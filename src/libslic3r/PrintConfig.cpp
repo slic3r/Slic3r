@@ -2189,16 +2189,51 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->default_value = new ConfigOptionBool(false);
 
-    def = this->add("support_material_contact_distance", coFloat);
-    def->gui_type = "f_enum_open";
-    def->label = L("Contact Z distance");
+    def = this->add("support_material_contact_distance_type", coEnum);
+    def->label = L("Type");
     def->category = L("Support material");
-    def->tooltip = L("The vertical distance between object and support material interface. "
-                   "Setting this to 0 will also prevent Slic3r from using bridge flow and speed "
-                   "for the first object layer.");
+    def->tooltip = L("How to compute the vertical z-distance.\n"
+        "From filament: it use the nearest bit of the filament. When a bridge is extruded, it goes below the current plane.\n"
+        "From plane: it use the plane-z. Same than 'from filament' if no 'bridge' is extruded.\n"
+        "None: No z-offset. Useful for Soluble supports.\n");
+    def->cli = "support-material-contact-type=s";
+    def->enum_keys_map = &ConfigOptionEnum<SupportZDistanceType>::get_enum_values();
+    def->enum_values.push_back("filament");
+    def->enum_values.push_back("plane");
+    def->enum_values.push_back("none");
+    def->enum_labels.push_back("From filament");
+    def->enum_labels.push_back("From plane");
+    def->enum_labels.push_back("None");
+    def->mode = comAdvanced;
+    def->default_value = new ConfigOptionEnum<SupportZDistanceType>(zdFilament);
+
+    def = this->add("support_material_contact_distance_top", coFloat);
+    def->gui_type = "f_enum_open";
+    def->label = L("Top");
+    def->category = L("Support material");
+    def->tooltip = L("The vertical distance between support material interface and the object"
+        "(when the object is printed on top of the support). "
+        "Setting this to 0 will also prevent Slic3r from using bridge flow and speed "
+        "for the first object layer.");
     def->sidetext = L("mm");
-    def->cli = "support-material-contact-distance=f";
-//    def->min = 0;
+    def->cli = "support-material-contact-distance-top=f";
+    //    def->min = 0;
+    def->enum_values.push_back("0");
+    def->enum_values.push_back("0.2");
+    def->enum_labels.push_back((boost::format("0 (%1%)") % L("soluble")).str());
+    def->enum_labels.push_back((boost::format("0.2 (%1%)") % L("detachable")).str());
+    def->mode = comAdvanced;
+    def->default_value = new ConfigOptionFloat(0.2);
+
+    def = this->add("support_material_contact_distance_bottom", coFloat);
+    def->gui_type = "f_enum_open";
+    def->label = L("Bottom");
+    def->category = L("Support material");
+    def->tooltip = L("The vertical distance between object and support material interface"
+        "(when the support is printed on top of the object).");
+    def->sidetext = L("mm");
+    def->cli = "support-material-contact-distance-bottom=f";
+    //    def->min = 0;
     def->enum_values.push_back("0");
     def->enum_values.push_back("0.2");
     def->enum_labels.push_back((boost::format("0 (%1%)") % L("soluble")).str());

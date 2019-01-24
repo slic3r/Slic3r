@@ -718,6 +718,8 @@ boost::any& Choice::get_value()
             m_value = static_cast<PrintHostType>(ret_enum);
         else if (m_opt_id.compare("infill_dense_algo") == 0)
             m_value = static_cast<DenseInfillAlgo>(ret_enum);
+        else if (m_opt_id.compare("support_material_contact_distance_type") == 0)
+            m_value = static_cast<SupportZDistanceType>(ret_enum);
 		else if (m_opt_id.compare("display_orientation") == 0)
 			m_value = static_cast<SLADisplayOrientation>(ret_enum);
 	}

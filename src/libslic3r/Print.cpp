@@ -1258,7 +1258,9 @@ std::string Print::validate() const
                 return L("The Wipe Tower is only supported for multiple objects if they have equal layer heigths");
             if (slicing_params.raft_layers() != slicing_params0.raft_layers())
                 return L("The Wipe Tower is only supported for multiple objects if they are printed over an equal number of raft layers");
-            if (object->config().support_material_contact_distance != m_objects.front()->config().support_material_contact_distance)
+            if (object->config().support_material_contact_distance_type != m_objects.front()->config().support_material_contact_distance_type
+				|| object->config().support_material_contact_distance_top != m_objects.front()->config().support_material_contact_distance_top
+				|| object->config().support_material_contact_distance_bottom != m_objects.front()->config().support_material_contact_distance_bottom)
                 return L("The Wipe Tower is only supported for multiple objects if they are printed with the same support_material_contact_distance");
             if (! equal_layering(slicing_params, slicing_params0))
                 return L("The Wipe Tower is only supported for multiple objects if they are sliced equally.");

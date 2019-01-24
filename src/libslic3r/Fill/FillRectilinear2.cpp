@@ -288,9 +288,9 @@ public:
         // for the infill pattern, don't cut the corners.
         // default miterLimt = 3
         //double mitterLimit = 10.;
-        assert(aoffset1 < 0);
-        assert(aoffset2 < 0);
-        assert(aoffset2 < aoffset1);
+        //assert(aoffset1 < 0);
+        //assert(aoffset2 < 0);
+        //assert(aoffset2 < aoffset1);
         bool sticks_removed = remove_sticks(polygons_src);
 //        if (sticks_removed) printf("Sticks removed!\n");
         polygons_outer = offset(polygons_src, aoffset1,
@@ -881,7 +881,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     std::pair<float, Point> rotate_vector = this->_infill_direction(surface);
     rotate_vector.first += angleBase;
 
-    assert(params.density > 0.0001f && params.density <= 1.f);
+    assert(params.density > 0.0001f);
     coord_t line_spacing = _line_spacing_for_density(params.density);
 
     // On the polygons of poly_with_offset, the infill lines will be connected.

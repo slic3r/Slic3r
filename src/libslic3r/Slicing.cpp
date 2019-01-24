@@ -57,7 +57,7 @@ SlicingParameters SlicingParameters::create_from_config(
     // In that case all the nozzles have to be of the same diameter.
     coordf_t support_material_extruder_dmr           = print_config.nozzle_diameter.get_at(object_config.support_material_extruder.value - 1);
     coordf_t support_material_interface_extruder_dmr = print_config.nozzle_diameter.get_at(object_config.support_material_interface_extruder.value - 1);
-    bool     soluble_interface                       = object_config.support_material_contact_distance.value == 0.;
+    bool     soluble_interface                       = object_config.support_material_contact_distance_type.value == zdNone;
 
     SlicingParameters params;
     params.layer_height = object_config.layer_height.value;
@@ -95,9 +95,9 @@ SlicingParameters SlicingParameters::create_from_config(
     params.max_layer_height = std::max(params.max_layer_height, params.layer_height);
 
     if (! soluble_interface) {
-        params.gap_raft_object    = object_config.support_material_contact_distance.value;
-        params.gap_object_support = object_config.support_material_contact_distance.value;
-        params.gap_support_object = object_config.support_material_contact_distance.value;
+        params.gap_raft_object    = object_config.support_material_contact_distance_top.value;
+        params.gap_object_support = object_config.support_material_contact_distance_bottom.value;
+        params.gap_support_object = object_config.support_material_contact_distance_top.value;
     }
 
     if (params.base_raft_layers > 0) {

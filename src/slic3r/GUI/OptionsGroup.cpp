@@ -557,6 +557,9 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
         else if (opt_key.compare("infill_dense_algo") == 0){
             ret = static_cast<int>(config.option<ConfigOptionEnum<DenseInfillAlgo>>(opt_key)->value);
         }
+        else if (opt_key.compare("support_material_contact_distance_type") == 0){
+            ret = static_cast<int>(config.option<ConfigOptionEnum<SupportZDistanceType>>(opt_key)->value);
+        }
         else if (opt_key.compare("display_orientation") == 0) {
             ret  = static_cast<int>(config.option<ConfigOptionEnum<SLADisplayOrientation>>(opt_key)->value);
         }

@@ -481,7 +481,9 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
         else if (
                opt_key == "clip_multipart_objects"
             || opt_key == "elefant_foot_compensation"
-            || opt_key == "support_material_contact_distance" 
+            || opt_key == "support_material_contact_distance_type" 
+            || opt_key == "support_material_contact_distance_top" 
+            || opt_key == "support_material_contact_distance_bottom" 
             || opt_key == "xy_size_compensation"
             || opt_key == "external_infill_margin"
             || opt_key == "bridged_infill_margin"
@@ -912,12 +914,12 @@ void PrintObject::detect_surfaces_type()
             [this, idx_region, interface_shells, &surfaces_new](const tbb::blocked_range<size_t>& range) {
                 // If we have raft layers, consider bottom layer as a bridge just like any other bottom surface lying on the void.
                 SurfaceType surface_type_bottom_1st =
-                    (m_config.raft_layers.value > 0 && m_config.support_material_contact_distance.value > 0) ?
+                    (m_config.raft_layers.value > 0 && m_config.support_material_contact_distance_type.value != zdNone) ?
                     stBottomBridge : stBottom;
                 // If we have soluble support material, don't bridge. The overhang will be squished against a soluble layer separating
                 // the support from the print.
                 SurfaceType surface_type_bottom_other =
-                    (m_config.support_material.value && m_config.support_material_contact_distance.value == 0) ?
+                    (m_config.support_material.value && m_config.support_material_contact_distance_type.value == zdNone) ?
                     stBottom : stBottomBridge;
                 for (size_t idx_layer = range.begin(); idx_layer < range.end(); ++ idx_layer) {
                     m_print->throw_if_canceled();

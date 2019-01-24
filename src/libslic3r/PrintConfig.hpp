@@ -61,6 +61,10 @@ enum DenseInfillAlgo {
     dfaAutomatic, dfaAutoNotFull, dfaEnlarged,
 };
 
+enum SupportZDistanceType {
+    zdFilament, zdPlane, zdNone,
+};
+
 enum SLADisplayOrientation {
     sladoLandscape,
     sladoPortrait
@@ -173,6 +177,15 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>:
     };
     return keys_map;
 }
+
+template<> inline const t_config_enum_values& ConfigOptionEnum<SupportZDistanceType>::get_enum_values() {
+    static const t_config_enum_values keys_map = {
+        { "filament", zdFilament },
+        { "plane", zdPlane },
+        { "none", zdNone }
+    };
+    return keys_map;
+} 
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<SLADisplayOrientation>::get_enum_values() {
     static const t_config_enum_values keys_map = {
@@ -396,7 +409,9 @@ public:
     // Direction of the support pattern (in XY plane).
     ConfigOptionFloat               support_material_angle;
     ConfigOptionBool                support_material_buildplate_only;
-    ConfigOptionFloat               support_material_contact_distance;
+    ConfigOptionEnum<SupportZDistanceType>  support_material_contact_distance_type;
+    ConfigOptionFloat               support_material_contact_distance_top;
+    ConfigOptionFloat               support_material_contact_distance_bottom;
     ConfigOptionInt                 support_material_enforce_layers;
     ConfigOptionInt                 support_material_extruder;
     ConfigOptionFloatOrPercent      support_material_extrusion_width;
@@ -442,7 +457,9 @@ protected:
         OPT_PTR(support_material_auto);
         OPT_PTR(support_material_angle);
         OPT_PTR(support_material_buildplate_only);
-        OPT_PTR(support_material_contact_distance);
+        OPT_PTR(support_material_contact_distance_type);
+        OPT_PTR(support_material_contact_distance_top);
+        OPT_PTR(support_material_contact_distance_bottom);
         OPT_PTR(support_material_enforce_layers);
         OPT_PTR(support_material_interface_contact_loops);
         OPT_PTR(support_material_extruder);

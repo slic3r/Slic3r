@@ -1007,7 +1007,11 @@ void TabPrint::build()
 //		# optgroup->append_single_option_line(get_option_("raft_contact_distance");
 
 		optgroup = page->new_optgroup(_(L("Options for support material and raft")));
-		optgroup->append_single_option_line("support_material_contact_distance");
+        line = { _(L("Z-offset")), "" };
+        line.append_option(optgroup->get_option("support_material_contact_distance_type"));
+        line.append_option(optgroup->get_option("support_material_contact_distance_top"));
+        line.append_option(optgroup->get_option("support_material_contact_distance_bottom"));
+        optgroup->append_line(line);
 		optgroup->append_single_option_line("support_material_pattern");
 		optgroup->append_single_option_line("support_material_with_sheath");
 		optgroup->append_single_option_line("support_material_spacing");
@@ -1221,7 +1225,7 @@ void TabPrint::update()
 	}
 
 	if (m_config->opt_bool("wipe_tower") && m_config->opt_bool("support_material") &&
-		m_config->opt_float("support_material_contact_distance") > 0. &&
+        ((ConfigOptionEnumGeneric*)m_config->option("support_material_contact_distance_type"))->value != zdNone &&
 		(m_config->opt_int("support_material_extruder") != 0 || m_config->opt_int("support_material_interface_extruder") != 0)) {
 		wxString msg_text = _(L("The Wipe Tower currently supports the non-soluble supports only\n"
 			"if they are printed with the current extruder without triggering a tool change.\n"
@@ -1239,7 +1243,7 @@ void TabPrint::update()
 	}
 
 	if (m_config->opt_bool("wipe_tower") && m_config->opt_bool("support_material") &&
-		m_config->opt_float("support_material_contact_distance") == 0 &&
+        ((ConfigOptionEnumGeneric*)m_config->option("support_material_contact_distance_type"))->value == zdNone &&
 		!m_config->opt_bool("support_material_synchronize_layers")) {
 		wxString msg_text = _(L("For the Wipe Tower to work with the soluble supports, the support layers\n"
 			"need to be synchronized with the object layers.\n"
@@ -1390,13 +1394,17 @@ void TabPrint::update()
 	bool have_support_material = m_config->opt_bool("support_material") || have_raft;
 	bool have_support_material_auto = have_support_material && m_config->opt_bool("support_material_auto");
 	bool have_support_interface = m_config->opt_int("support_material_interface_layers") > 0;
-	bool have_support_soluble = have_support_material && m_config->opt_float("support_material_contact_distance") == 0;
+    bool have_support_soluble = have_support_material && ((ConfigOptionEnumGeneric*)m_config->option("support_material_contact_distance_type"))->value == zdNone;
 	for (auto el : {"support_material_pattern", "support_material_with_sheath",
 					"support_material_spacing", "support_material_angle", "support_material_interface_layers",
-					"dont_support_bridges", "support_material_extrusion_width", "support_material_contact_distance",
+					"dont_support_bridges", "support_material_extrusion_width", 
+					"support_material_contact_distance_type", 
 					"support_material_xy_spacing" })
 		get_field(el)->toggle(have_support_material);
-	get_field("support_material_threshold")->toggle(have_support_material_auto);
+    get_field("support_material_threshold")->toggle(have_support_material_auto);
+    for (auto el : { "support_material_contact_distance_top",
+        "support_material_contact_distance_bottom"})
+        get_field(el)->toggle(have_support_material && !have_support_soluble);
 
 	for (auto el : {"support_material_interface_spacing", "support_material_interface_extruder",
 					"support_material_interface_speed", "support_material_interface_contact_loops" })
