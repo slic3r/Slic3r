@@ -223,6 +223,9 @@ struct Head {
     // If there is a pillar connecting to this head, then the id will be set.
     long pillar_id = -1;
 
+    inline void invalidate() { id = -1; }
+    inline bool is_valid() const { return id >= 0; }
+
     Head(double r_big_mm,
          double r_small_mm,
          double length_mm,
@@ -515,7 +518,8 @@ struct Pad {
         double ground_level,
         const PoolConfig& pcfg) :
         cfg(pcfg),
-        zlevel(ground_level + sla::get_pad_elevation(pcfg))
+        zlevel(ground_level +
+               (sla::get_pad_fullheight(pcfg) - sla::get_pad_elevation(pcfg)) )
     {
         ExPolygons basep;
         cfg.throw_on_cancel();
@@ -523,7 +527,8 @@ struct Pad {
         // The 0.1f is the layer height with which the mesh is sampled and then
         // the layers are unified into one vector of polygons.
         base_plate(object_support_mesh, basep,
-                   float(cfg.min_wall_height_mm), 0.1f, pcfg.throw_on_cancel);
+                   float(cfg.min_wall_height_mm + cfg.min_wall_thickness_mm),
+                   0.1f, pcfg.throw_on_cancel);
 
         for(auto& bp : baseplate) basep.emplace_back(bp);
 
@@ -733,34 +738,35 @@ public:
     const TriangleMesh& merged_mesh() const {
         if(meshcache_valid) return meshcache;
 
-        meshcache = TriangleMesh();
+        Contour3D merged;
 
         for(auto& head : heads()) {
             if(m_ctl.stopcondition()) break;
-            auto&& m = mesh(head.mesh);
-            meshcache.merge(m);
+            if(head.is_valid())
+                merged.merge(head.mesh);
         }
 
         for(auto& stick : pillars()) {
             if(m_ctl.stopcondition()) break;
-            meshcache.merge(mesh(stick.mesh));
-            meshcache.merge(mesh(stick.base));
+            merged.merge(stick.mesh);
+            merged.merge(stick.base);
         }
 
         for(auto& j : junctions()) {
             if(m_ctl.stopcondition()) break;
-            meshcache.merge(mesh(j.mesh));
+            merged.merge(j.mesh);
         }
 
         for(auto& cb : compact_bridges()) {
             if(m_ctl.stopcondition()) break;
-            meshcache.merge(mesh(cb.mesh));
+            merged.merge(cb.mesh);
         }
 
         for(auto& bs : bridges()) {
             if(m_ctl.stopcondition()) break;
-            meshcache.merge(mesh(bs.mesh));
+            merged.merge(bs.mesh);
         }
+
 
         if(m_ctl.stopcondition()) {
             // In case of failure we have to return an empty mesh
@@ -768,8 +774,10 @@ public:
             return meshcache;
         }
 
+        meshcache = mesh(merged);
+
         // TODO: Is this necessary?
-        meshcache.repair();
+        //meshcache.repair();
 
         BoundingBoxf3&& bb = meshcache.bounding_box();
         model_height = bb.max(Z) - bb.min(Z);
@@ -781,7 +789,7 @@ public:
     // WITH THE PAD
     double full_height() const {
         if(merged_mesh().empty() && !pad().empty())
-            return pad().cfg.min_wall_height_mm;
+            return get_pad_fullheight(pad().cfg);
 
         double h = mesh_height();
         if(!pad().empty()) h += sla::get_pad_elevation(pad().cfg);
@@ -1241,14 +1249,19 @@ bool SLASupportTree::generate(const PointSet &points,
         // there is no need to bridge them together.
         if(pillar_dist > 2*cfg.head_back_radius_mm &&
            bridge_distance < cfg.max_bridge_length_mm)
-            while(sj(Z) > pillar.endpoint(Z) &&
-                  ej(Z) > nextpillar.endpoint(Z))
+            while(sj(Z) > pillar.endpoint(Z) + cfg.base_radius_mm &&
+                  ej(Z) > nextpillar.endpoint(Z) + + cfg.base_radius_mm)
         {
             if(chkd >= bridge_distance) {
                 result.add_bridge(sj, ej, pillar.r);
 
+                auto pcm = cfg.pillar_connection_mode;
+
                 // double bridging: (crosses)
-                if(pillar_dist > 2*cfg.base_radius_mm) {
+                if( pcm == PillarConnectionMode::cross ||
+                   (pcm == PillarConnectionMode::dynamic &&
+                    pillar_dist > 2*cfg.base_radius_mm))
+                {
                     // If the columns are close together, no need to
                     // double bridge them
                     Vec3d bsj(ej(X), ej(Y), sj(Z));
@@ -1526,8 +1539,19 @@ bool SLASupportTree::generate(const PointSet &points,
 
             // In this case there is no room for the base pinhead.
             if(gh < head.fullwidth()) {
-                base_width = gh - 2 * cfg.head_front_radius_mm -
-                        2*cfg.head_back_radius_mm + cfg.head_penetration_mm;
+                double min_l =
+                        2 * cfg.head_front_radius_mm +
+                        2 * cfg.head_back_radius_mm - cfg.head_penetration_mm;
+
+                base_width = gh - min_l;
+            }
+
+            if(base_width < 0) {
+                // There is really no space for even a reduced size head. We
+                // have to replace that with a small half sphere that touches
+                // the model surface. (TODO)
+                head.invalidate();
+                continue;
             }
 
             head.transform();
@@ -1548,6 +1572,7 @@ bool SLASupportTree::generate(const PointSet &points,
                 // This should not happen it is against all assumptions
                 BOOST_LOG_TRIVIAL(warning)
                         << "Ignoring invalid supports connecting to model body";
+                head.invalidate();
                 continue;
             }
 
@@ -1722,7 +1747,7 @@ SlicedSupports SLASupportTree::slice(float layerh, float init_layerh) const
     const Pad& pad = m_impl->pad();
     if(!pad.empty()) gndlvl -= float(get_pad_elevation(pad.cfg));
 
-    std::vector<float> heights = {gndlvl};
+    std::vector<float> heights;
     heights.reserve(size_t(modelh/layerh) + 1);
 
     for(float h = gndlvl + init_layerh; h < gndlvl + modelh; h += layerh) {

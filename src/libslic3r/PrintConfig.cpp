@@ -75,7 +75,7 @@ void PrintConfigDef::init_fff_params()
                    "This is mostly useful with Bowden extruders which suffer from oozing. "
                    "This feature slows down both the print and the G-code generation.");
     def->cli = "avoid-crossing-perimeters!";
-    def->mode = comAdvanced;
+    def->mode = comExpert;
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("remove_small_gaps", coBool);
@@ -202,6 +202,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "bridge-speed=f";
     def->aliases = { "bridge_feed_rate" };
     def->min = 0;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloat(60);
 
     def = this->add("brim_width", coFloat);
@@ -369,7 +370,7 @@ void PrintConfigDef::init_fff_params()
                    "to compensate for the 1st layer squish aka an Elephant Foot effect. (should be negative = inwards)");
     def->sidetext = L("mm");
     def->cli = "elefant-foot-compensation=f";
-    def->mode = comExpert;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("end_gcode", coString);
@@ -503,6 +504,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "external-perimeter-speed=s";
     def->ratio_over = "perimeter_speed";
     def->min = 0;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloatOrPercent(50, true);
 
     def = this->add("external_perimeters_first", coBool);
@@ -836,12 +838,14 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("EDGE");
     def->enum_values.push_back("NGEN");
     def->enum_values.push_back("PVA");
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionStrings { "PLA" };
 
     def = this->add("filament_soluble", coBools);
     def->label = L("Soluble material");
     def->tooltip = L("Soluble material is most likely used for a soluble support.");
     def->cli = "filament-soluble!";
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionBools { false };
 
     def = this->add("filament_cost", coFloats);
@@ -1066,6 +1070,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/s");
     def->cli = "gap-fill-speed=f";
     def->min = 0;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloat(20);
 
     def = this->add("gcode_comments", coBool);
@@ -1237,6 +1242,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "infill-speed=f";
     def->aliases = { "print_feed_rate", "infill_feed_rate" };
     def->min = 0;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloat(80);
 
     def = this->add("inherits", coString);
@@ -1675,6 +1681,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "perimeter-speed=f";
     def->aliases = { "perimeter_feed_rate" };
     def->min = 0;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloat(60);
 
     def = this->add("perimeters", coInt);
@@ -1900,8 +1907,8 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Aligned"));
     def->enum_labels.push_back(L("Rear"));
     def->enum_labels.push_back(L("Hidden"));
-    def->mode = comAdvanced;
-    def->default_value = new ConfigOptionEnum<SeamPosition>(spAligned);
+    def->mode = comSimple;
+    def->default_value = new ConfigOptionEnum<SeamPosition>(spHidden);
 
     def = this->add("seam_travel", coBool);
     def->label = L("Travel move reduced");
@@ -1954,6 +1961,7 @@ void PrintConfigDef::init_fff_params()
     def->max = 300000;
     def->enum_values.push_back("115200");
     def->enum_values.push_back("250000");
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionInt(250000);
 
     def = this->add("skirt_distance", coFloat);
@@ -2007,6 +2015,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "small-perimeter-speed=s";
     def->ratio_over = "perimeter_speed";
     def->min = 0;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloatOrPercent(15, false);
 
     def = this->add("solid_infill_below_area", coFloat);
@@ -2063,6 +2072,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "infill_speed";
     def->aliases = { "solid_infill_feed_rate" };
     def->min = 0;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloatOrPercent(20, false);
 
     def = this->add("solid_layers", coInt);
@@ -2154,7 +2164,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("If checked, supports will be generated automatically based on the overhang threshold value."\
                      " If unchecked, supports will be generated inside the \"Support Enforcer\" volumes only.");
     def->cli = "support-material-auto!";
-    def->mode = comAdvanced;
+    def->mode = comSimple;
     def->default_value = new ConfigOptionBool(true);
 
     def = this->add("support_material_xy_spacing", coFloatOrPercent);
@@ -2186,7 +2196,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Support material");
     def->tooltip = L("Only create support if it lies on a build plate. Don't create support on a print.");
     def->cli = "support-material-buildplate-only!";
-    def->mode = comAdvanced;
+    def->mode = comSimple;
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("support_material_contact_distance_type", coEnum);
@@ -2323,6 +2333,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "support-material-interface-speed=s";
     def->ratio_over = "support_material_speed";
     def->min = 0;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloatOrPercent(100, true);
 
     def = this->add("support_material_pattern", coEnum);
@@ -2357,6 +2368,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/s");
     def->cli = "support-material-speed=f";
     def->min = 0;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloat(60);
 
     def = this->add("support_material_synchronize_layers", coBool);
@@ -2468,6 +2480,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "top-solid-infill-speed=s";
     def->ratio_over = "solid_infill_speed";
     def->min = 0;
+    def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloatOrPercent(15, false);
 
     def = this->add("top_solid_layers", coInt);
@@ -2823,7 +2836,6 @@ void PrintConfigDef::init_sla_params()
     def->label = L("Generate supports");
     def->category = L("Supports");
     def->tooltip = L("Generate supports for the models");
-    def->sidetext = L("");
     def->cli = "";
     def->default_value = new ConfigOptionBool(true);
 
@@ -2863,13 +2875,28 @@ void PrintConfigDef::init_sla_params()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(1.0);
 
+    def = this->add("support_pillar_connection_mode", coEnum);
+    def->label = L("Support pillar connection mode");
+    def->tooltip = L("Controls the bridge type between two neigboring pillars."
+                     " Can be zig-zag, cross (double zig-zag) or dynamic which"
+                     " will automatically switch between the first two depending"
+                     " on the distance of the two pillars.");
+    def->cli = "";
+    def->enum_keys_map = &ConfigOptionEnum<SLAPillarConnectionMode>::get_enum_values();
+    def->enum_values.push_back("zigzag");
+    def->enum_values.push_back("cross");
+    def->enum_values.push_back("dynamic");
+    def->enum_labels.push_back(L("Zig-Zag"));
+    def->enum_labels.push_back(L("Cross"));
+    def->enum_labels.push_back(L("Dynamic"));
+    def->default_value = new ConfigOptionEnum<SLAPillarConnectionMode>(slapcmDynamic);
+
     def = this->add("support_pillar_widening_factor", coFloat);
     def->label = L("Pillar widening factor");
     def->category = L("Supports");
     def->tooltip = L("Merging bridges or pillars into another pillars can "
                      "increase the radius. Zero means no increase, one means "
                      "full increase.");
-    def->sidetext = L("");
     def->cli = "";
     def->min = 0;
     def->max = 1;
@@ -2951,14 +2978,13 @@ void PrintConfigDef::init_sla_params()
     def->label = L("Use pad");
     def->category = L("Pad");
     def->tooltip = L("Add a pad underneath the supported model");
-    def->sidetext = L("");
     def->cli = "";
     def->default_value = new ConfigOptionBool(true);
 
     def = this->add("pad_wall_thickness", coFloat);
     def->label = L("Pad wall thickness");
     def->category = L("Pad");
-    def->tooltip = L("");
+//     def->tooltip = L("");
     def->sidetext = L("mm");
     def->cli = "";
     def->min = 0;
@@ -2967,7 +2993,7 @@ void PrintConfigDef::init_sla_params()
     def = this->add("pad_wall_height", coFloat);
     def->label = L("Pad wall height");
     def->category = L("Pad");
-    def->tooltip = L("");
+//     def->tooltip = L("");
     def->sidetext = L("mm");
     def->cli = "";
     def->min = 0;
@@ -2976,7 +3002,7 @@ void PrintConfigDef::init_sla_params()
     def = this->add("pad_max_merge_distance", coFloat);
     def->label = L("Max merge distance");
     def->category = L("Pad");
-    def->tooltip = L("");
+//     def->tooltip = L("");
     def->sidetext = L("mm");
     def->cli = "";
     def->min = 0;
@@ -2985,7 +3011,7 @@ void PrintConfigDef::init_sla_params()
     def = this->add("pad_edge_radius", coFloat);
     def->label = L("Pad edge radius");
     def->category = L("Pad");
-    def->tooltip = L("");
+//     def->tooltip = L("");
     def->sidetext = L("mm");
     def->cli = "";
     def->min = 0;
@@ -3394,7 +3420,7 @@ CLIConfigDef::CLIConfigDef()
     def->tooltip = L("Forces the GUI launch instead of command line slicing "
                      "(if you supply a model file, it will be loaded into the plater)");
     def->cli = "gui";
-    def->default_value = new ConfigOptionBool(true);
+    def->default_value = new ConfigOptionBool(false);
     
     def = this->add("info", coBool);
     def->label = L("Output Model Info");

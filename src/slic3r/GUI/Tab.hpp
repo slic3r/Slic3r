@@ -31,6 +31,7 @@
 #include "BedShapeDialog.hpp"
 #include "Event.hpp"
 
+class PrusaModeSizer;
 
 namespace Slic3r {
 namespace GUI {
@@ -123,6 +124,8 @@ protected:
 	wxTreeCtrl*			m_treectrl;
 	wxImageList*		m_icons;
 
+    PrusaModeSizer*     m_mode_sizer;
+
    	struct PresetDependencies {
 		Preset::Type type	  = Preset::TYPE_INVALID;
 		wxCheckBox 	*checkbox = nullptr;
@@ -185,7 +188,6 @@ protected:
 	bool				m_disable_tree_sel_changed_event;
 	bool				m_show_incompatible_presets;
 
-	std::vector<std::string>	m_reload_dependent_tabs = {};
     std::vector<Preset::Type>	m_dependent_tabs = {};
 	enum OptStatus { osSystemValue = 1, osInitValue = 2 };
 	std::map<std::string, int>	m_options_list;
@@ -211,9 +213,7 @@ public:
 
 public:
 	Tab(wxNotebook* parent, const wxString& title, const char* name); 
-	~Tab() {
-		wxGetApp().delete_tab_from_list(this);
-	}
+	~Tab() {}
 
 	wxWindow*	parent() const { return m_parent; }
 	wxString	title()	 const { return m_title; }
@@ -265,7 +265,6 @@ public:
 
 	DynamicPrintConfig*	get_config() { return m_config; }
 	PresetCollection*	get_presets() { return m_presets; }
-	std::vector<std::string>	get_dependent_tabs() { return m_reload_dependent_tabs; }
 	size_t				get_selected_preset_item() { return m_selected_preset_item; }
 
 	void			on_value_change(const std::string& opt_key, const boost::any& value);
@@ -286,6 +285,7 @@ protected:
 
 class TabPrint : public Tab
 {
+    bool is_msg_dlg_already_exist {false};
 public:
 	TabPrint(wxNotebook* parent) : 
 		Tab(parent, _(L("Print Settings")), "print") {}

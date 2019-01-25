@@ -430,6 +430,7 @@ const std::vector<std::string>& Preset::sla_print_options()
             "support_head_penetration",
             "support_head_width",
             "support_pillar_diameter",
+            "support_pillar_connection_mode",
             "support_pillar_widening_factor",
             "support_base_diameter",
             "support_base_height",
@@ -1073,7 +1074,7 @@ std::vector<std::string> PresetCollection::dirty_options(const Preset *edited, c
     std::vector<std::string> changed;
 	if (edited != nullptr && reference != nullptr) {
         changed = deep_compare ?
-				deep_diff(reference->config, edited->config) :
+				deep_diff(edited->config, reference->config) :
 				reference->config.diff(edited->config);
         // The "compatible_printers" option key is handled differently from the others:
         // It is not mandatory. If the key is missing, it means it is compatible with any printer.
@@ -1172,13 +1173,28 @@ std::vector<std::string> PresetCollection::merge_presets(PresetCollection &&othe
 std::string PresetCollection::name() const
 {
     switch (this->type()) {
-    case Preset::TYPE_PRINT:        return "print";
-    case Preset::TYPE_FILAMENT:     return "filament";
-    case Preset::TYPE_SLA_PRINT:    return "SLA print";
-    case Preset::TYPE_SLA_MATERIAL: return "SLA material";    
-    case Preset::TYPE_PRINTER:      return "printer";
+    case Preset::TYPE_PRINT:        return L("print");
+    case Preset::TYPE_FILAMENT:     return L("filament");
+    case Preset::TYPE_SLA_PRINT:    return L("SLA print");
+    case Preset::TYPE_SLA_MATERIAL: return L("SLA material");    
+    case Preset::TYPE_PRINTER:      return L("printer");
     default:                        return "invalid";
     }
+}
+
+std::vector<std::string> PresetCollection::system_preset_names() const
+{
+    size_t num = 0;
+    for (const Preset &preset : m_presets)
+        if (preset.is_system)
+            ++ num;
+    std::vector<std::string> out;
+    out.reserve(num);
+	for (const Preset &preset : m_presets)
+		if (preset.is_system)
+			out.emplace_back(preset.name);
+    std::sort(out.begin(), out.end());
+    return out;
 }
 
 // Generate a file path from a profile name. Add the ".ini" suffix if it is missing.

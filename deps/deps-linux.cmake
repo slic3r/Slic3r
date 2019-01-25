@@ -25,6 +25,19 @@ ExternalProject_Add(dep_boost
     INSTALL_COMMAND ""   # b2 does that already
 )
 
+ExternalProject_Add(dep_libpng
+    EXCLUDE_FROM_ALL 1
+    URL "https://github.com/glennrp/libpng/archive/v1.6.36.tar.gz"
+    URL_HASH SHA256=5bef5a850a9255365a2dc344671b7e9ef810de491bd479c2506ac3c337e2d84f
+    CMAKE_GENERATOR "${DEP_MSVC_GEN}"
+    CMAKE_ARGS
+        -DPNG_SHARED=OFF
+        -DPNG_TESTS=OFF
+        ${DEP_CMAKE_OPTS}
+    INSTALL_COMMAND make install "DESTDIR=${DESTDIR}"
+    INSTALL_COMMAND ""
+)
+
 ExternalProject_Add(dep_libopenssl
     EXCLUDE_FROM_ALL 1
     URL "https://github.com/openssl/openssl/archive/OpenSSL_1_1_0g.tar.gz"
@@ -88,16 +101,24 @@ ExternalProject_Add(dep_libcurl
     INSTALL_COMMAND make install "DESTDIR=${DESTDIR}"
 )
 
+if (DEP_WX_STABLE)
+    set(DEP_WX_URL "https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.4/wxWidgets-3.0.4.tar.bz2")
+    set(DEP_WX_HASH "SHA256=96157f988d261b7368e5340afa1a0cad943768f35929c22841f62c25b17bf7f0")
+else ()
+    set(DEP_WX_URL "https://github.com/wxWidgets/wxWidgets/releases/download/v3.1.1/wxWidgets-3.1.1.tar.bz2")
+    set(DEP_WX_HASH "SHA256=c925dfe17e8f8b09eb7ea9bfdcfcc13696a3e14e92750effd839f5e10726159e")
+endif()
+
 ExternalProject_Add(dep_wxwidgets
     EXCLUDE_FROM_ALL 1
-    URL "https://github.com/wxWidgets/wxWidgets/releases/download/v3.1.1/wxWidgets-3.1.1.tar.bz2"
-    URL_HASH SHA256=c925dfe17e8f8b09eb7ea9bfdcfcc13696a3e14e92750effd839f5e10726159e
+    URL "${DEP_WX_URL}"
+    URL_HASH "${DEP_WX_HASH}"
     BUILD_IN_SOURCE 1
     PATCH_COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/wxwidgets-pngprefix.h" src/png/pngprefix.h
     CONFIGURE_COMMAND ./configure
         "--prefix=${DESTDIR}/usr/local"
         --disable-shared
-       --with-gtk=2
+        --with-gtk=2
         --with-opengl
         --enable-unicode
         --enable-graphics_ctx

@@ -9,8 +9,12 @@
 #include <wx/numformatter.h>
 
 #include "BitmapCache.hpp"
+#include "GUI.hpp"
 #include "GUI_App.hpp"
 #include "GUI_ObjectList.hpp"
+#include "libslic3r/GCode/PreviewData.hpp"
+
+using Slic3r::GUI::from_u8;
 
 wxDEFINE_EVENT(wxCUSTOMEVT_TICKSCHANGED, wxEvent);
 wxDEFINE_EVENT(wxCUSTOMEVT_LAST_VOLUME_IS_DELETED, wxCommandEvent);
@@ -37,7 +41,7 @@ wxMenuItem* append_menu_item(wxMenu* menu, int id, const wxString& string, const
 wxMenuItem* append_menu_item(wxMenu* menu, int id, const wxString& string, const wxString& description,
     std::function<void(wxCommandEvent& event)> cb, const std::string& icon, wxEvtHandler* event_handler)
 {
-    const wxBitmap& bmp = !icon.empty() ? wxBitmap(wxString::FromUTF8(Slic3r::var(icon)), wxBITMAP_TYPE_PNG) : wxNullBitmap;
+    const wxBitmap& bmp = !icon.empty() ? wxBitmap(from_u8(Slic3r::var(icon)), wxBITMAP_TYPE_PNG) : wxNullBitmap;
     return append_menu_item(menu, id, string, description, cb, bmp, event_handler);
 }
 
@@ -48,7 +52,7 @@ wxMenuItem* append_submenu(wxMenu* menu, wxMenu* sub_menu, int id, const wxStrin
 
     wxMenuItem* item = new wxMenuItem(menu, id, string, description);
     if (!icon.empty())
-        item->SetBitmap(wxBitmap(wxString::FromUTF8(Slic3r::var(icon)), wxBITMAP_TYPE_PNG));
+        item->SetBitmap(wxBitmap(from_u8(Slic3r::var(icon)), wxBITMAP_TYPE_PNG));
 
     item->SetSubMenu(sub_menu);
     menu->Append(item);
@@ -284,7 +288,7 @@ bool PrusaCollapsiblePaneMSW::Create(wxWindow *parent, wxWindowID id, const wxSt
 {
 	if (!wxControl::Create(parent, id, pos, size, style, val, name))
 		return false;
-	m_pStaticLine = NULL;
+	// m_pStaticLine = NULL;
 	m_strLabel = label;
 
 	// sizer containing the expand button and possibly a static line
@@ -402,7 +406,7 @@ void PrusaObjectDataViewModelNode::set_object_action_icon() {
 	m_action_icon = wxBitmap(Slic3r::GUI::from_u8(Slic3r::var("add_object.png")), wxBITMAP_TYPE_PNG);
 }
 void  PrusaObjectDataViewModelNode::set_part_action_icon() {
-	m_action_icon = wxBitmap(Slic3r::GUI::from_u8(Slic3r::var("cog.png")), wxBITMAP_TYPE_PNG);
+	m_action_icon = wxBitmap(Slic3r::GUI::from_u8(Slic3r::var(m_type == itVolume ? "cog.png" : "brick_go.png")), wxBITMAP_TYPE_PNG);
 }
 
 Slic3r::GUI::BitmapCache *m_bitmap_cache = nullptr;
@@ -1662,6 +1666,10 @@ void PrusaDoubleSlider::render()
     const wxCoord lower_pos = get_position_from_value(m_lower_value);
     const wxCoord higher_pos = get_position_from_value(m_higher_value);
 
+    // draw colored band on the background of a scroll line 
+    // and only in a case of no-empty m_values
+    draw_colored_band(dc);
+
     // draw line
     draw_scroll_line(dc, lower_pos, higher_pos);
 
@@ -1831,6 +1839,56 @@ void PrusaDoubleSlider::draw_ticks(wxDC& dc)
                             dc.DrawLine(mid - 14, pos - 1, mid - 9, pos - 1);
         is_horizontal() ?   dc.DrawLine(pos, mid+14, pos, mid+9) :
                             dc.DrawLine(mid + 14, pos - 1, mid + 9, pos - 1);
+    }
+}
+
+void PrusaDoubleSlider::draw_colored_band(wxDC& dc)
+{
+    int height, width;
+    get_size(&width, &height);
+
+    wxRect main_band = m_rect_lower_thumb;
+    if (is_horizontal()) {
+        main_band.SetLeft(SLIDER_MARGIN);
+        main_band.SetRight(width - SLIDER_MARGIN + 1);
+    }
+    else {
+        const int cut = 2;
+        main_band.x += cut;
+        main_band.width -= 2*cut;
+        main_band.SetTop(SLIDER_MARGIN);
+        main_band.SetBottom(height - SLIDER_MARGIN + 1);
+    }
+
+    if (m_ticks.empty()) {
+        dc.SetPen(GetParent()->GetBackgroundColour());
+        dc.SetBrush(GetParent()->GetBackgroundColour());
+        dc.DrawRectangle(main_band);
+        return;
+    }
+
+    const std::vector<unsigned char>& clr_bytes = Slic3r::GCodePreviewData::Range::Default_Colors[0].as_bytes();
+    wxColour clr = wxColour(clr_bytes[0], clr_bytes[1], clr_bytes[2], clr_bytes[3]);
+    dc.SetPen(clr);
+    dc.SetBrush(clr);
+    dc.DrawRectangle(main_band);
+
+    int i = 1;
+    for (auto tick : m_ticks)
+    {
+        if (i == Slic3r::GCodePreviewData::Range::Colors_Count)
+            i = 0;
+        const wxCoord pos = get_position_from_value(tick);
+        is_horizontal() ?   main_band.SetLeft(SLIDER_MARGIN + pos) :
+                            main_band.SetBottom(pos-1);
+
+        const std::vector<unsigned char>& clr_b = Slic3r::GCodePreviewData::Range::Default_Colors[i].as_bytes();
+
+        clr = wxColour(clr_b[0], clr_b[1], clr_b[2], clr_b[3]);
+        dc.SetPen(clr);
+        dc.SetBrush(clr);
+        dc.DrawRectangle(main_band);
+        i++;
     }
 }
 
@@ -2034,6 +2092,8 @@ void PrusaDoubleSlider::OnMotion(wxMouseEvent& event)
 
 void PrusaDoubleSlider::OnLeftUp(wxMouseEvent& event)
 {
+    if (!HasCapture())
+        return;
     this->ReleaseMouse();
     m_is_left_down = false;
     Refresh();
@@ -2172,6 +2232,8 @@ void PrusaDoubleSlider::OnRightDown(wxMouseEvent& event)
 
 void PrusaDoubleSlider::OnRightUp(wxMouseEvent& event)
 {
+    if (!HasCapture())
+        return;
     this->ReleaseMouse();
     m_is_right_down = m_is_one_layer = false;
 
@@ -2195,12 +2257,12 @@ PrusaLockButton::PrusaLockButton(   wxWindow *parent,
     m_bmp_lock_off = wxBitmap(Slic3r::GUI::from_u8(Slic3r::var("one_layer_lock_off.png")), wxBITMAP_TYPE_PNG);
     m_bmp_unlock_on = wxBitmap(Slic3r::GUI::from_u8(Slic3r::var("one_layer_unlock_on.png")), wxBITMAP_TYPE_PNG);
     m_bmp_unlock_off = wxBitmap(Slic3r::GUI::from_u8(Slic3r::var("one_layer_unlock_off.png")), wxBITMAP_TYPE_PNG);
-    m_lock_icon_dim = m_bmp_lock_on.GetSize().x;
 
 #ifdef __WXMSW__
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
 #endif // __WXMSW__
     SetBitmap(m_bmp_unlock_on);
+    SetBitmapDisabled(m_bmp_lock_on);
 
     //button events
     Bind(wxEVT_BUTTON,          &PrusaLockButton::OnButton, this);
@@ -2216,6 +2278,12 @@ void PrusaLockButton::OnButton(wxCommandEvent& event)
     event.Skip();
 }
 
+void PrusaLockButton::SetLock(bool lock)
+{
+    m_is_pushed = lock;
+    enter_button(true);
+}
+
 void PrusaLockButton::enter_button(const bool enter)
 {
     wxBitmap* icon = m_is_pushed ?
@@ -2226,6 +2294,123 @@ void PrusaLockButton::enter_button(const bool enter)
     Refresh();
     Update();
 }
+
+
+
+// ----------------------------------------------------------------------------
+// PrusaModeButton
+// ----------------------------------------------------------------------------
+
+PrusaModeButton::PrusaModeButton(   wxWindow *parent,
+                                    wxWindowID id,
+                                    const wxString& mode/* = wxEmptyString*/,
+                                    const wxBitmap& bmp_on/* = wxNullBitmap*/,
+                                    const wxPoint& pos/* = wxDefaultPosition*/,
+                                    const wxSize& size/* = wxDefaultSize*/) :
+    wxButton(parent, id, mode, pos, size, wxBU_EXACTFIT | wxNO_BORDER),
+    m_bmp_on(bmp_on)
+{
+#ifdef __WXMSW__
+    SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+#endif // __WXMSW__
+    m_bmp_off = wxBitmap(Slic3r::GUI::from_u8(Slic3r::var("mode_off_sq.png")), wxBITMAP_TYPE_PNG);
+
+    SetBitmap(m_bmp_on);
+
+    //button events
+    Bind(wxEVT_BUTTON,          &PrusaModeButton::OnButton, this);
+    Bind(wxEVT_ENTER_WINDOW,    &PrusaModeButton::OnEnterBtn, this);
+    Bind(wxEVT_LEAVE_WINDOW,    &PrusaModeButton::OnLeaveBtn, this);
+}
+
+void PrusaModeButton::OnButton(wxCommandEvent& event)
+{
+    m_is_selected = true;
+    focus_button(m_is_selected);
+
+    event.Skip();
+}
+
+void PrusaModeButton::SetState(const bool state)
+{
+    m_is_selected = state;
+    focus_button(m_is_selected);
+}
+
+void PrusaModeButton::focus_button(const bool focus)
+{
+    const wxBitmap& bmp = focus ? m_bmp_on : m_bmp_off;
+    SetBitmap(bmp);
+    const wxFont& new_font = focus ? Slic3r::GUI::wxGetApp().bold_font() : Slic3r::GUI::wxGetApp().small_font();
+    SetFont(new_font);
+
+    Refresh();
+    Update();
+}
+
+
+// ----------------------------------------------------------------------------
+// PrusaModeSizer
+// ----------------------------------------------------------------------------
+
+PrusaModeSizer::PrusaModeSizer(wxWindow *parent) :
+    wxFlexGridSizer(3, 0, 5)
+{
+    SetFlexibleDirection(wxHORIZONTAL);
+
+    const wxBitmap bmp_simple_on    = wxBitmap(Slic3r::GUI::from_u8(Slic3r::var("mode_simple_sq.png")),   wxBITMAP_TYPE_PNG);
+    const wxBitmap bmp_advanced_on  = wxBitmap(Slic3r::GUI::from_u8(Slic3r::var("mode_middle_sq.png")),  wxBITMAP_TYPE_PNG);
+    const wxBitmap bmp_expert_on    = wxBitmap(Slic3r::GUI::from_u8(Slic3r::var("mode_expert_sq.png")),     wxBITMAP_TYPE_PNG);
+    
+    mode_btns.reserve(3);
+
+    mode_btns.push_back(new PrusaModeButton(parent, wxID_ANY, "Simple",     bmp_simple_on));
+    mode_btns.push_back(new PrusaModeButton(parent, wxID_ANY, "Advanced",   bmp_advanced_on));
+    mode_btns.push_back(new PrusaModeButton(parent, wxID_ANY, "Expert",     bmp_expert_on));
+
+    for (auto btn : mode_btns)
+    {
+        btn->Bind(wxEVT_BUTTON, [btn, this](wxCommandEvent &event) {
+            event.Skip();
+            int mode_id = 0;
+            for (auto cur_btn : mode_btns) {
+                if (cur_btn == btn)
+                    break;
+                else
+                    mode_id++;
+            }
+            Slic3r::GUI::wxGetApp().save_mode(mode_id);
+        });
+
+        Add(btn);
+    }
+
+}
+
+void PrusaModeSizer::SetMode(const int mode)
+{
+    for (int m = 0; m < mode_btns.size(); m++)
+        mode_btns[m]->SetState(m == mode);
+}
+
+
+// ----------------------------------------------------------------------------
+// PrusaMenu
+// ----------------------------------------------------------------------------
+
+void PrusaMenu::DestroySeparators()
+{
+    if (m_separator_frst) {
+        Destroy(m_separator_frst);
+        m_separator_frst = nullptr;
+    }
+
+    if (m_separator_scnd) {
+        Destroy(m_separator_scnd);
+        m_separator_scnd = nullptr;
+    }
+}
+
 
 // ************************************** EXPERIMENTS ***************************************
 

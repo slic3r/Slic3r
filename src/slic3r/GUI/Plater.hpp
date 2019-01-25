@@ -57,7 +57,7 @@ private:
 
 class Sidebar : public wxPanel
 {
-    /*ConfigMenuIDs*/int    m_mode;
+    /*ConfigOptionMode*/int    m_mode;
 public:
     Sidebar(Plater *parent);
     Sidebar(Sidebar &&) = delete;
@@ -69,13 +69,14 @@ public:
     void init_filament_combo(PresetComboBox **combo, const int extr_idx);
     void remove_unused_filament_combos(const int current_extruder_count);
     void update_presets(Slic3r::Preset::Type preset_type);
+    void update_mode_sizer(const Slic3r::ConfigOptionMode& mode);
 
     ObjectManipulation*     obj_manipul();
     ObjectList*             obj_list();
     ObjectSettings*         obj_settings();
     wxScrolledWindow*       scrolled_panel();
 
-    ConfigOptionsGroup*     og_freq_chng_params();
+    ConfigOptionsGroup*     og_freq_chng_params(const bool is_fff);
     wxButton*               get_wiping_dialog_button();
     void                    update_objects_list_extruder_column(int extruders_count);
     void                    show_info_sizer();
@@ -84,7 +85,7 @@ public:
     void                    show_reslice(bool show);
     void                    show_send(bool show);
     bool                    is_multifilament();
-    void                    set_mode_value(const /*ConfigMenuIDs*/int mode) { m_mode = mode; }
+    void                    set_mode_value(const /*ConfigOptionMode*/int mode) { m_mode = mode; }
 
     std::vector<PresetComboBox*>& combos_filament();
 private:
@@ -116,6 +117,8 @@ public:
     void extract_config_from_project();
 
     void load_files(const std::vector<boost::filesystem::path>& input_files, bool load_model = true, bool load_config = true);
+    // To be called when providing a list of files to the GUI slic3r on command line.
+    void load_files(const std::vector<std::string>& input_files, bool load_model = true, bool load_config = true);
 
     void update();
     void select_view(const std::string& direction);

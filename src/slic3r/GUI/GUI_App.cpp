@@ -5,7 +5,6 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
 
 #include <wx/stdpaths.h>
 #include <wx/imagpng.h>
@@ -15,6 +14,7 @@
 #include <wx/filedlg.h>
 #include <wx/dir.h>
 #include <wx/wupdlock.h>
+#include <wx/filefn.h>
 
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Model.hpp"
@@ -67,7 +67,7 @@ wxString file_wildcards(FileType file_type, const std::string &custom_extension)
 			out += std::string(";*") + custom_extension;
         }
     }
-	return wxString::FromUTF8(out.c_str());
+    return from_u8(out);
 }
 
 static std::string libslic3r_translate_callback(const char *s) { return wxGetTranslation(wxString(s, wxConvUTF8)).utf8_str().data(); }
@@ -83,6 +83,11 @@ GUI_App::GUI_App()
 
 bool GUI_App::OnInit()
 {
+    // Verify resources path
+    const wxString resources_dir = from_u8(Slic3r::resources_dir());
+    wxCHECK_MSG(wxDirExists(resources_dir), false,
+        wxString::Format("Resources path does not exist or is not a directory: %s", resources_dir));
+
 #if ENABLE_IMGUI
     wxCHECK_MSG(m_imgui->init(), false, "Failed to initialize ImGui");
 #endif // ENABLE_IMGUI
@@ -138,56 +143,33 @@ bool GUI_App::OnInit()
     init_fonts();
 
     // application frame
-    std::cerr << "Creating main frame..." << std::endl;
     if (wxImage::FindHandler(wxBITMAP_TYPE_PNG) == nullptr)
         wxImage::AddHandler(new wxPNGHandler());
     mainframe = new MainFrame();
     sidebar().obj_list()->init_objects(); // propagate model objects to object list
-//     update_mode(); // do that later
+//     update_mode(); // !!! do that later
     SetTopWindow(mainframe);
 
     m_printhost_job_queue.reset(new PrintHostJobQueue(mainframe->printhost_queue_dlg()));
 
-    CallAfter([this]() {
-        // temporary workaround for the correct behavior of the Scrolled sidebar panel 
-        auto& panel = sidebar();
-        if (panel.obj_list()->GetMinHeight() > 200) {
-            wxWindowUpdateLocker noUpdates_sidebar(&panel);
-            panel.obj_list()->SetMinSize(wxSize(-1, 200));
-//          panel.Layout();
-        }
-        update_mode(); // update view mode after fix of the object_list size 
-                       // to correct later layouts
-    });
-
-    // This makes CallAfter() work
     Bind(wxEVT_IDLE, [this](wxIdleEvent& event)
     {
-        std::function<void()> cur_cb{ nullptr };
-        // try to get the mutex. If we can't, just skip this idle event and get the next one.
-        if (!callback_register.try_lock()) return;
-        // pop callback
-        if (m_cb.size() != 0) {
-            cur_cb = m_cb.top();
-            m_cb.pop();
-        }
-        // unlock mutex
-        this->callback_register.unlock();
-
-        try { // call the function if it's not nullptr;
-            if (cur_cb != nullptr) cur_cb();
-        }
-        catch (std::exception& e) {
-            std::cerr << "Exception thrown: " << e.what() << std::endl;
-        }
-
         if (app_config->dirty())
             app_config->save();
 
-#if !ENABLE_IMPROVED_SIDEBAR_OBJECTS_MANIPULATION
+        // ! Temporary workaround for the correct behavior of the Scrolled sidebar panel 
+        // Do this "manipulations" only once ( after (re)create of the application )
+        if (plater_ && sidebar().obj_list()->GetMinHeight() > 200) 
+        {
+            wxWindowUpdateLocker noUpdates_sidebar(&sidebar());
+            sidebar().obj_list()->SetMinSize(wxSize(-1, 200));
+
+            // !!! to correct later layouts
+            update_mode(); // update view mode after fix of the object_list size
+        }
+
         if (this->plater() != nullptr)
             this->obj_manipul()->update_if_dirty();
-#endif // !ENABLE_IMPROVED_SIDEBAR_OBJECTS_MANIPULATION
     });
 
     // On OS X the UI tends to freeze in weird ways if modal dialogs(config wizard, update notifications, ...)
@@ -209,6 +191,8 @@ bool GUI_App::OnInit()
             preset_updater->slic3r_update_notify();
         }
         preset_updater->sync(preset_bundle);
+
+        load_current_presets();
     });
 
 
@@ -288,10 +272,17 @@ void GUI_App::recreate_GUI()
 {
     std::cerr << "recreate_GUI" << std::endl;
 
+    clear_tabs_list();
+    if (plater_) {
+        // before creating a new plater let's delete old one
+        plater_->Destroy();
+        plater_ = nullptr;
+    }
+
     MainFrame* topwindow = dynamic_cast<MainFrame*>(GetTopWindow());
     mainframe = new MainFrame();
     sidebar().obj_list()->init_objects(); // propagate model objects to object list
-//     update_mode(); // do that later
+
     if (topwindow) {
         SetTopWindow(mainframe);
         topwindow->Destroy();
@@ -299,18 +290,8 @@ void GUI_App::recreate_GUI()
 
     m_printhost_job_queue.reset(new PrintHostJobQueue(mainframe->printhost_queue_dlg()));
 
-    CallAfter([this]() {
-        // temporary workaround for the correct behavior of the Scrolled sidebar panel
-        auto& panel = sidebar();
-        if (panel.obj_list()->GetMinHeight() > 200) {
-            wxWindowUpdateLocker noUpdates_sidebar(&panel);
-            panel.obj_list()->SetMinSize(wxSize(-1, 200));
-//             panel.Layout();
-        }
-        update_mode(); // update view mode after fix of the object_list size 
-        			   // to correct later layouts
-    });
- 
+    load_current_presets();
+
     mainframe->Show(true);
 
     // On OSX the UI was not initialized correctly if the wizard was called
@@ -365,6 +346,33 @@ void GUI_App::update_ui_from_settings()
     mainframe->update_ui_from_settings();
 }
 
+void GUI_App::persist_window_geometry(wxTopLevelWindow *window)
+{
+    const std::string name = into_u8(window->GetName());
+
+    window->Bind(wxEVT_CLOSE_WINDOW, [=](wxCloseEvent &event) {
+        window_pos_save(window, name);
+        event.Skip();
+    });
+
+    window_pos_restore(window, name);
+#ifdef _WIN32
+    // On windows, the wxEVT_SHOW is not received if the window is created maximized
+    // cf. https://groups.google.com/forum/#!topic/wx-users/c7ntMt6piRI
+    // so we sanitize the position right away
+    window_pos_sanitize(window);
+#else
+    // On other platforms on the other hand it's needed to wait before the window is actually on screen
+    // and some initial round of events is complete otherwise position / display index is not reported correctly.
+    window->Bind(wxEVT_SHOW, [=](wxShowEvent &event) {
+        CallAfter([=]() {
+            window_pos_sanitize(window);
+        });
+        event.Skip();
+    });
+#endif
+}
+
 void GUI_App::load_project(wxWindow *parent, wxString& input_file)
 {
     input_file.Clear();
@@ -389,55 +397,6 @@ void GUI_App::import_model(wxWindow *parent, wxArrayString& input_files)
         dialog.GetPaths(input_files);
 }
 
-void GUI_App::CallAfter(std::function<void()> cb)
-{
-    // set mutex
-    callback_register.lock();
-    // push function onto stack
-    m_cb.emplace(cb);
-    // unset mutex
-    callback_register.unlock();
-}
-
-void GUI_App::window_pos_save(wxTopLevelWindow* window, const std::string &name)
-{
-    if (name.empty()) { return; }
-    const auto config_key = (boost::format("window_%1%") % name).str();
-
-    WindowMetrics metrics = WindowMetrics::from_window(window);
-    app_config->set(config_key, metrics.serialize());
-    app_config->save();
-}
-
-void GUI_App::window_pos_restore(wxTopLevelWindow* window, const std::string &name)
-{
-    if (name.empty()) { return; }
-    const auto config_key = (boost::format("window_%1%") % name).str();
-
-    if (! app_config->has(config_key)) { return; }
-
-    auto metrics = WindowMetrics::deserialize(app_config->get(config_key));
-    if (! metrics) { return; }
-
-    window->SetSize(metrics->get_rect());
-    window->Maximize(metrics->get_maximized());
-}
-
-void GUI_App::window_pos_sanitize(wxTopLevelWindow* window)
-{
-    const auto display_idx = wxDisplay::GetFromWindow(window);
-    if (display_idx == wxNOT_FOUND) { return; }
-
-    const auto display = wxDisplay(display_idx).GetClientArea();
-
-    auto metrics = WindowMetrics::from_window(window);
-
-    metrics.sanitize_for_display(display);
-    if (window->GetScreenRect() != metrics.get_rect()) {
-        window->SetSize(metrics.get_rect());
-    }
-}
-
 // select language from the list of installed languages
 bool GUI_App::select_language(  wxArrayString & names,
                                 wxArrayLong & identifiers)
@@ -459,7 +418,7 @@ bool GUI_App::select_language(  wxArrayString & names,
     {
         m_wxLocale = new wxLocale;
         m_wxLocale->Init(identifiers[index]);
-		m_wxLocale->AddCatalogLookupPathPrefix(wxString::FromUTF8(localization_dir()));
+		m_wxLocale->AddCatalogLookupPathPrefix(from_u8(localization_dir()));
         m_wxLocale->AddCatalog(/*GetAppName()*/"Slic3r++");
 		//FIXME This is a temporary workaround, the correct solution is to switch to "C" locale during file import / export only.
 		wxSetlocale(LC_NUMERIC, "C");
@@ -487,7 +446,7 @@ bool GUI_App::load_language()
         {
             m_wxLocale = new wxLocale;
             m_wxLocale->Init(identifiers[i]);
-			m_wxLocale->AddCatalogLookupPathPrefix(wxString::FromUTF8(localization_dir()));
+			m_wxLocale->AddCatalogLookupPathPrefix(from_u8(localization_dir()));
             m_wxLocale->AddCatalog(/*GetAppName()*/"Slic3r++");
 			//FIXME This is a temporary workaround, the correct solution is to switch to "C" locale during file import / export only.
             wxSetlocale(LC_NUMERIC, "C");
@@ -515,7 +474,7 @@ void GUI_App::get_installed_languages(wxArrayString & names, wxArrayLong & ident
     names.Clear();
     identifiers.Clear();
 
-	wxDir dir(wxString::FromUTF8(localization_dir()));
+	wxDir dir(from_u8(localization_dir()));
     wxString filename;
     const wxLanguageInfo * langinfo;
     wxString name = wxLocale::GetLanguageName(wxLANGUAGE_DEFAULT);
@@ -551,21 +510,23 @@ Tab* GUI_App::get_tab(Preset::Type type)
     return nullptr;
 }
 
-ConfigMenuIDs GUI_App::get_view_mode()
+ConfigOptionMode GUI_App::get_mode()
 {
     if (!app_config->has("view_mode"))
-        return ConfigMenuModeSimple;
+        return comSimple;
 
     const auto mode = app_config->get("view_mode");
-    return mode == "expert" ? ConfigMenuModeExpert : 
-           mode == "simple" ? ConfigMenuModeSimple : ConfigMenuModeAdvanced;
+    return mode == "expert" ? comExpert : 
+           mode == "simple" ? comSimple : comAdvanced;
 }
 
-ConfigOptionMode GUI_App::get_opt_mode()  {
-    const ConfigMenuIDs mode = wxGetApp().get_view_mode();
-
-    return  mode == ConfigMenuModeSimple ? comSimple :
-            mode == ConfigMenuModeExpert ? comExpert : comAdvanced;
+void GUI_App::save_mode(const /*ConfigOptionMode*/int mode) 
+{
+    const std::string mode_str = mode == comExpert ? "expert" :
+                                 mode == comSimple ? "simple" : "advanced";
+    app_config->set("view_mode", mode_str);
+    app_config->save(); 
+    update_mode();
 }
 
 // Update view mode according to selected menu
@@ -573,12 +534,16 @@ void GUI_App::update_mode()
 {
     wxWindowUpdateLocker noUpdates(&sidebar());
 
-    ConfigMenuIDs mode = wxGetApp().get_view_mode();
+    const ConfigOptionMode mode = wxGetApp().get_mode();
 
-    obj_list()->get_sizer()->Show(mode == ConfigMenuModeExpert);
+    obj_list()->get_sizer()->Show(mode > comSimple);
     sidebar().set_mode_value(mode);
-//    sidebar().show_buttons(mode == ConfigMenuModeExpert);
+//    sidebar().show_buttons(mode == comExpert);
+    obj_list()->unselect_objects();
     obj_list()->update_selections();
+    obj_list()->update_object_menu();
+
+    sidebar().update_mode_sizer(mode);
 
     sidebar().Layout();
 
@@ -593,26 +558,26 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
     auto local_menu = new wxMenu();
     wxWindowID config_id_base = wxWindow::NewControlId((int)ConfigMenuCnt);
 
-    const auto config_wizard_name = _(ConfigWizard::name().wx_str());
+    const auto config_wizard_name = _(ConfigWizard::name(true).wx_str());
     const auto config_wizard_tooltip = wxString::Format(_(L("Run %s")), config_wizard_name);
     // Cmd+, is standard on OS X - what about other operating systems?
     local_menu->Append(config_id_base + ConfigMenuWizard, config_wizard_name + dots, config_wizard_tooltip);
-    local_menu->Append(config_id_base + ConfigMenuSnapshots, _(L("Configuration Snapshots")) + dots, _(L("Inspect / activate configuration snapshots")));
-    local_menu->Append(config_id_base + ConfigMenuTakeSnapshot, _(L("Take Configuration Snapshot")), _(L("Capture a configuration snapshot")));
+    local_menu->Append(config_id_base + ConfigMenuSnapshots, _(L("&Configuration Snapshots")) + dots, _(L("Inspect / activate configuration snapshots")));
+    local_menu->Append(config_id_base + ConfigMenuTakeSnapshot, _(L("Take Configuration &Snapshot")), _(L("Capture a configuration snapshot")));
     // 	local_menu->Append(config_id_base + ConfigMenuUpdate, 		_(L("Check for updates")), 					_(L("Check for configuration updates")));
     local_menu->AppendSeparator();
-    local_menu->Append(config_id_base + ConfigMenuPreferences, _(L("Preferences")) + dots + "\tCtrl+P", _(L("Application preferences")));
+    local_menu->Append(config_id_base + ConfigMenuPreferences, _(L("&Preferences")) + dots + "\tCtrl+P", _(L("Application preferences")));
     local_menu->AppendSeparator();
     auto mode_menu = new wxMenu();
     mode_menu->AppendRadioItem(config_id_base + ConfigMenuModeSimple, _(L("Simple")), _(L("Simple View Mode")));
     mode_menu->AppendRadioItem(config_id_base + ConfigMenuModeAdvanced, _(L("Advanced")), _(L("Advanced View Mode")));
     mode_menu->AppendRadioItem(config_id_base + ConfigMenuModeExpert, _(L("Expert")), _(L("Expert View Mode")));
-    mode_menu->Check(config_id_base + get_view_mode(), true);
+    mode_menu->Check(config_id_base + ConfigMenuModeSimple + get_mode(), true);
     local_menu->AppendSubMenu(mode_menu, _(L("Mode")), _(L("Slic3r View Mode")));
     local_menu->AppendSeparator();
-    local_menu->Append(config_id_base + ConfigMenuLanguage, _(L("Change Application Language")));
+    local_menu->Append(config_id_base + ConfigMenuLanguage, _(L("Change Application &Language")));
     local_menu->AppendSeparator();
-    local_menu->Append(config_id_base + ConfigMenuFlashFirmware, _(L("Flash printer firmware")), _(L("Upload a firmware image into an Arduino based printer")));
+    local_menu->Append(config_id_base + ConfigMenuFlashFirmware, _(L("Flash printer &firmware")), _(L("Upload a firmware image into an Arduino based printer")));
     // TODO: for when we're able to flash dictionaries
     // local_menu->Append(config_id_base + FirmwareMenuDict,  _(L("Flash language file")),    _(L("Upload a language dictionary file into a Prusa printer")));
 
@@ -677,11 +642,7 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
     });
     mode_menu->Bind(wxEVT_MENU, [this, config_id_base](wxEvent& event) {
         int id_mode = event.GetId() - config_id_base;
-        std::string mode = id_mode == ConfigMenuModeExpert ? "expert" :
-                           id_mode == ConfigMenuModeSimple ? "simple" : "advanced";
-        app_config->set("view_mode", mode);
-        app_config->save();
-        update_mode();
+        save_mode(id_mode - ConfigMenuModeSimple);
     });
     menu->Append(local_menu, _(L("&Configuration")));
 }
@@ -717,13 +678,6 @@ bool GUI_App::checked_tab(Tab* tab)
     return ret;
 }
 
-void GUI_App::delete_tab_from_list(Tab* tab)
-{
-    std::vector<Tab *>::iterator itr = find(tabs_list.begin(), tabs_list.end(), tab);
-    if (itr != tabs_list.end())
-        tabs_list.erase(itr);
-}
-
 // Update UI / Tabs to reflect changes in the currently loaded presets
 void GUI_App::load_current_presets()
 {
@@ -737,6 +691,26 @@ void GUI_App::load_current_presets()
 		}
 }
 
+void GUI_App::clear_tabs_list()
+{  
+    for (auto tab : tabs_list) {
+        tab->Destroy();
+        tab = nullptr;
+    }
+    tabs_list.clear();
+}
+
+#ifdef __APPLE__
+// wxWidgets override to get an event on open files.
+void GUI_App::MacOpenFiles(const wxArrayString &fileNames)
+{
+    std::vector<std::string> files;
+    for (size_t i = 0; i < fileNames.GetCount(); ++ i)
+        files.emplace_back(fileNames[i].ToUTF8().data());
+    this->plater()->load_files(files, true, true);
+}
+#endif /* __APPLE */
+
 Sidebar& GUI_App::sidebar()
 {
     return plater_->sidebar();
@@ -744,7 +718,8 @@ Sidebar& GUI_App::sidebar()
 
 ObjectManipulation* GUI_App::obj_manipul()
 {
-    return sidebar().obj_manipul();
+    // If this method is called before plater_ has been initialized, return nullptr (to avoid a crash)
+    return (plater_ != nullptr) ? sidebar().obj_manipul() : nullptr;
 }
 
 ObjectSettings* GUI_App::obj_settings()
@@ -770,6 +745,48 @@ ModelObjectPtrs* GUI_App::model_objects()
 wxNotebook* GUI_App::tab_panel() const
 {
     return mainframe->m_tabpanel;
+}
+
+void GUI_App::window_pos_save(wxTopLevelWindow* window, const std::string &name)
+{
+    if (name.empty()) { return; }
+    const auto config_key = (boost::format("window_%1%") % name).str();
+
+    WindowMetrics metrics = WindowMetrics::from_window(window);
+    app_config->set(config_key, metrics.serialize());
+    app_config->save();
+}
+
+void GUI_App::window_pos_restore(wxTopLevelWindow* window, const std::string &name)
+{
+    if (name.empty()) { return; }
+    const auto config_key = (boost::format("window_%1%") % name).str();
+
+    if (! app_config->has(config_key)) { return; }
+
+    auto metrics = WindowMetrics::deserialize(app_config->get(config_key));
+    if (! metrics) { return; }
+
+    window->SetSize(metrics->get_rect());
+    window->Maximize(metrics->get_maximized());
+}
+
+void GUI_App::window_pos_sanitize(wxTopLevelWindow* window)
+{
+    unsigned display_idx = wxDisplay::GetFromWindow(window);
+    wxRect display;
+    if (display_idx == wxNOT_FOUND) {
+        display = wxDisplay(0u).GetClientArea();
+        window->Move(display.GetTopLeft());
+    } else {
+        display = wxDisplay(display_idx).GetClientArea();
+    }
+
+    auto metrics = WindowMetrics::from_window(window);
+    metrics.sanitize_for_display(display);
+    if (window->GetScreenRect() != metrics.get_rect()) {
+        window->SetSize(metrics.get_rect());
+    }
 }
 
 // static method accepting a wxWindow object as first parameter

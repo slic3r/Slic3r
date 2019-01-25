@@ -27,7 +27,7 @@
 namespace Slic3r {
 namespace GUI {
 
-    View3D::View3D(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSlicingProcess* process)
+View3D::View3D(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSlicingProcess* process)
     : m_canvas_widget(nullptr)
     , m_canvas(nullptr)
 #if !ENABLE_IMGUI
@@ -69,7 +69,9 @@ bool View3D::init(wxWindow* parent, Model* model, DynamicPrintConfig* config, Ba
     m_canvas->set_config(config);
     m_canvas->enable_gizmos(true);
     m_canvas->enable_toolbar(true);
+#if !ENABLE_REWORKED_BED_SHAPE_CHANGE
     m_canvas->enable_force_zoom_to_bed(true);
+#endif // !ENABLE_REWORKED_BED_SHAPE_CHANGE
 
 #if !ENABLE_IMGUI
     m_gizmo_widget = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
@@ -107,7 +109,9 @@ void View3D::set_bed_shape(const Pointfs& shape)
     if (m_canvas != nullptr)
     {
         m_canvas->set_bed_shape(shape);
+#if !ENABLE_REWORKED_BED_SHAPE_CHANGE
         m_canvas->zoom_to_bed();
+#endif // !ENABLE_REWORKED_BED_SHAPE_CHANGE
     }
 }
 
@@ -685,29 +689,24 @@ void Preview::load_print_as_fff()
     // we require that there's at least one object and the posSlice step
     // is performed on all of them(this ensures that _shifted_copies was
     // populated and we know the number of layers)
-    unsigned int n_layers = 0;
+    bool has_layers = false;
     const Print *print = m_process->fff_print();
-    if (print->is_step_done(posSlice))
-    {
-        std::set<float> zs;
+    if (print->is_step_done(posSlice)) {
         for (const PrintObject* print_object : print->objects())
-        {
-            const LayerPtrs& layers = print_object->layers();
-            const SupportLayerPtrs& support_layers = print_object->support_layers();
-            for (const Layer* layer : layers)
-            {
-                zs.insert(layer->print_z);
+            if (! print_object->layers().empty()) {
+                has_layers = true;
+                break;
             }
-            for (const SupportLayer* layer : support_layers)
-            {
-                zs.insert(layer->print_z);
+    }
+	if (print->is_step_done(posSupportMaterial)) {
+        for (const PrintObject* print_object : print->objects())
+            if (! print_object->support_layers().empty()) {
+                has_layers = true;
+                break;
             }
-        }
-
-        n_layers = (unsigned int)zs.size();
     }
 
-    if (n_layers == 0)
+    if (! has_layers)
     {
         reset_sliders();
         m_canvas->reset_legend_texture();
@@ -756,30 +755,20 @@ void Preview::load_print_as_fff()
     if (IsShown())
     {
         if (gcode_preview_data_valid)
-        {
+            // Load the real G-code preview.
             m_canvas->load_gcode_preview(*m_gcode_preview_data, colors);
-            show_hide_ui_elements("full");
-
-            // recalculates zs and update sliders accordingly
-            n_layers = (unsigned int)m_canvas->get_current_print_zs(true).size();
-            if (n_layers == 0)
-            {
-                // all layers filtered out
-                reset_sliders();
-                m_canvas_widget->Refresh();
-            }
-        } 
         else
-        {
-            // load skirt and brim
+            // Load the initial preview based on slices, not the final G-code.
             m_canvas->load_preview(colors);
-            show_hide_ui_elements("simple");
-        }
-
-
-        if (n_layers > 0)
-            update_sliders(m_canvas->get_current_print_zs(true));
-
+        show_hide_ui_elements(gcode_preview_data_valid ? "full" : "simple");
+        // recalculates zs and update sliders accordingly
+        std::vector<double> zs = m_canvas->get_current_print_zs(true);
+        if (zs.empty()) {
+            // all layers filtered out
+            reset_sliders();
+            m_canvas_widget->Refresh();
+        } else
+            update_sliders(zs);
         m_loaded = true;
     }
 }

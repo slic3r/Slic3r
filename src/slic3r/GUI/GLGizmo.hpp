@@ -134,7 +134,7 @@ public:
     void stop_dragging();
     bool is_dragging() const { return m_dragging; }
 
-    void update(const UpdateData& data);
+    void update(const UpdateData& data, const GLCanvas3D::Selection& selection);
 
     void render(const GLCanvas3D::Selection& selection) const { on_render(selection); }
     void render_for_picking(const GLCanvas3D::Selection& selection) const { on_render_for_picking(selection); }
@@ -158,7 +158,7 @@ protected:
     virtual void on_disable_grabber(unsigned int id) {}
     virtual void on_start_dragging(const GLCanvas3D::Selection& selection) {}
     virtual void on_stop_dragging() {}
-    virtual void on_update(const UpdateData& data) = 0;
+    virtual void on_update(const UpdateData& data, const GLCanvas3D::Selection& selection) = 0;
     virtual void on_render(const GLCanvas3D::Selection& selection) const = 0;
     virtual void on_render_for_picking(const GLCanvas3D::Selection& selection) const = 0;
 
@@ -221,7 +221,7 @@ protected:
     virtual bool on_init();
     virtual std::string on_get_name() const { return ""; }
     virtual void on_start_dragging(const GLCanvas3D::Selection& selection);
-    virtual void on_update(const UpdateData&  data);
+    virtual void on_update(const UpdateData& data, const GLCanvas3D::Selection& selection);
     virtual void on_render(const GLCanvas3D::Selection& selection) const;
     virtual void on_render_for_picking(const GLCanvas3D::Selection& selection) const;
 
@@ -234,9 +234,9 @@ private:
     void render_grabber(const BoundingBoxf3& box) const;
     void render_grabber_extension(const BoundingBoxf3& box, bool picking) const;
 
-    void transform_to_local() const;
+    void transform_to_local(const GLCanvas3D::Selection& selection) const;
     // returns the intersection of the mouse ray with the plane perpendicular to the gizmo axis, in local coordinate
-    Vec3d mouse_position_in_local_plane(const Linef3& mouse_ray) const;
+    Vec3d mouse_position_in_local_plane(const Linef3& mouse_ray, const GLCanvas3D::Selection& selection) const;
 };
 
 class GLGizmoRotate3D : public GLGizmoBase
@@ -279,11 +279,11 @@ protected:
     }
     virtual void on_start_dragging(const GLCanvas3D::Selection& selection);
     virtual void on_stop_dragging();
-    virtual void on_update(const UpdateData& data)
+    virtual void on_update(const UpdateData& data, const GLCanvas3D::Selection& selection)
     {
         for (GLGizmoRotate& g : m_gizmos)
         {
-            g.update(data);
+            g.update(data, selection);
         }
     }
     virtual void on_render(const GLCanvas3D::Selection& selection) const;
@@ -328,7 +328,7 @@ protected:
     virtual std::string on_get_name() const;
     virtual bool on_is_activable(const GLCanvas3D::Selection& selection) const { return !selection.is_wipe_tower(); }
     virtual void on_start_dragging(const GLCanvas3D::Selection& selection);
-    virtual void on_update(const UpdateData& data);
+    virtual void on_update(const UpdateData& data, const GLCanvas3D::Selection& selection);
     virtual void on_render(const GLCanvas3D::Selection& selection) const;
     virtual void on_render_for_picking(const GLCanvas3D::Selection& selection) const;
 
@@ -375,7 +375,7 @@ protected:
     virtual std::string on_get_name() const;
     virtual void on_start_dragging(const GLCanvas3D::Selection& selection);
     virtual void on_stop_dragging();
-    virtual void on_update(const UpdateData& data);
+    virtual void on_update(const UpdateData& data, const GLCanvas3D::Selection& selection);
     virtual void on_render(const GLCanvas3D::Selection& selection) const;
     virtual void on_render_for_picking(const GLCanvas3D::Selection& selection) const;
 
@@ -403,6 +403,9 @@ private:
 
     // This holds information to decide whether recalculation is necessary:
     std::vector<Transform3d> m_volumes_matrices;
+    std::vector<ModelVolume::Type> m_volumes_types;
+    Vec3d m_first_instance_scale;
+    Vec3d m_first_instance_mirror;
 
     std::vector<PlaneData> m_planes;
     mutable Vec3d m_starting_center;
@@ -423,7 +426,7 @@ protected:
     virtual std::string on_get_name() const;
     virtual bool on_is_activable(const GLCanvas3D::Selection& selection) const;
     virtual void on_start_dragging(const GLCanvas3D::Selection& selection);
-    virtual void on_update(const UpdateData& data) {}
+    virtual void on_update(const UpdateData& data, const GLCanvas3D::Selection& selection) {}
     virtual void on_render(const GLCanvas3D::Selection& selection) const;
     virtual void on_render_for_picking(const GLCanvas3D::Selection& selection) const;
     virtual void on_set_state()
@@ -479,7 +482,7 @@ public:
 
 private:
     bool on_init();
-    void on_update(const UpdateData& data);
+    void on_update(const UpdateData& data, const GLCanvas3D::Selection& selection);
     virtual void on_render(const GLCanvas3D::Selection& selection) const;
     virtual void on_render_for_picking(const GLCanvas3D::Selection& selection) const;
 
@@ -551,7 +554,7 @@ protected:
     virtual void on_set_state();
     virtual bool on_is_activable(const GLCanvas3D::Selection& selection) const;
     virtual void on_start_dragging(const GLCanvas3D::Selection& selection);
-    virtual void on_update(const UpdateData& data);
+    virtual void on_update(const UpdateData& data, const GLCanvas3D::Selection& selection);
     virtual void on_render(const GLCanvas3D::Selection& selection) const;
     virtual void on_render_for_picking(const GLCanvas3D::Selection& selection) const;
 

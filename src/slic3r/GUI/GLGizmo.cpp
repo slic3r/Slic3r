@@ -228,10 +228,10 @@ void GLGizmoBase::stop_dragging()
     on_stop_dragging();
 }
 
-void GLGizmoBase::update(const UpdateData& data)
+void GLGizmoBase::update(const UpdateData& data, const GLCanvas3D::Selection& selection)
 {
     if (m_hover_id != -1)
-        on_update(data);
+        on_update(data, selection);
 }
 
 float GLGizmoBase::picking_color_component(unsigned int id) const
@@ -368,9 +368,9 @@ void GLGizmoRotate::on_start_dragging(const GLCanvas3D::Selection& selection)
     m_snap_fine_out_radius = m_snap_fine_in_radius + m_radius * ScaleLongTooth;
 }
 
-void GLGizmoRotate::on_update(const UpdateData& data)
+void GLGizmoRotate::on_update(const UpdateData& data, const GLCanvas3D::Selection& selection)
 {
-    Vec2d mouse_pos = to_2d(mouse_position_in_local_plane(data.mouse_ray));
+    Vec2d mouse_pos = to_2d(mouse_position_in_local_plane(data.mouse_ray, selection));
 
     Vec2d orig_dir = Vec2d::UnitX();
     Vec2d new_dir = mouse_pos.normalized();
@@ -409,9 +409,6 @@ void GLGizmoRotate::on_render(const GLCanvas3D::Selection& selection) const
         return;
 
     const BoundingBoxf3& box = selection.get_bounding_box();
-#if !ENABLE_WORLD_ROTATIONS
-    bool single_selection = selection.is_single_full_instance() || selection.is_single_modifier() || selection.is_single_volume();
-#endif // !ENABLE_WORLD_ROTATIONS
 
     std::string axis;
     switch (m_axis)
@@ -421,13 +418,9 @@ void GLGizmoRotate::on_render(const GLCanvas3D::Selection& selection) const
     case Z: { axis = "Z"; break; }
     }
 
-#if ENABLE_WORLD_ROTATIONS
     if (!m_dragging && (m_hover_id == 0))
         set_tooltip(axis);
     else if (m_dragging)
-#else
-    if ((single_selection && (m_hover_id == 0)) || m_dragging)
-#endif // ENABLE_WORLD_ROTATIONS
         set_tooltip(axis + ": " + format((float)Geometry::rad2deg(m_angle), 4) + "\u00B0");
     else
     {
@@ -442,7 +435,7 @@ void GLGizmoRotate::on_render(const GLCanvas3D::Selection& selection) const
     ::glEnable(GL_DEPTH_TEST);
 
     ::glPushMatrix();
-    transform_to_local();
+    transform_to_local(selection);
 
     ::glLineWidth((m_hover_id != -1) ? 2.0f : 1.5f);
     ::glColor3fv((m_hover_id != -1) ? m_drag_color : m_highlight_color);
@@ -473,7 +466,7 @@ void GLGizmoRotate::on_render_for_picking(const GLCanvas3D::Selection& selection
 
     ::glPushMatrix();
 
-    transform_to_local();
+    transform_to_local(selection);
 
     const BoundingBoxf3& box = selection.get_bounding_box();
     render_grabbers_for_picking(box);
@@ -571,11 +564,7 @@ void GLGizmoRotate::render_angle() const
 
 void GLGizmoRotate::render_grabber(const BoundingBoxf3& box) const
 {
-#if ENABLE_WORLD_ROTATIONS
     double grabber_radius = (double)m_radius * (1.0 + (double)GrabberOffset);
-#else
-    double grabber_radius = (double)m_radius * (1.0 + (double)GrabberOffset) + 2.0 * (double)m_axis * (double)m_grabbers[0].get_half_size((float)box.max_size());
-#endif // ENABLE_WORLD_ROTATIONS
     m_grabbers[0].center = Vec3d(::cos(m_angle) * grabber_radius, ::sin(m_angle) * grabber_radius, 0.0);
     m_grabbers[0].angles(2) = m_angle;
 
@@ -635,9 +624,15 @@ void GLGizmoRotate::render_grabber_extension(const BoundingBoxf3& box, bool pick
         ::glDisable(GL_LIGHTING);
 }
 
-void GLGizmoRotate::transform_to_local() const
+void GLGizmoRotate::transform_to_local(const GLCanvas3D::Selection& selection) const
 {
     ::glTranslated(m_center(0), m_center(1), m_center(2));
+
+    if (selection.is_single_volume() || selection.is_single_modifier())
+    {
+        Transform3d orient_matrix = selection.get_volume(*selection.get_volume_idxs().begin())->get_instance_transformation().get_matrix(true, false, true, true);
+        ::glMultMatrixd(orient_matrix.data());
+    }
 
     switch (m_axis)
     {
@@ -662,7 +657,7 @@ void GLGizmoRotate::transform_to_local() const
     }
 }
 
-Vec3d GLGizmoRotate::mouse_position_in_local_plane(const Linef3& mouse_ray) const
+Vec3d GLGizmoRotate::mouse_position_in_local_plane(const Linef3& mouse_ray, const GLCanvas3D::Selection& selection) const
 {
     double half_pi = 0.5 * (double)PI;
 
@@ -689,6 +684,9 @@ Vec3d GLGizmoRotate::mouse_position_in_local_plane(const Linef3& mouse_ray) cons
         break;
     }
     }
+
+    if (selection.is_single_volume() || selection.is_single_modifier())
+        m = m * selection.get_volume(*selection.get_volume_idxs().begin())->get_instance_transformation().get_matrix(true, false, true, true).inverse();
 
     m.translate(-m_center);
 
@@ -739,7 +737,7 @@ bool GLGizmoRotate3D::on_init()
 
 std::string GLGizmoRotate3D::on_get_name() const
 {    
-    return L("Rotate");
+    return L("Rotate [R]");
 }
 
 void GLGizmoRotate3D::on_start_dragging(const GLCanvas3D::Selection& selection)
@@ -829,7 +827,7 @@ bool GLGizmoScale3D::on_init()
 
 std::string GLGizmoScale3D::on_get_name() const
 {
-    return L("Scale");
+    return L("Scale [S]");
 }
 
 void GLGizmoScale3D::on_start_dragging(const GLCanvas3D::Selection& selection)
@@ -841,7 +839,7 @@ void GLGizmoScale3D::on_start_dragging(const GLCanvas3D::Selection& selection)
     }
 }
 
-void GLGizmoScale3D::on_update(const UpdateData& data)
+void GLGizmoScale3D::on_update(const UpdateData& data, const GLCanvas3D::Selection& selection)
 {
     if ((m_hover_id == 0) || (m_hover_id == 1))
         do_scale_x(data);
@@ -1188,7 +1186,7 @@ bool GLGizmoMove3D::on_init()
 
 std::string GLGizmoMove3D::on_get_name() const
 {
-    return L("Move");
+    return L("Move [M]");
 }
 
 void GLGizmoMove3D::on_start_dragging(const GLCanvas3D::Selection& selection)
@@ -1209,7 +1207,7 @@ void GLGizmoMove3D::on_stop_dragging()
     m_displacement = Vec3d::Zero();
 }
 
-void GLGizmoMove3D::on_update(const UpdateData& data)
+void GLGizmoMove3D::on_update(const UpdateData& data, const GLCanvas3D::Selection& selection)
 {
     if (m_hover_id == 0)
         m_displacement(0) = calc_projection(data);
@@ -1418,7 +1416,7 @@ bool GLGizmoFlatten::on_init()
 
 std::string GLGizmoFlatten::on_get_name() const
 {
-    return L("Place on face");
+    return L("Place on face [F]");
 }
 
 bool GLGizmoFlatten::on_is_activable(const GLCanvas3D::Selection& selection) const
@@ -1502,7 +1500,7 @@ void GLGizmoFlatten::set_flattening_data(const ModelObject* model_object)
     bool object_changed = m_model_object != model_object;
     m_model_object = model_object;
 
-    if (object_changed && is_plane_update_necessary())
+    if (model_object && (object_changed || is_plane_update_necessary()))
         update_planes();
 }
 
@@ -1517,15 +1515,16 @@ void GLGizmoFlatten::update_planes()
         vol_ch.transform(vol->get_matrix());
         ch.merge(vol_ch);
     }
-
     ch = ch.convex_hull_3d();
-
-    const Vec3d& bb_size = ch.bounding_box().size();
-    double min_bb_face_area = std::min(bb_size(0) * bb_size(1), std::min(bb_size(0) * bb_size(2), bb_size(1) * bb_size(2)));
-
     m_planes.clear();
+    const Transform3d& inst_matrix = m_model_object->instances.front()->get_matrix(true);
 
-    // Now we'll go through all the facets and append Points of facets sharing the same normal:
+    // Following constants are used for discarding too small polygons.
+    const float minimal_area = 5.f; // in square mm (world coordinates)
+    const float minimal_side = 1.f; // mm
+
+    // Now we'll go through all the facets and append Points of facets sharing the same normal.
+    // This part is still performed in mesh coordinate system.
     const int num_of_facets = ch.stl.stats.number_of_facets;
     std::vector<int>  facet_queue(num_of_facets, 0);
     std::vector<bool> facet_visited(num_of_facets, false);
@@ -1561,63 +1560,76 @@ void GLGizmoFlatten::update_planes()
                 }
             }
         }
-        m_planes.back().normal = Vec3d((double)(*normal_ptr)(0), (double)(*normal_ptr)(1), (double)(*normal_ptr)(2));
+        m_planes.back().normal = normal_ptr->cast<double>();
 
-        // if this is a just a very small triangle, remove it to speed up further calculations (it would be rejected anyway):
+        // Now we'll transform all the points into world coordinates, so that the areas, angles and distances
+        // make real sense.
+        m_planes.back().vertices = transform(m_planes.back().vertices, inst_matrix);
+
+        // if this is a just a very small triangle, remove it to speed up further calculations (it would be rejected later anyway):
         if (m_planes.back().vertices.size() == 3 &&
-            ((m_planes.back().vertices[0] - m_planes.back().vertices[1]).norm() < 1.0
-            || (m_planes.back().vertices[0] - m_planes.back().vertices[2]).norm() < 1.0
-            || (m_planes.back().vertices[1] - m_planes.back().vertices[2]).norm() < 1.0))
+            ((m_planes.back().vertices[0] - m_planes.back().vertices[1]).norm() < minimal_side
+            || (m_planes.back().vertices[0] - m_planes.back().vertices[2]).norm() < minimal_side
+            || (m_planes.back().vertices[1] - m_planes.back().vertices[2]).norm() < minimal_side))
             m_planes.pop_back();
     }
 
-    const float minimal_area = 0.01f * (float)min_bb_face_area;
+    // Let's prepare transformation of the normal vector from mesh to instance coordinates.
+    Geometry::Transformation t(inst_matrix);
+    Vec3d scaling = t.get_scaling_factor();
+    t.set_scaling_factor(Vec3d(1./scaling(0), 1./scaling(1), 1./scaling(2)));
 
     // Now we'll go through all the polygons, transform the points into xy plane to process them:
     for (unsigned int polygon_id=0; polygon_id < m_planes.size(); ++polygon_id) {
         Pointf3s& polygon = m_planes[polygon_id].vertices;
         const Vec3d& normal = m_planes[polygon_id].normal;
 
+        // transform the normal according to the instance matrix:
+        Vec3d normal_transformed = t.get_matrix() * normal;
+
         // We are going to rotate about z and y to flatten the plane
         Eigen::Quaterniond q;
         Transform3d m = Transform3d::Identity();
-        m.matrix().block(0, 0, 3, 3) = q.setFromTwoVectors(normal, Vec3d::UnitZ()).toRotationMatrix();
+        m.matrix().block(0, 0, 3, 3) = q.setFromTwoVectors(normal_transformed, Vec3d::UnitZ()).toRotationMatrix();
         polygon = transform(polygon, m);
 
-        polygon = Slic3r::Geometry::convex_hull(polygon); // To remove the inner points
+        // Now to remove the inner points. We'll misuse Geometry::convex_hull for that, but since
+        // it works in fixed point representation, we will rescale the polygon to avoid overflows.
+        // And yes, it is a nasty thing to do. Whoever has time is free to refactor.
+        Vec3d bb_size = BoundingBoxf3(polygon).size();
+        float sf = std::min(1./bb_size(0), 1./bb_size(1));
+        Transform3d tr = Geometry::assemble_transform(Vec3d::Zero(), Vec3d::Zero(), Vec3d(sf, sf, 1.f));
+        polygon = transform(polygon, tr);
+        polygon = Slic3r::Geometry::convex_hull(polygon);
+        polygon = transform(polygon, tr.inverse());
 
-        // We will calculate area of the polygons and discard ones that are too small
-        // The limit is more forgiving in case the normal is in the direction of the coordinate axes
-        float area_threshold = (std::abs(normal(0)) > 0.999f || std::abs(normal(1)) > 0.999f || std::abs(normal(2)) > 0.999f) ? minimal_area : 10.0f * minimal_area;
+        // Calculate area of the polygons and discard ones that are too small
         float& area = m_planes[polygon_id].area;
         area = 0.f;
         for (unsigned int i = 0; i < polygon.size(); i++) // Shoelace formula
             area += polygon[i](0)*polygon[i + 1 < polygon.size() ? i + 1 : 0](1) - polygon[i + 1 < polygon.size() ? i + 1 : 0](0)*polygon[i](1);
         area = 0.5f * std::abs(area);
-        if (area < area_threshold) {
-            m_planes.erase(m_planes.begin()+(polygon_id--));
-            continue;
-        }
 
-        // We check the inner angles and discard polygons with angles smaller than the following threshold
-        const double angle_threshold = ::cos(10.0 * (double)PI / 180.0);
         bool discard = false;
+        if (area < minimal_area)
+            discard = true;
+        else {
+            // We also check the inner angles and discard polygons with angles smaller than the following threshold
+            const double angle_threshold = ::cos(10.0 * (double)PI / 180.0);
 
-        for (unsigned int i = 0; i < polygon.size(); ++i)
-        {
-            const Vec3d& prec = polygon[(i == 0) ? polygon.size() - 1 : i - 1];
-            const Vec3d& curr = polygon[i];
-            const Vec3d& next = polygon[(i == polygon.size() - 1) ? 0 : i + 1];
+            for (unsigned int i = 0; i < polygon.size(); ++i) {
+                const Vec3d& prec = polygon[(i == 0) ? polygon.size() - 1 : i - 1];
+                const Vec3d& curr = polygon[i];
+                const Vec3d& next = polygon[(i == polygon.size() - 1) ? 0 : i + 1];
 
-            if ((prec - curr).normalized().dot((next - curr).normalized()) > angle_threshold)
-            {
-                discard = true;
-                break;
+                if ((prec - curr).normalized().dot((next - curr).normalized()) > angle_threshold) {
+                    discard = true;
+                    break;
+                }
             }
         }
 
-        if (discard)
-        {
+        if (discard) {
             m_planes.erase(m_planes.begin() + (polygon_id--));
             continue;
         }
@@ -1667,13 +1679,13 @@ void GLGizmoFlatten::update_planes()
             polygon = points_out; // replace the coarse polygon with the smooth one that we just created
         }
 
-        // Transform back to 3D;
-        for (auto& b : polygon) {
-            b(2) += 0.1f; // raise a bit above the object surface to avoid flickering
-        }
 
-        m = m.inverse();
-        polygon = transform(polygon, m);
+        // Raise a bit above the object surface to avoid flickering:
+        for (auto& b : polygon)
+            b(2) += 0.1f;
+
+        // Transform back to 3D (and also back to mesh coordinates)
+        polygon = transform(polygon, inst_matrix.inverse() * m.inverse());
     }
 
     // We'll sort the planes by area and only keep the 254 largest ones (because of the picking pass limitations):
@@ -1682,12 +1694,16 @@ void GLGizmoFlatten::update_planes()
 
     // Planes are finished - let's save what we calculated it from:
     m_volumes_matrices.clear();
-    for (const ModelVolume* vol : m_model_object->volumes)
+    m_volumes_types.clear();
+    for (const ModelVolume* vol : m_model_object->volumes) {
         m_volumes_matrices.push_back(vol->get_matrix());
+        m_volumes_types.push_back(vol->type());
+    }
+    m_first_instance_scale = m_model_object->instances.front()->get_scaling_factor();
+    m_first_instance_mirror = m_model_object->instances.front()->get_mirror();
 }
 
-// Check if the bounding boxes of each volume's convex hull is the same as before
-// and that scaling and rotation has not changed. In that case we don't have to recalculate it.
+
 bool GLGizmoFlatten::is_plane_update_necessary() const
 {
     if (m_state != On || !m_model_object || m_model_object->instances.empty())
@@ -1696,8 +1712,14 @@ bool GLGizmoFlatten::is_plane_update_necessary() const
     if (m_model_object->volumes.size() != m_volumes_matrices.size())
         return true;
 
+    // We want to recalculate when the scale changes - some planes could (dis)appear.
+    if (! m_model_object->instances.front()->get_scaling_factor().isApprox(m_first_instance_scale)
+     || ! m_model_object->instances.front()->get_mirror().isApprox(m_first_instance_mirror))
+        return true;
+
     for (unsigned int i=0; i < m_model_object->volumes.size(); ++i)
-        if (! m_model_object->volumes[i]->get_matrix().isApprox(m_volumes_matrices[i]))
+        if (! m_model_object->volumes[i]->get_matrix().isApprox(m_volumes_matrices[i])
+         || m_model_object->volumes[i]->type() != m_volumes_types[i])
             return true;
 
     return false;
@@ -1723,7 +1745,7 @@ GLGizmoSlaSupports::GLGizmoSlaSupports(GLCanvas3D& parent)
     if (m_quadric != nullptr)
         // using GLU_FILL does not work when the instance's transformation
         // contains mirroring (normals are reverted)
-        ::gluQuadricDrawStyle(m_quadric, GLU_SILHOUETTE);
+        ::gluQuadricDrawStyle(m_quadric, GLU_FILL);
 #endif // ENABLE_SLA_SUPPORT_GIZMO_MOD
 }
 
@@ -1895,8 +1917,8 @@ void GLGizmoSlaSupports::render_grabbers(const GLCanvas3D::Selection& selection,
         ::glPushMatrix();
         ::glLoadIdentity();
         ::glTranslated(grabber_world_position(0), grabber_world_position(1), grabber_world_position(2) + z_shift);
-        ::gluQuadricDrawStyle(m_quadric, GLU_SILHOUETTE);
-        ::gluSphere(m_quadric, 0.75, 64, 36);
+        const float diameter = 0.8f;
+        ::gluSphere(m_quadric, diameter/2.f, 64, 36);
         ::glPopMatrix();
     }
 
@@ -1945,7 +1967,7 @@ void GLGizmoSlaSupports::render_grabbers(bool picking) const
             GLUquadricObj *quadric;
             quadric = ::gluNewQuadric();
             ::gluQuadricDrawStyle(quadric, GLU_FILL );
-            ::gluSphere( quadric , 0.75f, 64 , 32 );
+            ::gluSphere( quadric , 0.4, 64 , 32 );
             ::gluDeleteQuadric(quadric);
             ::glPopMatrix();
             if (!picking)
@@ -2112,7 +2134,7 @@ void GLGizmoSlaSupports::delete_current_grabber(bool delete_all)
     m_parent.post_event(SimpleEvent(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS));
 }
 
-void GLGizmoSlaSupports::on_update(const UpdateData& data)
+void GLGizmoSlaSupports::on_update(const UpdateData& data, const GLCanvas3D::Selection& selection)
 {
     if (m_hover_id != -1 && data.mouse_pos) {
         Vec3f new_pos;
@@ -2206,9 +2228,8 @@ bool GLGizmoSlaSupports::on_is_selectable() const
 }
 
 std::string GLGizmoSlaSupports::on_get_name() const
-
 {
-    return L("SLA Support Points");
+    return L("SLA Support Points [L]");
 }
 
 
@@ -2319,7 +2340,7 @@ bool GLGizmoCut::on_init()
 
 std::string GLGizmoCut::on_get_name() const
 {
-    return L("Cut");
+    return L("Cut [C]");
 }
 
 void GLGizmoCut::on_set_state()
@@ -2354,7 +2375,7 @@ void GLGizmoCut::on_start_dragging(const GLCanvas3D::Selection& selection)
     m_drag_center(2) = m_cut_z;
 }
 
-void GLGizmoCut::on_update(const UpdateData& data)
+void GLGizmoCut::on_update(const UpdateData& data, const GLCanvas3D::Selection& selection)
 {
     if (m_hover_id != -1) {
         set_cut_z(m_start_z + calc_projection(data.mouse_ray));
@@ -2433,11 +2454,13 @@ void GLGizmoCut::on_render_input_window(float x, float y, const GLCanvas3D::Sele
     m_imgui->checkbox(_(L("Keep lower part")), m_keep_lower);
     m_imgui->checkbox(_(L("Rotate lower part upwards")), m_rotate_lower);
 
+    m_imgui->disabled_begin(!m_keep_upper && !m_keep_lower);
     const bool cut_clicked = m_imgui->button(_(L("Perform cut")));
+    m_imgui->disabled_end();
 
     m_imgui->end();
 
-    if (cut_clicked) {
+    if (cut_clicked && (m_keep_upper || m_keep_lower)) {
         perform_cut(selection);
     }
 }

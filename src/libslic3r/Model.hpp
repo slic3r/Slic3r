@@ -170,12 +170,8 @@ public:
     // Variation of a layer thickness for spans of Z coordinates.
     t_layer_height_ranges   layer_height_ranges;
     // Profile of increasing z to a layer height, to be linearly interpolated when calculating the layers.
-    // The pairs of <z, layer_height> are packed into a 1D array to simplify handling by the Perl XS.
+    // The pairs of <z, layer_height> are packed into a 1D array.
     std::vector<coordf_t>   layer_height_profile;
-    // layer_height_profile is initialized when the layer editing mode is entered.
-    // Only if the user really modified the layer height, layer_height_profile_valid is set
-    // and used subsequently by the PrintObject.
-    bool                    layer_height_profile_valid;
 
     // This vector holds position of selected support points for SLA. The data are
     // saved in mesh coordinates to allow using them for several instances.
@@ -223,6 +219,10 @@ public:
     BoundingBoxf3 raw_bounding_box() const;
     // A snug bounding box around the transformed non-modifier object volumes.
     BoundingBoxf3 instance_bounding_box(size_t instance_idx, bool dont_translate = false) const;
+#if ENABLE_VOLUMES_CENTERING_FIXES
+    // Bounding box of non-transformed (non-rotated, non-scaled, non-translated) sum of all object volumes.
+    BoundingBoxf3 full_raw_mesh_bounding_box() const;
+#endif // ENABLE_VOLUMES_CENTERING_FIXES
     void center_around_origin();
     void ensure_on_bed();
     void translate_instances(const Vec3d& vector);
@@ -261,7 +261,7 @@ protected:
     void        set_model(Model *model) { m_model = model; }
 
 private:
-    ModelObject(Model *model) : layer_height_profile_valid(false), m_model(model), origin_translation(Vec3d::Zero()), m_bounding_box_valid(false) {}
+    ModelObject(Model *model) : m_model(model), origin_translation(Vec3d::Zero()), m_bounding_box_valid(false) {}
     ~ModelObject();
 
     /* To be able to return an object from own copy / clone methods. Hopefully the compiler will do the "Copy elision" */
@@ -318,6 +318,9 @@ public:
     // Extract the current extruder ID based on this ModelVolume's config and the parent ModelObject's config.
     // Extruder ID is only valid for FFF. Returns -1 for SLA or if the extruder ID is not applicable (support volumes).
     int                 extruder_id() const;
+
+    void                set_splittable(const int val) { m_is_splittable = val; }
+    int                 is_splittable() const { return m_is_splittable; }
 
     // Split this volume, append the result to the object owning this volume.
     // Return the number of volumes created from this one.
@@ -390,6 +393,12 @@ private:
     // The convex hull of this model's mesh.
     TriangleMesh             m_convex_hull;
     Geometry::Transformation m_transformation;
+
+    // flag to optimize the checking if the volume is splittable
+    //     -1   ->   is unknown value (before first cheking)
+    //      0   ->   is not splittable
+    //      1   ->   is splittable
+    int                     m_is_splittable {-1};
 
     ModelVolume(ModelObject *object, const TriangleMesh &mesh) : mesh(mesh), m_type(MODEL_PART), object(object)
     {

@@ -914,23 +914,79 @@ Transform3d assemble_transform(const Vec3d& translation, const Vec3d& rotation, 
 
 Vec3d extract_euler_angles(const Eigen::Matrix<double, 3, 3, Eigen::DontAlign>& rotation_matrix)
 {
-    // see: https://www.learnopencv.com/rotation-matrix-to-euler-angles/
-    double sy = ::sqrt(sqr(rotation_matrix(0, 0)) + sqr(rotation_matrix(1, 0)));
+#if ENABLE_NEW_EULER_ANGLES
+    // reference: http://www.gregslabaugh.net/publications/euler.pdf
+    auto is_approx = [](double value, double test_value) -> bool { return std::abs(value - test_value) < EPSILON; };
 
-    Vec3d angles = Vec3d::Zero();
-
-    if (sy >= 1e-6)
+    Vec3d angles1 = Vec3d::Zero();
+    Vec3d angles2 = Vec3d::Zero();
+    if (is_approx(std::abs(rotation_matrix(2, 0)), 1.0))
     {
-        angles(0) = ::atan2(rotation_matrix(2, 1), rotation_matrix(2, 2));
-        angles(1) = ::atan2(-rotation_matrix(2, 0), sy);
-        angles(2) = ::atan2(rotation_matrix(1, 0), rotation_matrix(0, 0));
+        angles1(0) = 0.0;
+        if (rotation_matrix(2, 0) > 0.0) // == +1.0
+        {
+            angles1(1) = 0.5 * (double)PI;
+            angles1(2) = angles1(0) + ::atan2(rotation_matrix(0, 1), rotation_matrix(0, 2));
+        }
+        else // == -1.0
+        {
+            angles1(1) = 0.5 * (double)PI;
+            angles1(2) = -angles1(0) - ::atan2(rotation_matrix(0, 1), rotation_matrix(0, 2));
+        }
+        angles2 = angles1;
     }
     else
     {
-        angles(1) = 0.0;
-        angles(1) = ::atan2(-rotation_matrix(2, 0), sy);
-        angles(2) = (angles(1) >-0.0) ? ::atan2(rotation_matrix(1, 2), rotation_matrix(1, 1)) : ::atan2(-rotation_matrix(1, 2), rotation_matrix(1, 1));
+        angles1(1) = -::asin(rotation_matrix(2, 0));
+        double inv_cos1 = 1.0 / ::cos(angles1(1));
+        angles1(0) = ::atan2(rotation_matrix(2, 1) * inv_cos1, rotation_matrix(2, 2) * inv_cos1);
+        angles1(2) = ::atan2(rotation_matrix(1, 0) * inv_cos1, rotation_matrix(0, 0) * inv_cos1);
+
+        angles2(1) = (double)PI - angles1(1);
+        double inv_cos2 = 1.0 / ::cos(angles2(1));
+        angles2(0) = ::atan2(rotation_matrix(2, 1) * inv_cos2, rotation_matrix(2, 2) * inv_cos2);
+        angles2(2) = ::atan2(rotation_matrix(1, 0) * inv_cos2, rotation_matrix(0, 0) * inv_cos2);
     }
+
+    // The following euristic is the best found up to now (in the sense that it works fine with the greatest number of edge use-cases)
+    // but there are other use-cases were it does not
+    // We need to improve it
+    double min_1 = angles1.cwiseAbs().minCoeff();
+    double min_2 = angles2.cwiseAbs().minCoeff();
+    bool use_1 = (min_1 < min_2) || (is_approx(min_1, min_2) && (angles1.norm() <= angles2.norm()));
+
+    Vec3d angles = use_1 ? angles1 : angles2;
+#else
+    auto y_only = [](const Eigen::Matrix<double, 3, 3, Eigen::DontAlign>& matrix) -> bool {
+        return (matrix(0, 1) == 0.0) && (matrix(1, 0) == 0.0) && (matrix(1, 1) == 1.0) && (matrix(1, 2) == 0.0) && (matrix(2, 1) == 0.0);
+    };
+
+    // see: https://www.learnopencv.com/rotation-matrix-to-euler-angles/
+    double cy_abs = ::sqrt(sqr(rotation_matrix(0, 0)) + sqr(rotation_matrix(1, 0)));
+
+    Vec3d angles = Vec3d::Zero();
+
+    if (cy_abs >= 1e-6)
+    {
+        angles(0) = ::atan2(rotation_matrix(2, 1), rotation_matrix(2, 2));
+        angles(1) = ::atan2(-rotation_matrix(2, 0), cy_abs);
+        angles(2) = ::atan2(rotation_matrix(1, 0), rotation_matrix(0, 0));
+
+        // this is an hack to try to avoid this function to return "strange" values due to gimbal lock
+        if (y_only(rotation_matrix) && (angles(0) == (double)PI) && (angles(2) == (double)PI))
+        {
+            angles(0) = 0.0;
+            angles(1) = ::atan2(rotation_matrix(2, 0), cy_abs) - (double)PI;
+            angles(2) = 0.0;
+        }
+    }
+    else
+    {
+        angles(0) = 0.0;
+        angles(1) = ::atan2(-rotation_matrix(2, 0), cy_abs);
+        angles(2) = (angles(1) >= 0.0) ? ::atan2(rotation_matrix(1, 2), rotation_matrix(1, 1)) : ::atan2(-rotation_matrix(1, 2), rotation_matrix(1, 1));
+    }
+#endif // ENABLE_NEW_EULER_ANGLES
 
     return angles;
 }
@@ -968,13 +1024,18 @@ void Transformation::Flags::set(bool dont_translate, bool dont_rotate, bool dont
 }
 
 Transformation::Transformation()
+#if !ENABLE_VOLUMES_CENTERING_FIXES
     : m_offset(Vec3d::Zero())
     , m_rotation(Vec3d::Zero())
     , m_scaling_factor(Vec3d::Ones())
     , m_mirror(Vec3d::Ones())
     , m_matrix(Transform3d::Identity())
     , m_dirty(false)
+#endif // !ENABLE_VOLUMES_CENTERING_FIXES
 {
+#if ENABLE_VOLUMES_CENTERING_FIXES
+    reset();
+#endif // ENABLE_VOLUMES_CENTERING_FIXES
 }
 
 Transformation::Transformation(const Transform3d& transform)
@@ -1092,6 +1153,18 @@ void Transformation::set_from_transform(const Transform3d& transform)
 //    if (!m_matrix.isApprox(transform))
 //        std::cout << "something went wrong in extracting data from matrix" << std::endl;
 }
+
+#if ENABLE_VOLUMES_CENTERING_FIXES
+void Transformation::reset()
+{
+    m_offset = Vec3d::Zero();
+    m_rotation = Vec3d::Zero();
+    m_scaling_factor = Vec3d::Ones();
+    m_mirror = Vec3d::Ones();
+    m_matrix = Transform3d::Identity();
+    m_dirty = false;
+}
+#endif // ENABLE_VOLUMES_CENTERING_FIXES
 
 const Transform3d& Transformation::get_matrix(bool dont_translate, bool dont_rotate, bool dont_scale, bool dont_mirror) const
 {

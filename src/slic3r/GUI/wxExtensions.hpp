@@ -8,7 +8,9 @@
 #include <wx/collpane.h>
 #include <wx/wupdlock.h>
 #include <wx/button.h>
+#include <wx/sizer.h>
 #include <wx/slider.h>
+#include <wx/menu.h>
 
 #include <vector>
 #include <set>
@@ -274,6 +276,7 @@ public:
         else if (type == itInstance) {
             m_idx = parent->GetChildCount();
             m_name = wxString::Format("Instance_%d", m_idx+1);
+            set_part_action_icon();
         }
 	}
 
@@ -329,7 +332,7 @@ public:
 	{
 		if (GetChildCount() == 0)
 			return;
-		for (size_t id = GetChildCount() - 1; id >= 0; --id)
+		for (int id = int(GetChildCount()) - 1; id >= 0; --id)
 		{
 			if (m_children.Item(id)->GetChildCount() > 0)
 				m_children[id]->RemoveAllChildren();
@@ -755,6 +758,7 @@ protected:
     void    draw_thumb(wxDC& dc, const wxCoord& pos_coord, const SelectedSlider& selection);
     void    draw_thumbs(wxDC& dc, const wxCoord& lower_pos, const wxCoord& higher_pos);
     void    draw_ticks(wxDC& dc);
+    void    draw_colored_band(wxDC& dc);
     void    draw_one_layer_icon(wxDC& dc);
     void    draw_thumb_item(wxDC& dc, const wxPoint& pos, const SelectedSlider& selection);
     void    draw_info_line_with_icon(wxDC& dc, const wxPoint& pos, SelectedSlider selection);
@@ -851,6 +855,7 @@ public:
     void    OnLeaveBtn(wxMouseEvent& event) { enter_button(false); event.Skip(); }
 
     bool    IsLocked() const { return m_is_pushed; }
+    void    SetLock(bool lock);
 
 protected:
     void    enter_button(const bool enter);
@@ -862,8 +867,80 @@ private:
     wxBitmap    m_bmp_lock_off;
     wxBitmap    m_bmp_unlock_on;
     wxBitmap    m_bmp_unlock_off;
+};
 
-    int         m_lock_icon_dim;
+
+// ----------------------------------------------------------------------------
+// PrusaModeButton
+// ----------------------------------------------------------------------------
+
+class PrusaModeButton : public wxButton
+{
+public:
+    PrusaModeButton(
+        wxWindow *parent,
+        wxWindowID id,
+        const wxString& mode = wxEmptyString,
+        const wxBitmap& bmp_on = wxNullBitmap,
+        const wxPoint& pos = wxDefaultPosition,
+        const wxSize& size = wxDefaultSize);
+    ~PrusaModeButton() {}
+
+    void    OnButton(wxCommandEvent& event);
+    void    OnEnterBtn(wxMouseEvent& event) { focus_button(true); event.Skip(); }
+    void    OnLeaveBtn(wxMouseEvent& event) { focus_button(m_is_selected); event.Skip(); }
+
+    void    SetState(const bool state);
+
+protected:
+    void    focus_button(const bool focus);
+
+private:
+    bool        m_is_selected = false;
+
+    wxBitmap    m_bmp_on;
+    wxBitmap    m_bmp_off;
+};
+
+
+
+// ----------------------------------------------------------------------------
+// PrusaModeSizer
+// ----------------------------------------------------------------------------
+
+class PrusaModeSizer : public wxFlexGridSizer
+{
+public:
+    PrusaModeSizer( wxWindow *parent);
+    ~PrusaModeSizer() {}
+
+    void SetMode(const /*ConfigOptionMode*/int mode);
+
+private:
+    std::vector<PrusaModeButton*> mode_btns;
+};
+
+
+
+// ----------------------------------------------------------------------------
+// PrusaMenu
+// ----------------------------------------------------------------------------
+
+class PrusaMenu : public wxMenu
+{
+public:
+    PrusaMenu(const wxString& title, long style = 0)
+        : wxMenu(title, style) {}
+
+    PrusaMenu(long style = 0)
+        : wxMenu(style) {}
+
+    ~PrusaMenu() {}
+
+    void DestroySeparators();
+
+    wxMenuItem* m_separator_frst { nullptr };    // use like separator before settings item
+    wxMenuItem* m_separator_scnd { nullptr };   // use like separator between settings items
 };
 
 

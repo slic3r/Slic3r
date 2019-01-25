@@ -6,6 +6,7 @@
 # All the dependencies are installed in a `destdir` directory in the root of the build directory,
 # in a traditional Unix-style prefix structure. The destdir can be used directly by CMake
 # when building Slic3r - to do this, set the CMAKE_PREFIX_PATH to ${destdir}/usr/local.
+# Warning: On UNIX/Linux, you also need to set -DSLIC3R_STATIC=1 when building Slic3r.
 #
 # For better clarity of console output, it's recommended to _not_ use a parallelized build
 # for the top-level command, ie. use `make -j 1` or `ninja -j 1` to force single-threaded top-level
@@ -32,6 +33,7 @@ endif ()
 
 set(DESTDIR "${CMAKE_CURRENT_BINARY_DIR}/destdir" CACHE PATH "Destination directory")
 option(DEP_DEBUG "Build debug variants (only applicable on Windows)" ON)
+option(DEP_WX_STABLE "Build against wxWidgets stable 3.0 as opposed to default 3.1 (Linux only)" OFF)
 
 message(STATUS "Slic3r deps DESTDIR: ${DESTDIR}")
 message(STATUS "Slic3r deps debug build: ${DEP_DEBUG}")
@@ -49,11 +51,22 @@ if (MSVC)
         message(FATAL_ERROR "Unable to detect architecture")
     endif ()
 elseif (APPLE)
-    set(DEPS_OSX_TARGET "10.9" CACHE STRING "OS X SDK version to build against")
-    set(DEPS_OSX_SYSROOT
-        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${DEPS_OSX_TARGET}.sdk"
-        CACHE PATH "OS X SDK directory"
-    )
+    message("OS X SDK Path: ${CMAKE_OSX_SYSROOT}")
+    if (CMAKE_OSX_DEPLOYMENT_TARGET)
+        set(DEP_OSX_TARGET "${CMAKE_OSX_DEPLOYMENT_TARGET}")
+        message("OS X Deployment Target: ${DEP_OSX_TARGET}")
+    else ()
+        # Attempt to infer the SDK version from the CMAKE_OSX_SYSROOT,
+        # this is done because wxWidgets need the min version explicitly set
+        string(REGEX MATCH "[0-9]+[.][0-9]+[.]sdk$" DEP_OSX_TARGET "${CMAKE_OSX_SYSROOT}")
+        string(REGEX MATCH "^[0-9]+[.][0-9]+" DEP_OSX_TARGET "${DEP_OSX_TARGET}")
+
+        if (NOT DEP_OSX_TARGET)
+            message(FATAL_ERROR "Could not determine OS X SDK version. Please use -DCMAKE_OSX_DEPLOYMENT_TARGET=<version>")
+        endif ()
+
+        message("OS X Deployment Target (inferred from default): ${DEP_OSX_TARGET}")
+    endif ()
 
     include("deps-macos.cmake")
 else ()
