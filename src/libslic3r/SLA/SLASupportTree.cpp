@@ -9,8 +9,8 @@
 #include "SLASpatIndex.hpp"
 #include "SLABasePool.hpp"
 
-#include "ClipperUtils.hpp"
-#include "Model.hpp"
+#include <libslic3r/ClipperUtils.hpp>
+#include <libslic3r/Model.hpp>
 
 #include <boost/log/trivial.hpp>
 
@@ -164,7 +164,13 @@ Contour3D sphere(double rho, Portion portion = make_portion(0.0, 2.0*PI),
     return ret;
 }
 
-Contour3D cylinder(double r, double h, size_t ssteps) {
+// Down facing cylinder in Z direction with arguments:
+// r: radius
+// h: Height
+// ssteps: how many edges will create the base circle
+// sp: starting point
+Contour3D cylinder(double r, double h, size_t ssteps, const Vec3d sp = {0,0,0})
+{
     Contour3D ret;
 
     auto steps = int(ssteps);
@@ -173,9 +179,10 @@ Contour3D cylinder(double r, double h, size_t ssteps) {
     points.reserve(2*ssteps);
     double a = 2*PI/steps;
 
-    Vec3d jp = {0, 0, 0};
-    Vec3d endp = {0, 0, h};
+    Vec3d jp = sp;
+    Vec3d endp = {sp(X), sp(Y), sp(Z) + h};
 
+    // Upper circle points
     for(int i = 0; i < steps; ++i) {
         double phi = i*a;
         double ex = endp(X) + r*std::cos(phi);
@@ -183,6 +190,7 @@ Contour3D cylinder(double r, double h, size_t ssteps) {
         points.emplace_back(ex, ey, endp(Z));
     }
 
+    // Lower circle points
     for(int i = 0; i < steps; ++i) {
         double phi = i*a;
         double x = jp(X) + r*std::cos(phi);
@@ -190,6 +198,7 @@ Contour3D cylinder(double r, double h, size_t ssteps) {
         points.emplace_back(x, y, jp(Z));
     }
 
+    // Now create long triangles connecting upper and lower circles
     indices.reserve(2*ssteps);
     auto offs = steps;
     for(int i = 0; i < steps - 1; ++i) {
@@ -197,9 +206,25 @@ Contour3D cylinder(double r, double h, size_t ssteps) {
         indices.emplace_back(i, offs + i + 1, i + 1);
     }
 
+    // Last triangle connecting the first and last vertices
     auto last = steps - 1;
     indices.emplace_back(0, last, offs);
     indices.emplace_back(last, offs + last, offs);
+
+    // According to the slicing algorithms, we need to aid them with generating
+    // a watertight body. So we create a triangle fan for the upper and lower
+    // ending of the cylinder to close the geometry.
+    points.emplace_back(jp); size_t ci = points.size() - 1;
+    for(int i = 0; i < steps - 1; ++i)
+        indices.emplace_back(i + offs + 1, i + offs, ci);
+
+    indices.emplace_back(offs, steps + offs - 1, ci);
+
+    points.emplace_back(endp); ci = points.size() - 1;
+    for(int i = 0; i < steps - 1; ++i)
+        indices.emplace_back(ci, i, i + 1);
+
+    indices.emplace_back(steps - 1, 0, ci);
 
     return ret;
 }
@@ -352,36 +377,15 @@ struct Pillar {
         r(radius), steps(st), endpoint(endp), starts_from_head(false)
     {
         assert(steps > 0);
-        int steps_1 = int(steps - 1);
 
-        auto& points = mesh.points;
-        auto& indices = mesh.indices;
-        points.reserve(2*steps);
-        double a = 2*PI/steps;
+        double h = jp(Z) - endp(Z);
+        assert(h > 0);    // Endpoint is below the starting point
 
-        for(size_t i = 0; i < steps; ++i) {
-            double phi = i*a;
-            double x = jp(X) + r*std::cos(phi);
-            double y = jp(Y) + r*std::sin(phi);
-            points.emplace_back(x, y, jp(Z));
-        }
-
-        for(size_t i = 0; i < steps; ++i) {
-            double phi = i*a;
-            double ex = endp(X) + r*std::cos(phi);
-            double ey = endp(Y) + r*std::sin(phi);
-            points.emplace_back(ex, ey, endp(Z));
-        }
-
-        indices.reserve(2*steps);
-        int offs = int(steps);
-        for(int i = 0; i < steps_1 ; ++i) {
-            indices.emplace_back(i, i + offs, offs + i + 1);
-            indices.emplace_back(i, offs + i + 1, i + 1);
-        }
-
-        indices.emplace_back(0, steps_1, offs);
-        indices.emplace_back(steps_1, offs + steps_1, offs);
+        // We just create a bridge geometry with the pillar parameters and
+        // move the data.
+        Contour3D body = cylinder(radius, h, st, endp);
+        mesh.points.swap(body.points);
+        mesh.indices.swap(body.indices);
     }
 
     Pillar(const Junction& junc, const Vec3d& endp):
@@ -1387,7 +1391,8 @@ bool SLASupportTree::generate(const PointSet &points,
                     }
 
                     double d = distance(jp, jn);
-                    if(jn(Z) <= gndlvl || d > max_len) break;
+                    if(jn(Z) <= (gndlvl + 2*cfg.head_width_mm) || d > max_len)
+                        break;
 
                     double chkd = ray_mesh_intersect(jp, dirv(jp, jn), emesh);
                     if(chkd >= d) nearest_id = ne.second;

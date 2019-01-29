@@ -95,14 +95,10 @@ wxFrame(NULL, wxID_ANY, SLIC3R_BUILD, wxDefaultPosition, wxDefaultSize, wxDEFAUL
         _3DScene::remove_all_canvases();
 //         Slic3r::GUI::deregister_on_request_update_callback();
 
-        // destroy and set to null tabs and a platter 
+        // set to null tabs and a platter
         // to avoid any manipulations with them from App->wxEVT_IDLE after of the mainframe closing 
-        wxGetApp().clear_tabs_list();
-        if (wxGetApp().plater_) {
-            // before creating a new plater let's delete old one
-            wxGetApp().plater_->Destroy();
-            wxGetApp().plater_ = nullptr;
-        }
+        wxGetApp().tabs_list.clear();
+        wxGetApp().plater_ = nullptr;
 
         // propagate event
         event.Skip();
@@ -112,6 +108,7 @@ wxFrame(NULL, wxID_ANY, SLIC3R_BUILD, wxDefaultPosition, wxDefaultSize, wxDEFAUL
 
     update_ui_from_settings();    // FIXME (?)
 }
+
 
 void MainFrame::init_tabpanel()
 {
@@ -239,11 +236,11 @@ void MainFrame::init_menubar()
     // File menu
     wxMenu* fileMenu = new wxMenu;
     {
-        wxMenuItem* item_open = append_menu_item(fileMenu, wxID_ANY, _(L("&Open")) + dots + "\tCtrl+O", _(L("Open a project file")),
+        wxMenuItem* item_open = append_menu_item(fileMenu, wxID_ANY, _(L("&Open Project")) + dots + "\tCtrl+O", _(L("Open a project file")),
             [this](wxCommandEvent&) { if (m_plater) m_plater->load_project(); }, "brick_add.png");
-        wxMenuItem* item_save = append_menu_item(fileMenu, wxID_ANY, _(L("&Save")) + "\tCtrl+S", _(L("Save current project file")),
+        wxMenuItem* item_save = append_menu_item(fileMenu, wxID_ANY, _(L("&Save Project")) + "\tCtrl+S", _(L("Save current project file")),
             [this](wxCommandEvent&) { if (m_plater) m_plater->export_3mf(into_path(m_plater->get_project_filename())); }, "disk.png");
-        wxMenuItem* item_save_as = append_menu_item(fileMenu, wxID_ANY, _(L("Save &as")) + dots + "\tCtrl+Alt+S", _(L("Save current project file as")),
+        wxMenuItem* item_save_as = append_menu_item(fileMenu, wxID_ANY, _(L("Save Project &as")) + dots + "\tCtrl+Alt+S", _(L("Save current project file as")),
             [this](wxCommandEvent&) { if (m_plater) m_plater->export_3mf(); }, "disk.png");
 
         fileMenu->AppendSeparator();
