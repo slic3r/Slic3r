@@ -200,17 +200,17 @@ class GLCanvas3D
     class Bed
     {
     public:
-        enum EType : unsigned char
+        /*enum EType : unsigned char
         {
             MK2,
             MK3,
             SL1,
             Custom,
             Num_Types
-        };
+        };*/
 
     private:
-        EType m_type;
+        std::string m_type;
         Pointfs m_shape;
         BoundingBoxf3 m_bounding_box;
         Polygon m_polygon;
@@ -248,13 +248,16 @@ class GLCanvas3D
         void _calc_bounding_box();
         void _calc_triangles(const ExPolygon& poly);
         void _calc_gridlines(const ExPolygon& poly, const BoundingBox& bed_bbox);
-        EType _detect_type() const;
+        std::string _detect_type() const;
 #if ENABLE_PRINT_BED_MODELS
         void _render_prusa(const std::string &key, float theta, bool useVBOs) const;
+        void _render_custom() const { _render_custom("", 0, 0); }
+        void _render_custom(const std::string &key, float theta, bool useVBOs) const;
 #else
         void _render_prusa(const std::string &key, float theta) const;
+        void _render_custom() const { _render_custom("", 0); }
+        void _render_custom(const std::string &key, float theta) const;
 #endif // ENABLE_PRINT_BED_MODELS
-        void _render_custom() const;
         static bool _are_equal(const Pointfs& bed_1, const Pointfs& bed_2);
     };
 
