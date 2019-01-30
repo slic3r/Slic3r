@@ -578,7 +578,10 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
         //FIXME: also pull (a bit less) points that are near to this one.
         // if true, pull it a bit, depends on my size, the dot?, and the coeff at my 0-end (~14% for a square, almost 0 for a gentle curve)
         coord_t length_pull = (coord_t)polyline.length();
-        length_pull *= (coord_t) 0.144 * get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, std::min(min_width, (coord_t)(polyline.length() / 2)));
+        length_pull *= (coord_t)( 0.144 * get_coeff_from_angle_countour(
+            polyline.points.back(), 
+            this->expolygon, 
+            std::min(min_width, (coord_t)(polyline.length() / 2))));
 
         //compute dir
         Vec2d pull_direction(polyline.points[1].x() - polyline.points[0].x(), polyline.points[1].y() - polyline.points[0].y());
@@ -610,7 +613,7 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
 
 void
 MedialAxis::extends_line_both_side(ThickPolylines& pp) {
-    const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), -SCALED_RESOLUTION, SCALED_RESOLUTION);
+    const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), (float)-SCALED_RESOLUTION, (float)SCALED_RESOLUTION);
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         this->extends_line(polyline, anchors, this->min_width);
@@ -816,7 +819,7 @@ MedialAxis::main_fusion(ThickPolylines& pp)
 
                 //compute angle to see if it's better than previous ones (straighter = better).
                 //we need to add how strait we are from our main.
-                float test_dot = dot(polyline.lines().front(), other.lines().front());
+                float test_dot = (float)(dot(polyline.lines().front(), other.lines().front()));
 
                 // Get the branch/line in wich we may merge, if possible
                 // with that, we can decide what is important, and how we can merge that.
@@ -837,14 +840,14 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                             find_main_branch = true;
                         else if (biggest_main_branch_length < main.length()) {
                             biggest_main_branch_id = k;
-                            biggest_main_branch_length = main.length();
+                            biggest_main_branch_length = (coord_t)main.length();
                         }
                     } else if (polyline.first_point().coincides_with(main.first_point())) {
                         if (!main.endpoints.second)
                             find_main_branch = true;
                         else if (biggest_main_branch_length < main.length()) {
                             biggest_main_branch_id = k;
-                            biggest_main_branch_length = main.length();
+                            biggest_main_branch_length = (coord_t)main.length();
                         }
                     }
                     if (find_main_branch) {
@@ -871,7 +874,7 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                     if (dot_poly_branch < 0) dot_poly_branch = 0;
                     if (dot_candidate_branch < 0) dot_candidate_branch = 0;
                     if (pp[biggest_main_branch_id].width.back()>0)
-                        test_dot += 2 * dot_poly_branch ;
+                        test_dot += 2 * (float)dot_poly_branch;
                 }
                 //test if it's useful to merge or not
                 //ie, don't merge  'T' but ok for 'Y', merge only lines of not disproportionate different length (ratio max: 4) (or they are both with 0-width end)
@@ -956,7 +959,7 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                     //failsafes
                     if (polyline.width[idx_point] > max_width) 
                         polyline.width[idx_point] = max_width;
-                    const coord_t max_width_contour = bounds.contour.closest_point(polyline.points[idx_point])->distance_to(polyline.points[idx_point]) * 2.1;
+                    const coord_t max_width_contour = (coord_t) bounds.contour.closest_point(polyline.points[idx_point])->distance_to(polyline.points[idx_point]) * 2.1;
                     if (polyline.width[idx_point] > max_width_contour)
                         polyline.width[idx_point] = max_width_contour;
 
@@ -1145,7 +1148,7 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
             v_poly *= (1 / std::sqrt(v_poly.x()*v_poly.x() + v_poly.y()*v_poly.y()));
             Vec2d v_other(other.lines().front().vector().x(), other.lines().front().vector().y());
             v_other *= (1 / std::sqrt(v_other.x()*v_other.x() + v_other.y()*v_other.y()));
-            float other_dot = v_poly.x()*v_other.x() + v_poly.y()*v_other.y();
+            float other_dot = (float)( v_poly.x()*v_other.x() + v_poly.y()*v_other.y() );
             if (other_dot > best_dot) {
                 best_candidate = &other;
                 best_idx = j;
@@ -1327,7 +1330,7 @@ MedialAxis::simplify_polygon_frontier()
     }
 
     if (!simplified_poly.contour.points.empty())
-        simplified_poly.remove_point_too_near(SCALED_RESOLUTION);
+        simplified_poly.remove_point_too_near((coord_t)SCALED_RESOLUTION);
     return simplified_poly;
 }
 
@@ -1377,7 +1380,7 @@ MedialAxis::build(ThickPolylines* polylines_out) {
        filtering the output segments. */
     double max_w = 0;
     for (ThickPolylines::const_iterator it = pp.begin(); it != pp.end(); ++it)
-        max_w = fmaxf(max_w, *std::max_element(it->width.begin(), it->width.end()));
+        max_w = std::max(max_w, *std::max_element(it->width.begin(), it->width.end()));
 
 
     fusion_curve(pp);
@@ -1464,7 +1467,7 @@ MedialAxis::build(ThickPolylines* polylines_out) {
     //    svg.Close();
     //}
 
-    remove_too_short_polylines(pp, max_w * 2);
+    remove_too_short_polylines(pp, (coord_t)max_w * 2);
     //{
     //    stringstream stri;
     //    stri << "medial_axis_8_tooshort_" << id << ".svg";
@@ -1522,7 +1525,7 @@ MedialAxis::taper_ends(ThickPolylines& pp) {
             polyline.width[0] = min_width;
             coord_t current_dist = min_width;
             for (size_t i = 1; i<polyline.width.size(); ++i) {
-                current_dist += polyline.points[i - 1].distance_to(polyline.points[i]);
+                current_dist += (coord_t) polyline.points[i - 1].distance_to(polyline.points[i]);
                 if (current_dist > polyline.width[i]) break;
                 polyline.width[i] = current_dist;
             }
@@ -1532,7 +1535,7 @@ MedialAxis::taper_ends(ThickPolylines& pp) {
             polyline.width[last_idx] = min_width;
             coord_t current_dist = min_width;
             for (size_t i = 1; i<polyline.width.size(); ++i) {
-                current_dist += polyline.points[last_idx - i + 1].distance_to(polyline.points[last_idx - i]);
+                current_dist += (coord_t) polyline.points[last_idx - i + 1].distance_to(polyline.points[last_idx - i]);
                 if (current_dist > polyline.width[last_idx - i]) break;
                 polyline.width[last_idx - i] = current_dist;
             }
@@ -1562,7 +1565,7 @@ ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, E
 
             double thickness_delta = fabs(line.a_width - line.b_width);
             if (thickness_delta > tolerance) {
-                const unsigned short segments = ceil(thickness_delta / tolerance);
+                const uint16_t segments = (uint16_t) std::min(16000.0, ceil(thickness_delta / tolerance));
                 const coordf_t seg_len = line_len / segments;
                 Points pp;
                 std::vector<coordf_t> width;
@@ -1602,7 +1605,7 @@ ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, E
                 path.polyline.append(line.b);
                 // Convert from spacing to extrusion width based on the extrusion model
                 // of a square extrusion ended with semi circles.
-                flow.width = unscaled(w) + flow.height * (1. - 0.25 * PI);
+                flow.width = (float)unscaled(w) + flow.height * (1. - 0.25 * PI);
 #ifdef SLIC3R_DEBUG
                 printf("  filling %f gap\n", flow.width);
 #endif

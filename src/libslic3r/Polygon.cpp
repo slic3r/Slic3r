@@ -53,7 +53,7 @@ Polygon::split_at_vertex(const Point &point) const
 
 // Split a closed polygon into an open polyline, with the split point duplicated at both ends.
 Polyline
-Polygon::split_at_index(int index) const
+Polygon::split_at_index(size_t index) const
 {
     Polyline polyline;
     polyline.points.reserve(this->points.size() + 1);

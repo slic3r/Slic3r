@@ -112,9 +112,9 @@ public:
     void   rotate(double angle, const Point &center);
     Point  rotated(double angle) const { Point res(*this); res.rotate(angle); return res; }
     Point  rotated(double angle, const Point &center) const { Point res(*this); res.rotate(angle, center); return res; }
-    int    nearest_point_index(const Points &points) const;
-    int    nearest_point_index(const PointConstPtrs &points) const;
-    int    nearest_point_index(const PointPtrs &points) const;
+    int32_t    nearest_point_index(const Points &points) const;
+    int32_t    nearest_point_index(const PointConstPtrs &points) const;
+    int32_t    nearest_point_index(const PointPtrs &points) const;
     bool   nearest_point(const Points &points, Point* point) const;
     double ccw(const Point &p1, const Point &p2) const;
     double ccw(const Line &line) const;

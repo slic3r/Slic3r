@@ -61,11 +61,11 @@ Polyline MotionPlanner::shortest_path(const Point &from, const Point &to)
         return Polyline(from, to);
     
     // Are both points in the same island?
-    int island_idx_from = -1;
-    int island_idx_to   = -1;
-    int island_idx      = -1;
+    int32_t island_idx_from = -1;
+    int32_t island_idx_to = -1;
+    int32_t island_idx = -1;
     for (MotionPlannerEnv &island : m_islands) {
-        int idx = &island - m_islands.data();
+        int32_t idx = (int32_t)( &island - m_islands.data() );
         if (island.island_contains(from))
             island_idx_from = idx;
         if (island.island_contains(to))

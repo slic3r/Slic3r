@@ -61,8 +61,8 @@ void PerimeterGenerator::process()
     // which is the spacing between external and internal, which is not correct
     // and would make the collapsing (thus the details resolution) dependent on 
     // internal flow which is unrelated.
-    coord_t min_spacing     = (coord_t)perimeter_spacing      * (1 - INSET_OVERLAP_TOLERANCE);
-    coord_t ext_min_spacing = (coord_t)ext_perimeter_spacing  * (1 - INSET_OVERLAP_TOLERANCE);
+    coord_t min_spacing     = (coord_t)( perimeter_spacing      * (1 - INSET_OVERLAP_TOLERANCE) );
+    coord_t ext_min_spacing = (coord_t)( ext_perimeter_spacing  * (1 - INSET_OVERLAP_TOLERANCE) );
     
     // prepare grown lower layer slices for overhang detection
     if (this->lower_slices != NULL && this->config->overhangs) {
@@ -131,8 +131,8 @@ void PerimeterGenerator::process()
                                         //it's not dangerous as it will be intersected by 'unsupported' later
                                         //FIXME: add overlap in this->fill_surfaces->append
                                         // add overlap (perimeter_spacing/4 was good in test, ie 25%)
-                                        coord_t overlap = scale_(this->config->get_abs_value("infill_overlap", unscale<double>(perimeter_spacing)));
-                                        unsupported_filtered = intersection_ex(unsupported_filtered, offset_ex(bridgeable_simplified, overlap));
+                                        double overlap = scale_(this->config->get_abs_value("infill_overlap", unscale<double>(perimeter_spacing)));
+                                        unsupported_filtered = intersection_ex(unsupported_filtered, offset_ex(bridgeable_simplified, (float) overlap));
                                     } else {
                                         unsupported_filtered.clear();
                                     }
@@ -152,7 +152,7 @@ void PerimeterGenerator::process()
                                 ExPolygons bridge = unsupported_filtered;
                                 unsupported_filtered = intersection_ex(offset_ex(unsupported_filtered, (float)(perimeter_spacing)), last);
                                 // remove from the bridge & support the small imperfections of the union
-                                ExPolygons bridge_and_support = offset2_ex(union_ex(bridge, support, true), perimeter_spacing/2, -perimeter_spacing/2);
+                                ExPolygons bridge_and_support = offset2_ex(union_ex(bridge, support, true), (float)perimeter_spacing / 2, (float)-perimeter_spacing / 2);
                                 // make him flush with perimeter area
                                 unsupported_filtered = intersection_ex(offset_ex(unsupported_filtered, (float)(perimeter_spacing / 2)), bridge_and_support);
                                 
@@ -207,7 +207,7 @@ void PerimeterGenerator::process()
                                     }
                                     
                                     if (!bridgeable_simplified.empty())
-                                        bridgeable_simplified = offset_ex(bridgeable_simplified, perimeter_spacing/1.9);
+                                        bridgeable_simplified = offset_ex(bridgeable_simplified, (float) perimeter_spacing / 1.9f);
                                     if (!bridgeable_simplified.empty()) {
                                         //offset by perimeter spacing because the simplify may have reduced it a bit.
                                         unsupported = diff_ex(unsupported, bridgeable_simplified, true);
@@ -215,10 +215,10 @@ void PerimeterGenerator::process()
                                 } 
                             }
                         } else {
-                            ExPolygonCollection coll_last(intersection_ex(last, offset_ex(this->lower_slices->expolygons, -perimeter_spacing / 2)));
+                            ExPolygonCollection coll_last(intersection_ex(last, offset_ex(this->lower_slices->expolygons, (float)-perimeter_spacing / 2)));
                             ExPolygon hull;
                             hull.contour = coll_last.convex_hull();
-                            unsupported = diff_ex(offset_ex(unsupported, perimeter_spacing), ExPolygons() = { hull });
+                            unsupported = diff_ex(offset_ex(unsupported, (float)perimeter_spacing), ExPolygons() = { hull });
                         }
                         if (!unsupported.empty()) {
                             //add fake perimeters here
@@ -274,11 +274,11 @@ void PerimeterGenerator::process()
                         ExPolygons half_thins = offset_ex(thin_zones, (float)(-min_width / 2));
                         //simplify them
                         for (ExPolygon &half_thin : half_thins) {
-                            half_thin.remove_point_too_near(SCALED_RESOLUTION);
+                            half_thin.remove_point_too_near((float)SCALED_RESOLUTION);
                         }
                         //we push the bits removed and put them into what we will use as our anchor
                         if (half_thins.size() > 0) {
-                            no_thin_zone = diff_ex(last, offset_ex(half_thins, (float)(min_width / 2) - SCALED_EPSILON), true);
+                            no_thin_zone = diff_ex(last, offset_ex(half_thins, (float)(min_width / 2) - (float) SCALED_EPSILON), true);
                         }
                         // compute a bit of overlap to anchor thin walls inside the print.
                         ExPolygons thin_zones_extruded;
@@ -292,9 +292,9 @@ void PerimeterGenerator::process()
                             for (ExPolygon &bound : bounds) {
                                 if (!intersection_ex(thin[0], bound).empty()) {
                                     //be sure it's not too small to extrude reliably
-                                    thin[0].remove_point_too_near(SCALED_RESOLUTION);
+                                    thin[0].remove_point_too_near((coord_t)SCALED_RESOLUTION);
                                     if (thin[0].area() > min_width*(ext_perimeter_width + ext_perimeter_spacing2)) {
-                                        bound.remove_point_too_near(SCALED_RESOLUTION);
+                                        bound.remove_point_too_near((coord_t)SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
                                         Slic3r::MedialAxis ma(thin[0], bound, ext_perimeter_width + ext_perimeter_spacing2, min_width, this->layer_height);
                                         ma.nozzle_diameter = (coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter);
@@ -476,8 +476,8 @@ void PerimeterGenerator::process()
             double min = 0.2 * perimeter_width * (1 - INSET_OVERLAP_TOLERANCE);
             double max = 2. * perimeter_spacing;
             ExPolygons gaps_ex = diff_ex(
-                offset2_ex(gaps, -min/2, +min/2),
-                offset2_ex(gaps, -max/2, +max/2),
+                offset2_ex(gaps, (float)-min / 2, (float)+min / 2),
+                offset2_ex(gaps, (float)-max / 2, (float)+max / 2),
                 true);
             ThickPolylines polylines;
             for (const ExPolygon &ex : gaps_ex) {
@@ -517,27 +517,27 @@ void PerimeterGenerator::process()
         // only apply infill overlap if we actually have one perimeter
         coord_t overlap = 0;
         if (inset > 0) {
-            overlap = scale_(this->config->get_abs_value("infill_overlap", unscale<double>(inset + solid_infill_spacing / 2)));
+            overlap = scale_(this->config->get_abs_value("infill_overlap", unscale<coord_t>(inset + solid_infill_spacing / 2)));
         }
         // simplify infill contours according to resolution
         Polygons pp;
         for (ExPolygon &ex : last)
             ex.simplify_p(SCALED_RESOLUTION, &pp);
         // collapse too narrow infill areas
-        coord_t min_perimeter_infill_spacing = solid_infill_spacing * (1. - INSET_OVERLAP_TOLERANCE);
+        coord_t min_perimeter_infill_spacing = (coord_t)( solid_infill_spacing * (1. - INSET_OVERLAP_TOLERANCE) );
         // append infill areas to fill_surfaces
         //auto it_surf = this->fill_surfaces->surfaces.end();
         this->fill_surfaces->append(
             offset2_ex(
                 union_ex(pp),
                 -inset - min_perimeter_infill_spacing / 2 + overlap,
-                min_perimeter_infill_spacing / 2),
+                (float) min_perimeter_infill_spacing / 2),
                 stInternal);
         if (overlap != 0) {
             ExPolygons polyWithoutOverlap = offset2_ex(
                 union_ex(pp),
                 -inset - min_perimeter_infill_spacing / 2,
-                min_perimeter_infill_spacing / 2);
+                (float) min_perimeter_infill_spacing / 2);
             this->fill_no_overlap.insert(this->fill_no_overlap.end(), polyWithoutOverlap.begin(), polyWithoutOverlap.end());
         }
     } // for each island
@@ -577,7 +577,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
                 role,
                 is_external ? this->_ext_mm3_per_mm           : this->_mm3_per_mm,
                 is_external ? this->ext_perimeter_flow.width  : this->perimeter_flow.width,
-                this->layer_height);
+                (float) this->layer_height);
             
             // get overhang paths by checking what parts of this loop fall 
             // outside the grown lower slices (thus where the distance between
@@ -599,7 +599,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
             path.polyline   = loop->polygon.split_at_first_point();
             path.mm3_per_mm = is_external ? this->_ext_mm3_per_mm           : this->_mm3_per_mm;
             path.width      = is_external ? this->ext_perimeter_flow.width  : this->perimeter_flow.width;
-            path.height     = this->layer_height;
+            path.height     = (float) this->layer_height;
             paths.push_back(path);
         }
         
@@ -847,7 +847,7 @@ PerimeterGenerator::_extrude_and_cut_loop(const PerimeterGeneratorLoop &loop, co
                 role,
                 is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm,
                 is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width,
-                this->layer_height);
+                (float) this->layer_height);
 
             // get overhang paths by checking what parts of this loop fall 
             // outside the grown lower slices (thus where the distance between
@@ -1049,8 +1049,8 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                 else
                     inner_start->polyline.clip_start(inner_start->polyline.length()/2);
             } else {
-                double length_poly_1 = outer_start->polyline.length();
-                double length_poly_2 = outer_end->polyline.length();
+                coord_t length_poly_1 = (coord_t)outer_start->polyline.length();
+                coord_t length_poly_2 = (coord_t)outer_end->polyline.length();
                 coord_t length_trim_1 = outer_start_spacing / 2;
                 coord_t length_trim_2 = outer_end_spacing / 2;
                 if (length_poly_1 < length_trim_1) {
@@ -1207,10 +1207,10 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                 outer_end->extruder_id = -1;
             }*/
             //add paths into my_loop => after that all ref are wrong!
-            for (int i = travel_path_end.size() - 1; i >= 0; i--) {
+            for (int32_t i = travel_path_end.size() - 1; i >= 0; i--) {
                 my_loop.paths.insert(my_loop.paths.begin() + nearest.idx_polyline_outter + child_paths_size + 1, travel_path_end[i]);
             }
-            for (int i = travel_path_begin.size() - 1; i >= 0; i--) {
+            for (int32_t i = travel_path_begin.size() - 1; i >= 0; i--) {
                 my_loop.paths.insert(my_loop.paths.begin() + nearest.idx_polyline_outter + 1, travel_path_begin[i]);
             }
         }

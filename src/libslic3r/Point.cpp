@@ -66,7 +66,7 @@ void Point::rotate(double angle, const Point &center)
     (*this)(1) = (coord_t)round( (double)center(1) + c * dy + s * dx );
 }
 
-int Point::nearest_point_index(const Points &points) const
+int32_t Point::nearest_point_index(const Points &points) const
 {
     PointConstPtrs p;
     p.reserve(points.size());
@@ -75,9 +75,9 @@ int Point::nearest_point_index(const Points &points) const
     return this->nearest_point_index(p);
 }
 
-int Point::nearest_point_index(const PointConstPtrs &points) const
+int32_t Point::nearest_point_index(const PointConstPtrs &points) const
 {
-    int idx = -1;
+    int32_t idx = -1;
     double distance = -1;  // double because long is limited to 2147483647 on some platforms and it's not enough
     
     for (PointConstPtrs::const_iterator it = points.begin(); it != points.end(); ++it) {
@@ -91,7 +91,7 @@ int Point::nearest_point_index(const PointConstPtrs &points) const
         d += sqr<double>((*this)(1) - (*it)->y());
         if (distance != -1 && d > distance) continue;
         
-        idx = it - points.begin();
+        idx = (int32_t)(it - points.begin());
         distance = d;
         
         if (distance < EPSILON) break;
@@ -123,7 +123,7 @@ Point::distance_to(const Line &line) const {
 }
 
 
-int Point::nearest_point_index(const PointPtrs &points) const
+int32_t Point::nearest_point_index(const PointPtrs &points) const
 {
     PointConstPtrs p;
     p.reserve(points.size());

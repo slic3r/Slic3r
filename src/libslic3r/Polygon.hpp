@@ -38,7 +38,7 @@ public:
     virtual Lines lines() const;
     Polyline split_at_vertex(const Point &point) const;
     // Split a closed polygon into an open polyline, with the split point duplicated at both ends.
-    Polyline split_at_index(int index) const;
+    Polyline split_at_index(size_t index) const;
     // Split a closed polygon into an open polyline, with the split point duplicated at both ends.
     Polyline split_at_first_point() const;
     Points equally_spaced_points(double distance) const;
