@@ -198,6 +198,20 @@ void ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys 
         // If the key is not in the parameter definition, or this ConfigBase is a static type and it does not support the parameter,
         // an exception is thrown if not ignore_nonexistent.
         ConfigOption *my_opt = this->option(opt_key, true);
+        // If we didn't find an option, look for any other option having this as an alias.
+        if (my_opt == nullptr) {
+            const ConfigDef       *def = this->def();
+            for (const auto &opt : def->options) {
+                for (const t_config_option_key &opt_key2 : opt.second.aliases) {
+                    if (opt_key2 == opt_key) {
+                        my_opt = this->option(opt.first, true);
+                        break;
+                    }
+                }
+                if (my_opt != nullptr)
+                    break;
+            }
+        }
         if (my_opt == nullptr) {
             // opt_key does not exist in this ConfigBase and it cannot be created, because it is not defined by this->def().
             // This is only possible if other is of DynamicConfig type.

@@ -34,6 +34,8 @@ can be used separately.
 * Many other little options and corrections (like the filled concentric pattern).
 * It has also all the current slic3rPE features.
 
+#### Complete changelog [here](https://github.com/supermerill/Slic3r/wiki)
+
 See the wiki for examples.
 
 ### What are Slic3r's main features?

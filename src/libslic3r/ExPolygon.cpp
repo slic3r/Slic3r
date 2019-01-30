@@ -201,11 +201,11 @@ void
 ExPolygon::remove_point_too_near(const coord_t tolerance) {
     size_t id = 1;
     while (id < this->contour.points.size() - 1) {
-        size_t newdist = min(this->contour.points[id].distance_to(this->contour.points[id - 1])
+        coord_t newdist = (coord_t)std::min(this->contour.points[id].distance_to(this->contour.points[id - 1])
             , this->contour.points[id].distance_to(this->contour.points[id + 1]));
         if (newdist < tolerance) {
             this->contour.points.erase(this->contour.points.begin() + id);
-            newdist = this->contour.points[id].distance_to(this->contour.points[id - 1]);
+            newdist = (coord_t)this->contour.points[id].distance_to(this->contour.points[id - 1]);
         }
         //go to next one
         //if you removed a point, it check if the next one isn't too near from the previous one.
@@ -221,7 +221,7 @@ ExPolygon::remove_point_too_near(const coord_t tolerance) {
 
 void
 ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_width, ThickPolylines* polylines, double height) const {
-    Slic3r::MedialAxis ma(*this, bounds, max_width, min_width, height);
+    Slic3r::MedialAxis ma(*this, bounds, (coord_t)max_width, (coord_t)min_width, height);
     ma.build(polylines);
 }
 
@@ -319,7 +319,7 @@ ExPolygon::get_trapezoids3_half(Polygons* polygons, float spacing) const {
         if (min_x > p->x()) min_x = p->x();
         if (max_x < p->x()) max_x = p->x();
     }
-    for (int x = min_x; x < max_x-spacing/2; x += spacing) {
+    for (coord_t x = min_x; x < max_x - (coord_t)(spacing / 2); x += (coord_t)spacing) {
         xx.push_back(x);
     }
     xx.push_back(max_x);
@@ -333,13 +333,13 @@ ExPolygon::get_trapezoids3_half(Polygons* polygons, float spacing) const {
         // build rectangle
         Polygon poly;
         poly.points.resize(4);
-        poly[0].x() = *x + spacing / 4;
+        poly[0].x() = *x + (coord_t)spacing / 4;
         poly[0].y() = bb.min(1);
-        poly[1].x() = next_x - spacing / 4;
+        poly[1].x() = next_x - (coord_t)spacing / 4;
         poly[1].y() = bb.min(1);
-        poly[2].x() = next_x - spacing / 4;
+        poly[2].x() = next_x - (coord_t)spacing / 4;
         poly[2].y() = bb.max(1);
-        poly[3].x() = *x + spacing / 4;
+        poly[3].x() = *x + (coord_t)spacing / 4;
         poly[3].y() = bb.max(1);
 
         // intersect with this expolygon
@@ -431,8 +431,8 @@ std::list<TPPLPoly> expoly_to_polypartition_input(const ExPolygon &ex)
 		p.Init(int(ex.contour.points.size()));
 		for (const Point &point : ex.contour.points) {
 			size_t i = &point - &ex.contour.points.front();
-			p[i].x = point(0);
-			p[i].y = point(1);
+			p[i].x = point.x();
+			p[i].y = point.y();
 		}
 		p.SetHole(false);
 	}

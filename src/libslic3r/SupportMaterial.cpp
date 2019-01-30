@@ -282,10 +282,11 @@ void PrintObjectSupportMaterial::generate(PrintObject &object)
     MyLayersPtr intermediate_layers = this->raft_and_intermediate_support_layers(
         object, bottom_contacts, top_contacts, layer_storage);
 
+    
 //    this->trim_support_layers_by_object(object, top_contacts, m_slicing_params.soluble_interface ? 0. : m_support_layer_height_min, 0., m_gap_xy);
     this->trim_support_layers_by_object(object, top_contacts, 
-        m_slicing_params.soluble_interface ? 0. : m_object_config->support_material_contact_distance_top.value, 
-        m_slicing_params.soluble_interface ? 0. : m_object_config->support_material_contact_distance_bottom.value, m_gap_xy);
+        m_slicing_params.soluble_interface ? 0. : this->m_slicing_params.gap_support_object,
+        m_slicing_params.soluble_interface ? 0. : this->m_slicing_params.gap_object_support, m_gap_xy);
 
 #ifdef SLIC3R_DEBUG
     for (const MyLayer *layer : top_contacts)
@@ -1207,7 +1208,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                         new_layer.height   = object.layers()[layer_id - 1]->height;
                         new_layer.bottom_z = (layer_id == 1) ? m_slicing_params.object_print_z_min : object.layers()[layer_id - 2]->print_z;
                     } else {
-                        new_layer.print_z  = layer.print_z - layer.height - m_object_config->support_material_contact_distance_top;
+                        new_layer.print_z = layer.print_z - layer.height - this->m_slicing_params.gap_support_object;
                         new_layer.bottom_z = new_layer.print_z;
                         new_layer.height   = 0.;
                         // Ignore this contact area if it's too low.
@@ -1237,7 +1238,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                                     bridging_height += region->region()->bridging_height_avg(*m_print_config);
                                 bridging_height /= coordf_t(layer.regions().size());
                             }
-                            coordf_t bridging_print_z = layer.print_z - bridging_height - m_object_config->support_material_contact_distance_top;
+                            coordf_t bridging_print_z = layer.print_z - bridging_height - this->m_slicing_params.gap_support_object;
                             if (bridging_print_z >= m_slicing_params.first_print_layer_height - EPSILON) {
                                 // Not below the first layer height means this layer is printable.
                                 if (new_layer.print_z < m_slicing_params.first_print_layer_height + EPSILON) {
@@ -1504,7 +1505,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
                                 m_support_material_interface_flow.nozzle_diameter;
                             layer_new.height_block = ((m_object_config->support_material_contact_distance_type == zdPlane) ? object.layers()[layer_id + 1]->height : layer_new.height);
                             layer_new.print_z = m_slicing_params.soluble_interface ? object.layers()[layer_id + 1]->print_z :
-                                (layer.print_z + layer_new.height_block + m_object_config->support_material_contact_distance_bottom.value);
+                                (layer.print_z + layer_new.height_block + this->m_slicing_params.gap_object_support);
                             layer_new.bottom_z = layer.print_z;
                             layer_new.idx_object_layer_below = layer_id;
                             layer_new.bridging = ! m_slicing_params.soluble_interface;
@@ -1642,8 +1643,8 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
         std::reverse(bottom_contacts.begin(), bottom_contacts.end());
 //        trim_support_layers_by_object(object, bottom_contacts, 0., 0., m_gap_xy);
         trim_support_layers_by_object(object, bottom_contacts, 
-            m_slicing_params.soluble_interface ? 0. : m_object_config->support_material_contact_distance_top.value, 
-            m_slicing_params.soluble_interface ? 0. : m_object_config->support_material_contact_distance_bottom.value, m_gap_xy);
+            m_slicing_params.soluble_interface ? 0. : this->m_slicing_params.gap_support_object,
+            m_slicing_params.soluble_interface ? 0. : this->m_slicing_params.gap_object_support, m_gap_xy);
 
     } // ! top_contacts.empty()
 
@@ -2071,8 +2072,8 @@ void PrintObjectSupportMaterial::generate_base_layers(
 
 //    trim_support_layers_by_object(object, intermediate_layers, 0., 0., m_gap_xy);
     this->trim_support_layers_by_object(object, intermediate_layers, 
-        m_slicing_params.soluble_interface ? 0. : m_object_config->support_material_contact_distance_top.value, 
-        m_slicing_params.soluble_interface ? 0. : m_object_config->support_material_contact_distance_bottom.value, m_gap_xy);
+        m_slicing_params.soluble_interface ? 0. : this->m_slicing_params.gap_support_object,
+        m_slicing_params.soluble_interface ? 0. : this->m_slicing_params.gap_object_support, m_gap_xy);
 }
 
 void PrintObjectSupportMaterial::trim_support_layers_by_object(

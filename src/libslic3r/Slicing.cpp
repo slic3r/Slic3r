@@ -95,9 +95,9 @@ SlicingParameters SlicingParameters::create_from_config(
     params.max_layer_height = std::max(params.max_layer_height, params.layer_height);
 
     if (! soluble_interface) {
-        params.gap_raft_object    = object_config.support_material_contact_distance_top.value;
-        params.gap_object_support = object_config.support_material_contact_distance_bottom.value;
-        params.gap_support_object = object_config.support_material_contact_distance_top.value;
+        params.gap_raft_object = object_config.support_material_contact_distance_top.get_abs_value(support_material_interface_extruder_dmr);
+        params.gap_object_support = object_config.support_material_contact_distance_bottom.get_abs_value(support_material_interface_extruder_dmr);
+        params.gap_support_object = params.gap_raft_object;
     }
 
     if (params.base_raft_layers > 0) {

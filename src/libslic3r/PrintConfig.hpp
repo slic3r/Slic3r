@@ -426,8 +426,8 @@ public:
     ConfigOptionFloat               support_material_angle;
     ConfigOptionBool                support_material_buildplate_only;
     ConfigOptionEnum<SupportZDistanceType>  support_material_contact_distance_type;
-    ConfigOptionFloat               support_material_contact_distance_top;
-    ConfigOptionFloat               support_material_contact_distance_bottom;
+    ConfigOptionFloatOrPercent      support_material_contact_distance_top;
+    ConfigOptionFloatOrPercent      support_material_contact_distance_bottom;
     ConfigOptionInt                 support_material_enforce_layers;
     ConfigOptionInt                 support_material_extruder;
     ConfigOptionFloatOrPercent      support_material_extrusion_width;

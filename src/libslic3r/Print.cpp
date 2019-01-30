@@ -337,7 +337,7 @@ std::vector<unsigned int> Print::extruders() const
 
 unsigned int Print::num_object_instances() const
 {
-	unsigned int instances = 0;
+	size_t instances = 0;
     for (const PrintObject *print_object : m_objects)
         instances += print_object->copies().size();
     return instances;
@@ -1290,13 +1290,13 @@ std::string Print::validate() const
                            "all nozzles have to be of the same diameter.");
             }
                 if (this->has_wipe_tower()) {
-    				if (object->config().support_material_contact_distance == 0) {
+                    if (object->config().support_material_contact_distance_type == zdNone) {
     					// Soluble interface
-    					if (object->config().support_material_contact_distance == 0 && ! object->config().support_material_synchronize_layers)
+    					if (! object->config().support_material_synchronize_layers)
     						return L("For the Wipe Tower to work with the soluble supports, the support layers need to be synchronized with the object layers.");
     				} else {
     					// Non-soluble interface
-    					if (object->config().support_material_extruder != 0 || object->config().support_material_interface_extruder != 0)
+                        if (object->config().support_material_contact_distance_type != zdNone || object->config().support_material_interface_extruder != 0)
     						return L("The Wipe Tower currently supports the non-soluble supports only if they are printed with the current extruder without triggering a tool change. "
     							     "(both support_material_extruder and support_material_interface_extruder need to be set to 0).");
     				}
@@ -1947,7 +1947,7 @@ void Print::_make_wipe_tower()
             wipe_tower.plan_toolchange(layer_tools.print_z, layer_tools.wipe_tower_layer_height, current_extruder_id, current_extruder_id,false);
             for (const auto extruder_id : layer_tools.extruders) {
                 if ((first_layer && extruder_id == m_wipe_tower_data.tool_ordering.all_extruders().back()) || extruder_id != current_extruder_id) {
-                    float volume_to_wipe = wipe_volumes[current_extruder_id][extruder_id];             // total volume to wipe after this toolchange
+                    double volume_to_wipe = wipe_volumes[current_extruder_id][extruder_id];             // total volume to wipe after this toolchange
                     // Not all of that can be used for infill purging:
                     volume_to_wipe -= m_config.filament_minimal_purge_on_wipe_tower.get_at(extruder_id);
 

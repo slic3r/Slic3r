@@ -61,8 +61,8 @@ void PerimeterGenerator::process()
     // which is the spacing between external and internal, which is not correct
     // and would make the collapsing (thus the details resolution) dependent on 
     // internal flow which is unrelated.
-    coord_t min_spacing         = perimeter_spacing      * (1 - INSET_OVERLAP_TOLERANCE);
-    coord_t ext_min_spacing     = ext_perimeter_spacing  * (1 - INSET_OVERLAP_TOLERANCE);
+    coord_t min_spacing     = (coord_t)perimeter_spacing      * (1 - INSET_OVERLAP_TOLERANCE);
+    coord_t ext_min_spacing = (coord_t)ext_perimeter_spacing  * (1 - INSET_OVERLAP_TOLERANCE);
     
     // prepare grown lower layer slices for overhang detection
     if (this->lower_slices != NULL && this->config->overhangs) {
@@ -952,7 +952,7 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
     int child_idx = 0;
     //Polylines myPolylines = { myPolyline };
     //iterate on each point ot find the best place to go into the child
-    vector<PerimeterGeneratorLoop> childs = children;
+    PerimeterGeneratorLoops childs = children;
     while (!childs.empty()) {
         child_idx++;
         PerimeterIntersectionPoint nearest = this->_get_nearest_point(childs, my_loop, this->perimeter_flow.scaled_width(), this->perimeter_flow.scaled_width()* 1.42);

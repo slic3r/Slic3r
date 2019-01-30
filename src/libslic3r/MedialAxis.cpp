@@ -292,15 +292,15 @@ MedialAxis::retrieve_endpoint(const VD::cell_type* cell) const
 void
 remove_point_too_near(ThickPolyline* to_reduce)
 {
-    const coord_t smallest = SCALED_EPSILON * 2;
+    const coord_t smallest = (coord_t)SCALED_EPSILON * 2;
     size_t id = 1;
     while (id < to_reduce->points.size() - 1) {
-        size_t newdist = min(to_reduce->points[id].distance_to(to_reduce->points[id - 1])
+        coord_t newdist = (coord_t)std::min(to_reduce->points[id].distance_to(to_reduce->points[id - 1])
             , to_reduce->points[id].distance_to(to_reduce->points[id + 1]));
         if (newdist < smallest) {
             to_reduce->points.erase(to_reduce->points.begin() + id);
             to_reduce->width.erase(to_reduce->width.begin() + id);
-            newdist = to_reduce->points[id].distance_to(to_reduce->points[id - 1]);
+            newdist = (coord_t)to_reduce->points[id].distance_to(to_reduce->points[id - 1]);
             //if you removed a point, it check if the next one isn't too near from the previous one.
             // if not, it bypass it.
             if (newdist > smallest) {
@@ -410,11 +410,11 @@ get_coeff_from_angle_countour(Point &point, const ExPolygon &contour, coord_t mi
     if (angle >= PI) angle = 2 * PI - angle;  // smaller angle
     //compute the diff from 90°
     angle = abs(angle - PI / 2);
-    if (point_near.coincides_with(point_nearest) && max(nearest_dist, near_dist) + SCALED_EPSILON < point_nearest.distance_to(point_near)) {
+    if (point_near.coincides_with(point_nearest) && std::max(nearest_dist, near_dist) + SCALED_EPSILON < point_nearest.distance_to(point_near)) {
         //not only nearest
         Point point_before = id_near == 0 ? contour.contour.points.back() : contour.contour.points[id_near - 1];
         Point point_after = id_near == contour.contour.points.size() - 1 ? contour.contour.points.front() : contour.contour.points[id_near + 1];
-        double angle2 = min(point_nearest.ccw_angle(point_before, point_after), point_nearest.ccw_angle(point_after, point_before));
+        double angle2 = std::min(point_nearest.ccw_angle(point_before, point_after), point_nearest.ccw_angle(point_after, point_before));
         angle2 = abs(angle - PI / 2);
         angle = (angle + angle2) / 2;
     }
@@ -457,9 +457,9 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
         size_t prev_idx = closest_point_idx == 0 ? this->expolygon.contour.points.size() - 1 : closest_point_idx - 1;
         size_t next_idx = closest_point_idx == this->expolygon.contour.points.size() - 1 ? 0 : closest_point_idx + 1;
         double mindot = 1;
-        mindot = min(mindot, abs(dot(Line(polyline.points[polyline.points.size() - 1], polyline.points[polyline.points.size() - 2]),
+        mindot = std::min(mindot, abs(dot(Line(polyline.points[polyline.points.size() - 1], polyline.points[polyline.points.size() - 2]),
             (Line(this->expolygon.contour.points[closest_point_idx], this->expolygon.contour.points[prev_idx])))));
-        mindot = min(mindot, abs(dot(Line(polyline.points[polyline.points.size() - 1], polyline.points[polyline.points.size() - 2]),
+        mindot = std::min(mindot, abs(dot(Line(polyline.points[polyline.points.size() - 1], polyline.points[polyline.points.size() - 2]),
             (Line(this->expolygon.contour.points[closest_point_idx], this->expolygon.contour.points[next_idx])))));
 
         //compute angle
@@ -473,7 +473,7 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
         double sum_dot = 0;
         double min_dot = 0;
         // look if other end is a cross point with multiple other branch
-        vector<size_t> crosspoint;
+        std::vector<size_t> crosspoint;
         for (size_t j = 0; j < pp.size(); ++j) {
             if (j == i) continue;
             ThickPolyline& other = pp[j];
@@ -481,12 +481,12 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
                 other.reverse();
                 crosspoint.push_back(j);
                 double dot_temp = dot(Line(polyline.points[0], polyline.points[1]), (Line(other.points[0], other.points[1])));
-                min_dot = min(min_dot, abs(dot_temp));
+                min_dot = std::min(min_dot, abs(dot_temp));
                 sum_dot += dot_temp;
             } else if (polyline.first_point().coincides_with(other.first_point())) {
                 crosspoint.push_back(j);
                 double dot_temp = dot(Line(polyline.points[0], polyline.points[1]), (Line(other.points[0], other.points[1])));
-                min_dot = min(min_dot, abs(dot_temp));
+                min_dot = std::min(min_dot, abs(dot_temp));
                 sum_dot += dot_temp;
             }
         }
@@ -502,7 +502,7 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
         //don't pull, it distords the line if there are too many points.
         //// pull it a bit, depends on my size, the dot?, and the coeff at my 0-end (~14% for a square, almost 0 for a gentle curve)
         //coord_t length_pull = polyline.length();
-        //length_pull *= 0.144 * get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, min(min_width, polyline.length() / 2));
+        //length_pull *= 0.144 * get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, std::min(min_width, polyline.length() / 2));
 
         ////compute dir
         //Vectorf pull_direction(polyline.points[1].x() - polyline.points[0].x(), polyline.points[1].y() - polyline.points[0].y());
@@ -546,11 +546,11 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
         if (polyline.width.back() > 0) continue;
 
         //check my length is small
-        coord_t length = polyline.length();
+        coord_t length = (coord_t)polyline.length();
         if (length > max_width) continue;
 
         // look if other end is a cross point with multiple other branch
-        vector<size_t> crosspoint;
+        std::vector<size_t> crosspoint;
         for (size_t j = 0; j < pp.size(); ++j) {
             if (j == i) continue;
             ThickPolyline& other = pp[j];
@@ -577,8 +577,8 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
 
         //FIXME: also pull (a bit less) points that are near to this one.
         // if true, pull it a bit, depends on my size, the dot?, and the coeff at my 0-end (~14% for a square, almost 0 for a gentle curve)
-        coord_t length_pull = polyline.length();
-        length_pull *= 0.144 * get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, min(min_width, (coord_t)(polyline.length() / 2)));
+        coord_t length_pull = (coord_t)polyline.length();
+        length_pull *= (coord_t) 0.144 * get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, std::min(min_width, (coord_t)(polyline.length() / 2)));
 
         //compute dir
         Vec2d pull_direction(polyline.points[1].x() - polyline.points[0].x(), polyline.points[1].y() - polyline.points[0].y());
@@ -588,12 +588,12 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
 
         //pull the points
         Point &p1 = pp[crosspoint[0]].points[0];
-        p1.x() = p1.x() + pull_direction.x();
-        p1.y() = p1.y() + pull_direction.y();
+        p1.x() = p1.x() + (coord_t)pull_direction.x();
+        p1.y() = p1.y() + (coord_t)pull_direction.y();
 
         Point &p2 = pp[crosspoint[1]].points[0];
-        p2.x() = p2.x() + pull_direction.x();
-        p2.y() = p2.y() + pull_direction.y();
+        p2.x() = p2.x() + (coord_t)pull_direction.x();
+        p2.y() = p2.y() + (coord_t)pull_direction.y();
 
         //delete the now unused polyline
         pp.erase(pp.begin() + i);
@@ -737,7 +737,7 @@ MedialAxis::main_fusion(ThickPolylines& pp)
     //int idf = 0;
 
     bool changes = true;
-    map<Point, double> coeff_angle_cache;
+    std::map<Point, double> coeff_angle_cache;
     while (changes) {
         concatThickPolylines(pp);
         //reoder pp by length (ascending) It's really important to do that to avoid building the line from the width insteand of the length
@@ -801,11 +801,11 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                 //test if we don't merge with something too different and without any relevance.
                 double coeffSizePolyI = 1;
                 if (polyline.width.back() == 0) {
-                    coeffSizePolyI = 0.1 + 0.9*get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, min(min_width, (coord_t)(polyline.length() / 2)));
+                    coeffSizePolyI = 0.1 + 0.9*get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, std::min(min_width, (coord_t)(polyline.length() / 2)));
                 }
                 double coeffSizeOtherJ = 1;
                 if (other.width.back() == 0) {
-                    coeffSizeOtherJ = 0.1 + 0.9*get_coeff_from_angle_countour(other.points.back(), this->expolygon, min(min_width, (coord_t)(polyline.length() / 2)));
+                    coeffSizeOtherJ = 0.1 + 0.9*get_coeff_from_angle_countour(other.points.back(), this->expolygon, std::min(min_width, (coord_t)(polyline.length() / 2)));
                 }
                 //std::cout << " try2 : " << i << ":" << j << " : "
                 //    << (abs(polyline.length()*coeffSizePolyI - other.length()*coeffSizeOtherJ) > max_width / 2)
@@ -904,29 +904,29 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                 //TODO: try if we can achieve a better result if we use a different algo if the angle is <90°
                 const double coeff_angle_poly = (coeff_angle_cache.find(polyline.points.back()) != coeff_angle_cache.end())
                     ? coeff_angle_cache[polyline.points.back()]
-                    : (get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, min(min_width, (coord_t)(polyline.length() / 2))));
+                    : (get_coeff_from_angle_countour(polyline.points.back(), this->expolygon, std::min(min_width, (coord_t)(polyline.length() / 2))));
                 const double coeff_angle_candi = (coeff_angle_cache.find(best_candidate->points.back()) != coeff_angle_cache.end())
                     ? coeff_angle_cache[best_candidate->points.back()]
-                    : (get_coeff_from_angle_countour(best_candidate->points.back(), this->expolygon, min(min_width, (coord_t)(best_candidate->length() / 2))));
+                    : (get_coeff_from_angle_countour(best_candidate->points.back(), this->expolygon, std::min(min_width, (coord_t)(best_candidate->length() / 2))));
 
                 //this will encourage to follow the curve, a little, because it's shorter near the center
                 //without that, it tends to go to the outter rim.
-                //std::cout << " max(polyline.length(), best_candidate->length())=" << max(polyline.length(), best_candidate->length())
+                //std::cout << " std::max(polyline.length(), best_candidate->length())=" << std::max(polyline.length(), best_candidate->length())
                 //    << ", polyline.length()=" << polyline.length()
                 //    << ", best_candidate->length()=" << best_candidate->length()
-                //    << ", polyline.length() / max=" << (polyline.length() / max(polyline.length(), best_candidate->length()))
-                //    << ", best_candidate->length() / max=" << (best_candidate->length() / max(polyline.length(), best_candidate->length()))
+                //    << ", polyline.length() / max=" << (polyline.length() / std::max(polyline.length(), best_candidate->length()))
+                //    << ", best_candidate->length() / max=" << (best_candidate->length() / std::max(polyline.length(), best_candidate->length()))
                 //    << "\n";
-                double weight_poly = 2 - (polyline.length() / max(polyline.length(), best_candidate->length()));
-                double weight_candi = 2 - (best_candidate->length() / max(polyline.length(), best_candidate->length()));
+                double weight_poly = 2 - (polyline.length() / std::max(polyline.length(), best_candidate->length()));
+                double weight_candi = 2 - (best_candidate->length() / std::max(polyline.length(), best_candidate->length()));
                 weight_poly *= coeff_angle_poly;
                 weight_candi *= coeff_angle_candi;
                 const double coeff_poly = (dot_poly_branch * weight_poly) / (dot_poly_branch * weight_poly + dot_candidate_branch * weight_candi);
                 const double coeff_candi = 1.0 - coeff_poly;
                 //std::cout << "coeff_angle_poly=" << coeff_angle_poly
                 //    << ", coeff_angle_candi=" << coeff_angle_candi
-                //    << ", weight_poly=" << (2 - (polyline.length() / max(polyline.length(), best_candidate->length())))
-                //    << ", weight_candi=" << (2 - (best_candidate->length() / max(polyline.length(), best_candidate->length())))
+                //    << ", weight_poly=" << (2 - (polyline.length() / std::max(polyline.length(), best_candidate->length())))
+                //    << ", weight_candi=" << (2 - (best_candidate->length() / std::max(polyline.length(), best_candidate->length())))
                 //    << ", sumpoly=" << weight_poly
                 //    << ", sumcandi=" << weight_candi
                 //    << ", dot_poly_branch=" << dot_poly_branch
@@ -937,7 +937,7 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                 //iterate the points
                 // as voronoi should create symetric thing, we can iterate synchonously
                 size_t idx_point = 1;
-                while (idx_point < min(polyline.points.size(), best_candidate->points.size())) {
+                while (idx_point < std::min(polyline.points.size(), best_candidate->points.size())) {
                     //fusion
                     polyline.points[idx_point].x() = polyline.points[idx_point].x() * coeff_poly + best_candidate->points[idx_point].x() * coeff_candi;
                     polyline.points[idx_point].y() = polyline.points[idx_point].y() * coeff_poly + best_candidate->points[idx_point].y() * coeff_candi;
@@ -946,10 +946,10 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                     // This formula is what works the best, even if it's not perfect (created empirically).  0->3% error on a gap fill on some tests.
                     //If someone find  an other formula based on the properties of the voronoi algorithm used here, and it works better, please use it.
                     //or maybe just use the distance to nearest edge in bounds...
-                    double value_from_current_width = 0.5*polyline.width[idx_point] * dot_poly_branch / max(dot_poly_branch, dot_candidate_branch);
-                    value_from_current_width += 0.5*best_candidate->width[idx_point] * dot_candidate_branch / max(dot_poly_branch, dot_candidate_branch);
+                    double value_from_current_width = 0.5*polyline.width[idx_point] * dot_poly_branch / std::max(dot_poly_branch, dot_candidate_branch);
+                    value_from_current_width += 0.5*best_candidate->width[idx_point] * dot_candidate_branch / std::max(dot_poly_branch, dot_candidate_branch);
                     double value_from_dist = 2 * polyline.points[idx_point].distance_to(best_candidate->points[idx_point]);
-                    value_from_dist *= sqrt(min(dot_poly_branch, dot_candidate_branch) / max(dot_poly_branch, dot_candidate_branch));
+                    value_from_dist *= sqrt(std::min(dot_poly_branch, dot_candidate_branch) / std::max(dot_poly_branch, dot_candidate_branch));
                     polyline.width[idx_point] = value_from_current_width + value_from_dist;
                     //std::cout << "width:" << polyline.width[idx_point] << " = " << value_from_current_width << " + " << value_from_dist 
                     //    << " (<" << max_width << " && " << (bounds.contour.closest_point(polyline.points[idx_point])->distance_to(polyline.points[idx_point]) * 2.1)<<")\n";
@@ -1306,7 +1306,7 @@ MedialAxis::simplify_polygon_frontier()
                 size_t next_i = i == simplified_poly.contour.points.size() - 1 ? 0 : (i + 1);
                 const Point* closest = bounds.contour.closest_point(p_check);
                 if (closest != nullptr && closest->distance_to(p_check) + SCALED_EPSILON
-                    < min(p_check.distance_to(simplified_poly.contour.points[prev_i]), p_check.distance_to(simplified_poly.contour.points[next_i])) / 2) {
+                    < std::min(p_check.distance_to(simplified_poly.contour.points[prev_i]), p_check.distance_to(simplified_poly.contour.points[next_i])) / 2) {
                     p_check.x() = closest->x();
                     p_check.y() = closest->y();
                     need_intersect = true;
@@ -1596,7 +1596,7 @@ ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, E
                 continue;
             }
 
-            const double w = fmax(line.a_width, line.b_width);
+            const double w = std::fmax(line.a_width, line.b_width);
             if (path.polyline.points.empty()) {
                 path.polyline.append(line.a);
                 path.polyline.append(line.b);

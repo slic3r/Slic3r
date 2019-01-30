@@ -2217,39 +2217,40 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->default_value = new ConfigOptionEnum<SupportZDistanceType>(zdFilament);
 
-    def = this->add("support_material_contact_distance_top", coFloat);
+    def = this->add("support_material_contact_distance_top", coFloatOrPercent);
     def->gui_type = "f_enum_open";
     def->label = L("Top");
     def->category = L("Support material");
     def->tooltip = L("The vertical distance between support material interface and the object"
         "(when the object is printed on top of the support). "
         "Setting this to 0 will also prevent Slic3r from using bridge flow and speed "
-        "for the first object layer.");
+        "for the first object layer. Can be a % of the extruder size used for the interface layers.");
     def->sidetext = L("mm");
     def->cli = "support-material-contact-distance-top=f";
     //    def->min = 0;
     def->enum_values.push_back("0");
     def->enum_values.push_back("0.2");
-    def->enum_labels.push_back((boost::format("0 (%1%)") % L("soluble")).str());
-    def->enum_labels.push_back((boost::format("0.2 (%1%)") % L("detachable")).str());
+    def->enum_labels.push_back((boost::format("0 (%1%)") % L("bad bond")).str());
+    def->enum_labels.push_back((boost::format("0.2 (%1%)") % L("ordinary")).str());
     def->mode = comAdvanced;
-    def->default_value = new ConfigOptionFloat(0.2);
+    def->aliases = { "support_material_contact_distance" };
+    def->default_value = new ConfigOptionFloatOrPercent(50,true);
 
-    def = this->add("support_material_contact_distance_bottom", coFloat);
+    def = this->add("support_material_contact_distance_bottom", coFloatOrPercent);
     def->gui_type = "f_enum_open";
     def->label = L("Bottom");
     def->category = L("Support material");
     def->tooltip = L("The vertical distance between object and support material interface"
-        "(when the support is printed on top of the object).");
+        "(when the support is printed on top of the object). Can be a % of the extruder size used for the interface layers.");
     def->sidetext = L("mm");
     def->cli = "support-material-contact-distance-bottom=f";
     //    def->min = 0;
     def->enum_values.push_back("0");
     def->enum_values.push_back("0.2");
-    def->enum_labels.push_back((boost::format("0 (%1%)") % L("soluble")).str());
-    def->enum_labels.push_back((boost::format("0.2 (%1%)") % L("detachable")).str());
+    def->enum_labels.push_back((boost::format("0 (%1%)") % L("bad bond")).str());
+    def->enum_labels.push_back((boost::format("0.2 (%1%)") % L("ordinary")).str());
     def->mode = comAdvanced;
-    def->default_value = new ConfigOptionFloat(0.2);
+    def->default_value = new ConfigOptionFloatOrPercent(50,true);
 
     def = this->add("support_material_enforce_layers", coInt);
     def->label = L("Enforce support for the first");
