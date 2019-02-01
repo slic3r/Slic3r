@@ -1081,8 +1081,10 @@ void TabPrint::build()
 		optgroup = page->new_optgroup(_(L("Autospeed (advanced)")));
 		optgroup->append_single_option_line("max_print_speed");
 		optgroup->append_single_option_line("max_volumetric_speed");
+#ifdef HAS_PRESSURE_EQUALIZER
 		optgroup->append_single_option_line("max_volumetric_extrusion_rate_slope_positive");
 		optgroup->append_single_option_line("max_volumetric_extrusion_rate_slope_negative");
+#endif /* HAS_PRESSURE_EQUALIZER */
 
 	page = add_options_page(_(L("Multiple Extruders")), "funnel.png");
 		optgroup = page->new_optgroup(_(L("Extruders")));
@@ -1154,7 +1156,7 @@ void TabPrint::build()
 
         optgroup = page->new_optgroup(_(L("Output file"))); 
         optgroup->append_single_option_line("gcode_comments");
-        optgroup->append_single_option_line("label_printed_objects");
+		optgroup->append_single_option_line("gcode_label_objects");
 		option = optgroup->get_option("output_filename_format");
 		option.opt.full_width = true;
 		optgroup->append_single_option_line(option);

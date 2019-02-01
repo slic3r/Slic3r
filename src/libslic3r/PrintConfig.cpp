@@ -1082,13 +1082,6 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->default_value = new ConfigOptionBool(0);
 
-    def = this->add("label_printed_objects", coBool);
-    def->label = "Label Prints with Object ID";
-    def->tooltip = "Enable this to add comments in the G-Code that label print moves with what object they belong. Can be used with Octoprint CancelObject plugin.";
-    def->cli = "label-printed-objects!";
-    def->mode = comAdvanced;
-    def->default_value = new ConfigOptionBool(0);
-
     def = this->add("gcode_flavor", coEnum);
     def->label = L("G-code flavor");
     def->tooltip = L("Some G/M-code commands, including temperature control and others, are not universal. "
@@ -1118,6 +1111,15 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("No extrusion"));
     def->mode = comExpert;
     def->default_value = new ConfigOptionEnum<GCodeFlavor>(gcfRepRap);
+
+    def = this->add("gcode_label_objects", coBool);
+    def->label = "Label objects";
+    def->tooltip = "Enable this to add comments into the G-Code labeling print moves with what object they belong to,"
+                   " which is useful for the Octoprint CancelObject plugin. This settings is NOT compatible with "
+                   "Single Extruder Multi Material setup and Wipe into Object / Wipe into Infill.";
+    def->cli = "gcode-label-objects!";
+    def->mode = comAdvanced;
+    def->default_value = new ConfigOptionBool(0);
 
     def = this->add("high_current_on_filament_swap", coBool);
     def->label = L("High extruder current on filament swap");
@@ -1439,6 +1441,7 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->default_value = new ConfigOptionFloat(0);
 
+#ifdef HAS_PRESSURE_EQUALIZER
     def = this->add("max_volumetric_extrusion_rate_slope_positive", coFloat);
     def->label = L("Max volumetric slope positive");
     def->tooltip = L("This experimental setting is used to limit the speed of change in extrusion rate. "
@@ -1462,6 +1465,7 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->mode = comExpert;
     def->default_value = new ConfigOptionFloat(0);
+#endif /* HAS_PRESSURE_EQUALIZER */
 
     def = this->add("min_fan_speed", coInts);
     def->label = L("Min");
@@ -3065,6 +3069,9 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         "start_perimeters_at_concave_points", "start_perimeters_at_non_overhang", "randomize_start", 
         "seal_position", "vibration_limit", "bed_size", 
         "print_center", "g0", "threads", "pressure_advance", "wipe_tower_per_color_wipe"
+#ifndef HAS_PRESSURE_EQUALIZER
+        , "max_volumetric_extrusion_rate_slope_positive", "max_volumetric_extrusion_rate_slope_negative"
+#endif /* HAS_PRESSURE_EQUALIZER */
     };
 
     if (ignore.find(opt_key) != ignore.end()) {

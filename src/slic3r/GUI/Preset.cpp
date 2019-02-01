@@ -323,7 +323,10 @@ const std::vector<std::string>& Preset::print_options()
         "seam_position", "external_perimeters_first", "fill_density", "fill_pattern", "top_fill_pattern", "bottom_fill_pattern", 
         "infill_every_layers", "infill_only_where_needed", "solid_infill_every_layers", "fill_angle", "bridge_angle", 
         "solid_infill_below_area", "only_retract_when_crossing_perimeters", "infill_first", "max_print_speed", 
-        "max_volumetric_speed", "max_volumetric_extrusion_rate_slope_positive", "max_volumetric_extrusion_rate_slope_negative", 
+        "max_volumetric_speed", 
+#ifdef HAS_PRESSURE_EQUALIZER
+        "max_volumetric_extrusion_rate_slope_positive", "max_volumetric_extrusion_rate_slope_negative", 
+#endif /* HAS_PRESSURE_EQUALIZER */
         "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "infill_speed", "solid_infill_speed", 
         "top_solid_infill_speed", "support_material_speed", "support_material_xy_spacing", "support_material_interface_speed",
         "bridge_speed", "gap_fill", "gap_fill_speed", "travel_speed", "first_layer_speed", "perimeter_acceleration", "infill_acceleration",
@@ -337,7 +340,7 @@ const std::vector<std::string>& Preset::print_options()
 		, "support_material_contact_distance_top"
 		, "support_material_contact_distance_bottom" 
         , "support_material_buildplate_only", "dont_support_bridges", "notes", "complete_objects", "extruder_clearance_radius", 
-        "extruder_clearance_height", "gcode_comments", "output_filename_format", "post_process", "perimeter_extruder", 
+        "extruder_clearance_height", "gcode_comments", "gcode_label_objects", "output_filename_format", "post_process", "perimeter_extruder", 
         "infill_extruder", "solid_infill_extruder", "support_material_extruder", "support_material_interface_extruder", 
         "ooze_prevention", "standby_temperature_delta", "interface_shells", "extrusion_width", "first_layer_extrusion_width", 
         "perimeter_extrusion_width", "external_perimeter_extrusion_width", "infill_extrusion_width", "solid_infill_extrusion_width", 
@@ -356,7 +359,6 @@ const std::vector<std::string>& Preset::print_options()
         , "remove_small_gaps"
         , "infill_not_connected"
         , "first_layer_infill_speed"
-        , "label_printed_objects"
         , "thin_walls_min_width"
     };
     return s_opts;
@@ -1180,7 +1182,7 @@ std::string PresetCollection::name() const
     case Preset::TYPE_PRINT:        return L("print");
     case Preset::TYPE_FILAMENT:     return L("filament");
     case Preset::TYPE_SLA_PRINT:    return L("SLA print");
-    case Preset::TYPE_SLA_MATERIAL: return L("SLA material");    
+    case Preset::TYPE_SLA_MATERIAL: return L("SLA material");
     case Preset::TYPE_PRINTER:      return L("printer");
     default:                        return "invalid";
     }

@@ -860,6 +860,8 @@ private:
 
     public:
         LegendTexture();
+        void fill_color_print_legend_values(const GCodePreviewData& preview_data, const GLCanvas3D& canvas,
+                                     std::vector<std::pair<double, double>>& cp_legend_values);
 
         bool generate(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors, const GLCanvas3D& canvas, bool use_error_colors);
 
@@ -1005,6 +1007,10 @@ public:
 
     void update_volumes_colors_by_extruder();
 
+#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
+    void update_toolbar_items_visibility();
+#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
+
 #if !ENABLE_IMGUI
     Rect get_gizmo_reset_rect(const GLCanvas3D& canvas, bool viewport) const;
     bool gizmo_reset_rect_contains(const GLCanvas3D& canvas, float x, float y) const;
@@ -1030,8 +1036,7 @@ public:
 
     void load_gcode_preview(const GCodePreviewData& preview_data, const std::vector<std::string>& str_tool_colors);
     void load_sla_preview();
-    void load_preview(const std::vector<std::string>& str_tool_colors);
-
+    void load_preview(const std::vector<std::string>& str_tool_colors, const std::vector<double>& color_print_values);
     void bind_event_handlers();
     void unbind_event_handlers();
 
@@ -1136,7 +1141,8 @@ private:
     // Create 3D thick extrusion lines for object forming extrusions.
     // Adds a new Slic3r::GUI::3DScene::Volume to $self->volumes,
     // one for perimeters, one for infill and one for supports.
-    void _load_print_object_toolpaths(const PrintObject& print_object, const std::vector<std::string>& str_tool_colors);
+    void _load_print_object_toolpaths(const PrintObject& print_object, const std::vector<std::string>& str_tool_colors,
+                                      const std::vector<double>& color_print_values);
     // Create 3D thick extrusion lines for wipe tower extrusions
     void _load_wipe_tower_toolpaths(const std::vector<std::string>& str_tool_colors);
 

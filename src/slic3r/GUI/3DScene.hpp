@@ -11,6 +11,19 @@
 
 #include <functional>
 
+#ifndef NDEBUG
+#define HAS_GLSAFE
+#endif
+
+#ifdef HAS_GLSAFE
+extern void glAssertRecentCallImpl();
+inline void glAssertRecentCall() { glAssertRecentCallImpl(); }
+#define glsafe(cmd) do { cmd; glAssertRecentCallImpl(); } while (false)
+#else
+inline void glAssertRecentCall() { }
+#define glsafe(cmd) cmd
+#endif
+
 namespace Slic3r {
 
 class Print;
@@ -282,6 +295,8 @@ public:
     bool                is_wipe_tower;
     // Wheter or not this volume has been generated from an extrusion path
     bool                is_extrusion_path;
+    // Wheter or not to always render this volume using its own alpha 
+    bool                force_transparent;
 
     // Interleaved triangles & normals with indexed triangles & quads.
     GLIndexedVertexArray        indexed_vertex_array;

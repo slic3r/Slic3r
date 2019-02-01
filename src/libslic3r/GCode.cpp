@@ -662,10 +662,14 @@ void GCode::_do_export(Print &print, FILE *file)
     m_cooling_buffer = make_unique<CoolingBuffer>(*this);
     if (print.config().spiral_vase.value)
         m_spiral_vase = make_unique<SpiralVase>(print.config());
+#ifdef HAS_PRESSURE_EQUALIZER
     if (print.config().max_volumetric_extrusion_rate_slope_positive.value > 0 ||
         print.config().max_volumetric_extrusion_rate_slope_negative.value > 0)
         m_pressure_equalizer = make_unique<PressureEqualizer>(&print.config());
     m_enable_extrusion_role_markers = (bool)m_pressure_equalizer;
+#else /* HAS_PRESSURE_EQUALIZER */
+    m_enable_extrusion_role_markers = false;
+#endif /* HAS_PRESSURE_EQUALIZER */
 
     // Write information on the generator.
     _write_format(file, "; %s\n\n", Slic3r::header_slic3r_generated().c_str());
@@ -918,8 +922,10 @@ void GCode::_do_export(Print &print, FILE *file)
                     this->process_layer(file, print, lrs, tool_ordering.tools_for_layer(ltp.print_z()), &copy - object.copies().data());
                     print.throw_if_canceled();
                 }
+#ifdef HAS_PRESSURE_EQUALIZER
                 if (m_pressure_equalizer)
                     _write(file, m_pressure_equalizer->process("", true));
+#endif /* HAS_PRESSURE_EQUALIZER */
                 ++ finished_objects;
                 // Flag indicating whether the nozzle temperature changes from 1st to 2nd layer were performed.
                 // Reset it when starting another object from 1st layer.
@@ -975,8 +981,10 @@ void GCode::_do_export(Print &print, FILE *file)
             this->process_layer(file, print, layer.second, layer_tools, size_t(-1));
             print.throw_if_canceled();
         }
+#ifdef HAS_PRESSURE_EQUALIZER
         if (m_pressure_equalizer)
             _write(file, m_pressure_equalizer->process("", true));
+#endif /* HAS_PRESSURE_EQUALIZER */
         if (m_wipe_tower)
             // Purge the extruder, pull out the active filament.
             _write(file, m_wipe_tower->finalize(*this));
@@ -1619,9 +1627,8 @@ void GCode::process_layer(
                 
                 unsigned int copy_id = 0;
                 for (const Point &copy : copies) {
-                    if (this->config().label_printed_objects) {
-                        gcode += ((std::ostringstream&)(std::ostringstream() << "; printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_id << "\n")).str();
-                    }
+                    if (this->config().gcode_label_objects)
+                        gcode += std::string("; printing object ") + print_object->model_object()->name + " id:" + std::to_string(layer_id) + " copy " + std::to_string(copy_id) + "\n";
                     // When starting a new object, use the external motion planner for the first travel move.
                     std::pair<const PrintObject*, Point> this_object_copy(print_object, copy);
                     if (m_last_obj_copy != this_object_copy)
@@ -1642,10 +1649,9 @@ void GCode::process_layer(
                         gcode += this->extrude_perimeters(print, by_region_specific, lower_layer_edge_grids[layer_id]);
                         gcode += this->extrude_infill(print, by_region_specific, false);
                     }
-                    if (this->config().label_printed_objects) {
-                        gcode += ((std::ostringstream&)(std::ostringstream() << "; stop printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_id << "\n")).str();
-                    }
-                    ++copy_id;
+                    if (this->config().gcode_label_objects)
+                        gcode += std::string("; stop printing object ") + print_object->model_object()->name + " id:" + std::to_string(layer_id) + " copy " + std::to_string(copy_id) + "\n";
+                    ++ copy_id;
                 }
             }
         }
@@ -1663,12 +1669,14 @@ void GCode::process_layer(
     if (m_cooling_buffer)
         gcode = m_cooling_buffer->process_layer(gcode, layer.id());
 
+#ifdef HAS_PRESSURE_EQUALIZER
     // Apply pressure equalization if enabled;
     // printf("G-code before filter:\n%s\n", gcode.c_str());
     if (m_pressure_equalizer)
         gcode = m_pressure_equalizer->process(gcode.c_str(), false);
     // printf("G-code after filter:\n%s\n", out.c_str());
-
+#endif /* HAS_PRESSURE_EQUALIZER */
+    
     _write(file, gcode);
     BOOST_LOG_TRIVIAL(trace) << "Exported layer " << layer.id() << " print_z " << print_z << 
         ", time estimator memory: " <<
