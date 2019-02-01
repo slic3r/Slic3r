@@ -1118,6 +1118,7 @@ void PrintConfigDef::init_fff_params()
                    " which is useful for the Octoprint CancelObject plugin. This settings is NOT compatible with "
                    "Single Extruder Multi Material setup and Wipe into Object / Wipe into Infill.";
     def->cli = "gcode-label-objects!";
+    def->aliases = { "label_printed_objects" };
     def->mode = comAdvanced;
     def->default_value = new ConfigOptionBool(0);
 
