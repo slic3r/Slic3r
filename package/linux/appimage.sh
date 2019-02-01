@@ -68,7 +68,7 @@ cp ${WD}/appimage-apprun.sh ${WD}/${APP}.AppDir/AppRun
 
 chmod +x AppRun
 
-cp ${WD}/${APP}.AppDir/usr/bin/var/Slic3r_192px_transparent.png $WD/${APP}.AppDir/${APP}.png
+cp ${WD}/${APP}.AppDir/usr/bin/var/Slic3r_192px.png $WD/${APP}.AppDir/${APP}.png
 
 cat > $WD/${APP}.AppDir/${APP}.desktop <<EOF
 [Desktop Entry]
