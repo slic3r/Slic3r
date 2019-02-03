@@ -1771,7 +1771,8 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Minimum detail resolution, used to simplify the input file for speeding up "
                    "the slicing job and reducing memory usage. High-resolution models often carry "
                    "more detail than printers can render. Set to zero to disable any simplification "
-                   "and use full resolution from input.");
+                   "and use full resolution from input. "
+                   "\nNote: slic3r simplify the geometry with a treshold of 0.0125mm and has an internal resolution of 0.0001mm.");
     def->sidetext = L("mm");
     def->cli = "resolution=f";
     def->min = 0;
@@ -2420,7 +2421,8 @@ void PrintConfigDef::init_fff_params()
     def = this->add("thin_walls_min_width", coFloatOrPercent);
     def->label = L("min width");
     def->category = L("Layers and Perimeters");
-    def->tooltip = L("Minimum width for the extrusion to be extruded (widths lower than the nozzle diameter will be over-extruded at the nozzle diameter). Can be percent of the nozzle size.");
+    def->tooltip = L("Minimum width for the extrusion to be extruded (widths lower than the nozzle diameter will be over-extruded at the nozzle diameter)."
+        "Can be percent of the nozzle size. The default behavior of slic3r and slic3rPE is with a 33% value. Put 100% to avoid any sort of over-extrusion.");
     def->cli = "thin-walls-min-width=s";
     def->mode = comExpert;
     def->min = 0;
@@ -2566,6 +2568,57 @@ void PrintConfigDef::init_fff_params()
                                                   140.f, 140.f,   0.f, 140.f, 140.f,
                                                   140.f, 140.f, 140.f,   0.f, 140.f,
                                                   140.f, 140.f, 140.f, 140.f,   0.f };
+
+
+    def = this->add("wipe_advanced", coBool);
+    def->label = L("Enable advanced wiping volume");
+    def->tooltip = L("Allow slic3r to compute the purge volume via smart computations. Use the pigment% of each filament and following parameters");
+    def->cli = "wipe-advanced!";
+    def->mode = comExpert;
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("wipe_advanced_nozzle_melted_volume", coFloat);
+    def->label = L("Nozzle volume");
+    def->tooltip = L("The volume of melted plastic inside your nozlle. Used by 'advanced wiping'.");
+    def->sidetext = L("mm3");
+    def->cli = "wipe-advanced-volume=f";
+    def->mode = comExpert;
+    def->default_value = new ConfigOptionFloat(120);
+
+    def = this->add("filament_wipe_advanced_pigment", coFloats);
+    def->label = L("Pigment percentage");
+    def->tooltip = L("The pigment % for this filament (bewteen 0 and 1, 1=100%). 0 for translucent/natural, 0.2-0.5 for white and 1 for black.");
+    def->cli = "wipe-advanced-pigment=f@";
+    def->mode = comExpert;
+    def->min = 0;
+    def->max = 1;
+    def->default_value = new ConfigOptionFloats{ 0.5 };
+
+    def = this->add("wipe_advanced_multiplier", coFloat);
+    def->label = L("Multiplier");
+    def->tooltip = L("The volume multiplier used to compute the final volume to extrude by the algorithm.");
+    def->sidetext = L("mm3");
+    def->cli = "wipe-advanced-mult=f";
+    def->mode = comExpert;
+    def->default_value = new ConfigOptionFloat(60);
+
+
+    def = this->add("wipe_advanced_algo", coEnum);
+    def->label = L("Algorithm");
+    def->tooltip = L("Algo for the advanced wipe.\n"
+        "Linear : volume = nozzle + volume_mult * (pigmentBefore-pigmentAfter)\n"
+        "Quadratic: volume = nozzle + volume_mult * (pigmentBefore-pigmentAfter)+ volume_mult * (pigmentBefore-pigmentAfter)^3\n"
+        "Hyperbola: volume = nozzle + volume_mult * (0.5+pigmentBefore) / (0.5+pigmentAfter)");
+    def->cli = "wipe-advanced-algo=s";
+    def->enum_keys_map = &ConfigOptionEnum<WipeAlgo>::get_enum_values();
+    def->enum_values.push_back("linear");
+    def->enum_values.push_back("quadra");
+    def->enum_values.push_back("expo");
+    def->enum_labels.push_back(L("Linear"));
+    def->enum_labels.push_back(L("Quadratric"));
+    def->enum_labels.push_back(L("Hyperbola"));
+    def->mode = comExpert;
+    def->default_value = new ConfigOptionEnum<WipeAlgo>(waLinear);
 
     def = this->add("wipe_tower_x", coFloat);
     def->label = L("X");

@@ -324,15 +324,15 @@ void MainFrame::init_menubar()
     if (m_plater != nullptr)
     {
         editMenu = new wxMenu();
-        wxMenuItem* item_select_all = append_menu_item(editMenu, wxID_ANY, _(L("&Select all")) + "\tCtrl+A", _(L("Selects all objects")),
-            [this](wxCommandEvent&) { m_plater->select_all(); }, "");
+        // wxMenuItem* item_select_all = append_menu_item(editMenu, wxID_ANY, _(L("&Select all")) + "\tCtrl+A", _(L("Selects all objects")),
+            // [this](wxCommandEvent&) { std::cout<<"select all plater?\n"; m_plater->select_all(); }, "");
         editMenu->AppendSeparator();
         wxMenuItem* item_delete_sel = append_menu_item(editMenu, wxID_ANY, _(L("&Delete selected")) + "\tDel", _(L("Deletes the current selection")),
             [this](wxCommandEvent&) { m_plater->remove_selected(); }, "");
         wxMenuItem* item_delete_all = append_menu_item(editMenu, wxID_ANY, _(L("Delete &all")) + "\tCtrl+Del", _(L("Deletes all objects")),
             [this](wxCommandEvent&) { m_plater->reset(); }, "");
 
-        Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_select()); }, item_select_all->GetId());
+        // Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_select()); }, item_select_all->GetId());
         Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_delete()); }, item_delete_sel->GetId());
         Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_delete_all()); }, item_delete_all->GetId());
     }
@@ -414,6 +414,8 @@ void MainFrame::init_menubar()
     {
         append_menu_item(helpMenu, wxID_ANY, _(L("Slic3r++ Releases")), _(L("Open the slic3r++ releases page in your browser")),
             [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/slic3r/releases"); });
+        append_menu_item(helpMenu, wxID_ANY, _(L("Slic3r++ wiki")), _(L("Open the slic3r++ wiki in your browser")),
+            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/slic3r/wiki"); });
         append_menu_item(helpMenu, wxID_ANY, _(L("Slic3r++ website")), _(L("Open the slic3r++ website in your browser")),
             [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/slic3r"); });
         append_menu_item(helpMenu, wxID_ANY, _(L("Prusa Edition website")), _(L("Open the Prusa Edition website in your browser")), 
@@ -432,7 +434,7 @@ void MainFrame::init_menubar()
         append_menu_item(helpMenu, wxID_ANY, _(L("Show &Configuration Folder")), _(L("Show user configuration folder (datadir)")),
             [this](wxCommandEvent&) { Slic3r::GUI::desktop_open_datadir_folder(); });
         append_menu_item(helpMenu, wxID_ANY, _(L("Report an Issue")), _(L("Report an issue on Slic3r++")), 
-            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/prusa3d/supermerill/issues/new"); });
+            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/Slic3r/issues/new"); });
         append_menu_item(helpMenu, wxID_ANY, _(L("&About Slic3r")), _(L("Show about dialog")),
             [this](wxCommandEvent&) { Slic3r::GUI::about(); });
         helpMenu->AppendSeparator();

@@ -1547,6 +1547,7 @@ void TabFilament::build()
         optgroup->append_single_option_line("filament_cooling_initial_speed");
         optgroup->append_single_option_line("filament_cooling_final_speed");
         optgroup->append_single_option_line("filament_minimal_purge_on_wipe_tower");
+        optgroup->append_single_option_line("filament_wipe_advanced_pigment");
 
         line = optgroup->create_single_option_line("filament_ramming_parameters");// { _(L("Ramming")), "" };
         line.widget = [this](wxWindow* parent) {
@@ -1562,7 +1563,7 @@ void TabFilament::build()
 			}));
 			return sizer;
 		};
-		optgroup->append_line(line);
+        optgroup->append_line(line);
 
 
         page = add_options_page(_(L("Custom G-code")), "cog.png");
@@ -2206,6 +2207,11 @@ void TabPrinter::build_extruder_pages()
 		optgroup->append_single_option_line("parking_pos_retraction");
         optgroup->append_single_option_line("extra_loading_move");
         optgroup->append_single_option_line("high_current_on_filament_swap");
+        optgroup = page->new_optgroup(_(L("Advanced wipe tower purge volume calculs")));
+        optgroup->append_single_option_line("wipe_advanced");
+        optgroup->append_single_option_line("wipe_advanced_nozzle_melted_volume");
+        optgroup->append_single_option_line("wipe_advanced_multiplier");
+        optgroup->append_single_option_line("wipe_advanced_algo");
 		m_pages.insert(m_pages.end() - n_after_single_extruder_MM, page);
 		m_has_single_extruder_MM_page = true;
 	}
@@ -2404,6 +2410,10 @@ void TabPrinter::update_fff()
 		get_field("retract_restart_extra_toolchange", i)->toggle
 			(have_multiple_extruders && toolchange_retraction);
 	}
+
+    bool have_advanced_wipe_volume = m_config->opt_bool("wipe_advanced");
+    for (auto el : { "wipe_advanced_nozzle_melted_volume", "wipe_advanced_multiplier", "wipe_advanced_algo" })
+        get_field(el)->toggle(have_advanced_wipe_volume);
 
 	Thaw();
 }

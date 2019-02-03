@@ -1950,6 +1950,39 @@ void Print::_make_wipe_tower()
             for (const auto extruder_id : layer_tools.extruders) {
                 if ((first_layer && extruder_id == m_wipe_tower_data.tool_ordering.all_extruders().back()) || extruder_id != current_extruder_id) {
                     double volume_to_wipe = wipe_volumes[current_extruder_id][extruder_id];             // total volume to wipe after this toolchange
+                    
+                    if (m_config.wipe_advanced) {
+                        volume_to_wipe = m_config.wipe_advanced_nozzle_melted_volume;
+                        float pigmentBef = m_config.filament_wipe_advanced_pigment.get_at(current_extruder_id);
+                        float pigmentAft = m_config.filament_wipe_advanced_pigment.get_at(extruder_id);
+                        if (m_config.wipe_advanced_algo.value == waLinear) {
+                            volume_to_wipe += m_config.wipe_advanced_multiplier.value * (pigmentBef - pigmentAft);
+                            std::cout << "advanced wiping (lin) ";
+                            std::cout << current_extruder_id << " -> " << extruder_id << " will use " << volume_to_wipe << " mm3\n";
+                            std::cout << " calculus : " << m_config.wipe_advanced_nozzle_melted_volume << " + " << m_config.wipe_advanced_multiplier.value
+                                << " * ( " << pigmentBef << " - " << pigmentAft << " )\n";
+                            std::cout << "    = " << m_config.wipe_advanced_nozzle_melted_volume << " + " << (m_config.wipe_advanced_multiplier.value* (pigmentBef - pigmentAft)) << "\n";
+                        } else if (m_config.wipe_advanced_algo.value == waQuadra) {
+                            volume_to_wipe += m_config.wipe_advanced_multiplier.value * (pigmentBef - pigmentAft)
+                                + m_config.wipe_advanced_multiplier.value * (pigmentBef - pigmentAft) * (pigmentBef - pigmentAft) * (pigmentBef - pigmentAft);
+                            std::cout << "advanced wiping (quadra) ";
+                            std::cout << current_extruder_id << " -> " << extruder_id << " will use " << volume_to_wipe << " mm3\n";
+                            std::cout << " calculus : " << m_config.wipe_advanced_nozzle_melted_volume << " + " << m_config.wipe_advanced_multiplier.value
+                                << " * ( " << pigmentBef << " - " << pigmentAft << " ) + " << m_config.wipe_advanced_multiplier.value
+                                << " * ( " << pigmentBef << " - " << pigmentAft << " ) ^3 \n";
+                            std::cout << "    = " << m_config.wipe_advanced_nozzle_melted_volume << " + " << (m_config.wipe_advanced_multiplier.value* (pigmentBef - pigmentAft))
+                                << " + " << (m_config.wipe_advanced_multiplier.value*(pigmentBef - pigmentAft)*(pigmentBef - pigmentAft)*(pigmentBef - pigmentAft))<<"\n";
+                        } else if (m_config.wipe_advanced_algo.value == waHyper) {
+                            volume_to_wipe += m_config.wipe_advanced_multiplier.value * (0.5 + pigmentBef) / (0.5 + pigmentAft);
+                            std::cout << "advanced wiping (hyper) ";
+                            std::cout << current_extruder_id << " -> " << extruder_id << " will use " << volume_to_wipe << " mm3\n";
+                            std::cout << " calculus : " << m_config.wipe_advanced_nozzle_melted_volume << " + " << m_config.wipe_advanced_multiplier.value
+                                << " * ( 0.5 + " << pigmentBef << " ) / ( 0.5 + " << pigmentAft << " )\n";
+                            std::cout << "    = " << m_config.wipe_advanced_nozzle_melted_volume << " + " << (m_config.wipe_advanced_multiplier.value * (0.5 + pigmentBef) / (0.5 + pigmentAft)) << "\n";
+                        }
+                    }
+                    //filament_wipe_advanced_pigment
+                    
                     // Not all of that can be used for infill purging:
                     volume_to_wipe -= m_config.filament_minimal_purge_on_wipe_tower.get_at(extruder_id);
 

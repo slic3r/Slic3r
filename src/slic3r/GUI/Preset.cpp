@@ -376,6 +376,7 @@ const std::vector<std::string>& Preset::filament_options()
         "min_print_speed", "start_filament_gcode", "end_filament_gcode",
         "compatible_prints", "compatible_prints_condition",
         "compatible_printers", "compatible_printers_condition", "inherits"
+        , "filament_wipe_advanced_pigment"
     };
     return s_opts;
 }
@@ -393,6 +394,10 @@ const std::vector<std::string>& Preset::printer_options()
             "between_objects_gcode", "printer_vendor", "printer_model", "printer_variant", "printer_notes", "cooling_tube_retraction",
             "cooling_tube_length", "high_current_on_filament_swap", "parking_pos_retraction", "extra_loading_move", "max_print_height", 
             "default_print_profile", "inherits",
+            "wipe_advanced",
+            "wipe_advanced_nozzle_melted_volume",
+            "wipe_advanced_multiplier",
+            "wipe_advanced_algo",
             "remaining_times", "silent_mode", "machine_max_acceleration_extruding", "machine_max_acceleration_retracting",
 			"machine_max_acceleration_x", "machine_max_acceleration_y", "machine_max_acceleration_z", "machine_max_acceleration_e",
         	"machine_max_feedrate_x", "machine_max_feedrate_y", "machine_max_feedrate_z", "machine_max_feedrate_e",

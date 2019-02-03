@@ -32,6 +32,13 @@ enum PrinterTechnology
     ptSLA,
 };
 
+
+enum WipeAlgo {
+    waLinear,
+    waQuadra,
+    waHyper,
+};
+
 enum GCodeFlavor {
     gcfRepRap, gcfRepetier, gcfTeacup, gcfMakerWare, gcfMarlin, gcfSailfish, gcfMach3, gcfMachinekit,
     gcfSmoothie, gcfNoExtrusion,
@@ -83,6 +90,16 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<PrinterTechnology
     if (keys_map.empty()) {
         keys_map["FFF"]             = ptFFF;
         keys_map["SLA"]             = ptSLA;
+    }
+    return keys_map;
+}
+
+template<> inline const t_config_enum_values& ConfigOptionEnum<WipeAlgo>::get_enum_values() {
+    static t_config_enum_values keys_map;
+    if (keys_map.empty()) {
+        keys_map["linear"]             = waLinear;
+        keys_map["quadra"]             = waQuadra;
+        keys_map["expo"]             = waHyper;
     }
     return keys_map;
 }
@@ -697,6 +714,7 @@ public:
     ConfigOptionInts                filament_cooling_moves;
     ConfigOptionFloats              filament_cooling_initial_speed;
     ConfigOptionFloats              filament_minimal_purge_on_wipe_tower;
+    ConfigOptionFloats              filament_wipe_advanced_pigment;
     ConfigOptionFloats              filament_cooling_final_speed;
     ConfigOptionStrings             filament_ramming_parameters;
     ConfigOptionBool                gcode_comments;
@@ -736,6 +754,10 @@ public:
     ConfigOptionBool                remaining_times;
     ConfigOptionBool                silent_mode;
     ConfigOptionFloat               extra_loading_move;
+    ConfigOptionBool                wipe_advanced;
+    ConfigOptionFloat               wipe_advanced_nozzle_melted_volume;
+    ConfigOptionFloat               wipe_advanced_multiplier;
+    ConfigOptionEnum<WipeAlgo>               wipe_advanced_algo;
 
     std::string get_extrusion_axis() const
     {
@@ -770,6 +792,7 @@ protected:
         OPT_PTR(filament_cooling_moves);
         OPT_PTR(filament_cooling_initial_speed);
         OPT_PTR(filament_minimal_purge_on_wipe_tower);
+        OPT_PTR(filament_wipe_advanced_pigment);
         OPT_PTR(filament_cooling_final_speed);
         OPT_PTR(filament_ramming_parameters);
         OPT_PTR(gcode_comments);
@@ -809,6 +832,10 @@ protected:
         OPT_PTR(remaining_times);
         OPT_PTR(silent_mode);
         OPT_PTR(extra_loading_move);
+        OPT_PTR(wipe_advanced);
+        OPT_PTR(wipe_advanced_nozzle_melted_volume);
+        OPT_PTR(wipe_advanced_multiplier);
+        OPT_PTR(wipe_advanced_algo);
     }
 };
 
