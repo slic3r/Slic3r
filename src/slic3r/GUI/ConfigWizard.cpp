@@ -262,7 +262,7 @@ PageWelcome::PageWelcome(ConfigWizard *parent, bool check_first_variant) :
 
 	const size_t num_other_vendors = vendors.size() - (vendor_prusa != vendors.cend());
 	auto *sizer = new wxBoxSizer(wxHORIZONTAL);
-	auto *other_vendors = new wxButton(others_buttons, wxID_ANY, _(L("Other vendors")));
+	auto *other_vendors = new wxButton(others_buttons, wxID_ANY, _(L("Presets printers")));
 	other_vendors->Enable(num_other_vendors > 0);
 	auto *custom_setup = new wxButton(others_buttons, wxID_ANY, _(L("Custom setup")));
 
@@ -321,7 +321,7 @@ PageUpdate::PageUpdate(ConfigWizard *parent) :
 PageVendors::PageVendors(ConfigWizard *parent) :
 	ConfigWizardPage(parent, _(L("Other Vendors")), _(L("Other Vendors")))
 {
-	append_text(_(L("Pick another vendor supported by Slic3r PE:")));
+	append_text(_(L("Pick another vendor supported by Slic3r++:")));
 
 	auto boldfont = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
 	boldfont.SetWeight(wxFONTWEIGHT_BOLD);
@@ -355,7 +355,7 @@ PageVendors::PageVendors(ConfigWizard *parent) :
 	});
 
 	append(vendor_picker);
-	for (PrinterPicker *picker : pickers) { this->append(picker); }
+    for (PrinterPicker *picker : pickers) { this->append(picker); }
 }
 
 void PageVendors::on_page_set()
@@ -722,7 +722,8 @@ void ConfigWizard::priv::set_page(ConfigWizardPage *page)
 void ConfigWizard::priv::layout_fit()
 {
 	q->Layout();
-	q->Fit();
+    q->Fit();
+    q->SetSize(wxRect(0, 0, 1200, 700));
 }
 
 void ConfigWizard::priv::enable_next(bool enable)

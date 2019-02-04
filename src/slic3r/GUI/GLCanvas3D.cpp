@@ -424,7 +424,7 @@ void GLCanvas3D::Bed::render(float theta, bool useVBOs, float scale_factor) cons
     {
         _render_prusa("sl1", theta, useVBOs);
     }
-    else if (m_type == "MK2")
+    else
     {
         _render_custom(m_type, theta, useVBOs);
     }
@@ -448,7 +448,7 @@ void GLCanvas3D::Bed::render(float theta, float scale_factor) const
     }
     else if (m_type == "MK2")
     {
-        _render_custom(m_type, theta);
+        _render_default(m_type, theta);
     }
 }
 #endif // ENABLE_PRINT_BED_MODELS
@@ -548,6 +548,7 @@ void GLCanvas3D::Bed::_render_prusa(const std::string &key, float theta, bool us
 void GLCanvas3D::Bed::_render_prusa(const std::string &key, float theta) const
 #endif // ENABLE_PRINT_BED_MODELS
 {
+    std::cout << "render prusa?\n";
     std::string tex_path = resources_dir() + "/icons/bed/" + key;
 #if ENABLE_PRINT_BED_MODELS
     std::string model_path = resources_dir() + "/models/" + key;
@@ -563,7 +564,7 @@ void GLCanvas3D::Bed::_render_prusa(const std::string &key, float theta) const
     {
         if (!m_top_texture.load_from_file(filename, true))
         {
-            _render_custom();
+            _render_default();
             return;
         }
 #if ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
@@ -581,7 +582,7 @@ void GLCanvas3D::Bed::_render_prusa(const std::string &key, float theta) const
     {
         if (!m_bottom_texture.load_from_file(filename, true))
         {
-            _render_custom();
+            _render_default();
             return;
         }
 #if ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
@@ -653,117 +654,12 @@ void GLCanvas3D::Bed::_render_prusa(const std::string &key, float theta) const
     }
 }
 
-#if ENABLE_PRINT_BED_MODELS
-void GLCanvas3D::Bed::_render_custom(const std::string &key, float theta, bool useVBOs) const
-#else
-void GLCanvas3D::Bed::_render_custom(const std::string &key, float theta) const
-#endif // ENABLE_PRINT_BED_MODELS
+void GLCanvas3D::Bed::_render_default() const
 {
     m_top_texture.reset();
     m_bottom_texture.reset();
 
-    //init textures
-
-#if ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
-    GLfloat max_anisotropy = 0.0f;
-    ::glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropy);
-#endif // ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
-    std::string tex_path = resources_dir() + "/icons/bed/" + key;
-    bool has_top_texture = false;
-    bool has_bot_texture = false;
-    if (!key.empty()) {
-        std::string filename_tex_top = tex_path + "_top.png";
-        if ((m_top_texture.get_id() == 0) || (m_top_texture.get_source() != filename_tex_top)) {
-            has_top_texture = m_top_texture.load_from_file(filename_tex_top, true);
-#if ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
-            if (has_top_texture && max_anisotropy > 0.0f) {
-                ::glBindTexture(GL_TEXTURE_2D, m_top_texture.get_id());
-                ::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy);
-                ::glBindTexture(GL_TEXTURE_2D, 0);
-            }
-#endif // ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
-        } else {
-            has_top_texture = true;
-        }
-        std::string filename_tex_bot = tex_path + "_bottom.png";
-        if ((m_bottom_texture.get_id() == 0) || (m_bottom_texture.get_source() != filename_tex_bot)) {
-            has_bot_texture = m_bottom_texture.load_from_file(filename_tex_bot, true);
-#if ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
-            if (has_bot_texture && max_anisotropy > 0.0f) {
-                ::glBindTexture(GL_TEXTURE_2D, m_bottom_texture.get_id());
-                ::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy);
-                ::glBindTexture(GL_TEXTURE_2D, 0);
-            }
-#endif // ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
-        } else {
-            has_bot_texture = true;
-        }
-    }
-   bool has_texture = (theta <= 90.0f) ? has_top_texture : has_bot_texture;
-
-#if ENABLE_PRINT_BED_MODELS
-   if (theta <= 90.0f) {
-       std::string model_path = resources_dir() + "/models/" + key;
-        std::string filename_model = model_path + "_bed.stl";
-        if ((m_model.get_filename() != filename_model) && m_model.init_from_file(filename_model, useVBOs)) {
-            Vec3d offset = m_bounding_box.center() - Vec3d(0.0, 0.0, 0.1 + 0.5 * m_model.get_bounding_box().size()(2));
-            if (key == "mk2")
-                offset.y() += 15. / 2.;
-            else if (key == "mk3")
-                offset += Vec3d(0., (19. - 8.) / 2., 2.);
-            m_model.center_around(offset);
-        }
-
-        if (!m_model.get_filename().empty()) {
-            ::glEnable(GL_LIGHTING);
-            m_model.render();
-            ::glDisable(GL_LIGHTING);
-        }
-    }
-#endif // ENABLE_PRINT_BED_MODELS
-
     unsigned int triangles_vcount = m_triangles.get_vertices_count();
-    if (has_texture && triangles_vcount > 0) {
-        ::glEnable(GL_DEPTH_TEST);
-        ::glDepthMask(GL_FALSE);
-
-        ::glEnable(GL_BLEND);
-        ::glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        ::glEnable(GL_TEXTURE_2D);
-        ::glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-            
-        ::glEnableClientState(GL_VERTEX_ARRAY);
-        ::glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-            
-        if (theta > 90.0f)
-            ::glFrontFace(GL_CW);
-
-        ::glBindTexture(GL_TEXTURE_2D, (theta <= 90.0f) ? (GLuint)m_top_texture.get_id() : (GLuint)m_bottom_texture.get_id());
-            
-        ::glVertexPointer(3, GL_FLOAT, 0, (GLvoid*)m_triangles.get_vertices());
-        ::glTexCoordPointer(2, GL_FLOAT, 0, (GLvoid*)m_triangles.get_tex_coords());
-        ::glDrawArrays(GL_TRIANGLES, 0, (GLsizei)triangles_vcount);
-
-
-        if (theta > 90.0f)
-            ::glFrontFace(GL_CCW);
-
-        ::glBindTexture(GL_TEXTURE_2D, 0);
-        ::glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-        ::glDisableClientState(GL_VERTEX_ARRAY);
-
-        ::glDisable(GL_TEXTURE_2D);
-
-        ::glDisable(GL_BLEND);
-        ::glDepthMask(GL_TRUE);
-
-    }
-    
-
-
-    triangles_vcount = m_triangles.get_vertices_count();
     if (triangles_vcount > 0) {
         ::glEnable(GL_LIGHTING);
         ::glDisable(GL_DEPTH_TEST);
@@ -771,18 +667,11 @@ void GLCanvas3D::Bed::_render_custom(const std::string &key, float theta) const
         ::glEnable(GL_BLEND);
         ::glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-
-
-
         ::glEnableClientState(GL_VERTEX_ARRAY);
-
 
         ::glColor4f(0.35f, 0.35f, 0.35f, 0.4f);
         ::glNormal3d(0.0f, 0.0f, 1.0f);
-
-
         ::glVertexPointer(3, GL_FLOAT, 0, (GLvoid*)m_triangles.get_vertices());
-
         ::glDrawArrays(GL_TRIANGLES, 0, (GLsizei)triangles_vcount);
 
         // draw grid
@@ -799,6 +688,105 @@ void GLCanvas3D::Bed::_render_custom(const std::string &key, float theta) const
 
         ::glDisable(GL_BLEND);
         ::glDisable(GL_LIGHTING);
+    }
+
+}
+
+#if ENABLE_PRINT_BED_MODELS
+void GLCanvas3D::Bed::_render_custom(const std::string &key, float theta, bool useVBOs) const
+#else
+void GLCanvas3D::Bed::_render_custom(const std::string &key, float theta) const
+#endif // ENABLE_PRINT_BED_MODELS
+{
+    std::string tex_path = resources_dir() + "/icons/bed/" + key;
+#if ENABLE_PRINT_BED_MODELS
+    std::string model_path = resources_dir() + "/models/" + key;
+#endif // ENABLE_PRINT_BED_MODELS
+
+#if ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
+    GLfloat max_anisotropy = 0.0f;
+    ::glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropy);
+#endif // ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
+
+    std::string filename = tex_path + "_top.png";
+    if ((m_top_texture.get_id() == 0) || (m_top_texture.get_source() != filename)) {
+        if (!m_top_texture.load_from_file(filename, true)) {
+            _render_default();
+            return;
+        }
+#if ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
+        if (max_anisotropy > 0.0f) {
+            ::glBindTexture(GL_TEXTURE_2D, m_top_texture.get_id());
+            ::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy);
+            ::glBindTexture(GL_TEXTURE_2D, 0);
+        }
+#endif // ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
+    }
+
+    filename = tex_path + "_bottom.png";
+    if ((m_bottom_texture.get_id() == 0) || (m_bottom_texture.get_source() != filename)) {
+        if (!m_bottom_texture.load_from_file(filename, true)) {
+            _render_default();
+            return;
+        }
+#if ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
+        if (max_anisotropy > 0.0f) {
+            ::glBindTexture(GL_TEXTURE_2D, m_bottom_texture.get_id());
+            ::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy);
+            ::glBindTexture(GL_TEXTURE_2D, 0);
+        }
+#endif // ENABLE_ANISOTROPIC_FILTER_ON_BED_TEXTURES
+    }
+
+#if ENABLE_PRINT_BED_MODELS
+    if (theta <= 90.0f) {
+        filename = model_path + "_bed.stl";
+        if ((m_model.get_filename() != filename) && m_model.init_from_file(filename, useVBOs)) {
+            Vec3d offset = m_bounding_box.center() - Vec3d(0.0, 0.0, 0.1 + 0.5 * m_model.get_bounding_box().size()(2));
+            m_model.center_around(offset);
+        }
+
+        if (!m_model.get_filename().empty()) {
+            ::glEnable(GL_LIGHTING);
+            m_model.render();
+            ::glDisable(GL_LIGHTING);
+        }
+    }
+#endif // ENABLE_PRINT_BED_MODELS
+
+    unsigned int triangles_vcount = m_triangles.get_vertices_count();
+    if (triangles_vcount > 0) {
+        ::glEnable(GL_DEPTH_TEST);
+        ::glDepthMask(GL_FALSE);
+
+        ::glEnable(GL_BLEND);
+        ::glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        ::glEnable(GL_TEXTURE_2D);
+        ::glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+        ::glEnableClientState(GL_VERTEX_ARRAY);
+        ::glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+        if (theta > 90.0f)
+            ::glFrontFace(GL_CW);
+
+        ::glBindTexture(GL_TEXTURE_2D, (theta <= 90.0f) ? (GLuint)m_top_texture.get_id() : (GLuint)m_bottom_texture.get_id());
+        ::glVertexPointer(3, GL_FLOAT, 0, (GLvoid*)m_triangles.get_vertices());
+        ::glTexCoordPointer(2, GL_FLOAT, 0, (GLvoid*)m_triangles.get_tex_coords());
+        ::glDrawArrays(GL_TRIANGLES, 0, (GLsizei)triangles_vcount);
+
+        if (theta > 90.0f)
+            ::glFrontFace(GL_CCW);
+
+        ::glBindTexture(GL_TEXTURE_2D, 0);
+        ::glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+        ::glDisableClientState(GL_VERTEX_ARRAY);
+
+        ::glDisable(GL_TEXTURE_2D);
+
+        ::glDisable(GL_BLEND);
+        ::glDepthMask(GL_TRUE);
     }
 }
 

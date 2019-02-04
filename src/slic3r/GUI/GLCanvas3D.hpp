@@ -251,13 +251,12 @@ class GLCanvas3D
         std::string _detect_type() const;
 #if ENABLE_PRINT_BED_MODELS
         void _render_prusa(const std::string &key, float theta, bool useVBOs) const;
-        void _render_custom() const { _render_custom("", 0, 0); }
         void _render_custom(const std::string &key, float theta, bool useVBOs) const;
 #else
         void _render_prusa(const std::string &key, float theta) const;
-        void _render_custom() const { _render_custom("", 0); }
         void _render_custom(const std::string &key, float theta) const;
 #endif // ENABLE_PRINT_BED_MODELS
+        void _render_default() const;
         static bool _are_equal(const Pointfs& bed_1, const Pointfs& bed_2);
     };
 
