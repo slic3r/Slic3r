@@ -2410,11 +2410,11 @@ void TabPrinter::update_fff()
 		get_field("retract_restart_extra_toolchange", i)->toggle
 			(have_multiple_extruders && toolchange_retraction);
 	}
-
-    bool have_advanced_wipe_volume = m_config->opt_bool("wipe_advanced");
-    for (auto el : { "wipe_advanced_nozzle_melted_volume", "wipe_advanced_multiplier", "wipe_advanced_algo" })
-        get_field(el)->toggle(have_advanced_wipe_volume);
-
+    if (m_has_single_extruder_MM_page) {
+        bool have_advanced_wipe_volume = m_config->opt_bool("wipe_advanced");
+        for (auto el : { "wipe_advanced_nozzle_melted_volume", "wipe_advanced_multiplier", "wipe_advanced_algo" })
+            get_field(el)->toggle(have_advanced_wipe_volume);
+    }
 	Thaw();
 }
 
