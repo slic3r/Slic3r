@@ -306,6 +306,7 @@ set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/libslic3r/test_geometry.cpp
     ${TESTDIR}/libslic3r/test_log.cpp
     ${TESTDIR}/libslic3r/test_model.cpp
+    ${TESTDIR}/libslic3r/test_polygon.cpp
     ${TESTDIR}/libslic3r/test_print.cpp
     ${TESTDIR}/libslic3r/test_printgcode.cpp
     ${TESTDIR}/libslic3r/test_skirt_brim.cpp
