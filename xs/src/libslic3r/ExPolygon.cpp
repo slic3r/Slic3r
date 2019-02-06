@@ -130,6 +130,14 @@ ExPolygon::has_boundary_point(const Point &point) const
 }
 
 void
+ExPolygon::remove_colinear_points()
+{
+    this->contour.remove_collinear_points();
+    for (Polygon &p : this->holes)
+        p.remove_collinear_points();
+}
+
+void
 ExPolygon::remove_vertical_collinear_points(coord_t tolerance)
 {
     this->contour.remove_vertical_collinear_points(tolerance);

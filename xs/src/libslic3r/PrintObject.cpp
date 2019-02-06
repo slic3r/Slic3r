@@ -842,6 +842,19 @@ void PrintObject::_slice()
         }
     }
 
+    // remove collinear points from slice polygons (artifacts from stl-triangulation)
+    std::queue<SurfaceCollection*> queue;
+    for (Layer* layer : this->layers) {
+        for (LayerRegion* layerm : layer->regions) {
+            queue.push(&layerm->slices);
+        }
+    }
+    parallelize<SurfaceCollection*>(
+        queue,
+        boost::bind(&Slic3r::SurfaceCollection::remove_collinear_points, _1),
+        this->_print->config.threads.value
+    );
+
     // remove last layer(s) if empty
     bool done = false;
     while (! this->layers.empty()) {
