@@ -228,7 +228,7 @@ void PerimeterGenerator::process()
                 }
 
                 // Calculate next onion shell of perimeters.
-                //this variable stored the nexyt onion
+                //this variable stored the next onion
                 ExPolygons next_onion;
                 if (i == 0) {
                     // compute next onion, without taking care of thin_walls : destroy too thin areas.
@@ -240,23 +240,21 @@ void PerimeterGenerator::process()
                     if (this->config->thin_walls) {
                         // the minimum thickness of a single loop is:
                         // ext_width/2 + ext_spacing/2 + spacing/2 + width/2
-
                         next_onion = offset2_ex(
                             last,
                             -(float)(ext_perimeter_width / 2 + ext_min_spacing / 2 - 1),
                             +(float)(ext_min_spacing / 2 - 1));
-
                         // detect edge case where a curve can be split in multiple small chunks.
                         ExPolygons no_thin_onion = offset_ex(last, -(float)(ext_perimeter_width / 2));
                         float div = 2;
                         while (no_thin_onion.size() > 0 && next_onion.size() > no_thin_onion.size() && no_thin_onion.size() + next_onion.size() > 3) {
                             div += 0.5;
-                            //use a sightly smaller spacing to try to drastically improve the split
+                            //use a sightly smaller spacing to try to drastically improve the split, but with a little bit of over-extrusion
                             ExPolygons next_onion_secondTry = offset2_ex(
                                 last,
                                 -(float)(ext_perimeter_width / 2 + ext_min_spacing / div - 1),
                                 +(float)(ext_min_spacing / div - 1));
-                            if (next_onion.size() >  next_onion_secondTry.size()) {
+                            if (next_onion.size() >  next_onion_secondTry.size() * 1.1) {
                                 next_onion = next_onion_secondTry;
                             }
                             if (div > 3) break;
@@ -281,13 +279,13 @@ void PerimeterGenerator::process()
                             no_thin_zone = diff_ex(last, offset_ex(half_thins, (float)(min_width / 2) - (float) SCALED_EPSILON), true);
                         }
                         // compute a bit of overlap to anchor thin walls inside the print.
-                        ExPolygons thin_zones_extruded;
                         for (ExPolygon &half_thin : half_thins) {
                             //growing back the polygon
                             ExPolygons thin = offset_ex(half_thin, (float)(min_width / 2));
                             assert(thin.size() == 1);
+                            coord_t overlap = (coord_t)scale_(this->config->thin_walls_overlap.get_abs_value(this->ext_perimeter_flow.nozzle_diameter));
                             ExPolygons anchor = intersection_ex(offset_ex(half_thin, (float)(min_width / 2) +
-                                (float)(ext_perimeter_width / 2), jtSquare), no_thin_zone, true);
+                                (float)(overlap), jtSquare), no_thin_zone, true);
                             ExPolygons bounds = union_ex(thin, anchor, true);
                             for (ExPolygon &bound : bounds) {
                                 if (!intersection_ex(thin[0], bound).empty()) {
@@ -298,14 +296,13 @@ void PerimeterGenerator::process()
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
                                         Slic3r::MedialAxis ma(thin[0], bound, ext_perimeter_width + ext_perimeter_spacing2, min_width, this->layer_height);
                                         ma.nozzle_diameter = (coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter);
+                                        ma.anchor_size = overlap;
                                         ma.build(&thin_walls);
-                                        thin_zones_extruded.emplace_back(thin[0]);
                                     }
                                     break;
                                 }
                             }
                         }
-                        next_onion = diff_ex(offset_ex(last, -(float)(ext_perimeter_width / 2)), thin_zones_extruded, true);
                     }
                 } else {
                     //FIXME Is this offset correct if the line width of the inner perimeters differs

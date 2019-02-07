@@ -945,6 +945,7 @@ void TabPrint::build()
         line = { _(L("Thin walls")), "" };
         line.append_option(optgroup->get_option("thin_walls"));
         line.append_option(optgroup->get_option("thin_walls_min_width"));
+        line.append_option(optgroup->get_option("thin_walls_overlap"));
         optgroup->append_line(line);
 		optgroup->append_single_option_line("overhangs");
         line = { _(L("Avoid unsupported perimeters")), "" };
@@ -1363,11 +1364,11 @@ void TabPrint::update()
 
     bool have_perimeters = m_config->opt_int("perimeters") > 0;
     for (auto el : { "extra_perimeters", "only_one_perimeter_top", "ensure_vertical_shell_thickness", "thin_walls", "overhangs",
-        "seam_position", "external_perimeters_first", "external_perimeter_extrusion_width", "thin_walls_min_width",
+        "seam_position", "external_perimeters_first", "external_perimeter_extrusion_width",
         "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "perimeter_loop", "perimeter_loop_seam" })
         get_field(el)->toggle(have_perimeters);
 
-    get_field("thin_walls_min_width")->toggle(m_config->opt_bool("thin_walls"));
+    for (auto el : { "thin_walls_min_width", "thin_walls_overlap" }) get_field(el)->toggle(m_config->opt_bool("thin_walls"));
     get_field("perimeter_loop_seam")->toggle(m_config->opt_bool("perimeter_loop"));
 
     bool have_no_perimeter_unsupported = have_perimeters && m_config->opt_bool("no_perimeter_unsupported");

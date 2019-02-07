@@ -463,6 +463,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "infill_overlap"
             || opt_key == "thin_walls"
             || opt_key == "thin_walls_min_width"
+            || opt_key == "thin_walls_overlap"
             || opt_key == "external_perimeters_first"
             || opt_key == "perimeter_loop"
             || opt_key == "perimeter_loop_seam"

@@ -573,6 +573,7 @@ public:
     // Detect thin walls.
     ConfigOptionBool                thin_walls;
     ConfigOptionFloatOrPercent      thin_walls_min_width;
+    ConfigOptionFloatOrPercent      thin_walls_overlap;
     ConfigOptionFloatOrPercent      top_infill_extrusion_width;
     ConfigOptionInt                 top_solid_layers;
     ConfigOptionFloatOrPercent      top_solid_infill_speed;
@@ -629,6 +630,7 @@ protected:
         OPT_PTR(solid_infill_speed);
         OPT_PTR(thin_walls);
         OPT_PTR(thin_walls_min_width);
+        OPT_PTR(thin_walls_overlap);
         OPT_PTR(top_infill_extrusion_width);
         OPT_PTR(top_solid_infill_speed);
         OPT_PTR(top_solid_layers);

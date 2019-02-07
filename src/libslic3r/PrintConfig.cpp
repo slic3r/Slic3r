@@ -2426,7 +2426,16 @@ void PrintConfigDef::init_fff_params()
     def->cli = "thin-walls-min-width=s";
     def->mode = comExpert;
     def->min = 0;
-    def->default_value = new ConfigOptionFloatOrPercent(33,true);
+    def->default_value = new ConfigOptionFloatOrPercent(33, true);
+
+    def = this->add("thin_walls_overlap", coFloatOrPercent);
+    def->label = L("overlap");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("Overlap between the thin wall and the perimeters. Can be a % of the external perimeter width (default 50%)");
+    def->cli = "thin-walls-overlap=s";
+    def->mode = comExpert;
+    def->min = 0;
+    def->default_value = new ConfigOptionFloatOrPercent(50, true);
 
     def = this->add("threads", coInt);
     def->label = L("Threads");

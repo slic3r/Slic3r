@@ -25,10 +25,12 @@ namespace Slic3r {
         const coord_t min_width;
         const coord_t height;
         coord_t nozzle_diameter;
+        coord_t anchor_size;
         bool stop_at_min_width = true;
         MedialAxis(const ExPolygon &_expolygon, const ExPolygon &_bounds, const coord_t _max_width, const coord_t _min_width, const coord_t _height)
             : surface(_expolygon), bounds(_bounds), max_width(_max_width), min_width(_min_width), height(_height) {
             nozzle_diameter = _min_width;
+            anchor_size = 0;
         };
         void build(ThickPolylines* polylines_out);
         void build(Polylines* polylines);
