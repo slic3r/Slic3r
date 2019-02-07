@@ -3,7 +3,6 @@
 
 #include "libslic3r.h"
 #include "BoundingBox.hpp"
-#include "MedialAxis.hpp"
 #include "ExPolygon.hpp"
 #include "Polygon.hpp"
 #include "Polyline.hpp"

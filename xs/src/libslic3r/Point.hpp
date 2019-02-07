@@ -82,6 +82,7 @@ class Point
     double ccw_angle(const Point &p1, const Point &p2) const;
     Point projection_onto(const MultiPoint &poly) const;
     Point projection_onto(const Line &line) const;
+    Point interpolate(const double percent, const Point &p) const;
     Point negative() const;
     Vector vector_to(const Point &point) const;
     void align_to_grid(const Point &spacing, const Point &base = Point(0,0));
