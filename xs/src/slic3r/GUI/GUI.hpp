@@ -169,7 +169,8 @@ int combochecklist_get_flags(wxComboCtrl* comboCtrl);
 wxString	L_str(const std::string &str);
 // Return wxString from std::string in UTF8
 wxString	from_u8(const std::string &str);
-
+// std::string in UTF8 from wxString
+std::string	into_u8(const wxString &str);
 
 void add_frequently_changed_parameters(wxWindow* parent, wxBoxSizer* sizer, wxFlexGridSizer* preset_sizer);
 
@@ -189,6 +190,8 @@ bool get_current_screen_size(wxWindow *window, unsigned &width, unsigned &height
 void save_window_size(wxTopLevelWindow *window, const std::string &name);
 // Restore the above
 void restore_window_size(wxTopLevelWindow *window, const std::string &name);
+
+void on_window_geometry(wxTopLevelWindow *tlw, std::function<void()> callback);
 
 // Display an About dialog
 extern void about();

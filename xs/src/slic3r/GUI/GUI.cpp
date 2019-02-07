@@ -794,6 +794,12 @@ wxString from_u8(const std::string &str)
 	return wxString::FromUTF8(str.c_str());
 }
 
+std::string into_u8(const wxString &str)
+{
+	auto buffer_utf8 = str.utf8_str();
+	return std::string(buffer_utf8.data());
+}
+
 
 void add_frequently_changed_parameters(wxWindow* parent, wxBoxSizer* sizer, wxFlexGridSizer* preset_sizer)
 {
@@ -1034,6 +1040,21 @@ void restore_window_size(wxTopLevelWindow *window, const std::string &name)
 	}
 }
 
+void on_window_geometry(wxTopLevelWindow *tlw, std::function<void()> callback)
+{
+    tlw->Bind(wxEVT_CREATE, [=](wxWindowCreateEvent &event) {
+#ifdef __linux__
+        // On Linux, the geometry is only available after wxEVT_CREATE + CallAfter
+        // cf. https://groups.google.com/forum/?pli=1#!topic/wx-users/fERSXdpVwAI
+        tlw->CallAfter([=]() {
+#endif
+            callback();
+#ifdef __linux__
+        });
+#endif
+        event.Skip();
+    });
+}
 
 void about()
 {

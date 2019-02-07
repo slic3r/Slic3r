@@ -212,6 +212,30 @@ int rename_file(const std::string &from, const std::string &to)
     return ec;
 }
 
+// Ignore system and hidden files, which may be created by the DropBox synchronisation process.
+// https://github.com/prusa3d/Slic3r/issues/1298
+bool is_plain_file(const boost::filesystem::directory_entry &dir_entry)
+{
+    if (! boost::filesystem::is_regular_file(dir_entry.status()))
+        return false;
+#ifdef _MSC_VER
+    DWORD attributes = GetFileAttributesW(boost::nowide::widen(dir_entry.path().string()).c_str());
+    return (attributes & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) == 0;
+#else
+    return true;
+#endif
+}
+
+bool is_ini_file(const boost::filesystem::directory_entry &dir_entry)
+{
+    return is_plain_file(dir_entry) && strcasecmp(dir_entry.path().extension().string().c_str(), ".ini") == 0;
+}
+
+bool is_idx_file(const boost::filesystem::directory_entry &dir_entry)
+{
+    return is_plain_file(dir_entry) && strcasecmp(dir_entry.path().extension().string().c_str(), ".idx") == 0;
+}
+
 } // namespace Slic3r
 
 #include <xsinit.h>

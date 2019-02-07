@@ -5,6 +5,7 @@
 #include "AppConfig.hpp"
 #include "BitmapCache.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <stdexcept>
 #include <boost/format.hpp>
@@ -139,6 +140,20 @@ VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem
     return res;
 }
 
+std::vector<std::string> VendorProfile::families() const
+{
+    std::vector<std::string> res;
+    unsigned num_familiies = 0;
+
+    for (auto &model : models) {
+        if (std::find(res.begin(), res.end(), model.family) == res.end()) {
+            res.push_back(model.family);
+            num_familiies++;
+        }
+    }
+
+    return res;
+}
 
 // Suffix to be added to a modified preset name in the combo box.
 static std::string g_suffix_modified = " (modified)";

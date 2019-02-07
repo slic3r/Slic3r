@@ -52,6 +52,7 @@ public:
         PrinterModel() {}
         std::string                 id;
         std::string                 name;
+        std::string                 family;
         std::vector<PrinterVariant> variants;
         PrinterVariant*       variant(const std::string &name) {
             for (auto &v : this->variants)
@@ -70,6 +71,7 @@ public:
     static VendorProfile from_ini(const boost::property_tree::ptree &tree, const boost::filesystem::path &path, bool load_all=true);
 
     size_t      num_variants() const { size_t n = 0; for (auto &model : models) n += model.variants.size(); return n; }
+    std::vector<std::string> families() const;
 
     bool        operator< (const VendorProfile &rhs) const { return this->id <  rhs.id; }
     bool        operator==(const VendorProfile &rhs) const { return this->id == rhs.id; }
