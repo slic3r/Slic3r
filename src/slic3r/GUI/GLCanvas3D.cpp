@@ -548,7 +548,6 @@ void GLCanvas3D::Bed::_render_prusa(const std::string &key, float theta, bool us
 void GLCanvas3D::Bed::_render_prusa(const std::string &key, float theta) const
 #endif // ENABLE_PRINT_BED_MODELS
 {
-    std::cout << "render prusa?\n";
     std::string tex_path = resources_dir() + "/icons/bed/" + key;
 #if ENABLE_PRINT_BED_MODELS
     std::string model_path = resources_dir() + "/models/" + key;
