@@ -1397,9 +1397,9 @@ double Print::skirt_first_layer_height() const
 Flow Print::brim_flow() const
 {
     ConfigOptionFloatOrPercent width = m_config.first_layer_extrusion_width;
-    if (width.value == 0) 
+    if (width.value <= 0) 
         width = m_regions.front()->config().perimeter_extrusion_width;
-    if (width.value == 0) 
+    if (width.value <= 0) 
         width = m_objects.front()->config().extrusion_width;
     
     /* We currently use a random region's perimeter extruder.
@@ -1419,9 +1419,9 @@ Flow Print::brim_flow() const
 Flow Print::skirt_flow() const
 {
     ConfigOptionFloatOrPercent width = m_config.first_layer_extrusion_width;
-    if (width.value == 0) 
+    if (width.value <= 0) 
         width = m_regions.front()->config().perimeter_extrusion_width;
-    if (width.value == 0)
+    if (width.value <= 0)
         width = m_objects.front()->config().extrusion_width;
     
     /* We currently use a random object's support material extruder.
@@ -1913,7 +1913,8 @@ void Print::_make_wipe_tower()
         float(m_config.cooling_tube_length.value), float(m_config.parking_pos_retraction.value),
         float(m_config.extra_loading_move.value), float(m_config.wipe_tower_bridging), 
         m_config.high_current_on_filament_swap.value, wipe_volumes,
-        m_wipe_tower_data.tool_ordering.first_extruder(), float(m_config.first_layer_extrusion_width));
+        m_wipe_tower_data.tool_ordering.first_extruder(), this->brim_flow().width);
+    
 
     //wipe_tower.set_retract();
     //wipe_tower.set_zhop();

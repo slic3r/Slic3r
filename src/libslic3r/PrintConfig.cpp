@@ -488,7 +488,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Extrusion Width");
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for external perimeters. "
                    "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
-                   "If expressed as percentage (for example 200%), it will be computed over layer height.");
+                   "If expressed as percentage (for example 112.5%), it will be computed over nozzle diameter.");
     def->sidetext = L("mm or % (leave 0 for default)");
     def->cli = "external-perimeter-extrusion-width=s";
     def->mode = comAdvanced;
@@ -637,7 +637,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Set this to a non-zero value to allow a manual extrusion width. "
                    "If left to zero, Slic3r derives extrusion widths from the nozzle diameter "
                    "(see the tooltips for perimeter extrusion width, infill extrusion width etc). "
-                   "If expressed as percentage (for example: 230%), it will be computed over layer height.");
+                   "If expressed as percentage (for example: 105%), it will be computed over nozzle diameter.");
     def->sidetext = L("mm or % (leave 0 for auto)");
     def->cli = "extrusion-width=s";
     def->mode = comAdvanced;
@@ -1000,13 +1000,14 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Extrusion Width");
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for first layer. "
                    "You can use this to force fatter extrudates for better adhesion. If expressed "
-                   "as percentage (for example 120%) it will be computed over first layer height. "
+                   "as percentage (for example 140%) it will be computed over the nozzle diameter "
+                   "of the nozzle used for the type of extrusion. "
                    "If set to zero, it will use the default extrusion width.");
     def->sidetext = L("mm or % (leave 0 for default)");
     def->cli = "first-layer-extrusion-width=s";
     def->ratio_over = "first_layer_height";
     def->mode = comAdvanced;
-    def->default_value = new ConfigOptionFloatOrPercent(200, true);
+    def->default_value = new ConfigOptionFloatOrPercent(140, true);
 
     def = this->add("first_layer_height", coFloatOrPercent);
     def->label = L("First layer height");
@@ -1201,7 +1202,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for infill. "
                    "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
                    "You may want to use fatter extrudates to speed up the infill and make your parts stronger. "
-                   "If expressed as percentage (for example 90%) it will be computed over layer height.");
+                   "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or % (leave 0 for default)");
     def->cli = "infill-extrusion-width=s";
     def->mode = comAdvanced;
@@ -1671,7 +1672,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for perimeters. "
                    "You may want to use thinner extrudates to get more accurate surfaces. "
                    "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
-                   "If expressed as percentage (for example 200%) it will be computed over layer height.");
+                   "If expressed as percentage (for example 105%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or % (leave 0 for default)");
     def->cli = "perimeter-extrusion-width=s";
     def->aliases = { "perimeters_extrusion_width" };
@@ -2061,7 +2062,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Extrusion Width");
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for infill for solid surfaces. "
                    "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
-                   "If expressed as percentage (for example 90%) it will be computed over layer height.");
+                   "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or % (leave 0 for default)");
     def->cli = "solid-infill-extrusion-width=s";
     def->mode = comAdvanced;
@@ -2275,7 +2276,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Extrusion Width");
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for support material. "
                    "If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. "
-                   "If expressed as percentage (for example 90%) it will be computed over layer height.");
+                   "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or % (leave 0 for default)");
     def->cli = "support-material-extrusion-width=s";
     def->mode = comAdvanced;
@@ -2413,7 +2414,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Detect single-width walls (parts where two extrusions don't fit and we need "
-                   "to collapse them into a single trace).");
+                   "to collapse them into a single trace). If unchecked, slic3r may try to fit perimeters "
+                   "where it's not possible, creating some overlap leading to over-extrusion.");
     def->cli = "thin-walls!";
     def->mode = comAdvanced;
     def->default_value = new ConfigOptionBool(true);
@@ -2422,7 +2424,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("min width");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Minimum width for the extrusion to be extruded (widths lower than the nozzle diameter will be over-extruded at the nozzle diameter)."
-        "Can be percent of the nozzle size. The default behavior of slic3r and slic3rPE is with a 33% value. Put 100% to avoid any sort of over-extrusion.");
+        " If expressed as percentage (for example 110%) it will be computed over nozzle diameter."
+        " The default behavior of slic3r and slic3rPE is with a 33% value. Put 100% to avoid any sort of over-extrusion.");
     def->cli = "thin-walls-min-width=s";
     def->mode = comExpert;
     def->min = 0;
@@ -2467,7 +2470,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for infill for top surfaces. "
                    "You may want to use thinner extrudates to fill all narrow regions and get a smoother finish. "
                    "If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. "
-                   "If expressed as percentage (for example 90%) it will be computed over layer height.");
+                   "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or % (leave 0 for default)");
     def->cli = "top-infill-extrusion-width=s";
     def->mode = comAdvanced;

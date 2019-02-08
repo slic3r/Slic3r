@@ -37,12 +37,12 @@ Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent
             // optimization to avoid sqrt()
             nozzle_diameter :
             sqrt(bridge_flow_ratio) * nozzle_diameter;
-    } else if (! width.percent && width.value == 0.) {
+    } else if (! width.percent && width.value <= 0.) {
         // If user left option to 0, calculate a sane default width.
         w = auto_extrusion_width(role, nozzle_diameter, height);
     } else {
         // If user set a manual value, use it.
-        w = float(width.get_abs_value(height));
+        w = float(width.get_abs_value(nozzle_diameter));
     }
     
     return Flow(w, height, nozzle_diameter, bridge_flow_ratio > 0);

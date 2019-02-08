@@ -96,14 +96,14 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
     const bool has_infill = this->region()->config().fill_density.value > 0.;
     coord_t margin = scale_(this->region()->config().external_infill_margin.getFloat());
     coord_t margin_bridged = scale_(this->region()->config().bridged_infill_margin.getFloat());
-    //if no infill, reduce the margin for averythign to only the perimeter
+    //if no infill, reduce the margin for everything to only the perimeter
     if (!has_infill) {
+        coord_t max_margin = 0;
         if ((this->region()->config().perimeters > 0)) {
-            const coord_t perimeter_width = scale_(this->region()->config().perimeter_extrusion_width.get_abs_value(this->layer()->object()->config().layer_height.value));
-            const coord_t first_perimeter_width = scale_(this->region()->config().external_perimeter_extrusion_width.get_abs_value(this->layer()->object()->config().layer_height.value));
-            margin = first_perimeter_width + perimeter_width * (this->region()->config().perimeters.value - 1);
-        } else margin = 0;
-        margin_bridged = margin;
+            max_margin = this->flow(frExternalPerimeter).width + this->flow(frPerimeter).width * (this->region()->config().perimeters.value - 1);
+        }
+        margin = std::min(margin, max_margin);
+        margin_bridged = std::min(margin_bridged, max_margin);
     }
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
     export_region_fill_surfaces_to_svg_debug("3_process_external_surfaces-initial");
