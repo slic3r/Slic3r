@@ -76,6 +76,17 @@ VendorProfile VendorProfile::from_ini(const boost::filesystem::path &path, bool 
     return VendorProfile::from_ini(tree, path, load_all);
 }
 
+
+static const std::unordered_map<std::string, std::string> pre_family_model_map {{
+    { "MK3",        "MK3" },
+    { "MK3MMU2",    "MK3" },
+    { "MK2.5",      "MK2.5" },
+    { "MK2.5MMU2",  "MK2.5" },
+    { "MK2S",       "MK2" },
+    { "MK2SMM",     "MK2" },
+    { "SL1",        "SL1" },
+}};
+
 VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem::path &path, bool load_all)
 {
     static const std::string printer_model_key = "printer_model:";
@@ -121,6 +132,14 @@ VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem
             VendorProfile::PrinterModel model;
             model.id = section.first.substr(printer_model_key.size());
             model.name = section.second.get<std::string>("name", model.id);
+
+            model.family = section.second.get<std::string>("family", std::string());
+            if (model.family.empty() && res.name == "Prusa Research") {
+                // If no family is specified, it can be inferred for known printers
+                const auto from_pre_map = pre_family_model_map.find(model.id);
+                if (from_pre_map != pre_family_model_map.end()) { model.family = from_pre_map->second; }
+            }
+
             section.second.get<std::string>("variants", "");
             const auto variants_field = section.second.get<std::string>("variants", "");
             std::vector<std::string> variants;
