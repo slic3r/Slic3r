@@ -5,6 +5,11 @@
 
 #include "libslic3r.h"
 
+#ifdef _MSC_VER
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
+#endif
+
 namespace boost { namespace filesystem { class directory_entry; }}
 
 namespace Slic3r {
