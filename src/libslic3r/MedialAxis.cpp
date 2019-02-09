@@ -690,7 +690,6 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
                     break;
                 }
             }
-            if (!is_in_anchor) std::cout << "not in anchor:\n";
             if (!is_in_anchor) return;
             new_bound = line.b;
         }
@@ -1492,6 +1491,8 @@ MedialAxis::build(ThickPolylines* polylines_out) {
 }
 
 
+/// Grow the extrusion to at least nozzle_diameter*1.05 (lowest safe extrusion width)
+/// Do not grow points inside the anchor.
 void
 MedialAxis::grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchors) {
     //ensure the width is not lower than 0.4.
@@ -1504,7 +1505,8 @@ MedialAxis::grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchor
                     break;
                 }
             }
-            if (!is_anchored && polyline.width[i]<nozzle_diameter) polyline.width[i] = nozzle_diameter;
+            if (!is_anchored && polyline.width[i] < nozzle_diameter * 1.05)
+                polyline.width[i] = nozzle_diameter * 1.05;
         }
     }
 }
@@ -1621,9 +1623,13 @@ ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, E
             if (path.polyline.points.empty()) {
                 path.polyline.append(line.a);
                 path.polyline.append(line.b);
-                // Convert from spacing to extrusion width based on the extrusion model
-                // of a square extrusion ended with semi circles.
-                flow.width = (float)unscaled(line.a_width) + flow.height * (1. - 0.25 * PI);
+                if (role == erGapFill){
+                    // Convert from spacing to extrusion width based on the extrusion model
+                    // of a square extrusion ended with semi circles.
+                    flow.width = (float)unscaled(line.a_width) + flow.height * (1. - 0.25 * PI);
+                }else{
+                    flow.width = (float)unscaled(line.a_width);
+                }
 #ifdef SLIC3R_DEBUG
                 printf("  filling %f gap\n", flow.width);
 #endif
