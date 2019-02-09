@@ -587,19 +587,19 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
 
 bool PrintObject::invalidate_step(PrintObjectStep step)
 {
-	bool invalidated = Inherited::invalidate_step(step);
+    bool invalidated = Inherited::invalidate_step(step);
     
     // propagate to dependent steps
     if (step == posPerimeters) {
-		invalidated |= this->invalidate_steps({ posPrepareInfill, posInfill });
+        invalidated |= this->invalidate_steps({ posPrepareInfill, posInfill });
         invalidated |= m_print->invalidate_steps({ psSkirt, psBrim });
     } else if (step == posPrepareInfill) {
         invalidated |= this->invalidate_step(posInfill);
     } else if (step == posInfill) {
         invalidated |= m_print->invalidate_steps({ psSkirt, psBrim });
     } else if (step == posSlice) {
-		invalidated |= this->invalidate_steps({ posPerimeters, posPrepareInfill, posInfill, posSupportMaterial });
-		invalidated |= m_print->invalidate_steps({ psSkirt, psBrim });
+        invalidated |= this->invalidate_steps({ posPerimeters, posPrepareInfill, posInfill, posSupportMaterial });
+        invalidated |= m_print->invalidate_steps({ psSkirt, psBrim });
     } else if (step == posSupportMaterial)
         invalidated |= m_print->invalidate_steps({ psSkirt, psBrim });
 
@@ -709,15 +709,24 @@ ExPolygons fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, c
     return intersection_ex(polygon_reduced, growing_area);
 }
 
+//FIXME: cerify it works if the part is split in 2 in the Z axis
 void PrintObject::count_distance_solid() {
     //if dense area * COEFF_SPLIT > sparse area then fill all with dense
     // sparse area = layer's fill area - solid area
     const float COEFF_SPLIT = 2;
     const int NB_DENSE_LAYERS = 1;
-    for (size_t idx_region = 0; idx_region < this->m_print->regions().size(); ++idx_region) {
+    for (const PrintRegion *region : this->m_print->regions()) {
         //count how many surface there are on each one
         LayerRegion *previousOne = NULL;
-        if (this->layers().size() > 1) previousOne = this->layers()[this->layers().size() - 1]->get_region(idx_region);
+        size_t top_z = this->layers().size() - 1;
+        for (; top_z < this->layers().size() && previousOne == NULL; --top_z){
+            for (LayerRegion * lregion : this->layers()[top_z]->regions()){
+                if (lregion->region() == region){
+                    previousOne = lregion;
+                    break;
+                }
+            }
+        }
         if (previousOne != NULL && previousOne->region()->config().infill_dense.getBool() && previousOne->region()->config().fill_density<40) {
             for (Surface &surf : previousOne->fill_surfaces.surfaces) {
                 if (surf.is_solid()) {
@@ -725,7 +734,16 @@ void PrintObject::count_distance_solid() {
                 }
             }
             for (size_t idx_layer = this->layers().size() - 2; idx_layer < this->layers().size() - 1; --idx_layer) {
-                LayerRegion *layerm = this->layers()[idx_layer]->get_region(idx_region);
+                LayerRegion *layerm = NULL;
+                for (LayerRegion * lregion : this->layers()[top_z]->regions()){
+                    if (lregion->region() == region){
+                        layerm = lregion;
+                        break;
+                    }
+                }
+                if (layerm == NULL){
+                    continue;
+                }
                 Surfaces surf_to_add;
                 for (Surface &surf : layerm->fill_surfaces.surfaces) {
                     if (!surf.is_solid()){
@@ -1082,7 +1100,7 @@ void PrintObject::process_external_surfaces()
 {
     BOOST_LOG_TRIVIAL(info) << "Processing external surfaces..." << log_memory_info();
 
-	for (size_t region_id = 0; region_id < this->region_volumes.size(); ++region_id) {
+    for (size_t region_id = 0; region_id < this->region_volumes.size(); ++region_id) {
         const PrintRegion &region = *m_print->regions()[region_id];
         
         BOOST_LOG_TRIVIAL(debug) << "Processing external surfaces for region " << region_id << " in parallel - start";
@@ -1472,11 +1490,11 @@ void PrintObject::discover_vertical_shells()
         BOOST_LOG_TRIVIAL(debug) << "Discovering vertical shells for region " << idx_region << " in parallel - end";
 
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
-		for (size_t idx_layer = 0; idx_layer < m_layers.size(); ++idx_layer) {
-			LayerRegion *layerm = m_layers[idx_layer]->get_region(idx_region);
-			layerm->export_region_slices_to_svg_debug("4_discover_vertical_shells-final");
-			layerm->export_region_fill_surfaces_to_svg_debug("4_discover_vertical_shells-final");
-		}
+        for (size_t idx_layer = 0; idx_layer < m_layers.size(); ++idx_layer) {
+            LayerRegion *layerm = m_layers[idx_layer]->get_region(idx_region);
+            layerm->export_region_slices_to_svg_debug("4_discover_vertical_shells-final");
+            layerm->export_region_fill_surfaces_to_svg_debug("4_discover_vertical_shells-final");
+        }
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
     } // for each region
 
@@ -1507,9 +1525,9 @@ void PrintObject::bridge_over_infill()
             *this
         );
         
-		for (LayerPtrs::iterator layer_it = m_layers.begin(); layer_it != m_layers.end(); ++ layer_it) {
+        for (LayerPtrs::iterator layer_it = m_layers.begin(); layer_it != m_layers.end(); ++ layer_it) {
             // skip first layer
-			if (layer_it == m_layers.begin())
+            if (layer_it == m_layers.begin())
                 continue;
             
             Layer* layer        = *layer_it;
