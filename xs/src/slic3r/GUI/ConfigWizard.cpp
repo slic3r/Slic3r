@@ -174,10 +174,13 @@ PrinterPicker::PrinterPicker(wxWindow *parent, const VendorProfile &vendor, wxSt
     if (titles.size() > 1) {
         // It only makes sense to add the All / None buttons if there's multiple printers
 
+        auto *sel_all_std = new wxButton(this, wxID_ANY, _(L("All standard")));
         auto *sel_all = new wxButton(this, wxID_ANY, _(L("All")));
         auto *sel_none = new wxButton(this, wxID_ANY, _(L("None")));
-        sel_all->Bind(wxEVT_BUTTON, [this](const wxCommandEvent &event) { this->select_all(true); });
+        sel_all_std->Bind(wxEVT_BUTTON, [this](const wxCommandEvent &event) { this->select_all(true, false); });
+        sel_all->Bind(wxEVT_BUTTON, [this](const wxCommandEvent &event) { this->select_all(true, true); });
         sel_none->Bind(wxEVT_BUTTON, [this](const wxCommandEvent &event) { this->select_all(false); });
+        title_sizer->Add(sel_all_std, 0, wxRIGHT, BTN_SPACING);
         title_sizer->Add(sel_all, 0, wxRIGHT, BTN_SPACING);
         title_sizer->Add(sel_none);
     }
@@ -192,7 +195,7 @@ PrinterPicker::PrinterPicker(wxWindow *parent, const VendorProfile &vendor, wxSt
     : PrinterPicker(parent, vendor, std::move(title), max_cols, appconfig_vendors, [](const VendorProfile::PrinterModel&) { return true; })
 {}
 
-void PrinterPicker::select_all(bool select)
+void PrinterPicker::select_all(bool select, bool alternates)
 {
     for (const auto &cb : cboxes) {
         if (cb->GetValue() != select) {
@@ -201,13 +204,12 @@ void PrinterPicker::select_all(bool select)
         }
     }
 
-    // Alt nozzles are de-selected if this is an all-deselect, left intact otherwise
-    if (! select) {
-        for (const auto &cb : cboxes_alt) {
-            if (cb->GetValue()) {
-                cb->SetValue(false);
-                on_checkbox(cb, false);
-            }
+    if (! select) { alternates = false; }
+
+    for (const auto &cb : cboxes_alt) {
+        if (cb->GetValue() != alternates) {
+            cb->SetValue(alternates);
+            on_checkbox(cb, alternates);
         }
     }
 }
@@ -334,10 +336,10 @@ PagePrinters::PagePrinters(ConfigWizard *parent, wxString title, wxString shortn
     }
 }
 
-void PagePrinters::select_all(bool select)
+void PagePrinters::select_all(bool select, bool alternates)
 {
     for (auto picker : printer_pickers) {
-        picker->select_all(select);
+        picker->select_all(select, alternates);
     }
 }
 
@@ -989,7 +991,7 @@ ConfigWizard::ConfigWizard(wxWindow *parent, RunReason reason)
     topsizer->AddSpacer(INDEX_MARGIN);
     topsizer->Add(p->hscroll, 1, wxEXPAND);
 
-    auto *btn_sel_all = new wxButton(this, wxID_ANY, _(L("Select all printers")));
+    auto *btn_sel_all = new wxButton(this, wxID_ANY, _(L("Select all standard printers")));
     p->btnsizer->Add(btn_sel_all);
 
     p->btn_prev = new wxButton(this, wxID_ANY, _(L("< &Back")));
@@ -1060,7 +1062,7 @@ ConfigWizard::ConfigWizard(wxWindow *parent, RunReason reason)
     p->btn_finish->Hide();
 
     btn_sel_all->Bind(wxEVT_BUTTON, [this](const wxCommandEvent &) {
-        p->page_fff->select_all(true);
+        p->page_fff->select_all(true, false);
         p->index->go_to(p->page_update);
     });
 
