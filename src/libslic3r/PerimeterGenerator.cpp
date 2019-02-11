@@ -282,7 +282,8 @@ void PerimeterGenerator::process()
                         for (ExPolygon &half_thin : half_thins) {
                             //growing back the polygon
                             ExPolygons thin = offset_ex(half_thin, (float)(min_width / 2));
-                            assert(thin.size() == 1);
+                            assert(thin.size() <= 1);
+                            if (thin.empty()) continue;
                             coord_t overlap = (coord_t)scale_(this->config->thin_walls_overlap.get_abs_value(this->ext_perimeter_flow.nozzle_diameter));
                             ExPolygons anchor = intersection_ex(offset_ex(half_thin, (float)(min_width / 2) +
                                 (float)(overlap), jtSquare), no_thin_zone, true);
@@ -514,7 +515,7 @@ void PerimeterGenerator::process()
         // only apply infill overlap if we actually have one perimeter
         coord_t overlap = 0;
         if (inset > 0) {
-            overlap = scale_(this->config->get_abs_value("infill_overlap", unscale<coord_t>(inset + solid_infill_spacing / 2)));
+            overlap = scale_(this->config->get_abs_value("infill_overlap", unscale<coordf_t>(inset + solid_infill_spacing / 2)));
         }
         // simplify infill contours according to resolution
         Polygons pp;

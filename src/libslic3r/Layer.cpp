@@ -20,7 +20,7 @@ Layer::~Layer()
 // Test whether whether there are any slices assigned to this layer.
 bool Layer::empty() const
 {
-	for (const LayerRegion *layerm : m_regions)
+    for (const LayerRegion *layerm : m_regions)
         if (layerm != nullptr && ! layerm->slices.empty())
             // Non empty layer.
             return false;
@@ -149,6 +149,7 @@ void Layer::make_perimeters()
                     // Separate the fill surfaces.
                     ExPolygons expp = intersection_ex(to_polygons(fill_surfaces), (*l)->slices);
                     (*l)->fill_expolygons = expp;
+                    (*l)->fill_no_overlap_expolygons = (*layerm)->fill_no_overlap_expolygons;
                     (*l)->fill_surfaces.set(std::move(expp), fill_surfaces.surfaces.front());
                 }
             }
