@@ -357,6 +357,7 @@ PageCustom::PageCustom(ConfigWizard *parent)
     tc_profile_name = new wxTextCtrl(this, wxID_ANY, default_profile_name);
     auto *label = new wxStaticText(this, wxID_ANY, _(L("Custom profile name:")));
 
+    tc_profile_name->Enable(false);
     tc_profile_name->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent &evt) {
         if (tc_profile_name->GetValue().IsEmpty()) {
             if (profile_name_prev.IsEmpty()) { tc_profile_name->SetValue(default_profile_name); }
@@ -368,6 +369,7 @@ PageCustom::PageCustom(ConfigWizard *parent)
     });
 
     cb_custom->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent &event) {
+        tc_profile_name->Enable(custom_wanted());
         wizard_p()->on_custom_setup(custom_wanted());
     });
 
