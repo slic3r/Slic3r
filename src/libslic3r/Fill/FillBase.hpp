@@ -24,17 +24,19 @@ struct FillParams
         memset(this, 0, sizeof(FillParams));
         // Adjustment does not work.
         dont_adjust = true;
-		flow_mult = 1.f;
+        flow_mult = 1.f;
         fill_exactly = false;
+        role = erNone;
+        flow = NULL;
     }
 
     bool        full_infill() const { return density > 0.9999f && density < 1.0001f; }
 
-	// Fill density, fraction in <0, 1>
-	float       density;
+    // Fill density, fraction in <0, 1>
+    float       density;
 
-	// Fill extruding flow multiplier, fraction in <0, 1>. Used by "over bridge compensation"
-	float       flow_mult;
+    // Fill extruding flow multiplier, fraction in <0, 1>. Used by "over bridge compensation"
+    float       flow_mult;
 
     // Don't connect the fill lines around the inner perimeter.
     bool        dont_connect;
@@ -49,6 +51,12 @@ struct FillParams
     // we were requested to complete each loop;
     // in this case we don't try to make more continuous paths
     bool        complete;
+
+    // if role == erNone or ERCustom, this method have to choose the best role itself, else it must use the argument's role.
+    ExtrusionRole role;
+
+    //flow to use
+    Flow  const *flow;
 };
 static_assert(IsTriviallyCopyable<FillParams>::value, "FillParams class is not POD (and it should be - see constructor).");
 
@@ -90,10 +98,8 @@ public:
     virtual bool no_sort() const { return false; }
 
     // This method have to fill the ExtrusionEntityCollection. It call fill_surface by default
-    // if role == erNone or ERCustom, this method have to choose the best role itself, else it must use the argument's role.
-    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, 
-        const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out);
-	
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out);
+    
     // Perform the fill.
     virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
 
@@ -136,8 +142,8 @@ public:
         // for both positive and negative numbers. Here we want to round down for negative
         // numbers as well.
         coord_t aligned = (coord < 0) ?
-        		((coord - spacing + 1) / spacing) * spacing :
-        		(coord / spacing) * spacing;
+                ((coord - spacing + 1) / spacing) * spacing :
+                (coord / spacing) * spacing;
         assert(aligned <= coord);
         return aligned;
     }

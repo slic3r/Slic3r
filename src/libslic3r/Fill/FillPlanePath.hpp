@@ -24,7 +24,7 @@ protected:
         unsigned int                     thickness_layers,
         const std::pair<float, Point>   &direction, 
         ExPolygon                       &expolygon, 
-        Polylines                       &polylines_out);
+        Polylines                       &polylines_out) override;
 
     virtual float _layer_angle(size_t idx) const { return 0.f; }
     virtual bool  _centered() const = 0;

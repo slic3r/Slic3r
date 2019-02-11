@@ -299,13 +299,13 @@ public:
         polygons_inner = offset(polygons_outer, aoffset2 - aoffset1,
             ClipperLib::jtMiter,
             mitterLimit);
-		// Filter out contours with zero area or small area, contours with 2 points only.
+        // Filter out contours with zero area or small area, contours with 2 points only.
         const double min_area_threshold = 0.01 * aoffset2 * aoffset2;
         remove_small(polygons_outer, min_area_threshold);
         remove_small(polygons_inner, min_area_threshold);
         remove_sticks(polygons_outer);
         remove_sticks(polygons_inner);
-		n_contours_outer = polygons_outer.size();
+        n_contours_outer = polygons_outer.size();
         n_contours_inner = polygons_inner.size();
         n_contours = n_contours_outer + n_contours_inner;
         polygons_ccw.assign(n_contours, false);
@@ -660,32 +660,32 @@ static inline coordf_t measure_perimeter_segment_on_vertical_line_length(
 // The first point (the point of iIntersection) will not be inserted,
 // the last point will be inserted.
 static inline void emit_perimeter_segment_on_vertical_line(
-	const ExPolygonWithOffset                     &poly_with_offset,
-	const std::vector<SegmentedIntersectionLine>  &segs,
-	size_t                                         iVerticalLine,
-	size_t                                         iInnerContour,
-	size_t                                         iIntersection,
-	size_t                                         iIntersection2,
-	Polyline                                      &out,
-	bool                                           forward)
+    const ExPolygonWithOffset                     &poly_with_offset,
+    const std::vector<SegmentedIntersectionLine>  &segs,
+    size_t                                         iVerticalLine,
+    size_t                                         iInnerContour,
+    size_t                                         iIntersection,
+    size_t                                         iIntersection2,
+    Polyline                                      &out,
+    bool                                           forward)
 {
-	const SegmentedIntersectionLine &il = segs[iVerticalLine];
-	const SegmentIntersection       &itsct = il.intersections[iIntersection];
-	const SegmentIntersection       &itsct2 = il.intersections[iIntersection2];
-	const Polygon                   &poly = poly_with_offset.contour(iInnerContour);
-	assert(itsct.is_inner());
-	assert(itsct2.is_inner());
-	assert(itsct.type != itsct2.type);
+    const SegmentedIntersectionLine &il = segs[iVerticalLine];
+    const SegmentIntersection       &itsct = il.intersections[iIntersection];
+    const SegmentIntersection       &itsct2 = il.intersections[iIntersection2];
+    const Polygon                   &poly = poly_with_offset.contour(iInnerContour);
+    assert(itsct.is_inner());
+    assert(itsct2.is_inner());
+    assert(itsct.type != itsct2.type);
     assert(itsct.iContour == iInnerContour);
-	assert(itsct.iContour == itsct2.iContour);
-	// Do not append the first point.
-	// out.points.push_back(Point(il.pos, itsct.pos));
-	if (forward)
-		polygon_segment_append(out.points, poly, itsct.iSegment, itsct2.iSegment);
-	else
-		polygon_segment_append_reversed(out.points, poly, itsct.iSegment, itsct2.iSegment);
-	// Append the last point.
-	out.points.push_back(Point(il.pos, itsct2.pos()));
+    assert(itsct.iContour == itsct2.iContour);
+    // Do not append the first point.
+    // out.points.push_back(Point(il.pos, itsct.pos));
+    if (forward)
+        polygon_segment_append(out.points, poly, itsct.iSegment, itsct2.iSegment);
+    else
+        polygon_segment_append_reversed(out.points, poly, itsct.iSegment, itsct2.iSegment);
+    // Append the last point.
+    out.points.push_back(Point(il.pos, itsct2.pos()));
 }
 
 //TBD: For precise infill, measure the area of a slab spanned by an infill line.
@@ -767,9 +767,9 @@ std::vector<SegmentedIntersectionLine> FillRectilinear2::_vert_lines_for_polygon
 {
     // n_vlines = ceil(bbox_width / line_spacing)
     size_t  n_vlines = (bounding_box.max(0) - bounding_box.min(0) + line_spacing - 1) / line_spacing;
-	coord_t x0 = bounding_box.min(0);
-	if (params.full_infill())
-		x0 += (line_spacing + SCALED_EPSILON) / 2;
+    coord_t x0 = bounding_box.min(0);
+    if (params.full_infill())
+        x0 += (line_spacing + SCALED_EPSILON) / 2;
 
 #ifdef SLIC3R_DEBUG
     static int iRun = 0;
@@ -820,7 +820,7 @@ std::vector<SegmentedIntersectionLine> FillRectilinear2::_vert_lines_for_polygon
             assert(ir >= 0 && ir < segs.size());
             for (int i = il; i <= ir; ++ i) {
                 coord_t this_x = segs[i].pos;
-				assert(this_x == i * line_spacing + x0);
+                assert(this_x == i * line_spacing + x0);
                 SegmentIntersection is;
                 is.iContour = iContour;
                 is.iSegment = iSegment;
@@ -1198,7 +1198,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
 
             // 3) Sort the intersection points, clear iPrev / iNext / iSegBelow / iSegAbove,
             // if it is preceded by any other intersection point along the contour.
-			unsigned int vert_seg_dir_valid_mask = 
+            unsigned int vert_seg_dir_valid_mask = 
                 (going_up ? 
                     (iSegAbove != -1 && seg.intersections[iAbove].type == SegmentIntersection::INNER_LOW) :
                     (iSegBelow != -1 && seg.intersections[iBelow].type == SegmentIntersection::INNER_HIGH)) ?
@@ -1287,23 +1287,23 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
             if (vert_seg_dir_valid_mask) {
                 bool valid = true;
                 // Verify, that there is no intersection with the inner contour up to the end of the contour segment.
-				// Verify, that the successive segment has not been consumed yet.
-				if (going_up) {
-					if (seg.intersections[iAbove].consumed_vertical_up) {
-						valid = false;
-					} else {
-						for (int i = (int)i_intersection + 1; i < iAbove && valid; ++i)
-							if (seg.intersections[i].is_inner()) 
-								valid = false;
-					}
+                // Verify, that the successive segment has not been consumed yet.
+                if (going_up) {
+                    if (seg.intersections[iAbove].consumed_vertical_up) {
+                        valid = false;
+                    } else {
+                        for (int i = (int)i_intersection + 1; i < iAbove && valid; ++i)
+                            if (seg.intersections[i].is_inner()) 
+                                valid = false;
+                    }
                 } else {
-					if (seg.intersections[iBelow-1].consumed_vertical_up) {
-						valid = false;
-					} else {
-						for (int i = iBelow + 1; i < (int)i_intersection && valid; ++i)
-							if (seg.intersections[i].is_inner()) 
-								valid = false;
-					}
+                    if (seg.intersections[iBelow-1].consumed_vertical_up) {
+                        valid = false;
+                    } else {
+                        for (int i = iBelow + 1; i < (int)i_intersection && valid; ++i)
+                            if (seg.intersections[i].is_inner()) 
+                                valid = false;
+                    }
                 }
                 if (valid) {
                     const Polygon &poly = poly_with_offset.contour(intrsctn->iContour);
@@ -1372,9 +1372,9 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
         assert(! polyline_current->has_duplicate_points());
         // Handle nearly zero length edges.
         if (polyline_current->points.size() <= 1 ||
-        	(polyline_current->points.size() == 2 &&
-        		std::abs(polyline_current->points.front()(0) - polyline_current->points.back()(0)) < SCALED_EPSILON &&
-				std::abs(polyline_current->points.front()(1) - polyline_current->points.back()(1)) < SCALED_EPSILON))
+            (polyline_current->points.size() == 2 &&
+                std::abs(polyline_current->points.front()(0) - polyline_current->points.back()(0)) < SCALED_EPSILON &&
+                std::abs(polyline_current->points.front()(1) - polyline_current->points.back()(1)) < SCALED_EPSILON))
             polylines_out.pop_back();
         intrsctn = NULL;
         i_intersection = -1;
@@ -1491,8 +1491,7 @@ Polylines FillCubic::fill_surface(const Surface *surface, const FillParams &para
 
 
 void
-FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillParams &params,
-    const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out)
+FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out)
 {
     ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
     //you don't want to sort the extrusions: big infill first, small second
@@ -1519,9 +1518,9 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
         /// add it into the collection
         eecroot->entities.push_back(eec);
         //get the role
-        ExtrusionRole good_role = role;
+        ExtrusionRole good_role = params.role;
         if (good_role == erNone || good_role == erCustom) {
-            good_role = flow.bridge ?
+            good_role = params.flow->bridge ?
             erBridgeInfill :
                            (surface->is_solid() ?
                            ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
@@ -1532,9 +1531,9 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
             eec->entities,
             polylines_1,
             good_role,
-            flow.mm3_per_mm() * params.flow_mult,
-            flow.width * params.flow_mult,
-            flow.height);
+            params.flow->mm3_per_mm() * params.flow_mult,
+            params.flow->width * params.flow_mult,
+            params.flow->height);
     }
 
 
@@ -1558,9 +1557,9 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
         /// add it into the collection
         eecroot->entities.push_back(eec);
         //get the role
-        ExtrusionRole good_role = role;
+        ExtrusionRole good_role = params.role;
         if (good_role == erNone || good_role == erCustom) {
-            good_role = flow.bridge ?
+            good_role = params.flow->bridge ?
             erBridgeInfill :
                            (surface->is_solid() ?
                            ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
@@ -1571,9 +1570,9 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
             eec->entities,
             polylines_2,
             good_role,
-            flow.mm3_per_mm() * params.flow_mult,
-            flow.width * params.flow_mult,
-            flow.height);
+            params.flow->mm3_per_mm() * params.flow_mult,
+            params.flow->width * params.flow_mult,
+            params.flow->height);
     }
 
     // === end ===

@@ -65,7 +65,7 @@ void FillConcentric::_fill_surface_single(
 }
 
 void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, const FillParams &params,
-    const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out) {
+    ExtrusionEntitiesPtr &out) {
 
     // Perform offset.
     Slic3r::ExPolygons expp = offset_ex(surface->expolygon, float(scale_(0 - 0.5 * this->spacing)));
@@ -112,9 +112,9 @@ void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, cons
 
 
         //get the role
-        ExtrusionRole good_role = role;
+        ExtrusionRole good_role = params.role;
         if (good_role == erNone || good_role == erCustom) {
-            good_role = (flow.bridge ? erBridgeInfill :
+            good_role = (params.flow->bridge ? erBridgeInfill :
                 (surface->is_solid() ?
                 ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
                 erInternalInfill));
@@ -125,9 +125,9 @@ void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, cons
         extrusion_entities_append_loops(
             coll_nosort->entities, loops,
             good_role,
-            flow.mm3_per_mm() * params.flow_mult,
-            flow.width * params.flow_mult,
-            flow.height);
+            params.flow->mm3_per_mm() * params.flow_mult,
+            params.flow->width * params.flow_mult,
+            params.flow->height);
 
         //add gapfills
         if (!gaps.empty() && params.density >= 1) {
@@ -143,11 +143,11 @@ void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, cons
                 //remove too small gaps that are too hard to fill.
                 //ie one that are smaller than an extrusion with width of min and a length of max.
                 if (ex.area() > min*max) {
-                    ex.medial_axis(ex, max, min, &polylines, flow.height);
+                    ex.medial_axis(ex, max, min, &polylines, params.flow->height);
                 }
             }
             if (!polylines.empty()) {
-                ExtrusionEntityCollection gap_fill = thin_variable_width(polylines, erGapFill, flow);
+                ExtrusionEntityCollection gap_fill = thin_variable_width(polylines, erGapFill, *params.flow);
                 coll_nosort->append(gap_fill.entities);
             }
         }

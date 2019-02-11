@@ -304,7 +304,8 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             //params.flow_mult = layerm.region()->config().over_bridge_flow_ratio;
         }
         
-        f->fill_surface_extrusion(&surface, params, flow, erNone, out.entities);
+        params.flow = &flow;
+        f->fill_surface_extrusion(&surface, params, out.entities);
     }
 
     // add thin fill regions

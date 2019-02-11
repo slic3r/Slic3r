@@ -629,7 +629,7 @@ public:
     }
 
     // Deserialization constructor
-	bool deserialize_(const std::string &path, int which = -1)
+    bool deserialize_(const std::string &path, int which = -1)
     {
         FILE *file = ::fopen(path.c_str(), "rb");
         if (file == nullptr)
@@ -793,8 +793,9 @@ namespace SupportMaterialInternal {
     {
         for (const ExtrusionEntity *ee : perimeters.entities) {
             if (ee->is_collection()) {
+                const ExtrusionEntityCollection * eec = static_cast<const ExtrusionEntityCollection*>(ee);
                 for (const ExtrusionEntity *ee2 : static_cast<const ExtrusionEntityCollection*>(ee)->entities) {
-                    assert(! ee2->is_collection());
+                    //assert(! ee2->is_collection()); // there are loops for perimeters and collections for thin walls !!
                     if (ee2->is_loop())
                         if (has_bridging_perimeters(*static_cast<const ExtrusionLoop*>(ee2)))
                             return true;
@@ -807,11 +808,12 @@ namespace SupportMaterialInternal {
     static bool has_bridging_fills(const ExtrusionEntityCollection &fills)
     {
         for (const ExtrusionEntity *ee : fills.entities) {
-            assert(ee->is_collection());
-            for (const ExtrusionEntity *ee2 : static_cast<const ExtrusionEntityCollection*>(ee)->entities) {
-                assert(! ee2->is_collection());
-                assert(! ee2->is_loop());
-                if (ee2->role() == erBridgeInfill)
+            if (ee->is_collection()) {
+                if(has_bridging_fills(*static_cast<const ExtrusionEntityCollection*>(ee)))
+                    return true;
+            } else {
+                assert(! ee->is_loop());
+                if (ee->role() == erBridgeInfill)
                     return true;
             }
         }
@@ -2330,9 +2332,11 @@ static inline void fill_expolygons_generate_paths(
     fill_params.density = density;
     fill_params.complete = true;
     fill_params.dont_adjust = true;
+    fill_params.flow = &flow;
+    fill_params.role = role;
     for (const ExPolygon &expoly : expolygons) {
         Surface surface(stInternal, expoly);
-        filler->fill_surface_extrusion(&surface, fill_params, flow, role, dst);
+        filler->fill_surface_extrusion(&surface, fill_params, dst);
     }
 }
 
@@ -2348,9 +2352,11 @@ static inline void fill_expolygons_generate_paths(
     fill_params.density = density;
     fill_params.complete = true;
     fill_params.dont_adjust = true;
+    fill_params.flow = &flow;
+    fill_params.role = role;
     for (ExPolygon &expoly : expolygons) {
         Surface surface(stInternal, std::move(expoly));
-        filler->fill_surface_extrusion(&surface, fill_params, flow, role, dst);
+        filler->fill_surface_extrusion(&surface, fill_params, dst);
     }
 }
 

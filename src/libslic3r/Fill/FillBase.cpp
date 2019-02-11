@@ -138,14 +138,14 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
     return std::pair<float, Point>(out_angle, out_shift);
 }
 
-void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out) {
+void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) {
     //add overlap & call fill_surface
     Polylines polylines = this->fill_surface(surface, params);
     if (polylines.empty())
         return;
     // ensure it doesn't over or under-extrude
     double multFlow = 1;
-    if (!params.dont_adjust && params.full_infill() && !flow.bridge && params.fill_exactly){
+    if (!params.dont_adjust && params.full_infill() && !params.flow->bridge && params.fill_exactly){
         // compute the path of the nozzle -> extruded volume
         double lengthTot = 0;
         int nbLines = 0;
@@ -156,17 +156,17 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
                 nbLines++;
             }
         }
-        double extrudedVolume = flow.mm3_per_mm() * lengthTot;
+        double extrudedVolume = params.flow->mm3_per_mm() * lengthTot;
         // compute real volume
         double poylineVolume = 0;
         for (auto poly = this->no_overlap_expolygons.begin(); poly != this->no_overlap_expolygons.end(); ++poly) {
-            poylineVolume += flow.height*unscaled(unscaled(poly->area()));
+            poylineVolume += params.flow->height*unscaled(unscaled(poly->area()));
             // add external "perimeter gap"
-            double perimeterRoundGap = unscaled(poly->contour.length()) * flow.height * (1 - 0.25*PI) * 0.5;
+            double perimeterRoundGap = unscaled(poly->contour.length()) * params.flow->height * (1 - 0.25*PI) * 0.5;
             // add holes "perimeter gaps"
             double holesGaps = 0;
             for (auto hole = poly->holes.begin(); hole != poly->holes.end(); ++hole) {
-                holesGaps += unscaled(hole->length()) * flow.height * (1 - 0.25*PI) * 0.5;
+                holesGaps += unscaled(hole->length()) * params.flow->height * (1 - 0.25*PI) * 0.5;
             }
             poylineVolume += perimeterRoundGap + holesGaps;
         }
@@ -188,9 +188,9 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
     /// add it into the collection
     out.push_back(eec);
     //get the role
-    ExtrusionRole good_role = role;
+    ExtrusionRole good_role = params.role;
     if (good_role == erNone || good_role == erCustom) {
-        good_role = (flow.bridge ? erBridgeInfill :
+        good_role = (params.flow->bridge ? erBridgeInfill :
             (surface->is_solid() ?
             ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
             erInternalInfill));
@@ -199,9 +199,9 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
     extrusion_entities_append_paths(
         eec->entities, std::move(polylines),
         good_role,
-        flow.mm3_per_mm() * params.flow_mult * multFlow,
-        flow.width * params.flow_mult * multFlow,
-        flow.height);
+        params.flow->mm3_per_mm() * params.flow_mult * multFlow,
+        params.flow->width * params.flow_mult * multFlow,
+        params.flow->height);
     
 }
 

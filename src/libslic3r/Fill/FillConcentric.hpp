@@ -29,8 +29,7 @@ public:
 
 protected:
     virtual Fill* clone() const { return new FillConcentricWGapFill(*this); };
-    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params,
-        const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out);
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) override;
 
     virtual bool no_sort() const { return true; }
 };
