@@ -1513,7 +1513,7 @@ MedialAxis::grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchor
 
 void
 MedialAxis::taper_ends(ThickPolylines& pp) {
-    const coord_t min_size = std::min(this->nozzle_diameter * 0.1, this->height * (1. - 0.25 * PI));
+    const coord_t min_size = std::max(this->nozzle_diameter * 0.1, this->height * (1. - 0.25 * PI));
     const coordf_t length = std::min(this->anchor_size, (this->nozzle_diameter - min_size) / 2);
     if (length <= SCALED_RESOLUTION) return;
     //ensure the width is not lower than 0.4.
@@ -1579,6 +1579,8 @@ ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, E
             const coordf_t line_len = line.length();
             if (line_len < SCALED_EPSILON) continue;
 
+            assert(line.a_width >= 0);
+            assert(line.b_width >= 0);
             double thickness_delta = fabs(line.a_width - line.b_width);
             if (thickness_delta > tolerance && ceil(thickness_delta / tolerance) > 2) {
                 const uint16_t segments = 1+(uint16_t) std::min(16000.0, ceil(thickness_delta / tolerance));
@@ -1628,8 +1630,7 @@ ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, E
                     // of a square extrusion ended with semi circles.
                     flow.width = unscale<coordf_t>(line.a_width) + flow.height * (1. - 0.25 * PI);
                 } else if (unscale<coordf_t>(line.a_width) < 2 * flow.height * (1. - 0.25 * PI)) {
-                    double percent = unscale<coordf_t>(line.a_width) / (2 * flow.height * (1. - 0.25 * PI));
-                    flow.width = unscale<coordf_t>(line.a_width)/2 + flow.height * (1. - 0.25 * PI);
+                    flow.width = unscale<coordf_t>(line.a_width)*0.35 + 1.3 * flow.height * (1. - 0.25 * PI);
                 } else {
                     flow.width = unscale<coordf_t>(line.a_width);
                 }
