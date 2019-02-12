@@ -143,6 +143,24 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             }
         }
     }
+ /*   for (const Surface &surface : surfaces) {
+        std::cout << "$$$$$$$ TEST srf (area=" << surface.area() << "): "
+            << ", type=" << surface.surface_type
+            << ", angle=" << surface.bridge_angle
+            << ", thickness=" << surface.thickness
+            << "\n contour=";
+        for (const Point &p : surface.expolygon.contour.points) {
+            std::cout << ", " << (int)(100 * unscaled(p.x())) << ":" << (int)(100 * unscaled(p.y()));
+        }
+        std::cout << "\n";
+        for (const Polygon &hole : surface.expolygon.holes) {
+            std::cout << "hole=";
+            for (const Point &p : hole.points) {
+                std::cout << ", " << (int)(100 * unscaled(p.x())) << ":" << (int)(100 * unscaled(p.y()));
+            }
+            std::cout << "\n";
+        }
+    }*/
     
     // we need to detect any narrow surfaces that might collapse
     // when adding spacing below
@@ -153,7 +171,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
     // we are going to grow such regions by overlapping them with the void (if any)
     // TODO: detect and investigate whether there could be narrow regions without
     // any void neighbors
-    {
+    /*{
         coord_t distance_between_surfaces = std::max(
             std::max(infill_flow.scaled_spacing(), solid_infill_flow.scaled_spacing()),
             top_solid_infill_flow.scaled_spacing());
@@ -175,7 +193,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 to_subtract,
                 true),
             stInternalSolid);
-    }
+    }*/
 
     if (0) {
 //        require "Slic3r/SVG.pm";
