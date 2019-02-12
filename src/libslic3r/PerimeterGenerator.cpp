@@ -306,7 +306,7 @@ void PerimeterGenerator::process()
                 } else {
                     //FIXME Is this offset correct if the line width of the inner perimeters differs
                     // from the line width of the infill?
-                    coord_t distance = (i == 1) ? ext_perimeter_spacing2 : perimeter_spacing;
+                    coord_t good_spacing = (i == 1) ? ext_perimeter_spacing2 : perimeter_spacing;
                     if (this->config->thin_walls){
                         // This path will ensure, that the perimeters do not overfill, as in 
                         // prusa3d/Slic3r GH #32, but with the cost of rounding the perimeters
@@ -315,21 +315,23 @@ void PerimeterGenerator::process()
                         // Also the offset2(perimeter, -x, x) may sometimes lead to a perimeter, which is larger than
                         // the original.
                         next_onion = offset2_ex(last,
-                            -(float)(distance + min_spacing / 2 - 1),
+                            -(float)(good_spacing + min_spacing / 2 - 1),
                             +(float)(min_spacing / 2 - 1));
                     } else {
                         // If "detect thin walls" is not enabled, this paths will be entered, which 
                         // leads to overflows, as in prusa3d/Slic3r GH #32
-                        next_onion = offset_ex(last, -(float)(distance));
+                        next_onion = offset_ex(last, -(float)(good_spacing));
                     }
                     // look for gaps
-                    if (this->config->gap_fill_speed.value > 0 && this->config->gap_fill)
+                    if (this->config->gap_fill_speed.value > 0 && this->config->gap_fill 
+                        //check if we are going to have an other perimeter
+                        && (i <= loop_number || has_overhang || next_onion.empty()))
                         // not using safety offset here would "detect" very narrow gaps
                         // (but still long enough to escape the area threshold) that gap fill
                         // won't be able to fill but we'd still remove from infill area
                         append(gaps, diff_ex(
-                            offset(last, -0.5f*distance),
-                            offset(next_onion, 0.5f * distance + 10)));  // safety offset
+                            offset(last, -0.5f*good_spacing),
+                            offset(next_onion, 0.5f * good_spacing + 10)));  // safety offset
                 }
 
                 if (next_onion.empty()) {
@@ -516,22 +518,22 @@ void PerimeterGenerator::process()
             overlap = scale_(this->config->get_abs_value("infill_overlap", unscale<coordf_t>(inset + solid_infill_spacing / 2)));
         }
         // simplify infill contours according to resolution
-        Polygons pp;
+        Polygons not_filled_p;
         for (ExPolygon &ex : last)
-            ex.simplify_p(SCALED_RESOLUTION, &pp);
+            ex.simplify_p(SCALED_RESOLUTION, &not_filled_p);
+        ExPolygons not_filled_exp = union_ex(not_filled_p);
         // collapse too narrow infill areas
         coord_t min_perimeter_infill_spacing = (coord_t)( solid_infill_spacing * (1. - INSET_OVERLAP_TOLERANCE) );
         // append infill areas to fill_surfaces
         //auto it_surf = this->fill_surfaces->surfaces.end();
-        this->fill_surfaces->append(
-            offset2_ex(
-                union_ex(pp),
-                -inset - min_perimeter_infill_spacing / 2 + overlap,
-                (float) min_perimeter_infill_spacing / 2),
-                stInternal);
+        ExPolygons infill_exp = offset2_ex(not_filled_exp,
+            -inset - min_perimeter_infill_spacing / 2 + overlap,
+            (float)min_perimeter_infill_spacing / 2);
+        this->fill_surfaces->append(infill_exp, stInternal);
+            
         if (overlap != 0) {
             ExPolygons polyWithoutOverlap = offset2_ex(
-                union_ex(pp),
+                not_filled_exp,
                 -inset - min_perimeter_infill_spacing / 2,
                 (float) min_perimeter_infill_spacing / 2);
             this->fill_no_overlap.insert(this->fill_no_overlap.end(), polyWithoutOverlap.begin(), polyWithoutOverlap.end());
