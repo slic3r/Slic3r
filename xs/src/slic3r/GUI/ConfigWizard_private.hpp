@@ -30,6 +30,7 @@ namespace GUI {
 
 enum {
     WRAP_WIDTH = 500,
+    MIN_HEIGHT = 150,
     MODEL_MIN_WRAP = 150,
 
     DIALOG_MARGIN = 15,

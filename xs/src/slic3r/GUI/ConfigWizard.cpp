@@ -264,7 +264,7 @@ void ConfigWizardPage::append_text(wxString text)
 {
     auto *widget = new wxStaticText(this, wxID_ANY, text, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     widget->Wrap(WRAP_WIDTH);
-    widget->SetMinSize(wxSize(WRAP_WIDTH, -1));
+    widget->SetMinSize(wxSize(WRAP_WIDTH, MIN_HEIGHT));
     append(widget);
 }
 
@@ -283,7 +283,7 @@ PageWelcome::PageWelcome(ConfigWizard *parent)
     if (wizard_p()->run_reason == ConfigWizard::RR_DATA_EMPTY) {
         wxString::Format(_(L("Run %s")), ConfigWizard::name());
         append_text(wxString::Format(
-            _(L("Hello, welcome to Slic3r Prusa Edition! This %s helps you with the initial configuration; just a few settings and you will be ready to print.")),
+            _(L("Hello, welcome to Slic3r Prusa Edition!\nThis %s helps you with the initial configuration; just a few settings and you will be ready to print.")),
             ConfigWizard::name())
         );
     } else {
