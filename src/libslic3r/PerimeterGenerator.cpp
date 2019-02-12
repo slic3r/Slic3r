@@ -90,6 +90,41 @@ void PerimeterGenerator::process()
         ExPolygons stored;
         ExPolygons last        = union_ex(surface.expolygon.simplify_p(SCALED_RESOLUTION));
         if (loop_number >= 0) {
+
+            // Add perimeters on overhangs : initialization
+            ExPolygons overhangs_unsupported;
+            if (this->config->extra_perimeters && !last.empty()
+                && this->lower_slices != NULL  && !this->lower_slices->expolygons.empty()) {
+                const ExPolygons unsupported = diff_ex(last, this->lower_slices->expolygons);
+                if (!unsupported.empty()) {
+                    //only consider overhangs and let bridges alone
+                    //only consider the part that can be bridged (really, by the bridge algorithm)
+                    //first, separate into islands (ie, each ExPlolygon)
+                    //only consider the bottom layer that intersect unsupported, to be sure it's only on our island.
+                    const ExPolygonCollection lower_island(diff_ex(last, unsupported));
+                    BridgeDetector detector(unsupported,
+                        lower_island,
+                        perimeter_spacing);
+                    if (detector.detect_angle(Geometry::deg2rad(this->config->bridge_angle.value))) {
+                        const ExPolygons bridgeable = union_ex(detector.coverage(-1, true));
+                        if (!bridgeable.empty()) {
+                            //simplify to avoid most of artefacts from printing lines.
+                            ExPolygons bridgeable_simplified;
+                            for (const ExPolygon &poly : bridgeable) {
+                                poly.simplify(perimeter_spacing / 2, &bridgeable_simplified);
+                            }
+
+                            if (!bridgeable_simplified.empty())
+                                bridgeable_simplified = offset_ex(bridgeable_simplified, (float)perimeter_spacing / 1.9f);
+                            if (!bridgeable_simplified.empty()) {
+                                //offset by perimeter spacing because the simplify may have reduced it a bit.
+                                overhangs_unsupported = diff_ex(unsupported, bridgeable_simplified);
+                            }
+                        }
+                    }
+                }
+            }
+
             // In case no perimeters are to be generated, loop_number will equal to -1.            
             std::vector<PerimeterGeneratorLoops> contours(loop_number+1);    // depth => loops
             std::vector<PerimeterGeneratorLoops> holes(loop_number+1);       // depth => loops
@@ -181,49 +216,12 @@ void PerimeterGenerator::process()
 
                 // We can add more perimeters if there are uncovered overhangs
                 // improvement for future: find a way to add perimeters only where it's needed.
-                // It's hard to do, so here is a simple version.
                 bool has_overhang = false;
-                if (this->config->extra_perimeters /*&& i > loop_number*/ && !last.empty()
-                    && this->lower_slices != NULL && !this->lower_slices->expolygons.empty()){
-                    //split the polygons with bottom/notbottom
-                    ExPolygons unsupported = diff_ex(last, this->lower_slices->expolygons, true);
-                    if (!unsupported.empty()) {
-                        //only consider overhangs and let bridges alone
-                        if (true) {
-                            //only consider the part that can be bridged (really, by the bridge algorithm)
-                            //first, separate into islands (ie, each ExPlolygon)
-                            //only consider the bottom layer that intersect unsupported, to be sure it's only on our island.
-                            ExPolygonCollection lower_island(diff_ex(last, unsupported, true));
-                            BridgeDetector detector(unsupported,
-                                lower_island,
-                                perimeter_spacing);
-                            if (detector.detect_angle(Geometry::deg2rad(this->config->bridge_angle.value))) {
-                                ExPolygons bridgeable = union_ex(detector.coverage(-1, true));
-                                if (!bridgeable.empty()) {
-                                    //simplify to avoid most of artefacts from printing lines.
-                                    ExPolygons bridgeable_simplified;
-                                    for (ExPolygon &poly : bridgeable) {
-                                        poly.simplify(perimeter_spacing / 2, &bridgeable_simplified);
-                                    }
-                                    
-                                    if (!bridgeable_simplified.empty())
-                                        bridgeable_simplified = offset_ex(bridgeable_simplified, (float) perimeter_spacing / 1.9f);
-                                    if (!bridgeable_simplified.empty()) {
-                                        //offset by perimeter spacing because the simplify may have reduced it a bit.
-                                        unsupported = diff_ex(unsupported, bridgeable_simplified, true);
-                                    }
-                                } 
-                            }
-                        } else {
-                            ExPolygonCollection coll_last(intersection_ex(last, offset_ex(this->lower_slices->expolygons, (float)-perimeter_spacing / 2)));
-                            ExPolygon hull;
-                            hull.contour = coll_last.convex_hull();
-                            unsupported = diff_ex(offset_ex(unsupported, (float)perimeter_spacing), ExPolygons() = { hull });
-                        }
-                        if (!unsupported.empty()) {
-                            //add fake perimeters here
-                            has_overhang = true;
-                        }
+                if (this->config->extra_perimeters && !last.empty() && !overhangs_unsupported.empty()) {
+                    size_t unsupported_test = intersection(overhangs_unsupported, last).size();
+                    if (unsupported_test > 0) {
+                        //add fake perimeters here
+                        has_overhang = true;
                     }
                 }
 
