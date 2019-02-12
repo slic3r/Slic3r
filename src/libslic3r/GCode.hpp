@@ -326,6 +326,9 @@ protected:
     // so no toolchange occurs twice.
     std::vector<float> m_colorprint_heights;
 
+    // ordered list of object, to give them a unique id.
+    std::vector<const PrintObject*> m_ordered_objects;
+
     // Time estimators
     GCodeTimeEstimator m_normal_time_estimator;
     GCodeTimeEstimator m_silent_time_estimator;

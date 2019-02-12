@@ -704,6 +704,23 @@ void GCode::_do_export(Print &print, FILE *file)
             _write_format(file, "; first layer extrusion width = %.2fmm\n",   region->flow(frPerimeter, first_layer_height, false, true, -1., *first_object).width);
         _write_format(file, "\n");
     }
+    if (this->config().gcode_label_objects) {
+        for (PrintObject *print_object : print.objects()) {
+            this->m_ordered_objects.push_back(print_object);
+            unsigned int copy_id = 0;
+            for (const Point &pos : print_object->copies()) {
+                _write_format(file, "; object:{\"name\":\"%s\",\"id\":\"%s id:%d copy %d\",\"object_center\":[%f,%f,%f],\"boundingbox_center\":[%f,%f,%f],\"boundingbox_size\":[%f,%f,%f]}",
+                    print_object->model_object()->name.substr(0, print_object->model_object()->name.find(".", 0)), print_object->model_object()->name, this->m_ordered_objects.size() - 1, copy_id,
+                    print_object->model_object()->bounding_box().center().x(), print_object->model_object()->bounding_box().center().y(), 0,
+                    print_object->model_object()->bounding_box().center().x(), print_object->model_object()->bounding_box().center().y(), print_object->model_object()->bounding_box().center().z(),
+                    print_object->model_object()->bounding_box().size().x(), print_object->model_object()->bounding_box().size().y(), print_object->model_object()->bounding_box().size().z()
+                    );
+                copy_id++;
+            }
+        }
+        _write_format(file, "\n");
+    }
+
     print.throw_if_canceled();
     
     // adds tags for time estimators
@@ -948,7 +965,6 @@ void GCode::_do_export(Print &print, FILE *file)
             m_wipe_tower.reset(new WipeTowerIntegration(print.config(), *print.wipe_tower_data().priming.get(), print.wipe_tower_data().tool_changes, *print.wipe_tower_data().final_purge.get()));
             _write(file, m_writer.travel_to_z(first_layer_height + m_config.z_offset.value, "Move to the first layer height"));
             if (print.config().single_extruder_multi_material_priming) {
-				//m_wipe_tower->next_layer();
                 _write(file, m_wipe_tower->prime(*this));
                 // Verify, whether the print overaps the priming extrusions.
                 BoundingBoxf bbox_print(get_print_extrusions_extents(print));
@@ -1629,7 +1645,9 @@ void GCode::process_layer(
                 unsigned int copy_id = 0;
                 for (const Point &copy : copies) {
                     if (this->config().gcode_label_objects)
-                        gcode += std::string("; printing object ") + print_object->model_object()->name + " id:" + std::to_string(layer_id) + " copy " + std::to_string(copy_id) + "\n";
+                        gcode += std::string("; printing object ") + print_object->model_object()->name 
+                            + " id:" + std::to_string(std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), print_object) - this->m_ordered_objects.begin()) 
+                            + " copy " + std::to_string(copy_id) + "\n";
                     // When starting a new object, use the external motion planner for the first travel move.
                     std::pair<const PrintObject*, Point> this_object_copy(print_object, copy);
                     if (m_last_obj_copy != this_object_copy)
@@ -1651,7 +1669,9 @@ void GCode::process_layer(
                         gcode += this->extrude_infill(print, by_region_specific, false);
                     }
                     if (this->config().gcode_label_objects)
-                        gcode += std::string("; stop printing object ") + print_object->model_object()->name + " id:" + std::to_string(layer_id) + " copy " + std::to_string(copy_id) + "\n";
+                        gcode += std::string("; stop printing object ") + print_object->model_object()->name 
+                            + " id:" + std::to_string((std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), print_object) - this->m_ordered_objects.begin())) 
+                            + " copy " + std::to_string(copy_id) + "\n";
                     ++ copy_id;
                 }
             }
