@@ -526,17 +526,17 @@ std::string GLCanvas3D::Bed::_detect_type() const
                 {
                     if (boost::contains(curr->name, "SL1"))
                     {
-                        type = SL1;
+                        type = "SL1";
                         break;
                     }
                     else if (boost::contains(curr->name, "MK3") || boost::contains(curr->name, "MK2.5"))
                     {
-                        type = MK3;
+                        type = "MK3";
                         break;
                     }
                     else if (boost::contains(curr->name, "MK2"))
                     {
-                        type = MK2;
+                        type = "MK2";
                         break;
                     }
                 }
