@@ -329,6 +329,7 @@ void PrintObject::prepare_infill()
     
     // the following step needs to be done before combination because it may need
     // to remove only half of the combined infill
+    //if (this->)
     this->bridge_over_infill();
     m_print->throw_if_canceled();
     this->replaceSurfaceType(stInternalSolid, stInternalOverBridge, stInternalBridge);
@@ -715,33 +716,30 @@ void PrintObject::count_distance_solid() {
     // sparse area = layer's fill area - solid area
     const float COEFF_SPLIT = 2;
     const int NB_DENSE_LAYERS = 1;
+    int idR = 0;
     for (const PrintRegion *region : this->m_print->regions()) {
-        //count how many surface there are on each one
         LayerRegion *previousOne = NULL;
-        size_t top_z = this->layers().size() - 1;
-        for (; top_z < this->layers().size() && previousOne == NULL; --top_z){
-            for (LayerRegion * lregion : this->layers()[top_z]->regions()){
-                if (lregion->region() == region){
-                    previousOne = lregion;
-                    break;
-                }
-            }
-        }
-        if (previousOne != NULL && previousOne->region()->config().infill_dense.getBool() && previousOne->region()->config().fill_density<40) {
-            for (Surface &surf : previousOne->fill_surfaces.surfaces) {
-                if (surf.is_solid()) {
-                    surf.maxNbSolidLayersOnTop = 0;
-                }
-            }
-            for (size_t idx_layer = this->layers().size() - 2; idx_layer < this->layers().size() - 1; --idx_layer) {
+        //count how many surface there are on each one
+        if (region->config().infill_dense.getBool() && region->config().fill_density<40) {
+            for (size_t idx_layer = this->layers().size() - 1; idx_layer < this->layers().size(); --idx_layer) {
                 LayerRegion *layerm = NULL;
-                for (LayerRegion * lregion : this->layers()[top_z]->regions()){
-                    if (lregion->region() == region){
+                for (LayerRegion * lregion : this->layers()[idx_layer]->regions()) {
+                    if (lregion->region() == region) {
                         layerm = lregion;
                         break;
                     }
                 }
                 if (layerm == NULL){
+                    previousOne = NULL;
+                    continue;
+                }
+                if (previousOne == NULL) {
+                    for (Surface &surf : layerm->fill_surfaces.surfaces) {
+                        if (surf.is_solid()) {
+                            surf.maxNbSolidLayersOnTop = 0;
+                        }
+                    }
+                    previousOne = layerm;
                     continue;
                 }
                 Surfaces surf_to_add;
@@ -1512,8 +1510,10 @@ void PrintObject::bridge_over_infill()
     for (size_t region_id = 0; region_id < this->region_volumes.size(); ++ region_id) {
         const PrintRegion &region = *m_print->regions()[region_id];
         
-        // skip bridging in case there are no voids
+        // skip over-bridging in case there are no voids
         if (region.config().fill_density.value == 100) continue;
+        // skip over-bridging in case there are no modification
+        if (region.config().over_bridge_flow_ratio == 1) continue;
         
         // get bridge flow
         Flow bridge_flow = region.flow(
