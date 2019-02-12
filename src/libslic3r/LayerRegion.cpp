@@ -100,7 +100,7 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
     if (!has_infill) {
         coord_t max_margin = 0;
         if ((this->region()->config().perimeters > 0)) {
-            max_margin = this->flow(frExternalPerimeter).width + this->flow(frPerimeter).width * (this->region()->config().perimeters.value - 1);
+            max_margin = scale_(this->flow(frExternalPerimeter).width) + this->flow(frPerimeter).scaled_spacing() * (this->region()->config().perimeters.value - 1);
         }
         margin = std::min(margin, max_margin);
         margin_bridged = std::min(margin_bridged, max_margin);
