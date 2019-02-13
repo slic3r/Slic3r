@@ -39,6 +39,14 @@ SurfaceCollection::simplify(double tolerance)
     this->surfaces = ss;
 }
 
+void
+SurfaceCollection::remove_collinear_points()
+{
+    for(Surface &surface : this->surfaces) {
+        surface.expolygon.remove_colinear_points();
+    }
+}
+
 /* group surfaces by common properties */
 void
 SurfaceCollection::group(std::vector<SurfacesConstPtr> *retval) const
@@ -91,12 +99,28 @@ SurfaceCollection::any_bottom_contains(const T &item) const
 template bool SurfaceCollection::any_bottom_contains<Polyline>(const Polyline &item) const;
 
 SurfacesPtr
-SurfaceCollection::filter_by_type(SurfaceType type)
+SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types)
 {
     SurfacesPtr ss;
-    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
-        if (surface->surface_type == type) ss.push_back(&*surface);
-    }
+    for (Surface& s : this->surfaces)
+        for (const SurfaceType& t : types)
+            if (s.surface_type == t) {
+                ss.push_back(&s);
+                break;
+            }
+    return ss;
+}
+
+SurfacesConstPtr
+SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types) const
+{
+    SurfacesConstPtr ss;
+    for (const Surface& s : this->surfaces)
+        for (const SurfaceType& t : types)
+            if (s.surface_type == t) {
+                ss.push_back(&s);
+                break;
+            }
     return ss;
 }
 
@@ -113,6 +137,12 @@ void
 SurfaceCollection::append(const SurfaceCollection &coll)
 {
     this->append(coll.surfaces);
+}
+
+void
+SurfaceCollection::append(const Surface &surface)
+{
+    this->surfaces.push_back(surface);
 }
 
 void
@@ -147,5 +177,94 @@ SurfaceCollection::polygons_count() const
         count += 1 + it->expolygon.holes.size();
     return count;
 }
-
+void
+SurfaceCollection::remove_type(const SurfaceType type)
+{
+    // Use stl remove_if to remove 
+    auto ptr = std::remove_if(surfaces.begin(), surfaces.end(),[type] (Surface& s) { return s.surface_type == type; });
+    surfaces.erase(ptr, surfaces.cend());
 }
+
+void
+SurfaceCollection::remove_types(const SurfaceType *types, size_t ntypes) 
+{
+    for (size_t i = 0; i < ntypes; ++i)
+        this->remove_type(types[i]);
+}
+
+void 
+SurfaceCollection::remove_types(std::initializer_list<SurfaceType> types) {
+    for (const auto& t : types) {
+        this->remove_type(t);
+    }
+}
+
+void
+SurfaceCollection::keep_type(const SurfaceType type)
+{
+    // Use stl remove_if to remove 
+    auto ptr = std::remove_if(surfaces.begin(), surfaces.end(),[type] (const Surface& s) { return s.surface_type != type; });
+    surfaces.erase(ptr, surfaces.cend());
+}
+
+void
+SurfaceCollection::keep_types(const SurfaceType *types, size_t ntypes) 
+{
+    size_t j = 0;
+    for (size_t i = 0; i < surfaces.size(); ++ i) {
+        bool keep = false;
+        for (int k = 0; k < ntypes; ++ k) {
+            if (surfaces[i].surface_type == types[k]) {
+                keep = true;
+                break;
+            }
+        }
+        if (keep) {
+            if (j < i)
+                std::swap(surfaces[i], surfaces[j]);
+            ++ j;
+        }
+    }
+    if (j < surfaces.size())
+        surfaces.erase(surfaces.begin() + j, surfaces.end());
+}
+
+void 
+SurfaceCollection::keep_types(std::initializer_list<SurfaceType> types) {
+    for (const auto& t : types) {
+        this->keep_type(t);
+    }
+}
+/* group surfaces by common properties */
+std::vector<SurfacesPtr>
+SurfaceCollection::group()
+{
+    std::vector<SurfacesPtr> retval;
+    this->group(&retval);
+    return retval;
+}
+
+void
+SurfaceCollection::group(std::vector<SurfacesPtr> *retval)
+{
+    for (Surfaces::iterator it = this->surfaces.begin(); it != this->surfaces.end(); ++it) {
+        // find a group with the same properties
+        SurfacesPtr* group = NULL;
+        for (std::vector<SurfacesPtr>::iterator git = retval->begin(); git != retval->end(); ++git)
+            if (! git->empty() && surfaces_could_merge(*git->front(), *it)) {
+                group = &*git;
+                break;
+            }
+        // if no group with these properties exists, add one
+        if (group == NULL) {
+            retval->resize(retval->size() + 1);
+            group = &retval->back();
+        }
+        // append surface to group
+        group->push_back(&*it);
+    }
+}
+
+
+
+} // namespace Slic3r

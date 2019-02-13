@@ -28,7 +28,7 @@ sub new {
     my $left_sizer = Wx::BoxSizer->new(wxVERTICAL);
     $self->{sizer}->Add($left_sizer, 0, wxEXPAND | wxLEFT | wxTOP | wxBOTTOM, 3);
     
-    my $left_col_width = 150;
+    my $left_col_width = -1;
     
     # preset chooser
     {
@@ -454,7 +454,7 @@ sub options {
         perimeter_acceleration infill_acceleration bridge_acceleration 
         first_layer_acceleration default_acceleration
         skirts skirt_distance skirt_height min_skirt_length
-        brim_connections_width brim_width interior_brim_width
+        brim_connections_width brim_ears brim_ears_max_angle brim_width interior_brim_width
         support_material support_material_threshold support_material_max_layers support_material_enforce_layers
         raft_layers
         support_material_pattern support_material_spacing support_material_angle
@@ -464,6 +464,7 @@ sub options {
         notes
         complete_objects extruder_clearance_radius extruder_clearance_height
         gcode_comments output_filename_format
+        label_printed_objects
         post_process
         perimeter_extruder infill_extruder solid_infill_extruder
         support_material_extruder support_material_interface_extruder
@@ -592,6 +593,8 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Brim');
             $optgroup->append_single_option_line('brim_width');
+            $optgroup->append_single_option_line('brim_ears');
+            $optgroup->append_single_option_line('brim_ears_max_angle');
             $optgroup->append_single_option_line('interior_brim_width');
             $optgroup->append_single_option_line('brim_connections_width');
         }
@@ -727,6 +730,7 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Output file');
             $optgroup->append_single_option_line('gcode_comments');
+            $optgroup->append_single_option_line('label_printed_objects');
             
             {
                 my $option = $optgroup->get_option('output_filename_format');
@@ -946,6 +950,9 @@ sub _update {
         || $config->brim_connections_width;
     # perimeter_extruder uses the same logic as in Print::extruders()
     $self->get_field('perimeter_extruder')->toggle($have_perimeters || $have_brim);
+    
+    $self->get_field('brim_ears')->toggle($have_brim);
+    $self->get_field('brim_ears_max_angle')->toggle($have_brim && $config->brim_ears);
     
     my $have_support_material = $config->support_material || $config->raft_layers > 0;
     my $have_support_interface = $config->support_material_interface_layers > 0;
@@ -1532,7 +1539,7 @@ sub _build_extruder_pages {
             $optgroup->append_single_option_line('nozzle_diameter', $extruder_idx);
         }
         {
-            my $optgroup = $page->new_optgroup('Limits');
+            my $optgroup = $page->new_optgroup('Layer Height Limits');
             $optgroup->append_single_option_line($_, $extruder_idx)
                for qw(min_layer_height max_layer_height);
         }

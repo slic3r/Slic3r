@@ -6,7 +6,24 @@
 
 namespace Slic3r {
 
-enum SurfaceType { stTop, stBottom, stBottomBridge, stInternal, stInternalSolid, stInternalBridge, stInternalVoid };
+/// Surface type enumerations.
+/// As it is very unlikely that there will be more than 32 or 64 of these surface types, pack into a flag 
+enum SurfaceType : uint16_t { 
+    stTop            = 0b1,       /// stTop: it has nothing just on top of it
+    stBottom         = 0b10,      /// stBottom: it's a surface with nothing just under it (or the base plate, or a support)
+    stInternal       = 0b100,     /// stInternal: not top nor bottom
+    stSolid          = 0b1000,    /// stSolid: modify the stInternal to say it should be at 100% infill
+    stBridge         = 0b10000,   /// stBridge: modify stBottom or stInternal to say it should be extruded as a bridge
+    stVoid           = 0b100000   /// stVoid: modify stInternal to say it should be at 0% infill
+};
+inline SurfaceType operator|(SurfaceType a, SurfaceType b)
+{return static_cast<SurfaceType>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b));}
+inline SurfaceType operator&(SurfaceType a, SurfaceType b)
+{return static_cast<SurfaceType>(static_cast<uint16_t>(a) & static_cast<uint16_t>(b));}
+inline SurfaceType operator|=(SurfaceType& a, SurfaceType b)
+{ a = a | b; return a;}
+inline SurfaceType operator&=(SurfaceType& a, SurfaceType b)
+{ a = a & b; return a;}
 
 class Surface
 {
@@ -27,6 +44,7 @@ class Surface
     bool is_solid() const;
     bool is_external() const;
     bool is_internal() const;
+    bool is_top() const;
     bool is_bottom() const;
     bool is_bridge() const;
 };
@@ -149,6 +167,15 @@ inline void polygons_append(Polygons &dst, SurfacesPtr &&src)
     }
 }
 
+inline bool surfaces_could_merge(const Surface &s1, const Surface &s2)
+{
+    return 
+        s1.surface_type      == s2.surface_type     &&
+        s1.thickness         == s2.thickness        &&
+        s1.thickness_layers  == s2.thickness_layers &&
+        s1.bridge_angle      == s2.bridge_angle;
 }
+
+} // namespace Slic3r
 
 #endif

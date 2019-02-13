@@ -25,6 +25,19 @@ double rad2deg(double angle);
 double rad2deg_dir(double angle);
 double deg2rad(double angle);
 
+/// Find the center of the circle corresponding to the vector of Points as an arc.
+Point circle_taubin_newton(const Points& input, size_t cycles = 20);
+Point circle_taubin_newton(const Points::const_iterator& input_start, const Points::const_iterator& input_end, size_t cycles = 20);
+
+/// Find the center of the circle corresponding to the vector of Pointfs as an arc.
+Pointf circle_taubin_newton(const Pointfs& input, size_t cycles = 20);
+Pointf circle_taubin_newton(const Pointfs::const_iterator& input_start, const Pointfs::const_iterator& input_end, size_t cycles = 20);
+
+/// Epsilon value
+// FIXME: this is a duplicate from libslic3r.h
+constexpr double epsilon { 1e-4 };
+constexpr coord_t scaled_epsilon { static_cast<coord_t>(epsilon / SCALING_FACTOR) };
+
 double linint(double value, double oldmin, double oldmax, double newmin, double newmax);
 bool arrange(
     // input

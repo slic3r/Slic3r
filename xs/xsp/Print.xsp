@@ -110,7 +110,7 @@ _constant()
     Ref<Layer> add_layer(int id, coordf_t height, coordf_t print_z,
         coordf_t slice_z);
     void delete_layer(int idx);
-
+    %name{support_material_flow} Clone<Flow> _support_material_flow(FlowRole role = frSupportMaterial);
     size_t support_layer_count();
     void clear_support_layers();
     Ref<SupportLayer> get_support_layer(int idx);
@@ -126,9 +126,13 @@ _constant()
     void set_step_started(PrintObjectStep step)
         %code%{ THIS->state.set_started(step); %};
     
-    %name{_detect_surfaces_type} void detect_surfaces_type();
+    void detect_surfaces_type();
     void process_external_surfaces();
     void bridge_over_infill();
+    void combine_infill();
+    void discover_horizontal_shells();
+    void clip_fill_surfaces();
+    void slice();
     void _slice();
     SV* _slice_region(size_t region_id, std::vector<double> z, bool modifier)
         %code%{
@@ -149,8 +153,10 @@ _constant()
             }
             RETVAL = (SV*)newRV_noinc((SV*)layers_av);
         %};
-    void _make_perimeters();
-    void _infill();
+    void make_perimeters();
+    void prepare_infill();
+    void infill();
+    void _simplify_slices(double distance);
     
     int ptr()
         %code%{ RETVAL = (int)(intptr_t)THIS; %};
@@ -269,12 +275,19 @@ _constant()
     bool has_infinite_skirt();
     bool has_skirt();
     std::string _validate()
-        %code%{ RETVAL = THIS->validate(); %};
+        %code%{
+            try {
+                THIS->validate();
+            } catch (std::exception &e) {
+                RETVAL = e.what();
+            }
+        %};
     Clone<BoundingBox> bounding_box();
     Clone<BoundingBox> total_bounding_box();
     double skirt_first_layer_height();
     Clone<Flow> brim_flow();
     Clone<Flow> skirt_flow();
+    void make_skirt();
     void _make_brim();
 %{
 

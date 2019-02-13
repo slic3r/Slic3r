@@ -21,6 +21,7 @@ class Polygon : public MultiPoint {
     const Point& operator[](Points::size_type idx) const;
     
     Polygon() {};
+
     explicit Polygon(const Points &points): MultiPoint(points) {};
     Point last_point() const;
     virtual Lines lines() const;
@@ -40,6 +41,8 @@ class Polygon : public MultiPoint {
     // Tested by counting intersections along a horizontal line.
     bool contains(const Point &point) const;
     void douglas_peucker(double tolerance);
+    /// removes collinear points within SCALED_EPSILON tolerance
+    void remove_collinear_points();
     void remove_vertical_collinear_points(coord_t tolerance);
     Polygons simplify(double tolerance) const;
     void simplify(double tolerance, Polygons &polygons) const;
@@ -48,7 +51,24 @@ class Polygon : public MultiPoint {
     std::string wkt() const;
     Points concave_points(double angle = PI) const;
     Points convex_points(double angle = PI) const;
+
+    static Polygon new_scale(const Pointfs& p);
 };
+
+// Append a vector of polygons at the end of another vector of polygons.
+inline void        polygons_append(Polygons &dst, const Polygons &src) { dst.insert(dst.end(), src.begin(), src.end()); }
+
+inline void        polygons_append(Polygons &dst, Polygons &&src) 
+{
+    if (dst.empty()) {
+        dst = std::move(src);
+    } else {
+        std::move(std::begin(src), std::end(src), std::back_inserter(dst));
+        src.clear();
+    }
+}
+
+
 
 inline Polygons
 operator+(Polygons src1, const Polygons &src2) {

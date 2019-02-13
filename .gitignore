@@ -1,6 +1,8 @@
 build
 Build
 Build.bat
+*/external/Catch
+Makefile
 MYMETA.json
 MYMETA.yml
 _build
@@ -13,6 +15,7 @@ xs/assertlib*
 .init_bundle.ini
 local-lib
 package/osx/Slic3r*.app
+package/osx/_tmp
 *.dmg
 *.swp
 *.swo
@@ -22,3 +25,13 @@ CMakeFiles
 core
 CMakeCache.txt
 *.cmake
+*.exe
+src/test/test_options.hpp
+src/slic3r
+build/*
+
+slic3r
+gui_test
+slic3r_test
+compile_commands.json
+tags
