@@ -95,14 +95,14 @@ void PerimeterGenerator::process()
             ExPolygons overhangs_unsupported;
             if (this->config->extra_perimeters && !last.empty()
                 && this->lower_slices != NULL  && !this->lower_slices->expolygons.empty()) {
-                const ExPolygons unsupported = diff_ex(last, this->lower_slices->expolygons);
-                if (!unsupported.empty()) {
+                overhangs_unsupported = diff_ex(last, this->lower_slices->expolygons);
+                if (!overhangs_unsupported.empty()) {
                     //only consider overhangs and let bridges alone
                     //only consider the part that can be bridged (really, by the bridge algorithm)
                     //first, separate into islands (ie, each ExPlolygon)
                     //only consider the bottom layer that intersect unsupported, to be sure it's only on our island.
-                    const ExPolygonCollection lower_island(diff_ex(last, unsupported));
-                    BridgeDetector detector(unsupported,
+                    const ExPolygonCollection lower_island(diff_ex(last, overhangs_unsupported));
+                    BridgeDetector detector(overhangs_unsupported,
                         lower_island,
                         perimeter_spacing);
                     if (detector.detect_angle(Geometry::deg2rad(this->config->bridge_angle.value))) {
@@ -118,7 +118,7 @@ void PerimeterGenerator::process()
                                 bridgeable_simplified = offset_ex(bridgeable_simplified, (float)perimeter_spacing / 1.9f);
                             if (!bridgeable_simplified.empty()) {
                                 //offset by perimeter spacing because the simplify may have reduced it a bit.
-                                overhangs_unsupported = diff_ex(unsupported, bridgeable_simplified);
+                                overhangs_unsupported = diff_ex(overhangs_unsupported, bridgeable_simplified);
                             }
                         }
                     }
