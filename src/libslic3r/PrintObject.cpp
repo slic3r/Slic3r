@@ -534,10 +534,8 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "bottom_fill_pattern"
             || opt_key == "solid_fill_pattern"
             || opt_key == "enforce_full_fill_volume"
-            || opt_key == "external_fill_link_max_length"
             || opt_key == "fill_angle"
             || opt_key == "fill_pattern"
-            || opt_key == "fill_link_max_length"
             || opt_key == "top_infill_extrusion_width"
             || opt_key == "first_layer_extrusion_width") {
             steps.emplace_back(posInfill);

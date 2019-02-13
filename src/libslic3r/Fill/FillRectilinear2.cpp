@@ -1253,15 +1253,34 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
                     (distNext < distPrev) : 
                     intrsctn_type_next == INTERSECTION_TYPE_OTHER_VLINE_OK;
                 assert(intrsctn->is_inner());
-                bool skip = params.dont_connect || (link_max_length > 0 && (take_next ? distNext : distPrev) > link_max_length);
+                bool skip = params.dont_connect || (link_max_length > 0 && (take_next ? distNext : distPrev) > link_max_length * 3);
                 if (skip) {
                     // Just skip the connecting contour and start a new path.
                     goto dont_connect;
-                    polyline_current->points.push_back(Point(seg.pos, intrsctn->pos()));
-                    polylines_out.push_back(Polyline()); 
-                    polyline_current = &polylines_out.back(); 
+                }
+                skip = params.dont_connect || (link_max_length > 0 && (take_next ? distNext : distPrev) > link_max_length);
+                if (skip) {
+                    //"skip" the connection but continue to do as it was printed
+                    //also, add a bit of extrusion at the tip, to not under-extrude
+                    //TODO: supermerill: don't output polyline but Extrusion entiyt, to be able to extrude a small line here (gap-fill style) instead of big bits.
+                    Point last_point = Point(seg.pos, intrsctn->pos());
                     const SegmentedIntersectionLine &il2 = segs[take_next ? (i_vline + 1) : (i_vline - 1)];
-                    polyline_current->points.push_back(Point(il2.pos, il2.intersections[take_next ? iNext : iPrev].pos()));
+                    Point next_point = Point(il2.pos, il2.intersections[take_next ? iNext : iPrev].pos());
+                    //compute angle to see where it's possible to extrude a bit
+                    float coeff_before = 0.5f;
+                    if (!polyline_current->points.empty()) coeff_before = 1 - std::abs(((last_point.ccw_angle(polyline_current->points.back(), next_point)) / PI) - 1);
+                    if (coeff_before < 0.2) coeff_before = 0.0;
+                    if (coeff_before > 0.8) coeff_before = 1.0;
+                    //now add the points at the end of the current polyline
+                    polyline_current->points.push_back(last_point);
+                    if (coeff_before > 0.0)
+                        polyline_current->points.push_back(last_point.interpolate(coeff_before * scale_(this->spacing) / ( (take_next ? distNext : distPrev)), next_point));
+                    //now create & add the points at the start of the new polyline
+                    polylines_out.push_back(Polyline());
+                    polyline_current = &polylines_out.back();
+                    if (coeff_before < 1.0)
+                        polyline_current->points.push_back(next_point.interpolate((1 - coeff_before) * scale_(this->spacing) / ( (take_next ? distNext : distPrev)), last_point));
+                    polyline_current->points.push_back(next_point);
                 } else {
                     polyline_current->points.push_back(Point(seg.pos, intrsctn->pos()));
                     emit_perimeter_prev_next_segment(poly_with_offset, segs, i_vline, intrsctn->iContour, i_intersection, take_next ? iNext : iPrev, *polyline_current, take_next);

@@ -270,13 +270,8 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 
         double link_max_length = 0.;
         if (! is_bridge) {
-#if 0
-            link_max_length = layerm.region()->config().get_abs_value(surface.is_external() ? "external_fill_link_max_length" : "fill_link_max_length", flow.spacing());
-//            printf("flow spacing: %f,  is_external: %d, link_max_length: %lf\n", flow.spacing(), int(surface.is_external()), link_max_length);
-#else
             if (density > 80.) // 80%
-                link_max_length = 3. * f->spacing;
-#endif
+                link_max_length = 3 * f->spacing; // slic3r default : 3
         }
 
         f->layer_id = layerm.layer()->id();
