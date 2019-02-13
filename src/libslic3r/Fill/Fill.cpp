@@ -103,8 +103,8 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 if (surface.is_solid() && (!surface.is_bridge() || layerm.layer()->id() == 0) && !surface.is_overBridge()) {
                     group_attrib[i].is_solid = true;
                     group_attrib[i].flow_width = (surface.is_top()) ? top_solid_infill_flow.width : solid_infill_flow.width;
-                    group_attrib[i].pattern = (surface.is_top() && surface.is_external()) ? layerm.region()->config().top_fill_pattern.value : ipRectilinear;
-                    group_attrib[i].pattern = (surface.is_bottom() && surface.is_external()) ? layerm.region()->config().bottom_fill_pattern.value : ipRectilinear;
+                    group_attrib[i].pattern = (surface.is_top() && surface.is_external()) ? layerm.region()->config().top_fill_pattern.value : layerm.region()->config().solid_fill_pattern.value;
+                    group_attrib[i].pattern = (surface.is_bottom() && surface.is_external()) ? layerm.region()->config().bottom_fill_pattern.value : layerm.region()->config().solid_fill_pattern.value;
                 }
             }
             // Loop through solid groups, find compatible groups and append them to this one.
@@ -214,9 +214,11 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 
         if (surface.is_solid()) {
             density = 100.;
-            fill_pattern = (surface.is_external() && ! is_bridge) ? 
-                (surface.is_top() ? layerm.region()->config().top_fill_pattern.value : layerm.region()->config().bottom_fill_pattern.value) :
-                ipRectilinear;
+            fill_pattern = ipRectilinear;
+            if (surface.is_external() && !is_bridge)
+                fill_pattern = surface.is_top() ? layerm.region()->config().top_fill_pattern.value : layerm.region()->config().bottom_fill_pattern.value;
+            else if (!is_bridge)
+                fill_pattern = layerm.region()->config().solid_fill_pattern.value;
         } else {
             if (layerm.region()->config().infill_dense.getBool()
                 && layerm.region()->config().fill_density<40

@@ -952,8 +952,8 @@ void TabPrint::build()
 		optgroup->append_single_option_line("overhangs");
         line = { _(L("Avoid unsupported perimeters")), "" };
         line.append_option(optgroup->get_option("no_perimeter_unsupported"));
-        line.append_option(optgroup->get_option("min_perimeter_unsupported"));
-        line.append_option(optgroup->get_option("noperi_bridge_only")); 
+        //line.append_option(optgroup->get_option("min_perimeter_unsupported"));
+        //line.append_option(optgroup->get_option("noperi_bridge_only")); 
         optgroup->append_line(line);
 
         optgroup = page->new_optgroup(_(L("Advanced")));
@@ -979,6 +979,7 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("top_fill_pattern"));
         line.append_option(optgroup->get_option("bottom_fill_pattern"));
         optgroup->append_line(line);
+        optgroup->append_single_option_line("solid_fill_pattern");
         optgroup = page->new_optgroup(_(L("Reducing printing time")));
         optgroup->append_single_option_line("infill_every_layers");
         optgroup->append_single_option_line("infill_only_where_needed");
@@ -1330,20 +1331,25 @@ void TabPrint::update()
 				break;
 			}
 		}
-		if (!str_fill_pattern.empty()){
+        if (!str_fill_pattern.empty()) {
+            bool correct_100p_fill = false;
 			const std::vector<std::string> top_fill_pattern = m_config->def()->get("top_fill_pattern")->enum_values;
-			bool correct_100p_fill = false;
 			for (const std::string &fill : top_fill_pattern)
 			{
 				if (str_fill_pattern == fill)
 					correct_100p_fill = true;
-			}
-			const std::vector<std::string> bottom_fill_pattern = m_config->def()->get("bottom_fill_pattern")->enum_values;
-			for (const std::string &fill : bottom_fill_pattern)
-			{
-				if (str_fill_pattern.compare(fill) == 0)
-					correct_100p_fill = true;
-			}
+            }
+            const std::vector<std::string> bottom_fill_pattern = m_config->def()->get("bottom_fill_pattern")->enum_values;
+            for (const std::string &fill : bottom_fill_pattern) {
+                if (str_fill_pattern.compare(fill) == 0)
+                    correct_100p_fill = true;
+            }
+            //note: supermerill : i don't understand this but i copy-paste
+            const std::vector<std::string> solid_fill_pattern = m_config->def()->get("solid_fill_pattern")->enum_values;
+            for (const std::string &fill : solid_fill_pattern) {
+                if (str_fill_pattern.compare(fill) == 0)
+                    correct_100p_fill = true;
+            }
 			// get fill_pattern name from enum_labels for using this one at dialog_msg
 			str_fill_pattern = m_config->def()->get("fill_pattern")->enum_labels[fill_pattern];
 			if (!correct_100p_fill) {
@@ -1373,9 +1379,9 @@ void TabPrint::update()
     for (auto el : { "thin_walls_min_width", "thin_walls_overlap" }) get_field(el)->toggle(m_config->opt_bool("thin_walls"));
     get_field("perimeter_loop_seam")->toggle(m_config->opt_bool("perimeter_loop"));
 
-    bool have_no_perimeter_unsupported = have_perimeters && m_config->opt_bool("no_perimeter_unsupported");
-    for (auto el : { "min_perimeter_unsupported", "noperi_bridge_only" })
-        get_field(el)->toggle(have_no_perimeter_unsupported);
+    //bool have_no_perimeter_unsupported = have_perimeters && m_config->opt_bool("no_perimeter_unsupported");
+    //for (auto el : { "min_perimeter_unsupported", "noperi_bridge_only" })
+    //    get_field(el)->toggle(have_no_perimeter_unsupported);
 
 
 	bool have_infill = m_config->option<ConfigOptionPercent>("fill_density")->value > 0;
@@ -1393,8 +1399,8 @@ void TabPrint::update()
 
 	bool have_solid_infill = m_config->opt_int("top_solid_layers") > 0 || m_config->opt_int("bottom_solid_layers") > 0;
 	// solid_infill_extruder uses the same logic as in Print::extruders()
-	for (auto el : {"top_fill_pattern", "bottom_fill_pattern", "enforce_full_fill_volume", "external_infill_margin", "infill_first",
-					"solid_infill_extruder", "solid_infill_extrusion_width", "solid_infill_speed" })
+    for (auto el : { "top_fill_pattern", "bottom_fill_pattern", "solid_fill_pattern", "enforce_full_fill_volume", "external_infill_margin",
+        "infill_first", "solid_infill_extruder", "solid_infill_extrusion_width", "solid_infill_speed" })
 		get_field(el)->toggle(have_solid_infill);
 
 	for (auto el : {"fill_angle", "bridge_angle", "infill_extrusion_width",

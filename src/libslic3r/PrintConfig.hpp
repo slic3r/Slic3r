@@ -526,10 +526,9 @@ public:
     ConfigOptionInt                 bottom_solid_layers;
     ConfigOptionFloat               bridge_flow_ratio;
     ConfigOptionFloat               over_bridge_flow_ratio;
+    ConfigOptionEnum<InfillPattern> bottom_fill_pattern;
     ConfigOptionFloat               bridge_speed;
     ConfigOptionBool                ensure_vertical_shell_thickness;
-    ConfigOptionEnum<InfillPattern> top_fill_pattern;
-    ConfigOptionEnum<InfillPattern> bottom_fill_pattern;
     ConfigOptionBool                enforce_full_fill_volume;
     ConfigOptionFloat               external_infill_margin;
     ConfigOptionFloat               bridged_infill_margin;
@@ -565,6 +564,7 @@ public:
     // Total number of perimeters.
     ConfigOptionInt                 perimeters;
     ConfigOptionFloatOrPercent      small_perimeter_speed;
+    ConfigOptionEnum<InfillPattern> solid_fill_pattern;
     ConfigOptionFloat               solid_infill_below_area;
     ConfigOptionInt                 solid_infill_extruder;
     ConfigOptionFloatOrPercent      solid_infill_extrusion_width;
@@ -574,6 +574,7 @@ public:
     ConfigOptionBool                thin_walls;
     ConfigOptionFloatOrPercent      thin_walls_min_width;
     ConfigOptionFloatOrPercent      thin_walls_overlap;
+    ConfigOptionEnum<InfillPattern> top_fill_pattern;
     ConfigOptionFloatOrPercent      top_infill_extrusion_width;
     ConfigOptionInt                 top_solid_layers;
     ConfigOptionFloatOrPercent      top_solid_infill_speed;
@@ -586,10 +587,9 @@ protected:
         OPT_PTR(bottom_solid_layers);
         OPT_PTR(bridge_flow_ratio);
         OPT_PTR(over_bridge_flow_ratio);
+        OPT_PTR(bottom_fill_pattern);
         OPT_PTR(bridge_speed);
         OPT_PTR(ensure_vertical_shell_thickness);
-        OPT_PTR(top_fill_pattern);
-        OPT_PTR(bottom_fill_pattern);
         OPT_PTR(enforce_full_fill_volume);
         OPT_PTR(external_infill_margin);
         OPT_PTR(bridged_infill_margin);
@@ -623,6 +623,7 @@ protected:
         OPT_PTR(perimeter_speed);
         OPT_PTR(perimeters);
         OPT_PTR(small_perimeter_speed);
+        OPT_PTR(solid_fill_pattern);
         OPT_PTR(solid_infill_below_area);
         OPT_PTR(solid_infill_extruder);
         OPT_PTR(solid_infill_extrusion_width);
@@ -631,6 +632,7 @@ protected:
         OPT_PTR(thin_walls);
         OPT_PTR(thin_walls_min_width);
         OPT_PTR(thin_walls_overlap);
+        OPT_PTR(top_fill_pattern);
         OPT_PTR(top_infill_extrusion_width);
         OPT_PTR(top_solid_infill_speed);
         OPT_PTR(top_solid_layers);

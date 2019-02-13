@@ -530,8 +530,9 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "bridge_angle") {
             steps.emplace_back(posPrepareInfill);
         } else if (
-               opt_key == "top_fill_pattern"
+            opt_key == "top_fill_pattern"
             || opt_key == "bottom_fill_pattern"
+            || opt_key == "solid_fill_pattern"
             || opt_key == "enforce_full_fill_volume"
             || opt_key == "external_fill_link_max_length"
             || opt_key == "fill_angle"
@@ -2716,6 +2717,8 @@ void PrintObject::combine_infill()
             // so let's remove those areas from all layers.
             Polygons intersection_with_clearance;
             intersection_with_clearance.reserve(intersection.size());
+            //TODO: check if that 'hack' isn't counter-productive : the overlap is done at perimetergenerator (so before this)
+            // and the not-overlap area is stored in the LayerRegion object
             float clearance_offset = 
                 0.5f * layerms.back()->flow(frPerimeter).scaled_width() +
              // Because fill areas for rectilinear and honeycomb are grown 
