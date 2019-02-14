@@ -501,7 +501,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Infill");
     def->tooltip = L("This parameter grows the bridged solid infill layers by the specified MM to anchor them into the part. Put 0 to deactivate it.");
     def->sidetext = L("mm");
-    def->cli = "top-layer-anchor=f";
+    def->cli = "bridged-layer-anchor=f";
     def->min = 0;
     def->mode = comExpert;
     def->default_value = new ConfigOptionFloat(2);

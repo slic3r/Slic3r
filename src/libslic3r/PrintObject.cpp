@@ -486,8 +486,6 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "support_material_contact_distance_top" 
             || opt_key == "support_material_contact_distance_bottom" 
             || opt_key == "xy_size_compensation"
-            || opt_key == "external_infill_margin"
-            || opt_key == "bridged_infill_margin"
             || opt_key == "hole_size_compensation") {
             steps.emplace_back(posSlice);
         } else if (
@@ -527,6 +525,8 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "solid_infill_extruder"
             || opt_key == "infill_extrusion_width"
             || opt_key == "ensure_vertical_shell_thickness"
+            || opt_key == "external_infill_margin"
+            || opt_key == "bridged_infill_margin"
             || opt_key == "bridge_angle") {
             steps.emplace_back(posPrepareInfill);
         } else if (

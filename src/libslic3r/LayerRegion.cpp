@@ -204,7 +204,11 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
                         break;
                     }
                 // Grown by bridged_infill_margin.
-                Polygons polys = offset(to_polygons(bridges[i].expolygon), float(margin_bridged), EXTERNAL_SURFACES_OFFSET_PARAMETERS);
+                // also, remove all bridge area that are thinner than a single line.
+                Polygons polys = offset2(to_polygons(bridges[i].expolygon),
+                    (-this->flow(frInfill).scaled_width() / 2), 
+                    (this->flow(frInfill).scaled_width() / 2) + float(margin_bridged), 
+                    EXTERNAL_SURFACES_OFFSET_PARAMETERS);
                 if (idx_island == -1) {
                     printf("Bridge did not fall into the source region!\r\n");
                 } else {
