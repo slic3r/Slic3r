@@ -466,9 +466,29 @@ WipeTowerPrusaMM::material_type WipeTowerPrusaMM::parse_material(const char *nam
 	if (strcasecmp(name, "EDGE") == 0)
 		return EDGE;
 	if (strcasecmp(name, "NGEN") == 0)
-		return NGEN;
-	if (strcasecmp(name, "PVA") == 0)
-		return PVA;
+        return NGEN;
+    if (strcasecmp(name, "PVA") == 0)
+        return PVA;
+    if (strcasecmp(name, "other0") == 0)
+        return other0;
+    if (strcasecmp(name, "other1") == 0)
+        return other1;
+    if (strcasecmp(name, "other2") == 0)
+        return other2;
+    if (strcasecmp(name, "other3") == 0)
+        return other3;
+    if (strcasecmp(name, "other4") == 0)
+        return other4;
+    if (strcasecmp(name, "other5") == 0)
+        return other5;
+    if (strcasecmp(name, "other6") == 0)
+        return other6;
+    if (strcasecmp(name, "other7") == 0)
+        return other7;
+    if (strcasecmp(name, "other8") == 0)
+        return other8;
+    if (strcasecmp(name, "other9") == 0)
+        return other9;
 	return INVALID;
 }
 
@@ -482,8 +502,18 @@ std::string WipeTowerPrusaMM::to_string(material_type material)
 	case FLEX:		return "FLEX";
 	case SCAFF:		return "SCAFF";
 	case EDGE:		return "EDGE";
-	case NGEN:		return "NGEN";
-	case PVA:		return "PVA";
+    case NGEN:		return "NGEN";
+    case PVA:		return "PVA";
+    case other0:		return "other0";
+    case other1:		return "other1";
+    case other2:		return "other2";
+    case other3:		return "other3";
+    case other4:		return "other4";
+    case other5:		return "other5";
+    case other6:		return "other6";
+    case other7:		return "other7";
+    case other8:		return "other8";
+    case other9:		return "other9";
 	case INVALID: 	
 	default: 		return "INVALID";
 	}

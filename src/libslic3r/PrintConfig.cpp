@@ -871,6 +871,16 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("EDGE");
     def->enum_values.push_back("NGEN");
     def->enum_values.push_back("PVA");
+    def->enum_values.push_back("other0");
+    def->enum_values.push_back("other1");
+    def->enum_values.push_back("other2");
+    def->enum_values.push_back("other3");
+    def->enum_values.push_back("other4");
+    def->enum_values.push_back("other5");
+    def->enum_values.push_back("other6");
+    def->enum_values.push_back("other7");
+    def->enum_values.push_back("other8");
+    def->enum_values.push_back("other9");
     def->mode = comAdvanced;
     def->default_value = new ConfigOptionStrings { "PLA" };
 
