@@ -1323,7 +1323,7 @@ void GCode::process_layer(
         m_spiral_vase->enable = enable;
     }
     // If we're going to apply spiralvase to this layer, disable loop clipping
-    m_enable_loop_clipping = ! m_spiral_vase || ! m_spiral_vase->enable;
+    m_enable_loop_clipping = !m_spiral_vase || !m_spiral_vase->enable;
     
     std::string gcode;
 
@@ -2021,6 +2021,10 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
     // extrude all loops ccw
     //no! this was decided in perimeter_generator
     bool was_clockwise = false;// loop.make_counter_clockwise();
+    //if spiral vase, we have to ensure that all loops are in the same orientation.
+    if (this->m_config.spiral_vase) {
+        was_clockwise = loop.make_counter_clockwise();
+    }
     
     SeamPosition seam_position = m_config.seam_position;
     if (loop.loop_role() == elrSkirt) 
@@ -2088,7 +2092,6 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
         }
         //TODO: ignore the angle penalty if the new point is not in an external path (bot/top/ext_peri)
         for (size_t i = 0; i < polygon.points.size(); ++i) {
-            //std::cout << "check point  @" << unscale(polygon.points[i].x) << ":" << unscale(polygon.points[i].y);
             float ccwAngle = penalties[i];
             if (was_clockwise)
                 ccwAngle = - ccwAngle;
