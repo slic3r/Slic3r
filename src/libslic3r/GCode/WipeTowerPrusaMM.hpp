@@ -75,7 +75,7 @@ public:
         m_filpar.push_back(FilamentParameters());
 
         m_filpar[idx].material = WipeTowerPrusaMM::parse_material(m_config->filament_type.get_at(idx).c_str());
-        if (m_filpar[idx].material == FLEX || m_filpar[idx].material == SCAFF || m_filpar[idx].material == PVA) {
+        if (m_config->filament_max_wipe_tower_speed.get_at(idx) > 0 || m_filpar[idx].material == FLEX || m_filpar[idx].material == SCAFF || m_filpar[idx].material == PVA) {
     		// MMU2 lowers the print speed using the speed override (M220) for printing of soluble PVA/BVOH and flex materials.
     		// Therefore it does not make sense to use the new M220 B and M220 R (backup / restore).
         	m_retain_speed_override = false;

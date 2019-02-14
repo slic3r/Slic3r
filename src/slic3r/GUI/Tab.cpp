@@ -1548,7 +1548,8 @@ void TabFilament::build()
 		line.widget = [this](wxWindow* parent) {
 			return description_line_widget(parent, &m_volumetric_speed_description_line);
 		};
-		optgroup->append_line(line);
+        optgroup->append_line(line);
+        optgroup->append_single_option_line("filament_max_wipe_tower_speed");
 
         optgroup = page->new_optgroup(_(L("Toolchange parameters with single extruder MM printers")));
 		optgroup->append_single_option_line("filament_loading_speed_start");

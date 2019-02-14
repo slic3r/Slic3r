@@ -713,6 +713,16 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloats { 0. };
 
+    def = this->add("filament_max_wipe_tower_speed", coFloats);
+    def->label = L("Max speed on the wipe tower");
+    def->tooltip = L("This setting is used to set the maximum speed when extruding inside the wipe tower (use M220). In %, set 0 to disable and use the Filament type instead.");
+    def->sidetext = L("% of mm/s");
+    def->cli = "filament-max-wipe-tower-speed=f@";
+    def->min = 0;
+    def->max = 200;
+    def->mode = comExpert;
+    def->default_value = new ConfigOptionFloats { 0 };
+
     def = this->add("filament_loading_speed", coFloats);
     def->label = L("Loading speed");
     def->tooltip = L("Speed used for loading the filament on the wipe tower. ");

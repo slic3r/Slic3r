@@ -903,13 +903,15 @@ void WipeTowerPrusaMM::toolchange_Change(
     	m_used_filament_length[m_current_tool] += writer.get_and_reset_used_filament_length();
 
 	// Speed override for the material. Go slow for flex and soluble materials.
-	int speed_override;
-	switch (new_material) {
-	case PVA:   speed_override = (m_z_pos < 0.80f) ? 60 : 80; break;
-	case SCAFF: speed_override = 35; break;
-	case FLEX:  speed_override = 35; break;
-	default:    speed_override = 100;
-	}
+    int speed_override = m_config->filament_max_wipe_tower_speed.get_at(new_tool);
+    if (speed_override <= 0) {
+        switch (new_material) {
+            case PVA:   speed_override = (m_z_pos < 0.80f) ? 60 : 80; break;
+            case SCAFF: speed_override = 35; break;
+            case FLEX:  speed_override = 35; break;
+            default:    speed_override = 100;
+        }
+    }
 	writer.set_tool(new_tool);
 	if (m_retain_speed_override)
 		assert(speed_override == 100);
