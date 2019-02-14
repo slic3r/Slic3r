@@ -7,6 +7,7 @@
 #include <utility>
 #include <algorithm>
 
+#include "PrintConfig.hpp"
 #include "WipeTower.hpp"
 
 
@@ -44,59 +45,56 @@ public:
 	// y			-- y coordinates of wipe tower in mm ( left bottom corner )
 	// width		-- width of wipe tower in mm ( default 60 mm - leave as it is )
 	// wipe_area	-- space available for one toolchange in mm
-	WipeTowerPrusaMM(float x, float y, float width, float rotation_angle, float cooling_tube_retraction,
-                     float cooling_tube_length, float parking_pos_retraction, float extra_loading_move, 
-                     float bridging, bool set_extruder_trimpot,
-                     const std::vector<std::vector<float>>& wiping_matrix, unsigned int initial_tool, float first_layer_width) :
-    m_wipe_tower_pos(x, y),
-		m_wipe_tower_width(width),
-		m_wipe_tower_rotation_angle(rotation_angle),
-		m_y_shift(0.f),
-		m_z_pos(0.f),
-		m_is_first_layer(false),
-        m_cooling_tube_retraction(cooling_tube_retraction),
-        m_cooling_tube_length(cooling_tube_length),
-        m_parking_pos_retraction(parking_pos_retraction),
-        m_extra_loading_move(extra_loading_move),
-		m_bridging(bridging),
-		m_set_extruder_trimpot(set_extruder_trimpot),
+    WipeTowerPrusaMM(PrintConfig &config,
+        const std::vector<std::vector<float>>& wiping_matrix, unsigned int initial_tool, float first_layer_width) :
+        m_wipe_tower_pos(float(config.wipe_tower_x.value), float(config.wipe_tower_y.value)),
+        m_wipe_tower_width(float(config.wipe_tower_width.value)),
+        m_wipe_tower_rotation_angle(float(config.wipe_tower_rotation_angle.value)),
+        m_y_shift(0.f),
+        m_z_pos(0.f),
+        m_is_first_layer(false),
+        m_cooling_tube_retraction(float(config.cooling_tube_retraction.value)),
+        m_cooling_tube_length(float(config.cooling_tube_length.value)),
+        m_parking_pos_retraction(float(config.parking_pos_retraction.value)),
+        m_extra_loading_move(float(config.extra_loading_move.value)),
+        m_bridging(float(config.wipe_tower_bridging)),
+        m_set_extruder_trimpot(config.high_current_on_filament_swap.value),
         m_current_tool(initial_tool),
         wipe_volumes(wiping_matrix),
-        m_brim_width(first_layer_width)
-        {}
+        m_brim_width(first_layer_width),
+        m_config(&config) {
+    }
 
 	virtual ~WipeTowerPrusaMM() {}
 
 
 	// Set the extruder properties.
-	void set_extruder(size_t idx, material_type material, int temp, int first_layer_temp, float loading_speed, float loading_speed_start,
-                      float unloading_speed, float unloading_speed_start, float delay, int cooling_moves,
-                      float cooling_initial_speed, float cooling_final_speed, std::string ramming_parameters, float nozzle_diameter)
+	void set_extruder(size_t idx)
 	{
         //while (m_filpar.size() < idx+1)   // makes sure the required element is in the vector
         m_filpar.push_back(FilamentParameters());
 
-        m_filpar[idx].material = material;
-        if (material == FLEX || material == SCAFF || material == PVA) {
+        m_filpar[idx].material = WipeTowerPrusaMM::parse_material(m_config->filament_type.get_at(idx).c_str());
+        if (m_filpar[idx].material == FLEX || m_filpar[idx].material == SCAFF || m_filpar[idx].material == PVA) {
     		// MMU2 lowers the print speed using the speed override (M220) for printing of soluble PVA/BVOH and flex materials.
     		// Therefore it does not make sense to use the new M220 B and M220 R (backup / restore).
         	m_retain_speed_override = false;
         }
-        m_filpar[idx].temperature = temp;
-        m_filpar[idx].first_layer_temperature = first_layer_temp;
-        m_filpar[idx].loading_speed = loading_speed;
-        m_filpar[idx].loading_speed_start = loading_speed_start;
-        m_filpar[idx].unloading_speed = unloading_speed;
-        m_filpar[idx].unloading_speed_start = unloading_speed_start;
-        m_filpar[idx].delay = delay;
-        m_filpar[idx].cooling_moves = cooling_moves;
-        m_filpar[idx].cooling_initial_speed = cooling_initial_speed;
-        m_filpar[idx].cooling_final_speed = cooling_final_speed;
-        m_filpar[idx].nozzle_diameter = nozzle_diameter; // to be used in future with (non-single) multiextruder MM
+        m_filpar[idx].temperature               = (float) m_config->temperature.get_at(idx);
+        m_filpar[idx].first_layer_temperature   = (float) m_config->first_layer_temperature.get_at(idx);
+        m_filpar[idx].loading_speed             = (float) m_config->filament_loading_speed.get_at(idx);
+        m_filpar[idx].loading_speed_start       = (float) m_config->filament_loading_speed_start.get_at(idx);
+        m_filpar[idx].unloading_speed           = (float) m_config->filament_unloading_speed.get_at(idx);
+        m_filpar[idx].unloading_speed_start     = (float) m_config->filament_unloading_speed_start.get_at(idx);
+        m_filpar[idx].delay                     = (float) m_config->filament_toolchange_delay.get_at(idx);
+        m_filpar[idx].cooling_moves             = (float) m_config->filament_cooling_moves.get_at(idx);
+        m_filpar[idx].cooling_initial_speed     = (float) m_config->filament_cooling_initial_speed.get_at(idx);
+        m_filpar[idx].cooling_final_speed       = (float) m_config->filament_cooling_final_speed.get_at(idx);
+        m_filpar[idx].nozzle_diameter           = (float) m_config->nozzle_diameter.get_at(idx); // to be used in future with (non-single) multiextruder MM
 
-        m_perimeter_width = nozzle_diameter * Width_To_Nozzle_Ratio; // all extruders are now assumed to have the same diameter
+        m_perimeter_width = m_filpar[idx].nozzle_diameter * Width_To_Nozzle_Ratio; // all extruders are now assumed to have the same diameter
 
-        std::stringstream stream{ramming_parameters};
+        std::stringstream stream{ m_config->filament_ramming_parameters.get_at(idx) };
         float speed = 0.f;
         stream >> m_filpar[idx].ramming_line_width_multiplicator >> m_filpar[idx].ramming_step_multiplicator;
         m_filpar[idx].ramming_line_width_multiplicator /= 100;
@@ -202,6 +200,7 @@ private:
     const float Width_To_Nozzle_Ratio = 1.25f; // desired line width (oval) in multiples of nozzle diameter - may not be actually neccessary to adjust
     const float WT_EPSILON            = 1e-3f;
 
+    PrintConfig *m_config = NULL;
 
 	xy 	   m_wipe_tower_pos; 			// Left front corner of the wipe tower in mm.
 	float  m_wipe_tower_width; 			// Width of the wipe tower.
