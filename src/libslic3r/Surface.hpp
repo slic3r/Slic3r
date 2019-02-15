@@ -6,31 +6,50 @@
 
 namespace Slic3r {
 
-enum SurfaceType { 
-    // Top horizontal surface, visible from the top.
-    stTop,
-    // Bottom horizontal surface, visible from the bottom, printed with a normal extrusion flow.
-    stBottom,
-    // Bottom horizontal surface, visible from the bottom, unsupported, printed with a bridging extrusion flow.
-    stBottomBridge,
-    // Normal sparse infill.
-    stInternal,
-    // Full infill, supporting the top surfaces and/or defining the verticall wall thickness.
-    stInternalSolid,
-    // 1st layer of dense infill over sparse infill, printed with a bridging extrusion flow.
-    stInternalBridge,
-    // 2nd layer of dense infill over sparse infill/nothing, printed with an over-extruding flow.
-    stInternalOverBridge,
-    stTopOverBridge,
-    // stInternal turns into void surfaces if the sparse infill is used for supports only,
-    // or if sparse infill layers get combined into a single layer.
-    stInternalVoid,
-    // Inner/outer perimeters.
-    stPerimeter,
-    // Last surface type, if the SurfaceType is used as an index into a vector.
-    stLast,
-    stCount = stLast + 1
+/// a SurfaceType should be composed of a Position & density flag
+/// Position: top, bottom, internal
+/// Density: solid, sparse, void
+/// optinally, is can also have one bridge modifier (bridge, over-bridge).
+enum SurfaceType  : uint16_t { 
+    stNone = 0,
+    /// Position: Top horizontal surface, visible from the top.
+    stPosTop        = 1 << 0,
+    /// Position: Bottom horizontal surface, visible from the bottom, printed with a normal extrusion flow.
+    stPosBottom     = 1 << 1,
+    /// Position: Normal sparse infill.
+    stPosInternal   = 1 << 2,
+    /// Position: Inner/outer perimeters. Mainly used for coloring
+    stPosPerimeter  = 1 << 3,
+    /// Density: Solid infill (100%).
+    stDensSolid     = 1 << 4,
+    /// Density: Sparse infill (>0% & <100%).
+    stDensSparse    = 1 << 5,
+    /// Density: or if sparse infill layers get combined into a single layer.
+    stDensVoid      = 1 << 6,
+    /// Bridge Modifier: 1st layer of dense infill over sparse infill, printed with a bridging extrusion flow.
+    stModBridge = 1 << 7,
+    /// Bridge Modifier: 2nd layer of dense infill over sparse infill/nothing, may be printed with an over-extruding flow.
+    stModOverBridge = 1 << 8,
 };
+inline SurfaceType operator|(SurfaceType a, SurfaceType b) {
+    return static_cast<SurfaceType>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b));
+}
+inline SurfaceType operator&(SurfaceType a, SurfaceType b) {
+    return static_cast<SurfaceType>(static_cast<uint16_t>(a)& static_cast<uint16_t>(b));
+}
+inline SurfaceType operator|=(SurfaceType& a, SurfaceType b) {
+    a = a | b; return a;
+}
+inline SurfaceType operator&=(SurfaceType& a, SurfaceType b) {
+    a = a & b; return a;
+}
+//inline bool operator==(SurfaceType a, SurfaceType b) {
+//    return static_cast<uint16_t>(a) ^ static_cast<uint16_t>(b) == 0;
+//}
+//inline bool operator!=(SurfaceType a, SurfaceType b) {
+//    return static_cast<uint16_t>(a) ^ static_cast<uint16_t>(b) != 0;
+//}
+
 
 class Surface
 {
@@ -108,13 +127,15 @@ public:
     double area() const;
     bool empty() const { return expolygon.empty(); }
     void clear() { expolygon.clear(); }
-    bool is_solid() const;
-    bool is_external() const;
-    bool is_top() const;
-    bool is_internal() const;
-    bool is_bottom() const;
-    bool is_bridge() const;
-    bool is_overBridge() const;
+    bool has_fill_solid() const;
+    bool has_fill_sparse() const;
+    bool has_fill_void() const;
+    bool has_pos_external() const;
+    bool has_pos_top() const;
+    bool has_pos_internal() const;
+    bool has_pos_bottom() const;
+    bool has_mod_bridge() const;
+    bool has_mod_overBridge() const;
 };
 
 typedef std::vector<Surface> Surfaces;

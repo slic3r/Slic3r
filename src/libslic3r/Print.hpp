@@ -183,7 +183,7 @@ private:
     void bridge_over_infill();
     void replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_replacement, SurfaceType st_under_it);
     void clip_fill_surfaces();
-    void count_distance_solid();
+    void tag_under_bridge();
     void discover_horizontal_shells();
     void combine_infill();
     void _generate_support_material();

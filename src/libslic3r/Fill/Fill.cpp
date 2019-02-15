@@ -66,7 +66,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 for (uint32_t num_srf = 0; num_srf < groups[num_group].size(); ++num_srf) {
                     Surface *srf = groups[num_group][num_srf];
                     //if solid, wrong group
-                    if (srf->is_solid()) break;
+                    if (srf->has_fill_solid()) break;
                     //find surface that can be used as dense infill
                     if (srf->maxNbSolidLayersOnTop <= 1
                         && srf->maxNbSolidLayersOnTop > 0) {
@@ -100,11 +100,11 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 // we can only merge solid non-bridge non-overextruded surfaces, so discard
                 // non-solid surfaces
                 const Surface &surface = *groups[i].front();
-                if (surface.is_solid() && (!surface.is_bridge() || layerm.layer()->id() == 0) && !surface.is_overBridge()) {
+                if (surface.has_fill_solid() && (!surface.has_mod_bridge() || layerm.layer()->id() == 0) && !surface.has_mod_overBridge()) {
                     group_attrib[i].is_solid = true;
-                    group_attrib[i].flow_width = (surface.is_top()) ? top_solid_infill_flow.width : solid_infill_flow.width;
-                    group_attrib[i].pattern = (surface.is_top() && surface.is_external()) ? layerm.region()->config().top_fill_pattern.value : layerm.region()->config().solid_fill_pattern.value;
-                    group_attrib[i].pattern = (surface.is_bottom() && surface.is_external()) ? layerm.region()->config().bottom_fill_pattern.value : layerm.region()->config().solid_fill_pattern.value;
+                    group_attrib[i].flow_width = (surface.has_pos_top()) ? top_solid_infill_flow.width : solid_infill_flow.width;
+                    group_attrib[i].pattern = surface.has_pos_top() ? layerm.region()->config().top_fill_pattern.value : layerm.region()->config().solid_fill_pattern.value;
+                    group_attrib[i].pattern = surface.has_pos_bottom() ? layerm.region()->config().bottom_fill_pattern.value : layerm.region()->config().solid_fill_pattern.value;
                 }
             }
             // Loop through solid groups, find compatible groups and append them to this one.
@@ -183,7 +183,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         Polygons to_subtract;
         to_subtract.reserve(collapsed.size() + number_polygons(surfaces));
         for (Surfaces::const_iterator it_surface = surfaces.begin(); it_surface != surfaces.end(); ++ it_surface)
-            if (it_surface->surface_type == stInternalVoid)
+            if (it_surface->surface_type == (stPosInternal |stDensVoid) )
                 polygons_append(to_subtract, *it_surface);
         polygons_append(to_subtract, collapsed);
         surfaces_append(
@@ -192,7 +192,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 offset(collapsed, distance_between_surfaces),
                 to_subtract,
                 true),
-            stInternalSolid);
+            stPosInternal | stDensSolid);
     }*/
 
     if (0) {
@@ -203,20 +203,20 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 //        );
     }
     for (const Surface &surface : surfaces) {
-        if (surface.surface_type == stInternalVoid)
+        if (surface.surface_type == (stPosInternal | stDensVoid))
             continue;
         InfillPattern  fill_pattern = layerm.region()->config().fill_pattern.value;
         double         density      = fill_density;
-        FlowRole role = (surface.is_top()) ? frTopSolidInfill :
-            (surface.is_solid() ? frSolidInfill : frInfill);
-        bool is_bridge = layerm.layer()->id() > 0 && surface.is_bridge();
+        FlowRole role = (surface.has_pos_top()) ? frTopSolidInfill :
+            (surface.has_fill_solid() ? frSolidInfill : frInfill);
+        bool is_bridge = layerm.layer()->id() > 0 && surface.has_mod_bridge();
         bool is_denser = false;
 
-        if (surface.is_solid()) {
+        if (surface.has_fill_solid()) {
             density = 100.;
             fill_pattern = ipRectilinear;
-            if (surface.is_external() && !is_bridge)
-                fill_pattern = surface.is_top() ? layerm.region()->config().top_fill_pattern.value : layerm.region()->config().bottom_fill_pattern.value;
+            if (surface.has_pos_external() && !is_bridge)
+                fill_pattern = surface.has_pos_top() ? layerm.region()->config().top_fill_pattern.value : layerm.region()->config().bottom_fill_pattern.value;
             else if (!is_bridge)
                 fill_pattern = layerm.region()->config().solid_fill_pattern.value;
         } else {
@@ -249,7 +249,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         
         // calculate flow spacing for infill pattern generation
         bool using_internal_flow = false;
-        if (! surface.is_solid() && ! is_bridge) {
+        if (! surface.has_fill_solid() && ! is_bridge) {
             // it's internal infill, so we can calculate a generic flow spacing 
             // for all layers, for avoiding the ugly effect of
             // misaligned infill on first layer because of different extrusion width and
@@ -314,7 +314,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         }
         
         float flow_percent = 1;
-        if(surface.is_overBridge()){
+        if (surface.has_mod_overBridge()){
             params.density = layerm.region()->config().over_bridge_flow_ratio;
             //params.flow_mult = layerm.region()->config().over_bridge_flow_ratio;
         }

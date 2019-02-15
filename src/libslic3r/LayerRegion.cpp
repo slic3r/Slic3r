@@ -37,16 +37,15 @@ void LayerRegion::slices_to_fill_surfaces_clipped()
 //    Polygons fill_boundaries = to_polygons(std::move(this->fill_surfaces));
     Polygons fill_boundaries = to_polygons(this->fill_expolygons);
     // Collect polygons per surface type.
-    std::vector<Polygons> polygons_by_surface;
-    polygons_by_surface.assign(size_t(stCount), Polygons());
-    for (Surface &surface : this->slices.surfaces)
-        polygons_append(polygons_by_surface[(size_t)surface.surface_type], surface.expolygon);
+    std::map<SurfaceType, Polygons> polygons_by_surface;
+    for (Surface &surface : this->slices.surfaces) {
+        polygons_append(polygons_by_surface[surface.surface_type], surface.expolygon);
+    }
     // Trim surfaces by the fill_boundaries.
     this->fill_surfaces.surfaces.clear();
-    for (size_t surface_type = 0; surface_type < size_t(stCount); ++ surface_type) {
-        const Polygons &polygons = polygons_by_surface[surface_type];
-        if (! polygons.empty())
-            this->fill_surfaces.append(intersection_ex(polygons, fill_boundaries), SurfaceType(surface_type));
+    for (auto const& entry : polygons_by_surface) {
+        if (!entry.second.empty())
+            this->fill_surfaces.append(intersection_ex(entry.second, fill_boundaries), entry.first);
     }
 }
 
@@ -131,24 +130,24 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
         fill_boundaries.reserve(number_polygons(surfaces));
         bool has_infill = this->region()->config().fill_density.value > 0.;
         for (const Surface &surface : this->fill_surfaces.surfaces) {
-            if (surface.is_top()) {
+            if (surface.has_pos_top()) {
                 // Collect the top surfaces, inflate them and trim them by the bottom surfaces.
                 // This gives the priority to bottom surfaces.
                 surfaces_append(top, offset_ex(surface.expolygon, float(margin), EXTERNAL_SURFACES_OFFSET_PARAMETERS), surface);
-            } else if (surface.surface_type == stBottom || (surface.surface_type == stBottomBridge && lower_layer == NULL)) {
+            } else if (surface.has_pos_bottom() && (!surface.has_mod_bridge() || lower_layer == NULL)) {
                 // Grown by 3mm.
                 surfaces_append(bottom, offset_ex(surface.expolygon, float(margin), EXTERNAL_SURFACES_OFFSET_PARAMETERS), surface);
-            } else if (surface.surface_type == stBottomBridge) {
+            } else if (surface.has_pos_bottom() && surface.has_mod_bridge()) {
                 if (! surface.empty())
                     bridges.push_back(surface);
             }
-            if (has_infill || surface.surface_type != stInternal) {
-                if (!surface.is_external())
+            if (has_infill || !(surface.has_pos_internal() && surface.has_fill_sparse())) {
+                if (!surface.has_pos_external())
                     // Make a copy as the following line uses the move semantics.
                     internal.push_back(surface);
                 polygons_append(fill_boundaries, std::move(surface.expolygon));
             } else{
-                if (!surface.is_external())
+                if (!surface.has_pos_external())
                     internal.push_back(std::move(surface));
                 //push surface as perimeter-only inside the fill_boundaries
                 if (margin_bridged > 0) {
@@ -324,7 +323,7 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
                     s2.clear();
                 }
             }
-            if (s1.is_top())
+            if (s1.has_pos_top())
                 // Trim the top surfaces by the bottom surfaces. This gives the priority to the bottom surfaces.
                 polys = diff(polys, bottom_polygons);
             surfaces_append(
@@ -376,14 +375,14 @@ void LayerRegion::prepare_fill_surfaces()
     // if no solid layers are requested, turn top/bottom surfaces to internal
     if (this->region()->config().top_solid_layers == 0) {
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface)
-            if (surface->is_top())
+            if (surface->has_pos_top())
                 surface->surface_type = (this->layer()->object()->config().infill_only_where_needed) ? 
-                    stInternalVoid : stInternal;
+                    stPosInternal | stDensVoid : stPosInternal | stDensSparse;
     }
     if (this->region()->config().bottom_solid_layers == 0) {
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
-            if (surface->is_bottom())
-                surface->surface_type = stInternal;
+            if (surface->has_pos_bottom())
+                surface->surface_type = stPosInternal | stDensSparse;
         }
     }
         
@@ -392,8 +391,8 @@ void LayerRegion::prepare_fill_surfaces()
         // scaling an area requires two calls!
         double min_area = scale_(scale_(this->region()->config().solid_infill_below_area.value));
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
-            if (surface->surface_type == stInternal && surface->area() <= min_area)
-                surface->surface_type = stInternalSolid;
+            if (surface->has_fill_sparse() && surface->has_pos_internal() && surface->area() <= min_area)
+                surface->surface_type = stPosInternal | stDensSolid;
         }
     }
 

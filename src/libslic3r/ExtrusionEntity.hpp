@@ -30,6 +30,9 @@ enum ExtrusionRole {
     // Extrusion role for a collection with multiple extrusion roles.
     erMixed,
 };
+// perimeter / infill / support / skirt / gapfill / wipetower / custom / mixed
+// side / internal / top / bottom
+// bridge
 
 inline bool is_perimeter(ExtrusionRole role)
 {

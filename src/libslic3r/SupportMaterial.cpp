@@ -824,7 +824,7 @@ namespace SupportMaterialInternal {
         for (const LayerRegion *region : layer.regions()) {
             if (SupportMaterialInternal::has_bridging_perimeters(region->perimeters))
                 return true;
-            if (region->fill_surfaces.has(stBottomBridge) && has_bridging_fills(region->fills))
+            if (region->fill_surfaces.has(stPosBottom | stDensSolid | stModBridge) && has_bridging_fills(region->fills))
                 return true;
         }
         return false;
@@ -922,7 +922,7 @@ namespace SupportMaterialInternal {
         // remove the entire bridges and only support the unsupported edges
         //FIXME the brided regions are already collected as layerm->bridged. Use it?
         for (const Surface &surface : layerm->fill_surfaces.surfaces)
-            if (surface.surface_type == stBottomBridge && surface.bridge_angle != -1)
+            if (surface.has_pos_bottom() && surface.has_mod_bridge() && surface.bridge_angle != -1)
                 polygons_append(bridges, surface.expolygon);
         //FIXME add the gap filled areas. Extrude the gaps with a bridge flow?
         // Remove the unsupported ends of the bridges from the bridged areas.
@@ -1468,7 +1468,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
             if (! m_object_config->support_material_buildplate_only)
                 // Find the bottom contact layers above the top surfaces of this layer.
                 task_group.run([this, &object, &top_contacts, contact_idx, &layer, layer_id, &layer_storage, &layer_support_areas, &bottom_contacts, &projection_raw] {
-                    Polygons top = collect_region_slices_by_type(layer, stTop);
+                    Polygons top = collect_region_slices_by_type(layer, stPosTop| stDensSolid);
         #ifdef SLIC3R_DEBUG
                     {
                         BoundingBox bbox = get_extents(projection_raw);
@@ -2134,7 +2134,7 @@ void PrintObjectSupportMaterial::trim_support_layers_by_object(
                                 break;
                             some_region_overlaps = true;
                             polygons_append(polygons_trimming, 
-                                offset(to_expolygons(region->fill_surfaces.filter_by_type(stBottomBridge)), 
+                                offset(to_expolygons(region->fill_surfaces.filter_by_type(stPosBottom | stDensSolid | stModBridge)), 
                                        gap_xy_scaled, SUPPORT_SURFACES_OFFSET_PARAMETERS));
                             if (region->region()->config().overhangs.value)
                                 SupportMaterialInternal::collect_bridging_perimeter_areas(region->perimeters, gap_xy_scaled, polygons_trimming);
@@ -2335,7 +2335,7 @@ static inline void fill_expolygons_generate_paths(
     fill_params.flow = &flow;
     fill_params.role = role;
     for (const ExPolygon &expoly : expolygons) {
-        Surface surface(stInternal, expoly);
+        Surface surface(stPosInternal | stDensSparse, expoly);
         filler->fill_surface_extrusion(&surface, fill_params, dst);
     }
 }
@@ -2355,7 +2355,7 @@ static inline void fill_expolygons_generate_paths(
     fill_params.flow = &flow;
     fill_params.role = role;
     for (ExPolygon &expoly : expolygons) {
-        Surface surface(stInternal, std::move(expoly));
+        Surface surface(stPosInternal | stDensSparse, std::move(expoly));
         filler->fill_surface_extrusion(&surface, fill_params, dst);
     }
 }

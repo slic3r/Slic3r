@@ -70,11 +70,11 @@ void Layer::merge_slices()
     if (m_regions.size() == 1) {
         // Optimization, also more robust. Don't merge classified pieces of layerm->slices,
         // but use the non-split islands of a layer. For a single region print, these shall be equal.
-        m_regions.front()->slices.set(this->slices.expolygons, stInternal);
+        m_regions.front()->slices.set(this->slices.expolygons, stPosInternal | stDensSparse);
     } else {
         for (LayerRegion *layerm : m_regions)
             // without safety offset, artifacts are generated (GH #2494)
-            layerm->slices.set(union_ex(to_polygons(std::move(layerm->slices.surfaces)), true), stInternal);
+            layerm->slices.set(union_ex(to_polygons(std::move(layerm->slices.surfaces)), true), stPosInternal | stDensSparse);
     }
 }
 

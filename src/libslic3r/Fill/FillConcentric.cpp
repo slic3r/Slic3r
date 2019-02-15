@@ -125,13 +125,7 @@ void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, cons
 
 
         //get the role
-        ExtrusionRole good_role = params.role;
-        if (good_role == erNone || good_role == erCustom) {
-            good_role = (params.flow->bridge ? erBridgeInfill :
-                (surface->is_solid() ?
-                ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
-                erInternalInfill));
-        }
+        ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
 
         ExtrusionEntityCollection *coll_nosort = new ExtrusionEntityCollection();
         coll_nosort->no_sort = true; //can be sorted inside the pass

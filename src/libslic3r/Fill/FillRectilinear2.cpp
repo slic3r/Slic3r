@@ -1537,14 +1537,7 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
         /// add it into the collection
         eecroot->entities.push_back(eec);
         //get the role
-        ExtrusionRole good_role = params.role;
-        if (good_role == erNone || good_role == erCustom) {
-            good_role = params.flow->bridge ?
-            erBridgeInfill :
-                           (surface->is_solid() ?
-                           ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
-                           erInternalInfill);
-        }
+        ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
         /// push the path
         extrusion_entities_append_paths(
             eec->entities,
@@ -1576,14 +1569,7 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
         /// add it into the collection
         eecroot->entities.push_back(eec);
         //get the role
-        ExtrusionRole good_role = params.role;
-        if (good_role == erNone || good_role == erCustom) {
-            good_role = params.flow->bridge ?
-            erBridgeInfill :
-                           (surface->is_solid() ?
-                           ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
-                           erInternalInfill);
-        }
+        ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
         /// push the path
         extrusion_entities_append_paths(
             eec->entities,
@@ -1683,14 +1669,8 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
         /// pass the no_sort attribute to the extrusion path
         eec->no_sort = this->no_sort();
 
-        ExtrusionRole good_role = params.role;
-        if (good_role == erNone || good_role == erCustom) {
-            good_role = params.flow->bridge ?
-            erBridgeInfill :
-                           (surface->is_solid() ?
-                           ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
-                           erInternalInfill);
-        }
+        ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
+
         for (Polyline poly : polylines_out) {
             if (!poly.is_valid()) continue;
 

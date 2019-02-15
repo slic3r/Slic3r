@@ -132,6 +132,17 @@ protected:
 
     void connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary, Polylines &polylines_out);
 
+    ExtrusionRole getRoleFromSurfaceType(const FillParams &params, const Surface *surface){
+        if (params.role == erNone || params.role == erCustom) {
+            return params.flow->bridge ?
+            erBridgeInfill :
+                           (surface->has_fill_solid() ?
+                           ((surface->has_pos_top()) ? erTopSolidInfill : erSolidInfill) :
+                           erInternalInfill);
+        }
+        return params.role;
+    }
+
 public:
     static coord_t  _adjust_solid_spacing(const coord_t width, const coord_t distance);
 

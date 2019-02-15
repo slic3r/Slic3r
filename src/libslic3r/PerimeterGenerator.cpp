@@ -195,7 +195,7 @@ void PerimeterGenerator::process()
                                 // this will avoid to throw wrong offsets into a good polygons
                                 this->fill_surfaces->append(
                                     unsupported_filtered,
-                                    stInternal);
+                                    stPosInternal | stDensSparse);
                                 
                                 // store the results
                                 last = diff_ex(last, unsupported_filtered, true);
@@ -204,7 +204,7 @@ void PerimeterGenerator::process()
                                     if (intersection_ex(support, ExPolygons() = { last[i] }).empty()) {
                                         this->fill_surfaces->append(
                                             ExPolygons() = { last[i] },
-                                            stInternal);
+                                            stPosInternal | stDensSparse);
                                         last.erase(last.begin() + i);
                                         i--;
                                     }
@@ -529,7 +529,7 @@ void PerimeterGenerator::process()
         ExPolygons infill_exp = offset2_ex(not_filled_exp,
             -inset - min_perimeter_infill_spacing / 2 + overlap,
             (float)min_perimeter_infill_spacing / 2);
-        this->fill_surfaces->append(infill_exp, stInternal);
+        this->fill_surfaces->append(infill_exp, stPosInternal | stDensSparse);
             
         if (overlap != 0) {
             ExPolygons polyWithoutOverlap = offset2_ex(

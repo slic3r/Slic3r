@@ -189,13 +189,7 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
     /// add it into the collection
     out.push_back(eec);
     //get the role
-    ExtrusionRole good_role = params.role;
-    if (good_role == erNone || good_role == erCustom) {
-        good_role = (params.flow->bridge ? erBridgeInfill :
-            (surface->is_solid() ?
-            ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
-            erInternalInfill));
-    }
+    ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
     /// push the path
     extrusion_entities_append_paths(
         eec->entities, std::move(polylines),
