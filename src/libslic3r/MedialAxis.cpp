@@ -44,7 +44,6 @@ MedialAxis::polyline_from_voronoi(const Lines& voronoi_edges, ThickPolylines* po
     }
     */
     
-    typedef const VD::vertex_type vert_t;
     typedef const VD::edge_type   edge_t;
     
     // collect valid edges (i.e. prune those not belonging to MAT)
@@ -605,7 +604,6 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
     }
 }
 
-
 void
 MedialAxis::extends_line_both_side(ThickPolylines& pp) {
     const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), (float)-SCALED_RESOLUTION, (float)SCALED_RESOLUTION);
@@ -850,39 +848,51 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                         break;
                     }
                 }
+                double dot_poly_branch_test = 0.707;
+                double dot_candidate_branch_test = 0.707;
                 if (!find_main_branch && biggest_main_branch_length == 0) {
                     // nothing -> it's impossible!
-                    dot_poly_branch = 0.707;
-                    dot_candidate_branch = 0.707;
+                    dot_poly_branch_test = 0.707;
+                    dot_candidate_branch_test = 0.707;
                     //std::cout << "no main branch... impossible!!\n";
                 } else if (!find_main_branch && (
                     (pp[biggest_main_branch_id].length() < polyline.length() && (polyline.width.back() != 0 || pp[biggest_main_branch_id].width.back() ==0)) 
                     || (pp[biggest_main_branch_id].length() < other.length() && (other.width.back() != 0 || pp[biggest_main_branch_id].width.back() == 0)))) {
                     //the main branch should have no endpoint or be bigger!
                     //here, it have an endpoint, and is not the biggest -> bad!
+                    //std::cout << "he main branch should have no endpoint or be bigger! here, it have an endpoint, and is not the biggest -> bad!\n";
                     continue;
                 } else {
                     //compute the dot (biggest_main_branch_id)
-                    dot_poly_branch = -dot(Line(polyline.points[0], polyline.points[1]), Line(pp[biggest_main_branch_id].points[0], pp[biggest_main_branch_id].points[1]));
-                    dot_candidate_branch = -dot(Line(other.points[0], other.points[1]), Line(pp[biggest_main_branch_id].points[0], pp[biggest_main_branch_id].points[1]));
-                    if (dot_poly_branch < 0) dot_poly_branch = 0;
-                    if (dot_candidate_branch < 0) dot_candidate_branch = 0;
+                    dot_poly_branch_test = -dot(Line(polyline.points[0], polyline.points[1]), Line(pp[biggest_main_branch_id].points[0], pp[biggest_main_branch_id].points[1]));
+                    dot_candidate_branch_test = -dot(Line(other.points[0], other.points[1]), Line(pp[biggest_main_branch_id].points[0], pp[biggest_main_branch_id].points[1]));
+                    if (dot_poly_branch_test < 0) dot_poly_branch_test = 0;
+                    if (dot_candidate_branch_test < 0) dot_candidate_branch_test = 0;
                     if (pp[biggest_main_branch_id].width.back()>0)
                         test_dot += 2 * (float)dot_poly_branch;
                 }
                 //test if it's useful to merge or not
                 //ie, don't merge  'T' but ok for 'Y', merge only lines of not disproportionate different length (ratio max: 4) (or they are both with 0-width end)
-                if (dot_poly_branch < 0.1 || dot_candidate_branch < 0.1 ||
+                if (dot_poly_branch_test < 0.1 || dot_candidate_branch_test < 0.1 ||
                     (
                         ((polyline.length()>other.length() ? polyline.length() / other.length() : other.length() / polyline.length()) > 4) 
                         && !(polyline.width.back() == 0 && other.width.back()==0)
-                    ) ){
+                        )) {
+                    //std::cout << "not useful to merge\n";
                     continue;
                 }
                 if (test_dot > best_dot) {
                     best_candidate = &other;
                     best_idx = j;
                     best_dot = test_dot;
+                    dot_poly_branch = dot_poly_branch_test;
+                    dot_candidate_branch = dot_candidate_branch_test;
+                    //{
+                    //    std::cout << "going to merge: b1=" << i << ", b2=" << best_idx << ", main=" << biggest_main_branch_id << "\n";
+                    //    std::cout << "b1=" << polyline.points.front().x() << " : " << polyline.points.front().y() << " => " << polyline.points.back().x() << " : " << polyline.points.back().y() << "\n";
+                    //    std::cout << "b2=" << other.points.front().x() << " : " << other.points.front().y() << " => " << other.points.back().x() << " : " << other.points.back().y() << "\n";
+                    //    std::cout << "main=" << pp[biggest_main_branch_id].points.front().x() << " : " << pp[biggest_main_branch_id].points.front().y() << " => " << pp[biggest_main_branch_id].points.back().x() << " : " << pp[biggest_main_branch_id].points.back().y() << "\n";
+                    //}
                 }
             }
             if (best_candidate != nullptr) {
@@ -1017,7 +1027,7 @@ MedialAxis::main_fusion(ThickPolylines& pp)
 
                 pp.erase(pp.begin() + best_idx);
                 //{
-                //    stringstream stri;
+                //    std::stringstream stri;
                 //    stri << "medial_axis_2.0_aft_fus_" << id << "_" << idf << ".svg";
                 //    SVG svg(stri.str());
                 //    svg.draw(bounds);
@@ -1096,7 +1106,6 @@ void
 MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
 {
 
-
     // concatenate, but even where multiple thickpolyline join, to create nice long strait polylines
     /*  If we removed any short polylines we now try to connect consecutive polylines
     in order to allow loop detection. Note that this algorithm is greedier than
@@ -1121,21 +1130,24 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
             if (j == i) continue;
             ThickPolyline& other = pp[j];
             if (other.endpoints.first && other.endpoints.second) continue;
-
+            bool me_reverse = false;
+            bool other_reverse = false;
             if (polyline.last_point().coincides_with(other.last_point())) {
-                other.reverse();
+                other_reverse = true;
             } else if (polyline.first_point().coincides_with(other.last_point())) {
-                polyline.reverse();
-                other.reverse();
+                me_reverse = true;
+                other_reverse = true;
             } else if (polyline.first_point().coincides_with(other.first_point())) {
-                polyline.reverse();
+                me_reverse = true;
             } else if (!polyline.last_point().coincides_with(other.first_point())) {
                 continue;
             }
 
-            Vec2d v_poly(polyline.lines().back().vector().x(), polyline.lines().back().vector().y());
+            Vec2d v_poly(me_reverse ? polyline.lines().front().vector().x() : polyline.lines().back().vector().x(), 
+                me_reverse ? polyline.lines().front().vector().y() : polyline.lines().back().vector().y());
             v_poly *= (1 / std::sqrt(v_poly.x()*v_poly.x() + v_poly.y()*v_poly.y()));
-            Vec2d v_other(other.lines().front().vector().x(), other.lines().front().vector().y());
+            Vec2d v_other(other_reverse ? other.lines().back().vector().x() : other.lines().front().vector().x(),
+                other_reverse ? other.lines().back().vector().y() : other.lines().front().vector().y());
             v_other *= (1 / std::sqrt(v_other.x()*v_other.x() + v_other.y()*v_other.y()));
             float other_dot = (float)( v_poly.x()*v_other.x() + v_poly.y()*v_other.y() );
             if (other_dot > best_dot) {
@@ -1145,8 +1157,18 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
             }
         }
         if (best_candidate != nullptr && best_candidate->size() > 1) {
-            //intersections may create ever-ertusion because the included circle can be a bit larger. We have to make it short again.
-            if (polyline.width.back() > polyline.width[polyline.width.size() - 2] && polyline.width.back() > best_candidate->width[1]) {
+            if (polyline.last_point().coincides_with(best_candidate->last_point())) {
+                best_candidate->reverse();
+            } else if (polyline.first_point().coincides_with(best_candidate->last_point())) {
+                polyline.reverse();
+                best_candidate->reverse();
+            } else if (polyline.first_point().coincides_with(best_candidate->first_point())) {
+                polyline.reverse();
+            }
+            //intersections may create over-extrusion because the included circle can be a bit larger. We have to make it short again if needed.
+            if (polyline.points.size() > 1 && best_candidate->points.size() > 1
+                    && polyline.width.back() > polyline.width[polyline.width.size() - 2]
+                    && polyline.width.back() > best_candidate->width[1]) {
                 polyline.width.back() = std::min(polyline.width[polyline.width.size() - 2], best_candidate->width[1]);
             }
             polyline.points.insert(polyline.points.end(), best_candidate->points.begin() + 1, best_candidate->points.end());
@@ -1327,170 +1349,6 @@ MedialAxis::simplify_polygon_frontier()
     return simplified_poly;
 }
 
-void
-MedialAxis::build(ThickPolylines* polylines_out) {
-    this->id++;
-    //std::cout << layerid << "\n";
-    //{
-    //    stringstream stri;
-    //    stri << "medial_axis_0_enter_" << id << ".svg";
-    //    SVG svg(stri.str());
-    //    svg.draw(this->surface);
-    //    svg.Close();
-    //}
-    this->expolygon = simplify_polygon_frontier();
-    //{
-    //    stringstream stri;
-    //    stri << "medial_axis_0.5_simplified_" << id << ".svg";
-    //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.Close();
-    //}
-    //safety check
-    if (this->expolygon.area() < this->min_width * this->min_width) this->expolygon = this->surface;
-    if (this->expolygon.area() < this->min_width * this->min_width) return;
-
-    //std::cout << "simplify_polygon_frontier\n";
-    // compute the Voronoi diagram and extract medial axis polylines
-    ThickPolylines pp;
-    this->polyline_from_voronoi(this->expolygon.lines(), &pp);
-
-    concatThickPolylines(pp);
-
-    //std::cout << "concatThickPolylines\n";
-    //{
-    //    stringstream stri;
-    //    stri << "medial_axis_1_voronoi_" << id << ".svg";
-    //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
-    //    svg.Close();
-    //}
-
-    /* Find the maximum width returned; we're going to use this for validating and
-       filtering the output segments. */
-    double max_w = 0;
-    for (ThickPolylines::const_iterator it = pp.begin(); it != pp.end(); ++it)
-        max_w = std::max(max_w, *std::max_element(it->width.begin(), it->width.end()));
-
-
-    fusion_curve(pp);
-    //{
-    //    stringstream stri;
-    //    stri << "medial_axis_2_curve_" << id << ".svg";
-    //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
-    //    svg.Close();
-    //}
-
-
-    // Aligned fusion: Fusion the bits at the end of lines by "increasing thickness"
-    // For that, we have to find other lines,
-    // and with a next point no more distant than the max width.
-    // Then, we can merge the bit from the first point to the second by following the mean.
-    //
-    main_fusion(pp);
-    //{
-    //    stringstream stri;
-    //    stri << "medial_axis_3_fusion_" << id << ".svg";
-    //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
-    //    svg.Close();
-    //}
-
-    //fusion right-angle corners.
-    fusion_corners(pp);
-
-    if (stop_at_min_width) {
-        extends_line_both_side(pp);
-    }
-
-    //reduce extrusion when it's too thin to be printable
-    remove_too_thin_extrusion(pp);
-    //{
-    //    stringstream stri;
-    //    stri << "medial_axis_4_thinok_" << id << ".svg";
-    //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
-    //    svg.Close();
-    //}
-
-    remove_too_thin_points(pp);
-    //{
-    //    stringstream stri;
-    //    stri << "medial_axis_5.0_thuinner_" << id << ".svg";
-    //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
-    //    svg.Close();
-    //}
-
-    // Loop through all returned polylines in order to extend their endpoints to the 
-    //   expolygon boundaries
-    if (!stop_at_min_width) {
-        extends_line_both_side(pp);
-    }
-    //{
-    //    stringstream stri;
-    //    stri << "medial_axis_5_expand_" << id << ".svg";
-    //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
-    //    svg.Close();
-    //}
-    concatenate_polylines_with_crossing(pp);
-    //{
-    //    stringstream stri;
-    //    stri << "medial_axis_6_concat_" << id << ".svg";
-    //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
-    //    svg.Close();
-    //}
-
-    remove_too_short_polylines(pp, (coord_t)max_w * 2);
-    //{
-    //    stringstream stri;
-    //    stri << "medial_axis_8_tooshort_" << id << ".svg";
-    //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
-    //    svg.Close();
-    //}
-
-    //TODO: reduce the flow at the intersection ( + ) points ?
-    ensure_not_overextrude(pp);
-    //{
-    //    stringstream stri;
-    //    stri << "medial_axis_9_endn_" << id << ".svg";
-    //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
-    //    svg.Close();
-    //}
-    if (nozzle_diameter != min_width) {
-        grow_to_nozzle_diameter(pp, diff_ex(this->bounds, this->expolygon));
-        taper_ends(pp);
-    }
-
-    polylines_out->insert(polylines_out->end(), pp.begin(), pp.end());
-
-}
-
-
 /// Grow the extrusion to at least nozzle_diameter*1.05 (lowest safe extrusion width)
 /// Do not grow points inside the anchor.
 void
@@ -1513,6 +1371,7 @@ MedialAxis::grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchor
 
 void
 MedialAxis::taper_ends(ThickPolylines& pp) {
+    // minimum size of the taper: be sure to extrude at least the "round edges" of the extrusion (0-spacing extrusion).
     const coord_t min_size = std::max(this->nozzle_diameter * 0.1, this->height * (1. - 0.25 * PI));
     const coordf_t length = std::min(this->anchor_size, (this->nozzle_diameter - min_size) / 2);
     if (length <= SCALED_RESOLUTION) return;
@@ -1524,9 +1383,9 @@ MedialAxis::taper_ends(ThickPolylines& pp) {
             coord_t current_dist = min_size;
             coord_t last_dist = min_size;
             for (size_t i = 1; i<polyline.width.size(); ++i) {
-                current_dist += (coord_t) polyline.points[i - 1].distance_to(polyline.points[i]);
+                current_dist += (coord_t)polyline.points[i - 1].distance_to(polyline.points[i]);
                 if (current_dist > length) {
-                    //create new point if not near enough
+                    //create a new point if not near enough
                     if (current_dist > polyline.width[i] + SCALED_RESOLUTION) {
                         coordf_t percent_dist = (polyline.width[i] - polyline.width[i - 1]) / (current_dist - last_dist);
                         polyline.points.insert(polyline.points.begin() + i, polyline.points[i - 1].interpolate(percent_dist, polyline.points[i]));
@@ -1561,7 +1420,182 @@ MedialAxis::taper_ends(ThickPolylines& pp) {
     }
 }
 
-ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow flow) {
+void
+MedialAxis::build(ThickPolylines* polylines_out) {
+    this->id++;
+    //std::cout << this->id << "\n";
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_0_enter_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(this->surface);
+    //    svg.Close();
+    //}
+    this->expolygon = simplify_polygon_frontier();
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_0.5_simplified_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.Close();
+    //}
+    //safety check
+    if (this->expolygon.area() < this->min_width * this->min_width) this->expolygon = this->surface;
+    if (this->expolygon.area() < this->min_width * this->min_width) return;
+
+    //std::cout << "simplify_polygon_frontier\n";
+    // compute the Voronoi diagram and extract medial axis polylines
+    ThickPolylines pp;
+    this->polyline_from_voronoi(this->expolygon.lines(), &pp);
+
+    concatThickPolylines(pp);
+
+    //std::cout << "concatThickPolylines\n";
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_1_voronoi_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.draw(pp);
+    //    svg.Close();
+    //}
+
+    /* Find the maximum width returned; we're going to use this for validating and
+       filtering the output segments. */
+    double max_w = 0;
+    for (ThickPolylines::const_iterator it = pp.begin(); it != pp.end(); ++it)
+        max_w = std::max(max_w, *std::max_element(it->width.begin(), it->width.end()));
+
+
+    fusion_curve(pp);
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_2_curve_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.draw(pp);
+    //    svg.Close();
+    //}
+
+
+    // Aligned fusion: Fusion the bits at the end of lines by "increasing thickness"
+    // For that, we have to find other lines,
+    // and with a next point no more distant than the max width.
+    // Then, we can merge the bit from the first point to the second by following the mean.
+    //
+    main_fusion(pp);
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_3_fusion_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.draw(pp);
+    //    svg.Close();
+    //}
+
+    //fusion right-angle corners.
+    fusion_corners(pp);
+
+    // Loop through all returned polylines in order to extend their endpoints to the 
+    //   expolygon boundaries (if done here, it may be cut later if not thick enough)
+    if (stop_at_min_width) {
+        extends_line_both_side(pp);
+    }
+
+    //reduce extrusion when it's too thin to be printable
+    remove_too_thin_extrusion(pp);
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_4_thinok_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.draw(pp);
+    //    svg.Close();
+    //}
+
+    remove_too_thin_points(pp);
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_5.0_thuinner_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.draw(pp);
+    //    svg.Close();
+    //}
+
+    // Loop through all returned polylines in order to extend their endpoints to the 
+    //   expolygon boundaries
+    if (!stop_at_min_width) {
+        extends_line_both_side(pp);
+    }
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_5_expand_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.draw(pp);
+    //    svg.Close();
+    //}
+    concatenate_polylines_with_crossing(pp);
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_6_concat_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.draw(pp);
+    //    svg.Close();
+    //}
+
+    remove_too_short_polylines(pp, (coord_t)max_w * 2);
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_8_tooshort_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.draw(pp);
+    //    svg.Close();
+    //}
+
+    //TODO: reduce the flow at the intersection ( + ) points ?
+    ensure_not_overextrude(pp);
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_9.1_end_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.draw(pp);
+    //    svg.Close();
+    //}
+    if (nozzle_diameter != min_width) {
+        grow_to_nozzle_diameter(pp, diff_ex(this->bounds, this->expolygon));
+        taper_ends(pp);
+    }
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_9.9_endnwithtaper_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.draw(pp);
+    //    svg.Close();
+    //}
+
+    polylines_out->insert(polylines_out->end(), pp.begin(), pp.end());
+
+}
+
+ExtrusionEntityCollection
+thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow flow) {
     // this value determines granularity of adaptive width, as G-code does not allow
     // variable extrusion within a single move; this value shall only affect the amount
     // of segments, and any pruning shall be performed before we apply this tolerance
@@ -1621,27 +1655,32 @@ ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, E
                 --i;
                 continue;
             }
+            //gapfill : we want to be able to fill the voids (touching the perimeters), so the spacing is what we want.
+            //thinwall: we want the extrusion to not go out of the polygon, so the width is what we want.
+            //  but we can't extrude with a negative spacing, so we have to gradually fall back to spacing if the width is too small.
+
+            // default: extrude a thin wall that doesn't go outside of the specified width.
+            coordf_t wanted_width = unscale<coordf_t>(line.a_width);
+            if (role == erGapFill) {
+                // Convert from spacing to extrusion width based on the extrusion model
+                // of a square extrusion ended with semi circles.
+                wanted_width = unscale<coordf_t>(line.a_width) + flow.height * (1. - 0.25 * PI);
+            } else if (unscale<coordf_t>(line.a_width) < 2 * flow.height * (1. - 0.25 * PI)) {
+                //width (too) small, be sure to not extrude with negative spacing.
+                //we began to fall back to spacing gradually even before the spacing go into the negative
+                //  to make extrusion1 < extrusion2 if width1 < width2 even if width2 is too small. 
+                wanted_width = unscale<coordf_t>(line.a_width)*0.35 + 1.3 * flow.height * (1. - 0.25 * PI);
+            }
 
             if (path.polyline.points.empty()) {
+                flow.width = wanted_width;
                 path.polyline.append(line.a);
                 path.polyline.append(line.b);
-                if (role == erGapFill) {
-                    // Convert from spacing to extrusion width based on the extrusion model
-                    // of a square extrusion ended with semi circles.
-                    flow.width = unscale<coordf_t>(line.a_width) + flow.height * (1. - 0.25 * PI);
-                } else if (unscale<coordf_t>(line.a_width) < 2 * flow.height * (1. - 0.25 * PI)) {
-                    flow.width = unscale<coordf_t>(line.a_width)*0.35 + 1.3 * flow.height * (1. - 0.25 * PI);
-                } else {
-                    flow.width = unscale<coordf_t>(line.a_width);
-                }
-#ifdef SLIC3R_DEBUG
-                printf("  filling %f gap\n", flow.width);
-#endif
                 path.mm3_per_mm = flow.mm3_per_mm();
                 path.width = flow.width;
                 path.height = flow.height;
             } else {
-                thickness_delta = fabs(flow.scaled_spacing() - line.a_width);
+                thickness_delta = scale_(fabs(flow.width - wanted_width));
                 if (thickness_delta <= tolerance / 2) {
                     // the width difference between this line and the current flow width is 
                     // within the accepted tolerance
