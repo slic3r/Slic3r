@@ -218,8 +218,8 @@ void PerimeterGenerator::process()
                 // improvement for future: find a way to add perimeters only where it's needed.
                 bool has_overhang = false;
                 if (this->config->extra_perimeters && !last.empty() && !overhangs_unsupported.empty()) {
-                    size_t unsupported_test = intersection(overhangs_unsupported, last).size();
-                    if (unsupported_test > 0) {
+                    overhangs_unsupported = intersection_ex(overhangs_unsupported, last);
+                    if (overhangs_unsupported.size() > 0) {
                         //add fake perimeters here
                         has_overhang = true;
                     }
