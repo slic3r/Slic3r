@@ -1992,10 +1992,11 @@ std::vector<float> polygon_angles_at_vertices(const Polygon &polygon, const std:
     return angles;
 }
 
-std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, double speed, std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid)
+std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::string &description, double speed, std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid)
 {
     // get a copy; don't modify the orientation of the original loop object otherwise
     // next copies (if any) would not detect the correct orientation
+    ExtrusionLoop loop = original_loop;
 
     if (m_layer->lower_layer != nullptr && lower_layer_edge_grid != nullptr) {
         if (! *lower_layer_edge_grid) {
@@ -2277,8 +2278,7 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
     return gcode;
 }
 
-std::string GCode::extrude_multi_path(ExtrusionMultiPath multipath, std::string description, double speed)
-{
+std::string GCode::extrude_multi_path(const ExtrusionMultiPath &multipath, const std::string &description, double speed) {
     // extrude along the path
     std::string gcode;
     for (ExtrusionPath path : multipath.paths) {
@@ -2296,34 +2296,99 @@ std::string GCode::extrude_multi_path(ExtrusionMultiPath multipath, std::string 
     return gcode;
 }
 
-std::string GCode::extrude_entity(const ExtrusionEntity &entity, std::string description, double speed, std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid)
-{
-    if (const ExtrusionPath* path = dynamic_cast<const ExtrusionPath*>(&entity))
-        return this->extrude_path(*path, description, speed);
-    else if (const ExtrusionMultiPath* multipath = dynamic_cast<const ExtrusionMultiPath*>(&entity))
-        return this->extrude_multi_path(*multipath, description, speed);
-    else if (const ExtrusionLoop* loop = dynamic_cast<const ExtrusionLoop*>(&entity))
-        return this->extrude_loop(*loop, description, speed, lower_layer_edge_grid);
-    else if (const ExtrusionEntityCollection* coll = dynamic_cast<const ExtrusionEntityCollection*>(&entity)){
-        std::string gcode;
-        ExtrusionEntityCollection chained;
-        if (coll->no_sort) chained = *coll;
-        else chained = coll->chained_path_from(m_last_pos, false);
-        for (ExtrusionEntity *next_entity : chained.entities) {
-            gcode += extrude_entity(*next_entity, description, speed, lower_layer_edge_grid);
+std::string GCode::extrude_multi_path3D(const ExtrusionMultiPath3D &multipath3D, const std::string &description, double speed) {
+    // extrude along the path
+    std::string gcode;
+    for (const ExtrusionPath3D &path : multipath3D.paths) {
+
+        gcode += this->_before_extrude(path, description, speed);
+
+        // calculate extrusion length per distance unit
+        double e_per_mm = m_writer.extruder()->e_per_mm3() * path.mm3_per_mm;
+        if (m_writer.extrusion_axis().empty()) e_per_mm = 0;
+        double path_length = 0.;
+        {
+            std::string comment = m_config.gcode_comments ? description : "";
+            //for (const Line &line : path.polyline.lines()) {
+            for (size_t i = 0; i < path.polyline.points.size() - 1; i++) {
+                Line line(path.polyline.points[i], path.polyline.points[i + 1]);
+                const double line_length = line.length() * SCALING_FACTOR;
+                path_length += line_length;
+                gcode += m_writer.extrude_to_xyz(
+                    this->point_to_gcode(line.b, path.z_offsets.size()>i+1 ? path.z_offsets[i+1] : 0),
+                    e_per_mm * line_length,
+                    comment);
+            }
         }
-        return gcode;
-    } else {
-        throw std::invalid_argument("Invalid argument supplied to extrude()");
-        return "";
+        gcode += this->_after_extrude(path);
+    }
+    if (m_wipe.enable) {
+        m_wipe.path = std::move(multipath3D.paths.back().polyline);  // TODO: don't limit wipe to last path
+        m_wipe.path.reverse();
+    }
+    // reset acceleration
+    gcode += m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    return gcode;
+}
+
+std::string GCode::extrude_entity(const ExtrusionEntity &entity, const std::string &description, double speed, std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid)
+{
+    this->visitor_gcode.clear();
+    this->visitor_comment = description;
+    this->visitor_speed = speed;
+    this->visitor_lower_layer_edge_grid = lower_layer_edge_grid;
+    entity.visit(*this);
+    return this->visitor_gcode;
+}
+
+void GCode::use(const ExtrusionEntityCollection &collection) {
+    ExtrusionEntityCollection chained;
+    if (collection.no_sort) chained = collection;
+    else chained = collection.chained_path_from(m_last_pos, false);
+    for (const ExtrusionEntity *next_entity : chained.entities) {
+        next_entity->visit(*this);
     }
 }
 
-std::string GCode::extrude_path(ExtrusionPath path, std::string description, double speed)
-{
-//    description += ExtrusionRole2String(path.role());
-    path.simplify(SCALED_RESOLUTION);
-    std::string gcode = this->_extrude(path, description, speed);
+std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &description, double speed) {
+    //    description += ExtrusionRole2String(path.role());
+    ExtrusionPath simplifed_path = path;
+    simplifed_path.simplify(SCALED_RESOLUTION);
+    std::string gcode = this->_extrude(simplifed_path, description, speed);
+
+    if (m_wipe.enable) {
+        m_wipe.path = std::move(simplifed_path.polyline);
+        m_wipe.path.reverse();
+    }
+    // reset acceleration
+    gcode += m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    return gcode;
+}
+
+std::string GCode::extrude_path_3D(const ExtrusionPath3D &path, const std::string &description, double speed) {
+    //    description += ExtrusionRole2String(path.role());
+    //path.simplify(SCALED_RESOLUTION);
+    std::string gcode = this->_before_extrude(path, description, speed);
+
+    // calculate extrusion length per distance unit
+    double e_per_mm = m_writer.extruder()->e_per_mm3() * path.mm3_per_mm;
+    if (m_writer.extrusion_axis().empty()) e_per_mm = 0;
+    double path_length = 0.;
+    {
+        std::string comment = m_config.gcode_comments ? description : "";
+        //for (const Line &line : path.polyline.lines()) {
+        for (size_t i = 0; i < path.polyline.points.size()-1;i++) {
+            Line line(path.polyline.points[i], path.polyline.points[i + 1]);
+            const double line_length = line.length() * SCALING_FACTOR;
+            path_length += line_length;
+            gcode += m_writer.extrude_to_xyz(
+                this->point_to_gcode(line.b, path.z_offsets.size()>i ? path.z_offsets[i] : 0),
+                e_per_mm * line_length,
+                comment);
+        }
+    }
+    gcode += this->_after_extrude(path);
+
     if (m_wipe.enable) {
         m_wipe.path = std::move(path.polyline);
         m_wipe.path.reverse();
@@ -2369,22 +2434,19 @@ std::string GCode::extrude_support(const ExtrusionEntityCollection &support_fill
         const double  support_interface_speed  = m_config.support_material_interface_speed.get_abs_value(support_speed);
         for (const ExtrusionEntity *ee : support_fills.entities) {
             ExtrusionRole role = ee->role();
-            assert(role == erSupportMaterial || role == erSupportMaterialInterface);
+            assert(role == erSupportMaterial || role == erSupportMaterialInterface || role == erMixed);
             if (const ExtrusionEntityCollection* coll = dynamic_cast<const ExtrusionEntityCollection*>(ee)) {
                 gcode += extrude_support(*coll);
                 continue;
             }
             const char  *label = (role == erSupportMaterial) ? support_label : support_interface_label;
             const double speed = (role == erSupportMaterial) ? support_speed : support_interface_speed;
-            const ExtrusionPath *path = dynamic_cast<const ExtrusionPath*>(ee);
-            if (path)
-                gcode += this->extrude_path(*path, label, speed);
-            else {
-                const ExtrusionMultiPath *multipath = dynamic_cast<const ExtrusionMultiPath*>(ee);
-                assert(multipath != nullptr);
-                if (multipath)
-                    gcode += this->extrude_multi_path(*multipath, label, speed);
-            }
+            visitor_gcode = "";
+            visitor_comment = label;
+            visitor_speed = speed;
+            visitor_lower_layer_edge_grid = nullptr;
+            ee->visit(*this);
+            gcode += visitor_gcode;
         }
     }
     return gcode;
@@ -2443,22 +2505,45 @@ void GCode::_write_format(FILE* file, const char* format, ...)
     va_end(args);
 }
 
-std::string GCode::_extrude(const ExtrusionPath &path, std::string description, double speed)
-{
+std::string GCode::_extrude(const ExtrusionPath &path, const std::string &description, double speed) {
+
+    std::string gcode = this->_before_extrude(path, description, speed);
+
+    // calculate extrusion length per distance unit
+    double e_per_mm = m_writer.extruder()->e_per_mm3() * path.mm3_per_mm;
+    if (m_writer.extrusion_axis().empty()) e_per_mm = 0;
+    double path_length = 0.;
+    {
+        std::string comment = m_config.gcode_comments ? description : "";
+        for (const Line &line : path.polyline.lines()) {
+            const double line_length = line.length() * SCALING_FACTOR;
+            path_length += line_length;
+            gcode += m_writer.extrude_to_xy(
+                this->point_to_gcode(line.b),
+                e_per_mm * line_length,
+                comment);
+        }
+    }
+    gcode += this->_after_extrude(path);
+
+    return gcode;
+}
+
+std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string &description, double speed) {
     std::string gcode;
-    
+
     // go to first point of extrusion path
     if (!m_last_pos_defined || m_last_pos != path.first_point()) {
         gcode += this->travel_to(
             path.first_point(),
             path.role(),
             "move to first " + description + " point"
-        );
+            );
     }
-    
+
     // compensate retraction
     gcode += this->unretract();
-    
+
     // adjust acceleration
     {
         double acceleration;
@@ -2475,11 +2560,8 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
         }
         gcode += m_writer.set_acceleration((unsigned int)floor(acceleration + 0.5));
     }
-    
-    // calculate extrusion length per distance unit
-    double e_per_mm = m_writer.extruder()->e_per_mm3() * path.mm3_per_mm;
-    if (m_writer.extrusion_axis().empty()) e_per_mm = 0;
-    
+
+
     // set speed
     if (speed == -1) {
         if (path.role() == erPerimeter) {
@@ -2514,24 +2596,21 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
         speed = std::min(
             speed,
             m_config.max_volumetric_speed.value / path.mm3_per_mm
-        );
+            );
     }
     if (EXTRUDER_CONFIG(filament_max_volumetric_speed) > 0) {
         // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
         speed = std::min(
             speed,
             EXTRUDER_CONFIG(filament_max_volumetric_speed) / path.mm3_per_mm
-        );
+            );
     }
     double F = speed * 60;  // convert mm/sec to mm/min
-    
+
     // extrude arc or line
-    if (m_enable_extrusion_role_markers)
-    {
-        if (path.role() != m_last_extrusion_role)
-        {
-            if (m_enable_extrusion_role_markers)
-            {
+    if (m_enable_extrusion_role_markers) {
+        if (path.role() != m_last_extrusion_role) {
+            if (m_enable_extrusion_role_markers) {
                 char buf[32];
                 sprintf(buf, ";_EXTRUSION_ROLE:%d\n", int(path.role()));
                 gcode += buf;
@@ -2541,18 +2620,15 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
     m_last_extrusion_role = path.role();
 
     // adds analyzer tags and updates analyzer's tracking data
-    if (m_enable_analyzer)
-    {
-        if (path.role() != m_last_analyzer_extrusion_role)
-        {
+    if (m_enable_analyzer) {
+        if (path.role() != m_last_analyzer_extrusion_role) {
             m_last_analyzer_extrusion_role = path.role();
             char buf[32];
             sprintf(buf, ";%s%d\n", GCodeAnalyzer::Extrusion_Role_Tag.c_str(), int(m_last_analyzer_extrusion_role));
             gcode += buf;
         }
 
-        if (m_last_mm3_per_mm != path.mm3_per_mm)
-        {
+        if (m_last_mm3_per_mm != path.mm3_per_mm) {
             m_last_mm3_per_mm = path.mm3_per_mm;
 
             char buf[32];
@@ -2560,8 +2636,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
             gcode += buf;
         }
 
-        if (m_last_width != path.width)
-        {
+        if (m_last_width != path.width) {
             m_last_width = path.width;
 
             char buf[32];
@@ -2569,8 +2644,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
             gcode += buf;
         }
 
-        if (m_last_height != path.height)
-        {
+        if (m_last_height != path.height) {
             m_last_height = path.height;
 
             char buf[32];
@@ -2590,21 +2664,13 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
         if (path.role() == erExternalPerimeter)
             comment += ";_EXTERNAL_PERIMETER";
     }
-
     // F is mm per minute.
     gcode += m_writer.set_speed(F, "", comment);
-    double path_length = 0.;
-    {
-        std::string comment = m_config.gcode_comments ? description : "";
-        for (const Line &line : path.polyline.lines()) {
-            const double line_length = line.length() * SCALING_FACTOR;
-            path_length += line_length;
-            gcode += m_writer.extrude_to_xy(
-                this->point_to_gcode(line.b),
-                e_per_mm * line_length,
-                comment);
-        }
-    }
+
+    return gcode;
+}
+std::string GCode::_after_extrude(const ExtrusionPath &path) {
+    std::string gcode;
     if (m_enable_cooling_markers)
         if (is_bridge(path.role()))
             gcode += ";_BRIDGE_FAN_END\n";
@@ -2783,10 +2849,18 @@ std::string GCode::set_extruder(unsigned int extruder_id, double print_z)
 }
 
 // convert a model-space scaled point into G-code coordinates
-Vec2d GCode::point_to_gcode(const Point &point) const
-{
+Vec2d GCode::point_to_gcode(const Point &point) const {
     Vec2d extruder_offset = EXTRUDER_CONFIG(extruder_offset);
     return unscale(point) + m_origin - extruder_offset;
+}
+
+// convert a model-space scaled point into G-code coordinates
+Vec3d GCode::point_to_gcode(const Point &point, const coord_t z_offset) const {
+    Vec2d extruder_offset = EXTRUDER_CONFIG(extruder_offset);
+    Vec3d ret_vec(unscale_(point.x()) + m_origin.x() - extruder_offset.x(),
+        unscale_(point.y()) + m_origin.y() - extruder_offset.y(),
+        unscale_(z_offset));
+    return ret_vec;
 }
 
 // convert a model-space scaled point into G-code coordinates

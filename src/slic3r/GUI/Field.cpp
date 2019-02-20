@@ -725,26 +725,27 @@ boost::any& Choice::get_value()
 		if (m_opt_id == rp_option)
 			return m_value = boost::any(ret_str);
 
-	if (m_opt.type == coEnum)
-	{
-		int ret_enum = static_cast<wxComboBox*>(window)->GetSelection(); 
-        if (m_opt_id.compare("top_fill_pattern") == 0 || m_opt_id.compare("bottom_fill_pattern") == 0 || m_opt_id.compare("solid_fill_pattern") == 0)
-		{
-			if (!m_opt.enum_values.empty()) {
-				std::string key = m_opt.enum_values[ret_enum];
-				t_config_enum_values map_names = ConfigOptionEnum<InfillPattern>::get_enum_values();
-				int value = map_names.at(key);
+    if (m_opt.type == coEnum)
+    {
+        int ret_enum = static_cast<wxComboBox*>(window)->GetSelection(); 
+        if (m_opt_id.compare("top_fill_pattern") == 0 || m_opt_id.compare("bottom_fill_pattern") == 0 
+            || m_opt_id.compare("solid_fill_pattern") == 0 || m_opt_id.compare("support_material_interface_pattern") == 0)
+        {
+            if (!m_opt.enum_values.empty()) {
+                std::string key = m_opt.enum_values[ret_enum];
+                t_config_enum_values map_names = ConfigOptionEnum<InfillPattern>::get_enum_values();
+                int value = map_names.at(key);
 
-				m_value = static_cast<InfillPattern>(value);
-			}
-			else
-				m_value = static_cast<InfillPattern>(0);
-		}
-		if (m_opt_id.compare("fill_pattern") == 0)
-			m_value = static_cast<InfillPattern>(ret_enum);
-		else if (m_opt_id.compare("gcode_flavor") == 0)
-			m_value = static_cast<GCodeFlavor>(ret_enum);
-		else if (m_opt_id.compare("support_material_pattern") == 0)
+                m_value = static_cast<InfillPattern>(value);
+            }
+            else
+                m_value = static_cast<InfillPattern>(0);
+        }
+        if (m_opt_id.compare("fill_pattern") == 0)
+            m_value = static_cast<InfillPattern>(ret_enum);
+        else if (m_opt_id.compare("gcode_flavor") == 0)
+            m_value = static_cast<GCodeFlavor>(ret_enum);
+        else if (m_opt_id.compare("support_material_pattern") == 0)
             m_value = static_cast<SupportMaterialPattern>(ret_enum);
         else if (m_opt_id.compare("seam_position") == 0)
             m_value = static_cast<SeamPosition>(ret_enum);

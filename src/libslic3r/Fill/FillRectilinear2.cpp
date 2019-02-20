@@ -1260,7 +1260,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
                 }
                 skip = params.dont_connect || (link_max_length > 0 && (take_next ? distNext : distPrev) > link_max_length);
                 if (skip) {
-                    //"skip" the connection but continue to do as it was printed
+                    //"skip" the connection but continue to print something as it was connected
                     //also, add a bit of extrusion at the tip, to not under-extrude
                     //TODO: supermerill: don't output polyline but Extrusion entiyt, to be able to extrude a small line here (gap-fill style) instead of big bits.
                     Point last_point = Point(seg.pos, intrsctn->pos());
@@ -1269,17 +1269,17 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
                     //compute angle to see where it's possible to extrude a bit
                     float coeff_before = 0.5f;
                     if (!polyline_current->points.empty()) coeff_before = 1 - std::abs(((last_point.ccw_angle(polyline_current->points.back(), next_point)) / PI) - 1);
-                    if (coeff_before < 0.2) coeff_before = 0.0;
-                    if (coeff_before > 0.8) coeff_before = 1.0;
+                    if (coeff_before < 0.5) coeff_before = 0.0;
+                    if (coeff_before > 0.5) coeff_before = 1.0;
                     //now add the points at the end of the current polyline
                     polyline_current->points.push_back(last_point);
                     if (coeff_before > 0.0)
-                        polyline_current->points.push_back(last_point.interpolate(coeff_before * scale_(this->spacing) / ( (take_next ? distNext : distPrev)), next_point));
+                        polyline_current->points.push_back(last_point.interpolate(coeff_before * scale_(this->spacing * 0.7) / ( (take_next ? distNext : distPrev)), next_point));
                     //now create & add the points at the start of the new polyline
                     polylines_out.push_back(Polyline());
                     polyline_current = &polylines_out.back();
                     if (coeff_before < 1.0)
-                        polyline_current->points.push_back(next_point.interpolate((1 - coeff_before) * scale_(this->spacing) / ( (take_next ? distNext : distPrev)), last_point));
+                        polyline_current->points.push_back(next_point.interpolate((1 - coeff_before) * scale_(this->spacing * 0.7) / ((take_next ? distNext : distPrev)), last_point));
                     polyline_current->points.push_back(next_point);
                 } else {
                     polyline_current->points.push_back(Point(seg.pos, intrsctn->pos()));
@@ -1665,6 +1665,127 @@ std::vector<SegmentedIntersectionLine> FillScatteredRectilinear::_vert_lines_for
 
     return segs;
 }
+
+
+void
+FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) {
+    const coord_t scaled_nozzle_diam = scale_(params.flow->nozzle_diameter);
+    const coord_t clearance = scaled_nozzle_diam * 2;
+    const coord_t tooth_spacing_min = scaled_nozzle_diam ;
+    const coord_t tooth_spacing_max = scaled_nozzle_diam * 3;
+    const coord_t tooth_zhop = scaled_nozzle_diam;
+    Polylines polylines_out;
+    if (!fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out)) {
+        printf("FillRectilinear2::fill_surface() failed to fill a region.\n");
+    }
+    if (!polylines_out.empty()) {
+        ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
+        /// pass the no_sort attribute to the extrusion path
+        eec->no_sort = this->no_sort();
+
+        ExtrusionRole good_role = params.role;
+        if (good_role == erNone || good_role == erCustom) {
+            good_role = params.flow->bridge ?
+            erBridgeInfill :
+                           (surface->is_solid() ?
+                           ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
+                           erInternalInfill);
+        }
+        for (Polyline poly : polylines_out) {
+            if (!poly.is_valid()) continue;
+
+            ExtrusionMultiPath3D *extrusions = new ExtrusionMultiPath3D();
+            extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow->mm3_per_mm() * params.flow_mult, params.flow->width * params.flow_mult, params.flow->height));
+            ExtrusionPath3D *current_extrusion = &(extrusions->paths.back());
+            Points &pts = poly.points;
+            coord_t next_zhop = tooth_spacing_min + (coord_t) abs((rand() / (float)RAND_MAX) * (tooth_spacing_max - tooth_spacing_min));
+            size_t idx = 1;
+
+            current_extrusion->push_back(pts[0], 0);
+            Point last = pts[0];
+            coord_t line_length = (coord_t)pts[idx - 1].distance_to(pts[idx]);
+            coord_t maxLength = poly.length();
+            while (idx < poly.size() && maxLength > tooth_spacing_max) {
+                //go next hop line
+                //do not use the "return" line nor the tangent ones.
+                while (idx < poly.size() && maxLength > tooth_spacing_min && (next_zhop >= line_length || line_length < clearance 
+                    || (std::abs(std::abs((int)(this->angle * 180 / PI) % 180) - 90) > 45 ? pts[idx].y() < pts[idx - 1].y() : pts[idx].x() < pts[idx - 1].x()))) {
+                    if (line_length < clearance || pts[idx].x() < pts[idx - 1].x()) {
+
+                    } else {
+                        next_zhop -= line_length;
+                    }
+                    maxLength -= line_length;
+                    current_extrusion->push_back(pts[idx], 0);
+                    last = pts[idx];
+                    idx++;
+                    if (idx < poly.size()) line_length = (coord_t)last.distance_to(pts[idx]);
+                }
+                if (idx < poly.size() && maxLength > clearance) {
+                    //do z-hop
+                    //keep some room for the mouv
+                    if (next_zhop > line_length - scaled_nozzle_diam * 2) next_zhop -= line_length - scaled_nozzle_diam * 2.5;
+                    last = last.interpolate(next_zhop / (double)line_length, pts[idx]);
+                    //Create point at pos
+                    if (last != pts[idx - 1]) {
+                        current_extrusion->push_back(last, 0);
+                    }
+
+                    //add new extrusion that go up with nozzle_flow
+                    extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow->nozzle_diameter * params.flow->nozzle_diameter * PI / 4, params.flow->nozzle_diameter, params.flow->nozzle_diameter));
+                    current_extrusion = &(extrusions->paths.back());
+                    current_extrusion->push_back(last, 0);
+                    current_extrusion->push_back(last, tooth_zhop);
+
+                    //add new extrusion that move a bit to let the palce for the nozzle tip
+                    extrusions->paths.push_back(ExtrusionPath3D(good_role, 0, params.flow->nozzle_diameter / 10, params.flow->nozzle_diameter / 10));
+                    current_extrusion = &(extrusions->paths.back());
+                    current_extrusion->push_back(last, tooth_zhop);
+                    //add next point
+                    line_length = (coord_t)last.distance_to(pts[idx]);
+                    last = last.interpolate(scaled_nozzle_diam / (double)line_length, pts[idx]);
+                    current_extrusion->push_back(last, tooth_zhop);
+
+                    // add new extrusion that go down with no nozzle_flow / sqrt(2)
+                    extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow->mm3_per_mm() / std::sqrt(2), params.flow->width / std::sqrt(2), params.flow->height));
+                    current_extrusion = &(extrusions->paths.back());
+                    current_extrusion->push_back(last, tooth_zhop);
+                    //add next point
+                    line_length = (coord_t)last.distance_to(pts[idx]);
+                    last = last.interpolate(scaled_nozzle_diam / (double)line_length, pts[idx]);
+                    current_extrusion->push_back(last, 0);
+
+                    // now go back to normal flow
+                    extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow->mm3_per_mm() * params.flow_mult, params.flow->width * params.flow_mult, params.flow->height));
+                    current_extrusion = &(extrusions->paths.back());
+                    current_extrusion->push_back(last, 0);
+                    line_length = (coord_t)last.distance_to(pts[idx]);
+            
+                    //re-init
+                    next_zhop = tooth_spacing_min + (coord_t) abs((rand() / (float)RAND_MAX) * (tooth_spacing_max - tooth_spacing_min));
+                }
+            }
+            while (idx < poly.size()) {
+                current_extrusion->push_back(pts[idx], 0);
+                idx++;
+            }
+            if (current_extrusion->size() < 2) extrusions->paths.pop_back();
+            ExtrusionPrinter print; extrusions->visit(print);
+            if (!extrusions->paths.empty()) eec->entities.push_back(extrusions);
+            else delete extrusions;
+        }
+        // === end ===
+        if (!eec->empty()) {
+            out.push_back(eec);
+            ExtrusionPrinter print; eec->visit(print);
+        } else {
+            delete eec;
+        }
+    }
+
+
+}
+
 
 
 } // namespace Slic3r

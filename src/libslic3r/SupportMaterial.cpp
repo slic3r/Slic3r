@@ -2966,6 +2966,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
         infill_pattern = ipHoneycomb;
         break;
     }
+    InfillPattern interface_pattern = m_object_config->support_material_interface_pattern;
     BoundingBox bbox_object(Point(-scale_(1.), -scale_(1.0)), Point(scale_(1.), scale_(1.)));
 
 //    const coordf_t link_max_length_factor = 3.;
@@ -3002,7 +3003,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
     size_t n_raft_layers = size_t(std::max(0, int(m_slicing_params.raft_layers()) - 1));
     tbb::parallel_for(tbb::blocked_range<size_t>(0, n_raft_layers),
         [this, &object, &raft_layers, 
-            infill_pattern, &bbox_object, support_density, interface_density, raft_angle_1st_layer, raft_angle_base, raft_angle_interface, link_max_length_factor, with_sheath]
+        infill_pattern, interface_pattern, &bbox_object, support_density, interface_density, raft_angle_1st_layer, raft_angle_base, raft_angle_interface, link_max_length_factor, with_sheath]
             (const tbb::blocked_range<size_t>& range) {
         for (size_t support_layer_id = range.begin(); support_layer_id < range.end(); ++ support_layer_id)
         {
@@ -3011,7 +3012,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
             assert(support_layer.support_fills.entities.empty());
             MyLayer      &raft_layer    = *raft_layers[support_layer_id];
 
-            std::unique_ptr<Fill> filler_interface = std::unique_ptr<Fill>(Fill::new_from_type(ipRectilinear));
+            std::unique_ptr<Fill> filler_interface = std::unique_ptr<Fill>(Fill::new_from_type(interface_pattern));
             std::unique_ptr<Fill> filler_support = std::unique_ptr<Fill>(Fill::new_from_type(infill_pattern));
             std::unique_ptr<Fill> filler_dense = std::unique_ptr<Fill>(Fill::new_from_type(ipRectiWithPerimeter));
             filler_interface->set_bounding_box(bbox_object);
@@ -3114,14 +3115,15 @@ void PrintObjectSupportMaterial::generate_toolpaths(
 
     tbb::parallel_for(tbb::blocked_range<size_t>(n_raft_layers, object.support_layers().size()),
         [this, &object, &bottom_contacts, &top_contacts, &intermediate_layers, &interface_layers, &layer_caches, &loop_interface_processor, 
-            infill_pattern, &bbox_object, support_density, interface_density, interface_angle, &angles, link_max_length_factor, with_sheath]
+        infill_pattern, interface_pattern, &bbox_object, support_density, interface_density, interface_angle, &angles, link_max_length_factor, with_sheath]
             (const tbb::blocked_range<size_t>& range) {
         // Indices of the 1st layer in their respective container at the support layer height.
         size_t idx_layer_bottom_contact   = size_t(-1);
         size_t idx_layer_top_contact      = size_t(-1);
         size_t idx_layer_intermediate     = size_t(-1);
         size_t idx_layer_inteface         = size_t(-1);
-        std::unique_ptr<Fill> filler_interface = std::unique_ptr<Fill>(Fill::new_from_type(m_slicing_params.soluble_interface ? ipRectilinear : ipRectilinear));
+        std::unique_ptr<Fill> filler_interface = std::unique_ptr<Fill>(Fill::new_from_type(interface_pattern));
+        std::unique_ptr<Fill> filler_intermediate_interface = std::unique_ptr<Fill>(Fill::new_from_type(ipRectilinear));
         std::unique_ptr<Fill> filler_support = std::unique_ptr<Fill>(Fill::new_from_type(infill_pattern));
         std::unique_ptr<Fill> filler_solid = std::unique_ptr<Fill>(Fill::new_from_type(ipRectiWithPerimeter));
         filler_interface->set_bounding_box(bbox_object);
@@ -3198,7 +3200,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     float(layer_ex.layer->height),
                     m_support_material_interface_flow.nozzle_diameter,
                     layer_ex.layer->bridging);
-                Fill *filler = filler_interface.get();
+                Fill *filler = i == 2 ? filler_intermediate_interface.get() : filler_interface.get();
                 float density = interface_density;
                 //if first layer and solid first layer : draw concentric with 100% density
                 if (support_layer.id() == 0 && this->m_object_config->support_material_solid_first_layer.value) {

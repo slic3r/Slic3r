@@ -1037,15 +1037,18 @@ void TabPrint::build()
         optgroup->append_line(line);
 		optgroup->append_single_option_line("support_material_pattern");
 		optgroup->append_single_option_line("support_material_with_sheath");
-		optgroup->append_single_option_line("support_material_spacing");
-		optgroup->append_single_option_line("support_material_angle");
+        optgroup->append_single_option_line("support_material_spacing");
+        optgroup->append_single_option_line("support_material_angle");
+        optgroup->append_single_option_line("support_material_buildplate_only");
+        optgroup->append_single_option_line("support_material_xy_spacing");
+        optgroup->append_single_option_line("dont_support_bridges");
+        optgroup->append_single_option_line("support_material_synchronize_layers");
+
+        optgroup = page->new_optgroup(_(L("Options for support material interface")));
+        optgroup->append_single_option_line("support_material_interface_pattern");
 		optgroup->append_single_option_line("support_material_interface_layers");
 		optgroup->append_single_option_line("support_material_interface_spacing");
 		optgroup->append_single_option_line("support_material_interface_contact_loops");
-		optgroup->append_single_option_line("support_material_buildplate_only");
-		optgroup->append_single_option_line("support_material_xy_spacing");
-		optgroup->append_single_option_line("dont_support_bridges");
-		optgroup->append_single_option_line("support_material_synchronize_layers");
 
 	page = add_options_page(_(L("Speed")), "time.png");
         optgroup = page->new_optgroup(_(L("Speed for print moves")));
@@ -1444,7 +1447,7 @@ void TabPrint::update()
 					"support_material_spacing", "support_material_angle", "support_material_interface_layers",
 					"dont_support_bridges", "support_material_extrusion_width", 
 					"support_material_contact_distance_type", 
-					"support_material_xy_spacing" })
+					"support_material_xy_spacing", "support_material_interface_pattern" })
 		get_field(el)->toggle(have_support_material);
     get_field("support_material_threshold")->toggle(have_support_material_auto);
     for (auto el : { "support_material_contact_distance_top",

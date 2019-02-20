@@ -545,6 +545,9 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 		else if (opt_key.compare("gcode_flavor") == 0 ) {
 			ret = static_cast<int>(config.option<ConfigOptionEnum<GCodeFlavor>>(opt_key)->value);
 		}
+		else if (opt_key.compare("support_material_interface_pattern") == 0) {
+			ret = static_cast<int>(config.option<ConfigOptionEnum<InfillPattern>>(opt_key)->value);
+        }
 		else if (opt_key.compare("support_material_pattern") == 0) {
 			ret = static_cast<int>(config.option<ConfigOptionEnum<SupportMaterialPattern>>(opt_key)->value);
         }

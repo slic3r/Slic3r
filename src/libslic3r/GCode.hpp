@@ -126,7 +126,7 @@ private:
     bool                                                         i_have_brim = false;
 };
 
-class GCode {
+class GCode : ExtrusionVisitor {
 public:        
     GCode() : 
     	m_origin(Vec2d::Zero()),
@@ -163,6 +163,7 @@ public:
     void            set_origin(const coordf_t x, const coordf_t y) { this->set_origin(Vec2d(x, y)); }
     const Point&    last_pos() const { return m_last_pos; }
     Vec2d           point_to_gcode(const Point &point) const;
+    Vec3d           point_to_gcode(const Point &point, coord_t z_offset) const;
     Point           gcode_to_point(const Vec2d &point) const;
     const FullPrintConfig &config() const { return m_config; }
     const Layer*    layer() const { return m_layer; }
@@ -213,10 +214,22 @@ protected:
     void            set_extruders(const std::vector<unsigned int> &extruder_ids);
     std::string     preamble();
     std::string     change_layer(coordf_t print_z);
-    std::string     extrude_entity(const ExtrusionEntity &entity, std::string description = "", double speed = -1., std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid = nullptr);
-    std::string     extrude_loop(ExtrusionLoop loop, std::string description, double speed = -1., std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid = nullptr);
-    std::string     extrude_multi_path(ExtrusionMultiPath multipath, std::string description = "", double speed = -1.);
-    std::string     extrude_path(ExtrusionPath path, std::string description = "", double speed = -1.);
+    std::string     visitor_gcode;
+    std::string     visitor_comment;
+    double          visitor_speed;
+    std::unique_ptr<EdgeGrid::Grid> *visitor_lower_layer_edge_grid;
+    virtual void use(const ExtrusionPath &path) override { visitor_gcode += extrude_path(path, visitor_comment, visitor_speed); };
+    virtual void use(const ExtrusionPath3D &path3D) override { visitor_gcode += extrude_path_3D(path3D, visitor_comment, visitor_speed); };
+    virtual void use(const ExtrusionMultiPath &multipath) override { visitor_gcode += extrude_multi_path(multipath, visitor_comment, visitor_speed); };
+    virtual void use(const ExtrusionMultiPath3D &multipath) override { visitor_gcode += extrude_multi_path3D(multipath, visitor_comment, visitor_speed); };
+    virtual void use(const ExtrusionLoop &loop) override { visitor_gcode += extrude_loop(loop, visitor_comment, visitor_speed, visitor_lower_layer_edge_grid); };
+    virtual void use(const ExtrusionEntityCollection &collection) override;
+    std::string     extrude_entity(const ExtrusionEntity &entity, const std::string &description, double speed = -1., std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid = nullptr);
+    std::string     extrude_loop(const ExtrusionLoop &loop, const std::string &description, double speed = -1., std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid = nullptr);
+    std::string     extrude_multi_path(const ExtrusionMultiPath &multipath, const std::string &description, double speed = -1.);
+    std::string     extrude_multi_path3D(const ExtrusionMultiPath3D &multipath, const std::string &description, double speed = -1.);
+    std::string     extrude_path(const ExtrusionPath &path, const std::string &description, double speed = -1.);
+    std::string     extrude_path_3D(const ExtrusionPath3D &path, const std::string &description, double speed = -1.);
 
     typedef std::vector<int> ExtruderPerCopy;
     // Extruding multiple objects with soluble / non-soluble / combined supports
@@ -349,7 +362,9 @@ protected:
     // Formats and write into a file the given data. 
     void _write_format(FILE* file, const char* format, ...);
 
-    std::string _extrude(const ExtrusionPath &path, std::string description = "", double speed = -1);
+    std::string _extrude(const ExtrusionPath &path, const std::string &description, double speed = -1);
+    std::string _before_extrude(const ExtrusionPath &path, const std::string &description, double speed = -1);
+    std::string _after_extrude(const ExtrusionPath &path);
     void print_machine_envelope(FILE *file, Print &print);
     void _print_first_layer_bed_temperature(FILE *file, Print &print, const std::string &gcode, unsigned int first_printing_extruder_id, bool wait);
     void _print_first_layer_extruder_temperatures(FILE *file, Print &print, const std::string &gcode, unsigned int first_printing_extruder_id, bool wait);

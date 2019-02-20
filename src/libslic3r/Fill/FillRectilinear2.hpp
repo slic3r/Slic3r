@@ -100,6 +100,16 @@ protected:
     virtual coord_t _line_spacing_for_density(float density) const;
 };
 
+class FillRectilinearSawtooth : public FillRectilinear2 {
+public:
+    // require bridge flow since it's a pre-bridge over very sparse infill
+    virtual bool use_bridge_flow() const { return true; }
+
+    virtual Fill* clone() const { return new FillRectilinearSawtooth(*this); };
+    virtual ~FillRectilinearSawtooth() {}
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) override;
+
+};
 
 
 }; // namespace Slic3r
