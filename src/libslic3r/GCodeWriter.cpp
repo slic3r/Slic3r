@@ -375,14 +375,15 @@ std::string GCodeWriter::extrude_to_xy(const Vec2d &point, double dE, const std:
 
 std::string GCodeWriter::extrude_to_xyz(const Vec3d &point, double dE, const std::string &comment)
 {
-    m_pos = point;
+    m_pos(0) = point(0);
+    m_pos(1) = point(1);
     m_lifted = 0;
     m_extruder->extrude(dE);
     
     std::ostringstream gcode;
-    gcode << "G1 X" << XYZF_NUM(point(0))
-          <<   " Y" << XYZF_NUM(point(1))
-          <<   " Z" << XYZF_NUM(point(2))
+    gcode << "G1 X" << XYZF_NUM(point.x())
+          <<   " Y" << XYZF_NUM(point.y())
+          <<   " Z" << XYZF_NUM(point.z() + m_pos.z())
           <<    " " << m_extrusion_axis << E_NUM(m_extruder->E());
     COMMENT(comment);
     gcode << "\n";

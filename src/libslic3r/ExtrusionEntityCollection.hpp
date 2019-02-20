@@ -103,6 +103,8 @@ public:
         throw std::runtime_error("Calling length() on a ExtrusionEntityCollection");
         return 0.;        
     }
+    virtual void visit(ExtrusionVisitor &visitor) { visitor.use(*this); };
+    virtual void visit(ExtrusionVisitor &visitor) const { visitor.use(*this); };
 };
 
 }

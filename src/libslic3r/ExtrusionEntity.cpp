@@ -63,62 +63,6 @@ void ExtrusionPath::polygons_covered_by_spacing(Polygons &out, const float scale
     polygons_append(out, offset(this->polyline, 0.5f * float(flow.scaled_spacing()) + scaled_epsilon));
 }
 
-void ExtrusionMultiPath::reverse()
-{
-    for (ExtrusionPaths::iterator path = this->paths.begin(); path != this->paths.end(); ++path)
-        path->reverse();
-    std::reverse(this->paths.begin(), this->paths.end());
-}
-
-double ExtrusionMultiPath::length() const
-{
-    double len = 0;
-    for (ExtrusionPaths::const_iterator path = this->paths.begin(); path != this->paths.end(); ++path)
-        len += path->polyline.length();
-    return len;
-}
-
-void ExtrusionMultiPath::polygons_covered_by_width(Polygons &out, const float scaled_epsilon) const
-{
-    for (ExtrusionPaths::const_iterator path = this->paths.begin(); path != this->paths.end(); ++path)
-        path->polygons_covered_by_width(out, scaled_epsilon);
-}
-
-void ExtrusionMultiPath::polygons_covered_by_spacing(Polygons &out, const float scaled_epsilon) const
-{
-    for (ExtrusionPaths::const_iterator path = this->paths.begin(); path != this->paths.end(); ++path)
-        path->polygons_covered_by_spacing(out, scaled_epsilon);
-}
-
-double ExtrusionMultiPath::min_mm3_per_mm() const
-{
-    double min_mm3_per_mm = std::numeric_limits<double>::max();
-    for (ExtrusionPaths::const_iterator path = this->paths.begin(); path != this->paths.end(); ++path)
-        min_mm3_per_mm = std::min(min_mm3_per_mm, path->mm3_per_mm);
-    return min_mm3_per_mm;
-}
-
-Polyline ExtrusionMultiPath::as_polyline() const
-{
-    Polyline out;
-    if (! paths.empty()) {
-        size_t len = 0;
-        for (size_t i_path = 0; i_path < paths.size(); ++ i_path) {
-            assert(! paths[i_path].polyline.points.empty());
-            assert(i_path == 0 || paths[i_path - 1].polyline.points.back() == paths[i_path].polyline.points.front());
-            len += paths[i_path].polyline.points.size();
-        }
-        // The connecting points between the segments are equal.
-        len -= paths.size() - 1;
-        assert(len > 0);
-        out.points.reserve(len);
-        out.points.push_back(paths.front().polyline.points.front());
-        for (size_t i_path = 0; i_path < paths.size(); ++ i_path)
-            out.points.insert(out.points.end(), paths[i_path].polyline.points.begin() + 1, paths[i_path].polyline.points.end());
-    }
-    return out;
-}
-
 bool
 ExtrusionLoop::make_clockwise()
 {
@@ -317,5 +261,62 @@ ExtrusionLoop::min_mm3_per_mm() const
         min_mm3_per_mm = std::min(min_mm3_per_mm, path->mm3_per_mm);
     return min_mm3_per_mm;
 }
+
+void ExtrusionPrinter::use(const ExtrusionPath &path) { 
+    ss << "Path_" << path.polyline.size(); 
+    for (const Point &p : path.polyline.points)
+        ss << "->" << (int)(100 * unscale_(p.x())) << ":" << (int)(100 * unscale_(p.y()));
+}
+void ExtrusionPrinter::use(const ExtrusionPath3D &path3D) {
+    ss << "Path3D_" << path3D.polyline.size();
+    for (int i = 0; i < path3D.polyline.points.size();i++)
+        ss << "->" << (int)(100 * unscale_(path3D.polyline.points[i].x())) << ":" << (int)(100 * unscale_(path3D.polyline.points[i].y())) << ":" << (path3D.z_offsets.size()>i ? unscale_(path3D.z_offsets[i]) : -1);
+}
+void ExtrusionPrinter::use(const ExtrusionMultiPath &multipath) {
+    ss << "multipath:{";
+    for (int i = 0; i < multipath.paths.size(); i++) {
+        if (i != 0) ss << ",";
+        multipath.paths[i].visit(*this);
+    }
+    ss << "}";
+}
+void ExtrusionPrinter::use(const ExtrusionMultiPath3D &multipath3D) {
+    ss << "multipath3D:{";
+    for (int i = 0; i < multipath3D.paths.size(); i++) {
+        if (i != 0) ss << ",";
+        multipath3D.paths[i].visit(*this);
+    }
+    ss << "}";
+}
+void ExtrusionPrinter::use(const ExtrusionLoop &loop) { ss << "loop_" << loop.paths.size(); }
+void ExtrusionPrinter::use(const ExtrusionEntityCollection &collection) {
+    ss << "collection:{";
+    for (int i = 0; i < collection.entities.size(); i++) {
+        if (i != 0) ss << ",";
+        collection.entities[i]->visit(*this);
+    }
+    ss << "}";
+}
+
+
+class ExtrusionTreeVisitor : ExtrusionVisitor {
+public:
+    //virtual void use(ExtrusionEntity &entity) { assert(false); };
+    virtual void use(ExtrusionPath &path) override { const ExtrusionPath &constpath = path;  use(constpath); };
+    virtual void use(ExtrusionPath3D &path3D) override { const ExtrusionPath3D &constpath3D = path3D;  use(constpath3D); };
+    virtual void use(ExtrusionMultiPath &multipath) override { const ExtrusionMultiPath &constmultipath = multipath;  use(constmultipath); };
+    virtual void use(ExtrusionMultiPath3D &multipath3D) override { const ExtrusionMultiPath3D &constmultipath3D = multipath3D;  use(constmultipath3D); };
+    virtual void use(ExtrusionLoop &loop) override { const ExtrusionLoop &constloop = loop;  use(constloop); };
+    virtual void use(ExtrusionEntityCollection &collection) { const ExtrusionEntityCollection &constcollection = collection;  use(constcollection); };
+    virtual void use(const ExtrusionPath &path) override { assert(false); };
+    virtual void use(const ExtrusionPath3D &path3D) override { assert(false); };
+    virtual void use(const ExtrusionMultiPath &multipath) override { assert(false); };
+    virtual void use(const ExtrusionMultiPath3D &multipath3D) { assert(false); };
+    virtual void use(const ExtrusionLoop &loop) override { assert(false); };
+    virtual void use(const ExtrusionEntityCollection &collection) { assert(false); };
+    virtual void use_default(ExtrusionEntity &entity) { const ExtrusionEntity &constentity = entity;  use_default(constentity); };
+    virtual void use_default(const ExtrusionEntity &entity) {};
+
+};
 
 }

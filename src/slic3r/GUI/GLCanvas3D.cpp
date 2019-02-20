@@ -7317,7 +7317,8 @@ void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, c
                             // fill represents infill extrusions of a single island.
                             const auto *fill = dynamic_cast<const ExtrusionEntityCollection*>(ee);
                             if (!fill->entities.empty())
-                                _3DScene::extrusionentity_to_verts(*fill, float(layer->print_z), copy,
+                                if (fill != nullptr)
+                                    _3DScene::extrusionentity_to_verts(*fill, float(layer->print_z), copy,
                                 *vols[ctxt.volume_idx(
                                 is_solid_infill(fill->entities.front()->role()) ?
                                 layerm->region()->config().solid_infill_extruder :
@@ -7330,7 +7331,8 @@ void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, c
                     const SupportLayer *support_layer = dynamic_cast<const SupportLayer*>(layer);
                     if (support_layer) {
                         for (const ExtrusionEntity *extrusion_entity : support_layer->support_fills.entities)
-                            _3DScene::extrusionentity_to_verts(extrusion_entity, float(layer->print_z), copy,
+                            if (extrusion_entity != nullptr)
+                                _3DScene::extrusionentity_to_verts(*extrusion_entity, float(layer->print_z), copy,
                             *vols[ctxt.volume_idx(
                             (extrusion_entity->role() == erSupportMaterial) ?
                             support_layer->object()->config().support_material_extruder :

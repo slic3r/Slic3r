@@ -61,7 +61,7 @@ ExtrusionEntityCollection::reverse()
     for (ExtrusionEntitiesPtr::iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
         // Don't reverse it if it's a loop, as it doesn't change anything in terms of elements ordering
         // and caller might rely on winding order
-        if (!(*it)->is_loop()) (*it)->reverse();
+        if (!(*it)->can_reverse()) (*it)->reverse();
     }
     std::reverse(this->entities.begin(), this->entities.end());
 }

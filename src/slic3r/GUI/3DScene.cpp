@@ -1604,8 +1604,7 @@ void _3DScene::extrusionentity_to_verts(const ExtrusionLoop &extrusion_loop, flo
 }
 
 // Fill in the qverts and tverts with quads and triangles for the extrusion_multi_path.
-void _3DScene::extrusionentity_to_verts(const ExtrusionMultiPath &extrusion_multi_path, float print_z, const Point &copy, GLVolume &volume)
-{
+void _3DScene::extrusionentity_to_verts(const ExtrusionMultiPath &extrusion_multi_path, float print_z, const Point &copy, GLVolume &volume) {
     Lines               lines;
     std::vector<double> widths;
     std::vector<double> heights;
@@ -1621,37 +1620,34 @@ void _3DScene::extrusionentity_to_verts(const ExtrusionMultiPath &extrusion_mult
     thick_lines_to_verts(lines, widths, heights, false, print_z, volume);
 }
 
-void _3DScene::extrusionentity_to_verts(const ExtrusionEntityCollection &extrusion_entity_collection, float print_z, const Point &copy, GLVolume &volume)
-{
-    for (const ExtrusionEntity *extrusion_entity : extrusion_entity_collection.entities)
-        extrusionentity_to_verts(extrusion_entity, print_z, copy, volume);
+// Fill in the qverts and tverts with quads and triangles for the extrusion_multi_path.
+void _3DScene::extrusionentity_to_verts(const ExtrusionMultiPath3D &extrusion_multi_path, float print_z, const Point &copy, GLVolume &volume) {
+    Lines               lines;
+    std::vector<double> widths;
+    std::vector<double> heights;
+    for (const ExtrusionPath3D &extrusion_path : extrusion_multi_path.paths) {
+        Polyline            polyline = extrusion_path.polyline;
+        polyline.remove_duplicate_points();
+        polyline.translate(copy);
+        Lines lines_this = polyline.lines();
+        append(lines, lines_this);
+        widths.insert(widths.end(), lines_this.size(), extrusion_path.width);
+        heights.insert(heights.end(), lines_this.size(), extrusion_path.height);
+    }
+    thick_lines_to_verts(lines, widths, heights, false, print_z, volume);
 }
 
-void _3DScene::extrusionentity_to_verts(const ExtrusionEntity *extrusion_entity, float print_z, const Point &copy, GLVolume &volume)
+void ExtrusionToVert::use(const ExtrusionPath &path) { _3DScene::extrusionentity_to_verts(path, print_z, copy, volume); }
+void ExtrusionToVert::use(const ExtrusionPath3D &path3D) { _3DScene::extrusionentity_to_verts(path3D, print_z, copy, volume); }
+void ExtrusionToVert::use(const ExtrusionMultiPath &multipath) { _3DScene::extrusionentity_to_verts(multipath, print_z, copy, volume); }
+void ExtrusionToVert::use(const ExtrusionMultiPath3D &multipath3D) { _3DScene::extrusionentity_to_verts(multipath3D, print_z, copy, volume); }
+void ExtrusionToVert::use(const ExtrusionLoop &loop) { _3DScene::extrusionentity_to_verts(loop, print_z, copy, volume); }
+void ExtrusionToVert::use(const ExtrusionEntityCollection &collection) { for (const ExtrusionEntity *extrusion_entity : collection.entities) extrusion_entity->visit(*this); }
+
+void _3DScene::extrusionentity_to_verts(const ExtrusionEntity &extrusion_entity, float print_z, const Point &copy, GLVolume &volume)
 {
-    if (extrusion_entity != nullptr) {
-        auto *extrusion_path = dynamic_cast<const ExtrusionPath*>(extrusion_entity);
-        if (extrusion_path != nullptr)
-            extrusionentity_to_verts(*extrusion_path, print_z, copy, volume);
-        else {
-            auto *extrusion_loop = dynamic_cast<const ExtrusionLoop*>(extrusion_entity);
-            if (extrusion_loop != nullptr)
-                extrusionentity_to_verts(*extrusion_loop, print_z, copy, volume);
-            else {
-                auto *extrusion_multi_path = dynamic_cast<const ExtrusionMultiPath*>(extrusion_entity);
-                if (extrusion_multi_path != nullptr)
-                    extrusionentity_to_verts(*extrusion_multi_path, print_z, copy, volume);
-                else {
-                    auto *extrusion_entity_collection = dynamic_cast<const ExtrusionEntityCollection*>(extrusion_entity);
-                    if (extrusion_entity_collection != nullptr)
-                        extrusionentity_to_verts(*extrusion_entity_collection, print_z, copy, volume);
-                    else {
-                        throw std::runtime_error("Unexpected extrusion_entity type in to_verts()");
-                    }
-                }
-            }
-        }
-    }
+    ExtrusionToVert visitor(print_z, copy, volume);
+    extrusion_entity.visit(visitor);
 }
 
 void _3DScene::polyline3_to_verts(const Polyline3& polyline, double width, double height, GLVolume& volume)
