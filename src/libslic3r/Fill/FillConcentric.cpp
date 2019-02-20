@@ -1,6 +1,7 @@
 #include "../ClipperUtils.hpp"
 #include "../ExPolygon.hpp"
 #include "../Surface.hpp"
+#include "../ExtrusionEntity.hpp"
 #include "../ExtrusionEntityCollection.hpp"
 #include "../MedialAxis.hpp"
 
@@ -63,6 +64,18 @@ void FillConcentric::_fill_surface_single(
     // otherwise the outermost loop starts at the closest point to (0, 0).
     // We want the loops to be split inside the G-code generator to get optimum path planning.
 }
+
+class ExtrusionSetRole : public ExtrusionVisitor {
+    ExtrusionRole new_role;
+public:
+    ExtrusionSetRole(ExtrusionRole role) : new_role(role) {}
+    void use(ExtrusionPath &path) override { path.set_role(new_role); }
+    void use(ExtrusionPath3D &path3D) override { path3D.set_role(new_role); }
+    void use(ExtrusionMultiPath &multipath) override { for (ExtrusionPath path : multipath.paths) path.set_role(new_role); }
+    void use(ExtrusionMultiPath3D &multipath) override { for (ExtrusionPath path : multipath.paths) path.set_role(new_role); }
+    void use(ExtrusionLoop &loop) override { for (ExtrusionPath path : loop.paths) path.set_role(new_role); }
+    void use(ExtrusionEntityCollection &collection) override { for (ExtrusionEntity *entity : collection.entities) entity->visit(*this); }
+};
 
 void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, const FillParams &params,
     ExtrusionEntitiesPtr &out) {
@@ -146,9 +159,15 @@ void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, cons
                     ex.medial_axis(ex, max, min, &polylines, params.flow->height);
                 }
             }
-            if (!polylines.empty()) {
+            if (!polylines.empty() && good_role != erBridgeInfill) {
                 ExtrusionEntityCollection gap_fill = thin_variable_width(polylines, erGapFill, *params.flow);
-                coll_nosort->append(gap_fill.entities);
+                //set role if needed
+                if (good_role != erSolidInfill) {
+                    ExtrusionSetRole set_good_role(good_role);
+                    gap_fill.visit(set_good_role);
+                }
+                //move them into the collection
+                coll_nosort->append(std::move(gap_fill.entities));
             }
         }
 
