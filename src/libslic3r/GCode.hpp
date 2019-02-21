@@ -353,6 +353,7 @@ protected:
     // Write a string into a file.
     void _write(FILE* file, const std::string& what) { this->_write(file, what.c_str()); }
     void _write(FILE* file, const char *what);
+    
 
     // Write a string into a file. 
     // Add a newline, if the string does not end with a newline already.
@@ -361,6 +362,9 @@ protected:
 
     // Formats and write into a file the given data. 
     void _write_format(FILE* file, const char* format, ...);
+
+    //some post-processing on the file, before the analyzer
+    void _post_process(std::string& what);
 
     std::string _extrude(const ExtrusionPath &path, const std::string &description, double speed = -1);
     std::string _before_extrude(const ExtrusionPath &path, const std::string &description, double speed = -1);

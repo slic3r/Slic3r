@@ -1338,18 +1338,30 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("remaining_times", coBool);
     def->label = L("Supports remaining times");
+    def->category = L("Firmware");
     def->tooltip = L("Emit M73 P[percent printed] R[remaining time in minutes] at 1 minute"
                      " intervals into the G-code to let the firmware show accurate remaining time."
                      " As of now only the Prusa i3 MK3 firmware recognizes M73."
                      " Also the i3 MK3 firmware supports M73 Qxx Sxx for the silent mode.");
+    def->cli = "remaining-times!";
     def->mode = comExpert;
     def->default_value = new ConfigOptionBool(false);
 
 	def = this->add("silent_mode", coBool);
-	def->label = L("Supports silent mode");
+    def->label = L("Supports silent mode");
+    def->category = L("Firmware");
 	def->tooltip = L("Set silent mode for the G-code flavor");
     def->mode = comExpert;
-	def->default_value = new ConfigOptionBool(true);
+    def->default_value = new ConfigOptionBool(true);
+
+    def = this->add("fan_speedup_time", coFloat);
+    def->label = L("fan startup delay");
+    def->category = L("Firmware");
+    def->tooltip = L("Move the M106 in the past by at least this delay and add the 'D' option to it to tell to the firware when the fan have to be at this speed."
+        " It assume infinite acceleration for this time estimation, and only takes into account G1 and G0 moves. Use 0 to deactivate, negative to remove the 'D' option.");
+    def->cli = "fan-speedup-time=f";
+    def->mode = comExpert;
+    def->default_value = new ConfigOptionFloat(0);
 
 	const int machine_limits_opt_width = 70;
 	{

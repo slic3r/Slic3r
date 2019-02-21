@@ -861,7 +861,7 @@ namespace SupportMaterialInternal {
         for (const ExtrusionEntity *ee : perimeters.entities) {
             if (ee->is_collection()) {
                 for (const ExtrusionEntity *ee2 : static_cast<const ExtrusionEntityCollection*>(ee)->entities) {
-                    assert(! ee2->is_collection());
+                    //assert(! ee2->is_collection()); // there are loops for perimeters and collections for thin walls !!
                     if (ee2->is_loop())
                         collect_bridging_perimeter_areas(*static_cast<const ExtrusionLoop*>(ee2), expansion_scaled, out);
                 }

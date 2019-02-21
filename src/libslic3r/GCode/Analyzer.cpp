@@ -863,5 +863,110 @@ size_t GCodeAnalyzer::memory_used() const
     out += m_process_output.size();
     return out;
 }
+const std::string& FanMover::process_gcode(const std::string& gcode) {
+    m_process_output = "";
+    buffer.clear();
+    buffer_time_size = 0;
+    current_speed = 1000 / 60.0;
+    expected_fan_speed = 0;
+    current_fan_speed = 0;
+
+    m_parser.parse_buffer(gcode,
+        [this](GCodeReader& reader, const GCodeReader::GCodeLine& line) { /*m_process_output += line.raw() + "\n";*/ this->_process_gcode_line(reader, line); });
+
+    while (!buffer.empty()) {
+        m_process_output += buffer.back().raw + "\n";
+        buffer.pop_back();
+    }
+
+    return m_process_output;
+}
+
+void FanMover::_process_gcode_line(GCodeReader& reader, const GCodeReader::GCodeLine& line)
+{
+    // processes 'normal' gcode lines
+    std::string cmd = line.cmd();
+    double time = 0;
+    float fan_speed = -1;
+    if (cmd.length() > 1) {
+        if (line.has_f())
+            current_speed = line.f() / 60.0f;
+        switch (::toupper(cmd[0])) {
+        case 'G':
+        {
+            if (::atoi(&cmd[1]) == 1 || ::atoi(&cmd[1]) == 0) {
+                double dist = line.dist_X(reader)*line.dist_X(reader) + line.dist_Y(reader)*line.dist_Y(reader) + line.dist_Z(reader)*line.dist_Z(reader);
+                if (dist > 0) {
+                    dist = std::sqrt(dist);
+                    time = dist / current_speed;
+                }
+            }
+            break;
+        }
+        case 'M':
+        {
+            if (::atoi(&cmd[1]) == 106) {
+                if (line.has_value('S', fan_speed) ) {
+                    int nb_M106_erased = 0;
+                    if (fan_speed > expected_fan_speed) {
+                        time = -1; // don't write!
+                        //erase M106 in the buffer -> don't slowdown if you are in the process of step-up.
+                        auto it = buffer.begin();
+                        int i = 0;
+                        while (it != buffer.end()) {
+                            if (it->raw.compare(0, 4, "M106") == 0 && it->speed < fan_speed) {
+                                //found somethign that is lower than us -> change is speed by ours and delete us
+                                it->speed = fan_speed;
+                                std::stringstream ss; ss << "S" << (int)fan_speed;
+                                it->raw = std::regex_replace(it->raw, regex_fan_speed, ss.str());
+                                nb_M106_erased++;
+                            } else {
+                                ++it;
+                                i++;
+                            }
+                        }
+
+                        if (nb_M106_erased == 0) {
+                            //print it
+                            if (with_D_option) {
+                                std::stringstream ss;
+                                ss << " D" << (uint32_t)(buffer_time_size * 1000) << "\n";
+                                m_process_output += line.raw() + ss.str();
+                            } else {
+                                m_process_output += line.raw() + "\n";
+                            }
+                            current_fan_speed = fan_speed;
+                        }
+                    }
+
+                    //update
+                    expected_fan_speed = fan_speed;
+                }
+            }
+            break;
+        }
+        }
+    }
+
+    if (time >= 0) {
+        buffer.emplace_front(BufferData(line.raw(), time, fan_speed));
+        buffer_time_size += time;
+    }
+    // puts the line back into the gcode
+    //if buffer too big, flush it.
+    if (time > 0) {
+        while (buffer_time_size - buffer.back().time > nb_seconds_delay) {
+            BufferData &backdata = buffer.back();
+            if (backdata.speed < 0 || (int)backdata.speed != (int)current_fan_speed) {
+                buffer_time_size -= backdata.time;
+                m_process_output += backdata.raw + "\n";
+                if (backdata.speed >= 0) {
+                    current_fan_speed = backdata.speed;
+                }
+            }
+            buffer.pop_back();
+        }
+    }
+}
 
 } // namespace Slic3r

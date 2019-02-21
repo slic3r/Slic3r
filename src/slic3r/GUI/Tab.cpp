@@ -1939,7 +1939,8 @@ void TabPrinter::build_fff()
 		optgroup = page->new_optgroup(_(L("Firmware")));
 		optgroup->append_single_option_line("gcode_flavor");
 		optgroup->append_single_option_line("silent_mode");
-		optgroup->append_single_option_line("remaining_times");
+        optgroup->append_single_option_line("remaining_times");
+        optgroup->append_single_option_line("fan_speedup_time");
 
 		optgroup->m_on_change = [this, optgroup](t_config_option_key opt_key, boost::any value) {
 			wxTheApp->CallAfter([this, opt_key, value]() {

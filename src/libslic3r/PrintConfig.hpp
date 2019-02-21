@@ -716,6 +716,7 @@ public:
     ConfigOptionStrings             end_filament_gcode;
     ConfigOptionString              extrusion_axis;
     ConfigOptionFloats              extrusion_multiplier;
+    ConfigOptionFloat               fan_speedup_time;
     ConfigOptionFloats              filament_diameter;
     ConfigOptionFloats              filament_density;
     ConfigOptionStrings             filament_type;
@@ -795,6 +796,7 @@ protected:
         OPT_PTR(end_filament_gcode);
         OPT_PTR(extrusion_axis);
         OPT_PTR(extrusion_multiplier);
+        OPT_PTR(fan_speedup_time);
         OPT_PTR(filament_diameter);
         OPT_PTR(filament_density);
         OPT_PTR(filament_type);

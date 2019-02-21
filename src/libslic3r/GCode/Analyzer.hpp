@@ -7,6 +7,7 @@
 
 #include "../Point.hpp"
 #include "../GCodeReader.hpp"
+#include <regex>
 
 namespace Slic3r {
 
@@ -237,6 +238,42 @@ private:
     void _calc_gcode_preview_travel(GCodePreviewData& preview_data);
     void _calc_gcode_preview_retractions(GCodePreviewData& preview_data);
     void _calc_gcode_preview_unretractions(GCodePreviewData& preview_data);
+};
+
+class BufferData {
+public:
+    std::string raw;
+    float time;
+    float speed;
+    BufferData(std::string line, float time = 0, float speed = 0) : raw(line), time(time), speed(speed) {}
+};
+class FanMover
+{
+private:
+    const std::regex regex_fan_speed;
+    const float nb_seconds_delay;
+    const bool with_D_option;
+
+    // in unit/second
+    double current_speed;
+    float buffer_time_size;
+    GCodeReader m_parser;
+    int expected_fan_speed;
+    int current_fan_speed;
+
+    // The output of process_layer()
+    std::list<BufferData> buffer;
+    std::string m_process_output;
+
+public:
+    FanMover(const float nb_seconds_delay, const bool with_D_option) : regex_fan_speed("S[0-9]+"), nb_seconds_delay(nb_seconds_delay), with_D_option(with_D_option){}
+
+    // Adds the gcode contained in the given string to the analysis and returns it after removing the workcodes
+    const std::string& process_gcode(const std::string& gcode);
+
+private:
+    // Processes the given gcode line
+    void _process_gcode_line(GCodeReader& reader, const GCodeReader::GCodeLine& line);
 };
 
 } // namespace Slic3r

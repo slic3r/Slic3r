@@ -2452,11 +2452,27 @@ std::string GCode::extrude_support(const ExtrusionEntityCollection &support_fill
     return gcode;
 }
 
+
+void GCode::_post_process(std::string& what) {
+    //if enabled, move the fan startup earlier.
+    if (this->config().fan_speedup_time.value != 0) {
+        FanMover fen_post_process(std::abs(this->config().fan_speedup_time.value), this->config().fan_speedup_time.value>0);
+        what = fen_post_process.process_gcode(what);
+    }
+}
+
 void GCode::_write(FILE* file, const char *what)
 {
     if (what != nullptr) {
+        
+        //const char * gcode_pp = _post_process(what).c_str();
+        std::string str_preproc = what;
+        _post_process(str_preproc);
+
+        const std::string str_ana = m_analyzer.process_gcode(str_preproc);
+
         // apply analyzer, if enabled
-        const char* gcode = m_enable_analyzer ? m_analyzer.process_gcode(what).c_str() : what;
+        const char * gcode = m_enable_analyzer ? str_ana.c_str() : str_preproc.c_str();
 
         // writes string to file
         fwrite(gcode, 1, ::strlen(gcode), file);
