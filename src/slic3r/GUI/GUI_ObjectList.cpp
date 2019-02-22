@@ -645,7 +645,7 @@ void ObjectList::get_options_menu(settings_menu_hierarchy& settings_menu, const 
 
         const std::string& label = opt->label.empty() ? opt->full_label : 
                                    opt->full_label.empty() ? opt->label :
-                                   opt->full_label + " " + opt->label;;
+                                   opt->full_label;
         std::pair<std::string, std::string> option_label(option, label);
         std::vector< std::pair<std::string, std::string> > new_category;
         auto& cat_opt_label = settings_menu.find(category) == settings_menu.end() ? new_category : settings_menu.at(category);

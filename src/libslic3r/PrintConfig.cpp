@@ -89,10 +89,10 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("bed_temperature", coInts);
     def->label = L("Other layers");
+    def->full_label = L("Bed temperature");
     def->tooltip = L("Bed temperature for layers after the first one. "
                    "Set this to zero to disable bed temperature control commands in the output.");
     def->cli = "bed-temperature=i@";
-    def->full_label = L("Bed temperature");
     def->min = 0;
     def->max = 300;
     def->default_value = new ConfigOptionInts { 0 };
@@ -121,15 +121,16 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("bottom_solid_layers", coInt);
     def->label = L("Bottom");
+    def->full_label = L("Bottom solid layers");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Number of solid layers to generate on bottom surfaces.");
     def->cli = "bottom-solid-layers=i";
-    def->full_label = L("Bottom solid layers");
     def->min = 0;
     def->default_value = new ConfigOptionInt(3);
 
     def = this->add("bridge_acceleration", coFloat);
     def->label = L("Bridge");
+    def->full_label = L("Bridge acceleration");
     def->tooltip = L("This is the acceleration your printer will use for bridges. "
                    "Set zero to disable acceleration control for bridges.");
     def->sidetext = L("mm/s²");
@@ -140,6 +141,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("bridge_angle", coFloat);
     def->label = L("Bridging");
+    def->full_label = L("Bridge angle");
     def->category = L("Infill");
     def->tooltip = L("Bridging angle override. If left to zero, the bridging angle will be calculated "
                    "automatically. Otherwise the provided angle will be used for all bridges. "
@@ -172,6 +174,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("bridge_flow_ratio", coFloat);
     def->label = L("Bridge");
+    def->full_label = L("Bridge flow ratio");
     def->category = L("Advanced");
     def->tooltip = L("This factor affects the amount of plastic for bridging. "
                    "You can decrease it slightly to pull the extrudates and prevent sagging, "
@@ -185,6 +188,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("over_bridge_flow_ratio", coFloat);
     def->label = L("Above the bridges");
+    def->full_label = L("Above bridge flow ratio");
     def->category = L("Advanced");
     def->tooltip = L("Flow ratio to compensate for the gaps in a bridged top surface. Used for ironing infill"
         "pattern to prevent regions where the low-flow pass does not provide a smooth surface due to a lack of plastic."
@@ -196,6 +200,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("bridge_speed", coFloat);
     def->label = L("Bridges");
+    def->full_label = L("Bridge speed");
     def->category = L("Speed");
     def->tooltip = L("Speed for printing bridges.");
     def->sidetext = L("mm/s");
@@ -215,6 +220,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("brim_ears", coBool);
     def->label = L(" ");
+    def->full_label = L("Brim ears");
     def->tooltip = L("Only draw brim over the sharp edges of the model.");
     def->cli = "brim-ears!";
     def->default_value = new ConfigOptionBool(false);
@@ -313,6 +319,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("default_acceleration", coFloat);
     def->label = L("Default");
+    def->full_label = L("Default acceleration");
     def->tooltip = L("This is the acceleration your printer will be reset to after "
                    "the role-specific acceleration values are used (perimeter/infill). "
                    "Set zero to prevent resetting acceleration at all.");
@@ -365,6 +372,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("elefant_foot_compensation", coFloat);
     def->label = L("First layer");
+    def->full_label = L("First layer compensation");
     def->category = L("Advanced");
     def->tooltip = L("The first layer will be grown / shrunk in the XY plane by the configured value "
                    "to compensate for the 1st layer squish aka an Elephant Foot effect. (should be negative = inwards)");
@@ -386,6 +394,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("end_filament_gcode", coStrings);
     def->label = L("End G-code");
+    def->full_label = L("Filament end G-code");
     def->tooltip = L("This end procedure is inserted at the end of the output file, before the printer end gcode. "
                    "Note that you can use placeholder variables for all Slic3r settings. "
                    "If you have multiple extruders, the gcode is processed in extruder order.");
@@ -455,7 +464,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("solid_fill_pattern", coEnum);
-    def->label = L("Fill solid");
+    def->label = L("Solid pattern");
     def->category = L("Infill");
     def->tooltip = L("Fill pattern for solid (internal) infill. This only affects the solid not-visible layers. You should use rectilinear is most cases. You can use ironing for transluscnet material.");
     def->cli = "solid-fill-pattern=s";
@@ -490,6 +499,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("external_infill_margin", coFloat);
     def->label = L("Default");
+    def->full_label = L("Default infill margin");
     def->category = L("Infill");
     def->tooltip = L("This parameter grows the top/bottom/solid layers by the specified MM to anchor them into the part. Put 0 to deactivate it.");
     def->sidetext = L("mm");
@@ -500,6 +510,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("bridged_infill_margin", coFloat);
     def->label = L("Bridged");
+    def->full_label = L("Bridge margin");
     def->category = L("Infill");
     def->tooltip = L("This parameter grows the bridged solid infill layers by the specified MM to anchor them into the part. Put 0 to deactivate it.");
     def->sidetext = L("mm");
@@ -510,6 +521,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("external_perimeter_extrusion_width", coFloatOrPercent);
     def->label = L("External perimeters");
+    def->full_label = L("External perimeters width");
     def->category = L("Extrusion Width");
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for external perimeters. "
                    "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
@@ -521,6 +533,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("external_perimeter_speed", coFloatOrPercent);
     def->label = L("External");
+    def->full_label = L("External perimeters speed");
     def->category = L("Speed");
     def->tooltip = L("This separate setting will affect the speed of external perimeters (the visible ones). "
                    "If expressed as percentage (for example: 80%) it will be calculated "
@@ -543,6 +556,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("perimeter_loop", coBool);
     def->label = L(" ");
+    def->full_label = L("Perimeters loop");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Join the perimeters to create only one continuous extrusion without any z-hop."
         " Long inside travel (from external to holes) are not extruded to give some space to the infill.");
@@ -552,6 +566,7 @@ void PrintConfigDef::init_fff_params()
     
     def = this->add("perimeter_loop_seam", coEnum);
     def->label = L("Seam position");
+    def->full_label = L("Perimeter loop");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Position of perimeters starting points.");
     def->cli = "perimeter-seam-position=s";
@@ -595,9 +610,14 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back("3");
     def->enum_labels.push_back("4");
     def->enum_labels.push_back("5");
+    def->enum_labels.push_back("6");
+    def->enum_labels.push_back("7");
+    def->enum_labels.push_back("8");
+    def->enum_labels.push_back("9");
 
     def = this->add("extruder_clearance_height", coFloat);
     def->label = L("Height");
+    def->full_label = L("Extruder clearance height");
     def->tooltip = L("Set this to the vertical distance between your nozzle tip and (usually) the X carriage rods. "
                    "In other words, this is the height of the clearance cylinder around your extruder, "
                    "and it represents the maximum depth the extruder can peek before colliding with "
@@ -610,6 +630,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("extruder_clearance_radius", coFloat);
     def->label = L("Radius");
+    def->full_label = L("Extruder clearance radius");
     def->tooltip = L("Set this to the clearance radius around your extruder. "
                    "If the extruder is not centered, choose the largest value for safety. "
                    "This setting is used to check for collisions and to display the graphical preview "
@@ -689,6 +710,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("filament_colour", coStrings);
     def->label = L("Color");
+    def->full_label = L("Filament color");
     def->tooltip = L("This is only used in the Slic3r interface as a visual help.");
     def->cli = "filament-color=s@";
     def->gui_type = "color";
@@ -906,6 +928,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("fill_angle", coFloat);
     def->label = L("Fill");
+    def->full_label = L("Fill angle");
     def->category = L("Infill");
     def->tooltip = L("Default base angle for infill orientation. Cross-hatching will be applied to this. "
                    "Bridges will be infilled using the best direction Slic3r can detect, so this setting "
@@ -987,6 +1010,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("fill_pattern", coEnum);
     def->label = L("Pattern");
+    def->full_label = L("Fill pattern");
     def->category = L("Infill");
     def->tooltip = L("Fill pattern for general low-density infill.");
     def->cli = "fill-pattern=s";
@@ -1023,6 +1047,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("first_layer_acceleration", coFloat);
     def->label = L("First layer");
+    def->full_label = L("First layer acceleration");
     def->tooltip = L("This is the acceleration your printer will use for first layer. Set zero "
                    "to disable acceleration control for first layer.");
     def->sidetext = L("mm/s²");
@@ -1033,6 +1058,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("first_layer_bed_temperature", coInts);
     def->label = L("First layer");
+    def->full_label = L("First layer bed temperature");
     def->tooltip = L("Heated build plate temperature for the first layer. Set this to zero to disable "
                    "bed temperature control commands in the output.");
     def->cli = "first-layer-bed-temperature=i@";
@@ -1042,6 +1068,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("first_layer_extrusion_width", coFloatOrPercent);
     def->label = L("First layer");
+    def->full_label = L("First layer width");
     def->category = L("Extrusion Width");
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for first layer. "
                    "You can use this to force fatter extrudates for better adhesion. If expressed "
@@ -1068,6 +1095,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("first_layer_speed", coFloatOrPercent);
     def->label = L("Default");
+    def->full_label = L("Default first layer speed");
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to all the print moves "
                    "but infill of the first layer, it can be overwrite by the 'default' (default depends of the type of the path) "
                    "speed if it's lower than that. If expressed as a percentage "
@@ -1079,7 +1107,8 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionFloatOrPercent(30, false);
     
     def = this->add("first_layer_infill_speed", coFloatOrPercent);
-    def->label = L("infill");
+    def->label = L("Infill");
+    def->full_label = L("Infill first layer speed");
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to infill moves "
                    "of the first layer, it can be overwrite by the 'default' (solid infill or infill if not bottom) "
                    "speed if it's lower than that. If expressed as a percentage "
@@ -1092,6 +1121,7 @@ void PrintConfigDef::init_fff_params()
     
     def = this->add("first_layer_temperature", coInts);
     def->label = L("First layer");
+    def->full_label = L("First layer temperature");
     def->tooltip = L("Extruder temperature for first layer. If you want to control temperature manually "
                    "during print, set this to zero to disable temperature control commands in the output file.");
     def->cli = "first-layer-temperature=i@";
@@ -1110,6 +1140,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("gap_fill_speed", coFloat);
     def->label = L("Gap fill");
+    def->full_label = L("Gap fill speed");
     def->category = L("Speed");
     def->tooltip = L("Speed for filling small gaps using short zigzag moves. Keep this reasonably low "
         "to avoid too much shaking and resonance issues. Set zero to disable gaps filling.");
@@ -1179,6 +1210,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("infill_acceleration", coFloat);
     def->label = L("Infill");
+    def->full_label = L("Infill acceleration");
     def->tooltip = L("This is the acceleration your printer will use for infill. Set zero to disable "
                    "acceleration control for infill.");
     def->sidetext = L("mm/s²");
@@ -1201,6 +1233,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("infill_dense", coBool);
     def->label = ("");
+    def->full_label = ("Dense infill layer");
     def->category = L("Infill");
     def->tooltip = L("Enables the creation of a support layer under the first solid layer. This allows you to use a lower infill ratio without compromising the top quality."
         " The dense infill is laid out with a 50% infill density.");
@@ -1218,6 +1251,7 @@ void PrintConfigDef::init_fff_params()
     
     def = this->add("infill_dense_algo", coEnum);
     def->label = L("Algorithm");
+    def->full_label = ("Dense infill algorithm");
     def->tooltip = L("Choose the way the dense layer is lay out."
         " The automatic option let it try to draw the smallest surface with only strait lines inside the sparse infill."
         " The anchored just enlarge a bit (by bridged anchor) the surfaces that need a better support.");
@@ -1285,6 +1319,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("infill_speed", coFloat);
     def->label = L("Sparse");
+    def->full_label = ("Sparse infill speed");
     def->category = L("Speed");
     def->tooltip = L("Speed for printing the internal fill. Set to zero for auto.");
     def->sidetext = L("mm/s");
@@ -1459,6 +1494,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("max_fan_speed", coInts);
     def->label = L("Max");
+    def->full_label = ("Max fan speed");
     def->tooltip = L("This setting represents the maximum speed of your fan.");
     def->sidetext = L("%");
     def->cli = "max-fan-speed=i@";
@@ -1469,6 +1505,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("max_layer_height", coFloats);
     def->label = L("Max");
+    def->full_label = ("Max layer height");
     def->tooltip = L("This is the highest printable layer height for this extruder, used to cap "
                    "the variable layer height and support layer height. Maximum recommended layer height "
                    "is 75% of the extrusion width to achieve reasonable inter-layer adhesion. "
@@ -1528,6 +1565,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("min_fan_speed", coInts);
     def->label = L("Min");
+    def->full_label = ("Min fan speed");
     def->tooltip = L("This setting represents the minimum PWM your fan needs to work.");
     def->sidetext = L("%");
     def->cli = "min-fan-speed=i@";
@@ -1538,6 +1576,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("min_layer_height", coFloats);
     def->label = L("Min");
+    def->full_label = ("Min layer height");
     def->tooltip = L("This is the lowest printable layer height for this extruder and limits "
                    "the resolution for variable layer height. Typical values are between 0.05 mm and 0.1 mm.");
     def->sidetext = L("mm");
@@ -1606,7 +1645,7 @@ void PrintConfigDef::init_fff_params()
     def->default_value = new ConfigOptionString("");
     
     def = this->add("printhost_cafile", coString);
-    def->label = "HTTPS CA File";
+    def->label = L("HTTPS CA File");
     def->tooltip = "Custom CA certificate file can be specified for HTTPS OctoPrint connections, in crt/pem format. "
                    "If left blank, the default OS CA certificate repository is used.";
     def->cli = "printhost-cafile=s";
@@ -1660,6 +1699,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("no_perimeter_unsupported", coBool);
     def->label = L("");
+    def->full_label = ("No perimeters on bridge areas");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Experimental option to remove perimeters where there is nothing under it and where a bridged infill should be better. Computationally intensive!");
     def->cli = "no-perimeter-unsupported!";
@@ -1705,6 +1745,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("perimeter_acceleration", coFloat);
     def->label = L("Perimeters");
+    def->full_label = ("Perimeter acceleration");
     def->tooltip = L("This is the acceleration your printer will use for perimeters. "
                    "A high value like 9000 usually gives good results if your hardware is up to the job. "
                    "Set zero to disable acceleration control for perimeters.");
@@ -1725,6 +1766,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("perimeter_extrusion_width", coFloatOrPercent);
     def->label = L("Perimeters");
+    def->full_label = ("Perimeter width");
     def->category = L("Extrusion Width");
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for perimeters. "
                    "You may want to use thinner extrudates to get more accurate surfaces. "
@@ -1738,6 +1780,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("perimeter_speed", coFloat);
     def->label = L("Default");
+    def->full_label = ("Default speed");
     def->category = L("Speed");
     def->tooltip = L("Speed for perimeters (contours, aka vertical shells). Set to zero for auto.");
     def->sidetext = L("mm/s");
@@ -1749,6 +1792,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("perimeters", coInt);
     def->label = L("Perimeters");
+    def->full_label = ("Perimeters count");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("This option sets the number of perimeters to generate for each layer. "
                    "Note that Slic3r may increase this number automatically when it detects "
@@ -1863,6 +1907,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("retract_length", coFloats);
     def->label = L("Length");
+    def->full_label = ("Retract length");
     def->full_label = L("Retraction Length");
     def->tooltip = L("When retraction is triggered, filament is pulled back by the specified amount "
                    "(the length is measured on raw filament, before it enters the extruder).");
@@ -1872,6 +1917,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("retract_length_toolchange", coFloats);
     def->label = L("Length");
+    def->full_label = ("Toolchange retract length");
     def->full_label = L("Retraction Length (Toolchange)");
     def->tooltip = L("When retraction is triggered before changing tool, filament is pulled back "
                    "by the specified amount (the length is measured on raw filament, before it enters "
@@ -1892,6 +1938,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("retract_lift_above", coFloats);
     def->label = L("Above Z");
+    def->full_label = ("Retract above Z");
     def->full_label = L("Only lift Z above");
     def->tooltip = L("If you set this to a positive value, Z lift will only take place above the specified "
                    "absolute Z. You can tune this setting for skipping lift on the first layers.");
@@ -1902,6 +1949,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("retract_lift_below", coFloats);
     def->label = L("Below Z");
+    def->full_label = ("Retract below Z");
     def->full_label = L("Only lift Z below");
     def->tooltip = L("If you set this to a positive value, Z lift will only take place below "
                    "the specified absolute Z. You can tune this setting for limiting lift "
@@ -1913,6 +1961,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("retract_lift_not_last_layer", coBools);
     def->label = L("Not on top");
+    def->full_label = ("Don't retract on top surfaces");
     def->category = L("Support material");
     def->tooltip = L("Select this option to not use the z-lift on a top surface.");
     def->mode = comAdvanced;
@@ -1929,6 +1978,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("retract_restart_extra_toolchange", coFloats);
     def->label = L("Extra length on restart");
+    def->full_label = ("Extrat length on toolchange restart");
     def->tooltip = L("When the retraction is compensated after changing tool, the extruder will push "
                    "this additional amount of filament.");
     def->sidetext = L("mm");
@@ -2071,6 +2121,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("small_perimeter_speed", coFloatOrPercent);
     def->label = L("Small");
+    def->full_label = ("Small perimeters speed");
     def->category = L("Speed");
     def->tooltip = L("This separate setting will affect the speed of perimeters having radius <= 6.5mm "
                    "(usually holes). If expressed as percentage (for example: 80%) it will be calculated "
@@ -2116,6 +2167,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("solid_infill_extrusion_width", coFloatOrPercent);
     def->label = L("Solid infill");
+    def->full_label = ("Solid infill width");
     def->category = L("Extrusion Width");
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for infill for solid surfaces. "
                    "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
@@ -2127,6 +2179,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("solid_infill_speed", coFloatOrPercent);
     def->label = L("Solid");
+    def->full_label = ("Solid infill speed");
     def->category = L("Speed");
     def->tooltip = L("Speed for printing solid regions (top/bottom/internal horizontal shells). "
                    "This can be expressed as a percentage (for example: 80%) over the default "
@@ -2186,6 +2239,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("start_filament_gcode", coStrings);
     def->label = L("Start G-code");
+    def->full_label = ("Filament start G-code");
     def->tooltip = L("This start procedure is inserted at the beginning, after any printer start gcode. "
                    "This is used to override settings for a specific filament. If Slic3r detects "
                    "M104, M109, M140 or M190 in your custom codes, such commands will "
@@ -2246,6 +2300,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("support_material_angle", coFloat);
     def->label = L("Pattern angle");
+    def->full_label = ("Support pattern angle");
     def->category = L("Support material");
     def->tooltip = L("Use this setting to rotate the support material pattern on the horizontal plane.");
     def->sidetext = L("°");
@@ -2265,6 +2320,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("support_material_contact_distance_type", coEnum);
     def->label = L("Type");
+    def->full_label = ("Support contact distance type");
     def->category = L("Support material");
     def->tooltip = L("How to compute the vertical z-distance.\n"
         "From filament: it use the nearest bit of the filament. When a bridge is extruded, it goes below the current plane.\n"
@@ -2283,6 +2339,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("support_material_contact_distance_top", coFloatOrPercent);
     def->label = L("Top");
+    def->full_label = ("Contact distance on top of supports");
     def->category = L("Support material");
     def->tooltip = L("The vertical distance between support material interface and the object"
         "(when the object is printed on top of the support). "
@@ -2296,6 +2353,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("support_material_contact_distance_bottom", coFloatOrPercent);
     def->label = L("Bottom");
+    def->full_label = ("Contact distance under the bottom of supports");
     def->category = L("Support material");
     def->tooltip = L("The vertical distance between object and support material interface"
         "(when the support is printed on top of the object). Can be a % of the extruder size used for the interface layers.");
@@ -2330,6 +2388,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("support_material_extrusion_width", coFloatOrPercent);
     def->label = L("Support material");
+    def->full_label = L("Support material width");
     def->category = L("Extrusion Width");
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for support material. "
                    "If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. "
@@ -2379,6 +2438,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("support_material_interface_speed", coFloatOrPercent);
     def->label = L("Interface");
+    def->full_label = L("Support interface speed");
     def->category = L("Support material");
     def->tooltip = L("Speed for printing support material interface layers. If expressed as percentage "
                    "(for example 50%) it will be calculated over support material speed.");
@@ -2391,6 +2451,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("support_material_pattern", coEnum);
     def->label = L("Pattern");
+    def->full_label = L("Support pattern");
     def->category = L("Support material");
     def->tooltip = L("Pattern used to generate support material.");
     def->cli = "support-material-pattern=s";
@@ -2406,6 +2467,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("support_material_interface_pattern", coEnum);
     def->label = L("Pattern");
+    def->full_label = L("Support interface pattern");
     def->category = L("Support material");
     def->tooltip = L("Pattern for interface layer.");
     def->cli = "support-material-interface-pattern=s";
@@ -2437,6 +2499,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("support_material_speed", coFloat);
     def->label = L("Default");
+    def->full_label = L("Support speed");
     def->category = L("Support material");
     def->tooltip = L("Speed for printing support material.");
     def->sidetext = L("mm/s");
@@ -2480,6 +2543,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("temperature", coInts);
     def->label = L("Other layers");
+    def->full_label = L("Temperature");
     def->tooltip = L("Extruder temperature for layers after the first one. Set this to zero to disable "
                    "temperature control commands in the output.");
     def->cli = "temperature=i@";
@@ -2490,6 +2554,7 @@ void PrintConfigDef::init_fff_params()
     
     def = this->add("thin_walls", coBool);
     def->label = L("");
+    def->full_label = L("Thin walls");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Detect single-width walls (parts where two extrusions don't fit and we need "
                    "to collapse them into a single trace). If unchecked, slic3r may try to fit perimeters "
@@ -2500,6 +2565,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("thin_walls_min_width", coFloatOrPercent);
     def->label = L("min width");
+    def->full_label = L("Thin walls min width");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Minimum width for the extrusion to be extruded (widths lower than the nozzle diameter will be over-extruded at the nozzle diameter)."
         " If expressed as percentage (for example 110%) it will be computed over nozzle diameter."
@@ -2511,6 +2577,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("thin_walls_overlap", coFloatOrPercent);
     def->label = L("overlap");
+    def->full_label = L("Thin wall overlap");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Overlap between the thin wall and the perimeters. Can be a % of the external perimeter width (default 50%)");
     def->cli = "thin-walls-overlap=s";
@@ -2556,6 +2623,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("top_solid_infill_speed", coFloatOrPercent);
     def->label = L("Top solid");
+    def->full_label = L("Top solid speed");
     def->category = L("Speed");
     def->tooltip = L("Speed for printing top solid layers (it only applies to the uppermost "
                    "external layers and not to their internal solid layers). You may want "
@@ -2571,6 +2639,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("top_solid_layers", coInt);
     def->label = L("Top");
+    def->full_label = L("Top layers");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Number of solid layers to generate on top surfaces.");
     def->cli = "top-solid-layers=i";
@@ -2580,6 +2649,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("travel_speed", coFloat);
     def->label = L("Travel");
+    def->full_label = L("Travel speed");
     def->tooltip = L("Speed for travel moves (jumps between distant extrusion points).");
     def->sidetext = L("mm/s");
     def->cli = "travel-speed=f";
@@ -2634,6 +2704,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("wipe_tower", coBool);
     def->label = L("Enable");
+    def->full_label = L("Enable wipe tower");
     def->tooltip = L("Multi material printers may need to prime or purge extruders on tool changes. "
                    "Extrude the excess material into the wipe tower.");
     def->cli = "wipe-tower!";
@@ -2686,6 +2757,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("wipe_advanced_multiplier", coFloat);
     def->label = L("Multiplier");
+    def->full_label = L("Auto-wipe multiplier");
     def->tooltip = L("The volume multiplier used to compute the final volume to extrude by the algorithm.");
     def->sidetext = L("mm3");
     def->cli = "wipe-advanced-mult=f";
@@ -2695,6 +2767,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("wipe_advanced_algo", coEnum);
     def->label = L("Algorithm");
+    def->full_label = L("Auto-wipe algorithm");
     def->tooltip = L("Algo for the advanced wipe.\n"
         "Linear : volume = nozzle + volume_mult * (pigmentBefore-pigmentAfter)\n"
         "Quadratic: volume = nozzle + volume_mult * (pigmentBefore-pigmentAfter)+ volume_mult * (pigmentBefore-pigmentAfter)^3\n"
@@ -2712,6 +2785,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("wipe_tower_x", coFloat);
     def->label = L("X");
+    def->full_label = L("Wipe tower X");
     def->tooltip = L("X coordinate of the left front corner of a wipe tower");
     def->sidetext = L("mm");
     def->cli = "wipe-tower-x=f";
@@ -2720,6 +2794,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("wipe_tower_y", coFloat);
     def->label = L("Y");
+    def->full_label = L("Wipe tower Y");
     def->tooltip = L("Y coordinate of the left front corner of a wipe tower");
     def->sidetext = L("mm");
     def->cli = "wipe-tower-y=f";
@@ -2728,6 +2803,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("wipe_tower_width", coFloat);
     def->label = L("Width");
+    def->full_label = L("Wipe tower Width");
     def->tooltip = L("Width of a wipe tower");
     def->sidetext = L("mm");
     def->cli = "wipe-tower-width=f";
@@ -2770,6 +2846,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("xy_size_compensation", coFloat);
     def->label = L("All layers");
+    def->full_label = L("XY size compensation");
     def->category = L("Advanced");
     def->tooltip = L("The object will be grown/shrunk in the XY plane by the configured value "
                    "(negative = inwards, positive = outwards). This might be useful "
@@ -2781,6 +2858,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("hole_size_compensation", coFloat);
     def->label = L("Holes");
+    def->full_label = L("XY holes compensation");
     def->category = L("Advanced");
     def->tooltip = L("The convex holes will be grown / shrunk in the XY plane by the configured value"
                    " (negative = inwards, positive = outwards, should be negative as the holes are always a bit smaller irl)."

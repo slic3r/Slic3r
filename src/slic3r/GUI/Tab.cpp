@@ -498,8 +498,10 @@ void TabSLAMaterial::init_options_list()
 void Tab::get_sys_and_mod_flags(const std::string& opt_key, bool& sys_page, bool& modified_page)
 {
     auto opt = m_options_list.find(opt_key);
-	if (sys_page) sys_page = (opt->second & osSystemValue) != 0;
-	modified_page |= (opt->second & osInitValue) == 0;
+    if (opt != m_options_list.end()){
+        if (sys_page) sys_page = (opt->second & osSystemValue) != 0;
+        modified_page |= (opt->second & osInitValue) == 0;
+    }
 }
 
 void Tab::update_changed_tree_ui()
