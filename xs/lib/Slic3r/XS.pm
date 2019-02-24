@@ -263,6 +263,7 @@ for my $class (qw(
         Slic3r::Surface
         Slic3r::Surface::Collection
         Slic3r::TriangleMesh
+        Slic3r::TransformationMatrix
     ))
 {
     no strict 'refs';
