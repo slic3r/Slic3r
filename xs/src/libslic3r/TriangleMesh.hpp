@@ -10,6 +10,7 @@
 #include "Point.hpp"
 #include "Polygon.hpp"
 #include "ExPolygon.hpp"
+#include "TransformationMatrix.hpp"
 
 namespace Slic3r {
 
@@ -61,6 +62,9 @@ class TriangleMesh
     float volume();
     bool is_manifold() const;
     void WriteOBJFile(const std::string &output_file) const;
+
+    void transform(const TransformationMatrix &trafo);
+
     void scale(float factor);
     void scale(const Pointf3 &versor);
 
