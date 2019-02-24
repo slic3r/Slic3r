@@ -37,6 +37,17 @@ public:
 
     /// Perform Translation
     void translate(double x, double y, double z);
+    void translateXY(Slic3r::Pointf position);
+
+    /// Set translation vector directly
+    void setTranslation(double x, double y, double z);
+
+    /// Set X and Y components of translation directly
+    void setXYtranslation(double x, double y);
+    void setXYtranslation(Slic3r::Pointf position);
+
+    /// Set Z component of translation directly
+    void setZtranslation(double z);
 
     /// Perform uniform scale
     void scale(double factor);
