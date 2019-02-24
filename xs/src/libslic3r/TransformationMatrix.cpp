@@ -1,10 +1,3 @@
-//#define Testumgebung
-//#include <iostream>
-//enum Axis { X = 0, Y, Z };
-//
-//void CONFESS(std::string content) {};
-//
-//
 #include "TransformationMatrix.hpp"
 #include <cmath>
 #include <math.h>
@@ -84,34 +77,31 @@ double TransformationMatrix::determinante() const
     return m11*(m22*m33 - m23*m32) - m12*(m21*m33 - m23*m31) + m13*(m21*m32 - m31*m22);
 }
 
-bool TransformationMatrix::inverse(TransformationMatrix* inverse) const
+bool TransformationMatrix::inverse(TransformationMatrix &inverse) const
 {
     // from http://mathworld.wolfram.com/MatrixInverse.html
     // and https://math.stackexchange.com/questions/152462/inverse-of-transformation-matrix
-    TransformationMatrix mat;
     double det = this->determinante();
     if (abs(det) < 1e-9)
     {
-        inverse = &mat;
         return false;
     }
     double fac = 1.0 / det;
 
-    mat.m11 = fac*(this->m22*this->m33 - this->m23*this->m32);
-    mat.m12 = fac*(this->m13*this->m32 - this->m12*this->m33);
-    mat.m13 = fac*(this->m12*this->m23 - this->m13*this->m22);
-    mat.m21 = fac*(this->m23*this->m31 - this->m21*this->m33);
-    mat.m22 = fac*(this->m11*this->m33 - this->m13*this->m31);
-    mat.m23 = fac*(this->m13*this->m21 - this->m11*this->m23);
-    mat.m31 = fac*(this->m21*this->m32 - this->m22*this->m31);
-    mat.m32 = fac*(this->m12*this->m31 - this->m11*this->m32);
-    mat.m33 = fac*(this->m11*this->m22 - this->m12*this->m21);
+    inverse.m11 = fac * (this->m22 * this->m33 - this->m23 * this->m32);
+    inverse.m12 = fac * (this->m13 * this->m32 - this->m12 * this->m33);
+    inverse.m13 = fac * (this->m12 * this->m23 - this->m13 * this->m22);
+    inverse.m21 = fac * (this->m23 * this->m31 - this->m21 * this->m33);
+    inverse.m22 = fac * (this->m11 * this->m33 - this->m13 * this->m31);
+    inverse.m23 = fac * (this->m13 * this->m21 - this->m11 * this->m23);
+    inverse.m31 = fac * (this->m21 * this->m32 - this->m22 * this->m31);
+    inverse.m32 = fac * (this->m12 * this->m31 - this->m11 * this->m32);
+    inverse.m33 = fac * (this->m11 * this->m22 - this->m12 * this->m21);
 
-    mat.m14 = -(mat.m11*this->m14 + mat.m12*this->m24 + mat.m13*this->m34);
-    mat.m24 = -(mat.m21*this->m14 + mat.m22*this->m24 + mat.m23*this->m34);
-    mat.m34 = -(mat.m31*this->m14 + mat.m32*this->m24 + mat.m33*this->m34);
+    inverse.m14 = -(inverse.m11 * this->m14 + inverse.m12 * this->m24 + inverse.m13 * this->m34);
+    inverse.m24 = -(inverse.m21 * this->m14 + inverse.m22 * this->m24 + inverse.m23 * this->m34);
+    inverse.m34 = -(inverse.m31 * this->m14 + inverse.m32 * this->m24 + inverse.m33 * this->m34);
 
-    inverse = &mat;
     return true;
 }
 
@@ -367,7 +357,7 @@ TransformationMatrix TransformationMatrix::mat_mirror(const Axis &axis)
 
 TransformationMatrix TransformationMatrix::mat_mirror(const Pointf3 &normal)
 {
-    // Kovács, E. Rotation about arbitrary axis and reflection through an arbitrary plane, Annales Mathematicae
+    // Kovï¿½cs, E. Rotation about arbitrary axis and reflection through an arbitrary plane, Annales Mathematicae
     // et Informaticae, Vol 40 (2012) pp 175-186
     // http://ami.ektf.hu/uploads/papers/finalpdf/AMI_40_from175to186.pdf
     double factor, c1, c2, c3;

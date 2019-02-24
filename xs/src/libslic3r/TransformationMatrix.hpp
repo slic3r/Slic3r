@@ -33,7 +33,7 @@ public:
     double determinante() const;
 
     /// Returns the inverse of the matrix
-    bool inverse(TransformationMatrix * inverse) const;
+    bool inverse(TransformationMatrix &inverse) const;
 
     /// Perform Translation
     void translate(double x, double y, double z);
