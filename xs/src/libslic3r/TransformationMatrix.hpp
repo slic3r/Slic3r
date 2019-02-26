@@ -27,7 +27,7 @@ public:
 
     /// Return the row-major form of the represented transformation matrix
     /// for admesh transform
-    float * matrix3x4f() const;
+    std::vector<float> matrix3x4f() const;
 
     /// Return the determinante of the matrix
     double determinante() const;
