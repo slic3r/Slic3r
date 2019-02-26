@@ -667,13 +667,13 @@ ExPolygons fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, c
     ExPolygon polygon_reduced = try_fit_to_size(polygon_to_cover, polygon_to_check, allowedPoints);
     while (!diff_ex(polygon_to_cover, polygon_reduced).empty()){
         //not enough, use a bigger offset
-        float percent_coverage = polygon_reduced.area() / growing_area.area();
+        float percent_coverage = (float)(polygon_reduced.area() / growing_area.area());
         float next_coverage = percent_coverage + (percent_coverage - current_coverage) * 4;
         previous_offset = current_offset;
         current_offset *= 2;
         if (next_coverage < 0.1) current_offset *= 2;
         //create the bigger polygon and test it
-        ExPolygons bigger_polygon = offset_ex(polygon_to_check, current_offset);
+        ExPolygons bigger_polygon = offset_ex(polygon_to_check, (float)current_offset);
         if (bigger_polygon.size() != 1) {
             // Error, growing a single polygon result in many/no other  => fallback to full coverage
             return ExPolygons({ growing_area });
@@ -691,7 +691,7 @@ ExPolygons fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, c
         uint32_t nb_opti_max = 6;
         for (uint32_t i = 0; i < nb_opti_max; ++i){
             coord_t new_offset = (previous_offset + current_offset) / 2;
-            ExPolygons bigger_polygon = offset_ex(polygon_to_check, new_offset);
+            ExPolygons bigger_polygon = offset_ex(polygon_to_check, (float)new_offset);
             if (bigger_polygon.size() != 1) {
                 //Warn, growing a single polygon result in many/no other, use previous good result
                 break;
@@ -756,12 +756,12 @@ void PrintObject::tag_under_bridge() {
                                 ExPolygons intersect = 
                                     offset2_ex(
                                     intersection_ex(sparse_polys, { upp.expolygon }, true)
-                                        , -layerm->flow(frInfill).scaled_width(), layerm->flow(frInfill).scaled_width());
+                                        , (float)-layerm->flow(frInfill).scaled_width(), (float)layerm->flow(frInfill).scaled_width());
                                 if (!intersect.empty()) {
 
                                     if (layerm->region()->config().infill_dense_algo == dfaEnlarged) {
                                         //expand the area a bit
-                                        intersect = offset_ex(intersect, scale_(layerm->region()->config().bridged_infill_margin));
+                                        intersect = offset_ex(intersect, (float)scale_(layerm->region()->config().bridged_infill_margin));
                                     } else if (layerm->region()->config().infill_dense_algo == dfaAutoNotFull 
                                         || layerm->region()->config().infill_dense_algo == dfaAutomatic){
                                         
@@ -778,15 +778,15 @@ void PrintObject::tag_under_bridge() {
                                             ExPolygons cover_intersect;
                                             for (ExPolygon &expoly_tocover : intersect) {
                                                 ExPolygons temp = (fit_to_size(expoly_tocover, expoly_tocover,
-                                                    diff_ex(offset_ex(layerm->fill_no_overlap_expolygons, layerm->flow(frInfill).scaled_width()),
-                                                    offset_ex(layerm->fill_no_overlap_expolygons, -layerm->flow(frInfill).scaled_width())),
+                                                    diff_ex(offset_ex(layerm->fill_no_overlap_expolygons, (float)layerm->flow(frInfill).scaled_width()),
+                                                    offset_ex(layerm->fill_no_overlap_expolygons, (float)-layerm->flow(frInfill).scaled_width())),
                                                     surf.expolygon,
-                                                    4 * layerm->flow(frInfill).scaled_width(), 0.01));
+                                                    4 * layerm->flow(frInfill).scaled_width(), 0.01f));
                                                 cover_intersect.insert(cover_intersect.end(), temp.begin(), temp.end());
                                             }
                                             intersect = offset2_ex(cover_intersect,
-                                                -layerm->flow(frInfill).scaled_width(),
-                                                layerm->flow(frInfill).scaled_width() * 2);
+                                                (float)-layerm->flow(frInfill).scaled_width(),
+                                                (float)layerm->flow(frInfill).scaled_width() * 2);
                                         } else {
                                             intersect.clear();
                                         }
@@ -794,8 +794,8 @@ void PrintObject::tag_under_bridge() {
                                     if (!intersect.empty()) {
                                         ExPolygons sparse_surfaces = offset2_ex(
                                             diff_ex(sparse_polys, intersect, true),
-                                            -layerm->flow(frInfill).scaled_width(),
-                                            layerm->flow(frInfill).scaled_width());
+                                            (float)-layerm->flow(frInfill).scaled_width(),
+                                            (float)layerm->flow(frInfill).scaled_width());
                                         ExPolygons dense_surfaces = diff_ex(sparse_polys, sparse_surfaces, true);
                                         //assign (copy)
                                         sparse_polys = std::move(sparse_surfaces);
@@ -1906,7 +1906,7 @@ end:
 
 void PrintObject::_offsetHoles(float hole_delta, LayerRegion *layerm) {
     if (hole_delta != 0.f) {
-        ExPolygons& polys = to_expolygons(std::move(layerm->slices.surfaces));
+        ExPolygons polys = to_expolygons(std::move(layerm->slices.surfaces));
         ExPolygons new_polys;
         for (ExPolygon ex_poly : polys) {
             ExPolygon new_ex_poly(ex_poly);
@@ -2318,7 +2318,7 @@ void PrintObject::discover_horizontal_shells()
                 // Insert a solid internal layer. Mark stInternal surfaces as stInternalSolid or stInternalBridge.
                 SurfaceType type = (region_config.fill_density == 100) ? (stPosInternal | stDensSolid) : (stPosInternal | stDensSolid | stModBridge);
                 for (Surface &surface : layerm->fill_surfaces.surfaces)
-                    if (surface.surface_type == stPosInternal | stDensSparse)
+                    if (surface.surface_type == (stPosInternal | stDensSparse))
                         surface.surface_type = type;
             }
 
@@ -2355,8 +2355,8 @@ void PrintObject::discover_horizontal_shells()
                     continue;
 //                Slic3r::debugf "Layer %d has %s surfaces\n", $i, ($type == S_TYPE_TOP) ? 'top' : 'bottom';
                 
-                size_t solid_layers = (type & stPosTop == stPosTop) ? region_config.top_solid_layers.value : region_config.bottom_solid_layers.value;                
-                for (int n = (type & stPosTop == stPosTop) ? i - 1 : i + 1; std::abs(n - i) < solid_layers; (type & stPosTop == stPosTop) ? --n : ++n) {
+                size_t solid_layers = ((type & stPosTop) == stPosTop) ? region_config.top_solid_layers.value : region_config.bottom_solid_layers.value;                
+                for (int n = ((type & stPosTop) == stPosTop) ? (i - 1) : (i + 1); std::abs(n - i) < solid_layers; ((type & stPosTop) == stPosTop) ? (--n) : (++n)) {
                     if (n < 0 || n >= int(m_layers.size()))
                         continue;
 //                    Slic3r::debugf "  looking for neighbors on layer %d...\n", $n;                  

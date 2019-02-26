@@ -49,9 +49,9 @@ protected:
     ExtrusionRole rolePass[3];
     InfillPattern fillPattern[3];
 
-    void FillSmooth::performSingleFill(const int idx, ExtrusionEntityCollection &eecroot, const Surface &srf_source,
+    void performSingleFill(const int idx, ExtrusionEntityCollection &eecroot, const Surface &srf_source,
         const FillParams &params, const double volume);
-    void FillSmooth::fillExPolygon(const int idx, ExtrusionEntityCollection &eec, const Surface &srf_to_fill,
+    void fillExPolygon(const int idx, ExtrusionEntityCollection &eec, const Surface &srf_to_fill,
         const FillParams &params, const double volume);
 };
 

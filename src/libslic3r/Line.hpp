@@ -47,7 +47,7 @@ public:
     static double distance_to_squared(const Point &point, const Point &a, const Point &b);
     static double distance_to(const Point &point, const Point &a, const Point &b) { return sqrt(distance_to_squared(point, a, b)); }
     Point point_at(double distance) const;
-    coord_t Line::dot(Line &l2) const { return vector().dot(l2.vector()); }
+    coord_t dot(const Line &l2) const { return vector().dot(l2.vector()); }
     void extend_end(double distance) { Line line = *this; line.reverse(); this->b = line.point_at(-distance); }
     void extend_start(double distance) { this->a = this->point_at(-distance); }
 
