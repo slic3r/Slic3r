@@ -71,10 +71,16 @@ public:
     void rotate(double q1, double q2, double q3, double q4);
 
     /// Multiplies the Parameter-Matrix from the left (this=left*this)
-    void multiplyLeft(const TransformationMatrix &left);
+    void applyLeft(const TransformationMatrix &left);
+
+    /// Multiplies the Parameter-Matrix from the left (out=left*this)
+    TransformationMatrix multiplyLeft(const TransformationMatrix &left);
 
     /// Multiplies the Parameter-Matrix from the right (this=this*right)
-    void multiplyRight(const TransformationMatrix &right);
+    void applyRight(const TransformationMatrix &right);
+
+    /// Multiplies the Parameter-Matrix from the right (out=this*right)
+    TransformationMatrix multiplyRight(const TransformationMatrix &right);
 
     /// Generate an eye matrix.
     static TransformationMatrix mat_eye();
