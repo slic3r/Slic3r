@@ -187,14 +187,24 @@ void TransformationMatrix::rotate(double q1, double q2, double q3, double q4)
     this->multiplyLeft(mat);
 }
 
-void TransformationMatrix::multiplyLeft(const TransformationMatrix &left)
+void TransformationMatrix::applyLeft(const TransformationMatrix &left)
 {
     *this = multiply(left, *this);
 }
 
-void TransformationMatrix::multiplyRight(const TransformationMatrix &right)
+TransformationMatrix TransformationMatrix::multiplyLeft(const TransformationMatrix &left)
+{
+    return multiply(left, *this);
+}
+
+void TransformationMatrix::applyRight(const TransformationMatrix &right)
 {
     *this = multiply(*this, right);
+}
+
+TransformationMatrix TransformationMatrix::multiplyRight(const TransformationMatrix &right)
+{
+    return multiply(*this, right);
 }
 
 TransformationMatrix TransformationMatrix::multiply(const TransformationMatrix &left, const TransformationMatrix &right)
