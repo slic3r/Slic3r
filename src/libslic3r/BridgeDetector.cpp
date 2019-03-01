@@ -35,7 +35,7 @@ BridgeDetector::BridgeDetector(
 void BridgeDetector::initialize()
 {
     // 5 degrees stepping
-    this->resolution = PI/36.0; 
+    this->resolution = PI/(36.0*5); 
     // output angle not known
     this->angle = -1.;
 
@@ -235,10 +235,10 @@ Polygons BridgeDetector::coverage(double angle, bool precise) const {
                 if (!precise) expoly.get_trapezoids2(&trapezoids, PI / 2);
                 else expoly.get_trapezoids3_half(&trapezoids, float(this->spacing));
                 for (Polygon &trapezoid : trapezoids) {
-                    // not nice, we need a more robust non-numeric check
-                    // imporvment 1: take into account when we go in the supported area.
                     size_t n_supported = 0;
                     if (!precise) {
+                        // not nice, we need a more robust non-numeric check
+                        // imporvment 1: take into account when we go in the supported area.
                         for (const Line &supported_line : intersection_ln(trapezoid.lines(), anchors))
                             if (supported_line.length() >= this->spacing)
                                 ++n_supported;
@@ -286,7 +286,7 @@ Polygons BridgeDetector::coverage(double angle, bool precise) const {
             covered = union_(covered);
             // Intersect trapezoids with actual bridge area to remove extra margins and append it to result.
             polygons_rotate(covered, -(PI/2.0 - angle));
-            covered = intersection(covered, to_polygons(this->expolygons));
+            //covered = intersection(covered, to_polygons(this->expolygons));
 #if 0
             {
                 my @lines = map @{$_->lines}, @$trapezoids;

@@ -497,27 +497,27 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->default_value = new ConfigOptionBool(true);
 
-    def = this->add("external_infill_margin", coFloat);
+    def = this->add("external_infill_margin", coFloatOrPercent);
     def->label = L("Default");
     def->full_label = L("Default infill margin");
     def->category = L("Infill");
-    def->tooltip = L("This parameter grows the top/bottom/solid layers by the specified MM to anchor them into the part. Put 0 to deactivate it.");
+    def->tooltip = L("This parameter grows the top/bottom/solid layers by the specified MM to anchor them into the part. Put 0 to deactivate it. Can be a % of the width of the perimeters.");
     def->sidetext = L("mm");
-    def->cli = "top-layer-anchor=f";
+    def->cli = "top-layer-anchor=s";
     def->min = 0;
     def->mode = comExpert;
-    def->default_value = new ConfigOptionFloat(1.5);
+    def->default_value = new ConfigOptionFloatOrPercent(150, true);
 
-    def = this->add("bridged_infill_margin", coFloat);
+    def = this->add("bridged_infill_margin", coFloatOrPercent);
     def->label = L("Bridged");
     def->full_label = L("Bridge margin");
     def->category = L("Infill");
-    def->tooltip = L("This parameter grows the bridged solid infill layers by the specified MM to anchor them into the part. Put 0 to deactivate it.");
+    def->tooltip = L("This parameter grows the bridged solid infill layers by the specified MM to anchor them into the part. Put 0 to deactivate it. Can be a % of the width of the external perimeter.");
     def->sidetext = L("mm");
-    def->cli = "bridged-layer-anchor=f";
+    def->cli = "bridged-layer-anchor=s";
     def->min = 0;
     def->mode = comExpert;
-    def->default_value = new ConfigOptionFloat(2);
+    def->default_value = new ConfigOptionFloatOrPercent(200, true);
 
     def = this->add("external_perimeter_extrusion_width", coFloatOrPercent);
     def->label = L("External perimeters");
@@ -1254,7 +1254,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = ("Dense infill algorithm");
     def->tooltip = L("Choose the way the dense layer is lay out."
         " The automatic option let it try to draw the smallest surface with only strait lines inside the sparse infill."
-        " The anchored just enlarge a bit (by bridged anchor) the surfaces that need a better support.");
+        " The anchored just enlarge a bit (by 'Default infill margin') the surfaces that need a better support.");
     def->cli = "infill-dense-algo=s";
     def->enum_keys_map = &ConfigOptionEnum<DenseInfillAlgo>::get_enum_values();
     def->enum_values.push_back("automatic");
@@ -1696,32 +1696,29 @@ void PrintConfigDef::init_fff_params()
     def->cli = "overhangs!";
     def->mode = comAdvanced;
     def->default_value = new ConfigOptionBool(true);
-
-    def = this->add("no_perimeter_unsupported", coBool);
-    def->label = L("");
-    def->full_label = ("No perimeters on bridge areas");
-    def->category = L("Layers and Perimeters");
-    def->tooltip = L("Experimental option to remove perimeters where there is nothing under it and where a bridged infill should be better. Computationally intensive!");
-    def->cli = "no-perimeter-unsupported!";
-    def->mode = comExpert;
-    def->default_value = new ConfigOptionBool(false);
-
-    def = this->add("min_perimeter_unsupported", coInt);
-    def->label = L("Minimum perimeters");
-    def->category = L("Layers and Perimeters");
-    def->tooltip = L("Number of perimeters exluded from this option.");
-    def->cli = "min-perimeter-unsupported=i";
-    def->min = 0;
-    def->mode = comExpert;
-    def->default_value = new ConfigOptionInt(0);
-
-    def = this->add("noperi_bridge_only", coBool);
-    def->label = L("Only on bridged areas");
-    def->category = L("Layers and Perimeters");
-    def->tooltip = L("Only remove perimeters over areas marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable.");
-    def->cli = "noperi-bridge-only!";
-    def->mode = comExpert;
-    def->default_value = new ConfigOptionBool(true);
+    
+    def = this->add("no_perimeter_unsupported_algo", coEnum);
+    def->label = L("No perimeters on bridge areas");
+    def->tooltip = L("Experimental option to remove perimeters where there is nothing under it and where a bridged infill should be better. "
+        "\nRemove perimeters: remove the unsupported periemter, let the bridge area as-is."
+        "\nKeep only bridges: remove the unsupported periemter, kep only bridges that end in solid area."
+        "\nKeep bridges and overhangs: remove the unsupported periemter, keep only bridges that end in solid area, fill the rest with overhang perimeters+bridges."
+        "\nFill the voids with bridges: remove the unsupported periemter, draw bridges over the whole hole. !! can lead to problems with overhangs shape like  /\\, consider carefully before using this option!"
+		"\n!!Computationally intensive!!. ");
+    def->cli = "no-perimeter-unsupported-algo=s";
+    def->enum_keys_map = &ConfigOptionEnum<NoPerimeterUnsupportedAlgo>::get_enum_values();
+    def->enum_values.push_back("none");
+    def->enum_values.push_back("noperi");
+    def->enum_values.push_back("bridges");
+    def->enum_values.push_back("bridgesoverhangs");
+    def->enum_values.push_back("filled");
+    def->enum_labels.push_back(L("Disabled"));
+    def->enum_labels.push_back(L("Remove perimeters"));
+    def->enum_labels.push_back(L("Keep only bridges"));
+    def->enum_labels.push_back(L("Keep bridges and overhangs"));
+    def->enum_labels.push_back(L("Fill the voids with bridges"));
+    def->mode = comAdvanced;
+    def->default_value = new ConfigOptionEnum<NoPerimeterUnsupportedAlgo>(npuaNone);
 
     def = this->add("parking_pos_retraction", coFloat);
     def->label = L("Filament parking position");

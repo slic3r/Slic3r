@@ -68,7 +68,11 @@ enum FilamentType {
 };
 
 enum DenseInfillAlgo {
-    dfaAutomatic, dfaAutoNotFull, dfaEnlarged,
+    dfaNone, dfaAutomatic, dfaAutoNotFull, dfaEnlarged,
+};
+
+enum NoPerimeterUnsupportedAlgo {
+    npuaNone, npuaNoPeri, npuaBridges, npuaBridgesOverhangs, npuaFilled,
 };
 
 enum SupportZDistanceType {
@@ -208,9 +212,21 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<FilamentType>::ge
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>::get_enum_values() {
     static const t_config_enum_values keys_map = {
+        { "none", dfaNone },
         { "automatic", dfaAutomatic },
         { "autosmall", dfaAutoNotFull },
         { "enlarged", dfaEnlarged }
+    };
+    return keys_map;
+}
+
+template<> inline const t_config_enum_values& ConfigOptionEnum<NoPerimeterUnsupportedAlgo>::get_enum_values() {
+    static const t_config_enum_values keys_map = {
+        { "none", npuaNone },
+        { "noperi", npuaNoPeri },
+        { "bridges", npuaBridges },
+        { "bridgesoverhangs", npuaBridgesOverhangs },
+        { "filled", npuaFilled }
     };
     return keys_map;
 }
@@ -544,8 +560,8 @@ public:
     ConfigOptionFloat               bridge_speed;
     ConfigOptionBool                ensure_vertical_shell_thickness;
     ConfigOptionBool                enforce_full_fill_volume;
-    ConfigOptionFloat               external_infill_margin;
-    ConfigOptionFloat               bridged_infill_margin;
+    ConfigOptionFloatOrPercent      external_infill_margin;
+    ConfigOptionFloatOrPercent      bridged_infill_margin;
     ConfigOptionFloatOrPercent      external_perimeter_extrusion_width;
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
@@ -569,9 +585,7 @@ public:
     ConfigOptionBool                infill_first;
     // Detect bridging perimeters
     ConfigOptionBool                overhangs;
-    ConfigOptionBool                no_perimeter_unsupported;
-    ConfigOptionInt                 min_perimeter_unsupported;
-    ConfigOptionBool                noperi_bridge_only;
+    ConfigOptionEnum<NoPerimeterUnsupportedAlgo> no_perimeter_unsupported_algo;
     ConfigOptionInt                 perimeter_extruder;
     ConfigOptionFloatOrPercent      perimeter_extrusion_width;
     ConfigOptionFloat               perimeter_speed;
@@ -629,9 +643,7 @@ protected:
         OPT_PTR(infill_dense_algo);
         OPT_PTR(infill_first);
         OPT_PTR(overhangs);
-        OPT_PTR(no_perimeter_unsupported);
-        OPT_PTR(min_perimeter_unsupported);
-        OPT_PTR(noperi_bridge_only);
+		OPT_PTR(no_perimeter_unsupported_algo);
         OPT_PTR(perimeter_extruder);
         OPT_PTR(perimeter_extrusion_width);
         OPT_PTR(perimeter_speed);

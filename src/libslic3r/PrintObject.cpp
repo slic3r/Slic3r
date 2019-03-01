@@ -476,9 +476,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "external_perimeters_first"
             || opt_key == "perimeter_loop"
             || opt_key == "perimeter_loop_seam"
-            || opt_key == "no_perimeter_unsupported"
-            || opt_key == "min_perimeter_unsupported"
-            || opt_key == "noperi_bridge_only") {
+            || opt_key == "no_perimeter_unsupported_algo") {
             steps.emplace_back(posPerimeters);
         } else if (
                opt_key == "layer_height"
@@ -761,7 +759,8 @@ void PrintObject::tag_under_bridge() {
 
                                     if (layerm->region()->config().infill_dense_algo == dfaEnlarged) {
                                         //expand the area a bit
-                                        intersect = offset_ex(intersect, (float)scale_(layerm->region()->config().bridged_infill_margin));
+                                        intersect = offset_ex(intersect, (float)scale_(layerm->region()->config().external_infill_margin.get_abs_value(
+                                            region->config().perimeters == 0 ? 0 : (layerm->flow(frExternalPerimeter).width + layerm->flow(frPerimeter).spacing() * (region->config().perimeters - 1)))));
                                     } else if (layerm->region()->config().infill_dense_algo == dfaAutoNotFull 
                                         || layerm->region()->config().infill_dense_algo == dfaAutomatic){
                                         
@@ -900,7 +899,9 @@ void PrintObject::detect_surfaces_type()
                     // collapse very narrow parts (using the safety offset in the diff is not enough)
                     float        offset = layerm->flow(frExternalPerimeter).scaled_width() / 10.f;
 
-                    Polygons     layerm_slices_surfaces = to_polygons(layerm->slices.surfaces);
+                    // no_perimeter_full_bridge allow to put bridges where there are nothing, hence adding area to silce, that's why we need to start from the result of PerimeterGenerator.
+                    // i don't see the need tostart from layerm->slices.surfaces, but i'll keep that "in case of".
+                    Polygons     layerm_slices_surfaces = layerm->region()->config().no_perimeter_unsupported_algo == npuaFilled ? to_polygons(layerm->fill_surfaces) : to_polygons(layerm->slices.surfaces);
 
                     // find top surfaces (difference between current surfaces
                     // of current layer and upper one)
@@ -933,11 +934,16 @@ void PrintObject::detect_surfaces_type()
                             offset2_ex(diff(layerm_slices_surfaces, lower_slices, true), -offset, offset),
                             surface_type_bottom_other);
 #else
+                        ExPolygons lower_slices = lower_layer->slices.expolygons;
+                        //if we added new surfaces, we can use them as support
+                        /*if (layerm->region()->config().no_perimeter_full_bridge) {
+                            lower_slices = union_ex(lower_slices, lower_layer->get_region(idx_region)->fill_surfaces);
+                        }*/
                         // Any surface lying on the void is a true bottom bridge (an overhang)
                         surfaces_append(
                             bottom,
                             offset2_ex(
-                                diff(layerm_slices_surfaces, to_polygons(lower_layer->slices), true), 
+                                diff(layerm_slices_surfaces, to_polygons(lower_slices), true),
                                 -offset, offset),
                             surface_type_bottom_other);
                         // if user requested internal shells, we need to identify surfaces
@@ -949,7 +955,7 @@ void PrintObject::detect_surfaces_type()
                                 bottom,
                                 offset2_ex(
                                     diff(
-                                        intersection(layerm_slices_surfaces, to_polygons(lower_layer->slices)), // supported
+                                        intersection(layerm_slices_surfaces, to_polygons(lower_slices)), // supported
                                         to_polygons(lower_layer->get_region(idx_region)->slices.surfaces), 
                                         true), 
                                     -offset, offset),

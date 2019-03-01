@@ -30,6 +30,7 @@ Flow LayerRegion::flow(FlowRole role, bool bridge, double width) const
 // Fill in layerm->fill_surfaces by trimming the layerm->slices by the cummulative layerm->fill_surfaces.
 void LayerRegion::slices_to_fill_surfaces_clipped()
 {
+    //if (this->region()->config().no_perimeter_full_bridge) return;
     // Note: this method should be idempotent, but fill_surfaces gets modified 
     // in place. However we're now only using its boundaries (which are invariant)
     // so we're safe. This guarantees idempotence of prepare_infill() also in case
@@ -45,11 +46,14 @@ void LayerRegion::slices_to_fill_surfaces_clipped()
     this->fill_surfaces.surfaces.clear();
     for (auto const& entry : polygons_by_surface) {
         if (!entry.second.empty())
-            this->fill_surfaces.append(intersection_ex(entry.second, fill_boundaries), entry.first);
+            //if (entry.first & stModBridge == stModBridge && this->region()->config().no_perimeter_full_bridge)
+            //    this->fill_surfaces.append(entry.second, entry.first);
+            //else
+                this->fill_surfaces.append(intersection_ex(entry.second, fill_boundaries), entry.first);
     }
 }
 
-void LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection* fill_surfaces)
+void LayerRegion::make_perimeters(SurfaceCollection &slices, SurfaceCollection* fill_surfaces)
 {
     this->perimeters.clear();
     this->thin_fills.clear();
@@ -91,16 +95,17 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollec
 
 void LayerRegion::process_external_surfaces(const Layer* lower_layer)
 {
+
+    coord_t max_margin = 0;
+    if ((this->region()->config().perimeters > 0)) {
+        max_margin = scale_(this->flow(frExternalPerimeter).width) + this->flow(frPerimeter).scaled_spacing() * (this->region()->config().perimeters.value - 1);
+    }
     const Surfaces &surfaces = this->fill_surfaces.surfaces;
     const bool has_infill = this->region()->config().fill_density.value > 0.;
-    coord_t margin = scale_(this->region()->config().external_infill_margin.getFloat());
-    coord_t margin_bridged = scale_(this->region()->config().bridged_infill_margin.getFloat());
+    coord_t margin = scale_(this->region()->config().external_infill_margin.get_abs_value(unscaled(max_margin)));
+    coord_t margin_bridged = scale_(this->region()->config().bridged_infill_margin.get_abs_value(this->flow(frExternalPerimeter).width));
     //if no infill, reduce the margin for everything to only the perimeter
     if (!has_infill) {
-        coord_t max_margin = 0;
-        if ((this->region()->config().perimeters > 0)) {
-            max_margin = scale_(this->flow(frExternalPerimeter).width) + this->flow(frPerimeter).scaled_spacing() * (this->region()->config().perimeters.value - 1);
-        }
         margin = std::min(margin, max_margin);
         margin_bridged = std::min(margin_bridged, max_margin);
     }
@@ -284,7 +289,7 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
                 if (bd.detect_angle(Geometry::deg2rad(this->region()->config().bridge_angle.value))) {
                     bridges[idx_last].bridge_angle = bd.angle;
                     if (this->layer()->object()->config().support_material) {
-                        polygons_append(this->bridged, bd.coverage());
+                        polygons_append(this->bridged, intersection(bd.coverage(), to_polygons(initial)));
                         this->unsupported_bridge_edges.append(bd.unsupported_edges()); 
                     }
                 }
