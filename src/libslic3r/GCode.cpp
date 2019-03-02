@@ -2060,7 +2060,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
             last_pos_weight = 5.f;
             break;
         case spHidden:
-            last_pos_weight = 0.1f;
+            last_pos_weight = 1.f;
             break;
 
         }
