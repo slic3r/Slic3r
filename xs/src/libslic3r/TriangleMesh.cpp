@@ -282,8 +282,8 @@ TriangleMesh::WriteOBJFile(const std::string &output_file) const {
 
 void TriangleMesh::transform(const TransformationMatrix &trafo)
 {
-    std::vector<float> trafo_arr = trafo.matrix3x4f;
-    stl_transform(&this->stl, &(trafo_arr.at(0)));
+    std::vector<float> trafo_arr = trafo.matrix3x4f();
+    stl_transform(&this->stl, trafo_arr.data());
     stl_invalidate_shared_vertices(&this->stl);
 }
 
