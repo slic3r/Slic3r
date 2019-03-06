@@ -3435,7 +3435,6 @@ double PrintConfig::min_object_distance(const ConfigBase *config)
 {
     double base_dist = config->option("duplicate_distance")->getFloat();
     if (config->option("complete_objects")->getBool()){
-        std::cout << "min distance: complete objects\n";
         std::vector<double> vals = dynamic_cast<const ConfigOptionFloats*>(config->option("nozzle_diameter"))->values;
         double max_nozzle_diam = 0;
         for (double val : vals) max_nozzle_diam = std::fmax(max_nozzle_diam, val);
@@ -3443,23 +3442,19 @@ double PrintConfig::min_object_distance(const ConfigBase *config)
         // min object distance is max(duplicate_distance, clearance_radius)
         double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat();
         if (extruder_clearance_radius > base_dist){
-            std::cout << "min distance: set for extruder_clearance_radius: " << base_dist << " + " << extruder_clearance_radius << " + " << max_nozzle_diam << "\n";
             base_dist = extruder_clearance_radius + max_nozzle_diam;
         }
         //add brim width
         if (config->option("brim_width")->getFloat() > 0){
-            std::cout << "min distance: add for brim_width: " << base_dist << " += " << (config->option("brim_width")->getFloat()) << "\n";
             base_dist += config->option("brim_width")->getFloat();
         }
         //add the skirt
         if (config->option("skirts")->getInt() > 0){
             //add skirt dist
-            std::cout << "min distance: set for skirt_distance: " << base_dist << " += " << config->option("skirt_distance")->getFloat() << "\n";
             double dist_skirt = config->option("skirt_distance")->getFloat();
             if (dist_skirt > config->option("brim_width")->getFloat())
                 base_dist += dist_skirt - config->option("brim_width")->getFloat();
             //add skirt width
-            std::cout << "min distance: add for skirts: " << base_dist << " += " << (max_nozzle_diam*config->option("skirts")->getInt()*1.5) << "\n";
             base_dist += max_nozzle_diam * config->option("skirts")->getInt() * 1.5;
         }
     }

@@ -1481,7 +1481,13 @@ void Print::process()
         m_skirt.clear();
         if (this->has_skirt()) {
             this->set_status(88, "Generating skirt");
-            this->_make_skirt();
+            if (config().complete_objects){
+                for (PrintObject *obj : m_objects){
+                    this->_make_skirt({ obj });
+                }
+            } else {
+                this->_make_skirt(m_objects);
+            }
         }
         this->set_done(psSkirt);
     }
@@ -1489,10 +1495,20 @@ void Print::process()
         m_brim.clear();
         if (m_config.brim_width > 0) {
             this->set_status(88, "Generating brim");
-            if (config().brim_ears)
-                this->_make_brim_ears();
-            else
-                this->_make_brim();
+            if (config().complete_objects){
+                for (PrintObject *obj : m_objects){
+                    if (config().brim_ears)
+                        this->_make_brim_ears({ obj });
+                    else
+                        this->_make_brim({ obj });
+                }
+            } else {
+                if (config().brim_ears)
+                    this->_make_brim_ears(m_objects);
+                else
+                    this->_make_brim(m_objects);
+
+            }
         }
        this->set_done(psBrim);
     }
@@ -1529,7 +1545,7 @@ void Print::export_gcode(const std::string &path_template, GCodePreviewData *pre
     gcode.do_export(this, path.c_str(), preview_data);
 }
 
-void Print::_make_skirt()
+void Print::_make_skirt(const PrintObjectPtrs &objects)
 {
     // First off we need to decide how tall the skirt must be.
     // The skirt_height option from config is expressed in layers, but our
@@ -1542,7 +1558,7 @@ void Print::_make_skirt()
     // prepended to the first 'n' layers (with 'n' = skirt_height).
     // $skirt_height_z in this case is the highest possible skirt height for safety.
     coordf_t skirt_height_z = 0.;
-    for (const PrintObject *object : m_objects) {
+    for (const PrintObject *object : objects) {
         size_t skirt_layers = this->has_infinite_skirt() ?
             object->layer_count() : 
             std::min(size_t(m_config.skirt_height.value), object->layer_count());
@@ -1551,7 +1567,7 @@ void Print::_make_skirt()
     
     // Collect points from all layers contained in skirt height.
     Points points;
-    for (const PrintObject *object : m_objects) {
+    for (const PrintObject *object : objects) {
         Points object_points;
         // Get object layers up to skirt_height_z.
         for (const Layer *layer : object->m_layers) {
@@ -1667,11 +1683,11 @@ void Print::_make_skirt()
     m_skirt.reverse();
 }
 
-void Print::_make_brim() {
+void Print::_make_brim(const PrintObjectPtrs &objects) {
     // Brim is only printed on first layer and uses perimeter extruder.
     Flow        flow = this->brim_flow();
     Polygons    islands;
-    for (PrintObject *object : m_objects) {
+    for (PrintObject *object : objects) {
         Polygons object_islands;
         for (ExPolygon &expoly : object->m_layers.front()->slices.expolygons)
             object_islands.push_back(expoly.contour);
@@ -1704,11 +1720,11 @@ void Print::_make_brim() {
     extrusion_entities_append_loops(m_brim.entities, std::move(loops), erSkirt, float(flow.mm3_per_mm()), float(flow.width), float(this->skirt_first_layer_height()));
 }
 
-void Print::_make_brim_ears() {
+void Print::_make_brim_ears(const PrintObjectPtrs &objects) {
     Flow        flow = this->brim_flow();
     Points pt_ears;
     Polygons islands;
-    for (PrintObject *object : m_objects) {
+    for (PrintObject *object : objects) {
         Polygons object_islands;
         for (ExPolygon &expoly : object->m_layers.front()->slices.expolygons)
             object_islands.push_back(expoly.contour);

@@ -365,9 +365,9 @@ protected:
 private:
     bool                invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
 
-    void                _make_skirt();
-    void                _make_brim();
-    void                _make_brim_ears();
+    void                _make_skirt(const PrintObjectPtrs &objects);
+    void                _make_brim(const PrintObjectPtrs &objects);
+    void                _make_brim_ears(const PrintObjectPtrs &objects);
     void                _make_wipe_tower();
     void                _simplify_slices(double distance);
 
