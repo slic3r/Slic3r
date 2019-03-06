@@ -12,6 +12,8 @@
 
 #include "PrintExport.hpp"
 
+#include <libnest2d.h>
+
 #include <algorithm>
 #include <limits>
 #include <unordered_set>
@@ -1134,29 +1136,63 @@ std::string Print::validate() const
         {
             Polygons convex_hulls_other;
             for (const PrintObject *object : m_objects) {
-                // Get convex hull of all meshes assigned to this print object.
-                Polygon convex_hull;
+
+                // Get the 2D projected shapes with their 3D model instance pointers
+                //same method from ModelArrange.cpp. It's copy-pasted. 
+                // TODO: make a generic method used by that and modelarrange.
+                ClipperLib::Path clpath;
                 {
-                    Polygons mesh_convex_hulls;
-                    for (const std::vector<int> &volumes : object->region_volumes)
-                        for (int volume_id : volumes)
-                            mesh_convex_hulls.emplace_back(object->model_object()->volumes[volume_id]->mesh.convex_hull());
-                    // make a single convex hull for all of them
-                    convex_hull = Slic3r::Geometry::convex_hull(mesh_convex_hulls);
+                    TriangleMesh rmesh = object->model_object()->raw_mesh();
+                    ModelInstance * finst = object->model_object()->instances.front();
+                    // Object instances should carry the same scaling and
+                    // x, y rotation that is why we use the first instance.
+                    // The next line will apply only the full mirroring and scaling
+                    rmesh.transform(finst->get_matrix(true, true, false, false));
+                    rmesh.rotate_x(float(finst->get_rotation()(X)));
+                    rmesh.rotate_y(float(finst->get_rotation()(Y)));
+
+                    // TODO export the exact 2D projection. Cannot do it as libnest2d
+                    // does not support concave shapes (yet).
+                    auto p = rmesh.convex_hull();
+
+                    p.make_clockwise();
+                    p.append(p.first_point());
+                    clpath = Slic3rMultiPoint_to_ClipperPath(p);
                 }
-                // Apply the same transformations we apply to the actual meshes when slicing them.
-                object->model_object()->instances.front()->transform_polygon(&convex_hull);
-                // Grow convex hull with the clearance margin.
-                // FIXME: Arrangement has different parameters for offsetting (jtMiter, limit 2)
-                // which causes that the warning will be showed after arrangement with the
-                // appropriate object distance. Even if I set this to jtMiter the warning still shows up.
-                convex_hull = offset(convex_hull, scale_(m_config.extruder_clearance_radius.value)/2, jtRound, scale_(0.1)).front();
+
+                std::vector<libnest2d::Item> convex_hull_items;
+                for (ModelInstance* objinst : object->model_object()->instances) {
+                    if (objinst) {
+                        ClipperLib::PolygonImpl pn;
+                        pn.Contour = clpath;
+                        // Efficient conversion to item.
+                        libnest2d::Item item(std::move(pn));
+                        // Invalid geometries would throw exceptions when arranging
+                        if (item.vertexCount() > 3) {
+                            item.rotation(objinst->get_rotation(Z));
+                            item.translation({
+                                ClipperLib::cInt(objinst->get_offset(X) / SCALING_FACTOR),
+                                ClipperLib::cInt(objinst->get_offset(Y) / SCALING_FACTOR)
+                            });
+                            convex_hull_items.push_back(item);
+                        }
+                    }
+                }
+                Polygons convex_hull;
+                for (libnest2d::Item &item : convex_hull_items){
+                    //conversion to Polygons
+                    ClipperLib::PolygonImpl var = item;
+                    ClipperLib::Path cont = var.Contour;
+                    convex_hull.push_back(ClipperPath_to_Slic3rPolygon(cont));
+                }
+                
                 // Now we check that no instance of convex_hull intersects any of the previously checked object instances.
-                for (const Point &copy : object->m_copies) {
-                    Polygon p = convex_hull;
-                    p.translate(copy);
-                    if (! intersection(convex_hulls_other, p).empty())
+                for (Polygon p : convex_hull){
+                    // Grow convex hull with the clearance margin.
+                    p = offset(p, scale_(m_config.extruder_clearance_radius.value) / 2, jtRound, scale_(0.1)).front();
+                    if (!intersection(convex_hulls_other, p).empty()){
                         return L("Some objects are too close; your extruder will collide with them.");
+                    }
                     polygons_append(convex_hulls_other, p);
                 }
             }
