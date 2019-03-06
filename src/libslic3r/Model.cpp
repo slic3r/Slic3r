@@ -592,6 +592,7 @@ ModelObject& ModelObject::assign_copy(const ModelObject &rhs)
     this->input_file                  = rhs.input_file;
     this->config                      = rhs.config;
     this->sla_support_points          = rhs.sla_support_points;
+    this->sla_points_status           = rhs.sla_points_status;
     this->layer_height_ranges         = rhs.layer_height_ranges;
     this->layer_height_profile        = rhs.layer_height_profile;
     this->origin_translation          = rhs.origin_translation;
@@ -625,6 +626,7 @@ ModelObject& ModelObject::assign_copy(ModelObject &&rhs)
     this->input_file                  = std::move(rhs.input_file);
     this->config                      = std::move(rhs.config);
     this->sla_support_points          = std::move(rhs.sla_support_points);
+    this->sla_points_status           = std::move(rhs.sla_points_status);
     this->layer_height_ranges         = std::move(rhs.layer_height_ranges);
     this->layer_height_profile        = std::move(rhs.layer_height_profile);
     this->origin_translation          = std::move(rhs.origin_translation);
@@ -1130,6 +1132,7 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
     if (keep_upper) {
         upper->set_model(nullptr);
         upper->sla_support_points.clear();
+        upper->sla_points_status = sla::PointsStatus::None;
         upper->clear_volumes();
         upper->input_file = "";
     }
@@ -1137,6 +1140,7 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
     if (keep_lower) {
         lower->set_model(nullptr);
         lower->sla_support_points.clear();
+        lower->sla_points_status = sla::PointsStatus::None;
         lower->clear_volumes();
         lower->input_file = "";
     }
@@ -1480,32 +1484,32 @@ const TriangleMesh& ModelVolume::get_convex_hull() const
     return m_convex_hull;
 }
 
-ModelVolume::Type ModelVolume::type_from_string(const std::string &s)
+ModelVolumeType ModelVolume::type_from_string(const std::string &s)
 {
     // Legacy support
     if (s == "1")
-        return PARAMETER_MODIFIER;
+		return ModelVolumeType::PARAMETER_MODIFIER;
     // New type (supporting the support enforcers & blockers)
     if (s == "ModelPart")
-        return MODEL_PART;
+		return ModelVolumeType::MODEL_PART;
     if (s == "ParameterModifier")
-        return PARAMETER_MODIFIER;
+		return ModelVolumeType::PARAMETER_MODIFIER;
     if (s == "SupportEnforcer")
-        return SUPPORT_ENFORCER;
+		return ModelVolumeType::SUPPORT_ENFORCER;
     if (s == "SupportBlocker")
-        return SUPPORT_BLOCKER;
+		return ModelVolumeType::SUPPORT_BLOCKER;
     assert(s == "0");
     // Default value if invalud type string received.
-    return MODEL_PART;
+	return ModelVolumeType::MODEL_PART;
 }
 
-std::string ModelVolume::type_to_string(const Type t)
+std::string ModelVolume::type_to_string(const ModelVolumeType t)
 {
     switch (t) {
-    case MODEL_PART:         return "ModelPart";
-    case PARAMETER_MODIFIER: return "ParameterModifier";
-    case SUPPORT_ENFORCER:   return "SupportEnforcer";
-    case SUPPORT_BLOCKER:    return "SupportBlocker";
+	case ModelVolumeType::MODEL_PART:         return "ModelPart";
+	case ModelVolumeType::PARAMETER_MODIFIER: return "ParameterModifier";
+	case ModelVolumeType::SUPPORT_ENFORCER:   return "SupportEnforcer";
+	case ModelVolumeType::SUPPORT_BLOCKER:    return "SupportBlocker";
     default:
         assert(false);
         return "ModelPart";
@@ -1671,7 +1675,7 @@ bool model_object_list_extended(const Model &model_old, const Model &model_new)
     return true;
 }
 
-bool model_volume_list_changed(const ModelObject &model_object_old, const ModelObject &model_object_new, const ModelVolume::Type type)
+bool model_volume_list_changed(const ModelObject &model_object_old, const ModelObject &model_object_new, const ModelVolumeType type)
 {
     bool modifiers_differ = false;
     size_t i_old, i_new;

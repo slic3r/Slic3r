@@ -42,7 +42,6 @@ static void avrdude_oom_handler(const char *context, void *user_p)
 
 struct AvrDude::priv
 {
-	std::string sys_config;
 	std::deque<std::vector<std::string>> args;
 	bool cancelled = false;
 	int exit_code = 0;
@@ -53,8 +52,6 @@ struct AvrDude::priv
 	CompleteFn complete_fn;
 
 	std::thread avrdude_thread;
-
-	priv(std::string &&sys_config) : sys_config(sys_config) {}
 
 	void set_handlers();
 	void unset_handlers();
@@ -96,14 +93,21 @@ void AvrDude::priv::unset_handlers()
 
 
 int AvrDude::priv::run_one(const std::vector<std::string> &args) {
-	std::vector<char*> c_args {{ const_cast<char*>(PACKAGE_NAME) }};
+	std::vector<char*> c_args {{ const_cast<char*>(PACKAGE) }};
+	std::string command_line { PACKAGE };
+
 	for (const auto &arg : args) {
 		c_args.push_back(const_cast<char*>(arg.data()));
+		command_line.push_back(' ');
+		command_line.append(arg);
 	}
+	command_line.push_back('\n');
 
 	HandlerGuard guard(*this);
 
-	const auto res = ::avrdude_main(static_cast<int>(c_args.size()), c_args.data(), sys_config.c_str());
+	message_fn(command_line.c_str(), command_line.size());
+
+	const auto res = ::avrdude_main(static_cast<int>(c_args.size()), c_args.data());
 
 	return res;
 }
@@ -123,7 +127,7 @@ int AvrDude::priv::run() {
 
 // Public
 
-AvrDude::AvrDude(std::string sys_config) : p(new priv(std::move(sys_config))) {}
+AvrDude::AvrDude() : p(new priv()) {}
 
 AvrDude::AvrDude(AvrDude &&other) : p(std::move(other.p)) {}
 

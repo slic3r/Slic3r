@@ -103,8 +103,9 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 if (surface.has_fill_solid() && (!surface.has_mod_bridge() || layerm.layer()->id() == 0) && !surface.has_mod_overBridge()) {
                     group_attrib[i].is_solid = true;
                     group_attrib[i].flow_width = (surface.has_pos_top()) ? top_solid_infill_flow.width : solid_infill_flow.width;
-                    group_attrib[i].pattern = surface.has_pos_top() ? layerm.region()->config().top_fill_pattern.value : layerm.region()->config().solid_fill_pattern.value;
-                    group_attrib[i].pattern = surface.has_pos_bottom() ? layerm.region()->config().bottom_fill_pattern.value : layerm.region()->config().solid_fill_pattern.value;
+                    group_attrib[i].pattern = surface.has_pos_external() ? 
+                        (surface.has_pos_top() ? layerm.region()->config().top_fill_pattern.value : layerm.region()->config().bottom_fill_pattern.value) :
+                        layerm.region()->config().solid_fill_pattern.value;
                 }
             }
             // Loop through solid groups, find compatible groups and append them to this one.

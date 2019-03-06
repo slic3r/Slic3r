@@ -11,8 +11,10 @@
     #include <Windows.h>
 #endif /* _MSC_VER */
 
+#include <algorithm>
 #include <fstream>
 #include <stdexcept>
+#include <unordered_map>
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -83,6 +85,16 @@ VendorProfile VendorProfile::from_ini(const boost::filesystem::path &path, bool 
     return VendorProfile::from_ini(tree, path, load_all);
 }
 
+static const std::unordered_map<std::string, std::string> pre_family_model_map {{
+    { "MK3",        "MK3" },
+    { "MK3MMU2",    "MK3" },
+    { "MK2.5",      "MK2.5" },
+    { "MK2.5MMU2",  "MK2.5" },
+    { "MK2S",       "MK2" },
+    { "MK2SMM",     "MK2" },
+    { "SL1",        "SL1" },
+}};
+
 VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem::path &path, bool load_all)
 {
     static const std::string printer_model_key = "printer_model:";
@@ -128,10 +140,20 @@ VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem
             VendorProfile::PrinterModel model;
             model.id = section.first.substr(printer_model_key.size());
             model.name = section.second.get<std::string>("name", model.id);
-            auto technology_field = section.second.get<std::string>("technology", "FFF");
+
+            const char *technology_fallback = boost::algorithm::starts_with(model.id, "SL") ? "SLA" : "FFF";
+
+            auto technology_field = section.second.get<std::string>("technology", technology_fallback);
             if (! ConfigOptionEnum<PrinterTechnology>::from_string(technology_field, model.technology)) {
                 BOOST_LOG_TRIVIAL(error) << boost::format("Vendor bundle: `%1%`: Invalid printer technology field: `%2%`") % id % technology_field;
                 model.technology = ptFFF;
+            }
+
+            model.family = section.second.get<std::string>("family", std::string());
+            if (model.family.empty() && res.name == "Prusa Research") {
+                // If no family is specified, it can be inferred for known printers
+                const auto from_pre_map = pre_family_model_map.find(model.id);
+                if (from_pre_map != pre_family_model_map.end()) { model.family = from_pre_map->second; }
             }
 #if 0
 			// Remove SLA printers from the initial alpha.
@@ -157,6 +179,20 @@ VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem
     return res;
 }
 
+std::vector<std::string> VendorProfile::families() const
+{
+    std::vector<std::string> res;
+    unsigned num_familiies = 0;
+
+    for (auto &model : models) {
+        if (std::find(res.begin(), res.end(), model.family) == res.end()) {
+            res.push_back(model.family);
+            num_familiies++;
+        }
+    }
+
+    return res;
+}
 
 // Suffix to be added to a modified preset name in the combo box.
 static std::string g_suffix_modified = " (modified)";
@@ -318,7 +354,7 @@ void Preset::set_visible_from_appconfig(const AppConfig &app_config)
 const std::vector<std::string>& Preset::print_options()
 {    
     static std::vector<std::string> s_opts {
-        "layer_height", "first_layer_height", "perimeters", "spiral_vase", "top_solid_layers", "bottom_solid_layers", 
+        "layer_height", "first_layer_height", "perimeters", "spiral_vase", "slice_closing_radius", "top_solid_layers", "bottom_solid_layers", 
         "extra_perimeters", "only_one_perimeter_top", "ensure_vertical_shell_thickness", "avoid_crossing_perimeters", "thin_walls", "overhangs", 
         "seam_position", "external_perimeters_first", "fill_density"
         , "fill_pattern"
@@ -362,7 +398,6 @@ const std::vector<std::string>& Preset::print_options()
         , "perimeter_loop"
         , "perimeter_loop_seam"
         , "seam_travel"
-        , "remove_small_gaps"
         , "infill_not_connected"
         , "first_layer_infill_speed"
         , "thin_walls_min_width"
@@ -441,6 +476,7 @@ const std::vector<std::string>& Preset::sla_print_options()
     if (s_opts.empty()) {
         s_opts = {
             "layer_height",
+            "faded_layers",
             "supports_enable",
             "support_head_front_diameter",
             "support_head_penetration",
@@ -454,14 +490,15 @@ const std::vector<std::string>& Preset::sla_print_options()
             "support_critical_angle",
             "support_max_bridge_length",
             "support_object_elevation",
-            "support_density_at_horizontal",
-            "support_density_at_45",
-            "support_minimal_z",
+            "support_points_density_relative",
+            "support_points_minimal_distance",
+            "slice_closing_radius",
             "pad_enable",
             "pad_wall_thickness",
             "pad_wall_height",
             "pad_max_merge_distance",
             "pad_edge_radius",
+            "pad_wall_slope",
             "output_filename_format", 
             "default_sla_print_profile",
             "compatible_printers",
@@ -498,6 +535,7 @@ const std::vector<std::string>& Preset::sla_printer_options()
             "bed_shape", "max_print_height",
             "display_width", "display_height", "display_pixels_x", "display_pixels_y",
             "display_orientation",
+            "fast_tilt_time", "slow_tilt_time", "area_fill",
             "printer_correction",
             "print_host", "printhost_apikey", "printhost_cafile",
             "printer_notes",

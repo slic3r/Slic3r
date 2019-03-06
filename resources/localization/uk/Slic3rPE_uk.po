@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2019-01-17 13:39+0100\n"
-"PO-Revision-Date: 2019-01-21 11:25+0100\n"
+"PO-Revision-Date: 2019-02-26 10:38+0100\n"
 "Last-Translator: Oleksandra Iushchenko <yusanka@gmail.com>\n"
 "Language-Team: \n"
 "Language: uk\n"
@@ -50,6 +50,12 @@ msgstr "Відстань координат 0,0 G-коду від нижньог
 #: src/slic3r/GUI/BedShapeDialog.cpp:66
 msgid "Circular"
 msgstr "Круговий"
+
+msgid "Switch to %s mode"
+msgstr "Перейти до режиму %s"
+
+msgid "Current mode is %s"
+msgstr "Поточний режим - %s"
 
 #: src/slic3r/GUI/BedShapeDialog.cpp:69 src/slic3r/GUI/ConfigWizard.cpp:92
 #: src/slic3r/GUI/ConfigWizard.cpp:456 src/slic3r/GUI/ConfigWizard.cpp:470
@@ -624,48 +630,48 @@ msgstr ""
 
 #: src/slic3r/GUI/GLGizmo.cpp:2207
 msgid "Left mouse click - add point"
-msgstr ""
+msgstr "Ліва кнопка миші - додати точку"
 
 #: src/slic3r/GUI/GLGizmo.cpp:2208
 msgid "Right mouse click - remove point"
-msgstr ""
+msgstr "Права кнопка миші - видалити точку"
 
 #: src/slic3r/GUI/GLGizmo.cpp:2211
 msgid "Generate points automatically"
-msgstr ""
+msgstr "Генерувати точки автоматично"
 
 #: src/slic3r/GUI/GLGizmo.cpp:2212
 msgid "Remove all points"
-msgstr ""
+msgstr "Видалити всі точки"
 
 #: src/slic3r/GUI/GLGizmo.cpp:2245
 msgid "SLA Support Points"
-msgstr ""
+msgstr "Точки SLA підтримки"
 
 #: src/slic3r/GUI/GLGizmo.cpp:2268 src/slic3r/GUI/GLGizmo.cpp:2468
 msgid "Rotate lower part upwards"
-msgstr ""
+msgstr "Повернути нижню частину вгору"
 
 #: src/slic3r/GUI/GLGizmo.cpp:2269 src/slic3r/GUI/GLGizmo.cpp:2470
 msgid "Perform cut"
-msgstr ""
+msgstr "Виконати розріз"
 
 #: src/slic3r/GUI/GLGizmo.cpp:2276
 msgid "Cut object:"
-msgstr ""
+msgstr "Розрізати об'єкт:"
 
 #: src/slic3r/GUI/GLGizmo.cpp:2356 src/slic3r/GUI/GLGizmo.cpp:2461
 #: src/libslic3r/PrintConfig.cpp:3016
 msgid "Cut"
-msgstr ""
+msgstr "Розрізати"
 
 #: src/slic3r/GUI/GLGizmo.cpp:2466
 msgid "Keep upper part"
-msgstr ""
+msgstr "Залишити верхню частину"
 
 #: src/slic3r/GUI/GLGizmo.cpp:2467
 msgid "Keep lower part"
-msgstr ""
+msgstr "Залишити нижню частину"
 
 #: src/slic3r/GUI/GUI.cpp:242
 msgid "Notice"
@@ -730,11 +736,11 @@ msgstr "Преференції застосування"
 
 #: src/slic3r/GUI/GUI_App.cpp:616
 msgid "Simple"
-msgstr ""
+msgstr "Простий"
 
 #: src/slic3r/GUI/GUI_App.cpp:616
 msgid "Simple View Mode"
-msgstr ""
+msgstr "Простий режим перегляду"
 
 #: src/slic3r/GUI/GUI_App.cpp:617 src/slic3r/GUI/GUI_ObjectList.cpp:39
 #: src/slic3r/GUI/Tab.cpp:948 src/slic3r/GUI/Tab.cpp:962
@@ -747,23 +753,23 @@ msgstr "Розширений"
 
 #: src/slic3r/GUI/GUI_App.cpp:617
 msgid "Advanced View Mode"
-msgstr ""
+msgstr "Розширений режим перегляду"
 
 #: src/slic3r/GUI/GUI_App.cpp:618
 msgid "Expert"
-msgstr ""
+msgstr "Експерт"
 
 #: src/slic3r/GUI/GUI_App.cpp:618
 msgid "Expert View Mode"
-msgstr ""
+msgstr "Режим перегляду Експерт"
 
 #: src/slic3r/GUI/GUI_App.cpp:620
 msgid "Mode"
-msgstr ""
+msgstr "Режим"
 
 #: src/slic3r/GUI/GUI_App.cpp:620
 msgid "Slic3r View Mode"
-msgstr ""
+msgstr "Режим перегляду Slic3r'у"
 
 #: src/slic3r/GUI/GUI_App.cpp:622
 msgid "Change Application &Language"
@@ -1752,7 +1758,7 @@ msgstr "Вид"
 
 #: src/slic3r/GUI/MainFrame.cpp:445
 msgid "&Help"
-msgstr "Доромога"
+msgstr "Допомога"
 
 #: src/slic3r/GUI/MainFrame.cpp:472
 msgid "Choose a file to slice (STL/OBJ/AMF/3MF/PRUSA):"
@@ -5064,11 +5070,11 @@ msgstr "Вертикальна відстань між об'єктом та ін
 
 #: src/libslic3r/PrintConfig.cpp:1923
 msgid "soluble"
-msgstr ""
+msgstr "розчинний"
 
 #: src/libslic3r/PrintConfig.cpp:1924
 msgid "detachable"
-msgstr ""
+msgstr "відривний"
 
 #: src/libslic3r/PrintConfig.cpp:1929
 msgid "Enforce support for the first"
@@ -5636,7 +5642,7 @@ msgstr ""
 
 #: src/libslic3r/PrintConfig.cpp:3017
 msgid "Cut model at the given Z."
-msgstr ""
+msgstr "Розрізати модель за заданим Z."
 
 #: src/libslic3r/PrintConfig.cpp:3022
 msgid "Dont arrange"
@@ -5672,7 +5678,7 @@ msgstr ""
 
 #: src/libslic3r/PrintConfig.cpp:3050
 msgid "Help"
-msgstr ""
+msgstr "Допомога"
 
 #: src/libslic3r/PrintConfig.cpp:3051
 msgid "Show this help."

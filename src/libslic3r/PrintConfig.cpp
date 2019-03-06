@@ -59,6 +59,17 @@ void PrintConfigDef::init_common_params()
     def->cli = "max-print-height=f";
     def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloat(200.0);
+
+    def = this->add("slice_closing_radius", coFloat);
+    def->label = L("Slice gap closing radius");
+    def->category = L("Advanced");
+    def->tooltip = L("Cracks smaller than 2x gap closing radius are being filled during the triangle mesh slicing. "
+                     "The gap closing operation may reduce the final print resolution, therefore it is advisable to keep the value reasonably low.");
+    def->sidetext = L("mm");
+    def->cli = "slice-closing-radius=f";
+    def->min = 0;
+	def->mode = comAdvanced;
+	def->default_value = new ConfigOptionFloat(0.049);
 }
 
 void PrintConfigDef::init_fff_params()
@@ -77,15 +88,6 @@ void PrintConfigDef::init_fff_params()
     def->cli = "avoid-crossing-perimeters!";
     def->mode = comExpert;
     def->default_value = new ConfigOptionBool(false);
-
-    def = this->add("remove_small_gaps", coBool);
-    def->label = L("Remove small gaps");
-    def->tooltip = L("Remove the small gaps in the 3D model when slicing. Disable it if you "
-        "are very confident on your model, or you want to print an item with a geometry "
-        "designed for vase mode.");
-    def->cli = "remove-small-gaps!";
-    def->mode = comAdvanced;
-    def->default_value = new ConfigOptionBool(true);
 
     def = this->add("bed_temperature", coInts);
     def->label = L("Other layers");
@@ -417,7 +419,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("top_fill_pattern", coEnum);
     def->label = L("Top Pattern");
     def->category = L("Infill");
-    def->tooltip = L("Fill pattern for top infill. This only affects the top external visible layer, and not its adjacent solid shells.");
+    def->tooltip = L("Fill pattern for top infill. This only affects the top visible layer, and not its adjacent solid shells.");
     def->cli = "top-fill-pattern|external-fill-pattern=s";
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
@@ -443,7 +445,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("bottom_fill_pattern", coEnum);
     def->label = L("Bottom Pattern");
     def->category = L("Infill");
-    def->tooltip = L("Fill pattern for bottom infill. This only affects the bottom external visible layer, and not its adjacent solid shells.");
+    def->tooltip = L("Fill pattern for bottom infill. This only affects the bottom visible layer, and not its adjacent solid shells.");
     def->cli = "bottom-fill-pattern|external-fill-pattern=s";
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
@@ -2972,6 +2974,32 @@ void PrintConfigDef::init_sla_params()
     def->enum_labels.push_back(L("Portrait"));
     def->default_value = new ConfigOptionEnum<SLADisplayOrientation>(sladoPortrait);
 
+    def = this->add("fast_tilt_time", coFloat);
+    def->label = L("Fast");
+    def->full_label = L("Fast tilt");
+    def->tooltip = L("Time of the fast tilt");
+    def->sidetext = L("s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->default_value = new ConfigOptionFloat(5.);
+
+    def = this->add("slow_tilt_time", coFloat);
+    def->label = L("Slow");
+    def->full_label = L("Slow tilt");
+    def->tooltip = L("Time of the slow tilt");
+    def->sidetext = L("s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->default_value = new ConfigOptionFloat(8.);
+
+    def = this->add("area_fill", coFloat);
+    def->label = L("Area fill");
+    def->tooltip = L("The percentage of the bed area. \nIf the print area exceeds the specified value, \nthen a slow tilt will be used, otherwise - a fast tilt");
+    def->sidetext = L("%");
+    def->min = 0;
+    def->mode = comExpert;
+    def->default_value = new ConfigOptionFloat(50.);
+
     def = this->add("printer_correction", coFloats);
     def->full_label = L("Printer scaling correction");
     def->tooltip  = L("Printer scaling correction");
@@ -2986,6 +3014,14 @@ void PrintConfigDef::init_sla_params()
     def->cli = "initial-layer-height=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0.3);
+
+    def = this->add("faded_layers", coInt);
+    def->label = L("Faded layers");
+    def->tooltip = L("Number of the layers needed for the exposure time fade from initial exposure time to the exposure time");
+    def->min = 3;
+    def->max = 20;
+    def->mode = comExpert;
+    def->default_value = new ConfigOptionInt(10);
 
     def = this->add("exposure_time", coFloat);
     def->label = L("Exposure time");
@@ -3167,28 +3203,19 @@ void PrintConfigDef::init_sla_params()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(5.0);
 
-    def = this->add("support_density_at_horizontal", coInt);
-    def->label = L("Density on horizontal surfaces");
+    def = this->add("support_points_density_relative", coInt);
+    def->label = L("Support points density");
     def->category = L("Supports");
-    def->tooltip = L("How many support points (approximately) should be placed on horizontal surface.");
-    def->sidetext = L("points per square dm");
+    def->tooltip = L("This is a relative measure of support points density.");
+    def->sidetext = L("%");
     def->cli = "";
     def->min = 0;
-    def->default_value = new ConfigOptionInt(500);
+    def->default_value = new ConfigOptionInt(100);
 
-    def = this->add("support_density_at_45", coInt);
-    def->label = L("Density on surfaces at 45 degrees");
+    def = this->add("support_points_minimal_distance", coFloat);
+    def->label = L("Minimal distance of the support points");
     def->category = L("Supports");
-    def->tooltip = L("How many support points (approximately) should be placed on surface sloping at 45 degrees.");
-    def->sidetext = L("points per square dm");
-    def->cli = "";
-    def->min = 0;
-    def->default_value = new ConfigOptionInt(250);
-
-    def = this->add("support_minimal_z", coFloat);
-    def->label = L("Minimal support point height");
-    def->category = L("Supports");
-    def->tooltip = L("No support points will be placed lower than this value from the bottom.");
+    def->tooltip = L("No support points will be placed closer than this threshold.");
     def->sidetext = L("mm");
     def->cli = "";
     def->min = 0;
@@ -3236,6 +3263,17 @@ void PrintConfigDef::init_sla_params()
     def->cli = "";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(1.0);
+
+    def = this->add("pad_wall_slope", coFloat);
+    def->label = L("Pad wall slope");
+    def->category = L("Pad");
+    def->tooltip = L("The slope of the pad wall relative to the bed plane. "
+                     "90 degrees means straight walls.");
+    def->sidetext = L("degrees");
+    def->cli = "";
+    def->min = 45;
+    def->max = 90;
+    def->default_value = new ConfigOptionFloat(45.0);
 }
 
 void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &value)
@@ -3395,13 +3433,38 @@ double PrintConfig::min_object_distance() const
 
 double PrintConfig::min_object_distance(const ConfigBase *config)
 {
-    double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat();
-    double duplicate_distance = config->option("duplicate_distance")->getFloat();
-    
-    // min object distance is max(duplicate_distance, clearance_radius)
-    return (config->option("complete_objects")->getBool() && extruder_clearance_radius > duplicate_distance)
-        ? extruder_clearance_radius
-        : duplicate_distance;
+    double base_dist = config->option("duplicate_distance")->getFloat();
+    if (config->option("complete_objects")->getBool()){
+        std::cout << "min distance: complete objects\n";
+        std::vector<double> vals = dynamic_cast<const ConfigOptionFloats*>(config->option("nozzle_diameter"))->values;
+        double max_nozzle_diam = 0;
+        for (double val : vals) max_nozzle_diam = std::fmax(max_nozzle_diam, val);
+
+        // min object distance is max(duplicate_distance, clearance_radius)
+        double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat();
+        if (extruder_clearance_radius > base_dist){
+            std::cout << "min distance: set for extruder_clearance_radius: " << base_dist << " + " << extruder_clearance_radius << " + " << max_nozzle_diam << "\n";
+            base_dist = extruder_clearance_radius + max_nozzle_diam;
+        }
+        //add brim width
+        if (config->option("brim_width")->getFloat() > 0){
+            std::cout << "min distance: add for brim_width: " << base_dist << " += " << (config->option("brim_width")->getFloat()) << "\n";
+            base_dist += config->option("brim_width")->getFloat();
+        }
+        //add the skirt
+        if (config->option("skirts")->getInt() > 0){
+            //add skirt dist
+            std::cout << "min distance: set for skirt_distance: " << base_dist << " += " << config->option("skirt_distance")->getFloat() << "\n";
+            double dist_skirt = config->option("skirt_distance")->getFloat();
+            if (dist_skirt > config->option("brim_width")->getFloat())
+                base_dist += dist_skirt - config->option("brim_width")->getFloat();
+            //add skirt width
+            std::cout << "min distance: add for skirts: " << base_dist << " += " << (max_nozzle_diam*config->option("skirts")->getInt()*1.5) << "\n";
+            base_dist += max_nozzle_diam * config->option("skirts")->getInt() * 1.5;
+        }
+    }
+    std::cout << "min distance: final=" << base_dist << "\n";
+    return base_dist;
 }
 
 std::string FullPrintConfig::validate()

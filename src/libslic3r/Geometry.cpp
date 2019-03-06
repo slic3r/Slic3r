@@ -482,6 +482,7 @@ public:
 bool
 arrange(size_t total_parts, const Vec2d &part_size, coordf_t dist, const BoundingBoxf* bb, Pointfs &positions)
 {
+    std::cout << "calling geometry::arrange()\n";
     positions.clear();
 
     Vec2d part = part_size;

@@ -1,3 +1,4 @@
+#include <limits>
 #include <string.h>
 #include <map>
 #include <string>
@@ -583,7 +584,7 @@ void AMFParserContext::endElement(const char * /* name */)
             else if (m_path.size() == 3 && m_path[1] == NODE_TYPE_OBJECT && m_object && strcmp(opt_key, "sla_support_points") == 0) {
                 // Parse object's layer height profile, a semicolon separated list of floats.
                 unsigned char coord_idx = 0;
-                Vec3f point(Vec3f::Zero());
+                Eigen::Matrix<float, 5, 1, Eigen::DontAlign> point(Eigen::Matrix<float, 5, 1, Eigen::DontAlign>::Zero());
                 char *p = const_cast<char*>(m_value[1].c_str());
                 for (;;) {
                     char *end = strchr(p, ';');
@@ -591,8 +592,8 @@ void AMFParserContext::endElement(const char * /* name */)
 	                    *end = 0;
 
                     point(coord_idx) = atof(p);
-                    if (++coord_idx == 3) {
-                        m_object->sla_support_points.push_back(point);
+                    if (++coord_idx == 5) {
+                        m_object->sla_support_points.push_back(sla::SupportPoint(point));
                         coord_idx = 0;
                     }
 					if (end == nullptr)
@@ -604,7 +605,7 @@ void AMFParserContext::endElement(const char * /* name */)
                 if (strcmp(opt_key, "modifier") == 0) {
                     // Is this volume a modifier volume?
                     // "modifier" flag comes first in the XML file, so it may be later overwritten by the "type" flag.
-                    m_volume->set_type((atoi(m_value[1].c_str()) == 1) ? ModelVolume::PARAMETER_MODIFIER : ModelVolume::MODEL_PART);
+					m_volume->set_type((atoi(m_value[1].c_str()) == 1) ? ModelVolumeType::PARAMETER_MODIFIER : ModelVolumeType::MODEL_PART);
                 } else if (strcmp(opt_key, "volume_type") == 0) {
                     m_volume->set_type(ModelVolume::type_from_string(m_value[1]));
                 }
@@ -856,6 +857,11 @@ bool store_amf(const char *path, Model *model, const DynamicPrintConfig *config)
         return false;
 
     std::stringstream stream;
+    // https://en.cppreference.com/w/cpp/types/numeric_limits/max_digits10
+    // Conversion of a floating-point value to text and back is exact as long as at least max_digits10 were used (9 for float, 17 for double).
+    // It is guaranteed to produce the same floating-point value, even though the intermediate text representation is not exact.
+    // The default value of std::stream precision is 6 digits only!
+    stream << std::setprecision(std::numeric_limits<float>::max_digits10);
     stream << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
     stream << "<amf unit=\"millimeter\">\n";
     stream << "<metadata type=\"cad\">Slic3r " << SLIC3R_VERSION << "</metadata>\n";
@@ -900,14 +906,14 @@ bool store_amf(const char *path, Model *model, const DynamicPrintConfig *config)
         }
         //FIXME Store the layer height ranges (ModelObject::layer_height_ranges)
 
-        const std::vector<Vec3f>& sla_support_points = object->sla_support_points;
+        const std::vector<sla::SupportPoint>& sla_support_points = object->sla_support_points;
         if (!sla_support_points.empty()) {
             // Store the SLA supports as a single semicolon separated list.
             stream << "    <metadata type=\"slic3r.sla_support_points\">";
             for (size_t i = 0; i < sla_support_points.size(); ++i) {
                 if (i != 0)
                     stream << ";";
-                stream << sla_support_points[i](0) << ";" << sla_support_points[i](1) << ";" << sla_support_points[i](2);
+                stream << sla_support_points[i].pos(0) << ";" << sla_support_points[i].pos(1) << ";" << sla_support_points[i].pos(2) << ";" << sla_support_points[i].head_front_radius << ";" << sla_support_points[i].is_new_island;
             }
             stream << "\n    </metadata>\n";
         }
@@ -927,7 +933,7 @@ bool store_amf(const char *path, Model *model, const DynamicPrintConfig *config)
             for (size_t i = 0; i < stl.stats.shared_vertices; ++i) {
                 stream << "         <vertex>\n";
                 stream << "           <coordinates>\n";
-                Vec3d v = matrix * stl.v_shared[i].cast<double>();
+                Vec3f v = (matrix * stl.v_shared[i].cast<double>()).cast<float>();
                 stream << "             <x>" << v(0) << "</x>\n";
                 stream << "             <y>" << v(1) << "</y>\n";
                 stream << "             <z>" << v(2) << "</z>\n";

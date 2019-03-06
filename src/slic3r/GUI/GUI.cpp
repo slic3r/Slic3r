@@ -211,8 +211,10 @@ void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt
 			}
 			break;
 		case coEnum:{
-            if (opt_key.compare("top_fill_pattern") == 0 || opt_key.compare("bottom_fill_pattern") == 0 ||
-                opt_key.compare("solid_fill_pattern") == 0 || opt_key.compare("fill_pattern") == 0)
+			if (opt_key == "top_fill_pattern" ||
+				opt_key == "bottom_fill_pattern" ||
+				opt_key == "solid_fill_pattern" ||
+				opt_key == "fill_pattern")
 				config.set_key_value(opt_key, new ConfigOptionEnum<InfillPattern>(boost::any_cast<InfillPattern>(value))); 
 			else if (opt_key.compare("gcode_flavor") == 0)
 				config.set_key_value(opt_key, new ConfigOptionEnum<GCodeFlavor>(boost::any_cast<GCodeFlavor>(value))); 
@@ -363,21 +365,6 @@ wxString from_path(const boost::filesystem::path &path)
 boost::filesystem::path into_path(const wxString &str)
 {
 	return boost::filesystem::path(str.wx_str());
-}
-
-bool get_current_screen_size(wxWindow *window, unsigned &width, unsigned &height)
-{
-	const auto idx = wxDisplay::GetFromWindow(window);
-	if (idx == wxNOT_FOUND) {
-		return false;
-	}
-
-	wxDisplay display(idx);
-	const auto disp_size = display.GetClientArea();
-	width = disp_size.GetWidth();
-	height = disp_size.GetHeight();
-
-	return true;
 }
 
 void about()

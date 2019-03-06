@@ -13,6 +13,7 @@
 #include "libslic3r/Utils.hpp"
 #include "avrdude/avrdude-slic3r.hpp"
 #include "GUI.hpp"
+#include "GUI_App.hpp"
 #include "I18N.hpp"
 #include "MsgDialog.hpp"
 #include "../Utils/HexFile.hpp"
@@ -36,7 +37,6 @@
 #include <wx/collpane.h>
 #include <wx/msgdlg.h>
 #include <wx/filefn.h>
-#include "GUI_App.hpp"
 
 
 namespace fs = boost::filesystem;
@@ -122,7 +122,6 @@ struct FirmwareDialog::priv
 	// This is a shared pointer holding the background AvrDude task
 	// also serves as a status indication (it is set _iff_ the background task is running, otherwise it is reset).
 	AvrDude::Ptr avrdude;
-	std::string avrdude_config;
 	unsigned progress_tasks_done;
 	unsigned progress_tasks_bar;
 	bool user_cancelled;
@@ -134,7 +133,6 @@ struct FirmwareDialog::priv
 		btn_flash_label_flashing(_(L("Cancel"))),
 		label_status_flashing(_(L("Flashing in progress. Please do not disconnect the printer!"))),
 		timer_pulse(q),
-		avrdude_config((fs::path(::Slic3r::resources_dir()) / "avrdude" / "avrdude.conf").string()),
 		progress_tasks_done(0),
 		progress_tasks_bar(0),
 		user_cancelled(false),
@@ -446,7 +444,7 @@ void FirmwareDialog::priv::prepare_common()
 		"-U", (boost::format("flash:w:0:%1%:i") % hex_file.path.string()).str(),
 	}};
 
-	BOOST_LOG_TRIVIAL(info) << "Invoking avrdude, arguments: "
+	BOOST_LOG_TRIVIAL(info) << "Preparing arguments avrdude: "
 		<< std::accumulate(std::next(args.begin()), args.end(), args[0], [](std::string a, const std::string &b) {
 			return a + ' ' + b;
 		});
@@ -492,7 +490,7 @@ void FirmwareDialog::priv::prepare_mk3()
 		"-U", (boost::format("flash:w:1:%1%:i") % hex_file.path.string()).str(),
 	}};
 
-	BOOST_LOG_TRIVIAL(info) << "Invoking avrdude for external flash flashing, arguments: "
+	BOOST_LOG_TRIVIAL(info) << "Preparing avrdude arguments for external flash flashing: "
 		<< std::accumulate(std::next(args.begin()), args.end(), args[0], [](std::string a, const std::string &b) {
 			return a + ' ' + b;
 		});
@@ -522,7 +520,7 @@ void FirmwareDialog::priv::prepare_mm_control()
 		"-U", (boost::format("flash:w:0:%1%:i") % hex_file.path.string()).str(),
 	}};
 
-	BOOST_LOG_TRIVIAL(info) << "Invoking avrdude, arguments: "
+	BOOST_LOG_TRIVIAL(info) << "Preparing avrdude arguments: "
 		<< std::accumulate(std::next(args.begin()), args.end(), args[0], [](std::string a, const std::string &b) {
 			return a + ' ' + b;
 		});
@@ -553,7 +551,7 @@ void FirmwareDialog::priv::perform_upload()
 	flashing_start(hex_file.device == HexFile::DEV_MK3 ? 2 : 1);
 
 	// Init the avrdude object
-	AvrDude avrdude(avrdude_config);
+	AvrDude avrdude;
 
 	// It is ok here to use the q-pointer to the FirmwareDialog
 	// because the dialog ensures it doesn't exit before the background thread is done.
@@ -588,6 +586,13 @@ void FirmwareDialog::priv::perform_upload()
 
 			auto evt = new wxCommandEvent(EVT_AVRDUDE, q->GetId());
 			auto wxmsg = wxString::FromUTF8(msg);
+#ifdef WIN32
+			// The string might be in local encoding
+			if (wxmsg.IsEmpty() && *msg != '\0') {
+				wxmsg = wxString(msg);
+			}
+#endif
+
 			evt->SetExtraLong(AE_MESSAGE);
 			evt->SetString(std::move(wxmsg));
 			wxQueueEvent(q, evt);
@@ -693,10 +698,15 @@ FirmwareDialog::FirmwareDialog(wxWindow *parent) :
 	enum {
 		DIALOG_MARGIN = 15,
 		SPACING = 10,
-		MIN_WIDTH = 600,
-		MIN_HEIGHT = 200,
-		MIN_HEIGHT_EXPANDED = 500,
+		MIN_WIDTH = 50,
+		MIN_HEIGHT = 18,
+		MIN_HEIGHT_EXPANDED = 40,
 	};
+
+	const int em = GUI::wxGetApp().em_unit();
+	int min_width = MIN_WIDTH * em;
+	int min_height = MIN_HEIGHT * em;
+	int min_height_expanded = MIN_HEIGHT_EXPANDED * em;
 
 	wxFont status_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
 	status_font.MakeBold();
@@ -710,7 +720,7 @@ FirmwareDialog::FirmwareDialog(wxWindow *parent) :
 	panel->SetSizer(vsizer);
 
 	auto *label_hex_picker = new wxStaticText(panel, wxID_ANY, _(L("Firmware image:")));
-	p->hex_picker = new wxFilePickerCtrl(panel, wxID_ANY, wxEmptyString, wxFileSelectorPromptStr, 
+	p->hex_picker = new wxFilePickerCtrl(panel, wxID_ANY, wxEmptyString, wxFileSelectorPromptStr,
 		"Hex files (*.hex)|*.hex|All files|*.*");
 
 	auto *label_port_picker = new wxStaticText(panel, wxID_ANY, _(L("Serial port:")));
@@ -758,7 +768,7 @@ FirmwareDialog::FirmwareDialog(wxWindow *parent) :
 	// Experience says it needs to be 1, otherwise things won't get sized properly.
 	vsizer->Add(p->spoiler, 1, wxEXPAND | wxBOTTOM, SPACING);
 
-	p->btn_close = new wxButton(panel, wxID_CLOSE);
+	p->btn_close = new wxButton(panel, wxID_CLOSE, _(L("Close")));   // Note: The label needs to be present, otherwise we get accelerator bugs on Mac
 	p->btn_flash = new wxButton(panel, wxID_ANY, p->btn_flash_label_ready);
 	p->btn_flash->Disable();
 	auto *bsizer = new wxBoxSizer(wxHORIZONTAL);
@@ -769,10 +779,10 @@ FirmwareDialog::FirmwareDialog(wxWindow *parent) :
 
 	auto *topsizer = new wxBoxSizer(wxVERTICAL);
 	topsizer->Add(panel, 1, wxEXPAND | wxALL, DIALOG_MARGIN);
-	SetMinSize(wxSize(MIN_WIDTH, MIN_HEIGHT));
+	SetMinSize(wxSize(min_width, min_height));
 	SetSizerAndFit(topsizer);
 	const auto size = GetSize();
-	SetSize(std::max(size.GetWidth(), static_cast<int>(MIN_WIDTH)), std::max(size.GetHeight(), static_cast<int>(MIN_HEIGHT)));
+	SetSize(std::max(size.GetWidth(), static_cast<int>(min_width)), std::max(size.GetHeight(), static_cast<int>(min_height)));
 	Layout();
 
     SetEscapeId(wxID_CLOSE); // To close the dialog using "Esc" button
@@ -786,13 +796,13 @@ FirmwareDialog::FirmwareDialog(wxWindow *parent) :
 		}
 	});
 
-	p->spoiler->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, [this](wxCollapsiblePaneEvent &evt) {
+	p->spoiler->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, [=](wxCollapsiblePaneEvent &evt) {
 		if (evt.GetCollapsed()) {
-			this->SetMinSize(wxSize(MIN_WIDTH, MIN_HEIGHT));
+			this->SetMinSize(wxSize(min_width, min_height));
 			const auto new_height = this->GetSize().GetHeight() - this->p->txt_stdout->GetSize().GetHeight();
 			this->SetSize(this->GetSize().GetWidth(), new_height);
 		} else {
-			this->SetMinSize(wxSize(MIN_WIDTH, MIN_HEIGHT_EXPANDED));
+			this->SetMinSize(wxSize(min_width, min_height_expanded));
 		}
 
 		this->Layout();

@@ -53,6 +53,11 @@ wxFrame(NULL, wxID_ANY, SLIC3R_BUILD, wxDefaultPosition, wxDefaultSize, wxDEFAUL
 		SLIC3R_VERSION +
 		_(L(" - Remember to check for updates at http://github.com/supermerill/slic3r/releases")));
 
+
+    // initialize default width_unit according to the width of the one symbol ("x") of the current system font
+    const wxSize size = GetTextExtent("m");
+    wxGetApp().set_em_unit(size.x-1);
+
     // initialize tabpanel and menubar
     init_tabpanel();
     init_menubar();
@@ -105,6 +110,12 @@ wxFrame(NULL, wxID_ANY, SLIC3R_BUILD, wxDefaultPosition, wxDefaultSize, wxDEFAUL
         event.Skip();
     });
 
+    Bind(wxEVT_ACTIVATE, [this](wxActivateEvent& event) {
+        if (m_plater != nullptr && event.GetActive())
+            m_plater->on_activate();
+        event.Skip();
+    });
+
     wxGetApp().persist_window_geometry(this);
 
     update_ui_from_settings();    // FIXME (?)
@@ -136,11 +147,11 @@ void MainFrame::init_tabpanel()
     wxGetApp().obj_list()->create_popup_menus();
 
     // The following event is emited by Tab implementation on config value change.
-    Bind(EVT_TAB_VALUE_CHANGED, &MainFrame::on_value_changed, this);
+    Bind(EVT_TAB_VALUE_CHANGED, &MainFrame::on_value_changed, this); // #ys_FIXME_to_delete
 
     // The following event is emited by Tab on preset selection,
     // or when the preset's "modified" status changes.
-    Bind(EVT_TAB_PRESETS_CHANGED, &MainFrame::on_presets_changed, this);
+    Bind(EVT_TAB_PRESETS_CHANGED, &MainFrame::on_presets_changed, this); // #ys_FIXME_to_delete
 
     create_preset_tabs();
 
@@ -550,9 +561,6 @@ void MainFrame::quick_slice(const int qs)
     } 
     else if (qs & qsSaveAs) {
         // The following line may die if the output_filename_format template substitution fails.
-//         output_file = sprint->output_filepath;
-//         if (export_svg)
-//         output_file = ~s / \.[gG][cC][oO][dD][eE]$ / .svg /;
         auto dlg = new wxFileDialog(this, _(L("Save ")) + (qs & qsExportSVG ? _(L("SVG")) : _(L("G-code"))) + _(L(" file as:")),
             wxGetApp().app_config->get_last_output_dir(get_dir_name(output_file)), get_base_name(input_file), 
             qs & qsExportSVG ? file_wildcards(FT_SVG) : file_wildcards(FT_GCODE),
@@ -568,11 +576,9 @@ void MainFrame::quick_slice(const int qs)
         wxGetApp().app_config->update_last_output_dir(get_dir_name(output_file));
     } 
     else if (qs & qsExportPNG) {
-//         output_file = sprint->output_filepath;
-//         output_file = ~s / \.[gG][cC][oO][dD][eE]$ / .zip / ;
         auto dlg = new wxFileDialog(this, _(L("Save zip file as:")),
             wxGetApp().app_config->get_last_output_dir(get_dir_name(output_file)),
-            get_base_name(output_file), "*.zip", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+            get_base_name(output_file), "*.sl1", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
         if (dlg->ShowModal() != wxID_OK) {
             dlg->Destroy();
             return;
@@ -826,6 +832,7 @@ void MainFrame::select_view(const std::string& direction)
          m_plater->select_view(direction);
 }
 
+// #ys_FIXME_to_delete
 void MainFrame::on_presets_changed(SimpleEvent &event)
 {
     auto *tab = dynamic_cast<Tab*>(event.GetEventObject());
@@ -850,6 +857,7 @@ void MainFrame::on_presets_changed(SimpleEvent &event)
     }
 }
 
+// #ys_FIXME_to_delete
 void MainFrame::on_value_changed(wxCommandEvent& event)
 {
     auto *tab = dynamic_cast<Tab*>(event.GetEventObject());
@@ -865,12 +873,12 @@ void MainFrame::on_value_changed(wxCommandEvent& event)
             m_plater->on_extruders_change(value);
         }
     }
-    // Don't save while loading for the first time.
-    if (m_loaded) {
-        AppConfig &cfg = *wxGetApp().app_config;
-        if (cfg.get("autosave") == "1")
-            cfg.save();
-    }
+}
+
+void MainFrame::on_config_changed(DynamicPrintConfig* config) const
+{
+    if (m_plater)
+        m_plater->on_config_change(*config); // propagate config change events to the plater
 }
 
 // Called after the Preferences dialog is closed and the program settings are saved.

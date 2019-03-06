@@ -225,6 +225,17 @@ bool GLShader::set_uniform(const char* name, const float* matrix) const
     return false;
 }
 
+bool GLShader::set_uniform(const char* name, int value) const
+{
+    int id = get_uniform_location(name);
+    if (id >= 0)
+    {
+        ::glUniform1i(id, value);
+        return true;
+    }
+    return false;
+}
+
 /*
 # Set shader vector
 sub SetVector
@@ -252,5 +263,102 @@ sub SetMatrix
     return '';
 }
 */
+
+#if ENABLE_TEXTURES_FROM_SVG
+Shader::Shader()
+    : m_shader(nullptr)
+{
+}
+
+Shader::~Shader()
+{
+    reset();
+}
+
+bool Shader::init(const std::string& vertex_shader_filename, const std::string& fragment_shader_filename)
+{
+    if (is_initialized())
+        return true;
+
+    m_shader = new GLShader();
+    if (m_shader != nullptr)
+    {
+        if (!m_shader->load_from_file(fragment_shader_filename.c_str(), vertex_shader_filename.c_str()))
+        {
+            std::cout << "Compilaton of shader failed:" << std::endl;
+            std::cout << m_shader->last_error << std::endl;
+            reset();
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool Shader::is_initialized() const
+{
+    return (m_shader != nullptr);
+}
+
+bool Shader::start_using() const
+{
+    if (is_initialized())
+    {
+        m_shader->enable();
+        return true;
+    }
+    else
+        return false;
+}
+
+void Shader::stop_using() const
+{
+    if (m_shader != nullptr)
+        m_shader->disable();
+}
+
+int Shader::get_attrib_location(const std::string& name) const
+{
+    return (m_shader != nullptr) ? m_shader->get_attrib_location(name.c_str()) : -1;
+}
+
+int Shader::get_uniform_location(const std::string& name) const
+{
+    return (m_shader != nullptr) ? m_shader->get_uniform_location(name.c_str()) : -1;
+}
+
+void Shader::set_uniform(const std::string& name, float value) const
+{
+    if (m_shader != nullptr)
+        m_shader->set_uniform(name.c_str(), value);
+}
+
+void Shader::set_uniform(const std::string& name, const float* matrix) const
+{
+    if (m_shader != nullptr)
+        m_shader->set_uniform(name.c_str(), matrix);
+}
+
+void Shader::set_uniform(const std::string& name, bool value) const
+{
+    if (m_shader != nullptr)
+        m_shader->set_uniform(name.c_str(), value ? 1 : 0);
+}
+
+unsigned int Shader::get_shader_program_id() const
+{
+    return (m_shader != nullptr) ? m_shader->shader_program_id : 0;
+}
+
+void Shader::reset()
+{
+    if (m_shader != nullptr)
+    {
+        m_shader->release();
+        delete m_shader;
+        m_shader = nullptr;
+    }
+}
+#endif // ENABLE_TEXTURES_FROM_SVG
 
 } // namespace Slic3r

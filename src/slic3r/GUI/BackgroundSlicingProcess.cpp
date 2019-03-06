@@ -150,7 +150,7 @@ void BackgroundSlicingProcess::process_sla()
     if (this->set_step_started(bspsGCodeFinalize)) {
         if (! m_export_path.empty()) {
             m_sla_print->export_raster<SLAZipFmt>(m_export_path);
-            m_print->set_status(100, "Zip file exported to " + m_export_path);
+            m_print->set_status(100, "Masked SLA file exported to " + m_export_path);
         } else if (! m_upload_job.empty()) {
             prepare_upload();
         } else {
@@ -196,6 +196,7 @@ void BackgroundSlicingProcess::thread_proc()
 		} catch (...) {
 			error = "Unknown C++ exception.";
 		}
+		m_print->finalize();
 		lck.lock();
 		m_state = m_print->canceled() ? STATE_CANCELED : STATE_FINISHED;
 		if (m_print->cancel_status() != Print::CANCELED_INTERNAL) {
@@ -360,6 +361,12 @@ Print::ApplyStatus BackgroundSlicingProcess::apply(const Model &model, const Dyn
 		m_gcode_preview_data->reset();
 	}
 	return invalidated;
+}
+
+void BackgroundSlicingProcess::set_task(const PrintBase::TaskParams &params)
+{
+	assert(m_print != nullptr);
+	m_print->set_task(params);
 }
 
 // Set the output path of the G-code.

@@ -16,12 +16,18 @@
 #include <set>
 #include <functional>
 
+namespace Slic3r {
+	enum class ModelVolumeType : int;
+};
+
 wxMenuItem* append_menu_item(wxMenu* menu, int id, const wxString& string, const wxString& description, 
     std::function<void(wxCommandEvent& event)> cb, const wxBitmap& icon, wxEvtHandler* event_handler = nullptr);
 wxMenuItem* append_menu_item(wxMenu* menu, int id, const wxString& string, const wxString& description,
     std::function<void(wxCommandEvent& event)> cb, const std::string& icon = "", wxEvtHandler* event_handler = nullptr);
 
 wxMenuItem* append_submenu(wxMenu* menu, wxMenu* sub_menu, int id, const wxString& string, const wxString& description, const std::string& icon = "");
+
+wxBitmap create_scaled_bitmap(const std::string& bmp_name);
 
 class wxCheckListBoxComboPopup : public wxCheckListBox, public wxComboPopup
 {
@@ -446,7 +452,7 @@ public:
 	wxDataViewItem Add(const wxString &name, const int extruder);
 	wxDataViewItem AddVolumeChild(const wxDataViewItem &parent_item, 
 							const wxString &name, 
-                            const int volume_type,
+                            const Slic3r::ModelVolumeType volume_type,
                             const int extruder = 0,
                             const bool create_frst_child = true);
 	wxDataViewItem AddSettingsChild(const wxDataViewItem &parent_item);
@@ -514,7 +520,7 @@ public:
     void    UpdateSettingsDigest(const wxDataViewItem &item, const std::vector<std::string>& categories);
 
     void    SetVolumeBitmaps(const std::vector<wxBitmap*>& volume_bmps) { m_volume_bmps = volume_bmps; }
-    void    SetVolumeType(const wxDataViewItem &item, const int type);
+    void    SetVolumeType(const wxDataViewItem &item, const Slic3r::ModelVolumeType type);
 
     void    SetAssociatedControl(wxDataViewCtrl* ctrl) { m_ctrl = ctrl; }
 };
@@ -785,6 +791,8 @@ protected:
     double      get_double_value(const SelectedSlider& selection);
 
 private:
+    bool        is_osx { false };
+    wxFont      m_font;
     int         m_min_value;
     int         m_max_value;
     int         m_lower_value;
@@ -882,8 +890,8 @@ public:
         wxWindowID id,
         const wxString& mode = wxEmptyString,
         const wxBitmap& bmp_on = wxNullBitmap,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize);
+        const wxSize& size = wxDefaultSize,
+        const wxPoint& pos = wxDefaultPosition);
     ~PrusaModeButton() {}
 
     void    OnButton(wxCommandEvent& event);
@@ -900,6 +908,8 @@ private:
 
     wxBitmap    m_bmp_on;
     wxBitmap    m_bmp_off;
+    wxString    m_tt_selected;
+    wxString    m_tt_focused;
 };
 
 
@@ -911,7 +921,7 @@ private:
 class PrusaModeSizer : public wxFlexGridSizer
 {
 public:
-    PrusaModeSizer( wxWindow *parent);
+    PrusaModeSizer( wxWindow *parent, int hgap = 10);
     ~PrusaModeSizer() {}
 
     void SetMode(const /*ConfigOptionMode*/int mode);

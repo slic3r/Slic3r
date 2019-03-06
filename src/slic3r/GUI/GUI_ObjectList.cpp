@@ -45,18 +45,18 @@ ObjectList::ObjectList(wxWindow* parent) :
     // Fill CATEGORY_ICON
     {
         // ptFFF
-		CATEGORY_ICON[L("Layers and Perimeters")]	= wxBitmap(from_u8(var("layers.png")), wxBITMAP_TYPE_PNG);
-		CATEGORY_ICON[L("Infill")]					= wxBitmap(from_u8(var("infill.png")), wxBITMAP_TYPE_PNG);
-		CATEGORY_ICON[L("Support material")]		= wxBitmap(from_u8(var("building.png")), wxBITMAP_TYPE_PNG);
-		CATEGORY_ICON[L("Speed")]					= wxBitmap(from_u8(var("time.png")), wxBITMAP_TYPE_PNG);
-		CATEGORY_ICON[L("Extruders")]				= wxBitmap(from_u8(var("funnel.png")), wxBITMAP_TYPE_PNG);
-		CATEGORY_ICON[L("Extrusion Width")]			= wxBitmap(from_u8(var("funnel.png")), wxBITMAP_TYPE_PNG);
-// 		CATEGORY_ICON[L("Skirt and brim")]			= wxBitmap(from_u8(var("box.png")), wxBITMAP_TYPE_PNG);
-// 		CATEGORY_ICON[L("Speed > Acceleration")]	= wxBitmap(from_u8(var("time.png")), wxBITMAP_TYPE_PNG);
-		CATEGORY_ICON[L("Advanced")]				= wxBitmap(from_u8(var("wand.png")), wxBITMAP_TYPE_PNG);
+		CATEGORY_ICON[L("Layers and Perimeters")]	= create_scaled_bitmap("layers.png"); // wxBitmap(from_u8(var("layers.png")), wxBITMAP_TYPE_PNG);
+		CATEGORY_ICON[L("Infill")]					= create_scaled_bitmap("infill.png"); // wxBitmap(from_u8(var("infill.png")), wxBITMAP_TYPE_PNG);
+		CATEGORY_ICON[L("Support material")]		= create_scaled_bitmap("building.png"); // wxBitmap(from_u8(var("building.png")), wxBITMAP_TYPE_PNG);
+		CATEGORY_ICON[L("Speed")]					= create_scaled_bitmap("time.png"); // wxBitmap(from_u8(var("time.png")), wxBITMAP_TYPE_PNG);
+		CATEGORY_ICON[L("Extruders")]				= create_scaled_bitmap("funnel.png"); // wxBitmap(from_u8(var("funnel.png")), wxBITMAP_TYPE_PNG);
+		CATEGORY_ICON[L("Extrusion Width")]			= create_scaled_bitmap("funnel.png"); // wxBitmap(from_u8(var("funnel.png")), wxBITMAP_TYPE_PNG);
+// 		CATEGORY_ICON[L("Skirt and brim")]			= create_scaled_bitmap("box.png"); // wxBitmap(from_u8(var("box.png")), wxBITMAP_TYPE_PNG);
+// 		CATEGORY_ICON[L("Speed > Acceleration")]	= create_scaled_bitmap("time.png"); // wxBitmap(from_u8(var("time.png")), wxBITMAP_TYPE_PNG);
+		CATEGORY_ICON[L("Advanced")]				= create_scaled_bitmap("wand.png"); // wxBitmap(from_u8(var("wand.png")), wxBITMAP_TYPE_PNG);
 		// ptSLA
-		CATEGORY_ICON[L("Supports")]				= wxBitmap(from_u8(var("building.png")), wxBITMAP_TYPE_PNG);
-		CATEGORY_ICON[L("Pad")]				        = wxBitmap(from_u8(var("brick.png")), wxBITMAP_TYPE_PNG);
+		CATEGORY_ICON[L("Supports")]				= create_scaled_bitmap("building.png"); // wxBitmap(from_u8(var("building.png")), wxBITMAP_TYPE_PNG);
+		CATEGORY_ICON[L("Pad")]				        = create_scaled_bitmap("brick.png"); // wxBitmap(from_u8(var("brick.png")), wxBITMAP_TYPE_PNG);
     }
 
     // create control
@@ -116,7 +116,7 @@ void ObjectList::create_objects_ctrl()
     SetMinSize(wxSize(-1, 3000));   // #ys_FIXME 
 
     m_sizer = new wxBoxSizer(wxVERTICAL);
-    m_sizer->Add(this, 1, wxGROW | wxLEFT, 20);
+    m_sizer->Add(this, 1, wxGROW);
 
     m_objects_model = new PrusaObjectDataViewModel;
     AssociateModel(m_objects_model);
@@ -129,13 +129,13 @@ void ObjectList::create_objects_ctrl()
     // column 0(Icon+Text) of the view control: 
     // And Icon can be consisting of several bitmaps
     AppendColumn(new wxDataViewColumn(_(L("Name")), new PrusaBitmapTextRenderer(),
-        0, 200, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE));
+        0, 20*wxGetApp().em_unit()/*200*/, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE));
 
     // column 1 of the view control:
     AppendColumn(create_objects_list_extruder_column(4));
 
     // column 2 of the view control:
-    AppendBitmapColumn(" ", 2, wxDATAVIEW_CELL_INERT, 25,
+    AppendBitmapColumn(" ", 2, wxDATAVIEW_CELL_INERT, int(2.5 * wxGetApp().em_unit())/*25*/,
         wxALIGN_CENTER_HORIZONTAL, wxDATAVIEW_COL_RESIZABLE);
 }
 
@@ -218,7 +218,8 @@ wxDataViewColumn* ObjectList::create_objects_list_extruder_column(int extruders_
         choices.Add(wxString::Format("%d", i));
     wxDataViewChoiceRenderer *c =
         new wxDataViewChoiceRenderer(choices, wxDATAVIEW_CELL_EDITABLE, wxALIGN_CENTER_HORIZONTAL);
-    wxDataViewColumn* column = new wxDataViewColumn(_(L("Extruder")), c, 1, 80, wxALIGN_CENTER_HORIZONTAL, wxDATAVIEW_COL_RESIZABLE);
+    wxDataViewColumn* column = new wxDataViewColumn(_(L("Extruder")), c, 1, 
+                               8*wxGetApp().em_unit()/*80*/, wxALIGN_CENTER_HORIZONTAL, wxDATAVIEW_COL_RESIZABLE);
     return column;
 }
 
@@ -334,11 +335,18 @@ void ObjectList::update_name_in_model(const wxDataViewItem& item) const
 
 void ObjectList::init_icons()
 {
-    m_bmp_modifiermesh      = wxBitmap(from_u8(var("lambda.png")), wxBITMAP_TYPE_PNG);//(Slic3r::var("plugin.png")), wxBITMAP_TYPE_PNG);
-    m_bmp_solidmesh         = wxBitmap(from_u8(var("object.png")), wxBITMAP_TYPE_PNG);//(Slic3r::var("package.png")), wxBITMAP_TYPE_PNG);
+//     m_bmp_modifiermesh      = wxBitmap(from_u8(var("lambda.png")), wxBITMAP_TYPE_PNG);//(Slic3r::var("plugin.png")), wxBITMAP_TYPE_PNG);
+//     m_bmp_solidmesh         = wxBitmap(from_u8(var("object.png")), wxBITMAP_TYPE_PNG);//(Slic3r::var("package.png")), wxBITMAP_TYPE_PNG);
 
-    m_bmp_support_enforcer  = wxBitmap(from_u8(var("support_enforcer_.png")), wxBITMAP_TYPE_PNG);
-    m_bmp_support_blocker   = wxBitmap(from_u8(var("support_blocker_.png")), wxBITMAP_TYPE_PNG);
+//     m_bmp_support_enforcer  = wxBitmap(from_u8(var("support_enforcer_.png")), wxBITMAP_TYPE_PNG);
+//     m_bmp_support_blocker   = wxBitmap(from_u8(var("support_blocker_.png")), wxBITMAP_TYPE_PNG);
+
+
+    m_bmp_modifiermesh     = create_scaled_bitmap("lambda.png");
+    m_bmp_solidmesh        = create_scaled_bitmap("object.png");
+    m_bmp_support_enforcer = create_scaled_bitmap("support_enforcer_.png");
+    m_bmp_support_blocker  = create_scaled_bitmap("support_blocker_.png");
+
 
     m_bmp_vector.reserve(4); // bitmaps for different types of parts 
     m_bmp_vector.push_back(&m_bmp_solidmesh);         // Add part
@@ -348,13 +356,16 @@ void ObjectList::init_icons()
     m_objects_model->SetVolumeBitmaps(m_bmp_vector);
 
     // init icon for manifold warning
-    m_bmp_manifold_warning  = wxBitmap(from_u8(var("exclamation_mark_.png")), wxBITMAP_TYPE_PNG);//(Slic3r::var("error.png")), wxBITMAP_TYPE_PNG);
+//     m_bmp_manifold_warning  = wxBitmap(from_u8(var("exclamation_mark_.png")), wxBITMAP_TYPE_PNG);//(Slic3r::var("error.png")), wxBITMAP_TYPE_PNG);
+    m_bmp_manifold_warning  = create_scaled_bitmap("exclamation_mark_.png");
 
     // init bitmap for "Split to sub-objects" context menu
-    m_bmp_split             = wxBitmap(from_u8(var("split.png")), wxBITMAP_TYPE_PNG);
+//     m_bmp_split             = wxBitmap(from_u8(var("split.png")), wxBITMAP_TYPE_PNG);
+    m_bmp_split             = create_scaled_bitmap("split.png");
 
     // init bitmap for "Add Settings" context menu
-    m_bmp_cog               = wxBitmap(from_u8(var("cog.png")), wxBITMAP_TYPE_PNG);
+//     m_bmp_cog               = wxBitmap(from_u8(var("cog.png")), wxBITMAP_TYPE_PNG);
+    m_bmp_cog               = create_scaled_bitmap("cog.png");
 }
 
 
@@ -807,7 +818,7 @@ void ObjectList::update_settings_item()
     }
 }
 
-void ObjectList::append_menu_item_add_generic(wxMenuItem* menu, const int type) {
+void ObjectList::append_menu_item_add_generic(wxMenuItem* menu, const ModelVolumeType type) {
     auto sub_menu = new wxMenu;
 
     if (wxGetApp().get_mode() == comExpert) {
@@ -816,10 +827,9 @@ void ObjectList::append_menu_item_add_generic(wxMenuItem* menu, const int type) 
     sub_menu->AppendSeparator();
     }
 
-    std::vector<std::string> menu_items = { L("Box"), L("Cylinder"), L("Sphere"), L("Slab") };
-    for (auto& item : menu_items) {
+    for (auto& item : { L("Box"), L("Cylinder"), L("Sphere"), L("Slab") }) {
         append_menu_item(sub_menu, wxID_ANY, _(item), "",
-            [this, type, item](wxCommandEvent&) { load_generic_subobject(_(item).ToUTF8().data(), type); }, "", menu->GetMenu());
+            [this, type, item](wxCommandEvent&) { load_generic_subobject(item, type); }, "", menu->GetMenu());
     }
 
     menu->SetSubMenu(sub_menu);
@@ -828,10 +838,10 @@ void ObjectList::append_menu_item_add_generic(wxMenuItem* menu, const int type) 
 void ObjectList::append_menu_items_add_volume(wxMenu* menu)
 {
     // Note: id accords to type of the sub-object, so sequence of the menu items is important
-    std::vector<std::string> menu_object_types_items = {L("Add part"),              // ~ModelVolume::MODEL_PART
-                                                        L("Add modifier"),          // ~ModelVolume::PARAMETER_MODIFIER
-                                                        L("Add support enforcer"),  // ~ModelVolume::SUPPORT_ENFORCER
-                                                        L("Add support blocker") }; // ~ModelVolume::SUPPORT_BLOCKER
+    std::vector<std::string> menu_object_types_items = {L("Add part"),              // ~ModelVolumeType::MODEL_PART
+                                                        L("Add modifier"),          // ~ModelVolumeType::PARAMETER_MODIFIER
+                                                        L("Add support enforcer"),  // ~ModelVolumeType::SUPPORT_ENFORCER
+                                                        L("Add support blocker") }; // ~ModelVolumeType::SUPPORT_BLOCKER
 
     // Update "add" items(delete old & create new)  settings popupmenu
     for (auto& item : menu_object_types_items){
@@ -845,15 +855,15 @@ void ObjectList::append_menu_items_add_volume(wxMenu* menu)
     if (mode < comExpert)
     {
         append_menu_item(menu, wxID_ANY, _(L("Add part")), "",
-            [this](wxCommandEvent&) { load_subobject(ModelVolume::MODEL_PART); }, *m_bmp_vector[ModelVolume::MODEL_PART]);
+			[this](wxCommandEvent&) { load_subobject(ModelVolumeType::MODEL_PART); }, *m_bmp_vector[int(ModelVolumeType::MODEL_PART)]);
     }
     if (mode == comSimple) {
         append_menu_item(menu, wxID_ANY, _(L("Add support enforcer")), "",
-            [this](wxCommandEvent&) { load_generic_subobject(_(L("Box")).ToUTF8().data(), ModelVolume::SUPPORT_ENFORCER); },
-            *m_bmp_vector[ModelVolume::SUPPORT_ENFORCER]);
+            [this](wxCommandEvent&) { load_generic_subobject(L("Box"), ModelVolumeType::SUPPORT_ENFORCER); },
+            *m_bmp_vector[int(ModelVolumeType::SUPPORT_ENFORCER)]);
         append_menu_item(menu, wxID_ANY, _(L("Add support blocker")), "",
-            [this](wxCommandEvent&) { load_generic_subobject(_(L("Box")).ToUTF8().data(), ModelVolume::SUPPORT_BLOCKER); },
-            *m_bmp_vector[ModelVolume::SUPPORT_BLOCKER]);
+            [this](wxCommandEvent&) { load_generic_subobject(L("Box"), ModelVolumeType::SUPPORT_BLOCKER); },
+            *m_bmp_vector[int(ModelVolumeType::SUPPORT_BLOCKER)]);
 
         return;
     }
@@ -864,7 +874,7 @@ void ObjectList::append_menu_items_add_volume(wxMenu* menu)
 
         auto menu_item = new wxMenuItem(menu, wxID_ANY, _(item));
         menu_item->SetBitmap(*m_bmp_vector[type]);
-        append_menu_item_add_generic(menu_item, type);
+        append_menu_item_add_generic(menu_item, ModelVolumeType(type));
 
         menu->Append(menu_item);
     }
@@ -913,7 +923,7 @@ wxMenuItem* ObjectList::append_menu_item_settings(wxMenu* menu_)
     menu->DestroySeparators(); // delete old separators
 
     const auto sel_vol = get_selected_model_volume();
-    if (sel_vol && sel_vol->type() >= ModelVolume::SUPPORT_ENFORCER)
+    if (sel_vol && sel_vol->type() >= ModelVolumeType::SUPPORT_ENFORCER)
         return nullptr;
 
     const ConfigOptionMode mode = wxGetApp().get_mode();
@@ -937,7 +947,7 @@ wxMenuItem* ObjectList::append_menu_item_settings(wxMenu* menu_)
     menu_item->SetBitmap(m_bmp_cog);
 
 //     const auto sel_vol = get_selected_model_volume();
-//     if (sel_vol && sel_vol->type() >= ModelVolume::SUPPORT_ENFORCER)
+//     if (sel_vol && sel_vol->type() >= ModelVolumeType::SUPPORT_ENFORCER)
 //         menu_item->Enable(false);
 //     else
         menu_item->SetSubMenu(create_settings_popupmenu(menu));
@@ -1092,7 +1102,7 @@ void ObjectList::update_opt_keys(t_config_option_keys& opt_keys)
             opt_keys.erase(opt_keys.begin() + i);
 }
 
-void ObjectList::load_subobject(int type)
+void ObjectList::load_subobject(ModelVolumeType type)
 {
     auto item = GetSelection();
     if (!item || m_objects_model->GetParent(item) != wxDataViewItem(0))
@@ -1115,7 +1125,7 @@ void ObjectList::load_subobject(int type)
 
 void ObjectList::load_part( ModelObject* model_object,
                             wxArrayString& part_names, 
-                            int type)
+                            ModelVolumeType type)
 {
     wxWindow* parent = wxGetApp().tab_panel()->GetPage(0);
 
@@ -1148,7 +1158,7 @@ void ObjectList::load_part( ModelObject* model_object,
 #endif // !ENABLE_VOLUMES_CENTERING_FIXES
                 volume->translate(delta);
                 auto new_volume = model_object->add_volume(*volume);
-                new_volume->set_type(static_cast<ModelVolume::Type>(type));
+                new_volume->set_type(type);
                 new_volume->name = boost::filesystem::path(input_file).filename().string();
 
                 part_names.Add(from_u8(new_volume->name));
@@ -1163,64 +1173,145 @@ void ObjectList::load_part( ModelObject* model_object,
 
 }
 
-void ObjectList::load_generic_subobject(const std::string& type_name, const int type)
+// Find volume transformation, so that the chained (instance_trafo * volume_trafo) will be as close to identity
+// as possible in least squares norm in regard to the 8 corners of bbox.
+// Bounding box is expected to be centered around zero in all axes.
+Geometry::Transformation volume_to_bed_transformation(const Geometry::Transformation &instance_transformation, const BoundingBoxf3 &bbox)
+{
+    Geometry::Transformation out;
+
+	// Is the angle close to a multiple of 90 degrees?
+	auto ninety_degrees = [](double a) { 
+		a = fmod(std::abs(a), 0.5 * PI);
+		if (a > 0.25 * PI)
+			a = 0.5 * PI - a;
+		return a < 0.001;
+	};
+    if (instance_transformation.is_scaling_uniform()) {
+        // No need to run the non-linear least squares fitting for uniform scaling.
+        // Just set the inverse.
+		out.set_from_transform(instance_transformation.get_matrix(true).inverse());
+    }
+	else if (ninety_degrees(instance_transformation.get_rotation().x()) && ninety_degrees(instance_transformation.get_rotation().y()) && ninety_degrees(instance_transformation.get_rotation().z()))
+	{
+		// Anisotropic scaling, rotation by multiples of ninety degrees.
+		Eigen::Matrix3d instance_rotation_trafo =
+			(Eigen::AngleAxisd(instance_transformation.get_rotation().z(), Vec3d::UnitZ()) *
+			 Eigen::AngleAxisd(instance_transformation.get_rotation().y(), Vec3d::UnitY()) *
+			 Eigen::AngleAxisd(instance_transformation.get_rotation().x(), Vec3d::UnitX())).toRotationMatrix();
+		Eigen::Matrix3d volume_rotation_trafo =
+			(Eigen::AngleAxisd(-instance_transformation.get_rotation().x(), Vec3d::UnitX()) *
+			 Eigen::AngleAxisd(-instance_transformation.get_rotation().y(), Vec3d::UnitY()) *
+			 Eigen::AngleAxisd(-instance_transformation.get_rotation().z(), Vec3d::UnitZ())).toRotationMatrix();
+
+		// 8 corners of the bounding box.
+		auto pts = Eigen::MatrixXd(8, 3);
+		pts(0, 0) = bbox.min.x(); pts(0, 1) = bbox.min.y(); pts(0, 2) = bbox.min.z();
+		pts(1, 0) = bbox.min.x(); pts(1, 1) = bbox.min.y(); pts(1, 2) = bbox.max.z();
+		pts(2, 0) = bbox.min.x(); pts(2, 1) = bbox.max.y(); pts(2, 2) = bbox.min.z();
+		pts(3, 0) = bbox.min.x(); pts(3, 1) = bbox.max.y(); pts(3, 2) = bbox.max.z();
+		pts(4, 0) = bbox.max.x(); pts(4, 1) = bbox.min.y(); pts(4, 2) = bbox.min.z();
+		pts(5, 0) = bbox.max.x(); pts(5, 1) = bbox.min.y(); pts(5, 2) = bbox.max.z();
+		pts(6, 0) = bbox.max.x(); pts(6, 1) = bbox.max.y(); pts(6, 2) = bbox.min.z();
+		pts(7, 0) = bbox.max.x(); pts(7, 1) = bbox.max.y(); pts(7, 2) = bbox.max.z();
+
+		// Corners of the bounding box transformed into the modifier mesh coordinate space, with inverse rotation applied to the modifier.
+		auto qs = pts * 
+			(instance_rotation_trafo *
+			 Eigen::Scaling(instance_transformation.get_scaling_factor().cwiseProduct(instance_transformation.get_mirror())) * 
+			 volume_rotation_trafo).inverse().transpose();
+		// Fill in scaling based on least squares fitting of the bounding box corners.
+		Vec3d scale;
+		for (int i = 0; i < 3; ++ i)
+			scale(i) = pts.col(i).dot(qs.col(i)) / pts.col(i).dot(pts.col(i));
+
+		out.set_rotation(Geometry::extract_euler_angles(volume_rotation_trafo));
+		out.set_scaling_factor(Vec3d(std::abs(scale(0)), std::abs(scale(1)), std::abs(scale(2))));
+		out.set_mirror(Vec3d(scale(0) > 0 ? 1. : -1, scale(1) > 0 ? 1. : -1, scale(2) > 0 ? 1. : -1));
+    }
+	else
+	{
+		// General anisotropic scaling, general rotation.
+		// Keep the modifier mesh in the instance coordinate system, so the modifier mesh will not be aligned with the world.
+		// Scale it to get the required size.
+		out.set_scaling_factor(instance_transformation.get_scaling_factor().cwiseInverse());
+	}
+
+    return out;
+}
+
+void ObjectList::load_generic_subobject(const std::string& type_name, const ModelVolumeType type)
 {
     const auto obj_idx = get_selected_obj_idx();
-    if (obj_idx < 0) return;
+    if (obj_idx < 0) 
+        return;
 
-    const std::string name = "lambda-" + type_name;
+    const GLCanvas3D::Selection& selection = wxGetApp().plater()->canvas3D()->get_selection();
+    assert(obj_idx == selection.get_object_idx());
+    // Selected instance index in ModelObject. Only valid if there is only one instance selected in the selection.
+    int instance_idx = selection.get_instance_idx();
+    assert(instance_idx != -1);
+    if (instance_idx == -1)
+        return;
+
+    // Selected object
+    ModelObject  &model_object = *(*m_objects)[obj_idx];
+    // Bounding box of the selected instance in world coordinate system including the translation, without modifiers.
+    BoundingBoxf3 instance_bb = model_object.instance_bounding_box(instance_idx);
+
+    const wxString name = _(L("Generic")) + "-" + _(type_name);
     TriangleMesh mesh;
 
     auto& bed_shape = wxGetApp().preset_bundle->printers.get_edited_preset().config.option<ConfigOptionPoints>("bed_shape")->values;
     const auto& sz = BoundingBoxf(bed_shape).size();
     const auto side = 0.1 * std::max(sz(0), sz(1));
 
-    if (type_name == _("Box")) {
+    if (type_name == "Box")
+        // Sitting on the print bed, left front front corner at (0, 0).
         mesh = make_cube(side, side, side);
-        // box sets the base coordinate at 0, 0, move to center of plate
-        mesh.translate(-side * 0.5, -side * 0.5, 0);
-    }
-    else if (type_name == _("Cylinder"))
-        mesh = make_cylinder(0.5*side, side);
-    else if (type_name == _("Sphere"))
-        mesh = make_sphere(0.5*side, PI/18);
-    else if (type_name == _("Slab")) {
-        const auto& size = (*m_objects)[obj_idx]->bounding_box().size();
-        mesh = make_cube(size(0)*1.5, size(1)*1.5, size(2)*0.5);
-        // box sets the base coordinate at 0, 0, move to center of plate and move it up to initial_z
-        mesh.translate(-size(0)*1.5 / 2.0, -size(1)*1.5 / 2.0, 0);
-    }
+    else if (type_name == "Cylinder")
+        // Centered around 0, sitting on the print bed.
+        // The cylinder has the same volume as the box above.
+        mesh = make_cylinder(0.564 * side, side);
+    else if (type_name == "Sphere")
+        // Centered around 0, half the sphere below the print bed, half above.
+        // The sphere has the same volume as the box above.
+        mesh = make_sphere(0.62 * side, PI / 18);
+    else if (type_name == "Slab")
+        // Sitting on the print bed, left front front corner at (0, 0).
+        mesh = make_cube(instance_bb.size().x()*1.5, instance_bb.size().y()*1.5, instance_bb.size().z()*0.5);
     mesh.repair();
     
-    auto new_volume = (*m_objects)[obj_idx]->add_volume(mesh);
-    new_volume->set_type(static_cast<ModelVolume::Type>(type));
+	// Mesh will be centered when loading.
+    ModelVolume *new_volume = model_object.add_volume(std::move(mesh));
+    new_volume->set_type(type);
 
 #if !ENABLE_GENERIC_SUBPARTS_PLACEMENT
-    new_volume->set_offset(Vec3d(0.0, 0.0, (*m_objects)[obj_idx]->origin_translation(2) - mesh.stl.stats.min(2)));
+    new_volume->set_offset(Vec3d(0.0, 0.0, model_object.origin_translation(2) - mesh.stl.stats.min(2)));
 #endif // !ENABLE_GENERIC_SUBPARTS_PLACEMENT
 #if !ENABLE_VOLUMES_CENTERING_FIXES
     new_volume->center_geometry();
 #endif // !ENABLE_VOLUMES_CENTERING_FIXES
 
 #if ENABLE_GENERIC_SUBPARTS_PLACEMENT
-    const GLCanvas3D::Selection& selection = wxGetApp().plater()->canvas3D()->get_selection();
-    int instance_idx = selection.get_instance_idx();
     if (instance_idx != -1)
     {
+        // First (any) GLVolume of the selected instance. They all share the same instance matrix.
         const GLVolume* v = selection.get_volume(*selection.get_volume_idxs().begin());
-        const Transform3d& inst_m = v->get_instance_transformation().get_matrix(true);
-        TriangleMesh vol_mesh(mesh);
-        vol_mesh.transform(inst_m);
-        Vec3d vol_shift = -vol_mesh.bounding_box().center();
-        vol_mesh.translate((float)vol_shift(0), (float)vol_shift(1), (float)vol_shift(2));
-        Vec3d world_mesh_bb_size = vol_mesh.bounding_box().size();
-        BoundingBoxf3 inst_bb = (*m_objects)[obj_idx]->instance_bounding_box(instance_idx);
-        Vec3d world_target = Vec3d(inst_bb.max(0), inst_bb.min(1), inst_bb.min(2)) + 0.5 * world_mesh_bb_size;
-        new_volume->set_offset(inst_m.inverse() * (world_target - v->get_instance_offset()));
+        // Transform the new modifier to be aligned with the print bed.
+		const BoundingBoxf3 mesh_bb = new_volume->mesh.bounding_box();
+		new_volume->set_transformation(volume_to_bed_transformation(v->get_instance_transformation(), mesh_bb));
+        // Set the modifier position.
+        auto offset = (type_name == "Slab") ?
+            // Slab: Lift to print bed
+			Vec3d(0., 0., 0.5 * mesh_bb.size().z() + instance_bb.min.z() - v->get_instance_offset().z()) :
+            // Translate the new modifier to be pickable: move to the left front corner of the instance's bounding box, lift to print bed.
+            Vec3d(instance_bb.max(0), instance_bb.min(1), instance_bb.min(2)) + 0.5 * mesh_bb.size() - v->get_instance_offset();
+        new_volume->set_offset(v->get_instance_transformation().get_matrix(true).inverse() * offset);
     }
 #endif // ENABLE_GENERIC_SUBPARTS_PLACEMENT
 
-    new_volume->name = name;
+    new_volume->name = into_u8(name);
     // set a default extruder value, since user can't add it manually
     new_volume->config.set_key_value("extruder", new ConfigOptionInt(0));
 
@@ -1228,7 +1319,7 @@ void ObjectList::load_generic_subobject(const std::string& type_name, const int 
     parts_changed(obj_idx);
 
     const auto object_item = m_objects_model->GetTopParent(GetSelection());
-    select_item(m_objects_model->AddVolumeChild(object_item, from_u8(name), type));
+    select_item(m_objects_model->AddVolumeChild(object_item, name, type));
 #ifndef __WXOSX__ //#ifdef __WXMSW__ // #ys_FIXME
     selection_changed();
 #endif //no __WXOSX__ //__WXMSW__
@@ -1360,7 +1451,7 @@ void ObjectList::split()
     for (auto id = 0; id < model_object->volumes.size(); id++) {
         const auto vol_item = m_objects_model->AddVolumeChild(parent, from_u8(model_object->volumes[id]->name),
                                             model_object->volumes[id]->is_modifier() ? 
-                                                ModelVolume::PARAMETER_MODIFIER : ModelVolume::MODEL_PART,
+                                                ModelVolumeType::PARAMETER_MODIFIER : ModelVolumeType::MODEL_PART,
                                             model_object->volumes[id]->config.has("extruder") ?
                                                 model_object->volumes[id]->config.option<ConfigOptionInt>("extruder")->value : 0,
                                             false);
@@ -1962,15 +2053,15 @@ void ObjectList::change_part_type()
     if (!volume)
         return;
 
-    const auto type = volume->type();
-    if (type == ModelVolume::MODEL_PART)
+    const ModelVolumeType type = volume->type();
+    if (type == ModelVolumeType::MODEL_PART)
     {
         const int obj_idx = get_selected_obj_idx();
         if (obj_idx < 0) return;
 
         int model_part_cnt = 0;
         for (auto vol : (*m_objects)[obj_idx]->volumes) {
-            if (vol->type() == ModelVolume::MODEL_PART)
+            if (vol->type() == ModelVolumeType::MODEL_PART)
                 ++model_part_cnt;
         }
 
@@ -1982,13 +2073,13 @@ void ObjectList::change_part_type()
 
     const wxString names[] = { "Part", "Modifier", "Support Enforcer", "Support Blocker" };
     
-    auto new_type = wxGetSingleChoiceIndex("Type: ", _(L("Select type of part")), wxArrayString(4, names), type);
+    auto new_type = ModelVolumeType(wxGetSingleChoiceIndex("Type: ", _(L("Select type of part")), wxArrayString(4, names), int(type)));
 
-    if (new_type == type || new_type < 0)
+	if (new_type == type || new_type == ModelVolumeType::INVALID)
         return;
 
     const auto item = GetSelection();
-    volume->set_type(static_cast<ModelVolume::Type>(new_type));
+    volume->set_type(new_type);
     m_objects_model->SetVolumeType(item, new_type);
 
     m_parts_changed = true;
@@ -1998,11 +2089,11 @@ void ObjectList::change_part_type()
     //(we show additional settings for Part and Modifier and hide it for Support Blocker/Enforcer)
     const auto settings_item = m_objects_model->GetSettingsItem(item);
     if (settings_item && 
-        (new_type == ModelVolume::SUPPORT_ENFORCER || new_type == ModelVolume::SUPPORT_BLOCKER)) {
+        (new_type == ModelVolumeType::SUPPORT_ENFORCER || new_type == ModelVolumeType::SUPPORT_BLOCKER)) {
         m_objects_model->Delete(settings_item);
     }
     else if (!settings_item && 
-              (new_type == ModelVolume::MODEL_PART || new_type == ModelVolume::PARAMETER_MODIFIER)) {
+              (new_type == ModelVolumeType::MODEL_PART || new_type == ModelVolumeType::PARAMETER_MODIFIER)) {
         select_item(m_objects_model->AddSettingsChild(item));
     }
 }

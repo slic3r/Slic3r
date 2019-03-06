@@ -482,7 +482,8 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
                opt_key == "layer_height"
             || opt_key == "first_layer_height"
             || opt_key == "exact_last_layer_height"
-            || opt_key == "raft_layers") {
+            || opt_key == "raft_layers"
+            || opt_key == "slice_closing_radius") {
             steps.emplace_back(posSlice);
         }
         else if (
@@ -2010,7 +2011,7 @@ std::vector<ExPolygons> PrintObject::_slice_volumes(const std::vector<float> &z,
             const Print *print = this->print();
             auto callback = TriangleMeshSlicer::throw_on_cancel_callback_type([print](){print->throw_if_canceled();});
             mslicer.init(&mesh, callback);
-            mslicer.slice(z, &layers, callback);
+			mslicer.slice(z, float(m_config.slice_closing_radius.value), &layers, callback);
             m_print->throw_if_canceled();
         }
     }

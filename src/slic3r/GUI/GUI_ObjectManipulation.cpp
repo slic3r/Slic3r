@@ -22,7 +22,7 @@ ObjectManipulation::ObjectManipulation(wxWindow* parent) :
 #endif // __APPLE__
 {
     m_og->set_name(_(L("Object Manipulation")));
-    m_og->label_width = 125;
+    m_og->label_width = 12 * wxGetApp().em_unit();//125;
     m_og->set_grid_vgap(5);
     
     m_og->m_on_change = std::bind(&ObjectManipulation::on_change, this, std::placeholders::_1, std::placeholders::_2);
@@ -44,15 +44,17 @@ ObjectManipulation::ObjectManipulation(wxWindow* parent) :
     def.label = L("Name");
     def.gui_type = "legend";
     def.tooltip = L("Object name");
-    def.width = 200;
+    def.width = 21 * wxGetApp().em_unit();
     def.default_value = new ConfigOptionString{ " " };
     m_og->append_single_option_line(Option(def, "object_name"));
+
+    const int field_width = 5 * wxGetApp().em_unit()/*50*/;
 
     // Legend for object modification
     auto line = Line{ "", "" };
     def.label = "";
     def.type = coString;
-    def.width = 50;
+    def.width = field_width/*50*/;
 
     std::vector<std::string> axes{ "x", "y", "z" };
     for (const auto axis : axes) {
@@ -64,13 +66,13 @@ ObjectManipulation::ObjectManipulation(wxWindow* parent) :
     m_og->append_line(line);
 
 
-    auto add_og_to_object_settings = [this](const std::string& option_name, const std::string& sidetext)
+    auto add_og_to_object_settings = [this, field_width](const std::string& option_name, const std::string& sidetext)
     {
         Line line = { _(option_name), "" };
         ConfigOptionDef def;
         def.type = coFloat;
         def.default_value = new ConfigOptionFloat(0.0);
-        def.width = 50;
+        def.width = field_width/*50*/;
 
         // Add "uniform scaling" button in front of "Scale" option 
         if (option_name == "Scale") {
@@ -88,8 +90,9 @@ ObjectManipulation::ObjectManipulation(wxWindow* parent) :
         // Add empty bmp (Its size have to be equal to PrusaLockButton) in front of "Size" option to label alignment
         else if (option_name == "Size") {
             line.near_label_widget = [this](wxWindow* parent) {
-                return new wxStaticBitmap(parent, wxID_ANY, wxNullBitmap, wxDefaultPosition, 
-                                          wxBitmap(from_u8(var("one_layer_lock_on.png")), wxBITMAP_TYPE_PNG).GetSize());
+                return new wxStaticBitmap(parent, wxID_ANY, wxNullBitmap, wxDefaultPosition,
+//                                           wxBitmap(from_u8(var("one_layer_lock_on.png")), wxBITMAP_TYPE_PNG).GetSize());
+                                          create_scaled_bitmap("one_layer_lock_on.png").GetSize());
             };
         }
 
@@ -358,16 +361,21 @@ void ObjectManipulation::change_rotation_value(const Vec3d& rotation)
     GLCanvas3D* canvas = wxGetApp().plater()->canvas3D();
     const GLCanvas3D::Selection& selection = canvas->get_selection();
 
-    Vec3d delta_rotation = rotation - m_cache.rotation;
+	GLCanvas3D::TransformationType transformation_type(GLCanvas3D::TransformationType::World_Relative_Joint);
+	if (selection.is_single_full_instance() || selection.requires_local_axes())
+		transformation_type.set_independent();
+	if (selection.is_single_full_instance()) {
+        //FIXME GLCanvas3D::Selection::rotate() does not process absoulte rotations correctly: It does not recognize the axis index, which was changed.
+		// transformation_type.set_absolute();
+		transformation_type.set_local();
+	}
 
     Vec3d rad_rotation;
     for (size_t i = 0; i < 3; ++i)
-    {
-        rad_rotation(i) = Geometry::deg2rad(delta_rotation(i));
-    }
+		rad_rotation(i) = Geometry::deg2rad((transformation_type.absolute()) ? rotation(i) : rotation(i) - m_cache.rotation(i));
 
     canvas->get_selection().start_dragging();
-    canvas->get_selection().rotate(rad_rotation, selection.is_single_full_instance() || selection.requires_local_axes());
+	canvas->get_selection().rotate(rad_rotation, transformation_type);
     canvas->do_rotate();
 
     m_cache.rotation = rotation;

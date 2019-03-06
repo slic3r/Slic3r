@@ -451,7 +451,6 @@ class PrintObjectConfig : public StaticPrintConfig
     STATIC_PRINT_CONFIG_CACHE(PrintObjectConfig)
 public:
     ConfigOptionBool                clip_multipart_objects;
-    ConfigOptionBool                remove_small_gaps;
     ConfigOptionBool                dont_support_bridges;
     ConfigOptionFloat               elefant_foot_compensation;
     ConfigOptionFloatOrPercent      extrusion_width;
@@ -466,6 +465,7 @@ public:
     ConfigOptionBool                seam_travel;
 //    ConfigOptionFloat               seam_preferred_direction;
 //    ConfigOptionFloat               seam_preferred_direction_jitter;
+    ConfigOptionFloat               slice_closing_radius;
     ConfigOptionBool                support_material;
     // Automatic supports (generated based on support_material_threshold).
     ConfigOptionBool                support_material_auto;
@@ -503,7 +503,6 @@ protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
         OPT_PTR(clip_multipart_objects);
-        OPT_PTR(remove_small_gaps);
         OPT_PTR(dont_support_bridges);
         OPT_PTR(elefant_foot_compensation);
         OPT_PTR(extrusion_width);
@@ -515,6 +514,7 @@ protected:
         OPT_PTR(raft_layers);
         OPT_PTR(seam_position);
         OPT_PTR(seam_travel);
+        OPT_PTR(slice_closing_radius);
 //        OPT_PTR(seam_preferred_direction);
 //        OPT_PTR(seam_preferred_direction_jitter);
         OPT_PTR(support_material);
@@ -557,11 +557,11 @@ public:
     ConfigOptionFloat               bridge_flow_ratio;
     ConfigOptionFloat               over_bridge_flow_ratio;
     ConfigOptionEnum<InfillPattern> bottom_fill_pattern;
+    ConfigOptionFloatOrPercent      bridged_infill_margin;
     ConfigOptionFloat               bridge_speed;
     ConfigOptionBool                ensure_vertical_shell_thickness;
     ConfigOptionBool                enforce_full_fill_volume;
     ConfigOptionFloatOrPercent      external_infill_margin;
-    ConfigOptionFloatOrPercent      bridged_infill_margin;
     ConfigOptionFloatOrPercent      external_perimeter_extrusion_width;
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
@@ -616,11 +616,11 @@ protected:
         OPT_PTR(bridge_flow_ratio);
         OPT_PTR(over_bridge_flow_ratio);
         OPT_PTR(bottom_fill_pattern);
+        OPT_PTR(bridged_infill_margin);
         OPT_PTR(bridge_speed);
         OPT_PTR(ensure_vertical_shell_thickness);
         OPT_PTR(enforce_full_fill_volume);
         OPT_PTR(external_infill_margin);
-        OPT_PTR(bridged_infill_margin);
         OPT_PTR(external_perimeter_extrusion_width);
         OPT_PTR(external_perimeter_speed);
         OPT_PTR(external_perimeters_first);
@@ -1109,6 +1109,11 @@ class SLAPrintObjectConfig : public StaticPrintConfig
 public:
     ConfigOptionFloat layer_height;
 
+    //Number of the layers needed for the exposure time fade [3;20]
+    ConfigOptionInt  faded_layers /*= 10*/;
+
+    ConfigOptionFloat slice_closing_radius;
+
     // Enabling or disabling support creation
     ConfigOptionBool  supports_enable;
 
@@ -1153,9 +1158,8 @@ public:
     ConfigOptionFloat support_object_elevation /*= 5.0*/;
 
     /////// Following options influence automatic support points placement:
-    ConfigOptionInt support_density_at_horizontal;
-    ConfigOptionInt support_density_at_45;
-    ConfigOptionFloat support_minimal_z;
+    ConfigOptionInt support_points_density_relative;
+    ConfigOptionFloat support_points_minimal_distance;
 
     // Now for the base pool (pad) /////////////////////////////////////////////
 
@@ -1175,10 +1179,15 @@ public:
     // The smoothing radius of the pad edges
     ConfigOptionFloat pad_edge_radius /*= 1*/;
 
+    // The slope of the pad wall...
+    ConfigOptionFloat pad_wall_slope;
+
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
         OPT_PTR(layer_height);
+        OPT_PTR(faded_layers);
+        OPT_PTR(slice_closing_radius);
         OPT_PTR(supports_enable);
         OPT_PTR(support_head_front_diameter);
         OPT_PTR(support_head_penetration);
@@ -1191,15 +1200,15 @@ protected:
         OPT_PTR(support_base_height);
         OPT_PTR(support_critical_angle);
         OPT_PTR(support_max_bridge_length);
-        OPT_PTR(support_density_at_horizontal);
-        OPT_PTR(support_density_at_45);
-        OPT_PTR(support_minimal_z);
+        OPT_PTR(support_points_density_relative);
+        OPT_PTR(support_points_minimal_distance);
         OPT_PTR(support_object_elevation);
         OPT_PTR(pad_enable);
         OPT_PTR(pad_wall_thickness);
         OPT_PTR(pad_wall_height);
         OPT_PTR(pad_max_merge_distance);
         OPT_PTR(pad_edge_radius);
+        OPT_PTR(pad_wall_slope);
     }
 };
 
@@ -1236,6 +1245,9 @@ public:
     ConfigOptionInt                         display_pixels_y;
     ConfigOptionEnum<SLADisplayOrientation> display_orientation;
     ConfigOptionFloats                      printer_correction;
+    ConfigOptionFloat                       fast_tilt_time;
+    ConfigOptionFloat                       slow_tilt_time;
+    ConfigOptionFloat                       area_fill;
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
@@ -1248,6 +1260,9 @@ protected:
         OPT_PTR(display_pixels_y);
         OPT_PTR(display_orientation);
         OPT_PTR(printer_correction);
+        OPT_PTR(fast_tilt_time);
+        OPT_PTR(slow_tilt_time);
+        OPT_PTR(area_fill);
     }
 };
 
