@@ -1189,7 +1189,7 @@ std::string Print::validate() const
                 // Now we check that no instance of convex_hull intersects any of the previously checked object instances.
                 for (Polygon p : convex_hull){
                     // Grow convex hull with the clearance margin.
-                    p = offset(p, scale_(m_config.extruder_clearance_radius.value) / 2, jtRound, scale_(0.1)).front();
+                    p = offset(p, scale_(m_config.min_object_distance() / 2), jtRound, scale_(0.1)).front();
                     if (!intersection(convex_hulls_other, p).empty()){
                         return L("Some objects are too close; your extruder will collide with them.");
                     }

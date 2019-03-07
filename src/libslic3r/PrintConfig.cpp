@@ -3433,7 +3433,7 @@ double PrintConfig::min_object_distance() const
 
 double PrintConfig::min_object_distance(const ConfigBase *config)
 {
-    double base_dist = config->option("duplicate_distance")->getFloat();
+    double base_dist = 0;
     if (config->option("complete_objects")->getBool()){
         std::vector<double> vals = dynamic_cast<const ConfigOptionFloats*>(config->option("nozzle_diameter"))->values;
         double max_nozzle_diam = 0;
@@ -3442,23 +3442,22 @@ double PrintConfig::min_object_distance(const ConfigBase *config)
         // min object distance is max(duplicate_distance, clearance_radius)
         double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat();
         if (extruder_clearance_radius > base_dist){
-            base_dist = extruder_clearance_radius + max_nozzle_diam;
+            base_dist = extruder_clearance_radius;
         }
         //add brim width
         if (config->option("brim_width")->getFloat() > 0){
-            base_dist += config->option("brim_width")->getFloat();
+            base_dist += config->option("brim_width")->getFloat() * 2;
         }
         //add the skirt
         if (config->option("skirts")->getInt() > 0){
             //add skirt dist
             double dist_skirt = config->option("skirt_distance")->getFloat();
             if (dist_skirt > config->option("brim_width")->getFloat())
-                base_dist += dist_skirt - config->option("brim_width")->getFloat();
+                base_dist += (dist_skirt - config->option("brim_width")->getFloat()) * 2;
             //add skirt width
-            base_dist += max_nozzle_diam * config->option("skirts")->getInt() * 1.5;
+            base_dist += max_nozzle_diam * config->option("skirts")->getInt() * 1.5 * 2;
         }
     }
-    std::cout << "min distance: final=" << base_dist << "\n";
     return base_dist;
 }
 

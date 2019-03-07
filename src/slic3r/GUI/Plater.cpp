@@ -1846,7 +1846,15 @@ void Plater::priv::arrange()
     // on printer technology. I guess the following should work but it crashes.
     double dist = 6; //PrintConfig::min_object_distance(config);
     if(printer_technology == ptFFF) {
-        dist = PrintConfig::min_object_distance(config);
+        //get default
+        dist = config->option("duplicate_distance")->getFloat();
+        //see if there are a bigger min distance
+        dist = std::max(dist, PrintConfig::min_object_distance(config));
+        //add a little safety offset (nozzle size)
+        std::vector<double> vals = dynamic_cast<const ConfigOptionFloats*>(config->option("nozzle_diameter"))->values;
+        double max_nozzle_diam = 0.1;
+        for (double val : vals) max_nozzle_diam = std::fmax(max_nozzle_diam, val);
+        dist += max_nozzle_diam;
     }
 
     auto min_obj_distance = coord_t(dist/SCALING_FACTOR);
