@@ -293,8 +293,11 @@ public:
             assert(len > 0);
             out.points.reserve(len);
             out.points.push_back(paths.front().as_polyline().points.front());
-            for (size_t i_path = 0; i_path < paths.size(); ++i_path)
-                out.points.insert(out.points.end(), paths[i_path].as_polyline().points.begin() + 1, paths[i_path].as_polyline().points.end());
+            for (size_t i_path = 0; i_path < paths.size(); ++i_path) {
+                Polyline poly_i = paths[i_path].as_polyline();
+                if (poly_i.size() > 1)
+                    out.points.insert(out.points.end(), poly_i.points.begin() + 1, poly_i.points.end());
+            }
         }
         return out;
     }
