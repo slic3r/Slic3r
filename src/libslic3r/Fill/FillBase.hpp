@@ -130,7 +130,7 @@ protected:
 
     virtual std::pair<float, Point> _infill_direction(const Surface *surface) const;
 
-    void connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary, Polylines &polylines_out);
+    void connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary, Polylines &polylines_out, const FillParams &params);
 
     ExtrusionRole getRoleFromSurfaceType(const FillParams &params, const Surface *surface){
         if (params.role == erNone || params.role == erCustom) {
