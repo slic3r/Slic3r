@@ -134,6 +134,7 @@ bool GUI_App::OnInit()
     });
 
     load_language();
+    //wxSetlocale(LC_NUMERIC, "C");
 
     // Suppress the '- default -' presets.
     preset_bundle->set_default_suppressed(app_config->get("no_defaults") == "1");
@@ -419,7 +420,7 @@ bool GUI_App::select_language(  wxArrayString & names,
 		m_wxLocale->AddCatalogLookupPathPrefix(from_u8(localization_dir()));
         m_wxLocale->AddCatalog(/*GetAppName()*/"Slic3r++");
 		//FIXME This is a temporary workaround, the correct solution is to switch to "C" locale during file import / export only.
-		wxSetlocale(LC_NUMERIC, "C");
+		//wxSetlocale(LC_NUMERIC, "C");
         Preset::update_suffix_modified();
 		m_imgui->set_language(m_wxLocale->GetCanonicalName().ToUTF8().data());
         return true;
@@ -445,10 +446,10 @@ bool GUI_App::load_language()
         {
             m_wxLocale = new wxLocale;
             m_wxLocale->Init(identifiers[i]);
-			m_wxLocale->AddCatalogLookupPathPrefix(from_u8(localization_dir()));
+            m_wxLocale->AddCatalogLookupPathPrefix(from_u8(localization_dir()));
             m_wxLocale->AddCatalog(/*GetAppName()*/"Slic3r++");
 			//FIXME This is a temporary workaround, the correct solution is to switch to "C" locale during file import / export only.
-            wxSetlocale(LC_NUMERIC, "C");
+            //wxSetlocale(LC_NUMERIC, "C");
 			Preset::update_suffix_modified();
 			m_imgui->set_language(m_wxLocale->GetCanonicalName().ToUTF8().data());
             return true;
@@ -638,6 +639,7 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
                 save_language();
                 show_info(mainframe->m_tabpanel, _(L("Application will be restarted")), _(L("Attention!")));
                 _3DScene::remove_all_canvases();// remove all canvas before recreate GUI
+                //wxSetlocale(LC_NUMERIC, "C");
                 recreate_GUI();
             }
             break;

@@ -317,7 +317,7 @@ set(L10N_DIR "${SLIC3R_RESOURCES_DIR}/localization")
 add_custom_target(pot
     COMMAND xgettext --keyword=L --from-code=UTF-8 --debug
         -f "${L10N_DIR}/list.txt"
-        -o "${L10N_DIR}/Slic3rPE.pot"
+        -o "${L10N_DIR}/Slic3r++.pot"
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     COMMENT "Generate pot file from strings in the source tree"
 )
