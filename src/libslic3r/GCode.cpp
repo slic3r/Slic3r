@@ -535,7 +535,7 @@ void GCode::_do_export(Print &print, FILE *file)
         m_normal_time_estimator.set_axis_max_jerk(GCodeTimeEstimator::Z, print.config().machine_max_jerk_z.values[0]);
         m_normal_time_estimator.set_axis_max_jerk(GCodeTimeEstimator::E, print.config().machine_max_jerk_e.values[0]);
 
-        if (m_silent_time_estimator_enabled)
+        if (m_silent_time_estimator_enabled && print.config().machine_max_acceleration_extruding.values.size() > 1)
         {
             m_silent_time_estimator.reset();
             m_silent_time_estimator.set_dialect(print.config().gcode_flavor);
