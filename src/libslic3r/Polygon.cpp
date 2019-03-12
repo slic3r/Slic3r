@@ -316,6 +316,35 @@ Point Polygon::point_projection(const Point &point) const
     return proj;
 }
 
+size_t Polygon::remove_colinear_points(coord_t max_offset){
+    size_t nb_del = 0;
+    if (points.size() < 3) return 0;
+
+    coord_t min_dist = max_offset * max_offset;
+    while (points.size() > 2 && Line::distance_to_squared(points[0], points.back(), points[1]) < min_dist){
+        //colinear! delete!
+        points.erase(points.begin());
+        nb_del++;
+    }
+    for (size_t idx = 1; idx < points.size()-1; ) {
+        //if (Line(previous, points[idx + 1]).distance_to(points[idx]) < SCALED_EPSILON){
+        if (Line::distance_to_squared(points[idx], points[idx-1], points[idx + 1]) < min_dist){
+            //colinear! delete!
+            points.erase(points.begin() + idx);
+            nb_del++;
+        } else {
+            idx++;
+        }
+    }
+    while (points.size() > 2 && Line::distance_to_squared(points.back(), points[points.size()-2], points.front()) < min_dist) {
+        //colinear! delete!
+        points.erase(points.end()-1);
+        nb_del++;
+    }
+
+    return nb_del;
+}
+
 BoundingBox get_extents(const Polygon &poly) 
 { 
     return poly.bounding_box();

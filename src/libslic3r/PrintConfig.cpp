@@ -1870,10 +1870,10 @@ void PrintConfigDef::init_fff_params()
     def = this->add("resolution", coFloat);
     def->label = L("Resolution");
     def->tooltip = L("Minimum detail resolution, used to simplify the input file for speeding up "
-                   "the slicing job and reducing memory usage. High-resolution models often carry "
-                   "more detail than printers can render. Set to zero to disable any simplification "
-                   "and use full resolution from input. "
-                   "\nNote: slic3r simplify the geometry with a treshold of 0.0125mm and has an internal resolution of 0.0001mm.");
+        "the slicing job and reducing memory usage. High-resolution models often carry "
+        "more detail than printers can render. Set to zero to disable any simplification "
+        "and use full resolution from input. "
+        "\nNote: slic3r simplify the geometry with a treshold of 0.0125mm and has an internal resolution of 0.0001mm.");
     def->sidetext = L("mm");
     def->cli = "resolution=f";
     def->min = 0;
@@ -2253,6 +2253,20 @@ void PrintConfigDef::init_fff_params()
     def->height = 120;
     def->mode = comExpert;
     def->default_value = new ConfigOptionStrings { "; Filament gcode\n" };
+
+
+    def = this->add("model_precision", coFloat);
+    def->label = L("Model rounding precision");
+    def->full_label = L("Model rounding precision");
+    def->category = L("Advanced");
+    def->tooltip = L("This is the rounding error of the input object."
+        " It's used to align points that should be in the same line."
+        " Put 0 to disable.");
+    def->sidetext = L("mm");
+    def->cli = "model-precision=f";
+    def->min = 0;
+    def->mode = comExpert;
+    def->default_value = new ConfigOptionFloat(0.0001);
 
     def = this->add("single_extruder_multi_material", coBool);
     def->label = L("Single Extruder Multi Material");

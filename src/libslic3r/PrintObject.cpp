@@ -813,7 +813,6 @@ void PrintObject::tag_under_bridge() {
                             for (ExPolygon poly_inter : dense_polys) area_dense += poly_inter.area();
                             double area_sparse = 0;
                             for (ExPolygon poly_inter : sparse_polys) area_sparse += poly_inter.area();
-                            std::cout << "need to split? " << area_sparse << " > " << area_dense << " * " << COEFF_SPLIT << "\n";
                             if (area_sparse > area_dense * COEFF_SPLIT) {
                                 //split
                                 dense_polys = union_ex(dense_polys);
@@ -1913,27 +1912,27 @@ end:
 
 void PrintObject::_offsetHoles(float hole_delta, LayerRegion *layerm) {
     if (hole_delta != 0.f) {
+        std::cout << "offset_hole z="<<layerm->layer()->id()<<"\n";
         ExPolygons polys = to_expolygons(std::move(layerm->slices.surfaces));
         ExPolygons new_polys;
-        for (ExPolygon ex_poly : polys) {
+        for (const ExPolygon &ex_poly : polys) {
             ExPolygon new_ex_poly(ex_poly);
             new_ex_poly.holes.clear();
-            for (Polygon hole : ex_poly.holes) {
+            for (const Polygon &hole : ex_poly.holes) {
                 //check if convex to reduce it
                 // check whether first point forms a convex angle
+                //note: we allow a deviation of 5.7° (0.01rad = 0.57°)
                 bool ok = true;
-                ok = (hole.points.front().ccw_angle(hole.points.back(), *(hole.points.begin() + 1)) <= PI + 0.001);
-                   
-                
+                ok = (hole.points.front().ccw_angle(hole.points.back(), *(hole.points.begin() + 1)) <= PI + 0.1);
                 // check whether points 1..(n-1) form convex angles
                 if (ok)
                     for (Points::const_iterator p = hole.points.begin() + 1; p != hole.points.end() - 1; ++p) {
-                        ok = (p->ccw_angle(*(p - 1), *(p + 1)) <= PI + 0.001);
+                        ok = (p->ccw_angle(*(p - 1), *(p + 1)) <= PI + 0.1);
                         if (!ok) break;
                     }
 
                 // check whether last point forms a convex angle
-                ok &= (hole.points.back().ccw_angle(*(hole.points.end() - 2), hole.points.front()) <= PI + 0.001);
+                ok &= (hole.points.back().ccw_angle(*(hole.points.end() - 2), hole.points.front()) <= PI + 0.1);
 
                 if (ok) {
                     for (Polygon newHole : offset(hole, -hole_delta)) {
@@ -1941,8 +1940,9 @@ void PrintObject::_offsetHoles(float hole_delta, LayerRegion *layerm) {
                         newHole.make_clockwise();
                         new_ex_poly.holes.push_back(newHole);
                     }
-                } else
+                } else {
                     new_ex_poly.holes.push_back(hole);
+                }
             }
             new_polys.push_back(new_ex_poly);
         }
@@ -2007,11 +2007,11 @@ std::vector<ExPolygons> PrintObject::_slice_volumes(const std::vector<float> &z,
             // apply XY shift
             mesh.translate(- unscale<float>(m_copies_shift(0)), - unscale<float>(m_copies_shift(1)), 0);
             // perform actual slicing
-            TriangleMeshSlicer mslicer;
+            TriangleMeshSlicer mslicer(float(m_config.slice_closing_radius.value), float(m_config.model_precision.value));
             const Print *print = this->print();
             auto callback = TriangleMeshSlicer::throw_on_cancel_callback_type([print](){print->throw_if_canceled();});
             mslicer.init(&mesh, callback);
-			mslicer.slice(z, float(m_config.slice_closing_radius.value), &layers, callback);
+			mslicer.slice(z, &layers, callback);
             m_print->throw_if_canceled();
         }
     }

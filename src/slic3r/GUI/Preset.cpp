@@ -402,6 +402,7 @@ const std::vector<std::string>& Preset::print_options()
         , "first_layer_infill_speed"
         , "thin_walls_min_width"
         , "thin_walls_overlap"
+        , "model_precision"
     };
     return s_opts;
 }

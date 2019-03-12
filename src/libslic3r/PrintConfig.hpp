@@ -453,13 +453,14 @@ public:
     ConfigOptionBool                clip_multipart_objects;
     ConfigOptionBool                dont_support_bridges;
     ConfigOptionFloat               elefant_foot_compensation;
+    ConfigOptionBool                exact_last_layer_height;
     ConfigOptionFloatOrPercent      extrusion_width;
     ConfigOptionFloatOrPercent      first_layer_height;
     ConfigOptionBool                infill_only_where_needed;
     // Force the generation of solid shells between adjacent materials/volumes.
     ConfigOptionBool                interface_shells;
     ConfigOptionFloat               layer_height;
-    ConfigOptionBool                exact_last_layer_height;
+    ConfigOptionFloat               model_precision;
     ConfigOptionInt                 raft_layers;
     ConfigOptionEnum<SeamPosition>  seam_position;
     ConfigOptionBool                seam_travel;
@@ -505,12 +506,13 @@ protected:
         OPT_PTR(clip_multipart_objects);
         OPT_PTR(dont_support_bridges);
         OPT_PTR(elefant_foot_compensation);
+        OPT_PTR(exact_last_layer_height);
         OPT_PTR(extrusion_width);
         OPT_PTR(first_layer_height);
         OPT_PTR(infill_only_where_needed);
         OPT_PTR(interface_shells);
         OPT_PTR(layer_height);
-        OPT_PTR(exact_last_layer_height);
+        OPT_PTR(model_precision);
         OPT_PTR(raft_layers);
         OPT_PTR(seam_position);
         OPT_PTR(seam_travel);

@@ -1179,6 +1179,7 @@ void TabPrint::build()
 		optgroup = page->new_optgroup(_(L("Other")));
         optgroup->append_single_option_line("clip_multipart_objects");
 		optgroup->append_single_option_line("resolution");
+        optgroup->append_single_option_line("model_precision");
 
 	page = add_options_page(_(L("Output options")), "page_white_go.png");
 		optgroup = page->new_optgroup(_(L("Sequential printing")));

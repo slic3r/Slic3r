@@ -852,22 +852,22 @@ void TriangleMeshSlicer::_slice_do(size_t facet_idx, std::vector<IntersectionLin
     }
 }
 
-void TriangleMeshSlicer::slice(const std::vector<float> &z, const float closing_radius, std::vector<ExPolygons>* layers, throw_on_cancel_callback_type throw_on_cancel) const
+void TriangleMeshSlicer::slice(const std::vector<float> &z, std::vector<ExPolygons>* layers, throw_on_cancel_callback_type throw_on_cancel) const
 {
     std::vector<Polygons> layers_p;
     this->slice(z, &layers_p, throw_on_cancel);
-    
+
 	BOOST_LOG_TRIVIAL(debug) << "TriangleMeshSlicer::make_expolygons in parallel - start";
 	layers->resize(z.size());
 	tbb::parallel_for(
 		tbb::blocked_range<size_t>(0, z.size()),
-		[&layers_p, closing_radius, layers, throw_on_cancel, this](const tbb::blocked_range<size_t>& range) {
+		[&layers_p, layers, throw_on_cancel, this](const tbb::blocked_range<size_t>& range) {
     		for (size_t layer_id = range.begin(); layer_id < range.end(); ++ layer_id) {
 #ifdef SLIC3R_TRIANGLEMESH_DEBUG
                 printf("Layer " PRINTF_ZU " (slice_z = %.2f):\n", layer_id, z[layer_id]);
 #endif
                 throw_on_cancel();
-    			this->make_expolygons(layers_p[layer_id], closing_radius, &(*layers)[layer_id]);
+    			this->make_expolygons(layers_p[layer_id], &(*layers)[layer_id]);
     		}
     	});
 	BOOST_LOG_TRIVIAL(debug) << "TriangleMeshSlicer::make_expolygons in parallel - end";
@@ -1002,7 +1002,7 @@ TriangleMeshSlicer::FacetSliceType TriangleMeshSlicer::slice_facet(
         line_out->a_id       = points[1].point_id;
         line_out->b_id       = points[0].point_id;
         line_out->edge_a_id  = points[1].edge_id;
-        line_out->edge_b_id  = points[0].edge_id;
+        line_out->edge_b_id = points[0].edge_id;
         // Not a zero lenght edge.
         //FIXME slice_facet() may create zero length edges due to rounding of doubles into coord_t.
         //assert(line_out->a != line_out->b);
@@ -1184,7 +1184,7 @@ static void chain_lines_by_triangle_connectivity(std::vector<IntersectionLine> &
             if (next_line == nullptr) {
                 // Check whether we closed this loop.
                 if ((first_line->edge_a_id != -1 && first_line->edge_a_id == last_line->edge_b_id) || 
-                    (first_line->a_id      != -1 && first_line->a_id      == last_line->b_id)) {
+                    (first_line->a_id != -1 && first_line->a_id == last_line->b_id)) {
                     // The current loop is complete. Add it to the output.
                     loops.emplace_back(std::move(loop_pts));
                     #ifdef SLIC3R_TRIANGLEMESH_DEBUG
@@ -1600,7 +1600,7 @@ void TriangleMeshSlicer::make_expolygons_simple(std::vector<IntersectionLine> &l
 #endif
 }
 
-void TriangleMeshSlicer::make_expolygons(const Polygons &loops, const float closing_radius, ExPolygons* slices) const
+void TriangleMeshSlicer::make_expolygons(const Polygons &loops, ExPolygons* slices) const
 {
     /*
         Input loops are not suitable for evenodd nor nonzero fill types, as we might get
@@ -1651,11 +1651,19 @@ void TriangleMeshSlicer::make_expolygons(const Polygons &loops, const float clos
     //        p_slices = diff(p_slices, *loop);
     //}
 
+    //remove point in the same plane (have to do that before the safety offset to avoid workgin on a distored polygon)
+    Polygons filered_polys = loops;
+    if (this->model_precision > 0){
+        for (Polygon &hole : filered_polys){
+            hole.remove_colinear_points(scale_(this->model_precision));
+        }
+    }
+
     // Perform a safety offset to merge very close facets (TODO: find test case for this)
     // 0.0499 comes from https://github.com/slic3r/Slic3r/issues/959
 //    double safety_offset = scale_(0.0499);
     // 0.0001 is set to satisfy GH #520, #1029, #1364
-    double safety_offset = scale_(closing_radius);
+    double safety_offset = scale_(this->closing_radius);
 
     /* The following line is commented out because it can generate wrong polygons,
        see for example issue #661 */
@@ -1671,16 +1679,16 @@ void TriangleMeshSlicer::make_expolygons(const Polygons &loops, const float clos
     
     // append to the supplied collection
     if (safety_offset > 0)
-    expolygons_append(*slices, offset2_ex(union_(loops, false), +safety_offset, -safety_offset));
+        expolygons_append(*slices, offset2_ex(union_(filered_polys, false), +safety_offset, -safety_offset));
     else
-        expolygons_append(*slices, union_ex(loops, false));
+        expolygons_append(*slices, union_ex(filered_polys, false));
 }
 
-void TriangleMeshSlicer::make_expolygons(std::vector<IntersectionLine> &lines, const float closing_radius, ExPolygons* slices) const
+void TriangleMeshSlicer::make_expolygons(std::vector<IntersectionLine> &lines, ExPolygons* slices) const
 {
     Polygons pp;
     this->make_loops(lines, &pp);
-    this->make_expolygons(pp, closing_radius, slices);
+    this->make_expolygons(pp, slices);
 }
 
 void TriangleMeshSlicer::cut(float z, TriangleMesh* upper, TriangleMesh* lower) const

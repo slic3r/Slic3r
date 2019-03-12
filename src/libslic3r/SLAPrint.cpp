@@ -629,7 +629,8 @@ void SLAPrint::process()
         double lh = po.m_config.layer_height.getFloat();
 
         TriangleMesh mesh = po.transformed_mesh();
-        TriangleMeshSlicer slicer(&mesh);
+        TriangleMeshSlicer slicer(float(po.config().slice_closing_radius.value),0);
+        slicer.init(&mesh, [](){});
 
         // The 1D grid heights
         std::vector<float> heights = calculate_heights(mesh.bounding_box(),
@@ -637,7 +638,7 @@ void SLAPrint::process()
                                                        ilh, float(lh));
 
         auto& layers = po.m_model_slices; layers.clear();
-		slicer.slice(heights, float(po.config().slice_closing_radius.value), &layers, [this](){ throw_if_canceled(); });
+		slicer.slice(heights, &layers, [this](){ throw_if_canceled(); });
     };
 
     // In this step we check the slices, identify island and cover them with
