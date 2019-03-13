@@ -7,11 +7,11 @@ PRODUCTVERSION @SLIC3R_RC_VERSION@
   BLOCK "040904E4"
   {
    VALUE "CompanyName", "Prusa Research"
-   VALUE "FileDescription", "Slic3r Prusa Edition"
+   VALUE "FileDescription", "Slic3r°°"
    VALUE "FileVersion", "@SLIC3R_BUILD_ID@"
-   VALUE "ProductName", "Slic3r Prusa Edition"
+   VALUE "ProductName", "Slic3r++"
    VALUE "ProductVersion", "@SLIC3R_BUILD_ID@"
-   VALUE "InternalName", "Slic3r Prusa Edition"
+   VALUE "InternalName", "Slic3r++"
    VALUE "LegalCopyright", "Copyright \251 2011-2017 Alessandro Ranelucci, \251 2016 Prusa Research"
    VALUE "OriginalFilename", "slic3r.exe"
   }

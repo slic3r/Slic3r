@@ -41,7 +41,7 @@ std::string get_main_info(bool format_as_html)
 }
 
 SysInfoDialog::SysInfoDialog()
-    : wxDialog(NULL, wxID_ANY, _(L("Slic3r Prusa Edition - System Information")), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER)
+    : wxDialog(NULL, wxID_ANY, _(L("Slic3r++ - System Information")), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER)
 {
 	wxColour bgr_clr = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
 	SetBackgroundColour(bgr_clr);
