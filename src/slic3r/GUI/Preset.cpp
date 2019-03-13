@@ -403,6 +403,8 @@ const std::vector<std::string>& Preset::print_options()
         , "thin_walls_min_width"
         , "thin_walls_overlap"
         , "model_precision"
+        , "curve_smoothing_precision"
+        , "curve_smoothing_angle"
     };
     return s_opts;
 }

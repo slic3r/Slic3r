@@ -1882,7 +1882,8 @@ end:
                         LayerRegion *layerm = layer->m_regions.front();
                         layerm->slices.set(offset_ex(to_expolygons(std::move(layerm->slices.surfaces)), delta), stPosInternal | stDensSparse);
                     }
-                    _offsetHoles(hole_delta, layer->regions().front());
+                    _offset_holes(hole_delta, layer->regions().front());
+                    _smooth_curves(layer->regions().front());
                 } else if (scale || clip || hole_delta != 0.f) {
                     // Multiple regions, growing, shrinking or just clipping one region by the other.
                     // When clipping the regions, priority is given to the first regions.
@@ -1899,7 +1900,8 @@ end:
                             // Collect the already processed regions to trim the to be processed regions.
                             polygons_append(processed, slices);
                         layerm->slices.set(std::move(slices), stPosInternal | stDensSparse);
-                        _offsetHoles(hole_delta, layerm);
+                        _offset_holes(hole_delta, layerm);
+                        _smooth_curves(layerm);
                     }
                 }
                 // Merge all regions' slices to get islands, chain them by a shortest path.
@@ -1910,9 +1912,8 @@ end:
     BOOST_LOG_TRIVIAL(debug) << "Slicing objects - make_slices in parallel - end";
 }
 
-void PrintObject::_offsetHoles(float hole_delta, LayerRegion *layerm) {
+void PrintObject::_offset_holes(float hole_delta, LayerRegion *layerm) {
     if (hole_delta != 0.f) {
-        std::cout << "offset_hole z="<<layerm->layer()->id()<<"\n";
         ExPolygons polys = to_expolygons(std::move(layerm->slices.surfaces));
         ExPolygons new_polys;
         for (const ExPolygon &ex_poly : polys) {
@@ -1943,6 +1944,96 @@ void PrintObject::_offsetHoles(float hole_delta, LayerRegion *layerm) {
                 } else {
                     new_ex_poly.holes.push_back(hole);
                 }
+            }
+            new_polys.push_back(new_ex_poly);
+        }
+        layerm->slices.set(std::move(new_polys), stPosInternal | stDensSparse);
+    }
+}
+
+/// max angle: you ahve to be lwer than that to divide it. PI => all accepted
+/// min angle: don't smooth sharp angles! 0  => all accepted
+Polygon _smooth_curve(Polygon &p, double max_angle, double min_angle, coord_t max_dist){
+    if (p.size() < 4) return p;
+    Polygon pout;
+    //duplicate points to simplify the loop
+    p.points.insert(p.points.end(), p.points.begin(), p.points.begin() + 3);
+    for (size_t idx = 1; idx<p.size() - 2; idx++){
+        pout.points.push_back(p[idx]);
+        double angle1 = p[idx].ccw_angle(p.points[idx - 1], p.points[idx + 1]);
+        if (angle1 > PI) angle1 = 2 * PI - angle1;
+        double angle2 = p[idx + 1].ccw_angle(p.points[idx], p.points[idx + 2]);
+        if (angle2 > PI) angle2 = 2 * PI - angle2;
+        if (angle1 < min_angle && angle2 < min_angle) continue;
+        if (angle1 > max_angle && angle2 > max_angle) continue;
+        // add points, but how many?
+        coordf_t dist = p[idx].distance_to(p[idx + 1]);
+        int nb_add = dist / max_dist;
+        if (max_angle < PI) {
+            int nb_add_per_angle = std::max((PI - angle1) / (PI - max_angle), (PI - angle2) / (PI - max_angle));
+            nb_add = std::min(nb_add, nb_add_per_angle);
+        }
+        if (nb_add == 0) continue;
+
+        //création des points de controles
+        Vec2d vec_ab = (p[idx] - p[idx - 1]).cast<double>();
+        Vec2d vec_bc = (p[idx + 1] - p[idx]).cast<double>();
+        Vec2d vec_cb = (p[idx] - p[idx + 1]).cast<double>();
+        Vec2d vec_dc = (p[idx + 1] - p[idx + 2]).cast<double>();
+        vec_ab.normalize();
+        vec_bc.normalize();
+        vec_cb.normalize();
+        vec_dc.normalize();
+        Vec2d vec_b_tang = vec_ab + vec_bc;
+        vec_b_tang.normalize();
+        //should be 0.55 / 1.414 = ~0.39 to create a true circle from a square (90°)
+        // it's ~0.36 for exagon (120°)
+        // it's ~0.34 for octogon (135°)
+        vec_b_tang *= dist * (0.31 + 0.12 * (1-(angle1 / PI)));
+        Vec2d vec_c_tang = vec_dc + vec_cb;
+        vec_c_tang.normalize();
+        vec_c_tang *= dist * (0.31 + 0.12 * (1 - (angle1 / PI)));
+        Point bp = p[idx] + ((angle1 < min_angle) ? vec_bc.cast<coord_t>() : vec_b_tang.cast<coord_t>());
+        Point cp = p[idx + 1] + ((angle2 < min_angle) ? vec_cb.cast<coord_t>() : vec_c_tang.cast<coord_t>());
+        for (int idx_np = 0; idx_np < nb_add; idx_np++){
+            const float percent_np = (idx_np + 1) / (float)(nb_add + 1);
+            const float inv_percent_np = 1 - percent_np;
+            pout.points.emplace_back();
+            Point &new_p = pout.points.back();
+            const float coeff0 = inv_percent_np * inv_percent_np * inv_percent_np;
+            const float coeff1 = percent_np * inv_percent_np * inv_percent_np;
+            const float coeff2 = percent_np * percent_np * inv_percent_np;
+            const float coeff3 = percent_np * percent_np * percent_np;
+            new_p.x() = (p[idx].x() * coeff0)
+                + (3 * bp.x() * coeff1)
+                + (3 * cp.x() * coeff2)
+                + (p[idx + 1].x() * coeff3);
+            new_p.y() = (p[idx].y() * coeff0)
+                + (3 * bp.y() * coeff1)
+                + (3 * cp.y() * coeff2)
+                + (p[idx + 1].y() * coeff3);
+        }
+
+    }
+    return pout;
+}
+
+void PrintObject::_smooth_curves(LayerRegion *layerm) {
+
+    if (layerm->region()->config().curve_smoothing_precision.value > 0.f) {
+        ExPolygons new_polys;
+        for (const Surface &srf : layerm->slices.surfaces) {
+            const ExPolygon &ex_poly = srf.expolygon;
+            ExPolygon new_ex_poly(ex_poly);
+            new_ex_poly.contour = _smooth_curve(new_ex_poly.contour, PI, 
+                layerm->region()->config().curve_smoothing_angle.value*PI / 180.0,
+                scale_(layerm->region()->config().curve_smoothing_precision.value));
+            for (Polygon &phole : new_ex_poly.holes){
+                phole.reverse(); // make_counter_clockwise();
+                phole = _smooth_curve(phole, PI,
+                    layerm->region()->config().curve_smoothing_angle.value*PI / 180.0,
+                    scale_(layerm->region()->config().curve_smoothing_precision.value));
+                phole.reverse(); // make_clockwise();
             }
             new_polys.push_back(new_ex_poly);
         }

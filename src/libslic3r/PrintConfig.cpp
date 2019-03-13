@@ -375,7 +375,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("elefant_foot_compensation", coFloat);
     def->label = L("First layer");
     def->full_label = L("First layer compensation");
-    def->category = L("Advanced");
+    def->category = L("Slicing");
     def->tooltip = L("The first layer will be grown / shrunk in the XY plane by the configured value "
                    "to compensate for the 1st layer squish aka an Elephant Foot effect. (should be negative = inwards)");
     def->sidetext = L("mm");
@@ -2132,6 +2132,35 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->default_value = new ConfigOptionFloatOrPercent(15, false);
 
+    def = this->add("curve_smoothing_angle", coFloat);
+    def->label = L("Min angle");
+    def->full_label = L("Curve smoothing minimum angle");
+    def->category = L("Slicing");
+    def->tooltip = L("Minimum angle at a vertex to enable smoothing"
+        " (trying to create a curve around the vertex). "
+        "180 : nothing will be smooth, 0 : all angles will be smoothen.");
+    def->sidetext = L("°");
+    def->cli = "curve-smoothing-angle=f";
+    def->min = 0;
+    def->max = 180;
+    def->mode = comAdvanced;
+    def->default_value = new ConfigOptionFloat(0);
+
+    def = this->add("curve_smoothing_precision", coFloat);
+    def->label = L("Precision");
+    def->full_label = L("Curve smoothing precision");
+    def->category = L("Slicing");
+    def->tooltip = L("These parameter allow the slicer to smooth the angles in each layer. "
+        "The precision will be at least the new precision of the curve. Set to 0 to deactivate."
+        "\nNote: as it use the polygon's edges and only work in the 2D planes, "
+        "you must have a very clean or hand-made 3D model."
+        "\nIt's really only useful to smoothen functional models or very wide angles.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->cli = "curve-smoothing-precision=f";
+    def->mode = comAdvanced;
+    def->default_value = new ConfigOptionFloat(0);
+
     def = this->add("solid_infill_below_area", coFloat);
     def->label = L("Solid infill threshold area");
     def->category = L("Infill");
@@ -2258,7 +2287,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("model_precision", coFloat);
     def->label = L("Model rounding precision");
     def->full_label = L("Model rounding precision");
-    def->category = L("Advanced");
+    def->category = L("Slicing");
     def->tooltip = L("This is the rounding error of the input object."
         " It's used to align points that should be in the same line."
         " Put 0 to disable.");
@@ -2860,7 +2889,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("xy_size_compensation", coFloat);
     def->label = L("All layers");
     def->full_label = L("XY size compensation");
-    def->category = L("Advanced");
+    def->category = L("Slicing");
     def->tooltip = L("The object will be grown/shrunk in the XY plane by the configured value "
                    "(negative = inwards, positive = outwards). This might be useful "
                    "for fine-tuning sizes.");
@@ -2872,7 +2901,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("hole_size_compensation", coFloat);
     def->label = L("Holes");
     def->full_label = L("XY holes compensation");
-    def->category = L("Advanced");
+    def->category = L("Slicing");
     def->tooltip = L("The convex holes will be grown / shrunk in the XY plane by the configured value"
                    " (negative = inwards, positive = outwards, should be negative as the holes are always a bit smaller irl)."
                    " This might be useful for fine-tuning hole sizes.");

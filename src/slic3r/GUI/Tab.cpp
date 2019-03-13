@@ -945,10 +945,10 @@ void Tab::update_frequently_changed_parameters()
 
 void TabPrint::build()
 {
-	m_presets = &m_preset_bundle->prints;
+    m_presets = &m_preset_bundle->prints;
+    Line line{ "", "" };
 	load_initial_data();
-
-	auto page = add_options_page(_(L("Layers and perimeters")), "layers.png");
+    auto page = add_options_page(_(L("Layers and perimeters")), "layers.png");
 		auto optgroup = page->new_optgroup(_(L("Layer height")));
 		optgroup->append_single_option_line("layer_height");
         optgroup->append_single_option_line("first_layer_height");
@@ -958,8 +958,8 @@ void TabPrint::build()
 		optgroup->append_single_option_line("perimeters");
 		optgroup->append_single_option_line("spiral_vase");
 
-		Line line { "", "" };
-		line.full_width = 1;
+        line = { "", "" };
+        line.full_width = 1;
 		line.widget = [this](wxWindow* parent) {
 			return description_line_widget(parent, &m_recommended_thin_wall_thickness_description_line);
 		};
@@ -1147,6 +1147,26 @@ void TabPrint::build()
 		optgroup = page->new_optgroup(_(L("Advanced")));
 		optgroup->append_single_option_line("interface_shells");
 
+
+     page = add_options_page(_(L("Slicing")), "layers.png");
+
+        optgroup = page->new_optgroup(_(L("Filtering")));
+        optgroup->append_single_option_line("slice_closing_radius");
+        optgroup->append_single_option_line("resolution");
+        optgroup->append_single_option_line("model_precision");
+
+        optgroup = page->new_optgroup(_(L("Modifying")));
+        line = { _(L("Curve smoothing")), "" };
+        line.append_option(optgroup->get_option("curve_smoothing_precision"));
+        line.append_option(optgroup->get_option("curve_smoothing_angle"));
+        optgroup->append_line(line);
+        line = { _(L("XY compensation")), "" };
+        line.append_option(optgroup->get_option("xy_size_compensation"));
+        line.append_option(optgroup->get_option("elefant_foot_compensation"));
+        line.append_option(optgroup->get_option("hole_size_compensation"));
+        optgroup->append_line(line);
+
+
 	page = add_options_page(_(L("Advanced")), "wrench.png");
 		optgroup = page->new_optgroup(_(L("Extrusion width")));
 		optgroup->append_single_option_line("extrusion_width");
@@ -1167,19 +1187,8 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("over_bridge_flow_ratio"));
         optgroup->append_line(line);
 
-		optgroup = page->new_optgroup(_(L("Slicing")));
-		optgroup->append_single_option_line("slice_closing_radius");
-		optgroup->append_single_option_line("resolution");
-        line = { _(L("XY compensation")), "" };
-        line.append_option(optgroup->get_option("xy_size_compensation"));
-        line.append_option(optgroup->get_option("elefant_foot_compensation"));
-        line.append_option(optgroup->get_option("hole_size_compensation"));
-        optgroup->append_line(line);
-
 		optgroup = page->new_optgroup(_(L("Other")));
         optgroup->append_single_option_line("clip_multipart_objects");
-		optgroup->append_single_option_line("resolution");
-        optgroup->append_single_option_line("model_precision");
 
 	page = add_options_page(_(L("Output options")), "page_white_go.png");
 		optgroup = page->new_optgroup(_(L("Sequential printing")));
