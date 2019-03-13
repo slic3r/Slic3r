@@ -117,6 +117,25 @@ VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem
 
     const auto &vendor_section = get_or_throw(tree, "vendor")->second;
     res.name = get_or_throw(vendor_section, "name")->second.data();
+    auto full_name_node = vendor_section.find("full_name");
+    res.full_name = (full_name_node == vendor_section.not_found()) ? res.name : full_name_node->second.data();
+    const auto technologies_field = vendor_section.get<std::string>("technologies", "");
+    std::vector<std::string> technologies;
+    if (Slic3r::unescape_strings_cstyle(technologies_field, technologies) && !technologies.empty()) {
+        for (const std::string &technology : technologies) {
+            if (technology == "FFF")
+                res.technologies.push_back(PrinterTechnology::ptFFF);
+            else if (technology == "SLA")
+                res.technologies.push_back(PrinterTechnology::ptSLA);
+            else if (technology == "SLS")
+                res.technologies.push_back(PrinterTechnology::ptSLS);
+            else
+                BOOST_LOG_TRIVIAL(error) << boost::format("Vendor bundle: `%1%`: Malformed technologies field: `%2%`") % id % technologies_field;
+        }
+    } else {
+        //default to FFF if not present
+        res.technologies.push_back(PrinterTechnology::ptFFF);
+    }
 
     auto config_version_str = get_or_throw(vendor_section, "config_version")->second.data();
     auto config_version = Semver::parse(config_version_str);
@@ -160,7 +179,6 @@ VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem
 			if (model.technology == ptSLA)
 				continue;
 #endif
-			section.second.get<std::string>("variants", "");
             const auto variants_field = section.second.get<std::string>("variants", "");
             std::vector<std::string> variants;
             if (Slic3r::unescape_strings_cstyle(variants_field, variants)) {

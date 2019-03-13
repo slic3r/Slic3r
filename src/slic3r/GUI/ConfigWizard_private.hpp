@@ -108,16 +108,10 @@ struct PageWelcome: ConfigWizardPage
 
 struct PagePrinters: ConfigWizardPage
 {
-    enum Technology {
-        // Bitflag equivalent of PrinterTechnology
-        T_FFF = 0x1,
-        T_SLA = 0x2,
-        T_Any = ~0,
-    };
 
     std::vector<PrinterPicker *> printer_pickers;
 
-    PagePrinters(ConfigWizard *parent, wxString title, wxString shortname, const VendorProfile &vendor, unsigned indent, Technology technology);
+    PagePrinters(ConfigWizard *parent, wxString title, wxString shortname, const VendorProfile &vendor, unsigned indent, PrinterTechnology technology);
 
     void select_all(bool select, bool alternates = false);
     int get_width() const;
@@ -262,11 +256,9 @@ struct ConfigWizard::priv
     wxButton *btn_cancel = nullptr;
 
     PageWelcome      *page_welcome = nullptr;
-    PagePrinters     *page_fff = nullptr;
-    PagePrinters     *page_msla = nullptr;
+    std::vector<PagePrinters*> page_vendors;
     PageCustom       *page_custom = nullptr;
     PageUpdate       *page_update = nullptr;
-    PageVendors      *page_vendors = nullptr;   // XXX: ?
 
     // Custom setup pages
     PageFirmware     *page_firmware = nullptr;

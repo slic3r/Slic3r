@@ -30,6 +30,8 @@ enum PrinterTechnology
     ptFFF,
     // Stereolitography
     ptSLA,
+    // laser-sintered powder
+    ptSLS,
 };
 
 

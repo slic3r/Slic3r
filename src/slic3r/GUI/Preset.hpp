@@ -39,6 +39,8 @@ class VendorProfile
 {
 public:
     std::string                     name;
+    std::string                     full_name;
+    std::vector<PrinterTechnology>  technologies;
     std::string                     id;
     Semver                          config_version;
     std::string                     config_update_url;
