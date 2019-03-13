@@ -948,13 +948,9 @@ void TabPrint::build()
     m_presets = &m_preset_bundle->prints;
     Line line{ "", "" };
 	load_initial_data();
-    auto page = add_options_page(_(L("Layers and perimeters")), "layers.png");
-		auto optgroup = page->new_optgroup(_(L("Layer height")));
-		optgroup->append_single_option_line("layer_height");
-        optgroup->append_single_option_line("first_layer_height");
-        optgroup->append_single_option_line("exact_last_layer_height");
+    auto page = add_options_page(_(L("Perimeters & shell")), "perimeters_shell.png");
 
-		optgroup = page->new_optgroup(_(L("Vertical shells")));
+        auto optgroup = page->new_optgroup(_(L("Vertical shells")));
 		optgroup->append_single_option_line("perimeters");
 		optgroup->append_single_option_line("spiral_vase");
 
@@ -986,6 +982,7 @@ void TabPrint::build()
         optgroup->append_single_option_line("no_perimeter_unsupported_algo");
 
         optgroup = page->new_optgroup(_(L("Advanced")));
+        optgroup->append_single_option_line("gap_fill");
         line = { _(L("Seam")), "" };
         line.append_option(optgroup->get_option("seam_position"));
         line.append_option(optgroup->get_option("seam_travel"));
@@ -996,18 +993,43 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("perimeter_loop_seam"));
         optgroup->append_line(line);
 
+    page = add_options_page(_(L("Slicing")), "layers.png");
+
+        optgroup = page->new_optgroup(_(L("Layer height")));
+        optgroup->append_single_option_line("layer_height");
+        optgroup->append_single_option_line("first_layer_height");
+        //optgroup->append_single_option_line("exact_last_layer_height");
+
+        optgroup = page->new_optgroup(_(L("Filtering")));
+        optgroup->append_single_option_line("resolution");
+        optgroup->append_single_option_line("model_precision");
+        optgroup->append_single_option_line("slice_closing_radius");
+
+        optgroup = page->new_optgroup(_(L("Modifying slices")));
+        line = { _(L("Curve smoothing")), "" };
+        line.append_option(optgroup->get_option("curve_smoothing_precision"));
+        line.append_option(optgroup->get_option("curve_smoothing_angle"));
+        optgroup->append_line(line);
+        line = { _(L("XY compensation")), "" };
+        line.append_option(optgroup->get_option("xy_size_compensation"));
+        line.append_option(optgroup->get_option("elefant_foot_compensation"));
+        line.append_option(optgroup->get_option("hole_size_compensation"));
+        optgroup->append_line(line);
+
+        optgroup = page->new_optgroup(_(L("Other")));
+        optgroup->append_single_option_line("clip_multipart_objects");
+
     page = add_options_page(_(L("Infill")), "infill.png");
         optgroup = page->new_optgroup(_(L("Infill")));
         optgroup->append_single_option_line("fill_density");
-        line = { _(L("Fill internal")), "" };
-        line.append_option(optgroup->get_option("fill_pattern"));
-        line.append_option(optgroup->get_option("infill_not_connected"));
-        optgroup->append_line(line);
-        line = { _(L("Fill external")), "" };
+        optgroup->append_single_option_line("fill_pattern");
+        line = { _(L("External patterns")), "" };
         line.append_option(optgroup->get_option("top_fill_pattern"));
         line.append_option(optgroup->get_option("bottom_fill_pattern"));
         optgroup->append_line(line);
         optgroup->append_single_option_line("solid_fill_pattern");
+        optgroup->append_single_option_line("infill_not_connected");
+
         optgroup = page->new_optgroup(_(L("Reducing printing time")));
         optgroup->append_single_option_line("infill_every_layers");
         optgroup->append_single_option_line("infill_only_where_needed");
@@ -1029,7 +1051,6 @@ void TabPrint::build()
         optgroup->append_line(line);
 		optgroup->append_single_option_line("only_retract_when_crossing_perimeters");
         optgroup->append_single_option_line("infill_first");
-        optgroup->append_single_option_line("gap_fill");
 
 	page = add_options_page(_(L("Skirt and brim")), "box.png");
 		optgroup = page->new_optgroup(_(L("Skirt")));
@@ -1121,53 +1142,7 @@ void TabPrint::build()
 		optgroup->append_single_option_line("max_volumetric_extrusion_rate_slope_negative");
 #endif /* HAS_PRESSURE_EQUALIZER */
 
-	page = add_options_page(_(L("Multiple Extruders")), "funnel.png");
-		optgroup = page->new_optgroup(_(L("Extruders")));
-		optgroup->append_single_option_line("perimeter_extruder");
-		optgroup->append_single_option_line("infill_extruder");
-		optgroup->append_single_option_line("solid_infill_extruder");
-		optgroup->append_single_option_line("support_material_extruder");
-		optgroup->append_single_option_line("support_material_interface_extruder");
-
-		optgroup = page->new_optgroup(_(L("Ooze prevention")));
-		optgroup->append_single_option_line("ooze_prevention");
-		optgroup->append_single_option_line("standby_temperature_delta");
-
-		optgroup = page->new_optgroup(_(L("Wipe tower")));
-        optgroup->append_single_option_line("wipe_tower");
-        line = { _(L("Wipe tower position")), "" };
-        line.append_option(optgroup->get_option("wipe_tower_x"));
-        line.append_option(optgroup->get_option("wipe_tower_y"));
-        optgroup->append_line(line);
-		optgroup->append_single_option_line("wipe_tower_width");
-		optgroup->append_single_option_line("wipe_tower_rotation_angle");
-        optgroup->append_single_option_line("wipe_tower_bridging");
-        optgroup->append_single_option_line("single_extruder_multi_material_priming");
-
-		optgroup = page->new_optgroup(_(L("Advanced")));
-		optgroup->append_single_option_line("interface_shells");
-
-
-     page = add_options_page(_(L("Slicing")), "layers.png");
-
-        optgroup = page->new_optgroup(_(L("Filtering")));
-        optgroup->append_single_option_line("slice_closing_radius");
-        optgroup->append_single_option_line("resolution");
-        optgroup->append_single_option_line("model_precision");
-
-        optgroup = page->new_optgroup(_(L("Modifying")));
-        line = { _(L("Curve smoothing")), "" };
-        line.append_option(optgroup->get_option("curve_smoothing_precision"));
-        line.append_option(optgroup->get_option("curve_smoothing_angle"));
-        optgroup->append_line(line);
-        line = { _(L("XY compensation")), "" };
-        line.append_option(optgroup->get_option("xy_size_compensation"));
-        line.append_option(optgroup->get_option("elefant_foot_compensation"));
-        line.append_option(optgroup->get_option("hole_size_compensation"));
-        optgroup->append_line(line);
-
-
-	page = add_options_page(_(L("Advanced")), "wrench.png");
+	page = add_options_page(_(L("Width & flow")), "width.png");
 		optgroup = page->new_optgroup(_(L("Extrusion width")));
 		optgroup->append_single_option_line("extrusion_width");
 		optgroup->append_single_option_line("first_layer_extrusion_width");
@@ -1182,13 +1157,36 @@ void TabPrint::build()
 		optgroup->append_single_option_line("infill_overlap");
 
         optgroup = page->new_optgroup(_(L("Flow")));
-        line = { _(L("Bridge flow ratio")), "" };
+        line = { _(L("Flow ratio")), "" };
         line.append_option(optgroup->get_option("bridge_flow_ratio"));
         line.append_option(optgroup->get_option("over_bridge_flow_ratio"));
         optgroup->append_line(line);
 
-		optgroup = page->new_optgroup(_(L("Other")));
-        optgroup->append_single_option_line("clip_multipart_objects");
+    page = add_options_page(_(L("Multiple extruders")), "funnel.png");
+        optgroup = page->new_optgroup(_(L("Extruders")));
+        optgroup->append_single_option_line("perimeter_extruder");
+        optgroup->append_single_option_line("infill_extruder");
+        optgroup->append_single_option_line("solid_infill_extruder");
+        optgroup->append_single_option_line("support_material_extruder");
+        optgroup->append_single_option_line("support_material_interface_extruder");
+
+        optgroup = page->new_optgroup(_(L("Ooze prevention")));
+        optgroup->append_single_option_line("ooze_prevention");
+        optgroup->append_single_option_line("standby_temperature_delta");
+
+        optgroup = page->new_optgroup(_(L("Wipe tower")));
+        optgroup->append_single_option_line("wipe_tower");
+        line = { _(L("Wipe tower position")), "" };
+        line.append_option(optgroup->get_option("wipe_tower_x"));
+        line.append_option(optgroup->get_option("wipe_tower_y"));
+        optgroup->append_line(line);
+        optgroup->append_single_option_line("wipe_tower_width");
+        optgroup->append_single_option_line("wipe_tower_rotation_angle");
+        optgroup->append_single_option_line("wipe_tower_bridging");
+        optgroup->append_single_option_line("single_extruder_multi_material_priming");
+
+        optgroup = page->new_optgroup(_(L("Advanced")));
+        optgroup->append_single_option_line("interface_shells");
 
 	page = add_options_page(_(L("Output options")), "page_white_go.png");
 		optgroup = page->new_optgroup(_(L("Sequential printing")));
@@ -1579,7 +1577,8 @@ void TabFilament::build()
 		optgroup->append_single_option_line("filament_type");
 		optgroup->append_single_option_line("filament_soluble");
 
-		optgroup = page->new_optgroup(_(L("Print speed override")));
+        optgroup = page->new_optgroup(_(L("Print speed override")));
+        optgroup->append_single_option_line("filament_max_wipe_tower_speed");
 		optgroup->append_single_option_line("filament_max_volumetric_speed");
 
 		line = { "", "" };
@@ -1588,7 +1587,6 @@ void TabFilament::build()
 			return description_line_widget(parent, &m_volumetric_speed_description_line);
 		};
         optgroup->append_line(line);
-        optgroup->append_single_option_line("filament_max_wipe_tower_speed");
 
         optgroup = page->new_optgroup(_(L("Toolchange parameters with single extruder MM printers")));
 		optgroup->append_single_option_line("filament_loading_speed_start");
@@ -1910,7 +1908,7 @@ void TabPrinter::build_fff()
 			def.label = L("Extruders");
 			def.tooltip = L("Number of extruders of the printer.");
 			def.min = 1;
-            def.mode = comExpert;
+            def.mode = comAdvanced;
 		Option option(def, "extruders_count");
 		optgroup->append_single_option_line(option);
 		optgroup->append_single_option_line("single_extruder_multi_material");
