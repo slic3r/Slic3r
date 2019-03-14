@@ -1714,10 +1714,10 @@ void PrintConfigDef::init_fff_params()
     def = this->add("no_perimeter_unsupported_algo", coEnum);
     def->label = L("No perimeters on bridge areas");
     def->tooltip = L("Experimental option to remove perimeters where there is nothing under it and where a bridged infill should be better. "
-        "\n * Remove perimeters: remove the unsupported periemter, let the bridge area as-is."
-        "\n * Keep only bridges: remove the unsupported periemter, kep only bridges that end in solid area."
-        "\n * Keep bridges and overhangs: remove the unsupported periemter, keep only bridges that end in solid area, fill the rest with overhang perimeters+bridges."
-        "\n * Fill the voids with bridges: remove the unsupported periemter, draw bridges over the whole hole. !! can lead to problems with overhangs shape like  /\\, consider carefully before using this option!"
+        "\n * Remove perimeters: remove the unsupported perimeter, let the bridge area as-is."
+        "\n * Keep only bridges: remove the unsupported perimeter, kep only bridges that end in solid area."
+        "\n * Keep bridges and overhangs: remove the unsupported perimeter, keep only bridges that end in solid area, fill the rest with overhang perimeters+bridges."
+        "\n * Fill the voids with bridges: remove the unsupported perimeter, draw bridges over the whole hole. !! can lead to problems with overhangs shape like  /\\, consider carefully before using this option!"
 		"\n!!Computationally intensive!!. ");
     def->cli = "no-perimeter-unsupported-algo=s";
     def->enum_keys_map = &ConfigOptionEnum<NoPerimeterUnsupportedAlgo>::get_enum_values();
