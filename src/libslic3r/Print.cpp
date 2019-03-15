@@ -1519,10 +1519,15 @@ void Print::process()
             this->set_status(88, "Generating skirt");
             if (config().complete_objects){
                 for (PrintObject *obj : m_objects){
-                    this->_make_skirt({ obj });
+                    //create a skirt "pattern" (one per object)
+                    const Points copies = obj->copies();
+                    obj->m_copies.clear();
+                    obj->m_copies.emplace_back();
+                    this->_make_skirt({ obj }, obj->m_skirt);
+                    obj->m_copies = copies;
                 }
             } else {
-                this->_make_skirt(m_objects);
+                this->_make_skirt(m_objects, m_skirt);
             }
         }
         this->set_done(psSkirt);
@@ -1533,16 +1538,21 @@ void Print::process()
             this->set_status(88, "Generating brim");
             if (config().complete_objects){
                 for (PrintObject *obj : m_objects){
+                    //create a brim "pattern" (one per object)
+                    const Points copies = obj->copies();
+                    obj->m_copies.clear();
+                    obj->m_copies.emplace_back();
                     if (config().brim_ears)
-                        this->_make_brim_ears({ obj });
+                        this->_make_brim_ears({ obj }, obj->m_brim);
                     else
-                        this->_make_brim({ obj });
+                        this->_make_brim({ obj }, obj->m_brim);
+                    obj->m_copies = copies;
                 }
             } else {
                 if (config().brim_ears)
-                    this->_make_brim_ears(m_objects);
+                    this->_make_brim_ears(m_objects, m_brim);
                 else
-                    this->_make_brim(m_objects);
+                    this->_make_brim(m_objects, m_brim);
 
             }
         }
@@ -1581,7 +1591,7 @@ void Print::export_gcode(const std::string &path_template, GCodePreviewData *pre
     gcode.do_export(this, path.c_str(), preview_data);
 }
 
-void Print::_make_skirt(const PrintObjectPtrs &objects)
+void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out)
 {
     // First off we need to decide how tall the skirt must be.
     // The skirt_height option from config is expressed in layers, but our
@@ -1696,7 +1706,7 @@ void Print::_make_skirt(const PrintObjectPtrs &objects)
                 first_layer_height  // this will be overridden at G-code export time
             )));
         eloop.paths.back().polyline = loop.split_at_first_point();
-        m_skirt.append(eloop);
+        out.append(eloop);
         if (m_config.min_skirt_length.value > 0) {
             // The skirt length is limited. Sum the total amount of filament length extruded, in mm.
             extruded_length[extruder_idx] += unscale<double>(loop.length()) * extruders_e_per_mm[extruder_idx];
@@ -1716,10 +1726,10 @@ void Print::_make_skirt(const PrintObjectPtrs &objects)
         }
     }
     // Brims were generated inside out, reverse to print the outmost contour first.
-    m_skirt.reverse();
+    out.reverse();
 }
 
-void Print::_make_brim(const PrintObjectPtrs &objects) {
+void Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out) {
     // Brim is only printed on first layer and uses perimeter extruder.
     Flow        flow = this->brim_flow();
     Polygons    islands;
@@ -1753,10 +1763,10 @@ void Print::_make_brim(const PrintObjectPtrs &objects) {
 
     loops = union_pt_chained(loops, false);
     std::reverse(loops.begin(), loops.end());
-    extrusion_entities_append_loops(m_brim.entities, std::move(loops), erSkirt, float(flow.mm3_per_mm()), float(flow.width), float(this->skirt_first_layer_height()));
+    extrusion_entities_append_loops(out.entities, std::move(loops), erSkirt, float(flow.mm3_per_mm()), float(flow.width), float(this->skirt_first_layer_height()));
 }
 
-void Print::_make_brim_ears(const PrintObjectPtrs &objects) {
+void Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out) {
     Flow        flow = this->brim_flow();
     Points pt_ears;
     Polygons islands;
@@ -1885,7 +1895,7 @@ void Print::_make_brim_ears(const PrintObjectPtrs &objects) {
 
     //push into extrusions
     extrusion_entities_append_paths(
-        m_brim.entities,
+        out.entities,
         lines_sorted,
         erSkirt,
         float(flow.mm3_per_mm()),

@@ -144,6 +144,10 @@ public:
     std::vector<ExPolygons>     slice_support_enforcers() const;
     std::vector<ExPolygons>     slice_support_blockers() const;
 
+    /// skirts if done per copy and not per platter
+    const ExtrusionEntityCollection& skirt() const { return m_skirt; }
+    const ExtrusionEntityCollection& brim() const { return m_brim; }
+
 protected:
     // to be called from Print only.
     friend class Print;
@@ -201,6 +205,12 @@ private:
 
     LayerPtrs                               m_layers;
     SupportLayerPtrs                        m_support_layers;
+
+
+    // Ordered collections of extrusion paths to build skirt loops and brim.
+    // have to be duplicated per copy
+    ExtrusionEntityCollection               m_skirt;
+    ExtrusionEntityCollection               m_brim;
 
     std::vector<ExPolygons> _slice_region(size_t region_id, const std::vector<float> &z, bool modifier);
     std::vector<ExPolygons> _slice_volumes(const std::vector<float> &z, const std::vector<const ModelVolume*> &volumes) const;
@@ -366,9 +376,9 @@ protected:
 private:
     bool                invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
 
-    void                _make_skirt(const PrintObjectPtrs &objects);
-    void                _make_brim(const PrintObjectPtrs &objects);
-    void                _make_brim_ears(const PrintObjectPtrs &objects);
+    void                _make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
+    void                _make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
+    void                _make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
     void                _make_wipe_tower();
     void                _simplify_slices(double distance);
 

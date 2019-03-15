@@ -1574,6 +1574,7 @@ void GCode::process_layer(
         if (m_enable_analyzer && layer_tools.has_wipe_tower && m_wipe_tower)
             m_last_analyzer_extrusion_role = erWipeTower;
 
+        // Extrude skirt with the extruder of the 1st region.
         if (extrude_skirt) {
             auto loops_it = skirt_loops_per_extruder.find(extruder_id);
             if (loops_it != skirt_loops_per_extruder.end()) {
@@ -1601,7 +1602,7 @@ void GCode::process_layer(
         }
         
         // Extrude brim with the extruder of the 1st region.
-        if (! m_brim_done) {
+        if (!m_brim_done) {
             this->set_origin(0., 0.);
             m_avoid_crossing_perimeters.use_external_mp = true;
             for (const ExtrusionEntity *ee : print.brim().entities)
@@ -1609,6 +1610,21 @@ void GCode::process_layer(
             m_brim_done = true;
             m_avoid_crossing_perimeters.use_external_mp = false;
             // Allow a straight travel move to the first object point.
+            m_avoid_crossing_perimeters.disable_once = true;
+        }
+        //extrude object-only skirt & brim & first extruder
+        if (single_object_idx != size_t(-1) && !layers.front().object()->brim().empty()
+            && extruder_id == layer_tools.extruders.front()) {
+            const PrintObject *print_object = layers.front().object();
+            this->set_origin(unscale(print_object->copies()[single_object_idx]));
+
+            for (const ExtrusionEntity *ee : print_object->skirt().entities)
+                gcode += this->extrude_entity(*ee, "skirt", m_config.support_material_speed.value);
+
+            m_avoid_crossing_perimeters.use_external_mp = true;
+            for (const ExtrusionEntity *ee : print_object->brim().entities)
+                gcode += this->extrude_entity(*ee, "brim", m_config.support_material_speed.value);
+            m_avoid_crossing_perimeters.use_external_mp = false;
             m_avoid_crossing_perimeters.disable_once = true;
         }
 
