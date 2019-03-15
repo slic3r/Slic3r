@@ -525,10 +525,10 @@ void Sidebar::priv::show_preset_comboboxes()
 
     wxWindowUpdateLocker noUpdates_scrolled(scrolled->GetParent());
     
-    for (size_t i = 0; i < 4; ++i)
+    for (size_t i = 0; i < 2; ++i)
         sizer_presets->Show(i, !showSLA);
 
-    for (size_t i = 4; i < 8; ++i) {
+    for (size_t i = 2; i < 4; ++i) {
         if (sizer_presets->IsShown(i) != showSLA)
             sizer_presets->Show(i, showSLA);
     }
@@ -562,13 +562,14 @@ Sidebar::Sidebar(Plater *parent)
     p->sizer_filaments = new wxBoxSizer(wxVERTICAL);
 
     auto init_combo = [this](PresetComboBox **combo, wxString label, Preset::Type preset_type, bool filament) {
-        auto *text = new wxStaticText(p->scrolled, wxID_ANY, label+" :");
-        text->SetFont(wxGetApp().small_font());
+        // do not print these albels. if you re-enabled these, don't forget to *2 the size in show_preset_comboboxes()
+        //auto *text = new wxStaticText(p->scrolled, wxID_ANY, label+" :");
+        //text->SetFont(wxGetApp().small_font());
         *combo = new PresetComboBox(p->scrolled, preset_type);
 
         auto *sizer_presets = this->p->sizer_presets;
         auto *sizer_filaments = this->p->sizer_filaments;
-        sizer_presets->Add(text, 0, wxALIGN_LEFT | wxEXPAND | wxRIGHT, 4);
+        //sizer_presets->Add(text, 0, wxALIGN_LEFT | wxEXPAND | wxRIGHT, 4);
         if (! filament) {
             sizer_presets->Add(*combo, 0, wxEXPAND | wxBOTTOM, 1);
         } else {
