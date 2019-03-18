@@ -440,7 +440,8 @@ const std::vector<std::string>& Preset::filament_options()
         "min_print_speed", "start_filament_gcode", "end_filament_gcode",
         "compatible_prints", "compatible_prints_condition",
         "compatible_printers", "compatible_printers_condition", "inherits"
-        , "filament_wipe_advanced_pigment"
+        , "filament_wipe_advanced_pigment",
+		"chamber_temperature"
     };
     return s_opts;
 }

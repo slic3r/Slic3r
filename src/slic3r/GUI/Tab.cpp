@@ -1544,6 +1544,8 @@ void TabFilament::build()
 		line.append_option(optgroup->get_option("first_layer_bed_temperature"));
 		line.append_option(optgroup->get_option("bed_temperature"));
 		optgroup->append_line(line);
+		
+		optgroup->append_single_option_line("chamber_temperature");
 
 	page = add_options_page(_(L("Cooling")), "hourglass.png");
 		optgroup = page->new_optgroup(_(L("Enable")));

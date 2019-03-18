@@ -895,10 +895,10 @@ public:
     ConfigOptionInts                bed_temperature;
     ConfigOptionFloat               bridge_acceleration;
     ConfigOptionInts                bridge_fan_speed;
-    ConfigOptionInts                top_fan_speed;
     ConfigOptionFloat               brim_width;
     ConfigOptionBool                brim_ears;
     ConfigOptionFloat               brim_ears_max_angle;
+    ConfigOptionInts                chamber_temperature;
     ConfigOptionBool                complete_objects;
     ConfigOptionFloats              colorprint_heights;
     ConfigOptionBools               cooling;
@@ -947,6 +947,7 @@ public:
     ConfigOptionInt                 standby_temperature_delta;
     ConfigOptionInts                temperature;
     ConfigOptionInt                 threads;
+    ConfigOptionInts                top_fan_speed;
     ConfigOptionBools               wipe;
     ConfigOptionBool                wipe_tower;
     ConfigOptionFloat               wipe_tower_x;
@@ -976,10 +977,10 @@ protected:
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);
         OPT_PTR(bridge_fan_speed);
-        OPT_PTR(top_fan_speed);
         OPT_PTR(brim_width);
         OPT_PTR(brim_ears);
         OPT_PTR(brim_ears_max_angle);
+        OPT_PTR(chamber_temperature);
         OPT_PTR(complete_objects);
         OPT_PTR(colorprint_heights);
         OPT_PTR(cooling);
@@ -1028,6 +1029,7 @@ protected:
         OPT_PTR(standby_temperature_delta);
         OPT_PTR(temperature);
         OPT_PTR(threads);
+        OPT_PTR(top_fan_speed);
         OPT_PTR(wipe);
         OPT_PTR(wipe_tower);
         OPT_PTR(wipe_tower_x);

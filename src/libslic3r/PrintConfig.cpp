@@ -96,6 +96,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Bed temperature for layers after the first one. "
                    "Set this to zero to disable bed temperature control commands in the output.");
     def->cli = "bed-temperature=i@";
+    def->sidetext = L("°C");
     def->min = 0;
     def->max = 300;
     def->default_value = new ConfigOptionInts { 0 };
@@ -236,6 +237,17 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->max = 180;
     def->default_value = new ConfigOptionFloat(125);
+
+    def = this->add("chamber_temperature", coInts);
+    def->label = L("Chamber");
+    def->full_label = L("Chamber temperature");
+    def->tooltip = L("Chamber temperature0. Note that this setting doesn't do anything, but you can access it in Start G-code, Tool change G-code and the other ones, like for other temperature settings.");
+    def->cli = "chamber-temperature=i@";
+    def->sidetext = L("°C");
+    def->min = 0;
+    def->max = 300;
+    def->mode = comExpert;
+    def->default_value = new ConfigOptionInts{ 0 };
 
     def = this->add("clip_multipart_objects", coBool);
     def->label = L("Clip multi-part objects");
@@ -1074,6 +1086,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Heated build plate temperature for the first layer. Set this to zero to disable "
                    "bed temperature control commands in the output.");
     def->cli = "first-layer-bed-temperature=i@";
+    def->sidetext = L("°C");
     def->max = 0;
     def->max = 300;
     def->default_value = new ConfigOptionInts { 0 };
@@ -1138,6 +1151,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Extruder temperature for first layer. If you want to control temperature manually "
                    "during print, set this to zero to disable temperature control commands in the output file.");
     def->cli = "first-layer-temperature=i@";
+    def->sidetext = L("°C");
     def->min = 0;
     def->max = max_temp;
     def->default_value = new ConfigOptionInts{ 200 };
@@ -2603,6 +2617,7 @@ void PrintConfigDef::init_fff_params()
                    "temperature control commands in the output.");
     def->cli = "temperature=i@";
     def->full_label = L("Temperature");
+    def->sidetext = L("°C");
     def->min = 0;
     def->max = max_temp;
     def->default_value = new ConfigOptionInts { 200 };
