@@ -195,7 +195,14 @@ sub load_config {
             Slic3r::GUI::show_error(undef, "The selected preset does not exist anymore (" . $self->file . ").");
             return undef;
         }
-        my $external_config = Slic3r::Config->load($self->file);
+        my $external_config = "";
+        eval {
+            $external_config = Slic3r::Config->load($self->file);
+        } or do {
+            # Catch exception from the XS load
+            Slic3r::GUI::show_error(undef, "The selected preset failed to load.");
+            return undef;
+        };
         if (!@keys) {
             $self->_config($external_config);
         } else {

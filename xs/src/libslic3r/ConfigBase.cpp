@@ -1,4 +1,5 @@
 #include "ConfigBase.hpp"
+#include "Log.hpp"
 #include <assert.h>
 #include <ctime>
 #include <fstream>
@@ -618,7 +619,13 @@ ConfigBase::load(const std::string &file)
     namespace pt = boost::property_tree;
     pt::ptree tree;
 	boost::nowide::ifstream ifs(file);
-	pt::read_ini(ifs, tree);
+    try {
+        pt::read_ini(ifs, tree);
+    } catch(std::exception& ex) {
+        // Log or error string stating that the data read is corrupt
+        Log::error("Config") << "Error reading ini " << file << ":" << ex.what() << "\n";
+        throw ex;
+    }
     BOOST_FOREACH(const pt::ptree::value_type &v, tree) {
         try {
             t_config_option_key opt_key = v.first;
