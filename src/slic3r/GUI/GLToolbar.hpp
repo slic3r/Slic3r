@@ -31,6 +31,10 @@ wxDECLARE_EVENT(EVT_GLVIEWTOOLBAR_PREVIEW, SimpleEvent);
 class GLToolbarItem
 {
 public:
+    typedef std::function<void()> ActionCallback;
+    typedef std::function<bool()> VisibilityCallback;
+    typedef std::function<bool()> EnabledStateCallback;
+
     enum EType : unsigned char
     {
         Action,
@@ -51,16 +55,23 @@ public:
     struct Data
     {
         std::string name;
+#if ENABLE_SVG_ICONS
+        std::string icon_filename;
+#endif // ENABLE_SVG_ICONS
         std::string tooltip;
         unsigned int sprite_id;
         bool is_toggable;
-        wxEventType action_event;
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
         bool visible;
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
+        ActionCallback action_callback;
+        VisibilityCallback visibility_callback;
+        EnabledStateCallback enabled_state_callback;
 
         Data();
     };
+
+    static const ActionCallback Default_Action_Callback;
+    static const VisibilityCallback Default_Visibility_Callback;
+    static const EnabledStateCallback Default_Enabled_State_Callback;
 
 private:
     EType m_type;
@@ -74,9 +85,12 @@ public:
     void set_state(EState state) { m_state = state; }
 
     const std::string& get_name() const { return m_data.name; }
+#if ENABLE_SVG_ICONS
+    const std::string& get_icon_filename() const { return m_data.icon_filename; }
+#endif // ENABLE_SVG_ICONS
     const std::string& get_tooltip() const { return m_data.tooltip; }
 
-    void do_action(wxEvtHandler *target);
+    void do_action() { m_data.action_callback(); }
 
     bool is_enabled() const { return m_state != Disabled; }
     bool is_disabled() const { return m_state == Disabled; }
@@ -84,18 +98,24 @@ public:
     bool is_pressed() const { return (m_state == Pressed) || (m_state == HoverPressed); }
 
     bool is_toggable() const { return m_data.is_toggable; }
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
     bool is_visible() const { return m_data.visible; }
-    void set_visible(bool visible) { m_data.visible = visible; }
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
     bool is_separator() const { return m_type == Separator; }
 
-    void render(unsigned int tex_id, float left, float right, float bottom, float top, unsigned int texture_size, unsigned int border_size, unsigned int icon_size, unsigned int gap_size) const;
+    // returns true if the state changes
+    bool update_visibility();
+    // returns true if the state changes
+    bool update_enabled_state();
+
+    void render(unsigned int tex_id, float left, float right, float bottom, float top, unsigned int tex_width, unsigned int tex_height, unsigned int icon_size) const;
 
 private:
-    GLTexture::Quad_UVs get_uvs(unsigned int texture_size, unsigned int border_size, unsigned int icon_size, unsigned int gap_size) const;
+    GLTexture::Quad_UVs get_uvs(unsigned int tex_width, unsigned int tex_height, unsigned int icon_size) const;
+    void set_visible(bool visible) { m_data.visible = visible; }
+
+    friend class GLToolbar;
 };
 
+#if !ENABLE_SVG_ICONS
 // items icon textures are assumed to be square and all with the same size in pixels, no internal check is done
 // icons are layed-out into the texture starting from the top-left corner in the same order as enum GLToolbarItem::EState
 // from left to right
@@ -107,10 +127,6 @@ struct ItemsIconsTexture
         std::string filename;
         // size of the square icons, in pixels
         unsigned int icon_size;
-        // size of the border, in pixels
-        unsigned int icon_border_size;
-        // distance between two adjacent icons (to avoid filtering artifacts), in pixels
-        unsigned int icon_gap_size;
 
         Metadata();
     };
@@ -118,6 +134,7 @@ struct ItemsIconsTexture
     GLTexture texture;
     Metadata metadata;
 };
+#endif // !ENABLE_SVG_ICONS
 
 struct BackgroundTexture
 {
@@ -144,6 +161,10 @@ struct BackgroundTexture
 class GLToolbar
 {
 public:
+#if ENABLE_SVG_ICONS
+    static const float Default_Icons_Size;
+#endif // ENABLE_SVG_ICONS
+
     enum EType : unsigned char
     {
         Normal,
@@ -177,7 +198,12 @@ public:
         float border;
         float separator_size;
         float gap_size;
+#if ENABLE_SVG_ICONS
+        float icons_size;
+        float scale;
+#else
         float icons_scale;
+#endif // ENABLE_SVG_ICONS
 
         float width;
         float height;
@@ -190,18 +216,50 @@ private:
     typedef std::vector<GLToolbarItem*> ItemsList;
 
     EType m_type;
+#if ENABLE_SVG_ICONS
+    std::string m_name;
+#endif // ENABLE_SVG_ICONS
     bool m_enabled;
+#if ENABLE_SVG_ICONS
+    mutable GLTexture m_icons_texture;
+    mutable bool m_icons_texture_dirty;
+#else
     ItemsIconsTexture m_icons_texture;
+#endif // ENABLE_SVG_ICONS
     BackgroundTexture m_background_texture;
     mutable Layout m_layout;
 
     ItemsList m_items;
 
+    struct MouseCapture
+    {
+        bool left;
+        bool middle;
+        bool right;
+        GLCanvas3D* parent;
+
+        MouseCapture() { reset(); }
+
+        bool any() const { return left || middle || right; }
+        void reset() { left = middle = right = false; parent = nullptr; }
+    };
+
+    MouseCapture m_mouse_capture;
+    std::string m_tooltip;
+
 public:
+#if ENABLE_SVG_ICONS
+    GLToolbar(EType type, const std::string& name);
+#else
     explicit GLToolbar(EType type);
+#endif // ENABLE_SVG_ICONS
     ~GLToolbar();
 
+#if ENABLE_SVG_ICONS
+    bool init(const BackgroundTexture::Metadata& background_texture);
+#else
     bool init(const ItemsIconsTexture::Metadata& icons_texture, const BackgroundTexture::Metadata& background_texture);
+#endif // ENABLE_SVG_ICONS
 
     Layout::EType get_layout_type() const;
     void set_layout_type(Layout::EType type);
@@ -212,7 +270,12 @@ public:
     void set_border(float border);
     void set_separator_size(float size);
     void set_gap_size(float size);
+#if ENABLE_SVG_ICONS
+    void set_icons_size(float size);
+    void set_scale(float scale);
+#else
     void set_icons_scale(float scale);
+#endif // ENABLE_SVG_ICONS
 
     bool is_enabled() const;
     void set_enabled(bool enable);
@@ -223,25 +286,21 @@ public:
     float get_width() const;
     float get_height() const;
 
-    void enable_item(const std::string& name);
-    void disable_item(const std::string& name);
     void select_item(const std::string& name);
 
     bool is_item_pressed(const std::string& name) const;
     bool is_item_disabled(const std::string& name) const;
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
     bool is_item_visible(const std::string& name) const;
-    void set_item_visible(const std::string& name, bool visible);
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
 
-    std::string update_hover_state(const Vec2d& mouse_pos, GLCanvas3D& parent);
+    const std::string& get_tooltip() const { return m_tooltip; }
 
-    // returns the id of the item under the given mouse position or -1 if none
-    int contains_mouse(const Vec2d& mouse_pos, const GLCanvas3D& parent) const;
 
-    void do_action(unsigned int item_id, GLCanvas3D& parent);
+    // returns true if any item changed its state
+    bool update_items_state();
 
     void render(const GLCanvas3D& parent) const;    
+
+    bool on_mouse(wxMouseEvent& evt, GLCanvas3D& parent);
 
 private:
     void calc_layout() const;
@@ -250,13 +309,26 @@ private:
     float get_height_horizontal() const;
     float get_height_vertical() const;
     float get_main_size() const;
+    void do_action(unsigned int item_id, GLCanvas3D& parent);
+    std::string update_hover_state(const Vec2d& mouse_pos, GLCanvas3D& parent);
     std::string update_hover_state_horizontal(const Vec2d& mouse_pos, GLCanvas3D& parent);
     std::string update_hover_state_vertical(const Vec2d& mouse_pos, GLCanvas3D& parent);
+    // returns the id of the item under the given mouse position or -1 if none
+    int contains_mouse(const Vec2d& mouse_pos, const GLCanvas3D& parent) const;
     int contains_mouse_horizontal(const Vec2d& mouse_pos, const GLCanvas3D& parent) const;
     int contains_mouse_vertical(const Vec2d& mouse_pos, const GLCanvas3D& parent) const;
 
     void render_horizontal(const GLCanvas3D& parent) const;
     void render_vertical(const GLCanvas3D& parent) const;
+
+#if ENABLE_SVG_ICONS
+    bool generate_icons_texture() const;
+#endif // ENABLE_SVG_ICONS
+
+    // returns true if any item changed its state
+    bool update_items_visibility();
+    // returns true if any item changed its state
+    bool update_items_enabled_state();
 };
 
 } // namespace GUI

@@ -107,6 +107,7 @@ PresetBundle::PresetBundle() :
     this->filaments    .load_bitmap_default("spool.png");
     this->sla_materials.load_bitmap_default("package_green.png");
     this->printers     .load_bitmap_default("printer_empty.png");
+    this->printers     .load_bitmap_add("add.png");
     this->load_compatible_bitmaps();
 
     // Re-activate the default presets, so their "edited" preset copies will be updated with the additional configuration values above.
@@ -1289,7 +1290,7 @@ void PresetBundle::update_compatible(bool select_other_if_incompatible)
 {
     const Preset &printer_preset = this->printers.get_edited_preset();
 
-    switch (printers.get_edited_preset().printer_technology()) {
+	switch (printer_preset.printer_technology()) {
     case ptFFF:
     {
 		assert(printer_preset.config.has("default_print_profile"));
@@ -1308,19 +1309,23 @@ void PresetBundle::update_compatible(bool select_other_if_incompatible)
                     { return std::find(prefered_filament_profiles.begin(), prefered_filament_profiles.end(), profile_name) != prefered_filament_profiles.end(); });
         if (select_other_if_incompatible) {
             // Verify validity of the current filament presets.
-            this->filament_presets.front() = this->filaments.get_edited_preset().name;
-            for (size_t idx = 1; idx < this->filament_presets.size(); ++ idx) {
-                std::string &filament_name = this->filament_presets[idx];
-                Preset      *preset        = this->filaments.find_preset(filament_name, false);
-                if (preset == nullptr || ! preset->is_compatible) {
-                    // Pick a compatible profile. If there are prefered_filament_profiles, use them.
-                    if (prefered_filament_profiles.empty())
-                        filament_name = this->filaments.first_compatible().name;
-                    else {
-                        const std::string &preferred = (idx < prefered_filament_profiles.size()) ? 
-                            prefered_filament_profiles[idx] : prefered_filament_profiles.front();
-                        filament_name = this->filaments.first_compatible(
-                            [&preferred](const std::string& profile_name) { return profile_name == preferred; }).name;
+            if (this->filament_presets.size() == 1)
+                this->filament_presets.front() = this->filaments.get_edited_preset().name;
+            else
+            {
+                for (size_t idx = 0; idx < this->filament_presets.size(); ++idx) {
+                    std::string &filament_name = this->filament_presets[idx];
+                    Preset      *preset = this->filaments.find_preset(filament_name, false);
+                    if (preset == nullptr || !preset->is_compatible) {
+                        // Pick a compatible profile. If there are prefered_filament_profiles, use them.
+                        if (prefered_filament_profiles.empty())
+                            filament_name = this->filaments.first_compatible().name;
+                        else {
+                            const std::string &preferred = (idx < prefered_filament_profiles.size()) ?
+                                prefered_filament_profiles[idx] : prefered_filament_profiles.front();
+                            filament_name = this->filaments.first_compatible(
+                                [&preferred](const std::string& profile_name) { return profile_name == preferred; }).name;
+                        }
                     }
                 }
             }
@@ -1401,7 +1406,7 @@ void PresetBundle::export_configbundle(const std::string &path, bool export_syst
 // an optional "(modified)" suffix will be removed from the filament name.
 void PresetBundle::set_filament_preset(size_t idx, const std::string &name)
 {
-	if (name.find_first_of("-------") == 0)
+	if (name.find_first_of(PresetCollection::separator_head()) == 0)
 		return;
 
     if (idx >= filament_presets.size())
@@ -1457,7 +1462,7 @@ void PresetBundle::update_platter_filament_ui(unsigned int idx_extruder, GUI::Pr
 	std::map<wxString, wxBitmap*> nonsys_presets;
 	wxString selected_str = "";
 	if (!this->filaments().front().is_visible)
-        ui->set_label_marker(ui->Append("------- " + _(L("System presets")) + " -------", wxNullBitmap));
+        ui->set_label_marker(ui->Append(PresetCollection::separator(L("System presets")), wxNullBitmap));
 	for (int i = this->filaments().front().is_visible ? 0 : 1; i < int(this->filaments().size()); ++i) {
         const Preset &preset    = this->filaments.preset(i);
         bool          selected  = this->filament_presets[idx_extruder] == preset.name;
@@ -1510,12 +1515,12 @@ void PresetBundle::update_platter_filament_ui(unsigned int idx_extruder, GUI::Pr
 				selected_str = wxString::FromUTF8((preset.name + (preset.is_dirty ? Preset::suffix_modified() : "")).c_str());
 		}
 		if (preset.is_default)
-            ui->set_label_marker(ui->Append("------- " + _(L("System presets")) + " -------", wxNullBitmap));
+            ui->set_label_marker(ui->Append(PresetCollection::separator(L("System presets")), wxNullBitmap));
     }
 
 	if (!nonsys_presets.empty())
 	{
-        ui->set_label_marker(ui->Append("-------  " + _(L("User presets")) + "  -------", wxNullBitmap));
+        ui->set_label_marker(ui->Append(PresetCollection::separator(L("User presets")), wxNullBitmap));
 		for (std::map<wxString, wxBitmap*>::iterator it = nonsys_presets.begin(); it != nonsys_presets.end(); ++it) {
 			ui->Append(it->first, *it->second);
 			if (it->first == selected_str)
@@ -1524,6 +1529,7 @@ void PresetBundle::update_platter_filament_ui(unsigned int idx_extruder, GUI::Pr
 	}
 	ui->SetSelection(selected_preset_item);
 	ui->SetToolTip(ui->GetString(selected_preset_item));
+    ui->check_selection();
     ui->Thaw();
 }
 

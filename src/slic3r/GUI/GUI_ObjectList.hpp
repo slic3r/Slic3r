@@ -127,6 +127,10 @@ class ObjectList : public wxDataViewCtrl
     bool        m_prevent_update_extruder_in_config = false; // We use this flag to avoid updating of the extruder value in config 
                                                              // during updating of the extruder count.
 
+    bool        m_prevent_canvas_selection_update = false; // This flag prevents changing selection on the canvas. See function
+                                                           // update_settings_items - updating canvas selection is undesirable,
+                                                           // because it would turn off the gizmos (mainly a problem for the SLA gizmo)
+
     bool        m_parts_changed = false;
     bool        m_part_settings_changed = false;
 
@@ -180,8 +184,9 @@ public:
     wxMenuItem*         append_menu_item_settings(wxMenu* menu);
     wxMenuItem*         append_menu_item_change_type(wxMenu* menu);
     wxMenuItem*         append_menu_item_instance_to_object(wxMenu* menu);
-    void                append_menu_item_rename(wxMenu* menu);
+    void                append_menu_items_osx(wxMenu* menu);
     void                append_menu_item_fix_through_netfabb(wxMenu* menu);
+    void                append_menu_item_export_stl(wxMenu* menu) const ;
     void                create_object_popupmenu(wxMenu *menu);
     void                create_sla_object_popupmenu(wxMenu*menu);
     void                create_part_popupmenu(wxMenu*menu);
@@ -265,6 +270,7 @@ public:
     void split_instances();
     void rename_item();
     void fix_through_netfabb() const;
+    void update_item_error_icon(const int obj_idx, int vol_idx) const ;
 private:
     void OnChar(wxKeyEvent& event);
     void OnContextMenu(wxDataViewEvent &event);
@@ -276,6 +282,10 @@ private:
 
     void ItemValueChanged(wxDataViewEvent &event);
     void OnEditingDone(wxDataViewEvent &event);
+
+    void show_multi_selection_menu();
+    void extruder_selection();
+    void set_extruder_for_selected_items(const int extruder) const ;
 
     std::vector<std::string>        get_options(const bool is_part);
     const std::vector<std::string>& get_options_for_bundle(const wxString& bundle_name);

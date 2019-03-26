@@ -53,6 +53,7 @@ bool BackgroundSlicingProcess::select_technology(PrinterTechnology tech)
 		switch (tech) {
 		case ptFFF: m_print = m_fff_print; break;
 		case ptSLA: m_print = m_sla_print; break;
+        case ptSLS: m_print = m_fff_print; break;
 		}
 		changed = true;
 	}
@@ -186,6 +187,7 @@ void BackgroundSlicingProcess::thread_proc()
 			switch(m_print->technology()) {
 				case ptFFF: this->process_fff(); break;
                 case ptSLA: this->process_sla(); break;
+                case ptSLS: this->process_fff(); break;
 				default: m_print->process(); break;
 			}
 		} catch (CanceledException & /* ex */) {

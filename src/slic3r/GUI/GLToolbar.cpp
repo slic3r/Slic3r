@@ -30,49 +30,70 @@ wxDEFINE_EVENT(EVT_GLTOOLBAR_LAYERSEDITING, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLVIEWTOOLBAR_3D, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLVIEWTOOLBAR_PREVIEW, SimpleEvent);
 
+const GLToolbarItem::ActionCallback GLToolbarItem::Default_Action_Callback = [](){};
+const GLToolbarItem::VisibilityCallback GLToolbarItem::Default_Visibility_Callback = []()->bool { return true; };
+const GLToolbarItem::EnabledStateCallback GLToolbarItem::Default_Enabled_State_Callback = []()->bool { return true; };
+
 GLToolbarItem::Data::Data()
     : name("")
+#if ENABLE_SVG_ICONS
+    , icon_filename("")
+#endif // ENABLE_SVG_ICONS
     , tooltip("")
     , sprite_id(-1)
     , is_toggable(false)
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
     , visible(true)
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
+    , action_callback(Default_Action_Callback)
+    , visibility_callback(Default_Visibility_Callback)
+    , enabled_state_callback(Default_Enabled_State_Callback)
 {
 }
 
 GLToolbarItem::GLToolbarItem(GLToolbarItem::EType type, const GLToolbarItem::Data& data)
     : m_type(type)
-    , m_state(Disabled)
+    , m_state(Normal)
     , m_data(data)
 {
 }
 
-void GLToolbarItem::do_action(wxEvtHandler *target)
+bool GLToolbarItem::update_visibility()
 {
-    wxPostEvent(target, SimpleEvent(m_data.action_event));
+    bool visible = m_data.visibility_callback();
+    bool ret = (m_data.visible != visible);
+    if (ret)
+        m_data.visible = visible;
+
+    return ret;
 }
 
-void GLToolbarItem::render(unsigned int tex_id, float left, float right, float bottom, float top, unsigned int texture_size, unsigned int border_size, unsigned int icon_size, unsigned int gap_size) const
+bool GLToolbarItem::update_enabled_state()
 {
-    GLTexture::render_sub_texture(tex_id, left, right, bottom, top, get_uvs(texture_size, border_size, icon_size, gap_size));
+    bool enabled = m_data.enabled_state_callback();
+    bool ret = (is_enabled() != enabled);
+    if (ret)
+        m_state = enabled ? GLToolbarItem::Normal : GLToolbarItem::Disabled;
+
+    return ret;
 }
 
-GLTexture::Quad_UVs GLToolbarItem::get_uvs(unsigned int texture_size, unsigned int border_size, unsigned int icon_size, unsigned int gap_size) const
+void GLToolbarItem::render(unsigned int tex_id, float left, float right, float bottom, float top, unsigned int tex_width, unsigned int tex_height, unsigned int icon_size) const
+{
+    GLTexture::render_sub_texture(tex_id, left, right, bottom, top, get_uvs(tex_width, tex_height, icon_size));
+}
+
+GLTexture::Quad_UVs GLToolbarItem::get_uvs(unsigned int tex_width, unsigned int tex_height, unsigned int icon_size) const
 {
     GLTexture::Quad_UVs uvs;
 
-    float inv_texture_size = (texture_size != 0) ? 1.0f / (float)texture_size : 0.0f;
+    float inv_tex_width = (tex_width != 0) ? 1.0f / (float)tex_width : 0.0f;
+    float inv_tex_height = (tex_height != 0) ? 1.0f / (float)tex_height : 0.0f;
 
-    float scaled_icon_size = (float)icon_size * inv_texture_size;
-    float scaled_border_size = (float)border_size * inv_texture_size;
-    float scaled_gap_size = (float)gap_size * inv_texture_size;
-    float stride = scaled_icon_size + scaled_gap_size;
-
-    float left = scaled_border_size + (float)m_state * stride;
-    float right = left + scaled_icon_size;
-    float top = scaled_border_size + (float)m_data.sprite_id * stride;
-    float bottom = top + scaled_icon_size;
+    float scaled_icon_width = (float)icon_size * inv_tex_width;
+    float scaled_icon_height = (float)icon_size * inv_tex_height;
+    float left = (float)m_state * scaled_icon_width;
+    float right = left + scaled_icon_width;
+    float top = (float)m_data.sprite_id * scaled_icon_height;
+    float bottom = top + scaled_icon_height;
 
     uvs.left_top = { left, top };
     uvs.left_bottom = { left, bottom };
@@ -82,13 +103,13 @@ GLTexture::Quad_UVs GLToolbarItem::get_uvs(unsigned int texture_size, unsigned i
     return uvs;
 }
 
+#if !ENABLE_SVG_ICONS
 ItemsIconsTexture::Metadata::Metadata()
     : filename("")
     , icon_size(0)
-    , icon_border_size(0)
-    , icon_gap_size(0)
 {
 }
+#endif // !ENABLE_SVG_ICONS
 
 BackgroundTexture::Metadata::Metadata()
     : filename("")
@@ -99,6 +120,10 @@ BackgroundTexture::Metadata::Metadata()
 {
 }
 
+#if ENABLE_SVG_ICONS
+const float GLToolbar::Default_Icons_Size = 64.0f;
+#endif // ENABLE_SVG_ICONS
+
 GLToolbar::Layout::Layout()
     : type(Horizontal)
     , orientation(Center)
@@ -107,16 +132,32 @@ GLToolbar::Layout::Layout()
     , border(0.0f)
     , separator_size(0.0f)
     , gap_size(0.0f)
+#if ENABLE_SVG_ICONS
+    , icons_size(Default_Icons_Size)
+    , scale(1.0f)
+#else
     , icons_scale(1.0f)
+#endif // ENABLE_SVG_ICONS
     , width(0.0f)
     , height(0.0f)
     , dirty(true)
 {
 }
 
+#if ENABLE_SVG_ICONS
+GLToolbar::GLToolbar(GLToolbar::EType type, const std::string& name)
+#else
 GLToolbar::GLToolbar(GLToolbar::EType type)
+#endif // ENABLE_SVG_ICONS
     : m_type(type)
+#if ENABLE_SVG_ICONS
+    , m_name(name)
+#endif // ENABLE_SVG_ICONS
     , m_enabled(false)
+#if ENABLE_SVG_ICONS
+    , m_icons_texture_dirty(true)
+#endif // ENABLE_SVG_ICONS
+    , m_tooltip("")
 {
 }
 
@@ -128,8 +169,19 @@ GLToolbar::~GLToolbar()
     }
 }
 
+#if ENABLE_SVG_ICONS
+bool GLToolbar::init(const BackgroundTexture::Metadata& background_texture)
+#else
 bool GLToolbar::init(const ItemsIconsTexture::Metadata& icons_texture, const BackgroundTexture::Metadata& background_texture)
+#endif // ENABLE_SVG_ICONS
 {
+#if ENABLE_SVG_ICONS
+    if (m_background_texture.texture.get_id() != 0)
+        return true;
+
+    std::string path = resources_dir() + "/icons/";
+    bool res = false;
+#else
     if (m_icons_texture.texture.get_id() != 0)
         return true;
 
@@ -137,6 +189,7 @@ bool GLToolbar::init(const ItemsIconsTexture::Metadata& icons_texture, const Bac
     bool res = !icons_texture.filename.empty() && m_icons_texture.texture.load_from_file(path + icons_texture.filename, false);
     if (res)
         m_icons_texture.metadata = icons_texture;
+#endif // ENABLE_SVG_ICONS
 
     if (!background_texture.filename.empty())
         res = m_background_texture.texture.load_from_file(path + background_texture.filename, false);
@@ -192,11 +245,33 @@ void GLToolbar::set_gap_size(float size)
     m_layout.dirty = true;
 }
 
+#if ENABLE_SVG_ICONS
+void GLToolbar::set_icons_size(float size)
+{
+    if (m_layout.icons_size != size)
+    {
+        m_layout.icons_size = size;
+        m_layout.dirty = true;
+        m_icons_texture_dirty = true;
+    }
+}
+
+void GLToolbar::set_scale(float scale)
+{
+    if (m_layout.scale != scale)
+    {
+        m_layout.scale = scale;
+        m_layout.dirty = true;
+        m_icons_texture_dirty = true;
+    }
+}
+#else
 void GLToolbar::set_icons_scale(float scale)
 {
     m_layout.icons_scale = scale;
     m_layout.dirty = true;
 }
+#endif // ENABLE_SVG_ICONS
 
 bool GLToolbar::is_enabled() const
 {
@@ -247,30 +322,6 @@ float GLToolbar::get_height() const
     return m_layout.height;
 }
 
-void GLToolbar::enable_item(const std::string& name)
-{
-    for (GLToolbarItem* item : m_items)
-    {
-        if ((item->get_name() == name) && (item->get_state() == GLToolbarItem::Disabled))
-        {
-            item->set_state(GLToolbarItem::Normal);
-            return;
-        }
-    }
-}
-
-void GLToolbar::disable_item(const std::string& name)
-{
-    for (GLToolbarItem* item : m_items)
-    {
-        if (item->get_name() == name)
-        {
-            item->set_state(GLToolbarItem::Disabled);
-            return;
-        }
-    }
-}
-
 void GLToolbar::select_item(const std::string& name)
 {
     if (is_item_disabled(name))
@@ -308,7 +359,6 @@ bool GLToolbar::is_item_disabled(const std::string& name) const
     return false;
 }
 
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
 bool GLToolbar::is_item_visible(const std::string& name) const
 {
     for (GLToolbarItem* item : m_items)
@@ -320,102 +370,23 @@ bool GLToolbar::is_item_visible(const std::string& name) const
     return false;
 }
 
-void GLToolbar::set_item_visible(const std::string& name, bool visible)
+bool GLToolbar::update_items_state()
 {
-    for (GLToolbarItem* item : m_items)
-    {
-        if ((item->get_name() == name) && (item->is_visible() != visible))
-        {
-            item->set_visible(visible);
-            m_layout.dirty = true;
-            break;
-        }
-    }
-
-    // updates separators visibility to avoid having two consecutive
-    bool any_item_visible = false;
-    for (GLToolbarItem* item : m_items)
-    {
-        if (!item->is_separator())
-            any_item_visible |= item->is_visible();
-        else
-        {
-            item->set_visible(any_item_visible);
-            any_item_visible = false;
-        }
-    }
-
-}
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
-
-std::string GLToolbar::update_hover_state(const Vec2d& mouse_pos, GLCanvas3D& parent)
-{
-    if (!m_enabled)
-        return "";
-
-    switch (m_layout.type)
-    {
-    default:
-    case Layout::Horizontal: { return update_hover_state_horizontal(mouse_pos, parent); }
-    case Layout::Vertical: { return update_hover_state_vertical(mouse_pos, parent); }
-    }
-}
-
-int GLToolbar::contains_mouse(const Vec2d& mouse_pos, const GLCanvas3D& parent) const
-{
-    if (!m_enabled)
-        return -1;
-
-    switch (m_layout.type)
-    {
-    default:
-    case Layout::Horizontal: { return contains_mouse_horizontal(mouse_pos, parent); }
-    case Layout::Vertical: { return contains_mouse_vertical(mouse_pos, parent); }
-    }
-}
-
-void GLToolbar::do_action(unsigned int item_id, GLCanvas3D& parent)
-{
-    if (item_id < (unsigned int)m_items.size())
-    {
-        GLToolbarItem* item = m_items[item_id];
-        if ((item != nullptr) && !item->is_separator() && item->is_hovered())
-        {
-            if (item->is_toggable())
-            {
-                GLToolbarItem::EState state = item->get_state();
-                if (state == GLToolbarItem::Hover)
-                    item->set_state(GLToolbarItem::HoverPressed);
-                else if (state == GLToolbarItem::HoverPressed)
-                    item->set_state(GLToolbarItem::Hover);
-
-                parent.render();
-                item->do_action(parent.get_wxglcanvas());
-            }
-            else
-            {
-                if (m_type == Radio)
-                    select_item(item->get_name());
-                else
-                    item->set_state(GLToolbarItem::HoverPressed);
-
-                parent.render();
-                item->do_action(parent.get_wxglcanvas());
-                if ((m_type == Normal) && (item->get_state() != GLToolbarItem::Disabled))
-                {
-                    // the item may get disabled during the action, if not, set it back to hover state
-                    item->set_state(GLToolbarItem::Hover);
-                    parent.render();
-                }
-            }
-        }
-    }
+    bool ret = false;
+    ret |= update_items_visibility();
+    ret |= update_items_enabled_state();
+    return ret;
 }
 
 void GLToolbar::render(const GLCanvas3D& parent) const
 {
     if (!m_enabled || m_items.empty())
         return;
+
+#if ENABLE_SVG_ICONS
+    if (m_icons_texture_dirty)
+        generate_icons_texture();
+#endif // ENABLE_SVG_ICONS
 
     ::glDisable(GL_DEPTH_TEST);
 
@@ -430,6 +401,71 @@ void GLToolbar::render(const GLCanvas3D& parent) const
     }
 
     ::glPopMatrix();
+}
+
+bool GLToolbar::on_mouse(wxMouseEvent& evt, GLCanvas3D& parent)
+{
+    Vec2d mouse_pos((double)evt.GetX(), (double)evt.GetY());
+    bool processed = false;
+
+    // mouse anywhere
+    if (!evt.Dragging() && !evt.Leaving() && !evt.Entering() && (m_mouse_capture.parent != nullptr))
+    {
+        if (m_mouse_capture.any() && (evt.LeftUp() || evt.MiddleUp() || evt.RightUp()))
+            // prevents loosing selection into the scene if mouse down was done inside the toolbar and mouse up was down outside it,
+            // as when switching between views
+            processed = true;
+
+        m_mouse_capture.reset();
+    }
+
+    if (evt.Moving())
+        m_tooltip = update_hover_state(mouse_pos, parent);
+    else if (evt.LeftUp())
+        m_mouse_capture.left = false;
+    else if (evt.MiddleUp())
+        m_mouse_capture.middle = false;
+    else if (evt.RightUp())
+        m_mouse_capture.right = false;
+    else if (evt.Dragging() && m_mouse_capture.any())
+        // if the button down was done on this toolbar, prevent from dragging into the scene
+        processed = true;
+
+    int item_id = contains_mouse(mouse_pos, parent);
+    if (item_id == -1)
+    {
+        // mouse is outside the toolbar
+        m_tooltip = "";
+    }
+    else
+    {
+        // mouse inside toolbar
+        if (evt.LeftDown() || evt.LeftDClick())
+        {
+            m_mouse_capture.left = true;
+            m_mouse_capture.parent = &parent;
+            if ((item_id != -2) && !m_items[item_id]->is_separator())
+            {
+                // mouse is inside an icon
+                do_action((unsigned int)item_id, parent);
+                processed = true;
+            }
+        }
+        else if (evt.MiddleDown())
+        {
+            m_mouse_capture.middle = true;
+            m_mouse_capture.parent = &parent;
+        }
+        else if (evt.RightDown())
+        {
+            m_mouse_capture.right = true;
+            m_mouse_capture.parent = &parent;
+        }
+        else if (evt.LeftUp())
+            processed = true;
+    }
+
+    return processed;
 }
 
 void GLToolbar::calc_layout() const
@@ -461,12 +497,20 @@ float GLToolbar::get_width_horizontal() const
 
 float GLToolbar::get_width_vertical() const
 {
+#if ENABLE_SVG_ICONS
+    return (2.0f * m_layout.border + m_layout.icons_size) * m_layout.scale;
+#else
     return 2.0f * m_layout.border * m_layout.icons_scale + m_icons_texture.metadata.icon_size * m_layout.icons_scale;
+#endif // ENABLE_SVG_ICONS
 }
 
 float GLToolbar::get_height_horizontal() const
 {
+#if ENABLE_SVG_ICONS
+    return (2.0f * m_layout.border + m_layout.icons_size) * m_layout.scale;
+#else
     return 2.0f * m_layout.border * m_layout.icons_scale + m_icons_texture.metadata.icon_size * m_layout.icons_scale;
+#endif // ENABLE_SVG_ICONS
 }
 
 float GLToolbar::get_height_vertical() const
@@ -476,13 +520,29 @@ float GLToolbar::get_height_vertical() const
 
 float GLToolbar::get_main_size() const
 {
+#if ENABLE_SVG_ICONS
+    float size = 2.0f * m_layout.border;
+    for (unsigned int i = 0; i < (unsigned int)m_items.size(); ++i)
+    {
+        if (!m_items[i]->is_visible())
+            continue;
+
+        if (m_items[i]->is_separator())
+            size += m_layout.separator_size;
+        else
+            size += (float)m_layout.icons_size;
+    }
+
+    if (m_items.size() > 1)
+        size += ((float)m_items.size() - 1.0f) * m_layout.gap_size;
+
+    size *= m_layout.scale;
+#else
     float size = 2.0f * m_layout.border * m_layout.icons_scale;
     for (unsigned int i = 0; i < (unsigned int)m_items.size(); ++i)
     {
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
         if (!m_items[i]->is_visible())
             continue;
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
 
         if (m_items[i]->is_separator())
             size += m_layout.separator_size * m_layout.icons_scale;
@@ -492,8 +552,60 @@ float GLToolbar::get_main_size() const
 
     if (m_items.size() > 1)
         size += ((float)m_items.size() - 1.0f) * m_layout.gap_size * m_layout.icons_scale;
+#endif // ENABLE_SVG_ICONS
 
     return size;
+}
+
+void GLToolbar::do_action(unsigned int item_id, GLCanvas3D& parent)
+{
+    if (item_id < (unsigned int)m_items.size())
+    {
+        GLToolbarItem* item = m_items[item_id];
+        if ((item != nullptr) && !item->is_separator() && item->is_hovered())
+        {
+            if (item->is_toggable())
+            {
+                GLToolbarItem::EState state = item->get_state();
+                if (state == GLToolbarItem::Hover)
+                    item->set_state(GLToolbarItem::HoverPressed);
+                else if (state == GLToolbarItem::HoverPressed)
+                    item->set_state(GLToolbarItem::Hover);
+
+                parent.render();
+                item->do_action();
+            }
+            else
+            {
+                if (m_type == Radio)
+                    select_item(item->get_name());
+                else
+                    item->set_state(GLToolbarItem::HoverPressed);
+
+                parent.render();
+                item->do_action();
+                if ((m_type == Normal) && (item->get_state() != GLToolbarItem::Disabled))
+                {
+                    // the item may get disabled during the action, if not, set it back to hover state
+                    item->set_state(GLToolbarItem::Hover);
+                    parent.render();
+                }
+            }
+        }
+    }
+}
+
+std::string GLToolbar::update_hover_state(const Vec2d& mouse_pos, GLCanvas3D& parent)
+{
+    if (!m_enabled)
+        return "";
+
+    switch (m_layout.type)
+    {
+    default:
+    case Layout::Horizontal: { return update_hover_state_horizontal(mouse_pos, parent); }
+    case Layout::Vertical: { return update_hover_state_vertical(mouse_pos, parent); }
+    }
 }
 
 std::string GLToolbar::update_hover_state_horizontal(const Vec2d& mouse_pos, GLCanvas3D& parent)
@@ -502,12 +614,20 @@ std::string GLToolbar::update_hover_state_horizontal(const Vec2d& mouse_pos, GLC
 
     float zoom = parent.get_camera_zoom();
     float inv_zoom = (zoom != 0.0f) ? 1.0f / zoom : 0.0f;
+#if ENABLE_SVG_ICONS
+    float factor = m_layout.scale * inv_zoom;
+#else
     float factor = m_layout.icons_scale * inv_zoom;
+#endif // ENABLE_SVG_ICONS
 
     Size cnv_size = parent.get_canvas_size();
     Vec2d scaled_mouse_pos((mouse_pos(0) - 0.5 * (double)cnv_size.get_width()) * inv_zoom, (0.5 * (double)cnv_size.get_height() - mouse_pos(1)) * inv_zoom);
 
+#if ENABLE_SVG_ICONS
+    float scaled_icons_size = m_layout.icons_size * factor;
+#else
     float scaled_icons_size = (float)m_icons_texture.metadata.icon_size * factor;
+#endif // ENABLE_SVG_ICONS
     float scaled_separator_size = m_layout.separator_size * factor;
     float scaled_gap_size = m_layout.gap_size * factor;
     float scaled_border = m_layout.border * factor;
@@ -522,10 +642,8 @@ std::string GLToolbar::update_hover_state_horizontal(const Vec2d& mouse_pos, GLC
         
     for (GLToolbarItem* item : m_items)
     {
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
         if (!item->is_visible())
             continue;
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
 
         if (item->is_separator())
             left += separator_stride;
@@ -601,16 +719,23 @@ std::string GLToolbar::update_hover_state_vertical(const Vec2d& mouse_pos, GLCan
 
     float zoom = parent.get_camera_zoom();
     float inv_zoom = (zoom != 0.0f) ? 1.0f / zoom : 0.0f;
+#if ENABLE_SVG_ICONS
+    float factor = m_layout.scale * inv_zoom;
+#else
     float factor = m_layout.icons_scale * inv_zoom;
+#endif // ENABLE_SVG_ICONS
 
     Size cnv_size = parent.get_canvas_size();
     Vec2d scaled_mouse_pos((mouse_pos(0) - 0.5 * (double)cnv_size.get_width()) * inv_zoom, (0.5 * (double)cnv_size.get_height() - mouse_pos(1)) * inv_zoom);
 
+#if ENABLE_SVG_ICONS
+    float scaled_icons_size = m_layout.icons_size * factor;
+#else
     float scaled_icons_size = (float)m_icons_texture.metadata.icon_size * factor;
+#endif // ENABLE_SVG_ICONS
     float scaled_separator_size = m_layout.separator_size * factor;
     float scaled_gap_size = m_layout.gap_size * factor;
     float scaled_border = m_layout.border * factor;
-
     float separator_stride = scaled_separator_size + scaled_gap_size;
     float icon_stride = scaled_icons_size + scaled_gap_size;
 
@@ -621,10 +746,8 @@ std::string GLToolbar::update_hover_state_vertical(const Vec2d& mouse_pos, GLCan
 
     for (GLToolbarItem* item : m_items)
     {
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
         if (!item->is_visible())
             continue;
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
 
         if (item->is_separator())
             top -= separator_stride;
@@ -694,24 +817,42 @@ std::string GLToolbar::update_hover_state_vertical(const Vec2d& mouse_pos, GLCan
     return tooltip;
 }
 
+int GLToolbar::contains_mouse(const Vec2d& mouse_pos, const GLCanvas3D& parent) const
+{
+    if (!m_enabled)
+        return -1;
+
+    switch (m_layout.type)
+    {
+    default:
+    case Layout::Horizontal: { return contains_mouse_horizontal(mouse_pos, parent); }
+    case Layout::Vertical: { return contains_mouse_vertical(mouse_pos, parent); }
+    }
+}
+
 int GLToolbar::contains_mouse_horizontal(const Vec2d& mouse_pos, const GLCanvas3D& parent) const
 {
     // NB: mouse_pos is already scaled appropriately
 
     float zoom = parent.get_camera_zoom();
     float inv_zoom = (zoom != 0.0f) ? 1.0f / zoom : 0.0f;
+#if ENABLE_SVG_ICONS
+    float factor = m_layout.scale * inv_zoom;
+#else
     float factor = m_layout.icons_scale * inv_zoom;
+#endif // ENABLE_SVG_ICONS
 
     Size cnv_size = parent.get_canvas_size();
     Vec2d scaled_mouse_pos((mouse_pos(0) - 0.5 * (double)cnv_size.get_width()) * inv_zoom, (0.5 * (double)cnv_size.get_height() - mouse_pos(1)) * inv_zoom);
 
+#if ENABLE_SVG_ICONS
+    float scaled_icons_size = m_layout.icons_size * factor;
+#else
     float scaled_icons_size = (float)m_icons_texture.metadata.icon_size * factor;
+#endif // ENABLE_SVG_ICONS
     float scaled_separator_size = m_layout.separator_size * factor;
     float scaled_gap_size = m_layout.gap_size * factor;
     float scaled_border = m_layout.border * factor;
-
-    float separator_stride = scaled_separator_size + scaled_gap_size;
-    float icon_stride = scaled_icons_size + scaled_gap_size;
 
     float left = m_layout.left + scaled_border;
     float top = m_layout.top - scaled_border;
@@ -722,22 +863,50 @@ int GLToolbar::contains_mouse_horizontal(const Vec2d& mouse_pos, const GLCanvas3
     {
         ++id;
         
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
         if (!item->is_visible())
             continue;
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
 
         if (item->is_separator())
-            left += separator_stride;
+        {
+            float right = left + scaled_separator_size;
+            float bottom = top - scaled_icons_size;
+
+            // mouse inside the separator
+            if ((left <= (float)scaled_mouse_pos(0)) && ((float)scaled_mouse_pos(0) <= right) && (bottom <= (float)scaled_mouse_pos(1)) && ((float)scaled_mouse_pos(1) <= top))
+                return id;
+
+            left = right;
+            right += scaled_gap_size;
+
+            if (id < m_items.size() - 1)
+            {
+                // mouse inside the gap
+                if ((left <= (float)scaled_mouse_pos(0)) && ((float)scaled_mouse_pos(0) <= right) && (bottom <= (float)scaled_mouse_pos(1)) && ((float)scaled_mouse_pos(1) <= top))
+                    return -2;
+            }
+
+            left = right;
+        }
         else
         {
             float right = left + scaled_icons_size;
             float bottom = top - scaled_icons_size;
-            
+
+            // mouse inside the icon
             if ((left <= (float)scaled_mouse_pos(0)) && ((float)scaled_mouse_pos(0) <= right) && (bottom <= (float)scaled_mouse_pos(1)) && ((float)scaled_mouse_pos(1) <= top))
                 return id;
             
-            left += icon_stride;
+            left = right;
+            right += scaled_gap_size;
+
+            if (id < m_items.size() - 1)
+            {
+                // mouse inside the gap
+                if ((left <= (float)scaled_mouse_pos(0)) && ((float)scaled_mouse_pos(0) <= right) && (bottom <= (float)scaled_mouse_pos(1)) && ((float)scaled_mouse_pos(1) <= top))
+                    return -2;
+            }
+
+            left = right;
         }
     }
     
@@ -750,18 +919,23 @@ int GLToolbar::contains_mouse_vertical(const Vec2d& mouse_pos, const GLCanvas3D&
 
     float zoom = parent.get_camera_zoom();
     float inv_zoom = (zoom != 0.0f) ? 1.0f / zoom : 0.0f;
+#if ENABLE_SVG_ICONS
+    float factor = m_layout.scale * inv_zoom;
+#else
     float factor = m_layout.icons_scale * inv_zoom;
+#endif // ENABLE_SVG_ICONS
 
     Size cnv_size = parent.get_canvas_size();
     Vec2d scaled_mouse_pos((mouse_pos(0) - 0.5 * (double)cnv_size.get_width()) * inv_zoom, (0.5 * (double)cnv_size.get_height() - mouse_pos(1)) * inv_zoom);
 
+#if ENABLE_SVG_ICONS
+    float scaled_icons_size = m_layout.icons_size * factor;
+#else
     float scaled_icons_size = (float)m_icons_texture.metadata.icon_size * factor;
+#endif // ENABLE_SVG_ICONS
     float scaled_separator_size = m_layout.separator_size * factor;
     float scaled_gap_size = m_layout.gap_size * factor;
     float scaled_border = m_layout.border * factor;
-
-    float separator_stride = scaled_separator_size + scaled_gap_size;
-    float icon_stride = scaled_icons_size + scaled_gap_size;
 
     float left = m_layout.left + scaled_border;
     float top = m_layout.top - scaled_border;
@@ -772,22 +946,50 @@ int GLToolbar::contains_mouse_vertical(const Vec2d& mouse_pos, const GLCanvas3D&
     {
         ++id;
 
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
         if (!item->is_visible())
             continue;
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
 
         if (item->is_separator())
-            top -= separator_stride;
+        {
+            float right = left + scaled_icons_size;
+            float bottom = top - scaled_separator_size;
+
+            // mouse inside the separator
+            if ((left <= (float)scaled_mouse_pos(0)) && ((float)scaled_mouse_pos(0) <= right) && (bottom <= (float)scaled_mouse_pos(1)) && ((float)scaled_mouse_pos(1) <= top))
+                return id;
+
+            top = bottom;
+            bottom -= scaled_gap_size;
+
+            if (id < m_items.size() - 1)
+            {
+                // mouse inside the gap
+                if ((left <= (float)scaled_mouse_pos(0)) && ((float)scaled_mouse_pos(0) <= right) && (bottom <= (float)scaled_mouse_pos(1)) && ((float)scaled_mouse_pos(1) <= top))
+                    return -2;
+            }
+
+            top = bottom;
+        }
         else
         {
             float right = left + scaled_icons_size;
             float bottom = top - scaled_icons_size;
 
+            // mouse inside the icon
             if ((left <= (float)scaled_mouse_pos(0)) && ((float)scaled_mouse_pos(0) <= right) && (bottom <= (float)scaled_mouse_pos(1)) && ((float)scaled_mouse_pos(1) <= top))
                 return id;
 
-            top -= icon_stride;
+            top = bottom;
+            bottom -= scaled_gap_size;
+
+            if (id < m_items.size() - 1)
+            {
+                // mouse inside the gap
+                if ((left <= (float)scaled_mouse_pos(0)) && ((float)scaled_mouse_pos(0) <= right) && (bottom <= (float)scaled_mouse_pos(1)) && ((float)scaled_mouse_pos(1) <= top))
+                    return -2;
+            }
+
+            top = bottom;
         }
     }
 
@@ -796,17 +998,34 @@ int GLToolbar::contains_mouse_vertical(const Vec2d& mouse_pos, const GLCanvas3D&
 
 void GLToolbar::render_horizontal(const GLCanvas3D& parent) const
 {
+#if ENABLE_SVG_ICONS
+    unsigned int tex_id = m_icons_texture.get_id();
+    int tex_width = m_icons_texture.get_width();
+    int tex_height = m_icons_texture.get_height();
+#else
     unsigned int tex_id = m_icons_texture.texture.get_id();
-    int tex_size = m_icons_texture.texture.get_width();
+    int tex_width = m_icons_texture.texture.get_width();
+    int tex_height = m_icons_texture.texture.get_height();
+#endif // ENABLE_SVG_ICONS
 
-    if ((tex_id == 0) || (tex_size <= 0))
+#if !ENABLE_SVG_ICONS
+    if ((tex_id == 0) || (tex_width <= 0) || (tex_height <= 0))
         return;
+#endif // !ENABLE_SVG_ICONS
 
     float zoom = parent.get_camera_zoom();
     float inv_zoom = (zoom != 0.0f) ? 1.0f / zoom : 0.0f;
+#if ENABLE_SVG_ICONS
+    float factor = inv_zoom * m_layout.scale;
+#else
     float factor = inv_zoom * m_layout.icons_scale;
+#endif // ENABLE_SVG_ICONS
 
+#if ENABLE_SVG_ICONS
+    float scaled_icons_size = m_layout.icons_size * factor;
+#else
     float scaled_icons_size = (float)m_icons_texture.metadata.icon_size * factor;
+#endif // ENABLE_SVG_ICONS
     float scaled_separator_size = m_layout.separator_size * factor;
     float scaled_gap_size = m_layout.gap_size * factor;
     float scaled_border = m_layout.border * factor;
@@ -907,19 +1126,26 @@ void GLToolbar::render_horizontal(const GLCanvas3D& parent) const
     left += scaled_border;
     top -= scaled_border;
 
+#if ENABLE_SVG_ICONS
+    if ((tex_id == 0) || (tex_width <= 0) || (tex_height <= 0))
+        return;
+#endif // ENABLE_SVG_ICONS
+
     // renders icons
     for (const GLToolbarItem* item : m_items)
     {
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
         if (!item->is_visible())
             continue;
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
 
         if (item->is_separator())
             left += separator_stride;
         else
         {
-            item->render(tex_id, left, left + scaled_icons_size, top - scaled_icons_size, top, (unsigned int)tex_size, m_icons_texture.metadata.icon_border_size, m_icons_texture.metadata.icon_size, m_icons_texture.metadata.icon_gap_size);
+#if ENABLE_SVG_ICONS
+            item->render(tex_id, left, left + scaled_icons_size, top - scaled_icons_size, top, (unsigned int)tex_width, (unsigned int)tex_height, (unsigned int)(m_layout.icons_size * m_layout.scale));
+#else
+            item->render(tex_id, left, left + scaled_icons_size, top - scaled_icons_size, top, (unsigned int)tex_width, (unsigned int)tex_height, m_icons_texture.metadata.icon_size);
+#endif // ENABLE_SVG_ICONS
             left += icon_stride;
         }
     }
@@ -927,17 +1153,34 @@ void GLToolbar::render_horizontal(const GLCanvas3D& parent) const
 
 void GLToolbar::render_vertical(const GLCanvas3D& parent) const
 {
+#if ENABLE_SVG_ICONS
+    unsigned int tex_id = m_icons_texture.get_id();
+    int tex_width = m_icons_texture.get_width();
+    int tex_height = m_icons_texture.get_height();
+#else
     unsigned int tex_id = m_icons_texture.texture.get_id();
-    int tex_size = m_icons_texture.texture.get_width();
+    int tex_width = m_icons_texture.texture.get_width();
+    int tex_height = m_icons_texture.texture.get_height();
+#endif // ENABLE_SVG_ICONS
 
-    if ((tex_id == 0) || (tex_size <= 0))
+#if !ENABLE_SVG_ICONS
+    if ((tex_id == 0) || (tex_width <= 0) || (tex_height <= 0))
         return;
+#endif // !ENABLE_SVG_ICONS
 
     float zoom = parent.get_camera_zoom();
     float inv_zoom = (zoom != 0.0f) ? 1.0f / zoom : 0.0f;
+#if ENABLE_SVG_ICONS
+    float factor = inv_zoom * m_layout.scale;
+#else
     float factor = inv_zoom * m_layout.icons_scale;
+#endif // ENABLE_SVG_ICONS
 
+#if ENABLE_SVG_ICONS
+    float scaled_icons_size = m_layout.icons_size * factor;
+#else
     float scaled_icons_size = (float)m_icons_texture.metadata.icon_size * m_layout.icons_scale * factor;
+#endif // ENABLE_SVG_ICONS
     float scaled_separator_size = m_layout.separator_size * factor;
     float scaled_gap_size = m_layout.gap_size * factor;
     float scaled_border = m_layout.border * factor;
@@ -1038,22 +1281,110 @@ void GLToolbar::render_vertical(const GLCanvas3D& parent) const
     left += scaled_border;
     top -= scaled_border;
 
+#if ENABLE_SVG_ICONS
+    if ((tex_id == 0) || (tex_width <= 0) || (tex_height <= 0))
+        return;
+#endif // ENABLE_SVG_ICONS
+
     // renders icons
     for (const GLToolbarItem* item : m_items)
     {
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
         if (!item->is_visible())
             continue;
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
 
         if (item->is_separator())
             top -= separator_stride;
         else
         {
-            item->render(tex_id, left, left + scaled_icons_size, top - scaled_icons_size, top, (unsigned int)tex_size, m_icons_texture.metadata.icon_border_size, m_icons_texture.metadata.icon_size, m_icons_texture.metadata.icon_gap_size);
+#if ENABLE_SVG_ICONS
+            item->render(tex_id, left, left + scaled_icons_size, top - scaled_icons_size, top, (unsigned int)tex_width, (unsigned int)tex_height, (unsigned int)(m_layout.icons_size * m_layout.scale));
+#else
+            item->render(tex_id, left, left + scaled_icons_size, top - scaled_icons_size, top, (unsigned int)tex_width, (unsigned int)tex_height, m_icons_texture.metadata.icon_size);
+#endif // ENABLE_SVG_ICONS
             top -= icon_stride;
         }
     }
+}
+
+#if ENABLE_SVG_ICONS
+bool GLToolbar::generate_icons_texture() const
+{
+    std::string path = resources_dir() + "/icons/";
+    std::vector<std::string> filenames;
+    for (GLToolbarItem* item : m_items)
+    {
+        const std::string& icon_filename = item->get_icon_filename();
+        if (!icon_filename.empty())
+            filenames.push_back(path + icon_filename);
+    }
+
+    std::vector<std::pair<int, bool>> states;
+    if (m_name == "Top")
+    {
+        states.push_back(std::make_pair(1, false));
+        states.push_back(std::make_pair(0, false));
+        states.push_back(std::make_pair(2, false));
+        states.push_back(std::make_pair(0, false));
+        states.push_back(std::make_pair(0, false));
+    }
+    else if (m_name == "View")
+    {
+        states.push_back(std::make_pair(1, false));
+        states.push_back(std::make_pair(1, true));
+        states.push_back(std::make_pair(1, false));
+        states.push_back(std::make_pair(0, false));
+        states.push_back(std::make_pair(1, true));
+    }
+
+    bool res = m_icons_texture.load_from_svg_files_as_sprites_array(filenames, states, (unsigned int)(m_layout.icons_size * m_layout.scale));
+    if (res)
+        m_icons_texture_dirty = false;
+
+    return res;
+}
+#endif // ENABLE_SVG_ICONS
+
+bool GLToolbar::update_items_visibility()
+{
+    bool ret = false;
+
+    for (GLToolbarItem* item : m_items)
+    {
+        ret |= item->update_visibility();
+    }
+
+    if (ret)
+        m_layout.dirty = true;
+
+    // updates separators visibility to avoid having two of them consecutive
+    bool any_item_visible = false;
+    for (GLToolbarItem* item : m_items)
+    {
+        if (!item->is_separator())
+            any_item_visible |= item->is_visible();
+        else
+        {
+            item->set_visible(any_item_visible);
+            any_item_visible = false;
+        }
+    }
+
+    return ret;
+}
+
+bool GLToolbar::update_items_enabled_state()
+{
+    bool ret = false;
+
+    for (GLToolbarItem* item : m_items)
+    {
+        ret |= item->update_enabled_state();
+    }
+
+    if (ret)
+        m_layout.dirty = true;
+
+    return ret;
 }
 
 } // namespace GUI

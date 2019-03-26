@@ -150,6 +150,7 @@ SlicingParameters SlicingParameters::create_from_config(
         params.object_print_z_max += print_z;
     }
 
+    params.valid = true;
     return params;
 }
 

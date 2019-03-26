@@ -38,6 +38,7 @@ class GLCanvas3D;
 using t_optgroups = std::vector <std::shared_ptr<ConfigOptionsGroup>>;
 
 class Plater;
+enum class ActionButtonType : int;
 
 class PresetComboBox : public wxBitmapComboBox
 {
@@ -45,14 +46,20 @@ public:
     PresetComboBox(wxWindow *parent, Preset::Type preset_type);
     ~PresetComboBox();
 
-    void set_label_marker(int item);
+    wxButton* edit_btn { nullptr };
+
+	enum LabelItemType {
+		LABEL_ITEM_MARKER = 0x4d,
+		LABEL_ITEM_CONFIG_WIZARD = 0x4e
+	};
+
+    void set_label_marker(int item, LabelItemType label_item_type = LABEL_ITEM_MARKER);
     void set_extruder_idx(const int extr_idx)   { extruder_idx = extr_idx; }
     int  get_extruder_idx() const               { return extruder_idx; }
     void check_selection();
 
 private:
     typedef std::size_t Marker;
-    enum { LABEL_ITEM_MARKER = 0x4d };
 
     Preset::Type preset_type;
     int last_selected;
@@ -61,7 +68,7 @@ private:
 
 class Sidebar : public wxPanel
 {
-    /*ConfigOptionMode*/int    m_mode;
+    ConfigOptionMode    m_mode;
 public:
     Sidebar(Plater *parent);
     Sidebar(Sidebar &&) = delete;
@@ -73,12 +80,14 @@ public:
     void init_filament_combo(PresetComboBox **combo, const int extr_idx);
     void remove_unused_filament_combos(const int current_extruder_count);
     void update_presets(Slic3r::Preset::Type preset_type);
-    void update_mode_sizer(const Slic3r::ConfigOptionMode& mode);
+    void update_mode_sizer() const;
+    void update_reslice_btn_tooltip() const;
 
     ObjectManipulation*     obj_manipul();
     ObjectList*             obj_list();
     ObjectSettings*         obj_settings();
     wxScrolledWindow*       scrolled_panel();
+    wxPanel*                presets_panel();
 
     ConfigOptionsGroup*     og_freq_chng_params(const bool is_fff);
     wxButton*               get_wiping_dialog_button();
@@ -86,10 +95,12 @@ public:
     void                    show_info_sizer();
     void                    show_sliced_info_sizer(const bool show);
     void                    enable_buttons(bool enable);
-    void                    show_reslice(bool show);
-    void                    show_send(bool show);
+    void                    set_btn_label(const ActionButtonType btn_type, const wxString& label) const;
+    void                    show_reslice(bool show) const;
+    void                    show_export(bool show) const;
+    void                    show_send(bool show) const;
     bool                    is_multifilament();
-    void                    set_mode_value(const /*ConfigOptionMode*/int mode) { m_mode = mode; }
+    void                    update_mode();
 
     std::vector<PresetComboBox*>& combos_filament();
 private:
@@ -170,6 +181,15 @@ public:
 
     PrinterTechnology   printer_technology() const;
     void                set_printer_technology(PrinterTechnology printer_technology);
+
+    bool can_delete() const;
+    bool can_delete_all() const;
+    bool can_increase_instances() const;
+    bool can_decrease_instances() const;
+    bool can_split_to_objects() const;
+    bool can_split_to_volumes() const;
+    bool can_arrange() const;
+    bool can_layers_editing() const;
 
 private:
     struct priv;

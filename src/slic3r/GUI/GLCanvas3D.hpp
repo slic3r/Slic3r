@@ -4,11 +4,12 @@
 #include <stddef.h>
 #include <memory>
 
-#include "libslic3r/Technologies.hpp"
 #include "3DScene.hpp"
 #include "GLToolbar.hpp"
 #include "Event.hpp"
 #include "3DBed.hpp"
+#include "Camera.hpp"
+#include "Selection.hpp"
 
 #include <float.h>
 
@@ -100,7 +101,6 @@ template <size_t N> using Vec3dsEvent = ArrayEvent<Vec3d, N>;
 
 wxDECLARE_EVENT(EVT_GLCANVAS_INIT, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_VIEWPORT_CHANGED, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_RIGHT_CLICK, Vec2dEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_REMOVE_OBJECT, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_ARRANGE, SimpleEvent);
@@ -160,41 +160,6 @@ class GLCanvas3D
         std::vector<FirstVolume> first_volumes;
 
         void reset() { first_volumes.clear(); }
-    };
-
-    struct Camera
-    {
-        enum EType : unsigned char
-        {
-            Unknown,
-//            Perspective,
-            Ortho,
-            Num_types
-        };
-
-        EType type;
-        float zoom;
-        float phi;
-//        float distance;
-
-    private:
-        Vec3d m_target;
-        BoundingBoxf3 m_scene_box;
-        float m_theta;
-
-    public:
-        Camera();
-
-        std::string get_type_as_string() const;
-
-        float get_theta() const { return m_theta; }
-        void set_theta(float theta, bool apply_limit);
-
-        const Vec3d& get_target() const { return m_target; }
-        void set_target(const Vec3d& target, GLCanvas3D& canvas);
-
-        const BoundingBoxf3& get_scene_box() const { return m_scene_box; }
-        void set_scene_box(const BoundingBoxf3& box, GLCanvas3D& canvas);
     };
 
 #if !ENABLE_TEXTURES_FROM_SVG
@@ -332,24 +297,19 @@ class GLCanvas3D
         {
             static const Point Invalid_2D_Point;
             static const Vec3d Invalid_3D_Point;
-#if ENABLE_MOVE_MIN_THRESHOLD
             static const int MoveThresholdPx;
-#endif // ENABLE_MOVE_MIN_THRESHOLD
 
             Point start_position_2D;
             Vec3d start_position_3D;
             int move_volume_idx;
-#if ENABLE_MOVE_MIN_THRESHOLD
             bool move_requires_threshold;
             Point move_start_threshold_position_2D;
-#endif // ENABLE_MOVE_MIN_THRESHOLD
 
         public:
             Drag();
         };
 
         bool dragging;
-        bool left_down;
         Vec2d position;
         Vec3d scene_position;
         Drag drag;
@@ -359,306 +319,18 @@ class GLCanvas3D
 
         void set_start_position_2D_as_invalid() { drag.start_position_2D = Drag::Invalid_2D_Point; }
         void set_start_position_3D_as_invalid() { drag.start_position_3D = Drag::Invalid_3D_Point; }
-#if ENABLE_MOVE_MIN_THRESHOLD
         void set_move_start_threshold_position_2D_as_invalid() { drag.move_start_threshold_position_2D = Drag::Invalid_2D_Point; }
-#endif // ENABLE_MOVE_MIN_THRESHOLD
 
         bool is_start_position_2D_defined() const { return (drag.start_position_2D != Drag::Invalid_2D_Point); }
         bool is_start_position_3D_defined() const { return (drag.start_position_3D != Drag::Invalid_3D_Point); }
-#if ENABLE_MOVE_MIN_THRESHOLD
         bool is_move_start_threshold_position_2D_defined() const { return (drag.move_start_threshold_position_2D != Drag::Invalid_2D_Point); }
         bool is_move_threshold_met(const Point& mouse_pos) const {
             return (std::abs(mouse_pos(0) - drag.move_start_threshold_position_2D(0)) > Drag::MoveThresholdPx)
                 || (std::abs(mouse_pos(1) - drag.move_start_threshold_position_2D(1)) > Drag::MoveThresholdPx);
         }
-#endif // ENABLE_MOVE_MIN_THRESHOLD
     };
 
 public:
-    class TransformationType
-    {
-	public:
-		enum Enum {
-			// Transforming in a world coordinate system
-			World = 0,
-			// Transforming in a local coordinate system
-			Local = 1,
-			// Absolute transformations, allowed in local coordinate system only.
-			Absolute = 0,
-			// Relative transformations, allowed in both local and world coordinate system.
-			Relative = 2,
-			// For group selection, the transformation is performed as if the group made a single solid body.
-			Joint = 0,
-			// For group selection, the transformation is performed on each object independently.
-			Independent = 4,
-
-			World_Relative_Joint = World | Relative | Joint,
-			World_Relative_Independent = World | Relative | Independent,
-			Local_Absolute_Joint = Local | Absolute | Joint,
-			Local_Absolute_Independent = Local | Absolute | Independent,
-			Local_Relative_Joint = Local | Relative | Joint,
-			Local_Relative_Independent = Local | Relative | Independent,
-		};
-		
-		TransformationType() : m_value(World) {}
-        TransformationType(Enum value) : m_value(value) {}
-        TransformationType& operator=(Enum value) { m_value = value; return *this; }
-
-        Enum operator()() const { return m_value; }
-        bool has(Enum v) const { return ((unsigned int)m_value & (unsigned int)v) != 0; }
-
-        void set_world()        { this->remove(Local); }
-        void set_local()        { this->add(Local); }
-        void set_absolute()     { this->remove(Relative); }
-        void set_relative()     { this->add(Relative); }
-        void set_joint()        { this->remove(Independent); }
-        void set_independent()  { this->add(Independent); }
-
-        bool world()        const { return ! this->has(Local); }
-		bool local()        const { return this->has(Local); }
-		bool absolute()     const { return ! this->has(Relative); }
-		bool relative()     const { return this->has(Relative); }
-		bool joint()        const { return ! this->has(Independent); }
-		bool independent()  const { return this->has(Independent); }
-
-    private:
-        void add(Enum v) { m_value = Enum((unsigned int)m_value | (unsigned int)v); }
-        void remove(Enum v) { m_value = Enum((unsigned int)m_value & (~(unsigned int)v)); }
-
-        Enum    m_value;
-    };
-
-    class Selection
-    {
-    public:
-        typedef std::set<unsigned int> IndicesList;
-
-        enum EMode : unsigned char
-        {
-            Volume,
-            Instance
-        };
-
-        enum EType : unsigned char
-        {
-            Invalid,
-            Empty,
-            WipeTower,
-            SingleModifier,
-            MultipleModifier,
-            SingleVolume,
-            MultipleVolume,
-            SingleFullObject,
-            MultipleFullObject,
-            SingleFullInstance,
-            MultipleFullInstance,
-            Mixed
-        };
-
-    private:
-        struct VolumeCache
-        {
-        private:
-            struct TransformCache
-            {
-                Vec3d position;
-                Vec3d rotation;
-                Vec3d scaling_factor;
-                Vec3d mirror;
-                Transform3d rotation_matrix;
-                Transform3d scale_matrix;
-                Transform3d mirror_matrix;
-
-                TransformCache();
-                explicit TransformCache(const Geometry::Transformation& transform);
-            };
-
-            TransformCache m_volume;
-            TransformCache m_instance;
-
-        public:
-            VolumeCache() {}
-            VolumeCache(const Geometry::Transformation& volume_transform, const Geometry::Transformation& instance_transform);
-
-            const Vec3d& get_volume_position() const { return m_volume.position; }
-            const Vec3d& get_volume_rotation() const { return m_volume.rotation; }
-            const Vec3d& get_volume_scaling_factor() const { return m_volume.scaling_factor; }
-            const Vec3d& get_volume_mirror() const { return m_volume.mirror; }
-            const Transform3d& get_volume_rotation_matrix() const { return m_volume.rotation_matrix; }
-            const Transform3d& get_volume_scale_matrix() const { return m_volume.scale_matrix; }
-            const Transform3d& get_volume_mirror_matrix() const { return m_volume.mirror_matrix; }
-
-            const Vec3d& get_instance_position() const { return m_instance.position; }
-            const Vec3d& get_instance_rotation() const { return m_instance.rotation; }
-            const Vec3d& get_instance_scaling_factor() const { return m_instance.scaling_factor; }
-            const Vec3d& get_instance_mirror() const { return m_instance.mirror; }
-            const Transform3d& get_instance_rotation_matrix() const { return m_instance.rotation_matrix; }
-            const Transform3d& get_instance_scale_matrix() const { return m_instance.scale_matrix; }
-            const Transform3d& get_instance_mirror_matrix() const { return m_instance.mirror_matrix; }
-        };
-
-        typedef std::map<unsigned int, VolumeCache> VolumesCache;
-        typedef std::set<int> InstanceIdxsList;
-        typedef std::map<int, InstanceIdxsList> ObjectIdxsToInstanceIdxsMap;
-
-        struct Cache
-        {
-            // Cache of GLVolume derived transformation matrices, valid during mouse dragging.
-            VolumesCache volumes_data;
-            // Center of the dragged selection, valid during mouse dragging.
-            Vec3d dragging_center;
-            // Map from indices of ModelObject instances in Model::objects
-            // to a set of indices of ModelVolume instances in ModelObject::instances
-            // Here the index means a position inside the respective std::vector, not ModelID.
-            ObjectIdxsToInstanceIdxsMap content;
-        };
-
-        // Volumes owned by GLCanvas3D.
-        GLVolumePtrs* m_volumes;
-        // Model, not owned.
-        Model* m_model;
-
-        bool m_valid;
-        EMode m_mode;
-        EType m_type;
-        // set of indices to m_volumes
-        IndicesList m_list;
-        Cache m_cache;
-        mutable BoundingBoxf3 m_bounding_box;
-        mutable bool m_bounding_box_dirty;
-
-#if ENABLE_RENDER_SELECTION_CENTER
-        GLUquadricObj* m_quadric;
-#endif // ENABLE_RENDER_SELECTION_CENTER
-        mutable GLArrow m_arrow;
-        mutable GLCurvedArrow m_curved_arrow;
-
-        mutable float m_scale_factor;
-
-    public:
-        Selection();
-#if ENABLE_RENDER_SELECTION_CENTER
-        ~Selection();
-#endif // ENABLE_RENDER_SELECTION_CENTER
-
-        void set_volumes(GLVolumePtrs* volumes);
-        bool init(bool useVBOs);
-
-        Model* get_model() const { return m_model; }
-        void set_model(Model* model);
-
-        EMode get_mode() const { return m_mode; }
-        void set_mode(EMode mode) { m_mode = mode; }
-
-        void add(unsigned int volume_idx, bool as_single_selection = true);
-        void remove(unsigned int volume_idx);
-
-        void add_object(unsigned int object_idx, bool as_single_selection = true);
-        void remove_object(unsigned int object_idx);
-
-        void add_instance(unsigned int object_idx, unsigned int instance_idx, bool as_single_selection = true);
-        void remove_instance(unsigned int object_idx, unsigned int instance_idx);
-
-        void add_volume(unsigned int object_idx, unsigned int volume_idx, int instance_idx, bool as_single_selection = true);
-        void remove_volume(unsigned int object_idx, unsigned int volume_idx);
-
-        void add_all();
-
-        // Update the selection based on the map from old indices to new indices after m_volumes changed.
-        // If the current selection is by instance, this call may select newly added volumes, if they belong to already selected instances.
-        void volumes_changed(const std::vector<size_t> &map_volume_old_to_new);
-        void clear();
-
-        bool is_empty() const { return m_type == Empty; }
-        bool is_wipe_tower() const { return m_type == WipeTower; }
-        bool is_modifier() const { return (m_type == SingleModifier) || (m_type == MultipleModifier); }
-        bool is_single_modifier() const { return m_type == SingleModifier; }
-        bool is_multiple_modifier() const { return m_type == MultipleModifier; }
-        bool is_single_full_instance() const;
-        bool is_multiple_full_instance() const { return m_type == MultipleFullInstance; }
-        bool is_single_full_object() const { return m_type == SingleFullObject; }
-        bool is_multiple_full_object() const { return m_type == MultipleFullObject; }
-        bool is_single_volume() const { return m_type == SingleVolume; }
-        bool is_multiple_volume() const { return m_type == MultipleVolume; }
-        bool is_mixed() const { return m_type == Mixed; }
-        bool is_from_single_instance() const { return get_instance_idx() != -1; }
-        bool is_from_single_object() const;
-
-        bool contains_volume(unsigned int volume_idx) const { return std::find(m_list.begin(), m_list.end(), volume_idx) != m_list.end(); }
-        bool requires_uniform_scale() const;
-
-        // Returns the the object id if the selection is from a single object, otherwise is -1
-        int get_object_idx() const;
-        // Returns the instance id if the selection is from a single object and from a single instance, otherwise is -1
-        int get_instance_idx() const;
-        // Returns the indices of selected instances.
-        // Can only be called if selection is from a single object.
-        const InstanceIdxsList& get_instance_idxs() const;
-
-        const IndicesList& get_volume_idxs() const { return m_list; }
-        const GLVolume* get_volume(unsigned int volume_idx) const;
-
-        const ObjectIdxsToInstanceIdxsMap& get_content() const { return m_cache.content; }
-
-        unsigned int volumes_count() const { return (unsigned int)m_list.size(); }
-        const BoundingBoxf3& get_bounding_box() const;
-
-        void start_dragging();
-
-        void translate(const Vec3d& displacement, bool local = false);
-        void rotate(const Vec3d& rotation, TransformationType transformation_type);
-        void flattening_rotate(const Vec3d& normal);
-        void scale(const Vec3d& scale, bool local);
-        void mirror(Axis axis);
-
-        void translate(unsigned int object_idx, const Vec3d& displacement);
-        void translate(unsigned int object_idx, unsigned int instance_idx, const Vec3d& displacement);
-
-        void erase();
-
-        void render(float scale_factor = 1.0) const;
-#if ENABLE_RENDER_SELECTION_CENTER
-        void render_center() const;
-#endif // ENABLE_RENDER_SELECTION_CENTER
-        void render_sidebar_hints(const std::string& sidebar_field) const;
-
-        bool requires_local_axes() const;
-
-    private:
-        void _update_valid();
-        void _update_type();
-        void _set_caches();
-        void _add_volume(unsigned int volume_idx);
-        void _add_instance(unsigned int object_idx, unsigned int instance_idx);
-        void _add_object(unsigned int object_idx);
-        void _remove_volume(unsigned int volume_idx);
-        void _remove_instance(unsigned int object_idx, unsigned int instance_idx);
-        void _remove_object(unsigned int object_idx);
-        void _calc_bounding_box() const;
-        void _render_selected_volumes() const;
-        void _render_synchronized_volumes() const;
-        void _render_bounding_box(const BoundingBoxf3& box, float* color) const;
-        void _render_sidebar_position_hints(const std::string& sidebar_field) const;
-        void _render_sidebar_rotation_hints(const std::string& sidebar_field) const;
-        void _render_sidebar_scale_hints(const std::string& sidebar_field) const;
-        void _render_sidebar_size_hints(const std::string& sidebar_field) const;
-        void _render_sidebar_position_hint(Axis axis) const;
-        void _render_sidebar_rotation_hint(Axis axis) const;
-        void _render_sidebar_scale_hint(Axis axis) const;
-        void _render_sidebar_size_hint(Axis axis, double length) const;
-		enum SyncRotationType {
-			// Do not synchronize rotation. Either not rotating at all, or rotating by world Z axis.
-			SYNC_ROTATION_NONE = 0,
-			// Synchronize fully. Used from "place on bed" feature.
-			SYNC_ROTATION_FULL = 1,
-			// Synchronize after rotation by an axis not parallel with Z.
-			SYNC_ROTATION_GENERAL = 2,
-		};
-        void _synchronize_unselected_instances(SyncRotationType sync_rotation_type);
-        void _synchronize_unselected_volumes();
-        void _ensure_on_bed();
-    };
-
     class ClippingPlane
     {
         double m_data[4];
@@ -688,6 +360,10 @@ private:
     class Gizmos
     {
     public:
+#if ENABLE_SVG_ICONS
+        static const float Default_Icons_Size;
+#endif // ENABLE_SVG_ICONS
+
         enum EType : unsigned char
         {
             Undefined,
@@ -704,10 +380,21 @@ private:
         bool m_enabled;
         typedef std::map<EType, GLGizmoBase*> GizmosMap;
         GizmosMap m_gizmos;
+#if ENABLE_SVG_ICONS
+        mutable GLTexture m_icons_texture;
+        mutable bool m_icons_texture_dirty;
+#else
+        ItemsIconsTexture m_icons_texture;
+#endif // ENABLE_SVG_ICONS
         BackgroundTexture m_background_texture;
         EType m_current;
 
+#if ENABLE_SVG_ICONS
+        float m_overlay_icons_size;
+        float m_overlay_scale;
+#else
         float m_overlay_icons_scale;
+#endif // ENABLE_SVG_ICONS
         float m_overlay_border;
         float m_overlay_gap_y;
 
@@ -720,6 +407,9 @@ private:
         bool is_enabled() const;
         void set_enabled(bool enable);
 
+#if ENABLE_SVG_ICONS
+        void set_overlay_icon_size(float size);
+#endif // ENABLE_SVG_ICONS
         void set_overlay_scale(float scale);
 
         std::string update_hover_state(const GLCanvas3D& canvas, const Vec2d& mouse_pos, const Selection& selection);
@@ -755,29 +445,28 @@ private:
 
         void set_flattening_data(const ModelObject* model_object);
 
-        void set_sla_support_data(ModelObject* model_object, const GLCanvas3D::Selection& selection);
-        bool mouse_event(SLAGizmoEventType action, const Vec2d& mouse_position = Vec2d::Zero(), bool shift_down = false);
-        void delete_current_grabber(bool delete_all = false);
+        void set_sla_support_data(ModelObject* model_object, const Selection& selection);
+        bool gizmo_event(SLAGizmoEventType action, const Vec2d& mouse_position = Vec2d::Zero(), bool shift_down = false);
 
         void render_current_gizmo(const Selection& selection) const;
         void render_current_gizmo_for_picking_pass(const Selection& selection) const;
 
         void render_overlay(const GLCanvas3D& canvas, const Selection& selection) const;
 
-#if !ENABLE_IMGUI
-        void create_external_gizmo_widgets(wxWindow *parent);
-#endif // not ENABLE_IMGUI
-
     private:
-        void _reset();
+        void reset();
 
-        void _render_overlay(const GLCanvas3D& canvas, const Selection& selection) const;
-        void _render_current_gizmo(const Selection& selection) const;
+        void do_render_overlay(const GLCanvas3D& canvas, const Selection& selection) const;
+        void do_render_current_gizmo(const Selection& selection) const;
 
-        float _get_total_overlay_height() const;
-        float _get_total_overlay_width() const;
+        float get_total_overlay_height() const;
+        float get_total_overlay_width() const;
 
-        GLGizmoBase* _get_current() const;
+        GLGizmoBase* get_current() const;
+
+#if ENABLE_SVG_ICONS
+        bool generate_icons_texture() const;
+#endif // ENABLE_SVG_ICONS
     };
 
     struct SlaCap
@@ -804,7 +493,8 @@ private:
         enum Warning {
             ObjectOutside,
             ToolpathOutside,
-            SomethingNotShown
+            SomethingNotShown,
+            ObjectClashed
         };
 
         // Sets a warning of the given type to be active/inactive. If several warnings are active simultaneously,
@@ -823,7 +513,7 @@ private:
         std::vector<Warning> m_warnings;
 
         // Generates the texture with given text.
-        bool _generate(const std::string& msg, const GLCanvas3D& canvas);
+        bool _generate(const std::string& msg, const GLCanvas3D& canvas, const bool red_colored = false);
     };
 
     class LegendTexture : public GUI::GLTexture
@@ -846,7 +536,7 @@ private:
         void fill_color_print_legend_values(const GCodePreviewData& preview_data, const GLCanvas3D& canvas,
                                      std::vector<std::pair<double, double>>& cp_legend_values);
 
-        bool generate(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors, const GLCanvas3D& canvas, bool use_error_colors);
+        bool generate(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors, const GLCanvas3D& canvas);
 
         void render(const GLCanvas3D& canvas) const;
     };
@@ -860,14 +550,14 @@ private:
     LegendTexture m_legend_texture;
     WarningTexture m_warning_texture;
     wxTimer m_timer;
-    Camera m_camera;
-    Bed3D* m_bed;
+    Bed3D& m_bed;
+    Camera& m_camera;
+    GLToolbar& m_view_toolbar;
     LayersEditing m_layers_editing;
     Shader m_shader;
     Mouse m_mouse;
     mutable Gizmos m_gizmos;
     mutable GLToolbar m_toolbar;
-    GLToolbar* m_view_toolbar;
     ClippingPlane m_clipping_planes[2];
     bool m_use_clipping_planes;
     mutable SlaCap m_sla_caps[2];
@@ -883,10 +573,8 @@ private:
     bool m_dirty;
     bool m_initialized;
     bool m_use_VBOs;
-    bool m_requires_zoom_to_bed;
     bool m_apply_zoom_to_volumes_filter;
     mutable int m_hover_volume_id;
-    bool m_toolbar_action_running;
     bool m_warning_texture_enabled;
     bool m_legend_texture_enabled;
     bool m_picking_enabled;
@@ -896,6 +584,9 @@ private:
     bool m_regenerate_volumes;
     bool m_moving;
     bool m_tab_down;
+
+    // Following variable is obsolete and it should be safe to remove it.
+    // I just don't want to do it now before a release (Lukas Matena 24.3.2019)
     bool m_render_sla_auxiliaries;
 
     std::string m_color_by;
@@ -904,22 +595,14 @@ private:
 
     GCodePreviewVolumeIndex m_gcode_preview_volume_index;
 
-#if !ENABLE_IMGUI
-    wxWindow *m_external_gizmo_widgets_parent;
-#endif // not ENABLE_IMGUI
-
 public:
-    GLCanvas3D(wxGLCanvas* canvas);
+    GLCanvas3D(wxGLCanvas* canvas, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar);
     ~GLCanvas3D();
 
     void set_context(wxGLContext* context) { m_context = context; }
 
     wxGLCanvas* get_wxglcanvas() { return m_canvas; }
 	const wxGLCanvas* get_wxglcanvas() const { return m_canvas; }
-
-    void set_bed(Bed3D* bed) { m_bed = bed; }
-
-    void set_view_toolbar(GLToolbar* toolbar) { m_view_toolbar = toolbar; }
 
     bool init(bool useVBOs, bool use_legacy_opengl);
     void post_event(wxEvent &&event);
@@ -930,7 +613,7 @@ public:
     void reset_volumes();
     int check_volumes_outside_state() const;
 
-    void toggle_sla_auxiliaries_visibility(bool visible);
+    void toggle_sla_auxiliaries_visibility(bool visible, const ModelObject* mo = nullptr, int instance_idx = -1);
     void toggle_model_objects_visibility(bool visible, const ModelObject* mo = nullptr, int instance_idx = -1);
 
     void set_config(const DynamicPrintConfig* config);
@@ -973,25 +656,12 @@ public:
     void enable_dynamic_background(bool enable);
     void allow_multisample(bool allow);
 
-    void enable_toolbar_item(const std::string& name, bool enable);
-    bool is_toolbar_item_pressed(const std::string& name) const;
-
     void zoom_to_bed();
     void zoom_to_volumes();
     void zoom_to_selection();
     void select_view(const std::string& direction);
-    void set_viewport_from_scene(const GLCanvas3D& other);
 
     void update_volumes_colors_by_extruder();
-
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
-    void update_toolbar_items_visibility();
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
-
-#if !ENABLE_IMGUI
-    Rect get_gizmo_reset_rect(const GLCanvas3D& canvas, bool viewport) const;
-    bool gizmo_reset_rect_contains(const GLCanvas3D& canvas, float x, float y) const;
-#endif // not ENABLE_IMGUI
 
     bool is_dragging() const { return m_gizmos.is_dragging() || m_moving; }
 
@@ -1033,10 +703,6 @@ public:
 
     void set_tooltip(const std::string& tooltip) const;
 
-#if !ENABLE_IMGUI
-    void set_external_gizmo_widgets_parent(wxWindow *parent);
-#endif // not ENABLE_IMGUI
-
     void do_move();
     void do_rotate();
     void do_scale();
@@ -1046,8 +712,6 @@ public:
     void set_camera_zoom(float zoom);
 
     void update_gizmos_on_off_state();
-
-    void viewport_changed();
 
     void handle_sidebar_focus_event(const std::string& opt_key, bool focus_on);
 
@@ -1148,7 +812,9 @@ private:
 
     bool _is_any_volume_outside() const;
 
+#if !ENABLE_SVG_ICONS
     void _resize_toolbars() const;
+#endif // !ENABLE_SVG_ICONS
 
     static std::vector<float> _parse_colors(const std::vector<std::string>& colors);
 

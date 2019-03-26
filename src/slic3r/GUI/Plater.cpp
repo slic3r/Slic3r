@@ -47,14 +47,17 @@
 #include "MainFrame.hpp"
 #include "3DScene.hpp"
 #include "GLCanvas3D.hpp"
+#include "Selection.hpp"
 #include "GLToolbar.hpp"
 #include "GUI_Preview.hpp"
 #include "3DBed.hpp"
+#include "Camera.hpp"
 #include "Tab.hpp"
 #include "PresetBundle.hpp"
 #include "BackgroundSlicingProcess.hpp"
 #include "ProgressStatusBar.hpp"
 #include "PrintHostDialogs.hpp"
+#include "ConfigWizard.hpp"
 #include "../Utils/ASCIIFolding.hpp"
 #include "../Utils/PrintHost.hpp"
 #include "../Utils/FixModelByWin10.hpp"
@@ -231,9 +234,11 @@ wxBitmapComboBox(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(15 *
         auto selected_item = this->GetSelection();
 
         auto marker = reinterpret_cast<Marker>(this->GetClientData(selected_item));
-        if (marker == LABEL_ITEM_MARKER) {
+        if (marker == LABEL_ITEM_MARKER || marker == LABEL_ITEM_CONFIG_WIZARD) {
             this->SetSelection(this->last_selected);
             evt.StopPropagation();
+            if (marker == LABEL_ITEM_CONFIG_WIZARD)
+                wxTheApp->CallAfter([]() { Slic3r::GUI::config_wizard(Slic3r::GUI::ConfigWizard::RR_USER); });
         } else if ( this->last_selected != selected_item || 
                     wxGetApp().get_tab(this->preset_type)->get_presets()->current_is_dirty() ) {
             this->last_selected = selected_item;
@@ -274,20 +279,55 @@ wxBitmapComboBox(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(15 *
             dialog->Destroy();
         });
     }
+
+    edit_btn = new wxButton(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT | wxNO_BORDER);
+#ifdef __WINDOWS__
+    edit_btn->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+#endif
+    edit_btn->SetBitmap(create_scaled_bitmap("cog.png"));
+    edit_btn->SetToolTip(_(L("Click to edit preset")));
+
+    edit_btn->Bind(wxEVT_BUTTON, ([preset_type, this](wxCommandEvent)
+    {
+        Tab* tab = wxGetApp().get_tab(preset_type);
+        if (!tab)
+            return;
+
+        int page_id = wxGetApp().tab_panel()->FindPage(tab);
+        if (page_id == wxNOT_FOUND)
+            return;
+
+        wxGetApp().tab_panel()->ChangeSelection(page_id);
+
+        /* In a case of a multi-material printing, for editing another Filament Preset 
+         * it's needed to select this preset for the "Filament settings" Tab 
+         */
+        if (preset_type == Preset::TYPE_FILAMENT && wxGetApp().extruders_cnt() > 1) 
+        {
+            const std::string& selected_preset = GetString(GetSelection()).ToUTF8().data();
+
+            // Call select_preset() only if there is new preset and not just modified 
+            if ( !boost::algorithm::ends_with(selected_preset, Preset::suffix_modified()) )
+                tab->select_preset(selected_preset);
+        }
+    }));
 }
 
-PresetComboBox::~PresetComboBox() {}
-
-
-void PresetComboBox::set_label_marker(int item)
+PresetComboBox::~PresetComboBox()
 {
-    this->SetClientData(item, (void*)LABEL_ITEM_MARKER);
+    if (edit_btn)
+        edit_btn->Destroy();
+}
+
+
+void PresetComboBox::set_label_marker(int item, LabelItemType label_item_type)
+{
+    this->SetClientData(item, (void*)label_item_type);
 }
 
 void PresetComboBox::check_selection()
 {
-    if (this->last_selected != GetSelection())
-        this->last_selected = GetSelection();
+    this->last_selected = GetSelection();
 }
 
 // Frequently changed parameters
@@ -364,20 +404,20 @@ FreqChangedParams::FreqChangedParams(wxWindow* parent, const int label_width) :
     
     Line line = Line { "", "" };
 
-    ConfigOptionDef def;
-    def.label = L("Supports");
-    def.type = coStrings;
-    def.gui_type = "select_open";
-    def.tooltip = L("Select what kind of support do you need");
-    def.enum_labels.push_back(L("None"));
-    def.enum_labels.push_back(L("Support on build plate only"));
-    def.enum_labels.push_back(L("Everywhere"));
-    const std::string selection = !config->opt_bool("support_material") ?
-                                  "None" : config->opt_bool("support_material_buildplate_only") ?
-                                  "Support on build plate only" :
-                                  "Everywhere";
-    def.default_value = new ConfigOptionStrings{ selection };
-    Option option = Option(def, "support");
+    ConfigOptionDef support_def;
+    support_def.label = L("Supports");
+    support_def.type = coStrings;
+    support_def.gui_type = "select_open";
+    support_def.tooltip = L("Select what kind of support do you need");
+    support_def.enum_labels.push_back(L("None"));
+    support_def.enum_labels.push_back(L("Support on build plate only"));
+    support_def.enum_labels.push_back(L("Everywhere"));
+    std::string selection = !config->opt_bool("support_material") ?
+                            "None" : config->opt_bool("support_material_buildplate_only") ?
+                            "Support on build plate only" :
+                            "Everywhere";
+    support_def.default_value = new ConfigOptionStrings{ selection };
+    Option option = Option(support_def, "support");
     option.opt.full_width = true;
     line.append_option(option);
     m_og->append_line(line);
@@ -392,6 +432,7 @@ FreqChangedParams::FreqChangedParams(wxWindow* parent, const int label_width) :
     line.append_option(option);
 
     m_brim_width = config->opt_float("brim_width");
+    ConfigOptionDef def;
     def.label = L("Brim");
     def.type = coBool;
     def.tooltip = L("This flag enables the brim that will be printed around each object on the first layer.");
@@ -427,6 +468,7 @@ FreqChangedParams::FreqChangedParams(wxWindow* parent, const int label_width) :
 
     m_og->append_line(line);
 
+
     // Frequently changed parameters for SLA_technology
     m_og_sla = std::make_shared<ConfigOptionsGroup>(parent, "");
     DynamicPrintConfig*	config_sla = &wxGetApp().preset_bundle->sla_prints.get_edited_preset().config;
@@ -437,20 +479,43 @@ FreqChangedParams::FreqChangedParams(wxWindow* parent, const int label_width) :
         Tab* tab = wxGetApp().get_tab(Preset::TYPE_SLA_PRINT);
         if (!tab) return;
 
-        tab->set_value(opt_key, value);
+        if (opt_key == "pad_enable") {
+            tab->set_value(opt_key, value);
+            tab->update();
+        }
+        else //(opt_key == "support")
+        {
+            DynamicPrintConfig new_conf = *config_sla;
+            const wxString& selection = boost::any_cast<wxString>(value);
 
-        DynamicPrintConfig new_conf = *config_sla;
-        new_conf.set_key_value(opt_key, new ConfigOptionBool(boost::any_cast<bool>(value)));
-        tab->load_config(new_conf);
+            const bool supports_enable = selection == _("None") ? false : true;
+            new_conf.set_key_value("supports_enable", new ConfigOptionBool(supports_enable));
+
+            if (selection == _("Everywhere"))
+                new_conf.set_key_value("support_buildplate_only", new ConfigOptionBool(false));
+            else if (selection == _("Support on build plate only"))
+                new_conf.set_key_value("support_buildplate_only", new ConfigOptionBool(true));
+
+            tab->load_config(new_conf);
+        }
+
         tab->update_dirty();
-    };    
-
+    };
 
     line = Line{ "", "" };
 
-    option = m_og_sla->get_option("supports_enable");
-    option.opt.sidetext = "     ";
+    selection = !config_sla->opt_bool("supports_enable") ?
+                "None" : config_sla->opt_bool("support_buildplate_only") ?
+                "Support on build plate only" :
+                "Everywhere";
+    support_def.default_value = new ConfigOptionStrings{ selection };
+    option = Option(support_def, "support");
+    option.opt.full_width = true;
     line.append_option(option);
+    m_og_sla->append_line(line);
+
+
+    line = Line{ "", "" };
 
     option = m_og_sla->get_option("pad_enable");
     option.opt.sidetext = "     ";
@@ -487,11 +552,18 @@ ConfigOptionsGroup* FreqChangedParams::get_og(const bool is_fff)
 
 // Sidebar / private
 
+enum class ActionButtonType : int {
+    abReslice,
+    abExport,
+    abSendGCode
+};
+
 struct Sidebar::priv
 {
     Plater *plater;
 
     wxScrolledWindow *scrolled;
+    wxPanel* presets_panel; // Used for MSW better layouts
 
     PrusaModeSizer  *mode_sizer;
     wxFlexGridSizer *sizer_presets;
@@ -523,8 +595,6 @@ void Sidebar::priv::show_preset_comboboxes()
 {
     const bool showSLA = wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology() == ptSLA;
 
-    wxWindowUpdateLocker noUpdates_scrolled(scrolled->GetParent());
-    
     for (size_t i = 0; i < 2; ++i)
         sizer_presets->Show(i, !showSLA);
 
@@ -548,6 +618,7 @@ Sidebar::Sidebar(Plater *parent)
     p->scrolled = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxSize(40 * wxGetApp().em_unit(), -1));
     p->scrolled->SetScrollbars(0, 20, 1, 2);
 
+
     // Sizer in the scrolled area
     auto *scrolled_sizer = new wxBoxSizer(wxVERTICAL);
     p->scrolled->SetSizer(scrolled_sizer);
@@ -559,21 +630,39 @@ Sidebar::Sidebar(Plater *parent)
     p->sizer_presets = new wxFlexGridSizer(10, 1, 1, 2);
     p->sizer_presets->AddGrowableCol(0, 1);
     p->sizer_presets->SetFlexibleDirection(wxBOTH);
+
+    bool is_msw = false;
+#ifdef __WINDOWS__
+    p->scrolled->SetDoubleBuffered(true);
+
+    p->presets_panel = new wxPanel(p->scrolled, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    p->presets_panel->SetSizer(p->sizer_presets);
+
+    is_msw = true;
+#else
+    p->presets_panel = p->scrolled;
+#endif //__WINDOWS__
+
     p->sizer_filaments = new wxBoxSizer(wxVERTICAL);
 
     auto init_combo = [this](PresetComboBox **combo, wxString label, Preset::Type preset_type, bool filament) {
         // do not print these albels. if you re-enabled these, don't forget to *2 the size in show_preset_comboboxes()
-        //auto *text = new wxStaticText(p->scrolled, wxID_ANY, label+" :");
+        //auto *text = new wxStaticText(p->presets_panel, wxID_ANY, label+" :");
         //text->SetFont(wxGetApp().small_font());
-        *combo = new PresetComboBox(p->scrolled, preset_type);
+        *combo = new PresetComboBox(p->presets_panel, preset_type);
+
+        auto combo_and_btn_sizer = new wxBoxSizer(wxHORIZONTAL);
+        combo_and_btn_sizer->Add(*combo, 1, wxEXPAND);
+        if ((*combo)->edit_btn)
+            combo_and_btn_sizer->Add((*combo)->edit_btn, 0, wxLEFT|wxRIGHT, int(0.3*wxGetApp().em_unit()));
 
         auto *sizer_presets = this->p->sizer_presets;
         auto *sizer_filaments = this->p->sizer_filaments;
         //sizer_presets->Add(text, 0, wxALIGN_LEFT | wxEXPAND | wxRIGHT, 4);
         if (! filament) {
-            sizer_presets->Add(*combo, 0, wxEXPAND | wxBOTTOM, 1);
+            sizer_presets->Add(combo_and_btn_sizer, 0, wxEXPAND | wxBOTTOM, 1);
         } else {
-            sizer_filaments->Add(*combo, 0, wxEXPAND | wxBOTTOM, 1);
+            sizer_filaments->Add(combo_and_btn_sizer, 0, wxEXPAND | wxBOTTOM, 1);
             (*combo)->set_extruder_idx(0);
             sizer_presets->Add(sizer_filaments, 1, wxEXPAND);
         }
@@ -614,9 +703,7 @@ Sidebar::Sidebar(Plater *parent)
     p->object_settings->Hide();
     p->sizer_params->Add(p->object_settings->get_sizer(), 0, wxEXPAND | wxTOP, margin_5);
 
-    wxBitmap arrow_up(GUI::from_u8(Slic3r::var("brick_go.png")), wxBITMAP_TYPE_PNG);
     p->btn_send_gcode = new wxButton(this, wxID_ANY, _(L("Send to printer")));
-    p->btn_send_gcode->SetBitmap(arrow_up);
     p->btn_send_gcode->SetFont(wxGetApp().bold_font());
     p->btn_send_gcode->Hide();
 
@@ -626,7 +713,9 @@ Sidebar::Sidebar(Plater *parent)
 
     // Sizer in the scrolled area
     scrolled_sizer->Add(p->mode_sizer, 0, wxALIGN_CENTER_HORIZONTAL/*RIGHT | wxBOTTOM | wxRIGHT, 5*/);
-    scrolled_sizer->Add(p->sizer_presets, 0, wxEXPAND | wxLEFT, margin_5);
+    is_msw ?
+        scrolled_sizer->Add(p->presets_panel, 0, wxEXPAND | wxLEFT, margin_5) :  
+        scrolled_sizer->Add(p->sizer_presets, 0, wxEXPAND | wxLEFT, margin_5);
     scrolled_sizer->Add(p->sizer_params, 1, wxEXPAND | wxLEFT, margin_5);
     scrolled_sizer->Add(p->object_info, 0, wxEXPAND | wxTOP | wxLEFT, margin_5);
     scrolled_sizer->Add(p->sliced_info, 0, wxEXPAND | wxTOP | wxLEFT, margin_5);
@@ -650,21 +739,32 @@ Sidebar::Sidebar(Plater *parent)
 
     // Events
     p->btn_export_gcode->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { p->plater->export_gcode(); });
-    p->btn_reslice->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { p->plater->reslice(); });
+    p->btn_reslice->Bind(wxEVT_BUTTON, [this](wxCommandEvent&)
+    {
+        const bool export_gcode_after_slicing = wxGetKeyState(WXK_SHIFT);
+        if (export_gcode_after_slicing)
+            p->plater->export_gcode();
+        else
+            p->plater->reslice();
+    });
     p->btn_send_gcode->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { p->plater->send_gcode(); });
 }
 
 Sidebar::~Sidebar() {}
 
 void Sidebar::init_filament_combo(PresetComboBox **combo, const int extr_idx) {
-    *combo = new PresetComboBox(p->scrolled, Slic3r::Preset::TYPE_FILAMENT);
+    *combo = new PresetComboBox(p->presets_panel, Slic3r::Preset::TYPE_FILAMENT);
 //         # copy icons from first choice
 //         $choice->SetItemBitmap($_, $choices->[0]->GetItemBitmap($_)) for 0..$#presets;
 
     (*combo)->set_extruder_idx(extr_idx);
 
+    auto combo_and_btn_sizer = new wxBoxSizer(wxHORIZONTAL);
+    combo_and_btn_sizer->Add(*combo, 1, wxEXPAND);
+    combo_and_btn_sizer->Add((*combo)->edit_btn, 0, wxLEFT | wxRIGHT, int(0.3*wxGetApp().em_unit()));
+
     auto /***/sizer_filaments = this->p->sizer_filaments;
-    sizer_filaments->Add(*combo, 1, wxEXPAND | wxBOTTOM, 1);
+    sizer_filaments->Add(combo_and_btn_sizer, 1, wxEXPAND | wxBOTTOM, 1);
 }
 
 void Sidebar::remove_unused_filament_combos(const int current_extruder_count)
@@ -719,6 +819,8 @@ void Sidebar::update_presets(Preset::Type preset_type)
 
 	case Preset::TYPE_PRINTER:
 	{
+//         wxWindowUpdateLocker noUpdates_scrolled(p->scrolled);
+
 		// Update the print choosers to only contain the compatible presets, update the dirty flags.
         if (print_tech == ptFFF)
 			preset_bundle.prints.update_platter_ui(p->combo_print);
@@ -727,10 +829,7 @@ void Sidebar::update_presets(Preset::Type preset_type)
             preset_bundle.sla_materials.update_platter_ui(p->combo_sla_material);
         }
 		// Update the printer choosers, update the dirty flags.
-        auto prev_selection = p->combo_printer->GetSelection();
 		preset_bundle.printers.update_platter_ui(p->combo_printer);
-        if (prev_selection != p->combo_printer->GetSelection())
-            p->combo_printer->check_selection();
 		// Update the filament choosers to only contain the compatible presets, update the color preview,
 		// update the dirty flags.
         if (print_tech == ptFFF) {
@@ -748,9 +847,15 @@ void Sidebar::update_presets(Preset::Type preset_type)
     wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
 }
 
-void Sidebar::update_mode_sizer(const Slic3r::ConfigOptionMode& mode)
+void Sidebar::update_mode_sizer() const
 {
-    p->mode_sizer->SetMode(mode);
+    p->mode_sizer->SetMode(m_mode);
+}
+
+void Sidebar::update_reslice_btn_tooltip() const
+{
+    const wxString tooltip = m_mode == comSimple ? wxString("") : _(L("Hold Shift to Slice & Export G-code"));
+    p->btn_reslice->SetToolTip(tooltip);
 }
 
 ObjectManipulation* Sidebar::obj_manipul()
@@ -771,6 +876,11 @@ ObjectSettings* Sidebar::obj_settings()
 wxScrolledWindow* Sidebar::scrolled_panel()
 {
     return p->scrolled;
+}
+
+wxPanel* Sidebar::presets_panel()
+{
+    return p->presets_panel;
 }
 
 ConfigOptionsGroup* Sidebar::og_freq_chng_params(const bool is_fff)
@@ -814,7 +924,7 @@ void Sidebar::show_info_sizer()
     p->object_info->info_materials->SetLabel(wxString::Format("%d", static_cast<int>(model_object->materials_count())));
 
     auto& stats = model_object->volumes.front()->mesh.stl.stats;
-    p->object_info->info_volume->SetLabel(wxString::Format("%.2f", size(0) * size(1) * size(2)));
+    p->object_info->info_volume->SetLabel(wxString::Format("%.2f", stats.volume));
     p->object_info->info_facets->SetLabel(wxString::Format(_(L("%d (%d shells)")), static_cast<int>(model_object->facets_count()), stats.number_of_parts));
 
     int errors = stats.degenerate_facets + stats.edges_fixed + stats.facets_removed +
@@ -943,14 +1053,33 @@ void Sidebar::enable_buttons(bool enable)
     p->btn_send_gcode->Enable(enable);
 }
 
-void Sidebar::show_reslice(bool show) { p->btn_reslice->Show(show); }
-void Sidebar::show_send(bool show) { p->btn_send_gcode->Show(show); }
+void Sidebar::show_reslice(bool show)   const { p->btn_reslice->Show(show); }
+void Sidebar::show_export(bool show)    const { p->btn_export_gcode->Show(show); }
+void Sidebar::show_send(bool show)      const { p->btn_send_gcode->Show(show); }
 
 bool Sidebar::is_multifilament()
 {
     return p->combos_filament.size() > 1;
 }
 
+
+void Sidebar::update_mode()
+{
+    m_mode = wxGetApp().get_mode();
+
+    update_reslice_btn_tooltip();
+    update_mode_sizer();
+
+    wxWindowUpdateLocker noUpdates(this);
+
+    p->object_list->get_sizer()->Show(m_mode > comSimple);
+
+    p->object_list->unselect_objects();
+    p->object_list->update_selections();
+    p->object_list->update_object_menu();
+    
+    Layout();
+}
 
 std::vector<PresetComboBox*>& Sidebar::combos_filament()
 {
@@ -1006,6 +1135,15 @@ struct Plater::priv
     // SLA-Object popup menu
     PrusaMenu sla_object_menu;
 
+    // Removed/Prepended Items according to the view mode
+    std::vector<wxMenuItem*> items_increase;
+    std::vector<wxMenuItem*> items_decrease;
+    std::vector<wxMenuItem*> items_set_number_of_copies;
+    enum MenuIdentifier {
+        miObjectFFF=0,
+        miObjectSLA
+    };
+
     // Data
     Slic3r::DynamicPrintConfig *config;        // FIXME: leak?
     Slic3r::Print               fff_print;
@@ -1015,11 +1153,12 @@ struct Plater::priv
     Slic3r::GCodePreviewData    gcode_preview_data;
 
     // GUI elements
-    wxSizer* panel_sizer;
-    wxPanel* current_panel;
+    wxSizer* panel_sizer{ nullptr };
+    wxPanel* current_panel{ nullptr };
     std::vector<wxPanel*> panels;
     Sidebar *sidebar;
     Bed3D bed;
+    Camera camera;
     View3D* view3D;
     GLToolbar view_toolbar;
     Preview *preview;
@@ -1033,6 +1172,9 @@ struct Plater::priv
     std::string                 delayed_error_message;
 
     wxTimer                     background_process_timer;
+
+    std::string                 label_btn_export;
+    std::string                 label_btn_send;
 
     static const std::regex pattern_bundle;
     static const std::regex pattern_3mf;
@@ -1057,8 +1199,8 @@ struct Plater::priv
     std::vector<size_t> load_model_objects(const ModelObjectPtrs &model_objects);
     std::unique_ptr<CheckboxFileDialog> get_export_file(GUI::FileType file_type);
 
-    const GLCanvas3D::Selection& get_selection() const;
-    GLCanvas3D::Selection& get_selection();
+    const Selection& get_selection() const;
+    Selection& get_selection();
     int get_selected_object_idx() const;
     int get_selected_volume_idx() const;
     void selection_changed();
@@ -1116,19 +1258,28 @@ struct Plater::priv
     void on_action_layersediting(SimpleEvent&);
 
     void on_object_select(SimpleEvent&);
-    void on_viewport_changed(SimpleEvent&);
     void on_right_click(Vec2dEvent&);
     void on_wipetower_moved(Vec3dEvent&);
     void on_update_geometry(Vec3dsEvent<2>&);
     void on_3dcanvas_mouse_dragging_finished(SimpleEvent&);
 
     void update_object_menu();
+    void show_action_buttons(const bool is_ready_to_slice) const;
 
     // Set the bed shape to a single closed 2D polygon(array of two element arrays),
     // triangulate the bed and store the triangles into m_bed.m_triangles,
     // fills the m_bed.m_grid_lines and sets m_bed.m_origin.
     // Sets m_bed.m_polygon to limit the object placement.
     void set_bed_shape(const Pointfs& shape);
+
+    bool can_delete() const;
+    bool can_delete_all() const;
+    bool can_increase_instances() const;
+    bool can_decrease_instances() const;
+    bool can_split_to_objects() const;
+    bool can_split_to_volumes() const;
+    bool can_arrange() const;
+    bool can_layers_editing() const;
 
 private:
     bool init_object_menu();
@@ -1138,16 +1289,9 @@ private:
     bool complit_init_part_menu();
     void init_view_toolbar();
 
-    bool can_delete_object() const;
-    bool can_increase_instances() const;
-    bool can_decrease_instances() const;
     bool can_set_instance_to_object() const;
-    bool can_split_to_objects() const;
-    bool can_split_to_volumes() const;
     bool can_split() const;
     bool layers_height_allowed() const;
-    bool can_delete_all() const;
-    bool can_arrange() const;
     bool can_mirror() const;
 
     void update_fff_scene();
@@ -1179,7 +1323,11 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     , sidebar(new Sidebar(q))
     , delayed_scene_refresh(false)
     , project_filename(wxEmptyString)
+#if ENABLE_SVG_ICONS
+    , view_toolbar(GLToolbar::Radio, "View")
+#else
     , view_toolbar(GLToolbar::Radio)
+#endif // ENABLE_SVG_ICONS
 {
     arranging.store(false);
     rotoptimizing.store(false);
@@ -1199,11 +1347,8 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     sla_print.set_status_callback(statuscb);
     this->q->Bind(EVT_SLICING_UPDATE, &priv::on_slicing_update, this);
 
-    view3D = new View3D(q, &model, config, &background_process);
-    preview = new Preview(q, config, &background_process, &gcode_preview_data, [this](){ schedule_background_process(); });
-
-    view3D->set_bed(&bed);
-    preview->set_bed(&bed);
+    view3D = new View3D(q, bed, camera, view_toolbar, &model, config, &background_process);
+    preview = new Preview(q, bed, camera, view_toolbar, config, &background_process, &gcode_preview_data, [this](){ schedule_background_process(); });
 
     panels.push_back(view3D);
     panels.push_back(preview);
@@ -1235,7 +1380,6 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     // 3DScene events:
     view3D_canvas->Bind(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS, [this](SimpleEvent&) { this->schedule_background_process(); });
     view3D_canvas->Bind(EVT_GLCANVAS_OBJECT_SELECT, &priv::on_object_select, this);
-    view3D_canvas->Bind(EVT_GLCANVAS_VIEWPORT_CHANGED, &priv::on_viewport_changed, this);
     view3D_canvas->Bind(EVT_GLCANVAS_RIGHT_CLICK, &priv::on_right_click, this);
     view3D_canvas->Bind(EVT_GLCANVAS_REMOVE_OBJECT, [q](SimpleEvent&) { q->remove_selected(); });
     view3D_canvas->Bind(EVT_GLCANVAS_ARRANGE, [this](SimpleEvent&) { arrange(); });
@@ -1265,7 +1409,6 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     view3D_canvas->Bind(EVT_GLCANVAS_UPDATE_BED_SHAPE, [this](SimpleEvent&) { set_bed_shape(config->option<ConfigOptionPoints>("bed_shape")->values); });
 
     // Preview events:
-    preview->get_wxglcanvas()->Bind(EVT_GLCANVAS_VIEWPORT_CHANGED, &priv::on_viewport_changed, this);
     preview->get_wxglcanvas()->Bind(EVT_GLCANVAS_QUESTION_MARK, [this](SimpleEvent&) { wxGetApp().keyboard_shortcuts(); });
     preview->get_wxglcanvas()->Bind(EVT_GLCANVAS_UPDATE_BED_SHAPE, [this](SimpleEvent&) { set_bed_shape(config->option<ConfigOptionPoints>("bed_shape")->values); });
     preview->get_wxglcanvas()->Bind(EVT_GLCANVAS_TAB, [this](SimpleEvent&) { select_next_view_3D(); });
@@ -1474,7 +1617,11 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
             if (type_3mf || type_any_amf) {
 #endif // !ENABLE_VOLUMES_CENTERING_FIXES
                 for (ModelObject* model_object : model.objects) {
+#if ENABLE_VOLUMES_CENTERING_FIXES
+                    model_object->center_around_origin(false);
+#else
                     model_object->center_around_origin();
+#endif // ENABLE_VOLUMES_CENTERING_FIXES
                     model_object->ensure_on_bed();
                 }
 #if !ENABLE_VOLUMES_CENTERING_FIXES
@@ -1529,7 +1676,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
     // automatic selection of added objects
     if (!obj_idxs.empty() && (view3D != nullptr))
     {
-        GLCanvas3D::Selection& selection = view3D->get_canvas3d()->get_selection();
+        Selection& selection = view3D->get_canvas3d()->get_selection();
         selection.clear();
         for (size_t idx : obj_idxs)
         {
@@ -1567,8 +1714,8 @@ std::vector<size_t> Plater::priv::load_model_objects(const ModelObjectPtrs &mode
             object->center_around_origin();
             new_instances.emplace_back(object->add_instance());
 #else /* AUTOPLACEMENT_ON_LOAD */
-            // if object has no defined position(s) we need to rearrange everything after loading               object->center_around_origin();
-            need_arrange = true;                
+            // if object has no defined position(s) we need to rearrange everything after loading
+            need_arrange = true;
              // add a default instance and center object around origin  
             object->center_around_origin();  // also aligns object to Z = 0 
             ModelInstance* instance = object->add_instance();   
@@ -1678,12 +1825,12 @@ std::unique_ptr<CheckboxFileDialog> Plater::priv::get_export_file(GUI::FileType 
     return dlg;
 }
 
-const GLCanvas3D::Selection& Plater::priv::get_selection() const
+const Selection& Plater::priv::get_selection() const
 {
     return view3D->get_canvas3d()->get_selection();
 }
 
-GLCanvas3D::Selection& Plater::priv::get_selection()
+Selection& Plater::priv::get_selection()
 {
     return view3D->get_canvas3d()->get_selection();
 }
@@ -1708,12 +1855,6 @@ int Plater::priv::get_selected_volume_idx() const
 
 void Plater::priv::selection_changed()
 {
-    view3D->enable_toolbar_item("delete", can_delete_object());
-    view3D->enable_toolbar_item("more", can_increase_instances());
-    view3D->enable_toolbar_item("fewer", can_decrease_instances());
-    view3D->enable_toolbar_item("splitobjects", can_split/*_to_objects*/());
-    view3D->enable_toolbar_item("splitvolumes", can_split/*_to_volumes*/());
-
     // if the selection is not valid to allow for layer editing, we need to turn off the tool if it is running
     bool enable_layer_editing = layers_height_allowed();
     if (!enable_layer_editing && view3D->is_layers_editing_enabled()) {
@@ -1721,18 +1862,12 @@ void Plater::priv::selection_changed()
         on_action_layersediting(evt);
     }
 
-    view3D->enable_toolbar_item("layersediting", enable_layer_editing);
-
     // forces a frame render to update the view (to avoid a missed update if, for example, the context menu appears)
     view3D->render();
 }
 
 void Plater::priv::object_list_changed()
 {
-    // Enable/disable buttons depending on whether there are any objects on the platter.
-    view3D->enable_toolbar_item("deleteall", can_delete_all());
-    view3D->enable_toolbar_item("arrange", can_arrange());
-
     const bool export_in_progress = this->background_process.is_export_scheduled(); // || ! send_gcode_file.empty());
     // XXX: is this right?
     const bool model_fits = view3D->check_volumes_outside_state() == ModelInstance::PVS_Inside;
@@ -1811,9 +1946,6 @@ void Plater::priv::arrange()
 
     wxBusyCursor wait;
 
-    // Disable the arrange button (to prevent reentrancies, we will call wxYied)
-    view3D->enable_toolbar_item("arrange", can_arrange());
-
     this->background_process.stop();
     unsigned count = 0;
     for(auto obj : model.objects) count += obj->instances.size();
@@ -1891,9 +2023,6 @@ void Plater::priv::arrange()
     statusbar()->set_range(prev_range);
     statusbar()->set_cancel_callback(); // remove cancel button
     arranging.store(false);
-
-    // We enable back the arrange button
-    view3D->enable_toolbar_item("arrange", can_arrange());
 
     // Do a full refresh of scene tree, including regenerating all the GLVolumes.
     //FIXME The update function shall just reload the modified matrices.
@@ -2006,9 +2135,6 @@ void Plater::priv::schedule_background_process()
     this->background_process_timer.Start(500, wxTIMER_ONE_SHOT);
     // Notify the Canvas3D that something has changed, so it may invalidate some of the layer editing stuff.
     this->view3D->get_canvas3d()->set_config(this->config);
-    // Reset gcode preview
-    this->preview->get_canvas3d()->reset_volumes();
-    this->preview->get_canvas3d()->reset_legend_texture();
 }
 
 void Plater::priv::update_print_volume_state()
@@ -2097,13 +2223,36 @@ unsigned int Plater::priv::update_background_process(bool force_validation)
 		wxQueueEvent(GUI::wxGetApp().mainframe->m_plater, evt.Clone());
 	}
 
-    //FIXME update "Slice Now / Schedule background process"
-    //background_process.is_export_scheduled() - byl zavolan "Export G-code", background processing ma jmeno export souboru
-    //background_process.is_upload_scheduled() - byl zavolan "Send to OctoPrint", jeste nebylo doslajsovano (pak se preda upload fronte a background process zapomene)
-    //background_process.empty() - prazdna plocha
-    // pokud (return_state & UPDATE_BACKGROUND_PROCESS_INVALID) != 0 -> doslo k chybe (gray out "Slice now") mozna "Invalid data"???
-    // jinak background_process.running() -> Zobraz "Slicing ..."
-    // jinak pokud ! background_process.empty() && ! background_process.finished() -> je neco ke slajsovani (povol tlacitko) "Slice Now"
+    if ((return_state & UPDATE_BACKGROUND_PROCESS_INVALID) != 0)
+    {
+        // Validation of the background data failed.
+        const wxString invalid_str = _(L("Invalid data"));
+        for (auto btn : {ActionButtonType::abReslice, ActionButtonType::abSendGCode, ActionButtonType::abExport})
+            sidebar->set_btn_label(btn, invalid_str);
+    }
+    else
+    {
+        // Background data is valid.
+        if ((return_state & UPDATE_BACKGROUND_PROCESS_RESTART) != 0 ||
+            (return_state & UPDATE_BACKGROUND_PROCESS_REFRESH_SCENE) != 0 )
+            this->statusbar()->set_status_text(L("Ready to slice"));
+
+        sidebar->set_btn_label(ActionButtonType::abExport, _(label_btn_export));
+        sidebar->set_btn_label(ActionButtonType::abSendGCode, _(label_btn_send));
+        
+        const wxString slice_string = background_process.running() && wxGetApp().get_mode() == comSimple ? 
+                                      _(L("Slicing")) + dots : _(L("Slice now"));
+        sidebar->set_btn_label(ActionButtonType::abReslice, slice_string);
+
+        if (background_process.finished())
+            show_action_buttons(false);
+        else if (!background_process.empty() && 
+                 !background_process.running()) /* Do not update buttons if background process is running
+                                                 * This condition is important for SLA mode especially, 
+                                                 * when this function is called several times during calculations 
+                                                 * */
+            show_action_buttons(true);
+    }
 
     return return_state;
 }
@@ -2234,6 +2383,10 @@ void Plater::priv::set_current_panel(wxPanel* panel)
     if (std::find(panels.begin(), panels.end(), panel) == panels.end())
         return;
 
+#ifdef __WXMAC__
+    bool force_render = (current_panel != nullptr);
+#endif // __WXMAC__
+
     if (current_panel == panel)
         return;
 
@@ -2242,7 +2395,19 @@ void Plater::priv::set_current_panel(wxPanel* panel)
     for (wxPanel* p : panels)
     {
         if (p == current_panel)
+        {
+#ifdef __WXMAC__
+            // On Mac we need also to force a render to avoid flickering when changing view
+            if (force_render)
+            {
+                if (p == view3D)
+                    dynamic_cast<View3D*>(p)->get_canvas3d()->render();
+                else if (p == preview)
+                    dynamic_cast<Preview*>(p)->get_canvas3d()->render();
+            }
+#endif // __WXMAC__
             p->Show();
+        }
     }
     // then set to invisible the other
     for (wxPanel* p : panels)
@@ -2274,7 +2439,7 @@ void Plater::priv::set_current_panel(wxPanel* panel)
     {
         this->q->reslice();        
         // keeps current gcode preview, if any
-        preview->reload_print(false, true);
+        preview->reload_print(true);
         preview->set_canvas_as_dirty();
         view_toolbar.select_item("Preview");
     }
@@ -2296,7 +2461,7 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
     //! instead of 
     //!     combo->GetStringSelection().ToUTF8().data()); 
 
-    std::string selected_string = combo->GetString(combo->GetSelection()).ToUTF8().data();
+    const std::string& selected_string = combo->GetString(combo->GetSelection()).ToUTF8().data();
 
     if (preset_type == Preset::TYPE_FILAMENT) {
         wxGetApp().preset_bundle->set_filament_preset(idx, selected_string);
@@ -2308,12 +2473,8 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
         wxGetApp().preset_bundle->update_platter_filament_ui(idx, combo);
     } 
     else {
-        for (Tab* tab : wxGetApp().tabs_list) {
-            if (tab->type() == preset_type) {
-                tab->select_preset(selected_string);
-                break;
-            }
-        }
+        wxWindowUpdateLocker noUpdates(sidebar->presets_panel());
+        wxGetApp().get_tab(preset_type)->select_preset(selected_string);
     }
 
     // update plater with new config
@@ -2324,8 +2485,10 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
 
 void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
 {
-    this->statusbar()->set_progress(evt.status.percent);
-    this->statusbar()->set_status_text(_(L(evt.status.text)) + wxString::FromUTF8("…"));
+    if (evt.status.percent >= -1) {
+        this->statusbar()->set_progress(evt.status.percent);
+        this->statusbar()->set_status_text(_(L(evt.status.text)) + wxString::FromUTF8("…"));
+    }
     if (evt.status.flags & PrintBase::SlicingStatus::RELOAD_SCENE) {
         switch (this->printer_technology) {
         case ptFFF:
@@ -2342,6 +2505,10 @@ void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
     if (evt.status.flags & PrintBase::SlicingStatus::RELOAD_SLA_SUPPORT_POINTS) {
         // Update SLA gizmo  (reload_scene calls update_gizmos_data)
         q->canvas3D()->reload_scene(true);
+    }
+    if (evt.status.flags & PrintBase::SlicingStatus::RELOAD_SLA_PREVIEW) {
+        // Update the SLA preview
+        this->preview->reload_print();
     }
 }
 
@@ -2369,14 +2536,17 @@ void Plater::priv::on_process_completed(wxCommandEvent &evt)
     this->statusbar()->reset_cancel_callback();
     this->statusbar()->stop_busy();
   
-	bool canceled = evt.GetInt() < 0;
-    bool success  = evt.GetInt() > 0;
+    const bool canceled = evt.GetInt() < 0;
+	const bool error = evt.GetInt() == 0;
+    const bool success  = evt.GetInt() > 0;
     // Reset the "export G-code path" name, so that the automatic background processing will be enabled again.
     this->background_process.reset_export();
-    if (! success) {
+
+    if (error) {
         wxString message = evt.GetString();
         if (message.IsEmpty())
             message = _(L("Export failed"));
+        show_error(q, message);
         this->statusbar()->set_status_text(message);
     }
 	if (canceled)
@@ -2401,15 +2571,19 @@ void Plater::priv::on_process_completed(wxCommandEvent &evt)
             this->update_sla_scene();
         break;
     }
+
+    if (canceled) {
+        if (wxGetApp().get_mode() == comSimple)
+            sidebar->set_btn_label(ActionButtonType::abReslice, "Slice now");
+        show_action_buttons(true);
+    }
+    else if (wxGetApp().get_mode() == comSimple)
+        show_action_buttons(false);
 }
 
 void Plater::priv::on_layer_editing_toggled(bool enable)
 {
     view3D->enable_layers_editing(enable);
-    if (enable && !view3D->is_layers_editing_enabled()) {
-        // Initialization of the OpenGL shaders failed. Disable the tool.
-        view3D->enable_toolbar_item("layersediting", false);
-    }
     view3D->set_as_dirty();
 }
 
@@ -2431,25 +2605,13 @@ void Plater::priv::on_action_split_volumes(SimpleEvent&)
 
 void Plater::priv::on_action_layersediting(SimpleEvent&)
 {
-    bool enable = !view3D->is_layers_editing_enabled();
-    view3D->enable_layers_editing(enable);
-    if (enable && !view3D->is_layers_editing_enabled())
-        view3D->enable_toolbar_item("layersediting", false);
+    view3D->enable_layers_editing(!view3D->is_layers_editing_enabled());
 }
 
 void Plater::priv::on_object_select(SimpleEvent& evt)
 {
     wxGetApp().obj_list()->update_selections();
     selection_changed();
-}
-
-void Plater::priv::on_viewport_changed(SimpleEvent& evt)
-{
-    wxObject* o = evt.GetEventObject();
-    if (o == preview->get_wxglcanvas())
-        preview->set_viewport_into_scene(view3D->get_canvas3d());
-    else if (o == view3D->get_wxglcanvas())
-        preview->set_viewport_from_scene(view3D->get_canvas3d());
 }
 
 void Plater::priv::on_right_click(Vec2dEvent& evt)
@@ -2463,6 +2625,32 @@ void Plater::priv::on_right_click(Vec2dEvent& evt)
                    &object_menu : &part_menu;
 
     sidebar->obj_list()->append_menu_item_settings(menu);
+
+    /* Remove/Prepend "increase/decrease instances" menu items according to the view mode.
+     * Suppress to show those items for a Simple mode
+     */
+    const MenuIdentifier id = printer_technology == ptSLA ? miObjectSLA : miObjectFFF;
+    if (wxGetApp().get_mode() == comSimple) {
+        if (menu->FindItem(_(L("Increase copies"))) != wxNOT_FOUND)
+        {
+            /* Detach an items from the menu, but don't delete them 
+             * so that they can be added back later
+             * (after switching to the Advanced/Expert mode)
+             */
+            menu->Remove(items_increase[id]);
+            menu->Remove(items_decrease[id]);
+            menu->Remove(items_set_number_of_copies[id]);
+        }
+    }
+    else {
+        if (menu->FindItem(_(L("Increase copies"))) == wxNOT_FOUND)
+        {
+            // Prepend items to the menu, if those aren't not there
+            menu->Prepend(items_set_number_of_copies[id]);
+            menu->Prepend(items_decrease[id]);
+            menu->Prepend(items_increase[id]);
+        }
+    }
 
     if (q != nullptr) {
 #ifdef __linux__
@@ -2500,6 +2688,10 @@ void Plater::priv::on_3dcanvas_mouse_dragging_finished(SimpleEvent&)
 
 bool Plater::priv::init_object_menu()
 {
+    items_increase.reserve(2);
+    items_decrease.reserve(2);
+    items_set_number_of_copies.reserve(2);
+
     init_common_menu(&object_menu);
     complit_init_object_menu();
 
@@ -2514,15 +2706,25 @@ bool Plater::priv::init_object_menu()
 
 bool Plater::priv::init_common_menu(wxMenu* menu, const bool is_part/* = false*/)
 {
-    wxMenuItem* item_delete = append_menu_item(menu, wxID_ANY, _(L("Delete")) + "\tDel", _(L("Remove the selected object")),
-        [this](wxCommandEvent&) { q->remove_selected(); }, "brick_delete.png");
-    if (!is_part){
+    wxMenuItem* item_delete = nullptr;
+    if (is_part) {
+        item_delete = append_menu_item(menu, wxID_ANY, _(L("Delete")) + "\tDel", _(L("Remove the selected object")),
+            [this](wxCommandEvent&) { q->remove_selected(); }, "brick_delete.png");
+    } else {
         wxMenuItem* item_increase = append_menu_item(menu, wxID_ANY, _(L("Increase copies")) + "\t+", _(L("Place one more copy of the selected object")),
             [this](wxCommandEvent&) { q->increase_instances(); }, "add.png");
         wxMenuItem* item_decrease = append_menu_item(menu, wxID_ANY, _(L("Decrease copies")) + "\t-", _(L("Remove one copy of the selected object")),
             [this](wxCommandEvent&) { q->decrease_instances(); }, "delete.png");
         wxMenuItem* item_set_number_of_copies = append_menu_item(menu, wxID_ANY, _(L("Set number of copies")) + dots, _(L("Change the number of copies of the selected object")),
             [this](wxCommandEvent&) { q->set_number_of_copies(); }, "textfield.png");
+
+        items_increase.push_back(item_increase);
+        items_decrease.push_back(item_decrease);
+        items_set_number_of_copies.push_back(item_set_number_of_copies);
+
+        // Delete menu was moved to be after +/- instace to make it more difficult to be selected by mistake.
+        item_delete = append_menu_item(menu, wxID_ANY, _(L("Delete")) + "\tDel", _(L("Remove the selected object")),
+            [this](wxCommandEvent&) { q->remove_selected(); }, "brick_delete.png");
 
         menu->AppendSeparator();
         wxMenuItem* item_instance_to_object = sidebar->obj_list()->append_menu_item_instance_to_object(menu);
@@ -2559,11 +2761,11 @@ bool Plater::priv::init_common_menu(wxMenu* menu, const bool is_part/* = false*/
 
     wxMenuItem* item_mirror = append_submenu(menu, mirror_menu, wxID_ANY, _(L("Mirror")), _(L("Mirror the selected object")));
 
-    // ui updates needs to be binded to the parent panel
+    // ui updates needs to be bound to the parent panel
     if (q != nullptr)
     {
         q->Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_mirror()); }, item_mirror->GetId());
-        q->Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_delete_object()); }, item_delete->GetId());
+        q->Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_delete()); }, item_delete->GetId());
     }
 
     return true;
@@ -2590,7 +2792,7 @@ bool Plater::priv::complit_init_object_menu()
     {
         q->Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_split()); }, item_split->GetId());
         q->Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_split()); }, item_split_objects->GetId());
-        q->Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_split()); }, item_split_volumes->GetId());
+        q->Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_split() && wxGetApp().get_mode() > comSimple); }, item_split_volumes->GetId());
     }
     return true;
 }
@@ -2636,11 +2838,11 @@ bool Plater::priv::complit_init_part_menu()
 
 void Plater::priv::init_view_toolbar()
 {
+#if !ENABLE_SVG_ICONS
     ItemsIconsTexture::Metadata icons_data;
     icons_data.filename = "view_toolbar.png";
     icons_data.icon_size = 64;
-    icons_data.icon_border_size = 0;
-    icons_data.icon_gap_size = 0;
+#endif // !ENABLE_SVG_ICONS
 
     BackgroundTexture::Metadata background_data;
     background_data.filename = "toolbar_background.png";
@@ -2649,7 +2851,11 @@ void Plater::priv::init_view_toolbar()
     background_data.right = 16;
     background_data.bottom = 16;
 
+#if ENABLE_SVG_ICONS
+    if (!view_toolbar.init(background_data))
+#else
     if (!view_toolbar.init(icons_data, background_data))
+#endif // ENABLE_SVG_ICONS
         return;
 
     view_toolbar.set_layout_orientation(GLToolbar::Layout::Bottom);
@@ -2659,68 +2865,35 @@ void Plater::priv::init_view_toolbar()
     GLToolbarItem::Data item;
 
     item.name = "3D";
+#if ENABLE_SVG_ICONS
+    item.icon_filename = "editor.svg";
+#endif // ENABLE_SVG_ICONS
     item.tooltip = GUI::L_str("3D editor view") + " [" + GUI::shortkey_ctrl_prefix() + "5]";
     item.sprite_id = 0;
-    item.action_event = EVT_GLVIEWTOOLBAR_3D;
+    item.action_callback = [this]() { if (this->q != nullptr) wxPostEvent(this->q, SimpleEvent(EVT_GLVIEWTOOLBAR_3D)); };
     item.is_toggable = false;
     if (!view_toolbar.add_item(item))
         return;
 
     item.name = "Preview";
+#if ENABLE_SVG_ICONS
+    item.icon_filename = "preview.svg";
+#endif // ENABLE_SVG_ICONS
     item.tooltip = GUI::L_str("Preview") + " [" + GUI::shortkey_ctrl_prefix() + "6]";
     item.sprite_id = 1;
-    item.action_event = EVT_GLVIEWTOOLBAR_PREVIEW;
+    item.action_callback = [this]() { if (this->q != nullptr) wxPostEvent(this->q, SimpleEvent(EVT_GLVIEWTOOLBAR_PREVIEW)); };
     item.is_toggable = false;
     if (!view_toolbar.add_item(item))
         return;
 
-    view_toolbar.enable_item("3D");
-    view_toolbar.enable_item("Preview");
-
     view_toolbar.select_item("3D");
     view_toolbar.set_enabled(true);
-
-    view3D->set_view_toolbar(&view_toolbar);
-    preview->set_view_toolbar(&view_toolbar);
-}
-
-bool Plater::priv::can_delete_object() const
-{
-    int obj_idx = get_selected_object_idx();
-    return (0 <= obj_idx) && (obj_idx < (int)model.objects.size());
-}
-
-bool Plater::priv::can_increase_instances() const
-{
-    int obj_idx = get_selected_object_idx();
-    return (0 <= obj_idx) && (obj_idx < (int)model.objects.size());
 }
 
 bool Plater::priv::can_set_instance_to_object() const
 {
     const int obj_idx = get_selected_object_idx();
     return (0 <= obj_idx) && (obj_idx < (int)model.objects.size()) && (model.objects[obj_idx]->instances.size() > 1);
-}
-
-bool Plater::priv::can_decrease_instances() const
-{
-    int obj_idx = get_selected_object_idx();
-    return (0 <= obj_idx) && (obj_idx < (int)model.objects.size()) && (model.objects[obj_idx]->instances.size() > 1);
-}
-
-bool Plater::priv::can_split_to_objects() const
-{
-    int obj_idx = get_selected_object_idx();
-    return (0 <= obj_idx) && (obj_idx < (int)model.objects.size()) && !model.objects[obj_idx]->is_multiparts();
-}
-
-bool Plater::priv::can_split_to_volumes() const
-{
-    if (printer_technology == ptSLA)
-        return false;
-//     int obj_idx = get_selected_object_idx();
-//     return (0 <= obj_idx) && (obj_idx < (int)model.objects.size()) && !model.objects[obj_idx]->is_multiparts();
-    return sidebar->obj_list()->is_splittable();
 }
 
 bool Plater::priv::can_split() const
@@ -2732,16 +2905,6 @@ bool Plater::priv::layers_height_allowed() const
 {
     int obj_idx = get_selected_object_idx();
     return (0 <= obj_idx) && (obj_idx < (int)model.objects.size()) && config->opt_bool("variable_layer_height") && view3D->is_layers_editing_allowed();
-}
-
-bool Plater::priv::can_delete_all() const
-{
-    return !model.objects.empty();
-}
-
-bool Plater::priv::can_arrange() const
-{
-    return !model.objects.empty() && !arranging.load();
 }
 
 bool Plater::priv::can_mirror() const
@@ -2759,13 +2922,83 @@ void Plater::priv::set_bed_shape(const Pointfs& shape)
     }
 }
 
+bool Plater::priv::can_delete() const
+{
+    return !get_selection().is_empty();
+}
+
+bool Plater::priv::can_delete_all() const
+{
+    return !model.objects.empty();
+}
+
+bool Plater::priv::can_increase_instances() const
+{
+    int obj_idx = get_selected_object_idx();
+    return (0 <= obj_idx) && (obj_idx < (int)model.objects.size());
+}
+
+bool Plater::priv::can_decrease_instances() const
+{
+    int obj_idx = get_selected_object_idx();
+    return (0 <= obj_idx) && (obj_idx < (int)model.objects.size()) && (model.objects[obj_idx]->instances.size() > 1);
+}
+
+bool Plater::priv::can_split_to_objects() const
+{
+    return can_split();
+}
+
+bool Plater::priv::can_split_to_volumes() const
+{
+    return (printer_technology != ptSLA) && can_split();
+}
+
+bool Plater::priv::can_arrange() const
+{
+    return !model.objects.empty() && !arranging.load();
+}
+
+bool Plater::priv::can_layers_editing() const
+{
+    return layers_height_allowed();
+}
+
 void Plater::priv::update_object_menu()
 {
     sidebar->obj_list()->append_menu_items_add_volume(&object_menu);
-#if ENABLE_MODE_AWARE_TOOLBAR_ITEMS
-    if (view3D != nullptr)
-        view3D->update_toolbar_items_visibility();
-#endif // ENABLE_MODE_AWARE_TOOLBAR_ITEMS
+}
+
+void Plater::priv::show_action_buttons(const bool is_ready_to_slice) const 
+{
+    wxWindowUpdateLocker noUpdater(sidebar);
+    const auto prin_host_opt = config->option<ConfigOptionString>("print_host");
+    const bool send_gcode_shown = prin_host_opt != nullptr && !prin_host_opt->value.empty();
+
+    // when a background processing is ON, export_btn and/or send_btn are showing 
+    if (wxGetApp().app_config->get("background_processing") == "1")
+    {
+        sidebar->show_reslice(false);
+        sidebar->show_export(true);
+        sidebar->show_send(send_gcode_shown);
+    }
+    else
+    {
+        sidebar->show_reslice(is_ready_to_slice);
+        sidebar->show_export(!is_ready_to_slice);
+        sidebar->show_send(send_gcode_shown && !is_ready_to_slice);
+    }
+    sidebar->Layout();
+}
+
+void Sidebar::set_btn_label(const ActionButtonType btn_type, const wxString& label) const
+{
+    switch (btn_type)
+    {
+        case ActionButtonType::abReslice:   p->btn_reslice->SetLabelText(label);        break;
+        case ActionButtonType::abExport:    p->btn_export_gcode->SetLabelText(label);   break;
+        case ActionButtonType::abSendGCode: p->btn_send_gcode->SetLabelText(label);     break;
+    }
 }
 
 // Plater / Public
@@ -3094,6 +3327,22 @@ void Plater::reslice()
     this->p->background_process.set_task(PrintBase::TaskParams());
     // Only restarts if the state is valid.
     this->p->restart_background_process(state | priv::UPDATE_BACKGROUND_PROCESS_FORCE_RESTART);
+
+    if ((state & priv::UPDATE_BACKGROUND_PROCESS_INVALID) != 0)
+        return;
+
+    if (p->background_process.running())
+    {
+        if (wxGetApp().get_mode() == comSimple)
+            p->sidebar->set_btn_label(ActionButtonType::abReslice, _(L("Slicing")) + dots);
+        else
+        {
+            p->sidebar->set_btn_label(ActionButtonType::abReslice, _(L("Slice now")));
+            p->show_action_buttons(false);
+        }
+    }
+    else if (!p->background_process.empty() && !p->background_process.idle())
+        p->show_action_buttons(true);
 }
 
 void Plater::reslice_SLA_supports(const ModelObject &object)
@@ -3144,7 +3393,7 @@ void Plater::send_gcode()
     }
     default_output_file = fs::path(Slic3r::fold_utf8_to_ascii(default_output_file.string()));
 
-    PrintHostSendDialog dlg(default_output_file);
+    PrintHostSendDialog dlg(default_output_file, upload_job.printhost->can_start_print());
     if (dlg.ShowModal() == wxID_OK) {
         upload_job.upload_data.upload_path = dlg.filename();
         upload_job.upload_data.start_print = dlg.start_print();
@@ -3157,8 +3406,10 @@ void Plater::on_extruders_change(int num_extruders)
 {
     auto& choices = sidebar().combos_filament();
 
+    if (num_extruders == choices.size())
+        return;
+
     wxWindowUpdateLocker noUpdates_scrolled_panel(&sidebar()/*.scrolled_panel()*/);
-//     sidebar().scrolled_panel()->Freeze();
 
     int i = choices.size();
     while ( i < num_extruders )
@@ -3198,14 +3449,10 @@ void Plater::on_config_change(const DynamicPrintConfig &config)
         } 
         else if(opt_key == "variable_layer_height") {
             if (p->config->opt_bool("variable_layer_height") != true) {
-                p->view3D->enable_toolbar_item("layersediting", false);
                 p->view3D->enable_layers_editing(false);
                 p->view3D->set_as_dirty();
             }
-            else if (p->view3D->is_layers_editing_allowed()) {
-                p->view3D->enable_toolbar_item("layersediting", true);
-            }
-        } 
+        }
         else if(opt_key == "extruder_colour") {
             update_scheduled = true;
             p->preview->set_number_extruders(p->config->option<ConfigOptionStrings>(opt_key)->values.size());
@@ -3216,9 +3463,6 @@ void Plater::on_config_change(const DynamicPrintConfig &config)
             // update to force bed selection(for texturing)
             bed_shape_changed = true;
             update_scheduled = true;
-        }
-        else if (opt_key == "host_type" && this->p->printer_technology == ptSLA) {
-            p->config->option<ConfigOptionEnum<PrintHostType>>(opt_key)->value = htSL1;
         }
     }
 
@@ -3295,6 +3539,9 @@ void Plater::set_printer_technology(PrinterTechnology printer_technology)
     }
     //FIXME for SLA synchronize 
     //p->background_process.apply(Model)!
+
+    p->label_btn_export = printer_technology == ptFFF ? L("Export G-code") : L("Export");
+    p->label_btn_send   = printer_technology == ptFFF ? L("Send G-code")   : L("Send to printer");
 }
 
 void Plater::changed_object(int obj_idx)
@@ -3325,5 +3572,14 @@ void Plater::changed_object(int obj_idx)
 void Plater::fix_through_netfabb(const int obj_idx, const int vol_idx/* = -1*/) { p->fix_through_netfabb(obj_idx, vol_idx); }
 
 void Plater::update_object_menu() { p->update_object_menu(); }
+
+bool Plater::can_delete() const { return p->can_delete(); }
+bool Plater::can_delete_all() const { return p->can_delete_all(); }
+bool Plater::can_increase_instances() const { return p->can_increase_instances(); }
+bool Plater::can_decrease_instances() const { return p->can_decrease_instances(); }
+bool Plater::can_split_to_objects() const { return p->can_split_to_objects(); }
+bool Plater::can_split_to_volumes() const { return p->can_split_to_volumes(); }
+bool Plater::can_arrange() const { return p->can_arrange(); }
+bool Plater::can_layers_editing() const { return p->can_layers_editing(); }
 
 }}    // namespace Slic3r::GUI

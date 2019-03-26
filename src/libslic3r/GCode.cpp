@@ -1,3 +1,4 @@
+#include "libslic3r.h"
 #include "GCode.hpp"
 #include "ExtrusionEntity.hpp"
 #include "EdgeGrid.hpp"
@@ -486,7 +487,7 @@ void GCode::do_export(Print *print, const char *path, GCodePreviewData *preview_
     // starts analyzer calculations
     if (m_enable_analyzer) {
         BOOST_LOG_TRIVIAL(debug) << "Preparing G-code preview data";
-        m_analyzer.calc_gcode_preview_data(*preview_data);
+        m_analyzer.calc_gcode_preview_data(*preview_data, [print]() { print->throw_if_canceled(); });
         m_analyzer.reset();
     }
 
@@ -573,6 +574,16 @@ void GCode::_do_export(Print &print, FILE *file)
 
     // resets analyzer
     m_analyzer.reset();
+
+    // send extruder offset data to analyzer
+    GCodeAnalyzer::ExtruderOffsetsMap extruder_offsets;
+    for (unsigned int extruder_id : print.extruders())
+    {
+        Vec2d offset = print.config().extruder_offset.get_at(extruder_id);
+        if (!offset.isApprox(Vec2d::Zero()))
+            extruder_offsets[extruder_id] = offset;
+    }
+    m_analyzer.set_extruder_offsets(extruder_offsets);
 
     // resets analyzer's tracking data
     m_last_mm3_per_mm = GCodeAnalyzer::Default_mm3_per_mm;
@@ -860,7 +871,7 @@ void GCode::_do_export(Print &print, FILE *file)
             for (unsigned int extruder_id : print.extruders()) {
                 const Vec2d &extruder_offset = print.config().extruder_offset.get_at(extruder_id);
                 Polygon s(outer_skirt);
-                s.translate(Point::new_scale(- extruder_offset(0), - extruder_offset(1)));
+                s.translate(Point::new_scale(-extruder_offset(0), -extruder_offset(1)));
                 skirts.emplace_back(std::move(s));
             }
             m_ooze_prevention.enable = true;

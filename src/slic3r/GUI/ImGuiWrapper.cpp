@@ -107,11 +107,11 @@ bool ImGuiWrapper::update_mouse_data(wxMouseEvent& evt)
 
     ImGuiIO& io = ImGui::GetIO();
     io.MousePos = ImVec2((float)evt.GetX(), (float)evt.GetY());
-    io.MouseDown[0] = evt.LeftDown();
-    io.MouseDown[1] = evt.RightDown();
-    io.MouseDown[2] = evt.MiddleDown();
+    io.MouseDown[0] = evt.LeftIsDown();
+    io.MouseDown[1] = evt.RightIsDown();
+    io.MouseDown[2] = evt.MiddleIsDown();
 
-    unsigned buttons = (evt.LeftDown() ? 1 : 0) | (evt.RightDown() ? 2 : 0) | (evt.MiddleDown() ? 4 : 0);
+    unsigned buttons = (evt.LeftIsDown() ? 1 : 0) | (evt.RightIsDown() ? 2 : 0) | (evt.MiddleIsDown() ? 4 : 0);
     m_mouse_buttons = buttons;
 
     new_frame();
@@ -239,32 +239,44 @@ bool ImGuiWrapper::checkbox(const wxString &label, bool &value)
     return ImGui::Checkbox(label_utf8.c_str(), &value);
 }
 
-void ImGuiWrapper::text(const wxString &label)
+void ImGuiWrapper::text(const char *label)
 {
-    auto label_utf8 = into_u8(label);
-    ImGui::Text(label_utf8.c_str(), NULL);
+    ImGui::Text(label, NULL);
 }
 
-
-bool ImGuiWrapper::combo(const wxString& label, const std::vector<wxString>& options, wxString& selection)
+void ImGuiWrapper::text(const std::string &label)
 {
-    std::string selection_u8 = into_u8(selection);
+    this->text(label.c_str());
+}
 
+void ImGuiWrapper::text(const wxString &label)
+{
+    this->text(into_u8(label).c_str());
+}
+
+bool ImGuiWrapper::combo(const wxString& label, const std::vector<std::string>& options, int& selection)
+{
     // this is to force the label to the left of the widget:
     text(label);
     ImGui::SameLine();
-    
-    if (ImGui::BeginCombo("", selection_u8.c_str())) {
-        for (const wxString& option : options) {
-            std::string option_u8 = into_u8(option);
-            bool is_selected = (selection_u8.empty()) ? false : (option_u8 == selection_u8);
-            if (ImGui::Selectable(option_u8.c_str(), is_selected))
-                selection = option_u8;
+
+    int selection_out = -1;
+    bool res = false;
+
+    const char *selection_str = selection < options.size() ? options[selection].c_str() : "";
+    if (ImGui::BeginCombo("", selection_str)) {
+        for (int i = 0; i < options.size(); i++) {
+            if (ImGui::Selectable(options[i].c_str(), i == selection)) {
+                selection_out = i;
+            }
         }
+
         ImGui::EndCombo();
-        return true;
+        res = true;
     }
-    return false;
+
+    selection = selection_out;
+    return res;
 }
 
 void ImGuiWrapper::disabled_begin(bool disabled)
@@ -429,6 +441,10 @@ void ImGuiWrapper::init_style()
     set_color(ImGuiCol_Header, COL_ORANGE_DARK);
     set_color(ImGuiCol_HeaderHovered, COL_ORANGE_LIGHT);
     set_color(ImGuiCol_HeaderActive, COL_ORANGE_LIGHT);
+
+    // Slider
+    set_color(ImGuiCol_SliderGrab, COL_ORANGE_DARK);
+    set_color(ImGuiCol_SliderGrabActive, COL_ORANGE_LIGHT);
 }
 
 void ImGuiWrapper::render_draw_data(ImDrawData *draw_data)

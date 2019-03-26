@@ -249,6 +249,7 @@ GLVolume::GLVolume(float r, float g, float b, float a)
     , is_wipe_tower(false)
     , is_extrusion_path(false)
     , force_transparent(false)
+    , force_native_color(false)
     , tverts_range(0, size_t(-1))
     , qverts_range(0, size_t(-1))
 {
@@ -280,16 +281,20 @@ void GLVolume::set_render_color(const float* rgba, unsigned int size)
 
 void GLVolume::set_render_color()
 {
-    if (selected)
-        set_render_color(is_outside ? SELECTED_OUTSIDE_COLOR : SELECTED_COLOR, 4);
-    else if (hover)
-        set_render_color(HOVER_COLOR, 4);
-    else if (disabled)
-        set_render_color(DISABLED_COLOR, 4);
-    else if (is_outside && shader_outside_printer_detection_enabled)
-        set_render_color(OUTSIDE_COLOR, 4);
-    else
+    if (force_native_color)
         set_render_color(color, 4);
+    else {
+        if (selected)
+            set_render_color(is_outside ? SELECTED_OUTSIDE_COLOR : SELECTED_COLOR, 4);
+        else if (hover)
+            set_render_color(HOVER_COLOR, 4);
+        else if (disabled)
+            set_render_color(DISABLED_COLOR, 4);
+        else if (is_outside && shader_outside_printer_detection_enabled)
+            set_render_color(OUTSIDE_COLOR, 4);
+        else
+            set_render_color(color, 4);
+    }
 
     if (force_transparent)
         render_color[3] = color[3];
@@ -834,6 +839,8 @@ bool GLVolumeCollection::check_outside_state(const DynamicPrintConfig* config, M
     ModelInstance::EPrintVolumeState state = ModelInstance::PVS_Inside;
     bool all_contained = true;
 
+    bool contained_min_one = false;
+
     for (GLVolume* volume : this->volumes)
     {
         if ((volume == nullptr) || volume->is_modifier || (volume->is_wipe_tower && !volume->shader_outside_printer_detection_enabled) || ((volume->composite_id.volume_id < 0) && !volume->shader_outside_printer_detection_enabled))
@@ -842,6 +849,9 @@ bool GLVolumeCollection::check_outside_state(const DynamicPrintConfig* config, M
         const BoundingBoxf3& bb = volume->transformed_convex_hull_bounding_box();
         bool contained = print_volume.contains(bb);
         all_contained &= contained;
+
+        if (contained)
+            contained_min_one = true;
 
         volume->is_outside = !contained;
 
@@ -855,7 +865,7 @@ bool GLVolumeCollection::check_outside_state(const DynamicPrintConfig* config, M
     if (out_state != nullptr)
         *out_state = state;
 
-    return all_contained;
+    return /*all_contained*/ contained_min_one; // #ys_FIXME_delete_after_testing
 }
 
 void GLVolumeCollection::reset_outside_state()
@@ -1998,9 +2008,9 @@ std::string _3DScene::get_gl_info(bool format_as_html, bool extensions)
     return s_canvas_mgr.get_gl_info(format_as_html, extensions);
 }
 
-bool _3DScene::add_canvas(wxGLCanvas* canvas)
+bool _3DScene::add_canvas(wxGLCanvas* canvas, GUI::Bed3D& bed, GUI::Camera& camera, GUI::GLToolbar& view_toolbar)
 {
-    return s_canvas_mgr.add(canvas);
+    return s_canvas_mgr.add(canvas, bed, camera, view_toolbar);
 }
 
 bool _3DScene::remove_canvas(wxGLCanvas* canvas)

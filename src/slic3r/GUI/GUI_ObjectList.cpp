@@ -10,6 +10,7 @@
 #include "libslic3r/Model.hpp"
 #include "LambdaObjectDialog.hpp"
 #include "GLCanvas3D.hpp"
+#include "Selection.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include "slic3r/Utils/FixModelByWin10.hpp"
@@ -37,6 +38,22 @@ FreqSettingsBundle FREQ_SETTINGS_BUNDLE_SLA =
 {
     { L("Pad and Support")      , { "supports_enable", "pad_enable" } }
 };
+
+static PrinterTechnology printer_technology()
+{
+    return wxGetApp().preset_bundle->printers.get_selected_preset().printer_technology();
+}
+
+// Config from current edited printer preset
+static DynamicPrintConfig& printer_config()
+{
+    return wxGetApp().preset_bundle->printers.get_edited_preset().config;
+}
+
+static int extruders_count()
+{
+    return wxGetApp().extruders_cnt();
+}
 
 ObjectList::ObjectList(wxWindow* parent) :
     wxDataViewCtrl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_MULTIPLE),
@@ -78,7 +95,7 @@ ObjectList::ObjectList(wxWindow* parent) :
 #endif //__WXMSW__        
     });
 
-//     Bind(wxEVT_CHAR, [this](wxKeyEvent& event) { key_event(event); }); // doesn't work on OSX
+    Bind(wxEVT_CHAR, [this](wxKeyEvent& event) { key_event(event); }); // doesn't work on OSX
 
 #ifdef __WXMSW__
     GetMainWindow()->Bind(wxEVT_MOTION, [this](wxMouseEvent& event) {
@@ -110,10 +127,7 @@ ObjectList::~ObjectList()
 
 void ObjectList::create_objects_ctrl()
 {
-    // temporary workaround for the correct behavior of the Scrolled sidebar panel:
-    // 1. set a height of the list to some big value 
-    // 2. change it to the normal min value (200) after first whole App updating/layouting
-    SetMinSize(wxSize(-1, 3000));   // #ys_FIXME 
+    SetMinSize(wxSize(-1, 15 * wxGetApp().em_unit()));
 
     m_sizer = new wxBoxSizer(wxVERTICAL);
     m_sizer->Add(this, 1, wxGROW);
@@ -259,7 +273,7 @@ void ObjectList::update_extruder_values_for_items(const int max_extruder)
 void ObjectList::update_objects_list_extruder_column(int extruders_count)
 {
     if (!this) return; // #ys_FIXME
-    if (wxGetApp().preset_bundle->printers.get_selected_preset().printer_technology() == ptSLA)
+    if (printer_technology() == ptSLA)
         extruders_count = 1;
 
     wxDataViewChoiceRenderer* ch_render = dynamic_cast<wxDataViewChoiceRenderer*>(GetColumn(1)->GetRenderer());
@@ -376,7 +390,8 @@ void ObjectList::selection_changed()
     fix_multiselection_conflicts();
 
     // update object selection on Plater
-    update_selections_on_canvas();
+    if (!m_prevent_canvas_selection_update)
+        update_selections_on_canvas();
 
     // to update the toolbar and info sizer
     if (!GetSelection() || m_objects_model->GetItemType(GetSelection()) == itObject) {
@@ -424,11 +439,10 @@ void ObjectList::OnContextMenu(wxDataViewEvent&)
     else if (title == _("Name") && pt.x >15 &&
              m_objects_model->GetBitmap(item).GetRefData() == m_bmp_manifold_warning.GetRefData())
     {
-        if (is_windows10()) {
-            const auto obj_idx = m_objects_model->GetIdByItem(m_objects_model->GetTopParent(item));
-            wxGetApp().plater()->fix_through_netfabb(obj_idx);
-        }
+        if (is_windows10())
+            fix_through_netfabb();
     }
+
 #ifndef __WXMSW__
     GetMainWindow()->SetToolTip(""); // hide tooltip
 #endif //__WXMSW__
@@ -436,9 +450,13 @@ void ObjectList::OnContextMenu(wxDataViewEvent&)
 
 void ObjectList::show_context_menu()
 {
-    if (multiple_selection() && selected_instances_of_same_object())
+    if (multiple_selection())
     {
-        wxGetApp().plater()->PopupMenu(&m_menu_instance);
+        if (selected_instances_of_same_object())
+            wxGetApp().plater()->PopupMenu(&m_menu_instance);
+        else
+            show_multi_selection_menu();
+
         return;
     }
 
@@ -451,7 +469,7 @@ void ObjectList::show_context_menu()
 
         wxMenu* menu = type & itInstance ? &m_menu_instance :
                        m_objects_model->GetParent(item) != wxDataViewItem(0) ? &m_menu_part :
-                       wxGetApp().plater()->printer_technology() == ptFFF ? &m_menu_object : &m_menu_sla_object;
+                       printer_technology() == ptFFF ? &m_menu_object : &m_menu_sla_object;
 
         if (!(type & itInstance))
             append_menu_item_settings(menu);
@@ -596,7 +614,7 @@ void ObjectList::OnDrop(wxDataViewEvent &event)
 
 std::vector<std::string> ObjectList::get_options(const bool is_part)
 {
-    if (wxGetApp().plater()->printer_technology() == ptSLA) {
+    if (printer_technology() == ptSLA) {
         SLAPrintObjectConfig full_sla_config;
         auto options = full_sla_config.keys();
         options.erase(find(options.begin(), options.end(), "layer_height"));
@@ -615,7 +633,7 @@ std::vector<std::string> ObjectList::get_options(const bool is_part)
     
 const std::vector<std::string>& ObjectList::get_options_for_bundle(const wxString& bundle_name)
 {
-    const FreqSettingsBundle& bundle = wxGetApp().plater()->printer_technology() == ptSLA ? 
+    const FreqSettingsBundle& bundle = printer_technology() == ptSLA ? 
                                        FREQ_SETTINGS_BUNDLE_SLA : FREQ_SETTINGS_BUNDLE_FFF;
 
     for (auto& it : bundle)
@@ -625,7 +643,7 @@ const std::vector<std::string>& ObjectList::get_options_for_bundle(const wxStrin
     }
 #if 0
     // if "Quick menu" is selected
-    FreqSettingsBundle& bundle_quick = wxGetApp().plater()->printer_technology() == ptSLA ?
+    FreqSettingsBundle& bundle_quick = printer_technology() == ptSLA ?
                                        m_freq_settings_sla: m_freq_settings_fff;
 
     for (auto& it : bundle_quick)
@@ -643,8 +661,7 @@ void ObjectList::get_options_menu(settings_menu_hierarchy& settings_menu, const 
 {
     auto options = get_options(is_part);
 
-    auto extruders_cnt = wxGetApp().preset_bundle->printers.get_selected_preset().printer_technology() == ptSLA ? 1 :
-        wxGetApp().preset_bundle->printers.get_edited_preset().config.option<ConfigOptionFloats>("nozzle_diameter")->values.size();
+    const int extruders_cnt = extruders_count();
 
     DynamicPrintConfig config;
     for (auto& option : options)
@@ -654,9 +671,7 @@ void ObjectList::get_options_menu(settings_menu_hierarchy& settings_menu, const 
         if (category.empty() ||
             (category == "Extruders" && extruders_cnt == 1)) continue;
 
-        const std::string& label = opt->label.empty() ? opt->full_label : 
-                                   opt->full_label.empty() ? opt->label :
-                                   opt->full_label;
+        const std::string& label = !opt->full_label.empty() ? opt->full_label : opt->label;
         std::pair<std::string, std::string> option_label(option, label);
         std::vector< std::pair<std::string, std::string> > new_category;
         auto& cat_opt_label = settings_menu.find(category) == settings_menu.end() ? new_category : settings_menu.at(category);
@@ -704,7 +719,7 @@ void ObjectList::get_settings_choice(const wxString& category_name)
     if (selection_cnt > 0) 
     {
         // Add selected items to the "Quick menu"
-        FreqSettingsBundle& freq_settings = wxGetApp().plater()->printer_technology() == ptSLA ?
+        FreqSettingsBundle& freq_settings = printer_technology() == ptSLA ?
                                             m_freq_settings_sla : m_freq_settings_fff;
         bool changed_existing = false;
 
@@ -750,7 +765,9 @@ void ObjectList::get_settings_choice(const wxString& category_name)
     for (auto sel : selections)
         selected_options.push_back((*settings_list)[sel].first);
 
-    const DynamicPrintConfig& from_config = wxGetApp().preset_bundle->prints.get_edited_preset().config;
+    const DynamicPrintConfig& from_config = printer_technology() == ptFFF ? 
+                                            wxGetApp().preset_bundle->prints.get_edited_preset().config : 
+                                            wxGetApp().preset_bundle->sla_prints.get_edited_preset().config;
 
     for (auto& setting : (*settings_list))
     {
@@ -852,7 +869,7 @@ void ObjectList::append_menu_items_add_volume(wxMenu* menu)
 
     const ConfigOptionMode mode = wxGetApp().get_mode();
 
-    if (mode < comExpert)
+    if (mode == comAdvanced)
     {
         append_menu_item(menu, wxID_ANY, _(L("Add part")), "",
 			[this](wxCommandEvent&) { load_subobject(ModelVolumeType::MODEL_PART); }, *m_bmp_vector[int(ModelVolumeType::MODEL_PART)]);
@@ -932,7 +949,9 @@ wxMenuItem* ObjectList::append_menu_item_settings(wxMenu* menu_)
 
     // Create new items for settings popupmenu
 
-    menu->m_separator_frst = menu->AppendSeparator();
+    if (printer_technology() == ptFFF ||
+        menu->GetMenuItems().size() > 0 && !menu->GetMenuItems().back()->IsSeparator())
+        menu->m_separator_frst = menu->AppendSeparator();
 
     // Add frequently settings
     create_freq_settings_popupmenu(menu);
@@ -968,10 +987,14 @@ wxMenuItem* ObjectList::append_menu_item_instance_to_object(wxMenu* menu)
         [this](wxCommandEvent&) { split_instances(); }, "", menu);
 }
 
-void ObjectList::append_menu_item_rename(wxMenu* menu)
+void ObjectList::append_menu_items_osx(wxMenu* menu)
 {
+    append_menu_item(menu, wxID_ANY, _(L("Delete item")), "",
+        [this](wxCommandEvent&) { remove(); }, "", menu);
+    
     append_menu_item(menu, wxID_ANY, _(L("Rename")), "",
         [this](wxCommandEvent&) { rename_item(); }, "", menu);
+    
     menu->AppendSeparator();
 }
 
@@ -984,12 +1007,20 @@ void ObjectList::append_menu_item_fix_through_netfabb(wxMenu* menu)
     menu->AppendSeparator();
 }
 
+void ObjectList::append_menu_item_export_stl(wxMenu* menu) const 
+{
+    append_menu_item(menu, wxID_ANY, _(L("Export object as STL")) + dots, "",
+        [](wxCommandEvent&) { wxGetApp().plater()->export_stl(true); }, "", menu);
+    menu->AppendSeparator();
+}
+
 void ObjectList::create_object_popupmenu(wxMenu *menu)
 {
 #ifdef __WXOSX__  
-    append_menu_item_rename(menu);
+    append_menu_items_osx(menu);
 #endif // __WXOSX__
 
+    append_menu_item_export_stl(menu);
     append_menu_item_fix_through_netfabb(menu);
 
     // Split object to parts
@@ -1007,9 +1038,10 @@ void ObjectList::create_object_popupmenu(wxMenu *menu)
 void ObjectList::create_sla_object_popupmenu(wxMenu *menu)
 {
 #ifdef __WXOSX__  
-    append_menu_item_rename(menu);
+    append_menu_items_osx(menu);
 #endif // __WXOSX__
-    
+
+    append_menu_item_export_stl(menu);
     append_menu_item_fix_through_netfabb(menu);
     // rest of a object_sla_menu will be added later in:
     // - append_menu_item_settings() -> for "Add (settings)"
@@ -1018,7 +1050,7 @@ void ObjectList::create_sla_object_popupmenu(wxMenu *menu)
 void ObjectList::create_part_popupmenu(wxMenu *menu)
 {
 #ifdef __WXOSX__  
-    append_menu_item_rename(menu);
+    append_menu_items_osx(menu);
 #endif // __WXOSX__
 
     append_menu_item_fix_through_netfabb(menu);
@@ -1064,11 +1096,10 @@ wxMenu* ObjectList::create_settings_popupmenu(wxMenu *parent_menu)
 void ObjectList::create_freq_settings_popupmenu(wxMenu *menu)
 {
     // Add default settings bundles
-    const FreqSettingsBundle& bundle = wxGetApp().plater()->printer_technology() == ptFFF ?
+    const FreqSettingsBundle& bundle = printer_technology() == ptFFF ?
                                      FREQ_SETTINGS_BUNDLE_FFF : FREQ_SETTINGS_BUNDLE_SLA;
 
-    auto extruders_cnt = wxGetApp().preset_bundle->printers.get_selected_preset().printer_technology() == ptSLA ? 1 :
-                         wxGetApp().preset_bundle->printers.get_edited_preset().config.option<ConfigOptionFloats>("nozzle_diameter")->values.size();
+    const int extruders_cnt = extruders_count();
 
     for (auto& it : bundle) {
         if (it.first.empty() || it.first == "Extruders" && extruders_cnt == 1) 
@@ -1080,7 +1111,7 @@ void ObjectList::create_freq_settings_popupmenu(wxMenu *menu)
     }
 #if 0
     // Add "Quick" settings bundles
-    const FreqSettingsBundle& bundle_quick = wxGetApp().plater()->printer_technology() == ptFFF ?
+    const FreqSettingsBundle& bundle_quick = printer_technology() == ptFFF ?
                                              m_freq_settings_fff : m_freq_settings_sla;
 
     for (auto& it : bundle_quick) {
@@ -1246,10 +1277,13 @@ void ObjectList::load_generic_subobject(const std::string& type_name, const Mode
     if (obj_idx < 0) 
         return;
 
-    const GLCanvas3D::Selection& selection = wxGetApp().plater()->canvas3D()->get_selection();
+    const Selection& selection = wxGetApp().plater()->canvas3D()->get_selection();
     assert(obj_idx == selection.get_object_idx());
-    // Selected instance index in ModelObject. Only valid if there is only one instance selected in the selection.
-    int instance_idx = selection.get_instance_idx();
+
+    /** Any changes of the Object's composition is duplicated for all Object's Instances
+      * So, It's enough to take a bounding box of a first selected Instance and calculate Part(generic_subobject) position
+      */
+    int instance_idx = *selection.get_instance_idxs().begin();
     assert(instance_idx != -1);
     if (instance_idx == -1)
         return;
@@ -1262,7 +1296,7 @@ void ObjectList::load_generic_subobject(const std::string& type_name, const Mode
     const wxString name = _(L("Generic")) + "-" + _(type_name);
     TriangleMesh mesh;
 
-    auto& bed_shape = wxGetApp().preset_bundle->printers.get_edited_preset().config.option<ConfigOptionPoints>("bed_shape")->values;
+    auto& bed_shape = printer_config().option<ConfigOptionPoints>("bed_shape")->values;
     const auto& sz = BoundingBoxf(bed_shape).size();
     const auto side = 0.1 * std::max(sz(0), sz(1));
 
@@ -1390,12 +1424,14 @@ bool ObjectList::del_subobject_from_object(const int obj_idx, const int idx, con
 		// Cannot delete a wipe tower.
 		return false;
 
+    ModelObject* object = (*m_objects)[obj_idx];
+
     if (type == itVolume) {
-        const auto volume = (*m_objects)[obj_idx]->volumes[idx];
+        const auto volume = object->volumes[idx];
 
         // if user is deleting the last solid part, throw error
         int solid_cnt = 0;
-        for (auto vol : (*m_objects)[obj_idx]->volumes)
+        for (auto vol : object->volumes)
             if (vol->is_model_part())
                 ++solid_cnt;
         if (volume->is_model_part() && solid_cnt == 1) {
@@ -1403,14 +1439,23 @@ bool ObjectList::del_subobject_from_object(const int obj_idx, const int idx, con
             return false;
         }
 
-        (*m_objects)[obj_idx]->delete_volume(idx);
+        object->delete_volume(idx);
+
+        if (object->volumes.size() == 1)
+        {
+            const auto last_volume = object->volumes[0];
+            if (!last_volume->config.empty()) {
+                object->config.apply(last_volume->config);
+                last_volume->config.clear();
+            }
+        }
     }
     else if (type == itInstance) {
-        if ((*m_objects)[obj_idx]->instances.size() == 1) {
+        if (object->instances.size() == 1) {
             Slic3r::GUI::show_error(nullptr, _(L("You can't delete the last intance from object.")));
             return false;
         }
-        (*m_objects)[obj_idx]->delete_instance(idx);
+        object->delete_instance(idx);
     }
     else
         return false;
@@ -1430,7 +1475,7 @@ void ObjectList::split()
 
     ModelVolume* volume;
     if (!get_volume_by_item(item, volume)) return;
-    DynamicPrintConfig&	config = wxGetApp().preset_bundle->printers.get_edited_preset().config;
+    DynamicPrintConfig&	config = printer_config();
 	const ConfigOption *nozzle_dmtrs_opt = config.option("nozzle_diameter", false);
 	const auto nozzle_dmrs_cnt = (nozzle_dmtrs_opt == nullptr) ? size_t(1) : dynamic_cast<const ConfigOptionFloats*>(nozzle_dmtrs_opt)->values.size();
     if (volume->split(nozzle_dmrs_cnt) == 1) {
@@ -1500,12 +1545,7 @@ bool ObjectList::is_splittable()
     if (!get_volume_by_item(item, volume) || !volume)
         return false;
 
-	int splittable = volume->is_splittable();
-	if (splittable == -1) {
-		splittable = (int)volume->mesh.has_multiple_patches();
-		volume->set_splittable(splittable);
-	}
-    return splittable != 0;
+    return volume->is_splittable();
 }
 
 bool ObjectList::selected_instances_of_same_object()
@@ -1525,7 +1565,7 @@ bool ObjectList::selected_instances_of_same_object()
 
 bool ObjectList::can_split_instances()
 {
-    const GLCanvas3D::Selection& selection = wxGetApp().plater()->canvas3D()->get_selection();
+    const Selection& selection = wxGetApp().plater()->canvas3D()->get_selection();
     return selection.is_multiple_full_instance() || selection.is_single_full_instance();
 }
 
@@ -1740,6 +1780,12 @@ void ObjectList::delete_from_model_and_list(const std::vector<ItemForDelete>& it
             if (item->type&itVolume)
             {
                 m_objects_model->Delete(m_objects_model->GetItemByVolumeId(item->obj_idx, item->sub_obj_idx));
+                if ((*m_objects)[item->obj_idx]->volumes.size() == 1 && 
+                    (*m_objects)[item->obj_idx]->config.has("extruder"))
+                {
+                    const wxString extruder = wxString::Format("%d", (*m_objects)[item->obj_idx]->config.option<ConfigOptionInt>("extruder")->value);
+                    m_objects_model->SetValue(extruder, m_objects_model->GetItemById(item->obj_idx), 1);
+                }
                 wxGetApp().plater()->canvas3D()->ensure_on_bed(item->obj_idx);
             }
             else
@@ -1812,8 +1858,11 @@ void ObjectList::remove()
     {
         if (m_objects_model->GetParent(item) == wxDataViewItem(0))
             delete_from_model_and_list(itObject, m_objects_model->GetIdByItem(item), -1);
-        else
+        else {
+            if (sels.size() == 1)
+                select_item(m_objects_model->GetParent(item));
             del_subobject_item(item);
+        }
     }
 }
 
@@ -1829,7 +1878,7 @@ bool ObjectList::multiple_selection() const
 
 void ObjectList::update_selections()
 {
-    const GLCanvas3D::Selection& selection = wxGetApp().plater()->canvas3D()->get_selection();
+    const Selection& selection = wxGetApp().plater()->canvas3D()->get_selection();
     wxDataViewItemArray sels;
 
     // We doesn't update selection if SettingsItem for the current object/part is selected
@@ -1906,16 +1955,28 @@ void ObjectList::update_selections()
     
     select_items(sels);
 
+    /* Because of ScrollLines() and GetItemRect() functions are implemented 
+     * only for GENERIC DataViewCtrl in current version of wxWidgets,
+     * use this part of code only for MSW 
+     */
+#if defined(wxUSE_GENERICDATAVIEWCTRL)
+    // Scroll selected Item in the middle of an object list
     if (GetSelection()) {
-        const int sel_item_row = m_objects_model->GetRowByItem(GetSelection());
-        ScrollLines(sel_item_row - m_selected_row);
-        m_selected_row = sel_item_row;
+        const wxRect& sel_rc = GetItemRect(GetSelection());
+        const wxRect& main_rc = GetClientRect();
+        if (sel_rc.GetBottom() <= main_rc.GetTop()+sel_rc.height ||
+            sel_rc.GetTop() >= main_rc.GetBottom() )
+        {
+            const wxRect& top_rc = GetItemRect(GetTopItem());
+            ScrollLines(int((sel_rc.y - top_rc.y) / top_rc.GetHeight()) - 0.5*GetCountPerPage());
+        }
     }
+#endif
 }
 
 void ObjectList::update_selections_on_canvas()
 {
-    GLCanvas3D::Selection& selection = wxGetApp().plater()->canvas3D()->get_selection();
+    Selection& selection = wxGetApp().plater()->canvas3D()->get_selection();
 
     const int sel_cnt = GetSelectedItemsCount();
     if (sel_cnt == 0) {
@@ -1924,8 +1985,8 @@ void ObjectList::update_selections_on_canvas()
         return;
     }
 
-    auto add_to_selection = [this](const wxDataViewItem& item, GLCanvas3D::Selection& selection, bool as_single_selection)
-    {        
+    auto add_to_selection = [this](const wxDataViewItem& item, Selection& selection, bool as_single_selection)
+    {
         if (m_objects_model->GetParent(item) == wxDataViewItem(0)) {
             selection.add_object(m_objects_model->GetIdByItem(item), as_single_selection);
             return;
@@ -1966,6 +2027,8 @@ void ObjectList::update_selections_on_canvas()
 
 void ObjectList::select_item(const wxDataViewItem& item)
 {
+    if (! item.IsOk()) { return; }
+
     m_prevent_list_events = true;
 
     UnselectAll();
@@ -2129,14 +2192,28 @@ bool ObjectList::has_multi_part_objects()
 
 void ObjectList::update_settings_items()
 {
+    m_prevent_canvas_selection_update = true;
+    wxDataViewItemArray sel;
+    GetSelections(sel); // stash selection
+
     wxDataViewItemArray items;
     m_objects_model->GetChildren(wxDataViewItem(0), items);
 
     for (auto& item : items) {        
         const wxDataViewItem& settings_item = m_objects_model->GetSettingsItem(item);
         select_item(settings_item ? settings_item : m_objects_model->AddSettingsChild(item));
+
+        // If settings item was deleted from the list, 
+        // it's need to be deleted from selection array, if it was there
+        if (settings_item != m_objects_model->GetSettingsItem(item) && 
+            sel.Index(settings_item) != wxNOT_FOUND) {
+            sel.Remove(settings_item);
+        }
     }
-    UnselectAll();
+
+    // restore selection:
+    SetSelections(sel);
+    m_prevent_canvas_selection_update = false;
 }
 
 void ObjectList::update_object_menu()
@@ -2168,7 +2245,7 @@ void ObjectList::instances_to_separated_object(const int obj_idx, const std::set
 
 void ObjectList::split_instances()
 {
-    const GLCanvas3D::Selection& selection = wxGetApp().plater()->canvas3D()->get_selection();
+    const Selection& selection = wxGetApp().plater()->canvas3D()->get_selection();
     const int obj_idx = selection.get_object_idx();
     if (obj_idx == -1)
         return;
@@ -2232,13 +2309,37 @@ void ObjectList::fix_through_netfabb() const
     if (!item)
         return;
     
-    ItemType type = m_objects_model->GetItemType(item);
+    const ItemType type = m_objects_model->GetItemType(item);
+
+    const int obj_idx = type & itObject ? m_objects_model->GetIdByItem(item) :
+                        type & itVolume ? m_objects_model->GetIdByItem(m_objects_model->GetTopParent(item)) : -1;
+
+    const int vol_idx = type & itVolume ? m_objects_model->GetVolumeIdByItem(item) : -1;
+
+    wxGetApp().plater()->fix_through_netfabb(obj_idx, vol_idx);
     
-    if (type & itObject)
-        wxGetApp().plater()->fix_through_netfabb(m_objects_model->GetIdByItem(item));
-    else if (type & itVolume) 
-        wxGetApp().plater()->fix_through_netfabb(m_objects_model->GetIdByItem(m_objects_model->GetTopParent(item)),
-                                                 m_objects_model->GetVolumeIdByItem(item));    
+    update_item_error_icon(obj_idx, vol_idx);
+}
+
+void ObjectList::update_item_error_icon(const int obj_idx, const int vol_idx) const 
+{
+    const wxDataViewItem item = vol_idx <0 ? m_objects_model->GetItemById(obj_idx) :
+                                m_objects_model->GetItemByVolumeId(obj_idx, vol_idx);
+    if (!item)
+        return;
+
+    auto model_object = (*m_objects)[obj_idx];
+
+    const stl_stats& stats = model_object->volumes[vol_idx<0 ? 0 : vol_idx]->mesh.stl.stats;
+    const int errors = stats.degenerate_facets + stats.edges_fixed + stats.facets_removed +
+                       stats.facets_added + stats.facets_reversed + stats.backwards_edges;
+
+    if (errors == 0) {
+        // delete Error_icon if all errors are fixed
+        wxVariant variant;
+        variant << PrusaDataViewBitmapText(from_u8(model_object->name), wxNullBitmap);
+        m_objects_model->SetValue(variant, item, 0);
+    }
 }
 
 void ObjectList::ItemValueChanged(wxDataViewEvent &event)
@@ -2259,6 +2360,95 @@ void ObjectList::OnEditingDone(wxDataViewEvent &event)
     if (renderer->WasCanceled())
         show_error(this, _(L("The supplied name is not valid;")) + "\n" +
                          _(L("the following characters are not allowed:")) + " <>:/\\|?*\"");
+}
+
+void ObjectList::show_multi_selection_menu()
+{
+    wxDataViewItemArray sels;
+    GetSelections(sels);
+
+    for (const wxDataViewItem& item : sels)
+        if (!(m_objects_model->GetItemType(item) & (itVolume | itObject)))
+            // show this menu only for Object(s)/Volume(s) selection
+            return;
+
+    wxMenu* menu = new wxMenu();
+
+#ifdef __WXOSX__
+    append_menu_item(menu, wxID_ANY, _(L("Delete items")), "",
+        [this](wxCommandEvent&) { remove(); }, "", menu);
+#endif //__WXOSX__
+
+    if (extruders_count() > 1)
+        append_menu_item(menu, wxID_ANY, _(L("Set extruder for selected items")),
+            _(L("Select extruder number for selected objects and/or parts")),
+            [this](wxCommandEvent&) { extruder_selection(); }, "", menu);
+
+    PopupMenu(menu);
+}
+
+void ObjectList::extruder_selection()
+{
+    wxArrayString choices;
+    choices.Add("default");
+    for (int i = 1; i <= extruders_count(); ++i)
+        choices.Add(wxString::Format("%d", i));
+
+    const wxString& selected_extruder = wxGetSingleChoice(_(L("Select extruder number:")),
+                                                          _(L("This extruder will be set for selected items")),
+                                                          choices, 0, this);
+    if (selected_extruder.IsEmpty())
+        return;
+
+    const int extruder_num = selected_extruder == "default" ? 0 : atoi(selected_extruder.c_str());
+
+//          /* Another variant for an extruder selection */
+//     extruder_num = wxGetNumberFromUser(_(L("Attention!!! \n"
+//                                              "It's a possibile to set an extruder number \n"
+//                                              "for whole Object(s) and/or object Part(s), \n"
+//                                              "not for an Instance. ")), 
+//                                          _(L("Enter extruder number:")),
+//                                          _(L("This extruder will be set for selected items")), 
+//                                          1, 1, 5, this);
+
+    set_extruder_for_selected_items(extruder_num);
+}
+
+void ObjectList::set_extruder_for_selected_items(const int extruder) const 
+{
+    wxDataViewItemArray sels;
+    GetSelections(sels);
+
+    for (const wxDataViewItem& item : sels)
+    {
+        const ItemType type = m_objects_model->GetItemType(item);
+
+        const int obj_idx = type & itObject ? m_objects_model->GetIdByItem(item) :
+                            m_objects_model->GetIdByItem(m_objects_model->GetTopParent(item));
+
+        const int vol_idx = type & itVolume ? m_objects_model->GetVolumeIdByItem(item) : -1;
+
+        DynamicPrintConfig& config = type & itObject ? (*m_objects)[obj_idx]->config : 
+                                     (*m_objects)[obj_idx]->volumes[vol_idx]->config;
+        
+        if (config.has("extruder")) {
+            if (extruder == 0)
+                config.erase("extruder");
+            else
+                config.option<ConfigOptionInt>("extruder")->value = extruder;
+        }
+        else if (extruder > 0)
+            config.set_key_value("extruder", new ConfigOptionInt(extruder));
+
+        const wxString extruder_str = extruder == 0 ? wxString ("default") : 
+                                      wxString::Format("%d", config.option<ConfigOptionInt>("extruder")->value);
+        m_objects_model->SetValue(extruder_str, item, 1);
+
+        wxGetApp().plater()->canvas3D()->ensure_on_bed(obj_idx);
+    }
+
+    // update scene
+    wxGetApp().plater()->update();
 }
 
 } //namespace GUI
