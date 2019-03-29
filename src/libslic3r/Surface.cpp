@@ -95,13 +95,13 @@ BoundingBox get_extents(const SurfacesPtr &surfaces)
 const char* surface_type_to_color_name(const SurfaceType surface_type)
 {
     if ((surface_type & stPosTop) != 0) return "rgb(255,0,0)"; // "red";
-    if (surface_type == stPosBottom | stDensSolid | stModBridge) return "rgb(0,0,255)"; // "blue";
+    if (surface_type == (stPosBottom | stDensSolid | stModBridge)) return "rgb(0,0,255)"; // "blue";
     if ((surface_type & stPosBottom) != 0) return "rgb(0,255,0)"; // "green";
-    if (surface_type == stPosInternal | stDensSolid | stModBridge) return "rgb(0,255,255)"; // cyan
-    if (surface_type == stPosInternal | stDensSolid | stModOverBridge) return "rgb(0,255,128)"; // green-cyan
-    if (surface_type == stPosInternal | stDensSolid) return "rgb(255,0,255)"; // magenta
-    if (surface_type == stPosInternal | stDensVoid) return "rgb(128,128,128)"; // gray
-    if (surface_type == stPosInternal | stDensSparse) return "rgb(255,255,128)"; // yellow 
+    if (surface_type == (stPosInternal | stDensSolid | stModBridge)) return "rgb(0,255,255)"; // cyan
+    if (surface_type == (stPosInternal | stDensSolid | stModOverBridge)) return "rgb(0,255,128)"; // green-cyan
+    if (surface_type == (stPosInternal | stDensSolid)) return "rgb(255,0,255)"; // magenta
+    if (surface_type == (stPosInternal | stDensVoid)) return "rgb(128,128,128)"; // gray
+    if (surface_type == (stPosInternal | stDensSparse)) return "rgb(255,255,128)"; // yellow 
     if ((surface_type & stPosPerimeter) != 0) return "rgb(128,0,0)"; // maroon
     return "rgb(64,64,64)"; //dark gray
 }

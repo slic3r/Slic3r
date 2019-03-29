@@ -417,7 +417,7 @@ void LayerRegion::trim_surfaces(const Polygons &trimming_polygons)
 {
 #ifndef NDEBUG
     for (const Surface &surface : this->slices.surfaces)
-        assert(surface.surface_type == stInternal);
+        assert(surface.surface_type == (stPosInternal | stDensSparse));
 #endif /* NDEBUG */
     this->slices.set(intersection_ex(to_polygons(std::move(this->slices.surfaces)), trimming_polygons, false), stPosInternal | stDensSparse);
 }
@@ -426,7 +426,7 @@ void LayerRegion::elephant_foot_compensation_step(const float elephant_foot_comp
 {
 #ifndef NDEBUG
     for (const Surface &surface : this->slices.surfaces)
-        assert(surface.surface_type == stInternal);
+        assert(surface.surface_type == (stPosInternal | stDensSparse));
 #endif /* NDEBUG */
     ExPolygons slices_expolygons = to_expolygons(std::move(this->slices.surfaces));
     Polygons   slices_polygons   = to_polygons(slices_expolygons);
