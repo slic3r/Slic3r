@@ -1320,10 +1320,10 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                 outer_end->extruder_id = -1;
             }*/
             //add paths into my_loop => after that all ref are wrong!
-            for (size_t i = travel_path_end.size() - 1; i >= 0; i--) {
+            for (size_t i = travel_path_end.size() - 1; i < travel_path_end.size(); i--) {
                 my_loop.paths.insert(my_loop.paths.begin() + nearest.idx_polyline_outter + child_paths_size + 1, travel_path_end[i]);
             }
-            for (size_t i = travel_path_begin.size() - 1; i >= 0; i--) {
+            for (size_t i = travel_path_begin.size() - 1; i < travel_path_begin.size(); i--) {
                 my_loop.paths.insert(my_loop.paths.begin() + nearest.idx_polyline_outter + 1, travel_path_begin[i]);
             }
         }
