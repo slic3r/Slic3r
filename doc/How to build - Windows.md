@@ -100,3 +100,8 @@ The dependency build will by default build _both_ the _Release_ and _Debug_ vari
 You can disable building of the debug variant by passing the `-DDEP_DEBUG=OFF` option to CMake, this will only produce a _Release_ build.
 
 Refer to the CMake scripts inside the `deps` directory to see which dependencies are built in what versions and how this is done.
+
+### building tests
+
+You must use vs 2015 or 2017, and convert the slic3r_test project to your version. Also, you have to add the "CRT SDK" to your windows 2017 installation (can be done via the VS intaller).
+

@@ -46,6 +46,15 @@ public:
     NoDefinitionException(const std::string &opt_key) :
         std::runtime_error(std::string("No definition exception: ") + opt_key) {}
 };
+// a bit more specific than a runtime_error
+class ConfigurationException : public std::runtime_error
+{
+public:
+    ConfigurationException() :
+        std::runtime_error("Configuration exception") {}
+    ConfigurationException(const std::string &opt_key) :
+        std::runtime_error(std::string("Configuration exception: ") + opt_key) {}
+};
 
 // Type of a configuration value.
 enum ConfigOptionType {
@@ -650,7 +659,7 @@ public:
 
     void set(const ConfigOption *rhs) override {
         if (rhs->type() != this->type())
-            throw std::runtime_error("ConfigOptionFloatOrPercent: Assigning an incompatible type");
+            throw ConfigurationException("ConfigOptionFloatOrPercent: Assigning an incompatible type");
         assert(dynamic_cast<const ConfigOptionFloatOrPercent*>(rhs));
         *this = *static_cast<const ConfigOptionFloatOrPercent*>(rhs);
     }

@@ -12,9 +12,9 @@ static inline float auto_extrusion_width(FlowRole role, float nozzle_diameter, f
     case frSupportMaterial:
     case frSupportMaterialInterface:
     case frTopSolidInfill:
-        return nozzle_diameter;
-    default:
     case frExternalPerimeter:
+        return 1.05f * nozzle_diameter;
+    default:
     case frPerimeter:
     case frSolidInfill:
     case frInfill:

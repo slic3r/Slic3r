@@ -342,8 +342,13 @@ void ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys 
 		if (other_opt == nullptr) {
             // The key was not found in the source config, therefore it will not be initialized!
 //			printf("Not found, therefore not initialized: %s\n", opt_key.c_str());
-		} else
-            my_opt->set(other_opt);
+        } else {
+            try {
+                my_opt->set(other_opt);
+            } catch (ConfigurationException e) {
+                throw ConfigurationException(std::string(e.what()) + ", when ConfigBase::apply_only on " + opt_key);
+            }
+        }
     }
 }
 

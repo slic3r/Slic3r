@@ -21,6 +21,8 @@ class CLI {
 public:
     int run(int argc, char **argv);
 
+    DynamicPrintConfig& full_print_config() { return m_print_config; }
+
 private:
     DynamicPrintAndCLIConfig    m_config;
     DynamicPrintConfig			m_print_config;

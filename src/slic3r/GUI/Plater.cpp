@@ -3272,11 +3272,11 @@ void Plater::export_amf()
     if (! dialog) { return; }
 
     const wxString path = dialog->GetPath();
-    const std::string path_u8 = into_u8(path);
+    std::string path_u8 = into_u8(path);
 
-	DynamicPrintConfig cfg = wxGetApp().preset_bundle->full_config_secure();
+    DynamicPrintConfig cfg = wxGetApp().preset_bundle->full_config_secure();
     wxBusyCursor wait;
-	if (Slic3r::store_amf(path_u8.c_str(), &p->model, dialog->get_checkbox_value() ? &cfg : nullptr)) {
+    if (Slic3r::store_amf(path_u8, &p->model, dialog->get_checkbox_value() ? &cfg : nullptr)) {
         // Success
         p->statusbar()->set_status_text(wxString::Format(_(L("AMF file exported to %s")), path));
     } else {

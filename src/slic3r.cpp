@@ -555,7 +555,7 @@ bool CLI::setup(int argc, char **argv)
 void CLI::print_help(bool include_print_options, PrinterTechnology printer_technology) const 
 {
     boost::nowide::cout
-		<< "Slic3r Prusa Edition " << SLIC3R_BUILD << std::endl
+        << "Slic3r++ " << SLIC3R_BUILD << std::endl
         << "https://github.com/prusa3d/Slic3r" << std::endl << std::endl
         << "Usage: slic3r [ ACTIONS ] [ TRANSFORM ] [ OPTIONS ] [ file.stl ... ]" << std::endl
         << std::endl
@@ -586,10 +586,10 @@ void CLI::print_help(bool include_print_options, PrinterTechnology printer_techn
 bool CLI::export_models(IO::ExportFormat format)
 {
     for (Model &model : m_models) {
-        const std::string path = this->output_filepath(model, format);
+        std::string path = this->output_filepath(model, format);
         bool success = false;
         switch (format) {
-            case IO::AMF: success = Slic3r::store_amf(path.c_str(), &model, nullptr); break;
+            case IO::AMF: success = Slic3r::store_amf(path, &model, nullptr); break;
             case IO::OBJ: success = Slic3r::store_obj(path.c_str(), &model);          break;
 			case IO::STL: success = Slic3r::store_stl(path.c_str(), &model, true);    break;
 			case IO::TMF: success = Slic3r::store_3mf(path.c_str(), &model, nullptr); break;
