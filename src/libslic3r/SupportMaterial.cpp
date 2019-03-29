@@ -2676,6 +2676,23 @@ static std::string dbg_index_to_color(int idx)
 }
 #endif /* SLIC3R_DEBUG */
 
+class GetFirstPath : public ExtrusionVisitor {
+public:
+    const ExtrusionPath *extrusion_path_template = nullptr;
+    virtual void use(const ExtrusionPath &path) { extrusion_path_template = &path; }
+    virtual void use(const ExtrusionPath3D &path3D) { extrusion_path_template = &path3D; }
+    virtual void use(const ExtrusionMultiPath &multipath) { if (!multipath.paths.empty()) extrusion_path_template = &multipath.paths.front(); }
+    virtual void use(const ExtrusionMultiPath3D &multipath) { if (!multipath.paths.empty()) extrusion_path_template = &multipath.paths.front(); }
+    virtual void use(const ExtrusionLoop &loop) { if (!loop.paths.empty()) extrusion_path_template = &loop.paths.front(); }
+    virtual void use(const ExtrusionEntityCollection &collection) {
+        auto it = collection.entities.begin();
+        while (extrusion_path_template == nullptr && it != collection.entities.end()) {
+            (*it)->visit(*this);
+            ++it;
+        }
+    }
+};
+
 // When extruding a bottom interface layer over an object, the bottom interface layer is extruded in a thin air, therefore
 // it is being extruded with a bridging flow to not shrink excessively (the die swell effect).
 // Tiny extrusions are better avoided and it is always better to anchor the thread to an existing support structure if possible.
@@ -2697,7 +2714,9 @@ void modulate_extrusion_by_overlapping_layers(
     ExtrusionEntityCollection flatten_extrusions_in_out = extrusions_in_out.flatten();
 
     // Get the initial extrusion parameters.
-    ExtrusionPath *extrusion_path_template = dynamic_cast<ExtrusionPath*>(flatten_extrusions_in_out.entities.front());
+    GetFirstPath getFirstPathVisitor;
+    flatten_extrusions_in_out.entities.front()->visit(getFirstPathVisitor);
+    const ExtrusionPath *extrusion_path_template = getFirstPathVisitor.extrusion_path_template;
     assert(extrusion_path_template != nullptr);
     ExtrusionRole extrusion_role = extrusion_path_template->role();
     float         extrusion_width = extrusion_path_template->width;
@@ -2773,9 +2792,10 @@ void modulate_extrusion_by_overlapping_layers(
     {
         Polylines &polylines = path_fragments.back().polylines;
         for (ExtrusionEntitiesPtr::const_iterator it = flatten_extrusions_in_out.entities.begin(); it != flatten_extrusions_in_out.entities.end(); ++it) {
-            ExtrusionPath *path = dynamic_cast<ExtrusionPath*>(*it);
-            assert(path != nullptr);
-            polylines.emplace_back(Polyline(std::move(path->polyline)));
+            Polylines polylines_from_entity = (*it)->as_polylines();
+            for (Polyline &polyline : polylines_from_entity) {
+                polylines.emplace_back(std::move(polyline));
+            }
             path_ends.emplace_back(std::pair<Point, Point>(polylines.back().points.front(), polylines.back().points.back()));
         }
     }
