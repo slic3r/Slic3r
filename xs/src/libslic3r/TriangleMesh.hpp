@@ -63,7 +63,7 @@ class TriangleMesh
     bool is_manifold() const;
     void WriteOBJFile(const std::string &output_file) const;
 
-    void transform(const TransformationMatrix &trafo);
+    TriangleMesh transform(const TransformationMatrix &trafo);
 
     void scale(float factor);
     void scale(const Pointf3 &versor);
