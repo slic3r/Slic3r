@@ -280,7 +280,7 @@ TriangleMesh::WriteOBJFile(const std::string &output_file) const {
     #endif
 }
 
-TriangleMesh TriangleMesh::transform(const TransformationMatrix &trafo)
+TriangleMesh TriangleMesh::transform(const TransformationMatrix &trafo) const
 {
     TriangleMesh mesh = TriangleMesh::TriangleMesh();
     std::vector<float> trafo_arr = trafo.matrix3x4f();
