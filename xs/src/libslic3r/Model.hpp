@@ -7,6 +7,7 @@
 #include "Layer.hpp"
 #include "Point.hpp"
 #include "TriangleMesh.hpp"
+#include "TransformationMatrix.hpp"
 #include "LayerHeightSpline.hpp"
 #include <map>
 #include <string>
@@ -530,12 +531,12 @@ class ModelInstance
     friend class ModelObject;
     public:
     double rotation;            ///< Rotation around the Z axis, in radians around mesh center point.
-    double x_rotation;          ///< Rotation around the X axis, in radians around mesh center point. Specific to 3MF format.
-    double y_rotation;          ///< Rotation around the Y axis, in radians around mesh center point. Specific to 3MF format.
+//    double x_rotation;          ///< Rotation around the X axis, in radians around mesh center point. Specific to 3MF format.
+//    double y_rotation;          ///< Rotation around the Y axis, in radians around mesh center point. Specific to 3MF format.
     double scaling_factor;      ///< uniform scaling factor.
-    Pointf3 scaling_vector;     ///< scaling vector. Specific to 3MF format.
+//    Pointf3 scaling_vector;     ///< scaling vector. Specific to 3MF format.
     Pointf offset;              ///< offset in unscaled coordinates.
-    double z_translation;       ///< translation in z axis. Specific to 3MF format. It's not used anywhere in Slic3r except at writing/reading 3mf.
+//    double z_translation;       ///< translation in z axis. Specific to 3MF format. It's not used anywhere in Slic3r except at writing/reading 3mf.
 
     /// Get the owning ModelObject
     /// \return ModelObject* pointer to the owner ModelObject

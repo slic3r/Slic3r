@@ -1068,10 +1068,6 @@ ModelInstance::swap(ModelInstance &other)
 {
     std::swap(this->rotation,       other.rotation);
     std::swap(this->scaling_factor, other.scaling_factor);
-    std::swap(this->scaling_vector, other.scaling_vector);
-    std::swap(this->x_rotation, other.x_rotation);
-    std::swap(this->y_rotation, other.y_rotation);
-    std::swap(this->z_translation, other.z_translation);
     std::swap(this->offset,         other.offset);
 }
 
