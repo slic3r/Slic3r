@@ -203,6 +203,27 @@ void stl_transform(stl_file *stl, float *trafo3x4) {
   calculate_normals(stl);
 }
 
+void stl_transform(stl_file const *stl_src, stl_file *stl_dst, float const *trafo3x4) {
+  int i_face, i_vertex, i, j;
+  if (stl_src->error || stl_dst->error)
+    return;
+  stl_dst->stats.number_of_facets = stl_src->stats.number_of_facets;
+  stl_allocate(stl_dst);
+  for (i_face = 0; i_face < stl_src->stats.number_of_facets; ++ i_face) {
+    stl_vertex const *vertices_src = stl_src->facet_start[i_face].vertex;
+    stl_vertex *vertices_dst = stl_dst->facet_start[i_face].vertex;
+    for (i_vertex = 0; i_vertex < 3; ++ i_vertex) {
+      stl_vertex* v_dst = &vertices_dst[i_vertex];
+      stl_vertex const * v_src = &vertices_src[i_vertex];
+      v_dst->x = trafo3x4[0] * v_src->x + trafo3x4[1] * v_src->y + trafo3x4[2]  * v_src->z + trafo3x4[3];
+      v_dst->y = trafo3x4[4] * v_src->x + trafo3x4[5] * v_src->y + trafo3x4[6]  * v_src->z + trafo3x4[7];
+      v_dst->z = trafo3x4[8] * v_src->x + trafo3x4[9] * v_src->y + trafo3x4[10] * v_src->z + trafo3x4[11];
+    }
+  }
+  stl_get_size(stl_dst);
+  calculate_normals(stl_dst);
+}
+
 void
 stl_rotate_x(stl_file *stl, float angle) {
   int i;
