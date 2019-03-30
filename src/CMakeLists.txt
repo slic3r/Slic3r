@@ -303,6 +303,7 @@ set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/libslic3r/test_fill.cpp
     ${TESTDIR}/libslic3r/test_flow.cpp
     ${TESTDIR}/libslic3r/test_gcodewriter.cpp
+    ${TESTDIR}/libslic3r/test_gcode.cpp
     ${TESTDIR}/libslic3r/test_geometry.cpp
     ${TESTDIR}/libslic3r/test_log.cpp
     ${TESTDIR}/libslic3r/test_model.cpp
@@ -544,6 +545,7 @@ if (SLIC3R_BUILD_TESTS)
     endif()
     configure_file("${TESTDIR}/test_options.hpp.in" "${TESTDIR}/test_options.hpp")
     add_executable(slic3r_test ${SLIC3R_TEST_SOURCES}) 
+    target_compile_options(slic3r_test PUBLIC -DSLIC3R_TEST)
     add_test(NAME TestSlic3r COMMAND slic3r_test)
     target_compile_features(slic3r_test PUBLIC cxx_std_14)
     target_include_directories(slic3r_test PUBLIC cxx_std_14 ${SLIC3R_INCLUDES})
