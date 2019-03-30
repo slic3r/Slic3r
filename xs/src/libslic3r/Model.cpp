@@ -979,6 +979,7 @@ ModelVolume::ModelVolume(ModelObject* object, const TriangleMesh &mesh)
 ModelVolume::ModelVolume(ModelObject* object, const ModelVolume &other)
 :   name(other.name),
     mesh(other.mesh),
+    trafo(other.trafo),
     config(other.config),
     input_file(other.input_file),
     input_file_obj_idx(other.input_file_obj_idx),
@@ -1000,6 +1001,7 @@ ModelVolume::swap(ModelVolume &other)
 {
     std::swap(this->name,       other.name);
     std::swap(this->mesh,       other.mesh);
+    std::swap(this->trafo,      other.trafo);
     std::swap(this->config,     other.config);
     std::swap(this->modifier,   other.modifier);
 	
