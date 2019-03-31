@@ -25,6 +25,9 @@ if [ ! -e ./local-lib/lib/perl5/x86_64-linux-thread-multi/Wx.pm ]; then
     tar -C$TRAVIS_BUILD_DIR -xjf /tmp/local-lib-wx302.tar.bz2
 fi
 
+cpanm local::lib
+eval $(perl -Mlocal::lib=${TRAVIS_BUILD_DIR}/local-lib)
+CC=g++-8 CXX=g++-8 cpanm ExtUtils::CppGuess --force
 CC=g++-8 CXX=g++-8 BOOST_DIR=$HOME/boost_1_69_0 perl ./Build.PL
 excode=$?
 if [ $excode -ne 0 ]; then exit $excode; fi
