@@ -1407,14 +1407,15 @@ private:
 class StaticConfig : public virtual ConfigBase
 {
 public:
-    StaticConfig() {}
     /// Gets list of config option names for each config option of this->def, which has a static counter-part defined by the derived object
     /// and which could be resolved by this->optptr(key) call.
     t_config_option_keys keys() const;
 
-protected:
     /// Set all statically defined config options to their defaults defined by this->def().
+    /// used (only) by tests
     void set_defaults();
+protected:
+    StaticConfig() {}
 };
 
 }

@@ -727,13 +727,13 @@ public:
     ConfigOptionString              extrusion_axis;
     ConfigOptionFloats              extrusion_multiplier;
     ConfigOptionFloat               fan_speedup_time;
-    ConfigOptionFloats              filament_diameter;
-    ConfigOptionFloats              filament_density;
-    ConfigOptionStrings             filament_type;
-    ConfigOptionBools               filament_soluble;
     ConfigOptionFloats              filament_cost;
+    ConfigOptionFloats              filament_density;
+    ConfigOptionFloats              filament_diameter;
+    ConfigOptionBools               filament_soluble;
     ConfigOptionFloats              filament_max_volumetric_speed;
     ConfigOptionFloats              filament_max_wipe_tower_speed;
+    ConfigOptionStrings             filament_type;
     ConfigOptionFloats              filament_loading_speed;
     ConfigOptionFloats              filament_loading_speed_start;
     ConfigOptionFloats              filament_load_time;
@@ -767,8 +767,8 @@ public:
     ConfigOptionFloats              retract_restart_extra;
     ConfigOptionFloats              retract_restart_extra_toolchange;
     ConfigOptionFloats              retract_speed;
-    ConfigOptionString              start_gcode;
     ConfigOptionStrings             start_filament_gcode;
+    ConfigOptionString              start_gcode;
     ConfigOptionBool                single_extruder_multi_material;
     ConfigOptionBool                single_extruder_multi_material_priming;
     ConfigOptionString              toolchange_gcode;

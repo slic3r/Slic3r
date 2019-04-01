@@ -13,6 +13,7 @@ set(SLIC3R_TEST_SOURCES
 #    libslic3r/test_config.cpp # toredo
     libslic3r/test_fill.cpp
     libslic3r/test_flow.cpp
+    libslic3r/test_gcodewriter.cpp
 )
 
 if (NOT TARGET Catch)

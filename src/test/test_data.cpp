@@ -1,9 +1,9 @@
 #include "test_data.hpp"
-#include "../../libslic3r/TriangleMesh.hpp"
-#include "../../libslic3r/GCodeReader.hpp"
-#include "../../libslic3r/Config.hpp"
-#include "../../libslic3r/Print.hpp"
-#include "../../libslic3r/Point.hpp"
+#include "../libslic3r/TriangleMesh.hpp"
+#include "../libslic3r/GCodeReader.hpp"
+#include "../libslic3r/Config.hpp"
+#include "../libslic3r/Print.hpp"
+#include "../libslic3r/Point.hpp"
 #include <cstdlib>
 #include <string>
 #include <fstream>
@@ -292,7 +292,19 @@ void clean_file(const std::string& name, const std::string& ext, bool glob) {
     filename.append(".");
     filename.append(ext);
 
-    std::remove(testfile(filename).c_str());
+    bool file_exist = false;
+    {
+        std::ifstream f(testfile(filename));
+        file_exist = f.good();
+        f.close();
+    }
+    if (file_exist) std::remove(testfile(filename).c_str());
+    else {
+        std::ifstream f(filename);
+        file_exist = f.good();
+        f.close();
+        if (file_exist) std::remove(filename.c_str());
+    }
 }
 
 Slic3r::Model model(const std::string& model_name, TriangleMesh&& _mesh) {

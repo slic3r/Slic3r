@@ -1,16 +1,18 @@
 #include <catch.hpp>
 #include <memory>
 
-#include "GCodeWriter.hpp"
-#include "test_options.hpp"
+#include "../../libslic3r/GCodeWriter.hpp"
+#include "../test_options.hpp"
+//#include "../test_data.hpp" // get access to init_print, etc
 
 using namespace Slic3r;
 using namespace std::literals::string_literals;
 
+// can't understand what the test want to test: here we are overflowing the double capacity to break the lift logic...
 SCENARIO("lift() and unlift() behavior with large values of Z", "[!shouldfail]") {
     GIVEN("A config from a file and a single extruder.") {
         GCodeWriter writer;
-        auto& config {writer.config};
+        GCodeConfig& config {writer.config};
         config.set_defaults();
         config.load(std::string(testfile_dir) + "test_gcodewriter/config_lift_unlift.ini"s);
 
@@ -40,7 +42,7 @@ SCENARIO("lift() and unlift() behavior with large values of Z", "[!shouldfail]")
 SCENARIO("lift() is not ignored after unlift() at normal values of Z") {
     GIVEN("A config from a file and a single extruder.") {
         GCodeWriter writer;
-        auto& config {writer.config};
+        GCodeConfig& config {writer.config};
         config.set_defaults();
         config.load(std::string(testfile_dir) + "test_gcodewriter/config_lift_unlift.ini"s);
 

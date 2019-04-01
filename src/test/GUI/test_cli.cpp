@@ -2,12 +2,13 @@
 #include <fstream>
 #include <cstdio>
 
-#include "../test_options.hpp"
+#include "../test_data.hpp"
 
 #include "../../slic3r.hpp"
 #include "../../libslic3r/GCodeReader.hpp"
 
 using namespace Slic3r;
+using namespace Slic3r::Test;
 using namespace std::string_literals;
 
 bool file_exists(const std::string& name, const std::string& ext) {

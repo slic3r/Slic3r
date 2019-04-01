@@ -432,7 +432,8 @@ bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, con
     }
     
     ConfigOption *opt = this->option(opt_key, true);
-    assert(opt != nullptr);
+    if (opt == nullptr)
+        throw new UnknownOptionException(opt_key);
     return opt->deserialize(value, append);
 }
 
