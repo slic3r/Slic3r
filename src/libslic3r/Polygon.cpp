@@ -236,7 +236,7 @@ Points
 Polygon::concave_points(double angle) const
 {
     Points points;
-    angle = 2*PI - angle;
+    angle = 2*PI - angle + EPSILON;
     
     // check whether first point forms a concave angle
     if (this->points.front().ccw_angle(this->points.back(), *(this->points.begin()+1)) <= angle)
@@ -260,7 +260,7 @@ Points
 Polygon::convex_points(double angle) const
 {
     Points points;
-    angle = 2*PI - angle;
+    angle = 2*PI - angle - EPSILON;
     
     // check whether first point forms a convex angle
     if (this->points.front().ccw_angle(this->points.back(), *(this->points.begin()+1)) >= angle)

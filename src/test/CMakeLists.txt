@@ -14,6 +14,7 @@ set(SLIC3R_TEST_SOURCES
     libslic3r/test_fill.cpp
     libslic3r/test_flow.cpp
     libslic3r/test_gcodewriter.cpp
+    libslic3r/test_geometry.cpp
 )
 
 if (NOT TARGET Catch)

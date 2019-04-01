@@ -1,19 +1,19 @@
 
 #include <catch.hpp>
 
-#include "Point.hpp"
-#include "BoundingBox.hpp"
-#include "Polygon.hpp"
-#include "Polyline.hpp"
-#include "Line.hpp"
-#include "Geometry.hpp"
-#include "ClipperUtils.hpp"
+#include "../../libslic3r/Point.hpp"
+#include "../../libslic3r/BoundingBox.hpp"
+#include "../../libslic3r/Polygon.hpp"
+#include "../../libslic3r/Polyline.hpp"
+#include "../../libslic3r/Line.hpp"
+#include "../../libslic3r/Geometry.hpp"
+#include "../../libslic3r/ClipperUtils.hpp"
 
 using namespace Slic3r;
 
 TEST_CASE("Polygon::contains works properly", ""){
    // this test was failing on Windows (GH #1950)
-    auto polygon = Polygon(std::vector<Point>({
+    auto polygon = Polygon(Points({
         Point(207802834,-57084522),
         Point(196528149,-37556190),
         Point(173626821,-25420928),
@@ -155,34 +155,33 @@ TEST_CASE("Bounding boxes are scaled appropriately"){
 
 
 TEST_CASE("Offseting a line generates a polygon correctly"){
-    auto line = Line(Point(10,10), Point(20,10));
-    Polyline tmp(line);
+    Polyline tmp({ Point(10,10), Point(20,10) });
     Polygon area = offset(tmp,5).at(0);
     REQUIRE(area.area() == Polygon(std::vector<Point>({Point(10,5),Point(20,5),Point(20,15),Point(10,15)})).area());
 }
 
 SCENARIO("Circle Fit, TaubinFit with Newton's method") {
     GIVEN("A vector of Pointfs arranged in a half-circle with approximately the same distance R from some point") {
-        Pointf expected_center(-6, 0);
-        Pointfs sample {Pointf(6.0, 0), Pointf(5.1961524, 3), Pointf(3 ,5.1961524), Pointf(0, 6.0), Pointf(3, 5.1961524), Pointf(-5.1961524, 3), Pointf(-6.0, 0)};
-        std::transform(sample.begin(), sample.end(), sample.begin(), [expected_center] (const Pointf& a) { return a + expected_center;});
+        Vec2d expected_center(-6, 0);
+        Pointfs sample {Vec2d(6.0, 0), Vec2d(5.1961524, 3), Vec2d(3 ,5.1961524), Vec2d(0, 6.0), Vec2d(-3, 5.1961524), Vec2d(-5.1961524, 3), Vec2d(-6.0, 0)};
+        std::transform(sample.begin(), sample.end(), sample.begin(), [expected_center] (const Vec2d& a) { return a + expected_center;});
 
         WHEN("Circle fit is called on the entire array") {
-            Pointf result_center(0,0);
+            Vec2d result_center(0,0);
             result_center = Geometry::circle_taubin_newton(sample);
             THEN("A center point of -6,0 is returned.") {
                 REQUIRE(result_center == expected_center);
             }
         }
         WHEN("Circle fit is called on the first four points") {
-            Pointf result_center(0,0);
+            Vec2d result_center(0,0);
             result_center = Geometry::circle_taubin_newton(sample.cbegin(), sample.cbegin()+4);
             THEN("A center point of -6,0 is returned.") {
                 REQUIRE(result_center == expected_center);
             }
         }
         WHEN("Circle fit is called on the middle four points") {
-            Pointf result_center(0,0);
+            Vec2d result_center(0,0);
             result_center = Geometry::circle_taubin_newton(sample.cbegin()+2, sample.cbegin()+6);
             THEN("A center point of -6,0 is returned.") {
                 REQUIRE(result_center == expected_center);
@@ -190,30 +189,30 @@ SCENARIO("Circle Fit, TaubinFit with Newton's method") {
         }
     }
     GIVEN("A vector of Pointfs arranged in a half-circle with approximately the same distance R from some point") {
-        Pointf expected_center(-3, 9);
-        Pointfs sample {Pointf(6.0, 0), Pointf(5.1961524, 3), Pointf(3 ,5.1961524), 
-                        Pointf(0, 6.0), 
-                        Pointf(3, 5.1961524), Pointf(-5.1961524, 3), Pointf(-6.0, 0)};
+        Vec2d expected_center(-3, 9);
+        Pointfs sample {Vec2d(6.0, 0), Vec2d(5.1961524, 3), Vec2d(3 ,5.1961524), 
+                        Vec2d(0, 6.0), 
+                        Vec2d(3, 5.1961524), Vec2d(-5.1961524, 3), Vec2d(-6.0, 0)};
 
-        std::transform(sample.begin(), sample.end(), sample.begin(), [expected_center] (const Pointf& a) { return a + expected_center;});
+        std::transform(sample.begin(), sample.end(), sample.begin(), [expected_center] (const Vec2d& a) { return a + expected_center;});
 
 
         WHEN("Circle fit is called on the entire array") {
-            Pointf result_center(0,0);
+            Vec2d result_center(0,0);
             result_center = Geometry::circle_taubin_newton(sample);
             THEN("A center point of 3,9 is returned.") {
                 REQUIRE(result_center == expected_center);
             }
         }
         WHEN("Circle fit is called on the first four points") {
-            Pointf result_center(0,0);
+            Vec2d result_center(0,0);
             result_center = Geometry::circle_taubin_newton(sample.cbegin(), sample.cbegin()+4);
             THEN("A center point of 3,9 is returned.") {
                 REQUIRE(result_center == expected_center);
             }
         }
         WHEN("Circle fit is called on the middle four points") {
-            Pointf result_center(0,0);
+            Vec2d result_center(0,0);
             result_center = Geometry::circle_taubin_newton(sample.cbegin()+2, sample.cbegin()+6);
             THEN("A center point of 3,9 is returned.") {
                 REQUIRE(result_center == expected_center);
@@ -262,7 +261,7 @@ TEST_CASE("Chained path working correctly"){
     Geometry::chained_path(points,indices);
     for(Points::size_type i = 0; i < indices.size()-1;i++){
         double dist = points.at(indices.at(i)).distance_to(points.at(indices.at(i+1)));
-        REQUIRE(abs(dist-26) <= Geometry::epsilon);
+        REQUIRE(abs(dist-26) <= EPSILON);
     }
 }
 

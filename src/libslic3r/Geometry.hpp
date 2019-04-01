@@ -241,6 +241,17 @@ public:
     Transformation operator * (const Transformation& other) const;
 };
 
+//------------for tests------------//
+ 
+/// Find the center of the circle corresponding to the vector of Points as an arc.
+Point circle_taubin_newton(const Points& input, size_t cycles = 20);
+Point circle_taubin_newton(const Points::const_iterator& input_start, const Points::const_iterator& input_end, size_t cycles = 20);
+
+/// Find the center of the circle corresponding to the vector of Pointfs as an arc.
+Vec2d circle_taubin_newton(const Pointfs& input, size_t cycles = 20);
+Vec2d circle_taubin_newton(const Pointfs::const_iterator& input_start, const Pointfs::const_iterator& input_end, size_t cycles = 20);
+
+
 } }
 
 #endif
