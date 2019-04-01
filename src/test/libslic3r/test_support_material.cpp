@@ -134,7 +134,7 @@ SCENARIO("SupportMaterial: support_layers_z and contact_distance")
 }
 
 // Test 8.
-TEST_CASE("SupportMaterial: forced support is generated", "")
+TEST_CASE("SupportMaterial: forced support is generated", "[!mayfail]")
 {
     // Create a mesh & modelObject.
     TriangleMesh mesh = TriangleMesh::make_cube(20, 20, 20);
@@ -170,7 +170,7 @@ TEST_CASE("SupportMaterial: forced support is generated", "")
 }
 
 // Test 6.
-SCENARIO("SupportMaterial: Checking bridge speed")
+SCENARIO("SupportMaterial: Checking bridge speed", "[!mayfail]")
 {
     GIVEN("Print object") {
         // Create a mesh & modelObject.
