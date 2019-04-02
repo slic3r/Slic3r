@@ -2022,6 +2022,17 @@ std::vector<float> polygon_angles_at_vertices(const Polygon &polygon, const std:
 
 std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::string &description, double speed, std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid)
 {
+#if DEBUG_EXTRUSION_OUTPUT
+    std::cout << "extrude loop_" << (original_loop.polygon().is_counter_clockwise() ? "ccw" : "clw") << ": ";
+    for (const ExtrusionPath &path : original_loop.paths) {
+        std::cout << ", path{ ";
+        for (const Point &pt : path.polyline.points) {
+            std::cout << ", " << floor(100 * unscale<double>(pt.x())) / 100.0 << ":" << floor(100 * unscale<double>(pt.y())) / 100.0;
+        }
+        std::cout << "}";
+    }
+    std::cout << "\n";
+#endif
     // get a copy; don't modify the orientation of the original loop object otherwise
     // next copies (if any) would not detect the correct orientation
     ExtrusionLoop loop = original_loop;

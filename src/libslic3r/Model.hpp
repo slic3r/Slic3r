@@ -193,10 +193,10 @@ public:
     Model*                  get_model() { return m_model; };
 	const Model*            get_model() const { return m_model; };
 
-    ModelVolume*            add_volume(const TriangleMesh &mesh);
-    ModelVolume*            add_volume(TriangleMesh &&mesh);
-    ModelVolume*            add_volume(const ModelVolume &volume);
-    ModelVolume*            add_volume(const ModelVolume &volume, TriangleMesh &&mesh);
+    ModelVolume*            add_volume(const TriangleMesh &mesh, bool centered = true);
+    ModelVolume*            add_volume(TriangleMesh &&mesh, bool centered = true);
+    ModelVolume*            add_volume(const ModelVolume &volume, bool centered = true);
+    ModelVolume*            add_volume(const ModelVolume &volume, TriangleMesh &&mesh, bool centered = true);
     void                    delete_volume(size_t idx);
     void                    clear_volumes();
     bool                    is_multiparts() const { return volumes.size() > 1; }

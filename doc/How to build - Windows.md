@@ -89,7 +89,7 @@ Then `cd` into the `deps` directory and use these commands to build:
 You can also use the Visual Studio GUI or other generators as mentioned above.
 
 The `DESTDIR` option is the location where the bundle will be installed.
-This may be customized. If you leave it empty, the `DESTDIR` will be places inside the same `build` directory.
+This may be customized. If you leave it empty, the `DESTDIR` will be places inside the same `build` directory. For using your newly compile deps, use -DCMAKE_INSTALL_PREFIX=<path_of_build\destdir\usr\local> in your cmake command for slic3r.
 
 Warning: If the `build` directory is nested too deep inside other folders, various file paths during the build
 become too long and the build might fail due to file writing errors. For this reason, it is recommended to

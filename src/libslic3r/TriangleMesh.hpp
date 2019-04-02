@@ -77,6 +77,9 @@ public:
 
     stl_file stl;
     bool repaired;
+
+/// --- for tests  ----- ///
+    Pointf3s vertices();
     
 private:
     void require_shared_vertices();

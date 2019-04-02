@@ -42,8 +42,8 @@ SCENARIO("Extrusion width specifics", "[!mayfail]") {
             std::string gcode_filepath("");
             Slic3r::Test::gcode(gcode_filepath, print);
 			GCodeReader parser {Slic3r::GCodeReader()};
-            const auto layer_height { config->opt_float("layer_height") };
-            std::string gcode_from_file{ read_to_string(gcode_filepath) };
+            const double layer_height = config->opt_float("layer_height");
+            std::string gcode_from_file= read_to_string(gcode_filepath);
             parser.parse_buffer(gcode_from_file, [&E_per_mm_bottom, layer_height] (Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line)
             {
                 if (self.z() == Approx(layer_height).margin(0.01)) { // only consider first layer

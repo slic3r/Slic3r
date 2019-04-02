@@ -1,47 +1,55 @@
 #include <catch.hpp>
-#include "Model.hpp"
-#include "test_data.hpp" // get access to init_print, etc
+#include "../../libslic3r/Config.hpp"
+#include "../../libslic3r/Model.hpp"
+#include "../test_data.hpp" // get access to init_print, etc
 
+using namespace Slic3r;
 using namespace Slic3r::Test;
 
 SCENARIO("Model construction") {
     GIVEN("A Slic3r Model") {
-        auto model {Slic3r::Model()};
-        auto sample_mesh {Slic3r::TriangleMesh::make_cube(20,20,20)};
+        Model model;
+        TriangleMesh sample_mesh = make_cube(20,20,20);
         sample_mesh.repair();
         
-        auto config {Slic3r::Config::new_from_defaults()};
-        std::shared_ptr<Slic3r::Print> print = std::make_shared<Slic3r::Print>();
-        print->apply_config(config);
+        DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
+        Slic3r::Print print;
+        print.apply_config(*config);
+        //Slic3r::Test::init_print(print, { sample_mesh }, model, config);
 
         WHEN("Model object is added") {
-            ModelObject* mo {model.add_object()};
+            ModelObject* mo = model.add_object();
+            mo->name = "cube20";
             THEN("Model object list == 1") {
                 REQUIRE(model.objects.size() == 1);
             }
 
-            mo->add_volume(sample_mesh);
+            mo->add_volume(sample_mesh, false);
             THEN("Model volume list == 1") {
                 REQUIRE(mo->volumes.size() == 1);
             }
             THEN("Model volume modifier is false") {
-                REQUIRE(mo->volumes.front()->modifier == false);
+                REQUIRE(mo->volumes.front()->is_modifier() == false);
             }
             THEN("Mesh is equivalent to input mesh.") {
                 REQUIRE(sample_mesh.vertices() == mo->volumes.front()->mesh.vertices());
             }
-            ModelInstance* inst {mo->add_instance()};
-            inst->rotation = 0;
-            inst->scaling_factor = 1.0;
-            model.arrange_objects(print->config.min_object_distance());
-            model.center_instances_around_point(Slic3r::Pointf(100,100));
-            print->auto_assign_extruders(mo);
-            print->add_model_object(mo);
+            ModelInstance* inst = mo->add_instance();
+            inst->set_rotation(Vec3d(0,0,0));
+            inst->set_scaling_factor(Vec3d(1, 1, 1));
+            model.arrange_objects(print.config().min_object_distance());
+            model.center_instances_around_point(Slic3r::Vec2d(100,100));
+            print.auto_assign_extruders(mo);
+            //print.add_model_object(mo);
+            print.apply(model, *config);
+            print.validate();
             THEN("Print works?") {
-                print->process();
-                auto gcode {std::stringstream("")};
-                print->export_gcode(gcode, true);
-                REQUIRE(gcode.str().size() > 0);
+                std::string gcode_filepath("");
+                Slic3r::Test::gcode(gcode_filepath, print);
+                std::cout << "gcode generation done\n";
+                std::string gcode_from_file = read_to_string(gcode_filepath);
+                REQUIRE(gcode_from_file.size() > 0);
+                clean_file(gcode_filepath, "gcode");
             }
 
         }

@@ -744,6 +744,10 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
             // let's get it from the sorted collection as it might have been reversed
             size_t i = idx - sorted_coll.orig_indices.begin();
             entities.append(*sorted_coll.entities[i]);
+            //if thin extrusion is a loop, make it ccw like a normal contour.
+            if (ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(entities.entities.back())) {
+                loop->make_counter_clockwise();
+            }
         } else {
             const PerimeterGeneratorLoop &loop = loops[*idx];
             ExtrusionLoop eloop = *dynamic_cast<ExtrusionLoop*>(coll.entities[*idx]);

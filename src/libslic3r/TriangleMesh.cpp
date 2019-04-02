@@ -1826,6 +1826,22 @@ void TriangleMeshSlicer::cut(float z, TriangleMesh* upper, TriangleMesh* lower) 
     stl_get_size(&lower->stl);
 }
 
+Pointf3s TriangleMesh::vertices()
+{
+    Pointf3s tmp{};
+    if (this->repaired) {
+        if (this->stl.v_shared == nullptr)
+            stl_generate_shared_vertices(&stl); // build the list of vertices
+        for (auto i = 0; i < this->stl.stats.shared_vertices; i++) {
+            const auto& v = this->stl.v_shared[i];
+            tmp.emplace_back(Vec3d(v.x(), v.y(), v.z()));
+        }
+    } else {
+        BOOST_LOG_TRIVIAL(warning) << "TriangleMesh", "vertices() requires repair()";
+    }
+    return tmp;
+}
+
 // Generate the vertex list for a cube solid of arbitrary size in X/Y/Z.
 TriangleMesh make_cube(double x, double y, double z) {
     Vec3d pv[8] = { 

@@ -670,45 +670,49 @@ void ModelObject::assign_new_unique_ids_recursive()
 //    return new ModelObject(parent, *this, true);
 //}
 
-ModelVolume* ModelObject::add_volume(const TriangleMesh &mesh)
+ModelVolume* ModelObject::add_volume(const TriangleMesh &mesh, bool centered)
 {
     ModelVolume* v = new ModelVolume(this, mesh);
     this->volumes.push_back(v);
 #if ENABLE_VOLUMES_CENTERING_FIXES
-    v->center_geometry();
+    if(centered)
+        v->center_geometry();
 #endif // ENABLE_VOLUMES_CENTERING_FIXES
     this->invalidate_bounding_box();
     return v;
 }
 
-ModelVolume* ModelObject::add_volume(TriangleMesh &&mesh)
+ModelVolume* ModelObject::add_volume(TriangleMesh &&mesh, bool centered)
 {
     ModelVolume* v = new ModelVolume(this, std::move(mesh));
     this->volumes.push_back(v);
 #if ENABLE_VOLUMES_CENTERING_FIXES
-    v->center_geometry();
+    if (centered)
+        v->center_geometry();
 #endif // ENABLE_VOLUMES_CENTERING_FIXES
     this->invalidate_bounding_box();
     return v;
 }
 
-ModelVolume* ModelObject::add_volume(const ModelVolume &other)
+ModelVolume* ModelObject::add_volume(const ModelVolume &other, bool centered)
 {
     ModelVolume* v = new ModelVolume(this, other);
     this->volumes.push_back(v);
 #if ENABLE_VOLUMES_CENTERING_FIXES
-    v->center_geometry();
+    if (centered)
+        v->center_geometry();
 #endif // ENABLE_VOLUMES_CENTERING_FIXES
     this->invalidate_bounding_box();
     return v;
 }
 
-ModelVolume* ModelObject::add_volume(const ModelVolume &other, TriangleMesh &&mesh)
+ModelVolume* ModelObject::add_volume(const ModelVolume &other, TriangleMesh &&mesh, bool centered)
 {
     ModelVolume* v = new ModelVolume(this, other, std::move(mesh));
     this->volumes.push_back(v);
 #if ENABLE_VOLUMES_CENTERING_FIXES
-    v->center_geometry();
+    if (centered)
+        v->center_geometry();
 #endif // ENABLE_VOLUMES_CENTERING_FIXES
     this->invalidate_bounding_box();
     return v;

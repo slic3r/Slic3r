@@ -57,4 +57,5 @@
 #define ENABLE_SVG_ICONS (1 && ENABLE_1_42_0_ALPHA8 && ENABLE_TEXTURES_FROM_SVG)
 
 
+#define DEBUG_EXTRUSION_OUTPUT 0
 #endif // _technologies_h_

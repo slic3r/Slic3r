@@ -1,38 +1,47 @@
 #include <catch.hpp>
 #include <string>
-#include "test_data.hpp"
-#include "libslic3r.h"
+#include "../test_data.hpp"
+#include "../../libslic3r/libslic3r.h"
 
 using namespace Slic3r::Test;
+using namespace Slic3r;
 using namespace std::literals;
 
 SCENARIO("PrintObject: Perimeter generation") {
     GIVEN("20mm cube and default config") {
-        auto config {Slic3r::Config::new_from_defaults()};
-        TestMesh m { TestMesh::cube_20x20x20 };
-        Slic3r::Model model;
-        auto event_counter {0U};
+        DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
+        TestMesh m = TestMesh::cube_20x20x20;
+        Model model;
+        unsigned int event_counter = 0U;
         std::string stage;
-        int value {0};
+        int value = 0;
         auto callback {[&event_counter, &stage, &value] (int a, const char* b) { stage = std::string(b); event_counter++; value = a; }};
-        config->set("fill_density", 0);
+        config->set_key_value("fill_density", new ConfigOptionPercent(0));
 
         WHEN("make_perimeters() is called")  {
-            auto print {Slic3r::Test::init_print({m}, model, config)};
-            const auto& object = *(print->objects.at(0));
-            print->objects[0]->make_perimeters();
+            Print print;
+            Slic3r::Test::init_print(print, { m }, model, config);
+            PrintObject& object = *(print.objects().at(0));
+            print.process();
+            // there are 66.66666.... layers for 0.3mm in 20mm
+            //slic3r is rounded (slice at half-layer), slic3rPE is less?
+            //TODO: check the slic32r why it's not cut at half-layer
             THEN("67 layers exist in the model") {
-                REQUIRE(object.layers.size() == 67);
+                REQUIRE(object.layers().size() == 67);
             }
             THEN("Every layer in region 0 has 1 island of perimeters") {
-                for(auto* layer : object.layers) {
-                    REQUIRE(layer->regions[0]->perimeters.size() == 1);
+                for(Layer* layer : object.layers()) {
+                    REQUIRE(layer->regions()[0]->perimeters.entities.size() == 1);
                 }
             }
-            THEN("Every layer in region 0 has 3 paths in its perimeters list.") {
-                for(auto* layer : object.layers) {
-                    REQUIRE(layer->regions[0]->perimeters.items_count() == 3);
+            THEN("Every layer (but top) in region 0 has 3 paths in its perimeters list.") {
+                LayerPtrs layers = object.layers();
+                for (auto layer = layers.begin(); layer != layers.end() - 1; ++layer) {
+                    REQUIRE((*layer)->regions()[0]->perimeters.items_count() == 3);
                 }
+            }
+            THEN("Top layer in region 0 has 1 path in its perimeters list (only 1 perimeter on top).") {
+                REQUIRE(object.layers().back()->regions()[0]->perimeters.items_count() == 1);
             }
         }
     }
@@ -40,21 +49,22 @@ SCENARIO("PrintObject: Perimeter generation") {
 
 SCENARIO("Print: Skirt generation") {
     GIVEN("20mm cube and default config") {
-        auto config {Slic3r::Config::new_from_defaults()};
-        TestMesh m { TestMesh::cube_20x20x20 };
+        DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
+        TestMesh m = TestMesh::cube_20x20x20;
         Slic3r::Model model;
-        auto event_counter {0U};
+        unsigned int event_counter = 0U;
         std::string stage;
-        int value {0};
-        config->set("skirt_height", 1);
-        config->set("skirt_distance", 1);
+        int value = 0;
+        config->set_key_value("skirt_height", new ConfigOptionInt(1));
+        config->set_key_value("skirt_distance", new ConfigOptionFloat(1));
         WHEN("Skirts is set to 2 loops")  {
-            config->set("skirts", 2);
-            auto print {Slic3r::Test::init_print({m}, model, config)};
-            print->make_skirt();
+            config->set_key_value("skirts", new ConfigOptionInt(2));
+            Print print;
+            Slic3r::Test::init_print(print, { m }, model, config);
+            print.process();
             THEN("Skirt Extrusion collection has 2 loops in it") {
-                REQUIRE(print->skirt.items_count() == 2);
-                REQUIRE(print->skirt.flatten().entities.size() == 2);
+                REQUIRE(print.skirt().items_count() == 2);
+                REQUIRE(print.skirt().flatten().entities.size() == 2);
             }
         }
     }
@@ -62,36 +72,40 @@ SCENARIO("Print: Skirt generation") {
 
 SCENARIO("Print: Brim generation") {
     GIVEN("20mm cube and default config, 1mm first layer width") {
-        auto config {Slic3r::Config::new_from_defaults()};
-        TestMesh m { TestMesh::cube_20x20x20 };
+        DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
+        TestMesh m = TestMesh::cube_20x20x20;
         Slic3r::Model model;
-        auto event_counter {0U};
+        unsigned int event_counter = 0U;
         std::string stage;
-        int value {0};
-        config->set("first_layer_extrusion_width", 1);
+        int value = 0;
+        config->set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(1, false));
         WHEN("Brim is set to 3mm")  {
-            config->set("brim_width", 3);
-            auto print {Slic3r::Test::init_print({m}, model, config)};
-            print->make_brim();
+            config->set_key_value("brim_width", new ConfigOptionFloat(3));
+            Print print;
+            Slic3r::Test::init_print(print, { m }, model, config);
+            print.process();
             THEN("Brim Extrusion collection has 3 loops in it") {
-                REQUIRE(print->brim.items_count() == 3);
+                REQUIRE(print.brim().items_count() == 3);
             }
         }
         WHEN("Brim is set to 6mm")  {
-            config->set("brim_width", 6);
-            auto print {Slic3r::Test::init_print({m}, model, config)};
-            print->make_brim();
+            config->set_key_value("brim_width", new ConfigOptionFloat(6));
+            Print print;
+            Slic3r::Test::init_print(print, { m }, model, config);
+            print.process();
             THEN("Brim Extrusion collection has 6 loops in it") {
-                REQUIRE(print->brim.items_count() == 6);
+                REQUIRE(print.brim().items_count() == 6);
             }
         }
         WHEN("Brim is set to 6mm, extrusion width 0.5mm")  {
-            config->set("brim_width", 6);
-            config->set("first_layer_extrusion_width", 0.5);
-            auto print {Slic3r::Test::init_print({m}, model, config)};
-            print->make_brim();
-            THEN("Brim Extrusion collection has 12 loops in it") {
-                REQUIRE(print->brim.items_count() == 12);
+            config->set_key_value("brim_width", new ConfigOptionFloat(6));
+            config->set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+            Print print;
+            Slic3r::Test::init_print(print, { m }, model, config);
+            print.process();
+            double nbLoops = 6.0 / print.brim_flow().spacing();
+            THEN("Brim Extrusion collection has " + std::to_string(nbLoops) + " loops in it (flow="+ std::to_string(print.brim_flow().spacing())+")") {
+                REQUIRE(print.brim().items_count() == floor(nbLoops));
             }
         }
     }

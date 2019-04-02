@@ -473,7 +473,10 @@ inline void extrusion_entities_append_loops(ExtrusionEntitiesPtr &dst, Polygons 
             ExtrusionPath path(role, mm3_per_mm, width, height);
             path.polyline.points = std::move(poly.points);
             path.polyline.points.push_back(path.polyline.points.front());
-            dst.emplace_back(new ExtrusionLoop(std::move(path)));
+            ExtrusionLoop *loop = new ExtrusionLoop(std::move(path));
+            //default to ccw
+            loop->make_counter_clockwise();
+            dst.emplace_back(loop);
         }
     }
     loops.clear();
