@@ -36,7 +36,7 @@ int CLI::run(int argc, char **argv) {
     // Convert arguments to UTF-8 (needed on Windows).
     // argv then points to memory owned by a.
     boost::nowide::args a(argc, argv);
-    
+    std::cerr<<"after boost::nowide<<args"<<std::endl;
     // parse all command line options into a DynamicConfig
     t_config_option_keys opt_order;
     this->config_def.merge(cli_actions_config_def);
@@ -44,19 +44,18 @@ int CLI::run(int argc, char **argv) {
     this->config_def.merge(cli_misc_config_def);
     this->config_def.merge(print_config_def);
     this->config.def = &this->config_def;
-    
+    std::cerr<<"after merges"<<std::endl;
     // if any option is unsupported, print usage and abort immediately
     if (!this->config.read_cli(argc, argv, &this->input_files, &opt_order)) {
         this->print_help();
         return 1;
     }
-    
     // parse actions and transform options
     for (auto const &opt_key : opt_order) {
         if (cli_actions_config_def.has(opt_key)) this->actions.push_back(opt_key);
         if (cli_transform_config_def.has(opt_key)) this->transforms.push_back(opt_key);
     }
-    
+    try{
     // load config files supplied via --load
     for (auto const &file : config.getStrings("load")) {
         if (!boost::filesystem::exists(file)) {
@@ -78,15 +77,18 @@ int CLI::run(int argc, char **argv) {
         c.normalize();
         this->print_config.apply(c);
     }
+    }catch (...){
+	std::cerr<<"Exception in 'load' processing "<<std::endl;
+    }
     
     // apply command line options to a more specific DynamicPrintConfig which provides normalize()
     // (command line options override --load files)
     this->print_config.apply(config, true);
     this->print_config.normalize();
-    
+    std::cerr<<"after config normalize" << std::endl;
     // create a static (full) print config to be used in our logic
     this->full_print_config.apply(this->print_config);
-    
+    std::cerr<<"apply full config"<<std::endl;
     // validate config
     try {
         this->full_print_config.validate();
@@ -94,6 +96,7 @@ int CLI::run(int argc, char **argv) {
         boost::nowide::cerr << e.what() << std::endl;
         return 1;
     }
+    std::cerr<<"after config validation"<<std::endl;
     
     // read input file(s) if any
     for (auto const &file : input_files) {

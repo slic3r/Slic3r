@@ -371,6 +371,7 @@ void
 ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent, bool default_nonexistent) {
     // loop through options and apply them
     for (const t_config_option_key &opt_key : opt_keys) {
+        try{ 
         ConfigOption* my_opt = this->option(opt_key, true);
         if (opt_key.size() == 0) continue;
         if (my_opt == NULL) {
@@ -393,6 +394,10 @@ ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_
         if (!res) {
             std::string error = "Unexpected failure when deserializing serialized value for " + opt_key;
             CONFESS(error.c_str());
+        }
+        } catch ( UnknownOptionException & e ){
+        
+    	    //    std::cerr<<e.what()<<std::endl;
         }
     }
 }
