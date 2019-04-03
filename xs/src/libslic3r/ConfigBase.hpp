@@ -1,6 +1,10 @@
 #ifndef slic3r_ConfigBase_hpp_
 #define slic3r_ConfigBase_hpp_
 
+#include <execinfo.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include <map>
 #include <climits>
 #include <cstdio>
@@ -14,6 +18,8 @@
 #include "utils.hpp"
 #include "Point.hpp"
 #include "Geometry.hpp"
+
+
 
 namespace Slic3r {
 
@@ -31,20 +37,40 @@ class ConfigOptionException : public std::exception {
     public:
     const t_config_option_key opt_key;
     ConfigOptionException(const t_config_option_key _opt_key)
-        : opt_key(_opt_key) {};
+        : opt_key(_opt_key) {
+        /*
+    	void *array[10];
+    	  size_t size;
+    	    char **strings;
+    	          size_t i;
+        	  
+                size = backtrace (array, 10);
+                  strings = backtrace_symbols (array, size);
+                  
+                    printf ("Obtained %zd stack frames.\n", size);
+                    
+                      for (i = 0; i < size; i++)
+                           std::cerr<<strings[i]<<std::endl;
+                           
+                             free (strings);
+        //*/
+        };
+
+    virtual const char* what() const noexcept {
+        std::string s("Exception with the option: ");
+        s += this->opt_key;
+        return s.c_str();
+    }
+
 };
 class UnknownOptionException : public ConfigOptionException {
     using ConfigOptionException::ConfigOptionException;
+
 };
 class InvalidOptionException : public ConfigOptionException {
     using ConfigOptionException::ConfigOptionException;
     
-    public:
-    virtual const char* what() const noexcept {
-        std::string s("Invalid value for option: ");
-        s += this->opt_key;
-        return s.c_str();
-    }
+
 };
 
 /// Specialization of std::exception to indicate that an unsupported accessor was called on a config option.
