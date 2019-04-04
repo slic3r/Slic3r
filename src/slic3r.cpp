@@ -36,7 +36,6 @@ int CLI::run(int argc, char **argv) {
     // Convert arguments to UTF-8 (needed on Windows).
     // argv then points to memory owned by a.
     boost::nowide::args a(argc, argv);
-    std::cerr<<"after boost::nowide<<args"<<std::endl;
     // parse all command line options into a DynamicConfig
     t_config_option_keys opt_order;
     this->config_def.merge(cli_actions_config_def);
@@ -44,7 +43,7 @@ int CLI::run(int argc, char **argv) {
     this->config_def.merge(cli_misc_config_def);
     this->config_def.merge(print_config_def);
     this->config.def = &this->config_def;
-    std::cerr<<"after merges"<<std::endl;
+    std::cerr<<"Configs merged"<<std::endl;
     // if any option is unsupported, print usage and abort immediately
     if (!this->config.read_cli(argc, argv, &this->input_files, &opt_order)) {
         this->print_help();
@@ -85,10 +84,10 @@ int CLI::run(int argc, char **argv) {
     // (command line options override --load files)
     this->print_config.apply(config, true);
     this->print_config.normalize();
-    std::cerr<<"after config normalize" << std::endl;
+    std::cerr<<"Print_config normalized" << std::endl;
     // create a static (full) print config to be used in our logic
     this->full_print_config.apply(this->print_config);
-    std::cerr<<"apply full config"<<std::endl;
+    std::cerr<<"Full_print_config created"<<std::endl;
     // validate config
     try {
         this->full_print_config.validate();
@@ -96,7 +95,7 @@ int CLI::run(int argc, char **argv) {
         boost::nowide::cerr << e.what() << std::endl;
         return 1;
     }
-    std::cerr<<"after config validation"<<std::endl;
+    std::cerr<<"Config validated"<<std::endl;
     
     // read input file(s) if any
     for (auto const &file : input_files) {
@@ -326,6 +325,7 @@ int CLI::run(int argc, char **argv) {
                 print.center = !this->config.has("center")
                     && !this->config.has("align_xy")
                     && !this->config.getBool("dont_arrange");
+                std::cerr<<"Arrange: "<<print.arrange<<", center: "<<print.center<<std::endl;
                 print.set_model(model);
                 
                 // start chronometer
