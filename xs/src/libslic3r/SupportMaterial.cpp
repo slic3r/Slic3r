@@ -70,8 +70,10 @@ SupportMaterial::generate(PrintObject *object)
     map<coordf_t, Polygons> &overhang = contact_overhang.second;
 
     //bugfix: do not try to generate overhang if there is no contact area 
-    if( contact.empty() )
-	return;
+    if( contact.empty() ){
+	std::cerr<<"Empty contact_areas of SupportMaterial for object ["<<object->model_object()->name<<"]"<<std::endl;
+    	return;
+    }
 	
     // Determine the top surfaces of the object. We need these to determine
     // the layer heights of support material and to clip support to the object

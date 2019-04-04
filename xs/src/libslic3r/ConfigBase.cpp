@@ -928,7 +928,7 @@ ConfigOptionPoint::deserialize(std::string str, bool append) {
         this->value.x = boost::lexical_cast<coordf_t>(tokens[0]);
         this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
     } catch (boost::bad_lexical_cast &e){
-        std::cout << "Exception caught : " << e.what() << std::endl;
+        std::cout << "Config option deserialisation error of ["<<str<<"]  : " << e.what()<<" (expected 2D point)" << std::endl;
         return false;
     }
     return true;
@@ -943,7 +943,7 @@ ConfigOptionPoint3::deserialize(std::string str, bool append) {
         this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
         this->value.z = boost::lexical_cast<coordf_t>(tokens[2]);
     } catch (boost::bad_lexical_cast &e){
-        std::cout << "Exception caught : " << e.what() << std::endl;
+        std::cout << "Config option deserialisation error of ["<<str<<"]  : " << e.what()<<" (expected 3D point)" << std::endl;
         return false;
     }
     return true;
