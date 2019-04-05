@@ -606,7 +606,7 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
 
 void
 MedialAxis::extends_line_both_side(ThickPolylines& pp) {
-    const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), (float)-SCALED_RESOLUTION, (float)SCALED_RESOLUTION);
+    const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), double(-SCALED_RESOLUTION), double(SCALED_RESOLUTION));
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         this->extends_line(polyline, anchors, this->min_width);

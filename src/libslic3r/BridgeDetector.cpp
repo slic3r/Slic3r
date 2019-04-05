@@ -40,7 +40,7 @@ void BridgeDetector::initialize()
     this->angle = -1.;
 
     // Outset our bridge by an arbitrary amout; we'll use this outer margin for detecting anchors.
-    Polygons grown = offset(to_polygons(this->expolygons), float(this->spacing));
+    Polygons grown = offset(to_polygons(this->expolygons), this->spacing);
     
     // Detect possible anchoring edges of this bridging region.
     // Detect what edges lie on lower slices by turning bridge contour and holes
@@ -86,7 +86,7 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
     /*  Outset the bridge expolygon by half the amount we used for detecting anchors;
         we'll use this one to clip our test lines and be sure that their endpoints
         are inside the anchors and not on their contours leading to false negatives. */
-    Polygons clip_area = offset(this->expolygons, 0.5f * float(this->spacing));
+    Polygons clip_area = offset(this->expolygons, 0.5f * this->spacing);
     
     /*  we'll now try several directions using a rudimentary visibility check:
         bridge in several directions and then sum the length of lines having both
@@ -229,7 +229,7 @@ Polygons BridgeDetector::coverage(double angle, bool precise) const {
             // Outset the bridge expolygon by half the amount we used for detecting anchors;
             // we'll use this one to generate our trapezoids and be sure that their vertices
             // are inside the anchors and not on their contours leading to false negatives.
-            for (ExPolygon &expoly : offset_ex(expolygon, 0.5f * float(this->spacing))) {
+            for (ExPolygon &expoly : offset_ex(expolygon, 0.5f * this->spacing)) {
                 // Compute trapezoids according to a vertical orientation
                 Polygons trapezoids;
                 if (!precise) expoly.get_trapezoids2(&trapezoids, PI / 2);
@@ -316,7 +316,7 @@ BridgeDetector::unsupported_edges(double angle, Polylines* unsupported) const
     if (angle == -1) angle = this->angle;
     if (angle == -1) return;
 
-    Polygons grown_lower = offset(this->lower_slices.expolygons, float(this->spacing));
+    Polygons grown_lower = offset(this->lower_slices.expolygons, this->spacing);
 
     for (ExPolygons::const_iterator it_expoly = this->expolygons.begin(); it_expoly != this->expolygons.end(); ++ it_expoly) {    
         // get unsupported bridge edges (both contour and holes)

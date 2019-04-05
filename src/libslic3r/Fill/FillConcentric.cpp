@@ -81,7 +81,7 @@ void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, cons
     ExtrusionEntitiesPtr &out) {
 
     // Perform offset.
-    Slic3r::ExPolygons expp = offset_ex(surface->expolygon, float(scale_(0 - 0.5 * this->spacing)));
+    Slic3r::ExPolygons expp = offset_ex(surface->expolygon, double(scale_(0 - 0.5 * this->spacing)));
     // Create the infills for each of the regions.
     Polylines polylines_out;
     for (size_t i = 0; i < expp.size(); ++i) {

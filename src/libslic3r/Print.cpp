@@ -1766,7 +1766,7 @@ void Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection
     size_t num_loops = size_t(floor(m_config.brim_width.value / flow.spacing()));
     for (size_t i = 0; i < num_loops; ++i) {
         this->throw_if_canceled();
-        islands = offset(islands, float(flow.scaled_spacing()), jtSquare);
+        islands = offset(islands, double(flow.scaled_spacing()), jtSquare);
         for (Polygon &poly : islands) {
             // poly.simplify(SCALED_RESOLUTION);
             poly.points.push_back(poly.points.front());
@@ -1774,7 +1774,7 @@ void Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection
             p.pop_back();
             poly.points = std::move(p);
         }
-        polygons_append(loops, offset(islands, -0.5f * float(flow.scaled_spacing())));
+        polygons_append(loops, offset(islands, -0.5f * double(flow.scaled_spacing())));
     }
 
     loops = union_pt_chained(loops, false);
@@ -1811,7 +1811,7 @@ void Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityColle
     size_t num_loops = size_t(floor(m_config.brim_width.value / flow.spacing()));
     for (size_t i = 0; i < num_loops; ++i) {
         this->throw_if_canceled();
-        islands = offset(islands, float(flow.scaled_spacing()), jtSquare);
+        islands = offset(islands, double(flow.scaled_spacing()), jtSquare);
         for (Polygon &poly : islands) {
             // poly.simplify(SCALED_RESOLUTION);
             poly.points.push_back(poly.points.front());
@@ -1819,7 +1819,7 @@ void Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityColle
             p.pop_back();
             poly.points = std::move(p);
         }
-        polygons_append(loops, offset(islands, -0.5f * float(flow.scaled_spacing())));
+        polygons_append(loops, offset(islands, -0.5f * double(flow.scaled_spacing())));
     }
     loops = union_pt_chained(loops, false);
 

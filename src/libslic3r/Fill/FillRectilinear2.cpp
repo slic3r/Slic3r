@@ -1482,9 +1482,9 @@ Polylines FillStars::fill_surface(const Surface *surface, const FillParams &para
     FillParams params3 = params2;
     params3.dont_connect = true;
     Polylines polylines_out;
-    if (! fill_surface_by_lines(surface, params2, 0.f, 0., polylines_out) ||
-        ! fill_surface_by_lines(surface, params2, float(M_PI / 3.), 0., polylines_out) ||
-        ! fill_surface_by_lines(surface, params3, float(2. * M_PI / 3.), 0.5 * this->spacing / params2.density, polylines_out)) {
+    if (! fill_surface_by_lines(surface, params2, 0.f, 0.f, polylines_out) ||
+        ! fill_surface_by_lines(surface, params2, float(M_PI / 3.), 0.f, polylines_out) ||
+        ! fill_surface_by_lines(surface, params3, float(2. * M_PI / 3.), float(0.5 * this->spacing / params2.density), polylines_out)) {
         printf("FillStars::fill_surface() failed to fill a region.\n");
     }
     return polylines_out;
@@ -1623,7 +1623,7 @@ Polylines FillScatteredRectilinear::fill_surface(const Surface *surface, const F
     Polylines polylines_out;
 
     // Offset the pattern randomly using the current layer index as the generator
-    float offset = randomFloatFromSeed((uint32_t) layer_id) * 0.5f * (float) this->spacing;
+    float offset = randomFloatFromSeed((uint32_t) layer_id) * 0.5f * this->spacing;
 
     if (!fill_surface_by_lines(surface, params, 0.f, offset, polylines_out)) {
         printf("FillScatteredRectilinear::fill_surface() failed to fill a region.\n");

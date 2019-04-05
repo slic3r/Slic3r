@@ -70,7 +70,7 @@ void PerimeterGenerator::process()
         // lower layer, so we take lower slices and offset them by half the nozzle diameter used 
         // in the current layer
         double nozzle_diameter = this->print_config->nozzle_diameter.get_at(this->config->perimeter_extruder-1);
-        this->_lower_slices_p = offset(*this->lower_slices, float(scale_(+nozzle_diameter/2)));
+        this->_lower_slices_p = offset(*this->lower_slices, double(scale_(+nozzle_diameter/2)));
     }
     
     // we need to process each island separately because we might have different
@@ -90,7 +90,7 @@ void PerimeterGenerator::process()
             ExPolygons unsupported = diff_ex(last, this->lower_slices->expolygons, true);
             if (!unsupported.empty()) {
                 //remove small overhangs
-                ExPolygons unsupported_filtered = offset2_ex(unsupported, -(float)(perimeter_spacing), (float)(perimeter_spacing));
+                ExPolygons unsupported_filtered = offset2_ex(unsupported, double(-perimeter_spacing), double(perimeter_spacing));
                 if (!unsupported_filtered.empty()) {
                     //to_draw.insert(to_draw.end(), last.begin(), last.end());
                     //extract only the useful part of the lower layer. The safety offset is really needed here.
@@ -128,7 +128,7 @@ void PerimeterGenerator::process()
                                         }
                                     }
                                     unsupported_filtered = intersection_ex(last,
-                                        offset2_ex(unsupported_filtered, (float)-perimeter_spacing / 2, (float)perimeter_spacing * 3 / 2));
+                                        offset2_ex(unsupported_filtered, double(-perimeter_spacing / 2), double(perimeter_spacing * 3 / 2)));
                                     if (this->config->no_perimeter_unsupported_algo == npuaFilled) {
                                         for (ExPolygon &expol : unsupported_filtered) {
                                             //check if the holes won't be covered by the upper layer
@@ -153,7 +153,7 @@ void PerimeterGenerator::process()
                                                 if (intersection_ex(ExPolygons() = { expol }, ExPolygons() = { all_surfaces[surface_idx_other].expolygon }).size() > 0) {
                                                     //this means that other_surf was inside an expol holes
                                                     //as we removed them, we need to add a new one
-                                                    ExPolygons new_poly = offset2_ex(all_surfaces[surface_idx_other].expolygon, -(float)perimeter_spacing * 2, (float)perimeter_spacing);
+                                                    ExPolygons new_poly = offset2_ex(all_surfaces[surface_idx_other].expolygon, double(-perimeter_spacing * 2), double(perimeter_spacing));
                                                     if (new_poly.size() == 1) {
                                                         all_surfaces[surface_idx_other].expolygon = new_poly[0];
                                                         expol.holes.push_back(new_poly[0].contour);
@@ -193,7 +193,7 @@ void PerimeterGenerator::process()
                                     //FIXME: it overlap inside unsuppported not-bridgeable area!
                                     double overlap = scale_(this->config->get_abs_value("infill_overlap", unscale<double>(perimeter_spacing)));
 
-                                    //bridgeable_simplified = offset2_ex(bridgeable_simplified, (float)-perimeter_spacing, (float)perimeter_spacing * 2);
+                                    //bridgeable_simplified = offset2_ex(bridgeable_simplified, (double)-perimeter_spacing, (double)perimeter_spacing * 2);
                                     //ExPolygons unbridgeable = offset_ex(diff_ex(unsupported, bridgeable_simplified), perimeter_spacing * 3 / 2);
                                     //ExPolygons unbridgeable = intersection_ex(unsupported, diff_ex(unsupported_filtered, offset_ex(bridgeable_simplified, ext_perimeter_width / 2)));
                                     //unbridgeable = offset2_ex(unbridgeable, -ext_perimeter_width, ext_perimeter_width);
@@ -218,7 +218,7 @@ void PerimeterGenerator::process()
                                         ////put the bridge area inside the unsupported_filtered variable
                                         //unsupported_filtered = intersection_ex(last,
                                         //    diff_ex(
-                                        //    offset_ex(bridgeable_simplified, (float)perimeter_spacing / 2),
+                                        //    offset_ex(bridgeable_simplified, (double)perimeter_spacing / 2),
                                         //    unbridgeable
                                         //    )
                                         //    );
@@ -310,7 +310,7 @@ void PerimeterGenerator::process()
                             }
 
                             if (!bridgeable_simplified.empty())
-                                bridgeable_simplified = offset_ex(bridgeable_simplified, (float)perimeter_spacing / 1.9f);
+                                bridgeable_simplified = offset_ex(bridgeable_simplified, double(perimeter_spacing) / 1.9);
                             if (!bridgeable_simplified.empty()) {
                                 //offset by perimeter spacing because the simplify may have reduced it a bit.
                                 overhangs_unsupported = diff_ex(overhangs_unsupported, bridgeable_simplified);
@@ -346,7 +346,7 @@ void PerimeterGenerator::process()
                 if (i == 0) {
                     // compute next onion, without taking care of thin_walls : destroy too thin areas.
                     if (!this->config->thin_walls)
-                        next_onion = offset_ex(last, -(float)(ext_perimeter_width / 2));
+                        next_onion = offset_ex(last, double( - ext_perimeter_width / 2));
 
 
                     // look for thin walls
@@ -358,7 +358,7 @@ void PerimeterGenerator::process()
                             -(float)(ext_perimeter_width / 2 + ext_min_spacing / 2 - 1),
                             +(float)(ext_min_spacing / 2 - 1));
                         // detect edge case where a curve can be split in multiple small chunks.
-                        ExPolygons no_thin_onion = offset_ex(last, -(float)(ext_perimeter_width / 2));
+                        ExPolygons no_thin_onion = offset_ex(last, double( - ext_perimeter_width / 2));
                         float div = 2;
                         while (no_thin_onion.size() > 0 && next_onion.size() > no_thin_onion.size() && no_thin_onion.size() + next_onion.size() > 3) {
                             div += 0.5;
@@ -377,28 +377,28 @@ void PerimeterGenerator::process()
                         // (actually, something larger than that still may exist due to mitering or other causes)
                         coord_t min_width = (coord_t)scale_(this->config->thin_walls_min_width.get_abs_value(this->ext_perimeter_flow.nozzle_diameter));
                         
-                        ExPolygons no_thin_zone = offset_ex(next_onion, (float)(ext_perimeter_width / 2), jtSquare);
+                        ExPolygons no_thin_zone = offset_ex(next_onion, double(ext_perimeter_width / 2), jtSquare);
                         // medial axis requires non-overlapping geometry
                         ExPolygons thin_zones = diff_ex(last, no_thin_zone, true);
                         //don't use offset2_ex, because we don't want to merge the zones that have been separated.
                             //a very little bit of overlap can be created here with other thin polygons, but it's more useful than worisome.
-                        ExPolygons half_thins = offset_ex(thin_zones, (float)(-min_width / 2));
+                        ExPolygons half_thins = offset_ex(thin_zones, double(-min_width / 2));
                         //simplify them
                         for (ExPolygon &half_thin : half_thins) {
                             half_thin.remove_point_too_near((float)SCALED_RESOLUTION);
                         }
                         //we push the bits removed and put them into what we will use as our anchor
                         if (half_thins.size() > 0) {
-                            no_thin_zone = diff_ex(last, offset_ex(half_thins, (float)(min_width / 2) - (float) SCALED_EPSILON), true);
+                            no_thin_zone = diff_ex(last, offset_ex(half_thins, double(min_width / 2 - SCALED_EPSILON)), true);
                         }
                         // compute a bit of overlap to anchor thin walls inside the print.
                         for (ExPolygon &half_thin : half_thins) {
                             //growing back the polygon
-                            ExPolygons thin = offset_ex(half_thin, (float)(min_width / 2));
+                            ExPolygons thin = offset_ex(half_thin, double(min_width / 2));
                             assert(thin.size() <= 1);
                             if (thin.empty()) continue;
                             coord_t overlap = (coord_t)scale_(this->config->thin_walls_overlap.get_abs_value(this->ext_perimeter_flow.nozzle_diameter));
-                            ExPolygons anchor = intersection_ex(offset_ex(half_thin, (float)(min_width / 2) +
+                            ExPolygons anchor = intersection_ex(offset_ex(half_thin, double(min_width / 2) +
                                 (float)(overlap), jtSquare), no_thin_zone, true);
                             ExPolygons bounds = union_ex(thin, anchor, true);
                             for (ExPolygon &bound : bounds) {
@@ -435,7 +435,7 @@ void PerimeterGenerator::process()
                     } else {
                         // If "detect thin walls" is not enabled, this paths will be entered, which 
                         // leads to overflows, as in prusa3d/Slic3r GH #32
-                        next_onion = offset_ex(last, -(float)(good_spacing));
+                        next_onion = offset_ex(last, double( - good_spacing));
                     }
                     // look for gaps
                     if (this->config->gap_fill_speed.value > 0 && this->config->gap_fill 
@@ -483,8 +483,8 @@ void PerimeterGenerator::process()
                     ExPolygons top_polygons = diff_ex(last, (upper_polygons), true);
                     ExPolygons inner_polygons = diff_ex(last, top_polygons, true);
                     // increase a bit the inner space to fill the frontier between last and stored.
-                    stored = union_ex(stored, intersection_ex(offset_ex(top_polygons, (float)(perimeter_spacing / 2)), last));
-                    last = intersection_ex(offset_ex(inner_polygons, (float)(perimeter_spacing / 2)), last);
+                    stored = union_ex(stored, intersection_ex(offset_ex(top_polygons, double(perimeter_spacing / 2)), last));
+                    last = intersection_ex(offset_ex(inner_polygons, double(perimeter_spacing / 2)), last);
                 }
 
                 
@@ -589,8 +589,8 @@ void PerimeterGenerator::process()
             double min = 0.2 * perimeter_width * (1 - INSET_OVERLAP_TOLERANCE);
             double max = 2. * perimeter_spacing;
             ExPolygons gaps_ex = diff_ex(
-                offset2_ex(gaps, (float)-min / 2, (float)+min / 2),
-                offset2_ex(gaps, (float)-max / 2, (float)+max / 2),
+                offset2_ex(gaps, double(-min / 2), double(+min / 2)),
+                offset2_ex(gaps, double(-max / 2), double(+max / 2)),
                 true);
             ThickPolylines polylines;
             for (const ExPolygon &ex : gaps_ex) {

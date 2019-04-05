@@ -123,7 +123,7 @@ Polyline MotionPlanner::shortest_path(const Point &from, const Point &to)
     {
         // grow our environment slightly in order for simplify_by_visibility()
         // to work best by considering moves on boundaries valid as well
-        ExPolygonCollection grown_env(offset_ex(env.m_env.expolygons, float(+SCALED_EPSILON)));
+        ExPolygonCollection grown_env(offset_ex(env.m_env.expolygons, double(+SCALED_EPSILON)));
         
         if (island_idx == -1) {
             /*  If 'from' or 'to' are not inside our env, they were connected using the 

@@ -138,10 +138,10 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
             if (surface.has_pos_top()) {
                 // Collect the top surfaces, inflate them and trim them by the bottom surfaces.
                 // This gives the priority to bottom surfaces.
-                surfaces_append(top, offset_ex(surface.expolygon, float(margin), EXTERNAL_SURFACES_OFFSET_PARAMETERS), surface);
+                surfaces_append(top, offset_ex(surface.expolygon, double(margin), EXTERNAL_SURFACES_OFFSET_PARAMETERS), surface);
             } else if (surface.has_pos_bottom() && (!surface.has_mod_bridge() || lower_layer == NULL)) {
                 // Grown by 3mm.
-                surfaces_append(bottom, offset_ex(surface.expolygon, float(margin), EXTERNAL_SURFACES_OFFSET_PARAMETERS), surface);
+                surfaces_append(bottom, offset_ex(surface.expolygon, double(margin), EXTERNAL_SURFACES_OFFSET_PARAMETERS), surface);
             } else if (surface.has_pos_bottom() && surface.has_mod_bridge()) {
                 if (! surface.empty())
                     bridges.push_back(surface);

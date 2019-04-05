@@ -183,8 +183,8 @@ void PrintObject::make_perimeters()
                             // (it should either lay over our perimeters or outside this area)
                             const coord_t critical_area_depth = coord_t(perimeter_spacing * 1.5);
                             const Polygons critical_area = diff(
-                                offset(slice.expolygon, float(- perimeters_thickness)),
-                                offset(slice.expolygon, float(- perimeters_thickness - critical_area_depth))
+                                offset(slice.expolygon, double(- perimeters_thickness)),
+                                offset(slice.expolygon, double(- perimeters_thickness - critical_area_depth))
                             );
                             // check whether a portion of the upper slices falls inside the critical area
                             const Polylines intersection = intersection_pl(to_polylines(upper_layerm_polygons), critical_area);
@@ -675,7 +675,7 @@ ExPolygons fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, c
         current_offset *= 2;
         if (next_coverage < 0.1) current_offset *= 2;
         //create the bigger polygon and test it
-        ExPolygons bigger_polygon = offset_ex(polygon_to_check, (float)current_offset);
+        ExPolygons bigger_polygon = offset_ex(polygon_to_check, double(current_offset));
         if (bigger_polygon.size() != 1) {
             // Error, growing a single polygon result in many/no other  => fallback to full coverage
             return ExPolygons({ growing_area });
@@ -693,7 +693,7 @@ ExPolygons fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, c
         uint32_t nb_opti_max = 6;
         for (uint32_t i = 0; i < nb_opti_max; ++i){
             coord_t new_offset = (previous_offset + current_offset) / 2;
-            ExPolygons bigger_polygon = offset_ex(polygon_to_check, (float)new_offset);
+            ExPolygons bigger_polygon = offset_ex(polygon_to_check, double(new_offset));
             if (bigger_polygon.size() != 1) {
                 //Warn, growing a single polygon result in many/no other, use previous good result
                 break;
@@ -763,8 +763,8 @@ void PrintObject::tag_under_bridge() {
 
                                     if (layerm->region()->config().infill_dense_algo == dfaEnlarged) {
                                         //expand the area a bit
-                                        intersect = offset_ex(intersect, (float)scale_(layerm->region()->config().external_infill_margin.get_abs_value(
-                                            region->config().perimeters == 0 ? 0 : (layerm->flow(frExternalPerimeter).width + layerm->flow(frPerimeter).spacing() * (region->config().perimeters - 1)))));
+                                        intersect = offset_ex(intersect, double(scale_(layerm->region()->config().external_infill_margin.get_abs_value(
+                                            region->config().perimeters == 0 ? 0 : (layerm->flow(frExternalPerimeter).width + layerm->flow(frPerimeter).spacing() * (region->config().perimeters - 1))))));
                                     } else if (layerm->region()->config().infill_dense_algo == dfaAutoNotFull 
                                         || layerm->region()->config().infill_dense_algo == dfaAutomatic){
                                         
@@ -781,15 +781,15 @@ void PrintObject::tag_under_bridge() {
                                             ExPolygons cover_intersect;
                                             for (ExPolygon &expoly_tocover : intersect) {
                                                 ExPolygons temp = (fit_to_size(expoly_tocover, expoly_tocover,
-                                                    diff_ex(offset_ex(layerm->fill_no_overlap_expolygons, (float)layerm->flow(frInfill).scaled_width()),
-                                                    offset_ex(layerm->fill_no_overlap_expolygons, (float)-layerm->flow(frInfill).scaled_width())),
+                                                    diff_ex(offset_ex(layerm->fill_no_overlap_expolygons, double(layerm->flow(frInfill).scaled_width())),
+                                                    offset_ex(layerm->fill_no_overlap_expolygons, double(-layerm->flow(frInfill).scaled_width()))),
                                                     surf.expolygon,
                                                     4 * layerm->flow(frInfill).scaled_width(), 0.01f));
                                                 cover_intersect.insert(cover_intersect.end(), temp.begin(), temp.end());
                                             }
                                             intersect = offset2_ex(cover_intersect,
-                                                (float)-layerm->flow(frInfill).scaled_width(),
-                                                (float)layerm->flow(frInfill).scaled_width() * 2);
+                                                double(-layerm->flow(frInfill).scaled_width()),
+                                                double(layerm->flow(frInfill).scaled_width() * 2));
                                         } else {
                                             intersect.clear();
                                         }
@@ -797,8 +797,8 @@ void PrintObject::tag_under_bridge() {
                                     if (!intersect.empty()) {
                                         ExPolygons sparse_surfaces = offset2_ex(
                                             diff_ex(sparse_polys, intersect, true),
-                                            (float)-layerm->flow(frInfill).scaled_width(),
-                                            (float)layerm->flow(frInfill).scaled_width());
+                                            double(-layerm->flow(frInfill).scaled_width()),
+                                            double(layerm->flow(frInfill).scaled_width()));
                                         ExPolygons dense_surfaces = diff_ex(sparse_polys, sparse_surfaces, true);
                                         //assign (copy)
                                         sparse_polys = std::move(sparse_surfaces);
@@ -1905,7 +1905,7 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
                             }
                         if (num_volumes > 1)
                             // Merge the islands using a positive / negative offset.
-                            expolygons = offset_ex(offset_ex(expolygons, float(scale_(EPSILON))), -float(scale_(EPSILON)));
+                            expolygons = offset_ex(offset_ex(expolygons, double(scale_(EPSILON))), double( - scale_(EPSILON)));
                         m_layers[layer_id]->regions()[region_id]->slices.append(std::move(expolygons), stPosInternal | stDensSparse);
                     }
                 }
@@ -2038,7 +2038,7 @@ end:
                     }
                     if (delta < 0.f) {
                         // Apply the negative XY compensation.
-                        Polygons trimming = offset(layer->merged(float(EPSILON)), delta - float(EPSILON));
+                        Polygons trimming = offset(layer->merged(double(EPSILON)), delta - double(EPSILON));
                         for (size_t region_id = 0; region_id < layer->m_regions.size(); ++ region_id)
                             layer->m_regions[region_id]->trim_surfaces(trimming);
                     }
@@ -2058,7 +2058,7 @@ end:
                         size_t nsteps = size_t(steps);
                         float  step   = elephant_foot_compensation / steps;
                         for (size_t i = 0; i < nsteps; ++ i) {
-                            Polygons trimming_polygons = offset(layer->merged(float(EPSILON)), - step - float(EPSILON));
+                            Polygons trimming_polygons = offset(layer->merged(float(EPSILON)), double(- step - EPSILON));
                             for (size_t region_id = 0; region_id < layer->m_regions.size(); ++ region_id)
                                 layer->m_regions[region_id]->elephant_foot_compensation_step(elephant_foot_spacing[region_id] + step, trimming_polygons);
                         }
@@ -2072,7 +2072,7 @@ end:
     BOOST_LOG_TRIVIAL(debug) << "Slicing objects - make_slices in parallel - end";
 }
 
-void PrintObject::_offset_holes(float hole_delta, LayerRegion *layerm) {
+void PrintObject::_offset_holes(double hole_delta, LayerRegion *layerm) {
     if (hole_delta != 0.f) {
         ExPolygons polys = to_expolygons(std::move(layerm->slices.surfaces));
         ExPolygons new_polys;
@@ -2446,8 +2446,8 @@ void PrintObject::_make_perimeters()
                             // (it should either lay over our perimeters or outside this area)
                             const coord_t critical_area_depth = coord_t(perimeter_spacing * 1.5);
                             const Polygons critical_area = diff(
-                                offset(slice.expolygon, float(- perimeters_thickness)),
-                                offset(slice.expolygon, float(- perimeters_thickness - critical_area_depth))
+                                offset(slice.expolygon, double(- perimeters_thickness)),
+                                offset(slice.expolygon, double(- perimeters_thickness - critical_area_depth))
                             );
                             // check whether a portion of the upper slices falls inside the critical area
                             const Polylines intersection = intersection_pl(to_polylines(upper_layerm_polygons), critical_area);

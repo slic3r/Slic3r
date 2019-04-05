@@ -52,7 +52,7 @@ ExtrusionPath::_inflate_collection(const Polylines &polylines, ExtrusionEntityCo
 
 void ExtrusionPath::polygons_covered_by_width(Polygons &out, const float scaled_epsilon) const
 {
-    polygons_append(out, offset(this->polyline, float(scale_(this->width/2)) + scaled_epsilon));
+    polygons_append(out, offset(this->polyline, double(scale_(this->width/2)) + scaled_epsilon));
 }
 
 void ExtrusionPath::polygons_covered_by_spacing(Polygons &out, const float scaled_epsilon) const
@@ -60,7 +60,7 @@ void ExtrusionPath::polygons_covered_by_spacing(Polygons &out, const float scale
     // Instantiating the Flow class to get the line spacing.
     // Don't know the nozzle diameter, setting to zero. It shall not matter it shall be optimized out by the compiler.
     Flow flow(this->width, this->height, 0.f, is_bridge(this->role()));
-    polygons_append(out, offset(this->polyline, 0.5f * float(flow.scaled_spacing()) + scaled_epsilon));
+    polygons_append(out, offset(this->polyline, 0.5f * double(flow.scaled_spacing()) + scaled_epsilon));
 }
 
 bool

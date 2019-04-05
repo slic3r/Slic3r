@@ -1028,10 +1028,10 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                 Polygons overhang_polygons;
                 Polygons contact_polygons;
                 Polygons slices_margin_cached;
-                float    slices_margin_cached_offset = -1.;
+                double    slices_margin_cached_offset = -1.;
                 Polygons lower_layer_polygons = (layer_id == 0) ? Polygons() : to_polygons(object.layers()[layer_id-1]->slices.expolygons);
                 // Offset of the lower layer, to trim the support polygons with to calculate dense supports.
-                float    no_interface_offset = 0.f;
+                double    no_interface_offset = 0.;
                 if (layer_id == 0) {
                     // This is the first object layer, so the object is being printed on a raft and
                     // we're here just to get the object footprint for the raft.
@@ -1045,8 +1045,8 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                     for (LayerRegion *layerm : layer.regions()) {
                         // Extrusion width accounts for the roundings of the extrudates.
                         // It is the maximum widh of the extrudate.
-                        float fw = float(layerm->flow(frExternalPerimeter).scaled_width());
-                        no_interface_offset = (no_interface_offset == 0.f) ? fw : std::min(no_interface_offset, fw);
+                        double fw = double(layerm->flow(frExternalPerimeter).scaled_width());
+                        no_interface_offset = (no_interface_offset == 0.) ? fw : std::min(no_interface_offset, fw);
                         float lower_layer_offset = 
                             (layer_id < m_object_config->support_material_enforce_layers.value) ? 
                                 // Enforce a full possible support, ignore the overhang angle.
@@ -1163,12 +1163,12 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                             //FIXME one should trim with the layer span colliding with the support layer, this layer
                             // may be lower than lower_layer, so the support area needed may need to be actually bigger!
                             // For the same reason, the non-bridging support area may be smaller than the bridging support area!
-                            float slices_margin_offset = std::min(lower_layer_offset, float(scale_(m_gap_xy))); 
+                            double slices_margin_offset = std::min(double(lower_layer_offset), double(scale_(m_gap_xy))); 
                             if (slices_margin_cached_offset != slices_margin_offset) {
                                 slices_margin_cached_offset = slices_margin_offset;
                                 slices_margin_cached = (slices_margin_offset == 0.f) ? 
                                     lower_layer_polygons :
-                                    offset2(to_polygons(lower_layer.slices.expolygons), - no_interface_offset * 0.5f, slices_margin_offset + no_interface_offset * 0.5f, SUPPORT_SURFACES_OFFSET_PARAMETERS);
+                                    offset2(to_polygons(lower_layer.slices.expolygons), - no_interface_offset * 0.5, slices_margin_offset + no_interface_offset * 0.5, SUPPORT_SURFACES_OFFSET_PARAMETERS);
                                 if (! buildplate_covered.empty()) {
                                     // Trim the inflated contact surfaces by the top surfaces as well.
                                     polygons_append(slices_margin_cached, buildplate_covered[layer_id]);
@@ -1180,7 +1180,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                                 diff_polygons = diff(
                                     offset(
                                         diff_polygons,
-                                        SUPPORT_MATERIAL_MARGIN / NUM_MARGIN_STEPS,
+                                        double(SUPPORT_MATERIAL_MARGIN / NUM_MARGIN_STEPS),
                                         ClipperLib::jtRound,
                                         // round mitter limit
                                         scale_(0.05)),
@@ -1457,7 +1457,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
 #endif
                 // These are the overhang surfaces. They are touching the object and they are not expanded away from the object.
                 // Use a slight positive offset to overlap the touching regions.
-                polygons_append(polygons_new, offset(*top_contacts[contact_idx]->overhang_polygons, float(SCALED_EPSILON)));
+                polygons_append(polygons_new, offset(*top_contacts[contact_idx]->overhang_polygons, double(SCALED_EPSILON)));
                 polygons_append(projection, union_(polygons_new));
             }
             if (projection.empty())
@@ -1512,7 +1512,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
                             layer_new.bridging = ! m_slicing_params.soluble_interface;
                             //FIXME how much to inflate the bottom surface, as it is being extruded with a bridging flow? The following line uses a normal flow.
                             //FIXME why is the offset positive? It will be trimmed by the object later on anyway, but then it just wastes CPU clocks.
-                            layer_new.polygons = offset(touching, float(m_support_material_flow.scaled_width()), SUPPORT_SURFACES_OFFSET_PARAMETERS);
+                            layer_new.polygons = offset(touching, double(m_support_material_flow.scaled_width()), SUPPORT_SURFACES_OFFSET_PARAMETERS);
                             if (! m_slicing_params.soluble_interface) {
                                 // Walk the top surfaces, snap the top of the new bottom surface to the closest top of the top surface,
                                 // so there will be no support surfaces generated with thickness lower than m_support_layer_height_min.
@@ -1548,7 +1548,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
                 #endif /* SLIC3R_DEBUG */
                             // Trim the already created base layers above the current layer intersecting with the new bottom contacts layer.
                             //FIXME Maybe this is no more needed, as the overlapping base layers are trimmed by the bottom layers at the final stage?
-                            touching = offset(touching, float(SCALED_EPSILON));
+                            touching = offset(touching, double(SCALED_EPSILON));
                             for (int layer_id_above = layer_id + 1; layer_id_above < int(object.total_layer_count()); ++ layer_id_above) {
                                 const Layer &layer_above = *object.layers()[layer_id_above];
                                 if (layer_above.print_z > layer_new.print_z - EPSILON)
@@ -1580,7 +1580,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
             task_group.run([this, &projection, &projection_raw, &layer, &layer_support_area, layer_id] {
                 // Remove the areas that touched from the projection that will continue on next, lower, top surfaces.
     //            Polygons trimming = union_(to_polygons(layer.slices.expolygons), touching, true);
-                Polygons trimming = offset(layer.slices.expolygons, float(SCALED_EPSILON));
+                Polygons trimming = offset(layer.slices.expolygons, double(SCALED_EPSILON));
                 projection = diff(projection_raw, trimming, false);
     #ifdef SLIC3R_DEBUG
                 {
@@ -2653,7 +2653,7 @@ void LoopInterfaceProcessor::generate(MyLayerExtruded &top_contact_layer, const 
     // solution should be found to achieve both goals
     // Store the trimmed polygons into a separate polygon set, so the original infill area remains intact for
     // "modulate by layer thickness".
-    top_contact_layer.set_polygons_to_extrude(diff(top_contact_layer.layer->polygons, offset(loop_lines, float(circle_radius * 1.1))));
+    top_contact_layer.set_polygons_to_extrude(diff(top_contact_layer.layer->polygons, offset(loop_lines, double(circle_radius * 1.1))));
 
     // Transform loops into ExtrusionPath objects.
     extrusion_entities_append_paths(
@@ -2808,7 +2808,7 @@ void modulate_extrusion_by_overlapping_layers(
     for (int i_overlapping_layer = int(n_overlapping_layers) - 1; i_overlapping_layer >= 0; -- i_overlapping_layer) {
         const PrintObjectSupportMaterial::MyLayer &overlapping_layer = *overlapping_layers[i_overlapping_layer];
         ExtrusionPathFragment &frag = path_fragments[i_overlapping_layer];
-        Polygons polygons_trimming = offset(union_ex(overlapping_layer.polygons), float(scale_(0.5*extrusion_width)));
+        Polygons polygons_trimming = offset(union_ex(overlapping_layer.polygons), double(scale_(0.5*extrusion_width)));
         frag.polylines = intersection_pl(path_fragments.back().polylines, polygons_trimming, false);
         path_fragments.back().polylines = diff_pl(path_fragments.back().polylines, polygons_trimming, false);
         // Adjust the extrusion parameters for a reduced layer height and a non-bridging flow (nozzle_dmr = -1, does not matter).
@@ -3049,14 +3049,14 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     // find centerline of the external loop/extrusions
                     ExPolygons to_infill = (support_layer_id == 0 || ! with_sheath) ?
                         // union_ex(base_polygons, true) :
-                        offset2_ex(to_infill_polygons, float(SCALED_EPSILON), float(- SCALED_EPSILON)) :
-                        offset2_ex(to_infill_polygons, float(SCALED_EPSILON), float(- SCALED_EPSILON - 0.5*flow.scaled_width()));            
+                        offset2_ex(to_infill_polygons, double(SCALED_EPSILON), double(- SCALED_EPSILON)) :
+                        offset2_ex(to_infill_polygons, double(SCALED_EPSILON), double(- SCALED_EPSILON - 0.5*flow.scaled_width()));            
                     if (! to_infill.empty() && with_sheath) {
                         // Draw a perimeter all around the support infill. This makes the support stable, but difficult to remove.
                         // TODO: use brim ordering algorithm
                         to_infill_polygons = to_polygons(to_infill);
                         // TODO: use offset2_ex()
-                        to_infill = offset_ex(to_infill, float(- 0.4 * flow.scaled_spacing()));
+                        to_infill = offset_ex(to_infill, double(- 0.4 * flow.scaled_spacing()));
                         extrusion_entities_append_paths(
                             support_layer.support_fills.entities, 
                             to_polylines(std::move(to_infill_polygons)),
@@ -3111,7 +3111,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                 // Destination
                 support_layer.support_fills.entities, 
                 // Regions to fill
-                offset2_ex(raft_layer.polygons, float(SCALED_EPSILON), float(- SCALED_EPSILON)),
+                offset2_ex(raft_layer.polygons, double(SCALED_EPSILON), double(- SCALED_EPSILON)),
                 // Filler and its parameters
                 filler, density,
                 // Extrusion parameters
@@ -3267,8 +3267,8 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                 // find centerline of the external loop/extrusions
                 ExPolygons to_infill = (support_layer_id == 0 || ! with_sheath) ?
                     // union_ex(base_polygons, true) :
-                    offset2_ex(base_layer.polygons_to_extrude(), float(SCALED_EPSILON), float(- SCALED_EPSILON)) :
-                    offset2_ex(base_layer.polygons_to_extrude(), float(SCALED_EPSILON), float(- SCALED_EPSILON - 0.5*flow.scaled_width()));
+                    offset2_ex(base_layer.polygons_to_extrude(), double(SCALED_EPSILON), double(- SCALED_EPSILON)) :
+                    offset2_ex(base_layer.polygons_to_extrude(), double(SCALED_EPSILON), double(- SCALED_EPSILON - 0.5*flow.scaled_width()));
                 if (base_layer.layer->bottom_z < EPSILON) {
                     if (this->m_object_config->support_material_solid_first_layer.value) {
                         // Base flange (the 1st layer).
@@ -3290,7 +3290,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     // TODO: use brim ordering algorithm
                     Polygons to_infill_polygons = to_polygons(to_infill);
                     // TODO: use offset2_ex()
-                    to_infill = offset_ex(to_infill, - 0.4 * float(flow.scaled_spacing()));
+                    to_infill = offset_ex(to_infill, double(- 0.4 * flow.scaled_spacing()));
                     extrusion_entities_append_paths(
                         base_layer.extrusions.entities,
                         to_polylines(std::move(to_infill_polygons)),

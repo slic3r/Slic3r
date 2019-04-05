@@ -143,9 +143,9 @@ static std::vector<SLAAutoSupports::MyLayer> make_layers(
             const float height = (layer_id>2 ? heights[layer_id-3] : heights[0]-(heights[1]-heights[0]));
             const float layer_height = (layer_id!=0 ? heights[layer_id]-heights[layer_id-1] : heights[0]);
             const float safe_angle = 5.f * (float(M_PI)/180.f); // smaller number - less supports
-            const float between_layers_offset =  float(scale_(layer_height / std::tan(safe_angle)));
+            const double between_layers_offset =  double(scale_(layer_height / std::tan(safe_angle)));
             const float slope_angle = 75.f * (float(M_PI)/180.f); // smaller number - less supports
-            const float slope_offset = float(scale_(layer_height / std::tan(slope_angle)));
+            const double slope_offset = double(scale_(layer_height / std::tan(slope_angle)));
 			//FIXME This has a quadratic time complexity, it will be excessively slow for many tiny islands.
 			for (SLAAutoSupports::Structure &top : layer_above.islands) {
 				for (SLAAutoSupports::Structure &bottom : layer_below.islands) {
