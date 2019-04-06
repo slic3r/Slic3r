@@ -1010,6 +1010,21 @@ ModelVolume::swap(ModelVolume &other)
 	std::swap(this->input_file_vol_idx,    other.input_file_vol_idx);
 }
 
+TriangleMesh
+ModelVolume::get_transformed_mesh(TransformationMatrix const * additional_trafo = nullptr) const
+{
+    TransformationMatrix trafo = this->trafo;
+    if(additional_trafo)
+    {
+        trafo.applyLeft(*(additional_trafo));
+    }
+    TriangleMesh mesh = TriangleMesh::TriangleMesh();
+    std::vector<float> trafo_arr = trafo.matrix3x4f();
+    stl_transform(&(this->mesh.stl), &(mesh.stl), trafo_arr.data());
+    stl_invalidate_shared_vertices(&(mesh.stl));
+    return mesh;
+}
+
 t_model_material_id
 ModelVolume::material_id() const
 {

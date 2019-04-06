@@ -477,6 +477,11 @@ class ModelVolume
     /// \return ModelObject* pointer to the owner ModelObject
     ModelObject* get_object() const { return this->object; };
 
+    /// Get the ModelVolume's mesh, transformed by the ModelVolume's TransformationMatrix
+    /// \param additional_trafo optional additional transformation
+    /// \return TriangleMesh the transformed mesh
+    TriangleMesh get_transformed_mesh(TransformationMatrix const * additional_trafo = nullptr) const;
+
     /// Get the material id of this ModelVolume object
     /// \return t_model_material_id the material id string
     t_model_material_id material_id() const;
