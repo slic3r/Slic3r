@@ -615,7 +615,7 @@ ModelObject::mesh() const
         TriangleMesh m(raw_mesh);
         (*i)->transform_mesh(&m);
         mesh.merge(m);
-    }
+        }
     return mesh;
 }
 
@@ -730,7 +730,7 @@ void
 ModelObject::translate(coordf_t x, coordf_t y, coordf_t z)
 {
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->mesh.translate(x, y, z);
+        (*v)->trafo.translate(x, y, z);
     }
     if (this->_bounding_box_valid) this->_bounding_box.translate(x, y, z);
 }
@@ -746,7 +746,7 @@ ModelObject::scale(const Pointf3 &versor)
 {
     if (versor.x == 1 && versor.y == 1 && versor.z == 1) return;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->mesh.scale(versor);
+        (*v)->trafo.scale(versor.x, versor.y, versor.z);
     }
     
     // reset origin translation since it doesn't make sense anymore
@@ -773,7 +773,7 @@ ModelObject::rotate(float angle, const Axis &axis)
 {
     if (angle == 0) return;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->mesh.rotate(angle, axis);
+        (*v)->trafo.rotate(angle, axis);
     }
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
@@ -783,7 +783,7 @@ void
 ModelObject::mirror(const Axis &axis)
 {
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->mesh.mirror(axis);
+        (*v)->trafo.mirror(axis);
     }
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
