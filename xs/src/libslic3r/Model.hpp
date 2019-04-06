@@ -543,6 +543,10 @@ class ModelInstance
     /// \param dont_translate bool whether to translate the mesh or not
     void transform_mesh(TriangleMesh* mesh, bool dont_translate = false) const;
 
+    /// Returns the TransformationMatrix defined by the instance's Transform an external TriangleMesh to the returned TriangleMesh object
+    /// \param dont_translate bool whether to translate the mesh or not
+    TransformationMatrix get_trafo_matrix(bool dont_translate = false) const;
+
     /// Calculate a bounding box of a transformed mesh. To be called on an external mesh.
     /// \param mesh TriangleMesh* pointer to the the mesh
     /// \param dont_translate bool whether to translate the bounding box or not
