@@ -1086,7 +1086,7 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
             Pointf v_other(other_reverse ? other.lines().back().vector().x : other.lines().front().vector().x,
                 other_reverse ? other.lines().back().vector().y : other.lines().front().vector().y);
             v_other.scale(1 / std::sqrt(v_other.x*v_other.x + v_other.y*v_other.y));
-            float other_dot = v_poly.x*v_other.x + v_poly.y*v_other.y;
+            float other_dot = std::abs(float(v_poly.x*v_other.x + v_poly.y*v_other.y));
             if (other_dot > best_dot) {
                 best_candidate = &other;
                 best_idx = j;
