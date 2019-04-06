@@ -280,15 +280,6 @@ TriangleMesh::WriteOBJFile(const std::string &output_file) const {
     #endif
 }
 
-TriangleMesh TriangleMesh::transform(const TransformationMatrix &trafo) const
-{
-    TriangleMesh mesh = TriangleMesh::TriangleMesh();
-    std::vector<float> trafo_arr = trafo.matrix3x4f();
-    stl_transform(&this->stl, &(mesh.stl), trafo_arr.data());
-    stl_invalidate_shared_vertices(&(mesh.stl));
-    return mesh;
-}
-
 void TriangleMesh::scale(float factor)
 {
     stl_scale(&(this->stl), factor);
