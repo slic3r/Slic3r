@@ -1074,19 +1074,11 @@ ModelInstance::swap(ModelInstance &other)
 void
 ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
 {
-    mesh->rotate_x(this->x_rotation);
-    mesh->rotate_y(this->y_rotation);
     mesh->rotate_z(this->rotation);                 // rotate around mesh origin
 
-    Pointf3 scale_versor = this->scaling_vector;
-    scale_versor.scale(this->scaling_factor);
-    mesh->scale(scale_versor);              // scale around mesh origin
+    mesh->scale(this->scaling_factor);              // scale around mesh origin
     if (!dont_translate) {
-        float z_trans = 0;
-        // In 3mf models avoid keeping the objects under z = 0 plane.
-        if (this->y_rotation || this->x_rotation)
-            z_trans = -(mesh->stl.stats.min.z);
-        mesh->translate(this->offset.x, this->offset.y, z_trans);
+        mesh->translate(this->offset.x, this->offset.y, 0);
     }
 
 }
@@ -1096,10 +1088,6 @@ BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mes
     // rotate around mesh origin
     double c = cos(this->rotation);
     double s = sin(this->rotation);
-    double cx = cos(this->x_rotation);
-    double sx = sin(this->x_rotation);
-    double cy = cos(this->y_rotation);
-    double sy = sin(this->y_rotation);
     BoundingBoxf3 bbox;
     for (int i = 0; i < mesh->stl.stats.number_of_facets; ++ i) {
         const stl_facet &facet = mesh->stl.facet_start[i];
@@ -1107,26 +1095,15 @@ BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mes
             stl_vertex v = facet.vertex[j];
             double xold = v.x;
             double yold = v.y;
-            double zold = v.z;
-            // Rotation around x axis.
-            v.z = float(sx * yold + cx * zold);
-            yold = v.y = float(cx * yold - sx * zold);
-            zold = v.z;
-            // Rotation around y axis.
-            v.x = float(cy * xold + sy * zold);
-            v.z = float(-sy * xold + cy * zold);
-            xold = v.x;
             // Rotation around z axis.
             v.x = float(c * xold - s * yold);
             v.y = float(s * xold + c * yold);
-            v.x *= float(this->scaling_factor * this->scaling_vector.x);
-            v.y *= float(this->scaling_factor * this->scaling_vector.y);
-            v.z *= float(this->scaling_factor * this->scaling_vector.z);
+            v.x *= float(this->scaling_factor);
+            v.y *= float(this->scaling_factor);
+            v.z *= float(this->scaling_factor);
             if (!dont_translate) {
                 v.x += this->offset.x;
                 v.y += this->offset.y;
-                if (this->y_rotation || this->x_rotation)
-                    v.z += -(mesh->stl.stats.min.z);
             }
             bbox.merge(Pointf3(v.x, v.y, v.z));
         }
@@ -1139,10 +1116,6 @@ BoundingBoxf3 ModelInstance::transform_bounding_box(const BoundingBoxf3 &bbox, b
     // rotate around mesh origin
     double c = cos(this->rotation);
     double s = sin(this->rotation);
-    double cx = cos(this->x_rotation);
-    double sx = sin(this->x_rotation);
-    double cy = cos(this->y_rotation);
-    double sy = sin(this->y_rotation);
     Pointf3 pts[4] = {
         bbox.min,
         bbox.max,
@@ -1154,21 +1127,10 @@ BoundingBoxf3 ModelInstance::transform_bounding_box(const BoundingBoxf3 &bbox, b
         Pointf3 &v = pts[i];
         double xold = v.x;
         double yold = v.y;
-        double zold = v.z;
-        // Rotation around x axis.
-        v.z = float(sx * yold + cx * zold);
-        yold = v.y = float(cx * yold - sx * zold);
-        zold = v.z;
-        // Rotation around y axis.
-        v.x = float(cy * xold + sy * zold);
-        v.z = float(-sy * xold + cy * zold);
-        xold = v.x;
         // Rotation around z axis.
         v.x = float(c * xold - s * yold);
         v.y = float(s * xold + c * yold);
-        v.x *= this->scaling_factor * this->scaling_vector.x;
-        v.y *= this->scaling_factor * this->scaling_vector.y;
-        v.z *= this->scaling_factor * this->scaling_vector.z;
+        v.scale(this->scaling_factor);
         if (!dont_translate) {
             v.x += this->offset.x;
             v.y += this->offset.y;
