@@ -609,13 +609,14 @@ TriangleMesh
 ModelObject::mesh() const
 {
     TriangleMesh mesh;
-    TriangleMesh raw_mesh = this->raw_mesh();
+    TransformationMatrix trafo;
     
     for (ModelInstancePtrs::const_iterator i = this->instances.begin(); i != this->instances.end(); ++i) {
-        TriangleMesh m(raw_mesh);
-        (*i)->transform_mesh(&m);
-        mesh.merge(m);
+        TransformationMatrix instance_trafo = (*i)->get_trafo_matrix();
+        for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
+            mesh.merge((*v)->get_transformed_mesh(&instance_trafo));
         }
+    }
     return mesh;
 }
 
@@ -625,7 +626,7 @@ ModelObject::raw_mesh() const
     TriangleMesh mesh;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         if ((*v)->modifier) continue;
-        mesh.merge((*v)->mesh);
+        mesh.merge((*v)->get_transformed_mesh());
     }
     return mesh;
 }
