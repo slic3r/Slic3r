@@ -1050,11 +1050,11 @@ ModelVolume::assign_unique_material()
 
 
 ModelInstance::ModelInstance(ModelObject *object)
-:   rotation(0), x_rotation(0), y_rotation(0), scaling_factor(1),scaling_vector(Pointf3(1,1,1)), z_translation(0), object(object)
+:   rotation(0), scaling_factor(1), object(object)
 {}
 
 ModelInstance::ModelInstance(ModelObject *object, const ModelInstance &other)
-:   rotation(other.rotation), x_rotation(other.x_rotation), y_rotation(other.y_rotation), scaling_factor(other.scaling_factor), scaling_vector(other.scaling_vector), offset(other.offset), z_translation(other.z_translation), object(object)
+:   rotation(other.rotation), scaling_factor(other.scaling_factor), offset(other.offset), object(object)
 {}
 
 ModelInstance& ModelInstance::operator= (ModelInstance other)
@@ -1081,6 +1081,18 @@ ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
         mesh->translate(this->offset.x, this->offset.y, 0);
     }
 
+}
+
+TransformationMatrix ModelInstance::get_trafo_matrix(bool dont_translate) const
+{
+    TransformationMatrix trafo = TransformationMatrix();
+    trafo.scale(this->scaling_factor);
+    trafo.rotate(this->rotation, Axis::Z);
+    if(!dont_translate)
+    {
+        trafo.translate(this->offset.x, this->offset.y, 0);
+    }
+    return trafo;
 }
 
 BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mesh, bool dont_translate) const
