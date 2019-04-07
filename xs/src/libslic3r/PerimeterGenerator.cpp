@@ -27,6 +27,9 @@ PerimeterGenerator::process()
     // solid infill
     coord_t ispacing            = this->solid_infill_flow.scaled_spacing();
     
+    //nozzle diameter
+    const double nozzle_diameter = this->print_config->nozzle_diameter.get_at(this->config->perimeter_extruder-1);
+    
     // Calculate the minimum required spacing between two adjacent traces.
     // This should be equal to the nominal flow spacing but we experiment
     // with some tolerance in order to avoid triggering medial axis when
@@ -48,8 +51,6 @@ PerimeterGenerator::process()
         // We consider overhang any part where the entire nozzle diameter is not supported by the
         // lower layer, so we take lower slices and offset them by half the nozzle diameter used 
         // in the current layer
-        double nozzle_diameter = this->print_config->nozzle_diameter.get_at(this->config->perimeter_extruder-1);
-        
         this->_lower_slices_p = offset(*this->lower_slices, scale_(+nozzle_diameter/2));
     }
     
@@ -319,6 +320,8 @@ PerimeterGenerator::process()
             
             // collapse 
             double min = 0.2*pwidth * (1 - INSET_OVERLAP_TOLERANCE);
+			//be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
+			min = std::max(min, double(Flow::new_from_spacing(EPSILON, nozzle_diameter, this->layer_height, false).scaled_width()));
             double max = 2*pspacing;
             ExPolygons gaps_ex = diff_ex(
                 offset2(gaps, -min/2, +min/2),
