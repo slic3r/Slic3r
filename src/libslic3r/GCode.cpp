@@ -1913,11 +1913,12 @@ static Points::iterator project_point_to_polygon_and_insert(Polygon &polygon, co
         const Point &p2 = polygon.points[j];
         const Slic3r::Point v_seg = p2 - p1;
         const Slic3r::Point v_pt  = pt - p1;
-        const int64_t l2_seg = int64_t(v_seg(0)) * int64_t(v_seg(0)) + int64_t(v_seg(1)) * int64_t(v_seg(1));
-        int64_t t_pt = int64_t(v_seg(0)) * int64_t(v_pt(0)) + int64_t(v_seg(1)) * int64_t(v_pt(1));
+        //going into double because coord*coord can overflow.
+        const double l2_seg = double(v_seg(0)) * double(v_seg(0)) + double(v_seg(1)) * double(v_seg(1));
+        double t_pt = double(v_seg(0)) * double(v_pt(0)) + double(v_seg(1)) * double(v_pt(1));
         if (t_pt < 0) {
             // Closest to p1.
-            double dabs = sqrt(int64_t(v_pt(0)) * int64_t(v_pt(0)) + int64_t(v_pt(1)) * int64_t(v_pt(1)));
+            double dabs = sqrt(double(v_pt(0)) * double(v_pt(0)) + double(v_pt(1)) * double(v_pt(1)));
             if (dabs < d_min) {
                 d_min  = dabs;
                 i_min  = i;
@@ -1930,7 +1931,7 @@ static Points::iterator project_point_to_polygon_and_insert(Polygon &polygon, co
         } else {
             // Closest to the segment.
             assert(t_pt >= 0 && t_pt <= l2_seg);
-            int64_t d_seg = int64_t(v_seg(1)) * int64_t(v_pt(0)) - int64_t(v_seg(0)) * int64_t(v_pt(1));
+            double d_seg = double(v_seg(1)) * double(v_pt(0)) - double(v_seg(0)) * double(v_pt(1));
             double d = double(d_seg) / sqrt(double(l2_seg));
             double dabs = std::abs(d);
             if (dabs < d_min) {
@@ -2010,9 +2011,9 @@ std::vector<float> polygon_angles_at_vertices(const Polygon &polygon, const std:
         const Point &p2 = polygon.points[idx_next];
         const Point  v1 = p1 - p0;
         const Point  v2 = p2 - p1;
-		int64_t dot   = int64_t(v1(0))*int64_t(v2(0)) + int64_t(v1(1))*int64_t(v2(1));
-		int64_t cross = int64_t(v1(0))*int64_t(v2(1)) - int64_t(v1(1))*int64_t(v2(0));
-		float angle = float(atan2(double(cross), double(dot)));
+        double dot   = double(v1(0))*double(v2(0)) + double(v1(1))*double(v2(1));
+        double cross = double(v1(0))*double(v2(1)) - double(v1(1))*double(v2(0));
+        float angle = float(atan2(cross, dot));
         angles[idx_curr] = angle;
     }
 

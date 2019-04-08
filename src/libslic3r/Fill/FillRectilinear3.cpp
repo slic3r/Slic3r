@@ -276,13 +276,13 @@ int SegmentIntersection::ordering_along_line(const SegmentIntersection &other) c
             // other.iSegment succeeds this->iSegment
 			assert(seg_end_a == seg_start_b);
 			// Avoid calling the 128bit x 128bit multiplication below if this->line intersects the common point.
-			if (cross2(Vec2i64(this->line->dir.cast<int64_t>()), (seg_end_b - this->line->pos).cast<int64_t>()) == 0)
+			if (cross2(Vec2crd(this->line->dir), (seg_end_b - this->line->pos)) == 0)
 				return 0;
         } else if ((other.iSegment + 1) % poly_a.points.size() == this->iSegment) {
             // this->iSegment succeeds other.iSegment
 			assert(seg_start_a == seg_end_b);
 			// Avoid calling the 128bit x 128bit multiplication below if this->line intersects the common point.
-			if (cross2(Vec2i64(this->line->dir.cast<int64_t>()), (seg_start_a - this->line->pos).cast<int64_t>()) == 0)
+			if (cross2(Vec2crd(this->line->dir), (seg_start_a - this->line->pos)) == 0)
 				return 0;
         } else {
             // General case.
@@ -290,33 +290,33 @@ int SegmentIntersection::ordering_along_line(const SegmentIntersection &other) c
     }
 
     // First test, whether both points of one segment are completely in one half-plane of the other line.
-    const Vec2i64 vec_b = (seg_end_b - seg_start_b).cast<int64_t>();
-    int side_start = signum(cross2(vec_b, (seg_start_a - seg_start_b).cast<int64_t>()));
-    int side_end   = signum(cross2(vec_b, (seg_end_a   - seg_start_b).cast<int64_t>()));
+    const Vec2crd vec_b = (seg_end_b - seg_start_b);
+    int side_start = signum(cross2(vec_b, (seg_start_a - seg_start_b)));
+    int side_end   = signum(cross2(vec_b, (seg_end_a   - seg_start_b)));
     int side       = side_start * side_end;
     if (side > 0)
         // This segment is completely inside one half-plane of the other line, therefore the ordering is trivial.
-        return signum(cross2(vec_b, this->line->dir.cast<int64_t>())) * side_start;
+        return signum(cross2(vec_b, this->line->dir)) * side_start;
 
-    const Vec2i64 vec_a = (seg_end_a - seg_start_a).cast<int64_t>();
-    int side_start2 = signum(cross2(vec_a, (seg_start_b - seg_start_a).cast<int64_t>()));
-    int side_end2   = signum(cross2(vec_a, (seg_end_b   - seg_start_a).cast<int64_t>()));
+    const Vec2crd vec_a = (seg_end_a - seg_start_a);
+    int side_start2 = signum(cross2(vec_a, (seg_start_b - seg_start_a)));
+    int side_end2   = signum(cross2(vec_a, (seg_end_b   - seg_start_a)));
     int side2       = side_start2 * side_end2;
     //if (side == 0 && side2 == 0)
         // The segments share one of their end points.
     if (side2 > 0)
         // This segment is completely inside one half-plane of the other line, therefore the ordering is trivial.
-        return signum(cross2(this->line->dir.cast<int64_t>(), vec_a)) * side_start2;
+        return signum(cross2(this->line->dir, vec_a)) * side_start2;
 
     // The two segments intersect and they are not sucessive segments of the same contour.
     // Ordering of the points depends on the position of the segment intersection (left / right from this->line),
     // therefore a simple test over the input segment end points is not sufficient.
 
     // Find the parameters of intersection of the two segmetns with this->line.
-	int64_t denom1 = cross2(this->line->dir.cast<int64_t>(), vec_a);
-	int64_t denom2 = cross2(this->line->dir.cast<int64_t>(), vec_b);
-	Vec2i64 vx_a   = (seg_start_a - this->line->pos).cast<int64_t>();
-	Vec2i64 vx_b   = (seg_start_b - this->line->pos).cast<int64_t>();
+	int64_t denom1 = cross2(this->line->dir, vec_a);
+	int64_t denom2 = cross2(this->line->dir, vec_b);
+    Vec2crd vx_a   = (seg_start_a - this->line->pos);
+    Vec2crd vx_b   = (seg_start_b - this->line->pos);
 	int64_t t1_times_denom1 = vx_a(0) * vec_a(1) - vx_a(1) * vec_a(0);
 	int64_t t2_times_denom2 = vx_b(0) * vec_b(1) - vx_b(1) * vec_b(0);
 	assert(denom1 != 0);
@@ -330,7 +330,7 @@ bool SegmentIntersection::operator<(const SegmentIntersection &other) const
 #ifdef _DEBUG
     Point p1 = this->pos();
     Point p2 = other.pos();
-    int64_t d = this->line->dir.cast<int64_t>().dot((p2 - p1).cast<int64_t>());
+    int64_t d = this->line->dir.dot((p2 - p1));
 #endif /* _DEBUG */
     int   ordering = this->ordering_along_line(other);
 #ifdef _DEBUG
@@ -510,7 +510,7 @@ static bool prepare_infill_hatching_segments(
         for (size_t i = 1; i < sil.intersections.size(); ++ i) {
             Point p1 = sil.intersections[i - 1].pos();
             Point p2 = sil.intersections[i].pos();
-            int64_t d = sil.dir.cast<int64_t>().dot((p2 - p1).cast<int64_t>());
+            int64_t d = sil.dir.dot((p2 - p1));
             assert(d >= - int64_t(SCALED_EPSILON));
         }
 #endif /* _DEBUG */

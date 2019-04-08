@@ -1258,9 +1258,9 @@ Polygons EdgeGrid::Grid::contours_simplified(coord_t offset, bool fill_holes) co
 	// 1) Collect the lines.
 	std::vector<Line> lines;
 	EndPointMapType start_point_to_line_idx;
-	for (int r = 0; r <= int(m_rows); ++ r) {
-		for (int c = 0; c <= int(m_cols); ++ c) {
-			int  addr    = (r + 1) * cell_cols + c + 1;
+	for (coord_t r = 0; r <= coord_t(m_rows); ++ r) {
+		for (coord_t c = 0; c <= coord_t(m_cols); ++ c) {
+			size_t  addr    = (r + 1) * cell_cols + c + 1;
 			bool left    = cell_inside[addr - 1];
 			bool top     = cell_inside[addr - cell_cols];
 			bool current = cell_inside[addr];
@@ -1364,9 +1364,9 @@ inline int segments_could_intersect(
 	const Slic3r::Point &ip1, const Slic3r::Point &ip2, 
 	const Slic3r::Point &jp1, const Slic3r::Point &jp2)
 {
-	Vec2i64 iv   = (ip2 - ip1).cast<int64_t>();
-	Vec2i64 vij1 = (jp1 - ip1).cast<int64_t>();
-	Vec2i64 vij2 = (jp2 - ip1).cast<int64_t>();
+    Vec2crd iv   = (ip2 - ip1);
+    Vec2crd vij1 = (jp1 - ip1);
+    Vec2crd vij2 = (jp2 - ip1);
 	int64_t tij1 = cross2(iv, vij1);
 	int64_t tij2 = cross2(iv, vij2);
 	int     sij1 = (tij1 > 0) ? 1 : ((tij1 < 0) ? -1 : 0); // signum

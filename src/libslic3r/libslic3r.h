@@ -20,7 +20,7 @@
 
 #include "Technologies.hpp"
 
-typedef int32_t coord_t;
+typedef int64_t coord_t;
 typedef double  coordf_t;
 
 //FIXME This epsilon value is used for many non-related purposes:
