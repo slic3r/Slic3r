@@ -856,7 +856,20 @@ void PrintObject::_slice()
         }
         this->delete_layer(int(this->layers.size()) - 1);
     }
-    
+
+    // remove collinear points from slice polygons (artifacts from stl-triangulation)
+    std::queue<SurfaceCollection*> queue;
+    for (Layer* layer : this->layers) {
+        for (LayerRegion* layerm : layer->regions) {
+            queue.push(&layerm->slices);
+        }
+    }
+    parallelize<SurfaceCollection*>(
+        queue,
+        boost::bind(&Slic3r::SurfaceCollection::remove_collinear_points, _1),
+        this->_print->config.threads.value
+    );
+
     // Apply size compensation and perform clipping of multi-part objects.
     const coord_t xy_size_compensation = scale_(this->config.xy_size_compensation.value);
     for (Layer* layer : this->layers) {
