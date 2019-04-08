@@ -102,8 +102,8 @@ Contour3D sphere(double rho, Portion portion = make_portion(0.0, 2.0*PI),
     // prohibit close to zero radius
     if(rho <= 1e-6 && rho >= -1e-6) return ret;
 
-    auto& vertices = ret.points;
-    auto& facets = ret.indices;
+    Pointf3s& vertices = ret.points;
+    Indices& facets = ret.indices;
 
     // Algorithm:
     // Add points one-by-one to the sphere grid and form facets using relative
@@ -128,7 +128,7 @@ Contour3D sphere(double rho, Portion portion = make_portion(0.0, 2.0*PI),
     if(sbegin == 0)
         vertices.emplace_back(Vec3d(0.0, 0.0, -rho + increment*sbegin*2.0*rho));
 
-    auto id = coord_t(vertices.size());
+    int32_t id = int32_t(vertices.size());
     for (size_t i = 0; i < ring.size(); i++) {
         // Fixed scaling
         const double z = -rho + increment*rho*2.0 * (sbegin + 1.0);
@@ -138,8 +138,8 @@ Contour3D sphere(double rho, Portion portion = make_portion(0.0, 2.0*PI),
         vertices.emplace_back(Vec3d(b(0), b(1), z));
 
         if(sbegin == 0)
-        facets.emplace_back((i == 0) ? Vec3crd(coord_t(ring.size()), 0, 1) :
-                                       Vec3crd(id - 1, 0, id));
+        facets.emplace_back((i == 0) ? Vec3i32(int32_t(ring.size()), 0, 1) :
+                                       Vec3i32(id - 1, 0, id));
         ++ id;
     }
 
@@ -152,15 +152,15 @@ Contour3D sphere(double rho, Portion portion = make_portion(0.0, 2.0*PI),
         for (size_t i = 0; i < ring.size(); i++) {
             Vec2d b = Eigen::Rotation2Dd(ring[i]) * Eigen::Vector2d(0, r);
             vertices.emplace_back(Vec3d(b(0), b(1), z));
-            auto id_ringsize = coord_t(id - int(ring.size()));
+            auto id_ringsize = int32_t(id - int(ring.size()));
             if (i == 0) {
                 // wrap around
-                facets.emplace_back(Vec3crd(id - 1, id,
-                                            id + coord_t(ring.size() - 1)));
-                facets.emplace_back(Vec3crd(id - 1, id_ringsize, id));
+                facets.emplace_back(Vec3i32(id - 1, id,
+                                            id + int32_t(ring.size() - 1)));
+                facets.emplace_back(Vec3i32(id - 1, id_ringsize, id));
             } else {
-                facets.emplace_back(Vec3crd(id_ringsize - 1, id_ringsize, id));
-                facets.emplace_back(Vec3crd(id - 1, id_ringsize - 1, id));
+                facets.emplace_back(Vec3i32(id_ringsize - 1, id_ringsize, id));
+                facets.emplace_back(Vec3i32(id - 1, id_ringsize - 1, id));
             }
             id++;
         }
@@ -171,13 +171,13 @@ Contour3D sphere(double rho, Portion portion = make_portion(0.0, 2.0*PI),
     if(send >= size_t(2*PI / angle)) {
         vertices.emplace_back(Vec3d(0.0, 0.0, -rho + increment*send*2.0*rho));
         for (size_t i = 0; i < ring.size(); i++) {
-            auto id_ringsize = coord_t(id - int(ring.size()));
+            auto id_ringsize = int32_t(id - int(ring.size()));
             if (i == 0) {
                 // third vertex is on the other side of the ring.
-                facets.emplace_back(Vec3crd(id - 1, id_ringsize, id));
+                facets.emplace_back(Vec3i32(id - 1, id_ringsize, id));
             } else {
-                auto ci = coord_t(id_ringsize + coord_t(i));
-                facets.emplace_back(Vec3crd(ci - 1, ci, id));
+                auto ci = int32_t(id_ringsize + int32_t(i));
+                facets.emplace_back(Vec3i32(ci - 1, ci, id));
             }
         }
     }
@@ -195,9 +195,9 @@ Contour3D cylinder(double r, double h, size_t ssteps, const Vec3d sp = {0,0,0})
 {
     Contour3D ret;
 
-    auto steps = int(ssteps);
-    auto& points = ret.points;
-    auto& indices = ret.indices;
+    int32_t steps = int32_t(ssteps);
+    Pointf3s& points = ret.points;
+    Indices& indices = ret.indices;
     points.reserve(2*ssteps);
     double a = 2*PI/steps;
 
@@ -222,7 +222,7 @@ Contour3D cylinder(double r, double h, size_t ssteps, const Vec3d sp = {0,0,0})
 
     // Now create long triangles connecting upper and lower circles
     indices.reserve(2*ssteps);
-    auto offs = steps;
+    int32_t offs = steps;
     for(int i = 0; i < steps - 1; ++i) {
         indices.emplace_back(i, i + offs, offs + i + 1);
         indices.emplace_back(i, offs + i + 1, i + 1);
@@ -237,16 +237,16 @@ Contour3D cylinder(double r, double h, size_t ssteps, const Vec3d sp = {0,0,0})
     // a watertight body. So we create a triangle fan for the upper and lower
     // ending of the cylinder to close the geometry.
     points.emplace_back(jp); size_t ci = points.size() - 1;
-    for(int i = 0; i < steps - 1; ++i)
-        indices.emplace_back(i + offs + 1, i + offs, ci);
+    for(int32_t i = 0; i < steps - 1; ++i)
+        indices.emplace_back(int32_t(i + offs + 1), int32_t(i + offs), int32_t(ci));
 
-    indices.emplace_back(offs, steps + offs - 1, ci);
+    indices.emplace_back(offs, int32_t(steps + offs - 1), int32_t(ci));
 
     points.emplace_back(endp); ci = points.size() - 1;
-    for(int i = 0; i < steps - 1; ++i)
-        indices.emplace_back(ci, i, i + 1);
+    for(int32_t i = 0; i < steps - 1; ++i)
+        indices.emplace_back(int32_t(ci), i, i + 1);
 
-    indices.emplace_back(steps - 1, 0, ci);
+    indices.emplace_back(int32_t(steps - 1), int32_t(0), int32_t(ci));
 
     return ret;
 }
@@ -306,10 +306,10 @@ struct Head {
         // The calculated phi is an offset to the half circles needed to smooth
         // the transition from the circle to the robe geometry
 
-        auto&& s1 = sphere(r_big_mm, make_portion(0, PI/2 + phi), detail);
-        auto&& s2 = sphere(r_small_mm, make_portion(PI/2 + phi, PI), detail);
+        Contour3D&& s1 = sphere(r_big_mm, make_portion(0, PI/2 + phi), detail);
+        Contour3D&& s2 = sphere(r_small_mm, make_portion(PI/2 + phi, PI), detail);
 
-        for(auto& p : s2.points) z(p) += h;
+        for(Vec3d & p : s2.points) z(p) += h;
 
         mesh.merge(s1);
         mesh.merge(s2);
@@ -318,17 +318,17 @@ struct Head {
             idx1 < s1.points.size() - 1;
             idx1++, idx2++)
         {
-            coord_t i1s1 = coord_t(idx1), i1s2 = coord_t(idx2);
-            coord_t i2s1 = i1s1 + 1, i2s2 = i1s2 + 1;
+            int32_t i1s1 = int32_t(idx1), i1s2 = int32_t(idx2);
+            int32_t i2s1 = i1s1 + 1, i2s2 = i1s2 + 1;
 
             mesh.indices.emplace_back(i1s1, i2s1, i2s2);
             mesh.indices.emplace_back(i1s1, i2s2, i1s2);
         }
 
-        auto i1s1 = coord_t(s1.points.size()) - coord_t(steps);
-        auto i2s1 = coord_t(s1.points.size()) - 1;
-        auto i1s2 = coord_t(s1.points.size());
-        auto i2s2 = coord_t(s1.points.size()) + coord_t(steps) - 1;
+        int32_t i1s1 = int32_t(s1.points.size()) - int32_t(steps);
+        int32_t i2s1 = int32_t(s1.points.size()) - 1;
+        int32_t i1s2 = int32_t(s1.points.size());
+        int32_t i2s2 = int32_t(s1.points.size()) + int32_t(steps) - 1;
 
         mesh.indices.emplace_back(i2s2, i2s1, i1s1);
         mesh.indices.emplace_back(i1s2, i2s2, i1s1);

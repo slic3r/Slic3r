@@ -366,7 +366,7 @@ bool GLGizmoSlaSupports::gizmo_event(SLAGizmoEventType action, const Vec2d& mous
             double z_offset = volume->get_sla_shift_z();
 
             // bounding box created from the rectangle corners - will take care of order of the corners
-            BoundingBox rectangle(Points{Point(m_selection_rectangle_start_corner.cast<int>()), Point(m_selection_rectangle_end_corner.cast<int>())});
+            BoundingBox rectangle(Points{Point(m_selection_rectangle_start_corner.cast<coord_t>()), Point(m_selection_rectangle_end_corner.cast<coord_t>())});
 
             const Transform3d& instance_matrix_no_translation = volume->get_instance_transformation().get_matrix(true);
             // we'll recover current look direction from the modelview matrix (in world coords)...

@@ -287,11 +287,11 @@ PointSet normals(const PointSet& points,
         }
 
         // vector for the neigboring triangles including the detected one.
-        std::vector<Vec3i> neigh;
+        std::vector<Vec3i32> neigh;
         if(ic >= 0) { // The point is right on a vertex of the triangle
             for(int n = 0; n < mesh.F().rows(); ++n) {
                 thr();
-                Vec3i ni = mesh.F().row(n);
+                Vec3i32 ni = mesh.F().row(n);
                 if((ni(X) == ic || ni(Y) == ic || ni(Z) == ic))
                     neigh.emplace_back(ni);
             }
@@ -300,7 +300,7 @@ PointSet normals(const PointSet& points,
             // now get all the neigboring triangles
             for(int n = 0; n < mesh.F().rows(); ++n) {
                 thr();
-                Vec3i ni = mesh.F().row(n);
+                Vec3i32 ni = mesh.F().row(n);
                 if((ni(X) == ia || ni(Y) == ia || ni(Z) == ia) &&
                    (ni(X) == ib || ni(Y) == ib || ni(Z) == ib))
                     neigh.emplace_back(ni);
@@ -309,7 +309,7 @@ PointSet normals(const PointSet& points,
 
         // Calculate the normals for the neighboring triangles
         std::vector<Vec3d> neighnorms; neighnorms.reserve(neigh.size());
-        for(const Vec3i& tri : neigh) {
+        for(const Vec3i32& tri : neigh) {
             const Vec3d& pt1 = mesh.V().row(tri(0));
             const Vec3d& pt2 = mesh.V().row(tri(1));
             const Vec3d& pt3 = mesh.V().row(tri(2));

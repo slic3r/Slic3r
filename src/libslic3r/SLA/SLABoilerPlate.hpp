@@ -29,14 +29,14 @@ inline coordf_t& x(Vec3d& p) { return p(0); }
 inline coordf_t& y(Vec3d& p) { return p(1); }
 inline coordf_t& z(Vec3d& p) { return p(2); }
 
-inline coord_t& x(Vec3crd& p) { return p(0); }
-inline coord_t& y(Vec3crd& p) { return p(1); }
-inline coord_t& z(Vec3crd& p) { return p(2); }
-inline coord_t x(const Vec3crd& p) { return p(0); }
-inline coord_t y(const Vec3crd& p) { return p(1); }
-inline coord_t z(const Vec3crd& p) { return p(2); }
+inline int32_t& x(Vec3i32& p) { return p(0); }
+inline int32_t& y(Vec3i32& p) { return p(1); }
+inline int32_t& z(Vec3i32& p) { return p(2); }
+inline int32_t x(const Vec3i32& p) { return p(0); }
+inline int32_t y(const Vec3i32& p) { return p(1); }
+inline int32_t z(const Vec3i32& p) { return p(2); }
 
-using Indices = std::vector<Vec3crd>;
+using Indices = std::vector<Vec3i32>;
 
 /// Intermediate struct for a 3D mesh
 struct Contour3D {
@@ -44,14 +44,14 @@ struct Contour3D {
     Indices indices;
 
     void merge(const Contour3D& ctr) {
-        auto s3 = coord_t(points.size());
-        auto s = indices.size();
+        size_t s3 = size_t(points.size());
+        size_t s = indices.size();
 
         points.insert(points.end(), ctr.points.begin(), ctr.points.end());
         indices.insert(indices.end(), ctr.indices.begin(), ctr.indices.end());
 
         for(size_t n = s; n < indices.size(); n++) {
-            auto& idx = indices[n]; x(idx) += s3; y(idx) += s3; z(idx) += s3;
+            Vec3i32& idx = indices[n]; x(idx) += s3; y(idx) += s3; z(idx) += s3;
         }
     }
 
@@ -71,7 +71,7 @@ struct Contour3D {
         }
 
         for(auto& f : indices) {
-            stream << "f " << (f + Vec3i(1, 1, 1)).transpose() << "\n";
+            stream << "f " << (f + Vec3i32(1, 1, 1)).transpose() << "\n";
         }
     }
 };

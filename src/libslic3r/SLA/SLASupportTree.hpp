@@ -7,18 +7,11 @@
 #include <memory>
 #include <Eigen/Geometry>
 
+#include <libslic3r/Point.hpp>
 #include "SLACommon.hpp"
 
 
 namespace Slic3r {
-
-// Needed types from Point.hpp
-typedef int32_t coord_t;
-typedef Eigen::Matrix<double,   3, 1, Eigen::DontAlign> Vec3d;
-typedef Eigen::Matrix<float,    3, 1, Eigen::DontAlign> Vec3f;
-typedef Eigen::Matrix<coord_t,  3, 1, Eigen::DontAlign> Vec3crd;
-typedef std::vector<Vec3d>                              Pointf3s;
-typedef std::vector<Vec3crd>                            Points3;
 
 class TriangleMesh;
 class Model;

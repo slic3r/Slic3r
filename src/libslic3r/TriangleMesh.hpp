@@ -22,7 +22,7 @@ class TriangleMesh
 {
 public:
     TriangleMesh() : repaired(false) { stl_initialize(&this->stl); }
-    TriangleMesh(const Pointf3s &points, const std::vector<Vec3crd> &facets);
+    TriangleMesh(const Pointf3s &points, const std::vector<Vec3i32> &facets);
     TriangleMesh(const TriangleMesh &other) : repaired(false) { stl_initialize(&this->stl); *this = other; }
     TriangleMesh(TriangleMesh &&other) : repaired(false) { stl_initialize(&this->stl); this->swap(other); }
     ~TriangleMesh() { stl_close(&this->stl); }
