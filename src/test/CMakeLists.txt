@@ -17,6 +17,7 @@ set(SLIC3R_TEST_SOURCES
     libslic3r/test_geometry.cpp
     libslic3r/test_model.cpp
     libslic3r/test_print.cpp
+    libslic3r/test_thin.cpp
 )
 
 if (NOT TARGET Catch)

@@ -20,16 +20,16 @@ SCENARIO("Extrusion width specifics", "[!mayfail]") {
         // this is a sharedptr
 		DynamicPrintConfig* config {Slic3r::DynamicPrintConfig::new_from_defaults()};
         config->set_key_value("skirts", new ConfigOptionInt{1});
-        config->set_key_value{"brim_width", new ConfigOptionFloat{2}};
-        config->set_key_value{"perimeters", new ConfigOptionInt{3}};
-        config->set_key_value{"fill_density", new ConfigOptionPercent{40}};
-        config->set_key_value{"first_layer_height", new ConfigOptionFloatOrPercent{100, true}};
+        config->set_key_value("brim_width", new ConfigOptionFloat{2});
+        config->set_key_value("perimeters", new ConfigOptionInt{3});
+        config->set_key_value("fill_density", new ConfigOptionPercent{40});
+        config->set_key_value("first_layer_height", new ConfigOptionFloatOrPercent{100, true});
 
         WHEN("first layer width set to 2mm") {
             Slic3r::Model model;
             config->set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent{2.0, false});
             Print print;
-            Slic3r::Test::init_print{print, { TestMesh::cube_20x20x20 }, model, config};
+            Slic3r::Test::init_print(print, { TestMesh::cube_20x20x20 }, model, config);
             //std::cout << "model pos: " << model.objects.front()->instances.front()->get_offset().x() << ": " << model.objects.front()->instances.front()->get_offset().x() << "\n";
             //Print print;
             //for (auto* mo : model.objects)
