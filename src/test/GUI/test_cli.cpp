@@ -17,7 +17,7 @@ bool file_exists(const std::string& name, const std::string& ext) {
     filename.append(".");
     filename.append(ext);
 
-    std::ifstream f(testfile(filename));
+    std::ifstream f{ testfile(filename) };
     bool result {f.good()};
     f.close();
 
@@ -42,7 +42,7 @@ void clean_array(size_t argc, char** argv) {
 
 SCENARIO( "CLI Export Arguments", "[!mayfail]") {
     char* args_cli[20];
-    std::vector<std::string> in_args;
+    std::vector<std::string> in_args{};
     in_args.reserve(20);
     in_args.emplace_back("gui_test"s);
     in_args.emplace_back(testfile("test_cli/20mmbox.stl"s));
@@ -202,7 +202,7 @@ SCENARIO( "CLI Export Arguments", "[!mayfail]") {
 // Test the --center and --dont-arrange parameters.
 SCENARIO("CLI positioning arguments") {
     char* args_cli[20];
-    std::vector<std::string> in_args;
+    std::vector<std::string> in_args{};
     in_args.reserve(20);
     in_args.emplace_back("gui_test"s);
     GIVEN( " 3D Model for a 20mm box, centered around 0,0 and gcode export" ) {
@@ -210,7 +210,7 @@ SCENARIO("CLI positioning arguments") {
         in_args.emplace(in_args.cend()-1, "-g");
         in_args.emplace(in_args.cend()-1, "--load"s);
         in_args.emplace(in_args.cend()-1, testfile("test_cli/20mmbox_config.ini"));
-        CLI cut;
+        CLI cut{};
 
         WHEN("--center is supplied with 40,40") {
             in_args.emplace(in_args.cend()-1, "--center");

@@ -22,16 +22,15 @@ bool test_if_solid_surface_filled(const ExPolygon& expolygon, double flow_spacin
 //    REQUIRE(surface_width % distance == 0);
 //}
 Polylines test(const ExPolygon& poly, Fill &filler, const FillParams &params){
-	std::cout << "don't connect? " << (params.dont_connect ? "true" : "false") << "\n";
 	Surface surface{ Slic3r::Surface((stPosTop | stDensSolid), poly) };
 	return filler.fill_surface(&surface, params);
 }
 
 TEST_CASE("Fill: Pattern Path Length") {
-    Fill* filler = {Slic3r::Fill::new_from_type("rectilinear")};
+    Fill* filler {Slic3r::Fill::new_from_type("rectilinear")};
 	filler->angle = -(PI) / 2.0;
 	filler->spacing = 5;
-	FillParams params;
+	FillParams params{};
 	params.dont_adjust = true;
 	params.density = filler->spacing / 50.0;
 	//params.endpoints_overlap = false;
@@ -39,14 +38,14 @@ TEST_CASE("Fill: Pattern Path Length") {
 
 
     SECTION("Square") {
-        Points test_set;
+        Points test_set{};
         test_set.reserve(4);
-        Points points {Point(0,0), Point(100,0), Point(100,100), Point(0,100)};
+        Points points {Point{0,0}, Point{100,0}, Point{100,100}, Point{0,100}};
         for (size_t i = 0; i < 4; ++i) {
             std::transform(points.cbegin()+i, points.cend(),   std::back_inserter(test_set), [] (const Point& a) -> Point { return Point::new_scale(a); } ); 
             std::transform(points.cbegin(), points.cbegin()+i, std::back_inserter(test_set), [] (const Point& a) -> Point { return Point::new_scale(a); } ); 
-			Slic3r::ExPolygon expoly;
-			expoly.contour = Slic3r::Polygon(test_set);
+			Slic3r::ExPolygon expoly{};
+            expoly.contour = Slic3r::Polygon{ test_set };
             Polylines paths {test(expoly, *filler, params)};
             REQUIRE(paths.size() == 1); // one continuous path
 
@@ -59,8 +58,8 @@ TEST_CASE("Fill: Pattern Path Length") {
         }
     }
     SECTION("Diamond with endpoints on grid") {
-        Points points {Point(0,0), Point(100,0), Point(150,50), Point(100,100), Point(0,100), Point(-50,50)};
-        Points test_set;
+        Points points {Point{0,0}, Point{100,0}, Point{150,50}, Point{100,100}, Point{0,100}, Point{-50,50}};
+        Points test_set{};
         test_set.reserve(6);
         std::transform(points.cbegin(), points.cend(),   std::back_inserter(test_set), [] (const Point& a) -> Point { return Point::new_scale(a); } );
 		Slic3r::ExPolygon expoly;
@@ -70,12 +69,12 @@ TEST_CASE("Fill: Pattern Path Length") {
     }
 
     SECTION("Square with hole") {
-        Points square { Point(0,0), Point(100,0), Point(100,100), Point(0,100)};
-        Points hole {Point(25,25), Point(75,25), Point(75,75), Point(25,75) };
+        Points square { Point{0,0}, Point{100,0}, Point{100,100}, Point{0,100}};
+        Points hole {Point{25,25}, Point{75,25}, Point{75,75}, Point{25,75} };
         std::reverse(hole.begin(), hole.end());
 
-        Points test_hole;
-        Points test_square;
+        Points test_hole{};
+        Points test_square{};
 
         std::transform(square.cbegin(), square.cend(), std::back_inserter(test_square), [] (const Point& a) -> Point { return Point::new_scale(a); } ); 
         std::transform(hole.cbegin(), hole.cend(), std::back_inserter(test_hole), [] (const Point& a) -> Point { return Point::new_scale(a); } ); 
@@ -85,7 +84,7 @@ TEST_CASE("Fill: Pattern Path Length") {
 				FillParams params_local = params;
 				params_local.density = filler->spacing / spacing;
                 filler->angle = angle;
-				Slic3r::ExPolygon e;
+				Slic3r::ExPolygon e{};
 				e.contour = Slic3r::Polygon(test_square);
 				e.holes = Slic3r::Polygons(Slic3r::Polygon(test_hole));
                 Polylines paths {test(e, *filler, params_local)};
@@ -115,8 +114,8 @@ TEST_CASE("Fill: Pattern Path Length") {
 		filler_local->layer_id = 66;
 		filler_local->z = 20.15;
 
-        Points points {Point(25771516,14142125),Point(14142138,25771515),Point(2512749,14142131),Point(14142125,2512749)};
-		Slic3r::ExPolygon expoly;
+        Points points {Point{25771516,14142125},Point{14142138,25771515},Point{2512749,14142131},Point{14142125,2512749}};
+		Slic3r::ExPolygon expoly{};
 		expoly.contour = Slic3r::Polygon(points);
         Polylines paths {test(expoly, *filler_local, params_local)};
         REQUIRE(paths.size() == 1); // one continuous path
@@ -129,21 +128,21 @@ TEST_CASE("Fill: Pattern Path Length") {
 
     SECTION("Rotated Square") {
         Points square { Point::new_scale(0,0), Point::new_scale(50,0), Point::new_scale(50,50), Point::new_scale(0,50)};
-		ExPolygon expolygon;
+		ExPolygon expolygon{};
 		expolygon.contour = Slic3r::Polygon(square);
         auto filler {Slic3r::Fill::new_from_type("rectilinear")};
         filler->bounding_box = expolygon.contour.bounding_box();
-        filler->angle = 0;
+        filler->angle = 0.F;
         
-        auto surface {Surface((stPosTop|stDensSolid), expolygon)};
-        auto flow {Slic3r::Flow(0.69, 0.4, 0.50)};
+        Surface surface {(stPosTop|stDensSolid), expolygon};
+        Flow flow {0.69, 0.4, 0.50};
 
         filler->spacing = flow.spacing();
 		params.density = 1.0;
 
         for (auto angle : { 0.0, 45.0}) {
-            surface.expolygon.rotate(angle, Point(0,0));
-            auto paths {filler->fill_surface(&surface, params)};
+            surface.expolygon.rotate(angle, Point{0,0});
+            Polylines paths = filler->fill_surface(&surface, params);
             REQUIRE(paths.size() == 1);
         }
     }
@@ -154,8 +153,8 @@ TEST_CASE("Fill: Pattern Path Length") {
             Point::new_scale(3116896, 20327272.01297),
             Point::new_scale(3116896, 9598327.01296997) 
         };
-		Slic3r::ExPolygon expolygon;
-		expolygon.contour = Slic3r::Polygon(points);
+        Slic3r::ExPolygon expolygon{};
+        expolygon.contour = Slic3r::Polygon{ points };
          
         REQUIRE(test_if_solid_surface_filled(expolygon, 0.55) == true);
         for (size_t i = 0; i <= 20; ++i)
@@ -166,23 +165,23 @@ TEST_CASE("Fill: Pattern Path Length") {
     }
     SECTION("Solid surface fill") {
         Points points {
-                Point(59515297,5422499),Point(59531249,5578697),Point(59695801,6123186),
-                Point(59965713,6630228),Point(60328214,7070685),Point(60773285,7434379),
-                Point(61274561,7702115),Point(61819378,7866770),Point(62390306,7924789),
-                Point(62958700,7866744),Point(63503012,7702244),Point(64007365,7434357),
-                Point(64449960,7070398),Point(64809327,6634999),Point(65082143,6123325),
-                Point(65245005,5584454),Point(65266967,5422499),Point(66267307,5422499),
-                Point(66269190,8310081),Point(66275379,17810072),Point(66277259,20697500),
-                Point(65267237,20697500),Point(65245004,20533538),Point(65082082,19994444),
-                Point(64811462,19488579),Point(64450624,19048208),Point(64012101,18686514),
-                Point(63503122,18415781),Point(62959151,18251378),Point(62453416,18198442),
-                Point(62390147,18197355),Point(62200087,18200576),Point(61813519,18252990),
-                Point(61274433,18415918),Point(60768598,18686517),Point(60327567,19047892),
-                Point(59963609,19493297),Point(59695865,19994587),Point(59531222,20539379),
-                Point(59515153,20697500),Point(58502480,20697500),Point(58502480,5422499)
+                Point{59515297,5422499},Point{59531249,5578697},Point{59695801,6123186},
+                Point{59965713,6630228},Point{60328214,7070685},Point{60773285,7434379},
+                Point{61274561,7702115},Point{61819378,7866770},Point{62390306,7924789},
+                Point{62958700,7866744},Point{63503012,7702244},Point{64007365,7434357},
+                Point{64449960,7070398},Point{64809327,6634999},Point{65082143,6123325},
+                Point{65245005,5584454},Point{65266967,5422499},Point{66267307,5422499},
+                Point{66269190,8310081},Point{66275379,17810072},Point{66277259,20697500},
+                Point{65267237,20697500},Point{65245004,20533538},Point{65082082,19994444},
+                Point{64811462,19488579},Point{64450624,19048208},Point{64012101,18686514},
+                Point{63503122,18415781},Point{62959151,18251378},Point{62453416,18198442},
+                Point{62390147,18197355},Point{62200087,18200576},Point{61813519,18252990},
+                Point{61274433,18415918},Point{60768598,18686517},Point{60327567,19047892},
+                Point{59963609,19493297},Point{59695865,19994587},Point{59531222,20539379},
+                Point{59515153,20697500},Point{58502480,20697500},Point{58502480,5422499}
         };
 		Slic3r::ExPolygon expolygon;
-		expolygon.contour = Slic3r::Polygon(points);
+        expolygon.contour = Slic3r::Polygon{ points };
          
         REQUIRE(test_if_solid_surface_filled(expolygon, 0.55) == true);
         REQUIRE(test_if_solid_surface_filled(expolygon, 0.55, PI/2.0) == true);
@@ -191,8 +190,8 @@ TEST_CASE("Fill: Pattern Path Length") {
         Points points {
             Point::new_scale(0,0),Point::new_scale(98,0),Point::new_scale(98,10), Point::new_scale(0,10)
         };
-		Slic3r::ExPolygon expolygon;
-		expolygon.contour = Slic3r::Polygon(points);
+		Slic3r::ExPolygon expolygon{};
+        expolygon.contour = Slic3r::Polygon{ points };
          
         REQUIRE(test_if_solid_surface_filled(expolygon, 0.5, 45.0, 0.99) == true);
     }

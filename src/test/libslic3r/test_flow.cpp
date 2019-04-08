@@ -19,17 +19,17 @@ SCENARIO("Extrusion width specifics", "[!mayfail]") {
     GIVEN("A config with a skirt, brim, some fill density, 3 perimeters, and 1 bottom solid layer and a 20mm cube mesh") {
         // this is a sharedptr
 		DynamicPrintConfig* config {Slic3r::DynamicPrintConfig::new_from_defaults()};
-        config->set_key_value("skirts", new ConfigOptionInt(1));
-        config->set_key_value("brim_width", new ConfigOptionFloat(2));
-        config->set_key_value("perimeters", new ConfigOptionInt(3));
-        config->set_key_value("fill_density", new ConfigOptionPercent(40));
-        config->set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(100, true));
+        config->set_key_value("skirts", new ConfigOptionInt{1});
+        config->set_key_value{"brim_width", new ConfigOptionFloat{2}};
+        config->set_key_value{"perimeters", new ConfigOptionInt{3}};
+        config->set_key_value{"fill_density", new ConfigOptionPercent{40}};
+        config->set_key_value{"first_layer_height", new ConfigOptionFloatOrPercent{100, true}};
 
         WHEN("first layer width set to 2mm") {
             Slic3r::Model model;
-            config->set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(2.0, false));
+            config->set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent{2.0, false});
             Print print;
-            Slic3r::Test::init_print(print, { TestMesh::cube_20x20x20 }, model, config);
+            Slic3r::Test::init_print{print, { TestMesh::cube_20x20x20 }, model, config};
             //std::cout << "model pos: " << model.objects.front()->instances.front()->get_offset().x() << ": " << model.objects.front()->instances.front()->get_offset().x() << "\n";
             //Print print;
             //for (auto* mo : model.objects)
@@ -47,9 +47,7 @@ SCENARIO("Extrusion width specifics", "[!mayfail]") {
             parser.parse_buffer(gcode_from_file, [&E_per_mm_bottom, layer_height] (Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line)
             {
                 if (self.z() == Approx(layer_height).margin(0.01)) { // only consider first layer
-                    std::cout << "line on first layer : " << line.raw()<<"\n";
                     if (line.extruding(self) && line.dist_XY(self) > 0) {
-                        std::cout << "line sextrusion : " << line.dist_E(self) << "\n";
                         E_per_mm_bottom.emplace_back(line.dist_E(self) / line.dist_XY(self));
                     }
                 }
@@ -104,7 +102,7 @@ SCENARIO(" Bridge flow specifics.", "[!mayfail]") {
 /// spacing, etc
 SCENARIO("Flow: Flow math for non-bridges", "[!mayfail]") {
     GIVEN("Nozzle Diameter of 0.4, a desired width of 1mm and layer height of 0.5") {
-        auto width {ConfigOptionFloatOrPercent(1.0, false)};
+        auto width {ConfigOptionFloatOrPercent{1.0, false}};
         float spacing {0.4f};
         float nozzle_diameter {0.4f};
         float bridge_flow {1.0f};
@@ -112,12 +110,12 @@ SCENARIO("Flow: Flow math for non-bridges", "[!mayfail]") {
 
         // Spacing for non-bridges is has some overlap
         THEN("External perimeter flow has a default spacing fixed to 1.05*nozzle_diameter") {
-            Flow flow {Flow::new_from_config_width(frExternalPerimeter, ConfigOptionFloatOrPercent(0, false), nozzle_diameter, layer_height, 0.0f)};
+            Flow flow {Flow::new_from_config_width(frExternalPerimeter, ConfigOptionFloatOrPercent{0, false}, nozzle_diameter, layer_height, 0.0f)};
             REQUIRE(flow.spacing() == Approx((1.05f*nozzle_diameter) - layer_height * (1.0 - PI / 4.0)));
         }
 
         THEN("Internal perimeter flow has a default spacing fixed to 1.125*nozzle_diameter") {
-            Flow flow {Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent(0, false), nozzle_diameter, layer_height, 0.0f)};
+            Flow flow {Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent{0, false}, nozzle_diameter, layer_height, 0.0f)};
             REQUIRE(flow.spacing() == Approx((1.125*nozzle_diameter) - layer_height * (1.0 - PI / 4.0)));
         }
         THEN("Spacing for supplied width is 0.8927f") {
@@ -134,22 +132,22 @@ SCENARIO("Flow: Flow math for non-bridges", "[!mayfail]") {
         WHEN("layer height is set to 0.15") {
             layer_height = 5.f;
             THEN("Max width is respected.") {
-                auto flow {Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent(0, false), nozzle_diameter, layer_height, 0.0f)};
+                auto flow {Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent{0, false}, nozzle_diameter, layer_height, 0.0f)};
                 REQUIRE(flow.width <= Approx(1.4*nozzle_diameter));
             }
             THEN("Min width is respected") {
-                auto flow{ Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent(0, false), nozzle_diameter, layer_height, 0.0f) };
+                auto flow{ Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent{0, false}, nozzle_diameter, layer_height, 0.0f) };
                 REQUIRE(flow.width >= Approx(1.05*nozzle_diameter));
             }
         }
         WHEN("Layer height is set to 0.3") {
             layer_height = 0.01f;
             THEN("Max width is respected.") {
-                auto flow{ Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent(0, false), nozzle_diameter, layer_height, 0.0f) };
+                auto flow{ Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent{0, false}, nozzle_diameter, layer_height, 0.0f) };
                 REQUIRE(flow.width <= Approx(1.4*nozzle_diameter));
             }
             THEN("Min width is respected.") {
-                auto flow{ Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent(0, false), nozzle_diameter, layer_height, 0.0f) };
+                auto flow{ Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent{0, false}, nozzle_diameter, layer_height, 0.0f) };
                 REQUIRE(flow.width >= Approx(1.05*nozzle_diameter));
             }
         }
@@ -175,7 +173,7 @@ SCENARIO("Flow: Flow math for non-bridges", "[!mayfail]") {
 /// Spacing, width calculation for bridge extrusions
 SCENARIO("Flow: Flow math for bridges", "[!mayfail]") {
     GIVEN("Nozzle Diameter of 0.4, a desired width of 1mm and layer height of 0.5") {
-        auto width {ConfigOptionFloatOrPercent(1.0, false)};
+        auto width {ConfigOptionFloatOrPercent{1.0, false}};
         auto spacing {0.4};
         auto nozzle_diameter {0.4};
         auto bridge_flow {1.0};

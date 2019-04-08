@@ -8,12 +8,12 @@ using namespace Slic3r::Test;
 
 SCENARIO("Model construction") {
     GIVEN("A Slic3r Model") {
-        Model model;
+        Model model{};
         TriangleMesh sample_mesh = make_cube(20,20,20);
         sample_mesh.repair();
         
         DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
-        Slic3r::Print print;
+        Slic3r::Print print{};
         print.apply_config(*config);
         //Slic3r::Test::init_print(print, { sample_mesh }, model, config);
 
@@ -44,7 +44,7 @@ SCENARIO("Model construction") {
             print.apply(model, *config);
             print.validate();
             THEN("Print works?") {
-                std::string gcode_filepath("");
+                std::string gcode_filepath{ "" };
                 Slic3r::Test::gcode(gcode_filepath, print);
                 std::cout << "gcode generation done\n";
                 std::string gcode_from_file = read_to_string(gcode_filepath);

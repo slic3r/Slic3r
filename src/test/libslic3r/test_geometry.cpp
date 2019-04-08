@@ -13,36 +13,36 @@ using namespace Slic3r;
 
 TEST_CASE("Polygon::contains works properly", ""){
    // this test was failing on Windows (GH #1950)
-    auto polygon = Polygon(Points({
-        Point(207802834,-57084522),
-        Point(196528149,-37556190),
-        Point(173626821,-25420928),
-        Point(171285751,-21366123),
-        Point(118673592,-21366123),
-        Point(116332562,-25420928),
-        Point(93431208,-37556191),
-        Point(82156517,-57084523),
-        Point(129714478,-84542120),
-        Point(160244873,-84542120)
-    }));
-    auto point = Point(95706562, -57294774);
+    Polygon polygon{ Points{
+        Point{207802834,-57084522},
+        Point{196528149,-37556190},
+        Point{173626821,-25420928},
+        Point{171285751,-21366123},
+        Point{118673592,-21366123},
+        Point{116332562,-25420928},
+        Point{93431208,-37556191},
+        Point{82156517,-57084523},
+        Point{129714478,-84542120},
+        Point{160244873,-84542120}
+    } };
+    Point point{ 95706562, -57294774 };
     REQUIRE(polygon.contains(point));
 }
 
 SCENARIO("Intersections of line segments"){
     GIVEN("Integer coordinates"){
-        auto line1 = Line(Point(5,15),Point(30,15));
-        auto line2 = Line(Point(10,20), Point(10,10));
+        Line line1{ Point{5,15},Point{30,15} };
+        Line line2{ Point{10,20}, Point{10,10} };
         THEN("The intersection is valid"){
             Point point;
             line1.intersection(line2,&point);
-            REQUIRE(Point(10,15) == point);
+            REQUIRE(Point{ 10,15 } == point);
         }
     }
 
     GIVEN("Scaled coordinates"){
-        auto line1 = Line(Point(73.6310778185108/0.0000001, 371.74239268924/0.0000001), Point(73.6310778185108/0.0000001, 501.74239268924/0.0000001));
-        auto line2 = Line(Point(75/0.0000001, 437.9853/0.0000001), Point(62.7484/0.0000001, 440.4223/0.0000001));
+        Line line1{ Point{73.6310778185108 / 0.0000001, 371.74239268924 / 0.0000001}, Point{73.6310778185108 / 0.0000001, 501.74239268924 / 0.0000001} };
+        Line line2{ Point{75 / 0.0000001, 437.9853 / 0.0000001}, Point{62.7484 / 0.0000001, 440.4223 / 0.0000001} };
         THEN("There is still an intersection"){
             Point point;
             REQUIRE(line1.intersection(line2,&point));
@@ -72,8 +72,8 @@ Tests for unused methods still written in perl
         'polygon_segment_having_point';
 }
 {
-        auto point = Point(736310778.185108, 5017423926.8924);
-        auto line = Line(Point((long int) 627484000, (long int) 3695776000), Point((long int) 750000000, (long int)3720147000));
+        auto point = Point{736310778.185108, 5017423926.8924};
+        auto line = Line(Point{(long int} 627484000, (long int) 3695776000), Point{(long int} 750000000, (long int)3720147000));
         //is Slic3r::Geometry::point_in_segment($point, $line), 0, 'point_in_segment';
 }
 
@@ -129,41 +129,41 @@ SCENARIO("polygon_is_convex works"){
 
 TEST_CASE("Creating a polyline generates the obvious lines"){
     auto polyline = Polyline();
-    polyline.points = std::vector<Point>({Point(0, 0), Point(10, 0), Point(20, 0)});
-    REQUIRE(polyline.lines().at(0).a == Point(0,0));
-    REQUIRE(polyline.lines().at(0).b == Point(10,0));
-    REQUIRE(polyline.lines().at(1).a == Point(10,0));
-    REQUIRE(polyline.lines().at(1).b == Point(20,0));
+    polyline.points = std::vector<Point>({Point{0, 0}, Point{10, 0}, Point{20, 0}});
+    REQUIRE(polyline.lines().at(0).a == Point{0,0});
+    REQUIRE(polyline.lines().at(0).b == Point{10,0});
+    REQUIRE(polyline.lines().at(1).a == Point{10,0});
+    REQUIRE(polyline.lines().at(1).b == Point{20,0});
 }
 
 TEST_CASE("Splitting a Polygon generates a polyline correctly"){
-    auto polygon = Polygon(std::vector<Point>({Point(0, 0), Point(10, 0), Point(5, 5)}));
+    auto polygon = Polygon(std::vector<Point>({Point{0, 0}, Point{10, 0}, Point{5, 5}}));
     auto split = polygon.split_at_index(1);
-    REQUIRE(split.points[0]==Point(10,0));
-    REQUIRE(split.points[1]==Point(5,5));
-    REQUIRE(split.points[2]==Point(0,0));
-    REQUIRE(split.points[3]==Point(10,0));
+    REQUIRE(split.points[0]==Point{10,0});
+    REQUIRE(split.points[1]==Point{5,5});
+    REQUIRE(split.points[2]==Point{0,0});
+    REQUIRE(split.points[3]==Point{10,0});
 }
 
 
 TEST_CASE("Bounding boxes are scaled appropriately"){
-    auto bb = BoundingBox(std::vector<Point>({Point(0, 1), Point(10, 2), Point(20, 2)}));
+    auto bb = BoundingBox(std::vector<Point>({Point{0, 1}, Point{10, 2}, Point{20, 2}}));
     bb.scale(2);
-    REQUIRE(bb.min == Point(0,2));
-    REQUIRE(bb.max == Point(40,4));
+    REQUIRE(bb.min == Point{0,2});
+    REQUIRE(bb.max == Point{40,4});
 }
 
 
 TEST_CASE("Offseting a line generates a polygon correctly"){
-    Polyline tmp({ Point(10,10), Point(20,10) });
+    Polyline tmp({ Point{10,10}, Point{20,10} });
     Polygon area = offset(tmp,5).at(0);
-    REQUIRE(area.area() == Polygon(std::vector<Point>({Point(10,5),Point(20,5),Point(20,15),Point(10,15)})).area());
+    REQUIRE(area.area() == Polygon(std::vector<Point>({Point{10,5},Point{20,5},Point{20,15},Point{10,15}})).area());
 }
 
 SCENARIO("Circle Fit, TaubinFit with Newton's method") {
     GIVEN("A vector of Pointfs arranged in a half-circle with approximately the same distance R from some point") {
         Vec2d expected_center(-6, 0);
-        Pointfs sample {Vec2d(6.0, 0), Vec2d(5.1961524, 3), Vec2d(3 ,5.1961524), Vec2d(0, 6.0), Vec2d(-3, 5.1961524), Vec2d(-5.1961524, 3), Vec2d(-6.0, 0)};
+        Pointfs sample {Vec2d{6.0, 0}, Vec2d{5.1961524, 3}, Vec2d{3 ,5.1961524}, Vec2d{0, 6.0}, Vec2d{-3, 5.1961524}, Vec2d{-5.1961524, 3}, Vec2d{-6.0, 0}};
         std::transform(sample.begin(), sample.end(), sample.begin(), [expected_center] (const Vec2d& a) { return a + expected_center;});
 
         WHEN("Circle fit is called on the entire array") {
@@ -190,9 +190,9 @@ SCENARIO("Circle Fit, TaubinFit with Newton's method") {
     }
     GIVEN("A vector of Pointfs arranged in a half-circle with approximately the same distance R from some point") {
         Vec2d expected_center(-3, 9);
-        Pointfs sample {Vec2d(6.0, 0), Vec2d(5.1961524, 3), Vec2d(3 ,5.1961524), 
-                        Vec2d(0, 6.0), 
-                        Vec2d(3, 5.1961524), Vec2d(-5.1961524, 3), Vec2d(-6.0, 0)};
+        Pointfs sample {Vec2d{6.0, 0}, Vec2d{5.1961524, 3}, Vec2d{3 ,5.1961524}, 
+                        Vec2d{0, 6.0}, 
+                        Vec2d{3, 5.1961524}, Vec2d{-5.1961524, 3}, Vec2d{-6.0, 0}};
 
         std::transform(sample.begin(), sample.end(), sample.begin(), [expected_center] (const Vec2d& a) { return a + expected_center;});
 
@@ -256,7 +256,7 @@ SCENARIO("Circle Fit, TaubinFit with Newton's method") {
 TEST_CASE("Chained path working correctly"){
     // if chained_path() works correctly, these points should be joined with no diagonal paths
     // (thus 26 units long)
-    std::vector<Point> points = {Point(26,26),Point(52,26),Point(0,26),Point(26,52),Point(26,0),Point(0,52),Point(52,52),Point(52,0)};
+    std::vector<Point> points = {Point{26,26},Point{52,26},Point{0,26},Point{26,52},Point{26,0},Point{0,52},Point{52,52},Point{52,0}};
     std::vector<Points::size_type> indices;
     Geometry::chained_path(points,indices);
     for(Points::size_type i = 0; i < indices.size()-1;i++){
@@ -267,27 +267,27 @@ TEST_CASE("Chained path working correctly"){
 
 SCENARIO("Line distances"){
     GIVEN("A line"){
-        auto line = Line(Point(0, 0), Point(20, 0));
+        Line line{ Point{0, 0}, Point{20, 0} };
         THEN("Points on the line segment have 0 distance"){
-            REQUIRE(Point(0, 0).distance_to(line)  == 0);
-            REQUIRE(Point(20, 0).distance_to(line) == 0);
-            REQUIRE(Point(10, 0).distance_to(line) == 0);
+            REQUIRE(Point{0, 0}.distance_to(line)  == 0);
+            REQUIRE(Point{20, 0}.distance_to(line) == 0);
+            REQUIRE(Point{10, 0}.distance_to(line) == 0);
         
         }
         THEN("Points off the line have the appropriate distance"){
-            REQUIRE(Point(10, 10).distance_to(line) == 10);
-            REQUIRE(Point(50, 0).distance_to(line) == 30);
+            REQUIRE(Point{10, 10}.distance_to(line) == 10);
+            REQUIRE(Point{50, 0}.distance_to(line) == 30);
         }
     }
 }
 
 SCENARIO("Polygon convex/concave detection"){
     GIVEN(("A Square with dimension 100")){
-        auto square = Polygon /*new_scale*/(std::vector<Point>({
-            Point(100,100),
-            Point(200,100),
-            Point(200,200),
-            Point(100,200)}));
+        Polygon square/*new_scale*/{ std::vector<Point>{
+            Point{100,100},
+            Point{200,100},
+            Point{200,200},
+            Point{100,200}}};
         THEN("It has 4 convex points counterclockwise"){
             REQUIRE(square.concave_points(PI*4/3).size() == 0);
             REQUIRE(square.convex_points(PI*2/3).size() == 4);
@@ -299,24 +299,24 @@ SCENARIO("Polygon convex/concave detection"){
         }
     }
     GIVEN("A Square with an extra colinearvertex"){
-        auto square = Polygon /*new_scale*/(std::vector<Point>({
-            Point(150,100),
-            Point(200,100),
-            Point(200,200),
-            Point(100,200),
-            Point(100,100)}));
+        Polygon square /*new_scale*/{ std::vector<Point>{
+            Point{150,100},
+            Point{200,100},
+            Point{200,200},
+            Point{100,200},
+            Point{100,100}} };
         THEN("It has 4 convex points counterclockwise"){
             REQUIRE(square.concave_points(PI*4/3).size() == 0);
             REQUIRE(square.convex_points(PI*2/3).size() == 4);
         }
     }
     GIVEN("A Square with an extra collinear vertex in different order"){
-        auto square = Polygon /*new_scale*/(std::vector<Point>({
-            Point(200,200),
-            Point(100,200),
-            Point(100,100),
-            Point(150,100),
-            Point(200,100)}));
+        Polygon square = Polygon /*new_scale*/{ std::vector<Point>{
+            Point{200,200},
+            Point{100,200},
+            Point{100,100},
+            Point{150,100},
+            Point{200,100}} };
         THEN("It has 4 convex points counterclockwise"){
             REQUIRE(square.concave_points(PI*4/3).size() == 0);
             REQUIRE(square.convex_points(PI*2/3).size() == 4);
@@ -324,11 +324,11 @@ SCENARIO("Polygon convex/concave detection"){
     }
 
     GIVEN("A triangle"){
-        auto triangle = Polygon(std::vector<Point>({
-            Point(16000170,26257364),
-            Point(714223,461012),
-            Point(31286371,461008)
-        }));
+        Polygon triangle{ std::vector<Point>{
+            Point{16000170,26257364},
+            Point{714223,461012},
+            Point{31286371,461008}
+        } };
         THEN("it has three convex vertices"){
             REQUIRE(triangle.concave_points(PI*4/3).size() == 0);
             REQUIRE(triangle.convex_points(PI*2/3).size() == 3);
@@ -336,12 +336,12 @@ SCENARIO("Polygon convex/concave detection"){
     }
 
     GIVEN("A triangle with an extra collinear point"){
-        auto triangle = Polygon(std::vector<Point>({
-            Point(16000170,26257364),
-            Point(714223,461012),
-            Point(20000000,461012),
-            Point(31286371,461012)
-        }));
+        Polygon triangle{ std::vector<Point>{
+            Point{16000170,26257364},
+            Point{714223,461012},
+            Point{20000000,461012},
+            Point{31286371,461012}
+        } };
         THEN("it has three convex vertices"){
             REQUIRE(triangle.concave_points(PI*4/3).size() == 0);
             REQUIRE(triangle.convex_points(PI*2/3).size() == 3);
@@ -350,16 +350,16 @@ SCENARIO("Polygon convex/concave detection"){
     GIVEN("A polygon with concave vertices with angles of specifically 4/3pi"){
         // Two concave vertices of this polygon have angle = PI*4/3, so this test fails
         // if epsilon is not used.
-        auto polygon = Polygon(std::vector<Point>({
-            Point(60246458,14802768),Point(64477191,12360001),
-            Point(63727343,11060995),Point(64086449,10853608),
-            Point(66393722,14850069),Point(66034704,15057334),
-            Point(65284646,13758387),Point(61053864,16200839),
-            Point(69200258,30310849),Point(62172547,42483120),
-            Point(61137680,41850279),Point(67799985,30310848),
-            Point(51399866,1905506),Point(38092663,1905506),
-            Point(38092663,692699),Point(52100125,692699)
-        }));
+        Polygon polygon{ std::vector<Point>{
+            Point{60246458,14802768},Point{64477191,12360001},
+            Point{63727343,11060995},Point{64086449,10853608},
+            Point{66393722,14850069},Point{66034704,15057334},
+            Point{65284646,13758387},Point{61053864,16200839},
+            Point{69200258,30310849},Point{62172547,42483120},
+            Point{61137680,41850279},Point{67799985,30310848},
+            Point{51399866,1905506},Point{38092663,1905506},
+            Point{38092663,692699},Point{52100125,692699}
+        } };
         THEN("the correct number of points are detected"){
             REQUIRE(polygon.concave_points(PI*4/3).size() == 6);
             REQUIRE(polygon.convex_points(PI*2/3).size() == 10);
@@ -368,9 +368,9 @@ SCENARIO("Polygon convex/concave detection"){
 }
 
 TEST_CASE("Triangle Simplification does not result in less than 3 points"){
-    auto triangle = Polygon(std::vector<Point>({
-        Point(16000170,26257364), Point(714223,461012), Point(31286371,461008)
-    }));
+    Polygon triangle{ std::vector<Point>{
+        Point{16000170,26257364}, Point{714223,461012}, Point{31286371,461008}
+    } };
     REQUIRE(triangle.simplify(250000).at(0).points.size() == 3);
 }
 
