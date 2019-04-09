@@ -1014,15 +1014,14 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                     }
                 }
 
-                //update cache
-                coeff_angle_cache[polyline.points.back()] = coeff_angle_poly * coeff_poly + coeff_angle_candi * coeff_candi;
-
-
                 if (polyline.points.size() < 2) {
                     //remove self
                     pp.erase(pp.begin() + i);
                     --i;
                     --best_idx;
+                } else {
+                    //update cache
+                    coeff_angle_cache[polyline.points.back()] = coeff_angle_poly * coeff_poly + coeff_angle_candi * coeff_candi;
                 }
 
                 pp.erase(pp.begin() + best_idx);
@@ -1353,6 +1352,9 @@ MedialAxis::simplify_polygon_frontier()
 /// Do not grow points inside the anchor.
 void
 MedialAxis::grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchors) {
+    //compute the min width
+    coord_t min_width = this->nozzle_diameter;
+    if (this->height > 0)min_width = Flow::new_from_spacing(float(unscale_(this->nozzle_diameter)), float(unscale_(this->nozzle_diameter)), float(unscale_(this->height)), false).scaled_width();
     //ensure the width is not lower than 0.4.
     for (ThickPolyline& polyline : pp) {
         for (int i = 0; i < polyline.points.size(); ++i) {
@@ -1363,8 +1365,8 @@ MedialAxis::grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchor
                     break;
                 }
             }
-            if (!is_anchored && polyline.width[i] < nozzle_diameter * 1.05)
-                polyline.width[i] = nozzle_diameter * 1.05;
+            if (!is_anchored && polyline.width[i] < min_width)
+                polyline.width[i] = min_width;
         }
     }
 }
@@ -1375,7 +1377,7 @@ MedialAxis::taper_ends(ThickPolylines& pp) {
     const coord_t min_size = std::max(this->nozzle_diameter * 0.1, this->height * (1. - 0.25 * PI));
     const coordf_t length = std::min(this->anchor_size, (this->nozzle_diameter - min_size) / 2);
     if (length <= SCALED_RESOLUTION) return;
-    //ensure the width is not lower than 0.4.
+    //ensure the width is not lower than min_size.
     for (ThickPolyline& polyline : pp) {
         if (polyline.length() < length * 2.2) continue;
         if (polyline.endpoints.first) {
@@ -1386,8 +1388,8 @@ MedialAxis::taper_ends(ThickPolylines& pp) {
                 current_dist += (coord_t)polyline.points[i - 1].distance_to(polyline.points[i]);
                 if (current_dist > length) {
                     //create a new point if not near enough
-                    if (current_dist > polyline.width[i] + SCALED_RESOLUTION) {
-                        coordf_t percent_dist = (polyline.width[i] - polyline.width[i - 1]) / (current_dist - last_dist);
+                    if (current_dist > length + SCALED_RESOLUTION) {
+                        coordf_t percent_dist = (length - last_dist) / (current_dist - last_dist);
                         polyline.points.insert(polyline.points.begin() + i, polyline.points[i - 1].interpolate(percent_dist, polyline.points[i]));
                         polyline.width.insert(polyline.width.begin() + i, polyline.width[i]);
                     }
@@ -1398,22 +1400,21 @@ MedialAxis::taper_ends(ThickPolylines& pp) {
             }
         }
         if (polyline.endpoints.second) {
-            const size_t back_idx = polyline.width.size() - 1;
-            polyline.width[back_idx] = min_size;
+            polyline.width[polyline.width.size() - 1] = min_size;
             coord_t current_dist = min_size;
             coord_t last_dist = min_size;
-            for (size_t i = 1; i<polyline.width.size(); ++i) {
-                current_dist += (coord_t)polyline.points[back_idx - i + 1].distance_to(polyline.points[back_idx - i]);
+            for (size_t i = polyline.width.size()-1; i > 0; --i) {
+                current_dist += (coord_t)polyline.points[i].distance_to(polyline.points[i - 1]);
                 if (current_dist > length) {
                     //create new point if not near enough
-                    if (current_dist > polyline.width[back_idx - i] + SCALED_RESOLUTION) {
-                        coordf_t percent_dist = (polyline.width[back_idx - i] - polyline.width[back_idx - i + 1]) / (current_dist - last_dist);
-                        polyline.points.insert(polyline.points.begin() + back_idx - i + 1, polyline.points[back_idx - i + 1].interpolate(percent_dist, polyline.points[back_idx - i]));
-                        polyline.width.insert(polyline.width.begin() + back_idx - i + 1, polyline.width[back_idx - i]);
+                    if (current_dist > length + SCALED_RESOLUTION) {
+                        coordf_t percent_dist = (length - last_dist) / (current_dist - last_dist);
+                        polyline.points.insert(polyline.points.begin() + i, polyline.points[i].interpolate(percent_dist, polyline.points[i - 1]));
+                        polyline.width.insert(polyline.width.begin() + i, polyline.width[i - 1]);
                     }
                     break;
                 }
-                polyline.width[back_idx - i] = std::max((coordf_t)min_size, min_size + (polyline.width[back_idx - i] - min_size) * current_dist / length);
+                polyline.width[i - 1] = std::max((coordf_t)min_size, min_size + (polyline.width[i - 1] - min_size) * current_dist / length);
                 last_dist = current_dist;
             }
         }

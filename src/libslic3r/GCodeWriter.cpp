@@ -505,8 +505,8 @@ std::string GCodeWriter::unlift()
     std::string gcode;
     if (m_lifted > 0) {
         gcode += this->_travel_to_z(m_pos.z() - m_lifted, "restore layer Z");
-        m_lifted = 0;
     }
+    m_lifted = 0;
     return gcode;
 }
 

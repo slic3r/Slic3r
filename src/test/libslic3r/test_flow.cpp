@@ -1,3 +1,6 @@
+
+#define CATCH_CONFIG_DISABLE
+
 #include <catch.hpp>
 
 #include <numeric>

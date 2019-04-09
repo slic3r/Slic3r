@@ -1,3 +1,6 @@
+
+#define CATCH_CONFIG_DISABLE
+
 #include <catch.hpp>
 #include "../../libslic3r/Config.hpp"
 #include "../../libslic3r/Model.hpp"

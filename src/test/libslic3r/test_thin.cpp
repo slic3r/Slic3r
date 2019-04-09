@@ -62,9 +62,9 @@ SCENARIO("thin walls: ")
             Point::new_scale(120, 200),
             Point::new_scale(105, 200), // extra point in the short side
             Point::new_scale(100, 200) } };
+        Polylines res2;
+        expolygon.medial_axis(scale_(20), scale_(0.5), &res2);
         WHEN("creating the medial axis"){
-            Polylines res2;
-            expolygon.medial_axis(scale_(1), scale_(0.5), &res);
 
             THEN("medial axis of a narrow rectangle is a single line"){
                 REQUIRE(res.size() == 1);
@@ -83,7 +83,8 @@ SCENARIO("thin walls: ")
             }
         }
     }
-
+    
+    //TODO: compare with mainline slic3r
     GIVEN("semicicumference"){
         ExPolygon expolygon;
         expolygon.contour = Slic3r::Polygon{ Points{
@@ -100,11 +101,16 @@ SCENARIO("thin walls: ")
             THEN("all medial axis segments of a semicircumference have the same orientation (but the 2 end points)"){
                 Lines lines = res[0].lines();
                 double min_angle = 1, max_angle = -1;
-                for (int idx = 2; idx < lines.size()-1; idx++){
+                //std::cout << "first angle=" << lines[0].ccw(lines[1].b) << "\n";
+                for (int idx = 2; idx < lines.size()-2; idx++){
                     double angle = lines[idx - 1].ccw(lines[idx].b);
+                    if (std::abs(angle) - EPSILON < 0) angle = 0;
+                    //if (angle < 0) std::cout << unscale_(lines[idx - 1].a.x()) << ":" << unscale_(lines[idx - 1].a.y()) << " -> " << unscale_(lines[idx - 1].b.x()) << ":" << unscale_(lines[idx - 1].b.y()) << " -> " << unscale_(lines[idx].b.x()) << ":" << unscale_(lines[idx].b.y()) << "\n";
+                    std::cout << "angle=" << 180*lines[idx].a.ccw_angle(lines[idx-1].a, lines[idx].b)/PI << "\n";
                     min_angle = std::min(min_angle, angle);
                     max_angle = std::max(max_angle, angle);
                 }
+                //std::cout << "last angle=" << lines[lines.size() - 2].ccw(lines[lines.size() - 1].b) << "\n";
                 // check whether turns are all CCW or all CW
                 bool allccw = (min_angle <= 0 && max_angle <= 0);
                 bool allcw = (min_angle >= 0 && max_angle >= 0);
@@ -161,30 +167,131 @@ SCENARIO("thin walls: ")
 
     }
 
-    GIVEN("narrow french cross")
+
+    //TODO: compare with mainline slic3r
+    //GIVEN("tooth")
+    //{
+    //    ExPolygon expolygon;
+    //    expolygon.contour = Slic3r::Polygon{ Points{
+    //        Point::new_scale(0.86526705, 1.4509841), Point::new_scale(0.57696039, 1.8637021), 
+    //        Point::new_scale(0.4502297, 2.5569978), Point::new_scale(0.45626199, 3.2965596), 
+    //        Point::new_scale(1.1218851, 3.3049455), Point::new_scale(0.96681072, 2.8243202), 
+    //        Point::new_scale(0.86328971, 2.2056997), Point::new_scale(0.85367905, 1.7790778)
+    //    } };
+    //    expolygon.contour.make_counter_clockwise();
+    //    WHEN("creating the medial axis"){
+    //        Polylines res;
+    //        expolygon.medial_axis(scale_(1), scale_(0.25), &res);
+    //        THEN("medial axis of a tooth is two lines"){
+    //            REQUIRE(res.size() == 2);
+    //            THEN("medial axis has reasonable length") {
+    //                REQUIRE(res[0].length() >= scale_(1.4) - SCALED_EPSILON);
+    //                REQUIRE(res[1].length() >= scale_(1.4) - SCALED_EPSILON);
+    //                // TODO: check if min width is < 0.3 and max width is > 0.6 (min($res->[0]->width.front, $res->[0]->width.back) # problem: can't have access to width
+    //                //TODO: now i have access! correct it!
+    //            }
+    //        }
+    //    }
+    //} 
+
+    GIVEN("Anchor & Tapers")
     {
-        ExPolygon expolygon;
-        expolygon.contour = Slic3r::Polygon{ Points{
-            Point::new_scale(0.86526705, 1.4509841), Point::new_scale(0.57696039, 1.8637021), 
-            Point::new_scale(0.4502297, 2.5569978), Point::new_scale(0.45626199, 3.2965596), 
-            Point::new_scale(1.1218851, 3.3049455), Point::new_scale(0.96681072, 2.8243202), 
-            Point::new_scale(0.86328971, 2.2056997), Point::new_scale(0.85367905, 1.7790778)
+        ExPolygon tooth;
+        tooth.contour = Slic3r::Polygon{ Points{
+            Point::new_scale(0,0), Point::new_scale(10,0), Point::new_scale(10,1.2), Point::new_scale(0,1.2)
         } };
-        expolygon.contour.make_counter_clockwise();
-        WHEN("creating the medial axis"){
-            Polylines res;
-            expolygon.medial_axis(scale_(1), scale_(0.25), &res);
-            THEN("medial axis of a (bit too narrow) french cross is two lines"){
-                REQUIRE(res.size() == 2);
-                THEN("medial axis has reasonable length") {
-                    REQUIRE(res[0].length() >= scale_(1.4) - SCALED_EPSILON);
-                    REQUIRE(res[1].length() >= scale_(1.4) - SCALED_EPSILON);
-                    // TODO: check if min width is < 0.3 and max width is > 0.6 (min($res->[0]->width.front, $res->[0]->width.back) # problem: can't have access to width
-                    //TODO: now i have access! correct it!
+        tooth.contour.make_counter_clockwise();
+        ExPolygon base_part;
+        base_part.contour = Slic3r::Polygon{ Points{
+            Point::new_scale(0,-3), Point::new_scale(0,3), Point::new_scale(-2,3), Point::new_scale(-2,-3)
+        } };
+        base_part.contour.make_counter_clockwise();
+        //expolygon.contour = Slic3r::Polygon{ Points{
+        //    //Point::new_scale(0, 13), Point::new_scale(-1, 13), Point::new_scale(-1, 0), Point::new_scale(0.0,0.0),
+        //    Point::new_scale(0,0.2), Point::new_scale(3,0.2), Point::new_scale(3,0.4), Point::new_scale(0,0.4),
+        //    Point::new_scale(0,1), Point::new_scale(3,1), Point::new_scale(3,1.3), Point::new_scale(0,1.3),
+        //    Point::new_scale(0,2), Point::new_scale(3,2), Point::new_scale(3,2.4), Point::new_scale(0,2.4),
+        //    Point::new_scale(0,3), Point::new_scale(3,3), Point::new_scale(3,3.5), Point::new_scale(0,3.5),
+        //    Point::new_scale(0,4), Point::new_scale(3,4), Point::new_scale(3,4.6), Point::new_scale(0,4.6),
+        //    Point::new_scale(0,5), Point::new_scale(3,5), Point::new_scale(3,5.7), Point::new_scale(0,5.7),
+        //    Point::new_scale(0,6), Point::new_scale(3,6), Point::new_scale(3,6.8), Point::new_scale(0,6.8),
+        //    Point::new_scale(0,7.5), Point::new_scale(3,7.5), Point::new_scale(3,8.4), Point::new_scale(0,8.4),
+        //    Point::new_scale(0,9), Point::new_scale(3,9), Point::new_scale(3,10), Point::new_scale(0,10),
+        //    Point::new_scale(0,11), Point::new_scale(3,11), Point::new_scale(3,12.2), Point::new_scale(0,12.2),
+        //} };
+        WHEN("1 nozzle, 0.2 layer height") {
+            const coord_t nozzle_diam = scale_(1);
+            ExPolygon anchor = union_ex(ExPolygons{ tooth }, intersection_ex(ExPolygons{ base_part }, offset_ex(tooth, nozzle_diam / 2)), true)[0];
+            ThickPolylines res;
+            //expolygon.medial_axis(scale_(1), scale_(0.5), &res);
+            Slic3r::MedialAxis ma(tooth, anchor, nozzle_diam * 2, nozzle_diam*0.33, scale_(0.2));
+            ma.nozzle_diameter = nozzle_diam;
+            ma.anchor_size = 0.25*nozzle_diam;
+            ma.build(&res);
+            THEN("medial axis of a simple line is one line") {
+                REQUIRE(res.size() == 1);
+                THEN("medial axis has the length of the line + the length of the anchor") {
+                    std::cout << res[0].length() << "\n";
+                    REQUIRE(std::abs(res[0].length() - scale_(10.5)) < SCALED_EPSILON);
+                }
+                THEN("medial axis has the line width as max width") {
+                    double max_width = 0;
+                    for (coordf_t width : res[0].width) max_width = std::max(max_width, width);
+                    REQUIRE(std::abs(max_width - scale_(1.2)) < SCALED_EPSILON);
+                }
+                //compute the length of the tapers
+                THEN("medial axis has good tapers length") {
+                    int l1 = 0;
+                    for (size_t idx = 0; idx < res[0].width.size() - 1 && res[0].width[idx] - nozzle_diam < SCALED_EPSILON; ++idx)
+                        l1 += res[0].lines()[idx].length();
+                    int l2 = 0;
+                    for (size_t idx = res[0].width.size() - 1; idx > 0 && res[0].width[idx] - nozzle_diam < SCALED_EPSILON; --idx)
+                        l2 += res[0].lines()[idx - 1].length();
+                    REQUIRE(std::abs(l1 - l2) < SCALED_EPSILON);
+                    REQUIRE(std::abs(l1 - scale_(0.25 - 0.1)) < SCALED_EPSILON);
                 }
             }
         }
-        
+
+        WHEN("1.2 nozzle, 0.6 layer height") {
+            const coord_t nozzle_diam = scale_(1.2);
+            ExPolygon anchor = union_ex(ExPolygons{ tooth }, intersection_ex(ExPolygons{ base_part }, offset_ex(tooth, nozzle_diam / 4)), true)[0];
+            ThickPolylines res;
+            //expolygon.medial_axis(scale_(1), scale_(0.5), &res);
+            Slic3r::MedialAxis ma(tooth, anchor, nozzle_diam * 2, nozzle_diam*0.33, scale_(0.6));
+            ma.nozzle_diameter = nozzle_diam;
+            ma.anchor_size = 1.0*nozzle_diam;
+            ma.build(&res);
+            THEN("medial axis of a simple line is one line") {
+                REQUIRE(res.size() == 1);
+                THEN("medial axis has the length of the line + the length of the anchor") {
+                    //0.3 because it's offseted by nozzle_diam / 4
+                    REQUIRE(std::abs(res[0].length() - scale_(10.3)) < SCALED_EPSILON);
+                }
+                THEN("medial axis can'ty have a line width below Flow::new_from_spacing(nozzle_diam).width") {
+                    double max_width = 0;
+                    for (coordf_t width : res[0].width) max_width = std::max(max_width, width);
+                    double min_width = Flow::new_from_spacing(float(unscale_(nozzle_diam)), float(unscale_(nozzle_diam)), 0.6f, false).scaled_width();
+                    REQUIRE(std::abs(max_width - min_width) < SCALED_EPSILON);
+                    REQUIRE(std::abs(max_width - nozzle_diam)  > SCALED_EPSILON);
+                }
+                //compute the length of the tapers
+                THEN("medial axis has a 45° taper and a shorter one") {
+                    int l1 = 0;
+                    for (size_t idx = 0; idx < res[0].width.size() - 1 && res[0].width[idx] - scale_(1.2) < SCALED_EPSILON; ++idx)
+                        l1 += res[0].lines()[idx].length();
+                    int l2 = 0;
+                    for (size_t idx = res[0].width.size() - 1; idx > 0 && res[0].width[idx] - scale_(1.2) < SCALED_EPSILON; --idx)
+                        l2 += res[0].lines()[idx - 1].length();
+                    //here the taper is limited by the 0-width spacing
+                    double min_width = Flow::new_from_spacing(float(unscale_(nozzle_diam)), float(unscale_(nozzle_diam)), 0.6f, false).scaled_width();
+                    REQUIRE(std::abs(l1 - l2) < SCALED_EPSILON);
+                    REQUIRE(l1 < scale_(0.6));
+                    REQUIRE(l1  > scale_(0.4));
+                }
+            }
+        }
+
     }
 
     GIVEN("narrow trapezoid")

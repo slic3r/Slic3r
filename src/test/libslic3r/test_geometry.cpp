@@ -1,4 +1,6 @@
 
+#define CATCH_CONFIG_DISABLE
+
 #include <catch.hpp>
 
 #include "../../libslic3r/Point.hpp"
