@@ -187,7 +187,20 @@ MedialAxis::validate_edge(const VD::edge_type* edge)
         // in this case, contains(line) returns a false positive
         if (!this->expolygon.contains(line.a)) return false;
     } else {
-        if (!this->expolygon.contains(line)) return false;
+        //test if  (!expolygon.contains(line))
+        Polyline line_a_b;
+        line_a_b.append(line.a);
+        line_a_b.append(line.b);
+        Polylines external_bits = diff_pl(Polylines{ line_a_b }, expolygon);
+        if (!external_bits.empty()){
+            //check if the bits that are not inside are under epsilon length
+            coordf_t max_length = 0;
+            for (Polyline &poly : external_bits){
+                max_length = std::max(max_length, poly.length());
+            }
+            if (max_length > SCALED_EPSILON)
+                return false;
+        }
     }
     
     // retrieve the original line segments which generated the edge we're checking
@@ -743,6 +756,10 @@ MedialAxis::main_fusion(ThickPolylines& pp)
             double dot_poly_branch = 0;
             double dot_candidate_branch = 0;
 
+            bool find_main_branch = false;
+            size_t biggest_main_branch_id = 0;
+            coord_t biggest_main_branch_length = 0;
+
             // find another polyline starting here
             for (size_t j = i + 1; j < pp.size(); ++j) {
                 ThickPolyline& other = pp[j];
@@ -794,9 +811,9 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                 // both angle are equal => both are useful with same strength
                 // ex: Y => | both are useful to crete a nice line
                 // ex2: TTTTT => -----  these 90° useless lines should be discarded
-                bool find_main_branch = false;
-                size_t biggest_main_branch_id = 0;
-                coord_t biggest_main_branch_length = 0;
+                find_main_branch = false;
+                biggest_main_branch_id = 0;
+                biggest_main_branch_length = 0;
                 for (size_t k = 0; k < pp.size(); ++k) {
                     if (k == i || k == j) continue;
                     ThickPolyline& main = pp[k];
@@ -909,9 +926,9 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                     //failsafes
                     if (polyline.width[idx_point] > max_width) 
                         polyline.width[idx_point] = max_width;
-                    const coord_t max_width_contour = (coord_t) bounds.contour.closest_point(polyline.points[idx_point])->distance_to(polyline.points[idx_point]) * 2.1;
-                    if (polyline.width[idx_point] > max_width_contour)
-                        polyline.width[idx_point] = max_width_contour;
+                    //failsafe: try to not go out of the radius of the section, take the width of the merging point for that. (and with some offset)
+                    if (find_main_branch && polyline.width[idx_point] > pp[biggest_main_branch_id].width.front() * 1.1)
+                        polyline.width[idx_point] = pp[biggest_main_branch_id].width.front() * 1.1;
 
                     ++idx_point;
                 }
@@ -960,15 +977,14 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                     }
                 }
 
-                //update cache
-                coeff_angle_cache[polyline.points.back()] = coeff_angle_poly * coeff_poly + coeff_angle_candi * coeff_candi;
-
-
                 if (polyline.points.size() < 2) {
                     //remove self
                     pp.erase(pp.begin() + i);
                     --i;
                     --best_idx;
+                } else {
+                    //update cache
+                    coeff_angle_cache[polyline.points.back()] = coeff_angle_poly * coeff_poly + coeff_angle_candi * coeff_candi;
                 }
 
                 pp.erase(pp.begin() + best_idx);
@@ -1250,6 +1266,9 @@ MedialAxis::simplify_polygon_frontier()
     //simplify the boundary between us and the bounds.
     //it will remove every point in the surface contour that aren't on the bounds contour
     ExPolygon simplified_poly = this->surface;
+    simplified_poly.contour.remove_collinear_points();
+    for (Polygon &hole : simplified_poly.holes)
+        hole.remove_collinear_points();
     if (&this->surface != &this->bounds) {
         bool need_intersect = false;
         for (size_t i = 0; i < simplified_poly.contour.points.size(); i++) {
@@ -1290,6 +1309,9 @@ MedialAxis::simplify_polygon_frontier()
 /// Do not grow points inside the anchor.
 void
 MedialAxis::grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchors) {
+    coord_t min_width = this->nozzle_diameter * 1.05;
+    if (this->height > 0)min_width = Flow::new_from_spacing(float(unscale(this->nozzle_diameter)),
+        float(unscale(this->nozzle_diameter)), float(unscale(this->height)), false).scaled_width();
     //ensure the width is not lower than 0.4.
     for (ThickPolyline& polyline : pp) {
         for (int i = 0; i < polyline.points.size(); ++i) {
@@ -1300,8 +1322,8 @@ MedialAxis::grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchor
                     break;
                 }
             }
-            if (!is_anchored && polyline.width[i] < nozzle_diameter * 1.05)
-                polyline.width[i] = nozzle_diameter * 1.05;
+            if (!is_anchored && polyline.width[i] < min_width)
+                polyline.width[i] = min_width;
         }
     }
 }
@@ -1324,7 +1346,7 @@ MedialAxis::taper_ends(ThickPolylines& pp) {
                 if (current_dist > length) {
                     //create a new point if not near enough
                     if (current_dist > polyline.width[i] + SCALED_RESOLUTION) {
-                        coordf_t percent_dist = (polyline.width[i] - polyline.width[i - 1]) / (current_dist - last_dist);
+                        coordf_t percent_dist = (length - last_dist) / (current_dist - last_dist);
                         polyline.points.insert(polyline.points.begin() + i, polyline.points[i - 1].interpolate(percent_dist, polyline.points[i]));
                         polyline.width.insert(polyline.width.begin() + i, polyline.width[i]);
                     }
@@ -1335,22 +1357,22 @@ MedialAxis::taper_ends(ThickPolylines& pp) {
             }
         }
         if (polyline.endpoints.second) {
-            const size_t back_idx = polyline.width.size() - 1;
-            polyline.width[back_idx] = min_size;
+            polyline.width[polyline.width.size() - 1] = min_size;
             coord_t current_dist = min_size;
             coord_t last_dist = min_size;
-            for (size_t i = 1; i<polyline.width.size(); ++i) {
-                current_dist += (coord_t)polyline.points[back_idx - i + 1].distance_to(polyline.points[back_idx - i]);
+            for (size_t i = polyline.width.size()-1; i > 0; --i) {
+                current_dist += (coord_t)polyline.points[i].distance_to(polyline.points[i - 1]);
+                std::cout << "2current_dist= " << current_dist << "\n";
                 if (current_dist > length) {
                     //create new point if not near enough
-                    if (current_dist > polyline.width[back_idx - i] + SCALED_RESOLUTION) {
-                        coordf_t percent_dist = (polyline.width[back_idx - i] - polyline.width[back_idx - i + 1]) / (current_dist - last_dist);
-                        polyline.points.insert(polyline.points.begin() + back_idx - i + 1, polyline.points[back_idx - i + 1].interpolate(percent_dist, polyline.points[back_idx - i]));
-                        polyline.width.insert(polyline.width.begin() + back_idx - i + 1, polyline.width[back_idx - i]);
+                    if (current_dist > length + SCALED_RESOLUTION) {
+                        coordf_t percent_dist = (length - last_dist) / (current_dist - last_dist);
+                        polyline.points.insert(polyline.points.begin() + i, polyline.points[i].interpolate(percent_dist, polyline.points[i - 1]));
+                        polyline.width.insert(polyline.width.begin() + i, polyline.width[i - 1]);
                     }
                     break;
                 }
-                polyline.width[back_idx - i] = std::max((coordf_t)min_size, min_size + (polyline.width[back_idx - i] - min_size) * current_dist / length);
+                polyline.width[i - 1] = std::max((coordf_t)min_size, min_size + (polyline.width[i - 1] - min_size) * current_dist / length);
                 last_dist = current_dist;
             }
         }
