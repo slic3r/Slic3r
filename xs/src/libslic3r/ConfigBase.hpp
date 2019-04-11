@@ -1,7 +1,6 @@
 #ifndef slic3r_ConfigBase_hpp_
 #define slic3r_ConfigBase_hpp_
 
-#include <execinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -37,24 +36,7 @@ class ConfigOptionException : public std::exception {
     public:
     const t_config_option_key opt_key;
     ConfigOptionException(const t_config_option_key _opt_key)
-        : opt_key(_opt_key) {
-        /*
-    	void *array[10];
-    	  size_t size;
-    	    char **strings;
-    	          size_t i;
-        	  
-                size = backtrace (array, 10);
-                  strings = backtrace_symbols (array, size);
-                  
-                    printf ("Obtained %zd stack frames.\n", size);
-                    
-                      for (i = 0; i < size; i++)
-                           std::cerr<<strings[i]<<std::endl;
-                           
-                             free (strings);
-        //*/
-        };
+        : opt_key(_opt_key) {};
 
     virtual const char* what() const noexcept {
         std::string s("Exception with the option: ");
