@@ -1,9 +1,6 @@
 #ifndef slic3r_ConfigBase_hpp_
 #define slic3r_ConfigBase_hpp_
 
-#include <stdio.h>
-#include <stdlib.h>
-
 #include <map>
 #include <climits>
 #include <cstdio>
@@ -43,16 +40,22 @@ class ConfigOptionException : public std::exception {
         s += this->opt_key;
         return s.c_str();
     }
-
 };
+
 class UnknownOptionException : public ConfigOptionException {
     using ConfigOptionException::ConfigOptionException;
 
 };
+
 class InvalidOptionException : public ConfigOptionException {
     using ConfigOptionException::ConfigOptionException;
     
-
+    public:
+	virtual const char* what() const noexcept {
+	    std::string s("Invalid value for option: ");
+	    s += this->opt_key;
+	    return s.c_str();
+	}
 };
 
 /// Specialization of std::exception to indicate that an unsupported accessor was called on a config option.
