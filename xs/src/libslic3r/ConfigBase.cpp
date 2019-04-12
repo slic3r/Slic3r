@@ -372,33 +372,31 @@ void
 ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent, bool default_nonexistent) {
     // loop through options and apply them
     for (const t_config_option_key &opt_key : opt_keys) {
-        try{ 
-        ConfigOption* my_opt = this->option(opt_key, true);
-        if (opt_key.size() == 0) continue;
-        if (my_opt == NULL) {
-            if (ignore_nonexistent == false) throw UnknownOptionException(opt_key);
-            continue;
-        }
-        if (default_nonexistent && !other.has(opt_key)) {
-            auto* def_opt = this->def->get(opt_key).default_value->clone();
-            // not the most efficient way, but easier than casting pointers to subclasses
-            bool res = my_opt->deserialize( def_opt->serialize() );
-            if (!res) {
-                std::string error = "Unexpected failure when deserializing serialized value for " + opt_key;
-                CONFESS(error.c_str());
-            }
-            continue;
-        }
-        
-        // not the most efficient way, but easier than casting pointers to subclasses
-        bool res = my_opt->deserialize( other.option(opt_key)->serialize() );
-        if (!res) {
-            std::string error = "Unexpected failure when deserializing serialized value for " + opt_key;
-            CONFESS(error.c_str());
-        }
+        try{
+	    ConfigOption* my_opt = this->option(opt_key, true);
+	    if (opt_key.size() == 0) continue;
+	    if (my_opt == NULL) {
+	        if (ignore_nonexistent == false) throw UnknownOptionException(opt_key);
+	        continue;
+	    }
+	    if (default_nonexistent && !other.has(opt_key)) {
+	        auto* def_opt = this->def->get(opt_key).default_value->clone();
+	        // not the most efficient way, but easier than casting pointers to subclasses
+	        bool res = my_opt->deserialize( def_opt->serialize() );
+	        if (!res) {
+	            std::string error = "Unexpected failure when deserializing serialized value for " + opt_key;
+	            CONFESS(error.c_str());
+	        }
+	        continue;
+	    }
+	    // not the most efficient way, but easier than casting pointers to subclasses
+	    bool res = my_opt->deserialize( other.option(opt_key)->serialize() );
+	    if (!res) {
+		std::string error = "Unexpected failure when deserializing serialized value for " + opt_key;
+		CONFESS(error.c_str());
+	    }
         } catch ( UnknownOptionException & e ){
-        
-    	    //    std::cerr<<e.what()<<std::endl;
+	    Slic3r::Log::warn("Config") << "Option " << opt_key << ": "  << e.what()<< std::endl;
         }
     }
 }
@@ -928,7 +926,7 @@ ConfigOptionPoint::deserialize(std::string str, bool append) {
         this->value.x = boost::lexical_cast<coordf_t>(tokens[0]);
         this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
     } catch (boost::bad_lexical_cast &e){
-        std::cout << "Config option deserialisation error of ["<<str<<"]  : " << e.what()<<" (expected 2D point)" << std::endl;
+        Slic3r::Log::error("Config") << "Deserialisation error of [" << str << "]  : " << e.what()<<" (expected 2D point)" << std::endl;
         return false;
     }
     return true;
@@ -943,7 +941,7 @@ ConfigOptionPoint3::deserialize(std::string str, bool append) {
         this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
         this->value.z = boost::lexical_cast<coordf_t>(tokens[2]);
     } catch (boost::bad_lexical_cast &e){
-        std::cout << "Config option deserialisation error of ["<<str<<"]  : " << e.what()<<" (expected 3D point)" << std::endl;
+        Slic3r::Log::error("Config") << "Deserialisation error of ["<<str<<"]  : " << e.what()<<" (expected 3D point)" << std::endl;
         return false;
     }
     return true;
@@ -965,10 +963,9 @@ ConfigOptionPoints::deserialize(std::string str, bool append) {
 			this->values.push_back(point);
 		}
 	} catch (boost::bad_lexical_cast &e) {
-		printf("%s\n", e.what());
+		Slic3r::Log::error("Config") << "Deserialisation error of ["  << str << "] " << e.what() << " (expected list of points) ";
 		return false;
 	}
-
 	return true;
 }
 

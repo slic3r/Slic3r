@@ -1,4 +1,5 @@
 #include "SupportMaterial.hpp"
+#include "Log.hpp"
 
 namespace Slic3r
 {
@@ -71,7 +72,8 @@ SupportMaterial::generate(PrintObject *object)
 
     //bugfix: do not try to generate overhang if there is no contact area 
     if( contact.empty() ){
-	std::cerr<<"Empty contact_areas of SupportMaterial for object ["<<object->model_object()->name<<"]"<<std::endl;
+	Slic3r::Log::error("Support material") << "Empty contact_areas of SupportMaterial for object "
+	    <<"[" << object->model_object()->name << "]" << std::endl;
     	return;
     }
 	
