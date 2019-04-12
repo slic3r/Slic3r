@@ -11,7 +11,6 @@ option(COVERAGE "Build with gcov code coverage profiling." OFF)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
 add_compile_options(-DNO_PERL  -DM_PI=3.14159265358979323846 -D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE)
-#add_link_options(-rdynamic)
 
 if (MSVC)
     add_compile_options(-W3)
