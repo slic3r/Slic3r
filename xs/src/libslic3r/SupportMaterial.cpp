@@ -226,7 +226,7 @@ SupportMaterial::contact_area(PrintObject *object)
     // Determine contact areas.
     map<coordf_t, Polygons> contact; // contact_z => [ polygons ].
     map<coordf_t, Polygons> overhang; // This stores the actual overhang supported by each contact layer
-    for (int layer_id = 0; layer_id < object->layers.size(); layer_id++) {
+    for (int layer_id = 0; layer_id < (int)object->layers.size(); layer_id++) {
         // Note $layer_id might != $layer->id when raft_layers > 0
         // so $layer_id == 0 means first object layer
         // and $layer->id == 0 means first print layer (including raft).
@@ -611,11 +611,11 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
         grid = union_(pillars);
     }
     // Add pillars to every layer.
-    for (auto i = 0; i < support_z.size(); i++) {
+    for (size_t i = 0; i < support_z.size(); i++) {
         shape[i] = grid;
     }
     // Build capitals.
-    for (auto i = 0; i < support_z.size(); i++) {
+    for (size_t i = 0; i < support_z.size(); i++) {
         coordf_t z = support_z[i];
 
         auto capitals = intersection(
@@ -632,7 +632,6 @@ SupportMaterial::generate_pillars_shape(const map<coordf_t, Polygons> &contact,
             append_to(contact_supported_by_capitals, capital_polygons);
 
             for (int j = i - 1; j >= 0; j--) {
-                auto jz = support_z[j];
                 capital_polygons = offset(Polygons{capital}, -interface_flow.scaled_width() / 2);
                 if (capitals.empty()) break;
                 append_to(shape[i], capital_polygons);
@@ -664,7 +663,6 @@ SupportMaterial::generate_base_layers(vector<coordf_t> support_z,
     map<int, Polygons> base;
     {
         for (auto i = static_cast<int>(support_z.size()) - 1; i >= 0; i--) {
-            auto z = support_z[i];
             auto overlapping_layers = this->overlapping_layers(i, support_z);
             vector<coordf_t> overlapping_z;
             for (auto el : overlapping_layers)
@@ -674,7 +672,7 @@ SupportMaterial::generate_base_layers(vector<coordf_t> support_z,
             // (1 interface layer means we only have contact layer, so $interface->{$i+1} is empty).
             Polygons upper_contact;
             if (object_config->support_material_interface_layers.value <= 1) {
-                append_to(upper_contact, (i + 1 < support_z.size() ? contact[support_z[i + 1]] : contact[-1]));
+                append_to(upper_contact, ((size_t)i + 1 < support_z.size() ? contact[support_z[i + 1]] : contact[-1]));
             }
 
             Polygons ps_1;
@@ -711,7 +709,7 @@ SupportMaterial::generate_interface_layers(vector<coordf_t> support_z,
     map<int, Polygons> _interface;
     auto interface_layers_num = object_config->support_material_interface_layers.value;
 
-    for (int layer_id = 0; layer_id < support_z.size(); layer_id++) {
+    for (int layer_id = 0; layer_id < (int)support_z.size(); layer_id++) {
         auto z = support_z[layer_id];
 
         if (contact.count(z) <= 0)
@@ -720,7 +718,6 @@ SupportMaterial::generate_interface_layers(vector<coordf_t> support_z,
 
         // Count contact layer as interface layer.
         for (int i = layer_id - 1; i >= 0 && i > layer_id - interface_layers_num; i--) {
-            auto _z = support_z[i];
             auto overlapping_layers = this->overlapping_layers(i, support_z);
             vector<coordf_t> overlapping_z;
             for (auto z_el : overlapping_layers)
@@ -773,7 +770,7 @@ SupportMaterial::generate_bottom_interface_layers(const vector<coordf_t> &suppor
 
         // Loop through support layers until we find the one(s) right above the top
         // surface.
-        for (int layer_id = 0; layer_id < support_z.size(); layer_id++) {
+        for (size_t layer_id = 0; layer_id < support_z.size(); layer_id++) {
             auto z = support_z[layer_id];
             if (z <= top_el.first) // next unless $z > $top_z;
                 continue;
@@ -830,7 +827,7 @@ SupportMaterial::overlapping_layers(int layer_idx, const vector<coordf_t> &suppo
     coordf_t z_max = support_z[layer_idx];
     coordf_t z_min = layer_idx == 0 ? 0 : support_z[layer_idx - 1];
 
-    for (int i = 0; i < support_z.size(); i++) {
+    for (int i = 0; i < (int) support_z.size(); i++) {
         if (i == layer_idx) continue;
 
         coordf_t z_max2 = support_z[i];
