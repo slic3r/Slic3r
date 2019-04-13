@@ -372,31 +372,32 @@ void
 ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent, bool default_nonexistent) {
     // loop through options and apply them
     for (const t_config_option_key &opt_key : opt_keys) {
-        try{
-	    ConfigOption* my_opt = this->option(opt_key, true);
-	    if (opt_key.size() == 0) continue;
-	    if (my_opt == NULL) {
-	        if (ignore_nonexistent == false) throw UnknownOptionException(opt_key);
-	        continue;
-	    }
-	    if (default_nonexistent && !other.has(opt_key)) {
-	        auto* def_opt = this->def->get(opt_key).default_value->clone();
-	        // not the most efficient way, but easier than casting pointers to subclasses
-	        bool res = my_opt->deserialize( def_opt->serialize() );
-	        if (!res) {
-	            std::string error = "Unexpected failure when deserializing serialized value for " + opt_key;
-	            CONFESS(error.c_str());
-	        }
-	        continue;
-	    }
-	    // not the most efficient way, but easier than casting pointers to subclasses
-	    bool res = my_opt->deserialize( other.option(opt_key)->serialize() );
-	    if (!res) {
-		std::string error = "Unexpected failure when deserializing serialized value for " + opt_key;
-		CONFESS(error.c_str());
-	    }
+        ConfigOption* my_opt = NULL;
+        try {
+            my_opt = this->option(opt_key, true);
         } catch ( UnknownOptionException & e ){
-	    Slic3r::Log::warn("Config") << "Option " << opt_key << ": "  << e.what()<< std::endl;
+            if (!ignore_nonexistent) Slic3r::Log::warn("Config") << "Option " << opt_key << ": " << e.what() << std::endl;
+        }
+        if (opt_key.size() == 0) continue;
+        if (my_opt == NULL) {
+            if (ignore_nonexistent == false) throw UnknownOptionException(opt_key);
+            continue;
+        }
+        if (default_nonexistent && !other.has(opt_key)) {
+            auto* def_opt = this->def->get(opt_key).default_value->clone();
+            // not the most efficient way, but easier than casting pointers to subclasses
+            bool res = my_opt->deserialize( def_opt->serialize() );
+            if (!res) {
+                std::string error = "Unexpected failure when deserializing serialized value for " + opt_key;
+                CONFESS(error.c_str());
+            }
+            continue;
+        }
+        // not the most efficient way, but easier than casting pointers to subclasses
+        bool res = my_opt->deserialize( other.option(opt_key)->serialize() );
+        if (!res) {
+            std::string error = "Unexpected failure when deserializing serialized value for " + opt_key;
+            CONFESS(error.c_str());
         }
     }
 }
