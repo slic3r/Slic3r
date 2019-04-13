@@ -70,9 +70,9 @@ int CLI::run(int argc, char **argv) {
             c.normalize();
             this->print_config.apply(c);
         } catch (std::exception &e){
-	    Slic3r::Log::error("CLI") << "Error with the config file '" << file << "': " << e.what() <<std::endl;
-	    exit(EXIT_FAILURE);
-	}
+            Slic3r::Log::error("CLI") << "Error with the config file '" << file << "': " << e.what() <<std::endl;
+            exit(EXIT_FAILURE);
+        }
     }
     
     // apply command line options to a more specific DynamicPrintConfig which provides normalize()
@@ -87,23 +87,23 @@ int CLI::run(int argc, char **argv) {
     try {
         this->full_print_config.validate();
     } catch (std::exception &e) {
-	Slic3r::Log::error("CLI") << "Config validation error: "<< e.what() << std::endl;
-	exit(EXIT_FAILURE);
+        Slic3r::Log::error("CLI") << "Config validation error: "<< e.what() << std::endl;
+        exit(EXIT_FAILURE);
     }
     Slic3r::Log::debug("CLI") << "Config validated" << std::endl;
-    
+
     // read input file(s) if any
     for (auto const &file : input_files) {
         Model model;
         try {
             model = Model::read_from_file(file);
         } catch (std::exception &e) {
-	    Slic3r::Log::error("CLI") << file << ": " << e.what() << std::endl;
-	    exit(EXIT_FAILURE);
+            Slic3r::Log::error("CLI") << file << ": " << e.what() << std::endl;
+            exit(EXIT_FAILURE);
         }
         if (model.objects.empty()) {
-	    Slic3r::Log::error("CLI") << "Error: file is empty: " << file << std::endl;
-	    continue;
+            Slic3r::Log::error("CLI") << "Error: file is empty: " << file << std::endl;
+            continue;
         }
         this->models.push_back(model);
     }
@@ -314,10 +314,10 @@ int CLI::run(int argc, char **argv) {
                     boost::nowide::cout << msg << std::endl;
                 };
                 print.apply_config(this->print_config);
-                print.arrange = !this->config.getBool("dont_arrange",false);
+                print.arrange = !this->config.getBool("dont_arrange", false);
                 print.center = !this->config.has("center")
                     && !this->config.has("align_xy")
-                    && !this->config.getBool("dont_arrange",false);
+                    && print.arrange;
                 Slic3r::Log::error("CLI") << "Arrange: " << print.arrange<< ", center: " << print.center << std::endl;
                 print.set_model(model);
                 
