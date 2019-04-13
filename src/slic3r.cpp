@@ -81,7 +81,7 @@ int CLI::run(int argc, char **argv) {
     this->print_config.normalize();
     Slic3r::Log::debug("CLI") << "Print config normalized" << std::endl;
     // create a static (full) print config to be used in our logic
-    this->full_print_config.apply(this->print_config);
+    this->full_print_config.apply(this->print_config, true);
     Slic3r::Log::debug("CLI") << "Full print config created" << std::endl;
     // validate config
     try {
