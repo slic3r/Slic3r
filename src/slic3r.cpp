@@ -56,7 +56,7 @@ int CLI::run(int argc, char **argv) {
         if (cli_transform_config_def.has(opt_key)) this->transforms.push_back(opt_key);
     }
     // load config files supplied via --load
-    for (auto const &file : config.getStrings("load",{})) {
+    for (auto const &file : config.getStrings("load", {})) {
         try{
             if (!boost::filesystem::exists(file)) {
                 if (config.getBool("ignore_nonexistent_file", false)) {
@@ -435,7 +435,7 @@ CLI::output_filepath(const Model &model, IO::ExportFormat format) const {
     const std::string filename = pp.process(filename_format);
     
     // use --output when available
-    std::string outfile{ this->config.getString("output","") };
+    std::string outfile{ this->config.getString("output", "") };
     if (!outfile.empty()) {
         // if we were supplied a directory, use it and append our automatically generated filename
         const boost::filesystem::path out(outfile);
