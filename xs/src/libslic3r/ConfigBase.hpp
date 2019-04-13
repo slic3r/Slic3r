@@ -51,11 +51,11 @@ class InvalidOptionException : public ConfigOptionException {
     using ConfigOptionException::ConfigOptionException;
     
     public:
-	virtual const char* what() const noexcept {
-	    std::string s("Invalid value for option: ");
-	    s += this->opt_key;
-	    return s.c_str();
-	}
+    virtual const char* what() const noexcept {
+        std::string s("Invalid value for option: ");
+        s += this->opt_key;
+        return s.c_str();
+    }
 };
 
 /// Specialization of std::exception to indicate that an unsupported accessor was called on a config option.
