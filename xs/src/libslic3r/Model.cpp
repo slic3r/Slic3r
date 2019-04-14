@@ -1012,14 +1012,14 @@ ModelVolume::swap(ModelVolume &other)
 }
 
 TriangleMesh
-ModelVolume::get_transformed_mesh(TransformationMatrix const * additional_trafo = nullptr) const
+ModelVolume::get_transformed_mesh(TransformationMatrix const * additional_trafo) const
 {
     TransformationMatrix trafo = this->trafo;
     if(additional_trafo)
     {
         trafo.applyLeft(*(additional_trafo));
     }
-    TriangleMesh mesh = TriangleMesh::TriangleMesh();
+    TriangleMesh mesh = TriangleMesh();
     std::vector<float> trafo_arr = trafo.matrix3x4f();
     stl_transform(&(this->mesh.stl), &(mesh.stl), trafo_arr.data());
     stl_invalidate_shared_vertices(&(mesh.stl));
