@@ -246,32 +246,22 @@ TMFEditor::write_build(boost::nowide::ofstream& fout)
             fout << "        <item objectid=\"" << (object_id + 1) << "\"";
 
             // Get the rotation about x, y &z, translations and the scale vector.
-            double sc = instance->scaling_factor,
-                    cosine_rz = cos(instance->rotation),
-                    sine_rz = sin(instance->rotation),
-                    cosine_ry = cos(instance->y_rotation),
-                    sine_ry = sin(instance->y_rotation),
-                    cosine_rx = cos(instance->x_rotation),
-                    sine_rx = sin(instance->x_rotation),
-                    tx = instance->offset.x + object->origin_translation.x ,
-                    ty = instance->offset.y + object->origin_translation.y,
-                    tz = instance->z_translation;
+            TransformationMatrix trafo = instance->get_trafo_matrix();
 
             // Add the transform
             fout << " transform=\""
-                 << (cosine_ry * cosine_rz * sc * instance->scaling_vector.x)
-                 << " "
-                 << (cosine_ry * sine_rz * sc) << " "
-                 << (-1 * sine_ry * sc) << " "
-                 << ((sine_rx * sine_ry * cosine_rz -1 * cosine_rx * sine_rz) * sc)  << " "
-                 << ((sine_rx * sine_ry * sine_rz + cosine_rx *cosine_rz) * sc * instance->scaling_vector.y) << " "
-                 << (sine_rx * cosine_ry * sc) << " "
-                 << ((cosine_rx * sine_ry * cosine_rz + sine_rx * sine_rz) * sc) << " "
-                 << ((sine_rx * sine_ry * sine_rz - sine_rx * cosine_rz) * sc) << " "
-                 << (cosine_rx * cosine_ry * sc * instance->scaling_vector.z) << " "
-                 << (tx) << " "
-                 << (ty) << " "
-                 << (tz)
+                 << trafo.m11 << " "
+                 << trafo.m21 << " "
+                 << trafo.m31 << " "
+                 << trafo.m12 << " "
+                 << trafo.m22 << " "
+                 << trafo.m32 << " "
+                 << trafo.m13 << " "
+                 << trafo.m23 << " "
+                 << trafo.m33 << " "
+                 << trafo.m14 << " "
+                 << trafo.m24 << " "
+                 << trafo.m34
                  << "\"/>\n";
 
         }
