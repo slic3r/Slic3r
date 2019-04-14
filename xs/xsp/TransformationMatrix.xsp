@@ -8,8 +8,6 @@
 %name{Slic3r::TransformationMatrix} class TransformationMatrix {
    TransformationMatrix();
    ~TransformationMatrix();
-   Clone<TransformationMatrix> clone()
-      %code{% RETVAL = THIS; %};
         
    double m11;
       %code%{ RETVAL = THIS->m11; %}
