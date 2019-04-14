@@ -1533,12 +1533,8 @@ sub increase {
     for my $i (1..$copies) {
         $instance = $model_object->add_instance(
             offset          => Slic3r::Pointf->new(map 10+$_, @{$instance->offset}),
-            z_translation   => $instance->z_translation,
             scaling_factor  => $instance->scaling_factor,
-            scaling_vector  => $instance->scaling_vector,
             rotation        => $instance->rotation,
-            x_rotation      => $instance->x_rotation,
-            y_rotation      => $instance->y_rotation,
         );
         $self->{print}->objects->[$obj_idx]->add_copy($instance->offset);
     }
@@ -3387,10 +3383,10 @@ sub make_thumbnail {
     
     my $mesh = $model->objects->[$obj_idx]->raw_mesh;
     # Apply x, y rotations and scaling vector in case of reading a 3MF model object.
-    my $model_instance = $model->objects->[$obj_idx]->instances->[0];
-    $mesh->rotate_x($model_instance->x_rotation);
-    $mesh->rotate_y($model_instance->y_rotation);
-    $mesh->scale_xyz($model_instance->scaling_vector);
+    #my $model_instance = $model->objects->[$obj_idx]->instances->[0];
+    #$mesh->rotate_x($model_instance->x_rotation);
+    #$mesh->rotate_y($model_instance->y_rotation);
+    #$mesh->scale_xyz($model_instance->scaling_vector);
 
     if ($mesh->facets_count <= 5000) {
         # remove polygons with area <= 1mm

@@ -845,17 +845,17 @@ void
 TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<double> &transformations)
 {
     // Apply scale.
-    instance->scaling_vector = Pointf3(transformations[3], transformations[4], transformations[5]);;
+    // instance->scaling_vector = Pointf3(transformations[3], transformations[4], transformations[5]);;
 
     // Apply x, y & z rotation.
     instance->rotation = transformations[8];
-    instance->x_rotation = transformations[6];
-    instance->y_rotation = transformations[7];
+    // instance->x_rotation = transformations[6];
+    // instance->y_rotation = transformations[7];
 
     // Apply translation.
     instance->offset.x = transformations[0];
     instance->offset.y = transformations[1];
-    instance->z_translation = transformations[2];
+    // instance->z_translation = transformations[2];
     return;
 }
 
