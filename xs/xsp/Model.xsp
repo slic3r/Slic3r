@@ -315,33 +315,17 @@ ModelMaterial::attributes()
 
     double rotation()
         %code%{ RETVAL = THIS->rotation; %};
-    double x_rotation()
-        %code%{ RETVAL = THIS->x_rotation; %};
-    double y_rotation()
-        %code%{ RETVAL = THIS->y_rotation; %};
     double scaling_factor()
         %code%{ RETVAL = THIS->scaling_factor; %};
-    Ref<Pointf3> scaling_vector()
-        %code%{ RETVAL = &THIS->scaling_vector; %};
     Ref<Pointf> offset()
         %code%{ RETVAL = &THIS->offset; %};
-    double z_translation()
-        %code%{ RETVAL = THIS->z_translation; %};
 
     void set_rotation(double val)
         %code%{ THIS->rotation = val; %};
-    void set_x_rotation(double val)
-        %code%{ THIS->x_rotation = val; %};
-    void set_y_rotation(double val)
-        %code%{ THIS->y_rotation = val; %};
     void set_scaling_factor(double val)
         %code%{ THIS->scaling_factor = val; %};
-    void set_scaling_vector(Pointf3 *vec)
-        %code%{ THIS->scaling_vector = *vec; %};
     void set_offset(Pointf *offset)
         %code%{ THIS->offset = *offset; %};
-    void set_z_translation(double val)
-        %code%{ THIS->z_translation = val; %};
     
     void transform_mesh(TriangleMesh* mesh, bool dont_translate = false) const;
     void transform_polygon(Polygon* polygon) const;
