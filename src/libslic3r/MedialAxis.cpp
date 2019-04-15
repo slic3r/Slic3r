@@ -186,7 +186,17 @@ MedialAxis::validate_edge(const VD::edge_type* edge)
         // in this case, contains(line) returns a false positive
         if (!this->expolygon.contains(line.a)) return false;
     } else {
-        if (!this->expolygon.contains(line)) return false;
+        //test if  (!expolygon.contains(line))
+        Polylines external_bits = diff_pl(Polylines{ Polyline{ line.a, line.b } }, expolygon);
+        if (!external_bits.empty()){
+            //check if the bits that are not inside are under epsilon length
+            coordf_t max_length = 0;
+            for (Polyline &poly : external_bits){
+                max_length = std::max(max_length, poly.length());
+            }
+            if (max_length > SCALED_EPSILON)
+                return false;
+        }
     }
     
     // retrieve the original line segments which generated the edge we're checking
