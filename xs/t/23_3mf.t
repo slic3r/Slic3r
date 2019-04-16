@@ -45,6 +45,9 @@ my $expected_relationships = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
     # Delete the created file.
     unlink($output_path);
 }
+done_testing();
+
+__END__
 
 # Test 2: Check read metadata/ objects/ components/ build items w/o or with tansformation matrics.
 {
