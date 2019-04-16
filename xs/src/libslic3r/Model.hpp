@@ -478,9 +478,14 @@ class ModelVolume
     ModelObject* get_object() const { return this->object; };
 
     /// Get the ModelVolume's mesh, transformed by the ModelVolume's TransformationMatrix
-    /// \param additional_trafo optional additional transformation
+    /// \param additional_trafo additional transformation
     /// \return TriangleMesh the transformed mesh
-    TriangleMesh get_transformed_mesh(TransformationMatrix const * additional_trafo = nullptr) const;
+    TriangleMesh get_transformed_mesh(TransformationMatrix const * additional_trafo) const;
+
+    /// Get the ModelVolume's mesh as pointer, transformed by the ModelVolume's TransformationMatrix
+    /// \param additional_trafo additional transformation
+    /// \return TriangleMesh the transformed mesh
+    TriangleMesh* get_transformed_meshptr(TransformationMatrix const * additional_trafo);
 
     /// Get the material id of this ModelVolume object
     /// \return t_model_material_id the material id string
@@ -508,6 +513,8 @@ class ModelVolume
     ModelObject* object;
     ///< The id of the this ModelVolume
     t_model_material_id _material_id;
+
+    TriangleMesh transformed_mesh;  ///< The transformed mesh only to be used by the perl binding
 
     /// Constructor
     /// \param object ModelObject* pointer to the owner ModelObject
@@ -552,6 +559,10 @@ class ModelInstance
     /// \param dont_translate bool whether to translate the mesh or not
     TransformationMatrix get_trafo_matrix(bool dont_translate = false) const;
 
+    /// Returns a pointer to TransformationMatrix defined by the instance's Transform an external TriangleMesh to the returned TriangleMesh object
+    /// \param dont_translate bool whether to translate the mesh or not
+    TransformationMatrix* get_trafo_matrixptr(bool dont_translate = false);
+
     /// Calculate a bounding box of a transformed mesh. To be called on an external mesh.
     /// \param mesh TriangleMesh* pointer to the the mesh
     /// \param dont_translate bool whether to translate the bounding box or not
@@ -588,6 +599,8 @@ class ModelInstance
     /// Swap attributes between another ModelInstance object
     /// \param other ModelInstance& the other instance object
     void swap(ModelInstance &other);
+
+    TransformationMatrix trafo; ///< Trafomatrix for perl binding
 };
 
 }
