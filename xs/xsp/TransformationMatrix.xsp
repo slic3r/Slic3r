@@ -8,55 +8,5 @@
 %name{Slic3r::TransformationMatrix} class TransformationMatrix {
    TransformationMatrix();
    ~TransformationMatrix();
-        
-   double m11;
-      %code%{ RETVAL = THIS->m11; %}
-   void set_m11(double value)
-      %code%{ THIS->m11 = value; %}
-   double m12;
-      %code%{ RETVAL = THIS->m12; %}
-   void set_m12(double value)
-      %code%{ THIS->m12 = value; %}
-   double m13;
-      %code%{ RETVAL = THIS->m13; %}
-   void set_m13(double value)
-      %code%{ THIS->m13 = value; %}
-   double m14;
-      %code%{ RETVAL = THIS->m14; %}
-   void set_m14(double value)
-      %code%{ THIS->m14 = value; %}
-   double m21;
-      %code%{ RETVAL = THIS->m21; %}
-   void set_m21(double value)
-      %code%{ THIS->m21 = value; %}
-   double m22;
-      %code%{ RETVAL = THIS->m22; %}
-   void set_m22(double value)
-      %code%{ THIS->m22 = value; %}
-   double m23;
-      %code%{ RETVAL = THIS->m23; %}
-   void set_m23(double value)
-      %code%{ THIS->m23 = value; %}
-   double m24;
-      %code%{ RETVAL = THIS->m24; %}
-   void set_m24(double value)
-      %code%{ THIS->m24 = value; %}
-   double m31;
-      %code%{ RETVAL = THIS->m31; %}
-   void set_m31(double value)
-      %code%{ THIS->m31 = value; %}
-   double m32;
-      %code%{ RETVAL = THIS->m32; %}
-   void set_m32(double value)
-      %code%{ THIS->m32 = value; %}
-   double m33;
-      %code%{ RETVAL = THIS->m33; %}
-   void set_m33(double value)
-      %code%{ THIS->m33 = value; %}
-   double m34;
-      %code%{ RETVAL = THIS->m34; %}
-   void set_m34(double value)
-      %code%{ THIS->m34 = value; %}
-        
 
 };
