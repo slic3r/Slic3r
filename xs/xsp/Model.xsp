@@ -290,6 +290,8 @@ ModelMaterial::attributes()
         %code%{ RETVAL = &THIS->config; %};
     Ref<TriangleMesh> mesh()
         %code%{ RETVAL = &THIS->mesh; %};
+
+    Ref<TriangleMesh> get_transformed_meshptr(TransformationMatrix * additional_trafo = nullptr);
     
     bool modifier()
         %code%{ RETVAL = THIS->modifier; %};
@@ -327,6 +329,8 @@ ModelMaterial::attributes()
     void set_offset(Pointf *offset)
         %code%{ THIS->offset = *offset; %};
     
-    void transform_mesh(TriangleMesh* mesh, bool dont_translate = false) const;
+    Ref<TransformationMatrix> get_trafo_matrixptr(bool dont_translate);
+
+    void transform_mesh(TriangleMesh* mesh, bool dont_translate) const;
     void transform_polygon(Polygon* polygon) const;
 };
