@@ -767,6 +767,10 @@ MedialAxis::main_fusion(ThickPolylines& pp)
             double dot_poly_branch = 0;
             double dot_candidate_branch = 0;
 
+            bool find_main_branch = false;
+            size_t biggest_main_branch_id = 0;
+            coord_t biggest_main_branch_length = 0;
+
             // find another polyline starting here
             for (size_t j = i + 1; j < pp.size(); ++j) {
                 ThickPolyline& other = pp[j];
@@ -829,9 +833,9 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                 // both angle are equal => both are useful with same strength
                 // ex: Y => | both are useful to crete a nice line
                 // ex2: TTTTT => -----  these 90° useless lines should be discarded
-                bool find_main_branch = false;
-                size_t biggest_main_branch_id = 0;
-                coord_t biggest_main_branch_length = 0;
+                find_main_branch = false;
+                biggest_main_branch_id = 0;
+                biggest_main_branch_length = 0;
                 for (size_t k = 0; k < pp.size(); ++k) {
                     //std::cout << "try to find main : " << k << " ? " << i << " " << j << " ";
                     if (k == i || k == j) continue;
@@ -971,11 +975,11 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                     //std::cout << "width:" << polyline.width[idx_point] << " = " << value_from_current_width << " + " << value_from_dist 
                     //    << " (<" << max_width << " && " << (bounds.contour.closest_point(polyline.points[idx_point])->distance_to(polyline.points[idx_point]) * 2.1)<<")\n";
                     //failsafes
-                    if (polyline.width[idx_point] > max_width) 
+                    if (polyline.width[idx_point] > max_width)
                         polyline.width[idx_point] = max_width;
-                    const coord_t max_width_contour = (coord_t) bounds.contour.closest_point(polyline.points[idx_point])->distance_to(polyline.points[idx_point]) * 2.1;
-                    if (polyline.width[idx_point] > max_width_contour)
-                        polyline.width[idx_point] = max_width_contour;
+                    //failsafe: try to not go out of the radius of the section, take the width of the merging point for that. (and with some offset)
+                    if (find_main_branch && polyline.width[idx_point] > pp[biggest_main_branch_id].width.front() * 1.1)
+                        polyline.width[idx_point] = pp[biggest_main_branch_id].width.front() * 1.1;
 
                     ++idx_point;
                 }
