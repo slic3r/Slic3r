@@ -144,7 +144,6 @@ class Pointf
     void rotate(double angle, const Pointf &center);
     Pointf negative() const;
     Vectorf vector_to(const Pointf &point) const;
-	
 };
 
 Pointf operator+(const Pointf& point1, const Pointf& point2);

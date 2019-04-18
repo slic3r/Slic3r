@@ -144,7 +144,7 @@ public:
             "perimeters"s, "spiral_vase"s,
             "top_solid_layers"s, "bottom_solid_layers"s,
             "extra_perimeters"s, "avoid_crossing_perimeters"s, 
-			"thin_walls"s, "thin_walls_min_width"s, "thin_walls_overlap"s, "overhangs"s,
+            "thin_walls"s, "thin_walls_min_width"s, "thin_walls_overlap"s, "overhangs"s,
             "seam_position"s, "external_perimeters_first"s,
             "fill_density"s, "fill_pattern"s, "top_infill_pattern"s, "bottom_infill_pattern"s, "fill_gaps"s,
             "infill_every_layers"s, "infill_only_where_needed"s,

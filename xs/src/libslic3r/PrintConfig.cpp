@@ -815,16 +815,16 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionInt(100);
 
     def = this->add("max_layer_height", coFloats);
-	def->label = "Max";
-	def->tooltip = "This is the highest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are slightly smaller than nozzle_diameter.";
-	def->sidetext = "mm";
-	def->cli = "max-layer-height=f@";
-	def->min = 0;
-	{
-		ConfigOptionFloats* opt = new ConfigOptionFloats();
-		opt->values.push_back(0.3);
-		def->default_value = opt;
-	}
+    def->label = "Max";
+    def->tooltip = "This is the highest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are slightly smaller than nozzle_diameter.";
+    def->sidetext = "mm";
+    def->cli = "max-layer-height=f@";
+    def->min = 0;
+    {
+        ConfigOptionFloats* opt = new ConfigOptionFloats();
+        opt->values.push_back(0.3);
+        def->default_value = opt;
+    }
 
     def = this->add("max_print_speed", coFloat);
     def->label = __TRANS("Max print speed");

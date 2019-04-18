@@ -440,7 +440,7 @@ sub options {
         perimeters spiral_vase
         top_solid_layers min_shell_thickness min_top_bottom_shell_thickness bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters 
-		thin_walls thin_walls_min_width thin_walls_overlap overhangs
+        thin_walls thin_walls_min_width thin_walls_overlap overhangs
         seam_position external_perimeters_first
         fill_density fill_pattern top_infill_pattern bottom_infill_pattern fill_gaps
         infill_every_layers infill_only_where_needed

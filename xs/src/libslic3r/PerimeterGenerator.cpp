@@ -96,7 +96,7 @@ PerimeterGenerator::process()
                     if (this->config->thin_walls) {
                         // the minimum thickness of a single loop is:
                         // ext_width/2 + ext_spacing/2 + spacing/2 + width/2
-						//here, we shrink & grow by ext_min_spacing to remove areas where the current loop can't be extruded 
+                        //here, we shrink & grow by ext_min_spacing to remove areas where the current loop can't be extruded 
                         offsets = offset2(
                             last,
                             -(ext_pwidth/2 + ext_min_spacing/2 - 1),
@@ -153,10 +153,11 @@ PerimeterGenerator::process()
                                     if (thin[0].area() > min_width*(ext_pwidth + ext_pspacing2)) {
                                         bound.remove_point_too_near(SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                        Slic3r::MedialAxis ma(thin[0], bound, ext_pwidth + ext_pspacing2, min_width, this->layer_height);
-                                        ma.nozzle_diameter = (coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter);
-                                        ma.anchor_size = overlap;
-                                        ma.build(&thin_walls);
+                                        Slic3r::MedialAxis ma{ thin[0], ext_pwidth + ext_pspacing2, min_width, coord_t(this->layer_height) };
+                                        ma.use_bounds(bound)
+                                            .use_min_real_width((coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter))
+                                            .use_tapers(overlap)
+                                            .build(thin_walls);
                                     }
                                     break;
                                 }
@@ -320,8 +321,8 @@ PerimeterGenerator::process()
             
             // collapse 
             double min = 0.2*pwidth * (1 - INSET_OVERLAP_TOLERANCE);
-			//be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
-			min = std::max(min, double(Flow::new_from_spacing(EPSILON, nozzle_diameter, this->layer_height, false).scaled_width()));
+            //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
+            min = std::max(min, double(Flow::new_from_spacing(EPSILON, nozzle_diameter, this->layer_height, false).scaled_width()));
             double max = 2*pspacing;
             ExPolygons gaps_ex = diff_ex(
                 offset2(gaps, -min/2, +min/2),
@@ -334,7 +335,7 @@ PerimeterGenerator::process()
                 //remove too small gaps that are too hard to fill.
                 //ie one that are smaller than an extrusion with width of min and a length of max.
                 if (ex.area() > min*max) {
-                    ex.medial_axis(ex, max, min, &polylines, this->layer_height);
+                    MedialAxis{ex, coord_t(max),coord_t(min), coord_t(this->layer_height)}.build(polylines);
                 }
             }
             if (!polylines.empty()) {
