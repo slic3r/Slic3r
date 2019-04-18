@@ -10,6 +10,21 @@ set -euo pipefail
 # While we might have a pp executable in our path, it might not be
 # using the perl binary we have in path, so make sure they belong
 # to the same Perl instance:
+
+source $(dirname $0)/../common/util.sh
+if [ $# -lt 1 ]; then
+    set_source_dir
+else
+    set_source_dir $1
+fi
+set_version
+get_commit
+set_build_id
+set_branch
+set_app_name
+set_pr_id
+
+
 if !(perl -Mlocal::lib=local-lib -MPAR::Packer -e1 2> /dev/null); then
     echo "The PAR::Packer module was not found; installing..."
     cpanm --local-lib local-lib PAR::Packer
@@ -49,7 +64,16 @@ else
     fi
 fi
 
-dmgfile=slic3r-${SLIC3R_BUILD_ID}.dmg
+if [ "$current_branch" == "master" ]; then
+    if [ ! -z ${PR_ID+x} ]; then
+        dmgfile=slic3r-${SLIC3R_BUILD_ID}-osx-PR${PR_ID}.dmg
+    else
+        dmgfile=slic3r-${SLIC3R_BUILD_ID}-osx.dmg
+    fi
+else
+    dmgfile=slic3r-${SLIC3R_BUILD_ID}-osx-${current_branch}.dmg
+fi
+
 echo "DMG filename: ${dmgfile}"
 
 rm -rf $WD/_tmp

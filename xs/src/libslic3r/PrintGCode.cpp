@@ -1,6 +1,6 @@
 #include "PrintGCode.hpp"
 #include "PrintConfig.hpp"
-
+#include "Log.hpp"
 #include <ctime>
 #include <iostream>
 
@@ -405,6 +405,13 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
         std::vector<double> mm3_per_mm;
         for (auto region_id = 0U; region_id < _print.regions.size(); ++region_id) {
             const PrintRegion* region = _print.get_region(region_id);
+            if( region_id >= layer->region_count() ){
+		Slic3r::Log::error("Layer processing") << "Layer #" << layer->id() 
+		    << " doesn't have region " << region_id << ". "
+		    << " The layer has " << layer->region_count() << " regions."
+		    << std::endl;
+		break;
+	    }
             const LayerRegion* layerm = layer->get_region(region_id);
 
             if (!(region->config.get_abs_value("perimeter_speed") > 0 &&
@@ -491,8 +498,11 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
 
     // extrude skirt along raft layers and normal obj layers
     // (not along interlaced support material layers)
+
     if (layer->id() < static_cast<size_t>(obj.config.raft_layers)
-        || ((_print.has_infinite_skirt() || _skirt_done.size() == 0 || (_skirt_done.rbegin())->first < _print.config.skirt_height)
+        || ((_print.has_infinite_skirt()
+        || _skirt_done.size() == 0
+        || (_skirt_done.rbegin())->first < scale_(_print.skirt_height_z))
         && _skirt_done.count(scale_(layer->print_z)) == 0
         && typeid(layer) != typeid(SupportLayer*)) ) {
 
@@ -547,7 +557,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
     }
 
     // extrude brim
-    if (this->_brim_done) {
+    if (!this->_brim_done) {
         gcode += _gcodegen.set_extruder(_print.brim_extruder() - 1);
         _gcodegen.set_origin(Pointf(0,0));
         _gcodegen.avoid_crossing_perimeters.use_external_mp = true;

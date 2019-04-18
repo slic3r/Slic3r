@@ -23,6 +23,12 @@ Point::new_scale(Pointf p) {
     return Point(scale_(p.x), scale_(p.y));
 }
 
+std::ostream&
+operator<<(std::ostream &stm, const Point &point)
+{
+    return stm << "POINT(" << point.x << " " << point.y << ")";
+}
+
 std::string
 Point::wkt() const
 {

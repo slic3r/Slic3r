@@ -37,6 +37,8 @@ class ExPolygon
     bool contains_b(const Point &point) const;
     bool has_boundary_point(const Point &point) const;
     BoundingBox bounding_box() const { return this->contour.bounding_box(); };
+    /// removes collinear points within SCALED_EPSILON tolerance
+    void remove_colinear_points();
     void remove_vertical_collinear_points(coord_t tolerance);
     void simplify_p(double tolerance, Polygons* polygons) const;
     Polygons simplify_p(double tolerance) const;

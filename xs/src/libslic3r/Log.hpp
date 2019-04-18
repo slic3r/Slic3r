@@ -26,10 +26,18 @@ class _Log {
 public:
     static std::unique_ptr<_Log> make_log() {
         std::unique_ptr<_Log> tmp {new _Log()};
+        tmp->_inclusive_levels = true;
+        tmp->set_level(log_t::ERR);
+        tmp->set_level(log_t::FERR);
+        tmp->set_level(log_t::WARN);
         return tmp;
     }
     static std::unique_ptr<_Log> make_log(std::ostream& out) {
         std::unique_ptr<_Log> tmp {new _Log(out)};
+        tmp->_inclusive_levels = true;
+        tmp->set_level(log_t::ERR);
+        tmp->set_level(log_t::FERR);
+        tmp->set_level(log_t::WARN);
         return tmp;
     }
     void fatal_error(const std::string& topic, const std::string& message);

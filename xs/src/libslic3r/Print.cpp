@@ -172,7 +172,7 @@ Print::make_skirt()
     // include the thickest object first. It is just guaranteed that a skirt is
     // prepended to the first 'n' layers (with 'n' = skirt_height).
     // $skirt_height_z in this case is the highest possible skirt height for safety.
-    double skirt_height_z {-1.0};
+    this->skirt_height_z = -1.0;
     for (const auto* object : this->objects) {
         const size_t skirt_height {
             this->has_infinite_skirt()
@@ -180,7 +180,7 @@ Print::make_skirt()
                 : std::min(size_t(this->config.skirt_height()), object->layer_count())
         };
         const Layer* highest_layer { object->get_layer(skirt_height - 1) };
-        skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
+        this->skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
     }
 
     // collect points from all layers contained in skirt height
@@ -188,16 +188,16 @@ Print::make_skirt()
     for (auto* object : this->objects) {
         Points object_points;
         
-        // get object layers up to skirt_height_z
+        // get object layers up to this->skirt_height_z
         for (const auto* layer : object->layers) {
-            if (layer->print_z > skirt_height_z) break;
+            if (layer->print_z > this->skirt_height_z) break;
             for (const ExPolygon ex : layer->slices)
                 append_to(object_points, static_cast<Points>(ex));
         }
         
-        // get support layers up to skirt_height_z
+        // get support layers up to this->skirt_height_z
         for (const auto* layer : object->support_layers) {
-            if (layer->print_z > skirt_height_z) break;
+            if (layer->print_z > this->skirt_height_z) break;
             for (auto* ee : layer->support_fills)
                 append_to(object_points, ee->as_polyline().points);
             for (auto* ee : layer->support_interface_fills)
@@ -349,6 +349,8 @@ Print::invalidate_state_by_config(const PrintConfigBase &config)
             osteps.insert(posSupportMaterial);
         } else if (opt_key == "brim_width"
             || opt_key == "interior_brim_width"
+            || opt_key == "brim_ears"
+            || opt_key == "brim_ears_max_angle"
             || opt_key == "brim_connections_width") {
             steps.insert(psBrim);
             steps.insert(psSkirt);
@@ -1084,6 +1086,7 @@ Print::_make_brim()
     
     const coord_t grow_distance = flow.scaled_width()/2;
     Polygons islands;
+    Points pt_ears;
     
     for (PrintObject* object : this->objects) {
         const Layer* layer0 = object->get_layer(0);
@@ -1103,6 +1106,10 @@ Print::_make_brim()
             for (Polygon p : object_islands) {
                 p.translate(copy);
                 islands.push_back(p);
+                if(this->config.brim_ears)
+                    for (const Point &p_corner : p.convex_points(this->config.brim_ears_max_angle.value * PI / 180.0)) {
+                        pt_ears.push_back(p_corner);
+                    }
             }
         }
     }
@@ -1123,6 +1130,124 @@ Print::_make_brim()
         ));
     }
     
+    if(this->config.brim_ears){
+        
+        //create ear pattern
+        coord_t size_ear = (scale_(this->config.brim_width.value) - flow.scaled_spacing());
+        Polygon point_round;
+        point_round.points.push_back(Point(size_ear*1, 0*size_ear));
+        point_round.points.push_back(Point(size_ear*0.966, 0.26*size_ear));
+        point_round.points.push_back(Point(size_ear*0.87, 0.5*size_ear));
+        point_round.points.push_back(Point(size_ear*0.7, 0.7*size_ear));
+        point_round.points.push_back(Point(size_ear*0.5, 0.87*size_ear));
+        point_round.points.push_back(Point(size_ear*0.26, 0.966*size_ear));
+        point_round.points.push_back(Point(size_ear*0, 1*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.26, 0.966*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.5, 0.87*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.7, 0.7*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.87, 0.5*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.966, 0.26*size_ear));
+        point_round.points.push_back(Point(size_ear*-1, 0*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.966, -0.26*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.87, -0.5*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.7, -0.7*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.5, -0.87*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.26, -0.966*size_ear));
+        point_round.points.push_back(Point(size_ear*0, -1*size_ear));
+        point_round.points.push_back(Point(size_ear*0.26, -0.966*size_ear));
+        point_round.points.push_back(Point(size_ear*0.5, -0.87*size_ear));
+        point_round.points.push_back(Point(size_ear*0.7, -0.7*size_ear));
+        point_round.points.push_back(Point(size_ear*0.87, -0.5*size_ear));
+        point_round.points.push_back(Point(size_ear*0.966, -0.26*size_ear));
+        
+        //create ears
+        Polygons mouse_ears;
+        for (Point pt : pt_ears) {
+            mouse_ears.push_back(point_round);
+            mouse_ears.back().translate(pt);
+        }
+        
+        //intersection
+        Polylines lines = intersection_pl(union_pt_chained(loops), mouse_ears);
+        
+        //reorder them
+        Polylines lines_sorted;
+        Polyline* previous = NULL;
+        Polyline* best = NULL;
+        double best_dist = -1;
+        size_t best_idx = 0;
+        while (lines.size() > 0) {
+            if (previous == NULL) {
+                lines_sorted.push_back(lines.back());
+                previous = &lines_sorted.back();
+                lines.erase(lines.end() - 1);
+            } else {
+                best = NULL;
+                best_dist = -1;
+                best_idx = 0;
+                for (size_t i = 0; i < lines.size(); ++i) {
+                    Polyline &viewed_line = lines[i];
+                    double dist = viewed_line.points.front().distance_to(previous->points.front());
+                    dist = std::min(dist, viewed_line.points.front().distance_to(previous->points.back()));
+                    dist = std::min(dist, viewed_line.points.back().distance_to(previous->points.front()));
+                    dist = std::min(dist, viewed_line.points.back().distance_to(previous->points.back()));
+                    if (dist < best_dist || best == NULL) {
+                        best = &viewed_line;
+                        best_dist = dist;
+                        best_idx = i;
+                    }
+                }
+                if (best != NULL) {
+                    //copy new line inside the sorted array.
+                    lines_sorted.push_back(lines[best_idx]);
+                    lines.erase(lines.begin() + best_idx);
+                    
+                    //connect if near enough
+                    if (lines_sorted.size() > 1) {
+                        size_t idx = lines_sorted.size() - 2;
+                        bool connect = false;
+                        if (lines_sorted[idx].points.back().distance_to(lines_sorted[idx + 1].points.front()) < flow.scaled_spacing() * 2) {
+                            connect = true;
+                        } else if (lines_sorted[idx].points.back().distance_to(lines_sorted[idx + 1].points.back()) < flow.scaled_spacing() * 2) {
+                            lines_sorted[idx + 1].reverse();
+                            connect = true;
+                        } else if (lines_sorted[idx].points.front().distance_to(lines_sorted[idx + 1].points.front()) < flow.scaled_spacing() * 2) {
+                            lines_sorted[idx].reverse();
+                            connect = true;
+                        } else if (lines_sorted[idx].points.front().distance_to(lines_sorted[idx + 1].points.back()) < flow.scaled_spacing() * 2) {
+                            lines_sorted[idx].reverse();
+                            lines_sorted[idx + 1].reverse();
+                            connect = true;
+                        }
+                        
+                        if (connect) {
+                            //connect them
+                            lines_sorted[idx].points.insert(
+                                lines_sorted[idx].points.end(),
+                                lines_sorted[idx + 1].points.begin(),
+                                lines_sorted[idx + 1].points.end());
+                            lines_sorted.erase(lines_sorted.begin() + idx + 1);
+                            idx--;
+                        }
+                    }
+                    
+                    //update last position
+                    previous = &lines_sorted.back();
+                } else {
+                    previous = NULL;
+                }
+                
+            }
+        }
+        
+        //push into extrusions
+        for (Polyline &to_extrude : lines_sorted) {
+            ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, flow.height);
+            path.polyline = to_extrude;
+            this->brim.append(path);
+        }
+    }
+    else
     {
         Polygons chained = union_pt_chained(loops);
         for (Polygons::const_reverse_iterator p = chained.rbegin(); p != chained.rend(); ++p) {

@@ -309,7 +309,8 @@ GCodeWriter::set_speed(double F, const std::string &comment,
                        const std::string &cooling_marker) const
 {
     std::ostringstream gcode;
-    gcode << "G1 F" << F;
+    gcode.precision(3);
+    gcode << "G1 F" << std::fixed << F;
     COMMENT(comment);
     gcode << cooling_marker;
     gcode << "\n";

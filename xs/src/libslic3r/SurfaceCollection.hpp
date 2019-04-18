@@ -18,6 +18,8 @@ class SurfaceCollection
     operator Polygons() const;
     operator ExPolygons() const;
     void simplify(double tolerance);
+    /// Unifies straight multi-segment lines to a single line (artifacts from stl-triangulation)
+    void remove_collinear_points();
     void group(std::vector<SurfacesConstPtr> *retval) const;
     template <class T> bool any_internal_contains(const T &item) const;
     template <class T> bool any_bottom_contains(const T &item) const;
@@ -78,6 +80,8 @@ class SurfaceCollection
     Surfaces::iterator end() { return this->surfaces.end();}
     Surfaces::const_iterator cbegin() const { return this->surfaces.cbegin();}
     Surfaces::const_iterator cend() const { return this->surfaces.cend();}
+    Surfaces::const_iterator begin() const { return this->surfaces.cbegin();}
+    Surfaces::const_iterator end() const { return this->surfaces.cend();}
 };
 
 }

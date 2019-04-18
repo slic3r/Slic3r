@@ -243,6 +243,7 @@ class Print
 
     // ordered collections of extrusion paths to build skirt loops and brim
     ExtrusionEntityCollection skirt, brim;
+    double skirt_height_z {-1.0};
 
     Print();
     ~Print();

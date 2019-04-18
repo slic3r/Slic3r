@@ -554,6 +554,8 @@ $j
                         of filament on the first layer, for each extruder (mm, 0+, default: $config->{min_skirt_length})
     --brim-width        Width of the brim that will get added to each object to help adhesion
                         (mm, default: $config->{brim_width})
+    --brim-ears         Print brim only on sharp corners.
+    --brim-ears-max-angle Maximum angle considered for adding brim ears. (degrees, default: $config->{brim_ears_max_angle})
     --interior-brim-width  Width of the brim that will get printed inside object holes to help adhesion
                         (mm, default: $config->{interior_brim_width})
    

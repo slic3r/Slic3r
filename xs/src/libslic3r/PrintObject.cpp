@@ -5,6 +5,7 @@
 #include "Log.hpp"
 #include <algorithm>
 #include <vector>
+#include <limits>
 
 namespace Slic3r {
 
@@ -561,9 +562,9 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
     std::vector<coordf_t> result;
 
     // collect values from config
-    coordf_t min_nozzle_diameter = 1.0;
+    coordf_t min_nozzle_diameter = std::numeric_limits<double>::max();
     coordf_t min_layer_height = 0.0;
-    coordf_t max_layer_height = 10.0;
+    coordf_t max_layer_height = std::numeric_limits<double>::max();
     std::set<size_t> object_extruders = this->_print->object_extruders();
     for (std::set<size_t>::const_iterator it_extruder = object_extruders.begin(); it_extruder != object_extruders.end(); ++ it_extruder) {
         min_nozzle_diameter = std::min(min_nozzle_diameter, this->_print->config.nozzle_diameter.get_at(*it_extruder));
@@ -589,7 +590,7 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
         // layer heights are already generated, just update layers from spline
         // we don't need to respect first layer here, it's correctly provided by the spline object
         result = this->layer_height_spline.getInterpolatedLayers();
-    }else{ // create new set of layers
+    } else { // create new set of layers
         // create stateful objects and variables for the adaptive slicing process
         SlicingAdaptive as;
         coordf_t adaptive_quality = this->config.adaptive_slicing_quality.value;
@@ -856,7 +857,20 @@ void PrintObject::_slice()
         }
         this->delete_layer(int(this->layers.size()) - 1);
     }
-    
+
+    // remove collinear points from slice polygons (artifacts from stl-triangulation)
+    std::queue<SurfaceCollection*> queue;
+    for (Layer* layer : this->layers) {
+        for (LayerRegion* layerm : layer->regions) {
+            queue.push(&layerm->slices);
+        }
+    }
+    parallelize<SurfaceCollection*>(
+        queue,
+        boost::bind(&Slic3r::SurfaceCollection::remove_collinear_points, _1),
+        this->_print->config.threads.value
+    );
+
     // Apply size compensation and perform clipping of multi-part objects.
     const coord_t xy_size_compensation = scale_(this->config.xy_size_compensation.value);
     for (Layer* layer : this->layers) {
@@ -1055,14 +1069,15 @@ void
 PrintObject::make_perimeters()
 {
     if (this->state.is_done(posPerimeters)) return;
-    this->state.set_started(posPerimeters);
     
     // Temporary workaround for detect_surfaces_type() not being idempotent (see #3764).
     // We can remove this when idempotence is restored. This make_perimeters() method
     // will just call merge_slices() to undo the typed slices and invalidate posDetectSurfaces.
-    if (this->typed_slices)
-        this->state.invalidate(posSlice);
-    
+    if (this->typed_slices) {
+        this->invalidate_step(posSlice);
+    }
+    this->state.set_started(posPerimeters);
+
     // prerequisites
     this->slice();
     

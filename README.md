@@ -9,7 +9,7 @@ The MacOS X build server is kindly sponsored by: <img width=150 src=https://clou
 
 Slic3r is mainly a **toolpath generator** for 3D printers: it reads 3D models (STL, OBJ, AMF, 3MF) and it converts them into **G-code** instructions for 3D printers. But it does much more than that, see the [features list](#features) below.
 
-Slic3r was born in **2011** within the RepRap community and thanks to its high configurability became the swiss-army knife for 3D printing. It served as a platform for experimenting several **new ideas that later became technology standards**, such as multiple extruders, brim, variable-height layers, per-object settings, modifiers, post-processing scripts, G-code macros and more. Despite being based on volunteer efforts, Slic3r is still pushing the boundaries of 3D printing.
+Slic3r was born in **2011** within the RepRap community and thanks to its high configurability became the swiss-army knife for 3D printing. It served as a platform for implementing several **new (experimental) ideas that later became technology standards**, such as multiple extruders, brim, variable-height layers, per-object settings, modifiers, post-processing scripts, G-code macros and more. Despite being based on volunteer efforts, Slic3r is still pushing the boundaries of 3D printing.
 
 Slic3r is:
 
@@ -19,7 +19,7 @@ Slic3r is:
 * **Community-driven:** new features or issues are discussed in the [GitHub repository](https://github.com/slic3r/Slic3r/issues). Join our collaborative effort and help improve it!
 * **Robust:** the codebase includes more than 1,000 unit and regression tests, collected in 6 years of development.
 * **Modular:** the core of Slic3r is libslic3r, a C++ library that provides a granular API and reusable components.
-* **Embeddable:** a complete and powerful command line interface allows to use Slic3r from the shell or to integrate it in server-side applications.
+* **Embeddable:** a complete and powerful command line interface allows Slic3r to be used from the shell or integrated with server-side applications.
 * **Powerful:** see the list below!
 
 See the [project homepage](http://slic3r.org/) at slic3r.org for more information.
@@ -53,24 +53,14 @@ If you want to compile the source yourself follow the instructions on one of the
 
 ### Can I help?
 
-Sure! You can do the following to find things that are available to help with:
-
-* Development
-	* [Low Effort tasks](https://github.com/slic3r/Slic3r/labels/Low%20Effort): pick one of them!
-	* [Help Wanted tasks](https://github.com/slic3r/Slic3r/labels/help%20wanted): pick one of them!
-	* [More available tasks](https://github.com/slic3r/Slic3r/milestone/32): let's discuss together before you start working on them
-	* Please comment in the related GitHub issue that you are working on it so that other people know.
-* Contribute to the [Manual](http://manual.slic3r.org/)! (see its [GitHub repository](https://github.com/slic3r/Slic3r-Manual))
-* You can also find us in #slic3r on [FreeNode](https://webchat.freenode.net): talk to _Sound_, _LoH_ or the other members of the Slic3r community.
-* Add an [issue](https://github.com/slic3r/Slic3r/issues) to the GitHub tracker if it isn't already present.
-* Update Slic3r's test suite to improve test coverage [Writing Test Cases](https://github.com/slic3r/Slic3r/wiki/Code:-Writing-Test-Cases)
-* Drop Alessandro a line at aar@cpan.org.
-* Drop Joseph a line at lenox.joseph@gmail.com
+Sure, but please read the
+[CONTRIBUTING](https://github.com/slic3r/Slic3r/blob/master/.github/CONTRIBUTING.md)
+document first!
 
 ### Directory structure
 
 * `package/`: the scripts used for packaging the executables
-* `src/`: the C++ source of the `slic3r` executable the and CMake definition file for compiling it
+* `src/`: the C++ source of the `slic3r` executable and the CMake definition file for compiling it
 * `src/GUI`: The C++ GUI.
 * `src/test`: New test suite for libslic3r and the GUI. Implemented with [Catch2](https://github.com/catchorg/Catch2)
 * `t/`: the test suite (deprecated)

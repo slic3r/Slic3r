@@ -39,6 +39,14 @@ SurfaceCollection::simplify(double tolerance)
     this->surfaces = ss;
 }
 
+void
+SurfaceCollection::remove_collinear_points()
+{
+    for(Surface &surface : this->surfaces) {
+        surface.expolygon.remove_colinear_points();
+    }
+}
+
 /* group surfaces by common properties */
 void
 SurfaceCollection::group(std::vector<SurfacesConstPtr> *retval) const
