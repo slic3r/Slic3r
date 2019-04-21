@@ -50,12 +50,18 @@ SupportMaterial::generate_toolpaths(PrintObject *object,
     params.support_spacing = object_config->support_material_spacing.value + flow.spacing();
     params.support_density = params.support_spacing == 0 ? 1 : flow.spacing() / params.support_spacing;
 
-    parallelize<size_t>(
-        0,
-        object->support_layers.size() - 1,
-        boost::bind(&SupportMaterial::process_layer, this, _1, params),
-        this->config->threads.value
-    );
+    if (this->config->threads.value == 1) {
+        for (size_t layer = 0; layer < object->support_layers.size() -1; ++layer) {
+            this->process_layer(layer, params, overhang, contact, _interface, base);
+        }
+    } else {
+        parallelize<size_t>(
+            0,
+            object->support_layers.size() - 1,
+            boost::bind(&SupportMaterial::process_layer, this, _1, params, overhang, contact, _interface, base),
+            this->config->threads.value
+        );
+    }
 }
 
 void
@@ -894,21 +900,27 @@ SupportMaterial::clip_with_object(map<int, Polygons> &support, vector<coordf_t> 
 }
 
 void
-SupportMaterial::process_layer(int layer_id, toolpaths_params params)
-{
+SupportMaterial::process_layer(int layer_id,
+                               toolpaths_params params,
+                               const map<coord_t, Polygons>& in_overhang,
+                               const map<coord_t, Polygons>& in_contact,
+                               const map<int, Polygons>& in_interface,
+                               const map<int, Polygons>& in_base)
+    {
     SupportLayer *layer = this->object->support_layers[layer_id];
     coordf_t z = layer->print_z;
+    coord_t scale_z = scale_(z);
 
-    // We redefine flows locally by applyinh this layer's height.
-    Flow _flow = flow;
-    Flow _interface_flow = interface_flow;
+    // We redefine flows locally by applying this layer's height.
+    Flow _flow {this->flow};
+    Flow _interface_flow {this->interface_flow};
     _flow.height = static_cast<float>(layer->height);
     _interface_flow.height = static_cast<float>(layer->height);
 
-    Polygons overhang = this->overhang.count(z) > 0 ? this->overhang[z] : Polygons();
-    Polygons contact = this->contact.count(z) > 0 ? this->contact[z] : Polygons();
-    Polygons _interface = this->_interface.count(layer_id) > 0 ? this->_interface[layer_id] : Polygons();
-    Polygons base = this->base.count(layer_id) > 0 ? this->base[layer_id] : Polygons();
+    Polygons overhang = in_overhang.count(scale_z) > 0 ? in_overhang.at(scale_z) : Polygons();
+    Polygons contact = in_contact.count(scale_z) > 0 ? in_contact.at(scale_z) : Polygons();
+    Polygons _interface = in_interface.count(layer_id) > 0 ? in_interface.at(layer_id) : Polygons();
+    Polygons base = in_base.count(layer_id) > 0 ? in_base.at(layer_id) : Polygons();
 
     // Islands.
     {
