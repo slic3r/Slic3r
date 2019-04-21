@@ -135,9 +135,9 @@ private:
                     Flow interface_flow)
         : config(print_config),
           object_config(print_object_config),
-          flow(Flow(0, 0, 0)),
-          first_layer_flow(Flow(0, 0, 0)),
-          interface_flow(Flow(0, 0, 0)),
+          flow(flow),
+          first_layer_flow(first_layer_flow),
+          interface_flow(interface_flow),
           object(nullptr)
     {}
 
