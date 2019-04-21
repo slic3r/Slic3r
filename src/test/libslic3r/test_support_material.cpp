@@ -6,6 +6,8 @@
 #include "TriangleMesh.hpp"
 #include "Model.hpp"
 #include "SupportMaterial.hpp"
+#include "test_data.hpp"
+#include "Log.hpp"
 
 using namespace std;
 using namespace Slic3r;
@@ -45,6 +47,23 @@ TEST_CASE("", "")
 
 }
 
+TEST_CASE("SupportMaterial: Support generated for bridge_with_hole")
+{
+    slic3r_log->set_level(log_t::ALL);
+    Model model {Model()};
+    auto config {Slic3r::Config::new_from_defaults()};
+    Test::TestMesh m { Test::TestMesh::overhang };
+    config->set("support_material", true);
+
+    std::cerr << "Set support_material\n";
+    auto print {Test::init_print({m}, model, config, false)};
+
+    print->objects.front()->_slice();
+
+    CHECK(print->objects.front()->support_layer_count() > 0);
+
+}
+
 // Test 1.
 SCENARIO("SupportMaterial: support_layers_z and contact_distance")
 {
@@ -73,18 +92,6 @@ SCENARIO("SupportMaterial: support_layers_z and contact_distance")
             bool a, b, c, d;
 
             test_1_checks(print, a, b, c, d);
-            THEN("First layer height is honored") {
-                REQUIRE(a == true);
-            }
-            THEN("No null or negative support layers") {
-                REQUIRE(b == true);
-            }
-            THEN("No layers thicker than nozzle diameter") {
-                REQUIRE(c == true);
-            }
-            THEN("Layers above top surfaces are spaced correctly") {
-                REQUIRE(d == true);
-            }
         }
         WHEN("Layer height = 0.2 and, first layer height = 0.3") {
             print.default_object_config.set_deserialize("layer_height", "0.2");
@@ -94,18 +101,6 @@ SCENARIO("SupportMaterial: support_layers_z and contact_distance")
             bool a, b, c, d;
 
             test_1_checks(print, a, b, c, d);
-            THEN("First layer height is honored") {
-                REQUIRE(a == true);
-            }
-            THEN("No null or negative support layers") {
-                REQUIRE(b == true);
-            }
-            THEN("No layers thicker than nozzle diameter") {
-                REQUIRE(c == true);
-            }
-            THEN("Layers above top surfaces are spaced correctly") {
-                REQUIRE(d == true);
-            }
         }
 
 
@@ -117,18 +112,7 @@ SCENARIO("SupportMaterial: support_layers_z and contact_distance")
             bool a, b, c, d;
 
             test_1_checks(print, a, b, c, d);
-            THEN("First layer height is honored") {
-                REQUIRE(a == true);
-            }
-            THEN("No null or negative support layers") {
-                REQUIRE(b == true);
-            }
-            THEN("No layers thicker than nozzle diameter") {
-                REQUIRE(c == true);
-            }
-            THEN("Layers above top surfaces are spaced correctly") {
-                REQUIRE(d == true);
-            }
+
         }
     }
 }
@@ -147,8 +131,8 @@ TEST_CASE("SupportMaterial: forced support is generated", "")
 
     Print print = Print();
 
-    vector<coordf_t> contact_z = {1.9};
-    vector<coordf_t> top_z = {1.1};
+    vector<coord_t> contact_z = {scale_(1.9)};
+    vector<coord_t> top_z = {scale_(1.1)};
     print.default_object_config.support_material_enforce_layers = 100;
     print.default_object_config.support_material = 0;
     print.default_object_config.layer_height = 0.2;
@@ -231,48 +215,51 @@ SCENARIO("SupportMaterial: Checking bridge speed")
 
 void test_1_checks(Print &print, bool &a, bool &b, bool &c, bool &d)
 {
-    vector<coordf_t> contact_z = {1.9};
-    vector<coordf_t> top_z = {1.1};
+    vector<coord_t> contact_z = {scale_(1.9f)};
+    vector<coord_t> top_z = {scale_(1.1f)};
 
     SupportMaterial *support = print.objects.front()->_support_material();
 
     vector<coordf_t>
         support_z = support->support_layers_z(contact_z, top_z, print.default_object_config.layer_height);
+    
+    THEN("First layer height is honored") {
+        REQUIRE(support_z[0] == Approx(print.default_object_config.first_layer_height.value));
+    }
+    
+    THEN("No null or negative support layers") {
+        for (size_t i = 1; i < support_z.size(); ++i)
+            CHECK(support_z[i] - support_z[i - 1] > 0);
+    }
 
-    a = (support_z[0] == print.default_object_config.first_layer_height.value);
+    THEN("No layers thicker than nozzle diameter") {
+        for (size_t i = 1; i < support_z.size(); ++i)
+            CHECK(support_z[i] - support_z[i - 1] <= Approx(print.config.nozzle_diameter.get_at(0) + EPSILON));
 
-    b = true;
-    for (size_t i = 1; i < support_z.size(); ++i)
-        if (support_z[i] - support_z[i - 1] <= 0) b = false;
-
-
-    c = true;
-    for (size_t i = 1; i < support_z.size(); ++i)
-        if (support_z[i] - support_z[i - 1] > print.config.nozzle_diameter.get_at(0) + EPSILON)
-            c = false;
-
+    }
     coordf_t expected_top_spacing = support
         ->contact_distance(print.default_object_config.layer_height,
                            print.config.nozzle_diameter.get_at(0));
 
-    bool wrong_top_spacing = 0;
-    for (coordf_t top_z_el : top_z) {
-        // find layer index of this top surface.
-        size_t layer_id = -1;
-        for (size_t i = 0; i < support_z.size(); i++) {
-            if (abs(support_z[i] - top_z_el) < EPSILON) {
-                layer_id = i;
-                i = static_cast<int>(support_z.size());
+    THEN("Layers above top surfaces are spaced correctly") {
+        bool wrong_top_spacing = 0;
+        for (coordf_t top_z_el : top_z) {
+            // find layer index of this top surface.
+            size_t layer_id = -1;
+            for (size_t i = 0; i < support_z.size(); i++) {
+                if (abs(support_z[i] - top_z_el) < EPSILON) {
+                    layer_id = i;
+                    i = support_z.size();
+                }
             }
-        }
+            std::cerr << "top z: " << support_z[layer_id] << " " << support_z[layer_id+1] << " " << support_z[layer_id+2] << " " 
+                      << expected_top_spacing << "\n";
 
-        // check that first support layer above this top surface (or the next one) is spaced with nozzle diameter
-        if (abs(support_z[layer_id + 1] - support_z[layer_id] - expected_top_spacing) > EPSILON
-            && abs(support_z[layer_id + 2] - support_z[layer_id] - expected_top_spacing) > EPSILON) {
-            wrong_top_spacing = 1;
+            // check that first support layer above this top surface (or the next one) is spaced with nozzle diameter
+            CHECK(((support_z[layer_id + 1] - support_z[layer_id] == Approx(expected_top_spacing).margin(EPSILON)) || 
+                   (support_z[layer_id + 2] - support_z[layer_id] == Approx(expected_top_spacing).margin(EPSILON))));
         }
     }
-    d = !wrong_top_spacing;
 }
 
 // TODO
