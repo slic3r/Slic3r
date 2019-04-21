@@ -1401,18 +1401,19 @@ PrintObject::combine_infill()
 SupportMaterial *
 PrintObject::_support_material()
 {
-    // TODO what does this line do //= FLOW_ROLE_SUPPORT_MATERIAL;
-    Flow first_layer_flow = Flow::new_from_config_width(
-        frSupportMaterial,
-        print()->config
-            .first_layer_extrusion_width,  // check why this line is put || config.support_material_extrusion_width,
-        static_cast<float>(print()->config.nozzle_diameter.get_at(static_cast<size_t>(
-                                                                      config.support_material_extruder
-                                                                          - 1))), // Check why this is put in perl "// $self->print->config->nozzle_diameter->[0]"
-        static_cast<float>(config.get_abs_value("first_layer_height")),
-        0 // No bridge flow ratio.
-    );
+    const auto& p_config {this->print()->config};
 
+    /// Select the config support material extrusion width if the object first layer extrusion width is 0.
+    const ConfigOptionFloat& support_width = (p_config.first_layer_extrusion_width > 0 ? p_config.first_layer_extrusion_width : this->config.support_material_extrusion_width);
+
+    float nozzle_diameter = static_cast<float>(p_config.nozzle_diameter.get_at(static_cast<size_t>(this->config.support_material_extruder - 1)));
+
+    Flow first_layer_flow = Flow::new_from_config_width(frSupportMaterial,
+                                                        dynamic_cast<const ConfigOptionFloatOrPercent&>(support_width),
+                                                        nozzle_diameter,
+                                                        static_cast<float>(config.get_abs_value("first_layer_height")),
+                                                        0.0f // No bridge flow ratio.
+    );
     return new SupportMaterial(
         &print()->config,
         &config,

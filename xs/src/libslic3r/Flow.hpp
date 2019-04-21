@@ -32,6 +32,10 @@ class Flow
     Flow(float _w, float _h, float _nd, bool _bridge = false)
         : width(_w), height(_h), nozzle_diameter(_nd), bridge(_bridge) {};
 
+    Flow(const Flow& other) : width(other.width), height(other.height),
+                              nozzle_diameter(other.nozzle_diameter), bridge(other.bridge) {}
+
+
     /// Return the centerline spacing between two adjacent extrusions that have the same properties (width, etc).
     /// Models as a rectangle with semicircles at the ends.
     float spacing() const;
