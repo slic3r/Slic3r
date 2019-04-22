@@ -12,7 +12,7 @@
 using namespace std;
 using namespace Slic3r;
 
-void test_1_checks(Print &print, bool &a, bool &b, bool &c, bool &d);
+void test_1_checks(Print &print);
 bool test_6_checks(Print &print);
 
 // Testing 0.1: supports material member functions.
@@ -52,13 +52,12 @@ TEST_CASE("SupportMaterial: Support generated for bridge_with_hole")
     slic3r_log->set_level(log_t::ALL);
     Model model {Model()};
     auto config {Slic3r::Config::new_from_defaults()};
-    Test::TestMesh m { Test::TestMesh::overhang };
+    Test::TestMesh m { Test::TestMesh::bridge_with_hole };
     config->set("support_material", true);
 
-    std::cerr << "Set support_material\n";
     auto print {Test::init_print({m}, model, config, false)};
 
-    print->objects.front()->_slice();
+    print->objects.front()->slice();
 
     CHECK(print->objects.front()->support_layer_count() > 0);
 
@@ -89,18 +88,16 @@ SCENARIO("SupportMaterial: support_layers_z and contact_distance")
 
             print.add_model_object(model.objects[0]);
             print.objects.front()->_slice();
-            bool a, b, c, d;
 
-            test_1_checks(print, a, b, c, d);
+            test_1_checks(print);
         }
         WHEN("Layer height = 0.2 and, first layer height = 0.3") {
             print.default_object_config.set_deserialize("layer_height", "0.2");
             print.default_object_config.set_deserialize("first_layer_height", "0.3");
             print.add_model_object(model.objects[0]);
             print.objects.front()->_slice();
-            bool a, b, c, d;
 
-            test_1_checks(print, a, b, c, d);
+            test_1_checks(print);
         }
 
 
@@ -109,9 +106,8 @@ SCENARIO("SupportMaterial: support_layers_z and contact_distance")
             print.default_object_config.set_deserialize("first_layer_height", "0.3");
             print.add_model_object(model.objects[0]);
             print.objects.front()->_slice();
-            bool a, b, c, d;
 
-            test_1_checks(print, a, b, c, d);
+            test_1_checks(print);
 
         }
     }
@@ -213,7 +209,7 @@ SCENARIO("SupportMaterial: Checking bridge speed")
     }
 }
 
-void test_1_checks(Print &print, bool &a, bool &b, bool &c, bool &d)
+void test_1_checks(Print &print)
 {
     vector<coord_t> contact_z = {scale_(1.9f)};
     vector<coord_t> top_z = {scale_(1.1f)};
@@ -242,18 +238,15 @@ void test_1_checks(Print &print, bool &a, bool &b, bool &c, bool &d)
                            print.config.nozzle_diameter.get_at(0));
 
     THEN("Layers above top surfaces are spaced correctly") {
-        bool wrong_top_spacing = 0;
-        for (coordf_t top_z_el : top_z) {
+        for (coord_t top_z_el : top_z) {
             // find layer index of this top surface.
             size_t layer_id = -1;
             for (size_t i = 0; i < support_z.size(); i++) {
-                if (abs(support_z[i] - top_z_el) < EPSILON) {
+                if (abs(scale_(support_z[i]) - top_z_el) < SCALED_EPSILON) {
                     layer_id = i;
                     i = support_z.size();
                 }
             }
-            std::cerr << "top z: " << support_z[layer_id] << " " << support_z[layer_id+1] << " " << support_z[layer_id+2] << " " 
-                      << expected_top_spacing << "\n";
 
             // check that first support layer above this top surface (or the next one) is spaced with nozzle diameter
             CHECK(((support_z[layer_id + 1] - support_z[layer_id] == Approx(expected_top_spacing).margin(EPSILON)) || 
