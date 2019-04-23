@@ -65,18 +65,6 @@ void FillConcentric::_fill_surface_single(
     // We want the loops to be split inside the G-code generator to get optimum path planning.
 }
 
-class ExtrusionSetRole : public ExtrusionVisitor {
-    ExtrusionRole new_role;
-public:
-    ExtrusionSetRole(ExtrusionRole role) : new_role(role) {}
-    void use(ExtrusionPath &path) override { path.set_role(new_role); }
-    void use(ExtrusionPath3D &path3D) override { path3D.set_role(new_role); }
-    void use(ExtrusionMultiPath &multipath) override { for (ExtrusionPath path : multipath.paths) path.set_role(new_role); }
-    void use(ExtrusionMultiPath3D &multipath) override { for (ExtrusionPath path : multipath.paths) path.set_role(new_role); }
-    void use(ExtrusionLoop &loop) override { for (ExtrusionPath path : loop.paths) path.set_role(new_role); }
-    void use(ExtrusionEntityCollection &collection) override { for (ExtrusionEntity *entity : collection.entities) entity->visit(*this); }
-};
-
 void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, const FillParams &params,
     ExtrusionEntitiesPtr &out) {
 

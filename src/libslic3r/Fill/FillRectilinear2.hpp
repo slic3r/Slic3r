@@ -111,6 +111,15 @@ public:
 
 };
 
+class FillRectilinear2WGapFill : public FillRectilinear2
+{
+public:
+
+    virtual Fill* clone() const { return new FillRectilinear2WGapFill(*this); };
+    virtual ~FillRectilinear2WGapFill() {}
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) override;
+};
+
 
 }; // namespace Slic3r
 

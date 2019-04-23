@@ -98,7 +98,7 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
 
     coord_t max_margin = 0;
     if ((this->region()->config().perimeters > 0)) {
-        max_margin = scale_(this->flow(frExternalPerimeter).width) + this->flow(frPerimeter).scaled_spacing() * (this->region()->config().perimeters.value - 1);
+        max_margin = this->flow(frExternalPerimeter).scaled_width() + this->flow(frPerimeter).scaled_spacing() * (this->region()->config().perimeters.value - 1);
     }
     const Surfaces &surfaces = this->fill_surfaces.surfaces;
     const bool has_infill = this->region()->config().fill_density.value > 0.;

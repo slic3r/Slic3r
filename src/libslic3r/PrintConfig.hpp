@@ -42,7 +42,7 @@ enum PrintHostType {
 enum InfillPattern {
     ipRectilinear, ipGrid, ipTriangles, ipStars, ipCubic, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
     ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral, ipSmooth, ipSmoothHilbert, ipSmoothTriple,
-    ipRectiWithPerimeter, ipConcentricGapFill, ipScatteredRectilinear, ipSawtooth
+    ipRectiWithPerimeter, ipConcentricGapFill, ipScatteredRectilinear, ipSawtooth, ipRectilinearWGapFill
 };
 
 enum SupportMaterialPattern {
@@ -149,6 +149,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<InfillPattern>::g
         keys_map["smoothhilbert"]       = ipSmoothHilbert;
         keys_map["rectiwithperimeter"]  = ipRectiWithPerimeter;
         keys_map["scatteredrectilinear"] = ipScatteredRectilinear;
+        keys_map["rectilineargapfill"] = ipRectilinearWGapFill;
         keys_map["sawtooth"]            = ipSawtooth;
     }
     return keys_map;

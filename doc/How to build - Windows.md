@@ -103,5 +103,6 @@ Refer to the CMake scripts inside the `deps` directory to see which dependencies
 
 ### building tests
 
-You must use vs 2015 or 2017, and convert the slic3r_test project to your version. Also, you have to add the "CRT SDK" to your windows 2017 installation (can be done via the VS intaller).
+You must use visual studio 2017, and build all deps & all projects with it (not the same compiler as vs 2013). Also, you have to add the "CRT SDK" to your windows 2017 installation (can be done via the VS intaller).
+Tested only with vs 2017. Should work with 2015 and 2019.
 

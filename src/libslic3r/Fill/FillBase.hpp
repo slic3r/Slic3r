@@ -13,6 +13,8 @@
 #include "../PrintConfig.hpp"
 #include "../Utils.hpp"
 #include "../Flow.hpp"
+#include "../ExtrusionEntity.hpp"
+#include "../ExtrusionEntityCollection.hpp"
 
 namespace Slic3r {
 
@@ -164,6 +166,19 @@ public:
         { return base + _align_to_grid(coord - base, spacing); }
     static Point   _align_to_grid(Point   coord, Point   spacing, Point   base)
         { return Point(_align_to_grid(coord(0), spacing(0), base(0)), _align_to_grid(coord(1), spacing(1), base(1))); }
+};
+
+
+class ExtrusionSetRole : public ExtrusionVisitor {
+    ExtrusionRole new_role;
+public:
+    ExtrusionSetRole(ExtrusionRole role) : new_role(role) {}
+    void use(ExtrusionPath &path) override { path.set_role(new_role); }
+    void use(ExtrusionPath3D &path3D) override { path3D.set_role(new_role); }
+    void use(ExtrusionMultiPath &multipath) override { for (ExtrusionPath path : multipath.paths) path.set_role(new_role); }
+    void use(ExtrusionMultiPath3D &multipath) override { for (ExtrusionPath path : multipath.paths) path.set_role(new_role); }
+    void use(ExtrusionLoop &loop) override { for (ExtrusionPath path : loop.paths) path.set_role(new_role); }
+    void use(ExtrusionEntityCollection &collection) override { for (ExtrusionEntity *entity : collection.entities) entity->visit(*this); }
 };
 
 } // namespace Slic3r

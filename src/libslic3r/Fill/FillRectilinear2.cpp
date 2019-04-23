@@ -1439,7 +1439,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
 Polylines FillRectilinear2::fill_surface(const Surface *surface, const FillParams &params)
 {
     Polylines polylines_out;
-    if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out)) {
+    if (!fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out)) {
         printf("FillRectilinear2::fill_surface() failed to fill a region.\n");
     }
     return polylines_out;
@@ -1657,7 +1657,7 @@ void
 FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) {
     const coord_t scaled_nozzle_diam = scale_(params.flow->nozzle_diameter);
     const coord_t clearance = scaled_nozzle_diam * 2;
-    const coord_t tooth_spacing_min = scaled_nozzle_diam ;
+    const coord_t tooth_spacing_min = scaled_nozzle_diam;
     const coord_t tooth_spacing_max = scaled_nozzle_diam * 3;
     const coord_t tooth_zhop = scaled_nozzle_diam;
     Polylines polylines_out;
@@ -1678,7 +1678,7 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
             extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow->mm3_per_mm() * params.flow_mult, params.flow->width * params.flow_mult, params.flow->height));
             ExtrusionPath3D *current_extrusion = &(extrusions->paths.back());
             Points &pts = poly.points;
-            coord_t next_zhop = tooth_spacing_min + (coord_t) abs((rand() / (float)RAND_MAX) * (tooth_spacing_max - tooth_spacing_min));
+            coord_t next_zhop = tooth_spacing_min + (coord_t)abs((rand() / (float)RAND_MAX) * (tooth_spacing_max - tooth_spacing_min));
             size_t idx = 1;
 
             current_extrusion->push_back(pts[0], 0);
@@ -1688,7 +1688,7 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
             while (idx < poly.size() && maxLength > tooth_spacing_max) {
                 //go next hop line
                 //do not use the "return" line nor the tangent ones.
-                while (idx < poly.size() && maxLength > tooth_spacing_min && (next_zhop >= line_length || line_length < clearance 
+                while (idx < poly.size() && maxLength > tooth_spacing_min && (next_zhop >= line_length || line_length < clearance
                     || (std::abs(std::abs((int)(this->angle * 180 / PI) % 180) - 90) > 45 ? pts[idx].y() < pts[idx - 1].y() : pts[idx].x() < pts[idx - 1].x()))) {
                     if (line_length < clearance || pts[idx].x() < pts[idx - 1].x()) {
 
@@ -1740,9 +1740,9 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
                     current_extrusion = &(extrusions->paths.back());
                     current_extrusion->push_back(last, 0);
                     line_length = (coord_t)last.distance_to(pts[idx]);
-            
+
                     //re-init
-                    next_zhop = tooth_spacing_min + (coord_t) abs((rand() / (float)RAND_MAX) * (tooth_spacing_max - tooth_spacing_min));
+                    next_zhop = tooth_spacing_min + (coord_t)abs((rand() / (float)RAND_MAX) * (tooth_spacing_max - tooth_spacing_min));
                 }
             }
             while (idx < poly.size()) {
@@ -1763,6 +1763,122 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
         }
     }
 
+
+}
+
+
+void
+FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) {
+    ExtrusionEntityCollection *coll_nosort = new ExtrusionEntityCollection();
+    coll_nosort->no_sort = true; //can be sorted inside the pass
+    ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
+
+    // remove areas for gapfill 
+    ExPolygons rectilinear_areas = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow->scaled_spacing() * 0.8f, params.flow->scaled_spacing() * 0.8f);
+    ExPolygons gapfill_areas = diff_ex(ExPolygons{ surface->expolygon }, rectilinear_areas);
+    double rec_area = 0;
+    for (ExPolygon &p : rectilinear_areas)rec_area += p.area();
+    double gf_area = 0;
+    for (ExPolygon &p : gapfill_areas)gf_area += p.area();
+    std::cout << unscaled(unscaled(surface->expolygon.area())) << " = " << unscaled(unscaled(rec_area)) << " + " << unscaled(unscaled(gf_area)) << "\n";
+
+    // rectilinear
+    Polylines polylines_rectilinear;
+    Surface rectilinear_surface{ *surface };
+    for (const ExPolygon &rectilinear_area : rectilinear_areas) {
+        rectilinear_surface.expolygon = rectilinear_area;
+        if (!fill_surface_by_lines(&rectilinear_surface, params, 0.f, 0.f, polylines_rectilinear)) {
+            printf("FillRectilinear2::fill_surface() failed to fill a region.\n");
+        }
+    }
+    if (!polylines_rectilinear.empty()) {
+        double flow_mult_exact_volume = 1;
+        //check if not over-extruding
+        if (!params.dont_adjust && params.full_infill() && !params.flow->bridge && params.fill_exactly) {
+            // compute the path of the nozzle -> extruded volume
+            double lengthTot = 0;
+            int nbLines = 0;
+            for (const Polyline &pline : polylines_rectilinear) {
+                Lines lines = pline.lines();
+                for (auto line = lines.begin(); line != lines.end(); ++line) {
+                    lengthTot += unscaled(line->length());
+                    nbLines++;
+                }
+            }
+            double extrudedVolume = params.flow->mm3_per_mm() * lengthTot;
+            // compute real volume
+            double poylineVolume = 0;
+            ExPolygons rectilinear_no_overlap_areas = intersection_ex(rectilinear_areas, this->no_overlap_expolygons);
+            for (const ExPolygon &poly : rectilinear_no_overlap_areas) {
+                poylineVolume += params.flow->height*unscaled(unscaled(poly.area()));
+                // add external "perimeter gap"
+                double perimeterRoundGap = unscaled(poly.contour.length()) * params.flow->height * (1 - 0.25*PI) * 0.5;
+                // add holes "perimeter gaps"
+                double holesGaps = 0;
+                for (auto hole = poly.holes.begin(); hole != poly.holes.end(); ++hole) {
+                    holesGaps += unscaled(hole->length()) * params.flow->height * (1 - 0.25*PI) * 0.5;
+                }
+                poylineVolume += perimeterRoundGap + holesGaps;
+            }
+            //printf("process want %f mm3 extruded for a volume of %f space : we mult by %f %i\n",
+            //    extrudedVolume,
+            //    (poylineVolume),
+            //    (poylineVolume) / extrudedVolume,
+            //    this->no_overlap_expolygons.size());
+            if (extrudedVolume != 0 && poylineVolume != 0) flow_mult_exact_volume = poylineVolume / extrudedVolume;
+            //failsafe, it can happen
+            if (flow_mult_exact_volume > 1.3) flow_mult_exact_volume = 1.3;
+            if (flow_mult_exact_volume < 0.8) flow_mult_exact_volume = 0.8;
+        }
+
+        //Create extrusions
+        ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
+        /// pass the no_sort attribute to the extrusion path
+        eec->no_sort = this->no_sort();
+
+        extrusion_entities_append_paths(
+            eec->entities, polylines_rectilinear,
+            good_role,
+            params.flow->mm3_per_mm() * params.flow_mult * flow_mult_exact_volume,
+            params.flow->width * params.flow_mult * flow_mult_exact_volume,
+            params.flow->height);
+
+        coll_nosort->entities.push_back(eec);
+    }
+
+    //gapfill
+    ThickPolylines polylines_gapfill;
+    double min = 0.2 * params.flow->scaled_width() * (1 - INSET_OVERLAP_TOLERANCE);
+    double max = 2. * params.flow->scaled_width();
+    for (const ExPolygon &ex : gapfill_areas) {
+        //remove too small gaps that are too hard to fill.
+        //ie one that are smaller than an extrusion with width of min and a length of max.
+        if (ex.area() > min * max) {
+            ex.medial_axis(ex, params.flow->scaled_width()*2, params.flow->scaled_width()/5, &polylines_gapfill, params.flow->height);
+        }
+    }
+    if (!polylines_gapfill.empty() && good_role != erBridgeInfill) {
+        ExtrusionEntityCollection gap_fill = thin_variable_width(polylines_gapfill, erGapFill, *params.flow);
+        //set role if needed
+        if (good_role != erSolidInfill) {
+            ExtrusionSetRole set_good_role(good_role);
+            gap_fill.visit(set_good_role);
+        }
+        //move them into the collection
+        if (!gap_fill.entities.empty()) {
+            ExtrusionEntityCollection *coll_gapfill = new ExtrusionEntityCollection();
+            coll_gapfill->no_sort = this->no_sort();
+            coll_gapfill->append(std::move(gap_fill.entities));
+            coll_nosort->entities.push_back(coll_gapfill);
+        }
+    }
+
+    // === end ===
+    if (!coll_nosort->empty()) {
+        out.push_back(coll_nosort);
+    } else {
+        delete coll_nosort;
+    }
 
 }
 
