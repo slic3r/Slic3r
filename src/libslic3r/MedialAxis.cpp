@@ -978,8 +978,12 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                     if (polyline.width[idx_point] > max_width)
                         polyline.width[idx_point] = max_width;
                     //failsafe: try to not go out of the radius of the section, take the width of the merging point for that. (and with some offset)
-                    if (find_main_branch && polyline.width[idx_point] > pp[biggest_main_branch_id].width.front() * 1.1)
-                        polyline.width[idx_point] = pp[biggest_main_branch_id].width.front() * 1.1;
+                    coord_t main_branch_width = pp[biggest_main_branch_id].width.front();
+                    coord_t main_branch_dist = pp[biggest_main_branch_id].points.front().distance_to(polyline.points[idx_point]);
+                    coord_t max_width_from_main = std::sqrt(main_branch_width*main_branch_width + main_branch_dist*main_branch_dist);
+                    if (find_main_branch && polyline.width[idx_point] > max_width_from_main)
+                        polyline.width[idx_point] = max_width_from_main;
+                    //std::cout << "main fusion, max dist : " << max_width_from_main << "\n";
 
                     ++idx_point;
                 }
@@ -1322,10 +1326,12 @@ MedialAxis::ensure_not_overextrude(ThickPolylines& pp)
 ExPolygon 
 MedialAxis::simplify_polygon_frontier()
 {
-
     //simplify the boundary between us and the bounds.
-    //it will remove every point in the surface contour that aren't on the bounds contour
     ExPolygon simplified_poly = this->surface;
+    simplified_poly.contour.remove_colinear_points(SCALED_EPSILON);
+    for (Polygon &hole : simplified_poly.holes)
+        hole.remove_colinear_points(SCALED_EPSILON);
+    //it will remove every point in the surface contour that aren't on the bounds contour
     if (&this->surface != &this->bounds) {
         bool need_intersect = false;
         for (size_t i = 0; i < simplified_poly.contour.points.size(); i++) {
@@ -1483,6 +1489,13 @@ MedialAxis::build(ThickPolylines* polylines_out) {
     for (ThickPolylines::const_iterator it = pp.begin(); it != pp.end(); ++it)
         max_w = std::max(max_w, *std::max_element(it->width.begin(), it->width.end()));
 
+    //for (auto &p : pp) {
+    //    std::cout << "Start polyline : ";
+    //    for (auto &w : p.width) {
+    //        std::cout << ", " << w;
+    //    }
+    //    std::cout << "\n";
+    //}
 
     fusion_curve(pp);
     //{
@@ -1521,6 +1534,13 @@ MedialAxis::build(ThickPolylines* polylines_out) {
         extends_line_both_side(pp);
     }
 
+    /*for (auto &p : pp) {
+        std::cout << "Fusion polyline : ";
+        for (auto &w : p.width) {
+            std::cout << ", " << w;
+        }
+        std::cout << "\n";
+    }*/
     //reduce extrusion when it's too thin to be printable
     remove_too_thin_extrusion(pp);
     //{
@@ -1603,6 +1623,14 @@ MedialAxis::build(ThickPolylines* polylines_out) {
     //    svg.draw(this->expolygon);
     //    svg.draw(pp);
     //    svg.Close();
+    //}
+
+    //for (auto &p : pp) {
+    //    std::cout << " polyline : ";
+    //    for (auto &w : p.width) {
+    //        std::cout << ", " << w;
+    //    }
+    //    std::cout << "\n";
     //}
 
     polylines_out->insert(polylines_out->end(), pp.begin(), pp.end());

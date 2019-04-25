@@ -294,6 +294,11 @@ SCENARIO("thin walls: ")
 
     }
 
+    GIVEN("1° rotated tooths")
+    {
+
+    }
+
     GIVEN("narrow trapezoid")
     {
         ExPolygon expolygon;
