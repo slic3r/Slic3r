@@ -160,7 +160,9 @@ pp `
 -M LWP::MemberMixin `
 -M LWP::Protocol `
 -M LWP::Protocol::http `
+-M LWP::Protocol::https `
 -M LWP::UserAgent `
+-M Net::SSL `
 -M List::Util `
 -M Math::Trig `
 -M Method::Generate::Accessor `
