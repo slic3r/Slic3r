@@ -48,7 +48,7 @@ if ($gui) {
     Wx::GLCanvas                    0
     OpenGL                          0
     LWP::UserAgent                  0
-    LWP::Protocol::https            0
+    Bundle::LWP                     0
     Net::Bonjour                    0
     Net::SSL                        0
     );
