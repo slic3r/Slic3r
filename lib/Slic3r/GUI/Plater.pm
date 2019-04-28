@@ -2363,7 +2363,7 @@ sub prepare_send {
         if ($self->{config}->print_host) {
             if($self->{config}->host_type eq 'octoprint'){
                 $res = $ua->get(
-                    $res = $ua->get($host . "/api/files/local",
+                    $host . "/api/files/local",
                     'X-Api-Key' => $self->{config}->octoprint_apikey,
                 );
             }else {
