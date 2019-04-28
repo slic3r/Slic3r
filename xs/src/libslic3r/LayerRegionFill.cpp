@@ -229,9 +229,8 @@ LayerRegion::make_fill()
             f->min_spacing = flow.spacing();
         }
         
-        f->endpoints_overlap = this->region()->config.get_abs_value("infill_overlap",
-            (perimeter_spacing + scale_(f->min_spacing))/2);
-
+        f->endpoints_overlap = scale_(this->region()->config.get_abs_value("infill_overlap",
+            (unscale(perimeter_spacing) + (f->min_spacing))/2));
         f->layer_id = this->layer()->id();
         f->z        = this->layer()->print_z;
         f->angle    = Geometry::deg2rad(this->region()->config.fill_angle.value);
