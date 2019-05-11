@@ -1026,13 +1026,6 @@ ModelVolume::get_transformed_mesh(TransformationMatrix const * additional_trafo)
     return mesh;
 }
 
-TriangleMesh*
-ModelVolume::get_transformed_meshptr(TransformationMatrix const * additional_trafo)
-{
-    this->transformed_mesh = get_transformed_mesh(additional_trafo);
-    return &(this->transformed_mesh);
-}
-
 t_model_material_id
 ModelVolume::material_id() const
 {
@@ -1118,10 +1111,9 @@ TransformationMatrix ModelInstance::get_trafo_matrix(bool dont_translate) const
     return trafo;
 }
 
-TransformationMatrix* ModelInstance::get_trafo_matrixptr(bool dont_translate)
+void ModelInstance::set_local_trafo_matrix(bool dont_translate)
 {
     this->trafo = this->get_trafo_matrix(dont_translate);
-    return &(this->trafo);
 }
 
 BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mesh, bool dont_translate) const

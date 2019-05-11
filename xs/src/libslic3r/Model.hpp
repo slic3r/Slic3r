@@ -466,6 +466,8 @@ class ModelVolume
     ///< Configuration parameters specific to an object model geometry or a modifier volume,
     ///< overriding the global Slic3r settings and the ModelObject settings.
     
+    TriangleMesh transformed_mesh;  ///< The transformed mesh only to be used by the perl binding
+
     /// Input file path needed for reloading the volume from disk
     std::string input_file; ///< Input file path
     int input_file_obj_idx; ///< Input file object index
@@ -481,11 +483,6 @@ class ModelVolume
     /// \param additional_trafo additional transformation
     /// \return TriangleMesh the transformed mesh
     TriangleMesh get_transformed_mesh(TransformationMatrix const * additional_trafo) const;
-
-    /// Get the ModelVolume's mesh as pointer, transformed by the ModelVolume's TransformationMatrix
-    /// \param additional_trafo additional transformation
-    /// \return TriangleMesh the transformed mesh
-    TriangleMesh* get_transformed_meshptr(TransformationMatrix const * additional_trafo);
 
     /// Get the material id of this ModelVolume object
     /// \return t_model_material_id the material id string
@@ -513,8 +510,6 @@ class ModelVolume
     ModelObject* object;
     ///< The id of the this ModelVolume
     t_model_material_id _material_id;
-
-    TriangleMesh transformed_mesh;  ///< The transformed mesh only to be used by the perl binding
 
     /// Constructor
     /// \param object ModelObject* pointer to the owner ModelObject
@@ -546,6 +541,8 @@ class ModelInstance
     double scaling_factor;      ///< uniform scaling factor.
     Pointf offset;              ///< offset in unscaled coordinates.
 
+    TransformationMatrix trafo; ///< Trafomatrix for perl binding
+
     /// Get the owning ModelObject
     /// \return ModelObject* pointer to the owner ModelObject
     ModelObject* get_object() const { return this->object; };
@@ -561,7 +558,7 @@ class ModelInstance
 
     /// Returns a pointer to TransformationMatrix defined by the instance's Transform an external TriangleMesh to the returned TriangleMesh object
     /// \param dont_translate bool whether to translate the mesh or not
-    TransformationMatrix* get_trafo_matrixptr(bool dont_translate = false);
+    void set_local_trafo_matrix(bool dont_translate);
 
     /// Calculate a bounding box of a transformed mesh. To be called on an external mesh.
     /// \param mesh TriangleMesh* pointer to the the mesh
@@ -599,8 +596,6 @@ class ModelInstance
     /// Swap attributes between another ModelInstance object
     /// \param other ModelInstance& the other instance object
     void swap(ModelInstance &other);
-
-    TransformationMatrix trafo; ///< Trafomatrix for perl binding
 };
 
 }
