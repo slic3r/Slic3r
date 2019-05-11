@@ -1331,8 +1331,7 @@ sub load_object {
         my $volume = $model_object->volumes->[$volume_idx];
         foreach my $instance_idx (@$instance_idxs) {
             my $instance = $model_object->instances->[$instance_idx];
-            my $instance_trafo = $instance->get_trafo_matrixptr();
-            my $mesh = $volume->get_transformed_meshptr($instance_trafo);
+            my $mesh = $volume->transformed_mesh($instance);
             
             my $color_idx;
             if ($self->color_by eq 'volume') {
