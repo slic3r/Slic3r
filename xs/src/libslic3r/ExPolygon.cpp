@@ -322,7 +322,6 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
     
     // Loop through all returned polylines in order to extend their endpoints to the 
     //   expolygon boundaries
-    bool removed = false;
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         
@@ -422,7 +421,6 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
             && polyline.length() < max_w * 2) {
             pp.erase(pp.begin() + i);
             --i;
-            removed = true;
             continue;
         }
 
