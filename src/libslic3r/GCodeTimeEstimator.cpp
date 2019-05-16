@@ -38,7 +38,6 @@ static const std::string MOVE_TYPE_STR[Slic3r::GCodeTimeEstimator::Block::Num_Ty
 #endif // ENABLE_MOVE_STATS
 
 namespace Slic3r {
-
     void GCodeTimeEstimator::Feedrates::reset()
     {
         feedrate = 0.0f;
@@ -171,6 +170,8 @@ namespace Slic3r {
 
     const std::string GCodeTimeEstimator::Normal_First_M73_Output_Placeholder_Tag = "; NORMAL_FIRST_M73_OUTPUT_PLACEHOLDER";
     const std::string GCodeTimeEstimator::Silent_First_M73_Output_Placeholder_Tag = "; SILENT_FIRST_M73_OUTPUT_PLACEHOLDER";
+    const std::string GCodeTimeEstimator::Normal_Last_M73_Output_Placeholder_Tag = "; NORMAL_LAST_M73_OUTPUT_PLACEHOLDER";
+    const std::string GCodeTimeEstimator::Silent_Last_M73_Output_Placeholder_Tag = "; SILENT_LAST_M73_OUTPUT_PLACEHOLDER";
 
     GCodeTimeEstimator::GCodeTimeEstimator(EMode mode)
         : _mode(mode)
@@ -306,8 +307,16 @@ namespace Slic3r {
                 sprintf(time_line, time_mask.c_str(), "0", _get_time_minutes(_time).c_str());
                 gcode_line = time_line;
             }
+            // replaces placeholders for final line M73 with the real lines
+            else if (((_mode == Normal) && (gcode_line == Normal_Last_M73_Output_Placeholder_Tag)) ||
+                     ((_mode == Silent) && (gcode_line == Silent_Last_M73_Output_Placeholder_Tag)))
+            {
+                sprintf(time_line, time_mask.c_str(), "100", "0");
+                gcode_line = time_line;
+            }
             else
                gcode_line += "\n";
+
 
             // add remaining time lines where needed
             _parser.parse_line(gcode_line,
@@ -685,6 +694,8 @@ namespace Slic3r {
         set_axis_position(X, 0.0f);
         set_axis_position(Y, 0.0f);
         set_axis_position(Z, 0.0f);
+        if (get_e_local_positioning_type() == Absolute)
+            set_axis_position(E, 0.0f);
 
         set_additional_time(0.0f);
 
@@ -704,7 +715,6 @@ namespace Slic3r {
     {
         _blocks.clear();
     }
-
 
     void GCodeTimeEstimator::_calculate_time()
     {

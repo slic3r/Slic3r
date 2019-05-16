@@ -552,6 +552,7 @@ void base_plate(const TriangleMesh &mesh, ExPolygons &output, float h,
                 float layerh, ThrowOnCancel thrfn)
 {
     TriangleMesh m = mesh;
+    m.require_shared_vertices(); // TriangleMeshSlicer needs this
     TriangleMeshSlicer slicer(&m);
 
     auto bb = mesh.bounding_box();
@@ -581,8 +582,8 @@ void base_plate(const TriangleMesh &mesh, ExPolygons &output, float h,
     }
 }
 
-void create_base_pool(const ExPolygons &ground_layer, TriangleMesh& out,
-                      const PoolConfig& cfg)
+Contour3D create_base_pool(const ExPolygons &ground_layer, 
+                           const PoolConfig& cfg = PoolConfig()) 
 {
     // for debugging:
     // Benchmark bench;
@@ -617,7 +618,7 @@ void create_base_pool(const ExPolygons &ground_layer, TriangleMesh& out,
     Contour3D pool;
 
     for(ExPolygon& concaveh : concavehs) {
-        if(concaveh.contour.points.empty()) return;
+        if(concaveh.contour.points.empty()) return pool;
 
         // Get rid of any holes in the concave hull output.
         concaveh.holes.clear();
@@ -682,7 +683,7 @@ void create_base_pool(const ExPolygons &ground_layer, TriangleMesh& out,
 
 
         // Generate the smoothed edge geometry
-        pool.merge(round_edges(ob,
+        if(s_eradius > 0) pool.merge(round_edges(ob,
                                r,
                                phi,
                                0,    // z position of the input plane
@@ -697,7 +698,8 @@ void create_base_pool(const ExPolygons &ground_layer, TriangleMesh& out,
 
         if(wingheight > 0) {
             // Generate the smoothed edge geometry
-            pool.merge(round_edges(middle_base,
+            wh = 0;
+            if(s_eradius) pool.merge(round_edges(middle_base,
                                    r,
                                    phi - 90, // from tangent lines
                                    0,  // z position of the input plane
@@ -721,6 +723,14 @@ void create_base_pool(const ExPolygons &ground_layer, TriangleMesh& out,
             pool.merge(triangulate_expolygon_3d(inner_base, -wingheight));
 
     }
+    
+    return pool;
+}
+
+void create_base_pool(const ExPolygons &ground_layer, TriangleMesh& out,
+                      const PoolConfig& cfg)
+{
+    
 
     // For debugging:
     // bench.stop();
@@ -728,7 +738,7 @@ void create_base_pool(const ExPolygons &ground_layer, TriangleMesh& out,
     // std::fstream fout("pad_debug.obj", std::fstream::out);
     // if(fout.good()) pool.to_obj(fout);
 
-    out.merge(mesh(pool));
+    out.merge(mesh(create_base_pool(ground_layer, cfg)));
 }
 
 }

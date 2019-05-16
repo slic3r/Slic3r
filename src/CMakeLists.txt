@@ -12,7 +12,6 @@ add_subdirectory(poly2tri)
 add_subdirectory(qhull)
 add_subdirectory(Shiny)
 add_subdirectory(semver)
-add_subdirectory(imgui)
 add_subdirectory(test)
 
 # Adding libnest2d project for bin packing...
@@ -22,33 +21,11 @@ add_subdirectory(libnest2d)
 include_directories(${LIBDIR}/qhull/src)
 #message(STATUS ${LIBDIR}/qhull/src)
 
-# ##############################################################################
-# Configure rasterizer target
-# ##############################################################################
-
-find_package(PNG QUIET)
-
-option(RASTERIZER_FORCE_BUILTIN_LIBPNG "Force the usage of builting libpng instead of the system version." OFF)
-
-if(PNG_FOUND AND NOT RASTERIZER_FORCE_BUILTIN_LIBPNG)
-    message(STATUS "Using system libpng.")
-else()
-    set(ZLIB_LIBRARY "")
-    message(WARNING "Using builtin libpng. This can cause crashes on some platforms.")
-    set(SKIP_INSTALL_ALL 1)   # Prevent png+zlib from creating install targets
-    add_subdirectory(png/zlib)
-    set(ZLIB_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/png/zlib ${CMAKE_CURRENT_BINARY_DIR}/png/zlib)
-    include_directories(${ZLIB_INCLUDE_DIR})
-    add_subdirectory(png/libpng)
-    set_target_properties(zlibstatic PROPERTIES POSITION_INDEPENDENT_CODE ON)
-    set_target_properties(png_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
-    set(PNG_LIBRARIES png_static zlibstatic)
-    set(PNG_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/png/libpng ${CMAKE_CURRENT_BINARY_DIR}/png/libpng)
-endif()
-
 add_subdirectory(libslic3r)
 
 if (SLIC3R_GUI)
+    add_subdirectory(imgui)
+
     if(WIN32)
         message(STATUS "WXWIN environment set to: $ENV{WXWIN}")
     elseif(UNIX)
@@ -66,6 +43,7 @@ if (SLIC3R_GUI)
             find_package(wxWidgets 3.0 REQUIRED COMPONENTS base core adv html gl)
         else ()
             find_package(wxWidgets 3.1 QUIET COMPONENTS base core adv html gl)
+
             if (NOT wxWidgets_FOUND)
                 message(FATAL_ERROR "\nCould not find wxWidgets 3.1.\n"
                     "Hint: On Linux you can set -DSLIC3R_WX_STABLE=1 to use wxWidgets 3.0\n")
@@ -80,27 +58,25 @@ if (SLIC3R_GUI)
     endif()
 
     include(${wxWidgets_USE_FILE})
+
+    add_subdirectory(slic3r)
 endif()
 
-add_subdirectory(slic3r)
 
 # Create a slic3r executable
 # Process mainfests for various platforms.
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platform/msw/slic3r.rc.in ${CMAKE_CURRENT_BINARY_DIR}/slic3r.rc @ONLY)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platform/msw/slic3r.manifest.in ${CMAKE_CURRENT_BINARY_DIR}/slic3r.manifest @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platform/msw/PrusaSlicer.rc.in ${CMAKE_CURRENT_BINARY_DIR}/slic3r.rc @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platform/msw/PrusaSlicer.manifest.in ${CMAKE_CURRENT_BINARY_DIR}/slic3r.manifest @ONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platform/osx/Info.plist.in ${CMAKE_CURRENT_BINARY_DIR}/Info.plist @ONLY)
 if (MSVC)
-    add_library(slic3r SHARED slic3r.cpp slic3r.hpp)
+    add_library(slic3r SHARED PrusaSlicer.cpp PrusaSlicer.hpp)
 else ()
-    add_executable(slic3r slic3r.cpp slic3r.hpp)
+    add_executable(slic3r PrusaSlicer.cpp PrusaSlicer.hpp)
 endif ()
-add_library(slic3r_lib STATIC slic3r.cpp slic3r.hpp)
+add_library(slic3r_lib STATIC PrusaSlicer.cpp PrusaSlicer.hpp)
 if (NOT MSVC)
-    if(SLIC3R_GUI)
-        set_target_properties(slic3r PROPERTIES OUTPUT_NAME "slic3r-gui")
-    else()
-        set_target_properties(slic3r PROPERTIES OUTPUT_NAME "slic3r-console")
-    endif()
+    # Binary name on unix like systems (OSX, Linux)
+    set_target_properties(slic3r PROPERTIES OUTPUT_NAME "slic3r++")
 endif ()
 
 target_link_libraries(slic3r libslic3r)
@@ -115,7 +91,8 @@ elseif (MSVC)
     # Manifest is provided through slic3r.rc, don't generate your own.
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /MANIFEST:NO")
 else ()
-    target_link_libraries(slic3r ${CMAKE_DL_LIBS} -lstdc++)
+    # Boost on Raspberry-Pi does not link to pthreads explicitely.
+    target_link_libraries(slic3r ${CMAKE_DL_LIBS} -lstdc++ Threads::Threads)
     target_link_libraries(slic3r_lib ${CMAKE_DL_LIBS} -lstdc++)
 endif ()
 
@@ -124,10 +101,14 @@ if (SLIC3R_GUI)
     target_link_libraries(slic3r libslic3r_gui ${wxWidgets_LIBRARIES})
     target_link_libraries(slic3r_lib libslic3r_gui ${wxWidgets_LIBRARIES})
 
-    # Configure libcurl & OpenSSL
+    # Configure libcurl and its dependencies OpenSSL & zlib
     find_package(CURL REQUIRED)
+    if (NOT MSVC)
+        # Required by libcurl
+        find_package(ZLIB REQUIRED)
+    endif()
     target_include_directories(slic3r PRIVATE ${CURL_INCLUDE_DIRS})
-    target_link_libraries(slic3r CURL::libcurl)
+    target_link_libraries(slic3r ${CURL_LIBRARIES} ${ZLIB_LIBRARIES})
     target_include_directories(slic3r_lib PRIVATE ${CURL_INCLUDE_DIRS})
     target_link_libraries(slic3r_lib CURL::libcurl)
     if (SLIC3R_STATIC)
@@ -151,6 +132,8 @@ if (SLIC3R_GUI)
     endif()
 
     if (MSVC)
+        # Generate debug symbols even in release mode.
+        #target_link_options(slic3r PUBLIC "$<$<CONFIG:RELEASE>:/DEBUG>")
         target_link_libraries(slic3r user32.lib Setupapi.lib OpenGL32.Lib GlU32.Lib)
         target_link_libraries(slic3r_lib user32.lib Setupapi.lib OpenGL32.Lib GlU32.Lib)
     elseif (MINGW)
@@ -168,15 +151,19 @@ endif ()
 # On Windows, a shim application is required to produce a console / non console version of the Slic3r application.
 # Also the shim may load the Mesa software OpenGL renderer if the default renderer does not support OpenGL 2.0 and higher.
 if (MSVC)
-    add_executable(slic3r_app_gui WIN32 slic3r_app_msvc.cpp ${CMAKE_CURRENT_BINARY_DIR}/slic3r.rc)
+    add_executable(slic3r_app_gui WIN32 PrusaSlicer_app_msvc.cpp ${CMAKE_CURRENT_BINARY_DIR}/slic3r.rc)
+    # Generate debug symbols even in release mode.
+    #target_link_options(slic3r_app_gui PUBLIC "$<$<CONFIG:RELEASE>:/DEBUG>")
     target_compile_definitions(slic3r_app_gui PRIVATE -DSLIC3R_WRAPPER_NOCONSOLE)
     add_dependencies(slic3r_app_gui slic3r)
-    set_target_properties(slic3r_app_gui PROPERTIES OUTPUT_NAME "slic3r")
+    set_target_properties(slic3r_app_gui PROPERTIES OUTPUT_NAME "slic3r++")
 
-    add_executable(slic3r_app_console slic3r_app_msvc.cpp ${CMAKE_CURRENT_BINARY_DIR}/slic3r.rc)
+    add_executable(slic3r_app_console PrusaSlicer_app_msvc.cpp ${CMAKE_CURRENT_BINARY_DIR}/slic3r.rc)
+    # Generate debug symbols even in release mode.
+    #target_link_options(slic3r_app_console PUBLIC "$<$<CONFIG:RELEASE>:/DEBUG>")
     target_compile_definitions(slic3r_app_console PRIVATE -DSLIC3R_WRAPPER_CONSOLE)
     add_dependencies(slic3r_app_console slic3r)
-    set_target_properties(slic3r_app_console PROPERTIES OUTPUT_NAME "slic3r-console")
+    set_target_properties(slic3r_app_console PROPERTIES OUTPUT_NAME "slic3r++_console")
 
 endif ()
 
@@ -205,7 +192,7 @@ if (MSVC)
         )
     endif ()
 elseif (XCODE)
-    # Because of Debug/Release/etc. configurations (similar to MSVC) the slic3r binary is located in an extra level
+    # Because of Debug/Release/etc. configurations (similar to MSVC) the slic3r binary is located in an extra level
     add_custom_command(TARGET slic3r POST_BUILD
         COMMAND ln -sf "${SLIC3R_RESOURCES_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/resources"
         COMMENT "Symlinking the resources directory into the build tree"

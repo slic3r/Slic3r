@@ -18,6 +18,7 @@ namespace GUI {
 
 void BedShapeDialog::build_dialog(ConfigOptionPoints* default_pt)
 {
+    SetFont(wxGetApp().normal_font());
 	m_panel = new BedShapePanel(this);
 	m_panel->build_panel(default_pt);
 
@@ -36,6 +37,22 @@ void BedShapeDialog::build_dialog(ConfigOptionPoints* default_pt)
 	}));
 }
 
+void BedShapeDialog::on_dpi_changed(const wxRect &suggested_rect)
+{
+    const int& em = em_unit();
+    m_panel->m_shape_options_book->SetMinSize(wxSize(25 * em, -1));
+
+    for (auto og : m_panel->m_optgroups)
+        og->msw_rescale();
+
+    const wxSize& size = wxSize(50 * em, -1);
+
+    SetMinSize(size);
+    SetSize(size);
+
+    Refresh();
+}
+
 void BedShapePanel::build_panel(ConfigOptionPoints* default_pt)
 {
 //  on_change(nullptr);
@@ -51,14 +68,14 @@ void BedShapePanel::build_panel(ConfigOptionPoints* default_pt)
 	auto optgroup = init_shape_options_page(_(L("Rectangular")));
 		ConfigOptionDef def;
 		def.type = coPoints;
-		def.default_value = new ConfigOptionPoints{ Vec2d(200, 200) };
+		def.set_default_value(new ConfigOptionPoints{ Vec2d(200, 200) });
 		def.label = L("Size");
 		def.tooltip = L("Size in X and Y of the rectangular plate.");
 		Option option(def, "rect_size");
 		optgroup->append_single_option_line(option);
 
 		def.type = coPoints;
-		def.default_value = new ConfigOptionPoints{ Vec2d(0, 0) };
+		def.set_default_value(new ConfigOptionPoints{ Vec2d(0, 0) });
 		def.label = L("Origin");
 		def.tooltip = L("Distance of the 0,0 G-code coordinate from the front left corner of the rectangle.");
 		option = Option(def, "rect_origin");
@@ -66,7 +83,7 @@ void BedShapePanel::build_panel(ConfigOptionPoints* default_pt)
 
 		optgroup = init_shape_options_page(_(L("Circular")));
 		def.type = coFloat;
-		def.default_value = new ConfigOptionFloat(200);
+		def.set_default_value(new ConfigOptionFloat(200));
 		def.sidetext = L("mm");
 		def.label = L("Diameter");
 		def.tooltip = L("Diameter of the print bed. It is assumed that origin (0,0) is located in the center.");
@@ -125,7 +142,7 @@ ConfigOptionsGroupShp BedShapePanel::init_shape_options_page(wxString title)
 	ConfigOptionsGroupShp optgroup;
 	optgroup = std::make_shared<ConfigOptionsGroup>(panel, _(L("Settings")));
 
-    optgroup->label_width = 10*wxGetApp().em_unit();//100;
+    optgroup->label_width = 10;
 	optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
 		update_shape();
 	};
@@ -313,7 +330,7 @@ void BedShapePanel::load_stl()
 		model = Model::read_from_file(file_name);
 	}
 	catch (std::exception &e) {
-		auto msg = _(L("Error! ")) + file_name + " : " + e.what() + ".";
+		auto msg = _(L("Error!")) + " " + file_name + " : " + e.what() + ".";
 		show_error(this, msg);
 		exit(1);
 	}

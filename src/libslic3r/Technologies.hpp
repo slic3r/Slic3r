@@ -11,6 +11,8 @@
 #define ENABLE_SELECTION_DEBUG_OUTPUT 0
 // Renders a small sphere in the center of the bounding box of the current selection when no gizmo is active
 #define ENABLE_RENDER_SELECTION_CENTER 0
+// Shows an imgui dialog with render related data
+#define ENABLE_RENDER_STATISTICS 0
 
 
 //====================
@@ -58,4 +60,12 @@
 
 
 #define DEBUG_EXTRUSION_OUTPUT 0
+//====================
+// 1.42.0.rc techs
+//====================
+#define ENABLE_1_42_0_RC 1
+
+// Disables Edit->Deselect all item menu item
+#define DISABLE_DESELECT_ALL_MENU_ITEM (1 && ENABLE_1_42_0_RC)
+
 #endif // _technologies_h_

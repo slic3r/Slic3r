@@ -4,6 +4,7 @@
 #include "AppConfig.hpp"
 #include "BitmapCache.hpp"
 #include "I18N.hpp"
+#include "wxExtensions.hpp"
 
 #ifdef _MSC_VER
     #define WIN32_LEAN_AND_MEAN
@@ -145,9 +146,14 @@ VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem
         res.config_version = std::move(*config_version);
     }
 
-    auto config_update_url = vendor_section.find("config_update_url");
+    const auto config_update_url = vendor_section.find("config_update_url");
     if (config_update_url != vendor_section.not_found()) {
         res.config_update_url = config_update_url->second.data();
+    }
+
+    const auto changelog_url = vendor_section.find("changelog_url");
+    if (changelog_url != vendor_section.not_found()) {
+        res.changelog_url = changelog_url->second.data();
     }
 
     if (! load_all) {
@@ -539,7 +545,7 @@ const std::vector<std::string>& Preset::sla_material_options()
         s_opts = {
             "initial_layer_height",
             "exposure_time", "initial_exposure_time",
-            "material_correction_printing", "material_correction_curing",
+            "material_correction",
             "material_notes",
             "default_sla_material_profile",
             "compatible_prints", "compatible_prints_condition", 
@@ -559,7 +565,9 @@ const std::vector<std::string>& Preset::sla_printer_options()
             "display_width", "display_height", "display_pixels_x", "display_pixels_y",
             "display_orientation",
             "fast_tilt_time", "slow_tilt_time", "area_fill",
-            "printer_correction",
+            "relative_correction",
+            "absolute_correction",
+            "gamma_correction",
             "print_host", "printhost_apikey", "printhost_cafile",
             "printer_notes",
             "inherits"
@@ -850,18 +858,25 @@ bool PresetCollection::delete_current_preset()
 	return true;
 }
 
-bool PresetCollection::load_bitmap_default(const std::string &file_name)
+void PresetCollection::load_bitmap_default(wxWindow *window, const std::string &file_name)
 {
-    return m_bitmap_main_frame->LoadFile(wxString::FromUTF8(Slic3r::var(file_name).c_str()), wxBITMAP_TYPE_PNG);
+    // XXX: See note in PresetBundle::load_compatible_bitmaps()
+    (void)window;
+    *m_bitmap_main_frame = create_scaled_bitmap(nullptr, file_name);
 }
 
-bool PresetCollection::load_bitmap_add(const std::string &file_name)
+void PresetCollection::load_bitmap_add(wxWindow *window, const std::string &file_name)
 {
-	return m_bitmap_add->LoadFile(wxString::FromUTF8(Slic3r::var(file_name).c_str()), wxBITMAP_TYPE_PNG);
+    // XXX: See note in PresetBundle::load_compatible_bitmaps()
+    (void)window;
+    *m_bitmap_add = create_scaled_bitmap(nullptr, file_name);
 }
 
 const Preset* PresetCollection::get_selected_preset_parent() const
 {
+    if (this->get_selected_idx() == -1)
+        // This preset collection has no preset activated yet. Only the get_edited_preset() is valid.
+        return nullptr;
     const std::string &inherits = this->get_edited_preset().inherits();
     if (inherits.empty())
 		return this->get_selected_preset().is_system ? &this->get_selected_preset() : nullptr; 
@@ -961,6 +976,16 @@ void PresetCollection::update_platter_ui(GUI::PresetComboBox *ui)
 	// and draw a red flag in front of the selected preset.
 	bool wide_icons = ! selected_preset.is_compatible && m_bitmap_incompatible != nullptr;
 
+    /* It's supposed that standard size of an icon is 16px*16px for 100% scaled display.
+    * So set sizes for solid_colored icons used for filament preset
+    * and scale them in respect to em_unit value
+    */
+    const float scale_f = ui->em_unit() * 0.1f;
+    const int icon_height           = 16 * scale_f + 0.5f;
+    const int icon_width            = 16 * scale_f + 0.5f;
+    const int thin_space_icon_width = 4 * scale_f + 0.5f;
+    const int wide_space_icon_width = 6 * scale_f + 0.5f;
+
 	std::map<wxString, wxBitmap*> nonsys_presets;
 	wxString selected = "";
 	if (!this->m_presets.front().is_visible)
@@ -981,13 +1006,13 @@ void PresetCollection::update_platter_ui(GUI::PresetComboBox *ui)
 			std::vector<wxBitmap> bmps;
 			if (wide_icons)
 				// Paint a red flag for incompatible presets.
-				bmps.emplace_back(preset.is_compatible ? m_bitmap_cache->mkclear(16, 16) : *m_bitmap_incompatible);
+				bmps.emplace_back(preset.is_compatible ? m_bitmap_cache->mkclear(icon_width, icon_height) : *m_bitmap_incompatible);
 			// Paint the color bars.
-			bmps.emplace_back(m_bitmap_cache->mkclear(4, 16));
+			bmps.emplace_back(m_bitmap_cache->mkclear(thin_space_icon_width, icon_height));
 			bmps.emplace_back(*m_bitmap_main_frame);
 			// Paint a lock at the system presets.
- 			bmps.emplace_back(m_bitmap_cache->mkclear(6, 16));
-			bmps.emplace_back((preset.is_system || preset.is_default) ? *m_bitmap_lock : m_bitmap_cache->mkclear(16, 16));
+			bmps.emplace_back(m_bitmap_cache->mkclear(wide_space_icon_width, icon_height));
+			bmps.emplace_back((preset.is_system || preset.is_default) ? *m_bitmap_lock : m_bitmap_cache->mkclear(icon_width, icon_height));
 			bmp = m_bitmap_cache->insert(bitmap_key, bmps);
 		}
 
@@ -1028,12 +1053,12 @@ void PresetCollection::update_platter_ui(GUI::PresetComboBox *ui)
 			std::vector<wxBitmap> bmps;
 			if (wide_icons)
 				// Paint a red flag for incompatible presets.
-				bmps.emplace_back(m_bitmap_cache->mkclear(16, 16));
+				bmps.emplace_back(m_bitmap_cache->mkclear(icon_width, icon_height));
 			// Paint the color bars.
-			bmps.emplace_back(m_bitmap_cache->mkclear(4, 16));
+			bmps.emplace_back(m_bitmap_cache->mkclear(thin_space_icon_width, icon_height));
 			bmps.emplace_back(*m_bitmap_main_frame);
 			// Paint a lock at the system presets.
-			bmps.emplace_back(m_bitmap_cache->mkclear(6, 16));
+			bmps.emplace_back(m_bitmap_cache->mkclear(wide_space_icon_width, icon_height));
 			bmps.emplace_back(m_bitmap_add ? *m_bitmap_add : wxNullBitmap);
 			bmp = m_bitmap_cache->insert(bitmap_key, bmps);
 		}
@@ -1044,15 +1069,27 @@ void PresetCollection::update_platter_ui(GUI::PresetComboBox *ui)
 	ui->SetToolTip(ui->GetString(selected_preset_item));
     ui->check_selection();
     ui->Thaw();
+
+    // Update control min size after rescale (changed Display DPI under MSW)
+    if (ui->GetMinWidth() != 20 * ui->em_unit())
+        ui->SetMinSize(wxSize(20 * ui->em_unit(), ui->GetSize().GetHeight()));
 }
 
-size_t PresetCollection::update_tab_ui(wxBitmapComboBox *ui, bool show_incompatible)
+size_t PresetCollection::update_tab_ui(wxBitmapComboBox *ui, bool show_incompatible, const int em/* = 10*/)
 {
     if (ui == nullptr)
         return 0;
     ui->Freeze();
     ui->Clear();
 	size_t selected_preset_item = 0;
+
+    /* It's supposed that standard size of an icon is 16px*16px for 100% scaled display.
+    * So set sizes for solid_colored(empty) icons used for preset
+    * and scale them in respect to em_unit value
+    */
+    const float scale_f = em * 0.1f;
+    const int icon_height = 16 * scale_f + 0.5f;
+    const int icon_width  = 16 * scale_f + 0.5f;
 
 	std::map<wxString, wxBitmap*> nonsys_presets;
 	wxString selected = "";
@@ -1072,7 +1109,7 @@ size_t PresetCollection::update_tab_ui(wxBitmapComboBox *ui, bool show_incompati
 			const wxBitmap* tmp_bmp = preset.is_compatible ? m_bitmap_compatible : m_bitmap_incompatible;
 			bmps.emplace_back((tmp_bmp == 0) ? (m_bitmap_main_frame ? *m_bitmap_main_frame : wxNullBitmap) : *tmp_bmp);
 			// Paint a lock at the system presets.
-			bmps.emplace_back((preset.is_system || preset.is_default) ? *m_bitmap_lock : m_bitmap_cache->mkclear(16, 16));
+			bmps.emplace_back((preset.is_system || preset.is_default) ? *m_bitmap_lock : m_bitmap_cache->mkclear(icon_width, icon_height));
 			bmp = m_bitmap_cache->insert(bitmap_key, bmps);
 		}
 
@@ -1339,6 +1376,11 @@ std::string PresetCollection::path_from_name(const std::string &new_name) const
     return (boost::filesystem::path(m_dir_path) / file_name).make_preferred().string();
 }
 
+void PresetCollection::clear_bitmap_cache()
+{
+    m_bitmap_cache->clear();
+}
+
 wxString PresetCollection::separator(const std::string &label)
 {
 	return wxString::FromUTF8(PresetCollection::separator_head()) + _(label) + wxString::FromUTF8(PresetCollection::separator_tail());
@@ -1348,6 +1390,17 @@ const Preset& PrinterPresetCollection::default_preset_for(const DynamicPrintConf
 { 
     const ConfigOptionEnumGeneric *opt_printer_technology = config.opt<ConfigOptionEnumGeneric>("printer_technology");
 	return this->default_preset((opt_printer_technology == nullptr || opt_printer_technology->value == ptFFF) ? 0 : 1);
+}
+
+const Preset* PrinterPresetCollection::find_by_model_id(const std::string &model_id) const
+{
+    if (model_id.empty()) { return nullptr; }
+
+    const auto it = std::find_if(cbegin(), cend(), [&](const Preset &preset) {
+        return preset.config.opt_string("printer_model") == model_id;
+    });
+
+    return it != cend() ? &*it : nullptr;
 }
 
 } // namespace Slic3r

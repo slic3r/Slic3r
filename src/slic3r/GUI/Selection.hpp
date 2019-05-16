@@ -133,10 +133,29 @@ private:
         const Transform3d& get_instance_full_matrix() const { return m_instance.full_matrix; }
     };
 
+public:
     typedef std::map<unsigned int, VolumeCache> VolumesCache;
     typedef std::set<int> InstanceIdxsList;
     typedef std::map<int, InstanceIdxsList> ObjectIdxsToInstanceIdxsMap;
 
+    class Clipboard
+    {
+        Model m_model;
+        Selection::EMode m_mode;
+
+    public:
+        void reset() { m_model.clear_objects(); }
+        bool is_empty() const { return m_model.objects.empty(); }
+
+        ModelObject* add_object() { return m_model.add_object(); }
+        ModelObject* get_object(unsigned int id) { return (id < (unsigned int)m_model.objects.size()) ? m_model.objects[id] : nullptr; }
+        const ModelObjectPtrs& get_objects() const { return m_model.objects; }
+
+        Selection::EMode get_mode() const { return m_mode; }
+        void set_mode(Selection::EMode mode) { m_mode = mode; }
+    };
+
+private:
     struct Cache
     {
         // Cache of GLVolume derived transformation matrices, valid during mouse dragging.
@@ -154,14 +173,22 @@ private:
     // Model, not owned.
     Model* m_model;
 
+    bool m_enabled;
     bool m_valid;
     EMode m_mode;
     EType m_type;
     // set of indices to m_volumes
     IndicesList m_list;
     Cache m_cache;
+    Clipboard m_clipboard;
     mutable BoundingBoxf3 m_bounding_box;
     mutable bool m_bounding_box_dirty;
+    // Bounding box of a selection, with no instance scaling applied. This bounding box
+    // is useful for absolute scaling of tilted objects in world coordinate space.
+    mutable BoundingBoxf3 m_unscaled_instance_bounding_box;
+    mutable bool m_unscaled_instance_bounding_box_dirty;
+    mutable BoundingBoxf3 m_scaled_instance_bounding_box;
+    mutable bool m_scaled_instance_bounding_box_dirty;
 
 #if ENABLE_RENDER_SELECTION_CENTER
     GLUquadricObj* m_quadric;
@@ -180,13 +207,16 @@ public:
     void set_volumes(GLVolumePtrs* volumes);
     bool init(bool useVBOs);
 
+    bool is_enabled() const { return m_enabled; }
+    void set_enabled(bool enable) { m_enabled = enable; }
+
     Model* get_model() const { return m_model; }
     void set_model(Model* model);
 
     EMode get_mode() const { return m_mode; }
     void set_mode(EMode mode) { m_mode = mode; }
 
-    void add(unsigned int volume_idx, bool as_single_selection = true);
+    void add(unsigned int volume_idx, bool as_single_selection = true, bool check_for_already_contained = false);
     void remove(unsigned int volume_idx);
 
     void add_object(unsigned int object_idx, bool as_single_selection = true);
@@ -200,6 +230,8 @@ public:
 
     void add_all();
 
+    // Update the selection based on the new instance IDs.
+	void instances_changed(const std::vector<size_t> &instance_ids_selected);
     // Update the selection based on the map from old indices to new indices after m_volumes changed.
     // If the current selection is by instance, this call may select newly added volumes, if they belong to already selected instances.
     void volumes_changed(const std::vector<size_t> &map_volume_old_to_new);
@@ -207,7 +239,7 @@ public:
 
     bool is_empty() const { return m_type == Empty; }
     bool is_wipe_tower() const { return m_type == WipeTower; }
-    bool is_modifier() const { return (m_type == SingleModifier) || (m_type == MultipleModifier); }
+    bool is_any_modifier() const { return is_single_modifier() || is_multiple_modifier(); }
     bool is_single_modifier() const { return m_type == SingleModifier; }
     bool is_multiple_modifier() const { return m_type == MultipleModifier; }
     bool is_single_full_instance() const;
@@ -216,11 +248,12 @@ public:
     bool is_multiple_full_object() const { return m_type == MultipleFullObject; }
     bool is_single_volume() const { return m_type == SingleVolume; }
     bool is_multiple_volume() const { return m_type == MultipleVolume; }
+    bool is_any_volume() const { return is_single_volume() || is_multiple_volume(); }
     bool is_mixed() const { return m_type == Mixed; }
     bool is_from_single_instance() const { return get_instance_idx() != -1; }
     bool is_from_single_object() const;
 
-    bool contains_volume(unsigned int volume_idx) const { return std::find(m_list.begin(), m_list.end(), volume_idx) != m_list.end(); }
+    bool contains_volume(unsigned int volume_idx) const { return m_list.find(volume_idx) != m_list.end(); }
     bool requires_uniform_scale() const;
 
     // Returns the the object id if the selection is from a single object, otherwise is -1
@@ -238,13 +271,17 @@ public:
 
     unsigned int volumes_count() const { return (unsigned int)m_list.size(); }
     const BoundingBoxf3& get_bounding_box() const;
+    // Bounding box of a selection, with no instance scaling applied. This bounding box
+    // is useful for absolute scaling of tilted objects in world coordinate space.
+    const BoundingBoxf3& get_unscaled_instance_bounding_box() const;
+    const BoundingBoxf3& get_scaled_instance_bounding_box() const;
 
     void start_dragging();
 
     void translate(const Vec3d& displacement, bool local = false);
     void rotate(const Vec3d& rotation, TransformationType transformation_type);
     void flattening_rotate(const Vec3d& normal);
-    void scale(const Vec3d& scale, bool local);
+    void scale(const Vec3d& scale, TransformationType transformation_type);
     void mirror(Axis axis);
 
     void translate(unsigned int object_idx, const Vec3d& displacement);
@@ -260,28 +297,36 @@ public:
 
     bool requires_local_axes() const;
 
+    void copy_to_clipboard();
+    void paste_from_clipboard();
+
+    const Clipboard& get_clipboard() const { return m_clipboard; }
+
 private:
-    void _update_valid();
-    void _update_type();
-    void _set_caches();
-    void _add_volume(unsigned int volume_idx);
-    void _add_instance(unsigned int object_idx, unsigned int instance_idx);
-    void _add_object(unsigned int object_idx);
-    void _remove_volume(unsigned int volume_idx);
-    void _remove_instance(unsigned int object_idx, unsigned int instance_idx);
-    void _remove_object(unsigned int object_idx);
-    void _calc_bounding_box() const;
-    void _render_selected_volumes() const;
-    void _render_synchronized_volumes() const;
-    void _render_bounding_box(const BoundingBoxf3& box, float* color) const;
-    void _render_sidebar_position_hints(const std::string& sidebar_field) const;
-    void _render_sidebar_rotation_hints(const std::string& sidebar_field) const;
-    void _render_sidebar_scale_hints(const std::string& sidebar_field) const;
-    void _render_sidebar_size_hints(const std::string& sidebar_field) const;
-    void _render_sidebar_position_hint(Axis axis) const;
-    void _render_sidebar_rotation_hint(Axis axis) const;
-    void _render_sidebar_scale_hint(Axis axis) const;
-    void _render_sidebar_size_hint(Axis axis, double length) const;
+    void update_valid();
+    void update_type();
+    void set_caches();
+    void do_add_volume(unsigned int volume_idx);
+    void do_add_instance(unsigned int object_idx, unsigned int instance_idx);
+    void do_add_object(unsigned int object_idx);
+    void do_remove_volume(unsigned int volume_idx);
+    void do_remove_instance(unsigned int object_idx, unsigned int instance_idx);
+    void do_remove_object(unsigned int object_idx);
+    void calc_bounding_box() const;
+    void calc_unscaled_instance_bounding_box() const;
+    void calc_scaled_instance_bounding_box() const;
+    void set_bounding_boxes_dirty() { m_bounding_box_dirty = true; m_unscaled_instance_bounding_box_dirty = true; m_scaled_instance_bounding_box_dirty = true; }
+    void render_selected_volumes() const;
+    void render_synchronized_volumes() const;
+    void render_bounding_box(const BoundingBoxf3& box, float* color) const;
+    void render_sidebar_position_hints(const std::string& sidebar_field) const;
+    void render_sidebar_rotation_hints(const std::string& sidebar_field) const;
+    void render_sidebar_scale_hints(const std::string& sidebar_field) const;
+    void render_sidebar_size_hints(const std::string& sidebar_field) const;
+    void render_sidebar_position_hint(Axis axis) const;
+    void render_sidebar_rotation_hint(Axis axis) const;
+    void render_sidebar_scale_hint(Axis axis) const;
+    void render_sidebar_size_hint(Axis axis, double length) const;
     enum SyncRotationType {
         // Do not synchronize rotation. Either not rotating at all, or rotating by world Z axis.
         SYNC_ROTATION_NONE = 0,
@@ -290,9 +335,13 @@ private:
         // Synchronize after rotation by an axis not parallel with Z.
         SYNC_ROTATION_GENERAL = 2,
     };
-    void _synchronize_unselected_instances(SyncRotationType sync_rotation_type);
-    void _synchronize_unselected_volumes();
-    void _ensure_on_bed();
+    void synchronize_unselected_instances(SyncRotationType sync_rotation_type);
+    void synchronize_unselected_volumes();
+    void ensure_on_bed();
+    bool is_from_fully_selected_instance(unsigned int volume_idx) const;
+
+    void paste_volumes_from_clipboard();
+    void paste_objects_from_clipboard();
 };
 
 } // namespace GUI

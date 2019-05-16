@@ -1,17 +1,14 @@
 #ifndef slic3r_OptionsGroup_hpp_
 #define slic3r_OptionsGroup_hpp_
 
-//#include <wx/wx.h>
 #include <wx/stattext.h>
 #include <wx/settings.h>
-//#include <wx/window.h>
 
 #include <map>
 #include <functional>
 
 #include "libslic3r/Config.hpp"
 #include "libslic3r/PrintConfig.hpp"
-// #include "libslic3r/libslic3r.h"
 
 #include "Field.hpp"
 #include "GUI_App.hpp"
@@ -72,7 +69,7 @@ private:
     std::vector<widget_t>	m_extra_widgets;//! {std::vector<widget_t>()};
 };
 
-using column_t = std::function<wxWindow*(wxWindow* parent, const Line&)>;//std::function<wxSizer*(const Line&)>;
+using column_t = std::function<wxWindow*(wxWindow* parent, const Line&)>;
 
 using t_optionfield_map = std::map<t_config_option_key, t_field>;
 using t_opt_map = std::map< std::string, std::pair<std::string, int> >;
@@ -82,16 +79,21 @@ class OptionsGroup {
 public:
     const bool		staticbox {true};
     const wxString	title {wxString("")};
-    size_t			label_width = 20 * wxGetApp().em_unit();// {200};
+    size_t			label_width = 20 ;// {200};
     wxSizer*		sizer {nullptr};
     column_t		extra_column {nullptr};
     t_change		m_on_change { nullptr };
+	// To be called when the field loses focus, to assign a new initial value to the field.
+	// Used by the relative position / rotation / scale manipulation fields of the Object Manipulation UI.
     t_kill_focus    m_fill_empty_value { nullptr };
     t_kill_focus    m_set_focus { nullptr };
 	std::function<DynamicPrintConfig()>	m_get_initial_config{ nullptr };
 	std::function<DynamicPrintConfig()>	m_get_sys_config{ nullptr };
 	std::function<bool()>	have_sys_config{ nullptr };
 
+    std::function<void(wxWindow* win)> rescale_extra_column_item { nullptr };
+    std::function<void(wxWindow* win)> rescale_near_label_widget { nullptr };
+    
     wxFont			sidetext_font {wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
     wxFont			label_font {wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
 	int				sidetext_width{ -1 };
@@ -191,6 +193,8 @@ protected:
 	std::map<t_config_option_key, Option>	m_options;
     wxWindow*				m_parent {nullptr};
     std::vector<ConfigOptionMode>           m_options_mode;
+    std::vector<wxWindow*>                  m_extra_column_item_ptrs;
+    std::vector<wxWindow*>                  m_near_label_widget_ptrs;
 
     /// Field list, contains unique_ptrs of the derived type.
     /// using types that need to know what it is beyond the public interface 
@@ -253,12 +257,13 @@ public:
 	void		back_to_initial_value(const std::string& opt_key) override;
 	void		back_to_sys_value(const std::string& opt_key) override;
 	void		back_to_config_value(const DynamicPrintConfig& config, const std::string& opt_key);
-    void		on_kill_focus(const std::string& opt_key) override;// { reload_config(); }
+    void		on_kill_focus(const std::string& opt_key) override;
 	void		reload_config();
     // return value shows visibility : false => all options are hidden
     void        Hide();
     void        Show(const bool show);
     bool        update_visibility(ConfigOptionMode mode);
+    void        msw_rescale();
 	boost::any	config_value(const std::string& opt_key, int opt_index, bool deserialize);
 	// return option value from config 
 	boost::any	get_config_value(const DynamicPrintConfig& config, const std::string& opt_key, int opt_index = -1);

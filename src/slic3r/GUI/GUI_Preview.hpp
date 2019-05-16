@@ -13,7 +13,7 @@ class wxStaticText;
 class wxChoice;
 class wxComboCtrl;
 class wxCheckBox;
-class PrusaDoubleSlider;
+class DoubleSlider;
 
 namespace Slic3r {
 
@@ -47,6 +47,7 @@ public:
 
     void select_view(const std::string& direction);
     void select_all();
+    void deselect_all();
     void delete_selected();
     void mirror_selection(Axis axis);
 
@@ -99,10 +100,11 @@ class Preview : public wxPanel
     bool m_loaded;
     bool m_enabled;
 
-    PrusaDoubleSlider* m_slider {nullptr};
+    DoubleSlider* m_slider {nullptr};
 
 public:
-    Preview(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar, DynamicPrintConfig* config, BackgroundSlicingProcess* process, GCodePreviewData* gcode_preview_data, std::function<void()> schedule_background_process = [](){});
+    Preview(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar, Model* model, DynamicPrintConfig* config, 
+        BackgroundSlicingProcess* process, GCodePreviewData* gcode_preview_data, std::function<void()> schedule_background_process = [](){});
     virtual ~Preview();
 
     wxGLCanvas* get_wxglcanvas() { return m_canvas_widget; }
@@ -119,8 +121,10 @@ public:
     void reload_print(bool keep_volumes = false);
     void refresh_print();
 
+    void msw_rescale();
+
 private:
-    bool init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar);
+    bool init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar, Model* model);
 
     void bind_event_handlers();
     void unbind_event_handlers();

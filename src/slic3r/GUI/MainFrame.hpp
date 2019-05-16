@@ -4,11 +4,13 @@
 #include "libslic3r/PrintConfig.hpp"
 
 #include <wx/frame.h>
+#include <wx/settings.h>
 #include <wx/string.h>
 
 #include <string>
 #include <map>
 
+#include "GUI_Utils.hpp"
 #include "Plater.hpp"
 #include "Event.hpp"
 
@@ -40,7 +42,7 @@ struct PresetTab {
     PrinterTechnology technology;
 };
 
-class MainFrame : public wxFrame
+class MainFrame : public DPIFrame
 {
     bool        m_loaded {false};
 
@@ -53,20 +55,37 @@ class MainFrame : public wxFrame
 
     PrintHostQueueDialog *m_printhost_queue_dlg;
 
-    std::string     get_base_name(const wxString &full_name) const;
+    std::string     get_base_name(const wxString &full_name, const char *extension = nullptr) const;
     std::string     get_dir_name(const wxString &full_name) const;
 
     void on_presets_changed(SimpleEvent&);
     void on_value_changed(wxCommandEvent&);
 
+    bool can_start_new_project() const;
     bool can_save() const;
     bool can_export_model() const;
+    bool can_export_supports() const;
     bool can_export_gcode() const;
     bool can_slice() const;
     bool can_change_view() const;
     bool can_select() const;
+    bool can_deselect() const;
     bool can_delete() const;
     bool can_delete_all() const;
+    bool can_reslice() const;
+
+    // MenuBar items changeable in respect to printer technology 
+    enum MenuItems
+    {                   //   FFF                  SLA
+        miExport = 0,   // Export G-code        Export
+        miMaterialTab,  // Filament Settings    Material Settings
+    };
+
+    // vector of a MenuBar items changeable in respect to printer technology 
+    std::vector<wxMenuItem*> m_changeable_menu_items;
+
+protected:
+    virtual void on_dpi_changed(const wxRect &suggested_rect);
 
 public:
     MainFrame();
@@ -74,10 +93,13 @@ public:
 
     Plater*     plater() { return m_plater; }
 
+    void        update_title();
+
     void        init_tabpanel();
     void        create_preset_tabs();
     void        add_created_tab(Tab* panel);
     void        init_menubar();
+    void        update_menubar();
 
     void        update_ui_from_settings();
     bool        is_loaded() const { return m_loaded; }

@@ -7,6 +7,8 @@
 #include <set>
 #include <boost/filesystem/path.hpp>
 
+class wxWindow;
+
 namespace Slic3r {
 
 namespace GUI {
@@ -29,7 +31,7 @@ public:
     // Load ini files of all types (print, filament, printer) from Slic3r::data_dir() / presets.
     // Load selections (current print, current filaments, current printer) from config.ini
     // This is done just once on application start up.
-    void            load_presets(const AppConfig &config);
+    void            load_presets(const AppConfig &config, const std::string &preferred_model_id = "");
 
     // Export selections (current print, current filaments, current printer) into config.ini
     void            export_selections(AppConfig &config);
@@ -127,6 +129,8 @@ public:
 
     static bool                 parse_color(const std::string &scolor, unsigned char *rgb_out);
 
+    void                        load_default_preset_bitmaps(wxWindow *window);
+
 private:
     std::string                 load_system_presets();
     // Merge one vendor's presets with the other vendor's presets, report duplicates.
@@ -139,14 +143,14 @@ private:
 
     // Load selections (current print, current filaments, current printer) from config.ini
     // This is done just once on application start up.
-    void                        load_selections(const AppConfig &config);
+    void                        load_selections(const AppConfig &config, const std::string &preferred_model_id = "");
 
     // Load print, filament & printer presets from a config. If it is an external config, then the name is extracted from the external path.
     // and the external config is just referenced, not stored into user profile directory.
     // If it is not an external config, then the config will be stored into the user profile directory.
     void                        load_config_file_config(const std::string &name_or_path, bool is_external, DynamicPrintConfig &&config);
     void                        load_config_file_config_bundle(const std::string &path, const boost::property_tree::ptree &tree);
-    bool                        load_compatible_bitmaps();
+    void                        load_compatible_bitmaps(wxWindow *window);
 
     DynamicPrintConfig          full_fff_config() const;
     DynamicPrintConfig          full_sla_config() const;

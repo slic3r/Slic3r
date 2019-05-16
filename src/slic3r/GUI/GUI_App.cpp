@@ -3,6 +3,8 @@
 #include "GUI_ObjectManipulation.hpp"
 #include "I18N.hpp"
 
+#include <algorithm>
+#include <iterator>
 #include <exception>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
@@ -14,10 +16,14 @@
 #include <wx/menu.h>
 #include <wx/menuitem.h>
 #include <wx/filedlg.h>
+#include <wx/progdlg.h>
 #include <wx/dir.h>
 #include <wx/wupdlock.h>
 #include <wx/filefn.h>
 #include <wx/sysopt.h>
+#include <wx/msgdlg.h>
+#include <wx/log.h>
+#include <wx/intl.h>
 
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Model.hpp"
@@ -31,7 +37,8 @@
 
 #include "../Utils/PresetUpdater.hpp"
 #include "../Utils/PrintHost.hpp"
-#include "ConfigWizard_private.hpp"
+#include "../Utils/MacDarkMode.hpp"
+#include "ConfigWizard.hpp"
 #include "slic3r/Config/Snapshot.hpp"
 #include "ConfigSnapshotDialog.hpp"
 #include "FirmwareDialog.hpp"
@@ -40,6 +47,10 @@
 #include "SysInfoDialog.hpp"
 #include "KBShortcutsDialog.hpp"
 
+#ifdef __WXMSW__
+#include <Shlobj.h>
+#endif // __WXMSW__
+
 namespace Slic3r {
 namespace GUI {
 
@@ -47,13 +58,14 @@ namespace GUI {
 wxString file_wildcards(FileType file_type, const std::string &custom_extension)
 {
     static const std::string defaults[FT_SIZE] = {
-        /* FT_STL */   "STL files (*.stl)|*.stl;*.STL",
-        /* FT_OBJ */   "OBJ files (*.obj)|*.obj;*.OBJ",
-        /* FT_AMF */   "AMF files (*.amf)|*.zip.amf;*.amf;*.AMF;*.xml;*.XML",
-        /* FT_3MF */   "3MF files (*.3mf)|*.3mf;*.3MF;",
-        /* FT_PRUSA */ "Prusa Control files (*.prusa)|*.prusa;*.PRUSA",
-        /* FT_GCODE */ "G-code files (*.gcode, *.gco, *.g, *.ngc)|*.gcode;*.GCODE;*.gco;*.GCO;*.g;*.G;*.ngc;*.NGC",
-        /* FT_MODEL */ "Known files (*.stl, *.obj, *.amf, *.xml, *.3mf, *.prusa)|*.stl;*.STL;*.obj;*.OBJ;*.amf;*.AMF;*.xml;*.XML;*.3mf;*.3MF;*.prusa;*.PRUSA",
+        /* FT_STL */     "STL files (*.stl)|*.stl;*.STL",
+        /* FT_OBJ */     "OBJ files (*.obj)|*.obj;*.OBJ",
+        /* FT_AMF */     "AMF files (*.amf)|*.zip.amf;*.amf;*.AMF;*.xml;*.XML",
+        /* FT_3MF */     "3MF files (*.3mf)|*.3mf;*.3MF;",
+        /* FT_PRUSA */   "Prusa Control files (*.prusa)|*.prusa;*.PRUSA",
+        /* FT_GCODE */   "G-code files (*.gcode, *.gco, *.g, *.ngc)|*.gcode;*.GCODE;*.gco;*.GCO;*.g;*.G;*.ngc;*.NGC",
+        /* FT_MODEL */   "Known files (*.stl, *.obj, *.amf, *.xml, *.3mf, *.prusa)|*.stl;*.STL;*.obj;*.OBJ;*.amf;*.AMF;*.xml;*.XML;*.3mf;*.3MF;*.prusa;*.PRUSA",
+        /* FT_PROJECT */ "Project files (*.3mf, *.amf)|*.3mf;*.3MF;*.amf;*.AMF",
 
         /* FT_INI */   "INI files (*.ini)|*.ini;*.INI",
         /* FT_SVG */   "SVG files (*.svg)|*.svg;*.SVG",
@@ -75,6 +87,52 @@ wxString file_wildcards(FileType file_type, const std::string &custom_extension)
 
 static std::string libslic3r_translate_callback(const char *s) { return wxGetTranslation(wxString(s, wxConvUTF8)).utf8_str().data(); }
 
+static void register_dpi_event()
+{
+#ifdef WIN32
+    enum { WM_DPICHANGED_ = 0x02e0 };
+
+    wxWindow::MSWRegisterMessageHandler(WM_DPICHANGED_, [](wxWindow *win, WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam) {
+        const int dpi = wParam & 0xffff;
+        const auto rect = reinterpret_cast<PRECT>(lParam);
+        const wxRect wxrect(wxPoint(rect->top, rect->left), wxPoint(rect->bottom, rect->right));
+
+        DpiChangedEvent evt(EVT_DPI_CHANGED, dpi, wxrect);
+        win->GetEventHandler()->AddPendingEvent(evt);
+
+        return true;
+    });
+#endif
+}
+
+
+static void generic_exception_handle()
+{
+    // Note: Some wxWidgets APIs use wxLogError() to report errors, eg. wxImage
+    // - see https://docs.wxwidgets.org/3.1/classwx_image.html#aa249e657259fe6518d68a5208b9043d0
+    //
+    // wxLogError typically goes around exception handling and display an error dialog some time
+    // after an error is logged even if exception handling and OnExceptionInMainLoop() take place.
+    // This is why we use wxLogError() here as well instead of a custom dialog, because it accumulates
+    // errors if multiple have been collected and displays just one error message for all of them.
+    // Otherwise we would get multiple error messages for one missing png, for example.
+    //
+    // If a custom error message window (or some other solution) were to be used, it would be necessary
+    // to turn off wxLogError() usage in wx APIs, most notably in wxImage
+    // - see https://docs.wxwidgets.org/trunk/classwx_image.html#aa32e5d3507cc0f8c3330135bc0befc6a
+
+    try {
+        throw;
+    } catch (const std::exception &ex) {
+        wxLogError("Internal error: %s", ex.what());
+        BOOST_LOG_TRIVIAL(error) << boost::format("Uncaught exception: %1%") % ex.what();
+        throw;
+    } catch (...) {
+        wxLogError("Unknown internal error");
+        BOOST_LOG_TRIVIAL(error) << "Uncaught exception: Unknown error";
+    }
+}
+
 IMPLEMENT_APP(GUI_App)
 
 GUI_App::GUI_App()
@@ -85,14 +143,23 @@ GUI_App::GUI_App()
 
 bool GUI_App::OnInit()
 {
+    try {
+        return on_init_inner();
+    } catch (...) {
+        generic_exception_handle();
+        return false;
+    }
+}
+
+bool GUI_App::on_init_inner()
+{
     // Verify resources path
     const wxString resources_dir = from_u8(Slic3r::resources_dir());
     wxCHECK_MSG(wxDirExists(resources_dir), false,
         wxString::Format("Resources path does not exist or is not a directory: %s", resources_dir));
-    wxCHECK_MSG(m_imgui->init(), false, "Failed to initialize ImGui");
 
-    SetAppName("Slic3r++-beta");
-    SetAppDisplayName("Slic3r++");
+    SetAppName(SLIC3R_APP_KEY);
+    SetAppDisplayName(SLIC3R_APP_NAME);
 
 // Enable this to get the default Win32 COMCTRL32 behavior of static boxes.
 //    wxSystemOptions::SetOption("msw.staticbox.optimized-paint", 0);
@@ -114,13 +181,7 @@ bool GUI_App::OnInit()
 
     // just checking for existence of Slic3r::data_dir is not enough : it may be an empty directory
     // supplied as argument to --datadir; in that case we should still run the wizard
-    try { 
-        preset_bundle->setup_directories();
-    } catch (const std::exception &ex) {
-        show_error(nullptr, ex.what());
-        // Exit the application.
-        return false;
-    }
+    preset_bundle->setup_directories();
 
     app_conf_exists = app_config->exists();
     // load settings
@@ -129,28 +190,35 @@ bool GUI_App::OnInit()
     app_config->set("version", SLIC3R_VERSION);
     app_config->save();
 
+#ifdef __WXMSW__
+    associate_3mf_files();
+#endif // __WXMSW__
+
     preset_updater = new PresetUpdater();
     Bind(EVT_SLIC3R_VERSION_ONLINE, [this](const wxCommandEvent &evt) {
         app_config->set("version_online", into_u8(evt.GetString()));
         app_config->save();
     });
 
+    // initialize label colors and fonts
+    init_label_colours();
+    init_fonts();
+
     load_language();
     //wxSetlocale(LC_NUMERIC, "C");
 
     // Suppress the '- default -' presets.
     preset_bundle->set_default_suppressed(app_config->get("no_defaults") == "1");
-	try {
-		preset_bundle->load_presets(*app_config);
-	} catch (const std::exception &ex) {
-        show_error(nullptr, ex.what());
-	}
+    try {
+        preset_bundle->load_presets(*app_config);
+    } catch (const std::exception &ex) {
+        show_error(nullptr, from_u8(ex.what()));
+    }
+
+    register_dpi_event();
 
     // Let the libslic3r know the callback, which will translate messages on demand.
     Slic3r::I18N::set_translate_callback(libslic3r_translate_callback);
-    // initialize label colors and fonts
-    init_label_colours();
-    init_fonts();
 
     // application frame
     if (wxImage::FindHandler(wxBITMAP_TYPE_PNG) == nullptr)
@@ -164,8 +232,8 @@ bool GUI_App::OnInit()
 
     Bind(wxEVT_IDLE, [this](wxIdleEvent& event)
     {
-		if (! plater_)
-			return;
+        if (! plater_)
+            return;
 
         if (app_config->dirty() && app_config->get("autosave") == "1")
             app_config->save();
@@ -176,7 +244,7 @@ bool GUI_App::OnInit()
         // and after MainFrame is created & shown.
         // The extra CallAfter() is needed because of Mac, where this is the only way
         // to popup a modal dialog on start without screwing combo boxes.
-        // This is ugly but I honestly found not better way to do it.
+        // This is ugly but I honestly found no better way to do it.
         // Neither wxShowEvent nor wxWindowCreateEvent work reliably.
         static bool once = true;
         if (once) {
@@ -187,12 +255,12 @@ bool GUI_App::OnInit()
                     mainframe->Close();
                 }
             } catch (const std::exception &ex) {
-                show_error(nullptr, ex.what());
+                show_error(nullptr, from_u8(ex.what()));
             }
 
             CallAfter([this] {
                 if (!config_wizard_startup(app_conf_exists)) {
-                    // Only notify if there was not wizard so as not to bother too much ...
+                    // Only notify if there was no wizard so as not to bother too much ...
                     preset_updater->slic3r_update_notify();
                 }
                 preset_updater->sync(preset_bundle);
@@ -203,7 +271,16 @@ bool GUI_App::OnInit()
     load_current_presets();
 
     mainframe->Show(true);
+
+    /* Temporary workaround for the correct behavior of the Scrolled sidebar panel:
+     * change min hight of object list to the normal min value (15 * wxGetApp().em_unit()) 
+     * after first whole Mainframe updating/layouting
+     */
+    if (obj_list()->GetMinSize().GetY() > 15 * em_unit())
+        obj_list()->SetMinSize(wxSize(-1, 15 * em_unit()));
+
     update_mode(); // update view mode after fix of the object_list size
+
     m_initialized = true;
     return true;
 }
@@ -221,16 +298,30 @@ unsigned GUI_App::get_colour_approx_luma(const wxColour &colour)
         ));
 }
 
+bool GUI_App::dark_mode()
+{
+    const unsigned luma = get_colour_approx_luma(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+    return luma < 128;
+}
+
+bool GUI_App::dark_mode_menus()
+{
+#if __APPLE__
+    return mac_dark_mode();
+#else
+    return dark_mode();
+#endif
+}
+
 void GUI_App::init_label_colours()
 {
-    auto luma = get_colour_approx_luma(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-    if (luma >= 128) {
-        m_color_label_modified = wxColour(252, 77, 1);
-        m_color_label_sys = wxColour(26, 132, 57);
-    }
-    else {
+    if (dark_mode()) {
         m_color_label_modified = wxColour(253, 111, 40);
         m_color_label_sys = wxColour(115, 220, 103);
+    }
+    else {
+        m_color_label_modified = wxColour(252, 77, 1);
+        m_color_label_sys = wxColour(26, 132, 57);
     }
     m_color_label_default = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
 }
@@ -262,6 +353,21 @@ void GUI_App::init_fonts()
 #endif /*__WXMAC__*/
 }
 
+void GUI_App::update_fonts(const MainFrame *main_frame)
+{
+    /* Only normal and bold fonts are used for an application rescale,
+     * because of under MSW small and normal fonts are the same.
+     * To avoid same rescaling twice, just fill this values
+     * from rescaled MainFrame
+     */
+	if (main_frame == nullptr)
+		main_frame = this->mainframe;
+    m_normal_font   = main_frame->normal_font();
+    m_small_font    = m_normal_font;
+    m_bold_font     = main_frame->normal_font().Bold();
+    m_em_unit       = main_frame->em_unit();
+}
+
 void GUI_App::set_label_clr_modified(const wxColour& clr) {
     m_color_label_modified = clr;
     auto clr_str = wxString::Format(wxT("#%02X%02X%02X"), clr.Red(), clr.Green(), clr.Blue());
@@ -280,9 +386,21 @@ void GUI_App::set_label_clr_sys(const wxColour& clr) {
 
 void GUI_App::recreate_GUI()
 {
+    // Weird things happen as the Paint messages are floating around the windows being destructed.
+    // Avoid the Paint messages by hiding the main window.
+    // Also the application closes much faster without these unnecessary screen refreshes.
+    // In addition, there were some crashes due to the Paint events sent to already destructed windows.
+    mainframe->Show(false);
+
+    const auto msg_name = _(L("Changing of an application language")) + dots;
+    wxProgressDialog dlg(msg_name, msg_name);
+    dlg.Pulse();
+
     // to make sure nobody accesses data from the soon-to-be-destroyed widgets:
     tabs_list.clear();
     plater_ = nullptr;
+
+    dlg.Update(10, _(L("Recreating")) + dots);
 
     MainFrame* topwindow = mainframe;
     mainframe = new MainFrame();
@@ -290,8 +408,12 @@ void GUI_App::recreate_GUI()
 
     if (topwindow) {
         SetTopWindow(mainframe);
+
+        dlg.Update(30, _(L("Recreating")) + dots);
         topwindow->Destroy();
     }
+
+    dlg.Update(80, _(L("Loading of current presets")) + dots);
 
     m_printhost_job_queue.reset(new PrintHostJobQueue(mainframe->printhost_queue_dlg()));
 
@@ -299,12 +421,22 @@ void GUI_App::recreate_GUI()
 
     mainframe->Show(true);
 
-    // On OSX the UI was not initialized correctly if the wizard was called
-    // before the UI was up and running.
-    CallAfter([]() {
-        // Run the config wizard, don't offer the "reset user profile" checkbox.
-        config_wizard_startup(true);
-    });
+    dlg.Update(90, _(L("Loading of a mode view")) + dots);
+
+    /* Temporary workaround for the correct behavior of the Scrolled sidebar panel:
+    * change min hight of object list to the normal min value (15 * wxGetApp().em_unit())
+    * after first whole Mainframe updating/layouting
+    */
+    if (obj_list()->GetMinSize().GetY() > 15 * em_unit())
+        obj_list()->SetMinSize(wxSize(-1, 15 * em_unit()));
+
+    update_mode();
+
+    // #ys_FIXME_delete_after_testing  Do we still need this  ?
+//     CallAfter([]() {
+//         // Run the config wizard, don't offer the "reset user profile" checkbox.
+//         config_wizard_startup(true);
+//     });
 }
 
 void GUI_App::system_info()
@@ -351,7 +483,7 @@ void GUI_App::update_ui_from_settings()
     mainframe->update_ui_from_settings();
 }
 
-void GUI_App::persist_window_geometry(wxTopLevelWindow *window)
+void GUI_App::persist_window_geometry(wxTopLevelWindow *window, bool default_maximized)
 {
     const std::string name = into_u8(window->GetName());
 
@@ -360,7 +492,7 @@ void GUI_App::persist_window_geometry(wxTopLevelWindow *window)
         event.Skip();
     });
 
-    window_pos_restore(window, name);
+    window_pos_restore(window, name, default_maximized);
 
     on_window_geometry(window, [=]() {
         window_pos_sanitize(window);
@@ -371,9 +503,9 @@ void GUI_App::load_project(wxWindow *parent, wxString& input_file)
 {
     input_file.Clear();
     wxFileDialog dialog(parent ? parent : GetTopWindow(),
-        _(L("Choose one file (3MF):")),
+        _(L("Choose one file (3MF/AMF):")),
         app_config->get_last_dir(), "",
-        file_wildcards(FT_3MF), wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+        file_wildcards(FT_PROJECT), wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
     if (dialog.ShowModal() == wxID_OK)
         input_file = dialog.GetPath();
@@ -391,66 +523,105 @@ void GUI_App::import_model(wxWindow *parent, wxArrayString& input_files)
         dialog.GetPaths(input_files);
 }
 
-// select language from the list of installed languages
-bool GUI_App::select_language(  wxArrayString & names,
-                                wxArrayLong & identifiers)
+bool GUI_App::switch_language()
 {
-    wxCHECK_MSG(names.Count() == identifiers.Count(), false,
-        _(L("Array of language names and identifiers should have the same size.")));
-    int init_selection = 0;
-    long current_language = m_wxLocale ? m_wxLocale->GetLanguage() : wxLANGUAGE_UNKNOWN;
-    for (auto lang : identifiers) {
-        if (lang == current_language)
-            break;
-        ++init_selection;
+    if (select_language()) {
+        save_language();
+        _3DScene::remove_all_canvases();
+        recreate_GUI();
+        return true;
+    } else {
+        return false;
     }
-    if (init_selection == identifiers.size())
-        init_selection = 0;
-    long index = wxGetSingleChoiceIndex(_(L("Select the language")), _(L("Language")),
-        names, init_selection);
-    if (index != -1)
-    {
-        m_wxLocale = new wxLocale;
-        m_wxLocale->Init(identifiers[index]);
+}
+
+// select language from the list of installed languages
+bool GUI_App::select_language()
+{
+    const auto langs = get_installed_languages();
+    wxArrayString names;
+    names.Alloc(langs.size());
+
+    int init_selection = -1;
+    const auto current_language = m_wxLocale ? m_wxLocale->GetLanguage() : wxLocale::GetSystemLanguage();
+
+    for (size_t i = 0; i < langs.size(); i++) {
+        const auto lang = langs[i]->Language;
+        const bool is_english = lang >= wxLANGUAGE_ENGLISH && lang <= wxLANGUAGE_ENGLISH_ZIMBABWE;
+
+        if (lang == current_language || (current_language == wxLANGUAGE_UNKNOWN && is_english)) {
+            init_selection = i;
+        }
+
+        names.Add(langs[i]->Description);
+    }
+
+    const long index = wxGetSingleChoiceIndex(
+        _(L("Select the language")),
+        _(L("Language")), names, init_selection >= 0 ? init_selection : 0);
+
+    if (index != -1) {
+        const wxLanguageInfo *lang = langs[index];
+        if (lang->Language == current_language) {
+            // There was no change
+            return false;
+        }
+
+        m_wxLocale = new wxLocale;    // FIXME: leak?
+        m_wxLocale->Init(lang->Language);
 		m_wxLocale->AddCatalogLookupPathPrefix(from_u8(localization_dir()));
-        m_wxLocale->AddCatalog(/*GetAppName()*/"Slic3r++");
+        m_wxLocale->AddCatalog(SLIC3R_APP_KEY);
 		//FIXME This is a temporary workaround, the correct solution is to switch to "C" locale during file import / export only.
 		//wxSetlocale(LC_NUMERIC, "C");
         Preset::update_suffix_modified();
-		m_imgui->set_language(m_wxLocale->GetCanonicalName().ToUTF8().data());
+        m_imgui->set_language(into_u8(lang->CanonicalName));
         return true;
     }
+
     return false;
 }
 
-// load language saved at application config
+// Load gettext translation files and activate them at the start of the application,
+// based on the "translation_language" key stored in the application config.
 bool GUI_App::load_language()
 {
     wxString language = wxEmptyString;
     if (app_config->has("translation_language"))
         language = app_config->get("translation_language");
 
-    if (language.IsEmpty())
-        return false;
-    wxArrayString	names;
-    wxArrayLong		identifiers;
-    get_installed_languages(names, identifiers);
-    for (size_t i = 0; i < identifiers.Count(); i++)
-    {
-        if (wxLocale::GetLanguageCanonicalName(identifiers[i]) == language)
-        {
-            m_wxLocale = new wxLocale;
-            m_wxLocale->Init(identifiers[i]);
-            m_wxLocale->AddCatalogLookupPathPrefix(from_u8(localization_dir()));
-            m_wxLocale->AddCatalog(/*GetAppName()*/"Slic3r++");
-			//FIXME This is a temporary workaround, the correct solution is to switch to "C" locale during file import / export only.
-            //wxSetlocale(LC_NUMERIC, "C");
-			Preset::update_suffix_modified();
-			m_imgui->set_language(m_wxLocale->GetCanonicalName().ToUTF8().data());
-            return true;
+    if (language.IsEmpty()) {
+        int lang = wxLocale::GetSystemLanguage();
+        if (lang != wxLANGUAGE_UNKNOWN) {
+            const wxLanguageInfo *info = wxLocale::GetLanguageInfo(lang);
+            if (info != nullptr)
+                language = info->CanonicalName;
         }
     }
-    return false;
+
+    const wxLanguageInfo *info = nullptr;
+    if (! language.IsEmpty()) {
+        const auto langs = get_installed_languages();
+        for (const wxLanguageInfo *this_info : langs)
+            if (this_info->CanonicalName == language) {
+                info = this_info;
+                break;
+            }
+    }
+
+    m_wxLocale = new wxLocale;
+    if (info == nullptr) {
+        m_wxLocale->Init(wxLANGUAGE_DEFAULT);
+        m_imgui->set_language("en");
+    } else {
+        m_wxLocale->Init(info->Language);
+        m_wxLocale->AddCatalogLookupPathPrefix(from_u8(localization_dir()));
+        m_wxLocale->AddCatalog(SLIC3R_APP_KEY);
+        m_imgui->set_language(into_u8(info->CanonicalName));
+    }
+    //FIXME This is a temporary workaround, the correct solution is to switch to "C" locale during file import / export only.
+    //wxSetlocale(LC_NUMERIC, "C");
+    Preset::update_suffix_modified();
+    return true;
 }
 
 // save language at application config
@@ -464,38 +635,31 @@ void GUI_App::save_language()
     app_config->save();
 }
 
-// get list of installed languages 
-void GUI_App::get_installed_languages(wxArrayString & names, wxArrayLong & identifiers)
+// Get a list of installed languages
+std::vector<const wxLanguageInfo*> GUI_App::get_installed_languages()
 {
-    names.Clear();
-    identifiers.Clear();
+    std::vector<const wxLanguageInfo*> res;
 
 	wxDir dir(from_u8(localization_dir()));
     wxString filename;
     const wxLanguageInfo * langinfo;
     wxString name = wxLocale::GetLanguageName(wxLANGUAGE_DEFAULT);
-    if (!name.IsEmpty())
-    {
-        names.Add(_(L("Default")));
-        identifiers.Add(wxLANGUAGE_DEFAULT);
+    if (!name.IsEmpty()) {
+        res.push_back(wxLocale::GetLanguageInfo(wxLANGUAGE_DEFAULT));
     }
-    for (bool cont = dir.GetFirst(&filename, wxEmptyString, wxDIR_DIRS);
-        cont; cont = dir.GetNext(&filename))
-    {
+
+    for (bool cont = dir.GetFirst(&filename, wxEmptyString, wxDIR_DIRS); cont; cont = dir.GetNext(&filename)) {
         langinfo = wxLocale::FindLanguageInfo(filename);
-        if (langinfo != NULL)
-        {
+        if (langinfo != NULL) {
             auto full_file_name = dir.GetName() + wxFileName::GetPathSeparator() +
-                filename + wxFileName::GetPathSeparator() +
-                /*GetAppName()*/"Slic3r++" + 
-                wxT(".mo");
-            if (wxFileExists(full_file_name))
-            {
-                names.Add(langinfo->Description);
-                identifiers.Add(langinfo->Language);
+                filename + wxFileName::GetPathSeparator() + SLIC3R_APP_KEY + wxT(".mo");
+            if (wxFileExists(full_file_name)) {
+                res.push_back(langinfo);
             }
         }
     }
+
+    return res;
 }
 
 Tab* GUI_App::get_tab(Preset::Type type)
@@ -565,7 +729,7 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Check(get_mode() == comAdvanced); }, config_id_base + ConfigMenuModeAdvanced);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Check(get_mode() == comExpert); }, config_id_base + ConfigMenuModeExpert);
 
-    local_menu->AppendSubMenu(mode_menu, _(L("Mode")), _(L("Slic3r View Mode")));
+    local_menu->AppendSubMenu(mode_menu, _(L("Mode")), wxString::Format(_(L("%s View Mode")), SLIC3R_APP_NAME));
     local_menu->AppendSeparator();
     local_menu->Append(config_id_base + ConfigMenuLanguage, _(L("Change Application &Language")));
     local_menu->AppendSeparator();
@@ -582,6 +746,12 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
             // Take a configuration snapshot.
             if (check_unsaved_changes()) {
                 wxTextEntryDialog dlg(nullptr, _(L("Taking configuration snapshot")), _(L("Snapshot name")));
+                
+                // set current normal font for dialog children, 
+                // because of just dlg.SetFont(normal_font()) has no result;
+                for (auto child : dlg.GetChildren())
+                    child->SetFont(normal_font());
+
                 if (dlg.ShowModal() == wxID_OK)
                     app_config->set("on_snapshot",
                     Slic3r::GUI::Config::SnapshotDB::singleton().take_snapshot(
@@ -614,16 +784,19 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
         }
         case ConfigMenuLanguage:
         {
-            wxArrayString names;
-            wxArrayLong identifiers;
-            get_installed_languages(names, identifiers);
-            if (select_language(names, identifiers)) {
-                save_language();
-                show_info(mainframe->m_tabpanel, _(L("Application will be restarted")), _(L("Attention!")));
-                _3DScene::remove_all_canvases();// remove all canvas before recreate GUI
-                //wxSetlocale(LC_NUMERIC, "C");
-                recreate_GUI();
-            }
+            /* Before change application language, let's check unsaved changes on 3D-Scene
+             * and draw user's attention to the application restarting after a language change
+             */
+            wxMessageDialog dialog(nullptr,
+                _(L("Switching the language will trigger application restart.\n"
+                    "You will lose content of the plater.")) + "\n\n" +
+                _(L("Do you want to proceed?")),
+                wxString(SLIC3R_APP_NAME) + " - " + _(L("Language selection")),
+                wxICON_QUESTION | wxOK | wxCANCEL);
+            if ( dialog.ShowModal() == wxID_CANCEL)
+                return;
+
+            switch_language();
             break;
         }
         case ConfigMenuFlashFirmware:
@@ -644,23 +817,23 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
 // to notify the user whether he is aware that some preset changes will be lost.
 bool GUI_App::check_unsaved_changes()
 {
-    std::string dirty;
+    wxString dirty;
     PrinterTechnology printer_technology = preset_bundle->printers.get_edited_preset().printer_technology();
     for (Tab *tab : tabs_list)
         if (tab->supports_printer_technology(printer_technology) && tab->current_preset_is_dirty())
             if (dirty.empty())
-                dirty = tab->name();
+                dirty = tab->title();
             else
-                dirty += std::string(", ") + tab->name();
+                dirty += wxString(", ") + tab->title();
     if (dirty.empty())
         // No changes, the application may close or reload presets.
         return true;
     // Ask the user.
-    auto dialog = new wxMessageDialog(mainframe,
-        _(L("You have unsaved changes ")) + dirty + _(L(". Discard changes and continue anyway?")),
-        _(L("Unsaved Presets")),
+    wxMessageDialog dialog(mainframe,
+        _(L("The presets on the following tabs were modified")) + ": " + dirty + "\n\n" + _(L("Discard changes and continue anyway?")),
+        wxString(SLIC3R_APP_NAME) + " - " + _(L("Unsaved Presets")),
         wxICON_QUESTION | wxYES_NO | wxNO_DEFAULT);
-    return dialog->ShowModal() == wxID_YES;
+    return dialog.ShowModal() == wxID_YES;
 }
 
 bool GUI_App::checked_tab(Tab* tab)
@@ -678,7 +851,7 @@ void GUI_App::load_current_presets()
 	this->plater()->set_printer_technology(printer_technology);
     for (Tab *tab : tabs_list)
 		if (tab->supports_printer_technology(printer_technology)) {
-			if (tab->name() == "printer")
+			if (tab->type() == Preset::TYPE_PRINTER)
 				static_cast<TabPrinter*>(tab)->update_pages();
 			tab->load_current_preset();
 		}
@@ -686,18 +859,7 @@ void GUI_App::load_current_presets()
 
 bool GUI_App::OnExceptionInMainLoop()
 {
-    try {
-        throw;
-    } catch (const std::exception &ex) {
-        const std::string error = (boost::format("Uncaught exception: %1%") % ex.what()).str();
-        BOOST_LOG_TRIVIAL(error) << error;
-        show_error(nullptr, from_u8(error));
-    } catch (...) {
-        const char *error = "Uncaught exception: Unknown error";
-        BOOST_LOG_TRIVIAL(error) << error;
-        show_error(nullptr, from_u8(error));
-    }
-
+    generic_exception_handle();
     return false;
 }
 
@@ -755,6 +917,11 @@ int GUI_App::extruders_cnt() const
            preset.config.option<ConfigOptionFloats>("nozzle_diameter")->values.size();
 }
 
+void GUI_App::open_web_page_localized(const std::string &http_address)
+{
+    wxLaunchDefaultBrowser(http_address + "&lng=" + this->current_language_code());
+}
+
 void GUI_App::window_pos_save(wxTopLevelWindow* window, const std::string &name)
 {
     if (name.empty()) { return; }
@@ -765,15 +932,21 @@ void GUI_App::window_pos_save(wxTopLevelWindow* window, const std::string &name)
     app_config->save();
 }
 
-void GUI_App::window_pos_restore(wxTopLevelWindow* window, const std::string &name)
+void GUI_App::window_pos_restore(wxTopLevelWindow* window, const std::string &name, bool default_maximized)
 {
     if (name.empty()) { return; }
     const auto config_key = (boost::format("window_%1%") % name).str();
 
-    if (! app_config->has(config_key)) { return; }
+    if (! app_config->has(config_key)) {
+        window->Maximize(default_maximized);
+        return;
+    }
 
     auto metrics = WindowMetrics::deserialize(app_config->get(config_key));
-    if (! metrics) { return; }
+    if (! metrics) {
+        window->Maximize(default_maximized);
+        return;
+    }
 
     window->SetSize(metrics->get_rect());
     window->Maximize(metrics->get_maximized());
@@ -822,6 +995,65 @@ void GUI_App::window_pos_sanitize(wxTopLevelWindow* window)
 //     //TODO use wxNotificationMessage ?
 // }
 
+
+#ifdef __WXMSW__
+void GUI_App::associate_3mf_files()
+{
+    // see as reference: https://stackoverflow.com/questions/20245262/c-program-needs-an-file-association
+
+    auto reg_set = [](HKEY hkeyHive, const wchar_t* pszVar, const wchar_t* pszValue)
+    {
+        wchar_t szValueCurrent[1000];
+        DWORD dwType;
+        DWORD dwSize = sizeof(szValueCurrent);
+
+        int iRC = ::RegGetValueW(hkeyHive, pszVar, nullptr, RRF_RT_ANY, &dwType, szValueCurrent, &dwSize);
+
+        bool bDidntExist = iRC == ERROR_FILE_NOT_FOUND;
+
+        if ((iRC != ERROR_SUCCESS) && !bDidntExist)
+            // an error occurred
+            return;
+
+        if (!bDidntExist)
+        {
+            if (dwType != REG_SZ)
+                // invalid type
+                return;
+
+            if (::wcscmp(szValueCurrent, pszValue) == 0)
+                // value already set
+                return;
+        }
+
+        DWORD dwDisposition;
+        HKEY hkey;
+        iRC = ::RegCreateKeyExW(hkeyHive, pszVar, 0, 0, 0, KEY_ALL_ACCESS, nullptr, &hkey, &dwDisposition);
+        if (iRC == ERROR_SUCCESS)
+            iRC = ::RegSetValueExW(hkey, L"", 0, REG_SZ, (BYTE*)pszValue, (::wcslen(pszValue) + 1) * sizeof(wchar_t));
+
+        RegCloseKey(hkey);
+    };
+
+    wchar_t app_path[MAX_PATH];
+    ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
+
+    std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
+    std::wstring prog_id = L"Slic3r++.1";
+    std::wstring prog_desc = L"Slic3r++";
+    std::wstring prog_command = prog_path + L" \"%1\"";
+    std::wstring reg_base = L"Software\\Classes";
+    std::wstring reg_extension = reg_base + L"\\.3mf";
+    std::wstring reg_prog_id = reg_base + L"\\" + prog_id;
+    std::wstring reg_prog_id_command = reg_prog_id + L"\\Shell\\Open\\Command";
+
+    reg_set(HKEY_CURRENT_USER, reg_extension.c_str(), prog_id.c_str());
+    reg_set(HKEY_CURRENT_USER, reg_prog_id.c_str(), prog_desc.c_str());
+    reg_set(HKEY_CURRENT_USER, reg_prog_id_command.c_str(), prog_command.c_str());
+
+    ::SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
+}
+#endif // __WXMSW__
 
 } // GUI
 } //Slic3r

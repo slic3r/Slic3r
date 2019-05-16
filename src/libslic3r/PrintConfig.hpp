@@ -387,8 +387,8 @@ protected:
                 m_keys.emplace_back(kvp.first);
                 const ConfigOptionDef *def = defs->get(kvp.first);
                 assert(def != nullptr);
-                if (def->default_value != nullptr)
-                    opt->set(def->default_value);
+                if (def->default_value)
+                    opt->set(def->default_value.get());
             }
         }
 
@@ -1212,16 +1212,14 @@ public:
     ConfigOptionFloat                       initial_layer_height;
     ConfigOptionFloat                       exposure_time;
     ConfigOptionFloat                       initial_exposure_time;
-    ConfigOptionFloats                      material_correction_printing;
-    ConfigOptionFloats                      material_correction_curing;
+    ConfigOptionFloats                      material_correction;
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
         OPT_PTR(initial_layer_height);
         OPT_PTR(exposure_time);
         OPT_PTR(initial_exposure_time);
-        OPT_PTR(material_correction_printing);
-        OPT_PTR(material_correction_curing);
+        OPT_PTR(material_correction);
     }
 };
 
@@ -1237,7 +1235,9 @@ public:
     ConfigOptionInt                         display_pixels_x;
     ConfigOptionInt                         display_pixels_y;
     ConfigOptionEnum<SLADisplayOrientation> display_orientation;
-    ConfigOptionFloats                      printer_correction;
+    ConfigOptionFloats                      relative_correction;
+    ConfigOptionFloat                       absolute_correction;
+    ConfigOptionFloat                       gamma_correction;
     ConfigOptionFloat                       fast_tilt_time;
     ConfigOptionFloat                       slow_tilt_time;
     ConfigOptionFloat                       area_fill;
@@ -1252,7 +1252,9 @@ protected:
         OPT_PTR(display_pixels_x);
         OPT_PTR(display_pixels_y);
         OPT_PTR(display_orientation);
-        OPT_PTR(printer_correction);
+        OPT_PTR(relative_correction);
+        OPT_PTR(absolute_correction);
+        OPT_PTR(gamma_correction);
         OPT_PTR(fast_tilt_time);
         OPT_PTR(slow_tilt_time);
         OPT_PTR(area_fill);

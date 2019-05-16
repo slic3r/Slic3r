@@ -4,6 +4,7 @@
 #include "BitmapCache.hpp"
 #include "Plater.hpp"
 #include "I18N.hpp"
+#include "wxExtensions.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -102,13 +103,14 @@ PresetBundle::PresetBundle() :
     }
 
 	// Load the default preset bitmaps.
-    this->prints       .load_bitmap_default("cog.png");
-    this->sla_prints   .load_bitmap_default("package_green.png");
-    this->filaments    .load_bitmap_default("spool.png");
-    this->sla_materials.load_bitmap_default("package_green.png");
-    this->printers     .load_bitmap_default("printer_empty.png");
-    this->printers     .load_bitmap_add("add.png");
-    this->load_compatible_bitmaps();
+	// #ys_FIXME_to_delete we'll load them later, using em_unit()
+//     this->prints       .load_bitmap_default("cog");
+//     this->sla_prints   .load_bitmap_default("package_green.png");
+//     this->filaments    .load_bitmap_default("spool.png");
+//     this->sla_materials.load_bitmap_default("package_green.png");
+//     this->printers     .load_bitmap_default("printer_empty.png");
+//     this->printers     .load_bitmap_add("add.png");
+//     this->load_compatible_bitmaps();
 
     // Re-activate the default presets, so their "edited" preset copies will be updated with the additional configuration values above.
     this->prints       .select_preset(0);
@@ -189,7 +191,7 @@ void PresetBundle::setup_directories()
     }
 }
 
-void PresetBundle::load_presets(const AppConfig &config)
+void PresetBundle::load_presets(const AppConfig &config, const std::string &preferred_model_id)
 {
     // First load the vendor specific system presets.
     std::string errors_cummulative = this->load_system_presets();
@@ -232,7 +234,7 @@ void PresetBundle::load_presets(const AppConfig &config)
     if (! errors_cummulative.empty())
         throw std::runtime_error(errors_cummulative);
 
-    this->load_selections(config);
+    this->load_selections(config, preferred_model_id);
 }
 
 // Load system presets into this PresetBundle.
@@ -322,7 +324,7 @@ void PresetBundle::load_installed_printers(const AppConfig &config)
 
 // Load selections (current print, current filaments, current printer) from config.ini
 // This is done on application start up or after updates are applied.
-void PresetBundle::load_selections(const AppConfig &config)
+void PresetBundle::load_selections(const AppConfig &config, const std::string &preferred_model_id)
 {
 	// Update visibility of presets based on application vendor / model / variant configuration.
 	this->load_installed_printers(config);
@@ -334,38 +336,37 @@ void PresetBundle::load_selections(const AppConfig &config)
     std::string initial_sla_material_profile_name = remove_ini_suffix(config.get("presets", "sla_material"));
 	std::string initial_printer_profile_name      = remove_ini_suffix(config.get("presets", "printer"));
 
-	// Activate print / filament / printer profiles from the config.
-	// If the printer profile enumerated by the config are not visible, select an alternate preset.
+    // Activate print / filament / printer profiles from either the config,
+    // or from the preferred_model_id suggestion passed in by ConfigWizard.
+    // If the printer profile enumerated by the config are not visible, select an alternate preset.
     // Do not select alternate profiles for the print / filament profiles as those presets
     // will be selected by the following call of this->update_compatible(true).
-    printers.select_preset_by_name(initial_printer_profile_name, true);
-    PrinterTechnology printer_technology = printers.get_selected_preset().printer_technology();
-    if (printer_technology == ptFFF) {
-        prints.select_preset_by_name_strict(initial_print_profile_name);
-        filaments.select_preset_by_name_strict(initial_filament_profile_name);
-        sla_prints.select_preset_by_name(initial_sla_material_profile_name, true);
-        sla_materials.select_preset_by_name(initial_sla_material_profile_name, true);
-    } else {
-        prints.select_preset_by_name(initial_print_profile_name, true);
-        filaments.select_preset_by_name(initial_filament_profile_name, true);
-        sla_prints.select_preset_by_name_strict(initial_sla_material_profile_name);
-        sla_materials.select_preset_by_name_strict(initial_sla_material_profile_name);
-    }
 
-    if (printers.get_selected_preset().printer_technology() == ptFFF) {
-        // Load the names of the other filament profiles selected for a multi-material printer.
-        auto   *nozzle_diameter = dynamic_cast<const ConfigOptionFloats*>(printers.get_selected_preset().config.option("nozzle_diameter"));
-        size_t  num_extruders = nozzle_diameter->values.size();
-        this->filament_presets = { initial_filament_profile_name };
-        for (unsigned int i = 1; i < (unsigned int)num_extruders; ++i) {
-            char name[64];
-            sprintf(name, "filament_%d", i);
-            if (!config.has("presets", name))
-                break;
-            this->filament_presets.emplace_back(remove_ini_suffix(config.get("presets", name)));
-        }
-        // Do not define the missing filaments, so that the update_compatible() will use the preferred filaments.
-        this->filament_presets.resize(num_extruders, "");
+    const Preset *initial_printer = printers.find_preset(initial_printer_profile_name);
+    const Preset *preferred_printer = printers.find_by_model_id(preferred_model_id);
+    printers.select_preset_by_name(
+        (preferred_printer != nullptr && (initial_printer == nullptr || !initial_printer->is_visible)) ? 
+            preferred_printer->name : 
+            initial_printer_profile_name,
+        true);
+
+    // Selects the profile, leaves it to -1 if the initial profile name is empty or if it was not found.
+    prints.select_preset_by_name_strict(initial_print_profile_name);
+    filaments.select_preset_by_name_strict(initial_filament_profile_name);
+	sla_prints.select_preset_by_name_strict(initial_sla_print_profile_name);
+    sla_materials.select_preset_by_name_strict(initial_sla_material_profile_name);
+
+    // Load the names of the other filament profiles selected for a multi-material printer.
+    // Load it even if the current printer technology is SLA.
+    // The possibly excessive filament names will be later removed with this->update_multi_material_filament_presets()
+    // once the FFF technology gets selected.
+    this->filament_presets = { filaments.get_selected_preset_name() };
+    for (unsigned int i = 1; i < 1000; ++ i) {
+        char name[64];
+        sprintf(name, "filament_%d", i);
+        if (! config.has("presets", name))
+            break;
+        this->filament_presets.emplace_back(remove_ini_suffix(config.get("presets", name)));
     }
 
     // Update visibility of presets based on their compatibility with the active printer.
@@ -394,49 +395,41 @@ void PresetBundle::export_selections(AppConfig &config)
     config.set("presets", "printer",      printers.get_selected_preset_name());
 }
 
-bool PresetBundle::load_compatible_bitmaps()
+void PresetBundle::load_compatible_bitmaps(wxWindow *window)
 {
-    const std::string path_bitmap_compatible   = "flag-green-icon.png";
-    const std::string path_bitmap_incompatible = "flag-red-icon.png";
-    const std::string path_bitmap_lock         = "sys_lock.png";//"lock.png";
-	const std::string path_bitmap_lock_open    = "sys_unlock.png";//"lock_open.png";
-    bool loaded_compatible   = m_bitmapCompatible  ->LoadFile(
-        wxString::FromUTF8(Slic3r::var(path_bitmap_compatible).c_str()), wxBITMAP_TYPE_PNG);
-    bool loaded_incompatible = m_bitmapIncompatible->LoadFile(
-        wxString::FromUTF8(Slic3r::var(path_bitmap_incompatible).c_str()), wxBITMAP_TYPE_PNG);
-    bool loaded_lock = m_bitmapLock->LoadFile(
-        wxString::FromUTF8(Slic3r::var(path_bitmap_lock).c_str()), wxBITMAP_TYPE_PNG);
-    bool loaded_lock_open = m_bitmapLockOpen->LoadFile(
-        wxString::FromUTF8(Slic3r::var(path_bitmap_lock_open).c_str()), wxBITMAP_TYPE_PNG);
-    if (loaded_compatible) {
-        prints       .set_bitmap_compatible(m_bitmapCompatible);
-        filaments    .set_bitmap_compatible(m_bitmapCompatible);
-        sla_prints   .set_bitmap_compatible(m_bitmapCompatible);
-        sla_materials.set_bitmap_compatible(m_bitmapCompatible);
-//        printers .set_bitmap_compatible(m_bitmapCompatible);
-    }
-    if (loaded_incompatible) {
-        prints       .set_bitmap_incompatible(m_bitmapIncompatible);
-        filaments    .set_bitmap_incompatible(m_bitmapIncompatible);
-        sla_prints   .set_bitmap_incompatible(m_bitmapIncompatible);
-        sla_materials.set_bitmap_incompatible(m_bitmapIncompatible);
-//        printers .set_bitmap_incompatible(m_bitmapIncompatible);
-    }
-    if (loaded_lock) {
-        prints       .set_bitmap_lock(m_bitmapLock);
-        filaments    .set_bitmap_lock(m_bitmapLock);
-        sla_prints   .set_bitmap_lock(m_bitmapLock);
-        sla_materials.set_bitmap_lock(m_bitmapLock);
-        printers     .set_bitmap_lock(m_bitmapLock);
-    }
-    if (loaded_lock_open) {
-        prints       .set_bitmap_lock_open(m_bitmapLock);
-        filaments    .set_bitmap_lock_open(m_bitmapLock);
-        sla_prints   .set_bitmap_lock_open(m_bitmapLock);
-        sla_materials.set_bitmap_lock_open(m_bitmapLock);
-        printers     .set_bitmap_lock_open(m_bitmapLock);
-    }
-    return loaded_compatible && loaded_incompatible && loaded_lock && loaded_lock_open;
+    // We don't actually pass the window pointer here and instead generate
+    // a low DPI bitmap, because the wxBitmapComboBox and wxDataViewCtrl don't support
+    // high DPI bitmaps very well, they compute their dimensions wrong.
+    // TODO: Update this when fixed in wxWidgets
+    // See also PresetCollection::load_bitmap_default() and PresetCollection::load_bitmap_add()
+
+    (void)window;
+    *m_bitmapCompatible     = create_scaled_bitmap(nullptr, "flag_green");
+    *m_bitmapIncompatible   = create_scaled_bitmap(nullptr, "flag_red");
+    *m_bitmapLock           = create_scaled_bitmap(nullptr, "lock_closed");
+    *m_bitmapLockOpen       = create_scaled_bitmap(nullptr, "lock_open");
+
+    prints       .set_bitmap_compatible(m_bitmapCompatible);
+    filaments    .set_bitmap_compatible(m_bitmapCompatible);
+    sla_prints   .set_bitmap_compatible(m_bitmapCompatible);
+    sla_materials.set_bitmap_compatible(m_bitmapCompatible);
+
+    prints       .set_bitmap_incompatible(m_bitmapIncompatible);
+    filaments    .set_bitmap_incompatible(m_bitmapIncompatible);
+    sla_prints   .set_bitmap_incompatible(m_bitmapIncompatible);
+    sla_materials.set_bitmap_incompatible(m_bitmapIncompatible);
+
+    prints       .set_bitmap_lock(m_bitmapLock);
+    filaments    .set_bitmap_lock(m_bitmapLock);
+    sla_prints   .set_bitmap_lock(m_bitmapLock);
+    sla_materials.set_bitmap_lock(m_bitmapLock);
+    printers     .set_bitmap_lock(m_bitmapLock);
+
+    prints       .set_bitmap_lock_open(m_bitmapLock);
+    filaments    .set_bitmap_lock_open(m_bitmapLock);
+    sla_prints   .set_bitmap_lock_open(m_bitmapLock);
+    sla_materials.set_bitmap_lock_open(m_bitmapLock);
+    printers     .set_bitmap_lock_open(m_bitmapLock);
 }
 
 DynamicPrintConfig PresetBundle::full_config() const
@@ -1438,6 +1431,25 @@ bool PresetBundle::parse_color(const std::string &scolor, unsigned char *rgb_out
     return true;
 }
 
+void PresetBundle::load_default_preset_bitmaps(wxWindow *window)
+{
+    // Clear bitmap cache, before load new scaled default preset bitmaps 
+    m_bitmapCache->clear();
+    this->prints.clear_bitmap_cache();
+    this->sla_prints.clear_bitmap_cache();
+    this->filaments.clear_bitmap_cache();
+    this->sla_materials.clear_bitmap_cache();
+    this->printers.clear_bitmap_cache();
+
+    this->prints.load_bitmap_default(window, "cog");
+    this->sla_prints.load_bitmap_default(window, "cog");
+    this->filaments.load_bitmap_default(window, "spool.png");
+    this->sla_materials.load_bitmap_default(window, "resin");
+    this->printers.load_bitmap_default(window, "printer");
+    this->printers.load_bitmap_add(window, "add.png");
+    this->load_compatible_bitmaps(window);
+}
+
 void PresetBundle::update_platter_filament_ui(unsigned int idx_extruder, GUI::PresetComboBox *ui)
 {
     if (ui == nullptr || this->printers.get_edited_preset().printer_technology() == ptSLA ||
@@ -1463,6 +1475,18 @@ void PresetBundle::update_platter_filament_ui(unsigned int idx_extruder, GUI::Pr
 	wxString selected_str = "";
 	if (!this->filaments().front().is_visible)
         ui->set_label_marker(ui->Append(PresetCollection::separator(L("System presets")), wxNullBitmap));
+
+    /* It's supposed that standard size of an icon is 16px*16px for 100% scaled display.
+     * So set sizes for solid_colored icons used for filament preset 
+     * and scale them in respect to em_unit value
+     */
+    const float scale_f = ui->em_unit() * 0.1f;
+    const int icon_height       = 16 * scale_f + 0.5f;
+    const int normal_icon_width = 16 * scale_f + 0.5f;
+    const int space_icon_width  = 2  * scale_f + 0.5f;
+    const int wide_icon_width   = 24 * scale_f + 0.5f;
+    const int thin_icon_width   = 8  * scale_f + 0.5f;
+
 	for (int i = this->filaments().front().is_visible ? 0 : 1; i < int(this->filaments().size()); ++i) {
         const Preset &preset    = this->filaments.preset(i);
         bool          selected  = this->filament_presets[idx_extruder] == preset.name;
@@ -1486,17 +1510,17 @@ void PresetBundle::update_platter_filament_ui(unsigned int idx_extruder, GUI::Pr
             std::vector<wxBitmap> bmps;
             if (wide_icons)
                 // Paint a red flag for incompatible presets.
-                bmps.emplace_back(preset.is_compatible ? m_bitmapCache->mkclear(16, 16) : *m_bitmapIncompatible);
+                bmps.emplace_back(preset.is_compatible ? m_bitmapCache->mkclear(normal_icon_width, icon_height) : *m_bitmapIncompatible);
             // Paint the color bars.
             parse_color(filament_rgb, rgb);
-            bmps.emplace_back(m_bitmapCache->mksolid(single_bar ? 24 : 16, 16, rgb));
+            bmps.emplace_back(m_bitmapCache->mksolid(single_bar ? wide_icon_width : normal_icon_width, icon_height, rgb));
             if (! single_bar) {
                 parse_color(extruder_rgb, rgb);
-                bmps.emplace_back(m_bitmapCache->mksolid(8,  16, rgb));
+                bmps.emplace_back(m_bitmapCache->mksolid(thin_icon_width, icon_height, rgb));
             }
             // Paint a lock at the system presets.
-            bmps.emplace_back(m_bitmapCache->mkclear(2, 16));
-			bmps.emplace_back((preset.is_system || preset.is_default) ? *m_bitmapLock : m_bitmapCache->mkclear(16, 16));
+            bmps.emplace_back(m_bitmapCache->mkclear(space_icon_width, icon_height));
+            bmps.emplace_back((preset.is_system || preset.is_default) ? *m_bitmapLock : m_bitmapCache->mkclear(normal_icon_width, icon_height));
 //                 (preset.is_dirty ? *m_bitmapLockOpen : *m_bitmapLock) : m_bitmapCache->mkclear(16, 16));
             bitmap = m_bitmapCache->insert(bitmap_key, bmps);
 		}
@@ -1531,6 +1555,10 @@ void PresetBundle::update_platter_filament_ui(unsigned int idx_extruder, GUI::Pr
 	ui->SetToolTip(ui->GetString(selected_preset_item));
     ui->check_selection();
     ui->Thaw();
+
+    // Update control min size after rescale (changed Display DPI under MSW)
+    if (ui->GetMinWidth() != 20 * ui->em_unit())
+        ui->SetMinSize(wxSize(20 * ui->em_unit(), ui->GetSize().GetHeight()));
 }
 
 void PresetBundle::set_default_suppressed(bool default_suppressed)

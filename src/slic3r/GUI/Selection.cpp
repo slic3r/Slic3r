@@ -6,6 +6,7 @@
 #include "GUI_ObjectManipulation.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Gizmos/GLGizmoBase.hpp"
+#include "slic3r/GUI/3DScene.hpp"
 
 #include <GL/glew.h>
 
@@ -49,13 +50,14 @@ Selection::VolumeCache::VolumeCache(const Geometry::Transformation& volume_trans
 Selection::Selection()
     : m_volumes(nullptr)
     , m_model(nullptr)
+    , m_enabled(false)
     , m_mode(Instance)
     , m_type(Empty)
     , m_valid(false)
-    , m_bounding_box_dirty(true)
     , m_curved_arrow(16)
     , m_scale_factor(1.0f)
 {
+    this->set_bounding_boxes_dirty();
 #if ENABLE_RENDER_SELECTION_CENTER
     m_quadric = ::gluNewQuadric();
     if (m_quadric != nullptr)
@@ -74,7 +76,7 @@ Selection::~Selection()
 void Selection::set_volumes(GLVolumePtrs* volumes)
 {
     m_volumes = volumes;
-    _update_valid();
+    update_valid();
 }
 
 bool Selection::init(bool useVBOs)
@@ -94,10 +96,10 @@ bool Selection::init(bool useVBOs)
 void Selection::set_model(Model* model)
 {
     m_model = model;
-    _update_valid();
+    update_valid();
 }
 
-void Selection::add(unsigned int volume_idx, bool as_single_selection)
+void Selection::add(unsigned int volume_idx, bool as_single_selection, bool check_for_already_contained)
 {
     if (!m_valid || ((unsigned int)m_volumes->size() <= volume_idx))
         return;
@@ -107,40 +109,46 @@ void Selection::add(unsigned int volume_idx, bool as_single_selection)
     if (is_wipe_tower() && volume->is_wipe_tower)
         return;
 
+    bool keep_instance_mode = (m_mode == Instance) && !as_single_selection;
+    bool already_contained = check_for_already_contained && contains_volume(volume_idx);
+
     // resets the current list if needed
-    bool needs_reset = as_single_selection;
+    bool needs_reset = as_single_selection && !already_contained;
     needs_reset |= volume->is_wipe_tower;
     needs_reset |= is_wipe_tower() && !volume->is_wipe_tower;
-    needs_reset |= !is_modifier() && volume->is_modifier;
-    needs_reset |= is_modifier() && !volume->is_modifier;
+    needs_reset |= as_single_selection && !is_any_modifier() && volume->is_modifier;
+    needs_reset |= is_any_modifier() && !volume->is_modifier;
 
     if (needs_reset)
         clear();
 
-    if (volume->is_modifier)
-        m_mode = Volume;
-    else if (!contains_volume(volume_idx))
-        m_mode = Instance;
-    // else -> keep current mode
+    if (!already_contained || needs_reset)
+    {
+        if (!keep_instance_mode)
+            m_mode = volume->is_modifier ? Volume : Instance;
+    }
+    else
+      // keep current mode
+      return;
 
     switch (m_mode)
     {
     case Volume:
     {
-        if (volume->volume_idx() >= 0 && (is_empty() || (volume->instance_idx() == get_instance_idx())))
-            _add_volume(volume_idx);
+        if ((volume->volume_idx() >= 0) && (is_empty() || (volume->instance_idx() == get_instance_idx())))
+            do_add_volume(volume_idx);
 
         break;
     }
     case Instance:
     {
-        _add_instance(volume->object_idx(), volume->instance_idx());
+        do_add_instance(volume->object_idx(), volume->instance_idx());
         break;
     }
     }
 
-    _update_type();
-    m_bounding_box_dirty = true;
+    update_type();
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::remove(unsigned int volume_idx)
@@ -154,18 +162,18 @@ void Selection::remove(unsigned int volume_idx)
     {
     case Volume:
     {
-        _remove_volume(volume_idx);
+        do_remove_volume(volume_idx);
         break;
     }
     case Instance:
     {
-        _remove_instance(volume->object_idx(), volume->instance_idx());
+        do_remove_instance(volume->object_idx(), volume->instance_idx());
         break;
     }
     }
 
-    _update_type();
-    m_bounding_box_dirty = true;
+    update_type();
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::add_object(unsigned int object_idx, bool as_single_selection)
@@ -179,10 +187,10 @@ void Selection::add_object(unsigned int object_idx, bool as_single_selection)
 
     m_mode = Instance;
 
-    _add_object(object_idx);
+    do_add_object(object_idx);
 
-    _update_type();
-    m_bounding_box_dirty = true;
+    update_type();
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::remove_object(unsigned int object_idx)
@@ -190,10 +198,10 @@ void Selection::remove_object(unsigned int object_idx)
     if (!m_valid)
         return;
 
-    _remove_object(object_idx);
+    do_remove_object(object_idx);
 
-    _update_type();
-    m_bounding_box_dirty = true;
+    update_type();
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::add_instance(unsigned int object_idx, unsigned int instance_idx, bool as_single_selection)
@@ -207,10 +215,10 @@ void Selection::add_instance(unsigned int object_idx, unsigned int instance_idx,
 
     m_mode = Instance;
 
-    _add_instance(object_idx, instance_idx);
+    do_add_instance(object_idx, instance_idx);
 
-    _update_type();
-    m_bounding_box_dirty = true;
+    update_type();
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::remove_instance(unsigned int object_idx, unsigned int instance_idx)
@@ -218,10 +226,10 @@ void Selection::remove_instance(unsigned int object_idx, unsigned int instance_i
     if (!m_valid)
         return;
 
-    _remove_instance(object_idx, instance_idx);
+    do_remove_instance(object_idx, instance_idx);
 
-    _update_type();
-    m_bounding_box_dirty = true;
+    update_type();
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::add_volume(unsigned int object_idx, unsigned int volume_idx, int instance_idx, bool as_single_selection)
@@ -241,12 +249,12 @@ void Selection::add_volume(unsigned int object_idx, unsigned int volume_idx, int
         if ((v->object_idx() == object_idx) && (v->volume_idx() == volume_idx))
         {
             if ((instance_idx != -1) && (v->instance_idx() == instance_idx))
-                _add_volume(i);
+                do_add_volume(i);
         }
     }
 
-    _update_type();
-    m_bounding_box_dirty = true;
+    update_type();
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::remove_volume(unsigned int object_idx, unsigned int volume_idx)
@@ -258,11 +266,11 @@ void Selection::remove_volume(unsigned int object_idx, unsigned int volume_idx)
     {
         GLVolume* v = (*m_volumes)[i];
         if ((v->object_idx() == object_idx) && (v->volume_idx() == volume_idx))
-            _remove_volume(i);
+            do_remove_volume(i);
     }
 
-    _update_type();
-    m_bounding_box_dirty = true;
+    update_type();
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::add_all()
@@ -276,11 +284,11 @@ void Selection::add_all()
     for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i)
     {
         if (!(*m_volumes)[i]->is_wipe_tower)
-            _add_volume(i);
+            do_add_volume(i);
     }
 
-    _update_type();
-    m_bounding_box_dirty = true;
+    update_type();
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::clear()
@@ -295,11 +303,27 @@ void Selection::clear()
 
     m_list.clear();
 
-    _update_type();
-    m_bounding_box_dirty = true;
+    update_type();
+    this->set_bounding_boxes_dirty();
 
     // resets the cache in the sidebar
     wxGetApp().obj_manipul()->reset_cache();
+}
+
+// Update the selection based on the new instance IDs.
+void Selection::instances_changed(const std::vector<size_t> &instance_ids_selected)
+{
+    assert(m_valid);
+    assert(m_mode == Instance);
+    m_list.clear();
+    for (unsigned int volume_idx = 0; volume_idx < (unsigned int)m_volumes->size(); ++ volume_idx) {
+        const GLVolume *volume = (*m_volumes)[volume_idx];
+        auto it = std::lower_bound(instance_ids_selected.begin(), instance_ids_selected.end(), volume->geometry_id.second);
+		if (it != instance_ids_selected.end() && *it == volume->geometry_id.second)
+            this->do_add_volume(volume_idx);
+    }
+    update_type();
+    this->set_bounding_boxes_dirty();
 }
 
 // Update the selection based on the map from old indices to new indices after m_volumes changed.
@@ -307,40 +331,17 @@ void Selection::clear()
 void Selection::volumes_changed(const std::vector<size_t> &map_volume_old_to_new)
 {
     assert(m_valid);
-
-    // 1) Update the selection set.
+    assert(m_mode == Volume);
     IndicesList list_new;
-    std::vector<std::pair<unsigned int, unsigned int>> model_instances;
-    for (unsigned int idx : m_list) {
+    for (unsigned int idx : m_list)
         if (map_volume_old_to_new[idx] != size_t(-1)) {
             unsigned int new_idx = (unsigned int)map_volume_old_to_new[idx];
+            assert((*m_volumes)[new_idx]->selected);
             list_new.insert(new_idx);
-            if (m_mode == Instance) {
-                // Save the object_idx / instance_idx pair of selected old volumes,
-                // so we may add the newly added volumes of the same object_idx / instance_idx pair
-                // to the selection.
-                const GLVolume *volume = (*m_volumes)[new_idx];
-                model_instances.emplace_back(volume->object_idx(), volume->instance_idx());
-            }
         }
-    }
     m_list = std::move(list_new);
-
-    if (!model_instances.empty()) {
-        // Instance selection mode. Add the newly added volumes of the same object_idx / instance_idx pair
-        // to the selection.
-        assert(m_mode == Instance);
-        sort_remove_duplicates(model_instances);
-        for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i) {
-            const GLVolume* volume = (*m_volumes)[i];
-            for (const std::pair<int, int> &model_instance : model_instances)
-                if (volume->object_idx() == model_instance.first && volume->instance_idx() == model_instance.second)
-                    this->_add_volume(i);
-        }
-    }
-
-    _update_type();
-    m_bounding_box_dirty = true;
+    update_type();
+    this->set_bounding_boxes_dirty();
 }
 
 bool Selection::is_single_full_instance() const
@@ -420,9 +421,23 @@ const GLVolume* Selection::get_volume(unsigned int volume_idx) const
 const BoundingBoxf3& Selection::get_bounding_box() const
 {
     if (m_bounding_box_dirty)
-        _calc_bounding_box();
+        calc_bounding_box();
 
     return m_bounding_box;
+}
+
+const BoundingBoxf3& Selection::get_unscaled_instance_bounding_box() const
+{
+    if (m_unscaled_instance_bounding_box_dirty)
+        calc_unscaled_instance_bounding_box();
+    return m_unscaled_instance_bounding_box;
+}
+
+const BoundingBoxf3& Selection::get_scaled_instance_bounding_box() const
+{
+    if (m_scaled_instance_bounding_box_dirty)
+        calc_scaled_instance_bounding_box();
+    return m_scaled_instance_bounding_box;
 }
 
 void Selection::start_dragging()
@@ -430,13 +445,15 @@ void Selection::start_dragging()
     if (!m_valid)
         return;
 
-    _set_caches();
+    set_caches();
 }
 
 void Selection::translate(const Vec3d& displacement, bool local)
 {
     if (!m_valid)
         return;
+
+    EMode translation_type = m_mode;
 
     for (unsigned int i : m_list)
     {
@@ -451,41 +468,26 @@ void Selection::translate(const Vec3d& displacement, bool local)
             }
         }
         else if (m_mode == Instance)
-            (*m_volumes)[i]->set_instance_offset(m_cache.volumes_data[i].get_instance_position() + displacement);
+        {
+            if (is_from_fully_selected_instance(i))
+                (*m_volumes)[i]->set_instance_offset(m_cache.volumes_data[i].get_instance_position() + displacement);
+            else
+            {
+                Vec3d local_displacement = (m_cache.volumes_data[i].get_instance_rotation_matrix() * m_cache.volumes_data[i].get_instance_scale_matrix() * m_cache.volumes_data[i].get_instance_mirror_matrix()).inverse() * displacement;
+                (*m_volumes)[i]->set_volume_offset(m_cache.volumes_data[i].get_volume_position() + local_displacement);
+                translation_type = Volume;
+            }
+        }
     }
 
 #if !DISABLE_INSTANCES_SYNCH
-    if (m_mode == Instance)
-        _synchronize_unselected_instances(SYNC_ROTATION_NONE);
-    else if (m_mode == Volume)
-        _synchronize_unselected_volumes();
+    if (translation_type == Instance)
+        synchronize_unselected_instances(SYNC_ROTATION_NONE);
+    else if (translation_type == Volume)
+        synchronize_unselected_volumes();
 #endif // !DISABLE_INSTANCES_SYNCH
 
-    m_bounding_box_dirty = true;
-}
-
-static Eigen::Quaterniond rotation_xyz_diff(const Vec3d &rot_xyz_from, const Vec3d &rot_xyz_to)
-{
-    return
-        // From the current coordinate system to world.
-        Eigen::AngleAxisd(rot_xyz_to(2), Vec3d::UnitZ()) * Eigen::AngleAxisd(rot_xyz_to(1), Vec3d::UnitY()) * Eigen::AngleAxisd(rot_xyz_to(0), Vec3d::UnitX()) *
-        // From world to the initial coordinate system.
-        Eigen::AngleAxisd(-rot_xyz_from(0), Vec3d::UnitX()) * Eigen::AngleAxisd(-rot_xyz_from(1), Vec3d::UnitY()) * Eigen::AngleAxisd(-rot_xyz_from(2), Vec3d::UnitZ());
-}
-
-// This should only be called if it is known, that the two rotations only differ in rotation around the Z axis.
-static double rotation_diff_z(const Vec3d &rot_xyz_from, const Vec3d &rot_xyz_to)
-{
-    Eigen::AngleAxisd angle_axis(rotation_xyz_diff(rot_xyz_from, rot_xyz_to));
-    Vec3d  axis = angle_axis.axis();
-    double angle = angle_axis.angle();
-#ifndef NDEBUG
-    if (std::abs(angle) > 1e-8) {
-        assert(std::abs(axis.x()) < 1e-8);
-        assert(std::abs(axis.y()) < 1e-8);
-    }
-#endif /* NDEBUG */
-    return (axis.z() < 0) ? -angle : angle;
+    this->set_bounding_boxes_dirty();
 }
 
 // Rotate an object around one of the axes. Only one rotation component is expected to be changing.
@@ -497,102 +499,117 @@ void Selection::rotate(const Vec3d& rotation, TransformationType transformation_
     // Only relative rotation values are allowed in the world coordinate system.
     assert(!transformation_type.world() || transformation_type.relative());
 
-    int rot_axis_max = 0;
-    if (rotation.isApprox(Vec3d::Zero()))
-    {
-        for (unsigned int i : m_list)
+    if (!is_wipe_tower()) {
+        int rot_axis_max = 0;
+        if (rotation.isApprox(Vec3d::Zero()))
         {
-            GLVolume &volume = *(*m_volumes)[i];
-            if (m_mode == Instance)
+            for (unsigned int i : m_list)
             {
-                volume.set_instance_rotation(m_cache.volumes_data[i].get_instance_rotation());
-                volume.set_instance_offset(m_cache.volumes_data[i].get_instance_position());
-            }
-            else if (m_mode == Volume)
-            {
-                volume.set_volume_rotation(m_cache.volumes_data[i].get_volume_rotation());
-                volume.set_volume_offset(m_cache.volumes_data[i].get_volume_position());
-            }
-        }
-    }
-    else
-    {
-        //FIXME this does not work for absolute rotations (transformation_type.absolute() is true)
-        rotation.cwiseAbs().maxCoeff(&rot_axis_max);
-
-        // For generic rotation, we want to rotate the first volume in selection, and then to synchronize the other volumes with it.
-        std::vector<int> object_instance_first(m_model->objects.size(), -1);
-        auto rotate_instance = [this, &rotation, &object_instance_first, rot_axis_max, transformation_type](GLVolume &volume, int i) {
-            int first_volume_idx = object_instance_first[volume.object_idx()];
-            if (rot_axis_max != 2 && first_volume_idx != -1) {
-                // Generic rotation, but no rotation around the Z axis.
-                // Always do a local rotation (do not consider the selection to be a rigid body).
-                assert(is_approx(rotation.z(), 0.0));
-                const GLVolume &first_volume = *(*m_volumes)[first_volume_idx];
-                const Vec3d    &rotation = first_volume.get_instance_rotation();
-                double z_diff = rotation_diff_z(m_cache.volumes_data[first_volume_idx].get_instance_rotation(), m_cache.volumes_data[i].get_instance_rotation());
-                volume.set_instance_rotation(Vec3d(rotation(0), rotation(1), rotation(2) + z_diff));
-            }
-            else {
-                // extracts rotations from the composed transformation
-                Vec3d new_rotation = transformation_type.world() ?
-                    Geometry::extract_euler_angles(Geometry::assemble_transform(Vec3d::Zero(), rotation) * m_cache.volumes_data[i].get_instance_rotation_matrix()) :
-                    transformation_type.absolute() ? rotation : rotation + m_cache.volumes_data[i].get_instance_rotation();
-                if (rot_axis_max == 2 && transformation_type.joint()) {
-                    // Only allow rotation of multiple instances as a single rigid body when rotating around the Z axis.
-                    Vec3d offset = Geometry::assemble_transform(Vec3d::Zero(), Vec3d(0.0, 0.0, new_rotation(2) - m_cache.volumes_data[i].get_instance_rotation()(2))) * (m_cache.volumes_data[i].get_instance_position() - m_cache.dragging_center);
-                    volume.set_instance_offset(m_cache.dragging_center + offset);
-                }
-                volume.set_instance_rotation(new_rotation);
-                object_instance_first[volume.object_idx()] = i;
-            }
-        };
-
-        for (unsigned int i : m_list)
-        {
-            GLVolume &volume = *(*m_volumes)[i];
-            if (is_single_full_instance())
-                rotate_instance(volume, i);
-            else if (is_single_volume() || is_single_modifier())
-            {
-                if (transformation_type.independent())
-                    volume.set_volume_rotation(volume.get_volume_rotation() + rotation);
-                else
-                {
-                    Transform3d m = Geometry::assemble_transform(Vec3d::Zero(), rotation);
-                    Vec3d new_rotation = Geometry::extract_euler_angles(m * m_cache.volumes_data[i].get_volume_rotation_matrix());
-                    volume.set_volume_rotation(new_rotation);
-                }
-            }
-            else
-            {
+                GLVolume &volume = *(*m_volumes)[i];
                 if (m_mode == Instance)
-                    rotate_instance(volume, i);
+                {
+                    volume.set_instance_rotation(m_cache.volumes_data[i].get_instance_rotation());
+                    volume.set_instance_offset(m_cache.volumes_data[i].get_instance_position());
+                }
                 else if (m_mode == Volume)
                 {
-                    // extracts rotations from the composed transformation
-                    Transform3d m = Geometry::assemble_transform(Vec3d::Zero(), rotation);
-                    Vec3d new_rotation = Geometry::extract_euler_angles(m * m_cache.volumes_data[i].get_volume_rotation_matrix());
-                    if (transformation_type.joint())
-                    {
-                        Vec3d local_pivot = m_cache.volumes_data[i].get_instance_full_matrix().inverse() * m_cache.dragging_center;
-                        Vec3d offset = m * (m_cache.volumes_data[i].get_volume_position() - local_pivot);
-                        volume.set_volume_offset(local_pivot + offset);
-                    }
-                    volume.set_volume_rotation(new_rotation);
+                    volume.set_volume_rotation(m_cache.volumes_data[i].get_volume_rotation());
+                    volume.set_volume_offset(m_cache.volumes_data[i].get_volume_position());
                 }
             }
         }
+        else { // this is not the wipe tower
+            //FIXME this does not work for absolute rotations (transformation_type.absolute() is true)
+            rotation.cwiseAbs().maxCoeff(&rot_axis_max);
+
+//            if ( single instance or single volume )
+                // Rotate around center , if only a single object or volume
+//                transformation_type.set_independent();
+
+            // For generic rotation, we want to rotate the first volume in selection, and then to synchronize the other volumes with it.
+            std::vector<int> object_instance_first(m_model->objects.size(), -1);
+            auto rotate_instance = [this, &rotation, &object_instance_first, rot_axis_max, transformation_type](GLVolume &volume, int i) {
+                int first_volume_idx = object_instance_first[volume.object_idx()];
+                if (rot_axis_max != 2 && first_volume_idx != -1) {
+                    // Generic rotation, but no rotation around the Z axis.
+                    // Always do a local rotation (do not consider the selection to be a rigid body).
+                    assert(is_approx(rotation.z(), 0.0));
+                    const GLVolume &first_volume = *(*m_volumes)[first_volume_idx];
+                    const Vec3d    &rotation = first_volume.get_instance_rotation();
+                    double z_diff = Geometry::rotation_diff_z(m_cache.volumes_data[first_volume_idx].get_instance_rotation(), m_cache.volumes_data[i].get_instance_rotation());
+                    volume.set_instance_rotation(Vec3d(rotation(0), rotation(1), rotation(2) + z_diff));
+                }
+                else {
+                    // extracts rotations from the composed transformation
+                    Vec3d new_rotation = transformation_type.world() ?
+                        Geometry::extract_euler_angles(Geometry::assemble_transform(Vec3d::Zero(), rotation) * m_cache.volumes_data[i].get_instance_rotation_matrix()) :
+                        transformation_type.absolute() ? rotation : rotation + m_cache.volumes_data[i].get_instance_rotation();
+                    if (rot_axis_max == 2 && transformation_type.joint()) {
+                        // Only allow rotation of multiple instances as a single rigid body when rotating around the Z axis.
+						double z_diff = Geometry::rotation_diff_z(m_cache.volumes_data[i].get_instance_rotation(), new_rotation);
+                        volume.set_instance_offset(m_cache.dragging_center + Eigen::AngleAxisd(z_diff, Vec3d::UnitZ()) * (m_cache.volumes_data[i].get_instance_position() - m_cache.dragging_center));
+                    }
+                    volume.set_instance_rotation(new_rotation);
+                    object_instance_first[volume.object_idx()] = i;
+                }
+            };
+
+            for (unsigned int i : m_list)
+            {
+                GLVolume &volume = *(*m_volumes)[i];
+                if (is_single_full_instance())
+                    rotate_instance(volume, i);
+                else if (is_single_volume() || is_single_modifier())
+                {
+                    if (transformation_type.independent())
+                        volume.set_volume_rotation(volume.get_volume_rotation() + rotation);
+                    else
+                    {
+                        Transform3d m = Geometry::assemble_transform(Vec3d::Zero(), rotation);
+                        Vec3d new_rotation = Geometry::extract_euler_angles(m * m_cache.volumes_data[i].get_volume_rotation_matrix());
+                        volume.set_volume_rotation(new_rotation);
+                    }
+                }
+                else
+                {
+                    if (m_mode == Instance)
+                        rotate_instance(volume, i);
+                    else if (m_mode == Volume)
+                    {
+                        // extracts rotations from the composed transformation
+                        Transform3d m = Geometry::assemble_transform(Vec3d::Zero(), rotation);
+                        Vec3d new_rotation = Geometry::extract_euler_angles(m * m_cache.volumes_data[i].get_volume_rotation_matrix());
+                        if (transformation_type.joint())
+                        {
+                            Vec3d local_pivot = m_cache.volumes_data[i].get_instance_full_matrix().inverse() * m_cache.dragging_center;
+                            Vec3d offset = m * (m_cache.volumes_data[i].get_volume_position() - local_pivot);
+                            volume.set_volume_offset(local_pivot + offset);
+                        }
+                        volume.set_volume_rotation(new_rotation);
+                    }
+                }
+            }
+        }
+
+    #if !DISABLE_INSTANCES_SYNCH
+        if (m_mode == Instance)
+            synchronize_unselected_instances((rot_axis_max == 2) ? SYNC_ROTATION_NONE : SYNC_ROTATION_GENERAL);
+        else if (m_mode == Volume)
+            synchronize_unselected_volumes();
+    #endif // !DISABLE_INSTANCES_SYNCH
+    }
+    else { // it's the wipe tower that's selected and being rotated
+        GLVolume& volume = *((*m_volumes)[*m_list.begin()]); // the wipe tower is always alone in the selection
+
+        // make sure the wipe tower rotates around its center, not origin
+        // we can assume that only Z rotation changes
+        Vec3d center_local = volume.transformed_bounding_box().center() - volume.get_volume_offset();
+        Vec3d center_local_new = Eigen::AngleAxisd(rotation(2)-volume.get_volume_rotation()(2), Vec3d(0, 0, 1)) * center_local;
+        volume.set_volume_rotation(rotation);
+        volume.set_volume_offset(volume.get_volume_offset() + center_local - center_local_new);
     }
 
-#if !DISABLE_INSTANCES_SYNCH
-    if (m_mode == Instance)
-        _synchronize_unselected_instances((rot_axis_max == 2) ? SYNC_ROTATION_NONE : SYNC_ROTATION_GENERAL);
-    else if (m_mode == Volume)
-        _synchronize_unselected_volumes();
-#endif // !DISABLE_INSTANCES_SYNCH
-
-    m_bounding_box_dirty = true;
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::flattening_rotate(const Vec3d& normal)
@@ -630,23 +647,32 @@ void Selection::flattening_rotate(const Vec3d& normal)
     // we want to synchronize z-rotation as well, otherwise the flattening behaves funny
     // when applied on one of several identical instances
     if (m_mode == Instance)
-        _synchronize_unselected_instances(SYNC_ROTATION_FULL);
+        synchronize_unselected_instances(SYNC_ROTATION_FULL);
 #endif // !DISABLE_INSTANCES_SYNCH
 
-    m_bounding_box_dirty = true;
+    this->set_bounding_boxes_dirty();
 }
 
-void Selection::scale(const Vec3d& scale, bool local)
+void Selection::scale(const Vec3d& scale, TransformationType transformation_type)
 {
     if (!m_valid)
         return;
 
     for (unsigned int i : m_list)
     {
-        if (is_single_full_instance())
-            (*m_volumes)[i]->set_instance_scaling_factor(scale);
+        GLVolume &volume = *(*m_volumes)[i];
+        if (is_single_full_instance()) {
+            assert(transformation_type.absolute());
+			if (transformation_type.world() && (std::abs(scale.x() - scale.y()) > EPSILON || std::abs(scale.x() - scale.z()) > EPSILON)) {
+                // Non-uniform scaling. Transform the scaling factors into the local coordinate system.
+                // This is only possible, if the instance rotation is mulitples of ninety degrees.
+                assert(Geometry::is_rotation_ninety_degrees(volume.get_instance_rotation()));
+				volume.set_instance_scaling_factor((volume.get_instance_transformation().get_matrix(true, false, true, true).matrix().block<3, 3>(0, 0).transpose() * scale).cwiseAbs());
+            } else
+				volume.set_instance_scaling_factor(scale);
+        }
         else if (is_single_volume() || is_single_modifier())
-            (*m_volumes)[i]->set_volume_scaling_factor(scale);
+            volume.set_volume_scaling_factor(scale);
         else
         {
             Transform3d m = Geometry::assemble_transform(Vec3d::Zero(), Vec3d::Zero(), scale);
@@ -655,36 +681,36 @@ void Selection::scale(const Vec3d& scale, bool local)
                 Eigen::Matrix<double, 3, 3, Eigen::DontAlign> new_matrix = (m * m_cache.volumes_data[i].get_instance_scale_matrix()).matrix().block(0, 0, 3, 3);
                 // extracts scaling factors from the composed transformation
                 Vec3d new_scale(new_matrix.col(0).norm(), new_matrix.col(1).norm(), new_matrix.col(2).norm());
-                if (!local)
-                    (*m_volumes)[i]->set_instance_offset(m_cache.dragging_center + m * (m_cache.volumes_data[i].get_instance_position() - m_cache.dragging_center));
+                if (transformation_type.joint())
+                    volume.set_instance_offset(m_cache.dragging_center + m * (m_cache.volumes_data[i].get_instance_position() - m_cache.dragging_center));
 
-                (*m_volumes)[i]->set_instance_scaling_factor(new_scale);
+                volume.set_instance_scaling_factor(new_scale);
             }
             else if (m_mode == Volume)
             {
                 Eigen::Matrix<double, 3, 3, Eigen::DontAlign> new_matrix = (m * m_cache.volumes_data[i].get_volume_scale_matrix()).matrix().block(0, 0, 3, 3);
                 // extracts scaling factors from the composed transformation
                 Vec3d new_scale(new_matrix.col(0).norm(), new_matrix.col(1).norm(), new_matrix.col(2).norm());
-                if (!local)
+                if (transformation_type.joint())
                 {
                     Vec3d offset = m * (m_cache.volumes_data[i].get_volume_position() + m_cache.volumes_data[i].get_instance_position() - m_cache.dragging_center);
-                    (*m_volumes)[i]->set_volume_offset(m_cache.dragging_center - m_cache.volumes_data[i].get_instance_position() + offset);
+                    volume.set_volume_offset(m_cache.dragging_center - m_cache.volumes_data[i].get_instance_position() + offset);
                 }
-                (*m_volumes)[i]->set_volume_scaling_factor(new_scale);
+                volume.set_volume_scaling_factor(new_scale);
             }
         }
     }
 
 #if !DISABLE_INSTANCES_SYNCH
     if (m_mode == Instance)
-        _synchronize_unselected_instances(SYNC_ROTATION_NONE);
+        synchronize_unselected_instances(SYNC_ROTATION_NONE);
     else if (m_mode == Volume)
-        _synchronize_unselected_volumes();
+        synchronize_unselected_volumes();
 #endif // !DISABLE_INSTANCES_SYNCH
 
-    _ensure_on_bed();
+    ensure_on_bed();
 
-    m_bounding_box_dirty = true;
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::mirror(Axis axis)
@@ -704,12 +730,12 @@ void Selection::mirror(Axis axis)
 
 #if !DISABLE_INSTANCES_SYNCH
     if (m_mode == Instance)
-        _synchronize_unselected_instances(SYNC_ROTATION_NONE);
+        synchronize_unselected_instances(SYNC_ROTATION_NONE);
     else if (m_mode == Volume)
-        _synchronize_unselected_volumes();
+        synchronize_unselected_volumes();
 #endif // !DISABLE_INSTANCES_SYNCH
 
-    m_bounding_box_dirty = true;
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::translate(unsigned int object_idx, const Vec3d& displacement)
@@ -754,7 +780,7 @@ void Selection::translate(unsigned int object_idx, const Vec3d& displacement)
         }
     }
 
-    m_bounding_box_dirty = true;
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::translate(unsigned int object_idx, unsigned int instance_idx, const Vec3d& displacement)
@@ -799,7 +825,7 @@ void Selection::translate(unsigned int object_idx, unsigned int instance_idx, co
         }
     }
 
-    m_bounding_box_dirty = true;
+    this->set_bounding_boxes_dirty();
 }
 
 void Selection::erase()
@@ -924,8 +950,8 @@ void Selection::render(float scale_factor) const
     m_scale_factor = scale_factor;
 
     // render cumulative bounding box of selected volumes
-    _render_selected_volumes();
-    _render_synchronized_volumes();
+    render_selected_volumes();
+    render_synchronized_volumes();
 }
 
 #if ENABLE_RENDER_SELECTION_CENTER
@@ -936,17 +962,17 @@ void Selection::render_center() const
 
     const Vec3d& center = get_bounding_box().center();
 
-    ::glDisable(GL_DEPTH_TEST);
+    glsafe(::glDisable(GL_DEPTH_TEST)));
 
-    ::glEnable(GL_LIGHTING);
+    glsafe(::glEnable(GL_LIGHTING));
 
-    ::glColor3f(1.0f, 1.0f, 1.0f);
-    ::glPushMatrix();
-    ::glTranslated(center(0), center(1), center(2));
-    ::gluSphere(m_quadric, 0.75, 32, 32);
-    ::glPopMatrix();
+    glsafe(::glColor3f(1.0f, 1.0f, 1.0f));
+    glsafe(::glPushMatrix());
+    glsafe(::glTranslated(center(0), center(1), center(2)));
+    glsafe(::gluSphere(m_quadric, 0.75, 32, 32));
+    glsafe(::glPopMatrix());
 
-    ::glDisable(GL_LIGHTING);
+    glsafe(::glDisable(GL_LIGHTING));
 }
 #endif // ENABLE_RENDER_SELECTION_CENTER
 
@@ -955,55 +981,71 @@ void Selection::render_sidebar_hints(const std::string& sidebar_field) const
     if (sidebar_field.empty())
         return;
 
-    ::glClear(GL_DEPTH_BUFFER_BIT);
-    ::glEnable(GL_DEPTH_TEST);
+    glsafe(::glClear(GL_DEPTH_BUFFER_BIT));
+    glsafe(::glEnable(GL_DEPTH_TEST));
 
-    ::glEnable(GL_LIGHTING);
+    glsafe(::glEnable(GL_LIGHTING));
 
-    ::glPushMatrix();
+    glsafe(::glPushMatrix());
 
     const Vec3d& center = get_bounding_box().center();
 
-    if (is_single_full_instance())
+    if (is_single_full_instance() && ! wxGetApp().obj_manipul()->get_world_coordinates())
     {
-        ::glTranslated(center(0), center(1), center(2));
+        glsafe(::glTranslated(center(0), center(1), center(2)));
         if (!boost::starts_with(sidebar_field, "position"))
         {
-            Transform3d orient_matrix = (*m_volumes)[*m_list.begin()]->get_instance_transformation().get_matrix(true, false, true, true);
-            ::glMultMatrixd(orient_matrix.data());
+            Transform3d orient_matrix = Transform3d::Identity();
+            if (boost::starts_with(sidebar_field, "scale"))
+                orient_matrix = (*m_volumes)[*m_list.begin()]->get_instance_transformation().get_matrix(true, false, true, true);
+            else if (boost::starts_with(sidebar_field, "rotation"))
+            {
+                if (boost::ends_with(sidebar_field, "x"))
+                    orient_matrix = (*m_volumes)[*m_list.begin()]->get_instance_transformation().get_matrix(true, false, true, true);
+                else if (boost::ends_with(sidebar_field, "y"))
+                {
+                    const Vec3d& rotation = (*m_volumes)[*m_list.begin()]->get_instance_transformation().get_rotation();
+                    if (rotation(0) == 0.0)
+                        orient_matrix = (*m_volumes)[*m_list.begin()]->get_instance_transformation().get_matrix(true, false, true, true);
+                    else
+                        orient_matrix.rotate(Eigen::AngleAxisd(rotation(2), Vec3d::UnitZ()));
+                }
+            }
+
+            glsafe(::glMultMatrixd(orient_matrix.data()));
         }
     }
     else if (is_single_volume() || is_single_modifier())
     {
-        ::glTranslated(center(0), center(1), center(2));
+        glsafe(::glTranslated(center(0), center(1), center(2)));
         Transform3d orient_matrix = (*m_volumes)[*m_list.begin()]->get_instance_transformation().get_matrix(true, false, true, true);
         if (!boost::starts_with(sidebar_field, "position"))
             orient_matrix = orient_matrix * (*m_volumes)[*m_list.begin()]->get_volume_transformation().get_matrix(true, false, true, true);
 
-        ::glMultMatrixd(orient_matrix.data());
+        glsafe(::glMultMatrixd(orient_matrix.data()));
     }
     else
     {
-        ::glTranslated(center(0), center(1), center(2));
+        glsafe(::glTranslated(center(0), center(1), center(2)));
         if (requires_local_axes())
         {
             Transform3d orient_matrix = (*m_volumes)[*m_list.begin()]->get_instance_transformation().get_matrix(true, false, true, true);
-            ::glMultMatrixd(orient_matrix.data());
+            glsafe(::glMultMatrixd(orient_matrix.data()));
         }
     }
 
     if (boost::starts_with(sidebar_field, "position"))
-        _render_sidebar_position_hints(sidebar_field);
+        render_sidebar_position_hints(sidebar_field);
     else if (boost::starts_with(sidebar_field, "rotation"))
-        _render_sidebar_rotation_hints(sidebar_field);
+        render_sidebar_rotation_hints(sidebar_field);
     else if (boost::starts_with(sidebar_field, "scale"))
-        _render_sidebar_scale_hints(sidebar_field);
+        render_sidebar_scale_hints(sidebar_field);
     else if (boost::starts_with(sidebar_field, "size"))
-        _render_sidebar_size_hints(sidebar_field);
+        render_sidebar_size_hints(sidebar_field);
 
-    ::glPopMatrix();
+    glsafe(::glPopMatrix());
 
-    ::glDisable(GL_LIGHTING);
+    glsafe(::glDisable(GL_LIGHTING));
 }
 
 bool Selection::requires_local_axes() const
@@ -1011,12 +1053,83 @@ bool Selection::requires_local_axes() const
     return (m_mode == Volume) && is_from_single_instance();
 }
 
-void Selection::_update_valid()
+void Selection::copy_to_clipboard()
+{
+    if (!m_valid)
+        return;
+
+    m_clipboard.reset();
+
+    for (const ObjectIdxsToInstanceIdxsMap::value_type& object : m_cache.content)
+    {
+        ModelObject* src_object = m_model->objects[object.first];
+        ModelObject* dst_object = m_clipboard.add_object();
+        dst_object->name                 = src_object->name;
+        dst_object->input_file           = src_object->input_file;
+        dst_object->config               = src_object->config;
+        dst_object->sla_support_points   = src_object->sla_support_points;
+        dst_object->sla_points_status    = src_object->sla_points_status;
+        dst_object->layer_height_ranges  = src_object->layer_height_ranges;
+        dst_object->layer_height_profile = src_object->layer_height_profile;
+        dst_object->origin_translation   = src_object->origin_translation;
+
+        for (int i : object.second)
+        {
+            dst_object->add_instance(*src_object->instances[i]);
+        }
+
+        for (unsigned int i : m_list)
+        {
+            // Copy the ModelVolumes only for the selected GLVolumes of the 1st selected instance.
+            const GLVolume* volume = (*m_volumes)[i];
+            if ((volume->object_idx() == object.first) && (volume->instance_idx() == *object.second.begin()))
+            {
+                int volume_idx = volume->volume_idx();
+                if ((0 <= volume_idx) && (volume_idx < (int)src_object->volumes.size()))
+                {
+                    ModelVolume* src_volume = src_object->volumes[volume_idx];
+                    ModelVolume* dst_volume = dst_object->add_volume(*src_volume);
+                    dst_volume->set_new_unique_id();
+                } else {
+                    assert(false);
+                }
+            }
+        }
+    }
+
+    m_clipboard.set_mode(m_mode);
+}
+
+void Selection::paste_from_clipboard()
+{
+    if (!m_valid || m_clipboard.is_empty())
+        return;
+
+    switch (m_clipboard.get_mode())
+    {
+    case Volume:
+    {
+        if (is_from_single_instance())
+            paste_volumes_from_clipboard();
+
+        break;
+    }
+    case Instance:
+    {
+        if (m_mode == Instance)
+            paste_objects_from_clipboard();
+
+        break;
+    }
+    }
+}
+
+void Selection::update_valid()
 {
     m_valid = (m_volumes != nullptr) && (m_model != nullptr);
 }
 
-void Selection::_update_type()
+void Selection::update_type()
 {
     m_cache.content.clear();
     m_type = Mixed;
@@ -1114,15 +1227,11 @@ void Selection::_update_type()
                         }
 
                         if (modifiers_count == 0)
-                        {
                             m_type = MultipleVolume;
-                            requires_disable = true;
-                        }
                         else if (modifiers_count == (unsigned int)m_list.size())
-                        {
                             m_type = MultipleModifier;
-                            requires_disable = true;
-                        }
+
+                        requires_disable = true;
                     }
                 }
                 else if ((selected_instances_count > 1) && (selected_instances_count * volumes_count == (unsigned int)m_list.size()))
@@ -1244,7 +1353,7 @@ void Selection::_update_type()
 #endif // ENABLE_SELECTION_DEBUG_OUTPUT
 }
 
-void Selection::_set_caches()
+void Selection::set_caches()
 {
     m_cache.volumes_data.clear();
     for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i)
@@ -1255,33 +1364,33 @@ void Selection::_set_caches()
     m_cache.dragging_center = get_bounding_box().center();
 }
 
-void Selection::_add_volume(unsigned int volume_idx)
+void Selection::do_add_volume(unsigned int volume_idx)
 {
     m_list.insert(volume_idx);
     (*m_volumes)[volume_idx]->selected = true;
 }
 
-void Selection::_add_instance(unsigned int object_idx, unsigned int instance_idx)
+void Selection::do_add_instance(unsigned int object_idx, unsigned int instance_idx)
 {
     for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i)
     {
         GLVolume* v = (*m_volumes)[i];
         if ((v->object_idx() == object_idx) && (v->instance_idx() == instance_idx))
-            _add_volume(i);
+            do_add_volume(i);
     }
 }
 
-void Selection::_add_object(unsigned int object_idx)
+void Selection::do_add_object(unsigned int object_idx)
 {
     for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i)
     {
         GLVolume* v = (*m_volumes)[i];
         if (v->object_idx() == object_idx)
-            _add_volume(i);
+            do_add_volume(i);
     }
 }
 
-void Selection::_remove_volume(unsigned int volume_idx)
+void Selection::do_remove_volume(unsigned int volume_idx)
 {
     IndicesList::iterator v_it = m_list.find(volume_idx);
     if (v_it == m_list.end())
@@ -1292,27 +1401,27 @@ void Selection::_remove_volume(unsigned int volume_idx)
     (*m_volumes)[volume_idx]->selected = false;
 }
 
-void Selection::_remove_instance(unsigned int object_idx, unsigned int instance_idx)
+void Selection::do_remove_instance(unsigned int object_idx, unsigned int instance_idx)
 {
     for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i)
     {
         GLVolume* v = (*m_volumes)[i];
         if ((v->object_idx() == object_idx) && (v->instance_idx() == instance_idx))
-            _remove_volume(i);
+            do_remove_volume(i);
     }
 }
 
-void Selection::_remove_object(unsigned int object_idx)
+void Selection::do_remove_object(unsigned int object_idx)
 {
     for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i)
     {
         GLVolume* v = (*m_volumes)[i];
         if (v->object_idx() == object_idx)
-            _remove_volume(i);
+            do_remove_volume(i);
     }
 }
 
-void Selection::_calc_bounding_box() const
+void Selection::calc_bounding_box() const
 {
     m_bounding_box = BoundingBoxf3();
     if (m_valid)
@@ -1322,16 +1431,48 @@ void Selection::_calc_bounding_box() const
             m_bounding_box.merge((*m_volumes)[i]->transformed_convex_hull_bounding_box());
         }
     }
-    m_bounding_box_dirty = false;
+	m_bounding_box_dirty = false;
 }
 
-void Selection::_render_selected_volumes() const
+void Selection::calc_unscaled_instance_bounding_box() const
+{
+	m_unscaled_instance_bounding_box = BoundingBoxf3();
+	if (m_valid) {
+		for (unsigned int i : m_list) {
+			const GLVolume &volume = *(*m_volumes)[i];
+            if (volume.is_modifier)
+                continue;
+			Transform3d trafo = volume.get_instance_transformation().get_matrix(false, false, true, false) * volume.get_volume_transformation().get_matrix();
+			trafo.translation()(2) += volume.get_sla_shift_z();
+			m_unscaled_instance_bounding_box.merge(volume.transformed_convex_hull_bounding_box(trafo));
+		}
+	}
+	m_unscaled_instance_bounding_box_dirty = false;
+}
+
+void Selection::calc_scaled_instance_bounding_box() const
+{
+    m_scaled_instance_bounding_box = BoundingBoxf3();
+    if (m_valid) {
+        for (unsigned int i : m_list) {
+            const GLVolume &volume = *(*m_volumes)[i];
+            if (volume.is_modifier)
+                continue;
+            Transform3d trafo = volume.get_instance_transformation().get_matrix(false, false, false, false) * volume.get_volume_transformation().get_matrix();
+            trafo.translation()(2) += volume.get_sla_shift_z();
+            m_scaled_instance_bounding_box.merge(volume.transformed_convex_hull_bounding_box(trafo));
+        }
+    }
+    m_scaled_instance_bounding_box_dirty = false;
+}
+
+void Selection::render_selected_volumes() const
 {
     float color[3] = { 1.0f, 1.0f, 1.0f };
-    _render_bounding_box(get_bounding_box(), color);
+    render_bounding_box(get_bounding_box(), color);
 }
 
-void Selection::_render_synchronized_volumes() const
+void Selection::render_synchronized_volumes() const
 {
     if (m_mode == Instance)
         return;
@@ -1353,12 +1494,12 @@ void Selection::_render_synchronized_volumes() const
             if ((v->object_idx() != object_idx) || (v->volume_idx() != volume_idx))
                 continue;
 
-            _render_bounding_box(v->transformed_convex_hull_bounding_box(), color);
+            render_bounding_box(v->transformed_convex_hull_bounding_box(), color);
         }
     }
 }
 
-void Selection::_render_bounding_box(const BoundingBoxf3& box, float* color) const
+void Selection::render_bounding_box(const BoundingBoxf3& box, float* color) const
 {
     if (color == nullptr)
         return;
@@ -1367,10 +1508,10 @@ void Selection::_render_bounding_box(const BoundingBoxf3& box, float* color) con
     Vec3f b_max = box.max.cast<float>();
     Vec3f size = 0.2f * box.size().cast<float>();
 
-    ::glEnable(GL_DEPTH_TEST);
+    glsafe(::glEnable(GL_DEPTH_TEST));
 
-    ::glColor3fv(color);
-    ::glLineWidth(2.0f * m_scale_factor);
+    glsafe(::glColor3fv(color));
+    glsafe(::glLineWidth(2.0f * m_scale_factor));
 
     ::glBegin(GL_LINES);
 
@@ -1406,109 +1547,109 @@ void Selection::_render_bounding_box(const BoundingBoxf3& box, float* color) con
     ::glVertex3f(b_min(0), b_max(1), b_max(2)); ::glVertex3f(b_min(0), b_max(1) - size(1), b_max(2));
     ::glVertex3f(b_min(0), b_max(1), b_max(2)); ::glVertex3f(b_min(0), b_max(1), b_max(2) - size(2));
 
-    ::glEnd();
+    glsafe(::glEnd());
 }
 
-void Selection::_render_sidebar_position_hints(const std::string& sidebar_field) const
+void Selection::render_sidebar_position_hints(const std::string& sidebar_field) const
 {
     if (boost::ends_with(sidebar_field, "x"))
     {
-        ::glRotated(-90.0, 0.0, 0.0, 1.0);
-        _render_sidebar_position_hint(X);
+        glsafe(::glRotated(-90.0, 0.0, 0.0, 1.0));
+        render_sidebar_position_hint(X);
     }
     else if (boost::ends_with(sidebar_field, "y"))
-        _render_sidebar_position_hint(Y);
+        render_sidebar_position_hint(Y);
     else if (boost::ends_with(sidebar_field, "z"))
     {
-        ::glRotated(90.0, 1.0, 0.0, 0.0);
-        _render_sidebar_position_hint(Z);
+        glsafe(::glRotated(90.0, 1.0, 0.0, 0.0));
+        render_sidebar_position_hint(Z);
     }
 }
 
-void Selection::_render_sidebar_rotation_hints(const std::string& sidebar_field) const
+void Selection::render_sidebar_rotation_hints(const std::string& sidebar_field) const
 {
     if (boost::ends_with(sidebar_field, "x"))
     {
-        ::glRotated(90.0, 0.0, 1.0, 0.0);
-        _render_sidebar_rotation_hint(X);
+        glsafe(::glRotated(90.0, 0.0, 1.0, 0.0));
+        render_sidebar_rotation_hint(X);
     }
     else if (boost::ends_with(sidebar_field, "y"))
     {
-        ::glRotated(-90.0, 1.0, 0.0, 0.0);
-        _render_sidebar_rotation_hint(Y);
+        glsafe(::glRotated(-90.0, 1.0, 0.0, 0.0));
+        render_sidebar_rotation_hint(Y);
     }
     else if (boost::ends_with(sidebar_field, "z"))
-        _render_sidebar_rotation_hint(Z);
+        render_sidebar_rotation_hint(Z);
 }
 
-void Selection::_render_sidebar_scale_hints(const std::string& sidebar_field) const
+void Selection::render_sidebar_scale_hints(const std::string& sidebar_field) const
 {
     bool uniform_scale = requires_uniform_scale() || wxGetApp().obj_manipul()->get_uniform_scaling();
 
     if (boost::ends_with(sidebar_field, "x") || uniform_scale)
     {
-        ::glPushMatrix();
-        ::glRotated(-90.0, 0.0, 0.0, 1.0);
-        _render_sidebar_scale_hint(X);
-        ::glPopMatrix();
+        glsafe(::glPushMatrix());
+        glsafe(::glRotated(-90.0, 0.0, 0.0, 1.0));
+        render_sidebar_scale_hint(X);
+        glsafe(::glPopMatrix());
     }
 
     if (boost::ends_with(sidebar_field, "y") || uniform_scale)
     {
-        ::glPushMatrix();
-        _render_sidebar_scale_hint(Y);
-        ::glPopMatrix();
+        glsafe(::glPushMatrix());
+        render_sidebar_scale_hint(Y);
+        glsafe(::glPopMatrix());
     }
 
     if (boost::ends_with(sidebar_field, "z") || uniform_scale)
     {
-        ::glPushMatrix();
-        ::glRotated(90.0, 1.0, 0.0, 0.0);
-        _render_sidebar_scale_hint(Z);
-        ::glPopMatrix();
+        glsafe(::glPushMatrix());
+        glsafe(::glRotated(90.0, 1.0, 0.0, 0.0));
+        render_sidebar_scale_hint(Z);
+        glsafe(::glPopMatrix());
     }
 }
 
-void Selection::_render_sidebar_size_hints(const std::string& sidebar_field) const
+void Selection::render_sidebar_size_hints(const std::string& sidebar_field) const
 {
-    _render_sidebar_scale_hints(sidebar_field);
+    render_sidebar_scale_hints(sidebar_field);
 }
 
-void Selection::_render_sidebar_position_hint(Axis axis) const
+void Selection::render_sidebar_position_hint(Axis axis) const
 {
     m_arrow.set_color(AXES_COLOR[axis], 3);
     m_arrow.render();
 }
 
-void Selection::_render_sidebar_rotation_hint(Axis axis) const
+void Selection::render_sidebar_rotation_hint(Axis axis) const
 {
     m_curved_arrow.set_color(AXES_COLOR[axis], 3);
     m_curved_arrow.render();
 
-    ::glRotated(180.0, 0.0, 0.0, 1.0);
+    glsafe(::glRotated(180.0, 0.0, 0.0, 1.0));
     m_curved_arrow.render();
 }
 
-void Selection::_render_sidebar_scale_hint(Axis axis) const
+void Selection::render_sidebar_scale_hint(Axis axis) const
 {
     m_arrow.set_color(((requires_uniform_scale() || wxGetApp().obj_manipul()->get_uniform_scaling()) ? UNIFORM_SCALE_COLOR : AXES_COLOR[axis]), 3);
 
-    ::glTranslated(0.0, 5.0, 0.0);
+    glsafe(::glTranslated(0.0, 5.0, 0.0));
     m_arrow.render();
 
-    ::glTranslated(0.0, -10.0, 0.0);
-    ::glRotated(180.0, 0.0, 0.0, 1.0);
+    glsafe(::glTranslated(0.0, -10.0, 0.0));
+    glsafe(::glRotated(180.0, 0.0, 0.0, 1.0));
     m_arrow.render();
 }
 
-void Selection::_render_sidebar_size_hint(Axis axis, double length) const
+void Selection::render_sidebar_size_hint(Axis axis, double length) const
 {
 }
 
 #ifndef NDEBUG
 static bool is_rotation_xy_synchronized(const Vec3d &rot_xyz_from, const Vec3d &rot_xyz_to)
 {
-    Eigen::AngleAxisd angle_axis(rotation_xyz_diff(rot_xyz_from, rot_xyz_to));
+    Eigen::AngleAxisd angle_axis(Geometry::rotation_xyz_diff(rot_xyz_from, rot_xyz_to));
     Vec3d  axis = angle_axis.axis();
     double angle = angle_axis.angle();
     if (std::abs(angle) < 1e-8)
@@ -1542,7 +1683,7 @@ static void verify_instances_rotation_synchronized(const Model &model, const GLV
 }
 #endif /* NDEBUG */
 
-void Selection::_synchronize_unselected_instances(SyncRotationType sync_rotation_type)
+void Selection::synchronize_unselected_instances(SyncRotationType sync_rotation_type)
 {
     std::set<unsigned int> done;  // prevent processing volumes twice
     done.insert(m_list.begin(), m_list.end());
@@ -1588,7 +1729,7 @@ void Selection::_synchronize_unselected_instances(SyncRotationType sync_rotation
                 break;
             case SYNC_ROTATION_GENERAL:
                 // generic rotation -> update instance z with the delta of the rotation.
-                double z_diff = rotation_diff_z(m_cache.volumes_data[i].get_instance_rotation(), m_cache.volumes_data[j].get_instance_rotation());
+                double z_diff = Geometry::rotation_diff_z(m_cache.volumes_data[i].get_instance_rotation(), m_cache.volumes_data[j].get_instance_rotation());
                 v->set_instance_rotation(Vec3d(rotation(0), rotation(1), rotation(2) + z_diff));
                 break;
             }
@@ -1605,7 +1746,7 @@ void Selection::_synchronize_unselected_instances(SyncRotationType sync_rotation
 #endif /* NDEBUG */
 }
 
-void Selection::_synchronize_unselected_volumes()
+void Selection::synchronize_unselected_volumes()
 {
     for (unsigned int i : m_list)
     {
@@ -1638,7 +1779,7 @@ void Selection::_synchronize_unselected_volumes()
     }
 }
 
-void Selection::_ensure_on_bed()
+void Selection::ensure_on_bed()
 {
     typedef std::map<std::pair<int, int>, double> InstancesToZMap;
     InstancesToZMap instances_min_z;
@@ -1664,6 +1805,69 @@ void Selection::_ensure_on_bed()
         if (it != instances_min_z.end())
             volume->set_instance_offset(Z, volume->get_instance_offset(Z) - it->second);
     }
+}
+
+bool Selection::is_from_fully_selected_instance(unsigned int volume_idx) const
+{
+    struct SameInstance
+    {
+        int obj_idx;
+        int inst_idx;
+        GLVolumePtrs& volumes;
+
+        SameInstance(int obj_idx, int inst_idx, GLVolumePtrs& volumes) : obj_idx(obj_idx), inst_idx(inst_idx), volumes(volumes) {}
+        bool operator () (unsigned int i) { return (volumes[i]->volume_idx() >= 0) && (volumes[i]->object_idx() == obj_idx) && (volumes[i]->instance_idx() == inst_idx); }
+    };
+
+    if ((unsigned int)m_volumes->size() <= volume_idx)
+        return false;
+
+    GLVolume* volume = (*m_volumes)[volume_idx];
+    int object_idx = volume->object_idx();
+    if ((int)m_model->objects.size() <= object_idx)
+        return false;
+
+    unsigned int count = (unsigned int)std::count_if(m_list.begin(), m_list.end(), SameInstance(object_idx, volume->instance_idx(), *m_volumes));
+    return count == (unsigned int)m_model->objects[object_idx]->volumes.size();
+}
+
+void Selection::paste_volumes_from_clipboard()
+{
+    int obj_idx = get_object_idx();
+    if ((obj_idx < 0) || ((int)m_model->objects.size() <= obj_idx))
+        return;
+
+    ModelObject* src_object = m_clipboard.get_object(0);
+    if (src_object != nullptr)
+    {
+        ModelObject* dst_object = m_model->objects[obj_idx];
+
+        ModelVolumePtrs volumes;
+        for (ModelVolume* src_volume : src_object->volumes)
+        {
+            ModelVolume* dst_volume = dst_object->add_volume(*src_volume);
+            dst_volume->set_new_unique_id();
+            double offset = wxGetApp().plater()->canvas3D()->get_size_proportional_to_max_bed_size(0.05);
+            dst_volume->translate(offset, offset, 0.0);
+            volumes.push_back(dst_volume);
+        }
+        wxGetApp().obj_list()->paste_volumes_into_list(obj_idx, volumes);
+    }
+}
+
+void Selection::paste_objects_from_clipboard()
+{
+    std::vector<size_t> object_idxs;
+    const ModelObjectPtrs& src_objects = m_clipboard.get_objects();
+    for (const ModelObject* src_object : src_objects)
+    {
+        ModelObject* dst_object = m_model->add_object(*src_object);
+        double offset = wxGetApp().plater()->canvas3D()->get_size_proportional_to_max_bed_size(0.05);
+        dst_object->translate(offset, offset, 0.0);
+        object_idxs.push_back(m_model->objects.size() - 1);
+    }
+
+    wxGetApp().obj_list()->paste_objects_into_list(object_idxs);
 }
 
 } // namespace GUI

@@ -3,6 +3,7 @@
 
 #include <GL/glew.h>
 
+#include <wx/utils.h> 
 
 namespace Slic3r {
 namespace GUI {
@@ -48,7 +49,7 @@ bool GLGizmoMove3D::on_init()
 
 std::string GLGizmoMove3D::on_get_name() const
 {
-    return L("Move [M]");
+    return (_(L("Move")) + " [M]").ToUTF8().data();
 }
 
 void GLGizmoMove3D::on_start_dragging(const Selection& selection)
@@ -97,8 +98,8 @@ void GLGizmoMove3D::on_render(const Selection& selection) const
     else if (!m_grabbers[2].dragging && (m_hover_id == 2))
         set_tooltip("Z");
 
-    ::glClear(GL_DEPTH_BUFFER_BIT);
-    ::glEnable(GL_DEPTH_TEST);
+    glsafe(::glClear(GL_DEPTH_BUFFER_BIT));
+    glsafe(::glEnable(GL_DEPTH_TEST));
 
     const BoundingBoxf3& box = selection.get_bounding_box();
     const Vec3d& center = box.center();
@@ -115,7 +116,7 @@ void GLGizmoMove3D::on_render(const Selection& selection) const
     m_grabbers[2].center = Vec3d(center(0), center(1), box.max(2) + Offset);
     ::memcpy((void*)m_grabbers[2].color, (const void*)&AXES_COLOR[2], 3 * sizeof(float));
 
-    ::glLineWidth((m_hover_id != -1) ? 2.0f : 1.5f);
+    glsafe(::glLineWidth((m_hover_id != -1) ? 2.0f : 1.5f));
 
     if (m_hover_id == -1)
     {
@@ -124,11 +125,11 @@ void GLGizmoMove3D::on_render(const Selection& selection) const
         {
             if (m_grabbers[i].enabled)
             {
-                ::glColor3fv(AXES_COLOR[i]);
+                glsafe(::glColor3fv(AXES_COLOR[i]));
                 ::glBegin(GL_LINES);
                 ::glVertex3dv(center.data());
                 ::glVertex3dv(m_grabbers[i].center.data());
-                ::glEnd();
+                glsafe(::glEnd());
             }
         }
 
@@ -143,21 +144,22 @@ void GLGizmoMove3D::on_render(const Selection& selection) const
     else
     {
         // draw axis
-        ::glColor3fv(AXES_COLOR[m_hover_id]);
+        glsafe(::glColor3fv(AXES_COLOR[m_hover_id]));
         ::glBegin(GL_LINES);
         ::glVertex3dv(center.data());
         ::glVertex3dv(m_grabbers[m_hover_id].center.data());
-        ::glEnd();
+        glsafe(::glEnd());
 
         // draw grabber
-        m_grabbers[m_hover_id].render(true, box.max_size());
+        float mean_size = (float)((box.size()(0) + box.size()(1) + box.size()(2)) / 3.0);
+        m_grabbers[m_hover_id].render(true, mean_size);
         render_grabber_extension((Axis)m_hover_id, box, false);
     }
 }
 
 void GLGizmoMove3D::on_render_for_picking(const Selection& selection) const
 {
-    ::glDisable(GL_DEPTH_TEST);
+    glsafe(::glDisable(GL_DEPTH_TEST));
 
     const BoundingBoxf3& box = selection.get_bounding_box();
     render_grabbers_for_picking(box);
@@ -205,7 +207,7 @@ double GLGizmoMove3D::calc_projection(const UpdateData& data) const
         projection = inters_vec.dot(starting_vec.normalized());
     }
 
-    if (data.shift_down)
+    if (wxGetKeyState(WXK_SHIFT))
         projection = m_snap_step * (double)std::round(projection / m_snap_step);
 
     return projection;
@@ -216,7 +218,8 @@ void GLGizmoMove3D::render_grabber_extension(Axis axis, const BoundingBoxf3& box
     if (m_quadric == nullptr)
         return;
 
-    double size = m_dragging ? (double)m_grabbers[axis].get_dragging_half_size((float)box.max_size()) : (double)m_grabbers[axis].get_half_size((float)box.max_size());
+    float mean_size = (float)((box.size()(0) + box.size()(1) + box.size()(2)) / 3.0);
+    double size = m_dragging ? (double)m_grabbers[axis].get_dragging_half_size(mean_size) : (double)m_grabbers[axis].get_half_size(mean_size);
 
     float color[3];
     ::memcpy((void*)color, (const void*)m_grabbers[axis].color, 3 * sizeof(float));
@@ -228,25 +231,25 @@ void GLGizmoMove3D::render_grabber_extension(Axis axis, const BoundingBoxf3& box
     }
 
     if (!picking)
-        ::glEnable(GL_LIGHTING);
+        glsafe(::glEnable(GL_LIGHTING));
 
-    ::glColor3fv(color);
-    ::glPushMatrix();
-    ::glTranslated(m_grabbers[axis].center(0), m_grabbers[axis].center(1), m_grabbers[axis].center(2));
+    glsafe(::glColor3fv(color));
+    glsafe(::glPushMatrix());
+    glsafe(::glTranslated(m_grabbers[axis].center(0), m_grabbers[axis].center(1), m_grabbers[axis].center(2)));
     if (axis == X)
-        ::glRotated(90.0, 0.0, 1.0, 0.0);
+        glsafe(::glRotated(90.0, 0.0, 1.0, 0.0));
     else if (axis == Y)
-        ::glRotated(-90.0, 1.0, 0.0, 0.0);
+        glsafe(::glRotated(-90.0, 1.0, 0.0, 0.0));
 
-    ::glTranslated(0.0, 0.0, 2.0 * size);
+    glsafe(::glTranslated(0.0, 0.0, 2.0 * size));
     ::gluQuadricOrientation(m_quadric, GLU_OUTSIDE);
     ::gluCylinder(m_quadric, 0.75 * size, 0.0, 3.0 * size, 36, 1);
     ::gluQuadricOrientation(m_quadric, GLU_INSIDE);
     ::gluDisk(m_quadric, 0.0, 0.75 * size, 36, 1);
-    ::glPopMatrix();
+    glsafe(::glPopMatrix());
 
     if (!picking)
-        ::glDisable(GL_LIGHTING);
+        glsafe(::glDisable(GL_LIGHTING));
 }
 
 
