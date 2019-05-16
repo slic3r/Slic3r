@@ -213,7 +213,7 @@ SurfaceCollection::keep_types(const SurfaceType *types, size_t ntypes)
     size_t j = 0;
     for (size_t i = 0; i < surfaces.size(); ++ i) {
         bool keep = false;
-        for (int k = 0; k < ntypes; ++ k) {
+        for (size_t k = 0; k < ntypes; ++ k) {
             if (surfaces[i].surface_type == types[k]) {
                 keep = true;
                 break;
