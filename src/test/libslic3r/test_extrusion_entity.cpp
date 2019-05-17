@@ -2,6 +2,7 @@
 #include "ExtrusionEntityCollection.hpp"
 #include "ExtrusionEntity.hpp"
 #include "Point.hpp"
+#include <cstdlib>
 
 Point random_point(float LO=-50, float HI=50) {
     float x = LO + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(HI-LO)));
@@ -28,6 +29,9 @@ ExtrusionPaths random_paths(size_t count=10, size_t length=20, float LO=-50, flo
 using namespace Slic3r;
 
 SCENARIO("ExtrusionEntityCollection: Polygon flattening") {
+    srand(0xDEADBEEF); // consistent seed for test reproducibility.
+
+    // Generate one specific random path set and save it for later comparison
     ExtrusionPaths nosort_path_set {random_paths()};
 
     ExtrusionEntityCollection sub_nosort;
