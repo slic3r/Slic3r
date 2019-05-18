@@ -261,6 +261,5 @@ xsp/SupportMaterial.xsp
 xsp/Surface.xsp
 xsp/SurfaceCollection.xsp
 xsp/TriangleMesh.xsp
-xsp/TransformationMatrix.xsp
 xsp/typemap.xspt
 xsp/XS.xsp

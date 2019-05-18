@@ -335,8 +335,6 @@ ModelMaterial::attributes()
         %code%{ THIS->offset = *offset; %};
     
     void set_local_trafo_matrix(bool dont_translate);
-    Ref<TransformationMatrix> local_trafo()
-        %code%{ RETVAL = &THIS->trafo; %};
 
 
     void transform_mesh(TriangleMesh* mesh, bool dont_translate) const;

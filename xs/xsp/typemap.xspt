@@ -88,8 +88,6 @@
 %typemap{TriangleMesh*};
 %typemap{Ref<TriangleMesh>}{simple};
 %typemap{Clone<TriangleMesh>}{simple};
-%typemap{TransformationMatrix*};
-%typemap{Ref<TransformationMatrix>}{simple};
 %typemap{PolylineCollection*};
 %typemap{Ref<PolylineCollection>}{simple};
 %typemap{Clone<PolylineCollection>}{simple};
