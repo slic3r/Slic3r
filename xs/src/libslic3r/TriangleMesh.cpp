@@ -173,14 +173,17 @@ TriangleMesh::repair() {
     
     this->check_topology();
 
+    float tolerance = stl.stats.shortest_edge;
+    float increment = stl.stats.bounding_diameter / 10000.0;
+
     /// Call the stl_repair from admesh rather than reimplementing it ourselves.
     stl_repair(&(this->stl),  // operate on this STL
                true,  // flag: try to fix everything
                true,  // flag: check for perfectly aligned edges
-               false, // flag: don't use tolerance
-               0.0,    // null tolerance value
-               false, // flag: don't increment tolerance
-               0.0,   // amount to increment tolerance on each iteration
+               true, // flag: don't use tolerance
+               tolerance,    // null tolerance value
+               true, // flag: don't increment tolerance
+               increment,   // amount to increment tolerance on each iteration
                true,  // find and try to connect nearby bad facets
                10,    // Perform 10 iterations
                true,  // remove unconnected
