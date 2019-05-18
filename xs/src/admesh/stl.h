@@ -61,11 +61,11 @@ typedef struct {
   float z;
 } stl_vertex;
 
-#ifdef static_assert
-static_assert(sizeof(stl_vertex) == 12, "size of stl_vertex incorrect");
-#endif
-
-typedef stl_vertex stl_normal;
+typedef struct {
+  float x;
+  float y;
+  float z;
+} stl_normal;
 
 typedef char stl_extra[2];
 
@@ -75,13 +75,6 @@ typedef struct {
   stl_extra  extra;
 } stl_facet;
 #define SIZEOF_STL_FACET       50
-
-#ifdef static_assert
-static_assert(offsetof(stl_facet, normal) == 0, "stl_facet.normal has correct offset");
-static_assert(offsetof(stl_facet, vertex) == 12, "stl_facet.vertex has correct offset");
-static_assert(offsetof(stl_facet, extra ) == 48, "stl_facet.extra has correct offset");
-static_assert(sizeof(stl_facet) >= SIZEOF_STL_FACET, "size of stl_facet incorrect");
-#endif
 
 typedef enum {binary, ascii, inmemory} stl_type;
 
@@ -102,9 +95,6 @@ typedef struct stl_hash_edge {
   struct stl_hash_edge  *next;
 } stl_hash_edge;
 
-#ifdef static_assert
-static_assert(offsetof(stl_hash_edge, facet_number) == SIZEOF_EDGE_SORT, "size of stl_hash_edge.key incorrect");
-#endif
 
 typedef struct {
   // Index of a neighbor facet.
