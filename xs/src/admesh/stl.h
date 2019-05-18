@@ -61,11 +61,8 @@ typedef struct {
   float z;
 } stl_vertex;
 
-typedef struct {
-  float x;
-  float y;
-  float z;
-} stl_normal;
+
+typedef stl_vertex stl_normal;
 
 typedef char stl_extra[2];
 
