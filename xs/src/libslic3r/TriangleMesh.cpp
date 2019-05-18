@@ -174,7 +174,21 @@ TriangleMesh::repair() {
     this->check_topology();
 
     /// Call the stl_repair from admesh rather than reimplementing it ourselves.
-    stl_repair(&(this->stl), 1, 1, 0, 0, 0, 0, 0, 100, 1, 1, 1, 1, 1, 0);
+    stl_repair(&(this->stl),  // operate on this STL
+               true,  // flag: try to fix everything
+               true,  // flag: check for perfectly aligned edges
+               false, // flag: don't use tolerance
+               0.0,    // null tolerance value
+               false, // flag: don't increment tolerance
+               0.0,   // amount to increment tolerance on each iteration
+               true,  // find and try to connect nearby bad facets
+               10,    // Perform 10 iterations
+               true,  // remove unconnected
+               true,  // fill holes
+               true,  // fix normal directions
+               true,  // fix normal values
+               false, // reverse direction of all facets and normals
+               0);  // Verbosity
     
     // always calculate the volume and reverse all normals if volume is negative
     (void)this->volume();
