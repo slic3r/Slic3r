@@ -20,18 +20,17 @@
  *           https://github.com/admesh/admesh/issues
  */
 
-#include <float.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
-#include "portable_endian.h"
 #include "stl.h"
 
-#ifndef SEEK_SET
-#error "SEEK_SET not defined"
+#if !defined(SEEK_SET)
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
 #endif
 
 void
@@ -47,6 +46,7 @@ stl_open(stl_file *stl, const ADMESH_CHAR *file) {
 void
 stl_initialize(stl_file *stl) {
   stl->error = 0;
+  stl->stats.backwards_edges = 0;
   stl->stats.degenerate_facets = 0;
   stl->stats.edges_fixed  = 0;
   stl->stats.facets_added = 0;
@@ -56,10 +56,9 @@ stl_initialize(stl_file *stl) {
   stl->stats.number_of_parts = 0;
   stl->stats.original_num_facets = 0;
   stl->stats.number_of_facets = 0;
-  stl->stats.bounding_diameter = 0;
-  stl->stats.shortest_edge = FLT_MAX;
   stl->stats.facets_malloced = 0;
   stl->stats.volume = -1.0;
+  stl->stats.surface_area = -1.0;
 
   stl->neighbors_start = NULL;
   stl->facet_start = NULL;
@@ -70,9 +69,9 @@ stl_initialize(stl_file *stl) {
 void
 stl_count_facets(stl_file *stl, const ADMESH_CHAR *file) {
   long           file_size;
-  uint32_t       header_num_facets;
+  int            header_num_facets;
   int            num_facets;
-  int            i;
+  int            i, j;
   size_t         s;
   unsigned char  chtest[128];
   int            num_lines = 1;
@@ -81,9 +80,14 @@ stl_count_facets(stl_file *stl, const ADMESH_CHAR *file) {
   if (stl->error) return;
 
   /* Open the file in binary mode first */
-  stl->fp = stl_fopen(file, "rb");
+  stl->fp = fopen(file, "rb");
   if(stl->fp == NULL) {
-    perror("stl_initialize: Couldn't open file for reading");
+    error_msg = (char*)
+                malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
+    sprintf(error_msg, "stl_initialize: Couldn't open %s for reading",
+            file);
+    perror(error_msg);
+    free(error_msg);
     stl->error = 1;
     return;
   }
@@ -125,46 +129,33 @@ stl_count_facets(stl_file *stl, const ADMESH_CHAR *file) {
     }
 
     /* Read the int following the header.  This should contain # of facets */
-    if((!fread(&header_num_facets, sizeof(uint32_t), 1, stl->fp)) || (uint32_t)num_facets != le32toh(header_num_facets)) {
+    if((!fread(&header_num_facets, sizeof(int), 1, stl->fp)) || (num_facets != header_num_facets)) {
       fprintf(stderr,
               "Warning: File size doesn't match number of facets in the header\n");
-
-      if(num_facets > header_num_facets) {
-          // this file is garbage.
-          stl->error = 1; 
-          return;
-      }
     }
   }
   /* Otherwise, if the .STL file is ASCII, then do the following */
   else {
     /* Reopen the file in text mode (for getting correct newlines on Windows) */
-    // fix to silence a warning about unused return value.
-    // obviously if it fails we have problems....
-    fclose(stl->fp);
-    stl->fp = stl_fopen(file, "r");
-
-    // do another null check to be safe
-    if(stl->fp == NULL) {
-      perror("stl_initialize: Couldn't open file for reading");
+    if (freopen(file, "r", stl->fp) == NULL) {
+      perror("Could not reopen the file, something went wrong");
       stl->error = 1;
       return;
     }
-    
+
     /* Find the number of facets */
-    char linebuf[100];
-    while (fgets(linebuf, 100, stl->fp) != NULL) {
-        /* don't count short lines */
-        if (strlen(linebuf) <= 4) continue;
-        
-        /* skip solid/endsolid lines as broken STL file generators may put several of them */
-        if (strncmp(linebuf, "solid", 5) == 0 || strncmp(linebuf, "endsolid", 8) == 0) continue;
-        
-        ++num_lines;
+    j = 0;
+    for(i = 0; i < file_size ; i++) {
+      j++;
+      if(getc(stl->fp) == '\n') {
+        if(j > 4) { /* don't count short lines */
+          num_lines++;
+        }
+        j = 0;
+      }
     }
-    
     rewind(stl->fp);
-    
+
     /* Get the header */
     for(i = 0;
         (i < 80) && (stl->stats.header[i] = getc(stl->fp)) != '\n'; i++);
@@ -190,7 +181,7 @@ stl_allocate(stl_file *stl) {
   /* Allocate memory for the neighbors list */
   stl->neighbors_start = (stl_neighbors*)
                          calloc(stl->stats.number_of_facets, sizeof(stl_neighbors));
-  if(stl->facet_start == NULL) perror("stl_initialize");
+  if(stl->neighbors_start == NULL) perror("stl_initialize");
 }
 
 void
@@ -262,24 +253,7 @@ stl_reallocate(stl_file *stl) {
 void
 stl_read(stl_file *stl, int first_facet, int first) {
   stl_facet facet;
-  int   i, j;
-  const int facet_float_length = 12;
-  float *facet_floats[12];
-  char facet_buffer[12 * sizeof(float)];
-  uint32_t endianswap_buffer;  /* for byteswapping operations */
-
-  facet_floats[0] = &facet.normal.x;
-  facet_floats[1] = &facet.normal.y;
-  facet_floats[2] = &facet.normal.z;
-  facet_floats[3] = &facet.vertex[0].x;
-  facet_floats[4] = &facet.vertex[0].y;
-  facet_floats[5] = &facet.vertex[0].z;
-  facet_floats[6] = &facet.vertex[1].x;
-  facet_floats[7] = &facet.vertex[1].y;
-  facet_floats[8] = &facet.vertex[1].z;
-  facet_floats[9] = &facet.vertex[2].x;
-  facet_floats[10] = &facet.vertex[2].y;
-  facet_floats[11] = &facet.vertex[2].z;
+  int   i;
 
   if (stl->error) return;
 
@@ -287,85 +261,40 @@ stl_read(stl_file *stl, int first_facet, int first) {
     fseek(stl->fp, HEADER_SIZE, SEEK_SET);
   } else {
     rewind(stl->fp);
+    /* Skip the first line of the file */
+    while(getc(stl->fp) != '\n');
   }
 
   for(i = first_facet; i < stl->stats.number_of_facets; i++) {
     if(stl->stats.type == binary)
       /* Read a single facet from a binary .STL file */
     {
-      if(fread(facet_buffer, sizeof(facet_buffer), 1, stl->fp)
-         + fread(&facet.extra, sizeof(char), 2, stl->fp) != 3) {
+      /* we assume little-endian architecture! */
+      if (fread(&facet.normal, sizeof(stl_normal), 1, stl->fp) \
+          + fread(&facet.vertex, sizeof(stl_vertex), 3, stl->fp) \
+          + fread(&facet.extra, sizeof(char), 2, stl->fp) != 6) {
         perror("Cannot read facet");
         stl->error = 1;
         return;
       }
-
-      for(j = 0; j < facet_float_length; j++) {
-        /* convert LE float to host byte order */
-        memcpy(&endianswap_buffer, facet_buffer + j * sizeof(float), 4);
-        endianswap_buffer = le32toh(endianswap_buffer);
-        memcpy(facet_floats[j], &endianswap_buffer, 4);
-      }
     } else
       /* Read a single facet from an ASCII .STL file */
     {
-      // skip solid/endsolid
-      // (in this order, otherwise it won't work when they are paired in the middle of a file)
-      fscanf(stl->fp, "endsolid\n");
-      fscanf(stl->fp, "solid%*[^\n]\n");  // name might contain spaces so %*s doesn't work and it also can be empty (just "solid")
-      
-      if((fscanf(stl->fp, " facet normal %f %f %f\n", &facet.normal.x, &facet.normal.y, &facet.normal.z) + \
-          fscanf(stl->fp, " outer loop\n") + \
-          fscanf(stl->fp, " vertex %f %f %f\n", &facet.vertex[0].x, &facet.vertex[0].y,  &facet.vertex[0].z) + \
-          fscanf(stl->fp, " vertex %f %f %f\n", &facet.vertex[1].x, &facet.vertex[1].y,  &facet.vertex[1].z) + \
-          fscanf(stl->fp, " vertex %f %f %f\n", &facet.vertex[2].x, &facet.vertex[2].y,  &facet.vertex[2].z) + \
-          fscanf(stl->fp, " endloop\n") + \
-          fscanf(stl->fp, " endfacet\n")) != 12) {
+      if((fscanf(stl->fp, "%*s %*s %f %f %f\n", &facet.normal.x, &facet.normal.y, &facet.normal.z) + \
+          fscanf(stl->fp, "%*s %*s") + \
+          fscanf(stl->fp, "%*s %f %f %f\n", &facet.vertex[0].x, &facet.vertex[0].y,  &facet.vertex[0].z) + \
+          fscanf(stl->fp, "%*s %f %f %f\n", &facet.vertex[1].x, &facet.vertex[1].y,  &facet.vertex[1].z) + \
+          fscanf(stl->fp, "%*s %f %f %f\n", &facet.vertex[2].x, &facet.vertex[2].y,  &facet.vertex[2].z) + \
+          fscanf(stl->fp, "%*s") + \
+          fscanf(stl->fp, "%*s")) != 12) {
         perror("Something is syntactically very wrong with this ASCII STL!");
         stl->error = 1;
         return;
       }
     }
-
-#if 0
-      // Report close to zero vertex coordinates. Due to the nature of the floating point numbers,
-      // close to zero values may be represented with singificantly higher precision than the rest of the vertices.
-      // It may be worth to round these numbers to zero during loading to reduce the number of errors reported
-      // during the STL import.
-      for (size_t j = 0; j < 3; ++ j) {
-        if (facet.vertex[j].x > -1e-12f && facet.vertex[j].x < 1e-12f)
-            printf("stl_read: facet %d.x = %e\r\n", j, facet.vertex[j].x);
-        if (facet.vertex[j].y > -1e-12f && facet.vertex[j].y < 1e-12f)
-            printf("stl_read: facet %d.y = %e\r\n", j, facet.vertex[j].y);
-        if (facet.vertex[j].z > -1e-12f && facet.vertex[j].z < 1e-12f)
-            printf("stl_read: facet %d.z = %e\r\n", j, facet.vertex[j].z);
-      }
-#endif
-
-#if 1
-    {
-      // Positive and negative zeros are possible in the floats, which are considered equal by the FP unit.
-      // When using a memcmp on raw floats, those numbers report to be different.
-      // Unify all +0 and -0 to +0 to make the floats equal under memcmp.
-      uint32_t *f = (uint32_t*)&facet;
-      for (int j = 0; j < 12; ++ j, ++ f) // 3x vertex + normal: 4x3 = 12 floats
-        if (*f == 0x80000000)
-          // Negative zero, switch to positive zero.
-          *f = 0;
-    }
-#else
-    {
-      // Due to the nature of the floating point numbers, close to zero values may be represented with singificantly higher precision 
-      // than the rest of the vertices. Round them to zero.
-      float *f = (float*)&facet;
-      for (int j = 0; j < 12; ++ j, ++ f) // 3x vertex + normal: 4x3 = 12 floats
-        if (*f > -1e-12f && *f < 1e-12f)
-          // Negative zero, switch to positive zero.
-          *f = 0;
-    }
-#endif
     /* Write the facet into memory. */
-    memcpy(stl->facet_start+i, &facet, SIZEOF_STL_FACET);
+    stl->facet_start[i] = facet;
+
     stl_facet_stats(stl, facet, first);
     first = 0;
   }

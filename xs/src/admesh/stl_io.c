@@ -103,12 +103,12 @@ Total disconnected facets        : %5d               %5d\n",
           stl->stats.connected_facets_3_edge);
 
   fprintf(file,
-          "=== Processing Statistics ===     ===== Other Statistics =====\n");
+          "=== Processing Statistics ===       ====== Other Statistics ======\n");
   fprintf(file, "\
-Number of parts       : %5d        Volume   : % f\n",
+Number of parts       : %5d       Volume          :   % f\n",
           stl->stats.number_of_parts, stl->stats.volume);
   fprintf(file, "\
-Degenerate facets     : %5d\n", stl->stats.degenerate_facets);
+Degenerate facets     : %5d       Surface area    :   % f\n", stl->stats.degenerate_facets, stl->stats.surface_area);
   fprintf(file, "\
 Edges fixed           : %5d\n", stl->stats.edges_fixed);
   fprintf(file, "\
@@ -132,9 +132,14 @@ stl_write_ascii(stl_file *stl, const ADMESH_CHAR *file, const char *label) {
   if (stl->error) return;
 
   /* Open the file */
-  fp = stl_fopen(file, "w");
+  fp = fopen(file, "w");
   if(fp == NULL) {
-    perror("stl_write_ascii: Couldn't open file for writing");
+    error_msg = (char*)
+                malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
+    sprintf(error_msg, "stl_write_ascii: Couldn't open %s for writing",
+            file);
+    perror(error_msg);
+    free(error_msg);
     stl->error = 1;
     return;
   }
@@ -173,9 +178,14 @@ stl_print_neighbors(stl_file *stl, ADMESH_CHAR *file) {
   if (stl->error) return;
 
   /* Open the file */
-  fp = stl_fopen(file, "w");
+  fp = fopen(file, "w");
   if(fp == NULL) {
-    perror("stl_print_neighbors: Couldn't open file for writing");
+    error_msg = (char*)
+                malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
+    sprintf(error_msg, "stl_print_neighbors: Couldn't open %s for writing",
+            file);
+    perror(error_msg);
+    free(error_msg);
     stl->error = 1;
     return;
   }
@@ -194,6 +204,63 @@ stl_print_neighbors(stl_file *stl, ADMESH_CHAR *file) {
 }
 
 void
+stl_put_little_int(FILE *fp, int value_in) {
+  int new_value;
+  union {
+    int  int_value;
+    char char_value[4];
+  } value;
+
+  value.int_value = value_in;
+
+  new_value  = value.char_value[0] & 0xFF;
+  new_value |= (value.char_value[1] & 0xFF) << 0x08;
+  new_value |= (value.char_value[2] & 0xFF) << 0x10;
+  new_value |= (value.char_value[3] & 0xFF) << 0x18;
+  fwrite(&new_value, sizeof(int), 1, fp);
+}
+
+void
+stl_put_little_float(FILE *fp, float value_in) {
+  int new_value;
+  union {
+    float float_value;
+    char  char_value[4];
+  } value;
+
+  value.float_value = value_in;
+
+  new_value  = value.char_value[0] & 0xFF;
+  new_value |= (value.char_value[1] & 0xFF) << 0x08;
+  new_value |= (value.char_value[2] & 0xFF) << 0x10;
+  new_value |= (value.char_value[3] & 0xFF) << 0x18;
+  fwrite(&new_value, sizeof(int), 1, fp);
+}
+
+void
+stl_write_binary_block(stl_file *stl, FILE *fp)
+{
+  int i;
+  for(i = 0; i < stl->stats.number_of_facets; i++)
+    {
+      stl_put_little_float(fp, stl->facet_start[i].normal.x);
+      stl_put_little_float(fp, stl->facet_start[i].normal.y);
+      stl_put_little_float(fp, stl->facet_start[i].normal.z);
+      stl_put_little_float(fp, stl->facet_start[i].vertex[0].x);
+      stl_put_little_float(fp, stl->facet_start[i].vertex[0].y);
+      stl_put_little_float(fp, stl->facet_start[i].vertex[0].z);
+      stl_put_little_float(fp, stl->facet_start[i].vertex[1].x);
+      stl_put_little_float(fp, stl->facet_start[i].vertex[1].y);
+      stl_put_little_float(fp, stl->facet_start[i].vertex[1].z);
+      stl_put_little_float(fp, stl->facet_start[i].vertex[2].x);
+      stl_put_little_float(fp, stl->facet_start[i].vertex[2].y);
+      stl_put_little_float(fp, stl->facet_start[i].vertex[2].z);
+      fputc(stl->facet_start[i].extra[0], fp);
+      fputc(stl->facet_start[i].extra[1], fp);
+    }
+}
+
+void
 stl_write_binary(stl_file *stl, const ADMESH_CHAR *file, const char *label) {
   FILE      *fp;
   int       i;
@@ -202,9 +269,14 @@ stl_write_binary(stl_file *stl, const ADMESH_CHAR *file, const char *label) {
   if (stl->error) return;
 
   /* Open the file */
-  fp = stl_fopen(file, "wb");
+  fp = fopen(file, "wb");
   if(fp == NULL) {
-    perror("stl_write_binary: Couldn't open file for writing");
+    error_msg = (char*)
+                malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
+    sprintf(error_msg, "stl_write_binary: Couldn't open %s for writing",
+            file);
+    perror(error_msg);
+    free(error_msg);
     stl->error = 1;
     return;
   }
@@ -213,9 +285,11 @@ stl_write_binary(stl_file *stl, const ADMESH_CHAR *file, const char *label) {
   for(i = strlen(label); i < LABEL_SIZE; i++) putc(0, fp);
 
   fseek(fp, LABEL_SIZE, SEEK_SET);
-  fwrite(&stl->stats.number_of_facets, 4, 1, fp);
-  for(i = 0; i < stl->stats.number_of_facets; i++)
-    fwrite(stl->facet_start + i, SIZEOF_STL_FACET, 1, fp);
+
+  stl_put_little_int(fp, stl->stats.number_of_facets);
+
+  stl_write_binary_block(stl, fp);
+
   fclose(fp);
 }
 
@@ -277,9 +351,14 @@ stl_write_quad_object(stl_file *stl, ADMESH_CHAR *file) {
   if (stl->error) return;
 
   /* Open the file */
-  fp = stl_fopen(file, "w");
+  fp = fopen(file, "w");
   if(fp == NULL) {
-    perror("stl_write_quad_object: Couldn't open file for writing");
+    error_msg = (char*)
+                malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
+    sprintf(error_msg, "stl_write_quad_object: Couldn't open %s for writing",
+            file);
+    perror(error_msg);
+    free(error_msg);
     stl->error = 1;
     return;
   }
@@ -340,9 +419,14 @@ stl_write_dxf(stl_file *stl, ADMESH_CHAR *file, char *label) {
   if (stl->error) return;
 
   /* Open the file */
-  fp = stl_fopen(file, "w");
+  fp = fopen(file, "w");
   if(fp == NULL) {
-    perror("stl_write_ascii: Couldn't open file for writing");
+    error_msg = (char*)
+                malloc(81 + strlen(file)); /* Allow 80 chars+file size for message */
+    sprintf(error_msg, "stl_write_ascii: Couldn't open %s for writing",
+            file);
+    perror(error_msg);
+    free(error_msg);
     stl->error = 1;
     return;
   }

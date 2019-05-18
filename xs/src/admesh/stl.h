@@ -127,6 +127,7 @@ typedef struct {
   float         bounding_diameter;
   float         shortest_edge;
   float         volume;
+  float         surface_area;
   unsigned      number_of_blocks;
   int           connected_edges;
   int           connected_facets_1_edge;
@@ -201,7 +202,6 @@ extern void stl_rotate_z(stl_file *stl, float angle);
 extern void stl_mirror_xy(stl_file *stl);
 extern void stl_mirror_yz(stl_file *stl);
 extern void stl_mirror_xz(stl_file *stl);
-extern void stl_transform(stl_file *stl, float *trafo3x4);
 extern void stl_open_merge(stl_file *stl, ADMESH_CHAR *file);
 extern void stl_invalidate_shared_vertices(stl_file *stl);
 extern void stl_generate_shared_vertices(stl_file *stl);
@@ -212,6 +212,7 @@ extern void stl_write_vrml(stl_file *stl, ADMESH_CHAR *file);
 extern void stl_calculate_normal(float normal[], stl_facet *facet);
 extern void stl_normalize_vector(float v[]);
 extern void stl_calculate_volume(stl_file *stl);
+extern void stl_calculate_surface_area(stl_file *stl);
 
 extern void stl_repair(stl_file *stl, int fixall_flag, int exact_flag, int tolerance_flag, float tolerance, int increment_flag, float increment, int nearby_flag, int iterations, int remove_unconnected_flag, int fill_holes_flag, int normal_directions_flag, int normal_values_flag, int reverse_all_flag, int verbose_flag);
 

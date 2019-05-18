@@ -27,7 +27,7 @@
 
 #include "stl.h"
 
-static void stl_rotate(float *x, float *y, const double c, const double s);
+static void stl_rotate(float *x, float *y, float angle);
 static float get_area(stl_facet *facet);
 static float get_volume(stl_file *stl);
 
@@ -156,6 +156,12 @@ stl_scale_versor(stl_file *stl, float versor[3]) {
   }
 
   stl_invalidate_shared_vertices(stl);
+
+  /* recalculate surface area */
+  if (stl->stats.surface_area > 0.0) {
+    stl_calculate_surface_area(stl);
+  }
+
 }
 
 void
@@ -185,38 +191,17 @@ void calculate_normals(stl_file *stl) {
   }
 }
 
-void stl_transform(stl_file *stl, float *trafo3x4) {
-  int i_face, i_vertex, i, j;
-  if (stl->error)
-    return;
-  for (i_face = 0; i_face < stl->stats.number_of_facets; ++ i_face) {
-    stl_vertex *vertices = stl->facet_start[i_face].vertex;
-    for (i_vertex = 0; i_vertex < 3; ++ i_vertex) {
-      stl_vertex* v_dst = &vertices[i_vertex];
-      stl_vertex  v_src = *v_dst;
-      v_dst->x = trafo3x4[0] * v_src.x + trafo3x4[1] * v_src.y + trafo3x4[2]  * v_src.z + trafo3x4[3];
-      v_dst->y = trafo3x4[4] * v_src.x + trafo3x4[5] * v_src.y + trafo3x4[6]  * v_src.z + trafo3x4[7];
-      v_dst->z = trafo3x4[8] * v_src.x + trafo3x4[9] * v_src.y + trafo3x4[10] * v_src.z + trafo3x4[11];
-    }
-  }
-  stl_get_size(stl);
-  calculate_normals(stl);
-}
-
 void
 stl_rotate_x(stl_file *stl, float angle) {
   int i;
   int j;
-  double radian_angle = (angle / 180.0) * M_PI;
-  double c = cos(radian_angle);
-  double s = sin(radian_angle);
 
   if (stl->error) return;
 
   for(i = 0; i < stl->stats.number_of_facets; i++) {
     for(j = 0; j < 3; j++) {
       stl_rotate(&stl->facet_start[i].vertex[j].y,
-                 &stl->facet_start[i].vertex[j].z, c, s);
+                 &stl->facet_start[i].vertex[j].z, angle);
     }
   }
   stl_get_size(stl);
@@ -227,16 +212,13 @@ void
 stl_rotate_y(stl_file *stl, float angle) {
   int i;
   int j;
-  double radian_angle = (angle / 180.0) * M_PI;
-  double c = cos(radian_angle);
-  double s = sin(radian_angle);
 
   if (stl->error) return;
 
   for(i = 0; i < stl->stats.number_of_facets; i++) {
     for(j = 0; j < 3; j++) {
       stl_rotate(&stl->facet_start[i].vertex[j].z,
-                 &stl->facet_start[i].vertex[j].x, c, s);
+                 &stl->facet_start[i].vertex[j].x, angle);
     }
   }
   stl_get_size(stl);
@@ -247,16 +229,13 @@ void
 stl_rotate_z(stl_file *stl, float angle) {
   int i;
   int j;
-  double radian_angle = (angle / 180.0) * M_PI;
-  double c = cos(radian_angle);
-  double s = sin(radian_angle);
 
   if (stl->error) return;
 
   for(i = 0; i < stl->stats.number_of_facets; i++) {
     for(j = 0; j < 3; j++) {
       stl_rotate(&stl->facet_start[i].vertex[j].x,
-                 &stl->facet_start[i].vertex[j].y, c, s);
+                 &stl->facet_start[i].vertex[j].y, angle);
     }
   }
   stl_get_size(stl);
@@ -266,11 +245,17 @@ stl_rotate_z(stl_file *stl, float angle) {
 
 
 static void
-stl_rotate(float *x, float *y, const double c, const double s) {
-  double xold = *x;
-  double yold = *y;
-  *x = c * xold - s * yold;
-  *y = s * xold + c * yold;
+stl_rotate(float *x, float *y, float angle) {
+  double r;
+  double theta;
+  double radian_angle;
+
+  radian_angle = (angle / 180.0) * M_PI;
+
+  r = sqrt((*x **x) + (*y **y));
+  theta = atan2(*y, *x);
+  *x = r * cos(theta + radian_angle);
+  *y = r * sin(theta + radian_angle);
 }
 
 extern void
@@ -409,13 +394,26 @@ static float get_volume(stl_file *stl) {
   return volume;
 }
 
+static float get_surface_area(stl_file *stl) {
+  int i;
+  float area = 0.0;
+  
+  if (stl->error) return 0;
+
+  for(i = 0; i < stl->stats.number_of_facets; i++)
+    area += get_area(&stl->facet_start[i]);
+
+  return area;
+}
+
 void stl_calculate_volume(stl_file *stl) {
   if (stl->error) return;
   stl->stats.volume = get_volume(stl);
-  if(stl->stats.volume < 0.0) {
-    stl_reverse_all_facets(stl);
-    stl->stats.volume = -stl->stats.volume;
-  }
+}
+
+void stl_calculate_surface_area(stl_file *stl) {
+  if (stl->error) return;
+  stl->stats.surface_area = get_surface_area(stl);
 }
 
 static float get_area(stl_facet *facet) {
@@ -564,6 +562,19 @@ All facets connected.  No further nearby check necessary.\n");
   if (verbose_flag)
     printf("Calculating volume...\n");
   stl_calculate_volume(stl);
+
+  if (verbose_flag)
+    printf("Calculate surfacea area...\n");
+  stl_calculate_surface_area(stl);
+
+  if(fixall_flag) {
+    if(stl->stats.volume < 0.0) {
+      if (verbose_flag)
+        printf("Reversing all facets because volume is negative...\n");
+      stl_reverse_all_facets(stl);
+      stl->stats.volume = -stl->stats.volume;
+    }
+  }
 
   if(exact_flag) {
     if (verbose_flag)
