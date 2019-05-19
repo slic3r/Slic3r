@@ -191,6 +191,20 @@ void stl_transform(stl_file const *stl_src, stl_file *stl_dst, float const *traf
     return;
   stl_dst->stats.number_of_facets = stl_src->stats.number_of_facets;
   stl_allocate(stl_dst);
+  printf("Supplied trafo: %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f\n", 
+    trafo3x4[0],
+    trafo3x4[1],
+    trafo3x4[2],
+    trafo3x4[3],
+    trafo3x4[4],
+    trafo3x4[5],
+    trafo3x4[6],
+    trafo3x4[7],
+    trafo3x4[8],
+    trafo3x4[9],
+    trafo3x4[10],
+    trafo3x4[11]
+    );
   for (i_face = 0; i_face < stl_src->stats.number_of_facets; ++ i_face) {
     stl_vertex const *vertices_src = stl_src->facet_start[i_face].vertex;
     stl_vertex *vertices_dst = stl_dst->facet_start[i_face].vertex;
