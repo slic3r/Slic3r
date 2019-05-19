@@ -609,7 +609,6 @@ TriangleMesh
 ModelObject::mesh() const
 {
     TriangleMesh mesh;
-    TransformationMatrix trafo;
     
     for (ModelInstancePtrs::const_iterator i = this->instances.begin(); i != this->instances.end(); ++i) {
         TransformationMatrix instance_trafo = (*i)->get_trafo_matrix();
