@@ -189,8 +189,20 @@ void stl_transform(stl_file const *stl_src, stl_file *stl_dst, float const *traf
   int i_face, i_vertex, i, j;
   if (stl_src->error || stl_dst->error)
     return;
-  stl_dst->stats.number_of_facets = stl_src->stats.number_of_facets;
-  stl_allocate(stl_dst);
+  
+  if (stl_dst->stats.facets_malloced != stl_src->stats.number_of_facets)
+  {
+    stl_dst->stats.number_of_facets = stl_src->stats.number_of_facets;
+    if (stl_dst->stats.facets_malloced > 0)
+    {
+      stl_reallocate(stl_dst);
+    }
+    else
+    {
+      stl_allocate(stl_dst);
+    }
+  }
+  
   printf("Supplied trafo: %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f\n", 
     trafo3x4[0],
     trafo3x4[1],
