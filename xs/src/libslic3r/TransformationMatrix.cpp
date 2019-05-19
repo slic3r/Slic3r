@@ -118,13 +118,13 @@ bool TransformationMatrix::inverse(TransformationMatrix &inverse) const
 void TransformationMatrix::translate(double x, double y, double z)
 {
     TransformationMatrix mat = mat_translation(x, y, z);
-    this->multiplyLeft(mat);
+    this->applyLeft(mat);
 }
 
 void TransformationMatrix::translateXY(Slic3r::Pointf position)
 {
     TransformationMatrix mat = mat_translation(position.x, position.y, 0.0);
-    this->multiplyLeft(mat);
+    this->applyLeft(mat);
 }
 
 void TransformationMatrix::setTranslation(double x, double y, double z)
@@ -154,37 +154,37 @@ void TransformationMatrix::scale(double factor)
 void TransformationMatrix::scale(double x, double y, double z)
 {
     TransformationMatrix mat = mat_scale(x, y, z);
-    this->multiplyLeft(mat);
+    this->applyLeft(mat);
 }
 
 void TransformationMatrix::mirror(const Axis &axis)
 {
     TransformationMatrix mat = mat_mirror(axis);
-    this->multiplyLeft(mat);
+    this->applyLeft(mat);
 }
 
 void TransformationMatrix::mirror(const Pointf3 & normal)
 {
     TransformationMatrix mat = mat_mirror(normal);
-    this->multiplyLeft(mat);
+    this->applyLeft(mat);
 }
 
 void TransformationMatrix::rotate(double angle_rad, const Axis & axis)
 {
     TransformationMatrix mat = mat_rotation(angle_rad, axis);
-    this->multiplyLeft(mat);
+    this->applyLeft(mat);
 }
 
 void TransformationMatrix::rotate(double angle_rad, const Pointf3 & axis)
 {
     TransformationMatrix mat = mat_rotation(angle_rad, axis);
-    this->multiplyLeft(mat);
+    this->applyLeft(mat);
 }
 
 void TransformationMatrix::rotate(double q1, double q2, double q3, double q4)
 {
     TransformationMatrix mat = mat_rotation(q1, q2, q3, q4);
-    this->multiplyLeft(mat);
+    this->applyLeft(mat);
 }
 
 void TransformationMatrix::applyLeft(const TransformationMatrix &left)
