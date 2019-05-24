@@ -63,30 +63,11 @@ class TriangleMesh
     bool is_manifold() const;
     void WriteOBJFile(const std::string &output_file) const;
 
-    void scale(float factor);
-    void scale(const Pointf3 &versor);
+    TriangleMesh get_transformed_mesh(TransformationMatrix const & trafo) const;
 
-    /// Translate the mesh to a new location.
-    void translate(float x, float y, float z);
+    void transform(TransformationMatrix const & trafo);
 
-    /// Translate the mesh to a new location.
-    void translate(Pointf3 vec);
-
-
-    void rotate(float angle, const Axis &axis);
-    void rotate_x(float angle);
-    void rotate_y(float angle);
-    void rotate_z(float angle);
-    void mirror(const Axis &axis);
-    void mirror_x();
-    void mirror_y();
-    void mirror_z();
-    void align_to_origin();
-    void center_around_origin();
-
-    /// Rotate angle around a specified point.
-    void rotate(double angle, const Point& center);
-    void rotate(double angle, Point* center);
+    void align_to_bed();
 
     TriangleMeshPtrs split() const;
     TriangleMeshPtrs cut_by_grid(const Pointf &grid) const;
