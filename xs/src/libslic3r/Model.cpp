@@ -1074,11 +1074,7 @@ ModelVolume::get_transformed_mesh(TransformationMatrix const * additional_trafo)
     {
         trafo.applyLeft(*(additional_trafo));
     }
-    TriangleMesh mesh = TriangleMesh();
-    std::vector<float> trafo_arr = trafo.matrix3x4f();
-    stl_transform(&(this->mesh.stl), &(mesh.stl), trafo_arr.data());
-    stl_invalidate_shared_vertices(&(mesh.stl));
-    return mesh;
+    return this->mesh.get_transformed_mesh(trafo);
 }
 
 t_model_material_id
