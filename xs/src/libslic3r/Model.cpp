@@ -1141,13 +1141,8 @@ ModelInstance::swap(ModelInstance &other)
 void
 ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
 {
-    mesh->rotate_z(this->rotation);                 // rotate around mesh origin
-
-    mesh->scale(this->scaling_factor);              // scale around mesh origin
-    if (!dont_translate) {
-        mesh->translate(this->offset.x, this->offset.y, 0);
-    }
-
+    TransformationMatrix trafo = this->get_trafo_matrix(dont_translate);
+    mesh->transform(trafo);
 }
 
 TransformationMatrix ModelInstance::get_trafo_matrix(bool dont_translate) const

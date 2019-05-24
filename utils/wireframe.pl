@@ -42,7 +42,7 @@ my %opt = (
     $model->add_default_instances;
     $model->center_instances_around_point(Slic3r::Pointf->new(100,100));
     my $mesh = $model->mesh;
-    $mesh->translate(0, 0, -$mesh->bounding_box->z_min);
+    $mesh->align_to_bed();
     
     # get slices
     my @z = ();
