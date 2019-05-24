@@ -482,7 +482,7 @@ class ModelVolume
     /// Get the ModelVolume's mesh, transformed by the ModelVolume's TransformationMatrix
     /// \param additional_trafo additional transformation
     /// \return TriangleMesh the transformed mesh
-    TriangleMesh get_transformed_mesh(TransformationMatrix const * additional_trafo) const;
+    TriangleMesh get_transformed_mesh(TransformationMatrix const * additional_trafo = nullptr) const;
 
     /// Get the material id of this ModelVolume object
     /// \return t_model_material_id the material id string
@@ -547,6 +547,7 @@ class ModelInstance
     /// \return ModelObject* pointer to the owner ModelObject
     ModelObject* get_object() const { return this->object; };
 
+    //TRAFO:should be deprecated
     /// Transform an external TriangleMesh object
     /// \param mesh TriangleMesh* pointer to the the mesh
     /// \param dont_translate bool whether to translate the mesh or not
