@@ -17,18 +17,7 @@
     void repair();
     float volume();
     void WriteOBJFile(std::string output_file);
-    void scale(float factor);
-    void scale_xyz(Pointf3* versor)
-        %code{% THIS->scale(*versor); %};
-    void translate(float x, float y, float z);
-    void rotate_x(float angle);
-    void rotate_y(float angle);
-    void rotate_z(float angle);
-    void mirror_x();
-    void mirror_y();
-    void mirror_z();
-    void align_to_origin();
-    void rotate(double angle, Point* center);
+    void align_to_bed();
     TriangleMeshPtrs split();
     TriangleMeshPtrs cut_by_grid(Pointf* grid)
         %code{% RETVAL = THIS->cut_by_grid(*grid); %};
