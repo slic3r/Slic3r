@@ -203,7 +203,7 @@ void stl_transform(stl_file *stl, float const *trafo3x4) {
   calculate_normals(stl);
 }
 
-void stl_transform(stl_file const *stl_src, stl_file *stl_dst, float const *trafo3x4) {
+void stl_get_transform(stl_file const *stl_src, stl_file *stl_dst, float const *trafo3x4) {
   int i_face, i_vertex, i, j;
   if (stl_src->error || stl_dst->error)
     return;
