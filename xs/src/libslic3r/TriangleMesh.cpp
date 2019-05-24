@@ -284,7 +284,7 @@ TriangleMesh TriangleMesh::get_transformed_mesh(TransformationMatrix const & tra
 {
     TriangleMesh mesh;
     std::vector<float> trafo_arr = trafo.matrix3x4f();
-    stl_transform(&(this->stl), &(mesh.stl), trafo_arr.data());
+    stl_get_transform(&(this->stl), &(mesh.stl), trafo_arr.data());
     stl_invalidate_shared_vertices(&(mesh.stl));
     return mesh;
 }
