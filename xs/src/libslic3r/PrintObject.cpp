@@ -3,6 +3,7 @@
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
 #include "Log.hpp"
+#include "TransformationMatrix.hpp"
 #include <algorithm>
 #include <vector>
 #include <limits>
@@ -936,28 +937,28 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
     
     // compose mesh
     TriangleMesh mesh;
+
+    // we ignore the per-instance transformations currently and only 
+    // consider the first one
+    TransformationMatrix trafo = object.instances[0]->get_trafo_matrix();
+
+    // align mesh to Z = 0 (it should be already aligned actually) and apply XY shift
+    trafo.translate(
+        -unscale(this->_copies_shift.x),
+        -unscale(this->_copies_shift.y),
+        -object.bounding_box().min.z
+    );
+
     for (const auto& i : region_volumes) {
         
         const ModelVolume &volume = *(object.volumes[i]);
 
         if (volume.modifier != modifier) continue;
         
-        mesh.merge(volume.mesh);
+        mesh.merge(volume.get_transformed_mesh(&trafo));
     }
     if (mesh.facets_count() == 0) return layers;
 
-    // transform mesh
-    // we ignore the per-instance transformations currently and only 
-    // consider the first one
-    object.instances[0]->transform_mesh(&mesh, true);
-
-    // align mesh to Z = 0 (it should be already aligned actually) and apply XY shift
-    mesh.translate(
-        -unscale(this->_copies_shift.x),
-        -unscale(this->_copies_shift.y),
-        -object.bounding_box().min.z
-    );
-    
     // perform actual slicing
     TriangleMeshSlicer<Z>(&mesh).slice(z, &layers);
     return layers;

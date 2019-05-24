@@ -366,7 +366,7 @@ sub on_btn_load {
                 $new_volume->set_input_file_vol_idx($vol_idx);
                 
                 # apply the same translation we applied to the object
-                $new_volume->mesh->translate(@{$self->{model_object}->origin_translation});
+                $new_volume->translate(@{$self->{model_object}->origin_translation});
                 
                 # set a default extruder value, since user can't add it manually
                 $new_volume->config->set_ifndef('extruder', 0);
@@ -405,11 +405,11 @@ sub on_btn_lambda {
             $params->{"slab_h"},
         );
         # box sets the base coordinate at 0,0, move to center of plate
-        $mesh->translate(
-            -$size->x*1.5/2.0,
-            -$size->y*1.5/2.0,  #**
-            0,
-        );
+        #$mesh->translate(
+        #    -$size->x*1.5/2.0,
+        #    -$size->y*1.5/2.0,  #**
+        #    0,
+        #);
     } else {
         return;
     }
@@ -418,7 +418,7 @@ sub on_btn_lambda {
     if (!$Slic3r::GUI::Settings->{_}{autocenter}) {
         #TODO what we really want to do here is just align the
         # center of the modifier to the center of the part.
-        $mesh->translate($center->x, $center->y, 0);
+        #$mesh->translate($center->x, $center->y, 0);
     }
 
     $mesh->repair;
@@ -497,7 +497,7 @@ sub _update {
     my $itemData = $self->get_selection;
     if ($itemData && $itemData->{type} eq 'volume') {
         my $volume = $self->{model_object}->volumes->[$itemData->{volume_id}];
-        $volume->mesh->translate(@{ $volume->mesh->bounding_box->min_point->vector_to($self->{move_target}) });
+        $volume->translate(@{ $volume->mesh->bounding_box->min_point->vector_to($self->{move_target}) });
     }
 
     $self->{parts_changed} = 1;
