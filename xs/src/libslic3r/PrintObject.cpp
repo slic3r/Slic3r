@@ -940,7 +940,7 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
 
     // we ignore the per-instance transformations currently and only 
     // consider the first one
-    TransformationMatrix trafo = object.instances[0]->get_trafo_matrix();
+    TransformationMatrix trafo = object.instances[0]->get_trafo_matrix(true);
 
     // align mesh to Z = 0 (it should be already aligned actually) and apply XY shift
     trafo.translate(
