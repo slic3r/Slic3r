@@ -625,7 +625,7 @@ ModelObject::raw_mesh() const
     TriangleMesh mesh;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         if ((*v)->modifier) continue;
-        mesh.merge((*v)->get_transformed_mesh(nullptr));
+        mesh.merge((*v)->get_transformed_mesh());
     }
     return mesh;
 }
