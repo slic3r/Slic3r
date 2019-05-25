@@ -41,7 +41,7 @@ TransformationMatrix::TransformationMatrix(const std::vector<double> &entries_ro
 TransformationMatrix::TransformationMatrix(const TransformationMatrix &other)
 {
     this->m11 = other.m11; this->m12 = other.m12; this->m13 = other.m13; this->m14 = other.m14;
-    this->m11 = other.m11; this->m22 = other.m22; this->m23 = other.m23; this->m24 = other.m24;
+    this->m21 = other.m21; this->m22 = other.m22; this->m23 = other.m23; this->m24 = other.m24;
     this->m31 = other.m31; this->m32 = other.m32; this->m33 = other.m33; this->m34 = other.m34;
 }
 
