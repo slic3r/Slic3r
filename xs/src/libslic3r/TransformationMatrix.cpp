@@ -311,13 +311,13 @@ TransformationMatrix TransformationMatrix::mat_rotation(double q1, double q2, do
 TransformationMatrix TransformationMatrix::mat_rotation(double angle_rad, const Pointf3 &axis)
 {
     double s, factor, q1, q2, q3, q4;
-    s = sin(angle_rad);
+    s = sin(angle_rad/2);
     factor = axis.x*axis.x + axis.y*axis.y + axis.z*axis.z;
     factor = s / sqrt(factor);
     q1 = factor*axis.x;
     q2 = factor*axis.y;
     q3 = factor*axis.z;
-    q4 = cos(angle_rad);
+    q4 = cos(angle_rad/2);
     return mat_rotation(q1, q2, q3, q4);
 }
 
