@@ -2,10 +2,6 @@
 #include <cmath>
 #include <math.h>
 
-#ifdef SLIC3R_DEBUG
-#include "SVG.hpp"
-#endif
-
 namespace Slic3r {
 
 TransformationMatrix::TransformationMatrix()
