@@ -588,7 +588,7 @@ ModelObject::update_bounding_box()
     BoundingBoxf3 raw_bbox;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         if ((*v)->modifier) continue;
-        raw_bbox.merge((*v)->mesh.bounding_box());
+        raw_bbox.merge((*v)->get_transformed_bounding_box());
     }
     BoundingBoxf3 bb;
     for (ModelInstancePtrs::const_iterator i = this->instances.begin(); i != this->instances.end(); ++i)
@@ -634,10 +634,11 @@ BoundingBoxf3
 ModelObject::raw_bounding_box() const
 {
     BoundingBoxf3 bb;
+    if (this->instances.empty()) CONFESS("Can't call raw_bounding_box() with no instances");
+    TransformationMatrix trafo = this->instances.front()->get_trafo_matrix(true);
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         if ((*v)->modifier) continue;
-        if (this->instances.empty()) CONFESS("Can't call raw_bounding_box() with no instances");
-        bb.merge(this->instances.front()->transform_mesh_bounding_box(&(*v)->mesh, true));
+        bb.merge((*v)->get_transformed_bounding_box(&trafo));
     }
     return bb;
 }
@@ -647,9 +648,11 @@ BoundingBoxf3
 ModelObject::instance_bounding_box(size_t instance_idx) const
 {
     BoundingBoxf3 bb;
+    if (this->instances.size()<=instance_idx) CONFESS("Can't call instance_bounding_box(index) with insufficient amount of instances");
+    TransformationMatrix trafo = this->instances[instance_idx]->get_trafo_matrix(true);
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         if ((*v)->modifier) continue;
-        bb.merge(this->instances[instance_idx]->transform_mesh_bounding_box(&(*v)->mesh, true));
+        bb.merge((*v)->get_transformed_bounding_box(&trafo));
     }
     return bb;
 }
@@ -1077,6 +1080,31 @@ ModelVolume::get_transformed_mesh(TransformationMatrix const * additional_trafo)
     return this->mesh.get_transformed_mesh(trafo);
 }
 
+BoundingBoxf3
+ModelVolume::get_transformed_bounding_box(TransformationMatrix const * additional_trafo) const
+{
+    TransformationMatrix trafo = this->trafo;
+    if(additional_trafo)
+    {
+        trafo.applyLeft(*(additional_trafo));
+    }
+    BoundingBoxf3 bbox;
+    for (int i = 0; i < this->mesh.stl.stats.number_of_facets; ++ i) {
+        const stl_facet &facet = this->mesh.stl.facet_start[i];
+        for (int j = 0; j < 3; ++ j) {
+            double v_x = facet.vertex[j].x;
+            double v_y = facet.vertex[j].y;
+            double v_z = facet.vertex[j].z;
+            Pointf3 poi;
+            poi.x = float(trafo.m11*v_x + trafo.m12*v_y + trafo.m13*v_z + trafo.m14);
+            poi.y = float(trafo.m21*v_x + trafo.m22*v_y + trafo.m23*v_z + trafo.m24);
+            poi.z = float(trafo.m31*v_x + trafo.m32*v_y + trafo.m33*v_z + trafo.m34);
+            bbox.merge(poi);
+        }
+    }
+    return bbox;
+}
+
 t_model_material_id
 ModelVolume::material_id() const
 {
@@ -1160,34 +1188,6 @@ TransformationMatrix ModelInstance::get_trafo_matrix(bool dont_translate) const
 void ModelInstance::set_local_trafo_matrix(bool dont_translate)
 {
     this->trafo = this->get_trafo_matrix(dont_translate);
-}
-
-BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh* mesh, bool dont_translate) const
-{
-    // rotate around mesh origin
-    double c = cos(this->rotation);
-    double s = sin(this->rotation);
-    BoundingBoxf3 bbox;
-    for (int i = 0; i < mesh->stl.stats.number_of_facets; ++ i) {
-        const stl_facet &facet = mesh->stl.facet_start[i];
-        for (int j = 0; j < 3; ++ j) {
-            stl_vertex v = facet.vertex[j];
-            double xold = v.x;
-            double yold = v.y;
-            // Rotation around z axis.
-            v.x = float(c * xold - s * yold);
-            v.y = float(s * xold + c * yold);
-            v.x *= float(this->scaling_factor);
-            v.y *= float(this->scaling_factor);
-            v.z *= float(this->scaling_factor);
-            if (!dont_translate) {
-                v.x += this->offset.x;
-                v.y += this->offset.y;
-            }
-            bbox.merge(Pointf3(v.x, v.y, v.z));
-        }
-    }
-    return bbox;
 }
 
 BoundingBoxf3 ModelInstance::transform_bounding_box(const BoundingBoxf3 &bbox, bool dont_translate) const
