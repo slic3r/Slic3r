@@ -323,6 +323,8 @@ TransformationMatrix TransformationMatrix::mat_rotation(double angle_rad, const 
 
 TransformationMatrix TransformationMatrix::mat_rotation(Pointf3 origin, Pointf3 target)
 {
+    // TODO: there is a lot of float <-> double conversion going on here
+
     TransformationMatrix mat;
     double length_sq = origin.x*origin.x + origin.y*origin.y + origin.z*origin.z;
     double rec_length;
@@ -349,8 +351,8 @@ TransformationMatrix TransformationMatrix::mat_rotation(Pointf3 origin, Pointf3 
     cross.z = origin.x*target.y - origin.y*target.x;
 
     length_sq = cross.x*cross.x + cross.y*cross.y + cross.z*cross.z;
+    double dot = origin.x*target.x + origin.y*target.y + origin.z*target.z;
     if (length_sq < 1e-12) {// colinear, but maybe opposite directions
-        double dot = origin.x*target.x + origin.y*target.y + origin.z*target.z;
         if (dot > 0.0)
         {
             return mat; // same direction, nothing to do
@@ -368,15 +370,21 @@ TransformationMatrix TransformationMatrix::mat_rotation(Pointf3 origin, Pointf3 
             // projection of axis onto unit vector origin
             dot = origin.x*help.x + origin.y*help.y + origin.z*help.z;
             proj.scale(dot);
+
             // help - proj is normal to origin -> rotation axis
+            Pointf3 axis = (Pointf3)proj.vector_to(help);
+
             // axis is not unit length -> gets normalized in called function
-            Pointf3 axis = (Pointf3)proj.vector_to(help); 
             return mat_rotation(PI, axis);
         }
     }
     else
-    {
+    {// not colinear, cross represents rotation axis so that angle is positive
+        // dot's vectors have previously been normalized, so nothing to do except arccos
+        double angle = acos(dot);
 
+        // cross is (probably) not unit length -> gets normalized in called function
+        return mat_rotation(angle, cross);
     }
     return mat; // Shouldn't be reached
 }
