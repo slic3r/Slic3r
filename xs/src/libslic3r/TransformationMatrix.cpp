@@ -267,19 +267,19 @@ TransformationMatrix TransformationMatrix::mat_rotation(double angle_rad, const 
     case X:
         mat = TransformationMatrix(
             1.0, 0.0, 0.0, 0.0,
-            0.0, c, s, 0.0,
-            0.0, -s, c, 0.0);
+            0.0, c, -s, 0.0,
+            0.0, s, c, 0.0);
         break;
     case Y:
         mat = TransformationMatrix(
-            c, 0.0, -s, 0.0,
+            c, 0.0, s, 0.0,
             0.0, 1.0, 0.0, 0.0,
-            s, 0.0, c, 0.0);
+            -s, 0.0, c, 0.0);
         break;
     case Z:
         mat = TransformationMatrix(
-            c, s, 0.0, 0.0,
-            -s, c, 0.0, 0.0,
+            c, -s, 0.0, 0.0,
+            s, c, 0.0, 0.0,
             0.0, 0.0, 1.0, 0.0);
         break;
     default:
