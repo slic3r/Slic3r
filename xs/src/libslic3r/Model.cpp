@@ -402,7 +402,7 @@ Model::looks_like_multipart_object() const
     std::set<coordf_t> heights;
     for (const ModelObject* o : this->objects)
         for (const ModelVolume* v : o->volumes)
-            heights.insert(v->mesh.bounding_box().min.z);
+            heights.insert(v->get_transformed_bounding_box().min.z);
     return heights.size() > 1;
 }
 
@@ -678,12 +678,10 @@ Model::align_to_ground()
 void
 ModelObject::align_to_ground()
 {
-    // calculate the displacements needed to 
-    // center this object around the origin
 	BoundingBoxf3 bb;
 	for (const ModelVolume* v : this->volumes)
 		if (!v->modifier)
-			bb.merge(v->mesh.bounding_box());
+			bb.merge(v->get_transformed_bounding_box());
     
     this->translate(0, 0, -bb.min.z);
     this->origin_translation.translate(0, 0, -bb.min.z);
@@ -697,7 +695,7 @@ ModelObject::center_around_origin()
 	BoundingBoxf3 bb;
 	for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v)
 		if (! (*v)->modifier)
-			bb.merge((*v)->mesh.bounding_box());
+			bb.merge((*v)->get_transformed_bounding_box());
     
     // first align to origin on XYZ
     Vectorf3 vector(-bb.min.x, -bb.min.y, -bb.min.z);
