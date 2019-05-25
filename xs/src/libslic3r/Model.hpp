@@ -484,6 +484,8 @@ class ModelVolume
     /// \return TriangleMesh the transformed mesh
     TriangleMesh get_transformed_mesh(TransformationMatrix const * additional_trafo = nullptr) const;
 
+    BoundingBoxf3 get_transformed_bounding_box(TransformationMatrix const * additional_trafo = nullptr) const;
+
     /// Get the material id of this ModelVolume object
     /// \return t_model_material_id the material id string
     t_model_material_id material_id() const;
@@ -560,12 +562,6 @@ class ModelInstance
     /// Returns a pointer to TransformationMatrix defined by the instance's Transform an external TriangleMesh to the returned TriangleMesh object
     /// \param dont_translate bool whether to translate the mesh or not
     void set_local_trafo_matrix(bool dont_translate);
-
-    /// Calculate a bounding box of a transformed mesh. To be called on an external mesh.
-    /// \param mesh TriangleMesh* pointer to the the mesh
-    /// \param dont_translate bool whether to translate the bounding box or not
-    /// \return BoundingBoxf3 the bounding box after transformation
-    BoundingBoxf3 transform_mesh_bounding_box(const TriangleMesh* mesh, bool dont_translate = false) const;
 
     /// Transform an external bounding box.
     /// \param bbox BoundingBoxf3 the bounding box to be transformed
