@@ -1637,12 +1637,12 @@ sub rotate_face {
 
     my $axis_vec = Slic3r::Pointf3->new(0,0,0);
     if($axis == Z){
-        $axis_vec->set_z(1);
+        $axis_vec->set_z(-1);
     } else {
         if($axis == X){
-            $axis_vec->set_x(1);
+            $axis_vec->set_x(-1);
         } else {
-            $axis_vec->set_y(1);
+            $axis_vec->set_y(-1);
         }
     }
 
