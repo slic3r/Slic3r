@@ -123,25 +123,6 @@ void TransformationMatrix::translateXY(Slic3r::Pointf position)
     this->applyLeft(mat);
 }
 
-void TransformationMatrix::setTranslation(double x, double y, double z)
-{
-    this->m14 = x;
-    this->m24 = y;
-    this->m34 = z;
-}
-
-void TransformationMatrix::setXYtranslation(double x, double y)
-{
-    this->m14 = x;
-    this->m24 = y;
-}
-
-void TransformationMatrix::setXYtranslation(Slic3r::Pointf position)
-{
-    this->m14 = position.x;
-    this->m24 = position.y;
-}
-
 void TransformationMatrix::scale(double factor)
 {
     this->scale(factor, factor, factor);
