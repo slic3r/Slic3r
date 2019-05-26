@@ -1676,6 +1676,8 @@ sub rotate {
         $angle = Wx::GetTextFromUser("Enter the rotation angle:", "Rotate around $axis_name axis",
             $default, $self);
         return if !$angle || $angle !~ /^-?\d*(?:\.\d*)?$/ || $angle == -1;
+        
+        $angle = $angle - $default;
     }
     
     $self->stop_background_process;
