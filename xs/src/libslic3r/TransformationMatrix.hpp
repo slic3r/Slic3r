@@ -37,8 +37,8 @@ public:
 
     /// performs translation
     void translate(double x, double y, double z);
-    void translate(Vectorf3 vector);
-    void translateXY(Vectorf vector);
+    void translate(Vectorf3 const &vector);
+    void translateXY(Vectorf const &vector);
 
     /// performs uniform scale
     void scale(double factor);
@@ -46,6 +46,9 @@ public:
     /// performs per-axis scale
     void scale(double x, double y, double z);
 
+    /// performs per-axis scale via vector
+    void scale(Vectorf3 const &vector);
+    
     /// performs mirroring along given axis
     void mirror(const Axis &axis);
 
