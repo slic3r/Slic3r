@@ -949,8 +949,6 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
         -object.bounding_box().min.z
     );
 
-    printf("Print Object: Region %d, X: %.2f, Y: %.2f", region_id, -unscale(this->_copies_shift.x), -unscale(this->_copies_shift.y));
-
     for (const auto& i : region_volumes) {
         
         const ModelVolume &volume = *(object.volumes[i]);
