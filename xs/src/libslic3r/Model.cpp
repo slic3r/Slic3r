@@ -732,20 +732,6 @@ ModelObject::translate(coordf_t x, coordf_t y, coordf_t z)
 {
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         (*v)->trafo.translate(x, y, z);
-        printf("Translate obj trafo: %.1f, %.1f, %.1f, %.1f; %.1f, %.1f, %.1f, %.1f; %.1f, %.1f, %.1f, %.1f\n", 
-            ((*v)->trafo.m11),
-            ((*v)->trafo.m12),
-            ((*v)->trafo.m13),
-            ((*v)->trafo.m14),
-            ((*v)->trafo.m21),
-            ((*v)->trafo.m22),
-            ((*v)->trafo.m23),
-            ((*v)->trafo.m24),
-            ((*v)->trafo.m31),
-            ((*v)->trafo.m32),
-            ((*v)->trafo.m33),
-            ((*v)->trafo.m34)
-            );
     }
     if (this->_bounding_box_valid) this->_bounding_box.translate(x, y, z);
 }
@@ -762,20 +748,6 @@ ModelObject::scale(const Pointf3 &versor)
     if (versor.x == 1 && versor.y == 1 && versor.z == 1) return;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         (*v)->trafo.scale(versor.x, versor.y, versor.z);
-        printf("Scale obj trafo: %.1f, %.1f, %.1f, %.1f; %.1f, %.1f, %.1f, %.1f; %.1f, %.1f, %.1f, %.1f\n", 
-            ((*v)->trafo.m11),
-            ((*v)->trafo.m12),
-            ((*v)->trafo.m13),
-            ((*v)->trafo.m14),
-            ((*v)->trafo.m21),
-            ((*v)->trafo.m22),
-            ((*v)->trafo.m23),
-            ((*v)->trafo.m24),
-            ((*v)->trafo.m31),
-            ((*v)->trafo.m32),
-            ((*v)->trafo.m33),
-            ((*v)->trafo.m34)
-            );
     }
     
     // reset origin translation since it doesn't make sense anymore
@@ -803,20 +775,6 @@ ModelObject::rotate(float angle, const Axis &axis)
     if (angle == 0) return;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         (*v)->trafo.rotate(angle, axis);
-        printf("Rotation obj trafo: %.1f, %.1f, %.1f, %.1f; %.1f, %.1f, %.1f, %.1f; %.1f, %.1f, %.1f, %.1f\n", 
-            ((*v)->trafo.m11),
-            ((*v)->trafo.m12),
-            ((*v)->trafo.m13),
-            ((*v)->trafo.m14),
-            ((*v)->trafo.m21),
-            ((*v)->trafo.m22),
-            ((*v)->trafo.m23),
-            ((*v)->trafo.m24),
-            ((*v)->trafo.m31),
-            ((*v)->trafo.m32),
-            ((*v)->trafo.m33),
-            ((*v)->trafo.m34)
-            );
     }
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
@@ -827,20 +785,6 @@ ModelObject::mirror(const Axis &axis)
 {
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         (*v)->trafo.mirror(axis);
-        printf("Mirror obj trafo: %.1f, %.1f, %.1f, %.1f; %.1f, %.1f, %.1f, %.1f; %.1f, %.1f, %.1f, %.1f\n", 
-            ((*v)->trafo.m11),
-            ((*v)->trafo.m12),
-            ((*v)->trafo.m13),
-            ((*v)->trafo.m14),
-            ((*v)->trafo.m21),
-            ((*v)->trafo.m22),
-            ((*v)->trafo.m23),
-            ((*v)->trafo.m24),
-            ((*v)->trafo.m31),
-            ((*v)->trafo.m32),
-            ((*v)->trafo.m33),
-            ((*v)->trafo.m34)
-            );
     }
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
