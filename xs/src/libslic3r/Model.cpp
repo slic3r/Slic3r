@@ -737,7 +737,7 @@ ModelObject::translate(coordf_t x, coordf_t y, coordf_t z)
 }
 
 void
-ModelObject::scale(float factor)
+ModelObject::scale(double factor)
 {
     this->scale(Pointf3(factor, factor, factor));
 }
@@ -759,7 +759,7 @@ void
 ModelObject::scale_to_fit(const Sizef3 &size)
 {
     Sizef3 orig_size = this->bounding_box().size();
-    float factor = fminf(
+    double factor = fminf(
         size.x / orig_size.x,
         fminf(
             size.y / orig_size.y,
@@ -770,7 +770,7 @@ ModelObject::scale_to_fit(const Sizef3 &size)
 }
 
 void
-ModelObject::rotate(float angle, const Axis &axis)
+ModelObject::rotate(double angle, const Axis &axis)
 {
     if (angle == 0) return;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
