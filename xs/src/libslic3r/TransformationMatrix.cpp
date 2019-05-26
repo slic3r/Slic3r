@@ -57,9 +57,9 @@ void TransformationMatrix::swap(TransformationMatrix &other)
     std::swap(this->m33, other.m33); std::swap(this->m34, other.m34);
 }
 
-std::vector<float> TransformationMatrix::matrix3x4f() const
+std::vector<double> TransformationMatrix::matrix3x4f() const
 {
-    std::vector<float> out_arr(0);
+    std::vector<double> out_arr(0);
     out_arr.reserve(12);
     out_arr.push_back(this->m11);
     out_arr.push_back(this->m12);

@@ -185,7 +185,7 @@ void calculate_normals(stl_file *stl) {
   }
 }
 
-void stl_transform(stl_file *stl, float const *trafo3x4) {
+void stl_transform(stl_file *stl, double const *trafo3x4) {
   int i_face, i_vertex, i, j;
   if (stl->error)
     return;
@@ -193,17 +193,19 @@ void stl_transform(stl_file *stl, float const *trafo3x4) {
     stl_vertex *vertices = stl->facet_start[i_face].vertex;
     for (i_vertex = 0; i_vertex < 3; ++ i_vertex) {
       stl_vertex* v_dst = &vertices[i_vertex];
-      stl_vertex  v_src = *v_dst;
-      v_dst->x = trafo3x4[0] * v_src.x + trafo3x4[1] * v_src.y + trafo3x4[2]  * v_src.z + trafo3x4[3];
-      v_dst->y = trafo3x4[4] * v_src.x + trafo3x4[5] * v_src.y + trafo3x4[6]  * v_src.z + trafo3x4[7];
-      v_dst->z = trafo3x4[8] * v_src.x + trafo3x4[9] * v_src.y + trafo3x4[10] * v_src.z + trafo3x4[11];
+      double v_src_x = (double)(v_dst->x);
+      double v_src_y = (double)(v_dst->y);
+      double v_src_z = (double)(v_dst->z);
+      v_dst->x = (float)(trafo3x4[0] * v_src_x + trafo3x4[1] * v_src_y + trafo3x4[2]  * v_src_z + trafo3x4[3]);
+      v_dst->y = (float)(trafo3x4[4] * v_src_x + trafo3x4[5] * v_src_y + trafo3x4[6]  * v_src_z + trafo3x4[7]);
+      v_dst->z = (float)(trafo3x4[8] * v_src_x + trafo3x4[9] * v_src_y + trafo3x4[10] * v_src_z + trafo3x4[11]);
     }
   }
   stl_get_size(stl);
   calculate_normals(stl);
 }
 
-void stl_get_transform(stl_file const *stl_src, stl_file *stl_dst, float const *trafo3x4) {
+void stl_get_transform(stl_file const *stl_src, stl_file *stl_dst, double const *trafo3x4) {
   int i_face, i_vertex, i, j;
   if (stl_src->error || stl_dst->error)
     return;
@@ -227,9 +229,12 @@ void stl_get_transform(stl_file const *stl_src, stl_file *stl_dst, float const *
     for (i_vertex = 0; i_vertex < 3; ++ i_vertex) {
       stl_vertex* v_dst = &vertices_dst[i_vertex];
       stl_vertex const * v_src = &vertices_src[i_vertex];
-      v_dst->x = trafo3x4[0] * v_src->x + trafo3x4[1] * v_src->y + trafo3x4[2]  * v_src->z + trafo3x4[3];
-      v_dst->y = trafo3x4[4] * v_src->x + trafo3x4[5] * v_src->y + trafo3x4[6]  * v_src->z + trafo3x4[7];
-      v_dst->z = trafo3x4[8] * v_src->x + trafo3x4[9] * v_src->y + trafo3x4[10] * v_src->z + trafo3x4[11];
+      double v_src_x = (double)(v_src->x);
+      double v_src_y = (double)(v_src->y);
+      double v_src_z = (double)(v_src->z);
+      v_dst->x = (float)(trafo3x4[0] * v_src_x + trafo3x4[1] * v_src_y + trafo3x4[2]  * v_src_z + trafo3x4[3]);
+      v_dst->y = (float)(trafo3x4[4] * v_src_x + trafo3x4[5] * v_src_y + trafo3x4[6]  * v_src_z + trafo3x4[7]);
+      v_dst->z = (float)(trafo3x4[8] * v_src_x + trafo3x4[9] * v_src_y + trafo3x4[10] * v_src_z + trafo3x4[11]);
     }
   }
   stl_get_size(stl_dst);
