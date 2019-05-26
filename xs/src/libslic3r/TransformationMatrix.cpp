@@ -117,9 +117,15 @@ void TransformationMatrix::translate(double x, double y, double z)
     this->applyLeft(mat);
 }
 
-void TransformationMatrix::translateXY(Slic3r::Pointf position)
+void TransformationMatrix::translate(Vectorf3 vector)
 {
-    TransformationMatrix mat = mat_translation(position.x, position.y, 0.0);
+    TransformationMatrix mat = mat_translation(x, y, z);
+    this->applyLeft(mat);
+}
+
+void TransformationMatrix::translateXY(Vectorf vector)
+{
+    TransformationMatrix mat = mat_translation(vector.x, vector.y, 0.0);
     this->applyLeft(mat);
 }
 
@@ -140,7 +146,7 @@ void TransformationMatrix::mirror(const Axis &axis)
     this->applyLeft(mat);
 }
 
-void TransformationMatrix::mirror(const Pointf3 & normal)
+void TransformationMatrix::mirror(const Vectorf3 & normal)
 {
     TransformationMatrix mat = mat_mirror(normal);
     this->applyLeft(mat);
@@ -152,7 +158,7 @@ void TransformationMatrix::rotate(double angle_rad, const Axis & axis)
     this->applyLeft(mat);
 }
 
-void TransformationMatrix::rotate(double angle_rad, const Pointf3 & axis)
+void TransformationMatrix::rotate(double angle_rad, const Vectorf3 & axis)
 {
     TransformationMatrix mat = mat_rotation(angle_rad, axis);
     this->applyLeft(mat);
@@ -285,7 +291,7 @@ TransformationMatrix TransformationMatrix::mat_rotation(double q1, double q2, do
         2.0 * (q1*q3 - q2*q4), 2.0 * (q2*q3 + q1*q4), 1.0 - 2.0 * (q1*q1 + q2*q2), 0.0);
 }
 
-TransformationMatrix TransformationMatrix::mat_rotation(double angle_rad, const Pointf3 &axis)
+TransformationMatrix TransformationMatrix::mat_rotation(double angle_rad, const Vectorf3 &axis)
 {
     double s, factor, q1, q2, q3, q4;
     s = sin(angle_rad/2);
@@ -298,7 +304,7 @@ TransformationMatrix TransformationMatrix::mat_rotation(double angle_rad, const 
     return mat_rotation(q1, q2, q3, q4);
 }
 
-TransformationMatrix TransformationMatrix::mat_rotation(Pointf3 origin, Pointf3 target)
+TransformationMatrix TransformationMatrix::mat_rotation(Vectorf3 origin, Vectorf3 target)
 {
     // TODO: there is a lot of float <-> double conversion going on here
 
@@ -322,7 +328,7 @@ TransformationMatrix TransformationMatrix::mat_rotation(Pointf3 origin, Pointf3 
     rec_length = 1.0 / sqrt(length_sq);
     target.scale(rec_length);
 
-    Pointf3 cross;
+    Vectorf3 cross;
     cross.x = origin.y*target.z - origin.z*target.y;
     cross.y = origin.z*target.x - origin.x*target.z;
     cross.z = origin.x*target.y - origin.y*target.x;
@@ -336,20 +342,20 @@ TransformationMatrix TransformationMatrix::mat_rotation(Pointf3 origin, Pointf3 
         }
         else
         {
-            Pointf3 help;
+            Vectorf3 help;
             // make help garanteed not colinear
             if (abs(abs(origin.x) - 1) < 0.02)
                 help.z = 1.0; // origin mainly in x direction
             else
                 help.x = 1.0;
 
-            Pointf3 proj = Pointf3(origin);
+            Vectorf3 proj = origin;
             // projection of axis onto unit vector origin
             dot = origin.x*help.x + origin.y*help.y + origin.z*help.z;
             proj.scale(dot);
 
             // help - proj is normal to origin -> rotation axis
-            Pointf3 axis = (Pointf3)proj.vector_to(help);
+            Vectorf3 axis = ((Pointf3)proj).vector_to((Pointf3)help);
 
             // axis is not unit length -> gets normalized in called function
             return mat_rotation(PI, axis);
@@ -387,7 +393,7 @@ TransformationMatrix TransformationMatrix::mat_mirror(const Axis &axis)
     return mat;
 }
 
-TransformationMatrix TransformationMatrix::mat_mirror(const Pointf3 &normal)
+TransformationMatrix TransformationMatrix::mat_mirror(const Vectorf3 &normal)
 {
     // Kov�cs, E. Rotation about arbitrary axis and reflection through an arbitrary plane, Annales Mathematicae
     // et Informaticae, Vol 40 (2012) pp 175-186
