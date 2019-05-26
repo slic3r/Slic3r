@@ -1634,23 +1634,21 @@ sub rotate_face {
     return if !defined $normal;
     my $axis = $dlg->SelectedAxis;
     return if !defined $axis;
-    
-    # Actual math to rotate
-    my $angleToXZ = atan2($normal->y(),$normal->x());
-    my $angleToZ = acos(-$normal->z());
-    $self->rotate(-rad2deg($angleToXZ),Z);
-    $self->rotate(rad2deg($angleToZ),Y);
-    
+
+    my $axis_vec = Slic3r::Pointf3->new(0,0,0);
     if($axis == Z){
-        $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-2));
+        $axis_vec->set_z(1);
     } else {
         if($axis == X){
-            $self->rotate(90,Y);
+            $axis_vec->set_x(1);
         } else {
-            $self->rotate(90,X);
+            $axis_vec->set_y(1);
         }
-        $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-3));
     }
+
+    $object->rotate_vec_to_vec($normal,$axis_vec);
+
+    #TODO: undo stack
 }
 
 sub rotate {
