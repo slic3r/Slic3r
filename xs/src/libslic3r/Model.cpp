@@ -731,7 +731,7 @@ void
 ModelObject::translate(coordf_t x, coordf_t y, coordf_t z)
 {
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->trafo.translate(x, y, z);
+        (*v)->translate(x, y, z);
     }
     if (this->_bounding_box_valid) this->_bounding_box.translate(x, y, z);
 }
@@ -747,7 +747,7 @@ ModelObject::scale(const Pointf3 &versor)
 {
     if (versor.x == 1 && versor.y == 1 && versor.z == 1) return;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->trafo.scale(versor.x, versor.y, versor.z);
+        (*v)->scale(versor);
     }
     
     // reset origin translation since it doesn't make sense anymore
@@ -774,7 +774,18 @@ ModelObject::rotate(double angle, const Axis &axis)
 {
     if (angle == 0) return;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->trafo.rotate(angle, axis);
+        (*v)->rotate(angle, axis);
+    }
+    this->origin_translation = Pointf3(0,0,0);
+    this->invalidate_bounding_box();
+}
+
+void
+ModelObject::rotate(const Vectorf3 &origin, const Vectorf3 &target)
+{
+    TransformationMatrix trafo = TransformationMatrix::mat_rotation(origin, target);
+    for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
+        (*v)->apply(trafo);
     }
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
@@ -784,7 +795,7 @@ void
 ModelObject::mirror(const Axis &axis)
 {
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->trafo.mirror(axis);
+        (*v)->mirror(axis);
     }
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
