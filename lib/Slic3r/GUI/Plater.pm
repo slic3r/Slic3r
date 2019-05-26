@@ -1646,8 +1646,23 @@ sub rotate_face {
         }
     }
 
-    $object->rotate_vec_to_vec($normal,$axis_vec);
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    my $model_instance = $model_object->instances->[0];
 
+    $model_object->transform_by_instance($model_instance, 1);
+    $model_object->rotate_vec_to_vec($normal,$axis_vec);
+
+    # realign object to Z = 0
+    $model_object->center_around_origin;
+    $self->make_thumbnail($obj_idx);
+
+    $model_object->update_bounding_box;
+    # update print and start background processing
+    $self->{print}->add_model_object($model_object, $obj_idx);
+
+    $self->selection_changed;  # refresh info (size etc.)
+    $self->on_model_change;
+    
     #TODO: undo stack
 }
 
