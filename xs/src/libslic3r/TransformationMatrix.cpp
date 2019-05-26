@@ -117,13 +117,13 @@ void TransformationMatrix::translate(double x, double y, double z)
     this->applyLeft(mat);
 }
 
-void TransformationMatrix::translate(Vectorf3 vector)
+void TransformationMatrix::translate(Vectorf3 const &vector)
 {
-    TransformationMatrix mat = mat_translation(x, y, z);
+    TransformationMatrix mat = mat_translation(vector.x, vector.y, vector.z);
     this->applyLeft(mat);
 }
 
-void TransformationMatrix::translateXY(Vectorf vector)
+void TransformationMatrix::translateXY(Vectorf const &vector)
 {
     TransformationMatrix mat = mat_translation(vector.x, vector.y, 0.0);
     this->applyLeft(mat);
@@ -137,6 +137,12 @@ void TransformationMatrix::scale(double factor)
 void TransformationMatrix::scale(double x, double y, double z)
 {
     TransformationMatrix mat = mat_scale(x, y, z);
+    this->applyLeft(mat);
+}
+
+void TransformationMatrix::scale(Vectorf3 const &vector)
+{
+    TransformationMatrix mat = mat_scale(vector.x, vector.y, vector.z);
     this->applyLeft(mat);
 }
 
