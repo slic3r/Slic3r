@@ -371,8 +371,8 @@ class ModelObject
 
     /// Scale the current ModelObject by scaling its ModelVolumes.
     /// This function calls scale(const Pointf3 &versor) to scale every TriangleMesh in each ModelVolume.
-    /// \param factor float the scaling factor
-    void scale(float factor);
+    /// \param factor double the scaling factor
+    void scale(double factor);
 
     /// Scale the current ModelObject by scaling its ModelVolumes.
     /// \param versor Pointf3 the scaling factor in a 3d vector.
@@ -384,9 +384,9 @@ class ModelObject
     void scale_to_fit(const Sizef3 &size);
 
     /// Rotate the current ModelObject by rotating ModelVolumes.
-    /// \param angle float the angle in radians
+    /// \param angle double the angle in radians
     /// \param axis Axis the axis to be rotated around
-    void rotate(float angle, const Axis &axis);
+    void rotate(double angle, const Axis &axis);
 
     /// Mirror the current Model around a certain axis.
     /// \param axis Axis enum member
