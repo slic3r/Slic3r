@@ -301,11 +301,10 @@ ModelMaterial::attributes()
     Ref<TriangleMesh> mesh()
         %code%{ RETVAL = &THIS->mesh; %};
 
-    Ref<TriangleMesh> transformed_mesh(ModelInstance * instance)
+    void transformed_mesh(ModelInstance * instance, TriangleMesh * mesh)
         %code%{
             TransformationMatrix trafo = instance->get_trafo_matrix(false);
-            THIS->transformed_mesh = THIS->get_transformed_mesh(&trafo);
-            RETVAL = &THIS->transformed_mesh;
+            *(mesh) = THIS->get_transformed_mesh(&trafo);
         %};
 
     bool modifier()

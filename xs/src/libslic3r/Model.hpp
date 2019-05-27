@@ -470,8 +470,6 @@ class ModelVolume
     DynamicPrintConfig config;
     ///< Configuration parameters specific to an object model geometry or a modifier volume,
     ///< overriding the global Slic3r settings and the ModelObject settings.
-    
-    TriangleMesh transformed_mesh;  ///< The transformed mesh only to be used by the perl binding
 
     /// Input file path needed for reloading the volume from disk
     std::string input_file; ///< Input file path
