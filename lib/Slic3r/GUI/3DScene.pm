@@ -1331,7 +1331,10 @@ sub load_object {
         my $volume = $model_object->volumes->[$volume_idx];
         foreach my $instance_idx (@$instance_idxs) {
             my $instance = $model_object->instances->[$instance_idx];
-            my $mesh = $volume->transformed_mesh($instance);
+            my $mesh = Slic3r::TriangleMesh->new();
+            
+            # $mesh is the output argument, given as pointer
+            $volume->transformed_mesh($instance, $mesh);
             
             my $color_idx;
             if ($self->color_by eq 'volume') {
