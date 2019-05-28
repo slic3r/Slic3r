@@ -26,7 +26,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <boost/detail/endian.hpp>
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     #include "windows.h"

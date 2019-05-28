@@ -1,6 +1,7 @@
 #include "slic3r.hpp"
 #include "Geometry.hpp"
 #include "IO.hpp"
+#include "Log.hpp"
 #include "SLAPrint.hpp"
 #include "Print.hpp"
 #include "SimplePrint.hpp"
@@ -36,7 +37,6 @@ int CLI::run(int argc, char **argv) {
     // Convert arguments to UTF-8 (needed on Windows).
     // argv then points to memory owned by a.
     boost::nowide::args a(argc, argv);
-    
     // parse all command line options into a DynamicConfig
     t_config_option_keys opt_order;
     this->config_def.merge(cli_actions_config_def);
@@ -44,72 +44,67 @@ int CLI::run(int argc, char **argv) {
     this->config_def.merge(cli_misc_config_def);
     this->config_def.merge(print_config_def);
     this->config.def = &this->config_def;
-    
+    Slic3r::Log::debug("CLI")<<"Configs merged.\n";
     // if any option is unsupported, print usage and abort immediately
     if (!this->config.read_cli(argc, argv, &this->input_files, &opt_order)) {
         this->print_help();
-        return 1;
+        exit(EXIT_FAILURE);
     }
-    
     // parse actions and transform options
     for (auto const &opt_key : opt_order) {
         if (cli_actions_config_def.has(opt_key)) this->actions.push_back(opt_key);
         if (cli_transform_config_def.has(opt_key)) this->transforms.push_back(opt_key);
     }
-    
     // load config files supplied via --load
-    for (auto const &file : config.getStrings("load")) {
-        if (!boost::filesystem::exists(file)) {
-            if (config.getBool("ignore_nonexistent_file", false)) {
-                continue;
-            } else {
-                boost::nowide::cerr << "No such file: " << file << std::endl;
-                exit(1);
+    for (auto const &file : config.getStrings("load", {})) {
+        try{
+            if (!boost::filesystem::exists(file)) {
+                if (config.getBool("ignore_nonexistent_file", false)) {
+                    continue;
+                } else {
+                    throw std::invalid_argument("No such file");
+                }
             }
-        }
-        
-        DynamicPrintConfig c;
-        try {
+            DynamicPrintConfig c;
             c.load(file);
-        } catch (std::exception &e) {
-            boost::nowide::cerr << "Error while reading config file: " << e.what() << std::endl;
-            exit(1);
+            c.normalize();
+            this->print_config.apply(c);
+        } catch (std::exception &e){
+            Slic3r::Log::error("CLI") << "Error with the config file '" << file << "': " << e.what() <<std::endl;
+            exit(EXIT_FAILURE);
         }
-        c.normalize();
-        this->print_config.apply(c);
     }
     
     // apply command line options to a more specific DynamicPrintConfig which provides normalize()
     // (command line options override --load files)
     this->print_config.apply(config, true);
     this->print_config.normalize();
-    
+    Slic3r::Log::debug("CLI") << "Print config normalized" << std::endl;
     // create a static (full) print config to be used in our logic
-    this->full_print_config.apply(this->print_config);
-    
+    this->full_print_config.apply(this->print_config, true);
+    Slic3r::Log::debug("CLI") << "Full print config created" << std::endl;
     // validate config
     try {
         this->full_print_config.validate();
-    } catch (InvalidOptionException &e) {
-        boost::nowide::cerr << e.what() << std::endl;
-        return 1;
+    } catch (std::exception &e) {
+        Slic3r::Log::error("CLI") << "Config validation error: "<< e.what() << std::endl;
+        exit(EXIT_FAILURE);
     }
-    
+    Slic3r::Log::debug("CLI") << "Config validated" << std::endl;
+
     // read input file(s) if any
     for (auto const &file : input_files) {
         Model model;
         try {
             model = Model::read_from_file(file);
         } catch (std::exception &e) {
-            boost::nowide::cerr << file << ": " << e.what() << std::endl;
-            exit(1);
+            Slic3r::Log::error("CLI") << file << ": " << e.what() << std::endl;
+            exit(EXIT_FAILURE);
         }
-        
         if (model.objects.empty()) {
-            boost::nowide::cerr << "Error: file is empty: " << file << std::endl;
+            Slic3r::Log::error("CLI") << "Error: file is empty: " << file << std::endl;
             continue;
         }
-        
         this->models.push_back(model);
     }
     
@@ -195,8 +190,8 @@ int CLI::run(int argc, char **argv) {
         } else if (opt_key == "scale_to_fit") {
             const auto opt = config.opt<ConfigOptionPoint3>(opt_key);
             if (!opt->is_positive_volume()) {
-                boost::nowide::cerr << "--scale-to-fit requires a positive volume" << std::endl;
-                return 1;
+                Slic3r::Log::error("CLI") << "--scale-to-fit requires a positive volume" << std::endl;
+                exit(EXIT_FAILURE);
             }
             for (auto &model : this->models)
                 for (auto &o : model.objects)
@@ -262,8 +257,8 @@ int CLI::run(int argc, char **argv) {
             for (auto &model : this->models)
                 model.repair();
         } else {
-            boost::nowide::cerr << "error: option not implemented yet: " << opt_key << std::endl;
-            return 1;
+	    Slic3r::Log::error("CLI") << " option not implemented yet: " << opt_key << std::endl;
+	    exit(EXIT_FAILURE);
         }
     }
     
@@ -298,7 +293,7 @@ int CLI::run(int argc, char **argv) {
         } else if (opt_key == "export_3mf") {
             this->export_models(IO::TMF);
         } else if (opt_key == "export_sla") {
-            boost::nowide::cerr << "--export-sla is not implemented yet" << std::endl;
+            Slic3r::Log::error("CLI") << "--export-sla is not implemented yet" << std::endl;
         } else if (opt_key == "export_sla_svg") {
             for (const Model &model : this->models) {
                 SLAPrint print(&model); // initialize print with model
@@ -319,10 +314,11 @@ int CLI::run(int argc, char **argv) {
                     boost::nowide::cout << msg << std::endl;
                 };
                 print.apply_config(this->print_config);
-                print.arrange = !this->config.getBool("dont_arrange");
+                print.arrange = !this->config.getBool("dont_arrange", false);
                 print.center = !this->config.has("center")
                     && !this->config.has("align_xy")
-                    && !this->config.getBool("dont_arrange");
+                    && print.arrange;
+                Slic3r::Log::error("CLI") << "Arrange: " << print.arrange<< ", center: " << print.center << std::endl;
                 print.set_model(model);
                 
                 // start chronometer
@@ -334,10 +330,10 @@ int CLI::run(int argc, char **argv) {
                 try {
                     print.export_gcode(outfile);
                 } catch (std::runtime_error &e) {
-                    boost::nowide::cerr << e.what() << std::endl;
-                    return 1;
+                    Slic3r::Log::error("CLI") << e.what() << std::endl;
+                    exit(EXIT_FAILURE);
                 }
-                boost::nowide::cout << "G-code exported to " << outfile << std::endl;
+                Slic3r::Log::info("CLI") << "G-code exported to " << outfile << std::endl;
                 
                 // output some statistics
                 double duration { std::chrono::duration_cast<second_>(clock_::now() - t0).count() };
@@ -350,8 +346,8 @@ int CLI::run(int argc, char **argv) {
                     << " (" << print.total_extruded_volume()/1000 << "cm3)" << std::endl;
             }
         } else {
-            boost::nowide::cerr << "error: option not supported yet: " << opt_key << std::endl;
-            return 1;
+            Slic3r::Log::error("CLI") <<  "error: option not supported yet: " << opt_key << std::endl;
+            exit(EXIT_FAILURE);
         }
     }
     
@@ -363,7 +359,7 @@ int CLI::run(int argc, char **argv) {
         GUI::App::SetInstance(gui);
         wxEntry(argc, argv);
 #else
-        std::cout << "GUI support has not been built." << "\n";
+        Slic3r::Log::error("CLI") << "GUI support has not been built." << "\n";
 #endif   
     }
     
@@ -439,7 +435,7 @@ CLI::output_filepath(const Model &model, IO::ExportFormat format) const {
     const std::string filename = pp.process(filename_format);
     
     // use --output when available
-    std::string outfile{ this->config.getString("output") };
+    std::string outfile{ this->config.getString("output", "") };
     if (!outfile.empty()) {
         // if we were supplied a directory, use it and append our automatically generated filename
         const boost::filesystem::path out(outfile);

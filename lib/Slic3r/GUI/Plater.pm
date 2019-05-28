@@ -599,6 +599,7 @@ sub new {
             my @info = (
                 fil     => "Used Filament",
                 cost    => "Cost",
+                tim     => "Time",
             );
             while (my $field = shift @info) {
                 my $label = shift @info;
@@ -2292,6 +2293,17 @@ sub on_export_completed {
         }
     } else {
         $message = "Export failed";
+    }
+    # Estimate print duration
+    {
+        my $estimator = Slic3r::GCode::TimeEstimator->new;
+        $estimator->parse_file($self->{export_gcode_output_file});
+        my $time = $estimator->time;
+        $self->{print_info_tim}->SetLabel(sprintf(
+            "%d minutes and %d seconds",
+            int($time / 60),
+            int($time % 60),
+        ));
     }
     $self->{export_gcode_output_file} = undef;
     $self->statusbar->SetStatusText($message);

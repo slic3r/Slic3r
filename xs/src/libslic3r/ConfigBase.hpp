@@ -15,6 +15,8 @@
 #include "Point.hpp"
 #include "Geometry.hpp"
 
+
+
 namespace Slic3r {
 
 /// Name of the configuration option.
@@ -32,10 +34,19 @@ class ConfigOptionException : public std::exception {
     const t_config_option_key opt_key;
     ConfigOptionException(const t_config_option_key _opt_key)
         : opt_key(_opt_key) {};
+
+    virtual const char* what() const noexcept {
+        std::string s("Exception with the option: ");
+        s += this->opt_key;
+        return s.c_str();
+    }
 };
+
 class UnknownOptionException : public ConfigOptionException {
     using ConfigOptionException::ConfigOptionException;
+
 };
+
 class InvalidOptionException : public ConfigOptionException {
     using ConfigOptionException::ConfigOptionException;
     

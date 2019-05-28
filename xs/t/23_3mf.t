@@ -9,6 +9,8 @@ use IO::Uncompress::Unzip qw(unzip $UnzipError) ;
 use Cwd qw(abs_path);
 use File::Basename qw(dirname);
 
+require Encode;
+
 # Removes '\n' and '\r\n' from a string.
 sub clean {
     my $text = shift;
@@ -17,7 +19,7 @@ sub clean {
     return $text;
 }
 
-my $current_path = abs_path($0);
+my $current_path = Encode::decode_utf8(abs_path($0));
 my $expected_content_types = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
     ."<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n"
     ."<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n"

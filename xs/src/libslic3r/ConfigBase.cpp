@@ -1,4 +1,5 @@
 #include "ConfigBase.hpp"
+#include "Log.hpp"
 #include <assert.h>
 #include <ctime>
 #include <fstream>
@@ -371,7 +372,12 @@ void
 ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent, bool default_nonexistent) {
     // loop through options and apply them
     for (const t_config_option_key &opt_key : opt_keys) {
-        ConfigOption* my_opt = this->option(opt_key, true);
+        ConfigOption* my_opt = NULL;
+        try {
+            my_opt = this->option(opt_key, true);
+        } catch ( UnknownOptionException & e ){
+            if (!ignore_nonexistent) Slic3r::Log::warn("Config") << "Option " << opt_key << ": " << e.what() << std::endl;
+        }
         if (opt_key.size() == 0) continue;
         if (my_opt == NULL) {
             if (ignore_nonexistent == false) throw UnknownOptionException(opt_key);
@@ -387,7 +393,6 @@ ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_
             }
             continue;
         }
-        
         // not the most efficient way, but easier than casting pointers to subclasses
         bool res = my_opt->deserialize( other.option(opt_key)->serialize() );
         if (!res) {
@@ -618,7 +623,13 @@ ConfigBase::load(const std::string &file)
     namespace pt = boost::property_tree;
     pt::ptree tree;
 	boost::nowide::ifstream ifs(file);
-	pt::read_ini(ifs, tree);
+    try {
+        pt::read_ini(ifs, tree);
+    } catch(std::exception& ex) {
+        // Log or error string stating that the data read is corrupt
+        Log::error("Config") << "Error reading ini " << file << ":" << ex.what() << "\n";
+        throw ex;
+    }
     BOOST_FOREACH(const pt::ptree::value_type &v, tree) {
         try {
             t_config_option_key opt_key = v.first;
@@ -916,7 +927,7 @@ ConfigOptionPoint::deserialize(std::string str, bool append) {
         this->value.x = boost::lexical_cast<coordf_t>(tokens[0]);
         this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
     } catch (boost::bad_lexical_cast &e){
-        std::cout << "Exception caught : " << e.what() << std::endl;
+        Slic3r::Log::error("Config") << "Deserialisation error of [" << str << "]  : " << e.what()<<" (expected 2D point)" << std::endl;
         return false;
     }
     return true;
@@ -931,7 +942,7 @@ ConfigOptionPoint3::deserialize(std::string str, bool append) {
         this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
         this->value.z = boost::lexical_cast<coordf_t>(tokens[2]);
     } catch (boost::bad_lexical_cast &e){
-        std::cout << "Exception caught : " << e.what() << std::endl;
+        Slic3r::Log::error("Config") << "Deserialisation error of ["<<str<<"]  : " << e.what()<<" (expected 3D point)" << std::endl;
         return false;
     }
     return true;
@@ -953,10 +964,9 @@ ConfigOptionPoints::deserialize(std::string str, bool append) {
 			this->values.push_back(point);
 		}
 	} catch (boost::bad_lexical_cast &e) {
-		printf("%s\n", e.what());
+		Slic3r::Log::error("Config") << "Deserialisation error of ["  << str << "] " << e.what() << " (expected list of points) ";
 		return false;
 	}
-
 	return true;
 }
 
