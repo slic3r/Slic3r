@@ -1,0 +1,14 @@
+%module{Slic3r::XS};
+
+%{
+#include <xsinit.h>
+#include "libslic3r/libslic3r.h"
+#include "libslic3r/TransformationMatrix.hpp"
+%}
+
+%name{Slic3r::TransformationMatrix} class TransformationMatrix {
+    TransformationMatrix();
+    ~TransformationMatrix();
+    Clone<TransformationMatrix> clone()
+        %code{% RETVAL=THIS; %}; 
+};
