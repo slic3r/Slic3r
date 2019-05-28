@@ -161,10 +161,10 @@ src/libslic3r/SurfaceCollection.cpp
 src/libslic3r/SurfaceCollection.hpp
 src/libslic3r/SVG.cpp
 src/libslic3r/SVG.hpp
-src/libslic3r/TriangleMesh.cpp
-src/libslic3r/TriangleMesh.hpp
 src/libslic3r/TransformationMatrix.cpp
 src/libslic3r/TransformationMatrix.hpp
+src/libslic3r/TriangleMesh.cpp
+src/libslic3r/TriangleMesh.hpp
 src/libslic3r/utils.cpp
 src/libslic3r/utils.hpp
 src/miniz/miniz.h
