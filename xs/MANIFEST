@@ -260,6 +260,7 @@ xsp/SlicingAdaptive.xsp
 xsp/SupportMaterial.xsp
 xsp/Surface.xsp
 xsp/SurfaceCollection.xsp
+xsp/TransformationMatrix.xsp
 xsp/TriangleMesh.xsp
 xsp/typemap.xspt
 xsp/XS.xsp

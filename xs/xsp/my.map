@@ -53,6 +53,10 @@ Ref<FullPrintConfig>       O_OBJECT_SLIC3R_T
 
 ZTable*                    O_OBJECT
 
+TransformationMatrix*       O_OBJECT_SLIC3R
+Ref<TransformationMatrix>   O_OBJECT_SLIC3R_T
+Clone<TransformationMatrix> O_OBJECT_SLIC3R_T
+
 TriangleMesh*              O_OBJECT_SLIC3R
 Ref<TriangleMesh>          O_OBJECT_SLIC3R_T
 Clone<TriangleMesh>        O_OBJECT_SLIC3R_T
