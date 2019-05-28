@@ -1,5 +1,5 @@
-#ifndef slic3r_TriangleMatrix_hpp_
-#define slic3r_TriangleMatrix_hpp_
+#ifndef slic3r_TransformationMatrix_hpp_
+#define slic3r_TransformationMatrix_hpp_
 
 #include "libslic3r.h"
 #include "Point.hpp"
