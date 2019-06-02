@@ -35,35 +35,6 @@ public:
     /// returns the inverse of the matrix
     bool inverse(TransformationMatrix &inverse) const;
 
-    /// performs translation
-    void translate(double x, double y, double z);
-    void translate(Vectorf3 const &vector);
-    void translateXY(Vectorf const &vector);
-
-    /// performs uniform scale
-    void scale(double factor);
-
-    /// performs per-axis scale
-    void scale(double x, double y, double z);
-
-    /// performs per-axis scale via vector
-    void scale(Vectorf3 const &vector);
-    
-    /// performs mirroring along given axis
-    void mirror(const Axis &axis);
-
-    /// performs mirroring along given axis
-    void mirror(const Vectorf3 &normal);
-
-    /// performs rotation around given axis
-    void rotate(double angle_rad, const Axis &axis);
-
-    /// performs rotation around arbitrary axis
-    void rotate(double angle_rad, const Vectorf3 &axis);
-
-    /// performs rotation defined by unit quaternion
-    void rotate(double q1, double q2, double q3, double q4);
-
     /// multiplies the parameter-matrix from the left (this=left*this)
     void applyLeft(const TransformationMatrix &left);
 
@@ -97,11 +68,11 @@ public:
     /// generates a rotation matrix around coodinate axis
     static TransformationMatrix mat_rotation(double angle_rad, const Axis &axis);
 
-    /// generates a rotation matrix defined by unit quaternion q1*i + q2*j + q3*k + q4
-    static TransformationMatrix mat_rotation(double q1, double q2, double q3, double q4);
-
     /// generates a rotation matrix around arbitrary axis
     static TransformationMatrix mat_rotation(double angle_rad, const Vectorf3 &axis);
+
+    /// generates a rotation matrix defined by unit quaternion q1*i + q2*j + q3*k + q4
+    static TransformationMatrix mat_rotation(double q1, double q2, double q3, double q4);
 
     /// generates a rotation matrix by specifying a vector (origin) that is to be rotated 
     /// to be colinear with another vector (target)
