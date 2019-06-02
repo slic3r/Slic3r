@@ -444,6 +444,9 @@ class ModelObject
     /// \param copy_volumes bool whether to also copy its volumes or not, by default = true
     ModelObject(Model *model, const ModelObject &other, bool copy_volumes = true);
 
+    /// Apply transformation to all volumes
+    void apply_transformation(const TransformationMatrix & trafo);
+
     /// = Operator overloading
     /// \param other ModelObject the other ModelObject to be copied
     /// \return ModelObject& the current ModelObject to enable operator cascading
@@ -485,9 +488,10 @@ class ModelVolume
     /// Get the ModelVolume's mesh, transformed by the ModelVolume's TransformationMatrix
     /// \param additional_trafo additional transformation
     /// \return TriangleMesh the transformed mesh
-    TriangleMesh get_transformed_mesh(TransformationMatrix const * additional_trafo = nullptr) const;
+    TriangleMesh get_transformed_mesh(TransformationMatrix const & trafo) const;
 
-    BoundingBoxf3 get_transformed_bounding_box(TransformationMatrix const * additional_trafo = nullptr) const;
+    BoundingBoxf3 get_transformed_bounding_box(TransformationMatrix const & trafo) const;
+    BoundingBoxf3 bounding_box() const;
 
     //Transformation matrix manipulators
     
@@ -515,7 +519,7 @@ class ModelVolume
     void rotate(double angle_rad, const Axis &axis) { this->trafo.rotate(angle_rad,axis); };
 
     /// apply whichever matrix is supplied, multiplied from the left
-    void apply(TransformationMatrix const &trafo) { this->trafo.applyLeft(trafo); };
+    void apply_transformation(TransformationMatrix const &trafo);
 
     /// Get the material id of this ModelVolume object
     /// \return t_model_material_id the material id string

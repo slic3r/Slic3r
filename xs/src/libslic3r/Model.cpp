@@ -802,6 +802,14 @@ ModelObject::mirror(const Axis &axis)
 }
 
 void
+ModelObject::apply_transformation(const TransformationMatrix & trafo)
+{
+    for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
+        (*v)->apply_transformation(trafo);
+    }
+}
+
+void
 ModelObject::transform_by_instance(ModelInstance instance, bool dont_translate)
 {
     // We get instance by copy because we would alter it in the loop below,
@@ -1023,39 +1031,27 @@ ModelVolume::swap(ModelVolume &other)
 }
 
 TriangleMesh
-ModelVolume::get_transformed_mesh(TransformationMatrix const * additional_trafo) const
+ModelVolume::get_transformed_mesh(TransformationMatrix const & trafo) const
 {
-    TransformationMatrix trafo = this->trafo;
-    if(additional_trafo)
-    {
-        trafo.applyLeft(*(additional_trafo));
-    }
     return this->mesh.get_transformed_mesh(trafo);
 }
 
 BoundingBoxf3
-ModelVolume::get_transformed_bounding_box(TransformationMatrix const * additional_trafo) const
+ModelVolume::get_transformed_bounding_box(TransformationMatrix const & trafo) const
 {
-    TransformationMatrix trafo = this->trafo;
-    if(additional_trafo)
-    {
-        trafo.applyLeft(*(additional_trafo));
-    }
-    BoundingBoxf3 bbox;
-    for (int i = 0; i < this->mesh.stl.stats.number_of_facets; ++ i) {
-        const stl_facet &facet = this->mesh.stl.facet_start[i];
-        for (int j = 0; j < 3; ++ j) {
-            double v_x = facet.vertex[j].x;
-            double v_y = facet.vertex[j].y;
-            double v_z = facet.vertex[j].z;
-            Pointf3 poi;
-            poi.x = float(trafo.m11*v_x + trafo.m12*v_y + trafo.m13*v_z + trafo.m14);
-            poi.y = float(trafo.m21*v_x + trafo.m22*v_y + trafo.m23*v_z + trafo.m24);
-            poi.z = float(trafo.m31*v_x + trafo.m32*v_y + trafo.m33*v_z + trafo.m34);
-            bbox.merge(poi);
-        }
-    }
-    return bbox;
+    return this->mesh.get_transformed_bounding_box(trafo);
+}
+
+BoundingBoxf3
+ModelVolume::bounding_box() const
+{
+    return this->mesh.bounding_box();
+}
+
+void ModelVolume::apply_transformation(TransformationMatrix const & trafo)
+{
+    this->mesh.transform(trafo);
+    this->trafo.applyLeft(trafo);
 }
 
 t_model_material_id
