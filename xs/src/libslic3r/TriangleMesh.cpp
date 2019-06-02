@@ -576,6 +576,26 @@ TriangleMesh::bounding_box() const
     return bb;
 }
 
+BoundingBoxf3
+TriangleMesh::get_transformed_bounding_box(TransformationMatrix const & trafo) const
+{
+    BoundingBoxf3 bbox;
+    for (int i = 0; i < this->stl.stats.number_of_facets; ++ i) {
+        const stl_facet &facet = this->stl.facet_start[i];
+        for (int j = 0; j < 3; ++ j) {
+            double v_x = facet.vertex[j].x;
+            double v_y = facet.vertex[j].y;
+            double v_z = facet.vertex[j].z;
+            Pointf3 poi;
+            poi.x = float(trafo.m11*v_x + trafo.m12*v_y + trafo.m13*v_z + trafo.m14);
+            poi.y = float(trafo.m21*v_x + trafo.m22*v_y + trafo.m23*v_z + trafo.m24);
+            poi.z = float(trafo.m31*v_x + trafo.m32*v_y + trafo.m33*v_z + trafo.m34);
+            bbox.merge(poi);
+        }
+    }
+    return bbox;
+}
+
 void
 TriangleMesh::require_shared_vertices()
 {
