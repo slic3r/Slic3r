@@ -402,7 +402,7 @@ Model::looks_like_multipart_object() const
     std::set<coordf_t> heights;
     for (const ModelObject* o : this->objects)
         for (const ModelVolume* v : o->volumes)
-            heights.insert(v->get_transformed_bounding_box().min.z);
+            heights.insert(v->bounding_box().min.z);
     return heights.size() > 1;
 }
 
@@ -588,7 +588,7 @@ ModelObject::update_bounding_box()
     BoundingBoxf3 raw_bbox;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         if ((*v)->modifier) continue;
-        raw_bbox.merge((*v)->get_transformed_bounding_box());
+        raw_bbox.merge((*v)->bounding_box());
     }
     BoundingBoxf3 bb;
     for (ModelInstancePtrs::const_iterator i = this->instances.begin(); i != this->instances.end(); ++i)
@@ -613,7 +613,7 @@ ModelObject::mesh() const
     for (ModelInstancePtrs::const_iterator i = this->instances.begin(); i != this->instances.end(); ++i) {
         TransformationMatrix instance_trafo = (*i)->get_trafo_matrix();
         for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-            mesh.merge((*v)->get_transformed_mesh(&instance_trafo));
+            mesh.merge((*v)->get_transformed_mesh(instance_trafo));
         }
     }
     return mesh;
@@ -625,7 +625,7 @@ ModelObject::raw_mesh() const
     TriangleMesh mesh;
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         if ((*v)->modifier) continue;
-        mesh.merge((*v)->get_transformed_mesh());
+        mesh.merge((*v)->mesh);
     }
     return mesh;
 }
@@ -638,7 +638,7 @@ ModelObject::raw_bounding_box() const
     TransformationMatrix trafo = this->instances.front()->get_trafo_matrix(true);
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         if ((*v)->modifier) continue;
-        bb.merge((*v)->get_transformed_bounding_box(&trafo));
+        bb.merge((*v)->get_transformed_bounding_box(trafo));
     }
     return bb;
 }
@@ -652,7 +652,7 @@ ModelObject::instance_bounding_box(size_t instance_idx) const
     TransformationMatrix trafo = this->instances[instance_idx]->get_trafo_matrix(true);
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         if ((*v)->modifier) continue;
-        bb.merge((*v)->get_transformed_bounding_box(&trafo));
+        bb.merge((*v)->get_transformed_bounding_box(trafo));
     }
     return bb;
 }
@@ -681,7 +681,7 @@ ModelObject::align_to_ground()
 	BoundingBoxf3 bb;
 	for (const ModelVolume* v : this->volumes)
 		if (!v->modifier)
-			bb.merge(v->get_transformed_bounding_box());
+			bb.merge(v->bounding_box());
     
     this->translate(0, 0, -bb.min.z);
     this->origin_translation.translate(0, 0, -bb.min.z);
@@ -695,7 +695,7 @@ ModelObject::center_around_origin()
 	BoundingBoxf3 bb;
 	for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v)
 		if (! (*v)->modifier)
-			bb.merge((*v)->get_transformed_bounding_box());
+			bb.merge((*v)->bounding_box());
     
     // first align to origin on XYZ
     Vectorf3 vector(-bb.min.x, -bb.min.y, -bb.min.z);
@@ -705,6 +705,9 @@ ModelObject::center_around_origin()
     vector.x -= size.x/2;
     vector.y -= size.y/2;
     
+    TransformationMatrix trafo = TransformationMatrix::mat_translation(-bb.center().x, -bb.center().y, -bb.min.z);
+
+
     this->translate(vector);
     this->origin_translation.translate(vector);
     
@@ -730,9 +733,9 @@ ModelObject::translate(const Vectorf3 &vector)
 void
 ModelObject::translate(coordf_t x, coordf_t y, coordf_t z)
 {
-    for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->translate(x, y, z);
-    }
+    TransformationMatrix trafo = TransformationMatrix::mat_translation(x, y, z);
+    this->apply_transformation(trafo);
+    
     if (this->_bounding_box_valid) this->_bounding_box.translate(x, y, z);
 }
 
@@ -746,9 +749,8 @@ void
 ModelObject::scale(const Pointf3 &versor)
 {
     if (versor.x == 1 && versor.y == 1 && versor.z == 1) return;
-    for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->scale(versor);
-    }
+    TransformationMatrix trafo = TransformationMatrix::mat_scale(versor.x, versor.y, versor.z);
+    this->apply_transformation(trafo);
     
     // reset origin translation since it doesn't make sense anymore
     this->origin_translation = Pointf3(0,0,0);
@@ -773,9 +775,9 @@ void
 ModelObject::rotate(double angle, const Axis &axis)
 {
     if (angle == 0) return;
-    for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->rotate(angle, axis);
-    }
+    TransformationMatrix trafo = TransformationMatrix::mat_rotation(angle, axis);
+    this->apply_transformation(trafo);
+    
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
 }
@@ -784,9 +786,8 @@ void
 ModelObject::rotate(const Vectorf3 &origin, const Vectorf3 &target)
 {
     TransformationMatrix trafo = TransformationMatrix::mat_rotation(origin, target);
-    for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->apply(trafo);
-    }
+    this->apply_transformation(trafo);
+    
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
 }
@@ -794,9 +795,9 @@ ModelObject::rotate(const Vectorf3 &origin, const Vectorf3 &target)
 void
 ModelObject::mirror(const Axis &axis)
 {
-    for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
-        (*v)->mirror(axis);
-    }
+    TransformationMatrix trafo = TransformationMatrix::mat_mirror(axis);
+    this->apply_transformation(trafo);
+
     this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
 }
@@ -814,10 +815,7 @@ ModelObject::transform_by_instance(ModelInstance instance, bool dont_translate)
 {
     // We get instance by copy because we would alter it in the loop below,
     // causing inconsistent values in subsequent instances.
-    this->rotate(instance.rotation, Z);
-    this->scale(instance.scaling_factor);
-    if (!dont_translate)
-        this->translate(instance.offset.x, instance.offset.y, 0);
+    TransformationMatrix trafo = instance.get_trafo_matrix(dont_translate);
     
     for (ModelInstance* i : this->instances) {
         i->rotation -= instance.rotation;
