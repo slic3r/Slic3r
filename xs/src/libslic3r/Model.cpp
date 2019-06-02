@@ -1133,11 +1133,6 @@ TransformationMatrix ModelInstance::get_trafo_matrix(bool dont_translate) const
     return trafo;
 }
 
-void ModelInstance::set_local_trafo_matrix(bool dont_translate)
-{
-    this->trafo = this->get_trafo_matrix(dont_translate);
-}
-
 BoundingBoxf3 ModelInstance::transform_bounding_box(const BoundingBoxf3 &bbox, bool dont_translate) const
 {
     // rotate around mesh origin

@@ -578,8 +578,6 @@ class ModelInstance
     double scaling_factor;      ///< uniform scaling factor.
     Pointf offset;              ///< offset in unscaled coordinates.
 
-    TransformationMatrix trafo; ///< Trafomatrix for perl binding
-
     /// Get the owning ModelObject
     /// \return ModelObject* pointer to the owner ModelObject
     ModelObject* get_object() const { return this->object; };
@@ -593,10 +591,6 @@ class ModelInstance
     /// Returns the TransformationMatrix defined by the instance's Transform an external TriangleMesh to the returned TriangleMesh object
     /// \param dont_translate bool whether to translate the mesh or not
     TransformationMatrix get_trafo_matrix(bool dont_translate = false) const;
-
-    /// Returns a pointer to TransformationMatrix defined by the instance's Transform an external TriangleMesh to the returned TriangleMesh object
-    /// \param dont_translate bool whether to translate the mesh or not
-    void set_local_trafo_matrix(bool dont_translate);
 
     /// Transform an external bounding box.
     /// \param bbox BoundingBoxf3 the bounding box to be transformed
