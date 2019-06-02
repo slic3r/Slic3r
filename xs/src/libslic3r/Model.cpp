@@ -1124,12 +1124,11 @@ ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
 
 TransformationMatrix ModelInstance::get_trafo_matrix(bool dont_translate) const
 {
-    TransformationMatrix trafo = TransformationMatrix();
-    trafo.scale(this->scaling_factor);
-    trafo.rotate(this->rotation, Axis::Z);
+    TransformationMatrix trafo = TransformationMatrix::mat_rotation(this->rotation, Axis::Z);
+    trafo.applyLeft(TransformationMatrix::mat_scale(this->scaling_factor));
     if(!dont_translate)
     {
-        trafo.translate(this->offset.x, this->offset.y, 0);
+        trafo.applyLeft(TransformationMatrix::mat_translation(this->offset.x, this->offset.y, 0));
     }
     return trafo;
 }
