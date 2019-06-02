@@ -75,6 +75,7 @@ class TriangleMesh
     ExPolygons horizontal_projection() const;
     Polygon convex_hull();
     BoundingBoxf3 bounding_box() const;
+    BoundingBoxf3 get_transformed_bounding_box(TransformationMatrix const & trafo) const;
     void reset_repair_stats();
     bool needed_repair() const;
     size_t facets_count() const;
