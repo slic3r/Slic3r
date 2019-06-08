@@ -410,10 +410,12 @@ void PerimeterGenerator::process()
                                     if (thin[0].area() > min_width*(ext_perimeter_width + ext_perimeter_spacing2)) {
                                         bound.remove_point_too_near((coord_t)SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                        Slic3r::MedialAxis ma(thin[0], bound, ext_perimeter_width + ext_perimeter_spacing2, min_width, this->layer_height);
-                                        ma.nozzle_diameter = (coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter);
-                                        ma.anchor_size = overlap;
-                                        ma.build(&thin_walls);
+                                        Slic3r::MedialAxis ma{ thin[0], ext_perimeter_width + ext_perimeter_spacing2, 
+                                            min_width, coord_t(this->layer_height) };
+                                        ma.use_bounds(bound)
+                                            .use_min_real_width((coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter))
+                                            .use_tapers(overlap)
+                                            .build(thin_walls);
                                     }
                                     break;
                                 }
@@ -601,7 +603,7 @@ void PerimeterGenerator::process()
                 //remove too small gaps that are too hard to fill.
                 //ie one that are smaller than an extrusion with width of min and a length of max.
                 if (ex.area() > min*max) {
-                    ex.medial_axis(ex, max, min, &polylines, this->layer_height);
+                    MedialAxis{ ex, coord_t(max), coord_t(min), coord_t(this->layer_height) }.build(polylines);
                 }
             }
             if (!polylines.empty()) {

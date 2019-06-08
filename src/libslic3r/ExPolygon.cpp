@@ -220,16 +220,10 @@ ExPolygon::remove_point_too_near(const coord_t tolerance) {
 }
 
 void
-ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_width, ThickPolylines* polylines, double height) const {
-    Slic3r::MedialAxis ma(*this, bounds, (coord_t)max_width, (coord_t)min_width, height);
-    ma.build(polylines);
-}
-
-void
 ExPolygon::medial_axis(double max_width, double min_width, Polylines* polylines) const
 {
     ThickPolylines tp;
-    this->medial_axis(*this, max_width, min_width, &tp, max_width/2.0);
+    MedialAxis{ *this, coord_t(max_width), coord_t(min_width), coord_t(max_width / 2.0) }.build(tp);
     polylines->insert(polylines->end(), tp.begin(), tp.end());
 }
 

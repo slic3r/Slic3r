@@ -138,7 +138,7 @@ void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, cons
                 //remove too small gaps that are too hard to fill.
                 //ie one that are smaller than an extrusion with width of min and a length of max.
                 if (ex.area() > min*max) {
-                    ex.medial_axis(ex, max, min, &polylines, params.flow->height);
+                    MedialAxis{ ex, coord_t(max), coord_t(min), coord_t(params.flow->height) }.build(polylines);
                 }
             }
             if (!polylines.empty() && good_role != erBridgeInfill) {

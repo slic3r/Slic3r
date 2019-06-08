@@ -1663,7 +1663,7 @@ void TriangleMeshSlicer::make_expolygons(const Polygons &loops, ExPolygons* slic
     Polygons filered_polys = loops;
     if (this->model_precision > 0){
         for (Polygon &hole : filered_polys){
-            hole.remove_colinear_points(scale_(this->model_precision));
+            hole.remove_collinear_points(scale_(this->model_precision));
         }
     }
 

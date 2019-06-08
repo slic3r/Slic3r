@@ -1984,13 +1984,20 @@ end:
                 if (layer->m_regions.size() == 1) {
                     // Optimized version for a single region layer.
                     if (layer_id == 0) {
-                        if (delta > elephant_foot_compensation) {
-                            delta -= elephant_foot_compensation;
-                            elephant_foot_compensation = 0.f;
-                        } else if (delta > 0)
-                            elephant_foot_compensation -= delta;
+                        if (elephant_foot_compensation > 0) {
+                            delta += elephant_foot_compensation;
+                            elephant_foot_compensation = 0;
+                        }else if (delta > 0) {
+                            if (-elephant_foot_compensation < delta) {
+                                delta += elephant_foot_compensation;
+                                elephant_foot_compensation = 0;
+                            } else {
+                                elephant_foot_compensation += delta;
+                                delta = 0;
+                            }
+                        }
                     }
-                    if (delta != 0.f || elephant_foot_compensation > 0.f) {
+                    if (delta != 0.f || elephant_foot_compensation != 0.f) {
                         // Single region, growing or shrinking.
                         LayerRegion *layerm = layer->m_regions.front();
                         // Apply the XY compensation.
@@ -1998,16 +2005,16 @@ end:
                             to_expolygons(std::move(layerm->slices.surfaces)) :
                             offset_ex(to_expolygons(std::move(layerm->slices.surfaces)), delta);
                         // Apply the elephant foot compensation.
-                        if (elephant_foot_compensation > 0) {
+                        if (elephant_foot_compensation != 0) {
                             float elephant_foot_spacing     = float(layerm->flow(frExternalPerimeter).scaled_elephant_foot_spacing());
                             float external_perimeter_nozzle = float(scale_(this->print()->config().nozzle_diameter.get_at(layerm->region()->config().perimeter_extruder.value - 1)));
                             // Apply the elephant foot compensation by steps of 1/10 nozzle diameter.
                             float  steps  = std::ceil(elephant_foot_compensation / (0.1f * external_perimeter_nozzle));
-                            size_t nsteps = size_t(steps);
+                            size_t nsteps = size_t(std::abs(steps));
                             float  step   = elephant_foot_compensation / steps;
                             for (size_t i = 0; i < nsteps; ++ i) {
     							Polygons tmp = offset(expolygons, - step);
-    							append(tmp, diff(to_polygons(expolygons), offset(offset_ex(expolygons, -elephant_foot_spacing - step), elephant_foot_spacing + step)));
+    							append(tmp, diff(to_polygons(expolygons), offset(offset_ex(expolygons, -elephant_foot_spacing + step), elephant_foot_spacing - step)));
     							expolygons = union_ex(tmp);
                             }
                         }
@@ -2042,7 +2049,7 @@ end:
                         for (size_t region_id = 0; region_id < layer->m_regions.size(); ++ region_id)
                             layer->m_regions[region_id]->trim_surfaces(trimming);
                     }
-                    if (elephant_foot_compensation > 0.f) {
+                    if (elephant_foot_compensation != 0.f) {
                         // Apply the elephant foot compensation.
                         std::vector<float> elephant_foot_spacing;
                         elephant_foot_spacing.reserve(layer->m_regions.size());
@@ -2055,12 +2062,12 @@ end:
                         external_perimeter_nozzle /= (float)layer->m_regions.size();
                         // Apply the elephant foot compensation by steps of 1/10 nozzle diameter.
                         float  steps  = std::ceil(elephant_foot_compensation / (0.1f * external_perimeter_nozzle));
-                        size_t nsteps = size_t(steps);
+                        size_t nsteps = size_t(std::abs(steps));
                         float  step   = elephant_foot_compensation / steps;
                         for (size_t i = 0; i < nsteps; ++ i) {
                             Polygons trimming_polygons = offset(layer->merged(float(EPSILON)), double(- step - EPSILON));
                             for (size_t region_id = 0; region_id < layer->m_regions.size(); ++ region_id)
-                                layer->m_regions[region_id]->elephant_foot_compensation_step(elephant_foot_spacing[region_id] + step, trimming_polygons);
+                                layer->m_regions[region_id]->elephant_foot_compensation_step(elephant_foot_spacing[region_id] - step, trimming_polygons);
                         }
                     }
                 }
@@ -2096,7 +2103,7 @@ void PrintObject::_offset_holes(double hole_delta, LayerRegion *layerm) {
                 ok &= (hole.points.back().ccw_angle(*(hole.points.end() - 2), hole.points.front()) <= PI + 0.1);
 
                 if (ok) {
-                    for (Polygon newHole : offset(hole, -hole_delta)) {
+                    for (Polygon newHole : offset(hole, hole_delta)) {
                         //reverse because it's a hole, not an object
                         newHole.make_clockwise();
                         new_ex_poly.holes.push_back(newHole);

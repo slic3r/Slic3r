@@ -59,3 +59,18 @@ SCENARIO("Model construction") {
     }
 
 }
+
+
+SCENARIO("xy compensations"){
+    GIVEN(("A Square with a complex hole inside")){
+        Polygon square/*new_scale*/{ std::vector<Point>{
+            Point{ 100, 100 },
+                Point{ 200, 100 },
+                Point{ 200, 200 },
+                Point{ 100, 200 }} };
+        THEN("elephant and xy can compensate each other"){
+        }
+        THEN("hole and xy can compensate each othere"){
+        }
+    }
+}

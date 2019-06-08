@@ -1774,7 +1774,8 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
     ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
 
     // remove areas for gapfill 
-    ExPolygons rectilinear_areas = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow->scaled_spacing() * 0.8f, params.flow->scaled_spacing() * 0.8f);
+    float factor = 1; // 0.8f;
+    ExPolygons rectilinear_areas = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow->scaled_spacing() * factor, params.flow->scaled_spacing() * factor);
     ExPolygons gapfill_areas = diff_ex(ExPolygons{ surface->expolygon }, rectilinear_areas);
     double rec_area = 0;
     for (ExPolygon &p : rectilinear_areas)rec_area += p.area();
@@ -1854,7 +1855,7 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
         //remove too small gaps that are too hard to fill.
         //ie one that are smaller than an extrusion with width of min and a length of max.
         if (ex.area() > min * max) {
-            ex.medial_axis(ex, params.flow->scaled_width()*2, params.flow->scaled_width()/5, &polylines_gapfill, params.flow->height);
+            MedialAxis{ ex, params.flow->scaled_width() * 2, params.flow->scaled_width() / 5, coord_t(params.flow->height) }.build(polylines_gapfill);
         }
     }
     if (!polylines_gapfill.empty() && good_role != erBridgeInfill) {

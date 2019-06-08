@@ -316,7 +316,7 @@ Point Polygon::point_projection(const Point &point) const
     return proj;
 }
 
-size_t Polygon::remove_colinear_points(coord_t max_offset){
+size_t Polygon::remove_collinear_points(coord_t max_offset){
     size_t nb_del = 0;
     if (points.size() < 3) return 0;
 
