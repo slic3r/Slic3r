@@ -54,6 +54,10 @@ struct ModelID
 	size_t	id;
 };
 
+// Unique object / instance ID for the wipe tower.
+extern ModelID wipe_tower_object_id();
+extern ModelID wipe_tower_instance_id();
+
 // Base for Model, ModelObject, ModelVolume, ModelInstance or ModelMaterial to provide a unique ID
 // to synchronize the front end (UI) with the back end (BackgroundSlicingProcess / Print / PrintObject).
 // Achtung! The s_last_id counter is not thread safe, so it is expected, that the ModelBase derived instances
@@ -85,6 +89,9 @@ private:
 
 	static inline ModelID   generate_new_id() { return ModelID(++ s_last_id); }
     static size_t           s_last_id;
+	
+	friend ModelID wipe_tower_object_id();
+	friend ModelID wipe_tower_instance_id();
 };
 
 #define MODELBASE_DERIVED_COPY_MOVE_CLONE(TYPE) \
@@ -212,7 +219,7 @@ public:
     // This bounding box is approximate and not snug.
     // This bounding box is being cached.
     const BoundingBoxf3& bounding_box() const;
-    void invalidate_bounding_box() { m_bounding_box_valid = false; m_raw_mesh_bounding_box_valid = false; }
+    void invalidate_bounding_box() { m_bounding_box_valid = false; m_raw_bounding_box_valid = false; m_raw_mesh_bounding_box_valid = false; }
 
     // A mesh containing all transformed instances of this object.
     TriangleMesh mesh() const;
@@ -223,18 +230,18 @@ public:
     TriangleMesh full_raw_mesh() const;
     // A transformed snug bounding box around the non-modifier object volumes, without the translation applied.
     // This bounding box is only used for the actual slicing.
-    BoundingBoxf3 raw_bounding_box() const;
+    const BoundingBoxf3& raw_bounding_box() const;
     // A snug bounding box around the transformed non-modifier object volumes.
     BoundingBoxf3 instance_bounding_box(size_t instance_idx, bool dont_translate = false) const;
 	// A snug bounding box of non-transformed (non-rotated, non-scaled, non-translated) sum of non-modifier object volumes.
-	BoundingBoxf3 raw_mesh_bounding_box() const;
+	const BoundingBoxf3& raw_mesh_bounding_box() const;
 	// A snug bounding box of non-transformed (non-rotated, non-scaled, non-translated) sum of all object volumes.
     BoundingBoxf3 full_raw_mesh_bounding_box() const;
 
     // Calculate 2D convex hull of of a projection of the transformed printable volumes into the XY plane.
     // This method is cheap in that it does not make any unnecessary copy of the volume meshes.
     // This method is used by the auto arrange function.
-    Polygon       convex_hull_2d(const Transform3d &trafo_instance);
+    Polygon       convex_hull_2d(const Transform3d &trafo_instance) const;
 
 #if ENABLE_VOLUMES_CENTERING_FIXES
     void center_around_origin(bool include_modifiers = true);
@@ -265,6 +272,11 @@ public:
     ModelObjectPtrs cut(size_t instance, coordf_t z, bool keep_upper = true, bool keep_lower = true, bool rotate_lower = false);    // Note: z is in world coordinates
     void split(ModelObjectPtrs* new_objects);
     void repair();
+    // Support for non-uniform scaling of instances. If an instance is rotated by angles, which are not multiples of ninety degrees,
+    // then the scaling in world coordinate system is not representable by the Geometry::Transformation structure.
+    // This situation is solved by baking in the instance transformation into the mesh vertices.
+    // Rotation and mirroring is being baked in. In case the instance scaling was non-uniform, it is baked in as well.
+    void bake_xy_rotation_into_meshes(size_t instance_idx);
 
     double get_min_z() const;
     double get_instance_min_z(size_t instance_idx) const;
@@ -275,6 +287,13 @@ public:
     // Print object statistics to console.
     void print_info() const;
 
+    std::string get_export_filename() const;
+
+    // Get full stl statistics for all object's meshes 
+    stl_stats   get_object_stl_stats() const;
+    // Get count of errors in the mesh( or all object's meshes, if volume index isn't defined) 
+    int         get_mesh_errors_count(const int vol_idx = -1) const;
+
 protected:
     friend class Print;
     friend class SLAPrint;
@@ -283,7 +302,7 @@ protected:
 
 private:
     ModelObject(Model *model) : m_model(model), origin_translation(Vec3d::Zero()), 
-        m_bounding_box_valid(false), m_raw_mesh_bounding_box_valid(false) {}
+        m_bounding_box_valid(false), m_raw_bounding_box_valid(false), m_raw_mesh_bounding_box_valid(false) {}
     ~ModelObject();
 
     /* To be able to return an object from own copy / clone methods. Hopefully the compiler will do the "Copy elision" */
@@ -302,6 +321,8 @@ private:
     // Bounding box, cached.
     mutable BoundingBoxf3 m_bounding_box;
     mutable bool          m_bounding_box_valid;
+    mutable BoundingBoxf3 m_raw_bounding_box;
+    mutable bool          m_raw_bounding_box_valid;
     mutable BoundingBoxf3 m_raw_mesh_bounding_box;
     mutable bool          m_raw_mesh_bounding_box_valid;    
 };
@@ -366,6 +387,8 @@ public:
 
     void                calculate_convex_hull();
     const TriangleMesh& get_convex_hull() const;
+    // Get count of errors in the mesh
+    int                 get_mesh_errors_count() const;
 
     // Helpers for loading / storing into AMF / 3MF files.
     static ModelVolumeType type_from_string(const std::string &s);
@@ -394,6 +417,7 @@ public:
 
     const Vec3d& get_mirror() const { return m_transformation.get_mirror(); }
     double get_mirror(Axis axis) const { return m_transformation.get_mirror(axis); }
+    bool is_left_handed() const { return m_transformation.is_left_handed(); }
 
     void set_mirror(const Vec3d& mirror) { m_transformation.set_mirror(mirror); }
     void set_mirror(Axis axis, double mirror) { m_transformation.set_mirror(axis, mirror); }
@@ -409,6 +433,8 @@ protected:
 
 	explicit ModelVolume(const ModelVolume &rhs) = default;
     void     set_model_object(ModelObject *model_object) { object = model_object; }
+    void     transform_mesh(const Transform3d& t, bool fix_left_handed);
+    void     transform_mesh(const Matrix3d& m, bool fix_left_handed);
 
 private:
     // Parent object owning this ModelVolume.
@@ -498,6 +524,7 @@ public:
 
     const Vec3d& get_mirror() const { return m_transformation.get_mirror(); }
     double get_mirror(Axis axis) const { return m_transformation.get_mirror(axis); }
+	bool is_left_handed() const { return m_transformation.is_left_handed(); }
 
     void set_mirror(const Vec3d& mirror) { m_transformation.set_mirror(mirror); }
     void set_mirror(Axis axis, double mirror) { m_transformation.set_mirror(axis, mirror); }

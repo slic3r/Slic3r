@@ -165,6 +165,8 @@ add_library(libslic3r STATIC
     utils.cpp
     Utils.hpp
     MTUtils.hpp
+    Zipper.hpp
+    Zipper.cpp
     SLA/SLABoilerPlate.hpp
     SLA/SLABasePool.hpp
     SLA/SLABasePool.cpp
@@ -181,8 +183,8 @@ if (SLIC3R_PCH AND NOT SLIC3R_SYNTAXONLY)
     add_precompiled_header(libslic3r pchheader.hpp FORCEINCLUDE)
 endif ()
 
-target_compile_definitions(libslic3r PUBLIC -DUSE_TBB ${PNG_DEFINITIONS})
-target_include_directories(libslic3r PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${LIBNEST2D_INCLUDES} ${PNG_INCLUDE_DIRS} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+target_compile_definitions(libslic3r PUBLIC -DUSE_TBB)
+target_include_directories(libslic3r PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${LIBNEST2D_INCLUDES} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(libslic3r
     libnest2d
     admesh
@@ -191,8 +193,6 @@ target_link_libraries(libslic3r
     clipper
     nowide
     ${EXPAT_LIBRARIES}
-    ${GLEW_LIBRARIES}
-    ${PNG_LIBRARIES}
     glu-libtess
     polypartition
     poly2tri

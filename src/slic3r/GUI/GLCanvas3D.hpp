@@ -4,12 +4,14 @@
 #include <stddef.h>
 #include <memory>
 
+#include "libslic3r/ModelArrange.hpp"
 #include "3DScene.hpp"
 #include "GLToolbar.hpp"
 #include "Event.hpp"
 #include "3DBed.hpp"
 #include "Camera.hpp"
 #include "Selection.hpp"
+#include "Gizmos/GLGizmosManager.hpp"
 
 #include <float.h>
 
@@ -64,32 +66,36 @@ public:
     void set_scale_factor(int height);
 };
 
-class Rect
+
+class ClippingPlane
 {
-    float m_left;
-    float m_top;
-    float m_right;
-    float m_bottom;
+    double m_data[4];
 
 public:
-    Rect();
-    Rect(float left, float top, float right, float bottom);
+    ClippingPlane()
+    {
+        m_data[0] = 0.0;
+        m_data[1] = 0.0;
+        m_data[2] = 1.0;
+        m_data[3] = 0.0;
+    }
 
-    float get_left() const;
-    void set_left(float left);
+    ClippingPlane(const Vec3d& direction, double offset)
+    {
+        Vec3d norm_dir = direction.normalized();
+        m_data[0] = norm_dir(0);
+        m_data[1] = norm_dir(1);
+        m_data[2] = norm_dir(2);
+        m_data[3] = offset;
+    }
 
-    float get_top() const;
-    void set_top(float top);
+    bool is_active() const { return m_data[3] != DBL_MAX; }
 
-    float get_right() const;
-    void set_right(float right);
+    static ClippingPlane ClipsNothing() { return ClippingPlane(Vec3d(0., 0., 1.), DBL_MAX); }
 
-    float get_bottom() const;
-    void set_bottom(float bottom);
-
-    float get_width() const { return m_right - m_left; }
-    float get_height() const { return m_top - m_bottom; }
+    const double* get_data() const { return m_data; }
 };
+
 
 wxDECLARE_EVENT(EVT_GLCANVAS_OBJECT_SELECT, SimpleEvent);
 
@@ -111,27 +117,13 @@ wxDECLARE_EVENT(EVT_GLCANVAS_INSTANCE_MOVED, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_WIPETOWER_MOVED, Vec3dEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_INSTANCE_ROTATED, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_INSTANCE_SCALED, SimpleEvent);
+wxDECLARE_EVENT(EVT_GLCANVAS_WIPETOWER_ROTATED, Vec3dEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_ENABLE_ACTION_BUTTONS, Event<bool>);
 wxDECLARE_EVENT(EVT_GLCANVAS_UPDATE_GEOMETRY, Vec3dsEvent<2>);
 wxDECLARE_EVENT(EVT_GLCANVAS_MOUSE_DRAGGING_FINISHED, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_UPDATE_BED_SHAPE, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_TAB, SimpleEvent);
-
-// this describes events being passed from GLCanvas3D to SlaSupport gizmo
-enum class SLAGizmoEventType {
-    LeftDown = 1,
-    LeftUp,
-    RightDown,
-    Dragging,
-    Delete,
-    SelectAll,
-    ShiftUp,
-    ApplyChanges,
-    DiscardChanges,
-    AutomaticGeneration,
-    ManualEditing
-};
-
+wxDECLARE_EVENT(EVT_GLCANVAS_RESETGIZMOS, SimpleEvent);
 
 class GLCanvas3D
 {
@@ -313,7 +305,7 @@ class GLCanvas3D
         Vec2d position;
         Vec3d scene_position;
         Drag drag;
-        bool ignore_up_event;
+        bool ignore_left_up;
 
         Mouse();
 
@@ -328,145 +320,6 @@ class GLCanvas3D
             return (std::abs(mouse_pos(0) - drag.move_start_threshold_position_2D(0)) > Drag::MoveThresholdPx)
                 || (std::abs(mouse_pos(1) - drag.move_start_threshold_position_2D(1)) > Drag::MoveThresholdPx);
         }
-    };
-
-public:
-    class ClippingPlane
-    {
-        double m_data[4];
-
-    public:
-        ClippingPlane()
-        {
-            m_data[0] = 0.0;
-            m_data[1] = 0.0;
-            m_data[2] = 1.0;
-            m_data[3] = 0.0;
-        }
-
-        ClippingPlane(const Vec3d& direction, double offset)
-        {
-            Vec3d norm_dir = direction.normalized();
-            m_data[0] = norm_dir(0);
-            m_data[1] = norm_dir(1);
-            m_data[2] = norm_dir(2);
-            m_data[3] = offset;
-        }
-
-        const double* get_data() const { return m_data; }
-    };
-
-private:
-    class Gizmos
-    {
-    public:
-#if ENABLE_SVG_ICONS
-        static const float Default_Icons_Size;
-#endif // ENABLE_SVG_ICONS
-
-        enum EType : unsigned char
-        {
-            Undefined,
-            Move,
-            Scale,
-            Rotate,
-            Flatten,
-            Cut,
-            SlaSupports,
-            Num_Types
-        };
-
-    private:
-        bool m_enabled;
-        typedef std::map<EType, GLGizmoBase*> GizmosMap;
-        GizmosMap m_gizmos;
-#if ENABLE_SVG_ICONS
-        mutable GLTexture m_icons_texture;
-        mutable bool m_icons_texture_dirty;
-#else
-        ItemsIconsTexture m_icons_texture;
-#endif // ENABLE_SVG_ICONS
-        BackgroundTexture m_background_texture;
-        EType m_current;
-
-#if ENABLE_SVG_ICONS
-        float m_overlay_icons_size;
-        float m_overlay_scale;
-#else
-        float m_overlay_icons_scale;
-#endif // ENABLE_SVG_ICONS
-        float m_overlay_border;
-        float m_overlay_gap_y;
-
-    public:
-        Gizmos();
-        ~Gizmos();
-
-        bool init(GLCanvas3D& parent);
-
-        bool is_enabled() const;
-        void set_enabled(bool enable);
-
-#if ENABLE_SVG_ICONS
-        void set_overlay_icon_size(float size);
-#endif // ENABLE_SVG_ICONS
-        void set_overlay_scale(float scale);
-
-        std::string update_hover_state(const GLCanvas3D& canvas, const Vec2d& mouse_pos, const Selection& selection);
-        void update_on_off_state(const GLCanvas3D& canvas, const Vec2d& mouse_pos, const Selection& selection);
-        void update_on_off_state(const Selection& selection);
-        void reset_all_states();
-
-        void set_hover_id(int id);
-        void enable_grabber(EType type, unsigned int id, bool enable);
-
-        bool overlay_contains_mouse(const GLCanvas3D& canvas, const Vec2d& mouse_pos) const;
-        bool grabber_contains_mouse() const;
-        void update(const Linef3& mouse_ray, const Selection& selection, bool shift_down, const Point* mouse_pos = nullptr);
-        Rect get_reset_rect_viewport(const GLCanvas3D& canvas) const;
-        EType get_current_type() const;
-
-        bool is_running() const;
-        bool handle_shortcut(int key, const Selection& selection);
-
-        bool is_dragging() const;
-        void start_dragging(const Selection& selection);
-        void stop_dragging();
-
-        Vec3d get_displacement() const;
-
-        Vec3d get_scale() const;
-        void set_scale(const Vec3d& scale);
-
-        Vec3d get_rotation() const;
-        void set_rotation(const Vec3d& rotation);
-
-        Vec3d get_flattening_normal() const;
-
-        void set_flattening_data(const ModelObject* model_object);
-
-        void set_sla_support_data(ModelObject* model_object, const Selection& selection);
-        bool gizmo_event(SLAGizmoEventType action, const Vec2d& mouse_position = Vec2d::Zero(), bool shift_down = false);
-
-        void render_current_gizmo(const Selection& selection) const;
-        void render_current_gizmo_for_picking_pass(const Selection& selection) const;
-
-        void render_overlay(const GLCanvas3D& canvas, const Selection& selection) const;
-
-    private:
-        void reset();
-
-        void do_render_overlay(const GLCanvas3D& canvas, const Selection& selection) const;
-        void do_render_current_gizmo(const Selection& selection) const;
-
-        float get_total_overlay_height() const;
-        float get_total_overlay_width() const;
-
-        GLGizmoBase* get_current() const;
-
-#if ENABLE_SVG_ICONS
-        bool generate_icons_texture() const;
-#endif // ENABLE_SVG_ICONS
     };
 
     struct SlaCap
@@ -493,6 +346,7 @@ private:
         enum Warning {
             ObjectOutside,
             ToolpathOutside,
+            SlaSupportsOutside,
             SomethingNotShown,
             ObjectClashed
         };
@@ -502,12 +356,19 @@ private:
         void activate(WarningTexture::Warning warning, bool state, const GLCanvas3D& canvas);
         void render(const GLCanvas3D& canvas) const;
 
+        // function used to get an information for rescaling of the warning
+        void msw_rescale(const GLCanvas3D& canvas);
+
     private:
         static const unsigned char Background_Color[3];
         static const unsigned char Opacity;
 
         int m_original_width;
         int m_original_height;
+
+        // information for rescaling of the warning legend
+        std::string     m_msg_text = "";
+        bool            m_is_colored_red{false};
 
         // Information about which warnings are currently active.
         std::vector<Warning> m_warnings;
@@ -541,6 +402,23 @@ private:
         void render(const GLCanvas3D& canvas) const;
     };
 
+#if ENABLE_RENDER_STATISTICS
+    struct RenderStats
+    {
+        long long last_frame;
+
+        RenderStats() : last_frame(0) {}
+    };
+#endif // ENABLE_RENDER_STATISTICS
+
+public:
+    enum ECursorType : unsigned char
+    {
+        Standard,
+        Cross
+    };
+
+private:
     wxGLCanvas* m_canvas;
     wxGLContext* m_context;
 #if ENABLE_RETINA_GL
@@ -556,9 +434,10 @@ private:
     LayersEditing m_layers_editing;
     Shader m_shader;
     Mouse m_mouse;
-    mutable Gizmos m_gizmos;
+    mutable GLGizmosManager m_gizmos;
     mutable GLToolbar m_toolbar;
     ClippingPlane m_clipping_planes[2];
+    mutable ClippingPlane m_camera_clipping_plane;
     bool m_use_clipping_planes;
     mutable SlaCap m_sla_caps[2];
     std::string m_sidebar_field;
@@ -574,7 +453,7 @@ private:
     bool m_initialized;
     bool m_use_VBOs;
     bool m_apply_zoom_to_volumes_filter;
-    mutable int m_hover_volume_id;
+    mutable std::vector<int> m_hover_volume_idxs;
     bool m_warning_texture_enabled;
     bool m_legend_texture_enabled;
     bool m_picking_enabled;
@@ -584,6 +463,8 @@ private:
     bool m_regenerate_volumes;
     bool m_moving;
     bool m_tab_down;
+    ECursorType m_cursor_type;
+    GLSelectionRectangle m_rectangle_selection;
 
     // Following variable is obsolete and it should be safe to remove it.
     // I just don't want to do it now before a release (Lukas Matena 24.3.2019)
@@ -594,6 +475,10 @@ private:
     bool m_reload_delayed;
 
     GCodePreviewVolumeIndex m_gcode_preview_volume_index;
+
+#if ENABLE_RENDER_STATISTICS
+    RenderStats m_render_stats;
+#endif // ENABLE_RENDER_STATISTICS
 
 public:
     GLCanvas3D(wxGLCanvas* canvas, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar);
@@ -633,11 +518,12 @@ public:
             m_sla_caps[id].reset();
         }
     }
+    void reset_clipping_planes_cache() { m_sla_caps[0].triangles.clear(); m_sla_caps[1].triangles.clear(); }
     void set_use_clipping_planes(bool use) { m_use_clipping_planes = use; }
 
     void set_color_by(const std::string& value);
 
-    float get_camera_zoom() const;
+    const Camera& get_camera() const { return m_camera; }
 
     BoundingBoxf3 volumes_bounding_box() const;
     BoundingBoxf3 scene_bounding_box() const;
@@ -652,6 +538,7 @@ public:
     void enable_picking(bool enable);
     void enable_moving(bool enable);
     void enable_gizmos(bool enable);
+    void enable_selection(bool enable);
     void enable_toolbar(bool enable);
     void enable_dynamic_background(bool enable);
     void allow_multisample(bool allow);
@@ -668,6 +555,7 @@ public:
     void render();
 
     void select_all();
+    void deselect_all();
     void delete_selected();
     void ensure_on_bed(unsigned int object_idx);
 
@@ -697,7 +585,7 @@ public:
     void on_paint(wxPaintEvent& evt);
 
     Size get_canvas_size() const;
-    Point get_local_mouse_position() const;
+    Vec2d get_local_mouse_position() const;
 
     void reset_legend_texture();
 
@@ -712,10 +600,32 @@ public:
     void set_camera_zoom(float zoom);
 
     void update_gizmos_on_off_state();
+    void reset_all_gizmos() { m_gizmos.reset_all_states(); }
 
     void handle_sidebar_focus_event(const std::string& opt_key, bool focus_on);
 
     void update_ui_from_settings();
+
+    float get_view_toolbar_height() const { return m_view_toolbar.get_height(); }
+
+    int get_move_volume_id() const { return m_mouse.drag.move_volume_idx; }
+    int get_first_hover_volume_idx() const { return m_hover_volume_idxs.empty() ? -1 : m_hover_volume_idxs.front(); }
+
+    arr::WipeTowerInfo get_wipe_tower_info() const;
+    void arrange_wipe_tower(const arr::WipeTowerInfo& wti) const;
+
+    // Returns the view ray line, in world coordinate, at the given mouse position.
+    Linef3 mouse_ray(const Point& mouse_pos);
+
+    void set_mouse_as_dragging() { m_mouse.dragging = true; }
+    void disable_regenerate_volumes() { m_regenerate_volumes = false; }
+    void refresh_camera_scene_box() { m_camera.set_scene_box(scene_bounding_box()); }
+    bool is_mouse_dragging() const { return m_mouse.dragging; }
+
+    double get_size_proportional_to_max_bed_size(double factor) const;
+
+    void set_cursor(ECursorType type);
+    void msw_rescale();
 
 private:
     bool _is_shown_on_screen() const;
@@ -732,8 +642,8 @@ private:
 
     void _refresh_if_shown_on_screen();
 
-    void _camera_tranform() const;
     void _picking_pass() const;
+    void _rectangular_selection_picking_pass() const;
     void _render_background() const;
     void _render_bed(float theta) const;
     void _render_axes() const;
@@ -744,7 +654,7 @@ private:
 #endif // ENABLE_RENDER_SELECTION_CENTER
     void _render_warning_texture() const;
     void _render_legend_texture() const;
-    void _render_volumes(bool fake_colors) const;
+    void _render_volumes_for_picking() const;
     void _render_current_gizmo() const;
     void _render_gizmos_overlay() const;
     void _render_toolbar() const;
@@ -756,7 +666,6 @@ private:
     void _render_selection_sidebar_hints() const;
 
     void _update_volumes_hover_state() const;
-    void _update_gizmos_data();
 
     void _perform_layer_editing_action(wxMouseEvent* evt = nullptr);
 
@@ -766,9 +675,6 @@ private:
 
     // Convert the screen space coordinate to world coordinate on the bed.
     Vec3d _mouse_to_bed_3d(const Point& mouse_pos);
-
-    // Returns the view ray line, in world coordinate, at the given mouse position.
-    Linef3 mouse_ray(const Point& mouse_pos);
 
     void _start_timer();
     void _stop_timer();
@@ -796,13 +702,14 @@ private:
     // generates gcode unretractions geometry
     void _load_gcode_unretractions(const GCodePreviewData& preview_data);
     // generates objects and wipe tower geometry
-    void _load_shells_fff();
+    void _load_fff_shells();
     // generates objects geometry for sla
-    void _load_shells_sla();
+    void _load_sla_shells();
     // sets gcode geometry visibility according to user selection
     void _update_gcode_volumes_visibility(const GCodePreviewData& preview_data);
     void _update_toolpath_volumes_outside_state();
-    void _show_warning_texture_if_needed();
+    void _update_sla_shells_outside_state();
+    void _show_warning_texture_if_needed(WarningTexture::Warning warning);
 
     // generates the legend texture in dependence of the current shown view type
     void _generate_legend_texture(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors);
@@ -815,6 +722,9 @@ private:
 #if !ENABLE_SVG_ICONS
     void _resize_toolbars() const;
 #endif // !ENABLE_SVG_ICONS
+
+    // updates the selection from the content of m_hover_volume_idxs
+    void _update_selection_from_hover();
 
     static std::vector<float> _parse_colors(const std::vector<std::string>& colors);
 

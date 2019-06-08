@@ -49,13 +49,18 @@ foreach (_cache_var ${_cache_vars})
     endif ()
 endforeach()
 
+if (SLIC3R_GUI)
+    add_definitions(-DSLIC3R_GUI)
+endif ()
+
 if (MSVC)
     if (SLIC3R_MSVC_COMPILE_PARALLEL)
 	   add_compile_options(/MP)
     endif ()
     # /bigobj (Increase Number of Sections in .Obj file)
     # error C3859: virtual memory range for PCH exceeded; please recompile with a command line option of '-Zm90' or greater
-    add_compile_options(-bigobj -Zm316)
+    # Generate symbols at every build target, even for the release.
+    add_compile_options(-bigobj -Zm316 /Zi)
 endif ()
 
 # Display and check CMAKE_PREFIX_PATH
@@ -135,6 +140,10 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         # Workaround for an old CMake, which does not understand CMAKE_CXX_STANDARD.
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     endif()
+
+    # Boost on Raspberry-Pi does not link to pthreads.
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package(Threads REQUIRED)
 endif()
 
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUXX)
@@ -226,7 +235,11 @@ if(SLIC3R_STATIC)
 endif()
 #set(Boost_DEBUG ON)
 # set(Boost_COMPILER "-vc120")
-find_package(Boost REQUIRED COMPONENTS system filesystem thread log locale regex)
+if(NOT WIN32)
+    # boost::process was introduced first in version 1.64.0
+    set(MINIMUM_BOOST_VERSION "1.64.0")
+endif()
+find_package(Boost ${MINIMUM_BOOST_VERSION} REQUIRED COMPONENTS system filesystem thread log locale regex)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
     if (APPLE)
@@ -317,7 +330,7 @@ include_directories(${GLEW_INCLUDE_DIRS})
 # l10n
 set(L10N_DIR "${SLIC3R_RESOURCES_DIR}/localization")
 add_custom_target(pot
-    COMMAND xgettext --keyword=L --from-code=UTF-8 --debug
+    COMMAND xgettext --keyword=L --add-comments=TRN --from-code=UTF-8 --debug
         -f "${L10N_DIR}/list.txt"
         -o "${L10N_DIR}/Slic3r++.pot"
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
@@ -348,7 +361,7 @@ endif()
 if (WIN32)
     install(DIRECTORY "${SLIC3R_RESOURCES_DIR}/" DESTINATION "${CMAKE_INSTALL_PREFIX}/resources")
 else ()
-    set(SLIC3R_FHS_RESOURCES "${CMAKE_INSTALL_FULL_DATAROOTDIR}/slic3r-prusa3d")
+    set(SLIC3R_FHS_RESOURCES "${CMAKE_INSTALL_FULL_DATAROOTDIR}/slic3r++")
     install(DIRECTORY "${SLIC3R_RESOURCES_DIR}/" DESTINATION "${SLIC3R_FHS_RESOURCES}")
 endif ()
 configure_file(${LIBDIR}/platform/unix/fhs.hpp.in ${LIBDIR_BIN}/platform/unix/fhs.hpp)

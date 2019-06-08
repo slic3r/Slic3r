@@ -59,6 +59,8 @@ ObjectSettings::ObjectSettings(wxWindow* parent) :
 
     m_settings_list_sizer = new wxBoxSizer(wxVERTICAL);
     m_og->sizer->Add(m_settings_list_sizer, 1, wxEXPAND | wxLEFT, 5);
+
+    m_bmp_delete = ScalableBitmap(parent, "cross");
 }
 
 void ObjectSettings::update_settings_list()
@@ -77,15 +79,13 @@ void ObjectSettings::update_settings_list()
 		{
 			auto opt_key = (line.get_options())[0].opt_id;  //we assume that we have one option per line
 
-// 			auto btn = new wxBitmapButton(parent, wxID_ANY, wxBitmap(from_u8(var("colorchange_delete_on.png")), wxBITMAP_TYPE_PNG),
-			auto btn = new wxBitmapButton(parent, wxID_ANY, create_scaled_bitmap("colorchange_delete_on.png"),
-				wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
-#ifdef __WXMSW__
-            btn->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-#endif // __WXMSW__
+			auto btn = new ScalableButton(parent, wxID_ANY, m_bmp_delete);
+            btn->SetToolTip(_(L("Remove parameter")));
+
 			btn->Bind(wxEVT_BUTTON, [opt_key, config, this](wxEvent &event) {
 				config->erase(opt_key);
-                wxTheApp->CallAfter([this]() { 
+                wxGetApp().obj_list()->changed_object();
+                wxTheApp->CallAfter([this]() {
                     wxWindowUpdateLocker noUpdates(m_parent);
                     update_settings_list(); 
                     m_parent->Layout(); 
@@ -122,23 +122,35 @@ void ObjectSettings::update_settings_list()
                 if (cat.second.size() == 1 && cat.second[0] == "extruder")
                     continue;
 
-                auto optgroup = std::make_shared<ConfigOptionsGroup>(m_og->ctrl_parent(), cat.first, config, false, extra_column);
-                optgroup->label_width = 15 * wxGetApp().em_unit();//150;
-                optgroup->sidetext_width = 7 * wxGetApp().em_unit();//70;
+                auto optgroup = std::make_shared<ConfigOptionsGroup>(m_og->ctrl_parent(), _(cat.first), config, false, extra_column);
+                optgroup->label_width = 15;
+                optgroup->sidetext_width = 5.5;
 
                 optgroup->m_on_change = [](const t_config_option_key& opt_id, const boost::any& value) {
-                                        wxGetApp().obj_list()->part_settings_changed(); };
+                                        wxGetApp().obj_list()->changed_object(); };
 
+                const bool is_extriders_cat = cat.first == "Extruders";
                 for (auto& opt : cat.second)
                 {
                     if (opt == "extruder")
                         continue;
                     Option option = optgroup->get_option(opt);
-                    option.opt.width = 7 * wxGetApp().em_unit();//70;
+                    option.opt.width = 12;
+                    if (is_extriders_cat)
+                        option.opt.max = wxGetApp().extruders_cnt();
                     optgroup->append_single_option_line(option);
                 }
                 optgroup->reload_config();
                 m_settings_list_sizer->Add(optgroup->sizer, 0, wxEXPAND | wxALL, 0);
+
+                // call back for rescaling of the extracolumn control
+                optgroup->rescale_extra_column_item = [this](wxWindow* win) {
+                    auto *ctrl = dynamic_cast<ScalableButton*>(win);
+                    if (ctrl == nullptr)
+                        return;
+                    ctrl->SetBitmap_(m_bmp_delete);
+                };
+
                 m_og_settings.push_back(optgroup);
 
                 categories.push_back(cat.first);
@@ -161,6 +173,14 @@ void ObjectSettings::UpdateAndShow(const bool show)
         update_settings_list();
 
     OG_Settings::UpdateAndShow(show);
+}
+
+void ObjectSettings::msw_rescale()
+{
+    m_bmp_delete.msw_rescale();
+
+    for (auto group : m_og_settings)
+        group->msw_rescale();
 }
 
 } //namespace GUI

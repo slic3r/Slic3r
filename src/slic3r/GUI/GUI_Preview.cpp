@@ -27,7 +27,7 @@
 namespace Slic3r {
 namespace GUI {
 
-    View3D::View3D(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar, Model* model, DynamicPrintConfig* config, BackgroundSlicingProcess* process)
+View3D::View3D(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar, Model* model, DynamicPrintConfig* config, BackgroundSlicingProcess* process)
     : m_canvas_widget(nullptr)
     , m_canvas(nullptr)
 {
@@ -62,6 +62,7 @@ bool View3D::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_
     m_canvas->set_process(process);
     m_canvas->set_config(config);
     m_canvas->enable_gizmos(true);
+    m_canvas->enable_selection(true);
     m_canvas->enable_toolbar(true);
 
     wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
@@ -96,6 +97,12 @@ void View3D::select_all()
 {
     if (m_canvas != nullptr)
         m_canvas->select_all();
+}
+
+void View3D::deselect_all()
+{
+    if (m_canvas != nullptr)
+        m_canvas->deselect_all();
 }
 
 void View3D::delete_selected()
@@ -154,7 +161,9 @@ void View3D::render()
         m_canvas->set_as_dirty();
 }
 
-Preview::Preview(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar, DynamicPrintConfig* config, BackgroundSlicingProcess* process, GCodePreviewData* gcode_preview_data, std::function<void()> schedule_background_process_func)
+Preview::Preview(
+    wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar, Model* model, DynamicPrintConfig* config, 
+    BackgroundSlicingProcess* process, GCodePreviewData* gcode_preview_data, std::function<void()> schedule_background_process_func)
     : m_canvas_widget(nullptr)
     , m_canvas(nullptr)
     , m_double_slider_sizer(nullptr)
@@ -178,14 +187,14 @@ Preview::Preview(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_t
     , m_volumes_cleanup_required(false)
 #endif // __linux__
 {
-    if (init(parent, bed, camera, view_toolbar))
+    if (init(parent, bed, camera, view_toolbar, model))
     {
         show_hide_ui_elements("none");
         load_print();
     }
 }
 
-bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar)
+bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar, Model* model)
 {
     if (!Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0 /* disable wxTAB_TRAVERSAL */))
         return false;
@@ -195,6 +204,7 @@ bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view
     m_canvas = _3DScene::get_canvas(this->m_canvas_widget);
     m_canvas->allow_multisample(GLCanvas3DManager::can_multisample());
     m_canvas->set_config(m_config);
+    m_canvas->set_model(model);
     m_canvas->set_process(m_process);
     m_canvas->enable_legend_texture(true);
     m_canvas->enable_dynamic_background(true);
@@ -392,6 +402,18 @@ void Preview::refresh_print()
     load_print(true);
 }
 
+void Preview::msw_rescale()
+{
+    // rescale slider
+    if (m_slider) m_slider->msw_rescale();
+
+    // rescale warning legend on the canvas
+    get_canvas3d()->msw_rescale();
+
+    // rescale legend
+    refresh_print();
+}
+
 void Preview::bind_event_handlers()
 {
     this->Bind(wxEVT_SIZE, &Preview::on_size, this);
@@ -503,7 +525,7 @@ void Preview::on_checkbox_shells(wxCommandEvent& evt)
 
 void Preview::create_double_slider()
 {
-    m_slider = new PrusaDoubleSlider(this, wxID_ANY, 0, 0, 0, 100);
+    m_slider = new DoubleSlider(this, wxID_ANY, 0, 0, 0, 100);
     m_double_slider_sizer->Add(m_slider, 0, wxEXPAND, 0);
 
     // sizer, m_canvas_widget
@@ -772,14 +794,15 @@ void Preview::load_print_as_sla()
     std::vector<double> zs;
     double initial_layer_height = print->material_config().initial_layer_height.value;
     for (const SLAPrintObject* obj : print->objects())
-        if (obj->is_step_done(slaposIndexSlices))
+        if (obj->is_step_done(slaposSliceSupports) && !obj->get_slice_index().empty())
         {
-            auto slicerecords = obj->get_slice_records();
-            auto low_coord = slicerecords.begin()->key();
-            for (auto& rec : slicerecords)
-                zs.emplace_back(initial_layer_height + (rec.key() - low_coord) * SCALING_FACTOR);
+            auto low_coord = obj->get_slice_index().front().print_level();
+            for (auto& rec : obj->get_slice_index())
+                zs.emplace_back(initial_layer_height + (rec.print_level() - low_coord) * SCALING_FACTOR);
         }
     sort_remove_duplicates(zs);
+
+    m_canvas->reset_clipping_planes_cache();
 
     n_layers = (unsigned int)zs.size();
     if (n_layers == 0)
@@ -813,8 +836,8 @@ void Preview::on_sliders_scroll_changed(wxEvent& event)
         }
         else if (tech == ptSLA)
         {
-            m_canvas->set_clipping_plane(0, GLCanvas3D::ClippingPlane(Vec3d::UnitZ(), -m_slider->GetLowerValueD()));
-            m_canvas->set_clipping_plane(1, GLCanvas3D::ClippingPlane(-Vec3d::UnitZ(), m_slider->GetHigherValueD()));
+            m_canvas->set_clipping_plane(0, ClippingPlane(Vec3d::UnitZ(), -m_slider->GetLowerValueD()));
+            m_canvas->set_clipping_plane(1, ClippingPlane(-Vec3d::UnitZ(), m_slider->GetHigherValueD()));
             m_canvas->set_use_clipping_planes(m_slider->GetHigherValue() != 0);
             m_canvas_widget->Refresh();
         }

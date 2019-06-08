@@ -30,6 +30,9 @@ set(SLIC3R_GUI_SOURCES
     GUI/GLCanvas3DManager.cpp
     GUI/Selection.hpp
     GUI/Selection.cpp    
+    GUI/Gizmos/GLGizmos.hpp
+    GUI/Gizmos/GLGizmosManager.cpp
+    GUI/Gizmos/GLGizmosManager.hpp
     GUI/Gizmos/GLGizmoBase.cpp
     GUI/Gizmos/GLGizmoBase.hpp
     GUI/Gizmos/GLGizmoMove.cpp
@@ -44,6 +47,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Gizmos/GLGizmoFlatten.hpp
     GUI/Gizmos/GLGizmoCut.cpp
     GUI/Gizmos/GLGizmoCut.hpp
+    GUI/GLSelectionRectangle.cpp
+    GUI/GLSelectionRectangle.hpp
     GUI/GLTexture.hpp
     GUI/GLTexture.cpp
     GUI/GLToolbar.hpp
@@ -146,12 +151,15 @@ set(SLIC3R_GUI_SOURCES
 )
 
 if (APPLE)
-    list(APPEND SLIC3R_GUI_SOURCES Utils/RetinaHelperImpl.mm)
+    list(APPEND SLIC3R_GUI_SOURCES
+            Utils/RetinaHelperImpl.mm
+            Utils/MacDarkMode.mm
+        )
 endif ()
 
 add_library(libslic3r_gui STATIC ${SLIC3R_GUI_SOURCES})
 
-target_link_libraries(libslic3r_gui libslic3r avrdude imgui)
+target_link_libraries(libslic3r_gui libslic3r avrdude imgui ${GLEW_LIBRARIES})
 if (SLIC3R_PCH AND NOT SLIC3R_SYNTAXONLY)
     add_precompiled_header(libslic3r_gui pchheader.hpp FORCEINCLUDE)
 endif ()

@@ -3,10 +3,42 @@
 
 #include <ostream>
 #include <memory>
+#include <vector>
+#include <cstdint>
+
+namespace ClipperLib { struct Polygon; }
 
 namespace Slic3r {
 
 class ExPolygon;
+
+// Raw byte buffer paired with its size. Suitable for compressed PNG data.
+class RawBytes {
+
+    std::vector<std::uint8_t> m_buffer;
+public:
+
+    RawBytes() = default;
+    RawBytes(std::vector<std::uint8_t>&& data): m_buffer(std::move(data)) {}
+    
+    size_t size() const { return m_buffer.size(); }
+    const uint8_t * data() { return m_buffer.data(); }
+
+    // /////////////////////////////////////////////////////////////////////////
+    // FIXME: the following is needed for MSVC2013 compatibility
+    // /////////////////////////////////////////////////////////////////////////
+
+    RawBytes(const RawBytes&) = delete;
+    RawBytes(RawBytes&& mv) : m_buffer(std::move(mv.m_buffer)) {}
+
+    RawBytes& operator=(const RawBytes&) = delete;
+    RawBytes& operator=(RawBytes&& mv) {
+        m_buffer = std::move(mv.m_buffer);
+        return *this;
+    }
+
+    // /////////////////////////////////////////////////////////////////////////
+};
 
 /**
  * @brief Raster captures an anti-aliased monochrome canvas where vectorial
@@ -58,8 +90,9 @@ public:
     };
 
     /// Constructor taking the resolution and the pixel dimension.
-    explicit Raster(const Resolution& r, const PixelDim& pd,
-                    Origin o = Origin::BOTTOM_LEFT );
+    Raster(const Resolution& r,  const PixelDim& pd, 
+           Origin o = Origin::BOTTOM_LEFT, double gamma = 1.0);
+    
     Raster();
     Raster(const Raster& cpy) = delete;
     Raster& operator=(const Raster& cpy) = delete;
@@ -67,8 +100,8 @@ public:
     ~Raster();
 
     /// Reallocated everything for the given resolution and pixel dimension.
-    void reset(const Resolution& r, const PixelDim& pd);
-    void reset(const Resolution& r, const PixelDim& pd, Origin o);
+    void reset(const Resolution& r, const PixelDim& pd, double gamma = 1.0);
+    void reset(const Resolution& r, const PixelDim& pd, Origin o, double gamma);
 
     /**
      * Release the allocated resources. Drawing in this state ends in
@@ -84,9 +117,12 @@ public:
 
     /// Draw a polygon with holes.
     void draw(const ExPolygon& poly);
+    void draw(const ClipperLib::Polygon& poly);
 
     /// Save the raster on the specified stream.
     void save(std::ostream& stream, Compression comp = Compression::RAW);
+
+    RawBytes save(Compression comp = Compression::RAW);
 };
 
 }

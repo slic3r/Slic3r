@@ -19,6 +19,7 @@
 #include "MsgDialog.hpp"
 #include "I18N.hpp"
 #include "../Utils/PrintHost.hpp"
+#include "wxExtensions.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -91,12 +92,13 @@ void PrintHostSendDialog::EndModal(int ret)
         // Persist path and print settings
         wxString path = txt_filename->GetValue();
         int last_slash = path.Find('/', true);
-        if (last_slash != wxNOT_FOUND) {
+		if (last_slash == wxNOT_FOUND)
+			path.clear();
+		else
             path = path.SubString(0, last_slash);
-            wxGetApp().app_config->set("recent", CONFIG_KEY_PATH, into_u8(path));
-        }
-
-        GUI::get_app_config()->set("recent", CONFIG_KEY_PRINT, start_print() ? "1" : "0");
+		AppConfig *app_config = wxGetApp().app_config;
+		app_config->set("recent", CONFIG_KEY_PATH, into_u8(path));
+        app_config->set("recent", CONFIG_KEY_PRINT, start_print() ? "1" : "0");
     }
 
     MsgDialog::EndModal(ret);
@@ -131,13 +133,11 @@ wxEvent *PrintHostQueueDialog::Event::Clone() const
 }
 
 PrintHostQueueDialog::PrintHostQueueDialog(wxWindow *parent)
-    : wxDialog(parent, wxID_ANY, _(L("Print host upload queue")), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
+    : DPIDialog(parent, wxID_ANY, _(L("Print host upload queue")), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
     , on_progress_evt(this, EVT_PRINTHOST_PROGRESS, &PrintHostQueueDialog::on_progress, this)
     , on_error_evt(this, EVT_PRINTHOST_ERROR, &PrintHostQueueDialog::on_error, this)
     , on_cancel_evt(this, EVT_PRINTHOST_CANCEL, &PrintHostQueueDialog::on_cancel, this)
 {
-    enum { HEIGHT = 60, WIDTH = 30, SPACING = 5 };
-
     const auto em = GetTextExtent("m").x;
 
     SetSize(wxSize(HEIGHT * em, WIDTH * em));
@@ -146,12 +146,12 @@ PrintHostQueueDialog::PrintHostQueueDialog(wxWindow *parent)
 
     job_list = new wxDataViewListCtrl(this, wxID_ANY);
     // Note: Keep these in sync with Column
-    job_list->AppendTextColumn("ID", wxDATAVIEW_CELL_INERT);
-    job_list->AppendProgressColumn("Progress", wxDATAVIEW_CELL_INERT);
-    job_list->AppendTextColumn("Status", wxDATAVIEW_CELL_INERT);
-    job_list->AppendTextColumn("Host", wxDATAVIEW_CELL_INERT);
-    job_list->AppendTextColumn("Filename", wxDATAVIEW_CELL_INERT);
-    job_list->AppendTextColumn("error_message", wxDATAVIEW_CELL_INERT, -1, wxALIGN_CENTER, wxDATAVIEW_COL_HIDDEN);
+    job_list->AppendTextColumn(_(L("ID")), wxDATAVIEW_CELL_INERT);
+    job_list->AppendProgressColumn(_(L("Progress")), wxDATAVIEW_CELL_INERT);
+    job_list->AppendTextColumn(_(L("Status")), wxDATAVIEW_CELL_INERT);
+    job_list->AppendTextColumn(_(L("Host")), wxDATAVIEW_CELL_INERT);
+    job_list->AppendTextColumn(_(L("Filename")), wxDATAVIEW_CELL_INERT);
+    job_list->AppendTextColumn(_(L("Error Message")), wxDATAVIEW_CELL_INERT, -1, wxALIGN_CENTER, wxDATAVIEW_COL_HIDDEN);
 
     auto *btnsizer = new wxBoxSizer(wxHORIZONTAL);
     btn_cancel = new wxButton(this, wxID_DELETE, _(L("Cancel selected")));
@@ -200,6 +200,18 @@ void PrintHostQueueDialog::append_job(const PrintHostJob &job)
     fields.push_back(wxVariant(job.upload_data.upload_path.string()));
     fields.push_back(wxVariant(""));
     job_list->AppendItem(fields, static_cast<wxUIntPtr>(ST_NEW));
+}
+
+void PrintHostQueueDialog::on_dpi_changed(const wxRect &suggested_rect)
+{
+    const int& em = em_unit();
+
+    msw_buttons_rescale(this, em, { wxID_DELETE, wxID_CANCEL, btn_error->GetId() });
+
+    SetMinSize(wxSize(HEIGHT * em, WIDTH * em));
+
+    Fit();
+    Refresh();
 }
 
 PrintHostQueueDialog::JobState PrintHostQueueDialog::get_state(int idx)

@@ -9,6 +9,7 @@
 
 #include "PrintConfig.hpp"
 #include "WipeTower.hpp"
+#include "PrintConfig.hpp"
 
 
 namespace Slic3r
@@ -55,8 +56,7 @@ public:
 	// y			-- y coordinates of wipe tower in mm ( left bottom corner )
 	// width		-- width of wipe tower in mm ( default 60 mm - leave as it is )
 	// wipe_area	-- space available for one toolchange in mm
-    WipeTowerPrusaMM(PrintConfig &config,
-        const std::vector<std::vector<float>>& wiping_matrix, unsigned int initial_tool, float first_layer_width) :
+    WipeTowerPrusaMM(PrintConfig &config, const std::vector<std::vector<float>>& wiping_matrix, unsigned int initial_tool, float first_layer_width) :
         m_wipe_tower_pos(float(config.wipe_tower_x.value), float(config.wipe_tower_y.value)),
         m_wipe_tower_width(float(config.wipe_tower_width.value)),
         m_wipe_tower_rotation_angle(float(config.wipe_tower_rotation_angle.value)),
@@ -69,6 +69,7 @@ public:
         m_extra_loading_move(float(config.extra_loading_move.value)),
         m_bridging(float(config.wipe_tower_bridging)),
         m_set_extruder_trimpot(config.high_current_on_filament_swap.value),
+        m_gcode_flavor(config.gcode_flavor),
         m_current_tool(initial_tool),
         wipe_volumes(wiping_matrix),
         m_brim_width(first_layer_width),
@@ -206,7 +207,7 @@ private:
 
 
     const bool  m_peters_wipe_tower   = false; // sparse wipe tower inspired by Peter's post processor - not finished yet
-    const float Filament_Area         = M_PI * 1.75f * 1.75f / 4.f; // filament area in mm^2
+    const float Filament_Area         = float(M_PI * 1.75f * 1.75f / 4.f); // filament area in mm^2
     const float Width_To_Nozzle_Ratio = 1.25f; // desired line width (oval) in multiples of nozzle diameter - may not be actually neccessary to adjust
     const float WT_EPSILON            = 1e-3f;
 
@@ -233,11 +234,11 @@ private:
     bool            m_set_extruder_trimpot      = false;
     bool 			m_retain_speed_override		= true;
     bool            m_adhesion                  = true;
+    GCodeFlavor     m_gcode_flavor;
 
-    float m_perimeter_width = 0.4 * Width_To_Nozzle_Ratio; // Width of an extrusion line, also a perimeter spacing for 100% infill.
+    float m_perimeter_width = 0.4f * Width_To_Nozzle_Ratio; // Width of an extrusion line, also a perimeter spacing for 100% infill.
     float m_brim_width = 0.4 * Width_To_Nozzle_Ratio * Width_To_Nozzle_Ratio; // Width of an extrusion line, also a perimeter spacing for 100% infill.
-	float m_extrusion_flow = 0.038; //0.029f;// Extrusion flow is derived from m_perimeter_width, layer height and filament diameter.
-
+    float m_extrusion_flow = 0.038f; //0.029f;// Extrusion flow is derived from m_perimeter_width, layer height and filament diameter.
 
     struct FilamentParameters {
         material_type 	    material = PLA;
@@ -280,12 +281,12 @@ private:
 	{
 		if ( layer_height < 0 )
 			return m_extrusion_flow;
-		return layer_height * ( m_perimeter_width - layer_height * (1-M_PI/4.f)) / Filament_Area;
+		return layer_height * ( m_perimeter_width - layer_height * (1.f-float(M_PI)/4.f)) / Filament_Area;
 	}
 
 	// Calculates length of extrusion line to extrude given volume
 	float volume_to_length(float volume, float line_width, float layer_height) const {
-		return std::max(0., volume / (layer_height * (line_width - layer_height * (1. - M_PI / 4.))));
+		return std::max(0.f, volume / (layer_height * (line_width - layer_height * (1.f - float(M_PI) / 4.f))));
 	}
 
 	// Calculates depth for all layers and propagates them downwards

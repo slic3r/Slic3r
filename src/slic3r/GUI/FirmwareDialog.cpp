@@ -18,6 +18,7 @@
 #include "MsgDialog.hpp"
 #include "../Utils/HexFile.hpp"
 #include "../Utils/Serial.hpp"
+#include "wxExtensions.hpp"
 
 // wx includes need to come after asio because of the WinSock.h problem
 #include "FirmwareDialog.hpp"
@@ -59,6 +60,8 @@ enum {
 	USB_PID_MK3      = 2,
 	USB_PID_MMU_BOOT = 3,
 	USB_PID_MMU_APP  = 4,
+	USB_PID_CW1_BOOT = 7,
+	USB_PID_CW1_APP  = 8,
 };
 
 // This enum discriminates the kind of information in EVT_AVRDUDE,
@@ -77,6 +80,13 @@ wxDEFINE_EVENT(EVT_AVRDUDE, wxCommandEvent);
 wxDECLARE_EVENT(EVT_ASYNC_DIALOG, wxCommandEvent);
 wxDEFINE_EVENT(EVT_ASYNC_DIALOG, wxCommandEvent);
 
+struct Avr109Pid
+{
+	unsigned boot;
+	unsigned app;
+
+	Avr109Pid(unsigned boot, unsigned app) : boot(boot), app(app) {}
+};
 
 // Private
 
@@ -108,6 +118,10 @@ struct FirmwareDialog::priv
 	wxString label_status_flashing;
 
 	wxTimer timer_pulse;
+
+    int min_width;
+    int min_height;
+    int min_height_expanded;
 
 	// Async modal dialog during flashing
 	std::mutex mutex;
@@ -146,24 +160,40 @@ struct FirmwareDialog::priv
 	void flashing_done(AvrDudeComplete complete);
 	void enable_port_picker(bool enable);
 	void load_hex_file(const wxString &path);
-	void queue_status(wxString message);
-	void queue_error(const wxString &message);
+	void queue_event(AvrdudeEvent aevt, wxString message);
 
 	bool ask_model_id_mismatch(const std::string &printer_model);
 	bool check_model_id();
-	void wait_for_mmu_bootloader(unsigned retries);
-	void mmu_reboot(const SerialPortInfo &port);
-	void lookup_port_mmu();
+	void avr109_wait_for_bootloader(Avr109Pid usb_pid, unsigned retries);
+	void avr109_reboot(const SerialPortInfo &port);
+	void avr109_lookup_port(Avr109Pid usb_pid);
 	void prepare_common();
 	void prepare_mk2();
 	void prepare_mk3();
-	void prepare_mm_control();
+	void prepare_avr109(Avr109Pid usb_pid);
 	void perform_upload();
 
 	void user_cancel();
 	void on_avrdude(const wxCommandEvent &evt);
 	void on_async_dialog(const wxCommandEvent &evt);
 	void ensure_joined();
+
+	void queue_status(wxString message) { queue_event(AE_STATUS, std::move(message)); }
+
+	template<class ...Args> void queue_message(const wxString &format, Args... args) {
+		auto message = wxString::Format(format, args...);
+		BOOST_LOG_TRIVIAL(info) << message;
+		message.Append('\n');
+		queue_event(AE_MESSAGE, std::move(message));
+	}
+
+	template<class ...Args> void queue_error(const wxString &format, Args... args) {
+		queue_message(format, args...);
+		queue_event(AE_STATUS, _(L("Flashing failed")) +": "+ wxString::Format(format, args...));
+		avrdude->cancel();
+	}
+
+	static const char* avr109_dev_name(Avr109Pid usb_pid);
 };
 
 void FirmwareDialog::priv::find_serial_ports()
@@ -259,24 +289,16 @@ void FirmwareDialog::priv::enable_port_picker(bool enable)
 void FirmwareDialog::priv::load_hex_file(const wxString &path)
 {
 	hex_file = HexFile(path.wx_str());
-	enable_port_picker(hex_file.device != HexFile::DEV_MM_CONTROL);
+	const bool auto_lookup = hex_file.device == HexFile::DEV_MM_CONTROL || hex_file.device == HexFile::DEV_CW1;
+	enable_port_picker(! auto_lookup);
 }
 
-void FirmwareDialog::priv::queue_status(wxString message)
+void FirmwareDialog::priv::queue_event(AvrdudeEvent aevt, wxString message)
 {
 	auto evt = new wxCommandEvent(EVT_AVRDUDE, this->q->GetId());
-	evt->SetExtraLong(AE_STATUS);
+	evt->SetExtraLong(aevt);
 	evt->SetString(std::move(message));
 	wxQueueEvent(this->q, evt);
-}
-
-void FirmwareDialog::priv::queue_error(const wxString &message)
-{
-	auto evt = new wxCommandEvent(EVT_AVRDUDE, this->q->GetId());
-	evt->SetExtraLong(AE_STATUS);
-	evt->SetString(wxString::Format(_(L("Flashing failed: %s")), message));
-
-	wxQueueEvent(this->q, evt);	avrdude->cancel();
 }
 
 bool FirmwareDialog::priv::ask_model_id_mismatch(const std::string &printer_model)
@@ -356,7 +378,7 @@ bool FirmwareDialog::priv::check_model_id()
 	// return false;
 }
 
-void FirmwareDialog::priv::wait_for_mmu_bootloader(unsigned retries)
+void FirmwareDialog::priv::avr109_wait_for_bootloader(Avr109Pid usb_pid, unsigned retries)
 {
 	enum {
 		SLEEP_MS = 500,
@@ -367,61 +389,63 @@ void FirmwareDialog::priv::wait_for_mmu_bootloader(unsigned retries)
 
 		auto ports = Utils::scan_serial_ports_extended();
 		ports.erase(std::remove_if(ports.begin(), ports.end(), [=](const SerialPortInfo &port ) {
-			return port.id_vendor != USB_VID_PRUSA || port.id_product != USB_PID_MMU_BOOT;
+			return port.id_vendor != USB_VID_PRUSA || port.id_product != usb_pid.boot;
 		}), ports.end());
 
 		if (ports.size() == 1) {
 			port = ports[0];
 			return;
 		} else if (ports.size() > 1) {
-			BOOST_LOG_TRIVIAL(error) << "Several VID/PID 0x2c99/3 devices found";
-			queue_error(_(L("Multiple Original Prusa i3 MMU 2.0 devices found. Please only connect one at a time for flashing.")));
+			queue_message("Several VID/PID 0x2c99/%u devices found", usb_pid.boot);
+			queue_error(_(L("Multiple %s devices found. Please only connect one at a time for flashing.")), avr109_dev_name(usb_pid));
 			return;
 		}
 	}
 }
 
-void FirmwareDialog::priv::mmu_reboot(const SerialPortInfo &port)
+void FirmwareDialog::priv::avr109_reboot(const SerialPortInfo &port)
 {
 	asio::io_service io;
 	Serial serial(io, port.port, 1200);
 	std::this_thread::sleep_for(std::chrono::milliseconds(50));
 }
 
-void FirmwareDialog::priv::lookup_port_mmu()
+void FirmwareDialog::priv::avr109_lookup_port(Avr109Pid usb_pid)
 {
-	static const auto msg_not_found =
-		"The Multi Material Control device was not found.\n"
-		"If the device is connected, please press the Reset button next to the USB connector ...";
+	const char *dev_name = avr109_dev_name(usb_pid);
+	const wxString msg_not_found = wxString::Format(
+		_(L("The %s device was not found.\n"
+			"If the device is connected, please press the Reset button next to the USB connector ...")),
+		dev_name);
 
-	BOOST_LOG_TRIVIAL(info) << "Flashing MMU 2.0, looking for VID/PID 0x2c99/3 or 0x2c99/4 ...";
+	queue_message("Flashing %s, looking for VID/PID 0x2c99/%u or 0x2c99/%u ...", dev_name, usb_pid.boot, usb_pid.app);
 
 	auto ports = Utils::scan_serial_ports_extended();
 	ports.erase(std::remove_if(ports.begin(), ports.end(), [=](const SerialPortInfo &port ) {
 		return port.id_vendor != USB_VID_PRUSA ||
-			port.id_product != USB_PID_MMU_BOOT &&
-			port.id_product != USB_PID_MMU_APP;
+			port.id_product != usb_pid.boot &&
+			port.id_product != usb_pid.app;
 	}), ports.end());
 
 	if (ports.size() == 0) {
-		BOOST_LOG_TRIVIAL(info) << "MMU 2.0 device not found, asking the user to press Reset and waiting for the device to show up ...";
-		queue_status(_(L(msg_not_found)));
-		wait_for_mmu_bootloader(30);
+		queue_message("The %s device was not found.", dev_name);
+		queue_status(msg_not_found);
+		avr109_wait_for_bootloader(usb_pid, 30);
 	} else if (ports.size() > 1) {
-		BOOST_LOG_TRIVIAL(error) << "Several VID/PID 0x2c99/3 devices found";
-		queue_error(_(L("Multiple Original Prusa i3 MMU 2.0 devices found. Please only connect one at a time for flashing.")));
+		queue_message("Several VID/PID 0x2c99/%u devices found", usb_pid.boot);
+		queue_error(_(L("Multiple %s devices found. Please only connect one at a time for flashing.")), dev_name);
 	} else {
-		if (ports[0].id_product == USB_PID_MMU_APP) {
+		if (ports[0].id_product == usb_pid.app) {
 			// The device needs to be rebooted into the bootloader mode
-			BOOST_LOG_TRIVIAL(info) << boost::format("Found VID/PID 0x2c99/4 at `%1%`, rebooting the device ...") % ports[0].port;
-			mmu_reboot(ports[0]);
-			wait_for_mmu_bootloader(10);
+			queue_message("Found VID/PID 0x2c99/%u at `%s`, rebooting the device ...", usb_pid.app, ports[0].port);
+			avr109_reboot(ports[0]);
+			avr109_wait_for_bootloader(usb_pid, 10);
 
 			if (! port) {
 				// The device in bootloader mode was not found, inform the user and wait some more...
-				BOOST_LOG_TRIVIAL(info) << "MMU 2.0 bootloader device not found after reboot, asking the user to press Reset and waiting for the device to show up ...";
-				queue_status(_(L(msg_not_found)));
-				wait_for_mmu_bootloader(30);
+				queue_message("%s device not found after reboot", dev_name);
+				queue_status(msg_not_found);
+				avr109_wait_for_bootloader(usb_pid, 30);
 			}
 		} else {
 			port = ports[0];
@@ -498,16 +522,16 @@ void FirmwareDialog::priv::prepare_mk3()
 	avrdude->push_args(std::move(args));
 }
 
-void FirmwareDialog::priv::prepare_mm_control()
+void FirmwareDialog::priv::prepare_avr109(Avr109Pid usb_pid)
 {
 	port = boost::none;
-	lookup_port_mmu();
+	avr109_lookup_port(usb_pid);
 	if (! port) {
-		queue_error(_(L("The device could not have been found")));
+		queue_error(_(L("The %s device could not have been found")), avr109_dev_name(usb_pid));
 		return;
 	}
 
-	BOOST_LOG_TRIVIAL(info) << boost::format("Found VID/PID 0x2c99/3 at `%1%`, flashing ...") % port->port;
+	queue_message("Found VID/PID 0x2c99/%u at `%s`, flashing ...", usb_pid.boot, port->port);
 	queue_status(label_status_flashing);
 
 	std::vector<std::string> args {{
@@ -568,7 +592,11 @@ void FirmwareDialog::priv::perform_upload()
 					break;
 
 				case HexFile::DEV_MM_CONTROL:
-					this->prepare_mm_control();
+					this->prepare_avr109(Avr109Pid(USB_PID_MMU_BOOT, USB_PID_MMU_APP));
+					break;
+
+				case HexFile::DEV_CW1:
+					this->prepare_avr109(Avr109Pid(USB_PID_CW1_BOOT, USB_PID_CW1_APP));
 					break;
 
 				default:
@@ -576,7 +604,11 @@ void FirmwareDialog::priv::perform_upload()
 					break;
 				}
 			} catch (const std::exception &ex) {
-				queue_error(wxString::Format(_(L("Error accessing port at %s: %s")), port->port, ex.what()));
+				if (port) {
+					queue_error(_(L("Error accessing port at %s: %s")), port->port, ex.what());
+				} else {
+					queue_error(_(L("Error: %s")), ex.what());
+				}
 			}
 		})
 		.on_message(std::move([q, extra_verbose](const char *msg, unsigned /* size */) {
@@ -688,27 +720,38 @@ void FirmwareDialog::priv::ensure_joined()
 	avrdude.reset();
 }
 
+const char* FirmwareDialog::priv::avr109_dev_name(Avr109Pid usb_pid) {
+	switch (usb_pid.boot) {
+		case USB_PID_MMU_BOOT:
+			return "Prusa MMU 2.0 Control";
+		break;
+		case USB_PID_CW1_BOOT:
+			return "Prusa CurWa";
+		break;
+
+		default: throw std::runtime_error((boost::format("Invalid avr109 device USB PID: %1%") % usb_pid.boot).str());
+	}
+}
+
 
 // Public
 
 FirmwareDialog::FirmwareDialog(wxWindow *parent) :
-	wxDialog(parent, wxID_ANY, _(L("Firmware flasher")), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+	GUI::DPIDialog(parent, wxID_ANY, _(L("Firmware flasher")), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
 	p(new priv(this))
 {
-	enum {
-		DIALOG_MARGIN = 15,
-		SPACING = 10,
-		MIN_WIDTH = 50,
-		MIN_HEIGHT = 18,
-		MIN_HEIGHT_EXPANDED = 40,
-	};
-
 	const int em = GUI::wxGetApp().em_unit();
-	int min_width = MIN_WIDTH * em;
-	int min_height = MIN_HEIGHT * em;
-	int min_height_expanded = MIN_HEIGHT_EXPANDED * em;
+	p->min_width = MIN_WIDTH * em;
+	p->min_height = MIN_HEIGHT * em;
+	p->min_height_expanded = MIN_HEIGHT_EXPANDED * em;
 
-	wxFont status_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
+    /* get current font from application, 
+     * because of wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) function
+     * returns font for primary Display
+     */
+    const wxFont& font = GUI::wxGetApp().normal_font();
+    SetFont(font);
+    wxFont status_font = font;//wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
 	status_font.MakeBold();
 	wxFont mono_font(wxFontInfo().Family(wxFONTFAMILY_TELETYPE));
 	mono_font.MakeSmaller();
@@ -722,6 +765,7 @@ FirmwareDialog::FirmwareDialog(wxWindow *parent) :
 	auto *label_hex_picker = new wxStaticText(panel, wxID_ANY, _(L("Firmware image:")));
 	p->hex_picker = new wxFilePickerCtrl(panel, wxID_ANY, wxEmptyString, wxFileSelectorPromptStr,
 		"Hex files (*.hex)|*.hex|All files|*.*");
+	p->hex_picker->GetPickerCtrl()->SetLabelText(_(L("Browse")));
 
 	auto *label_port_picker = new wxStaticText(panel, wxID_ANY, _(L("Serial port:")));
 	p->port_picker = new wxComboBox(panel, wxID_ANY);
@@ -757,7 +801,7 @@ FirmwareDialog::FirmwareDialog(wxWindow *parent) :
 
 	vsizer->Add(grid, 0, wxEXPAND | wxTOP | wxBOTTOM, SPACING);
 
-	p->spoiler = new wxCollapsiblePane(panel, wxID_ANY, _(L("Advanced: avrdude output log")), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
+	p->spoiler = new wxCollapsiblePane(panel, wxID_ANY, _(L("Advanced: Output log")), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
 	auto *spoiler_pane = p->spoiler->GetPane();
 	auto *spoiler_sizer = new wxBoxSizer(wxVERTICAL);
 	p->txt_stdout = new wxTextCtrl(spoiler_pane, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
@@ -779,10 +823,10 @@ FirmwareDialog::FirmwareDialog(wxWindow *parent) :
 
 	auto *topsizer = new wxBoxSizer(wxVERTICAL);
 	topsizer->Add(panel, 1, wxEXPAND | wxALL, DIALOG_MARGIN);
-	SetMinSize(wxSize(min_width, min_height));
+	SetMinSize(wxSize(p->min_width, p->min_height));
 	SetSizerAndFit(topsizer);
 	const auto size = GetSize();
-	SetSize(std::max(size.GetWidth(), static_cast<int>(min_width)), std::max(size.GetHeight(), static_cast<int>(min_height)));
+	SetSize(std::max(size.GetWidth(), static_cast<int>(p->min_width)), std::max(size.GetHeight(), static_cast<int>(p->min_height)));
 	Layout();
 
     SetEscapeId(wxID_CLOSE); // To close the dialog using "Esc" button
@@ -798,11 +842,11 @@ FirmwareDialog::FirmwareDialog(wxWindow *parent) :
 
 	p->spoiler->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, [=](wxCollapsiblePaneEvent &evt) {
 		if (evt.GetCollapsed()) {
-			this->SetMinSize(wxSize(min_width, min_height));
+			this->SetMinSize(wxSize(p->min_width, p->min_height));
 			const auto new_height = this->GetSize().GetHeight() - this->p->txt_stdout->GetSize().GetHeight();
 			this->SetSize(this->GetSize().GetWidth(), new_height);
 		} else {
-			this->SetMinSize(wxSize(min_width, min_height_expanded));
+			this->SetMinSize(wxSize(p->min_width, p->min_height_expanded));
 		}
 
 		this->Layout();
@@ -857,5 +901,25 @@ void FirmwareDialog::run(wxWindow *parent)
 	dialog.ShowModal();
 }
 
+void FirmwareDialog::on_dpi_changed(const wxRect &suggested_rect)
+{
+    const int& em = em_unit();
+
+    msw_buttons_rescale(this, em, { p->btn_close->GetId(), 
+                                    p->btn_rescan->GetId(),
+                                    p->btn_flash->GetId(),
+                                    p->hex_picker->GetPickerCtrl()->GetId()
+                                                            });
+
+    p->min_width = MIN_WIDTH * em;
+    p->min_height = MIN_HEIGHT * em;
+    p->min_height_expanded = MIN_HEIGHT_EXPANDED * em;
+
+    const int min_height = p->spoiler->IsExpanded() ? p->min_height_expanded : p->min_height;
+    SetMinSize(wxSize(p->min_width, min_height));
+    Fit();
+
+    Refresh();
+}
 
 }

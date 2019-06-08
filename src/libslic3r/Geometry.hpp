@@ -226,6 +226,7 @@ public:
 
     const Vec3d& get_mirror() const { return m_mirror; }
     double get_mirror(Axis axis) const { return m_mirror(axis); }
+    bool is_left_handed() const { return m_mirror.x() * m_mirror.y() * m_mirror.z() < 0.; }
 
     void set_mirror(const Vec3d& mirror);
     void set_mirror(Axis axis, double mirror);
@@ -240,6 +241,28 @@ public:
 
     Transformation operator * (const Transformation& other) const;
 };
+
+// Rotation when going from the first coordinate system with rotation rot_xyz_from applied
+// to a coordinate system with rot_xyz_to applied.
+extern Eigen::Quaterniond rotation_xyz_diff(const Vec3d &rot_xyz_from, const Vec3d &rot_xyz_to);
+// Rotation by Z to align rot_xyz_from to rot_xyz_to.
+// This should only be called if it is known, that the two rotations only differ in rotation around the Z axis.
+extern double rotation_diff_z(const Vec3d &rot_xyz_from, const Vec3d &rot_xyz_to);
+
+// Is the angle close to a multiple of 90 degrees?
+inline bool is_rotation_ninety_degrees(double a)
+{
+    a = fmod(std::abs(a), 0.5 * M_PI);
+    if (a > 0.25 * PI)
+        a = 0.5 * PI - a;
+    return a < 0.001;
+}
+
+// Is the angle close to a multiple of 90 degrees?
+inline bool is_rotation_ninety_degrees(const Vec3d &rotation)
+{
+    return is_rotation_ninety_degrees(rotation.x()) && is_rotation_ninety_degrees(rotation.y()) && is_rotation_ninety_degrees(rotation.z());
+}
 
 //------------for tests------------//
  

@@ -1329,6 +1329,10 @@ void
 MedialAxis::simplify_polygon_frontier()
 {
     //simplify the boundary between us and the bounds.
+    ExPolygon simplified_poly = this->surface;
+    simplified_poly.contour.remove_colinear_points(SCALED_EPSILON);
+    for (Polygon &hole : simplified_poly.holes)
+        hole.remove_colinear_points(SCALED_EPSILON);
     //it will remove every point in the surface contour that aren't on the bounds contour
     this->expolygon = this->surface;
     this->expolygon.contour.remove_collinear_points(SCALED_EPSILON);

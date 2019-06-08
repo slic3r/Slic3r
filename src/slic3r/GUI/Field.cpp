@@ -15,40 +15,41 @@ namespace Slic3r { namespace GUI {
 
 wxString double_to_string(double const value, const int max_precision /*= 4*/)
 {
-	if (value - int(value) == 0)
-		return wxString::Format(_T("%i"), int(value));
+// Style_NoTrailingZeroes does not work on OSX. It also does not work correctly with some locales on Windows.
+//	return wxNumberFormatter::ToString(value, max_precision, wxNumberFormatter::Style_NoTrailingZeroes);
 
-    int precision = max_precision;
-    for (size_t p = 1; p < max_precision; p++)
-	{
-		double cur_val = pow(10, p)*value;
-		if (cur_val - int(cur_val) == 0) {
-			precision = p;
-			break;
+	wxString s = wxNumberFormatter::ToString(value, max_precision, wxNumberFormatter::Style_None);
+
+	// The following code comes from wxNumberFormatter::RemoveTrailingZeroes(wxString& s)
+	// with the exception that here one sets the decimal separator explicitely to dot.
+    // If number is in scientific format, trailing zeroes belong to the exponent and cannot be removed.
+    if (s.find_first_of("eE") == wxString::npos) {
+	    const size_t posDecSep = s.find(".");
+	    // No decimal point => removing trailing zeroes irrelevant for integer number.
+	    if (posDecSep != wxString::npos) {
+		    // Find the last character to keep.
+		    size_t posLastNonZero = s.find_last_not_of("0");
+		    // If it's the decimal separator itself, don't keep it neither.
+		    if (posLastNonZero == posDecSep)
+		        -- posLastNonZero;
+		    s.erase(posLastNonZero + 1);
+		    // Remove sign from orphaned zero.
+		    if (s.compare("-0") == 0)
+		        s = "0";
 		}
 	}
-	return wxNumberFormatter::ToString(value, precision, wxNumberFormatter::Style_None);
+
+    return s;
 }
 
 void Field::PostInitialize()
 {
 	auto color = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
-	m_Undo_btn			= new MyButton(m_parent, wxID_ANY, "", wxDefaultPosition,wxDefaultSize, wxBU_EXACTFIT | wxNO_BORDER);
-	m_Undo_to_sys_btn	= new MyButton(m_parent, wxID_ANY, "", wxDefaultPosition,wxDefaultSize, wxBU_EXACTFIT | wxNO_BORDER);
-	if (wxMSW) {
-		m_Undo_btn->SetBackgroundColour(color);
-		m_Undo_btn->SetBackgroundStyle(wxBG_STYLE_PAINT);
-		m_Undo_to_sys_btn->SetBackgroundColour(color);
-		m_Undo_to_sys_btn->SetBackgroundStyle(wxBG_STYLE_PAINT);
-	}
-	m_Undo_btn->Bind(wxEVT_BUTTON, ([this](wxCommandEvent) { on_back_to_initial_value(); }));
-	m_Undo_to_sys_btn->Bind(wxEVT_BUTTON, ([this](wxCommandEvent) { on_back_to_sys_value(); }));
+	m_Undo_btn			= new RevertButton(m_parent, "bullet_white.png");
+	m_Undo_to_sys_btn	= new RevertButton(m_parent, "bullet_white.png");
 
-	//set default bitmap
-	wxBitmap bmp;
-	bmp.LoadFile(from_u8(var("bullet_white.png")), wxBITMAP_TYPE_PNG);
-	set_undo_bitmap(&bmp);
-	set_undo_to_sys_bitmap(&bmp);
+    m_Undo_btn->Bind(wxEVT_BUTTON, ([this](wxCommandEvent) { on_back_to_initial_value(); }));
+	m_Undo_to_sys_btn->Bind(wxEVT_BUTTON, ([this](wxCommandEvent) { on_back_to_sys_value(); }));
 
 	switch (m_opt.type)
 	{
@@ -65,6 +66,9 @@ void Field::PostInitialize()
 	default:
 		break;
 	}
+
+    // initialize m_unit_value
+    m_em_unit = em_unit(m_parent);
 
 	BUILD();
 }
@@ -108,6 +112,7 @@ wxString Field::get_tooltip_text(const wxString& default_string)
 {
 	wxString tooltip_text("");
 	wxString tooltip = _(m_opt.tooltip);
+    edit_tooltip(tooltip);
 	if (tooltip.length() > 0)
         tooltip_text = tooltip + "\n" + _(L("default value")) + "\t: " +
         (boost::iends_with(m_opt_id, "_gcode") ? "\n" : "") + default_string +
@@ -213,8 +218,8 @@ bool is_defined_input_value(wxWindow* win, const ConfigOptionType& type)
 
 void TextCtrl::BUILD() {
     auto size = wxSize(wxDefaultSize);
-    if (m_opt.height >= 0) size.SetHeight(m_opt.height);
-    if (m_opt.width >= 0) size.SetWidth(m_opt.width);
+    if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
+    if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
 
 	wxString text_value = wxString(""); 
 
@@ -222,7 +227,7 @@ void TextCtrl::BUILD() {
 	case coFloatOrPercent:
 	{
 		text_value = double_to_string(m_opt.default_value->getFloat());
-		if (static_cast<const ConfigOptionFloatOrPercent*>(m_opt.default_value)->percent)
+		if (m_opt.get_default_value<ConfigOptionFloatOrPercent>()->percent)
 			text_value += "%";
 		break;
 	}
@@ -237,19 +242,19 @@ void TextCtrl::BUILD() {
 	case coFloat:
 	{
 		double val = m_opt.type == coFloats ?
-			static_cast<const ConfigOptionFloats*>(m_opt.default_value)->get_at(m_opt_idx) :
+			m_opt.get_default_value<ConfigOptionFloats>()->get_at(m_opt_idx) :
 			m_opt.type == coFloat ? 
 				m_opt.default_value->getFloat() :
-				static_cast<const ConfigOptionPercents*>(m_opt.default_value)->get_at(m_opt_idx);
+				m_opt.get_default_value<ConfigOptionPercents>()->get_at(m_opt_idx);
 		text_value = double_to_string(val);
 		break;
 	}
 	case coString:			
-		text_value = static_cast<const ConfigOptionString*>(m_opt.default_value)->value;
+		text_value = m_opt.get_default_value<ConfigOptionString>()->value;
 		break;
 	case coStrings:
 	{
-		const ConfigOptionStrings *vec = static_cast<const ConfigOptionStrings*>(m_opt.default_value);
+		const ConfigOptionStrings *vec = m_opt.get_default_value<ConfigOptionStrings>();
 		if (vec == nullptr || vec->empty()) break; //for the case of empty default value
 		text_value = vec->get_at(m_opt_idx);
 		break;
@@ -279,8 +284,8 @@ void TextCtrl::BUILD() {
             e.Skip();
             temp->GetToolTip()->Enable(true);
 #endif // __WXGTK__
-            propagate_value();
             bEnterPressed = true;
+            propagate_value();
         }), temp->GetId());
     }
 
@@ -358,6 +363,21 @@ boost::any& TextCtrl::get_value()
 	return m_value;
 }
 
+void TextCtrl::msw_rescale()
+{
+    Field::msw_rescale();
+    auto size = wxSize(wxDefaultSize);
+    if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
+    if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
+
+    if (size != wxDefaultSize)
+    {
+        wxTextCtrl* field = dynamic_cast<wxTextCtrl*>(window);
+        field->SetMinSize(size);
+    }
+
+}
+
 void TextCtrl::enable() { dynamic_cast<wxTextCtrl*>(window)->Enable(); dynamic_cast<wxTextCtrl*>(window)->SetEditable(true); }
 void TextCtrl::disable() { dynamic_cast<wxTextCtrl*>(window)->Disable(); dynamic_cast<wxTextCtrl*>(window)->SetEditable(false); }
 
@@ -372,15 +392,16 @@ void TextCtrl::change_field_value(wxEvent& event)
 
 void CheckBox::BUILD() {
 	auto size = wxSize(wxDefaultSize);
-	if (m_opt.height >= 0) size.SetHeight(m_opt.height);
-	if (m_opt.width >= 0) size.SetWidth(m_opt.width);
+	if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
+	if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
 
 	bool check_value =	m_opt.type == coBool ? 
 						m_opt.default_value->getBool() : m_opt.type == coBools ? 
-						static_cast<const ConfigOptionBools*>(m_opt.default_value)->get_at(m_opt_idx) : 
-    					false;
+							m_opt.get_default_value<ConfigOptionBools>()->get_at(m_opt_idx) : 
+    						false;
 
-	auto temp = new wxCheckBox(m_parent, wxID_ANY, wxString(""), wxDefaultPosition, size); 
+	// Set Label as a string of at least one space simbol to correct system scaling of a CheckBox 
+	auto temp = new wxCheckBox(m_parent, wxID_ANY, wxString(" "), wxDefaultPosition, size); 
 	temp->SetFont(Slic3r::GUI::wxGetApp().normal_font());
 	temp->SetBackgroundStyle(wxBG_STYLE_PAINT);
 	temp->SetValue(check_value);
@@ -405,12 +426,20 @@ boost::any& CheckBox::get_value()
  	return m_value;
 }
 
+void CheckBox::msw_rescale()
+{
+    Field::msw_rescale();
+
+    wxCheckBox* field = dynamic_cast<wxCheckBox*>(window);
+    field->SetMinSize(wxSize(-1, int(1.5f*field->GetFont().GetPixelSize().y +0.5f)));
+}
+
 int undef_spin_val = -9999;		//! Probably, It's not necessary
 
 void SpinCtrl::BUILD() {
 	auto size = wxSize(wxDefaultSize);
-	if (m_opt.height >= 0) size.SetHeight(m_opt.height);
-	if (m_opt.width >= 0) size.SetWidth(m_opt.width);
+    if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
+    if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
 
 	wxString	text_value = wxString("");
 	int			default_value = 0;
@@ -422,7 +451,7 @@ void SpinCtrl::BUILD() {
 		break;
 	case coInts:
 	{
-		const ConfigOptionInts *vec = static_cast<const ConfigOptionInts*>(m_opt.default_value);
+		const ConfigOptionInts *vec = m_opt.get_default_value<ConfigOptionInts>();
 		if (vec == nullptr || vec->empty()) break;
 		for (size_t id = 0; id < vec->size(); ++id)
 		{
@@ -488,6 +517,17 @@ void SpinCtrl::BUILD() {
         else tmp_value = -9999;
 #ifdef __WXOSX__
         propagate_value();
+
+        // Forcibly set the input value for SpinControl, since the value 
+	    // inserted from the clipboard is not updated under OSX
+        if (tmp_value > -9999) {
+            wxSpinCtrl* spin = dynamic_cast<wxSpinCtrl*>(window);
+            spin->SetValue(tmp_value);
+
+            // But in SetValue() is executed m_text_ctrl->SelectAll(), so
+            // discard this selection and set insertion point to the end of string
+            spin->GetText()->SetInsertionPointEnd();
+        }
 #endif
 	}), temp->GetId());
 	
@@ -505,10 +545,18 @@ void SpinCtrl::propagate_value()
         on_change_field();
 }
 
+void SpinCtrl::msw_rescale()
+{
+    Field::msw_rescale();
+
+    wxSpinCtrl* field = dynamic_cast<wxSpinCtrl*>(window);
+    field->SetMinSize(wxSize(-1, int(1.9f*field->GetFont().GetPixelSize().y)));
+}
+
 void Choice::BUILD() {
-    wxSize size(15 * wxGetApp().em_unit(), -1);
-	if (m_opt.height >= 0) size.SetHeight(m_opt.height);
-	if (m_opt.width >= 0) size.SetWidth(m_opt.width);
+    wxSize size(m_width * m_em_unit, -1);
+    if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
+    if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
 
 	wxBitmapComboBox* temp;	
     if (!m_opt.gui_type.empty() && m_opt.gui_type.compare("select_open") != 0) {
@@ -540,20 +588,37 @@ void Choice::BUILD() {
 	else{
 		for (auto el : m_opt.enum_labels.empty() ? m_opt.enum_values : m_opt.enum_labels) {
 			const wxString& str = _(el);//m_opt_id == "support" ? _(el) : el;
-			//FIXME Vojtech: Why is the single column empty icon necessary? It is a workaround of some kind, but what for?
-			// Please document such workarounds by comments!
-            // temp->Append(str, create_scaled_bitmap("empty_icon.png"));
-            temp->Append(str, wxNullBitmap);
+			temp->Append(str);
 		}
 		set_selection();
 	}
+
+#ifndef __WXGTK__
+    /* Workaround for a correct rendering of the control without Bitmap (under MSW and OSX):
+     * 
+     * 1. We should create small Bitmap to fill Bitmaps RefData,
+     *    ! in this case wxBitmap.IsOK() return true.
+     * 2. But then set width to 0 value for no using of bitmap left and right spacing 
+     * 3. Set this empty bitmap to the at list one item and BitmapCombobox will be recreated correct
+     * 
+     * Note: Set bitmap height to the Font size because of OSX rendering.
+     */
+    wxBitmap empty_bmp(1, temp->GetFont().GetPixelSize().y + 2);
+    empty_bmp.SetWidth(0);
+    temp->SetItemBitmap(0, empty_bmp);
+#endif
+
 // 	temp->Bind(wxEVT_TEXT, ([this](wxCommandEvent e) { on_change_field(); }), temp->GetId());
  	temp->Bind(wxEVT_COMBOBOX, ([this](wxCommandEvent e) { on_change_field(); }), temp->GetId());
 
     if (m_is_editable) {
         temp->Bind(wxEVT_KILL_FOCUS, ([this](wxEvent& e) {
             e.Skip();
-            if (m_opt.type == coStrings) return;
+            if (m_opt.type == coStrings) {
+                on_change_field();
+                return;
+            }
+
             double old_val = !m_value.empty() ? boost::any_cast<double>(m_value) : -99999;
             if (is_defined_input_value<wxBitmapComboBox>(window, m_opt.type)) {
                 if (fabs(old_val - boost::any_cast<double>(get_value())) <= 0.0001)
@@ -571,6 +636,11 @@ void Choice::BUILD() {
 
 void Choice::set_selection()
 {
+    /* To prevent earlier control updating under OSX set m_disable_change_event to true
+     * (under OSX wxBitmapComboBox send wxEVT_COMBOBOX even after SetSelection())
+     */
+    m_disable_change_event = true;
+
 	wxString text_value = wxString("");
 
     wxBitmapComboBox* field = dynamic_cast<wxBitmapComboBox*>(window);
@@ -593,7 +663,7 @@ void Choice::set_selection()
 		break;
 	}
 	case coEnum:{
-		int id_value = static_cast<const ConfigOptionEnum<SeamPosition>*>(m_opt.default_value)->value; //!!
+		int id_value = m_opt.get_default_value<ConfigOptionEnum<SeamPosition>>()->value; //!!
         field->SetSelection(id_value);
 		break;
 	}
@@ -613,7 +683,7 @@ void Choice::set_selection()
 		break;
 	}
 	case coStrings:{
-		text_value = static_cast<const ConfigOptionStrings*>(m_opt.default_value)->get_at(m_opt_idx);
+		text_value = m_opt.get_default_value<ConfigOptionStrings>()->get_at(m_opt_idx);
 
 		size_t idx = 0;
 		for (auto el : m_opt.enum_values)
@@ -836,14 +906,58 @@ boost::any& Choice::get_value()
 	return m_value;
 }
 
+void Choice::msw_rescale()
+{
+    Field::msw_rescale();
+
+    wxBitmapComboBox* field = dynamic_cast<wxBitmapComboBox*>(window);
+
+    const wxString selection = field->GetString(field->GetSelection());
+
+	/* To correct scaling (set new controll size) of a wxBitmapCombobox 
+	 * we need to refill control with new bitmaps. So, in our case : 
+	 * 1. clear conrol
+	 * 2. add content
+	 * 3. add scaled "empty" bitmap to the at least one item
+	 */
+    field->Clear();
+    wxSize size(wxDefaultSize);
+    size.SetWidth((m_opt.width > 0 ? m_opt.width : m_width) * m_em_unit);
+ 
+    // Set rescaled min height to correct layout
+    field->SetMinSize(wxSize(-1, int(1.5f*field->GetFont().GetPixelSize().y + 0.5f)));
+    // Set rescaled size
+    field->SetSize(size);
+
+    size_t idx, counter = idx = 0;
+    if (m_opt.enum_labels.empty() && m_opt.enum_values.empty()) {}
+    else{
+        for (auto el : m_opt.enum_labels.empty() ? m_opt.enum_values : m_opt.enum_labels) {
+            const wxString& str = _(el);
+            field->Append(str);
+            if (el.compare(selection) == 0)
+                idx = counter;
+            ++counter;
+        }
+    }
+
+    wxBitmap empty_bmp(1, field->GetFont().GetPixelSize().y + 2);
+    empty_bmp.SetWidth(0);
+    field->SetItemBitmap(0, empty_bmp);
+
+    idx == m_opt.enum_values.size() ?
+        field->SetValue(selection) :
+        field->SetSelection(idx);
+}
+
 void ColourPicker::BUILD()
 {
 	auto size = wxSize(wxDefaultSize);
-	if (m_opt.height >= 0) size.SetHeight(m_opt.height);
-	if (m_opt.width >= 0) size.SetWidth(m_opt.width);
+    if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
+    if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
 
 	// Validate the color
-	wxString clr_str(static_cast<const ConfigOptionStrings*>(m_opt.default_value)->get_at(m_opt_idx));
+	wxString clr_str(m_opt.get_default_value<ConfigOptionStrings>()->get_at(m_opt_idx));
 	wxColour clr(clr_str);
 	if (! clr.IsOk()) {
 		clr = wxTransparentColour;
@@ -875,9 +989,9 @@ void PointCtrl::BUILD()
 {
 	auto temp = new wxBoxSizer(wxHORIZONTAL);
 
-    const wxSize field_size(4 * wxGetApp().em_unit(), -1);
+    const wxSize field_size(4 * m_em_unit, -1);
 
-	auto default_pt = static_cast<const ConfigOptionPoints*>(m_opt.default_value)->values.at(0);
+	auto default_pt = m_opt.get_default_value<ConfigOptionPoints>()->values.at(0);
 	double val = default_pt(0);
 	wxString X = val - int(val) == 0 ? wxString::Format(_T("%i"), int(val)) : wxNumberFormatter::ToString(val, 2, wxNumberFormatter::Style_None);
 	val = default_pt(1);
@@ -916,6 +1030,16 @@ void PointCtrl::BUILD()
 
 	x_textctrl->SetToolTip(get_tooltip_text(X+", "+Y));
 	y_textctrl->SetToolTip(get_tooltip_text(X+", "+Y));
+}
+
+void PointCtrl::msw_rescale()
+{
+    Field::msw_rescale();
+
+    const wxSize field_size(4 * m_em_unit, -1);
+
+    x_textctrl->SetMinSize(field_size);
+    y_textctrl->SetMinSize(field_size);
 }
 
 void PointCtrl::propagate_value(wxTextCtrl* win)
@@ -963,10 +1087,10 @@ boost::any& PointCtrl::get_value()
 void StaticText::BUILD()
 {
 	auto size = wxSize(wxDefaultSize);
-	if (m_opt.height >= 0) size.SetHeight(m_opt.height);
-	if (m_opt.width >= 0) size.SetWidth(m_opt.width);
+    if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
+    if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
 
-    const wxString legend(static_cast<const ConfigOptionString*>(m_opt.default_value)->value);
+    const wxString legend = wxString::FromUTF8(m_opt.get_default_value<ConfigOptionString>()->value.c_str());
     auto temp = new wxStaticText(m_parent, wxID_ANY, legend, wxDefaultPosition, size, wxST_ELLIPSIZE_MIDDLE);
 	temp->SetFont(Slic3r::GUI::wxGetApp().normal_font());
 	temp->SetBackgroundStyle(wxBG_STYLE_PAINT);
@@ -978,6 +1102,22 @@ void StaticText::BUILD()
 	temp->SetToolTip(get_tooltip_text(legend));
 }
 
+void StaticText::msw_rescale()
+{
+    Field::msw_rescale();
+
+    auto size = wxSize(wxDefaultSize);
+    if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
+    if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
+
+    if (size != wxDefaultSize)
+    {
+        wxStaticText* field = dynamic_cast<wxStaticText*>(window);
+        field->SetSize(size);
+        field->SetMinSize(size);
+    }
+}
+
 void SliderCtrl::BUILD()
 {
 	auto size = wxSize(wxDefaultSize);
@@ -986,7 +1126,7 @@ void SliderCtrl::BUILD()
 
 	auto temp = new wxBoxSizer(wxHORIZONTAL);
 
-	auto def_val = static_cast<const ConfigOptionInt*>(m_opt.default_value)->value;
+	auto def_val = m_opt.get_default_value<ConfigOptionInt>()->value;
 	auto min = m_opt.min == INT_MIN ? 0 : m_opt.min;
 	auto max = m_opt.max == INT_MAX ? 100 : m_opt.max;
 

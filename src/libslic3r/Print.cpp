@@ -10,7 +10,7 @@
 #include "GCode/WipeTowerPrusaMM.hpp"
 #include "Utils.hpp"
 
-#include "PrintExport.hpp"
+//#include "PrintExport.hpp"
 
 #include <libnest2d.h>
 
@@ -132,7 +132,6 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "first_layer_speed",
         "first_layer_infill_speed",
         "gcode_comments",
-        "gcode_flavor",
         "gcode_label_objects",
         "infill_acceleration",
         "layer_gcode",
@@ -1148,65 +1147,29 @@ std::string Print::validate() const
         // Check horizontal clearance.
         {
             Polygons convex_hulls_other;
-            for (const PrintObject *object : m_objects) {
-
-                // Get the 2D projected shapes with their 3D model instance pointers
-                //same method from ModelArrange.cpp. It's copy-pasted. 
-                // TODO: make a generic method used by that and modelarrange.
-                ClipperLib::Path clpath;
-                {
-                    TriangleMesh rmesh = object->model_object()->raw_mesh();
-                    ModelInstance * finst = object->model_object()->instances.front();
-                    // Object instances should carry the same scaling and
-                    // x, y rotation that is why we use the first instance.
-                    // The next line will apply only the full mirroring and scaling
-                    rmesh.transform(finst->get_matrix(true, true, false, false));
-                    rmesh.rotate_x(float(finst->get_rotation()(X)));
-                    rmesh.rotate_y(float(finst->get_rotation()(Y)));
-
-                    // TODO export the exact 2D projection. Cannot do it as libnest2d
-                    // does not support concave shapes (yet).
-                    auto p = rmesh.convex_hull();
-
-                    p.make_clockwise();
-                    p.append(p.first_point());
-                    clpath = Slic3rMultiPoint_to_ClipperPath(p);
-                }
-
-                std::vector<libnest2d::Item> convex_hull_items;
-                for (ModelInstance* objinst : object->model_object()->instances) {
-                    if (objinst) {
-                        ClipperLib::PolygonImpl pn;
-                        pn.Contour = clpath;
-                        // Efficient conversion to item.
-                        libnest2d::Item item(std::move(pn));
-                        // Invalid geometries would throw exceptions when arranging
-                        if (item.vertexCount() > 3) {
-                            item.rotation(objinst->get_rotation(Z));
-                            item.translation({
-                                ClipperLib::cInt(objinst->get_offset(X) / SCALING_FACTOR),
-                                ClipperLib::cInt(objinst->get_offset(Y) / SCALING_FACTOR)
-                            });
-                            convex_hull_items.push_back(item);
-                        }
-                    }
-                }
-                Polygons convex_hull;
-                for (libnest2d::Item &item : convex_hull_items){
-                    //conversion to Polygons
-                    ClipperLib::PolygonImpl var = item;
-                    ClipperLib::Path cont = var.Contour;
-                    convex_hull.push_back(ClipperPath_to_Slic3rPolygon(cont));
-                }
-                
-                // Now we check that no instance of convex_hull intersects any of the previously checked object instances.
-                for (Polygon p : convex_hull){
+            for (const PrintObject *print_object : m_objects) {
+                assert(! print_object->model_object()->instances.empty());
+                assert(! print_object->copies().empty());
+                // Get convex hull of all meshes assigned to this print object.
+                ModelInstance *model_instance0 = print_object->model_object()->instances.front();
+                Vec3d          rotation        = model_instance0->get_rotation();
+                rotation.z() = 0.;
+                // Calculate the convex hull of a printable object centered around X=0,Y=0. 
                     // Grow convex hull with the clearance margin.
-                    p = offset(p, scale_(m_config.min_object_distance() / 2), jtRound, scale_(0.1)).front();
-                    if (!intersection(convex_hulls_other, p).empty()){
+                // FIXME: Arrangement has different parameters for offsetting (jtMiter, limit 2)
+                // which causes that the warning will be showed after arrangement with the
+                // appropriate object distance. Even if I set this to jtMiter the warning still shows up.
+                Polygon        convex_hull0    = offset(
+                    print_object->model_object()->convex_hull_2d(
+                        Geometry::assemble_transform(Vec3d::Zero(), rotation, model_instance0->get_scaling_factor(), model_instance0->get_mirror())),
+                    scale_(m_config.extruder_clearance_radius.value) / 2., jtRound, scale_(0.1)).front();
+                // Now we check that no instance of convex_hull intersects any of the previously checked object instances.
+                for (const Point &copy : print_object->m_copies) {
+                    Polygon convex_hull = convex_hull0;
+                    convex_hull.translate(copy);
+                    if (! intersection(convex_hulls_other, convex_hull).empty())
                         return L("Some objects are too close; your extruder will collide with them.");
-                    }
-                    polygons_append(convex_hulls_other, p);
+                    polygons_append(convex_hulls_other, convex_hull);
                 }
             }
         }
@@ -1266,7 +1229,7 @@ std::string Print::validate() const
                 const SlicingParameters &slicing_params = object->slicing_parameters();
             if (std::abs(slicing_params.first_print_layer_height - slicing_params0.first_print_layer_height) > EPSILON ||
                 std::abs(slicing_params.layer_height             - slicing_params0.layer_height            ) > EPSILON)
-                return L("The Wipe Tower is only supported for multiple objects if they have equal layer heigths");
+                    return L("The Wipe Tower is only supported for multiple objects if they have equal layer heights");
             if (slicing_params.raft_layers() != slicing_params0.raft_layers())
                 return L("The Wipe Tower is only supported for multiple objects if they are printed over an equal number of raft layers");
             if (object->config().support_material_contact_distance_type != m_objects.front()->config().support_material_contact_distance_type
@@ -1358,7 +1321,7 @@ std::string Print::validate() const
             }
             
             // validate first_layer_height
-            double first_layer_height = object->config().get_abs_value(L("first_layer_height"));
+            double first_layer_height = object->config().get_abs_value("first_layer_height");
             double first_layer_min_nozzle_diameter;
             if (object->config().raft_layers > 0) {
                 // if we have raft layers, only support material extruder is used on first layer
@@ -1521,7 +1484,7 @@ void Print::process()
     BOOST_LOG_TRIVIAL(info) << "Staring the slicing process." << log_memory_info();
     for (PrintObject *obj : m_objects)
         obj->make_perimeters();
-    this->set_status(70, "Infilling layers");
+    this->set_status(70, L("Infilling layers"));
     for (PrintObject *obj : m_objects)
         obj->infill();
     for (PrintObject *obj : m_objects)
@@ -1529,7 +1492,7 @@ void Print::process()
     if (this->set_started(psSkirt)) {
         m_skirt.clear();
         if (this->has_skirt()) {
-            this->set_status(88, "Generating skirt");
+            this->set_status(88, L("Generating skirt"));
             if (config().complete_objects){
                 for (PrintObject *obj : m_objects){
                     //create a skirt "pattern" (one per object)
@@ -1548,7 +1511,7 @@ void Print::process()
 	if (this->set_started(psBrim)) {
         m_brim.clear();
         if (m_config.brim_width > 0) {
-            this->set_status(88, "Generating brim");
+            this->set_status(88, L("Generating brim"));
             if (config().complete_objects){
                 for (PrintObject *obj : m_objects){
                     //create a brim "pattern" (one per object)
@@ -1574,7 +1537,7 @@ void Print::process()
     if (this->set_started(psWipeTower)) {
         m_wipe_tower_data.clear();
         if (this->has_wipe_tower()) {
-            //this->set_status(95, "Generating wipe tower");
+            //this->set_status(95, L("Generating wipe tower"));
             this->_make_wipe_tower();
         }
        this->set_done(psWipeTower);
@@ -1591,12 +1554,14 @@ std::string Print::export_gcode(const std::string &path_template, GCodePreviewDa
     // output everything to a G-code file
     // The following call may die if the output_filename_format template substitution fails.
     std::string path = this->output_filepath(path_template);
-    std::string message = "Exporting G-code";
+    std::string message;
     if (! path.empty() && preview_data == nullptr) {
         // Only show the path if preview_data is not set -> running from command line.
+        message = L("Exporting G-code");
         message += " to ";
         message += path;
-    }
+    } else
+        message = L("Generating G-code");
     this->set_status(90, message);
 
     // The following line may die for multiple reasons.
@@ -1955,7 +1920,7 @@ void Print::_make_wipe_tower()
     // Check whether there are any layers in m_tool_ordering, which are marked with has_wipe_tower,
     // they print neither object, nor support. These layers are above the raft and below the object, and they
     // shall be added to the support layers to be printed.
-    // see https://github.com/prusa3d/Slic3r/issues/607
+    // see https://github.com/prusa3d/PrusaSlicer/issues/607
     {
         size_t idx_begin = size_t(-1);
         size_t idx_end   = m_wipe_tower_data.tool_ordering.layer_tools().size();

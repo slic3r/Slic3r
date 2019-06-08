@@ -25,9 +25,10 @@ public:
     TriangleMesh(const Pointf3s &points, const std::vector<Vec3i32> &facets);
     TriangleMesh(const TriangleMesh &other) : repaired(false) { stl_initialize(&this->stl); *this = other; }
     TriangleMesh(TriangleMesh &&other) : repaired(false) { stl_initialize(&this->stl); this->swap(other); }
-    ~TriangleMesh() { stl_close(&this->stl); }
+    ~TriangleMesh() { clear(); }
     TriangleMesh& operator=(const TriangleMesh &other);
     TriangleMesh& operator=(TriangleMesh &&other) { this->swap(other); return *this; }
+    void clear() { stl_close(&this->stl); this->repaired = false; }
     void swap(TriangleMesh &other) { std::swap(this->stl, other.stl); std::swap(this->repaired, other.repaired); }
     void ReadSTLFile(const char* input_file) { stl_open(&stl, input_file); }
     void write_ascii(const char* output_file) { stl_write_ascii(&this->stl, output_file, ""); }
@@ -40,6 +41,7 @@ public:
     void scale(float factor);
     void scale(const Vec3d &versor);
     void translate(float x, float y, float z);
+    void translate(const Vec3f &displacement);
     void rotate(float angle, const Axis &axis);
     void rotate(float angle, const Vec3d& axis);
     void rotate_x(float angle) { this->rotate(angle, X); }
@@ -49,7 +51,8 @@ public:
     void mirror_x() { this->mirror(X); }
     void mirror_y() { this->mirror(Y); }
     void mirror_z() { this->mirror(Z); }
-    void transform(const Transform3d& t);
+    void transform(const Transform3d& t, bool fix_left_handed = false);
+	void transform(const Matrix3d& t, bool fix_left_handed = false);
     void align_to_origin();
     void rotate(double angle, Point* center);
     TriangleMeshPtrs split() const;
@@ -65,15 +68,11 @@ public:
     TriangleMesh convex_hull_3d() const;
     void reset_repair_stats();
     bool needed_repair() const;
+    void require_shared_vertices();
+    bool   has_shared_vertices() const { return stl.v_shared != NULL; }
     size_t facets_count() const { return this->stl.stats.number_of_facets; }
     bool   empty() const { return this->facets_count() == 0; }
-
-    // Returns true, if there are two and more connected patches in the mesh.
-    // Returns false, if one or zero connected patch is in the mesh.
-    bool has_multiple_patches() const;
-
-    // Count disconnected triangle patches.
-    size_t number_of_patches() const;
+    bool is_splittable() const;
 
     stl_file stl;
     bool repaired;
@@ -82,8 +81,7 @@ public:
     Pointf3s vertices();
     
 private:
-    void require_shared_vertices();
-    friend class TriangleMeshSlicer;
+    std::deque<uint32_t> find_unvisited_neighbors(std::vector<unsigned char> &facet_visited) const;
 };
 
 enum FacetEdgeType { 
@@ -167,9 +165,8 @@ public:
 
     typedef std::function<void()> throw_on_cancel_callback_type;
     TriangleMeshSlicer(float closing_radius, float model_precision) : mesh(nullptr), closing_radius(closing_radius), model_precision(model_precision) {}
-    // Not quite nice, but the constructor and init() methods require non-const mesh pointer to be able to call mesh->require_shared_vertices()
-    TriangleMeshSlicer(TriangleMesh* mesh) { this->init(mesh, [](){}); }
-    void init(TriangleMesh *mesh, throw_on_cancel_callback_type throw_on_cancel);
+    TriangleMeshSlicer(const TriangleMesh* mesh) : mesh(mesh), closing_radius(0), model_precision(0) { this->init(mesh, []() {}); }
+    void init(const TriangleMesh *mesh, throw_on_cancel_callback_type throw_on_cancel);
     void slice(const std::vector<float> &z, std::vector<Polygons>* layers, throw_on_cancel_callback_type throw_on_cancel) const;
     void slice(const std::vector<float> &z, std::vector<ExPolygons>* layers, throw_on_cancel_callback_type throw_on_cancel) const;
     enum FacetSliceType {
@@ -180,6 +177,7 @@ public:
     FacetSliceType slice_facet(float slice_z, const stl_facet &facet, const int facet_idx,
         const float min_z, const float max_z, IntersectionLine *line_out) const;
     void cut(float z, TriangleMesh* upper, TriangleMesh* lower) const;
+    void set_up_direction(const Vec3f& up);
     
 private:
     const TriangleMesh      *mesh;
@@ -187,6 +185,10 @@ private:
     std::vector<int>         facets_edges;
     // Scaled copy of this->mesh->stl.v_shared
     std::vector<stl_vertex>  v_scaled_shared;
+    // Quaternion that will be used to rotate every facet before the slicing
+    Eigen::Quaternion<float, Eigen::DontAlign> m_quaternion;
+    // Whether or not the above quaterion should be used
+    bool                     m_use_quaternion = false;
 
     void _slice_do(size_t facet_idx, std::vector<IntersectionLines>* lines, boost::mutex* lines_mutex, const std::vector<float> &z) const;
     void make_loops(std::vector<IntersectionLine> &lines, Polygons* loops) const;

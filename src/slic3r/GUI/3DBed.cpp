@@ -8,6 +8,7 @@
 
 #include "GUI_App.hpp"
 #include "PresetBundle.hpp"
+#include "Gizmos/GLGizmoBase.hpp"
 
 #include <GL/glew.h>
 
@@ -232,7 +233,7 @@ void Bed3D::Axes::render() const
     glsafe(::glEnable(GL_LIGHTING));
 
     // x axis
-    glsafe(::glColor3f(1.0f, 0.0f, 0.0f));
+    glsafe(::glColor3fv(AXES_COLOR[0]));
     glsafe(::glPushMatrix());
     glsafe(::glTranslated(origin(0), origin(1), origin(2)));
     glsafe(::glRotated(90.0, 0.0, 1.0, 0.0));
@@ -240,7 +241,7 @@ void Bed3D::Axes::render() const
     glsafe(::glPopMatrix());
 
     // y axis
-    glsafe(::glColor3f(0.0f, 1.0f, 0.0f));
+    glsafe(::glColor3fv(AXES_COLOR[1]));
     glsafe(::glPushMatrix());
     glsafe(::glTranslated(origin(0), origin(1), origin(2)));
     glsafe(::glRotated(-90.0, 1.0, 0.0, 0.0));
@@ -248,7 +249,7 @@ void Bed3D::Axes::render() const
     glsafe(::glPopMatrix());
 
     // z axis
-    glsafe(::glColor3f(0.0f, 0.0f, 1.0f));
+    glsafe(::glColor3fv(AXES_COLOR[2]));
     glsafe(::glPushMatrix());
     glsafe(::glTranslated(origin(0), origin(1), origin(2)));
     render_axis(length(2));
@@ -495,11 +496,11 @@ void Bed3D::render_prusa(const std::string &key, bool bottom) const
     // use anisotropic filter if graphic card allows
     GLfloat max_anisotropy = 0.0f;
     if (glewIsSupported("GL_EXT_texture_filter_anisotropic"))
-        ::glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropy);
+        glsafe(::glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropy));
 
     // use higher resolution images if graphic card allows
     GLint max_tex_size;
-    ::glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex_size);
+    glsafe(::glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex_size));
 
     // clamp or the texture generation becomes too slow
     max_tex_size = std::min(max_tex_size, 8192);
@@ -621,7 +622,6 @@ void Bed3D::render_prusa_shader(bool transparent) const
         m_shader.stop_using();
     }
 }
-
 #else
 void Bed3D::render_prusa(const std::string &key, float theta, bool useVBOs) const
 {
@@ -629,7 +629,7 @@ void Bed3D::render_prusa(const std::string &key, float theta, bool useVBOs) cons
 
     // use higher resolution images if graphic card allows
     GLint max_tex_size;
-    ::glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex_size);
+    glsafe(::glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex_size));
 
     // temporary set to lowest resolution
     max_tex_size = 2048;
@@ -644,7 +644,7 @@ void Bed3D::render_prusa(const std::string &key, float theta, bool useVBOs) cons
     // use anisotropic filter if graphic card allows
     GLfloat max_anisotropy = 0.0f;
     if (glewIsSupported("GL_EXT_texture_filter_anisotropic"))
-        ::glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropy);
+        glsafe(::glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropy));
 
     std::string filename = tex_path + "_top.png";
     if ((m_top_texture.get_id() == 0) || (m_top_texture.get_source() != filename))

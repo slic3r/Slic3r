@@ -43,11 +43,21 @@ typedef Eigen::Matrix<float, 3, 1, Eigen::DontAlign> stl_normal;
 static_assert(sizeof(stl_vertex) == 12, "size of stl_vertex incorrect");
 static_assert(sizeof(stl_normal) == 12, "size of stl_normal incorrect");
 
-typedef struct {
+struct stl_facet {
   stl_normal normal;
   stl_vertex vertex[3];
   char       extra[2];
-} stl_facet;
+
+  stl_facet  rotated(const Eigen::Quaternion<float, Eigen::DontAlign> &rot) {
+    stl_facet out;
+    out.normal    = rot * this->normal;
+    out.vertex[0] = rot * this->vertex[0];
+    out.vertex[1] = rot * this->vertex[1];
+    out.vertex[2] = rot * this->vertex[2];
+    return out;
+  }
+};
+
 #define SIZEOF_STL_FACET       50
 
 static_assert(offsetof(stl_facet, normal) == 0, "stl_facet.normal has correct offset");
@@ -127,7 +137,6 @@ typedef struct {
 typedef struct {
   FILE          *fp;
   stl_facet     *facet_start;
-  stl_edge      *edge_start;
   stl_hash_edge **heads;
   stl_hash_edge *tail;
   int           M;
@@ -142,7 +151,6 @@ typedef struct {
 extern void stl_open(stl_file *stl, const char *file);
 extern void stl_close(stl_file *stl);
 extern void stl_stats_out(stl_file *stl, FILE *file, char *input_file);
-extern void stl_print_edges(stl_file *stl, FILE *file);
 extern void stl_print_neighbors(stl_file *stl, char *file);
 extern void stl_put_little_int(FILE *fp, int value_in);
 extern void stl_put_little_float(FILE *fp, float value_in);
@@ -172,8 +180,67 @@ extern void stl_rotate_z(stl_file *stl, float angle);
 extern void stl_mirror_xy(stl_file *stl);
 extern void stl_mirror_yz(stl_file *stl);
 extern void stl_mirror_xz(stl_file *stl);
-extern void stl_transform(stl_file *stl, float *trafo3x4);
-extern void stl_transform(stl_file *stl, const Eigen::Transform<double, 3, Eigen::Affine, Eigen::DontAlign>& t);
+
+extern void stl_get_size(stl_file *stl);
+
+template<typename T>
+extern void stl_transform(stl_file *stl, T *trafo3x4)
+{
+  if (stl->error)
+    return;
+
+  for (uint32_t i_face = 0; i_face < stl->stats.number_of_facets; ++ i_face) {
+    stl_facet &face = stl->facet_start[i_face];
+    for (int i_vertex = 0; i_vertex < 3; ++ i_vertex) {
+      stl_vertex &v_dst = face.vertex[i_vertex];
+      stl_vertex  v_src = v_dst;
+      v_dst(0) = T(trafo3x4[0] * v_src(0) + trafo3x4[1] * v_src(1) + trafo3x4[2]  * v_src(2) + trafo3x4[3]);
+      v_dst(1) = T(trafo3x4[4] * v_src(0) + trafo3x4[5] * v_src(1) + trafo3x4[6]  * v_src(2) + trafo3x4[7]);
+      v_dst(2) = T(trafo3x4[8] * v_src(0) + trafo3x4[9] * v_src(1) + trafo3x4[10] * v_src(2) + trafo3x4[11]);
+    }
+    stl_vertex &v_dst = face.normal;
+    stl_vertex  v_src = v_dst;
+    v_dst(0) = T(trafo3x4[0] * v_src(0) + trafo3x4[1] * v_src(1) + trafo3x4[2]  * v_src(2));
+    v_dst(1) = T(trafo3x4[4] * v_src(0) + trafo3x4[5] * v_src(1) + trafo3x4[6]  * v_src(2));
+    v_dst(2) = T(trafo3x4[8] * v_src(0) + trafo3x4[9] * v_src(1) + trafo3x4[10] * v_src(2));
+  }
+
+  stl_get_size(stl);
+}
+
+template<typename T>
+inline void stl_transform(stl_file *stl, const Eigen::Transform<T, 3, Eigen::Affine, Eigen::DontAlign>& t)
+{
+	if (stl->error)
+		return;
+
+	const Eigen::Matrix<double, 3, 3, Eigen::DontAlign> r = t.matrix().template block<3, 3>(0, 0);
+	for (size_t i = 0; i < stl->stats.number_of_facets; ++i) {
+		stl_facet &f = stl->facet_start[i];
+		for (size_t j = 0; j < 3; ++j)
+			f.vertex[j] = (t * f.vertex[j].template cast<T>()).template cast<float>().eval();
+		f.normal = (r * f.normal.template cast<T>()).template cast<float>().eval();
+	}
+
+	stl_get_size(stl);
+}
+
+template<typename T>
+inline void stl_transform(stl_file *stl, const Eigen::Matrix<T, 3, 3, Eigen::DontAlign>& m)
+{
+	if (stl->error)
+		return;
+
+	for (size_t i = 0; i < stl->stats.number_of_facets; ++i) {
+		stl_facet &f = stl->facet_start[i];
+		for (size_t j = 0; j < 3; ++j)
+			f.vertex[j] = (m * f.vertex[j].template cast<T>()).template cast<float>().eval();
+		f.normal = (m * f.normal.template cast<T>()).template cast<float>().eval();
+	}
+
+	stl_get_size(stl);
+}
+
 extern void stl_open_merge(stl_file *stl, char *file);
 extern void stl_invalidate_shared_vertices(stl_file *stl);
 extern void stl_generate_shared_vertices(stl_file *stl);
@@ -206,7 +273,6 @@ extern void stl_read(stl_file *stl, int first_facet, bool first);
 extern void stl_facet_stats(stl_file *stl, stl_facet facet, bool &first);
 extern void stl_reallocate(stl_file *stl);
 extern void stl_add_facet(stl_file *stl, stl_facet *new_facet);
-extern void stl_get_size(stl_file *stl);
 
 extern void stl_clear_error(stl_file *stl);
 extern int stl_get_error(stl_file *stl);

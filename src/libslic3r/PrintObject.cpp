@@ -2,6 +2,7 @@
 #include "BoundingBox.hpp"
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
+#include "I18N.hpp"
 #include "SupportMaterial.hpp"
 #include "Surface.hpp"
 #include "Slicing.hpp"
@@ -16,6 +17,10 @@
 #include <tbb/atomic.h>
 
 #include <Shiny/Shiny.h>
+
+//! macro used to mark string used at localization, 
+//! return same string
+#define L(s) Slic3r::I18N::translate(s)
 
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
 #define SLIC3R_DEBUG
@@ -102,7 +107,7 @@ void PrintObject::slice()
 {
     if (! this->set_started(posSlice))
         return;
-    m_print->set_status(10, "Processing triangulated mesh");
+    m_print->set_status(10, L("Processing triangulated mesh"));
     std::vector<coordf_t> layer_height_profile;
     this->update_layer_height_profile(*this->model_object(), m_slicing_params, layer_height_profile);
     m_print->throw_if_canceled();
@@ -133,7 +138,7 @@ void PrintObject::make_perimeters()
     if (! this->set_started(posPerimeters))
         return;
 
-    m_print->set_status(20, "Generating perimeters");
+    m_print->set_status(20, L("Generating perimeters"));
     BOOST_LOG_TRIVIAL(info) << "Generating perimeters..." << log_memory_info();
     
     // merge slices if they were split into types
@@ -243,7 +248,7 @@ void PrintObject::prepare_infill()
     if (! this->set_started(posPrepareInfill))
         return;
 
-    m_print->set_status(30, "Preparing infill");
+    m_print->set_status(30, L("Preparing infill"));
 
     // This will assign a type (top/bottom/internal) to $layerm->slices.
     // Then the classifcation of $layerm->slices is transfered onto 
@@ -405,7 +410,7 @@ void PrintObject::generate_support_material()
     if (this->set_started(posSupportMaterial)) {
         this->clear_support_layers();
         if ((m_config.support_material || m_config.raft_layers > 0) && m_layers.size() > 1) {
-            m_print->set_status(85, "Generating support material");    
+            m_print->set_status(85, L("Generating support material"));    
             this->_generate_support_material();
             m_print->throw_if_canceled();
         } else {
@@ -1694,7 +1699,7 @@ void PrintObject::update_slicing_parameters()
             this->print()->config(), m_config, unscale<double>(this->size(2)), this->object_extruders());
 }
 
-SlicingParameters PrintObject::slicing_parameters(const DynamicPrintConfig &full_config, const ModelObject &model_object)
+SlicingParameters PrintObject::slicing_parameters(const DynamicPrintConfig &full_config, const ModelObject &model_object, float object_max_z)
 {
     PrintConfig         print_config;
     PrintObjectConfig   object_config;
@@ -1714,7 +1719,9 @@ SlicingParameters PrintObject::slicing_parameters(const DynamicPrintConfig &full
                 object_extruders);
     sort_remove_duplicates(object_extruders);
 
-    return SlicingParameters::create_from_config(print_config, object_config, model_object.bounding_box().max.z(), object_extruders);
+    if (object_max_z <= 0.f)
+        object_max_z = model_object.raw_bounding_box().size().z();
+	return SlicingParameters::create_from_config(print_config, object_config, object_max_z, object_extruders);
 }
 
 // returns 0-based indices of extruders used to print the object (without brim, support and other helper extrusions)
@@ -2253,21 +2260,28 @@ std::vector<ExPolygons> PrintObject::_slice_volumes(const std::vector<float> &z,
     if (! volumes.empty()) {
         // Compose mesh.
         //FIXME better to perform slicing over each volume separately and then to use a Boolean operation to merge them.
-        TriangleMesh mesh;
-        for (const ModelVolume *v : volumes)
-        {
-            TriangleMesh vol_mesh(v->mesh);
-            vol_mesh.transform(v->get_matrix());
+		TriangleMesh mesh(volumes.front()->mesh);
+        mesh.transform(volumes.front()->get_matrix(), true);
+		assert(mesh.repaired);
+		if (volumes.size() == 1 && mesh.repaired) {
+			//FIXME The admesh repair function may break the face connectivity, rather refresh it here as the slicing code relies on it.
+			stl_check_facets_exact(&mesh.stl);
+		}
+        for (size_t idx_volume = 1; idx_volume < volumes.size(); ++ idx_volume) {
+            const ModelVolume &model_volume = *volumes[idx_volume];
+            TriangleMesh vol_mesh(model_volume.mesh);
+            vol_mesh.transform(model_volume.get_matrix(), true);
             mesh.merge(vol_mesh);
         }
         if (mesh.stl.stats.number_of_facets > 0) {
-            mesh.transform(m_trafo);
+            mesh.transform(m_trafo, true);
             // apply XY shift
             mesh.translate(- unscale<float>(m_copies_shift(0)), - unscale<float>(m_copies_shift(1)), 0);
             // perform actual slicing
             TriangleMeshSlicer mslicer(float(m_config.slice_closing_radius.value), float(m_config.model_precision.value));
             const Print *print = this->print();
             auto callback = TriangleMeshSlicer::throw_on_cancel_callback_type([print](){print->throw_if_canceled();});
+            mesh.require_shared_vertices(); // TriangleMeshSlicer needs this
             mslicer.init(&mesh, callback);
 			mslicer.slice(z, &layers, callback);
             m_print->throw_if_canceled();
@@ -2282,15 +2296,20 @@ std::vector<ExPolygons> PrintObject::_slice_volume(const std::vector<float> &z, 
     // Compose mesh.
     //FIXME better to perform slicing over each volume separately and then to use a Boolean operation to merge them.
     TriangleMesh mesh(volume.mesh);
-    mesh.transform(volume.get_matrix());
+    mesh.transform(volume.get_matrix(), true);
+	if (mesh.repaired) {
+		//FIXME The admesh repair function may break the face connectivity, rather refresh it here as the slicing code relies on it.
+		stl_check_facets_exact(&mesh.stl);
+	}
     if (mesh.stl.stats.number_of_facets > 0) {
-        mesh.transform(m_trafo);
+        mesh.transform(m_trafo, true);
         // apply XY shift
         mesh.translate(- unscale<float>(m_copies_shift(0)), - unscale<float>(m_copies_shift(1)), 0);
         // perform actual slicing
         TriangleMeshSlicer mslicer(float(m_config.slice_closing_radius.value), float(m_config.model_precision.value));
         const Print *print = this->print();
         auto callback = TriangleMeshSlicer::throw_on_cancel_callback_type([print](){print->throw_if_canceled();});
+        mesh.require_shared_vertices(); // TriangleMeshSlicer needs this
         mslicer.init(&mesh, callback);
         mslicer.slice(z, &layers, callback);
         m_print->throw_if_canceled();
@@ -2704,7 +2723,7 @@ void PrintObject::discover_horizontal_shells()
                     // when spacing is added in Fill.pm
                     {
                         //FIXME Vojtech: Disable this and you will be sorry.
-                        // https://github.com/prusa3d/Slic3r/issues/26 bottom
+                        // https://github.com/prusa3d/PrusaSlicer/issues/26 bottom
                         float margin = 3.f * layerm->flow(frSolidInfill).scaled_width(); // require at least this size
                         // we use a higher miterLimit here to handle areas with acute angles
                         // in those cases, the default miterLimit would cut the corner and we'd
