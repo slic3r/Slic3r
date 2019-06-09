@@ -1781,7 +1781,7 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
     for (ExPolygon &p : rectilinear_areas)rec_area += p.area();
     double gf_area = 0;
     for (ExPolygon &p : gapfill_areas)gf_area += p.area();
-    std::cout << unscaled(unscaled(surface->expolygon.area())) << " = " << unscaled(unscaled(rec_area)) << " + " << unscaled(unscaled(gf_area)) << "\n";
+    //std::cout << unscaled(unscaled(surface->expolygon.area())) << " = " << unscaled(unscaled(rec_area)) << " + " << unscaled(unscaled(gf_area)) << "\n";
 
     // rectilinear
     Polylines polylines_rectilinear;

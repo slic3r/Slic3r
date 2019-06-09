@@ -1328,16 +1328,11 @@ MedialAxis::ensure_not_overextrude(ThickPolylines& pp)
 void
 MedialAxis::simplify_polygon_frontier()
 {
-    //simplify the boundary between us and the bounds.
-    ExPolygon simplified_poly = this->surface;
-    simplified_poly.contour.remove_colinear_points(SCALED_EPSILON);
-    for (Polygon &hole : simplified_poly.holes)
-        hole.remove_colinear_points(SCALED_EPSILON);
     //it will remove every point in the surface contour that aren't on the bounds contour
     this->expolygon = this->surface;
-    this->expolygon.contour.remove_collinear_points(SCALED_EPSILON);
+    this->expolygon.contour.remove_colinear_points(SCALED_EPSILON);
     for (Polygon &hole : this->expolygon.holes)
-        hole.remove_collinear_points(SCALED_EPSILON);
+        hole.remove_colinear_points(SCALED_EPSILON);
     if (&this->surface != this->bounds) {
         bool need_intersect = false;
         for (size_t i = 0; i < this->expolygon.contour.points.size(); i++) {
@@ -1366,9 +1361,9 @@ MedialAxis::simplify_polygon_frontier()
             } else {
                 //can't simplify that much, reuse the given one
                 this->expolygon = this->surface;
-                this->expolygon.contour.remove_collinear_points(SCALED_EPSILON);
+                this->expolygon.contour.remove_colinear_points(SCALED_EPSILON);
                 for (Polygon &hole : this->expolygon.holes)
-                    hole.remove_collinear_points(SCALED_EPSILON);
+                    hole.remove_colinear_points(SCALED_EPSILON);
             }
         }
     }

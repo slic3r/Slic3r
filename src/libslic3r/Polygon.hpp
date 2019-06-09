@@ -61,7 +61,7 @@ public:
     Point point_projection(const Point &point) const;
     /// remove points that are (almost) on an existing line from previous & next point.
     /// return number of point removed
-    size_t remove_collinear_points(coord_t max_offset);
+    size_t remove_colinear_points(coord_t max_offset);
 };
 
 extern BoundingBox get_extents(const Polygon &poly);
