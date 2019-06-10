@@ -80,6 +80,7 @@ public:
         MK2,
         MK3,
         SL1,
+        CustomBedView,
         Custom,
         Num_Types
     };
@@ -106,6 +107,7 @@ private:
 #endif // ENABLE_TEXTURES_FROM_SVG
     mutable GLBed m_model;
     Axes m_axes;
+    std::string m_bed_view_prefix;
 
     mutable float m_scale_factor;
 
@@ -135,12 +137,14 @@ private:
     void calc_bounding_boxes() const;
     void calc_triangles(const ExPolygon& poly);
     void calc_gridlines(const ExPolygon& poly, const BoundingBox& bed_bbox);
-    EType detect_type(const Pointfs& shape) const;
+    std::pair<Bed3D::EType, std::string> detect_type(const Pointfs& shape) const;
 #if ENABLE_TEXTURES_FROM_SVG
     void render_prusa(GLCanvas3D* canvas, const std::string& key, bool bottom) const;
     void render_prusa_shader(bool transparent) const;
+    void render_custom_bed(bool bottom) const;
 #else
     void render_prusa(const std::string &key, float theta, bool useVBOs) const;
+    void render_custom_bed(float theta, bool useVBOs) const;
 #endif // ENABLE_TEXTURES_FROM_SVG
     void render_custom() const;
 #if ENABLE_TEXTURES_FROM_SVG

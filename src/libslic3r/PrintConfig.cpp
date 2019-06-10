@@ -53,6 +53,12 @@ void PrintConfigDef::init_common_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionPoints{ Vec2d(0, 0), Vec2d(200, 0), Vec2d(200, 200), Vec2d(0, 200) });
     
+    def = this->add("custom_bed_view", coString);
+    def->label = L("Prefix for custom bed rendering");
+    def->tooltip = L("Filename prefix (filename without extension) of the custom bed .stl and .svg files");
+    def->set_default_value(new ConfigOptionString());
+    def->cli = ConfigOptionDef::nocli;
+
     def = this->add("layer_height", coFloat);
     def->label = L("Base Layer height");
     def->category = L("Layers and Perimeters");
