@@ -18,9 +18,6 @@ add_subdirectory(test)
 set(LIBNEST2D_UNITTESTS ON CACHE BOOL "Force generating unittests for libnest2d")
 add_subdirectory(libnest2d)
 
-include_directories(${LIBDIR}/qhull/src)
-#message(STATUS ${LIBDIR}/qhull/src)
-
 add_subdirectory(libslic3r)
 
 if (SLIC3R_GUI)
@@ -157,6 +154,7 @@ if (MSVC)
     target_compile_definitions(slic3r_app_gui PRIVATE -DSLIC3R_WRAPPER_NOCONSOLE)
     add_dependencies(slic3r_app_gui slic3r)
     set_target_properties(slic3r_app_gui PROPERTIES OUTPUT_NAME "slic3r++")
+    target_link_libraries(slic3r_app_gui PRIVATE boost_headeronly)
 
     add_executable(slic3r_app_console PrusaSlicer_app_msvc.cpp ${CMAKE_CURRENT_BINARY_DIR}/slic3r.rc)
     # Generate debug symbols even in release mode.
@@ -164,7 +162,8 @@ if (MSVC)
     target_compile_definitions(slic3r_app_console PRIVATE -DSLIC3R_WRAPPER_CONSOLE)
     add_dependencies(slic3r_app_console slic3r)
     set_target_properties(slic3r_app_console PROPERTIES OUTPUT_NAME "slic3r++_console")
-
+    target_link_libraries(slic3r_app_console PRIVATE boost_headeronly)
+	
 endif ()
 
 # Link the resources dir to where Slic3r GUI expects it

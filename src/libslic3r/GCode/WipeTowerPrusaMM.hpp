@@ -36,6 +36,7 @@ public:
 		EDGE  = 6,		// E:240C	B:80C
 		NGEN  = 7,		// E:230C	B:80C
 		PVA   = 8,	    // E:210C	B:80C
+		PC    = 9,
         other0 = 10,
         other1 = 11,
         other2 = 12,

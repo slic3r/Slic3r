@@ -103,7 +103,7 @@ Contour3D sphere(double rho, Portion portion = make_portion(0.0, 2.0*PI),
     if(rho <= 1e-6 && rho >= -1e-6) return ret;
 
     Pointf3s& vertices = ret.points;
-    Indices& facets = ret.indices;
+    std::vector<Vec3i32>& facets = ret.indices;
 
     // Algorithm:
     // Add points one-by-one to the sphere grid and form facets using relative
@@ -197,7 +197,7 @@ Contour3D cylinder(double r, double h, size_t ssteps, const Vec3d sp = {0,0,0})
 
     int32_t steps = int32_t(ssteps);
     Pointf3s& points = ret.points;
-    Indices& indices = ret.indices;
+    std::vector<Vec3i32>& indices = ret.indices;
     points.reserve(2*ssteps);
     double a = 2*PI/steps;
 
@@ -236,13 +236,13 @@ Contour3D cylinder(double r, double h, size_t ssteps, const Vec3d sp = {0,0,0})
     // According to the slicing algorithms, we need to aid them with generating
     // a watertight body. So we create a triangle fan for the upper and lower
     // ending of the cylinder to close the geometry.
-    points.emplace_back(jp); size_t ci = points.size() - 1;
+    points.emplace_back(jp); int ci = int(points.size() - 1);
     for(int32_t i = 0; i < steps - 1; ++i)
         indices.emplace_back(int32_t(i + offs + 1), int32_t(i + offs), int32_t(ci));
 
     indices.emplace_back(offs, int32_t(steps + offs - 1), int32_t(ci));
 
-    points.emplace_back(endp); ci = points.size() - 1;
+    points.emplace_back(endp); ci = int(points.size() - 1);
     for(int32_t i = 0; i < steps - 1; ++i)
         indices.emplace_back(int32_t(ci), i, i + 1);
 
@@ -757,8 +757,8 @@ public:
 
     template<class T> inline const Pillar& pillar(T id) const {
         static_assert(std::is_integral<T>::value, "Invalid index type");
-        assert(id >= 0 && id < m_pillars.size() &&
-               id < std::numeric_limits<size_t>::max());
+        assert(id >= 0 && size_t(id) < m_pillars.size() &&
+               size_t(id) < std::numeric_limits<size_t>::max());
         return m_pillars[size_t(id)];
     }
 

@@ -53,10 +53,12 @@ enum SeamPosition {
     spRandom, spNearest, spAligned, spRear, spHidden
 };
 
+/*
 enum FilamentType {
     ftPLA, ftABS, ftPET, ftHIPS, ftFLEX, ftSCAFF, ftEDGE, ftNGEN, ftPVA
     , ftOther0, ftOther1, ftOther2, ftOther3, ftOther4, ftOther5, ftOther6, ftOther7, ftOther8, ftOther9
 };
+*/
 
 enum DenseInfillAlgo {
     dfaNone, dfaAutomatic, dfaAutoNotFull, dfaEnlarged,
@@ -177,6 +179,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<SeamPosition>::ge
     return keys_map;
 }
 
+/*
 template<> inline const t_config_enum_values& ConfigOptionEnum<FilamentType>::get_enum_values() {
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
@@ -202,6 +205,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<FilamentType>::ge
     }
     return keys_map;
 }
+*/
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>::get_enum_values() {
     static const t_config_enum_values keys_map = {
@@ -1235,6 +1239,8 @@ public:
     ConfigOptionInt                         display_pixels_x;
     ConfigOptionInt                         display_pixels_y;
     ConfigOptionEnum<SLADisplayOrientation> display_orientation;
+    ConfigOptionBool                        display_mirror_x;
+    ConfigOptionBool                        display_mirror_y;
     ConfigOptionFloats                      relative_correction;
     ConfigOptionFloat                       absolute_correction;
     ConfigOptionFloat                       gamma_correction;
@@ -1251,6 +1257,8 @@ protected:
         OPT_PTR(display_height);
         OPT_PTR(display_pixels_x);
         OPT_PTR(display_pixels_y);
+        OPT_PTR(display_mirror_x);
+        OPT_PTR(display_mirror_y);
         OPT_PTR(display_orientation);
         OPT_PTR(relative_correction);
         OPT_PTR(absolute_correction);

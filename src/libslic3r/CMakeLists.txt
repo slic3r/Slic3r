@@ -134,13 +134,10 @@ add_library(libslic3r STATIC
     Print.hpp
     PrintBase.cpp
     PrintBase.hpp
-    PrintExport.hpp
     PrintConfig.cpp
     PrintConfig.hpp
     PrintObject.cpp
     PrintRegion.cpp
-    Rasterizer/Rasterizer.hpp
-    Rasterizer/Rasterizer.cpp
     SLAPrint.cpp
     SLAPrint.hpp
     SLA/SLAAutoSupports.hpp
@@ -167,6 +164,10 @@ add_library(libslic3r STATIC
     MTUtils.hpp
     Zipper.hpp
     Zipper.cpp
+    MinAreaBoundingBox.hpp
+    MinAreaBoundingBox.cpp
+    miniz_extension.hpp
+    miniz_extension.cpp
     SLA/SLABoilerPlate.hpp
     SLA/SLABasePool.hpp
     SLA/SLABasePool.cpp
@@ -177,6 +178,10 @@ add_library(libslic3r STATIC
     SLA/SLARotfinder.cpp
     SLA/SLABoostAdapter.hpp
     SLA/SLASpatIndex.hpp
+    SLA/SLARaster.hpp
+    SLA/SLARaster.cpp
+    SLA/SLARasterWriter.hpp
+    SLA/SLARasterWriter.cpp
 )
 
 if (SLIC3R_PCH AND NOT SLIC3R_SYNTAXONLY)
@@ -189,7 +194,7 @@ target_link_libraries(libslic3r
     libnest2d
     admesh
     miniz
-    ${Boost_LIBRARIES}
+    boost_libs
     clipper
     nowide
     ${EXPAT_LIBRARIES}

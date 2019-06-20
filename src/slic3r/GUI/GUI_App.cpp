@@ -185,8 +185,11 @@ bool GUI_App::on_init_inner()
 
     app_conf_exists = app_config->exists();
     // load settings
-    if (app_conf_exists)
+    app_conf_exists = app_config->exists();
+    if (app_conf_exists) {
         app_config->load();
+    }
+
     app_config->set("version", SLIC3R_VERSION);
     app_config->save();
 
@@ -250,9 +253,13 @@ bool GUI_App::on_init_inner()
         if (once) {
             once = false;
 
+            PresetUpdater::UpdateResult updater_result;
             try {
-                if (!preset_updater->config_update()) {
+                updater_result = preset_updater->config_update();
+                if (updater_result == PresetUpdater::R_INCOMPAT_EXIT) {
                     mainframe->Close();
+                } else if (updater_result == PresetUpdater::R_INCOMPAT_CONFIGURED) {
+                    app_conf_exists = true;
                 }
             } catch (const std::exception &ex) {
                 show_error(nullptr, from_u8(ex.what()));
@@ -384,6 +391,27 @@ void GUI_App::set_label_clr_sys(const wxColour& clr) {
     app_config->save();
 }
 
+float GUI_App::toolbar_icon_scale(const bool is_limited/* = false*/) const
+{
+#ifdef __APPLE__
+    const float icon_sc = 1.0f; // for Retina display will be used its own scale
+#else
+    const float icon_sc = m_em_unit*0.1f;
+#endif // __APPLE__
+
+    const std::string& use_val  = app_config->get("use_custom_toolbar_size");
+    const std::string& val      = app_config->get("custom_toolbar_size");
+
+    if (val.empty() || use_val.empty() || use_val == "0")
+        return icon_sc;
+
+    int int_val = atoi(val.c_str());
+    if (is_limited && int_val < 50)
+        int_val = 50;
+
+    return 0.01f * int_val * icon_sc;
+}
+
 void GUI_App::recreate_GUI()
 {
     // Weird things happen as the Paint messages are floating around the windows being destructed.
@@ -443,14 +471,12 @@ void GUI_App::system_info()
 {
     SysInfoDialog dlg;
     dlg.ShowModal();
-    dlg.Destroy();
 }
 
 void GUI_App::keyboard_shortcuts()
 {
     KBShortcutsDialog dlg;
     dlg.ShowModal();
-    dlg.Destroy();
 }
 
 // static method accepting a wxWindow object as first parameter
@@ -703,7 +729,7 @@ void GUI_App::update_mode()
 void GUI_App::add_config_menu(wxMenuBar *menu)
 {
     auto local_menu = new wxMenu();
-    wxWindowID config_id_base = wxWindow::NewControlId((int)ConfigMenuCnt);
+    wxWindowID config_id_base = wxWindow::NewControlId(int(ConfigMenuCnt));
 
     const auto config_wizard_name = _(ConfigWizard::name(true).wx_str());
     const auto config_wizard_tooltip = wxString::Format(_(L("Run %s")), config_wizard_name);
@@ -725,9 +751,9 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
     mode_menu->AppendRadioItem(config_id_base + ConfigMenuModeSimple, _(L("Simple")), _(L("Simple View Mode")));
     mode_menu->AppendRadioItem(config_id_base + ConfigMenuModeAdvanced, _(L("Advanced")), _(L("Advanced View Mode")));
     mode_menu->AppendRadioItem(config_id_base + ConfigMenuModeExpert, _(L("Expert")), _(L("Expert View Mode")));
-    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Check(get_mode() == comSimple); }, config_id_base + ConfigMenuModeSimple);
-    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Check(get_mode() == comAdvanced); }, config_id_base + ConfigMenuModeAdvanced);
-    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Check(get_mode() == comExpert); }, config_id_base + ConfigMenuModeExpert);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { if(get_mode() == comSimple) evt.Check(true); }, config_id_base + ConfigMenuModeSimple);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { if(get_mode() == comAdvanced) evt.Check(true); }, config_id_base + ConfigMenuModeAdvanced);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { if(get_mode() == comExpert) evt.Check(true); }, config_id_base + ConfigMenuModeExpert);
 
     local_menu->AppendSubMenu(mode_menu, _(L("Mode")), wxString::Format(_(L("%s View Mode")), SLIC3R_APP_NAME));
     local_menu->AppendSeparator();
@@ -806,10 +832,14 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
             break;
         }
     });
-    mode_menu->Bind(wxEVT_MENU, [this, config_id_base](wxEvent& event) {
-        int id_mode = event.GetId() - config_id_base;
-        save_mode(id_mode - ConfigMenuModeSimple);
-    });
+    
+    using std::placeholders::_1;
+    
+    auto modfn = [this](int mode, wxCommandEvent&) { if(get_mode() != mode) save_mode(mode); };
+    mode_menu->Bind(wxEVT_MENU, std::bind(modfn, comSimple, _1),   config_id_base + ConfigMenuModeSimple);
+    mode_menu->Bind(wxEVT_MENU, std::bind(modfn, comAdvanced, _1), config_id_base + ConfigMenuModeAdvanced);
+    mode_menu->Bind(wxEVT_MENU, std::bind(modfn, comExpert, _1),   config_id_base + ConfigMenuModeExpert);
+
     menu->Append(local_menu, _(L("&Configuration")));
 }
 
@@ -910,9 +940,18 @@ wxNotebook* GUI_App::tab_panel() const
     return mainframe->m_tabpanel;
 }
 
+// extruders count from selected printer preset
 int GUI_App::extruders_cnt() const
 {
     const Preset& preset = preset_bundle->printers.get_selected_preset();
+    return preset.printer_technology() == ptSLA ? 1 :
+           preset.config.option<ConfigOptionFloats>("nozzle_diameter")->values.size();
+}
+
+// extruders count from edited printer preset
+int GUI_App::extruders_edited_cnt() const
+{
+    const Preset& preset = preset_bundle->printers.get_edited_preset();
     return preset.printer_technology() == ptSLA ? 1 :
            preset.config.option<ConfigOptionFloats>("nozzle_diameter")->values.size();
 }
@@ -1001,7 +1040,7 @@ void GUI_App::associate_3mf_files()
 {
     // see as reference: https://stackoverflow.com/questions/20245262/c-program-needs-an-file-association
 
-    auto reg_set = [](HKEY hkeyHive, const wchar_t* pszVar, const wchar_t* pszValue)
+    auto reg_set = [](HKEY hkeyHive, const wchar_t* pszVar, const wchar_t* pszValue)->bool
     {
         wchar_t szValueCurrent[1000];
         DWORD dwType;
@@ -1013,26 +1052,32 @@ void GUI_App::associate_3mf_files()
 
         if ((iRC != ERROR_SUCCESS) && !bDidntExist)
             // an error occurred
-            return;
+            return false;
 
         if (!bDidntExist)
         {
             if (dwType != REG_SZ)
                 // invalid type
-                return;
+                return false;
 
             if (::wcscmp(szValueCurrent, pszValue) == 0)
                 // value already set
-                return;
+                return false;
         }
 
         DWORD dwDisposition;
         HKEY hkey;
         iRC = ::RegCreateKeyExW(hkeyHive, pszVar, 0, 0, 0, KEY_ALL_ACCESS, nullptr, &hkey, &dwDisposition);
+        bool ret = false;
         if (iRC == ERROR_SUCCESS)
+        {
             iRC = ::RegSetValueExW(hkey, L"", 0, REG_SZ, (BYTE*)pszValue, (::wcslen(pszValue) + 1) * sizeof(wchar_t));
+            if (iRC == ERROR_SUCCESS)
+                ret = true;
+        }
 
         RegCloseKey(hkey);
+        return ret;
     };
 
     wchar_t app_path[MAX_PATH];
@@ -1047,11 +1092,14 @@ void GUI_App::associate_3mf_files()
     std::wstring reg_prog_id = reg_base + L"\\" + prog_id;
     std::wstring reg_prog_id_command = reg_prog_id + L"\\Shell\\Open\\Command";
 
-    reg_set(HKEY_CURRENT_USER, reg_extension.c_str(), prog_id.c_str());
-    reg_set(HKEY_CURRENT_USER, reg_prog_id.c_str(), prog_desc.c_str());
-    reg_set(HKEY_CURRENT_USER, reg_prog_id_command.c_str(), prog_command.c_str());
+    bool is_new = false;
+    is_new |= reg_set(HKEY_CURRENT_USER, reg_extension.c_str(), prog_id.c_str());
+    is_new |= reg_set(HKEY_CURRENT_USER, reg_prog_id.c_str(), prog_desc.c_str());
+    is_new |= reg_set(HKEY_CURRENT_USER, reg_prog_id_command.c_str(), prog_command.c_str());
 
-    ::SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
+    if (is_new)
+        // notify Windows only when any of the values gets changed
+        ::SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
 }
 #endif // __WXMSW__
 

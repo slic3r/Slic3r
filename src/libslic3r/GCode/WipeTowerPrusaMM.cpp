@@ -474,6 +474,8 @@ WipeTowerPrusaMM::material_type WipeTowerPrusaMM::parse_material(const char *nam
         return NGEN;
     if (strcasecmp(name, "PVA") == 0)
         return PVA;
+    if (strcasecmp(name, "PC") == 0)
+        return PC;
     if (strcasecmp(name, "other0") == 0)
         return other0;
     if (strcasecmp(name, "other1") == 0)
@@ -499,16 +501,17 @@ WipeTowerPrusaMM::material_type WipeTowerPrusaMM::parse_material(const char *nam
 
 std::string WipeTowerPrusaMM::to_string(material_type material)
 {
-	switch (material) {
-	case PLA:		return "PLA";
-	case ABS:		return "ABS";
-	case PET:		return "PET";
-	case HIPS:		return "HIPS";
-	case FLEX:		return "FLEX";
-	case SCAFF:		return "SCAFF";
-	case EDGE:		return "EDGE";
+    switch (material) {
+    case PLA:		return "PLA";
+    case ABS:		return "ABS";
+    case PET:		return "PET";
+    case HIPS:		return "HIPS";
+    case FLEX:		return "FLEX";
+    case SCAFF:		return "SCAFF";
+    case EDGE:		return "EDGE";
     case NGEN:		return "NGEN";
     case PVA:		return "PVA";
+    case PC:		return "PC";
     case other0:		return "other0";
     case other1:		return "other1";
     case other2:		return "other2";
