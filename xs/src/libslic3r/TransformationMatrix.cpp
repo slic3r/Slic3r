@@ -117,7 +117,7 @@ void TransformationMatrix::applyLeft(const TransformationMatrix &left)
     *this = temp;
 }
 
-TransformationMatrix TransformationMatrix::multiplyLeft(const TransformationMatrix &left)
+TransformationMatrix TransformationMatrix::multiplyLeft(const TransformationMatrix &left) const
 {
     return multiply(left, *this);
 }
@@ -128,7 +128,7 @@ void TransformationMatrix::applyRight(const TransformationMatrix &right)
     *this = temp;
 }
 
-TransformationMatrix TransformationMatrix::multiplyRight(const TransformationMatrix &right)
+TransformationMatrix TransformationMatrix::multiplyRight(const TransformationMatrix &right) const
 {
     return multiply(*this, right);
 }

@@ -39,13 +39,13 @@ public:
     void applyLeft(const TransformationMatrix &left);
 
     /// multiplies the parameter-matrix from the left (out=left*this)
-    TransformationMatrix multiplyLeft(const TransformationMatrix &left);
+    TransformationMatrix multiplyLeft(const TransformationMatrix &left) const;
 
     /// multiplies the parameter-matrix from the right (this=this*right)
     void applyRight(const TransformationMatrix &right);
 
     /// multiplies the parameter-matrix from the right (out=this*right)
-    TransformationMatrix multiplyRight(const TransformationMatrix &right);
+    TransformationMatrix multiplyRight(const TransformationMatrix &right) const;
 
     /// generates an eye matrix.
     static TransformationMatrix mat_eye();
