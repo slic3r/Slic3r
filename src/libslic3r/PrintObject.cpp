@@ -94,6 +94,22 @@ PrintBase::ApplyStatus PrintObject::set_copies(const Points &points)
     return status;
 }
 
+void print_vertices(ModelObject * obj) {
+    auto objs = obj->volumes;
+    if (objs.size() > 0) {
+        TriangleMesh mesh = objs[0]->mesh();
+        std::cout << "vertices = std::vector<Vec3d>{\n\t";
+        for (Vec3f vert : mesh.its.vertices) {
+            std::cout << "Vec3d(" << vert.x() << "," << vert.y() << "," << vert.z() << "),";
+        }
+        std::cout << "\n};\nfacets = std::vector<Vec3i32>{ \n\t";
+        for (Vec3i32 face : mesh.its.indices) {
+            std::cout << "Vec3i32(" << face(0) << "," << face(1) << "," << face(2) << "),";
+        }
+        std::cout << "\n};";
+    }
+}
+
 // 1) Decides Z positions of the layers,
 // 2) Initializes layers and their regions
 // 3) Slices the object meshes
@@ -105,6 +121,8 @@ PrintBase::ApplyStatus PrintObject::set_copies(const Points &points)
 // this should be idempotent
 void PrintObject::slice()
 {
+    print_vertices(this->model_object());
+
     if (! this->set_started(posSlice))
         return;
     m_print->set_status(10, L("Processing triangulated mesh"));
