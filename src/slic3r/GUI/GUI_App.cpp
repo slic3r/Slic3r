@@ -208,7 +208,6 @@ bool GUI_App::on_init_inner()
     init_fonts();
 
     load_language();
-    //wxSetlocale(LC_NUMERIC, "C");
 
     // Suppress the '- default -' presets.
     preset_bundle->set_default_suppressed(app_config->get("no_defaults") == "1");
@@ -596,7 +595,7 @@ bool GUI_App::select_language()
 		m_wxLocale->AddCatalogLookupPathPrefix(from_u8(localization_dir()));
         m_wxLocale->AddCatalog(SLIC3R_APP_KEY);
 		//FIXME This is a temporary workaround, the correct solution is to switch to "C" locale during file import / export only.
-		//wxSetlocale(LC_NUMERIC, "C");
+		wxSetlocale(LC_NUMERIC, "C");
         Preset::update_suffix_modified();
         m_imgui->set_language(into_u8(lang->CanonicalName));
         return true;
@@ -643,7 +642,7 @@ bool GUI_App::load_language()
         m_imgui->set_language(into_u8(info->CanonicalName));
     }
     //FIXME This is a temporary workaround, the correct solution is to switch to "C" locale during file import / export only.
-    //wxSetlocale(LC_NUMERIC, "C");
+    wxSetlocale(LC_NUMERIC, "C");
     Preset::update_suffix_modified();
     return true;
 }
