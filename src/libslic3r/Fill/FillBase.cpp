@@ -197,7 +197,7 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
         good_role,
         params.flow->mm3_per_mm() * params.flow_mult * multFlow,
         params.flow->width * params.flow_mult * multFlow,
-        params.flow->height);
+        (float)params.flow->height);
     
 }
 

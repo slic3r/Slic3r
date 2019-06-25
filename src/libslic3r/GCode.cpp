@@ -1692,11 +1692,11 @@ void GCode::process_layer(
 
             for (ObjectByExtruder &object_by_extruder : objects_by_extruder_it->second) {
                 const size_t       layer_id = &object_by_extruder - objects_by_extruder_it->second.data();
-                std::cout << "Writing gcode for layer at " << layers[layer_id].print_z() << ", " << ((this->m_layer_index *100 )/ this->m_layer_count) << "%" << std::endl;
                 const PrintObject *print_object = layers[layer_id].object();
-                    if (print_object == nullptr)
-                        // This layer is empty for this particular object, it has neither object extrusions nor support extrusions at this print_z.
-                        continue;
+                if (print_object == nullptr)
+                    // This layer is empty for this particular object, it has neither object extrusions nor support extrusions at this print_z.
+                    continue;
+                std::cout << "Writing gcode for layer at " << layers[layer_id].print_z() << ", " << ((this->m_layer_index * 100) / this->m_layer_count) << "%" << std::endl;
             
                 m_config.apply(print_object->config(), true);
                 m_layer = layers[layer_id].layer();

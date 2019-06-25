@@ -133,8 +133,8 @@ public:
 
     double distance_to(const Point &point) const { return (point - *this).cast<double>().norm(); }
     double distance_to_square(const Point &point) const {
-        double dx = (point.x() - this->x());
-        double dy = (point.y() - this->y());
+        double dx = double(point.x() - this->x());
+        double dy = double(point.y() - this->y());
         return dx*dx + dy*dy;
     }
     double distance_to(const Line &line) const;

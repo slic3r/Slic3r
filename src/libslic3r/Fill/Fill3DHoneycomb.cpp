@@ -153,9 +153,10 @@ void Fill3DHoneycomb::_fill_surface_single(
     Polylines   polylines = makeGrid(
         scale_(this->z),
         distance,
-        ceil(bb.size()(0) / distance) + 1,
-        ceil(bb.size()(1) / distance) + 1,
-        ((this->layer_id/thickness_layers) % 2) + 1);
+        ceil(bb.size().x() / distance) + 1,
+        ceil(bb.size().y() / distance) + 1,
+		size_t((this->layer_id / thickness_layers) % 2) + 1);
+	//makeGrid(coord_t z, coord_t gridSize, size_t gridWidth, size_t gridHeight, size_t curveType)
     
     // move pattern in place
     for (Polylines::iterator it = polylines.begin(); it != polylines.end(); ++ it)

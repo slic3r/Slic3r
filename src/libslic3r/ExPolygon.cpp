@@ -307,7 +307,7 @@ ExPolygon::get_trapezoids3_half(Polygons* polygons, float spacing) const {
     BoundingBox bb(pp);
 
     // get all x coordinates
-    int min_x = pp[0].x(), max_x = pp[0].x();
+    coord_t min_x = pp[0].x(), max_x = pp[0].x();
     std::vector<coord_t> xx;
     for (Points::const_iterator p = pp.begin(); p != pp.end(); ++p) {
         if (min_x > p->x()) min_x = p->x();
