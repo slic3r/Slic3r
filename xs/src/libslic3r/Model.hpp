@@ -492,32 +492,7 @@ class ModelVolume
 
     BoundingBoxf3 get_transformed_bounding_box(TransformationMatrix const & trafo) const;
     BoundingBoxf3 bounding_box() const;
-
-    //Transformation matrix manipulators
     
-    /// performs translation
-    void translate(double x, double y, double z) { this->trafo.translate(x,y,z); };
-    void translate(Vectorf3 const &vector) { this->trafo.translate(vector); };
-    void translateXY(Vectorf const &vector) { this->trafo.translateXY(vector); };
-
-    /// performs uniform scale
-    void scale(double factor) { this->trafo.scale(factor); };
-
-    /// performs per-axis scale
-    void scale(double x, double y, double z) { this->trafo.scale(x,y,z); };
-
-    /// performs per-axis scale via vector
-    void scale(Vectorf3 const &vector) { this->trafo.scale(vector); };
-
-    /// performs mirroring along given axis
-    void mirror(const Axis &axis) { this->trafo.mirror(axis); };
-
-    /// performs mirroring along given axis
-    void mirror(const Vectorf3 &normal) { this->trafo.mirror(normal); };
-
-    /// performs rotation around given axis
-    void rotate(double angle_rad, const Axis &axis) { this->trafo.rotate(angle_rad,axis); };
-
     /// apply whichever matrix is supplied, multiplied from the left
     void apply_transformation(TransformationMatrix const &trafo);
 
