@@ -2,6 +2,7 @@
 #include "Model.hpp"
 #include "Geometry.hpp"
 #include "SVG.hpp"
+#include "MTUtils.hpp"
 
 #include <libnest2d.h>
 
@@ -821,14 +822,12 @@ bool arrange(Model &model,              // The model with the geometries
 
     auto& cfn = stopcondition;
 
-    auto binbb = Box({
-                         static_cast<libnest2d::Coord>(bbb.min(0)),
-                         static_cast<libnest2d::Coord>(bbb.min(1))
-                     },
-    {
-                         static_cast<libnest2d::Coord>(bbb.max(0)),
-                         static_cast<libnest2d::Coord>(bbb.max(1))
-                     });
+    coord_t md = ceil_i(min_obj_distance, 2) - SCALED_EPSILON;
+
+    auto binbb = Box({libnest2d::Coord{bbb.min(0)} - md,
+                      libnest2d::Coord{bbb.min(1)} - md},
+                     {libnest2d::Coord{bbb.max(0)} + md,
+                      libnest2d::Coord{bbb.max(1)} + md});
 
     switch(bedhint.type) {
     case BedShapeType::BOX: {
@@ -917,14 +916,12 @@ void find_new_position(const Model &model,
 
     BoundingBox bbb(bed);
 
-    auto binbb = Box({
-                         static_cast<libnest2d::Coord>(bbb.min(0)),
-                         static_cast<libnest2d::Coord>(bbb.min(1))
-                     },
-                     {
-                         static_cast<libnest2d::Coord>(bbb.max(0)),
-                         static_cast<libnest2d::Coord>(bbb.max(1))
-                     });
+    coord_t md = ceil_i(min_obj_distance, 2) - SCALED_EPSILON;
+
+    auto binbb = Box({libnest2d::Coord{bbb.min(0)} - md,
+                      libnest2d::Coord{bbb.min(1)} - md},
+                     {libnest2d::Coord{bbb.max(0)} + md,
+                      libnest2d::Coord{bbb.max(1)} + md});
 
     for(auto it = shapemap.begin(); it != shapemap.end(); ++it) {
         if(std::find(toadd.begin(), toadd.end(), it->first) == toadd.end()) {
