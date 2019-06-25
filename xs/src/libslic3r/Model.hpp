@@ -468,8 +468,12 @@ class ModelVolume
     public:
 
     std::string name;   ///< Name of this ModelVolume object
-    TriangleMesh mesh;  ///< The triangular model.
-    TransformationMatrix trafo; ///< The transformation matrix of this volume
+    TriangleMesh mesh;  ///< The triangular model
+
+    TransformationMatrix trafo; 
+    ///< The transformation matrix of this volume, representing which transformation has been
+    ///< applied to the mesh
+    
     DynamicPrintConfig config;
     ///< Configuration parameters specific to an object model geometry or a modifier volume,
     ///< overriding the global Slic3r settings and the ModelObject settings.
