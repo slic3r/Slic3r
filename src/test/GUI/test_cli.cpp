@@ -7,7 +7,7 @@
 
 #include "../test_data.hpp"
 
-#include "../../slic3r.hpp"
+#include "../../PrusaSlicer.hpp"
 #include "../../libslic3r/GCodeReader.hpp"
 
 using namespace Slic3r;

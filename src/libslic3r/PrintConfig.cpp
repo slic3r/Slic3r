@@ -61,7 +61,7 @@ void PrintConfigDef::init_common_params()
     def->sidetext = L("mm");
     def->min = 0;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloat(0.3));
+    def->set_default_value(new ConfigOptionFloat(0.2));
 
     def = this->add("max_print_height", coFloat);
     def->label = L("Max print height");
@@ -1094,7 +1094,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->ratio_over = "layer_height";
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0.35, false));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0.2, false));
 
     def = this->add("first_layer_speed", coFloatOrPercent);
     def->label = L("Default");

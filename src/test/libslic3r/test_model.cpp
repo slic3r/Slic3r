@@ -17,7 +17,7 @@ SCENARIO("Model construction") {
         
         DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
         Slic3r::Print print{};
-        print.apply_config(*config);
+        print.apply_config_perl_tests_only(*config);
         //Slic3r::Test::init_print(print, { sample_mesh }, model, config);
 
         WHEN("Model object is added") {
@@ -63,7 +63,7 @@ SCENARIO("Model construction") {
 
 SCENARIO("xy compensations"){
     GIVEN(("A Square with a complex hole inside")){
-        Polygon square/*new_scale*/{ std::vector<Point>{
+        Slic3r::Polygon square/*new_scale*/{ std::vector<Point>{
             Point{ 100, 100 },
                 Point{ 200, 100 },
                 Point{ 200, 200 },

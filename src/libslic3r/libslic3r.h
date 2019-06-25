@@ -46,7 +46,7 @@ typedef double  coordf_t;
 #define INSET_OVERLAP_TOLERANCE 0.4
 //FIXME Better to use an inline function with an explicit return type.
 //inline coord_t scale_(coordf_t v) { return coord_t(floor(v / SCALING_FACTOR + 0.5f)); }
-#define scale_(val) ((val) / SCALING_FACTOR)
+#define scale_(val) (coord_t)((val) / SCALING_FACTOR)
 
 #define SCALED_EPSILON scale_(EPSILON)
 

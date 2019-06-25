@@ -32,7 +32,11 @@ enum class TestMesh {
     slopy_cube,
     small_dorito,
     step,
-    two_hollow_squares
+    two_hollow_squares,
+    di_5mm_center_notch,
+    di_10mm_notch,
+    di_20mm_notch,
+    di_25mm_notch
 };
 
 // Neccessary for <c++17

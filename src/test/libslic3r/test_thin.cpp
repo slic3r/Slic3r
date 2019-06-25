@@ -1,3 +1,6 @@
+
+#define CATCH_CONFIG_DISABLE
+
 #include <catch.hpp>
 #include "../test_data.hpp"
 #include "../../libslic3r/ClipperUtils.hpp"
@@ -224,10 +227,11 @@ SCENARIO("thin walls: ")
             ExPolygon anchor = union_ex(ExPolygons{ tooth }, intersection_ex(ExPolygons{ base_part }, offset_ex(tooth, nozzle_diam / 2)), true)[0];
             ThickPolylines res;
             //expolygon.medial_axis(scale_(1), scale_(0.5), &res);
-            Slic3r::MedialAxis ma(tooth, anchor, nozzle_diam * 2, nozzle_diam*0.33, scale_(0.2));
-            ma.nozzle_diameter = nozzle_diam;
-            ma.anchor_size = 0.25*nozzle_diam;
-            ma.build(&res);
+            Slic3r::MedialAxis ma(tooth, nozzle_diam * 2, nozzle_diam/3, scale_(0.2));
+            ma.use_bounds(anchor)
+                .use_min_real_width(nozzle_diam)
+                .use_tapers(0.25*nozzle_diam);
+            ma.build(res);
             THEN("medial axis of a simple line is one line") {
                 REQUIRE(res.size() == 1);
                 THEN("medial axis has the length of the line + the length of the anchor") {
@@ -258,10 +262,11 @@ SCENARIO("thin walls: ")
             ExPolygon anchor = union_ex(ExPolygons{ tooth }, intersection_ex(ExPolygons{ base_part }, offset_ex(tooth, nozzle_diam / 4)), true)[0];
             ThickPolylines res;
             //expolygon.medial_axis(scale_(1), scale_(0.5), &res);
-            Slic3r::MedialAxis ma(tooth, anchor, nozzle_diam * 2, nozzle_diam*0.33, scale_(0.6));
-            ma.nozzle_diameter = nozzle_diam;
-            ma.anchor_size = 1.0*nozzle_diam;
-            ma.build(&res);
+            Slic3r::MedialAxis ma(tooth, nozzle_diam * 2, nozzle_diam/3, scale_(0.6));
+            ma.use_bounds(anchor)
+                .use_min_real_width(nozzle_diam)
+                .use_tapers(1.0*nozzle_diam);
+            ma.build(res);
             THEN("medial axis of a simple line is one line") {
                 REQUIRE(res.size() == 1);
                 THEN("medial axis has the length of the line + the length of the anchor") {
