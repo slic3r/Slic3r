@@ -284,16 +284,11 @@ ModelMaterial::attributes()
     Clone<BoundingBoxf3> bounding_box()
         %code%{
             try {
-                RETVAL = THIS->get_transformed_bounding_box(NULL);
+                RETVAL = THIS->bounding_box();
             } catch (std::exception& e) {
                 croak("%s", e.what());
             }
         %};
-
-    void translate(double x, double y, double z);
-    void scale_xyz(Pointf3* versor)
-        %code{% THIS->scale(*versor); %};
-    void rotate(double angle, Axis axis);
 
     
     Ref<DynamicPrintConfig> config()
@@ -304,7 +299,7 @@ ModelMaterial::attributes()
     Clone<TriangleMesh> get_transformed_mesh(ModelInstance * instance)
         %code%{
             TransformationMatrix trafo = instance->get_trafo_matrix(false);
-            RETVAL = THIS->get_transformed_mesh(&trafo);
+            RETVAL = THIS->get_transformed_mesh(trafo);
         %};
 
     bool modifier()
@@ -342,9 +337,6 @@ ModelMaterial::attributes()
         %code%{ THIS->scaling_factor = val; %};
     void set_offset(Pointf *offset)
         %code%{ THIS->offset = *offset; %};
-    
-    void set_local_trafo_matrix(bool dont_translate);
-
 
     void transform_mesh(TriangleMesh* mesh, bool dont_translate) const;
     void transform_polygon(Polygon* polygon) const;

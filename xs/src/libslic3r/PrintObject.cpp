@@ -943,11 +943,11 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
     TransformationMatrix trafo = object.instances[0]->get_trafo_matrix(true);
 
     // align mesh to Z = 0 (it should be already aligned actually) and apply XY shift
-    trafo.translate(
+    trafo.applyLeft(TransformationMatrix::mat_translation(
         -unscale(this->_copies_shift.x),
         -unscale(this->_copies_shift.y),
         -object.bounding_box().min.z
-    );
+    ));
 
     for (const auto& i : region_volumes) {
         
@@ -955,7 +955,7 @@ PrintObject::_slice_region(size_t region_id, std::vector<float> z, bool modifier
 
         if (volume.modifier != modifier) continue;
         
-        mesh.merge(volume.get_transformed_mesh(&trafo));
+        mesh.merge(volume.get_transformed_mesh(trafo));
     }
     if (mesh.facets_count() == 0) return layers;
 
