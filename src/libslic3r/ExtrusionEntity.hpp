@@ -69,27 +69,53 @@ enum ExtrusionLoopRole {
 };
 
 
+class ExtrusionEntity;
 class ExtrusionPath;
 class ExtrusionPath3D;
 class ExtrusionMultiPath;
 class ExtrusionMultiPath3D;
 class ExtrusionLoop;
+//
+//class ExtrusionVisitor {
+//public:
+//    virtual void default_use(ExtrusionEntity &entity) { assert(false); };
+//    virtual void use(ExtrusionPath &path) { ExtrusionEntity &entity = path; default_use(entity); };
+//    virtual void use(ExtrusionPath3D &path3D) { ExtrusionPath &path = path3D;  use(path); };
+//    virtual void use(ExtrusionMultiPath &multipath) { ExtrusionEntity &entity = multipath; default_use(entity); };
+//    virtual void use(ExtrusionMultiPath3D &multipath3D) { ExtrusionEntity &entity = multipath3D; default_use(entity); };
+//    virtual void use(ExtrusionLoop &loop) { ExtrusionEntity &entity = loop; default_use(entity); };
+//    virtual void use(ExtrusionEntityCollection &collection) { ExtrusionEntity &entity = collection;  default_use(entity); };
+//};
+//class ExtrusionVisitorConst {
+//public:
+//    virtual void default_use(const ExtrusionEntity &entity) { assert(false); };
+//    virtual void use(const ExtrusionPath &path) { const ExtrusionEntity &entity = path; default_use(entity); };
+//    virtual void use(const ExtrusionPath3D &path3D) { const ExtrusionPath &path = path3D;  use(path); };
+//    virtual void use(const ExtrusionMultiPath &multipath) { const ExtrusionEntity &entity = multipath; default_use(entity); };
+//    virtual void use(const ExtrusionMultiPath3D &multipath3D) { const ExtrusionEntity &entity = multipath3D; default_use(entity); };
+//    virtual void use(const ExtrusionLoop &loop) { const ExtrusionEntity &entity = loop; default_use(entity); };
+//    virtual void use(const ExtrusionEntityCollection &collection) { const ExtrusionEntity &entity = collection;  default_use(entity); };
+//};
+
 class ExtrusionVisitor {
 public:
-    //virtual void use(ExtrusionEntity &entity) { assert(false); };
-    virtual void use(ExtrusionPath &path) { const ExtrusionPath &constpath = path;  use(constpath); };
-    virtual void use(ExtrusionPath3D &path3D) { const ExtrusionPath3D &constpath3D = path3D;  use(constpath3D); };
-    virtual void use(ExtrusionMultiPath &multipath) { const ExtrusionMultiPath &constmultipath = multipath;  use(constmultipath); };
-    virtual void use(ExtrusionMultiPath3D &multipath3D) { const ExtrusionMultiPath3D &constmultipath3D = multipath3D;  use(constmultipath3D); };
-    virtual void use(ExtrusionLoop &loop) { const ExtrusionLoop &constloop = loop;  use(constloop); };
-    virtual void use(ExtrusionEntityCollection &collection) { const ExtrusionEntityCollection &constcollection = collection;  use(constcollection); };
-    virtual void use(const ExtrusionPath &path) { assert(false); };
-    virtual void use(const ExtrusionPath3D &path3D) { assert(false); };
-    virtual void use(const ExtrusionMultiPath &multipath) { assert(false); };
-    virtual void use(const ExtrusionMultiPath3D &multipath3D) { assert(false); };
-    virtual void use(const ExtrusionLoop &loop) { assert(false); };
-    virtual void use(const ExtrusionEntityCollection &collection) { assert(false); };
-
+    virtual void default_use(ExtrusionEntity &entity) { assert(false); };
+    virtual void use(ExtrusionPath &path);
+    virtual void use(ExtrusionPath3D &path3D);
+    virtual void use(ExtrusionMultiPath &multipath);
+    virtual void use(ExtrusionMultiPath3D &multipath3D);
+    virtual void use(ExtrusionLoop &loop);
+    virtual void use(ExtrusionEntityCollection &collection);
+};
+class ExtrusionVisitorConst {
+public:
+    virtual void default_use(const ExtrusionEntity &entity) { assert(false); };
+    virtual void use(const ExtrusionPath &path);
+    virtual void use(const ExtrusionPath3D &path3D);
+    virtual void use(const ExtrusionMultiPath &multipath);
+    virtual void use(const ExtrusionMultiPath3D &multipath3D);
+    virtual void use(const ExtrusionLoop &loop);
+    virtual void use(const ExtrusionEntityCollection &collection);
 };
 
 class ExtrusionEntity
@@ -123,7 +149,7 @@ public:
     virtual double length() const = 0;
     virtual double total_volume() const = 0;
     virtual void visit(ExtrusionVisitor &visitor) = 0;
-    virtual void visit(ExtrusionVisitor &visitor) const = 0;
+    virtual void visit(ExtrusionVisitorConst &visitor) const = 0;
 };
 
 typedef std::vector<ExtrusionEntity*> ExtrusionEntitiesPtr;
@@ -185,7 +211,7 @@ public:
     void   collect_polylines(Polylines &dst) const override { if (! this->polyline.empty()) dst.emplace_back(this->polyline); }
     double total_volume() const override { return mm3_per_mm * unscale<double>(length()); }
     virtual void visit(ExtrusionVisitor &visitor) override { visitor.use(*this); };
-    virtual void visit(ExtrusionVisitor &visitor) const override { visitor.use(*this); };
+    virtual void visit(ExtrusionVisitorConst &visitor) const override { visitor.use(*this); };
 
 protected:
     void _inflate_collection(const Polylines &polylines, ExtrusionEntityCollection* collection) const;
@@ -214,7 +240,7 @@ public:
     }
     ExtrusionPath3D* clone() const { return new ExtrusionPath3D(*this); }
     virtual void visit(ExtrusionVisitor &visitor) override { visitor.use(*this); };
-    virtual void visit(ExtrusionVisitor &visitor) const override { visitor.use(*this); };
+    virtual void visit(ExtrusionVisitorConst &visitor) const override { visitor.use(*this); };
 
     void push_back(Point p, coord_t z_offset) { polyline.points.push_back(p); z_offsets.push_back(z_offset); }
 
@@ -320,7 +346,7 @@ public:
     virtual ExtrusionMultiPath* clone() const override { return new ExtrusionMultiPath(*this); }
 
     virtual void visit(ExtrusionVisitor &visitor) override { visitor.use(*this); };
-    virtual void visit(ExtrusionVisitor &visitor) const override { visitor.use(*this); };
+    virtual void visit(ExtrusionVisitorConst &visitor) const override { visitor.use(*this); };
 };
 // Single continuous extrusion path, possibly with varying extrusion thickness, extrusion height or bridging / non bridging.
 class ExtrusionMultiPath3D : public ExtrusionMultiEntity<ExtrusionPath3D> {
@@ -335,7 +361,7 @@ public:
     virtual ExtrusionMultiPath3D* clone() const override { return new ExtrusionMultiPath3D(*this); }
 
     virtual void visit(ExtrusionVisitor &visitor) override { visitor.use(*this); };
-    virtual void visit(ExtrusionVisitor &visitor) const override { visitor.use(*this); };
+    virtual void visit(ExtrusionVisitorConst &visitor) const override { visitor.use(*this); };
 
     virtual bool can_reverse() const override { return false; }
     virtual void reverse() override {
@@ -391,7 +417,7 @@ public:
     void   collect_polylines(Polylines &dst) const override { Polyline pl = this->as_polyline(); if (! pl.empty()) dst.emplace_back(std::move(pl)); }
     double total_volume() const override { double volume = 0.; for (const auto& path : paths) volume += path.total_volume(); return volume; }
     virtual void visit(ExtrusionVisitor &visitor) override { visitor.use(*this); };
-    virtual void visit(ExtrusionVisitor &visitor) const override { visitor.use(*this); };
+    virtual void visit(ExtrusionVisitorConst &visitor) const override { visitor.use(*this); };
 
 private:
     ExtrusionLoopRole m_loop_role;
@@ -482,7 +508,7 @@ inline void extrusion_entities_append_loops(ExtrusionEntitiesPtr &dst, Polygons 
     loops.clear();
 }
 
-class ExtrusionPrinter : public ExtrusionVisitor {
+class ExtrusionPrinter : public ExtrusionVisitorConst {
     std::stringstream ss;
 public:
     virtual void use(const ExtrusionPath &path);
@@ -492,7 +518,10 @@ public:
     virtual void use(const ExtrusionLoop &loop);
     virtual void use(const ExtrusionEntityCollection &collection);
     std::string str() { return ss.str(); }
-//    void clear() { return ss.clear(); }
+    std::string && print(ExtrusionEntity &entity) && {
+        entity.visit(*this);
+        return std::move(ss.str());
+    }
 };
 
 }

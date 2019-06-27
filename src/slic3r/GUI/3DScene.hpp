@@ -622,7 +622,7 @@ public:
 };
 
 
-class ExtrusionToVert : public ExtrusionVisitor {
+class ExtrusionToVert : public ExtrusionVisitorConst {
     float print_z;
     const Point &copy;
     GLVolume &volume;

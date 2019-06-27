@@ -126,7 +126,7 @@ private:
     bool                                                         i_have_brim = false;
 };
 
-class GCode : ExtrusionVisitor {
+class GCode : ExtrusionVisitorConst {
 public:        
     GCode() : 
     	m_origin(Vec2d::Zero()),

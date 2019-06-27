@@ -10,9 +10,14 @@ class ExtrusionEntityCollection : public ExtrusionEntity
 {
 public:
     ExtrusionEntityCollection* clone() const;
+
+    /// Owned ExtrusionEntities and descendent ExtrusionEntityCollections.
+    /// Iterating over this needs to check each child to see if it, too is a collection.
     ExtrusionEntitiesPtr entities;     // we own these entities
+
     std::vector<size_t> orig_indices;  // handy for XS
     bool no_sort;
+
     ExtrusionEntityCollection(): no_sort(false) {};
     ExtrusionEntityCollection(const ExtrusionEntityCollection &other) : orig_indices(other.orig_indices), no_sort(other.no_sort) { this->append(other.entities); }
     ExtrusionEntityCollection(ExtrusionEntityCollection &&other) : entities(std::move(other.entities)), orig_indices(std::move(other.orig_indices)), no_sort(other.no_sort) {}
@@ -21,6 +26,8 @@ public:
     ExtrusionEntityCollection& operator=(ExtrusionEntityCollection &&other) 
         { this->entities = std::move(other.entities); this->orig_indices = std::move(other.orig_indices); this->no_sort = other.no_sort; return *this; }
     ~ExtrusionEntityCollection() { clear(); }
+
+    /// Operator to convert and flatten this collection to a single vector of ExtrusionPaths.
     explicit operator ExtrusionPaths() const;
     
     bool is_collection() const { return true; };
@@ -80,11 +87,20 @@ public:
         { Polygons out; this->polygons_covered_by_width(out, scaled_epsilon); return out; }
     Polygons polygons_covered_by_spacing(const float scaled_epsilon = 0.f) const
         { Polygons out; this->polygons_covered_by_spacing(out, scaled_epsilon); return out; }
+
+    /// Recursively count paths and loops contained in this collection 
     size_t items_count() const;
-    void flatten(ExtrusionEntityCollection* retval) const;
-	ExtrusionEntityCollection flatten() const;
-	void flattenIfSortable(ExtrusionEntityCollection* retval) const;
-	ExtrusionEntityCollection flattenIfSortable() const;
+
+    /// Returns a single vector of pointers to all non-collection items contained in this one
+    /// \param retval a pointer to the output memory space.
+    /// \param preserve_ordering Flag to method that will flatten if and only if the underlying collection is sortable when True (default: False).
+    void flatten(ExtrusionEntityCollection* retval, bool preserve_ordering = false) const;
+
+    /// Returns a flattened copy of this ExtrusionEntityCollection. That is, all of the items in its entities vector are not collections.
+    /// You should be iterating over flatten().entities if you are interested in the underlying ExtrusionEntities (and don't care about hierarchy).
+    /// \param preserve_ordering Flag to method that will flatten if and only if the underlying collection is sortable when True (default: False).
+    ExtrusionEntityCollection flatten(bool preserve_ordering = false) const;
+
     double min_mm3_per_mm() const;
     double total_volume() const override { double volume=0.; for (const auto& ent : entities) volume+=ent->total_volume(); return volume; }
 
@@ -104,7 +120,34 @@ public:
         return 0.;        
     }
     virtual void visit(ExtrusionVisitor &visitor) { visitor.use(*this); };
-    virtual void visit(ExtrusionVisitor &visitor) const { visitor.use(*this); };
+    virtual void visit(ExtrusionVisitorConst &visitor) const { visitor.use(*this); };
+};
+
+//// visitors /////
+
+class CountEntities : public ExtrusionVisitorConst {
+public:
+    size_t count(const ExtrusionEntity &coll) { coll.visit(*this); return leaf_number; }
+    size_t leaf_number = 0;
+    virtual void default_use(const ExtrusionEntity &entity) override { ++leaf_number; }
+    virtual void use(const ExtrusionEntityCollection &coll) override;
+};
+
+class FlatenEntities : public ExtrusionVisitorConst {
+    ExtrusionEntityCollection to_fill;
+    bool preserve_ordering;
+public:
+    FlatenEntities(bool preserve_ordering) : preserve_ordering(preserve_ordering) {}
+    FlatenEntities(ExtrusionEntityCollection pattern, bool preserve_ordering) : preserve_ordering(preserve_ordering) {
+        to_fill.no_sort = pattern.no_sort;
+        to_fill.orig_indices = pattern.orig_indices;
+    }
+    ExtrusionEntityCollection get() {
+        return to_fill;
+    };
+    ExtrusionEntityCollection&& flatten(const ExtrusionEntityCollection &to_flatten) &&;
+    virtual void default_use(const ExtrusionEntity &entity) override { to_fill.append(entity); }
+    virtual void use(const ExtrusionEntityCollection &coll) override;
 };
 
 }

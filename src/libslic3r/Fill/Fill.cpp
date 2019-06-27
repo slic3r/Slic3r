@@ -221,6 +221,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             else if (!is_bridge)
                 fill_pattern = layerm.region()->config().solid_fill_pattern.value;
         } else {
+
             if (layerm.region()->config().infill_dense.getBool()
                 && layerm.region()->config().fill_density<40
                 && surface.maxNbSolidLayersOnTop <= 1

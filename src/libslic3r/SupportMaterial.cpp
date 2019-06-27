@@ -2709,6 +2709,7 @@ void modulate_extrusion_by_overlapping_layers(
         // The extrusions do not overlap with any other extrusion.
         return;
 
+    //TODO: should preserve the unsortable things
     ExtrusionEntityCollection flatten_extrusions_in_out = extrusions_in_out.flatten();
 
     // Get the initial extrusion parameters.

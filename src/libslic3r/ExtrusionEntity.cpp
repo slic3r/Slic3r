@@ -9,6 +9,21 @@
 #include <sstream>
 
 namespace Slic3r {
+
+//// extrusion entity visitor
+void ExtrusionVisitor::use(ExtrusionPath &path) { default_use(path); };
+void ExtrusionVisitor::use(ExtrusionPath3D &path3D) { default_use(path3D); }
+void ExtrusionVisitor::use(ExtrusionMultiPath &multipath) { default_use(multipath); }
+void ExtrusionVisitor::use(ExtrusionMultiPath3D &multipath3D) { default_use(multipath3D); }
+void ExtrusionVisitor::use(ExtrusionLoop &loop) { default_use(loop); }
+void ExtrusionVisitor::use(ExtrusionEntityCollection &collection) { default_use(collection); }
+
+void ExtrusionVisitorConst::use(const ExtrusionPath &path) { default_use(path); }
+void ExtrusionVisitorConst::use(const ExtrusionPath3D &path3D) { default_use(path3D); }
+void ExtrusionVisitorConst::use(const ExtrusionMultiPath &multipath) { default_use(multipath); }
+void ExtrusionVisitorConst::use(const ExtrusionMultiPath3D &multipath3D) { default_use(multipath3D); }
+void ExtrusionVisitorConst::use(const ExtrusionLoop &loop) { default_use(loop); }
+void ExtrusionVisitorConst::use(const ExtrusionEntityCollection &collection) { default_use(collection); }
     
 void
 ExtrusionPath::intersect_expolygons(const ExPolygonCollection &collection, ExtrusionEntityCollection* retval) const
@@ -299,24 +314,24 @@ void ExtrusionPrinter::use(const ExtrusionEntityCollection &collection) {
 }
 
 
-class ExtrusionTreeVisitor : ExtrusionVisitor {
-public:
-    //virtual void use(ExtrusionEntity &entity) { assert(false); };
-    virtual void use(ExtrusionPath &path) override { const ExtrusionPath &constpath = path;  use(constpath); };
-    virtual void use(ExtrusionPath3D &path3D) override { const ExtrusionPath3D &constpath3D = path3D;  use(constpath3D); };
-    virtual void use(ExtrusionMultiPath &multipath) override { const ExtrusionMultiPath &constmultipath = multipath;  use(constmultipath); };
-    virtual void use(ExtrusionMultiPath3D &multipath3D) override { const ExtrusionMultiPath3D &constmultipath3D = multipath3D;  use(constmultipath3D); };
-    virtual void use(ExtrusionLoop &loop) override { const ExtrusionLoop &constloop = loop;  use(constloop); };
-    virtual void use(ExtrusionEntityCollection &collection) { const ExtrusionEntityCollection &constcollection = collection;  use(constcollection); };
-    virtual void use(const ExtrusionPath &path) override { assert(false); };
-    virtual void use(const ExtrusionPath3D &path3D) override { assert(false); };
-    virtual void use(const ExtrusionMultiPath &multipath) override { assert(false); };
-    virtual void use(const ExtrusionMultiPath3D &multipath3D) { assert(false); };
-    virtual void use(const ExtrusionLoop &loop) override { assert(false); };
-    virtual void use(const ExtrusionEntityCollection &collection) { assert(false); };
-    virtual void use_default(ExtrusionEntity &entity) { const ExtrusionEntity &constentity = entity;  use_default(constentity); };
-    virtual void use_default(const ExtrusionEntity &entity) {};
-
-};
+//class ExtrusionTreeVisitor : ExtrusionVisitor {
+//public:
+//    //virtual void use(ExtrusionEntity &entity) { assert(false); };
+//    virtual void use(ExtrusionPath &path) override { const ExtrusionPath &constpath = path;  use(constpath); };
+//    virtual void use(ExtrusionPath3D &path3D) override { const ExtrusionPath3D &constpath3D = path3D;  use(constpath3D); };
+//    virtual void use(ExtrusionMultiPath &multipath) override { const ExtrusionMultiPath &constmultipath = multipath;  use(constmultipath); };
+//    virtual void use(ExtrusionMultiPath3D &multipath3D) override { const ExtrusionMultiPath3D &constmultipath3D = multipath3D;  use(constmultipath3D); };
+//    virtual void use(ExtrusionLoop &loop) override { const ExtrusionLoop &constloop = loop;  use(constloop); };
+//    virtual void use(ExtrusionEntityCollection &collection) { const ExtrusionEntityCollection &constcollection = collection;  use(constcollection); };
+//    virtual void use(const ExtrusionPath &path) override { assert(false); };
+//    virtual void use(const ExtrusionPath3D &path3D) override { assert(false); };
+//    virtual void use(const ExtrusionMultiPath &multipath) override { assert(false); };
+//    virtual void use(const ExtrusionMultiPath3D &multipath3D) { assert(false); };
+//    virtual void use(const ExtrusionLoop &loop) override { assert(false); };
+//    virtual void use(const ExtrusionEntityCollection &collection) { assert(false); };
+//    virtual void use_default(ExtrusionEntity &entity) { const ExtrusionEntity &constentity = entity;  use_default(constentity); };
+//    virtual void use_default(const ExtrusionEntity &entity) {};
+//
+//};
 
 }

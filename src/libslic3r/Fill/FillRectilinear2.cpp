@@ -1420,7 +1420,8 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     for (Polylines::iterator it = polylines_out.begin() + n_polylines_out_initial; it != polylines_out.end(); ++ it) {
         // No need to translate, the absolute position is irrelevant.
         // it->translate(- rotate_vector.second(0), - rotate_vector.second(1));
-        assert(! it->has_duplicate_points());
+        //assert(! it->has_duplicate_points());
+        it->remove_duplicate_points();
         it->rotate(rotate_vector.first);
         //FIXME rather simplify the paths to avoid very short edges?
         //assert(! it->has_duplicate_points());
@@ -1750,14 +1751,12 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
                 idx++;
             }
             if (current_extrusion->size() < 2) extrusions->paths.pop_back();
-            ExtrusionPrinter print; extrusions->visit(print);
             if (!extrusions->paths.empty()) eec->entities.push_back(extrusions);
             else delete extrusions;
         }
         // === end ===
         if (!eec->empty()) {
             out.push_back(eec);
-            ExtrusionPrinter print; eec->visit(print);
         } else {
             delete eec;
         }

@@ -174,78 +174,73 @@ void ExtrusionEntityCollection::polygons_covered_by_spacing(Polygons &out, const
 size_t
 ExtrusionEntityCollection::items_count() const
 {
-    size_t count = 0;
-    for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
-        if ((*it)->is_collection()) {
-            ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
-            count += collection->items_count();
-        } else {
-            ++count;
-        }
-    }
-    return count;
+    return CountEntities().count(*this);
 }
 
-/* Returns a single vector of pointers to all non-collection items contained in this one */
 void
-ExtrusionEntityCollection::flatten(ExtrusionEntityCollection* retval) const
-{
-    for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
-        if ((*it)->is_collection()) {
-            ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
-            retval->append(collection->flatten().entities);
-        } else {
-            retval->append(**it);
-        }
+CountEntities::use(const ExtrusionEntityCollection &coll) {
+    for (const ExtrusionEntity* entity : coll.entities) {
+        entity->visit(*this);
     }
 }
+//
+//void
+//ExtrusionEntityCollection::flatten(ExtrusionEntityCollection* retval, bool preserve_ordering) const
+//{
+//    if (this->no_sort && preserve_ordering) {
+//        /// if we want to preserve ordering and we can't sort, break out the unsorted ones first.
+//        ExtrusionEntityCollection *unsortable = new ExtrusionEntityCollection();
+//        unsortable->no_sort = true;
+//        unsortable->orig_indices = this->orig_indices;
+//        retval->append(*unsortable);
+//        for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
+//            if ((*it)->is_collection()) {
+//                ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
+//                collection->flatten(unsortable, preserve_ordering);
+//            } else {
+//                unsortable->append(**it);
+//            }
+//        }
+//    } else {
+//        for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
+//            if ((*it)->is_collection()) {
+//                ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
+//                retval->append(collection->flatten().entities);
+//            } else {
+//                retval->append(**it);
+//            }
+//        }
+//    }
+//}
 
+/* Returns a single vector of chained (new) pointers to all non-collection items contained in this one */
 ExtrusionEntityCollection
-ExtrusionEntityCollection::flatten() const
+ExtrusionEntityCollection::flatten(bool preserve_ordering) const
 {
-    ExtrusionEntityCollection coll;
-    this->flatten(&coll);
-    return coll;
-}
+    //ExtrusionEntityCollection coll;
+    //this->flatten(&coll, preserve_ordering);
+    //return coll;
+    return FlatenEntities(preserve_ordering).flatten(*this);
 
-/* Returns a vector of chained (new) pointers to all non-collection items contained in this one */
+}
 void
-ExtrusionEntityCollection::flattenIfSortable(ExtrusionEntityCollection* retval) const
-{
-	if (no_sort){
-		ExtrusionEntityCollection *unsortable = new ExtrusionEntityCollection(*this);
-		retval->append(*unsortable);
-		unsortable->entities.clear();
-		for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
-			if ((*it)->is_collection()) {
-				ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
-				collection->flattenIfSortable(unsortable);
-			}
-			else {
-				unsortable->append(**it);
-			}
-		}
-	}
-	else{
-		for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
-			if ((*it)->is_collection()) {
-				ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
-				retval->append(collection->flattenIfSortable().entities);
-			}
-			else {
-				retval->append(**it);
-			}
-		}
-	}
+FlatenEntities::use(const ExtrusionEntityCollection &coll) {
+    if (coll.no_sort && preserve_ordering) {
+        to_fill.append(FlatenEntities(coll, preserve_ordering).flatten(coll));
+    } else {
+        for (const ExtrusionEntity* entity : coll.entities) {
+            entity->visit(*this);
+        }
+    }
+}
+ExtrusionEntityCollection&&
+FlatenEntities::flatten(const ExtrusionEntityCollection &to_flatten) && {
+    for (const ExtrusionEntity* entity : to_flatten.entities) {
+        entity->visit(*this);
+    }
+    return std::move(to_fill);
 }
 
-ExtrusionEntityCollection
-ExtrusionEntityCollection::flattenIfSortable() const
-{
-	ExtrusionEntityCollection coll;
-	this->flattenIfSortable(&coll);
-	return coll;
-}
 
 double
 ExtrusionEntityCollection::min_mm3_per_mm() const

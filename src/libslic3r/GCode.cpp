@@ -2547,7 +2547,7 @@ void GCode::_write(FILE* file, const char *what)
         
         //const char * gcode_pp = _post_process(what).c_str();
         std::string str_preproc{ what };
-        _post_process(str_preproc);
+        //_post_process(str_preproc);
 
         const std::string str_ana = m_analyzer.process_gcode(str_preproc);
 
@@ -3030,8 +3030,8 @@ void GCode::ObjectByExtruder::Island::Region::append(const std::string& type, co
 
 
     // First we append the entities, there are eec->entities.size() of them:
-    //don't do fill->entities because it will discard no_sort, we must use flattenIfSortable()
-    ExtrusionEntitiesPtr entities = eec->flattenIfSortable().entities;
+    //don't do fill->entities because it will discard no_sort, we must use flatten(preserve_ordering = true)
+    ExtrusionEntitiesPtr entities = eec->flatten(true).entities;
     perimeters_or_infills->append(entities);
 
     for (unsigned int i = 0; i<entities.size(); ++i)
