@@ -206,7 +206,7 @@ TriangleMesh mesh(TestMesh m) {
             break;
         case TestMesh::di_5mm_center_notch:
             vertices = std::vector<Vec3d>{
-                Vec3d(-15,-15,-5),Vec3d(-15,15,5),Vec3d(-15,15,-5),Vec3d(-15,-15,5),Vec3d(3,-2,5),Vec3d(15,15,5),Vec3d(3,3,5),Vec3d(-2,3,5),Vec3d(-2,-2,5),Vec3d(15,-15,5),Vec3d(15,15,-5),Vec3d(15,-15,-5),Vec3d(-2,3,0),Vec3d(-2,-2,0),Vec3d(3,-2,0),Vec3d(3,3,0)
+                Vec3d(-15,-15,0),Vec3d(-15,15,10),Vec3d(-15,15,0),Vec3d(-15,-15,10),Vec3d(3,-2,10),Vec3d(15,15,10),Vec3d(3,3,10),Vec3d(-2,3,10),Vec3d(-2,-2,10),Vec3d(15,-15,10),Vec3d(15,15,0),Vec3d(15,-15,0),Vec3d(-2,3,5),Vec3d(-2,-2,5),Vec3d(3,-2,5),Vec3d(3,3,5)
             };
             facets = std::vector<Vec3i32>{
                 Vec3i32(0,1,2),Vec3i32(1,0,3),Vec3i32(4,5,6),Vec3i32(5,7,6),Vec3i32(7,1,8),Vec3i32(1,7,5),Vec3i32(5,4,9),Vec3i32(8,9,4),Vec3i32(8,3,9),Vec3i32(3,8,1),Vec3i32(9,10,5),Vec3i32(10,9,11),Vec3i32(10,1,5),Vec3i32(1,10,2),Vec3i32(0,10,11),Vec3i32(10,0,2),Vec3i32(0,9,3),Vec3i32(9,0,11),
@@ -215,29 +215,29 @@ TriangleMesh mesh(TestMesh m) {
             break;
         case TestMesh::di_10mm_notch:
             vertices = std::vector<Vec3d>{
-                Vec3d(-15,15,-5),Vec3d(-15,-5,0),Vec3d(-15,15,5),Vec3d(-15,-15,-5),Vec3d(-15,-15,0),Vec3d(-15,-5,5),Vec3d(15,15,5),Vec3d(-5,-5,5),Vec3d(15,-15,5),Vec3d(-5,-15,5),Vec3d(15,15,-5),Vec3d(15,-15,-5),Vec3d(-5,-15,0),Vec3d(-5,-5,0)
+                Vec3d(-15,15,0),Vec3d(-15,-5,5),Vec3d(-15,15,10),Vec3d(-15,-15,0),Vec3d(-15,-15,5),Vec3d(-15,-5,10),Vec3d(15,15,10),Vec3d(-5,-5,10),Vec3d(15,-15,10),Vec3d(-5,-15,10),Vec3d(15,15,0),Vec3d(15,-15,0),Vec3d(-5,-15,5),Vec3d(-5,-5,5)
             };
             facets = std::vector<Vec3i32>{
                 Vec3i32(0,1,2),Vec3i32(3,1,0),Vec3i32(1,3,4),Vec3i32(2,1,5),Vec3i32(6,7,8),Vec3i32(2,7,6),Vec3i32(7,2,5),Vec3i32(8,7,9),Vec3i32(8,10,6),Vec3i32(10,8,11),Vec3i32(10,2,6),Vec3i32(2,10,0),Vec3i32(3,10,11),Vec3i32(10,3,0),Vec3i32(4,3,12),Vec3i32(12,8,9),Vec3i32(11,12,3),Vec3i32(12,11,8),
-                Vec3i32(12,7,13),Vec3i32(7,12,9),Vec3i32(1,7,5),Vec3i32(7,1,13),Vec3i32(1,12,13),Vec3i32(12,1,4),
+                Vec3i32(12,7,13),Vec3i32(7,12,9),Vec3i32(1,7,5),Vec3i32(7,1,13),Vec3i32(1,12,13),Vec3i32(12,1,4)
             };
             break;
         case TestMesh::di_20mm_notch:
             vertices = std::vector<Vec3d>{
-                Vec3d(-15,15,-5),Vec3d(-15,5,0),Vec3d(-15,15,5),Vec3d(-15,-15,-5),Vec3d(-15,-15,0),Vec3d(-15,5,5),Vec3d(15,15,5),Vec3d(5,5,5),Vec3d(15,-15,5),Vec3d(5,-15,5),Vec3d(15,15,-5),Vec3d(15,-15,-5),Vec3d(5,-15,0),Vec3d(5,5,0),
+                Vec3d(-15,15,0),Vec3d(-15,5,5),Vec3d(-15,15,10),Vec3d(-15,-15,0),Vec3d(-15,-15,5),Vec3d(-15,5,10),Vec3d(15,15,10),Vec3d(5,5,10),Vec3d(15,-15,10),Vec3d(5,-15,10),Vec3d(15,15,0),Vec3d(15,-15,0),Vec3d(5,-15,5),Vec3d(5,5,5)
             };
             facets = std::vector<Vec3i32>{
                 Vec3i32(0,1,2),Vec3i32(3,1,0),Vec3i32(1,3,4),Vec3i32(2,1,5),Vec3i32(6,7,8),Vec3i32(2,7,6),Vec3i32(7,2,5),Vec3i32(8,7,9),Vec3i32(8,10,6),Vec3i32(10,8,11),Vec3i32(3,10,11),Vec3i32(10,3,0),Vec3i32(4,3,12),Vec3i32(12,8,9),Vec3i32(12,11,8),Vec3i32(11,12,3),Vec3i32(10,2,6),Vec3i32(2,10,0),
-                Vec3i32(12,7,13),Vec3i32(7,12,9),Vec3i32(1,12,13),Vec3i32(12,1,4),Vec3i32(1,7,5),Vec3i32(7,1,13),
+                Vec3i32(12,7,13),Vec3i32(7,12,9),Vec3i32(1,12,13),Vec3i32(12,1,4),Vec3i32(1,7,5),Vec3i32(7,1,13)
             };
             break;
         case TestMesh::di_25mm_notch:
             vertices = std::vector<Vec3d>{
-                Vec3d(-15,15,-5),Vec3d(-15,10,0),Vec3d(-15,15,5),Vec3d(-15,-15,-5),Vec3d(-15,-15,0),Vec3d(-15,10,5),Vec3d(15,15,5),Vec3d(10,10,5),Vec3d(15,-15,5),Vec3d(10,-15,5),Vec3d(15,15,-5),Vec3d(15,-15,-5),Vec3d(10,-15,0),Vec3d(10,10,0),
+                Vec3d(-15,15,0),Vec3d(-15,10,5),Vec3d(-15,15,10),Vec3d(-15,-15,0),Vec3d(-15,-15,5),Vec3d(-15,10,10),Vec3d(15,15,10),Vec3d(10,10,10),Vec3d(15,-15,10),Vec3d(10,-15,10),Vec3d(15,15,0),Vec3d(15,-15,0),Vec3d(10,-15,5),Vec3d(10,10,5)
             };
             facets = std::vector<Vec3i32>{
                 Vec3i32(0,1,2),Vec3i32(3,1,0),Vec3i32(1,3,4),Vec3i32(2,1,5),Vec3i32(6,7,8),Vec3i32(2,7,6),Vec3i32(7,2,5),Vec3i32(8,7,9),Vec3i32(8,10,6),Vec3i32(10,8,11),Vec3i32(3,10,11),Vec3i32(10,3,0),Vec3i32(4,3,12),Vec3i32(12,8,9),Vec3i32(12,11,8),Vec3i32(11,12,3),Vec3i32(10,2,6),Vec3i32(2,10,0),
-                Vec3i32(12,7,13),Vec3i32(7,12,9),Vec3i32(1,7,5),Vec3i32(7,1,13),Vec3i32(1,12,13),Vec3i32(12,1,4),
+                Vec3i32(12,7,13),Vec3i32(7,12,9),Vec3i32(1,7,5),Vec3i32(7,1,13),Vec3i32(1,12,13),Vec3i32(12,1,4)
             };
             break;
         default:

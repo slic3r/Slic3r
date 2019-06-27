@@ -153,7 +153,7 @@ void MainFrame::update_title()
         if (!project.empty())
             title += (project + " - ");
     }
-    title += (wxString(SLIC3R_BUILD_ID) + " " + _(L("based on Slic3r")));
+    title += (wxString(SLIC3R_APP_NAME) + " " + _(L("based on PrusaSlicer & Slic3r")));
 
     SetTitle(title);
 }

@@ -61,7 +61,7 @@ enum FilamentType {
 */
 
 enum DenseInfillAlgo {
-    dfaNone, dfaAutomatic, dfaAutoNotFull, dfaEnlarged,
+    dfaAutomatic, dfaAutoNotFull, dfaEnlarged,
 };
 
 enum NoPerimeterUnsupportedAlgo {
@@ -209,7 +209,6 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<FilamentType>::ge
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>::get_enum_values() {
     static const t_config_enum_values keys_map = {
-        { "none", dfaNone },
         { "automatic", dfaAutomatic },
         { "autosmall", dfaAutoNotFull },
         { "enlarged", dfaEnlarged }
