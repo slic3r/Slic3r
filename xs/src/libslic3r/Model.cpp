@@ -704,9 +704,6 @@ ModelObject::center_around_origin()
     Sizef3 size = bb.size();
     vector.x -= size.x/2;
     vector.y -= size.y/2;
-    
-    TransformationMatrix trafo = TransformationMatrix::mat_translation(-bb.center().x, -bb.center().y, -bb.min.z);
-
 
     this->translate(vector);
     this->origin_translation.translate(vector);
