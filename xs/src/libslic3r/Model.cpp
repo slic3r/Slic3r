@@ -724,6 +724,13 @@ ModelObject::center_around_origin()
     }
 }
 
+TransformationMatrix
+ModelObject::get_trafo_to_center() const
+{
+    BoundingBoxf3 raw_bb = this->raw_bounding_box();
+    return TransformationMatrix::mat_translation(raw_bb.center().negative());
+}
+
 void
 ModelObject::translate(const Vectorf3 &vector)
 {
@@ -773,6 +780,17 @@ ModelObject::scale_to_fit(const Sizef3 &size)
 
 void
 ModelObject::rotate(double angle, const Axis &axis)
+{
+    if (angle == 0) return;
+    TransformationMatrix trafo = TransformationMatrix::mat_rotation(angle, axis);
+    this->apply_transformation(trafo);
+    
+    this->origin_translation = Pointf3(0,0,0);
+    this->invalidate_bounding_box();
+}
+
+void
+ModelObject::rotate(double angle, const Vectorf3 &axis)
 {
     if (angle == 0) return;
     TransformationMatrix trafo = TransformationMatrix::mat_rotation(angle, axis);
