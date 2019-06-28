@@ -83,16 +83,19 @@ double TransformationMatrix::determinante() const
     return m11*(m22*m33 - m23*m32) - m12*(m21*m33 - m23*m31) + m13*(m21*m32 - m31*m22);
 }
 
-bool TransformationMatrix::inverse(TransformationMatrix &inverse) const
+TransformationMatrix TransformationMatrix::inverse() const
 {
     // from http://mathworld.wolfram.com/MatrixInverse.html
     // and https://math.stackexchange.com/questions/152462/inverse-of-transformation-matrix
     double det = this->determinante();
     if (abs(det) < 1e-9)
     {
-        return false;
+        printf("Matrix (very close to) singular. Inverse cannot be computed");
+        return TransformationMatrix();
     }
     double fac = 1.0 / det;
+
+    TransformationMatrix inverse;
 
     inverse.m11 = fac * (this->m22 * this->m33 - this->m23 * this->m32);
     inverse.m12 = fac * (this->m13 * this->m32 - this->m12 * this->m33);
@@ -108,7 +111,7 @@ bool TransformationMatrix::inverse(TransformationMatrix &inverse) const
     inverse.m24 = -(inverse.m21 * this->m14 + inverse.m22 * this->m24 + inverse.m23 * this->m34);
     inverse.m34 = -(inverse.m31 * this->m14 + inverse.m32 * this->m24 + inverse.m33 * this->m34);
 
-    return true;
+    return inverse;
 }
 
 void TransformationMatrix::applyLeft(const TransformationMatrix &left)
