@@ -65,6 +65,9 @@ public:
     /// generates a translation matrix
     static TransformationMatrix mat_translation(double x, double y, double z);
 
+    /// generates a translation matrix
+    static TransformationMatrix mat_translation(const Vectorf3 &vector);
+
     /// generates a rotation matrix around coodinate axis
     static TransformationMatrix mat_rotation(double angle_rad, const Axis &axis);
 
