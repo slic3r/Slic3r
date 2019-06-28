@@ -168,6 +168,14 @@ TransformationMatrix TransformationMatrix::mat_translation(double x, double y, d
         0.0, 0.0, 1.0, z);
 }
 
+TransformationMatrix TransformationMatrix::mat_translation(const Vectorf3 &vector)
+{
+    return TransformationMatrix(
+        1.0, 0.0, 0.0, vector.x,
+        0.0, 1.0, 0.0, vector.y,
+        0.0, 0.0, 1.0, vector.z);
+}
+
 TransformationMatrix TransformationMatrix::mat_scale(double x, double y, double z)
 {
     return TransformationMatrix(
