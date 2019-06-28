@@ -358,6 +358,9 @@ class ModelObject
     /// Center the current ModelObject to origin by translating the ModelVolumes
     void center_around_origin();
 
+    /// Get the matrix, that, when applied, centers the bounding box in all 3 coordinate directions
+    TransformationMatrix get_trafo_to_center() const;
+
     /// Translate the current ModelObject by translating ModelVolumes with (x,y,z) units.
     /// This function calls translate(coordf_t x, coordf_t y, coordf_t z) to translate every TriangleMesh in each ModelVolume.
     /// \param vector Vectorf3 the translation vector
@@ -387,6 +390,11 @@ class ModelObject
     /// \param angle double the angle in radians
     /// \param axis Axis the axis to be rotated around
     void rotate(double angle, const Axis &axis);
+
+    /// Rotate the current ModelObject by rotating ModelVolumes.
+    /// \param angle double the angle in radians
+    /// \param axis Axis the axis to be rotated around
+    void rotate(double angle, const Vectorf3 &axis);
 
     /// Rotate the current ModelObject by rotating ModelVolumes to align the given vectors
     /// \param origin Vectorf3
