@@ -33,7 +33,7 @@ public:
     double determinante() const;
 
     /// returns the inverse of the matrix
-    bool inverse(TransformationMatrix &inverse) const;
+    TransformationMatrix inverse() const;
 
     /// multiplies the parameter-matrix from the left (this=left*this)
     void applyLeft(const TransformationMatrix &left);
