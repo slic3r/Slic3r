@@ -753,7 +753,11 @@ void
 ModelObject::scale(const Pointf3 &versor)
 {
     if (versor.x == 1 && versor.y == 1 && versor.z == 1) return;
-    TransformationMatrix trafo = TransformationMatrix::mat_scale(versor.x, versor.y, versor.z);
+
+    TransformationMatrix center_trafo = this->get_trafo_to_center();
+    TransformationMatrix trafo = TransformationMatrix::multiply(TransformationMatrix::mat_scale(versor.x, versor.y, versor.z), center_trafo);
+    trafo.applyLeft(center_trafo.inverse());
+
     this->apply_transformation(trafo);
     
     // reset origin translation since it doesn't make sense anymore
@@ -779,7 +783,11 @@ void
 ModelObject::rotate(double angle, const Axis &axis)
 {
     if (angle == 0) return;
-    TransformationMatrix trafo = TransformationMatrix::mat_rotation(angle, axis);
+
+    TransformationMatrix center_trafo = this->get_trafo_to_center();
+    TransformationMatrix trafo = TransformationMatrix::multiply(TransformationMatrix::mat_rotation(angle, axis), center_trafo);
+    trafo.applyLeft(center_trafo.inverse());
+
     this->apply_transformation(trafo);
     
     this->origin_translation = Pointf3(0,0,0);
@@ -790,7 +798,11 @@ void
 ModelObject::rotate(double angle, const Vectorf3 &axis)
 {
     if (angle == 0) return;
-    TransformationMatrix trafo = TransformationMatrix::mat_rotation(angle, axis);
+
+    TransformationMatrix center_trafo = this->get_trafo_to_center();
+    TransformationMatrix trafo = TransformationMatrix::multiply(TransformationMatrix::mat_rotation(angle, axis), center_trafo);
+    trafo.applyLeft(center_trafo.inverse());
+
     this->apply_transformation(trafo);
     
     this->origin_translation = Pointf3(0,0,0);
@@ -800,7 +812,11 @@ ModelObject::rotate(double angle, const Vectorf3 &axis)
 void
 ModelObject::rotate(const Vectorf3 &origin, const Vectorf3 &target)
 {
-    TransformationMatrix trafo = TransformationMatrix::mat_rotation(origin, target);
+
+    TransformationMatrix center_trafo = this->get_trafo_to_center();
+    TransformationMatrix trafo = TransformationMatrix::multiply(TransformationMatrix::mat_rotation(origin, target), center_trafo);
+    trafo.applyLeft(center_trafo.inverse());
+
     this->apply_transformation(trafo);
     
     this->origin_translation = Pointf3(0,0,0);
@@ -810,7 +826,10 @@ ModelObject::rotate(const Vectorf3 &origin, const Vectorf3 &target)
 void
 ModelObject::mirror(const Axis &axis)
 {
-    TransformationMatrix trafo = TransformationMatrix::mat_mirror(axis);
+    TransformationMatrix center_trafo = this->get_trafo_to_center();
+    TransformationMatrix trafo = TransformationMatrix::multiply(TransformationMatrix::mat_mirror(axis), center_trafo);
+    trafo.applyLeft(center_trafo.inverse());
+    
     this->apply_transformation(trafo);
 
     this->origin_translation = Pointf3(0,0,0);
