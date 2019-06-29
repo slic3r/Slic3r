@@ -1080,6 +1080,36 @@ ModelVolume::bounding_box() const
     return this->mesh.bounding_box();
 }
 
+void ModelVolume::translate(double x, double y, double z)
+{
+    TransformationMatrix trafo = TransformationMatrix::mat_translation(x,y,z);
+    this->apply_transformation(trafo);
+}
+
+void ModelVolume::scale(double x, double y, double z)
+{
+    TransformationMatrix trafo = TransformationMatrix::mat_scale(x,y,z);
+    this->apply_transformation(trafo);
+}
+
+void ModelVolume::mirror(const Axis &axis)
+{
+    TransformationMatrix trafo = TransformationMatrix::mat_mirror(axis);
+    this->apply_transformation(trafo);
+}
+
+void ModelVolume::mirror(const Vectorf3 &normal)
+{
+    TransformationMatrix trafo = TransformationMatrix::mat_mirror(normal);
+    this->apply_transformation(trafo);
+}
+
+void ModelVolume::rotate(double angle_rad, const Axis &axis)
+{
+    TransformationMatrix trafo = TransformationMatrix::mat_rotation(angle_rad, axis);
+    this->apply_transformation(trafo);
+}
+
 void ModelVolume::apply_transformation(TransformationMatrix const & trafo)
 {
     this->mesh.transform(trafo);

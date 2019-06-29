@@ -290,7 +290,11 @@ ModelMaterial::attributes()
             }
         %};
 
-    
+    void translate(double x, double y, double z);
+    void scale_xyz(Pointf3* versor)
+        %code{% THIS->scale(*versor); %};
+    void rotate(double angle, Axis axis);
+
     Ref<DynamicPrintConfig> config()
         %code%{ RETVAL = &THIS->config; %};
     Ref<TriangleMesh> mesh()
