@@ -201,6 +201,10 @@ void stl_transform(stl_file *stl, double const *trafo3x4) {
       v_dst->z = (float)(trafo3x4[8] * v_src_x + trafo3x4[9] * v_src_y + trafo3x4[10] * v_src_z + trafo3x4[11]);
     }
   }
+  double det = trafo3x4[0]*trafo3x4[5]*trafo3x4[10] + trafo3x4[4]*trafo3x4[9]*trafo3x4[2] + trafo3x4[8]*trafo3x4[1]*trafo3x4[6]
+              - trafo3x4[0]*trafo3x4[9]*trafo3x4[6] - trafo3x4[4]*trafo3x4[1]*trafo3x4[10] - trafo3x4[8]*trafo3x4[5]*trafo3x4[2];
+  if(det < 0)
+    stl_reverse_all_facets(stl);
   stl_get_size(stl);
   calculate_normals(stl);
 }
@@ -237,6 +241,10 @@ void stl_get_transform(stl_file const *stl_src, stl_file *stl_dst, double const 
       v_dst->z = (float)(trafo3x4[8] * v_src_x + trafo3x4[9] * v_src_y + trafo3x4[10] * v_src_z + trafo3x4[11]);
     }
   }
+  double det = trafo3x4[0]*trafo3x4[5]*trafo3x4[10] + trafo3x4[4]*trafo3x4[9]*trafo3x4[2] + trafo3x4[8]*trafo3x4[1]*trafo3x4[6]
+              - trafo3x4[0]*trafo3x4[9]*trafo3x4[6] - trafo3x4[4]*trafo3x4[1]*trafo3x4[10] - trafo3x4[8]*trafo3x4[5]*trafo3x4[2];
+  if(det < 0)
+    stl_reverse_all_facets(stl_dst);
   stl_get_size(stl_dst);
   calculate_normals(stl_dst);
 }
