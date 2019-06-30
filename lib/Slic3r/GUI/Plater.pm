@@ -372,7 +372,7 @@ sub new {
         EVT_BUTTON($self, $self->{btn_increase}, sub { $self->increase; });
         EVT_BUTTON($self, $self->{btn_decrease}, sub { $self->decrease; });
 
-        if ($Slic3r::GUI::Settings->{_}{extended_gui} >= 2) { # if Toolbar enabled
+        if ($Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz' || $Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz-big') {
             EVT_BUTTON($self, $self->{btn_rotateX90cw}, sub { $_[0]->rotate(-90, X) });
             EVT_BUTTON($self, $self->{btn_rotateX90ccw}, sub { $_[0]->rotate(90, X) });
             EVT_BUTTON($self, $self->{btn_rotateY90cw}, sub { $_[0]->rotate(-90, Y) });
