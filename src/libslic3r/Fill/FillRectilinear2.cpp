@@ -1853,7 +1853,7 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
         double min = 0.2 * params.flow->scaled_width() * (1 - INSET_OVERLAP_TOLERANCE);
         double max = 2. * params.flow->scaled_width();
         // collapse 
-        double min_offset = 0.2 * params.flow->scaled_width() * (1 - INSET_OVERLAP_TOLERANCE);
+        double min_offset = 0.1 * params.flow->scaled_width() * (1 - INSET_OVERLAP_TOLERANCE);
         //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
         min = std::max(min, double(Flow::new_from_spacing(EPSILON, params.flow->nozzle_diameter , params.flow->height, false).scaled_width()));
         double max_offset = 2. * params.flow->scaled_spacing();
