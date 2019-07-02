@@ -1002,7 +1002,7 @@ void TabPrint::build()
     m_presets = &m_preset_bundle->prints;
     Line line{ "", "" };
 	load_initial_data();
-    auto page = add_options_page(_(L("Perimeters & shell")), "perimeters_shell.png");
+    auto page = add_options_page(_(L("Perimeters & shell")), "shell");
 
         auto optgroup = page->new_optgroup(_(L("Vertical shells")));
 		optgroup->append_single_option_line("perimeters");
@@ -1196,7 +1196,7 @@ void TabPrint::build()
 		optgroup->append_single_option_line("max_volumetric_extrusion_rate_slope_negative");
 #endif /* HAS_PRESSURE_EQUALIZER */
 
-	page = add_options_page(_(L("Width & flow")), "width.png");
+	page = add_options_page(_(L("Width & flow")), "width");
 		optgroup = page->new_optgroup(_(L("Extrusion width")));
 		optgroup->append_single_option_line("extrusion_width");
 		optgroup->append_single_option_line("first_layer_extrusion_width");

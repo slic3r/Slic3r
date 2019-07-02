@@ -253,7 +253,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("brim_ears_max_angle", coFloat);
     def->label = L("max angle");
-    def->tooltip = L("Maximum angle to let a brim ear appear.");
+    def->tooltip = L("Maximum angle to let a brim ear appear. \nIf set to 0, no brim will be created. \nIf set to ~178, brim will be created on everything but strait sections.");
     def->sidetext = L("°");
     def->min = 0;
     def->max = 180;
