@@ -273,7 +273,9 @@ void Bed3D::Axes::render_axis(double length) const
 }
 
 Bed3D::Bed3D()
-    : m_type(Custom), m_bed_view_prefix("")
+    : m_type(Custom)
+    , m_bed_view_path_stl("")
+    , m_bed_view_path_svg("")
     , m_requires_canvas_update(false)
 #if ENABLE_TEXTURES_FROM_SVG
     , m_vbo_id(0)
@@ -284,16 +286,18 @@ Bed3D::Bed3D()
 
 bool Bed3D::set_shape(const Pointfs& shape)
 {
-    std::string new_bed_view_prefix;
+    std::string new_bed_view_path_stl;
+    std::string new_bed_view_path_svg;
     EType new_type;
-    std::tie(new_type, new_bed_view_prefix) = detect_type(shape);
-    if (m_shape == shape && m_type == new_type && m_bed_view_prefix == new_bed_view_prefix)
+    std::tie(new_type, new_bed_view_path_stl, new_bed_view_path_svg) = detect_type(shape);
+    if (m_shape == shape && m_type == new_type && m_bed_view_path_stl == new_bed_view_path_stl && m_bed_view_path_svg == new_bed_view_path_svg)
         // No change, no need to update the UI.
         return false;
 
     m_shape = shape;
     m_type = new_type;
-    m_bed_view_prefix = new_bed_view_prefix;
+    m_bed_view_path_stl = new_bed_view_path_stl;
+    m_bed_view_path_svg = new_bed_view_path_svg;
 
     calc_bounding_boxes();
 
@@ -338,35 +342,10 @@ void Bed3D::render(GLCanvas3D* canvas, float theta, bool useVBOs, float scale_fa
     m_scale_factor = scale_factor;
 
     EType type = useVBOs ? m_type : Custom;
-    switch (type)
-    {
-    case MK2:
-    {
-        render_prusa(canvas, "mk2", theta > 90.0f);
-        break;
-    }
-    case MK3:
-    {
-        render_prusa(canvas, "mk3", theta > 90.0f);
-        break;
-    }
-    case SL1:
-    {
-        render_prusa(canvas, "sl1", theta > 90.0f);
-        break;
-    }
-    case CustomBedView:
-    {
-        render_custom_bed(theta > 90.0f);
-        break;
-    }
-    default:
-    case Custom:
-    {
+    if(type == Custom)
         render_custom();
-        break;
-    }
-    }
+    else
+        render_bed(canvas, type, theta > 90.0f);
 }
 #else
 void Bed3D::render(GLCanvas3D* canvas, float theta, bool useVBOs, float scale_factor) const
@@ -376,35 +355,10 @@ void Bed3D::render(GLCanvas3D* canvas, float theta, bool useVBOs, float scale_fa
     if (m_shape.empty())
         return;
 
-    switch (m_type)
-    {
-    case MK2:
-    {
-        render_prusa(canvas, "mk2", theta, useVBOs);
-        break;
-    }
-    case MK3:
-    {
-        render_prusa(canvas, "mk3", theta, useVBOs);
-        break;
-    }
-    case SL1:
-    {
-        render_prusa(canvas, "sl1", theta, useVBOs);
-        break;
-    }
-    case CustomBedView:
-    {
-        render_custom_bed(theta, useVBOs);
-        break;
-    }
-    default:
-    case Custom:
-    {
+    if (m_type == Custom)
         render_custom();
-        break;
-    }
-    }
+    else
+        render_bed(canvas, m_type, theta, useVBOs);
 }
 #endif // ENABLE_TEXTURES_FROM_SVG
 
@@ -470,10 +424,11 @@ void Bed3D::calc_gridlines(const ExPolygon& poly, const BoundingBox& bed_bbox)
         printf("Unable to create bed grid lines\n");
 }
 
-std::pair<Bed3D::EType, std::string> Bed3D::detect_type(const Pointfs& shape) const
+std::tuple<Bed3D::EType, std::string, std::string> Bed3D::detect_type(const Pointfs& shape) const
 {
     EType type = Custom;
-    std::string bed_view_prefix = "";
+    std::string bed_view_path_stl;
+    std::string bed_view_path_svg;
 
     auto bundle = wxGetApp().preset_bundle;
     if (bundle != nullptr)
@@ -483,73 +438,85 @@ std::pair<Bed3D::EType, std::string> Bed3D::detect_type(const Pointfs& shape) co
         {
             if (curr->config.has("bed_shape"))
             {
-                if (curr->config.has("custom_bed_view") && (shape == dynamic_cast<const ConfigOptionPoints*>(curr->config.option("bed_shape"))->values))
-                {
-                    if (!static_cast<const ConfigOptionString*>(curr->config.option("custom_bed_view"))->value.empty()) {
-                        bed_view_prefix = static_cast<const ConfigOptionString*>(curr->config.option("custom_bed_view"))->value;
-                        boost::filesystem::path path = bed_view_prefix + ".stl";
-                        if (!path.is_absolute())
-                        {
-                            bed_view_prefix  = (boost::filesystem::path(Slic3r::data_dir()) / "printer" / bed_view_prefix).string();
-                            path = bed_view_prefix + ".stl";
-                        }
-                        type = CustomBedView;
-                        if (!boost::filesystem::exists(path)) {
-                            type = Custom;
-                        }
-                        break;
-                    }
-                }
-                if ((curr->vendor != nullptr) && (curr->vendor->name == "Prusa Research") && (shape == dynamic_cast<const ConfigOptionPoints*>(curr->config.option("bed_shape"))->values))
+                if ((curr->vendor != nullptr) && (boost::contains(curr->vendor->full_name, "Prusa Research")) && (shape == dynamic_cast<const ConfigOptionPoints*>(curr->config.option("bed_shape"))->values))
                 {
                     if (boost::contains(curr->name, "SL1"))
                     {
                         type = SL1;
+                        bed_view_path_svg = resources_dir() + "/icons/bed/sl1.svg";
+                        bed_view_path_stl = resources_dir() + "/models/sl1.stl";
                         break;
-                    }
-                    else if (boost::contains(curr->name, "MK3") || boost::contains(curr->name, "MK2.5"))
+                    } else if (boost::contains(curr->name, "MK3") || boost::contains(curr->name, "MK2.5"))
                     {
                         type = MK3;
+                        bed_view_path_svg = resources_dir() + "/icons/bed/mk3.svg";
+                        bed_view_path_stl = resources_dir() + "/models/mk3.stl";
                         break;
-                    }
-                    else if (boost::contains(curr->name, "MK2"))
+                    } else if (boost::contains(curr->name, "MK2"))
                     {
                         type = MK2;
+                        bed_view_path_svg = resources_dir() + "/icons/bed/mk2.svg";
+                        bed_view_path_stl = resources_dir() + "/models/mk2.stl";
                         break;
                     }
                 }
+                if (curr->config.has("custom_bed_view") && (shape == dynamic_cast<const ConfigOptionPoints*>(curr->config.option("bed_shape"))->values))
+                {
+                    if (!static_cast<const ConfigOptionString*>(curr->config.option("custom_bed_view"))->value.empty()) {
+                        const std::string custom_bed_view = static_cast<const ConfigOptionString*>(curr->config.option("custom_bed_view"))->value;
+                        bed_view_path_stl = custom_bed_view + ".stl";
+                        if (!boost::filesystem::path{ bed_view_path_stl }.is_absolute())
+                        {
+                            if (!boost::filesystem::exists(bed_view_path_stl)) {
+                                bed_view_path_stl = resources_dir() + "/models/" + custom_bed_view + ".stl";
+                            }
+                        }
+                        bed_view_path_svg = custom_bed_view + ".svg";
+                        if (!boost::filesystem::path{ bed_view_path_svg }.is_absolute())
+                        {
+                            bed_view_path_svg = Slic3r::data_dir() + "/printer/" + custom_bed_view + ".svg";
+                            if (!boost::filesystem::exists(bed_view_path_svg)) {
+                                bed_view_path_svg = resources_dir() + "/icons/bed/" + custom_bed_view + ".svg";
+                            }
+                        }
+
+                        type = CustomBedView;
+                        if (!boost::filesystem::exists(bed_view_path_stl) && !boost::filesystem::exists(bed_view_path_svg)) {
+                            type = Custom;
+                            bed_view_path_stl = "";
+                            bed_view_path_svg = "";
+                        }
+                        break;
+                    }
+                }
+                
             }
 
             curr = bundle->printers.get_preset_parent(*curr);
         }
     }
 
-    return std::make_pair(type, bed_view_prefix);
+    return std::make_tuple(type, bed_view_path_stl, bed_view_path_svg);
 }
 
 #if ENABLE_TEXTURES_FROM_SVG
-void Bed3D::render_prusa(GLCanvas3D* canvas, const std::string &key, bool bottom) const
+void Bed3D::render_bed(GLCanvas3D* canvas, const EType key, bool bottom) const
 {
-    std::string tex_path = resources_dir() + "/icons/bed/" + key;
-
-    std::string model_path = resources_dir() + "/models/" + key;
 
     // use higher resolution images if graphic card and opengl version allow
     GLint max_tex_size = GLCanvas3DManager::get_gl_info().get_max_tex_size();
 
-    std::string filename = tex_path + ".svg";
-
-    if ((m_texture.get_id() == 0) || (m_texture.get_source() != filename))
+    if ((m_texture.get_id() == 0) || (m_texture.get_source() != m_bed_view_path_svg))
     {
         // generate a temporary lower resolution texture to show while no main texture levels have been compressed
-        if (!m_temp_texture.load_from_svg_file(filename, false, false, false, max_tex_size / 8))
+        if (!m_temp_texture.load_from_svg_file(m_bed_view_path_svg, false, false, false, max_tex_size / 8))
         {
             render_custom();
             return;
         }
 
         // starts generating the main texture, compression will run asynchronously
-        if (!m_texture.load_from_svg_file(filename, true, true, true, max_tex_size))
+        if (!m_texture.load_from_svg_file(m_bed_view_path_svg, true, true, true, max_tex_size))
         {
             render_custom();
             return;
@@ -576,18 +543,23 @@ void Bed3D::render_prusa(GLCanvas3D* canvas, const std::string &key, bool bottom
 
     if (!bottom)
     {
-        filename = model_path + "_bed.stl";
-        if ((m_model.get_filename() != filename) && m_model.init_from_file(filename, true)) {
+        if ((m_model.get_filename() != m_bed_view_path_stl) && m_model.init_from_file(m_bed_view_path_stl, true)) {
             Vec3d offset = m_bounding_box.center() - Vec3d(0.0, 0.0, 0.5 * m_model.get_bounding_box().size()(2));
-            if (key == "mk2")
-                // hardcoded value to match the stl model
+            // hardcoded value to match the stl model
+            switch (key) {
+            case MK2:
                 offset += Vec3d(0.0, 7.5, -0.03);
-            else if (key == "mk3")
-                // hardcoded value to match the stl model
+                break;
+            case MK3:
                 offset += Vec3d(0.0, 5.5, 2.43);
-            else if (key == "sl1")
-                // hardcoded value to match the stl model
+                break;
+            case SL1:
                 offset += Vec3d(0.0, 0.0, -0.03);
+                break;
+            case CustomBedView:
+                offset += Vec3d(0.0, 0.0, -0.03);
+                break;
+            }
 
             m_model.center_around(offset);
 
@@ -623,7 +595,7 @@ void Bed3D::render_prusa(GLCanvas3D* canvas, const std::string &key, bool bottom
         if (bottom)
             glsafe(::glFrontFace(GL_CW));
 
-        render_prusa_shader(bottom);
+        render_bed_shader(bottom);
 
         if (bottom)
             glsafe(::glFrontFace(GL_CCW));
@@ -633,7 +605,7 @@ void Bed3D::render_prusa(GLCanvas3D* canvas, const std::string &key, bool bottom
     }
 }
 
-void Bed3D::render_prusa_shader(bool transparent) const
+void Bed3D::render_bed_shader(bool transparent) const
 {
     if (m_shader.get_shader_program_id() == 0)
         m_shader.init("printbed.vs", "printbed.fs");
@@ -681,90 +653,25 @@ void Bed3D::render_prusa_shader(bool transparent) const
         m_shader.stop_using();
     }
 }
-
-void Bed3D::render_custom_bed(bool bottom) const
-{
-    // use anisotropic filter if graphic card allows
-    GLfloat max_anisotropy = 0.0f;
-    if (glewIsSupported("GL_EXT_texture_filter_anisotropic"))
-        glsafe(::glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropy));
-
-    // use higher resolution images if graphic card allows
-    GLint max_tex_size;
-    glsafe(::glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex_size));
-
-    // clamp or the texture generation becomes too slow
-    max_tex_size = std::min(max_tex_size, 8192);
-
-    std::string filename = m_bed_view_prefix + ".svg";
-
-    if ((m_texture.get_id() == 0) || (m_texture.get_source() != filename))
-    {
-        if (!m_texture.load_from_svg_file(filename, true, max_tex_size))
-        {
-            render_custom();
-            return;
-        }
-
-        if (max_anisotropy > 0.0f)
-        {
-            glsafe(::glBindTexture(GL_TEXTURE_2D, m_texture.get_id()));
-            glsafe(::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy));
-            glsafe(::glBindTexture(GL_TEXTURE_2D, 0));
-        }
-    }
-
-    if (!bottom)
-    {
-        filename = m_bed_view_prefix + ".stl";
-        if ((m_model.get_filename() != filename) && m_model.init_from_file(filename, true)) {
-            Vec3d offset = m_bounding_box.center() - Vec3d(0.0, 0.0, 0.5 * m_model.get_bounding_box().size()(2));
-            offset += Vec3d(0.0, 0.0, -0.03);
-            m_model.center_around(offset);
-        }
-
-        if (!m_model.get_filename().empty())
-        {
-            glsafe(::glEnable(GL_LIGHTING));
-            m_model.render();
-            glsafe(::glDisable(GL_LIGHTING));
-        }
-    }
-
-    unsigned int triangles_vcount = m_triangles.get_vertices_count();
-    if (triangles_vcount > 0)
-    {
-        if (m_vbo_id == 0)
-        {
-            glsafe(::glGenBuffers(1, &m_vbo_id));
-            glsafe(::glBindBuffer(GL_ARRAY_BUFFER, m_vbo_id));
-            glsafe(::glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_triangles.get_vertices_data_size(), (const GLvoid*)m_triangles.get_vertices_data(), GL_STATIC_DRAW));
-            glsafe(::glBindBuffer(GL_ARRAY_BUFFER, 0));
-        }
-
-        glsafe(::glEnable(GL_DEPTH_TEST));
-        glsafe(::glDepthMask(GL_FALSE));
-
-        glsafe(::glEnable(GL_BLEND));
-        glsafe(::glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-
-        if (bottom)
-            glsafe(::glFrontFace(GL_CW));
-
-        render_prusa_shader(bottom);
-
-        if (bottom)
-            glsafe(::glFrontFace(GL_CCW));
-
-        glsafe(::glDisable(GL_BLEND));
-        glsafe(::glDepthMask(GL_TRUE));
-    }
-
-}
 #else
-void Bed3D::render_prusa(const std::string &key, float theta, bool useVBOs) const
+void Bed3D::render_bed(const EType key, float theta, bool useVBOs) const
 {
-    std::string tex_path = resources_dir() + "/icons/bed/" + key;
+    std::string tex_path = resources_dir() + "/icons/bed/default";
+    std::string model_path = resources_dir() + "/models/default";
+    switch (key) {
+    case MK2:
+        tex_path = resources_dir() + "/icons/bed/mk2";
+        model_path = resources_dir() + "/models/mk2";
+        break;
+    case MK3:
+        tex_path = resources_dir() + "/icons/bed/mk3";
+        model_path = resources_dir() + "/models/mk3";
+        break;
+    case SL1:
+        tex_path = resources_dir() + "/icons/bed/sl1";
+        model_path = resources_dir() + "/models/sl1";
+        break;
+    }
 
     // use higher resolution images if graphic card allows
     GLint max_tex_size;
@@ -778,7 +685,6 @@ void Bed3D::render_prusa(const std::string &key, float theta, bool useVBOs) cons
     else if (max_tex_size >= 4096)
         tex_path += "_4096";
 
-    std::string model_path = resources_dir() + "/models/" + key;
 
     // use anisotropic filter if graphic card allows
     GLfloat max_anisotropy = 0.0f;
@@ -824,130 +730,16 @@ void Bed3D::render_prusa(const std::string &key, float theta, bool useVBOs) cons
         filename = model_path + "_bed.stl";
         if ((m_model.get_filename() != filename) && m_model.init_from_file(filename, useVBOs)) {
             Vec3d offset = m_bounding_box.center() - Vec3d(0.0, 0.0, 0.5 * m_model.get_bounding_box().size()(2));
-            if (key == "mk2")
+            if (key == MK2)
                 // hardcoded value to match the stl model
                 offset += Vec3d(0.0, 7.5, -0.03);
-            else if (key == "mk3")
+            else if (key == MK3)
                 // hardcoded value to match the stl model
                 offset += Vec3d(0.0, 5.5, 2.43);
-            else if (key == "sl1")
+            else if (key == SL1)
                 // hardcoded value to match the stl model
                 offset += Vec3d(0.0, 0.0, -0.03);
-
-            m_model.center_around(offset);
-        }
-
-        if (!m_model.get_filename().empty())
-        {
-            glsafe(::glEnable(GL_LIGHTING));
-            m_model.render();
-            glsafe(::glDisable(GL_LIGHTING));
-        }
-    }
-
-    unsigned int triangles_vcount = m_triangles.get_vertices_count();
-    if (triangles_vcount > 0)
-    {
-        glsafe(::glEnable(GL_DEPTH_TEST));
-        glsafe(::glDepthMask(GL_FALSE));
-
-        glsafe(::glEnable(GL_BLEND));
-        glsafe(::glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-
-        glsafe(::glEnable(GL_TEXTURE_2D));
-        glsafe(::glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE));
-
-        glsafe(::glEnableClientState(GL_VERTEX_ARRAY));
-        glsafe(::glEnableClientState(GL_TEXTURE_COORD_ARRAY));
-
-        if (theta > 90.0f)
-            glsafe(::glFrontFace(GL_CW));
-
-        glsafe(::glBindTexture(GL_TEXTURE_2D, (theta <= 90.0f) ? (GLuint)m_top_texture.get_id() : (GLuint)m_bottom_texture.get_id()));
-        glsafe(::glVertexPointer(3, GL_FLOAT, 0, (GLvoid*)m_triangles.get_vertices()));
-        glsafe(::glTexCoordPointer(2, GL_FLOAT, 0, (GLvoid*)m_triangles.get_tex_coords()));
-        glsafe(::glDrawArrays(GL_TRIANGLES, 0, (GLsizei)triangles_vcount));
-
-        if (theta > 90.0f)
-            glsafe(::glFrontFace(GL_CCW));
-
-        glsafe(::glBindTexture(GL_TEXTURE_2D, 0));
-        glsafe(::glDisableClientState(GL_TEXTURE_COORD_ARRAY));
-        glsafe(::glDisableClientState(GL_VERTEX_ARRAY));
-
-        glsafe(::glDisable(GL_TEXTURE_2D));
-
-        glsafe(::glDisable(GL_BLEND));
-        glsafe(::glDepthMask(GL_TRUE));
-    }
-}
-
-void Bed3D::render_custom_bed(float theta, bool useVBOs) const
-{
-    // use higher resolution images if graphic card allows
-    GLint max_tex_size;
-    glsafe(::glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex_size));
-
-    // temporary set to lowest resolution
-    max_tex_size = 2048;
-
-    if (max_tex_size >= 8192)
-        tex_path += "_8192";
-    else if (max_tex_size >= 4096)
-        tex_path += "_4096";
-
-    // use anisotropic filter if graphic card allows
-    GLfloat max_anisotropy = 0.0f;
-    if (glewIsSupported("GL_EXT_texture_filter_anisotropic"))
-        glsafe(::glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropy));
-
-    std::string filename = m_bed_view_prefix + "_top.png";
-    if ((m_top_texture.get_id() == 0) || (m_top_texture.get_source() != filename))
-    {
-        if (!m_top_texture.load_from_file(filename, true))
-        {
-            render_custom();
-            return;
-        }
-
-        if (max_anisotropy > 0.0f)
-        {
-            glsafe(::glBindTexture(GL_TEXTURE_2D, m_top_texture.get_id()));
-            glsafe(::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy));
-            glsafe(::glBindTexture(GL_TEXTURE_2D, 0));
-        }
-    }
-
-    filename = m_bed_view_prefix + "_bottom.png";
-    if ((m_bottom_texture.get_id() == 0) || (m_bottom_texture.get_source() != filename))
-    {
-        if (!m_bottom_texture.load_from_file(filename, true))
-        {
-            render_custom();
-            return;
-        }
-
-        if (max_anisotropy > 0.0f)
-        {
-            glsafe(::glBindTexture(GL_TEXTURE_2D, m_bottom_texture.get_id()));
-            glsafe(::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy));
-            glsafe(::glBindTexture(GL_TEXTURE_2D, 0));
-        }
-    }
-
-    if (theta <= 90.0f)
-    {
-        filename = m_bed_view_prefix + ".stl";
-        if ((m_model.get_filename() != filename) && m_model.init_from_file(filename, useVBOs)) {
-            Vec3d offset = m_bounding_box.center() - Vec3d(0.0, 0.0, 0.5 * m_model.get_bounding_box().size()(2));
-            if (key == "mk2")
-                // hardcoded value to match the stl model
-                offset += Vec3d(0.0, 7.5, -0.03);
-            else if (key == "mk3")
-                // hardcoded value to match the stl model
-                offset += Vec3d(0.0, 5.5, 2.43);
-            else if (key == "sl1")
-                // hardcoded value to match the stl model
+            else
                 offset += Vec3d(0.0, 0.0, -0.03);
 
             m_model.center_around(offset);
@@ -1001,21 +793,6 @@ void Bed3D::render_custom_bed(float theta, bool useVBOs) const
 
 void Bed3D::render_custom() const
 {
-  printf("render_custom:\n");
-  auto bundle = wxGetApp().preset_bundle;
-  if (bundle != nullptr)
-  {
-    const Preset* curr = &bundle->printers.get_selected_preset();
-    if (curr->config.has("custom_bed_view")) {
-        printf("Config has custom_bed_view.\n");
-        const ConfigOptionString *opt = static_cast<const ConfigOptionString*>(curr->config.option("custom_bed_view"));
-        printf("STL File: %s\n", opt->value.c_str());
-    } else {
-        printf("Config does not have custom_bed_view.\n");
-    }
-  }
-                //if ((curr->vendor != nullptr) && (curr->vendor->name == "Prusa Research") && (shape == dynamic_cast<const ConfigOptionPoints*>(curr->config.option("bed_shape"))->values))
-
 #if ENABLE_TEXTURES_FROM_SVG
     m_texture.reset();
 #else
