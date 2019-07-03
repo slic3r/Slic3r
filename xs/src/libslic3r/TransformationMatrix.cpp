@@ -57,6 +57,25 @@ void TransformationMatrix::swap(TransformationMatrix &other)
     std::swap(this->m33, other.m33); std::swap(this->m34, other.m34);
 }
 
+bool TransformationMatrix::operator==(const TransformationMatrix &other) const
+{
+    double eps = 1e-14; 
+    bool is_equal = true;
+    is_equal &= (abs(this->m11 - other.m11) < eps);
+    is_equal &= (abs(this->m12 - other.m12) < eps);
+    is_equal &= (abs(this->m13 - other.m13) < eps);
+    is_equal &= (abs(this->m14 - other.m14) < eps);
+    is_equal &= (abs(this->m21 - other.m21) < eps);
+    is_equal &= (abs(this->m22 - other.m22) < eps);
+    is_equal &= (abs(this->m23 - other.m23) < eps);
+    is_equal &= (abs(this->m24 - other.m24) < eps);
+    is_equal &= (abs(this->m31 - other.m31) < eps);
+    is_equal &= (abs(this->m32 - other.m32) < eps);
+    is_equal &= (abs(this->m33 - other.m33) < eps);
+    is_equal &= (abs(this->m34 - other.m34) < eps);
+    return is_equal;
+}
+
 std::vector<double> TransformationMatrix::matrix3x4f() const
 {
     std::vector<double> out_arr(0);

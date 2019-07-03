@@ -17,6 +17,9 @@
     Clone<TransformationMatrix> inverse()
         %code{% RETVAL = THIS->inverse(); %};
 
+    bool equal(TransformationMatrix* other)
+        %code{% RETVAL = (*THIS == *other); %};
+
     double determinante();
 
     double m11()
