@@ -59,7 +59,7 @@ void TransformationMatrix::swap(TransformationMatrix &other)
 
 bool TransformationMatrix::operator==(const TransformationMatrix &other) const
 {
-    double eps = 1e-14; 
+    double const eps = EPSILON; 
     bool is_equal = true;
     is_equal &= (abs(this->m11 - other.m11) < eps);
     is_equal &= (abs(this->m12 - other.m12) < eps);
