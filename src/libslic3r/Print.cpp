@@ -201,7 +201,9 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             || opt_key == "min_skirt_length"
             || opt_key == "ooze_prevention") {
             steps.emplace_back(psSkirt);
-        } else if (opt_key == "brim_width"
+        } else if (
+            opt_key == "complete_objects"
+            || opt_key == "brim_width"
             || opt_key == "brim_ears"
             || opt_key == "brim_ears_max_angle") {
             steps.emplace_back(psBrim);
@@ -211,8 +213,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             || opt_key == "resolution") {
             osteps.emplace_back(posSlice);
         } else if (
-               opt_key == "complete_objects"
-            || opt_key == "filament_type"
+               opt_key == "filament_type"
             || opt_key == "filament_soluble"
             || opt_key == "first_layer_temperature"
             || opt_key == "filament_loading_speed"
@@ -1513,12 +1514,15 @@ void Print::process()
         obj->generate_support_material();
     if (this->set_started(psSkirt)) {
         m_skirt.clear();
+        for (PrintObject *obj : m_objects) {
+            obj->m_skirt.clear();
+        }
         if (this->has_skirt()) {
             this->set_status(88, L("Generating skirt"));
             if (config().complete_objects){
                 for (PrintObject *obj : m_objects){
                     //create a skirt "pattern" (one per object)
-                    const Points copies = obj->copies();
+                    const Points copies{ obj->copies() };
                     obj->m_copies.clear();
                     obj->m_copies.emplace_back();
                     this->_make_skirt({ obj }, obj->m_skirt);
@@ -1532,6 +1536,9 @@ void Print::process()
     }
 	if (this->set_started(psBrim)) {
         m_brim.clear();
+        for (PrintObject *obj : m_objects) {
+            obj->m_brim.clear();
+        }
         if (m_config.brim_width > 0) {
             this->set_status(88, L("Generating brim"));
             if (config().complete_objects){

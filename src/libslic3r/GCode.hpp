@@ -50,6 +50,7 @@ public:
 
     Polyline travel_to(const GCode &gcodegen, const Point &point);
 
+    bool is_init() { return (use_external_mp || use_external_mp_once) ? m_external_mp.get() != nullptr : m_layer_mp.get() != nullptr; }
 private:
     std::unique_ptr<MotionPlanner> m_external_mp;
     std::unique_ptr<MotionPlanner> m_layer_mp;

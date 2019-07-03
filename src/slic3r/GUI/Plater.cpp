@@ -614,10 +614,10 @@ struct Sidebar::priv
     PresetComboBox *combo_printer;
 
     wxBoxSizer *sizer_params;
-    FreqChangedParams   *frequently_changed_parameters;
-    ObjectList          *object_list;
-    ObjectManipulation  *object_manipulation;
-    ObjectSettings      *object_settings;
+    FreqChangedParams   *frequently_changed_parameters{ nullptr };
+    ObjectList          *object_list{ nullptr };
+    ObjectManipulation  *object_manipulation{ nullptr };
+    ObjectSettings      *object_settings{ nullptr };
     ObjectInfo *object_info;
     SlicedInfo *sliced_info;
 
@@ -626,9 +626,22 @@ struct Sidebar::priv
     wxButton *btn_send_gcode;
 
     priv(Plater *plater) : plater(plater) {}
+    ~priv();
 
     void show_preset_comboboxes();
 };
+
+Sidebar::priv::~priv()
+{
+    if (object_manipulation != nullptr)
+        delete object_manipulation;
+
+    if (object_settings != nullptr)
+        delete object_settings;
+
+    if (frequently_changed_parameters != nullptr)
+        delete frequently_changed_parameters;
+}
 
 void Sidebar::priv::show_preset_comboboxes()
 {
@@ -1261,6 +1274,7 @@ struct Plater::priv
     Preview *preview;
 
     BackgroundSlicingProcess    background_process;
+    bool suppressed_backround_processing_update { false };
     
     // A class to handle UI jobs like arranging and optimizing rotation.
     // These are not instant jobs, the user has to be informed about their
@@ -1513,6 +1527,7 @@ struct Plater::priv
     static const std::regex pattern_prusa;
 
     priv(Plater *q, MainFrame *main_frame);
+    ~priv();
 
     void update(bool force_full_scene_refresh = false);
     void select_view(const std::string& direction);
@@ -1695,7 +1710,11 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     panels.push_back(preview);
 
     this->background_process_timer.SetOwner(this->q, 0);
-    this->q->Bind(wxEVT_TIMER, [this](wxTimerEvent &evt) { this->update_restart_background_process(false, false); });
+    this->q->Bind(wxEVT_TIMER, [this](wxTimerEvent &evt)
+    {
+        if (!this->suppressed_backround_processing_update)
+            this->update_restart_background_process(false, false);
+    });
 
     update();
 
@@ -1776,6 +1795,12 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
 
     // updates camera type from .ini file
     camera.set_type(get_config("use_perspective_camera"));
+}
+
+Plater::priv::~priv()
+{
+    if (config != nullptr)
+        delete config;
 }
 
 void Plater::priv::update(bool force_full_scene_refresh)
@@ -3931,6 +3956,9 @@ void Plater::reslice()
     }
     else if (!p->background_process.empty() && !p->background_process.idle())
         p->show_action_buttons(true);
+
+    // update type of preview
+    p->preview->update_view_type();
 }
 
 void Plater::reslice_SLA_supports(const ModelObject &object)
@@ -4183,9 +4211,25 @@ void Plater::changed_objects(const std::vector<size_t>& object_idxs)
     this->p->schedule_background_process();
 }
 
-void Plater::schedule_background_process()
+void Plater::schedule_background_process(bool schedule/* = true*/)
 {
-    this->p->schedule_background_process();    
+    if (schedule)
+        this->p->schedule_background_process();
+
+    this->p->suppressed_backround_processing_update = false;
+}
+
+bool Plater::is_background_process_running() const 
+{
+    return this->p->background_process_timer.IsRunning();
+}
+
+void Plater::suppress_background_process(const bool stop_background_process)
+{
+    if (stop_background_process)
+        this->p->background_process_timer.Stop();
+
+    this->p->suppressed_backround_processing_update = true;
 }
 
 void Plater::fix_through_netfabb(const int obj_idx, const int vol_idx/* = -1*/) { p->fix_through_netfabb(obj_idx, vol_idx); }
@@ -4259,6 +4303,17 @@ bool Plater::can_copy_to_clipboard() const
         return false;
 
     return true;
+}
+
+SuppressBackgroundProcessingUpdate::SuppressBackgroundProcessingUpdate() :
+    m_was_running(wxGetApp().plater()->is_background_process_running())
+{
+    wxGetApp().plater()->suppress_background_process(m_was_running);
+}
+
+SuppressBackgroundProcessingUpdate::~SuppressBackgroundProcessingUpdate()
+{
+    wxGetApp().plater()->schedule_background_process(m_was_running);
 }
 
 }}    // namespace Slic3r::GUI

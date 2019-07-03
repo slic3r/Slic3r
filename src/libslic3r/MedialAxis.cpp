@@ -13,6 +13,7 @@
 #include <list>
 
 namespace Slic3r {
+    int count_error = 0;
     
 void
 MedialAxis::build(Polylines &polylines)
@@ -663,11 +664,26 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
             if (!finded) {
                 if (!this->expolygon.contains(line.b)) {
                     //it's outside!!!
-                    if (!this->expolygon.contains(line.a)) {
-                        std::cout << "Error, a line is formed that start outside a polygon, end outside of it and don't cross it!\n";
-                    } else {
-                        std::cout << "Error, a line is formed that start in a polygon, end outside of it and don't cross it!\n";
-                    }
+                    //if (!this->expolygon.contains(line.a)) {
+                    //    std::cout << "Error, a line is formed that start outside a polygon, end outside of it and don't cross it!\n";
+                    //} else {
+                    //    std::cout << "Error, a line is formed that start in a polygon, end outside of it and don't cross it!\n";
+                    //}
+
+                    //{
+                    //    std::stringstream stri;
+                    //    stri << "Error_" << (count_error++) << ".svg";
+                    //    SVG svg(stri.str());
+                    //    svg.draw(anchors);
+                    //    svg.draw(this->expolygon);
+                    //    svg.draw(line);
+                    //    svg.draw(polyline);
+                    //    svg.Close();
+                    //}
+                    //it's not possible to print that
+                    polyline.points.clear();
+                    polyline.width.clear();
+                    return;
                 }
                 new_back = line.b;
             }

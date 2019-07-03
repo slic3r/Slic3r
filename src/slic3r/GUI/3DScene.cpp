@@ -1670,7 +1670,8 @@ void ExtrusionToVert::use(const ExtrusionEntityCollection &collection) { for (co
 
 void _3DScene::extrusionentity_to_verts(const ExtrusionEntity &extrusion_entity, float print_z, const Point &copy, GLVolume &volume)
 {
-    extrusion_entity.visit(ExtrusionToVert(print_z, copy, volume));
+    ExtrusionToVert visitor(print_z, copy, volume);
+    extrusion_entity.visit(visitor);
 }
 
 void _3DScene::polyline3_to_verts(const Polyline3& polyline, double width, double height, GLVolume& volume)

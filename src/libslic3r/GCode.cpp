@@ -721,8 +721,12 @@ void GCode::_do_export(Print &print, FILE *file)
             this->m_ordered_objects.push_back(print_object);
             unsigned int copy_id = 0;
             for (const Point &pos : print_object->copies()) {
-                _write_format(file, "; object:{\"name\":\"%s\",\"id\":\"%s id:%d copy %d\",\"object_center\":[%f,%f,%f],\"boundingbox_center\":[%f,%f,%f],\"boundingbox_size\":[%f,%f,%f]}",
-                    print_object->model_object()->name.substr(0, print_object->model_object()->name.find(".", 0)), print_object->model_object()->name, this->m_ordered_objects.size() - 1, copy_id,
+                std::string object_name = print_object->model_object()->name;
+                size_t pos_dot = object_name.find(".", 0);
+                if (pos_dot != std::string::npos && pos_dot > 0)
+                    object_name = object_name.substr(0, pos_dot);
+                _write_format(file, "; object:{\"name\":\"%s\",\"id\":\"%s id:%d copy %d\",\"object_center\":[%f,%f,%f],\"boundingbox_center\":[%f,%f,%f],\"boundingbox_size\":[%f,%f,%f]}\n",
+                    object_name.c_str(), print_object->model_object()->name.c_str(), this->m_ordered_objects.size() - 1, copy_id,
                     print_object->model_object()->bounding_box().center().x(), print_object->model_object()->bounding_box().center().y(), 0,
                     print_object->model_object()->bounding_box().center().x(), print_object->model_object()->bounding_box().center().y(), print_object->model_object()->bounding_box().center().z(),
                     print_object->model_object()->bounding_box().size().x(), print_object->model_object()->bounding_box().size().y(), print_object->model_object()->bounding_box().size().z()
@@ -1422,7 +1426,9 @@ void GCode::process_layer(
         m_colorprint_heights.erase(m_colorprint_heights.begin());
         colorprint_change = true;
     }
-    if (colorprint_change && print.extruders().size()==1)
+
+    // we should add or not colorprint_change in respect to nozzle_diameter count instead of really used extruders count
+    if (colorprint_change && print./*extruders()*/config().nozzle_diameter.size()==1)
         gcode += "M600\n";
 
 
@@ -1658,25 +1664,33 @@ void GCode::process_layer(
             m_avoid_crossing_perimeters.use_external_mp = true;
             for (const ExtrusionEntity *ee : print.brim().entities)
                 gcode += this->extrude_entity(*ee, "brim", m_config.support_material_speed.value);
-            m_brim_done = true;
             m_avoid_crossing_perimeters.use_external_mp = false;
             // Allow a straight travel move to the first object point.
             m_avoid_crossing_perimeters.disable_once = true;
+            m_brim_done = true;
         }
-        //extrude object-only skirt & brim & first extruder
+        //extrude object-only skirt
+        if (single_object_idx != size_t(-1) && !layers.front().object()->skirt().empty()
+            && extruder_id == layer_tools.extruders.front()) {
+            const PrintObject *print_object = layers.front().object();
+            this->set_origin(unscale(print_object->copies()[single_object_idx]));
+            if (this->m_layer != nullptr && this->m_layer->id() < m_config.skirt_height) {
+                for (const ExtrusionEntity *ee : print_object->skirt().entities)
+                    gcode += this->extrude_entity(*ee, "skirt", m_config.support_material_speed.value);
+            }
+        }
+        //extrude object-only brim
         if (single_object_idx != size_t(-1) && !layers.front().object()->brim().empty()
             && extruder_id == layer_tools.extruders.front()) {
             const PrintObject *print_object = layers.front().object();
             this->set_origin(unscale(print_object->copies()[single_object_idx]));
-
-            for (const ExtrusionEntity *ee : print_object->skirt().entities)
-                gcode += this->extrude_entity(*ee, "skirt", m_config.support_material_speed.value);
-
-            m_avoid_crossing_perimeters.use_external_mp = true;
-            for (const ExtrusionEntity *ee : print_object->brim().entities)
-                gcode += this->extrude_entity(*ee, "brim", m_config.support_material_speed.value);
-            m_avoid_crossing_perimeters.use_external_mp = false;
-            m_avoid_crossing_perimeters.disable_once = true;
+            if (this->m_layer != nullptr && this->m_layer->id() == 0) {
+                m_avoid_crossing_perimeters.use_external_mp = true;
+                for (const ExtrusionEntity *ee : print_object->brim().entities)
+                    gcode += this->extrude_entity(*ee, "brim", m_config.support_material_speed.value);
+                m_avoid_crossing_perimeters.use_external_mp = false;
+                m_avoid_crossing_perimeters.disable_once = true;
+            }
         }
 
 
@@ -1696,7 +1710,7 @@ void GCode::process_layer(
                 if (print_object == nullptr)
                     // This layer is empty for this particular object, it has neither object extrusions nor support extrusions at this print_z.
                     continue;
-                std::cout << "Writing gcode for layer at " << layers[layer_id].print_z() << ", " << ((this->m_layer_index * 100) / this->m_layer_count) << "%" << std::endl;
+                //std::cout << "Writing gcode for layer at " << layers[layer_id].print_z() << ", " << ((this->m_layer_index * 100) / this->m_layer_count) << "%" << std::endl;
             
                 m_config.apply(print_object->config(), true);
                 m_layer = layers[layer_id].layer();
@@ -2808,7 +2822,8 @@ std::string GCode::travel_to(const Point &point, ExtrusionRole role, std::string
     // multi-hop travel path inside the configuration space
     if (needs_retraction
         && m_config.avoid_crossing_perimeters
-        && ! m_avoid_crossing_perimeters.disable_once) {
+        && ! m_avoid_crossing_perimeters.disable_once
+        && m_avoid_crossing_perimeters.is_init()) {
         travel = m_avoid_crossing_perimeters.travel_to(*this, point);
         
         // check again whether the new travel path still needs a retraction

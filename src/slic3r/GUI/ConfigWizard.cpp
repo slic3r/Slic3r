@@ -810,7 +810,7 @@ void ConfigWizardIndex::on_paint(wxPaintEvent & evt)
         const Item& item = items[i];
         unsigned x = em_w/2 + item.indent * em_w;
 
-        if (i == item_active || item_hover >= 0 && i == (size_t)item_hover) {
+        if (i == item_active || (item_hover >= 0 && i == (size_t)item_hover)) {
             dc.DrawBitmap(bullet_blue.bmp(), x, y + yoff_icon, false);
         }
         else if (i < item_active)  { dc.DrawBitmap(bullet_black.bmp(), x, y + yoff_icon, false); }

@@ -921,9 +921,9 @@ void Tab::update_preset_description_line()
 	wxString description_line = preset.is_default ?
 		_(L("It's a default preset.")) : preset.is_system ?
 		_(L("It's a system preset.")) : 
-		wxString::Format(_(L("Current preset is inherited from %s")), (parent == nullptr ? 
-													_(L("default preset"))+"." : 
-													":\n\t" + parent->name));
+		wxString::Format(_(L("Current preset is inherited from %s")), ((parent == nullptr) ? 
+													(_(L("default preset"))+".") : 
+                                                    (wxString( ":\n\t" + parent->name ))));
 	
 	if (preset.is_default || preset.is_system)
 		description_line += "\n\t" + _(L("It can't be deleted or modified. ")) + 
@@ -2432,6 +2432,40 @@ void TabPrinter::build_unregular_pages()
 			
 			auto optgroup = page->new_optgroup(_(L("Size")));
 			optgroup->append_single_option_line("nozzle_diameter", extruder_idx);
+
+            optgroup->m_on_change = [this, extruder_idx](const t_config_option_key& opt_key, boost::any value)
+            {
+                if (m_extruders_count > 1 && opt_key.find_first_of("nozzle_diameter") != std::string::npos)
+                {
+                    SuppressBackgroundProcessingUpdate sbpu;
+                    const double new_nd = boost::any_cast<double>(value);
+                    std::vector<double> nozzle_diameters = static_cast<const ConfigOptionFloats*>(m_config->option("nozzle_diameter"))->values;
+
+                    // if value was changed
+                    if (fabs(nozzle_diameters[extruder_idx == 0 ? 1 : 0] - new_nd) > EPSILON) 
+                    {
+                        const wxString msg_text = _(L("Do you want to change the diameter for all extruders?"));
+                        auto dialog = new wxMessageDialog(parent(), msg_text, _(L("Nozzle diameter")), wxICON_WARNING | wxYES_NO);
+
+                        DynamicPrintConfig new_conf = *m_config;
+                        if (dialog->ShowModal() == wxID_YES) {
+                            for (size_t i = 0; i < nozzle_diameters.size(); i++) {
+                                if (i==extruder_idx)
+                                    continue;
+                                nozzle_diameters[i] = new_nd;
+                            }
+                        }
+                        else 
+                            nozzle_diameters[extruder_idx] = nozzle_diameters[extruder_idx == 0 ? 1 : 0];
+
+                        new_conf.set_key_value("nozzle_diameter", new ConfigOptionFloats(nozzle_diameters));
+                        load_config(new_conf);
+                    }
+                }
+
+                update_dirty();
+                update();
+            };
 		
 			optgroup = page->new_optgroup(_(L("Layer height limits")));
 			optgroup->append_single_option_line("min_layer_height", extruder_idx);

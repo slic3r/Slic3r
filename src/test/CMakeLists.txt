@@ -20,6 +20,7 @@ set(SLIC3R_TEST_SOURCES
     libslic3r/test_thin.cpp
 	libslic3r/test_denserinfill.cpp
 	libslic3r/test_extrusion_entity.cpp
+	libslic3r/test_skirt_brim.cpp
 )
 
 if (NOT TARGET Catch)

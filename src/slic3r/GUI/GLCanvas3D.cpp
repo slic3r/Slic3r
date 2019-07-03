@@ -457,8 +457,10 @@ void GLCanvas3D::LayersEditing::_render_profile(const Rect& bar_rect) const
 {
     //FIXME show some kind of legend.
 
+    if (!m_slicing_parameters)
+        return;
+
     // Make the vertical bar a bit wider so the layer height curve does not touch the edge of the bar region.
-	assert(m_slicing_parameters != nullptr);
     float scale_x = bar_rect.get_width() / (float)(1.12 * m_slicing_parameters->max_layer_height);
     float scale_y = bar_rect.get_height() / m_object_max_z;
     float x = bar_rect.get_left() + (float)m_slicing_parameters->layer_height * scale_x;
@@ -910,7 +912,8 @@ GLCanvas3D::LegendTexture::LegendTexture()
 void GLCanvas3D::LegendTexture::fill_color_print_legend_values(const GCodePreviewData& preview_data, const GLCanvas3D& canvas, 
                                                                std::vector<std::pair<double, double>>& cp_legend_values)
 {
-    if (preview_data.extrusion.view_type == GCodePreviewData::Extrusion::ColorPrint) 
+    if (preview_data.extrusion.view_type == GCodePreviewData::Extrusion::ColorPrint && 
+        wxGetApp().extruders_edited_cnt() == 1) // show color change legend only for single-material presets
     {
         auto& config = wxGetApp().preset_bundle->project_config;
         const std::vector<double>& color_print_values = config.option<ConfigOptionFloats>("colorprint_heights")->values;
@@ -1222,6 +1225,9 @@ GLCanvas3D::GLCanvas3D(wxGLCanvas* canvas, Bed3D& bed, Camera& camera, GLToolbar
     , m_cursor_type(Standard)
     , m_color_by("volume")
     , m_reload_delayed(false)
+#if ENABLE_RENDER_PICKING_PASS
+    , m_show_picking_texture(false)
+#endif // ENABLE_RENDER_PICKING_PASS
     , m_render_sla_auxiliaries(true)
 {
     if (m_canvas != nullptr) {
@@ -1625,6 +1631,10 @@ void GLCanvas3D::render()
             _picking_pass();
     }
 
+#if ENABLE_RENDER_PICKING_PASS
+    if (!m_picking_enabled || !m_show_picking_texture)
+    {
+#endif // ENABLE_RENDER_PICKING_PASS
     // draw scene
     glsafe(::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
     _render_background();
@@ -1654,6 +1664,9 @@ void GLCanvas3D::render()
 
     _render_current_gizmo();
     _render_selection_sidebar_hints();
+#if ENABLE_RENDER_PICKING_PASS
+    }
+#endif // ENABLE_RENDER_PICKING_PASS
 
 #if ENABLE_SHOW_CAMERA_TARGET
     _render_camera_target();
@@ -2395,6 +2408,14 @@ void GLCanvas3D::on_char(wxKeyEvent& evt)
         case 'k': { m_camera.select_next_type(); m_dirty = true; break; }
         case 'O':
         case 'o': { set_camera_zoom(-1.0); break; }
+#if ENABLE_RENDER_PICKING_PASS
+        case 'T':
+        case 't': {
+            m_show_picking_texture = !m_show_picking_texture;
+            m_dirty = true; 
+            break;
+        }
+#endif // ENABLE_RENDER_PICKING_PASS
         case 'Z':
         case 'z': { m_selection.is_empty() ? zoom_to_volumes() : zoom_to_selection(); break; }
         default:  { evt.Skip(); break; }
