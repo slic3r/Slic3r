@@ -22,6 +22,9 @@ public:
     TransformationMatrix& operator= (TransformationMatrix other);
     void swap(TransformationMatrix &other);
 
+    bool operator== (const TransformationMatrix &other) const;
+    bool operator!= (const TransformationMatrix &other) const { return !(*this == other); };
+
     /// matrix entries 
     double m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34;
 
