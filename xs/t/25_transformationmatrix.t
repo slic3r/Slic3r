@@ -45,6 +45,15 @@ ok(abs($mat_rnd->determinante() - 0.5539) < 0.0001, 'determinante');
 my $inv_rnd = $mat_rnd->inverse();
 ok(check_elements($inv_rnd,0.78273,-0.4065,0.67967,-1.9868,0.54422,0.31157,1.6319,2.4697,-0.87509,-0.90741,0.46498,21.7955), 'inverse');
 
+my $vec1 = Slic3r::Pointf3->new(1,2,3);
+my $vec2 = Slic3r::Pointf3->new(-4,3,-2);
+$mat1->set_scale_xyz(2,3,4);
+ok(check_point(multiply_point($mat1,$vec1),2,6,12),'scale xyz');
+
+$mat1->set_mirror_vec($vec2);
+ok(check_point(multiply_point($mat1,$vec1),1.9231,0.7692,3.3077),'mirror arbituary axis');
+
+
 
 done_testing();
 
@@ -56,9 +65,19 @@ sub check_elements {
 
 sub multiply_point {
     my $trafo = $_[0];
-    my $x = $_[1];
-    my $y = $_[1];
-    my $z = $_[1];
+    my $x = 0;
+    my $y = 0;
+    my $z = 0;
+    if ($_[1]->isa('Slic3r::Pointf3')) {
+        $x = $_[1]->x();
+        $y = $_[1]->y();
+        $z = $_[1]->z();
+    } else {
+        $x = $_[1];
+        $y = $_[2];
+        $z = $_[3];
+    }
+    
     my $ret = Slic3r::Pointf3->new;
     $ret->set_x($trafo->m11()*$x + $trafo->m12()*$y + $trafo->m13()*$z + $trafo->m14());
     $ret->set_y($trafo->m21()*$x + $trafo->m22()*$y + $trafo->m23()*$z + $trafo->m24());
@@ -67,7 +86,7 @@ sub multiply_point {
 }
 
 sub check_point {
-    my $eps = 0.0001;
+    my $eps = 0.001;
     my $equal = 1;
     $equal = $equal & (abs($_[0]->x() - $_[1]) < $eps);
     $equal = $equal & (abs($_[0]->y() - $_[2]) < $eps);
