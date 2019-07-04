@@ -17,6 +17,16 @@
     Clone<TransformationMatrix> inverse()
         %code{% RETVAL = THIS->inverse(); %};
 
+    Clone<TransformationMatrix> multiplyLeft(TransformationMatrix* left)
+        %code{% RETVAL = THIS->multiplyLeft(*left); %};
+    void applyLeft(TransformationMatrix* left)
+        %code{% THIS->applyLeft(*left); %};
+
+    Clone<TransformationMatrix> multiplyRight(TransformationMatrix* right)
+        %code{% RETVAL = THIS->multiplyRight(*right); %};
+    void applyRight(TransformationMatrix* right)
+        %code{% THIS->applyRight(*right); %};
+
     bool equal(TransformationMatrix* other)
         %code{% RETVAL = (*THIS == *other); %};
 
