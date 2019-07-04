@@ -15,7 +15,36 @@ BEGIN {
 
 use Slic3r::XS;
 
-is(1, 1, 'Dummy test');
+my $mat_eye = Slic3r::TransformationMatrix->new;
+ok(check_elements($mat_eye,1,0,0,0,0,1,0,0,0,0,1,0), 'eye, init');
+
+my $mat1 = Slic3r::TransformationMatrix->new;
+$mat1->set_elements(1,2,3,4,5,6,7,8,9,10,11,12);
+my $mat2 = Slic3r::TransformationMatrix->new;
+$mat2->set_elements(1,4,7,10,2,5,8,11,3,6,9,12);
+
+ok(check_elements($mat1,1,2,3,4,5,6,7,8,9,10,11,12), 'set elements, 1');
+ok(check_elements($mat2,1,4,7,10,2,5,8,11,3,6,9,12), 'set elements, 2');
+
+my $mat_3 = Slic3r::TransformationMatrix->new;
+$mat_3->set_multiply($mat1,$mat2);
+ok(check_elements($mat_3,14,32,50,72,38,92,146,208,62,152,242,344), 'multiply: M1 * M2');
+
+$mat_3->set_multiply($mat2,$mat1);
+ok(check_elements($mat_3,84,96,108,130,99,114,129,155,114,132,150,180), 'multiply: M2 * M1');
+
+
+ok(check_elements($mat2->multiplyLeft($mat1),14,32,50,72,38,92,146,208,62,152,242,344), 'multiplyLeft');
+ok(check_elements($mat1->multiplyRight($mat2),14,32,50,72,38,92,146,208,62,152,242,344), 'multiplyRight');
+
+my $mat_rnd = Slic3r::TransformationMatrix->new;
+$mat_rnd->set_elements(0.9004,-0.2369,-0.4847,12.9383,-0.9311,0.531,-0.5026,7.7931,-0.1225,0.5904,0.2576,-7.316);
+
+ok(abs($mat_rnd->determinante() - 0.5539) < 0.0001, 'determinante');
+
+my $inv_rnd = $mat_rnd->inverse();
+ok(check_elements($inv_rnd,0.78273,-0.4065,0.67967,-1.9868,0.54422,0.31157,1.6319,2.4697,-0.87509,-0.90741,0.46498,21.7955), 'inverse');
+
 
 done_testing();
 
