@@ -16,10 +16,10 @@ BEGIN {
 use Slic3r::XS;
 use Slic3r::Geometry qw(X Y Z);
 
-my $mat_eye = Slic3r::TransformationMatrix->new;
-ok(check_elements($mat_eye,1,0,0,0,0,1,0,0,0,0,1,0), 'eye, init');
-
 my $mat1 = Slic3r::TransformationMatrix->new;
+
+ok(check_elements($mat1,1,0,0,0,0,1,0,0,0,0,1,0), 'eye, init');
+
 $mat1->set_elements(1,2,3,4,5,6,7,8,9,10,11,12);
 my $mat2 = Slic3r::TransformationMatrix->new;
 $mat2->set_elements(1,4,7,10,2,5,8,11,3,6,9,12);
