@@ -14,6 +14,7 @@ BEGIN {
 }
 
 use Slic3r::XS;
+use Slic3r::Geometry qw(X Y Z);
 
 my $mat_eye = Slic3r::TransformationMatrix->new;
 ok(check_elements($mat_eye,1,0,0,0,0,1,0,0,0,0,1,0), 'eye, init');
@@ -47,11 +48,28 @@ ok(check_elements($inv_rnd,0.78273,-0.4065,0.67967,-1.9868,0.54422,0.31157,1.631
 
 my $vec1 = Slic3r::Pointf3->new(1,2,3);
 my $vec2 = Slic3r::Pointf3->new(-4,3,-2);
+
+$mat1->set_scale_uni(3);
+ok(check_point(multiply_point($mat1,$vec1),3,6,9),'scale uniform');
+
 $mat1->set_scale_xyz(2,3,4);
 ok(check_point(multiply_point($mat1,$vec1),2,6,12),'scale xyz');
 
+$mat1->set_mirror_xyz(X);
+my $vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,-1,2,3),'mirror axis X');
+
+$mat1->set_mirror_xyz(Y);
+$vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,1,-2,3),'mirror axis Y');
+
+$mat1->set_mirror_xyz(Z);
+$vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,1,2,-3),'mirror axis Z');
+
 $mat1->set_mirror_vec($vec2);
-ok(check_point(multiply_point($mat1,$vec1),1.9231,0.7692,3.3077),'mirror arbituary axis');
+$vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,-0.1034,2.8276,2.4483),'mirror arbituary axis');
 
 
 
