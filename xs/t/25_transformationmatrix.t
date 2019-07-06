@@ -14,7 +14,7 @@ BEGIN {
 }
 
 use Slic3r::XS;
-use Slic3r::Geometry qw(X Y Z);
+use Slic3r::Geometry qw(X Y Z deg2rad);
 
 my $mat1 = Slic3r::TransformationMatrix->new;
 
@@ -70,7 +70,49 @@ ok(check_point($vecout,1,2,-3),'mirror axis Z');
 $mat1->set_mirror_vec($vec2);
 $vecout = multiply_point($mat1,$vec1);
 ok(check_point($vecout,-0.1034,2.8276,2.4483),'mirror arbituary axis');
+ok(abs($mat1->determinante() + 1) < 0.0001,'mirror arbituary axis - determinante');
 
+$mat1->set_translation_xyz(4,2,5);
+$vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,5,4,8),'translate xyz');
+
+$mat1->set_translation_vec($vec2);
+$vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,-3,5,1),'translate vector');
+
+$mat1->set_rotation_ang_xyz(deg2rad(90),X);
+$vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,1,-3,2),'rotation X');
+
+$mat1->set_rotation_ang_xyz(deg2rad(90),Y);
+$vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,3,2,-1),'rotation Y');
+
+$mat1->set_rotation_ang_xyz(deg2rad(90),Z);
+$vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,-2,1,3),'rotation Z');
+
+$mat1->set_rotation_ang_arb_axis(deg2rad(80),$vec2);
+$vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,3.0069,1.8341,-1.2627),'rotation arbituary axis');
+ok(abs($mat1->determinante() - 1) < 0.0001,'rotation arbituary axis - determinante');
+
+$mat1->set_rotation_quat(-0.4775,0.3581,-0.2387,0.7660);
+$vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,3.0069,1.8341,-1.2627),'rotation quaternion');
+ok(abs($mat1->determinante() - 1) < 0.0001,'rotation quaternion - determinante');
+
+$mat1->set_rotation_vec_vec($vec1,$vec2);
+$vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,-2.7792,2.0844,-1.3896),'rotation vector to vector 1');
+ok(abs($mat1->determinante() - 1) < 0.0001,'rotation vector to vector 1 - determinante');
+
+$mat1->set_rotation_vec_vec($vec1,$vec1->negative());
+$vecout = multiply_point($mat1,$vec1);
+ok(check_point($vecout,-1,-2,-3),'rotation vector to vector 2 - colinear, oppsite directions');
+
+$mat1->set_rotation_vec_vec($vec1,$vec1);
+ok(check_elements($mat1,1,0,0,0,0,1,0,0,0,0,1,0), 'rotation vector to vector 3 - colinear, same directions');
 
 
 done_testing();
