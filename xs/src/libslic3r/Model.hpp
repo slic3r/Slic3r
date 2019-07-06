@@ -589,6 +589,7 @@ class ModelInstance
     double rotation;            ///< Rotation around the Z axis, in radians around mesh center point.
     double scaling_factor;      ///< uniform scaling factor.
     Pointf offset;              ///< offset in unscaled coordinates.
+    TransformationMatrix additional_trafo; ///< 3mf instance transformation cannot be completely represented by the other properties
 
     /// Get the owning ModelObject
     /// \return ModelObject* pointer to the owner ModelObject
