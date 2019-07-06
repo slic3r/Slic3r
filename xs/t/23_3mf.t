@@ -3,13 +3,22 @@
 use strict;
 use warnings;
 
-use Slic3r::XS;
 use Test::More;
 use IO::Uncompress::Unzip qw(unzip $UnzipError) ;
 use Cwd qw(abs_path);
 use File::Basename qw(dirname);
 
 require Encode;
+
+#plan skip_all => 'temporarily disabled';
+
+BEGIN {
+    use FindBin;
+    use lib "$FindBin::Bin/../../lib";
+    use local::lib "$FindBin::Bin/../../local-lib";
+}
+
+use Slic3r::XS;
 
 # Removes '\n' and '\r\n' from a string.
 sub clean {
@@ -45,9 +54,6 @@ my $expected_relationships = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
     # Delete the created file.
     unlink($output_path);
 }
-done_testing();
-
-__END__
 
 # Test 2: Check read metadata/ objects/ components/ build items w/o or with tansformation matrics.
 {
