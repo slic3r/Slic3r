@@ -3,6 +3,7 @@
 
 #include "../IO.hpp"
 #include "../Zip/ZipArchive.hpp"
+#include "../TransformationMatrix.hpp"
 #include <cstdio>
 #include <string>
 #include <cstring>
@@ -145,8 +146,9 @@ struct TMFParserContext{
 
     /// Get scale, rotation and scale transformation from affine matrix.
     /// \param matrix string the 3D matrix where elements are separated by space.
-    /// \return vector<double> a vector contains [translation, scale factor, xRotation, yRotation, zRotation].
-    bool get_transformations(std::string matrix, std::vector<double>& transformations);
+    /// \return TransformationMatrix a matrix that contains the complete defined transformation.
+    /// \return optional vector<double> a vector contains [translation x, y, uniform scale factor, zRotation].
+    bool get_transformations(std::string matrix, TransformationMatrix& trafo, std::vector<double>* transformations = nullptr);
 
     /// Add a new volume to the current object.
     /// \param start_offset size_t the start index in the m_volume_facets vector.
@@ -155,15 +157,10 @@ struct TMFParserContext{
     /// \return ModelVolume* a pointer to the newly added volume.
     ModelVolume* add_volume(int start_offset, int end_offset, bool modifier);
 
-    /// Apply scale, rotate & translate to the given object.
-    /// \param object ModelObject*
-    /// \param transfornmations vector<int>
-    void apply_transformation(ModelObject* object, std::vector<double>& transformations);
-
     /// Apply scale, rotate & translate to the given instance.
     /// \param instance ModelInstance*
     /// \param transfornmations vector<int>
-    void apply_transformation(ModelInstance* instance, std::vector<double>& transformations);
+    void apply_transformation(ModelInstance* instance, const TransformationMatrix& complete_trafo, const std::vector<double>& single_transformations);
 };
 
 } }
