@@ -1186,7 +1186,8 @@ ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
 
 TransformationMatrix ModelInstance::get_trafo_matrix(bool dont_translate) const
 {
-    TransformationMatrix trafo = TransformationMatrix::mat_rotation(this->rotation, Axis::Z);
+    TransformationMatrix trafo = this->additional_trafo;
+    trafo.applyLeft(TransformationMatrix::mat_rotation(this->rotation, Axis::Z));
     trafo.applyLeft(TransformationMatrix::mat_scale(this->scaling_factor));
     if(!dont_translate)
     {
