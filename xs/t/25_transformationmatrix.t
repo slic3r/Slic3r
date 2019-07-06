@@ -6,7 +6,10 @@ use warnings;
 use Test::More;
 
 use Slic3r::XS;
-use Slic3r::Geometry qw(X Y Z deg2rad);
+
+use constant X => 0;
+use constant Y => 1;
+use constant Z => 2;
 
 my $mat1 = Slic3r::TransformationMatrix->new;
 
@@ -144,6 +147,10 @@ sub check_point {
     $equal = $equal & (abs($_[0]->y() - $_[2]) < $eps);
     $equal = $equal & (abs($_[0]->z() - $_[3]) < $eps);
     return $equal;
+}
+
+sub deg2rad {
+    return ($_[0] * 3.141592653589793238 / 180);
 }
 
 __END__
