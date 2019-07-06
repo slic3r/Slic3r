@@ -277,8 +277,6 @@ TransformationMatrix TransformationMatrix::mat_rotation(double angle_rad, const 
 
 TransformationMatrix TransformationMatrix::mat_rotation(Vectorf3 origin, Vectorf3 target)
 {
-    // TODO: there is a lot of float <-> double conversion going on here
-
     TransformationMatrix mat;
     double length_sq = origin.x*origin.x + origin.y*origin.y + origin.z*origin.z;
     double rec_length;
@@ -333,7 +331,7 @@ TransformationMatrix TransformationMatrix::mat_rotation(Vectorf3 origin, Vectorf
         }
     }
     else
-    {// not colinear, cross represents rotation axis so that angle is positive
+    {// not colinear, cross represents rotation axis so that angle is (0, 180)
         // dot's vectors have previously been normalized, so nothing to do except arccos
         double angle = acos(dot);
 
