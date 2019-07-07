@@ -331,6 +331,7 @@ class GCodeConfig : public virtual StaticPrintConfig
     ConfigOptionStrings             end_filament_gcode;
     ConfigOptionString              extrusion_axis;
     ConfigOptionFloats              extrusion_multiplier;
+    ConfigOptionBool                fan_percentage;
     ConfigOptionFloats              filament_diameter;
     ConfigOptionFloats              filament_density;
     ConfigOptionFloats              filament_cost;
@@ -375,6 +376,7 @@ class GCodeConfig : public virtual StaticPrintConfig
         OPT_PTR(end_filament_gcode);
         OPT_PTR(extrusion_axis);
         OPT_PTR(extrusion_multiplier);
+        OPT_PTR(fan_percentage);
         OPT_PTR(filament_diameter);
         OPT_PTR(filament_density);
         OPT_PTR(filament_cost);
