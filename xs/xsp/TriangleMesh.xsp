@@ -18,6 +18,8 @@
     float volume();
     void WriteOBJFile(std::string output_file);
     void align_to_bed();
+    void transform(TransformationMatrix* trafo)
+        %code{% THIS->transform(*trafo); %};
     TriangleMeshPtrs split();
     TriangleMeshPtrs cut_by_grid(Pointf* grid)
         %code{% RETVAL = THIS->cut_by_grid(*grid); %};
