@@ -334,6 +334,8 @@ ModelMaterial::attributes()
         %code%{ RETVAL = THIS->scaling_factor; %};
     Ref<Pointf> offset()
         %code%{ RETVAL = &THIS->offset; %};
+    Ref<TransformationMatrix> additional_trafo()
+        %code%{ RETVAL = &THIS->additional_trafo; %};
 
     void set_rotation(double val)
         %code%{ THIS->rotation = val; %};
