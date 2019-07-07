@@ -3,16 +3,8 @@
 use strict;
 use warnings;
 
-plan skip_all => 'temporarily disabled';
-
-BEGIN {
-    use FindBin;
-    use lib "$FindBin::Bin/../../lib";
-    use local::lib "$FindBin::Bin/../../local-lib";
-}
-
+use Test::More;
 use Slic3r::XS;
-use Test::More tests => 1;
 
 use constant Z => 2;
 
@@ -137,5 +129,7 @@ my $cube = {
         is $lower->facets_count, 2+12+6, 'lower mesh has the expected number of facets';
     }
 }
+
+done_testing();
 
 __END__
