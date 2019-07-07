@@ -818,6 +818,9 @@ TMFParserContext::apply_transformation(ModelInstance *instance, const Transforma
     instance->offset.x = single_transformations[0];
     instance->offset.y = single_transformations[1];
 
+    // Complete = Instance * Additional
+    // -> Instance^-1 * Complete = (Instance^-1 * Instance) * Additional
+    // -> Instance^-1 * Complete = Additional
     instance->additional_trafo = TransformationMatrix::multiply(
         instance->get_trafo_matrix().inverse(),
         complete_trafo);
