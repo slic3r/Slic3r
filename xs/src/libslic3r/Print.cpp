@@ -1359,7 +1359,7 @@ Print::_make_brim(size_t i)
         }
     }
     this->brim.push_back(tmp_brim);
-    if (this->brim.size() == (this->config.brim_layers - 1))
+    if (this->brim.size() == (this->config.brim_layers))
         this->state.set_done(psBrim);
 }
 
