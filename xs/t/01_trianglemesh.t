@@ -26,6 +26,7 @@ my $cube = {
 
 {
     my $m = Slic3r::TriangleMesh->new;
+    my $trafo = Slic3r::TransformationMatrix->new;
     $m->ReadFromPerl($cube->{vertices}, $cube->{facets});
     $m->repair;
     my ($vertices, $facets) = ($m->vertices, $m->facets);
@@ -38,7 +39,10 @@ my $cube = {
         my $m2 = $m->clone;
         is_deeply $m2->vertices, $cube->{vertices}, 'cloned vertices arrayref roundtrip';
         is_deeply $m2->facets, $cube->{facets}, 'cloned facets arrayref roundtrip';
-        $m2->scale(3);  # check that it does not affect $m
+        # check that it does not affect $m
+        $trafo->set_scale_uni(3);
+        $m2->transform($trafo);
+        ok $m2->stats->{volume} != $m->stats->{volume}, 'cloned transform not affecting original'
     }
     
     {
@@ -47,23 +51,9 @@ my $cube = {
         ok abs($stats->{volume} - 20*20*20) < 1E-2, 'stats.volume';
     }
     
-    $m->scale(2);
-    ok abs($m->stats->{volume} - 40*40*40) < 1E-2, 'scale';
-    
-    $m->scale_xyz(Slic3r::Pointf3->new(2,1,1));
-    ok abs($m->stats->{volume} - 2*40*40*40) < 1E-2, 'scale_xyz';
-    
-    $m->translate(5,10,0);
-    is_deeply $m->vertices->[0], [85,50,0], 'translate';
-    
-    $m->align_to_origin;
-    is_deeply $m->vertices->[2], [0,0,0], 'align_to_origin';
-    
-    is_deeply $m->size, [80,40,40], 'size';
-    
-    $m->scale_xyz(Slic3r::Pointf3->new(0.5,1,1));
-    $m->rotate(45, Slic3r::Point->new(20,20));
-    ok abs($m->size->[0] - sqrt(2)*40) < 1E-4, 'rotate';
+    $trafo->set_scale_uni(2);
+    $m->transform($trafo);
+    ok abs($m->stats->{volume} - 40*40*40) < 1E-2, 'transform';
     
     {
         my $meshes = $m->split;
@@ -110,7 +100,9 @@ my $cube = {
         my $slices = $m->slice([ 5, 10 ]);
         is $slices->[0][0]->area, $slices->[1][0]->area, 'slicing a top tangent plane includes its area';
     }
-    $m->mirror_z;
+    my $trafo = Slic3r::TransformationMatrix->new;
+    $trafo->set_mirror_xyz(Z);
+    $m->transform($trafo);
     {
         # this second test also checks that performing a second slice on a mesh after
         # a transformation works properly (shared_vertices is correctly invalidated);
