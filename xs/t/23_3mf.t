@@ -10,14 +10,6 @@ use File::Basename qw(dirname);
 
 require Encode;
 
-#plan skip_all => 'temporarily disabled';
-
-BEGIN {
-    use FindBin;
-    use lib "$FindBin::Bin/../../lib";
-    use local::lib "$FindBin::Bin/../../local-lib";
-}
-
 use Slic3r::XS;
 
 # Removes '\n' and '\r\n' from a string.
