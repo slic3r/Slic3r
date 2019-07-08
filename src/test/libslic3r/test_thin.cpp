@@ -1,5 +1,5 @@
 
-#define CATCH_CONFIG_DISABLE
+//#define CATCH_CONFIG_DISABLE
 
 #include <catch.hpp>
 #include "../test_data.hpp"
@@ -105,7 +105,7 @@ SCENARIO("thin walls: ")
                 Lines lines = res[0].lines();
                 double min_angle = 1, max_angle = -1;
                 //std::cout << "first angle=" << lines[0].ccw(lines[1].b) << "\n";
-                for (int idx = 2; idx < lines.size()-2; idx++){
+                for (int idx = 1; idx < lines.size()-1; idx++){
                     double angle = lines[idx - 1].ccw(lines[idx].b);
                     if (std::abs(angle) - EPSILON < 0) angle = 0;
                     //if (angle < 0) std::cout << unscale_(lines[idx - 1].a.x()) << ":" << unscale_(lines[idx - 1].a.y()) << " -> " << unscale_(lines[idx - 1].b.x()) << ":" << unscale_(lines[idx - 1].b.y()) << " -> " << unscale_(lines[idx].b.x()) << ":" << unscale_(lines[idx].b.y()) << "\n";

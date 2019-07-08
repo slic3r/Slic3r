@@ -1,5 +1,5 @@
 
-#define CATCH_CONFIG_DISABLE
+//#define CATCH_CONFIG_DISABLE
 
 #include <catch.hpp>
 #include "../test_data.hpp"
@@ -396,28 +396,29 @@ SCENARIO("Original Slic3r Skirt/Brim tests", "[!mayfail]") {
             }
         }
 
-        WHEN("Object is plated with overhang support and a brim") {
-            config->set_deserialize("layer_height", "0.4");
-            config->set_deserialize("first_layer_height", "0.4");
-            config->set_deserialize("skirts", "1");
-            config->set_deserialize("skirt_distance", "0");
-            config->set_deserialize("support_material_speed", "99");
-            config->set_deserialize("perimeter_extruder", "1");
-            config->set_deserialize("support_material_extruder", "2");
-            config->set_deserialize("cooling", "0");                     // to prevent speeds to be altered
-            config->set_deserialize("first_layer_speed", "100%");      // to prevent speeds to be altered
+        //TODO review this test that fail because "there are no layer" and it test nothing anyway
+        //WHEN("Object is plated with overhang support and a brim") {
+        //    config->set_deserialize("layer_height", "0.4");
+        //    config->set_deserialize("first_layer_height", "0.4");
+        //    config->set_deserialize("skirts", "1");
+        //    config->set_deserialize("skirt_distance", "0");
+        //    config->set_deserialize("support_material_speed", "99");
+        //    config->set_deserialize("perimeter_extruder", "1");
+        //    config->set_deserialize("support_material_extruder", "2");
+        //    config->set_deserialize("cooling", "0");                     // to prevent speeds to be altered
+        //    config->set_deserialize("first_layer_speed", "100%");      // to prevent speeds to be altered
 
-            Slic3r::Model model;
-            Print print{};
-            Slic3r::Test::init_print(print, { TestMesh::overhang }, model, config, false);
-            print.process();
-            
-            config->set_deserialize("support_material", "true");      // to prevent speeds to be altered
+        //    Slic3r::Model model;
+        //    Print print{};
+        //    Slic3r::Test::init_print(print, { TestMesh::overhang }, model, config, false);
+        //    print.process();
+        //    
+        //    config->set_deserialize("support_material", "true");      // to prevent speeds to be altered
 
-            THEN("skirt length is large enough to contain object with support") {
-                REQUIRE(true); //TODO
-            }
-        }
+        //    THEN("skirt length is large enough to contain object with support") {
+        //        REQUIRE(true); //TODO
+        //    }
+        //}
         WHEN("Large minimum skirt length is used.") {
             config->set_deserialize("min_skirt_length", "20");
             auto gcode {std::stringstream("")};

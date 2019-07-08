@@ -1,5 +1,5 @@
 
-#define CATCH_CONFIG_DISABLE
+//#define CATCH_CONFIG_DISABLE
 
 #include <catch.hpp>
 #include <string>
@@ -11,11 +11,12 @@ using namespace Slic3r;
 using namespace std::literals;
 
 SCENARIO("PrintObject: Perimeter generation") {
-    GIVEN("20mm cube and default config") {
+    GIVEN("20mm cube and default config & 0.3 layer height") {
         DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
         TestMesh m = TestMesh::cube_20x20x20;
         Model model{};
         config->set_key_value("fill_density", new ConfigOptionPercent(0));
+        config->set_deserialize("layer_height", "0.3");
 
         WHEN("make_perimeters() is called")  {
             Print print{};

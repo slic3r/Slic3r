@@ -294,7 +294,7 @@ void init_print(Print& print, std::initializer_list<TestMesh> meshes, Slic3r::Mo
     print.apply(model, *config);
 
     std::string err = print.validate();
-    std::cout << "validate result : " << err << ", mempty print? " << print.empty() << "\n";
+    //std::cout << "validate result : " << err << ", mempty print? " << print.empty() << "\n";
 
 }
 void init_print(Print& print, std::initializer_list<TriangleMesh> meshes, Slic3r::Model& model, DynamicPrintConfig* _config, bool comments) {

@@ -854,7 +854,6 @@ bool store_amf(std::string &path, Model *model, const DynamicPrintConfig *config
     mz_zip_archive archive;
     mz_zip_zero_struct(&archive);
 
-    mz_bool res = mz_zip_writer_init_file(&archive, path.c_str(), 0);
     if (!open_zip_writer(&archive, path)) return false;
 
     std::stringstream stream;

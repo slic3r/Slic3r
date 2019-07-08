@@ -1,5 +1,5 @@
 
-#define CATCH_CONFIG_DISABLE
+//#define CATCH_CONFIG_DISABLE
 
 #include <catch.hpp>
 #include "../test_data.hpp"
@@ -24,7 +24,6 @@ SCENARIO("denser infills: ")
             config->set_key_value("infill_dense", new ConfigOptionBool(true));
             config->set_key_value("infill_dense_algo", new ConfigOptionEnum<DenseInfillAlgo>(dfaEnlarged));
             config->save("C:\\Users\\Admin\\Desktop\\config_def.ini");
-            std::cout << "dense infill : " << config->opt_bool("infill_dense") << "\n";
             Slic3r::Test::init_print(print, { Slic3r::Test::TestMesh::di_5mm_center_notch }, model, config, false);
             print.process();
             PrintObject& object = *(print.objects().at(0));
@@ -66,7 +65,7 @@ SCENARIO("denser infills: ")
                     srfSparse = srfDense;
                     srfDense = &object.layers()[21]->regions()[0]->fill_surfaces.surfaces[0];
                 }
-                std::cout << "sparse area = " << unscaled(unscaled(srfSparse->area())) << " , dense area = " << unscaled(unscaled(srfDense->area())) << "\n";
+                //std::cout << "sparse area = " << unscaled(unscaled(srfSparse->area())) << " , dense area = " << unscaled(unscaled(srfDense->area())) << "\n";
                 REQUIRE(unscaled(unscaled(srfSparse->area())) > unscaled(unscaled(srfDense->area())));
                 REQUIRE(object.layers()[22]->regions()[0]->fills.entities.size() == 2); //sparse + solid-bridge
                 REQUIRE(object.layers()[22]->regions()[0]->fill_surfaces.surfaces.size() == 2);
@@ -94,7 +93,6 @@ SCENARIO("denser infills: ")
             config->set_key_value("infill_dense", new ConfigOptionBool(true));
             config->set_key_value("infill_dense_algo", new ConfigOptionEnum<DenseInfillAlgo>(dfaAutomatic));
             config->save("C:\\Users\\Admin\\Desktop\\config_def.ini");
-            std::cout << "dense infill : " << config->opt_bool("infill_dense") << "\n";
             Slic3r::Test::init_print(print, { Slic3r::Test::TestMesh::di_10mm_notch }, model, config, false);
             print.process();
             PrintObject& object = *(print.objects().at(0));
@@ -157,7 +155,6 @@ SCENARIO("denser infills: ")
             config->set_key_value("infill_dense", new ConfigOptionBool(true));
             config->set_key_value("infill_dense_algo", new ConfigOptionEnum<DenseInfillAlgo>(dfaAutoNotFull));
             config->save("C:\\Users\\Admin\\Desktop\\config_def.ini");
-            std::cout << "dense infill : " << config->opt_bool("infill_dense") << "\n";
             Slic3r::Test::init_print(print, { Slic3r::Test::TestMesh::di_10mm_notch }, model, config, false);
             print.process();
             PrintObject& object = *(print.objects().at(0));

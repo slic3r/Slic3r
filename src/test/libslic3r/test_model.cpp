@@ -1,5 +1,5 @@
 
-#define CATCH_CONFIG_DISABLE
+//#define CATCH_CONFIG_DISABLE
 
 #include <catch.hpp>
 #include "../../libslic3r/Config.hpp"
@@ -35,7 +35,8 @@ SCENARIO("Model construction") {
                 REQUIRE(mo->volumes.front()->is_modifier() == false);
             }
             THEN("Mesh is equivalent to input mesh.") {
-                REQUIRE(sample_mesh.vertices() == mo->volumes.front()->mesh.vertices());
+                TriangleMesh trimesh = mo->volumes.front()->mesh();
+                REQUIRE(sample_mesh.vertices() == trimesh.vertices());
             }
             ModelInstance* inst = mo->add_instance();
             inst->set_rotation(Vec3d(0,0,0));
