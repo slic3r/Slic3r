@@ -405,27 +405,26 @@ sub on_btn_lambda {
             $params->{"slab_h"},
         );
         # box sets the base coordinate at 0,0, move to center of plate
-        #$mesh->translate(
-        #    -$size->x*1.5/2.0,
-        #    -$size->y*1.5/2.0,  #**
-        #    0,
-        #);
+        my $trafo = Slic3r::TransformationMatrix->new;
+        $trafo->set_translation_xyz(-$size->x*1.5/2.0,-$size->y*1.5/2.0,0);
+        $mesh->transform($trafo);
     } else {
         return;
     }
 
     my $center = $self->{model_object}->bounding_box->center; 
-    if (!$Slic3r::GUI::Settings->{_}{autocenter}) {
-        #TODO what we really want to do here is just align the
-        # center of the modifier to the center of the part.
-        #$mesh->translate($center->x, $center->y, 0);
-    }
 
     $mesh->repair;
     my $new_volume = $self->{model_object}->add_volume(mesh => $mesh);
     $new_volume->set_modifier($is_modifier);
     $new_volume->set_name($name);
 
+    if (!$Slic3r::GUI::Settings->{_}{autocenter}) {
+        #TODO what we really want to do here is just align the
+        # center of the modifier to the center of the part.
+        $new_volume->translate($center->x, $center->y,0);
+    }
+    
     # set a default extruder value, since user can't add it manually
     $new_volume->config->set_ifndef('extruder', 0);
 
