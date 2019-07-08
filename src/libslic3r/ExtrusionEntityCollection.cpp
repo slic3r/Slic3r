@@ -226,7 +226,11 @@ ExtrusionEntityCollection::flatten(bool preserve_ordering) const
 void
 FlatenEntities::use(const ExtrusionEntityCollection &coll) {
     if (coll.no_sort && preserve_ordering) {
-        to_fill.append(FlatenEntities(coll, preserve_ordering).flatten(coll));
+        FlatenEntities unsortable(coll, preserve_ordering);
+        for (const ExtrusionEntity* entity : coll.entities) {
+            entity->visit(unsortable);
+        }
+        to_fill.append(std::move(unsortable.to_fill));
     } else {
         for (const ExtrusionEntity* entity : coll.entities) {
             entity->visit(*this);
@@ -235,9 +239,7 @@ FlatenEntities::use(const ExtrusionEntityCollection &coll) {
 }
 ExtrusionEntityCollection&&
 FlatenEntities::flatten(const ExtrusionEntityCollection &to_flatten) && {
-    for (const ExtrusionEntity* entity : to_flatten.entities) {
-        entity->visit(*this);
-    }
+    use(to_flatten);
     return std::move(to_fill);
 }
 

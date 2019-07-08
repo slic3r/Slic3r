@@ -1,5 +1,5 @@
 
-#define CATCH_CONFIG_DISABLE
+//#define CATCH_CONFIG_DISABLE
 
 #include <catch.hpp>
 #include <string>
@@ -8,7 +8,10 @@
 #include "../../libslic3r/ExtrusionEntityCollection.hpp"
 #include "../../libslic3r/ExtrusionEntity.hpp"
 #include "../../libslic3r/Point.hpp"
+#include "../../libslic3r/GCodeReader.hpp"
 #include <cstdlib>
+
+using namespace Slic3r;
 
 Slic3r::Point random_point(float LO=-50, float HI=50) {
     float x = LO + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(HI-LO)));
@@ -80,5 +83,83 @@ SCENARIO("ExtrusionEntityCollection: Polygon flattening") {
                 }
             }
         }
+    }
+}
+
+SCENARIO("ExtrusionEntityCollection: no sort") {
+    DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
+    config->set_key_value("gcode_comments", new ConfigOptionBool(true));
+    config->set_deserialize("skirts", "0");
+    Model model{};
+    Print print{};
+    Slic3r::Test::init_print(print, { Slic3r::Test::TestMesh::cube_20x20x20}, model, config);
+
+    std::map<double, bool> layers_with_skirt;
+    std::map<double, bool> layers_with_brim;
+    std::string gcode_filepath{ "" };
+
+    print.process();
+    //replace extrusion from sliceing by manual ones
+    print.objects()[0]->clear_layers();
+    Layer* customL_layer = print.objects()[0]->add_layer(0, 0.2, 0.2, 0.1);
+    LayerRegion* custom_region = customL_layer->add_region(print.regions()[0]);
+
+    ExtrusionPath path_peri(ExtrusionRole::erPerimeter);
+    path_peri.polyline.append(Point{ 0,0 });
+    path_peri.polyline.append(Point{ scale_(1),scale_(0) });
+    ExtrusionPath path_fill1(ExtrusionRole::erInternalInfill);
+    path_fill1.polyline.append(Point{ scale_(1),scale_(0) });
+    path_fill1.polyline.append(Point{ scale_(2),scale_(0) });
+    ExtrusionPath path_fill2(ExtrusionRole::erInternalInfill);
+    path_fill2.polyline.append(Point{ scale_(2),scale_(0) });
+    path_fill2.polyline.append(Point{ scale_(3),scale_(0) });
+    ExtrusionEntityCollection coll_fill;
+    coll_fill.append(path_fill2);
+    coll_fill.append(path_fill1);
+    ExtrusionEntityCollection coll_peri;
+    coll_peri.append(path_peri);
+
+
+    WHEN("sort") {
+        custom_region->fills.append(coll_fill);
+        custom_region->perimeters.append(coll_peri);
+        coll_fill.no_sort = false;
+        Slic3r::Test::gcode(gcode_filepath, print);
+        auto parser{ Slic3r::GCodeReader() };
+        std::vector<float> extrude_x;
+        parser.parse_file(gcode_filepath, [&extrude_x, &config](Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line)
+        {
+            if (line.comment() == " infill" || line.comment() == " perimeter" || line.comment() == " move to first infill point") {
+                extrude_x.push_back(line.x());
+            }
+        });
+        Slic3r::Test::clean_file(gcode_filepath, "gcode");
+        REQUIRE(extrude_x.size()==3);
+        REQUIRE(extrude_x[0] == 91);
+        REQUIRE(extrude_x[1] == 92);
+        REQUIRE(extrude_x[2] == 93);
+    }
+
+
+    WHEN("no sort") {
+        coll_fill.no_sort = true;
+        custom_region->fills.append(coll_fill);
+        custom_region->perimeters.append(coll_peri);
+        Slic3r::Test::gcode(gcode_filepath, print);
+        auto parser{ Slic3r::GCodeReader() };
+        std::vector<float> extrude_x;
+        parser.parse_file(gcode_filepath, [&extrude_x, &config](Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line)
+        {
+            if (line.comment() == " infill" || line.comment() == " perimeter" || line.comment() == " move to first infill point") {
+                extrude_x.push_back(line.x());
+            }
+        });
+        Slic3r::Test::clean_file(gcode_filepath, "gcode");
+        REQUIRE(extrude_x.size() == 5);
+        REQUIRE(extrude_x[0] == 91);
+        REQUIRE(extrude_x[1] == 92);
+        REQUIRE(extrude_x[2] == 93);
+        REQUIRE(extrude_x[3] == 91);
+        REQUIRE(extrude_x[4] == 92);
     }
 }

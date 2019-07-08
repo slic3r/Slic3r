@@ -518,9 +518,9 @@ public:
     virtual void use(const ExtrusionLoop &loop);
     virtual void use(const ExtrusionEntityCollection &collection);
     std::string str() { return ss.str(); }
-    std::string && print(ExtrusionEntity &entity) && {
+    std::string print(const ExtrusionEntity &entity) && {
         entity.visit(*this);
-        return std::move(ss.str());
+        return ss.str();
     }
 };
 
