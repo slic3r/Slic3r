@@ -767,7 +767,7 @@ std::vector<SegmentedIntersectionLine> FillRectilinear2::_vert_lines_for_polygon
 {
     // n_vlines = ceil(bbox_width / line_spacing)
     size_t  n_vlines = (bounding_box.max(0) - bounding_box.min(0) + line_spacing - 1) / line_spacing;
-    coord_t x0 = bounding_box.min(0);
+    coord_t x0 = bounding_box.min(0) + (bounding_box.max(0) - bounding_box.min(0) + line_spacing - n_vlines*line_spacing) / 2;
     if (params.full_infill())
         x0 += (line_spacing + SCALED_EPSILON) / 2;
 

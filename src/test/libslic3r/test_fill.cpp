@@ -1,5 +1,5 @@
 
-#define CATCH_CONFIG_DISABLE
+//#define CATCH_CONFIG_DISABLE
 
 #include <catch.hpp>
 #include "../test_data.hpp"
@@ -91,16 +91,18 @@ TEST_CASE("Fill: Pattern Path Length") {
 				e.contour = Slic3r::Polygon(test_square);
 				e.holes = Slic3r::Polygons(Slic3r::Polygon(test_hole));
                 Polylines paths {test(e, *filler, params_local)};
-				std::cout << "paths.size="<<paths.size() << "\n";
-				{
-				    std::stringstream stri;
-				    stri << "squarewithhole.svg";
-				    SVG svg(stri.str());
-				    svg.draw(paths);
-				    svg.draw(e);
-				    svg.Close();
-				}
-                REQUIRE((paths.size() >= 2 && paths.size() <= 3));
+				//std::cout << "paths.size="<<paths.size() << "\n";
+				//{
+				//    std::stringstream stri;
+				//    stri << "squarewithhole.svg";
+				//    SVG svg(stri.str());
+				//    svg.draw(paths);
+				//    svg.draw(e);
+				//    svg.Close();
+				//}
+                //path CAN loop around the hole
+                REQUIRE(paths.size() >= 1);
+                REQUIRE(paths.size() <= 2);
                 // paths don't cross hole
                 REQUIRE(diff_pl(paths, offset(e, (float)(+SCALED_EPSILON * 10))).size() == 0);
             }
