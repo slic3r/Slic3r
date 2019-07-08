@@ -3398,10 +3398,8 @@ sub make_thumbnail {
     
     my $mesh = $model->objects->[$obj_idx]->raw_mesh;
     # Apply x, y rotations and scaling vector in case of reading a 3MF model object.
-    #my $model_instance = $model->objects->[$obj_idx]->instances->[0];
-    #$mesh->rotate_x($model_instance->x_rotation);
-    #$mesh->rotate_y($model_instance->y_rotation);
-    #$mesh->scale_xyz($model_instance->scaling_vector);
+    my $model_instance = $model->objects->[$obj_idx]->instances->[0];
+    $mesh->transform($model_instance->additional_trafo);
 
     if ($mesh->facets_count <= 5000) {
         # remove polygons with area <= 1mm

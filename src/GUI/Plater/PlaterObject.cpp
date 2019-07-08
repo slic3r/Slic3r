@@ -16,6 +16,9 @@ Slic3r::ExPolygonCollection& PlaterObject::make_thumbnail(std::shared_ptr<Slic3r
     auto mesh {model->objects[obj_idx]->raw_mesh()};
     auto model_instance {model->objects[obj_idx]->instances[0]};
 
+    // Apply any x/y rotations and scaling vector if this came from a 3MF object.
+    mesh.transform(model_instance->additional_trafo);
+
     if (mesh.facets_count() <= 5000) {
         auto area_threshold {scale_(1.0)};
         ExPolygons tmp {};
