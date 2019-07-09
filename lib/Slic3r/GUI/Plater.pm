@@ -1042,14 +1042,29 @@ sub undo {
 
     my $type = $operation->{type};
 
-    if ($type eq "ROTATE") {
+    if ($type eq "TRANSFORM") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $trafo = $operation->{attributes}->[0];
+        $self->transform($trafo->inverse(), 'true'); # Apply inverse transformation.
+
+    } elsif ($type eq "ROTATE_Z") {
         my $object_id = $operation->{object_identifier};
         my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
 
         my $angle = $operation->{attributes}->[0];
-        my $axis = $operation->{attributes}->[1];
-        $self->rotate(-1 * $angle, $axis, 'true'); # Apply inverse transformation.
+        $self->rotate(-1 * $angle, Z, 'true'); # Apply inverse transformation.
+
+    } elsif ($type eq "SCALE_UNIFORM") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $new_scale = $operation->{attributes}->[0];
+        $self->changescale(undef, undef, $new_scale, 'true');
 
     } elsif ($type eq "INCREASE") {
         my $object_id = $operation->{object_identifier};
@@ -1067,14 +1082,6 @@ sub undo {
         my $copies = $operation->{attributes}->[0];
         $self->increase($copies, 'true');
 
-    } elsif ($type eq "MIRROR") {
-        my $object_id = $operation->{object_identifier};
-        my $obj_idx = $self->get_object_index($object_id);
-        $self->select_object($obj_idx);
-
-        my $axis = $operation->{attributes}->[0];
-        $self->mirror($axis, 'true');
-
     } elsif ($type eq "REMOVE") {
         my $_model = $operation->{attributes}->[0];
         $self->load_model_objects(@{$_model->objects});
@@ -1091,16 +1098,6 @@ sub undo {
         $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
         $self->{object_identifier}--;
         $self->{objects}->[-1]->identifier($operation->{object_identifier}); # Add the original assigned identifier.
-
-    } elsif ($type eq "CHANGE_SCALE") {
-        my $object_id = $operation->{object_identifier};
-        my $obj_idx = $self->get_object_index($object_id);
-        $self->select_object($obj_idx);
-
-        my $axis = $operation->{attributes}->[0];
-        my $tosize = $operation->{attributes}->[1];
-        my $saved_scale = $operation->{attributes}->[3];
-        $self->changescale($axis, $tosize, $saved_scale, 'true');
 
     } elsif ($type eq "RESET") {
         # Revert changes to the plater object identifier. It's modified when adding new objects only not when undo/redo is executed.
@@ -1145,14 +1142,29 @@ sub redo {
 
     my $type = $operation->{type};
 
-    if ($type eq "ROTATE") {
+    if ($type eq "TRANSFORM") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $trafo = $operation->{attributes}->[0];
+        $self->transform($trafo, 'true'); # Reapply transformation.
+
+    } elsif ($type eq "ROTATE_Z") {
         my $object_id = $operation->{object_identifier};
         my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
 
         my $angle = $operation->{attributes}->[0];
-        my $axis = $operation->{attributes}->[1];
-        $self->rotate($angle, $axis, 'true');
+        $self->rotate($angle, Z, 'true'); # Reapply transformation.
+
+    } elsif ($type eq "SCALE_UNIFORM") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $new_scale = $operation->{attributes}->[1];
+        $self->changescale(undef, undef, $new_scale, 'true');
 
     } elsif ($type eq "INCREASE") {
         my $object_id = $operation->{object_identifier};
@@ -1169,14 +1181,6 @@ sub redo {
 
         my $copies = $operation->{attributes}->[0];
         $self->decrease($copies, 'true');
-
-    } elsif ($type eq "MIRROR") {
-        my $object_id = $operation->{object_identifier};
-        my $obj_idx = $self->get_object_index($object_id);
-        $self->select_object($obj_idx);
-
-        my $axis = $operation->{attributes}->[0];
-        $self->mirror($axis, 'true');
 
     } elsif ($type eq "REMOVE") {
         my $object_id = $operation->{object_identifier};
@@ -1199,16 +1203,6 @@ sub redo {
             $self->{objects}->[-$obj_count]->identifier($obj_identifiers_start++);
             $obj_count--;
         }
-    } elsif ($type eq "CHANGE_SCALE") {
-        my $object_id = $operation->{object_identifier};
-        my $obj_idx = $self->get_object_index($object_id);
-        $self->select_object($obj_idx);
-
-        my $axis = $operation->{attributes}->[0];
-        my $tosize = $operation->{attributes}->[1];
-        my $old_scale = $operation->{attributes}->[2];
-        $self->changescale($axis, $tosize, $old_scale, 'true');
-
     } elsif ($type eq "RESET") {
         $self->reset('true');
     } elsif ($type eq "ADD") {
@@ -1699,24 +1693,30 @@ sub rotate {
         my $new_angle = deg2rad($angle);
         $_->set_rotation($_->rotation + $new_angle) for @{ $model_object->instances };
         $object->transform_thumbnail($self->{model}, $obj_idx);
+
+        if (!defined $dont_push) {
+            $self->add_undo_operation("ROTATE_Z", $object->identifier, $angle);
+        }
     } else {
         # rotation around X and Y needs to be performed on mesh
         # so we first apply any Z rotation
         $model_object->transform_by_instance($model_instance, 1);
+
+        $model_object->reset_undo_trafo();
         $model_object->rotate(deg2rad($angle), $axis);
         
         # realign object to Z = 0
         $model_object->center_around_origin;
         $self->make_thumbnail($obj_idx);
+
+        if (!defined $dont_push) {
+            $self->add_undo_operation("TRANSFORM", $object->identifier, $model_object->get_undo_trafo());
+        }
     }
 
     $model_object->update_bounding_box;
     # update print and start background processing
     $self->{print}->add_model_object($model_object, $obj_idx);
-
-    if (!defined $dont_push) {
-        $self->add_undo_operation("ROTATE", $object->identifier, $angle, $axis);
-    }
 
     $self->selection_changed;  # refresh info (size etc.)
     $self->on_model_change;
@@ -1734,6 +1734,7 @@ sub mirror {
     # apply Z rotation before mirroring
     $model_object->transform_by_instance($model_instance, 1);
     
+    $model_object->reset_undo_trafo();
     $model_object->mirror($axis);
     $model_object->update_bounding_box;
     
@@ -1746,7 +1747,37 @@ sub mirror {
     $self->{print}->add_model_object($model_object, $obj_idx);
 
     if (!defined $dont_push) {
-        $self->add_undo_operation("MIRROR", $object->identifier, $axis);
+        $self->add_undo_operation("TRANSFORM", $object->identifier, $model_object->get_undo_trafo());
+    }
+
+    $self->selection_changed;  # refresh info (size etc.)
+    $self->on_model_change;
+}
+
+sub transform {
+    my ($self, $trafo, $dont_push) = @_;
+    
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+    
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    
+    # apply Z rotation before mirroring
+    $model_object->transform_by_instance($model_instance, 1);
+    
+    $model_object->apply_transformation($trafo);
+    $model_object->update_bounding_box;
+    
+    # realign object to Z = 0
+    $model_object->center_around_origin;
+    $self->make_thumbnail($obj_idx);
+        
+    # update print and start background processing
+    $self->stop_background_process;
+    $self->{print}->add_model_object($model_object, $obj_idx);
+
+    if (!defined $dont_push) {
+        $self->add_undo_operation("TRANSFORM", $object->identifier, $trafo);
     }
 
     $self->selection_changed;  # refresh info (size etc.)
@@ -1802,9 +1833,17 @@ sub changescale {
         
         my $versor = [1,1,1];
         $versor->[$axis] = $scale/100;
+
+        $model_object->reset_undo_trafo();
         $model_object->scale_xyz(Slic3r::Pointf3->new(@$versor));
+
         # object was already aligned to Z = 0, so no need to realign it
         $self->make_thumbnail($obj_idx);
+
+        # Add the new undo operation.
+        if (!defined $dont_push) {
+            $self->add_undo_operation("TRANSFORM", $object->identifier, $model_object->get_undo_trafo());
+        }
     } else {
         if (!defined $saved_scale) {
             if ($tosize) {
@@ -1839,12 +1878,13 @@ sub changescale {
         $object->transform_thumbnail($self->{model}, $obj_idx);
 
         $scale *= 100;
+
+        # Add the new undo operation.
+        if (!defined $dont_push) {
+            $self->add_undo_operation("SCALE_UNIFORM", $object->identifier, $old_scale, $scale);
+        }
     }
 
-    # Add the new undo operation.
-    if (!defined $dont_push) {
-        $self->add_undo_operation("CHANGE_SCALE", $object->identifier, $axis, $tosize, $scale, $old_scale);
-    }
 
     $model_object->update_bounding_box;
     
