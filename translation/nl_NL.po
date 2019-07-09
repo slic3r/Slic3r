@@ -1,0 +1,2110 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Slic3r\n"
+"POT-Creation-Date: 2017-03-29 00:02-0600\n"
+"PO-Revision-Date: 2019-05-04 17:11+0200\n"
+"Last-Translator: \n"
+"Language-Team: Simon Tillema <simontillema@gmail.com>\n"
+"Language: nl_NL\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.2.1\n"
+"X-Poedit-Basepath: .\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-KeywordsList: __TRANS;__\n"
+
+#: xs/src/libslic3r/PrintConfig.cpp:18
+msgid "Rectilinear"
+msgstr "Rechtlijnig"
+
+#: xs/src/libslic3r/PrintConfig.cpp:19
+msgid "Concentric"
+msgstr "Concentrisch"
+
+#: xs/src/libslic3r/PrintConfig.cpp:20
+msgid "Hilbert Curve"
+msgstr "Hilbert-kromme"
+
+#: xs/src/libslic3r/PrintConfig.cpp:21
+msgid "Archimedean Chords"
+msgstr "Archimedische spiraal"
+
+#: xs/src/libslic3r/PrintConfig.cpp:22
+msgid "Octagram Spiral"
+msgstr "Octagramspiraal"
+
+#: xs/src/libslic3r/PrintConfig.cpp:27
+msgid "Avoid crossing perimeters"
+msgstr "Vermijd kruisende omtreklijnen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:28 xs/src/libslic3r/PrintConfig.cpp:77
+#: xs/src/libslic3r/PrintConfig.cpp:252 xs/src/libslic3r/PrintConfig.cpp:259
+#: xs/src/libslic3r/PrintConfig.cpp:544 xs/src/libslic3r/PrintConfig.cpp:712
+#: xs/src/libslic3r/PrintConfig.cpp:726 xs/src/libslic3r/PrintConfig.cpp:820
+#: xs/src/libslic3r/PrintConfig.cpp:842 xs/src/libslic3r/PrintConfig.cpp:900
+#: xs/src/libslic3r/PrintConfig.cpp:1080 xs/src/libslic3r/PrintConfig.cpp:1230
+#: xs/src/libslic3r/PrintConfig.cpp:1442 xs/src/libslic3r/PrintConfig.cpp:1503
+msgid "Layers and Perimeters"
+msgstr "Lagen en omtreklijnen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:29
+msgid ""
+"Optimize travel moves in order to minimize the crossing of perimeters. This "
+"is mostly useful with Bowden extruders which suffer from oozing. This "
+"feature slows down both the print and the G-code generation."
+msgstr ""
+"Optimaliseer de bewegingen om kruisende omtreklijnen te minimaliseren. Dit "
+"is handig bij Bowden extruders die gevoelig zijn voor lekken. Deze "
+"aanpassing vertraagd zowel de print als de gcode-generatie."
+
+#: xs/src/libslic3r/PrintConfig.cpp:34
+msgid "Bed shape"
+msgstr "Bedafmeting"
+
+#: xs/src/libslic3r/PrintConfig.cpp:44
+msgid "Has heated bed"
+msgstr "Heeft verwarmd bed"
+
+#: xs/src/libslic3r/PrintConfig.cpp:45
+msgid ""
+"Unselecting this will suppress automatic generation of bed heating gcode."
+msgstr ""
+"Dit deselecteren zal de automatische bedverwarming uitschakelen in de gcode."
+
+#: xs/src/libslic3r/PrintConfig.cpp:50 xs/src/libslic3r/PrintConfig.cpp:1428
+msgid "Other layers"
+msgstr "Overige lagen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:51
+msgid "Bed temperature for layers after the first one."
+msgstr "Bedtemperatuur voor de overige lagen na de eerste laag."
+
+#: xs/src/libslic3r/PrintConfig.cpp:53
+msgid "Bed temperature"
+msgstr "Bedtemperatuur"
+
+#: xs/src/libslic3r/PrintConfig.cpp:59
+msgid "Before layer change G-code"
+msgstr "Gcode die komt vóór de laagwisseling"
+
+#: xs/src/libslic3r/PrintConfig.cpp:60
+msgid ""
+"This custom code is inserted at every layer change, right before the Z move. "
+"Note that you can use placeholder variables for all Slic3r settings as well "
+"as [layer_num] and [layer_z]."
+msgstr ""
+"Deze aangepaste code wordt toegevoegd bij elke laagwisseling, vlak voor de Z-"
+"beweging. Je kunt hier variabelen gebruiken voor alle Slic3r-instellingen "
+"zoals [layer_num] en [layer_z]."
+
+#: xs/src/libslic3r/PrintConfig.cpp:68 xs/src/libslic3r/PrintConfig.cpp:76
+msgid "Bottom"
+msgstr "Bodem"
+
+#: xs/src/libslic3r/PrintConfig.cpp:69
+msgid "Bottom infill pattern"
+msgstr "Vulpatroon voor de bodem"
+
+#: xs/src/libslic3r/PrintConfig.cpp:70 xs/src/libslic3r/PrintConfig.cpp:216
+#: xs/src/libslic3r/PrintConfig.cpp:425 xs/src/libslic3r/PrintConfig.cpp:437
+#: xs/src/libslic3r/PrintConfig.cpp:475 xs/src/libslic3r/PrintConfig.cpp:482
+#: xs/src/libslic3r/PrintConfig.cpp:624 xs/src/libslic3r/PrintConfig.cpp:634
+#: xs/src/libslic3r/PrintConfig.cpp:651 xs/src/libslic3r/PrintConfig.cpp:664
+#: xs/src/libslic3r/PrintConfig.cpp:671 xs/src/libslic3r/PrintConfig.cpp:686
+#: xs/src/libslic3r/PrintConfig.cpp:1168 xs/src/libslic3r/PrintConfig.cpp:1185
+#: xs/src/libslic3r/PrintConfig.cpp:1482
+msgid "Infill"
+msgstr "Vulling"
+
+#: xs/src/libslic3r/PrintConfig.cpp:71
+msgid ""
+"Infill pattern for bottom layers. This only affects the external visible "
+"layer, and not its adjacent solid shells."
+msgstr ""
+"Vulpatroon voor bodemlagen. Dit is alleen van toepassing op de buitenste "
+"zichtbare lagen en niet zijn aanliggende dichte lagen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:78
+msgid "Number of solid layers to generate on bottom surfaces."
+msgstr "Aantal te genereren dichte lagen voor bodemvlakken."
+
+#: xs/src/libslic3r/PrintConfig.cpp:80
+msgid "Bottom solid layers"
+msgstr "Dichte bodemlagen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:85
+msgid "Bridge"
+msgstr "Brug"
+
+#: xs/src/libslic3r/PrintConfig.cpp:86 xs/src/libslic3r/PrintConfig.cpp:160
+#: xs/src/libslic3r/PrintConfig.cpp:514 xs/src/libslic3r/PrintConfig.cpp:625
+#: xs/src/libslic3r/PrintConfig.cpp:857
+msgid "Speed > Acceleration"
+msgstr "Snelheid > Acceleratie"
+
+#: xs/src/libslic3r/PrintConfig.cpp:87
+msgid ""
+"This is the acceleration your printer will use for bridges. Set zero to "
+"disable acceleration control for bridges."
+msgstr ""
+"Deze acceleratie zal je printer gebruiken voor bruggen. Zet op 0 om "
+"acceleratie-instellingen voor bruggen uit te zetten."
+
+#: xs/src/libslic3r/PrintConfig.cpp:94
+msgid "Bridges fan speed"
+msgstr "Ventilatorsnelheid voor bruggen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:95
+msgid "This fan speed is enforced during all bridges and overhangs."
+msgstr "Deze ventilatorsnelheid wordt aangehouden bij bruggen en overhangs."
+
+#: xs/src/libslic3r/PrintConfig.cpp:103
+msgid "Bridge flow ratio"
+msgstr "Brugextrusieverhouding"
+
+#: xs/src/libslic3r/PrintConfig.cpp:104 xs/src/libslic3r/PrintConfig.cpp:147
+#: xs/src/libslic3r/PrintConfig.cpp:678 xs/src/libslic3r/PrintConfig.cpp:1559
+msgid "Advanced"
+msgstr "Geavanceerd"
+
+#: xs/src/libslic3r/PrintConfig.cpp:105
+msgid ""
+"This factor affects the amount of plastic for bridging. You can decrease it "
+"slightly to pull the extrudates and prevent sagging, although default "
+"settings are usually good and you should experiment with cooling (use a fan) "
+"before tweaking this."
+msgstr ""
+"Deze factor beïnvloedt de hoeveelheid plastic voor bruggen. Deze kan je "
+"verminderen om het extrudaat te trekken en verzakkingen tegen te gaan, "
+"hoewel de standaardinstelling meestal goed staat. Je kunt beter eerst "
+"experimenteren met de koeling."
+
+#: xs/src/libslic3r/PrintConfig.cpp:111
+msgid "Bridges"
+msgstr "Bruggen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:113 xs/src/libslic3r/PrintConfig.cpp:240
+#: xs/src/libslic3r/PrintConfig.cpp:553 xs/src/libslic3r/PrintConfig.cpp:576
+#: xs/src/libslic3r/PrintConfig.cpp:688 xs/src/libslic3r/PrintConfig.cpp:744
+#: xs/src/libslic3r/PrintConfig.cpp:753 xs/src/libslic3r/PrintConfig.cpp:888
+#: xs/src/libslic3r/PrintConfig.cpp:1067 xs/src/libslic3r/PrintConfig.cpp:1105
+#: xs/src/libslic3r/PrintConfig.cpp:1156 xs/src/libslic3r/PrintConfig.cpp:1209
+#: xs/src/libslic3r/PrintConfig.cpp:1491 xs/src/libslic3r/PrintConfig.cpp:1512
+msgid "Speed"
+msgstr "Snelheid"
+
+#: xs/src/libslic3r/PrintConfig.cpp:114
+msgid "Speed for printing bridges."
+msgstr "Printsnelheid voor bruggen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:124
+msgid "Brim connections width"
+msgstr "Brim verbindingsbreedte"
+
+#: xs/src/libslic3r/PrintConfig.cpp:125 xs/src/libslic3r/PrintConfig.cpp:134
+#: xs/src/libslic3r/PrintConfig.cpp:701 xs/src/libslic3r/PrintConfig.cpp:779
+#: xs/src/libslic3r/PrintConfig.cpp:1118 xs/src/libslic3r/PrintConfig.cpp:1127
+#: xs/src/libslic3r/PrintConfig.cpp:1135
+msgid "Skirt and brim"
+msgstr "Skirt en brim"
+
+#: xs/src/libslic3r/PrintConfig.cpp:126
+msgid ""
+"If set to a positive value, straight connections will be built on the first "
+"layer between adjacent objects."
+msgstr ""
+"Als dit een positieve waarde is, zullen de verbindingen op de eerste laag "
+"tussen aangrenzende objecten worden gemaakt."
+
+#: xs/src/libslic3r/PrintConfig.cpp:133
+msgid "Exterior brim width"
+msgstr "Buitenste brim-breedte"
+
+#: xs/src/libslic3r/PrintConfig.cpp:135
+msgid ""
+"Horizontal width of the brim that will be printed around each object on the "
+"first layer."
+msgstr ""
+"Horizontale breedte van de brim die wordt geprint rond elk object op de "
+"eerste laag."
+
+#: xs/src/libslic3r/PrintConfig.cpp:142
+msgid "Compatible printers"
+msgstr "Compatibele printers"
+
+#: xs/src/libslic3r/PrintConfig.cpp:146
+msgid "Complete individual objects"
+msgstr "Voltooi individuele objecten"
+
+#: xs/src/libslic3r/PrintConfig.cpp:148
+msgid ""
+"When printing multiple objects or copies, this feature will complete each "
+"object before moving onto next one (and starting it from its bottom layer). "
+"This feature is useful to avoid the risk of ruined prints. Slic3r should "
+"warn and prevent you from extruder collisions, but beware."
+msgstr ""
+"Als meerdere objecten of kopies geprint worden zorgt deze feature dat de "
+"objecten afzonderlijk voltooit worden voordat bewogen wordt naar de volgende "
+"(om weer op de eerste laag te beginnen). Deze feature is handig om het "
+"risico van mislukte prints te verkleinen. Slic3r voorkomt botsingen van de "
+"extruder tegen eerder geprinte objecten en zal je daar ook voor waarschuwen, "
+"maar blijf alert."
+
+#: xs/src/libslic3r/PrintConfig.cpp:153
+msgid "Enable auto cooling"
+msgstr "Sta automatisch koelen toe"
+
+#: xs/src/libslic3r/PrintConfig.cpp:154
+msgid ""
+"This flag enables the automatic cooling logic that adjusts print speed and "
+"fan speed according to layer printing time."
+msgstr ""
+"Door dit aan te vinken zal automatisch gekoeld worden; hierdoor worden de "
+"print- en ventilatorsnelheid aangepast op basis van de laagprinttijd."
+
+#: xs/src/libslic3r/PrintConfig.cpp:159
+msgid "Default"
+msgstr "Standaard"
+
+#: xs/src/libslic3r/PrintConfig.cpp:161
+msgid ""
+"This is the acceleration your printer will be reset to after the role-"
+"specific acceleration values are used (perimeter/infill). Set zero to "
+"prevent resetting acceleration at all."
+msgstr ""
+"Dit is de acceleratie waarop je printer wordt ingesteld na een specifieke "
+"acceleratiewaarde (omtreklijnen/vulling). Stel in op 0 om geen "
+"acceleratiewaarden opnieuw in te stellen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:168
+msgid "Disable fan for the first"
+msgstr "Zet uit voor de eerste"
+
+#: xs/src/libslic3r/PrintConfig.cpp:169
+msgid ""
+"This disables the fan completely for the first N layers to aid in the "
+"adhesion of media to the bed. (default 3)"
+msgstr ""
+"Deze instelling zet de ventilator voor de eerste N lagen uit voor een betere "
+"bedhechting. (standaard 3)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:170
+msgid "layers"
+msgstr "lagen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:177
+msgid "Don't support bridges"
+msgstr "Gebruik geen support voor bruggen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:178 xs/src/libslic3r/PrintConfig.cpp:933
+#: xs/src/libslic3r/PrintConfig.cpp:942 xs/src/libslic3r/PrintConfig.cpp:1270
+#: xs/src/libslic3r/PrintConfig.cpp:1277 xs/src/libslic3r/PrintConfig.cpp:1287
+#: xs/src/libslic3r/PrintConfig.cpp:1295 xs/src/libslic3r/PrintConfig.cpp:1308
+#: xs/src/libslic3r/PrintConfig.cpp:1325 xs/src/libslic3r/PrintConfig.cpp:1346
+#: xs/src/libslic3r/PrintConfig.cpp:1355 xs/src/libslic3r/PrintConfig.cpp:1367
+#: xs/src/libslic3r/PrintConfig.cpp:1379 xs/src/libslic3r/PrintConfig.cpp:1395
+#: xs/src/libslic3r/PrintConfig.cpp:1406 xs/src/libslic3r/PrintConfig.cpp:1408
+#: xs/src/libslic3r/PrintConfig.cpp:1419
+msgid "Support material"
+msgstr "Supportmateriaal"
+
+#: xs/src/libslic3r/PrintConfig.cpp:179
+msgid ""
+"Experimental option for preventing support material from being generated "
+"under bridged areas."
+msgstr ""
+"Experimentele optie om supportmateriaal onder brugvlakken te vermijden."
+
+#: xs/src/libslic3r/PrintConfig.cpp:184
+msgid "Distance between copies"
+msgstr "Ruimte tussen kopieën"
+
+#: xs/src/libslic3r/PrintConfig.cpp:185
+msgid "Distance used for the auto-arrange feature of the plater."
+msgstr ""
+"Afstand die gebruikt wordt voor het automatisch rangschikken van de objecten."
+
+#: xs/src/libslic3r/PrintConfig.cpp:193 xs/src/libslic3r/PrintConfig.cpp:202
+msgid "End G-code"
+msgstr "Eind gcode"
+
+#: xs/src/libslic3r/PrintConfig.cpp:194
+msgid ""
+"This end procedure is inserted at the end of the output file. Note that you "
+"can use placeholder variables for all Slic3r settings."
+msgstr ""
+"Deze eindregels worden ingevoegd aan het eind van de gcode. Hier kunnen "
+"variabelen voor alle Slic3r-instellingen gebruikt worden."
+
+#: xs/src/libslic3r/PrintConfig.cpp:203
+msgid ""
+"This end procedure is inserted at the end of the output file, before the "
+"printer end gcode. Note that you can use placeholder variables for all "
+"Slic3r settings. If you have multiple extruders, the gcode is processed in "
+"extruder order."
+msgstr ""
+"Deze regels worden ingevoegd aan het eind van de gcode, maar voor de "
+"eindcode bij de printerinstellingen. Hier kan je variabelen gebruiken voor "
+"alle Slic3r-instellingen. Als je meerdere extruders hebt, worden de regels "
+"uitgevoerd op extruder-volgorde."
+
+#: xs/src/libslic3r/PrintConfig.cpp:215
+msgid "Top/bottom fill pattern"
+msgstr "Top/bodem vulpatroon"
+
+#: xs/src/libslic3r/PrintConfig.cpp:217
+msgid ""
+"Fill pattern for top/bottom infill. This only affects the external visible "
+"layer, and not its adjacent solid shells."
+msgstr ""
+"Vulpatroon voor de top/bodem vulling. Dit heeft alleen invloed op de "
+"buitenste zichtbare laag, maar niet op de aangrenzende dichte lagen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:224 xs/src/libslic3r/PrintConfig.cpp:237
+msgid "↳ external"
+msgstr "↳ buitenste"
+
+#: xs/src/libslic3r/PrintConfig.cpp:225
+msgid "External perimeters extrusion width"
+msgstr "Extrusiebreedte van de buitenste omtreklijnen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:227 xs/src/libslic3r/PrintConfig.cpp:323
+#: xs/src/libslic3r/PrintConfig.cpp:532 xs/src/libslic3r/PrintConfig.cpp:653
+#: xs/src/libslic3r/PrintConfig.cpp:875 xs/src/libslic3r/PrintConfig.cpp:1196
+#: xs/src/libslic3r/PrintConfig.cpp:1327 xs/src/libslic3r/PrintConfig.cpp:1470
+msgid "Extrusion Width"
+msgstr "Extrusiebreedte"
+
+#: xs/src/libslic3r/PrintConfig.cpp:228
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width for external "
+"perimeters. If auto is chosen, a value will be used that maximizes accuracy "
+"of the external visible surfaces. If expressed as percentage (for example "
+"200%) it will be computed over layer height."
+msgstr ""
+"Stel dit in op een niet-0 waarde om handmatig de extrusiebreedte voor "
+"buitenste omtreklijnen aan te passen. Als de waarde 0 is, wordt een waarde "
+"genomen voor maximale nauwkeurigheid van buitenste zichtbare vlakken. Als de "
+"waarde een percentage is (bijvoorbeeld 200%), wordt deze genomen over de "
+"laagdikte."
+
+#: xs/src/libslic3r/PrintConfig.cpp:238
+msgid "External perimeters speed"
+msgstr "Snelheid van de buitenste omtreklijnen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:241
+msgid ""
+"This separate setting will affect the speed of external perimeters (the "
+"visible ones). If expressed as percentage (for example: 80%) it will be "
+"calculated on the perimeters speed setting above."
+msgstr ""
+"Deze specifieke instelling zorgt voor de snelheid van buitenste "
+"omtreklijnen. Als de waarde een percentage is (bijvoorbeeld 80%) wordt deze "
+"genomen over de snelheid van de omtreklijnen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:251
+msgid "External perimeters first"
+msgstr "Buitenste omtreklijnen eerst"
+
+#: xs/src/libslic3r/PrintConfig.cpp:253
+msgid ""
+"Print contour perimeters from the outermost one to the innermost one instead "
+"of the default inverse order."
+msgstr ""
+"Print de buitenste omtreklijnen eerder dan de binnenste in plaats van "
+"andersom."
+
+#: xs/src/libslic3r/PrintConfig.cpp:258
+msgid "Extra perimeters if needed"
+msgstr "Extra omtreklijnen als dat nodig is"
+
+#: xs/src/libslic3r/PrintConfig.cpp:260
+msgid "Add more perimeters when needed for avoiding gaps in sloping walls."
+msgstr ""
+"Voeg meer omtreklijnen toe als dat nodig is voor het voorkomen van gaten in "
+"hellende wanden."
+
+#: xs/src/libslic3r/PrintConfig.cpp:266 xs/src/libslic3r/PrintConfig.cpp:925
+msgid "Extruder"
+msgstr "Extruder"
+
+#: xs/src/libslic3r/PrintConfig.cpp:267 xs/src/libslic3r/PrintConfig.cpp:644
+#: xs/src/libslic3r/PrintConfig.cpp:828 xs/src/libslic3r/PrintConfig.cpp:865
+#: xs/src/libslic3r/PrintConfig.cpp:1177 xs/src/libslic3r/PrintConfig.cpp:1238
+#: xs/src/libslic3r/PrintConfig.cpp:1318 xs/src/libslic3r/PrintConfig.cpp:1338
+msgid "Extruders"
+msgstr "Extruders"
+
+#: xs/src/libslic3r/PrintConfig.cpp:268
+msgid ""
+"The extruder to use (unless more specific extruder settings are specified)."
+msgstr "De te gebruiken extruder (tenzij anders staat ingesteld)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:278
+msgid "Height"
+msgstr "Hoogte"
+
+#: xs/src/libslic3r/PrintConfig.cpp:279
+msgid ""
+"Set this to the vertical distance between your nozzle tip and (usually) the "
+"X carriage rods. In other words, this is the height of the clearance "
+"cylinder around your extruder, and it represents the maximum depth the "
+"extruder can peek before colliding with other printed objects."
+msgstr ""
+"Stel dit in als verticale afstand tussen de nozzle-punt en de geleidestangen "
+"van de X-as. In andere woorden; dit is de hoogte van de vrijloopcilinder "
+"rond de extruder en geeft de maximale diepte weer die de extruder kan halen "
+"zonder te botsen met eerder geprinte objecten."
+
+#: xs/src/libslic3r/PrintConfig.cpp:286
+msgid "Radius"
+msgstr "Straal"
+
+#: xs/src/libslic3r/PrintConfig.cpp:287
+msgid ""
+"Set this to the clearance radius around your extruder. If the extruder is "
+"not centered, choose the largest value for safety. This setting is used to "
+"check for collisions and to display the graphical preview in the plater."
+msgstr ""
+"Stel dit in als vrijloopstraal rond de extruder. Kies de hoogste waarde voor "
+"de veiligheid als de extruder niet is gecentreerd. Deze instelling wordt "
+"gebruikt om te controleren op botsingen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:294
+msgid "Extruder offset"
+msgstr "Extrudercompensatie"
+
+#: xs/src/libslic3r/PrintConfig.cpp:295
+msgid ""
+"If your firmware doesn't handle the extruder displacement you need the G-"
+"code to take it into account. This option lets you specify the displacement "
+"of each extruder with respect to the first one. It expects positive "
+"coordinates (they will be subtracted from the XY coordinate)."
+msgstr ""
+"Als je firmware extrudercompensatie niet toestaat, kan daar rekening mee "
+"gehouden worden in de gcode. Met deze optie kan je de compensatie per "
+"extruder specificeren op basis van de eerste extruder. Hiervoor zijn "
+"positieve coördinaten nodig (die worden van de X- en Y-coördinaten "
+"afgetrokken)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:305
+msgid "Extrusion axis"
+msgstr "Extrusie-as"
+
+#: xs/src/libslic3r/PrintConfig.cpp:306
+msgid ""
+"Use this option to set the axis letter associated to your printer's extruder "
+"(usually E but some printers use A)."
+msgstr ""
+"Gebruik deze optie om de as-naam van de extruder in te stellen (normaal "
+"gesproken E, maar soms A)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:311
+msgid "Extrusion multiplier"
+msgstr "Extrusie vermenigvuldigingsfactor"
+
+#: xs/src/libslic3r/PrintConfig.cpp:312
+msgid ""
+"This factor changes the amount of flow proportionally. You may need to tweak "
+"this setting to get nice surface finish and correct single wall widths. "
+"Usual values are between 0.9 and 1.1. If you think you need to change this "
+"more, check filament diameter and your firmware E steps."
+msgstr ""
+"Deze factor verandert het stroomdebiet proportioneel. Je kunt deze "
+"fijnstellen om een mooi oppervlak en dunne wanden te krijgen. Waarden liggen "
+"normaal gesproken tussen 0.9 en 1.1. Check eventueel de filamentdiameter en "
+"de extruderstappen (uit de firmware) als je denkt dat dit aangepast moet "
+"worden."
+
+#: xs/src/libslic3r/PrintConfig.cpp:321
+msgid "Default extrusion width"
+msgstr "Standaard extrusiebreedte"
+
+#: xs/src/libslic3r/PrintConfig.cpp:324
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width. If expressed "
+"as percentage (for example: 230%) it will be computed over layer height."
+msgstr ""
+"Maak deze waarde niet-0 om handmatig de extrusiebreedte in te stellen. Als "
+"de waarde een percentage is (bijvoorbeeld 230%), wordt deze genomen over de "
+"laagdikte."
+
+#: xs/src/libslic3r/PrintConfig.cpp:333
+msgid "Keep fan always on"
+msgstr "Laat ventilator altijd aan"
+
+#: xs/src/libslic3r/PrintConfig.cpp:334
+msgid ""
+"If this is enabled, fan will never be disabled and will be kept running at "
+"least at its minimum speed. Useful for PLA, harmful for ABS."
+msgstr ""
+"Als dit is ingeschakeld zal de ventilator nooit uitgezet worden, maar "
+"tenminste de ingestelde minimale snelheid aanhouden."
+
+#: xs/src/libslic3r/PrintConfig.cpp:339
+msgid "Enable fan if layer print time is below"
+msgstr "Schakel de ventilator in bij een printtijd korter dan"
+
+#: xs/src/libslic3r/PrintConfig.cpp:340
+msgid ""
+"If layer print time is estimated below this number of seconds, fan will be "
+"enabled and its speed will be calculated by interpolating the minimum and "
+"maximum speeds."
+msgstr ""
+"Als de printtijd voor een laag onder dit aantal seconden komt, zal de "
+"ventilator aangezet worden en wordt de snelheid berekent door te "
+"interpoleren tussen de minimale en maximale snelheid."
+
+#: xs/src/libslic3r/PrintConfig.cpp:349
+msgid "Color"
+msgstr "Kleur"
+
+#: xs/src/libslic3r/PrintConfig.cpp:350
+msgid "This is only used in the Slic3r interface as a visual help."
+msgstr ""
+"Dit wordt alleen gebruikt in de Slic3r interface als een visueel hulpmiddel."
+
+#: xs/src/libslic3r/PrintConfig.cpp:360
+msgid "Filament notes"
+msgstr "Filamentopmerkingen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:361
+msgid "You can put your notes regarding the filament here."
+msgstr "Hier kun je opmerkingen over het filament plaatsen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:373 xs/src/libslic3r/PrintConfig.cpp:752
+msgid "Max volumetric speed"
+msgstr "Maximale volumetrische snelheid"
+
+#: xs/src/libslic3r/PrintConfig.cpp:374
+msgid ""
+"Maximum volumetric speed allowed for this filament. Limits the maximum "
+"volumetric speed of a print to the minimum of print and filament volumetric "
+"speed. Set to zero for no limit."
+msgstr ""
+"Maximale volumetrische snelheid is toegestaan voor dit filament. Beperkt de "
+"maximale volumetrische snelheid van een print tot het minimum van de "
+"maximale print en filament volumetrische snelheid. Stel in op 0 voor geen "
+"limiet."
+
+#: xs/src/libslic3r/PrintConfig.cpp:385
+msgid "Diameter"
+msgstr "Diameter"
+
+#: xs/src/libslic3r/PrintConfig.cpp:386
+msgid ""
+"Enter your filament diameter here. Good precision is required, so use a "
+"caliper and do multiple measurements along the filament, then compute the "
+"average."
+msgstr ""
+"Stel hier de filamentdiameter in. De juiste precisie is benodigd. Gebruik "
+"daarom een schuifmaat en doe meerdere metingen over het hele filament. "
+"Bereken vervolgens het gemiddelde."
+
+#: xs/src/libslic3r/PrintConfig.cpp:397
+msgid "Density"
+msgstr "Dichtheid"
+
+#: xs/src/libslic3r/PrintConfig.cpp:398
+msgid ""
+"Enter your filament density here. This is only for statistical information. "
+"A decent way is to weigh a known length of filament and compute the ratio of "
+"the length to volume. Better is to calculate the volume directly through "
+"displacement."
+msgstr ""
+"Stel hier de dichtheid van het filament in. Dit is slechts voor de "
+"statistische informatie. Dit kan gedaan worden met de formule: dichtheid = "
+"massa [gram] / volume [cm^3]. Het volume kan berekend worden met de formule: "
+"volume [cm^3] = diameter [cm] ^2 x pi / 4 x lengte (cm)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:409
+msgid "Cost"
+msgstr "Kosten"
+
+#: xs/src/libslic3r/PrintConfig.cpp:410
+msgid ""
+"Enter your filament cost per kg here. This is only for statistical "
+"information."
+msgstr ""
+"Stel hier de filamentkosten per kilogram in. Dit is alleen voor statistische "
+"informatie."
+
+# Set this to be the local currency symbol.
+#: xs/src/libslic3r/PrintConfig.cpp:411
+msgid "money/kg"
+msgstr "€/kg"
+
+#: xs/src/libslic3r/PrintConfig.cpp:424
+msgid "Fill angle"
+msgstr "Vullingshoek"
+
+#: xs/src/libslic3r/PrintConfig.cpp:426
+msgid ""
+"Default base angle for infill orientation. Cross-hatching will be applied to "
+"this. Bridges will be infilled using the best direction Slic3r can detect, "
+"so this setting does not affect them."
+msgstr ""
+"Standaard basishoek voor de vullingsoriëntatie. Hier wordt kruislings "
+"overheen geprint. Bruggen worden geprint met de optimale richting die Slic3r "
+"kan detecteren. Deze instelling zal daarom die richting niet beïnvloeden."
+
+#: xs/src/libslic3r/PrintConfig.cpp:436
+msgid "Fill density"
+msgstr "Vullingsdichtheid"
+
+#: xs/src/libslic3r/PrintConfig.cpp:438
+msgid "Density of internal infill, expressed in the range 0% - 100%."
+msgstr ""
+"Dichtheid van inwendige vulling, uitgedrukt in een percentage (0 - 100%)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:474
+msgid "Fill gaps"
+msgstr "Vul gaatjes"
+
+#: xs/src/libslic3r/PrintConfig.cpp:476
+msgid ""
+"If this is enabled, gaps will be filled with single passes. Enable this for "
+"better quality, disable it for shorter printing times."
+msgstr ""
+"Als dit is toegestaan, worden gaatjes gevuld met een enkele passage. Sta dit "
+"toe voor een betere kwaliteit. Sta dit NIET toe voor kortere printtijden."
+
+#: xs/src/libslic3r/PrintConfig.cpp:481
+msgid "Fill pattern"
+msgstr "Vulpatroon"
+
+#: xs/src/libslic3r/PrintConfig.cpp:483
+msgid "Fill pattern for general low-density infill."
+msgstr "Vulpatroon voor algemene lage-dichtheidsvulling."
+
+#: xs/src/libslic3r/PrintConfig.cpp:513 xs/src/libslic3r/PrintConfig.cpp:522
+#: xs/src/libslic3r/PrintConfig.cpp:530 xs/src/libslic3r/PrintConfig.cpp:561
+msgid "First layer"
+msgstr "Eerste laag"
+
+#: xs/src/libslic3r/PrintConfig.cpp:515
+msgid ""
+"This is the acceleration your printer will use for first layer. Set zero to "
+"disable acceleration control for first layer."
+msgstr ""
+"Dit is de acceleratie die je printer gebruikt voor de eerste laag. Stel in "
+"op 0 voor de standaard acceleratie."
+
+#: xs/src/libslic3r/PrintConfig.cpp:523
+msgid ""
+"Heated build plate temperature for the first layer. Set this to zero to "
+"disable bed temperature control commands in the output."
+msgstr ""
+"Temperatuur van het verwarmd bed voor de eerste laag. Stel in op 0 voor de "
+"standaard temperatuur."
+
+#: xs/src/libslic3r/PrintConfig.cpp:533
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width for first "
+"layer. You can use this to force fatter extrudates for better adhesion. If "
+"expressed as percentage (for example 120%) it will be computed over first "
+"layer height."
+msgstr ""
+"Stel dit in op een niet-0 waarde om handmatig de extrusiebreedte voor de "
+"eerste laag te gebruiken. Je kunt dit gebruiken voor een breder extrudaat "
+"voor een betere bedhechting. Als de waarde een percentage is (bijvoorbeeld "
+"120%), wordt deze genomen over de laagdikte van de eerste laag."
+
+#: xs/src/libslic3r/PrintConfig.cpp:543
+msgid "First layer height"
+msgstr "Laagdikte eerste laag"
+
+#: xs/src/libslic3r/PrintConfig.cpp:545
+msgid ""
+"When printing with very low layer heights, you might still want to print a "
+"thicker bottom layer to improve adhesion and tolerance for non perfect build "
+"plates. This can be expressed as an absolute value or as a percentage (for "
+"example: 150%) over the default layer height."
+msgstr ""
+"Als geprint wordt met hele kleine laagdiktes, moet de eerste laag toch iets "
+"dikker geprint worden voor een betere bedhechting en tolerantie voor "
+"imperfecte printplatformen. Dit kan uitgedrukt worden als een absolute "
+"waarde of als percentage (bijvoorbeeld 150%) over de standaard laaghoogte."
+
+#: xs/src/libslic3r/PrintConfig.cpp:552
+msgid "First layer speed"
+msgstr "Snelheid eerste laag"
+
+#: xs/src/libslic3r/PrintConfig.cpp:554
+msgid ""
+"If expressed as absolute value in mm/s, this speed will be applied to all "
+"the print moves of the first layer, regardless of their type. If expressed "
+"as a percentage (for example: 40%) it will scale the default speeds."
+msgstr ""
+"Als dit uitgedrukt wordt als absolute waarde in mm/s, zal deze snelheid "
+"toegepast worden bij alle printbewegingen van de eerste laag, onafhankelijk "
+"van het type. Als de waarde een percentage is (bijvoorbeeld 40%), worden de "
+"standaardsnelheden geschaald."
+
+#: xs/src/libslic3r/PrintConfig.cpp:562
+msgid ""
+"Extruder temperature for first layer. If you want to control temperature "
+"manually during print, set this to zero to disable temperature control "
+"commands in the output file."
+msgstr ""
+"Printtemperatuur voor de eerste laag. Stel in op 0 als je de temperatuur "
+"wilt besturen tijdens het printen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:573
+msgid "↳ gaps"
+msgstr "↳ gaatjes"
+
+#: xs/src/libslic3r/PrintConfig.cpp:577
+msgid ""
+"Speed for filling gaps. Since these are usually single lines you might want "
+"to use a low speed for better sticking. If expressed as percentage (for "
+"example: 80%) it will be calculated on the infill speed setting above."
+msgstr ""
+"Snelheid voor vulling van gaatjes. Omdat dit maar korte lijntjes zijn, wil "
+"je misschien een wat lagere snelheid voor een betere hechting. Als de waarde "
+"een percentage is (bijvoorbeeld 80%), wordt deze genomen over de "
+"vullingssnelheid."
+
+#: xs/src/libslic3r/PrintConfig.cpp:587
+msgid "Use native G-code arcs"
+msgstr "Gebruik bekende gcode bogen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:588
+msgid ""
+"This experimental feature tries to detect arcs from segments and generates "
+"G2/G3 arc commands instead of multiple straight G1 commands."
+msgstr ""
+"Deze experimentele feature probeert bogen te detecteren vanaf segmenten en "
+"genereert G2/G3-boogcommando's in plaat van meerdere rechte G1-commando's."
+
+#: xs/src/libslic3r/PrintConfig.cpp:593
+msgid "Verbose G-code"
+msgstr "Opmerkingen in gcode"
+
+#: xs/src/libslic3r/PrintConfig.cpp:594
+msgid ""
+"Enable this to get a commented G-code file, with each line explained by a "
+"descriptive text. If you print from SD card, the additional weight of the "
+"file could make your firmware slow down."
+msgstr ""
+"Sta dit toe om een gcode met opmerkingen te krijgen. Bij elke lijn wordt een "
+"opmerking geplaatst. Als je print vanaf een sd-kaart, kan de extra grootte "
+"van het bestand de firmware vertragen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:599
+msgid "G-code flavor"
+msgstr "Gcode-variant"
+
+#: xs/src/libslic3r/PrintConfig.cpp:600
+msgid ""
+"Some G/M-code commands, including temperature control and others, are not "
+"universal. Set this option to your printer's firmware to get a compatible "
+"output. The \"No extrusion\" flavor prevents Slic3r from exporting any "
+"extrusion value at all."
+msgstr ""
+"Sommige G/M-commando's, inclusief temperatuurinstellingen, zijn niet "
+"universeel. Stel deze optie in op je printers firmware om een compatibele "
+"gcode te verkrijgen. De 'No extrusion'-variant zorgt dat Slic3r geen "
+"extrusiewaarden aan de gcode toevoegt."
+
+#: xs/src/libslic3r/PrintConfig.cpp:626
+msgid ""
+"This is the acceleration your printer will use for infill. Set zero to "
+"disable acceleration control for infill."
+msgstr ""
+"Deze acceleratie wordt door je printer gebruikt voor de vulling. Stel in op "
+"0 om deze instelling te deactiveren."
+
+#: xs/src/libslic3r/PrintConfig.cpp:633
+msgid "Combine infill every"
+msgstr "Combineer vulling elke"
+
+#: xs/src/libslic3r/PrintConfig.cpp:635
+msgid ""
+"This feature allows to combine infill and speed up your print by extruding "
+"thicker infill layers while preserving thin perimeters, thus accuracy."
+msgstr ""
+"Deze feature staat vullingslagen combineren toe voor een snellere print door "
+"de vullingslagen dikker te maken, terwijl de laagdikte van omtreklijnen "
+"behouden wordt."
+
+#: xs/src/libslic3r/PrintConfig.cpp:643
+msgid "Infill extruder"
+msgstr "Vullingsextruder"
+
+#: xs/src/libslic3r/PrintConfig.cpp:645
+msgid "The extruder to use when printing infill."
+msgstr "De extruder die gebruikt wordt voor het printen van de vulling."
+
+#: xs/src/libslic3r/PrintConfig.cpp:654
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width for infill. You "
+"may want to use fatter extrudates to speed up the infill and make your parts "
+"stronger. If expressed as percentage (for example 90%) it will be computed "
+"over layer height."
+msgstr ""
+"Stel dit in op een niet-0 waarde om handmatig de extrusiebreedte van de "
+"vulling aan te passen. Wellicht wilt u een dikker extrudaat voor een "
+"snellere vulling en sterkere objecten. Als de waarde een percentage is "
+"(bijvoorbeeld 90%), wordt deze genomen over de laagdikte."
+
+#: xs/src/libslic3r/PrintConfig.cpp:663
+msgid "Infill before perimeters"
+msgstr "Vulling voor omtreklijnen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:665
+msgid ""
+"This option will switch the print order of perimeters and infill, making the "
+"latter first."
+msgstr ""
+"Deze optie verandert de printvolgorde van omtreklijnen en vulling, de "
+"laatstgenoemde eerst."
+
+#: xs/src/libslic3r/PrintConfig.cpp:670
+msgid "Only infill where needed"
+msgstr "Alleen vulling waar nodig"
+
+#: xs/src/libslic3r/PrintConfig.cpp:672
+msgid ""
+"This option will limit infill to the areas actually needed for supporting "
+"ceilings (it will act as internal support material). If enabled, slows down "
+"the G-code generation due to the multiple checks involved."
+msgstr ""
+"Deze optie beperkt de vulling tot gebieden waar dit nodig is voor "
+"ondersteuning van bovenvlakken (het fungeert als inwendig supportmateriaal). "
+"Als dit wordt aangezet, vertraagt dit de gcode-generatie door de vele "
+"betrokken controles."
+
+#: xs/src/libslic3r/PrintConfig.cpp:677
+msgid "Infill/perimeters overlap"
+msgstr "Overlapping van vulling/omtreklijnen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:679
+msgid ""
+"This setting applies an additional overlap between infill and perimeters for "
+"better bonding. Theoretically this shouldn't be needed, but backlash might "
+"cause gaps. If expressed as percentage (example: 15%) it is calculated over "
+"perimeter extrusion width."
+msgstr ""
+"Deze instelling zorgt voor een extra overlapping tussen vulling en "
+"omtreklijnen voor een betere hechting. Theoretisch gezien is dit niet nodig, "
+"maar mechanische terugslag kan zorgen voor gaatjes. Als de waarde als "
+"percentage is (bijvoorbeeld 15%), wordt deze genomen over de extrusiebreedte "
+"van de omtreklijnen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:689
+msgid "Speed for printing the internal fill."
+msgstr "Printsnelheid van de inwendige vulling."
+
+#: xs/src/libslic3r/PrintConfig.cpp:700
+msgid "Interior brim width"
+msgstr "Inwendige brim-breedte"
+
+#: xs/src/libslic3r/PrintConfig.cpp:702
+msgid ""
+"Horizontal width of the brim that will be printed inside object holes on the "
+"first layer."
+msgstr "Horizontale brim-breedte die geprint wordt in gaten van het object."
+
+#: xs/src/libslic3r/PrintConfig.cpp:709
+msgid "Interface shells"
+msgstr "Omtreklijnen van de interface"
+
+#: xs/src/libslic3r/PrintConfig.cpp:710
+msgid ""
+"Force the generation of solid shells between adjacent materials/volumes. "
+"Useful for multi-extruder prints with translucent materials or manual "
+"soluble support material."
+msgstr ""
+"Forceer de generatie van dichte omtreklijnen tussen aangrenzende materialen/"
+"volumes. Handig voor multi-extruder prints met transparante materialen of "
+"handmatig oplosbaar supportmateriaal."
+
+#: xs/src/libslic3r/PrintConfig.cpp:716
+msgid "After layer change G-code"
+msgstr "Gcode na laagwisseling"
+
+#: xs/src/libslic3r/PrintConfig.cpp:717
+msgid ""
+"This custom code is inserted at every layer change, right after the Z move "
+"and before the extruder moves to the first layer point. Note that you can "
+"use placeholder variables for all Slic3r settings as well as [layer_num] and "
+"[layer_z]."
+msgstr ""
+"Deze custom code wordt ingevoegd bij elke laagwisseling, direct na de Z-"
+"beweging en voor de extruder naar het volgende punt beweegt. Hier kun je "
+"variabelen gebruiken voor alle Slic3r-instellingen zoals [layer_num] en "
+"[layer_z]."
+
+#: xs/src/libslic3r/PrintConfig.cpp:725
+msgid "Layer height"
+msgstr "Laagdikte"
+
+#: xs/src/libslic3r/PrintConfig.cpp:727
+msgid ""
+"This setting controls the height (and thus the total number) of the slices/"
+"layers. Thinner layers give better accuracy but take more time to print."
+msgstr ""
+"Deze instelling is voor de dikte (en dus het totaal aantal) van de lagen. "
+"Dunnere lagen geven betere nauwkeurigheid, maar het printen duurt langer."
+
+#: xs/src/libslic3r/PrintConfig.cpp:734
+msgid "Max"
+msgstr "Max"
+
+#: xs/src/libslic3r/PrintConfig.cpp:735
+msgid "This setting represents the maximum speed of your fan."
+msgstr "Deze instelling gaat over de maximale snelheid van je ventilator."
+
+#: xs/src/libslic3r/PrintConfig.cpp:743
+msgid "Max print speed"
+msgstr "Maximale printsnelheid"
+
+#: xs/src/libslic3r/PrintConfig.cpp:745
+msgid ""
+"When setting other speed settings to 0 Slic3r will autocalculate the optimal "
+"speed in order to keep constant extruder pressure. This experimental setting "
+"is used to set the highest print speed you want to allow."
+msgstr ""
+"Als de overige snelheidsinstellingen op 0 staan, berekent Slic3r automatisch "
+"de optimale snelheid voor een constante extrusiedruk. Deze experimentele "
+"instelling wordt gebruikt voor de hoogste printsnelheid die je toestaat."
+
+#: xs/src/libslic3r/PrintConfig.cpp:754
+msgid ""
+"This experimental setting is used to set the maximum volumetric speed your "
+"extruder supports."
+msgstr ""
+"Deze experimentele instelling wordt gebruikt voor de maximale volumetrische "
+"snelheid van de extruder."
+
+#: xs/src/libslic3r/PrintConfig.cpp:761
+msgid "Min"
+msgstr "Min"
+
+#: xs/src/libslic3r/PrintConfig.cpp:762
+msgid "This setting represents the minimum PWM your fan needs to work."
+msgstr ""
+"Deze instelling geeft de minimale snelheid van je ventilator weer waarbij je "
+"ventilator draait."
+
+#: xs/src/libslic3r/PrintConfig.cpp:770
+msgid "Min print speed"
+msgstr "Minimale printsnelheid"
+
+#: xs/src/libslic3r/PrintConfig.cpp:771
+msgid "Slic3r will not scale speed down below this speed."
+msgstr "Slic3r zal de printsnelheid niet verlagen tot onder deze snelheid."
+
+#: xs/src/libslic3r/PrintConfig.cpp:778
+msgid "Minimum extrusion length"
+msgstr "Minimale extrusielengte"
+
+#: xs/src/libslic3r/PrintConfig.cpp:780
+msgid ""
+"Generate no less than the number of skirt loops required to consume the "
+"specified amount of filament on the bottom layer. For multi-extruder "
+"machines, this minimum applies to each extruder."
+msgstr ""
+"Genereer niet minder dan het aantal skirtlijnen benodigd om de aangegeven "
+"hoeveelheid filament op de eerste laag. Voor multi-extruder printers is dit "
+"het minimum voor elke extruder."
+
+#: xs/src/libslic3r/PrintConfig.cpp:787
+msgid "Configuration notes"
+msgstr "Configuratie-opmerkingen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:788
+msgid ""
+"You can put here your personal notes. This text will be added to the G-code "
+"header comments."
+msgstr ""
+"Hier kun je persoonlijke opmerkingen plaatsen. Deze tekst wordt bovenin de "
+"gcode toegevoegd."
+
+#: xs/src/libslic3r/PrintConfig.cpp:796
+msgid "Nozzle diameter"
+msgstr "Nozzlediameter"
+
+#: xs/src/libslic3r/PrintConfig.cpp:797
+msgid ""
+"This is the diameter of your extruder nozzle (for example: 0.5, 0.35 etc.)"
+msgstr "Dit is de diameter van je extruder nozzle (bijvoorbeeld 0.4)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:807
+msgid "API Key"
+msgstr "API-sleutel"
+
+#: xs/src/libslic3r/PrintConfig.cpp:808
+msgid ""
+"Slic3r can upload G-code files to OctoPrint. This field should contain the "
+"API Key required for authentication."
+msgstr ""
+"Slic3r kan gcode-bestanden naar OctoPrint uploaden. Dit veld bevat de API-"
+"sleutel die benodigd is voor de verificatie."
+
+#: xs/src/libslic3r/PrintConfig.cpp:813
+msgid "Host or IP"
+msgstr "Host of IP-adres"
+
+#: xs/src/libslic3r/PrintConfig.cpp:814
+msgid ""
+"Slic3r can upload G-code files to OctoPrint. This field should contain the "
+"hostname or IP address of the OctoPrint instance."
+msgstr ""
+"Slic3r kan gcode-bestanden naar OctoPrint uploaden. Dit tekstvak bevat de "
+"hostnaam of het IP-adres van de OctoPrint omgeving."
+
+#: xs/src/libslic3r/PrintConfig.cpp:819
+msgid "Only retract when crossing perimeters"
+msgstr "Alleen terugtrekken bij kruisende omtreklijnen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:821
+msgid ""
+"Disables retraction when the travel path does not exceed the upper layer's "
+"perimeters (and thus any ooze will be probably invisible)."
+msgstr ""
+"Schakelt terugtrekken uit als de bewegingsroute de omtreklijnen van de "
+"bovenste laag niet overschrijdt (en maakt eventuele lekken dus onzichtbaar)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:826
+msgid "Enable"
+msgstr "Toestaan"
+
+#: xs/src/libslic3r/PrintConfig.cpp:829
+msgid ""
+"During multi-extruder prints, this option will drop the temperature of the "
+"inactive extruders to prevent oozing. It will enable a tall skirt "
+"automatically and move extruders outside such skirt when changing "
+"temperatures."
+msgstr ""
+"Tijdens multi-extruder prints zal deze optie de temperatuur van inactieve "
+"extruders verlagen om lekken te voorkomen. Dit zal een kleine skirt "
+"automatisch aanzetten en de extruder buiten zo'n skirt bewegen als de "
+"temperatuur verandert wordt."
+
+#: xs/src/libslic3r/PrintConfig.cpp:834
+msgid "Output filename format"
+msgstr "Output bestandsnaam-formaat"
+
+#: xs/src/libslic3r/PrintConfig.cpp:835
+msgid ""
+"You can use all configuration options as variables inside this template. For "
+"example: [layer_height], [fill_density] etc. You can also use [timestamp], "
+"[year], [month], [day], [hour], [minute], [second], [version], "
+"[input_filename], [input_filename_base]."
+msgstr ""
+"Je kan alle Slic3r-instellingen gebruiken in deze template. Hier kun je ook "
+"variabelen gebruiken, zoals [layer_height], [fill_density], [timestamp], "
+"[year], [month], [day], [hour], [minute], [second], [version], "
+"[input_filename], [input_filename_base], etc."
+
+#: xs/src/libslic3r/PrintConfig.cpp:841
+msgid "Detect bridging perimeters"
+msgstr "Detecteer brug-omtreklijnen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:843
+msgid ""
+"Experimental option to adjust flow for overhangs (bridge flow will be used), "
+"to apply bridge speed to them and enable fan."
+msgstr ""
+"Experimentele optie om het stroomdebiet voor overhangingen aan te passen. "
+"Het stroomdebiet voor bruggen wordt aangehouden, evenals de printsnelheid en "
+"de koeling."
+
+#: xs/src/libslic3r/PrintConfig.cpp:848
+msgid "Overridable options"
+msgstr "Overschrijfbare opties"
+
+#: xs/src/libslic3r/PrintConfig.cpp:856 xs/src/libslic3r/PrintConfig.cpp:873
+#: xs/src/libslic3r/PrintConfig.cpp:886 xs/src/libslic3r/PrintConfig.cpp:899
+msgid "Perimeters"
+msgstr "Omtreklijnen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:858
+msgid ""
+"This is the acceleration your printer will use for perimeters. A high value "
+"like 9000 usually gives good results if your hardware is up to the job. Set "
+"zero to disable acceleration control for perimeters."
+msgstr ""
+"Dit is de acceleratie die je printer gebruikt voor omtreklijnen. Een hoge "
+"waarde zoals 9000 geeft goede kwaliteit als je hardware dit aan kan. Stel in "
+"op 0 op acceleratie-instellingen voor omtreklijnen uit te zetten."
+
+#: xs/src/libslic3r/PrintConfig.cpp:864
+msgid "Perimeter extruder"
+msgstr "Omtreklijn-extruder"
+
+#: xs/src/libslic3r/PrintConfig.cpp:866
+msgid ""
+"The extruder to use when printing perimeters and brim. First extruder is 1."
+msgstr ""
+"De extruder die gebruikt wordt voor het printen van omtreklijnen en de brim. "
+"De eerste extruder is 1."
+
+#: xs/src/libslic3r/PrintConfig.cpp:876
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width for perimeters. "
+"You may want to use thinner extrudates to get more accurate surfaces. If "
+"expressed as percentage (for example 200%) it will be computed over layer "
+"height."
+msgstr ""
+"Stel in op een niet-0 waarde om handmatig de extrusiebreedte voor "
+"omtreklijnen aan te passen. Wellicht wil je een iets dunner extrudaat voor "
+"een nauwkeuriger oppervlak. Als de waarde een percentage is (bijvoorbeeld "
+"200%), wordt deze genomen over de laagdikte."
+
+#: xs/src/libslic3r/PrintConfig.cpp:889
+msgid "Speed for perimeters (contours, aka vertical shells)."
+msgstr "Snelheid voor omtreklijnen (contouren)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:901
+msgid ""
+"This option sets the number of perimeters to generate for each layer. Note "
+"that Slic3r may increase this number automatically when it detects sloping "
+"surfaces which benefit from a higher number of perimeters if the Extra "
+"Perimeters option is enabled."
+msgstr ""
+"Instelling voor het te genereren aantal omtreklijnen per laag. Slic3r kan "
+"dit aantal verhogen als het schuine vlakken detecteert die gebruik maken van "
+"een hoger aantal omtreklijnen als de optie voor extra omtreklijnen is "
+"ingeschakeld."
+
+#: xs/src/libslic3r/PrintConfig.cpp:909
+msgid "Post-processing scripts"
+msgstr "Scripts ter voorbewerking"
+
+#: xs/src/libslic3r/PrintConfig.cpp:910
+msgid ""
+"If you want to process the output G-code through custom scripts, just list "
+"their absolute paths here. Separate multiple scripts on individual lines. "
+"Scripts will be passed the absolute path to the G-code file as the first "
+"argument, and they can access the Slic3r config settings by reading "
+"environment variables."
+msgstr ""
+"Als je in de gcode een aantal custom regels wil toevoegen, kan dat hier. Let "
+"op dat elk commando op een nieuwe regel moet beginnen. De regels worden als "
+"eerst uitgevoerd waarna het gegenereerde bestand uitgevoerd wordt. In deze "
+"custom gcode kunnen standaard Slic3r-instellingen gebruikt worden middels "
+"variabelen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:924
+msgid "Pressure advance"
+msgstr "Pressure advance"
+
+#: xs/src/libslic3r/PrintConfig.cpp:926
+msgid ""
+"When set to a non-zero value, this experimental option enables pressure "
+"regulation. It's the K constant for the advance algorithm that pushes more "
+"or less filament upon speed changes. It's useful for Bowden-tube extruders. "
+"Reasonable values are in range 0-10."
+msgstr ""
+"Wanneer ingesteld op een niet-0 waarde zorgt deze optie voor een "
+"drukregulatie. De bepalende constant K is voor het geavanceerde algoritme "
+"dat meer of minder filament toevoert bij snelheidsverschillen. Zeer "
+"bruikbaar bij printers met een bowden-extruder. Waarden liggen meestal "
+"tussen 0 en 10."
+
+#: xs/src/libslic3r/PrintConfig.cpp:932
+msgid "Raft layers"
+msgstr "Raft lagen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:934
+msgid ""
+"The object will be raised by this number of layers, and support material "
+"will be generated under it."
+msgstr ""
+"Het object wordt verhoogd met dit aantal lagen. Support wordt onder het "
+"object gegenereerd."
+
+#: xs/src/libslic3r/PrintConfig.cpp:941
+msgid "Raft offset"
+msgstr "Raft-hoogte"
+
+#: xs/src/libslic3r/PrintConfig.cpp:943
+msgid "Horizontal margin between object base layer and raft contour."
+msgstr ""
+"Horizontale marge tussen het bodemvlak van het object en de raft-contouren."
+
+#: xs/src/libslic3r/PrintConfig.cpp:950
+msgid "Resolution (deprecated)"
+msgstr "Resolutie (verouderd)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:951
+msgid ""
+"Minimum detail resolution, used to simplify the input file for speeding up "
+"the slicing job and reducing memory usage. High-resolution models often "
+"carry more detail than printers can render. Set to zero to disable any "
+"simplification and use full resolution from input."
+msgstr ""
+"Minimale resolutie van details. Dit wordt gebruikt om het geïmporteerde "
+"bestand sneller te slicen, evenals de grootte van de gcode. Modellen met een "
+"hoge resolutie vragen meer van een printer dan mogelijk. Stel in op 0 om "
+"elke simplificatie uit te schakelen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:958
+msgid "Minimum travel after retraction"
+msgstr "Minimale beweging na terugtrekken"
+
+#: xs/src/libslic3r/PrintConfig.cpp:959 xs/src/libslic3r/PrintConfig.cpp:971
+#: xs/src/libslic3r/PrintConfig.cpp:982 xs/src/libslic3r/PrintConfig.cpp:1007
+#: xs/src/libslic3r/PrintConfig.cpp:1020 xs/src/libslic3r/PrintConfig.cpp:1033
+#: xs/src/libslic3r/PrintConfig.cpp:1045 xs/src/libslic3r/PrintConfig.cpp:1068
+#: xs/src/libslic3r/PrintConfig.cpp:1548
+msgid "Retraction"
+msgstr "Terugtrekken"
+
+#: xs/src/libslic3r/PrintConfig.cpp:960
+msgid ""
+"Retraction is not triggered when travel moves are shorter than this length."
+msgstr ""
+"Terugtrekking is niet geactiveerd als bewegingen korter zijn dan de hier "
+"ingevoerde lengte."
+
+#: xs/src/libslic3r/PrintConfig.cpp:970
+msgid "Retract on layer change"
+msgstr "Terugtrekken bij laagwisselingen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:972
+msgid "This flag enforces a retraction whenever a Z move is done."
+msgstr "Dit vinkje zorgt dat wordt teruggetrokken bij een Z-beweging."
+
+#: xs/src/libslic3r/PrintConfig.cpp:981 xs/src/libslic3r/PrintConfig.cpp:994
+msgid "Length"
+msgstr "Lengte"
+
+#: xs/src/libslic3r/PrintConfig.cpp:984
+msgid ""
+"When retraction is triggered, filament is pulled back by the specified "
+"amount (the length is measured on raw filament, before it enters the "
+"extruder)."
+msgstr ""
+"Als terugtrekken is geactiveerd, wordt filament teruggetrokken bij de "
+"ingestelde waarde."
+
+#: xs/src/libslic3r/PrintConfig.cpp:996
+msgid ""
+"When retraction is triggered before changing tool, filament is pulled back "
+"by the specified amount (the length is measured on raw filament, before it "
+"enters the extruder)."
+msgstr ""
+"Als terugtrekken is geactiveerd voor extruderwisseling, wordt filament "
+"teruggetrokken bij de ingestelde waarde."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1006
+msgid "Lift Z"
+msgstr "Beweeg Z omhoog"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1008
+msgid ""
+"If you set this to a positive value, Z is quickly raised every time a "
+"retraction is triggered. When using multiple extruders, only the setting for "
+"the first extruder will be considered."
+msgstr ""
+"Als je dit instelt op een positieve waarde, wordt telkens beweegt de nozzle "
+"enigszins omhoog als retractie is geactiveerd. Als meerdere extruders worden "
+"gebruikt wordt alleen de instelling van de eerste extruder aangehouden."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1018
+msgid "Above Z"
+msgstr "Minimale Z"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1021
+msgid ""
+"If you set this to a positive value, Z lift will only take place above the "
+"specified absolute Z. You can tune this setting for skipping lift on the "
+"first layers."
+msgstr ""
+"Als dit ingesteld is op een positieve waarde, zal de nozzle alleen boven de "
+"ingestelde waarde omhoog bewegen voor het terugtrekken. Deze kan aangepast "
+"worden om warping te voorkomen bij de eerste lagen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1031
+msgid "Below Z"
+msgstr "Maximale Z"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1034
+msgid ""
+"If you set this to a positive value, Z lift will only take place below the "
+"specified absolute Z. You can tune this setting for limiting lift to the "
+"first layers."
+msgstr ""
+"Als dit ingesteld is op een positieve waarde, zal de nozzle alleen onder de "
+"ingestelde waarde omhoog bewegen bij terugtrekken."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1044 xs/src/libslic3r/PrintConfig.cpp:1056
+msgid "Extra length on restart"
+msgstr "Extra lengte bij een herstart"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1046
+msgid ""
+"When the retraction is compensated after the travel move, the extruder will "
+"push this additional amount of filament. This setting is rarely needed."
+msgstr ""
+"Als terugtrekken wordt gecompenseerd na een beweging, wordt deze extra "
+"hoeveelheid filament geëxtrudeerd. Deze instelling is zelden van toepassing."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1057
+msgid ""
+"When the retraction is compensated after changing tool, the extruder will "
+"push this additional amount of filament."
+msgstr ""
+"Als terugtrekken wordt gecompenseerd naar een extruderwisseling, wordt deze "
+"extra hoeveelheid filament geëxtrudeerd."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1069
+msgid ""
+"The speed for retractions (it only applies to the extruder motor). If you "
+"use the Firmware Retraction option, please note this value still affects the "
+"auto-speed pressure regulator."
+msgstr ""
+"De snelheid voor terugtrekken (alleen nodig voor de extruder-motor). Als de "
+"firmware-terugtrekking wordt gebruikt moet rekening worden gehouden dat deze "
+"waarde interfereert met de automatische drukregulator."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1079
+msgid "Seam position"
+msgstr "Naadpositie"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1081
+msgid "Position of perimeters starting points."
+msgstr "Positie van startpunten van omtreklijnen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1098
+msgid "USB/serial port for printer connection."
+msgstr "USB/seriële poort voor verbinding met de printer."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1107
+msgid "Speed (baud) of USB/serial port for printer connection."
+msgstr ""
+"Snelheid (baud) van de USB/seriële poort voor de verbinding met de printer."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1117
+msgid "Distance from object"
+msgstr "Afstand vanaf het object"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1119
+msgid ""
+"Distance between skirt and object(s). Set this to zero to attach the skirt "
+"to the object(s) and get a brim for better adhesion."
+msgstr ""
+"Afstand tussen skirt en object(en). Stel in op 0 om de skirt aan de "
+"object(en) vast te maken. Fungeert als een brim voor betere hechting."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1126
+msgid "Skirt height"
+msgstr "Skirt hoogte"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1128
+msgid ""
+"Height of skirt expressed in layers. Set this to a tall value to use skirt "
+"as a shield against drafts."
+msgstr ""
+"Hoogte van de skirt uitgedrukt in het aantal lagen. Stel in op een hoge "
+"waarde om de skirt te gebruiken als afscherming tegen tocht."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1134
+msgid "Loops (minimum)"
+msgstr "Rondjes (minimaal)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1137
+msgid ""
+"Number of loops for the skirt. If the Minimum Extrusion Length option is "
+"set, the number of loops might be greater than the one configured here. Set "
+"this to zero to disable skirt completely."
+msgstr ""
+"Het aantal rondje van de skirt. Als de minimale extrusielengte optie is "
+"ingesteld, kan dit aantal rondjes groter zijn dan hier ingesteld. Stel in op "
+"0 om de skirt uit te schakelen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1143
+msgid "Slow down if layer print time is below"
+msgstr "Vertraag bij een kortere laagprinttijd dan"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1144
+msgid ""
+"If layer print time is estimated below this number of seconds, print moves "
+"speed will be scaled down to extend duration to this value."
+msgstr ""
+"Als de laagprinttijd wordt berekend onder dit aantal seconden, wordt de "
+"printsnelheid daarop vertraagd om de laagprinttijd te verlengen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1153
+msgid "↳ small"
+msgstr "↳ klein"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1157
+msgid ""
+"This separate setting will affect the speed of perimeters having radius <= "
+"6.5mm (usually holes). If expressed as percentage (for example: 80%) it will "
+"be calculated on the perimeters speed setting above."
+msgstr ""
+"Deze afgezonderde instelling zorgt dat de snelheid van omtreklijnen met een "
+"radius die kleiner of gelijk is aan 6.5 mm aangepast wordt. Als de waarde "
+"een percentage is (bijvoorbeeld 80%), wordt deze genomen over de snelheid "
+"van omtreklijnen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1167
+msgid "Solid infill threshold area"
+msgstr "Minimaal oppervlak voor dichte vulling"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1169
+msgid ""
+"Force solid infill for regions having a smaller area than the specified "
+"threshold."
+msgstr ""
+"Forceer dichte vulling voor delen met een kleiner doorsnee-oppervlak dan de "
+"hier ingestelde waarde."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1176
+msgid "Solid infill extruder"
+msgstr "Dichte-vulling extruder"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1178
+msgid "The extruder to use when printing solid infill."
+msgstr "De extruder die gebruikt wordt voor het printen van dichte vulling."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1184
+msgid "Solid infill every"
+msgstr "Dichte vulling elke"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1186
+msgid ""
+"This feature allows to force a solid layer every given number of layers. "
+"Zero to disable. You can set this to any value (for example 9999); Slic3r "
+"will automatically choose the maximum possible number of layers to combine "
+"according to nozzle diameter and layer height."
+msgstr ""
+"Deze feature staat het genereren van een dichte laag tussen het ingestelde "
+"aantal lagen toe. Stel in op 0 om dit uit te schakelen. Stel dit in op een "
+"waarde (bijvoorbeeld 9999); Slic3r zal dan automatisch het maximaal aantal "
+"lagen kiezen om te combineren op basis van de nozzlediameter en de laagdikte."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1193 xs/src/libslic3r/PrintConfig.cpp:1206
+msgid "↳ solid"
+msgstr "↳ dicht"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1197
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width for infill for "
+"solid surfaces. If expressed as percentage (for example 90%) it will be "
+"computed over layer height."
+msgstr ""
+"Stel dit in op een niet-0 waarde om handmatig de extrusiebreedte voor dichte "
+"vulling in te stellen. Als de waarde een percentage is (bijvoorbeeld 90%), "
+"wordt deze genomen over de laagdikte."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1210
+msgid ""
+"Speed for printing solid regions (top/bottom/internal horizontal shells). "
+"This can be expressed as a percentage (for example: 80%) over the default "
+"infill speed above."
+msgstr ""
+"Printsnelheid voor dicht delen (boven/onder/inwendige vulling). Als de "
+"waarde een percentage is (bijvoorbeeld 80%), wordt deze genomen over de "
+"vullingsnelheid."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1221
+msgid "Solid layers"
+msgstr "Dichte lagen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1222
+msgid "Number of solid layers to generate on top and bottom surfaces."
+msgstr "Aantal te genereren dichte lagen voor boven- en ondervlakken."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1229
+msgid "Spiral vase"
+msgstr "Spiraal (vaas)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1231
+msgid ""
+"This feature will raise Z gradually while printing a single-walled object in "
+"order to remove any visible seam. This option requires a single perimeter, "
+"no infill, no top solid layers and no support material. You can still set "
+"any number of bottom solid layers as well as skirt/brim loops. It won't work "
+"when printing more than an object."
+msgstr ""
+"Deze feature zorgt dat Z stapsgewijs omhoog gaat als een object met een "
+"enkele omtreklijn geprint wordt om een naadlijn te voorkomen. Voor deze "
+"optie is een enkele omtreklijn nodig; vulling, bovenlagen en support zijn "
+"niet mogelijk. Bodemlagen zijn wel mogelijk, evenals een skirt en brim. "
+"Werkt niet bij het printen van meerdere objecten tegelijk."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1236
+msgid "Temperature variation"
+msgstr "Temperatuurvariatie"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1239
+msgid ""
+"Temperature difference to be applied when an extruder is not active.  "
+"Enables a full-height \"sacrificial\" skirt on which the nozzles are "
+"periodically wiped."
+msgstr ""
+"Temperatuurverschil die wordt aangehouden als een extruder niet actief is. "
+"Maakt een skirt onnodig waarop nozzles worden schoongeveegd."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1247 xs/src/libslic3r/PrintConfig.cpp:1256
+msgid "Start G-code"
+msgstr "Start gcode"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1248
+msgid ""
+"This start procedure is inserted at the beginning, after bed has reached the "
+"target temperature and extruder just started heating, and before extruder "
+"has finished heating. If Slic3r detects M104, M109, M140 or M190 in your "
+"custom codes, such commands will not be prepended automatically so you're "
+"free to customize the order of heating commands and other custom actions. "
+"Note that you can use placeholder variables for all Slic3r settings, so you "
+"can put a \"M109 S[first_layer_temperature]\" command wherever you want."
+msgstr ""
+"Deze startregels worden toegevoegd aan het begin, nadat het bed de "
+"doeltemperatuur heeft bereikt en de extruder begint op te warmen, maar nog "
+"voor de extruder klaar is met verwarmen. Als Slic3r de commando's M104, "
+"M109, M140 of M190 detecteert, zullen deze niet automatisch in de gcode "
+"worden opgenomen. Dat wil zeggen dat je vrij bent om hierin zelf een andere "
+"volgorde aan te brengen en eventueel andere regels toe te voegen. Het is "
+"mogelijk variabelen te gebruiken van alle Slic3r-instellingen zoals 'M109 "
+"S[first_layer_temperature]'."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1257
+msgid ""
+"This start procedure is inserted at the beginning, after any printer start "
+"gcode. This is used to override settings for a specific filament. If Slic3r "
+"detects M104, M109, M140 or M190 in your custom codes, such commands will "
+"not be prepended automatically so you're free to customize the order of "
+"heating commands and other custom actions. Note that you can use placeholder "
+"variables for all Slic3r settings, so you can put a \"M109 "
+"S[first_layer_temperature]\" command wherever you want. If you have multiple "
+"extruders, the gcode is processed in extruder order."
+msgstr ""
+"Deze startregels worden toegevoegd aan het begin, na de printer start gcode. "
+"Dit wordt gebruikt om instellingen te overschrijven voor een specifiek "
+"filament. Als Slic3r de commando's M104, M109, M140 of M190 detecteert, "
+"worden deze automatisch in de gcode overgenomen. Je kunt hier variabelen "
+"gebruiken voor alle Slic3r-instellingen zoals 'M109 "
+"S[first_layer_temperature]'. Als je meerdere extruders hebt, wordt deze "
+"gcode in extruder-volgorde uitgevoerd."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1269
+msgid "Generate support material"
+msgstr "Genereer supportmateriaal"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1271
+msgid "Enable support material generation."
+msgstr "Sta de generatie van supportmateriaal toe."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1276
+msgid "Pattern angle"
+msgstr "Patroonhoek"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1278
+msgid ""
+"Use this setting to rotate the support material pattern on the horizontal "
+"plane."
+msgstr ""
+"Gebruik deze instelling om het patroon van supportmateriaal te draaien."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1286
+msgid "Support on build plate only"
+msgstr "Support alleen op het bed"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1288
+msgid ""
+"Only create support if it lies on a build plate. Don't create support on a "
+"print."
+msgstr ""
+"Genereer alleen support als dit op het bed geplaatst wordt, dus niet op de "
+"print zelf."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1294
+msgid "Contact Z distance"
+msgstr "Contact Z-afstand"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1296
+msgid ""
+"The vertical distance between object and support material interface. Setting "
+"this to 0 will also prevent Slic3r from using bridge flow and speed for the "
+"first object layer."
+msgstr ""
+"De afstand tussen objecten en supportmateriaal. Stel in op 0 om te voorkomen "
+"dat Slic3r bruginstellingen gebruikt voor de eerste laag boven het "
+"supportdak."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1307
+msgid "Enforce support for the first"
+msgstr "Forceer support voor de eerste"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1309
+msgid ""
+"Generate support material for the specified number of layers counting from "
+"bottom, regardless of whether normal support material is enabled or not and "
+"regardless of any angle threshold. This is useful for getting more adhesion "
+"of objects having a very thin or poor footprint on the build plate."
+msgstr ""
+"Genereer supportmateriaal voor het ingevoerde aantal lagen, tellend vanaf de "
+"bodem, ongeacht de plekken waar standaard supportmateriaal al dan niet is "
+"toegestaan, waarbij de ingesteld hoek wordt aangehouden. Dit is handig om "
+"meer hechting op het bed te verkrijgen bij objecten met een klein "
+"contactoppervlak."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1317
+msgid "Support material/raft/skirt extruder"
+msgstr "Extruder voor supportmateriaal/raft/skirt"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1319
+msgid "The extruder to use when printing support material, raft and skirt."
+msgstr ""
+"De extruder die gebruikt wordt voor het printen van het supportmateriaal, de "
+"raft en de skirt."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1328
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width for support "
+"material. If expressed as percentage (for example 90%) it will be computed "
+"over layer height."
+msgstr ""
+"Stel in op een niet-0 waarde om handmatig de extrusiebreedte voor "
+"supportmateriaal aan te passen. Als de waarde een percentage is "
+"(bijvoorbeeld 90%), wordt deze genomen over de laagdikte."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1337
+msgid "Support material/raft interface extruder"
+msgstr "Extruder voor supportdak en de bovenlaag van de raft"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1339
+msgid ""
+"The extruder to use when printing support material interface. This affects "
+"raft too."
+msgstr ""
+"De extruder die gebruikt wordt voor het printen van het supportdak en de "
+"bovenste laag van de raft."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1345
+msgid "Interface layers"
+msgstr "Aantal lagen supportdak"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1347
+msgid ""
+"Number of interface layers to insert between the object(s) and support "
+"material."
+msgstr "Aantal supportdaklagen tussen het supportmateriaal en het object."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1354
+msgid "Interface pattern spacing"
+msgstr "Tussenruimte van patroon voor supportdak"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1356
+msgid "Spacing between interface lines. Set zero to get a solid interface."
+msgstr ""
+"Ruimte tussen lijnen van supportdak. Stel in op 0 om een dicht supportdak te "
+"krijgen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1363
+msgid "↳ interface"
+msgstr "↳ supportdak"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1364
+msgid "Interface Speed"
+msgstr "Snelheid van supportdak"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1365
+msgid "Support material interface speed"
+msgstr "Printsnelheid van supportdak"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1368
+msgid ""
+"Speed for printing support material interface layers. If expressed as "
+"percentage (for example 50%) it will be calculated over support material "
+"speed."
+msgstr ""
+"Printsnelheid van supportdak-lagen. Als de waarde een percentage is "
+"(bijvoorbeeld 50%), wordt deze genomen over de snelheid van supportmateriaal."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1378
+msgid "Pattern"
+msgstr "Patroon"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1380
+msgid "Pattern used to generate support material."
+msgstr "Patroon dat gebruikt wordt voor supportmateriaal."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1394
+msgid "Pattern spacing"
+msgstr "Tussenafstand van het patroon"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1396
+msgid "Spacing between support material lines."
+msgstr "Afstand tussen supportmateriaal-lijnen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1409
+msgid "Speed for printing support material."
+msgstr "Printsnelheid van supportmateriaal."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1418
+msgid "Overhang threshold"
+msgstr "Maximale overhanging"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1420
+#, c-format
+msgid ""
+"Support material will not be generated for overhangs whose slope angle (90° "
+"= vertical) is above the given threshold. In other words, this value "
+"represent the most horizontal slope (measured from the horizontal plane) "
+"that you can print without support material. Set to a percentage to "
+"automatically detect based on some % of overhanging perimeter width instead "
+"(recommended)."
+msgstr ""
+"Supportmateriaal wordt niet gegenereerd voor overhangingen met een "
+"hellingshoek (90°= verticaal) boven de ingevoerde waarde. In andere woorden, "
+"deze waarde is representatief voor de horizontale helling gemeten vanaf het "
+"bed dat geprint kan worden zonder supportmateriaal. Stel in op een % om dit "
+"automatisch te detecteren. Dat laatste wordt gebaseerd op een percentage van "
+"overhangende omtreklijnen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1429
+msgid ""
+"Extruder temperature for layers after the first one. Set this to zero to "
+"disable temperature control commands in the output."
+msgstr ""
+"Extrudertemperatuur voor lager direct na de eerste laag. Stel in op 0 om een "
+"verschil te voorkomen in de output."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1441
+msgid "Detect thin walls"
+msgstr "Detecteer dunne wanden"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1443
+msgid ""
+"Detect single-width walls (parts where two extrusions don't fit and we need "
+"to collapse them into a single trace)."
+msgstr ""
+"Detecteer enkellijnige wanden (onderdelen waar twee extrusielijnen niet "
+"passen en dit opgevangen moet worden met een enkele lijn)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1448
+msgid "Threads"
+msgstr "Meerdere processen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1449
+msgid ""
+"Threads are used to parallelize long-running tasks. Optimal threads number "
+"is slightly above the number of available cores/processors."
+msgstr ""
+"Meerdere processen wordt gebruikt om langdurige commando's parallel te "
+"draaien. Het optimaal aantal processen is vlak boven het aanwezige aantal "
+"kernen/processoren."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1458
+msgid "Tool change G-code"
+msgstr "Extruderwisseling gcode"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1459
+msgid ""
+"This custom code is inserted right before every extruder change. Note that "
+"you can use placeholder variables for all Slic3r settings as well as "
+"[previous_extruder] and [next_extruder]."
+msgstr ""
+"Deze custom code wordt ingevoegd vlak voor de extruderwisseling. Hier kun je "
+"gebruik maken van viarabelen voor alle Slic3r instellingen, evenals "
+"[previous_extruder] en [next_exruder]."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1467 xs/src/libslic3r/PrintConfig.cpp:1488
+msgid "↳ top solid"
+msgstr "↳ boven dicht"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1471
+msgid ""
+"Set this to a non-zero value to set a manual extrusion width for infill for "
+"top surfaces. You may want to use thinner extrudates to fill all narrow "
+"regions and get a smoother finish. If expressed as percentage (for example "
+"90%) it will be computed over layer height."
+msgstr ""
+"Stel dit in op een niet-0 waarde om handmatig de extrusiebreedte voor "
+"vulling van bovenlagen aan te passen. Wellicht wil je een dunner extrudaat "
+"om smalle gebieden te vullen voor een gladder oppervlak. Als de waarde een "
+"percentage is (bijvoorbeeld 90%), wordt deze genomen over de laagdikte."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1480 xs/src/libslic3r/PrintConfig.cpp:1502
+msgid "Top"
+msgstr "Bovenkant"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1483
+msgid ""
+"Infill pattern for top layers. This only affects the external visible layer, "
+"and not its adjacent solid shells."
+msgstr ""
+"Vulpatroon voor bovenlagen. Dit heeft alleen invloed op de buitenste "
+"zichtbare laag en niet op de lagen eronder."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1492
+msgid ""
+"Speed for printing top solid layers (it only applies to the uppermost "
+"external layers and not to their internal solid layers). You may want to "
+"slow down this to get a nicer surface finish. This can be expressed as a "
+"percentage (for example: 80%) over the solid infill speed above."
+msgstr ""
+"Printsnelheid voor bovenlagen (is alleen van toepassing op de bovenste "
+"toplaag). Wellicht wil je dit iets langzamer instellen voor een mooier "
+"oppervlak. Als de waarde een percentage is (bijvoorbeeld 80%), wordt deze "
+"genomen over de printsnelheid van dichte vullingen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1504
+msgid "Number of solid layers to generate on top surfaces."
+msgstr "Aantalte genereren dichte lagen voor bovenvlakken."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1511
+msgid "Travel"
+msgstr "Beweging"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1513
+msgid "Speed for travel moves (jumps between distant extrusion points)."
+msgstr "Bewegingssnelheid (beweging bij grotere afstanden)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1521
+msgid "Use firmware retraction"
+msgstr "Gebruik de terugtrakking uit de firmware"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1522
+msgid ""
+"This experimental setting uses G10 and G11 commands to have the firmware "
+"handle the retraction. This is only supported in recent Marlin."
+msgstr ""
+"Deze experimentele instelling gebruikt G10 en G11 commando's voor het "
+"terugtrekken in de firmware. Dit wordt alleen ondersteunt bij de recente "
+"Marlin-variant."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1527
+msgid "Use relative E distances"
+msgstr "Gebruik relatieve E-waarden"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1528
+msgid ""
+"If your firmware requires relative E values, check this, otherwise leave it "
+"unchecked. Most firmwares use absolute values."
+msgstr ""
+"Als je firmware relatieve E-waarden nodig heeft, vink dit dan aan. Laat het "
+"ander uit staan. De meeste firmware gebruiken absolute waarden."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1533
+msgid "Use volumetric E"
+msgstr "Gebruik volumetrische E-waarden"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1534
+msgid ""
+"This experimental setting uses outputs the E values in cubic millimeters "
+"instead of linear millimeters. If your firmware doesn't already know "
+"filament diameter(s), you can put commands like 'M200 D[filament_diameter_0] "
+"T0' in your start G-code in order to turn volumetric mode on and use the "
+"filament diameter associated to the filament selected in Slic3r. This is "
+"only supported in recent Marlin."
+msgstr ""
+"Deze experimentele instelling gebruikt E-waarden in kubieke millimeters in "
+"plaats van lineaire millimeters. Als je firmware nog niet weet wat de "
+"filamentdiameter is, kun je een commando zoals 'M200 D[filament_diameter_0] "
+"T0' in de start gcode invoegen om de volumetrische modus te gebruiken. Deze "
+"variabele gebruikt de filamentdiameter zoals ingevoerd bij de "
+"filamentinstellingen. Dit wordt alleen ondersteund in de recente Marlin-"
+"variant."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1539
+msgid "Vibration limit (deprecated)"
+msgstr "Vibratielimiet (verouderd)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1540
+msgid ""
+"This experimental option will slow down those moves hitting the configured "
+"frequency limit. The purpose of limiting vibrations is to avoid mechanical "
+"resonance. Set zero to disable."
+msgstr ""
+"Deze experimentele optie laat je de snelheid gaan tot de ingestelde "
+"frequentielimiet. Dit is handig om vibraties door mechanische resonantie te "
+"vermijden. Stel in op 0 om uit te schakelen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1547
+msgid "Wipe while retracting"
+msgstr "Veeg af bij het terugtrekken"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1549
+msgid ""
+"This flag will move the nozzle while retracting to minimize the possible "
+"blob on leaky extruders."
+msgstr ""
+"Als je dit aanvinkt beweegt de nozzle tijdens het terugtrekken om een bultje "
+"of lekkende extruders tegen te gaan."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1558
+msgid "XY Size Compensation"
+msgstr "Compensatie voor X- en Y-afmetingen"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1560
+msgid ""
+"The object will be grown/shrunk in the XY plane by the configured value "
+"(negative = inwards, positive = outwards). This might be useful for fine-"
+"tuning hole sizes."
+msgstr ""
+"Het object wordt verbreed/versmald in X- en Y-richting volgens de ingestelde "
+"waarde (negatief = naar binnen, positief = naar buiten). Dit kan handig zijn "
+"voor het verfijnen van gaten."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1566
+msgid "Z offset"
+msgstr "Z-hoogte"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1567
+msgid ""
+"This value will be added (or subtracted) from all the Z coordinates in the "
+"output G-code. It is used to compensate for bad Z endstop position: for "
+"example, if your endstop zero actually leaves the nozzle 0.3mm far from the "
+"print bed, set this to -0.3 (or fix your endstop)."
+msgstr ""
+"Deze waarde wordt toegevoegd (of afgetrokken) van alle Z-coördinaten in de "
+"gcode. Het wordt gebruikt voor een slechte Z-eindstop positie. Als je Z-"
+"eindstop bijvoorbeeld een waarde gebruikt die 0.3mm van het printbed is, kan "
+"dit ingesteld worden op -0.3mm."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1573
+msgid "Z full steps/mm"
+msgstr "Aantal stappen/mm voor de Z-as"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1574
+msgid ""
+"Set this to the number of *full* steps (not microsteps) needed for moving "
+"the Z axis by 1mm; you can calculate this by dividing the number of "
+"microsteps configured in your firmware by the microstepping amount (8, 16, "
+"32). Slic3r will round your configured layer height to the nearest multiple "
+"of that value in order to ensure the best accuracy. This is most useful for "
+"machines with imperial leadscrews or belt-driven Z or for unusual layer "
+"heights with metric leadscrews. Set to zero to disable this experimental "
+"feature."
+msgstr ""
+"Stel dit in op het aantal hele stappen (geen microstappen) die nodig zijn om "
+"de Z-as 1mm omhoog te bewegen. Je kan dit berekenen door het aantal "
+"microstappen te delen door het ingesteld aantal microstappen van de firmware "
+"(8, 16, 32, ...). Slic3r zal de waarde afronden naar de dichtstbijzijnde "
+"integer voor de hoogste nauwkeurigheid. Dit is handig voor printers met "
+"Amerikaanse spindels of een tandriem-aangedreven Z-as voor ongebruikelijke "
+"laagdiktes met metrisch spindels. Stel in op 0 om deze experimentele feature "
+"uit te schakelen."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1716 xs/src/libslic3r/PrintConfig.cpp:1722
+#: xs/src/libslic3r/PrintConfig.cpp:1728 xs/src/libslic3r/PrintConfig.cpp:1734
+msgid "Cut"
+msgstr "Snij"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1717
+msgid "Cut model at the given Z."
+msgstr "Snijdt model op de ingestelde hoogte."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1723
+msgid "Cut model in the XY plane into tiles of the specified max size."
+msgstr "Snijdt model in het XY-vlak in delen van maximale grootte."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1729
+msgid "Cut model at the given X."
+msgstr "Snijdt model op ingevoerde X-waarde."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1735
+msgid "Cut model at the given Y."
+msgstr "Snijdt model op ingevoerde Y-waarde."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1740 xs/src/libslic3r/PrintConfig.cpp:1752
+msgid "Export SVG"
+msgstr "Exporteer .svg-bestand"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1741
+msgid "Export the model as OBJ."
+msgstr "Exporteer het model als .obj-bestand."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1746
+msgid "Export POV"
+msgstr "Exporteer .pov-bestand"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1747
+msgid "Export the model as POV-Ray definition."
+msgstr "Exporteer het model als POV-Ray-bestand."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1753
+msgid "Slice the model and export slices as SVG."
+msgstr "Slice het model en exporteer de slices als .svg-bestand."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1758
+msgid "Output Model Info"
+msgstr "Output model-info"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1759
+msgid "Write information about the model to the console."
+msgstr "Schrijf informatie over het model naar de console."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1764
+msgid "Load config file"
+msgstr "Laad configuratiebestand"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1765
+msgid ""
+"Load configuration from the specified file. It can be used more than once to "
+"load options from multiple files."
+msgstr ""
+"Laad configuratie uit een specifiek bestand. Dit kan meerdere keren gebruikt "
+"worden om instellingen uit meerdere bestanden te laden."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1770
+msgid "Output File"
+msgstr "Outputbestand"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1771
+msgid ""
+"The file where the output will be written (if not specified, it will be "
+"based on the input file)."
+msgstr ""
+"Het bestand waaroverheen wordt geschreven (als dit niet aangegeven is, wort "
+"dit gebaseerd op het inputbestand)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1776
+msgid "Rotate"
+msgstr "Draai"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1777
+msgid "Rotation angle around the Z axis in degrees (0-360, default: 0)."
+msgstr "Draaihoek over de Z-as, uitgedrukt in graden (0 - 360, standaard 0)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1782
+msgid "Rotate around X"
+msgstr "Draai over de X-as"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1783
+msgid "Rotation angle around the X axis in degrees (0-360, default: 0)."
+msgstr "Draaihoek over de X-as, uitgedrukt in graden (0 - 360, standaard 0)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1788
+msgid "Rotate around Y"
+msgstr "Draai over de Y-as"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1789
+msgid "Rotation angle around the Y axis in degrees (0-360, default: 0)."
+msgstr "Draaihoek over de Y-as, uitgedrukt in graden (0 - 360, standaard 0)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1794
+msgid "Save config file"
+msgstr "Sla configuratiebestand op"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1795
+msgid "Save configuration to the specified file."
+msgstr "Sla configuratie op in aangegeven bestand."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1800
+msgid "Scale"
+msgstr "Verschaal"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1801
+msgid "Scaling factor (default: 1)."
+msgstr "Verschalingsfactor (standaard 1)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1806
+msgid "Scale to Fit"
+msgstr "Verschaal naar passing"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1807
+msgid "Scale to fit the given volume."
+msgstr "Verschaal naar passing in het gegeven volume."
