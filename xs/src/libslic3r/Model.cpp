@@ -836,9 +836,20 @@ ModelObject::mirror(const Axis &axis)
     this->invalidate_bounding_box();
 }
 
+void ModelObject::reset_undo_trafo()
+{
+    this->trafo_undo_stack = TransformationMatrix::mat_eye();
+}
+
+TransformationMatrix ModelObject::get_undo_trafo() const
+{
+    return this->trafo_undo_stack;
+}
+
 void
 ModelObject::apply_transformation(const TransformationMatrix & trafo)
 {
+    this->trafo_undo_stack.applyLeft(trafo);
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         (*v)->apply_transformation(trafo);
     }

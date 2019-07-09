@@ -405,6 +405,12 @@ class ModelObject
     /// \param axis Axis enum member
     void mirror(const Axis &axis);
 
+    /// Reset the internal collection of transformations
+    void reset_undo_trafo();
+
+    /// Get the accumulated collection of transformations since its reset
+    TransformationMatrix get_undo_trafo() const;
+
     /// Transform the current ModelObject by a certain ModelInstance attributes.
     /// Inverse transformation is applied to all the ModelInstances, so that the final size/position/rotation of the transformed objects doesn't change.
     /// \param instance ModelInstance the instance used to transform the current ModelObject
@@ -439,6 +445,7 @@ class ModelObject
     /// Print the current info of this ModelObject
     void print_info() const;
 
+
     private:
     Model* model; ///< Parent object, owning this ModelObject.
 
@@ -454,6 +461,9 @@ class ModelObject
 
     /// Apply transformation to all volumes
     void apply_transformation(const TransformationMatrix & trafo);
+
+    /// Trafo to collect the transformation applied to all volumes over a series of manipulations
+    TransformationMatrix trafo_undo_stack;
 
     /// = Operator overloading
     /// \param other ModelObject the other ModelObject to be copied
