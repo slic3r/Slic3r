@@ -233,6 +233,9 @@ ModelMaterial::attributes()
         %code{% THIS->rotate(*origin, *target); %};
     void mirror(Axis axis);
 
+    void reset_undo_trafo();
+    Clone<TransformationMatrix> get_undo_trafo()
+        %code{% RETVAL = THIS->get_undo_trafo(); %};
 
     void transform_by_instance(ModelInstance* instance, bool dont_translate = false)
         %code{% THIS->transform_by_instance(*instance, dont_translate); %};
