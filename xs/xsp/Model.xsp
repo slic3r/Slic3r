@@ -232,6 +232,8 @@ ModelMaterial::attributes()
     void rotate_vec_to_vec(Pointf3* origin, Pointf3* target)
         %code{% THIS->rotate(*origin, *target); %};
     void mirror(Axis axis);
+    void apply_transformation(TransformationMatrix* trafo)
+        %code{% THIS->apply_transformation(*trafo); %};
 
     void reset_undo_trafo();
     Clone<TransformationMatrix> get_undo_trafo()

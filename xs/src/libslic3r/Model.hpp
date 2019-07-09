@@ -411,6 +411,9 @@ class ModelObject
     /// Get the accumulated collection of transformations since its reset
     TransformationMatrix get_undo_trafo() const;
 
+    /// Apply transformation to all volumes
+    void apply_transformation(const TransformationMatrix & trafo);
+
     /// Transform the current ModelObject by a certain ModelInstance attributes.
     /// Inverse transformation is applied to all the ModelInstances, so that the final size/position/rotation of the transformed objects doesn't change.
     /// \param instance ModelInstance the instance used to transform the current ModelObject
@@ -458,9 +461,6 @@ class ModelObject
     /// \param other ModelObject the other ModelObject to be copied
     /// \param copy_volumes bool whether to also copy its volumes or not, by default = true
     ModelObject(Model *model, const ModelObject &other, bool copy_volumes = true);
-
-    /// Apply transformation to all volumes
-    void apply_transformation(const TransformationMatrix & trafo);
 
     /// Trafo to collect the transformation applied to all volumes over a series of manipulations
     TransformationMatrix trafo_undo_stack;
