@@ -516,7 +516,7 @@ sub changescale {
         if (defined $axis) {
             my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
             my $scale;
-            if (defined $tosize) {
+            if ($tosize) {
                 my $cursize = $object_size->[$axis];
                 # Wx::GetNumberFromUser() does not support decimal numbers
                 my $newsize = Wx::GetTextFromUser(
