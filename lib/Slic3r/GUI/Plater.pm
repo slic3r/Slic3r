@@ -1631,6 +1631,8 @@ sub rotate_face {
     my $model_instance = $model_object->instances->[0];
 
     $model_object->transform_by_instance($model_instance, 1);
+
+    $model_object->reset_undo_trafo();
     $model_object->rotate_vec_to_vec($normal,$axis_vec);
 
     # realign object to Z = 0
@@ -1644,7 +1646,7 @@ sub rotate_face {
     $self->selection_changed;  # refresh info (size etc.)
     $self->on_model_change;
     
-    #TODO: undo stack
+    $self->add_undo_operation("TRANSFORM", $object->identifier, $model_object->get_undo_trafo());
 }
 
 sub rotate {
