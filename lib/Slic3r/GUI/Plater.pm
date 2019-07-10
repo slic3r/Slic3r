@@ -2536,26 +2536,17 @@ sub export_stl {
 sub reload_from_disk {
     my ($self) = @_;
     
-    my ($obj_idx, $object) = $self->selected_object;
+    my ($obj_idx, $org_obj) = $self->selected_object;
     return if !defined $obj_idx;
     
-    if (!$object->input_file) {
+    if (!$org_obj->input_file) {
         Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because it isn't referenced to its input file any more. This is the case after performing operations like cut or split.");
         return;
     }
-    if (!-e $object->input_file) {
+    if (!-e $org_obj->input_file) {
         Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the file doesn't exist anymore on the disk.");
         return;
     }
-    
-    # Only reload the selected object and not all objects from the input file.
-    my @new_obj_idx = $self->load_file($object->input_file, $object->input_file_obj_idx);
-    if (!@new_obj_idx) {
-        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the new file doesn't contain the object.");
-        return;
-    }
-
-    my $org_obj = $self->{model}->objects->[$obj_idx];
 
     # check if the object is dependant of more than one file
     my $org_obj_has_modifiers=0;
@@ -2573,7 +2564,6 @@ sub reload_from_disk {
         my $dlg = Slic3r::GUI::ReloadDialog->new(undef,$reload_behavior);
         my $res = $dlg->ShowModal;
         if ($res==wxID_CANCEL) {
-            $self->remove($_) for @new_obj_idx;
             $dlg->Destroy;
             return;
         }
@@ -2589,6 +2579,13 @@ sub reload_from_disk {
         }
         Slic3r::GUI->save_settings if $save;
         $dlg->Destroy;
+    }
+    
+    # Only reload the selected object and not all objects from the input file.
+    my @new_obj_idx = $self->load_file($org_obj->input_file, $org_obj->input_file_obj_idx);
+    if (!@new_obj_idx) {
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the new file doesn't contain the object.");
+        return;
     }
 
     my $volume_unmatched=0;
