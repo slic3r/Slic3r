@@ -534,7 +534,7 @@ sub changescale {
             }
             my $versor = [1,1,1];
             $versor->[$axis] = $scale/100;
-            $volume->mesh->scale_xyz(Slic3r::Pointf3->new(@$versor));
+            $volume->scale_xyz(Slic3r::Pointf3->new(@$versor));
         } else {
             my $scale;
             if ($tosize) {
@@ -552,7 +552,7 @@ sub changescale {
                 return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
             }
             return if !$scale || $scale < 0;
-            $volume->mesh->scale($scale);
+            $volume->scale_xyz(Slic3r::Pointf3->new($scale/100, $scale/100, $scale/100));
         }
         $self->_parts_changed;
     }
@@ -573,10 +573,9 @@ sub rotate {
                     $default, $self);
             return if !$angle || $angle !~ /^-?\d*(?:\.\d*)?$/ || $angle == -1;
         }
-        if ($axis == X) { $volume->mesh->rotate_x(deg2rad($angle)); }
-
-        if ($axis == Y) { $volume->mesh->rotate_y(deg2rad($angle)); } 
-        if ($axis == Z) { $volume->mesh->rotate_z(deg2rad($angle)); }
+        if ($axis == X) { $volume->rotate(deg2rad($angle), X); }
+        if ($axis == Y) { $volume->rotate(deg2rad($angle), Y); } 
+        if ($axis == Z) { $volume->rotate(deg2rad($angle), Z); }
             
         $self->_parts_changed;
     }
