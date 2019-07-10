@@ -206,7 +206,8 @@ void stl_transform(stl_file *stl, double const *trafo3x4) {
   if(det < 0)
     stl_reverse_all_facets(stl);
   stl_get_size(stl);
-  stl_calculate_volume(stl);
+  if(det - 1.0 > 1e-04)
+    stl_calculate_volume(stl);
   calculate_normals(stl);
 }
 
@@ -247,7 +248,8 @@ void stl_get_transform(stl_file const *stl_src, stl_file *stl_dst, double const 
   if(det < 0)
     stl_reverse_all_facets(stl_dst);
   stl_get_size(stl_dst);
-  stl_calculate_volume(stl_dst);
+  if(det - 1.0 > 1e-04)
+    stl_calculate_volume(stl_dst);
   calculate_normals(stl_dst);
 }
 
