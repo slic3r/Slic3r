@@ -1761,6 +1761,7 @@ sub transform {
     return if !defined $obj_idx;
     
     my $model_object = $self->{model}->objects->[$obj_idx];
+    my $model_instance = $model_object->instances->[0];
     
     # apply Z rotation before mirroring
     $model_object->transform_by_instance($model_instance, 1);
