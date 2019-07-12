@@ -2535,25 +2535,25 @@ sub reload_from_disk {
     }
 
     my $reload_behavior = $Slic3r::GUI::Settings->{_}{reload_behavior};
-    my $reload_preserve = $Slic3r::GUI::Settings->{_}{reload_preserve};
+    my $reload_preserve_trafo = $Slic3r::GUI::Settings->{_}{reload_preserve_trafo};
 
     # ask the user how to proceed, if option is selected in preferences
     if (!$Slic3r::GUI::Settings->{_}{reload_hide_dialog}) {
-        my $dlg = Slic3r::GUI::ReloadDialog->new(undef,$reload_behavior,$reload_preserve);
+        my $dlg = Slic3r::GUI::ReloadDialog->new(undef,$reload_behavior,$reload_preserve_trafo);
         my $res = $dlg->ShowModal;
         if ($res==wxID_CANCEL) {
             $dlg->Destroy;
             return;
         }
         $reload_behavior = $dlg->GetAdditionalOption;
-        $reload_preserve = $dlg->GetPreserveTrafo;
+        $reload_preserve_trafo = $dlg->GetPreserveTrafo;
         my $save = 0;
         if ($reload_behavior != $Slic3r::GUI::Settings->{_}{reload_behavior}) {
             $Slic3r::GUI::Settings->{_}{reload_behavior} = $reload_behavior;
             $save = 1;
         }
-        if ($reload_preserve != $Slic3r::GUI::Settings->{_}{reload_preserve}) {
-            $Slic3r::GUI::Settings->{_}{reload_preserve} = $reload_preserve;
+        if ($reload_preserve_trafo != $Slic3r::GUI::Settings->{_}{reload_preserve_trafo}) {
+            $Slic3r::GUI::Settings->{_}{reload_preserve_trafo} = $reload_preserve_trafo;
             $save = 1;
         }
         if ($dlg->GetHideOnNext) {
