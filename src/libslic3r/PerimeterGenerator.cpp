@@ -363,8 +363,9 @@ void PerimeterGenerator::process()
                         ExPolygons no_thin_onion = offset_ex(last, double( - ext_perimeter_width / 2));
                         float div = 2;
                         while (no_thin_onion.size() > 0 && next_onion.size() > no_thin_onion.size() && no_thin_onion.size() + next_onion.size() > 3) {
-                            div += 0.5;
-                            //use a sightly smaller spacing to try to drastically improve the split, but with a little bit of over-extrusion
+                            div -= 0.3;
+                            if (div == 2) div -= 0.3;
+                            //use a sightly bigger spacing to try to drastically improve the split, that can lead to very thick gapfill
                             ExPolygons next_onion_secondTry = offset2_ex(
                                 last,
                                 -(float)(ext_perimeter_width / 2 + ext_min_spacing / div - 1),
@@ -372,7 +373,7 @@ void PerimeterGenerator::process()
                             if (next_onion.size() >  next_onion_secondTry.size() * 1.1) {
                                 next_onion = next_onion_secondTry;
                             }
-                            if (div > 3) break;
+                            if (div > 3 || div < 1.2) break;
                         }
 
                         // the following offset2 ensures almost nothing in @thin_walls is narrower than $min_width
@@ -436,6 +437,23 @@ void PerimeterGenerator::process()
                         next_onion = offset2_ex(last,
                             -(float)(good_spacing + min_spacing / 2 - 1),
                             +(float)(min_spacing / 2 - 1));
+
+                        ExPolygons no_thin_onion = offset_ex(last, double(-good_spacing));
+                        float div = 2;
+                        while (no_thin_onion.size() > 0 && next_onion.size() > no_thin_onion.size() && no_thin_onion.size() + next_onion.size() > 3) {
+                            div -= 0.3;
+                            if (div == 2) div -= 0.3;
+                            //use a sightly bigger spacing to try to drastically improve the split, that can lead to very thick gapfill
+                            ExPolygons next_onion_secondTry = offset2_ex(
+                                last,
+                                -(float)(good_spacing + min_spacing / div - 1),
+                                +(float)(min_spacing / div - 1));
+                            if (next_onion.size() >  next_onion_secondTry.size() * 1.1) {
+                                next_onion = next_onion_secondTry;
+                            }
+                            if (div > 3 || div < 1.2) break;
+                        }
+
                     } else {
                         // If "detect thin walls" is not enabled, this paths will be entered, which 
                         // leads to overflows, as in prusa3d/Slic3r GH #32
@@ -471,6 +489,7 @@ void PerimeterGenerator::process()
                 }
 
                 for (const ExPolygon &expolygon : next_onion) {
+                    //TODO: add width here to allow variable width (if we want to extrude a sightly bigger perimeter, see thin wall)
                     contours[i].emplace_back(PerimeterGeneratorLoop(expolygon.contour, i, true, has_overhang));
                     if (! expolygon.holes.empty()) {
                         holes[i].reserve(holes[i].size() + expolygon.holes.size());
@@ -593,7 +612,7 @@ void PerimeterGenerator::process()
             double min = 0.2 * perimeter_width * (1 - INSET_OVERLAP_TOLERANCE);
             //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
             min = std::max(min, double(Flow::new_from_spacing(EPSILON, nozzle_diameter, this->layer_height, false).scaled_width()));
-            double max = 2. * perimeter_spacing;
+            double max = 3. * perimeter_spacing;
             ExPolygons gaps_ex = diff_ex(
                 offset2_ex(gaps, double(-min / 2), double(+min / 2)),
                 offset2_ex(gaps, double(-max / 2), double(+max / 2)),
