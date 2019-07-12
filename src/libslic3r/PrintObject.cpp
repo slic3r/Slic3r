@@ -2129,19 +2129,35 @@ void PrintObject::_offset_holes(double hole_delta, LayerRegion *layerm) {
 
 /// max angle: you ahve to be lwer than that to divide it. PI => all accepted
 /// min angle: don't smooth sharp angles! 0  => all accepted
-Polygon _smooth_curve(Polygon &p, double max_angle, double min_angle, coord_t max_dist){
+/// cutoff_dist: maximum dist between two point to add new points
+/// max dist : maximum distance between two pointsd, where we add new points
+Polygon _smooth_curve(Polygon &p, double max_angle, double min_angle_convex, double min_angle_concave, coord_t cutoff_dist, coord_t max_dist){
     if (p.size() < 4) return p;
     Polygon pout;
     //duplicate points to simplify the loop
     p.points.insert(p.points.end(), p.points.begin(), p.points.begin() + 3);
     for (size_t idx = 1; idx<p.size() - 2; idx++){
+        //put first point
         pout.points.push_back(p[idx]);
+        //get angles
         double angle1 = p[idx].ccw_angle(p.points[idx - 1], p.points[idx + 1]);
-        if (angle1 > PI) angle1 = 2 * PI - angle1;
+        bool angle1_concave = true;
+        if (angle1 > PI) {
+            angle1 = 2 * PI - angle1;
+            angle1_concave = false;
+        }
         double angle2 = p[idx + 1].ccw_angle(p.points[idx], p.points[idx + 2]);
-        if (angle2 > PI) angle2 = 2 * PI - angle2;
-        if (angle1 < min_angle && angle2 < min_angle) continue;
+        bool angle2_concave = true;
+        if (angle2 > PI) {
+            angle2 = 2 * PI - angle2;
+            angle2_concave = false;
+        }
+        //filters
+        bool angle1_ok = angle1_concave ? angle1 >= min_angle_concave : angle1 >= min_angle_convex;
+        bool angle2_ok = angle2_concave ? angle2 >= min_angle_concave : angle2 >= min_angle_convex;
+        if (!angle1_ok && !angle2_ok) continue;
         if (angle1 > max_angle && angle2 > max_angle) continue;
+        if (cutoff_dist > 0 && p.points[idx].distance_to(p.points[idx+1]) > cutoff_dist) continue;
         // add points, but how many?
         coordf_t dist = p[idx].distance_to(p[idx + 1]);
         int nb_add = dist / max_dist;
@@ -2168,9 +2184,9 @@ Polygon _smooth_curve(Polygon &p, double max_angle, double min_angle, coord_t ma
         vec_b_tang *= dist * (0.31 + 0.12 * (1-(angle1 / PI)));
         Vec2d vec_c_tang = vec_dc + vec_cb;
         vec_c_tang.normalize();
-        vec_c_tang *= dist * (0.31 + 0.12 * (1 - (angle1 / PI)));
-        Point bp = p[idx] + ((angle1 < min_angle) ? vec_bc.cast<coord_t>() : vec_b_tang.cast<coord_t>());
-        Point cp = p[idx + 1] + ((angle2 < min_angle) ? vec_cb.cast<coord_t>() : vec_c_tang.cast<coord_t>());
+        vec_c_tang *= dist * (0.31 + 0.12 * (1 - (angle2 / PI)));
+        Point bp = p[idx] + ((!angle1_ok) ? vec_bc.cast<coord_t>() : vec_b_tang.cast<coord_t>());
+        Point cp = p[idx + 1] + ((!angle2_ok) ? vec_cb.cast<coord_t>() : vec_c_tang.cast<coord_t>());
         for (int idx_np = 0; idx_np < nb_add; idx_np++){
             const float percent_np = (idx_np + 1) / (float)(nb_add + 1);
             const float inv_percent_np = 1 - percent_np;
@@ -2201,13 +2217,17 @@ void PrintObject::_smooth_curves(LayerRegion *layerm) {
         for (const Surface &srf : layerm->slices.surfaces) {
             const ExPolygon &ex_poly = srf.expolygon;
             ExPolygon new_ex_poly(ex_poly);
-            new_ex_poly.contour = _smooth_curve(new_ex_poly.contour, PI, 
-                layerm->region()->config().curve_smoothing_angle.value*PI / 180.0,
+            new_ex_poly.contour = _smooth_curve(new_ex_poly.contour, PI,
+                layerm->region()->config().curve_smoothing_angle_convex.value*PI / 180.0,
+                layerm->region()->config().curve_smoothing_angle_concave.value*PI / 180.0,
+                scale_(layerm->region()->config().curve_smoothing_cutoff_dist.value),
                 scale_(layerm->region()->config().curve_smoothing_precision.value));
             for (Polygon &phole : new_ex_poly.holes){
                 phole.reverse(); // make_counter_clockwise();
                 phole = _smooth_curve(phole, PI,
-                    layerm->region()->config().curve_smoothing_angle.value*PI / 180.0,
+                    layerm->region()->config().curve_smoothing_angle_convex.value*PI / 180.0,
+                    layerm->region()->config().curve_smoothing_angle_concave.value*PI / 180.0,
+                    scale_(layerm->region()->config().curve_smoothing_cutoff_dist.value),
                     scale_(layerm->region()->config().curve_smoothing_precision.value));
                 phole.reverse(); // make_clockwise();
             }

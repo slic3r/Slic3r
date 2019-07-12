@@ -1062,7 +1062,9 @@ void TabPrint::build()
         optgroup = page->new_optgroup(_(L("Modifying slices")));
         line = { _(L("Curve smoothing")), "" };
         line.append_option(optgroup->get_option("curve_smoothing_precision"));
-        line.append_option(optgroup->get_option("curve_smoothing_angle"));
+        line.append_option(optgroup->get_option("curve_smoothing_angle_convex"));
+        line.append_option(optgroup->get_option("curve_smoothing_angle_concave"));
+        line.append_option(optgroup->get_option("curve_smoothing_cutoff_dist"));
         optgroup->append_line(line);
         line = { _(L("XY compensation")), "" };
         line.append_option(optgroup->get_option("xy_size_compensation"));

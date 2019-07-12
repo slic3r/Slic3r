@@ -2100,15 +2100,30 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(15, false));
 
-    def = this->add("curve_smoothing_angle", coFloat);
-    def->label = L("Min angle");
-    def->full_label = L("Curve smoothing minimum angle");
+    def = this->add("curve_smoothing_angle_convex", coFloat);
+    def->label = L("Min convex angle");
+    def->full_label = L("Curve smoothing minimum angle (convex)");
     def->category = L("Slicing");
-    def->tooltip = L("Minimum angle at a vertex to enable smoothing"
+    def->tooltip = L("Minimum (convex) angle at a vertex to enable smoothing"
         " (trying to create a curve around the vertex). "
         "180 : nothing will be smooth, 0 : all angles will be smoothen.");
     def->sidetext = L("°");
-    def->cli = "curve-smoothing-angle=f";
+    def->aliases = { "curve_smoothing_angle" };
+    def->cli = "curve-smoothing-angle-convex=f";
+    def->min = 0;
+    def->max = 180;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0));
+
+    def = this->add("curve_smoothing_angle_concave", coFloat);
+    def->label = L("Min concave angle");
+    def->full_label = L("Curve smoothing minimum angle (concave)");
+    def->category = L("Slicing");
+    def->tooltip = L("Minimum (concave) angle at a vertex to enable smoothing"
+        " (trying to create a curve around the vertex). "
+        "180 : nothing will be smooth, 0 : all angles will be smoothen.");
+    def->sidetext = L("°");
+    def->cli = "curve-smoothing-angle-concave=f";
     def->min = 0;
     def->max = 180;
     def->mode = comAdvanced;
@@ -2128,6 +2143,17 @@ void PrintConfigDef::init_fff_params()
     def->cli = "curve-smoothing-precision=f";
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(0));
+
+    def = this->add("curve_smoothing_cutoff_dist", coFloat);
+    def->label = L("cutoff");
+    def->full_label = L("Curve smoothing cutoff dist");
+    def->category = L("Slicing");
+    def->tooltip = L("Maximum distance between two points to allow adding new ones. Allow to avoid distording long strait areas. 0 to disable.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->cli = "curve-smoothing-cutoff-dist=f";
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(2));
 
     def = this->add("solid_infill_below_area", coFloat);
     def->label = L("Solid infill threshold area");

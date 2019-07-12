@@ -558,7 +558,9 @@ public:
     ConfigOptionFloatOrPercent      bridged_infill_margin;
     ConfigOptionFloat               bridge_speed;
     ConfigOptionFloat               curve_smoothing_precision;
-    ConfigOptionFloat               curve_smoothing_angle;
+    ConfigOptionFloat               curve_smoothing_cutoff_dist;
+    ConfigOptionFloat               curve_smoothing_angle_convex;
+    ConfigOptionFloat               curve_smoothing_angle_concave;
     ConfigOptionBool                ensure_vertical_shell_thickness;
     ConfigOptionBool                enforce_full_fill_volume;
     ConfigOptionFloatOrPercent      external_infill_margin;
@@ -619,7 +621,9 @@ protected:
         OPT_PTR(bridged_infill_margin);
         OPT_PTR(bridge_speed);
         OPT_PTR(curve_smoothing_precision);
-        OPT_PTR(curve_smoothing_angle);
+        OPT_PTR(curve_smoothing_cutoff_dist);
+        OPT_PTR(curve_smoothing_angle_convex);
+        OPT_PTR(curve_smoothing_angle_concave);
         OPT_PTR(ensure_vertical_shell_thickness);
         OPT_PTR(enforce_full_fill_volume);
         OPT_PTR(external_infill_margin);
