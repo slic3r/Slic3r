@@ -97,8 +97,15 @@ sub new {
         opt_id      => 'reload_hide_dialog',
         type        => 'bool',
         label       => 'Hide Dialog on Reload',
-        tooltip     => 'When checked, the dialog on reloading files with added parts & modifiers is suppressed. The reload is performed according to the option given in \'Default Reload Behavior\'',
+        tooltip     => 'When checked, the dialog on reloading files with added parts & modifiers is suppressed. The reload is performed according to the option given in \'Default Reload Behavior\' and \'Keep Transformation on Reload\'',
         default     => $Slic3r::GUI::Settings->{_}{reload_hide_dialog},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # reload preserve transformation
+        opt_id      => 'reload_preserve_trafo',
+        type        => 'bool',
+        label       => 'Keep Transformations on Reload',
+        tooltip     => 'When checked, the \'Reload from disk\' function tries to preserve the current orientation of the object on the bed by applying the same transformation to the reloaded object.',
+        default     => $Slic3r::GUI::Settings->{_}{reload_preserve_trafo},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # default reload behavior
         opt_id      => 'reload_behavior',
