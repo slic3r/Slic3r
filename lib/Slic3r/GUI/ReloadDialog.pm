@@ -28,7 +28,7 @@ sub new {
     my $text_trafo = Wx::StaticText->new($self, -1, "Handling of transformations made inside Slic3r:", wxDefaultPosition, wxDefaultSize);
     
     # cb_Transformation
-    $self->{cb_Transformation} = my $cb_Transformation = Wx::CheckBox->new($self, -1, "Preserve transformation");
+    $self->{cb_Transformation} = my $cb_Transformation = Wx::CheckBox->new($self, -1, "Preserve transformations");
     $cb_Transformation->SetValue($default_preserve);
     
     # cb_HideDialog
