@@ -2548,15 +2548,6 @@ sub reload_from_disk {
         return;
     }
 
-    # check if the object is dependant of more than one file
-    my $org_obj_has_modifiers=0;
-    for my $i (0..($org_obj->volumes_count-1)) {
-        if ($org_obj->input_file ne $org_obj->get_volume($i)->input_file) {
-            $org_obj_has_modifiers=1;
-            last;
-        }
-    }
-
     my $reload_behavior = $Slic3r::GUI::Settings->{_}{reload_behavior};
     my $reload_preserve = $Slic3r::GUI::Settings->{_}{reload_preserve};
 
