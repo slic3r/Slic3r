@@ -23,17 +23,21 @@ use Slic3r::Test;
     
     # center around origin
     my $bb = $mesh1->bounding_box;
-    $mesh1->translate(
+
+    my $trafo = Slic3r::TransformationMatrix->new;
+    $trafo->set_translation_xyz(
         -($bb->x_min + $bb->size->x/2),
         -($bb->y_min + $bb->size->y/2),  #//
         -($bb->z_min + $bb->size->z/2),
     );
-    
-    my $mesh2 = $mesh1->clone;
-    $mesh2->scale(1.2);
-    
-    my $mesh3 = $mesh2->clone;
-    $mesh3->scale(1.2);
+
+    $mesh1->transform($trafo);
+
+    $trafo->set_scale_uni(1.2);
+
+    my $mesh2 = $mesh1->get_transformed_mesh($trafo);
+
+    my $mesh3 = $mesh2->get_transformed_mesh($trafo);
     
     $mesh1->reverse_normals;
     ok $mesh1->volume < 0, 'reverse_normals';

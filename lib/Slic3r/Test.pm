@@ -164,8 +164,16 @@ sub mesh {
     my $mesh = Slic3r::TriangleMesh->new;
     $mesh->ReadFromPerl($vertices, $facets);
     $mesh->repair;
-    $mesh->scale_xyz(Slic3r::Pointf3->new(@{$params{scale_xyz}})) if $params{scale_xyz};
-    $mesh->translate(@{$params{translate}}) if $params{translate};
+
+    my $trafo = Slic3r::TransformationMatrix->new;
+    $trafo->set_scale_xyz(@{$params{scale_xyz}})  if $params{scale_xyz};
+    if ($params{translate}) {
+        my $trafo2 = Slic3r::TransformationMatrix->new;
+        $trafo2->set_translation_xyz(@{$params{translate}});
+        $trafo->applyLeft($trafo2);
+    }
+
+    $mesh->transform($trafo);
     return $mesh;
 }
 
