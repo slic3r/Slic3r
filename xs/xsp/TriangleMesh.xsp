@@ -20,6 +20,8 @@
     void align_to_bed();
     void transform(TransformationMatrix* trafo)
         %code{% THIS->transform(*trafo); %};
+    Clone<TriangleMesh> get_transformed_mesh(TransformationMatrix* trafo)
+        %code{% RETVAL=THIS->get_transformed_mesh(*trafo); %};
     TriangleMeshPtrs split();
     TriangleMeshPtrs cut_by_grid(Pointf* grid)
         %code{% RETVAL = THIS->cut_by_grid(*grid); %};
