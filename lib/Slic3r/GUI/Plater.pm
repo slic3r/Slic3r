@@ -2586,10 +2586,12 @@ sub reload_from_disk {
         
         while ($new_vol_idx<=$new_vol_count-1) {
             if (($org_vol_idx<=$org_vol_count-1) && ($org_obj->get_volume($org_vol_idx)->input_file eq $new_obj->input_file)) {
-                # apply config from the matching volumes
+                # apply config and trafo from the matching volumes
+                $new_obj->get_volume($new_vol_idx)->apply_transformation($org_obj->get_volume($org_vol_idx)->get_transformation) if $reload_preserve_trafo;
                 $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume($org_vol_idx++)->config);
             } else {
-                # reload has more volumes than original (first file), apply config from the first volume
+                # reload has more volumes than original (first file), apply config and trafo from the first volume
+                $new_obj->get_volume($new_vol_idx)->apply_transformation($org_obj->get_volume(0)->get_transformation) if $reload_preserve_trafo;
                 $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume(0)->config);
                 $volume_unmatched=1;
             }
@@ -2601,10 +2603,13 @@ sub reload_from_disk {
             $volume_unmatched=1;
         }
         while ($org_vol_idx<=$org_vol_count-1) {
+            my $org_volume = $org_obj->get_volume($org_vol_idx);
+
             if ($reload_behavior==1) { # Reload behavior: copy
-                my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx));
-                $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
-                $new_volume->mesh->translate(@{$new_obj->origin_translation});
+
+                my $new_volume = $new_obj->add_volume($org_volume);
+                #$new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
+                #$new_volume->mesh->translate(@{$new_obj->origin_translation});
                 if ($new_volume->name =~ m/link to path\z/) {
                     my $new_name = $new_volume->name;
                     $new_name =~ s/ - no link to path$/ - copied/;
@@ -2612,35 +2617,40 @@ sub reload_from_disk {
                 }elsif(!($new_volume->name =~ m/copied\z/)) {
                     $new_volume->set_name($new_volume->name . " - copied");
                 }
+
             }else{ # Reload behavior: Reload all, also fallback solution if ini was manually edited to a wrong value
-                if ($org_obj->get_volume($org_vol_idx)->input_file) {
-                    my $model = eval { Slic3r::Model->read_from_file($org_obj->get_volume($org_vol_idx)->input_file) };
+
+                if ($org_volume->input_file) {
+                    my $model = eval { Slic3r::Model->read_from_file($org_volume->input_file) };
                     if ($@) {
-                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
-                    }elsif ($org_obj->get_volume($org_vol_idx)->input_file_obj_idx > ($model->objects_count-1)) {
+                        $org_volume->set_input_file("");
+                    }elsif ($org_volume->input_file_obj_idx > ($model->objects_count-1)) {
                         # Object Index for that part / modifier not found in current version of the file
-                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                        $org_volume->set_input_file("");
                     }else{
-                        my $prt_mod_obj = $model->objects->[$org_obj->get_volume($org_vol_idx)->input_file_obj_idx];
-                        if ($org_obj->get_volume($org_vol_idx)->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
+                        my $prt_mod_obj = $model->objects->[$org_volume->input_file_obj_idx];
+                        if ($org_volume->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
                             # Volume Index for that part / modifier not found in current version of the file
-                            $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                            $org_volume->set_input_file("");
                         }else{
                             # all checks passed, load new mesh and copy metadata
-                            my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_obj->get_volume($org_vol_idx)->input_file_vol_idx));
-                            $new_volume->set_input_file($org_obj->get_volume($org_vol_idx)->input_file);
-                            $new_volume->set_input_file_obj_idx($org_obj->get_volume($org_vol_idx)->input_file_obj_idx);
-                            $new_volume->set_input_file_vol_idx($org_obj->get_volume($org_vol_idx)->input_file_vol_idx);
-                            $new_volume->config->apply($org_obj->get_volume($org_vol_idx)->config);
-                            $new_volume->set_modifier($org_obj->get_volume($org_vol_idx)->modifier);
-                            $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                            my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_volume->input_file_vol_idx));
+
+                            $new_volume->apply_transformation($org_volume->get_transformation()) if $reload_preserve_trafo;
+
+                            $new_volume->set_input_file($org_volume->input_file);
+                            $new_volume->set_input_file_obj_idx($org_volume->input_file_obj_idx);
+                            $new_volume->set_input_file_vol_idx($org_volume->input_file_vol_idx);
+                            $new_volume->config->apply($org_volume->config);
+                            $new_volume->set_modifier($org_volume->modifier);
+                            #$new_volume->mesh->translate(@{$new_obj->origin_translation});
                         }
                     }
                 }
-                if (!$org_obj->get_volume($org_vol_idx)->input_file) {
-                    my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx)); # error -> copy old mesh
-                    $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
-                    $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                if (!$org_volume->input_file) {
+                    my $new_volume = $new_obj->add_volume($org_volume); # error -> copy old mesh
+                    #$new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
+                    #$new_volume->mesh->translate(@{$new_obj->origin_translation});
                     if ($new_volume->name =~ m/copied\z/) {
                         my $new_name = $new_volume->name;
                         $new_name =~ s/ - copied$/ - no link to path/;
