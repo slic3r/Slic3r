@@ -17,7 +17,7 @@
     void repair();
     float volume();
     void WriteOBJFile(std::string output_file);
-    
+
     void scale(float factor);
     void scale_xyz(Pointf3* versor)
         %code{% THIS->scale(*versor); %};
