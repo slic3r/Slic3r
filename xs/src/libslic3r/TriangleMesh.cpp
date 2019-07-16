@@ -280,6 +280,129 @@ TriangleMesh::WriteOBJFile(const std::string &output_file) const {
     #endif
 }
 
+void TriangleMesh::scale(float factor)
+{
+    stl_scale(&(this->stl), factor);
+    stl_invalidate_shared_vertices(&this->stl);
+}
+
+void TriangleMesh::scale(const Pointf3 &versor)
+{
+    float fversor[3];
+    fversor[0] = versor.x;
+    fversor[1] = versor.y;
+    fversor[2] = versor.z;
+    stl_scale_versor(&this->stl, fversor);
+    stl_invalidate_shared_vertices(&this->stl);
+}
+
+void TriangleMesh::translate(float x, float y, float z)
+{
+    stl_translate_relative(&(this->stl), x, y, z);
+    stl_invalidate_shared_vertices(&this->stl);
+}
+
+void TriangleMesh::translate(Pointf3 vec) {
+    this->translate(
+        static_cast<float>(vec.x),
+        static_cast<float>(vec.y),
+        static_cast<float>(vec.z)
+    );
+}
+
+void TriangleMesh::rotate(float angle, const Axis &axis)
+{
+    // admesh uses degrees
+    angle = Slic3r::Geometry::rad2deg(angle);
+    
+    if (axis == X) {
+        stl_rotate_x(&(this->stl), angle);
+    } else if (axis == Y) {
+        stl_rotate_y(&(this->stl), angle);
+    } else if (axis == Z) {
+        stl_rotate_z(&(this->stl), angle);
+    }
+    stl_invalidate_shared_vertices(&this->stl);
+}
+
+void TriangleMesh::rotate_x(float angle)
+{
+    this->rotate(angle, X);
+}
+
+void TriangleMesh::rotate_y(float angle)
+{
+    this->rotate(angle, Y);
+}
+
+void TriangleMesh::rotate_z(float angle)
+{
+    this->rotate(angle, Z);
+}
+
+void TriangleMesh::mirror(const Axis &axis)
+{
+    if (axis == X) {
+        stl_mirror_yz(&this->stl);
+    } else if (axis == Y) {
+        stl_mirror_xz(&this->stl);
+    } else if (axis == Z) {
+        stl_mirror_xy(&this->stl);
+    }
+    stl_invalidate_shared_vertices(&this->stl);
+}
+
+void TriangleMesh::mirror_x()
+{
+    this->mirror(X);
+}
+
+void TriangleMesh::mirror_y()
+{
+    this->mirror(Y);
+}
+
+void TriangleMesh::mirror_z()
+{
+    this->mirror(Z);
+}
+
+void TriangleMesh::align_to_origin()
+{
+    this->translate(
+        -(this->stl.stats.min.x),
+        -(this->stl.stats.min.y),
+        -(this->stl.stats.min.z)
+    );
+}
+
+void TriangleMesh::center_around_origin()
+{
+    this->align_to_origin();
+    this->translate(
+        -(this->stl.stats.size.x/2),
+        -(this->stl.stats.size.y/2),
+        -(this->stl.stats.size.z/2)
+    );
+}
+
+void TriangleMesh::rotate(double angle, Point* center)
+{
+    this->rotate(angle, *center);
+}
+void TriangleMesh::rotate(double angle, const Point& center)
+{
+    this->translate(-center.x, -center.y, 0);
+    stl_rotate_z(&(this->stl), (float)angle);
+    this->translate(+center.x, +center.y, 0);
+}
+
+void TriangleMesh::align_to_bed()
+{
+    stl_translate_relative(&(this->stl), 0.0f, 0.0f, -this->stl.stats.min.z);
+    stl_invalidate_shared_vertices(&this->stl);
+}
+
 TriangleMesh TriangleMesh::get_transformed_mesh(TransformationMatrix const & trafo) const
 {
     TriangleMesh mesh;
@@ -294,12 +417,6 @@ void TriangleMesh::transform(TransformationMatrix const & trafo)
     std::vector<double> trafo_arr = trafo.matrix3x4f();
     stl_transform(&(this->stl), trafo_arr.data());
     stl_invalidate_shared_vertices(&(this->stl));
-}
-
-void TriangleMesh::align_to_bed()
-{
-    stl_translate_relative(&(this->stl), 0.0f, 0.0f, -this->stl.stats.min.z);
-    stl_invalidate_shared_vertices(&this->stl);
 }
 
 Pointf3s TriangleMesh::vertices()
