@@ -6,6 +6,33 @@
 
 namespace Slic3r {
 
+/*
+
+    The TransformationMatrix class was created to keep track of the transformations applied
+    to the objects from the GUI. Reloading these objects will now preserve their orientation.
+
+    As usual in engineering vectors are treated as column vectors.
+    
+    Note that if they are treated as row vectors, the order is inversed:
+    (') denotes the transponse and column vectors
+    Column:         out' = M1 * M2 * in'
+    Row:             out = in * M2' * M1'
+
+    Every vector gets a 4th component w added,
+    with positions lying in hyperplane w=1
+    and direction vectors lying in hyperplane w=0
+
+    Using this, affine transformations (scaling, rotating, shearing, translating and their combinations)
+    can be represented as 4x4 Matri.
+    The 4th row equals [0 0 0 1] in order to not alter the w component.
+    The other entries are represented by the class properties mij (i-th row [1,2,3], j-th column [1,2,3,4]).
+    The 4th row is not explicitly stored, it is hard coded in the multiply function.
+
+    Column vectors have to be multiplied from the right side.
+
+ */
+
+
 class TransformationMatrix
 {
 public:
