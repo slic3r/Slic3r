@@ -134,9 +134,9 @@ sub multiply_point {
     }
     
     my $ret = Slic3r::Pointf3->new;
-    $ret->set_x($trafo->m11()*$x + $trafo->m12()*$y + $trafo->m13()*$z + $trafo->m14());
-    $ret->set_y($trafo->m21()*$x + $trafo->m22()*$y + $trafo->m23()*$z + $trafo->m24());
-    $ret->set_z($trafo->m31()*$x + $trafo->m32()*$y + $trafo->m33()*$z + $trafo->m34());
+    $ret->set_x($trafo->m00()*$x + $trafo->m01()*$y + $trafo->m02()*$z + $trafo->m03());
+    $ret->set_y($trafo->m10()*$x + $trafo->m11()*$y + $trafo->m12()*$z + $trafo->m13());
+    $ret->set_z($trafo->m20()*$x + $trafo->m21()*$y + $trafo->m22()*$z + $trafo->m23());
     return $ret
 }
 

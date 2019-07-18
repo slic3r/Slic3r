@@ -23,9 +23,9 @@ namespace Slic3r {
     and direction vectors lying in hyperplane w=0
 
     Using this, affine transformations (scaling, rotating, shearing, translating and their combinations)
-    can be represented as 4x4 Matri.
+    can be represented as 4x4 Matrix.
     The 4th row equals [0 0 0 1] in order to not alter the w component.
-    The other entries are represented by the class properties mij (i-th row [1,2,3], j-th column [1,2,3,4]).
+    The other entries are represented by the class properties mij (i-th row [0,1,2], j-th column [0,1,2,3]).
     The 4th row is not explicitly stored, it is hard coded in the multiply function.
 
     Column vectors have to be multiplied from the right side.
@@ -41,9 +41,9 @@ public:
     TransformationMatrix(const std::vector<double> &entries_row_maj);
 
     TransformationMatrix(
-        double m11, double m12, double m13, double m14,
-        double m21, double m22, double m23, double m24,
-        double m31, double m32, double m33, double m34);
+        double m00, double m01, double m02, double m03,
+        double m10, double m11, double m12, double m13,
+        double m20, double m21, double m22, double m23);
 
     TransformationMatrix(const TransformationMatrix &other);
     TransformationMatrix& operator= (TransformationMatrix other);
@@ -53,7 +53,7 @@ public:
     bool operator!= (const TransformationMatrix &other) const { return !(*this == other); };
 
     /// matrix entries 
-    double m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34;
+    double m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23;
 
     /// return the row-major form of the represented transformation matrix
     /// for admesh transform
