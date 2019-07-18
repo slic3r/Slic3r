@@ -704,9 +704,9 @@ TriangleMesh::get_transformed_bounding_box(TransformationMatrix const & trafo) c
             double v_y = facet.vertex[j].y;
             double v_z = facet.vertex[j].z;
             Pointf3 poi;
-            poi.x = float(trafo.m11*v_x + trafo.m12*v_y + trafo.m13*v_z + trafo.m14);
-            poi.y = float(trafo.m21*v_x + trafo.m22*v_y + trafo.m23*v_z + trafo.m24);
-            poi.z = float(trafo.m31*v_x + trafo.m32*v_y + trafo.m33*v_z + trafo.m34);
+            poi.x = float(trafo.m00*v_x + trafo.m01*v_y + trafo.m02*v_z + trafo.m03);
+            poi.y = float(trafo.m10*v_x + trafo.m11*v_y + trafo.m12*v_z + trafo.m13);
+            poi.z = float(trafo.m20*v_x + trafo.m21*v_y + trafo.m22*v_z + trafo.m23);
             bbox.merge(poi);
         }
     }

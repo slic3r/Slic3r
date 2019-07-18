@@ -5,19 +5,19 @@
 namespace Slic3r {
 
 TransformationMatrix::TransformationMatrix()
-    : m11(1.0), m12(0.0), m13(0.0), m14(0.0),
-    m21(0.0), m22(1.0), m23(0.0), m24(0.0),
-    m31(0.0), m32(0.0), m33(1.0), m34(0.0)
+    : m00(1.0), m01(0.0), m02(0.0), m03(0.0),
+    m10(0.0), m11(1.0), m12(0.0), m13(0.0),
+    m20(0.0), m21(0.0), m22(1.0), m23(0.0)
 {
 }
 
 TransformationMatrix::TransformationMatrix(
-    double _m11, double _m12, double _m13, double _m14,
-    double _m21, double _m22, double _m23, double _m24,
-    double _m31, double _m32, double _m33, double _m34)
-    : m11(_m11), m12(_m12), m13(_m13), m14(_m14),
-    m21(_m21), m22(_m22), m23(_m23), m24(_m24),
-    m31(_m31), m32(_m32), m33(_m33), m34(_m34)
+    double _m00, double _m01, double _m02, double _m03,
+    double _m10, double _m11, double _m12, double _m13,
+    double _m20, double _m21, double _m22, double _m23)
+    : m00(_m00), m01(_m01), m02(_m02), m03(_m03),
+    m10(_m10), m11(_m11), m12(_m12), m13(_m13),
+    m20(_m20), m21(_m21), m22(_m22), m23(_m23)
 {
 }
 
@@ -29,16 +29,16 @@ TransformationMatrix::TransformationMatrix(const std::vector<double> &entries_ro
         CONFESS("Invalid number of entries when initalizing TransformationMatrix. Vector length must be 12.");
         return;
     }
-    m11 = entries_row_maj[0];   m12 = entries_row_maj[1];   m13 = entries_row_maj[2];   m14 = entries_row_maj[3];
-    m21 = entries_row_maj[4];   m22 = entries_row_maj[5];   m23 = entries_row_maj[6];   m24 = entries_row_maj[7];
-    m31 = entries_row_maj[8];   m32 = entries_row_maj[9];   m33 = entries_row_maj[10];  m34 = entries_row_maj[11];
+    m00 = entries_row_maj[0];   m01 = entries_row_maj[1];   m02 = entries_row_maj[2];   m03 = entries_row_maj[3];
+    m10 = entries_row_maj[4];   m11 = entries_row_maj[5];   m12 = entries_row_maj[6];   m13 = entries_row_maj[7];
+    m20 = entries_row_maj[8];   m21 = entries_row_maj[9];   m22 = entries_row_maj[10];  m23 = entries_row_maj[11];
 }
 
 TransformationMatrix::TransformationMatrix(const TransformationMatrix &other)
 {
-    this->m11 = other.m11; this->m12 = other.m12; this->m13 = other.m13; this->m14 = other.m14;
-    this->m21 = other.m21; this->m22 = other.m22; this->m23 = other.m23; this->m24 = other.m24;
-    this->m31 = other.m31; this->m32 = other.m32; this->m33 = other.m33; this->m34 = other.m34;
+    this->m00 = other.m00; this->m01 = other.m01; this->m02 = other.m02; this->m03 = other.m03;
+    this->m10 = other.m10; this->m11 = other.m11; this->m12 = other.m12; this->m13 = other.m13;
+    this->m20 = other.m20; this->m21 = other.m21; this->m22 = other.m22; this->m23 = other.m23;
 }
 
 TransformationMatrix& TransformationMatrix::operator= (TransformationMatrix other)
@@ -49,30 +49,30 @@ TransformationMatrix& TransformationMatrix::operator= (TransformationMatrix othe
 
 void TransformationMatrix::swap(TransformationMatrix &other)
 {
-    std::swap(this->m11, other.m11); std::swap(this->m12, other.m12);
-    std::swap(this->m13, other.m13); std::swap(this->m14, other.m14);
-    std::swap(this->m21, other.m21); std::swap(this->m22, other.m22);
-    std::swap(this->m23, other.m23); std::swap(this->m24, other.m24);
-    std::swap(this->m31, other.m31); std::swap(this->m32, other.m32);
-    std::swap(this->m33, other.m33); std::swap(this->m34, other.m34);
+    std::swap(this->m00, other.m00); std::swap(this->m01, other.m01);
+    std::swap(this->m02, other.m02); std::swap(this->m03, other.m03);
+    std::swap(this->m10, other.m10); std::swap(this->m11, other.m11);
+    std::swap(this->m12, other.m12); std::swap(this->m13, other.m13);
+    std::swap(this->m20, other.m20); std::swap(this->m21, other.m21);
+    std::swap(this->m22, other.m22); std::swap(this->m23, other.m23);
 }
 
 bool TransformationMatrix::operator==(const TransformationMatrix &other) const
 {
     double const eps = EPSILON; 
     bool is_equal = true;
+    is_equal &= (abs(this->m00 - other.m00) < eps);
+    is_equal &= (abs(this->m01 - other.m01) < eps);
+    is_equal &= (abs(this->m02 - other.m02) < eps);
+    is_equal &= (abs(this->m03 - other.m03) < eps);
+    is_equal &= (abs(this->m10 - other.m10) < eps);
     is_equal &= (abs(this->m11 - other.m11) < eps);
     is_equal &= (abs(this->m12 - other.m12) < eps);
     is_equal &= (abs(this->m13 - other.m13) < eps);
-    is_equal &= (abs(this->m14 - other.m14) < eps);
+    is_equal &= (abs(this->m20 - other.m20) < eps);
     is_equal &= (abs(this->m21 - other.m21) < eps);
     is_equal &= (abs(this->m22 - other.m22) < eps);
     is_equal &= (abs(this->m23 - other.m23) < eps);
-    is_equal &= (abs(this->m24 - other.m24) < eps);
-    is_equal &= (abs(this->m31 - other.m31) < eps);
-    is_equal &= (abs(this->m32 - other.m32) < eps);
-    is_equal &= (abs(this->m33 - other.m33) < eps);
-    is_equal &= (abs(this->m34 - other.m34) < eps);
     return is_equal;
 }
 
@@ -80,18 +80,18 @@ std::vector<double> TransformationMatrix::matrix3x4f() const
 {
     std::vector<double> out_arr(0);
     out_arr.reserve(12);
+    out_arr.push_back(this->m00);
+    out_arr.push_back(this->m01);
+    out_arr.push_back(this->m02);
+    out_arr.push_back(this->m03);
+    out_arr.push_back(this->m10);
     out_arr.push_back(this->m11);
     out_arr.push_back(this->m12);
     out_arr.push_back(this->m13);
-    out_arr.push_back(this->m14);
+    out_arr.push_back(this->m20);
     out_arr.push_back(this->m21);
     out_arr.push_back(this->m22);
     out_arr.push_back(this->m23);
-    out_arr.push_back(this->m24);
-    out_arr.push_back(this->m31);
-    out_arr.push_back(this->m32);
-    out_arr.push_back(this->m33);
-    out_arr.push_back(this->m34);
     return out_arr;
 }
 
@@ -99,7 +99,7 @@ double TransformationMatrix::determinante() const
 {
     // translation elements don't influence the determinante
     // because of the 0s on the other side of main diagonal
-    return m11*(m22*m33 - m23*m32) - m12*(m21*m33 - m23*m31) + m13*(m21*m32 - m31*m22);
+    return m00*(m11*m22 - m12*m21) - m01*(m10*m22 - m12*m20) + m02*(m10*m21 - m20*m11);
 }
 
 TransformationMatrix TransformationMatrix::inverse() const
@@ -116,19 +116,19 @@ TransformationMatrix TransformationMatrix::inverse() const
 
     TransformationMatrix inverse;
 
-    inverse.m11 = fac * (this->m22 * this->m33 - this->m23 * this->m32);
-    inverse.m12 = fac * (this->m13 * this->m32 - this->m12 * this->m33);
-    inverse.m13 = fac * (this->m12 * this->m23 - this->m13 * this->m22);
-    inverse.m21 = fac * (this->m23 * this->m31 - this->m21 * this->m33);
-    inverse.m22 = fac * (this->m11 * this->m33 - this->m13 * this->m31);
-    inverse.m23 = fac * (this->m13 * this->m21 - this->m11 * this->m23);
-    inverse.m31 = fac * (this->m21 * this->m32 - this->m22 * this->m31);
-    inverse.m32 = fac * (this->m12 * this->m31 - this->m11 * this->m32);
-    inverse.m33 = fac * (this->m11 * this->m22 - this->m12 * this->m21);
+    inverse.m00 = fac * (this->m11 * this->m22 - this->m12 * this->m21);
+    inverse.m01 = fac * (this->m02 * this->m21 - this->m01 * this->m22);
+    inverse.m02 = fac * (this->m01 * this->m12 - this->m02 * this->m11);
+    inverse.m10 = fac * (this->m12 * this->m20 - this->m10 * this->m22);
+    inverse.m11 = fac * (this->m00 * this->m22 - this->m02 * this->m20);
+    inverse.m12 = fac * (this->m02 * this->m10 - this->m00 * this->m12);
+    inverse.m20 = fac * (this->m10 * this->m21 - this->m11 * this->m20);
+    inverse.m21 = fac * (this->m01 * this->m20 - this->m00 * this->m21);
+    inverse.m22 = fac * (this->m00 * this->m11 - this->m01 * this->m10);
 
-    inverse.m14 = -(inverse.m11 * this->m14 + inverse.m12 * this->m24 + inverse.m13 * this->m34);
-    inverse.m24 = -(inverse.m21 * this->m14 + inverse.m22 * this->m24 + inverse.m23 * this->m34);
-    inverse.m34 = -(inverse.m31 * this->m14 + inverse.m32 * this->m24 + inverse.m33 * this->m34);
+    inverse.m03 = -(inverse.m00 * this->m03 + inverse.m01 * this->m13 + inverse.m02 * this->m23);
+    inverse.m13 = -(inverse.m10 * this->m03 + inverse.m11 * this->m13 + inverse.m12 * this->m23);
+    inverse.m23 = -(inverse.m20 * this->m03 + inverse.m21 * this->m13 + inverse.m22 * this->m23);
 
     return inverse;
 }
@@ -159,20 +159,20 @@ TransformationMatrix TransformationMatrix::multiply(const TransformationMatrix &
 {
     TransformationMatrix trafo;
 
-    trafo.m11 = left.m11*right.m11 + left.m12*right.m21 + left.m13*right.m31;
-    trafo.m12 = left.m11*right.m12 + left.m12*right.m22 + left.m13*right.m32;
-    trafo.m13 = left.m11*right.m13 + left.m12*right.m23 + left.m13*right.m33;
-    trafo.m14 = left.m11*right.m14 + left.m12*right.m24 + left.m13*right.m34 + left.m14;
+    trafo.m00 = left.m00*right.m00 + left.m01*right.m10 + left.m02*right.m20;
+    trafo.m01 = left.m00*right.m01 + left.m01*right.m11 + left.m02*right.m21;
+    trafo.m02 = left.m00*right.m02 + left.m01*right.m12 + left.m02*right.m22;
+    trafo.m03 = left.m00*right.m03 + left.m01*right.m13 + left.m02*right.m23 + left.m03;
 
-    trafo.m21 = left.m21*right.m11 + left.m22*right.m21 + left.m23*right.m31;
-    trafo.m22 = left.m21*right.m12 + left.m22*right.m22 + left.m23*right.m32;
-    trafo.m23 = left.m21*right.m13 + left.m22*right.m23 + left.m23*right.m33;
-    trafo.m24 = left.m21*right.m14 + left.m22*right.m24 + left.m23*right.m34 + left.m24;
+    trafo.m10 = left.m10*right.m00 + left.m11*right.m10 + left.m12*right.m20;
+    trafo.m11 = left.m10*right.m01 + left.m11*right.m11 + left.m12*right.m21;
+    trafo.m12 = left.m10*right.m02 + left.m11*right.m12 + left.m12*right.m22;
+    trafo.m13 = left.m10*right.m03 + left.m11*right.m13 + left.m12*right.m23 + left.m13;
 
-    trafo.m31 = left.m31*right.m11 + left.m32*right.m21 + left.m33*right.m31;
-    trafo.m32 = left.m31*right.m12 + left.m32*right.m22 + left.m33*right.m32;
-    trafo.m33 = left.m31*right.m13 + left.m32*right.m23 + left.m33*right.m33;
-    trafo.m34 = left.m31*right.m14 + left.m32*right.m24 + left.m33*right.m34 + left.m34;
+    trafo.m20 = left.m20*right.m00 + left.m21*right.m10 + left.m22*right.m20;
+    trafo.m21 = left.m20*right.m01 + left.m21*right.m11 + left.m22*right.m21;
+    trafo.m22 = left.m20*right.m02 + left.m21*right.m12 + left.m22*right.m22;
+    trafo.m23 = left.m20*right.m03 + left.m21*right.m13 + left.m22*right.m23 + left.m23;
 
     return trafo;
 }
@@ -347,13 +347,13 @@ TransformationMatrix TransformationMatrix::mat_mirror(const Axis &axis)
     switch (axis)
     {
     case X:
-        mat.m11 = -1.0;
+        mat.m00 = -1.0;
         break;
     case Y:
-        mat.m22 = -1.0;
+        mat.m11 = -1.0;
         break;
     case Z:
-        mat.m33 = -1.0;
+        mat.m22 = -1.0;
         break;
     default:
         CONFESS("Invalid Axis supplied to TransformationMatrix::mat_mirror");

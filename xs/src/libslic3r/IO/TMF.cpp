@@ -250,18 +250,18 @@ TMFEditor::write_build(boost::nowide::ofstream& fout)
 
             // Add the transform
             fout << " transform=\""
+                 << trafo.m00 << " "
+                 << trafo.m10 << " "
+                 << trafo.m20 << " "
+                 << trafo.m01 << " "
                  << trafo.m11 << " "
                  << trafo.m21 << " "
-                 << trafo.m31 << " "
+                 << trafo.m02 << " "
                  << trafo.m12 << " "
                  << trafo.m22 << " "
-                 << trafo.m32 << " "
+                 << trafo.m03 << " "
                  << trafo.m13 << " "
-                 << trafo.m23 << " "
-                 << trafo.m33 << " "
-                 << trafo.m14 << " "
-                 << trafo.m24 << " "
-                 << trafo.m34
+                 << trafo.m23
                  << "\"/>\n";
 
         }
@@ -728,18 +728,18 @@ TMFParserContext::get_transformations(std::string matrix, TransformationMatrix &
 
     // matrices in 3mf is row-major for row-vectors multiplied from the left, 
     // so we have to transpose the matrix
-    trafo.m11 = m[0];
-    trafo.m21 = m[1];
-    trafo.m31 = m[2];
-    trafo.m12 = m[3];
-    trafo.m22 = m[4];
-    trafo.m32 = m[5];
-    trafo.m13 = m[6];
-    trafo.m23 = m[7];
-    trafo.m33 = m[8];
-    trafo.m14 = m[9];
-    trafo.m24 = m[10];
-    trafo.m34 = m[11];
+    trafo.m00 = m[0];
+    trafo.m10 = m[1];
+    trafo.m20 = m[2];
+    trafo.m01 = m[3];
+    trafo.m11 = m[4];
+    trafo.m21 = m[5];
+    trafo.m02 = m[6];
+    trafo.m12 = m[7];
+    trafo.m22 = m[8];
+    trafo.m03 = m[9];
+    trafo.m13 = m[10];
+    trafo.m23 = m[11];
 
     if (transformations)
     {

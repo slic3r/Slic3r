@@ -32,6 +32,27 @@
 
     double determinante();
 
+    double m00()
+        %code%{ RETVAL = THIS->m00; %};
+    void set_m00(double value)
+        %code%{ THIS->m00 = value; %};
+    double m01()
+        %code%{ RETVAL = THIS->m01; %};
+    void set_m01(double value)
+        %code%{ THIS->m01 = value; %};
+    double m02()
+        %code%{ RETVAL = THIS->m02; %};
+    void set_m02(double value)
+        %code%{ THIS->m02 = value; %};
+    double m03()
+        %code%{ RETVAL = THIS->m03; %};
+    void set_m03(double value)
+        %code%{ THIS->m03 = value; %};
+
+    double m10()
+        %code%{ RETVAL = THIS->m10; %};
+    void set_m10(double value)
+        %code%{ THIS->m10 = value; %};
     double m11()
         %code%{ RETVAL = THIS->m11; %};
     void set_m11(double value)
@@ -44,11 +65,11 @@
         %code%{ RETVAL = THIS->m13; %};
     void set_m13(double value)
         %code%{ THIS->m13 = value; %};
-    double m14()
-        %code%{ RETVAL = THIS->m14; %};
-    void set_m14(double value)
-        %code%{ THIS->m14 = value; %};
 
+    double m20()
+        %code%{ RETVAL = THIS->m20; %};
+    void set_m20(double value)
+        %code%{ THIS->m20 = value; %};
     double m21()
         %code%{ RETVAL = THIS->m21; %};
     void set_m21(double value)
@@ -61,33 +82,12 @@
         %code%{ RETVAL = THIS->m23; %};
     void set_m23(double value)
         %code%{ THIS->m23 = value; %};
-    double m24()
-        %code%{ RETVAL = THIS->m24; %};
-    void set_m24(double value)
-        %code%{ THIS->m24 = value; %};
-
-    double m31()
-        %code%{ RETVAL = THIS->m31; %};
-    void set_m31(double value)
-        %code%{ THIS->m31 = value; %};
-    double m32()
-        %code%{ RETVAL = THIS->m32; %};
-    void set_m32(double value)
-        %code%{ THIS->m32 = value; %};
-    double m33()
-        %code%{ RETVAL = THIS->m33; %};
-    void set_m33(double value)
-        %code%{ THIS->m33 = value; %};
-    double m34()
-        %code%{ RETVAL = THIS->m34; %};
-    void set_m34(double value)
-        %code%{ THIS->m34 = value; %};
 
     void set_elements(
-        double m11, double m12, double m13, double m14,
-        double m21, double m22, double m23, double m24,
-        double m31, double m32, double m33, double m34)
-        %code{% *THIS = TransformationMatrix(m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34); %};
+        double m00, double m01, double m02, double m03,
+        double m10, double m11, double m12, double m13,
+        double m20, double m21, double m22, double m23)
+        %code{% *THIS = TransformationMatrix(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23); %};
 
     void set_eye()
         %code{% *THIS = TransformationMatrix::mat_eye(); %};
