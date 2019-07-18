@@ -503,13 +503,13 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 // Apply transformation if supplied.
                 const char* transformation_matrix = get_attribute(atts, "transform");
                 if(transformation_matrix){
-                    // Decompose the affine matrix.
                     TransformationMatrix trafo;
                     std::vector<double> single_transformations;
-                    if(!get_transformations(transformation_matrix, trafo, &single_transformations))
+                    if(!extract_trafo(transformation_matrix, trafo))
                         this->stop();
 
-                    apply_transformation(instance, trafo, single_transformations);
+                    // Decompose the affine matrix.
+                    instance->set_complete_trafo(trafo);
                 }
 
                 node_type_new = NODE_TYPE_ITEM;
@@ -560,7 +560,7 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 if(transformation_matrix){
                     TransformationMatrix trafo;
 
-                    if(!get_transformations(transformation_matrix, trafo))
+                    if(!extract_trafo(transformation_matrix, trafo))
                         this->stop();
 
                     volume->apply_transformation(trafo);
@@ -708,7 +708,7 @@ TMFParserContext::stop()
 }
 
 bool
-TMFParserContext::get_transformations(std::string matrix, TransformationMatrix &trafo, std::vector<double>* transformations)
+TMFParserContext::extract_trafo(std::string matrix, TransformationMatrix &trafo)
 {
     // Get the values.
     double m[12];
@@ -741,91 +741,7 @@ TMFParserContext::get_transformations(std::string matrix, TransformationMatrix &
     trafo.m13 = m[10];
     trafo.m23 = m[11];
 
-    if (transformations)
-    {
-
-        transformations->push_back(m[9]);
-        transformations->push_back(m[10]);
-
-        // Get the scale values.
-        double sx = sqrt( m[0] * m[0] + m[1] * m[1] + m[2] * m[2]),
-            sy = sqrt( m[3] * m[3] + m[4] * m[4] + m[5] * m[5]),
-            sz = sqrt( m[6] * m[6] + m[7] * m[7] + m[8] * m[8]);
-        
-        double uniform_scaling = (sx + sy + sz) / 3;
-        transformations->push_back(uniform_scaling);
-
-        // Get the rotation values.
-        // Normalize scale from the rotation matrix.
-        m[0] /= sx; m[1] /= sy; m[2] /= sz;
-        m[3] /= sx; m[4] /= sy; m[5] /= sz;
-        m[6] /= sx; m[7] /= sy; m[8] /= sz;
-
-        // Get quaternion values
-        double q_w = sqrt(std::max(0.0, 1.0 + m[0] + m[4] + m[8])) / 2,
-            q_x = sqrt(std::max(0.0, 1.0 + m[0] - m[4] - m[8])) / 2,
-            q_y = sqrt(std::max(0.0, 1.0 - m[0] + m[4] - m[8])) / 2,
-            q_z = sqrt(std::max(0.0, 1.0 - m[0] - m[4] + m[8])) / 2;
-
-        q_x *= ((q_x * (m[5] - m[7])) <= 0 ? -1 : 1);
-        q_y *= ((q_y * (m[6] - m[2])) <= 0 ? -1 : 1);
-        q_z *= ((q_z * (m[1] - m[3])) <= 0 ? -1 : 1);
-
-        // Normalize quaternion values.
-        double q_magnitude = sqrt(q_w * q_w + q_x * q_x + q_y * q_y + q_z * q_z);
-        q_w /= q_magnitude;
-        q_x /= q_magnitude;
-        q_y /= q_magnitude;
-        q_z /= q_magnitude;
-
-        double test = q_x * q_y + q_z * q_w;
-        double result_z;
-        // singularity at north pole
-        if (test > 0.499)
-        {
-            result_z = PI / 2;
-        }
-            // singularity at south pole
-        else if (test < -0.499)
-        {
-            result_z = -PI / 2;
-        }
-        else
-        {
-            result_z = asin(2 * q_x * q_y + 2 * q_z * q_w);
-
-            if (result_z < 0) result_z += 2 * PI;
-        }
-        transformations->push_back(result_z);
-
-    }
     return true;
-}
-
-void
-TMFParserContext::apply_transformation(ModelInstance *instance, const TransformationMatrix& complete_trafo, const std::vector<double>& single_transformations)
-{
-    // Reset internal trafo
-    instance->additional_trafo = TransformationMatrix::mat_eye();
-
-    // Apply scale.
-    instance->scaling_factor = single_transformations[2];
-
-    // Apply z rotation.
-    instance->rotation = single_transformations[3];
-
-    // Apply translation.
-    instance->offset.x = single_transformations[0];
-    instance->offset.y = single_transformations[1];
-
-    // Complete = Instance * Additional
-    // -> Instance^-1 * Complete = (Instance^-1 * Instance) * Additional
-    // -> Instance^-1 * Complete = Additional
-    instance->additional_trafo = TransformationMatrix::multiply(
-        instance->get_trafo_matrix().inverse(),
-        complete_trafo);
-
-    return;
 }
 
 ModelVolume*

@@ -1170,8 +1170,15 @@ ModelInstance::ModelInstance(ModelObject *object)
 :   rotation(0), scaling_factor(1), object(object)
 {}
 
+ModelInstance::ModelInstance(ModelObject *object, const TransformationMatrix & trafo)
+:   object(object)
+{
+    this->set_complete_trafo(trafo);
+}
+
+
 ModelInstance::ModelInstance(ModelObject *object, const ModelInstance &other)
-:   rotation(other.rotation), scaling_factor(other.scaling_factor), offset(other.offset), object(object)
+:   rotation(other.rotation), scaling_factor(other.scaling_factor), offset(other.offset), additional_trafo(other.additional_trafo), object(object)
 {}
 
 ModelInstance& ModelInstance::operator= (ModelInstance other)
@@ -1183,9 +1190,80 @@ ModelInstance& ModelInstance::operator= (ModelInstance other)
 void
 ModelInstance::swap(ModelInstance &other)
 {
-    std::swap(this->rotation,       other.rotation);
-    std::swap(this->scaling_factor, other.scaling_factor);
-    std::swap(this->offset,         other.offset);
+    std::swap(this->rotation,         other.rotation);
+    std::swap(this->scaling_factor,   other.scaling_factor);
+    std::swap(this->offset,           other.offset);
+    std::swap(this->additional_trafo, other.additional_trafo);
+}
+
+void ModelInstance::set_complete_trafo(TransformationMatrix const & trafo)
+{
+    // Extraction code moved from TMF class
+
+    this->offset.x = trafo.m03;
+    this->offset.y = trafo.m13;
+
+    // Get the scale values.
+    double sx = sqrt( trafo.m00 * trafo.m00 + trafo.m10 * trafo.m10 + trafo.m20 * trafo.m20),
+        sy = sqrt( trafo.m01 * trafo.m01 + trafo.m11 * trafo.m11 + trafo.m21 * trafo.m21),
+        sz = sqrt( trafo.m02 * trafo.m02 + trafo.m12 * trafo.m12 + trafo.m22 * trafo.m22);
+    
+    this->scaling_factor = (sx + sy + sz) / 3;
+
+    // Get the rotation values.
+    // Normalize scale from the matrix.
+    TransformationMatrix rotmat = trafo.multiplyLeft(TransformationMatrix::mat_scale(1/sx, 1/sy, 1/sz));
+    rotmat.m00 /= sx; rotmat.m10 /= sy; rotmat.m20 /= sz;
+    rotmat.m01 /= sx; rotmat.m11 /= sy; rotmat.m21 /= sz;
+    rotmat.m02 /= sx; rotmat.m12 /= sy; rotmat.m22 /= sz;
+
+    // Get quaternion values
+    double q_w = sqrt(std::max(0.0, 1.0 + rotmat.m00 + rotmat.m11 + rotmat.m22)) / 2,
+        q_x = sqrt(std::max(0.0, 1.0 + rotmat.m00 - rotmat.m11 - rotmat.m22)) / 2,
+        q_y = sqrt(std::max(0.0, 1.0 - rotmat.m00 + rotmat.m11 - rotmat.m22)) / 2,
+        q_z = sqrt(std::max(0.0, 1.0 - rotmat.m00 - rotmat.m11 + rotmat.m22)) / 2;
+
+    q_x *= ((q_x * (rotmat.m21 - rotmat.m12)) <= 0 ? -1 : 1);
+    q_y *= ((q_y * (rotmat.m02 - rotmat.m20)) <= 0 ? -1 : 1);
+    q_z *= ((q_z * (rotmat.m10 - rotmat.m01)) <= 0 ? -1 : 1);
+
+    // Normalize quaternion values.
+    double q_magnitude = sqrt(q_w * q_w + q_x * q_x + q_y * q_y + q_z * q_z);
+    q_w /= q_magnitude;
+    q_x /= q_magnitude;
+    q_y /= q_magnitude;
+    q_z /= q_magnitude;
+
+    double test = q_x * q_y + q_z * q_w;
+    double result_z;
+    // singularity at north pole
+    if (test > 0.499)
+    {
+        result_z = PI / 2;
+    }
+        // singularity at south pole
+    else if (test < -0.499)
+    {
+        result_z = -PI / 2;
+    }
+    else
+    {
+        result_z = asin(2 * q_x * q_y + 2 * q_z * q_w);
+
+        if (result_z < 0) result_z += 2 * PI;
+    }
+    
+    this->rotation = result_z;
+
+    this->additional_trafo = TransformationMatrix::mat_eye();
+
+    // Complete = Instance * Additional
+    // -> Instance^-1 * Complete = (Instance^-1 * Instance) * Additional
+    // -> Instance^-1 * Complete = Additional
+    this->additional_trafo = TransformationMatrix::multiply(
+        this->get_trafo_matrix().inverse(),
+        trafo);
+
 }
 
 void
@@ -1209,9 +1287,7 @@ TransformationMatrix ModelInstance::get_trafo_matrix(bool dont_translate) const
 
 BoundingBoxf3 ModelInstance::transform_bounding_box(const BoundingBoxf3 &bbox, bool dont_translate) const
 {
-    // rotate around mesh origin
-    double c = cos(this->rotation);
-    double s = sin(this->rotation);
+    TransformationMatrix
     Pointf3 pts[4] = {
         bbox.min,
         bbox.max,

@@ -605,6 +605,9 @@ class ModelInstance
     /// \return ModelObject* pointer to the owner ModelObject
     ModelObject* get_object() const { return this->object; };
 
+    /// Set the internal instance parameters by extracting them from the given complete transformation
+    void set_complete_trafo(TransformationMatrix const & trafo);
+
     //TRAFO:should be deprecated
     /// Transform an external TriangleMesh object
     /// \param mesh TriangleMesh* pointer to the the mesh
@@ -631,6 +634,11 @@ class ModelInstance
     /// Constructor
     /// \param object ModelObject* pointer to the owner ModelObject
     ModelInstance(ModelObject *object);
+
+    /// Constructor
+    /// \param object ModelObject* pointer to the owner ModelObject
+    /// \param trafo transformation that the Model Instance should initially represent
+    ModelInstance(ModelObject *object, const TransformationMatrix & trafo);
 
     /// Constructor
     /// \param object ModelObject* pointer to the owner ModelObject
