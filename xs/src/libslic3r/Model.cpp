@@ -1222,9 +1222,9 @@ void ModelInstance::set_complete_trafo(TransformationMatrix const & trafo)
     this->offset.y = trafo.m13;
 
     // Get the scale values.
-    double sx = sqrt( trafo.m00 * trafo.m00 + trafo.m10 * trafo.m10 + trafo.m20 * trafo.m20),
-        sy = sqrt( trafo.m01 * trafo.m01 + trafo.m11 * trafo.m11 + trafo.m21 * trafo.m21),
-        sz = sqrt( trafo.m02 * trafo.m02 + trafo.m12 * trafo.m12 + trafo.m22 * trafo.m22);
+    double sx = sqrt( trafo.m00 * trafo.m00 + trafo.m01 * trafo.m01 + trafo.m02 * trafo.m02),
+        sy = sqrt( trafo.m10 * trafo.m10 + trafo.m11 * trafo.m11 + trafo.m12 * trafo.m12),
+        sz = sqrt( trafo.m20 * trafo.m20 + trafo.m21 * trafo.m21 + trafo.m22 * trafo.m22);
     
     this->scaling_factor = (sx + sy + sz) / 3;
 
