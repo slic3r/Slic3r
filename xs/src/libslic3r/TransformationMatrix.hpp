@@ -77,6 +77,9 @@ public:
     /// multiplies the parameter-matrix from the right (out=this*right)
     TransformationMatrix multiplyRight(const TransformationMatrix &right) const;
 
+    /// multiplies the Point from the right (out=this*right)
+    Pointf3 transform(const Pointf3 &point, coordf_t w = 1.0) const;
+
     /// generates an eye matrix.
     static TransformationMatrix mat_eye();
 
