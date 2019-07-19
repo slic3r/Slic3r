@@ -78,7 +78,7 @@ my $expected_relationships = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
     cmp_ok(abs($model->get_object(0)->get_instance(0)->offset()->y() + 142.501), '<=', 0.0001, 'Test 2: Y translation check.');
 
     # Check scale.
-    cmp_ok(abs($model->get_object(0)->get_instance(0)->scaling_factor() - 25.4), '<=', 0.0001, 'Test 2: X scale check.');
+    cmp_ok(abs($model->get_object(0)->get_instance(0)->scaling_factor() - 25.4), '<=', 0.0001, 'Test 2: scale check.');
 
     # Check Z rotation.
     cmp_ok(abs($model->get_object(0)->get_instance(0)->rotation()), '<=', 0.0001, 'Test 2: Z rotation check.');
