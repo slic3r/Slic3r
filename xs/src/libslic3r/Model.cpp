@@ -1231,9 +1231,6 @@ void ModelInstance::set_complete_trafo(TransformationMatrix const & trafo)
     // Get the rotation values.
     // Normalize scale from the matrix.
     TransformationMatrix rotmat = trafo.multiplyLeft(TransformationMatrix::mat_scale(1/sx, 1/sy, 1/sz));
-    rotmat.m00 /= sx; rotmat.m10 /= sy; rotmat.m20 /= sz;
-    rotmat.m01 /= sx; rotmat.m11 /= sy; rotmat.m21 /= sz;
-    rotmat.m02 /= sx; rotmat.m12 /= sy; rotmat.m22 /= sz;
 
     // Get quaternion values
     double q_w = sqrt(std::max(0.0, 1.0 + rotmat.m00 + rotmat.m11 + rotmat.m22)) / 2,
