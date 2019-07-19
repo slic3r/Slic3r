@@ -2536,14 +2536,14 @@ sub export_stl {
 sub reload_from_disk {
     my ($self) = @_;
     
-    my ($obj_idx, $org_obj) = $self->selected_object;
+    my ($obj_idx, $org_obj_plater) = $self->selected_object;
     return if !defined $obj_idx;
     
-    if (!$org_obj->input_file) {
+    if (!$org_obj_plater->input_file) {
         Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because it isn't referenced to its input file any more. This is the case after performing operations like cut or split.");
         return;
     }
-    if (!-e $org_obj->input_file) {
+    if (!-e $org_obj_plater->input_file) {
         Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the file doesn't exist anymore on the disk.");
         return;
     }
@@ -2579,11 +2579,13 @@ sub reload_from_disk {
     }
     
     # Only reload the selected object and not all objects from the input file.
-    my @new_obj_idx = $self->load_file($org_obj->input_file, $org_obj->input_file_obj_idx);
+    my @new_obj_idx = $self->load_file($org_obj_plater->input_file, $org_obj_plater->input_file_obj_idx);
     if (!@new_obj_idx) {
         Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the new file doesn't contain the object.");
         return;
     }
+
+    my $org_obj = my $new_obj = $self->{model}->objects->[$obj_idx];
 
     my $volume_unmatched=0;
 
