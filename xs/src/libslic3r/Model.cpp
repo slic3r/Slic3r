@@ -1305,27 +1305,24 @@ TransformationMatrix ModelInstance::get_trafo_matrix(bool dont_translate) const
 
 BoundingBoxf3 ModelInstance::transform_bounding_box(const BoundingBoxf3 &bbox, bool dont_translate) const
 {
-    TransformationMatrix
-    Pointf3 pts[4] = {
-        bbox.min,
-        bbox.max,
-        Pointf3(bbox.min.x, bbox.max.y, bbox.min.z),
-        Pointf3(bbox.max.x, bbox.min.y, bbox.max.z)
+    TransformationMatrix trafo = this->get_trafo_matrix(dont_translate);
+    Pointf3 Poi_min = bbox.min;
+    Pointf3 Poi_max = bbox.max;
+
+    // all 8 corner points needed because the transformation could be anything
+    Pointf3 pts[8] = {
+        Pointf3(Poi_min.x, Poi_min.y, Poi_min.z),
+        Pointf3(Poi_min.x, Poi_min.y, Poi_max.z),
+        Pointf3(Poi_min.x, Poi_max.y, Poi_min.z),
+        Pointf3(Poi_min.x, Poi_max.y, Poi_max.z),
+        Pointf3(Poi_max.x, Poi_min.y, Poi_min.z),
+        Pointf3(Poi_max.x, Poi_min.y, Poi_max.z),
+        Pointf3(Poi_max.x, Poi_max.y, Poi_min.z),
+        Pointf3(Poi_max.x, Poi_max.y, Poi_max.z)
     };
     BoundingBoxf3 out;
-    for (int i = 0; i < 4; ++ i) {
-        Pointf3 &v = pts[i];
-        double xold = v.x;
-        double yold = v.y;
-        // Rotation around z axis.
-        v.x = float(c * xold - s * yold);
-        v.y = float(s * xold + c * yold);
-        v.scale(this->scaling_factor);
-        if (!dont_translate) {
-            v.x += this->offset.x;
-            v.y += this->offset.y;
-        }
-        out.merge(v);
+    for (int i = 0; i < 8; ++ i) {
+        out.merge(trafo.transform(pts[i]));
     }
     return out;
 }

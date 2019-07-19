@@ -155,6 +155,15 @@ TransformationMatrix TransformationMatrix::multiplyRight(const TransformationMat
     return multiply(*this, right);
 }
 
+Pointf3 TransformationMatrix::transform(const Pointf3 &point, coordf_t w) const
+{
+    Pointf3 out;
+    out.x = this->m00 * point.x + this->m01 * point.y + this->m02 * point.z + this->m03 * w;
+    out.y = this->m10 * point.x + this->m11 * point.y + this->m12 * point.z + this->m13 * w;
+    out.z = this->m20 * point.x + this->m21 * point.y + this->m22 * point.z + this->m23 * w;
+    return out;
+}
+
 TransformationMatrix TransformationMatrix::multiply(const TransformationMatrix &left, const TransformationMatrix &right)
 {
     TransformationMatrix trafo;
