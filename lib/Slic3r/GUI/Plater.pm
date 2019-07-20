@@ -1649,7 +1649,7 @@ sub rotate_face {
     $model_object->rotate_vec_to_vec($normal,$axis_vec);
 
     # realign object to Z = 0
-    $model_object->center_around_origin;
+    $model_object->align_to_ground;
     $self->make_thumbnail($obj_idx);
 
     $model_object->update_bounding_box;
@@ -1708,7 +1708,7 @@ sub rotate {
         $model_object->rotate(deg2rad($angle), $axis);
         
         # realign object to Z = 0
-        $model_object->center_around_origin;
+        $model_object->align_to_ground;
         $self->make_thumbnail($obj_idx);
 
         if (!defined $dont_push) {
@@ -1738,10 +1738,9 @@ sub mirror {
     
     $model_object->reset_undo_trafo();
     $model_object->mirror($axis);
-    $model_object->update_bounding_box;
     
     # realign object to Z = 0
-    $model_object->center_around_origin;
+    $model_object->align_to_ground;
     $self->make_thumbnail($obj_idx);
         
     # update print and start background processing
@@ -1772,7 +1771,7 @@ sub transform {
     $model_object->update_bounding_box;
     
     # realign object to Z = 0
-    $model_object->center_around_origin;
+    $model_object->align_to_ground;
     $self->make_thumbnail($obj_idx);
         
     # update print and start background processing
