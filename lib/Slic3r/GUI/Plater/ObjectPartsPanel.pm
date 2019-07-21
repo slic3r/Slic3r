@@ -366,7 +366,7 @@ sub on_btn_load {
                 $new_volume->set_input_file_vol_idx($vol_idx);
                 
                 # apply the same translation we applied to the object
-                $new_volume->translate(@{$self->{model_object}->origin_translation});
+                $new_volume->apply_transformation($self->{model_object}->get_trafo_obj);
                 
                 # set a default extruder value, since user can't add it manually
                 $new_volume->config->set_ifndef('extruder', 0);
