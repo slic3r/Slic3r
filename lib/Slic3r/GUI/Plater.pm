@@ -2593,6 +2593,7 @@ sub reload_from_disk {
         $new_obj->clear_instances;
         $new_obj->add_instance($_) for @{$org_obj->instances};
         $new_obj->config->apply($org_obj->config);
+        $new_obj->set_trafo_obj($org_obj->get_trafo_obj()) if $reload_preserve_trafo;
         
         my $new_vol_idx = 0;
         my $org_vol_idx = 0;
@@ -2605,8 +2606,8 @@ sub reload_from_disk {
                 $new_obj->get_volume($new_vol_idx)->apply_transformation($org_obj->get_volume($org_vol_idx)->get_transformation) if $reload_preserve_trafo;
                 $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume($org_vol_idx++)->config);
             } else {
-                # reload has more volumes than original (first file), apply config and trafo from the first volume
-                $new_obj->get_volume($new_vol_idx)->apply_transformation($org_obj->get_volume(0)->get_transformation) if $reload_preserve_trafo;
+                # reload has more volumes than original (first file), apply config and trafo from the parent object
+                $new_obj->get_volume($new_vol_idx)->apply_transformation($org_obj->get_trafo_obj()) if $reload_preserve_trafo;
                 $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume(0)->config);
                 $volume_unmatched=1;
             }
@@ -2623,8 +2624,6 @@ sub reload_from_disk {
             if ($reload_behavior==1) { # Reload behavior: copy
 
                 my $new_volume = $new_obj->add_volume($org_volume);
-                #$new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
-                #$new_volume->mesh->translate(@{$new_obj->origin_translation});
                 if ($new_volume->name =~ m/link to path\z/) {
                     my $new_name = $new_volume->name;
                     $new_name =~ s/ - no link to path$/ - copied/;
@@ -2658,14 +2657,11 @@ sub reload_from_disk {
                             $new_volume->set_input_file_vol_idx($org_volume->input_file_vol_idx);
                             $new_volume->config->apply($org_volume->config);
                             $new_volume->set_modifier($org_volume->modifier);
-                            #$new_volume->mesh->translate(@{$new_obj->origin_translation});
                         }
                     }
                 }
                 if (!$org_volume->input_file) {
                     my $new_volume = $new_obj->add_volume($org_volume); # error -> copy old mesh
-                    #$new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
-                    #$new_volume->mesh->translate(@{$new_obj->origin_translation});
                     if ($new_volume->name =~ m/copied\z/) {
                         my $new_name = $new_volume->name;
                         $new_name =~ s/ - copied$/ - no link to path/;
@@ -2678,6 +2674,7 @@ sub reload_from_disk {
             }
             $org_vol_idx++;
         }
+        $new_obj->center_around_origin();
     }
     $self->remove($obj_idx);
     

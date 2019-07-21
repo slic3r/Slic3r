@@ -538,6 +538,8 @@ AMF::write(const Model& model, std::string output_file)
         
         std::vector<size_t> vertices_offsets;
         size_t num_vertices = 0;
+
+        Pointf3 origin_translation = object->origin_translation();
         
         for (ModelVolume *volume : object->volumes) {
             volume->mesh.require_shared_vertices();
@@ -552,9 +554,9 @@ AMF::write(const Model& model, std::string output_file)
                 // below.
                 file << "         <vertex>" << endl
                      << "           <coordinates>" << endl
-                     << "             <x>" << (stl.v_shared[i].x - object->origin_translation.x) << "</x>" << endl
-                     << "             <y>" << (stl.v_shared[i].y - object->origin_translation.y) << "</y>" << endl
-                     << "             <z>" << (stl.v_shared[i].z - object->origin_translation.z) << "</z>" << endl
+                     << "             <x>" << (stl.v_shared[i].x - origin_translation.x) << "</x>" << endl
+                     << "             <y>" << (stl.v_shared[i].y - origin_translation.y) << "</y>" << endl
+                     << "             <z>" << (stl.v_shared[i].z - origin_translation.z) << "</z>" << endl
                      << "           </coordinates>" << endl
                      << "         </vertex>" << endl;
             
@@ -597,8 +599,8 @@ AMF::write(const Model& model, std::string output_file)
         for (const ModelInstance* instance : object->instances)
             instances
                 << "    <instance objectid=\"" << object_id << "\">" << endl
-                << "      <deltax>" << instance->offset.x + object->origin_translation.x << "</deltax>" << endl
-                << "      <deltay>" << instance->offset.y + object->origin_translation.y << "</deltay>" << endl
+                << "      <deltax>" << instance->offset.x + origin_translation.x << "</deltax>" << endl
+                << "      <deltay>" << instance->offset.y + origin_translation.y << "</deltay>" << endl
                 << "      <rz>" << instance->rotation << "</rz>" << endl
                 << "      <scale>" << instance->scaling_factor << "</scale>" << endl
                 << "    </instance>" << endl;
