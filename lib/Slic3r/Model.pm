@@ -36,8 +36,8 @@ sub add_object {
             if defined $args{config};
         $new_object->set_layer_height_ranges($args{layer_height_ranges})
             if defined $args{layer_height_ranges};
-        $new_object->set_origin_translation($args{origin_translation})
-            if defined $args{origin_translation};
+        $new_object->apply_transformation($args{trafo_obj})
+            if defined $args{trafo_obj};
         
         return $new_object;
     }

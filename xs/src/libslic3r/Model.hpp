@@ -277,12 +277,6 @@ class ModelObject
     int part_number; ///< It's used for the 3MF items part numbers in the build element.
     LayerHeightSpline layer_height_spline;     ///< Spline based variations of layer thickness for interactive user manipulation
 
-    Pointf3 origin_translation;
-    ///< This vector accumulates the total translation applied to the object by the
-    ///< center_around_origin() method. Callers might want to apply the same translation
-    ///< to new volumes before adding them to this object in order to preserve alignment
-    ///< when user expects that.
-
     // these should be private but we need to expose them via XS until all methods are ported
     BoundingBoxf3 _bounding_box;
     bool _bounding_box_valid;
@@ -335,6 +329,17 @@ class ModelObject
 
     /// Repair all TriangleMesh objects found in each ModelVolume.
     void repair();
+
+    Pointf3 origin_translation() const;
+    ///< This vector returns the total translation applied to the object by the
+    ///< transformation methods. Callers might want to apply the same translation
+    ///< to new volumes before adding them to this object in order to preserve alignment
+    ///< when user expects that.
+
+    TransformationMatrix get_trafo_obj() const {return this->trafo_obj;};
+    /// return a copy of the private trafo_obj, that accumulates all top-level transformations
+
+    void set_trafo_obj(TransformationMatrix const & trafo) {this->trafo_obj = trafo;};
 
     /// Flatten all volumes and instances into a single mesh and applying all the ModelInstances transformations.
     TriangleMesh mesh() const;
@@ -464,6 +469,9 @@ class ModelObject
 
     /// Trafo to collect the transformation applied to all volumes over a series of manipulations
     TransformationMatrix trafo_undo_stack;
+
+    /// Trafo that accumulates all transformations applied to the whole object
+    TransformationMatrix trafo_obj;
 
     /// = Operator overloading
     /// \param other ModelObject the other ModelObject to be copied

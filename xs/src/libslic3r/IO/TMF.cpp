@@ -144,6 +144,8 @@ TMFEditor::write_object(boost::nowide::ofstream& fout, const ModelObject* object
     std::vector<int> vertices_offsets;
     int num_vertices = 0;
 
+    Pointf3 origin_translation = object->origin_translation();
+
     for (const auto volume : object->volumes){
         // Require mesh vertices.
         volume->mesh.require_shared_vertices();
@@ -160,9 +162,9 @@ TMFEditor::write_object(boost::nowide::ofstream& fout, const ModelObject* object
             // In order to do this we compensate for this translation in the instance placement
             // below.
             fout << "                    <vertex";
-            fout << " x=\"" << (stl.v_shared[i].x - object->origin_translation.x) << "\"";
-            fout << " y=\"" << (stl.v_shared[i].y - object->origin_translation.y) << "\"";
-            fout << " z=\"" << (stl.v_shared[i].z - object->origin_translation.z) << "\"/>\n";
+            fout << " x=\"" << (stl.v_shared[i].x - origin_translation.x) << "\"";
+            fout << " y=\"" << (stl.v_shared[i].y - origin_translation.y) << "\"";
+            fout << " z=\"" << (stl.v_shared[i].z - origin_translation.z) << "\"/>\n";
         }
         num_vertices += stl.stats.shared_vertices;
     }

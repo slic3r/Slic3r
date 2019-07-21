@@ -215,10 +215,14 @@ ModelMaterial::attributes()
     void set_layer_height_spline(LayerHeightSpline* spline)
         %code%{ THIS->layer_height_spline = *spline; %};
 
-    Ref<Pointf3> origin_translation()
-        %code%{ RETVAL = &THIS->origin_translation; %};
-    void set_origin_translation(Pointf3* point)
-        %code%{ THIS->origin_translation = *point; %};
+    Clone<Pointf3> origin_translation()
+        %code%{ RETVAL = THIS->origin_translation(); %};
+
+    Clone<TransformationMatrix> get_trafo_obj()
+        %code%{ RETVAL = THIS->get_trafo_obj(); %};
+
+    void set_trafo_obj(TransformationMatrix* trafo)
+        %code%{ THIS->set_trafo_obj(*trafo); %};
     
     bool needed_repair() const;
     int materials_count() const;

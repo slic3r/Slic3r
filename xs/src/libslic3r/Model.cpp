@@ -452,7 +452,7 @@ ModelObject::ModelObject(Model *model, const ModelObject &other, bool copy_volum
     layer_height_ranges(other.layer_height_ranges),
     part_number(other.part_number),
     layer_height_spline(other.layer_height_spline),
-    origin_translation(other.origin_translation),
+    trafo_obj(other.trafo_obj),
     _bounding_box(other._bounding_box),
     _bounding_box_valid(other._bounding_box_valid),
     model(model)
@@ -482,8 +482,8 @@ ModelObject::swap(ModelObject &other)
     std::swap(this->volumes,                other.volumes);
     std::swap(this->config,                 other.config);
     std::swap(this->layer_height_ranges,    other.layer_height_ranges);
-    std::swap(this->layer_height_spline,    other.layer_height_spline);
-    std::swap(this->origin_translation,     other.origin_translation);
+    std::swap(this->layer_height_spline,    other.layer_height_spline);    
+    std::swap(this->trafo_obj,              other.trafo_obj);
     std::swap(this->_bounding_box,          other._bounding_box);
     std::swap(this->_bounding_box_valid,    other._bounding_box_valid);
     std::swap(this->part_number,            other.part_number);
@@ -604,6 +604,13 @@ ModelObject::repair()
         (*v)->mesh.repair();
 }
 
+Pointf3 
+ModelObject::origin_translation() const
+{
+    return Pointf3(trafo_obj.m03, trafo_obj.m13, trafo_obj.m23);
+}
+
+
 // flattens all volumes and instances into a single mesh
 TriangleMesh
 ModelObject::mesh() const
@@ -684,7 +691,6 @@ ModelObject::align_to_ground()
 			bb.merge(v->bounding_box());
     
     this->translate(0, 0, -bb.min.z);
-    this->origin_translation.translate(0, 0, -bb.min.z);
 }
 
 void
@@ -706,7 +712,6 @@ ModelObject::center_around_origin()
     vector.y -= size.y/2;
 
     this->translate(vector);
-    this->origin_translation.translate(vector);
     
     if (!this->instances.empty()) {
         for (ModelInstancePtrs::const_iterator i = this->instances.begin(); i != this->instances.end(); ++i) {
@@ -759,9 +764,7 @@ ModelObject::scale(const Pointf3 &versor)
     trafo.applyLeft(center_trafo.inverse());
 
     this->apply_transformation(trafo);
-    
-    // reset origin translation since it doesn't make sense anymore
-    this->origin_translation = Pointf3(0,0,0);
+
     this->invalidate_bounding_box();
 }
 
@@ -790,7 +793,6 @@ ModelObject::rotate(double angle, const Axis &axis)
 
     this->apply_transformation(trafo);
     
-    this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
 }
 
@@ -805,7 +807,6 @@ ModelObject::rotate(double angle, const Vectorf3 &axis)
 
     this->apply_transformation(trafo);
     
-    this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
 }
 
@@ -819,7 +820,6 @@ ModelObject::rotate(const Vectorf3 &origin, const Vectorf3 &target)
 
     this->apply_transformation(trafo);
     
-    this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
 }
 
@@ -832,7 +832,6 @@ ModelObject::mirror(const Axis &axis)
     
     this->apply_transformation(trafo);
 
-    this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
 }
 
@@ -849,6 +848,7 @@ TransformationMatrix ModelObject::get_undo_trafo() const
 void
 ModelObject::apply_transformation(const TransformationMatrix & trafo)
 {
+    this->trafo_obj.applyLeft(trafo);
     this->trafo_undo_stack.applyLeft(trafo);
     for (ModelVolumePtrs::const_iterator v = this->volumes.begin(); v != this->volumes.end(); ++v) {
         (*v)->apply_transformation(trafo);
@@ -886,7 +886,6 @@ ModelObject::transform_by_instance(ModelInstance instance, bool dont_translate)
     for (ModelInstance* i : this->instances) {
         i->set_complete_trafo(i->get_trafo_matrix().multiplyRight(temp_trafo));
     }
-    this->origin_translation = Pointf3(0,0,0);
     this->invalidate_bounding_box();
 }
 
