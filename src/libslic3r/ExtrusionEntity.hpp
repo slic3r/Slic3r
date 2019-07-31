@@ -511,12 +511,12 @@ inline void extrusion_entities_append_loops(ExtrusionEntitiesPtr &dst, Polygons 
 class ExtrusionPrinter : public ExtrusionVisitorConst {
     std::stringstream ss;
 public:
-    virtual void use(const ExtrusionPath &path);
-    virtual void use(const ExtrusionPath3D &path3D);
-    virtual void use(const ExtrusionMultiPath &multipath);
-    virtual void use(const ExtrusionMultiPath3D &multipath);
-    virtual void use(const ExtrusionLoop &loop);
-    virtual void use(const ExtrusionEntityCollection &collection);
+    virtual void use(const ExtrusionPath &path) override;
+    virtual void use(const ExtrusionPath3D &path3D) override;
+    virtual void use(const ExtrusionMultiPath &multipath) override;
+    virtual void use(const ExtrusionMultiPath3D &multipath) override;
+    virtual void use(const ExtrusionLoop &loop) override;
+    virtual void use(const ExtrusionEntityCollection &collection) override;
     std::string str() { return ss.str(); }
     std::string print(const ExtrusionEntity &entity) && {
         entity.visit(*this);

@@ -2674,15 +2674,15 @@ static std::string dbg_index_to_color(int idx)
 }
 #endif /* SLIC3R_DEBUG */
 
-class GetFirstPath : public ExtrusionVisitor {
+class GetFirstPath : public ExtrusionVisitorConst {
 public:
     const ExtrusionPath *extrusion_path_template = nullptr;
-    virtual void use(const ExtrusionPath &path) { extrusion_path_template = &path; }
-    virtual void use(const ExtrusionPath3D &path3D) { extrusion_path_template = &path3D; }
-    virtual void use(const ExtrusionMultiPath &multipath) { if (!multipath.paths.empty()) extrusion_path_template = &multipath.paths.front(); }
-    virtual void use(const ExtrusionMultiPath3D &multipath) { if (!multipath.paths.empty()) extrusion_path_template = &multipath.paths.front(); }
-    virtual void use(const ExtrusionLoop &loop) { if (!loop.paths.empty()) extrusion_path_template = &loop.paths.front(); }
-    virtual void use(const ExtrusionEntityCollection &collection) {
+    virtual void use(const ExtrusionPath &path) override { extrusion_path_template = &path; }
+    virtual void use(const ExtrusionPath3D &path3D) override { extrusion_path_template = &path3D; }
+    virtual void use(const ExtrusionMultiPath &multipath) override { if (!multipath.paths.empty()) extrusion_path_template = &multipath.paths.front(); }
+    virtual void use(const ExtrusionMultiPath3D &multipath) override { if (!multipath.paths.empty()) extrusion_path_template = &multipath.paths.front(); }
+    virtual void use(const ExtrusionLoop &loop) override { if (!loop.paths.empty()) extrusion_path_template = &loop.paths.front(); }
+    virtual void use(const ExtrusionEntityCollection &collection) override {
         auto it = collection.entities.begin();
         while (extrusion_path_template == nullptr && it != collection.entities.end()) {
             (*it)->visit(*this);
