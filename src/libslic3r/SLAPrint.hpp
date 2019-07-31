@@ -54,10 +54,10 @@ public:
     bool                        is_left_handed() const { return m_left_handed; }
 
     struct Instance {
-        Instance(ModelID instance_id, const Point &shift, float rotation) : instance_id(instance_id), shift(shift), rotation(rotation) {}
+        Instance(ObjectID instance_id, const Point &shift, float rotation) : instance_id(instance_id), shift(shift), rotation(rotation) {}
         bool operator==(const Instance &rhs) const { return this->instance_id == rhs.instance_id && this->shift == rhs.shift && this->rotation == rhs.rotation; }
         // ID of the corresponding ModelInstance.
-        ModelID instance_id;
+        ObjectID instance_id;
         // Slic3r::Point objects in scaled G-code coordinates
         Point 	shift;
         // Rotation along the Z axis, in radians.
@@ -349,7 +349,7 @@ public:
 
     void                clear() override;
     bool                empty() const override { return m_objects.empty(); }
-    ApplyStatus         apply(const Model &model, const DynamicPrintConfig &config) override;
+    ApplyStatus         apply(const Model &model, DynamicPrintConfig config) override;
     void                set_task(const TaskParams &params) override;
     void                process() override;
     void                finalize() override;
@@ -447,15 +447,20 @@ private:
 
     // Estimated print time, material consumed.
     SLAPrintStatistics                      m_print_statistics;
-
-    class StatusReporter {
+    
+    class StatusReporter
+    {
         double m_st = 0;
+        
     public:
-        void operator() (SLAPrint& p, double st, const std::string& msg,
-                         unsigned flags = SlicingStatus::DEFAULT);
+        void operator()(SLAPrint &         p,
+                        double             st,
+                        const std::string &msg,
+                        unsigned           flags = SlicingStatus::DEFAULT,
+                        const std::string &logmsg = "");
+        
         double status() const { return m_st; }
     } m_report_status;
-
 
 	friend SLAPrintObject;
 };

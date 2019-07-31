@@ -132,18 +132,13 @@ void GLGizmoBase::Grabber::render_face(float half_size) const
     glsafe(::glEnd());
 }
 
-#if ENABLE_SVG_ICONS
+
 GLGizmoBase::GLGizmoBase(GLCanvas3D& parent, const std::string& icon_filename, unsigned int sprite_id)
-#else
-GLGizmoBase::GLGizmoBase(GLCanvas3D& parent, unsigned int sprite_id)
-#endif // ENABLE_SVG_ICONS
     : m_parent(parent)
     , m_group_id(-1)
     , m_state(Off)
     , m_shortcut_key(0)
-#if ENABLE_SVG_ICONS
     , m_icon_filename(icon_filename)
-#endif // ENABLE_SVG_ICONS
     , m_sprite_id(sprite_id)
     , m_hover_id(-1)
     , m_dragging(false)
@@ -171,7 +166,7 @@ void GLGizmoBase::set_highlight_color(const float* color)
 
 void GLGizmoBase::enable_grabber(unsigned int id)
 {
-    if ((0 <= id) && (id < (unsigned int)m_grabbers.size()))
+    if (id < m_grabbers.size())
         m_grabbers[id].enabled = true;
 
     on_enable_grabber(id);
@@ -179,13 +174,13 @@ void GLGizmoBase::enable_grabber(unsigned int id)
 
 void GLGizmoBase::disable_grabber(unsigned int id)
 {
-    if ((0 <= id) && (id < (unsigned int)m_grabbers.size()))
+    if (id < m_grabbers.size())
         m_grabbers[id].enabled = false;
 
     on_disable_grabber(id);
 }
 
-void GLGizmoBase::start_dragging(const Selection& selection)
+void GLGizmoBase::start_dragging()
 {
     m_dragging = true;
 
@@ -194,7 +189,7 @@ void GLGizmoBase::start_dragging(const Selection& selection)
         m_grabbers[i].dragging = (m_hover_id == i);
     }
 
-    on_start_dragging(selection);
+    on_start_dragging();
 }
 
 void GLGizmoBase::stop_dragging()
@@ -209,10 +204,10 @@ void GLGizmoBase::stop_dragging()
     on_stop_dragging();
 }
 
-void GLGizmoBase::update(const UpdateData& data, const Selection& selection)
+void GLGizmoBase::update(const UpdateData& data)
 {
     if (m_hover_id != -1)
-        on_update(data, selection);
+        on_update(data);
 }
 
 std::array<float, 3> GLGizmoBase::picking_color_component(unsigned int id) const

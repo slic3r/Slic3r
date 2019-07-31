@@ -97,6 +97,7 @@ private:
         EPositioningType e_local_positioning_type;
         Metadata data;
         Vec3d start_position = Vec3d::Zero();
+        float cached_position[5];
         float start_extrusion;
         float position[Num_Axis];
         unsigned int cur_cp_color_id = 0;
@@ -107,6 +108,7 @@ private:
     GCodeReader m_parser;
     TypeToMovesMap m_moves_map;
     ExtruderOffsetsMap m_extruder_offsets;
+    GCodeFlavor m_gcode_flavor;
 
     // The output of process_layer()
     std::string m_process_output;
@@ -115,6 +117,8 @@ public:
     GCodeAnalyzer();
 
     void set_extruder_offsets(const ExtruderOffsetsMap& extruder_offsets);
+
+    void set_gcode_flavor(const GCodeFlavor& flavor);
 
     // Reinitialize the analyzer
     void reset();
@@ -165,10 +169,20 @@ private:
     // Set extruder to relative mode
     void _processM83(const GCodeReader::GCodeLine& line);
 
+    // Set tool (MakerWare and Sailfish flavor)
+    void _processM108orM135(const GCodeReader::GCodeLine& line);
+
+    // Repetier: Store x, y and z position
+    void _processM401(const GCodeReader::GCodeLine& line);
+
+    // Repetier: Go to stored position
+    void _processM402(const GCodeReader::GCodeLine& line);
+
     // Set color change
     void _processM600(const GCodeReader::GCodeLine& line);
 
     // Processes T line (Select Tool)
+    void _processT(const std::string& command);
     void _processT(const GCodeReader::GCodeLine& line);
 
     // Processes the tags
@@ -225,6 +239,11 @@ private:
 
     void _set_start_position(const Vec3d& position);
     const Vec3d& _get_start_position() const;
+
+    void _set_cached_position(unsigned char axis, float position);
+    float _get_cached_position(unsigned char axis) const;
+
+    void _reset_cached_position();
 
     void _set_start_extrusion(float extrusion);
     float _get_start_extrusion() const;

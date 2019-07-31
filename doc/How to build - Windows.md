@@ -1,30 +1,19 @@
 
 # Building Slic3r++ on Microsoft Windows
 
-The currently supported way of building Slic3r++ on Windows is with CMake and MS Visual Studio 2013.
-You can use the free [Visual Studio 2013 Community Edition](https://www.visualstudio.com/vs/older-downloads/).
-CMake installer can be downloaded from [the official website](https://cmake.org/download/).
+The currently supported way of building Slic3r++ on Windows is with CMake and MS Visual Studio 2017.
+You can use the free [Visual Studio 2017 Community Edition](https://www.visualstudio.com/vs/older-downloads/).
+CMake installer can be downloaded from [the official website](https://cmake.org/download/).~~
 
-Building with newer versions of MSVS (2015, 2017) may work too as reported by some of our users.
+Building with newer versions of MSVS (2019) may work too as reported by some of our users.
 
-_Note:_ Thanks to [**@supermerill**](https://github.com/supermerill) for testing and inspiration for this guide.
 
 ### Dependencies
 
 On Windows Slic3r++ is built against statically built libraries.
-We provide a prebuilt package of all the needed dependencies. This package only works on Visual Studio 2013, so if you are using a newer version of Visual Studio, you need to compile the dependencies yourself as per [below](#building-the-dependencies-package-yourself).
-The package comes in a several variants:
 
-  - [64 bit, Release mode only](https://bintray.com/vojtechkral/Slic3r-PE/download_file?file_path=destdir-64.7z) (41 MB, 578 MB unpacked)
-  - [64 bit, Release and Debug mode](https://bintray.com/vojtechkral/Slic3r-PE/download_file?file_path=destdir-64-dev.7z) (88 MB, 1.3 GB unpacked)
-  - [32 bit, Release mode only](https://bintray.com/vojtechkral/Slic3r-PE/download_file?file_path=destdir-32.7z) (38 MB, 520 MB unpacked)
-  - [32 bit, Release and Debug mode](https://bintray.com/vojtechkral/Slic3r-PE/download_file?file_path=destdir-32-dev.7z) (74 MB, 1.1 GB unpacked)
 
-When unsure, use the _Release mode only_ variant, the _Release and Debug_ variant is only needed for debugging & development.
 
-If you're unsure where to unpack the package, unpack it into `C:\local\` (but it can really be anywhere).
-
-Alternatively you can also compile the dependencies yourself, see below.
 
 ### Building Slic3r++ with Visual Studio
 
@@ -38,9 +27,9 @@ Use these commands to prepare Visual Studio solution file:
 
     mkdir build
     cd build
-    cmake .. -G "Visual Studio 12 Win64" -DCMAKE_PREFIX_PATH="<insert prefix path here>"
+    cmake .. -G "Visual Studio 15 Win64" -DCMAKE_PREFIX_PATH="<insert prefix path here>"
 
-Note that if you're building a 32-bit variant, you will need to change the `"Visual Studio 12 Win64"` to just `"Visual Studio 12"`.
+Note that if you're building a 32-bit variant, you will need to change the `"Visual Studio 15 Win64"` to just `"Visual Studio 15"`.
 
 Conversely, if you're using Visual Studio version other than 2013, the version number will need to be changed accordingly.
 

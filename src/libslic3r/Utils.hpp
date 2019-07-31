@@ -21,6 +21,8 @@ extern std::string format_memsize_MB(size_t n);
 // The string is non-empty only if the loglevel >= info (3).
 extern std::string log_memory_info();
 extern void disable_multi_threading();
+// Returns the size of physical memory (RAM) in bytes.
+extern size_t total_physical_memory();
 
 // Set a path with GUI resource files.
 void set_var_dir(const std::string &path);
@@ -170,7 +172,7 @@ extern std::string xml_escape(std::string text);
 #if defined __GNUC__ && __GNUC__ < 5 && !defined __clang__
 // Older GCCs don't have std::is_trivially_copyable
 // cf. https://gcc.gnu.org/onlinedocs/gcc-4.9.4/libstdc++/manual/manual/status.html#status.iso.2011
-#warning "GCC version < 5, faking std::is_trivially_copyable"
+// #warning "GCC version < 5, faking std::is_trivially_copyable"
 template<typename T> struct IsTriviallyCopyable { static constexpr bool value = true; };
 #else
 template<typename T> struct IsTriviallyCopyable : public std::is_trivially_copyable<T> {};
@@ -182,7 +184,7 @@ class ScopeGuard
 public:
     typedef std::function<void()> Closure;
 private:
-    bool committed;
+//    bool committed;
     Closure closure;
 
 public:

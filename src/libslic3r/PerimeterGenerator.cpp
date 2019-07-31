@@ -557,8 +557,8 @@ void PerimeterGenerator::process()
                 for (int i = 0; i < (int)contours_d.size(); ++i) {
                     const PerimeterGeneratorLoop &loop = contours_d[i];
                     // find the contour loop that contains it
-                    for (int t = d-1; t >= 0; --t) {
-                        for (int j = 0; j < contours[t].size(); ++j) {
+                    for (int t = d - 1; t >= 0; -- t) {
+                        for (size_t j = 0; j < contours[t].size(); ++ j) {
                             PerimeterGeneratorLoop &candidate_parent = contours[t][j];
                             if (candidate_parent.polygon.contains(loop.polygon.first_point())) {
                                 candidate_parent.children.push_back(loop);

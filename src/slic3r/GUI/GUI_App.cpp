@@ -67,9 +67,12 @@ wxString file_wildcards(FileType file_type, const std::string &custom_extension)
         /* FT_MODEL */   "Known files (*.stl, *.obj, *.amf, *.xml, *.3mf, *.prusa)|*.stl;*.STL;*.obj;*.OBJ;*.amf;*.AMF;*.xml;*.XML;*.3mf;*.3MF;*.prusa;*.PRUSA",
         /* FT_PROJECT */ "Project files (*.3mf, *.amf)|*.3mf;*.3MF;*.amf;*.AMF",
 
-        /* FT_INI */   "INI files (*.ini)|*.ini;*.INI",
-        /* FT_SVG */   "SVG files (*.svg)|*.svg;*.SVG",
-        /* FT_PNGZIP */"Masked SLA files (*.sl1)|*.sl1;*.SL1",
+        /* FT_INI */     "INI files (*.ini)|*.ini;*.INI",
+        /* FT_SVG */     "SVG files (*.svg)|*.svg;*.SVG",
+
+        /* FT_TEX */     "Texture (*.png, *.svg)|*.png;*.PNG;*.svg;*.SVG",
+
+        /* FT_PNGZIP */  "Masked SLA files (*.sl1)|*.sl1;*.SL1",
     };
 
 	std::string out = defaults[file_type];
@@ -534,7 +537,7 @@ void GUI_App::persist_window_geometry(wxTopLevelWindow *window, bool default_max
     });
 }
 
-void GUI_App::load_project(wxWindow *parent, wxString& input_file)
+void GUI_App::load_project(wxWindow *parent, wxString& input_file) const
 {
     input_file.Clear();
     wxFileDialog dialog(parent ? parent : GetTopWindow(),
@@ -546,7 +549,7 @@ void GUI_App::load_project(wxWindow *parent, wxString& input_file)
         input_file = dialog.GetPath();
 }
 
-void GUI_App::import_model(wxWindow *parent, wxArrayString& input_files)
+void GUI_App::import_model(wxWindow *parent, wxArrayString& input_files) const
 {
     input_files.Clear();
     wxFileDialog dialog(parent ? parent : GetTopWindow(),
@@ -854,7 +857,7 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
 
 // This is called when closing the application, when loading a config file or when starting the config wizard
 // to notify the user whether he is aware that some preset changes will be lost.
-bool GUI_App::check_unsaved_changes()
+bool GUI_App::check_unsaved_changes(const wxString &header)
 {
     wxString dirty;
     PrinterTechnology printer_technology = preset_bundle->printers.get_edited_preset().printer_technology();
@@ -868,8 +871,12 @@ bool GUI_App::check_unsaved_changes()
         // No changes, the application may close or reload presets.
         return true;
     // Ask the user.
+    wxString message;
+    if (! header.empty())
+    	message = header + "\n\n";
+    message += _(L("The presets on the following tabs were modified")) + ": " + dirty + "\n\n" + _(L("Discard changes and continue anyway?"));
     wxMessageDialog dialog(mainframe,
-        _(L("The presets on the following tabs were modified")) + ": " + dirty + "\n\n" + _(L("Discard changes and continue anyway?")),
+        message,
         wxString(SLIC3R_APP_NAME) + " - " + _(L("Unsaved Presets")),
         wxICON_QUESTION | wxYES_NO | wxNO_DEFAULT);
     return dialog.ShowModal() == wxID_YES;
@@ -934,14 +941,19 @@ ObjectList* GUI_App::obj_list()
     return sidebar().obj_list();
 }
 
+ObjectLayers* GUI_App::obj_layers()
+{
+    return sidebar().obj_layers();
+}
+
 Plater* GUI_App::plater()
 {
     return plater_;
 }
 
-ModelObjectPtrs* GUI_App::model_objects()
+Model& GUI_App::model()
 {
-    return &plater_->model().objects;
+    return plater_->model();
 }
 
 wxNotebook* GUI_App::tab_panel() const
@@ -965,9 +977,36 @@ int GUI_App::extruders_edited_cnt() const
            preset.config.option<ConfigOptionFloats>("nozzle_diameter")->values.size();
 }
 
+wxString GUI_App::current_language_code_safe() const
+{
+	// Translate the language code to a code, for which Prusa Research maintains translations.
+	wxString language_code = this->current_language_code();
+	size_t   idx_underscore = language_code.find(language_code);
+	if (idx_underscore != wxString::npos)
+		language_code = language_code.substr(0, idx_underscore);
+	const std::map<wxString, wxString> mapping {
+		{ "cs", 	"cs_CZ", },
+		{ "de", 	"de_DE", },
+		{ "es", 	"es_ES", },
+		{ "fr", 	"fr_FR", },
+		{ "it", 	"it_IT", },
+		{ "ja", 	"ja_JP", },
+		{ "ko", 	"ko_KR", },
+		{ "pl", 	"pl_PL", },
+		{ "uk", 	"uk_UA", },
+		{ "zh", 	"zh_CN", },
+	};
+	auto it = mapping.find(language_code);
+	if (it != mapping.end())
+		language_code = it->second;
+	else
+		language_code = "en_US";
+	return language_code;
+}
+
 void GUI_App::open_web_page_localized(const std::string &http_address)
 {
-    wxLaunchDefaultBrowser(http_address + "&lng=" + this->current_language_code());
+    wxLaunchDefaultBrowser(http_address + "&lng=" + this->current_language_code_safe());
 }
 
 void GUI_App::window_pos_save(wxTopLevelWindow* window, const std::string &name)

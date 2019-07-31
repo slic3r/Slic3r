@@ -32,7 +32,6 @@ option(SLIC3R_MSVC_COMPILE_PARALLEL "Compile on Visual Studio in parallel" 1)
 option(SLIC3R_MSVC_PDB          "Generate PDB files on MSVC in Release mode" 1)
 option(SLIC3R_PERL_XS           "Compile XS Perl module and enable Perl unit and integration tests" 0)
 option(SLIC3R_ASAN              "Enable ASan on Clang and GCC" 0)
-option(SLIC3R_SYNTAXONLY        "Only perform source code correctness checking, no binary output (UNIX only)" 0)
 
 set(SLIC3R_GTK "2" CACHE STRING "GTK version to use with wxWidgets on Linux")
 
@@ -147,30 +146,28 @@ endif()
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUXX)
     # Adding -fext-numeric-literals to enable GCC extensions on definitions of quad float literals, which are required by Boost.
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fext-numeric-literals" )
-
-    if (SLIC3R_SYNTAXONLY)
-        set(CMAKE_CXX_ARCHIVE_CREATE "true")
-        set(CMAKE_C_ARCHIVE_CREATE "true")
-        set(CMAKE_CXX_ARCHIVE_APPEND "true")
-        set(CMAKE_C_ARCHIVE_APPEND "true")
-        set(CMAKE_RANLIB "true")
-        set(CMAKE_C_LINK_EXECUTABLE "true")
-        set(CMAKE_CXX_LINK_EXECUTABLE "true")
-
-        set(CMAKE_C_COMPILE_OBJECT "<CMAKE_C_COMPILER> -fsyntax-only <DEFINES> <INCLUDES> <FLAGS> -c <SOURCE> && touch <OBJECT>")
-        set(CMAKE_CXX_COMPILE_OBJECT "<CMAKE_CXX_COMPILER> -fsyntax-only <DEFINES> <INCLUDES> <FLAGS> -c <SOURCE> && touch <OBJECT>")
-    endif ()
 endif()
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    add_compile_options(-Wall)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall" )
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reorder" )
 
     # On GCC and Clang, no return from a non-void function is a warning only. Here, we make it an error.
     add_compile_options(-Werror=return-type)
 
-    #removes LOTS of extraneous Eigen warnings
-    # add_compile_options(-Wno-ignored-attributes) # Tamas: Eigen include dirs are marked as SYSTEM
+    #removes LOTS of extraneous Eigen warnings (GCC only supports it since 6.1)
+    #if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 6.1)
+        # add_compile_options(-Wno-ignored-attributes) # Tamas: Eigen include dirs are marked as SYSTEM
+    #endif()
+
+    #GCC generates loads of -Wunknown-pragmas when compiling igl. The fix is not easy due to a bug in gcc, see
+    # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66943 or
+    # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
+    # We will turn the warning of for GCC for now:
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        add_compile_options(-Wno-unknown-pragmas)
+    endif()
+
 
     if (SLIC3R_ASAN)
         add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
@@ -306,10 +303,10 @@ endif()
 
 # Find eigen3 or use bundled version
 if (NOT SLIC3R_STATIC)
-    find_package(Eigen3 3)
+    find_package(Eigen3 3.3)
 endif ()
-if (NOT Eigen3_FOUND)
-    set(Eigen3_FOUND 1)
+if (NOT EIGEN3_FOUND)
+    set(EIGEN3_FOUND 1)
     set(EIGEN3_INCLUDE_DIR ${LIBDIR}/eigen/)
 endif ()
 include_directories(BEFORE SYSTEM ${EIGEN3_INCLUDE_DIR})
@@ -343,6 +340,10 @@ if (NOT GLEW_FOUND)
     add_definitions(-DGLEW_STATIC)
 endif ()
 include_directories(${GLEW_INCLUDE_DIRS})
+
+# Find the Cereal serialization library
+add_library(cereal INTERFACE)
+target_include_directories(cereal INTERFACE include)
 
 # l10n
 set(L10N_DIR "${SLIC3R_RESOURCES_DIR}/localization")

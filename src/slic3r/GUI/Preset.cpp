@@ -444,12 +444,19 @@ const std::vector<std::string>& Preset::filament_options()
         "filament_unloading_speed", "filament_toolchange_delay", "filament_unloading_speed_start", "filament_unload_time", "filament_cooling_moves",
         "filament_cooling_initial_speed", "filament_cooling_final_speed", "filament_ramming_parameters", "filament_minimal_purge_on_wipe_tower",
         "temperature", "first_layer_temperature", "bed_temperature", "first_layer_bed_temperature", "fan_always_on", "cooling", "min_fan_speed",
-        "max_fan_speed", "bridge_fan_speed", "top_fan_speed", "disable_fan_first_layers", "fan_below_layer_time", "slowdown_below_layer_time",
-        "min_print_speed", "start_filament_gcode", "end_filament_gcode",
-        "compatible_prints", "compatible_prints_condition",
-        "compatible_printers", "compatible_printers_condition", "inherits"
-        , "filament_wipe_advanced_pigment",
-		"chamber_temperature"
+        "max_fan_speed", "bridge_fan_speed"
+        , "top_fan_speed"
+        , "disable_fan_first_layers"
+        , "fan_below_layer_time", "slowdown_below_layer_time", "min_print_speed",
+        "start_filament_gcode", "end_filament_gcode",
+        // Retract overrides
+        "filament_retract_length", "filament_retract_lift", "filament_retract_lift_above", "filament_retract_lift_below", "filament_retract_speed", "filament_deretract_speed", "filament_retract_restart_extra", "filament_retract_before_travel", 
+        "filament_retract_layer_change", "filament_wipe", "filament_retract_before_wipe",
+        // Profile compatibility
+        "compatible_prints", "compatible_prints_condition", "compatible_printers", "compatible_printers_condition", "inherits"
+        //merill adds
+        , "filament_wipe_advanced_pigment"
+        , "chamber_temperature"
     };
     return s_opts;
 }
@@ -460,7 +467,7 @@ const std::vector<std::string>& Preset::printer_options()
     if (s_opts.empty()) {
         s_opts = {
             "printer_technology",
-            "bed_shape", "custom_bed_view", "z_offset", "gcode_flavor", "use_relative_e_distances", "serial_port", "serial_speed",
+            "bed_shape", "bed_custom_texture", "bed_custom_model", "z_offset", "gcode_flavor", "use_relative_e_distances", "serial_port", "serial_speed",
             "use_firmware_retraction", "use_volumetric_e", "variable_layer_height",
             "host_type", "print_host", "printhost_apikey", "printhost_cafile",
             "single_extruder_multi_material", "start_gcode", "end_gcode", "before_layer_gcode", "layer_gcode", "toolchange_gcode",
@@ -517,6 +524,7 @@ const std::vector<std::string>& Preset::sla_print_options()
             "support_pillar_widening_factor",
             "support_base_diameter",
             "support_base_height",
+            "support_base_safety_distance",
             "support_critical_angle",
             "support_max_bridge_length",
             "support_max_pillar_link_distance",
@@ -530,6 +538,10 @@ const std::vector<std::string>& Preset::sla_print_options()
             "pad_max_merge_distance",
             "pad_edge_radius",
             "pad_wall_slope",
+            "pad_object_gap",
+            "pad_object_connector_stride",
+            "pad_object_connector_width",
+            "pad_object_connector_penetration",
             "output_filename_format", 
             "default_sla_print_profile",
             "compatible_printers",
@@ -563,7 +575,8 @@ const std::vector<std::string>& Preset::sla_printer_options()
     if (s_opts.empty()) {
         s_opts = {
             "printer_technology",
-            "bed_shape", "custom_bed_view", "max_print_height",
+            "bed_shape", "bed_custom_texture", "bed_custom_model", "max_print_height",
+            "bed_shape", "max_print_height",
             "display_width", "display_height", "display_pixels_x", "display_pixels_y",
             "display_mirror_x", "display_mirror_y",
             "display_orientation",
@@ -880,11 +893,25 @@ const Preset* PresetCollection::get_selected_preset_parent() const
     if (this->get_selected_idx() == -1)
         // This preset collection has no preset activated yet. Only the get_edited_preset() is valid.
         return nullptr;
-    const std::string &inherits = this->get_edited_preset().inherits();
+//    const std::string &inherits = this->get_edited_preset().inherits();
+//    if (inherits.empty())
+//		return this->get_selected_preset().is_system ? &this->get_selected_preset() : nullptr; 
+
+    std::string inherits = this->get_edited_preset().inherits();
     if (inherits.empty())
-		return this->get_selected_preset().is_system ? &this->get_selected_preset() : nullptr; 
+    {
+		if (this->get_selected_preset().is_system || this->get_selected_preset().is_default) 
+            return &this->get_selected_preset();
+        if (this->get_selected_preset().is_external)
+            return nullptr;
+        
+        inherits = m_type != Preset::Type::TYPE_PRINTER ? "- default -" :
+                   this->get_edited_preset().printer_technology() == ptFFF ? 
+                   "- default FFF -" : "- default SLA -" ;
+    }
+
     const Preset* preset = this->find_preset(inherits, false);
-    return (preset == nullptr || preset->is_default || preset->is_external) ? nullptr : preset;
+    return (preset == nullptr/* || preset->is_default*/ || preset->is_external) ? nullptr : preset;
 }
 
 const Preset* PresetCollection::get_preset_parent(const Preset& child) const

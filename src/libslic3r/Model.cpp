@@ -1,5 +1,6 @@
 #include "Model.hpp"
 #include "Geometry.hpp"
+#include "MTUtils.hpp"
 
 #include "Format/AMF.hpp"
 #include "Format/OBJ.hpp"
@@ -21,21 +22,6 @@
 namespace Slic3r {
 
 unsigned int Model::s_auto_extruder_id = 1;
-
-size_t ModelBase::s_last_id = 0;
-
-// Unique object / instance ID for the wipe tower.
-ModelID wipe_tower_object_id()
-{
-    static ModelBase mine;
-    return mine.id();
-}
-
-ModelID wipe_tower_instance_id()
-{
-    static ModelBase mine;
-    return mine.id();
-}
 
 Model& Model::assign_copy(const Model &rhs)
 {
@@ -85,6 +71,19 @@ void Model::assign_new_unique_ids_recursive()
         m.second->assign_new_unique_ids_recursive();
     for (ModelObject *model_object : this->objects)
         model_object->assign_new_unique_ids_recursive();
+}
+
+void Model::update_links_bottom_up_recursive()
+{
+	for (std::pair<const t_model_material_id, ModelMaterial*> &kvp : this->materials)
+		kvp.second->set_model(this);
+	for (ModelObject *model_object : this->objects) {
+		model_object->set_model(this);
+		for (ModelInstance *model_instance : model_object->instances)
+			model_instance->set_model_object(model_object);
+		for (ModelVolume *model_volume : model_object->volumes)
+			model_volume->set_model_object(model_object);
+	}
 }
 
 Model Model::read_from_file(const std::string &input_file, DynamicPrintConfig *config, bool add_default_instances)
@@ -221,7 +220,7 @@ bool Model::delete_object(ModelObject* object)
     return false;
 }
 
-bool Model::delete_object(ModelID id)
+bool Model::delete_object(ObjectID id)
 {
     if (id.id != 0) {
         size_t idx = 0;
@@ -371,34 +370,44 @@ static bool _arrange(const Pointfs &sizes, coordf_t dist, const BoundingBoxf* bb
 /*  arrange objects preserving their instance count
     but altering their instance positions */
 bool Model::arrange_objects(coordf_t dist, const BoundingBoxf* bb)
-{
-    // get the (transformed) size of each instance so that we take
-    // into account their different transformations when packing
-    Pointfs instance_sizes;
-    Pointfs instance_centers;
-    for (const ModelObject *o : this->objects)
-        for (size_t i = 0; i < o->instances.size(); ++ i) {
-            // an accurate snug bounding box around the transformed mesh.
-            BoundingBoxf3 bbox(o->instance_bounding_box(i, true));
-            instance_sizes.emplace_back(to_2d(bbox.size()));
-            instance_centers.emplace_back(to_2d(bbox.center()));
+{    
+    size_t count = 0;
+    for (auto obj : objects) count += obj->instances.size();
+    
+    arrangement::ArrangePolygons input;
+    ModelInstancePtrs instances;
+    input.reserve(count);
+    instances.reserve(count);
+    for (ModelObject *mo : objects)
+        for (ModelInstance *minst : mo->instances) {
+            input.emplace_back(minst->get_arrange_polygon());
+            instances.emplace_back(minst);
         }
-
-    Pointfs positions;
-    if (! _arrange(instance_sizes, dist, bb, positions))
-        return false;
-
-    size_t idx = 0;
-    for (ModelObject *o : this->objects) {
-        for (ModelInstance *i : o->instances) {
-            Vec2d offset_xy = positions[idx] - instance_centers[idx];
-            i->set_offset(Vec3d(offset_xy(0), offset_xy(1), i->get_offset(Z)));
-            ++idx;
-        }
-        o->invalidate_bounding_box();
+    
+    arrangement::BedShapeHint bedhint;
+    coord_t bedwidth = 0;
+    
+    if (bb) {
+        bedwidth = scaled(bb->size().x());
+        bedhint = arrangement::BedShapeHint(
+            BoundingBox(scaled(bb->min), scaled(bb->max)));
     }
 
-    return true;
+    arrangement::arrange(input, scaled(dist), bedhint);
+    
+    bool ret = true;
+    coord_t stride = bedwidth + bedwidth / 5;
+    
+    for(size_t i = 0; i < input.size(); ++i) {
+        if (input[i].bed_idx != 0) ret = false;
+        if (input[i].bed_idx >= 0) {
+            input[i].translation += Vec2crd{input[i].bed_idx * stride, 0};
+            instances[i]->apply_arrange_result(input[i].translation,
+                                               input[i].rotation);
+        }
+    }
+    
+    return ret;
 }
 
 // Duplicate the entire model preserving instance relative positions.
@@ -622,14 +631,18 @@ ModelObject::~ModelObject()
 // maintains the m_model pointer
 ModelObject& ModelObject::assign_copy(const ModelObject &rhs)
 {
-    this->copy_id(rhs);
+	assert(this->id().invalid() || this->id() == rhs.id());
+	assert(this->config.id().invalid() || this->config.id() == rhs.config.id());
+	this->copy_id(rhs);
 
     this->name                        = rhs.name;
     this->input_file                  = rhs.input_file;
+    // Copies the config's ID
     this->config                      = rhs.config;
+    assert(this->config.id() == rhs.config.id());
     this->sla_support_points          = rhs.sla_support_points;
     this->sla_points_status           = rhs.sla_points_status;
-    this->layer_height_ranges         = rhs.layer_height_ranges;
+    this->layer_config_ranges         = rhs.layer_config_ranges;    // #ys_FIXME_experiment
     this->layer_height_profile        = rhs.layer_height_profile;
     this->origin_translation          = rhs.origin_translation;
     m_bounding_box                    = rhs.m_bounding_box;
@@ -658,14 +671,17 @@ ModelObject& ModelObject::assign_copy(const ModelObject &rhs)
 // maintains the m_model pointer
 ModelObject& ModelObject::assign_copy(ModelObject &&rhs)
 {
+	assert(this->id().invalid());
     this->copy_id(rhs);
 
     this->name                        = std::move(rhs.name);
     this->input_file                  = std::move(rhs.input_file);
+    // Moves the config's ID
     this->config                      = std::move(rhs.config);
+    assert(this->config.id() == rhs.config.id());
     this->sla_support_points          = std::move(rhs.sla_support_points);
     this->sla_points_status           = std::move(rhs.sla_points_status);
-    this->layer_height_ranges         = std::move(rhs.layer_height_ranges);
+    this->layer_config_ranges         = std::move(rhs.layer_config_ranges); // #ys_FIXME_experiment
     this->layer_height_profile        = std::move(rhs.layer_height_profile);
     this->origin_translation          = std::move(rhs.origin_translation);
     m_bounding_box                    = std::move(rhs.m_bounding_box);
@@ -1070,11 +1086,11 @@ void ModelObject::mirror(Axis axis)
 }
 
 // This method could only be called before the meshes of this ModelVolumes are not shared!
-void ModelObject::scale_mesh(const Vec3d &versor)
+void ModelObject::scale_mesh_after_creation(const Vec3d &versor)
 {
     for (ModelVolume *v : this->volumes)
     {
-        v->scale_geometry(versor);
+        v->scale_geometry_after_creation(versor);
         v->set_offset(versor.cwiseProduct(v->get_offset()));
     }
     this->invalidate_bounding_box();
@@ -1118,7 +1134,7 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
     if (keep_upper) {
         upper->set_model(nullptr);
         upper->sla_support_points.clear();
-        upper->sla_points_status = sla::PointsStatus::None;
+        upper->sla_points_status = sla::PointsStatus::NoPoints;
         upper->clear_volumes();
         upper->input_file = "";
     }
@@ -1126,7 +1142,7 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
     if (keep_lower) {
         lower->set_model(nullptr);
         lower->sla_support_points.clear();
-        lower->sla_points_status = sla::PointsStatus::None;
+        lower->sla_points_status = sla::PointsStatus::NoPoints;
         lower->clear_volumes();
         lower->input_file = "";
     }
@@ -1190,14 +1206,20 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
 
             if (keep_upper && upper_mesh.facets_count() > 0) {
                 ModelVolume* vol = upper->add_volume(upper_mesh);
-                vol->name = volume->name;
-                vol->config         = volume->config;
+                vol->name	= volume->name;
+                // Don't copy the config's ID.
+				static_cast<DynamicPrintConfig&>(vol->config) = static_cast<const DynamicPrintConfig&>(volume->config);
+    			assert(vol->config.id().valid());
+	    		assert(vol->config.id() != volume->config.id());
                 vol->set_material(volume->material_id(), *volume->material());
             }
             if (keep_lower && lower_mesh.facets_count() > 0) {
                 ModelVolume* vol = lower->add_volume(lower_mesh);
-                vol->name = volume->name;
-                vol->config         = volume->config;
+                vol->name	= volume->name;
+                // Don't copy the config's ID.
+				static_cast<DynamicPrintConfig&>(vol->config) = static_cast<const DynamicPrintConfig&>(volume->config);
+    			assert(vol->config.id().valid());
+	    		assert(vol->config.id() != volume->config.id());
                 vol->set_material(volume->material_id(), *volume->material());
 
                 // Compute the lower part instances' bounding boxes to figure out where to place
@@ -1272,7 +1294,10 @@ void ModelObject::split(ModelObjectPtrs* new_objects)
         // XXX: this seems to be the only real usage of m_model, maybe refactor this so that it's not needed?
         ModelObject* new_object = m_model->add_object();    
         new_object->name   = this->name;
-        new_object->config = this->config;
+        // Don't copy the config's ID.
+		static_cast<DynamicPrintConfig&>(new_object->config) = static_cast<const DynamicPrintConfig&>(this->config);
+		assert(new_object->config.id().valid());
+		assert(new_object->config.id() != this->config.id());
         new_object->instances.reserve(this->instances.size());
         for (const ModelInstance *model_instance : this->instances)
             new_object->add_instance(*model_instance);
@@ -1565,9 +1590,9 @@ void ModelVolume::center_geometry_after_creation()
     if (!shift.isApprox(Vec3d::Zero()))
     {
     	if (m_mesh)
-        	m_mesh->translate(-(float)shift(0), -(float)shift(1), -(float)shift(2));
+        	const_cast<TriangleMesh*>(m_mesh.get())->translate(-(float)shift(0), -(float)shift(1), -(float)shift(2));
         if (m_convex_hull)
-        	m_convex_hull->translate(-(float)shift(0), -(float)shift(1), -(float)shift(2));
+			const_cast<TriangleMesh*>(m_convex_hull.get())->translate(-(float)shift(0), -(float)shift(1), -(float)shift(2));
         translate(shift);
     }
 }
@@ -1720,10 +1745,10 @@ void ModelVolume::mirror(Axis axis)
 }
 
 // This method could only be called before the meshes of this ModelVolumes are not shared!
-void ModelVolume::scale_geometry(const Vec3d& versor)
+void ModelVolume::scale_geometry_after_creation(const Vec3d& versor)
 {
-    m_mesh->scale(versor);
-    m_convex_hull->scale(versor);
+	const_cast<TriangleMesh*>(m_mesh.get())->scale(versor);
+	const_cast<TriangleMesh*>(m_convex_hull.get())->scale(versor);
 }
 
 void ModelVolume::transform_this_mesh(const Transform3d &mesh_trafo, bool fix_left_handed)
@@ -1800,6 +1825,36 @@ void ModelInstance::transform_polygon(Polygon* polygon) const
     polygon->scale(get_scaling_factor(X), get_scaling_factor(Y)); // scale around polygon origin
 }
 
+arrangement::ArrangePolygon ModelInstance::get_arrange_polygon() const
+{
+    static const double SIMPLIFY_TOLERANCE_MM = 0.1;
+    
+    Vec3d rotation = get_rotation();
+    rotation.z()   = 0.;
+    Transform3d trafo_instance =
+        Geometry::assemble_transform(Vec3d::Zero(), rotation,
+                                     get_scaling_factor(), get_mirror());
+
+    Polygon p = get_object()->convex_hull_2d(trafo_instance);
+
+    assert(!p.points.empty());
+
+    // this may happen for malformed models, see:
+    // https://github.com/prusa3d/PrusaSlicer/issues/2209
+    if (!p.points.empty()) {
+        Polygons pp{p};
+        pp = p.simplify(scaled<double>(SIMPLIFY_TOLERANCE_MM));
+        if (!pp.empty()) p = pp.front();
+    }
+   
+    arrangement::ArrangePolygon ret;
+    ret.poly.contour = std::move(p);
+    ret.translation  = Vec2crd{scaled(get_offset(X)), scaled(get_offset(Y))};
+    ret.rotation     = get_rotation(Z);
+
+    return ret;
+}
+
 // Test whether the two models contain the same number of ModelObjects with the same set of IDs
 // ordered in the same order. In that case it is not necessary to kill the background processing.
 bool model_object_list_equal(const Model &model_old, const Model &model_new)
@@ -1845,7 +1900,7 @@ bool model_volume_list_changed(const ModelObject &model_object_old, const ModelO
         if (!mv_old.get_matrix().isApprox(mv_new.get_matrix()))
             return true;
 
-        ++i_old;
+        ++ i_old;
         ++ i_new;
     }
     for (; i_old < model_object_old.volumes.size(); ++ i_old) {
@@ -1863,25 +1918,55 @@ bool model_volume_list_changed(const ModelObject &model_object_old, const ModelO
     return false;
 }
 
+extern bool model_has_multi_part_objects(const Model &model)
+{
+    for (const ModelObject *model_object : model.objects)
+    	if (model_object->volumes.size() != 1 || ! model_object->volumes.front()->is_model_part())
+    		return true;
+    return false;
+}
+
+extern bool model_has_advanced_features(const Model &model)
+{
+	auto config_is_advanced = [](const DynamicPrintConfig &config) {
+        return ! (config.empty() || (config.size() == 1 && config.cbegin()->first == "extruder"));
+	};
+    for (const ModelObject *model_object : model.objects) {
+        // Is there more than one instance or advanced config data?
+        if (model_object->instances.size() > 1 || config_is_advanced(model_object->config))
+        	return true;
+        // Is there any modifier or advanced config data?
+        for (const ModelVolume* model_volume : model_object->volumes)
+            if (! model_volume->is_model_part() || config_is_advanced(model_volume->config))
+            	return true;
+    }
+    return false;
+}
+
 #ifndef NDEBUG
 // Verify whether the IDs of Model / ModelObject / ModelVolume / ModelInstance / ModelMaterial are valid and unique.
 void check_model_ids_validity(const Model &model)
 {
-    std::set<ModelID> ids;
-    auto check = [&ids](ModelID id) { 
-        assert(id.id > 0);
+    std::set<ObjectID> ids;
+    auto check = [&ids](ObjectID id) { 
+        assert(id.valid());
         assert(ids.find(id) == ids.end());
         ids.insert(id);
     };
     for (const ModelObject *model_object : model.objects) {
         check(model_object->id());
-        for (const ModelVolume *model_volume : model_object->volumes)
+        check(model_object->config.id());
+        for (const ModelVolume *model_volume : model_object->volumes) {
             check(model_volume->id());
+	        check(model_volume->config.id());
+        }
         for (const ModelInstance *model_instance : model_object->instances)
             check(model_instance->id());
     }
-    for (const auto mm : model.materials)
+    for (const auto mm : model.materials) {
         check(mm.second->id());
+        check(mm.second->config.id());
+    }
 }
 
 void check_model_ids_equal(const Model &model1, const Model &model2)
@@ -1892,10 +1977,13 @@ void check_model_ids_equal(const Model &model1, const Model &model2)
         const ModelObject &model_object1 = *model1.objects[idx_model];
         const ModelObject &model_object2 = *  model2.objects[idx_model];
         assert(model_object1.id() == model_object2.id());
+        assert(model_object1.config.id() == model_object2.config.id());
         assert(model_object1.volumes.size() == model_object2.volumes.size());
         assert(model_object1.instances.size() == model_object2.instances.size());
-        for (size_t i = 0; i < model_object1.volumes.size(); ++ i)
+        for (size_t i = 0; i < model_object1.volumes.size(); ++ i) {
             assert(model_object1.volumes[i]->id() == model_object2.volumes[i]->id());
+        	assert(model_object1.volumes[i]->config.id() == model_object2.volumes[i]->config.id());
+        }
         for (size_t i = 0; i < model_object1.instances.size(); ++ i)
             assert(model_object1.instances[i]->id() == model_object2.instances[i]->id());
     }
@@ -1906,9 +1994,22 @@ void check_model_ids_equal(const Model &model1, const Model &model2)
         for (; it1 != model1.materials.end(); ++ it1, ++ it2) {
             assert(it1->first == it2->first); // compare keys
             assert(it1->second->id() == it2->second->id());
+        	assert(it1->second->config.id() == it2->second->config.id());
         }
     }
 }
 #endif /* NDEBUG */
 
 }
+
+#if 0
+CEREAL_REGISTER_TYPE(Slic3r::ModelObject)
+CEREAL_REGISTER_TYPE(Slic3r::ModelVolume)
+CEREAL_REGISTER_TYPE(Slic3r::ModelInstance)
+CEREAL_REGISTER_TYPE(Slic3r::Model)
+
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ObjectBase, Slic3r::ModelObject)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ObjectBase, Slic3r::ModelVolume)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ObjectBase, Slic3r::ModelInstance)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ObjectBase, Slic3r::Model)
+#endif

@@ -198,7 +198,7 @@ void Tab::create_preset_tab()
     // There is used just additional sizer for m_mode_sizer with right alignment
     auto mode_sizer = new wxBoxSizer(wxVERTICAL);
     mode_sizer->Add(m_mode_sizer, 1, wxALIGN_RIGHT);
-    m_hsizer->Add(mode_sizer, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, wxOSX ? 15 : 5);
+    m_hsizer->Add(mode_sizer, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, wxOSX ? 15 : 10);
 
 	//Horizontal sizer to hold the tree and the selected page.
 	m_hsizer = new wxBoxSizer(wxHORIZONTAL);
@@ -423,7 +423,7 @@ void Tab::update_changed_ui()
 		const ScalableBitmap *sys_icon =	&m_bmp_value_lock;
 		const ScalableBitmap *icon =		&m_bmp_value_revert;
 
-		const wxColour *color =		&m_sys_label_clr;
+		const wxColour *color =		m_is_default_preset ? &m_default_text_clr : &m_sys_label_clr;
 
 		const wxString *sys_tt =	&m_tt_value_lock;
 		const wxString *tt =		&m_tt_value_revert;
@@ -592,7 +592,7 @@ void Tab::update_changed_tree_ui()
 				}
 			}
 
-			const wxColor *clr = sys_page		?	&m_sys_label_clr :
+			const wxColor *clr = sys_page		?	(m_is_default_preset ? &m_default_text_clr : &m_sys_label_clr) :
 								 modified_page	?	&m_modified_label_clr : 
 													&m_default_text_clr;
 
@@ -876,11 +876,10 @@ void Tab::update_wiping_button_visibility() {
         return; // ys_FIXME
     bool wipe_tower_enabled = dynamic_cast<ConfigOptionBool*>(  (m_preset_bundle->prints.get_edited_preset().config  ).option("wipe_tower"))->value;
     bool multiple_extruders = dynamic_cast<ConfigOptionFloats*>((m_preset_bundle->printers.get_edited_preset().config).option("nozzle_diameter"))->values.size() > 1;
-    bool single_extruder_mm = dynamic_cast<ConfigOptionBool*>(  (m_preset_bundle->printers.get_edited_preset().config).option("single_extruder_multi_material"))->value;
 
     auto wiping_dialog_button = wxGetApp().sidebar().get_wiping_dialog_button();
     if (wiping_dialog_button) {
-        wiping_dialog_button->Show(wipe_tower_enabled && multiple_extruders && single_extruder_mm);
+        wiping_dialog_button->Show(wipe_tower_enabled && multiple_extruders);
         wiping_dialog_button->GetParent()->Layout();
     }
 }
@@ -917,17 +916,23 @@ void Tab::update_preset_description_line()
 {
 	const Preset* parent = m_presets->get_selected_preset_parent();
 	const Preset& preset = m_presets->get_edited_preset();
-			
-	wxString description_line = preset.is_default ?
-		_(L("It's a default preset.")) : preset.is_system ?
-		_(L("It's a system preset.")) : 
-		wxString::Format(_(L("Current preset is inherited from %s")), ((parent == nullptr) ? 
-													(_(L("default preset"))+".") : 
-                                                    (wxString( ":\n\t" + parent->name ))));
-	
+
+	wxString description_line;
+
+	if (preset.is_default) {
+		description_line = _(L("This is a default preset."));
+	} else if (preset.is_system) {
+		description_line = _(L("This is a system preset."));
+	} else if (parent == nullptr) {
+		description_line = _(L("Current preset is inherited from the default preset."));
+	} else {
+		description_line = wxString::Format(
+			_(L("Current preset is inherited from:\n\t%s")), GUI::from_u8(parent->name));
+	}
+
 	if (preset.is_default || preset.is_system)
-		description_line += "\n\t" + _(L("It can't be deleted or modified. ")) + 
-							"\n\t" + _(L("Any modifications should be saved as a new preset inherited from this one. ")) + 
+		description_line += "\n\t" + _(L("It can't be deleted or modified.")) + 
+							"\n\t" + _(L("Any modifications should be saved as a new preset inherited from this one.")) + 
 							"\n\t" + _(L("To do that please specify a new name for the preset."));
 	
 	if (parent && parent->vendor)
@@ -1601,6 +1606,105 @@ void TabPrint::OnActivate()
 	Tab::OnActivate();
 }
 
+void TabFilament::add_filament_overrides_page()
+{
+    PageShp page = add_options_page(_(L("Filament Overrides")), "wrench");
+    ConfigOptionsGroupShp optgroup = page->new_optgroup(_(L("Retraction")));
+
+    auto append_single_option_line = [optgroup, this](const std::string& opt_key, int opt_index)
+    {
+        Line line {"",""};
+        if (opt_key == "filament_retract_lift_above" || opt_key == "filament_retract_lift_below") {
+            Option opt = optgroup->get_option(opt_key);
+            opt.opt.label = opt.opt.full_label;
+            line = optgroup->create_single_option_line(opt);
+        }
+        else
+            line = optgroup->create_single_option_line(optgroup->get_option(opt_key));
+
+        line.near_label_widget = [this, optgroup, opt_key, opt_index](wxWindow* parent) {
+            wxCheckBox* check_box = new wxCheckBox(parent, wxID_ANY, "");
+
+            check_box->Bind(wxEVT_CHECKBOX, [this, optgroup, opt_key, opt_index](wxCommandEvent& evt) {
+                const bool is_checked = evt.IsChecked();
+                Field* field = optgroup->get_fieldc(opt_key, opt_index);
+                if (field != nullptr) {
+                    field->toggle(is_checked);
+                    if (is_checked)
+                        field->set_last_meaningful_value();
+                    else
+                        field->set_na_value();
+                }
+            }, check_box->GetId());
+
+            m_overrides_options[opt_key] = check_box;
+            return check_box;
+        };
+
+        optgroup->append_line(line);
+    };
+
+    const int extruder_idx = 0; // #ys_FIXME
+
+    for (const std::string opt_key : {  "filament_retract_length",
+                                        "filament_retract_lift",
+                                        "filament_retract_lift_above",
+                                        "filament_retract_lift_below",
+                                        "filament_retract_speed",
+                                        "filament_deretract_speed",
+                                        "filament_retract_restart_extra",
+                                        "filament_retract_before_travel",
+                                        "filament_retract_layer_change",
+                                        "filament_wipe",
+                                        "filament_retract_before_wipe"
+                                     })
+        append_single_option_line(opt_key, extruder_idx);
+}
+
+void TabFilament::update_filament_overrides_page()
+{
+    const auto page_it = std::find_if(m_pages.begin(), m_pages.end(), [](const PageShp page) {return page->title() == _(L("Filament Overrides")); });
+    if (page_it == m_pages.end())
+        return;
+    PageShp page = *page_it;
+
+    const auto og_it = std::find_if(page->m_optgroups.begin(), page->m_optgroups.end(), [](const ConfigOptionsGroupShp og) {return og->title == _(L("Retraction")); });
+    if (og_it == page->m_optgroups.end())
+        return;
+    ConfigOptionsGroupShp optgroup = *og_it;
+
+    std::vector<std::string> opt_keys = {   "filament_retract_length", 
+                                            "filament_retract_lift", 
+                                            "filament_retract_lift_above", 
+                                            "filament_retract_lift_below",
+                                            "filament_retract_speed",
+                                            "filament_deretract_speed",
+                                            "filament_retract_restart_extra",
+                                            "filament_retract_before_travel",
+                                            "filament_retract_layer_change",
+                                            "filament_wipe",
+                                            "filament_retract_before_wipe"
+                                        };
+
+    const int extruder_idx = 0; // #ys_FIXME
+
+    const bool have_retract_length = m_config->option("filament_retract_length")->is_nil() ||
+                                     m_config->opt_float("filament_retract_length", extruder_idx) > 0;
+
+    for (const std::string& opt_key : opt_keys)
+    {
+        bool is_checked = opt_key=="filament_retract_length" ? true : have_retract_length;
+        m_overrides_options[opt_key]->Enable(is_checked);
+
+        is_checked &= !m_config->option(opt_key)->is_nil();
+        m_overrides_options[opt_key]->SetValue(is_checked);
+
+        Field* field = optgroup->get_fieldc(opt_key, extruder_idx);
+        if (field != nullptr)
+            field->toggle(is_checked);
+    }
+}
+
 void TabFilament::build()
 {
 	m_presets = &m_preset_bundle->filaments;
@@ -1670,6 +1774,9 @@ void TabFilament::build()
 		};
         optgroup->append_line(line);
 
+        optgroup = page->new_optgroup(_(L("Wipe tower parameters")));
+        optgroup->append_single_option_line("filament_minimal_purge_on_wipe_tower");
+
         optgroup = page->new_optgroup(_(L("Toolchange parameters with single extruder MM printers")));
 		optgroup->append_single_option_line("filament_loading_speed_start");
         optgroup->append_single_option_line("filament_loading_speed");
@@ -1681,7 +1788,6 @@ void TabFilament::build()
         optgroup->append_single_option_line("filament_cooling_moves");
         optgroup->append_single_option_line("filament_cooling_initial_speed");
         optgroup->append_single_option_line("filament_cooling_final_speed");
-        optgroup->append_single_option_line("filament_minimal_purge_on_wipe_tower");
         optgroup->append_single_option_line("filament_wipe_advanced_pigment");
 
         line = optgroup->create_single_option_line("filament_ramming_parameters");// { _(L("Ramming")), "" };
@@ -1701,10 +1807,14 @@ void TabFilament::build()
 		};
         optgroup->append_line(line);
 
+
+    add_filament_overrides_page();
+
+
         const int gcode_field_height = 15; // 150
         const int notes_field_height = 25; // 250
 
-        page = add_options_page(_(L("Custom G-code")), "cog");
+    page = add_options_page(_(L("Custom G-code")), "cog");
 		optgroup = page->new_optgroup(_(L("Start G-code")), 0);
 		Option option = optgroup->get_option("start_filament_gcode");
 		option.opt.full_width = true;
@@ -1768,7 +1878,7 @@ void TabFilament::update()
         return; // ys_FIXME
 
     m_update_cnt++;
-//	Freeze();
+
 	wxString text = from_u8(PresetHints::cooling_description(m_presets->get_edited_preset()));
 	m_cooling_description_line->SetText(text);
 	text = from_u8(PresetHints::maximum_volumetric_flow_description(*m_preset_bundle));
@@ -1783,7 +1893,9 @@ void TabFilament::update()
 
 	for (auto el : { "min_fan_speed", "disable_fan_first_layers" })
 		get_field(el)->toggle(fan_always_on);
-//    Thaw();
+
+    update_filament_overrides_page();
+
     m_update_cnt--;
 
     if (m_update_cnt == 0)
@@ -1969,12 +2081,18 @@ void TabPrinter::build_fff()
 			btn->Bind(wxEVT_BUTTON, ([this](wxCommandEvent e)
 			{
                 BedShapeDialog dlg(this);
-                dlg.build_dialog(m_config->option<ConfigOptionPoints>("bed_shape"));
+                dlg.build_dialog(*m_config->option<ConfigOptionPoints>("bed_shape"),
+                    *m_config->option<ConfigOptionString>("bed_custom_texture"),
+                    *m_config->option<ConfigOptionString>("bed_custom_model"));
                 if (dlg.ShowModal() == wxID_OK) {
-                    std::vector<Vec2d> shape = dlg.GetValue();
+                    const std::vector<Vec2d>& shape = dlg.get_shape();
+                    const std::string& custom_texture = dlg.get_custom_texture();
+                    const std::string& custom_model = dlg.get_custom_model();
                     if (!shape.empty())
                     {
                         load_key_value("bed_shape", shape);
+                        load_key_value("bed_custom_texture", custom_texture);
+                        load_key_value("bed_custom_model", custom_model);
                         update_changed_ui();
                     }
                 }
@@ -2005,8 +2123,35 @@ void TabPrinter::build_fff()
 					extruders_count_changed(extruders_count);
                     init_options_list(); // m_options_list should be updated before UI updating
 					update_dirty();
-                    if (opt_key == "single_extruder_multi_material") // the single_extruder_multimaterial was added to force pages
+                    if (opt_key == "single_extruder_multi_material") { // the single_extruder_multimaterial was added to force pages
                         on_value_change(opt_key, value);                      // rebuild - let's make sure the on_value_change is not skipped
+
+                        if (boost::any_cast<bool>(value) && m_extruders_count > 1) {
+                            SuppressBackgroundProcessingUpdate sbpu;
+                            std::vector<double> nozzle_diameters = static_cast<const ConfigOptionFloats*>(m_config->option("nozzle_diameter"))->values;
+                            const double frst_diam = nozzle_diameters[0];
+
+                            for (auto cur_diam : nozzle_diameters) {
+                                // if value is differs from first nozzle diameter value
+                                if (fabs(cur_diam - frst_diam) > EPSILON) {
+                                    const wxString msg_text = _(L("Single Extruder Multi Material is selected, \n"
+                                                                  "and all extruders must have the same diameter.\n"
+                                                                  "Do you want to change the diameter for all extruders to first extruder nozzle diameter value?"));
+                                    auto dialog = new wxMessageDialog(parent(), msg_text, _(L("Nozzle diameter")), wxICON_WARNING | wxYES_NO);
+                                    
+                                    if (dialog->ShowModal() == wxID_YES) {
+                                        DynamicPrintConfig new_conf = *m_config;
+                                        for (size_t i = 1; i < nozzle_diameters.size(); i++)
+                                            nozzle_diameters[i] = frst_diam;
+
+                                        new_conf.set_key_value("nozzle_diameter", new ConfigOptionFloats(nozzle_diameters));
+                                        load_config(new_conf);
+                                    }
+                                    break;
+                                }
+                            } 
+                        }
+                    }
 				}
 				else {
 					update_dirty();
@@ -2176,12 +2321,18 @@ void TabPrinter::build_sla()
         btn->Bind(wxEVT_BUTTON, ([this](wxCommandEvent e)
         {
             BedShapeDialog dlg(this);
-            dlg.build_dialog(m_config->option<ConfigOptionPoints>("bed_shape"));
+            dlg.build_dialog(*m_config->option<ConfigOptionPoints>("bed_shape"),
+                *m_config->option<ConfigOptionString>("bed_custom_texture"),
+                *m_config->option<ConfigOptionString>("bed_custom_model"));
             if (dlg.ShowModal() == wxID_OK) {
-                std::vector<Vec2d> shape = dlg.GetValue();
+                const std::vector<Vec2d>& shape = dlg.get_shape();
+                const std::string& custom_texture = dlg.get_custom_texture();
+                const std::string& custom_model = dlg.get_custom_model();
                 if (!shape.empty())
                 {
                     load_key_value("bed_shape", shape);
+                    load_key_value("bed_custom_texture", custom_texture);
+                    load_key_value("bed_custom_model", custom_model);
                     update_changed_ui();
                 }
             }
@@ -2267,6 +2418,9 @@ void TabPrinter::extruders_count_changed(size_t extruders_count)
 	m_preset_bundle->update_multi_material_filament_presets();
         is_count_changed = true;
     }
+    else if (m_extruders_count == 1 && 
+             m_preset_bundle->project_config.option<ConfigOptionFloats>("wiping_volumes_matrix")->values.size()>1)
+        m_preset_bundle->update_multi_material_filament_presets();
 
     /* This function should be call in any case because of correct updating/rebuilding 
      * of unregular pages of a Printer Settings
@@ -2437,7 +2591,7 @@ void TabPrinter::build_unregular_pages()
 
             optgroup->m_on_change = [this, extruder_idx](const t_config_option_key& opt_key, boost::any value)
             {
-                if (m_extruders_count > 1 && opt_key.find_first_of("nozzle_diameter") != std::string::npos)
+                if (m_config->opt_bool("single_extruder_multi_material") && m_extruders_count > 1 && opt_key.find_first_of("nozzle_diameter") != std::string::npos)
                 {
                     SuppressBackgroundProcessingUpdate sbpu;
                     const double new_nd = boost::any_cast<double>(value);
@@ -2709,11 +2863,14 @@ void Tab::load_current_preset()
     // Reload preset pages with the new configuration values.
     reload_config();
 
-	m_bmp_non_system = m_presets->get_selected_preset_parent() ? &m_bmp_value_unlock : &m_bmp_white_bullet;
-	m_ttg_non_system = m_presets->get_selected_preset_parent() ? &m_ttg_value_unlock : &m_ttg_white_bullet_ns;
-	m_tt_non_system = m_presets->get_selected_preset_parent()  ? &m_tt_value_unlock  : &m_ttg_white_bullet_ns;
+    const Preset* selected_preset_parent = m_presets->get_selected_preset_parent();
+    m_is_default_preset = selected_preset_parent != nullptr && selected_preset_parent->is_default;
 
-	m_undo_to_sys_btn->Enable(!preset.is_default);
+	m_bmp_non_system = selected_preset_parent ? &m_bmp_value_unlock : &m_bmp_white_bullet;
+	m_ttg_non_system = selected_preset_parent ? &m_ttg_value_unlock : &m_ttg_white_bullet_ns;
+	m_tt_non_system  = selected_preset_parent ? &m_tt_value_unlock  : &m_ttg_white_bullet_ns;
+
+//	m_undo_to_sys_btn->Enable(!preset.is_default);
 
 #if 0
 	// use CallAfter because some field triggers schedule on_change calls using CallAfter,
@@ -3025,7 +3182,7 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection* presets /*= nullptr
 // Because of we can't to print the multi-part objects with SLA technology.
 bool Tab::may_switch_to_SLA_preset()
 {
-    if (wxGetApp().obj_list()->has_multi_part_objects())
+    if (model_has_multi_part_objects(wxGetApp().model()))
     {
         show_info( parent(), 
                     _(L("It's impossible to print multi-part object(s) with SLA technology.")) + "\n\n" +
@@ -3299,18 +3456,18 @@ void Tab::fill_icon_descriptions()
 {
 	m_icon_descriptions.emplace_back(&m_bmp_value_lock, L("LOCKED LOCK"),
         // TRN Description for "LOCKED LOCK"
-		L("indicates that the settings are the same as the system values for the current option group"));
+		L("indicates that the settings are the same as the system (or default) values for the current option group"));
 
     m_icon_descriptions.emplace_back(&m_bmp_value_unlock, L("UNLOCKED LOCK"),
         // TRN Description for "UNLOCKED LOCK"
-		L("indicates that some settings were changed and are not equal to the system values for "
+		L("indicates that some settings were changed and are not equal to the system (or default) values for "
 		"the current option group.\n"
 		"Click the UNLOCKED LOCK icon to reset all settings for current option group to "
-		"the system values."));
+		"the system (or default) values."));
 
     m_icon_descriptions.emplace_back(&m_bmp_white_bullet, L("WHITE BULLET"),
         // TRN Description for "WHITE BULLET"
-        L("for the left button: \tindicates a non-system preset,\n"
+        L("for the left button: \tindicates a non-system (or non-default) preset,\n"
 		"for the right button: \tindicates that the settings hasn't been modified."));
 
     m_icon_descriptions.emplace_back(&m_bmp_value_revert, L("BACK ARROW"),
@@ -3323,29 +3480,14 @@ void Tab::fill_icon_descriptions()
 
 void Tab::set_tooltips_text()
 {
-// 	m_undo_to_sys_btn->SetToolTip(_(L(	"LOCKED LOCK icon indicates that the settings are the same as the system values "
-// 										"for the current option group.\n"
-// 										"UNLOCKED LOCK icon indicates that some settings were changed and are not equal "
-// 										"to the system values for the current option group.\n"
-// 										"WHITE BULLET icon indicates a non system preset.\n\n"
-// 										"Click the UNLOCKED LOCK icon to reset all settings for current option group to "
-// 										"the system values.")));
-// 
-// 	m_undo_btn->SetToolTip(_(L(	"WHITE BULLET icon indicates that the settings are the same as in the last saved"
-// 								"preset  for the current option group.\n"
-// 								"BACK ARROW icon indicates that the settings were changed and are not equal to "
-// 								"the last saved preset for the current option group.\n\n"
-// 								"Click the BACK ARROW icon to reset all settings for the current option group to "
-// 								"the last saved preset.")));
-
 	// --- Tooltip text for reset buttons (for whole options group)
 	// Text to be shown on the "Revert to system" aka "Lock to system" button next to each input field.
-	m_ttg_value_lock =		_(L("LOCKED LOCK icon indicates that the settings are the same as the system values "
+	m_ttg_value_lock =		_(L("LOCKED LOCK icon indicates that the settings are the same as the system (or default) values "
 								"for the current option group"));
 	m_ttg_value_unlock =	_(L("UNLOCKED LOCK icon indicates that some settings were changed and are not equal "
-								"to the system values for the current option group.\n"
-								"Click to reset all settings for current option group to the system values."));
-	m_ttg_white_bullet_ns =	_(L("WHITE BULLET icon indicates a non system preset."));
+								"to the system (or default) values for the current option group.\n"
+								"Click to reset all settings for current option group to the system (or default) values."));
+	m_ttg_white_bullet_ns =	_(L("WHITE BULLET icon indicates a non system (or non default) preset."));
 	m_ttg_non_system =		&m_ttg_white_bullet_ns;
 	// Text to be shown on the "Undo user changes" button next to each input field.
 	m_ttg_white_bullet =	_(L("WHITE BULLET icon indicates that the settings are the same as in the last saved "
@@ -3356,10 +3498,10 @@ void Tab::set_tooltips_text()
 
 	// --- Tooltip text for reset buttons (for each option in group)
 	// Text to be shown on the "Revert to system" aka "Lock to system" button next to each input field.
-	m_tt_value_lock =		_(L("LOCKED LOCK icon indicates that the value is the same as the system value."));
+	m_tt_value_lock =		_(L("LOCKED LOCK icon indicates that the value is the same as the system (or default) value."));
 	m_tt_value_unlock =		_(L("UNLOCKED LOCK icon indicates that the value was changed and is not equal "
-								"to the system value.\n"
-								"Click to reset current value to the system value."));
+								"to the system (or default) value.\n"
+								"Click to reset current value to the system (or default) value."));
 	// 	m_tt_white_bullet_ns=	_(L("WHITE BULLET icon indicates a non system preset."));
 	m_tt_non_system =		&m_ttg_white_bullet_ns;
 	// Text to be shown on the "Undo user changes" button next to each input field.
@@ -3613,9 +3755,9 @@ void TabSLAMaterial::reload_config()
 void TabSLAMaterial::update()
 {
     if (m_preset_bundle->printers.get_selected_preset().printer_technology() == ptFFF)
-        return; // #ys_FIXME
+        return;
     
-// #ys_FIXME
+// #ys_FIXME. Just a template for this function
 //     m_update_cnt++;
 //     ! something to update
 //     m_update_cnt--;
@@ -3652,6 +3794,7 @@ void TabSLAPrint::build()
     // optgroup->append_single_option_line("support_pillar_widening_factor");
     optgroup->append_single_option_line("support_base_diameter");
     optgroup->append_single_option_line("support_base_height");
+    optgroup->append_single_option_line("support_base_safety_distance");
     optgroup->append_single_option_line("support_object_elevation");
 
     optgroup = page->new_optgroup(_(L("Connection of the support sticks and junctions")));
@@ -3672,7 +3815,12 @@ void TabSLAPrint::build()
     // TODO: Disabling this parameter for the beta release
 //    optgroup->append_single_option_line("pad_edge_radius");
     optgroup->append_single_option_line("pad_wall_slope");
-
+    
+    optgroup->append_single_option_line("pad_object_gap");
+    optgroup->append_single_option_line("pad_object_connector_stride");
+    optgroup->append_single_option_line("pad_object_connector_width");
+    optgroup->append_single_option_line("pad_object_connector_penetration");
+    
 	page = add_options_page(_(L("Advanced")), "wrench");
 	optgroup = page->new_optgroup(_(L("Slicing")));
 	optgroup->append_single_option_line("slice_closing_radius");
@@ -3713,41 +3861,61 @@ void TabSLAPrint::reload_config()
 void TabSLAPrint::update()
 {
     if (m_preset_bundle->printers.get_selected_preset().printer_technology() == ptFFF)
-        return; // #ys_FIXME
+        return;
 
-// #ys_FIXME
      m_update_cnt++;
 
-     double head_penetration = m_config->opt_float("support_head_penetration");
-     double head_width = m_config->opt_float("support_head_width");
-     if(head_penetration > head_width) {
-         wxString msg_text = _(L("Head penetration should not be greater than the head width."));
-         auto dialog = new wxMessageDialog(parent(), msg_text, _(L("Invalid Head penetration")), wxICON_WARNING | wxOK);
-         DynamicPrintConfig new_conf = *m_config;
-         if (dialog->ShowModal() == wxID_OK) {
-             new_conf.set_key_value("support_head_penetration", new ConfigOptionFloat(head_width));
-         }
+    double head_penetration = m_config->opt_float("support_head_penetration");
+    double head_width       = m_config->opt_float("support_head_width");
+    if (head_penetration > head_width) {
+        wxString msg_text = _(
+            L("Head penetration should not be greater than the head width."));
 
-         load_config(new_conf);
-     }
+        auto dialog = new wxMessageDialog(parent(),
+                                          msg_text,
+                                          _(L("Invalid Head penetration")),
+                                          wxICON_WARNING | wxOK);
 
-     double pinhead_d = m_config->opt_float("support_head_front_diameter");
-     double pillar_d     = m_config->opt_float("support_pillar_diameter");
-     if(pinhead_d > pillar_d) {
-         wxString msg_text = _(L("Pinhead diameter should be smaller than the pillar diameter."));
-         auto dialog = new wxMessageDialog(parent(), msg_text, _(L("Invalid pinhead diameter")), wxICON_WARNING | wxOK);
-         DynamicPrintConfig new_conf = *m_config;
-         if (dialog->ShowModal() == wxID_OK) {
-             new_conf.set_key_value("support_head_front_diameter", new ConfigOptionFloat(pillar_d / 2.0));
-         }
+        DynamicPrintConfig new_conf = *m_config;
+        if (dialog->ShowModal() == wxID_OK) {
+            new_conf.set_key_value("support_head_penetration",
+                                   new ConfigOptionFloat(head_width));
+        }
 
-         load_config(new_conf);
-     }
+        load_config(new_conf);
+    }
 
-     m_update_cnt--;
+    double pinhead_d = m_config->opt_float("support_head_front_diameter");
+    double pillar_d  = m_config->opt_float("support_pillar_diameter");
+    if (pinhead_d > pillar_d) {
+        wxString msg_text = _(L(
+            "Pinhead diameter should be smaller than the pillar diameter."));
 
-     if (m_update_cnt == 0)
-    wxGetApp().mainframe->on_config_changed(m_config);
+        auto dialog = new wxMessageDialog(parent(),
+                                          msg_text,
+                                          _(L("Invalid pinhead diameter")),
+                                          wxICON_WARNING | wxOK);
+
+        DynamicPrintConfig new_conf = *m_config;
+        if (dialog->ShowModal() == wxID_OK) {
+            new_conf.set_key_value("support_head_front_diameter",
+                                   new ConfigOptionFloat(pillar_d / 2.0));
+        }
+
+        load_config(new_conf);
+    }
+    
+    // if(m_config->opt_float("support_object_elevation") < EPSILON &&
+    //    m_config->opt_bool("pad_enable")) {
+    //     // TODO: disable editding of:
+    //     // pad_object_connector_stride
+    //     // pad_object_connector_width
+    //     // pad_object_connector_penetration
+    // }
+
+    m_update_cnt--;
+
+    if (m_update_cnt == 0) wxGetApp().mainframe->on_config_changed(m_config);
 }
 
 } // GUI

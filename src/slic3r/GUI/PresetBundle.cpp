@@ -72,6 +72,8 @@ PresetBundle::PresetBundle() :
     this->filaments.default_preset().config.option<ConfigOptionStrings>("filament_settings_id", true)->values = { "" };
     this->filaments.default_preset().compatible_printers_condition();
     this->filaments.default_preset().inherits();
+	// Set all the nullable values to nils.
+	this->filaments.default_preset().config.null_nullables();
 
     this->sla_materials.default_preset().config.optptr("sla_material_settings_id", true);
     this->sla_materials.default_preset().compatible_printers_condition();
@@ -1366,7 +1368,7 @@ void PresetBundle::export_configbundle(const std::string &path, bool export_syst
                 continue;
             c << std::endl << "[" << presets->section_name() << ":" << preset.name << "]" << std::endl;
             for (const std::string &opt_key : preset.config.keys())
-                c << opt_key << " = " << preset.config.serialize(opt_key) << std::endl;
+                c << opt_key << " = " << preset.config.opt_serialize(opt_key) << std::endl;
         }
     }
 

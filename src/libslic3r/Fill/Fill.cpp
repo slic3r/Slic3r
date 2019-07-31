@@ -179,7 +179,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         Polygons surfaces_polygons = to_polygons(surfaces);
         Polygons collapsed = diff(
             surfaces_polygons,
-            offset2(surfaces_polygons, -distance_between_surfaces/2, +distance_between_surfaces/2),
+            offset2(surfaces_polygons, (float)-distance_between_surfaces/2, (float)+distance_between_surfaces/2),
             true);
         Polygons to_subtract;
         to_subtract.reserve(collapsed.size() + number_polygons(surfaces));
@@ -190,7 +190,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         surfaces_append(
             surfaces,
             intersection_ex(
-                offset(collapsed, distance_between_surfaces),
+                offset(collapsed, (float)distance_between_surfaces),
                 to_subtract,
                 true),
             stPosInternal | stDensSolid);
@@ -281,9 +281,9 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         if (is_denser)f->angle = 0;
         else f->angle = float(Geometry::deg2rad(layerm.region()->config().fill_angle.value));
         // Maximum length of the perimeter segment linking two infill lines.
-        f->link_max_length = scale_(link_max_length);
+        f->link_max_length = (coord_t)scale_(link_max_length);
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
-        f->loop_clipping = scale_(flow.nozzle_diameter) * LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER;
+        f->loop_clipping = coord_t(scale_(flow.nozzle_diameter) * LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER);
         //give the overlap size to let the infill do his overlap
         //add overlap if at least one perimeter
         if (layerm.region()->config().perimeters > 0) {
@@ -300,7 +300,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         
         // apply half spacing using this flow's own spacing and generate infill
         FillParams params;
-        params.density = 0.01 * density;
+        params.density = float(0.01 * density);
         params.dont_adjust = false;
         params.fill_exactly = layerm.region()->config().enforce_full_fill_volume.getBool();
         params.dont_connect = layerm.region()->config().infill_not_connected.getBool();
@@ -312,7 +312,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             // so we can safely ignore the slight variation that might have
             // been applied to $f->flow_spacing
         } else {
-            flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, h, is_bridge || f->use_bridge_flow());
+            flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, (float)h, is_bridge || f->use_bridge_flow());
         }
         
         float flow_percent = 1;

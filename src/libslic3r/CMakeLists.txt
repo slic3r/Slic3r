@@ -83,9 +83,8 @@ add_library(libslic3r STATIC
     GCode/SpiralVase.hpp
     GCode/ToolOrdering.cpp
     GCode/ToolOrdering.hpp
+    GCode/WipeTower.cpp
     GCode/WipeTower.hpp
-    GCode/WipeTowerPrusaMM.cpp
-    GCode/WipeTowerPrusaMM.hpp
     GCode.cpp
     GCode.hpp
     GCodeReader.cpp
@@ -111,13 +110,15 @@ add_library(libslic3r STATIC
     MedialAxis.hpp
     Model.cpp
     Model.hpp
-    ModelArrange.hpp
-    ModelArrange.cpp
+    Arrange.hpp
+    Arrange.cpp
     MotionPlanner.cpp
     MotionPlanner.hpp
     MultiPoint.cpp
     MultiPoint.hpp
     MutablePriorityQueue.hpp
+    ObjectID.cpp
+    ObjectID.hpp
     PerimeterGenerator.cpp
     PerimeterGenerator.hpp
     PlaceholderParser.cpp
@@ -168,6 +169,7 @@ add_library(libslic3r STATIC
     MinAreaBoundingBox.cpp
     miniz_extension.hpp
     miniz_extension.cpp
+    SLA/SLACommon.hpp
     SLA/SLABoilerPlate.hpp
     SLA/SLABasePool.hpp
     SLA/SLABasePool.cpp
@@ -193,6 +195,7 @@ target_include_directories(libslic3r PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${LIBNE
 target_link_libraries(libslic3r
     libnest2d
     admesh
+    cereal
     libigl
     miniz
     boost_libs

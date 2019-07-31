@@ -1,11 +1,13 @@
 #ifndef MTUTILS_HPP
 #define MTUTILS_HPP
 
-#include <atomic>     // for std::atomic_flag and memory orders
-#include <mutex>      // for std::lock_guard
-#include <functional> // for std::function
-#include <utility>    // for std::forward
+#include <atomic>       // for std::atomic_flag and memory orders
+#include <mutex>        // for std::lock_guard
+#include <functional>   // for std::function
+#include <utility>      // for std::forward
+#include <vector>
 #include <algorithm>
+#include <cmath>
 
 #include "libslic3r.h"
 #include "Point.hpp"
@@ -242,6 +244,58 @@ template<class C> bool all_of(const C &container)
                        });
 }
 
+template<class T> struct remove_cvref
+{
+    using type =
+        typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+};
+
+template<class T> using remove_cvref_t = typename remove_cvref<T>::type;
+
+template<template<class> class C, class T>
+class Container : public C<remove_cvref_t<T>>
+{
+public:
+    explicit Container(size_t count, T &&initval)
+        : C<remove_cvref_t<T>>(count, initval)
+    {}
+};
+
+template<class T> using DefaultContainer = std::vector<T>;
+
+/// Exactly like Matlab https://www.mathworks.com/help/matlab/ref/linspace.html
+template<class T, class I, template<class> class C = DefaultContainer>
+inline C<remove_cvref_t<T>> linspace(const T &start, const T &stop, const I &n)
+{
+    Container<C, T> vals(n, T());
+
+    T      stride = (stop - start) / n;
+    size_t i      = 0;
+    std::generate(vals.begin(), vals.end(), [&i, start, stride] {
+        return start + i++ * stride;
+    });
+
+    return vals;
+}
+
+/// A set of equidistant values starting from 'start' (inclusive), ending
+/// in the closest multiple of 'stride' less than or equal to 'end' and
+/// leaving 'stride' space between each value. 
+/// Very similar to Matlab [start:stride:end] notation.
+template<class T, template<class> class C = DefaultContainer>
+inline C<remove_cvref_t<T>> grid(const T &start, const T &stop, const T &stride)
+{
+    Container<C, T> vals(size_t(std::ceil((stop - start) / stride)), T());
+    
+    int i = 0;
+    std::generate(vals.begin(), vals.end(), [&i, start, stride] {
+        return start + i++ * stride; 
+    });
+     
+    return vals;
+}
+
+
 // A shorter C++14 style form of the enable_if metafunction
 template<bool B, class T>
 using enable_if_t = typename std::enable_if<B, T>::type;
@@ -260,51 +314,53 @@ template<class I> struct is_scaled_coord
 };
 
 // Meta predicates for floating, 'scaled coord' and generic arithmetic types
-template<class T>
-using FloatingOnly = enable_if_t<std::is_floating_point<T>::value, T>;
+template<class T, class O = T>
+using FloatingOnly = enable_if_t<std::is_floating_point<T>::value, O>;
 
-template<class T>
-using ScaledCoordOnly = enable_if_t<is_scaled_coord<T>::value, T>;
+template<class T, class O = T>
+using ScaledCoordOnly = enable_if_t<is_scaled_coord<T>::value, O>;
 
-template<class T>
-using ArithmeticOnly = enable_if_t<std::is_arithmetic<T>::value, T>;
+template<class T, class O = T>
+using IntegerOnly = enable_if_t<std::is_integral<T>::value, O>;
 
-// A shorter form for a generic Eigen vector which is widely used in PrusaSlicer 
-template<class T, int N>
-using EigenVec = Eigen::Matrix<T, N, 1, Eigen::DontAlign>;
+template<class T, class O = T>
+using ArithmeticOnly = enable_if_t<std::is_arithmetic<T>::value, O>;
 
 // Semantics are the following:
 // Upscaling (scaled()): only from floating point types (or Vec) to either
 //                       floating point or integer 'scaled coord' coordinates.
-// Downscaling (unscaled()): from arithmetic types (or Vec) to either
-//                           floating point only
+// Downscaling (unscaled()): from arithmetic (or Vec) to floating point only
 
 // Conversion definition from unscaled to floating point scaled
 template<class Tout,
          class Tin,
-         class = FloatingOnly<Tin>,
-         class = FloatingOnly<Tout>>
-inline SLIC3R_CONSTEXPR Tout scaled(const Tin &v) SLIC3R_NOEXCEPT
+         class = FloatingOnly<Tin>>
+inline constexpr FloatingOnly<Tout> scaled(const Tin &v) noexcept
 {
-    return static_cast<Tout>(v / static_cast<Tin>(SCALING_FACTOR));
+    return Tout(v / Tin(SCALING_FACTOR));
 }
 
 // Conversion definition from unscaled to integer 'scaled coord'.
-// TODO: is the rounding necessary ? Here it is to show that it can be different
-// but it does not have to be. Using std::round means loosing noexcept and
-// constexpr modifiers
+// TODO: is the rounding necessary? Here it is commented  out to show that
+// it can be different for integers but it does not have to be. Using
+// std::round means loosing noexcept and constexpr modifiers
 template<class Tout = coord_t, class Tin, class = FloatingOnly<Tin>>
-inline SLIC3R_CONSTEXPR ScaledCoordOnly<Tout> scaled(const Tin &v) SLIC3R_NOEXCEPT
+inline constexpr ScaledCoordOnly<Tout> scaled(const Tin &v) noexcept
 {
     //return static_cast<Tout>(std::round(v / SCALING_FACTOR));
-    return static_cast<Tout>(v / static_cast<Tin>(SCALING_FACTOR));
+    return Tout(v / Tin(SCALING_FACTOR));
 }
 
 // Conversion for Eigen vectors (N dimensional points)
-template<class Tout = coord_t, class Tin, int N, class = FloatingOnly<Tin>>
-inline EigenVec<ArithmeticOnly<Tout>, N> scaled(const EigenVec<Tin, N> &v)
+template<class Tout = coord_t,
+         class Tin,
+         int N,
+         class = FloatingOnly<Tin>,
+         int...EigenArgs>
+inline Eigen::Matrix<ArithmeticOnly<Tout>, N, EigenArgs...>
+scaled(const Eigen::Matrix<Tin, N, EigenArgs...> &v)
 {
-    return v.template cast<Tout>() / SCALING_FACTOR;
+    return (v / SCALING_FACTOR).template cast<Tout>();
 }
 
 // Conversion from arithmetic scaled type to floating point unscaled
@@ -312,9 +368,9 @@ template<class Tout = double,
          class Tin,
          class = ArithmeticOnly<Tin>,
          class = FloatingOnly<Tout>>
-inline SLIC3R_CONSTEXPR Tout unscaled(const Tin &v) SLIC3R_NOEXCEPT
+inline constexpr Tout unscaled(const Tin &v) noexcept
 {
-    return static_cast<Tout>(v * static_cast<Tout>(SCALING_FACTOR));
+    return Tout(v * Tout(SCALING_FACTOR));
 }
 
 // Unscaling for Eigen vectors. Input base type can be arithmetic, output base
@@ -323,11 +379,19 @@ template<class Tout = double,
          class Tin,
          int N,
          class = ArithmeticOnly<Tin>,
-         class = FloatingOnly<Tout>>
-inline SLIC3R_CONSTEXPR EigenVec<Tout, N> unscaled(
-    const EigenVec<Tin, N> &v) SLIC3R_NOEXCEPT
+         class = FloatingOnly<Tout>,
+         int...EigenArgs>
+inline constexpr Eigen::Matrix<Tout, N, EigenArgs...>
+unscaled(const Eigen::Matrix<Tin, N, EigenArgs...> &v) noexcept
 {
     return v.template cast<Tout>() * SCALING_FACTOR;
+}
+
+template<class T> inline std::vector<T> reserve_vector(size_t capacity)
+{
+    std::vector<T> ret;
+    ret.reserve(capacity);
+    return ret;
 }
 
 } // namespace Slic3r
