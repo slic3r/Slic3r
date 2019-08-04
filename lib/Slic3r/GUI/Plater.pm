@@ -2302,8 +2302,9 @@ sub on_export_completed {
         $estimator->parse_file($self->{export_gcode_output_file});
         my $time = $estimator->time;
         $self->{print_info_tim}->SetLabel(sprintf(
-            "%d minutes and %d seconds",
-            int($time / 60),
+            "%d hours, %d minutes and %d seconds",
+            int($time / 3600),
+            int(($time % 3600) / 60),
             int($time % 60),
         ));
     }
