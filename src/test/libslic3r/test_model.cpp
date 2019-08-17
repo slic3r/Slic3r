@@ -17,7 +17,7 @@ SCENARIO("Model construction") {
         
         DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
         Slic3r::Print print{};
-        print.apply_config_perl_tests_only(*config);
+        print.apply(model, *config);
         //Slic3r::Test::init_print(print, { sample_mesh }, model, config);
 
         WHEN("Model object is added") {

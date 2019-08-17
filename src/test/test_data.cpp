@@ -274,7 +274,7 @@ void init_print(Print& print, std::initializer_list<TestMesh> meshes, Slic3r::Mo
     //if (tests_gcode != ""s)
     //    config->set_key_value("gcode_comments", new ConfigOptionBool(true));
 
-    print.apply_config_perl_tests_only(*config);
+    //print.apply_config_perl_tests_only(*config);
     for (const TestMesh& t : meshes) {
         ModelObject* object {model.add_object()};
         object->name += std::string(mesh_names.at(t)) + ".stl"s;
@@ -307,7 +307,6 @@ void init_print(Print& print, std::initializer_list<TriangleMesh> meshes, Slic3r
     if (tests_gcode != ""s)
         config->set_key_value("gcode_comments", new ConfigOptionBool(true));
 
-    print.apply_config_perl_tests_only(*config);
     for (const TriangleMesh& t : meshes) {
 		ModelObject* object {model.add_object()};
 		object->name += "object.stl"s;
@@ -320,11 +319,11 @@ void init_print(Print& print, std::initializer_list<TriangleMesh> meshes, Slic3r
 
     model.arrange_objects(print.config().min_object_distance());
     model.center_instances_around_point(Slic3r::Vec2d(100,100));
-    for (ModelObject* mo : model.objects) {
+	print.apply(model, *config);
+	for (ModelObject* mo : model.objects) {
         print.auto_assign_extruders(mo);
-        print.add_model_object(mo);
     }
-
+	
     print.validate();
 
 }
