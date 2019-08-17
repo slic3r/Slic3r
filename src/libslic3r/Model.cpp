@@ -498,7 +498,9 @@ void Model::convert_multipart_object(unsigned int max_extruders)
 
     reset_auto_extruder_id();
 
-    bool is_single_object = (this->objects.size() == 1);
+	//supermerill: note: the new codepath indroduced in fab363493140a93c1786c7898424a73dd1ed2a2e
+	// doesn't work for my fork for a reason, deactivating it for now.
+	bool is_single_object = true; // (this->objects.size() == 1);
 
     for (const ModelObject* o : this->objects)
     {
