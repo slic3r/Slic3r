@@ -482,6 +482,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "external_perimeters_first"
             || opt_key == "perimeter_loop"
             || opt_key == "perimeter_loop_seam"
+            || opt_key == "only_one_perimeter_top"
             || opt_key == "no_perimeter_unsupported_algo") {
             steps.emplace_back(posPerimeters);
         } else if (
@@ -489,11 +490,8 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "first_layer_height"
             || opt_key == "exact_last_layer_height"
             || opt_key == "raft_layers"
-            || opt_key == "slice_closing_radius") {
-            steps.emplace_back(posSlice);
-        }
-        else if (
-               opt_key == "clip_multipart_objects"
+            || opt_key == "slice_closing_radius"
+            || opt_key == "clip_multipart_objects"
             || opt_key == "elefant_foot_compensation"
             || opt_key == "support_material_contact_distance_type" 
             || opt_key == "support_material_contact_distance_top" 

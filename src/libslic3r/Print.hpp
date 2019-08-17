@@ -64,7 +64,7 @@ private:
     Print             *m_print;
     PrintRegionConfig  m_config;
     
-    PrintRegion(Print* print) : m_refcnt(0), m_print(print) {}
+    //PrintRegion(Print* print) : m_refcnt(0), m_print(print) {}
     PrintRegion(Print* print, const PrintRegionConfig &config) : m_refcnt(0), m_print(print), m_config(config) {}
     ~PrintRegion() {}
 };
@@ -376,7 +376,7 @@ public:
 protected:
     // methods for handling regions
     PrintRegion*        get_region(size_t idx)        { return m_regions[idx]; }
-    PrintRegion*        add_region();
+    //PrintRegion*        add_region();
     PrintRegion*        add_region(const PrintRegionConfig &config);
 
     // Invalidates the step, and its depending steps in Print.

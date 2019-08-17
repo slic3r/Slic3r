@@ -44,11 +44,11 @@ void Print::clear()
     m_model.clear_objects();
 }
 
-PrintRegion* Print::add_region()
-{
-    m_regions.emplace_back(new PrintRegion(this));
-    return m_regions.back();
-}
+//PrintRegion* Print::add_region()
+//{
+//    m_regions.emplace_back(new PrintRegion(this));
+//    return m_regions.back();
+//}
 
 PrintRegion* Print::add_region(const PrintRegionConfig &config)
 {

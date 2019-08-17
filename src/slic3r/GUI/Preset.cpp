@@ -414,7 +414,7 @@ const std::vector<std::string>& Preset::print_options()
         "over_bridge_flow_ratio", "clip_multipart_objects", "enforce_full_fill_volume", "external_infill_margin", "bridged_infill_margin",
         "elefant_foot_compensation", "xy_size_compensation", "hole_size_compensation", "threads", "resolution",
         "wipe_tower", "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_bridging",
-        "only_one_perimeter_top", "single_extruder_multi_material_priming", "compatible_printers", "compatible_printers_condition", "inherits", 
+        "single_extruder_multi_material_priming", "compatible_printers", "compatible_printers_condition", "inherits", 
         "infill_dense", "infill_dense_algo",
         "no_perimeter_unsupported_algo",
         "support_material_solid_first_layer"

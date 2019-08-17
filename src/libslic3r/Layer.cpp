@@ -122,8 +122,11 @@ void Layer::make_perimeters()
             LayerRegion* other_layerm = *it;
             const PrintRegionConfig &other_config = other_layerm->region()->config();
             
+			/// !!! add here the settings you want to be added in the per-object menu.
+			/// if you don't do that, objects will share the same region, and the same settings.
             if (config.perimeter_extruder   == other_config.perimeter_extruder
                 && config.perimeters        == other_config.perimeters
+                && config.only_one_perimeter_top == other_config.only_one_perimeter_top
                 && config.perimeter_speed   == other_config.perimeter_speed
                 && config.external_perimeter_speed == other_config.external_perimeter_speed
                 && config.gap_fill_speed    == other_config.gap_fill_speed
