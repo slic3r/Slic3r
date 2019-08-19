@@ -61,18 +61,18 @@ bool TransformationMatrix::operator==(const TransformationMatrix &other) const
 {
     double const eps = EPSILON; 
     bool is_equal = true;
-    is_equal &= (abs(this->m00 - other.m00) < eps);
-    is_equal &= (abs(this->m01 - other.m01) < eps);
-    is_equal &= (abs(this->m02 - other.m02) < eps);
-    is_equal &= (abs(this->m03 - other.m03) < eps);
-    is_equal &= (abs(this->m10 - other.m10) < eps);
-    is_equal &= (abs(this->m11 - other.m11) < eps);
-    is_equal &= (abs(this->m12 - other.m12) < eps);
-    is_equal &= (abs(this->m13 - other.m13) < eps);
-    is_equal &= (abs(this->m20 - other.m20) < eps);
-    is_equal &= (abs(this->m21 - other.m21) < eps);
-    is_equal &= (abs(this->m22 - other.m22) < eps);
-    is_equal &= (abs(this->m23 - other.m23) < eps);
+    is_equal &= (std::abs(this->m00 - other.m00) < eps);
+    is_equal &= (std::abs(this->m01 - other.m01) < eps);
+    is_equal &= (std::abs(this->m02 - other.m02) < eps);
+    is_equal &= (std::abs(this->m03 - other.m03) < eps);
+    is_equal &= (std::abs(this->m10 - other.m10) < eps);
+    is_equal &= (std::abs(this->m11 - other.m11) < eps);
+    is_equal &= (std::abs(this->m12 - other.m12) < eps);
+    is_equal &= (std::abs(this->m13 - other.m13) < eps);
+    is_equal &= (std::abs(this->m20 - other.m20) < eps);
+    is_equal &= (std::abs(this->m21 - other.m21) < eps);
+    is_equal &= (std::abs(this->m22 - other.m22) < eps);
+    is_equal &= (std::abs(this->m23 - other.m23) < eps);
     return is_equal;
 }
 
@@ -107,7 +107,7 @@ TransformationMatrix TransformationMatrix::inverse() const
     // from http://mathworld.wolfram.com/MatrixInverse.html
     // and https://math.stackexchange.com/questions/152462/inverse-of-transformation-matrix
     double det = this->determinante();
-    if (abs(det) < 1e-9)
+    if (std::abs(det) < 1e-9)
     {
         printf("Matrix (very close to) singular. Inverse cannot be computed");
         return TransformationMatrix();
@@ -256,7 +256,7 @@ TransformationMatrix TransformationMatrix::mat_rotation(double angle_rad, const 
 TransformationMatrix TransformationMatrix::mat_rotation(double q1, double q2, double q3, double q4)
 {
     double factor = q1*q1 + q2*q2 + q3*q3 + q4*q4;
-    if (abs(factor - 1.0) > 1e-12)
+    if (std::abs(factor - 1.0) > 1e-12)
     {
         factor = 1.0 / sqrt(factor);
         q1 *= factor;
@@ -322,7 +322,7 @@ TransformationMatrix TransformationMatrix::mat_rotation(Vectorf3 origin, Vectorf
         {
             Vectorf3 help;
             // make help garanteed not colinear
-            if (abs(abs(origin.x) - 1) < 0.02)
+            if (std::abs(std::abs(origin.x) - 1) < 0.02)
                 help.z = 1.0; // origin mainly in x direction
             else
                 help.x = 1.0;
