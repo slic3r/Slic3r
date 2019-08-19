@@ -564,6 +564,7 @@ const std::vector<std::string>& Preset::filament_options()
         , "disable_fan_first_layers"
         , "fan_below_layer_time", "slowdown_below_layer_time", "min_print_speed",
         "start_filament_gcode", "end_filament_gcode",
+        "external_perimeter_fan_speed",
         // Retract overrides
         "filament_retract_length", "filament_retract_lift", "filament_retract_lift_above", "filament_retract_lift_below", "filament_retract_speed", "filament_deretract_speed", "filament_retract_restart_extra", "filament_retract_before_travel",
         "filament_retract_layer_change", "filament_wipe", "filament_wipe_extra_perimeter", "filament_retract_before_wipe",

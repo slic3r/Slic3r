@@ -88,6 +88,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "end_gcode",
         "end_filament_gcode",
         "external_perimeter_cut_corners",
+        "external_perimeter_fan_speed",
         "extrusion_axis",
         "extruder_clearance_height",
         "extruder_clearance_radius",
