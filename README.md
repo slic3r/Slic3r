@@ -2,11 +2,11 @@
 
 ### How to build
 
-####Installing prerequisites:
+#### Installing prerequisites
 
     sudo apt-get install gcc cmake build-essential libgtk2.0-dev libwxgtk3.0-dev libwx-perl libmodule-build-perl git cpanminus libextutils-cppguess-perl libboost-all-dev libxmu-dev liblocal-lib-perl wx-common libopengl-perl libwx-glcanvas-perl libtbb-dev libxmu-dev freeglut3-dev libwxgtk-media3.0-dev libboost-thread-dev libboost-system-dev libboost-filesystem-dev libcurl4-openssl-dev libextutils-makemaker-cpanfile-perl
 
-####Get repository:
+#### Get repository
 
     git clone https://github.com/Zip-o-mat/Slic3r.git
 
@@ -14,13 +14,13 @@
 
     git checkout nonplanar
 
-####Install Perl libs:
+#### Install Perl libs
 
     perl Build.PL
 
     perl Build.PL --gui
 
-####Build with cmake (Tested on Ubuntu 16.04):
+#### Build with cmake (Tested on Ubuntu 16.04)
 
     mkdir build
 
@@ -32,7 +32,7 @@
 
     make
 
-####Start:
+#### Start
 
     cd ..
 
