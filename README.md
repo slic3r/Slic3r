@@ -20,7 +20,7 @@
 
     perl Build.PL --gui
 
-#### Build with cmake (Tested on Ubuntu 16.04)
+#### Build with cmake (Tested on Ubuntu 16.04, 18.04LTS & 19.04)
 
     mkdir build
 
@@ -36,7 +36,7 @@
 
     cd ..
 
-    perl slicer.pl
+    perl slic3r.pl
 
 ### So, what's this Slic3r?
 
