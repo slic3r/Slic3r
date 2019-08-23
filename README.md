@@ -36,7 +36,7 @@
 
     cd ..
 
-    perl slicer.pl
+    perl slic3r.pl
 
 ### So, what's this Slic3r?
 
