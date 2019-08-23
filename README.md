@@ -20,7 +20,7 @@
 
     perl Build.PL --gui
 
-#### Build with cmake (Tested on Ubuntu 16.04 & 18.04LTS)
+#### Build with cmake (Tested on Ubuntu 16.04, 18.04LTS & 19.04)
 
     mkdir build
 
