@@ -838,35 +838,36 @@ void Choice::set_value(const boost::any& value, bool change_event)
             field->SetValue(text_value);
         }
         else
-			field->SetSelection(idx);
-		break;
-	}
-	case coEnum: {
-		int val = boost::any_cast<int>(value);
-		if (m_opt_id == "top_fill_pattern" || m_opt_id == "bottom_fill_pattern" || m_opt_id == "solid_fill_pattern")
-		{
-			if (!m_opt.enum_values.empty()) {
-				std::string key;
-				t_config_enum_values map_names = ConfigOptionEnum<InfillPattern>::get_enum_values();				
-				for (auto it : map_names) {
-					if (val == it.second) {
-						key = it.first;
-						break;
-					}
-				}
+            field->SetSelection(idx);
+        break;
+    }
+    case coEnum: {
+        int val = boost::any_cast<int>(value);
+        if (m_opt_id == "top_fill_pattern" || m_opt_id == "bottom_fill_pattern" || m_opt_id == "solid_fill_pattern"
+            || m_opt_id == "fill_pattern" || m_opt_id == "support_fill_pattern")
+        {
+            if (!m_opt.enum_values.empty()) {
+                std::string key;
+                t_config_enum_values map_names = ConfigOptionEnum<InfillPattern>::get_enum_values();
+                for (auto it : map_names) {
+                    if (val == it.second) {
+                        key = it.first;
+                        break;
+                    }
+                }
 
-				size_t idx = 0;
-				for (auto el : m_opt.enum_values)
-				{
-					if (el.compare(key) == 0)
-						break;
-					++idx;
-				}
+                size_t idx = 0;
+                for (auto el : m_opt.enum_values)
+                {
+                    if (el.compare(key) == 0)
+                        break;
+                    ++idx;
+                }
 
-				val = idx == m_opt.enum_values.size() ? 0 : idx;
-			}
-			else
-				val = 0;
+                val = idx == m_opt.enum_values.size() ? 0 : idx;
+            }
+            else
+                val = 0;
         } else if (m_opt_id.compare("perimeter_loop_seam") == 0) {
             if (!m_opt.enum_values.empty()) {
                 std::string key;
@@ -934,7 +935,8 @@ boost::any& Choice::get_value()
     if (m_opt.type == coEnum)
     {
         int ret_enum = field->GetSelection(); 
-        if (m_opt_id == "top_fill_pattern" || m_opt_id == "bottom_fill_pattern" || m_opt_id == "solid_fill_pattern" || m_opt_id == "support_material_interface_pattern")
+        if (m_opt_id == "top_fill_pattern" || m_opt_id == "bottom_fill_pattern" || m_opt_id == "solid_fill_pattern" 
+            || m_opt_id == "support_material_interface_pattern" || m_opt_id == "fill_pattern")
         {
             if (!m_opt.enum_values.empty()) {
                 std::string key = m_opt.enum_values[ret_enum];
@@ -946,8 +948,6 @@ boost::any& Choice::get_value()
             else
                 m_value = static_cast<InfillPattern>(0);
         }
-        if (m_opt_id.compare("fill_pattern") == 0)
-            m_value = static_cast<InfillPattern>(ret_enum);
         else if (m_opt_id.compare("gcode_flavor") == 0)
             m_value = static_cast<GCodeFlavor>(ret_enum);
         else if (m_opt_id.compare("support_material_pattern") == 0)
