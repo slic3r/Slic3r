@@ -376,6 +376,11 @@ public:
 class Choice : public Field {
 	using Field::Field;
     int             m_width{ 15 };
+protected:
+    //used by get_value when it's an enum
+    //convert the value from the select to the enum value. store it in m_value
+    template<class T> void convert_to_enum_value(int idx_val);
+    template<class T> int idx_from_enum_value(int enum_val);
 public:
 	Choice(const ConfigOptionDef& opt, const t_config_option_key& id) : Field(opt, id) {}
 	Choice(wxWindow* parent, const ConfigOptionDef& opt, const t_config_option_key& id) : Field(parent, opt, id) {}
