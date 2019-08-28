@@ -157,6 +157,10 @@ private:
 
     int         m_selected_row = 0;
     wxDataViewItem m_last_selected_item {nullptr};
+#ifdef __WXMSW__
+    // Workaround for entering the column editing mode on Windows. Simulate keyboard enter when another column of the active line is selected.
+    int 	    m_last_selected_column = -1;
+#endif /* __MSW__ */
 
 #if 0
     SettingsBundle m_freq_settings_fff;
@@ -225,6 +229,7 @@ public:
     wxMenuItem*         append_menu_item_settings(wxMenu* menu);
     wxMenuItem*         append_menu_item_change_type(wxMenu* menu);
     wxMenuItem*         append_menu_item_instance_to_object(wxMenu* menu, wxWindow* parent);
+    wxMenuItem*         append_menu_item_printable(wxMenu* menu, wxWindow* parent);
     void                append_menu_items_osx(wxMenu* menu);
     wxMenuItem*         append_menu_item_fix_through_netfabb(wxMenu* menu);
     void                append_menu_item_export_stl(wxMenu* menu) const ;
@@ -348,12 +353,16 @@ public:
     void msw_rescale();
 
     void update_after_undo_redo();
+    //update printable state for item from objects model
+    void update_printable_state(int obj_idx, int instance_idx);
+    void toggle_printable_state(wxDataViewItem item);
 
 private:
 #ifdef __WXOSX__
 //    void OnChar(wxKeyEvent& event);
 #endif /* __WXOSX__ */
     void OnContextMenu(wxDataViewEvent &event);
+    void list_manipulation();
 
     void OnBeginDrag(wxDataViewEvent &event);
     void OnDropPossible(wxDataViewEvent &event);
@@ -361,6 +370,10 @@ private:
     bool can_drop(const wxDataViewItem& item) const ;
 
     void ItemValueChanged(wxDataViewEvent &event);
+#ifdef __WXMSW__
+    // Workaround for entering the column editing mode on Windows. Simulate keyboard enter when another column of the active line is selected.
+	void OnEditingStarted(wxDataViewEvent &event);
+#endif /* __WXMSW__ */
     void OnEditingDone(wxDataViewEvent &event);
 
     void show_multi_selection_menu();

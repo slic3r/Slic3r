@@ -197,11 +197,7 @@ GLCanvas3DManager::GLCanvas3DManager()
 
 GLCanvas3DManager::~GLCanvas3DManager()
 {
-    if (m_context != nullptr)
-    {
-        delete m_context;
-        m_context = nullptr;
-    }
+	this->destroy();
 }
 
 bool GLCanvas3DManager::add(wxGLCanvas* canvas, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar)
@@ -282,6 +278,15 @@ bool GLCanvas3DManager::init(wxGLCanvas* canvas)
         return false;
 }
 
+void GLCanvas3DManager::destroy()
+{
+    if (m_context != nullptr)
+    {
+        delete m_context;
+        m_context = nullptr;
+    }
+}
+
 GLCanvas3D* GLCanvas3DManager::get_canvas(wxGLCanvas* canvas)
 {
     CanvasesMap::const_iterator it = do_get_canvas(canvas);
@@ -290,7 +295,21 @@ GLCanvas3D* GLCanvas3DManager::get_canvas(wxGLCanvas* canvas)
 
 wxGLCanvas* GLCanvas3DManager::create_wxglcanvas(wxWindow *parent)
 {
-    int attribList[] = { WX_GL_RGBA, WX_GL_DOUBLEBUFFER, WX_GL_DEPTH_SIZE, 24, WX_GL_SAMPLE_BUFFERS, GL_TRUE, WX_GL_SAMPLES, 4, 0 };
+    int attribList[] = { 
+    	WX_GL_RGBA,
+    	WX_GL_DOUBLEBUFFER,
+    	// RGB channels each should be allocated with 8 bit depth. One should almost certainly get these bit depths by default.
+      	WX_GL_MIN_RED, 			8,
+      	WX_GL_MIN_GREEN, 		8,
+      	WX_GL_MIN_BLUE, 		8,
+      	// Requesting an 8 bit alpha channel. Interestingly, the NVIDIA drivers would most likely work with some alpha plane, but glReadPixels would not return
+      	// the alpha channel on NVIDIA if not requested when the GL context is created.
+      	WX_GL_MIN_ALPHA, 		8,
+    	WX_GL_DEPTH_SIZE, 		24,
+    	WX_GL_SAMPLE_BUFFERS, 	GL_TRUE,
+    	WX_GL_SAMPLES, 			4,
+    	0
+    };
 
     if (s_multisample == MS_Unknown)
     {
@@ -300,7 +319,7 @@ wxGLCanvas* GLCanvas3DManager::create_wxglcanvas(wxWindow *parent)
     }
 
     if (! can_multisample())
-        attribList[4] = 0;
+        attribList[12] = 0;
 
     return new wxGLCanvas(parent, wxID_ANY, attribList, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
 }

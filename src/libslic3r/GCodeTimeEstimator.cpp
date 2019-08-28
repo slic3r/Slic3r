@@ -168,10 +168,14 @@ namespace Slic3r {
     }
 #endif // ENABLE_MOVE_STATS
 
-    const std::string GCodeTimeEstimator::Normal_First_M73_Output_Placeholder_Tag = "; NORMAL_FIRST_M73_OUTPUT_PLACEHOLDER";
-    const std::string GCodeTimeEstimator::Silent_First_M73_Output_Placeholder_Tag = "; SILENT_FIRST_M73_OUTPUT_PLACEHOLDER";
-    const std::string GCodeTimeEstimator::Normal_Last_M73_Output_Placeholder_Tag = "; NORMAL_LAST_M73_OUTPUT_PLACEHOLDER";
-    const std::string GCodeTimeEstimator::Silent_Last_M73_Output_Placeholder_Tag = "; SILENT_LAST_M73_OUTPUT_PLACEHOLDER";
+    const std::string GCodeTimeEstimator::Normal_First_M73_Output_Placeholder_Tag = "; _TE_NORMAL_FIRST_M73_OUTPUT_PLACEHOLDER";
+    const std::string GCodeTimeEstimator::Silent_First_M73_Output_Placeholder_Tag = "; _TE_SILENT_FIRST_M73_OUTPUT_PLACEHOLDER";
+    const std::string GCodeTimeEstimator::Normal_Last_M73_Output_Placeholder_Tag = "; _TE_NORMAL_LAST_M73_OUTPUT_PLACEHOLDER";
+    const std::string GCodeTimeEstimator::Silent_Last_M73_Output_Placeholder_Tag = "; _TE_SILENT_LAST_M73_OUTPUT_PLACEHOLDER";
+
+    // temporary human readable form to use until not removed from gcode by the new post-process method
+    const std::string GCodeTimeEstimator::Color_Change_Tag = "PRINT_COLOR_CHANGE";
+//    const std::string GCodeTimeEstimator::Color_Change_Tag = "_TE_COLOR_CHANGE";
 
     GCodeTimeEstimator::GCodeTimeEstimator(EMode mode)
         : m_mode(mode)
@@ -390,7 +394,7 @@ namespace Slic3r {
         fclose(out);
         in.close();
 
-        if (rename_file(path_tmp, filename) != 0)
+        if (rename_file(path_tmp, filename))
             throw std::runtime_error(std::string("Failed to rename the output G-code file from ") + path_tmp + " to " + filename + '\n' +
             "Is " + path_tmp + " locked?" + '\n');
 
@@ -694,22 +698,39 @@ namespace Slic3r {
         return m_color_times;
     }
 
-    std::vector<std::string> GCodeTimeEstimator::get_color_times_dhms() const
+    std::vector<std::string> GCodeTimeEstimator::get_color_times_dhms(bool include_remaining) const
     {
         std::vector<std::string> ret;
+        float total_time = 0.0f;
         for (float t : m_color_times)
         {
-            ret.push_back(_get_time_dhms(t));
+            std::string time = _get_time_dhms(t);
+            if (include_remaining)
+            {
+                time += " (";
+                time += _get_time_dhms(m_time - total_time);
+                time += ")";
+            }
+            total_time += t;
+            ret.push_back(time);
         }
         return ret;
     }
 
-    std::vector<std::string> GCodeTimeEstimator::get_color_times_minutes() const
+    std::vector<std::string> GCodeTimeEstimator::get_color_times_minutes(bool include_remaining) const
     {
         std::vector<std::string> ret;
+        float total_time = 0.0f;
         for (float t : m_color_times)
         {
-            ret.push_back(_get_time_minutes(t));
+            std::string time = _get_time_minutes(t);
+            if (include_remaining)
+            {
+                time += " (";
+                time += _get_time_minutes(m_time - total_time);
+                time += ")";
+            }
+            total_time += t;
         }
         return ret;
     }
@@ -797,6 +818,11 @@ namespace Slic3r {
     void GCodeTimeEstimator::_process_gcode_line(GCodeReader&, const GCodeReader::GCodeLine& line)
     {
         PROFILE_FUNC();
+
+        // processes 'special' comments contained in line
+        if (_process_tags(line))
+            return;
+
         std::string cmd = line.cmd();
         if (cmd.length() > 1)
         {
@@ -902,11 +928,6 @@ namespace Slic3r {
                     case 566: // Set allowable instantaneous speed change
                         {
                             _processM566(line);
-                            break;
-                        }
-                    case 600: // Set color change
-                        {
-                            _processM600(line);
                             break;
                         }
                     case 702: // MK3 MMU2: Process the final filament unload.
@@ -1379,18 +1400,6 @@ namespace Slic3r {
             set_axis_max_jerk(E, line.e() * MMMIN_TO_MMSEC);
     }
 
-    void GCodeTimeEstimator::_processM600(const GCodeReader::GCodeLine& line)
-    {
-        PROFILE_FUNC();
-        m_needs_color_times = true;
-        _calculate_time();
-        if (m_color_time_cache != 0.0f)
-        {
-            m_color_times.push_back(m_color_time_cache);
-            m_color_time_cache = 0.0f;
-        }
-    }
-
     void GCodeTimeEstimator::_processM702(const GCodeReader::GCodeLine& line)
     {
         PROFILE_FUNC();
@@ -1419,6 +1428,33 @@ namespace Slic3r {
                 add_additional_time(get_filament_load_time(get_extruder_id()));
                 _simulate_st_synchronize();
             }
+        }
+    }
+
+    bool GCodeTimeEstimator::_process_tags(const GCodeReader::GCodeLine& line)
+    {
+        std::string comment = line.comment();
+
+        // color change tag
+        size_t pos = comment.find(Color_Change_Tag);
+        if (pos != comment.npos)
+        {
+            _process_color_change_tag();
+            return true;
+        }
+
+        return false;
+    }
+
+    void GCodeTimeEstimator::_process_color_change_tag()
+    {
+        PROFILE_FUNC();
+        m_needs_color_times = true;
+        _calculate_time();
+        if (m_color_time_cache != 0.0f)
+        {
+            m_color_times.push_back(m_color_time_cache);
+            m_color_time_cache = 0.0f;
         }
     }
 

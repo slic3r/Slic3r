@@ -131,6 +131,7 @@ wxDECLARE_EVENT(EVT_GLCANVAS_REDO, SimpleEvent);
 
 class GLCanvas3D
 {
+public:
     struct GCodePreviewVolumeIndex
     {
         enum EType
@@ -158,6 +159,7 @@ class GLCanvas3D
         void reset() { first_volumes.clear(); }
     };
 
+private:
     class LayersEditing
     {
     public:
@@ -482,6 +484,8 @@ public:
 
     void toggle_sla_auxiliaries_visibility(bool visible, const ModelObject* mo = nullptr, int instance_idx = -1);
     void toggle_model_objects_visibility(bool visible, const ModelObject* mo = nullptr, int instance_idx = -1);
+    void update_instance_printable_state_for_object(size_t obj_idx);
+    void update_instance_printable_state_for_objects(std::vector<size_t>& object_idxs);
 
     void set_config(const DynamicPrintConfig* config);
     void set_process(BackgroundSlicingProcess* process);
@@ -642,6 +646,9 @@ public:
     void get_undoredo_toolbar_additional_tooltip(unsigned int item_id, std::string& text) { return m_undoredo_toolbar.get_additional_tooltip(item_id, text); }
     void set_undoredo_toolbar_additional_tooltip(unsigned int item_id, const std::string& text) { m_undoredo_toolbar.set_additional_tooltip(item_id, text); }
 
+    bool has_toolpaths_to_export() const;
+    void export_toolpaths_to_obj(const char* filename) const;
+
 private:
     bool _is_shown_on_screen() const;
 
@@ -652,7 +659,7 @@ private:
     bool _set_current();
     void _resize(unsigned int w, unsigned int h);
 
-    BoundingBoxf3 _max_bounding_box(bool include_bed_model) const;
+    BoundingBoxf3 _max_bounding_box(bool include_gizmos, bool include_bed_model) const;
 
     void _zoom_to_box(const BoundingBoxf3& box);
 
@@ -715,12 +722,10 @@ private:
     bool _travel_paths_by_type(const GCodePreviewData& preview_data);
     bool _travel_paths_by_feedrate(const GCodePreviewData& preview_data);
     bool _travel_paths_by_tool(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors);
-    // generates gcode retractions geometry
-    void _load_gcode_retractions(const GCodePreviewData& preview_data);
-    // generates gcode unretractions geometry
-    void _load_gcode_unretractions(const GCodePreviewData& preview_data);
     // generates objects and wipe tower geometry
     void _load_fff_shells();
+    // Load SLA objects and support structures for objects, for which the slaposSliceSupports step has been finished.
+	void _load_sla_shells();
     // sets gcode geometry visibility according to user selection
     void _update_gcode_volumes_visibility(const GCodePreviewData& preview_data);
     void _update_toolpath_volumes_outside_state();

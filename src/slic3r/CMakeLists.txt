@@ -87,6 +87,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/LambdaObjectDialog.hpp
     GUI/Tab.cpp
     GUI/Tab.hpp
+    GUI/ConfigManipulation.cpp
+    GUI/ConfigManipulation.hpp
     GUI/Field.cpp
     GUI/Field.hpp
     GUI/OptionsGroup.cpp
@@ -162,6 +164,8 @@ if (APPLE)
 endif ()
 
 add_library(libslic3r_gui STATIC ${SLIC3R_GUI_SOURCES})
+
+encoding_check(libslic3r_gui)
 
 target_link_libraries(libslic3r_gui libslic3r avrdude cereal imgui ${GLEW_LIBRARIES})
 if (SLIC3R_PCH AND NOT SLIC3R_SYNTAXONLY)

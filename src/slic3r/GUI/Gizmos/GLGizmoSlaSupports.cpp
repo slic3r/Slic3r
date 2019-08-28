@@ -284,7 +284,7 @@ void GLGizmoSlaSupports::render_points(const Selection& selection, bool picking)
     glsafe(::glTranslated(0.0, 0.0, m_z_shift));
     glsafe(::glMultMatrixd(instance_matrix.data()));
 
-    float render_color[3];
+    float render_color[4];
     size_t cache_size = m_editing_mode ? m_editing_cache.size() : m_normal_cache.size();
     for (size_t i = 0; i < cache_size; ++i)
     {
@@ -296,12 +296,14 @@ void GLGizmoSlaSupports::render_points(const Selection& selection, bool picking)
 
         // First decide about the color of the point.
         if (picking) {
-            std::array<float, 3> color = picking_color_component(i);
+            std::array<float, 4> color = picking_color_component(i);
             render_color[0] = color[0];
             render_color[1] = color[1];
             render_color[2] = color[2];
+	        render_color[3] = color[3];
         }
         else {
+            render_color[3] = 1.f;
             if ((m_hover_id == i && m_editing_mode)) { // ignore hover state unless editing mode is active
                 render_color[0] = 0.f;
                 render_color[1] = 1.0f;
@@ -318,7 +320,7 @@ void GLGizmoSlaSupports::render_points(const Selection& selection, bool picking)
                     for (unsigned char i=0; i<3; ++i) render_color[i] = 0.5f;
             }
         }
-        glsafe(::glColor3fv(render_color));
+        glsafe(::glColor4fv(render_color));
         float render_color_emissive[4] = { 0.5f * render_color[0], 0.5f * render_color[1], 0.5f * render_color[2], 1.f};
         glsafe(::glMaterialfv(GL_FRONT, GL_EMISSION, render_color_emissive));
 
@@ -420,9 +422,9 @@ void GLGizmoSlaSupports::update_mesh()
 
 
 
-// Unprojects the mouse position on the mesh and return the hit point and normal of the facet.
-// The function throws if no intersection if found.
-std::pair<Vec3f, Vec3f> GLGizmoSlaSupports::unproject_on_mesh(const Vec2d& mouse_pos)
+// Unprojects the mouse position on the mesh and saves hit point and normal of the facet into pos_and_normal
+// Return false if no intersection was found, true otherwise.
+bool GLGizmoSlaSupports::unproject_on_mesh(const Vec2d& mouse_pos, std::pair<Vec3f, Vec3f>& pos_and_normal)
 {
     // if the gizmo doesn't have the V, F structures for igl, calculate them first:
     if (m_its == nullptr)
@@ -455,7 +457,7 @@ std::pair<Vec3f, Vec3f> GLGizmoSlaSupports::unproject_on_mesh(const Vec2d& mouse
         MapMatrixXfUnaligned(m_its->vertices.front().data(), m_its->vertices.size(), 3),
         MapMatrixXiUnaligned(m_its->indices.front().data(), m_its->indices.size(), 3),
         point1.cast<float>(), (point2-point1).cast<float>(), hits))
-        throw std::invalid_argument("unproject_on_mesh(): No intersection found.");
+        return false; // no intersection found
 
     std::sort(hits.begin(), hits.end(), [](const igl::Hit& a, const igl::Hit& b) { return a.t < b.t; });
 
@@ -479,14 +481,12 @@ std::pair<Vec3f, Vec3f> GLGizmoSlaSupports::unproject_on_mesh(const Vec2d& mouse
     if (i==hits.size() || (hits.size()-i) % 2 != 0) {
         // All hits are either clipped, or there is an odd number of unclipped
         // hits - meaning the nearest must be from inside the mesh.
-        throw std::invalid_argument("unproject_on_mesh(): No intersection found.");
+        return false;
     }
 
     // Calculate and return both the point and the facet normal.
-    return std::make_pair(
-            result,
-            a.cross(b)
-        );
+    pos_and_normal = std::make_pair(result, a.cross(b));
+    return true;
 }
 
 // Following function is called from GLCanvas3D to inform the gizmo about a mouse/keyboard event.
@@ -524,16 +524,15 @@ bool GLGizmoSlaSupports::gizmo_event(SLAGizmoEventType action, const Vec2d& mous
 
             // If there is some selection, don't add new point and deselect everything instead.
             if (m_selection_empty) {
-                try {
-                    std::pair<Vec3f, Vec3f> pos_and_normal = unproject_on_mesh(mouse_position); // don't create anything if this throws
-                    wxGetApp().plater()->take_snapshot(_(L("Add support point")));
+                std::pair<Vec3f, Vec3f> pos_and_normal;
+                if (unproject_on_mesh(mouse_position, pos_and_normal)) { // we got an intersection
+                    Plater::TakeSnapshot snapshot(wxGetApp().plater(), _(L("Add support point")));
                     m_editing_cache.emplace_back(sla::SupportPoint(pos_and_normal.first, m_new_point_head_diameter/2.f, false), false, pos_and_normal.second);
                     m_parent.set_as_dirty();
                     m_wait_for_up_event = true;
                 }
-                catch (...) {   // not clicked on object
+                else
                     return false;
-                }
             }
             else
                 select_point(NoPoints);
@@ -715,14 +714,12 @@ void GLGizmoSlaSupports::delete_selected_points(bool force)
         std::abort();
     }
 
-    wxGetApp().plater()->take_snapshot(_(L("Delete support point")));
+    Plater::TakeSnapshot snapshot(wxGetApp().plater(), _(L("Delete support point")));
 
     for (unsigned int idx=0; idx<m_editing_cache.size(); ++idx) {
         if (m_editing_cache[idx].selected && (!m_editing_cache[idx].support_point.is_new_island || !m_lock_unique_islands || force)) {
             m_editing_cache.erase(m_editing_cache.begin() + (idx--));
         }
-            // This should trigger the support generation
-            // wxGetApp().plater()->reslice_SLA_supports(*m_model_object);
     }
 
     select_point(NoPoints);
@@ -737,10 +734,8 @@ void GLGizmoSlaSupports::on_update(const UpdateData& data)
     else {
         if (m_hover_id != -1 && (! m_editing_cache[m_hover_id].support_point.is_new_island || !m_lock_unique_islands)) {
             std::pair<Vec3f, Vec3f> pos_and_normal;
-            try {
-                pos_and_normal = unproject_on_mesh(data.mouse_pos.cast<double>());
-            }
-            catch (...) { return; }
+            if (! unproject_on_mesh(data.mouse_pos.cast<double>(), pos_and_normal))
+                return;
             m_editing_cache[m_hover_id].support_point.pos = pos_and_normal.first;
             m_editing_cache[m_hover_id].support_point.is_new_island = false;
             m_editing_cache[m_hover_id].normal = pos_and_normal.second;
@@ -920,7 +915,7 @@ RENDER_AGAIN:
                     cache_entry.support_point.head_front_radius = m_old_point_head_diameter / 2.f;
             float backup = m_new_point_head_diameter;
             m_new_point_head_diameter = m_old_point_head_diameter;
-            wxGetApp().plater()->take_snapshot(_(L("Change point head diameter")));
+            Plater::TakeSnapshot snapshot(wxGetApp().plater(), _(L("Change point head diameter")));
             m_new_point_head_diameter = backup;
             for (auto& cache_entry : m_editing_cache)
                 if (cache_entry.selected)
@@ -986,7 +981,7 @@ RENDER_AGAIN:
         if (slider_released) {
             m_model_object->config.opt<ConfigOptionFloat>("support_points_minimal_distance", true)->value = m_minimal_point_distance_stash;
             m_model_object->config.opt<ConfigOptionInt>("support_points_density_relative", true)->value = (int)m_density_stash;
-            wxGetApp().plater()->take_snapshot(_(L("Support parameter change")));
+            Plater::TakeSnapshot snapshot(wxGetApp().plater(), _(L("Support parameter change")));
             m_model_object->config.opt<ConfigOptionFloat>("support_points_minimal_distance", true)->value = minimal_point_distance;
             m_model_object->config.opt<ConfigOptionInt>("support_points_density_relative", true)->value = (int)density;
             wxGetApp().obj_list()->update_and_show_object_settings_item();
@@ -1101,6 +1096,9 @@ std::string GLGizmoSlaSupports::on_get_name() const
 
 void GLGizmoSlaSupports::on_set_state()
 {
+    if (m_state == Hover)
+        return;
+
     // m_model_object pointer can be invalid (for instance because of undo/redo action),
     // we should recover it from the object id
     m_model_object = nullptr;
@@ -1112,6 +1110,7 @@ void GLGizmoSlaSupports::on_set_state()
     }
 
     if (m_state == On && m_old_state != On) { // the gizmo was just turned on
+        Plater::TakeSnapshot snapshot(wxGetApp().plater(), _(L("SLA gizmo turned on")));
         if (is_mesh_update_necessary())
             update_mesh();
 
@@ -1128,21 +1127,26 @@ void GLGizmoSlaSupports::on_set_state()
         m_new_point_head_diameter = static_cast<const ConfigOptionFloat*>(cfg.option("support_head_front_diameter"))->value;
     }
     if (m_state == Off && m_old_state != Off) { // the gizmo was just turned Off
-        wxGetApp().CallAfter([this]() {
-            // Following is called through CallAfter, because otherwise there was a problem
-            // on OSX with the wxMessageDialog being shown several times when clicked into.
-            if (m_model_object) {
-                if (m_editing_mode && unsaved_changes()) {
-                    wxMessageDialog dlg(GUI::wxGetApp().mainframe, _(L("Do you want to save your manually edited support points?")) + "\n",
-                                        _(L("Save changes?")), wxICON_QUESTION | wxYES | wxNO);
+        bool will_ask = m_model_object && m_editing_mode && unsaved_changes();
+        if (will_ask) {
+            wxGetApp().CallAfter([this]() {
+                // Following is called through CallAfter, because otherwise there was a problem
+                // on OSX with the wxMessageDialog being shown several times when clicked into.
+                wxMessageDialog dlg(GUI::wxGetApp().mainframe, _(L("Do you want to save your manually "
+                    "edited support points?")) + "\n",_(L("Save changes?")), wxICON_QUESTION | wxYES | wxNO);
                     if (dlg.ShowModal() == wxID_YES)
                         editing_mode_apply_changes();
                     else
                         editing_mode_discard_changes();
-                }
-            }
-            m_parent.toggle_model_objects_visibility(true);
+            });
+            // refuse to be turned off so the gizmo is active when the CallAfter is executed
+            m_state = m_old_state;
+        }
+        else {
+            // we are actually shutting down
             disable_editing_mode(); // so it is not active next time the gizmo opens
+            Plater::TakeSnapshot snapshot(wxGetApp().plater(), _(L("SLA gizmo turned off")));
+            m_parent.toggle_model_objects_visibility(true);
             m_normal_cache.clear();
             m_clipping_plane_distance = 0.f;
             // Release triangle mesh slicer and the AABB spatial search structure.
@@ -1150,7 +1154,7 @@ void GLGizmoSlaSupports::on_set_state()
             m_its = nullptr;
             m_tms.reset();
             m_supports_tms.reset();
-        });
+        }
     }
     m_old_state = m_state;
 }
@@ -1178,7 +1182,7 @@ void GLGizmoSlaSupports::on_stop_dragging()
          && backup.support_point.pos != m_point_before_drag.support_point.pos) // and it was moved, not just selected
         {
             m_editing_cache[m_hover_id] = m_point_before_drag;
-            wxGetApp().plater()->take_snapshot(_(L("Move support point")));
+            Plater::TakeSnapshot snapshot(wxGetApp().plater(), _(L("Move support point")));
             m_editing_cache[m_hover_id] = backup;
         }
     }
@@ -1277,7 +1281,7 @@ void GLGizmoSlaSupports::editing_mode_apply_changes()
     disable_editing_mode(); // this leaves the editing mode undo/redo stack and must be done before the snapshot is taken
 
     if (unsaved_changes()) {
-        wxGetApp().plater()->take_snapshot(_(L("Support points edit")));
+        Plater::TakeSnapshot snapshot(wxGetApp().plater(), _(L("Support points edit")));
 
         m_normal_cache.clear();
         for (const CacheEntry& ce : m_editing_cache)
@@ -1287,7 +1291,7 @@ void GLGizmoSlaSupports::editing_mode_apply_changes()
         m_model_object->sla_support_points.clear();
         m_model_object->sla_support_points = m_normal_cache;
 
-        wxGetApp().CallAfter([this]() { wxGetApp().plater()->reslice_SLA_supports(*m_model_object); });
+        reslice_SLA_supports();
     }
 }
 
@@ -1304,11 +1308,29 @@ void GLGizmoSlaSupports::reload_cache()
 }
 
 
+bool GLGizmoSlaSupports::has_backend_supports() const
+{
+    // find SlaPrintObject with this ID
+    for (const SLAPrintObject* po : m_parent.sla_print()->objects()) {
+        if (po->model_object()->id() == m_model_object->id())
+        	return po->is_step_done(slaposSupportPoints);
+    }
+    return false;
+}
+
+void GLGizmoSlaSupports::reslice_SLA_supports(bool postpone_error_messages) const
+{
+    wxGetApp().CallAfter([this, postpone_error_messages]() { wxGetApp().plater()->reslice_SLA_supports(*m_model_object, postpone_error_messages); });
+}
 
 void GLGizmoSlaSupports::get_data_from_backend()
 {
+    if (! has_backend_supports())
+        return;
+
+    // find the respective SLAPrintObject, we need a pointer to it
     for (const SLAPrintObject* po : m_parent.sla_print()->objects()) {
-        if (po->model_object()->id() == m_model_object->id() && po->is_step_done(slaposSupportPoints)) {
+        if (po->model_object()->id() == m_model_object->id()) {
             m_normal_cache.clear();
             const std::vector<sla::SupportPoint>& points = po->get_support_points();
             auto mat = po->trafo().inverse().cast<float>();
@@ -1333,8 +1355,8 @@ void GLGizmoSlaSupports::auto_generate()
                 )), _(L("Warning")), wxICON_WARNING | wxYES | wxNO);
 
     if (m_model_object->sla_points_status != sla::PointsStatus::UserModified || m_normal_cache.empty() || dlg.ShowModal() == wxID_YES) {
-        wxGetApp().plater()->take_snapshot(_(L("Autogenerate support points")));
-        wxGetApp().CallAfter([this]() { wxGetApp().plater()->reslice_SLA_supports(*m_model_object); });
+        Plater::TakeSnapshot snapshot(wxGetApp().plater(), _(L("Autogenerate support points")));
+        wxGetApp().CallAfter([this]() { reslice_SLA_supports(); });
         m_model_object->sla_points_status = sla::PointsStatus::Generating;
     }
 }

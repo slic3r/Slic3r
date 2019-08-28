@@ -22,6 +22,8 @@ namespace Slic3r {
         static const std::string Normal_Last_M73_Output_Placeholder_Tag;
         static const std::string Silent_Last_M73_Output_Placeholder_Tag;
 
+        static const std::string Color_Change_Tag;
+
         enum EMode : unsigned char
         {
             Normal,
@@ -346,14 +348,16 @@ namespace Slic3r {
         // Returns the estimated time, in minutes (integer)
         std::string get_time_minutes() const;
 
-       // Returns the estimated time, in seconds, for each color
+        // Returns the estimated time, in seconds, for each color
         std::vector<float> get_color_times() const;
 
         // Returns the estimated time, in format DDd HHh MMm SSs, for each color
-        std::vector<std::string> get_color_times_dhms() const;
+        // If include_remaining==true the strings will be formatted as: "time for color (remaining time at color start)"
+        std::vector<std::string> get_color_times_dhms(bool include_remaining) const;
 
         // Returns the estimated time, in minutes (integer), for each color
-        std::vector<std::string> get_color_times_minutes() const;
+        // If include_remaining==true the strings will be formatted as: "time for color (remaining time at color start)"
+        std::vector<std::string> get_color_times_minutes(bool include_remaining) const;
 
         // Return an estimate of the memory consumed by the time estimator.
         size_t memory_used() const;
@@ -423,14 +427,18 @@ namespace Slic3r {
         // Set allowable instantaneous speed change
         void _processM566(const GCodeReader::GCodeLine& line);
 
-        // Set color change
-        void _processM600(const GCodeReader::GCodeLine& line);
-
         // Unload the current filament into the MK3 MMU2 unit at the end of print.
         void _processM702(const GCodeReader::GCodeLine& line);
 
         // Processes T line (Select Tool)
         void _processT(const GCodeReader::GCodeLine& line);
+
+        // Processes the tags
+        // Returns true if any tag has been processed
+        bool _process_tags(const GCodeReader::GCodeLine& line);
+
+        // Processes color change tag
+        void _process_color_change_tag();
 
         // Simulates firmware st_synchronize() call
         void _simulate_st_synchronize();

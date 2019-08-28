@@ -763,8 +763,11 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
                 }
             }
             // Load the configs into this->filaments and make them active.
-            this->filament_presets.clear();
-            for (size_t i = 0; i < configs.size(); ++ i) {
+            this->filament_presets = std::vector<std::string>(configs.size());
+            // To avoid incorrect selection of the first filament preset (means a value of Preset->m_idx_selected) 
+            // in a case when next added preset take a place of previosly selected preset,
+            // we should add presets from last to first
+            for (int i = (int)configs.size()-1; i >= 0; i--) {
                 DynamicPrintConfig &cfg = configs[i];
                 // Split the "compatible_printers_condition" and "inherits" from the cummulative vectors to separate filament presets.
                 cfg.opt_string("compatible_printers_condition", true) = compatible_printers_condition_values[i + 1];
@@ -789,7 +792,7 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
                         new_name, std::move(cfg), i == 0);
                     loaded->save();
                 }
-                this->filament_presets.emplace_back(loaded->name);
+                this->filament_presets[i] = loaded->name;
             }
         }
         // 4) Load the project config values (the per extruder wipe matrix etc).
@@ -1484,11 +1487,16 @@ void PresetBundle::update_platter_filament_ui(unsigned int idx_extruder, GUI::Pr
      * and scale them in respect to em_unit value
      */
     const float scale_f = ui->em_unit() * 0.1f;
-    const int icon_height       = 16 * scale_f + 0.5f;
-    const int normal_icon_width = 16 * scale_f + 0.5f;
+
+    // To avoid the errors of number rounding for different combination of monitor configuration,
+    // let use scaled 8px, as a smallest icon unit 
+    const int icon_unit         = 8 * scale_f + 0.5f;
+    const int icon_height       = 2 * icon_unit;    //16 * scale_f + 0.5f;
+    const int normal_icon_width = 2 * icon_unit;    //16 * scale_f + 0.5f;
+    const int thin_icon_width   = icon_unit;        //8 * scale_f + 0.5f;
+    const int wide_icon_width   = 3 * icon_unit;    //24 * scale_f + 0.5f;
+
     const int space_icon_width  = 2  * scale_f + 0.5f;
-    const int wide_icon_width   = 24 * scale_f + 0.5f;
-    const int thin_icon_width   = 8  * scale_f + 0.5f;
 
 	for (int i = this->filaments().front().is_visible ? 0 : 1; i < int(this->filaments().size()); ++i) {
         const Preset &preset    = this->filaments.preset(i);

@@ -19,6 +19,7 @@
 #include <limits>
 #include <unordered_set>
 #include <boost/filesystem/path.hpp>
+#include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
 
 //! macro used to mark string used at localization,
@@ -270,8 +271,14 @@ std::vector<unsigned int> Print::object_extruders() const
 {
     std::vector<unsigned int> extruders;
     extruders.reserve(m_regions.size() * 3);
-    for (const PrintRegion *region : m_regions)
-        region->collect_object_printing_extruders(extruders);
+    std::vector<unsigned char> region_used(m_regions.size(), false);
+    for (const PrintObject *object : m_objects)
+		for (const std::vector<std::pair<t_layer_height_range, int>> &volumes_per_region : object->region_volumes)
+        	if (! volumes_per_region.empty())
+        		region_used[&volumes_per_region - &object->region_volumes.front()] = true;
+    for (size_t idx_region = 0; idx_region < m_regions.size(); ++ idx_region)
+    	if (region_used[idx_region])
+        	m_regions[idx_region]->collect_object_printing_extruders(extruders);
     sort_remove_duplicates(extruders);
     return extruders;
 }
@@ -281,18 +288,25 @@ std::vector<unsigned int> Print::support_material_extruders() const
 {
     std::vector<unsigned int> extruders;
     bool support_uses_current_extruder = false;
+    auto num_extruders = (unsigned int)m_config.nozzle_diameter.size();
 
     for (PrintObject *object : m_objects) {
         if (object->has_support_material()) {
+        	assert(object->config().support_material_extruder >= 0);
             if (object->config().support_material_extruder == 0)
                 support_uses_current_extruder = true;
-            else
-                extruders.push_back(object->config().support_material_extruder - 1);
+            else {
+            	unsigned int i = (unsigned int)object->config().support_material_extruder - 1;
+                extruders.emplace_back((i >= num_extruders) ? 0 : i);
+            }
+        	assert(object->config().support_material_interface_extruder >= 0);
             if (object->config().support_material_interface_extruder == 0)
                 support_uses_current_extruder = true;
-            else
-                extruders.push_back(object->config().support_material_interface_extruder - 1);
+            else {
+            	unsigned int i = (unsigned int)object->config().support_material_interface_extruder - 1;
+                extruders.emplace_back((i >= num_extruders) ? 0 : i);
         }
+    }
     }
 
     if (support_uses_current_extruder)
@@ -585,6 +599,8 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
 
     // Apply variables to placeholder parser. The placeholder parser is used by G-code export,
     // which should be stopped if print_diff is not empty.
+    size_t num_extruders = m_config.nozzle_diameter.size();
+    bool   num_extruders_changed = false;
     if (! full_config_diff.empty() || ! placeholder_parser_overrides.empty()) {
         update_apply_status(this->invalidate_step(psGCodeExport));
 		m_placeholder_parser.apply_config(std::move(placeholder_parser_overrides));
@@ -600,6 +616,10 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
 	    // Handle changes to regions config defaults
 	    m_default_region_config.apply_only(new_full_config, region_diff, true);
         m_full_print_config = std::move(new_full_config);
+        if (num_extruders != m_config.nozzle_diameter.size()) {
+        	num_extruders = m_config.nozzle_diameter.size();
+        	num_extruders_changed = true;
+    }
     }
     
     class LayerRanges
@@ -776,7 +796,6 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
         print_object_status.emplace(PrintObjectStatus(print_object));
 
     // 3) Synchronize ModelObjects & PrintObjects.
-    size_t num_extruders = m_config.nozzle_diameter.size();
     for (size_t idx_model_object = 0; idx_model_object < model.objects.size(); ++ idx_model_object) {
         ModelObject &model_object = *m_model.objects[idx_model_object];
         auto it_status = model_object_status.find(ModelObjectStatus(model_object.id()));
@@ -823,7 +842,7 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
             bool object_config_changed = model_object.config != model_object_new.config;
 			if (object_config_changed)
 				static_cast<DynamicPrintConfig&>(model_object.config) = static_cast<const DynamicPrintConfig&>(model_object_new.config);
-            if (! object_diff.empty() || object_config_changed) {
+            if (! object_diff.empty() || object_config_changed || num_extruders_changed) {
                 PrintObjectConfig new_config = PrintObject::object_config_from_model_object(m_default_object_config, model_object, num_extruders);
                 auto range = print_object_status.equal_range(PrintObjectStatus(model_object.id()));
                 for (auto it = range.first; it != range.second; ++ it) {
@@ -1152,16 +1171,27 @@ std::string Print::validate() const
         // #4043
         if (total_copies_count > 1 && ! m_config.complete_objects.value)
             return L("The Spiral Vase option can only be used when printing a single object.");
-        if (m_regions.size() > 1)
+        assert(m_objects.size() == 1);
+        size_t num_regions = 0;
+        for (const std::vector<std::pair<t_layer_height_range, int>> &volumes_per_region : m_objects.front()->region_volumes)
+        	if (! volumes_per_region.empty())
+        		++ num_regions;
+        if (num_regions > 1)
             return L("The Spiral Vase option can only be used when printing single material objects.");
     }
 
     if (this->has_wipe_tower() && ! m_objects.empty()) {
-        // make sure all extruders use same diameter filament and have the same nozzle diameter
+        // Make sure all extruders use same diameter filament and have the same nozzle diameter
+        // EPSILON comparison is used for nozzles and 10 % tolerance is used for filaments
+        double first_nozzle_diam = m_config.nozzle_diameter.get_at(extruders().front());
+        double first_filament_diam = m_config.filament_diameter.get_at(extruders().front());
         for (const auto& extruder_idx : extruders()) {
-            if (m_config.nozzle_diameter.get_at(extruder_idx) != m_config.nozzle_diameter.get_at(extruders().front())
-             || m_config.filament_diameter.get_at(extruder_idx) != m_config.filament_diameter.get_at(extruders().front()))
-                 return L("The wipe tower is only supported if all extruders have the same nozzle diameter and use filaments of the same diameter.");
+            double nozzle_diam = m_config.nozzle_diameter.get_at(extruder_idx);
+            double filament_diam = m_config.filament_diameter.get_at(extruder_idx);
+            if (nozzle_diam - EPSILON > first_nozzle_diam || nozzle_diam + EPSILON < first_nozzle_diam
+             || std::abs((filament_diam-first_filament_diam)/first_filament_diam) > 0.1)
+                 return L("The wipe tower is only supported if all extruders have the same nozzle diameter "
+                          "and use filaments of the same diameter.");
         }
 
         if (m_config.gcode_flavor != gcfRepRap && m_config.gcode_flavor != gcfRepetier && m_config.gcode_flavor != gcfMarlin)
@@ -1169,15 +1199,11 @@ std::string Print::validate() const
         if (! m_config.use_relative_e_distances)
             return L("The Wipe Tower is currently only supported with the relative extruder addressing (use_relative_e_distances=1).");
         
-        for (size_t i=1; i<m_config.nozzle_diameter.values.size(); ++i)
-            if (m_config.nozzle_diameter.values[i] != m_config.nozzle_diameter.values[i-1])
-                return L("All extruders must have the same diameter for the Wipe Tower.");
-
         if (m_objects.size() > 1) {
             bool                                has_custom_layering = false;
             std::vector<std::vector<coordf_t>>  layer_height_profiles;
             for (const PrintObject *object : m_objects) {
-                has_custom_layering = ! object->model_object()->layer_config_ranges.empty() || ! object->model_object()->layer_height_profile.empty();      // #ys_FIXME_experiment
+                has_custom_layering = ! object->model_object()->layer_config_ranges.empty() || ! object->model_object()->layer_height_profile.empty();
                 if (has_custom_layering) {
                     layer_height_profiles.assign(m_objects.size(), std::vector<coordf_t>());
                     break;
@@ -1258,6 +1284,20 @@ std::string Print::validate() const
                 return L("One or more object were assigned an extruder that the printer does not have.");
 #endif
 
+		auto validate_extrusion_width = [min_nozzle_diameter, max_nozzle_diameter](const ConfigBase &config, const char *opt_key, double layer_height, std::string &err_msg) -> bool {
+        	double extrusion_width_min = config.get_abs_value(opt_key, min_nozzle_diameter);
+        	double extrusion_width_max = config.get_abs_value(opt_key, max_nozzle_diameter);
+        	if (extrusion_width_min == 0) {
+        		// Default "auto-generated" extrusion width is always valid.
+        	} else if (extrusion_width_min <= layer_height) {
+        		err_msg = (boost::format(L("%1%=%2% mm is too low to be printable at a layer height %3% mm")) % opt_key % extrusion_width_min % layer_height).str();
+				return false;
+			} else if (extrusion_width_max >= max_nozzle_diameter * 3.) {
+				err_msg = (boost::format(L("Excessive %1%=%2% mm to be printable with a nozzle diameter %3% mm")) % opt_key % extrusion_width_max % max_nozzle_diameter).str();
+				return false;
+			}
+			return true;
+		};
         for (PrintObject *object : m_objects) {
             if (object->config().raft_layers > 0 || object->config().support_material.value) {
                 if ((object->config().support_material_extruder == 0 || object->config().support_material_interface_extruder == 0) && max_nozzle_diameter - min_nozzle_diameter > EPSILON) {
@@ -1301,8 +1341,20 @@ std::string Print::validate() const
                 return L("First layer height can't be greater than nozzle diameter");
             
             // validate layer_height
-            if (object->config().layer_height.value > min_nozzle_diameter)
+            double layer_height = object->config().layer_height.value;
+            if (layer_height > min_nozzle_diameter)
                 return L("Layer height can't be greater than nozzle diameter");
+
+            // Validate extrusion widths.
+            std::string err_msg;
+            if (! validate_extrusion_width(object->config(), "extrusion_width", layer_height, err_msg))
+            	return err_msg;
+            if ((object->config().support_material || object->config().raft_layers > 0) && ! validate_extrusion_width(object->config(), "support_material_extrusion_width", layer_height, err_msg))
+            	return err_msg;
+            for (const char *opt_key : { "perimeter_extrusion_width", "external_perimeter_extrusion_width", "infill_extrusion_width", "solid_infill_extrusion_width", "top_infill_extrusion_width" })
+				for (size_t i = 0; i < object->region_volumes.size(); ++ i)
+            		if (! object->region_volumes[i].empty() && ! validate_extrusion_width(this->get_region(i)->config(), opt_key, layer_height, err_msg))
+		            	return err_msg;
         }
     }
 
@@ -1912,7 +1964,7 @@ void Print::_make_wipe_tower()
                     break;
                 lt.has_support = true;
                 // Insert the new support layer.
-                double height    = lt.print_z - m_wipe_tower_data.tool_ordering.layer_tools()[i-1].print_z;
+                double height    = lt.print_z - (i == 0 ? 0. : m_wipe_tower_data.tool_ordering.layer_tools()[i-1].print_z);
                 //FIXME the support layer ID is set to -1, as Vojtech hopes it is not being used anyway.
                 it_layer = m_objects.front()->insert_support_layer(it_layer, -1, height, lt.print_z, lt.print_z - 0.5 * height);
                 ++ it_layer;
@@ -1922,16 +1974,7 @@ void Print::_make_wipe_tower()
     this->throw_if_canceled();
 
     // Initialize the wipe tower.
-    WipeTower wipe_tower(m_config
-        //m_config.single_extruder_multi_material.value,
-        //float(m_config.wipe_tower_x.value),     float(m_config.wipe_tower_y.value), 
-        //float(m_config.wipe_tower_width.value),
-        //float(m_config.wipe_tower_rotation_angle.value), float(m_config.cooling_tube_retraction.value),
-        //float(m_config.cooling_tube_length.value), float(m_config.parking_pos_retraction.value),
-        //float(m_config.extra_loading_move.value), float(m_config.wipe_tower_bridging), 
-        //m_config.high_current_on_filament_swap.value
-        , wipe_volumes,
-        m_wipe_tower_data.tool_ordering.first_extruder(), this->brim_flow().width);
+    WipeTower wipe_tower(m_config, wipe_volumes, m_wipe_tower_data.tool_ordering.first_extruder());
     
 
     //wipe_tower.set_retract();
@@ -1939,7 +1982,9 @@ void Print::_make_wipe_tower()
 
     // Set the extruder & material properties at the wipe tower object.
     for (size_t i = 0; i < number_of_extruders; ++i)
-        wipe_tower.set_extruder(i);
+
+        wipe_tower.set_extruder(i, m_config);
+
     m_wipe_tower_data.priming = Slic3r::make_unique<std::vector<WipeTower::ToolChangeResult>>(
         wipe_tower.prime((float)this->skirt_first_layer_height(), m_wipe_tower_data.tool_ordering.all_extruders(), false));
 

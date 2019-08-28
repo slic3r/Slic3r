@@ -290,17 +290,17 @@ wxBitmapComboBox(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(15 *
             auto colors = static_cast<ConfigOptionStrings*>(cfg->option("extruder_colour")->clone());
             wxColour clr(colors->values[extruder_idx]);
             if (!clr.IsOk())
-                clr = wxTransparentColour;
+                clr = wxColour(0,0,0); // Don't set alfa to transparence
 
             auto data = new wxColourData();
             data->SetChooseFull(1);
             data->SetColour(clr);
 
-            auto dialog = new wxColourDialog(this, data);
-            dialog->CenterOnParent();
-            if (dialog->ShowModal() == wxID_OK)
+            wxColourDialog dialog(this, data);
+            dialog.CenterOnParent();
+            if (dialog.ShowModal() == wxID_OK)
             {
-                colors->values[extruder_idx] = dialog->GetColourData().GetColour().GetAsString(wxC2S_HTML_SYNTAX);
+                colors->values[extruder_idx] = dialog.GetColourData().GetColour().GetAsString(wxC2S_HTML_SYNTAX);
 
                 DynamicPrintConfig cfg_new = *cfg; 
                 cfg_new.set_key_value("extruder_colour", colors);
@@ -309,7 +309,6 @@ wxBitmapComboBox(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(15 *
                 wxGetApp().preset_bundle->update_platter_filament_ui(extruder_idx, this);
                 wxGetApp().plater()->on_config_change(cfg_new);
             }
-            dialog->Destroy();
         });
     }
 
@@ -556,14 +555,21 @@ FreqChangedParams::FreqChangedParams(wxWindow* parent) :
         Tab* tab = wxGetApp().get_tab(Preset::TYPE_SLA_PRINT);
         if (!tab) return;
 
-        if (opt_key == "pad_enable") {
-            tab->set_value(opt_key, value);
-            tab->update();
+        DynamicPrintConfig new_conf = *config_sla;
+        if (opt_key == "pad") {
+            const wxString& selection = boost::any_cast<wxString>(value);
+
+            const bool pad_enable = selection == _("None") ? false : true;
+            new_conf.set_key_value("pad_enable", new ConfigOptionBool(pad_enable));
+
+            if (selection == _("Below object"))
+                new_conf.set_key_value("pad_zero_elevation", new ConfigOptionBool(false));
+            else if (selection == _("Around object"))
+                new_conf.set_key_value("pad_zero_elevation", new ConfigOptionBool(true));
         }
         else
         {
             assert(opt_key == "support");
-            DynamicPrintConfig new_conf = *config_sla;
             const wxString& selection = boost::any_cast<wxString>(value);
 
             const bool supports_enable = selection == _("None") ? false : true;
@@ -573,10 +579,9 @@ FreqChangedParams::FreqChangedParams(wxWindow* parent) :
                 new_conf.set_key_value("support_buildplate_only", new ConfigOptionBool(false));
             else if (selection == _("Support on build plate only"))
                 new_conf.set_key_value("support_buildplate_only", new ConfigOptionBool(true));
-
-            tab->load_config(new_conf);
         }
 
+            tab->load_config(new_conf);
         tab->update_dirty();
     };
 
@@ -594,9 +599,19 @@ FreqChangedParams::FreqChangedParams(wxWindow* parent) :
 
     line = Line{ "", "" };
 
-    option = m_og_sla->get_option("pad_enable");
-    option.opt.sidetext = "     ";
+    ConfigOptionDef pad_def;
+    pad_def.label = L("Pad");
+    pad_def.type = coStrings;
+    pad_def.gui_type = "select_open";
+    pad_def.tooltip = L("Select what kind of pad do you need");
+    pad_def.enum_labels.push_back(L("None"));
+    pad_def.enum_labels.push_back(L("Below object"));
+    pad_def.enum_labels.push_back(L("Around object"));
+    pad_def.set_default_value(new ConfigOptionStrings{ "Below object" });
+    option = Option(pad_def, "pad");
+    option.opt.full_width = true;
     line.append_option(option);
+    line.append_widget(empty_widget);
 
     m_og_sla->append_line(line);
 
@@ -709,8 +724,8 @@ void Sidebar::priv::show_preset_comboboxes()
 Sidebar::Sidebar(Plater *parent)
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(40 * wxGetApp().em_unit(), -1)), p(new priv(parent))
 {
-    p->scrolled = new wxScrolledWindow(this, wxID_ANY/*, wxDefaultPosition, wxSize(40 * wxGetApp().em_unit(), -1)*/);
-    p->scrolled->SetScrollbars(0, 20, 1, 2);
+    p->scrolled = new wxScrolledWindow(this);
+    p->scrolled->SetScrollbars(0, 100, 1, 2);
 
 
     // Sizer in the scrolled area
@@ -1176,10 +1191,10 @@ void Sidebar::show_sliced_info_sizer(const bool show)
                 if (ps.estimated_silent_print_time != "N/A") {
                     new_label += wxString::Format("\n    - %s", _(L("stealth mode")));
                     info_text += wxString::Format("\n%s", ps.estimated_silent_print_time);
-                    for (int i = (int)ps.estimated_normal_color_print_times.size() - 1; i >= 0; --i)
+                    for (int i = (int)ps.estimated_silent_color_print_times.size() - 1; i >= 0; --i)
                     {
                         new_label += wxString::Format("\n      - %s%d", _(L("Color ")), i + 1);
-                        info_text += wxString::Format("\n%s", ps.estimated_normal_color_print_times[i]);
+                        info_text += wxString::Format("\n%s", ps.estimated_silent_color_print_times[i]);
                     }
                 }
                 p->sliced_info->SetTextAndShow(siEstimatedTime,  info_text,      new_label);
@@ -1443,7 +1458,7 @@ struct Plater::priv
             // Do a full refresh of scene tree, including regenerating
             // all the GLVolumes. FIXME The update function shall just
             // reload the modified matrices.
-            if (!was_canceled()) plater().update(true);
+            if (!was_canceled()) plater().update((unsigned int)UpdateParams::FORCE_FULL_SCREEN_REFRESH);
         }
 
     public:
@@ -1662,7 +1677,7 @@ struct Plater::priv
             // Apply the arrange result to all selected objects
             for (ArrangePolygon &ap : m_selected) ap.apply();
 
-            plater().update(false /*dont force_full_scene_refresh*/);
+            plater().update();
         }
     };
     
@@ -1745,10 +1760,20 @@ struct Plater::priv
     priv(Plater *q, MainFrame *main_frame);
     ~priv();
 
-    void update(bool force_full_scene_refresh = false, bool force_background_processing_update = false);
+	enum class UpdateParams {
+    	FORCE_FULL_SCREEN_REFRESH 			= 1,
+    	FORCE_BACKGROUND_PROCESSING_UPDATE 	= 2,
+    	POSTPONE_VALIDATION_ERROR_MESSAGE	= 4,
+    };
+    void update(unsigned int flags = 0);
     void select_view(const std::string& direction);
     void select_view_3D(const std::string& name);
     void select_next_view_3D();
+
+    bool is_preview_shown() const { return current_panel == preview; }
+    bool is_preview_loaded() const { return preview->is_loaded(); }
+    bool is_view3D_shown() const { return current_panel == view3D; }
+
     void reset_all_gizmos();
     void update_ui_from_settings();
     ProgressStatusBar* statusbar();
@@ -1818,11 +1843,18 @@ struct Plater::priv
         UPDATE_BACKGROUND_PROCESS_FORCE_EXPORT = 16,
     };
     // returns bit mask of UpdateBackgroundProcessReturnState
-    unsigned int update_background_process(bool force_validation = false);
+    unsigned int update_background_process(bool force_validation = false, bool postpone_error_messages = false);
     // Restart background processing thread based on a bitmask of UpdateBackgroundProcessReturnState.
     bool restart_background_process(unsigned int state);
 	// returns bit mask of UpdateBackgroundProcessReturnState
 	unsigned int update_restart_background_process(bool force_scene_update, bool force_preview_update);
+	void show_delayed_error_message() {
+		if (!this->delayed_error_message.empty()) {
+			std::string msg = std::move(this->delayed_error_message);
+			this->delayed_error_message.clear();
+			GUI::show_error(this->q, msg);
+		}
+	}
     void export_gcode(fs::path output_path, PrintHostJob upload_job);
     void reload_from_disk();
     void fix_through_netfabb(const int obj_idx, const int vol_idx = -1);
@@ -1889,7 +1921,7 @@ private:
     void update_fff_scene();
     void update_sla_scene();
 	void undo_redo_to(std::vector<UndoRedo::Snapshot>::const_iterator it_snapshot);
-    void update_after_undo_redo(bool temp_snapshot_was_taken = false);
+    void update_after_undo_redo(const UndoRedo::Snapshot& snapshot, bool temp_snapshot_was_taken = false);
 
     // path to project file stored with no extension
     wxString 					m_project_filename;
@@ -2063,7 +2095,7 @@ Plater::priv::~priv()
         delete config;
 }
 
-void Plater::priv::update(bool force_full_scene_refresh, bool force_background_processing_update)
+void Plater::priv::update(unsigned int flags)
 {
     // the following line, when enabled, causes flickering on NVIDIA graphics cards
 //    wxWindowUpdateLocker freeze_guard(q);
@@ -2076,11 +2108,11 @@ void Plater::priv::update(bool force_full_scene_refresh, bool force_background_p
     }
 
     unsigned int update_status = 0;
-    if (this->printer_technology == ptSLA || force_background_processing_update)
+    if (this->printer_technology == ptSLA || (flags & (unsigned int)UpdateParams::FORCE_BACKGROUND_PROCESSING_UPDATE))
         // Update the SLAPrint from the current Model, so that the reload_scene()
         // pulls the correct data.
-        update_status = this->update_background_process(false);
-    this->view3D->reload_scene(false, force_full_scene_refresh);
+        update_status = this->update_background_process(false, flags & (unsigned int)UpdateParams::POSTPONE_VALIDATION_ERROR_MESSAGE);
+    this->view3D->reload_scene(false, flags & (unsigned int)UpdateParams::FORCE_FULL_SCREEN_REFRESH);
 	this->preview->reload_print();
     if (this->printer_technology == ptSLA)
         this->restart_background_process(update_status);
@@ -2196,7 +2228,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                 DynamicPrintConfig config;
                 {
                     DynamicPrintConfig config_loaded;
-                    model = Slic3r::Model::read_from_archive(path.string(), &config_loaded, false);
+                    model = Slic3r::Model::read_from_archive(path.string(), &config_loaded, false, load_config);
                     if (load_config && !config_loaded.empty()) {
                         // Based on the printer technology field found in the loaded config, select the base for the config,
 					    PrinterTechnology printer_technology = Preset::printer_technology(config_loaded);
@@ -2236,7 +2268,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                 }
             }
             else {
-                model = Slic3r::Model::read_from_file(path.string(), nullptr, false);
+                model = Slic3r::Model::read_from_file(path.string(), nullptr, false, load_config);
                 for (auto obj : model.objects)
                     if (obj->name.empty())
                         obj->name = fs::path(obj->input_file).filename().string();
@@ -2303,7 +2335,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
         }
     }
 
-    if (new_model != nullptr) {
+    if (new_model != nullptr && new_model->objects.size() > 1) {
         wxMessageDialog dlg(q, _(L(
                 "Multiple objects were loaded for a multi-material printer.\n"
                 "Instead of considering them as multiple objects, should I consider\n"
@@ -2327,6 +2359,9 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
     // automatic selection of added objects
     if (!obj_idxs.empty() && (view3D != nullptr))
     {
+        // update printable state for new volumes on canvas3D
+        wxGetApp().plater()->canvas3D()->update_instance_printable_state_for_objects(obj_idxs);
+
         Selection& selection = view3D->get_canvas3d()->get_selection();
         selection.clear();
         for (size_t idx : obj_idxs)
@@ -2440,6 +2475,7 @@ wxString Plater::priv::get_export_file(GUI::FileType file_type)
         case FT_AMF:
         case FT_3MF:
         case FT_GCODE:
+        case FT_OBJ:
             wildcard = file_wildcards(file_type);
         break;
         default:
@@ -2490,18 +2526,23 @@ wxString Plater::priv::get_export_file(GUI::FileType file_type)
             dlg_title = _(L("Save file as:"));
             break;
         }
+        case FT_OBJ:
+        {
+            output_file.replace_extension("obj");
+            dlg_title = _(L("Export OBJ file:"));
+            break;
+        }
         default: break;
     }
 
-    wxFileDialog* dlg = new wxFileDialog(q, dlg_title,
+    wxFileDialog dlg(q, dlg_title,
         from_path(output_file.parent_path()), from_path(output_file.filename()),
         wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 
-    if (dlg->ShowModal() != wxID_OK) {
+    if (dlg.ShowModal() != wxID_OK)
         return wxEmptyString;
-    }
 
-    wxString out_path = dlg->GetPath();
+    wxString out_path = dlg.GetPath();
     fs::path path(into_path(out_path));
     wxGetApp().app_config->update_last_output_dir(path.parent_path().string());
 
@@ -2628,7 +2669,6 @@ void Plater::priv::reset()
 
 void Plater::priv::mirror(Axis axis)
 {
-    this->take_snapshot(_(L("Mirror")));
     view3D->mirror_selection(axis);
 }
 
@@ -2844,7 +2884,7 @@ void Plater::priv::update_print_volume_state()
 
 // Update background processing thread from the current config and Model.
 // Returns a bitmask of UpdateBackgroundProcessReturnState.
-unsigned int Plater::priv::update_background_process(bool force_validation)
+unsigned int Plater::priv::update_background_process(bool force_validation, bool postpone_error_messages)
 {
     // bitmap of enum UpdateBackgroundProcessReturnState
     unsigned int return_state = 0;
@@ -2854,8 +2894,6 @@ unsigned int Plater::priv::update_background_process(bool force_validation)
     this->background_process_timer.Stop();
     // Update the "out of print bed" state of ModelInstances.
     this->update_print_volume_state();
-    // The delayed error message is no more valid.
-    this->delayed_error_message.clear();
     // Apply new config to the possibly running background task.
     bool               was_running = this->background_process.running();
     Print::ApplyStatus invalidated = this->background_process.apply(this->q->model(), wxGetApp().preset_bundle->full_config());
@@ -2881,6 +2919,8 @@ unsigned int Plater::priv::update_background_process(bool force_validation)
     }
 
     if ((invalidated != Print::APPLY_STATUS_UNCHANGED || force_validation) && ! this->background_process.empty()) {
+		// The delayed error message is no more valid.
+		this->delayed_error_message.clear();
         // The state of the Print changed, and it is non-zero. Let's validate it and give the user feedback on errors.
         std::string err = this->background_process.validate();
         if (err.empty()) {
@@ -2893,7 +2933,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation)
             while (p->GetParent())
                 p = p->GetParent();
             auto *top_level_wnd = dynamic_cast<wxTopLevelWindow*>(p);
-            if (top_level_wnd && top_level_wnd->IsActive()) {
+            if (! postpone_error_messages && top_level_wnd && top_level_wnd->IsActive()) {
                 // The error returned from the Print needs to be translated into the local language.
                 GUI::show_error(this->q, _(err));
             } else {
@@ -2902,6 +2942,9 @@ unsigned int Plater::priv::update_background_process(bool force_validation)
             }
             return_state |= UPDATE_BACKGROUND_PROCESS_INVALID;
         }
+    } else if (! this->delayed_error_message.empty()) {
+    	// Reusing the old state.
+        return_state |= UPDATE_BACKGROUND_PROCESS_INVALID;
     }
 
     if (invalidated != Print::APPLY_STATUS_UNCHANGED && was_running && ! this->background_process.running() &&
@@ -3491,6 +3534,9 @@ bool Plater::priv::init_common_menu(wxMenu* menu, const bool is_part/* = false*/
         sidebar->obj_list()->append_menu_item_instance_to_object(menu, q);
         menu->AppendSeparator();
 
+        wxMenuItem* menu_item_printable = sidebar->obj_list()->append_menu_item_printable(menu, q);
+        menu->AppendSeparator();
+
         append_menu_item(menu, wxID_ANY, _(L("Reload from Disk")), _(L("Reload the selected file from Disk")),
             [this](wxCommandEvent&) { reload_from_disk(); });
 
@@ -3498,6 +3544,17 @@ bool Plater::priv::init_common_menu(wxMenu* menu, const bool is_part/* = false*/
             [this](wxCommandEvent&) { q->export_stl(false, true); });
 
         menu->AppendSeparator();
+
+        q->Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) {
+            const Selection& selection = get_selection();
+            int instance_idx = selection.get_instance_idx();
+            evt.Enable(instance_idx != -1);
+            if (instance_idx != -1)
+            {
+                evt.Check(model.objects[selection.get_object_idx()]->instances[instance_idx]->printable);
+                view3D->set_as_dirty();
+    }
+            }, menu_item_printable->GetId());
     }
 
     sidebar->obj_list()->append_menu_item_fix_through_netfabb(menu);
@@ -3782,6 +3839,12 @@ void Plater::priv::take_snapshot(const std::string& snapshot_name)
     }
     else if (this->sidebar->obj_list()->is_selected(itLayerRoot))
         snapshot_data.flags |= UndoRedo::SnapshotData::SELECTED_LAYERROOT_ON_SIDEBAR;
+
+    // If SLA gizmo is active, ask it if it wants to trigger support generation
+    // on loading this snapshot.
+    if (view3D->get_canvas3d()->get_gizmos_manager().wants_reslice_supports_on_undo())
+        snapshot_data.flags |= UndoRedo::SnapshotData::RECALCULATE_SLA_SUPPORTS;
+
     //FIXME updating the Wipe tower config values at the ModelWipeTower from the Print config.
     // This is a workaround until we refactor the Wipe Tower position / orientation to live solely inside the Model, not in the Print config.
     if (this->printer_technology == ptFFF) {
@@ -3822,6 +3885,9 @@ void Plater::priv::undo_redo_to(size_t time_to_load)
 
 void Plater::priv::undo_redo_to(std::vector<UndoRedo::Snapshot>::const_iterator it_snapshot)
 {
+    // Make sure that no updating function calls take_snapshot until we are done.
+    SuppressSnapshots snapshot_supressor(q);
+
 	bool 				temp_snapshot_was_taken 	= this->undo_redo_stack().temp_snapshot_active();
 	PrinterTechnology 	new_printer_technology 		= it_snapshot->snapshot_data.printer_technology;
 	bool 				printer_technology_changed 	= this->printer_technology != new_printer_technology;
@@ -3864,9 +3930,14 @@ void Plater::priv::undo_redo_to(std::vector<UndoRedo::Snapshot>::const_iterator 
     bool         new_selected_layer_on_sidebar     = (new_flags & UndoRedo::SnapshotData::SELECTED_LAYER_ON_SIDEBAR) != 0;
     bool         new_selected_layerroot_on_sidebar = (new_flags & UndoRedo::SnapshotData::SELECTED_LAYERROOT_ON_SIDEBAR) != 0;
 
+    if (this->view3D->get_canvas3d()->get_gizmos_manager().wants_reslice_supports_on_undo())
+        top_snapshot_data.flags |= UndoRedo::SnapshotData::RECALCULATE_SLA_SUPPORTS;
+
 	// Disable layer editing before the Undo / Redo jump.
     if (!new_variable_layer_editing_active && view3D->is_layers_editing_enabled())
         view3D->get_canvas3d()->force_main_toolbar_left_action(view3D->get_canvas3d()->get_main_toolbar_item_id("layersediting"));
+    // Make a copy of the snapshot, undo/redo could invalidate the iterator
+    const UndoRedo::Snapshot snapshot_copy = *it_snapshot;
     // Do the jump in time.
     if (it_snapshot->timestamp < this->undo_redo_stack().active_snapshot_time() ?
 		this->undo_redo_stack().undo(model, this->view3D->get_canvas3d()->get_selection(), this->view3D->get_canvas3d()->get_gizmos_manager(), top_snapshot_data, it_snapshot->timestamp) :
@@ -3904,18 +3975,18 @@ void Plater::priv::undo_redo_to(std::vector<UndoRedo::Snapshot>::const_iterator 
         if (new_selected_settings_on_sidebar || new_selected_layer_on_sidebar)
             this->sidebar->obj_list()->set_selected_layers_range_idx(layer_range_idx);
 
-        this->update_after_undo_redo(temp_snapshot_was_taken);
+        this->update_after_undo_redo(snapshot_copy, temp_snapshot_was_taken);
 		// Enable layer editing after the Undo / Redo jump.
 		if (! view3D->is_layers_editing_enabled() && this->layers_height_allowed() && new_variable_layer_editing_active)
             view3D->get_canvas3d()->force_main_toolbar_left_action(view3D->get_canvas3d()->get_main_toolbar_item_id("layersediting"));
     }
 }
 
-void Plater::priv::update_after_undo_redo(bool /* temp_snapshot_was_taken */)
+void Plater::priv::update_after_undo_redo(const UndoRedo::Snapshot& snapshot, bool /* temp_snapshot_was_taken */)
 {
 	this->view3D->get_canvas3d()->get_selection().clear();
 	// Update volumes from the deserializd model, always stop / update the background processing (for both the SLA and FFF technologies).
-	this->update(false, true);
+    this->update((unsigned int)UpdateParams::FORCE_BACKGROUND_PROCESSING_UPDATE | (unsigned int)UpdateParams::POSTPONE_VALIDATION_ERROR_MESSAGE);
 	// Release old snapshots if the memory allocated is excessive. This may remove the top most snapshot if jumping to the very first snapshot.
 	//if (temp_snapshot_was_taken)
 	// Release the old snapshots always, as it may have happened, that some of the triangle meshes got deserialized from the snapshot, while some
@@ -3923,7 +3994,7 @@ void Plater::priv::update_after_undo_redo(bool /* temp_snapshot_was_taken */)
 		this->undo_redo_stack().release_least_recently_used();
 	//YS_FIXME update obj_list from the deserialized model (maybe store ObjectIDs into the tree?) (no selections at this point of time)
     this->view3D->get_canvas3d()->get_selection().set_deserialized(GUI::Selection::EMode(this->undo_redo_stack().selection_deserialized().mode), this->undo_redo_stack().selection_deserialized().volumes_and_instances);
-    this->view3D->get_canvas3d()->get_gizmos_manager().update_after_undo_redo();
+    this->view3D->get_canvas3d()->get_gizmos_manager().update_after_undo_redo(snapshot);
 
     wxGetApp().obj_list()->update_after_undo_redo();
 
@@ -3933,6 +4004,11 @@ void Plater::priv::update_after_undo_redo(bool /* temp_snapshot_was_taken */)
         Slic3r::GUI::wxGetApp().save_mode(comAdvanced);
         view3D->set_as_dirty();
     }
+
+	// this->update() above was called with POSTPONE_VALIDATION_ERROR_MESSAGE, so that if an error message was generated when updating the back end, it would not open immediately, 
+	// but it would be saved to be show later. Let's do it now. We do not want to display the message box earlier, because on Windows & OSX the message box takes over the message
+	// queue pump, which in turn executes the rendering function before a full update after the Undo / Redo jump.
+	this->show_delayed_error_message();
 
 	//FIXME what about the state of the manipulators?
 	//FIXME what about the focus? Cursor in the side panel?
@@ -4065,6 +4141,10 @@ void Plater::update_ui_from_settings() { p->update_ui_from_settings(); }
 void Plater::select_view(const std::string& direction) { p->select_view(direction); }
 
 void Plater::select_view_3D(const std::string& name) { p->select_view_3D(name); }
+
+bool Plater::is_preview_shown() const { return p->is_preview_shown(); }
+bool Plater::is_preview_loaded() const { return p->is_preview_loaded(); }
+bool Plater::is_view3D_shown() const { return p->is_view3D_shown(); }
 
 void Plater::select_all() { p->select_all(); }
 void Plater::deselect_all() { p->deselect_all(); }
@@ -4389,6 +4469,24 @@ void Plater::export_3mf(const boost::filesystem::path& output_path)
     }
 }
 
+bool Plater::has_toolpaths_to_export() const
+{
+    return  p->preview->get_canvas3d()->has_toolpaths_to_export();
+}
+
+void Plater::export_toolpaths_to_obj() const
+{
+    if ((printer_technology() != ptFFF) || !is_preview_loaded())
+        return;
+
+    wxString path = p->get_export_file(FT_OBJ);
+    if (path.empty()) 
+        return;
+    
+    wxBusyCursor wait;
+    p->preview->get_canvas3d()->export_toolpaths_to_obj(into_u8(path).c_str());
+}
+
 void Plater::reslice()
 {
     // Stop arrange and (or) optimize rotation tasks.
@@ -4430,11 +4528,11 @@ void Plater::reslice()
     p->preview->update_view_type();
 }
 
-void Plater::reslice_SLA_supports(const ModelObject &object)
+void Plater::reslice_SLA_supports(const ModelObject &object, bool postpone_error_messages)
 {
     //FIXME Don't reslice if export of G-code or sending to OctoPrint is running.
     // bitmask of UpdateBackgroundProcessReturnState
-    unsigned int state = this->p->update_background_process(true);
+    unsigned int state = this->p->update_background_process(true, postpone_error_messages);
     if (state & priv::UPDATE_BACKGROUND_PROCESS_REFRESH_SCENE)
         this->p->view3D->reload_scene(false);
 
@@ -4537,7 +4635,7 @@ void Plater::undo_redo_topmost_string_getter(const bool is_undo, std::string& ou
         return;
     }
 
-    out_text = L("");
+    out_text = "";
 }
 
 void Plater::on_extruders_change(int num_extruders)
@@ -4573,6 +4671,30 @@ void Plater::on_config_change(const DynamicPrintConfig &config)
     bool update_scheduled = false;
     bool bed_shape_changed = false;
     for (auto opt_key : p->config->diff(config)) {
+        if (opt_key == "filament_colour")
+        {
+            update_scheduled = true; // update should be scheduled (for update 3DScene) #2738
+
+            /* There is a case, when we use filament_color instead of extruder_color (when extruder_color == "").
+             * Thus plater config option "filament_colour" should be filled with filament_presets values.
+             * Otherwise, on 3dScene will be used last edited filament color for all volumes with extruder_color == "".
+             */
+            const std::vector<std::string> filament_presets = wxGetApp().preset_bundle->filament_presets;
+            if (filament_presets.size() > 1 &&
+                p->config->option<ConfigOptionStrings>(opt_key)->values.size() != config.option<ConfigOptionStrings>(opt_key)->values.size())
+            {
+                const PresetCollection& filaments = wxGetApp().preset_bundle->filaments;
+                std::vector<std::string> filament_colors;
+                filament_colors.reserve(filament_presets.size());
+
+                for (const std::string& filament_preset : filament_presets)
+                    filament_colors.push_back(filaments.find_preset(filament_preset, true)->config.opt_string("filament_colour", (unsigned)0));
+
+                p->config->option<ConfigOptionStrings>(opt_key)->values = filament_colors;
+                continue;
+            }
+        }
+        
         p->config->set_key_value(opt_key, config.option(opt_key)->clone());
         if (opt_key == "printer_technology")
             this->set_printer_technology(config.opt_enum<PrinterTechnology>(opt_key));
@@ -4634,12 +4756,8 @@ void Plater::on_activate()
         this->p->preview->get_wxglcanvas()->SetFocus();
 #endif
 
-    if (! this->p->delayed_error_message.empty()) {
-		std::string msg = std::move(this->p->delayed_error_message);
-		this->p->delayed_error_message.clear();
-        GUI::show_error(this, msg);
+	this->p->show_delayed_error_message();
 	}
-}
 
 wxString Plater::get_project_filename(const wxString& extension) const
 {
