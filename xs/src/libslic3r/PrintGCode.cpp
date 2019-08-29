@@ -477,7 +477,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
     // set new layer - this will change Z and force a retraction if retract_layer_change is enabled
     if (_print.config.before_layer_gcode.getString().size() > 0) {
         PlaceholderParser pp { *_gcodegen.placeholder_parser };
-        pp.set("layer_num", _gcodegen.layer_index);
+        pp.set("layer_num", layer->id());
         pp.set("layer_z", layer->print_z);
         pp.set("current_retraction", _gcodegen.writer.extruder()->retracted);
 
@@ -487,7 +487,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
     gcode += _gcodegen.change_layer(*layer);
     if (_print.config.layer_gcode.getString().size() > 0) {
         PlaceholderParser pp { *_gcodegen.placeholder_parser };
-        pp.set("layer_num", _gcodegen.layer_index);
+        pp.set("layer_num", layer->id());
         pp.set("layer_z", layer->print_z);
         pp.set("current_retraction", _gcodegen.writer.extruder()->retracted);
 
