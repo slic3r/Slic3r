@@ -225,6 +225,25 @@ SCENARIO( "PrintGCode basic functionality") {
             }
         }
 
+        WHEN("layer_num represents the layer's index from z=0") {
+            config->set("layer_gcode", ";Layer:[layer_num] ([layer_z] mm)");
+            config->set("layer_height", 1.0);
+            config->set("first_layer_height", 1.0);
+
+            Slic3r::Model model;
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20,TestMesh::cube_20x20x20}, model, config)};
+            Slic3r::Test::gcode(gcode, print);
+
+            auto exported {gcode.str()};
+            int count = 2;            
+            for(int pos = 0; pos != std::string::npos; count--) 
+                pos = exported.find(";Layer:38 (20 mm)", pos+1);
+
+            THEN("layer_num and layer_z are processed in the end gcode") {\
+                REQUIRE(count == -1);
+            }
+        }
+
         gcode.clear();
     }
 }
