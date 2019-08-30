@@ -43,7 +43,7 @@ namespace nowide {
     public:
         
         ///
-        /// Fix command line agruments 
+        /// Fix command line arguments 
         ///
         args(int &argc,char **&argv) :
             old_argc_(argc),
@@ -56,7 +56,7 @@ namespace nowide {
             fix_args(argc,argv);
         }
         ///
-        /// Fix command line agruments and environment
+        /// Fix command line arguments and environment
         ///
         args(int &argc,char **&argv,char **&en) :
             old_argc_(argc),

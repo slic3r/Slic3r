@@ -487,7 +487,7 @@ PrintObject::bridge_over_infill()
             printf("Bridging %zu internal areas at layer %zu\n", to_bridge.size(), layer->id());
             #endif
             
-            // compute the remaning internal solid surfaces as difference
+            // compute the remaining internal solid surfaces as difference
             const ExPolygons not_to_bridge = diff_ex(internal_solid, to_polygons(to_bridge), true);
             
             // build the new collection of fill_surfaces
@@ -1625,7 +1625,7 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
                         append_to(tmp, (Polygons)s);
                 const auto grown = intersection(
                     offset(too_narrow, +margin),
-                    // Discard bridges as they are grown for anchoring and we cant
+                    // Discard bridges as they are grown for anchoring and we can't
                     // remove such anchors. (This may happen when a bridge is being 
                     // anchored onto a wall where little space remains after the bridge
                     // is grown, and that little space is an internal solid shell so 

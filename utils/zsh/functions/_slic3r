@@ -72,7 +72,7 @@ _arguments -S \
     \
     '--retract-length[specify filament retraction length when pausing extrusion]:filament retraction length in mm' \
     '--retract-speed[specify filament retraction speed]:filament retraction speed in mm/s' \
-    '--retract-restart-extra[specify filament length to extrude for compensating retraction]: filament lenght in mm' \
+    '--retract-restart-extra[specify filament length to extrude for compensating retraction]: filament length in mm' \
     '--retract-before-travel[specify minimum travel length for activating retraction]:minimum travel length for activating retraction in mm' \
     '--retract-lift[specify Z-axis lift for use when retracting]:Z-axis lift in mm' \
     \

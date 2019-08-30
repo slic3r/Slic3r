@@ -157,7 +157,7 @@ stl_fix_normal_directions(stl_file *stl) {
     /* Get next facet to fix from top of list. */
     if(head->next != tail) {
       facet_num = head->next->facet_num;
-      if(norm_sw[facet_num] != 1) { /* If facet is in list mutiple times */
+      if(norm_sw[facet_num] != 1) { /* If facet is in list multiple times */
         norm_sw[facet_num] = 1; /* Record this one as being fixed. */
         checked++;
       }

@@ -39,7 +39,7 @@ public:
 private:
     wxDECLARE_EVENT_TABLE();
 
-    void init_menubar(); //< Routine to intialize all top-level menu items.
+    void init_menubar(); //< Routine to initialize all top-level menu items.
     void init_tabpanel(); //< Routine to initialize all of the tabs.
 
     bool loaded; //< Main frame itself has finished loading.
