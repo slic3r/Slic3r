@@ -207,8 +207,6 @@ SCENARIO( "PrintGCode basic functionality") {
                 REQUIRE(exported.find("M107") != std::string::npos);
             }
         }
-
-
         WHEN("end_gcode exists with layer_num and layer_z") {
             config->set("end_gcode", "; Layer_num [layer_num]\n; Layer_z [layer_z]");
             config->set("layer_height", 0.1);
@@ -222,6 +220,21 @@ SCENARIO( "PrintGCode basic functionality") {
             THEN("layer_num and layer_z are processed in the end gcode") {\
                 REQUIRE(exported.find("; Layer_num 199") != std::string::npos);
                 REQUIRE(exported.find("; Layer_z 20") != std::string::npos);
+            }
+        }
+        WHEN("current_extruder exists in start_gcode") {
+            config->set("start_gcode", "; Extruder [current_extruder]");
+            Slic3r::Model model;
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+            Slic3r::Test::gcode(gcode, print);
+            auto exported {gcode.str()};
+            THEN("current_extruder is processed in the start gcode and set for first extruder") {
+                REQUIRE(exported.find("; Extruder 0") != std::string::npos);
+            }
+            Slic3r::Test::gcode(gcode, print);
+            auto exported {gcode.str()};
+            THEN("current_extruder is processed in the start gcode and set for second extruder") {
+                REQUIRE(exported.find("; Extruder 1") != std::string::npos);
             }
         }
 
