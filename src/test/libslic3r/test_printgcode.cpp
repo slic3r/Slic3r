@@ -224,17 +224,27 @@ SCENARIO( "PrintGCode basic functionality") {
         }
         WHEN("current_extruder exists in start_gcode") {
             config->set("start_gcode", "; Extruder [current_extruder]");
-            Slic3r::Model model;
-            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
-            Slic3r::Test::gcode(gcode, print);
-            auto exported {gcode.str()};
-            THEN("current_extruder is processed in the start gcode and set for first extruder") {
-                REQUIRE(exported.find("; Extruder 0") != std::string::npos);
+            {
+                Slic3r::Model model;
+                auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+                Slic3r::Test::gcode(gcode, print);
+                auto exported {gcode.str()};
+                THEN("current_extruder is processed in the start gcode and set for first extruder") {
+                    REQUIRE(exported.find("; Extruder 0") != std::string::npos);
+                }
             }
-            Slic3r::Test::gcode(gcode, print);
-            auto exported {gcode.str()};
-            THEN("current_extruder is processed in the start gcode and set for second extruder") {
-                REQUIRE(exported.find("; Extruder 1") != std::string::npos);
+            config->set("solid_infill_extruder", 2);
+            config->set("support_material_extruder", 2);
+            config->set("infill_extruder", 2);
+            config->set("perimeter_extruder", 2);
+            {
+                Slic3r::Model model;
+                auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+                Slic3r::Test::gcode(gcode, print);
+                auto exported {gcode.str()};
+                THEN("current_extruder is processed in the start gcode and set for second extruder") {
+                    REQUIRE(exported.find("; Extruder 1") != std::string::npos);
+                }
             }
         }
 
