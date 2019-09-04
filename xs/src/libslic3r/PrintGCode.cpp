@@ -102,6 +102,7 @@ PrintGCode::output()
         fh << _gcodegen.writer.set_fan(0,1) << "\n";
     }
 
+    // set initial extruder so it can be used in start G-code
     const auto extruders = _print.extruders();
     fh << _gcodegen.set_extruder( *(extruders.begin()) );
 
