@@ -102,6 +102,9 @@ PrintGCode::output()
         fh << _gcodegen.writer.set_fan(0,1) << "\n";
     }
 
+    const auto extruders = _print.extruders();
+    fh << _gcodegen.set_extruder( *(extruders.begin()) );
+
     // set bed temperature
     const auto temp = config.first_layer_bed_temperature.getInt();
     if (config.has_heatbed && temp > 0 && std::regex_search(config.start_gcode.getString(), bed_temp_regex)) {
@@ -162,8 +165,6 @@ PrintGCode::output()
         _gcodegen.avoid_crossing_perimeters.init_external_mp(union_ex(islands_p));
     }
 
-    const auto extruders = _print.extruders();
-
     // Calculate wiping points if needed.
     if (config.ooze_prevention && extruders.size() > 1) {
         /*
@@ -196,9 +197,6 @@ PrintGCode::output()
         }
         */
     }
-
-    // Set initial extruder only after custom start gcode
-    fh << _gcodegen.set_extruder( *(extruders.begin()) );
 
     // Do all objects for each layer.
 
