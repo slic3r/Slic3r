@@ -121,6 +121,10 @@ PrintGCode::output()
 
     if (include_start_extruder_temp) this->_print_first_layer_temperature(0);
 
+    // initialize current_extruder placeholder now, because start_gcode may be relying on it
+    const auto extruders = _print.extruders();
+    _gcodegen.placeholder_parser->set("current_extruder", *(extruders.begin()));
+    
     // Apply gcode math to start gcode
     fh << apply_math(_gcodegen.placeholder_parser->process(config.start_gcode.value));
     {
@@ -161,9 +165,7 @@ PrintGCode::output()
 
         _gcodegen.avoid_crossing_perimeters.init_external_mp(union_ex(islands_p));
     }
-
-    const auto extruders = _print.extruders();
-
+    
     // Calculate wiping points if needed.
     if (config.ooze_prevention && extruders.size() > 1) {
         /*

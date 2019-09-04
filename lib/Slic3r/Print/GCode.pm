@@ -159,7 +159,13 @@ sub export {
     }
     $self->_print_first_layer_temperature(0)
         if $include_start_extruder_temp;
+    
+    # initialize current_extruder placeholder now, because start_gcode may be relying on it.
+    $gcodegen->placeholder_parser->set("current_extruder", $self->print->extruders->[0]);
+    
+    # process start gcode
     printf $fh "%s\n", Slic3r::ConditionalGCode::apply_math($gcodegen->placeholder_parser->process($self->config->start_gcode));
+    
     my $filament_extruder = 0;
     foreach my $start_gcode (@{ $self->config->start_filament_gcode }) { # process filament gcode in order
         $gcodegen->placeholder_parser->set("filament_extruder_id", $filament_extruder);
