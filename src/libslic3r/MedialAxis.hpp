@@ -110,6 +110,8 @@ class MedialAxis {
         void grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchors);
         /// taper the ends of polylines (don't activate that for gapfill)
         void taper_ends(ThickPolylines& pp);
+        //cleaning method
+        void check_width(ThickPolylines& pp, double max_width, std::string msg);
 };
     
     /// create a ExtrusionEntityCollection from ThickPolylines, discretizing the variable width into little sections (of 4*SCALED_RESOLUTION length) where needed.

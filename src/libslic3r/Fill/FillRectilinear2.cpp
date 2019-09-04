@@ -1775,13 +1775,18 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
 
     // remove areas for gapfill 
     // factor=0.5 : remove area smaller than a spacing. factor=1 : max spacing for the gapfill (but not the width)
-    float factor = 0.9f;
-    ExPolygons rectilinear_areas = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow->scaled_spacing() * factor, params.flow->scaled_spacing() * factor);
+    //choose between 2 to avoid dotted line  effect.
+    float factor1 = 0.99f;
+    float factor2 = 0.7f;
+    ExPolygons rectilinear_areas1 = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow->scaled_spacing() * factor1, params.flow->scaled_spacing() * factor1);
+    ExPolygons rectilinear_areas2 = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow->scaled_spacing() * factor2, params.flow->scaled_spacing() * factor2);
+    std::cout << "FillRectilinear2WGapFill use " << (rectilinear_areas1.size() <= rectilinear_areas2.size() + 1 ? "1" : "2") << "\n";
+    ExPolygons &rectilinear_areas = rectilinear_areas1.size() <= rectilinear_areas2.size() + 1 ? rectilinear_areas1 : rectilinear_areas2;
     ExPolygons gapfill_areas = diff_ex(ExPolygons{ surface->expolygon }, rectilinear_areas);
     double rec_area = 0;
     for (ExPolygon &p : rectilinear_areas)rec_area += p.area();
     double gf_area = 0;
-    for (ExPolygon &p : gapfill_areas)gf_area += p.area();
+    for (ExPolygon &p : gapfill_areas) gf_area += p.area();
     //std::cout << unscaled(unscaled(surface->expolygon.area())) << " = " << unscaled(unscaled(rec_area)) << " + " << unscaled(unscaled(gf_area)) << "\n";
 
     // rectilinear
@@ -1851,21 +1856,20 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
     //gapfill
     if (gapfill_areas.size() > 0) {
         ThickPolylines polylines_gapfill;
-        double min = 0.2 * params.flow->scaled_width() * (1 - INSET_OVERLAP_TOLERANCE);
+        double min = 0.4 * scale_(params.flow->nozzle_diameter) * (1 - INSET_OVERLAP_TOLERANCE);
         double max = 2. * params.flow->scaled_width();
         // collapse 
-        double min_offset = 0.1 * params.flow->scaled_width() * (1 - INSET_OVERLAP_TOLERANCE);
         //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
         min = std::max(min, double(Flow::new_from_spacing(EPSILON, params.flow->nozzle_diameter , params.flow->height, false).scaled_width()));
-        double max_offset = 2. * params.flow->scaled_spacing();
-        ExPolygons gapfill_areas_collapsed = diff_ex(
-            offset2_ex(gapfill_areas, double(-min_offset / 2), double(+min_offset / 2)),
-            offset2_ex(gapfill_areas, double(-max_offset / 2), double(+max_offset / 2)),
-            true);
+        //ExPolygons gapfill_areas_collapsed = diff_ex(
+        //    offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2)),
+        //    offset2_ex(gapfill_areas, double(-max / 2), double(+max / 2)),
+        //    true);
+        ExPolygons gapfill_areas_collapsed = offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2));
         for (const ExPolygon &ex : gapfill_areas_collapsed) {
             //remove too small gaps that are too hard to fill.
             //ie one that are smaller than an extrusion with width of min and a length of max.
-            if (ex.area() > min * max) {
+            if (ex.area() > scale_(params.flow->nozzle_diameter)*scale_(params.flow->nozzle_diameter) * 2) {
                 MedialAxis{ ex, params.flow->scaled_width() * 2, params.flow->scaled_width() / 5, coord_t(params.flow->height) }.build(polylines_gapfill);
             }
         }
