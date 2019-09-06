@@ -6,6 +6,10 @@
 
     sudo apt-get install gcc cmake build-essential libgtk2.0-dev libwxgtk3.0-dev libwx-perl libmodule-build-perl git cpanminus libextutils-cppguess-perl libboost-all-dev libxmu-dev liblocal-lib-perl wx-common libopengl-perl libwx-glcanvas-perl libtbb-dev libxmu-dev freeglut3-dev libwxgtk-media3.0-dev libboost-thread-dev libboost-system-dev libboost-filesystem-dev libcurl4-openssl-dev libextutils-makemaker-cpanfile-perl
 
+Maybe you need these too
+
+    sudo apt-get install libextutils-typemaps-default-perl libextutils-xspp-perl libextutils-typemap-perl
+
 #### Get repository
 
     git clone https://github.com/Zip-o-mat/Slic3r.git
@@ -28,7 +32,8 @@
 
     cmake ..
 
-    export PERL5LIB=<PATH_TO_SOURCE>/Slic3r/local-lib/lib/perl5
+    export PERL5LIB=<PATH_TO_SLIC3R_SOURCE>/local-lib/lib/perl5
+    (e.g. /home/zip-o-mat/Slic3r/local-lib/lib/perl5)
 
     make
 
