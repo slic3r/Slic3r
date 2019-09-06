@@ -1,6 +1,12 @@
 # This is a experimental version of the nonplanar slicing
 
-### How to build
+## How to build
+
+### Run as Linux application in Windows
+
+    https://github.com/Zip-o-mat/Slic3r/issues/6#issuecomment-528333989
+
+### Linux
 
 #### Installing prerequisites
 
