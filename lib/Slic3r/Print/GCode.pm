@@ -157,7 +157,7 @@ sub export {
         if $include_start_extruder_temp;
     printf $fh "%s\n", Slic3r::ConditionalGCode::apply_math($gcodegen->placeholder_parser->process($self->config->start_gcode));
     foreach my $start_gcode (@{ $self->config->start_filament_gcode }) { # process filament gcode in order
-        printf $fh "%s\n", $gcodegen->placeholder_parser->process($start_gcode);
+        printf $fh "%s\n", Slic3r::ConditionalGCode::apply_math($gcodegen->placeholder_parser->process($start_gcode));
     }
     $self->_print_first_layer_temperature(1)
         if $include_start_extruder_temp;

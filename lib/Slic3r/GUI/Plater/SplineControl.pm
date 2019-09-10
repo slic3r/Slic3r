@@ -9,9 +9,19 @@ use Wx qw(:misc :pen :brush :sizer :font :cursor wxTAB_TRAVERSAL);
 use Wx::Event qw(EVT_MOUSE_EVENTS EVT_PAINT EVT_ERASE_BACKGROUND EVT_SIZE);
 use base 'Wx::Panel';
 
+# Color Scheme
+use Slic3r::GUI::ColorScheme;
+
 sub new {
     my $class = shift;
     my ($parent, $size, $object) = @_;
+    
+    if ( ( defined $Slic3r::GUI::Settings->{_}{colorscheme} ) && ( Slic3r::GUI::ColorScheme->can($Slic3r::GUI::Settings->{_}{colorscheme}) ) ) {
+        my $myGetSchemeName = \&{"Slic3r::GUI::ColorScheme::$Slic3r::GUI::Settings->{_}{colorscheme}"};
+        $myGetSchemeName->();
+    } else {
+        Slic3r::GUI::ColorScheme->getDefault();
+    }
     
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, $size, wxTAB_TRAVERSAL);
     
@@ -19,12 +29,12 @@ sub new {
     $self->{is_valid} = 0;
     
     # This has only effect on MacOS. On Windows and Linux/GTK, the background is painted by $self->repaint().
-    $self->SetBackgroundColour(Wx::wxWHITE);
+    $self->SetBackgroundColour(Wx::Colour->new(@BACKGROUND255));
 
-    $self->{line_pen}           = Wx::Pen->new(Wx::Colour->new(50,50,50), 1, wxSOLID);
-    $self->{original_pen}       = Wx::Pen->new(Wx::Colour->new(200,200,200), 1, wxSOLID);
-    $self->{interactive_pen}    = Wx::Pen->new(Wx::Colour->new(255,0,0), 1, wxSOLID);
-    $self->{resulting_pen}      = Wx::Pen->new(Wx::Colour->new(5,120,160), 1, wxSOLID);
+    $self->{line_pen}           = Wx::Pen->new(Wx::Colour->new(@SPLINE_L_PEN), 1, wxSOLID);
+    $self->{original_pen}       = Wx::Pen->new(Wx::Colour->new(@SPLINE_O_PEN), 1, wxSOLID);
+    $self->{interactive_pen}    = Wx::Pen->new(Wx::Colour->new(@SPLINE_I_PEN), 1, wxSOLID);
+    $self->{resulting_pen}      = Wx::Pen->new(Wx::Colour->new(@SPLINE_R_PEN), 1, wxSOLID);
 
     $self->{user_drawn_background} = $^O ne 'darwin';
 
@@ -63,8 +73,9 @@ sub repaint {
         # On MacOS the background is erased, on Windows the background is not erased 
         # and on Linux/GTK the background is erased to gray color.
         # Fill DC with the background on Windows & Linux/GTK.
-        my $brush_background = Wx::Brush->new(Wx::wxWHITE, wxSOLID);
-        $dc->SetPen(wxWHITE_PEN);
+        my $brush_background = Wx::Brush->new(Wx::Colour->new(@BACKGROUND255), wxSOLID);
+        my $pen_background   = Wx::Pen->new(Wx::Colour->new(@BACKGROUND255), 1, wxSOLID);
+        $dc->SetPen($pen_background);
         $dc->SetBrush($brush_background);
         my $rect = $self->GetUpdateRegion()->GetBox();
         $dc->DrawRectangle($rect->GetLeft(), $rect->GetTop(), $rect->GetWidth(), $rect->GetHeight());

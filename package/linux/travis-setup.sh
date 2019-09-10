@@ -6,7 +6,7 @@ mkdir -p $CACHE
 
 if [ ! -e $CACHE/slic3r-perlbrew-5.24.tar.bz2 ]; then
     echo "Downloading http://www.siusgs.com/slic3r/buildserver/slic3r-perl.524.travis.tar.bz2 => $CACHE/slic3r-perlbrew-5.24.tar.bz2"
-    curl -L "http://www.siusgs.com/slic3r/buildserver/slic3r-perl.524.travis.tar.bz2" -o $CACHE/slic3r-perlbrew-5.24.tar.bz2; 
+    curl -L "http://www.siusgs.com/slic3r/buildserver/slic3r-perl.524.travis.tar.bz2" -o $CACHE/slic3r-perlbrew-5.24.tar.bz2;
 fi
 
 if [ ! -e $CACHE/boost-compiled.tar.bz2 ]; then
@@ -28,4 +28,3 @@ tar -C$TRAVIS_BUILD_DIR -xjf $CACHE/local-lib-wx${WXVERSION}.tar.bz2
 tar -C$HOME/perl5/perlbrew/perls -xjf $CACHE/slic3r-perlbrew-5.24.tar.bz2
 tar -C$HOME -xjf $CACHE/boost-compiled.tar.bz2
 tar -C$HOME -xjf $CACHE/wx${WXVERSION}.tar.bz2
-cd $TRAVIS_BUILD_DIR

@@ -11,6 +11,7 @@
 #include "FillConcentric.hpp"
 #include "FillHoneycomb.hpp"
 #include "Fill3DHoneycomb.hpp"
+#include "FillGyroid.hpp"
 #include "FillPlanePath.hpp"
 #include "FillRectilinear.hpp"
 
@@ -23,6 +24,7 @@ Fill::new_from_type(const InfillPattern type)
         case ipConcentric:          return new FillConcentric();
         case ipHoneycomb:           return new FillHoneycomb();
         case ip3DHoneycomb:         return new Fill3DHoneycomb();
+        case ipGyroid:              return new FillGyroid();
         
         case ipRectilinear:         return new FillRectilinear();
         case ipAlignedRectilinear:  return new FillAlignedRectilinear();

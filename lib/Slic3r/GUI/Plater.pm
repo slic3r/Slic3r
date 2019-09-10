@@ -248,7 +248,7 @@ sub new {
             changescale     arrow_out.png
             split           shape_ungroup.png
             cut             package.png
-            layers          cog.png
+            layers          variable_layer_height.png
             settings        cog.png
         );
         for (grep $self->{"btn_$_"}, keys %icons) {
@@ -2967,7 +2967,7 @@ sub object_menu {
     }, undef, 'package.png');
     wxTheApp->append_menu_item($menu, "Layer heights…", 'Open the dynamic layer height control', sub {
         $self->object_layers_dialog;
-    }, undef, 'cog.png');
+    }, undef, 'variable_layer_height.png');
     $menu->AppendSeparator();
     wxTheApp->append_menu_item($menu, "Settings…", 'Open the object editor dialog', sub {
         $self->object_settings_dialog;

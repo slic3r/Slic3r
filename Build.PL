@@ -53,7 +53,7 @@ if ($gui) {
     );
     if ($^O eq 'MSWin32') {
         $recommends{"Win32::TieRegistry"} = 0;
-        
+
         # we need an up-to-date Win32::API because older aren't thread-safe (GH #2517)
         $prereqs{'Win32::API'} = 0.79;
     }
@@ -80,7 +80,7 @@ if ($ENV{SLIC3R_NO_AUTO}) {
         File::Spec->catfile($Config{sitebin}, 'cpanm'),
         File::Spec->catfile($Config{installscript}, 'cpanm'),
     );
-    
+
     my $cpanm;
     foreach my $path (@try) {
         if (-e $path) {  # don't use -x because it fails on Windows
@@ -103,35 +103,35 @@ There are several ways to install cpanm, try one of these:
     cpan App::cpanminus
 
 If it is installed in a non-standard location you can do:
-    
+
     CPANM=/path/to/cpanm perl Build.PL
 
 EOF
         if !$cpanm;
     my @cpanm_args = ();
     push @cpanm_args, "--sudo" if $sudo;
-    
+
     # install local::lib without --local-lib otherwise it's not usable afterwards
     if (!eval "use local::lib qw(local-lib); 1") {
         my $res = system $cpanm, @cpanm_args, 'local::lib';
         warn "Warning: local::lib is required. You might need to run the `cpanm --sudo local::lib` command in order to install it.\n"
             if $res != 0;
     }
-    
+
     push @cpanm_args, ('--local-lib', 'local-lib');
-    
+
     # make sure our cpanm is updated (old ones don't support the ~ syntax)
     system $cpanm, @cpanm_args, 'App::cpanminus';
-    
+
     my %modules = (%prereqs, %recommends);
     foreach my $module (sort keys %modules) {
         my $version = $modules{$module};
         my @cmd = ($cpanm, @cpanm_args);
-        
+
         # temporary workaround for upstream bug in test
         push @cmd, '--notest'
             if $module =~ /^(?:OpenGL|Math::PlanePath|Test::Harness|IO::Scalar)$/;
-        
+
         push @cmd, "$module~$version";
         my $res = system @cmd;
         if ($res != 0) {
@@ -142,11 +142,35 @@ EOF
             }
         }
     }
+    if (!$gui) {
+        # clean xs directory before reinstalling, to make sure Build is called
+        # with current perl binary
+        if (-e './xs/Build') {
+            if ($^O eq 'MSWin32') {
+                system '.\xs\Build', 'distclean';
+            } else {
+                system './xs/Build', 'distclean';
+            }
+        }
+        my $res = system $cpanm, @cpanm_args, '--reinstall', '--verbose', './xs';
+        if ($res != 0) {
+            die "The XS/C++ code failed to compile, aborting\n";
+        }
+    }
 }
 
 if (@missing_prereqs) {
     printf "The following prerequisites failed to install: %s\n", join(', ', @missing_prereqs);
     exit 1;
+    } elsif (!$gui) {
+    eval "use App::Prove; 1" or die "Failed to load App::Prove";
+    my $res = App::Prove->new->run ? 0 : 1;
+    if ($res == 0) {
+        print "If you also want to use the GUI you can now run `perl Build.PL --gui` to install the required modules.\n";
+    } else {
+        print "Some tests failed. Please report the failure to the author!\n";
+    }
+    exit $res;
 }
 
 __END__

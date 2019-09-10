@@ -230,6 +230,9 @@ ConfigBase__set(ConfigBase* THIS, const t_config_option_key &opt_key, SV* value)
     } else if (def->type == coPoint) {
         ConfigOptionPoint* optv = dynamic_cast<ConfigOptionPoint*>(opt);
         return from_SV_check(value, &optv->value);
+    } else if(def->type == coPoint3){
+        ConfigOptionPoint3* optv = dynamic_cast<ConfigOptionPoint3*>(opt);
+        return from_SV_check(value, &optv->value);
     } else if (def->type == coPoints) {
         ConfigOptionPoints* optv = dynamic_cast<ConfigOptionPoints*>(opt);
         std::vector<Pointf> values;
@@ -506,6 +509,73 @@ bool from_SV_check(SV* point_sv, Pointf* point)
         return true;
     } else {
         return from_SV(point_sv, point);
+    }
+}
+
+SV* to_SV_pureperl(const Point3* THIS)
+{
+    AV* av = newAV();
+    av_fill(av, 2);
+    av_store(av, 0, newSViv(THIS->x));
+    av_store(av, 1, newSViv(THIS->y));
+    av_store(av, 1, newSViv(THIS->z));
+    return newRV_noinc((SV*)av);
+}
+
+void from_SV(SV* point3_sv, Point3* point)
+{
+    AV* point3_av = (AV*)SvRV(point3_sv);
+    // get a double from Perl and round it, otherwise
+    // it would get truncated
+    point->x = lrint(SvNV(*av_fetch(point3_av, 0, 0)));
+    point->y = lrint(SvNV(*av_fetch(point3_av, 1, 0)));
+    point->z = lrint(SvNV(*av_fetch(point3_av, 2, 0)));
+}
+
+void from_SV_check(SV* point3_sv, Point3* point)
+{
+    if (sv_isobject(point3_sv) && (SvTYPE(SvRV(point3_sv)) == SVt_PVMG)) {
+        if (!sv_isa(point3_sv, perl_class_name(point)) && !sv_isa(point3_sv, perl_class_name_ref(point)))
+            CONFESS("Not a valid %s object (got %s)", perl_class_name(point), HvNAME(SvSTASH(SvRV(point3_sv))));
+        *point = *(Point3*)SvIV((SV*)SvRV( point3_sv ));
+    } else {
+        from_SV(point3_sv, point);
+    }
+}
+
+SV* to_SV_pureperl(const Pointf3* point)
+{
+    AV* av = newAV();
+    av_fill(av, 2);
+    av_store(av, 0, newSVnv(point->x));
+    av_store(av, 1, newSVnv(point->y));
+    av_store(av, 1, newSVnv(point->z));
+    return newRV_noinc((SV*)av);
+}
+
+bool from_SV(SV* point3_sv, Pointf3* point)
+{
+    AV* point3_av = (AV*)SvRV(point3_sv);
+    SV* sv_x = *av_fetch(point3_av, 0, 0);
+    SV* sv_y = *av_fetch(point3_av, 1, 0);
+    SV* sv_z = *av_fetch(point3_av, 2, 0);
+    if (!looks_like_number(sv_x) || !looks_like_number(sv_y) || !looks_like_number(sv_z) ) return false;
+    
+    point->x = SvNV(sv_x);
+    point->y = SvNV(sv_y);
+    point->z = SvNV(sv_z);
+    return true;
+}
+
+bool from_SV_check(SV* point3_sv, Pointf3* point)
+{
+    if (sv_isobject(point3_sv) && (SvTYPE(SvRV(point3_sv)) == SVt_PVMG)) {
+        if (!sv_isa(point3_sv, perl_class_name(point)) && !sv_isa(point3_sv, perl_class_name_ref(point)))
+            CONFESS("Not a valid %s object (got %s)", perl_class_name(point), HvNAME(SvSTASH(SvRV(point3_sv))));
+        *point = *(Pointf3*)SvIV((SV*)SvRV( point3_sv ));
+        return true;
+    } else {
+        return from_SV(point3_sv, point);
     }
 }
 

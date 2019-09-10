@@ -4,7 +4,7 @@ use warnings;
 use utf8;
 
 use Slic3r::Print::State ':steps';
-use Wx qw(:misc :sizer :slider :statictext wxWHITE);
+use Wx qw(:misc :sizer :slider :statictext);
 use Wx::Event qw(EVT_SLIDER EVT_KEY_DOWN);
 use base qw(Wx::Panel Class::Accessor);
 

@@ -143,6 +143,8 @@ class Pointf
     Vectorf vector_to(const Pointf &point) const;
 };
 
+std::ostream& operator<<(std::ostream &stm, const Pointf3 &pointf3);
+
 class Pointf3 : public Pointf
 {
     public:

@@ -11,10 +11,20 @@ use Wx qw(:misc :pen :brush :font :systemsettings wxTAB_TRAVERSAL wxSOLID);
 use Wx::Event qw(EVT_PAINT EVT_ERASE_BACKGROUND EVT_MOUSE_EVENTS EVT_SIZE);
 use base qw(Wx::Panel Class::Accessor);
 
+# Color Scheme
+use Slic3r::GUI::ColorScheme;
+
 __PACKAGE__->mk_accessors(qw(bed_shape interactive pos _scale_factor _shift on_move _painted));
 
 sub new {
     my ($class, $parent, $bed_shape) = @_;
+    
+    if ( ( defined $Slic3r::GUI::Settings->{_}{colorscheme} ) && ( Slic3r::GUI::ColorScheme->can($Slic3r::GUI::Settings->{_}{colorscheme}) ) ) {
+        my $myGetSchemeName = \&{"Slic3r::GUI::ColorScheme::$Slic3r::GUI::Settings->{_}{colorscheme}"};
+        $myGetSchemeName->();
+    } else {
+        Slic3r::GUI::ColorScheme->getDefault();
+    }
     
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, [250,-1], wxTAB_TRAVERSAL);
     $self->{user_drawn_background} = $^O ne 'darwin';
@@ -38,9 +48,10 @@ sub _repaint {
         # On MacOS the background is erased, on Windows the background is not erased 
         # and on Linux/GTK the background is erased to gray color.
         # Fill DC with the background on Windows & Linux/GTK.
-        my $color = Wx::SystemSettings::GetSystemColour(wxSYS_COLOUR_3DLIGHT);
-        $dc->SetPen(Wx::Pen->new($color, 1, wxSOLID));
-        $dc->SetBrush(Wx::Brush->new($color, wxSOLID));
+        my $brush_background = Wx::Brush->new(Wx::Colour->new(@BACKGROUND255), wxSOLID);
+        my $pen_background   = Wx::Pen->new(Wx::Colour->new(@BACKGROUND255), 1, wxSOLID);
+        $dc->SetPen($pen_background);
+        $dc->SetBrush($brush_background);
         my $rect = $self->GetUpdateRegion()->GetBox();
         $dc->DrawRectangle($rect->GetLeft(), $rect->GetTop(), $rect->GetWidth(), $rect->GetHeight());
     }
@@ -89,7 +100,7 @@ sub _repaint {
     # draw bed fill
     {
         $dc->SetPen(Wx::Pen->new(Wx::Colour->new(0,0,0), 1, wxSOLID));
-        $dc->SetBrush(Wx::Brush->new(Wx::Colour->new(255,255,255), wxSOLID));
+        $dc->SetBrush(Wx::Brush->new(Wx::Colour->new(@BED_COLOR), wxSOLID));
         $dc->DrawPolygon([ map $self->to_pixels($_), @$bed_shape ], 0, 0);
     }
     
@@ -105,7 +116,7 @@ sub _repaint {
         }
         @polylines = @{intersection_pl(\@polylines, [$bed_polygon])};
         
-        $dc->SetPen(Wx::Pen->new(Wx::Colour->new(230,230,230), 1, wxSOLID));
+        $dc->SetPen(Wx::Pen->new(Wx::Colour->new(@BED_GRID), 1, wxSOLID));
         $dc->DrawLine(map @{$self->to_pixels([map unscale($_), @$_])}, @$_[0,-1]) for @polylines;
     }
     

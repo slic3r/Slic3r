@@ -509,6 +509,87 @@ sub disable {
     $self->y_textctrl->Disable;
 }
 
+package Slic3r::GUI::OptionsGroup::Field::Point3;
+use Moo;
+extends 'Slic3r::GUI::OptionsGroup::Field::wxSizer';
+
+has 'x_textctrl' => (is => 'rw');
+has 'y_textctrl' => (is => 'rw');
+has 'z_textctrl' => (is => 'rw');
+
+use Slic3r::Geometry qw(X Y Z);
+use Wx qw(:misc :sizer);
+use Wx::Event qw(EVT_TEXT);
+
+sub BUILD {
+    my ($self) = @_;
+    
+    my $sizer = Wx::BoxSizer->new(wxHORIZONTAL);
+    $self->wxSizer($sizer);
+    
+    my $field_size = Wx::Size->new(40, -1);
+    
+    $self->x_textctrl(Wx::TextCtrl->new($self->parent, -1, $self->option->default->[X], wxDefaultPosition, $field_size));
+    $self->y_textctrl(Wx::TextCtrl->new($self->parent, -1, $self->option->default->[Y], wxDefaultPosition, $field_size));
+    $self->z_textctrl(Wx::TextCtrl->new($self->parent, -1, $self->option->default->[Z], wxDefaultPosition, $field_size));
+    
+    my @items = (
+        Wx::StaticText->new($self->parent, -1, "x:"),
+        $self->x_textctrl,
+        Wx::StaticText->new($self->parent, -1, "  y:"),
+        $self->y_textctrl,
+        Wx::StaticText->new($self->parent, -1, "  z:"),
+        $self->z_textctrl,
+    );
+    $sizer->Add($_, 0, wxALIGN_CENTER_VERTICAL, 0) for @items;
+    
+    if ($self->option->tooltip) {
+        foreach my $item (@items) {
+            $item->SetToolTipString($self->option->tooltip)
+                if $item->can('SetToolTipString');
+        }
+    }
+    
+    EVT_TEXT($self->parent, $_, sub {
+        $self->_on_change($self->option->opt_id);
+    }) for $self->x_textctrl, $self->y_textctrl, $self->z_textctrl;
+}
+
+sub set_value {
+    my ($self, $value) = @_;
+    
+    $self->disable_change_event(1);
+    $self->x_textctrl->SetValue($value->[X]);
+    $self->y_textctrl->SetValue($value->[Y]);
+    $self->z_textctrl->SetValue($value->[Z]);
+    $self->disable_change_event(0);
+}
+
+sub get_value {
+    my ($self) = @_;
+    
+    return [
+        $self->x_textctrl->GetValue,
+        $self->y_textctrl->GetValue,
+        $self->z_textctrl->GetValue,
+    ];
+}
+
+sub enable {
+    my ($self) = @_;
+    
+    $self->x_textctrl->Enable;
+    $self->y_textctrl->Enable;
+    $self->z_textctrl->Enable;
+}
+
+sub disable {
+    my ($self) = @_;
+    
+    $self->x_textctrl->Disable;
+    $self->y_textctrl->Disable;
+    $self->z_textctrl->Disable;
+}
 
 package Slic3r::GUI::OptionsGroup::Field::Slider;
 use Moo;

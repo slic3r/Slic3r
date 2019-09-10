@@ -37,7 +37,7 @@ enum InfillPattern {
     ipRectilinear, ipGrid, ipAlignedRectilinear,
     ipTriangles, ipStars, ipCubic, 
     ipConcentric, ipHoneycomb, ip3DHoneycomb,
-    ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral,
+    ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral,
 };
 
 enum SupportMaterialPattern {
@@ -80,6 +80,7 @@ template<> inline t_config_enum_values ConfigOptionEnum<InfillPattern>::get_enum
     keys_map["concentric"]          = ipConcentric;
     keys_map["honeycomb"]           = ipHoneycomb;
     keys_map["3dhoneycomb"]         = ip3DHoneycomb;
+    keys_map["gyroid"]              = ipGyroid;
     keys_map["hilbertcurve"]        = ipHilbertCurve;
     keys_map["archimedeanchords"]   = ipArchimedeanChords;
     keys_map["octagramspiral"]      = ipOctagramSpiral;
