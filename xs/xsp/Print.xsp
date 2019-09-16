@@ -129,7 +129,6 @@ _constant()
 
     %name{_detect_surfaces_type} void detect_surfaces_type();
     void project_nonplanar_surfaces();
-    void merge_nonplanar_surfaces();
     void debug_svg_print();
     void move_nonplanar_surfaces_up();
     void process_external_surfaces();

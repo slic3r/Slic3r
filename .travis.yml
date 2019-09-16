@@ -7,10 +7,10 @@ install:
 - export CXX=g++-4.9
 - export CC=g++-4.9
 - source $HOME/perl5/perlbrew/etc/bashrc
+script:
 - bash package/linux/travis-setup.sh
 - perlbrew switch slic3r-perl
-- perl .Build.PL
-
+- perl ./Build.PL
 after_success:
 - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
 - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
