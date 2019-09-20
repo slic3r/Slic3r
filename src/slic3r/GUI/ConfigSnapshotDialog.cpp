@@ -1,0 +1,170 @@
+#include "ConfigSnapshotDialog.hpp"
+#include "I18N.hpp"
+
+#include "../Config/Snapshot.hpp"
+
+#include "libslic3r/Utils.hpp"
+#include "libslic3r/Time.hpp"
+#include "GUI_App.hpp"
+#include "wxExtensions.hpp"
+
+namespace Slic3r { 
+namespace GUI {
+
+static wxString format_reason(const Config::Snapshot::Reason reason) 
+{
+    switch (reason) {
+    case Config::Snapshot::SNAPSHOT_UPGRADE:
+        return wxString(_(L("Upgrade")));
+    case Config::Snapshot::SNAPSHOT_DOWNGRADE:
+        return wxString(_(L("Downgrade")));
+    case Config::Snapshot::SNAPSHOT_BEFORE_ROLLBACK:
+        return wxString(_(L("Before roll back")));
+    case Config::Snapshot::SNAPSHOT_USER:
+        return wxString(_(L("User")));
+    case Config::Snapshot::SNAPSHOT_UNKNOWN:
+    default:
+        return wxString(_(L("Unknown")));
+    }
+}
+
+static wxString generate_html_row(const Config::Snapshot &snapshot, bool row_even, bool snapshot_active)
+{
+    // Start by declaring a row with an alternating background color.
+    wxString text = "<tr bgcolor=\"";
+    text += snapshot_active ? "#B3FFCB" : (row_even ? "#FFFFFF" : "#D5D5D5");
+    text += "\">";
+    text += "<td>";
+    // Format the row header.
+    text += wxString("<font size=\"5\"><b>") + (snapshot_active ? _(L("Active")) + ": " : "") + 
+        Utils::format_local_date_time(snapshot.time_captured) + ": " + format_reason(snapshot.reason);
+    if (! snapshot.comment.empty())
+        text += " (" + wxString::FromUTF8(snapshot.comment.data()) + ")";
+    text += "</b></font><br>";
+    // End of row header.
+    text += _(L("slic3r version")) + ": " + snapshot.slic3r_version_captured.to_string() + "<br>";
+    text += _(L("print")) + ": " + snapshot.print + "<br>";
+    text += _(L("filaments")) + ": " + snapshot.filaments.front() + "<br>";
+    text += _(L("printer")) + ": " + snapshot.printer + "<br>";
+
+    bool compatible = true;
+    for (const Config::Snapshot::VendorConfig &vc : snapshot.vendor_configs) {
+        text += _(L("vendor")) + ": " + vc.name +", " + _(L("version")) + ": " + vc.version.config_version.to_string() + 
+				", " + _(L("min slic3r version")) + ": " + vc.version.min_slic3r_version.to_string();
+        if (vc.version.max_slic3r_version != Semver::inf())
+            text += ", " + _(L("max slic3r version")) + ": " + vc.version.max_slic3r_version.to_string();
+        text += "<br>";
+        for (const std::pair<std::string, std::set<std::string>> &model : vc.models_variants_installed) {
+            text += _(L("model")) + ": " + model.first + ", " + _(L("variants")) + ": ";
+            for (const std::string &variant : model.second) {
+                if (&variant != &*model.second.begin())
+                    text += ", ";
+                text += variant;
+            }
+            text += "<br>";
+        }
+        if (! vc.version.is_current_slic3r_supported()) { compatible = false; }
+    }
+
+    if (! compatible) {
+        text += "<p align=\"right\">" + wxString::Format(_(L("Incompatible with this %s")), SLIC3R_APP_NAME) + "</p>";
+    }
+    else if (! snapshot_active)
+        text += "<p align=\"right\"><a href=\"" + snapshot.id + "\">" + _(L("Activate")) + "</a></p>";
+    text += "</td>";
+	text += "</tr>";
+    return text;
+}
+
+static wxString generate_html_page(const Config::SnapshotDB &snapshot_db, const wxString &on_snapshot)
+{
+    wxString text = 
+        "<html>"
+        "<body bgcolor=\"#ffffff\" cellspacing=\"2\" cellpadding=\"0\" border=\"0\" link=\"#800000\">"
+        "<font color=\"#000000\">";
+    text += "<table style=\"width:100%\">";
+    for (size_t i_row = 0; i_row < snapshot_db.snapshots().size(); ++ i_row) {
+        const Config::Snapshot &snapshot = snapshot_db.snapshots()[snapshot_db.snapshots().size() - i_row - 1];
+        text += generate_html_row(snapshot, i_row & 1, snapshot.id == on_snapshot);
+    }
+    text +=
+        "</table>"
+        "</font>"
+        "</body>"
+        "</html>";
+    return text;
+}
+
+ConfigSnapshotDialog::ConfigSnapshotDialog(const Config::SnapshotDB &snapshot_db, const wxString &on_snapshot)
+    : DPIDialog(NULL, wxID_ANY, _(L("Configuration Snapshots")), wxDefaultPosition, 
+               wxSize(45 * wxGetApp().em_unit(), 40 * wxGetApp().em_unit()), 
+               wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER | wxMAXIMIZE_BOX)
+{
+    this->SetFont(wxGetApp().normal_font());
+    this->SetBackgroundColour(*wxWHITE);
+    
+    wxBoxSizer* vsizer = new wxBoxSizer(wxVERTICAL);
+    this->SetSizer(vsizer);
+
+    // text
+    html = new wxHtmlWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO);
+    {
+        wxFont font = wxGetApp().normal_font();//wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
+        #ifdef __WXMSW__
+            const int fs = font.GetPointSize();
+            const int fs1 = static_cast<int>(0.8f*fs);
+            const int fs2 = static_cast<int>(1.1f*fs);
+            int size[] = {fs1, fs1, fs1, fs1, fs2, fs2, fs2};
+//             int size[] = {8,8,8,8,11,11,11};
+        #else
+            int size[] = {11,11,11,11,14,14,14};
+        #endif
+        html->SetFonts(font.GetFaceName(), font.GetFaceName(), size);
+        html->SetBorders(2);
+        wxString text = generate_html_page(snapshot_db, on_snapshot);
+        html->SetPage(text);
+        vsizer->Add(html, 1, wxEXPAND | wxALIGN_LEFT | wxRIGHT | wxBOTTOM, 0);
+        html->Bind(wxEVT_HTML_LINK_CLICKED, &ConfigSnapshotDialog::onLinkClicked, this);
+    }
+    
+    wxStdDialogButtonSizer* buttons = this->CreateStdDialogButtonSizer(wxCLOSE);
+    this->SetEscapeId(wxID_CLOSE);
+    this->Bind(wxEVT_BUTTON, &ConfigSnapshotDialog::onCloseDialog, this, wxID_CLOSE);
+    vsizer->Add(buttons, 0, wxEXPAND | wxRIGHT | wxBOTTOM, 3);
+}
+
+void ConfigSnapshotDialog::on_dpi_changed(const wxRect &suggested_rect)
+{
+    wxFont font = GetFont();
+    const int fs = font.GetPointSize();
+    const int fs1 = static_cast<int>(0.8f*fs);
+    const int fs2 = static_cast<int>(1.1f*fs);
+    int font_size[] = { fs1, fs1, fs1, fs1, fs2, fs2, fs2 };
+
+    html->SetFonts(font.GetFaceName(), font.GetFaceName(), font_size);
+    html->Refresh();
+
+    const int& em = em_unit();
+
+    msw_buttons_rescale(this, em, { wxID_CLOSE});
+
+    const wxSize& size = wxSize(45 * em, 40 * em);
+    SetMinSize(size);
+    Fit();
+
+    Refresh();
+}
+
+void ConfigSnapshotDialog::onLinkClicked(wxHtmlLinkEvent &event)
+{
+    m_snapshot_to_activate = event.GetLinkInfo().GetHref();
+    this->EndModal(wxID_CLOSE);
+}
+
+void ConfigSnapshotDialog::onCloseDialog(wxEvent &)
+{
+    this->EndModal(wxID_CLOSE);
+}
+
+} // namespace GUI
+} // namespace Slic3r

@@ -33,7 +33,7 @@
         %code{% RETVAL = ConfigBase__set_deserialize(THIS, opt_key, str); %};
     void set_ifndef(t_config_option_key opt_key, SV* value, bool deserialize = false)
         %code{% ConfigBase__set_ifndef(THIS, opt_key, value, deserialize); %};
-    std::string serialize(t_config_option_key opt_key);
+    std::string opt_serialize(t_config_option_key opt_key);
     double get_abs_value(t_config_option_key opt_key);
     %name{get_abs_value_over}
         double get_abs_value(t_config_option_key opt_key, double ratio_over);
@@ -49,7 +49,7 @@
     void erase(t_config_option_key opt_key);
     void normalize();
     %name{setenv} void setenv_();
-    double min_object_distance() %code{% RETVAL = PrintConfig::min_object_distance(THIS); %};
+    double min_object_distance() %code{% PrintConfig cfg; cfg.apply(*THIS, true); RETVAL = cfg.min_object_distance(); %};
     static DynamicPrintConfig* load(char *path)
         %code%{
             auto config = new DynamicPrintConfig();
@@ -95,7 +95,7 @@
         %code{% RETVAL = ConfigBase__set_deserialize(THIS, opt_key, str); %};
     void set_ifndef(t_config_option_key opt_key, SV* value, bool deserialize = false)
         %code{% ConfigBase__set_ifndef(THIS, opt_key, value, deserialize); %};
-    std::string serialize(t_config_option_key opt_key);
+    std::string opt_serialize(t_config_option_key opt_key);
     double get_abs_value(t_config_option_key opt_key);
     %name{get_abs_value_over}
         double get_abs_value(t_config_option_key opt_key, double ratio_over);
@@ -137,7 +137,7 @@ PROTOTYPES: DISABLE
 SV*
 print_config_def()
     CODE:
-        t_optiondef_map &def = Slic3r::print_config_def.options;
+        t_optiondef_map &def = *const_cast<t_optiondef_map*>(&Slic3r::print_config_def.options);
         
         HV* options_hv = newHV();
         for (t_optiondef_map::iterator oit = def.begin(); oit != def.end(); ++oit) {
@@ -159,6 +159,8 @@ print_config_def()
                 opt_type = "s@";
             } else if (optdef->type == coPoint || optdef->type == coPoints) {
                 opt_type = "point";
+            } else if (optdef->type == coPoint3) {
+                opt_type = "point3";
             } else if (optdef->type == coBool || optdef->type == coBools) {
                 opt_type = "bool";
             } else if (optdef->type == coEnum) {
@@ -221,8 +223,8 @@ print_config_def()
                 (void)hv_stores( hv, "labels", newRV_noinc((SV*)av) );
             }
             
-            if (optdef->default_value != NULL)
-                (void)hv_stores( hv, "default", ConfigOption_to_SV(*optdef->default_value, *optdef) );
+            if (optdef->default_value)
+                (void)hv_stores( hv, "default", ConfigOption_to_SV(*optdef->default_value.get(), *optdef) );
             (void)hv_store( options_hv, opt_key.c_str(), opt_key.length(), newRV_noinc((SV*)hv), 0 );
         }
         

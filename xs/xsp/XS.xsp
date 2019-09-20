@@ -20,7 +20,7 @@ VERSION()
 SV*
 BUILD()
     CODE:
-        RETVAL = newSVpv(SLIC3R_BUILD, 0);
+        RETVAL = newSVpv(SLIC3R_BUILD_ID, 0);
     OUTPUT: RETVAL
 
 SV*
@@ -32,7 +32,7 @@ DEBUG_OUT_PATH_PREFIX()
 SV*
 FORK_NAME()
     CODE:
-        RETVAL = newSVpv(SLIC3R_FORK_NAME, 0);
+        RETVAL = newSVpv(SLIC3R_APP_NAME, 0);
     OUTPUT: RETVAL
 
 void
