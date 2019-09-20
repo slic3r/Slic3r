@@ -5,7 +5,6 @@
 #include <queue>
 #include <string>
 #include <vector>
-#include <boost/core/noncopyable.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>

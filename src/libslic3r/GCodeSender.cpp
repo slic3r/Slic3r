@@ -7,7 +7,6 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/asio/serial_port_service.hpp>
 
 #if defined(__APPLE__) || defined(__OpenBSD__)
 #include <termios.h>
@@ -550,7 +549,7 @@ void
 GCodeSender::set_DTR(bool on)
 {
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-    boost::asio::serial_port::native_handle_type handle = this->serial.native_handle();
+    boost::asio::serial_port_service::native_handle_type handle = this->serial.native_handle();
     if (on)
         EscapeCommFunction(handle, SETDTR);
     else
