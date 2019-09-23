@@ -86,30 +86,37 @@ SCENARIO("thin walls: ")
             }
         }
     }
-    
+
     //TODO: compare with mainline slic3r
-    GIVEN("semicicumference"){
+    GIVEN("semicicumference") {
         ExPolygon expolygon;
         expolygon.contour = Slic3r::Polygon{ Points{
-            Point{ 1185881, 829367 }, Point{ 1421988, 1578184 }, Point{ 1722442, 2303558 }, Point{ 2084981, 2999998 }, Point{ 2506843, 3662186 }, Point{ 2984809, 4285086 }, Point{ 3515250, 4863959 }, Point{ 4094122, 5394400 }, Point{ 4717018, 5872368 }, Point{ 5379210, 6294226 }, Point{ 6075653, 6656769 }, Point{ 6801033, 6957229 }, Point{ 7549842, 7193328 }, Point{ 8316383, 7363266 }, Point{ 9094809, 7465751 }, Point{ 9879211, 7500000 }, Point{ 10663611, 7465750 }, Point{ 11442038, 7363265 }, Point{ 12208580, 7193327 }, Point{ 12957389, 6957228 }, Point{ 13682769, 6656768 }, Point{ 14379209, 6294227 }, Point{ 15041405, 5872366 }, Point{ 15664297, 5394401 }, Point{ 16243171, 4863960 }, Point{ 16758641, 4301424 }, Point{ 17251579, 3662185 }, Point{ 17673439, 3000000 }, Point{ 18035980, 2303556 }, Point{ 18336441, 1578177 }, Point{ 18572539, 829368 }, Point{ 18750748, 0 }, Point{ 19758422, 0 }, Point{ 19727293, 236479 }, Point{ 19538467, 1088188 }, Point{ 19276136, 1920196 }, Point{ 18942292, 2726179 }, Point{ 18539460, 3499999 }, Point{ 18070731, 4235755 }, Point{ 17539650, 4927877 }, Point{ 16950279, 5571067 }, Point{ 16307090, 6160437 }, Point{ 15614974, 6691519 }, Point{ 14879209, 7160248 }, Point{ 14105392, 7563079 }, Point{ 13299407, 7896927 }, Point{ 12467399, 8159255 }, Point{ 11615691, 8348082 }, Point{ 10750769, 8461952 }, Point{ 9879211, 8500000 }, Point{ 9007652, 8461952 }, Point{ 8142729, 8348082 }, Point{ 7291022, 8159255 }, Point{ 6459015, 7896927 }, Point{ 5653029, 7563079 }, Point{ 4879210, 7160247 }, Point{ 4143447, 6691519 }, Point{ 3451331, 6160437 }, Point{ 2808141, 5571066 }, Point{ 2218773, 4927878 }, Point{ 1687689, 4235755 }, Point{ 1218962, 3499999 }, Point{ 827499, 2748020 }, Point{ 482284, 1920196 }, Point{ 219954, 1088186 }, Point{ 31126, 236479 }, Point{ 0, 0 }, Point{ 1005754, 0 }
+            Point{ 1185881, 829367 }, Point{ 1421988, 1578184 }, Point{ 1722442, 2303558 }, Point{ 2084981, 2999998 }, Point{ 2506843, 3662186 }, Point{ 2984809, 4285086 }, Point{ 3515250, 4863959 }, Point{ 4094122, 5394400 }, Point{ 4717018, 5872368 }, 
+            Point{ 5379210, 6294226 }, Point{ 6075653, 6656769 }, Point{ 6801033, 6957229 }, Point{ 7549842, 7193328 }, Point{ 8316383, 7363266 }, Point{ 9094809, 7465751 }, Point{ 9879211, 7500000 }, Point{ 10663611, 7465750 }, Point{ 11442038, 7363265 }, 
+            Point{ 12208580, 7193327 }, Point{ 12957389, 6957228 }, Point{ 13682769, 6656768 }, Point{ 14379209, 6294227 }, Point{ 15041405, 5872366 }, Point{ 15664297, 5394401 }, Point{ 16243171, 4863960 }, Point{ 16758641, 4301424 }, Point{ 17251579, 3662185 }, 
+            Point{ 17673439, 3000000 }, Point{ 18035980, 2303556 }, Point{ 18336441, 1578177 }, Point{ 18572539, 829368 }, Point{ 18750748, 0 }, Point{ 19758422, 0 }, Point{ 19727293, 236479 }, Point{ 19538467, 1088188 }, Point{ 19276136, 1920196 }, 
+            Point{ 18942292, 2726179 }, Point{ 18539460, 3499999 }, Point{ 18070731, 4235755 }, Point{ 17539650, 4927877 }, Point{ 16950279, 5571067 }, Point{ 16307090, 6160437 }, Point{ 15614974, 6691519 }, Point{ 14879209, 7160248 }, Point{ 14105392, 7563079 }, 
+            Point{ 13299407, 7896927 }, Point{ 12467399, 8159255 }, Point{ 11615691, 8348082 }, Point{ 10750769, 8461952 }, Point{ 9879211, 8500000 }, Point{ 9007652, 8461952 }, Point{ 8142729, 8348082 }, Point{ 7291022, 8159255 }, Point{ 6459015, 7896927 },
+            Point{ 5653029, 7563079 }, Point{ 4879210, 7160247 }, Point{ 4143447, 6691519 }, Point{ 3451331, 6160437 }, Point{ 2808141, 5571066 }, Point{ 2218773, 4927878 }, Point{ 1687689, 4235755 }, Point{ 1218962, 3499999 }, Point{ 827499, 2748020 }, 
+            Point{ 482284, 1920196 }, Point{ 219954, 1088186 }, Point{ 31126, 236479 }, Point{ 0, 0 }, Point{ 1005754, 0 }
         } };
 
-        WHEN("creating the medial axis"){
+        WHEN("creating the medial axis") {
             Polylines res;
             expolygon.medial_axis(scale_(1.324888), scale_(0.25), &res);
 
-            THEN("medial axis of a semicircumference is a single line"){
+            THEN("medial axis of a semicircumference is a single line") {
                 REQUIRE(res.size() == 1);
             }
-            THEN("all medial axis segments of a semicircumference have the same orientation (but the 2 end points)"){
+            THEN("all medial axis segments of a semicircumference have the same orientation (but the 2 end points)") {
                 Lines lines = res[0].lines();
                 double min_angle = 1, max_angle = -1;
                 //std::cout << "first angle=" << lines[0].ccw(lines[1].b) << "\n";
-                for (int idx = 1; idx < lines.size()-1; idx++){
+                for (int idx = 1; idx < lines.size() - 1; idx++) {
                     double angle = lines[idx - 1].ccw(lines[idx].b);
                     if (std::abs(angle) - EPSILON < 0) angle = 0;
                     //if (angle < 0) std::cout << unscale_(lines[idx - 1].a.x()) << ":" << unscale_(lines[idx - 1].a.y()) << " -> " << unscale_(lines[idx - 1].b.x()) << ":" << unscale_(lines[idx - 1].b.y()) << " -> " << unscale_(lines[idx].b.x()) << ":" << unscale_(lines[idx].b.y()) << "\n";
-                    std::cout << "angle=" << 180*lines[idx].a.ccw_angle(lines[idx-1].a, lines[idx].b)/PI << "\n";
+                    std::cout << "angle=" << 180 * lines[idx].a.ccw_angle(lines[idx - 1].a, lines[idx].b) / PI << "\n";
                     min_angle = std::min(min_angle, angle);
                     max_angle = std::max(max_angle, angle);
                 }
@@ -119,6 +126,28 @@ SCENARIO("thin walls: ")
                 bool allcw = (min_angle >= 0 && max_angle >= 0);
                 bool allsame_orientation = allccw || allcw;
                 REQUIRE(allsame_orientation);
+            }
+        }
+    }
+    
+
+    GIVEN("round with large and very small distance between points"){
+        ExPolygon expolygon;
+        expolygon.contour = Slic3r::Polygon{ Points{
+            Point::new_scale(15.181601,-2.389639), Point::new_scale(15.112616,-1.320034), Point::new_scale(14.024491,-0.644338), Point::new_scale(13.978982,-0.624495), Point::new_scale(9.993299,0.855584), Point::new_scale(9.941970,0.871195), Point::new_scale(5.796743,1.872643),
+            Point::new_scale(5.743826,1.882168), Point::new_scale(1.509170,2.386464), Point::new_scale(1.455460,2.389639), Point::new_scale(-2.809359,2.389639), Point::new_scale(-2.862805,2.386464), Point::new_scale(-7.097726,1.882168), Point::new_scale(-7.150378,1.872643), Point::new_scale(-11.286344,0.873576),
+            Point::new_scale(-11.335028,0.858759), Point::new_scale(-14.348632,-0.237938), Point::new_scale(-14.360538,-0.242436), Point::new_scale(-15.181601,-0.737570), Point::new_scale(-15.171309,-2.388509)
+        } };
+        expolygon.holes.push_back(Slic3r::Polygon{ Points{
+            Point::new_scale( -11.023311,-1.034226 ), Point::new_scale( -6.920984,-0.042941 ), Point::new_scale( -2.768613,0.463207 ), Point::new_scale( 1.414714,0.463207 ), Point::new_scale( 5.567085,-0.042941 ), Point::new_scale( 9.627910,-1.047563 )
+            } });
+
+        WHEN("creating the medial axis"){
+            Polylines res;
+            expolygon.medial_axis(scale_(2.5), scale_(0.5), &res);
+
+           THEN("medial axis of it is two line"){
+                REQUIRE(res.size() == 2);
             }
         }
     }

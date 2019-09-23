@@ -279,7 +279,6 @@ void concatThickPolylines(ThickPolylines& pp) {
             for (size_t j = 0; j < pp.size(); ++j) {
                 if (j == i) continue;
                 ThickPolyline *other = &pp[j];
-                if (other->first_point().coincides_with(other->last_point())) continue;
                 if (polyline->last_point().coincides_with(other->last_point())) {
                     id_candidate_last_point = j;
                     nbCandidate_last_point++;

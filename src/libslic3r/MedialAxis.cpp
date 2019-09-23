@@ -29,28 +29,30 @@ MedialAxis::polyline_from_voronoi(const Lines& voronoi_edges, ThickPolylines* po
     this->lines = voronoi_edges;
     construct_voronoi(lines.begin(), lines.end(), &this->vd);
 
-    /*
+    typedef const VD::edge_type   edge_t;
+    
     // DEBUG: dump all Voronoi edges
-    {
+    /*{
         for (VD::const_edge_iterator edge = this->vd.edges().begin(); edge != this->vd.edges().end(); ++edge) {
             if (edge->is_infinite()) continue;
-            
+            const edge_t* edgeptr = &*edge;
             ThickPolyline polyline;
             polyline.points.push_back(Point( edge->vertex0()->x(), edge->vertex0()->y() ));
             polyline.points.push_back(Point( edge->vertex1()->x(), edge->vertex1()->y() ));
+            polyline.width.push_back(this->thickness[edgeptr].first);
+            polyline.width.push_back(this->thickness[edgeptr].second);
             polylines->push_back(polyline);
         }
         return;
-    }
-    */
+    }*/
     
-    typedef const VD::edge_type   edge_t;
+    
     
     // collect valid edges (i.e. prune those not belonging to MAT)
     // note: this keeps twins, so it inserts twice the number of the valid edges
     this->valid_edges.clear();
     {
-        std::set<const VD::edge_type*> seen_edges;
+        std::set<const edge_t*> seen_edges;
         for (VD::const_edge_iterator edge = this->vd.edges().begin(); edge != this->vd.edges().end(); ++edge) {
             // if we only process segments representing closed loops, none if the
             // infinite edges (if any) would be part of our MAT anyway
@@ -71,6 +73,18 @@ MedialAxis::polyline_from_voronoi(const Lines& voronoi_edges, ThickPolylines* po
     // iterate through the valid edges to build polylines
     while (!this->edges.empty()) {
         const edge_t* edge = *this->edges.begin();
+        if (this->thickness[edge].first > this->max_width*1.001) {
+            //std::cerr << "Error, edge.first has a thickness of " << unscaled(this->thickness[edge].first) << " > " << unscaled(this->max_width) << "\n";
+            //(void)this->edges.erase(edge);
+            //(void)this->edges.erase(edge->twin());
+            //continue;
+        }
+        if (this->thickness[edge].second > this->max_width*1.001) {
+            //std::cerr << "Error, edge.second has a thickness of " << unscaled(this->thickness[edge].second) << " > " << unscaled(this->max_width) << "\n";
+            //(void)this->edges.erase(edge);
+            //(void)this->edges.erase(edge->twin());
+            //continue;
+        }
         
         // start a polyline
         ThickPolyline polyline;
@@ -97,7 +111,7 @@ MedialAxis::polyline_from_voronoi(const Lines& voronoi_edges, ThickPolylines* po
         
         assert(polyline.width.size() == polyline.points.size());
         
-        // prevent loop endpoints from being extended
+        // if loop, set endpoints to false
         if (polyline.first_point().coincides_with(polyline.last_point())) {
             polyline.endpoints.first = false;
             polyline.endpoints.second = false;
@@ -446,7 +460,7 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         // only consider 2-point polyline with endpoint
-        if (polyline.points.size() != 2) continue;
+        //if (polyline.points.size() != 2) continue; // too restrictive.
         if (polyline.endpoints.first) polyline.reverse();
         else if (!polyline.endpoints.second) continue;
         if (polyline.width.back() > EPSILON) continue;
@@ -496,6 +510,10 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
                 sum_dot += dot_temp;
             }
         }
+        sum_dot = abs(sum_dot);
+        std::cout << "    with mindot= " << min_dot << "< 0.5" << " ; with sum_dot= " << sum_dot << "< 0.2" << " ; with crosspoint.size= " << crosspoint.size() << " ; with coeff_contour_angle= " << coeff_contour_angle << " 0.2> " << (1 - (coeff_contour_angle / (PI / 2)))
+            << " ; length= " << unscaled(polyline.length())<<" >? 1.42*width= "<< polyline.width.front()<<"->"<< polyline.width.back() << "\n";
+
         //only consider very shallow angle for contour
         if (mindot > 0.15 &&
             (1 - (coeff_contour_angle / (PI / 2))) > 0.2) continue;
@@ -504,6 +522,8 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
         if (crosspoint.size() != 2) continue;
         if (sum_dot > 0.2) continue;
         if (min_dot > 0.5) continue;
+        //don't remove useful bits. TODO: use the mindot to know by how much to multiply (1 when 90°, 1.42 when 45+, 1 when 0°)
+        if (polyline.length() > polyline.width.front()*1.42) continue;
 
         //don't pull, it distords the line if there are too many points.
         //// pull it a bit, depends on my size, the dot?, and the coeff at my 0-end (~14% for a square, almost 0 for a gentle curve)
@@ -534,6 +554,8 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
         concatThickPolylines(pp);
         ///reorder, in case of change
         std::sort(pp.begin(), pp.end(), [](const ThickPolyline & a, const ThickPolyline & b) { return a.length() < b.length(); });
+        //have to redo it to remove multi-branch bits.
+        fusion_curve(pp);
     }
 }
 
@@ -622,8 +644,14 @@ MedialAxis::extends_line_both_side(ThickPolylines& pp) {
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         this->extends_line(polyline, anchors, this->min_width);
-        polyline.reverse();
-        this->extends_line(polyline, anchors, this->min_width);
+        if (!polyline.points.empty()) {
+            polyline.reverse();
+            this->extends_line(polyline, anchors, this->min_width);
+        }
+        if (polyline.points.empty()) {
+            pp.erase(pp.begin() + i);
+            --i;
+        }
     }
 }
 
@@ -742,9 +770,8 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
             l2.extend_end(max_width);
             (void)bounds->contour.first_intersection(l2, &new_bound);
         }
-        if (new_bound.coincides_with_epsilon(new_back)) {
+        if (new_bound.coincides_with_epsilon(new_back))
             return;
-        }
         polyline.points.push_back(new_bound);
         //polyline.width.push_back(join_width);
         //it thickens the line a bit too early, imo
@@ -1304,6 +1331,22 @@ MedialAxis::remove_too_short_polylines(ThickPolylines& pp, const coord_t min_siz
 }
 
 void
+MedialAxis::check_width(ThickPolylines& pp, double max_width, std::string msg)
+{
+    //remove empty polyline
+    int nb = 0;
+    for (size_t i = 0; i < pp.size(); ++i) {
+        for (size_t j = 0; j < pp[i].width.size(); ++j) {
+            if (pp[i].width[j] > max_width * 1.01) {
+                std::cout << "Error " << msg << " width " << unscaled(pp[i].width[j]) << "(" << i << ":" << j << ") > " << unscaled(max_width) << "\n";
+                nb++;
+            }
+        }
+    }
+    if (nb > 0) std::cout << "== nbBig = " << nb << " ==\n";
+}
+
+void
 MedialAxis::ensure_not_overextrude(ThickPolylines& pp)
 {
     //ensure the volume extruded is correct for what we have been asked
@@ -1494,6 +1537,27 @@ MedialAxis::build(ThickPolylines &polylines_out)
     // compute the Voronoi diagram and extract medial axis polylines
     ThickPolylines pp;
     this->polyline_from_voronoi(this->expolygon.lines(), &pp);
+
+    //sanity check, as the voronoi can return (abeit very rarely) randomly high values.
+    for (ThickPolyline &tp : pp) {
+        for (int i = 0; i < tp.width.size(); i++) {
+            if (tp.width[i] > this->max_width) {
+                tp.width[i] = this->max_width;
+            }
+        }
+    }
+    //std::cout << "polyline_from_voronoi\n";
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_1_voronoi_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    //svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.draw(pp);
+    //    svg.Close();
+    //}
+
+    //check_width(pp, this->max_width, "polyline_from_voronoi");
     
     concatThickPolylines(pp);
 
@@ -1522,6 +1586,7 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::cout << "\n";
     //}
 
+    // "remove" the little paths that are at the outside of a curve.
     fusion_curve(pp);
     //{
     //    std::stringstream stri;
