@@ -9,6 +9,7 @@
 #include "3mf.hpp"
 
 #include <limits>
+#include <stdexcept>
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -100,6 +101,13 @@ const char* INVALID_OBJECT_TYPES[] =
     "support",
     "surface",
     "other"
+};
+
+class version_error : public std::runtime_error
+{
+public:
+    version_error(const std::string& what_arg) : std::runtime_error(what_arg) {}
+    version_error(const char* what_arg) : std::runtime_error(what_arg) {}
 };
 
 const char* get_attribute_value_charptr(const char** attributes, unsigned int attributes_size, const char* attribute_key)
@@ -567,7 +575,7 @@ namespace Slic3r {
                     {
                         // ensure the zip archive is closed and rethrow the exception
                         close_zip_reader(&archive);
-                        throw e;
+                        throw std::runtime_error(e.what());
                     }
                 }
             }
@@ -705,25 +713,46 @@ namespace Slic3r {
         XML_SetElementHandler(m_xml_parser, _3MF_Importer::_handle_start_model_xml_element, _3MF_Importer::_handle_end_model_xml_element);
         XML_SetCharacterDataHandler(m_xml_parser, _3MF_Importer::_handle_model_xml_characters);
 
-        void* parser_buffer = XML_GetBuffer(m_xml_parser, (int)stat.m_uncomp_size);
-        if (parser_buffer == nullptr)
+        struct CallbackData
         {
-            add_error("Unable to create buffer");
+            XML_Parser& parser;
+            const mz_zip_archive_file_stat& stat;
+
+            CallbackData(XML_Parser& parser, const mz_zip_archive_file_stat& stat) : parser(parser), stat(stat) {}
+        };
+
+        CallbackData data(m_xml_parser, stat);
+
+        mz_bool res = 0;
+
+        try
+        {
+            res = mz_zip_reader_extract_file_to_callback(&archive, stat.m_filename, [](void* pOpaque, mz_uint64 file_ofs, const void* pBuf, size_t n)->size_t {
+                CallbackData* data = (CallbackData*)pOpaque;
+                if (!XML_Parse(data->parser, (const char*)pBuf, (int)n, (file_ofs + n == data->stat.m_uncomp_size) ? 1 : 0))
+                {
+                    char error_buf[1024];
+                    ::sprintf(error_buf, "Error (%s) while parsing '%s' at line %d", XML_ErrorString(XML_GetErrorCode(data->parser)), data->stat.m_filename, (int)XML_GetCurrentLineNumber(data->parser));
+                    throw std::runtime_error(error_buf);
+                }
+
+                return n;
+                }, &data, 0);
+        }
+        catch (const version_error& e)
+        {
+            // rethrow the exception
+            throw std::runtime_error(e.what());
+        }
+        catch (std::exception& e)
+        {
+            add_error(e.what());
             return false;
         }
 
-        mz_bool res = mz_zip_reader_extract_file_to_mem(&archive, stat.m_filename, parser_buffer, (size_t)stat.m_uncomp_size, 0);
         if (res == 0)
         {
-            add_error("Error while reading model data to buffer");
-            return false;
-        }
-
-        if (!XML_ParseBuffer(m_xml_parser, (int)stat.m_uncomp_size, 1))
-        {
-            char error_buf[1024];
-            ::sprintf(error_buf, "Error (%s) while parsing xml file at line %d", XML_ErrorString(XML_GetErrorCode(m_xml_parser)), (int)XML_GetCurrentLineNumber(m_xml_parser));
-            add_error(error_buf);
+            add_error("Error while extracting model data from zip archive");
             return false;
         }
 
@@ -1423,8 +1452,8 @@ namespace Slic3r {
 
             if (m_check_version && (m_version > VERSION_3MF))
             {
-                std::string msg = _(L("The selected 3mf file has been saved with a newer version of " + std::string(SLIC3R_APP_NAME) + " and is not compatibile."));
-                throw std::runtime_error(msg.c_str());
+                std::string msg = _(L("The selected 3mf file has been saved with a newer version of " + std::string(SLIC3R_APP_NAME) + " and is not compatible."));
+                throw version_error(msg.c_str());
             }
         }
 

@@ -5,11 +5,11 @@
 #include <vector>
 #include <wx/panel.h>
 #include "wxExtensions.hpp"
-#include "libslic3r/PrintConfig.hpp"
 
 class wxBoxSizer;
 
 namespace Slic3r {
+class DynamicPrintConfig;
 namespace GUI {
 class ConfigOptionsGroup;
 
@@ -48,6 +48,11 @@ public:
     ~ObjectSettings() {}
 
     bool        update_settings_list();
+    /* Additional check for override options: Add options, if its needed.
+     * Example: if Infill is set to 100%, and Fill Pattern is missed in config_to,
+     * we should add fill_pattern to avoid endless loop in update
+     */
+    bool        add_missed_options(DynamicPrintConfig *config_to, const DynamicPrintConfig &config_from);
     void        update_config_values(DynamicPrintConfig*config);
     void        UpdateAndShow(const bool show) override;
     void        msw_rescale();

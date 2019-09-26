@@ -104,8 +104,6 @@ void msw_rescale_word_local_combo(wxBitmapComboBox* combo)
     
     combo->Append(_(L("World coordinates")));
     combo->Append(_(L("Local coordinates")));
-//     combo->SetSelection(0);
-//     combo->SetValue(combo->GetString(0));
 
     wxBitmap empty_bmp(1, combo->GetFont().GetPixelSize().y + 2);
     empty_bmp.SetWidth(0);
@@ -141,20 +139,10 @@ ObjectManipulation::ObjectManipulation(wxWindow* parent) :
 
     ConfigOptionDef def;
 
-    // Objects(sub-objects) name
-//     def.label = L("Name");
-//     def.gui_type = "legend";
-//     def.tooltip = L("Object name");
-//     def.width = 21 * wxGetApp().em_unit();
-//     def.default_value = new ConfigOptionString{ " " };
-//     m_og->append_single_option_line(Option(def, "object_name"));
-
     Line line = Line{ "Name", "Object name" };
 
     auto manifold_warning_icon = [this](wxWindow* parent) {
         m_fix_throught_netfab_bitmap = new wxStaticBitmap(parent, wxID_ANY, wxNullBitmap);
-//         auto sizer = new wxBoxSizer(wxHORIZONTAL);
-//         sizer->Add(m_fix_throught_netfab_bitmap);
 
         if (is_windows10())
             m_fix_throught_netfab_bitmap->Bind(wxEVT_CONTEXT_MENU, [this](wxCommandEvent &e)
@@ -167,11 +155,9 @@ ObjectManipulation::ObjectManipulation(wxWindow* parent) :
                 update_warning_icon_state(wxGetApp().obj_list()->get_mesh_errors_list());
             });
 
-//         return sizer;
         return m_fix_throught_netfab_bitmap;
     };
 
- //   line.append_widget(manifold_warning_icon);
     line.near_label_widget = manifold_warning_icon;
     def.label = "";
     def.gui_type = "legend";
@@ -562,7 +548,7 @@ void ObjectManipulation::update_if_dirty()
 
     if (selection.requires_uniform_scale()) {
         m_lock_bnt->SetLock(true);
-        m_lock_bnt->SetToolTip(_(L("You cann't use non-uniform scaling mode for multiple objects/parts selection")));
+        m_lock_bnt->SetToolTip(_(L("You cannot use non-uniform scaling mode for multiple objects/parts selection")));
         m_lock_bnt->disable();
     }
     else {
@@ -625,6 +611,14 @@ void ObjectManipulation::update_reset_buttons_visibility()
         m_reset_rotation_button->Show(show_rotation);
         m_reset_scale_button->Show(show_scale);
         m_drop_to_bed_button->Show(show_drop_to_bed);
+
+        // Because of CallAfter we need to layout sidebar after Show/hide of reset buttons one more time
+        Sidebar& panel = wxGetApp().sidebar();
+        if (!panel.IsFrozen()) {
+            panel.Freeze();
+            panel.Layout();
+            panel.Thaw();
+        }
     });
 }
 
@@ -660,7 +654,7 @@ void ObjectManipulation::update_mirror_buttons_visibility()
     wxGetApp().CallAfter([this, new_states]{
         for (int i=0; i<3; ++i) {
             if (new_states[i] != m_mirror_buttons[i].second) {
-                const ScalableBitmap* bmp;
+                const ScalableBitmap* bmp = nullptr;
                 switch (new_states[i]) {
                     case mbHidden : bmp = &m_mirror_bitmap_hidden; m_mirror_buttons[i].first->Enable(false); break;
                     case mbShown  : bmp = &m_mirror_bitmap_off; m_mirror_buttons[i].first->Enable(true); break;

@@ -8,6 +8,7 @@
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/GCode/PreviewData.hpp"
 #include "libslic3r/Geometry.hpp"
+#include "libslic3r/ExtrusionEntity.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Technologies.hpp"
 #include "libslic3r/Tesselate.hpp"
@@ -59,10 +60,6 @@
 #endif // ENABLE_RENDER_STATISTICS
 
 static const float TRACKBALLSIZE = 0.8f;
-static const float GROUND_Z = -0.02f;
-
-static const float GIZMO_RESET_BUTTON_HEIGHT = 22.0f;
-static const float GIZMO_RESET_BUTTON_WIDTH = 70.f;
 
 static const float DEFAULT_BG_DARK_COLOR[3] = { 0.478f, 0.478f, 0.478f };
 static const float DEFAULT_BG_LIGHT_COLOR[3] = { 0.753f, 0.753f, 0.753f };
@@ -71,9 +68,11 @@ static const float ERROR_BG_LIGHT_COLOR[3] = { 0.753f, 0.192f, 0.039f };
 //static const float AXES_COLOR[3][3] = { { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } };
 
 // Number of floats
-static const float MAX_VERTEX_BUFFER_SIZE     = 131072 * 6; // 3.15MB
+static const size_t MAX_VERTEX_BUFFER_SIZE     = 131072 * 6; // 3.15MB
 // Reserve size in number of floats.
-static const float VERTEX_BUFFER_RESERVE_SIZE = 131072 * 2; // 1.05MB
+static const size_t VERTEX_BUFFER_RESERVE_SIZE = 131072 * 2; // 1.05MB
+// Reserve size in number of floats, maximum sum of all preallocated buffers.
+static const size_t VERTEX_BUFFER_RESERVE_SIZE_SUM_MAX = 1024 * 1024 * 128 / 4; // 128MB
 
 namespace Slic3r {
 namespace GUI {
@@ -842,22 +841,23 @@ void GLCanvas3D::LegendTexture::fill_color_print_legend_values(const GCodePrevie
     {
         auto& config = wxGetApp().preset_bundle->project_config;
         const std::vector<double>& color_print_values = config.option<ConfigOptionFloats>("colorprint_heights")->values;
-        const int values_cnt = color_print_values.size();
-        if (values_cnt > 0) {
-            auto print_zs = canvas.get_current_print_zs(true);
-            auto z = 0;
-            for (auto i = 0; i < values_cnt; ++i)
+        
+        if (!color_print_values.empty()) {
+            std::vector<double> print_zs = canvas.get_current_print_zs(true);
+            for (auto cp_value : color_print_values)
             {
-                double prev_z = -1.0;
-                for (z; z < print_zs.size(); ++z)
-                    if (fabs(color_print_values[i] - print_zs[z]) < EPSILON) {
-                        prev_z = print_zs[z - 1];
-                        break;
-                    }
-                if (prev_z < 0)
+                auto lower_b = std::lower_bound(print_zs.begin(), print_zs.end(), cp_value - DoubleSlider::epsilon());
+
+                if (lower_b == print_zs.end())
                     continue;
                 
-                cp_legend_values.push_back(std::pair<double, double>(prev_z, color_print_values[i]));
+                double current_z    = *lower_b;
+                double previous_z   = lower_b == print_zs.begin() ? 0.0 : *(--lower_b);
+
+                // to avoid duplicate values, check adding values
+                if (cp_legend_values.empty() || 
+                    !(cp_legend_values.back().first == previous_z && cp_legend_values.back().second == current_z) )
+                    cp_legend_values.push_back(std::pair<double, double>(previous_z, current_z));
             }
         }
     }
@@ -898,11 +898,11 @@ bool GLCanvas3D::LegendTexture::generate(const GCodePreviewData& preview_data, c
 
     // Disabling ClearType works, but the font returned is very different (much thicker) from the default.
 //    msw_disable_cleartype(font);
-    bool cleartype = is_font_cleartype(font);
+//    bool cleartype = is_font_cleartype(font);
 #else
     // select default font
     wxFont font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT).Scale(scale_gl);
-    bool cleartype = false;
+//    bool cleartype = false;
 #endif /* __WXMSW__ */
 
     memDC.SetFont(font);
@@ -1094,7 +1094,7 @@ void GLCanvas3D::LegendTexture::render(const GLCanvas3D& canvas) const
 wxDEFINE_EVENT(EVT_GLCANVAS_INIT, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_OBJECT_SELECT, SimpleEvent);
-wxDEFINE_EVENT(EVT_GLCANVAS_RIGHT_CLICK, Vec2dEvent);
+wxDEFINE_EVENT(EVT_GLCANVAS_RIGHT_CLICK, RBtnEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_REMOVE_OBJECT, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_ARRANGE, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_SELECT_ALL, SimpleEvent);
@@ -1123,6 +1123,7 @@ GLCanvas3D::GLCanvas3D(wxGLCanvas* canvas, Bed3D& bed, Camera& camera, GLToolbar
     , m_retina_helper(nullptr)
 #endif
     , m_in_render(false)
+    , m_render_enabled(true)
     , m_bed(bed)
     , m_camera(camera)
     , m_view_toolbar(view_toolbar)
@@ -1327,13 +1328,13 @@ void GLCanvas3D::toggle_model_objects_visibility(bool visible, const ModelObject
 void GLCanvas3D::update_instance_printable_state_for_object(const size_t obj_idx)
 {
     ModelObject* model_object = m_model->objects[obj_idx];
-    for (int inst_idx = 0; inst_idx < model_object->instances.size(); inst_idx++)
+    for (int inst_idx = 0; inst_idx < (int)model_object->instances.size(); ++inst_idx)
     {
         ModelInstance* instance = model_object->instances[inst_idx];
 
         for (GLVolume* volume : m_volumes.volumes)
         {
-            if ((volume->object_idx() == obj_idx) && (volume->instance_idx() == inst_idx))
+            if ((volume->object_idx() == (int)obj_idx) && (volume->instance_idx() == inst_idx))
                 volume->printable = instance->printable;
         }
     }
@@ -1509,7 +1510,7 @@ void GLCanvas3D::update_volumes_colors_by_extruder()
 
 void GLCanvas3D::render()
 {
-    if (m_in_render)
+    if (!m_render_enabled || m_in_render)
     {
         // if called recursively, return
         m_dirty = true;
@@ -1669,7 +1670,7 @@ void GLCanvas3D::ensure_on_bed(unsigned int object_idx)
 
     for (GLVolume* volume : m_volumes.volumes)
     {
-        if ((volume->object_idx() == object_idx) && !volume->is_modifier)
+        if ((volume->object_idx() == (int)object_idx) && !volume->is_modifier)
         {
             double min_z = volume->transformed_convex_hull_bounding_box().min(2);
             std::pair<int, int> instance = std::make_pair(volume->object_idx(), volume->instance_idx());
@@ -1965,8 +1966,8 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
                     }
             }
 
-            // stores the current volumes count
-            size_t volumes_count = m_volumes.volumes.size();
+//            // stores the current volumes count
+//            size_t volumes_count = m_volumes.volumes.size();
 
             for (size_t istep = 0; istep < sla_steps.size(); ++istep)
                 if (!instances[istep].empty())
@@ -1975,7 +1976,7 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
 
 		// Shift-up all volumes of the object so that it has the right elevation with respect to the print bed
 		for (GLVolume* volume : m_volumes.volumes)
-			if (volume->object_idx() < m_model->objects.size() && m_model->objects[volume->object_idx()]->instances[volume->instance_idx()]->is_printable())
+			if (volume->object_idx() < (int)m_model->objects.size() && m_model->objects[volume->object_idx()]->instances[volume->instance_idx()]->is_printable())
 				volume->set_sla_shift_z(shift_zs[volume->object_idx()]);
     }
 
@@ -2083,7 +2084,7 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
     m_dirty = true;
 }
 
-static void reserve_new_volume_finalize_old_volume(GLVolume& vol_new, GLVolume& vol_old, bool gl_initialized)
+static void reserve_new_volume_finalize_old_volume(GLVolume& vol_new, GLVolume& vol_old, bool gl_initialized, size_t prealloc_size = VERTEX_BUFFER_RESERVE_SIZE)
 {
 	// Assign the large pre-allocated buffers to the new GLVolume.
 	vol_new.indexed_vertex_array = std::move(vol_old.indexed_vertex_array);
@@ -2093,7 +2094,7 @@ static void reserve_new_volume_finalize_old_volume(GLVolume& vol_new, GLVolume& 
 	vol_new.indexed_vertex_array.clear();
 	// Just make sure that clear did not clear the reserved memory.
 	// Reserving number of vertices (3x position + 3x color)
-	vol_new.indexed_vertex_array.reserve(VERTEX_BUFFER_RESERVE_SIZE / 6);
+	vol_new.indexed_vertex_array.reserve(prealloc_size / 6);
 	// Finalize the old geometry, possibly move data to the graphics card.
 	vol_old.finalize_geometry(gl_initialized);
 }
@@ -2149,9 +2150,36 @@ void GLCanvas3D::load_gcode_preview(const GCodePreviewData& preview_data, const 
             
             if (!m_volumes.empty())
             {
-                // removes empty volumes
-                m_volumes.volumes.erase(std::remove_if(m_volumes.volumes.begin(), m_volumes.volumes.end(),
-                    [](const GLVolume* volume) { return volume->print_zs.empty(); }), m_volumes.volumes.end());
+                // Remove empty volumes from both m_volumes, update m_gcode_preview_volume_index.
+                {
+	                size_t idx_volume_src = 0;
+	                size_t idx_volume_dst = 0;
+	                size_t idx_volume_index_src = 0;
+	                size_t idx_volume_index_dst = 0;
+	                size_t idx_volume_of_this_type_last = (idx_volume_index_src + 1 == m_gcode_preview_volume_index.first_volumes.size()) ? m_volumes.volumes.size() : m_gcode_preview_volume_index.first_volumes[idx_volume_index_src + 1].id;
+	                size_t idx_volume_of_this_type_first_new = 0;
+	                for (;;) {
+	                	if (idx_volume_src == idx_volume_of_this_type_last) {
+	                		if (idx_volume_of_this_type_first_new < idx_volume_dst) {
+	                			// There are some volumes of this type left, therefore their entry in the index has to be maintained.
+	                			if (idx_volume_index_dst < idx_volume_index_src)
+	                				m_gcode_preview_volume_index.first_volumes[idx_volume_index_dst] = m_gcode_preview_volume_index.first_volumes[idx_volume_index_src];
+	                			m_gcode_preview_volume_index.first_volumes[idx_volume_index_dst].id = idx_volume_of_this_type_first_new;
+		                		++ idx_volume_index_dst;
+		                	}
+	                		if (idx_volume_of_this_type_last == m_volumes.volumes.size())
+	                			break;
+	                		++ idx_volume_index_src;
+	                		idx_volume_of_this_type_last = (idx_volume_index_src + 1 == m_gcode_preview_volume_index.first_volumes.size()) ? m_volumes.volumes.size() : m_gcode_preview_volume_index.first_volumes[idx_volume_index_src + 1].id;
+	                		idx_volume_of_this_type_first_new = idx_volume_dst;
+	                	}
+	                	if (! m_volumes.volumes[idx_volume_src]->print_zs.empty())
+                			m_volumes.volumes[idx_volume_dst ++] = m_volumes.volumes[idx_volume_src];
+	                	++ idx_volume_src;
+	                }
+	                m_volumes.volumes.erase(m_volumes.volumes.begin() + idx_volume_dst, m_volumes.volumes.end());
+	                m_gcode_preview_volume_index.first_volumes.erase(m_gcode_preview_volume_index.first_volumes.begin() + idx_volume_index_dst, m_gcode_preview_volume_index.first_volumes.end());
+	            }
 
                 _load_fff_shells();
             }
@@ -2984,16 +3012,17 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
                     wxGetApp().obj_manipul()->set_dirty();
                     // forces a frame render to update the view before the context menu is shown
                     render();
-
+                }
+            }
                     Vec2d logical_pos = pos.cast<double>();
 #if ENABLE_RETINA_GL
                     const float factor = m_retina_helper->get_scale_factor();
                     logical_pos = logical_pos.cwiseQuotient(Vec2d(factor, factor));
 #endif // ENABLE_RETINA_GL
-                    post_event(Vec2dEvent(EVT_GLCANVAS_RIGHT_CLICK, logical_pos));
+            if (!m_mouse.dragging)
+                // do not post the event if the user is panning the scene
+                post_event(RBtnEvent(EVT_GLCANVAS_RIGHT_CLICK, { logical_pos, m_hover_volume_idxs.empty() }));
                 }
-            }
-        }
 
         mouse_up_cleanup();
     }
@@ -3344,7 +3373,7 @@ void GLCanvas3D::do_mirror(const std::string& snapshot_type)
 void GLCanvas3D::set_camera_zoom(double zoom)
 {
     const Size& cnv_size = get_canvas_size();
-    m_camera.set_zoom(zoom, _max_bounding_box(false, false), cnv_size.get_width(), cnv_size.get_height());
+    m_camera.set_zoom(zoom, _max_bounding_box(false, true), cnv_size.get_width(), cnv_size.get_height());
     m_dirty = true;
 }
 
@@ -3468,14 +3497,13 @@ static bool string_getter(const bool is_undo, int idx, const char** out_text)
 
 void GLCanvas3D::_render_undo_redo_stack(const bool is_undo, float pos_x)
 {
-    const wxString& stack_name = _(is_undo ? L("Undo") : L("Redo"));
     ImGuiWrapper* imgui = wxGetApp().imgui();
 
     const float x = pos_x * (float)get_camera().get_zoom() + 0.5f * (float)get_canvas_size().get_width();
     imgui->set_next_window_pos(x, m_undoredo_toolbar.get_height(), ImGuiCond_Always, 0.5f, 0.0f);
     imgui->set_next_window_bg_alpha(0.5f);
-    imgui->begin(wxString::Format(_(L("%s Stack")), stack_name),
-                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+	std::string title = is_undo ? L("Undo History") : L("Redo History");
+    imgui->begin(_(title), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 
     int hovered = m_imgui_undo_redo_hovered_pos;
     int selected = -1;
@@ -3492,7 +3520,7 @@ void GLCanvas3D::_render_undo_redo_stack(const bool is_undo, float pos_x)
     if (selected >= 0)
         is_undo ? wxGetApp().plater()->undo_to(selected) : wxGetApp().plater()->redo_to(selected);
 
-    imgui->text(wxString::Format(_(L("%s %d Action")), stack_name, hovered + 1));
+    imgui->text(wxString::Format(is_undo ? _L_PLURAL("Undo %1$d Action", "Undo %1$d Actions", hovered + 1) : _L_PLURAL("Redo %1$d Action", "Redo %1$d Actions", hovered + 1), hovered + 1));
 
     imgui->end();
 }
@@ -3645,7 +3673,7 @@ bool GLCanvas3D::_init_main_toolbar()
 
     item.name = "layersediting";
     item.icon_filename = "layers_white.svg";
-    item.tooltip = _utf8(L("Layers editing"));
+    item.tooltip = _utf8(L("Height ranges"));
     item.sprite_id = 10;
     item.left.toggable = true;
     item.left.action_callback = [this]() { if (m_canvas != nullptr) wxPostEvent(m_canvas, SimpleEvent(EVT_GLTOOLBAR_LAYERSEDITING)); };
@@ -3696,7 +3724,7 @@ bool GLCanvas3D::_init_undoredo_toolbar()
 
     item.name = "undo";
     item.icon_filename = "undo_toolbar.svg";
-    item.tooltip = _utf8(L("Undo")) + " [" + GUI::shortkey_ctrl_prefix() + "Z]";
+    item.tooltip = _utf8(L("Undo")) + " [" + GUI::shortkey_ctrl_prefix() + "Z]\n" + _utf8(L("Click right mouse button to open History"));
     item.sprite_id = 0;
     item.left.action_callback = [this]() { post_event(SimpleEvent(EVT_GLCANVAS_UNDO)); };
     item.right.toggable = true;
@@ -3704,14 +3732,17 @@ bool GLCanvas3D::_init_undoredo_toolbar()
     item.right.render_callback = [this](float left, float right, float, float) { if (m_canvas != nullptr) _render_undo_redo_stack(true, 0.5f * (left + right)); };
     item.enabling_callback = [this]()->bool {
         bool can_undo = wxGetApp().plater()->can_undo();
-        unsigned int id = m_undoredo_toolbar.get_item_id("undo");
+        int id = m_undoredo_toolbar.get_item_id("undo");
 
         std::string curr_additional_tooltip;
         m_undoredo_toolbar.get_additional_tooltip(id, curr_additional_tooltip);
 
         std::string new_additional_tooltip = "";
-        if (can_undo)
-            wxGetApp().plater()->undo_redo_topmost_string_getter(true, new_additional_tooltip);
+        if (can_undo) {
+        	std::string action;
+            wxGetApp().plater()->undo_redo_topmost_string_getter(true, action);
+            new_additional_tooltip = (boost::format(_utf8(L("Next Undo action: %1%"))) % action).str();
+        }
 
         if (new_additional_tooltip != curr_additional_tooltip)
         {
@@ -3726,21 +3757,24 @@ bool GLCanvas3D::_init_undoredo_toolbar()
 
     item.name = "redo";
     item.icon_filename = "redo_toolbar.svg";
-    item.tooltip = _utf8(L("Redo")) + " [" + GUI::shortkey_ctrl_prefix() + "Y]";
+	item.tooltip = _utf8(L("Redo")) + " [" + GUI::shortkey_ctrl_prefix() + "Y]\n" + _utf8(L("Click right mouse button to open History"));
     item.sprite_id = 1;
     item.left.action_callback = [this]() { post_event(SimpleEvent(EVT_GLCANVAS_REDO)); };
     item.right.action_callback = [this]() { m_imgui_undo_redo_hovered_pos = -1; };
     item.right.render_callback = [this](float left, float right, float, float) { if (m_canvas != nullptr) _render_undo_redo_stack(false, 0.5f * (left + right)); };
     item.enabling_callback = [this]()->bool {
         bool can_redo = wxGetApp().plater()->can_redo();
-        unsigned int id = m_undoredo_toolbar.get_item_id("redo");
+        int id = m_undoredo_toolbar.get_item_id("redo");
 
         std::string curr_additional_tooltip;
         m_undoredo_toolbar.get_additional_tooltip(id, curr_additional_tooltip);
 
         std::string new_additional_tooltip = "";
-        if (can_redo)
-            wxGetApp().plater()->undo_redo_topmost_string_getter(false, new_additional_tooltip);
+        if (can_redo) {
+        	std::string action;
+            wxGetApp().plater()->undo_redo_topmost_string_getter(false, action);
+            new_additional_tooltip = (boost::format(_utf8(L("Next Redo action: %1%"))) % action).str();
+        }
 
         if (new_additional_tooltip != curr_additional_tooltip)
         {
@@ -3873,7 +3907,7 @@ void GLCanvas3D::_picking_pass() const
             m_gizmos.set_hover_id(-1);
         }
         else
-            m_gizmos.set_hover_id(inside && volume_id <= GLGizmoBase::BASE_ID ? (GLGizmoBase::BASE_ID - volume_id) : -1);
+            m_gizmos.set_hover_id(inside && (unsigned int)volume_id <= GLGizmoBase::BASE_ID ? ((int)GLGizmoBase::BASE_ID - volume_id) : -1);
 
         _update_volumes_hover_state();
     }
@@ -4826,7 +4860,7 @@ void GLCanvas3D::_load_wipe_tower_toolpaths(const std::vector<std::string>& str_
     ctxt.print = print;
     ctxt.tool_colors = tool_colors.empty() ? nullptr : &tool_colors;
     if (print->wipe_tower_data().priming && print->config().single_extruder_multi_material_priming)
-        for (int i=0; i<print->wipe_tower_data().priming.get()->size(); ++i)
+        for (int i=0; i<(int)print->wipe_tower_data().priming.get()->size(); ++i)
             ctxt.priming.emplace_back(print->wipe_tower_data().priming.get()->at(i));
     if (print->wipe_tower_data().final_purge)
         ctxt.final.emplace_back(*print->wipe_tower_data().final_purge.get());
@@ -4962,6 +4996,7 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
             switch (type)
             {
             case GCodePreviewData::Extrusion::FeatureType:
+            	// The role here is used for coloring.
                 return (float)path.role();
             case GCodePreviewData::Extrusion::Height:
                 return path.height;
@@ -5006,7 +5041,7 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
             }
             case GCodePreviewData::Extrusion::ColorPrint:
             {
-                const size_t color_cnt = tool_colors.size() / 4;
+                int color_cnt = (int)tool_colors.size() / 4;
 
                 int val = int(value);
                 while (val >= color_cnt)
@@ -5025,72 +5060,46 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
         }
     };
 
-    // Helper structure for filters
-    struct Filter
-    {
-        float value;
-        ExtrusionRole role;
-        GLVolume* volume;
-
-        Filter(float value, ExtrusionRole role)
-            : value(value)
-            , role(role)
-            , volume(nullptr)
-        {
-        }
-
-        bool operator == (const Filter& other) const
-        {
-            if (value != other.value)
-                return false;
-
-            if (role != other.role)
-                return false;
-
-            return true;
-        }
-    };
-
-    typedef std::vector<Filter> FiltersList;
     size_t initial_volumes_count = m_volumes.volumes.size();
+    size_t initial_volume_index_count = m_gcode_preview_volume_index.first_volumes.size();
 
-    // detects filters
-    FiltersList filters;
-    for (const GCodePreviewData::Extrusion::Layer& layer : preview_data.extrusion.layers)
-    {
-        for (const ExtrusionPath& path : layer.paths)
+    try 
         {
-            ExtrusionRole role = path.role();
-            float path_filter = Helper::path_filter(preview_data.extrusion.view_type, path);
-            if (std::find(filters.begin(), filters.end(), Filter(path_filter, role)) == filters.end())
-                filters.emplace_back(path_filter, role);
+	    BOOST_LOG_TRIVIAL(debug) << "Loading G-code extrusion paths - create volumes" << m_volumes.log_memory_info() << log_memory_info();
+
+	    // detects filters
+	    size_t vertex_buffer_prealloc_size = 0;
+	    std::vector<std::vector<std::pair<float, GLVolume*>>> roles_filters;
+        {
+		    std::vector<size_t> num_paths_per_role(size_t(erCount), 0);
+    for (const GCodePreviewData::Extrusion::Layer& layer : preview_data.extrusion.layers)
+        for (const ExtrusionPath& path : layer.paths)
+		        	++ num_paths_per_role[size_t(path.role())];
+			std::vector<std::vector<float>> roles_values;
+			roles_values.assign(size_t(erCount), std::vector<float>());
+		    for (size_t i = 0; i < roles_values.size(); ++ i)
+		    	roles_values[i].reserve(num_paths_per_role[i]);
+		    for (const GCodePreviewData::Extrusion::Layer& layer : preview_data.extrusion.layers)
+		        for (const ExtrusionPath& path : layer.paths)
+		        	roles_values[size_t(path.role())].emplace_back(Helper::path_filter(preview_data.extrusion.view_type, path));
+			roles_filters.reserve(size_t(erCount));
+			size_t num_buffers = 0;
+		    for (std::vector<float> &values : roles_values) {
+		    	sort_remove_duplicates(values);
+		    	num_buffers += values.size();
         }
-    }
-
+		    if (num_buffers == 0)
     // nothing to render, return
-    if (filters.empty())
         return;
-
-    BOOST_LOG_TRIVIAL(debug) << "Loading G-code extrusion paths - create volumes" << m_volumes.log_memory_info() << log_memory_info();
-
-    // creates a new volume for each filter
-    for (Filter& filter : filters)
-    {
-        m_gcode_preview_volume_index.first_volumes.emplace_back(GCodePreviewVolumeIndex::Extrusion, (unsigned int)filter.role, (unsigned int)m_volumes.volumes.size());
-        try {
-            filter.volume = m_volumes.new_toolpath_volume(Helper::path_color(preview_data, tool_colors, filter.value).rgba, VERTEX_BUFFER_RESERVE_SIZE);
-        } catch (std::bad_alloc& /* err */) {
-            // an error occourred - restore to previous state and return
-            m_gcode_preview_volume_index.first_volumes.pop_back();
-            if (initial_volumes_count != m_volumes.volumes.size())
-            {
-                GLVolumePtrs::iterator begin = m_volumes.volumes.begin() + initial_volumes_count;
-                GLVolumePtrs::iterator end = m_volumes.volumes.end();
-                for (GLVolumePtrs::iterator it = begin; it < end; ++it)
-                    delete *it;
-                m_volumes.volumes.erase(begin, end);
-                //FIXME rethrow bad_alloc?
-                return;
+		    vertex_buffer_prealloc_size = (uint64_t(num_buffers) * uint64_t(VERTEX_BUFFER_RESERVE_SIZE) < VERTEX_BUFFER_RESERVE_SIZE_SUM_MAX) ? 
+	    		VERTEX_BUFFER_RESERVE_SIZE : next_highest_power_of_2(VERTEX_BUFFER_RESERVE_SIZE_SUM_MAX / num_buffers) / 2;
+		    for (std::vector<float> &values : roles_values) {
+		    	size_t role = &values - &roles_values.front();
+				roles_filters.emplace_back();
+		    	if (! values.empty()) {
+		        	m_gcode_preview_volume_index.first_volumes.emplace_back(GCodePreviewVolumeIndex::Extrusion, role, (unsigned int)m_volumes.volumes.size());
+					for (const float value : values)
+						roles_filters.back().emplace_back(value, m_volumes.new_toolpath_volume(Helper::path_color(preview_data, tool_colors, value).rgba, vertex_buffer_prealloc_size));
             }
         }
     }
@@ -5102,122 +5111,86 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
     {
         for (const ExtrusionPath& path : layer.paths)
         {
-            float path_filter = Helper::path_filter(preview_data.extrusion.view_type, path);
-            FiltersList::iterator filter = std::find(filters.begin(), filters.end(), Filter(path_filter, path.role()));
-            if (filter != filters.end())
-            {
-            	GLVolume &vol = *filter->volume;
+				std::vector<std::pair<float, GLVolume*>> &filters = roles_filters[size_t(path.role())];
+				auto key = std::make_pair<float, GLVolume*>(Helper::path_filter(preview_data.extrusion.view_type, path), nullptr);
+				auto it_filter = std::lower_bound(filters.begin(), filters.end(), key);
+				assert(it_filter != filters.end() && key.first == it_filter->first);
+
+				GLVolume& vol = *it_filter->second;
                 vol.print_zs.push_back(layer.z);
                 vol.offsets.push_back(vol.indexed_vertex_array.quad_indices.size());
                 vol.offsets.push_back(vol.indexed_vertex_array.triangle_indices.size());
 
                 _3DScene::extrusionentity_to_verts(path, layer.z, vol);
-
+			}
 	            // Ensure that no volume grows over the limits. If the volume is too large, allocate a new one.
-	            if (vol.indexed_vertex_array.vertices_and_normals_interleaved.size() > MAX_VERTEX_BUFFER_SIZE) {
-		            filter->volume = m_volumes.new_toolpath_volume(vol.color);
-	                reserve_new_volume_finalize_old_volume(*filter->volume, vol, m_initialized);
-            }
-        }
-    }
-}
+		    for (std::vector<std::pair<float, GLVolume*>> &filters : roles_filters) {
+		    	unsigned int role = (unsigned int)(&filters - &roles_filters.front());
+			    for (std::pair<float, GLVolume*> &filter : filters)
+					if (filter.second->indexed_vertex_array.vertices_and_normals_interleaved.size() > MAX_VERTEX_BUFFER_SIZE) {
+						if (m_gcode_preview_volume_index.first_volumes.back().type != GCodePreviewVolumeIndex::Extrusion || m_gcode_preview_volume_index.first_volumes.back().flag != role)
+			        		m_gcode_preview_volume_index.first_volumes.emplace_back(GCodePreviewVolumeIndex::Extrusion, role, (unsigned int)m_volumes.volumes.size());
+						GLVolume& vol = *filter.second;
+						filter.second = m_volumes.new_toolpath_volume(vol.color);
+						reserve_new_volume_finalize_old_volume(*filter.second, vol, m_initialized, vertex_buffer_prealloc_size);
+					}
+		    }
+	    }
 
     // Finalize volumes and sends geometry to gpu
-    for (Filter &filter : filters)
-    	filter.volume->indexed_vertex_array.finalize_geometry(m_initialized);
+	    for (std::vector<std::pair<float, GLVolume*>> &filters : roles_filters)
+		    for (std::pair<float, GLVolume*> &filter : filters)
+	    		filter.second->indexed_vertex_array.finalize_geometry(m_initialized);
 
     BOOST_LOG_TRIVIAL(debug) << "Loading G-code extrusion paths - end" << m_volumes.log_memory_info() << log_memory_info();
 }
-
-void GLCanvas3D::_load_gcode_travel_paths(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors)
+	catch (const std::bad_alloc & /* err */)
 {
-    size_t initial_volumes_count = m_volumes.volumes.size();
-    m_gcode_preview_volume_index.first_volumes.emplace_back(GCodePreviewVolumeIndex::Travel, 0, (unsigned int)initial_volumes_count);
-
-    bool res = true;
-    switch (preview_data.extrusion.view_type)
-    {
-    case GCodePreviewData::Extrusion::Feedrate:
-    {
-        res = _travel_paths_by_feedrate(preview_data);
-        break;
-    }
-    case GCodePreviewData::Extrusion::Tool:
-    case GCodePreviewData::Extrusion::Filament:
-    {
-        res = _travel_paths_by_tool(preview_data, tool_colors);
-        break;
-    }
-    default:
-    {
-        res = _travel_paths_by_type(preview_data);
-        break;
-    }
-    }
-
-    if (!res)
-    {
         // an error occourred - restore to previous state and return
-        if (initial_volumes_count != m_volumes.volumes.size())
-        {
             GLVolumePtrs::iterator begin = m_volumes.volumes.begin() + initial_volumes_count;
             GLVolumePtrs::iterator end = m_volumes.volumes.end();
             for (GLVolumePtrs::iterator it = begin; it < end; ++it)
                 delete *it;
             m_volumes.volumes.erase(begin, end);
+        m_gcode_preview_volume_index.first_volumes.erase(m_gcode_preview_volume_index.first_volumes.begin() + initial_volume_index_count, m_gcode_preview_volume_index.first_volumes.end());
+	    BOOST_LOG_TRIVIAL(debug) << "Loading G-code extrusion paths - failed on low memory" << m_volumes.log_memory_info() << log_memory_info();
+        //FIXME rethrow bad_alloc?
         }
-
-        return;
     }
-}
 
-bool GLCanvas3D::_travel_paths_by_type(const GCodePreviewData& preview_data)
-{
-    // Helper structure for types
-    struct Type
-    {
-        GCodePreviewData::Travel::EType value;
-        GLVolume* volume;
+template<typename TYPE, typename FUNC_VALUE, typename FUNC_COLOR>
+inline void travel_paths_internal(
+	// input
+	const GCodePreviewData &preview_data, 
+	// accessors
+	FUNC_VALUE func_value, FUNC_COLOR func_color,
+	// output
+	GLVolumeCollection &volumes, bool gl_initialized)
 
-        explicit Type(GCodePreviewData::Travel::EType value)
-            : value(value)
-            , volume(nullptr)
         {
-        }
-
-        bool operator == (const Type& other) const
+	// colors travels by type
+	std::vector<std::pair<TYPE, GLVolume*>> by_type;
         {
-            return value == other.value;
-        }
-    };
-
-    typedef std::vector<Type> TypesList;
-
-    // colors travels by travel type
-
-    // detects types
-    TypesList types;
+		std::vector<TYPE> values;
+		values.reserve(preview_data.travel.polylines.size());
     for (const GCodePreviewData::Travel::Polyline& polyline : preview_data.travel.polylines)
-    {
-        if (std::find(types.begin(), types.end(), Type(polyline.type)) == types.end())
-            types.emplace_back(polyline.type);
+			values.emplace_back(func_value(polyline));
+		sort_remove_duplicates(values);
+		by_type.reserve(values.size());
+		// creates a new volume for each feedrate
+		for (TYPE type : values)
+			by_type.emplace_back(type, volumes.new_nontoolpath_volume(func_color(type).rgba, VERTEX_BUFFER_RESERVE_SIZE));
     }
-
-    // nothing to render, return
-    if (types.empty())
-        return true;
-
-    // creates a new volume for each type
-    for (Type& type : types)
-        type.volume = m_volumes.new_nontoolpath_volume(preview_data.travel.type_colors[type.value].rgba, VERTEX_BUFFER_RESERVE_SIZE);
 
     // populates volumes
+	std::pair<TYPE, GLVolume*> key(0.f, nullptr);
     for (const GCodePreviewData::Travel::Polyline& polyline : preview_data.travel.polylines)
     {
-        TypesList::iterator type = std::find(types.begin(), types.end(), Type(polyline.type));
-        if (type != types.end())
-        {
-        	GLVolume &vol = *type->volume;
+		key.first = func_value(polyline);
+		auto it = std::lower_bound(by_type.begin(), by_type.end(), key, [](const std::pair<TYPE, GLVolume*>& l, const std::pair<TYPE, GLVolume*>& r) { return l.first < r.first; });
+		assert(it != by_type.end() && it->first == func_value(polyline));
+
+		GLVolume& vol = *it->second;
             vol.print_zs.push_back(unscale<double>(polyline.polyline.bounding_box().min(2)));
             vol.offsets.push_back(vol.indexed_vertex_array.quad_indices.size());
             vol.offsets.push_back(vol.indexed_vertex_array.triangle_indices.size());
@@ -5226,155 +5199,61 @@ bool GLCanvas3D::_travel_paths_by_type(const GCodePreviewData& preview_data)
 
             // Ensure that no volume grows over the limits. If the volume is too large, allocate a new one.
             if (vol.indexed_vertex_array.vertices_and_normals_interleaved.size() > MAX_VERTEX_BUFFER_SIZE) {
-	            type->volume = m_volumes.new_nontoolpath_volume(vol.color);
-                reserve_new_volume_finalize_old_volume(*type->volume, vol, m_initialized);
-        }
-    }
-    }
+			it->second = volumes.new_nontoolpath_volume(vol.color);
+			reserve_new_volume_finalize_old_volume(*it->second, vol, gl_initialized);
+		}
+	}
 
-    for (Type &type : types)
-    	type.volume->finalize_geometry(m_initialized);
-
-    return true;
+	for (auto &feedrate : by_type)
+		feedrate.second->finalize_geometry(gl_initialized);
 }
 
-bool GLCanvas3D::_travel_paths_by_feedrate(const GCodePreviewData& preview_data)
+void GLCanvas3D::_load_gcode_travel_paths(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors)
 {
-    // Helper structure for feedrate
-    struct Feedrate
-    {
-        float value;
-        GLVolume* volume;
-
-        explicit Feedrate(float value)
-            : value(value)
-            , volume(nullptr)
-        {
-        }
-
-        bool operator == (const Feedrate& other) const
-        {
-            return value == other.value;
-        }
-    };
-
-    typedef std::vector<Feedrate> FeedratesList;
-
-    // colors travels by feedrate
-
-    // detects feedrates
-    FeedratesList feedrates;
-    for (const GCodePreviewData::Travel::Polyline& polyline : preview_data.travel.polylines)
-    {
-        if (std::find(feedrates.begin(), feedrates.end(), Feedrate(polyline.feedrate)) == feedrates.end())
-            feedrates.emplace_back(polyline.feedrate);
-    }
-
     // nothing to render, return
-    if (feedrates.empty())
-        return true;
+	if (preview_data.travel.polylines.empty())
+		return;
 
-    // creates a new volume for each feedrate
-    for (Feedrate& feedrate : feedrates)
-		feedrate.volume = m_volumes.new_nontoolpath_volume(preview_data.get_feedrate_color(feedrate.value).rgba, VERTEX_BUFFER_RESERVE_SIZE);
+    size_t initial_volumes_count = m_volumes.volumes.size();
+    size_t volume_index_allocated = false;
 
-    // populates volumes
-    for (const GCodePreviewData::Travel::Polyline& polyline : preview_data.travel.polylines)
-    {
-        FeedratesList::iterator feedrate = std::find(feedrates.begin(), feedrates.end(), Feedrate(polyline.feedrate));
-        if (feedrate != feedrates.end())
-        {
-        	GLVolume &vol = *feedrate->volume;
-            vol.print_zs.push_back(unscale<double>(polyline.polyline.bounding_box().min(2)));
-            vol.offsets.push_back(vol.indexed_vertex_array.quad_indices.size());
-            vol.offsets.push_back(vol.indexed_vertex_array.triangle_indices.size());
+    try {
+    	m_gcode_preview_volume_index.first_volumes.emplace_back(GCodePreviewVolumeIndex::Travel, 0, (unsigned int)initial_volumes_count);
+    	volume_index_allocated = true;
 
-            _3DScene::polyline3_to_verts(polyline.polyline, preview_data.travel.width, preview_data.travel.height, *feedrate->volume);
-
-            // Ensure that no volume grows over the limits. If the volume is too large, allocate a new one.
-            if (vol.indexed_vertex_array.vertices_and_normals_interleaved.size() > MAX_VERTEX_BUFFER_SIZE) {
-	            feedrate->volume = m_volumes.new_nontoolpath_volume(vol.color);
-                reserve_new_volume_finalize_old_volume(*feedrate->volume, vol, m_initialized);
-        }
-    }
-    }
-
-    for (Feedrate &feedrate : feedrates)
-    	feedrate.volume->finalize_geometry(m_initialized);
-
-    return true;
-}
-
-bool GLCanvas3D::_travel_paths_by_tool(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors)
+	    switch (preview_data.extrusion.view_type)
 {
-    // Helper structure for tool
-    struct Tool
-    {
-        unsigned int value;
-        GLVolume* volume;
-
-        explicit Tool(unsigned int value)
-            : value(value)
-            , volume(nullptr)
-        {
+	    case GCodePreviewData::Extrusion::Feedrate:
+			travel_paths_internal<float>(preview_data,
+				[](const GCodePreviewData::Travel::Polyline &polyline) { return polyline.feedrate; }, 
+				[&preview_data](const float feedrate) -> const GCodePreviewData::Color { return preview_data.get_feedrate_color(feedrate); },
+				m_volumes, m_initialized);
+	        break;
+	    case GCodePreviewData::Extrusion::Tool:
+	    	travel_paths_internal<unsigned int>(preview_data,
+				[](const GCodePreviewData::Travel::Polyline &polyline) { return polyline.extruder_id; }, 
+				[&tool_colors](const unsigned int extruder_id) -> const GCodePreviewData::Color { assert((extruder_id + 1) * 4 <= tool_colors.size()); return GCodePreviewData::Color(tool_colors.data() + extruder_id * 4); },
+				m_volumes, m_initialized);
+	        break;
+	    default:
+	    	travel_paths_internal<unsigned int>(preview_data,
+				[](const GCodePreviewData::Travel::Polyline &polyline) { return polyline.type; }, 
+				[&preview_data](const unsigned int type) -> const GCodePreviewData::Color& { return preview_data.travel.type_colors[type]; },
+				m_volumes, m_initialized);
+	        break;
         }
-
-        bool operator == (const Tool& other) const
-        {
-            return value == other.value;
-        }
-    };
-
-    typedef std::vector<Tool> ToolsList;
-
-    // colors travels by tool
-
-    // detects tools
-    ToolsList tools;
-    for (const GCodePreviewData::Travel::Polyline& polyline : preview_data.travel.polylines)
-    {
-        if (std::find(tools.begin(), tools.end(), Tool(polyline.extruder_id)) == tools.end())
-            tools.emplace_back(polyline.extruder_id);
-    }
-
-    // nothing to render, return
-    if (tools.empty())
-        return true;
-
-    // creates a new volume for each tool
-    for (Tool& tool : tools)
-    {
-        // tool.value could be invalid (as it was with https://github.com/prusa3d/PrusaSlicer/issues/2179), we better check
-        if (tool.value < tool_colors.size())
-			tool.volume = m_volumes.new_nontoolpath_volume(tool_colors.data() + tool.value * 4, VERTEX_BUFFER_RESERVE_SIZE);
-        }
-
-    // populates volumes
-    for (const GCodePreviewData::Travel::Polyline& polyline : preview_data.travel.polylines)
-    {
-        ToolsList::iterator tool = std::find(tools.begin(), tools.end(), Tool(polyline.extruder_id));
-        if (tool != tools.end() && tool->volume != nullptr)
-        {
-        	GLVolume &vol = *tool->volume;
-            vol.print_zs.push_back(unscale<double>(polyline.polyline.bounding_box().min(2)));
-            vol.offsets.push_back(vol.indexed_vertex_array.quad_indices.size());
-            vol.offsets.push_back(vol.indexed_vertex_array.triangle_indices.size());
-
-            _3DScene::polyline3_to_verts(polyline.polyline, preview_data.travel.width, preview_data.travel.height, *tool->volume);
-
-            // Ensure that no volume grows over the limits. If the volume is too large, allocate a new one.
-            if (vol.indexed_vertex_array.vertices_and_normals_interleaved.size() > MAX_VERTEX_BUFFER_SIZE) {
-	            tool->volume = m_volumes.new_nontoolpath_volume(vol.color);
-                reserve_new_volume_finalize_old_volume(*tool->volume, vol, m_initialized);
-}
+	} catch (const std::bad_alloc & /* ex */) {
+        // an error occourred - restore to previous state and return
+        GLVolumePtrs::iterator begin = m_volumes.volumes.begin() + initial_volumes_count;
+        GLVolumePtrs::iterator end   = m_volumes.volumes.end();
+        for (GLVolumePtrs::iterator it = begin; it < end; ++it)
+            delete *it;
+        m_volumes.volumes.erase(begin, end);
+        if (volume_index_allocated)
+        	m_gcode_preview_volume_index.first_volumes.pop_back();
+        //FIXME report the memory issue?
         }
     }
-
-    for (Tool& tool : tools)
-    	tool.volume->finalize_geometry(m_initialized);
-
-    return true;
-        }
 
 void GLCanvas3D::_load_fff_shells()
 {

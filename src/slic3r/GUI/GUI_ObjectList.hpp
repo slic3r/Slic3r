@@ -132,6 +132,7 @@ private:
     MenuWithSeparators  m_menu_sla_object;
     MenuWithSeparators  m_menu_instance;
     MenuWithSeparators  m_menu_layer;
+    MenuWithSeparators  m_menu_default;
     wxMenuItem* m_menu_item_settings { nullptr };
     wxMenuItem* m_menu_item_split_instances { nullptr };
 
@@ -182,15 +183,15 @@ public:
 
     void                create_objects_ctrl();
     void                create_popup_menus();
-    wxDataViewColumn*   create_objects_list_extruder_column(int extruders_count);
-    void                update_objects_list_extruder_column(int extruders_count);
+    wxDataViewColumn*   create_objects_list_extruder_column(size_t extruders_count);
+    void                update_objects_list_extruder_column(size_t extruders_count);
     // show/hide "Extruder" column for Objects List
     void                set_extruder_column_hidden(const bool hide) const;
     // update extruder in current config
     void                update_extruder_in_config(const wxDataViewItem& item);
     // update changed name in the object model
     void                update_name_in_model(const wxDataViewItem& item) const;
-    void                update_extruder_values_for_items(const int max_extruder);
+    void                update_extruder_values_for_items(const size_t max_extruder);
 
     void                init_icons();
     void                msw_rescale_icons();
@@ -208,7 +209,7 @@ public:
     void                set_tooltip_for_item(const wxPoint& pt);
 
     void                selection_changed();
-    void                show_context_menu();
+    void                show_context_menu(const bool evt_context_menu);
 #ifndef __WXOSX__
     void                key_event(wxKeyEvent& event);
 #endif /* __WXOSX__ */
@@ -240,14 +241,16 @@ public:
     void                create_sla_object_popupmenu(wxMenu*menu);
     void                create_part_popupmenu(wxMenu*menu);
     void                create_instance_popupmenu(wxMenu*menu);
+    void                create_default_popupmenu(wxMenu *menu);
     wxMenu*             create_settings_popupmenu(wxMenu *parent_menu);
-    void                create_freq_settings_popupmenu(wxMenu *parent_menu);
+    void                create_freq_settings_popupmenu(wxMenu *parent_menu, const bool is_object_settings = true);
 
     void                update_opt_keys(t_config_option_keys& t_optopt_keys, const bool is_object);
 
     void                load_subobject(ModelVolumeType type);
     void                load_part(ModelObject* model_object, std::vector<std::pair<wxString, bool>> &volumes_info, ModelVolumeType type);
 	void                load_generic_subobject(const std::string& type_name, const ModelVolumeType type);
+    void                load_shape_object(const std::string &type_name);
     void                del_object(const int obj_idx);
     void                del_subobject_item(wxDataViewItem& item);
     void                del_settings_from_config(const wxDataViewItem& parent_item);
@@ -362,7 +365,7 @@ private:
 //    void OnChar(wxKeyEvent& event);
 #endif /* __WXOSX__ */
     void OnContextMenu(wxDataViewEvent &event);
-    void list_manipulation();
+    void list_manipulation(bool evt_context_menu = false);
 
     void OnBeginDrag(wxDataViewEvent &event);
     void OnDropPossible(wxDataViewEvent &event);

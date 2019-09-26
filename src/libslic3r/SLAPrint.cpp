@@ -454,9 +454,9 @@ SLAPrint::ApplyStatus SLAPrint::apply(const Model &model, DynamicPrintConfig con
     }
     
     if(m_objects.empty()) {
-        m_printer.release();
-        m_printer_input.clear();
-        m_print_statistics.clear();
+        m_printer.reset();
+        m_printer_input = {};
+        m_print_statistics = {};
     }
 
 #ifdef _DEBUG
@@ -577,12 +577,7 @@ std::string SLAPrint::output_filename(const std::string &filename_base) const
 namespace {
 
 bool is_zero_elevation(const SLAPrintObjectConfig &c) {
-    bool en_implicit = c.support_object_elevation.getFloat() <= EPSILON &&
-                       c.pad_enable.getBool() && c.supports_enable.getBool();
-    bool en_explicit = c.pad_zero_elevation.getBool() &&
-                       c.supports_enable.getBool();
-
-    return en_implicit || en_explicit;
+    return c.pad_enable.getBool() && c.pad_around_object.getBool();
 }
 
 // Compile the argument for support creation from the static print config.
@@ -676,12 +671,13 @@ std::string SLAPrint::validate() const
         
         double elv = cfg.object_elevation_mm;
 
-        if(supports_en && elv > EPSILON && elv < pinhead_width )
+        sla::PoolConfig::EmbedObject builtinpad = builtin_pad_cfg(po->config());
+        
+        if(supports_en && !builtinpad.enabled && elv < pinhead_width )
             return L(
                 "Elevation is too low for object. Use the \"Pad around "
-                "obect\" feature to print the object without elevation.");
+                "object\" feature to print the object without elevation.");
         
-        sla::PoolConfig::EmbedObject builtinpad = builtin_pad_cfg(po->config());
         if(supports_en && builtinpad.enabled &&
            cfg.pillar_base_safety_distance_mm < builtinpad.object_gap_mm) {
             return L(
@@ -1385,9 +1381,9 @@ void SLAPrint::process()
         // Estimated printing time
         // A layers count o the highest object
         if (m_printer_input.size() == 0)
-            m_print_statistics.estimated_print_time = "N/A";
+            m_print_statistics.estimated_print_time = std::nan("");
         else
-            m_print_statistics.estimated_print_time = get_time_dhms(float(estim_time));
+            m_print_statistics.estimated_print_time = estim_time;
 
         m_print_statistics.fast_layers_count = fast_layers;
         m_print_statistics.slow_layers_count = slow_layers;
@@ -1399,15 +1395,9 @@ void SLAPrint::process()
     auto rasterize = [this]() {
         if(canceled()) return;
 
-        { // create a raster printer for the current print parameters
-            double layerh = m_default_object_config.layer_height.getFloat();
-            m_printer.reset(new SLAPrinter(m_printer_config, 
-                                           m_material_config, 
-                                           layerh));
-        }
+        // Set up the printer, allocate space for all the layers
+        sla::SLARasterWriter &printer = init_printer();
 
-        // Allocate space for all the layers
-        SLAPrinter& printer = *m_printer;
         auto lvlcnt = unsigned(m_printer_input.size());
         printer.layers(lvlcnt);
 
@@ -1426,9 +1416,11 @@ void SLAPrint::process()
 
         SpinMutex slck;
 
+        auto orientation = get_printer_orientation();
+
         // procedure to process one height level. This will run in parallel
         auto lvlfn =
-        [this, &slck, &printer, increment, &dstatus, &pst]
+        [this, &slck, &printer, increment, &dstatus, &pst, orientation]
             (unsigned level_id)
         {
             if(canceled()) return;
@@ -1439,7 +1431,7 @@ void SLAPrint::process()
             printer.begin_layer(level_id);
 
             for(const ClipperLib::Polygon& poly : printlayer.transformed_slices())
-                printer.draw_polygon(poly, level_id);
+                printer.draw_polygon(poly, level_id, orientation);
 
             // Finish the layer for later saving it.
             printer.finish_layer(level_id);
@@ -1467,12 +1459,18 @@ void SLAPrint::process()
         tbb::parallel_for<unsigned, decltype(lvlfn)>(0, lvlcnt, lvlfn);
 
         // Set statistics values to the printer
-        m_printer->set_statistics(
-            {(m_print_statistics.objects_used_material
-              + m_print_statistics.support_used_material) / 1000,
-             double(m_default_object_config.faded_layers.getInt()),
-             double(m_print_statistics.slow_layers_count),
-             double(m_print_statistics.fast_layers_count)});
+        sla::SLARasterWriter::PrintStatistics stats;
+        stats.used_material = (m_print_statistics.objects_used_material +
+                               m_print_statistics.support_used_material) /
+                              1000;
+        
+        int num_fade = m_default_object_config.faded_layers.getInt();
+        stats.num_fade = num_fade >= 0 ? size_t(num_fade) : size_t(0);
+        stats.num_fast = m_print_statistics.fast_layers_count;
+        stats.num_slow = m_print_statistics.slow_layers_count;
+        stats.estimated_print_time_s = m_print_statistics.estimated_print_time;
+        
+        m_printer->set_statistics(stats);
     };
 
     using slaposFn = std::function<void(SLAPrintObject&)>;
@@ -1656,6 +1654,39 @@ bool SLAPrint::invalidate_state_by_config_options(const std::vector<t_config_opt
     return invalidated;
 }
 
+sla::SLARasterWriter & SLAPrint::init_printer()
+{
+    sla::Raster::Resolution res;
+    sla::Raster::PixelDim   pxdim;
+    std::array<bool, 2>     mirror;
+    double                  gamma;
+
+    double w  = m_printer_config.display_width.getFloat();
+    double h  = m_printer_config.display_height.getFloat();
+    auto   pw = size_t(m_printer_config.display_pixels_x.getInt());
+    auto   ph = size_t(m_printer_config.display_pixels_y.getInt());
+
+    mirror[X] = m_printer_config.display_mirror_x.getBool();
+    mirror[Y] = m_printer_config.display_mirror_y.getBool();
+
+    if (get_printer_orientation() == sla::SLARasterWriter::roPortrait) {
+        std::swap(w, h);
+        std::swap(pw, ph);
+
+        // XY flipping implicitly does an X mirror
+        mirror[X] = !mirror[X];
+    }
+
+    res   = sla::Raster::Resolution{pw, ph};
+    pxdim = sla::Raster::PixelDim{w / pw, h / ph};
+
+    gamma = m_printer_config.gamma_correction.getFloat();
+
+    m_printer.reset(new sla::SLARasterWriter(res, pxdim, mirror, gamma));
+    m_printer->set_config(m_full_print_config);
+    return *m_printer;
+}
+
 // Returns true if an object step is done on all objects and there's at least one object.
 bool SLAPrint::is_step_done(SLAPrintObjectStep step) const
 {
@@ -1698,7 +1729,7 @@ bool SLAPrintObject::invalidate_state_by_config_options(const std::vector<t_conf
             || opt_key == "pad_wall_thickness"
             || opt_key == "supports_enable"
             || opt_key == "support_object_elevation"
-            || opt_key == "pad_zero_elevation"
+            || opt_key == "pad_around_object"
             || opt_key == "slice_closing_radius") {
             steps.emplace_back(slaposObjectSlice);
         } else if (
@@ -1935,7 +1966,7 @@ std::vector<sla::SupportPoint> SLAPrintObject::transformed_support_points() cons
 DynamicConfig SLAPrintStatistics::config() const
 {
     DynamicConfig config;
-    const std::string print_time = Slic3r::short_time(this->estimated_print_time);
+    const std::string print_time = Slic3r::short_time(get_time_dhms(float(this->estimated_print_time)));
     config.set_key_value("print_time", new ConfigOptionString(print_time));
     config.set_key_value("objects_used_material", new ConfigOptionFloat(this->objects_used_material));
     config.set_key_value("support_used_material", new ConfigOptionFloat(this->support_used_material));

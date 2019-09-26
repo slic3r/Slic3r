@@ -329,6 +329,28 @@ void ToolOrdering::fill_wipe_tower_partitions(const PrintConfig &config, coordf_
         }
     }
 
+    // If the model contains empty layers (such as https://github.com/prusa3d/Slic3r/issues/1266), there might be layers
+    // that were not marked as has_wipe_tower, even when they should have been. This produces a crash with soluble supports
+    // and maybe other problems. We will therefore go through layer_tools and detect and fix this.
+    // So, if there is a non-object layer starting with different extruder than the last one ended with (or containing more than one extruder),
+    // we'll mark it with has_wipe tower.
+    for (unsigned int i=0; i+1<m_layer_tools.size(); ++i) {
+        LayerTools& lt = m_layer_tools[i];
+        LayerTools& lt_next = m_layer_tools[i+1];
+        if (lt.extruders.empty() || lt_next.extruders.empty())
+            break;
+        if (!lt_next.has_wipe_tower && (lt_next.extruders.front() != lt.extruders.back() || lt_next.extruders.size() > 1))
+            lt_next.has_wipe_tower = true;
+        // We should also check that the next wipe tower layer is no further than max_layer_height:
+        unsigned int j = i+1;
+        double last_wipe_tower_print_z = lt_next.print_z;
+        while (++j < m_layer_tools.size()-1 && !m_layer_tools[j].has_wipe_tower)
+            if (m_layer_tools[j+1].print_z - last_wipe_tower_print_z > max_layer_height) {
+                m_layer_tools[j].has_wipe_tower = true;
+                last_wipe_tower_print_z = m_layer_tools[j].print_z;
+            }
+    }
+
     // Calculate the wipe_tower_layer_height values.
     coordf_t wipe_tower_print_z_last = 0.;
     for (LayerTools &lt : m_layer_tools)
@@ -458,14 +480,14 @@ float WipingExtrusions::mark_wiping_extrusions(const Print& print, unsigned int 
             continue;
         }
 
-        const auto& object = object_list[i];
+        const PrintObject* object = object_list[i];
 
         // Finds this layer:
         auto this_layer_it = std::find_if(object->layers().begin(), object->layers().end(), [&lt](const Layer* lay) { return std::abs(lt.print_z - lay->print_z)<EPSILON; });
         if (this_layer_it == object->layers().end())
             continue;
         const Layer* this_layer = *this_layer_it;
-        unsigned int num_of_copies = object->copies().size();
+        size_t num_of_copies = object->copies().size();
 
         for (unsigned int copy = 0; copy < num_of_copies; ++copy) {    // iterate through copies first, so that we mark neighbouring infills to minimize travel moves
 
@@ -494,7 +516,7 @@ float WipingExtrusions::mark_wiping_extrusions(const Print& print, unsigned int 
 
                         if ((!is_entity_overridden(fill, copy) && fill->total_volume() > min_infill_volume)) {     // this infill will be used to wipe this extruder
                             set_extruder_override(fill, copy, new_extruder, num_of_copies);
-                            volume_to_wipe -= fill->total_volume();
+                            volume_to_wipe -= float(fill->total_volume());
                         }
                     }
                 }
@@ -512,7 +534,7 @@ float WipingExtrusions::mark_wiping_extrusions(const Print& print, unsigned int 
 
                         if ((!is_entity_overridden(fill, copy) && fill->total_volume() > min_infill_volume)) {
                             set_extruder_override(fill, copy, new_extruder, num_of_copies);
-                            volume_to_wipe -= fill->total_volume();
+                            volume_to_wipe -= float(fill->total_volume());
                         }
                     }
                 }
@@ -540,9 +562,9 @@ void WipingExtrusions::ensure_perimeters_infills_order(const Print& print)
         if (this_layer_it == object->layers().end())
             continue;
         const Layer* this_layer = *this_layer_it;
-        unsigned int num_of_copies = object->copies().size();
+        size_t num_of_copies = object->copies().size();
 
-        for (unsigned int copy = 0; copy < num_of_copies; ++copy) {    // iterate through copies first, so that we mark neighbouring infills to minimize travel moves
+        for (size_t copy = 0; copy < num_of_copies; ++copy) {    // iterate through copies first, so that we mark neighbouring infills to minimize travel moves
             for (size_t region_id = 0; region_id < object->region_volumes.size(); ++ region_id) {
                 const auto& region = *object->print()->regions()[region_id];
 
@@ -598,7 +620,7 @@ void WipingExtrusions::ensure_perimeters_infills_order(const Print& print)
 // so -1 was used as "print as usual".
 // The resulting vector has to keep track of which extrusions are the ones that were overridden and which were not. In the extruder is used as overridden,
 // its number is saved as it is (zero-based index). Usual extrusions are saved as -number-1 (unfortunately there is no negative zero).
-const std::vector<int>* WipingExtrusions::get_extruder_overrides(const ExtrusionEntity* entity, int correct_extruder_id, int num_of_copies)
+const std::vector<int>* WipingExtrusions::get_extruder_overrides(const ExtrusionEntity* entity, int correct_extruder_id, size_t num_of_copies)
 {
     auto entity_map_it = entity_map.find(entity);
     if (entity_map_it == entity_map.end())

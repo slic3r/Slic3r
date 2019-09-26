@@ -232,7 +232,7 @@ void Tab::create_preset_tab()
 		//! select_preset(m_presets_choice->GetStringSelection().ToUTF8().data()); 
 		//! we doing next:
 		int selected_item = m_presets_choice->GetSelection();
-		if (m_selected_preset_item == selected_item && !m_presets->current_is_dirty())
+        if (m_selected_preset_item == size_t(selected_item) && !m_presets->current_is_dirty())
 			return;
 		if (selected_item >= 0) {
 			std::string selected_string = m_presets_choice->GetString(selected_item).ToUTF8().data();
@@ -489,7 +489,7 @@ template<class T>
 void add_correct_opts_to_options_list(const std::string &opt_key, std::map<std::string, int>& map, Tab *tab, const int& value)
 {
 	T *opt_cur = static_cast<T*>(tab->m_config->option(opt_key));
-	for (int i = 0; i < opt_cur->values.size(); i++)
+    for (size_t i = 0; i < opt_cur->values.size(); i++)
 		map.emplace(opt_key + "#" + std::to_string(i), value);
 }
 
@@ -545,10 +545,11 @@ void TabSLAMaterial::init_options_list()
 void Tab::get_sys_and_mod_flags(const std::string& opt_key, bool& sys_page, bool& modified_page)
 {
     auto opt = m_options_list.find(opt_key);
-    if (opt != m_options_list.end()){
+    if (opt == m_options_list.end()) 
+        return;
+
         if (sys_page) sys_page = (opt->second & osSystemValue) != 0;
         modified_page |= (opt->second & osInitValue) == 0;
-    }
 }
 
 void Tab::update_changed_tree_ui()
@@ -842,7 +843,7 @@ static wxString support_combo_value_for_config(const DynamicPrintConfig &config,
 
 static wxString pad_combo_value_for_config(const DynamicPrintConfig &config)
 {
-    return config.opt_bool("pad_enable") ? (config.opt_bool("pad_zero_elevation") ? _("Around object") : _("Below object")) : _("None");
+    return config.opt_bool("pad_enable") ? (config.opt_bool("pad_around_object") ? _("Around object") : _("Below object")) : _("None");
 }
 
 void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
@@ -859,12 +860,19 @@ void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
         og_freq_chng_params->set_value(opt_key, val);
 	}
 
+    if (opt_key == "pad_around_object") {
+        for (PageShp &pg : m_pages) {
+            Field * fld = pg->get_field(opt_key);
+            if (fld) fld->set_value(value, false);
+        }
+    }
+
 	if (is_fff ?
 			(opt_key == "support_material" || opt_key == "support_material_auto" || opt_key == "support_material_buildplate_only") :
         	(opt_key == "supports_enable"  || opt_key == "support_buildplate_only"))
 		og_freq_chng_params->set_value("support", support_combo_value_for_config(*m_config, is_fff));
 
-    if (! is_fff && (opt_key == "pad_enable" || opt_key == "pad_zero_elevation"))
+    if (! is_fff && (opt_key == "pad_enable" || opt_key == "pad_around_object"))
         og_freq_chng_params->set_value("pad", pad_combo_value_for_config(*m_config));
 
 	if (opt_key == "brim_width")
@@ -987,6 +995,7 @@ void Tab::update_preset_description_line()
 					description_line += "\n\n\t" + _(L("default SLA print profile")) + ": \n\t\t" + default_sla_print_profile;
 				break;
 			}
+            default: break;
 			}
 		}
 	}
@@ -1904,7 +1913,7 @@ void TabFilament::update_volumetric_flow_preset_hints()
     try {
         text = from_u8(PresetHints::maximum_volumetric_flow_description(*m_preset_bundle));
     } catch (std::exception &ex) {
-        text = _(L("Volumetric flow hints not available\n\n")) + from_u8(ex.what());
+        text = _(L("Volumetric flow hints not available")) + "\n\n" + from_u8(ex.what());
     }
     m_volumetric_speed_description_line->SetText(text);
 }
@@ -2153,7 +2162,7 @@ void TabPrinter::build_fff()
 		optgroup->append_single_option_line("single_extruder_multi_material");
 
 		optgroup->m_on_change = [this, optgroup](t_config_option_key opt_key, boost::any value) {
-			size_t extruders_count = boost::any_cast<int>(optgroup->get_value("extruders_count"));
+            size_t extruders_count = boost::any_cast<size_t>(optgroup->get_value("extruders_count"));
 			wxTheApp->CallAfter([this, opt_key, value, extruders_count]() {
 				if (opt_key == "extruders_count" || opt_key == "single_extruder_multi_material") {
 					extruders_count_changed(extruders_count);
@@ -2574,7 +2583,7 @@ void TabPrinter::build_unregular_pages()
 
 	// Add/delete Kinematics page according to is_marlin_flavor
 	size_t existed_page = 0;
-	for (int i = n_before_extruders; i < m_pages.size(); ++i) // first make sure it's not there already
+    for (size_t i = n_before_extruders; i < m_pages.size(); ++i) // first make sure it's not there already
 		if (m_pages[i]->title().find(_(L("Machine limits"))) != std::string::npos) {
 			if (!is_marlin_flavor || m_rebuild_kinematics_page)
 				m_pages.erase(m_pages.begin() + i);
@@ -2599,7 +2608,7 @@ void TabPrinter::build_unregular_pages()
 		(m_has_single_extruder_MM_page && m_extruders_count == 1))
 	{
 		// if we have a single extruder MM setup, add a page with configuration options:
-		for (int i = 0; i < m_pages.size(); ++i) // first make sure it's not there already
+        for (size_t i = 0; i < m_pages.size(); ++i) // first make sure it's not there already
 			if (m_pages[i]->title().find(_(L("Single extruder MM setup"))) != std::string::npos) {
 				m_pages.erase(m_pages.begin() + i);
 				break;
@@ -2751,8 +2760,8 @@ void TabPrinter::on_preset_loaded()
 {
 	// update the extruders count field
 	auto   *nozzle_diameter = dynamic_cast<const ConfigOptionFloats*>(m_config->option("nozzle_diameter"));
-	int extruders_count = nozzle_diameter->values.size();
-	set_value("extruders_count", extruders_count);
+    size_t extruders_count = nozzle_diameter->values.size();
+    set_value("extruders_count", int(extruders_count));
 	// update the GUI field according to the number of nozzle diameters supplied
 	extruders_count_changed(extruders_count);
 }
@@ -2890,7 +2899,7 @@ void TabPrinter::update_fff()
 			DynamicPrintConfig new_conf = *m_config;
             if (dialog.ShowModal() == wxID_YES) {
 				auto wipe = static_cast<ConfigOptionBools*>(m_config->option("wipe")->clone());
-				for (int w = 0; w < wipe->values.size(); w++)
+                for (size_t w = 0; w < wipe->values.size(); w++)
 					wipe->values[w] = false;
 				new_conf.set_key_value("wipe", wipe);
 			}
@@ -3867,6 +3876,9 @@ void TabSLAPrint::build()
     optgroup->append_single_option_line("support_base_diameter");
     optgroup->append_single_option_line("support_base_height");
     optgroup->append_single_option_line("support_base_safety_distance");
+    
+    // Mirrored parameter from Pad page for toggling elevation on the same page
+    optgroup->append_single_option_line("pad_around_object");
     optgroup->append_single_option_line("support_object_elevation");
 
     optgroup = page->new_optgroup(_(L("Connection of the support sticks and junctions")));
@@ -3888,7 +3900,7 @@ void TabSLAPrint::build()
 //    optgroup->append_single_option_line("pad_edge_radius");
     optgroup->append_single_option_line("pad_wall_slope");
     
-    optgroup->append_single_option_line("pad_zero_elevation");
+    optgroup->append_single_option_line("pad_around_object");
     optgroup->append_single_option_line("pad_object_gap");
     optgroup->append_single_option_line("pad_object_connector_stride");
     optgroup->append_single_option_line("pad_object_connector_width");
@@ -3937,84 +3949,6 @@ void TabSLAPrint::update()
         return;
 
      m_update_cnt++;
-
-    /* #ys_FIXME_delete_after_testing (refactoring)
-     *
-    bool supports_en = m_config->opt_bool("supports_enable");
-
-    get_field("support_head_front_diameter")->toggle(supports_en);
-    get_field("support_head_penetration")->toggle(supports_en);
-    get_field("support_head_width")->toggle(supports_en);
-    get_field("support_pillar_diameter")->toggle(supports_en);
-    get_field("support_pillar_connection_mode")->toggle(supports_en);
-    get_field("support_buildplate_only")->toggle(supports_en);
-    get_field("support_base_diameter")->toggle(supports_en);
-    get_field("support_base_height")->toggle(supports_en);
-    get_field("support_base_safety_distance")->toggle(supports_en);
-    get_field("support_critical_angle")->toggle(supports_en);
-    get_field("support_max_bridge_length")->toggle(supports_en);
-    get_field("support_max_pillar_link_distance")->toggle(supports_en);
-    get_field("support_points_density_relative")->toggle(supports_en);
-    get_field("support_points_minimal_distance")->toggle(supports_en);
-
-    bool pad_en = m_config->opt_bool("pad_enable");
-
-    get_field("pad_wall_thickness")->toggle(pad_en);
-    get_field("pad_wall_height")->toggle(pad_en);
-    get_field("pad_max_merge_distance")->toggle(pad_en);
-    // get_field("pad_edge_radius")->toggle(supports_en);
-    get_field("pad_wall_slope")->toggle(pad_en);
-    get_field("pad_zero_elevation")->toggle(pad_en);
-
-    double head_penetration = m_config->opt_float("support_head_penetration");
-    double head_width       = m_config->opt_float("support_head_width");
-    if (head_penetration > head_width) {
-        wxString msg_text = _(
-            L("Head penetration should not be greater than the head width."));
-
-        wxMessageDialog dialog(parent(),
-                                          msg_text,
-                                          _(L("Invalid Head penetration")),
-                                          wxICON_WARNING | wxOK);
-
-        DynamicPrintConfig new_conf = *m_config;
-        if (dialog.ShowModal() == wxID_OK) {
-            new_conf.set_key_value("support_head_penetration",
-                                   new ConfigOptionFloat(head_width));
-        }
-
-        load_config(new_conf);
-    }
-
-    double pinhead_d = m_config->opt_float("support_head_front_diameter");
-    double pillar_d  = m_config->opt_float("support_pillar_diameter");
-    if (pinhead_d > pillar_d) {
-        wxString msg_text = _(L(
-            "Pinhead diameter should be smaller than the pillar diameter."));
-
-        wxMessageDialog dialog (parent(),
-                                          msg_text,
-                                          _(L("Invalid pinhead diameter")),
-                                          wxICON_WARNING | wxOK);
-
-        DynamicPrintConfig new_conf = *m_config;
-        if (dialog.ShowModal() == wxID_OK) {
-            new_conf.set_key_value("support_head_front_diameter",
-                                   new ConfigOptionFloat(pillar_d / 2.0));
-        }
-
-        load_config(new_conf);
-    }
-    
-    bool   has_suppad = pad_en && supports_en;
-    bool zero_elev    = m_config->opt_bool("pad_zero_elevation") && has_suppad;
-
-    get_field("support_object_elevation")->toggle(supports_en && !zero_elev);
-    get_field("pad_object_gap")->toggle(zero_elev);
-    get_field("pad_object_connector_stride")->toggle(zero_elev);
-    get_field("pad_object_connector_width")->toggle(zero_elev);
-    get_field("pad_object_connector_penetration")->toggle(zero_elev);
-*/
 
     m_config_manipulation.update_print_sla_config(m_config, true);
     m_update_cnt--;

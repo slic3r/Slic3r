@@ -6,12 +6,23 @@
 //
 // The classes derived from StaticPrintConfig form a following hierarchy.
 //
-// FullPrintConfig
-//    PrintObjectConfig
-//    PrintRegionConfig
-//    PrintConfig
-//        GCodeConfig
-//    HostConfig
+//  class ConfigBase
+//    class StaticConfig : public virtual ConfigBase
+//        class StaticPrintConfig : public StaticConfig
+//            class PrintObjectConfig : public StaticPrintConfig
+//            class PrintRegionConfig : public StaticPrintConfig
+//            class HostConfig : public StaticPrintConfig
+//            class MachineEnvelopeConfig : public StaticPrintConfig
+//            class GCodeConfig : public StaticPrintConfig
+//                class PrintConfig : public MachineEnvelopeConfig, public GCodeConfig
+//                    class FullPrintConfig : PrintObjectConfig,PrintRegionConfig,PrintConfig,HostConfig
+//            class SLAPrintObjectConfig : public StaticPrintConfig
+//            class SLAMaterialConfig : public StaticPrintConfig
+//            class SLAPrinterConfig : public StaticPrintConfig
+//    class DynamicConfig : public virtual ConfigBase
+//        class DynamicPrintConfig : public DynamicConfig
+//            class DynamicPrintAndCLIConfig : public DynamicPrintConfig
+//
 //
 
 #ifndef slic3r_PrintConfig_hpp_
@@ -30,7 +41,7 @@ enum WipeAlgo {
     waHyper,
 };
 
-enum GCodeFlavor {
+enum GCodeFlavor : unsigned char {
     gcfRepRap, gcfRepetier, gcfTeacup, gcfMakerWare, gcfMarlin, gcfSailfish, gcfMach3, gcfMachinekit,
     gcfSmoothie, gcfNoExtrusion,
 };
@@ -42,7 +53,7 @@ enum PrintHostType {
 enum InfillPattern {
     ipRectilinear, ipGrid, ipTriangles, ipStars, ipCubic, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
     ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral, ipSmooth, ipSmoothHilbert, ipSmoothTriple,
-    ipRectiWithPerimeter, ipConcentricGapFill, ipScatteredRectilinear, ipSawtooth, ipRectilinearWGapFill
+    ipRectiWithPerimeter, ipConcentricGapFill, ipScatteredRectilinear, ipSawtooth, ipRectilinearWGapFill, ipCount
 };
 
 enum SupportMaterialPattern {
@@ -1201,7 +1212,7 @@ public:
     // /////////////////////////////////////////////////////////////////////////
 
     // Disable the elevation (ignore its value) and use the zero elevation mode
-    ConfigOptionBool  pad_zero_elevation;
+    ConfigOptionBool  pad_around_object;
 
     // This is the gap between the object bottom and the generated pad
     ConfigOptionFloat pad_object_gap;
@@ -1244,7 +1255,7 @@ protected:
         OPT_PTR(pad_max_merge_distance);
         // OPT_PTR(pad_edge_radius);
         OPT_PTR(pad_wall_slope);
-        OPT_PTR(pad_zero_elevation);
+        OPT_PTR(pad_around_object);
         OPT_PTR(pad_object_gap);
         OPT_PTR(pad_object_connector_stride);
         OPT_PTR(pad_object_connector_width);

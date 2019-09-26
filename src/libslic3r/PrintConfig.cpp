@@ -2603,13 +2603,13 @@ void PrintConfigDef::init_fff_params()
     {
         int threads = (unsigned int)boost::thread::hardware_concurrency();
         def->set_default_value(new ConfigOptionInt(threads > 0 ? threads : 2));
-        def->cli == ConfigOptionDef::nocli;
+        def->cli = ConfigOptionDef::nocli;
     }
 
     def = this->add("toolchange_gcode", coString);
     def->label = L("Tool change G-code");
     def->tooltip = L("This custom code is inserted at every extruder change. If you don't leave this empty, you are "
-                     "expected to take care of the toolchange yourself - PrusaSlicer will not output any other G-code to "
+                     "expected to take care of the toolchange yourself - slic3r will not output any other G-code to "
                      "change the filament. You can use placeholder variables for all Slic3r settings as well as [previous_extruder] "
                      "and [next_extruder], so e.g. the standard toolchange command can be scripted as T[next_extruder].");
     def->multiline = true;
@@ -3262,7 +3262,8 @@ void PrintConfigDef::init_sla_params()
     def->category = L("Supports");
     def->tooltip = L("How much the supports should lift up the supported object. "
                      "If this value is zero, the bottom of the model geometry "
-                     "will be considered as part of the pad.");
+                     "will be considered as part of the pad."
+                     "If \"Pad around object\" is enabled, this value is ignored.");
     def->sidetext = L("mm");
     def->min = 0;
     def->max = 150; // This is the max height of print on SL1
@@ -3349,7 +3350,7 @@ void PrintConfigDef::init_sla_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(45.0));
 
-    def = this->add("pad_zero_elevation", coBool);
+    def = this->add("pad_around_object", coBool);
     def->label = L("Pad around object");
     def->category = L("Pad");
     def->tooltip = L("Create pad around object and ignore the support elevation");
@@ -3370,8 +3371,7 @@ void PrintConfigDef::init_sla_params()
     def = this->add("pad_object_connector_stride", coFloat);
     def->label = L("Pad object connector stride");
     def->category = L("Pad");
-    def->tooltip = L("Distance between two connector sticks between "
-                     "the object pad and the generated pad.");
+    def->tooltip = L("Distance between two connector sticks which connect the object and the generated pad.");
     def->sidetext = L("mm");
     def->min = 0;
     def->mode = comExpert;
@@ -3380,8 +3380,7 @@ void PrintConfigDef::init_sla_params()
     def = this->add("pad_object_connector_width", coFloat);
     def->label = L("Pad object connector width");
     def->category = L("Pad");
-    def->tooltip  = L("The width of the connectors sticks which connect the "
-                      "object pad and the generated pad.");
+    def->tooltip  = L("Width of the connector sticks which connect the object and the generated pad.");
     def->sidetext = L("mm");
     def->min = 0;
     def->mode = comExpert;
@@ -3556,22 +3555,22 @@ double PrintConfig::min_object_distance() const
 double PrintConfig::min_object_distance(const ConfigBase *config)
 {
     double base_dist = 0;
-    if (config->option("complete_objects")->getBool()){
+    if (config->option("complete_objects")->getBool()) {
         std::vector<double> vals = dynamic_cast<const ConfigOptionFloats*>(config->option("nozzle_diameter"))->values;
         double max_nozzle_diam = 0;
         for (double val : vals) max_nozzle_diam = std::fmax(max_nozzle_diam, val);
 
         // min object distance is max(duplicate_distance, clearance_radius)
         double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat();
-        if (extruder_clearance_radius > base_dist){
+        if (extruder_clearance_radius > base_dist) {
             base_dist = extruder_clearance_radius;
         }
         //add brim width
-        if (config->option("brim_width")->getFloat() > 0){
+        if (config->option("brim_width")->getFloat() > 0) {
             base_dist += config->option("brim_width")->getFloat() * 2;
         }
         //add the skirt
-        if (config->option("skirts")->getInt() > 0){
+        if (config->option("skirts")->getInt() > 0) {
             //add skirt dist
             double dist_skirt = config->option("skirt_distance")->getFloat();
             if (dist_skirt > config->option("brim_width")->getFloat())
@@ -3581,6 +3580,7 @@ double PrintConfig::min_object_distance(const ConfigBase *config)
         }
     }
     return base_dist;
+}
 
 //FIXME localize this function.
 std::string FullPrintConfig::validate()

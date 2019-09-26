@@ -1,7 +1,6 @@
 #include "Snapshot.hpp"
 #include "../GUI/AppConfig.hpp"
 #include "../GUI/PresetBundle.hpp"
-#include "../Utils/Time.hpp"
 
 #include <time.h>
 
@@ -13,6 +12,7 @@
 #include <boost/property_tree/ptree.hpp>
 
 #include "libslic3r/libslic3r.h"
+#include "libslic3r/Time.hpp"
 #include "libslic3r/Config.hpp"
 #include "libslic3r/FileParserError.hpp"
 #include "libslic3r/Utils.hpp"
@@ -202,9 +202,9 @@ void Snapshot::export_selections(AppConfig &config) const
     config.clear_section("presets");
     config.set("presets", "print",    print);
     config.set("presets", "filament", filaments.front());
-	for (int i = 1; i < filaments.size(); ++i) {
+    for (unsigned i = 1; i < filaments.size(); ++i) {
         char name[64];
-        sprintf(name, "filament_%d", i);
+        sprintf(name, "filament_%u", i);
         config.set("presets", name, filaments[i]);
     }
     config.set("presets", "printer",  printer);
@@ -373,9 +373,9 @@ const Snapshot&	SnapshotDB::take_snapshot(const AppConfig &app_config, Snapshot:
     snapshot.print   = app_config.get("presets", "print");
     snapshot.filaments.emplace_back(app_config.get("presets", "filament"));
     snapshot.printer = app_config.get("presets", "printer");
-    for (unsigned int i = 1; i < 1000; ++ i) {
+    for (unsigned i = 1; i < 1000; ++ i) {
         char name[64];
-        sprintf(name, "filament_%d", i);
+        sprintf(name, "filament_%u", i);
         if (! app_config.has("presets", name))
             break;
 	    snapshot.filaments.emplace_back(app_config.get("presets", name));

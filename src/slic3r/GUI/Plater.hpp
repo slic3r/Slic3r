@@ -89,7 +89,7 @@ public:
     ~Sidebar();
 
     void init_filament_combo(PresetComboBox **combo, const int extr_idx);
-    void remove_unused_filament_combos(const int current_extruder_count);
+    void remove_unused_filament_combos(const size_t current_extruder_count);
     void update_all_preset_comboboxes();
     void update_presets(Slic3r::Preset::Type preset_type);
     void update_mode_sizer() const;
@@ -105,7 +105,7 @@ public:
 
     ConfigOptionsGroup*     og_freq_chng_params(const bool is_fff);
     wxButton*               get_wiping_dialog_button();
-    void                    update_objects_list_extruder_column(int extruders_count);
+    void                    update_objects_list_extruder_column(size_t extruders_count);
     void                    show_info_sizer();
     void                    show_sliced_info_sizer(const bool show);
     void                    enable_buttons(bool enable);
@@ -147,9 +147,9 @@ public:
     void add_model();
     void extract_config_from_project();
 
-    void load_files(const std::vector<boost::filesystem::path>& input_files, bool load_model = true, bool load_config = true);
+    std::vector<size_t> load_files(const std::vector<boost::filesystem::path>& input_files, bool load_model = true, bool load_config = true);
     // To be called when providing a list of files to the GUI slic3r on command line.
-    void load_files(const std::vector<std::string>& input_files, bool load_model = true, bool load_config = true);
+    std::vector<size_t> load_files(const std::vector<std::string>& input_files, bool load_model = true, bool load_config = true);
 
     void update();
     void stop_jobs();
@@ -209,10 +209,11 @@ public:
     void enter_gizmos_stack();
     void leave_gizmos_stack();
 
-    void on_extruders_change(int extruders_count);
+    void on_extruders_change(size_t extruders_count);
     void on_config_change(const DynamicPrintConfig &config);
     // On activating the parent window.
     void on_activate();
+    const DynamicPrintConfig* get_plater_config() const;
 
     void update_object_menu();
 
@@ -224,6 +225,7 @@ public:
     int get_selected_object_idx();
     bool is_single_full_object_selection() const;
     GLCanvas3D* canvas3D();
+    BoundingBoxf bed_shape_bb() const;
 
     PrinterTechnology   printer_technology() const;
     void                set_printer_technology(PrinterTechnology printer_technology);

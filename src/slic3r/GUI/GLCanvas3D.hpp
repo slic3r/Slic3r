@@ -12,6 +12,7 @@
 #include "Selection.hpp"
 #include "Gizmos/GLGizmosManager.hpp"
 #include "GUI_ObjectLayers.hpp"
+#include "MeshUtils.hpp"
 
 #include <float.h>
 
@@ -67,39 +68,11 @@ public:
 };
 
 
-class ClippingPlane
-{
-    double m_data[4];
-
-public:
-    ClippingPlane()
-    {
-        m_data[0] = 0.0;
-        m_data[1] = 0.0;
-        m_data[2] = 1.0;
-        m_data[3] = 0.0;
-    }
-
-    ClippingPlane(const Vec3d& direction, double offset)
-    {
-        Vec3d norm_dir = direction.normalized();
-        m_data[0] = norm_dir(0);
-        m_data[1] = norm_dir(1);
-        m_data[2] = norm_dir(2);
-        m_data[3] = offset;
-    }
-
-    bool is_active() const { return m_data[3] != DBL_MAX; }
-
-    static ClippingPlane ClipsNothing() { return ClippingPlane(Vec3d(0., 0., 1.), DBL_MAX); }
-
-    const double* get_data() const { return m_data; }
-};
-
-
 wxDECLARE_EVENT(EVT_GLCANVAS_OBJECT_SELECT, SimpleEvent);
 
 using Vec2dEvent = Event<Vec2d>;
+// _bool_ value is used as a indicator of selection in the 3DScene
+using RBtnEvent = Event<std::pair<Vec2d, bool>>;
 template <size_t N> using Vec2dsEvent = ArrayEvent<Vec2d, N>;
 
 using Vec3dEvent = Event<Vec3d>;
@@ -107,7 +80,7 @@ template <size_t N> using Vec3dsEvent = ArrayEvent<Vec3d, N>;
 
 wxDECLARE_EVENT(EVT_GLCANVAS_INIT, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS, SimpleEvent);
-wxDECLARE_EVENT(EVT_GLCANVAS_RIGHT_CLICK, Vec2dEvent);
+wxDECLARE_EVENT(EVT_GLCANVAS_RIGHT_CLICK, RBtnEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_REMOVE_OBJECT, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_ARRANGE, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_SELECT_ALL, SimpleEvent);
@@ -403,6 +376,7 @@ private:
     std::unique_ptr<RetinaHelper> m_retina_helper;
 #endif
     bool m_in_render;
+    bool m_render_enabled;
     LegendTexture m_legend_texture;
     WarningTexture m_warning_texture;
     wxTimer m_timer;
@@ -433,7 +407,6 @@ private:
     bool m_initialized;
     bool m_apply_zoom_to_volumes_filter;
     mutable std::vector<int> m_hover_volume_idxs;
-    bool m_warning_texture_enabled;
     bool m_legend_texture_enabled;
     bool m_picking_enabled;
     bool m_moving_enabled;
@@ -532,6 +505,9 @@ public:
     void enable_undoredo_toolbar(bool enable);
     void enable_dynamic_background(bool enable);
     void allow_multisample(bool allow);
+
+    void enable_render(bool enable) { m_render_enabled = enable; }
+    bool is_render_enabled() const { return m_render_enabled; }
 
     void zoom_to_bed();
     void zoom_to_volumes();
@@ -637,14 +613,13 @@ public:
     void set_cursor(ECursorType type);
     void msw_rescale();
 
+    bool is_keeping_dirty() const { return m_keep_dirty; }
     void start_keeping_dirty() { m_keep_dirty = true; }
     void stop_keeping_dirty() { m_keep_dirty = false; }
 
-    unsigned int get_main_toolbar_item_id(const std::string& name) const { return m_main_toolbar.get_item_id(name); }
-    void force_main_toolbar_left_action(unsigned int item_id) { m_main_toolbar.force_left_action(item_id, *this); }
-    void force_main_toolbar_right_action(unsigned int item_id) { m_main_toolbar.force_right_action(item_id, *this); }
-    void get_undoredo_toolbar_additional_tooltip(unsigned int item_id, std::string& text) { return m_undoredo_toolbar.get_additional_tooltip(item_id, text); }
-    void set_undoredo_toolbar_additional_tooltip(unsigned int item_id, const std::string& text) { m_undoredo_toolbar.set_additional_tooltip(item_id, text); }
+    int get_main_toolbar_item_id(const std::string& name) const { return m_main_toolbar.get_item_id(name); }
+    void force_main_toolbar_left_action(int item_id) { m_main_toolbar.force_left_action(item_id, *this); }
+    void force_main_toolbar_right_action(int item_id) { m_main_toolbar.force_right_action(item_id, *this); }
 
     bool has_toolpaths_to_export() const;
     void export_toolpaths_to_obj(const char* filename) const;
@@ -719,9 +694,6 @@ private:
     void _load_gcode_extrusion_paths(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors);
     // generates gcode travel paths geometry
     void _load_gcode_travel_paths(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors);
-    bool _travel_paths_by_type(const GCodePreviewData& preview_data);
-    bool _travel_paths_by_feedrate(const GCodePreviewData& preview_data);
-    bool _travel_paths_by_tool(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors);
     // generates objects and wipe tower geometry
     void _load_fff_shells();
     // Load SLA objects and support structures for objects, for which the slaposSliceSupports step has been finished.

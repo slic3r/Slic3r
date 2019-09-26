@@ -529,8 +529,9 @@ void Model::convert_multipart_object(unsigned int max_extruders)
                     }
                 }
 
-        object->add_instance();
-    object->instances[0]->set_offset(object->raw_mesh_bounding_box().center());
+    // commented-out to fix #2868
+//    object->add_instance();
+//    object->instances[0]->set_offset(object->raw_mesh_bounding_box().center());
 
     this->clear_objects();
     this->objects.push_back(object);
@@ -711,7 +712,7 @@ ModelVolume* ModelObject::add_volume(const ModelVolume &other, TriangleMesh &&me
 {
     ModelVolume* v = new ModelVolume(this, other, std::move(mesh));
     this->volumes.push_back(v);
-        if(centered) v->center_geometry_after_creation();
+    if(centered) v->center_geometry_after_creation();
     this->invalidate_bounding_box();
     return v;
 }
