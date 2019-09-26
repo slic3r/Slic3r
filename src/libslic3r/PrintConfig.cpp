@@ -3554,7 +3554,8 @@ double PrintConfig::min_object_distance() const
 
 double PrintConfig::min_object_distance(const ConfigBase *config)
 {
-    double base_dist = 0;
+    double duplicate_distance = config->option("duplicate_distance")->getFloat();
+    double base_dist = duplicate_distance;
     if (config->option("complete_objects")->getBool()) {
         std::vector<double> vals = dynamic_cast<const ConfigOptionFloats*>(config->option("nozzle_diameter"))->values;
         double max_nozzle_diam = 0;
