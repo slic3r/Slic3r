@@ -69,15 +69,26 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
 
     double fill_density = config->option<ConfigOptionPercent>("fill_density")->value;
 
-    if (config->opt_bool("spiral_vase") &&
-        !(config->opt_int("perimeters") == 1 && config->opt_int("top_solid_layers") == 0 &&
-            fill_density == 0)) {
+    if (config->opt_bool("spiral_vase") && !(
+        config->opt_int("perimeters") == 1
+            && config->opt_int("top_solid_layers") == 0
+            && fill_density == 0
+            && config->opt_bool("support_material") == false
+            && config->opt_int("support_material_enforce_layers") == 0
+            && config->opt_bool("exact_last_layer_height") == false
+            && config->opt_bool("ensure_vertical_shell_thickness") == false
+            && config->opt_bool("infill_dense") == false
+            && config->opt_bool("extra_perimeters") == false
+            )) {
         wxString msg_text = _(L("The Spiral Vase mode requires:\n"
-                                "- one perimeter\n"
-                                "- no top solid layers\n"
-                                "- 0% fill density\n"
-                                "- no support material\n"
-                                "- no ensure_vertical_shell_thickness"));
+			"- one perimeter\n"
+			"- no top solid layers\n"
+			"- 0% fill density\n"
+			"- no support material\n"
+			"- no ensure_vertical_shell_thickness\n"
+			"- unchecked 'exact last layer height'\n"
+			"- unchecked 'dense infill'\n"
+			"- unchecked 'extra perimeters'\n"));
         if (is_global_config)
             msg_text += "\n\n" + _(L("Shall I adjust those settings in order to enable Spiral Vase?"));
         wxMessageDialog dialog(nullptr, msg_text, _(L("Spiral Vase")),
@@ -90,7 +101,10 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
             new_conf.set_key_value("fill_density", new ConfigOptionPercent(0));
             new_conf.set_key_value("support_material", new ConfigOptionBool(false));
             new_conf.set_key_value("support_material_enforce_layers", new ConfigOptionInt(0));
+            new_conf.set_key_value("exact_last_layer_height", new ConfigOptionBool(false));
             new_conf.set_key_value("ensure_vertical_shell_thickness", new ConfigOptionBool(false));
+            new_conf.set_key_value("infill_dense", new ConfigOptionBool(false));
+            new_conf.set_key_value("extra_perimeters", new ConfigOptionBool(false));
             fill_density = 0;
         }
         else {
@@ -102,7 +116,7 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
     }
 
     if (config->opt_bool("wipe_tower") && config->opt_bool("support_material") &&
-        config->opt_float("support_material_contact_distance") > 0. &&
+        ((ConfigOptionEnumGeneric*)config->option("support_material_contact_distance_type"))->value != zdNone &&
         (config->opt_int("support_material_extruder") != 0 || config->opt_int("support_material_interface_extruder") != 0)) {
         wxString msg_text = _(L("The Wipe Tower currently supports the non-soluble supports only\n"
                                 "if they are printed with the current extruder without triggering a tool change.\n"
@@ -123,7 +137,7 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
     }
 
     if (config->opt_bool("wipe_tower") && config->opt_bool("support_material") &&
-        config->opt_float("support_material_contact_distance") == 0 &&
+        ((ConfigOptionEnumGeneric*)config->option("support_material_contact_distance_type"))->value != zdNone &&
         !config->opt_bool("support_material_synchronize_layers")) {
         wxString msg_text = _(L("For the Wipe Tower to work with the soluble supports, the support layers\n"
                                 "need to be synchronized with the object layers."));
@@ -187,11 +201,16 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
             }
         }
         if (!str_fill_pattern.empty()) {
-            const std::vector<std::string>& external_fill_pattern = config->def()->get("top_fill_pattern")->enum_values;
+            const std::vector<std::string>& top_fill_pattern = config->def()->get("top_fill_pattern")->enum_values;
             bool correct_100p_fill = false;
-            for (const std::string& fill : external_fill_pattern)
+            for (const std::string& fill : top_fill_pattern)
             {
                 if (str_fill_pattern == fill)
+                    correct_100p_fill = true;
+            }
+            const std::vector<std::string> bottom_fill_pattern = config->def()->get("bottom_fill_pattern")->enum_values;
+            for (const std::string &fill : bottom_fill_pattern) {
+                if (str_fill_pattern.compare(fill) == 0)
                     correct_100p_fill = true;
             }
             // get fill_pattern name from enum_labels for using this one at dialog_msg
@@ -199,7 +218,7 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
             if (!correct_100p_fill) {
                 wxString msg_text = GUI::from_u8((boost::format(_utf8(L("The %1% infill pattern is not supposed to work at 100%% density."))) % str_fill_pattern).str());
                 if (is_global_config)
-                    msg_text += "\n\n" + _(L("Shall I switch to rectilinear fill pattern?"));
+                    msg_text += "\n\n" + _(L("Shall I switch to "+ str_fill_pattern +" fill pattern?"));
                 wxMessageDialog dialog(nullptr, msg_text, _(L("Infill")),
                                                   wxICON_WARNING | (is_global_config ? wxYES | wxNO : wxOK) );
                 DynamicPrintConfig new_conf = *config;
@@ -222,29 +241,43 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
 void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 {
     bool have_perimeters = config->opt_int("perimeters") > 0;
-    for (auto el : { "extra_perimeters", "ensure_vertical_shell_thickness", "thin_walls", "overhangs",
-                    "seam_position", "external_perimeters_first", "external_perimeter_extrusion_width",
-                    "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed" })
+    for (auto el : { "extra_perimeters", "only_one_perimeter_top", "ensure_vertical_shell_thickness", "thin_walls", "overhangs",
+        "seam_position", "external_perimeters_first", "external_perimeter_extrusion_width",
+        "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "perimeter_loop", "perimeter_loop_seam" })
         toggle_field(el, have_perimeters);
+
+    for (auto el : { "thin_walls_min_width", "thin_walls_overlap" })
+        toggle_field(el, config->opt_bool("thin_walls"));
+
+    toggle_field("perimeter_loop_seam", config->opt_bool("perimeter_loop"));
+
 
     bool have_infill = config->option<ConfigOptionPercent>("fill_density")->value > 0;
     // infill_extruder uses the same logic as in Print::extruders()
     for (auto el : { "fill_pattern", "infill_every_layers", "infill_only_where_needed",
-                    "solid_infill_every_layers", "solid_infill_below_area", "infill_extruder" })
+                "solid_infill_every_layers", "solid_infill_below_area", "infill_extruder" })
         toggle_field(el, have_infill);
+
+    bool can_have_infill_dense = config->option<ConfigOptionPercent>("fill_density")->value < 50;
+    for (auto el : { "infill_dense" })
+        toggle_field(el, can_have_infill_dense);
+
+    bool have_infill_dense = config->opt_bool("infill_dense") && can_have_infill_dense;
+    for (auto el : { "infill_dense_algo" })
+        toggle_field(el, have_infill_dense);
 
     bool have_solid_infill = config->opt_int("top_solid_layers") > 0 || config->opt_int("bottom_solid_layers") > 0;
     // solid_infill_extruder uses the same logic as in Print::extruders()
-    for (auto el : { "top_fill_pattern", "bottom_fill_pattern", "infill_first", "solid_infill_extruder",
-                    "solid_infill_extrusion_width", "solid_infill_speed" })
+    for (auto el : { "top_fill_pattern", "bottom_fill_pattern", "solid_fill_pattern", "enforce_full_fill_volume", "external_infill_margin",
+        "infill_first", "solid_infill_extruder", "solid_infill_extrusion_width", "solid_infill_speed" })
         toggle_field(el, have_solid_infill);
 
     for (auto el : { "fill_angle", "bridge_angle", "infill_extrusion_width",
                     "infill_speed", "bridge_speed" })
         toggle_field(el, have_infill || have_solid_infill);
 
-    // Gap fill is newly allowed in between perimeter lines even for empty infill (see GH #1476).
-    toggle_field("gap_fill_speed", have_perimeters);
+    // gap fill  can appear in infill
+    //toggle_field("gap_fill_speed", have_perimeters && config->opt_bool("gap_fill"));
 
     bool have_top_solid_infill = config->opt_int("top_solid_layers") > 0;
     for (auto el : { "top_infill_extrusion_width", "top_solid_infill_speed" })
@@ -263,17 +296,25 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     // perimeter_extruder uses the same logic as in Print::extruders()
     toggle_field("perimeter_extruder", have_perimeters || have_brim);
 
+    toggle_field("brim_ears", have_brim);
+    toggle_field("brim_ears_max_angle", have_brim && config->opt_bool("brim_ears"));
+
     bool have_raft = config->opt_int("raft_layers") > 0;
     bool have_support_material = config->opt_bool("support_material") || have_raft;
     bool have_support_material_auto = have_support_material && config->opt_bool("support_material_auto");
     bool have_support_interface = config->opt_int("support_material_interface_layers") > 0;
-    bool have_support_soluble = have_support_material && config->opt_float("support_material_contact_distance") == 0;
+    bool have_support_soluble = have_support_material && ((ConfigOptionEnumGeneric*)config->option("support_material_contact_distance_type"))->value == zdNone;
     for (auto el : { "support_material_pattern", "support_material_with_sheath",
                     "support_material_spacing", "support_material_angle", "support_material_interface_layers",
-                    "dont_support_bridges", "support_material_extrusion_width", "support_material_contact_distance",
-                    "support_material_xy_spacing" })
+                    "dont_support_bridges", "support_material_extrusion_width",
+                    "support_material_contact_distance_type",
+                    "support_material_xy_spacing", "support_material_interface_pattern" })
         toggle_field(el, have_support_material);
     toggle_field("support_material_threshold", have_support_material_auto);
+
+    for (auto el : { "support_material_contact_distance_top",
+        "support_material_contact_distance_bottom" })
+        toggle_field(el, have_support_material && !have_support_soluble);
 
     for (auto el : { "support_material_interface_spacing", "support_material_interface_extruder",
                     "support_material_interface_speed", "support_material_interface_contact_loops" })
