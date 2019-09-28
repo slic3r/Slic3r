@@ -102,6 +102,10 @@ PrintGCode::output()
         fh << _gcodegen.writer.set_fan(0,1) << "\n";
     }
 
+    // set initial extruder so it can be used in start G-code
+    const auto extruders = _print.extruders();
+    fh << _gcodegen.set_extruder( *(extruders.begin()) );
+
     // set bed temperature
     const auto temp = config.first_layer_bed_temperature.getInt();
     if (config.has_heatbed && temp > 0 && std::regex_search(config.start_gcode.getString(), bed_temp_regex)) {
@@ -162,8 +166,6 @@ PrintGCode::output()
         _gcodegen.avoid_crossing_perimeters.init_external_mp(union_ex(islands_p));
     }
 
-    const auto extruders = _print.extruders();
-
     // Calculate wiping points if needed.
     if (config.ooze_prevention && extruders.size() > 1) {
         /*
@@ -196,9 +198,6 @@ PrintGCode::output()
         }
         */
     }
-
-    // Set initial extruder only after custom start gcode
-    fh << _gcodegen.set_extruder( *(extruders.begin()) );
 
     // Do all objects for each layer.
 
@@ -477,7 +476,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
     // set new layer - this will change Z and force a retraction if retract_layer_change is enabled
     if (_print.config.before_layer_gcode.getString().size() > 0) {
         PlaceholderParser pp { *_gcodegen.placeholder_parser };
-        pp.set("layer_num", _gcodegen.layer_index);
+        pp.set("layer_num", layer->id());
         pp.set("layer_z", layer->print_z);
         pp.set("current_retraction", _gcodegen.writer.extruder()->retracted);
 
@@ -487,7 +486,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
     gcode += _gcodegen.change_layer(*layer);
     if (_print.config.layer_gcode.getString().size() > 0) {
         PlaceholderParser pp { *_gcodegen.placeholder_parser };
-        pp.set("layer_num", _gcodegen.layer_index);
+        pp.set("layer_num", layer->id());
         pp.set("layer_z", layer->print_z);
         pp.set("current_retraction", _gcodegen.writer.extruder()->retracted);
 

@@ -429,6 +429,12 @@ PrintConfigDef::PrintConfigDef()
         def->default_value = opt;
     }
 
+    def = this->add("fan_percentage", coBool);
+    def->label = __TRANS("Fan PWM from 0-100");
+    def->tooltip = __TRANS("Set this if your printer uses control values from 0-100 instead of 0-255.");
+    def->cli = "fan-percentage";
+    def->default_value = new ConfigOptionBool(false);
+
     def = this->add("filament_diameter", coFloats);
     def->label = __TRANS("Diameter");
     def->tooltip = __TRANS("Enter your filament diameter here. Good precision is required, so use a caliper and do multiple measurements along the filament, then compute the average.");
