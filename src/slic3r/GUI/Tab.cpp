@@ -1064,7 +1064,10 @@ void TabPrint::build()
         optgroup->append_single_option_line("no_perimeter_unsupported_algo");
 
         optgroup = page->new_optgroup(_(L("Advanced")));
-        optgroup->append_single_option_line("gap_fill");
+        line = { _(L("Gap Fill")), "" };
+        line.append_option(optgroup->get_option("gap_fill"));
+        line.append_option(optgroup->get_option("gap_fill_min_area"));
+        optgroup->append_line(line);
         line = { _(L("Seam")), "" };
         line.append_option(optgroup->get_option("seam_position"));
         line.append_option(optgroup->get_option("seam_travel"));

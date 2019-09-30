@@ -1142,12 +1142,21 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionInts { 200 });
 
     def = this->add("gap_fill", coBool);
-    def->label = L("Gap fill");
+    def->label = L("");
+    def->full_label = L("Enable Gap Fill");
     def->category = L("Advanced");
     def->tooltip = L("Enable gap fill algorithm. It will extrude small lines between perimeters "
         "when there is not enough space for another perimeter or an infill.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(true));
+
+    def = this->add("gap_fill_min_area", coFloatOrPercent);
+    def->label = L("Min surface");
+    def->full_label = ("Min gap-fill surface");
+    def->tooltip = L("This setting represents the minimum mm² for a gapfill extrusion to be created.\nCan be a % of (perimeter width)²");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloatOrPercent{ 100,true });
 
     def = this->add("gap_fill_speed", coFloat);
     def->label = L("Gap fill");
@@ -1585,7 +1594,7 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->max = 100;
     def->mode = comSimple;
-    def->set_default_value(new ConfigOptionInts { 35 });
+    def->set_default_value(new ConfigOptionInts{ 35 });
 
     def = this->add("min_layer_height", coFloats);
     def->label = L("Min");

@@ -586,14 +586,13 @@ public:
     ConfigOptionFloatOrPercent      external_perimeter_extrusion_width;
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
-    ConfigOptionBool                perimeter_loop;
-    ConfigOptionEnum<SeamPosition>  perimeter_loop_seam;
     ConfigOptionBool                extra_perimeters;
     ConfigOptionBool                only_one_perimeter_top;
     ConfigOptionFloat               fill_angle;
     ConfigOptionPercent             fill_density;
     ConfigOptionEnum<InfillPattern> fill_pattern;
     ConfigOptionBool                gap_fill;
+    ConfigOptionFloatOrPercent      gap_fill_min_area;
     ConfigOptionFloat               gap_fill_speed;
     ConfigOptionInt                 infill_extruder;
     ConfigOptionFloatOrPercent      infill_extrusion_width;
@@ -609,6 +608,8 @@ public:
     ConfigOptionEnum<NoPerimeterUnsupportedAlgo> no_perimeter_unsupported_algo;
     ConfigOptionInt                 perimeter_extruder;
     ConfigOptionFloatOrPercent      perimeter_extrusion_width;
+    ConfigOptionBool                perimeter_loop;
+    ConfigOptionEnum<SeamPosition>  perimeter_loop_seam;
     ConfigOptionFloat               perimeter_speed;
     // Total number of perimeters.
     ConfigOptionInt                 perimeters;
@@ -649,14 +650,13 @@ protected:
         OPT_PTR(external_perimeter_extrusion_width);
         OPT_PTR(external_perimeter_speed);
         OPT_PTR(external_perimeters_first);
-        OPT_PTR(perimeter_loop);
-        OPT_PTR(perimeter_loop_seam);
         OPT_PTR(extra_perimeters);
         OPT_PTR(only_one_perimeter_top);
         OPT_PTR(fill_angle);
         OPT_PTR(fill_density);
         OPT_PTR(fill_pattern);
         OPT_PTR(gap_fill);
+        OPT_PTR(gap_fill_min_area);
         OPT_PTR(gap_fill_speed);
         OPT_PTR(infill_extruder);
         OPT_PTR(infill_extrusion_width);
@@ -671,6 +671,8 @@ protected:
 		OPT_PTR(no_perimeter_unsupported_algo);
         OPT_PTR(perimeter_extruder);
         OPT_PTR(perimeter_extrusion_width);
+        OPT_PTR(perimeter_loop);
+        OPT_PTR(perimeter_loop_seam);
         OPT_PTR(perimeter_speed);
         OPT_PTR(perimeters);
         OPT_PTR(small_perimeter_speed);

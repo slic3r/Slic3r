@@ -393,7 +393,11 @@ const std::vector<std::string>& Preset::print_options()
 #endif /* HAS_PRESSURE_EQUALIZER */
         "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "infill_speed", "solid_infill_speed", 
         "top_solid_infill_speed", "support_material_speed", "support_material_xy_spacing", "support_material_interface_speed",
-        "bridge_speed", "gap_fill", "gap_fill_speed", "travel_speed", "first_layer_speed", "perimeter_acceleration", "infill_acceleration",
+        "bridge_speed",
+        "gap_fill",
+        "gap_fill_min_area",
+        "gap_fill_speed",
+        "travel_speed", "first_layer_speed", "perimeter_acceleration", "infill_acceleration",
         "bridge_acceleration", "first_layer_acceleration", "default_acceleration", "skirts", "skirt_distance", "skirt_height",
         "min_skirt_length", "brim_width", "brim_ears", "brim_ears_max_angle",
         "support_material", "support_material_auto", "support_material_threshold", "support_material_enforce_layers", 
