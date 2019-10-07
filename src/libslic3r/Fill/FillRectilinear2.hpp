@@ -118,6 +118,7 @@ public:
     virtual Fill* clone() const { return new FillRectilinear2WGapFill(*this); };
     virtual ~FillRectilinear2WGapFill() {}
     virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) override;
+    static void split_polygon_gap_fill(const Surface &surface, const FillParams &params, ExPolygons &rectilinear, ExPolygons &gapfill);
 };
 
 

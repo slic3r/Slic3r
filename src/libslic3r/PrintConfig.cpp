@@ -205,7 +205,7 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInts{ 100 });
 
-    def = this->add("bridge_flow_ratio", coFloat);
+    def = this->add("bridge_flow_ratio", coFloatOrPercent);
     def->label = L("Bridge");
     def->full_label = L("Bridge flow ratio");
     def->category = L("Advanced");
@@ -216,18 +216,18 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->max = 2;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloat(1));
+    def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
 
-    def = this->add("over_bridge_flow_ratio", coFloat);
+    def = this->add("over_bridge_flow_ratio", coFloatOrPercent);
     def->label = L("Above the bridges");
     def->full_label = L("Above bridge flow ratio");
     def->category = L("Advanced");
     def->tooltip = L("Flow ratio to compensate for the gaps in a bridged top surface. Used for ironing infill"
         "pattern to prevent regions where the low-flow pass does not provide a smooth surface due to a lack of plastic."
-        " You can increase it slightly to pull the top layer at the correct height. Recommended maximum: 1.2.");
+        " You can increase it slightly to pull the top layer at the correct height. Recommended maximum: 120%.");
     def->min = 0;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloat(1));
+    def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
 
     def = this->add("bridge_speed", coFloat);
     def->label = L("Bridges");
@@ -1144,6 +1144,22 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Octagram Spiral"));
     def->enum_labels.push_back(L("Scattered Rectilinear"));
     def->set_default_value( new ConfigOptionEnum<InfillPattern>(ipStars));
+
+    def = this->add("fill_top_flow_ratio", coFloatOrPercent);
+    def->label = L(" Top fill");
+    def->full_label = L("Top fill flow");
+    def->tooltip = L("You can increase this to over-extrude on the top layer if there are not enough plastic to makle a fill.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
+
+    def = this->add("fill_smooth_width", coFloatOrPercent);
+    def->label = L("width");
+    def->full_label = L("Ironing width");
+    def->tooltip = L("This is the width of the ironing pass, in a % of the top width, should be no more than 50%.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
 
     def = this->add("first_layer_acceleration", coFloat);
     def->label = L("First layer");
@@ -3756,14 +3772,6 @@ std::string FullPrintConfig::validate()
     // --skirt-height
     if (this->skirt_height < -1) // -1 means as tall as the object
         return "Invalid value for --skirt-height";
-
-    // --bridge-flow-ratio
-    if (this->bridge_flow_ratio <= 0)
-        return "Invalid value for --bridge-flow-ratio";
-    
-    // --over-bridge-flow-ratio
-    if (this->over_bridge_flow_ratio <= 0)
-        return "Invalid value for --over-bridge-flow-ratio";
     
     // extruder clearance
     if (this->extruder_clearance_radius <= 0)
@@ -3824,17 +3832,28 @@ std::string FullPrintConfig::validate()
         bool out_of_range = false;
         switch (opt->type()) {
         case coFloat:
-        case coPercent:
-        case coFloatOrPercent:
         {
             auto *fopt = static_cast<const ConfigOptionFloat*>(opt);
             out_of_range = fopt->value < optdef->min || fopt->value > optdef->max;
             break;
         }
+        case coPercent:
+        case coFloatOrPercent:
+        {
+            auto *fopt = static_cast<const ConfigOptionPercent*>(opt);
+            out_of_range = fopt->get_abs_value(1) < optdef->min || fopt->get_abs_value(1) > optdef->max;
+            break;
+        }
         case coFloats:
-        case coPercents:
             for (double v : static_cast<const ConfigOptionVector<double>*>(opt)->values)
                 if (v < optdef->min || v > optdef->max) {
+                    out_of_range = true;
+                    break;
+                }
+            break;
+        case coPercents:
+            for (double v : static_cast<const ConfigOptionVector<double>*>(opt)->values)
+                if (v*0.01 < optdef->min || v * 0.01 > optdef->max) {
                     out_of_range = true;
                     break;
                 }

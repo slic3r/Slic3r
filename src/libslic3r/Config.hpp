@@ -1734,7 +1734,11 @@ public:
     int                 opt_int(const t_config_option_key &opt_key, unsigned int idx) const     { return dynamic_cast<const ConfigOptionInts*>(this->option(opt_key))->get_at(idx); }
 
     template<typename ENUM>
-	ENUM                opt_enum(const t_config_option_key &opt_key) const                      { return (ENUM)dynamic_cast<const ConfigOptionEnumGeneric*>(this->option(opt_key))->value; }
+	ENUM                opt_enum(const t_config_option_key &opt_key) const                      {
+        auto v1 = this->option<ConfigOptionEnumGeneric>(opt_key);
+        auto v2 = this->option<ConfigOptionEnum<ENUM>>(opt_key);
+        return v1==nullptr? v2->value : (ENUM)v1->value;
+    }
 
     bool                opt_bool(const t_config_option_key &opt_key) const                      { return this->option<ConfigOptionBool>(opt_key)->value != 0; }
     bool                opt_bool(const t_config_option_key &opt_key, unsigned int idx) const    { return this->option<ConfigOptionBools>(opt_key)->get_at(idx) != 0; }

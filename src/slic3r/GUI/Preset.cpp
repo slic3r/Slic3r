@@ -382,6 +382,8 @@ const std::vector<std::string>& Preset::print_options()
         "extra_perimeters", "only_one_perimeter_top", "ensure_vertical_shell_thickness", "avoid_crossing_perimeters", "thin_walls", "overhangs", 
         "seam_position", "external_perimeters_first", "fill_density"
         , "fill_pattern"
+        , "fill_top_flow_ratio"
+        , "fill_smooth_width"
         , "top_fill_pattern"
         , "bottom_fill_pattern"
         , "solid_fill_pattern",

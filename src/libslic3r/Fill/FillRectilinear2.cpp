@@ -1767,22 +1767,39 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
 }
 
 
-void
-FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) {
-    ExtrusionEntityCollection *coll_nosort = new ExtrusionEntityCollection();
-    coll_nosort->no_sort = true; //can be sorted inside the pass
-    ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
+void FillRectilinear2WGapFill::split_polygon_gap_fill(const Surface &surface, const FillParams &params, ExPolygons &rectilinear, ExPolygons &gapfill) {
 
     // remove areas for gapfill 
     // factor=0.5 : remove area smaller than a spacing. factor=1 : max spacing for the gapfill (but not the width)
     //choose between 2 to avoid dotted line  effect.
     float factor1 = 0.99f;
     float factor2 = 0.7f;
-    ExPolygons rectilinear_areas1 = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow->scaled_spacing() * factor1, params.flow->scaled_spacing() * factor1);
-    ExPolygons rectilinear_areas2 = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow->scaled_spacing() * factor2, params.flow->scaled_spacing() * factor2);
-    std::cout << "FillRectilinear2WGapFill use " << (rectilinear_areas1.size() <= rectilinear_areas2.size() + 1 ? "1" : "2") << "\n";
-    ExPolygons &rectilinear_areas = rectilinear_areas1.size() <= rectilinear_areas2.size() + 1 ? rectilinear_areas1 : rectilinear_areas2;
-    ExPolygons gapfill_areas = diff_ex(ExPolygons{ surface->expolygon }, rectilinear_areas);
+    ExPolygons rectilinear_areas1 = offset2_ex(ExPolygons{ surface.expolygon }, -params.flow->scaled_spacing() * factor1, params.flow->scaled_spacing() * factor1);
+    ExPolygons rectilinear_areas2 = offset2_ex(ExPolygons{ surface.expolygon }, -params.flow->scaled_spacing() * factor2, params.flow->scaled_spacing() * factor2);
+    //choose the best one
+    rectilinear = rectilinear_areas1.size() <= rectilinear_areas2.size() + 1 || rectilinear_areas2.empty() ? rectilinear_areas1 : rectilinear_areas2;
+    //get gapfill
+    gapfill = diff_ex(ExPolygons{ surface.expolygon }, rectilinear);
+}
+
+void
+FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) {
+    ExtrusionEntityCollection *coll_nosort = new ExtrusionEntityCollection();
+    coll_nosort->no_sort = true; //can be sorted inside the pass
+    ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
+
+    //// remove areas for gapfill 
+    //// factor=0.5 : remove area smaller than a spacing. factor=1 : max spacing for the gapfill (but not the width)
+    ////choose between 2 to avoid dotted line  effect.
+    //float factor1 = 0.99f;
+    //float factor2 = 0.7f;
+    //ExPolygons rectilinear_areas1 = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow->scaled_spacing() * factor1, params.flow->scaled_spacing() * factor1);
+    //ExPolygons rectilinear_areas2 = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow->scaled_spacing() * factor2, params.flow->scaled_spacing() * factor2);
+    //std::cout << "FillRectilinear2WGapFill use " << (rectilinear_areas1.size() <= rectilinear_areas2.size() + 1 ? "1" : "2") << "\n";
+    //ExPolygons &rectilinear_areas = rectilinear_areas1.size() <= rectilinear_areas2.size() + 1 ? rectilinear_areas1 : rectilinear_areas2;
+    //ExPolygons gapfill_areas = diff_ex(ExPolygons{ surface->expolygon }, rectilinear_areas);
+    ExPolygons rectilinear_areas, gapfill_areas;
+    split_polygon_gap_fill(*surface, params, rectilinear_areas, gapfill_areas);
     double rec_area = 0;
     for (ExPolygon &p : rectilinear_areas)rec_area += p.area();
     double gf_area = 0;
@@ -1793,7 +1810,7 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
     Polylines polylines_rectilinear;
     Surface rectilinear_surface{ *surface };
     for (const ExPolygon &rectilinear_area : rectilinear_areas) {
-        rectilinear_surface.expolygon = rectilinear_area;
+        rectilinear_surface.expolygon = rectilinear_area, 0 - 0.5 * params.flow->scaled_spacing();
         if (!fill_surface_by_lines(&rectilinear_surface, params, 0.f, 0.f, polylines_rectilinear)) {
             printf("FillRectilinear2::fill_surface() failed to fill a region.\n");
         }
@@ -1855,48 +1872,9 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
 
     //gapfill
     if (gapfill_areas.size() > 0) {
-        ThickPolylines polylines_gapfill;
-        double min = 0.4 * scale_(params.flow->nozzle_diameter) * (1 - INSET_OVERLAP_TOLERANCE);
-        double max = 2. * params.flow->scaled_width();
-        // collapse 
-        //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
-        min = std::max(min, double(Flow::new_from_spacing(EPSILON, params.flow->nozzle_diameter , params.flow->height, false).scaled_width()));
-        //ExPolygons gapfill_areas_collapsed = diff_ex(
-        //    offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2)),
-        //    offset2_ex(gapfill_areas, double(-max / 2), double(+max / 2)),
-        //    true);
-        ExPolygons gapfill_areas_collapsed = offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2));
-        for (const ExPolygon &ex : gapfill_areas_collapsed) {
-            //remove too small gaps that are too hard to fill.
-            //ie one that are smaller than an extrusion with width of min and a length of max.
-            if (ex.area() > scale_(params.flow->nozzle_diameter)*scale_(params.flow->nozzle_diameter) * 2) {
-                MedialAxis{ ex, params.flow->scaled_width() * 2, params.flow->scaled_width() / 5, coord_t(params.flow->height) }.build(polylines_gapfill);
-            }
-        }
-        if (!polylines_gapfill.empty() && good_role != erBridgeInfill) {
-            //test
-            for (ThickPolyline poly : polylines_gapfill) {
-                for (coordf_t width : poly.width) {
-                    if (width > params.flow->scaled_width() * 2.2) {
-                        std::cout << "ERRROR!!!! recti gapfill width = " << unscaled(width) << " > max_width = " << (params.flow->width * 2) << "\n";
-                    }
-                }
-            }
-
-            ExtrusionEntityCollection gap_fill = thin_variable_width(polylines_gapfill, erGapFill, *params.flow);
-            //set role if needed
-            if (good_role != erSolidInfill) {
-                ExtrusionSetRole set_good_role(good_role);
-                gap_fill.visit(set_good_role);
-            }
-            //move them into the collection
-            if (!gap_fill.entities.empty()) {
-                ExtrusionEntityCollection *coll_gapfill = new ExtrusionEntityCollection();
-                coll_gapfill->no_sort = this->no_sort();
-                coll_gapfill->append(std::move(gap_fill.entities));
-                coll_nosort->entities.push_back(coll_gapfill);
-            }
-        }
+        FillParams params2{ params };
+        params2.role = good_role;
+        do_gap_fill(gapfill_areas, params2, coll_nosort->entities);
     }
 
     // === end ===
@@ -1906,6 +1884,55 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
         delete coll_nosort;
     }
 
+}
+
+void
+Fill::do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, ExtrusionEntitiesPtr &coll_out) {
+
+    ThickPolylines polylines_gapfill;
+    double min = 0.4 * scale_(params.flow->nozzle_diameter) * (1 - INSET_OVERLAP_TOLERANCE);
+    double max = 2. * params.flow->scaled_width();
+    // collapse 
+    //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
+    min = std::max(min, double(Flow::new_from_spacing(EPSILON, params.flow->nozzle_diameter, params.flow->height, false).scaled_width()));
+    //ExPolygons gapfill_areas_collapsed = diff_ex(
+    //    offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2)),
+    //    offset2_ex(gapfill_areas, double(-max / 2), double(+max / 2)),
+    //    true);
+    ExPolygons gapfill_areas_collapsed = offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2));
+    for (const ExPolygon &ex : gapfill_areas_collapsed) {
+        //remove too small gaps that are too hard to fill.
+        //ie one that are smaller than an extrusion with width of min and a length of max.
+        if (ex.area() > scale_(params.flow->nozzle_diameter)*scale_(params.flow->nozzle_diameter) * 2) {
+            MedialAxis{ ex, params.flow->scaled_width() * 2, params.flow->scaled_width() / 5, coord_t(params.flow->height) }.build(polylines_gapfill);
+        }
+    }
+    if (!polylines_gapfill.empty() && params.role != erBridgeInfill) {
+        //test
+#ifdef _DEBUG
+       for (ThickPolyline poly : polylines_gapfill) {
+            for (coordf_t width : poly.width) {
+                if (width > params.flow->scaled_width() * 2.2) {
+                    std::cerr << "ERRROR!!!! recti gapfill width = " << unscaled(width) << " > max_width = " << (params.flow->width * 2) << "\n";
+                }
+            }
+        }
+#endif
+
+        ExtrusionEntityCollection gap_fill = thin_variable_width(polylines_gapfill, erGapFill, *params.flow);
+        //set role if needed
+        if (params.role != erSolidInfill) {
+            ExtrusionSetRole set_good_role(params.role);
+            gap_fill.visit(set_good_role);
+        }
+        //move them into the collection
+        if (!gap_fill.entities.empty()) {
+            ExtrusionEntityCollection *coll_gapfill = new ExtrusionEntityCollection();
+            coll_gapfill->no_sort = this->no_sort();
+            coll_gapfill->append(std::move(gap_fill.entities));
+            coll_out.push_back(coll_gapfill);
+        }
+    }
 }
 
 

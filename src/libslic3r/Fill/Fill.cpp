@@ -315,13 +315,18 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, (float)h, is_bridge || f->use_bridge_flow());
         }
         
+        //adjust flow (to over-extrude when needed)
         float flow_percent = 1;
+        if (surface.has_pos_top()) flow_percent *= layerm.region()->config().fill_top_flow_ratio.get_abs_value(1);
+        params.flow_mult = flow_percent;
+
+        //adjust spacing (to over-extrude when needed)
         if (surface.has_mod_overBridge()){
-            params.density = layerm.region()->config().over_bridge_flow_ratio;
-            //params.flow_mult = layerm.region()->config().over_bridge_flow_ratio;
+            params.density = layerm.region()->config().over_bridge_flow_ratio.get_abs_value(1);
         }
-        
+
         params.flow = &flow;
+        params.config = &layerm.region()->config();
         f->fill_surface_extrusion(&surface, params, out.entities);
     }
 

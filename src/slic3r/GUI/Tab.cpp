@@ -1125,9 +1125,9 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("infill_dense_algo"));
         optgroup->append_line(line);
 
-		optgroup = page->new_optgroup(_(L("Advanced")));
-		optgroup->append_single_option_line("solid_infill_every_layers");
-		optgroup->append_single_option_line("solid_infill_below_area");
+        optgroup = page->new_optgroup(_(L("Advanced")));
+        optgroup->append_single_option_line("solid_infill_every_layers");
+        optgroup->append_single_option_line("solid_infill_below_area");
         line = { _(L("Angle")), "" };
         line.append_option(optgroup->get_option("fill_angle"));
         line.append_option(optgroup->get_option("bridge_angle"));
@@ -1136,8 +1136,13 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("external_infill_margin"));
         line.append_option(optgroup->get_option("bridged_infill_margin"));
         optgroup->append_line(line);
-		optgroup->append_single_option_line("only_retract_when_crossing_perimeters");
+        optgroup->append_single_option_line("only_retract_when_crossing_perimeters");
         optgroup->append_single_option_line("infill_first");
+        line = { _(L("Ironing tuning")), "" };
+
+        optgroup = page->new_optgroup(_(L("Advanced Infill")));
+        line.append_option(optgroup->get_option("fill_smooth_width"));
+        optgroup->append_line(line);
 
 	page = add_options_page(_(L("Skirt and brim")), "skirt+brim");
 		optgroup = page->new_optgroup(_(L("Skirt")));
@@ -1229,24 +1234,25 @@ void TabPrint::build()
 		optgroup->append_single_option_line("max_volumetric_extrusion_rate_slope_negative");
 #endif /* HAS_PRESSURE_EQUALIZER */
 
-	page = add_options_page(_(L("Width & flow")), "width");
-		optgroup = page->new_optgroup(_(L("Extrusion width")));
-		optgroup->append_single_option_line("extrusion_width");
-		optgroup->append_single_option_line("first_layer_extrusion_width");
-		optgroup->append_single_option_line("perimeter_extrusion_width");
-		optgroup->append_single_option_line("external_perimeter_extrusion_width");
-		optgroup->append_single_option_line("infill_extrusion_width");
-		optgroup->append_single_option_line("solid_infill_extrusion_width");
-		optgroup->append_single_option_line("top_infill_extrusion_width");
-		optgroup->append_single_option_line("support_material_extrusion_width");
+    page = add_options_page(_(L("Width & flow")), "width");
+        optgroup = page->new_optgroup(_(L("Extrusion width")));
+        optgroup->append_single_option_line("extrusion_width");
+        optgroup->append_single_option_line("first_layer_extrusion_width");
+        optgroup->append_single_option_line("perimeter_extrusion_width");
+        optgroup->append_single_option_line("external_perimeter_extrusion_width");
+        optgroup->append_single_option_line("infill_extrusion_width");
+        optgroup->append_single_option_line("solid_infill_extrusion_width");
+        optgroup->append_single_option_line("top_infill_extrusion_width");
+        optgroup->append_single_option_line("support_material_extrusion_width");
 
-		optgroup = page->new_optgroup(_(L("Overlap")));
-		optgroup->append_single_option_line("infill_overlap");
+        optgroup = page->new_optgroup(_(L("Overlap")));
+        optgroup->append_single_option_line("infill_overlap");
 
         optgroup = page->new_optgroup(_(L("Flow")));
         line = { _(L("Flow ratio")), "" };
         line.append_option(optgroup->get_option("bridge_flow_ratio"));
         line.append_option(optgroup->get_option("over_bridge_flow_ratio"));
+        line.append_option(optgroup->get_option("fill_top_flow_ratio"));
         optgroup->append_line(line);
 
     page = add_options_page(_(L("Multiple extruders")), "funnel");

@@ -558,6 +558,8 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "enforce_full_fill_volume"
             || opt_key == "fill_angle"
             || opt_key == "fill_pattern"
+            || opt_key == "fill_top_flow_ratio"
+            || opt_key == "fill_smooth_width"
             || opt_key == "top_infill_extrusion_width"
             || opt_key == "first_layer_extrusion_width") {
             steps.emplace_back(posInfill);
@@ -1683,7 +1685,7 @@ PrintObject::replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_replac
         const PrintRegion &region = *m_print->regions()[region_id];
 
         // skip over-bridging in case there are no modification
-        if (region.config().over_bridge_flow_ratio.value == 1) continue;
+        if (region.config().over_bridge_flow_ratio.get_abs_value(1) == 1) continue;
 
         for (LayerPtrs::iterator layer_it = m_layers.begin(); layer_it != m_layers.end(); ++layer_it) {
             // skip first layer

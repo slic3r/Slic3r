@@ -571,8 +571,8 @@ class PrintRegionConfig : public StaticPrintConfig
 public:
     ConfigOptionFloat               bridge_angle;
     ConfigOptionInt                 bottom_solid_layers;
-    ConfigOptionFloat               bridge_flow_ratio;
-    ConfigOptionFloat               over_bridge_flow_ratio;
+    ConfigOptionFloatOrPercent      bridge_flow_ratio;
+    ConfigOptionFloatOrPercent      over_bridge_flow_ratio;
     ConfigOptionEnum<InfillPattern> bottom_fill_pattern;
     ConfigOptionFloatOrPercent      bridged_infill_margin;
     ConfigOptionFloat               bridge_speed;
@@ -591,6 +591,8 @@ public:
     ConfigOptionFloat               fill_angle;
     ConfigOptionPercent             fill_density;
     ConfigOptionEnum<InfillPattern> fill_pattern;
+    ConfigOptionFloatOrPercent      fill_top_flow_ratio;
+    ConfigOptionFloatOrPercent      fill_smooth_width;
     ConfigOptionBool                gap_fill;
     ConfigOptionFloatOrPercent      gap_fill_min_area;
     ConfigOptionFloat               gap_fill_speed;
@@ -655,6 +657,8 @@ protected:
         OPT_PTR(fill_angle);
         OPT_PTR(fill_density);
         OPT_PTR(fill_pattern);
+        OPT_PTR(fill_top_flow_ratio);
+        OPT_PTR(fill_smooth_width);
         OPT_PTR(gap_fill);
         OPT_PTR(gap_fill_min_area);
         OPT_PTR(gap_fill_speed);

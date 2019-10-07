@@ -310,7 +310,7 @@ SCENARIO("thin walls: ")
                     REQUIRE(std::abs(max_width - nozzle_diam)  > SCALED_EPSILON);
                 }
                 //compute the length of the tapers
-                THEN("medial axis has a 45° taper and a shorter one") {
+                THEN("medial axis has a 45ï¿½ taper and a shorter one") {
                     int l1 = 0;
                     for (size_t idx = 0; idx < res[0].width.size() - 1 && res[0].width[idx] - scale_(1.2) < SCALED_EPSILON; ++idx)
                         l1 += res[0].lines()[idx].length();
@@ -328,7 +328,7 @@ SCENARIO("thin walls: ")
 
     }
 
-    GIVEN("1° rotated tooths")
+    GIVEN("1ï¿½ rotated tooths")
     {
 
     }

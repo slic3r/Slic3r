@@ -15,17 +15,17 @@ public:
         anglePass[0] = 0;
         anglePass[1] = float(M_PI/2);
         anglePass[2] = 0;
-        fillPattern[0] = InfillPattern::ipRectilinear;
+        fillPattern[0] = InfillPattern::ipRectilinearWGapFill;
         fillPattern[1] = InfillPattern::ipRectilinear;
         fillPattern[2] = InfillPattern::ipRectilinear;
         rolePass[0] = erSolidInfill;
         rolePass[1] = erTopSolidInfill;
-        rolePass[2] = erSolidInfill;
-        percentWidth[0] = 0.9;
+        rolePass[2] = erTopSolidInfill;
+        percentWidth[0] = 1;
         percentWidth[1] = 2;
         percentWidth[2] = 1.0;
-        percentFlow[0] = 0.7;
-        percentFlow[1] = 0.3;
+        percentFlow[0] = 0.8;
+        percentFlow[1] = 0.2;
         percentFlow[2] = 0.0;
         double extrusionMult = 1.0;
         percentFlow[0] *= extrusionMult;
@@ -42,16 +42,22 @@ public:
     
 protected:
     int nbPass=2;
+    // this parameter is now erased by fill_smooth_width when available.
     double percentWidth[3];
+    // this parameter is now modified by fill_top_flow_ratio when available.
     double percentFlow[3];
+    //angle to add to base angle
     float anglePass[3];
+    //if false, it won't overlap inside the perimeters
     bool has_overlap[3];
+    // profile for base width, speed, etc.
     ExtrusionRole rolePass[3];
+    //fill algorithm to call
     InfillPattern fillPattern[3];
 
-    void performSingleFill(const int idx, ExtrusionEntityCollection &eecroot, const Surface &srf_source,
+    void perform_single_fill(const int idx, ExtrusionEntityCollection &eecroot, const Surface &srf_source,
         const FillParams &params, const double volume);
-    void fillExPolygon(const int idx, ExtrusionEntityCollection &eec, const Surface &srf_to_fill,
+    void fill_expolygon(const int idx, ExtrusionEntityCollection &eec, const Surface &srf_to_fill,
         const FillParams &params, const double volume);
 };
 

@@ -30,6 +30,7 @@ struct FillParams
         fill_exactly = false;
         role = erNone;
         flow = NULL;
+        config = NULL;
     }
 
     bool        full_infill() const { return density > 0.9999f && density < 1.0001f; }
@@ -59,6 +60,9 @@ struct FillParams
 
     //flow to use
     Flow  const *flow;
+
+    //full configuration for the region, to avoid copying every bit that is needed. Use this for process-specific parameters.
+    PrintRegionConfig const *config;
 };
 static_assert(IsTriviallyCopyable<FillParams>::value, "FillParams class is not POD (and it should be - see constructor).");
 
@@ -134,6 +138,8 @@ protected:
     virtual std::pair<float, Point> _infill_direction(const Surface *surface) const;
 
     void connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary, Polylines &polylines_out, const FillParams &params);
+
+    void do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, ExtrusionEntitiesPtr &coll_out);
 
     ExtrusionRole getRoleFromSurfaceType(const FillParams &params, const Surface *surface){
         if (params.role == erNone || params.role == erCustom) {
