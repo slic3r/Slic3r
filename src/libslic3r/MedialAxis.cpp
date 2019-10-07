@@ -511,8 +511,8 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
             }
         }
         sum_dot = abs(sum_dot);
-        std::cout << "    with mindot= " << min_dot << "< 0.5" << " ; with sum_dot= " << sum_dot << "< 0.2" << " ; with crosspoint.size= " << crosspoint.size() << " ; with coeff_contour_angle= " << coeff_contour_angle << " 0.2> " << (1 - (coeff_contour_angle / (PI / 2)))
-            << " ; length= " << unscaled(polyline.length())<<" >? 1.42*width= "<< polyline.width.front()<<"->"<< polyline.width.back() << "\n";
+        //std::cout << "    with mindot= " << min_dot << "< 0.5" << " ; with sum_dot= " << sum_dot << "< 0.2" << " ; with crosspoint.size= " << crosspoint.size() << " ; with coeff_contour_angle= " << coeff_contour_angle << " 0.2> " << (1 - (coeff_contour_angle / (PI / 2)))
+            //<< " ; length= " << unscaled(polyline.length())<<" >? 1.42*width= "<< polyline.width.front()<<"->"<< polyline.width.back() << "\n";
 
         //only consider very shallow angle for contour
         if (mindot > 0.15 &&
