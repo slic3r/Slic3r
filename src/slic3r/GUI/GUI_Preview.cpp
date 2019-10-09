@@ -223,6 +223,7 @@ bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view
     m_choice_view_type->Append(_(L("Speed")));
     m_choice_view_type->Append(_(L("Volumetric flow rate")));
     m_choice_view_type->Append(_(L("Tool")));
+    m_choice_view_type->Append(_(L("Filament")));
     m_choice_view_type->Append(_(L("Color Print")));
     m_choice_view_type->SetSelection(0);
 
@@ -785,7 +786,26 @@ void Preview::load_print_as_fff(bool keep_z_range)
             color_print_values = config.option<ConfigOptionFloats>("colorprint_heights")->values;
         }
     }
-    else if (gcode_preview_data_valid || (m_gcode_preview_data->extrusion.view_type == GCodePreviewData::Extrusion::Tool) )
+    else if ((m_gcode_preview_data->extrusion.view_type == GCodePreviewData::Extrusion::Filament))
+    {
+        const ConfigOptionStrings* extruders_opt = dynamic_cast<const ConfigOptionStrings*>(m_config->option("extruder_colour"));
+        const ConfigOptionStrings* filamemts_opt = dynamic_cast<const ConfigOptionStrings*>(m_config->option("filament_colour"));
+        unsigned int colors_count = std::max((unsigned int)extruders_opt->values.size(), (unsigned int)filamemts_opt->values.size());
+
+        unsigned char rgb[3];
+        for (unsigned int i = 0; i < colors_count; ++i)
+        {
+            std::string color = m_config->opt_string("filament_colour", i);
+            if (!PresetBundle::parse_color(color, rgb))
+            {
+                color = "#FFFFFF";
+            }
+
+            colors.emplace_back(color);
+        }
+        color_print_values.clear();
+    }
+    else if (gcode_preview_data_valid || (m_gcode_preview_data->extrusion.view_type == GCodePreviewData::Extrusion::Tool))
     {
         const ConfigOptionStrings* extruders_opt = dynamic_cast<const ConfigOptionStrings*>(m_config->option("extruder_colour"));
         const ConfigOptionStrings* filamemts_opt = dynamic_cast<const ConfigOptionStrings*>(m_config->option("filament_colour"));
