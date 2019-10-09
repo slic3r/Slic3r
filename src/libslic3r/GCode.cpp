@@ -773,6 +773,7 @@ void GCode::_do_export(Print &print, FILE *file)
 		m_normal_time_estimator.set_axis_max_jerk(GCodeTimeEstimator::Z, (float)print.config().machine_max_jerk_z.values[0]);
 		m_normal_time_estimator.set_axis_max_jerk(GCodeTimeEstimator::E, (float)print.config().machine_max_jerk_e.values[0]);
 
+        //fix for "silent time_estimator" when enabled but does not exist => CTD
         if (m_silent_time_estimator_enabled && print.config().machine_max_acceleration_extruding.values.size() > 1)
         {
             m_silent_time_estimator.reset();
@@ -1943,8 +1944,7 @@ void GCode::process_layer(
                 if (print_object == nullptr)
                     // This layer is empty for this particular object, it has neither object extrusions nor support extrusions at this print_z.
                     continue;
-                //std::cout << "Writing gcode for layer at " << layers[layer_id].print_z() << ", " << ((this->m_layer_index * 100) / this->m_layer_count) << "%" << std::endl;
-            
+
                 m_config.apply(print_object->config(), true);
                 m_layer = layers[layer_id].layer();
                 if (m_config.avoid_crossing_perimeters)
@@ -2727,7 +2727,7 @@ std::string GCode::extrude_support(const ExtrusionEntityCollection &support_fill
             visitor_comment = label;
             visitor_speed = speed;
             visitor_lower_layer_edge_grid = nullptr;
-            ee->visit(*this);
+            ee->visit(*this); // will call extrude_thing()
             gcode += visitor_gcode;
         }
     }
@@ -2911,11 +2911,9 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
     // extrude arc or line
     if (m_enable_extrusion_role_markers) {
         if (path.role() != m_last_extrusion_role) {
-            if (m_enable_extrusion_role_markers) {
-                char buf[32];
-                sprintf(buf, ";_EXTRUSION_ROLE:%d\n", int(path.role()));
-                gcode += buf;
-            }
+            char buf[32];
+            sprintf(buf, ";_EXTRUSION_ROLE:%d\n", int(path.role()));
+            gcode += buf;
         }
     }
     m_last_extrusion_role = path.role();
@@ -3086,7 +3084,7 @@ std::string GCode::retract(bool toolchange)
         methods even if we performed wipe, since this will ensure the entire retraction
         length is honored in case wipe path was too short.  */
     gcode += toolchange ? m_writer.retract_for_toolchange() : m_writer.retract();
-	if (toolchange || !this->m_config.retract_lift_not_last_layer.get_at(m_writer.extruder()->id()) || !(this->m_last_extrusion_role == ExtrusionRole::erTopSolidInfill))
+    if (toolchange || !this->m_config.retract_lift_not_last_layer.get_at(m_writer.extruder()->id()) || !(this->m_last_extrusion_role == ExtrusionRole::erTopSolidInfill))
         if (m_writer.extruder()->retract_length() > 0 || m_config.use_firmware_retraction)
             gcode += m_writer.lift();
     
@@ -3185,7 +3183,8 @@ std::string GCode::set_extruder(unsigned int extruder_id, double print_z)
 }
 
 // convert a model-space scaled point into G-code coordinates
-Vec2d GCode::point_to_gcode(const Point &point) const {
+Vec2d GCode::point_to_gcode(const Point &point) const
+{
     Vec2d extruder_offset = EXTRUDER_CONFIG(extruder_offset);
     return unscale(point) + m_origin - extruder_offset;
 }
