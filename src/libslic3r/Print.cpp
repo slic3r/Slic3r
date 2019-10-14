@@ -353,7 +353,7 @@ void Print::_simplify_slices(double distance)
         for (Layer *layer : object->m_layers) {
             layer->slices.simplify(distance);
             for (LayerRegion *layerm : layer->regions())
-                layerm->slices.simplify(distance);
+                layerm->m_slices.simplify(distance);
         }
     }
 }

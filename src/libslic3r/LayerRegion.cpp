@@ -39,7 +39,7 @@ void LayerRegion::slices_to_fill_surfaces_clipped()
     Polygons fill_boundaries = to_polygons(this->fill_expolygons);
     // Collect polygons per surface type.
     std::map<SurfaceType, Polygons> polygons_by_surface;
-    for (Surface &surface : this->slices.surfaces) {
+    for (const Surface &surface : this->slices().surfaces) {
         polygons_append(polygons_by_surface[surface.surface_type], surface.expolygon);
     }
     // Trim surfaces by the fill_boundaries.
@@ -53,7 +53,7 @@ void LayerRegion::slices_to_fill_surfaces_clipped()
     }
 }
 
-void LayerRegion::make_perimeters(SurfaceCollection &slices, SurfaceCollection* fill_surfaces)
+void LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection* fill_surfaces)
 {
     this->perimeters.clear();
     this->thin_fills.clear();
@@ -438,7 +438,7 @@ void LayerRegion::trim_surfaces(const Polygons &trimming_polygons)
     for (const Surface &surface : this->slices.surfaces)
         assert(surface.surface_type == (stPosInternal | stDensSparse));
 #endif /* NDEBUG */
-    this->slices.set(intersection_ex(to_polygons(std::move(this->slices.surfaces)), trimming_polygons, false), stPosInternal | stDensSparse);
+    this->m_slices.set(intersection_ex(to_polygons(std::move(this->slices().surfaces)), trimming_polygons, false), stPosInternal | stDensSparse);
 }
 
 void LayerRegion::elephant_foot_compensation_step(const float elephant_foot_compensation_perimeter_step, const Polygons &trimming_polygons)
@@ -447,25 +447,25 @@ void LayerRegion::elephant_foot_compensation_step(const float elephant_foot_comp
     for (const Surface &surface : this->slices.surfaces)
         assert(surface.surface_type == (stPosInternal | stDensSparse));
 #endif /* NDEBUG */
-    ExPolygons slices_expolygons = to_expolygons(std::move(this->slices.surfaces));
+    ExPolygons slices_expolygons = to_expolygons(std::move(this->slices().surfaces));
     Polygons   slices_polygons   = to_polygons(slices_expolygons);
     Polygons   tmp               = intersection(slices_polygons, trimming_polygons, false);
     append(tmp, diff(slices_polygons, offset(offset_ex(slices_expolygons, -elephant_foot_compensation_perimeter_step), elephant_foot_compensation_perimeter_step)));
-    this->slices.set(std::move(union_ex(tmp)), stPosInternal | stDensSparse);
+    this->m_slices.set(std::move(union_ex(tmp)), stPosInternal | stDensSparse);
 }
 
 void LayerRegion::export_region_slices_to_svg(const char *path) const
 {
     BoundingBox bbox;
-    for (Surfaces::const_iterator surface = this->slices.surfaces.begin(); surface != this->slices.surfaces.end(); ++surface)
-        bbox.merge(get_extents(surface->expolygon));
+    for (const Surface& surface : this->slices().surfaces)
+        bbox.merge(get_extents(surface.expolygon));
     Point legend_size = export_surface_type_legend_to_svg_box_size();
     Point legend_pos(bbox.min(0), bbox.max(1));
     bbox.merge(Point(std::max(bbox.min(0) + legend_size(0), bbox.max(0)), bbox.max(1) + legend_size(1)));
 
     SVG svg(path, bbox);
     const float transparency = 0.5f;
-    for (Surfaces::const_iterator surface = this->slices.surfaces.begin(); surface != this->slices.surfaces.end(); ++surface)
+    for (Surfaces::const_iterator surface = this->slices().surfaces.begin(); surface != this->slices().surfaces.end(); ++surface)
         svg.draw(surface->expolygon, surface_type_to_color_name(surface->surface_type), transparency);
     for (Surfaces::const_iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface)
         svg.draw(surface->expolygon.lines(), surface_type_to_color_name(surface->surface_type));

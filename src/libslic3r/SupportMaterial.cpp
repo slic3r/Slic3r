@@ -279,7 +279,6 @@ void PrintObjectSupportMaterial::generate(PrintObject &object)
     MyLayersPtr intermediate_layers = this->raft_and_intermediate_support_layers(
         object, bottom_contacts, top_contacts, layer_storage);
 
-    
 //    this->trim_support_layers_by_object(object, top_contacts, m_slicing_params.soluble_interface ? 0. : m_support_layer_height_min, 0., m_gap_xy);
     this->trim_support_layers_by_object(object, top_contacts, 
         m_slicing_params.soluble_interface ? 0. : this->m_slicing_params.gap_support_object,
@@ -429,14 +428,14 @@ Polygons collect_region_slices_by_type(const Layer &layer, SurfaceType surface_t
     // 1) Count the new polygons first.
     size_t n_polygons_new = 0;
     for (const LayerRegion *region : layer.regions())
-        for (const Surface &surface : region->slices.surfaces)
+        for (const Surface &surface : region->slices().surfaces)
             if (surface.surface_type == surface_type)
                 n_polygons_new += surface.expolygon.holes.size() + 1;
     // 2) Collect the new polygons.
     Polygons out;
     out.reserve(n_polygons_new);
     for (const LayerRegion *region : layer.regions())
-        for (const Surface &surface : region->slices.surfaces)
+        for (const Surface &surface : region->slices().surfaces)
             if (surface.surface_type == surface_type)
                 polygons_append(out, surface.expolygon);
     return out;
@@ -791,7 +790,6 @@ namespace SupportMaterialInternal {
     {
         for (const ExtrusionEntity *ee : perimeters.entities) {
             if (ee->is_collection()) {
-                const ExtrusionEntityCollection * eec = static_cast<const ExtrusionEntityCollection*>(ee);
                 for (const ExtrusionEntity *ee2 : static_cast<const ExtrusionEntityCollection*>(ee)->entities) {
                     //assert(! ee2->is_collection()); // there are loops for perimeters and collections for thin walls !!
                     if (ee2->is_loop())
@@ -854,15 +852,11 @@ namespace SupportMaterialInternal {
                 }
             }
     }
-    static void collect_bridging_perimeter_areas(const ExtrusionEntityCollection &perimeters, const float expansion_scaled, Polygons &out)
+    static void collect_bridging_perimeter_areas(const ExtrusionEntitiesPtr &perimeters, const float expansion_scaled, Polygons &out)
     {
-        for (const ExtrusionEntity *ee : perimeters.entities) {
+        for (const ExtrusionEntity *ee : perimeters) {
             if (ee->is_collection()) {
-                for (const ExtrusionEntity *ee2 : static_cast<const ExtrusionEntityCollection*>(ee)->entities) {
-                    //assert(! ee2->is_collection()); // there are loops for perimeters and collections for thin walls !!
-                    if (ee2->is_loop())
-                        collect_bridging_perimeter_areas(*static_cast<const ExtrusionLoop*>(ee2), expansion_scaled, out);
-                }
+                collect_bridging_perimeter_areas(static_cast<const ExtrusionEntityCollection*>(ee)->entities, expansion_scaled, out);
             } else if (ee->is_loop())
                 collect_bridging_perimeter_areas(*static_cast<const ExtrusionLoop*>(ee), expansion_scaled, out);
         }
@@ -1027,7 +1021,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                 Polygons contact_polygons;
                 Polygons slices_margin_cached;
                 double    slices_margin_cached_offset = -1.;
-                Polygons lower_layer_polygons = (layer_id == 0) ? Polygons() : to_polygons(object.layers()[layer_id-1]->slices.expolygons);
+                Polygons lower_layer_polygons = (layer_id == 0) ? Polygons() : to_polygons(object.layers()[layer_id - 1]->slices.expolygons);
                 // Offset of the lower layer, to trim the support polygons with to calculate dense supports.
                 double    no_interface_offset = 0.;
                 if (layer_id == 0) {
@@ -1056,7 +1050,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                                 0.5f * fw);
                         // Overhang polygons for this layer and region.
                         Polygons diff_polygons;
-                        Polygons layerm_polygons = to_polygons(layerm->slices);
+                        Polygons layerm_polygons = to_polygons(layerm->slices());
                         if (lower_layer_offset == 0.f) {
                             // Support everything.
                             diff_polygons = diff(layerm_polygons, lower_layer_polygons);
@@ -1466,7 +1460,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
             if (! m_object_config->support_material_buildplate_only)
                 // Find the bottom contact layers above the top surfaces of this layer.
                 task_group.run([this, &object, &top_contacts, contact_idx, &layer, layer_id, &layer_storage, &layer_support_areas, &bottom_contacts, &projection_raw] {
-                    Polygons top = collect_region_slices_by_type(layer, stPosTop| stDensSolid);
+                    Polygons top = collect_region_slices_by_type(layer, stPosTop | stDensSolid);
         #ifdef SLIC3R_DEBUG
                     {
                         BoundingBox bbox = get_extents(projection_raw);
@@ -1538,7 +1532,6 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
                                     }
                                 }
                             }
-
                 #ifdef SLIC3R_DEBUG
                             Slic3r::SVG::export_expolygons(
                                 debug_out_path("support-bottom-contacts-%d-%lf.svg", iRun, layer_new.print_z),
@@ -2135,7 +2128,7 @@ void PrintObjectSupportMaterial::trim_support_layers_by_object(
                                 offset(to_expolygons(region->fill_surfaces.filter_by_type(stPosBottom | stDensSolid | stModBridge)), 
                                        gap_xy_scaled, SUPPORT_SURFACES_OFFSET_PARAMETERS));
                             if (region->region()->config().overhangs.value)
-                                SupportMaterialInternal::collect_bridging_perimeter_areas(region->perimeters, gap_xy_scaled, polygons_trimming);
+                                SupportMaterialInternal::collect_bridging_perimeter_areas(region->perimeters.entities, gap_xy_scaled, polygons_trimming);
                         }
                         if (! some_region_overlaps)
                             break;

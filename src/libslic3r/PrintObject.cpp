@@ -170,7 +170,7 @@ void PrintObject::make_perimeters()
                     m_print->throw_if_canceled();
                     LayerRegion &layerm                     = *m_layers[layer_idx]->m_regions[region_id];
                     const LayerRegion &upper_layerm         = *m_layers[layer_idx+1]->m_regions[region_id];
-                    const Polygons upper_layerm_polygons    = upper_layerm.slices;
+                    const Polygons upper_layerm_polygons    = upper_layerm.slices();
                     // Filter upper layer polygons in intersection_ppl by their bounding boxes?
                     // my $upper_layerm_poly_bboxes= [ map $_->bounding_box, @{$upper_layerm_polygons} ];
                     const double total_loop_length      = total_length(upper_layerm_polygons);
@@ -179,7 +179,7 @@ void PrintObject::make_perimeters()
                     const coord_t ext_perimeter_width   = ext_perimeter_flow.scaled_width();
                     const coord_t ext_perimeter_spacing = ext_perimeter_flow.scaled_spacing();
 
-                    for (Surface &slice : layerm.slices.surfaces) {
+                    for (Surface &slice : layerm.m_slices.surfaces) {
                         for (;;) {
                             // compute the total thickness of perimeters
                             const coord_t perimeters_thickness = ext_perimeter_width/2 + ext_perimeter_spacing/2
@@ -924,20 +924,21 @@ void PrintObject::detect_surfaces_type()
                     // unless internal shells are requested
                     Layer       *upper_layer = (idx_layer + 1 < this->layer_count()) ? m_layers[idx_layer + 1] : nullptr;
                     Layer       *lower_layer = (idx_layer > 0) ? m_layers[idx_layer - 1] : nullptr;
-                    Layer       *under_lower_layer = (idx_layer > 1) ? this->layers()[idx_layer - 2] : nullptr;
                     // collapse very narrow parts (using the safety offset in the diff is not enough)
                     float        offset = layerm->flow(frExternalPerimeter).scaled_width() / 10.f;
 
+                    Polygons     layerm_slices_surfaces = to_polygons(layerm->slices().surfaces);
                     // no_perimeter_full_bridge allow to put bridges where there are nothing, hence adding area to silce, that's why we need to start from the result of PerimeterGenerator.
-                    // i don't see the need tostart from layerm->slices.surfaces, but i'll keep that "in case of".
-                    Polygons     layerm_slices_surfaces = layerm->region()->config().no_perimeter_unsupported_algo == npuaFilled ? to_polygons(layerm->fill_surfaces) : to_polygons(layerm->slices.surfaces);
+                    if (layerm->region()->config().no_perimeter_unsupported_algo == npuaFilled) {
+                        layerm_slices_surfaces = union_(layerm_slices_surfaces, to_polygons(layerm->fill_surfaces));
+                    }
 
                     // find top surfaces (difference between current surfaces
                     // of current layer and upper one)
                     Surfaces top;
                     if (upper_layer) {
                         Polygons upper_slices = interface_shells ? 
-                            to_polygons(upper_layer->get_region(idx_region)->slices.surfaces) : 
+                            to_polygons(upper_layer->get_region(idx_region)->slices().surfaces) : 
                             to_polygons(upper_layer->slices);
                         surfaces_append(top,
                             //FIXME implement offset2_ex working over ExPolygons, that should be a bit more efficient than calling offset_ex twice.
@@ -946,7 +947,7 @@ void PrintObject::detect_surfaces_type()
                     } else {
                         // if no upper layer, all surfaces of this one are solid
                         // we clone surfaces because we're going to clear the slices collection
-                        top = layerm->slices.surfaces;
+                        top = layerm->m_slices.surfaces;
                         for (Surface &surface : top)
                             surface.surface_type = stPosTop | stDensSolid;
                     }
@@ -985,7 +986,7 @@ void PrintObject::detect_surfaces_type()
                                 offset2_ex(
                                     diff(
                                         intersection(layerm_slices_surfaces, to_polygons(lower_slices)), // supported
-                                        to_polygons(lower_layer->get_region(idx_region)->slices.surfaces), 
+                                        to_polygons(lower_layer->get_region(idx_region)->slices().surfaces), 
                                         true), 
                                     -offset, offset),
                                     stPosBottom | stDensSolid);
@@ -994,7 +995,7 @@ void PrintObject::detect_surfaces_type()
                     } else {
                         // if no lower layer, all surfaces of this one are solid
                         // we clone surfaces because we're going to clear the slices collection
-                        bottom = layerm->slices.surfaces;
+                        bottom = layerm->slices().surfaces;
                         for (Surface &surface : bottom)
                             surface.surface_type = surface_type_bottom_1st;
                     }
@@ -1019,14 +1020,13 @@ void PrintObject::detect_surfaces_type()
                         std::vector<std::pair<Slic3r::ExPolygons, SVG::ExPolygonAttributes>> expolygons_with_attributes;
                         expolygons_with_attributes.emplace_back(std::make_pair(union_ex(top),                           SVG::ExPolygonAttributes("green")));
                         expolygons_with_attributes.emplace_back(std::make_pair(union_ex(bottom),                        SVG::ExPolygonAttributes("brown")));
-                        expolygons_with_attributes.emplace_back(std::make_pair(union_ex(bottomOverBridge),              SVG::ExPolygonAttributes("grey")));
-                        expolygons_with_attributes.emplace_back(std::make_pair(to_expolygons(layerm->slices.surfaces),  SVG::ExPolygonAttributes("black")));
+                        expolygons_with_attributes.emplace_back(std::make_pair(to_expolygons(layerm->slices().surfaces),  SVG::ExPolygonAttributes("black")));
                         SVG::export_expolygons(debug_out_path("1_detect_surfaces_type_%d_region%d-layer_%f.svg", iRun ++, idx_region, layer->print_z).c_str(), expolygons_with_attributes);
                     }
         #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
                     
                     // save surfaces to layer
-                    Surfaces &surfaces_out = interface_shells ? surfaces_new[idx_layer] : layerm->slices.surfaces;
+                    Surfaces &surfaces_out = interface_shells ? surfaces_new[idx_layer] : layerm->m_slices.surfaces;
                     surfaces_out.clear();
 
                     // find internal surfaces (difference between top/bottom surfaces and others)
@@ -1054,8 +1054,8 @@ void PrintObject::detect_surfaces_type()
 
         if (interface_shells) {
             // Move surfaces_new to layerm->slices.surfaces
-            for (size_t idx_layer = 0; idx_layer < m_layers.size(); ++ idx_layer)
-                m_layers[idx_layer]->get_region(idx_region)->slices.surfaces = std::move(surfaces_new[idx_layer]);
+            for (size_t idx_layer = 0; idx_layer < m_layers.size(); ++idx_layer)
+                m_layers[idx_layer]->get_region(idx_region)->m_slices.surfaces = std::move(surfaces_new[idx_layer]);
         }
 
         BOOST_LOG_TRIVIAL(debug) << "Detecting solid surfaces for region " << idx_region << " - clipping in parallel - start";
@@ -1211,16 +1211,16 @@ void PrintObject::discover_vertical_shells()
                         LayerRegion &layerm                       = *layer.m_regions[idx_region];
                         float        min_perimeter_infill_spacing = float(layerm.flow(frSolidInfill).scaled_spacing()) * 1.05f;
                         // Top surfaces.
-                        append(cache.top_surfaces, offset(to_expolygons(layerm.slices.filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing));
+                        append(cache.top_surfaces, offset(to_expolygons(layerm.slices().filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing));
                         append(cache.top_surfaces, offset(to_expolygons(layerm.fill_surfaces.filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing));
                         // Bottom surfaces.
                         const SurfaceType surfaces_bottom[2] = { stPosBottom | stDensSolid, stPosBottom | stDensSolid | stModBridge };
-                        append(cache.bottom_surfaces, offset(to_expolygons(layerm.slices.filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing));
+                        append(cache.bottom_surfaces, offset(to_expolygons(layerm.slices().filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing));
                         append(cache.bottom_surfaces, offset(to_expolygons(layerm.fill_surfaces.filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing));
                         // Calculate the maximum perimeter offset as if the slice was extruded with a single extruder only.
                         // First find the maxium number of perimeters per region slice.
                         unsigned int perimeters = 0;
-                        for (Surface &s : layerm.slices.surfaces)
+                        for (const Surface &s : layerm.slices().surfaces)
                             perimeters = std::max<unsigned int>(perimeters, s.extra_perimeters);
                         perimeters += layerm.region()->config().perimeters.value;
                         // Then calculate the infill offset.
@@ -1287,11 +1287,11 @@ void PrintObject::discover_vertical_shells()
                         float        min_perimeter_infill_spacing = float(layerm.flow(frSolidInfill).scaled_spacing()) * 1.05f;
                         // Top surfaces.
                         auto &cache = cache_top_botom_regions[idx_layer];
-                        cache.top_surfaces = offset(to_expolygons(layerm.slices.filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing);
+                        cache.top_surfaces = offset(to_expolygons(layerm.slices().filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing);
                         append(cache.top_surfaces, offset(to_expolygons(layerm.fill_surfaces.filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing));
                         // Bottom surfaces.
                         const SurfaceType surfaces_bottom[2] = { stPosBottom | stDensSolid, stPosBottom | stDensSolid | stModBridge };
-                        cache.bottom_surfaces = offset(to_expolygons(layerm.slices.filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing);
+                        cache.bottom_surfaces = offset(to_expolygons(layerm.slices().filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing);
                         append(cache.bottom_surfaces, offset(to_expolygons(layerm.fill_surfaces.filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing));
                         // Holes over all regions. Only collect them once, they are valid for all idx_region iterations.
                         if (cache.holes.empty()) {
@@ -1939,7 +1939,7 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
             m_print->throw_if_canceled();
             BOOST_LOG_TRIVIAL(debug) << "Slicing objects - append slices " << region_id << " start";
             for (size_t layer_id = 0; layer_id < expolygons_by_layer.size(); ++ layer_id)
-                m_layers[layer_id]->regions()[region_id]->slices.append(std::move(expolygons_by_layer[layer_id]), stPosInternal | stDensSparse);
+                m_layers[layer_id]->regions()[region_id]->m_slices.append(std::move(expolygons_by_layer[layer_id]), stPosInternal | stDensSparse);
             m_print->throw_if_canceled();
             BOOST_LOG_TRIVIAL(debug) << "Slicing objects - append slices " << region_id << " end";
         }
@@ -2018,7 +2018,7 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
                         if (num_volumes > 1)
                             // Merge the islands using a positive / negative offset.
                             expolygons = offset_ex(offset_ex(expolygons, double(scale_(EPSILON))), double( - scale_(EPSILON)));
-                        m_layers[layer_id]->regions()[region_id]->slices.append(std::move(expolygons), stPosInternal | stDensSparse);
+                        m_layers[layer_id]->regions()[region_id]->m_slices.append(std::move(expolygons), stPosInternal | stDensSparse);
                     }
                 }
             });
@@ -2048,16 +2048,16 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
                             Layer       *layer = m_layers[layer_id];
                             LayerRegion *layerm = layer->m_regions[region_id];
                             LayerRegion *other_layerm = layer->m_regions[other_region_id];
-                            if (layerm == nullptr || other_layerm == nullptr || other_layerm->slices.empty() || expolygons_by_layer[layer_id].empty())
+                            if (layerm == nullptr || other_layerm == nullptr || other_layerm->slices().empty() || expolygons_by_layer[layer_id].empty())
                                 continue;
-                            Polygons other_slices = to_polygons(other_layerm->slices);
+                            Polygons other_slices = to_polygons(other_layerm->slices());
                             ExPolygons my_parts = intersection_ex(other_slices, to_polygons(expolygons_by_layer[layer_id]));
                             if (my_parts.empty())
                                 continue;
                             // Remove such parts from original region.
-                            other_layerm->slices.set(diff_ex(other_slices, to_polygons(my_parts)), stPosInternal | stDensSparse);
+                            other_layerm->m_slices.set(diff_ex(other_slices, to_polygons(my_parts)), stPosInternal | stDensSparse);
                             // Append new parts to our region.
-                            layerm->slices.append(std::move(my_parts), stPosInternal | stDensSparse);
+                            layerm->m_slices.append(std::move(my_parts), stPosInternal | stDensSparse);
                         }
                     }
                 });
@@ -2114,8 +2114,8 @@ end:
                         LayerRegion *layerm = layer->m_regions.front();
                         // Apply the XY compensation.
                         ExPolygons expolygons = (delta == 0.f) ?
-                            to_expolygons(std::move(layerm->slices.surfaces)) :
-                            offset_ex(to_expolygons(std::move(layerm->slices.surfaces)), delta);
+                            to_expolygons(std::move(layerm->slices().surfaces)) :
+                            offset_ex(to_expolygons(std::move(layerm->slices().surfaces)), delta);
                         // Apply the elephant foot compensation.
                         if (elephant_foot_compensation != 0) {
                             float elephant_foot_spacing     = float(layerm->flow(frExternalPerimeter).scaled_elephant_foot_spacing());
@@ -2130,7 +2130,7 @@ end:
     							expolygons = union_ex(tmp);
                             }
                         }
-                        layerm->slices.set(std::move(expolygons), stPosInternal | stDensSparse);
+                        layerm->m_slices.set(std::move(expolygons), stPosInternal | stDensSparse);
                     }
                     _offset_holes(hole_delta, layer->regions().front());
                     _smooth_curves(layer->regions().front());
@@ -2143,7 +2143,7 @@ end:
                         Polygons processed;
                         for (size_t region_id = 0; region_id < layer->m_regions.size(); ++ region_id) {
                             LayerRegion *layerm = layer->m_regions[region_id];
-                            ExPolygons slices = to_expolygons(std::move(layerm->slices.surfaces));
+                            ExPolygons slices = to_expolygons(std::move(layerm->slices().surfaces));
                             if (upscale)
                                 slices = offset_ex(std::move(slices), delta);
                             if (region_id > 0 && clip)
@@ -2152,7 +2152,7 @@ end:
                             if (clip && (region_id + 1 < layer->m_regions.size()))
                                 // Collect the already processed regions to trim the to be processed regions.
                                 polygons_append(processed, slices);
-                            layerm->slices.set(std::move(slices), stPosInternal | stDensSparse);
+                            layerm->m_slices.set(std::move(slices), stPosInternal | stDensSparse);
                         }
                     }
                     if (delta < 0.f) {
@@ -2193,7 +2193,7 @@ end:
 
 void PrintObject::_offset_holes(double hole_delta, LayerRegion *layerm) {
     if (hole_delta != 0.f) {
-        ExPolygons polys = to_expolygons(std::move(layerm->slices.surfaces));
+        ExPolygons polys = to_expolygons(std::move(layerm->slices().surfaces));
         ExPolygons new_polys;
         for (const ExPolygon &ex_poly : polys) {
             ExPolygon new_ex_poly(ex_poly);
@@ -2226,7 +2226,7 @@ void PrintObject::_offset_holes(double hole_delta, LayerRegion *layerm) {
             }
             new_polys.push_back(new_ex_poly);
         }
-        layerm->slices.set(std::move(new_polys), stPosInternal | stDensSparse);
+        layerm->m_slices.set(std::move(new_polys), stPosInternal | stDensSparse);
     }
 }
 
@@ -2317,7 +2317,7 @@ void PrintObject::_smooth_curves(LayerRegion *layerm) {
 
     if (layerm->region()->config().curve_smoothing_precision.value > 0.f) {
         ExPolygons new_polys;
-        for (const Surface &srf : layerm->slices.surfaces) {
+        for (const Surface &srf : layerm->slices().surfaces) {
             const ExPolygon &ex_poly = srf.expolygon;
             ExPolygon new_ex_poly(ex_poly);
             new_ex_poly.contour = _smooth_curve(new_ex_poly.contour, PI,
@@ -2336,7 +2336,7 @@ void PrintObject::_smooth_curves(LayerRegion *layerm) {
             }
             new_polys.push_back(new_ex_poly);
         }
-        layerm->slices.set(std::move(new_polys), stPosInternal | stDensSparse);
+        layerm->m_slices.set(std::move(new_polys), stPosInternal | stDensSparse);
     }
 }
 
@@ -2591,12 +2591,12 @@ std::string PrintObject::_fix_slicing_errors()
                     const Surfaces *lower_surfaces = nullptr;
                     for (size_t j = idx_layer + 1; j < m_layers.size(); ++ j)
                         if (! m_layers[j]->slicing_errors) {
-                            upper_surfaces = &m_layers[j]->regions()[region_id]->slices.surfaces;
+                            upper_surfaces = &m_layers[j]->regions()[region_id]->slices().surfaces;
                             break;
                         }
                     for (int j = int(idx_layer) - 1; j >= 0; -- j)
                         if (! m_layers[j]->slicing_errors) {
-                            lower_surfaces = &m_layers[j]->regions()[region_id]->slices.surfaces;
+                            lower_surfaces = &m_layers[j]->regions()[region_id]->slices().surfaces;
                             break;
                         }
                     // Collect outer contours and holes from the valid layers above & below.
@@ -2623,7 +2623,7 @@ std::string PrintObject::_fix_slicing_errors()
                     if (lower_surfaces)
                         for (const auto &surface : *lower_surfaces)
                             polygons_append(holes, surface.expolygon.holes);
-                    layerm->slices.set(diff_ex(union_(outer), holes, false), stPosInternal | stDensSparse);
+                    layerm->m_slices.set(diff_ex(union_(outer), holes, false), stPosInternal | stDensSparse);
                 }
                 // Update layer slices after repairing the single regions.
                 layer->make_slices();
@@ -2659,115 +2659,13 @@ void PrintObject::_simplify_slices(double distance)
                 m_print->throw_if_canceled();
                 Layer *layer = m_layers[layer_idx];
                 for (size_t region_idx = 0; region_idx < layer->m_regions.size(); ++ region_idx)
-                    layer->m_regions[region_idx]->slices.simplify(distance);
+                    layer->m_regions[region_idx]->m_slices.simplify(distance);
                 layer->slices.simplify(distance);
             }
         });
     BOOST_LOG_TRIVIAL(debug) << "Slicing objects - siplifying slices in parallel - end";
 }
 
-void PrintObject::_make_perimeters()
-{
-    if (! this->set_started(posPerimeters))
-        return;
-
-    BOOST_LOG_TRIVIAL(info) << "Generating perimeters..." << log_memory_info();
-    
-    // merge slices if they were split into types
-    if (this->typed_slices) {
-        for (Layer *layer : m_layers)
-            layer->merge_slices();
-        this->typed_slices = false;
-        this->invalidate_step(posPrepareInfill);
-    }
-    
-    // compare each layer to the one below, and mark those slices needing
-    // one additional inner perimeter, like the top of domed objects-
-    
-    // this algorithm makes sure that at least one perimeter is overlapping
-    // but we don't generate any extra perimeter if fill density is zero, as they would be floating
-    // inside the object - infill_only_where_needed should be the method of choice for printing
-    // hollow objects
-    for (size_t region_id = 0; region_id < this->region_volumes.size(); ++ region_id) {
-        const PrintRegion &region = *m_print->regions()[region_id];
-        if (! region.config().extra_perimeters || region.config().perimeters == 0 || region.config().fill_density == 0 || this->layer_count() < 2)
-            continue;
-        
-        BOOST_LOG_TRIVIAL(debug) << "Generating extra perimeters for region " << region_id << " in parallel - start";
-        tbb::parallel_for(
-            tbb::blocked_range<size_t>(0, m_layers.size() - 1),
-            [this, &region, region_id](const tbb::blocked_range<size_t>& range) {
-                for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++ layer_idx) {
-                    LayerRegion &layerm                     = *m_layers[layer_idx]->regions()[region_id];
-                    const LayerRegion &upper_layerm         = *m_layers[layer_idx+1]->regions()[region_id];
-                    const Polygons upper_layerm_polygons    = upper_layerm.slices;
-                    // Filter upper layer polygons in intersection_ppl by their bounding boxes?
-                    // my $upper_layerm_poly_bboxes= [ map $_->bounding_box, @{$upper_layerm_polygons} ];
-                    const double total_loop_length      = total_length(upper_layerm_polygons);
-                    const coord_t perimeter_spacing     = layerm.flow(frPerimeter).scaled_spacing();
-                    const Flow ext_perimeter_flow       = layerm.flow(frExternalPerimeter);
-                    const coord_t ext_perimeter_width   = ext_perimeter_flow.scaled_width();
-                    const coord_t ext_perimeter_spacing = ext_perimeter_flow.scaled_spacing();
-
-                    for (Surface &slice : layerm.slices.surfaces) {
-                        for (;;) {
-                            // compute the total thickness of perimeters
-                            const coord_t perimeters_thickness = ext_perimeter_width/2 + ext_perimeter_spacing/2
-                                + (region.config().perimeters-1 + slice.extra_perimeters) * perimeter_spacing;
-                            // define a critical area where we don't want the upper slice to fall into
-                            // (it should either lay over our perimeters or outside this area)
-                            const coord_t critical_area_depth = coord_t(perimeter_spacing * 1.5);
-                            const Polygons critical_area = diff(
-                                offset(slice.expolygon, double(- perimeters_thickness)),
-                                offset(slice.expolygon, double(- perimeters_thickness - critical_area_depth))
-                            );
-                            // check whether a portion of the upper slices falls inside the critical area
-                            const Polylines intersection = intersection_pl(to_polylines(upper_layerm_polygons), critical_area);
-                            // only add an additional loop if at least 30% of the slice loop would benefit from it
-                            if (total_length(intersection) <=  total_loop_length*0.3)
-                                break;
-                            /*
-                            if (0) {
-                                require "Slic3r/SVG.pm";
-                                Slic3r::SVG::output(
-                                    "extra.svg",
-                                    no_arrows   => 1,
-                                    expolygons  => union_ex($critical_area),
-                                    polylines   => [ map $_->split_at_first_point, map $_->p, @{$upper_layerm->slices} ],
-                                );
-                            }
-                            */
-                            ++ slice.extra_perimeters;
-                        }
-                        #ifdef DEBUG
-                            if (slice.extra_perimeters > 0)
-                                printf("  adding %d more perimeter(s) at layer %zu\n", slice.extra_perimeters, layer_idx);
-                        #endif
-                    }
-                }
-            });
-        BOOST_LOG_TRIVIAL(debug) << "Generating extra perimeters for region " << region_id << " in parallel - end";
-    }
-
-    BOOST_LOG_TRIVIAL(debug) << "Generating perimeters in parallel - start";
-    tbb::parallel_for(
-        tbb::blocked_range<size_t>(0, m_layers.size()),
-        [this](const tbb::blocked_range<size_t>& range) {
-            for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++ layer_idx)
-                m_layers[layer_idx]->make_perimeters();
-        }
-    );
-    BOOST_LOG_TRIVIAL(debug) << "Generating perimeters in parallel - end";
-
-    /*
-        simplify slices (both layer and region slices),
-        we only need the max resolution for perimeters
-    ### This makes this method not-idempotent, so we keep it disabled for now.
-    ###$self->_simplify_slices(&Slic3r::SCALED_RESOLUTION);
-    */
-    
-    this->set_done(posPerimeters);
-}
 
 // Only active if config->infill_only_where_needed. This step trims the sparse infill,
 // so it acts as an internal support. It maintains all other infill types intact.
@@ -2895,7 +2793,7 @@ void PrintObject::discover_horizontal_shells()
                 // (not covered by a layer above / below).
                 // This does not contain the areas covered by perimeters!
                 Polygons solid;
-                for (const Surface &surface : layerm->slices.surfaces)
+                for (const Surface &surface : layerm->slices().surfaces)
                     if (surface.surface_type == type)
                         polygons_append(solid, to_polygons(surface.expolygon));
                 // Infill areas (slices without the perimeters).

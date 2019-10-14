@@ -140,6 +140,7 @@ public:
 
 typedef std::vector<Surface> Surfaces;
 typedef std::vector<Surface*> SurfacesPtr;
+typedef std::vector<const Surface*> SurfacesConstPtr;
 
 inline Polygons to_polygons(const Surfaces &src)
 {
@@ -171,6 +172,21 @@ inline Polygons to_polygons(const SurfacesPtr &src)
     return polygons;
 }
 
+inline Polygons to_polygons(const SurfacesConstPtr &src)
+{
+    size_t num = 0;
+    for (SurfacesConstPtr::const_iterator it = src.begin(); it != src.end(); ++it)
+        num += (*it)->expolygon.holes.size() + 1;
+    Polygons polygons;
+    polygons.reserve(num);
+    for (SurfacesConstPtr::const_iterator it = src.begin(); it != src.end(); ++it) {
+        polygons.emplace_back((*it)->expolygon.contour);
+        for (Polygons::const_iterator ith = (*it)->expolygon.holes.begin(); ith != (*it)->expolygon.holes.end(); ++ith)
+            polygons.emplace_back(*ith);
+    }
+    return polygons;
+}
+
 inline ExPolygons to_expolygons(const Surfaces &src)
 {
     ExPolygons expolygons;
@@ -195,6 +211,15 @@ inline ExPolygons to_expolygons(const SurfacesPtr &src)
     ExPolygons expolygons;
     expolygons.reserve(src.size());
     for (SurfacesPtr::const_iterator it = src.begin(); it != src.end(); ++it)
+        expolygons.emplace_back((*it)->expolygon);
+    return expolygons;
+}
+
+inline ExPolygons to_expolygons(const SurfacesConstPtr &src)
+{
+    ExPolygons expolygons;
+    expolygons.reserve(src.size());
+    for (SurfacesConstPtr::const_iterator it = src.begin(); it != src.end(); ++it)
         expolygons.emplace_back((*it)->expolygon);
     return expolygons;
 }

@@ -21,7 +21,7 @@ Layer::~Layer()
 bool Layer::empty() const
 {
     for (const LayerRegion *layerm : m_regions)
-        if (layerm != nullptr && ! layerm->slices.empty())
+        if (layerm != nullptr && ! layerm->slices().empty())
             // Non empty layer.
             return false;
     return true;
@@ -39,11 +39,11 @@ void Layer::make_slices()
     ExPolygons slices;
     if (m_regions.size() == 1) {
         // optimization: if we only have one region, take its slices
-        slices = m_regions.front()->slices;
+        slices = m_regions.front()->slices();
     } else {
         Polygons slices_p;
         for (LayerRegion *layerm : m_regions)
-            polygons_append(slices_p, to_polygons(layerm->slices));
+            polygons_append(slices_p, to_polygons(layerm->slices()));
         slices = union_ex(slices_p);
     }
     
@@ -71,11 +71,11 @@ void Layer::merge_slices()
     if (m_regions.size() == 1) {
         // Optimization, also more robust. Don't merge classified pieces of layerm->slices,
         // but use the non-split islands of a layer. For a single region print, these shall be equal.
-        m_regions.front()->slices.set(this->slices.expolygons, stPosInternal | stDensSparse);
+        m_regions.front()->m_slices.set(this->slices.expolygons, stPosInternal | stDensSparse);
     } else {
         for (LayerRegion *layerm : m_regions)
             // without safety offset, artifacts are generated (GH #2494)
-            layerm->slices.set(union_ex(to_polygons(std::move(layerm->slices.surfaces)), true), stPosInternal | stDensSparse);
+            layerm->m_slices.set(union_ex(to_polygons(std::move(layerm->m_slices.surfaces)), true), stPosInternal | stDensSparse);
     }
 }
 
@@ -90,7 +90,7 @@ ExPolygons Layer::merged(float offset_scaled) const
     }
     Polygons polygons;
     for (LayerRegion *layerm : m_regions)
-		append(polygons, offset(to_expolygons(layerm->slices.surfaces), offset_scaled));
+		append(polygons, offset(to_expolygons(layerm->slices().surfaces), offset_scaled));
     ExPolygons out = union_ex(polygons);
 	if (offset_scaled2 != 0.f)
 		out = offset_ex(out, offset_scaled2);
@@ -145,7 +145,7 @@ void Layer::make_perimeters()
         
         if (layerms.size() == 1) {  // optimization
             (*layerm)->fill_surfaces.surfaces.clear();
-            (*layerm)->make_perimeters((*layerm)->slices, &(*layerm)->fill_surfaces);
+            (*layerm)->make_perimeters((*layerm)->slices(), &(*layerm)->fill_surfaces);
             (*layerm)->fill_expolygons = to_expolygons((*layerm)->fill_surfaces.surfaces);
         } else {
             SurfaceCollection new_slices;
@@ -155,7 +155,7 @@ void Layer::make_perimeters()
                 // group slices (surfaces) according to number of extra perimeters
                 std::map<unsigned short, Surfaces> slices;  // extra_perimeters => [ surface, surface... ]
                 for (LayerRegion *layerm : layerms) {
-                    for (Surface &surface : layerm->slices.surfaces)
+                    for (const Surface &surface : layerm->slices().surfaces)
                         slices[surface.extra_perimeters].emplace_back(surface);
                     if (layerm->region()->config().fill_density > layerm_config->region()->config().fill_density)
                     	layerm_config = layerm;
@@ -173,7 +173,7 @@ void Layer::make_perimeters()
             if (!fill_surfaces.surfaces.empty()) { 
                 for (LayerRegionPtrs::iterator l = layerms.begin(); l != layerms.end(); ++l) {
                     // Separate the fill surfaces.
-                    ExPolygons expp = intersection_ex(to_polygons(fill_surfaces), (*l)->slices);
+                    ExPolygons expp = intersection_ex(to_polygons(fill_surfaces), (*l)->slices());
                     (*l)->fill_expolygons = expp;
                     (*l)->fill_no_overlap_expolygons = (*layerm)->fill_no_overlap_expolygons;
                     (*l)->fill_surfaces.set(std::move(expp), fill_surfaces.surfaces.front());
@@ -202,8 +202,8 @@ void Layer::make_fills()
 void Layer::export_region_slices_to_svg(const char *path) const
 {
     BoundingBox bbox;
-    for (const auto *region : m_regions)
-        for (const auto &surface : region->slices.surfaces)
+    for (const LayerRegion *region : m_regions)
+        for (const Surface &surface : region->slices().surfaces)
             bbox.merge(get_extents(surface.expolygon));
     Point legend_size = export_surface_type_legend_to_svg_box_size();
     Point legend_pos(bbox.min(0), bbox.max(1));
@@ -211,8 +211,8 @@ void Layer::export_region_slices_to_svg(const char *path) const
 
     SVG svg(path, bbox);
     const float transparency = 0.5f;
-    for (const auto *region : m_regions)
-        for (const auto &surface : region->slices.surfaces)
+    for (const LayerRegion *region : m_regions)
+        for (const Surface &surface : region->slices().surfaces)
             svg.draw(surface.expolygon, surface_type_to_color_name(surface.surface_type), transparency);
     export_surface_type_legend_to_svg(svg, legend_pos);
     svg.Close(); 
@@ -228,8 +228,8 @@ void Layer::export_region_slices_to_svg_debug(const char *name) const
 void Layer::export_region_fill_surfaces_to_svg(const char *path) const
 {
     BoundingBox bbox;
-    for (const auto *region : m_regions)
-        for (const auto &surface : region->slices.surfaces)
+    for (const LayerRegion *region : m_regions)
+        for (const Surface &surface : region->slices().surfaces)
             bbox.merge(get_extents(surface.expolygon));
     Point legend_size = export_surface_type_legend_to_svg_box_size();
     Point legend_pos(bbox.min(0), bbox.max(1));
@@ -237,8 +237,8 @@ void Layer::export_region_fill_surfaces_to_svg(const char *path) const
 
     SVG svg(path, bbox);
     const float transparency = 0.5f;
-    for (const auto *region : m_regions)
-        for (const auto &surface : region->slices.surfaces)
+    for (const LayerRegion *region : m_regions)
+        for (const Surface &surface : region->slices().surfaces)
             svg.draw(surface.expolygon, surface_type_to_color_name(surface.surface_type), transparency);
     export_surface_type_legend_to_svg(svg, legend_pos);
     svg.Close();

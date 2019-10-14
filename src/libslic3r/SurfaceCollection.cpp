@@ -54,34 +54,34 @@ SurfaceCollection::group(std::vector<SurfacesPtr> *retval)
     }
 }
 
-SurfacesPtr
-SurfaceCollection::filter_by_type(const SurfaceType type)
+SurfacesConstPtr
+SurfaceCollection::filter_by_type(const SurfaceType type) const
 {
-    SurfacesPtr ss;
-    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
-        if (surface->surface_type == type) ss.push_back(&*surface);
+    SurfacesConstPtr ss;
+    for (const Surface & surface : this->surfaces) {
+        if (surface.surface_type == type) ss.push_back(&surface);
     }
     return ss;
 }
 
-SurfacesPtr
-SurfaceCollection::filter_by_type_flag(const SurfaceType allowed, const SurfaceType not_allowed)
+SurfacesConstPtr
+SurfaceCollection::filter_by_type_flag(const SurfaceType allowed, const SurfaceType not_allowed) const
 {
-    SurfacesPtr ss;
-    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
-        if ((surface->surface_type & allowed) == allowed && (surface->surface_type & not_allowed) == 0) ss.push_back(&*surface);
+    SurfacesConstPtr ss;
+    for (const Surface & surface : this->surfaces) {
+        if ((surface.surface_type & allowed) == allowed && (surface.surface_type & not_allowed) == 0) ss.push_back(&surface);
     }
     return ss;
 }
 
-SurfacesPtr
-SurfaceCollection::filter_by_types(const SurfaceType *types, int ntypes)
+SurfacesConstPtr
+SurfaceCollection::filter_by_types(const SurfaceType *types, int ntypes) const
 {
-    SurfacesPtr ss;
-    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
+    SurfacesConstPtr ss;
+    for (const Surface & surface : this->surfaces) {
         for (int i = 0; i < ntypes; ++ i) {
-            if (surface->surface_type == types[i]) {
-                ss.push_back(&*surface);
+            if (surface.surface_type == types[i]) {
+                ss.push_back(&surface);
                 break;
             }
         }
@@ -90,21 +90,21 @@ SurfaceCollection::filter_by_types(const SurfaceType *types, int ntypes)
 }
 
 void
-SurfaceCollection::filter_by_type(const SurfaceType type, Polygons* polygons)
+SurfaceCollection::filter_by_type(const SurfaceType type, Polygons* polygons) const
 {
-    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
-        if (surface->surface_type == type) {
-            Polygons pp = surface->expolygon;
+    for (const Surface & surface : this->surfaces) {
+        if (surface.surface_type == type) {
+            Polygons pp = surface.expolygon;
             polygons->insert(polygons->end(), pp.begin(), pp.end());
         }
     }
 }
 void
-SurfaceCollection::filter_by_type_flag(Polygons* polygons, const SurfaceType flags_needed, const SurfaceType flags_not_allowed)
+SurfaceCollection::filter_by_type_flag(Polygons* polygons, const SurfaceType flags_needed, const SurfaceType flags_not_allowed) const
 {
-    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
-        if ((surface->surface_type & flags_needed) == flags_needed && (surface->surface_type & flags_not_allowed)==0) {
-            Polygons pp = surface->expolygon;
+    for (const Surface & surface : this->surfaces) {
+        if ((surface.surface_type & flags_needed) == flags_needed && (surface.surface_type & flags_not_allowed)==0) {
+            Polygons pp = surface.expolygon;
             polygons->insert(polygons->end(), pp.begin(), pp.end());
         }
     }
