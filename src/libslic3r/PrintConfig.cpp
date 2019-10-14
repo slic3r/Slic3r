@@ -1800,13 +1800,22 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionString("[input_filename_base].gcode"));
 
     def = this->add("overhangs", coBool);
-    def->label = L("Detect bridging perimeters");
+    def->label = L("As bridge");
+    def->full_label = L("Overhangs as bridge");
     def->category = L("Layers and Perimeters");
-    def->tooltip = L("Experimental option to adjust flow for overhangs (bridge flow will be used), "
+    def->tooltip = L("Option to adjust flow for overhangs (bridge flow will be used), "
         "to apply bridge speed to them and enable fan.");
-    def->mode = comAdvanced;
+    def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(true));
-    
+
+    def = this->add("overhangs_width", coFloatOrPercent);
+    def->label = L("Threshold");
+    def->full_label = L("Overhang Threshold");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("Minimum unsupported width for an extrusion to be considered an overhang. Can be in mm or in a % of the nozzle diameter.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
+
     def = this->add("no_perimeter_unsupported_algo", coEnum);
     def->label = L("No perimeters on bridge areas");
     def->tooltip = L("Experimental option to remove perimeters where there is nothing under it and where a bridged infill should be better. "

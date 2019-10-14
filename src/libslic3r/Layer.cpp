@@ -121,23 +121,26 @@ void Layer::make_perimeters()
         for (LayerRegionPtrs::const_iterator it = layerm + 1; it != m_regions.end(); ++it) {
             LayerRegion* other_layerm = *it;
             const PrintRegionConfig &other_config = other_layerm->region()->config();
+            //FIXME get this list from the menu list itself to avoid duplication
+            // also, this list is TOO SHORT
             /// !!! add here the settings you want to be added in the per-object menu.
             /// if you don't do that, objects will share the same region, and the same settings.
-            if (config.perimeter_extruder   == other_config.perimeter_extruder
-                && config.perimeters        == other_config.perimeters
-                && config.only_one_perimeter_top == other_config.only_one_perimeter_top
-                && config.perimeter_speed   == other_config.perimeter_speed
-                && config.external_perimeter_speed == other_config.external_perimeter_speed
-                && config.gap_fill_speed    == other_config.gap_fill_speed
-                && config.overhangs         == other_config.overhangs
-                && config.opt_serialize("perimeter_extrusion_width") == other_config.opt_serialize("perimeter_extrusion_width")
+            if (config.perimeter_extruder           == other_config.perimeter_extruder
+                && config.perimeters                == other_config.perimeters
+                && config.only_one_perimeter_top    == other_config.only_one_perimeter_top
+                && config.perimeter_speed           == other_config.perimeter_speed
+                && config.external_perimeter_speed  == other_config.external_perimeter_speed
+                && config.gap_fill_speed            == other_config.gap_fill_speed
+                && config.overhangs                 == other_config.overhangs
+                && config.overhangs_width           == other_config.overhangs_width
+                && config.opt_serialize("perimeter_extrusion_width").compare(other_config.opt_serialize("perimeter_extrusion_width")) == 0
                 && config.opt_serialize("external_perimeter_extrusion_width").compare(other_config.opt_serialize("external_perimeter_extrusion_width")) == 0
-                && config.thin_walls == other_config.thin_walls
-                && config.thin_walls_min_width == other_config.thin_walls_min_width
-                && config.thin_walls_overlap == other_config.thin_walls_overlap
+                && config.thin_walls                == other_config.thin_walls
+                && config.thin_walls_min_width      == other_config.thin_walls_min_width
+                && config.thin_walls_overlap        == other_config.thin_walls_overlap
                 && config.external_perimeters_first == other_config.external_perimeters_first
-                && config.infill_overlap    == other_config.infill_overlap
-                && config.perimeter_loop == other_config.perimeter_loop) {
+                && config.infill_overlap            == other_config.infill_overlap
+                && config.perimeter_loop            == other_config.perimeter_loop) {
                 layerms.push_back(other_layerm);
                 done[it - m_regions.begin()] = true;
             }

@@ -72,7 +72,7 @@ void PerimeterGenerator::process()
         // We consider overhang any part where the entire nozzle diameter is not supported by the
         // lower layer, so we take lower slices and offset them by half the nozzle diameter used 
         // in the current layer
-        this->_lower_slices_p = offset(*this->lower_slices, double(scale_(+nozzle_diameter/2)));
+        this->_lower_slices_p = offset(*this->lower_slices, double(scale_(config->overhangs_width.get_abs_value(nozzle_diameter))));
     }
     
     // we need to process each island separately because we might have different

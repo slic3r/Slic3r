@@ -1060,7 +1060,10 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("thin_walls_min_width"));
         line.append_option(optgroup->get_option("thin_walls_overlap"));
         optgroup->append_line(line);
-        optgroup->append_single_option_line("overhangs");
+        line = { _(L("Overhangs")), "" };
+        line.append_option(optgroup->get_option("overhangs"));
+        line.append_option(optgroup->get_option("overhangs_width"));
+        optgroup->append_line(line);
         optgroup->append_single_option_line("no_perimeter_unsupported_algo");
 
         optgroup = page->new_optgroup(_(L("Advanced")));

@@ -607,6 +607,7 @@ public:
     ConfigOptionBool                infill_first;
     // Detect bridging perimeters
     ConfigOptionBool                overhangs;
+    ConfigOptionFloatOrPercent      overhangs_width;
     ConfigOptionEnum<NoPerimeterUnsupportedAlgo> no_perimeter_unsupported_algo;
     ConfigOptionInt                 perimeter_extruder;
     ConfigOptionFloatOrPercent      perimeter_extrusion_width;
@@ -672,6 +673,7 @@ protected:
         OPT_PTR(infill_dense_algo);
         OPT_PTR(infill_first);
         OPT_PTR(overhangs);
+        OPT_PTR(overhangs_width);
 		OPT_PTR(no_perimeter_unsupported_algo);
         OPT_PTR(perimeter_extruder);
         OPT_PTR(perimeter_extrusion_width);
