@@ -435,7 +435,7 @@ double LayerRegion::infill_area_threshold() const
 void LayerRegion::trim_surfaces(const Polygons &trimming_polygons)
 {
 #ifndef NDEBUG
-    for (const Surface &surface : this->slices.surfaces)
+    for (const Surface &surface : this->slices().surfaces)
         assert(surface.surface_type == (stPosInternal | stDensSparse));
 #endif /* NDEBUG */
     this->m_slices.set(intersection_ex(to_polygons(std::move(this->slices().surfaces)), trimming_polygons, false), stPosInternal | stDensSparse);
@@ -444,7 +444,7 @@ void LayerRegion::trim_surfaces(const Polygons &trimming_polygons)
 void LayerRegion::elephant_foot_compensation_step(const float elephant_foot_compensation_perimeter_step, const Polygons &trimming_polygons)
 {
 #ifndef NDEBUG
-    for (const Surface &surface : this->slices.surfaces)
+    for (const Surface &surface : this->slices().surfaces)
         assert(surface.surface_type == (stPosInternal | stDensSparse));
 #endif /* NDEBUG */
     ExPolygons slices_expolygons = to_expolygons(std::move(this->slices().surfaces));
