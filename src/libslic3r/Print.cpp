@@ -1569,18 +1569,19 @@ void Print::process()
                     const Points copies = obj->copies();
                     obj->m_copies.clear();
                     obj->m_copies.emplace_back();
-                    if (config().brim_ears)
-                        this->_make_brim_ears({ obj }, obj->m_brim);
-                    else
-                        this->_make_brim({ obj }, obj->m_brim);
+                    ExPolygons brim_area = (config().brim_ears)
+                        ?   this->_make_brim_ears({ obj }, obj->m_brim)
+                        :   this->_make_brim({ obj }, obj->m_brim);
+                    if (config().brim_width_interior > 0)
+                        _make_brim_interior({ obj }, brim_area, obj->m_brim);
                     obj->m_copies = copies;
                 }
             } else {
-                if (config().brim_ears)
-                    this->_make_brim_ears(m_objects, m_brim);
-                else
-                    this->_make_brim(m_objects, m_brim);
-
+                ExPolygons brim_area = (config().brim_ears)
+                    ?   this->_make_brim_ears(m_objects, m_brim)
+                    :   this->_make_brim(m_objects, m_brim);
+                if (config().brim_width_interior > 0)
+                    _make_brim_interior(m_objects, brim_area, m_brim);
             }
         }
        this->set_done(psBrim);
@@ -1759,210 +1760,190 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
     out.reverse();
 }
 
-void Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out) {
-    // Brim is only printed on first layer and uses perimeter extruder.
+//TODO: test if no regression vs old _make_brim.
+// this new one can extrude brim for an object inside an other object.
+ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out) {
+
     Flow        flow = this->brim_flow();
-    Polygons    islands;
+    ExPolygons    islands;
     for (PrintObject *object : objects) {
-        Polygons object_islands;
+        ExPolygons object_islands;
         for (ExPolygon &expoly : object->m_layers.front()->slices.expolygons)
-            object_islands.push_back(expoly.contour);
-        if (!object->support_layers().empty())
-            object->support_layers().front()->support_fills.polygons_covered_by_spacing(object_islands, float(SCALED_EPSILON));
+            object_islands.push_back(expoly);
+        if (!object->support_layers().empty()) {
+            Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
+            for (Polygon poly : polys)
+                for (ExPolygon & expoly2 : union_ex(poly))
+                    object_islands.emplace_back(expoly2);
+        }
         islands.reserve(islands.size() + object_islands.size() * object->m_copies.size());
         for (const Point &pt : object->m_copies)
-            for (Polygon &poly : object_islands) {
+            for (ExPolygon &poly : object_islands) {
                 islands.push_back(poly);
-                islands.back().translate(pt);
+                islands.back().translate(pt.x(), pt.y());
             }
     }
-    Polygons loops;
-    size_t num_loops = size_t(floor(m_config.brim_width.value / flow.spacing()));
+
+    this->throw_if_canceled();
+
+    //simplify & merge
+    ExPolygons unbrimmable_areas;
+    for (ExPolygon &expoly : islands)
+        for (ExPolygon &expoly : expoly.simplify(SCALED_RESOLUTION))
+            unbrimmable_areas.emplace_back(std::move(expoly));
+    islands = union_ex(unbrimmable_areas, true);
+    unbrimmable_areas = islands;
+
+    //get the brimmable area
+    const size_t num_loops = size_t(floor(m_config.brim_width.value / flow.spacing()));
+    ExPolygons brimmable_areas;
+    for (ExPolygon &expoly : islands) {
+        for (Polygon poly : offset(expoly.contour, num_loops * flow.scaled_width(), jtSquare)) {
+            brimmable_areas.emplace_back();
+            brimmable_areas.back().contour = poly;
+            brimmable_areas.back().contour.make_counter_clockwise();
+            brimmable_areas.back().holes.push_back(expoly.contour);
+            brimmable_areas.back().holes.back().make_clockwise();
+        }
+    }
+    brimmable_areas = union_ex(brimmable_areas);
+    this->throw_if_canceled();
+
+    //don't collide with objects
+    brimmable_areas = diff_ex(brimmable_areas, unbrimmable_areas, true);
+
+    //now get all holes, use them to create loops
+    Polylines loops;
+    ExPolygons bigger_islands;
+
+    //grow a half of spacing, to go to the first extrusion polyline.
+    Polygons unbrimmable_polygons;
+    for (ExPolygon &expoly : islands) {
+        unbrimmable_polygons.push_back(expoly.contour);
+        //do it separately because we don't want to union them
+        for (ExPolygon &big_expoly : offset_ex(expoly, double(flow.scaled_spacing()) * 0.5, jtSquare)) {
+            bigger_islands.emplace_back(big_expoly);
+            unbrimmable_polygons.insert(unbrimmable_polygons.end(), big_expoly.holes.begin(), big_expoly.holes.end());
+        }
+    }
+    //frontiers = to_polygons(union_ex(frontiers));
+    islands = bigger_islands;
     for (size_t i = 0; i < num_loops; ++i) {
         this->throw_if_canceled();
-        islands = offset(islands, double(flow.scaled_spacing()), jtSquare);
-        for (Polygon &poly : islands) {
-            // poly.simplify(SCALED_RESOLUTION);
-            poly.points.push_back(poly.points.front());
-            Points p = MultiPoint::_douglas_peucker(poly.points, SCALED_RESOLUTION);
-            p.pop_back();
-            poly.points = std::move(p);
+        // only grow the contour, not holes
+        bigger_islands.clear();
+        if (i > 0) {
+            for (ExPolygon &expoly : islands) {
+                for (Polygon &big_contour : offset(expoly.contour, double(flow.scaled_spacing()) * i, jtSquare)) {
+                    bigger_islands.emplace_back(expoly);
+                    bigger_islands.back().contour = big_contour;
+                }
+            }
         }
-        polygons_append(loops, offset(islands, -0.5f * double(flow.scaled_spacing())));
+        else bigger_islands = islands;
+        bigger_islands = union_ex(bigger_islands);
+        for (ExPolygon &expoly : bigger_islands) {
+            loops.push_back(expoly.contour);
+            //also add hole, in case of it's merged with a contour.
+            for (Polygon &hole : expoly.holes)
+                //but remove the points that are inside the holes of islands
+                for(Polyline &pl : diff_pl(hole, unbrimmable_polygons, true))
+                    loops.emplace_back(pl);
+        }
     }
-    loops = union_pt_chained(loops, false);
-    // The function above produces ordering well suited for concentric infill (from outside to inside).
-    // For Brim, the ordering should be reversed (from inside to outside).
-    std::reverse(loops.begin(), loops.end());
 
-    // If there is a possibility that brim intersects skirt, go through loops and split those extrusions
-    // The result is either the original Polygon or a list of Polylines
-    if (! m_skirt.empty() && m_config.skirt_distance.value < m_config.brim_width)
-    {
-        // Find the bounding polygons of the skirt
-        const Polygons skirt_inners = offset(dynamic_cast<ExtrusionLoop*>(m_skirt.entities.back())->polygon(),
-                                              -float(scale_(this->skirt_flow().spacing()))/2.f,
-                                              ClipperLib::jtRound,
-                                              float(scale_(0.1)));
-        const Polygons skirt_outers = offset(dynamic_cast<ExtrusionLoop*>(m_skirt.entities.front())->polygon(),
-                                              float(scale_(this->skirt_flow().spacing()))/2.f,
-                                              ClipperLib::jtRound,
-                                              float(scale_(0.1)));
+    //intersection
+    Polygons frontiers;
+    //use contour from brimmable_areas (external frontier)
+    for (ExPolygon &expoly : brimmable_areas) {
+        frontiers.push_back(expoly.contour);
+        frontiers.back().make_counter_clockwise();
+    }
+    // add internal frontier
+    frontiers.insert(frontiers.begin(), unbrimmable_polygons.begin(), unbrimmable_polygons.end());
 
-        // First calculate the trimming region.
-		ClipperLib_Z::Paths trimming;
-		{
-		    ClipperLib_Z::Paths input_subject;
-		    ClipperLib_Z::Paths input_clip;
-		    for (const Polygon &poly : skirt_outers) {
-		    	input_subject.emplace_back();
-		    	ClipperLib_Z::Path &out = input_subject.back();
-		    	out.reserve(poly.points.size());
-			    for (const Point &pt : poly.points)
-					out.emplace_back(pt.x(), pt.y(), 0);
-		    }
-		    for (const Polygon &poly : skirt_inners) {
-		    	input_clip.emplace_back();
-		    	ClipperLib_Z::Path &out = input_clip.back();
-		    	out.reserve(poly.points.size());
-			    for (const Point &pt : poly.points)
-					out.emplace_back(pt.x(), pt.y(), 0);
-		    }
-		    // init Clipper
-		    ClipperLib_Z::Clipper clipper;	    
-		    // add polygons
-		    clipper.AddPaths(input_subject, ClipperLib_Z::ptSubject, true);
-		    clipper.AddPaths(input_clip,    ClipperLib_Z::ptClip,    true);
-		    // perform operation
-		    clipper.Execute(ClipperLib_Z::ctDifference, trimming, ClipperLib_Z::pftEvenOdd, ClipperLib_Z::pftEvenOdd);
-		}
+    Polylines lines = intersection_pl(loops, frontiers, true);
+    //{
+    //    std::stringstream stri;
+    //    stri << "exter_brim_test_" << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(unbrimmable_areas, "red");
+    //    svg.draw(brimmable_areas, "green");
+    //    svg.draw(to_polylines(frontiers), "blue");
+    //    svg.draw((loops), "pink");
+    //    svg.draw(lines, "yellow");
+    //    svg.Close();
+    //}
 
-		// Second, trim the extrusion loops with the trimming regions.
-		ClipperLib_Z::Paths loops_trimmed;
-		{
-			// Produce a closed polyline (repeat the first point at the end).
-			ClipperLib_Z::Paths input_clip;
-			for (const Polygon &loop : loops) {
-				input_clip.emplace_back();
-				ClipperLib_Z::Path& out = input_clip.back();
-				out.reserve(loop.points.size());
-				int64_t loop_idx = &loop - &loops.front();
-				for (const Point& pt : loop.points)
-					// The Z coordinate carries index of the source loop.
-					out.emplace_back(pt.x(), pt.y(), loop_idx + 1);
-				out.emplace_back(out.front());
-			}
-			// init Clipper
-			ClipperLib_Z::Clipper clipper;
-			clipper.ZFillFunction([](const ClipperLib_Z::IntPoint& e1bot, const ClipperLib_Z::IntPoint& e1top, const ClipperLib_Z::IntPoint& e2bot, const ClipperLib_Z::IntPoint& e2top, ClipperLib_Z::IntPoint& pt) {
-				// Assign a valid input loop identifier. Such an identifier is strictly positive, the next line is safe even in case one side of a segment
-				// hat the Z coordinate not set to the contour coordinate.
-				pt.Z = std::max(std::max(e1bot.Z, e1top.Z), std::max(e2bot.Z, e2top.Z));
-			});
-			// add polygons
-			clipper.AddPaths(input_clip, ClipperLib_Z::ptSubject, false);
-			clipper.AddPaths(trimming,   ClipperLib_Z::ptClip,    true);
-			// perform operation
-			ClipperLib_Z::PolyTree loops_trimmed_tree;
-			clipper.Execute(ClipperLib_Z::ctDifference, loops_trimmed_tree, ClipperLib_Z::pftEvenOdd, ClipperLib_Z::pftEvenOdd);
-			ClipperLib_Z::PolyTreeToPaths(loops_trimmed_tree, loops_trimmed);
-		}
+    this->throw_if_canceled();
+    //reorder & extrude them
+    _extrude_brim_polyline(lines, out);
 
-		// Third, produce the extrusions, sorted by the source loop indices.
-		{
-			std::vector<std::pair<const ClipperLib_Z::Path*, size_t>> loops_trimmed_order;
-			loops_trimmed_order.reserve(loops_trimmed.size());
-			for (const ClipperLib_Z::Path &path : loops_trimmed) {
-				size_t input_idx = 0;
-				for (const ClipperLib_Z::IntPoint &pt : path)
-					if (pt.Z > 0) {
-						input_idx = (size_t)pt.Z;
-						break;
-					}
-				assert(input_idx != 0);
-				loops_trimmed_order.emplace_back(&path, input_idx);
-			}
-			std::stable_sort(loops_trimmed_order.begin(), loops_trimmed_order.end(),
-				[](const std::pair<const ClipperLib_Z::Path*, size_t> &l, const std::pair<const ClipperLib_Z::Path*, size_t> &r) {
-					return l.second < r.second;
-				});
-			Vec3f last_pt(0.f, 0.f, 0.f);
-
-			for (size_t i = 0; i < loops_trimmed_order.size();) {
-				// Find all pieces that the initial loop was split into.
-				size_t j = i + 1;
-				for (; j < loops_trimmed_order.size() && loops_trimmed_order[i].first == loops_trimmed_order[j].first; ++ j) ;
-				const ClipperLib_Z::Path &first_path = *loops_trimmed_order[i].first;
-				if (i + 1 == j && first_path.size() > 3 && first_path.front().X == first_path.back().X && first_path.front().Y == first_path.back().Y) {
-					auto *loop = new ExtrusionLoop();
-					out.entities.emplace_back(loop);
-					loop->paths.emplace_back(erSkirt, float(flow.mm3_per_mm()), float(flow.width), float(this->skirt_first_layer_height()));
-		            Points &points = loop->paths.front().polyline.points;
-		            points.reserve(first_path.size());
-		            for (const ClipperLib_Z::IntPoint &pt : first_path)
-		            	points.emplace_back(coord_t(pt.X), coord_t(pt.Y));
-		            i = j;
-				} else {
-			    	//FIXME this is not optimal as the G-code generator will follow the sequence of paths verbatim without respect to minimum travel distance.
-			    	for (; i < j; ++ i) {
-			            out.entities.emplace_back(new ExtrusionPath(erSkirt, float(flow.mm3_per_mm()), float(flow.width), float(this->skirt_first_layer_height())));
-						const ClipperLib_Z::Path &path = *loops_trimmed_order[i].first;
-			            Points &points = static_cast<ExtrusionPath*>(out.entities.back())->polyline.points;
-			            points.reserve(path.size());
-			            for (const ClipperLib_Z::IntPoint &pt : path)
-			            	points.emplace_back(coord_t(pt.X), coord_t(pt.Y));
-		           	}
-		        }
-			}
-		}
-    } else {
-    	extrusion_entities_append_loops(out.entities, std::move(loops), erSkirt, float(flow.mm3_per_mm()), float(flow.width), float(this->skirt_first_layer_height()));
-}
+    return brimmable_areas;
 }
 
-void Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out) {
+ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out) {
     Flow        flow = this->brim_flow();
     Points pt_ears;
-    Polygons islands;
+    ExPolygons islands;
     for (PrintObject *object : objects) {
-        Polygons object_islands;
+        ExPolygons object_islands;
         for (ExPolygon &expoly : object->m_layers.front()->slices.expolygons)
-            object_islands.push_back(expoly.contour);
-        if (!object->support_layers().empty())
-            object->support_layers().front()->support_fills.polygons_covered_by_spacing(object_islands, float(SCALED_EPSILON));
+            object_islands.push_back(expoly);
+        if (!object->support_layers().empty()) {
+            Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
+            for (Polygon poly : polys)
+                for (ExPolygon & expoly2 : union_ex(poly))
+                    object_islands.push_back(expoly2);
+        }
         islands.reserve(islands.size() + object_islands.size() * object->m_copies.size());
         for (const Point &copy_pt : object->m_copies)
-            for (const Polygon &poly : object_islands) {
+            for (const ExPolygon &poly : object_islands) {
                 islands.push_back(poly);
-                islands.back().translate(copy_pt);
-                for (const Point &p : poly.convex_points(config().brim_ears_max_angle.value * PI / 180.0)) {
+                islands.back().translate(copy_pt.x(), copy_pt.y());
+                for (const Point &p : poly.contour.convex_points(config().brim_ears_max_angle.value * PI / 180.0)) {
                     pt_ears.push_back(p);
                     pt_ears.back() += (copy_pt);
                 }
             }
     }
 
+    islands = union_ex(islands, true);
+
+    //get the brimmable area (for the return value only)
+    const size_t num_loops = size_t(floor(m_config.brim_width.value / flow.spacing()));
+    ExPolygons brimmable_areas;
+    for (ExPolygon &expoly : islands) {
+        for (Polygon poly : offset(expoly.contour, num_loops * flow.scaled_width(), jtSquare)) {
+            brimmable_areas.emplace_back();
+            brimmable_areas.back().contour = poly;
+            brimmable_areas.back().contour.make_counter_clockwise();
+            brimmable_areas.back().holes.push_back(expoly.contour);
+            brimmable_areas.back().holes.back().make_clockwise();
+        }
+    }
+    brimmable_areas = union_ex(brimmable_areas);
+
     //create loops (same as standard brim)
     Polygons loops;
-    size_t num_loops = size_t(floor(m_config.brim_width.value / flow.spacing()));
+    islands = offset_ex(islands, -0.5f * double(flow.scaled_spacing()));
     for (size_t i = 0; i < num_loops; ++i) {
         this->throw_if_canceled();
-        islands = offset(islands, double(flow.scaled_spacing()), jtSquare);
-        for (Polygon &poly : islands) {
-            // poly.simplify(SCALED_RESOLUTION);
+        islands = offset_ex(islands, double(flow.scaled_spacing()), jtSquare);
+        for (ExPolygon &expoly : islands) {
+            Polygon poly = expoly.contour;
             poly.points.push_back(poly.points.front());
             Points p = MultiPoint::_douglas_peucker(poly.points, SCALED_RESOLUTION);
             p.pop_back();
             poly.points = std::move(p);
+            loops.push_back(poly);
         }
-        polygons_append(loops, offset(islands, -0.5f * double(flow.scaled_spacing())));
     }
     loops = union_pt_chained(loops, false);
 
-
     //create ear pattern
     coord_t size_ear = (scale_(m_config.brim_width.value) - flow.scaled_spacing());
-    Polygon point_round; 
+    Polygon point_round;
     for (size_t i = 0; i < POLY_SIDES; i++) {
         double angle = (2.0 * PI * i) / POLY_SIDES;
         point_round.points.emplace_back(size_ear * cos(angle), size_ear * sin(angle));
@@ -1970,13 +1951,106 @@ void Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityColle
 
     //create ears
     Polygons mouse_ears;
+    ExPolygons mouse_ears_ex;
     for (Point pt : pt_ears) {
         mouse_ears.push_back(point_round);
         mouse_ears.back().translate(pt);
+        mouse_ears_ex.emplace_back();
+        mouse_ears_ex.back().contour = mouse_ears.back();
     }
 
     //intersection
     Polylines lines = intersection_pl(loops, mouse_ears);
+
+    //reorder & extrude them
+    _extrude_brim_polyline(lines, out);
+
+    return intersection_ex(brimmable_areas, mouse_ears_ex);
+}
+
+ExPolygons Print::_make_brim_interior(const PrintObjectPtrs &objects, const ExPolygons &unbrimmable_areas, ExtrusionEntityCollection &out) {
+    // Brim is only printed on first layer and uses perimeter extruder.
+    Flow        flow = this->brim_flow();
+    ExPolygons    islands;
+    for (PrintObject *object : objects) {
+        ExPolygons object_islands;
+        for (ExPolygon &expoly : object->m_layers.front()->slices.expolygons)
+            object_islands.push_back(expoly);
+        if (!object->support_layers().empty()) {
+            Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
+            for (Polygon poly : polys)
+                for (ExPolygon & expoly2 : union_ex(poly))
+                    object_islands.push_back(expoly2);
+        }
+        islands.reserve(islands.size() + object_islands.size() * object->m_copies.size());
+        for (const Point &pt : object->m_copies)
+            for (ExPolygon &poly : object_islands) {
+                islands.push_back(poly);
+                islands.back().translate(pt.x(), pt.y());
+            }
+    }
+
+    islands = union_ex(islands);
+
+    //to have the brimmable areas, get all holes, use them as contour , add smaller hole inside and make a diff with unbrimmable
+    const size_t num_loops = size_t(floor(m_config.brim_width_interior.value / flow.spacing()));
+    ExPolygons brimmable_areas;
+    Polygons islands_to_loops;
+    for (const ExPolygon &expoly : islands) {
+        for (const Polygon &hole : expoly.holes) {
+            brimmable_areas.emplace_back();
+            brimmable_areas.back().contour = hole;
+            brimmable_areas.back().contour.make_counter_clockwise();
+            for (Polygon poly : offset(brimmable_areas.back().contour, -flow.scaled_width() * (double)num_loops, jtSquare)) {
+                brimmable_areas.back().holes.push_back(poly);
+                brimmable_areas.back().holes.back().make_clockwise();
+            }
+            islands_to_loops = brimmable_areas.back().contour;
+        }
+    }
+
+    brimmable_areas = diff_ex(brimmable_areas, islands, true);
+    brimmable_areas = diff_ex(brimmable_areas, unbrimmable_areas, true);
+
+    //now get all holes, use them to create loops
+    Polygons loops;
+    for (size_t i = 0; i < num_loops; ++i) {
+        this->throw_if_canceled();
+        islands_to_loops = offset(islands_to_loops, double(-flow.scaled_spacing()), jtSquare);
+        for (Polygon &poly : islands_to_loops) {
+            poly.points.push_back(poly.points.front());
+            Points p = MultiPoint::_douglas_peucker(poly.points, SCALED_RESOLUTION);
+            p.pop_back();
+            poly.points = std::move(p);
+        }
+        polygons_append(loops, offset(islands_to_loops, 0.5f * double(flow.scaled_spacing())));
+    }
+    loops = union_pt_chained(loops, false);
+
+    //intersection
+    Polygons frontiers;
+    for (ExPolygon &expoly : brimmable_areas) {
+        for (Polygon &big_contour : offset(expoly.contour, 0.1f * flow.scaled_width())) {
+            frontiers.push_back(big_contour);
+            for (Polygon &hole : expoly.holes) {
+                frontiers.push_back(hole);
+                //don't reverse it! back! or it will be ignored by intersection_pl. 
+                //frontiers.back().reverse();
+            }
+        }
+    }
+
+    Polylines lines = intersection_pl(loops, frontiers);
+
+    //reorder & extrude them
+    _extrude_brim_polyline(lines, out);
+
+    return brimmable_areas;
+}
+
+/// reorder & join polyline if their ending are near enough, then extrude the brim from the polyline into 'out'.
+void Print::_extrude_brim_polyline(Polylines lines, ExtrusionEntityCollection &out) {
+    Flow        flow = this->brim_flow();
 
     //reorder them
     std::sort(lines.begin(), lines.end(), [](const Polyline &a, const Polyline &b)->bool { return a.closest_point(Point(0, 0))->y() < b.closest_point(Point(0, 0))->y(); });
@@ -2043,7 +2117,6 @@ void Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityColle
                 //update last position
                 previous = &lines_sorted.back();
             }
-            
         }
     }
 
@@ -2055,7 +2128,7 @@ void Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityColle
         float(flow.mm3_per_mm()),
         float(flow.width),
         float(this->skirt_first_layer_height())
-        );
+    );
 }
 
 // Wipe tower support.

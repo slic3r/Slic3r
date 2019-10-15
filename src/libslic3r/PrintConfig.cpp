@@ -248,6 +248,14 @@ void PrintConfigDef::init_fff_params()
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionFloat(0));
 
+    def = this->add("brim_width_interior", coFloat);
+    def->label = L("Interior Brim width");
+    def->tooltip = L("Horizontal width of the brim that will be printed inside each object on the first layer.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionFloat(0));
+
     def = this->add("brim_ears", coBool);
     def->label = L(" ");
     def->full_label = L("Brim ears");

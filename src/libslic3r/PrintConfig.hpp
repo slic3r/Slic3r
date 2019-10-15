@@ -943,6 +943,7 @@ public:
     ConfigOptionFloat               bridge_acceleration;
     ConfigOptionInts                bridge_fan_speed;
     ConfigOptionFloat               brim_width;
+    ConfigOptionFloat               brim_width_interior;
     ConfigOptionBool                brim_ears;
     ConfigOptionFloat               brim_ears_max_angle;
     ConfigOptionInts                chamber_temperature;
@@ -1019,6 +1020,7 @@ protected:
         OPT_PTR(bridge_acceleration);
         OPT_PTR(bridge_fan_speed);
         OPT_PTR(brim_width);
+        OPT_PTR(brim_width_interior);
         OPT_PTR(brim_ears);
         OPT_PTR(brim_ears_max_angle);
         OPT_PTR(chamber_temperature);

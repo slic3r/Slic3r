@@ -875,11 +875,11 @@ void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
     if (! is_fff && (opt_key == "pad_enable" || opt_key == "pad_around_object"))
         og_freq_chng_params->set_value("pad", pad_combo_value_for_config(*m_config));
 
-	if (opt_key == "brim_width")
-	{
-		bool val = m_config->opt_float("brim_width") > 0.0 ? true : false;
+    if (opt_key == "brim_width")
+    {
+        bool val = m_config->opt_float("brim_width") > 0.0 || m_config->opt_float("brim_width_interior");
         og_freq_chng_params->set_value("brim", val);
-	}
+    }
 
     if (opt_key == "wipe_tower" || opt_key == "single_extruder_multi_material" || opt_key == "extruders_count" )
         update_wiping_button_visibility();
@@ -1005,11 +1005,11 @@ void Tab::update_preset_description_line()
 
 void Tab::update_frequently_changed_parameters()
 {
-	const bool is_fff = supports_printer_technology(ptFFF);
-	auto og_freq_chng_params = wxGetApp().sidebar().og_freq_chng_params(is_fff);
+    const bool is_fff = supports_printer_technology(ptFFF);
+    auto og_freq_chng_params = wxGetApp().sidebar().og_freq_chng_params(is_fff);
     if (!og_freq_chng_params) return;
 
-	og_freq_chng_params->set_value("support", support_combo_value_for_config(*m_config, is_fff));
+    og_freq_chng_params->set_value("support", support_combo_value_for_config(*m_config, is_fff));
     if (! is_fff)
         og_freq_chng_params->set_value("pad", pad_combo_value_for_config(*m_config));
 
@@ -1020,9 +1020,9 @@ void Tab::update_frequently_changed_parameters()
 
     if (is_fff)
     {
-        og_freq_chng_params->set_value("brim", bool(m_config->opt_float("brim_width") > 0.0));
-	update_wiping_button_visibility();
-}
+        og_freq_chng_params->set_value("brim", bool(m_config->opt_float("brim_width") > 0.0 || m_config->opt_float("brim_width_interior") > 0.0));
+        update_wiping_button_visibility();
+    }
 }
 
 void TabPrint::build()
@@ -1156,6 +1156,7 @@ void TabPrint::build()
 
 		optgroup = page->new_optgroup(_(L("Brim")));
         optgroup->append_single_option_line("brim_width");
+        optgroup->append_single_option_line("brim_width_interior");
         line = { _(L("Brim ears")), "" };
         line.append_option(optgroup->get_option("brim_ears"));
         line.append_option(optgroup->get_option("brim_ears_max_angle"));
