@@ -69,7 +69,7 @@ SCENARIO( "CLI Export Arguments", "[!mayfail]") {
             clean_array(in_args.size(), args_cli);
             clean_file("test_cli/20mmbox", "gcode");
         }
-		// doesn't work anymore
+        // doesn't work anymore
         //WHEN ( "[ ACTION ] is export-obj") {
         //    in_args.emplace(in_args.cend()-1, "--export-obj");
         //    CLI().run(in_args.size(), to_cstr_array(in_args, args_cli));
@@ -79,7 +79,7 @@ SCENARIO( "CLI Export Arguments", "[!mayfail]") {
         //    clean_array(in_args.size(), args_cli);
         //    clean_file("test_cli/20mmbox", "obj");
         //}
-		//doesn't work
+        //doesn't work
         //WHEN ( "[ ACTION ] is export-pov") {
         //    in_args.emplace(in_args.cend()-1, "--export-pov");
         //    CLI().run(in_args.size(), to_cstr_array(in_args, args_cli));
@@ -107,7 +107,7 @@ SCENARIO( "CLI Export Arguments", "[!mayfail]") {
             clean_array(in_args.size(), args_cli);
             clean_file("test_cli/20mmbox", "3mf");
         }
-		// now export-sla
+        // now export-sla
         //WHEN ( "[ ACTION ] is export-svg") {
         //    in_args.emplace(in_args.cend()-1, "--export-svg");
         //    CLI().run(in_args.size(), to_cstr_array(in_args, args_cli));
@@ -134,24 +134,24 @@ SCENARIO( "CLI Export Arguments", "[!mayfail]") {
         //    clean_array(in_args.size(), args_cli);
         //    clean_file("test_cli/20mmbox", "svg", true);
         //}
-		//WHEN("[ ACTION ] is sla") {
-		//	in_args.emplace(in_args.cend() - 1, "--sla");
-		//	CLI().run(in_args.size(), to_cstr_array(in_args, args_cli));
-		//	THEN("SVG file is created.") {
-		//		REQUIRE(file_exists("test_cli/20mmbox", "svg"));
-		//	}
-		//	clean_array(in_args.size(), args_cli);
-		//	clean_file("test_cli/20mmbox", "svg", true);
-		//}
-		//WHEN("[ ACTION ] is sla for sl1") {
-		//	in_args.emplace(in_args.cend() - 1, "--sla");
-		//	CLI().run(in_args.size(), to_cstr_array(in_args, args_cli));
-		//	THEN("SVG file is created.") {
-		//		REQUIRE(file_exists("test_cli/20mmbox", "sl1"));
-		//	}
-		//	clean_array(in_args.size(), args_cli);
-		//	clean_file("test_cli/20mmbox", "sl1", true);
-		//}
+        //WHEN("[ ACTION ] is sla") {
+        //    in_args.emplace(in_args.cend() - 1, "--sla");
+        //    CLI().run(in_args.size(), to_cstr_array(in_args, args_cli));
+        //    THEN("SVG file is created.") {
+        //        REQUIRE(file_exists("test_cli/20mmbox", "svg"));
+        //    }
+        //    clean_array(in_args.size(), args_cli);
+        //    clean_file("test_cli/20mmbox", "svg", true);
+        //}
+        //WHEN("[ ACTION ] is sla for sl1") {
+        //    in_args.emplace(in_args.cend() - 1, "--sla");
+        //    CLI().run(in_args.size(), to_cstr_array(in_args, args_cli));
+        //    THEN("SVG file is created.") {
+        //        REQUIRE(file_exists("test_cli/20mmbox", "sl1"));
+        //    }
+        //    clean_array(in_args.size(), args_cli);
+        //    clean_file("test_cli/20mmbox", "sl1", true);
+        //}
         //WHEN ( "[ ACTION ] is sla and --output is output.svg") {
         //    in_args.emplace(in_args.cend()-1, "--sla");
         //    in_args.emplace(in_args.cend()-1, "--output");
@@ -206,12 +206,11 @@ SCENARIO( "CLI Export Arguments", "[!mayfail]") {
 SCENARIO("CLI positioning arguments") {
     char* args_cli[20];
     std::vector<std::string> in_args{};
-    in_args.reserve(20);
     in_args.emplace_back("gui_test"s);
     GIVEN( " 3D Model for a 20mm box, centered around 0,0 and gcode export" ) {
-        in_args.emplace_back(testfile("test_cli/20mmbox.stl"s));
+        in_args.emplace_back(testfile("test_cli/20mmbox.stl"));
         in_args.emplace(in_args.cend()-1, "-g");
-        in_args.emplace(in_args.cend()-1, "--load"s);
+        in_args.emplace(in_args.cend()-1, "--load");
         in_args.emplace(in_args.cend()-1, testfile("test_cli/20mmbox_config.ini"));
         CLI cut{};
 
@@ -221,8 +220,8 @@ SCENARIO("CLI positioning arguments") {
             cut.run(in_args.size(), to_cstr_array(in_args, args_cli));
 
             THEN ("The first layer of the print should be centered around 0,0") {
-                std::string exported { read_to_string("test_cli/20mmbox.gcode"s)};
-				GCodeReader reader;
+                std::string exported { read_to_string(testfile("test_cli/20mmbox.gcode"))};
+                GCodeReader reader;
                 REQUIRE(exported != ""s);
                 double min_x = 50.0, max_x = -50.0, min_y = 50.0, max_y = -50.0;
                 reader.apply_config(cut.full_print_config());
@@ -249,27 +248,27 @@ SCENARIO("CLI positioning arguments") {
                 AND_THEN("Maximum Y encountered is about 49.9") {
                     REQUIRE(max_y == Approx(49.9));
                 }
-                }
             }
-            WHEN("--dont-arrange is supplied") {
-                in_args.emplace(in_args.cend()-1, "--dont-arrange");
-                cut.run(in_args.size(), to_cstr_array(in_args, args_cli));
+        }
+        WHEN("--dont-arrange is supplied") {
+            in_args.emplace(in_args.cend()-1, "--dont-arrange");
+            cut.run(in_args.size(), to_cstr_array(in_args, args_cli));
 
-                THEN ("The first layer of the print should be centered around 0,0") {
-                    auto reader {GCodeReader()};
-                    std::string exported { read_to_string("test_cli/20mmbox.gcode"s)};
-                    REQUIRE(exported != ""s);
-					double min_x = 50.0, max_x = -50.0, min_y = 50.0, max_y = -50.0;
-                    reader.apply_config(cut.full_print_config());
-                    reader.parse_buffer(exported, [&min_x, &min_y, &max_x, &max_y] (GCodeReader& self, const GCodeReader::GCodeLine& line)
-                    {
-                        if (self.z() < 0.6) {
-                            min_x = std::min(min_x, static_cast<double>(self.x()));
-                            min_y = std::min(min_y, static_cast<double>(self.y()));
-                            max_x = std::max(max_x, static_cast<double>(self.x()));
-                            max_y = std::max(max_y, static_cast<double>(self.y()));
-                        }
-                    });
+            THEN ("The first layer of the print should be centered around 0,0") {
+                auto reader {GCodeReader()};
+                std::string exported { read_to_string("test_cli/20mmbox.gcode"s)};
+                REQUIRE(exported != ""s);
+                double min_x = 50.0, max_x = -50.0, min_y = 50.0, max_y = -50.0;
+                reader.apply_config(cut.full_print_config());
+                reader.parse_buffer(exported, [&min_x, &min_y, &max_x, &max_y] (GCodeReader& self, const GCodeReader::GCodeLine& line)
+                {
+                    if (self.z() < 0.6) {
+                        min_x = std::min(min_x, static_cast<double>(self.x()));
+                        min_y = std::min(min_y, static_cast<double>(self.y()));
+                        max_x = std::max(max_x, static_cast<double>(self.x()));
+                        max_y = std::max(max_y, static_cast<double>(self.y()));
+                    }
+                });
                 AND_THEN("Minimum X encountered is about -9.9") {
                     REQUIRE(min_x == Approx(-9.9));
                 }
@@ -284,7 +283,7 @@ SCENARIO("CLI positioning arguments") {
                 }
             }
         }
-        clean_array(in_args.size(), args_cli);
-        clean_file("test_cli/20mmbox", "gcode");
     }
+    clean_array(in_args.size(), args_cli);
+    clean_file("test_cli/20mmbox", "gcode");
 }

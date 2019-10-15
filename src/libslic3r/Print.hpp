@@ -397,7 +397,7 @@ private:
     ExPolygons          _make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
     ExPolygons          _make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
     ExPolygons          _make_brim_interior(const PrintObjectPtrs &objects, const ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
-    void                _extrude_brim_polyline(Polylines lines, ExtrusionEntityCollection &out);
+    Polylines           _reorder_brim_polyline(Polylines lines, ExtrusionEntityCollection &out);
     void                _make_wipe_tower();
     void                _simplify_slices(double distance);
 

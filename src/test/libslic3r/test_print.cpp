@@ -5,6 +5,7 @@
 #include <string>
 #include "../test_data.hpp"
 #include "../../libslic3r/libslic3r.h"
+#include "../../libslic3r/SVG.hpp"
 
 using namespace Slic3r::Test;
 using namespace Slic3r;
@@ -78,6 +79,13 @@ SCENARIO("Print: Brim generation") {
             Print print{};
             Slic3r::Test::init_print(print, { m }, model, config);
             print.process();
+            //{
+            //    std::stringstream stri;
+            //    stri << "20mm_cube_brim_test_" << ".svg";
+            //    SVG svg(stri.str());
+            //    svg.draw(print.brim().as_polylines(), "red");
+            //    svg.Close();
+            //}
             THEN("Brim Extrusion collection has 3 loops in it") {
                 REQUIRE(print.brim().items_count() == 3);
             }

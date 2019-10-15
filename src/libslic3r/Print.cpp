@@ -1812,10 +1812,10 @@ ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityColl
     //don't collide with objects
     brimmable_areas = diff_ex(brimmable_areas, unbrimmable_areas, true);
 
+    this->throw_if_canceled();
     //now get all holes, use them to create loops
     Polylines loops;
     ExPolygons bigger_islands;
-
     //grow a half of spacing, to go to the first extrusion polyline.
     Polygons unbrimmable_polygons;
     for (ExPolygon &expoly : islands) {
@@ -1826,7 +1826,6 @@ ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityColl
             unbrimmable_polygons.insert(unbrimmable_polygons.end(), big_expoly.holes.begin(), big_expoly.holes.end());
         }
     }
-    //frontiers = to_polygons(union_ex(frontiers));
     islands = bigger_islands;
     for (size_t i = 0; i < num_loops; ++i) {
         this->throw_if_canceled();
@@ -1876,8 +1875,18 @@ ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityColl
     //}
 
     this->throw_if_canceled();
-    //reorder & extrude them
-    _extrude_brim_polyline(lines, out);
+
+    //TODO: reorder when it will work with loops (ie do not overextrude)
+
+    //push into extrusions
+    extrusion_entities_append_paths(
+        out.entities,
+        lines,
+        erSkirt,
+        float(flow.mm3_per_mm()),
+        float(flow.width),
+        float(this->skirt_first_layer_height())
+    );
 
     return brimmable_areas;
 }
@@ -1924,6 +1933,7 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
     }
     brimmable_areas = union_ex(brimmable_areas);
 
+    this->throw_if_canceled();
     //create loops (same as standard brim)
     Polygons loops;
     islands = offset_ex(islands, -0.5f * double(flow.scaled_spacing()));
@@ -1961,9 +1971,20 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
 
     //intersection
     Polylines lines = intersection_pl(loops, mouse_ears);
+    this->throw_if_canceled();
 
     //reorder & extrude them
-    _extrude_brim_polyline(lines, out);
+    Polylines lines_sorted = _reorder_brim_polyline(lines, out);
+
+    //push into extrusions
+    extrusion_entities_append_paths(
+        out.entities,
+        lines_sorted,
+        erSkirt,
+        float(flow.mm3_per_mm()),
+        float(flow.width),
+        float(this->skirt_first_layer_height())
+    );
 
     return intersection_ex(brimmable_areas, mouse_ears_ex);
 }
@@ -2042,14 +2063,23 @@ ExPolygons Print::_make_brim_interior(const PrintObjectPtrs &objects, const ExPo
 
     Polylines lines = intersection_pl(loops, frontiers);
 
-    //reorder & extrude them
-    _extrude_brim_polyline(lines, out);
+    //TODO: reorder when it can  work with loops
+
+    //push into extrusions
+    extrusion_entities_append_paths(
+        out.entities,
+        lines,
+        erSkirt,
+        float(flow.mm3_per_mm()),
+        float(flow.width),
+        float(this->skirt_first_layer_height())
+    );
 
     return brimmable_areas;
 }
 
 /// reorder & join polyline if their ending are near enough, then extrude the brim from the polyline into 'out'.
-void Print::_extrude_brim_polyline(Polylines lines, ExtrusionEntityCollection &out) {
+Polylines Print::_reorder_brim_polyline(Polylines lines, ExtrusionEntityCollection &out) {
     Flow        flow = this->brim_flow();
 
     //reorder them
@@ -2120,15 +2150,7 @@ void Print::_extrude_brim_polyline(Polylines lines, ExtrusionEntityCollection &o
         }
     }
 
-    //push into extrusions
-    extrusion_entities_append_paths(
-        out.entities,
-        lines_sorted,
-        erSkirt,
-        float(flow.mm3_per_mm()),
-        float(flow.width),
-        float(this->skirt_first_layer_height())
-    );
+    return lines_sorted;
 }
 
 // Wipe tower support.
