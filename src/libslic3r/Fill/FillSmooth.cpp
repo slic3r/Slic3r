@@ -87,7 +87,6 @@ namespace Slic3r {
             }
             // print
             float mult_flow = (params.fill_exactly && idx == 0 ? std::min(2., volume / extrudedVolume) : 1);
-            std::cout << "mult_flow =" << mult_flow << " \n";
             extrusion_entities_append_paths(
                 eec.entities, std::move(polylines_layer),
                 good_role,
