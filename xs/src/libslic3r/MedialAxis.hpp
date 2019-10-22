@@ -24,7 +24,7 @@ class MedialAxis {
         /// _expolygon: the polygon to fill
         /// _max_width : maximum width of the extrusion. _expolygon shouldn't have a spot where a circle diameter is higher than that (or almost).
         /// _min_width : minimum width of the extrusion, every spot where a circle diameter is lower than that will be ignored (unless it's the tip of the extrusion)
-        /// _height: height of the extrusion, used to compute the diufference between width and spacing.
+        /// _height: height of the extrusion, used to compute the difference between width and spacing.
         MedialAxis(const ExPolygon &_expolygon, const coord_t _max_width, const coord_t _min_width, const coord_t _height)
             : surface(_expolygon), max_width(_max_width), min_width(_min_width), height(_height),
             bounds(&_expolygon), nozzle_diameter(_min_width), taper_size(0), stop_at_min_width(true){};
@@ -49,7 +49,7 @@ class MedialAxis {
 
         /// input polygon to fill
         const ExPolygon& surface;
-        /// the copied expolygon from surface, it's modified in build() to simplify it. It's then used to create the voronopi diagram.
+        /// the copied expolygon from surface, it's modified in build() to simplify it. It's then used to create the voronoi diagram.
         ExPolygon expolygon;
         const ExPolygon* bounds;
         /// maximum width of the extrusion. _expolygon shouldn't have a spot where a circle diameter is higher than that (or almost).
