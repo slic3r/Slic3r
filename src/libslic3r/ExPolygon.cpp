@@ -199,22 +199,23 @@ ExPolygon::simplify(double tolerance, ExPolygons* expolygons) const
 //simplier than simplify
 void
 ExPolygon::remove_point_too_near(const coord_t tolerance) {
+    const double tolerance_sq = tolerance * (double)tolerance;
     size_t id = 1;
     while (id < this->contour.points.size() - 1) {
-        coord_t newdist = (coord_t)std::min(this->contour.points[id].distance_to(this->contour.points[id - 1])
-            , this->contour.points[id].distance_to(this->contour.points[id + 1]));
-        if (newdist < tolerance) {
+        coord_t newdist = (coord_t)std::min(this->contour.points[id].distance_to_square(this->contour.points[id - 1])
+            , this->contour.points[id].distance_to_square(this->contour.points[id + 1]));
+        if (newdist < tolerance_sq) {
             this->contour.points.erase(this->contour.points.begin() + id);
-            newdist = (coord_t)this->contour.points[id].distance_to(this->contour.points[id - 1]);
+            newdist = (coord_t)this->contour.points[id].distance_to_square(this->contour.points[id - 1]);
         }
         //go to next one
         //if you removed a point, it check if the next one isn't too near from the previous one.
         // if not, it byepass it.
-        if (newdist > tolerance) {
+        if (newdist > tolerance_sq) {
             ++id;
         }
     }
-    if (this->contour.points.front().distance_to(this->contour.points.back()) < tolerance) {
+    if (this->contour.points.front().distance_to_square(this->contour.points.back()) < tolerance_sq) {
         this->contour.points.erase(this->contour.points.end() -1);
     }
 }
