@@ -102,7 +102,7 @@ TEST_CASE("Fill: Pattern Path Length") {
 				//}
                 //path CAN loop around the hole
                 REQUIRE(paths.size() >= 1);
-                REQUIRE(paths.size() <= 2);
+                REQUIRE(paths.size() <= 3);
                 // paths don't cross hole
                 REQUIRE(diff_pl(paths, offset(e, (float)(+SCALED_EPSILON * 10))).size() == 0);
             }

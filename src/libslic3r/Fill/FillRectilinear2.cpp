@@ -1,3 +1,5 @@
+//TODO: don't draw long strait lines inside the overlap region
+
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -768,7 +770,7 @@ std::vector<SegmentedIntersectionLine> FillRectilinear2::_vert_lines_for_polygon
 {
     // n_vlines = ceil(bbox_width / line_spacing)
     size_t  n_vlines = (bounding_box.max(0) - bounding_box.min(0) + line_spacing - 1) / line_spacing;
-    coord_t x0 = bounding_box.min(0) + (bounding_box.max(0) - bounding_box.min(0) + line_spacing - n_vlines*line_spacing) / 2;
+    coord_t x0 = bounding_box.min(0);
     if (params.full_infill())
         x0 += (line_spacing + SCALED_EPSILON) / 2;
 
@@ -893,7 +895,8 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
         scale_(0 /*this->overlap*/ - 0.5 * this->spacing));
     if (poly_with_offset.n_contours_inner == 0) {
         // Not a single infill line fits.
-        //FIXME maybe one shall trigger the gap fill here?
+        //Prusa: maybe one shall trigger the gap fill here?
+        //supermerill: not possible here, gapfill return a ThickPolyline, not a Polyline. Have to it after that, to fill un-exterded areas.
         return true;
     }
 

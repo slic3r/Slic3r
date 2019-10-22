@@ -1,5 +1,7 @@
+// !! you have to put the resource folder/shrotcut in your build/run folder
+//
 
-//#define CATCH_CONFIG_DISABLE
+#define CATCH_CONFIG_DISABLE
 
 #include <catch.hpp>
 #include <fstream>
