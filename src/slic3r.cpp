@@ -354,8 +354,18 @@ int CLI::run(int argc, char **argv) {
     if (actions.empty()) {
 #ifdef USE_WX
         GUI::App *gui = new GUI::App();
-        gui->autosave = this->config.getString("autosave");
-        gui->datadir  = this->config.getString("datadir");
+        try {
+            gui->autosave = this->config.getString("autosave");
+        } catch(Slic3r::UnknownOptionException &e) {
+            // if no autosave, set a sensible default.
+            gui->autosave = wxFileName::CreateTempFileName("slic3r_autosave_").ToStdString();
+        }
+        try {
+            gui->datadir  = this->config.getString("datadir");
+        } catch(Slic3r::UnknownOptionException &e) {
+            // if no datadir on the CLI, set a default.
+            gui->datadir = GUI::home().ToStdString();
+        }
         GUI::App::SetInstance(gui);
         wxEntry(argc, argv);
 #else

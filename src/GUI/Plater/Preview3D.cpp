@@ -25,8 +25,8 @@ Preview3D::Preview3D(wxWindow* parent, const wxSize& size, std::shared_ptr<Slic3
     //z_label->SetFont(Slic3r::GUI::small_font);
     
     auto* vsizer = new wxBoxSizer(wxVERTICAL);
-    vsizer->Add(slider, 1, wxALL | wxEXPAND | wxALIGN_CENTER, 3);
-    vsizer->Add(z_label, 0, wxALL | wxEXPAND | wxALIGN_CENTER, 3);
+    vsizer->Add(slider, 1, wxALL | wxEXPAND, 3);
+    vsizer->Add(z_label, 0, wxALL | wxEXPAND, 3);
     
     auto* sizer = new wxBoxSizer(wxHORIZONTAL);
     sizer->Add(&canvas, 1, wxALL | wxEXPAND, 0);

@@ -543,7 +543,7 @@ AMF::write(const Model& model, std::string output_file)
             volume->mesh.require_shared_vertices();
             vertices_offsets.push_back(num_vertices);
             const auto &stl = volume->mesh.stl;
-            for (size_t i = 0; i < stl.stats.shared_vertices; ++i)
+            for (size_t i = 0; i < static_cast<size_t>(stl.stats.shared_vertices); ++i)
                 // Subtract origin_translation in order to restore the coordinates of the parts
                 // before they were imported. Otherwise, when this AMF file is reimported parts
                 // will be placed in the plater correctly, but we will have lost origin_translation

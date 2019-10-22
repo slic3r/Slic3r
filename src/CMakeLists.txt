@@ -316,6 +316,7 @@ set(SLIC3R_TEST_SOURCES
     ${TESTDIR}/libslic3r/test_skirt_brim.cpp
     ${TESTDIR}/libslic3r/test_test_data.cpp
     ${TESTDIR}/libslic3r/test_trianglemesh.cpp
+    ${TESTDIR}/libslic3r/test_extrusion_entity.cpp
     ${TESTDIR}/libslic3r/test_3mf.cpp
 )
 

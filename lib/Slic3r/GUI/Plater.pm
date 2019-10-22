@@ -91,6 +91,9 @@ sub new {
     # Stack of redo operations.
     $self->{redo_stack} = [];
 
+    # Preset dialogs
+    $self->{'preset_dialogs'} = {};
+
     $self->{print}->set_status_cb(sub {
         my ($percent, $message) = @_;
         
@@ -372,7 +375,7 @@ sub new {
         EVT_BUTTON($self, $self->{btn_increase}, sub { $self->increase; });
         EVT_BUTTON($self, $self->{btn_decrease}, sub { $self->decrease; });
 
-        if ($Slic3r::GUI::Settings->{_}{extended_gui} >= 2) { # if Toolbar enabled
+        if ($Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz' || $Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz-big') {
             EVT_BUTTON($self, $self->{btn_rotateX90cw}, sub { $_[0]->rotate(-90, X) });
             EVT_BUTTON($self, $self->{btn_rotateX90ccw}, sub { $_[0]->rotate(90, X) });
             EVT_BUTTON($self, $self->{btn_rotateY90cw}, sub { $_[0]->rotate(-90, Y) });
@@ -599,6 +602,7 @@ sub new {
             my @info = (
                 fil     => "Used Filament",
                 cost    => "Cost",
+                tim     => "Time",
             );
             while (my $field = shift @info) {
                 my $label = shift @info;
@@ -876,6 +880,23 @@ sub selected_presets {
     return $group ? @{$presets{$group}} : %presets;
 }
 
+sub show_unique_preset_dialog {
+    my($self, $group) = @_;
+    my $dlg;
+    my $preset_editor;
+    if( $self->{'preset_dialogs'}->{$group} ) {
+        $dlg = $self->{'preset_dialogs'}->{$group};
+    }
+    else {        
+        my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
+        $dlg = $class->new($self);
+        $self->{'preset_dialogs'}->{$group} = $dlg;        
+    }
+    $dlg->Show;    
+    $preset_editor = $dlg->preset_editor;
+    return $preset_editor;
+}
+
 sub show_preset_editor {
     my ($self, $group, $i, $panel) = @_;
     
@@ -883,7 +904,6 @@ sub show_preset_editor {
         my @presets = $self->selected_presets($group);
     
         my $preset_editor;
-        my $dlg;
         my $mainframe = $self->GetFrame;
         my $tabpanel = $mainframe->{tabpanel};
         if (exists $mainframe->{preset_editor_tabs}{$group}) {
@@ -900,9 +920,7 @@ sub show_preset_editor {
             $mainframe->{preset_editor_tabs}{$group} = $preset_editor = $class->new($tabpanel);
             $tabpanel->AddPage($preset_editor, ucfirst($group) . " Settings");
         } else {
-            my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
-            $dlg = $class->new($self);
-            $preset_editor = $dlg->preset_editor;
+           $preset_editor = $self->show_unique_preset_dialog($group);
         }
     
         $preset_editor->select_preset_by_name($presets[$i // 0]->name);
@@ -927,10 +945,6 @@ sub show_preset_editor {
         };
         $preset_editor->on_select_preset($cb);
         $preset_editor->on_save_preset($cb);
-    
-        if ($dlg) {
-            $dlg->Show;
-        }
     });
 }
 
@@ -2281,6 +2295,17 @@ sub on_export_completed {
         }
     } else {
         $message = "Export failed";
+    }
+    # Estimate print duration
+    {
+        my $estimator = Slic3r::GCode::TimeEstimator->new;
+        $estimator->parse_file($self->{export_gcode_output_file});
+        my $time = $estimator->time;
+        $self->{print_info_tim}->SetLabel(sprintf(
+            "%d minutes and %d seconds",
+            int($time / 60),
+            int($time % 60),
+        ));
     }
     $self->{export_gcode_output_file} = undef;
     $self->statusbar->SetStatusText($message);

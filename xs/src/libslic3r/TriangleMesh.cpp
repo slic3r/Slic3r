@@ -172,23 +172,23 @@ TriangleMesh::repair() {
     if (this->stl.stats.number_of_facets == 0) return;
     
     this->check_topology();
-    
-    // remove_unconnected
-    if (stl.stats.connected_facets_3_edge <  stl.stats.number_of_facets) {
-        stl_remove_unconnected_facets(&stl);
-    }
-    
-    // fill_holes
-    if (stl.stats.connected_facets_3_edge < stl.stats.number_of_facets) {
-        stl_fill_holes(&stl);
-        stl_clear_error(&stl);
-    }
-    
-    // normal_directions
-    stl_fix_normal_directions(&stl);
-    
-    // normal_values
-    stl_fix_normal_values(&stl);
+
+    /// Call the stl_repair from admesh rather than reimplementing it ourselves.
+    stl_repair(&(this->stl),  // operate on this STL
+               true,  // flag: try to fix everything
+               true,  // flag: check for perfectly aligned edges
+               false, // flag: don't use tolerance
+               0.0,    // null tolerance value
+               false, // flag: don't increment tolerance
+               0.0,   // amount to increment tolerance on each iteration
+               true,  // find and try to connect nearby bad facets
+               10,    // Perform 10 iterations
+               true,  // remove unconnected
+               true,  // fill holes
+               true,  // fix normal directions
+               true,  // fix normal values
+               false, // reverse direction of all facets and normals
+               0);  // Verbosity
     
     // always calculate the volume and reverse all normals if volume is negative
     (void)this->volume();

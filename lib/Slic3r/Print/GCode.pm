@@ -142,6 +142,9 @@ sub export {
     # disable fan
     print $fh $gcodegen->writer->set_fan(0, 1)
         if $self->config->cooling && $self->config->disable_fan_first_layers;
+  
+    # set initial extruder so it can be used in start G-code
+    print $fh $gcodegen->set_extruder($self->print->extruders->[0]);
     
     # set bed temperature
     if ($self->config->has_heatbed && (my $temp = $self->config->first_layer_bed_temperature) && $self->config->start_gcode !~ /M(?:190|140)/i) {
@@ -222,9 +225,6 @@ sub export {
             }
         }
     }
-    
-    # set initial extruder only after custom start G-code
-    print $fh $gcodegen->set_extruder($self->print->extruders->[0]);
     
     # do all objects for each layer
     if ($self->config->complete_objects) {

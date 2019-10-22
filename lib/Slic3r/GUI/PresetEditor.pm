@@ -927,7 +927,7 @@ sub _update {
 
     if (any { /$opt_key/ } qw(all_keys top_solid_layers bottom_solid_layers fill_density)) {
         $self->get_field($_)->toggle($have_infill || $have_solid_infill)
-            for qw(fill_angle infill_extrusion_width infill_speed bridge_speed);
+            for qw(fill_angle infill_extrusion_width infill_speed);
     }
 
     if (any { /$opt_key/ } qw(all_keys fill_density perimeters)) {
@@ -1263,6 +1263,7 @@ sub title { 'Printer Settings' }
 sub options {
     return qw(
         bed_shape z_offset z_steps_per_mm has_heatbed
+        fan_percentage
         gcode_flavor use_relative_e_distances
         serial_port serial_speed
         host_type print_host octoprint_apikey
@@ -1429,6 +1430,7 @@ sub build {
             $optgroup->append_single_option_line('z_steps_per_mm');
             $optgroup->append_single_option_line('use_set_and_wait_extruder');
             $optgroup->append_single_option_line('use_set_and_wait_bed');
+            $optgroup->append_single_option_line('fan_percentage');
         }
     }
     {

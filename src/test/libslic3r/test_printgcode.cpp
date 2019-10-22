@@ -207,8 +207,6 @@ SCENARIO( "PrintGCode basic functionality") {
                 REQUIRE(exported.find("M107") != std::string::npos);
             }
         }
-
-
         WHEN("end_gcode exists with layer_num and layer_z") {
             config->set("end_gcode", "; Layer_num [layer_num]\n; Layer_z [layer_z]");
             config->set("layer_height", 0.1);
@@ -222,6 +220,50 @@ SCENARIO( "PrintGCode basic functionality") {
             THEN("layer_num and layer_z are processed in the end gcode") {\
                 REQUIRE(exported.find("; Layer_num 199") != std::string::npos);
                 REQUIRE(exported.find("; Layer_z 20") != std::string::npos);
+            }
+        }
+        WHEN("current_extruder exists in start_gcode") {
+            config->set("start_gcode", "; Extruder [current_extruder]");
+            {
+                Slic3r::Model model;
+                auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+                Slic3r::Test::gcode(gcode, print);
+                auto exported {gcode.str()};
+                THEN("current_extruder is processed in the start gcode and set for first extruder") {
+                    REQUIRE(exported.find("; Extruder 0") != std::string::npos);
+                }
+            }
+            config->set("solid_infill_extruder", 2);
+            config->set("support_material_extruder", 2);
+            config->set("infill_extruder", 2);
+            config->set("perimeter_extruder", 2);
+            {
+                Slic3r::Model model;
+                auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+                Slic3r::Test::gcode(gcode, print);
+                auto exported {gcode.str()};
+                THEN("current_extruder is processed in the start gcode and set for second extruder") {
+                    REQUIRE(exported.find("; Extruder 1") != std::string::npos);
+                }
+            }
+        }
+
+        WHEN("layer_num represents the layer's index from z=0") {
+            config->set("layer_gcode", ";Layer:[layer_num] ([layer_z] mm)");
+            config->set("layer_height", 1.0);
+            config->set("first_layer_height", 1.0);
+
+            Slic3r::Model model;
+            auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20,TestMesh::cube_20x20x20}, model, config)};
+            Slic3r::Test::gcode(gcode, print);
+
+            auto exported {gcode.str()};
+            int count = 2;            
+            for(int pos = 0; pos != std::string::npos; count--) 
+                pos = exported.find(";Layer:38 (20 mm)", pos+1);
+
+            THEN("layer_num and layer_z are processed in the end gcode") {\
+                REQUIRE(count == -1);
             }
         }
 

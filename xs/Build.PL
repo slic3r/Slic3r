@@ -206,9 +206,9 @@ Slic3r requires the Boost libraries. Please make sure they are installed.
 
 If they are installed, this script should be able to locate them in several
 standard locations. If this is not the case, you might want to supply their 
-path through the BOOST_INCLUDEPATH and BOOST_LIBRARYPATH environment variables:
+path through the BOOST_INCLUDEDIR and BOOST_LIBRARYPATH environment variables:
 
-    BOOST_INCLUDEPATH=/usr/local/include BOOST_LIBRARYPATH=/usr/lib perl Build.PL
+    BOOST_INCLUDEDIR=/usr/local/include BOOST_LIBRARYPATH=/usr/lib perl Build.PL
 
 If you just compiled Boost in its source directory without installing it in the
 system you can just provide the BOOST_DIR variable pointing to that directory.
