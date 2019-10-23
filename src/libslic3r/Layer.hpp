@@ -134,7 +134,7 @@ public:
         return false;
     }
     template <class T> bool any_bottom_region_slice_contains(const T &item) const {
-        for (const LayerRegion *layerm : m_regions) if (layerm->slices.any_bottom_contains(item)) return true;
+        for (const LayerRegion *layerm : m_regions) if (layerm->slices().any_bottom_contains(item)) return true;
         return false;
     }
     void                    make_perimeters();
