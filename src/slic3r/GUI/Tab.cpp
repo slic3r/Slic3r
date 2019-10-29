@@ -2074,6 +2074,12 @@ void TabPrinter::build_fff()
 		option.opt.full_width = true;
         option.opt.height = gcode_field_height;//150;
 		optgroup->append_single_option_line(option);
+
+		optgroup = page->new_optgroup(_(L("Between extrusion role change G-code")), 0);
+		option = optgroup->get_option("feature_gcode");
+		option.opt.full_width = true;
+        option.opt.height = gcode_field_height;//150;
+		optgroup->append_single_option_line(option);
 	
 	page = add_options_page(_(L("Notes")), "note.png");
 		optgroup = page->new_optgroup(_(L("Notes")), 0);

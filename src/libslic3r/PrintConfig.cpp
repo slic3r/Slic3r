@@ -1477,9 +1477,22 @@ void PrintConfigDef::init_fff_params()
     def = this->add("layer_gcode", coString);
     def->label = L("After layer change G-code");
     def->tooltip = L("This custom code is inserted at every layer change, right after the Z move "
-                   "and before the extruder moves to the first layer point. Note that you can use "
-                   "placeholder variables for all Slic3r settings as well as [layer_num] and [layer_z].");
+        "and before the extruder moves to the first layer point. Note that you can use "
+        "placeholder variables for all Slic3r settings as well as [layer_num] and [layer_z].");
     def->cli = "after-layer-gcode|layer-gcode";
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 5;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionString(""));
+
+    def = this->add("feature_gcode", coString);
+    def->label = L("After layer change G-code");
+    def->tooltip = L("This custom code is inserted at every extrusion type change."
+        "Note that you can use placeholder variables for all Slic3r settings as well as [extrusion_role], [layer_num] and [layer_z] that can take these string values:"
+        " { Perimeter, ExternalPerimeter, OverhangPerimeter, InternalInfill, SolidInfill, TopSolidInfill, BridgeInfill, GapFill, Skirt, SupportMaterial, SupportMaterialInterface, WipeTower, Mixed }."
+        " Mixed is only used when the role of the extrusion is not unique, not exactly inside an other category or not known.");
+    def->cli = "feature-gcode";
     def->multiline = true;
     def->full_width = true;
     def->height = 5;

@@ -2909,6 +2909,15 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
     double F = speed * 60;  // convert mm/sec to mm/min
 
     // extrude arc or line
+    if (path.role() != m_last_extrusion_role) {
+        DynamicConfig config;
+        config.set_key_value("extrusion_role", new ConfigOptionString(extrusion_role_to_string_for_parser(path.role())));
+        config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index + 1));
+        config.set_key_value("layer_z", new ConfigOptionFloat(m_config.z_offset.value));
+        gcode += this->placeholder_parser_process("feature_gcode",
+            m_config.feature_gcode.value, m_writer.extruder()->id(), &config)
+            + "\n";
+    }
     if (m_enable_extrusion_role_markers) {
         if (path.role() != m_last_extrusion_role) {
             char buf[32];
@@ -3264,6 +3273,42 @@ void GCode::ObjectByExtruder::Island::Region::append(const std::string& type, co
 
     for (unsigned int i = 0; i<entities.size(); ++i)
         perimeters_or_infills_overrides->push_back(copies_extruder);
+}
+
+std::string
+GCode::extrusion_role_to_string_for_parser(const ExtrusionRole & role) {
+    switch (role) {
+    case erPerimeter:
+        return "Perimeter";
+    case erExternalPerimeter:
+        return "ExternalPerimeter";
+    case erOverhangPerimeter:
+        return "OverhangPerimeter";
+    case erInternalInfill:
+        return "InternalInfill";
+    case erSolidInfill:
+        return "SolidInfill";
+    case erTopSolidInfill:
+        return "TopSolidInfill";
+    case erBridgeInfill:
+        return "BridgeInfill";
+    case erGapFill:
+        return "GapFill";
+    case erSkirt:
+        return "Skirt";
+    case erSupportMaterial:
+        return "SupportMaterial";
+    case erSupportMaterialInterface:
+        return "SupportMaterialInterface";
+    case erWipeTower:
+        return "WipeTower";
+    case erCustom:
+    case erMixed:
+    case erCount:
+    case erNone:
+    default:
+        return "Mixed";
+    }
 }
 
 }   // namespace Slic3r

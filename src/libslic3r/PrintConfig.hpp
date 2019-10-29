@@ -799,6 +799,7 @@ public:
     ConfigOptionEnum<GCodeFlavor>   gcode_flavor;
     ConfigOptionBool                gcode_label_objects;
     ConfigOptionString              layer_gcode;
+    ConfigOptionString              feature_gcode;
     ConfigOptionFloat               max_print_speed;
     ConfigOptionFloat               max_volumetric_speed;
 #ifdef HAS_PRESSURE_EQUALIZER
@@ -890,6 +891,7 @@ protected:
         OPT_PTR(gcode_flavor);
         OPT_PTR(gcode_label_objects);
         OPT_PTR(layer_gcode);
+        OPT_PTR(feature_gcode);
         OPT_PTR(max_print_speed);
         OPT_PTR(max_volumetric_speed);
 #ifdef HAS_PRESSURE_EQUALIZER
