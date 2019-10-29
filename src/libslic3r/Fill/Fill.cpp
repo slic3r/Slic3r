@@ -228,6 +228,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 && surface.maxNbSolidLayersOnTop > 0) {
                 density = 42;
                 is_denser = true;
+                is_bridge = true;
                 fill_pattern = ipRectiWithPerimeter;
             }
             if (density <= 0)
@@ -243,7 +244,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         Flow flow = layerm.region()->flow(
             role,
             h,
-            is_bridge || f->use_bridge_flow(),  // bridge flow?
+            is_bridge,  // bridge flow?
             layerm.layer()->id() == 0,          // first layer?
             -1,                                 // auto width
             *layerm.layer()->object()
@@ -312,7 +313,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             // so we can safely ignore the slight variation that might have
             // been applied to $f->flow_spacing
         } else {
-            flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, (float)h, is_bridge || f->use_bridge_flow());
+            flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, (float)h, is_bridge);
         }
         
         //adjust flow (to over-extrude when needed)

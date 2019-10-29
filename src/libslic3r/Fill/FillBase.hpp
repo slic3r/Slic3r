@@ -94,12 +94,8 @@ public:
 
     static Fill* new_from_type(const InfillPattern type);
     static Fill* new_from_type(const std::string &type);
-    static bool  use_bridge_flow(const InfillPattern type);
 
     void         set_bounding_box(const Slic3r::BoundingBox &bbox) { bounding_box = bbox; }
-
-    // Use bridge flow for the fill?
-    virtual bool use_bridge_flow() const { return false; }
 
     // Do not sort the fill lines to optimize the print head path?
     virtual bool no_sort() const { return false; }

@@ -13,9 +13,6 @@ public:
     FillGyroid() {}
     virtual Fill* clone() const { return new FillGyroid(*this); }
 
-    // require bridge flow since most of this pattern hangs in air
-    virtual bool use_bridge_flow() const { return false; }
-
     // Correction applied to regular infill angle to maximize printing
     // speed in default configuration (degrees)
     static constexpr float CorrectionAngle = -45.;
