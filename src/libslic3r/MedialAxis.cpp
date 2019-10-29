@@ -112,6 +112,7 @@ MedialAxis::polyline_from_voronoi(const Lines& voronoi_edges, ThickPolylines* po
         assert(polyline.width.size() == polyline.points.size());
         
         // if loop, set endpoints to false
+        // prevent loop endpoints from being extended
         if (polyline.first_point().coincides_with(polyline.last_point())) {
             polyline.endpoints.first = false;
             polyline.endpoints.second = false;
@@ -511,8 +512,6 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
             }
         }
         sum_dot = abs(sum_dot);
-        //std::cout << "    with mindot= " << min_dot << "< 0.5" << " ; with sum_dot= " << sum_dot << "< 0.2" << " ; with crosspoint.size= " << crosspoint.size() << " ; with coeff_contour_angle= " << coeff_contour_angle << " 0.2> " << (1 - (coeff_contour_angle / (PI / 2)))
-            //<< " ; length= " << unscaled(polyline.length())<<" >? 1.42*width= "<< polyline.width.front()<<"->"<< polyline.width.back() << "\n";
 
         //only consider very shallow angle for contour
         if (mindot > 0.15 &&
@@ -640,7 +639,7 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
 
 void
 MedialAxis::extends_line_both_side(ThickPolylines& pp) {
-    const ExPolygons anchors = offset2_ex(diff_ex(*this->bounds, this->expolygon), double(-SCALED_RESOLUTION), double(SCALED_RESOLUTION));
+    const ExPolygons anchors = offset2_ex(to_polygons(diff_ex(*this->bounds, this->expolygon)), double(-SCALED_RESOLUTION), double(SCALED_RESOLUTION));
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         this->extends_line(polyline, anchors, this->min_width);

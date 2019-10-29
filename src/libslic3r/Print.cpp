@@ -227,8 +227,9 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             || opt_key == "extra_loading_move"
             || opt_key == "z_offset") {
             steps.emplace_back(psWipeTower);
-        } else if (
-               opt_key == "first_layer_extrusion_width" 
+        }
+        else if (
+            opt_key == "first_layer_extrusion_width"
             || opt_key == "min_layer_height"
             || opt_key == "max_layer_height") {
             osteps.emplace_back(posPerimeters);
@@ -236,7 +237,20 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             osteps.emplace_back(posSupportMaterial);
             steps.emplace_back(psSkirt);
             steps.emplace_back(psBrim);
-        } else {
+        }
+        else if (opt_key == "posSlice")
+            osteps.emplace_back(posSlice);
+        else if (opt_key == "posPerimeters")
+            osteps.emplace_back(posPerimeters);
+        else if (opt_key == "posPrepareInfill")
+            osteps.emplace_back(posPrepareInfill);
+        else if (opt_key == "posInfill")
+            osteps.emplace_back(posInfill);
+        else if (opt_key == "posSupportMaterial")
+            osteps.emplace_back(posSupportMaterial);
+        else if (opt_key == "posCount")
+            osteps.emplace_back(posCount);
+        else {
             // for legacy, if we can't handle this option let's invalidate all steps
             //FIXME invalidate all steps of all objects as well?
             invalidated |= this->invalidate_all_steps();

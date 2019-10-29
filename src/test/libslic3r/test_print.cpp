@@ -68,10 +68,59 @@ SCENARIO("Print: Skirt generation") {
     }
 }
 
+void test_is_solid_infill(Print &p, size_t obj_id, size_t layer_id ) {
+    const PrintObject& obj { *(p.objects().at(obj_id)) };
+    const Layer& layer { *(obj.get_layer(layer_id)) };
+
+    // iterate over all of the regions in the layer
+    for (const LayerRegion* reg : layer.regions()) {
+        // for each region, iterate over the fill surfaces
+        for (const Surface& s : reg->fill_surfaces.surfaces) {
+            CHECK(s.has_fill_solid());
+        }
+    }
+}
+
+SCENARIO("Print: Changing number of solid surfaces does not cause all surfaces to become internal.") {
+    GIVEN("sliced 20mm cube and config with top_solid_surfaces = 2 and bottom_solid_surfaces = 1") {
+        DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
+        TestMesh m { TestMesh::cube_20x20x20 };
+        config->set_key_value("top_solid_layers", new ConfigOptionInt(2));
+        config->set_key_value("bottom_solid_layers", new ConfigOptionInt(1));
+        config->set_key_value("layer_height", new ConfigOptionFloat(0.5)); // get a known number of layers
+        config->set_key_value("first_layer_height", new ConfigOptionFloat(0.5));
+        Slic3r::Model model;
+        auto event_counter {0U};
+        std::string stage;
+        Print print{};
+        Slic3r::Test::init_print(print, { m }, model, config);
+        print.process();
+        // Precondition: Ensure that the model has 2 solid top layers (39, 38)
+        // and one solid bottom layer (0).
+        test_is_solid_infill(print, 0, 0); // should be solid
+        test_is_solid_infill(print, 0, 39); // should be solid
+        test_is_solid_infill(print, 0, 38); // should be solid
+        WHEN("Model is re-sliced with top_solid_layers == 3") {
+            ((ConfigOptionInt&)(print.regions()[0]->config().top_solid_layers)).value = 3;
+            print.invalidate_state_by_config_options(std::vector<Slic3r::t_config_option_key>{ "posPrepareInfill" });
+            print.process();
+            THEN("Print object does not have 0 solid bottom layers.") {
+                test_is_solid_infill(print, 0, 0);
+            }
+            AND_THEN("Print object has 3 top solid layers") {
+                test_is_solid_infill(print, 0, 39);
+                test_is_solid_infill(print, 0, 38);
+                test_is_solid_infill(print, 0, 37);
+            }
+        }
+    }
+
+}
+
 SCENARIO("Print: Brim generation") {
     GIVEN("20mm cube and default config, 1mm first layer width") {
         DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
-        TestMesh m = TestMesh::cube_20x20x20;
+        TestMesh m{ TestMesh::cube_20x20x20 };
         Slic3r::Model model{};
         config->set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(1, false));
         WHEN("Brim is set to 3mm")  {

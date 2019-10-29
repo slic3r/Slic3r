@@ -374,6 +374,8 @@ public:
     // Accessed by SupportMaterial
     const PrintRegion*  get_region(size_t idx) const  { return m_regions[idx]; }
 
+    //put this in public to be accessible for tests, it was in private before.
+    bool                invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
 protected:
     // methods for handling regions
     PrintRegion*        get_region(size_t idx)        { return m_regions[idx]; }
@@ -390,8 +392,6 @@ private:
 		t_config_option_keys &full_config_diff, 
 		DynamicPrintConfig &placeholder_parser_overrides,
 		DynamicPrintConfig &filament_overrides) const;
-
-    bool                invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
 
     void                _make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
     ExPolygons          _make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);

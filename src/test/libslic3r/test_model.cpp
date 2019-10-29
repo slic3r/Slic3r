@@ -70,6 +70,7 @@ SCENARIO("xy compensations"){
                 Point{ 200, 200 },
                 Point{ 100, 200 }} };
         THEN("elephant and xy can compensate each other"){
+//TODO
         }
         THEN("hole and xy can compensate each othere"){
         }
