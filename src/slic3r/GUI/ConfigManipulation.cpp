@@ -279,7 +279,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     // gap fill  can appear in infill
     //toggle_field("gap_fill_speed", have_perimeters && config->opt_bool("gap_fill"));
 
-    for (auto el : {"fill_smooth_width" })
+    for (auto el : {"fill_smooth_width, fill_smooth_distribution" })
         toggle_field(el, config->opt_enum<InfillPattern>("top_fill_pattern") == InfillPattern::ipSmooth);
 
     bool have_top_solid_infill = config->opt_int("top_solid_layers") > 0;

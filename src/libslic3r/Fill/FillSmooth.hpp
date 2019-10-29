@@ -44,7 +44,7 @@ protected:
     int nbPass=2;
     // this parameter is now erased by fill_smooth_width when available.
     double percentWidth[3];
-    // this parameter is now modified by fill_top_flow_ratio when available.
+    // this parameter is now modified by fill_smooth_distribution when available. (note that fill_top_flow_ratio can also increasse the params.flow_mult passed by fill.cpp)
     double percentFlow[3];
     //angle to add to base angle
     float anglePass[3];
@@ -76,7 +76,7 @@ public:
         rolePass[0] = erTopSolidInfill;//erSolidInfill
         rolePass[1] = erSolidInfill;
         rolePass[2] = erTopSolidInfill;
-        percentWidth[0] = 1.4; //0.8
+        percentWidth[0] = 1; //0.8
         percentWidth[1] = 1.5;
         percentWidth[2] = 2.8;
         percentFlow[0] = 1; //0.7

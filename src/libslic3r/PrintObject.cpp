@@ -560,6 +560,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "fill_pattern"
             || opt_key == "fill_top_flow_ratio"
             || opt_key == "fill_smooth_width"
+            || opt_key == "fill_smooth_distribution"
             || opt_key == "top_infill_extrusion_width"
             || opt_key == "first_layer_extrusion_width") {
             steps.emplace_back(posInfill);

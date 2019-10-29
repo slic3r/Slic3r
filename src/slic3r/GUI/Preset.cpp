@@ -385,6 +385,7 @@ const std::vector<std::string>& Preset::print_options()
         , "fill_pattern"
         , "fill_top_flow_ratio"
         , "fill_smooth_width"
+        , "fill_smooth_distribution"
         , "top_fill_pattern"
         , "bottom_fill_pattern"
         , "solid_fill_pattern",

@@ -18,6 +18,7 @@ namespace Slic3r {
         return polylines_out;
     }
 
+    /// @idx: the index of the step (0 = first step, 1 = second step, ...) The first lay down the volume and the others smoothen the surface.
     void FillSmooth::perform_single_fill(const int idx, ExtrusionEntityCollection &eecroot, const Surface &srf_source,
         const FillParams &params, const double volume){
         if (srf_source.expolygon.empty()) return;
@@ -26,14 +27,18 @@ namespace Slic3r {
         ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
         eec->no_sort = false;
         FillParams params_modifided = params;
-        if (params.config != NULL && rolePass[idx] == ExtrusionRole::erTopSolidInfill) params_modifided.density /= (float)params.config->fill_smooth_width.get_abs_value(1);
+        if (params.config != NULL && idx > 0) params_modifided.density /= (float)params.config->fill_smooth_width.get_abs_value(1);
+        else if (params.config != NULL && idx == 0) params_modifided.density *= 1;
         else params_modifided.density *= (float)percentWidth[idx];
         // reduce flow for each increase in density
         params_modifided.flow_mult *= params.density;
         params_modifided.flow_mult /= params_modifided.density;
         // split the flow between steps
-        params_modifided.flow_mult *= (float)percentFlow[idx];
-        
+        if (params.config != NULL && idx > 0) params_modifided.flow_mult *= (float)params.config->fill_smooth_distribution.get_abs_value(1);
+        else if (params.config != NULL && idx == 0) params_modifided.flow_mult *= (1.f - (float)params.config->fill_smooth_distribution.get_abs_value(1));
+        else params_modifided.flow_mult *= (float)percentFlow[idx];
+
+        //choose if we are going to extrude with or without overlap
         if ((params.flow->bridge && idx == 0) || has_overlap[idx]){
             this->fill_expolygon(idx, *eec, srf_source, params_modifided, volume);
         }
@@ -86,11 +91,11 @@ namespace Slic3r {
                 good_role = params.flow->bridge && idx == 0 ? erBridgeInfill : rolePass[idx];
             }
             // print
-            float mult_flow = (params.fill_exactly && idx == 0 ? std::min(2., volume / extrudedVolume) : 1);
+            float mult_flow = (params.fill_exactly /*&& idx == 0*/ ? std::min(2., volume / extrudedVolume) : 1);
             extrusion_entities_append_paths(
                 eec.entities, std::move(polylines_layer),
                 good_role,
-                params.flow_mult * params.flow->mm3_per_mm() * mult_flow,
+                params.flow->mm3_per_mm() * params.flow_mult * mult_flow,
                 //min-reduced flow width for a better view (it's only a gui thing)
                 (float)(params.flow->width * (params.flow_mult* mult_flow < 0.1 ? 0.1 : params.flow_mult * mult_flow)), (float)params.flow->height);
         }

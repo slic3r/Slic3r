@@ -1164,10 +1164,20 @@ void PrintConfigDef::init_fff_params()
     def = this->add("fill_smooth_width", coFloatOrPercent);
     def->label = L("width");
     def->full_label = L("Ironing width");
-    def->tooltip = L("This is the width of the ironing pass, in a % of the top width, should be no more than 50%.");
+    def->tooltip = L("This is the width of the ironing pass, in a % of the top extrusion width, should not be more than 50%.");
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
+
+    def = this->add("fill_smooth_distribution", coFloatOrPercent);
+    def->label = L("distribution");
+    def->full_label = L("Ironing flow distribution");
+    def->tooltip = L("This is the percentage of the flow that is used for the second ironing pass. Typical 0-20%. "
+        "Should not be lower than 20%, unless you have your top extrusion width greatly superior to your nozzle width.");
+    def->min = 0;
+    def->max = 0.9;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloatOrPercent(10, true));
 
     def = this->add("first_layer_acceleration", coFloat);
     def->label = L("First layer");

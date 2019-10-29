@@ -1145,6 +1145,7 @@ void TabPrint::build()
 
         optgroup = page->new_optgroup(_(L("Advanced Infill")));
         line.append_option(optgroup->get_option("fill_smooth_width"));
+        line.append_option(optgroup->get_option("fill_smooth_distribution"));
         optgroup->append_line(line);
 
 	page = add_options_page(_(L("Skirt and brim")), "skirt+brim");

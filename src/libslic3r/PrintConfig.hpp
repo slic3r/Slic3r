@@ -592,6 +592,7 @@ public:
     ConfigOptionPercent             fill_density;
     ConfigOptionEnum<InfillPattern> fill_pattern;
     ConfigOptionFloatOrPercent      fill_top_flow_ratio;
+    ConfigOptionFloatOrPercent      fill_smooth_distribution;
     ConfigOptionFloatOrPercent      fill_smooth_width;
     ConfigOptionBool                gap_fill;
     ConfigOptionFloatOrPercent      gap_fill_min_area;
@@ -659,6 +660,7 @@ protected:
         OPT_PTR(fill_density);
         OPT_PTR(fill_pattern);
         OPT_PTR(fill_top_flow_ratio);
+        OPT_PTR(fill_smooth_distribution);
         OPT_PTR(fill_smooth_width);
         OPT_PTR(gap_fill);
         OPT_PTR(gap_fill_min_area);
