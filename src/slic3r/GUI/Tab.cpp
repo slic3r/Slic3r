@@ -1051,7 +1051,10 @@ void TabPrint::build()
         optgroup->append_single_option_line("enforce_full_fill_volume");
 
 		optgroup = page->new_optgroup(_(L("Quality (slower slicing)")));
-		optgroup->append_single_option_line("extra_perimeters");
+        line = { _(L("Extra perimeters")), "" };
+        line.append_option(optgroup->get_option("extra_perimeters"));
+        line.append_option(optgroup->get_option("extra_perimeters_odd_layers"));
+        optgroup->append_line(line);
 		optgroup->append_single_option_line("only_one_perimeter_top");
 		optgroup->append_single_option_line("ensure_vertical_shell_thickness");
 		optgroup->append_single_option_line("avoid_crossing_perimeters");

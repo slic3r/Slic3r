@@ -273,9 +273,10 @@ void PerimeterGenerator::process()
     }
 
     surface_idx = 0;
+    const int extra_odd_perimeter = (config->extra_perimeters_odd_layers && layer_id % 2 == 1 ? 1:0);
     for (const Surface &surface : all_surfaces) {
         // detect how many perimeters must be generated for this island
-        int        loop_number = this->config->perimeters + surface.extra_perimeters - 1;  // 0-indexed loops
+        int        loop_number = this->config->perimeters + surface.extra_perimeters - 1 + extra_odd_perimeter;  // 0-indexed loops
         surface_idx++;
 
         if (this->config->only_one_perimeter_top && this->upper_slices == NULL){

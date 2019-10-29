@@ -472,6 +472,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
     for (const t_config_option_key &opt_key : opt_keys) {
         if (   opt_key == "perimeters"
             || opt_key == "extra_perimeters"
+            || opt_key == "extra_perimeters_odd_layers"
             || opt_key == "gap_fill"
             || opt_key == "gap_fill_speed"
             || opt_key == "overhangs"

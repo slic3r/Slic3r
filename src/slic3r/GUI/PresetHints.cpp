@@ -267,7 +267,7 @@ std::string PresetHints::recommended_thin_wall_thickness(const PresetBundle &pre
     
     if (num_perimeters > 0) {
         int num_lines = std::min(num_perimeters * 2, 10);
-        out += (boost::format(_utf8(L("Recommended object min thin wall thickness for layer height %.2f and"))) % layer_height).str() + " ";
+        out += (boost::format(_utf8(L("Recommended object min wall thickness for layer height %.2f and"))) % layer_height).str() + " ";
         // Start with the width of two closely spaced 
         double width = external_perimeter_flow.width + external_perimeter_flow.spacing();
         for (int i = 2; i <= num_lines; thin_walls ? ++ i : i += 2) {

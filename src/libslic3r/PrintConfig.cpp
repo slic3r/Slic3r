@@ -619,17 +619,27 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Nearest"));
     def->enum_labels.push_back(L("Rear"));
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionEnum<SeamPosition>(spRear)); 
-    
+    def->set_default_value(new ConfigOptionEnum<SeamPosition>(spRear));
+
     def = this->add("extra_perimeters", coBool);
-    def->label = L("Extra perimeters if needed");
+    def->label = L("filling horizontal gaps on slopes");
+    def->full_label = L("Extra perimeters if needed");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Add more perimeters when needed for avoiding gaps in sloping walls. "
-                   "Slic3r keeps adding perimeters, until more than 70% of the loop immediately above "
-                   "is supported, and keep adding periemter until all overhangs are filled."
-                   "\n!! this is a very slow algorithm !!");
+        "Slic3r keeps adding perimeters, until more than 70% of the loop immediately above "
+        "is supported, and keep adding periemter until all overhangs are filled."
+        "\n!! this is a very slow algorithm !!");
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionBool(true));
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("extra_perimeters_odd_layers", coBool);
+    def->label = L("on odd layers");
+    def->full_label = L("Extra perimeter on odd layers");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("Add one perimeter every odd layer. With this, infill is taken into sandwitch"
+        " and you may be able to reduce drastically the infill/perimeter overlap setting. ");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("only_one_perimeter_top", coBool);
     def->label = "Only one perimeter on Top surfaces";
