@@ -2909,7 +2909,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
     double F = speed * 60;  // convert mm/sec to mm/min
 
     // extrude arc or line
-    if (path.role() != m_last_extrusion_role) {
+    if (path.role() != m_last_extrusion_role && !m_config.feature_gcode.value.empty()) {
         DynamicConfig config;
         config.set_key_value("extrusion_role", new ConfigOptionString(extrusion_role_to_string_for_parser(path.role())));
         config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index + 1));
