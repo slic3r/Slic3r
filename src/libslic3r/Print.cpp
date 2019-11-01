@@ -176,6 +176,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             steps.emplace_back(psSkirt);
         } else if (
             opt_key == "complete_objects"
+			|| opt_key == "brim_inside_holes"
             || opt_key == "brim_width"
             || opt_key == "brim_ears"
             || opt_key == "brim_ears_max_angle") {
@@ -1783,12 +1784,18 @@ ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityColl
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
         for (ExPolygon &expoly : object->m_layers.front()->slices.expolygons)
-            object_islands.push_back(expoly);
+            if(config().brim_inside_holes || config().brim_width_interior > 0)
+                object_islands.push_back(expoly);
+            else
+                object_islands.emplace_back(to_expolygon(expoly.contour));
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
             for (Polygon poly : polys)
                 for (ExPolygon & expoly2 : union_ex(poly))
-                    object_islands.emplace_back(expoly2);
+                    if (config().brim_inside_holes || config().brim_width_interior > 0)
+                        object_islands.emplace_back(expoly2);
+                    else
+                        object_islands.emplace_back(to_expolygon(expoly2.contour));
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_copies.size());
         for (const Point &pt : object->m_copies)
@@ -1912,12 +1919,18 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
         for (ExPolygon &expoly : object->m_layers.front()->slices.expolygons)
-            object_islands.push_back(expoly);
+            if (config().brim_inside_holes || config().brim_width_interior > 0)
+                object_islands.push_back(expoly);
+            else
+                object_islands.emplace_back(to_expolygon(expoly.contour));
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
             for (Polygon poly : polys)
                 for (ExPolygon & expoly2 : union_ex(poly))
-                    object_islands.push_back(expoly2);
+                    if (config().brim_inside_holes || config().brim_width_interior > 0)
+                        object_islands.push_back(expoly2);
+                    else
+                        object_islands.emplace_back(to_expolygon(expoly2.contour));
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_copies.size());
         for (const Point &copy_pt : object->m_copies)

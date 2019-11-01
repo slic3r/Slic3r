@@ -239,6 +239,13 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(60));
+    
+    def = this->add("brim_inside_holes", coBool);
+    def->label = L("Brim inside holes");
+    def->full_label = L("Brim inside holes");
+    def->tooltip = L("Allow to create brim when over an island when this one is inside a hole.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("brim_width", coFloat);
     def->label = L("Brim width");
@@ -260,6 +267,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L(" ");
     def->full_label = L("Brim ears");
     def->tooltip = L("Only draw brim over the sharp edges of the model.");
+    def->mode = comSimple;
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("brim_ears_max_angle", coFloat);
@@ -268,6 +276,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("°");
     def->min = 0;
     def->max = 180;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(125));
 
     def = this->add("chamber_temperature", coInts);

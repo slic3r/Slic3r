@@ -1162,6 +1162,7 @@ void TabPrint::build()
 
 		optgroup = page->new_optgroup(_(L("Brim")));
         optgroup->append_single_option_line("brim_width");
+        optgroup->append_single_option_line("brim_inside_holes");
         optgroup->append_single_option_line("brim_width_interior");
         line = { _(L("Brim ears")), "" };
         line.append_option(optgroup->get_option("brim_ears"));

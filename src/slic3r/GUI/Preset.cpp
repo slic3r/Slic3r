@@ -406,6 +406,7 @@ const std::vector<std::string>& Preset::print_options()
         "travel_speed", "first_layer_speed", "perimeter_acceleration", "infill_acceleration",
         "bridge_acceleration", "first_layer_acceleration", "default_acceleration", "skirts", "skirt_distance", "skirt_height",
         "min_skirt_length",
+        "brim_inside_holes",
         "brim_width",
         "brim_width_interior",
         "brim_ears",

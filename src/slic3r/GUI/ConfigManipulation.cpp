@@ -295,11 +295,12 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     for (auto el : { "skirt_distance", "skirt_height" })
         toggle_field(el, have_skirt);
 
-    bool have_brim = config->opt_float("brim_width") > 0;
+    bool have_brim = config->opt_float("brim_width") > 0 || config->opt_float("brim_width_interior") > 0;
     // perimeter_extruder uses the same logic as in Print::extruders()
     toggle_field("perimeter_extruder", have_perimeters || have_brim);
 
-    toggle_field("brim_ears", have_brim);
+    toggle_field("brim_ears", config->opt_float("brim_width") > 0);
+    toggle_field("brim_inside_holes", config->opt_float("brim_width") > 0 && config->opt_float("brim_width_interior") == 0);
     toggle_field("brim_ears_max_angle", have_brim && config->opt_bool("brim_ears"));
 
     bool have_raft = config->opt_int("raft_layers") > 0;

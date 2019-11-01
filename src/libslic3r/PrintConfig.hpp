@@ -950,6 +950,7 @@ public:
     ConfigOptionInts                bed_temperature;
     ConfigOptionFloat               bridge_acceleration;
     ConfigOptionInts                bridge_fan_speed;
+    ConfigOptionBool                brim_inside_holes;
     ConfigOptionFloat               brim_width;
     ConfigOptionFloat               brim_width_interior;
     ConfigOptionBool                brim_ears;
@@ -1027,6 +1028,7 @@ protected:
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);
         OPT_PTR(bridge_fan_speed);
+        OPT_PTR(brim_inside_holes);
         OPT_PTR(brim_width);
         OPT_PTR(brim_width_interior);
         OPT_PTR(brim_ears);
