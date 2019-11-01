@@ -293,7 +293,11 @@ void PerimeterGenerator::process()
             ExPolygons overhangs_unsupported;
             if (this->config->extra_perimeters && !last.empty()
                 && this->lower_slices != NULL  && !this->lower_slices->expolygons.empty()) {
-                overhangs_unsupported = diff_ex(last, this->lower_slices->expolygons);
+                //remove holes from lower layer, we only ant that for overhangs, not bridges!
+                ExPolygons lower_without_holes;
+                for (const ExPolygon &exp : this->lower_slices->expolygons)
+                    lower_without_holes.emplace_back(to_expolygon(exp.contour));
+                overhangs_unsupported = diff_ex(last, lower_without_holes);
                 if (!overhangs_unsupported.empty()) {
                     //only consider overhangs and let bridges alone
                     //only consider the part that can be bridged (really, by the bridge algorithm)

@@ -80,6 +80,28 @@ inline size_t number_polygons(const ExPolygons &expolys)
     return n_polygons;
 }
 
+
+inline ExPolygon to_expolygon(const Polygon &other)
+{
+    ExPolygon ex;
+    ex.contour = other;
+    return ex;
+}
+
+inline ExPolygon to_expolygon(Polygon &&other)
+{
+    ExPolygon ex;
+    ex.contour = std::move(other);
+    return ex;
+}
+
+inline ExPolygons to_expolygon(const Polygons &other)
+{
+    ExPolygons exs;
+    for (const Polygon &po : other) exs.emplace_back(to_expolygon(po));
+    return exs;
+}
+
 inline Lines to_lines(const ExPolygon &src) 
 {
     size_t n_lines = src.contour.points.size();
