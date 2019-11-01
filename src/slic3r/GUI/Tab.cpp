@@ -1109,6 +1109,8 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("hole_size_compensation"));
         optgroup->append_line(line);
 
+        optgroup->append_single_option_line("hole_to_polyhole");
+
         optgroup = page->new_optgroup(_(L("Other")));
         optgroup->append_single_option_line("clip_multipart_objects");
 

@@ -1232,6 +1232,7 @@ void PrintConfigDef::init_fff_params()
                    "over the default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "layer_height";
+    def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0.2, false));
 
@@ -3005,11 +3006,21 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("XY holes compensation");
     def->category = L("Slicing");
     def->tooltip = L("The convex holes will be grown / shrunk in the XY plane by the configured value"
-                   " (negative = inwards, positive = outwards, should be negative as the holes are always a bit smaller irl)."
-                   " This might be useful for fine-tuning hole sizes.");
+        " (negative = inwards, positive = outwards, should be negative as the holes are always a bit smaller irl)."
+        " This might be useful for fine-tuning hole sizes.");
     def->sidetext = L("mm");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0));
+
+    def = this->add("hole_to_polyhole", coBool);
+    def->label = L("Convert round holes to polyholes");
+    def->full_label = L("Convert round holes to polyholes");
+    def->category = L("Slicing");
+    def->tooltip = L("Search for almost-circular holes that span more than one layer and conert the geometry to polyholes."
+        " Use the nozzle size and the (biggest) diameter to compute the polyhole."
+        "\nSee http://hydraraptor.blogspot.com/2011/02/polyholes.html");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("z_offset", coFloat);
     def->label = L("Z offset");

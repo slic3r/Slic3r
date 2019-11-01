@@ -182,6 +182,7 @@ private:
 
     void _slice(const std::vector<coordf_t> &layer_height_profile);
     void _offset_holes(double hole_delta, LayerRegion *layerm);
+    void _transform_hole_to_polyholes();
     void _smooth_curves(LayerRegion *layerm);
     std::string _fix_slicing_errors();
     void _simplify_slices(double distance);

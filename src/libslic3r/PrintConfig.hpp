@@ -598,6 +598,7 @@ public:
     ConfigOptionBool                gap_fill;
     ConfigOptionFloatOrPercent      gap_fill_min_area;
     ConfigOptionFloat               gap_fill_speed;
+    ConfigOptionBool                hole_to_polyhole;
     ConfigOptionInt                 infill_extruder;
     ConfigOptionFloatOrPercent      infill_extrusion_width;
     ConfigOptionInt                 infill_every_layers;
@@ -667,6 +668,7 @@ protected:
         OPT_PTR(gap_fill);
         OPT_PTR(gap_fill_min_area);
         OPT_PTR(gap_fill_speed);
+        OPT_PTR(hole_to_polyhole);
         OPT_PTR(infill_extruder);
         OPT_PTR(infill_extrusion_width);
         OPT_PTR(infill_every_layers);

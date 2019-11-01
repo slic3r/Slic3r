@@ -47,7 +47,7 @@ SlicingParameters SlicingParameters::create_from_config(
 	coordf_t				 object_height,
 	const std::vector<unsigned int> &object_extruders)
 {
-    coordf_t first_layer_height                      = (object_config.first_layer_height.value <= 0) ? 
+    coordf_t first_layer_height                      = (object_config.first_layer_height.get_abs_value(object_config.layer_height.value) <= 0) ?
         object_config.layer_height.value : 
         object_config.first_layer_height.get_abs_value(object_config.layer_height.value);
     // If object_config.support_material_extruder == 0 resp. object_config.support_material_interface_extruder == 0,
