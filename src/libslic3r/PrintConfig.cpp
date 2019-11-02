@@ -581,7 +581,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("External perimeters width");
     def->category = L("Extrusion Width");
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for external perimeters. "
-                   "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
+                   "If left zero, default extrusion width will be used if set, otherwise 1.05 x nozzle diameter will be used. "
                    "If expressed as percentage (for example 112.5%), it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
     def->mode = comAdvanced;

@@ -58,7 +58,7 @@ Flow Flow::new_from_spacing(float spacing, float nozzle_diameter, float height, 
     // For normal extrusons, extrusion width is wider than the spacing due to the rounding and squishing of the extrusions.
     // For bridge extrusions, the extrusions are placed with a tiny BRIDGE_EXTRA_SPACING gaps between the threads.
     float width = float(bridge ?
-        (spacing - BRIDGE_EXTRA_SPACING) : 
+        (spacing - BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter) :
 #ifdef HAS_PERIMETER_LINE_OVERLAP
         (spacing + PERIMETER_LINE_OVERLAP_FACTOR * height * (1. - 0.25 * PI));
 #else
@@ -78,7 +78,7 @@ float Flow::spacing() const
     float min_flow_spacing = this->width - this->height * (1. - 0.25 * PI);
     float res = this->width - PERIMETER_LINE_OVERLAP_FACTOR * (this->width - min_flow_spacing);
 #else
-    float res = float(this->bridge ? (this->width + BRIDGE_EXTRA_SPACING) : (this->width - this->height * (1. - 0.25 * PI)));
+    float res = float(this->bridge ? (this->width + BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter) : (this->width - this->height * (1. - 0.25 * PI)));
 #endif
 //    assert(res > 0.f);
 	if (res <= 0.f)
@@ -94,7 +94,7 @@ float Flow::spacing(const Flow &other) const
     assert(this->height == other.height);
     assert(this->bridge == other.bridge);
     float res = float(this->bridge ? 
-        0.5 * this->width + 0.5 * other.width + BRIDGE_EXTRA_SPACING :
+        0.5 * this->width + 0.5 * other.width + BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter :
         0.5 * this->spacing() + 0.5 * other.spacing());
 //    assert(res > 0.f);
 	if (res <= 0.f)

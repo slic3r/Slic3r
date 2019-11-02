@@ -63,9 +63,9 @@ void PerimeterGenerator::process()
     // external loops (which is the correct way) instead of using ext_perimeter_spacing2
     // which is the spacing between external and internal, which is not correct
     // and would make the collapsing (thus the details resolution) dependent on 
-    // internal flow which is unrelated.
-    coord_t min_spacing     = (coord_t)( perimeter_spacing      * (1 - INSET_OVERLAP_TOLERANCE) );
-    coord_t ext_min_spacing = (coord_t)( ext_perimeter_spacing  * (1 - INSET_OVERLAP_TOLERANCE) );
+    // internal flow which is unrelated. <- i don't undertand, so revert to ext_perimeter_spacing2
+    coord_t min_spacing     = (coord_t)( perimeter_spacing      * (1 - 0.05/*INSET_OVERLAP_TOLERANCE*/) );
+    coord_t ext_min_spacing = (coord_t)( ext_perimeter_spacing2  * (1 - 0.05/*INSET_OVERLAP_TOLERANCE*/) );
     
     // prepare grown lower layer slices for overhang detection
     if (this->lower_slices != NULL && this->config->overhangs) {
@@ -353,7 +353,10 @@ void PerimeterGenerator::process()
                 if (i == 0) {
                     // compute next onion, without taking care of thin_walls : destroy too thin areas.
                     if (!this->config->thin_walls)
-                        next_onion = offset_ex(last, double( - ext_perimeter_width / 2));
+                        next_onion = offset2_ex(
+                            last,
+                            -(float)(ext_perimeter_width / 2 + ext_min_spacing / 2 - 1),
+                            +(float)(ext_min_spacing / 2 - 1));
 
 
                     // look for thin walls
