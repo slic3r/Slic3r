@@ -99,7 +99,7 @@ ErrorDialog::ErrorDialog(wxWindow *parent, const wxString &msg)
 	btn_ok->SetFocus();
 	btn_sizer->Add(btn_ok, 0, wxRIGHT, HORIZ_SPACING);
 
-	logo->SetBitmap(create_scaled_bitmap(this, "Slic3r_192px_grayscale.png", 192));
+	logo->SetBitmap(create_scaled_bitmap(this, "Slic3r_192px.png", 192));
 
     SetMaxSize(wxSize(-1, CONTENT_MAX_HEIGHT*wxGetApp().em_unit()));
 	Fit();

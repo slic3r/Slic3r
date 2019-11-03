@@ -18,6 +18,7 @@
 #include "GUI_App.hpp"
 #include "GUI_ObjectList.hpp"
 #include "libslic3r/GCode/PreviewData.hpp"
+#include "libslic3r/Config.hpp"
 #include "I18N.hpp"
 #include "GUI_Utils.hpp"
 #include "../Utils/MacDarkMode.hpp"
@@ -544,7 +545,7 @@ void ObjectDataViewModelNode::update_settings_digest_bitmaps()
 {
     m_bmp = m_empty_bmp;
 
-    std::map<std::string, wxBitmap>& categories_icon = Slic3r::GUI::wxGetApp().obj_list()->CATEGORY_ICON;
+    std::map<Slic3r::OptionCategory, wxBitmap>& categories_icon = Slic3r::GUI::wxGetApp().obj_list()->CATEGORY_ICON;
 
     std::string scaled_bitmap_name = m_name.ToUTF8().data();
     scaled_bitmap_name += "-em" + std::to_string(Slic3r::GUI::wxGetApp().em_unit());
@@ -552,7 +553,7 @@ void ObjectDataViewModelNode::update_settings_digest_bitmaps()
     wxBitmap *bmp = m_bitmap_cache->find(scaled_bitmap_name);
     if (bmp == nullptr) {
         std::vector<wxBitmap> bmps;
-        for (auto& cat : m_opt_categories)
+        for (Slic3r::OptionCategory& cat : m_opt_categories)
             bmps.emplace_back(  categories_icon.find(cat) == categories_icon.end() ?
                                 wxNullBitmap : categories_icon.at(cat));
         bmp = m_bitmap_cache->insert(scaled_bitmap_name, bmps);
@@ -561,7 +562,7 @@ void ObjectDataViewModelNode::update_settings_digest_bitmaps()
     m_bmp = *bmp;
 }
 
-bool ObjectDataViewModelNode::update_settings_digest(const std::vector<std::string>& categories)
+bool ObjectDataViewModelNode::update_settings_digest(const std::vector<Slic3r::OptionCategory>& categories)
 {
     if (m_type != itSettings || m_opt_categories == categories)
         return false;
@@ -569,10 +570,10 @@ bool ObjectDataViewModelNode::update_settings_digest(const std::vector<std::stri
     m_opt_categories = categories;
     m_name = wxEmptyString;
 
-    for (auto& cat : m_opt_categories)
-        m_name += _(cat) + "; ";
+    for (Slic3r::OptionCategory& cat : m_opt_categories)
+        m_name += _(toString(cat)) + "; ";
     if (!m_name.IsEmpty())
-        m_name.erase(m_name.Length()-2, 2); // Delete last "; "
+        m_name.erase(m_name.Length()-2, 2); // Delete last "; " <- ??? you just added it!!
 
     update_settings_digest_bitmaps();
 
@@ -1700,7 +1701,7 @@ bool ObjectDataViewModel::IsSettingsItem(const wxDataViewItem &item) const
 }
 
 void ObjectDataViewModel::UpdateSettingsDigest(const wxDataViewItem &item, 
-                                                    const std::vector<std::string>& categories)
+                                                    const std::vector<Slic3r::OptionCategory>& categories)
 {
     if (!item.IsOk()) return;
     ObjectDataViewModelNode *node = (ObjectDataViewModelNode*)item.GetID();

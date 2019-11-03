@@ -23,6 +23,37 @@
 
 namespace Slic3r {
 
+
+std::string toString(OptionCategory opt) {
+    switch (opt) {
+    case none: return "";
+    case perimeter: return "Perimeters & Shell";
+    case slicing: return "Slicing";
+    case infill: return "Infill";
+    case skirtBrim: return "Skirt & Brim";
+    case support: return "Support material";
+    case width: return "Width & Flow";
+    case speed: return "Speed";
+    case extruders: return "Multiple extruders";
+    case output: return "Output options";
+    case notes: return "Notes";
+    case dependencies: return "Dependencies";
+    case filament: return "Filament";
+    case cooling: return "Cooling";
+    case advanced: return "Advanced";
+    case filoverride: return "Filament overrides";
+    case customgcode: return "Custom G-code";
+    case general: return "General";
+    case limits: return "Machine limits";
+    case mmsetup: return "Single Extruder MM Setup";
+    case firmware: return "Firmware";
+    case pad: return "Pad";
+    case padSupp: return "Pad and Support";
+    case wipe: return "Wipe Options";
+    }
+    return "error";
+}
+
 // Escape \n, \r and backslash
 std::string escape_string_cstyle(const std::string &str)
 {
@@ -298,16 +329,16 @@ std::ostream& ConfigDef::print_cli_help(std::ostream& out, bool show_defaults, s
     };
 
     // get the unique categories
-    std::set<std::string> categories;
+    std::set<OptionCategory> categories;
     for (const auto& opt : this->options) {
         const ConfigOptionDef& def = opt.second;
         if (filter(def))
             categories.insert(def.category);
     }
     
-    for (auto category : categories) {
-        if (category != "") {
-            out << category << ":" << std::endl;
+    for (OptionCategory category : categories) {
+        if (category != OptionCategory::none) {
+            out << toString(category) << ":" << std::endl;
         } else if (categories.size() > 1) {
             out << "Misc options:" << std::endl;
         }

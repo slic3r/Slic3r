@@ -1030,7 +1030,7 @@ void TabPrint::build()
     m_presets = &m_preset_bundle->prints;
     Line line{ "", "" };
 	load_initial_data();
-    auto page = add_options_page(_(L("Perimeters & shell")), "shell");
+    auto page = add_options_page(_(L(toString(OptionCategory::perimeter))), "shell");
 
         auto optgroup = page->new_optgroup(_(L("Vertical shells")));
 		optgroup->append_single_option_line("perimeters");
@@ -1084,7 +1084,7 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("perimeter_loop_seam"));
         optgroup->append_line(line);
 
-    page = add_options_page(_(L("Slicing")), "layers");
+    page = add_options_page(_(L(toString(OptionCategory::slicing))), "layers");
 
         optgroup = page->new_optgroup(_(L("Layer height")));
         optgroup->append_single_option_line("layer_height");
@@ -1114,7 +1114,7 @@ void TabPrint::build()
         optgroup = page->new_optgroup(_(L("Other")));
         optgroup->append_single_option_line("clip_multipart_objects");
 
-    page = add_options_page(_(L("Infill")), "infill");
+    page = add_options_page(_(L(toString(OptionCategory::infill))), "infill");
         optgroup = page->new_optgroup(_(L("Infill")));
         optgroup->append_single_option_line("fill_density");
         optgroup->append_single_option_line("fill_pattern");
@@ -1153,7 +1153,7 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("fill_smooth_distribution"));
         optgroup->append_line(line);
 
-	page = add_options_page(_(L("Skirt and brim")), "skirt+brim");
+	page = add_options_page(_(L(toString(OptionCategory::skirtBrim))), "skirt+brim");
 		optgroup = page->new_optgroup(_(L("Skirt")));
 		optgroup->append_single_option_line("skirts");
 		optgroup->append_single_option_line("skirt_distance");
@@ -1169,7 +1169,7 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("brim_ears_max_angle"));
         optgroup->append_line(line);
 
-	page = add_options_page(_(L("Support material")), "support");
+	page = add_options_page(_(L(toString(OptionCategory::support))), "support");
 		optgroup = page->new_optgroup(_(L("Support material")));
 		optgroup->append_single_option_line("support_material");
 		optgroup->append_single_option_line("support_material_auto");
@@ -1202,7 +1202,7 @@ void TabPrint::build()
 		optgroup->append_single_option_line("support_material_interface_spacing");
 		optgroup->append_single_option_line("support_material_interface_contact_loops");
 
-	page = add_options_page(_(L("Speed")), "time");
+	page = add_options_page(_(L(toString(OptionCategory::speed))), "time");
         optgroup = page->new_optgroup(_(L("Speed for print moves")));
         line = { _(L("Perimeter speed")), "" };
         line.append_option(optgroup->get_option("perimeter_speed"));
@@ -1245,7 +1245,7 @@ void TabPrint::build()
 		optgroup->append_single_option_line("max_volumetric_extrusion_rate_slope_negative");
 #endif /* HAS_PRESSURE_EQUALIZER */
 
-    page = add_options_page(_(L("Width & flow")), "width");
+    page = add_options_page(_(L(toString(OptionCategory::width))), "width");
         optgroup = page->new_optgroup(_(L("Extrusion width")));
         optgroup->append_single_option_line("extrusion_width");
         optgroup->append_single_option_line("first_layer_extrusion_width");
@@ -1266,7 +1266,7 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("fill_top_flow_ratio"));
         optgroup->append_line(line);
 
-    page = add_options_page(_(L("Multiple extruders")), "funnel");
+    page = add_options_page(_(L(toString(OptionCategory::extruders))), "funnel");
         optgroup = page->new_optgroup(_(L("Extruders")));
         optgroup->append_single_option_line("perimeter_extruder");
         optgroup->append_single_option_line("infill_extruder");
@@ -1292,7 +1292,7 @@ void TabPrint::build()
         optgroup = page->new_optgroup(_(L("Advanced")));
         optgroup->append_single_option_line("interface_shells");
 
-	page = add_options_page(_(L("Output options")), "output+page_white");
+	page = add_options_page(_(L(toString(OptionCategory::output))), "output+page_white");
 		optgroup = page->new_optgroup(_(L("Sequential printing")));
 		optgroup->append_single_option_line("complete_objects");
 		line = { _(L("Extruder clearance (mm)")), "" };
@@ -1317,14 +1317,14 @@ void TabPrint::build()
         option.opt.height = 5;//50;
 		optgroup->append_single_option_line(option);
 
-	page = add_options_page(_(L("Notes")), "note");
+	page = add_options_page(_(L(toString(OptionCategory::notes))), "note");
 		optgroup = page->new_optgroup(_(L("Notes")), 0);						
 		option = optgroup->get_option("notes");
 		option.opt.full_width = true;
         option.opt.height = 25;//250;
 		optgroup->append_single_option_line(option);
 
-	page = add_options_page(_(L("Dependencies")), "wrench");
+	page = add_options_page(_(L(toString(OptionCategory::dependencies))), "wrench");
 		optgroup = page->new_optgroup(_(L("Profile dependencies")));
         line = optgroup->create_single_option_line("compatible_printers");
         line.widget = [this](wxWindow* parent) {
@@ -2997,8 +2997,8 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection* presets /*= nullptr
 	for (const std::string &opt_key : presets->current_dirty_options()) {
 		const ConfigOptionDef &opt = m_config->def()->options.at(opt_key);
 		/*std::string*/wxString name = "";
-		if (! opt.category.empty())
-			name += _(opt.category) + " > ";
+		if (opt.category != OptionCategory::none)
+			name += _(toString(opt.category)) + " > ";
 		name += !opt.full_label.empty() ?
 				_(opt.full_label) : 
 				_(opt.label);

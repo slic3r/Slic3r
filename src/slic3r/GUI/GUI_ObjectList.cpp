@@ -31,18 +31,18 @@ wxDEFINE_EVENT(EVT_OBJ_LIST_OBJECT_SELECT, SimpleEvent);
 // pt_FFF
 static SettingsBundle FREQ_SETTINGS_BUNDLE_FFF =
 {
-    { L("Layers and Perimeters"), { "layer_height" , "perimeters", "top_solid_layers", "bottom_solid_layers" } },
-    { L("Infill")               , { "fill_density", "fill_pattern" } },
-    { L("Support material")     , { "support_material", "support_material_auto", "support_material_threshold", 
+    { OptionCategory::perimeter     , { "layer_height" , "perimeters", "top_solid_layers", "bottom_solid_layers" } },
+    { OptionCategory::infill        , { "fill_density", "fill_pattern" } },
+    { OptionCategory::support       , { "support_material", "support_material_auto", "support_material_threshold", 
                                     "support_material_pattern", "support_material_interface_pattern", "support_material_buildplate_only",
                                     "support_material_spacing" } },
-    { L("Wipe options")            , { "wipe_into_infill", "wipe_into_objects" } }
+    { OptionCategory::wipe          , { "wipe_into_infill", "wipe_into_objects" } }
 };
 
 // pt_SLA
 static SettingsBundle FREQ_SETTINGS_BUNDLE_SLA =
 {
-    { L("Pad and Support")      , { "supports_enable", "pad_enable" } }
+    { OptionCategory::padSupp      , { "supports_enable", "pad_enable" } }
 };
 
 // Note: id accords to type of the sub-object (adding volume), so sequence of the menu items is important
@@ -75,30 +75,36 @@ static void take_snapshot(const wxString& snapshot_name)
     wxGetApp().plater()->take_snapshot(snapshot_name);
 }
 
+void fill_CATEGORY_ICON(std::map<OptionCategory, wxBitmap> &CATEGORY_ICON)
+{
+    // Note: `this` isn't passed to create_scaled_bitmap() here because of bugs in the widget,
+    // see note in PresetBundle::load_compatible_bitmaps()
+
+    // ptFFF
+    CATEGORY_ICON[OptionCategory::perimeter] = create_scaled_bitmap(nullptr, "shell");
+    CATEGORY_ICON[OptionCategory::slicing] = create_scaled_bitmap(nullptr, "layers");
+    CATEGORY_ICON[OptionCategory::infill] = create_scaled_bitmap(nullptr, "infill");
+    CATEGORY_ICON[OptionCategory::support] = create_scaled_bitmap(nullptr, "support");
+    CATEGORY_ICON[OptionCategory::speed] = create_scaled_bitmap(nullptr, "time");
+    CATEGORY_ICON[OptionCategory::extruders] = create_scaled_bitmap(nullptr, "funnel");
+    CATEGORY_ICON[OptionCategory::width] = create_scaled_bitmap(nullptr, "funnel");
+    CATEGORY_ICON[OptionCategory::wipe] = create_scaled_bitmap(nullptr, "funnel");
+    CATEGORY_ICON[OptionCategory::skirtBrim] = create_scaled_bitmap(nullptr, "skirt+brim");
+    CATEGORY_ICON[OptionCategory::width] = create_scaled_bitmap(nullptr, "width");
+    CATEGORY_ICON[OptionCategory::advanced] = create_scaled_bitmap(nullptr, "wrench");
+    CATEGORY_ICON[OptionCategory::output] = create_scaled_bitmap(nullptr, "output+page_white");
+    CATEGORY_ICON[OptionCategory::notes] = create_scaled_bitmap(nullptr, "note");
+    CATEGORY_ICON[OptionCategory::dependencies] = create_scaled_bitmap(nullptr, "wrench");
+    // ptSLA
+    CATEGORY_ICON[OptionCategory::support] = create_scaled_bitmap(nullptr, "support"/*"sla_supports"*/);
+    CATEGORY_ICON[OptionCategory::pad] = create_scaled_bitmap(nullptr, "pad");
+}
+
 ObjectList::ObjectList(wxWindow* parent) :
     wxDataViewCtrl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_MULTIPLE),
     m_parent(parent)
 {
-    // Fill CATEGORY_ICON
-    {
-        // Note: `this` isn't passed to create_scaled_bitmap() here because of bugs in the widget,
-        // see note in PresetBundle::load_compatible_bitmaps()
-
-        // ptFFF
-        CATEGORY_ICON[L("Layers and Perimeters")]    = create_scaled_bitmap(nullptr, "layers");
-        CATEGORY_ICON[L("Infill")]                   = create_scaled_bitmap(nullptr, "infill");
-        CATEGORY_ICON[L("Support material")]         = create_scaled_bitmap(nullptr, "support");
-        CATEGORY_ICON[L("Speed")]                    = create_scaled_bitmap(nullptr, "time");
-        CATEGORY_ICON[L("Extruders")]                = create_scaled_bitmap(nullptr, "funnel");
-        CATEGORY_ICON[L("Extrusion Width")]          = create_scaled_bitmap(nullptr, "funnel");
-        CATEGORY_ICON[L("Wipe options")]             = create_scaled_bitmap(nullptr, "funnel");
-//         CATEGORY_ICON[L("Skirt and brim")]          = create_scaled_bitmap(nullptr, "skirt+brim"); 
-//         CATEGORY_ICON[L("Speed > Acceleration")]    = create_scaled_bitmap(nullptr, "time");
-        CATEGORY_ICON[L("Advanced")]                 = create_scaled_bitmap(nullptr, "wrench");
-        // ptSLA
-        CATEGORY_ICON[L("Supports")]                 = create_scaled_bitmap(nullptr, "support"/*"sla_supports"*/);
-        CATEGORY_ICON[L("Pad")]                      = create_scaled_bitmap(nullptr, "pad");
-    }
+    fill_CATEGORY_ICON(CATEGORY_ICON);
 
     // create control
     create_objects_ctrl();
@@ -613,25 +619,7 @@ void ObjectList::msw_rescale_icons()
 
 
     // Update CATEGORY_ICON according to new scale
-    {
-        // Note: `this` isn't passed to create_scaled_bitmap() here because of bugs in the widget,
-        // see note in PresetBundle::load_compatible_bitmaps()
-
-        // ptFFF
-        CATEGORY_ICON[L("Layers and Perimeters")]    = create_scaled_bitmap(nullptr, "layers");
-        CATEGORY_ICON[L("Infill")]                   = create_scaled_bitmap(nullptr, "infill");
-        CATEGORY_ICON[L("Support material")]         = create_scaled_bitmap(nullptr, "support");
-        CATEGORY_ICON[L("Speed")]                    = create_scaled_bitmap(nullptr, "time");
-        CATEGORY_ICON[L("Extruders")]                = create_scaled_bitmap(nullptr, "funnel");
-        CATEGORY_ICON[L("Extrusion Width")]          = create_scaled_bitmap(nullptr, "funnel");
-        CATEGORY_ICON[L("Wipe options")]             = create_scaled_bitmap(nullptr, "funnel");
-//         CATEGORY_ICON[L("Skirt and brim")]          = create_scaled_bitmap(nullptr, "skirt+brim"); 
-//         CATEGORY_ICON[L("Speed > Acceleration")]    = create_scaled_bitmap(nullptr, "time");
-        CATEGORY_ICON[L("Advanced")]                 = create_scaled_bitmap(nullptr, "wrench");
-        // ptSLA
-        CATEGORY_ICON[L("Supports")]                 = create_scaled_bitmap(nullptr, "support"/*"sla_supports"*/);
-        CATEGORY_ICON[L("Pad")]                      = create_scaled_bitmap(nullptr, "pad");
-    }
+    fill_CATEGORY_ICON(CATEGORY_ICON);
 }
 
 
@@ -1064,19 +1052,20 @@ void ObjectList::OnDrop(wxDataViewEvent &event)
 
 std::vector<std::string> ObjectList::get_options(const bool is_part)
 {
+    std::vector<std::string> options;
     if (printer_technology() == ptSLA) {
         SLAPrintObjectConfig full_sla_config;
-        auto options = full_sla_config.keys();
+        options = full_sla_config.keys();
         options.erase(find(options.begin(), options.end(), "layer_height"));
-        return options;
-    }
-
-    PrintRegionConfig reg_config;
-    auto options = reg_config.keys();
-    if (!is_part) {
-        PrintObjectConfig obj_config;
-        std::vector<std::string> obj_options = obj_config.keys();
-        options.insert(options.end(), obj_options.begin(), obj_options.end());
+        std::sort(options.begin(), options.end());
+    } else {
+        PrintRegionConfig reg_config;
+        options = reg_config.keys();
+        if (!is_part) {
+            PrintObjectConfig obj_config;
+            std::vector<std::string> obj_options = obj_config.keys();
+            options.insert(options.end(), obj_options.begin(), obj_options.end());
+        }
     }
     return options;
 }
@@ -1088,7 +1077,7 @@ const std::vector<std::string>& ObjectList::get_options_for_bundle(const wxStrin
 
     for (auto& it : bundle)
     {
-        if (bundle_name == _(it.first))
+        if (bundle_name == _(toString(it.first)))
             return it.second;
     }
 #if 0
@@ -1107,31 +1096,32 @@ const std::vector<std::string>& ObjectList::get_options_for_bundle(const wxStrin
 	return empty;
 }
 
-static bool improper_category(const std::string& category, const int extruders_cnt, const bool is_object_settings = true)
+static bool improper_category(const OptionCategory& category, const int extruders_cnt, const bool is_object_settings = true)
 {
-    return  category.empty() || 
-            (extruders_cnt == 1 && (category == "Extruders" || category == "Wipe options" )) ||
-            (!is_object_settings && category == "Support material");
+    return  category == OptionCategory::none ||
+            (extruders_cnt == 1 && (category == OptionCategory::extruders || category == OptionCategory::wipe )) ||
+            (!is_object_settings && category == OptionCategory::support);
 }
 
 void ObjectList::get_options_menu(settings_menu_hierarchy& settings_menu, const bool is_part)
 {
-    auto options = get_options(is_part);
+    std::vector<std::string> options = get_options(is_part);
 
     const int extruders_cnt = extruders_count();
 
     DynamicPrintConfig config;
-    for (auto& option : options)
+    for (std::string& option : options)
     {
-        auto const opt = config.def()->get(option);
-        auto category = opt->category;
+        const ConfigOptionDef* opt = config.def()->get(option);
+        OptionCategory category = opt->category;
         if (improper_category(category, extruders_cnt, !is_part))
             continue;
 
         const std::string& label = !opt->full_label.empty() ? opt->full_label : opt->label;
         std::pair<std::string, std::string> option_label(option, label);
         std::vector< std::pair<std::string, std::string> > new_category;
-        auto& cat_opt_label = settings_menu.find(category) == settings_menu.end() ? new_category : settings_menu.at(category);
+        std::vector< std::pair<std::string, std::string> >& cat_opt_label = 
+            settings_menu.find(category) == settings_menu.end() ? new_category : settings_menu.at(category);
         cat_opt_label.push_back(option_label);
         if (cat_opt_label.size() == 1)
             settings_menu[category] = cat_opt_label;
@@ -1157,17 +1147,20 @@ void ObjectList::get_settings_choice(const wxString& category_name)
     assert(m_config);
     auto opt_keys = m_config->keys();
 
-    for (auto& cat : settings_menu)
+    for (auto& cat2idname : settings_menu)
     {
-        if (_(cat.first) == category_name) {
+        if (_(toString(cat2idname.first)) == category_name) {
             int sel = 0;
-            for (auto& pair : cat.second) {
-                names.Add(_(pair.second));
-                if (find(opt_keys.begin(), opt_keys.end(), pair.first) != opt_keys.end())
+            //sort per label, because there isn't a better one.
+            std::sort(cat2idname.second.begin(), cat2idname.second.end(), 
+                [](const std::pair< std::string, std::string> &e1, const std::pair< std::string, std::string> &e2)->bool {return e1.second<e2.second; });
+            for (auto& pair_strid_strname : cat2idname.second) {
+                names.Add(_(pair_strid_strname.second));
+                if (find(opt_keys.begin(), opt_keys.end(), pair_strid_strname.first) != opt_keys.end())
                     selections.Add(sel);
                 sel++;
             }
-            settings_list = &cat.second;
+            settings_list = &cat2idname.second;
             break;
         }
     }
@@ -1404,13 +1397,13 @@ wxMenuItem* ObjectList::append_menu_item_settings(wxMenu* menu_)
 
     for (auto& it : FREQ_SETTINGS_BUNDLE_FFF)
     {
-        settings_id = menu->FindItem(_(it.first));
+        settings_id = menu->FindItem(_(toString(it.first)));
         if (settings_id != wxNOT_FOUND)
             menu->Destroy(settings_id);
     }
     for (auto& it : FREQ_SETTINGS_BUNDLE_SLA)
     {
-        settings_id = menu->FindItem(_(it.first));
+        settings_id = menu->FindItem(_(toString(it.first)));
         if (settings_id != wxNOT_FOUND)
             menu->Destroy(settings_id);
     }
@@ -1637,8 +1630,9 @@ wxMenu* ObjectList::create_settings_popupmenu(wxMenu *parent_menu)
     const bool is_part = m_objects_model->GetParent(GetSelection()) != wxDataViewItem(nullptr);
     get_options_menu(settings_menu, is_part);
 
+    //note: as settings_menu_hierarchy is a map<OptionCategory,...>, it's automatically sorted by enum order
     for (auto cat : settings_menu) {
-        append_menu_item(menu, wxID_ANY, _(cat.first), "",
+        append_menu_item(menu, wxID_ANY, _(toString(cat.first)), "",
                         [menu, this](wxCommandEvent& event) { get_settings_choice(menu->GetLabel(event.GetId())); }, 
                         CATEGORY_ICON.find(cat.first) == CATEGORY_ICON.end() ? wxNullBitmap : CATEGORY_ICON.at(cat.first), parent_menu); 
     }
@@ -1658,7 +1652,7 @@ void ObjectList::create_freq_settings_popupmenu(wxMenu *menu, const bool is_obje
         if (improper_category(it.first, extruders_cnt, is_object_settings)) 
             continue;
 
-        append_menu_item(menu, wxID_ANY, _(it.first), "",
+        append_menu_item(menu, wxID_ANY, _(toString(it.first)), "",
                         [menu, this](wxCommandEvent& event) { get_freq_settings_choice(menu->GetLabel(event.GetId())); }, 
                         CATEGORY_ICON.find(it.first) == CATEGORY_ICON.end() ? wxNullBitmap : CATEGORY_ICON.at(it.first), menu); 
     }
@@ -2404,7 +2398,7 @@ wxDataViewItem ObjectList::add_settings_item(wxDataViewItem parent_item, const D
     if (cat_options.empty())
         return ret;
 
-    std::vector<std::string> categories;
+    std::vector<Slic3r::OptionCategory> categories;
     categories.reserve(cat_options.size());
     for (auto& cat : cat_options)
         categories.push_back(cat.first);

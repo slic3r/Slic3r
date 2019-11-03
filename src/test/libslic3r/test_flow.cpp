@@ -186,8 +186,8 @@ SCENARIO("Flow: Flow math for bridges", "[!mayfail]") {
             THEN("Bridge width is same as nozzle diameter") {
                 REQUIRE(flow.width == Approx(nozzle_diameter));
             }
-            THEN("Bridge spacing is same as nozzle diameter + BRIDGE_EXTRA_SPACING") {
-                REQUIRE(flow.spacing() == Approx(nozzle_diameter + BRIDGE_EXTRA_SPACING));
+            THEN("Bridge spacing is same as nozzle diameter + BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter") {
+                REQUIRE(flow.spacing() == Approx(nozzle_diameter + BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter));
             }
         }
         WHEN("Flow role is frInfill") {
@@ -195,8 +195,8 @@ SCENARIO("Flow: Flow math for bridges", "[!mayfail]") {
             THEN("Bridge width is same as nozzle diameter") {
                 REQUIRE(flow.width == Approx(nozzle_diameter));
             }
-            THEN("Bridge spacing is same as nozzle diameter + BRIDGE_EXTRA_SPACING") {
-                REQUIRE(flow.spacing() == Approx(nozzle_diameter + BRIDGE_EXTRA_SPACING));
+            THEN("Bridge spacing is same as nozzle diameter + BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter") {
+                REQUIRE(flow.spacing() == Approx(nozzle_diameter + BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter));
             }
         }
         WHEN("Flow role is frPerimeter") {
@@ -204,8 +204,8 @@ SCENARIO("Flow: Flow math for bridges", "[!mayfail]") {
             THEN("Bridge width is same as nozzle diameter") {
                 REQUIRE(flow.width == Approx(nozzle_diameter));
             }
-            THEN("Bridge spacing is same as nozzle diameter + BRIDGE_EXTRA_SPACING") {
-                REQUIRE(flow.spacing() == Approx(nozzle_diameter + BRIDGE_EXTRA_SPACING));
+            THEN("Bridge spacing is same as nozzle diameter + BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter") {
+                REQUIRE(flow.spacing() == Approx(nozzle_diameter + BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter));
             }
         }
         WHEN("Flow role is frSupportMaterial") {
@@ -213,8 +213,8 @@ SCENARIO("Flow: Flow math for bridges", "[!mayfail]") {
             THEN("Bridge width is same as nozzle diameter") {
                 REQUIRE(flow.width == Approx(nozzle_diameter));
             }
-            THEN("Bridge spacing is same as nozzle diameter + BRIDGE_EXTRA_SPACING") {
-                REQUIRE(flow.spacing() == Approx(nozzle_diameter + BRIDGE_EXTRA_SPACING));
+            THEN("Bridge spacing is same as nozzle diameter + BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter") {
+                REQUIRE(flow.spacing() == Approx(nozzle_diameter + BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter));
             }
         }
     }

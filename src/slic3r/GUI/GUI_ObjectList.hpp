@@ -26,10 +26,10 @@ enum class ModelVolumeType : int;
 // FIXME: broken build on mac os because of this is missing:
 typedef std::vector<std::string>    t_config_option_keys;
 
-typedef std::map<std::string, std::vector<std::string>> SettingsBundle;
+typedef std::map<OptionCategory, std::vector<std::string>> SettingsBundle;
 
 //				  category ->		vector 			 ( option	;  label )
-typedef std::map< std::string, std::vector< std::pair<std::string, std::string> > > settings_menu_hierarchy;
+typedef std::map< OptionCategory, std::vector< std::pair<std::string, std::string> > > settings_menu_hierarchy;
 
 typedef std::vector<ModelVolume*> ModelVolumePtrs;
 
@@ -173,7 +173,7 @@ public:
     ~ObjectList();
 
 
-    std::map<std::string, wxBitmap> CATEGORY_ICON;
+    std::map<OptionCategory, wxBitmap> CATEGORY_ICON;
 
     ObjectDataViewModel*        GetModel() const    { return m_objects_model; }
     DynamicPrintConfig*         config() const      { return m_config; }

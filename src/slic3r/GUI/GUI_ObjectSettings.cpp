@@ -84,7 +84,7 @@ bool ObjectSettings::update_settings_list()
 
     if (!cat_options.empty())
     {
-	    std::vector<std::string> categories;
+	    std::vector<Slic3r::OptionCategory> categories;
         categories.reserve(cat_options.size());
 
         auto extra_column = [config, this](wxWindow* parent, const Line& line)
@@ -120,7 +120,7 @@ bool ObjectSettings::update_settings_list()
         {
             categories.push_back(cat.first);
 
-            auto optgroup = std::make_shared<ConfigOptionsGroup>(m_og->ctrl_parent(), _(cat.first), config, false, extra_column);
+            auto optgroup = std::make_shared<ConfigOptionsGroup>(m_og->ctrl_parent(), _(toString(cat.first)), config, false, extra_column);
             optgroup->label_width = 15;
             optgroup->sidetext_width = 5;
 
@@ -138,7 +138,7 @@ bool ObjectSettings::update_settings_list()
                 ctrl->SetBitmapHover(m_bmp_delete_focus.bmp());
             };
 
-            const bool is_extruders_cat = cat.first == "Extruders";
+            const bool is_extruders_cat = cat.first == OptionCategory::extruders;
             for (auto& opt : cat.second)
             {
                 Option option = optgroup->get_option(opt);

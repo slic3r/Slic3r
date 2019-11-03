@@ -33,6 +33,40 @@ extern std::string  escape_strings_cstyle(const std::vector<std::string> &strs);
 extern bool         unescape_string_cstyle(const std::string &str, std::string &out);
 extern bool         unescape_strings_cstyle(const std::string &str, std::vector<std::string> &out);
 
+
+enum OptionCategory : int
+{
+    none,
+
+    perimeter,
+    slicing,
+    infill,
+    skirtBrim,
+    support,
+    speed,
+    width,
+    extruders,
+    output,
+    notes,
+    dependencies,
+
+    filament,
+    cooling,
+    advanced,
+    filoverride,
+    customgcode,
+    
+    general,
+    limits,
+    mmsetup,
+    firmware,
+
+    pad,
+    padSupp,
+    wipe,
+};
+std::string toString(OptionCategory opt);
+
 /// Specialization of std::exception to indicate that an unknown config option has been encountered.
 class UnknownOptionException : public std::runtime_error {
 public:
@@ -1407,8 +1441,7 @@ public:
     // With which printer technology is this configuration valid?
     PrinterTechnology                   printer_technology = ptUnknown;
     // Category of a configuration field, from the GUI perspective.
-    // One of: "Layers and Perimeters", "Infill", "Support material", "Speed", "Extruders", "Advanced", "Extrusion Width"
-    std::string                         category;
+    OptionCategory                      category = OptionCategory::none;
     // A tooltip text shown in the GUI.
     std::string                         tooltip;
     // Text right from the input field, usually a unit of measurement.
