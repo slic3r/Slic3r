@@ -1078,7 +1078,10 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("seam_position"));
         line.append_option(optgroup->get_option("seam_travel"));
         optgroup->append_line(line);
-        optgroup->append_single_option_line("external_perimeters_first");
+        line = { _(L("External Perimeter")), "" };
+        line.append_option(optgroup->get_option("external_perimeters_first"));
+        line.append_option(optgroup->get_option("external_perimeters_vase"));
+        optgroup->append_line(line);
         line = { _(L("Looping perimeter")), "" };
         line.append_option(optgroup->get_option("perimeter_loop"));
         line.append_option(optgroup->get_option("perimeter_loop_seam"));

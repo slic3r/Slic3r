@@ -633,10 +633,19 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
 
     def = this->add("external_perimeters_first", coBool);
-    def->label = L("External perimeters first");
+    def->label = L("first");
+    def->full_label = L("External perimeters first");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Print contour perimeters from the outermost one to the innermost one "
         "instead of the default inverse order.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("external_perimeters_vase", coBool);
+    def->label = L("in vase mode (no seam)");
+    def->full_label = L("ExternalPerimeter in vase mode");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("Print contour perimeters in two circle, in a contiunous way, like for a vase mode. It needs the external_perimeters_first parameter do work.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
 

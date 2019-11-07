@@ -470,6 +470,7 @@ public:
     ConfigOptionFloat               elefant_foot_compensation;
     ConfigOptionBool                exact_last_layer_height;
     ConfigOptionFloatOrPercent      extrusion_width;
+    ConfigOptionBool                external_perimeters_vase;
     ConfigOptionFloatOrPercent      first_layer_height;
     ConfigOptionBool                infill_only_where_needed;
     // Force the generation of solid shells between adjacent materials/volumes.
@@ -523,6 +524,7 @@ protected:
         OPT_PTR(elefant_foot_compensation);
         OPT_PTR(exact_last_layer_height);
         OPT_PTR(extrusion_width);
+        OPT_PTR(external_perimeters_vase);
         OPT_PTR(first_layer_height);
         OPT_PTR(infill_only_where_needed);
         OPT_PTR(interface_shells);

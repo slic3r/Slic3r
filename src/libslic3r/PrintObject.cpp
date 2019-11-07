@@ -709,6 +709,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "support_material_interface_speed"
             || opt_key == "bridge_speed"
             || opt_key == "external_perimeter_speed"
+            || opt_key == "external_perimeters_vase"
             || opt_key == "infill_speed"
             || opt_key == "perimeter_speed"
             || opt_key == "small_perimeter_speed"

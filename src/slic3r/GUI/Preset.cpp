@@ -383,7 +383,10 @@ const std::vector<std::string>& Preset::print_options()
         "extra_perimeters_odd_layers",
         "only_one_perimeter_top", "ensure_vertical_shell_thickness", "avoid_crossing_perimeters", "thin_walls", "overhangs", 
         "overhangs_width",
-        "seam_position", "external_perimeters_first", "fill_density"
+        "seam_position", 
+        "external_perimeters_first", 
+        "external_perimeters_vase", 
+        "fill_density"
         , "fill_pattern"
         , "fill_top_flow_ratio"
         , "fill_smooth_width"

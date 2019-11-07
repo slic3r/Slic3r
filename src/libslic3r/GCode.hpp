@@ -235,10 +235,12 @@ protected:
     virtual void use(const ExtrusionEntityCollection &collection) override;
     std::string     extrude_entity(const ExtrusionEntity &entity, const std::string &description, double speed = -1., std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid = nullptr);
     std::string     extrude_loop(const ExtrusionLoop &loop, const std::string &description, double speed = -1., std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid = nullptr);
+    std::string     extrude_loop_vase(const ExtrusionLoop &loop, const std::string &description, double speed = -1., std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid = nullptr);
     std::string     extrude_multi_path(const ExtrusionMultiPath &multipath, const std::string &description, double speed = -1.);
     std::string     extrude_multi_path3D(const ExtrusionMultiPath3D &multipath, const std::string &description, double speed = -1.);
     std::string     extrude_path(const ExtrusionPath &path, const std::string &description, double speed = -1.);
     std::string     extrude_path_3D(const ExtrusionPath3D &path, const std::string &description, double speed = -1.);
+    void            split_at_seam_pos(ExtrusionLoop &loop, std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid);
 
     typedef std::vector<int> ExtruderPerCopy;
     // Extruding multiple objects with soluble / non-soluble / combined supports

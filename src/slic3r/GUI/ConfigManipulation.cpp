@@ -242,9 +242,12 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 {
     bool have_perimeters = config->opt_int("perimeters") > 0;
     for (auto el : { "extra_perimeters", "extra_perimeters_odd_layers", "only_one_perimeter_top", "ensure_vertical_shell_thickness", "thin_walls", "overhangs",
-        "seam_position", "external_perimeters_first", "external_perimeter_extrusion_width",
+        "seam_position", "external_perimeters_first", "external_perimeters_vase", "external_perimeter_extrusion_width",
         "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "perimeter_loop", "perimeter_loop_seam" })
         toggle_field(el, have_perimeters);
+
+    for (auto el : { "external_perimeters_vase"})
+        toggle_field(el, config->opt_bool("external_perimeters_first"));
 
     for (auto el : { "thin_walls_min_width", "thin_walls_overlap" })
         toggle_field(el, config->opt_bool("thin_walls"));
