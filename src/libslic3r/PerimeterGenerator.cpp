@@ -351,22 +351,21 @@ void PerimeterGenerator::process()
                 //this variable stored the next onion
                 ExPolygons next_onion;
                 if (i == 0) {
-                    // compute next onion, without taking care of thin_walls : destroy too thin areas.
-                    if (!this->config->thin_walls)
-                        next_onion = offset2_ex(
-                            last,
-                            -(float)(ext_perimeter_width / 2 + ext_min_spacing / 2 - 1),
-                            +(float)(ext_min_spacing / 2 - 1));
-
-
-                    // look for thin walls
-                    if (this->config->thin_walls) {
+                    // compute next onion
                         // the minimum thickness of a single loop is:
                         // ext_width/2 + ext_spacing/2 + spacing/2 + width/2
+                    if (this->config->thin_perimeters)
+                        next_onion = offset_ex(
+                            last,
+                            -(float)(ext_perimeter_width / 2));
+                    else
                         next_onion = offset2_ex(
                             last,
                             -(float)(ext_perimeter_width / 2 + ext_min_spacing / 2 - 1),
                             +(float)(ext_min_spacing / 2 - 1));
+
+                    // look for thin walls
+                     if (this->config->thin_walls) {
                         // detect edge case where a curve can be split in multiple small chunks.
                         ExPolygons no_thin_onion = offset_ex(last, double( - ext_perimeter_width / 2));
                         float div = 2;

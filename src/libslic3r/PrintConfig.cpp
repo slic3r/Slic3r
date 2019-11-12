@@ -2811,13 +2811,21 @@ void PrintConfigDef::init_fff_params()
     def->max = max_temp;
     def->set_default_value(new ConfigOptionInts { 200 });
 
+    def = this->add("thin_perimeters", coBool);
+    def->label = L("Overlapping perimeters");
+    def->full_label = L("Overlapping perimeters");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("Allow external perimeter to overlap each other to avoid the use of thin walls. Note that their flow isn't adjusted and so it will result in over-extruding and undefined behavior.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("thin_walls", coBool);
     def->label = L("");
     def->full_label = L("Thin walls");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Detect single-width walls (parts where two extrusions don't fit and we need "
-                   "to collapse them into a single trace). If unchecked, slic3r may try to fit perimeters "
-                   "where it's not possible, creating some overlap leading to over-extrusion.");
+        "to collapse them into a single trace). If unchecked, slic3r may try to fit perimeters "
+        "where it's not possible, creating some overlap leading to over-extrusion.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(true));
 

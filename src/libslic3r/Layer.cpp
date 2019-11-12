@@ -137,6 +137,7 @@ void Layer::make_perimeters()
                 && config.opt_serialize("external_perimeter_extrusion_width").compare(other_config.opt_serialize("external_perimeter_extrusion_width")) == 0
                 && config.thin_walls                == other_config.thin_walls
                 && config.thin_walls_min_width      == other_config.thin_walls_min_width
+                && config.thin_perimeters           == other_config.thin_perimeters
                 && config.thin_walls_overlap        == other_config.thin_walls_overlap
                 && config.external_perimeters_first == other_config.external_perimeters_first
                 && config.infill_overlap            == other_config.infill_overlap
