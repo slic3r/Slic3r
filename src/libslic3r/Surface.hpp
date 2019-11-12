@@ -56,7 +56,6 @@ class Surface
 public:
     SurfaceType     surface_type;
     ExPolygon       expolygon;
-    ExPolygons      notOverlaps;
     double          thickness;          // in mm
     unsigned short  thickness_layers;   // in layers
     double          bridge_angle;       // in radians, ccw, 0 = East, only 0+ (negative means undefined)

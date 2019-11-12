@@ -301,11 +301,11 @@ void init_print(Print& print, std::initializer_list<TriangleMesh> meshes, Slic3r
 	DynamicPrintConfig* config {Slic3r::DynamicPrintConfig::new_from_defaults()};
     config->apply(*_config);
 
-    const std::string v {std::getenv("SLIC3R_TESTS_GCODE")};
-    std::string tests_gcode {(v == "" ? "" : v)};
+    //const std::string v {std::getenv("SLIC3R_TESTS_GCODE")};
+    //std::string tests_gcode {(v == "" ? "" : v)};
 
-    if (tests_gcode != ""s)
-        config->set_key_value("gcode_comments", new ConfigOptionBool(true));
+    //if (tests_gcode != ""s)
+        //config->set_key_value("gcode_comments", new ConfigOptionBool(true));
 
     for (const TriangleMesh& t : meshes) {
 		ModelObject* object {model.add_object()};

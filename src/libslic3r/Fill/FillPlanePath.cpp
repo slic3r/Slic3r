@@ -11,7 +11,7 @@ void FillPlanePath::_fill_surface_single(
     unsigned int                     thickness_layers,
     const std::pair<float, Point>   &direction, 
     ExPolygon                       &expolygon, 
-    Polylines                       &polylines_out)
+    Polylines                       &polylines_out) const
 {
     expolygon.rotate(- direction.first);
 
@@ -75,7 +75,7 @@ void FillPlanePath::_fill_surface_single(
 }
 
 // Follow an Archimedean spiral, in polar coordinates: r=a+b\theta
-Pointfs FillArchimedeanChords::_generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y)
+Pointfs FillArchimedeanChords::_generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y) const
 {
     // Radius to achieve.
     coordf_t rmax = std::sqrt(coordf_t(max_x)*coordf_t(max_x)+coordf_t(max_y)*coordf_t(max_y)) * std::sqrt(2.) + 1.5;
@@ -145,7 +145,7 @@ static inline Point hilbert_n_to_xy(const size_t n)
     return Point(x, y);
 }
 
-Pointfs FillHilbertCurve::_generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y)
+Pointfs FillHilbertCurve::_generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y) const
 {
     // Minimum power of two square to fit the domain.
     size_t sz = 2;
@@ -168,7 +168,7 @@ Pointfs FillHilbertCurve::_generate(coord_t min_x, coord_t min_y, coord_t max_x,
     return line;
 }
 
-Pointfs FillOctagramSpiral::_generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y)
+Pointfs FillOctagramSpiral::_generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y) const
 {
     // Radius to achieve.
     coordf_t rmax = std::sqrt(coordf_t(max_x)*coordf_t(max_x)+coordf_t(max_y)*coordf_t(max_y)) * std::sqrt(2.) + 1.5;

@@ -234,6 +234,23 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             if (density <= 0)
                 continue;
         }
+
+        //Set Params for fill
+        // apply half spacing using this flow's own spacing and generate infill
+        FillParams params;
+        params.density = float(0.01 * density);
+        params.dont_adjust = false;
+        params.fill_exactly = layerm.region()->config().enforce_full_fill_volume.getBool();
+        params.dont_connect = layerm.region()->config().infill_not_connected.getBool();
+        //adjust flow (to over-extrude when needed)
+        float flow_percent = 1;
+        if (surface.has_pos_top()) flow_percent *= layerm.region()->config().fill_top_flow_ratio.get_abs_value(1);
+        params.flow_mult = flow_percent;
+        //adjust spacing (to over-extrude when needed)
+        if (surface.has_mod_overBridge()) {
+            params.density = layerm.region()->config().over_bridge_flow_ratio.get_abs_value(1);
+        }
+        params.config = &layerm.region()->config();
         
         // get filler object
         std::unique_ptr<Fill> f = std::unique_ptr<Fill>(Fill::new_from_type(fill_pattern));
@@ -249,32 +266,37 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             -1,                                 // auto width
             *layerm.layer()->object()
         );
-        
+
         // calculate flow spacing for infill pattern generation
         bool using_internal_flow = false;
-        if (! surface.has_fill_solid() && ! is_bridge) {
-            // it's internal infill, so we can calculate a generic flow spacing 
-            // for all layers, for avoiding the ugly effect of
-            // misaligned infill on first layer because of different extrusion width and
-            // layer height
-            Flow internal_flow = layerm.region()->flow(
-                frInfill,
-                layerm.layer()->object()->config().layer_height.value,  // TODO: handle infill_every_layers?
-                false,  // no bridge
-                false,  // no first layer
-                -1,     // auto width
-                *layerm.layer()->object()
-            );
-            f->spacing = internal_flow.spacing();
-            using_internal_flow = true;
-        } else {
-            f->spacing = flow.spacing();
+        {
+            coordf_t spacing;
+            if (!surface.has_fill_solid() && !is_bridge) {
+                // it's internal infill, so we can calculate a generic flow spacing 
+                // for all layers, for avoiding the ugly effect of
+                // misaligned infill on first layer because of different extrusion width and
+                // layer height
+                Flow internal_flow = layerm.region()->flow(
+                    frInfill,
+                    layerm.layer()->object()->config().layer_height.value,  // TODO: handle infill_every_layers?
+                    false,  // no bridge
+                    false,  // no first layer
+                    -1,     // auto width
+                    *layerm.layer()->object()
+                );
+                spacing = internal_flow.spacing();
+                using_internal_flow = true;
+            }
+            else {
+                spacing = flow.spacing();
+            }
+            f->init_spacing(spacing, params);
         }
 
         double link_max_length = 0.;
         if (! is_bridge) {
             if (density > 80.) // 80%
-                link_max_length = 3 * f->spacing; // slic3r default : 3
+                link_max_length = 3 * f->get_spacing(); // slic3r default : 3
         }
 
         f->layer_id = layerm.layer()->id();
@@ -288,7 +310,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         //give the overlap size to let the infill do his overlap
         //add overlap if at least one perimeter
         if (layerm.region()->config().perimeters > 0) {
-            f->overlap = layerm.region()->config().get_abs_value("infill_overlap", (perimeter_spacing + (f->spacing)) / 2);
+            f->overlap = layerm.region()->config().get_abs_value("infill_overlap", (perimeter_spacing + (f->get_spacing())) / 2);
             if (f->overlap!=0) {
                 f->no_overlap_expolygons = intersection_ex(layerm.fill_no_overlap_expolygons, ExPolygons() = { surface.expolygon });
             } else {
@@ -298,13 +320,6 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             f->overlap = 0;
             f->no_overlap_expolygons.push_back(surface.expolygon);
         }
-        
-        // apply half spacing using this flow's own spacing and generate infill
-        FillParams params;
-        params.density = float(0.01 * density);
-        params.dont_adjust = false;
-        params.fill_exactly = layerm.region()->config().enforce_full_fill_volume.getBool();
-        params.dont_connect = layerm.region()->config().infill_not_connected.getBool();
 
         // calculate actual flow from spacing (which might have been adjusted by the infill
         // pattern generator)
@@ -313,21 +328,10 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             // so we can safely ignore the slight variation that might have
             // been applied to $f->flow_spacing
         } else {
-            flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, (float)h, is_bridge);
+            flow = Flow::new_from_spacing(f->get_spacing(), flow.nozzle_diameter, (float)h, is_bridge);
         }
-        
-        //adjust flow (to over-extrude when needed)
-        float flow_percent = 1;
-        if (surface.has_pos_top()) flow_percent *= layerm.region()->config().fill_top_flow_ratio.get_abs_value(1);
-        params.flow_mult = flow_percent;
-
-        //adjust spacing (to over-extrude when needed)
-        if (surface.has_mod_overBridge()){
-            params.density = layerm.region()->config().over_bridge_flow_ratio.get_abs_value(1);
-        }
-
         params.flow = &flow;
-        params.config = &layerm.region()->config();
+
         f->fill_surface_extrusion(&surface, params, out.entities);
     }
 

@@ -24,11 +24,11 @@ protected:
         unsigned int                     thickness_layers,
         const std::pair<float, Point>   &direction, 
         ExPolygon                       &expolygon, 
-        Polylines                       &polylines_out) override;
+        Polylines                       &polylines_out) const override;
 
     virtual float _layer_angle(size_t idx) const { return 0.f; }
     virtual bool  _centered() const = 0;
-    virtual Pointfs _generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y) = 0;
+    virtual Pointfs _generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y) const = 0;
 };
 
 class FillArchimedeanChords : public FillPlanePath
@@ -39,7 +39,7 @@ public:
 
 protected:
     virtual bool  _centered() const { return true; }
-    virtual Pointfs _generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y);
+    virtual Pointfs _generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y) const;
 };
 
 class FillHilbertCurve : public FillPlanePath
@@ -50,7 +50,7 @@ public:
 
 protected:
     virtual bool  _centered() const { return false; }
-    virtual Pointfs _generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y);
+    virtual Pointfs _generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y) const;
 };
 
 class FillOctagramSpiral : public FillPlanePath
@@ -61,7 +61,7 @@ public:
 
 protected:
     virtual bool  _centered() const { return true; }
-    virtual Pointfs _generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y);
+    virtual Pointfs _generate(coord_t min_x, coord_t min_y, coord_t max_x, coord_t max_y) const;
 };
 
 } // namespace Slic3r

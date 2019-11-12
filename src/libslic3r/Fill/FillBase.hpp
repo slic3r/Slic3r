@@ -73,8 +73,6 @@ public:
     size_t      layer_id;
     // Z coordinate of the top print surface, in unscaled coordinates
     coordf_t    z;
-    // in unscaled coordinates
-    coordf_t    spacing;
     // infill / perimeter overlap, in unscaled coordinates 
     coordf_t    overlap;
     ExPolygons  no_overlap_expolygons;
@@ -88,6 +86,9 @@ public:
     coord_t     loop_clipping;
     // In scaled coordinates. Bounding box of the 2D projection of the object.
     BoundingBox bounding_box;
+protected:
+    // in unscaled coordinates, please use init (after settings all others settings) as some algos want to modify the value
+    coordf_t    spacing;
 
 public:
     virtual ~Fill() {}
@@ -96,15 +97,17 @@ public:
     static Fill* new_from_type(const std::string &type);
 
     void         set_bounding_box(const Slic3r::BoundingBox &bbox) { bounding_box = bbox; }
+    virtual void init_spacing(coordf_t spacing, const FillParams &params) { this->spacing = spacing;  }
+    coordf_t get_spacing() const { return spacing; }
 
     // Do not sort the fill lines to optimize the print head path?
     virtual bool no_sort() const { return false; }
 
     // This method have to fill the ExtrusionEntityCollection. It call fill_surface by default
-    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out);
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const;
     
     // Perform the fill.
-    virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
+    virtual Polylines fill_surface(const Surface *surface, const FillParams &params) const;
 
 protected:
     Fill() :
@@ -127,17 +130,19 @@ protected:
         unsigned int                      /* thickness_layers */,
         const std::pair<float, Point>   & /* direction */, 
         ExPolygon                       & /* expolygon */, 
-        Polylines                       & /* polylines_out */) {};
+        Polylines                       & /* polylines_out */) const {};
 
     virtual float _layer_angle(size_t idx) const { return (idx & 1) ? float(M_PI/2.) : 0; }
 
+    virtual coord_t _line_spacing_for_density(float density) const;
+
     virtual std::pair<float, Point> _infill_direction(const Surface *surface) const;
 
-    void connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary, Polylines &polylines_out, const FillParams &params);
+    void connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary, Polylines &polylines_out, const FillParams &params) const;
 
-    void do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, ExtrusionEntitiesPtr &coll_out);
+    void do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, ExtrusionEntitiesPtr &coll_out) const;
 
-    ExtrusionRole getRoleFromSurfaceType(const FillParams &params, const Surface *surface){
+    ExtrusionRole getRoleFromSurfaceType(const FillParams &params, const Surface *surface) const {
         if (params.role == erNone || params.role == erCustom) {
             return params.flow->bridge ?
             erBridgeInfill :
@@ -165,7 +170,7 @@ public:
     }
     static Point   _align_to_grid(Point   coord, Point   spacing) 
         { return Point(_align_to_grid(coord(0), spacing(0)), _align_to_grid(coord(1), spacing(1))); }
-    static coord_t _align_to_grid(coord_t coord, coord_t spacing, coord_t base) 
+    static coord_t _align_to_grid(coord_t coord, coord_t spacing, coord_t base)
         { return base + _align_to_grid(coord - base, spacing); }
     static Point   _align_to_grid(Point   coord, Point   spacing, Point   base)
         { return Point(_align_to_grid(coord(0), spacing(0), base(0)), _align_to_grid(coord(1), spacing(1), base(1))); }

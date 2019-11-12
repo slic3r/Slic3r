@@ -1220,9 +1220,9 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Ironing flow distribution");
     def->category = OptionCategory::infill;
     def->tooltip = L("This is the percentage of the flow that is used for the second ironing pass. Typical 0-20%. "
-        "Should not be lower than 20%, unless you have your top extrusion width greatly superior to your nozzle width.");
-    def->min = 0;
-    def->max = 0.9;
+        "Should not be higher than 20%, unless you have your top extrusion width greatly superior to your nozzle width.");
+    //def->min = 0;
+    //def->max = 0.9;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(10, true));
 

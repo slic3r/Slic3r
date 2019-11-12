@@ -8,30 +8,37 @@
 #include "FillConcentric.hpp"
 
 namespace Slic3r {
-    
 
-void FillConcentric::_fill_surface_single(
+void
+FillConcentric::init_spacing(coordf_t spacing, const FillParams &params)
+{
+    Fill::init_spacing(spacing, params);
+    if (params.density > 0.9999f && !params.dont_adjust) {
+        this->spacing = unscale<double>(this->_adjust_solid_spacing(bounding_box.size()(0), _line_spacing_for_density(params.density)));
+    }
+}
+
+void
+FillConcentric::_fill_surface_single(
     const FillParams                &params, 
     unsigned int                     thickness_layers,
     const std::pair<float, Point>   &direction, 
     ExPolygon                       &expolygon, 
-    Polylines                       &polylines_out)
+    Polylines                       &polylines_out) const
 {
     // no rotation is supported for this infill pattern
     BoundingBox bounding_box = expolygon.contour.bounding_box();
     
-    coord_t min_spacing = scale_(this->spacing);
-    coord_t distance = coord_t(min_spacing / params.density);
-    
+    coord_t distance = _line_spacing_for_density(params.density);
     if (params.density > 0.9999f && !params.dont_adjust) {
-        distance = this->_adjust_solid_spacing(bounding_box.size()(0), distance);
-        this->spacing = unscale<double>(distance);
+        //it's == this->_adjust_solid_spacing(bounding_box.size()(0), _line_spacing_for_density(params.density)) because of the init_spacing()
+        distance = scale_(this->spacing);
     }
 
     Polygons loops = (Polygons)expolygon;
     Polygons last  = loops;
     while (! last.empty()) {
-        last = offset2(last, -(distance + min_spacing/2), +min_spacing/2);
+        last = offset2(last, -(distance + scale_(this->spacing) /2), +scale_(this->spacing) /2);
         loops.insert(loops.end(), last.begin(), last.end());
     }
 
@@ -66,7 +73,7 @@ void FillConcentric::_fill_surface_single(
 }
 
 void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, const FillParams &params,
-    ExtrusionEntitiesPtr &out) {
+    ExtrusionEntitiesPtr &out) const {
 
     // Perform offset.
     Slic3r::ExPolygons expp = offset_ex(surface->expolygon, double(scale_(0 - 0.5 * this->spacing)));
@@ -86,19 +93,16 @@ void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, cons
         // no rotation is supported for this infill pattern
         BoundingBox bounding_box = expolygon.contour.bounding_box();
 
-        coord_t min_spacing = scale_(this->spacing);
-        coord_t distance = coord_t(min_spacing / params.density);
-
+        coord_t distance = _line_spacing_for_density(params.density);
         if (params.density > 0.9999f && !params.dont_adjust) {
-            distance = this->_adjust_solid_spacing(bounding_box.size().x(), distance);
-            this->spacing = unscaled(distance);
+            distance = scale_(this->spacing);
         }
 
         ExPolygons gaps;
         Polygons loops = (Polygons)expolygon;
         Polygons last = loops;
         while (!last.empty()) {
-            Polygons next_onion = offset2(last, -(distance + min_spacing / 2), +min_spacing / 2);
+            Polygons next_onion = offset2(last, -(distance + scale_(this->spacing) / 2), +scale_(this->spacing) / 2);
             loops.insert(loops.end(), next_onion.begin(), next_onion.end());
             append(gaps, diff_ex(
                 offset(last, -0.5f * distance),

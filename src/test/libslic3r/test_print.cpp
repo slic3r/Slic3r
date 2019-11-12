@@ -88,7 +88,8 @@ SCENARIO("Print: Changing number of solid surfaces does not cause all surfaces t
         config->set_key_value("top_solid_layers", new ConfigOptionInt(2));
         config->set_key_value("bottom_solid_layers", new ConfigOptionInt(1));
         config->set_key_value("layer_height", new ConfigOptionFloat(0.5)); // get a known number of layers
-        config->set_key_value("first_layer_height", new ConfigOptionFloat(0.5));
+        config->set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(0.5, false));
+        config->set_key_value("enforce_full_fill_volume", new ConfigOptionBool(true)); 
         Slic3r::Model model;
         auto event_counter {0U};
         std::string stage;

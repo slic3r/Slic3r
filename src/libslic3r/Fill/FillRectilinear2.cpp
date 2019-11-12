@@ -865,12 +865,18 @@ std::vector<SegmentedIntersectionLine> FillRectilinear2::_vert_lines_for_polygon
     return segs;
 }
 
-coord_t FillRectilinear2::_line_spacing_for_density(float density) const
+void
+FillRectilinear2::init_spacing(coordf_t spacing, const FillParams &params)
 {
-    return coord_t(scale_(this->spacing) / density);
+    Fill::init_spacing(spacing, params);
+    //remove this code path becaus it's only really useful for squares at 45° and it override a setting
+    // define flow spacing according to requested density
+    //if (params.full_infill() && !params.dont_adjust) {
+    //    this->spacing = unscale<coordf_t>(this->_adjust_solid_spacing(bounding_box.size()(0), _line_spacing_for_density(params.density)));
+    //}
 }
 
-bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillParams &params, float angleBase, float pattern_shift, Polylines &polylines_out)
+bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillParams &params, float angleBase, float pattern_shift, Polylines &polylines_out) const
 {
     // At the end, only the new polylines will be rotated back.
     size_t n_polylines_out_initial = polylines_out.size();
@@ -904,8 +910,8 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
 
     // define flow spacing according to requested density
     if (params.full_infill() && !params.dont_adjust) {
-        line_spacing = this->_adjust_solid_spacing(bounding_box.size()(0), line_spacing);
-        this->spacing = unscale<double>(line_spacing);
+        //it's == this->_adjust_solid_spacing(bounding_box.size()(0), line_spacing) because of the init_spacing
+        line_spacing = scale_(this->spacing);
     } else {
         // extend bounding box so that our pattern will be aligned with other layers
         // Transform the reference point to the rotated coordinate system.
@@ -1441,7 +1447,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     return true;
 }
 
-Polylines FillRectilinear2::fill_surface(const Surface *surface, const FillParams &params)
+Polylines FillRectilinear2::fill_surface(const Surface *surface, const FillParams &params) const
 {
     Polylines polylines_out;
     if (!fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out)) {
@@ -1450,7 +1456,7 @@ Polylines FillRectilinear2::fill_surface(const Surface *surface, const FillParam
     return polylines_out;
 }
 
-Polylines FillGrid2::fill_surface(const Surface *surface, const FillParams &params)
+Polylines FillGrid2::fill_surface(const Surface *surface, const FillParams &params) const
 {
     // Each linear fill covers half of the target coverage.
     FillParams params2 = params;
@@ -1463,7 +1469,7 @@ Polylines FillGrid2::fill_surface(const Surface *surface, const FillParams &para
     return polylines_out;
 }
 
-Polylines FillTriangles::fill_surface(const Surface *surface, const FillParams &params)
+Polylines FillTriangles::fill_surface(const Surface *surface, const FillParams &params) const
 {
     // Each linear fill covers 1/3 of the target coverage.
     FillParams params2 = params;
@@ -1479,7 +1485,7 @@ Polylines FillTriangles::fill_surface(const Surface *surface, const FillParams &
     return polylines_out;
 }
 
-Polylines FillStars::fill_surface(const Surface *surface, const FillParams &params)
+Polylines FillStars::fill_surface(const Surface *surface, const FillParams &params) const
 {
     // Each linear fill covers 1/3 of the target coverage.
     FillParams params2 = params;
@@ -1495,7 +1501,7 @@ Polylines FillStars::fill_surface(const Surface *surface, const FillParams &para
     return polylines_out;
 }
 
-Polylines FillCubic::fill_surface(const Surface *surface, const FillParams &params)
+Polylines FillCubic::fill_surface(const Surface *surface, const FillParams &params) const
 {
     // Each linear fill covers 1/3 of the target coverage.
     FillParams params2 = params;
@@ -1515,7 +1521,7 @@ Polylines FillCubic::fill_surface(const Surface *surface, const FillParams &para
 
 
 void
-FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out)
+FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const
 {
     ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
     //you don't want to sort the extrusions: big infill first, small second
@@ -1623,7 +1629,7 @@ coord_t FillScatteredRectilinear::_line_spacing_for_density(float density) const
     return coord_t(scale_(this->spacing) / 1.0);
 }
 
-Polylines FillScatteredRectilinear::fill_surface(const Surface *surface, const FillParams &params)
+Polylines FillScatteredRectilinear::fill_surface(const Surface *surface, const FillParams &params) const
 {
     Polylines polylines_out;
 
@@ -1659,7 +1665,7 @@ std::vector<SegmentedIntersectionLine> FillScatteredRectilinear::_vert_lines_for
 
 
 void
-FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) {
+FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const {
     const coord_t scaled_nozzle_diam = scale_(params.flow->nozzle_diameter);
     const coord_t clearance = scaled_nozzle_diam * 2;
     const coord_t tooth_spacing_min = scaled_nozzle_diam;
@@ -1770,7 +1776,8 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
 }
 
 
-void FillRectilinear2WGapFill::split_polygon_gap_fill(const Surface &surface, const FillParams &params, ExPolygons &rectilinear, ExPolygons &gapfill) {
+void
+FillRectilinear2WGapFill::split_polygon_gap_fill(const Surface &surface, const FillParams &params, ExPolygons &rectilinear, ExPolygons &gapfill) {
 
     // remove areas for gapfill 
     // factor=0.5 : remove area smaller than a spacing. factor=1 : max spacing for the gapfill (but not the width)
@@ -1786,7 +1793,7 @@ void FillRectilinear2WGapFill::split_polygon_gap_fill(const Surface &surface, co
 }
 
 void
-FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) {
+FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const {
     ExtrusionEntityCollection *coll_nosort = new ExtrusionEntityCollection();
     coll_nosort->no_sort = true; //can be sorted inside the pass
     ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
@@ -1888,56 +1895,6 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
     }
 
 }
-
-void
-Fill::do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, ExtrusionEntitiesPtr &coll_out) {
-
-    ThickPolylines polylines_gapfill;
-    double min = 0.4 * scale_(params.flow->nozzle_diameter) * (1 - INSET_OVERLAP_TOLERANCE);
-    double max = 2. * params.flow->scaled_width();
-    // collapse 
-    //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
-    min = std::max(min, double(Flow::new_from_spacing(EPSILON, params.flow->nozzle_diameter, params.flow->height, false).scaled_width()));
-    //ExPolygons gapfill_areas_collapsed = diff_ex(
-    //    offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2)),
-    //    offset2_ex(gapfill_areas, double(-max / 2), double(+max / 2)),
-    //    true);
-    ExPolygons gapfill_areas_collapsed = offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2));
-    for (const ExPolygon &ex : gapfill_areas_collapsed) {
-        //remove too small gaps that are too hard to fill.
-        //ie one that are smaller than an extrusion with width of min and a length of max.
-        if (ex.area() > scale_(params.flow->nozzle_diameter)*scale_(params.flow->nozzle_diameter) * 2) {
-            MedialAxis{ ex, params.flow->scaled_width() * 2, params.flow->scaled_width() / 5, coord_t(params.flow->height) }.build(polylines_gapfill);
-        }
-    }
-    if (!polylines_gapfill.empty() && params.role != erBridgeInfill) {
-        //test
-#ifdef _DEBUG
-       for (ThickPolyline poly : polylines_gapfill) {
-            for (coordf_t width : poly.width) {
-                if (width > params.flow->scaled_width() * 2.2) {
-                    std::cerr << "ERRROR!!!! recti gapfill width = " << unscaled(width) << " > max_width = " << (params.flow->width * 2) << "\n";
-                }
-            }
-        }
-#endif
-
-        ExtrusionEntityCollection gap_fill = thin_variable_width(polylines_gapfill, erGapFill, *params.flow);
-        //set role if needed
-        if (params.role != erSolidInfill) {
-            ExtrusionSetRole set_good_role(params.role);
-            gap_fill.visit(set_good_role);
-        }
-        //move them into the collection
-        if (!gap_fill.entities.empty()) {
-            ExtrusionEntityCollection *coll_gapfill = new ExtrusionEntityCollection();
-            coll_gapfill->no_sort = this->no_sort();
-            coll_gapfill->append(std::move(gap_fill.entities));
-            coll_out.push_back(coll_gapfill);
-        }
-    }
-}
-
 
 
 } // namespace Slic3r

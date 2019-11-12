@@ -37,8 +37,8 @@ public:
     }
     virtual Fill* clone() const{ return new FillSmooth(*this); }
 
-    virtual Polylines fill_surface(const Surface *surface, const FillParams &params) override;
-    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) override;
+    virtual Polylines fill_surface(const Surface *surface, const FillParams &params) const override;
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const override;
     
 protected:
     int nbPass=2;
@@ -56,9 +56,9 @@ protected:
     InfillPattern fillPattern[3];
 
     void perform_single_fill(const int idx, ExtrusionEntityCollection &eecroot, const Surface &srf_source,
-        const FillParams &params, const double volume);
+        const FillParams &params, const double volume) const;
     void fill_expolygon(const int idx, ExtrusionEntityCollection &eec, const Surface &srf_to_fill,
-        const FillParams &params, const double volume);
+        const FillParams &params, const double volume) const;
 };
 
 

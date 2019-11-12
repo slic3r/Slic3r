@@ -15,6 +15,7 @@
 #include "FillRectilinear2.hpp"
 #include "FillRectilinear3.hpp"
 #include "FillSmooth.hpp"
+#include "../MedialAxis.hpp"
 
 namespace Slic3r {
 
@@ -55,7 +56,7 @@ Fill* Fill::new_from_type(const std::string &type)
     return (it == enum_keys_map.end()) ? nullptr : new_from_type(InfillPattern(it->second));
 }
 
-Polylines Fill::fill_surface(const Surface *surface, const FillParams &params)
+Polylines Fill::fill_surface(const Surface *surface, const FillParams &params) const
 {
     // Perform offset.
     Slic3r::ExPolygons expp = offset_ex(surface->expolygon, double(scale_(0 - 0.5 * this->spacing)));
@@ -140,7 +141,7 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
     return std::pair<float, Point>(out_angle, out_shift);
 }
 
-void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) {
+void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const {
     //add overlap & call fill_surface
     Polylines polylines = this->fill_surface(surface, params);
     if (polylines.empty())
@@ -163,14 +164,6 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
         double poylineVolume = 0;
         for (auto poly = this->no_overlap_expolygons.begin(); poly != this->no_overlap_expolygons.end(); ++poly) {
             poylineVolume += params.flow->height*unscaled(unscaled(poly->area()));
-            // add external "perimeter gap"
-            double perimeterRoundGap = unscaled(poly->contour.length()) * params.flow->height * (1 - 0.25*PI) * 0.5;
-            // add holes "perimeter gaps"
-            double holesGaps = 0;
-            for (auto hole = poly->holes.begin(); hole != poly->holes.end(); ++hole) {
-                holesGaps += unscaled(hole->length()) * params.flow->height * (1 - 0.25*PI) * 0.5;
-            }
-            poylineVolume += perimeterRoundGap + holesGaps;
         }
         //printf("process want %f mm3 extruded for a volume of %f space : we mult by %f %i\n",
         //    extrudedVolume,
@@ -203,6 +196,10 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
 
 
 
+coord_t Fill::_line_spacing_for_density(float density) const
+{
+    return coord_t(scale_(this->spacing) / density);
+}
 
 /// cut poly between poly.point[idx_1] & poly.point[idx_1+1]
 /// add p1+-width to one part and p2+-width to the other one.
@@ -461,7 +458,8 @@ Points getFrontier(Polylines &polylines, const Point& p1, const Point& p2, const
 /// return the connected polylines in polylines_out. Can output polygons (stored as polylines with first_point = last_point).
 /// complexity: worst: N(infill_ordered.points) x N(boundary.points)
 ///             typical: N(infill_ordered) x ( N(boundary.points) + N(infill_ordered.points) )
-void Fill::connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary, Polylines &polylines_out, const FillParams &params) {
+void
+Fill::connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary, Polylines &polylines_out, const FillParams &params) const {
 
     //TODO: fallback to the quick & dirty old algorithm when n(points) is too high.
     Polylines polylines_frontier = to_polylines(((Polygons)boundary));
@@ -572,5 +570,57 @@ void Fill::connect_infill(const Polylines &infill_ordered, const ExPolygon &boun
         polylines_out.emplace_back(polyline);
     }
 }
+
+
+
+void
+Fill::do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, ExtrusionEntitiesPtr &coll_out) const {
+
+    ThickPolylines polylines_gapfill;
+    double min = 0.4 * scale_(params.flow->nozzle_diameter) * (1 - INSET_OVERLAP_TOLERANCE);
+    double max = 2. * params.flow->scaled_width();
+    // collapse 
+    //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
+    min = std::max(min, double(Flow::new_from_spacing(EPSILON, params.flow->nozzle_diameter, params.flow->height, false).scaled_width()));
+    //ExPolygons gapfill_areas_collapsed = diff_ex(
+    //    offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2)),
+    //    offset2_ex(gapfill_areas, double(-max / 2), double(+max / 2)),
+    //    true);
+    ExPolygons gapfill_areas_collapsed = offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2));
+    for (const ExPolygon &ex : gapfill_areas_collapsed) {
+        //remove too small gaps that are too hard to fill.
+        //ie one that are smaller than an extrusion with width of min and a length of max.
+        if (ex.area() > scale_(params.flow->nozzle_diameter)*scale_(params.flow->nozzle_diameter) * 2) {
+            MedialAxis{ ex, params.flow->scaled_width() * 2, params.flow->scaled_width() / 5, coord_t(params.flow->height) }.build(polylines_gapfill);
+        }
+    }
+    if (!polylines_gapfill.empty() && params.role != erBridgeInfill) {
+        //test
+#ifdef _DEBUG
+        for (ThickPolyline poly : polylines_gapfill) {
+            for (coordf_t width : poly.width) {
+                if (width > params.flow->scaled_width() * 2.2) {
+                    std::cerr << "ERRROR!!!! gapfill width = " << unscaled(width) << " > max_width = " << (params.flow->width * 2) << "\n";
+                }
+            }
+        }
+#endif
+
+        ExtrusionEntityCollection gap_fill = thin_variable_width(polylines_gapfill, erGapFill, *params.flow);
+        //set role if needed
+        if (params.role != erSolidInfill) {
+            ExtrusionSetRole set_good_role(params.role);
+            gap_fill.visit(set_good_role);
+        }
+        //move them into the collection
+        if (!gap_fill.entities.empty()) {
+            ExtrusionEntityCollection *coll_gapfill = new ExtrusionEntityCollection();
+            coll_gapfill->no_sort = this->no_sort();
+            coll_gapfill->append(std::move(gap_fill.entities));
+            coll_out.push_back(coll_gapfill);
+        }
+    }
+}
+
 
 } // namespace Slic3r

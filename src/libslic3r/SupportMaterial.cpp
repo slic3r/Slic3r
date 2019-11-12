@@ -2337,7 +2337,8 @@ static inline void fill_expolygons_generate_paths(
     Fill                    *filler,
     float                    density,
     ExtrusionRole            role,
-    const Flow              &flow)
+    const Flow              &flow,
+    coordf_t                 spacing)
 {
     FillParams fill_params;
     fill_params.density = density;
@@ -2345,6 +2346,7 @@ static inline void fill_expolygons_generate_paths(
     fill_params.dont_adjust = true;
     fill_params.flow = &flow;
     fill_params.role = role;
+    filler->init_spacing(spacing, fill_params);
     for (ExPolygon &expoly : expolygons) {
         Surface surface(stPosInternal | stDensSparse, std::move(expoly));
         filler->fill_surface_extrusion(&surface, fill_params, dst);
@@ -3059,8 +3061,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                         // value that guarantees that all layers are correctly aligned.
                         Fill *filler = filler_support.get();
                         filler->angle   = raft_angle_base;
-                        filler->spacing = m_support_material_flow.spacing();
-                        filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / support_density));
+                        filler->link_max_length = coord_t(scale_(m_support_material_flow.spacing() * link_max_length_factor / support_density));
                         fill_expolygons_generate_paths(
                             // Destination
                             support_layer.support_fills.entities, 
@@ -3069,7 +3070,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                             // Filler and its parameters
                             filler, float(support_density),
                             // Extrusion parameters
-                            erSupportMaterial, flow);
+                            erSupportMaterial, flow, m_support_material_flow.spacing());
                     }
                 }
             }
@@ -3077,6 +3078,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
             Fill *filler = filler_interface.get();
             Flow  flow = m_first_layer_flow;
             float density = 0.f;
+            coordf_t spacing = 0.f;
             if (support_layer_id == 0) {
                 // Base flange.
                 if (this->m_object_config->support_material_solid_first_layer.value) {
@@ -3088,17 +3090,17 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     // 70% of density on the 1st layer.
                     density = 0.7f;
                 }
-                filler->spacing = m_first_layer_flow.spacing();
+                spacing = m_first_layer_flow.spacing();
             } else if (support_layer_id >= m_slicing_params.base_raft_layers) {
                 filler->angle = raft_angle_interface;
                 // We don't use $base_flow->spacing because we need a constant spacing
                 // value that guarantees that all layers are correctly aligned.
-                filler->spacing = m_support_material_flow.spacing();
+                spacing = m_support_material_flow.spacing();
                 flow          = Flow(float(m_support_material_interface_flow.width), float(raft_layer.height), m_support_material_flow.nozzle_diameter, raft_layer.bridging);
                 density       = float(interface_density);
             } else
                 continue;
-            filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / density));
+            filler->link_max_length = coord_t(scale_(spacing * link_max_length_factor / density));
             fill_expolygons_generate_paths(
                 // Destination
                 support_layer.support_fills.entities, 
@@ -3107,7 +3109,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                 // Filler and its parameters
                 filler, density,
                 // Extrusion parameters
-                (support_layer_id < m_slicing_params.base_raft_layers) ? erSupportMaterial : erSupportMaterialInterface, flow);
+                (support_layer_id < m_slicing_params.base_raft_layers) ? erSupportMaterial : erSupportMaterialInterface, flow, spacing);
         }
     });
 
@@ -3214,21 +3216,22 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     layer_ex.layer->bridging);
                 Fill *filler = i == 2 ? filler_intermediate_interface.get() : filler_interface.get();
                 float density = interface_density;
+                coordf_t spacing;
                 //if first layer and solid first layer : draw concentric with 100% density
                 if (support_layer.id() == 0 && this->m_object_config->support_material_solid_first_layer.value) {
                     filler = filler_solid.get();
                     density = 1.f;
                     interface_flow = m_first_layer_flow;
                     filler->angle = 0;
-                    filler->spacing = interface_flow.spacing();
+                    spacing = interface_flow.spacing();
                 } else {
                     filler->angle = interface_as_base ?
                         // If zero interface layers are configured, use the same angle as for the base layers.
                         angles[support_layer_id % angles.size()] :
                         // Use interface angle for the interface layers.
                         interface_angle;
-                    filler->spacing = m_support_material_interface_flow.spacing();
-                    filler->link_max_length = coord_t(scale_(filler_interface->spacing * link_max_length_factor / density));
+                    spacing = m_support_material_interface_flow.spacing();
+                    filler->link_max_length = coord_t(scale_(spacing * link_max_length_factor / density));
                 }
                 fill_expolygons_generate_paths(
                     // Destination
@@ -3238,7 +3241,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     // Filler and its parameters
                     filler, float(density),
                     // Extrusion parameters
-                    erSupportMaterialInterface, interface_flow);
+                    erSupportMaterialInterface, interface_flow, spacing);
             }
 
             // Base support or flange.
@@ -3253,8 +3256,8 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     float(base_layer.layer->height), 
                     m_support_material_flow.nozzle_diameter, 
                     base_layer.layer->bridging);
-                filler->spacing = m_support_material_flow.spacing();
-                filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / support_density));
+                coordf_t spacing = m_support_material_flow.spacing();
+                filler->link_max_length = coord_t(scale_(spacing * link_max_length_factor / support_density));
                 float density = float(support_density);
                 // find centerline of the external loop/extrusions
                 ExPolygons to_infill = (support_layer_id == 0 || ! with_sheath) ?
@@ -3271,12 +3274,12 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                         filler = filler_interface.get();
                         filler->angle = Geometry::deg2rad(float(m_object_config->support_material_angle.value + 90.));
                         density = 0.5f;
-                        filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / density));
+                        filler->link_max_length = coord_t(scale_(spacing * link_max_length_factor / density));
                     }
                     // use the proper spacing for first layer as we don't need to align
                     // its pattern to the other layers
                     flow = m_first_layer_flow;
-                    filler->spacing = flow.spacing();
+                    spacing = flow.spacing();
                 } else if (with_sheath) {
                     // Draw a perimeter all around the support infill. This makes the support stable, but difficult to remove.
                     // TODO: use brim ordering algorithm
@@ -3296,7 +3299,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     // Filler and its parameters
                     filler, density,
                     // Extrusion parameters
-                    erSupportMaterial, flow);
+                    erSupportMaterial, flow, spacing);
             }
 
             layer_cache.overlaps.reserve(4);

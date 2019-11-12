@@ -10,7 +10,7 @@
 
 namespace Slic3r {
 
-    Polylines FillSmooth::fill_surface(const Surface *surface, const FillParams &params)
+    Polylines FillSmooth::fill_surface(const Surface *surface, const FillParams &params) const
     {
         //ERROR: you shouldn't call that. Default to the rectilinear one.
         printf("FillSmooth::fill_surface() : you call the wrong method (fill_surface instead of fill_surface_extrusion).\n");
@@ -20,7 +20,7 @@ namespace Slic3r {
 
     /// @idx: the index of the step (0 = first step, 1 = second step, ...) The first lay down the volume and the others smoothen the surface.
     void FillSmooth::perform_single_fill(const int idx, ExtrusionEntityCollection &eecroot, const Surface &srf_source,
-        const FillParams &params, const double volume){
+        const FillParams &params, const double volume) const {
         if (srf_source.expolygon.empty()) return;
         
         // Save into layer smoothing path.
@@ -44,7 +44,7 @@ namespace Slic3r {
         }
         else{
             Surface surfaceNoOverlap(srf_source);
-            for (ExPolygon &poly : this->no_overlap_expolygons) {
+            for (const ExPolygon &poly : this->no_overlap_expolygons) {
                 if (poly.empty()) continue;
                 surfaceNoOverlap.expolygon = poly;
                 this->fill_expolygon(idx, *eec, surfaceNoOverlap, params_modifided, volume);
@@ -56,11 +56,11 @@ namespace Slic3r {
     }
     
     void FillSmooth::fill_expolygon(const int idx, ExtrusionEntityCollection &eec, const Surface &srf_to_fill, 
-        const FillParams &params, const double volume){
+        const FillParams &params, const double volume) const {
         
         std::unique_ptr<Fill> f2 = std::unique_ptr<Fill>(Fill::new_from_type(fillPattern[idx]));
         f2->bounding_box = this->bounding_box;
-        f2->spacing = this->spacing;
+        f2->init_spacing(this->get_spacing(),params);
         f2->layer_id = this->layer_id;
         f2->z = this->z;
         f2->angle = anglePass[idx] + this->angle;
@@ -102,7 +102,7 @@ namespace Slic3r {
     }
 
 
-    void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out)
+    void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const
     {
         coordf_t init_spacing = this->spacing;
 
