@@ -509,7 +509,9 @@ void PerimeterGenerator::process()
                 //store surface for top infill if only_one_perimeter_top
                 if(i==0 && config->only_one_perimeter_top && this->upper_slices != NULL){
                     //split the polygons with top/not_top
-                    ExPolygons upper_polygons(this->upper_slices->expolygons);
+                    coord_t offset_top_surface = scale_(config->external_infill_margin.get_abs_value(
+                        config->perimeters == 0 ? 0 : (ext_perimeter_width + perimeter_spacing * (config->perimeters - 1))));
+                    ExPolygons upper_polygons = offset_ex(this->upper_slices->expolygons, offset_top_surface);
                     ExPolygons top_polygons = diff_ex(last, (upper_polygons), true);
                     ExPolygons inner_polygons = diff_ex(last, top_polygons, true);
                     // increase a bit the inner space to fill the frontier between last and stored.

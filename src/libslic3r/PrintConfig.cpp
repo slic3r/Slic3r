@@ -645,7 +645,11 @@ void PrintConfigDef::init_fff_params()
     def->label = L("in vase mode (no seam)");
     def->full_label = L("ExternalPerimeter in vase mode");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("Print contour perimeters in two circle, in a contiunous way, like for a vase mode. It needs the external_perimeters_first parameter do work.");
+    def->tooltip = L("Print contour perimeters in two circle, in a contiunous way, like for a vase mode. It needs the external_perimeters_first parameter do work."
+        " \nDoesn't work for the first layer, as it may damage the bed overwise."
+        " \nNote that It will use min_layer_height from your hardware setting as the base height (it doesn't start at 0)"
+        ", so be sure to put here the lowest value your printer can handle."
+        " if it's not lower than two times the current layer height, it falls back to the normal algorithm, as there are not enough room to do two loops.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
 
@@ -1267,13 +1271,13 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::perimeter;
     def->tooltip = L("When printing with very low layer heights, you might still want to print a thicker "
                    "bottom layer to improve adhesion and tolerance for non perfect build plates. "
-                   "This can be expressed as an absolute value or as a percentage (for example: 150%) "
-                   "over the default layer height.");
+                   "This can be expressed as an absolute value or as a percentage (for example: 75%) "
+                   "over the default nozzle width.");
     def->sidetext = L("mm or %");
     def->ratio_over = "layer_height";
     def->min = 0;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0.2, false));
+    def->set_default_value(new ConfigOptionFloatOrPercent(75, true));
 
     def = this->add("first_layer_speed", coFloatOrPercent);
     def->label = L("Default");
