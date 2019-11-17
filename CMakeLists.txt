@@ -256,7 +256,9 @@ if(NOT WIN32)
 endif()
 find_package(Boost ${MINIMUM_BOOST_VERSION} REQUIRED COMPONENTS system filesystem thread log locale regex)
 # boost compile only in release & debug. We have to force the release version for RELWITHDEBINFO compilation
-set_target_properties(${Boost_LIBRARIES} PROPERTIES MAP_IMPORTED_CONFIG_RELWITHDEBINFO RELEASE)
+if (MSVC)
+  set_target_properties(${Boost_LIBRARIES} PROPERTIES MAP_IMPORTED_CONFIG_RELWITHDEBINFO RELEASE)
+endif()
 
 add_library(boost_libs INTERFACE)
 add_library(boost_headeronly INTERFACE)

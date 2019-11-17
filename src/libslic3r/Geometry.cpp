@@ -10,10 +10,12 @@
 #include <cmath>
 #include <list>
 #include <map>
+#include <numeric>
 #include <set>
 #include <utility>
 #include <stack>
 #include <vector>
+#include <boost/log/trivial.hpp>
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"

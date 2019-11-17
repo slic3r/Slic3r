@@ -1,0 +1,48 @@
+name: C/C++ CI ubuntu
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: install gtk2 glew
+      run: sudo apt-get install libgtk2.0-dev libglew-dev
+    - name: mkdir in deps
+      run: mkdir deps/build
+    - name: cmake deps
+      working-directory: ./deps/build
+      run: cmake ..
+    - name: make deps
+      working-directory: ./deps/build
+      run: make
+    - name: mkdir build
+      run: mkdir build
+    - name: cmake
+      working-directory: ./build
+      run: cmake .. -DCMAKE_PREFIX_PATH="/home/runner/work/Slic3r/Slic3r/deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
+    - name: make slic3r
+      working-directory: ./build
+      run: make slic3r
+    - name: create directory and copy into it
+      working-directory: ./build
+      run: |
+        mkdir package
+        mkdir package/bin
+    - name: copy resources
+      working-directory: ./build
+      run: cp -Rf ../resources package/resources
+    - name: copy bin
+      working-directory: ./build
+      run: cp -f src/slic3r++ package/bin/slic3r++
+    - name: create sh from echo
+      working-directory: ./build/package
+      run: echo -e '#!/bin/bash\nDIR=$(readlink -f "$0" | xargs dirname)\nexport LD_LIBRARY_PATH="$DIR/bin"\nexec "$DIR/bin/slic3r++" "$@"' >slic3r++
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: nightly_linux
+        path: build/package/
