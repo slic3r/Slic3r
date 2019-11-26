@@ -63,6 +63,7 @@ SlicingParameters SlicingParameters::create_from_config(
 
     SlicingParameters params;
     params.layer_height = object_config.layer_height.value;
+    params.layer_height_adaptive = object_config.layer_height_adaptive.value;
     params.first_print_layer_height = first_layer_height;
     params.first_object_layer_height = first_layer_height;
     params.object_print_z_min = 0.;

@@ -378,7 +378,9 @@ void Preset::set_visible_from_appconfig(const AppConfig &app_config)
 const std::vector<std::string>& Preset::print_options()
 {    
     static std::vector<std::string> s_opts {
-        "layer_height", "first_layer_height", "perimeters", "spiral_vase", "slice_closing_radius", "top_solid_layers", "bottom_solid_layers", 
+        "layer_height", 
+        "layer_height_adaptive",
+        "first_layer_height", "perimeters", "spiral_vase", "slice_closing_radius", "top_solid_layers", "bottom_solid_layers",
         "extra_perimeters",
         "extra_perimeters_odd_layers",
         "only_one_perimeter_top", "ensure_vertical_shell_thickness", "avoid_crossing_perimeters", 

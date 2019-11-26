@@ -1093,6 +1093,7 @@ void TabPrint::build()
         optgroup = page->new_optgroup(_(L("Layer height")));
         optgroup->append_single_option_line("layer_height");
         optgroup->append_single_option_line("first_layer_height");
+        optgroup->append_single_option_line("layer_height_adaptive");
         //optgroup->append_single_option_line("exact_last_layer_height");
 
         optgroup = page->new_optgroup(_(L("Filtering")));

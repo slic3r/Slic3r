@@ -476,6 +476,7 @@ public:
     // Force the generation of solid shells between adjacent materials/volumes.
     ConfigOptionBool                interface_shells;
     ConfigOptionFloat               layer_height;
+    ConfigOptionBool                layer_height_adaptive;
     ConfigOptionFloat               model_precision;
     ConfigOptionInt                 raft_layers;
     ConfigOptionEnum<SeamPosition>  seam_position;
@@ -529,6 +530,7 @@ protected:
         OPT_PTR(infill_only_where_needed);
         OPT_PTR(interface_shells);
         OPT_PTR(layer_height);
+        OPT_PTR(layer_height_adaptive);
         OPT_PTR(model_precision);
         OPT_PTR(raft_layers);
         OPT_PTR(seam_position);

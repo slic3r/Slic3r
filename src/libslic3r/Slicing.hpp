@@ -60,6 +60,8 @@ struct SlicingParameters
 	// The regular layer height, applied for all but the first layer, if not overridden by layer ranges
 	// or by the variable layer thickness table.
     coordf_t    layer_height;
+    // enable the adpatative algorithm
+    bool        layer_height_adaptive;
     // Minimum / maximum layer height, to be used for the automatic adaptive layer height algorithm,
     // or by an interactive layer height editor.
     coordf_t    min_layer_height;
