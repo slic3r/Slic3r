@@ -342,6 +342,13 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     bool have_wipe_tower = config->opt_bool("wipe_tower");
     for (auto el : { "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_bridging" })
         toggle_field(el, have_wipe_tower);
+
+
+    for (auto el : { "fill_smooth_width", "fill_smooth_distribution" })
+        toggle_field(el, (have_solid_infill && (config->option<ConfigOptionEnum<InfillPattern>>("top_fill_pattern")->value == InfillPattern::ipSmooth
+            || config->option<ConfigOptionEnum<InfillPattern>>("bottom_fill_pattern")->value == InfillPattern::ipSmooth
+            || config->option<ConfigOptionEnum<InfillPattern>>("solid_fill_pattern")->value == InfillPattern::ipSmooth))
+            || (config->option<ConfigOptionEnum<InfillPattern>>("support_material_interface_pattern")->value == InfillPattern::ipSmooth && have_support_material));
 }
 
 void ConfigManipulation::update_print_sla_config(DynamicPrintConfig* config, const bool is_global_config/* = false*/)

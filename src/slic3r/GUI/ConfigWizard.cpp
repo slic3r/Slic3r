@@ -349,7 +349,7 @@ PagePrinters::PagePrinters(ConfigWizard *parent, wxString title, wxString shortn
 
         if (check_first_variant) {
             // Select the default (first) model/variant on the Prusa vendor
-            picker->select_one(0, true);
+            //picker->select_one(0, true);
             check_first_variant = false;
         }
 
