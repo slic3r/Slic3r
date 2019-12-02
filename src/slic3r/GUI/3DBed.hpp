@@ -67,6 +67,7 @@ public:
         MK2,
         MK3,
         SL1,
+        MINI,
         Custom,
         Num_Types
     };

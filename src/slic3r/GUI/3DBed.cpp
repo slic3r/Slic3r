@@ -270,27 +270,12 @@ void Bed3D::render(GLCanvas3D& canvas, float theta, float scale_factor) const
 
     switch (m_type)
     {
-    case MK2:
-    {
-        render_prusa(canvas, "mk2", theta > 90.0f);
-        break;
-    }
-    case MK3:
-    {
-        render_prusa(canvas, "mk3", theta > 90.0f);
-        break;
-    }
-    case SL1:
-    {
-        render_prusa(canvas, "sl1", theta > 90.0f);
-        break;
-    }
+    case MK2: { render_prusa(canvas, "mk2", theta > 90.0f); break; }
+    case MK3: { render_prusa(canvas, "mk3", theta > 90.0f); break; }
+    case SL1: { render_prusa(canvas, "sl1", theta > 90.0f); break; }
+    case MINI: { render_prusa(canvas, "mini", theta > 90.0f); break; }
     default:
-    case Custom:
-    {
-        render_custom(canvas, theta > 90.0f);
-        break;
-    }
+    case Custom: { render_custom(canvas, theta > 90.0f); break; }
     }
 }
 
@@ -362,22 +347,30 @@ Bed3D::EType Bed3D::detect_type(const Pointfs& shape) const
         {
             if (curr->config.has("bed_shape"))
             {
-                if ((curr->vendor != nullptr) && (curr->vendor->name == "Prusa Research") && (shape == dynamic_cast<const ConfigOptionPoints*>(curr->config.option("bed_shape"))->values))
+                if (curr->vendor != nullptr)
                 {
-                    if (boost::contains(curr->name, "SL1"))
+                    if ((curr->vendor->name == "Prusa Research") && (shape == dynamic_cast<const ConfigOptionPoints*>(curr->config.option("bed_shape"))->values))
                     {
-                        type = SL1;
-                        break;
-                    }
-                    else if (boost::contains(curr->name, "MK3") || boost::contains(curr->name, "MK2.5"))
-                    {
-                        type = MK3;
-                        break;
-                    }
-                    else if (boost::contains(curr->name, "MK2"))
-                    {
-                        type = MK2;
-                        break;
+                        if (boost::contains(curr->name, "SL1"))
+                        {
+                            type = SL1;
+                            break;
+                        }
+                        else if (boost::contains(curr->name, "MK3") || boost::contains(curr->name, "MK2.5"))
+                        {
+                            type = MK3;
+                            break;
+                        }
+                        else if (boost::contains(curr->name, "MK2"))
+                        {
+                            type = MK2;
+                            break;
+                        }
+                        else if (boost::contains(curr->name, "MINI"))
+                        {
+                            type = MINI;
+                            break;
+                        }
                     }
                 }
             }
