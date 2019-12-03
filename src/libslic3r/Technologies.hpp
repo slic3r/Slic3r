@@ -32,4 +32,13 @@
 #define ENABLE_NONCUSTOM_DATA_VIEW_RENDERING (0 && ENABLE_1_42_0_ALPHA1)
 
 
+//============
+// 2.1.1 techs
+//============
+#define ENABLE_2_1_1 1
+
+// Enable thumbnail generator
+#define ENABLE_THUMBNAIL_GENERATOR (1 && ENABLE_2_1_1)
+
+
 #endif // _technologies_h_

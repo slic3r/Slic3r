@@ -10,6 +10,10 @@
 #include <wx/wfstream.h>
 #include <wx/zipstrm.h>
 
+#if ENABLE_THUMBNAIL_GENERATOR
+#include <miniz.h>
+#endif // ENABLE_THUMBNAIL_GENERATOR
+
 // Print now includes tbb, and tbb includes Windows. This breaks compilation of wxWidgets if included before wx.
 #include "libslic3r/Print.hpp"
 #include "libslic3r/SLAPrint.hpp"
@@ -82,8 +86,12 @@ void BackgroundSlicingProcess::process_fff()
 	assert(m_print == m_fff_print);
     m_print->process();
 	wxQueueEvent(GUI::wxGetApp().mainframe->m_plater, new wxCommandEvent(m_event_slicing_completed_id));
-	m_fff_print->export_gcode(m_temp_output_path, m_gcode_preview_data);
-	if (this->set_step_started(bspsGCodeFinalize)) {
+#if ENABLE_THUMBNAIL_GENERATOR
+    m_fff_print->export_gcode(m_temp_output_path, m_gcode_preview_data, m_thumbnail_cb);
+#else
+    m_fff_print->export_gcode(m_temp_output_path, m_gcode_preview_data);
+#endif // ENABLE_THUMBNAIL_GENERATOR
+    if (this->set_step_started(bspsGCodeFinalize)) {
 	    if (! m_export_path.empty()) {
 	    	//FIXME localize the messages
 	    	// Perform the final post-processing of the export path by applying the print statistics over the file name.

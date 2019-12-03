@@ -38,6 +38,7 @@ typedef std::vector<Point*>                             PointPtrs;
 typedef std::vector<const Point*>                       PointConstPtrs;
 typedef std::vector<Vec3crd>                            Points3;
 typedef std::vector<Vec2d>                              Pointfs;
+typedef std::vector<Vec2d>                              Vec2ds;
 typedef std::vector<Vec3d>                              Pointf3s;
 
 typedef Eigen::Matrix<float,  2, 2, Eigen::DontAlign> Matrix2f;
@@ -87,11 +88,12 @@ class Point : public Vec2crd
 public:
     typedef coord_t coord_type;
 
-    Point() : Vec2crd() { (*this)(0) = 0; (*this)(1) = 0; }
-    Point(coord_t x, coord_t y) { (*this)(0) = x; (*this)(1) = y; }
-    Point(int64_t x, int64_t y) { (*this)(0) = coord_t(x); (*this)(1) = coord_t(y); } // for Clipper
-    Point(double x, double y) { (*this)(0) = coord_t(lrint(x)); (*this)(1) = coord_t(lrint(y)); }
-    Point(const Point &rhs) { *this = rhs; }
+    Point() : Vec2crd(0, 0) {}
+    Point(coord_t x, coord_t y) : Vec2crd(x, y) {}
+    Point(int64_t x, int64_t y) : Vec2crd(coord_t(x), coord_t(y)) {} // for Clipper
+    Point(double x, double y) : Vec2crd(coord_t(lrint(x)), coord_t(lrint(y))) {}
+    Point(const Point& rhs) { *this = rhs; }
+    explicit Point(const Vec2d& rhs) : Vec2crd(coord_t(lrint(rhs.x())), coord_t(lrint(rhs.y()))) {}
     // This constructor allows you to construct Point from Eigen expressions
     template<typename OtherDerived>
     Point(const Eigen::MatrixBase<OtherDerived> &other) : Vec2crd(other) {}
