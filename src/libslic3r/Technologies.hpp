@@ -31,6 +31,20 @@
 // Use wxDataViewRender instead of wxDataViewCustomRenderer
 #define ENABLE_NONCUSTOM_DATA_VIEW_RENDERING (0 && ENABLE_1_42_0_ALPHA1)
 
-
 //#define DEBUG_EXTRUSION_OUTPUT 0
+
+//====================
+// 2.2.0.alpha1 techs
+//====================
+#define ENABLE_2_2_0_ALPHA1 0
+
+// Enable thumbnail generator
+// When removing this technology, remove it also from stable branch, 
+// where it has been partially copied for patch 2.1.1
+#define ENABLE_THUMBNAIL_GENERATOR (1 && ENABLE_2_2_0_ALPHA1)
+#define ENABLE_THUMBNAIL_GENERATOR_DEBUG (0 && ENABLE_THUMBNAIL_GENERATOR)
+
+// Enable adaptive layer height profile
+#define ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE (1 && ENABLE_2_2_0_ALPHA1)
+
 #endif // _technologies_h_

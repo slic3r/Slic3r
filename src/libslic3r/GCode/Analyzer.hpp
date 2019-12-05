@@ -21,6 +21,9 @@ public:
     static const std::string Width_Tag;
     static const std::string Height_Tag;
     static const std::string Color_Change_Tag;
+    static const std::string Pause_Print_Tag;
+    static const std::string Custom_Code_Tag;
+    static const std::string End_Pause_Print_Or_Custom_Code_Tag;
 
     static const double Default_mm3_per_mm;
     static const float Default_Width;
@@ -55,10 +58,11 @@ public:
         float width;     // mm
         float height;    // mm
         float feedrate;  // mm/s
+        float fan_speed; // percentage
         unsigned int cp_color_id;
 
         Metadata();
-        Metadata(ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, float width, float height, float feedrate, unsigned int cp_color_id = 0);
+        Metadata(ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, float width, float height, float feedrate, float fan_speed, unsigned int cp_color_id = 0);
 
         bool operator != (const Metadata& other) const;
     };
@@ -82,13 +86,14 @@ public:
         Vec3d end_position;
         float delta_extruder;
 
-        GCodeMove(EType type, ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, float width, float height, float feedrate, const Vec3d& start_position, const Vec3d& end_position, float delta_extruder, unsigned int cp_color_id = 0);
+        GCodeMove(EType type, ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, float width, float height, float feedrate, const Vec3d& start_position, const Vec3d& end_position, float delta_extruder, float fan_speed, unsigned int cp_color_id = 0);
         GCodeMove(EType type, const Metadata& data, const Vec3d& start_position, const Vec3d& end_position, float delta_extruder);
     };
 
     typedef std::vector<GCodeMove> GCodeMovesList;
     typedef std::map<GCodeMove::EType, GCodeMovesList> TypeToMovesMap;
     typedef std::map<unsigned int, Vec2d> ExtruderOffsetsMap;
+    typedef std::map<unsigned int, unsigned int> ExtruderToColorMap;
 
 private:
     struct State
@@ -101,7 +106,8 @@ private:
         float cached_position[5];
         float start_extrusion;
         float position[Num_Axis];
-        unsigned int cur_cp_color_id = 0;
+        float origin[Num_Axis];
+        unsigned int cp_color_counter = 0;
     };
 
 private:
@@ -111,6 +117,8 @@ private:
     ExtruderOffsetsMap m_extruder_offsets;
     unsigned int m_extruders_count;
     GCodeFlavor m_gcode_flavor;
+
+    ExtruderToColorMap m_extruder_color;
 
     // The output of process_layer()
     std::string m_process_output;
@@ -172,8 +180,17 @@ private:
     // Set extruder to relative mode
     void _processM83(const GCodeReader::GCodeLine& line);
 
+    // Set fan speed
+    void _processM106(const GCodeReader::GCodeLine& line);
+
+    // Disable fan
+    void _processM107(const GCodeReader::GCodeLine& line);
+
     // Set tool (MakerWare and Sailfish flavor)
     void _processM108orM135(const GCodeReader::GCodeLine& line);
+
+    // Recall stored home offsets
+    void _processM132(const GCodeReader::GCodeLine& line);
 
     // Repetier: Store x, y and z position
     void _processM401(const GCodeReader::GCodeLine& line);
@@ -202,7 +219,13 @@ private:
     void _process_height_tag(const std::string& comment, size_t pos);
 
     // Processes color change tag
-    void _process_color_change_tag();
+    void _process_color_change_tag(int extruder);
+
+    // Processes pause print and custom gcode tag
+    void _process_pause_print_or_custom_code_tag();
+
+    // Processes new layer tag
+    void _process_end_pause_print_or_custom_code_tag();
 
     void _set_units(EUnits units);
     EUnits _get_units() const;
@@ -234,11 +257,19 @@ private:
     void _set_feedrate(float feedrate_mm_sec);
     float _get_feedrate() const;
 
+    void _set_fan_speed(float fan_speed_percentage);
+    float _get_fan_speed() const;
+
     void _set_axis_position(EAxis axis, float position);
     float _get_axis_position(EAxis axis) const;
 
+    void _set_axis_origin(EAxis axis, float position);
+    float _get_axis_origin(EAxis axis) const;
+
     // Sets axes position to zero
     void _reset_axes_position();
+    // Sets origin position to zero
+    void _reset_axes_origin();
 
     void _set_start_position(const Vec3d& position);
     const Vec3d& _get_start_position() const;

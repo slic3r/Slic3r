@@ -7,6 +7,9 @@
 #include "libslic3r/ClipperUtils.hpp"
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/GCode/PreviewData.hpp"
+#if ENABLE_THUMBNAIL_GENERATOR
+#include "libslic3r/GCode/ThumbnailData.hpp"
+#endif // ENABLE_THUMBNAIL_GENERATOR
 #include "libslic3r/Geometry.hpp"
 #include "libslic3r/ExtrusionEntity.hpp"
 #include "libslic3r/Utils.hpp"
@@ -19,9 +22,11 @@
 #include "slic3r/GUI/PresetBundle.hpp"
 #include "slic3r/GUI/Tab.hpp"
 #include "slic3r/GUI/GUI_Preview.hpp"
+
 #include "GUI_App.hpp"
 #include "GUI_ObjectList.hpp"
 #include "GUI_ObjectManipulation.hpp"
+#include "Mouse3DController.hpp"
 #include "I18N.hpp"
 
 #if ENABLE_RETINA_GL
@@ -127,6 +132,9 @@ GLCanvas3D::LayersEditing::LayersEditing()
     , m_object_max_z(0.f)
     , m_slicing_parameters(nullptr)
     , m_layer_height_profile_modified(false)
+#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+    , m_adaptive_cusp(0.2f)
+#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
     , state(Unknown)
     , band_width(2.0f)
     , strength(0.005f)
@@ -147,7 +155,9 @@ GLCanvas3D::LayersEditing::~LayersEditing()
 }
 
 const float GLCanvas3D::LayersEditing::THICKNESS_BAR_WIDTH = 70.0f;
+#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 const float GLCanvas3D::LayersEditing::THICKNESS_RESET_BUTTON_HEIGHT = 22.0f;
+#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
 bool GLCanvas3D::LayersEditing::init(const std::string& vertex_shader_filename, const std::string& fragment_shader_filename)
 {
@@ -214,13 +224,103 @@ void GLCanvas3D::LayersEditing::render_overlay(const GLCanvas3D& canvas) const
     if (!m_enabled)
         return;
 
+#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+    static const ImVec4 orange(0.757f, 0.404f, 0.216f, 1.0f);
+
+    const Size& cnv_size = canvas.get_canvas_size();
+    float canvas_w = (float)cnv_size.get_width();
+    float canvas_h = (float)cnv_size.get_height();
+
+    ImGuiWrapper& imgui = *wxGetApp().imgui();
+    imgui.set_next_window_pos(canvas_w - imgui.get_style_scaling() * THICKNESS_BAR_WIDTH, canvas_h, ImGuiCond_Always, 1.0f, 1.0f);
+    imgui.set_next_window_bg_alpha(0.5f);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+
+    imgui.begin(_(L("Layer height profile")), ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+
+    ImGui::PushStyleColor(ImGuiCol_Text, orange);
+    imgui.text(_(L("Left mouse button:")));
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    imgui.text(_(L("Add detail")));
+
+    ImGui::PushStyleColor(ImGuiCol_Text, orange);
+    imgui.text(_(L("Right mouse button:")));
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    imgui.text(_(L("Remove detail")));
+
+    ImGui::PushStyleColor(ImGuiCol_Text, orange);
+    imgui.text(_(L("Shift + Left mouse button:")));
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    imgui.text(_(L("Reset to base")));
+
+    ImGui::PushStyleColor(ImGuiCol_Text, orange);
+    imgui.text(_(L("Shift + Right mouse button:")));
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    imgui.text(_(L("Smoothing")));
+
+    ImGui::PushStyleColor(ImGuiCol_Text, orange);
+    imgui.text(_(L("Mouse wheel:")));
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    imgui.text(_(L("Increase/decrease edit area")));
+    
+    ImGui::Separator();
+    if (imgui.button(_(L("Adaptive"))))
+        wxPostEvent((wxEvtHandler*)canvas.get_wxglcanvas(), Event<float>(EVT_GLCANVAS_ADAPTIVE_LAYER_HEIGHT_PROFILE, m_adaptive_cusp));
+
+    ImGui::SameLine();
+    float text_align = ImGui::GetCursorPosX();
+    imgui.text(_(L("Cusp (mm)")));
+    ImGui::SameLine();
+    float widget_align = ImGui::GetCursorPosX();
+    ImGui::PushItemWidth(imgui.get_style_scaling() * 120.0f);
+    m_adaptive_cusp = clamp((float)m_slicing_parameters->min_layer_height, (float)m_slicing_parameters->max_layer_height, m_adaptive_cusp);
+    ImGui::SliderFloat("", &m_adaptive_cusp, (float)m_slicing_parameters->min_layer_height, (float)m_slicing_parameters->max_layer_height, "%.2f");
+
+    ImGui::Separator();
+    if (imgui.button(_(L("Smooth"))))
+        wxPostEvent((wxEvtHandler*)canvas.get_wxglcanvas(), HeightProfileSmoothEvent(EVT_GLCANVAS_SMOOTH_LAYER_HEIGHT_PROFILE, m_smooth_params));
+
+    ImGui::SameLine();
+    ImGui::SetCursorPosX(text_align);
+    imgui.text(_(L("Radius")));
+    ImGui::SameLine();
+    ImGui::SetCursorPosX(widget_align);
+    ImGui::PushItemWidth(imgui.get_style_scaling() * 120.0f);
+    int radius = (int)m_smooth_params.radius;
+    if (ImGui::SliderInt("##1", &radius, 1, 10))
+        m_smooth_params.radius = (unsigned int)radius;
+
+    ImGui::SetCursorPosX(text_align);
+    imgui.text(_(L("Keep min")));
+    ImGui::SameLine();
+    ImGui::SetCursorPosX(widget_align);
+    ImGui::PushItemWidth(imgui.get_style_scaling() * 120.0f);
+    imgui.checkbox("##2", m_smooth_params.keep_min);
+
+    ImGui::Separator();
+    if (imgui.button(_(L("Reset"))))
+        wxPostEvent((wxEvtHandler*)canvas.get_wxglcanvas(), SimpleEvent(EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE));
+
+    imgui.end();
+
+    ImGui::PopStyleVar();
+
+    const Rect& bar_rect = get_bar_rect_viewport(canvas);
+#else
     const Rect& bar_rect = get_bar_rect_viewport(canvas);
     const Rect& reset_rect = get_reset_rect_viewport(canvas);
 
     _render_tooltip_texture(canvas, bar_rect, reset_rect);
     _render_reset_texture(reset_rect);
-    _render_active_object_annotations(canvas, bar_rect);
-    _render_profile(bar_rect);
+#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+    render_active_object_annotations(canvas, bar_rect);
+    render_profile(bar_rect);
 }
 
 float GLCanvas3D::LayersEditing::get_cursor_z_relative(const GLCanvas3D& canvas)
@@ -245,11 +345,13 @@ bool GLCanvas3D::LayersEditing::bar_rect_contains(const GLCanvas3D& canvas, floa
     return (rect.get_left() <= x) && (x <= rect.get_right()) && (rect.get_top() <= y) && (y <= rect.get_bottom());
 }
 
+#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 bool GLCanvas3D::LayersEditing::reset_rect_contains(const GLCanvas3D& canvas, float x, float y)
 {
     const Rect& rect = get_reset_rect_screen(canvas);
     return (rect.get_left() <= x) && (x <= rect.get_right()) && (rect.get_top() <= y) && (y <= rect.get_bottom());
 }
+#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
 Rect GLCanvas3D::LayersEditing::get_bar_rect_screen(const GLCanvas3D& canvas)
 {
@@ -257,9 +359,14 @@ Rect GLCanvas3D::LayersEditing::get_bar_rect_screen(const GLCanvas3D& canvas)
     float w = (float)cnv_size.get_width();
     float h = (float)cnv_size.get_height();
 
+#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+    return Rect(w - thickness_bar_width(canvas), 0.0f, w, h);
+#else
     return Rect(w - thickness_bar_width(canvas), 0.0f, w, h - reset_button_height(canvas));
+#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 }
 
+#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 Rect GLCanvas3D::LayersEditing::get_reset_rect_screen(const GLCanvas3D& canvas)
 {
     const Size& cnv_size = canvas.get_canvas_size();
@@ -268,6 +375,7 @@ Rect GLCanvas3D::LayersEditing::get_reset_rect_screen(const GLCanvas3D& canvas)
 
     return Rect(w - thickness_bar_width(canvas), h - reset_button_height(canvas), w, h);
 }
+#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
 Rect GLCanvas3D::LayersEditing::get_bar_rect_viewport(const GLCanvas3D& canvas)
 {
@@ -278,9 +386,14 @@ Rect GLCanvas3D::LayersEditing::get_bar_rect_viewport(const GLCanvas3D& canvas)
     float zoom = (float)canvas.get_camera().get_zoom();
     float inv_zoom = (zoom != 0.0f) ? 1.0f / zoom : 0.0f;
 
+#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+    return Rect((half_w - thickness_bar_width(canvas)) * inv_zoom, half_h * inv_zoom, half_w * inv_zoom, -half_h * inv_zoom);
+#else
     return Rect((half_w - thickness_bar_width(canvas)) * inv_zoom, half_h * inv_zoom, half_w * inv_zoom, (-half_h + reset_button_height(canvas)) * inv_zoom);
+#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 }
 
+#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 Rect GLCanvas3D::LayersEditing::get_reset_rect_viewport(const GLCanvas3D& canvas)
 {
     const Size& cnv_size = canvas.get_canvas_size();
@@ -292,13 +405,43 @@ Rect GLCanvas3D::LayersEditing::get_reset_rect_viewport(const GLCanvas3D& canvas
 
     return Rect((half_w - thickness_bar_width(canvas)) * inv_zoom, (-half_h + reset_button_height(canvas)) * inv_zoom, half_w * inv_zoom, -half_h * inv_zoom);
 }
+#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
-
-bool GLCanvas3D::LayersEditing::_is_initialized() const
+bool GLCanvas3D::LayersEditing::is_initialized() const
 {
     return m_shader.is_initialized();
 }
 
+std::string GLCanvas3D::LayersEditing::get_tooltip(const GLCanvas3D& canvas) const
+{
+    std::string ret;
+    if (m_enabled && (m_layer_height_profile.size() >= 4))
+    {
+        float z = get_cursor_z_relative(canvas);
+        if (z != -1000.0f)
+        {
+            z *= m_object_max_z;
+
+            float h = 0.0f;
+            for (size_t i = m_layer_height_profile.size() - 2; i >= 2; i -= 2)
+            {
+                float zi = m_layer_height_profile[i];
+                float zi_1 = m_layer_height_profile[i - 2];
+                if ((zi_1 <= z) && (z <= zi))
+                {
+                    float dz = zi - zi_1;
+                    h = (dz != 0.0f) ? lerp(m_layer_height_profile[i - 1], m_layer_height_profile[i + 1], (z - zi_1) / dz) : m_layer_height_profile[i + 1];
+                    break;
+                }
+            }
+            if (h > 0.0f)
+                ret = std::to_string(h);
+        }
+    }
+    return ret;
+}
+
+#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 void GLCanvas3D::LayersEditing::_render_tooltip_texture(const GLCanvas3D& canvas, const Rect& bar_rect, const Rect& reset_rect) const
 {
     // TODO: do this with ImGui
@@ -344,8 +487,9 @@ void GLCanvas3D::LayersEditing::_render_reset_texture(const Rect& reset_rect) co
 
     GLTexture::render_texture(m_reset_texture.get_id(), reset_rect.get_left(), reset_rect.get_right(), reset_rect.get_bottom(), reset_rect.get_top());
 }
+#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
-void GLCanvas3D::LayersEditing::_render_active_object_annotations(const GLCanvas3D& canvas, const Rect& bar_rect) const
+void GLCanvas3D::LayersEditing::render_active_object_annotations(const GLCanvas3D& canvas, const Rect& bar_rect) const
 {
     m_shader.start_using();
 
@@ -376,7 +520,7 @@ void GLCanvas3D::LayersEditing::_render_active_object_annotations(const GLCanvas
     m_shader.stop_using();
 }
 
-void GLCanvas3D::LayersEditing::_render_profile(const Rect& bar_rect) const
+void GLCanvas3D::LayersEditing::render_profile(const Rect& bar_rect) const
 {
     //FIXME show some kind of legend.
 
@@ -493,6 +637,27 @@ void GLCanvas3D::LayersEditing::reset_layer_height_profile(GLCanvas3D& canvas)
     canvas.post_event(SimpleEvent(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS));
 }
 
+#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+void GLCanvas3D::LayersEditing::adaptive_layer_height_profile(GLCanvas3D& canvas, float cusp)
+{
+    this->update_slicing_parameters();
+    m_layer_height_profile = layer_height_profile_adaptive(*m_slicing_parameters, *m_model_object, cusp);
+    const_cast<ModelObject*>(m_model_object)->layer_height_profile = m_layer_height_profile;
+    m_layers_texture.valid = false;
+    canvas.post_event(SimpleEvent(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS));
+}
+
+void GLCanvas3D::LayersEditing::smooth_layer_height_profile(GLCanvas3D& canvas, const HeightProfileSmoothingParams& smoothing_params)
+{
+    this->update_slicing_parameters();
+
+    m_layer_height_profile = smooth_height_profile(m_layer_height_profile, *m_slicing_parameters, smoothing_params);
+    const_cast<ModelObject*>(m_model_object)->layer_height_profile = m_layer_height_profile;
+    m_layers_texture.valid = false;
+    canvas.post_event(SimpleEvent(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS));
+}
+#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+
 void GLCanvas3D::LayersEditing::generate_layer_height_texture()
 {
 	this->update_slicing_parameters();
@@ -527,7 +692,7 @@ void GLCanvas3D::LayersEditing::accept_changes(GLCanvas3D& canvas)
 {
     if (last_object_id >= 0) {
         if (m_layer_height_profile_modified) {
-            wxGetApp().plater()->take_snapshot(_(L("Layers heights")));
+            wxGetApp().plater()->take_snapshot(_(L("Layer height profile-Manual edit")));
             const_cast<ModelObject*>(m_model_object)->layer_height_profile = m_layer_height_profile;
 			canvas.post_event(SimpleEvent(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS));
         }
@@ -554,6 +719,7 @@ float GLCanvas3D::LayersEditing::thickness_bar_width(const GLCanvas3D &canvas)
          * THICKNESS_BAR_WIDTH;
 }
 
+#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 float GLCanvas3D::LayersEditing::reset_button_height(const GLCanvas3D &canvas)
 {
     return
@@ -564,6 +730,7 @@ float GLCanvas3D::LayersEditing::reset_button_height(const GLCanvas3D &canvas)
 #endif
          * THICKNESS_RESET_BUTTON_HEIGHT;
 }
+#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
 
 const Point GLCanvas3D::Mouse::Drag::Invalid_2D_Point(INT_MAX, INT_MAX);
@@ -833,20 +1000,29 @@ GLCanvas3D::LegendTexture::LegendTexture()
 {
 }
 
-void GLCanvas3D::LegendTexture::fill_color_print_legend_values(const GCodePreviewData& preview_data, const GLCanvas3D& canvas, 
-                                                               std::vector<std::pair<double, double>>& cp_legend_values)
+void GLCanvas3D::LegendTexture::fill_color_print_legend_items(  const GLCanvas3D& canvas,
+                                                                const std::vector<float>& colors_in,
+                                                                std::vector<float>& colors,
+                                                                std::vector<std::string>& cp_legend_items)
 {
-    if (preview_data.extrusion.view_type == GCodePreviewData::Extrusion::ColorPrint && 
-        wxGetApp().extruders_edited_cnt() == 1) // show color change legend only for single-material presets
+    std::vector<Model::CustomGCode> custom_gcode_per_height = wxGetApp().plater()->model().custom_gcode_per_height;
+
+    const int extruders_cnt = wxGetApp().extruders_edited_cnt();
+    if (extruders_cnt == 1) 
     {
-        auto& config = wxGetApp().preset_bundle->project_config;
-        const std::vector<double>& color_print_values = config.option<ConfigOptionFloats>("colorprint_heights")->values;
+        if (custom_gcode_per_height.empty()) {
+            cp_legend_items.push_back(I18N::translate_utf8(L("Default print color")));
+            colors = colors_in;
+            return;
+        }
+        std::vector<std::pair<double, double>> cp_values;
         
-        if (!color_print_values.empty()) {
             std::vector<double> print_zs = canvas.get_current_print_zs(true);
-            for (auto cp_value : color_print_values)
+        for (auto custom_code : custom_gcode_per_height)
             {
-                auto lower_b = std::lower_bound(print_zs.begin(), print_zs.end(), cp_value - DoubleSlider::epsilon());
+            if (custom_code.gcode != ColorChangeCode)
+                continue;
+            auto lower_b = std::lower_bound(print_zs.begin(), print_zs.end(), custom_code.height - DoubleSlider::epsilon());
 
                 if (lower_b == print_zs.end())
                     continue;
@@ -855,25 +1031,94 @@ void GLCanvas3D::LegendTexture::fill_color_print_legend_values(const GCodePrevie
                 double previous_z   = lower_b == print_zs.begin() ? 0.0 : *(--lower_b);
 
                 // to avoid duplicate values, check adding values
-                if (cp_legend_values.empty() || 
-                    !(cp_legend_values.back().first == previous_z && cp_legend_values.back().second == current_z) )
-                    cp_legend_values.push_back(std::pair<double, double>(previous_z, current_z));
+            if (cp_values.empty() ||
+                !(cp_values.back().first == previous_z && cp_values.back().second == current_z))
+                cp_values.push_back(std::pair<double, double>(previous_z, current_z));
             }
+
+        const auto items_cnt = (int)cp_values.size();
+        if (items_cnt == 0) // There is no one color change, but there is/are some pause print or custom Gcode
+        {
+            cp_legend_items.push_back(I18N::translate_utf8(L("Default print color")));
+            cp_legend_items.push_back(I18N::translate_utf8(L("Pause print or custom G-code")));
+            colors = colors_in;
+            return;
         }
+
+        const int color_cnt = (int)colors_in.size() / 4;
+        colors.resize(colors_in.size(), 0.0);
+                
+        ::memcpy((void*)(colors.data()), (const void*)(colors_in.data() + (color_cnt - 1) * 4), 4 * sizeof(float));
+        cp_legend_items.push_back(I18N::translate_utf8(L("Pause print or custom G-code")));
+        size_t color_pos = 4;
+
+        for (int i = items_cnt; i >= 0; --i, color_pos+=4)
+        {
+            // update colors for color print item
+            ::memcpy((void*)(colors.data() + color_pos), (const void*)(colors_in.data() + i * 4), 4 * sizeof(float));
+
+            // create label for color print item
+            std::string id_str = std::to_string(i + 1) + ": ";
+
+            if (i == 0) {
+                cp_legend_items.push_back(id_str + (boost::format(I18N::translate_utf8(L("up to %.2f mm"))) % cp_values[0].first).str());
+                break;
+    }
+            if (i == items_cnt) {
+                cp_legend_items.push_back(id_str + (boost::format(I18N::translate_utf8(L("above %.2f mm"))) % cp_values[i - 1].second).str());
+                continue;
+}
+
+            cp_legend_items.push_back(id_str + (boost::format(I18N::translate_utf8(L("%.2f - %.2f mm"))) % cp_values[i - 1].second % cp_values[i].first).str());
+        }
+    }
+    else
+{
+        // colors = colors_in;
+        const int color_cnt = (int)colors_in.size() / 4;
+        colors.resize(colors_in.size(), 0.0);
+
+        ::memcpy((void*)(colors.data()), (const void*)(colors_in.data()), 4 * extruders_cnt * sizeof(float));
+        size_t color_pos = 4 * extruders_cnt;
+        size_t color_in_pos = 4 * (color_cnt - 1);
+        
+        for (unsigned int i = 0; i < (unsigned int)extruders_cnt; ++i)
+            cp_legend_items.push_back((boost::format(I18N::translate_utf8(L("Extruder %d"))) % (i + 1)).str());
+
+        ::memcpy((void*)(colors.data() + color_pos), (const void*)(colors_in.data() + color_in_pos), 4 * sizeof(float));
+        color_pos += 4;
+        color_in_pos -= 4;
+        cp_legend_items.push_back(I18N::translate_utf8(L("Pause print or custom G-code")));
+
+        int cnt = custom_gcode_per_height.size();
+        for (int i = cnt-1; i >= 0; --i)
+            if (custom_gcode_per_height[i].gcode == ColorChangeCode) {
+                ::memcpy((void*)(colors.data() + color_pos), (const void*)(colors_in.data() + color_in_pos), 4 * sizeof(float));
+                color_pos += 4;
+                color_in_pos -= 4;
+                cp_legend_items.push_back((boost::format(I18N::translate_utf8(L("Color change for Extruder %d at %.2f mm"))) % custom_gcode_per_height[i].extruder % custom_gcode_per_height[i].height).str());
+            }
     }
 }
 
-bool GLCanvas3D::LegendTexture::generate(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors, const GLCanvas3D& canvas, bool compress)
+bool GLCanvas3D::LegendTexture::generate(const GCodePreviewData& preview_data, const std::vector<float>& tool_colors_in, const GLCanvas3D& canvas, bool compress)
 {
     reset();
 
     // collects items to render
     auto title = _(preview_data.get_legend_title());
 
-    std::vector<std::pair<double, double>> cp_legend_values;
-    fill_color_print_legend_values(preview_data, canvas, cp_legend_values);
+    std::vector<std::string> cp_legend_items;
+    std::vector<float> cp_colors;
 
-    const GCodePreviewData::LegendItemsList& items = preview_data.get_legend_items(tool_colors, cp_legend_values);
+    if (preview_data.extrusion.view_type == GCodePreviewData::Extrusion::ColorPrint)
+    {
+        cp_legend_items.reserve(cp_colors.size());
+        fill_color_print_legend_items(canvas, tool_colors_in, cp_colors, cp_legend_items);
+    }
+
+    const std::vector<float>& tool_colors = preview_data.extrusion.view_type == GCodePreviewData::Extrusion::ColorPrint ? cp_colors : tool_colors_in;
+    const GCodePreviewData::LegendItemsList& items = preview_data.get_legend_items(tool_colors, cp_legend_items);
 
     unsigned int items_count = (unsigned int)items.size();
     if (items_count == 0)
@@ -1115,6 +1360,15 @@ wxDEFINE_EVENT(EVT_GLCANVAS_MOVE_DOUBLE_SLIDER, wxKeyEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_EDIT_COLOR_CHANGE, wxKeyEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_UNDO, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_REDO, SimpleEvent);
+#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+wxDEFINE_EVENT(EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE, SimpleEvent);
+wxDEFINE_EVENT(EVT_GLCANVAS_ADAPTIVE_LAYER_HEIGHT_PROFILE, Event<float>);
+wxDEFINE_EVENT(EVT_GLCANVAS_SMOOTH_LAYER_HEIGHT_PROFILE, HeightProfileSmoothEvent);
+#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+
+#if ENABLE_THUMBNAIL_GENERATOR
+const double GLCanvas3D::DefaultCameraZoomToBoxMarginFactor = 1.25;
+#endif // ENABLE_THUMBNAIL_GENERATOR
 
 GLCanvas3D::GLCanvas3D(wxGLCanvas* canvas, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar)
     : m_canvas(canvas)
@@ -1365,7 +1619,7 @@ void GLCanvas3D::set_model(Model* model)
 
 void GLCanvas3D::bed_shape_changed()
 {
-    m_camera.set_scene_box(scene_bounding_box());
+    refresh_camera_scene_box();
     m_camera.requires_zoom_to_bed = true;
     m_dirty = true;
     if (m_bed.is_prusa())
@@ -1391,7 +1645,7 @@ BoundingBoxf3 GLCanvas3D::volumes_bounding_box() const
 BoundingBoxf3 GLCanvas3D::scene_bounding_box() const
 {
     BoundingBoxf3 bb = volumes_bounding_box();
-    bb.merge(m_bed.get_bounding_box(false));
+    bb.merge(m_bed.get_bounding_box(true));
 
     if (m_config != nullptr)
     {
@@ -1412,6 +1666,32 @@ bool GLCanvas3D::is_layers_editing_allowed() const
 {
     return m_layers_editing.is_allowed();
 }
+
+#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+void GLCanvas3D::reset_layer_height_profile()
+{
+    wxGetApp().plater()->take_snapshot(_(L("Layer height profile-Reset")));
+    m_layers_editing.reset_layer_height_profile(*this);
+    m_layers_editing.state = LayersEditing::Completed;
+    m_dirty = true;
+}
+
+void GLCanvas3D::adaptive_layer_height_profile(float cusp)
+{
+    wxGetApp().plater()->take_snapshot(_(L("Layer height profile-Adaptive")));
+    m_layers_editing.adaptive_layer_height_profile(*this, cusp);
+    m_layers_editing.state = LayersEditing::Completed;
+    m_dirty = true;
+}
+
+void GLCanvas3D::smooth_layer_height_profile(const HeightProfileSmoothingParams& smoothing_params)
+{
+    wxGetApp().plater()->take_snapshot(_(L("Layer height profile-Smooth all")));
+    m_layers_editing.smooth_layer_height_profile(*this, smoothing_params);
+    m_layers_editing.state = LayersEditing::Completed;
+    m_dirty = true;
+}
+#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
 bool GLCanvas3D::is_reload_delayed() const
 {
@@ -1539,10 +1819,11 @@ void GLCanvas3D::render()
         return;
     }
 
+    const Size& cnv_size = get_canvas_size();
+
     if (m_camera.requires_zoom_to_bed)
     {
         zoom_to_bed();
-        const Size& cnv_size = get_canvas_size();
         _resize((unsigned int)cnv_size.get_width(), (unsigned int)cnv_size.get_height());
         m_camera.requires_zoom_to_bed = false;
     }
@@ -1583,7 +1864,7 @@ void GLCanvas3D::render()
     _render_objects();
     _render_sla_slices();
     _render_selection();
-    _render_bed(theta);
+    _render_bed(theta, true);
 
 #if ENABLE_RENDER_SELECTION_CENTER
     _render_selection_center();
@@ -1633,6 +1914,8 @@ void GLCanvas3D::render()
     m_camera.debug_render();
 #endif // ENABLE_CAMERA_STATISTICS
 
+    wxGetApp().plater()->get_mouse3d_controller().render_settings_dialog((unsigned int)cnv_size.get_width(), (unsigned int)cnv_size.get_height());
+
     wxGetApp().imgui()->render();
 
     m_canvas->SwapBuffers();
@@ -1642,6 +1925,18 @@ void GLCanvas3D::render()
     m_render_stats.last_frame = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
 #endif // ENABLE_RENDER_STATISTICS
 }
+
+#if ENABLE_THUMBNAIL_GENERATOR
+void GLCanvas3D::render_thumbnail(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, bool printable_only, bool parts_only, bool show_bed, bool transparent_background)
+{
+    switch (GLCanvas3DManager::get_framebuffers_type())
+    {
+    case GLCanvas3DManager::FB_Arb: { _render_thumbnail_framebuffer(thumbnail_data, w, h, printable_only, parts_only, show_bed, transparent_background); break; }
+    case GLCanvas3DManager::FB_Ext: { _render_thumbnail_framebuffer_ext(thumbnail_data, w, h, printable_only, parts_only, show_bed, transparent_background); break; }
+    default: { _render_thumbnail_legacy(thumbnail_data, w, h, printable_only, parts_only, show_bed, transparent_background); break; }
+    }
+}
+#endif // ENABLE_THUMBNAIL_GENERATOR
 
 void GLCanvas3D::select_all()
 {
@@ -1765,9 +2060,20 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
     std::vector<ModelVolumeState> model_volume_state;
 	std::vector<ModelVolumeState> aux_volume_state;
 
+    struct GLVolumeState {
+        GLVolumeState() :
+            volume_idx(-1) {}
+        GLVolumeState(const GLVolume* volume, unsigned int volume_idx) :
+            composite_id(volume->composite_id), volume_idx(volume_idx) {}
+
+        GLVolume::CompositeID       composite_id;
+        // Volume index in the old GLVolume vector.
+        size_t                      volume_idx;
+    };
+
     // SLA steps to pull the preview meshes for.
 	typedef std::array<SLAPrintObjectStep, 2> SLASteps;
-	SLASteps sla_steps = { slaposSupportTree, slaposBasePool };
+	SLASteps sla_steps = { slaposSupportTree, slaposPad };
     struct SLASupportState {
 		std::array<PrintStateBase::StateWithTimeStamp, std::tuple_size<SLASteps>::value> step;
     };
@@ -1776,6 +2082,7 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
 
     std::vector<size_t> instance_ids_selected;
     std::vector<size_t> map_glvolume_old_to_new(m_volumes.volumes.size(), size_t(-1));
+    std::vector<GLVolumeState> deleted_volumes;
     std::vector<GLVolume*> glvolumes_new;
     glvolumes_new.reserve(m_volumes.volumes.size());
     auto model_volume_state_lower = [](const ModelVolumeState &m1, const ModelVolumeState &m2) { return m1.geometry_id < m2.geometry_id; };
@@ -1838,7 +2145,8 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
                 // to revert to before it was generated). We only reuse the volume if that's not the case.
                 if (m_model->objects[volume->composite_id.object_id]->sla_points_status != sla::PointsStatus::NoPoints)
                     mvs = &(*it);
-        } else {
+        }
+        else {
 			auto it = std::lower_bound(model_volume_state.begin(), model_volume_state.end(), key, model_volume_state_lower);
             if (it != model_volume_state.end() && it->geometry_id == key.geometry_id)
 				mvs = &(*it);
@@ -1855,8 +2163,12 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
                 volume_idx_wipe_tower_old = (int)volume_id;
             }
             if (! m_reload_delayed)
+            {
+                deleted_volumes.emplace_back(volume, volume_id);
                 delete volume;
-        } else {
+            }
+        }
+        else {
             // This GLVolume will be reused.
             volume->set_sla_shift_z(0.0);
             map_glvolume_old_to_new[volume_id] = glvolumes_new.size();
@@ -1884,6 +2196,16 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
 
 	bool update_object_list = false;
 
+    auto find_old_volume_id = [&deleted_volumes](const GLVolume::CompositeID& id) -> unsigned int {
+        for (unsigned int i = 0; i < (unsigned int)deleted_volumes.size(); ++i)
+        {
+            const GLVolumeState& v = deleted_volumes[i];
+            if (v.composite_id == id)
+                return v.volume_idx;
+        }
+        return (unsigned int)-1;
+    };
+
     if (m_volumes.volumes != glvolumes_new)
 		update_object_list = true;
     m_volumes.volumes = std::move(glvolumes_new);
@@ -1898,6 +2220,9 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
 				assert(it != model_volume_state.end() && it->geometry_id == key.geometry_id);
                 if (it->new_geometry()) {
                     // New volume.
+                    unsigned int old_id = find_old_volume_id(it->composite_id);
+                    if (old_id != (unsigned int)-1)
+                        map_glvolume_old_to_new[old_id] = m_volumes.volumes.size();
                     m_volumes.load_object_volume(&model_object, obj_idx, volume_idx, instance_idx, m_color_by, m_initialized);
                     m_volumes.volumes.back()->geometry_id = key.geometry_id;
 					update_object_list = true;
@@ -1999,19 +2324,17 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
             float a = dynamic_cast<const ConfigOptionFloat*>(m_config->option("wipe_tower_rotation_angle"))->value;
 
             const Print *print = m_process->fff_print();
-            float depth = print->get_wipe_tower_depth();
 
-            // Calculate wipe tower brim spacing.
             const DynamicPrintConfig &print_config  = wxGetApp().preset_bundle->prints.get_edited_preset().config;
             double layer_height                     = print_config.opt_float("layer_height");
             double first_layer_height               = print_config.get_abs_value("first_layer_height", layer_height);
-            float brim_spacing = print->config().nozzle_diameter.values[0] * 1.25f - first_layer_height * (1. - M_PI_4);
+            double nozzle_diameter                  = print->config().nozzle_diameter.values[0];
+            float depth = print->wipe_tower_data(extruders_count, first_layer_height, nozzle_diameter).depth;
+            float brim_width = print->wipe_tower_data(extruders_count, first_layer_height, nozzle_diameter).brim_width;
 
-            if (!print->is_step_done(psWipeTower))
-                depth = (900.f/w) * (float)(extruders_count - 1);
             int volume_idx_wipe_tower_new = m_volumes.load_wipe_tower_preview(
                 1000, x, y, w, depth, (float)height, a, !print->is_step_done(psWipeTower),
-                brim_spacing * 4.5f, m_initialized);
+                brim_width, m_initialized);
             if (volume_idx_wipe_tower_old != -1)
                 map_glvolume_old_to_new[volume_idx_wipe_tower_old] = volume_idx_wipe_tower_new;
         }
@@ -2043,20 +2366,6 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
 
         post_event(Event<bool>(EVT_GLCANVAS_ENABLE_ACTION_BUTTONS, 
                                contained_min_one && !m_model->objects.empty() && state != ModelInstance::PVS_Partly_Outside));
-
-// #ys_FIXME_delete_after_testing
-//         bool contained = m_volumes.check_outside_state(m_config, &state);
-//         if (!contained)
-//         {
-//             _set_warning_texture(WarningTexture::ObjectOutside, true);
-//             post_event(Event<bool>(EVT_GLCANVAS_ENABLE_ACTION_BUTTONS, state == ModelInstance::PVS_Fully_Outside));
-//         }
-//         else
-//         {
-//             m_volumes.reset_outside_state();
-//             _set_warning_texture(WarningTexture::ObjectOutside, false);
-//             post_event(Event<bool>(EVT_GLCANVAS_ENABLE_ACTION_BUTTONS, !m_model->objects.empty()));
-//         }
     }
     else
     {
@@ -2065,7 +2374,7 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
         post_event(Event<bool>(EVT_GLCANVAS_ENABLE_ACTION_BUTTONS, false));
     }
 
-    m_camera.set_scene_box(scene_bounding_box());
+    refresh_camera_scene_box();
 
     if (m_selection.is_empty())
     {
@@ -2101,11 +2410,11 @@ static void reserve_new_volume_finalize_old_volume(GLVolume& vol_new, GLVolume& 
 
 static void load_gcode_retractions(const GCodePreviewData::Retraction& retractions, GLCanvas3D::GCodePreviewVolumeIndex::EType extrusion_type, GLVolumeCollection &volumes, GLCanvas3D::GCodePreviewVolumeIndex &volume_index, bool gl_initialized)
 {
-	volume_index.first_volumes.emplace_back(extrusion_type, 0, (unsigned int)volumes.volumes.size());
-
 	// nothing to render, return
 	if (retractions.positions.empty())
 		return;
+
+	volume_index.first_volumes.emplace_back(extrusion_type, 0, (unsigned int)volumes.volumes.size());
 
 	GLVolume *volume = volumes.new_nontoolpath_volume(retractions.color.rgba, VERTEX_BUFFER_RESERVE_SIZE);
 
@@ -2172,6 +2481,9 @@ void GLCanvas3D::load_gcode_preview(const GCodePreviewData& preview_data, const 
 	                		++ idx_volume_index_src;
 	                		idx_volume_of_this_type_last = (idx_volume_index_src + 1 == m_gcode_preview_volume_index.first_volumes.size()) ? m_volumes.volumes.size() : m_gcode_preview_volume_index.first_volumes[idx_volume_index_src + 1].id;
 	                		idx_volume_of_this_type_first_new = idx_volume_dst;
+	                		if (idx_volume_src == idx_volume_of_this_type_last)
+	                			// Empty sequence of volumes for the current index item.
+	                			continue;
 	                	}
 	                	if (! m_volumes.volumes[idx_volume_src]->print_zs.empty())
                 			m_volumes.volumes[idx_volume_dst ++] = m_volumes.volumes[idx_volume_src];
@@ -2210,7 +2522,7 @@ void GLCanvas3D::load_sla_preview()
     }
 }
 
-void GLCanvas3D::load_preview(const std::vector<std::string>& str_tool_colors, const std::vector<double>& color_print_values)
+void GLCanvas3D::load_preview(const std::vector<std::string>& str_tool_colors, const std::vector<Model::CustomGCode>& color_print_values)
 {
     const Print *print = this->fff_print();
     if (print == nullptr)
@@ -2305,14 +2617,21 @@ void GLCanvas3D::on_idle(wxIdleEvent& evt)
     m_dirty |= m_main_toolbar.update_items_state();
     m_dirty |= m_undoredo_toolbar.update_items_state();
     m_dirty |= m_view_toolbar.update_items_state();
+    bool mouse3d_controller_applied = wxGetApp().plater()->get_mouse3d_controller().apply(m_camera);
+    m_dirty |= mouse3d_controller_applied;
 
     if (!m_dirty)
         return;
 
     _refresh_if_shown_on_screen();
 
-    if (m_keep_dirty)
+    if (m_keep_dirty || mouse3d_controller_applied)
+    {
         m_dirty = true;
+        evt.RequestMore();
+}
+    else
+        m_dirty = false;
 }
 
 void GLCanvas3D::on_char(wxKeyEvent& evt)
@@ -2357,6 +2676,20 @@ void GLCanvas3D::on_char(wxKeyEvent& evt)
 #endif /* __APPLE__ */
             post_event(SimpleEvent(EVT_GLTOOLBAR_COPY));
         break;
+
+#ifdef __APPLE__
+        case 'm':
+        case 'M':
+#else /* __APPLE__ */
+        case WXK_CONTROL_M:
+#endif /* __APPLE__ */
+            {
+                Mouse3DController& controller = wxGetApp().plater()->get_mouse3d_controller();
+                controller.show_settings_dialog(!controller.is_settings_dialog_shown());
+                m_dirty = true;
+                break;
+            }
+
 #ifdef __APPLE__
         case 'v':
         case 'V':
@@ -2424,11 +2757,11 @@ void GLCanvas3D::on_char(wxKeyEvent& evt)
         case 'B':
         case 'b': { zoom_to_bed(); break; }
         case 'I':
-        case 'i': { set_camera_zoom(1.0); break; }
+        case 'i': { _update_camera_zoom(1.0); break; }
         case 'K':
         case 'k': { m_camera.select_next_type(); m_dirty = true; break; }
         case 'O':
-        case 'o': { set_camera_zoom(-1.0); break; }
+        case 'o': { _update_camera_zoom(-1.0); break; }
 #if ENABLE_RENDER_PICKING_PASS
         case 'T':
         case 't': {
@@ -2531,6 +2864,11 @@ void GLCanvas3D::on_key(wxKeyEvent& evt)
 
 void GLCanvas3D::on_mouse_wheel(wxMouseEvent& evt)
 {
+    // try to filter out events coming from mouse 3d 
+    Mouse3DController& controller = wxGetApp().plater()->get_mouse3d_controller();
+    if (controller.process_mouse_wheel())
+        return;
+
     if (!m_initialized)
         return;
 
@@ -2575,7 +2913,7 @@ void GLCanvas3D::on_mouse_wheel(wxMouseEvent& evt)
         return;
 
     // Calculate the zoom delta and apply it to the current zoom factor
-    set_camera_zoom((double)evt.GetWheelRotation() / (double)evt.GetWheelDelta());
+    _update_camera_zoom((double)evt.GetWheelRotation() / (double)evt.GetWheelDelta());
 }
 
 void GLCanvas3D::on_timer(wxTimerEvent& evt)
@@ -2634,19 +2972,6 @@ std::string format_mouse_event_debug_message(const wxMouseEvent &evt)
 
 void GLCanvas3D::on_mouse(wxMouseEvent& evt)
 {
-    auto mouse_up_cleanup = [this](){
-        m_moving = false;
-        m_mouse.drag.move_volume_idx = -1;
-        m_mouse.set_start_position_3D_as_invalid();
-        m_mouse.set_start_position_2D_as_invalid();
-        m_mouse.dragging = false;
-        m_mouse.ignore_left_up = false;
-        m_dirty = true;
-
-        if (m_canvas->HasCapture())
-            m_canvas->ReleaseMouse();
-    };
-
 #if ENABLE_RETINA_GL
     const float scale = m_retina_helper->get_scale_factor();
     evt.SetX(evt.GetX() * scale);
@@ -2780,6 +3105,7 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
             m_layers_editing.state = LayersEditing::Editing;
             _perform_layer_editing_action(&evt);
         }
+#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
         else if ((layer_editing_object_idx != -1) && m_layers_editing.reset_rect_contains(*this, pos(0), pos(1)))
         {
             if (evt.LeftDown())
@@ -2792,6 +3118,7 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
                 m_dirty = true;
             }
         }
+#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
         else if (evt.LeftDown() && (evt.ShiftDown() || evt.AltDown()) && m_picking_enabled)
         {
             if (m_gizmos.get_current_type() != GLGizmosManager::SlaSupports)
@@ -2853,6 +3180,7 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
                     volume_bbox.offset(1.0);
                     if (volume_bbox.contains(m_mouse.scene_position))
                     {
+                        m_volumes.volumes[volume_idx]->hover = GLVolume::HS_None;
                         // The dragging operation is initiated.
                         m_mouse.drag.move_volume_idx = volume_idx;
                         m_selection.start_dragging();
@@ -2922,6 +3250,7 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
 
         if ((m_layers_editing.state != LayersEditing::Unknown) && (layer_editing_object_idx != -1))
         {
+            set_tooltip("");
             if (m_layers_editing.state == LayersEditing::Editing)
                 _perform_layer_editing_action(&evt);
         }
@@ -3030,6 +3359,9 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
     {
         m_mouse.position = pos.cast<double>();
         std::string tooltip = "";
+
+        if (tooltip.empty())
+            tooltip = m_layers_editing.get_tooltip(*this);
 
         if (tooltip.empty())
             tooltip = m_gizmos.get_tooltip();
@@ -3370,13 +3702,6 @@ void GLCanvas3D::do_mirror(const std::string& snapshot_type)
     m_dirty = true;
 }
 
-void GLCanvas3D::set_camera_zoom(double zoom)
-{
-    const Size& cnv_size = get_canvas_size();
-    m_camera.set_zoom(zoom, _max_bounding_box(false, true), cnv_size.get_width(), cnv_size.get_height());
-    m_dirty = true;
-}
-
 void GLCanvas3D::update_gizmos_on_off_state()
 {
     set_as_dirty();
@@ -3389,11 +3714,10 @@ void GLCanvas3D::handle_sidebar_focus_event(const std::string& opt_key, bool foc
     m_sidebar_field = focus_on ? opt_key : "";
 
     if (!m_sidebar_field.empty())
-    {
         m_gizmos.reset_all_states();
+
         m_dirty = true;
     }
-}
 
 void GLCanvas3D::handle_layers_data_focus_event(const t_layer_height_range range, const EditorType type)
 {
@@ -3484,6 +3808,20 @@ void GLCanvas3D::export_toolpaths_to_obj(const char* filename) const
     m_volumes.export_toolpaths_to_obj(filename);
 }
 
+void GLCanvas3D::mouse_up_cleanup()
+{
+    m_moving = false;
+    m_mouse.drag.move_volume_idx = -1;
+    m_mouse.set_start_position_3D_as_invalid();
+    m_mouse.set_start_position_2D_as_invalid();
+    m_mouse.dragging = false;
+    m_mouse.ignore_left_up = false;
+    m_dirty = true;
+
+    if (m_canvas->HasCapture())
+        m_canvas->ReleaseMouse();
+}
+
 bool GLCanvas3D::_is_shown_on_screen() const
 {
     return (m_canvas != nullptr) ? m_canvas->IsShownOnScreen() : false;
@@ -3524,6 +3862,357 @@ void GLCanvas3D::_render_undo_redo_stack(const bool is_undo, float pos_x)
 
     imgui->end();
 }
+
+#if ENABLE_THUMBNAIL_GENERATOR
+#define ENABLE_THUMBNAIL_GENERATOR_DEBUG_OUTPUT 0
+#if ENABLE_THUMBNAIL_GENERATOR_DEBUG_OUTPUT
+static void debug_output_thumbnail(const ThumbnailData& thumbnail_data)
+{
+    // debug export of generated image
+    wxImage image(thumbnail_data.width, thumbnail_data.height);
+    image.InitAlpha();
+
+    for (unsigned int r = 0; r < thumbnail_data.height; ++r)
+    {
+        unsigned int rr = (thumbnail_data.height - 1 - r) * thumbnail_data.width;
+        for (unsigned int c = 0; c < thumbnail_data.width; ++c)
+        {
+            unsigned char* px = (unsigned char*)thumbnail_data.pixels.data() + 4 * (rr + c);
+            image.SetRGB((int)c, (int)r, px[0], px[1], px[2]);
+            image.SetAlpha((int)c, (int)r, px[3]);
+        }
+    }
+
+    image.SaveFile("C:/prusa/test/test.png", wxBITMAP_TYPE_PNG);
+}
+#endif // ENABLE_THUMBNAIL_GENERATOR_DEBUG_OUTPUT
+
+void GLCanvas3D::_render_thumbnail_internal(ThumbnailData& thumbnail_data, bool printable_only, bool parts_only, bool show_bed, bool transparent_background)
+{
+    auto is_visible = [](const GLVolume& v) -> bool
+    {
+        bool ret = v.printable;
+        ret &= (!v.shader_outside_printer_detection_enabled || !v.is_outside);
+        return ret;
+    };
+
+    static const GLfloat orange[] = { 0.923f, 0.504f, 0.264f, 1.0f };
+    static const GLfloat gray[] = { 0.64f, 0.64f, 0.64f, 1.0f };
+
+    GLVolumePtrs visible_volumes;
+
+    for (GLVolume* vol : m_volumes.volumes)
+    {
+        if (!vol->is_modifier && !vol->is_wipe_tower && (!parts_only || (vol->composite_id.volume_id >= 0)))
+        {
+            if (!printable_only || is_visible(*vol))
+                visible_volumes.push_back(vol);
+        }
+    }
+
+    if (visible_volumes.empty())
+        return;
+
+    BoundingBoxf3 box;
+    for (const GLVolume* vol : visible_volumes)
+    {
+        box.merge(vol->transformed_bounding_box());
+    }
+
+    Camera camera;
+    camera.set_type(Camera::Ortho);
+    camera.zoom_to_volumes(visible_volumes, thumbnail_data.width, thumbnail_data.height);
+    camera.apply_viewport(0, 0, thumbnail_data.width, thumbnail_data.height);
+    camera.apply_view_matrix();
+
+    double near_z = -1.0;
+    double far_z = -1.0;
+
+    if (show_bed)
+    {
+        // extends the near and far z of the frustrum to avoid the bed being clipped
+
+        // box in eye space
+        BoundingBoxf3 t_bed_box = m_bed.get_bounding_box(true).transformed(camera.get_view_matrix());
+        near_z = -t_bed_box.max(2);
+        far_z = -t_bed_box.min(2);
+    }
+
+    camera.apply_projection(box, near_z, far_z);
+
+    if (transparent_background)
+        glsafe(::glClearColor(0.0f, 0.0f, 0.0f, 0.0f));
+
+    glsafe(::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+    glsafe(::glEnable(GL_DEPTH_TEST));
+
+    m_shader.start_using();
+
+    GLint shader_id = m_shader.get_shader_program_id();
+    GLint color_id = ::glGetUniformLocation(shader_id, "uniform_color");
+    GLint print_box_detection_id = ::glGetUniformLocation(shader_id, "print_box.volume_detection");
+    glcheck();
+
+    if (print_box_detection_id != -1)
+        glsafe(::glUniform1i(print_box_detection_id, 0));
+
+    for (const GLVolume* vol : visible_volumes)
+    {
+        if (color_id >= 0)
+            glsafe(::glUniform4fv(color_id, 1, (vol->printable && !vol->is_outside) ? orange : gray));
+        else
+            glsafe(::glColor4fv((vol->printable && !vol->is_outside) ? orange : gray));
+
+        vol->render();
+    }
+
+    m_shader.stop_using();
+
+    glsafe(::glDisable(GL_DEPTH_TEST));
+
+    if (show_bed)
+        _render_bed(camera.get_theta(), false);
+
+    if (transparent_background)
+        glsafe(::glClearColor(1.0f, 1.0f, 1.0f, 1.0f));
+}
+
+void GLCanvas3D::_render_thumbnail_framebuffer(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, bool printable_only, bool parts_only, bool show_bed, bool transparent_background)
+{
+    thumbnail_data.set(w, h);
+    if (!thumbnail_data.is_valid())
+        return;
+
+    bool multisample = m_multisample_allowed;
+    if (multisample)
+        glsafe(::glEnable(GL_MULTISAMPLE));
+
+    GLint max_samples;
+    glsafe(::glGetIntegerv(GL_MAX_SAMPLES, &max_samples));
+    GLsizei num_samples = max_samples / 2;
+
+    GLuint render_fbo;
+    glsafe(::glGenFramebuffers(1, &render_fbo));
+    glsafe(::glBindFramebuffer(GL_FRAMEBUFFER, render_fbo));
+
+    GLuint render_tex = 0;
+    GLuint render_tex_buffer = 0;
+    if (multisample)
+    {
+        // use renderbuffer instead of texture to avoid the need to use glTexImage2DMultisample which is available only since OpenGL 3.2
+        glsafe(::glGenRenderbuffers(1, &render_tex_buffer));
+        glsafe(::glBindRenderbuffer(GL_RENDERBUFFER, render_tex_buffer));
+        glsafe(::glRenderbufferStorageMultisample(GL_RENDERBUFFER, num_samples, GL_RGBA8, w, h));
+        glsafe(::glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, render_tex_buffer));
+    }
+    else
+    {
+        glsafe(::glGenTextures(1, &render_tex));
+        glsafe(::glBindTexture(GL_TEXTURE_2D, render_tex));
+        glsafe(::glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr));
+        glsafe(::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+        glsafe(::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+        glsafe(::glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, render_tex, 0));
+    }
+
+    GLuint render_depth;
+    glsafe(::glGenRenderbuffers(1, &render_depth));
+    glsafe(::glBindRenderbuffer(GL_RENDERBUFFER, render_depth));
+    if (multisample)
+        glsafe(::glRenderbufferStorageMultisample(GL_RENDERBUFFER, num_samples, GL_DEPTH_COMPONENT24, w, h));
+    else
+        glsafe(::glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, w, h));
+
+    glsafe(::glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, render_depth));
+
+    GLenum drawBufs[] = { GL_COLOR_ATTACHMENT0 };
+    glsafe(::glDrawBuffers(1, drawBufs));
+
+    if (::glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
+    {
+        _render_thumbnail_internal(thumbnail_data, printable_only, parts_only, show_bed, transparent_background);
+
+        if (multisample)
+        {
+            GLuint resolve_fbo;
+            glsafe(::glGenFramebuffers(1, &resolve_fbo));
+            glsafe(::glBindFramebuffer(GL_FRAMEBUFFER, resolve_fbo));
+
+            GLuint resolve_tex;
+            glsafe(::glGenTextures(1, &resolve_tex));
+            glsafe(::glBindTexture(GL_TEXTURE_2D, resolve_tex));
+            glsafe(::glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr));
+            glsafe(::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+            glsafe(::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+            glsafe(::glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, resolve_tex, 0));
+
+            glsafe(::glDrawBuffers(1, drawBufs));
+
+            if (::glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
+            {
+                glsafe(::glBindFramebuffer(GL_READ_FRAMEBUFFER, render_fbo));
+                glsafe(::glBindFramebuffer(GL_DRAW_FRAMEBUFFER, resolve_fbo));
+                glsafe(::glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_LINEAR));
+
+                glsafe(::glBindFramebuffer(GL_READ_FRAMEBUFFER, resolve_fbo));
+                glsafe(::glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, (void*)thumbnail_data.pixels.data()));
+            }
+
+            glsafe(::glDeleteTextures(1, &resolve_tex));
+            glsafe(::glDeleteFramebuffers(1, &resolve_fbo));
+        }
+        else
+            glsafe(::glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, (void*)thumbnail_data.pixels.data()));
+
+#if ENABLE_THUMBNAIL_GENERATOR_DEBUG_OUTPUT
+        debug_output_thumbnail(thumbnail_data);
+#endif // ENABLE_THUMBNAIL_GENERATOR_DEBUG_OUTPUT
+    }
+
+    glsafe(::glBindFramebuffer(GL_FRAMEBUFFER, 0));
+    glsafe(::glDeleteRenderbuffers(1, &render_depth));
+    if (render_tex_buffer != 0)
+        glsafe(::glDeleteRenderbuffers(1, &render_tex_buffer));
+    if (render_tex != 0)
+        glsafe(::glDeleteTextures(1, &render_tex));
+    glsafe(::glDeleteFramebuffers(1, &render_fbo));
+
+    if (multisample)
+        glsafe(::glDisable(GL_MULTISAMPLE));
+}
+
+void GLCanvas3D::_render_thumbnail_framebuffer_ext(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, bool printable_only, bool parts_only, bool show_bed, bool transparent_background)
+{
+    thumbnail_data.set(w, h);
+    if (!thumbnail_data.is_valid())
+        return;
+
+    bool multisample = m_multisample_allowed;
+    if (multisample)
+        glsafe(::glEnable(GL_MULTISAMPLE));
+
+    GLint max_samples;
+    glsafe(::glGetIntegerv(GL_MAX_SAMPLES_EXT, &max_samples));
+    GLsizei num_samples = max_samples / 2;
+
+    GLuint render_fbo;
+    glsafe(::glGenFramebuffersEXT(1, &render_fbo));
+    glsafe(::glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, render_fbo));
+
+    GLuint render_tex = 0;
+    GLuint render_tex_buffer = 0;
+    if (multisample)
+    {
+        // use renderbuffer instead of texture to avoid the need to use glTexImage2DMultisample which is available only since OpenGL 3.2
+        glsafe(::glGenRenderbuffersEXT(1, &render_tex_buffer));
+        glsafe(::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, render_tex_buffer));
+        glsafe(::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER_EXT, num_samples, GL_RGBA8, w, h));
+        glsafe(::glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_RENDERBUFFER_EXT, render_tex_buffer));
+    }
+    else
+    {
+        glsafe(::glGenTextures(1, &render_tex));
+        glsafe(::glBindTexture(GL_TEXTURE_2D, render_tex));
+        glsafe(::glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr));
+        glsafe(::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+        glsafe(::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+        glsafe(::glFramebufferTexture2D(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, render_tex, 0));
+    }
+
+    GLuint render_depth;
+    glsafe(::glGenRenderbuffersEXT(1, &render_depth));
+    glsafe(::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, render_depth));
+    if (multisample)
+        glsafe(::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER_EXT, num_samples, GL_DEPTH_COMPONENT24, w, h));
+    else
+        glsafe(::glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT, w, h));
+
+    glsafe(::glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, render_depth));
+
+    GLenum drawBufs[] = { GL_COLOR_ATTACHMENT0 };
+    glsafe(::glDrawBuffers(1, drawBufs));
+
+    if (::glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT)
+    {
+        _render_thumbnail_internal(thumbnail_data, printable_only, parts_only, show_bed, transparent_background);
+
+        if (multisample)
+        {
+            GLuint resolve_fbo;
+            glsafe(::glGenFramebuffersEXT(1, &resolve_fbo));
+            glsafe(::glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, resolve_fbo));
+
+            GLuint resolve_tex;
+            glsafe(::glGenTextures(1, &resolve_tex));
+            glsafe(::glBindTexture(GL_TEXTURE_2D, resolve_tex));
+            glsafe(::glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr));
+            glsafe(::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+            glsafe(::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+            glsafe(::glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, resolve_tex, 0));
+
+            glsafe(::glDrawBuffers(1, drawBufs));
+
+            if (::glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT)
+            {
+                glsafe(::glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, render_fbo));
+                glsafe(::glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, resolve_fbo));
+                glsafe(::glBlitFramebufferEXT(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_LINEAR));
+
+                glsafe(::glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, resolve_fbo));
+                glsafe(::glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, (void*)thumbnail_data.pixels.data()));
+            }
+
+            glsafe(::glDeleteTextures(1, &resolve_tex));
+            glsafe(::glDeleteFramebuffersEXT(1, &resolve_fbo));
+        }
+        else
+            glsafe(::glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, (void*)thumbnail_data.pixels.data()));
+
+#if ENABLE_THUMBNAIL_GENERATOR_DEBUG_OUTPUT
+        debug_output_thumbnail(thumbnail_data);
+#endif // ENABLE_THUMBNAIL_GENERATOR_DEBUG_OUTPUT
+    }
+
+    glsafe(::glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0));
+    glsafe(::glDeleteRenderbuffersEXT(1, &render_depth));
+    if (render_tex_buffer != 0)
+        glsafe(::glDeleteRenderbuffersEXT(1, &render_tex_buffer));
+    if (render_tex != 0)
+        glsafe(::glDeleteTextures(1, &render_tex));
+    glsafe(::glDeleteFramebuffersEXT(1, &render_fbo));
+
+    if (multisample)
+        glsafe(::glDisable(GL_MULTISAMPLE));
+}
+
+void GLCanvas3D::_render_thumbnail_legacy(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, bool printable_only, bool parts_only, bool show_bed, bool transparent_background)
+{
+    // check that thumbnail size does not exceed the default framebuffer size
+    const Size& cnv_size = get_canvas_size();
+    unsigned int cnv_w = (unsigned int)cnv_size.get_width();
+    unsigned int cnv_h = (unsigned int)cnv_size.get_height();
+    if ((w > cnv_w) || (h > cnv_h))
+    {
+        float ratio = std::min((float)cnv_w / (float)w, (float)cnv_h / (float)h);
+        w = (unsigned int)(ratio * (float)w);
+        h = (unsigned int)(ratio * (float)h);
+    }
+
+    thumbnail_data.set(w, h);
+    if (!thumbnail_data.is_valid())
+        return;
+
+    _render_thumbnail_internal(thumbnail_data, printable_only, parts_only, show_bed, transparent_background);
+
+    glsafe(::glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, (void*)thumbnail_data.pixels.data()));
+#if ENABLE_THUMBNAIL_GENERATOR_DEBUG_OUTPUT
+    debug_output_thumbnail(thumbnail_data);
+#endif // ENABLE_THUMBNAIL_GENERATOR_DEBUG_OUTPUT
+
+    // restore the default framebuffer size to avoid flickering on the 3D scene
+    m_camera.apply_viewport(0, 0, cnv_size.get_width(), cnv_size.get_height());
+}
+#endif // ENABLE_THUMBNAIL_GENERATOR
 
 bool GLCanvas3D::_init_toolbars()
 {
@@ -3814,8 +4503,6 @@ void GLCanvas3D::_resize(unsigned int w, unsigned int h)
 
     // updates camera
     m_camera.apply_viewport(0, 0, w, h);
-
-    m_dirty = false;
 }
 
 BoundingBoxf3 GLCanvas3D::_max_bounding_box(bool include_gizmos, bool include_bed_model) const
@@ -3836,12 +4523,27 @@ BoundingBoxf3 GLCanvas3D::_max_bounding_box(bool include_gizmos, bool include_be
     return bb;
 }
 
+#if ENABLE_THUMBNAIL_GENERATOR
+void GLCanvas3D::_zoom_to_box(const BoundingBoxf3& box, double margin_factor)
+{
+    const Size& cnv_size = get_canvas_size();
+    m_camera.zoom_to_box(box, cnv_size.get_width(), cnv_size.get_height(), margin_factor);
+    m_dirty = true;
+}
+#else
 void GLCanvas3D::_zoom_to_box(const BoundingBoxf3& box)
 {
     const Size& cnv_size = get_canvas_size();
     m_camera.zoom_to_box(box, cnv_size.get_width(), cnv_size.get_height());
         m_dirty = true;
     }
+#endif // ENABLE_THUMBNAIL_GENERATOR
+
+void GLCanvas3D::_update_camera_zoom(double zoom)
+{
+    m_camera.update_zoom(zoom);
+    m_dirty = true;
+}
 
 void GLCanvas3D::_refresh_if_shown_on_screen()
 {
@@ -4024,13 +4726,13 @@ void GLCanvas3D::_render_background() const
     glsafe(::glPopMatrix());
 }
 
-void GLCanvas3D::_render_bed(float theta) const
+void GLCanvas3D::_render_bed(float theta, bool show_axes) const
 {
     float scale_factor = 1.0;
 #if ENABLE_RETINA_GL
     scale_factor = m_retina_helper->get_scale_factor();
 #endif // ENABLE_RETINA_GL
-    m_bed.render(const_cast<GLCanvas3D&>(*this), theta, scale_factor);
+    m_bed.render(const_cast<GLCanvas3D&>(*this), theta, scale_factor, show_axes);
 }
 
 void GLCanvas3D::_render_objects() const
@@ -4038,7 +4740,9 @@ void GLCanvas3D::_render_objects() const
     if (m_volumes.empty())
         return;
 
+#if !ENABLE_THUMBNAIL_GENERATOR
     glsafe(::glEnable(GL_LIGHTING));
+#endif // !ENABLE_THUMBNAIL_GENERATOR
     glsafe(::glEnable(GL_DEPTH_TEST));
 
     m_camera_clipping_plane = m_gizmos.get_sla_clipping_plane();
@@ -4082,7 +4786,9 @@ void GLCanvas3D::_render_objects() const
     m_shader.stop_using();
 
     m_camera_clipping_plane = ClippingPlane::ClipsNothing();
+#if !ENABLE_THUMBNAIL_GENERATOR
     glsafe(::glDisable(GL_LIGHTING));
+#endif // !ENABLE_THUMBNAIL_GENERATOR
 }
 
 void GLCanvas3D::_render_selection() const
@@ -4638,7 +5344,7 @@ void GLCanvas3D::_load_print_toolpaths()
     volume->indexed_vertex_array.finalize_geometry(m_initialized);
 }
 
-void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, const std::vector<std::string>& str_tool_colors, const std::vector<double>& color_print_values)
+void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, const std::vector<std::string>& str_tool_colors, const std::vector<Model::CustomGCode>& color_print_values)
 {
     std::vector<float> tool_colors = _parse_colors(str_tool_colors);
 
@@ -4650,11 +5356,14 @@ void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, c
         bool                         has_infill;
         bool                         has_support;
         const std::vector<float>*    tool_colors;
-        const std::vector<double>*   color_print_values;
+        bool                         is_single_material_print;
+        int                          extruders_cnt;
+        const std::vector<Model::CustomGCode>*   color_print_values;
 
         static const float*          color_perimeters() { static float color[4] = { 1.0f, 1.0f, 0.0f, 1.f }; return color; } // yellow
         static const float*          color_infill() { static float color[4] = { 1.0f, 0.5f, 0.5f, 1.f }; return color; } // redish
         static const float*          color_support() { static float color[4] = { 0.5f, 1.0f, 0.5f, 1.f }; return color; } // greenish
+        static const float*          color_pause_or_custom_code() { static float color[4] = { 0.5f, 0.5f, 0.5f, 1.f }; return color; } // gray
 
         // For cloring by a tool, return a parsed color.
         bool                         color_by_tool() const { return tool_colors != nullptr; }
@@ -4664,9 +5373,106 @@ void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, c
         // For coloring by a color_print(M600), return a parsed color.
         bool                         color_by_color_print() const { return color_print_values!=nullptr; }
         const size_t                 color_print_color_idx_by_layer_idx(const size_t layer_idx) const {
-            auto it = std::lower_bound(color_print_values->begin(), color_print_values->end(), layers[layer_idx]->print_z + EPSILON);
+            const Model::CustomGCode value(layers[layer_idx]->print_z + EPSILON, "", 0, "");
+            auto it = std::lower_bound(color_print_values->begin(), color_print_values->end(), value);
             return (it - color_print_values->begin()) % number_tools();
         }
+
+        const size_t                 color_print_color_idx_by_layer_idx_and_extruder(const size_t layer_idx, const int extruder) const
+        {
+            const coordf_t print_z = layers[layer_idx]->print_z;
+
+            auto it = std::find_if(color_print_values->begin(), color_print_values->end(),
+                [print_z](const Model::CustomGCode& code)
+                { return fabs(code.height - print_z) < EPSILON; });
+            if (it != color_print_values->end())
+            {
+                const std::string& code = it->gcode;
+                // pause print or custom Gcode
+                if (code == PausePrintCode || 
+                    (code != ColorChangeCode && code != ExtruderChangeCode))
+                    return number_tools()-1; // last color item is a gray color for pause print or custom G-code 
+
+                // change tool (extruder) 
+                if (code == ExtruderChangeCode)
+                    return get_color_idx_for_tool_change(it, extruder);
+                // change color for current extruder
+                if (code == ColorChangeCode) {
+                    int color_idx = get_color_idx_for_color_change(it, extruder);
+                    if (color_idx >= 0)
+                        return color_idx;
+                }
+            }
+
+            const Model::CustomGCode value(print_z + EPSILON, "", 0, "");
+            it = std::lower_bound(color_print_values->begin(), color_print_values->end(), value);
+            while (it != color_print_values->begin())
+            {
+                --it;
+                // change color for current extruder
+                if (it->gcode == ColorChangeCode) {
+                    int color_idx = get_color_idx_for_color_change(it, extruder);
+                    if (color_idx >= 0)
+                        return color_idx;
+                }
+                // change tool (extruder) 
+                if (it->gcode == ExtruderChangeCode)
+                    return get_color_idx_for_tool_change(it, extruder);
+            }
+
+            return std::min<int>(extruders_cnt - 1, std::max<int>(extruder - 1, 0));;
+        }
+
+    private:
+        int get_m600_color_idx(std::vector<Model::CustomGCode>::const_iterator it) const 
+        {
+            int shift = 0;
+            while (it != color_print_values->begin()) {
+                --it;
+                if (it->gcode == ColorChangeCode)
+                    shift++;
+            }
+            return extruders_cnt + shift;
+        }
+
+        int get_color_idx_for_tool_change(std::vector<Model::CustomGCode>::const_iterator it, const int extruder) const 
+        {
+            const int current_extruder = it->extruder == 0 ? extruder : it->extruder;
+            if (number_tools() == extruders_cnt + 1) // there is no one "M600"
+                return std::min<int>(extruders_cnt - 1, std::max<int>(current_extruder - 1, 0));
+
+            auto it_n = it;
+            while (it_n != color_print_values->begin()) {
+                --it_n;
+                if (it_n->gcode == ColorChangeCode && it_n->extruder == current_extruder)
+                    return get_m600_color_idx(it_n);
+            }
+
+            return std::min<int>(extruders_cnt - 1, std::max<int>(current_extruder - 1, 0));
+        }
+
+        int get_color_idx_for_color_change(std::vector<Model::CustomGCode>::const_iterator it, const int extruder) const 
+        {
+            if (extruders_cnt == 1)
+                return get_m600_color_idx(it);
+
+            auto it_n = it;
+            bool is_tool_change = false;
+            while (it_n != color_print_values->begin()) {
+                --it_n;
+                if (it_n->gcode == ExtruderChangeCode) {
+                    is_tool_change = true;
+                    if (it_n->extruder == it->extruder || (it_n->extruder == 0 && it->extruder == extruder))
+                        return get_m600_color_idx(it);
+                    break;
+                }
+            }
+            if (!is_tool_change && it->extruder == extruder)
+                return get_m600_color_idx(it);
+
+            return -1;
+        }
+
     } ctxt;
 
     ctxt.has_perimeters = print_object.is_step_done(posPerimeters);
@@ -4674,6 +5480,8 @@ void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, c
     ctxt.has_support = print_object.is_step_done(posSupportMaterial);
     ctxt.tool_colors = tool_colors.empty() ? nullptr : &tool_colors;
     ctxt.color_print_values = color_print_values.empty() ? nullptr : &color_print_values;
+    ctxt.is_single_material_print = this->fff_print()->extruders().size()==1;
+    ctxt.extruders_cnt = wxGetApp().extruders_edited_cnt();
 
     ctxt.shifted_copies = &print_object.copies();
 
@@ -4697,6 +5505,8 @@ void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, c
     // Maximum size of an allocation block: 32MB / sizeof(float)
     BOOST_LOG_TRIVIAL(debug) << "Loading print object toolpaths in parallel - start" << m_volumes.log_memory_info() << log_memory_info();
 
+    const bool is_selected_separate_extruder = m_selected_extruder > 0 && ctxt.color_by_color_print();
+
     //FIXME Improve the heuristics for a grain size.
     size_t          grain_size = std::max(ctxt.layers.size() / 16, size_t(1));
     tbb::spin_mutex new_volume_mutex;
@@ -4714,32 +5524,18 @@ void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, c
     const size_t   volumes_cnt_initial = m_volumes.volumes.size();
     tbb::parallel_for(
         tbb::blocked_range<size_t>(0, ctxt.layers.size(), grain_size),
-        [&ctxt, &new_volume](const tbb::blocked_range<size_t>& range) {
+        [&ctxt, &new_volume, is_selected_separate_extruder, this](const tbb::blocked_range<size_t>& range) {
         GLVolumePtrs vols;
         std::vector<size_t>	color_print_layer_to_glvolume;
         auto                volume = [&ctxt, &vols, &color_print_layer_to_glvolume, &range](size_t layer_idx, int extruder, int feature) -> GLVolume& {
             return *vols[ctxt.color_by_color_print() ?
-            	color_print_layer_to_glvolume[layer_idx - range.begin()] :
+                ctxt.color_print_color_idx_by_layer_idx_and_extruder(layer_idx, extruder) :
 				ctxt.color_by_tool() ? 
 					std::min<int>(ctxt.number_tools() - 1, std::max<int>(extruder - 1, 0)) : 
 					feature
 				];
         };
-        if (ctxt.color_by_color_print()) {
-        	// Create a map from the layer index to a GLVolume, which is initialized with the correct layer span color.
-        	std::vector<int> color_print_tool_to_glvolume(ctxt.number_tools(), -1);
-        	color_print_layer_to_glvolume.reserve(range.end() - range.begin());
-        	vols.reserve(ctxt.number_tools());
-	        for (size_t idx_layer = range.begin(); idx_layer < range.end(); ++ idx_layer) {
-	        	int idx_tool = (int)ctxt.color_print_color_idx_by_layer_idx(idx_layer);
-	        	if (color_print_tool_to_glvolume[idx_tool] == -1) {
-	        		color_print_tool_to_glvolume[idx_tool] = (int)vols.size();
-	        		vols.emplace_back(new_volume(ctxt.color_tool(idx_tool)));
-	        	}
-	        	color_print_layer_to_glvolume.emplace_back(color_print_tool_to_glvolume[idx_tool]);
-	        }
-        }
-        else if (ctxt.color_by_tool()) {
+        if (ctxt.color_by_color_print() || ctxt.color_by_tool()) {
             for (size_t i = 0; i < ctxt.number_tools(); ++i)
                 vols.emplace_back(new_volume(ctxt.color_tool(i)));
         }
@@ -4750,6 +5546,26 @@ void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, c
         	vol->indexed_vertex_array.reserve(VERTEX_BUFFER_RESERVE_SIZE / 6);
         for (size_t idx_layer = range.begin(); idx_layer < range.end(); ++idx_layer) {
             const Layer *layer = ctxt.layers[idx_layer];
+
+            if (is_selected_separate_extruder)
+            {
+                bool at_least_one_has_correct_extruder = false;
+                for (const LayerRegion* layerm : layer->regions())
+                {
+                    if (layerm->slices.surfaces.empty())
+                        continue;
+                    const PrintRegionConfig& cfg = layerm->region()->config();
+                    if (cfg.perimeter_extruder.value    == m_selected_extruder ||
+                        cfg.infill_extruder.value       == m_selected_extruder ||
+                        cfg.solid_infill_extruder.value == m_selected_extruder ) {
+                        at_least_one_has_correct_extruder = true;
+                        break;
+                    }
+                }
+                if (!at_least_one_has_correct_extruder)
+                    continue;
+            }
+
             for (GLVolume *vol : vols)
                 if (vol->print_zs.empty() || vol->print_zs.back() != layer->print_z) {
                     vol->print_zs.push_back(layer->print_z);
@@ -4758,6 +5574,14 @@ void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, c
                 }
             for (const Point &copy : *ctxt.shifted_copies) {
                 for (const LayerRegion *layerm : layer->regions()) {
+                    if (is_selected_separate_extruder)
+                    {
+                        const PrintRegionConfig& cfg = layerm->region()->config();
+                        if (cfg.perimeter_extruder.value    != m_selected_extruder ||
+                            cfg.infill_extruder.value       != m_selected_extruder ||
+                            cfg.solid_infill_extruder.value != m_selected_extruder)
+                            continue;
+                    }
                     if (ctxt.has_perimeters)
                         _3DScene::extrusionentity_to_verts(layerm->perimeters, float(layer->print_z), copy,
                         	volume(idx_layer, layerm->region()->config().perimeter_extruder.value, 0));
@@ -4991,19 +5815,21 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
     // helper functions to select data in dependence of the extrusion view type
     struct Helper
     {
-        static float path_filter(GCodePreviewData::Extrusion::EViewType type, const ExtrusionPath& path)
+        static float path_filter(GCodePreviewData::Extrusion::EViewType type, const GCodePreviewData::Extrusion::Path& path)
         {
             switch (type)
             {
             case GCodePreviewData::Extrusion::FeatureType:
             	// The role here is used for coloring.
-                return (float)path.role();
+                return (float)path.extrusion_role;
             case GCodePreviewData::Extrusion::Height:
                 return path.height;
             case GCodePreviewData::Extrusion::Width:
                 return path.width;
             case GCodePreviewData::Extrusion::Feedrate:
                 return path.feedrate;
+            case GCodePreviewData::Extrusion::FanSpeed:
+                return path.fan_speed;
             case GCodePreviewData::Extrusion::VolumetricRate:
                 return path.feedrate * (float)path.mm3_per_mm;
             case GCodePreviewData::Extrusion::Tool:
@@ -5030,6 +5856,8 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
                 return data.get_width_color(value);
             case GCodePreviewData::Extrusion::Feedrate:
                 return data.get_feedrate_color(value);
+            case GCodePreviewData::Extrusion::FanSpeed:
+                return data.get_fan_speed_color(value);
             case GCodePreviewData::Extrusion::VolumetricRate:
                 return data.get_volumetric_rate_color(value);
             case GCodePreviewData::Extrusion::Tool:
@@ -5042,11 +5870,8 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
             case GCodePreviewData::Extrusion::ColorPrint:
             {
                 int color_cnt = (int)tool_colors.size() / 4;
+                int val = value > color_cnt ? color_cnt - 1 : value;
 
-                int val = int(value);
-                while (val >= color_cnt)
-                    val -= color_cnt;
-                    
                 GCodePreviewData::Color color;
                 ::memcpy((void*)color.rgba, (const void*)(tool_colors.data() + val * 4), 4 * sizeof(float));
 
@@ -5073,15 +5898,15 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
         {
 		    std::vector<size_t> num_paths_per_role(size_t(erCount), 0);
     for (const GCodePreviewData::Extrusion::Layer& layer : preview_data.extrusion.layers)
-        for (const ExtrusionPath& path : layer.paths)
-		        	++ num_paths_per_role[size_t(path.role())];
+		        for (const GCodePreviewData::Extrusion::Path &path : layer.paths)
+		        	++ num_paths_per_role[size_t(path.extrusion_role)];
 			std::vector<std::vector<float>> roles_values;
 			roles_values.assign(size_t(erCount), std::vector<float>());
 		    for (size_t i = 0; i < roles_values.size(); ++ i)
 		    	roles_values[i].reserve(num_paths_per_role[i]);
 		    for (const GCodePreviewData::Extrusion::Layer& layer : preview_data.extrusion.layers)
-		        for (const ExtrusionPath& path : layer.paths)
-		        	roles_values[size_t(path.role())].emplace_back(Helper::path_filter(preview_data.extrusion.view_type, path));
+		        for (const GCodePreviewData::Extrusion::Path &path : layer.paths)
+		        	roles_values[size_t(path.extrusion_role)].emplace_back(Helper::path_filter(preview_data.extrusion.view_type, path));
 			roles_filters.reserve(size_t(erCount));
 			size_t num_buffers = 0;
 		    for (std::vector<float> &values : roles_values) {
@@ -5107,11 +5932,14 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
     BOOST_LOG_TRIVIAL(debug) << "Loading G-code extrusion paths - populate volumes" << m_volumes.log_memory_info() << log_memory_info();
 
     // populates volumes
+        const bool is_selected_separate_extruder = m_selected_extruder > 0 && preview_data.extrusion.view_type == GCodePreviewData::Extrusion::ColorPrint;
     for (const GCodePreviewData::Extrusion::Layer& layer : preview_data.extrusion.layers)
     {
-        for (const ExtrusionPath& path : layer.paths)
+			for (const GCodePreviewData::Extrusion::Path& path : layer.paths)
         {
-				std::vector<std::pair<float, GLVolume*>> &filters = roles_filters[size_t(path.role())];
+                if (is_selected_separate_extruder && path.extruder_id != m_selected_extruder - 1)
+                    continue;
+				std::vector<std::pair<float, GLVolume*>> &filters = roles_filters[size_t(path.extrusion_role)];
 				auto key = std::make_pair<float, GLVolume*>(Helper::path_filter(preview_data.extrusion.view_type, path), nullptr);
 				auto it_filter = std::lower_bound(filters.begin(), filters.end(), key);
 				assert(it_filter != filters.end() && key.first == it_filter->first);
@@ -5121,7 +5949,7 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
                 vol.offsets.push_back(vol.indexed_vertex_array.quad_indices.size());
                 vol.offsets.push_back(vol.indexed_vertex_array.triangle_indices.size());
 
-                _3DScene::extrusionentity_to_verts(path, layer.z, vol);
+				_3DScene::extrusionentity_to_verts(path.polyline, path.width, path.height, layer.z, vol);
 			}
 	            // Ensure that no volume grows over the limits. If the volume is too large, allocate a new one.
 		    for (std::vector<std::pair<float, GLVolume*>> &filters : roles_filters) {
@@ -5286,20 +6114,18 @@ void GLCanvas3D::_load_fff_shells()
         // adds wipe tower's volume
         double max_z = print->objects()[0]->model_object()->get_model()->bounding_box().max(2);
         const PrintConfig& config = print->config();
-        unsigned int extruders_count = config.nozzle_diameter.size();
+        size_t extruders_count = config.nozzle_diameter.size();
         if ((extruders_count > 1) && config.wipe_tower && !config.complete_objects) {
-            float depth = print->get_wipe_tower_depth();
 
-            // Calculate wipe tower brim spacing.
             const DynamicPrintConfig &print_config  = wxGetApp().preset_bundle->prints.get_edited_preset().config;
             double layer_height                     = print_config.opt_float("layer_height");
             double first_layer_height               = print_config.get_abs_value("first_layer_height", layer_height);
-            float brim_spacing = print->config().nozzle_diameter.values[0] * 1.25f - first_layer_height * (1. - M_PI_4);
+            double nozzle_diameter                  = print->config().nozzle_diameter.values[0];
+            float depth = print->wipe_tower_data(extruders_count, first_layer_height, nozzle_diameter).depth;
+            float brim_width = print->wipe_tower_data(extruders_count, first_layer_height, nozzle_diameter).brim_width;
 
-            if (!print->is_step_done(psWipeTower))
-                depth = (900.f/config.wipe_tower_width) * (float)(extruders_count - 1);
             m_volumes.load_wipe_tower_preview(1000, config.wipe_tower_x, config.wipe_tower_y, config.wipe_tower_width, depth, max_z, config.wipe_tower_rotation_angle,
-                !print->is_step_done(psWipeTower), brim_spacing * 4.5f, m_initialized);
+                !print->is_step_done(psWipeTower), brim_width, m_initialized);
         }
     }
 }
@@ -5342,8 +6168,8 @@ void GLCanvas3D::_load_sla_shells()
                 m_volumes.volumes.back()->extruder_id = obj->model_object()->volumes.front()->extruder_id();
                 if (obj->is_step_done(slaposSupportTree) && obj->has_mesh(slaposSupportTree))
                     add_volume(*obj, -int(slaposSupportTree), instance, obj->support_mesh(), GLVolume::SLA_SUPPORT_COLOR, true);
-                if (obj->is_step_done(slaposBasePool) && obj->has_mesh(slaposBasePool))
-                    add_volume(*obj, -int(slaposBasePool), instance, obj->pad_mesh(), GLVolume::SLA_PAD_COLOR, false);
+                if (obj->is_step_done(slaposPad) && obj->has_mesh(slaposPad))
+                    add_volume(*obj, -int(slaposPad), instance, obj->pad_mesh(), GLVolume::SLA_PAD_COLOR, false);
             }
             double shift_z = obj->get_current_elevation();
             for (unsigned int i = initial_volumes_count; i < m_volumes.volumes.size(); ++ i) {

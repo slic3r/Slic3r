@@ -41,6 +41,7 @@ class ObjectSettings;
 class ObjectLayers;
 class ObjectList;
 class GLCanvas3D;
+class Mouse3DController;
 
 using t_optgroups = std::vector <std::shared_ptr<ConfigOptionsGroup>>;
 
@@ -56,8 +57,12 @@ public:
     ScalableButton* edit_btn { nullptr };
 
 	enum LabelItemType {
-		LABEL_ITEM_MARKER = 0x4d,
-		LABEL_ITEM_CONFIG_WIZARD = 0x4e
+		LABEL_ITEM_MARKER = 0xffffff01,
+		LABEL_ITEM_WIZARD_PRINTERS,
+        LABEL_ITEM_WIZARD_FILAMENTS,
+        LABEL_ITEM_WIZARD_MATERIALS,
+
+        LABEL_ITEM_MAX,
 	};
 
     void set_label_marker(int item, LabelItemType label_item_type = LABEL_ITEM_MARKER);
@@ -108,6 +113,7 @@ public:
     void                    update_objects_list_extruder_column(size_t extruders_count);
     void                    show_info_sizer();
     void                    show_sliced_info_sizer(const bool show);
+    void                    update_sliced_info_sizer();
     void                    enable_buttons(bool enable);
     void                    set_btn_label(const ActionButtonType btn_type, const wxString& label) const;
     bool                    show_reslice(bool show) const;
@@ -183,6 +189,7 @@ public:
     void export_stl(bool extended = false, bool selection_only = false);
     void export_amf();
     void export_3mf(const boost::filesystem::path& output_path = boost::filesystem::path());
+    void reload_from_disk();
     bool has_toolpaths_to_export() const;
     void export_toolpaths_to_obj() const;
     void reslice();
@@ -211,9 +218,12 @@ public:
 
     void on_extruders_change(size_t extruders_count);
     void on_config_change(const DynamicPrintConfig &config);
+    void force_filament_colors_update();
     // On activating the parent window.
     void on_activate();
     const DynamicPrintConfig* get_plater_config() const;
+    std::vector<std::string> get_extruder_colors_from_plater_config() const;
+    std::vector<std::string> get_colors_for_color_print() const;
 
     void update_object_menu();
 
@@ -247,10 +257,13 @@ public:
     bool can_copy_to_clipboard() const;
     bool can_undo() const;
     bool can_redo() const;
+    bool can_reload_from_disk() const;
 
     void msw_rescale();
 
     const Camera& get_camera() const;
+    const Mouse3DController& get_mouse3d_controller() const;
+    Mouse3DController& get_mouse3d_controller();
 
 	// ROII wrapper for suppressing the Undo / Redo snapshot to be taken.
 	class SuppressSnapshots

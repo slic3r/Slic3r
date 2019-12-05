@@ -71,7 +71,7 @@ elseif (APPLE)
             message(FATAL_ERROR "Could not determine OS X SDK version. Please use -DCMAKE_OSX_DEPLOYMENT_TARGET=<version>")
         endif ()
 
-        message("OS X Deployment Target (inferred from default): ${DEP_OSX_TARGET}")
+        message("OS X Deployment Target (inferred from SDK): ${DEP_OSX_TARGET}")
     endif ()
 
     include("deps-macos.cmake")
@@ -95,6 +95,7 @@ if (MSVC)
         dep_nlopt
         # dep_qhull # Experimental
         dep_zlib    # on Windows we still need zlib
+        dep_openvdb
     )
 
 else()
@@ -109,6 +110,7 @@ else()
         dep_cereal
         dep_nlopt
         dep_qhull
+        dep_openvdb
         # dep_libigl # Not working, static build has different Eigen
     )
 

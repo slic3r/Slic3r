@@ -1,5 +1,5 @@
 #include "../ClipperUtils.hpp"
-#include "../PolylineCollection.hpp"
+#include "../ShortestPath.hpp"
 #include "../Surface.hpp"
 
 #include "Fill3DHoneycomb.hpp"
@@ -159,42 +159,19 @@ void Fill3DHoneycomb::_fill_surface_single(
 	//makeGrid(coord_t z, coord_t gridSize, size_t gridWidth, size_t gridHeight, size_t curveType)
     
     // move pattern in place
-    for (Polylines::iterator it = polylines.begin(); it != polylines.end(); ++ it)
-        it->translate(bb.min(0), bb.min(1));
+	for (Polyline &pl : polylines)
+		pl.translate(bb.min);
 
-    // clip pattern to boundaries, keeping the polyline order & ordering the fragment to be able to join them easily
-    Polylines polylines_chained;
-    for (size_t idx_polyline = 0; idx_polyline < polylines.size(); ++idx_polyline) {
-        Polyline &poly_to_cut = polylines[idx_polyline];
-        Polylines polylines_to_sort = intersection_pl(Polylines() = { poly_to_cut }, (Polygons)expolygon);
-        for (Polyline &polyline : polylines_to_sort) {
-            //TODO: replace by closest_index_point()
-            if (poly_to_cut.points.front().distance_to_square(polyline.points.front()) > poly_to_cut.points.front().distance_to_square(polyline.points.back())) {
-                polyline.reverse();
-            }
-        }
-        if (polylines_to_sort.size() > 1) {
-            Point nearest = poly_to_cut.points.front();
-            //Bubble sort
-            for (size_t idx_sort = polylines_to_sort.size() - 1; idx_sort > 0; idx_sort--) {
-                for (size_t idx_bubble = 0; idx_bubble < idx_sort; idx_bubble++) {
-                    if (polylines_to_sort[idx_bubble + 1].points.front().distance_to_square(nearest) < polylines_to_sort[idx_bubble].points.front().distance_to_square(nearest)) {
-                        iter_swap(polylines_to_sort.begin() + idx_bubble, polylines_to_sort.begin() + idx_bubble + 1);
-                    }
-                }
-            }
-        }
-        polylines_chained.insert(polylines_chained.end(), polylines_to_sort.begin(), polylines_to_sort.end());
-    }
+    // clip pattern to boundaries, chain the clipped polylines
+    Polylines polylines_chained = chain_polylines(intersection_pl(polylines, to_polygons(expolygon)));
+
     // connect lines if needed
-    if (!polylines_chained.empty()) {
-        if (params.dont_connect) {
-            polylines_out.insert(polylines_out.end(), polylines_chained.begin(), polylines_chained.end());
-        } else {
-            this->connect_infill(polylines_chained, expolygon, polylines_out, params);
+    if (! polylines_chained.empty()) {
+        if (params.dont_connect)
+            append(polylines_out, std::move(polylines_chained));
+        else
+            this->connect_infill(std::move(polylines_chained), expolygon, polylines_out, this->spacing, params);
+            }
         }
-
-    }
-}
 
 } // namespace Slic3r

@@ -11,6 +11,9 @@
 #include "Slicing.hpp"
 #include "GCode/ToolOrdering.hpp"
 #include "GCode/WipeTower.hpp"
+#if ENABLE_THUMBNAIL_GENERATOR
+#include "GCode/ThumbnailData.hpp"
+#endif // ENABLE_THUMBNAIL_GENERATOR
 
 namespace Slic3r {
 
@@ -96,6 +99,7 @@ public:
     const SupportLayerPtrs& support_layers() const  { return m_support_layers; }
     const Transform3d&      trafo() const           { return m_trafo; }
     const Points&           copies() const          { return m_copies; }
+    const Point 			copy_center(size_t idx) const { return m_copies[idx] + m_copies_shift + Point(this->size.x() / 2, this->size.y() / 2); }
 
     // since the object is aligned to origin, bounding box coincides with size
     BoundingBox bounding_box() const { return BoundingBox(Point(0,0), to_2d(this->size)); }
@@ -241,6 +245,7 @@ struct WipeTowerData
 
     // Depth of the wipe tower to pass to GLCanvas3D for exact bounding box:
     float                                                 depth;
+    float                                                 brim_width;
 
     void clear() {
         tool_ordering.clear();
@@ -250,6 +255,7 @@ struct WipeTowerData
         used_filament.clear();
         number_of_toolchanges = -1;
         depth = 0.f;
+        brim_width = 0.f;
     }
 };
 
@@ -263,6 +269,7 @@ struct PrintStatistics
     double                          total_used_filament;
     double                          total_extruded_volume;
     double                          total_cost;
+    int                             total_toolchanges;
     double                          total_weight;
     double                          total_wipe_tower_cost;
     double                          total_wipe_tower_filament;
@@ -283,6 +290,7 @@ struct PrintStatistics
         total_used_filament    = 0.;
         total_extruded_volume  = 0.;
         total_cost             = 0.;
+        total_toolchanges      = 0;
         total_weight           = 0.;
         total_wipe_tower_cost  = 0.;
         total_wipe_tower_filament = 0.;
@@ -318,7 +326,11 @@ public:
     void                process() override;
     // Exports G-code into a file name based on the path_template, returns the file path of the generated G-code file.
     // If preview_data is not null, the preview_data is filled in for the G-code visualization (not used by the command line Slic3r).
+#if ENABLE_THUMBNAIL_GENERATOR
+    std::string         export_gcode(const std::string& path_template, GCodePreviewData* preview_data, ThumbnailsGeneratorCallback thumbnail_cb = nullptr);
+#else
     std::string         export_gcode(const std::string &path_template, GCodePreviewData *preview_data);
+#endif // ENABLE_THUMBNAIL_GENERATOR
 
     // methods for handling state
     bool                is_step_done(PrintStep step) const { return Inherited::is_step_done(step); }
@@ -329,7 +341,6 @@ public:
 
     bool                has_infinite_skirt() const;
     bool                has_skirt() const;
-    float               get_wipe_tower_depth() const { return m_wipe_tower_data.depth; }
 
     // Returns an empty string if valid, otherwise returns an error message.
     std::string         validate() const override;
@@ -368,12 +379,15 @@ public:
 
     // Wipe tower support.
     bool                        has_wipe_tower() const;
-    const WipeTowerData&        wipe_tower_data() const { return m_wipe_tower_data; }
+    const WipeTowerData&        wipe_tower_data(size_t extruders_cnt = 0, double first_layer_height = 0., double nozzle_diameter = 0.) const;
 
 	std::string                 output_filename(const std::string &filename_base = std::string()) const override;
 
     // Accessed by SupportMaterial
     const PrintRegion*  get_region(size_t idx) const  { return m_regions[idx]; }
+
+    // force update of PrintRegions, when custom_tool_change is not empty and (Re)Slicing is started
+    void set_force_update_print_regions(bool force_update_print_regions) { m_force_update_print_regions = force_update_print_regions; }
 
     //put this in public to be accessible for tests, it was in private before.
     bool                invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
@@ -400,7 +414,6 @@ private:
     ExPolygons          _make_brim_interior(const PrintObjectPtrs &objects, const ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
     Polylines           _reorder_brim_polyline(Polylines lines, ExtrusionEntityCollection &out);
     void                _make_wipe_tower();
-    void                _simplify_slices(double distance);
 
     // Declared here to have access to Model / ModelObject / ModelInstance
     static void         model_volume_list_update_supports(ModelObject &model_object_dst, const ModelObject &model_object_src);
@@ -420,6 +433,9 @@ private:
 
     // Estimated print time, filament consumed.
     PrintStatistics                         m_print_statistics;
+
+    // flag used
+    bool                                    m_force_update_print_regions = false;
 
     // To allow GCode to set the Print's GCodeExport step status.
     friend class GCode;

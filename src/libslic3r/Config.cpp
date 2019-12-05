@@ -280,7 +280,7 @@ ConfigOption* ConfigOptionDef::create_default_option() const
             // Special case: For a DynamicConfig, convert a templated enum to a generic enum.
             new ConfigOptionEnumGeneric(this->enum_keys_map, this->default_value->getInt()) :
             this->default_value->clone();
-	return this->create_empty_option();
+    return this->create_empty_option();
 }
 
 // Assignment of the serialization IDs is not thread safe. The Defs shall be initialized from the main thread!
@@ -301,8 +301,6 @@ ConfigOptionDef* ConfigDef::add_nullable(const t_config_option_key &opt_key, Con
 	def->nullable = true;
 	return def;
 }
-
-std::string ConfigOptionDef::nocli = "~~~noCLI";
 
 std::ostream& ConfigDef::print_cli_help(std::ostream& out, bool show_defaults, std::function<bool(const ConfigOptionDef &)> filter) const
 {
@@ -477,7 +475,30 @@ std::string ConfigBase::opt_serialize(const t_config_option_key &opt_key) const
     return opt->serialize();
 }
 
-bool ConfigBase::set_deserialize(const t_config_option_key &opt_key_src, const std::string &value_src, bool append)
+void ConfigBase::set(const std::string &opt_key, int value, bool create)
+{
+    ConfigOption *opt = this->option_throw(opt_key, create);
+    switch (opt->type()) {
+    	case coInt:    static_cast<ConfigOptionInt*>(opt)->value = value; break;
+    	case coFloat:  static_cast<ConfigOptionFloat*>(opt)->value = value; break;
+		case coFloatOrPercent:  static_cast<ConfigOptionFloatOrPercent*>(opt)->value = value; static_cast<ConfigOptionFloatOrPercent*>(opt)->percent = false; break;
+		case coString: static_cast<ConfigOptionString*>(opt)->value = std::to_string(value); break;
+    	default: throw BadOptionTypeException("Configbase::set() - conversion from int not possible");
+    }
+}
+
+void ConfigBase::set(const std::string &opt_key, double value, bool create)
+{
+    ConfigOption *opt = this->option_throw(opt_key, create);
+    switch (opt->type()) {
+    	case coFloat:  			static_cast<ConfigOptionFloat*>(opt)->value = value; break;
+    	case coFloatOrPercent:  static_cast<ConfigOptionFloatOrPercent*>(opt)->value = value; static_cast<ConfigOptionFloatOrPercent*>(opt)->percent = false; break;
+		case coString: 			static_cast<ConfigOptionString*>(opt)->value = std::to_string(value); break;
+    	default: throw BadOptionTypeException("Configbase::set() - conversion from float not possible");
+    }
+}
+
+bool ConfigBase::set_deserialize_nothrow(const t_config_option_key &opt_key_src, const std::string &value_src, bool append)
 {
     t_config_option_key opt_key = opt_key_src;
     std::string         value   = value_src;
@@ -488,6 +509,18 @@ bool ConfigBase::set_deserialize(const t_config_option_key &opt_key_src, const s
         // Ignore the option.
         return true;
     return this->set_deserialize_raw(opt_key, value, append);
+}
+
+void ConfigBase::set_deserialize(const t_config_option_key &opt_key_src, const std::string &value_src, bool append)
+{
+	if (! this->set_deserialize_nothrow(opt_key_src, value_src, append))
+		throw BadOptionTypeException("ConfigBase::set_deserialize() failed");
+}
+
+void ConfigBase::set_deserialize(std::initializer_list<SetDeserializeItem> items)
+{
+	for (const SetDeserializeItem &item : items)
+		this->set_deserialize(item.opt_key, item.opt_value, item.append);
 }
 
 bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, const std::string &value, bool append)
@@ -729,6 +762,12 @@ void ConfigBase::null_nullables()
     }
 }
 
+DynamicConfig::DynamicConfig(const ConfigBase& rhs, const t_config_option_keys& keys)
+{
+	for (const t_config_option_key& opt_key : keys)
+		this->options[opt_key] = std::unique_ptr<ConfigOption>(rhs.option(opt_key)->clone());
+}
+
 bool DynamicConfig::operator==(const DynamicConfig &rhs) const
 {
     auto it1     = this->options.begin();
@@ -878,7 +917,7 @@ bool DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra,
             static_cast<ConfigOptionString*>(opt_base)->value = value;
         } else {
             // Any scalar value of a type different from Bool and String.
-            if (! this->set_deserialize(opt_key, value, false)) {
+            if (! this->set_deserialize_nothrow(opt_key, value, false)) {
 				boost::nowide::cerr << "Invalid value supplied for --" << token.c_str() << std::endl;
 				return false;
 			}

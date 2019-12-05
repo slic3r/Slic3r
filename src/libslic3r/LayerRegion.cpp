@@ -73,7 +73,7 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollec
         fill_surfaces
     );
     
-    if (this->layer()->lower_layer != NULL)
+    if (this->layer()->lower_layer != nullptr)
         // Cummulative sum of polygons over all the regions.
         g.lower_slices = &this->layer()->lower_layer->slices;
     if (this->layer()->upper_layer != NULL)
@@ -147,7 +147,7 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
                 if (! surface.empty())
                     bridges.emplace_back(surface);
             }
-            if (has_infill || !(surface.has_pos_internal() && surface.has_fill_sparse())) {
+            if (has_infill || !(surface.has_pos_internal())) {
                 if (!surface.has_pos_external())
                     // Make a copy as the following line uses the move semantics.
                     internal.push_back(surface);
@@ -169,7 +169,7 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
             // Remove voids from fill_boundaries, that are not supported by the layer below.
             if (lower_layer_covered == nullptr) {
                 lower_layer_covered = &lower_layer_covered_tmp;
-                lower_layer_covered_tmp = to_polygons(lower_layer->slices.expolygons);
+            	lower_layer_covered_tmp = to_polygons(lower_layer->slices);
             }
             if (! lower_layer_covered->empty())
                 voids = diff(voids, *lower_layer_covered);
@@ -305,7 +305,7 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
                     bridges[idx_last].bridge_angle = bd.angle;
                     if (this->layer()->object()->config().support_material) {
                         polygons_append(this->bridged, intersection(bd.coverage(), to_polygons(initial)));
-                        this->unsupported_bridge_edges.append(bd.unsupported_edges()); 
+                        append(this->unsupported_bridge_edges, bd.unsupported_edges());
                     }
                 } else if (custom_angle > 0) {
                     // Bridge was not detected (likely it is only supported at one side). Still it is a surface filled in

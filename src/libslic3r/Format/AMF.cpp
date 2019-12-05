@@ -12,8 +12,13 @@
 #include "../PrintConfig.hpp"
 #include "../Utils.hpp"
 #include "../I18N.hpp"
+#include "../Geometry.hpp"
 
 #include "AMF.hpp"
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+namespace pt = boost::property_tree;
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/algorithm/string.hpp>
@@ -36,7 +41,8 @@
 //     Added x and y components of rotation
 //     Added x, y and z components of scale
 //     Added x, y and z components of mirror
-const unsigned int VERSION_AMF = 2;
+// 3 : Meshes saved in their local system; Added volumes' matrices and source data
+const unsigned int VERSION_AMF = 3;
 const char* SLIC3RPE_AMF_VERSION = "slic3rpe_amf_version";
 
 const char* SLIC3R_CONFIG_TYPE = "slic3rpe_config";
@@ -145,6 +151,8 @@ struct AMFParserContext
         NODE_TYPE_MIRRORY,              // amf/constellation/instance/mirrory
         NODE_TYPE_MIRRORZ,              // amf/constellation/instance/mirrorz
         NODE_TYPE_PRINTABLE,            // amf/constellation/instance/mirrorz
+        NODE_TYPE_CUSTOM_GCODE,         // amf/custom_code_per_height
+        NODE_TYPE_GCODE_PER_HEIGHT,     // amf/custom_code_per_height/code
         NODE_TYPE_METADATA,             // anywhere under amf/*/metadata
     };
 
@@ -225,7 +233,7 @@ struct AMFParserContext
     // Current instance allocated for an amf/constellation/instance subtree.
     Instance                *m_instance;
     // Generic string buffer for vertices, face indices, metadata etc.
-    std::string              m_value[3];
+    std::string              m_value[4];
     // Pointer to config to update if config data are stored inside the amf file
     DynamicPrintConfig      *m_config;
 
@@ -266,6 +274,8 @@ void AMFParserContext::startElement(const char *name, const char **atts)
             }
         } else if (strcmp(name, "constellation") == 0) {
             node_type_new = NODE_TYPE_CONSTELLATION;
+        } else if (strcmp(name, "custom_gcodes_per_height") == 0) {
+            node_type_new = NODE_TYPE_CUSTOM_GCODE;
         }
         break;
     case 2:
@@ -292,6 +302,13 @@ void AMFParserContext::startElement(const char *name, const char **atts)
             }
             else
                 this->stop();
+        } 
+        else if (strcmp(name, "code") == 0 && m_path[1] == NODE_TYPE_CUSTOM_GCODE) {
+            node_type_new = NODE_TYPE_GCODE_PER_HEIGHT;
+            m_value[0] = get_attribute(atts, "height");
+            m_value[1] = get_attribute(atts, "gcode");
+            m_value[2] = get_attribute(atts, "extruder");
+            m_value[3] = get_attribute(atts, "color");
         }
         break;
     case 3:
@@ -560,15 +577,38 @@ void AMFParserContext::endElement(const char * /* name */)
         stl.stats.number_of_facets = int(m_volume_facets.size() / 3);
         stl.stats.original_num_facets = stl.stats.number_of_facets;
         stl_allocate(&stl);
+
+        Slic3r::Geometry::Transformation transform;
+        if (m_version > 2)
+            transform = m_volume->get_transformation();
+
+        Transform3d inv_matrix = transform.get_matrix().inverse();
+
         for (size_t i = 0; i < m_volume_facets.size();) {
             stl_facet &facet = stl.facet_start[i/3];
-            for (unsigned int v = 0; v < 3; ++ v)
-                memcpy(facet.vertex[v].data(), &m_object_vertices[m_volume_facets[i ++] * 3], 3 * sizeof(float));
+            for (unsigned int v = 0; v < 3; ++v)
+            {
+                unsigned int tri_id = m_volume_facets[i++] * 3;
+                Vec3f vertex(m_object_vertices[tri_id + 0], m_object_vertices[tri_id + 1], m_object_vertices[tri_id + 2]);
+                if (m_version > 2)
+                    // revert the vertices to the original mesh reference system
+                    vertex = (inv_matrix * vertex.cast<double>()).cast<float>();
+                ::memcpy((void*)facet.vertex[v].data(), (const void*)vertex.data(), 3 * sizeof(float));
+            }
         }
         stl_get_size(&stl);
         mesh.repair();
 		m_volume->set_mesh(std::move(mesh));
-        m_volume->center_geometry_after_creation();
+        if (m_volume->source.input_file.empty() && (m_volume->type() == ModelVolumeType::MODEL_PART))
+        {
+            m_volume->source.object_idx = (int)m_model.objects.size() - 1;
+            m_volume->source.volume_idx = (int)m_model.objects.back()->volumes.size() - 1;
+            m_volume->center_geometry_after_creation();
+        }
+        else
+            // pass false if the mesh offset has been already taken from the data 
+            m_volume->center_geometry_after_creation(m_volume->source.input_file.empty());
+
         m_volume->calculate_convex_hull();
         m_volume_facets.clear();
         m_volume = nullptr;
@@ -590,6 +630,19 @@ void AMFParserContext::endElement(const char * /* name */)
         assert(m_instance);
         m_instance = nullptr;
         break;
+
+    case NODE_TYPE_GCODE_PER_HEIGHT: {
+        double height = double(atof(m_value[0].c_str()));
+        const std::string& gcode = m_value[1];
+        int extruder = atoi(m_value[2].c_str());
+        const std::string& color = m_value[3];
+
+        m_model.custom_gcode_per_height.push_back(Model::CustomGCode(height, gcode, extruder, color));
+
+        for (std::string& val: m_value)
+            val.clear();
+        break;
+        }
 
     case NODE_TYPE_METADATA:
         if ((m_config != nullptr) && strncmp(m_value[0].c_str(), SLIC3R_CONFIG_TYPE, strlen(SLIC3R_CONFIG_TYPE)) == 0)
@@ -663,6 +716,29 @@ void AMFParserContext::endElement(const char * /* name */)
 					m_volume->set_type((atoi(m_value[1].c_str()) == 1) ? ModelVolumeType::PARAMETER_MODIFIER : ModelVolumeType::MODEL_PART);
                 } else if (strcmp(opt_key, "volume_type") == 0) {
                     m_volume->set_type(ModelVolume::type_from_string(m_value[1]));
+                }
+                else if (strcmp(opt_key, "matrix") == 0) {
+                    Geometry::Transformation transform;
+                    transform.set_from_string(m_value[1]);
+                    m_volume->set_transformation(transform);
+                }
+                else if (strcmp(opt_key, "source_file") == 0) {
+                    m_volume->source.input_file = m_value[1];
+                }
+                else if (strcmp(opt_key, "source_object_id") == 0) {
+                    m_volume->source.object_idx = ::atoi(m_value[1].c_str());
+                }
+                else if (strcmp(opt_key, "source_volume_id") == 0) {
+                    m_volume->source.volume_idx = ::atoi(m_value[1].c_str());
+                }
+                else if (strcmp(opt_key, "source_offset_x") == 0) {
+                    m_volume->source.mesh_offset(0) = ::atof(m_value[1].c_str());
+                }
+                else if (strcmp(opt_key, "source_offset_y") == 0) {
+                    m_volume->source.mesh_offset(1) = ::atof(m_value[1].c_str());
+                }
+                else if (strcmp(opt_key, "source_offset_z") == 0) {
+                    m_volume->source.mesh_offset(2) = ::atof(m_value[1].c_str());
                 }
             }
         } else if (m_path.size() == 3) {
@@ -758,6 +834,15 @@ bool load_amf_file(const char *path, DynamicPrintConfig *config, Model *model)
 
     if (result)
         ctx.endDocument();
+
+    for (ModelObject* o : model->objects)
+    {
+        for (ModelVolume* v : o->volumes)
+        {
+            if (v->source.input_file.empty() && (v->type() == ModelVolumeType::MODEL_PART))
+                v->source.input_file = path;
+        }
+    }
 
     return result;
 }
@@ -978,7 +1063,7 @@ bool store_amf(std::string &path, Model *model, const DynamicPrintConfig *config
             stream << layer_height_profile.front();
             for (size_t i = 1; i < layer_height_profile.size(); ++i)
                 stream << ";" << layer_height_profile[i];
-                stream << "\n    </metadata>\n";
+            stream << "\n    </metadata>\n";
         }
 
         // Export layer height ranges including the layer range specific config overrides.
@@ -1056,7 +1141,28 @@ bool store_amf(std::string &path, Model *model, const DynamicPrintConfig *config
             if (volume->is_modifier())
                 stream << "        <metadata type=\"slic3r.modifier\">1</metadata>\n";
             stream << "        <metadata type=\"slic3r.volume_type\">" << ModelVolume::type_to_string(volume->type()) << "</metadata>\n";
-			const indexed_triangle_set &its = volume->mesh().its;
+            stream << "        <metadata type=\"slic3r.matrix\">";
+            const Transform3d& matrix = volume->get_matrix();
+            for (int r = 0; r < 4; ++r)
+            {
+                for (int c = 0; c < 4; ++c)
+                {
+                    stream << matrix(r, c);
+                    if ((r != 3) || (c != 3))
+                        stream << " ";
+                }
+            }
+            stream << "</metadata>\n";
+            if (!volume->source.input_file.empty())
+            {
+                stream << "        <metadata type=\"slic3r.source_file\">" << xml_escape(volume->source.input_file) << "</metadata>\n";
+                stream << "        <metadata type=\"slic3r.source_object_id\">" << volume->source.object_idx << "</metadata>\n";
+                stream << "        <metadata type=\"slic3r.source_volume_id\">" << volume->source.volume_idx << "</metadata>\n";
+                stream << "        <metadata type=\"slic3r.source_offset_x\">" << volume->source.mesh_offset(0) << "</metadata>\n";
+                stream << "        <metadata type=\"slic3r.source_offset_y\">" << volume->source.mesh_offset(1) << "</metadata>\n";
+                stream << "        <metadata type=\"slic3r.source_offset_z\">" << volume->source.mesh_offset(2) << "</metadata>\n";
+            }
+            const indexed_triangle_set &its = volume->mesh().its;
             for (size_t i = 0; i < its.indices.size(); ++i) {
                 stream << "        <triangle>\n";
                 for (int j = 0; j < 3; ++j)
@@ -1111,6 +1217,42 @@ bool store_amf(std::string &path, Model *model, const DynamicPrintConfig *config
         stream << instances;
         stream << "  </constellation>\n";
     }
+
+    if (!model->custom_gcode_per_height.empty())
+    {
+        std::string out = "";
+        pt::ptree tree;
+
+        pt::ptree& main_tree = tree.add("custom_gcodes_per_height", "");
+
+        for (const Model::CustomGCode& code : model->custom_gcode_per_height)
+        {
+            pt::ptree& code_tree = main_tree.add("code", "");
+            // store minX and maxZ
+            code_tree.put("<xmlattr>.height", code.height);
+            code_tree.put("<xmlattr>.gcode", code.gcode);
+            code_tree.put("<xmlattr>.extruder", code.extruder);
+            code_tree.put("<xmlattr>.color", code.color);
+        }
+
+        if (!tree.empty())
+        {
+            std::ostringstream oss;
+            pt::write_xml(oss, tree);
+            out = oss.str();
+
+            int del_header_pos = out.find("<custom_gcodes_per_height");
+            if (del_header_pos != std::string::npos)
+                out.erase(out.begin(), out.begin() + del_header_pos);
+
+            // Post processing("beautification") of the output string
+            boost::replace_all(out, "><code", ">\n  <code");
+            boost::replace_all(out, "><", ">\n<");
+
+            stream << out << "\n";
+        }
+    }
+
     stream << "</amf>\n";
 
     std::string internal_amf_filename = boost::ireplace_last_copy(boost::filesystem::path(path).filename().string(), ".zip.amf", ".amf");

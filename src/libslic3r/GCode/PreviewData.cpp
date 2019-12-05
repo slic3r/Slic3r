@@ -23,7 +23,7 @@ std::vector<unsigned char> GCodePreviewData::Color::as_bytes() const
     return ret;
 }
 
-GCodePreviewData::Extrusion::Layer::Layer(float z, const ExtrusionPaths& paths)
+GCodePreviewData::Extrusion::Layer::Layer(float z, const Paths& paths)
     : z(z)
     , paths(paths)
 {
@@ -171,8 +171,8 @@ size_t GCodePreviewData::Extrusion::memory_used() const
     size_t out = sizeof(*this);
     out += SLIC3R_STDVEC_MEMSIZE(this->layers, Layer);
     for (const Layer &layer : this->layers) {
-        out += SLIC3R_STDVEC_MEMSIZE(layer.paths, ExtrusionPath);
-        for (const ExtrusionPath &path : layer.paths)
+        out += SLIC3R_STDVEC_MEMSIZE(layer.paths, Path);
+        for (const Path &path : layer.paths)
 			out += SLIC3R_STDVEC_MEMSIZE(path.polyline.points, Point);
     }
 	return out;
@@ -241,6 +241,7 @@ void GCodePreviewData::set_default()
     ::memcpy((void*)ranges.height.colors, (const void*)Range::Default_Colors, Range::Colors_Count * sizeof(Color));
     ::memcpy((void*)ranges.width.colors, (const void*)Range::Default_Colors, Range::Colors_Count * sizeof(Color));
     ::memcpy((void*)ranges.feedrate.colors, (const void*)Range::Default_Colors, Range::Colors_Count * sizeof(Color));
+    ::memcpy((void*)ranges.fan_speed.colors, (const void*)Range::Default_Colors, Range::Colors_Count * sizeof(Color));
     ::memcpy((void*)ranges.volumetric_rate.colors, (const void*)Range::Default_Colors, Range::Colors_Count * sizeof(Color));
 
     extrusion.set_default();
@@ -285,6 +286,11 @@ GCodePreviewData::Color GCodePreviewData::get_width_color(float width) const
 GCodePreviewData::Color GCodePreviewData::get_feedrate_color(float feedrate) const
 {
     return ranges.feedrate.get_color_at(feedrate);
+}
+
+GCodePreviewData::Color GCodePreviewData::get_fan_speed_color(float fan_speed) const
+{
+    return ranges.fan_speed.get_color_at(fan_speed);
 }
 
 GCodePreviewData::Color GCodePreviewData::get_volumetric_rate_color(float rate) const
@@ -358,8 +364,10 @@ std::string GCodePreviewData::get_legend_title() const
         return L("Width (mm)");
     case Extrusion::Feedrate:
         return L("Speed (mm/s)");
+    case Extrusion::FanSpeed:
+        return L("Fan Speed (%)");
     case Extrusion::VolumetricRate:
-        return L("Volumetric flow rate (mm3/s)");
+        return L("Volumetric flow rate (mm³/s)");
     case Extrusion::Tool:
         return L("Tool");
     case Extrusion::Filament:
@@ -373,7 +381,8 @@ std::string GCodePreviewData::get_legend_title() const
     return "";
 }
 
-GCodePreviewData::LegendItemsList GCodePreviewData::get_legend_items(const std::vector<float>& tool_colors, const std::vector</*double*/std::pair<double, double>>& cp_values) const
+GCodePreviewData::LegendItemsList GCodePreviewData::get_legend_items(const std::vector<float>& tool_colors, 
+                                                                     const std::vector<std::string>& cp_items) const
 {
     struct Helper
     {
@@ -423,6 +432,11 @@ GCodePreviewData::LegendItemsList GCodePreviewData::get_legend_items(const std::
             Helper::FillListFromRange(items, ranges.feedrate, 1, 1.0f);
             break;
         }
+    case Extrusion::FanSpeed:
+        {
+            Helper::FillListFromRange(items, ranges.fan_speed, 0, 1.0f);
+            break;
+        }
     case Extrusion::VolumetricRate:
         {
             Helper::FillListFromRange(items, ranges.volumetric_rate, 3, 1.0f);
@@ -445,31 +459,25 @@ GCodePreviewData::LegendItemsList GCodePreviewData::get_legend_items(const std::
     case Extrusion::ColorPrint:
         {
             const int color_cnt = (int)tool_colors.size()/4;
-
-            const auto color_print_cnt = (int)cp_values.size();
-            for (int i = color_print_cnt; i >= 0 ; --i)
+            const auto color_print_cnt = (int)cp_items.size();
+            if (color_print_cnt == 1) // means "Default print color"
             {
-                GCodePreviewData::Color color;
-                ::memcpy((void*)color.rgba, (const void*)(tool_colors.data() + (i % color_cnt) * 4), 4 * sizeof(float));
+                Color color;
+                ::memcpy((void*)color.rgba, (const void*)(tool_colors.data()), 4 * sizeof(float));
+
+                items.emplace_back(cp_items[0], color);
+                break;
+            }
+
+            if (color_cnt != color_print_cnt)
+                break;
+
+            for (int i = 0 ; i < color_print_cnt; ++i)
+            {
+                Color color;
+                ::memcpy((void*)color.rgba, (const void*)(tool_colors.data() + i * 4), 4 * sizeof(float));
                 
-                if (color_print_cnt == 0) {
-                    items.emplace_back(Slic3r::I18N::translate(L("Default print color")), color);
-                    break;
-                }
-
-                std::string id_str = std::to_string(i + 1) + ": ";
-
-                if (i == 0) {
-                    items.emplace_back(id_str + (boost::format(Slic3r::I18N::translate(L("up to %.2f mm"))) % cp_values[0].first).str(), color);
-                    break;
-                }
-                if (i == color_print_cnt) {
-                    items.emplace_back(id_str + (boost::format(Slic3r::I18N::translate(L("above %.2f mm"))) % cp_values[i - 1].second).str(), color);
-                    continue;
-                }
-
-//                 items.emplace_back((boost::format(Slic3r::I18N::translate(L("%.2f - %.2f mm"))) %  cp_values[i-1] % cp_values[i]).str(), color);
-                items.emplace_back(id_str + (boost::format(Slic3r::I18N::translate(L("%.2f - %.2f mm"))) % cp_values[i - 1].second% cp_values[i].first).str(), color);
+                items.emplace_back(cp_items[i], color);
             }
             break;
         }
