@@ -726,7 +726,9 @@ Print::export_gcode(std::string outfile, bool quiet)
         this->config.setenv_();
         for (std::string ppscript : this->config.post_process.values) {
             #ifdef __cpp_lib_quoted_string_io
-                ppscript += " " + std::quoted(outfile);
+                std::stringstream _tmp_string(ppscript);
+                _tmp_string << " " << std::quoted(outfile);
+                ppscript = _tmp_string.str();
             #else
                 boost::replace_all(ppscript, "\"", "\\\"");
                 ppscript += " \"" + outfile + "\"";
