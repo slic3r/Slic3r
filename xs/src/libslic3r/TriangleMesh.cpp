@@ -462,7 +462,7 @@ Pointf3s TriangleMesh::normals() const
     } else {
         Slic3r::Log::warn("TriangleMesh", "normals() requires repair()");
     }
-    return std::move(tmp);
+    return tmp;
 }
 
 Pointf3 TriangleMesh::size() const
