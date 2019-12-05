@@ -156,6 +156,9 @@ bool
 OBJ::write(const Model& model, std::string output_file)
 {
     TriangleMesh mesh = model.mesh();
+    // pre-emptively repair because object write can break 
+    // output
+    mesh.repair();
     return OBJ::write(mesh, output_file);
 }
 
