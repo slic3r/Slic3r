@@ -2,11 +2,10 @@ _Q: Oh cool, a new fork of slic3r?_
 
 A: Yeah!
 
-Slic3r
+Slic3r++
 ======
-Prebuilt Windows 64b is available through the [git releases page](https://github.com/supermerill/Slic3r/releases).
-
-<img width=256 src=https://cloud.githubusercontent.com/assets/31754/22719818/09998c92-ed6d-11e6-9fa0-09de638f3a36.png />
+Prebuilt Windows 64b releases are available through the [git releases page](https://github.com/supermerill/Slic3r/releases).
+Nightly builds for windows, Linux and macos are available through the [git actions page](https://github.com/supermerill/Slic3r/actions). Click on the a build for your plateform and then on 'Artifacts (1)' in the top right corner.
 
 Slic3r++ takes 3D models (STL, OBJ, AMF) and converts them into G-code
 instructions for FFF printers or PNG layers for mSLA 3D printers. It's
@@ -28,10 +27,13 @@ The command line interface is a thin wrapper over `libslic3r`.
 
 ### What are this fork main features/differences?
 
-* **Ironing** top surface & many new settings to fine-tune the top surface quality.
+* **Ironing** top surface & many new settings to fine-tune the top surface quality, like 'only one perimeter on top'.
 * A "denser infill" option for supporting the (solid) top layers.
+* Better **Thin walls** (anchored inside the print, no more random bits at the ends).
+* Options to change holes dimensions and/or geometry, to print them at the right size.
 * Better overhangs (add perimeters if needed, slice them in opposite direction each layer).
-* Better Thin walls (anchored inside the print, no more random bits at the ends).
+* Briml rework: many more options (inside, outside ounly, 'ears')
+* Some new seam options, to help hide them.
 * Can join perimeters into a big one to avoid travel moves.
 * Many other little options and corrections (like the filled concentric pattern).
 * It has also all the current slic3rPE/PrusaSlicer features.
@@ -78,6 +80,9 @@ these documentation pages:
 * [Linux](doc/How%20to%20build%20-%20Linux%20et%20al.md)
 * [macOS](doc/How%20to%20build%20-%20Mac%20OS.md)
 * [Windows](doc/How%20to%20build%20-%20Windows.md)
+
+Also, you can look at the worklow yaml files for [git actions](https://github.com/supermerill/Slic3r/tree/master/.github/workflows), as they describe how to build from source from a "virgin" dev computer.
+
 ### Can I help?
 
 Sure! You can do the following to find things that are available to help with:

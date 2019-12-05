@@ -17,11 +17,6 @@
     #endif /* SLIC3R_GUI */
 #endif /* WIN32 */
 
-#include <cstdio>
-#include <string>
-#include <cstring>
-#include <iostream>
-#include <math.h>
 #include <boost/filesystem.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/cenv.hpp>
