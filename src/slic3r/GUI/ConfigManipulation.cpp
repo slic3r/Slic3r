@@ -342,6 +342,13 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     bool have_wipe_tower = config->opt_bool("wipe_tower");
     for (auto el : { "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_bridging" })
         toggle_field(el, have_wipe_tower);
+
+
+    for (auto el : { "fill_smooth_width", "fill_smooth_distribution" })
+        toggle_field(el, (have_solid_infill && (config->option<ConfigOptionEnum<InfillPattern>>("top_fill_pattern")->value == InfillPattern::ipSmooth
+            || config->option<ConfigOptionEnum<InfillPattern>>("bottom_fill_pattern")->value == InfillPattern::ipSmooth
+            || config->option<ConfigOptionEnum<InfillPattern>>("solid_fill_pattern")->value == InfillPattern::ipSmooth))
+            || (config->option<ConfigOptionEnum<InfillPattern>>("support_material_interface_pattern")->value == InfillPattern::ipSmooth && have_support_material));
 }
 
 void ConfigManipulation::update_print_sla_config(DynamicPrintConfig* config, const bool is_global_config/* = false*/)
@@ -397,16 +404,18 @@ void ConfigManipulation::toggle_print_sla_options(DynamicPrintConfig* config)
 
     toggle_field("pad_wall_thickness", pad_en);
     toggle_field("pad_wall_height", pad_en);
+    toggle_field("pad_brim_size", pad_en);
     toggle_field("pad_max_merge_distance", pad_en);
  // toggle_field("pad_edge_radius", supports_en);
     toggle_field("pad_wall_slope", pad_en);
     toggle_field("pad_around_object", pad_en);
+    toggle_field("pad_around_object_everywhere", pad_en);
 
-    bool has_suppad = pad_en && supports_en;
-    bool zero_elev = config->opt_bool("pad_around_object") && has_suppad;
+    bool zero_elev = config->opt_bool("pad_around_object") && pad_en;
 
     toggle_field("support_object_elevation", supports_en && !zero_elev);
     toggle_field("pad_object_gap", zero_elev);
+    toggle_field("pad_around_object_everywhere", zero_elev);
     toggle_field("pad_object_connector_stride", zero_elev);
     toggle_field("pad_object_connector_width", zero_elev);
     toggle_field("pad_object_connector_penetration", zero_elev);

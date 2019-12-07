@@ -236,7 +236,7 @@ bool TriangleMesh::needed_repair() const
         || this->stl.stats.backwards_edges      > 0;
 }
 
-void TriangleMesh::WriteOBJFile(const char* output_file)
+void TriangleMesh::WriteOBJFile(const char* output_file) const
 {
     its_write_obj(this->its, output_file);
 }
@@ -591,6 +591,17 @@ TriangleMesh TriangleMesh::convex_hull_3d() const
     TriangleMesh output_mesh(dst_vertices, facets);
     output_mesh.repair();
     return output_mesh;
+}
+
+std::vector<ExPolygons> TriangleMesh::slice(const std::vector<double> &z)
+{
+    // convert doubles to floats
+    std::vector<float> z_f(z.begin(), z.end());
+    TriangleMeshSlicer mslicer(this);
+    std::vector<ExPolygons> layers;
+    //mslicer.slice(z_f, 0.0004f, &layers, []() {});
+    mslicer.slice(z_f, &layers, []() {});
+    return layers;
 }
 
 void TriangleMesh::require_shared_vertices()
@@ -1885,7 +1896,8 @@ Pointf3s TriangleMesh::vertices()
 }
 
 // Generate the vertex list for a cube solid of arbitrary size in X/Y/Z.
-TriangleMesh make_cube(double x, double y, double z) {
+TriangleMesh make_cube(double x, double y, double z) 
+{
     Vec3d pv[8] = { 
         Vec3d(x, y, 0), Vec3d(x, 0, 0), Vec3d(0, 0, 0), 
         Vec3d(0, y, 0), Vec3d(x, y, z), Vec3d(0, y, z), 
@@ -1902,6 +1914,7 @@ TriangleMesh make_cube(double x, double y, double z) {
     Pointf3s vertices(&pv[0], &pv[0]+8);
 
     TriangleMesh mesh(vertices ,facets);
+	mesh.repair();
     return mesh;
 }
 
@@ -1946,7 +1959,9 @@ TriangleMesh make_cylinder(double r, double h, double fa)
 	facets.emplace_back(Vec3i32(id, 2,      3));
     facets.emplace_back(Vec3i32(id, id - 1, 2));
     
-	return TriangleMesh(std::move(vertices), std::move(facets));
+	TriangleMesh mesh(std::move(vertices), std::move(facets));
+	mesh.repair();
+	return mesh;
 }
 
 // Generates mesh for a sphere centered about the origin, using the generated angle
@@ -2002,7 +2017,9 @@ TriangleMesh make_sphere(double radius, double fa)
             k2 = k2_next;
     }
         }
-    return TriangleMesh(std::move(vertices), std::move(facets));
+	TriangleMesh mesh(std::move(vertices), std::move(facets));
+	mesh.repair();
+	return mesh;
     }
 
 }

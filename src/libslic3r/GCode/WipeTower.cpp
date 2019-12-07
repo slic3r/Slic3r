@@ -383,15 +383,18 @@ public:
 
 	// Let the firmware back up the active speed override value.
 	WipeTowerWriter& speed_override_backup()
-	{
-		m_gcode += "M220 B\n";
+    {
+        // This is only supported by Prusa at this point (https://github.com/prusa3d/PrusaSlicer/issues/3114)
+        if (m_gcode_flavor == gcfMarlin)
+            m_gcode += "M220 B\n";
 		return *this;
     }
 
 	// Let the firmware restore the active speed override value.
 	WipeTowerWriter& speed_override_restore()
 	{
-		m_gcode += "M220 R\n";
+        if (m_gcode_flavor == gcfMarlin)
+            m_gcode += "M220 R\n";
 		return *this;
     }
 
@@ -523,6 +526,7 @@ WipeTower::WipeTower(const PrintConfig& config, const std::vector<std::vector<fl
     m_z_pos(0.f),
     m_is_first_layer(false),
     m_bridging(float(config.wipe_tower_bridging)),
+    m_no_sparse_layers(config.wipe_tower_no_sparse_layers),
     m_gcode_flavor(config.gcode_flavor),
     m_current_tool(initial_tool),
     wipe_volumes(wiping_matrix)
@@ -763,7 +767,7 @@ WipeTower::ToolChangeResult WipeTower::tool_change(size_t tool, bool last_in_lay
         writer.append(std::string("; material : " + (m_current_tool < m_filpar.size() ? m_filpar[m_current_tool].material : "(NONE)") + " -> " + m_filpar[tool].material + "\n").c_str())
               .append(";--------------------\n");
 
-	writer.speed_override_backup();
+    writer.speed_override_backup();
 	writer.speed_override(100);
 
 	Vec2f initial_position = cleaning_box.ld + Vec2f(0.f, m_depth_traversed);
@@ -813,7 +817,7 @@ WipeTower::ToolChangeResult WipeTower::tool_change(size_t tool, bool last_in_lay
     if (m_current_tool < m_used_filament_length.size())
         m_used_filament_length[m_current_tool] += writer.get_and_reset_used_filament_length();
 
-	ToolChangeResult result;
+    ToolChangeResult result;
     result.priming      = false;
     result.initial_tool = int(old_tool);
     result.new_tool     = int(m_current_tool);
@@ -852,8 +856,10 @@ WipeTower::ToolChangeResult WipeTower::toolchange_Brim(bool sideOnly, float y_of
     // The tool is supposed to be active and primed at the time when the wipe tower brim is extruded.
     // Extrude 4 rounds of a brim around the future wipe tower.
     box_coordinates box(wipeTower_box);
+    // the brim shall have 'normal' spacing with no extra void space
+    float spacing = m_brim_width - m_layer_height*float(1.-M_PI_4);
     for (size_t i = 0; i < 4; ++ i) {
-        box.expand(m_brim_width - m_layer_height*(1.f-M_PI_4)); // the brim shall have 'normal' spacing with no extra void space
+        box.expand(spacing);
         writer.travel (box.ld, 7000)
                 .extrude(box.lu, 2100).extrude(box.ru)
                 .extrude(box.rd      ).extrude(box.ld);
@@ -865,13 +871,17 @@ WipeTower::ToolChangeResult WipeTower::toolchange_Brim(bool sideOnly, float y_of
     writer.append("; CP WIPE TOWER FIRST LAYER BRIM END\n"
                   ";-----------------------------------\n");
 
+    // Save actual brim width to be later passed to the Print object, which will use it
+    // for skirt calculation and pass it to GLCanvas for precise preview box
+    m_wipe_tower_brim_width = wipeTower_box.ld.x() - box.ld.x() + spacing/2.f;
+
     m_print_brim = false;  // Mark the brim as extruded
 
     // Ask our writer about how much material was consumed:
     if (m_current_tool < m_used_filament_length.size())
     	m_used_filament_length[m_current_tool] += writer.get_and_reset_used_filament_length();
 
-	ToolChangeResult result;
+    ToolChangeResult result;
     result.priming      = false;
     result.initial_tool = int(old_tool);
     result.new_tool     = int(m_current_tool);
@@ -1129,9 +1139,10 @@ void WipeTower::toolchange_Change(
     writer.append("[toolchange_gcode]\n");
 
     // Travel to where we assume we are. Custom toolchange or some special T code handling (parking extruder etc)
-    // gcode could have left the extruder somewhere, we cannot just start extruding.
-	Vec2f current_pos = writer.pos_rotated();
-    writer.append(std::string("G1 X") + std::to_string(current_pos.x()) +  " Y" + std::to_string(current_pos.y()) +  "\n");
+    // gcode could have left the extruder somewhere, we cannot just start extruding. We should also inform the
+    // postprocessor that we absolutely want to have this in the gcode, even if it thought it is the same as before.
+    Vec2f current_pos = writer.pos_rotated();
+    writer.append(std::string("G1 X") + std::to_string(current_pos.x()) +  " Y" + std::to_string(current_pos.y()) + never_skip_tag() + "\n");
 
     // The toolchange Tn command will be inserted later, only in case that the user does
     // not provide a custom toolchange gcode.
@@ -1271,9 +1282,10 @@ WipeTower::ToolChangeResult WipeTower::finish_layer()
     writer.set_initial_position((m_left_to_right ? fill_box.ru : fill_box.lu), // so there is never a diagonal travel
                                  m_wipe_tower_width, m_wipe_tower_depth, m_internal_rotation);
 
+    bool toolchanges_on_layer = m_layer_info->toolchanges_depth() > WT_EPSILON;
 	box_coordinates box = fill_box;
     for (int i=0;i<2;++i) {
-        if (m_layer_info->toolchanges_depth() < WT_EPSILON) { // there were no toolchanges on this layer
+        if (! toolchanges_on_layer) {
             if (i==0) box.expand(m_perimeter_width);
             else box.expand(-m_perimeter_width);
         }
@@ -1298,7 +1310,7 @@ WipeTower::ToolChangeResult WipeTower::finish_layer()
                 writer.extrude(box.rd.x() - m_perimeter_width / 2.f, writer.y() + 0.5f * step);
                 writer.extrude(box.ld.x() + m_perimeter_width / 2.f, writer.y());
             }
-            writer.travel(box.rd.x()-m_perimeter_width/2.f,writer.y()); // wipe the nozzle
+        writer.travel(box.rd.x()-m_perimeter_width/2.f,writer.y()); // wipe the nozzle
     }
     else {  // Extrude a sparse infill to support the material to be printed above.
         const float dy = (fill_box.lu.y() - fill_box.ld.y() - m_perimeter_width);
@@ -1327,11 +1339,14 @@ WipeTower::ToolChangeResult WipeTower::finish_layer()
 
     m_depth_traversed = m_wipe_tower_depth-m_perimeter_width;
 
-    // Ask our writer about how much material was consumed:
-    if (m_current_tool < m_used_filament_length.size())
-        m_used_filament_length[m_current_tool] += writer.get_and_reset_used_filament_length();
 
-	ToolChangeResult result;
+    // Ask our writer about how much material was consumed.
+    // Skip this in case the layer is sparse and config option to not print sparse layers is enabled.
+    if (! m_no_sparse_layers || toolchanges_on_layer)
+        if (m_current_tool < m_used_filament_length.size())
+            m_used_filament_length[m_current_tool] += writer.get_and_reset_used_filament_length();
+
+    ToolChangeResult result;
     result.priming      = false;
     result.initial_tool = int(old_tool);
     result.new_tool     = int(m_current_tool);

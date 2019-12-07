@@ -133,7 +133,7 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	full_Label/* = n
         m_options_mode.push_back(option_set[0].opt.mode);
 
 	// if we have a single option with no label, no sidetext just add it directly to sizer
-	if (option_set.size() == 1 && label_width == 0 && option_set.front().opt.full_width &&
+    if (option_set.size() == 1 && label_width == 0 && option_set.front().opt.full_width &&
         option_set.front().opt.label.empty() &&
 		option_set.front().opt.sidetext.size() == 0 && option_set.front().side_widget == nullptr && 
 		line.get_extra_widgets().size() == 0) {
@@ -233,7 +233,7 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	full_Label/* = n
 
 		add_undo_buttuns_to_sizer(sizer, field);
 		if (is_window_field(field)) 
-			sizer->Add(field->getWindow(), option.opt.full_width ? 1 : 0, //(option.opt.full_width ? wxEXPAND : 0) |
+            sizer->Add(field->getWindow(), option.opt.full_width ? 1 : 0, //(option.opt.full_width ? wxEXPAND : 0) |
             wxBOTTOM | wxTOP | (option.opt.full_width ? wxEXPAND : wxALIGN_CENTER_VERTICAL), (wxOSX || !staticbox) ? 0 : 2);
 		if (is_sizer_field(field)) 
 			sizer->Add(field->getSizer(), 1, /*(*/option.opt.full_width ? wxEXPAND : /*0) |*/ wxALIGN_CENTER_VERTICAL, 0);

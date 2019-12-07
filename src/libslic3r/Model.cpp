@@ -41,6 +41,9 @@ Model& Model::assign_copy(const Model &rhs)
         mo->set_model(this);
 		this->objects.emplace_back(mo);
     }
+
+    // copy custom code per height
+    this->custom_gcode_per_height = rhs.custom_gcode_per_height;
     return *this;
 }
 
@@ -59,6 +62,9 @@ Model& Model::assign_copy(Model &&rhs)
     for (ModelObject *model_object : this->objects)
         model_object->set_model(this);
     rhs.objects.clear();
+
+    // copy custom code per height
+    this->custom_gcode_per_height = rhs.custom_gcode_per_height;
     return *this;
 }
 
@@ -141,12 +147,12 @@ Model Model::read_from_archive(const std::string& input_file, DynamicPrintConfig
 
     for (ModelObject *o : model.objects)
     {
-        if (boost::algorithm::iends_with(input_file, ".zip.amf"))
-        {
-            // we remove the .zip part of the extension to avoid it be added to filenames when exporting
-            o->input_file = boost::ireplace_last_copy(input_file, ".zip.", ".");
-        }
-        else
+//        if (boost::algorithm::iends_with(input_file, ".zip.amf"))
+//        {
+//            // we remove the .zip part of the extension to avoid it be added to filenames when exporting
+//            o->input_file = boost::ireplace_last_copy(input_file, ".zip.", ".");
+//        }
+//        else
             o->input_file = input_file;
     }
 
@@ -170,6 +176,9 @@ ModelObject* Model::add_object(const char *name, const char *path, const Triangl
     new_object->input_file = path;
     ModelVolume *new_volume = new_object->add_volume(mesh);
     new_volume->name = name;
+    new_volume->source.input_file = path;
+    new_volume->source.object_idx = (int)this->objects.size() - 1;
+    new_volume->source.volume_idx = (int)new_object->volumes.size() - 1;
     new_object->invalidate_bounding_box();
     return new_object;
 }
@@ -182,6 +191,9 @@ ModelObject* Model::add_object(const char *name, const char *path, TriangleMesh 
     new_object->input_file = path;
     ModelVolume *new_volume = new_object->add_volume(std::move(mesh));
     new_volume->name = name;
+    new_volume->source.input_file = path;
+    new_volume->source.object_idx = (int)this->objects.size() - 1;
+    new_volume->source.volume_idx = (int)new_object->volumes.size() - 1;
     new_object->invalidate_bounding_box();
     return new_object;
 }
@@ -578,6 +590,22 @@ end:
 std::string Model::propose_export_file_name_and_path(const std::string &new_extension) const
 {
     return boost::filesystem::path(this->propose_export_file_name_and_path()).replace_extension(new_extension).string();
+}
+
+std::vector<std::pair<double, DynamicPrintConfig>> Model::get_custom_tool_changes(double default_layer_height, size_t num_extruders) const
+{
+    std::vector<std::pair<double, DynamicPrintConfig>> custom_tool_changes;
+    if (!custom_gcode_per_height.empty()) {
+        for (const CustomGCode& custom_gcode : custom_gcode_per_height)
+            if (custom_gcode.gcode == ExtruderChangeCode) {
+                DynamicPrintConfig config;
+                // If extruder count in PrinterSettings was changed, use default (0) extruder for extruders, more than num_extruders
+                config.set_key_value("extruder", new ConfigOptionInt(custom_gcode.extruder > num_extruders ? 0 : custom_gcode.extruder));
+                // For correct extruders(tools) changing, we should decrease custom_gcode.height value by one default layer height
+                custom_tool_changes.push_back({ custom_gcode.height - default_layer_height, config });
+            }
+    }
+    return custom_tool_changes;
 }
 
 ModelObject::~ModelObject()
@@ -1462,7 +1490,7 @@ stl_stats ModelObject::get_object_stl_stats() const
         return this->volumes[0]->mesh().stl.stats;
 
     stl_stats full_stats;
-    memset(&full_stats, 0, sizeof(stl_stats));
+    full_stats.volume = 0.f;
 
     // fill full_stats from all objet's meshes
     for (ModelVolume* volume : this->volumes)
@@ -1543,7 +1571,7 @@ bool ModelVolume::is_splittable() const
     return m_is_splittable == 1;
 }
 
-void ModelVolume::center_geometry_after_creation()
+void ModelVolume::center_geometry_after_creation(bool update_source_offset)
 {
     Vec3d shift = this->mesh().bounding_box().center();
     if (!shift.isApprox(Vec3d::Zero()))
@@ -1554,6 +1582,9 @@ void ModelVolume::center_geometry_after_creation()
 			const_cast<TriangleMesh*>(m_convex_hull.get())->translate(-(float)shift(0), -(float)shift(1), -(float)shift(2));
         translate(shift);
     }
+
+    if (update_source_offset)
+        source.mesh_offset = shift;
 }
 
 void ModelVolume::calculate_convex_hull()

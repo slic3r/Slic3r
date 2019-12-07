@@ -2,6 +2,9 @@
 #define slic3r_Camera_hpp_
 
 #include "libslic3r/BoundingBox.hpp"
+#if ENABLE_THUMBNAIL_GENERATOR
+#include "3DScene.hpp"
+#endif // ENABLE_THUMBNAIL_GENERATOR
 #include <array>
 
 namespace Slic3r {
@@ -10,6 +13,10 @@ namespace GUI {
 struct Camera
 {
     static const double DefaultDistance;
+#if ENABLE_THUMBNAIL_GENERATOR
+    static const double DefaultZoomToBoxMarginFactor;
+    static const double DefaultZoomToVolumesMarginFactor;
+#endif // ENABLE_THUMBNAIL_GENERATOR
     static double FrustrumMinZRange;
     static double FrustrumMinNearZ;
     static double FrustrumZMargin;
@@ -63,8 +70,8 @@ public:
     void set_theta(float theta, bool apply_limit);
 
     double get_zoom() const { return m_zoom; }
-    void set_zoom(double zoom, const BoundingBoxf3& max_box, int canvas_w, int canvas_h);
-    void set_zoom(double zoom) { m_zoom = zoom; }
+    void update_zoom(double delta_zoom);
+    void set_zoom(double zoom);
 
     const BoundingBoxf3& get_scene_box() const { return m_scene_box; }
     void set_scene_box(const BoundingBoxf3& box) { m_scene_box = box; }
@@ -88,9 +95,16 @@ public:
 
     void apply_viewport(int x, int y, unsigned int w, unsigned int h) const;
     void apply_view_matrix() const;
-    void apply_projection(const BoundingBoxf3& box) const;
+    // Calculates and applies the projection matrix tighting the frustrum z range around the given box.
+    // If larger z span is needed, pass the desired values of near and far z (negative values are ignored)
+    void apply_projection(const BoundingBoxf3& box, double near_z = -1.0, double far_z = -1.0) const;
 
+#if ENABLE_THUMBNAIL_GENERATOR
+    void zoom_to_box(const BoundingBoxf3& box, int canvas_w, int canvas_h, double margin_factor = DefaultZoomToBoxMarginFactor);
+    void zoom_to_volumes(const GLVolumePtrs& volumes, int canvas_w, int canvas_h, double margin_factor = DefaultZoomToVolumesMarginFactor);
+#else
     void zoom_to_box(const BoundingBoxf3& box, int canvas_w, int canvas_h);
+#endif // ENABLE_THUMBNAIL_GENERATOR
 
 #if ENABLE_CAMERA_STATISTICS
     void debug_render() const;
@@ -100,7 +114,12 @@ private:
     // returns tight values for nearZ and farZ plane around the given bounding box
     // the camera MUST be outside of the bounding box in eye coordinate of the given box
     std::pair<double, double> calc_tight_frustrum_zs_around(const BoundingBoxf3& box) const;
+#if ENABLE_THUMBNAIL_GENERATOR
+    double calc_zoom_to_bounding_box_factor(const BoundingBoxf3& box, int canvas_w, int canvas_h, double margin_factor = DefaultZoomToBoxMarginFactor) const;
+    double calc_zoom_to_volumes_factor(const GLVolumePtrs& volumes, int canvas_w, int canvas_h, Vec3d& center, double margin_factor = DefaultZoomToVolumesMarginFactor) const;
+#else
     double calc_zoom_to_bounding_box_factor(const BoundingBoxf3& box, int canvas_w, int canvas_h) const;
+#endif // ENABLE_THUMBNAIL_GENERATOR
     void set_distance(double distance) const;
 };
 

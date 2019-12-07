@@ -38,6 +38,7 @@ typedef std::vector<Point*>                             PointPtrs;
 typedef std::vector<const Point*>                       PointConstPtrs;
 typedef std::vector<Vec3crd>                            Points3;
 typedef std::vector<Vec2d>                              Pointfs;
+typedef std::vector<Vec2d>                              Vec2ds;
 typedef std::vector<Vec3d>                              Pointf3s;
 
 typedef Eigen::Matrix<float,  2, 2, Eigen::DontAlign> Matrix2f;
@@ -90,11 +91,12 @@ class Point : public Vec2crd
 public:
     typedef coord_t coord_type;
 
-    Point() : Vec2crd() { (*this)(0) = 0; (*this)(1) = 0; }
-    Point(int32_t x, int32_t y) { (*this)(0) = coord_t(x); (*this)(1) = coord_t(y); }
-    Point(int64_t x, int64_t y) { (*this)(0) = coord_t(x); (*this)(1) = coord_t(y); }
-    Point(double x, double y) { (*this)(0) = coord_t(lrintl(x)); (*this)(1) = coord_t(lrintl(y)); }
+    Point() : Vec2crd(0, 0) {}
+    Point(int32_t x, int32_t y) : Vec2crd(coord_t(x), coord_t(y)) {}
+    Point(int64_t x, int64_t y) : Vec2crd(coord_t(x), coord_t(y)) {} // for Clipper
+    Point(double x, double y) : Vec2crd(coord_t(lrint(x)), coord_t(lrint(y))) {}
     Point(const Point &rhs) { *this = rhs; }
+    explicit Point(const Vec2d& rhs) : Vec2crd(coord_t(lrint(rhs.x())), coord_t(lrint(rhs.y()))) {}
     // This constructor allows you to construct Point from Eigen expressions
     template<typename OtherDerived>
     Point(const Eigen::MatrixBase<OtherDerived> &other) : Vec2crd(other) {}
@@ -143,6 +145,36 @@ public:
         return std::abs(this->x() - point.x()) < SCALED_EPSILON && std::abs(this->y() - point.y()) < SCALED_EPSILON;
     }
 };
+
+inline bool is_approx(const Point &p1, const Point &p2, coord_t epsilon = coord_t(SCALED_EPSILON))
+{
+	Point d = (p2 - p1).cwiseAbs();
+	return d.x() < epsilon && d.y() < epsilon;
+}
+
+inline bool is_approx(const Vec2f &p1, const Vec2f &p2, float epsilon = float(EPSILON))
+{
+	Vec2f d = (p2 - p1).cwiseAbs();
+	return d.x() < epsilon && d.y() < epsilon;
+}
+
+inline bool is_approx(const Vec2d &p1, const Vec2d &p2, double epsilon = EPSILON)
+{
+	Vec2d d = (p2 - p1).cwiseAbs();
+	return d.x() < epsilon && d.y() < epsilon;
+}
+
+inline bool is_approx(const Vec3f &p1, const Vec3f &p2, float epsilon = float(EPSILON))
+{
+	Vec3f d = (p2 - p1).cwiseAbs();
+	return d.x() < epsilon && d.y() < epsilon && d.z() < epsilon;
+}
+
+inline bool is_approx(const Vec3d &p1, const Vec3d &p2, double epsilon = EPSILON)
+{
+	Vec3d d = (p2 - p1).cwiseAbs();
+	return d.x() < epsilon && d.y() < epsilon && d.z() < epsilon;
+}
 
 namespace int128 {
     // Exact orientation predicate,

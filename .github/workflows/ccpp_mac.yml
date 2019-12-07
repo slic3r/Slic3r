@@ -1,0 +1,51 @@
+name: C/C++ CI macos
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: mkdir in deps
+      run: mkdir deps/build
+    - name: cmake deps
+      working-directory: ./deps/build
+      run: cmake ..
+    - name: make deps
+      working-directory: ./deps/build
+      run: make
+    - name: mkdir build
+      run: mkdir build
+    - name: cmake
+      working-directory: ./build
+      run: cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
+    - name: make slic3r
+      working-directory: ./build
+      run: make slic3r
+    - name: create directory and copy into it
+      working-directory: ./build
+      run: |
+        mkdir Slic3r++
+        mkdir Slic3r++/Slic3r++.app
+        mkdir Slic3r++/Slic3r++.app/Contents
+        mkdir Slic3r++/Slic3r++.app/Contents/_CodeSignature
+        mkdir Slic3r++/Slic3r++.app/Contents/Frameworks
+        mkdir Slic3r++/Slic3r++.app/Contents/MacOS
+    - name: copy resources
+      working-directory: ./build
+      run: cp -Rf ../resources Slic3r++/Slic3r++.app/Contents/resources
+    - name: copy bin
+      working-directory: ./build
+      run: cp -f src/slic3r++ Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
+#    - name: signing resources (creating CodeResources inside _CodeSignature)
+#      working-directory: .
+#      run: codesign -s <identity> resources
+# maybe i should just try to do that on a separate pc and copy the file here, more secure as a signing process.
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: nightly_macos
+        path: build/Slic3r++/

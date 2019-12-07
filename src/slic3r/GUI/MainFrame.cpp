@@ -24,6 +24,7 @@
 #include "PrintHostDialogs.hpp"
 #include "wxExtensions.hpp"
 #include "GUI_ObjectList.hpp"
+#include "Mouse3DController.hpp"
 #include "I18N.hpp"
 
 #include <fstream>
@@ -261,7 +262,7 @@ bool MainFrame::can_export_supports() const
     const PrintObjects& objects = m_plater->sla_print().objects();
     for (const SLAPrintObject* object : objects)
     {
-        if (object->has_mesh(slaposBasePool) || object->has_mesh(slaposSupportTree))
+        if (object->has_mesh(slaposPad) || object->has_mesh(slaposSupportTree))
         {
             can_export = true;
             break;
@@ -686,6 +687,11 @@ void MainFrame::init_menubar()
         helpMenu->AppendSeparator();
         append_menu_item(helpMenu, wxID_ANY, _(L("Keyboard Shortcuts")) + sep + "&?", _(L("Show the list of the keyboard shortcuts")),
             [this](wxCommandEvent&) { wxGetApp().keyboard_shortcuts(); });
+#if ENABLE_THUMBNAIL_GENERATOR_DEBUG
+        helpMenu->AppendSeparator();
+        append_menu_item(helpMenu, wxID_ANY, _(L("DEBUG gcode thumbnails")), _(L("DEBUG ONLY - read the selected gcode file and generates png for the contained thumbnails")),
+            [this](wxCommandEvent&) { wxGetApp().gcode_thumbnails_debug(); });
+#endif // ENABLE_THUMBNAIL_GENERATOR_DEBUG
     }
 
     // menubar
@@ -921,7 +927,7 @@ void MainFrame::load_config_file()
 	wxString file;
     if (dlg.ShowModal() == wxID_OK)
         file = dlg.GetPath();
-	if (! file.IsEmpty() && this->load_config_file(file.ToUTF8().data())) {
+    if (! file.IsEmpty() && this->load_config_file(file.ToUTF8().data())) {
         wxGetApp().app_config->update_config_dir(get_dir_name(file));
         m_last_config = file;
     }

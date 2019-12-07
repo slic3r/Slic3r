@@ -446,8 +446,8 @@ Polygons collect_region_slices_by_type(const Layer &layer, SurfaceType surface_t
 Polygons collect_slices_outer(const Layer &layer)
 {
     Polygons out;
-    out.reserve(out.size() + layer.slices.expolygons.size());
-    for (const ExPolygon &expoly : layer.slices.expolygons)
+    out.reserve(out.size() + layer.slices.size());
+    for (const ExPolygon &expoly : layer.slices)
         out.emplace_back(expoly.contour);
     return out;
 }
@@ -905,9 +905,13 @@ namespace SupportMaterialInternal {
                     polyline.extend_start(fw);
                     polyline.extend_end(fw);
                     // Is the straight perimeter segment supported at both sides?
-                    if (lower_layer.slices.contains(polyline.first_point()) && lower_layer.slices.contains(polyline.last_point()))
+					for (size_t i = 0; i < lower_layer.slices.size(); ++ i)
+						if (lower_layer.slices_bboxes[i].contains(polyline.first_point()) && lower_layer.slices_bboxes[i].contains(polyline.last_point()) && 
+							lower_layer.slices[i].contains(polyline.first_point()) && lower_layer.slices[i].contains(polyline.last_point())) {
                         // Offset a polyline into a thick line.
                         polygons_append(bridges, offset(polyline, 0.5f * w + 10.f));
+							break;
+                }
                 }
             bridges = union_(bridges);
         }
@@ -921,7 +925,7 @@ namespace SupportMaterialInternal {
         //FIXME add supports at regular intervals to support long bridges!
         bridges = diff(bridges,
                 // Offset unsupported edges into polygons.
-                offset(layerm->unsupported_bridge_edges.polylines, scale_(SUPPORT_MATERIAL_MARGIN), SUPPORT_SURFACES_OFFSET_PARAMETERS));
+                offset(layerm->unsupported_bridge_edges, scale_(SUPPORT_MATERIAL_MARGIN), SUPPORT_SURFACES_OFFSET_PARAMETERS));
         // Remove bridged areas from the supported areas.
         contact_polygons = diff(contact_polygons, bridges, true);
     }
@@ -992,7 +996,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
             // inflate the polygons over and over.
             Polygons &covered = buildplate_covered[layer_id];
             covered = buildplate_covered[layer_id - 1];
-            polygons_append(covered, offset(lower_layer.slices.expolygons, scale_(0.01)));
+            polygons_append(covered, offset(lower_layer.slices, scale_(0.01)));
             covered = union_(covered, false); // don't apply the safety offset.
         }
     }
@@ -1021,7 +1025,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                 Polygons contact_polygons;
                 Polygons slices_margin_cached;
                 double    slices_margin_cached_offset = -1.;
-                Polygons lower_layer_polygons = (layer_id == 0) ? Polygons() : to_polygons(object.layers()[layer_id - 1]->slices.expolygons);
+                Polygons lower_layer_polygons = (layer_id == 0) ? Polygons() : to_polygons(object.layers()[layer_id-1]->slices);
                 // Offset of the lower layer, to trim the support polygons with to calculate dense supports.
                 double    no_interface_offset = 0.;
                 if (layer_id == 0) {
@@ -1160,7 +1164,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                                 slices_margin_cached_offset = slices_margin_offset;
                                 slices_margin_cached = (slices_margin_offset == 0.f) ? 
                                     lower_layer_polygons :
-                                    offset2(to_polygons(lower_layer.slices.expolygons), - no_interface_offset * 0.5, slices_margin_offset + no_interface_offset * 0.5, SUPPORT_SURFACES_OFFSET_PARAMETERS);
+                                    offset2(to_polygons(lower_layer.slices), - no_interface_offset * 0.5, slices_margin_offset + no_interface_offset * 0.5, SUPPORT_SURFACES_OFFSET_PARAMETERS);
                                 if (! buildplate_covered.empty()) {
                                     // Trim the inflated contact surfaces by the top surfaces as well.
                                     polygons_append(slices_margin_cached, buildplate_covered[layer_id]);
@@ -1469,7 +1473,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
                         svg.draw(union_ex(top, false), "blue", 0.5f);
                         svg.draw(union_ex(projection_raw, true), "red", 0.5f);
                         svg.draw_outline(union_ex(projection_raw, true), "red", "blue", scale_(0.1f));
-                        svg.draw(layer.slices.expolygons, "green", 0.5f);
+                        svg.draw(layer.slices, "green", 0.5f);
                     }
         #endif /* SLIC3R_DEBUG */
 
@@ -1571,7 +1575,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
             task_group.run([this, &projection, &projection_raw, &layer, &layer_support_area, layer_id] {
                 // Remove the areas that touched from the projection that will continue on next, lower, top surfaces.
     //            Polygons trimming = union_(to_polygons(layer.slices.expolygons), touching, true);
-                Polygons trimming = offset(layer.slices.expolygons, double(SCALED_EPSILON));
+                Polygons trimming = offset(layer.slices, double(SCALED_EPSILON));
                 projection = diff(projection_raw, trimming, false);
     #ifdef SLIC3R_DEBUG
                 {
@@ -2110,7 +2114,7 @@ void PrintObjectSupportMaterial::trim_support_layers_by_object(
                     const Layer &object_layer = *object.layers()[i];
                     if (object_layer.print_z - object_layer.height > support_layer.print_z + gap_extra_above - EPSILON)
                         break;
-                    polygons_append(polygons_trimming, offset(object_layer.slices.expolygons, gap_xy_scaled, SUPPORT_SURFACES_OFFSET_PARAMETERS));
+                    polygons_append(polygons_trimming, offset(object_layer.slices, gap_xy_scaled, SUPPORT_SURFACES_OFFSET_PARAMETERS));
                 }
                 if (!m_slicing_params.soluble_interface) {
                     // Collect all bottom surfaces, which will be extruded with a bridging flow.
@@ -2136,7 +2140,7 @@ void PrintObjectSupportMaterial::trim_support_layers_by_object(
                 }
                 // $layer->slices contains the full shape of layer, thus including
                 // perimeter's width. $support contains the full shape of support
-                // material, thus including the width of its foremost extrusion.
+                // material, thus including the width of its foremost extrusion.
                 // We leave a gap equal to a full extrusion width.
                 support_layer.polygons = diff(support_layer.polygons, polygons_trimming);
             }
@@ -2225,7 +2229,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::generate_raf
         // Expand the bases of the support columns in the 1st layer.
         columns_base->polygons = diff(
             offset(columns_base->polygons, inflate_factor_1st_layer),
-            offset(m_object->layers().front()->slices.expolygons, (float)scale_(m_gap_xy), SUPPORT_SURFACES_OFFSET_PARAMETERS));
+            offset(m_object->layers().front()->slices, (float)scale_(m_gap_xy), SUPPORT_SURFACES_OFFSET_PARAMETERS));
         if (contacts != nullptr)
             columns_base->polygons = diff(columns_base->polygons, interface_polygons);
     }
@@ -2966,20 +2970,13 @@ void PrintObjectSupportMaterial::generate_toolpaths(
     // Prepare fillers.
     SupportMaterialPattern  support_pattern = m_object_config->support_material_pattern;
     bool                    with_sheath     = m_object_config->support_material_with_sheath;
-    InfillPattern           infill_pattern;
+    InfillPattern           infill_pattern = (support_pattern == smpHoneycomb ? ipHoneycomb : ipRectilinear);
     std::vector<float>      angles;
     angles.push_back(base_angle);
-    switch (support_pattern) {
-    case smpRectilinearGrid:
+
+    if (support_pattern == smpRectilinearGrid)
         angles.push_back(interface_angle);
-        // fall through
-    case smpRectilinear:
-        infill_pattern = ipRectilinear;
-        break;
-    case smpHoneycomb:
-        infill_pattern = ipHoneycomb;
-        break;
-    }
+
     InfillPattern interface_pattern = m_object_config->support_material_interface_pattern;
     BoundingBox bbox_object(Point(-scale_(1.), -scale_(1.0)), Point(scale_(1.), scale_(1.)));
 
@@ -3277,7 +3274,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                         filler->link_max_length = coord_t(scale_(spacing * link_max_length_factor / density));
                     }
                     // use the proper spacing for first layer as we don't need to align
-                    // its pattern to the other layers
+                    // its pattern to the other layers
                     flow = m_first_layer_flow;
                     spacing = flow.spacing();
                 } else if (with_sheath) {

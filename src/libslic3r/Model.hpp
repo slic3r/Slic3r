@@ -392,6 +392,18 @@ class ModelVolume final : public ObjectBase
 {
 public:
     std::string         name;
+    // struct used by reload from disk command to recover data from disk
+    struct Source
+    {
+        std::string input_file;
+        int object_idx{ -1 };
+        int volume_idx{ -1 };
+        Vec3d mesh_offset{ Vec3d::Zero() };
+
+        template<class Archive> void serialize(Archive& ar) { ar(input_file, object_idx, volume_idx, mesh_offset); }
+    };
+    Source              source;
+
     // The triangular model.
     const TriangleMesh& mesh() const { return *m_mesh.get(); }
     void                set_mesh(const TriangleMesh &mesh) { m_mesh = std::make_shared<const TriangleMesh>(mesh); }
@@ -440,7 +452,7 @@ public:
 
     // Translates the mesh and the convex hull so that the origin of their vertices is in the center of this volume's bounding box.
     // Attention! This method may only be called just after ModelVolume creation! It must not be called once the TriangleMesh of this ModelVolume is shared!
-    void                center_geometry_after_creation();
+    void                center_geometry_after_creation(bool update_source_offset = true);
 
     void                calculate_convex_hull();
     const TriangleMesh& get_convex_hull() const;
@@ -529,7 +541,7 @@ private:
     // Copying an existing volume, therefore this volume will get a copy of the ID assigned.
     ModelVolume(ModelObject *object, const ModelVolume &other) :
         ObjectBase(other),
-        name(other.name), m_mesh(other.m_mesh), m_convex_hull(other.m_convex_hull), config(other.config), m_type(other.m_type), object(object), m_transformation(other.m_transformation)
+        name(other.name), source(other.source), m_mesh(other.m_mesh), m_convex_hull(other.m_convex_hull), config(other.config), m_type(other.m_type), object(object), m_transformation(other.m_transformation)
     {
 		assert(this->id().valid()); assert(this->config.id().valid()); assert(this->id() != this->config.id());
 		assert(this->id() == other.id() && this->config.id() == other.config.id());
@@ -537,7 +549,7 @@ private:
     }
     // Providing a new mesh, therefore this volume will get a new unique ID assigned.
     ModelVolume(ModelObject *object, const ModelVolume &other, const TriangleMesh &&mesh) :
-        name(other.name), m_mesh(new TriangleMesh(std::move(mesh))), config(other.config), m_type(other.m_type), object(object), m_transformation(other.m_transformation)
+        name(other.name), source(other.source), m_mesh(new TriangleMesh(std::move(mesh))), config(other.config), m_type(other.m_type), object(object), m_transformation(other.m_transformation)
     {
 		assert(this->id().valid()); assert(this->config.id().valid()); assert(this->id() != this->config.id());
 		assert(this->id() != other.id() && this->config.id() == other.config.id());
@@ -558,8 +570,8 @@ private:
 	}
 	template<class Archive> void load(Archive &ar) {
 		bool has_convex_hull;
-		ar(name, m_mesh, m_type, m_material_id, m_transformation, m_is_splittable, has_convex_hull);
-		cereal::load_by_value(ar, config);
+        ar(name, source, m_mesh, m_type, m_material_id, m_transformation, m_is_splittable, has_convex_hull);
+        cereal::load_by_value(ar, config);
 		assert(m_mesh);
 		if (has_convex_hull) {
 			cereal::load_optional(ar, m_convex_hull);
@@ -571,8 +583,8 @@ private:
 	}
 	template<class Archive> void save(Archive &ar) const {
 		bool has_convex_hull = m_convex_hull.get() != nullptr;
-		ar(name, m_mesh, m_type, m_material_id, m_transformation, m_is_splittable, has_convex_hull);
-		cereal::save_by_value(ar, config);
+        ar(name, source, m_mesh, m_type, m_material_id, m_transformation, m_is_splittable, has_convex_hull);
+        cereal::save_by_value(ar, config);
 		if (has_convex_hull)
 			cereal::save_optional(ar, m_convex_hull);
 	}
@@ -733,6 +745,37 @@ public:
     ModelObjectPtrs     objects;
     // Wipe tower object.
     ModelWipeTower	    wipe_tower;
+
+    // Extensions for color print
+    struct CustomGCode
+    {
+        CustomGCode(double height, const std::string& code, int extruder, const std::string& color) :
+            height(height), gcode(code), extruder(extruder), color(color) {}
+
+        bool operator<(const CustomGCode& other) const { return other.height > this->height; }
+        bool operator==(const CustomGCode& other) const
+        {
+            return (other.height    == this->height)     && 
+                   (other.gcode     == this->gcode)      && 
+                   (other.extruder  == this->extruder   )&& 
+                   (other.color     == this->color   );
+        }
+        bool operator!=(const CustomGCode& other) const
+        {
+            return (other.height    != this->height)     || 
+                   (other.gcode     != this->gcode)      || 
+                   (other.extruder  != this->extruder   )|| 
+                   (other.color     != this->color   );
+        }
+        
+        double      height;
+        std::string gcode;
+        int         extruder;   // 0    - "gcode" will be applied for whole print
+                                // else - "gcode" will be applied only for "extruder" print
+        std::string color;      // if gcode is equal to PausePrintCode, 
+                                // this field is used for save a short message shown on Printer display 
+    };
+    std::vector<CustomGCode> custom_gcode_per_height;
     
     // Default constructor assigns a new ID to the model.
     Model() { assert(this->id().valid()); }
@@ -797,6 +840,9 @@ public:
     std::string   propose_export_file_name_and_path() const;
     // Propose an output path, replace extension. The new_extension shall contain the initial dot.
     std::string   propose_export_file_name_and_path(const std::string &new_extension) const;
+
+    // from custom_gcode_per_height get just tool_change codes
+    std::vector<std::pair<double, DynamicPrintConfig>> get_custom_tool_changes(double default_layer_height, size_t num_extruders) const;
 
 private:
 	explicit Model(int) : ObjectBase(-1) { assert(this->id().invalid()); };

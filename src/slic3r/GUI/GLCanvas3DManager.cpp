@@ -107,7 +107,9 @@ void GLCanvas3DManager::GLInfo::detect() const
         m_renderer = data;
 
     glsafe(::glGetIntegerv(GL_MAX_TEXTURE_SIZE, &m_max_tex_size));
-    
+
+    m_max_tex_size /= 2;
+
     if (GLEW_EXT_texture_filter_anisotropic)
         glsafe(::glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &m_max_anisotropy));
 
@@ -187,6 +189,7 @@ std::string GLCanvas3DManager::GLInfo::to_string(bool format_as_html, bool exten
 
 GLCanvas3DManager::EMultisampleState GLCanvas3DManager::s_multisample = GLCanvas3DManager::MS_Unknown;
 bool GLCanvas3DManager::s_compressed_textures_supported = false;
+GLCanvas3DManager::EFramebufferType GLCanvas3DManager::s_framebuffers_type = GLCanvas3DManager::FB_None;
 GLCanvas3DManager::GLInfo GLCanvas3DManager::s_gl_info;
 
 GLCanvas3DManager::GLCanvas3DManager()
@@ -267,18 +270,25 @@ void GLCanvas3DManager::init_gl()
         else
             s_compressed_textures_supported = false;
 
+        if (GLEW_ARB_framebuffer_object)
+            s_framebuffers_type = FB_Arb;
+        else if (GLEW_EXT_framebuffer_object)
+            s_framebuffers_type = FB_Ext;
+        else
+            s_framebuffers_type = FB_None;
+
         if (! s_gl_info.is_version_greater_or_equal_to(2, 0)) {
         	// Complain about the OpenGL version.
         	wxString message = wxString::Format(
-        		_(L("PrusaSlicer requires OpenGL 2.0 capable graphics driver to run correctly, \n"
+        		_(L("Slic3r++ requires OpenGL 2.0 capable graphics driver to run correctly, \n"
         			"while OpenGL version %s, render %s, vendor %s was detected.")), wxString(s_gl_info.get_version()), wxString(s_gl_info.get_renderer()), wxString(s_gl_info.get_vendor()));
         	message += "\n";
         	message += _(L("You may need to update your graphics card driver."));
 #ifdef _WIN32
         	message += "\n";
-        	message += _(L("As a workaround, you may run PrusaSlicer with a software rendered 3D graphics by running prusa-slicer.exe with the --sw_renderer parameter."));
+        	message += _(L("As a workaround, you may run Slic3r++ with a software rendered 3D graphics by running prusa-slicer.exe with the --sw_renderer parameter."));
 #endif
-        	wxMessageBox(message, wxString("PrusaSlicer - ") + _(L("Unsupported OpenGL version")), wxOK | wxICON_ERROR);
+        	wxMessageBox(message, wxString("Slic3r++ - ") + _(L("Unsupported OpenGL version")), wxOK | wxICON_ERROR);
         }
     }
 }

@@ -1,6 +1,7 @@
 #include "Print.hpp"
 #include "BoundingBox.hpp"
 #include "ClipperUtils.hpp"
+#include "ElephantFootCompensation.hpp"
 #include "Geometry.hpp"
 #include "I18N.hpp"
 #include "SupportMaterial.hpp"
@@ -12,7 +13,6 @@
 #include <boost/log/trivial.hpp>
 #include <float.h>
 
-#include <tbb/task_scheduler_init.h>
 #include <tbb/parallel_for.h>
 #include <tbb/atomic.h>
 
@@ -75,13 +75,9 @@ PrintBase::ApplyStatus PrintObject::set_copies(const Points &points)
 {
     // Order copies with a nearest-neighbor search.
     std::vector<Point> copies;
-    {
-        std::vector<Points::size_type> ordered_copies;
-        Slic3r::Geometry::chained_path(points, ordered_copies);
-        copies.reserve(ordered_copies.size());
-        for (size_t point_idx : ordered_copies)
-            copies.emplace_back(points[point_idx] + m_copies_shift);
-    }
+    copies.reserve(points.size());
+    for (const Point &pt : points)
+        copies.emplace_back(pt + m_copies_shift);
     // Invalidate and set copies.
     PrintBase::ApplyStatus status = PrintBase::APPLY_STATUS_UNCHANGED;
     if (copies != m_copies) {
@@ -122,8 +118,23 @@ void PrintObject::slice()
     // Simplify slices if required.
     if (m_print->config().resolution)
         this->_simplify_slices(scale_(this->print()->config().resolution));
+
     //create polyholes
     this->_transform_hole_to_polyholes();
+
+    // Update bounding boxes
+    tbb::parallel_for(
+        tbb::blocked_range<size_t>(0, m_layers.size()),
+        [this](const tbb::blocked_range<size_t>& range) {
+            for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++ layer_idx) {
+                m_print->throw_if_canceled();
+                Layer &layer = *m_layers[layer_idx];
+                layer.slices_bboxes.clear();
+                layer.slices_bboxes.reserve(layer.slices.size());
+                for (const ExPolygon &expoly : layer.slices)
+                	layer.slices_bboxes.emplace_back(get_extents(expoly));
+            }
+        });
     if (m_layers.empty())
         throw std::runtime_error("No layers were detected. You might want to repair your STL file(s) or check their size or thickness and retry.\n");    
     this->set_done(posSlice);
@@ -230,7 +241,7 @@ void PrintObject::_transform_hole_to_polyholes()
         polyhole.make_clockwise();
         for (auto &poly_to_replace : entry.second) {
             //search the clone in layers->slices
-            for (ExPolygon &explo_slice : m_layers[poly_to_replace.second]->slices.expolygons) {
+            for (ExPolygon &explo_slice : m_layers[poly_to_replace.second]->slices) {
                 for (Polygon &poly_slice : explo_slice.holes) {
                     if (poly_slice.points == poly_to_replace.first->points) {
                         poly_slice.points = polyhole.points;
@@ -1085,7 +1096,7 @@ void PrintObject::detect_surfaces_type()
                             offset2_ex(diff(layerm_slices_surfaces, lower_slices, true), -offset, offset),
                             surface_type_bottom_other);
 #else
-                        ExPolygons lower_slices = lower_layer->slices.expolygons;
+                        ExPolygons lower_slices = lower_layer->slices;
                         //if we added new surfaces, we can use them as support
                         /*if (layerm->region()->config().no_perimeter_full_bridge) {
                             lower_slices = union_ex(lower_slices, lower_layer->get_region(idx_region)->fill_surfaces);
@@ -1254,7 +1265,7 @@ void PrintObject::process_external_surfaces()
                                     // Shrink the holes, let the layer above expand slightly inside the unsupported areas.
                                     polygons_append(voids, offset(surface.expolygon, unsupported_width));
                         }
-                        surfaces_covered[layer_idx] = diff(to_polygons(this->m_layers[layer_idx]->slices.expolygons), voids);
+		                surfaces_covered[layer_idx] = diff(to_polygons(this->m_layers[layer_idx]->slices), voids);
                     }
             }
         );
@@ -1364,8 +1375,8 @@ void PrintObject::discover_vertical_shells()
                         polygons_append(cache.holes, offset(offset_ex(layer.slices, 0.3f * perimeter_min_spacing), - perimeter_offset - 0.3f * perimeter_min_spacing));
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
                         {
-                            Slic3r::SVG svg(debug_out_path("discover_vertical_shells-extra-holes-%d.svg", debug_idx), get_extents(layer.slices.expolygons));
-                            svg.draw(layer.slices.expolygons, "blue");
+                            Slic3r::SVG svg(debug_out_path("discover_vertical_shells-extra-holes-%d.svg", debug_idx), get_extents(layer.slices));
+                            svg.draw(layer.slices, "blue");
                             svg.draw(union_ex(cache.holes), "red");
                             svg.draw_outline(union_ex(cache.holes), "black", "blue", scale_(0.05));
                             svg.Close(); 
@@ -1964,7 +1975,9 @@ bool PrintObject::update_layer_height_profile(const ModelObject &model_object, c
         layer_height_profile.clear();
 
     if (layer_height_profile.empty()) {
-            //layer_height_profile = layer_height_profile_adaptive(slicing_parameters, model_object.layer_config_ranges, model_object.volumes);
+        if(slicing_parameters.layer_height_adaptive)
+            layer_height_profile = layer_height_profile_adaptive(slicing_parameters, model_object.layer_config_ranges, model_object.volumes);
+        else
             layer_height_profile = layer_height_profile_from_ranges(slicing_parameters, model_object.layer_config_ranges);
         updated = true;
     }
@@ -2115,7 +2128,8 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
                     // Trim volumes in a single layer, one by the other, possibly apply upscaling.
                     {
                         Polygons processed;
-                        for (SlicedVolume &sliced_volume : sliced_volumes) {
+                        for (SlicedVolume &sliced_volume : sliced_volumes) 
+                        	if (! sliced_volume.expolygons_by_layer.empty()) {
                             ExPolygons slices = std::move(sliced_volume.expolygons_by_layer[layer_id]);
                             if (upscale)
                                 slices = offset_ex(std::move(slices), delta);
@@ -2133,7 +2147,7 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
                         ExPolygons expolygons;
                         size_t     num_volumes = 0;
                         for (SlicedVolume &sliced_volume : sliced_volumes)
-                            if (sliced_volume.region_id == region_id && ! sliced_volume.expolygons_by_layer[layer_id].empty()) {
+                            if (sliced_volume.region_id == region_id && ! sliced_volume.expolygons_by_layer.empty() && ! sliced_volume.expolygons_by_layer[layer_id].empty()) {
                                 ++ num_volumes;
                                 append(expolygons, std::move(sliced_volume.expolygons_by_layer[layer_id]));
                             }
@@ -2212,8 +2226,10 @@ end:
                 // Apply size compensation and perform clipping of multi-part objects.
                 float delta = float(scale_(m_config.xy_size_compensation.value));
                 float hole_delta = float(scale_(this->config().hole_size_compensation.value));
+                //FIXME only apply the compensation if no raft is enabled.
                 float elephant_foot_compensation = 0.f;
-                if (layer_id == 0)
+                if (layer_id == 0 && m_config.raft_layers == 0)
+                	// Only enable Elephant foot compensation if printing directly on the print bed.
                     elephant_foot_compensation = float(scale_(m_config.elefant_foot_compensation.value));
                 if (layer->m_regions.size() == 1) {
                     // Optimized version for a single region layer.
@@ -2239,19 +2255,8 @@ end:
                             to_expolygons(std::move(layerm->slices().surfaces)) :
                             offset_ex(to_expolygons(std::move(layerm->slices().surfaces)), delta);
                         // Apply the elephant foot compensation.
-                        if (elephant_foot_compensation != 0) {
-                            float elephant_foot_spacing     = float(layerm->flow(frExternalPerimeter).scaled_elephant_foot_spacing());
-                            float external_perimeter_nozzle = float(scale_(this->print()->config().nozzle_diameter.get_at(layerm->region()->config().perimeter_extruder.value - 1)));
-                            // Apply the elephant foot compensation by steps of 1/10 nozzle diameter.
-                            float  steps  = std::ceil(elephant_foot_compensation / (0.1f * external_perimeter_nozzle));
-                            size_t nsteps = size_t(std::abs(steps));
-                            float  step   = elephant_foot_compensation / steps;
-                            for (size_t i = 0; i < nsteps; ++ i) {
-                                Polygons tmp = offset(expolygons, - step);
-                                append(tmp, diff(to_polygons(expolygons), offset(offset_ex(expolygons, -elephant_foot_spacing + step), elephant_foot_spacing - step)));
-                            	expolygons = union_ex(tmp);
-                            }
-                        }
+                        if (elephant_foot_compensation > 0)
+                            expolygons = union_ex(Slic3r::elephant_foot_compensation(expolygons, layerm->flow(frExternalPerimeter), unscale<double>(elephant_foot_compensation)));
                         layerm->m_slices.set(std::move(expolygons), stPosInternal | stDensSparse);
                     }
                     _offset_holes(hole_delta, layer->regions().front());
@@ -2277,34 +2282,19 @@ end:
                             layerm->m_slices.set(std::move(slices), stPosInternal | stDensSparse);
                         }
                     }
-                    if (delta < 0.f) {
+                    if (delta < 0.f || elephant_foot_compensation > 0.f) {
                         // Apply the negative XY compensation.
-                        Polygons trimming = offset(layer->merged(double(EPSILON)), delta - double(EPSILON));
+                        Polygons trimming;
+                        static const float eps = float(scale_(m_config.slice_closing_radius.value) * 1.5);
+                        if (elephant_foot_compensation > 0.f) {
+                            trimming = to_polygons(Slic3r::elephant_foot_compensation(offset_ex(layer->merged(eps), std::min(delta, 0.f) - eps),
+                                layer->m_regions.front()->flow(frExternalPerimeter), unscale<double>(elephant_foot_compensation)));
+                        } else
+                            trimming = offset(layer->merged(float(SCALED_EPSILON)), delta - float(SCALED_EPSILON));
                         for (size_t region_id = 0; region_id < layer->m_regions.size(); ++ region_id)
                             layer->m_regions[region_id]->trim_surfaces(trimming);
                     }
-                    if (elephant_foot_compensation != 0.f) {
-                        // Apply the elephant foot compensation.
-                        std::vector<float> elephant_foot_spacing;
-                        elephant_foot_spacing.reserve(layer->m_regions.size());
-                        float external_perimeter_nozzle = 0.f;
-                        for (size_t region_id = 0; region_id < layer->m_regions.size(); ++ region_id) {
-                            LayerRegion *layerm = layer->m_regions[region_id];
-                            elephant_foot_spacing.emplace_back(float(layerm->flow(frExternalPerimeter).scaled_elephant_foot_spacing()));
-                            external_perimeter_nozzle += float(scale_(this->print()->config().nozzle_diameter.get_at(layerm->region()->config().perimeter_extruder.value - 1)));
                         }
-                        external_perimeter_nozzle /= (float)layer->m_regions.size();
-                        // Apply the elephant foot compensation by steps of 1/10 nozzle diameter.
-                        float  steps  = std::ceil(elephant_foot_compensation / (0.1f * external_perimeter_nozzle));
-                        size_t nsteps = size_t(std::abs(steps));
-                        float  step   = elephant_foot_compensation / steps;
-                        for (size_t i = 0; i < nsteps; ++ i) {
-                            Polygons trimming_polygons = offset(layer->merged(float(EPSILON)), double(- step - EPSILON));
-                            for (size_t region_id = 0; region_id < layer->m_regions.size(); ++ region_id)
-                                layer->m_regions[region_id]->elephant_foot_compensation_step(elephant_foot_spacing[region_id] - step, trimming_polygons);
-                        }
-                    }
-                }
                 // Merge all regions' slices to get islands, chain them by a shortest path.
                 layer->make_slices();
             }
@@ -2755,7 +2745,7 @@ std::string PrintObject::_fix_slicing_errors()
     BOOST_LOG_TRIVIAL(debug) << "Slicing objects - fixing slicing errors in parallel - end";
 
     // remove empty layers from bottom
-    while (! m_layers.empty() && m_layers.front()->slices.expolygons.empty()) {
+    while (! m_layers.empty() && m_layers.front()->slices.empty()) {
         delete m_layers.front();
         m_layers.erase(m_layers.begin());
         m_layers.front()->lower_layer = nullptr;
@@ -2782,12 +2772,16 @@ void PrintObject::_simplify_slices(coord_t distance)
                 Layer *layer = m_layers[layer_idx];
                 for (size_t region_idx = 0; region_idx < layer->m_regions.size(); ++ region_idx)
                     layer->m_regions[region_idx]->m_slices.simplify(distance);
-                layer->slices.simplify(distance);
+                {
+                    ExPolygons simplified;
+                    for (const ExPolygon& expoly : layer->slices)
+                        expoly.simplify(distance, &simplified);
+                    layer->slices = std::move(simplified);
+                }
             }
         });
     BOOST_LOG_TRIVIAL(debug) << "Slicing objects - siplifying slices in parallel - end";
 }
-
 
 // Only active if config->infill_only_where_needed. This step trims the sparse infill,
 // so it acts as an internal support. It maintains all other infill types intact.
@@ -2814,7 +2808,7 @@ void PrintObject::clip_fill_surfaces()
         // Detect things that we need to support.
         // Cummulative slices.
         Polygons slices;
-        polygons_append(slices, layer->slices.expolygons);
+        polygons_append(slices, layer->slices);
         // Cummulative fill surfaces.
         Polygons fill_surfaces;
         // Solid surfaces to be supported.

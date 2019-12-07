@@ -17,6 +17,9 @@
 #include "GCodeTimeEstimator.hpp"
 #include "EdgeGrid.hpp"
 #include "GCode/Analyzer.hpp"
+#if ENABLE_THUMBNAIL_GENERATOR
+#include "GCode/ThumbnailData.hpp"
+#endif // ENABLE_THUMBNAIL_GENERATOR
 
 #include <memory>
 #include <string>
@@ -111,7 +114,7 @@ public:
 
 private:
     WipeTowerIntegration& operator=(const WipeTowerIntegration&);
-    std::string append_tcr(GCode &gcodegen, const WipeTower::ToolChangeResult &tcr, int new_extruder_id) const;
+    std::string append_tcr(GCode &gcodegen, const WipeTower::ToolChangeResult &tcr, int new_extruder_id, double z = -1.) const;
 
     // Postprocesses gcode: rotates and moves G1 extrusions and returns result
     std::string post_process_wipe_tower_moves(const WipeTower::ToolChangeResult& tcr, const Vec2f& translation, float angle) const;
@@ -132,6 +135,7 @@ private:
     int                                                          m_tool_change_idx;
     bool                                                         m_brim_done;
     bool                                                         i_have_brim = false;
+    double                                                       m_last_wipe_tower_print_z = 0.f;
 };
 
 class GCode : ExtrusionVisitorConst {
@@ -163,7 +167,11 @@ public:
 
     // throws std::runtime_exception on error,
     // throws CanceledException through print->throw_if_canceled().
+#if ENABLE_THUMBNAIL_GENERATOR
+    void            do_export(Print* print, const char* path, GCodePreviewData* preview_data = nullptr, ThumbnailsGeneratorCallback thumbnail_cb = nullptr);
+#else
     void            do_export(Print *print, const char *path, GCodePreviewData *preview_data = nullptr);
+#endif // ENABLE_THUMBNAIL_GENERATOR
 
     // Exported for the helper classes (OozePrevention, Wipe) and for the Perl binding for unit tests.
     const Vec2d&    origin() const { return m_origin; }
@@ -193,7 +201,11 @@ public:
     static void append_full_config(const Print& print, std::string& str);
 
 protected:
+#if ENABLE_THUMBNAIL_GENERATOR
+    void            _do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thumbnail_cb);
+#else
     void            _do_export(Print &print, FILE *file);
+#endif //ENABLE_THUMBNAIL_GENERATOR
 
     // Object and support extrusions of the same PrintObject at the same print_z.
     struct LayerToPrint
@@ -205,7 +217,7 @@ protected:
         const PrintObject*    object() const { return (this->layer() != nullptr) ? this->layer()->object() : nullptr; }
         coordf_t              print_z() const { return (object_layer != nullptr && support_layer != nullptr) ? 0.5 * (object_layer->print_z + support_layer->print_z) : this->layer()->print_z; }
     };
-    static std::vector<GCode::LayerToPrint>                            collect_layers_to_print(const PrintObject &object);
+    static std::vector<LayerToPrint>        		                   collect_layers_to_print(const PrintObject &object);
     static std::vector<std::pair<coordf_t, std::vector<LayerToPrint>>> collect_layers_to_print(const Print &print);
     void            process_layer(
         // Write into the output file.
@@ -213,7 +225,9 @@ protected:
         const Print                     &print,
         // Set of object & print layers of the same PrintObject and with the same print_z.
         const std::vector<LayerToPrint> &layers,
-        const LayerTools  &layer_tools,
+        const LayerTools  				&layer_tools,
+        // Pairs of PrintObject index and its instance index.
+        const std::vector<std::pair<size_t, size_t>> *ordering,
         // If set to size_t(-1), then print all copies of all objects.
         // Otherwise print a single copy of a single object.
         const size_t                     single_object_idx = size_t(-1));
@@ -275,6 +289,25 @@ protected:
         std::vector<Island>         islands;
     };
 
+	struct InstanceToPrint
+	{
+		InstanceToPrint(ObjectByExtruder &object_by_extruder, size_t layer_id, const PrintObject &print_object, size_t instance_id) :
+			object_by_extruder(object_by_extruder), layer_id(layer_id), print_object(print_object), instance_id(instance_id) {}
+
+		ObjectByExtruder	&object_by_extruder;
+		const size_t       		 layer_id;
+		const PrintObject 		&print_object;
+		// Instance idx of the copy of a print object.
+		const size_t			 instance_id;
+	};
+
+	std::vector<InstanceToPrint> sort_print_object_instances(
+		std::vector<ObjectByExtruder> 			&objects_by_extruder,
+		const std::vector<LayerToPrint> 				&layers,
+		// Ordering must be defined for normal (non-sequential print).
+		const std::vector<std::pair<size_t, size_t>> 	*ordering,
+		// For sequential print, the instance of the object to be printing has to be defined.
+		const size_t                     				 single_object_instance_idx);
 
     std::string     extrude_perimeters(const Print &print, const std::vector<ObjectByExtruder::Island::Region> &by_region, std::unique_ptr<EdgeGrid::Grid> &lower_layer_edge_grid);
     std::string     extrude_infill(const Print &print, const std::vector<ObjectByExtruder::Island::Region> &by_region, bool is_infill_first);
@@ -346,9 +379,12 @@ protected:
     bool                                m_second_layer_things_done;
     // Index of a last object copy extruded.
     std::pair<const PrintObject*, Point> m_last_obj_copy;
-    // Layer heights for colorprint - updated before the export and erased during the process
-    // so no toolchange occurs twice.
-    std::vector<float> m_colorprint_heights;
+    /* Extensions for colorprint - now it's not a just color_print_heights, 
+     * there can be some custom gcode.
+     * Updated before the export and erased during the process,
+     * so no toolchange occurs twice.
+     * */
+    std::vector<Model::CustomGCode> m_custom_g_code_heights;
 
     // ordered list of object, to give them a unique id.
     std::vector<const PrintObject*> m_ordered_objects;

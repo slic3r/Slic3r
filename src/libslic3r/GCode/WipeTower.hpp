@@ -17,9 +17,12 @@ class PrintConfig;
 enum GCodeFlavor : unsigned char;
 
 
+
 class WipeTower
 {
 public:
+    static char const* never_skip_tag() { return "_GCODE_WIPE_TOWER_NEVER_SKIP_TAG"; }
+
     struct Extrusion
     {
 		Extrusion(const Vec2f &pos, float width, unsigned int tool) : pos(pos), width(width), tool(tool) {}
@@ -91,6 +94,9 @@ public:
 	void generate(std::vector<std::vector<ToolChangeResult>> &result);
 
     float get_depth() const { return m_wipe_tower_depth; }
+    float get_brim_width() const { return m_wipe_tower_brim_width; }
+
+
 
 
 
@@ -215,6 +221,7 @@ private:
     Vec2f  m_wipe_tower_pos; 			// Left front corner of the wipe tower in mm.
 	float  m_wipe_tower_width; 			// Width of the wipe tower.
 	float  m_wipe_tower_depth 	= 0.f; 	// Depth of the wipe tower
+    float  m_wipe_tower_brim_width     = 0.f; 	// Width of brim (mm)
 	float  m_wipe_tower_rotation_angle = 0.f; // Wipe tower rotation angle in degrees (with respect to x axis)
     float  m_internal_rotation  = 0.f;
 	float  m_y_shift			= 0.f;  // y shift passed to writer
@@ -230,6 +237,7 @@ private:
     float           m_parking_pos_retraction    = 0.f;
     float           m_extra_loading_move        = 0.f;
     float           m_bridging                  = 0.f;
+    bool            m_no_sparse_layers          = false;
     bool            m_set_extruder_trimpot      = false;
     bool            m_adhesion                  = true;
     GCodeFlavor     m_gcode_flavor;

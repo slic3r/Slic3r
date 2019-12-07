@@ -6,9 +6,9 @@
 namespace Slic3r {
 
 BridgeDetector::BridgeDetector(
-    ExPolygon                   _expolygon,
-    const ExPolygonCollection  &_lower_slices, 
-    coord_t                     _spacing) :
+    ExPolygon         _expolygon,
+    const ExPolygons &_lower_slices, 
+    coord_t           _spacing) :
     // The original infill polygon, not inflated.
     expolygons(expolygons_owned),
     // All surfaces of the object supporting this region.
@@ -20,9 +20,9 @@ BridgeDetector::BridgeDetector(
 }
 
 BridgeDetector::BridgeDetector(
-    const ExPolygons           &_expolygons,
-    const ExPolygonCollection  &_lower_slices,
-    coord_t                     _spacing) : 
+    const ExPolygons  &_expolygons,
+    const ExPolygons  &_lower_slices,
+    coord_t            _spacing) : 
     // The original infill polygon, not inflated.
     expolygons(_expolygons),
     // All surfaces of the object supporting this region.
@@ -40,13 +40,17 @@ void BridgeDetector::initialize()
     this->angle = -1.;
 
     // Outset our bridge by an arbitrary amout; we'll use this outer margin for detecting anchors.
-    Polygons grown = offset(to_polygons(this->expolygons), this->spacing);
+    Polygons grown = offset(to_polygons(this->expolygons), float(this->spacing));
     
     // Detect possible anchoring edges of this bridging region.
     // Detect what edges lie on lower slices by turning bridge contour and holes
     // into polylines and then clipping them with each lower slice's contour.
     // Currently _edges are only used to set a candidate direction of the bridge (see bridge_direction_candidates()).
-    this->_edges = intersection_pl(to_polylines(grown), this->lower_slices.contours());
+    Polygons contours;
+    contours.reserve(this->lower_slices.size());
+    for (const ExPolygon &expoly : this->lower_slices)
+        contours.push_back(expoly.contour);
+    this->_edges = intersection_pl(to_polylines(grown), contours);
     
     #ifdef SLIC3R_DEBUG
     printf("  bridge has " PRINTF_ZU " support(s)\n", this->_edges.size());
@@ -54,7 +58,7 @@ void BridgeDetector::initialize()
     
     // detect anchors as intersection between our bridge expolygon and the lower slices
     // safety offset required to avoid Clipper from detecting empty intersection while Boost actually found some edges
-    this->_anchor_regions = intersection_ex(grown, to_polygons(this->lower_slices.expolygons), true);
+    this->_anchor_regions = intersection_ex(grown, to_polygons(this->lower_slices), true);
     
     /*
     if (0) {
@@ -281,29 +285,28 @@ Polygons BridgeDetector::coverage(double angle, bool precise) const {
             }
         }
 
-            // Unite the trapezoids before rotation, as the rotation creates tiny gaps and intersections between the trapezoids
-            // instead of exact overlaps.
-            covered = union_(covered);
-            // Intersect trapezoids with actual bridge area to remove extra margins and append it to result.
-            polygons_rotate(covered, -(PI/2.0 - angle));
-            //covered = intersection(covered, to_polygons(this->expolygons));
+        // Unite the trapezoids before rotation, as the rotation creates tiny gaps and intersections between the trapezoids
+        // instead of exact overlaps.
+        covered = union_(covered);
+        // Intersect trapezoids with actual bridge area to remove extra margins and append it to result.
+        polygons_rotate(covered, -(PI/2.0 - angle));
+        //covered = intersection(covered, to_polygons(this->expolygons));
 #if 0
-            {
-                my @lines = map @{$_->lines}, @$trapezoids;
-                $_->rotate(-(PI/2 - $angle), [0,0]) for @lines;
-
-                require "Slic3r/SVG.pm";
-                Slic3r::SVG::output(
-                    "coverage_" . rad2deg($angle) . ".svg",
-                    expolygons          => [$self->expolygon],
-                    green_expolygons    => $self->_anchor_regions,
-                    red_expolygons      => $coverage,
-                    lines               => \@lines,
-                    );
+        {
+            my @lines = map @{$_->lines}, @$trapezoids;
+            $_->rotate(-(PI/2 - $angle), [0,0]) for @lines;
+            
+            require "Slic3r/SVG.pm";
+            Slic3r::SVG::output(
+                "coverage_" . rad2deg($angle) . ".svg",
+                expolygons          => [$self->expolygon],
+                green_expolygons    => $self->_anchor_regions,
+                red_expolygons      => $coverage,
+                lines               => \@lines,
+            );
         }
 #endif
     }
-
     return covered;
 }
 
@@ -316,7 +319,7 @@ BridgeDetector::unsupported_edges(double angle, Polylines* unsupported) const
     if (angle == -1) angle = this->angle;
     if (angle == -1) return;
 
-    Polygons grown_lower = offset(this->lower_slices.expolygons, this->spacing);
+    Polygons grown_lower = offset(this->lower_slices, float(this->spacing));
 
     for (ExPolygons::const_iterator it_expoly = this->expolygons.begin(); it_expoly != this->expolygons.end(); ++ it_expoly) {    
         // get unsupported bridge edges (both contour and holes)

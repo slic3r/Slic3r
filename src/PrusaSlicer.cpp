@@ -17,11 +17,6 @@
     #endif /* SLIC3R_GUI */
 #endif /* WIN32 */
 
-#include <cstdio>
-#include <string>
-#include <cstring>
-#include <iostream>
-#include <math.h>
 #include <boost/filesystem.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/cenv.hpp>
@@ -167,6 +162,7 @@ int CLI::run(int argc, char **argv)
 //    sla_print_config.apply(m_print_config, true);
     
     // Loop through transform options.
+    bool user_center_specified = false;
     for (auto const &opt_key : m_transforms) {
         if (opt_key == "merge") {
             Model m;
@@ -209,6 +205,7 @@ int CLI::run(int argc, char **argv)
             for (auto &model : m_models)
                 model.duplicate_objects_grid(x, y, (distance > 0) ? distance : 6);  // TODO: this is not the right place for setting a default
         } else if (opt_key == "center") {
+        	user_center_specified = true;
             for (auto &model : m_models) {
                 model.add_default_instances();
                 // this affects instances:
@@ -403,7 +400,9 @@ int CLI::run(int argc, char **argv)
                 if (! m_config.opt_bool("dont_arrange")) {
                     //FIXME make the min_object_distance configurable.
                     model.arrange_objects(fff_print.config().min_object_distance());
-					model.center_instances_around_point(m_config.option<ConfigOptionPoint>("center")->value);
+                    model.center_instances_around_point((! user_center_specified && m_print_config.has("bed_shape")) ? 
+                        BoundingBoxf(m_print_config.opt<ConfigOptionPoints>("bed_shape")->values).center() : 
+                        m_config.option<ConfigOptionPoint>("center")->value);
                 }
                 if (printer_technology == ptFFF) {
                     for (auto* mo : model.objects)
@@ -420,37 +419,37 @@ int CLI::run(int argc, char **argv)
                 else 
                     try {
                         std::string outfile_final;
-						print->process();
+                        print->process();
                         if (printer_technology == ptFFF) {
                             // The outfile is processed by a PlaceholderParser.
                             outfile = fff_print.export_gcode(outfile, nullptr);
                             outfile_final = fff_print.print_statistics().finalize_output_path(outfile);
                         } else {
-							outfile = sla_print.output_filepath(outfile);
+                            outfile = sla_print.output_filepath(outfile);
                             // We need to finalize the filename beforehand because the export function sets the filename inside the zip metadata
                             outfile_final = sla_print.print_statistics().finalize_output_path(outfile);
-							sla_print.export_raster(outfile_final);
+                            sla_print.export_raster(outfile_final);
                         }
                         if (outfile != outfile_final && Slic3r::rename_file(outfile, outfile_final)) {
-							boost::nowide::cerr << "Renaming file " << outfile << " to " << outfile_final << " failed" << std::endl;
+                            boost::nowide::cerr << "Renaming file " << outfile << " to " << outfile_final << " failed" << std::endl;
                             return 1;
                         }
                         boost::nowide::cout << "Slicing result exported to " << outfile << std::endl;
                     } catch (const std::exception &ex) {
-						boost::nowide::cerr << ex.what() << std::endl;
-                        return 1;                        
+                        boost::nowide::cerr << ex.what() << std::endl;
+                        return 1;
                     }
 /*
                 print.center = ! m_config.has("center")
                     && ! m_config.has("align_xy")
                     && ! m_config.opt_bool("dont_arrange");
                 print.set_model(model);
-                
+
                 // start chronometer
                 typedef std::chrono::high_resolution_clock clock_;
                 typedef std::chrono::duration<double, std::ratio<1> > second_;
                 std::chrono::time_point<clock_> t0{ clock_::now() };
-                
+
                 const std::string outfile = this->output_filepath(model, IO::Gcode);
                 try {
                     print.export_gcode(outfile);
@@ -459,7 +458,7 @@ int CLI::run(int argc, char **argv)
                     return 1;
                 }
                 boost::nowide::cout << "G-code exported to " << outfile << std::endl;
-                
+
                 // output some statistics
                 double duration { std::chrono::duration_cast<second_>(clock_::now() - t0).count() };
                 boost::nowide::cout << std::fixed << std::setprecision(0)
@@ -476,48 +475,48 @@ int CLI::run(int argc, char **argv)
             return 1;
         }
     }
-    
-	if (start_gui) {
+
+    if (start_gui) {
 #ifdef SLIC3R_GUI
 // #ifdef USE_WX
-		GUI::GUI_App *gui = new GUI::GUI_App();
+        GUI::GUI_App *gui = new GUI::GUI_App();
 //		gui->autosave = m_config.opt_string("autosave");
-		GUI::GUI_App::SetInstance(gui);
-		gui->CallAfter([gui, this, &load_configs] {
-			if (!gui->initialized()) {
-				return;
-			}
+        GUI::GUI_App::SetInstance(gui);
+        gui->CallAfter([gui, this, &load_configs] {
+            if (!gui->initialized()) {
+                return;
+            }
 #if 0
-			// Load the cummulative config over the currently active profiles.
-			//FIXME if multiple configs are loaded, only the last one will have an effect.
-			// We need to decide what to do about loading of separate presets (just print preset, just filament preset etc).
-			// As of now only the full configs are supported here.
-			if (!m_print_config.empty())
-				gui->mainframe->load_config(m_print_config);
+            // Load the cummulative config over the currently active profiles.
+            //FIXME if multiple configs are loaded, only the last one will have an effect.
+            // We need to decide what to do about loading of separate presets (just print preset, just filament preset etc).
+            // As of now only the full configs are supported here.
+            if (!m_print_config.empty())
+                gui->mainframe->load_config(m_print_config);
 #endif
-			if (! load_configs.empty())
-				// Load the last config to give it a name at the UI. The name of the preset may be later
-				// changed by loading an AMF or 3MF.
-				//FIXME this is not strictly correct, as one may pass a print/filament/printer profile here instead of a full config.
-				gui->mainframe->load_config_file(load_configs.back());
-			// If loading a 3MF file, the config is loaded from the last one.
-			if (! m_input_files.empty())
-				gui->plater()->load_files(m_input_files, true, true);
-			if (! m_extra_config.empty())
-				gui->mainframe->load_config(m_extra_config);
-		});
+            if (! load_configs.empty())
+                // Load the last config to give it a name at the UI. The name of the preset may be later
+                // changed by loading an AMF or 3MF.
+                //FIXME this is not strictly correct, as one may pass a print/filament/printer profile here instead of a full config.
+                gui->mainframe->load_config_file(load_configs.back());
+            // If loading a 3MF file, the config is loaded from the last one.
+            if (! m_input_files.empty())
+                gui->plater()->load_files(m_input_files, true, true);
+            if (! m_extra_config.empty())
+                gui->mainframe->load_config(m_extra_config);
+        });
         int result = wxEntry(argc, argv);
         //FIXME this is a workaround for the PrusaSlicer 2.1 release.
-        _3DScene::destroy();
+		_3DScene::destroy();
         return result;
 #else /* SLIC3R_GUI */
-		// No GUI support. Just print out a help.
-		this->print_help(false);
-		// If started without a parameter, consider it to be OK, otherwise report an error code (no action etc).
-		return (argc == 0) ? 0 : 1;
+        // No GUI support. Just print out a help.
+        this->print_help(false);
+        // If started without a parameter, consider it to be OK, otherwise report an error code (no action etc).
+        return (argc == 0) ? 0 : 1;
 #endif /* SLIC3R_GUI */
     }
-    
+
     return 0;
 }
 
@@ -565,18 +564,18 @@ bool CLI::setup(int argc, char **argv)
     // If any option is unsupported, print usage and abort immediately.
     t_config_option_keys opt_order;
     if (! m_config.read_cli(argc, argv, &m_input_files, &opt_order)) {
-		// Separate error message reported by the CLI parser from the help.
-		boost::nowide::cerr << std::endl;
+        // Separate error message reported by the CLI parser from the help.
+        boost::nowide::cerr << std::endl;
         this->print_help();
-		return false;
+        return false;
     }
-	// Parse actions and transform options.
-	for (auto const &opt_key : opt_order) {
-		if (cli_actions_config_def.has(opt_key))
-			m_actions.emplace_back(opt_key);
-		else if (cli_transform_config_def.has(opt_key))
-			m_transforms.emplace_back(opt_key);
-	}
+    // Parse actions and transform options.
+    for (auto const &opt_key : opt_order) {
+        if (cli_actions_config_def.has(opt_key))
+            m_actions.emplace_back(opt_key);
+        else if (cli_transform_config_def.has(opt_key))
+            m_transforms.emplace_back(opt_key);
+    }
 
     {
         const ConfigOptionInt *opt_loglevel = m_config.opt<ConfigOptionInt>("loglevel");
@@ -589,41 +588,41 @@ bool CLI::setup(int argc, char **argv)
         for (const std::pair<t_config_option_key, ConfigOptionDef> &optdef : *options)
             m_config.optptr(optdef.first, true);
 
-	set_data_dir(m_config.opt_string("datadir"));
+    set_data_dir(m_config.opt_string("datadir"));
 
-	return true;
+    return true;
 }
 
-void CLI::print_help(bool include_print_options, PrinterTechnology printer_technology) const 
+void CLI::print_help(bool include_print_options, PrinterTechnology printer_technology) const
 {
     boost::nowide::cout
-		<< SLIC3R_BUILD_ID << " " << "based on Slic3r"
+        << SLIC3R_BUILD_ID << " " << "based on Slic3r"
 #ifdef SLIC3R_GUI
         << " (with GUI support)"
 #else /* SLIC3R_GUI */
         << " (without GUI support)"
 #endif /* SLIC3R_GUI */
         << std::endl
-        << "https://github.com/supermerill/slic3r" << std::endl << std::endl
+        << "https://github.com/prusa3d/PrusaSlicer" << std::endl << std::endl
         << "Usage: prusa-slicer [ ACTIONS ] [ TRANSFORM ] [ OPTIONS ] [ file.stl ... ]" << std::endl
         << std::endl
         << "Actions:" << std::endl;
     cli_actions_config_def.print_cli_help(boost::nowide::cout, false);
-    
+
     boost::nowide::cout
         << std::endl
         << "Transform options:" << std::endl;
         cli_transform_config_def.print_cli_help(boost::nowide::cout, false);
-    
+
     boost::nowide::cout
         << std::endl
         << "Other options:" << std::endl;
         cli_misc_config_def.print_cli_help(boost::nowide::cout, false);
-    
+
     if (include_print_options) {
         boost::nowide::cout << std::endl;
-		print_config_def.print_cli_help(boost::nowide::cout, true, [printer_technology](const ConfigOptionDef &def)
-            { return (printer_technology & def.printer_technology) != 0; });
+        print_config_def.print_cli_help(boost::nowide::cout, true, [printer_technology](const ConfigOptionDef &def)
+            { return printer_technology == ptAny || def.printer_technology == ptAny || printer_technology == def.printer_technology; });
     } else {
         boost::nowide::cout
             << std::endl
@@ -639,14 +638,14 @@ bool CLI::export_models(IO::ExportFormat format)
         switch (format) {
             case IO::AMF: success = Slic3r::store_amf(path, &model, nullptr); break;
             case IO::OBJ: success = Slic3r::store_obj(path.c_str(), &model);          break;
-			case IO::STL: success = Slic3r::store_stl(path.c_str(), &model, true);    break;
-			case IO::TMF: success = Slic3r::store_3mf(path.c_str(), &model, nullptr); break;
+            case IO::STL: success = Slic3r::store_stl(path.c_str(), &model, true);    break;
+            case IO::TMF: success = Slic3r::store_3mf(path.c_str(), &model, nullptr); break;
             default: assert(false); break;
         }
         if (success)
-			std::cout << "File exported to " << path << std::endl;
+            std::cout << "File exported to " << path << std::endl;
         else {
-			std::cerr << "File export to " << path << " failed" << std::endl;
+            std::cerr << "File export to " << path << " failed" << std::endl;
             return false;
         }
     }
@@ -660,12 +659,12 @@ std::string CLI::output_filepath(const Model &model, IO::ExportFormat format) co
         case IO::AMF: ext = ".zip.amf"; break;
         case IO::OBJ: ext = ".obj"; break;
         case IO::STL: ext = ".stl"; break;
-		case IO::TMF: ext = ".3mf"; break;
+        case IO::TMF: ext = ".3mf"; break;
         default: assert(false); break;
     };
     auto proposed_path = boost::filesystem::path(model.propose_export_file_name_and_path(ext));
     // use --output when available
-	std::string cmdline_param = m_config.opt_string("output");
+    std::string cmdline_param = m_config.opt_string("output");
     if (! cmdline_param.empty()) {
         // if we were supplied a directory, use it and append our automatically generated filename
         boost::filesystem::path cmdline_path(cmdline_param);
@@ -679,18 +678,18 @@ std::string CLI::output_filepath(const Model &model, IO::ExportFormat format) co
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 extern "C" {
-	__declspec(dllexport) int __stdcall slic3r_main(int argc, wchar_t **argv)
-	{
-		// Convert wchar_t arguments to UTF8.
-		std::vector<std::string> 	argv_narrow;
-		std::vector<char*>			argv_ptrs(argc + 1, nullptr);
-		for (size_t i = 0; i < argc; ++ i)
-			argv_narrow.emplace_back(boost::nowide::narrow(argv[i]));
-		for (size_t i = 0; i < argc; ++ i)
-			argv_ptrs[i] = const_cast<char*>(argv_narrow[i].data());
-		// Call the UTF8 main.
-		return CLI().run(argc, argv_ptrs.data());
-	}
+    __declspec(dllexport) int __stdcall slic3r_main(int argc, wchar_t **argv)
+    {
+        // Convert wchar_t arguments to UTF8.
+        std::vector<std::string> 	argv_narrow;
+        std::vector<char*>			argv_ptrs(argc + 1, nullptr);
+        for (size_t i = 0; i < argc; ++ i)
+            argv_narrow.emplace_back(boost::nowide::narrow(argv[i]));
+        for (size_t i = 0; i < argc; ++ i)
+            argv_ptrs[i] = const_cast<char*>(argv_narrow[i].data());
+        // Call the UTF8 main.
+        return CLI().run(argc, argv_ptrs.data());
+    }
 }
 #else /* _MSC_VER */
 int main(int argc, char **argv)

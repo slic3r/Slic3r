@@ -67,6 +67,8 @@ public:
         MK2,
         MK3,
         SL1,
+        MINI,
+        ENDER3,
         Custom,
         Num_Types
     };
@@ -110,7 +112,7 @@ public:
     bool contains(const Point& point) const;
     Point point_projection(const Point& point) const;
 
-    void render(GLCanvas3D& canvas, float theta, float scale_factor) const;
+    void render(GLCanvas3D& canvas, float theta, float scale_factor, bool show_axes) const;
 
 private:
     void calc_bounding_boxes() const;

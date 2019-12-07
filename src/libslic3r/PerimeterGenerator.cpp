@@ -745,7 +745,8 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
             // reapply the nearest point search for starting point
             // We allow polyline reversal because Clipper may have randomly
             // reversed polylines during clipping.
-            paths = (ExtrusionPaths)ExtrusionEntityCollection(paths).chained_path();
+            if (!paths.empty())
+                paths = (ExtrusionPaths)ExtrusionEntityCollection(paths).chained_path_from(paths.front().first_point());
         } else {
             ExtrusionPath path(role);
             path.polyline   = loop->polygon.split_at_first_point();
@@ -769,8 +770,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     
     // sort entities into a new collection using a nearest-neighbor search,
     // preserving the original indices which are useful for detecting thin walls
-    ExtrusionEntityCollection sorted_coll;
-    coll.chained_path(&sorted_coll, false, erMixed, &sorted_coll.orig_indices);
+    ExtrusionEntityCollection sorted_coll = coll.chained_path_from(coll.first_point());
     
     // traverse children and build the final collection
     ExtrusionEntityCollection entities;
@@ -819,7 +819,7 @@ PerimeterGenerator::_get_nearest_point(const PerimeterGeneratorLoops &children, 
     for (size_t idx_child = 0; idx_child < children.size(); idx_child++) {
         const PerimeterGeneratorLoop &child = children[idx_child];
         for (size_t idx_poly = 0; idx_poly < myPolylines.paths.size(); idx_poly++) {
-            if (myPolylines.paths[idx_poly].extruder_id == (unsigned int)-1) continue;
+            //if (myPolylines.paths[idx_poly].extruder_id == (unsigned int)-1) continue;
             if (myPolylines.paths[idx_poly].length() < dist_cut + SCALED_RESOLUTION) continue;
 
             if ((myPolylines.paths[idx_poly].role() == erExternalPerimeter || child.is_external() )
@@ -868,7 +868,7 @@ PerimeterGenerator::_get_nearest_point(const PerimeterGeneratorLoops &children, 
     for (size_t idx_child = 0; idx_child < children.size(); idx_child++) {
         const PerimeterGeneratorLoop &child = children[idx_child];
         for (size_t idx_poly = 0; idx_poly < myPolylines.paths.size(); idx_poly++) {
-            if (myPolylines.paths[idx_poly].extruder_id == (unsigned int)-1) continue;
+            //if (myPolylines.paths[idx_poly].extruder_id == (unsigned int)-1) continue;
             if (myPolylines.paths[idx_poly].length() < dist_cut + SCALED_RESOLUTION) continue;
 
             //second, try to check from one of my points
@@ -898,7 +898,7 @@ PerimeterGenerator::_get_nearest_point(const PerimeterGeneratorLoops &children, 
     for (size_t idx_child = 0; idx_child < children.size(); idx_child++) {
         const PerimeterGeneratorLoop &child = children[idx_child];
         for (size_t idx_poly = 0; idx_poly < myPolylines.paths.size(); idx_poly++) {
-            if (myPolylines.paths[idx_poly].extruder_id == (unsigned int)-1) continue;
+            //if (myPolylines.paths[idx_poly].extruder_id == (unsigned int)-1) continue;
             if (myPolylines.paths[idx_poly].length() < dist_cut + SCALED_RESOLUTION) continue;
 
             //lastly, try to check from one of his points
@@ -1019,7 +1019,8 @@ PerimeterGenerator::_extrude_and_cut_loop(const PerimeterGeneratorLoop &loop, co
             // reapply the nearest point search for starting point
             // We allow polyline reversal because Clipper may have randomly
             // reversed polylines during clipping.
-            paths = (ExtrusionPaths)ExtrusionEntityCollection(paths).chained_path();
+            if(!paths.empty())
+                paths = (ExtrusionPaths)ExtrusionEntityCollection(paths).chained_path_from(paths.front().first_point());
              
             
             if (direction.length() > 0) {
@@ -1282,9 +1283,9 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                 travel_path_begin.emplace_back(ExtrusionRole::erPerimeter, outer_start->mm3_per_mm, outer_start->width, outer_start->height);
                 travel_path_begin.emplace_back(ExtrusionRole::erNone, 0, outer_start->width, outer_start->height);
                 travel_path_begin.emplace_back(ExtrusionRole::erPerimeter, outer_start->mm3_per_mm, outer_start->width, outer_start->height);
-                travel_path_begin[0].extruder_id = -1;
-                travel_path_begin[1].extruder_id = -1;
-                travel_path_begin[2].extruder_id = -1;
+                //travel_path_begin[0].extruder_id = -1;
+                //travel_path_begin[1].extruder_id = -1;
+                //travel_path_begin[2].extruder_id = -1;
                 Line line(outer_start->polyline.points.back(), inner_start->polyline.points.front());
                 Point p_dist_cut_extrude = (line.b - line.a);
                 p_dist_cut_extrude.x() = (coord_t)(p_dist_cut_extrude.x() * ((double)max_width_extrusion) / (line.length() * 2));
@@ -1310,7 +1311,7 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                     flow_mult = max_width_extrusion / dist_travel;
                 }
                 travel_path_begin.emplace_back(ExtrusionRole::erPerimeter, outer_start->mm3_per_mm * flow_mult, (float)(outer_start->width * flow_mult), outer_start->height);
-                travel_path_begin[0].extruder_id = -1;
+                //travel_path_begin[0].extruder_id = -1;
                 travel_path_begin[0].polyline.append(outer_start->polyline.points.back());
                 travel_path_begin[0].polyline.append(inner_start->polyline.points.front());
             }
@@ -1319,9 +1320,9 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                 travel_path_end.emplace_back(ExtrusionRole::erPerimeter, outer_end->mm3_per_mm, outer_end->width, outer_end->height);
                 travel_path_end.emplace_back(ExtrusionRole::erNone, 0, outer_end->width, outer_end->height);
                 travel_path_end.emplace_back(ExtrusionRole::erPerimeter, outer_end->mm3_per_mm, outer_end->width, outer_end->height);
-                travel_path_end[0].extruder_id = -1;
-                travel_path_end[1].extruder_id = -1;
-                travel_path_end[2].extruder_id = -1;
+                //travel_path_end[0].extruder_id = -1;
+                //travel_path_end[1].extruder_id = -1;
+                //travel_path_end[2].extruder_id = -1;
                 Line line(inner_end->polyline.points.back(), outer_end->polyline.points.front());
                 Point p_dist_cut_extrude = (line.b - line.a);
                 p_dist_cut_extrude.x() = (coord_t)(p_dist_cut_extrude.x() * ((double)max_width_extrusion) / (line.length() * 2));
@@ -1347,7 +1348,7 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                     flow_mult = max_width_extrusion / dist_travel;
                 }
                 travel_path_end.emplace_back(ExtrusionRole::erPerimeter, outer_end->mm3_per_mm * flow_mult, (float)(outer_end->width * flow_mult), outer_end->height);
-                travel_path_end[0].extruder_id = -1;
+                //travel_path_end[0].extruder_id = -1;
                 travel_path_end[0].polyline.append(inner_end->polyline.points.back());
                 travel_path_end[0].polyline.append(outer_end->polyline.points.front());
             }

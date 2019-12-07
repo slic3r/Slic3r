@@ -417,7 +417,7 @@ void GLVolume::render(int color_id, int detection_id, int worldmatrix_id) const
 }
 
 bool GLVolume::is_sla_support() const { return this->composite_id.volume_id == -int(slaposSupportTree); }
-bool GLVolume::is_sla_pad() const { return this->composite_id.volume_id == -int(slaposBasePool); }
+bool GLVolume::is_sla_pad() const { return this->composite_id.volume_id == -int(slaposPad); }
 
 std::vector<int> GLVolumeCollection::load_object(
     const ModelObject       *model_object,
@@ -501,7 +501,7 @@ void GLVolumeCollection::load_object_auxiliary(
     TriangleMesh convex_hull = mesh.convex_hull_3d();
     for (const std::pair<size_t, size_t>& instance_idx : instances) {
         const ModelInstance& model_instance = *print_object->model_object()->instances[instance_idx.first];
-        this->volumes.emplace_back(new GLVolume((milestone == slaposBasePool) ? GLVolume::SLA_PAD_COLOR : GLVolume::SLA_SUPPORT_COLOR));
+        this->volumes.emplace_back(new GLVolume((milestone == slaposPad) ? GLVolume::SLA_PAD_COLOR : GLVolume::SLA_SUPPORT_COLOR));
         GLVolume& v = *this->volumes.back();
         v.indexed_vertex_array.load_mesh(mesh);
 	    v.indexed_vertex_array.finalize_geometry(opengl_initialized);
@@ -707,23 +707,23 @@ bool GLVolumeCollection::check_outside_state(const DynamicPrintConfig* config, M
     print_volume.min(2) = -1e10;
 
     ModelInstance::EPrintVolumeState state = ModelInstance::PVS_Inside;
-    bool all_contained = true;
 
     bool contained_min_one = false;
 
     for (GLVolume* volume : this->volumes)
     {
-        if ((volume == nullptr) || !volume->printable || volume->is_modifier || (volume->is_wipe_tower && !volume->shader_outside_printer_detection_enabled) || ((volume->composite_id.volume_id < 0) && !volume->shader_outside_printer_detection_enabled))
+        if ((volume == nullptr) || volume->is_modifier || (volume->is_wipe_tower && !volume->shader_outside_printer_detection_enabled) || ((volume->composite_id.volume_id < 0) && !volume->shader_outside_printer_detection_enabled))
             continue;
 
         const BoundingBoxf3& bb = volume->transformed_convex_hull_bounding_box();
         bool contained = print_volume.contains(bb);
-        all_contained &= contained;
+
+        volume->is_outside = !contained;
+        if (!volume->printable)
+            continue;
 
         if (contained)
             contained_min_one = true;
-
-        volume->is_outside = !contained;
 
         if ((state == ModelInstance::PVS_Inside) && volume->is_outside)
             state = ModelInstance::PVS_Fully_Outside;
@@ -735,7 +735,7 @@ bool GLVolumeCollection::check_outside_state(const DynamicPrintConfig* config, M
     if (out_state != nullptr)
         *out_state = state;
 
-    return /*all_contained*/ contained_min_one; // #ys_FIXME_delete_after_testing
+    return contained_min_one;
 }
 
 void GLVolumeCollection::reset_outside_state()
@@ -1717,13 +1717,18 @@ static void thick_point_to_verts(const Vec3crd& point,
     point_to_indexed_vertex_array(point, width, height, volume.indexed_vertex_array);
 }
 
+void _3DScene::extrusionentity_to_verts(const Polyline &polyline, float width, float height, float print_z, GLVolume& volume)
+{
+	if (polyline.size() >= 2) {
+		size_t num_segments = polyline.size() - 1;
+		thick_lines_to_verts(polyline.lines(), std::vector<double>(num_segments, width), std::vector<double>(num_segments, height), false, print_z, volume);
+	}
+}
+
 // Fill in the qverts and tverts with quads and triangles for the extrusion_path.
 void _3DScene::extrusionentity_to_verts(const ExtrusionPath &extrusion_path, float print_z, GLVolume &volume)
 {
-    Lines               lines = extrusion_path.polyline.lines();
-    std::vector<double> widths(lines.size(), extrusion_path.width);
-    std::vector<double> heights(lines.size(), extrusion_path.height);
-    thick_lines_to_verts(lines, widths, heights, false, print_z, volume);
+	extrusionentity_to_verts(extrusion_path.polyline, extrusion_path.width, extrusion_path.height, print_z, volume);
 }
 
 // Fill in the qverts and tverts with quads and triangles for the extrusion_path.

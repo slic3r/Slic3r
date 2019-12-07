@@ -1,5 +1,5 @@
 #include "../ClipperUtils.hpp"
-#include "../PolylineCollection.hpp"
+#include "../ShortestPath.hpp"
 #include "../Surface.hpp"
 #include <cmath>
 #include <algorithm>
@@ -145,6 +145,9 @@ static Polylines make_gyroid_waves(double gridZ, double density_adjusted, double
     return result;
 }
 
+// FIXME: needed to fix build on Mac on buildserver
+constexpr double FillGyroid::PatternTolerance;
+
 void FillGyroid::_fill_surface_single(
     const FillParams                &params, 
     unsigned int                     thickness_layers,
@@ -173,68 +176,32 @@ void FillGyroid::_fill_surface_single(
         ceil(bb.size()(0) / distance) + 1.,
         ceil(bb.size()(1) / distance) + 1.);
 
-    // clip pattern to boundaries, keeping the polyline order & ordering the fragment to be able to join them easily
-    Polylines polylines_chained;
-    for (size_t idx_polyline = 0; idx_polyline < polylines_square.size(); ++idx_polyline) {
-        // shift the polyline to the grid origin
-        Polyline &poly_to_cut = polylines_square[idx_polyline];
-        poly_to_cut.translate(bb.min);
+	// shift the polyline to the grid origin
+	for (Polyline &pl : polylines)
+		pl.translate(bb.min);
 
-        // intersect
-        Polylines polylines_to_sort = intersection_pl(Polylines() = { poly_to_cut }, (Polygons)expolygon);
-        for (Polyline &polyline : polylines_to_sort) {
-            //TODO: replace by closest_index_point()
-            if (idx_polyline % 2 == 0) {
-                if (poly_to_cut.points.front().distance_to_square(polyline.points.front()) > poly_to_cut.points.front().distance_to_square(polyline.points.back())) {
-                    polyline.reverse();
-                }
-            } else {
-                if (poly_to_cut.points.back().distance_to_square(polyline.points.front()) > poly_to_cut.points.back().distance_to_square(polyline.points.back())) {
-                    polyline.reverse();
-                }
-            }
-        }
-        if (polylines_to_sort.size() > 1) {
-            Point nearest = poly_to_cut.points.front();
-            if (idx_polyline % 2 != 0) {
-                nearest = poly_to_cut.points.back();
-            }
-            //Bubble sort
-            for (size_t idx_sort = polylines_to_sort.size() - 1; idx_sort > 0; idx_sort--) {
-                for (size_t idx_bubble = 0; idx_bubble < idx_sort; idx_bubble++) {
-                    if (polylines_to_sort[idx_bubble + 1].points.front().distance_to_square(nearest) < polylines_to_sort[idx_bubble].points.front().distance_to_square(nearest)) {
-                        iter_swap(polylines_to_sort.begin() + idx_bubble, polylines_to_sort.begin() + idx_bubble + 1);
-                    }
-                }
-            }
-        }
-        polylines_chained.insert(polylines_chained.end(), polylines_to_sort.begin(), polylines_to_sort.end());
-    }
+	polylines = intersection_pl(polylines, to_polygons(expolygon));
 
-    size_t polylines_out_first_idx = polylines_out.size();
-    if (!polylines_chained.empty()) {
-        // connect lines
-        if (params.dont_connect) {
-            polylines_out.insert(polylines_out.end(), polylines_chained.begin(), polylines_chained.end());
-        } else {
-            this->connect_infill(polylines_chained, expolygon, polylines_out, params);
-        }
-    }
+    if (! polylines.empty())
+		// remove too small bits (larger than longer)
+		polylines.erase(
+			//FIXME what is the small size? Removing tiny extrusions disconnects walls!
+			std::remove_if(polylines.begin(), polylines.end(), [this](const Polyline &pl) { return pl.length() < scale_(this->spacing * 3); }),
+			polylines.end());
 
-    //remove too small bits (larger than longer);
-    for (size_t idx = polylines_out_first_idx; idx < polylines_out.size(); idx++) {
-        if (polylines_out[idx].length() < scale_(this->spacing * 3)) {
-            polylines_out.erase(polylines_out.begin() + idx);
-            idx--;
-        }
-    }
-
-    // new paths must be rotated back
-    if(abs(infill_angle) >= EPSILON) {
-        for (Polylines::iterator it = polylines_out.begin() + polylines_out_first_idx;
-             it != polylines_out.end(); ++it) {
-            it->rotate(infill_angle);
-        }
+	if (! polylines.empty()) {
+		polylines = chain_polylines(polylines);
+		// connect lines
+		size_t polylines_out_first_idx = polylines_out.size();
+		if (params.dont_connect)
+        	append(polylines_out, std::move(polylines));
+        else
+            this->connect_infill(std::move(polylines), expolygon, polylines_out, this->spacing, params);
+	    // new paths must be rotated back
+	    if (abs(infill_angle) >= EPSILON) {
+	        for (auto it = polylines_out.begin() + polylines_out_first_idx; it != polylines_out.end(); ++ it)
+	        	it->rotate(infill_angle);
+	    }
     }
 }
 

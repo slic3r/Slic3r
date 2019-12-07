@@ -7,6 +7,7 @@
 #include "Flow.hpp"
 #include "Geometry.hpp"
 #include "I18N.hpp"
+#include "ShortestPath.hpp"
 #include "SupportMaterial.hpp"
 #include "GCode.hpp"
 #include "GCode/WipeTower.hpp"
@@ -15,7 +16,6 @@
 //#include "PrintExport.hpp"
 
 #include <float.h>
-#include <libnest2d.h>
 
 #include <algorithm>
 #include <limits>
@@ -148,10 +148,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "use_relative_e_distances",
         "use_volumetric_e",
         "variable_layer_height",
-        "wipe",
-        "wipe_tower_x",
-        "wipe_tower_y",
-        "wipe_tower_rotation_angle"
+        "wipe"
     };
 
     static std::unordered_set<std::string> steps_ignore;
@@ -172,7 +169,10 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             || opt_key == "skirt_height"
             || opt_key == "skirt_distance"
             || opt_key == "min_skirt_length"
-            || opt_key == "ooze_prevention") {
+            || opt_key == "ooze_prevention"
+            || opt_key == "wipe_tower_x"
+            || opt_key == "wipe_tower_y"
+            || opt_key == "wipe_tower_rotation_angle") {
             steps.emplace_back(psSkirt);
         } else if (
             opt_key == "complete_objects"
@@ -221,6 +221,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             || opt_key == "wipe_tower"
             || opt_key == "wipe_tower_width"
             || opt_key == "wipe_tower_bridging"
+            || opt_key == "wipe_tower_no_sparse_layers"
             || opt_key == "wiping_volumes_matrix"
             || opt_key == "parking_pos_retraction"
             || opt_key == "cooling_tube_retraction"
@@ -228,6 +229,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             || opt_key == "extra_loading_move"
             || opt_key == "z_offset") {
             steps.emplace_back(psWipeTower);
+            steps.emplace_back(psSkirt);
         }
         else if (
             opt_key == "first_layer_extrusion_width"
@@ -287,7 +289,7 @@ bool Print::is_step_done(PrintObjectStep step) const
 {
     if (m_objects.empty())
         return false;
-	tbb::mutex::scoped_lock lock(this->state_mutex());
+    tbb::mutex::scoped_lock lock(this->state_mutex());
     for (const PrintObject *object : m_objects)
         if (! object->is_step_done_unguarded(step))
             return false;
@@ -360,17 +362,6 @@ unsigned int Print::num_object_instances() const
     for (const PrintObject *print_object : m_objects)
         instances += (unsigned int)print_object->copies().size();
     return instances;
-}
-
-void Print::_simplify_slices(double distance)
-{
-    for (PrintObject *object : m_objects) {
-        for (Layer *layer : object->m_layers) {
-            layer->slices.simplify(distance);
-            for (LayerRegion *layerm : layer->regions())
-                layerm->m_slices.simplify(distance);
-        }
-    }
 }
 
 double Print::max_allowed_layer_height() const
@@ -680,11 +671,59 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
             else
                 m_ranges.emplace_back(t_layer_height_range(m_ranges.back().first.second, DBL_MAX), nullptr);
         }
+
+        // Convert input config ranges into continuous non-overlapping sorted vector of intervals and their configs,
+        // considering custom_tool_change values
+        void assign(const t_layer_config_ranges &in, const std::vector<std::pair<double, DynamicPrintConfig>> &custom_tool_changes) {
+            m_ranges.clear();
+            m_ranges.reserve(in.size());
+            // Input ranges are sorted lexicographically. First range trims the other ranges.
+            coordf_t last_z = 0;
+            for (const std::pair<const t_layer_height_range, DynamicPrintConfig> &range : in)
+				if (range.first.second > last_z) {
+                    coordf_t min_z = std::max(range.first.first, 0.);
+                    if (min_z > last_z + EPSILON) {
+                        m_ranges.emplace_back(t_layer_height_range(last_z, min_z), nullptr);
+                        last_z = min_z;
+                    }
+                    if (range.first.second > last_z + EPSILON) {
+						const DynamicPrintConfig* cfg = &range.second;
+                        m_ranges.emplace_back(t_layer_height_range(last_z, range.first.second), cfg);
+                        last_z = range.first.second;
+                    }
+                }
+
+            // add ranges for extruder changes from custom_tool_changes
+            for (size_t i = 0; i < custom_tool_changes.size(); i++) {
+                const DynamicPrintConfig* cfg = &custom_tool_changes[i].second;
+                coordf_t cur_Z = custom_tool_changes[i].first;
+                coordf_t next_Z = i == custom_tool_changes.size()-1 ? DBL_MAX : custom_tool_changes[i+1].first;
+                if (cur_Z > last_z + EPSILON) {
+                    if (i==0)
+                        m_ranges.emplace_back(t_layer_height_range(last_z, cur_Z), nullptr);
+                    m_ranges.emplace_back(t_layer_height_range(cur_Z, next_Z), cfg);
+                }
+                else if (next_Z > last_z + EPSILON)
+                    m_ranges.emplace_back(t_layer_height_range(last_z, next_Z), cfg);
+            }
+
+            if (m_ranges.empty())
+                m_ranges.emplace_back(t_layer_height_range(0, DBL_MAX), nullptr);
+            else if (m_ranges.back().second == nullptr)
+                m_ranges.back().first.second = DBL_MAX;
+            else if (m_ranges.back().first.second != DBL_MAX)
+                m_ranges.emplace_back(t_layer_height_range(m_ranges.back().first.second, DBL_MAX), nullptr);
+        }
         const DynamicPrintConfig* config(const t_layer_height_range &range) const {
             auto it = std::lower_bound(m_ranges.begin(), m_ranges.end(), std::make_pair< t_layer_height_range, const DynamicPrintConfig*>(t_layer_height_range(range.first - EPSILON, range.second - EPSILON), nullptr));
-            assert(it != m_ranges.end());
-            assert(it == m_ranges.end() || std::abs(it->first.first  - range.first ) < EPSILON);
-            assert(it == m_ranges.end() || std::abs(it->first.second - range.second) < EPSILON);
+            // #ys_FIXME_COLOR
+            // assert(it != m_ranges.end());
+            // assert(it == m_ranges.end() || std::abs(it->first.first  - range.first ) < EPSILON);
+            // assert(it == m_ranges.end() || std::abs(it->first.second - range.second) < EPSILON);
+            if (it == m_ranges.end() ||
+                std::abs(it->first.first - range.first) > EPSILON ||
+                std::abs(it->first.second - range.second) > EPSILON )
+                return nullptr; // desired range doesn't found
             return (it == m_ranges.end()) ? nullptr : it->second;
         }
         std::vector<std::pair<t_layer_height_range, const DynamicPrintConfig*>>::const_iterator begin() const { return m_ranges.cbegin(); }
@@ -732,6 +771,13 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
             // The object list did not change.
 			for (const ModelObject *model_object : m_model.objects)
 				model_object_status.emplace(model_object->id(), ModelObjectStatus::Old);
+
+            // But if custom gcode per layer height was changed
+            if (m_model.custom_gcode_per_height != model.custom_gcode_per_height) {
+                // we should stop background processing
+                update_apply_status(this->invalidate_step(psGCodeExport));
+                m_model.custom_gcode_per_height = model.custom_gcode_per_height;
+            }
         } else if (model_object_list_extended(m_model, model)) {
             // Add new objects. Their volumes and configs will be synchronized later.
             update_apply_status(this->invalidate_step(psGCodeExport));
@@ -823,6 +869,9 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
     for (PrintObject *print_object : m_objects)
         print_object_status.emplace(PrintObjectStatus(print_object));
 
+    std::vector<std::pair<double, DynamicPrintConfig>> custom_tool_changes = 
+        m_model.get_custom_tool_changes(m_default_object_config.layer_height, num_extruders);
+
     // 3) Synchronize ModelObjects & PrintObjects.
     for (size_t idx_model_object = 0; idx_model_object < model.objects.size(); ++ idx_model_object) {
         ModelObject &model_object = *m_model.objects[idx_model_object];
@@ -830,7 +879,9 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
         assert(it_status != model_object_status.end());
         assert(it_status->status != ModelObjectStatus::Deleted);
 		const ModelObject& model_object_new = *model.objects[idx_model_object];
-		const_cast<ModelObjectStatus&>(*it_status).layer_ranges.assign(model_object_new.layer_config_ranges);
+        // ys_FIXME_COLOR
+		// const_cast<ModelObjectStatus&>(*it_status).layer_ranges.assign(model_object_new.layer_config_ranges);
+        const_cast<ModelObjectStatus&>(*it_status).layer_ranges.assign(model_object_new.layer_config_ranges, custom_tool_changes);
         if (it_status->status == ModelObjectStatus::New)
             // PrintObject instances will be added in the next loop.
             continue;
@@ -998,6 +1049,8 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
         PrintRegionConfig  this_region_config;
         bool               this_region_config_set = false;
         for (PrintObject *print_object : m_objects) {
+            if(m_force_update_print_regions && !custom_tool_changes.empty())
+                goto print_object_end;
             const LayerRanges *layer_ranges;
             {
                 auto it_status = model_object_status.find(ModelObjectStatus(print_object->model_object()->id()));
@@ -1148,6 +1201,9 @@ std::string Print::validate() const
     if (m_objects.empty())
         return L("All objects are outside of the print volume.");
 
+    if (extruders().empty())
+        return L("The supplied settings will cause an empty print.");
+
     if (m_config.complete_objects) {
         // Check horizontal clearance.
         {
@@ -1228,6 +1284,8 @@ std::string Print::validate() const
             return L("The Wipe Tower is currently only supported with the relative extruder addressing (use_relative_e_distances=1).");
         if (m_config.ooze_prevention)
             return L("Ooze prevention is currently not supported with the wipe tower enabled.");
+        if (m_config.use_volumetric_e)
+            return L("The Wipe Tower currently does not support volumetric E (use_volumetric_e=0).");
         
         if (m_objects.size() > 1) {
             bool                                has_custom_layering = false;
@@ -1306,11 +1364,8 @@ std::string Print::validate() const
     }
     }
     
-    {
-        // find the smallest nozzle diameter
-        std::vector<unsigned int> extruders = this->extruders();
-        if (extruders.empty())
-            return L("The supplied settings will cause an empty print.");
+	{
+		std::vector<unsigned int> extruders = this->extruders();
 
 		// Find the smallest used nozzle diameter and the number of unique nozzle diameters.
 		double min_nozzle_diameter = std::numeric_limits<double>::max();
@@ -1549,6 +1604,14 @@ void Print::process()
         obj->infill();
     for (PrintObject *obj : m_objects)
         obj->generate_support_material();
+    if (this->set_started(psWipeTower)) {
+        m_wipe_tower_data.clear();
+        if (this->has_wipe_tower()) {
+            //this->set_status(95, L("Generating wipe tower"));
+            this->_make_wipe_tower();
+        }
+        this->set_done(psWipeTower);
+    }
     if (this->set_started(psSkirt)) {
         m_skirt.clear();
         for (PrintObject *obj : m_objects) {
@@ -1601,14 +1664,6 @@ void Print::process()
         }
        this->set_done(psBrim);
     }
-    if (this->set_started(psWipeTower)) {
-        m_wipe_tower_data.clear();
-        if (this->has_wipe_tower()) {
-            //this->set_status(95, L("Generating wipe tower"));
-            this->_make_wipe_tower();
-        }
-       this->set_done(psWipeTower);
-    }
     BOOST_LOG_TRIVIAL(info) << "Slicing process finished." << log_memory_info();
 }
 
@@ -1616,7 +1671,11 @@ void Print::process()
 // The export_gcode may die for various reasons (fails to process output_filename_format,
 // write error into the G-code, cannot execute post-processing scripts).
 // It is up to the caller to show an error message.
+#if ENABLE_THUMBNAIL_GENERATOR
+std::string Print::export_gcode(const std::string& path_template, GCodePreviewData* preview_data, ThumbnailsGeneratorCallback thumbnail_cb)
+#else
 std::string Print::export_gcode(const std::string &path_template, GCodePreviewData *preview_data)
+#endif // ENABLE_THUMBNAIL_GENERATOR
 {
     // output everything to a G-code file
     // The following call may die if the output_filename_format template substitution fails.
@@ -1633,7 +1692,11 @@ std::string Print::export_gcode(const std::string &path_template, GCodePreviewDa
 
     // The following line may die for multiple reasons.
     GCode gcode;
+#if ENABLE_THUMBNAIL_GENERATOR
+    gcode.do_export(this, path.c_str(), preview_data, thumbnail_cb);
+#else
     gcode.do_export(this, path.c_str(), preview_data);
+#endif // ENABLE_THUMBNAIL_GENERATOR
     return path.c_str();
 }
 
@@ -1665,7 +1728,7 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
         for (const Layer *layer : object->m_layers) {
             if (layer->print_z > skirt_height_z)
                 break;
-            for (const ExPolygon &expoly : layer->slices.expolygons)
+            for (const ExPolygon &expoly : layer->slices)
                 // Collect the outer contour points only, ignore holes for the calculation of the convex hull.
                 append(object_points, expoly.contour.points);
         }
@@ -1686,6 +1749,24 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
             for (Point &pt : copy_points)
                 pt += shift;
             append(points, copy_points);
+        }
+    }
+
+    // Include the wipe tower.
+    if (has_wipe_tower() && ! m_wipe_tower_data.tool_changes.empty()) {
+        double width = m_config.wipe_tower_width + 2*m_wipe_tower_data.brim_width;
+        double depth = m_wipe_tower_data.depth + 2*m_wipe_tower_data.brim_width;
+        Vec2d pt = Vec2d(-m_wipe_tower_data.brim_width, -m_wipe_tower_data.brim_width);
+
+        std::vector<Vec2d> pts;
+        pts.push_back(Vec2d(pt.x(), pt.y()));
+        pts.push_back(Vec2d(pt.x()+width, pt.y()));
+        pts.push_back(Vec2d(pt.x()+width, pt.y()+depth));
+        pts.push_back(Vec2d(pt.x(), pt.y()+depth));
+        for (Vec2d& pt : pts) {
+            pt = Eigen::Rotation2Dd(Geometry::deg2rad(m_config.wipe_tower_rotation_angle.value)) * pt;
+            pt += Vec2d(m_config.wipe_tower_x.value, m_config.wipe_tower_y.value);
+            points.push_back(Point(scale_(pt.x()), scale_(pt.y())));
         }
     }
 
@@ -2022,7 +2103,7 @@ ExPolygons Print::_make_brim_interior(const PrintObjectPtrs &objects, const ExPo
     ExPolygons    islands;
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
-        for (ExPolygon &expoly : object->m_layers.front()->slices.expolygons)
+        for (ExPolygon &expoly : object->m_layers.front()->slices)
             object_islands.push_back(expoly);
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
@@ -2189,6 +2270,22 @@ bool Print::has_wipe_tower() const
         m_config.nozzle_diameter.values.size() > 1;
 }
 
+const WipeTowerData& Print::wipe_tower_data(size_t extruders_cnt, double first_layer_height, double nozzle_diameter) const
+{
+    // If the wipe tower wasn't created yet, make sure the depth and brim_width members are set to default.
+    if (! is_step_done(psWipeTower) && extruders_cnt !=0) {
+
+        float width = m_config.wipe_tower_width;
+        float brim_spacing = nozzle_diameter * 1.25f - first_layer_height * (1. - M_PI_4);
+
+        const_cast<Print*>(this)->m_wipe_tower_data.depth = (900.f/width) * float(extruders_cnt - 1);
+        const_cast<Print*>(this)->m_wipe_tower_data.brim_width = 4.5f * brim_spacing;
+    }
+
+    return m_wipe_tower_data;
+}
+
+
 void Print::_make_wipe_tower()
 {
     m_wipe_tower_data.clear();
@@ -2330,6 +2427,7 @@ void Print::_make_wipe_tower()
     m_wipe_tower_data.tool_changes.reserve(m_wipe_tower_data.tool_ordering.layer_tools().size());
     wipe_tower.generate(m_wipe_tower_data.tool_changes);
     m_wipe_tower_data.depth = wipe_tower.get_depth();
+    m_wipe_tower_data.brim_width = wipe_tower.get_brim_width();
 
     // Unload the current filament over the purge tower.
     coordf_t layer_height = m_objects.front()->config().layer_height.value;
@@ -2383,6 +2481,7 @@ DynamicConfig PrintStatistics::config() const
     config.set_key_value("used_filament",             new ConfigOptionFloat (this->total_used_filament / 1000.));
     config.set_key_value("extruded_volume",           new ConfigOptionFloat (this->total_extruded_volume));
     config.set_key_value("total_cost",                new ConfigOptionFloat (this->total_cost));
+    config.set_key_value("total_toolchanges",         new ConfigOptionInt(this->total_toolchanges));
     config.set_key_value("total_weight",              new ConfigOptionFloat (this->total_weight));
     config.set_key_value("total_wipe_tower_cost",     new ConfigOptionFloat (this->total_wipe_tower_cost));
     config.set_key_value("total_wipe_tower_filament", new ConfigOptionFloat (this->total_wipe_tower_filament));
@@ -2395,7 +2494,7 @@ DynamicConfig PrintStatistics::placeholders()
     for (const std::string &key : { 
         "print_time", "normal_print_time", "silent_print_time", 
         "used_filament", "extruded_volume", "total_cost", "total_weight", 
-        "total_wipe_tower_cost", "total_wipe_tower_filament"})
+        "total_toolchanges", "total_wipe_tower_cost", "total_wipe_tower_filament"})
         config.set_key_value(key, new ConfigOptionString(std::string("{") + key + "}"));
     return config;
 }

@@ -30,7 +30,7 @@ PrintConfigDef::PrintConfigDef()
     //assign params that are not already allocated to FFF+SLA (default from slic3rPE)
     assign_printer_technology_to_unknown(this->options, ptFFF | ptSLA);
     this->init_fff_params();
-    this->init_extruder_retract_keys();
+    this->init_extruder_option_keys();
     assign_printer_technology_to_unknown(this->options, ptFFF);
     this->init_sla_params();
     assign_printer_technology_to_unknown(this->options, ptSLA);
@@ -67,15 +67,29 @@ void PrintConfigDef::init_common_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionString(""));
 
+    def = this->add("thumbnails", coPoints);
+    def->label = L("Picture sizes to be stored into a .gcode and .sl1 files");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionPoints());
+
     def = this->add("layer_height", coFloat);
     def->label = L("Base Layer height");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("This setting controls the height (and thus the total number) of the slices/layers. "
-                   "Thinner layers give better accuracy but take more time to print.");
+        "Thinner layers give better accuracy but take more time to print.");
     def->sidetext = L("mm");
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(0.2));
+
+    def = this->add("layer_height_adaptive", coBool);
+    def->label = L("Automatic questionable layer height");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("This setting enable the adaptive layer height algorithm. It erase the layer height table but it's also erased by the result of the manual variable layer height feature. "
+        "Personally, I don't recommand to use it, it's not that good and you can do a much better job in some seconds with the manual 'variable layer height' tool.\n"
+        "note: it uses the min_height and max_height defined in the printer/hardware profile.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("max_print_height", coFloat);
     def->label = L("Max print height");
@@ -278,7 +292,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Horizontal width of the brim that will be printed inside each object on the first layer.");
     def->sidetext = L("mm");
     def->min = 0;
-    def->mode = comSimple;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("brim_ears", coBool);
@@ -616,6 +630,7 @@ void PrintConfigDef::init_fff_params()
                    "If left zero, default extrusion width will be used if set, otherwise 1.05 x nozzle diameter will be used. "
                    "If expressed as percentage (for example 112.5%), it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
+    def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -791,6 +806,7 @@ void PrintConfigDef::init_fff_params()
                    "(see the tooltips for perimeter extrusion width, infill extrusion width etc). "
                    "If expressed as percentage (for example: 105%), it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
+    def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -1115,6 +1131,10 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionStrings { "" });
     def->cli = ConfigOptionDef::nocli;
 
+    def = this->add("filament_vendor", coString);
+    def->set_default_value(new ConfigOptionString(L("(Unknown)")));
+    def->cli = ConfigOptionDef::nocli;
+
     def = this->add("fill_angle", coFloat);
     def->label = L("Fill");
     def->full_label = L("Fill angle");
@@ -1263,6 +1283,7 @@ void PrintConfigDef::init_fff_params()
                    "If set to zero, it will use the default extrusion width.");
     def->sidetext = L("mm or %");
     def->ratio_over = "first_layer_height";
+    def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(140, true));
 
@@ -1474,6 +1495,7 @@ void PrintConfigDef::init_fff_params()
                    "You may want to use fatter extrudates to speed up the infill and make your parts stronger. "
                    "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
+    def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -1856,8 +1878,10 @@ void PrintConfigDef::init_fff_params()
     def->enum_keys_map = &ConfigOptionEnum<PrintHostType>::get_enum_values();
     def->enum_values.push_back("octoprint");
     def->enum_values.push_back("duet");
+    def->enum_values.push_back("flashair");
     def->enum_labels.push_back("OctoPrint");
     def->enum_labels.push_back("Duet");
+    def->enum_labels.push_back("FlashAir");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionEnum<PrintHostType>(htOctoPrint));
 
@@ -2000,6 +2024,7 @@ void PrintConfigDef::init_fff_params()
                    "If expressed as percentage (for example 105%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
     def->aliases = { "perimeters_extrusion_width" };
+    def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -2443,6 +2468,7 @@ void PrintConfigDef::init_fff_params()
                    "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
                    "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
+    def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -2547,6 +2573,14 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("If enabled, all printing extruders will be primed at the front edge of the print bed at the start of the print.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(true));
+
+    def = this->add("wipe_tower_no_sparse_layers", coBool);
+    def->label = L("No sparse layers (EXPERIMENTAL)");
+    def->tooltip = L("If enabled, the wipe tower will not be printed on layers with no toolchanges. "
+                     "On layers with a toolchange, extruder will travel downward to print the wipe tower. "
+                     "User is responsible for ensuring there is no collision with the print.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("support_material", coBool);
     def->label = L("Generate support material");
@@ -2669,6 +2703,7 @@ void PrintConfigDef::init_fff_params()
                    "If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. "
                    "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
+    def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -2886,6 +2921,7 @@ void PrintConfigDef::init_fff_params()
                    "If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. "
                    "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
+    def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -3165,8 +3201,17 @@ void PrintConfigDef::init_fff_params()
     }
 }
 
-void PrintConfigDef::init_extruder_retract_keys()
+void PrintConfigDef::init_extruder_option_keys()
 {
+    // ConfigOptionFloats, ConfigOptionPercents, ConfigOptionBools, ConfigOptionStrings
+    m_extruder_option_keys = {
+        "nozzle_diameter", "min_layer_height", "max_layer_height", "extruder_offset",
+        "retract_length", "retract_lift", "retract_lift_above", "retract_lift_below", "retract_speed", "deretract_speed",
+        "retract_before_wipe", "retract_restart_extra", "retract_before_travel", "wipe",
+        "retract_layer_change", "retract_length_toolchange", "retract_restart_extra_toolchange", "extruder_colour",
+        "default_filament_profile"
+    };
+
     m_extruder_retract_keys = {
         "deretract_speed",
         "retract_before_travel",
@@ -3291,17 +3336,58 @@ void PrintConfigDef::init_sla_params()
                       "the threshold in the middle. This behaviour eliminates "
                       "antialiasing without losing holes in polygons.");
     def->min = 0;
+    def->max = 1;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(1.0));
 
 
     // SLA Material settings.
+    def = this->add("material_type", coString);
+    def->label = L("SLA material type");
+    def->tooltip = L("SLA material type");
+    def->gui_type = "f_enum_open";   // TODO: ???
+    def->gui_flags = "show_value";
+    def->enum_values.push_back("Tough");
+    def->enum_values.push_back("Flexible");
+    def->enum_values.push_back("Casting");
+    def->enum_values.push_back("Dental");
+    def->enum_values.push_back("Heat-resistant");
+    def->set_default_value(new ConfigOptionString("Tough"));
+
     def = this->add("initial_layer_height", coFloat);
     def->label = L("Initial layer height");
     def->tooltip = L("Initial layer height");
     def->sidetext = L("mm");
     def->min = 0;
     def->set_default_value(new ConfigOptionFloat(0.3));
+
+    def = this->add("bottle_volume", coFloat);
+    def->label = L("Bottle volume");
+    def->tooltip = L("Bottle volume");
+    def->sidetext = L("ml");
+    def->min = 50;
+    def->set_default_value(new ConfigOptionFloat(1000.0));
+
+    def = this->add("bottle_weight", coFloat);
+    def->label = L("Bottle weight");
+    def->tooltip = L("Bottle weight");
+    def->sidetext = L("kg");
+    def->min = 0;
+    def->set_default_value(new ConfigOptionFloat(1.0));
+
+    def = this->add("material_density", coFloat);
+    def->label = L("Density");
+    def->tooltip = L("Density");
+    def->sidetext = L("g/ml");
+    def->min = 0;
+    def->set_default_value(new ConfigOptionFloat(1.0));
+
+    def = this->add("bottle_cost", coFloat);
+    def->label = L("Cost");
+    def->tooltip = L("Cost");
+    def->sidetext = L("money/bottle");
+    def->min = 0;
+    def->set_default_value(new ConfigOptionFloat(0.0));
 
     def = this->add("faded_layers", coInt);
     def->label = L("Faded layers");
@@ -3372,6 +3458,10 @@ void PrintConfigDef::init_sla_params()
     def->height = 13;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionString(""));
+
+    def = this->add("material_vendor", coString);
+    def->set_default_value(new ConfigOptionString(L("(Unknown)")));
+    def->cli = ConfigOptionDef::nocli;
 
     def = this->add("default_sla_material_profile", coString);
     def->label = L("Default SLA material profile");
@@ -3594,6 +3684,17 @@ void PrintConfigDef::init_sla_params()
     def->max = 30;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0.));
+    
+    def = this->add("pad_brim_size", coFloat);
+    def->label = L("Pad brim size");
+    def->tooltip = L("How far should the pad extend around the contained geometry");
+    def->category = L("Pad");
+    //     def->tooltip = L("");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->max = 30;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(1.6));
 
     def = this->add("pad_max_merge_distance", coFloat);
     def->label = L("Max merge distance");
@@ -3632,6 +3733,13 @@ void PrintConfigDef::init_sla_params()
     def->label = L("Pad around object");
     def->category = OptionCategory::pad;
     def->tooltip = L("Create pad around object and ignore the support elevation");
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionBool(false));
+    
+    def = this->add("pad_around_object_everywhere", coBool);
+    def->label = L("Pad around object everywhere");
+    def->category = L("Pad");
+    def->tooltip = L("Force pad around object everywhere");
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionBool(false));
 
@@ -3751,9 +3859,13 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
 
 const PrintConfigDef print_config_def;
 
-DynamicPrintConfig* DynamicPrintConfig::new_from_defaults()
+DynamicPrintConfig DynamicPrintConfig::full_print_config()
 {
-    return new_from_defaults_keys(FullPrintConfig::defaults().keys());
+	return DynamicPrintConfig((const PrintRegionConfig&)FullPrintConfig::defaults());
+}
+
+DynamicPrintConfig::DynamicPrintConfig(const StaticPrintConfig& rhs) : DynamicConfig(rhs, rhs.keys_ref())
+{
 }
 
 DynamicPrintConfig* DynamicPrintConfig::new_from_defaults_keys(const std::vector<std::string> &keys)
@@ -3803,6 +3915,20 @@ void DynamicPrintConfig::normalize()
             this->opt<ConfigOptionBool>("infill_dense", true)->value = false;
             this->opt<ConfigOptionBool>("extra_perimeters", true)->value = false;
         }
+    }
+}
+
+void DynamicPrintConfig::set_num_extruders(unsigned int num_extruders)
+{
+    const auto &defaults = FullPrintConfig::defaults();
+    for (const std::string &key : print_config_def.extruder_option_keys()) {
+        if (key == "default_filament_profile")
+            continue;
+        auto *opt = this->option(key, false);
+        assert(opt != nullptr);
+        assert(opt->is_vector());
+        if (opt != nullptr && opt->is_vector())
+            static_cast<ConfigOptionVectorBase*>(opt)->resize(num_extruders, defaults.option(key));
     }
 }
 

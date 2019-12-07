@@ -2,6 +2,8 @@
 #define slic3r_Preset_hpp_
 
 #include <deque>
+#include <set>
+#include <unordered_map>
 
 #include <boost/filesystem/path.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -73,9 +75,14 @@ public:
     };
     std::vector<PrinterModel>          models;
 
+    std::set<std::string>              default_filaments;
+    std::set<std::string>              default_sla_materials;
+
     VendorProfile() {}
     VendorProfile(std::string id) : id(std::move(id)) {}
 
+    // Load VendorProfile from an ini file.
+    // If `load_all` is false, only the header with basic info (name, version, URLs) is loaded.
     static VendorProfile from_ini(const boost::filesystem::path &path, bool load_all=true);
     static VendorProfile from_ini(const boost::property_tree::ptree &tree, const boost::filesystem::path &path, bool load_all=true);
 
@@ -85,6 +92,12 @@ public:
     bool        operator< (const VendorProfile &rhs) const { return this->id <  rhs.id; }
     bool        operator==(const VendorProfile &rhs) const { return this->id == rhs.id; }
 };
+
+// Note: it is imporant that map is used here rather than unordered_map,
+// because we need iterators to not be invalidated,
+// because Preset and the ConfigWizard hold pointers to VendorProfiles.
+// XXX: maybe set is enough (cf. changes in Wizard)
+typedef std::map<std::string, VendorProfile> VendorMap;
 
 class Preset
 {
@@ -136,6 +149,9 @@ public:
 
     // Configuration data, loaded from a file, or set from the defaults.
     DynamicPrintConfig  config;
+
+    // Alias of the preset
+    std::string         alias = "";
 
     void                save();
 
@@ -191,7 +207,7 @@ public:
     void                set_visible_from_appconfig(const AppConfig &app_config);
 
     // Resize the extruder specific fields, initialize them with the content of the 1st extruder.
-    void                set_num_extruders(unsigned int n) { set_num_extruders(this->config, n); }
+    void                set_num_extruders(unsigned int n) { this->config.set_num_extruders(n); }
 
     // Sort lexicographically by a preset name. The preset name shall be unique across a single PresetCollection.
     bool                operator<(const Preset &other) const { return this->name < other.name; }
@@ -216,8 +232,6 @@ public:
 protected:
     friend class        PresetCollection;
     friend class        PresetBundle;
-    // Resize the extruder specific vectors ()
-    static void         set_num_extruders(DynamicPrintConfig &config, unsigned int n);
     static std::string  remove_suffix_modified(const std::string &name);
 };
 
@@ -278,6 +292,9 @@ public:
     // Delete the current preset, activate the first visible preset.
     // returns true if the preset was deleted successfully.
     bool            delete_current_preset();
+    // Delete the current preset, activate the first visible preset.
+    // returns true if the preset was deleted successfully.
+    bool            delete_preset(const std::string& name);
 
     // Load default bitmap to be placed at the wxBitmapComboBox of a MainFrame.
     void            load_bitmap_default(wxWindow *window, const std::string &file_name);
@@ -313,6 +330,8 @@ public:
 	// Return the selected preset including the user modifications.
     Preset&         get_edited_preset()         { return m_edited_preset; }
     const Preset&   get_edited_preset() const   { return m_edited_preset; }
+
+    const std::string& get_preset_name_by_alias(const std::string& alias) const;
 
 	// used to update preset_choice from Tab
 	const std::deque<Preset>&	get_presets() const	{ return m_presets; }
@@ -432,7 +451,7 @@ protected:
     bool            select_preset_by_name_strict(const std::string &name);
 
     // Merge one vendor's presets with the other vendor's presets, report duplicates.
-    std::vector<std::string> merge_presets(PresetCollection &&other, const std::set<VendorProfile> &new_vendors);
+    std::vector<std::string> merge_presets(PresetCollection &&other, const VendorMap &new_vendors);
 
 private:
     PresetCollection();
