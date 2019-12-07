@@ -185,7 +185,7 @@ private:
     void _transform_hole_to_polyholes();
     void _smooth_curves(LayerRegion *layerm);
     std::string _fix_slicing_errors();
-    void _simplify_slices(double distance);
+    void _simplify_slices(coord_t distance);
     bool has_support_material() const;
     void detect_surfaces_type();
     void process_external_surfaces();

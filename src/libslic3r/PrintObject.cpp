@@ -666,7 +666,6 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "solid_infill_extruder"
             || opt_key == "infill_extrusion_width"
             || opt_key == "ensure_vertical_shell_thickness"
-            || opt_key == "external_infill_margin"
             || opt_key == "bridged_infill_margin"
             || opt_key == "bridge_angle") {
             steps.emplace_back(posPrepareInfill);
@@ -685,6 +684,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             steps.emplace_back(posInfill);
         } else if (
                opt_key == "fill_density"
+            || opt_key == "external_infill_margin"
             || opt_key == "solid_infill_extrusion_width") {
             steps.emplace_back(posPerimeters);
             steps.emplace_back(posPrepareInfill);
@@ -1247,7 +1247,8 @@ void PrintObject::process_external_surfaces()
                         Polygons voids;
                         for (const LayerRegion *layerm : m_layers[layer_idx]->regions()) {
                             /// supermerill: why *0.3 ???
-                            float unsupported_width = -float(scale_(0.3 * layerm->region()->config().external_infill_margin));
+                            float unsupported_width = -float(scale_(layerm->region()->config().external_infill_margin.get_abs_value(
+                                layerm->region()->config().perimeters == 0 ? 0 : (layerm->flow(frExternalPerimeter).width + layerm->flow(frPerimeter).spacing() * (layerm->region()->config().perimeters - 1)))));
                             if (layerm->region()->config().fill_density.value == 0.)
                                 for (const Surface &surface : layerm->fill_surfaces.surfaces)
                                     // Shrink the holes, let the layer above expand slightly inside the unsupported areas.
@@ -2770,7 +2771,7 @@ std::string PrintObject::_fix_slicing_errors()
 // Simplify the sliced model, if "resolution" configuration parameter > 0.
 // The simplification is problematic, because it simplifies the slices independent from each other,
 // which makes the simplified discretization visible on the object surface.
-void PrintObject::_simplify_slices(double distance)
+void PrintObject::_simplify_slices(coord_t distance)
 {
     BOOST_LOG_TRIVIAL(debug) << "Slicing objects - siplifying slices in parallel - begin";
     tbb::parallel_for(

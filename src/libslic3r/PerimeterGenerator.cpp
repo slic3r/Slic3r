@@ -509,11 +509,16 @@ void PerimeterGenerator::process()
                 //store surface for top infill if only_one_perimeter_top
                 if(i==0 && config->only_one_perimeter_top && this->upper_slices != NULL){
                     //split the polygons with top/not_top
+                    //get the offset from solid surface anchor
                     coord_t offset_top_surface = scale_(config->external_infill_margin.get_abs_value(
-                        config->perimeters == 0 ? 0 : (ext_perimeter_width + perimeter_spacing * (config->perimeters - 1))));
-                    ExPolygons upper_polygons = offset_ex(this->upper_slices->expolygons, offset_top_surface);
+                        config->perimeters == 0 ? 0. : unscaled(ext_perimeter_width + perimeter_spacing * (config->perimeters - 1))));
+                    // if possible, try to not push the extra perimeters inside the sparse infill
+                    if (offset_top_surface > 0.9 * (config->perimeters <= 1 ? 0. : (perimeter_spacing * (config->perimeters - 1))))
+                        offset_top_surface -= 0.9 * (config->perimeters <= 1 ? 0. : (perimeter_spacing * (config->perimeters - 1)));
+                    else offset_top_surface = 0;
+                    ExPolygons upper_polygons = this->upper_slices->expolygons;
                     ExPolygons top_polygons = diff_ex(last, (upper_polygons), true);
-                    ExPolygons inner_polygons = diff_ex(last, top_polygons, true);
+                    ExPolygons inner_polygons = diff_ex(last, offset_ex(top_polygons, offset_top_surface), true);
                     // increase a bit the inner space to fill the frontier between last and stored.
                     stored = union_ex(stored, intersection_ex(offset_ex(top_polygons, double(perimeter_spacing / 2)), last));
                     last = intersection_ex(offset_ex(inner_polygons, double(perimeter_spacing / 2)), last);
