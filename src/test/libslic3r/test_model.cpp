@@ -15,9 +15,9 @@ SCENARIO("Model construction") {
         TriangleMesh sample_mesh = make_cube(20,20,20);
         sample_mesh.repair();
         
-        DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
+        DynamicPrintConfig &config = Slic3r::DynamicPrintConfig::full_print_config();
         Slic3r::Print print{};
-        print.apply(model, *config);
+        print.apply(model, config);
         //Slic3r::Test::init_print(print, { sample_mesh }, model, config);
 
         WHEN("Model object is added") {
@@ -45,7 +45,7 @@ SCENARIO("Model construction") {
             model.center_instances_around_point(Slic3r::Vec2d(100,100));
             print.auto_assign_extruders(mo);
             //print.add_model_object(mo);
-            print.apply(model, *config);
+            print.apply(model, config);
             print.validate();
             THEN("Print works?") {
                 std::string gcode_filepath{ "" };

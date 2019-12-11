@@ -1,8 +1,10 @@
 #include "PerimeterGenerator.hpp"
+
+#include "BridgeDetector.hpp"
 #include "ClipperUtils.hpp"
 #include "ExtrusionEntityCollection.hpp"
-#include "BridgeDetector.hpp"
 #include "Geometry.hpp"
+#include "ShortestPath.hpp"
 #include <cmath>
 #include <cassert>
 #include <vector>
@@ -702,14 +704,13 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     // loops is an arrayref of ::Loop objects
     // turn each one into an ExtrusionLoop object
     ExtrusionEntityCollection coll;
-    for (PerimeterGeneratorLoops::const_iterator loop = loops.begin();
-        loop != loops.end(); ++loop) {
-        bool is_external = loop->is_external();
+    for (const PerimeterGeneratorLoop &loop : loops) {
+        bool is_external = loop.is_external();
         
         ExtrusionRole role;
         ExtrusionLoopRole loop_role;
         role = is_external ? erExternalPerimeter : erPerimeter;
-        if (loop->is_internal_contour()) {
+        if (loop.is_internal_contour()) {
             // Note that we set loop role to ContourInternalPerimeter
             // also when loop is both internal and external (i.e.
             // there's only one contour loop).
@@ -725,7 +726,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
             // get non-overhang paths by intersecting this loop with the grown lower slices
             extrusion_paths_append(
                 paths,
-                intersection_pl(loop->polygon, this->_lower_slices_p),
+                intersection_pl(loop.polygon, this->_lower_slices_p),
                 role,
                 is_external ? this->_ext_mm3_per_mm           : this->_mm3_per_mm,
                 is_external ? this->ext_perimeter_flow.width  : this->perimeter_flow.width,
@@ -736,20 +737,18 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
             // the loop centerline and original lower slices is >= half nozzle diameter
             extrusion_paths_append(
                 paths,
-                diff_pl(loop->polygon, this->_lower_slices_p),
+                diff_pl(loop.polygon, this->_lower_slices_p),
                 erOverhangPerimeter,
                 this->_mm3_per_mm_overhang,
                 this->overhang_flow.width,
                 this->overhang_flow.height);
             
             // reapply the nearest point search for starting point
-            // We allow polyline reversal because Clipper may have randomly
-            // reversed polylines during clipping.
-            if (!paths.empty())
-                paths = (ExtrusionPaths)ExtrusionEntityCollection(paths).chained_path_from(paths.front().first_point());
+            // We allow polyline reversal because Clipper may have randomly reversed polylines during clipping.
+            chain_and_reorder_extrusion_paths(paths, &paths.front().first_point());
         } else {
             ExtrusionPath path(role);
-            path.polyline   = loop->polygon.split_at_first_point();
+            path.polyline   = loop.polygon.split_at_first_point();
             path.mm3_per_mm = is_external ? this->_ext_mm3_per_mm           : this->_mm3_per_mm;
             path.width      = is_external ? this->ext_perimeter_flow.width  : this->perimeter_flow.width;
             path.height     = (float) this->layer_height;
@@ -761,48 +760,48 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     
     // append thin walls to the nearest-neighbor search (only for first iteration)
     if (!thin_walls.empty()) {
-        ExtrusionEntityCollection tw = thin_variable_width
-            (thin_walls, erExternalPerimeter, this->ext_perimeter_flow);
-        
+        ExtrusionEntityCollection tw = thin_variable_width(thin_walls, erExternalPerimeter, this->ext_perimeter_flow);
         coll.append(tw.entities);
         thin_walls.clear();
     }
     
-    // sort entities into a new collection using a nearest-neighbor search,
-    // preserving the original indices which are useful for detecting thin walls
-    ExtrusionEntityCollection sorted_coll = coll.chained_path_from(coll.first_point());
-    
     // traverse children and build the final collection
+    Point zero_point(0, 0);
+    //result is  [idx, needReverse] ?
+    std::vector<std::pair<size_t, bool>> chain = chain_extrusion_entities(coll.entities, &zero_point);
     ExtrusionEntityCollection entities;
-    for (std::vector<size_t>::const_iterator idx = sorted_coll.orig_indices.begin();
-        idx != sorted_coll.orig_indices.end();
-        ++idx) {
+    for (const std::pair<size_t, bool> &idx : chain) {
         
-        if (*idx >= loops.size()) {
+        if (idx.first >= loops.size()) {
             // this is a thin wall
             // let's get it from the sorted collection as it might have been reversed
-            size_t i = idx - sorted_coll.orig_indices.begin();
-            entities.append(*sorted_coll.entities[i]);
+            entities.entities.reserve(entities.entities.size() + 1);
+            entities.entities.emplace_back(coll.entities[idx.first]);
+            coll.entities[idx.first] = nullptr;
+            if (idx.second)
+                entities.entities.back()->reverse();
             //if thin extrusion is a loop, make it ccw like a normal contour.
             if (ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(entities.entities.back())) {
                 loop->make_counter_clockwise();
             }
         } else {
-            const PerimeterGeneratorLoop &loop = loops[*idx];
-            ExtrusionLoop eloop = *dynamic_cast<ExtrusionLoop*>(coll.entities[*idx]);
-            
+            const PerimeterGeneratorLoop &loop = loops[idx.first];
+            assert(thin_walls.empty());
             ExtrusionEntityCollection children = this->_traverse_loops(loop.children, thin_walls);
+            entities.entities.reserve(entities.entities.size() + children.entities.size() + 1);
+            ExtrusionLoop *eloop = static_cast<ExtrusionLoop*>(coll.entities[idx.first]);
+            coll.entities[idx.first] = nullptr;
             if (loop.is_contour) {
                 if (loop.is_overhang && this->layer_id % 2 == 1)
-                    eloop.make_clockwise();
+                    eloop->make_clockwise();
                 else
-                    eloop.make_counter_clockwise();
-                entities.append(children.entities);
-                entities.append(eloop);
+                    eloop->make_counter_clockwise();
+                entities.append(std::move(children.entities));
+                entities.append(*eloop);
             } else {
-                eloop.make_clockwise();
-                entities.append(eloop);
-                entities.append(children.entities);
+                eloop->make_clockwise();
+                entities.append(*eloop);
+                entities.append(std::move(children.entities));
             }
         }
     }

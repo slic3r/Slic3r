@@ -265,8 +265,8 @@ TriangleMesh mesh(TestMesh m) {
 
 
 void init_print(Print& print, std::initializer_list<TestMesh> meshes, Slic3r::Model& model, DynamicPrintConfig* _config, bool comments) {
-	DynamicPrintConfig* config {Slic3r::DynamicPrintConfig::new_from_defaults()};
-    config->apply(*_config);
+	DynamicPrintConfig &config = Slic3r::DynamicPrintConfig::full_print_config();
+    config.apply(*_config);
 
     //const std::string v {std::getenv("SLIC3R_TESTS_GCODE")};
     //auto tests_gcode {(v == "" ? ""s : std::string(v))};
@@ -291,15 +291,15 @@ void init_print(Print& print, std::initializer_list<TestMesh> meshes, Slic3r::Mo
         print.auto_assign_extruders(mo);
         //print.add_model_object(mo);
     }
-    print.apply(model, *config);
+    print.apply(model, config);
 
     std::string err = print.validate();
     //std::cout << "validate result : " << err << ", mempty print? " << print.empty() << "\n";
 
 }
 void init_print(Print& print, std::initializer_list<TriangleMesh> meshes, Slic3r::Model& model, DynamicPrintConfig* _config, bool comments) {
-	DynamicPrintConfig* config {Slic3r::DynamicPrintConfig::new_from_defaults()};
-    config->apply(*_config);
+	DynamicPrintConfig &config = Slic3r::DynamicPrintConfig::full_print_config();
+    config.apply(*_config);
 
     //const std::string v {std::getenv("SLIC3R_TESTS_GCODE")};
     //std::string tests_gcode {(v == "" ? "" : v)};
@@ -319,7 +319,7 @@ void init_print(Print& print, std::initializer_list<TriangleMesh> meshes, Slic3r
 
     model.arrange_objects(print.config().min_object_distance());
     model.center_instances_around_point(Slic3r::Vec2d(100,100));
-	print.apply(model, *config);
+	print.apply(model, config);
 	for (ModelObject* mo : model.objects) {
         print.auto_assign_extruders(mo);
     }

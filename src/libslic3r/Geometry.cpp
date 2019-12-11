@@ -353,6 +353,12 @@ Point circle_taubin_newton(const Points::const_iterator& input_begin, const Poin
 	return Point::new_scale(center.x(), center.y());
 }
 
+Vec2d
+circle_taubin_newton(const Pointfs& input, size_t cycles)
+{
+    return circle_taubin_newton(input.cbegin(), input.cend(), cycles);
+}
+
 /// Adapted from work in "Circular and Linear Regression: Fitting circles and lines by least squares", pg 126
 /// Returns a point corresponding to the center of a circle for which all of the points from input_begin to input_end
 /// lie on.

@@ -67,7 +67,7 @@ public:
     Point point_projection(const Point &point) const;
     /// remove points that are (almost) on an existing line from previous & next point.
     /// return number of point removed
-    size_t remove_colinear_points(coord_t max_offset);
+    size_t remove_collinear(coord_t max_offset);
 };
 
 inline bool operator==(const Polygon &lhs, const Polygon &rhs) { return lhs.points == rhs.points; }
@@ -94,8 +94,8 @@ extern bool        remove_sticks(Polygons &polys);
 // Remove polygons with less than 3 edges.
 extern bool        remove_degenerate(Polygons &polys);
 extern bool        remove_small(Polygons &polys, double min_area);
-extern void 	   remove_collinear(Polygon &poly);
-extern void 	   remove_collinear(Polygons &polys);
+extern void 	   remove_collinear(Polygon &poly, coord_t max_offset = SCALED_EPSILON);
+extern void 	   remove_collinear(Polygons &polys, coord_t max_offset = SCALED_EPSILON);
 
 // Append a vector of polygons at the end of another vector of polygons.
 inline void        polygons_append(Polygons &dst, const Polygons &src) { dst.insert(dst.end(), src.begin(), src.end()); }

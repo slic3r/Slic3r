@@ -87,12 +87,12 @@ SCENARIO("ExtrusionEntityCollection: Polygon flattening") {
 }
 
 SCENARIO("ExtrusionEntityCollection: no sort") {
-    DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
-    config->set_key_value("gcode_comments", new ConfigOptionBool(true));
-    config->set_deserialize("skirts", "0");
+    DynamicPrintConfig &config = Slic3r::DynamicPrintConfig::full_print_config();
+    config.set_key_value("gcode_comments", new ConfigOptionBool(true));
+    config.set_deserialize("skirts", "0");
     Model model{};
     Print print{};
-    Slic3r::Test::init_print(print, { Slic3r::Test::TestMesh::cube_20x20x20}, model, config);
+    Slic3r::Test::init_print(print, { Slic3r::Test::TestMesh::cube_20x20x20}, model, &config);
 
     std::map<double, bool> layers_with_skirt;
     std::map<double, bool> layers_with_brim;
@@ -127,7 +127,7 @@ SCENARIO("ExtrusionEntityCollection: no sort") {
         Slic3r::Test::gcode(gcode_filepath, print);
         auto parser{ Slic3r::GCodeReader() };
         std::vector<float> extrude_x;
-        parser.parse_file(gcode_filepath, [&extrude_x, &config](Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line)
+        parser.parse_file(gcode_filepath, [&extrude_x](Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line)
         {
             if (line.comment() == " infill" || line.comment() == " perimeter" || line.comment() == " move to first infill point") {
                 extrude_x.push_back(line.x());
@@ -148,7 +148,7 @@ SCENARIO("ExtrusionEntityCollection: no sort") {
         Slic3r::Test::gcode(gcode_filepath, print);
         auto parser{ Slic3r::GCodeReader() };
         std::vector<float> extrude_x;
-        parser.parse_file(gcode_filepath, [&extrude_x, &config](Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line)
+        parser.parse_file(gcode_filepath, [&extrude_x](Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line)
         {
             if (line.comment() == " infill" || line.comment() == " perimeter" || line.comment() == " move to first infill point") {
                 extrude_x.push_back(line.x());

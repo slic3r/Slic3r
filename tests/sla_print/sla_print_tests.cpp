@@ -215,7 +215,8 @@ void test_supports(const std::string &       obj_filename,
 
     REQUIRE_FALSE(mesh.empty());
 
-    TriangleMeshSlicer slicer{&mesh};
+    TriangleMeshSlicer slicer{ CLOSING_RADIUS, 0.f };
+    slicer.init(&mesh, []() {});
 
     auto   bb      = mesh.bounding_box();
     double zmin    = bb.min.z();
@@ -224,7 +225,7 @@ void test_supports(const std::string &       obj_filename,
     auto   layer_h = 0.05f;
 
     out.slicegrid = grid(float(gnd), float(zmax), layer_h);
-    slicer.slice(out.slicegrid , CLOSING_RADIUS, &out.model_slices, []{});
+    slicer.slice(out.slicegrid, &out.model_slices, []{});
 
     // Create the special index-triangle mesh with spatial indexing which
     // is the input of the support point and support mesh generators

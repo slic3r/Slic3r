@@ -19,7 +19,7 @@ using namespace std;
 SCENARIO( "TriangleMesh: Basic mesh statistics") {
     GIVEN( "A 20mm cube, built from constexpr std::array" ) {
         std::vector<Vec3d> vertices { Vec3d(20,20,0), Vec3d(20,0,0), Vec3d(0,0,0), Vec3d(0,20,0), Vec3d(20,20,20), Vec3d(0,20,20), Vec3d(0,0,20), Vec3d(20,0,20) };
-        std::vector<Vec3crd> facets { Vec3crd(0,1,2), Vec3crd(0,2,3), Vec3crd(4,5,6), Vec3crd(4,6,7), Vec3crd(0,4,7), Vec3crd(0,7,1), Vec3crd(1,7,6), Vec3crd(1,6,2), Vec3crd(2,6,5), Vec3crd(2,5,3), Vec3crd(4,0,3), Vec3crd(4,3,5) };
+        std::vector<Vec3i32> facets { Vec3i32(0,1,2), Vec3i32(0,2,3), Vec3i32(4,5,6), Vec3i32(4,6,7), Vec3i32(0,4,7), Vec3i32(0,7,1), Vec3i32(1,7,6), Vec3i32(1,6,2), Vec3i32(2,6,5), Vec3i32(2,5,3), Vec3i32(4,0,3), Vec3i32(4,3,5) };
 		TriangleMesh cube(vertices, facets);
         cube.repair();
         
@@ -69,7 +69,7 @@ SCENARIO( "TriangleMesh: Basic mesh statistics") {
     }
     GIVEN( "A 20mm cube with one corner on the origin") {
         const std::vector<Vec3d> vertices { Vec3d(20,20,0), Vec3d(20,0,0), Vec3d(0,0,0), Vec3d(0,20,0), Vec3d(20,20,20), Vec3d(0,20,20), Vec3d(0,0,20), Vec3d(20,0,20) };
-        const std::vector<Vec3crd> facets { Vec3crd(0,1,2), Vec3crd(0,2,3), Vec3crd(4,5,6), Vec3crd(4,6,7), Vec3crd(0,4,7), Vec3crd(0,7,1), Vec3crd(1,7,6), Vec3crd(1,6,2), Vec3crd(2,6,5), Vec3crd(2,5,3), Vec3crd(4,0,3), Vec3crd(4,3,5) };
+        const std::vector<Vec3i32> facets { Vec3i32(0,1,2), Vec3i32(0,2,3), Vec3i32(4,5,6), Vec3i32(4,6,7), Vec3i32(0,4,7), Vec3i32(0,7,1), Vec3i32(1,7,6), Vec3i32(1,6,2), Vec3i32(2,6,5), Vec3i32(2,5,3), Vec3i32(4,0,3), Vec3i32(4,3,5) };
 
 		TriangleMesh cube(vertices, facets);
         cube.repair();
@@ -122,7 +122,7 @@ SCENARIO( "TriangleMesh: Basic mesh statistics") {
 SCENARIO( "TriangleMesh: Transformation functions affect mesh as expected.") {
     GIVEN( "A 20mm cube with one corner on the origin") {
         const std::vector<Vec3d> vertices { Vec3d(20,20,0), Vec3d(20,0,0), Vec3d(0,0,0), Vec3d(0,20,0), Vec3d(20,20,20), Vec3d(0,20,20), Vec3d(0,0,20), Vec3d(20,0,20) };
-        const std::vector<Vec3crd> facets { Vec3crd(0,1,2), Vec3crd(0,2,3), Vec3crd(4,5,6), Vec3crd(4,6,7), Vec3crd(0,4,7), Vec3crd(0,7,1), Vec3crd(1,7,6), Vec3crd(1,6,2), Vec3crd(2,6,5), Vec3crd(2,5,3), Vec3crd(4,0,3), Vec3crd(4,3,5) };
+        const std::vector<Vec3i32> facets { Vec3i32(0,1,2), Vec3i32(0,2,3), Vec3i32(4,5,6), Vec3i32(4,6,7), Vec3i32(0,4,7), Vec3i32(0,7,1), Vec3i32(1,7,6), Vec3i32(1,6,2), Vec3i32(2,6,5), Vec3i32(2,5,3), Vec3i32(4,0,3), Vec3i32(4,3,5) };
 		TriangleMesh cube(vertices, facets);
         cube.repair();
 
@@ -185,7 +185,7 @@ SCENARIO( "TriangleMesh: Transformation functions affect mesh as expected.") {
 SCENARIO( "TriangleMesh: slice behavior.") {
     GIVEN( "A 20mm cube with one corner on the origin") {
         const std::vector<Vec3d> vertices { Vec3d(20,20,0), Vec3d(20,0,0), Vec3d(0,0,0), Vec3d(0,20,0), Vec3d(20,20,20), Vec3d(0,20,20), Vec3d(0,0,20), Vec3d(20,0,20) };
-        const std::vector<Vec3crd> facets { Vec3crd(0,1,2), Vec3crd(0,2,3), Vec3crd(4,5,6), Vec3crd(4,6,7), Vec3crd(0,4,7), Vec3crd(0,7,1), Vec3crd(1,7,6), Vec3crd(1,6,2), Vec3crd(2,6,5), Vec3crd(2,5,3), Vec3crd(4,0,3), Vec3crd(4,3,5) };
+        const std::vector<Vec3i32> facets { Vec3i32(0,1,2), Vec3i32(0,2,3), Vec3i32(4,5,6), Vec3i32(4,6,7), Vec3i32(0,4,7), Vec3i32(0,7,1), Vec3i32(1,7,6), Vec3i32(1,6,2), Vec3i32(2,6,5), Vec3i32(2,5,3), Vec3i32(4,0,3), Vec3i32(4,3,5) };
 		TriangleMesh cube(vertices, facets);
         cube.repair();
 
@@ -206,7 +206,7 @@ SCENARIO( "TriangleMesh: slice behavior.") {
     }
     GIVEN( "A STL with an irregular shape.") {
         const std::vector<Vec3d> vertices {Vec3d(0,0,0),Vec3d(0,0,20),Vec3d(0,5,0),Vec3d(0,5,20),Vec3d(50,0,0),Vec3d(50,0,20),Vec3d(15,5,0),Vec3d(35,5,0),Vec3d(15,20,0),Vec3d(50,5,0),Vec3d(35,20,0),Vec3d(15,5,10),Vec3d(50,5,20),Vec3d(35,5,10),Vec3d(35,20,10),Vec3d(15,20,10)};
-        const std::vector<Vec3crd> facets {Vec3crd(0,1,2),Vec3crd(2,1,3),Vec3crd(1,0,4),Vec3crd(5,1,4),Vec3crd(0,2,4),Vec3crd(4,2,6),Vec3crd(7,6,8),Vec3crd(4,6,7),Vec3crd(9,4,7),Vec3crd(7,8,10),Vec3crd(2,3,6),Vec3crd(11,3,12),Vec3crd(7,12,9),Vec3crd(13,12,7),Vec3crd(6,3,11),Vec3crd(11,12,13),Vec3crd(3,1,5),Vec3crd(12,3,5),Vec3crd(5,4,9),Vec3crd(12,5,9),Vec3crd(13,7,10),Vec3crd(14,13,10),Vec3crd(8,15,10),Vec3crd(10,15,14),Vec3crd(6,11,8),Vec3crd(8,11,15),Vec3crd(15,11,13),Vec3crd(14,15,13)};
+        const std::vector<Vec3i32> facets {Vec3i32(0,1,2),Vec3i32(2,1,3),Vec3i32(1,0,4),Vec3i32(5,1,4),Vec3i32(0,2,4),Vec3i32(4,2,6),Vec3i32(7,6,8),Vec3i32(4,6,7),Vec3i32(9,4,7),Vec3i32(7,8,10),Vec3i32(2,3,6),Vec3i32(11,3,12),Vec3i32(7,12,9),Vec3i32(13,12,7),Vec3i32(6,3,11),Vec3i32(11,12,13),Vec3i32(3,1,5),Vec3i32(12,3,5),Vec3i32(5,4,9),Vec3i32(12,5,9),Vec3i32(13,7,10),Vec3i32(14,13,10),Vec3i32(8,15,10),Vec3i32(10,15,14),Vec3i32(6,11,8),Vec3i32(8,11,15),Vec3i32(15,11,13),Vec3i32(14,15,13)};
 
 		TriangleMesh cube(vertices, facets);
         cube.repair();
@@ -296,7 +296,7 @@ SCENARIO( "make_xxx functions produce meshes.") {
 SCENARIO( "TriangleMesh: split functionality.") {
     GIVEN( "A 20mm cube with one corner on the origin") {
         const std::vector<Vec3d> vertices { Vec3d(20,20,0), Vec3d(20,0,0), Vec3d(0,0,0), Vec3d(0,20,0), Vec3d(20,20,20), Vec3d(0,20,20), Vec3d(0,0,20), Vec3d(20,0,20) };
-        const std::vector<Vec3crd> facets { Vec3crd(0,1,2), Vec3crd(0,2,3), Vec3crd(4,5,6), Vec3crd(4,6,7), Vec3crd(0,4,7), Vec3crd(0,7,1), Vec3crd(1,7,6), Vec3crd(1,6,2), Vec3crd(2,6,5), Vec3crd(2,5,3), Vec3crd(4,0,3), Vec3crd(4,3,5) };
+        const std::vector<Vec3i32> facets { Vec3i32(0,1,2), Vec3i32(0,2,3), Vec3i32(4,5,6), Vec3i32(4,6,7), Vec3i32(0,4,7), Vec3i32(0,7,1), Vec3i32(1,7,6), Vec3i32(1,6,2), Vec3i32(2,6,5), Vec3i32(2,5,3), Vec3i32(4,0,3), Vec3i32(4,3,5) };
 
 		TriangleMesh cube(vertices, facets);
         cube.repair();
@@ -310,7 +310,7 @@ SCENARIO( "TriangleMesh: split functionality.") {
     }
     GIVEN( "Two 20mm cubes, each with one corner on the origin, merged into a single TriangleMesh") {
         const std::vector<Vec3d> vertices { Vec3d(20,20,0), Vec3d(20,0,0), Vec3d(0,0,0), Vec3d(0,20,0), Vec3d(20,20,20), Vec3d(0,20,20), Vec3d(0,0,20), Vec3d(20,0,20) };
-        const std::vector<Vec3crd> facets { Vec3crd(0,1,2), Vec3crd(0,2,3), Vec3crd(4,5,6), Vec3crd(4,6,7), Vec3crd(0,4,7), Vec3crd(0,7,1), Vec3crd(1,7,6), Vec3crd(1,6,2), Vec3crd(2,6,5), Vec3crd(2,5,3), Vec3crd(4,0,3), Vec3crd(4,3,5) };
+        const std::vector<Vec3i32> facets { Vec3i32(0,1,2), Vec3i32(0,2,3), Vec3i32(4,5,6), Vec3i32(4,6,7), Vec3i32(0,4,7), Vec3i32(0,7,1), Vec3i32(1,7,6), Vec3i32(1,6,2), Vec3i32(2,6,5), Vec3i32(2,5,3), Vec3i32(4,0,3), Vec3i32(4,3,5) };
 
 		TriangleMesh cube(vertices, facets);
         cube.repair();
@@ -331,7 +331,7 @@ SCENARIO( "TriangleMesh: split functionality.") {
 SCENARIO( "TriangleMesh: Mesh merge functions") {
     GIVEN( "Two 20mm cubes, each with one corner on the origin") {
         const std::vector<Vec3d> vertices { Vec3d(20,20,0), Vec3d(20,0,0), Vec3d(0,0,0), Vec3d(0,20,0), Vec3d(20,20,20), Vec3d(0,20,20), Vec3d(0,0,20), Vec3d(20,0,20) };
-        const std::vector<Vec3crd> facets { Vec3crd(0,1,2), Vec3crd(0,2,3), Vec3crd(4,5,6), Vec3crd(4,6,7), Vec3crd(0,4,7), Vec3crd(0,7,1), Vec3crd(1,7,6), Vec3crd(1,6,2), Vec3crd(2,6,5), Vec3crd(2,5,3), Vec3crd(4,0,3), Vec3crd(4,3,5) };
+        const std::vector<Vec3i32> facets { Vec3i32(0,1,2), Vec3i32(0,2,3), Vec3i32(4,5,6), Vec3i32(4,6,7), Vec3i32(0,4,7), Vec3i32(0,7,1), Vec3i32(1,7,6), Vec3i32(1,6,2), Vec3i32(2,6,5), Vec3i32(2,5,3), Vec3i32(4,0,3), Vec3i32(4,3,5) };
 
 		TriangleMesh cube(vertices, facets);
         cube.repair();
@@ -351,7 +351,7 @@ SCENARIO( "TriangleMesh: Mesh merge functions") {
 SCENARIO( "TriangleMeshSlicer: Cut behavior.") {
     GIVEN( "A 20mm cube with one corner on the origin") {
         const std::vector<Vec3d> vertices { Vec3d(20,20,0), Vec3d(20,0,0), Vec3d(0,0,0), Vec3d(0,20,0), Vec3d(20,20,20), Vec3d(0,20,20), Vec3d(0,0,20), Vec3d(20,0,20) };
-        const std::vector<Vec3crd> facets { Vec3crd(0,1,2), Vec3crd(0,2,3), Vec3crd(4,5,6), Vec3crd(4,6,7), Vec3crd(0,4,7), Vec3crd(0,7,1), Vec3crd(1,7,6), Vec3crd(1,6,2), Vec3crd(2,6,5), Vec3crd(2,5,3), Vec3crd(4,0,3), Vec3crd(4,3,5) };
+        const std::vector<Vec3i32> facets { Vec3i32(0,1,2), Vec3i32(0,2,3), Vec3i32(4,5,6), Vec3i32(4,6,7), Vec3i32(0,4,7), Vec3i32(0,7,1), Vec3i32(1,7,6), Vec3i32(1,6,2), Vec3i32(2,6,5), Vec3i32(2,5,3), Vec3i32(4,0,3), Vec3i32(4,3,5) };
 
 		TriangleMesh cube(vertices, facets);
         cube.repair();

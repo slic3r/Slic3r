@@ -3205,10 +3205,25 @@ void PrintConfigDef::init_extruder_option_keys()
 {
     // ConfigOptionFloats, ConfigOptionPercents, ConfigOptionBools, ConfigOptionStrings
     m_extruder_option_keys = {
-        "nozzle_diameter", "min_layer_height", "max_layer_height", "extruder_offset",
-        "retract_length", "retract_lift", "retract_lift_above", "retract_lift_below", "retract_speed", "deretract_speed",
-        "retract_before_wipe", "retract_restart_extra", "retract_before_travel", "wipe",
-        "retract_layer_change", "retract_length_toolchange", "retract_restart_extra_toolchange", "extruder_colour",
+        "nozzle_diameter",
+        "min_layer_height",
+        "max_layer_height",
+        "extruder_offset",
+        "retract_length",
+        "retract_lift",
+        "retract_lift_above",
+        "retract_lift_below",
+        "retract_lift_not_last_layer",
+        "retract_speed",
+        "deretract_speed",
+        "retract_before_wipe",
+        "retract_restart_extra",
+        "retract_before_travel",
+        "wipe",
+        "retract_layer_change",
+        "retract_length_toolchange",
+        "retract_restart_extra_toolchange",
+        "extruder_colour",
         "default_filament_profile"
     };
 

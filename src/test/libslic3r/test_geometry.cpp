@@ -192,7 +192,7 @@ SCENARIO("Circle Fit, TaubinFit with Newton's method") {
     }
     GIVEN("A vector of Pointfs arranged in a half-circle with approximately the same distance R from some point") {
         Vec2d expected_center(-3, 9);
-        Pointfs sample {Vec2d{6.0, 0}, Vec2d{5.1961524, 3}, Vec2d{3 ,5.1961524}, 
+        Pointfs sample {Vec2d{6.0, 0}, Vec2d{5.1961524, 3}, Vec2d{3 ,5.1961524},
                         Vec2d{0, 6.0}, 
                         Vec2d{3, 5.1961524}, Vec2d{-5.1961524, 3}, Vec2d{-6.0, 0}};
 
@@ -254,18 +254,18 @@ SCENARIO("Circle Fit, TaubinFit with Newton's method") {
     }
 }
 
-
-TEST_CASE("Chained path working correctly"){
-    // if chained_path() works correctly, these points should be joined with no diagonal paths
-    // (thus 26 units long)
-    std::vector<Point> points = {Point{26,26},Point{52,26},Point{0,26},Point{26,52},Point{26,0},Point{0,52},Point{52,52},Point{52,0}};
-    std::vector<Points::size_type> indices;
-    Geometry::chained_path(points,indices);
-    for(Points::size_type i = 0; i < indices.size()-1;i++){
-        double dist = points.at(indices.at(i)).distance_to(points.at(indices.at(i+1)));
-        REQUIRE(abs(dist-26) <= EPSILON);
-    }
-}
+// A PU
+//TEST_CASE("Chained path working correctly"){
+//    // if chained_path() works correctly, these points should be joined with no diagonal paths
+//    // (thus 26 units long)
+//    std::vector<Point> points = {Point{26,26},Point{52,26},Point{0,26},Point{26,52},Point{26,0},Point{0,52},Point{52,52},Point{52,0}};
+//    std::vector<Points::size_type> indices;
+//    Geometry::chained_path(points,indices);
+//    for(Points::size_type i = 0; i < indices.size()-1;i++){
+//        double dist = points.at(indices.at(i)).distance_to(points.at(indices.at(i+1)));
+//        REQUIRE(abs(dist-26) <= EPSILON);
+//    }
+//}
 
 SCENARIO("Line distances"){
     GIVEN("A line"){

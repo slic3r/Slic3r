@@ -163,7 +163,7 @@ TEST_CASE("Offseting a line generates a polygon correctly", "[Geometry]"){
 SCENARIO("Circle Fit, TaubinFit with Newton's method", "[Geometry]") {
     GIVEN("A vector of Vec2ds arranged in a half-circle with approximately the same distance R from some point") {
         Vec2d expected_center(-6, 0);
-        Vec2ds sample {Vec2d(6.0, 0), Vec2d(5.1961524, 3), Vec2d(3 ,5.1961524), Vec2d(0, 6.0), Vec2d(3, 5.1961524), Vec2d(-5.1961524, 3), Vec2d(-6.0, 0)};
+        Pointfs sample {Vec2d(6.0, 0), Vec2d(5.1961524, 3), Vec2d(3 ,5.1961524), Vec2d(0, 6.0), Vec2d(3, 5.1961524), Vec2d(-5.1961524, 3), Vec2d(-6.0, 0)};
         std::transform(sample.begin(), sample.end(), sample.begin(), [expected_center] (const Vec2d& a) { return a + expected_center;});
 
         WHEN("Circle fit is called on the entire array") {
@@ -190,7 +190,7 @@ SCENARIO("Circle Fit, TaubinFit with Newton's method", "[Geometry]") {
     }
     GIVEN("A vector of Vec2ds arranged in a half-circle with approximately the same distance R from some point") {
         Vec2d expected_center(-3, 9);
-        Vec2ds sample {Vec2d(6.0, 0), Vec2d(5.1961524, 3), Vec2d(3 ,5.1961524), 
+        Pointfs sample {Vec2d(6.0, 0), Vec2d(5.1961524, 3), Vec2d(3 ,5.1961524),
                         Vec2d(0, 6.0), 
                         Vec2d(3, 5.1961524), Vec2d(-5.1961524, 3), Vec2d(-6.0, 0)};
 

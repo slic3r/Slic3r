@@ -13,6 +13,7 @@
 #include "Gizmos/GLGizmosManager.hpp"
 #include "GUI_ObjectLayers.hpp"
 #include "MeshUtils.hpp"
+#include "../libslic3r/Slicing.hpp"
 
 #include <float.h>
 
@@ -81,7 +82,6 @@ template <size_t N> using Vec2dsEvent = ArrayEvent<Vec2d, N>;
 using Vec3dEvent = Event<Vec3d>;
 template <size_t N> using Vec3dsEvent = ArrayEvent<Vec3d, N>;
 
-using HeightProfileSmoothEvent = Event<HeightProfileSmoothingParams>;
 
 wxDECLARE_EVENT(EVT_GLCANVAS_INIT, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS, SimpleEvent);
@@ -107,6 +107,7 @@ wxDECLARE_EVENT(EVT_GLCANVAS_EDIT_COLOR_CHANGE, wxKeyEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_UNDO, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_REDO, SimpleEvent);
 #if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+using HeightProfileSmoothEvent = Event< Slic3r::HeightProfileSmoothingParams>;
 wxDECLARE_EVENT(EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_ADAPTIVE_LAYER_HEIGHT_PROFILE, Event<float>);
 wxDECLARE_EVENT(EVT_GLCANVAS_SMOOTH_LAYER_HEIGHT_PROFILE, HeightProfileSmoothEvent);

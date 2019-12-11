@@ -5,6 +5,8 @@
 
 namespace Slic3r {
 
+
+
 Lines Polygon::lines() const
 {
     return to_lines(*this);
@@ -261,7 +263,7 @@ BoundingBox get_extents(const Points &points)
     return BoundingBox(points);
 }
 
-size_t Polygon::remove_colinear_points(coord_t max_offset){
+size_t Polygon::remove_collinear(coord_t max_offset){
     size_t nb_del = 0;
     if (points.size() < 3) return 0;
 
@@ -429,10 +431,14 @@ bool remove_small(Polygons &polys, double min_area)
     return modified;
 }
 
+void remove_collinear(Polygon &poly, coord_t max_offset)
+{
+    poly.remove_collinear(max_offset);
+}
 void remove_collinear(Polygons &polys, coord_t max_offset)
 {
     for (Polygon &poly : polys)
-        poly.remove_colinear_points(max_offset);
+        poly.remove_collinear(max_offset);
 }
 
 }

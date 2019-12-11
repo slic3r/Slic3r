@@ -5552,7 +5552,7 @@ void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, c
                 bool at_least_one_has_correct_extruder = false;
                 for (const LayerRegion* layerm : layer->regions())
                 {
-                    if (layerm->slices.surfaces.empty())
+                    if (layerm->slices().surfaces.empty())
                         continue;
                     const PrintRegionConfig& cfg = layerm->region()->config();
                     if (cfg.perimeter_extruder.value    == m_selected_extruder ||

@@ -2196,16 +2196,16 @@ void GCode::process_layer(
                 if (m_config.avoid_crossing_perimeters)
                     m_avoid_crossing_perimeters.init_layer_mp(union_ex(m_layer->slices, true));
                 
-                    if (this->config().gcode_label_objects)
-                        gcode += std::string("; printing object ") + instance_to_print.print_object.model_object()->name 
-                            + " id:" + std::to_string(std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin()) 
-                            + " copy " + std::to_string(instance_to_print.instance_id) + "\n";
-                    // When starting a new object, use the external motion planner for the first travel move.
+                if (this->config().gcode_label_objects)
+                    gcode += std::string("; printing object ") + instance_to_print.print_object.model_object()->name 
+                        + " id:" + std::to_string(std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin()) 
+                        + " copy " + std::to_string(instance_to_print.instance_id) + "\n";
+                // When starting a new object, use the external motion planner for the first travel move.
                 const Point &offset = instance_to_print.print_object.copies()[instance_to_print.instance_id];
                 std::pair<const PrintObject*, Point> this_object_copy(&instance_to_print.print_object, offset);
-                    if (m_last_obj_copy != this_object_copy)
-                        m_avoid_crossing_perimeters.use_external_mp_once = true;
-                    m_last_obj_copy = this_object_copy;
+                if (m_last_obj_copy != this_object_copy)
+                    m_avoid_crossing_perimeters.use_external_mp_once = true;
+                m_last_obj_copy = this_object_copy;
                 this->set_origin(unscale(offset));
                 if (instance_to_print.object_by_extruder.support != nullptr && !print_wipe_extrusions) {
                     m_layer = layers[instance_to_print.layer_id].support_layer;
@@ -2213,21 +2213,22 @@ void GCode::process_layer(
                             // support_extrusion_role is erSupportMaterial, erSupportMaterialInterface or erMixed for all extrusion paths.
                         instance_to_print.object_by_extruder.support->chained_path_from(m_last_pos, instance_to_print.object_by_extruder.support_extrusion_role));
                     m_layer = layers[instance_to_print.layer_id].layer();
-                    }
-                for (ObjectByExtruder::Island &island : instance_to_print.object_by_extruder.islands) {
-                    const auto& by_region_specific = is_anything_overridden ? island.by_region_per_copy(instance_to_print.instance_id, extruder_id, print_wipe_extrusions) : island.by_region;
-
-                        gcode += this->extrude_infill(print, by_region_specific, true);
-                        gcode += this->extrude_perimeters(print, by_region_specific, lower_layer_edge_grids[instance_to_print.layer_id]);
-                        gcode += this->extrude_infill(print, by_region_specific, false);
-                    }
-                    if (this->config().gcode_label_objects)
-                        gcode += std::string("; stop printing object ") + instance_to_print.print_object.model_object()->name 
-                            + " id:" + std::to_string((std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin())) 
-                            + " copy " + std::to_string(instance_to_print.instance_id) + "\n";
                 }
+                for (ObjectByExtruder::Island &island : instance_to_print.object_by_extruder.islands) {
+                    const std::vector<GCode::ObjectByExtruder::Island::Region>& by_region_specific = is_anything_overridden ? island.by_region_per_copy(instance_to_print.instance_id, extruder_id, print_wipe_extrusions) : island.by_region;
+                    if (m_layer_index == 110)
+                        std::cout << "test point\n";
+                    gcode += this->extrude_infill(print, by_region_specific, true);
+                    gcode += this->extrude_perimeters(print, by_region_specific, lower_layer_edge_grids[instance_to_print.layer_id]);
+                    gcode += this->extrude_infill(print, by_region_specific, false);
+                }
+                if (this->config().gcode_label_objects)
+                    gcode += std::string("; stop printing object ") + instance_to_print.print_object.model_object()->name 
+                        + " id:" + std::to_string((std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin())) 
+                        + " copy " + std::to_string(instance_to_print.instance_id) + "\n";
             }
         }
+    }
 
     // Apply spiral vase post-processing if this layer contains suitable geometry
     // (we must feed all the G-code into the post-processor, including the first 

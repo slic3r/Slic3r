@@ -2465,11 +2465,11 @@ void TabPrinter::build_unregular_pages()
 			optgroup = page->new_optgroup(_(L("Retraction")));
 			optgroup->append_single_option_line("retract_length", extruder_idx);
 			optgroup->append_single_option_line("retract_lift", extruder_idx);
-				Line line = { _(L("Only lift Z")), "" };
+			Line line = { _(L("Only lift Z")), "" };
                 line.append_option(optgroup->get_option("retract_lift_above", extruder_idx));
                 line.append_option(optgroup->get_option("retract_lift_below", extruder_idx));
                 line.append_option(optgroup->get_option("retract_lift_not_last_layer", extruder_idx));
-				optgroup->append_line(line);
+			optgroup->append_line(line);
 			
 			optgroup->append_single_option_line("retract_speed", extruder_idx);
 			optgroup->append_single_option_line("deretract_speed", extruder_idx);
