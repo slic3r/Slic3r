@@ -1864,7 +1864,7 @@ ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityColl
     ExPolygons    islands;
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
-        for (ExPolygon &expoly : object->m_layers.front()->slices.expolygons)
+        for (ExPolygon &expoly : object->m_layers.front()->slices)
             if(config().brim_inside_holes || config().brim_width_interior > 0)
                 object_islands.push_back(expoly);
             else
@@ -1999,7 +1999,7 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
     ExPolygons islands;
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
-        for (ExPolygon &expoly : object->m_layers.front()->slices.expolygons)
+        for (const ExPolygon &expoly : object->m_layers.front()->slices)
             if (config().brim_inside_holes || config().brim_width_interior > 0)
                 object_islands.push_back(expoly);
             else

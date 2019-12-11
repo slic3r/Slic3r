@@ -52,8 +52,8 @@ class PerimeterGenerator {
 public:
     // Inputs:
     const SurfaceCollection     *slices;
-    const ExPolygonCollection   *upper_slices;
-    const ExPolygonCollection   *lower_slices;
+    const ExPolygons            *upper_slices;
+    const ExPolygons            *lower_slices;
     double                       layer_height;
     int                          layer_id;
     Flow                         perimeter_flow;

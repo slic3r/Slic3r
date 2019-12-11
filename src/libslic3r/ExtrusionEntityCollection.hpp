@@ -131,7 +131,6 @@ public:
     FlatenEntities(bool preserve_ordering) : preserve_ordering(preserve_ordering) {}
     FlatenEntities(ExtrusionEntityCollection pattern, bool preserve_ordering) : preserve_ordering(preserve_ordering) {
         to_fill.no_sort = pattern.no_sort;
-        to_fill.orig_indices = pattern.orig_indices;
     }
     ExtrusionEntityCollection get() {
         return to_fill;

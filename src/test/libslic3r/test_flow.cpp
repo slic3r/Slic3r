@@ -21,18 +21,18 @@ using namespace Slic3r;
 SCENARIO("Extrusion width specifics", "[!mayfail]") {
     GIVEN("A config with a skirt, brim, some fill density, 3 perimeters, and 1 bottom solid layer and a 20mm cube mesh") {
         // this is a sharedptr
-		DynamicPrintConfig* config {Slic3r::DynamicPrintConfig::new_from_defaults()};
-        config->set_key_value("skirts", new ConfigOptionInt{1});
-        config->set_key_value("brim_width", new ConfigOptionFloat{2});
-        config->set_key_value("perimeters", new ConfigOptionInt{3});
-        config->set_key_value("fill_density", new ConfigOptionPercent{40});
-        config->set_key_value("first_layer_height", new ConfigOptionFloatOrPercent{100, true});
+		DynamicPrintConfig &config {Slic3r::DynamicPrintConfig::full_print_config()};
+        config.set_key_value("skirts", new ConfigOptionInt{1});
+        config.set_key_value("brim_width", new ConfigOptionFloat{2});
+        config.set_key_value("perimeters", new ConfigOptionInt{3});
+        config.set_key_value("fill_density", new ConfigOptionPercent{40});
+        config.set_key_value("first_layer_height", new ConfigOptionFloatOrPercent{100, true});
 
         WHEN("first layer width set to 2mm") {
             Slic3r::Model model;
-            config->set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent{2.0, false});
+            config.set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent{2.0, false});
             Print print;
-            Slic3r::Test::init_print(print, { TestMesh::cube_20x20x20 }, model, config);
+            Slic3r::Test::init_print(print, { TestMesh::cube_20x20x20 }, model, &config);
             //std::cout << "model pos: " << model.objects.front()->instances.front()->get_offset().x() << ": " << model.objects.front()->instances.front()->get_offset().x() << "\n";
             //Print print;
             //for (auto* mo : model.objects)
@@ -45,7 +45,7 @@ SCENARIO("Extrusion width specifics", "[!mayfail]") {
             std::string gcode_filepath("");
             Slic3r::Test::gcode(gcode_filepath, print);
 			GCodeReader parser {Slic3r::GCodeReader()};
-            const double layer_height = config->opt_float("layer_height");
+            const double layer_height = config.opt_float("layer_height");
             std::string gcode_from_file= read_to_string(gcode_filepath);
             parser.parse_buffer(gcode_from_file, [&E_per_mm_bottom, layer_height] (Slic3r::GCodeReader& self, const Slic3r::GCodeReader::GCodeLine& line)
             {

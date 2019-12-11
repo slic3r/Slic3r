@@ -235,30 +235,30 @@ TEST_CASE("Fill: extrude gcode and check it")
         double volume = (5 * 5 * 0.2);
         sample_mesh.repair();
 
-        DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
-        config->set_key_value("perimeters", new ConfigOptionInt(1));
-        config->set_key_value("top_solid_layers", new ConfigOptionInt(1));
-        config->set_key_value("bottom_solid_layers", new ConfigOptionInt(1));
+        DynamicPrintConfig &config = Slic3r::DynamicPrintConfig::full_print_config();
+        config.set_key_value("perimeters", new ConfigOptionInt(1));
+        config.set_key_value("top_solid_layers", new ConfigOptionInt(1));
+        config.set_key_value("bottom_solid_layers", new ConfigOptionInt(1));
 
-        config->set_key_value("enforce_full_fill_volume", new ConfigOptionBool(true));
-        config->set_key_value("infill_overlap", new ConfigOptionFloatOrPercent(0.1, true));
+        config.set_key_value("enforce_full_fill_volume", new ConfigOptionBool(true));
+        config.set_key_value("infill_overlap", new ConfigOptionFloatOrPercent(0.1, true));
 
-        config->set_key_value("skirts", new ConfigOptionInt(0));
+        config.set_key_value("skirts", new ConfigOptionInt(0));
 
-        config->set_key_value("layer_height", new ConfigOptionFloat(0.2)); // get a known number of layers
-        config->set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(0.2, false));
+        config.set_key_value("layer_height", new ConfigOptionFloat(0.2)); // get a known number of layers
+        config.set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(0.2, false));
 
-        config->set_key_value("extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
-        config->set_key_value("infill_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
-        config->set_key_value("perimeter_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
-        config->set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
-        config->set_key_value("external_perimeter_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
-        config->set_key_value("solid_infill_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
-        config->set_key_value("top_infill_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("infill_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("perimeter_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("external_perimeter_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("solid_infill_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("top_infill_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
         auto event_counter{ 0U };
         std::string stage;
         Print print{};
-        Slic3r::Test::init_print(print, { sample_mesh }, model, config);
+        Slic3r::Test::init_print(print, { sample_mesh }, model, &config);
         print.process();
 
         std::string gcode_filepath{ "" };
@@ -289,8 +289,8 @@ TEST_CASE("Fill: extrude gcode and check it")
             }
         });
 
-        double perimeterRoundGapRemove = unscaled(print.objects()[0]->layers()[0]->slices.expolygons[0].contour.length()) * 0.1*0.1 * (2 - (PI / 2));
-        double perimeterRoundGapAdd = unscaled(print.objects()[0]->layers()[0]->slices.expolygons[0].contour.length()) * 0.1*0.1 * ((PI / 2));
+        double perimeterRoundGapRemove = unscaled(print.objects()[0]->layers()[0]->slices[0].contour.length()) * 0.1*0.1 * (2 - (PI / 2));
+        double perimeterRoundGapAdd = unscaled(print.objects()[0]->layers()[0]->slices[0].contour.length()) * 0.1*0.1 * ((PI / 2));
         //for (Line &l : print.objects()[0]->layers()[0]->slices.expolygons[0].contour.lines()) {
 
         //}
@@ -343,30 +343,30 @@ TEST_CASE("Fill: extrude gcode and check it")
         double volume = (PI * 25 * 0.2);
         sample_mesh.repair();
 
-        DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
-        config->set_key_value("perimeters", new ConfigOptionInt(1));
-        config->set_key_value("top_solid_layers", new ConfigOptionInt(1));
-        config->set_key_value("bottom_solid_layers", new ConfigOptionInt(1));
+        DynamicPrintConfig &config = Slic3r::DynamicPrintConfig::full_print_config();
+        config.set_key_value("perimeters", new ConfigOptionInt(1));
+        config.set_key_value("top_solid_layers", new ConfigOptionInt(1));
+        config.set_key_value("bottom_solid_layers", new ConfigOptionInt(1));
 
-        config->set_key_value("enforce_full_fill_volume", new ConfigOptionBool(true));
-        config->set_key_value("infill_overlap", new ConfigOptionFloatOrPercent(0.1, true));
+        config.set_key_value("enforce_full_fill_volume", new ConfigOptionBool(true));
+        config.set_key_value("infill_overlap", new ConfigOptionFloatOrPercent(0.1, true));
 
-        config->set_key_value("skirts", new ConfigOptionInt(0));
+        config.set_key_value("skirts", new ConfigOptionInt(0));
 
-        config->set_key_value("layer_height", new ConfigOptionFloat(0.2)); // get a known number of layers
-        config->set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(0.2, false));
+        config.set_key_value("layer_height", new ConfigOptionFloat(0.2)); // get a known number of layers
+        config.set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(0.2, false));
 
-        config->set_key_value("extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
-        config->set_key_value("infill_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
-        config->set_key_value("perimeter_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
-        config->set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
-        config->set_key_value("external_perimeter_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
-        config->set_key_value("solid_infill_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
-        config->set_key_value("top_infill_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("infill_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("perimeter_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("external_perimeter_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("solid_infill_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
+        config.set_key_value("top_infill_extrusion_width", new ConfigOptionFloatOrPercent(0.5, false));
         auto event_counter{ 0U };
         std::string stage;
         Print print{};
-        Slic3r::Test::init_print(print, { sample_mesh }, model, config);
+        Slic3r::Test::init_print(print, { sample_mesh }, model, &config);
         print.process();
 
         std::string gcode_filepath{ "" };
@@ -397,8 +397,8 @@ TEST_CASE("Fill: extrude gcode and check it")
             }
         });
 
-        double perimeterRoundGapRemove = unscaled(print.objects()[0]->layers()[0]->slices.expolygons[0].contour.length()) * 0.1*0.1 * (2 - (PI / 2));
-        double perimeterRoundGapAdd = unscaled(print.objects()[0]->layers()[0]->slices.expolygons[0].contour.length()) * 0.1*0.1 * ((PI / 2));
+        double perimeterRoundGapRemove = unscaled(print.objects()[0]->layers()[0]->slices[0].contour.length()) * 0.1*0.1 * (2 - (PI / 2));
+        double perimeterRoundGapAdd = unscaled(print.objects()[0]->layers()[0]->slices[0].contour.length()) * 0.1*0.1 * ((PI / 2));
 
         double volumeExtrPerimeter = ExtrusionGetVolume{}.get(print.objects()[0]->layers()[0]->regions()[0]->perimeters);
         double volumeExtrInfill = ExtrusionGetVolume{}.get(print.objects()[0]->layers()[0]->regions()[0]->fills);

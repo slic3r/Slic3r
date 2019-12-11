@@ -83,13 +83,13 @@ void PerimeterGenerator::process()
     //store surface for bridge infill to avoid unsupported perimeters (but the first one, this one is always good)
     
     if (this->config->no_perimeter_unsupported_algo != npuaNone
-        && this->lower_slices != NULL && !this->lower_slices->expolygons.empty()) {
+        && this->lower_slices != NULL && !this->lower_slices->empty()) {
 
         for (surface_idx = 0; surface_idx < all_surfaces.size(); surface_idx++) {
             Surface *surface = &all_surfaces[surface_idx];
             ExPolygons last = union_ex(surface->expolygon.simplify_p(SCALED_RESOLUTION));
             //compute our unsupported surface
-            ExPolygons unsupported = diff_ex(last, this->lower_slices->expolygons, true);
+            ExPolygons unsupported = diff_ex(last, *this->lower_slices, true);
             if (!unsupported.empty()) {
                 //remove small overhangs
                 ExPolygons unsupported_filtered = offset2_ex(unsupported, double(-perimeter_spacing), double(perimeter_spacing));
@@ -103,9 +103,9 @@ void PerimeterGenerator::process()
                         int numploy = 0;
                         //only consider the bottom layer that intersect unsupported, to be sure it's only on our island.
                         ExPolygonCollection lower_island(support);
-                        BridgeDetector detector(unsupported_filtered,
-                            lower_island,
-                            perimeter_spacing);
+                        BridgeDetector detector{ unsupported_filtered,
+                            lower_island.expolygons,
+                            perimeter_spacing };
                         if (detector.detect_angle(Geometry::deg2rad(this->config->bridge_angle.value))) {
                             ExPolygons bridgeable = union_ex(detector.coverage(-1, true));
                             if (!bridgeable.empty()) {
@@ -292,10 +292,10 @@ void PerimeterGenerator::process()
             // Add perimeters on overhangs : initialization
             ExPolygons overhangs_unsupported;
             if (this->config->extra_perimeters && !last.empty()
-                && this->lower_slices != NULL  && !this->lower_slices->expolygons.empty()) {
+                && this->lower_slices != NULL  && !this->lower_slices->empty()) {
                 //remove holes from lower layer, we only ant that for overhangs, not bridges!
                 ExPolygons lower_without_holes;
-                for (const ExPolygon &exp : this->lower_slices->expolygons)
+                for (const ExPolygon &exp : *this->lower_slices)
                     lower_without_holes.emplace_back(to_expolygon(exp.contour));
                 overhangs_unsupported = diff_ex(last, lower_without_holes);
                 if (!overhangs_unsupported.empty()) {
@@ -304,9 +304,9 @@ void PerimeterGenerator::process()
                     //first, separate into islands (ie, each ExPlolygon)
                     //only consider the bottom layer that intersect unsupported, to be sure it's only on our island.
                     const ExPolygonCollection lower_island(diff_ex(last, overhangs_unsupported));
-                    BridgeDetector detector(overhangs_unsupported,
-                        lower_island,
-                        perimeter_spacing);
+                    BridgeDetector detector{ overhangs_unsupported,
+                        lower_island.expolygons,
+                        perimeter_spacing };
                     if (detector.detect_angle(Geometry::deg2rad(this->config->bridge_angle.value))) {
                         const ExPolygons bridgeable = union_ex(detector.coverage(-1, true));
                         if (!bridgeable.empty()) {
@@ -516,7 +516,7 @@ void PerimeterGenerator::process()
                     if (offset_top_surface > 0.9 * (config->perimeters <= 1 ? 0. : (perimeter_spacing * (config->perimeters - 1))))
                         offset_top_surface -= 0.9 * (config->perimeters <= 1 ? 0. : (perimeter_spacing * (config->perimeters - 1)));
                     else offset_top_surface = 0;
-                    ExPolygons upper_polygons = this->upper_slices->expolygons;
+                    ExPolygons upper_polygons = *this->upper_slices;
                     ExPolygons top_polygons = diff_ex(last, (upper_polygons), true);
                     ExPolygons inner_polygons = diff_ex(last, offset_ex(top_polygons, offset_top_surface), true);
                     // increase a bit the inner space to fill the frontier between last and stored.

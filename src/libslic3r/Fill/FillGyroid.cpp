@@ -169,7 +169,7 @@ void FillGyroid::_fill_surface_single(
     bb.merge(_align_to_grid(bb.min, Point(2*M_PI*distance, 2*M_PI*distance)));
 
     // generate pattern
-    Polylines polylines_square = make_gyroid_waves(
+    Polylines polylines = make_gyroid_waves(
         scale_(this->z),
         density_adjusted,
         this->spacing,

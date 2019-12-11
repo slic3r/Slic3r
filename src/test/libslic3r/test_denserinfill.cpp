@@ -18,13 +18,13 @@ SCENARIO("denser infills: ")
         WHEN("dense infill to enlarged") {
             Model model{};
             Print print{};
-            DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
-            config->set_key_value("layer_height", new ConfigOptionFloat(0.2));
-            config->set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(0.2, false));
-            config->set_key_value("infill_dense", new ConfigOptionBool(true));
-            config->set_key_value("infill_dense_algo", new ConfigOptionEnum<DenseInfillAlgo>(dfaEnlarged));
-            config->save("C:\\Users\\Admin\\Desktop\\config_def.ini");
-            Slic3r::Test::init_print(print, { Slic3r::Test::TestMesh::di_5mm_center_notch }, model, config, false);
+            DynamicPrintConfig &config = Slic3r::DynamicPrintConfig::full_print_config();
+            config.set_key_value("layer_height", new ConfigOptionFloat(0.2));
+            config.set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(0.2, false));
+            config.set_key_value("infill_dense", new ConfigOptionBool(true));
+            config.set_key_value("infill_dense_algo", new ConfigOptionEnum<DenseInfillAlgo>(dfaEnlarged));
+            config.save("C:\\Users\\Admin\\Desktop\\config_def.ini");
+            Slic3r::Test::init_print(print, { Slic3r::Test::TestMesh::di_5mm_center_notch }, model, &config, false);
             print.process();
             PrintObject& object = *(print.objects().at(0));
 
@@ -87,13 +87,13 @@ SCENARIO("denser infills: ")
         WHEN("dense infill to auto") {
             Model model{};
             Print print{};
-            DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
-            config->set_key_value("layer_height", new ConfigOptionFloat(0.2));
-            config->set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(0.2, false));
-            config->set_key_value("infill_dense", new ConfigOptionBool(true));
-            config->set_key_value("infill_dense_algo", new ConfigOptionEnum<DenseInfillAlgo>(dfaAutomatic));
-            config->save("C:\\Users\\Admin\\Desktop\\config_def.ini");
-            Slic3r::Test::init_print(print, { Slic3r::Test::TestMesh::di_10mm_notch }, model, config, false);
+            DynamicPrintConfig &config = Slic3r::DynamicPrintConfig::full_print_config();
+            config.set_key_value("layer_height", new ConfigOptionFloat(0.2));
+            config.set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(0.2, false));
+            config.set_key_value("infill_dense", new ConfigOptionBool(true));
+            config.set_key_value("infill_dense_algo", new ConfigOptionEnum<DenseInfillAlgo>(dfaAutomatic));
+            config.save("C:\\Users\\Admin\\Desktop\\config_def.ini");
+            Slic3r::Test::init_print(print, { Slic3r::Test::TestMesh::di_10mm_notch }, model, &config, false);
             print.process();
             PrintObject& object = *(print.objects().at(0));
             THEN("correct number of fills") {
@@ -149,13 +149,13 @@ SCENARIO("denser infills: ")
         WHEN("dense infill to auto-not-full") {
             Model model{};
             Print print{};
-            DynamicPrintConfig *config = Slic3r::DynamicPrintConfig::new_from_defaults();
-            config->set_key_value("layer_height", new ConfigOptionFloat(0.2));
-            config->set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(0.2, false));
-            config->set_key_value("infill_dense", new ConfigOptionBool(true));
-            config->set_key_value("infill_dense_algo", new ConfigOptionEnum<DenseInfillAlgo>(dfaAutoNotFull));
-            config->save("C:\\Users\\Admin\\Desktop\\config_def.ini");
-            Slic3r::Test::init_print(print, { Slic3r::Test::TestMesh::di_10mm_notch }, model, config, false);
+            DynamicPrintConfig &config = Slic3r::DynamicPrintConfig::full_print_config();
+            config.set_key_value("layer_height", new ConfigOptionFloat(0.2));
+            config.set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(0.2, false));
+            config.set_key_value("infill_dense", new ConfigOptionBool(true));
+            config.set_key_value("infill_dense_algo", new ConfigOptionEnum<DenseInfillAlgo>(dfaAutoNotFull));
+            config.save("C:\\Users\\Admin\\Desktop\\config_def.ini");
+            Slic3r::Test::init_print(print, { Slic3r::Test::TestMesh::di_10mm_notch }, model, &config, false);
             print.process();
             PrintObject& object = *(print.objects().at(0));
             THEN("correct number of fills") {

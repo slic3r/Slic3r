@@ -3688,7 +3688,7 @@ void PrintConfigDef::init_sla_params()
     def = this->add("pad_brim_size", coFloat);
     def->label = L("Pad brim size");
     def->tooltip = L("How far should the pad extend around the contained geometry");
-    def->category = L("Pad");
+    def->category = OptionCategory::pad;
     //     def->tooltip = L("");
     def->sidetext = L("mm");
     def->min = 0;
@@ -3738,7 +3738,7 @@ void PrintConfigDef::init_sla_params()
     
     def = this->add("pad_around_object_everywhere", coBool);
     def->label = L("Pad around object everywhere");
-    def->category = L("Pad");
+    def->category = OptionCategory::pad;
     def->tooltip = L("Force pad around object everywhere");
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionBool(false));

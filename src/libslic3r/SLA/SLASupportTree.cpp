@@ -76,7 +76,7 @@ std::vector<ExPolygons> SupportTree::slice(
         std::copy(grid.begin(), maxzit, std::back_inserter(padgrid));
     
         TriangleMeshSlicer pad_slicer(&pad_mesh);
-        sup_slicer.closing_radius = cr;
+        pad_slicer.closing_radius = cr;
         pad_slicer.slice(padgrid, &slices.back(), ctl().cancelfn);
     }
     

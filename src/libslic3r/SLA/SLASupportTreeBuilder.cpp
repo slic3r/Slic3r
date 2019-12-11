@@ -211,8 +211,8 @@ Head::Head(double       r_big_mm,
         coord_t i1s1 = coord_t(idx1), i1s2 = coord_t(idx2);
         coord_t i2s1 = i1s1 + 1, i2s2 = i1s2 + 1;
         
-        mesh.indices.emplace_back(i1s1, i2s1, i2s2);
-        mesh.indices.emplace_back(i1s1, i2s2, i1s2);
+        mesh.indices.emplace_back((int32_t)i1s1, (int32_t)i2s1, (int32_t)i2s2);
+        mesh.indices.emplace_back((int32_t)i1s1, (int32_t)i2s2, (int32_t)i1s2);
     }
     
     auto i1s1 = coord_t(s1.points.size()) - coord_t(steps);

@@ -28,7 +28,7 @@ struct Contour3D {
         indices.insert(indices.end(), ctr.indices.begin(), ctr.indices.end());
 
         for(size_t n = s; n < indices.size(); n++) {
-            Vec3i32& idx = indices[n]; idx.x() += s3; idx.y() += s3; idx.z() += s3;
+            Vec3i32& idx = indices[n]; idx.x() +=(int32_t)s3; idx.y() += (int32_t)s3; idx.z() += (int32_t)s3;
         }
         
         return *this;
