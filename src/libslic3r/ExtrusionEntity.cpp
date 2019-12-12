@@ -286,18 +286,23 @@ std::string ExtrusionEntity::role_to_string(ExtrusionRole role)
 
     return "";
 }void ExtrusionPrinter::use(const ExtrusionPath &path) { 
-    ss << "Path_" << path.polyline.size(); 
-    for (const Point &p : path.polyline.points)
-        ss << "->" << (int)(100 * unscale_(p.x())) << ":" << (int)(100 * unscale_(p.y()));
-
+    ss << "ExtrusionPath{";
+    for (int i = 0; i < path.polyline.points.size(); i++) {
+        if (i != 0) ss << ",";
+        ss << "{"<<(int)(100 * unscale_(path.polyline.points[i].x())) << "," << (int)(100 * unscale_(path.polyline.points[i].y()))<<"}";
+    }
+    ss << "}";
 }
 void ExtrusionPrinter::use(const ExtrusionPath3D &path3D) {
-    ss << "Path3D_" << path3D.polyline.size();
-    for (int i = 0; i < path3D.polyline.points.size();i++)
-        ss << "->" << (int)(100 * unscale_(path3D.polyline.points[i].x())) << ":" << (int)(100 * unscale_(path3D.polyline.points[i].y())) << ":" << (path3D.z_offsets.size()>i ? unscale_(path3D.z_offsets[i]) : -1);
+    ss << "ExtrusionPath3D{";
+    for (int i = 0; i < path3D.polyline.points.size();i++){
+        if (i != 0) ss << ",";
+        ss << "{"<<(int)(100 * unscale_(path3D.polyline.points[i].x())) << "," << (int)(100 * unscale_(path3D.polyline.points[i].y())) << ":" << (path3D.z_offsets.size()>i ? unscale_(path3D.z_offsets[i]) : -1) <<"}";
+    }
+    ss << "}";
 }
 void ExtrusionPrinter::use(const ExtrusionMultiPath &multipath) {
-    ss << "multipath:{";
+    ss << "ExtrusionMultiPath{";
     for (int i = 0; i < multipath.paths.size(); i++) {
         if (i != 0) ss << ",";
         multipath.paths[i].visit(*this);
@@ -305,20 +310,28 @@ void ExtrusionPrinter::use(const ExtrusionMultiPath &multipath) {
     ss << "}";
 }
 void ExtrusionPrinter::use(const ExtrusionMultiPath3D &multipath3D) {
-    ss << "multipath3D:{";
+    ss << "multipath3D{";
     for (int i = 0; i < multipath3D.paths.size(); i++) {
         if (i != 0) ss << ",";
         multipath3D.paths[i].visit(*this);
     }
     ss << "}";
 }
-void ExtrusionPrinter::use(const ExtrusionLoop &loop) { ss << "loop_" << loop.paths.size(); }
+void ExtrusionPrinter::use(const ExtrusionLoop &loop) { 
+    ss << "ExtrusionLoop{";
+    for (int i = 0; i < loop.paths.size(); i++) {
+        if (i != 0) ss << ",";
+        loop.paths[i].visit(*this);
+    }
+    ss << "}";
+}
 void ExtrusionPrinter::use(const ExtrusionEntityCollection &collection) {
-    ss << "collection:{";
+    ss << "ExtrusionEntityCollection{";
     for (int i = 0; i < collection.entities.size(); i++) {
         if (i != 0) ss << ",";
         collection.entities[i]->visit(*this);
     }
+    if(collection.no_sort) ss<<", no_sort=true";
     ss << "}";
 }
 
