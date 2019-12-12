@@ -1,6 +1,9 @@
 name: C/C++ CI ubuntu
 
-on: [push]
+on:
+  push:
+    branches:
+      - CI
 
 jobs:
   build:
