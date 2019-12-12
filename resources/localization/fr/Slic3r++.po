@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2019-11-28 15:55+0100\n"
-"PO-Revision-Date: 2019-12-05 13:27+0100\n"
+"PO-Revision-Date: 2019-12-12 16:33+0100\n"
 "Last-Translator: Admin <EMAIL@ADDRESS>\n"
 "Language-Team: English\n"
 "MIME-Version: 1.0\n"
@@ -1954,10 +1954,13 @@ msgstr "Modifier l'Option %s"
 msgid "View"
 msgstr "Vue"
 
-#: src/slic3r/GUI/GUI_Preview.cpp:220 src/slic3r/GUI/GUI_Preview.cpp:570
-#: src/libslic3r/GCode/PreviewData.cpp:354
+#: src/slic3r/GUI/GUI_Preview.cpp:570 src/libslic3r/GCode/PreviewData.cpp:354
 msgid "Feature type"
 msgstr "Type de fonctionnalité"
+
+#: src/slic3r/GUI/GUI_Preview.cpp:220
+msgid "Extrusion type"
+msgstr "Type d'extrusion"
 
 #: src/slic3r/GUI/GUI_Preview.cpp:221 src/libslic3r/PrintConfig.cpp:733
 msgid "Height"
@@ -3284,7 +3287,7 @@ msgid "Another export job is currently running."
 msgstr "Une autre tâche d'export est actuellement en cours."
 
 #: src/slic3r/GUI/Plater.cpp:3102 src/slic3r/GUI/Plater.cpp:3634
-msgid "Reload from Disk"
+msgid "Reload from disk"
 msgstr "Recharger depuis le Disque"
 
 #: src/slic3r/GUI/Plater.cpp:3191
@@ -4052,7 +4055,7 @@ msgstr "Remplissage avancé"
 
 #: src/slic3r/GUI/Tab.cpp:1172 src/libslic3r/PrintConfig.cpp:295
 msgid "Brim ears"
-msgstr "Les oreilles"
+msgstr "Jupe en oreille"
 
 #: src/slic3r/GUI/Tab.cpp:1184
 msgid "Raft"
@@ -7059,7 +7062,7 @@ msgstr "Largeur minimale pour qu'une extrusion soit considérée comme un surplo
 
 #: src/libslic3r/PrintConfig.cpp:1942
 msgid "No perimeters on bridge areas"
-msgstr "Pas de périmètres à l'intérieure d'une sruface de pont"
+msgstr "Pas de périmètres dans un pont"
 
 #: src/libslic3r/PrintConfig.cpp:1944
 msgid ""
@@ -7574,11 +7577,11 @@ msgstr "L'imprimante multiplexe les filaments vers une seule tête d'extrusion."
 
 #: src/libslic3r/PrintConfig.cpp:2555
 msgid "Prime all printing extruders"
-msgstr "Préparer tous les extrudeurs d'impression"
+msgstr "Purger tous les extrudeurs d'impression"
 
 #: src/libslic3r/PrintConfig.cpp:2556
 msgid "If enabled, all printing extruders will be primed at the front edge of the print bed at the start of the print."
-msgstr "Si ceci est activé, tous les extrudeurs qui impriment seront positionnés sur la bordure avant du lit d'impression au début de l'impression."
+msgstr "Si ceci est activé, tous les extrudeurs qui impriment seront positionnés sur la bordure avant du lit d'impression au début de l'impression et une bande de test sera extrudé pour chacun."
 
 #: src/libslic3r/PrintConfig.cpp:2561
 msgid "Generate support material"
@@ -8093,7 +8096,7 @@ msgstr "Les trous convexes seront grossis / rétrécis dans le plan XY par la va
 
 #: src/libslic3r/PrintConfig.cpp:3132 src/libslic3r/PrintConfig.cpp:3133
 msgid "Convert round holes to polyholes"
-msgstr "Convertis les trous rond en polyholes"
+msgstr "Trous rond changé en polyholes"
 
 #: src/libslic3r/PrintConfig.cpp:3135
 msgid ""
@@ -8779,12 +8782,18 @@ msgstr "Couleur d'impression par défaut"
 msgid "up to %.2f mm"
 msgstr "jusqu'à %.2f mm"
 
-#: src/libslic3r/GCode/PreviewData.cpp:467
-#, c-format
-msgid "above %.2f mm"
-msgstr "au dessus de %.2f mm"
+#: src/slic3r/GUI/Tab.cpp:1258
+msgid "Width & Flow"
+msgstr "Epaisseur & Débit"
 
-#: src/libslic3r/GCode/PreviewData.cpp:472
-#, c-format
-msgid "%.2f - %.2f mm"
-msgstr "%.2f - %.2f mm"
+#: src/libslic3r/PrintConfig.cpp:467
+msgid "Only one perimeter on Top surfaces"
+msgstr "Un seul prérimètre sur le dessus"
+
+#: src/libslic3r/PrintConfig.cpp:472
+msgid "Use only one perimeter on flat top surface, to let more space to the top infill pattern."
+msgstr "N'utiliser qu'un seul périmètre sur les surface paltes du dessus, pour laisser plus de place au motif de dessus."
+
+#: src/libslic3r/PrintConfig.cpp:1458
+msgid "Do not connect infill lines to each other"
+msgstr "Ne pas interconnecter les lignes de remplissages"

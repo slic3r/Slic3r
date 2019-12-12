@@ -711,9 +711,9 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("only_one_perimeter_top", coBool);
-    def->label = "Only one perimeter on Top surfaces";
+    def->label = L("Only one perimeter on Top surfaces");
     def->category = OptionCategory::perimeter;
-    def->tooltip = "Use only one perimeter on flat top surface, to let more space to the top infill pattern.";
+    def->tooltip = L("Use only one perimeter on flat top surface, to let more space to the top infill pattern.");
     def->set_default_value(new ConfigOptionBool(true));
 
 
@@ -1456,7 +1456,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("infill_not_connected", coBool);
-    def->label = ("Do not connect infill lines to each other");
+    def->label = L("Do not connect infill lines to each other");
     def->category = OptionCategory::infill;
     def->tooltip = L("If checked, the infill algorithm will try to not connect the lines near the infill. Can be useful for art or with high infill/perimeter overlap.");
     def->mode = comExpert;
@@ -1895,8 +1895,8 @@ void PrintConfigDef::init_fff_params()
     
     def = this->add("printhost_cafile", coString);
     def->label = L("HTTPS CA File");
-    def->tooltip = "Custom CA certificate file can be specified for HTTPS OctoPrint connections, in crt/pem format. "
-                   "If left blank, the default OS CA certificate repository is used.";
+    def->tooltip = L("Custom CA certificate file can be specified for HTTPS OctoPrint connections, in crt/pem format. "
+                   "If left blank, the default OS CA certificate repository is used.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionString(""));
 
