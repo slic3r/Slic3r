@@ -13,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: install gtk2 glew
-      run: sudo apt-get install libgtk2.0-dev libglew-dev
+      run: sudo apt-get install libgtk2.0-dev libglew-dev libudev-dev
     - name: mkdir in deps
       run: mkdir deps/build
     - name: cmake deps
