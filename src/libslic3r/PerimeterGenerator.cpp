@@ -518,16 +518,16 @@ void PerimeterGenerator::process()
                     if (offset_top_surface > 0.9 * (config->perimeters <= 1 ? 0. : (perimeter_spacing * (config->perimeters - 1))))
                         offset_top_surface -= 0.9 * (config->perimeters <= 1 ? 0. : (perimeter_spacing * (config->perimeters - 1)));
                     else offset_top_surface = 0;
-                    ExPolygons upper_polygons = *this->upper_slices;
-                    ExPolygons top_polygons = diff_ex(last, (upper_polygons), true);
+                    // get the real top surface
+                    ExPolygons top_polygons = diff_ex(last, *this->upper_slices, true);
+                    //get the not-top surface, from the "real top" but enlarged by external_infill_margin
                     ExPolygons inner_polygons = diff_ex(last, offset_ex(top_polygons, offset_top_surface), true);
-                    // increase a bit the inner space to fill the frontier between last and stored.
+                    // get the enlarged top surface, by using inner_polygons instead of upper_slices
+                    top_polygons = diff_ex(last, inner_polygons, true);
+                    // increase by half peri the inner space to fill the frontier between last and stored.
                     stored = union_ex(stored, intersection_ex(offset_ex(top_polygons, double(perimeter_spacing / 2)), last));
                     last = intersection_ex(offset_ex(inner_polygons, double(perimeter_spacing / 2)), last);
                 }
-
-                
-
             }
             
             // re-add stored polygons
