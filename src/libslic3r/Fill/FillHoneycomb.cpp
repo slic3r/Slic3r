@@ -6,18 +6,20 @@
 
 namespace Slic3r {
 
+FillHoneycomb::Cache FillHoneycomb::cache{};
+
 void FillHoneycomb::_fill_surface_single(
     const FillParams                &params, 
     unsigned int                     thickness_layers,
     const std::pair<float, Point>   &direction, 
     ExPolygon                       &expolygon, 
-    Polylines                       &polylines_out)
+    Polylines                       &polylines_out) const
 {
     // cache hexagons math
     CacheID cache_id(params.density, this->spacing);
-    Cache::iterator it_m = this->cache.find(cache_id);
-    if (it_m == this->cache.end()) {
-        it_m = this->cache.insert(it_m, std::pair<CacheID, CacheData>(cache_id, CacheData()));
+    Cache::iterator it_m = FillHoneycomb::cache.find(cache_id);
+    if (it_m == FillHoneycomb::cache.end()) {
+        it_m = FillHoneycomb::cache.insert(it_m, std::pair<CacheID, CacheData>(cache_id, CacheData()));
         CacheData &m = it_m->second;
         coord_t min_spacing = scale_(this->spacing);
         m.distance = min_spacing / params.density;

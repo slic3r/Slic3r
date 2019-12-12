@@ -153,7 +153,7 @@ void FillGyroid::_fill_surface_single(
     unsigned int                     thickness_layers,
     const std::pair<float, Point>   &direction, 
     ExPolygon                       &expolygon, 
-    Polylines                       &polylines_out)
+    Polylines                       &polylines_out) const
 {
     float infill_angle = this->angle + (CorrectionAngle * 2*M_PI) / 360.;
     if(abs(infill_angle) >= EPSILON)

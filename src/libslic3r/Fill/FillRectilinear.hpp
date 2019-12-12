@@ -21,7 +21,7 @@ protected:
 	    unsigned int                     thickness_layers,
 	    const std::pair<float, Point>   &direction, 
 	    ExPolygon                       &expolygon, 
-	    Polylines                       &polylines_out);
+	    Polylines                       &polylines_out) const override;
 
 	coord_t _min_spacing;
 	coord_t _line_spacing;
@@ -29,6 +29,7 @@ protected:
 	coord_t _diagonal_distance;
 	// only for line infill
 	coord_t _line_oscillation;
+    virtual void init_spacing(coordf_t spacing, const FillParams &params) override;
 
 	// Enabled for the grid infill, disabled for the rectilinear and line infill.
 	virtual bool _horizontal_lines() const { return false; }
@@ -36,7 +37,7 @@ protected:
 	virtual Line _line(int i, coord_t x, coord_t y_min, coord_t y_max) const 
 		{ return Line(Point(x, y_min), Point(x, y_max)); }
 	
-	virtual bool _can_connect(coord_t dist_X, coord_t dist_Y) {
+	virtual bool _can_connect(coord_t dist_X, coord_t dist_Y) const {
 	    return dist_X <= this->_diagonal_distance
 	        && dist_Y <= this->_diagonal_distance;
     }
@@ -48,12 +49,12 @@ public:
     virtual ~FillLine() {}
 
 protected:
-	virtual Line _line(int i, coord_t x, coord_t y_min, coord_t y_max) const {
+	virtual Line _line(int i, coord_t x, coord_t y_min, coord_t y_max) const override {
 		coord_t osc = (i & 1) ? this->_line_oscillation : 0;
 		return Line(Point(x - osc, y_min), Point(x + osc, y_max));
 	}
 
-	virtual bool _can_connect(coord_t dist_X, coord_t dist_Y)
+	virtual bool _can_connect(coord_t dist_X, coord_t dist_Y) const override
 	{
 	    double TOLERANCE = 10 * SCALED_EPSILON;
     	return (dist_X >= (this->_line_spacing - this->_line_oscillation) - TOLERANCE)
@@ -69,9 +70,9 @@ public:
 
 protected:
 	// The grid fill will keep the angle constant between the layers, see the implementation of Slic3r::Fill.
-    virtual float _layer_angle(size_t idx) const { return 0.f; }
+    virtual float _layer_angle(size_t idx) const override { return 0.f; }
 	// Flag for Slic3r::Fill::Rectilinear to fill both directions.
-	virtual bool _horizontal_lines() const { return true; }
+	virtual bool _horizontal_lines() const override { return true; }
 };
 
 }; // namespace Slic3r

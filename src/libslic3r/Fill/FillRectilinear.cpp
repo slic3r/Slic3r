@@ -7,34 +7,38 @@
 
 namespace Slic3r {
 
+void FillRectilinear::init_spacing(coordf_t spacing, const FillParams &params) {
+        this->spacing = spacing;
+        this->_min_spacing = scale_(this->spacing);
+        assert(params.density > 0.0001f);
+        this->_line_spacing = coord_t(coordf_t(this->_min_spacing) / params.density);
+        this->_diagonal_distance = this->_line_spacing * 2;
+        this->_line_oscillation = this->_line_spacing - this->_min_spacing; // only for Line infill
+    // define flow spacing according to requested density
+        if (params.density > 0.9999f && !params.dont_adjust) {
+            this->_line_spacing = this->_adjust_solid_spacing(bounding_box.size()(0), this->_line_spacing);
+            this->spacing = unscale<double>(this->_line_spacing);
+        }
+}
+
 void FillRectilinear::_fill_surface_single(
     const FillParams                &params,
     unsigned int                     thickness_layers,
     const std::pair<float, Point>   &direction,
     ExPolygon                       &expolygon,
-    Polylines                       &polylines_out)
+    Polylines                       &polylines_out) const
 {
     // rotate polygons so that we can work with vertical lines here
     expolygon.rotate(- direction.first);
 
-    this->_min_spacing = scale_(this->spacing);
-    assert(params.density > 0.0001f);
-    this->_line_spacing = coord_t(coordf_t(this->_min_spacing) / params.density);
-    this->_diagonal_distance = this->_line_spacing * 2;
-    this->_line_oscillation = this->_line_spacing - this->_min_spacing; // only for Line infill
     BoundingBox bounding_box = expolygon.contour.bounding_box();
-    
-    // define flow spacing according to requested density
-    if (params.density > 0.9999f && !params.dont_adjust) {
-        this->_line_spacing = this->_adjust_solid_spacing(bounding_box.size()(0), this->_line_spacing);
-        this->spacing = unscale<double>(this->_line_spacing);
-    } else {
+    if (!(params.density > 0.9999f && !params.dont_adjust)) {
         // extend bounding box so that our pattern will be aligned with other layers
         // Transform the reference point to the rotated coordinate system.
         bounding_box.merge(_align_to_grid(
-            bounding_box.min, 
-            Point(this->_line_spacing, this->_line_spacing), 
-            direction.second.rotated(- direction.first)));
+            bounding_box.min,
+            Point(this->_line_spacing, this->_line_spacing),
+            direction.second.rotated(-direction.first)));
     }
 
     // generate the basic pattern

@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include <type_traits>
+#include <boost/log/trivial.hpp>
 
 #include "../libslic3r.h"
 #include "../BoundingBox.hpp"
@@ -110,6 +111,7 @@ public:
     // Perform the fill.
     virtual Polylines fill_surface(const Surface *surface, const FillParams &params) const;
 
+    virtual Fill* clone() const = 0;
 protected:
     Fill() :
         layer_id(size_t(-1)),
@@ -131,7 +133,9 @@ protected:
         unsigned int                      /* thickness_layers */,
         const std::pair<float, Point>   & /* direction */, 
         ExPolygon                       & /* expolygon */, 
-        Polylines                       & /* polylines_out */) const {};
+        Polylines                       & /* polylines_out */) const {
+        BOOST_LOG_TRIVIAL(error)<<"Error, the fill isn't implemented";
+    };
 
     virtual float _layer_angle(size_t idx) const { return (idx & 1) ? float(M_PI/2.) : 0; }
 

@@ -6,6 +6,7 @@
 
 namespace Slic3r {
 
+
 /*
 Creates a contiguous sequence of points at a specified height that make
 up a horizontal slice of the edges of a space filling truncated
@@ -138,7 +139,7 @@ void Fill3DHoneycomb::_fill_surface_single(
     unsigned int                     thickness_layers,
     const std::pair<float, Point>   &direction, 
     ExPolygon                       &expolygon, 
-    Polylines                       &polylines_out)
+    Polylines                       &polylines_out) const
 {
     // no rotation is supported for this infill pattern
     BoundingBox bb = expolygon.contour.bounding_box();

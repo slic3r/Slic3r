@@ -1529,7 +1529,7 @@ static bool fill_hatching_segments_legacy(
 
 }; // namespace FillRectilinear3_Internal
 
-bool FillRectilinear3::fill_surface_by_lines(const Surface *surface, const FillParams &params, std::vector<FillDirParams> &fill_dir_params, Polylines &polylines_out)
+bool FillRectilinear3::fill_surface_by_lines(const Surface *surface, const FillParams &params, std::vector<FillDirParams> &fill_dir_params, Polylines &polylines_out) const
 {
     assert(params.density > 0.0001f);
 
@@ -1566,20 +1566,21 @@ bool FillRectilinear3::fill_surface_by_lines(const Surface *surface, const FillP
     return true;
 }
 
-Polylines FillRectilinear3::fill_surface(const Surface *surface, const FillParams &params)
+Polylines FillRectilinear3::fill_surface(const Surface *surface, const FillParams &params) const
 {
     Polylines polylines_out;
     std::vector<FillDirParams> fill_dir_params;
     fill_dir_params.emplace_back(FillDirParams(this->spacing, 0.f));
     if (! fill_surface_by_lines(surface, params, fill_dir_params, polylines_out))
         printf("FillRectilinear3::fill_surface() failed to fill a region.\n");
-    if (params.full_infill() && ! params.dont_adjust)
-        // Return back the adjusted spacing.
-        this->spacing = fill_dir_params.front().spacing;
+    //if (params.full_infill() && ! params.dont_adjust)
+        // Return back the adjusted spacing. //NOT POSSIBLE : DO NOT MODIFY PARAMS AFTER INITIALISATION !!! No one will read it anyway.
+        //this->spacing = fill_dir_params.front().spacing;
+    
     return polylines_out;
 }
 
-Polylines FillGrid3::fill_surface(const Surface *surface, const FillParams &params)
+Polylines FillGrid3::fill_surface(const Surface *surface, const FillParams &params) const
 {
     // Each linear fill covers half of the target coverage.
     FillParams params2 = params;
@@ -1593,7 +1594,7 @@ Polylines FillGrid3::fill_surface(const Surface *surface, const FillParams &para
     return polylines_out;
 }
 
-Polylines FillTriangles3::fill_surface(const Surface *surface, const FillParams &params)
+Polylines FillTriangles3::fill_surface(const Surface *surface, const FillParams &params) const
 {
     // Each linear fill covers 1/3 of the target coverage.
     FillParams params2 = params;
@@ -1608,7 +1609,7 @@ Polylines FillTriangles3::fill_surface(const Surface *surface, const FillParams 
     return polylines_out;
 }
 
-Polylines FillStars3::fill_surface(const Surface *surface, const FillParams &params)
+Polylines FillStars3::fill_surface(const Surface *surface, const FillParams &params) const
 {
     // Each linear fill covers 1/3 of the target coverage.
     FillParams params2 = params;
@@ -1623,7 +1624,7 @@ Polylines FillStars3::fill_surface(const Surface *surface, const FillParams &par
     return polylines_out;
 }
 
-Polylines FillCubic3::fill_surface(const Surface *surface, const FillParams &params)
+Polylines FillCubic3::fill_surface(const Surface *surface, const FillParams &params) const
 {
     // Each linear fill covers 1/3 of the target coverage.
     FillParams params2 = params;

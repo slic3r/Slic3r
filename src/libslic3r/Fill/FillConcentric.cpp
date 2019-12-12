@@ -72,7 +72,10 @@ FillConcentric::_fill_surface_single(
     // We want the loops to be split inside the G-code generator to get optimum path planning.
 }
 
-void FillConcentricWGapFill::fill_surface_extrusion(const Surface *surface, const FillParams &params,
+void
+FillConcentricWGapFill::fill_surface_extrusion(
+    const Surface *surface, 
+    const FillParams &params,
     ExtrusionEntitiesPtr &out) const {
 
     // Perform offset.

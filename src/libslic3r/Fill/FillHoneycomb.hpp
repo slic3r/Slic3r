@@ -21,7 +21,7 @@ protected:
 	    unsigned int                     thickness_layers,
 	    const std::pair<float, Point>   &direction, 
 	    ExPolygon                       &expolygon, 
-	    Polylines                       &polylines_out);
+	    Polylines                       &polylines_out) const override;
 
 	// Caching the 
 	struct CacheID 
@@ -47,7 +47,7 @@ protected:
         Point	hex_center;
     };
     typedef std::map<CacheID, CacheData> Cache;
-	Cache cache;
+	static Cache cache;
 
     virtual float _layer_angle(size_t idx) const { return float(M_PI/3.) * (idx % 3); }
 };
