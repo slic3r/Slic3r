@@ -289,7 +289,9 @@ std::string ExtrusionEntity::role_to_string(ExtrusionRole role)
     ss << "ExtrusionPath{";
     for (int i = 0; i < path.polyline.points.size(); i++) {
         if (i != 0) ss << ",";
-        ss << "{"<<(int)(100 * unscale_(path.polyline.points[i].x())) << "," << (int)(100 * unscale_(path.polyline.points[i].y()))<<"}";
+        double x = (mult * (path.polyline.points[i].x()));
+        double y = (mult * (path.polyline.points[i].y()));
+        ss << std::fixed << "{"<<(trunc?(int)x:x) << "," << (trunc ? (int)y : y) <<"}";
     }
     ss << "}";
 }
@@ -297,7 +299,10 @@ void ExtrusionPrinter::use(const ExtrusionPath3D &path3D) {
     ss << "ExtrusionPath3D{";
     for (int i = 0; i < path3D.polyline.points.size();i++){
         if (i != 0) ss << ",";
-        ss << "{"<<(int)(100 * unscale_(path3D.polyline.points[i].x())) << "," << (int)(100 * unscale_(path3D.polyline.points[i].y())) << ":" << (path3D.z_offsets.size()>i ? unscale_(path3D.z_offsets[i]) : -1) <<"}";
+        double x = (mult * (path3D.polyline.points[i].x()));
+        double y = (mult * (path3D.polyline.points[i].y()));
+        double z = (path3D.z_offsets.size() > i ? mult * (path3D.z_offsets[i]) : -1);
+        ss << std::fixed << "{" << (trunc ? (int)x : x) << "," << (trunc ? (int)y : y) << "," << (trunc ? (int)z : z) << "}";
     }
     ss << "}";
 }

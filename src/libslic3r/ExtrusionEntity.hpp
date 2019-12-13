@@ -535,7 +535,10 @@ inline void extrusion_entities_append_loops(ExtrusionEntitiesPtr &dst, Polygons 
 
 class ExtrusionPrinter : public ExtrusionVisitorConst {
     std::stringstream ss;
+    double mult;
+    bool trunc;
 public:
+    ExtrusionPrinter(double mult = 0.0001, bool trunc = false) : mult(mult), trunc(trunc) { }
     virtual void use(const ExtrusionPath &path) override;
     virtual void use(const ExtrusionPath3D &path3D) override;
     virtual void use(const ExtrusionMultiPath &multipath) override;
