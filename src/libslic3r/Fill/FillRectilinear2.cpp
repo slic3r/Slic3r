@@ -1825,6 +1825,7 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
             printf("FillRectilinear2::fill_surface() failed to fill a region.\n");
         }
     }
+    ExPolygons unextruded_areas;
     if (!polylines_rectilinear.empty()) {
         double flow_mult_exact_volume = 1;
         //check if not over-extruding
@@ -1878,9 +1879,15 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
             params.flow->height);
 
         coll_nosort->entities.push_back(eec);
+
+        unextruded_areas = diff_ex(rectilinear_areas, union_ex(eec->polygons_covered_by_spacing(10), true));
     }
+    else
+        unextruded_areas = rectilinear_areas;
 
     //gapfill
+    gapfill_areas.insert(gapfill_areas.end(), unextruded_areas.begin(), unextruded_areas.end());
+    gapfill_areas = union_ex(gapfill_areas, true);
     if (gapfill_areas.size() > 0) {
         FillParams params2{ params };
         params2.role = good_role;
