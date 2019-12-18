@@ -5,9 +5,9 @@
   <key>CFBundleExecutable</key>
   <string>@SLIC3R_APP_KEY@</string>
   <key>CFBundleGetInfoString</key>
-  <string>@SLIC3R_APP_NAME@ Copyright (C) 2011-2019 Alessandro Ranellucci, (C) 2016-2019 Prusa Reseach</string>
+  <string>@SLIC3R_APP_NAME@ Copyright (C) 2011-2019 Alessandro Ranellucci, (C) 2016-2019 Prusa Reseach, (C) 2018-2019 Remi Durand</string>
   <key>CFBundleIconFile</key>
-  <string>PrusaSlicer.icns</string>
+  <string>Slic3r.icns</string>
   <key>CFBundleName</key>
   <string>@SLIC3R_APP_KEY@</string>
   <key>CFBundleShortVersionString</key>
@@ -48,7 +48,7 @@
           <string>OBJ</string>
         </array>
         <key>CFBundleTypeIconFile</key>
-        <string>PrusaSlicer.icns</string>
+        <string>Slic3r.icns</string>
         <key>CFBundleTypeName</key>
         <string>STL</string>
         <key>CFBundleTypeRole</key>
@@ -65,7 +65,7 @@
           <string>AMF</string>
         </array>
         <key>CFBundleTypeIconFile</key>
-        <string>PrusaSlicer.icns</string>
+        <string>Slic3r.icns</string>
         <key>CFBundleTypeName</key>
         <string>AMF</string>
         <key>CFBundleTypeRole</key>
@@ -82,7 +82,7 @@
           <string>3MF</string>
         </array>
         <key>CFBundleTypeIconFile</key>
-        <string>PrusaSlicer.icns</string>
+        <string>Slic3r.icns</string>
         <key>CFBundleTypeName</key>
         <string>3MF</string>
         <key>CFBundleTypeRole</key>
@@ -111,7 +111,7 @@
       </dict>
     </array>
     <key>LSMinimumSystemVersion</key>
-    <string>10.9</string>
+    <string>10.14</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>

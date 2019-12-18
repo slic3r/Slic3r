@@ -25,6 +25,8 @@ jobs:
     - name: cmake
       working-directory: ./build
       run: cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.14" -DSLIC3R_STATIC=1
+    - name: change date in version
+      run: sed "s/UNKNOWN/$(date '+%F')/" version.inc
     - name: make slic3r
       working-directory: ./build
       run: make slic3r
@@ -39,10 +41,16 @@ jobs:
         mkdir Slic3r++/Slic3r++.app/Contents/MacOS
     - name: copy resources
       working-directory: ./build
-      run: cp -Rf ../resources Slic3r++/Slic3r++.app/Contents/resources
+      run: |
+        cp -Rf ../resources Slic3r++/Slic3r++.app/Contents/resources
+        cp Slic3r++/Slic3r++.app/Contents/resources/icons/slic3r.icns Slic3r++/Slic3r++.app/Contents/resources/slic3r.icns
+        cp src/Info.plist Slic3r++/Slic3r++.app/Contents/Info.plist
+        echo -n -e '\xff\xfeAPPL\x3f\x00\x3f\x00\x3f\x00\x3f\x00\x0a\x00' > PkgInfo
     - name: copy bin
       working-directory: ./build
-      run: cp -f src/slic3r++ Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
+      run: |
+        cp -f src/slic3r++ Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
+        chmod 777 Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
 #    - name: signing resources (creating CodeResources inside _CodeSignature)
 #      working-directory: .
 #      run: codesign -s <identity> resources

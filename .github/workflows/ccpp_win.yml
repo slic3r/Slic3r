@@ -23,10 +23,12 @@ jobs:
       run: mkdir build
     - name: cmake
       working-directory: ./build
-      run: |
-        cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH="d:\a\Slic3r\Slic3r\deps\build\destdir\usr\local"
-        #msbuild /m /P:Configuration=Release ALL_BUILD.vcxproj
-        msbuild /m /P:Configuration=Release INSTALL.vcxproj
+      run: cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH="d:\a\Slic3r\Slic3r\deps\build\destdir\usr\local"
+    - name: change date in version
+      shell: powershell
+      run: (Get-Content version.inc) | Foreach-Object {$_ -replace "UNKNOWN", [datetime]::Today.ToString("yyyy-MM-dd")} | Set-Content version.inc
+    - name: make
+      run: msbuild /m /P:Configuration=Release INSTALL.vcxproj
     - name: create directory and copy into it
       working-directory: ./build
       run: ls
