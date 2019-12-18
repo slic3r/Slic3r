@@ -603,9 +603,10 @@ public:
     ConfigOptionInt                 bottom_solid_layers;
     ConfigOptionFloatOrPercent      bridge_flow_ratio;
     ConfigOptionFloatOrPercent      over_bridge_flow_ratio;
+    ConfigOptionFloatOrPercent      bridge_overlap;
     ConfigOptionEnum<InfillPattern> bottom_fill_pattern;
     ConfigOptionFloatOrPercent      bridged_infill_margin;
-    ConfigOptionFloat               bridge_speed;
+    ConfigOptionFloat               bridge_speed; 
     ConfigOptionFloat               curve_smoothing_precision;
     ConfigOptionFloat               curve_smoothing_cutoff_dist;
     ConfigOptionFloat               curve_smoothing_angle_convex;
@@ -674,6 +675,7 @@ protected:
         OPT_PTR(bottom_solid_layers);
         OPT_PTR(bridge_flow_ratio);
         OPT_PTR(over_bridge_flow_ratio);
+        OPT_PTR(bridge_overlap);
         OPT_PTR(bottom_fill_pattern);
         OPT_PTR(bridged_infill_margin);
         OPT_PTR(bridge_speed);

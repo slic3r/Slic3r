@@ -332,6 +332,11 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         }
         params.flow = &flow;
 
+        //apply bridge_overlap if needed
+        if (is_bridge && density > 99 && layerm.region()->config().bridge_overlap.get_abs_value(1) != 1) {
+            params.density *= layerm.region()->config().bridge_overlap.get_abs_value(1);
+        }
+
         f->fill_surface_extrusion(&surface, params, out.entities);
     }
 

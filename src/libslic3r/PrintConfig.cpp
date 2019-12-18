@@ -258,6 +258,15 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
 
+    def = this->add("bridge_overlap", coFloatOrPercent);
+    def->label = L("Bridge overlap");
+    def->full_label = L("Bridge overlap");
+    def->category = OptionCategory::width;
+    def->tooltip = L("Amount of overlap between lines of the bridge. If your bridge flow ratio is low, it may be useful to increaase this setting to let lines touch each other. Default to 100%. A value of 200% will create two times more lines.");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(105, true));
+
     def = this->add("bridge_speed", coFloat);
     def->label = L("Bridges");
     def->full_label = L("Bridge speed");

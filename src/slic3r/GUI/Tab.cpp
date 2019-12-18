@@ -1272,6 +1272,7 @@ void TabPrint::build()
         optgroup = page->new_optgroup(_(L("Flow")));
         line = { _(L("Flow ratio")), "" };
         line.append_option(optgroup->get_option("bridge_flow_ratio"));
+        line.append_option(optgroup->get_option("bridge_overlap"));
         line.append_option(optgroup->get_option("over_bridge_flow_ratio"));
         line.append_option(optgroup->get_option("fill_top_flow_ratio"));
         optgroup->append_line(line);

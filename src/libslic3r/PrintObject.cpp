@@ -1753,6 +1753,20 @@ void PrintObject::bridge_over_infill()
             printf("Bridging " PRINTF_ZU " internal areas at layer " PRINTF_ZU "\n", to_bridge.size(), layer->id());
             #endif
             
+            //add a bit of overlap for the internal bridge, note that this can only be useful in inverted slopes and with extra_perimeters_odd_layers
+            coord_t overlap_width = 0;
+            // if extra_perimeters_odd_layers, fill the void if possible
+            if (region.config().extra_perimeters_odd_layers.value) {
+                overlap_width = layerm->flow(frPerimeter).scaled_width();
+            }
+            else
+            {
+                //half a perimeter should be enough for most of the cases.
+                overlap_width = layerm->flow(frPerimeter).scaled_width() /2;
+            }
+            if (overlap_width > 0)
+                to_bridge = offset_ex(to_bridge, overlap_width);
+
             // compute the remaning internal solid surfaces as difference
             ExPolygons not_to_bridge = diff_ex(internal_solid, to_polygons(to_bridge), true);
             to_bridge = intersection_ex(to_polygons(to_bridge), internal_solid, true);
