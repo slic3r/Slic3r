@@ -124,25 +124,32 @@ void Layer::make_perimeters()
         for (LayerRegionPtrs::const_iterator it = layerm + 1; it != m_regions.end(); ++it) {
             LayerRegion* other_layerm = *it;
             const PrintRegionConfig &other_config = other_layerm->region()->config();
-            //FIXME get this list from the menu list itself to avoid duplication
-            // also, this list is TOO SHORT
             /// !!! add here the settings you want to be added in the per-object menu.
             /// if you don't do that, objects will share the same region, and the same settings.
             if (config.perimeter_extruder           == other_config.perimeter_extruder
                 && config.perimeters                == other_config.perimeters
-                && config.only_one_perimeter_top    == other_config.only_one_perimeter_top
-                && config.perimeter_speed           == other_config.perimeter_speed
+                && config.perimeter_speed           == other_config.perimeter_speed // it os mandatory? can't this be set at gcode.cpp?
+                && config.external_perimeter_extrusion_width == other_config.external_perimeter_extrusion_width
+                && config.external_perimeters_first == other_config.external_perimeters_first
                 && config.external_perimeter_speed  == other_config.external_perimeter_speed
+                && config.extra_perimeters_odd_layers == other_config.extra_perimeters_odd_layers
+                && config.gap_fill                  == other_config.gap_fill
+                && config.gap_fill_min_area         == other_config.gap_fill_min_area
                 && config.gap_fill_speed            == other_config.gap_fill_speed
+                && config.infill_dense              == other_config.infill_dense
+                && config.infill_dense_algo         == other_config.infill_dense_algo
+                && config.only_one_perimeter_top    == other_config.only_one_perimeter_top
                 && config.overhangs                 == other_config.overhangs
                 && config.overhangs_width           == other_config.overhangs_width
-                && config.opt_serialize("perimeter_extrusion_width").compare(other_config.opt_serialize("perimeter_extrusion_width")) == 0
-                && config.opt_serialize("external_perimeter_extrusion_width").compare(other_config.opt_serialize("external_perimeter_extrusion_width")) == 0
+                && config.perimeter_extrusion_width == other_config.perimeter_extrusion_width
+                && config.perimeter_loop            == other_config.perimeter_loop
+                && config.perimeter_loop_seam       == other_config.perimeter_loop_seam
+                && config.perimeter_speed           == other_config.perimeter_speed
+                && config.small_perimeter_speed     == other_config.small_perimeter_speed
                 && config.thin_walls                == other_config.thin_walls
                 && config.thin_walls_min_width      == other_config.thin_walls_min_width
-                && config.thin_perimeters           == other_config.thin_perimeters
                 && config.thin_walls_overlap        == other_config.thin_walls_overlap
-                && config.external_perimeters_first == other_config.external_perimeters_first
+                && config.thin_perimeters           == other_config.thin_perimeters
                 && config.infill_overlap            == other_config.infill_overlap
                 && config.perimeter_loop            == other_config.perimeter_loop) {
                 layerms.push_back(other_layerm);
@@ -176,7 +183,7 @@ void Layer::make_perimeters()
             SurfaceCollection fill_surfaces;
             layerm_config->make_perimeters(new_slices, &fill_surfaces);
 
-            // assign fill_surfaces to each layer
+            // assign fill_surfaces to each LayerRegion
             if (!fill_surfaces.surfaces.empty()) { 
                 for (LayerRegionPtrs::iterator l = layerms.begin(); l != layerms.end(); ++l) {
                     // Separate the fill surfaces.
