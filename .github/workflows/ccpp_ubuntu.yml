@@ -12,6 +12,8 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
+    - name: change date in version
+      run: sed -i "s/+UNKNOWN/_$(date '+%F')/" version.inc
     - name: install gtk2 glew
       run: sudo apt-get install libgtk2.0-dev libglew-dev libudev-dev
     - name: mkdir in deps
@@ -27,8 +29,6 @@ jobs:
     - name: cmake
       working-directory: ./build
       run: cmake .. -DCMAKE_PREFIX_PATH="/home/runner/work/Slic3r/Slic3r/deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
-    - name: change date in version
-      run: sed "s/UNKNOWN/$(date '+%F')/" version.inc
     - name: make slic3r
       working-directory: ./build
       run: make slic3r

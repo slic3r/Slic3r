@@ -12,6 +12,8 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
+    - name: change date in version
+      run: sed -i "s/+UNKNOWN/_$(date '+%F')/" version.inc
     - name: mkdir in deps
       run: mkdir deps/build
     - name: cmake deps
@@ -25,8 +27,6 @@ jobs:
     - name: cmake
       working-directory: ./build
       run: cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.14" -DSLIC3R_STATIC=1
-    - name: change date in version
-      run: sed "s/UNKNOWN/$(date '+%F')/" version.inc
     - name: make slic3r
       working-directory: ./build
       run: make slic3r

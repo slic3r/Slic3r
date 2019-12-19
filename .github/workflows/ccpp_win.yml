@@ -12,6 +12,9 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: ilammy/msvc-dev-cmd@v1
+    - name: change date in version
+      shell: powershell
+      run: (Get-Content version.inc) | Foreach-Object {$_ -replace "\+UNKNOWN", ("_" + [datetime]::Today.ToString("yyyy-MM-dd"))} | Set-Content version.inc
     - name: mkdir in deps
       run: mkdir deps/build
     - name: cmake deps
@@ -24,10 +27,8 @@ jobs:
     - name: cmake
       working-directory: ./build
       run: cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH="d:\a\Slic3r\Slic3r\deps\build\destdir\usr\local"
-    - name: change date in version
-      shell: powershell
-      run: (Get-Content version.inc) | Foreach-Object {$_ -replace "UNKNOWN", [datetime]::Today.ToString("yyyy-MM-dd")} | Set-Content version.inc
     - name: make
+      working-directory: ./build
       run: msbuild /m /P:Configuration=Release INSTALL.vcxproj
     - name: create directory and copy into it
       working-directory: ./build
