@@ -14,6 +14,10 @@ PrinterEditor::PrinterEditor(wxWindow* parent, t_config_option_keys options) :
 void PrinterEditor::_update(const std::string& opt_key) {
 }
 
+// TODO
+void PrinterEditor::_on_preset_loaded() {
+}
+
 void PrinterEditor::_build() {
 }
 }} // namespace Slic3r::GUI
