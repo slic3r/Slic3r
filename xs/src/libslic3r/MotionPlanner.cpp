@@ -362,7 +362,7 @@ MotionPlannerGraph::shortest_path(node_t from, node_t to)
         auto cmp = [dist](const std::pair<node_t, node_t> &a, const std::pair<node_t, node_t> &b){ return dist[a.first] < dist[b.first]; };
         // Type is a pair of node_t where the the first value is the index of the node and
         // the second value is the previous node
-        std::priority_queue<std::pair<node_t, node_t>> Q(decltype(cmp));
+        std::priority_queue<std::pair<node_t, node_t>, std::vector<std::pair<node_t, node_t>>, decltype(cmp)> Q(cmp);
         Q.emplace(from, -1);
         
         while (!Q.empty()) 
