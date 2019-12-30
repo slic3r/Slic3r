@@ -357,31 +357,29 @@ MotionPlannerGraph::shortest_path(node_t from, node_t to)
         dist[from] = 0;  // distance from 'from' to itself
         previous.clear();
         previous.resize(n, -1);
+        std::vector<bool> visited(n);
         
-        // initialize the Q with all nodes
-        std::set<node_t> Q;
-        for (node_t i = 0; i < n; ++i) Q.insert(i);
+        auto cmp = [dist](const std::pair<node_t, node_t> &a, const std::pair<node_t, node_t> &b){ return dist[a.first] < dist[b.first]; };
+        // Type is a pair of node_t where the the first value is the index of the node and
+        // the second value is the previous node
+        std::priority_queue<std::pair<node_t, node_t>> Q(decltype(cmp));
+        Q.emplace(from, -1);
         
         while (!Q.empty()) 
         {
             // get node in Q having the minimum dist ('from' in the first loop)
-            node_t u;
-            {
-                double min_dist = -1;
-                for (std::set<node_t>::const_iterator n = Q.begin(); n != Q.end(); ++n) {
-                    if (dist[*n] < min_dist || min_dist == -1) {
-                        u = *n;
-                        min_dist = dist[*n];
-                    }
-                }
-            }
-            Q.erase(u);
+            std::pair<node_t, node_t> u = Q.top();
+            Q.pop();
+            if (visited[u.first])
+                continue;
+            previous[u.first] = u.second;
+            visited[u.first] = true;
             
             // stop searching if we reached our destination
-            if (u == to) break;
+            if (u.first == to) break;
             
             // Visit each edge starting from node u
-            const std::vector<neighbor> &neighbors = this->adjacency_list[u];
+            const std::vector<neighbor> &neighbors = this->adjacency_list[u.first];
             for (std::vector<neighbor>::const_iterator neighbor_iter = neighbors.begin();
                  neighbor_iter != neighbors.end();
                  ++neighbor_iter)
@@ -390,18 +388,12 @@ MotionPlannerGraph::shortest_path(node_t from, node_t to)
                 node_t v = neighbor_iter->target;
                 
                 // skip if we already visited this
-                if (Q.find(v) == Q.end()) continue;
+                if (visited[v]) continue;
                 
                 // calculate total distance
-                weight_t alt = dist[u] + neighbor_iter->weight;
-                
-                // if total distance through u is shorter than the previous
-                // distance (if any) between 'from' and 'v', replace it
-                if (alt < dist[v]) {
-                    dist[v]     = alt;
-                    previous[v] = u;
-                }
-
+                dist[v] = dist[u.first] + neighbor_iter->weight;
+                // insert in the priority queue
+                Q.emplace(v, u.first);
             }
         }
     }
