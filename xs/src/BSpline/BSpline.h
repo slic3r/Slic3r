@@ -138,7 +138,7 @@ template <class T> struct BSplineBaseP;
  * own instantiation.
  *
  * The algorithm is based on the cubic spline described by Katsuyuki Ooyama
- * in Montly Weather Review, Vol 115, October 1987.  This implementation
+ * in Monthly Weather Review, Vol 115, October 1987.  This implementation
  * has benefited from comparisons with a previous FORTRAN implementation by
  * James L. Franklin, NOAA/Hurricane Research Division.  In particular, the
  * algorithm in the Setup() method is based mostly on his implementation

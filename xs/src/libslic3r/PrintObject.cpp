@@ -678,9 +678,9 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
                 // we need to thicken last layer
                 coordf_t new_h = result[last_layer] - result[last_layer-1];
                 if(this->config.adaptive_slicing.value) { // use min/max layer_height values from adaptive algo.
-                    new_h = std::min(max_layer_height, new_h - diff); // add (negativ) diff value
+                    new_h = std::min(max_layer_height, new_h - diff); // add (negative) diff value
                 }else{
-                    new_h = std::min(min_nozzle_diameter, new_h - diff); // add (negativ) diff value
+                    new_h = std::min(min_nozzle_diameter, new_h - diff); // add (negative) diff value
                 }
                 result[last_layer] = result[last_layer-1] + new_h;
             } else {
