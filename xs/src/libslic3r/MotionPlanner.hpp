@@ -6,7 +6,7 @@
 #include "ExPolygonCollection.hpp"
 #include "Polyline.hpp"
 #include <map>
-#include <priority_queue>
+#include <queue>
 #include <utility>
 #include <vector>
 
