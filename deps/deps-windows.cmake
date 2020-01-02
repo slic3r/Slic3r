@@ -134,7 +134,7 @@ ExternalProject_Add(dep_cereal
 ExternalProject_Add(dep_nlopt
     EXCLUDE_FROM_ALL 1
     URL "https://github.com/stevengj/nlopt/archive/v2.5.0.tar.gz"
-    URL_HASH SHA256=c6dd7a5701fff8ad5ebb45a3dc8e757e61d52658de3918e38bab233e7fd3b4ae
+    URL_HASH SHA256=c81bf6d981c328f3e634709dc84746e32ff5cfb715f698ead2de4d57e30a0e70
     CMAKE_GENERATOR "${DEP_MSVC_GEN}"
 #    if (DEP_VS_VER MORE 15)
 #        CMAKE_GENERATOR_PLATFORM "${DEP_PLATFORM}"
@@ -154,38 +154,37 @@ ExternalProject_Add(dep_nlopt
 
 add_debug_dep(dep_nlopt)
 
-ExternalProject_Add(dep_zlib
-    EXCLUDE_FROM_ALL 1
-    URL "https://zlib.net/zlib-1.2.11.tar.xz"
-    URL_HASH SHA256=4ff941449631ace0d4d203e3483be9dbc9da454084111f97ea0a2114e19bf066
-    CMAKE_GENERATOR "${DEP_MSVC_GEN}"
-#    if (DEP_VS_VER MORE 15)
-#        CMAKE_GENERATOR_PLATFORM "${DEP_PLATFORM}"
-#    endif()
-    CMAKE_ARGS
-        -DSKIP_INSTALL_FILES=ON                                    # Prevent installation of man pages et al.
-        "-DINSTALL_BIN_DIR=${CMAKE_CURRENT_BINARY_DIR}\\fallout"   # I found no better way of preventing zlib from creating & installing DLLs :-/
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-        "-DCMAKE_INSTALL_PREFIX:PATH=${DESTDIR}\\usr\\local"
-    BUILD_COMMAND msbuild /m /P:Configuration=Release INSTALL.vcxproj
-    INSTALL_COMMAND ""
-)
+include(ZLIB/ZLIB.cmake)
+# ExternalProject_Add(dep_zlib
+#     EXCLUDE_FROM_ALL 1
+#     URL "https://zlib.net/zlib-1.2.11.tar.xz"
+#     URL_HASH SHA256=4ff941449631ace0d4d203e3483be9dbc9da454084111f97ea0a2114e19bf066
+#     CMAKE_GENERATOR "${DEP_MSVC_GEN}"
+#     CMAKE_GENERATOR_PLATFORM "${DEP_PLATFORM}"
+#     CMAKE_ARGS
+#         -DSKIP_INSTALL_FILES=ON                                    # Prevent installation of man pages et al.
+#         "-DINSTALL_BIN_DIR=${CMAKE_CURRENT_BINARY_DIR}\\fallout"   # I found no better way of preventing zlib from creating & installing DLLs :-/
+#         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+#         "-DCMAKE_INSTALL_PREFIX:PATH=${DESTDIR}\\usr\\local"
+#     BUILD_COMMAND msbuild /m /P:Configuration=Release INSTALL.vcxproj
+#     INSTALL_COMMAND ""
+# )
 
-add_debug_dep(dep_zlib)
+add_debug_dep(dep_ZLIB)
 
 # The following steps are unfortunately needed to remove the _static suffix on libraries
-ExternalProject_Add_Step(dep_zlib fix_static
-    DEPENDEES install
-    COMMAND "${CMAKE_COMMAND}" -E rename zlibstatic.lib zlib.lib
-    WORKING_DIRECTORY "${DESTDIR}\\usr\\local\\lib\\"
-)
-if (${DEP_DEBUG})
-    ExternalProject_Add_Step(dep_zlib fix_static_debug
-        DEPENDEES install
-        COMMAND "${CMAKE_COMMAND}" -E rename zlibstaticd.lib zlibd.lib
-        WORKING_DIRECTORY "${DESTDIR}\\usr\\local\\lib\\"
-    )
-endif ()
+# ExternalProject_Add_Step(dep_zlib fix_static
+#     DEPENDEES install
+#     COMMAND "${CMAKE_COMMAND}" -E rename zlibstatic.lib zlib.lib
+#     WORKING_DIRECTORY "${DESTDIR}\\usr\\local\\lib\\"
+# )
+# if (${DEP_DEBUG})
+#     ExternalProject_Add_Step(dep_zlib fix_static_debug
+#         DEPENDEES install
+#         COMMAND "${CMAKE_COMMAND}" -E rename zlibstaticd.lib zlibd.lib
+#         WORKING_DIRECTORY "${DESTDIR}\\usr\\local\\lib\\"
+#     )
+# endif ()
 
 if (${DEPS_BITS} EQUAL 32)
     set(DEP_LIBCURL_TARGET "x86")
@@ -220,8 +219,6 @@ if (${DEP_DEBUG})
         WORKING_DIRECTORY "${SOURCE_DIR}"
     )
 endif ()
-
-find_package(Git REQUIRED)
 
 ExternalProject_Add(dep_qhull
     EXCLUDE_FROM_ALL 1
@@ -280,7 +277,7 @@ ExternalProject_Add(dep_blosc
     #URL_HASH SHA256=7463a1df566704f212263312717ab2c36b45d45cba6cd0dccebf91b2cc4b4da9
     GIT_REPOSITORY https://github.com/Blosc/c-blosc.git
     GIT_TAG e63775855294b50820ef44d1b157f4de1cc38d3e #v1.17.0
-    DEPENDS dep_zlib
+    DEPENDS dep_ZLIB
     CMAKE_GENERATOR "${DEP_MSVC_GEN}"
     CMAKE_GENERATOR_PLATFORM "${DEP_PLATFORM}"
     CMAKE_ARGS
@@ -307,7 +304,7 @@ ExternalProject_Add(dep_openexr
     EXCLUDE_FROM_ALL 1
     GIT_REPOSITORY https://github.com/openexr/openexr.git
     GIT_TAG eae0e337c9f5117e78114fd05f7a415819df413a #v2.4.0 
-    DEPENDS dep_zlib
+    DEPENDS dep_ZLIB
     CMAKE_GENERATOR "${DEP_MSVC_GEN}"
     CMAKE_GENERATOR_PLATFORM "${DEP_PLATFORM}"
     CMAKE_ARGS

@@ -83,7 +83,9 @@ using Vec3dEvent = Event<Vec3d>;
 template <size_t N> using Vec3dsEvent = ArrayEvent<Vec3d, N>;
 
 
+#if !ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 wxDECLARE_EVENT(EVT_GLCANVAS_INIT, SimpleEvent);
+#endif // !ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 wxDECLARE_EVENT(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_RIGHT_CLICK, RBtnEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_REMOVE_OBJECT, SimpleEvent);
@@ -184,7 +186,7 @@ private:
         bool                        m_layer_height_profile_modified;
 
 #if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-        mutable float               m_adaptive_cusp;
+        mutable float               m_adaptive_quality;
         mutable HeightProfileSmoothingParams m_smooth_params;
 #endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
@@ -235,8 +237,8 @@ private:
 		void accept_changes(GLCanvas3D& canvas);
         void reset_layer_height_profile(GLCanvas3D& canvas);
 #if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-        void adaptive_layer_height_profile(GLCanvas3D& canvas, float cusp);
-        void smooth_layer_height_profile(GLCanvas3D& canvas, const HeightProfileSmoothingParams& smoothing_paramsn);
+        void adaptive_layer_height_profile(GLCanvas3D& canvas, float quality_factor);
+        void smooth_layer_height_profile(GLCanvas3D& canvas, const HeightProfileSmoothingParams& smoothing_params);
 #endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
         static float get_cursor_z_relative(const GLCanvas3D& canvas);
@@ -418,7 +420,6 @@ private:
     std::unique_ptr<RetinaHelper> m_retina_helper;
 #endif
     bool m_in_render;
-    bool m_render_enabled;
     LegendTexture m_legend_texture;
     WarningTexture m_warning_texture;
     wxTimer m_timer;
@@ -436,7 +437,9 @@ private:
     bool m_use_clipping_planes;
     mutable SlaCap m_sla_caps[2];
     std::string m_sidebar_field;
-    bool m_keep_dirty;
+    // when true renders an extra frame by not resetting m_dirty to false
+    // see request_extra_frame()
+    bool m_extra_frame_requested;
 
     mutable GLVolumeCollection m_volumes;
     Selection m_selection;
@@ -477,7 +480,7 @@ private:
     RenderStats m_render_stats;
 #endif // ENABLE_RENDER_STATISTICS
 
-    int m_imgui_undo_redo_hovered_pos{ -1 };
+    mutable int m_imgui_undo_redo_hovered_pos{ -1 };
     int m_selected_extruder;
 
 public:
@@ -539,7 +542,7 @@ public:
 
 #if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
     void reset_layer_height_profile();
-    void adaptive_layer_height_profile(float cusp);
+    void adaptive_layer_height_profile(float quality_factor);
     void smooth_layer_height_profile(const HeightProfileSmoothingParams& smoothing_params);
 #endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
@@ -556,9 +559,6 @@ public:
     void enable_dynamic_background(bool enable);
     void allow_multisample(bool allow);
 
-    void enable_render(bool enable) { m_render_enabled = enable; }
-    bool is_render_enabled() const { return m_render_enabled; }
-
     void zoom_to_bed();
     void zoom_to_volumes();
     void zoom_to_selection();
@@ -572,7 +572,7 @@ public:
 #if ENABLE_THUMBNAIL_GENERATOR
     // printable_only == false -> render also non printable volumes as grayed
     // parts_only == false -> render also sla support and pad
-    void render_thumbnail(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, bool printable_only, bool parts_only, bool show_bed, bool transparent_background);
+    void render_thumbnail(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, bool printable_only, bool parts_only, bool show_bed, bool transparent_background) const;
 #endif // ENABLE_THUMBNAIL_GENERATOR
 
     void select_all();
@@ -667,9 +667,7 @@ public:
     void set_cursor(ECursorType type);
     void msw_rescale();
 
-    bool is_keeping_dirty() const { return m_keep_dirty; }
-    void start_keeping_dirty() { m_keep_dirty = true; }
-    void stop_keeping_dirty() { m_keep_dirty = false; }
+    void request_extra_frame() { m_extra_frame_requested = true; }
 
     int get_main_toolbar_item_id(const std::string& name) const { return m_main_toolbar.get_item_id(name); }
     void force_main_toolbar_left_action(int item_id) { m_main_toolbar.force_left_action(item_id, *this); }
@@ -686,6 +684,9 @@ private:
     bool _init_toolbars();
     bool _init_main_toolbar();
     bool _init_undoredo_toolbar();
+#if ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
+    bool _init_view_toolbar();
+#endif // ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 
     bool _set_current();
     void _resize(unsigned int w, unsigned int h);
@@ -724,15 +725,15 @@ private:
 #endif // ENABLE_SHOW_CAMERA_TARGET
     void _render_sla_slices() const;
     void _render_selection_sidebar_hints() const;
-    void _render_undo_redo_stack(const bool is_undo, float pos_x);
+    void _render_undo_redo_stack(const bool is_undo, float pos_x) const;
 #if ENABLE_THUMBNAIL_GENERATOR
-    void _render_thumbnail_internal(ThumbnailData& thumbnail_data, bool printable_only, bool parts_only, bool show_bed, bool transparent_background);
+    void _render_thumbnail_internal(ThumbnailData& thumbnail_data, bool printable_only, bool parts_only, bool show_bed, bool transparent_background) const;
     // render thumbnail using an off-screen framebuffer
-    void _render_thumbnail_framebuffer(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, bool printable_only, bool parts_only, bool show_bed, bool transparent_background);
+    void _render_thumbnail_framebuffer(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, bool printable_only, bool parts_only, bool show_bed, bool transparent_background) const;
     // render thumbnail using an off-screen framebuffer when GLEW_EXT_framebuffer_object is supported
-    void _render_thumbnail_framebuffer_ext(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, bool printable_only, bool parts_only, bool show_bed, bool transparent_background);
+    void _render_thumbnail_framebuffer_ext(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, bool printable_only, bool parts_only, bool show_bed, bool transparent_background) const;
     // render thumbnail using the default framebuffer
-    void _render_thumbnail_legacy(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, bool printable_only, bool parts_only, bool show_bed, bool transparent_background);
+    void _render_thumbnail_legacy(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, bool printable_only, bool parts_only, bool show_bed, bool transparent_background) const;
 #endif // ENABLE_THUMBNAIL_GENERATOR
 
     void _update_volumes_hover_state() const;

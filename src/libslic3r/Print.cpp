@@ -773,10 +773,10 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
 				model_object_status.emplace(model_object->id(), ModelObjectStatus::Old);
 
             // But if custom gcode per layer height was changed
-            if (m_model.custom_gcode_per_height != model.custom_gcode_per_height) {
+            if (m_model.custom_gcode_per_print_z != model.custom_gcode_per_print_z) {
                 // we should stop background processing
                 update_apply_status(this->invalidate_step(psGCodeExport));
-                m_model.custom_gcode_per_height = model.custom_gcode_per_height;
+                m_model.custom_gcode_per_print_z = model.custom_gcode_per_print_z;
             }
         } else if (model_object_list_extended(m_model, model)) {
             // Add new objects. Their volumes and configs will be synchronized later.
@@ -1286,6 +1286,8 @@ std::string Print::validate() const
             return L("Ooze prevention is currently not supported with the wipe tower enabled.");
         if (m_config.use_volumetric_e)
             return L("The Wipe Tower currently does not support volumetric E (use_volumetric_e=0).");
+        if (m_config.complete_objects && extruders().size() > 1)
+            return L("The Wipe Tower is currently not supported for multimaterial sequential prints.");
         
         if (m_objects.size() > 1) {
             bool                                has_custom_layering = false;
@@ -1356,7 +1358,7 @@ std::string Print::validate() const
                             } while (ref_z == next_ref_z);
                         }
                         if (std::abs(this_height - ref_height) > EPSILON)
-                            return L("The Wipe tower is only supported if all objects have the same layer height profile");
+                            return L("The Wipe tower is only supported if all objects have the same variable layer height");
                         i += 2;
                     }
                 }

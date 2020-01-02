@@ -46,6 +46,7 @@
 #include "SysInfoDialog.hpp"
 #include "KBShortcutsDialog.hpp"
 #include "UpdateDialogs.hpp"
+#include "RemovableDriveManager.hpp"
 
 #ifdef __WXMSW__
 #include <Shlobj.h>
@@ -259,6 +260,8 @@ bool GUI_App::on_init_inner()
 
     m_printhost_job_queue.reset(new PrintHostJobQueue(mainframe->printhost_queue_dlg()));
 
+	RemovableDriveManager::get_instance().init();
+
     Bind(wxEVT_IDLE, [this](wxIdleEvent& event)
     {
         if (! plater_)
@@ -268,6 +271,10 @@ bool GUI_App::on_init_inner()
             app_config->save();
 
         this->obj_manipul()->update_if_dirty();
+
+#if !__APPLE__
+		RemovableDriveManager::get_instance().update(wxGetLocalTime(), true);
+#endif
 
         // Preset updating & Configwizard are done after the above initializations,
         // and after MainFrame is created & shown.
@@ -296,6 +303,7 @@ bool GUI_App::on_init_inner()
                 preset_updater->slic3r_update_notify();
                 preset_updater->sync(preset_bundle);
             });
+			
         }
     });
 
@@ -332,16 +340,11 @@ unsigned GUI_App::get_colour_approx_luma(const wxColour &colour)
 
 bool GUI_App::dark_mode()
 {
-    const unsigned luma = get_colour_approx_luma(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-    return luma < 128;
-}
-
-bool GUI_App::dark_mode_menus()
-{
 #if __APPLE__
     return mac_dark_mode();
 #else
-    return dark_mode();
+    const unsigned luma = get_colour_approx_luma(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+    return luma < 128;
 #endif
 }
 
@@ -464,6 +467,9 @@ void GUI_App::recreate_GUI()
 
         dlg.Update(30, _(L("Recreating")) + dots);
         topwindow->Destroy();
+
+        // For this moment ConfigWizard is deleted, invalidate it
+        m_wizard = nullptr;
     }
 
     dlg.Update(80, _(L("Loading of current presets")) + dots);

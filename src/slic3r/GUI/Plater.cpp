@@ -77,6 +77,7 @@
 #include "../Utils/FixModelByWin10.hpp"
 #include "../Utils/UndoRedo.hpp"
 #include "../Utils/Thread.hpp"
+#include "RemovableDriveManager.hpp"
 
 #include <wx/glcanvas.h>    // Needs to be last because reasons :-/
 #include "WipeTowerDialog.hpp"
@@ -698,7 +699,8 @@ struct Sidebar::priv
 
     wxButton *btn_export_gcode;
     wxButton *btn_reslice;
-    wxButton *btn_send_gcode;
+    ScalableButton *btn_send_gcode;
+    ScalableButton *btn_remove_device;
 
     priv(Plater *plater) : plater(plater) {}
     ~priv();
@@ -848,22 +850,47 @@ Sidebar::Sidebar(Plater *parent)
 
     // Buttons underneath the scrolled area
 
-    auto init_btn = [this](wxButton **btn, wxString label) {
+    // rescalable bitmap buttons "Send to printer" and "Remove device" 
+
+    auto init_scalable_btn = [this](ScalableButton** btn, const std::string& icon_name, wxString tooltip = wxEmptyString)
+    {
+#ifdef __APPLE__
+        int bmp_px_cnt = 16;
+#else
+        int bmp_px_cnt = 32;
+#endif //__APPLE__
+        ScalableBitmap bmp = ScalableBitmap(this, icon_name, bmp_px_cnt);
+        *btn = new ScalableButton(this, wxID_ANY, bmp, "", wxBU_EXACTFIT);
+        (*btn)->SetToolTip(tooltip);
+        (*btn)->Hide();
+    };
+
+    init_scalable_btn(&p->btn_send_gcode   , "export_gcode", _(L("Send to printer")));
+    init_scalable_btn(&p->btn_remove_device, "cross"       , _(L("Remove device")));
+
+    // regular buttons "Slice now" and "Export G-code" 
+
+    const int scaled_height = p->btn_remove_device->GetBitmapHeight() + 4;
+    auto init_btn = [this](wxButton **btn, wxString label, const int button_height) {
         *btn = new wxButton(this, wxID_ANY, label, wxDefaultPosition, 
-                            wxDefaultSize, wxBU_EXACTFIT);
+                            wxSize(-1, button_height), wxBU_EXACTFIT);
         (*btn)->SetFont(wxGetApp().bold_font());
     };
 
-    init_btn(&p->btn_send_gcode,   _(L("Send to printer")));
-    p->btn_send_gcode->Hide();
-    init_btn(&p->btn_export_gcode, _(L("Export G-code")) + dots);
-    init_btn(&p->btn_reslice,      _(L("Slice now")));
+    init_btn(&p->btn_export_gcode, _(L("Export G-code")) + dots , scaled_height);
+    init_btn(&p->btn_reslice     , _(L("Slice now"))            , scaled_height);
+
     enable_buttons(false);
 
     auto *btns_sizer = new wxBoxSizer(wxVERTICAL);
+
+    auto* complect_btns_sizer = new wxBoxSizer(wxHORIZONTAL);
+    complect_btns_sizer->Add(p->btn_export_gcode, 1, wxEXPAND);
+    complect_btns_sizer->Add(p->btn_send_gcode);
+    complect_btns_sizer->Add(p->btn_remove_device);
+
     btns_sizer->Add(p->btn_reslice, 0, wxEXPAND | wxTOP, margin_5);
-    btns_sizer->Add(p->btn_send_gcode, 0, wxEXPAND | wxTOP, margin_5);
-    btns_sizer->Add(p->btn_export_gcode, 0, wxEXPAND | wxTOP, margin_5);
+    btns_sizer->Add(complect_btns_sizer, 0, wxEXPAND | wxTOP, margin_5);
 
     auto *sizer = new wxBoxSizer(wxVERTICAL);
     sizer->Add(p->scrolled, 1, wxEXPAND);
@@ -882,6 +909,7 @@ Sidebar::Sidebar(Plater *parent)
 		p->plater->select_view_3D("Preview");
     });
     p->btn_send_gcode->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { p->plater->send_gcode(); });
+    p->btn_remove_device->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { p->plater->eject_drive(); });
 }
 
 Sidebar::~Sidebar() {}
@@ -1026,6 +1054,12 @@ void Sidebar::msw_rescale()
     p->object_layers->msw_rescale();
 
     p->object_info->msw_rescale();
+
+    p->btn_send_gcode->msw_rescale();
+    p->btn_remove_device->msw_rescale();
+    const int scaled_height = p->btn_remove_device->GetBitmap().GetHeight() + 4;
+    p->btn_export_gcode->SetMinSize(wxSize(-1, scaled_height));
+    p->btn_reslice     ->SetMinSize(wxSize(-1, scaled_height));
 
     p->scrolled->Layout();
 }
@@ -1255,11 +1289,13 @@ void Sidebar::enable_buttons(bool enable)
     p->btn_reslice->Enable(enable);
     p->btn_export_gcode->Enable(enable);
     p->btn_send_gcode->Enable(enable);
+    p->btn_remove_device->Enable(enable);
 }
 
 bool Sidebar::show_reslice(bool show)   const { return p->btn_reslice->Show(show); }
 bool Sidebar::show_export(bool show)    const { return p->btn_export_gcode->Show(show); }
 bool Sidebar::show_send(bool show)      const { return p->btn_send_gcode->Show(show); }
+bool Sidebar::show_disconnect(bool show)const { return p->btn_remove_device->Show(show); }
 
 bool Sidebar::is_multifilament()
 {
@@ -1820,6 +1856,10 @@ struct Plater::priv
     bool is_preview_loaded() const { return preview->is_loaded(); }
     bool is_view3D_shown() const { return current_panel == view3D; }
 
+#if ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
+    bool init_view_toolbar();
+#endif // ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
+
     void reset_all_gizmos();
     void update_ui_from_settings();
     ProgressStatusBar* statusbar();
@@ -1965,7 +2005,9 @@ private:
     bool complit_init_object_menu();
     bool complit_init_sla_object_menu();
     bool complit_init_part_menu();
+#if !ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
     void init_view_toolbar();
+#endif // !ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 
     bool can_split() const;
     bool layers_height_allowed() const;
@@ -2117,7 +2159,9 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     view3D_canvas->Bind(EVT_GLTOOLBAR_SPLIT_OBJECTS, &priv::on_action_split_objects, this);
     view3D_canvas->Bind(EVT_GLTOOLBAR_SPLIT_VOLUMES, &priv::on_action_split_volumes, this);
     view3D_canvas->Bind(EVT_GLTOOLBAR_LAYERSEDITING, &priv::on_action_layersediting, this);
+#if !ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
     view3D_canvas->Bind(EVT_GLCANVAS_INIT, [this](SimpleEvent&) { init_view_toolbar(); });
+#endif // !ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
     view3D_canvas->Bind(EVT_GLCANVAS_UPDATE_BED_SHAPE, [this](SimpleEvent&)
         {
             set_bed_shape(config->option<ConfigOptionPoints>("bed_shape")->values,
@@ -2327,7 +2371,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         config += std::move(config_loaded);
                     }
 
-                    this->model.custom_gcode_per_height = model.custom_gcode_per_height;
+                    this->model.custom_gcode_per_print_z = model.custom_gcode_per_print_z;
                 }
 
                 if (load_config)
@@ -2746,7 +2790,7 @@ void Plater::priv::reset()
     // The hiding of the slicing results, if shown, is not taken care by the background process, so we do it here
     this->sidebar->show_sliced_info_sizer(false);
 
-    model.custom_gcode_per_height.clear();
+    model.custom_gcode_per_print_z.clear();
 }
 
 void Plater::priv::mirror(Axis axis)
@@ -3147,6 +3191,7 @@ void Plater::priv::update_fff_scene()
         this->preview->reload_print();
     // In case this was MM print, wipe tower bounding box on 3D tab might need redrawing with exact depth:
 	view3D->reload_scene(true);
+	
 }
 
 void Plater::priv::update_sla_scene()
@@ -3196,12 +3241,81 @@ void Plater::priv::reload_from_disk()
 
     // collects paths of files to load
     std::vector<fs::path> input_paths;
+#if ENABLE_RELOAD_FROM_DISK_MISSING_SELECTION
+    std::vector<fs::path> missing_input_paths;
+#endif // ENABLE_RELOAD_FROM_DISK_MISSING_SELECTION
     for (const SelectedVolume& v : selected_volumes)
     {
+#if ENABLE_RELOAD_FROM_DISK_MISSING_SELECTION
+        const ModelObject* object = model.objects[v.object_idx];
+        const ModelVolume* volume = object->volumes[v.volume_idx];
+
+        if (!volume->source.input_file.empty())
+        {
+            if (fs::exists(volume->source.input_file))
+                input_paths.push_back(volume->source.input_file);
+            else
+                missing_input_paths.push_back(volume->source.input_file);
+        }
+#else
         const ModelVolume* volume = model.objects[v.object_idx]->volumes[v.volume_idx];
         if (!volume->source.input_file.empty() && boost::filesystem::exists(volume->source.input_file))
             input_paths.push_back(volume->source.input_file);
+#endif // ENABLE_RELOAD_FROM_DISK_MISSING_SELECTION
     }
+
+#if ENABLE_RELOAD_FROM_DISK_MISSING_SELECTION
+    std::sort(missing_input_paths.begin(), missing_input_paths.end());
+    missing_input_paths.erase(std::unique(missing_input_paths.begin(), missing_input_paths.end()), missing_input_paths.end());
+
+    while (!missing_input_paths.empty())
+    {
+        // ask user to select the missing file
+        fs::path search = missing_input_paths.back();
+        wxString title = _(L("Please select the file to reload"));
+#if defined(__APPLE__)
+        title += " (" + from_u8(search.filename().string()) + "):";
+#else
+        title += ":";
+#endif // __APPLE__
+        wxFileDialog dialog(q, title, "", from_u8(search.filename().string()), file_wildcards(FT_MODEL), wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+        if (dialog.ShowModal() != wxID_OK)
+            return;
+
+        std::string sel_filename_path = dialog.GetPath().ToUTF8().data();
+        std::string sel_filename = fs::path(sel_filename_path).filename().string();
+        if (boost::algorithm::iequals(search.filename().string(), sel_filename))
+        {
+            input_paths.push_back(sel_filename_path);
+            missing_input_paths.pop_back();
+
+            fs::path sel_path = fs::path(sel_filename_path).remove_filename().string();
+
+            std::vector<fs::path>::iterator it = missing_input_paths.begin();
+            while (it != missing_input_paths.end())
+            {
+                // try to use the path of the selected file with all remaining missing files
+                fs::path repathed_filename = sel_path;
+                repathed_filename /= it->filename();
+                if (fs::exists(repathed_filename))
+                {
+                    input_paths.push_back(repathed_filename.string());
+                    it = missing_input_paths.erase(it);
+                }
+                else
+                    ++it;
+            }
+        }
+        else
+        {
+            wxString message = _(L("It is not allowed to change the file to reload")) + " (" + from_u8(search.filename().string()) + ").\n" + _(L("Do you want to retry")) + " ?";
+            wxMessageDialog dlg(q, message, wxMessageBoxCaptionStr, wxYES_NO | wxYES_DEFAULT | wxICON_QUESTION);
+            if (dlg.ShowModal() != wxID_YES)
+                return;
+        }
+    }
+#endif // ENABLE_RELOAD_FROM_DISK_MISSING_SELECTION
+
     std::sort(input_paths.begin(), input_paths.end());
     input_paths.erase(std::unique(input_paths.begin(), input_paths.end()), input_paths.end());
 
@@ -3222,7 +3336,6 @@ void Plater::priv::reload_from_disk()
         catch (std::exception&)
         {
             // error while loading
-            view3D->get_canvas3d()->enable_render(true);
             return;
         }
 
@@ -3234,10 +3347,10 @@ void Plater::priv::reload_from_disk()
             int new_volume_idx = old_volume->source.volume_idx;
             int new_object_idx = old_volume->source.object_idx;
 
-            if (old_volume->source.input_file == path)
+            if (boost::algorithm::iequals(fs::path(old_volume->source.input_file).filename().string(),
+                fs::path(path).filename().string()))
         {
-                if (new_object_idx < (int)new_model.objects.size())
-            {
+                assert(new_object_idx < (int)new_model.objects.size());
                     ModelObject* new_model_object = new_model.objects[new_object_idx];
                     if (new_volume_idx < (int)new_model_object->volumes.size())
                     {
@@ -3247,17 +3360,26 @@ void Plater::priv::reload_from_disk()
                         new_volume->config.apply(old_volume->config);
                         new_volume->set_type(old_volume->type());
                         new_volume->set_material_id(old_volume->material_id());
+#if ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
+                    new_volume->set_transformation(old_volume->get_transformation() * old_volume->source.transform);
+#else
                         new_volume->set_transformation(old_volume->get_transformation());
+#endif // ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
                         new_volume->translate(new_volume->get_transformation().get_matrix(true) * (new_volume->source.mesh_offset - old_volume->source.mesh_offset));
+                    new_volume->source.input_file = path;
                         std::swap(old_model_object->volumes[old_v.volume_idx], old_model_object->volumes.back());
                         old_model_object->delete_volume(old_model_object->volumes.size() - 1);
+#if ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
+                    old_model_object->ensure_on_bed();
+#endif // ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
+                }
             }
         }
     }
-        }
-    }
 
+#if !ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
     model.adjust_min_z();
+#endif // !ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
 
     // update 3D scene
     update();
@@ -3493,6 +3615,7 @@ void Plater::priv::on_process_completed(wxCommandEvent &evt)
     default: break;
     }
 
+
     if (canceled) {
         if (wxGetApp().get_mode() == comSimple)
             sidebar->set_btn_label(ActionButtonType::abReslice, "Slice now");
@@ -3500,6 +3623,16 @@ void Plater::priv::on_process_completed(wxCommandEvent &evt)
     }
     else if (wxGetApp().get_mode() == comSimple)
         show_action_buttons(false);
+
+	if(!canceled && RemovableDriveManager::get_instance().get_is_writing())
+	{	
+		//if (!RemovableDriveManager::get_instance().is_last_drive_removed())
+		//{
+			RemovableDriveManager::get_instance().set_is_writing(false);
+			show_action_buttons(false);
+		//}
+		
+}
 }
 
 void Plater::priv::on_layer_editing_toggled(bool enable)
@@ -3543,17 +3676,32 @@ void Plater::priv::on_right_click(RBtnEvent& evt)
 
     wxMenu* menu = nullptr;
 
-    if (obj_idx == -1)
+    if (obj_idx == -1) // no one or several object are selected
+    { 
+        if (evt.data.second) // right button was clicked on empty space
         menu = &default_menu;
+    else
+    {
+            sidebar->obj_list()->show_multi_selection_menu();
+            return;
+        }
+    }
     else
     {
         // If in 3DScene is(are) selected volume(s), but right button was clicked on empty space
         if (evt.data.second)
         return;
 
-        menu = printer_technology == ptSLA ? &sla_object_menu :
-                   get_selection().is_single_full_instance() ? // show "Object menu" for each FullInstance instead of FullObject
-                   &object_menu : &part_menu;
+        if (printer_technology == ptSLA)
+            menu = &sla_object_menu;
+        else
+        {
+            // show "Object menu" for each one or several FullInstance instead of FullObject
+            const bool is_some_full_instances = get_selection().is_single_full_instance() || 
+                                                get_selection().is_single_full_object() || 
+                                                get_selection().is_multiple_full_instance();
+            menu = is_some_full_instances ? &object_menu : &part_menu;
+        }
 
     sidebar->obj_list()->append_menu_item_settings(menu);
 
@@ -3746,14 +3894,18 @@ bool Plater::priv::init_common_menu(wxMenu* menu, const bool is_part/* = false*/
             [this](wxCommandEvent&) { reload_from_disk(); }, "", nullptr, [this]() { return can_reload_from_disk(); }, q);
 
         append_menu_item(menu, wxID_ANY, _(L("Export as STL")) + dots, _(L("Export the selected object as STL file")),
-            [this](wxCommandEvent&) { q->export_stl(false, true); });
+            [this](wxCommandEvent&) { q->export_stl(false, true); }, "", nullptr, 
+            [this]() {
+                const Selection& selection = get_selection();
+                return selection.is_single_full_instance() || selection.is_single_full_object();
+            }, q);
 
         menu->AppendSeparator();
 
         q->Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) {
             const Selection& selection = get_selection();
             int instance_idx = selection.get_instance_idx();
-            evt.Enable(instance_idx != -1);
+            evt.Enable(selection.is_single_full_instance() || selection.is_single_full_object());
             if (instance_idx != -1)
             {
                 evt.Check(model.objects[selection.get_object_idx()]->instances[instance_idx]->printable);
@@ -3799,7 +3951,7 @@ bool Plater::priv::complit_init_object_menu()
     object_menu.AppendSeparator();
 
     // Layers Editing for object
-    sidebar->obj_list()->append_menu_item_layers_editing(&object_menu);
+    sidebar->obj_list()->append_menu_item_layers_editing(&object_menu, q);
     object_menu.AppendSeparator();
 
     // "Add (volumes)" popupmenu will be added later in append_menu_items_add_volume()
@@ -3834,8 +3986,18 @@ bool Plater::priv::complit_init_part_menu()
     return true;
 }
 
+#if ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
+bool Plater::priv::init_view_toolbar()
+#else
 void Plater::priv::init_view_toolbar()
+#endif //!ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 {
+#if ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
+    if (view_toolbar.get_items_count() > 0)
+        // already initialized
+        return true;
+#endif // ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
+
     BackgroundTexture::Metadata background_data;
     background_data.filename = "toolbar_background.png";
     background_data.left = 16;
@@ -3844,7 +4006,11 @@ void Plater::priv::init_view_toolbar()
     background_data.bottom = 16;
 
     if (!view_toolbar.init(background_data))
+#if ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
+        return false;
+#else
         return;
+#endif // ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 
     view_toolbar.set_horizontal_orientation(GLToolbar::Layout::HO_Left);
     view_toolbar.set_vertical_orientation(GLToolbar::Layout::VO_Bottom);
@@ -3859,7 +4025,11 @@ void Plater::priv::init_view_toolbar()
     item.sprite_id = 0;
     item.left.action_callback = [this]() { if (this->q != nullptr) wxPostEvent(this->q, SimpleEvent(EVT_GLVIEWTOOLBAR_3D)); };
     if (!view_toolbar.add_item(item))
+#if ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
+        return false;
+#else
         return;
+#endif // ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 
     item.name = "Preview";
     item.icon_filename = "preview.svg";
@@ -3867,10 +4037,18 @@ void Plater::priv::init_view_toolbar()
     item.sprite_id = 1;
     item.left.action_callback = [this]() { if (this->q != nullptr) wxPostEvent(this->q, SimpleEvent(EVT_GLVIEWTOOLBAR_PREVIEW)); };
     if (!view_toolbar.add_item(item))
+#if ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
+        return false;
+#else
         return;
+#endif // ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 
     view_toolbar.select_item("3D");
     view_toolbar.set_enabled(true);
+
+#if ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
+    return true;
+#endif // ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 }
 
 bool Plater::priv::can_set_instance_to_object() const
@@ -3931,7 +4109,11 @@ bool Plater::priv::can_reload_from_disk() const
     for (const SelectedVolume& v : selected_volumes)
     {
         const ModelVolume* volume = model.objects[v.object_idx]->volumes[v.volume_idx];
+#if ENABLE_RELOAD_FROM_DISK_MISSING_SELECTION
+        if (!volume->source.input_file.empty())
+#else
         if (!volume->source.input_file.empty() && boost::filesystem::exists(volume->source.input_file))
+#endif // ENABLE_RELOAD_FROM_DISK_MISSING_SELECTION
             paths.push_back(volume->source.input_file);
     }
     std::sort(paths.begin(), paths.end());
@@ -4020,19 +4202,22 @@ void Plater::priv::show_action_buttons(const bool is_ready_to_slice) const
     const auto prin_host_opt = config->option<ConfigOptionString>("print_host");
     const bool send_gcode_shown = prin_host_opt != nullptr && !prin_host_opt->value.empty();
 
+    bool disconnect_shown = !RemovableDriveManager::get_instance().is_last_drive_removed() ; // #dk_FIXME
     // when a background processing is ON, export_btn and/or send_btn are showing 
     if (wxGetApp().app_config->get("background_processing") == "1")
     {
         if (sidebar->show_reslice(false) |
 			sidebar->show_export(true) |
-			sidebar->show_send(send_gcode_shown))
+            sidebar->show_send(send_gcode_shown) |
+            sidebar->show_disconnect(disconnect_shown))
 			sidebar->Layout();
 	}
     else
     {
 		if (sidebar->show_reslice(is_ready_to_slice) |
 			sidebar->show_export(!is_ready_to_slice) |
-			sidebar->show_send(send_gcode_shown && !is_ready_to_slice))
+            sidebar->show_send(send_gcode_shown && !is_ready_to_slice) |
+            sidebar->show_disconnect(disconnect_shown && !is_ready_to_slice))
 			sidebar->Layout();
 	}
 }
@@ -4273,7 +4458,7 @@ void Sidebar::set_btn_label(const ActionButtonType btn_type, const wxString& lab
     {
         case ActionButtonType::abReslice:   p->btn_reslice->SetLabelText(label);        break;
         case ActionButtonType::abExport:    p->btn_export_gcode->SetLabelText(label);   break;
-        case ActionButtonType::abSendGCode: p->btn_send_gcode->SetLabelText(label);     break;
+        case ActionButtonType::abSendGCode: /*p->btn_send_gcode->SetLabelText(label);*/     break;
     }
 }
 
@@ -4532,6 +4717,13 @@ void Plater::cut(size_t obj_idx, size_t instance_idx, coordf_t z, bool keep_uppe
 
     remove(obj_idx);
     p->load_model_objects(new_objects);
+
+    Selection& selection = p->get_selection();
+    size_t last_id = p->model.objects.size() - 1;
+    for (size_t i = 0; i < new_objects.size(); ++i)
+    {
+        selection.add_object((unsigned int)(last_id - i), i == 0);
+}
 }
 
 void Plater::export_gcode()
@@ -4556,7 +4748,13 @@ void Plater::export_gcode()
     }
     default_output_file = fs::path(Slic3r::fold_utf8_to_ascii(default_output_file.string()));
     auto start_dir = wxGetApp().app_config->get_last_output_dir(default_output_file.parent_path().string());
-
+	if (GUI::RemovableDriveManager::get_instance().update())
+	{
+		if (!RemovableDriveManager::get_instance().is_path_on_removable_drive(start_dir))
+		{
+			start_dir = RemovableDriveManager::get_instance().get_drive_path();
+		}
+	}
     wxFileDialog dlg(this, (printer_technology() == ptFFF) ? _(L("Save G-code file as:")) : _(L("Save SL1 file as:")),
         start_dir,
         from_path(default_output_file.filename()),
@@ -4571,7 +4769,22 @@ void Plater::export_gcode()
         output_path = std::move(path);
     }
     if (! output_path.empty())
+	{
+		std::string path = output_path.string();
         p->export_gcode(std::move(output_path), PrintHostJob());
+
+		RemovableDriveManager::get_instance().update(0, false);
+		RemovableDriveManager::get_instance().set_last_save_path(path);
+		RemovableDriveManager::get_instance().verify_last_save_path();
+		
+		if(!RemovableDriveManager::get_instance().is_last_drive_removed())
+		{
+			RemovableDriveManager::get_instance().set_is_writing(true);
+			RemovableDriveManager::get_instance().erase_callbacks();
+			RemovableDriveManager::get_instance().add_callback(std::bind(&Plater::drive_ejected_callback, this));
+}
+
+	}
 }
 
 void Plater::export_stl(bool extended, bool selection_only)
@@ -4851,6 +5064,27 @@ void Plater::send_gcode()
     }
 }
 
+void Plater::eject_drive()
+{
+	RemovableDriveManager::get_instance().update(0, true);
+	//RemovableDriveManager::get_instance().erase_callbacks();
+	//RemovableDriveManager::get_instance().add_callback(std::bind(&Plater::drive_ejected_callback, this));
+	RemovableDriveManager::get_instance().eject_drive(RemovableDriveManager::get_instance().get_last_save_path());
+		
+}
+void Plater::drive_ejected_callback()
+{
+	if (RemovableDriveManager::get_instance().get_did_eject())
+	{
+        RemovableDriveManager::get_instance().set_did_eject(false);
+		wxString message = "Unmounting succesesful. The device " + RemovableDriveManager::get_instance().get_last_save_name() + "(" + RemovableDriveManager::get_instance().get_last_save_path() + ")" + " can now be safely removed from the computer.";
+		wxMessageBox(message);
+	}
+	p->show_action_buttons(false);
+}
+
+
+
 void Plater::take_snapshot(const std::string &snapshot_name) { p->take_snapshot(snapshot_name); }
 void Plater::take_snapshot(const wxString &snapshot_name) { p->take_snapshot(snapshot_name); }
 void Plater::suppress_snapshots() { p->suppress_snapshots(); }
@@ -5061,6 +5295,7 @@ const DynamicPrintConfig* Plater::get_plater_config() const
     return p->config;
 }
 
+// Get vector of extruder colors considering filament color, if extruder color is undefined.
 std::vector<std::string> Plater::get_extruder_colors_from_plater_config() const
 {
     const Slic3r::DynamicPrintConfig* config = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
@@ -5080,13 +5315,17 @@ std::vector<std::string> Plater::get_extruder_colors_from_plater_config() const
     return extruder_colors;
 }
 
+/* Get vector of colors used for rendering of a Preview scene in "Color print" mode
+ * It consists of extruder colors and colors, saved in model.custom_gcode_per_print_z
+ */
 std::vector<std::string> Plater::get_colors_for_color_print() const
 {
     std::vector<std::string> colors = get_extruder_colors_from_plater_config();
+    colors.reserve(colors.size() + p->model.custom_gcode_per_print_z.size());
 
-    for (const Model::CustomGCode& code : p->model.custom_gcode_per_height)
+    for (const Model::CustomGCode& code : p->model.custom_gcode_per_print_z)
         if (code.gcode == ColorChangeCode)
-            colors.push_back(code.color);
+            colors.emplace_back(code.color);
 
     return colors;
 }
@@ -5242,6 +5481,13 @@ void Plater::msw_rescale()
     Layout();
     GetParent()->Layout();
 }
+
+#if ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
+bool Plater::init_view_toolbar()
+{
+    return p->init_view_toolbar();
+}
+#endif // ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 
 const Camera& Plater::get_camera() const
 {

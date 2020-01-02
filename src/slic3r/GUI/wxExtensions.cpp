@@ -13,7 +13,9 @@
 #include <wx/numformatter.h>
 #include <wx/colordlg.h>
 
+#include <boost/filesystem.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/nowide/cstdio.hpp>
 
 #include "BitmapCache.hpp"
 #include "GUI.hpp"
@@ -58,7 +60,7 @@ void msw_rescale_menu(wxMenu* menu)
 #endif /* __WXMSW__ */
 #endif /* no __WXGTK__ */
 
-void enable_menu_item(wxUpdateUIEvent& evt, std::function<bool()> const cb_condition, wxMenuItem* item)
+void enable_menu_item(wxUpdateUIEvent& evt, std::function<bool()> const cb_condition, wxMenuItem* item, wxWindow* win)
 {
     const bool enable = cb_condition();
     evt.Enable(enable);
@@ -67,7 +69,7 @@ void enable_menu_item(wxUpdateUIEvent& evt, std::function<bool()> const cb_condi
     const auto it = msw_menuitem_bitmaps.find(item->GetId());
     if (it != msw_menuitem_bitmaps.end())
     {
-        const wxBitmap& item_icon = create_scaled_bitmap(nullptr, it->second, 16, false, !enable);
+        const wxBitmap& item_icon = create_scaled_bitmap(win, it->second, 16, false, !enable);
         if (item_icon.IsOk())
             item->SetBitmap(item_icon);
     }
@@ -95,8 +97,8 @@ wxMenuItem* append_menu_item(wxMenu* menu, int id, const wxString& string, const
         menu->Bind(wxEVT_MENU, cb, id);
 
     if (parent) {
-        parent->Bind(wxEVT_UPDATE_UI, [cb_condition, item](wxUpdateUIEvent& evt) {
-            enable_menu_item(evt, cb_condition, item); }, id);
+        parent->Bind(wxEVT_UPDATE_UI, [cb_condition, item, parent](wxUpdateUIEvent& evt) {
+            enable_menu_item(evt, cb_condition, item, parent); }, id);
     }
 
     return item;
@@ -109,7 +111,7 @@ wxMenuItem* append_menu_item(wxMenu* menu, int id, const wxString& string, const
     if (id == wxID_ANY)
         id = wxNewId();
 
-    const wxBitmap& bmp = !icon.empty() ? create_scaled_bitmap(nullptr, icon) : wxNullBitmap;   // FIXME: pass window ptr
+    const wxBitmap& bmp = !icon.empty() ? create_scaled_bitmap(parent, icon) : wxNullBitmap;   // FIXME: pass window ptr
 //#ifdef __WXMSW__
 #ifndef __WXGTK__
     if (bmp.IsOk())
@@ -127,7 +129,7 @@ wxMenuItem* append_submenu(wxMenu* menu, wxMenu* sub_menu, int id, const wxStrin
 
     wxMenuItem* item = new wxMenuItem(menu, id, string, description);
     if (!icon.empty()) {
-        item->SetBitmap(create_scaled_bitmap(nullptr, icon));    // FIXME: pass window ptr
+        item->SetBitmap(create_scaled_bitmap(parent, icon));    // FIXME: pass window ptr
 //#ifdef __WXMSW__
 #ifndef __WXGTK__
         msw_menuitem_bitmaps[id] = icon;
@@ -138,8 +140,8 @@ wxMenuItem* append_submenu(wxMenu* menu, wxMenu* sub_menu, int id, const wxStrin
     menu->Append(item);
 
     if (parent) {
-        parent->Bind(wxEVT_UPDATE_UI, [cb_condition, item](wxUpdateUIEvent& evt) {
-            enable_menu_item(evt, cb_condition, item); }, id);
+        parent->Bind(wxEVT_UPDATE_UI, [cb_condition, item, parent](wxUpdateUIEvent& evt) {
+            enable_menu_item(evt, cb_condition, item, parent); }, id);
     }
 
     return item;
@@ -425,6 +427,28 @@ static float get_svg_scale_factor(wxWindow *win)
 #endif
 }
 
+// in the Dark mode of any platform, we should draw icons in respect to OS background
+static std::string icon_name_respected_to_mode(const std::string& bmp_name_in)
+{
+#ifdef __WXMSW__
+    const std::string folder = "white\\";
+#else
+    const std::string folder = "white/";
+#endif
+    std::string bmp_name;
+    if (Slic3r::GUI::wxGetApp().dark_mode()) {
+     	bmp_name = folder + bmp_name_in;
+	    boost::replace_last(bmp_name, ".png", "");
+        if (! boost::filesystem::exists(Slic3r::var(bmp_name + ".svg")))
+            bmp_name.clear();
+	}
+	if (bmp_name.empty()) {
+		bmp_name = bmp_name_in;
+		boost::replace_last(bmp_name, ".png", "");
+	}
+    return bmp_name;
+}
+
 // If an icon has horizontal orientation (width > height) call this function with is_horizontal = true
 wxBitmap create_scaled_bitmap(wxWindow *win, const std::string& bmp_name_in, 
     const int px_cnt/* = 16*/, const bool is_horizontal /* = false*/, const bool grayscale/* = false*/)
@@ -451,8 +475,10 @@ wxBitmap create_scaled_bitmap(wxWindow *win, const std::string& bmp_name_in,
 
     scale_base = (unsigned int)(em_unit(win) * px_cnt * 0.1f + 0.5f);
 
-    std::string bmp_name = bmp_name_in;
-    boost::replace_last(bmp_name, ".png", "");
+//    std::string bmp_name = bmp_name_in;
+//    boost::replace_last(bmp_name, ".png", "");
+
+    std::string bmp_name = icon_name_respected_to_mode(bmp_name_in);
 
     // Try loading an SVG first, then PNG if SVG is not found:
     wxBitmap *bmp = cache.load_svg(bmp_name, width, height, scale_factor, grayscale);
@@ -2539,7 +2565,7 @@ std::vector<t_custom_code> DoubleSlider::GetTicksValues() const
         for (const TICK_CODE& tick : m_ticks_) {
             if (tick.tick > val_size)
                 break;
-            values.push_back(t_custom_code(m_values[tick.tick], tick.gcode, tick.extruder, tick.color));
+            values.emplace_back(t_custom_code{m_values[tick.tick], tick.gcode, tick.extruder, tick.color});
         }
 
     return values;
@@ -2554,12 +2580,12 @@ void DoubleSlider::SetTicksValues(const std::vector<t_custom_code>& heights)
 
     m_ticks_.clear();
     for (auto h : heights) {
-        auto it = std::lower_bound(m_values.begin(), m_values.end(), h.height - epsilon());
+        auto it = std::lower_bound(m_values.begin(), m_values.end(), h.print_z - epsilon());
 
         if (it == m_values.end())
             continue;
 
-        m_ticks_.insert(TICK_CODE(it-m_values.begin(), h.gcode, h.extruder, h.color));
+        m_ticks_.emplace(TICK_CODE{int(it-m_values.begin()), h.gcode, h.extruder, h.color});
     }
     
     if (!was_empty && m_ticks_.empty())
@@ -2643,7 +2669,7 @@ void DoubleSlider::draw_action_icon(wxDC& dc, const wxPoint pt_beg, const wxPoin
         return;
 
     wxBitmap* icon = m_is_action_icon_focesed ? &m_bmp_add_tick_off.bmp() : &m_bmp_add_tick_on.bmp();
-    if (m_ticks_.find(tick) != m_ticks_.end())
+    if (m_ticks_.find(TICK_CODE{tick}) != m_ticks_.end())
         icon = m_is_action_icon_focesed ? &m_bmp_del_tick_off.bmp() : &m_bmp_del_tick_on.bmp();
 
     wxCoord x_draw, y_draw;
@@ -3082,7 +3108,7 @@ wxString DoubleSlider::get_tooltip(IconFocus icon_focus)
     else if (m_is_action_icon_focesed)
     {
         const int tick = m_selection == ssLower ? m_lower_value : m_higher_value;
-        const auto tick_code_it = m_ticks_.find(tick);
+        const auto tick_code_it = m_ticks_.find(TICK_CODE{tick});
         tooltip = tick_code_it == m_ticks_.end()            ? (m_state == msSingleExtruder ?
                         _(L("For add color change use left mouse button click")) :
                         _(L("For add change extruder use left mouse button click"))) + "\n" +
@@ -3241,13 +3267,13 @@ void DoubleSlider::action_tick(const TicksAction action)
 
     const int tick = m_selection == ssLower ? m_lower_value : m_higher_value;
 
-    const auto it = m_ticks_.find(tick);
+    const auto it = m_ticks_.find(TICK_CODE{tick});
 
     if (it != m_ticks_.end()) // erase this tick
     {
         if (action == taAdd)
             return;
-        m_ticks_.erase(TICK_CODE(tick));
+        m_ticks_.erase(TICK_CODE{tick});
 
         wxPostEvent(this->GetParent(), wxCommandEvent(wxCUSTOMEVT_TICKSCHANGED));
         Refresh();
@@ -3351,7 +3377,7 @@ void DoubleSlider::OnRightDown(wxMouseEvent& event)
     {
         const int tick = m_selection == ssLower ? m_lower_value : m_higher_value;
         // if on this Z doesn't exist tick
-        auto it = m_ticks_.find(tick);
+        auto it = m_ticks_.find(TICK_CODE{ tick });
         if (it == m_ticks_.end())
         {
             // show context menu on OnRightUp()
@@ -3388,7 +3414,7 @@ int DoubleSlider::get_extruder_for_tick(int tick)
     if (m_ticks_.empty())
         return 0;
     
-    auto it = m_ticks_.lower_bound(tick);
+    auto it = m_ticks_.lower_bound(TICK_CODE{tick});
     while (it != m_ticks_.begin()) {
         --it;
         if(it->gcode == Slic3r::ExtruderChangeCode)
@@ -3455,7 +3481,7 @@ void DoubleSlider::OnRightUp(wxMouseEvent& event)
     else if (m_show_edit_menu) {
         wxMenu menu;
 
-        std::set<TICK_CODE>::iterator it = m_ticks_.find(m_selection == ssLower ? m_lower_value : m_higher_value);
+        std::set<TICK_CODE>::iterator it = m_ticks_.find(TICK_CODE{ m_selection == ssLower ? m_lower_value : m_higher_value });
         const bool is_color_change = it->gcode == Slic3r::ColorChangeCode;
 
         append_menu_item(&menu, wxID_ANY, it->gcode == Slic3r::ColorChangeCode ? _(L("Edit color")) :
@@ -3497,7 +3523,7 @@ static std::string get_new_color(const std::string& color)
 
 static std::string get_custom_code(const std::string& code_in, double height)
 {
-    wxString msg_text = from_u8(_utf8(L("Enter custom G-code used on current layer"))) + " :";
+    wxString msg_text = from_u8(_utf8(L("Enter custom G-code used on current layer"))) + ":";
     wxString msg_header = from_u8((boost::format(_utf8(L("Custom Gcode on current layer (%1% mm)."))) % height).str());
 
     // get custom gcode
@@ -3511,7 +3537,7 @@ static std::string get_custom_code(const std::string& code_in, double height)
 
 static std::string get_pause_print_msg(const std::string& msg_in, double height)
 {
-    wxString msg_text = from_u8(_utf8(L("Enter short message shown on Printer display during pause print"))) + " :";
+    wxString msg_text = from_u8(_utf8(L("Enter short message shown on Printer display during pause print"))) + ":";
     wxString msg_header = from_u8((boost::format(_utf8(L("Message for pause print on current layer (%1% mm)."))) % height).str());
 
     // get custom gcode
@@ -3527,7 +3553,7 @@ void DoubleSlider::add_code(std::string code, int selected_extruder/* = -1*/)
 {
     const int tick = m_selection == ssLower ? m_lower_value : m_higher_value;
     // if on this Z doesn't exist tick
-    auto it = m_ticks_.find(tick);
+    auto it = m_ticks_.find(TICK_CODE{ tick });
     if (it == m_ticks_.end())
     {
         std::string color = "";
@@ -3536,7 +3562,7 @@ void DoubleSlider::add_code(std::string code, int selected_extruder/* = -1*/)
             std::vector<std::string> colors = Slic3r::GUI::wxGetApp().plater()->get_extruder_colors_from_plater_config();
 
             if (m_state == msSingleExtruder && !m_ticks_.empty()) {
-                auto before_tick_it = std::lower_bound(m_ticks_.begin(), m_ticks_.end(), tick);
+                auto before_tick_it = std::lower_bound(m_ticks_.begin(), m_ticks_.end(), TICK_CODE{ tick });
                 while (before_tick_it != m_ticks_.begin()) {
                     --before_tick_it;
                     if (before_tick_it->gcode == Slic3r::ColorChangeCode) {
@@ -3581,7 +3607,7 @@ void DoubleSlider::add_code(std::string code, int selected_extruder/* = -1*/)
                 extruder = get_extruder_for_tick(m_selection == ssLower ? m_lower_value : m_higher_value);
         }
 
-        m_ticks_.insert(TICK_CODE(tick, code, extruder, color));
+        m_ticks_.emplace(TICK_CODE{tick, code, extruder, color});
 
         wxPostEvent(this->GetParent(), wxCommandEvent(wxCUSTOMEVT_TICKSCHANGED));
         Refresh();
@@ -3593,7 +3619,7 @@ void DoubleSlider::edit_tick()
 {
     const int tick = m_selection == ssLower ? m_lower_value : m_higher_value;
     // if on this Z exists tick
-    std::set<TICK_CODE>::iterator it = m_ticks_.find(tick);
+    std::set<TICK_CODE>::iterator it = m_ticks_.find(TICK_CODE{ tick });
     if (it != m_ticks_.end())
     {
         std::string edited_value;
@@ -3620,7 +3646,7 @@ void DoubleSlider::edit_tick()
         }
         
         m_ticks_.erase(it);
-        m_ticks_.insert(changed_tick);
+        m_ticks_.emplace(changed_tick);
 
         wxPostEvent(this->GetParent(), wxCommandEvent(wxCUSTOMEVT_TICKSCHANGED));
     }
@@ -3633,9 +3659,9 @@ void DoubleSlider::change_extruder(int extruder)
     std::vector<std::string> colors = Slic3r::GUI::wxGetApp().plater()->get_extruder_colors_from_plater_config();
 
     // if on this Y doesn't exist tick
-    if (m_ticks_.find(tick) == m_ticks_.end())
+    if (m_ticks_.find(TICK_CODE{tick}) == m_ticks_.end())
     {        
-        m_ticks_.insert(TICK_CODE(tick, Slic3r::ExtruderChangeCode, extruder, extruder == 0 ? "" : colors[extruder-1]));
+        m_ticks_.emplace(TICK_CODE{tick, Slic3r::ExtruderChangeCode, extruder, extruder == 0 ? "" : colors[extruder-1]});
 
         wxPostEvent(this->GetParent(), wxCommandEvent(wxCUSTOMEVT_TICKSCHANGED));
         Refresh();
@@ -3673,7 +3699,7 @@ void DoubleSlider::edit_extruder_sequence()
     while (tick <= m_max_value)
     {
         int cur_extruder = m_extruders_sequence.extruders[extruder];
-        m_ticks_.insert(TICK_CODE(tick, Slic3r::ExtruderChangeCode, cur_extruder + 1, colors[cur_extruder]));
+        m_ticks_.emplace(TICK_CODE{tick, Slic3r::ExtruderChangeCode, cur_extruder + 1, colors[cur_extruder]});
 
         extruder++;
         if (extruder == extr_cnt)
@@ -3681,12 +3707,12 @@ void DoubleSlider::edit_extruder_sequence()
         if (m_extruders_sequence.is_mm_intervals)
         {
             value += m_extruders_sequence.interval_by_mm;
-            auto it = std::lower_bound(m_values.begin(), m_values.end(), value - epsilon());
+            auto val_it = std::lower_bound(m_values.begin(), m_values.end(), value - epsilon());
 
-            if (it == m_values.end())
+            if (val_it == m_values.end())
                 break;
 
-            tick = it - m_values.begin();
+            tick = val_it - m_values.begin();
         }
         else
             tick += m_extruders_sequence.interval_by_layers;
@@ -3936,8 +3962,10 @@ ScalableButton::ScalableButton( wxWindow *          parent,
                                 const ScalableBitmap&  bitmap,
                                 const wxString&     label /*= wxEmptyString*/, 
                                 long                style /*= wxBU_EXACTFIT | wxNO_BORDER*/) :
+    m_parent(parent),
     m_current_icon_name(bitmap.name()),
-    m_parent(parent)
+    m_px_cnt(bitmap.px_cnt()),
+    m_is_horizontal(bitmap.is_horizontal())
 {
     Create(parent, id, label, wxDefaultPosition, wxDefaultSize, style);
 #ifdef __WXMSW__
@@ -3960,11 +3988,17 @@ void ScalableButton::SetBitmapDisabled_(const ScalableBitmap& bmp)
     m_disabled_icon_name = bmp.name();
 }
 
+int ScalableButton::GetBitmapHeight()
+{
+    const float scale_factor = get_svg_scale_factor(m_parent);
+    return int((float)GetBitmap().GetHeight() / scale_factor);
+}
+
 void ScalableButton::msw_rescale()
 {
-    SetBitmap(create_scaled_bitmap(m_parent, m_current_icon_name));
+    SetBitmap(create_scaled_bitmap(m_parent, m_current_icon_name, m_px_cnt, m_is_horizontal));
     if (!m_disabled_icon_name.empty())
-        SetBitmapDisabled(create_scaled_bitmap(m_parent, m_disabled_icon_name));
+        SetBitmapDisabled(create_scaled_bitmap(m_parent, m_disabled_icon_name, m_px_cnt, m_is_horizontal));
 
     if (m_width > 0 || m_height>0)
     {

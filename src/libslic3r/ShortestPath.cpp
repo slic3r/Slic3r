@@ -46,15 +46,13 @@ std::vector<std::pair<size_t, bool>> chain_segments_closest_point(std::vector<En
 		// Ignore the starting point as the starting point is considered to be occupied, no end point coud connect to it.
 		size_t next_idx = find_closest_point(kdtree, this_point.pos,
 			[this_idx, &end_points, &could_reverse_func](size_t idx) {
-				return
-					// ????
-					//(idx ^ this_idx) > 1 &&
-					// only consider untaken points
-					end_points[idx].chain_id == 0 
-					// only consider seg_start if can't be reversed
-					&& ((idx & 1) == 0 || could_reverse_func(idx >> 1) 
-					//don't consider erased segments
-					&& this_idx < end_points.size());
+            return
+                // ????
+                (idx ^ this_idx) > 1 &&
+                // only consider untaken points
+                end_points[idx].chain_id == 0
+                // only consider seg_start if can't be reversed
+                && ((idx & 1) == 0 || could_reverse_func(idx >> 1));
 		});
 		assert(next_idx < end_points.size());
 		EndPointType &end_point = end_points[next_idx];
@@ -91,11 +89,8 @@ std::vector<std::pair<size_t, bool>> chain_segments_greedy_constrained_reversals
 	else if (num_segments == 1)
 	{
 		// Just sort the end points so that the first point visited is closest to start_near.
-		if (could_reverse_func(0))
-			out.emplace_back(0, start_near != nullptr &&
+		out.emplace_back(0, could_reverse_func(0) && start_near != nullptr && 
 			(end_point_func(0, true) - *start_near).template cast<double>().squaredNorm() < (end_point_func(0, false) - *start_near).template cast<double>().squaredNorm());
-		else
-			out.emplace_back(0, false);
 	} 
 	else
 	{
@@ -1026,13 +1021,13 @@ std::vector<std::pair<size_t, bool>> chain_extrusion_entities(std::vector<Extrus
 	auto segment_end_point = [&entities](size_t idx, bool first_point) -> const Point& { return first_point ? entities[idx]->first_point() : entities[idx]->last_point(); };
 	auto could_reverse = [&entities](size_t idx) { const ExtrusionEntity *ee = entities[idx]; return ee->is_loop() || ee->can_reverse(); };
 	std::vector<std::pair<size_t, bool>> out = chain_segments_greedy_constrained_reversals<Point, decltype(segment_end_point), decltype(could_reverse)>(segment_end_point, could_reverse, entities.size(), start_near);
-	for (size_t i = 0; i < entities.size(); ++ i) {
-		ExtrusionEntity *ee = entities[out[i].first];
+	for (std::pair<size_t, bool> &segment : out) {
+		ExtrusionEntity *ee = entities[segment.first];
 		if (ee->is_loop())
 			// Ignore reversals for loops, as the start point equals the end point.
-			out[i].second = false;
+			segment.second = false;
 		// Is can_reverse() respected by the reversals?
-		assert(entities[out[i].first]->can_reverse() || ! out[i].second);
+		assert(ee->can_reverse() || ! segment.second);
 	}
 	return out;
 }

@@ -204,6 +204,30 @@ private:
     void make_expolygons(std::vector<IntersectionLine> &lines, ExPolygons* slices) const;
 };
 
+inline void slice_mesh(
+    const TriangleMesh &                              mesh,
+    const std::vector<float> &                        z,
+    std::vector<Polygons> &                           layers,
+    TriangleMeshSlicer::throw_on_cancel_callback_type thr = nullptr)
+{
+    if (mesh.empty()) return;
+    TriangleMeshSlicer slicer(&mesh);
+    slicer.slice(z, &layers, thr);
+}
+
+inline void slice_mesh(
+    const TriangleMesh &                              mesh,
+    const std::vector<float> &                        z,
+    std::vector<ExPolygons> &                         layers,
+    float                                             closing_radius,
+    TriangleMeshSlicer::throw_on_cancel_callback_type thr = nullptr)
+{
+    if (mesh.empty()) return;
+    TriangleMeshSlicer slicer(closing_radius, 0);
+    slicer.init(&mesh, [](){});
+    slicer.slice(z, &layers, thr);
+}
+
 TriangleMesh make_cube(double x, double y, double z);
 
 // Generate a TriangleMesh of a cylinder

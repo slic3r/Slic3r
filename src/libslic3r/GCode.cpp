@@ -495,37 +495,37 @@ std::string WipeTowerIntegration::prime(GCode &gcodegen)
 {
     std::string gcode;
 
-    if (&m_priming != nullptr) {
-        // Disable linear advance for the wipe tower operations.
-            //gcode += (gcodegen.config().gcode_flavor == gcfRepRap ? std::string("M572 D0 S0\n") : std::string("M900 K0\n"));
 
-        for (const WipeTower::ToolChangeResult& tcr : m_priming) {
-            if (!tcr.extrusions.empty())
-                gcode += append_tcr(gcodegen, tcr, tcr.new_tool);
+    // Disable linear advance for the wipe tower operations.
+        //gcode += (gcodegen.config().gcode_flavor == gcfRepRap ? std::string("M572 D0 S0\n") : std::string("M900 K0\n"));
+
+    for (const WipeTower::ToolChangeResult& tcr : m_priming) {
+        if (!tcr.extrusions.empty())
+            gcode += append_tcr(gcodegen, tcr, tcr.new_tool);
 
 
-            // Let the tool change be executed by the wipe tower class.
-            // Inform the G-code writer about the changes done behind its back.
-            //gcode += tcr.gcode;
-            // Let the m_writer know the current extruder_id, but ignore the generated G-code.
-      //      unsigned int current_extruder_id = tcr.extrusions.back().tool;
-      //      gcodegen.writer().toolchange(current_extruder_id);
-      //      gcodegen.placeholder_parser().set("current_extruder", current_extruder_id);
+        // Let the tool change be executed by the wipe tower class.
+        // Inform the G-code writer about the changes done behind its back.
+        //gcode += tcr.gcode;
+        // Let the m_writer know the current extruder_id, but ignore the generated G-code.
+  //      unsigned int current_extruder_id = tcr.extrusions.back().tool;
+  //      gcodegen.writer().toolchange(current_extruder_id);
+  //      gcodegen.placeholder_parser().set("current_extruder", current_extruder_id);
 
-        }
-
-        // A phony move to the end position at the wipe tower.
-       /* gcodegen.writer().travel_to_xy(Vec2d(m_priming.back().end_pos.x, m_priming.back().end_pos.y));
-        gcodegen.set_last_pos(wipe_tower_point_to_object_point(gcodegen, m_priming.back().end_pos));
-        // Prepare a future wipe.
-        gcodegen.m_wipe.path.points.clear();
-        // Start the wipe at the current position.
-        gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen, m_priming.back().end_pos));
-        // Wipe end point: Wipe direction away from the closer tower edge to the further tower edge.
-        gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen,
-            WipeTower::xy((std::abs(m_left - m_priming.back().end_pos.x) < std::abs(m_right - m_priming.back().end_pos.x)) ? m_right : m_left,
-            m_priming.back().end_pos.y)));*/
     }
+
+    // A phony move to the end position at the wipe tower.
+   /* gcodegen.writer().travel_to_xy(Vec2d(m_priming.back().end_pos.x, m_priming.back().end_pos.y));
+    gcodegen.set_last_pos(wipe_tower_point_to_object_point(gcodegen, m_priming.back().end_pos));
+    // Prepare a future wipe.
+    gcodegen.m_wipe.path.points.clear();
+    // Start the wipe at the current position.
+    gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen, m_priming.back().end_pos));
+    // Wipe end point: Wipe direction away from the closer tower edge to the further tower edge.
+    gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen,
+        WipeTower::xy((std::abs(m_left - m_priming.back().end_pos.x) < std::abs(m_right - m_priming.back().end_pos.x)) ? m_right : m_left,
+        m_priming.back().end_pos.y)));*/
+
     return gcode;
 }
 
@@ -630,7 +630,7 @@ std::vector<GCode::LayerToPrint> GCode::collect_layers_to_print(const PrintObjec
 
             if (layer_to_print.print_z() > maximal_print_z + 2. * EPSILON)
                 throw std::runtime_error(_(L("Empty layers detected, the output would not be printable.")) + "\n\n" +
-                    _(L("Object name: ")) + object.model_object()->name + "\n" + _(L("Print z: ")) +
+                    _(L("Object name")) + ": " + object.model_object()->name + "\n" + _(L("Print z")) + ": " +
                     std::to_string(layers_to_print.back().print_z()) + "\n\n" + _(L("This is "
                     "usually caused by negligibly small extrusions or by a faulty model. Try to repair "
                     " the model or change its orientation on the bed.")));
@@ -803,6 +803,7 @@ void GCode::_do_export(Print &print, FILE *file)
     // resets time estimators
     m_normal_time_estimator.reset();
     m_normal_time_estimator.set_dialect(print.config().gcode_flavor);
+    m_normal_time_estimator.set_extrusion_axis(print.config().get_extrusion_axis()[0]);
     m_silent_time_estimator_enabled = (print.config().gcode_flavor == gcfMarlin) && print.config().silent_mode;
 
     // Until we have a UI support for the other firmwares than the Marlin, use the hardcoded default values
@@ -833,6 +834,7 @@ void GCode::_do_export(Print &print, FILE *file)
         {
             m_silent_time_estimator.reset();
             m_silent_time_estimator.set_dialect(print.config().gcode_flavor);
+            m_silent_time_estimator.set_extrusion_axis(print.config().get_extrusion_axis()[0]);
             /* "Stealth mode" values can be just a copy of "normal mode" values
             * (when they aren't input for a printer preset).
             * Thus, use back value from values, instead of second one, which could be absent
@@ -881,6 +883,9 @@ void GCode::_do_export(Print &print, FILE *file)
             extruder_offsets[extruder_id] = offset;
     }
     m_analyzer.set_extruder_offsets(extruder_offsets);
+
+    // tell analyzer about the extrusion axis
+    m_analyzer.set_extrusion_axis(print.config().get_extrusion_axis()[0]);
 
     // send extruders count to analyzer to allow it to detect invalid extruder idxs
     const ConfigOptionStrings* extruders_opt = dynamic_cast<const ConfigOptionStrings*>(print.config().option("extruder_colour"));
@@ -932,7 +937,7 @@ void GCode::_do_export(Print &print, FILE *file)
     
     // Initialize custom gcode
     Model* model = print.get_object(0)->model_object()->get_model();
-    m_custom_g_code_heights = model->custom_gcode_per_height;
+    m_custom_gcode_per_print_z = model->custom_gcode_per_print_z;
 
     // Initialize autospeed.
     {
@@ -1141,20 +1146,22 @@ void GCode::_do_export(Print &print, FILE *file)
     }
     print.throw_if_canceled();
 
+// #ys_FIXME_no_exported_codes
+    /*
     /* To avoid change filament for non-used extruder for Multi-material,
-     * check model->custom_gcode_per_height using tool_ordering values
-     * */
-    if (!m_custom_g_code_heights. empty())
+     * check model->custom_gcode_per_print_z using tool_ordering values
+     * /
+    if (!m_custom_gcode_per_print_z. empty())
     {
         bool delete_executed = false;
-        auto it = m_custom_g_code_heights.end();
-        while (it != m_custom_g_code_heights.begin())
+        auto it = m_custom_gcode_per_print_z.end();
+        while (it != m_custom_gcode_per_print_z.begin())
         {
             --it;
             if (it->gcode != ColorChangeCode)
                 continue;
 
-            auto it_layer_tools = std::lower_bound(tool_ordering.begin(), tool_ordering.end(), LayerTools(it->height));
+            auto it_layer_tools = std::lower_bound(tool_ordering.begin(), tool_ordering.end(), LayerTools(it->print_z));
 
             bool used_extruder = false;
             for (; it_layer_tools != tool_ordering.end(); it_layer_tools++)
@@ -1171,16 +1178,16 @@ void GCode::_do_export(Print &print, FILE *file)
 
             /* If we are there, current extruder wouldn't be used,
              * so this color change is a redundant move.
-             * Delete this item from m_custom_g_code_heights
-             * */
-            it = m_custom_g_code_heights.erase(it);
+             * Delete this item from m_custom_gcode_per_print_z
+             * /
+            it = m_custom_gcode_per_print_z.erase(it);
             delete_executed = true;
         }
 
         if (delete_executed)
-            model->custom_gcode_per_height = m_custom_g_code_heights;
+            model->custom_gcode_per_print_z = m_custom_gcode_per_print_z;
     }
-
+*/
 
     m_cooling_buffer->set_current_extruder(initial_extruder_id);
 
@@ -1478,7 +1485,7 @@ void GCode::_do_export(Print &print, FILE *file)
                 dst.first += buf;
                 ++ dst.second;
             };
-            print.m_print_statistics.filament_stats.insert(std::pair<size_t, float>(extruder.id(), (float)used_filament));
+            print.m_print_statistics.filament_stats.insert(std::pair<size_t, float>{extruder.id(), (float)used_filament});
             append(out_filament_used_mm,  "%.1lf", used_filament);
             append(out_filament_used_cm3, "%.1lf", extruded_volume * 0.001);
             if (filament_weight > 0.) {
@@ -1852,15 +1859,15 @@ void GCode::process_layer(
     std::string custom_code = "";
     std::string pause_print_msg = "";
     int m600_before_extruder = -1;
-    while (!m_custom_g_code_heights.empty() && m_custom_g_code_heights.front().height-EPSILON < layer.print_z) {
-        custom_code = m_custom_g_code_heights.front().gcode;
+    while (!m_custom_gcode_per_print_z.empty() && m_custom_gcode_per_print_z.front().print_z - EPSILON < layer.print_z) {
+        custom_code = m_custom_gcode_per_print_z.front().gcode;
 
-        if (custom_code == ColorChangeCode && m_custom_g_code_heights.front().extruder > 0)
-            m600_before_extruder = m_custom_g_code_heights.front().extruder - 1;
+        if (custom_code == ColorChangeCode && m_custom_gcode_per_print_z.front().extruder > 0)
+            m600_before_extruder = m_custom_gcode_per_print_z.front().extruder - 1;
         if (custom_code == PausePrintCode)
-            pause_print_msg = m_custom_g_code_heights.front().color;
+            pause_print_msg = m_custom_gcode_per_print_z.front().color;
 
-        m_custom_g_code_heights.erase(m_custom_g_code_heights.begin());
+        m_custom_gcode_per_print_z.erase(m_custom_gcode_per_print_z.begin());
         colorprint_change = true;
     }
 

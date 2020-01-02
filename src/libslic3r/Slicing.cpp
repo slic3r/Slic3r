@@ -63,7 +63,6 @@ SlicingParameters SlicingParameters::create_from_config(
 
     SlicingParameters params;
     params.layer_height = object_config.layer_height.value;
-    params.layer_height_adaptive = object_config.layer_height_adaptive.value;
     params.first_print_layer_height = first_layer_height;
     params.first_object_layer_height = first_layer_height;
     params.object_print_z_min = 0.;
@@ -228,38 +227,14 @@ std::vector<coordf_t> layer_height_profile_from_ranges(
 
 // Based on the work of @platsch
 // Fill layer_height_profile by heights ensuring a prescribed maximum cusp height.
-#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-std::vector<double> layer_height_profile_adaptive(const SlicingParameters& slicing_params,
-    const ModelObject& object, float cusp_value)
-#else
-std::vector<coordf_t> layer_height_profile_adaptive(
-    const SlicingParameters     &slicing_params,
-    const t_layer_config_ranges & /* layer_config_ranges */,
-    const ModelVolumePtrs		&volumes)
-#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+std::vector<double> layer_height_profile_adaptive(const SlicingParameters& slicing_params, const ModelObject& object, float quality_factor)
 {
-#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
     // 1) Initialize the SlicingAdaptive class with the object meshes.
     SlicingAdaptive as;
     as.set_slicing_parameters(slicing_params);
-    as.set_object(object);
-#else
-    // 1) Initialize the SlicingAdaptive class with the object meshes.
-    SlicingAdaptive as;
-    as.set_slicing_parameters(slicing_params);
-    for (const ModelVolume *volume : volumes)
-        if (volume->is_model_part())
-            as.add_mesh(&volume->mesh());
-#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-
-    as.prepare();
+    as.prepare(object);
 
     // 2) Generate layers using the algorithm of @platsch 
-    // loop until we have at least one layer and the max slice_z reaches the object height
-#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-    double cusp_value = 0.2;
-#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-
     std::vector<double> layer_height_profile;
     layer_height_profile.push_back(0.0);
     layer_height_profile.push_back(slicing_params.first_object_layer_height);
@@ -267,39 +242,41 @@ std::vector<coordf_t> layer_height_profile_adaptive(
         layer_height_profile.push_back(slicing_params.first_object_layer_height);
         layer_height_profile.push_back(slicing_params.first_object_layer_height);
     }
-    double slice_z = slicing_params.first_object_layer_height;
-    int current_facet = 0;
-#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-    while (slice_z <= slicing_params.object_print_z_height()) {
-        double height = slicing_params.max_layer_height;
-#else
-    double height = slicing_params.first_object_layer_height;
-    while ((slice_z - height) <= slicing_params.object_print_z_height()) {
-        height = 999.0;
-#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+    double print_z = slicing_params.first_object_layer_height;
+    // last facet visited by the as.next_layer_height() function, where the facets are sorted by their increasing Z span.
+    size_t current_facet = 0;
+    // loop until we have at least one layer and the max slice_z reaches the object height
+    while (print_z + EPSILON < slicing_params.object_print_z_height()) {
+        float height = slicing_params.max_layer_height;
         // Slic3r::debugf "\n Slice layer: %d\n", $id;
         // determine next layer height
-        double cusp_height = as.cusp_height((float)slice_z, cusp_value, current_facet);
+        float cusp_height = as.next_layer_height(float(print_z), quality_factor, current_facet);
 
+#if 0
         // check for horizontal features and object size
-        /*
-        if($self->config->get_value('match_horizontal_surfaces')) {
-            my $horizontal_dist = $adaptive_slicing[$region_id]->horizontal_facet_distance(scale $slice_z+$cusp_height, $min_height);
-            if(($horizontal_dist < $min_height) && ($horizontal_dist > 0)) {
-                Slic3r::debugf "Horizontal feature ahead, distance: %f\n", $horizontal_dist;
-                # can we shrink the current layer a bit?
-                if($cusp_height-($min_height-$horizontal_dist) > $min_height) {
-                    # yes we can
-                    $cusp_height = $cusp_height-($min_height-$horizontal_dist);
-                    Slic3r::debugf "Shrink layer height to %f\n", $cusp_height;
+        if (this->config.match_horizontal_surfaces.value) {
+            coordf_t horizontal_dist = as.horizontal_facet_distance(print_z + height, min_layer_height);
+            if ((horizontal_dist < min_layer_height) && (horizontal_dist > 0)) {
+                #ifdef SLIC3R_DEBUG
+                std::cout << "Horizontal feature ahead, distance: " << horizontal_dist << std::endl;
+                #endif
+                // can we shrink the current layer a bit?
+                if (height-(min_layer_height - horizontal_dist) > min_layer_height) {
+                    // yes we can
+                    height -= (min_layer_height - horizontal_dist);
+                    #ifdef SLIC3R_DEBUG
+                    std::cout << "Shrink layer height to " << height << std::endl;
+                    #endif
                 }else{
-                    # no, current layer would become too thin
-                    $cusp_height = $cusp_height+$horizontal_dist;
-                    Slic3r::debugf "Widen layer height to %f\n", $cusp_height;
+                    // no, current layer would become too thin
+                    height += horizontal_dist;
+                    #ifdef SLIC3R_DEBUG
+                    std::cout << "Widen layer height to " << height << std::endl;
+                    #endif
                 }
             }
         }
-        */
+#endif
         height = std::min(cusp_height, height);
 
         // apply z-gradation
@@ -312,22 +289,22 @@ std::vector<coordf_t> layer_height_profile_adaptive(
     
         // look for an applicable custom range
         /*
-        if (my $range = first { $_->[0] <= $slice_z && $_->[1] > $slice_z } @{$self->layer_height_ranges}) {
+        if (my $range = first { $_->[0] <= $print_z && $_->[1] > $print_z } @{$self->layer_height_ranges}) {
             $height = $range->[2];
     
             # if user set custom height to zero we should just skip the range and resume slicing over it
             if ($height == 0) {
-                $slice_z += $range->[1] - $range->[0];
+                $print_z += $range->[1] - $range->[0];
                 next;
             }
         }
         */
         
-        layer_height_profile.push_back(slice_z);
+        layer_height_profile.push_back(print_z);
         layer_height_profile.push_back(height);
-        slice_z += height;
+        print_z += height;
 #if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-        layer_height_profile.push_back(slice_z);
+        layer_height_profile.push_back(print_z);
         layer_height_profile.push_back(height);
 #endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
     }
@@ -350,7 +327,6 @@ std::vector<coordf_t> layer_height_profile_adaptive(
     return layer_height_profile;
 }
 
-#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 std::vector<double> smooth_height_profile(const std::vector<double>& profile, const SlicingParameters& slicing_params, const HeightProfileSmoothingParams& smoothing_params)
 {
     auto gauss_blur = [&slicing_params](const std::vector<double>& profile, const HeightProfileSmoothingParams& smoothing_params) -> std::vector<double> {
@@ -433,7 +409,6 @@ std::vector<double> smooth_height_profile(const std::vector<double>& profile, co
 
     return gauss_blur(profile, smoothing_params);
 }
-#endif
 
 void adjust_layer_height_profile(
     const SlicingParameters     &slicing_params,
@@ -755,11 +730,7 @@ int generate_layer_height_texture(
             const Vec3i32 &color1 = palette_raw[idx1];
             const Vec3i32 &color2 = palette_raw[idx2];
             coordf_t z = cell_to_z * coordf_t(cell);
-#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-            assert((lo - EPSILON <= z) && (z <= hi + EPSILON));
-#else
-			assert(z >= lo && z <= hi);
-#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+            assert(lo - EPSILON <= z && z <= hi + EPSILON);
             // Intensity profile to visualize the layers.
             coordf_t intensity = cos(M_PI * 0.7 * (mid - z) / h);
             // Color mapping from layer height to RGB.

@@ -101,12 +101,6 @@ enum SLAPillarConnectionMode {
     slapcmDynamic
 };
 
-// ys_FIXME ! may be, it's not a best place
-// Additional Codes which can be set by user using DoubleSlider
-static const std::string ColorChangeCode    = "M600";
-static const std::string PausePrintCode     = "M601";
-static const std::string ExtruderChangeCode = "tool_change";
-
 template<> inline const t_config_enum_values& ConfigOptionEnum<PrinterTechnology>::get_enum_values() {
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
@@ -502,7 +496,6 @@ public:
     // Force the generation of solid shells between adjacent materials/volumes.
     ConfigOptionBool                interface_shells;
     ConfigOptionFloat               layer_height;
-    ConfigOptionBool                layer_height_adaptive;
     ConfigOptionFloat               model_precision;
     ConfigOptionInt                 raft_layers;
     ConfigOptionEnum<SeamPosition>  seam_position;
@@ -556,7 +549,6 @@ protected:
         OPT_PTR(infill_only_where_needed);
         OPT_PTR(interface_shells);
         OPT_PTR(layer_height);
-        OPT_PTR(layer_height_adaptive);
         OPT_PTR(model_precision);
         OPT_PTR(raft_layers);
         OPT_PTR(seam_position);

@@ -58,15 +58,16 @@ enum Technology {
 struct Materials
 {
     Technology technology;
-    std::set<const Preset*> presets;
+    // use vector for the presets to purpose of save of presets sorting in the bundle
+    std::vector<const Preset*> presets;
     std::set<std::string> types;
 
     Materials(Technology technology) : technology(technology) {}
 
     void push(const Preset *preset);
     void clear();
-    bool containts(const Preset *preset) {
-        return presets.find(preset) != presets.end(); 
+    bool containts(const Preset *preset) const {
+        return std::find(presets.begin(), presets.end(), preset) != presets.end(); 
     }
 
     const std::string& appconfig_section() const;
@@ -497,7 +498,7 @@ struct ConfigWizard::priv
     void on_3rdparty_install(const VendorProfile *vendor, bool install);
 #endif
 
-    bool check_material_config();
+    bool check_material_config(Technology technology);
     void apply_config(AppConfig *app_config, PresetBundle *preset_bundle, const PresetUpdater *updater);
     // #ys_FIXME_alise
     void update_presets_in_config(const std::string& section, const std::string& alias_key, bool add);

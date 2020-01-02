@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.8)
 project(Slic3r)
 
 include("version.inc")
@@ -102,7 +102,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules/)
 enable_testing ()
 
 # Enable C++11 language standard.
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(NOT WIN32)
@@ -373,18 +373,24 @@ if (NOT EXPAT_FOUND)
 endif ()
 include_directories(${EXPAT_INCLUDE_DIRS})
 
+find_package(OpenGL REQUIRED)
+
 # Find glew or use bundled version
-if (NOT SLIC3R_STATIC)
+if (SLIC3R_STATIC)
+    set(GLEW_USE_STATIC_LIBS ON)
+    set(GLEW_VERBOSE ON)
+endif()
+
     find_package(GLEW)
-endif ()
 if (NOT GLEW_FOUND)
+    message(STATUS "GLEW not found, using bundled version.")
     add_library(glew STATIC ${LIBDIR}/glew/src/glew.c)
-    set(GLEW_FOUND 1)
+    set(GLEW_FOUND TRUE)
     set(GLEW_INCLUDE_DIRS ${LIBDIR}/glew/include/)
-    set(GLEW_LIBRARIES glew)
-    add_definitions(-DGLEW_STATIC)
+    target_compile_definitions(glew PUBLIC GLEW_STATIC)
+    target_include_directories(glew PUBLIC ${GLEW_INCLUDE_DIRS})
+    add_library(GLEW::GLEW ALIAS glew)
 endif ()
-include_directories(${GLEW_INCLUDE_DIRS})
 
 # Find the Cereal serialization library
 add_library(cereal INTERFACE)
@@ -406,6 +412,29 @@ if(SLIC3R_STATIC)
     set(OPENVDB_USE_STATIC_LIBS ON)
     set(USE_BLOSC TRUE)
 endif()
+
+set(TOP_LEVEL_PROJECT_DIR ${PROJECT_SOURCE_DIR})
+function(prusaslicer_copy_dlls target)
+    if ("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+        set(_bits 64)
+    elseif ("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+        set(_bits 32)
+    endif ()
+    
+    get_target_property(_out_dir ${target} BINARY_DIR)
+    
+    # This has to be a separate target due to the windows command line lenght limits    
+    add_custom_command(TARGET ${target} POST_BUILD 
+        COMMAND ${CMAKE_COMMAND} -E copy ${TOP_LEVEL_PROJECT_DIR}/deps/GMP/gmp/lib/win${_bits}/libgmp-10.dll ${_out_dir}/
+        COMMENT "Copy gmp runtime to build tree"
+        VERBATIM)
+    
+    add_custom_command(TARGET ${target} POST_BUILD 
+        COMMAND ${CMAKE_COMMAND} -E copy ${TOP_LEVEL_PROJECT_DIR}/deps/MPFR/mpfr/lib/win${_bits}/libmpfr-4.dll ${_out_dir}/
+        COMMENT "Copy mpfr runtime to build tree"
+        VERBATIM)
+
+endfunction()
 
 #find_package(OpenVDB 5.0 COMPONENTS openvdb)
 #slic3r_remap_configs(IlmBase::Half RelWithDebInfo Release)

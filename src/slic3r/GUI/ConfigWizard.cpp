@@ -655,14 +655,6 @@ void PageMaterials::update_lists(int sel1, int sel2)
 
         sel2_prev = sel2;
     }
-
-    // for the very begining
-    if ((wizard_p()->run_reason == ConfigWizard::RR_DATA_EMPTY || wizard_p()->run_reason == ConfigWizard::RR_DATA_LEGACY)
-        && list_l3->size() > 0 )
-    {
-        list_l3->Check(0, true);
-        wizard_p()->update_presets_in_config(materials->appconfig_section(), list_l3->get_data(0), true);
-    }
 }
 
 void PageMaterials::select_material(int i)
@@ -822,7 +814,7 @@ PageVendors::PageVendors(ConfigWizard *parent)
 {
     const AppConfig &appconfig = this->wizard_p()->appconfig_new;
 
-    append_text(wxString::Format(_(L("Pick another vendor supported by %s: (FIXME: this text)")), SLIC3R_APP_NAME));
+    append_text(wxString::Format(_(L("Pick another vendor supported by %s")), SLIC3R_APP_NAME) + ":");
 
     auto boldfont = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
     boldfont.SetWeight(wxFONTWEIGHT_BOLD);
@@ -1256,7 +1248,7 @@ const std::string Materials::UNKNOWN = "(Unknown)";
 
 void Materials::push(const Preset *preset)
 {
-    presets.insert(preset);
+    presets.push_back(preset);
     types.insert(technology & T_FFF
         ? Materials::get_filament_type(preset)
         : Materials::get_material_type(preset));
@@ -1513,23 +1505,21 @@ void ConfigWizard::priv::update_materials(Technology technology)
         for (const auto &pair : bundles) {
             for (const auto &filament : pair.second.preset_bundle->filaments) {
                 // Check if filament is already added
-                if (filaments.containts(&filament)) { continue; }
-
+                if (filaments.containts(&filament)) 
+                	continue;
                 // Iterate printers in all bundles
-                for (const auto &pair : bundles) {
-                    for (const auto &printer : pair.second.preset_bundle->printers) {
+                // For now, we only allow the profiles to be compatible with another profiles inside the same bundle.
+//                for (const auto &pair : bundles)
+                    for (const auto &printer : pair.second.preset_bundle->printers)
                         // Filter out inapplicable printers
-                        if (!printer.is_visible || printer.printer_technology() != ptFFF) {
-                            continue;
-                        }
-
-                        if (filament.is_compatible_with_printer(printer)) {
+                        if (printer.is_visible && printer.printer_technology() == ptFFF && 
+                        	is_compatible_with_printer(PresetWithVendorProfile(filament, nullptr), PresetWithVendorProfile(printer, nullptr)) &&
+                            // Check if filament is already added
+                        	! filaments.containts(&filament)) {
                             filaments.push(&filament);
                             if (!filament.alias.empty())
                                 aliases_fff[filament.alias].insert(filament.name);
                         }
-                    }
-                }
             }
         }
     }
@@ -1542,23 +1532,21 @@ void ConfigWizard::priv::update_materials(Technology technology)
         for (const auto &pair : bundles) {
             for (const auto &material : pair.second.preset_bundle->sla_materials) {
                 // Check if material is already added
-                if (sla_materials.containts(&material)) { continue; }
-
+                if (sla_materials.containts(&material))
+                	continue;
                 // Iterate printers in all bundles
-                for (const auto &pair : bundles) {
-                    for (const auto &printer : pair.second.preset_bundle->printers) {
+				// For now, we only allow the profiles to be compatible with another profiles inside the same bundle.
+//                for (const auto &pair : bundles) 
+                    for (const auto &printer : pair.second.preset_bundle->printers)
                         // Filter out inapplicable printers
-                        if (!printer.is_visible || printer.printer_technology() != ptSLA) {
-                            continue;
-                        }
-
-                        if (material.is_compatible_with_printer(printer)) {
+                        if (printer.is_visible && printer.printer_technology() == ptSLA && 
+                        	is_compatible_with_printer(PresetWithVendorProfile(material, nullptr), PresetWithVendorProfile(printer, nullptr)) &&
+                            // Check if material is already added
+                        	! sla_materials.containts(&material)) {
                             sla_materials.push(&material);
                             if (!material.alias.empty())
                                 aliases_sla[material.alias].insert(material.name);
                         }
-                    }
-                }
             }
         }
     }
@@ -1616,7 +1604,7 @@ void ConfigWizard::priv::on_3rdparty_install(const VendorProfile *vendor, bool i
 }
 #endif
 
-bool ConfigWizard::priv::check_material_config()
+bool ConfigWizard::priv::check_material_config(Technology technology)
 {
     const auto exist_preset = [this](const std::string& section, const Materials& materials)
     {
@@ -1631,13 +1619,13 @@ bool ConfigWizard::priv::check_material_config()
         return false;
     };
 
-    if (any_fff_selected && !exist_preset(AppConfig::SECTION_FILAMENTS, filaments))
+    if (any_fff_selected && technology & T_FFF && !exist_preset(AppConfig::SECTION_FILAMENTS, filaments))
     {
         show_info(q, _(L("You have to select at least one filament for selected printers")), "");
         return false;
     }
 
-    if (any_sla_selected && !exist_preset(AppConfig::SECTION_MATERIALS, sla_materials))
+    if (any_sla_selected && technology & T_SLA && !exist_preset(AppConfig::SECTION_MATERIALS, sla_materials))
     {
         show_info(q, _(L("You have to select at least one material for selected printers")), "");
         return false;
@@ -1832,7 +1820,7 @@ bool ConfigWizard::priv::check_sla_selected()
 // Public
 
 ConfigWizard::ConfigWizard(wxWindow *parent)
-    : DPIDialog(parent, wxID_ANY, wxString(SLIC3R_APP_NAME) + " - " + name(), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
+    : DPIDialog(parent, wxID_ANY, wxString(SLIC3R_APP_NAME) + " - " + _(name().ToStdString()), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
     , p(new priv(this))
 {
     this->SetFont(wxGetApp().normal_font());
@@ -1906,7 +1894,7 @@ ConfigWizard::ConfigWizard(wxWindow *parent)
     p->add_page(p->page_filaments = new PageMaterials(this, &p->filaments,
         _(L("Filament Profiles Selection")), _(L("Filaments")), _(L("Type:")) ));
     p->add_page(p->page_sla_materials = new PageMaterials(this, &p->sla_materials,
-        _(L("SLA Material Profiles Selection")), _(L("SLA Materials")), _(L("Layer height:")) ));
+        _(L("SLA Material Profiles Selection")) + " ", _(L("SLA Materials")), _(L("Layer height:")) ));
 
     p->add_page(p->page_custom   = new PageCustom(this));
     p->add_page(p->page_update   = new PageUpdate(this));
@@ -1940,14 +1928,23 @@ ConfigWizard::ConfigWizard(wxWindow *parent)
     });
 
     p->btn_prev->Bind(wxEVT_BUTTON, [this](const wxCommandEvent &) { this->p->index->go_prev(); });
-    p->btn_next->Bind(wxEVT_BUTTON, [this](const wxCommandEvent &) { this->p->index->go_next(); });
+
+    p->btn_next->Bind(wxEVT_BUTTON, [this](const wxCommandEvent &)
+    {
+        // check, that there is selected at least one filament/material
+        ConfigWizardPage* active_page = this->p->index->active_page();
+        if ( (active_page == p->page_filaments || active_page == p->page_sla_materials)
+            && !p->check_material_config(dynamic_cast<PageMaterials*>(active_page)->materials->technology))
+            return;
+        this->p->index->go_next();
+    });
+
     p->btn_finish->Bind(wxEVT_BUTTON, [this](const wxCommandEvent &)
     {
-        if (!p->check_material_config())
+        if (!p->check_material_config(T_ANY))
             return;
         this->EndModal(wxID_OK);
     });
-//    p->btn_finish->Hide();
 
     p->btn_sel_all->Bind(wxEVT_BUTTON, [this](const wxCommandEvent &) {
 #ifdef ALLOW_PRUSA_FIRST
@@ -1968,7 +1965,6 @@ ConfigWizard::ConfigWizard(wxWindow *parent)
     p->index->Bind(EVT_INDEX_PAGE, [this](const wxCommandEvent &) {
         const bool is_last = p->index->active_is_last();
         p->btn_next->Show(! is_last);
-//        p->btn_finish->Show(is_last);
         if (is_last)
             p->btn_finish->SetFocus();
 

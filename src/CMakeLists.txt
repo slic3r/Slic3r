@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.8)
 project(Slic3r-native)
 
 add_subdirectory(build-utils)
@@ -143,18 +144,18 @@ if (SLIC3R_GUI)
 
     if (MSVC)
         # Generate debug symbols even in release mode.
-        #target_link_options(slic3r PUBLIC "$<$<CONFIG:RELEASE>:/DEBUG>")
-        target_link_libraries(slic3r user32.lib Setupapi.lib OpenGL32.Lib GlU32.Lib)
-        target_link_libraries(slic3r_lib user32.lib Setupapi.lib OpenGL32.Lib GlU32.Lib)
+        target_link_options(slic3r PUBLIC "$<$<CONFIG:RELEASE>:/DEBUG>")
+        target_link_libraries(slic3r user32.lib Setupapi.lib)
+        target_link_libraries(slic3r_lib user32.lib Setupapi.lib)
     elseif (MINGW)
-        target_link_libraries(slic3r opengl32 ws2_32 uxtheme setupapi)
+        target_link_libraries(slic3r ws2_32 uxtheme setupapi)
         target_link_libraries(slic3r_lib -lopengl32)
     elseif (APPLE)
         target_link_libraries(slic3r "-framework OpenGL")
         target_link_libraries(slic3r_lib "-framework OpenGL")
     else ()
-        target_link_libraries(slic3r -ldl -lGL -lGLU)
-        target_link_libraries(slic3r_lib -ldl -lGL -lGLU)
+        target_link_libraries(slic3r -ldl)
+        target_link_libraries(slic3r_lib -ldl)
     endif ()
 endif ()
 
@@ -210,6 +211,11 @@ if (WIN32)
             VERBATIM
         )
     endif ()
+    
+    # This has to be a separate target due to the windows command line lenght limits
+    add_custom_target(slic3rDllsCopy ALL DEPENDS slic3r)
+    prusaslicer_copy_dlls(slic3rDllsCopy)
+    
 elseif (XCODE)
     # Because of Debug/Release/etc. configurations (similar to MSVC) the slic3r binary is located in an extra level
     add_custom_command(TARGET slic3r POST_BUILD
