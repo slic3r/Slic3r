@@ -326,14 +326,12 @@ public:
     {
         char all[128];
         if (fan_on == true){
-            sprintf(all, "M106 S%u ;Part fan on to cool hotend\n",(unsigned int)(255.0 * fan_speed / 100.0));
-            this->append(all);
+            set_fan(fan_speed, " ;Part fan on to cool hotend");
         }
         sprintf(all, "M109 S%d ;SKINNYDIP TOOLCHANGE WAIT FOR TEMP %s\n", tc_temp, fast ? "FAST MODE":"NORMAL MODE");
         this->append(all);
         if (fan_on == true){
-            sprintf(all, "M106 S0 ;Fan off\n"); //turn off fan
-            this->append(all);
+            set_fan(m_last_fan_speed, " ;restore cooling");
         }
         return *this;
     }
@@ -429,14 +427,14 @@ public:
     }
 
 
-    WipeTowerWriter& set_fan(unsigned speed)
+    WipeTowerWriter& set_fan(unsigned speed, const std::string &comment)
 	{
 		if (speed == m_last_fan_speed)
 			return *this;
 		if (speed == 0)
 			m_gcode += "M107\n";
 		else
-            m_gcode += "M106 S" + std::to_string(unsigned(255.0 * speed / 100.0)) + "\n";
+            m_gcode += "M106 S" + std::to_string(unsigned(255.0 * speed / 100.0)) + comment + "\n";
 		m_last_fan_speed = speed;
 		return *this;
 	}
