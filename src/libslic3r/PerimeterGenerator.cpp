@@ -299,7 +299,7 @@ void PerimeterGenerator::process()
                 ExPolygons lower_without_holes;
                 for (const ExPolygon &exp : *this->lower_slices)
                     lower_without_holes.emplace_back(to_expolygon(exp.contour));
-                overhangs_unsupported = diff_ex(last, lower_without_holes);
+                overhangs_unsupported = offset2_ex(diff_ex(last, lower_without_holes, true), -SCALED_RESOLUTION, SCALED_RESOLUTION);
                 if (!overhangs_unsupported.empty()) {
                     //only consider overhangs and let bridges alone
                     //only consider the part that can be bridged (really, by the bridge algorithm)
@@ -322,7 +322,7 @@ void PerimeterGenerator::process()
                                 bridgeable_simplified = offset_ex(bridgeable_simplified, double(perimeter_spacing) / 1.9);
                             if (!bridgeable_simplified.empty()) {
                                 //offset by perimeter spacing because the simplify may have reduced it a bit.
-                                overhangs_unsupported = diff_ex(overhangs_unsupported, bridgeable_simplified);
+                                overhangs_unsupported = diff_ex(overhangs_unsupported, bridgeable_simplified, true);
                             }
                         }
                     }
@@ -336,13 +336,11 @@ void PerimeterGenerator::process()
             // we loop one time more than needed in order to find gaps after the last perimeter was applied
             for (int i = 0;; ++ i) {  // outer loop is 0
 
-                
-
                 // We can add more perimeters if there are uncovered overhangs
                 // improvement for future: find a way to add perimeters only where it's needed.
                 bool has_overhang = false;
                 if (this->config->extra_perimeters && !last.empty() && !overhangs_unsupported.empty()) {
-                    overhangs_unsupported = intersection_ex(overhangs_unsupported, last);
+                    overhangs_unsupported = intersection_ex(overhangs_unsupported, last, true);
                     if (overhangs_unsupported.size() > 0) {
                         //add fake perimeters here
                         has_overhang = true;
@@ -714,9 +712,12 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
             // Note that we set loop role to ContourInternalPerimeter
             // also when loop is both internal and external (i.e.
             // there's only one contour loop).
-            loop_role = elrContourInternalPerimeter;
+            loop_role = elrInternal;
         } else {
             loop_role = elrDefault;
+        }
+        if (!loop.is_contour) {
+            loop_role = (ExtrusionLoopRole)(loop_role | elrHole);
         }
         
         // detect overhanging/bridging perimeters
@@ -986,9 +987,12 @@ PerimeterGenerator::_extrude_and_cut_loop(const PerimeterGeneratorLoop &loop, co
             // Note that we set loop role to ContourInternalPerimeter
             // also when loop is both internal and external (i.e.
             // there's only one contour loop).
-            loop_role = elrContourInternalPerimeter;
+            loop_role = elrInternal;
         } else {
             loop_role = elrDefault;
+        }
+        if (!loop.is_contour) {
+            loop_role = (ExtrusionLoopRole)(loop_role | elrHole);
         }
 
         // detect overhanging/bridging perimeters

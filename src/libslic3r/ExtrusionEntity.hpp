@@ -38,10 +38,13 @@ enum ExtrusionRole : uint8_t {
 // bridge
 
 // Special flags describing loop
-enum ExtrusionLoopRole {
-    elrDefault,
-    elrContourInternalPerimeter,
-    elrSkirt,
+enum ExtrusionLoopRole : uint16_t {
+    elrDefault=0x1,
+    // doesn't contains more contour: it's the most internal one
+    elrInternal=0x10,
+    elrSkirt = 0x100,
+    //it's a modifier that indicate that the loop is around a hole, not around the infill
+    elrHole = 0x1000,
 };
 
 

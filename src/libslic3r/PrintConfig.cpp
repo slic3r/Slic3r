@@ -82,15 +82,6 @@ void PrintConfigDef::init_common_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(0.2));
 
-    def = this->add("layer_height_adaptive", coBool);
-    def->label = L("Automatic questionable layer height");
-    def->category = OptionCategory::perimeter;
-    def->tooltip = L("This setting enable the adaptive layer height algorithm. It erase the layer height table but it's also erased by the result of the manual variable layer height feature. "
-        "Personally, I don't recommand to use it, it's not that good and you can do a much better job in some seconds with the manual 'variable layer height' tool.\n"
-        "note: it uses the min_height and max_height defined in the printer/hardware profile.");
-    def->mode = comExpert;
-    def->set_default_value(new ConfigOptionBool(false));
-
     def = this->add("max_print_height", coFloat);
     def->label = L("Max print height");
     def->category = OptionCategory::general;

@@ -2544,7 +2544,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
 
     // extrude all loops ccw
     //no! this was decided in perimeter_generator
-    bool was_cw_and_now_ccw = false;// loop.make_counter_clockwise();
+    bool is_hole_loop = loop.loop_role() & ExtrusionLoopRole::elrHole != 0;// loop.make_counter_clockwise();
 
     split_at_seam_pos(loop, lower_layer_edge_grid);
 
@@ -2680,7 +2680,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
         //FIXME improve the algorithm in case the loop is split into segments with a low number of points (see the Point b query).
         Point a = paths.front().polyline.points[1];  // second point
         Point b = *(paths.back().polyline.points.end() - 3);       // second to last point
-        if (loop.polygon().is_clockwise()) {
+        if (is_hole_loop) {
             // swap points
             Point c = a; a = b; b = c;
         }
@@ -2688,7 +2688,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
         double angle = paths.front().first_point().ccw_angle(a, b) / 3;
 
         // turn left if contour, turn right if hole
-        if (loop.polygon().is_clockwise()) angle *= -1;
+        if (is_hole_loop) angle *= -1;
 
         // create the destination point along the first segment and rotate it
         // we make sure we don't exceed the segment length because we don't know
@@ -2879,8 +2879,8 @@ void GCode::split_at_seam_pos(ExtrusionLoop &loop, std::unique_ptr<EdgeGrid::Gri
             loop.split_at(polygon.points[idx_min], true);
 
     } else if (seam_position == spRandom) {
-        if (loop.loop_role() == elrContourInternalPerimeter) {
-            // This loop does not contain any other loop. Set a random position.
+        if (loop.loop_role() & elrInternal != 0) {
+            // This loop does not contain any other (not-hole) loop. Set a random position.
             // The other loops will get a seam close to the random point chosen
             // on the inner most contour.
             //FIXME This works correctly for inner contours first only.
@@ -2949,10 +2949,13 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     
     // extrude all loops ccw
     //no! this was decided in perimeter_generator
-    bool was_clockwise = false;// loop.make_counter_clockwise();
+    //but we need to know where is "inside", so we will use is_hole_loop. if is_hole_loop, then we need toconsider that the right direction is clockwise, else counter clockwise. 
+    bool is_hole_loop = (loop.loop_role() & ExtrusionLoopRole::elrHole) != 0;// loop.make_counter_clockwise();
+
     //if spiral vase, we have to ensure that all loops are in the same orientation.
     if (this->m_config.spiral_vase) {
-        was_clockwise = loop.make_counter_clockwise();
+        loop.make_counter_clockwise();
+        is_hole_loop = false;
     }
 
     split_at_seam_pos(loop, lower_layer_edge_grid);
@@ -2996,7 +2999,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
 		//FIXME improve the algorithm in case the loop is split into segments with a low number of points (see the Point b query).
         Point a = paths.front().polyline.points[1];  // second point
         Point b = *(paths.back().polyline.points.end()-3);       // second to last point
-        if (was_clockwise) {
+        if (is_hole_loop ? loop.polygon().is_counter_clockwise() : loop.polygon().is_clockwise()) {
             // swap points
             Point c = a; a = b; b = c;
         }
@@ -3004,7 +3007,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         double angle = paths.front().first_point().ccw_angle(a, b) / 3;
         
         // turn left if contour, turn right if hole
-        if (was_clockwise) angle *= -1;
+        if (is_hole_loop ? loop.polygon().is_counter_clockwise() : loop.polygon().is_clockwise()) angle *= -1;
         
         // create the destination point along the first segment and rotate it
         // we make sure we don't exceed the segment length because we don't know
