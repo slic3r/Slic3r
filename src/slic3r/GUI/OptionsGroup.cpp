@@ -124,7 +124,7 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	full_Label/* = n
         }
     }
 
-	auto option_set = line.get_options();
+    const std::vector<Option>& option_set = line.get_options();
 	for (auto opt : option_set) 
 		m_options.emplace(opt.opt_id, opt);
 

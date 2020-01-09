@@ -1,0 +1,49 @@
+
+page:General:printer
+group:Size and coordinates
+	bed_shape
+	setting:max_print_height
+	setting:z_offset
+group:extruders_count_event:Capabilities
+	extruders_count
+	setting:single_extruder_multi_material
+group:Print Host upload
+	printhost
+group:silent_mode_event:Firmware
+	setting:gcode_flavor
+	setting:silent_mode
+	setting:remaining_times
+	setting:fan_speedup_time
+group:Advanced
+	setting:use_relative_e_distances
+	setting:use_firmware_retraction
+	setting:use_volumetric_e
+	setting:variable_layer_height
+
+page:Custom G-code:cog
+height:15
+group:nolabel:Start G-code
+	setting:full_width:start_gcode
+group:nolabel:End G-code
+	setting:full_width:end_gcode
+group:nolabel:Before layer change G-code
+	setting:full_width:before_layer_gcode
+group:nolabel:After layer change G-code
+	setting:full_width:layer_gcode
+group:nolabel:Tool change G-code
+	setting:full_width:toolchange_gcode
+group:nolabel:Between objects G-code (for sequential printing)
+	setting:full_width:between_objects_gcode
+group:nolabel:Between extrusion role change G-code
+	setting:full_width:feature_gcode
+height:0
+
+page:Notes:note.png
+group:nolabel:Notes
+		setting:full_width:height$25:printer_notes
+
+page:Dependencies:wrench.png
+	group:Profile dependencies
+		parent_preset_description
+
+unregular_pages

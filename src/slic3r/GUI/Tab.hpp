@@ -315,6 +315,8 @@ protected:
 	void			fill_icon_descriptions();
 	void			set_tooltips_text();
 
+    bool create_pages(std::string setting_type_name);
+
     ConfigManipulation m_config_manipulation;
     ConfigManipulation get_config_manipulation();
 };
@@ -338,10 +340,11 @@ public:
 };
 class TabFilament : public Tab
 {
+public:
 	ogStaticText*	m_volumetric_speed_description_line;
 	ogStaticText*	m_cooling_description_line;
-
     void            add_filament_overrides_page();
+protected:
     void            update_filament_overrides_page();
 	void 			update_volumetric_flow_preset_hints();
 
@@ -361,16 +364,18 @@ public:
 
 class TabPrinter : public Tab
 {
-	bool		m_has_single_extruder_MM_page = false;
-	bool		m_use_silent_mode = false;
-	void		append_option_line(ConfigOptionsGroupShp optgroup, const std::string opt_key);
-	bool		m_rebuild_kinematics_page = false;
 
     std::vector<PageShp>			m_pages_fff;
     std::vector<PageShp>			m_pages_sla;
 
-    void build_printhost(ConfigOptionsGroup *optgroup);
 public:
+    void build_printhost(ConfigOptionsGroup *optgroup);
+
+    bool		m_has_single_extruder_MM_page = false;
+    bool		m_use_silent_mode = false;
+    void		append_option_line_kinematics(ConfigOptionsGroupShp optgroup, const std::string opt_key);
+    bool		m_rebuild_kinematics_page = false;
+
 	wxButton*	m_serial_test_btn = nullptr;
 	ScalableButton*	m_print_host_test_btn = nullptr;
 	ScalableButton*	m_printhost_browse_btn = nullptr;
