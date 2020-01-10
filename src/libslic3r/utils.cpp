@@ -486,7 +486,7 @@ int check_copy(const std::string &origin, const std::string &copy)
     } while (f1.good() && f2.good());
 
     // All data has been read and compared equal.
-    return (f1.eof() && f2.eof() && fsize == 0) ? 0 : -1;
+    return (f1.eof() && f2.eof() && fsize == std::streampos(0)) ? 0 : -1;
 }
 
 // Ignore system and hidden files, which may be created by the DropBox synchronisation process.
