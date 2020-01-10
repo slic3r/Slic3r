@@ -22,6 +22,10 @@ jobs:
       run: |
         cmake .. -G "Visual Studio 16 2019" -A x64
         msbuild /m ALL_BUILD.vcxproj
+    - name: clean deps
+      working-directory: ./deps/build
+      shell: cmd
+      run: for /d %G in ("./dep_*") do rmdir /S /Q "%~G"
     - name: mkdir
       run: mkdir build
     - name: cmake

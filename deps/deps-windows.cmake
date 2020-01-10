@@ -134,7 +134,8 @@ ExternalProject_Add(dep_cereal
 ExternalProject_Add(dep_nlopt
     EXCLUDE_FROM_ALL 1
     URL "https://github.com/stevengj/nlopt/archive/v2.5.0.tar.gz"
-    URL_HASH SHA256=c81bf6d981c328f3e634709dc84746e32ff5cfb715f698ead2de4d57e30a0e70
+#    URL_HASH SHA256=c81bf6d981c328f3e634709dc84746e32ff5cfb715f698ead2de4d57e30a0e70
+    URL_HASH SHA256=c6dd7a5701fff8ad5ebb45a3dc8e757e61d52658de3918e38bab233e7fd3b4ae
     CMAKE_GENERATOR "${DEP_MSVC_GEN}"
 #    if (DEP_VS_VER MORE 15)
 #        CMAKE_GENERATOR_PLATFORM "${DEP_PLATFORM}"

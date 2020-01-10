@@ -13,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: change date in version
-      run: sed -i "s/+UNKNOWN/_$(date '+%F')/" version.inc
+      run: sed "s/+UNKNOWN/_$(date '+%F')/" version.inc
     - name: mkdir in deps
       run: mkdir deps/build
     - name: cmake deps
@@ -22,6 +22,9 @@ jobs:
     - name: make deps
       working-directory: ./deps/build
       run: make
+    - name: clean deps
+      working-directory: ./deps/build
+      run: rm -rf dep_*
     - name: mkdir build
       run: mkdir build
     - name: cmake
