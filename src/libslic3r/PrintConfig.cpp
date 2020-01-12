@@ -1234,7 +1234,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("width");
     def->full_label = L("Ironing width");
     def->category = OptionCategory::infill;
-    def->tooltip = L("This is the width of the ironing pass, in a % of the top extrusion width, should not be more than 50%.");
+    def->tooltip = L("This is the width of the ironing pass, in a % of the top extrusion width, should not be more than 50%"
+        " (two times more lines, 50% overlap). It's not necessary to go below 25% (four times more lines, 75% overlap)");
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
@@ -1243,8 +1244,9 @@ void PrintConfigDef::init_fff_params()
     def->label = L("distribution");
     def->full_label = L("Ironing flow distribution");
     def->category = OptionCategory::infill;
-    def->tooltip = L("This is the percentage of the flow that is used for the second ironing pass. Typical 0-20%. "
-        "Should not be higher than 20%, unless you have your top extrusion width greatly superior to your nozzle width.");
+    def->tooltip = L("This is the percentage of the flow that is used for the second ironing pass. Typical 10-20%. "
+        "Should not be higher than 20%, unless you have your top extrusion width greatly superior to your nozzle width. "
+        "A value too low and your extruder will eat the filament. A value too high and the first pass won't print well.");
     //def->min = 0;
     //def->max = 0.9;
     def->mode = comExpert;
