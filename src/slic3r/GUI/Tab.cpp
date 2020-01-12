@@ -23,7 +23,10 @@
 #include <wx/settings.h>
 #include <wx/filedlg.h>
 
+#include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/path.hpp>
 #include "wxExtensions.hpp"
 #include <wx/wupdlock.h>
 
@@ -1035,8 +1038,8 @@ bool Tab::create_pages(std::string setting_type_name)
 {
     std::cout << "create settings  " << setting_type_name << "\n";
     //search for the file
-    const auto ui_layout_file = (boost::filesystem::path(resources_dir()) / "ui_layout" / setting_type_name).make_preferred();
-    if (!boost::filesystem::exists(ui_layout_file)) return false;
+    const boost::filesystem::path ui_layout_file = (boost::filesystem::path(resources_dir()) / "ui_layout" / setting_type_name).make_preferred();
+    if (! boost::filesystem::exists(ui_layout_file)) return false;
 
     Slic3r::GUI::PageShp current_page;
     ConfigOptionsGroupShp current_group;

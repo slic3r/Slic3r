@@ -18,7 +18,7 @@ jobs:
       run: mkdir deps/build
     - name: cmake deps
       working-directory: ./deps/build
-      run: cmake .. -DCMAKE_OSX_DEPLOYMENT_TARGET="10.14"
+      run: cmake .. -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13"
     - name: make deps
       working-directory: ./deps/build
       run: make
@@ -29,7 +29,7 @@ jobs:
       run: mkdir build
     - name: cmake
       working-directory: ./build
-      run: cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.14" -DSLIC3R_STATIC=1
+      run: cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13" -DSLIC3R_STATIC=1
     - name: make slic3r
       working-directory: ./build
       run: make slic3r
