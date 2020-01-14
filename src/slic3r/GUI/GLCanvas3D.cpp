@@ -5406,7 +5406,7 @@ void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, c
             {
                 const std::string& code = it->gcode;
                 // pause print or custom Gcode
-                if (code == PausePrintCode || 
+                if (code == GCodeWriter::PausePrintCode ||
                     (code != ColorChangeCode && code != ExtruderChangeCode))
                     return number_tools()-1; // last color item is a gray color for pause print or custom G-code 
 

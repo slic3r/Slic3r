@@ -3090,6 +3090,10 @@ void TabPrinter::update_fff()
         else
             sm->disable();
     }
+    if (m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfKlipper)
+        GCodeWriter::PausePrintCode = "PAUSE";
+    else 
+        GCodeWriter::PausePrintCode = "M601";
 
     if (m_use_silent_mode != m_config->opt_bool("silent_mode")) {
         m_rebuild_kinematics_page = true;

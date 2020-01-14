@@ -1865,7 +1865,7 @@ void GCode::process_layer(
 
         if (custom_code == ColorChangeCode && m_custom_gcode_per_print_z.front().extruder > 0)
             m600_before_extruder = m_custom_gcode_per_print_z.front().extruder - 1;
-        if (custom_code == PausePrintCode)
+        if (custom_code == GCodeWriter::PausePrintCode)
             pause_print_msg = m_custom_gcode_per_print_z.front().color;
 
         m_custom_gcode_per_print_z.erase(m_custom_gcode_per_print_z.begin());
@@ -1900,7 +1900,7 @@ void GCode::process_layer(
         } 
         else
         {
-            if (custom_code == PausePrintCode) // Pause print
+            if (custom_code == GCodeWriter::PausePrintCode) // Pause print
             {
                 // add tag for analyzer
                 gcode += "; " + GCodeAnalyzer::Pause_Print_Tag + "\n";
