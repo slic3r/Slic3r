@@ -1373,7 +1373,8 @@ void GCode::_do_export(Print &print, FILE *file)
                 bbox_prime.offset(0.5f);
                 // Beep for 500ms, tone 800Hz. Yet better, play some Morse.
                 _write(file, this->retract());
-                _write(file, "M300 S800 P500\n");
+                if(print.config().gcode_flavor.value != gcfKlipper)
+                    _write(file, "M300 S800 P500\n");
                 if (bbox_prime.overlap(bbox_print)) {
                     // Wait for the user to remove the priming extrusions, otherwise they would
                     // get covered by the print.
@@ -1888,7 +1889,10 @@ void GCode::process_layer(
                 // && !MMU1
                 ) {
                 //! FIXME_in_fw show message during print pause
-                gcode += "M601\n"; // pause print
+                if (print.config().gcode_flavor.value == gcfKlipper)
+                    gcode += "PAUSE\n";
+                else
+                    gcode += "M601\n"; // pause print
                 gcode += "M117 Change filament for Extruder " + std::to_string(m600_before_extruder) + "\n";
     }
             else 
