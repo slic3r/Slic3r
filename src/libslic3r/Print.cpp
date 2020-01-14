@@ -1255,7 +1255,7 @@ std::string Print::validate() const
         // #4043
         if (total_copies_count > 1 && ! m_config.complete_objects.value)
             return L("The Spiral Vase option can only be used when printing a single object.");
-        assert(m_objects.size() == 1);
+        assert(m_objects.size() == 1 || config().complete_objects.value);
         size_t num_regions = 0;
         for (const std::vector<std::pair<t_layer_height_range, int>> &volumes_per_region : m_objects.front()->region_volumes)
         	if (! volumes_per_region.empty())

@@ -793,7 +793,9 @@ std::string CoolingBuffer::apply_layer_cooldown(
                     // Roll the pointer before the 'F' word.
                     for (f -= 2; f > line_start && (*f == ' ' || *f == '\t'); -- f);
                     // Append up to the F word, without the trailing whitespace.
-                    new_gcode.append(line_start, f - line_start + 1);
+                    //but only if there are something else than a simple "G1" (F is always put at the end of a G1 command)
+                    if(f - line_start > 2)
+                        new_gcode.append(line_start, f - line_start + 1);
                 }
                 // Skip the non-whitespaces of the F parameter up the comment or end of line.
                 for (; fpos != end && *fpos != ' ' && *fpos != ';' && *fpos != '\n'; ++fpos);
