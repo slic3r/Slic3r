@@ -470,7 +470,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("elefant_foot_compensation", coFloat);
     def->label = L("First layer");
-    def->full_label = L("First layer compensation");
+    def->full_label = L("XY First layer compensation");
     def->category = OptionCategory::slicing;
     def->tooltip = L("The first layer will be grown / shrunk in the XY plane by the configured value "
                    "to compensate for the 1st layer squish aka an Elephant Foot effect. (should be negative = inwards)");
@@ -1235,7 +1235,8 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Ironing width");
     def->category = OptionCategory::infill;
     def->tooltip = L("This is the width of the ironing pass, in a % of the top extrusion width, should not be more than 50%"
-        " (two times more lines, 50% overlap). It's not necessary to go below 25% (four times more lines, 75% overlap)");
+        " (two times more lines, 50% overlap). It's not necessary to go below 25% (four times more lines, 75% overlap). \nIf you have problems with your ironing process,"
+        " don't forget to look at the flow->above bridge flow, as this setting should be set to min 110% to let you have enough plastic in the top layer.");
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));

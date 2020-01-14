@@ -1,7 +1,7 @@
 #logs
 page:Perimeters & Shell:shell
 group:Vertical shells
-	setting:label$perimeters yeah!:width$5:perimeters
+	setting:label$perimeters:perimeters
 	setting:spiral_vase
 	recommended_thin_wall_thickness_description
 group:Horizontal shells
@@ -21,18 +21,18 @@ group:Quality (slower slicing)
 	setting:thin_perimeters
 	line:Thin walls
 		setting:thin_walls
-		setting:thin_walls_min_width
-		setting:thin_walls_overlap
+		setting:width$5:thin_walls_min_width
+		setting:width$5:thin_walls_overlap
 	end_line
 	line:Overhangs
 		setting:overhangs
-		setting:overhangs_width
+		setting:width$5:overhangs_width
 	end_line
 	setting:no_perimeter_unsupported_algo
 group:Advanced
 	line:Gap Fill
 		setting:gap_fill
-		setting:gap_fill_min_area
+		setting:width$5:gap_fill_min_area
 	end_line
 	line:Seam
 		setting:seam_position
@@ -57,15 +57,15 @@ group:Filtering
 	setting:slice_closing_radius
 group:Modifying slices
 	line:Curve smoothing
-		setting:curve_smoothing_precision
-		setting:curve_smoothing_angle_convex
-		setting:curve_smoothing_angle_concave
-		setting:curve_smoothing_cutoff_dist
+		setting:width$6:curve_smoothing_precision
+		setting:width$6:curve_smoothing_angle_convex
+		setting:width$6:curve_smoothing_angle_concave
+		setting:width$6:curve_smoothing_cutoff_dist
 	end_line
 	line:XY compensation
-		setting:xy_size_compensation
-		setting:elefant_foot_compensation
-		setting:hole_size_compensation
+		setting:width$6:xy_size_compensation
+		setting:width$6:elefant_foot_compensation
+		setting:width$6:hole_size_compensation
 	end_line
 	setting:hole_to_polyhole
 group:Other
