@@ -1114,8 +1114,16 @@ bool Tab::create_pages(std::string setting_type_name)
             
             current_group = current_page->new_optgroup(_(L(params.back())), nolabel?0:-1);
             for (int i = 1; i < params.size() - 1; i++) {
-                if (boost::starts_with(params[i], "label_width$")) {
+                if (boost::starts_with(params[i], "title_width$")) {
+                    current_group->title_width = atoi(params[i].substr(12, params[i].size() - 12).c_str());
+                }
+                else if (params[i].find("label_width$") != std::string::npos)
+                {
                     current_group->label_width = atoi(params[i].substr(12, params[i].size() - 12).c_str());
+                }
+                else if (params[i].find("sidetext_width$") != std::string::npos)
+                {
+                    current_group->sidetext_width = atoi(params[i].substr(15, params[i].size() - 15).c_str());
                 }
                 else if (params[i] == "extruders_count_event") {
                     TabPrinter* tab = nullptr;
@@ -1314,11 +1322,22 @@ bool Tab::create_pages(std::string setting_type_name)
                 {
                     option.opt.label = params[i].substr(6, params[i].size() - 6);
                 }
+                else if (boost::starts_with(params[i], "label_width$")) {
+                    option.opt.label_width = atoi(params[i].substr(12, params[i].size() - 12).c_str());
+                }
+                else if (params[i].find("sidetext$") != std::string::npos)
+                {
+                    option.opt.sidetext = params[i].substr(9, params[i].size() - 9);
+                }
+                else if (params[i].find("sidetext_width$") != std::string::npos)
+                {
+                    option.opt.sidetext_width = atoi(params[i].substr(15, params[i].size() - 15).c_str());
+                }
                 else if (params[i] == "full_width") {
                     option.opt.full_width = true;
                 }
                 else if (boost::starts_with(params[i], "width$")) {
-                    option.opt.width = atoi(params[i].substr(6, params[i].size()-6).c_str());
+                    option.opt.width = atoi(params[i].substr(6, params[i].size() - 6).c_str());
                 }
                 else if (boost::starts_with(params[i], "height$")) {
                     option.opt.height = atoi(params[i].substr(7, params[i].size() - 7).c_str());
@@ -2084,7 +2103,7 @@ void TabFilament::build()
 
     page = add_options_page(_(L("Notes")), "note.png");
         optgroup = page->new_optgroup(_(L("Notes")), 0);
-        optgroup->label_width = 0;
+        optgroup->title_width = 0;
         option = optgroup->get_option("filament_notes");
         option.opt.full_width = true;
         option.opt.height = notes_field_height;// 250;
@@ -2743,7 +2762,7 @@ PageShp TabPrinter::build_kinematics_page()
         // Legend for OptionsGroups
         auto optgroup = page->new_optgroup("");
         optgroup->set_show_modified_btns_val(false);
-        optgroup->label_width = 23;// 230;
+        optgroup->title_width = 23;// 230;
         auto line = Line{ "", "" };
 
         ConfigOptionDef def;
@@ -3897,7 +3916,7 @@ bool Page::set_value(const t_config_option_key& opt_key, const boost::any& value
 }
 
 // package Slic3r::GUI::Tab::Page;
-ConfigOptionsGroupShp Page::new_optgroup(const wxString& title, int noncommon_label_width /*= -1*/)
+ConfigOptionsGroupShp Page::new_optgroup(const wxString& title, int noncommon_title_width /*= -1*/)
 {
     auto extra_column = [this](wxWindow* parent, const Line& line)
     {
@@ -3915,8 +3934,8 @@ ConfigOptionsGroupShp Page::new_optgroup(const wxString& title, int noncommon_la
 
     //! config_ have to be "right"
     ConfigOptionsGroupShp optgroup = std::make_shared<ConfigOptionsGroup>(this, title, m_config, true, extra_column);
-    if (noncommon_label_width >= 0)
-        optgroup->label_width = noncommon_label_width;
+    if (noncommon_title_width >= 0)
+        optgroup->title_width = noncommon_title_width;
 
 #ifdef __WXOSX__
         auto tab = GetParent()->GetParent();
@@ -4071,7 +4090,7 @@ void TabSLAMaterial::build()
     optgroup->append_single_option_line("initial_exposure_time");
 
     optgroup = page->new_optgroup(_(L("Corrections")));
-    optgroup->label_width = 19;//190;
+    optgroup->title_width = 19;//190;
     std::vector<std::string> corrections = {"material_correction"};
 //    std::vector<std::string> axes{ "X", "Y", "Z" };
     std::vector<std::string> axes{ "XY", "Z" };
@@ -4090,7 +4109,7 @@ void TabSLAMaterial::build()
 
     page = add_options_page(_(L("Notes")), "note");
     optgroup = page->new_optgroup(_(L("Notes")), 0);
-    optgroup->label_width = 0;
+    optgroup->title_width = 0;
     Option option = optgroup->get_option("material_notes");
     option.opt.full_width = true;
     option.opt.height = 25;//250;

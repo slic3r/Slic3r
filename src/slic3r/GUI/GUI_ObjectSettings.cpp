@@ -121,7 +121,7 @@ bool ObjectSettings::update_settings_list()
             categories.push_back(cat.first);
 
             auto optgroup = std::make_shared<ConfigOptionsGroup>(m_og->ctrl_parent(), _(toString(cat.first)), config, false, extra_column);
-            optgroup->label_width = 15;
+            optgroup->title_width = 15;
             optgroup->sidetext_width = 5;
 
             optgroup->m_on_change = [this, config](const t_config_option_key& opt_id, const boost::any& value) {

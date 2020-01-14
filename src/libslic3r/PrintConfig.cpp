@@ -296,7 +296,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("brim_ears", coBool);
-    def->label = L(" ");
+    def->label = L("");
     def->full_label = L("Brim ears");
     def->category = OptionCategory::skirtBrim;
     def->tooltip = L("Only draw brim over the sharp edges of the model.");
@@ -669,7 +669,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("perimeter_loop", coBool);
-    def->label = L(" ");
+    def->label = L("");
     def->full_label = L("Perimeters loop");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Join the perimeters to create only one continuous extrusion without any z-hop."

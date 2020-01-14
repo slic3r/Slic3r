@@ -1,7 +1,7 @@
 #logs
 page:Perimeters & Shell:shell
 group:Vertical shells
-	setting:label$perimeters:perimeters
+	setting:width$6:perimeters
 	setting:spiral_vase
 	recommended_thin_wall_thickness_description
 group:Horizontal shells
@@ -55,32 +55,38 @@ group:Filtering
 	setting:resolution
 	setting:model_precision
 	setting:slice_closing_radius
-group:Modifying slices
+group:label_width$8:Modifying slices
 	line:Curve smoothing
 		setting:width$6:curve_smoothing_precision
 		setting:width$6:curve_smoothing_angle_convex
 		setting:width$6:curve_smoothing_angle_concave
 		setting:width$6:curve_smoothing_cutoff_dist
 	end_line
+	setting:hole_to_polyhole
 	line:XY compensation
 		setting:width$6:xy_size_compensation
 		setting:width$6:elefant_foot_compensation
 		setting:width$6:hole_size_compensation
 	end_line
-	setting:hole_to_polyhole
 group:Other
 	setting:clip_multipart_objects
 
 page:Infill:infill
 group:Infill
-	setting:fill_density
-	setting:fill_pattern
-	line:External patterns
-		setting:top_fill_pattern
-		setting:bottom_fill_pattern
+	line:Fill density
+		setting:label_width$5:label$_:fill_density
 	end_line
-	setting:solid_fill_pattern
-	setting:infill_not_connected
+	line:Pattern
+		setting:label_width$5:label$_:fill_pattern
+		setting:label$don't connect:infill_not_connected
+	end_line
+	line:External patterns
+		setting:label_width$5:top_fill_pattern
+		setting:label_width$5:bottom_fill_pattern
+	end_line
+	line:Solid pattern
+		setting:label_width$5:label$_:solid_fill_pattern
+	end_line
 group:Reducing printing time
 	setting:infill_every_layers
 	setting:infill_only_where_needed
@@ -88,23 +94,23 @@ group:Reducing printing time
 		setting:infill_dense
 		setting:infill_dense_algo
 	end_line
-group:Advanced
+group:sidetext_width$3:Advanced
 	setting:solid_infill_every_layers
 	setting:solid_infill_below_area
 	line:Angle
-		setting:fill_angle
-		setting:bridge_angle
+		setting:label_width$6:width$5:fill_angle
+		setting:label_width$6:width$5:bridge_angle
 	end_line
 	line:Anchor solid infill by X mm
-		setting:external_infill_margin
-		setting:bridged_infill_margin
+		setting:label_width$6:width$5:external_infill_margin
+		setting:label_width$6:width$5:bridged_infill_margin
 	end_line
 	setting:only_retract_when_crossing_perimeters
 	setting:infill_first
 group:Advanced Infill
 	line:Ironing tuning
-		setting:fill_smooth_width
-		setting:fill_smooth_distribution
+		setting:label_width$6:width$5:fill_smooth_width
+		setting:label_width$9:width$5:fill_smooth_distribution
 	end_line
 
 page:Skirt & Brim:skirt+brim
@@ -119,7 +125,7 @@ group:Brim
 	setting:brim_width_interior
 	line:Brim ears
 		setting:brim_ears
-		setting:brim_ears_max_angle
+		setting:width$3:brim_ears_max_angle
 	end_line
 
 page:Support material:support
@@ -152,29 +158,33 @@ group:Options for support material interface
 	setting:support_material_interface_contact_loops
 
 page:Speed:time
-group:Speed for print moves
+group:label_width$8:Speed for print moves
 	line:Perimeter speed
-		setting:perimeter_speed
-		setting:external_perimeter_speed
-		setting:small_perimeter_speed
+		setting:width$4:perimeter_speed
+		setting:width$4:external_perimeter_speed
+		setting:width$4:small_perimeter_speed
 	end_line
 	line:Infill speed
-		setting:infill_speed
-		setting:solid_infill_speed
-		setting:top_solid_infill_speed
+		setting:width$4:infill_speed
+		setting:width$4:solid_infill_speed
+		setting:width$4:top_solid_infill_speed
 	end_line
 	line:Support speed
-		setting:support_material_speed
-		setting:support_material_interface_speed
+		setting:width$4:support_material_speed
+		setting:width$4:support_material_interface_speed
 	end_line
-	setting:bridge_speed
-	setting:gap_fill_speed
+	line:Bridge speed
+		setting:label$_:width$4:bridge_speed
+	end_line
+	line:Gap fill speed
+		setting:label$_:width$4:gap_fill_speed
+	end_line
 group:Speed for non-print moves
 	setting:travel_speed
 group:Modifiers
 	line:First layer speed
-		setting:first_layer_speed
-		setting:first_layer_infill_speed
+		setting:label_width$8:width$4:first_layer_speed
+		setting:label_width$8:width$4:first_layer_infill_speed
 	end_line
 group:Acceleration control (advanced)
 	setting:perimeter_acceleration
@@ -219,8 +229,8 @@ group:Ooze prevention
 group:Wipe tower
 	setting:wipe_tower
 	line:Wipe tower position
-		setting:wipe_tower_x
-		setting:wipe_tower_y
+		setting:label_width$3:width$5:sidetext$mm:wipe_tower_x
+		setting:label_width$3:width$5:sidetext$mm:wipe_tower_y
 	end_line
 	setting:wipe_tower_width
 	setting:wipe_tower_rotation_angle
