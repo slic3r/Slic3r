@@ -301,16 +301,18 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
                 printf("Processing bridge at layer " PRINTF_ZU ":\n", this->layer()->id());
                 #endif
                 double custom_angle = Geometry::deg2rad(this->region()->config().bridge_angle.value);
-                if (bd.detect_angle(custom_angle)) {
+                if (custom_angle > 0) {
+                    // Bridge was not detected (likely it is only supported at one side). Still it is a surface filled in
+                    // using a bridging flow, therefore it makes sense to respect the custom bridging direction.
+                    bridges[idx_last].bridge_angle = custom_angle;
+                }else if (bd.detect_angle(custom_angle)) {
                     bridges[idx_last].bridge_angle = bd.angle;
                     if (this->layer()->object()->config().support_material) {
                         polygons_append(this->bridged, intersection(bd.coverage(), to_polygons(initial)));
                         append(this->unsupported_bridge_edges, bd.unsupported_edges());
                     }
-                } else if (custom_angle > 0) {
-                    // Bridge was not detected (likely it is only supported at one side). Still it is a surface filled in
-                    // using a bridging flow, therefore it makes sense to respect the custom bridging direction.
-                    bridges[idx_last].bridge_angle = custom_angle;
+                } else {
+                    bridges[idx_last].bridge_angle = 0;
                 }
                 // without safety offset, artifacts are generated (GH #2494)
                 surfaces_append(bottom, union_ex(grown, true), bridges[idx_last]);
