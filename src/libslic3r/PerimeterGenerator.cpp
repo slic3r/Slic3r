@@ -418,7 +418,7 @@ void PerimeterGenerator::process()
                                     if (thin[0].area() > min_width*(ext_perimeter_width + ext_perimeter_spacing2)) {
                                         bound.remove_point_too_near((coord_t)SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                        Slic3r::MedialAxis ma{ thin[0], ext_perimeter_width + ext_perimeter_spacing2, 
+                                        Slic3r::MedialAxis ma{ thin[0], (coord_t)((ext_perimeter_width + ext_perimeter_spacing2)*1.1),
                                             min_width, coord_t(this->layer_height) };
                                         ma.use_bounds(bound)
                                             .use_min_real_width((coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter))

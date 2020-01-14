@@ -284,8 +284,8 @@ MedialAxis::validate_edge(const VD::edge_type* edge)
     //    return false;
     //
 
-    //shouldn't occur if perimeter_generator is well made
-    if (w0 > this->max_width && w1 > this->max_width)
+    //shouldn't occur if perimeter_generator is well made. *1.05 for a little wiggle room
+    if (w0 > this->max_width*1.05 && w1 > this->max_width*1.05)
         return false;
     
     this->thickness[edge]         = std::make_pair(w0, w1);
@@ -926,6 +926,7 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                     if (dot_candidate_branch_test < 0) dot_candidate_branch_test = 0;
                     if (pp[biggest_main_branch_id].width.back()>0)
                         test_dot += 2 * (float)dot_poly_branch;
+                    //std::cout << "compute dot "<< dot_poly_branch_test<<" & "<< dot_candidate_branch_test <<"\n";
                 }
                 //test if it's useful to merge or not
                 //ie, don't merge  'T' but ok for 'Y', merge only lines of not disproportionate different length (ratio max: 4) (or they are both with 0-width end)
@@ -953,7 +954,7 @@ MedialAxis::main_fusion(ThickPolylines& pp)
             }
             if (best_candidate != nullptr) {
                 //idf++;
-                //std::cout << " == fusion " << id <<" : "<< idf << " ==\n";
+                //std::cout << " == fusion " << id <<" : "<< idf << " == with "<< i <<" & "<<best_idx<<"\n";
                 // delete very near points
                 remove_point_too_near(&polyline);
                 remove_point_too_near(best_candidate);
