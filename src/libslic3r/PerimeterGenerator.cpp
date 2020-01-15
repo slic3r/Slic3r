@@ -210,10 +210,12 @@ void PerimeterGenerator::process()
                                         unbridgeable = offset2_ex(unbridgeable, -ext_perimeter_width*2, ext_perimeter_width*2);
                                         ExPolygons bridges_temp = intersection_ex(last, diff_ex(unsupported_filtered, unbridgeable));
                                         //remove the overhangs section form the surface polygons
+                                        ExPolygons reference = last;
                                         last = diff_ex(last, unsupported_filtered);
                                         //ExPolygons no_bridge = diff_ex(offset_ex(unbridgeable, ext_perimeter_width * 3 / 2), last);
                                         //bridges_temp = diff_ex(bridges_temp, no_bridge);
                                         unsupported_filtered = diff_ex(offset_ex(bridges_temp, ext_perimeter_width * 3 / 2), offset_ex(unbridgeable, ext_perimeter_width*2, jtSquare));
+                                        unsupported_filtered = intersection_ex(unsupported_filtered, reference);
                                     } else {
                                         ExPolygons unbridgeable = intersection_ex(unsupported, diff_ex(unsupported_filtered, offset_ex(bridgeable_simplified, ext_perimeter_width / 2)));
                                         unbridgeable = offset2_ex(unbridgeable, -ext_perimeter_width, ext_perimeter_width);

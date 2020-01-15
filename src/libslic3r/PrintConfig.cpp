@@ -2259,7 +2259,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Position of perimeters starting points.");
     def->enum_keys_map = &ConfigOptionEnum<SeamPosition>::get_enum_values();
     def->enum_values.push_back("random");
-    def->enum_values.push_back("nearest");
+    def->enum_values.push_back("near");
     def->enum_values.push_back("aligned");
     def->enum_values.push_back("rear");
     def->enum_values.push_back("hidden");
@@ -2267,7 +2267,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Nearest"));
     def->enum_labels.push_back(L("Aligned"));
     def->enum_labels.push_back(L("Rear"));
-    def->enum_labels.push_back(L("Hidden"));
+    def->enum_labels.push_back(L("Corners"));
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionEnum<SeamPosition>(spHidden));
 

@@ -190,7 +190,8 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<SeamPosition>::ge
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
         keys_map["random"]              = spRandom;
-        keys_map["nearest"]             = spNearest;
+        keys_map["nearest"]             = spHidden;
+        keys_map["near"]                = spNearest;
         keys_map["aligned"]             = spAligned;
         keys_map["rear"]                = spRear;
         keys_map["hidden"]              = spHidden;
