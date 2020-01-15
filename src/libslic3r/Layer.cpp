@@ -138,6 +138,7 @@ void Layer::make_perimeters()
                 && config.gap_fill_speed            == other_config.gap_fill_speed
                 && config.infill_dense              == other_config.infill_dense
                 && config.infill_dense_algo         == other_config.infill_dense_algo
+                && config.no_perimeter_unsupported_algo == other_config.no_perimeter_unsupported_algo
                 && config.only_one_perimeter_top    == other_config.only_one_perimeter_top
                 && config.overhangs                 == other_config.overhangs
                 && config.overhangs_width           == other_config.overhangs_width

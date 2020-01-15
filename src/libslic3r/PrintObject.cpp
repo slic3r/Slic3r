@@ -1060,7 +1060,7 @@ void PrintObject::detect_surfaces_type()
                     float        offset = layerm->flow(frExternalPerimeter).scaled_width() / 10.f;
 
                     Polygons     layerm_slices_surfaces = to_polygons(layerm->slices().surfaces);
-                    // no_perimeter_full_bridge allow to put bridges where there are nothing, hence adding area to silce, that's why we need to start from the result of PerimeterGenerator.
+                    // no_perimeter_full_bridge allow to put bridges where there are nothing, hence adding area to slice, that's why we need to start from the result of PerimeterGenerator.
                     if (layerm->region()->config().no_perimeter_unsupported_algo == npuaFilled) {
                         layerm_slices_surfaces = union_(layerm_slices_surfaces, to_polygons(layerm->fill_surfaces));
                     }
