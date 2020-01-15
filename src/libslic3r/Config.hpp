@@ -1475,8 +1475,10 @@ public:
     int                                 height          = -1;
     // Optional width of an input field.
     int                                 width = -1;
-    // Optional label width of an input field (if in a line).
+    // Optional label width of the label (if in a line).
     int                                 label_width = -1;
+    // Optional label width of the sidetext (if in a line).
+    int                                 sidetext_width = -1;
     // <min, max> limit of a numeric input.
     // If not set, the <min, max> is set to <INT_MIN, INT_MAX>
     // By setting min=0, only nonnegative input is allowed.

@@ -693,6 +693,9 @@ void SpinCtrl::propagate_value()
 void SpinCtrl::msw_rescale()
 {
     Field::msw_rescale();
+    auto size = wxSize(wxDefaultSize);
+    if (m_opt.height >= 0) size.SetHeight(m_opt.height * m_em_unit);
+    if (m_opt.width >= 0) size.SetWidth(m_opt.width * m_em_unit);
 
     wxSpinCtrl* field = dynamic_cast<wxSpinCtrl*>(window);
     field->SetMinSize(wxSize(-1, int(1.9f*field->GetFont().GetPixelSize().y)));

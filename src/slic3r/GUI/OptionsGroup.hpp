@@ -79,7 +79,7 @@ class OptionsGroup {
 public:
     const bool		staticbox {true};
     const wxString	title {wxString("")};
-    size_t			label_width = 20 ;// {200};
+    size_t			title_width = 20;// {200};
     wxSizer*		sizer {nullptr};
     column_t		extra_column {nullptr};
     t_change		m_on_change { nullptr };
@@ -96,7 +96,8 @@ public:
     
     wxFont			sidetext_font {wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
     wxFont			label_font {wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
-	int				sidetext_width{ -1 };
+    int			    sidetext_width{ -1 };
+    int			    label_width{ -1 };
 
     /// Returns a copy of the pointer of the parent wxWindow.
     /// Accessor function is because users are not allowed to change the parent
@@ -163,7 +164,7 @@ public:
     void            clear_fields_except_of(const std::vector<std::string> left_fields);
 
     void            hide_labels() {
-        label_width = 0;
+        title_width = 0;
         m_grid_sizer->SetCols(m_grid_sizer->GetEffectiveColsCount()-1);
         static_cast<wxFlexGridSizer*>(m_grid_sizer)->AddGrowableCol(!extra_column ? 0 : 1);
     }
@@ -181,11 +182,11 @@ public:
         	stb = nullptr;
         sizer = (staticbox ? new wxStaticBoxSizer(stb, wxVERTICAL) : new wxBoxSizer(wxVERTICAL));
         auto num_columns = 1U;
-        if (label_width != 0) num_columns++;
+        if (title_width != 0) num_columns++;
         if (extra_column != nullptr) num_columns++;
         m_grid_sizer = new wxFlexGridSizer(0, num_columns, 1,0);
         static_cast<wxFlexGridSizer*>(m_grid_sizer)->SetFlexibleDirection(wxBOTH/*wxHORIZONTAL*/);
-        static_cast<wxFlexGridSizer*>(m_grid_sizer)->AddGrowableCol(label_width == 0 ? 0 : !extra_column ? 1 : 2 );
+        static_cast<wxFlexGridSizer*>(m_grid_sizer)->AddGrowableCol(title_width == 0 ? 0 : !extra_column ? 1 : 2 );
 #if 0//#ifdef __WXGTK__
         m_panel = new wxPanel( _parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
         sizer->Fit(m_panel);
@@ -200,7 +201,8 @@ public:
 protected:
 	std::map<t_config_option_key, Option>	m_options;
     wxWindow*				m_parent {nullptr};
-    std::vector<ConfigOptionMode>           m_options_mode;
+    std::vector<std::map<ConfigOptionMode, std::vector<size_t>>> m_options_mode;
+    std::vector<wxSizer*>                   m_line_sizer;
     std::vector<wxWindow*>                  m_extra_column_item_ptrs;
     std::vector<wxWindow*>                  m_near_label_widget_ptrs;
 
@@ -226,7 +228,7 @@ protected:
 	const t_field&		build_field(const t_config_option_key& id, const ConfigOptionDef& opt, wxStaticText* label = nullptr);
 	const t_field&		build_field(const t_config_option_key& id, wxStaticText* label = nullptr);
 	const t_field&		build_field(const Option& opt, wxStaticText* label = nullptr);
-	void				add_undo_buttuns_to_sizer(wxSizer* sizer, const t_field& field);
+	void				add_undo_buttuns_to_sizer(wxSizer* sizer, const t_field& field, std::vector<size_t> *widget_idx_in_sizer = nullptr);
 
     virtual void		on_kill_focus(const std::string& opt_key) {};
 	virtual void		on_set_focus(const std::string& opt_key);

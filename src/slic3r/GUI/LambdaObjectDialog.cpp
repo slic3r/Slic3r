@@ -181,7 +181,7 @@ ConfigOptionsGroupShp LambdaObjectDialog::init_modificator_options_page(const wx
 
 	ConfigOptionsGroupShp optgroup;
 	optgroup = std::make_shared<ConfigOptionsGroup>(panel, _(L("Add")) + " " +title + " " +dots);
-	optgroup->label_width = 100;
+	optgroup->title_width = 100;
 
 	m_optgroups.push_back(optgroup);
 

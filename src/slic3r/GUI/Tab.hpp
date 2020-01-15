@@ -83,7 +83,7 @@ public:
     void        msw_rescale();
 	Field*		get_field(const t_config_option_key& opt_key, int opt_index = -1) const;
 	bool		set_value(const t_config_option_key& opt_key, const boost::any& value);
-	ConfigOptionsGroupShp	new_optgroup(const wxString& title, int noncommon_label_width = -1);
+	ConfigOptionsGroupShp	new_optgroup(const wxString& title, int noncommon_title_width = -1);
 
 	bool		set_item_colour(const wxColour *clr) {
 		if (m_item_color != clr) {
