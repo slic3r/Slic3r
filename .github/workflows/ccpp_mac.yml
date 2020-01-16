@@ -49,6 +49,9 @@ jobs:
         cp Slic3r++/Slic3r++.app/Contents/resources/icons/slic3r.icns Slic3r++/Slic3r++.app/Contents/resources/slic3r.icns
         cp src/Info.plist Slic3r++/Slic3r++.app/Contents/Info.plist
         echo -n -e '\xff\xfeAPPL\x3f\x00\x3f\x00\x3f\x00\x3f\x00\x0a\x00' > PkgInfo
+    - name: update Info.plist
+      working-directory: ./build
+      run: sed "s/+UNKNOWN/_$(date '+%F')/" Slic3r++/Slic3r++.app/Contents/Info.plist
     - name: copy bin
       working-directory: ./build
       run: |
