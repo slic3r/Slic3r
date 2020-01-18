@@ -48,6 +48,16 @@ PresetEditor::PresetEditor(wxWindow* parent, t_config_option_keys options) :
     this->disable_tree_sel_changed_event = false;
 
     /// bind a lambda for the event EVT_TREE_SEL_CHANGED
+    this->Bind(wxEVT_TREE_SEL_CHANGED, [=](wxTreeEvent& e) {
+            if (this->disable_tree_sel_changed_event) return;
+            auto page_iter = std::find_if(this->_pages.begin(), this->_pages.end(), [=] (PresetPage* x) { return x->title() == this->_treectrl->GetItemText(this->_treectrl->GetSelection());});
+            if (page_iter == this->_pages.end()) return;
+            auto page = *page_iter;
+            for (auto p : this->_pages) p->Hide();
+            page->Show();
+            this->_sizer->Layout();
+            this->Refresh();
+    });
 
     /// bind a lambda for the event EVT_KEY_DOWN
 
@@ -58,7 +68,8 @@ PresetEditor::PresetEditor(wxWindow* parent, t_config_option_keys options) :
     /// bind a lambda for the event EVT_BUTTON from btn_save_preset
 
     /// bind a lambda for the event EVT_BUTTON from btn_delete_preset
-
+    this->_sizer->Add(left_sizer);
+    this->SetSizer(this->_sizer);
 }
 
 void PresetEditor::save_preset() {
@@ -107,7 +118,7 @@ PresetPage* PresetEditor::add_options_page(const wxString& _title, const wxStrin
         this->_iconcount += 1;
     }
 
-    PresetPage* page {new PresetPage(this, _title, this->_iconcount)};
+    PresetPage* page {new PresetPage(this, _title, this->_iconcount, [this] () -> config_ref { return this->current_preset->config(); } )};
     page->Hide();
     this->_sizer->Add(page, 1, wxEXPAND | wxLEFT, 5);
     _pages.push_back(page);
@@ -124,6 +135,23 @@ void PresetEditor::reload_preset() {
 
 // TODO
 void PresetEditor::_update_tree() {
+    auto selected {this->_treectrl->GetItemText(this->_treectrl->GetSelection()) };
+    auto root_item {this->_treectrl->GetRootItem()};
+    this->_treectrl->DeleteChildren(root_item);
+
+    bool have_selection { false };
+    for (auto& page : this->_pages) {
+        auto item_id = this->_treectrl->AppendItem(root_item, page->title(), page->iconID());
+        if (page->title() == selected) {
+            this->disable_tree_sel_changed_event = false;
+            this->_treectrl->SelectItem(item_id);
+            this->disable_tree_sel_changed_event = true;
+            have_selection = true;
+        }
+    }
+    if (!have_selection) {
+        this->_treectrl->SelectItem(root_item);
+    }
 }
 
 // TODO

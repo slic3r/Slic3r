@@ -4,6 +4,8 @@
 #include <string>
 #include <map>
 #include <memory>
+// wx
+#include <wx/statbox.h>
 
 namespace Slic3r { namespace GUI {
 
@@ -50,20 +52,26 @@ private:
     ConfigOption* _default {nullptr};
 };
 
-class OptionsGroup {
+class OptionsGroup : public wxStaticBox {
 public:
-    OptionsGroup() {}
-    ConfigOption* get_field(const t_config_option_key& opt_id) { return nullptr; }
+    OptionsGroup() : OptionsGroup(nullptr, wxString(""), nullptr) {};
+    OptionsGroup(wxWindow* parent, const wxString& title, const std::function<config_ref(void)> _config_cb) : 
+        wxStaticBox(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT, title),
+        _parent(parent),
+        _config_cb(_config_cb) {
+            this->_sizer = new wxBoxSizer(wxVERTICAL);
+            this->SetSizer(this->_sizer);
+    }
+    std::shared_ptr<UI_Field> append(const t_config_option_key& opt_id);
 protected:
-    std::map<t_config_option_key, std::unique_ptr<Option>> _options;
-    std::map<t_config_option_key, std::unique_ptr<UI_Field>> _fields;
+    wxWindow* _parent {nullptr};
+    wxSizer* _sizer {nullptr};
+
+    /// Callback function to get a current config reference from the owning PresetPage
+    std::function<config_ref(void)> _config_cb {nullptr};
 };
 
 class ConfigOptionsGroup : public OptionsGroup {
-public:
-
-    std::shared_ptr<Slic3r::Config> config;
-protected:
 
 };
 

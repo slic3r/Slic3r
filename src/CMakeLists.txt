@@ -401,6 +401,7 @@ IF(wxWidgets_FOUND AND OPENGL_FOUND AND Enable_GUI)
     add_library(slic3r_gui STATIC 
     ${GUI_LIBDIR}/Dialogs/AboutDialog.cpp
     ${GUI_LIBDIR}/Dialogs/PresetEditor.cpp
+    ${GUI_LIBDIR}/Dialogs/PresetPage.cpp
     ${GUI_LIBDIR}/Dialogs/PrintEditor.cpp
     ${GUI_LIBDIR}/Dialogs/PrinterEditor.cpp
     ${GUI_LIBDIR}/Dialogs/MaterialEditor.cpp
@@ -418,6 +419,7 @@ IF(wxWidgets_FOUND AND OPENGL_FOUND AND Enable_GUI)
     ${GUI_LIBDIR}/ProgressStatusBar.cpp
     ${GUI_LIBDIR}/Settings.cpp
     ${GUI_LIBDIR}/misc_ui.cpp
+    ${GUI_LIBDIR}/OptionsGroup.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_NumChoice.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_Choice.cpp
     ${GUI_LIBDIR}/OptionsGroup/UI_Point.cpp

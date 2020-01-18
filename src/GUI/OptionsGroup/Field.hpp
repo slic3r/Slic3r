@@ -66,6 +66,10 @@ public:
     /// Function to call when focus leaves.
     std::function<void (const std::string&)> on_kill_focus {nullptr};
 
+    /// Change the underlying scaling for this UI element, if it makes sense.
+    /// Return value from get_X does not change.
+    virtual void set_scale(size_t new_scale) {};
+
 protected:
     wxWindow* parent {nullptr}; //< Cached copy of the parent object
     wxWindow* window {nullptr}; //< Pointer copy of the derived classes
@@ -441,7 +445,7 @@ public:
     template <typename T> void set_range(T min, T max);
 
     /// Change the scale of the slider bar. Return value from get_X functions does not change.
-    void set_scale(size_t new_scale);
+    void set_scale(size_t new_scale) override;
     
     /// Returns pointer to owned wxSlider.
     wxSlider* slider() { return _slider;}

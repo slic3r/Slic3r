@@ -4,6 +4,7 @@
 // stdlib
 #include <string>
 #include <functional>
+#include <memory>
 
 // Libslic3r
 #include "libslic3r.h"
@@ -13,6 +14,7 @@
 // GUI
 #include "misc_ui.hpp"
 #include "Preset.hpp"
+#include "OptionsGroup/Field.hpp"
 
 // Wx
 #include <wx/treectrl.h>
@@ -65,10 +67,19 @@ public:
     void reload_preset();
     PresetPage* add_options_page(const wxString& _title, const wxString& _icon = "");
 
-    virtual wxString title() = 0;
+    static wxString title() { return wxString(""); };
+    virtual wxString my_title() { return PresetEditor::title(); };
     virtual std::string name() = 0;
     virtual preset_t type() = 0; 
-    virtual int typeId() = 0; 
+    virtual int typeId() = 0;
+
+    /// Actual storage for UI elements for this Editor
+    std::map<t_config_option_key, std::shared_ptr<UI_Field> > fields {};
+
+    /// Retrieve-and-cast method for UI fields.
+    /// Must be called with the expected return type.
+    template <typename T>
+    std::shared_ptr<T> get_field(t_config_option_key key) { return std::dynamic_pointer_cast<T>(fields.at(key)); }
 protected:
     // Main sizer
     wxSizer* _sizer {nullptr};
@@ -123,7 +134,8 @@ public:
     PrintEditor(wxWindow* parent, t_config_option_keys options = {});
     PrintEditor() : PrintEditor(nullptr, {}) {};
 
-    wxString title() override { return _("Print Settings"); }
+    static wxString title() { return _("Print Settings"); }
+    wxString my_title() override { return PrintEditor::title(); }
     std::string name() override { return "print"s; }
 
     preset_t type() override  { return preset_t::Print; }; 
@@ -196,7 +208,8 @@ public:
     PrinterEditor(wxWindow* parent, t_config_option_keys options = {});
     PrinterEditor() : PrinterEditor(nullptr, {}) {};
 
-    wxString title() override { return _("Printer Settings"); }
+    static wxString title() { return _("Printer Settings"); }
+    wxString my_title() override { return PrinterEditor::title(); }
     std::string name() override { return "printer"s; }
     preset_t type() override  { return preset_t::Printer; }; 
     int typeId() override  { return static_cast<int>(preset_t::Printer); }; 
@@ -243,7 +256,8 @@ protected:
 class MaterialEditor : public PresetEditor {
 public:
 
-    wxString title() override { return _("Material Settings"); }
+    static wxString title() { return _("Material Settings"); }
+    wxString my_title() override { return MaterialEditor::title(); }
     std::string name() override { return "material"s; }
     preset_t type() override  { return preset_t::Material; }; 
     int typeId() override  { return static_cast<int>(preset_t::Material); }; 
@@ -278,22 +292,59 @@ protected:
 };
 
 
-
+class OptionsGroup;
 
 class PresetPage : public wxScrolledWindow {
 public:
-    PresetPage(wxWindow* parent, wxString _title, int _iconID) : 
+    PresetPage(wxWindow* parent, wxString _title, int _iconID, std::function<config_ref(void)> _config_access_cb) : 
         wxScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL),
-        title(_title), iconID(_iconID) {
+        _title(_title), _iconID(_iconID), _config_cb(_config_access_cb) {
             this->vsizer = new wxBoxSizer(wxVERTICAL);
             this->SetSizer(this->vsizer);
             this->SetScrollRate(ui_settings->scroll_step(), ui_settings->scroll_step());
         }
+    OptionsGroup* append(OptionsGroup* optgroup) {
+        this->_groups.push_back(optgroup);
+        return this->_groups.back();
+    }
+
+    /// Add an OptionsGroup to this PresetPage
+    OptionsGroup* add_optgroup(const wxString& title);
+    int iconID() { return this->_iconID; }
+    wxString title() { return this->_title; }
 protected:
     wxSizer* vsizer {nullptr};
-    wxString title {""};
-    int iconID {0};
+    wxString _title {""};
+    int _iconID {0};
+    // trust wxWidgets RTTI to not leak
+    std::vector<OptionsGroup*> _groups;
+
+    /// Callback function to get a clean config reference from the owning PresetEditor
+    std::function<config_ref(void)> _config_cb {nullptr};
 };
+
+template <class T>
+class PresetDialog : public wxDialog {
+public:
+    T* editor;
+    PresetDialog<T>(wxWindow* parent, t_config_option_keys options = {}) :
+        wxDialog(parent, wxID_ANY, T::title(), wxDefaultPosition, wxSize(800, 600)),
+        _sizer(new wxBoxSizer(wxHORIZONTAL)) {
+
+        this->editor = new T(this, options);
+
+        this->_sizer->Add(this->editor, 1, wxEXPAND | wxALL);
+        this->SetSizer(this->_sizer);
+        this->Show(this->editor);
+    }
+    
+    OptionsGroup* add_optgroup(const wxString& title, int label_width = 200);
+
+private:
+    wxSizer* _sizer;
+};
+
+
 
 }} // namespace Slic3r::GUI
 #endif // PRESETEDITOR_HPP

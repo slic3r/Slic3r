@@ -16,7 +16,7 @@ PresetChooser::PresetChooser(wxWindow* parent, std::weak_ptr<Print> print, Setti
         wxString name = "";
         switch(group) {
             case preset_t::Print:
-                name << _("Print settings:");
+                name << _("Print:");
                 break;
             case preset_t::Material:
                 name << _("Material:");
@@ -46,10 +46,41 @@ PresetChooser::PresetChooser(wxWindow* parent, std::weak_ptr<Print> print, Setti
             [=](wxCommandEvent& e) { 
                 wxTheApp->CallAfter([=]() { this->_on_change_combobox(group, choice);} );
             });
+
+        settings_btn->Bind(wxEVT_BUTTON,
+            [=](wxCommandEvent& e) {
+                wxTheApp->CallAfter([=]() { this->_load_preset_editor(group, choice);} );
+            });
     }
 
     this->SetSizer(_local_sizer);
 }
+
+void PresetChooser::_load_preset_editor(preset_t group, wxBitmapComboBox* choice) {
+    auto* preset = &(this->_presets.at(get_preset(group))[choice->GetSelection()+1]);
+    std::cerr << choice->GetStringSelection() << "\n";
+    PresetEditor* tab;
+    wxDialog* dlg;
+
+    switch(group) {
+        case preset_t::Print:
+            dlg = new PresetDialog<PrintEditor>(nullptr);
+            //tab = new PrintEditor(this);
+            break;
+        case preset_t::Material:
+            dlg = new PresetDialog<MaterialEditor>(nullptr);
+            //tab = new MaterialEditor(this);
+            break;
+        case preset_t::Printer:
+            dlg = new PresetDialog<PrinterEditor>(nullptr);
+            //tab = new PrinterEditor(this);
+            break;
+        default: break;
+    }
+
+    dlg->ShowModal();
+}
+
 
 void PresetChooser::load(std::array<Presets, preset_types> presets) {
 

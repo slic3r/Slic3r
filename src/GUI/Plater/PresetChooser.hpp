@@ -12,6 +12,7 @@
 
 #include "misc_ui.hpp"
 #include "Preset.hpp"
+#include "Dialogs/PresetEditor.hpp"
 #include "GUI.hpp"
 #include "Settings.hpp"
 
@@ -88,6 +89,8 @@ private:
 
     /// Update Settings presets with the state of this system
     void _update_preset_settings(preset_t preset);
+
+    void _load_preset_editor(preset_t group, wxBitmapComboBox* choice);
 };
 
 }} // Slic3r::GUI
