@@ -26,19 +26,27 @@ void PrintEditor::_build() {
     {
         auto page = this->add_options_page(_("Layers and perimeters"), "layers.png");
         {
-            auto optgroup = page->add_optgroup(_("Layer height"));
-            optgroup->append("layer_height");
-            optgroup->append("first_layer_height");
-
-            // note: candidate for a Line
-            optgroup->append("adaptive_slicing");
-            optgroup->append("adaptive_slicing_quality");
-            optgroup->append("layer_height");
-            //this->get_field<UI_Slider>("adaptive_slicing_quality")->set_scale(1);
-            optgroup->append("match_horizontal_surfaces");
+            {
+                auto optgroup = page->add_optgroup(_("Layer height"));
+                optgroup->append("layer_height");
+                optgroup->append("first_layer_height");
+                // note: candidate for a Line
+                optgroup->append("adaptive_slicing");
+                optgroup->append("adaptive_slicing_quality");
+                this->get_field<UI_Slider>("adaptive_slicing_quality")->set_scale(1);
+                optgroup->append("match_horizontal_surfaces");
+            }
+            {
+                auto optgroup = page->add_optgroup(_("Vertical Shells"));
+                optgroup->append("perimeters");
+                optgroup->append("min_shell_thickness");
+                optgroup->append("spiral_vase");
+            }
         }
-        page->Show();
-        this->_sizer->Layout();
     }
+    {
+        auto page = this->add_options_page(_("Infill"), "infill.png");
+    }
+    this->_sizer->Layout();
 }
 }} // namespace Slic3r::GUI
