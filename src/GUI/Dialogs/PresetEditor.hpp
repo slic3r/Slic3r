@@ -25,6 +25,9 @@
 using namespace std::string_literals;
 namespace Slic3r { namespace GUI {
 
+using field_storage_t = std::map<t_config_option_key, std::shared_ptr<UI_Field> >;
+using field_storage_ref = std::weak_ptr<std::map<t_config_option_key, std::shared_ptr<UI_Field> > >;
+
 class PresetPage;
 
 class PresetEditor : public wxPanel {
@@ -74,12 +77,12 @@ public:
     virtual int typeId() = 0;
 
     /// Actual storage for UI elements for this Editor
-    std::map<t_config_option_key, std::shared_ptr<UI_Field> > fields {};
+    std::shared_ptr<field_storage_t> fields {nullptr};
 
     /// Retrieve-and-cast method for UI fields.
     /// Must be called with the expected return type.
     template <typename T>
-    std::shared_ptr<T> get_field(t_config_option_key key) { return std::dynamic_pointer_cast<T>(fields.at(key)); }
+    std::shared_ptr<T> get_field(t_config_option_key key) { return std::dynamic_pointer_cast<T>(fields->at(key)); }
 protected:
     // Main sizer
     wxSizer* _sizer {nullptr};
@@ -296,12 +299,12 @@ class OptionsGroup;
 
 class PresetPage : public wxScrolledWindow {
 public:
-    PresetPage(wxWindow* parent, wxString _title, int _iconID, std::function<config_ref(void)> _config_access_cb) : 
+    PresetPage(wxWindow* parent, wxString _title, int _iconID, std::function<config_ref(void)> _config_access_cb, field_storage_ref _fields ) : 
         wxScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL),
-        _title(_title), _iconID(_iconID), _config_cb(_config_access_cb) {
+        _title(_title), _iconID(_iconID), _config_cb(_config_access_cb), fields(_fields) {
             this->vsizer = new wxBoxSizer(wxVERTICAL);
-            this->SetSizer(this->vsizer);
             this->SetScrollRate(ui_settings->scroll_step(), ui_settings->scroll_step());
+            this->SetSizer(this->vsizer);
         }
     OptionsGroup* append(OptionsGroup* optgroup) {
         this->_groups.push_back(optgroup);
@@ -321,6 +324,9 @@ protected:
 
     /// Callback function to get a clean config reference from the owning PresetEditor
     std::function<config_ref(void)> _config_cb {nullptr};
+
+    /// Reference to parent container's field array
+    field_storage_ref fields;
 };
 
 template <class T>
@@ -335,7 +341,6 @@ public:
 
         this->_sizer->Add(this->editor, 1, wxEXPAND | wxALL);
         this->SetSizer(this->_sizer);
-        this->Show(this->editor);
     }
     
     OptionsGroup* add_optgroup(const wxString& title, int label_width = 200);

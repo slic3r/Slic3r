@@ -7,7 +7,8 @@
 namespace Slic3r { namespace GUI {
 
 PresetEditor::PresetEditor(wxWindow* parent, t_config_option_keys options) :
-    wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBK_LEFT | wxTAB_TRAVERSAL) {
+    wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBK_LEFT | wxTAB_TRAVERSAL),
+    fields(std::make_shared<field_storage_t>()) {
 
     this->_sizer = new wxBoxSizer(wxHORIZONTAL);
     this->SetSizer(this->_sizer);
@@ -118,7 +119,7 @@ PresetPage* PresetEditor::add_options_page(const wxString& _title, const wxStrin
         this->_iconcount += 1;
     }
 
-    PresetPage* page {new PresetPage(this, _title, this->_iconcount, [this] () -> config_ref { return this->current_preset->config(); } )};
+    PresetPage* page {new PresetPage(this, _title, this->_iconcount, [this] () -> config_ref { return this->current_preset->config(); }, this->fields )};
     page->Hide();
     this->_sizer->Add(page, 1, wxEXPAND | wxLEFT, 5);
     _pages.push_back(page);
