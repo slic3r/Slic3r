@@ -226,6 +226,7 @@ ConfigDef::add(const t_config_option_key &opt_key, ConfigOptionType type)
 {
     ConfigOptionDef* opt = &this->options[opt_key];
     opt->type = type;
+    opt->name = opt_key;
     return opt;
 }
 

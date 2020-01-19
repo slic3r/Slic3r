@@ -697,6 +697,9 @@ class ConfigOptionDef
     /// For text input: If true, the GUI text box spans the complete page width.
     bool full_width;
 
+    /// Canonical name for this configuration option.
+    t_config_option_key name;
+
     /// This configuration item is not editable. 
     /// Currently only used for the display of the number of threads.
     bool readonly;
