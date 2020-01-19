@@ -1,6 +1,10 @@
+#ifndef OPTIONSGROUP_HPP
+#define OPTIONSGROUP_HPP
+
 #include "ConfigBase.hpp"
 #include "Config.hpp"
 #include "OptionsGroup/Field.hpp"
+#include "Dialogs/PresetEditor.hpp"
 #include <string>
 #include <map>
 #include <memory>
@@ -52,23 +56,29 @@ private:
     ConfigOption* _default {nullptr};
 };
 
-class OptionsGroup : public wxStaticBox {
+class OptionsGroup {
 public:
-    OptionsGroup() : OptionsGroup(nullptr, wxString(""), nullptr) {};
-    OptionsGroup(wxWindow* parent, const wxString& title, const std::function<config_ref(void)> _config_cb) : 
-        wxStaticBox(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT, title),
+    OptionsGroup() : OptionsGroup(nullptr, wxString(""), nullptr, field_storage_ref() ) {};
+    OptionsGroup(wxWindow* parent, const wxString& title, const std::function<config_ref(void)> config_cb, 
+    field_storage_ref _fields) :
         _parent(parent),
-        _config_cb(_config_cb) {
-            this->_sizer = new wxBoxSizer(wxVERTICAL);
-            this->SetSizer(this->_sizer);
+        _config_cb(config_cb),
+        fields(_fields) {
+            this->_box = new wxStaticBox(parent, wxID_ANY, title);
+            this->_sizer = new wxStaticBoxSizer(this->_box, wxVERTICAL);
+            this->_sizer->SetMinSize(wxSize(350, -1));
     }
-    std::shared_ptr<UI_Field> append(const t_config_option_key& opt_id);
+    std::shared_ptr<UI_Field> append(const t_config_option_key& opt_id, wxSizer* above_sizer = nullptr);
+    void append(const wxString& label, std::initializer_list<std::string> items);
+    wxSizer* sizer() { return this->_sizer; }
 protected:
     wxWindow* _parent {nullptr};
-    wxSizer* _sizer {nullptr};
+    wxStaticBoxSizer* _sizer {nullptr};
+    wxStaticBox* _box { nullptr };
 
     /// Callback function to get a current config reference from the owning PresetPage
     std::function<config_ref(void)> _config_cb {nullptr};
+    field_storage_ref fields;
 };
 
 class ConfigOptionsGroup : public OptionsGroup {
@@ -76,3 +86,5 @@ class ConfigOptionsGroup : public OptionsGroup {
 };
 
 }} // namespace Slic3r::GUI
+
+#endif // OPTIONSGROUP_HPP
