@@ -13,7 +13,9 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: change date in version
-      run: sed -i "s/+UNKNOWN/_$(date '+%F')/" version.inc
+      run: |
+        sed -i "s/+UNKNOWN/_$(date '+%F')/" version.inc >version.date.inc
+        mv version.date.inc version.inc
     - name: install gtk2 glew
       run: sudo apt-get install libgtk2.0-dev libglew-dev libudev-dev
     - name: mkdir in deps

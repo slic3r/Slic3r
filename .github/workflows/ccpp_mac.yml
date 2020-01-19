@@ -13,7 +13,9 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: change date in version
-      run: sed "s/+UNKNOWN/_$(date '+%F')/" version.inc
+      run: |
+        sed "s/+UNKNOWN/_$(date '+%F')/" version.inc > version.date.inc
+        mv version.date.inc version.inc
     - name: mkdir in deps
       run: mkdir deps/build
     - name: cmake deps
@@ -35,7 +37,7 @@ jobs:
       run: make slic3r
     - name: update Info.plist
       working-directory: ./build/src
-      run: sed "s/+UNKNOWN/_$(date '+%F')/" Info.plist
+      run: sed "s/+UNKNOWN/_$(date '+%F')/" Info.plist >Info.date.plist
     - name: create directory and copy into it
       working-directory: ./build
       run: |
@@ -50,7 +52,7 @@ jobs:
       run: |
         cp -Rf ../resources Slic3r++/Slic3r++.app/Contents/resources
         cp Slic3r++/Slic3r++.app/Contents/resources/icons/slic3r.icns Slic3r++/Slic3r++.app/Contents/resources/slic3r.icns
-        cp src/Info.plist Slic3r++/Slic3r++.app/Contents/Info.plist
+        cp src/Info.date.plist Slic3r++/Slic3r++.app/Contents/Info.plist
         echo -n -e '\xff\xfeAPPL\x3f\x00\x3f\x00\x3f\x00\x3f\x00\x0a\x00' > PkgInfo
     - name: copy bin
       working-directory: ./build
