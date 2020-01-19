@@ -203,13 +203,14 @@ public:
             _default_size(), 
             style);
 
-        window = _text;
 
         // Set up event handlers
         if (!opt.multiline) {
-            _text->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
+            _text->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(this->key); e.Skip(); });
         }
-        _text->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus(""); this->_on_change("");} e.Skip(); });
+        _text->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus(this->key); this->_on_change(this->key);} e.Skip(); });
+        this->window = _text;
+        this->window->Show();
     }
     ~UI_TextCtrl() { _text->Destroy(); }
     std::string get_string() { return this->_text->GetValue().ToStdString(); }
