@@ -198,7 +198,7 @@ public:
         }
         /// Initialize and set defaults, if available.
         _text = new wxTextCtrl(parent, id, 
-            (opt.default_value != NULL ? wxString(opt.default_value->getString()) : wxString()), 
+            (opt.default_value != NULL ? wxString(opt.default_value->serialize()) : wxString()), 
             wxDefaultPosition, 
             _default_size(), 
             style);
