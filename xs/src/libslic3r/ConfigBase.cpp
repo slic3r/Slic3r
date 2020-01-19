@@ -469,7 +469,7 @@ ConfigBase::set_deserialize(t_config_option_key opt_key, std::string str, bool a
 void
 ConfigBase::set_deserialize_throw(t_config_option_key opt_key, std::string str, bool append) {
     bool res = this->set_deserialize(opt_key, str, append);
-    if (!res) throw BadOptionTypeException();
+    if (!res) throw BadOptionTypeException(__func__, opt_key);
 }
 
 // Return an absolute value of a possibly relative config variable.

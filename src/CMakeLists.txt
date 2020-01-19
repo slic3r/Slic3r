@@ -175,6 +175,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/ExPolygon.cpp
     ${LIBDIR}/libslic3r/ExPolygonCollection.cpp
     ${LIBDIR}/libslic3r/Extruder.cpp
+    ${LIBDIR}/libslic3r/Exception.cpp
     ${LIBDIR}/libslic3r/ExtrusionEntity.cpp
     ${LIBDIR}/libslic3r/ExtrusionEntityCollection.cpp
     ${LIBDIR}/libslic3r/Fill/Fill.cpp

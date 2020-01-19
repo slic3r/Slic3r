@@ -59,7 +59,16 @@ class InvalidOptionException : public ConfigOptionException {
 };
 
 /// Specialization of std::exception to indicate that an unsupported accessor was called on a config option.
-class BadOptionTypeException : public std::exception {};
+class BadOptionTypeException : public std::exception {
+    public:
+    const char* func_name;
+    const t_config_option_key opt_key;
+    std::string msg;
+    BadOptionTypeException(const char* _func_name)
+        : BadOptionTypeException(_func_name, "Unknown Option") {};
+    BadOptionTypeException(const char* _func_name, t_config_option_key _opt_key);
+    virtual const char* what() const noexcept;
+};
 
 
 /// \brief Public interface for configuration options. 
@@ -75,20 +84,20 @@ class ConfigOption {
     virtual bool deserialize(std::string str, bool append = false) = 0;
     virtual void set(const ConfigOption &option) = 0;
     
-    virtual bool getBool() const { throw BadOptionTypeException(); };
-    virtual void setBool(bool val) { throw BadOptionTypeException(); };
+    virtual bool getBool() const { throw BadOptionTypeException(__func__); };
+    virtual void setBool(bool val) { throw BadOptionTypeException(__func__); };
     
-    virtual int getInt() const { throw BadOptionTypeException(); };
-    virtual void setInt(int val) { throw BadOptionTypeException(); };
+    virtual int getInt() const { throw BadOptionTypeException(__func__); };
+    virtual void setInt(int val) { throw BadOptionTypeException(__func__); };
     
-    virtual double getFloat() const { throw BadOptionTypeException(); };
-    virtual void setFloat(double val) { throw BadOptionTypeException(); };
+    virtual double getFloat() const { throw BadOptionTypeException(__func__); };
+    virtual void setFloat(double val) { throw BadOptionTypeException(__func__); };
     
-    virtual std::string getString() const { throw BadOptionTypeException(); };
-    virtual void setString(std::string val) { throw BadOptionTypeException(); };
+    virtual std::string getString() const { throw BadOptionTypeException(__func__); };
+    virtual void setString(std::string val) { throw BadOptionTypeException(__func__); };
     
-    virtual std::vector<std::string> getStrings() const { throw BadOptionTypeException(); };
-    virtual void setStrings(std::vector<std::string> val) { throw BadOptionTypeException(); };
+    virtual std::vector<std::string> getStrings() const { throw BadOptionTypeException(__func__); };
+    virtual void setStrings(std::vector<std::string> val) { throw BadOptionTypeException(__func__); };
     
     friend bool operator== (const ConfigOption &a, const ConfigOption &b);
     friend bool operator!= (const ConfigOption &a, const ConfigOption &b);
@@ -364,7 +373,7 @@ class ConfigOptionFloatOrPercent : public ConfigOptionPercent
         : ConfigOptionPercent(_value), percent(_percent) {};
     ConfigOptionFloatOrPercent* clone() const override { return new ConfigOptionFloatOrPercent(this->value, this->percent); };
     
-    double getFloat() const override { throw BadOptionTypeException(); };
+    double getFloat() const override { throw BadOptionTypeException(__func__); };
     void setFloat(double val) override {
         this->value = val;
         this->percent = false;
