@@ -92,7 +92,7 @@ void UI_Point3::_set_value(std::string value) {
 
 }
 
-UI_Point3::UI_Point3(wxWindow* _parent, Slic3r::ConfigOptionDef _opt) : UI_Sizer(_parent, _opt) {
+UI_Point3::UI_Point3(wxWindow* _parent, const Slic3r::ConfigOptionDef& _opt) : UI_Sizer(_parent, _opt) {
     Slic3r::Pointf3 def_val {_opt.default_value == nullptr ? Pointf3() : Pointf3(*(dynamic_cast<ConfigOptionPoint3*>(_opt.default_value))) };
 
     this->_ctrl_x = new wxTextCtrl(parent, wxID_ANY, trim_zeroes(wxString::FromDouble(def_val.x)), wxDefaultPosition, this->field_size, wxTE_PROCESS_ENTER);

@@ -3,7 +3,7 @@
 
 namespace Slic3r { namespace GUI {
 
-UI_Color::UI_Color(wxWindow* parent, Slic3r::ConfigOptionDef _opt ) : UI_Window(parent, _opt) { 
+UI_Color::UI_Color(wxWindow* parent, const Slic3r::ConfigOptionDef& _opt ) : UI_Window(parent, _opt) { 
     wxColour default_color(255,255,255,255);
     if (_opt.default_value != nullptr) {
         default_color = _string_to_color(_opt.default_value->getString());

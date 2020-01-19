@@ -30,7 +30,7 @@ using namespace std::string_literals;
 
 class UI_Field {
 public:
-    UI_Field(wxWindow* _parent, Slic3r::ConfigOptionDef _opt) : parent(_parent), opt(_opt) { };
+    UI_Field(wxWindow* _parent, const Slic3r::ConfigOptionDef& _opt) : parent(_parent), opt(_opt), key(_opt.name)  { };
     virtual ~UI_Field() = default; 
 
     /// Don't trigger on_change when this is true.
@@ -75,7 +75,8 @@ protected:
     wxWindow* window {nullptr}; //< Pointer copy of the derived classes
     wxSizer* sizer {nullptr}; //< Pointer copy of the derived classes
 
-    const Slic3r::ConfigOptionDef opt; //< Reference to the UI-specific bits of this option
+    const Slic3r::ConfigOptionDef& opt; //< Reference to the UI-specific bits of this option
+    const t_config_option_key key;
 
     virtual std::string LogChannel() { return "UI_Field"s; }
     
@@ -89,7 +90,7 @@ protected:
 /// Organizing class for single-part UI elements.
 class UI_Window : public UI_Field { 
 public:
-    UI_Window(wxWindow* _parent, Slic3r::ConfigOptionDef _opt) : UI_Field(_parent, _opt) {};
+    UI_Window(wxWindow* _parent, const Slic3r::ConfigOptionDef& _opt) : UI_Field(_parent, _opt) {};
     virtual ~UI_Window() = default; 
     virtual std::string LogChannel() override { return "UI_Window"s; }
 };
@@ -97,14 +98,14 @@ public:
 /// Organizing class for multi-part UI elements.
 class UI_Sizer : public UI_Field {
 public:
-    UI_Sizer(wxWindow* _parent, Slic3r::ConfigOptionDef _opt) : UI_Field(_parent, _opt) {};
+    UI_Sizer(wxWindow* _parent, const Slic3r::ConfigOptionDef& _opt) : UI_Field(_parent, _opt) {};
     virtual ~UI_Sizer() = default; 
     virtual std::string LogChannel() override { return "UI_Sizer"s; }
 };
 
 class UI_Checkbox : public UI_Window {
 public:
-    UI_Checkbox(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID checkid = wxID_ANY) : UI_Window(parent, _opt) {
+    UI_Checkbox(wxWindow* parent, const Slic3r::ConfigOptionDef& _opt, wxWindowID checkid = wxID_ANY) : UI_Window(parent, _opt) {
         _check = new wxCheckBox(parent, checkid, "");
         this->window = _check;
 
@@ -113,7 +114,7 @@ public:
         if (this->opt.default_value != nullptr) { this->_check->SetValue(this->opt.default_value->getBool()); }
         
         // Set up event handlers
-        _check->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
+        _check->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& e) { if (this->on_change != nullptr) { this->on_change("", e.IsChecked()); } e.Skip(); });
         _check->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus("");} e.Skip(); });
     }
 
@@ -148,7 +149,7 @@ private:
 
 class UI_SpinCtrl : public UI_Window {
 public:
-    UI_SpinCtrl(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID spinid = wxID_ANY) : UI_Window(parent, _opt) {
+    UI_SpinCtrl(wxWindow* parent, const Slic3r::ConfigOptionDef& _opt, wxWindowID spinid = wxID_ANY) : UI_Window(parent, _opt) {
 
         /// Initialize and set defaults, if available.
         _spin = new wxSpinCtrl(parent, spinid, "", wxDefaultPosition, _default_size(), 0,
@@ -187,7 +188,7 @@ private:
 
 class UI_TextCtrl : public UI_Window {
 public:
-    UI_TextCtrl(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id = wxID_ANY) : UI_Window(parent, _opt) {
+    UI_TextCtrl(wxWindow* parent, const Slic3r::ConfigOptionDef& _opt, wxWindowID id = wxID_ANY) : UI_Window(parent, _opt) {
         int style {0};
         if (opt.multiline) {
             style |= wxHSCROLL;
@@ -235,7 +236,7 @@ private:
 
 class UI_Choice : public UI_Window {
 public:
-    UI_Choice(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id = wxID_ANY);
+    UI_Choice(wxWindow* parent, const Slic3r::ConfigOptionDef& _opt, wxWindowID id = wxID_ANY);
     ~UI_Choice() { window->Destroy(); }
 
     std::string get_string() override;
@@ -264,7 +265,7 @@ private:
 
 class UI_NumChoice : public UI_Window {
 public:
-    UI_NumChoice(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id = wxID_ANY);
+    UI_NumChoice(wxWindow* parent, const Slic3r::ConfigOptionDef& _opt, wxWindowID id = wxID_ANY);
     ~UI_NumChoice() { _choice->Destroy(); }
 
     /// Returns the underlying value for the selected value (defined by enum_values). If there are labels, this may not 
@@ -307,7 +308,7 @@ private:
 class UI_Point : public UI_Sizer {
 public:
 
-    UI_Point(wxWindow* _parent, Slic3r::ConfigOptionDef _opt);
+    UI_Point(wxWindow* _parent, const Slic3r::ConfigOptionDef& _opt);
     ~UI_Point() { _lbl_x->Destroy(); _lbl_y->Destroy(); _ctrl_x->Destroy(); _ctrl_y->Destroy(); }
     std::string get_string() override;
 
@@ -356,7 +357,7 @@ private:
 
 class UI_Point3 : public UI_Sizer { 
 public:
-    UI_Point3(wxWindow* _parent, Slic3r::ConfigOptionDef _opt);
+    UI_Point3(wxWindow* _parent, const Slic3r::ConfigOptionDef& _opt);
     ~UI_Point3() { _lbl_x->Destroy(); _lbl_y->Destroy(); _ctrl_x->Destroy(); _ctrl_y->Destroy(); _lbl_z->Destroy(); _ctrl_z->Destroy(); }
     std::string get_string() override;
 
@@ -408,7 +409,7 @@ private:
 
 class UI_Color : public UI_Window { 
 public:
-    UI_Color(wxWindow* parent, Slic3r::ConfigOptionDef _opt );  
+    UI_Color(wxWindow* parent, const Slic3r::ConfigOptionDef& _opt );  
     ~UI_Color() { _picker->Destroy(); }
     wxColourPickerCtrl* picker() { return this->_picker; }
 
@@ -429,7 +430,7 @@ private:
 
 class UI_Slider : public UI_Sizer { 
 public:
-    UI_Slider(wxWindow* parent, Slic3r::ConfigOptionDef _opt, size_t scale = 10);  
+    UI_Slider(wxWindow* parent, const Slic3r::ConfigOptionDef& _opt, size_t scale = 10);  
 
     ~UI_Slider();
 

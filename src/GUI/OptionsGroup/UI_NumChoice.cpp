@@ -77,7 +77,7 @@ std::string UI_NumChoice::get_string() {
     return this->_choice->GetValue().ToStdString();
 }
 
-UI_NumChoice::UI_NumChoice(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id) : UI_Window(parent, _opt) {
+UI_NumChoice::UI_NumChoice(wxWindow* parent, const Slic3r::ConfigOptionDef& _opt, wxWindowID id) : UI_Window(parent, _opt) {
     int style {0};
     style |= wxTE_PROCESS_ENTER;
     if (opt.gui_type.size() > 0 && opt.gui_type.compare("select_open"s)) style |= wxCB_READONLY;

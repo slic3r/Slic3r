@@ -2,7 +2,7 @@
 
 namespace Slic3r { namespace GUI {
 
-UI_Choice::UI_Choice(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id) : UI_Window(parent, _opt) {
+UI_Choice::UI_Choice(wxWindow* parent, const Slic3r::ConfigOptionDef& _opt, wxWindowID id) : UI_Window(parent, _opt) {
     int style {0};
     style |= wxTE_PROCESS_ENTER;
 

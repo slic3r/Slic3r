@@ -4,7 +4,7 @@
 
 namespace Slic3r { namespace GUI {
 
-UI_Slider::UI_Slider(wxWindow* parent, Slic3r::ConfigOptionDef _opt, size_t scale) : UI_Sizer(parent, _opt), _scale(scale) {
+UI_Slider::UI_Slider(wxWindow* parent, const Slic3r::ConfigOptionDef& _opt, size_t scale) : UI_Sizer(parent, _opt), _scale(scale) {
     double default_value {0.0};
     if (_opt.default_value != nullptr) { default_value = _opt.default_value->getFloat(); }
     sizer = new wxBoxSizer(wxHORIZONTAL);
