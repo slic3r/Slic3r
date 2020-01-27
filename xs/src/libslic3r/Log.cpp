@@ -52,9 +52,10 @@ void _Log::debug(const std::string& topic, const std::wstring& message) { this->
 void _Log::fatal_error(const std::string& topic, const std::string& message) {
     this->fatal_error(topic) << message << std::endl;
 }
-std::ostream& _Log::fatal_error(const std::string& topic) {
+std::ostream& _Log::fatal_error(const std::string& topic, bool multiline) {
     if (this->_has_log_level(log_t::FERR) && this->_has_topic(topic)) {
-        _out << topic << std::setfill(' ') << std::setw(6) << "FERR" << ": ";
+        if (!multiline)
+            _out << topic << std::setfill(' ') << std::setw(6) << "FERR" << ": ";
         return _out;
     }
     return null_log;
@@ -63,9 +64,10 @@ std::ostream& _Log::fatal_error(const std::string& topic) {
 void _Log::error(const std::string& topic, const std::string& message) {
     this->error(topic) << message << std::endl;
 }
-std::ostream& _Log::error(const std::string& topic) {
+std::ostream& _Log::error(const std::string& topic, bool multiline) {
     if (this->_has_log_level(log_t::ERR) && this->_has_topic(topic)) {
-        _out << topic << std::setfill(' ') << std::setw(6) << "ERR" << ": ";
+        if (!multiline)
+            _out << topic << std::setfill(' ') << std::setw(6) << "ERR" << ": ";
         return _out;
     }
     return null_log;
@@ -75,9 +77,10 @@ void _Log::info(const std::string& topic, const std::string& message) {
     this->info(topic) << message << std::endl;
 }
 
-std::ostream& _Log::info(const std::string& topic) {
+std::ostream& _Log::info(const std::string& topic, bool multiline) {
     if (this->_has_log_level(log_t::INFO) && this->_has_topic(topic)) {
-        _out << topic << std::setfill(' ') << std::setw(6) << "INFO" << ": ";
+        if (!multiline)
+            _out << topic << std::setfill(' ') << std::setw(6) << "INFO" << ": ";
         return _out;
     }
     return null_log;
@@ -87,9 +90,10 @@ void _Log::warn(const std::string& topic, const std::string& message) {
     this->warn(topic) << message << std::endl;
 }
 
-std::ostream& _Log::warn(const std::string& topic) {
+std::ostream& _Log::warn(const std::string& topic, bool multiline) {
     if (this->_has_log_level(log_t::WARN) && this->_has_topic(topic)) {
-        _out << topic << std::setfill(' ') << std::setw(6) << "WARN" << ": ";
+        if (!multiline)
+            _out << topic << std::setfill(' ') << std::setw(6) << "WARN" << ": ";
         return _out;
     }
     return null_log;
@@ -99,9 +103,10 @@ void _Log::debug(const std::string& topic, const std::string& message) {
     this->debug(topic) << message << std::endl;
 }
 
-std::ostream& _Log::debug(const std::string& topic) {
+std::ostream& _Log::debug(const std::string& topic, bool multiline) {
     if (this->_has_log_level(log_t::DEBUG) && this->_has_topic(topic)) {
-        _out << topic << std::setfill(' ') << std::setw(6) << "DEBUG" << ": ";
+        if (!multiline)
+            _out << topic << std::setfill(' ') << std::setw(6) << "DEBUG" << ": ";
         return _out;
     }
     return null_log;
