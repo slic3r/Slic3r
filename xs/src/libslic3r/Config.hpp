@@ -43,6 +43,10 @@ public:
         return this->_config.getString(opt_key);
     }
 
+    std::string get_serialized(const t_config_option_key& opt_key) const {
+        return this->_config.serialize(opt_key);
+    }
+
 
     /// Template function to dynamic cast and leave it in pointer form.
     template <class T>
