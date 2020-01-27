@@ -51,9 +51,14 @@ void UI_Point::_set_value(Slic3r::Pointf3 value) {
     this->_set_value(Pointf(value.x, value.y));
 }
 
+bool UI_Point::deserialize(const wxString& value) {
+    this->_set_value(value.ToStdString());
+    return true;
+}
+
 void UI_Point::_set_value(std::string value) {
     /// parse the string into the two parts.
-    std::regex format_regex(";");
+    std::regex format_regex("[x,;]");
     auto f_begin { std::sregex_token_iterator(value.begin(), value.end(), format_regex, -1) };
     auto f_end { std::sregex_token_iterator() };
 
@@ -64,8 +69,6 @@ void UI_Point::_set_value(std::string value) {
         if (iter != f_end)
             this->_ctrl_y->SetValue(trim_zeroes(iter->str()));
     }
-
-
 }
 
 UI_Point::UI_Point(wxWindow* _parent, const Slic3r::ConfigOptionDef& _opt) : UI_Sizer(_parent, _opt) {

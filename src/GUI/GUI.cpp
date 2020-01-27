@@ -17,6 +17,8 @@
 // Logging mechanism
 #include "Log.hpp"
 
+
+
 namespace Slic3r { namespace GUI {
 
 /// Primary initialization and point of entry into the GUI application.
@@ -172,31 +174,26 @@ void App::load_presets() {
         Presets& preset_list = this->presets.at(group);
         wxString& ini = this->preset_ini.at(group);
         // keep external or dirty presets
-        preset_list.erase(std::remove_if(preset_list.begin(), preset_list.end(), 
-                    [](const Preset& t) -> bool { return (t.external && t.file_exists()) || t.dirty(); }),
-                preset_list.end());
+        std::erase_if(preset_list, [](const std::pair<wxString, Preset>& t) -> bool { return (t.second.external && t.second.file_exists()) || t.second.dirty(); });
         if (wxDirExists(ini)) {
             auto sink { wxDirTraverserSimple() };
             sink.file_cb = ([&preset_list, group] (const wxString& filename) {
 
                     // skip if we already have it
                     if (std::find_if(preset_list.begin(), preset_list.end(), 
-                            [filename] (const Preset& t) 
-                                { return filename.ToStdString() == t.name; }) != preset_list.end()) return;
+                            [filename] (const std::pair<const wxString, Preset>& t) 
+                                { return filename.ToStdString() == t.second.name; }) != preset_list.end()) return;
                     wxString path, name, ext;
                     wxFileName::SplitPath(filename, &path, &name, &ext);
 
-                    preset_list.push_back(Preset(path.ToStdString(), (name + wxString(".") + ext).ToStdString(), static_cast<preset_t>(group)));
+                    preset_list.emplace(name, Preset(path.ToStdString(), (name + wxString(".") + ext).ToStdString(), static_cast<preset_t>(group)));
                     });
 
             wxDir dir(ini);
             dir.Traverse(sink, "*.ini");
 
-            // Sort the list by name
-            std::sort(preset_list.begin(), preset_list.end(), [] (const Preset& x, const Preset& y) -> bool { return x.name < y.name; });
-
             // Prepend default Preset
-            preset_list.emplace(preset_list.begin(), Preset(true, "- default -"s, static_cast<preset_t>(group)));
+            preset_list.emplace(wxString("- default -"), Preset(true, "- default -"s, static_cast<preset_t>(group)));
         }
 
     }

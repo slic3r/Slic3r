@@ -33,6 +33,11 @@ std::string UI_Color::get_string() {
     return _picker->GetColour().GetAsString(wxC2S_HTML_SYNTAX).ToStdString();
 }
 
+bool UI_Color::deserialize(const wxString& value) {
+    this->set_value(value);
+    return true;
+}
+
 wxColour UI_Color::_string_to_color(const std::string& color) {
     // if invalid color string sent, use the default
     wxColour col(255,255,255,255);

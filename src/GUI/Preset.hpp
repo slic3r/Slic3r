@@ -36,7 +36,7 @@ const std::string preset_name(preset_t group);
 
 class Preset; 
 
-using Presets = std::vector<Preset>;
+using Presets = std::map<const wxString, Preset>;
 using preset_store = std::array<Presets, preset_types>;
 
 class PresetEditor;
@@ -90,7 +90,7 @@ public:
     config_ref config();
 
     /// Pass-through to Slic3r::Config, returns whether or not a config was loaded.
-    bool loaded() { return !this->_config->empty(); }
+    bool loaded();
 
     /// Clear the dirty config.
     void dismiss_changes();
@@ -125,6 +125,27 @@ private:
 
 
 };
+template <class Pred>
+std::vector<std::reference_wrapper<Preset> > grep_view(Presets& T, Pred pred) {
+    std::vector<std::reference_wrapper<Preset> > result;
+    for (std::pair<const wxString, Preset>& t : T) {
+        if (pred(t.second))
+            result.emplace_back(t.second);
+    }
+    return result;
+}
+
+template <class Pred>
+std::vector<wxString> grep_keys(const Presets& T, Pred pred) {
+    std::vector<wxString> result;
+    std::transform(T.cbegin(),
+                   T.cend(),
+                   std::back_inserter(result),
+                   [pred] (const std::pair<const wxString, Preset>& t) -> const wxString { if (pred(t.second)) return t.first; });
+    std::stable_sort(result.begin(), result.end());
+    return result;
+}
+
 
 }} // namespace Slic3r::GUI
 

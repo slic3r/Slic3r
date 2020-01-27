@@ -23,6 +23,8 @@
 #include <wx/colour.h>
 #include <wx/clrpicker.h>
 #include <wx/slider.h>
+#include <sstream>
+
 
 namespace Slic3r { namespace GUI {
 
@@ -30,7 +32,7 @@ using namespace std::string_literals;
 
 class UI_Field {
 public:
-    UI_Field(wxWindow* _parent, const Slic3r::ConfigOptionDef& _opt) : parent(_parent), opt(_opt), key(_opt.name)  { };
+    UI_Field(wxWindow* _parent, const Slic3r::ConfigOptionDef& _opt) : parent(_parent), opt(_opt), _key(_opt.name)  { };
     virtual ~UI_Field() = default; 
 
     /// Don't trigger on_change when this is true.
@@ -54,6 +56,8 @@ public:
     virtual int get_int() { Slic3r::Log::warn(this->LogChannel(), "get_int does not exist"s); return 0; } //< return 0 all the time if this is not implemented.
     virtual std::string get_string() { Slic3r::Log::warn(this->LogChannel(), "get_string does not exist"s); return 0; } //< return 0 all the time if this is not implemented.
 
+    virtual bool deserialize(const wxString& value) = 0;
+
     virtual Slic3r::Pointf get_point() { Slic3r::Log::warn(this->LogChannel(), "get_point does not exist"s); return Slic3r::Pointf(); } //< return 0 all the time if this is not implemented.
     virtual Slic3r::Pointf3 get_point3() { Slic3r::Log::warn(this->LogChannel(), "get_point3 does not exist"s); return Slic3r::Pointf3(); } //< return 0 all the time if this is not implemented.
 
@@ -67,8 +71,9 @@ public:
     std::function<void (const std::string&)> on_kill_focus {nullptr};
 
     /// Change the underlying scaling for this UI element, if it makes sense.
-    /// Return value from get_X does not change.
     virtual void set_scale(size_t new_scale) {};
+
+    const t_config_option_key& key() const { return this->_key; }
 
 protected:
     wxWindow* parent {nullptr}; //< Cached copy of the parent object
@@ -76,7 +81,7 @@ protected:
     wxSizer* sizer {nullptr}; //< Pointer copy of the derived classes
 
     const Slic3r::ConfigOptionDef& opt; //< Reference to the UI-specific bits of this option
-    const t_config_option_key key;
+    const t_config_option_key _key;
 
     virtual std::string LogChannel() { return "UI_Field"s; }
     
@@ -114,8 +119,8 @@ public:
         if (this->opt.default_value != nullptr) { this->_check->SetValue(this->opt.default_value->getBool()); }
         
         // Set up event handlers
-        _check->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& e) { if (this->on_change != nullptr) { this->on_change("", e.IsChecked()); } e.Skip(); });
-        _check->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus("");} e.Skip(); });
+        _check->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& e) { if (this->on_change != nullptr) { this->on_change(this->_key, e.IsChecked()); } e.Skip(); });
+        _check->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus(this->_key);} e.Skip(); });
     }
 
     ~UI_Checkbox() { _check->Destroy(); }
@@ -130,6 +135,15 @@ public:
     /// Casts the containing value to boolean and sets the built-in checkbox appropriately.
     /// implements set_value
     virtual void set_value(boost::any value) override { this->_check->SetValue(boost::any_cast<bool>(value)); }
+
+    /// Deserialization logic for compatibility with wxStrings and Slic3r::ConfigOption::serialize()
+    virtual bool deserialize(const wxString& value) override {
+        std::istringstream iss {value.ToStdString()};
+        bool _value;
+        iss >> _value;
+        this->_check->SetValue(_value);
+        return !iss.fail();
+    }
 
     /// Function to call when the contents of this change.
     std::function<void (const std::string&, bool value)> on_change {nullptr};
@@ -160,12 +174,19 @@ public:
         window = _spin;
 
         // Set up event handlers
-        _spin->Bind(wxEVT_SPINCTRL, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
-        _spin->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) { this->_on_change(""); this->on_kill_focus("");} e.Skip(); });
+        _spin->Bind(wxEVT_SPINCTRL, [this](wxCommandEvent& e) { this->_on_change(this->_key); e.Skip(); });
+        _spin->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) { this->_on_change(this->_key); this->on_kill_focus(this->_key);} e.Skip(); });
     }
     ~UI_SpinCtrl() { _spin->Destroy();}
     int get_int() { return this->_spin->GetValue(); }
     void set_value(boost::any value) { this->_spin->SetValue(boost::any_cast<int>(value)); }
+    bool deserialize(const wxString& value) override {
+        std::istringstream iss {value.ToStdString()};
+        int _value;
+        iss >> _value;
+        this->set_value(_value);
+        return !iss.fail();
+    }
 
     /// Access method for the underlying SpinCtrl
     wxSpinCtrl* spinctrl() { return _spin; }
@@ -177,6 +198,8 @@ protected:
     virtual std::string LogChannel() { return "UI_SpinCtrl"s; }
 
     void _on_change(std::string opt_id) {
+        Slic3r::Log::debug(this->LogChannel()) << opt_id << " fired on_change, is null: " << (this->on_change == nullptr)
+                  << " value: " << this->get_int() << "\n";
         if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
             this->on_change(opt_id, this->get_int());
         }
@@ -206,9 +229,9 @@ public:
 
         // Set up event handlers
         if (!opt.multiline) {
-            _text->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(this->key); e.Skip(); });
+            _text->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(this->_key); e.Skip(); });
         }
-        _text->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus(this->key); this->_on_change(this->key);} e.Skip(); });
+        _text->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus(this->_key); this->_on_change(this->_key);} e.Skip(); });
         this->window = _text;
         this->window->Show();
     }
@@ -222,10 +245,20 @@ public:
     /// Function to call when the contents of this change.
     std::function<void (const std::string&, std::string value)> on_change {nullptr};
 
+    /// Deserialization logic for compatibility with wxStrings and Slic3r::ConfigOption::serialize()
+    virtual bool deserialize(const wxString& value) override {
+        this->_text->SetValue(value);
+        return true;
+    }
+
+
+
 protected:
     virtual std::string LogChannel() { return "UI_TextCtrl"s; }
 
     void _on_change(std::string opt_id) {
+        std::cerr << "Fired on_change, is null: " << (this->on_change == nullptr)
+                  << " key " << opt_id << " value: " << this->get_string() << "\n";
         if (!this->disable_change_event && this->window->IsEnabled() && this->on_change != nullptr) {
             this->on_change(opt_id, this->get_string());
         }
@@ -243,6 +276,7 @@ public:
     std::string get_string() override;
 
     void set_value(boost::any value) override;
+    bool deserialize(const wxString& value) override;
 
     /// Function to call when the contents of this change.
     std::function<void (const std::string&, std::string value)> on_change {nullptr};
@@ -272,6 +306,7 @@ public:
     /// Returns the underlying value for the selected value (defined by enum_values). If there are labels, this may not 
     /// match the underlying combobox->GetValue(). 
     std::string get_string() override;
+    bool deserialize(const wxString& value) override;
 
     /// Returns the item in the value field of the associated option as an integer.
     int get_int() override { return std::stoi(this->get_string()); }
@@ -312,6 +347,7 @@ public:
     UI_Point(wxWindow* _parent, const Slic3r::ConfigOptionDef& _opt);
     ~UI_Point() { _lbl_x->Destroy(); _lbl_y->Destroy(); _ctrl_x->Destroy(); _ctrl_y->Destroy(); }
     std::string get_string() override;
+    bool deserialize(const wxString& value) override;
 
     void set_value(boost::any value) override; //< Implements set_value
 
@@ -361,6 +397,7 @@ public:
     UI_Point3(wxWindow* _parent, const Slic3r::ConfigOptionDef& _opt);
     ~UI_Point3() { _lbl_x->Destroy(); _lbl_y->Destroy(); _ctrl_x->Destroy(); _ctrl_y->Destroy(); _lbl_z->Destroy(); _ctrl_z->Destroy(); }
     std::string get_string() override;
+    bool deserialize(const wxString& value) override;
 
     void set_value(boost::any value) override; //< Implements set_value
 
@@ -416,6 +453,7 @@ public:
 
     void set_value(boost::any value) override;
     std::string get_string() override; 
+    bool deserialize(const wxString& value) override;
     std::function<void (const std::string&, const std::string&)> on_change {nullptr};
 protected:
     virtual std::string LogChannel() override { return "UI_Color"s; }
@@ -436,6 +474,7 @@ public:
     ~UI_Slider();
 
     void set_value(boost::any value) override;
+    bool deserialize(const wxString& value) override;
     std::string get_string() override;
     double get_double() override;
     int get_int() override;

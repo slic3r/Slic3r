@@ -1,4 +1,5 @@
 #include "OptionsGroup/Field.hpp"
+#include <sstream>
 
 namespace Slic3r { namespace GUI {
 
@@ -41,6 +42,15 @@ std::string UI_Choice::get_string() {
         }
         return std::string("");
     }
+}
+
+/// Deserialization logic for compatibility with wxStrings and Slic3r::ConfigOption::serialize()
+bool UI_Choice::deserialize(const wxString& value) {
+    std::istringstream iss {value.ToStdString()};
+    std::string _value;
+    iss >> _value;
+    this->set_value(_value);
+    return !iss.fail();
 }
 
 

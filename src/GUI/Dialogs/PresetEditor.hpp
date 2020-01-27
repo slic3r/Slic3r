@@ -48,7 +48,7 @@ public:
     wxSizer* sizer() { return _sizer; };
     PresetEditor(wxWindow* parent, t_config_option_keys options = {});
     PresetEditor() : PresetEditor(nullptr, {}) {};
-    std::shared_ptr<Preset> current_preset;
+    Preset& current_preset();
 
     /// Check if there is a dirty config that is different than the loaded config.
     bool prompt_unsaved_changes();
@@ -93,6 +93,7 @@ protected:
     wxBitmapButton* _btn_delete_preset {nullptr};
     wxChoice* _presets_choice {nullptr};
     int _iconcount {-1};
+    std::reference_wrapper<Preset> find_preset(const wxString& name);
 
     /// Vector of PresetPage pointers; trust wxWidgets RTTI to avoid leaks
     std::vector<PresetPage*> _pages {};
@@ -315,6 +316,7 @@ public:
     OptionsGroup* add_optgroup(const wxString& title);
     int iconID() { return this->_iconID; }
     wxString title() { return this->_title; }
+    void reload_config();
 protected:
     wxSizer* vsizer {nullptr};
     wxString _title {""};

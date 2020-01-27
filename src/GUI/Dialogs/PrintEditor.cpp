@@ -1,5 +1,6 @@
 #include "Dialogs/PresetEditor.hpp"
 #include "OptionsGroup.hpp"
+#include "GUI.hpp"
 namespace Slic3r { namespace GUI {
 
 PrintEditor::PrintEditor(wxWindow* parent, t_config_option_keys options) : 

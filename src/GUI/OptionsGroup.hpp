@@ -71,6 +71,8 @@ public:
     std::shared_ptr<UI_Field> append(const t_config_option_key& opt_id, wxSizer* above_sizer = nullptr);
     void append(const wxString& label, std::initializer_list<std::string> items);
     wxSizer* sizer() { return this->_sizer; }
+
+    void reload_config();
 protected:
     wxWindow* _parent {nullptr};
     wxStaticBoxSizer* _sizer {nullptr};
@@ -79,6 +81,7 @@ protected:
     /// Callback function to get a current config reference from the owning PresetPage
     std::function<config_ref(void)> _config_cb {nullptr};
     field_storage_ref fields;
+    wxString LogChannel() { return "OptionsGroup"s; }
 };
 
 class ConfigOptionsGroup : public OptionsGroup {

@@ -91,6 +91,7 @@ private:
     void _update_preset_settings(preset_t preset);
 
     void _load_preset_editor(preset_t group, wxBitmapComboBox* choice);
+    std::string LogChannel() { return "GUI::PresetChooser"s; }
 };
 
 }} // Slic3r::GUI

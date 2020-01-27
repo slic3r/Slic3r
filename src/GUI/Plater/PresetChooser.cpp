@@ -57,7 +57,7 @@ PresetChooser::PresetChooser(wxWindow* parent, std::weak_ptr<Print> print, Setti
 }
 
 void PresetChooser::_load_preset_editor(preset_t group, wxBitmapComboBox* choice) {
-    auto* preset = &(this->_presets.at(get_preset(group))[choice->GetSelection()+1]);
+    auto* preset = &(this->_presets.at(get_preset(group)).at(choice->GetStringSelection()));
     std::cerr << choice->GetStringSelection() << "\n";
     PresetEditor* tab;
     wxDialog* dlg;
@@ -66,6 +66,7 @@ void PresetChooser::_load_preset_editor(preset_t group, wxBitmapComboBox* choice
         case preset_t::Print:
             dlg = new PresetDialog<PrintEditor>(nullptr);
             //tab = new PrintEditor(this);
+            dynamic_cast<PresetDialog<PrintEditor>*>(dlg)->editor->select_preset_by_name(choice->GetStringSelection());
             break;
         case preset_t::Material:
             dlg = new PresetDialog<MaterialEditor>(nullptr);
@@ -86,10 +87,10 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
 
     wxString selected_printer_name {""};
     for (const auto& group : { preset_t::Printer, preset_t::Material, preset_t::Print }) {
-        auto current_list = presets.at(get_preset(group));
+        auto current_list = grep_view(presets.at(get_preset(group)), [] (const Preset& x) -> bool { return True;});
         // Filter out profiles not compatible with this printer
         if (group != preset_t::Printer) {
-            current_list = grep(presets.at(get_preset(group)), [selected_printer_name] (const Preset& x) -> bool { return x.compatible(selected_printer_name); });
+            current_list = grep(current_list, [selected_printer_name] (const Preset& x) -> bool { return x.compatible(selected_printer_name); });
         }
 
         // show default names if no other presets visible.
@@ -107,14 +108,15 @@ void PresetChooser::load(std::array<Presets, preset_types> presets) {
         for (auto* chooser : this->preset_choosers[get_preset(group)]) {
             chooser->Clear();
             assert(chooser->GetCount() == 0);
-            for (auto preset : current_list) {
+            for (auto _preset : current_list) {
+                Preset& preset = _preset;
                 wxBitmap bitmap;
                 switch (group) {
                     case preset_t::Print:
                         bitmap = wxBitmap(var("cog.png"), wxBITMAP_TYPE_PNG);
                         break;
                     case preset_t::Material: 
-                        if (auto config =  preset.config().lock()) {
+                        if (auto config = preset.config().lock()) {
                             if (preset.default_preset || !config->has("filament_colour"))
                                 bitmap = wxBitmap(var("spool.png"), wxBITMAP_TYPE_PNG);
                         } else { // fall back if for some reason the config is dead.

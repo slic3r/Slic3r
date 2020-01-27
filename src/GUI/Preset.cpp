@@ -28,6 +28,11 @@ Preset::Preset(bool is_default, wxString name, preset_t p) : group(p), name(name
     this->_config = Slic3r::Config::new_from_defaults(keylist);
 }
 
+bool Preset::loaded() {
+    if (this->_config.get() == nullptr) return false;
+    return !this->_config->empty(); 
+}
+
 Preset::Preset(std::string load_dir, std::string filename, preset_t p) : group(p), _file(wxFileName(load_dir, filename)) {
     this->name = this->_file.GetName();
     this->_dirty_config = Slic3r::Config::new_from_ini(_file.GetFullPath().ToStdString());
@@ -63,6 +68,7 @@ Slic3r::Config Preset::dirty_config() {
 }
 
 config_ref Preset::config() {
+    if (!this->loaded()) load_config();
     std::weak_ptr<Slic3r::Config> result { this->_dirty_config };
     return result;
 }

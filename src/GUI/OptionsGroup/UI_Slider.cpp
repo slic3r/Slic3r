@@ -28,12 +28,23 @@ UI_Slider::UI_Slider(wxWindow* parent, const Slic3r::ConfigOptionDef& _opt, size
     _textctrl->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
     _textctrl->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) { if (this->on_kill_focus != nullptr) {this->on_kill_focus(""); this->_on_change("");} e.Skip(); });
 
+    // Update the slider without re-updating the text field being modified.
+    _textctrl->Bind(wxEVT_TEXT, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
+
     _slider->Bind(wxEVT_SLIDER, [this](wxCommandEvent& e) { this->_on_change(""); e.Skip(); });
 
 
 
 }
 UI_Slider::~UI_Slider() { _slider->Destroy(); _textctrl->Destroy(); }
+
+bool UI_Slider::deserialize(const wxString& value) {
+    std::istringstream iss {value.ToStdString()};
+    double in_value; 
+    iss >> in_value;
+    this->set_value(in_value);
+    return !iss.fail();
+}
 
 void UI_Slider::set_value(boost::any value) {
     this->disable_change_event = true;

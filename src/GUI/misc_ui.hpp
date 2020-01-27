@@ -10,6 +10,7 @@
 #include <wx/settings.h>
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
+#include <version>
 #include <map>
 #include <utility>
 #include <memory>
@@ -186,5 +187,22 @@ T grep(const T& container, G lambda_func) {
 }
 
 }} // namespace Slic3r::GUI
+
+#if __cpp_lib_erase_if < 201811L
+// Simple templated implementation for C++20 std::erase_if
+// Avoid including it if the compiler is in C++20 mode
+namespace std {
+template <class Key, class T, class Compare, class Alloc, class Pred>
+    void erase_if(std::map<Key, T, Compare, Alloc>& c, Pred pred) {
+        for (auto i = c.begin(), last = c.end(); i != last; ) {
+            if (pred(*i)) {
+                i = c.erase(i);
+            } else {
+                ++i;
+            }
+        }
+    }
+}
+#endif
 
 #endif // MISC_UI_HPP

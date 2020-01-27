@@ -22,6 +22,11 @@ void UI_NumChoice::set_value(boost::any value) {
     }
 }
 
+bool UI_NumChoice::deserialize(const wxString& value) {
+    this->set_value(value);
+    return true;
+}
+
 // Specialized set_value function for an input that is either a direct input or 
 // an index to the label vector.
 void UI_NumChoice::_set_value(int value, bool show_value) {
