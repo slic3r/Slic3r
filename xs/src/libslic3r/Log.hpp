@@ -42,21 +42,21 @@ public:
     }
     void fatal_error(const std::string& topic, const std::string& message);
     void fatal_error(const std::string& topic, const std::wstring& message);
-    std::ostream& fatal_error(const std::string& topic);
+    std::ostream& fatal_error(const std::string& topic, bool multiline = false);
 
     void error(const std::string& topic, const std::string& message);
     void error(const std::string& topic, const std::wstring& message);
-    std::ostream& error(const std::string& topic);
+    std::ostream& error(const std::string& topic, bool multiline = false);
 
     void info(const std::string& topic, const std::string& message);
     void info(const std::string& topic, const std::wstring& message);
-    std::ostream& info(const std::string& topic);
+    std::ostream& info(const std::string& topic, bool multiline = false);
     void debug(const std::string& topic, const std::string& message);
     void debug(const std::string& topic, const std::wstring& message);
-    std::ostream& debug(const std::string& topic);
+    std::ostream& debug(const std::string& topic, bool multiline = false);
     void warn(const std::string& topic, const std::string& message);
     void warn(const std::string& topic, const std::wstring& message);
-    std::ostream& warn(const std::string& topic);
+    std::ostream& warn(const std::string& topic, bool multiline = false);
     void raw(const std::string& message);
     void raw(const std::wstring& message);
     std::ostream& raw();
@@ -159,32 +159,36 @@ public:
 
     /// Logs an error message with Slic3r.
     /// \param topic [in] file or heading for message
+    /// \param multiline [in] Is this a following part of a multline output (default False)
     /// \return reference to output ostream for << chaining.
     /// \note Developer is expected to add newlines.
-    static std::ostream& error(std::string topic) {
-        return slic3r_log->error(topic);
+    static std::ostream& error(std::string topic, bool multiline = false) {
+        return slic3r_log->error(topic, multiline);
     }
     /// Logs a debugging message with Slic3r.
     /// \param topic [in] file or heading for message
+    /// \param multiline [in] Is this a following part of a multline output (default False)
     /// \return reference to output ostream for << chaining.
     /// \note Developer is expected to add newlines.
-    static std::ostream& debug(std::string topic) {
-        return slic3r_log->debug(topic);
+    static std::ostream& debug(std::string topic, bool multiline = false) {
+        return slic3r_log->debug(topic, multiline);
     }
 
     /// Logs a warning message with Slic3r.
     /// \param topic [in] file or heading for message
+    /// \param multiline [in] Is this a following part of a multline output (default False)
     /// \return reference to output ostream for << chaining.
     /// \note Developer is expected to add newlines.
-    static std::ostream& warn(std::string topic) {
-        return slic3r_log->warn(topic);
+    static std::ostream& warn(std::string topic, bool multiline = false) {
+        return slic3r_log->warn(topic, multiline);
     }
     /// Logs an informational message with Slic3r.
     /// \param topic [in] file or heading for message
+    /// \param multiline [in] Is this a following part of a multline output (default False)
     /// \return reference to output ostream for << chaining.
     /// \note Developer is expected to add newlines.
-    static std::ostream& info(std::string topic) {
-        return slic3r_log->info(topic);
+    static std::ostream& info(std::string topic, bool multiline = false) {
+        return slic3r_log->info(topic, multiline);
     }
 
     /// Unadorned ostream output for multiline constructions.
