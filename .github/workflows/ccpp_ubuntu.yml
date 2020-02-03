@@ -14,8 +14,12 @@ jobs:
     - uses: actions/checkout@v1
     - name: change date in version
       run: sed -i "s/+UNKNOWN/_$(date '+%F')/" version.inc
+    - name: update apt
+      run: sudo apt update
+    - name: update clock
+      run: sudo hwclock -s
     - name: install gtk2 glew
-      run: sudo apt-get install libgtk2.0-dev libglew-dev libudev-dev
+      run: sudo apt install libgtk2.0-dev libglew-dev libudev-dev
     - name: mkdir in deps
       run: mkdir deps/build
     - name: cmake deps
