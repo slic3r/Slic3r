@@ -2811,8 +2811,10 @@ void modulate_extrusion_by_overlapping_layers(
         path_fragments.back().polylines = diff_pl(path_fragments.back().polylines, polygons_trimming, false);
         // Adjust the extrusion parameters for a reduced layer height and a non-bridging flow (nozzle_dmr = -1, does not matter).
         assert(this_layer.print_z > overlapping_layer.print_z);
+        float old_height = frag.height;
         frag.height = float(this_layer.print_z - overlapping_layer.print_z);
-        frag.mm3_per_mm = Flow(frag.width, frag.height, -1.f, false).mm3_per_mm();
+        // don't recompute the flow, just use a simple % reduction/increase
+        frag.mm3_per_mm = frag.mm3_per_mm * frag.height / old_height;
 #ifdef SLIC3R_DEBUG
         svg.draw(frag.polylines, dbg_index_to_color(i_overlapping_layer), scale_(0.1));
 #endif /* SLIC3R_DEBUG */
