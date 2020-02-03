@@ -13,9 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: change date in version
-      run: |
-        sed -i "s/+UNKNOWN/_$(date '+%F')/" version.inc >version.date.inc
-        mv version.date.inc version.inc
+      run: sed -i "s/+UNKNOWN/_$(date '+%F')/" version.inc
     - name: install gtk2 glew
       run: sudo apt-get install libgtk2.0-dev libglew-dev libudev-dev
     - name: mkdir in deps
@@ -50,9 +48,12 @@ jobs:
       run: cp -f src/slic3r++ package/bin/slic3r++
     - name: create sh from echo
       working-directory: ./build/package
-      run: echo -e '#!/bin/bash\nDIR=$(readlink -f "$0" | xargs dirname)\nexport LD_LIBRARY_PATH="$DIR/bin"\nexec "$DIR/bin/slic3r++" "$@"' >slic3r++
+      run: |
+        echo -e '#!/bin/bash\nDIR=$(readlink -f "$0" | xargs dirname)\nexport LD_LIBRARY_PATH="$DIR/bin"\nexec "$DIR/bin/slic3r++" "$@"' >slic3r++
+        chmod u+x slic3r++
+        tar -zcvf ../slic3r++.tar.gz .
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
         name: nightly_linux
-        path: build/package/
+        path: build/slic3r++.tar.gz
