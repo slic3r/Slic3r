@@ -59,11 +59,12 @@ jobs:
       run: |
         cp -f src/slic3r++ Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
         chmod u+x Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
-        tar -zcvf slic3r++.tar.gz Slic3r++
+        tar -cvf slic3r++.tar Slic3r++
     - name: create dmg
       working-directory: ./build
       run: |
-        hdiutil create -ov -format UDZO -volname "Slic3rPP" -srcfolder "Slic3r++" Slic3r++.dmg
+        hdiutil create -ov -fs HFS+ -volname "Slic3r++" -srcfolder "Slic3r++" temp.dmg
+        hdiutil convert temp.dmg -format UDZO -o Slic3r++.dmg
 #    - name: signing resources (creating CodeResources inside _CodeSignature)
 #      working-directory: .
 #      run: codesign -s <identity> resources
@@ -71,10 +72,10 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: nightly_macos_targz
-        path: build/slic3r++.tar.gz
+        name: nightly_macos.tar
+        path: build/slic3r++.tar
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: nightly_macos
+        name: nightly_macos.dmg
         path: build/Slic3r++.dmg
