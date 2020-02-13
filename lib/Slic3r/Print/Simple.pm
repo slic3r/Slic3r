@@ -11,6 +11,15 @@ use Moo;
 use Slic3r::Geometry qw(X Y);
 use Slic3r::Geometry::Clipper qw(diff);
 
+my $or = '';
+my $ox = '';
+my $oy = '';
+my $oz = '';
+my $nr = '';
+my $nx = '';
+my $ny = '';
+my $nz = '';
+
 has '_print' => (
     is      => 'ro',
     default => sub { Slic3r::Print->new },
@@ -76,9 +85,17 @@ sub set_model {
     
     # apply scaling and rotation supplied from command line if any
     foreach my $instance (map @{$_->instances}, @{$model->objects}) {
+        ### JKT CODE START ###
+        $or = $instance->rotation;
+        $ox = $instance->offset->[0];
+        $oy = $instance->offset->[1];
+        ### JKT CODE END ###
         $instance->set_scaling_factor($instance->scaling_factor * $self->scale);
         $instance->set_rotation($instance->rotation + $self->rotate);
     }
+    ### JKT CODE START ###
+    $oz = $_->bounding_box->z_min for @{$model->objects};
+    ### JKT CODE END ###
     
     my $bed_shape = $self->_print->config->bed_shape;
     my $bb = Slic3r::Geometry::BoundingBoxf->new_from_points($bed_shape);
@@ -99,6 +116,14 @@ sub set_model {
             // Slic3r::Pointf->new_unscale(@{ $self->_bed_polygon->centroid });
         $model->center_instances_around_point($print_center);
     }
+    ### JKT CODE START ###
+    foreach my $instance (map @{$_->instances}, @{$model->objects}) {
+        $nr = $instance->rotation;
+        $nx = $instance->offset->[0];
+        $ny = $instance->offset->[1];
+    }
+    $nz = $_->bounding_box->z_min for @{$model->objects};
+    ### JKT CODE END ###
     
     foreach my $model_object (@{$model->objects}) {
         $self->_print->auto_assign_extruders($model_object);
@@ -132,6 +157,20 @@ sub export_gcode {
     $self->_before_export;
     $self->_print->export_gcode(output_file => $self->output_file);
     $self->_after_export;
+
+    ### JKT CODE START ###
+    open(my $fh, '>>', $self->output_file);
+    printf $fh "; original_rotation = %d\n", $or;
+    printf $fh "; original_offset_X = %d\n", $ox;
+    printf $fh "; original_offset_Y = %d\n", $oy;
+    printf $fh "; original_offset_Z = %d\n", $oz;
+    printf $fh "; new_rotation = %d\n", $nr;
+    printf $fh "; new_offset_X = %d\n", $nx;
+    printf $fh "; new_offset_Y = %d\n", $ny;
+    printf $fh "; new_offset_Z = %d\n", $nz;
+    close $fh
+    ### JKT CODE END ###
+
 }
 
 sub export_svg {
