@@ -52,20 +52,39 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("nonplanar_layers_angle", coFloat);
     def->label = "Maximum nonplanar angle";
     def->category = "Layers and Perimeters";
-    def->tooltip = "This is the maximum angle the printer can print without collisions.";
+    def->tooltip = "This is the maximum angle that will be printed as nonplanar layers. This must always be smaller than the collision angle";
     def->sidetext = "°";
     def->cli = "nonplanar_layers_angle=f";
     def->min = 0;
-    def->default_value = new ConfigOptionFloat(10.0);
-    
+    def->default_value = new ConfigOptionFloat(5.0);
+
+    def = this->add("nonplanar_layers_collision_angle", coFloat);
+    def->label = "Maximum nonplanar collision angle";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "This is the maximum angle the printer can print without collisions.";
+    def->sidetext = "°";
+    def->cli = "nonplanar_layers_collision_angle=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(8.0);
+
     def = this->add("nonplanar_layers_height", coFloat);
-    def->label = "Maximum nonplanar height";
+    def->label = "Maximum nonplanar collision height";
     def->category = "Layers and Perimeters";
     def->tooltip = "This is the maximum height the printer can print without collisions.";
     def->sidetext = "mm";
     def->cli = "nonplanar_layers_height=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(10.0);
+
+    def = this->add("nonplanar_layers_ignore_collision_size", coFloat);
+    def->label = "Ignore collision size";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "Collisions that are smaller than this are ignored during collision check. This reduces false positives but has to be used with caution!";
+    def->sidetext = "mm²";
+    def->cli = "nonplanar_layers_ignore_collision_size=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(10.0);
+
 
     def = this->add("avoid_crossing_perimeters", coBool);
     def->label = "Avoid crossing perimeters";

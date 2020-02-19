@@ -523,7 +523,9 @@ sub build {
             my $optgroup = $page->new_optgroup('Nonplanar layers');
             $optgroup->append_single_option_line('nonplanar_layers');
             $optgroup->append_single_option_line('nonplanar_layers_angle');
+            $optgroup->append_single_option_line('nonplanar_layers_collision_angle');
             $optgroup->append_single_option_line('nonplanar_layers_height');
+            $optgroup->append_single_option_line('nonplanar_layers_ignore_collision_size');
         }
         {
             my $optgroup = $page->new_optgroup('Vertical shells');

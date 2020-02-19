@@ -417,7 +417,7 @@ PrintObject::check_nonplanar_collisions(NonplanarSurface &surface)
             //break if above nonplanar surface
             if (surface.stats.max.z < layer->slice_z) break;
             
-            float angle_rad = this->config.nonplanar_layers_angle.value * 3.14159265/180.0;
+            float angle_rad = this->config.nonplanar_layers_collision_angle.value * 3.14159265/180.0;
             float angle_offset = scale_(layer->height*std::sin(1.57079633-angle_rad)/std::sin(angle_rad));
             Polygons layerm_slices_surfaces = layerm.slices;
             
@@ -1154,10 +1154,11 @@ PrintObject::find_nonplanar_surfaces()
             const TriangleMesh mesh = (*it)->mesh;
             std::map<int, NonplanarFacet> facets;
             //store all meshes with slope <= nonplanar_layers_angle in map. Map is necessary to keep facet ID
+            float min_angle = std::cos(std::min(this->config.nonplanar_layers_collision_angle.value, this->config.nonplanar_layers_angle.value) * 3.14159265/180.0);
             for (int i = 0; i < mesh.stl.stats.number_of_facets; ++ i) {
                 stl_facet* facet = mesh.stl.facet_start + i;
                 //TODO check if normals exist
-                if (facet->normal.z >= std::cos(this->config.nonplanar_layers_angle.value * 3.14159265/180.0)) {
+                if (facet->normal.z >= min_angle) {
                     //copy facet
                     NonplanarFacet new_facet;
                     new_facet.normal.x = facet->normal.x;
