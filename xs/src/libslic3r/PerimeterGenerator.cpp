@@ -140,7 +140,8 @@ PerimeterGenerator::process()
                         for (ExPolygon &half_thin : half_thins) {
                             //growing back the polygon
                             ExPolygons thin = offset_ex(half_thin, (float)(min_width / 2));
-                            assert(thin.size() == 1);
+                            assert(thin.size() <= 1);
+                            if (thin.empty()) continue;
                             double overlap = (coord_t)scale_(this->config->thin_walls_overlap.get_abs_value(this->ext_perimeter_flow.nozzle_diameter));
                             ExPolygons anchor = intersection_ex(
                                 to_polygons(offset_ex(half_thin, (float)(min_width / 2 + overlap), CLIPPER_OFFSET_SCALE, jtSquare, 3)), 
@@ -152,8 +153,8 @@ PerimeterGenerator::process()
                                     thin[0].remove_point_too_near(SCALED_RESOLUTION);
                                     if (thin[0].area() > min_width*(ext_pwidth + ext_pspacing2)) {
                                         bound.remove_point_too_near(SCALED_RESOLUTION);
-                                        // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                        Slic3r::MedialAxis ma{ thin[0], ext_pwidth + ext_pspacing2, min_width, coord_t(this->layer_height) };
+                                        // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop (*1.1 because of circles approx.)
+                                        Slic3r::MedialAxis ma{ thin[0], (ext_pwidth + ext_pspacing2)*1.1, min_width, coord_t(this->layer_height) };
                                         ma.use_bounds(bound)
                                             .use_min_real_width((coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter))
                                             .use_tapers(overlap)

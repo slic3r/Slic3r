@@ -95,7 +95,7 @@ MedialAxis::polyline_from_voronoi(const Lines& voronoi_edges, ThickPolylines* po
         }
         
         assert(polyline.width.size() == polyline.points.size());
-        
+        // if loop, set endpoints to false
         // prevent loop endpoints from being extended
         if (polyline.first_point().coincides_with(polyline.last_point())) {
             polyline.endpoints.first = false;
@@ -271,8 +271,8 @@ MedialAxis::validate_edge(const VD::edge_type* edge)
     //    return false;
     //
 
-    //shouldn't occur if perimeter_generator is well made
-    if (w0 > this->max_width && w1 > this->max_width)
+    //shouldn't occur if perimeter_generator is well made. *1.05 for a little wiggle room
+    if (w0 > this->max_width*1.05 && w1 > this->max_width*1.05)
         return false;
     
     this->thickness[edge]         = std::make_pair(w0, w1);
@@ -628,8 +628,14 @@ MedialAxis::extends_line_both_side(ThickPolylines& pp) {
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         this->extends_line(polyline, anchors, this->min_width);
-        polyline.reverse();
-        this->extends_line(polyline, anchors, this->min_width);
+        if (!polyline.points.empty()) {
+            polyline.reverse();
+            this->extends_line(polyline, anchors, this->min_width);
+        }
+        if (polyline.points.empty()) {
+            pp.erase(pp.begin() + i);
+            --i;
+        }
     }
 }
 
