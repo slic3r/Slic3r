@@ -401,66 +401,112 @@ PrintObject::debug_svg_print()
 }
 
 bool
-PrintObject::check_nonplanar_collisions(NonplanarSurface &surface)
+PrintObject::check_nonplanar_collisions(NonplanarSurface &surface, int id)
 {
     FOREACH_REGION(this->_print, region_it) {
         size_t region_id = region_it - this->_print->regions.begin();
-        Polygons collider;
         Polygons nonplanar_polygon = to_polygons(surface.horizontal_projection());
-        //check each layer
-        for (LayerPtrs::iterator layer_it = this->layers.begin(); layer_it != this->layers.end(); ++layer_it){
+        Polygons shrinking_nonplanar_polygon = nonplanar_polygon;
+        std::map<float,Polygons> layer_nonplanar_polygon;
+        Polygons collider;
+        float angle_rad = this->config.nonplanar_layers_collision_angle.value * 3.14159265/180.0;
+        double collision_area = 0;
+
+        //Generate shrinking collision polygons for each layer in nonplanar extrusion
+        for (LayerPtrs::reverse_iterator layer_it = this->layers.rbegin(); layer_it != this->layers.rend(); ++layer_it) {
             Layer* layer        = *layer_it;
+
+            //skip if above nonplanar surface
+            if (surface.stats.max.z < layer->slice_z) continue;
+            //break if below minimum nonplanar surface
+            if (surface.stats.min.z-layer->height > layer->slice_z) break;
+
             LayerRegion &layerm = *layer->regions[region_id];
-            
-            //skip if below minimum nonplanar surface
-            if (surface.stats.min.z-layer->height > layer->slice_z) continue;
-            //break if above nonplanar surface
-            if (surface.stats.max.z < layer->slice_z) break;
-            
-            float angle_rad = this->config.nonplanar_layers_collision_angle.value * 3.14159265/180.0;
-            float angle_offset = scale_(layer->height*std::sin(1.57079633-angle_rad)/std::sin(angle_rad));
             Polygons layerm_slices_surfaces = layerm.slices;
-            
-            //debug
-            // SVG svg("svg/collider" + std::to_string(layer->id()) + ".svg");
-            // svg.draw(layerm_slices_surfaces, "blue");
-            // svg.draw(union_ex(diff(collider,nonplanar_polygon)), "red", 0.7f);
-            // svg.draw_outline(collider);
-            // svg.arrows = false;
-            // svg.Close();
-            
-            //check if current surface collides with previous collider
-            ExPolygons collisions = union_ex(intersection(layerm_slices_surfaces, diff(collider,nonplanar_polygon)));
-            
-            
-            if (!collisions.empty()){
-                double area = 0;
-                for (auto& c : collisions){
-                    area += c.area();
-                    
-                }
-                
-                //collsion found abort when area > 1.0 mm²
-                if (1.0 < unscale(unscale(area))) {
-                    std::cout << "Surface removed: collision on layer " << layer->print_z << "mm (" << unscale(unscale(area)) << " mm²)" << '\n';
-                    return true;
-                }
-            }
-            
+            Polygons current_top;
+
             if (layer->upper_layer != NULL) {
                 Layer* upper_layer = layer->upper_layer;
                 LayerRegion &upper_layerm = *upper_layer->regions[region_id];
                 Polygons upper_slices = upper_layerm.slices;
-                //merge the ofsetted surface to the collider
-                collider= offset(union_(intersection(nonplanar_polygon, 
-                                        diff(layerm_slices_surfaces, 
-                                            upper_slices, false), false), 
-                                collider),
-                            angle_offset);
+                //set intersection as current top
+                current_top = diff(layerm_slices_surfaces, upper_slices, false);
+            } else {
+                // whole surface is current top
+                current_top = layerm_slices_surfaces;
             }
+
+            //save intersection with shrinking_nonplanar_polygon for each layer
+            layer_nonplanar_polygon[layer->slice_z] = intersection(shrinking_nonplanar_polygon, current_top, true);
+
+            //remove small artifacts from Polygons
+            for (Polygons::iterator it=layer_nonplanar_polygon[layer->slice_z].begin(); it!=layer_nonplanar_polygon[layer->slice_z].end();) {
+                if(unscale(unscale(it->area())) <= 0.5)
+                    it = layer_nonplanar_polygon[layer->slice_z].erase(it);
+                else
+                    ++it;
+            }
+
+            //remove current top from shrinking_nonplanar_polygon
+            shrinking_nonplanar_polygon = diff(shrinking_nonplanar_polygon, layer_nonplanar_polygon[layer->slice_z], true);
+
+            //debug
+            // SVG svg("svg/polygon_" + std::to_string(id) + "_" + std::to_string(layer->id()) + "_" + std::to_string(layer->slice_z) + ".svg");
+            // svg.draw_outline(layer_nonplanar_polygon[layer->slice_z],"green");
+            // svg.draw_outline(shrinking_nonplanar_polygon, "cyan");
+            // svg.arrows = false;
+            // svg.Close();
+        }
+
+        //check each layer
+        for (LayerPtrs::iterator layer_it = this->layers.begin(); layer_it != this->layers.end(); ++layer_it){
+            Layer* layer        = *layer_it;
+
+
+            //skip if below minimum nonplanar surface
+            if (surface.stats.min.z-layer->height > layer->slice_z) continue;
+            //break if above nonplanar surface
+            if (surface.stats.max.z < layer->slice_z) break;
+
+            LayerRegion &layerm = *layer->regions[region_id];
+            float angle_offset = scale_(layer->height*std::sin(1.57079633-angle_rad)/std::sin(angle_rad));
+            Polygons layerm_slices_surfaces = layerm.slices;
+
+            //check if current surface collides with previous collider
+            ExPolygons collisions = union_ex(intersection(layerm_slices_surfaces, diff(collider,nonplanar_polygon)));
+
+            if (!collisions.empty()){
+                for (auto& c : collisions){
+                    collision_area += c.area();
+                }
+
+                //collsion found abort when area > configured area
+                if (this->config.nonplanar_layers_ignore_collision_size.value < unscale(unscale(collision_area))) {
+                    std::cout << "Surface removed: collision on layer " << layer->print_z << "mm (" << unscale(unscale(collision_area)) << " mm²)" << '\n';
+                    return true;
+                }
+            }
+
+            collider= offset(union_(layer_nonplanar_polygon[layer->slice_z],
+                            collider),
+                        angle_offset,
+                        100000.0,
+                        ClipperLib::jtMiter);
+
+            //debug
+            // SVG svg("svg/collider_" + std::to_string(id) + "_" + std::to_string(layer->id()) + "_" + std::to_string(layer->slice_z) + ".svg");
+            // svg.draw(layerm_slices_surfaces, "blue");
+            // svg.draw(union_ex(diff(collider,nonplanar_polygon)), "yellow", 0.7f);
+            // svg.draw(collisions, "red", 0.9f);
+            // svg.draw_outline(collider);
+            // svg.draw_outline(layer_nonplanar_polygon[layer->slice_z],"green");
+            // svg.draw_outline(nonplanar_polygon, "cyan");
+            // svg.arrows = false;
+            // svg.Close();
+
         }
     }
-    
+
     return false;
 }
 
@@ -1206,7 +1252,7 @@ PrintObject::find_nonplanar_surfaces()
             
             //check if surfaces areas collide
             for (NonplanarSurfaces::iterator it = this->nonplanar_surfaces.begin(); it!=this->nonplanar_surfaces.end();) {
-                if(check_nonplanar_collisions((*it))) {
+                if(check_nonplanar_collisions((*it),std::distance(nonplanar_surfaces.begin(), it))) {
                     it = this->nonplanar_surfaces.erase(it);
                 }else {
                     it++;

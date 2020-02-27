@@ -438,7 +438,7 @@ sub options {
     return qw(
         layer_height first_layer_height
         adaptive_slicing adaptive_slicing_quality match_horizontal_surfaces
-        nonplanar_layers nonplanar_layers_angle nonplanar_layers_height
+        nonplanar_layers nonplanar_layers_angle nonplanar_layers_collision_angle nonplanar_layers_height nonplanar_layers_ignore_collision_size
         perimeters spiral_vase
         top_solid_layers bottom_solid_layers
         extra_perimeters avoid_crossing_perimeters thin_walls overhangs
@@ -554,7 +554,7 @@ sub build {
             $optgroup->append_single_option_line('external_perimeters_first');
         }
     }
-    
+
     {
         my $page = $self->add_options_page('Infill', 'infill.png');
         {
@@ -888,7 +888,7 @@ sub _update {
         
     my $have_nonplanar_layers = $config->nonplanar_layers;
     $self->get_field($_)->toggle($have_nonplanar_layers)
-        for qw(nonplanar_layers_angle nonplanar_layers_height);
+        for qw(nonplanar_layers_angle nonplanar_layers_collision_angle nonplanar_layers_height nonplanar_layers_ignore_collision_size);
     
     my $have_infill = $config->fill_density > 0;
     # infill_extruder uses the same logic as in Print::extruders()
