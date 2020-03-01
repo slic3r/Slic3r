@@ -1733,6 +1733,7 @@ void ConfigWizard::priv::apply_config(AppConfig *app_config, PresetBundle *prese
             if (bundle.second.is_prusa_bundle) { continue; }
 
             const auto config = enabled_vendors.find(bundle.first);
+            if (config == enabled_vendors.end()) { continue; }
             for (const auto &model : bundle.second.vendor_profile->models) {
                 const auto model_it = config->second.find(model.id);
                 if (model_it != config->second.end() && model_it->second.size() > 0) {
