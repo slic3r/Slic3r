@@ -2916,7 +2916,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         //but not for the first layer
         && this->m_layer->id() > 0
         //exclude if min_layer_height * 2 > layer_height (increase from 2 to 3 because it's working but uses in-between)
-        && this->m_layer->height < EXTRUDER_CONFIG(min_layer_height) * 3
+        && this->m_layer->height >= EXTRUDER_CONFIG(min_layer_height) * 2
         ) {
 
         return extrude_loop_vase(original_loop, description, speed, lower_layer_edge_grid);
