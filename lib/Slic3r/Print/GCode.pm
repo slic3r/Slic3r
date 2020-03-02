@@ -337,11 +337,11 @@ sub export {
         my $filament_cost = $filament_weight * ($extruder->filament_cost / 1000);
         $self->print->set_filament_stats($extruder->id, $used_filament);
         
-        printf $fh "; filament used = %.1fmm (%.1fcm3)\n",
+        printf $fh "; filament used = %.1fmm (%.2fcm3)\n",
             $used_filament, $extruded_volume/1000;
         if ($filament_weight > 0) {
             $self->print->total_weight($self->print->total_weight + $filament_weight);
-            printf $fh "; filament used = %.1fg\n",
+            printf $fh "; filament used = %.2fg\n",
                    $filament_weight;
             if ($filament_cost > 0) {
                 $self->print->total_cost($self->print->total_cost + $filament_cost);
