@@ -51,7 +51,7 @@ jobs:
       working-directory: ./build
       run: |
         cp -Rf ../resources Slic3r++/Slic3r++.app/Contents/resources
-        cp Slic3r++/Slic3r++.app/Contents/resources/icons/slic3r.icns Slic3r++/Slic3r++.app/Contents/resources/slic3r.icns
+        cp Slic3r++/Slic3r++.app/Contents/resources/icons/slic3r.icns Slic3r++/Slic3r++.app/Contents/resources/Slic3r.icns
         cp src/Info.date.plist Slic3r++/Slic3r++.app/Contents/Info.plist
         echo -n -e 'APPL????\x0a' > PkgInfo
         cp PkgInfo Slic3r++/Slic3r++.app/Contents/PkgInfo
