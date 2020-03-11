@@ -419,7 +419,7 @@ void PerimeterGenerator::process()
                                     thin[0].remove_point_too_near((coord_t)SCALED_RESOLUTION);
                                     if (thin[0].area() > min_width*(ext_perimeter_width + ext_perimeter_spacing2)) {
                                         bound.remove_point_too_near((coord_t)SCALED_RESOLUTION);
-                                        // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
+                                        // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop (*1.1 because of circles approx.)
                                         Slic3r::MedialAxis ma{ thin[0], (coord_t)((ext_perimeter_width + ext_perimeter_spacing2)*1.1),
                                             min_width, coord_t(this->layer_height) };
                                         ma.use_bounds(bound)
@@ -436,7 +436,7 @@ void PerimeterGenerator::process()
                     //FIXME Is this offset correct if the line width of the inner perimeters differs
                     // from the line width of the infill?
                     coord_t good_spacing = (i == 1) ? ext_perimeter_spacing2 : perimeter_spacing;
-                    if (this->config->thin_walls){
+                    if (!this->config->thin_perimeters){
                         // This path will ensure, that the perimeters do not overfill, as in 
                         // prusa3d/Slic3r GH #32, but with the cost of rounding the perimeters
                         // excessively, creating gaps, which then need to be filled in by the not very 
