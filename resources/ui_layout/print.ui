@@ -216,6 +216,7 @@ group:Flow
 		setting:bridge_flow_ratio
 		setting:over_bridge_flow_ratio
 		setting:fill_top_flow_ratio
+		setting:first_layer_flow_ratio
 	end_line
 
 page:Multiple extruders:funnel

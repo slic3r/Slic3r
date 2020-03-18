@@ -3350,6 +3350,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
 
     // calculate extrusion length per distance unit
     double e_per_mm = m_writer.extruder()->e_per_mm3() * path.mm3_per_mm;
+    if (this->m_layer_index <= 0) e_per_mm *= this->config().first_layer_flow_ratio.get_abs_value(1);
     if (m_writer.extrusion_axis().empty()) e_per_mm = 0;
     double path_length = 0.;
     {

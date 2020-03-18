@@ -1746,6 +1746,7 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("bridge_overlap"));
         line.append_option(optgroup->get_option("over_bridge_flow_ratio"));
         line.append_option(optgroup->get_option("fill_top_flow_ratio"));
+        line.append_option(optgroup->get_option("first_layer_flow_ratio"));
         optgroup->append_line(line);
 
     page = add_options_page(_(L(toString(OptionCategory::extruders))), "funnel");

@@ -1007,6 +1007,7 @@ public:
     ConfigOptionFloat               first_layer_acceleration;
     ConfigOptionInts                first_layer_bed_temperature;
     ConfigOptionFloatOrPercent      first_layer_extrusion_width;
+    ConfigOptionFloatOrPercent      first_layer_flow_ratio;
     ConfigOptionFloatOrPercent      first_layer_speed;
     ConfigOptionFloatOrPercent      first_layer_infill_speed;
     ConfigOptionInts                first_layer_temperature;
@@ -1085,6 +1086,7 @@ protected:
         OPT_PTR(first_layer_acceleration);
         OPT_PTR(first_layer_bed_temperature);
         OPT_PTR(first_layer_extrusion_width);
+        OPT_PTR(first_layer_flow_ratio);
         OPT_PTR(first_layer_speed);
         OPT_PTR(first_layer_infill_speed);
         OPT_PTR(first_layer_temperature);

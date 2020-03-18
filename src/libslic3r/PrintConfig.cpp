@@ -1244,7 +1244,16 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Top fill");
     def->full_label = L("Top fill flow ratio");
     def->category = OptionCategory::width;
-    def->tooltip = L("You can increase this to over-extrude on the top layer if there are not enough plastic to makle a good fill.");
+    def->tooltip = L("You can increase this to over-extrude on the top layer if there are not enough plastic to make a good fill.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
+
+    def = this->add("first_layer_flow_ratio", coFloatOrPercent);
+    def->label = L("First layer");
+    def->full_label = L("First layer flow ratio");
+    def->category = OptionCategory::width;
+    def->tooltip = L("You can increase this to over-extrude on the first layer if there are not enough plastic because your bed isn't levelled.");
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
