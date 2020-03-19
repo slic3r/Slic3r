@@ -628,7 +628,7 @@ void PerimeterGenerator::process()
             double min = 0.2 * perimeter_width * (1 - INSET_OVERLAP_TOLERANCE);
             //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
             min = std::max(min, double(Flow::new_from_spacing(EPSILON, nozzle_diameter, this->layer_height, false).scaled_width()));
-            double max = 2. * perimeter_spacing;
+            double max = 2.2 * perimeter_spacing;
             ExPolygons gaps_ex = diff_ex(
                 offset2_ex(gaps, double(-min / 2), double(+min / 2)),
                 offset2_ex(gaps, double(-max / 2), double(+max / 2)),
