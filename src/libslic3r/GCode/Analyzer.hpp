@@ -12,6 +12,7 @@
 namespace Slic3r {
 
 class GCodePreviewData;
+class GCodeTimeEstimator;
 
 class GCodeAnalyzer
 {
@@ -59,10 +60,11 @@ public:
         float height;    // mm
         float feedrate;  // mm/s
         float fan_speed; // percentage
+        float layer_time; //s
         unsigned int cp_color_id;
 
         Metadata();
-        Metadata(ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, float width, float height, float feedrate, float fan_speed, unsigned int cp_color_id = 0);
+        Metadata(ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, float width, float height, float feedrate, float fan_speed, float layer_time, unsigned int cp_color_id = 0);
 
         bool operator != (const Metadata& other) const;
     };
@@ -86,7 +88,7 @@ public:
         Vec3d end_position;
         float delta_extruder;
 
-        GCodeMove(EType type, ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, float width, float height, float feedrate, const Vec3d& start_position, const Vec3d& end_position, float delta_extruder, float fan_speed, unsigned int cp_color_id = 0);
+        GCodeMove(EType type, ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, float width, float height, float feedrate, const Vec3d& start_position, const Vec3d& end_position, float delta_extruder, float fan_speed, float layer_time, unsigned int cp_color_id = 0);
         GCodeMove(EType type, const Metadata& data, const Vec3d& start_position, const Vec3d& end_position, float delta_extruder);
     };
 
@@ -141,7 +143,7 @@ public:
 
     // Calculates all data needed for gcode visualization
     // throws CanceledException through print->throw_if_canceled() (sent by the caller as callback).
-    void calc_gcode_preview_data(GCodePreviewData& preview_data, std::function<void()> cancel_callback = std::function<void()>());
+    void calc_gcode_preview_data(GCodePreviewData& preview_data, GCodeTimeEstimator& time_estimator, std::function<void()> cancel_callback = std::function<void()>());
 
     // Return an estimate of the memory consumed by the time estimator.
     size_t memory_used() const;
@@ -262,6 +264,9 @@ private:
     void _set_fan_speed(float fan_speed_percentage);
     float _get_fan_speed() const;
 
+    void _set_layer_time(float layer_time_sec);
+    float _get_layer_time() const;
+
     void _set_axis_position(EAxis axis, float position);
     float _get_axis_position(EAxis axis) const;
 
@@ -295,7 +300,7 @@ private:
     bool _is_valid_extrusion_role(int value) const;
 
     // All the following methods throw CanceledException through print->throw_if_canceled() (sent by the caller as callback).
-    void _calc_gcode_preview_extrusion_layers(GCodePreviewData& preview_data, std::function<void()> cancel_callback);
+    void _calc_gcode_preview_extrusion_layers(GCodePreviewData& preview_data, GCodeTimeEstimator& time_estimator, std::function<void()> cancel_callback);
     void _calc_gcode_preview_travel(GCodePreviewData& preview_data, std::function<void()> cancel_callback);
     void _calc_gcode_preview_retractions(GCodePreviewData& preview_data, std::function<void()> cancel_callback);
     void _calc_gcode_preview_unretractions(GCodePreviewData& preview_data, std::function<void()> cancel_callback);

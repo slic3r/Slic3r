@@ -154,6 +154,7 @@ namespace Slic3r {
             Flags flags;
 
             float delta_pos[Num_Axis]; // mm
+            float z;
             float acceleration;        // mm/s^2
             float max_entry_speed;     // mm/s
             float safe_feedrate;       // mm/s
@@ -161,6 +162,7 @@ namespace Slic3r {
             FeedrateProfile feedrate;
             Trapezoid trapezoid;
             float elapsed_time;
+            float time;
 
             Block();
 
@@ -204,6 +206,14 @@ namespace Slic3r {
 
         typedef std::vector<Block> BlocksList;
 
+        struct Layer
+        {
+            float z;
+            float time;
+        };
+
+        typedef std::vector<Layer> LayersList;
+
 #if ENABLE_MOVE_STATS
         struct MoveStats
         {
@@ -236,6 +246,7 @@ namespace Slic3r {
         Feedrates m_curr;
         Feedrates m_prev;
         BlocksList m_blocks;
+        LayersList m_layers;
         // Map between g1 line id and blocks id, used to speed up export of remaining times
         G1LineIdToBlockIdMap m_g1_line_ids;
         // Index of the last block already st_synchronized
@@ -353,6 +364,10 @@ namespace Slic3r {
         void add_additional_time(float timeSec);
         void set_additional_time(float timeSec);
         float get_additional_time() const;
+
+        void calculate_layer_time();
+        float get_layer_time(float z);
+        void reset_layers();
 
         void set_default();
 

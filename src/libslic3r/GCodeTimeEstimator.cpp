@@ -854,6 +854,7 @@ namespace Slic3r {
             block_time += block.deceleration_time();
             m_time += block_time;
             block.elapsed_time = m_time;
+            block.time = block_time;
 
 #if ENABLE_MOVE_STATS
             MovesStatsMap::iterator it = _moves_stats.find(block.move_type);
@@ -1031,6 +1032,7 @@ namespace Slic3r {
 
         // updates axes positions from line
         float new_pos[Num_Axis];
+        long raw_axis_absolute_position;
         for (unsigned char a = X; a < Num_Axis; ++a)
         {
             new_pos[a] = axis_absolute_position((EAxis)a, line);
@@ -1050,6 +1052,7 @@ namespace Slic3r {
             block.delta_pos[a] = new_pos[a] - get_axis_position((EAxis)a);
             max_abs_delta = std::max(max_abs_delta, std::abs(block.delta_pos[a]));
         }
+        block.z = new_pos[Z];
 
         // is it a move ?
         if (max_abs_delta == 0.0f)
@@ -1687,6 +1690,47 @@ namespace Slic3r {
     {
         return std::to_string((int)(::roundf(time_in_secs / 60.0f)));
     }
+
+    void GCodeTimeEstimator::reset_layers()
+    {
+        m_layers.clear();
+    }
+
+    void GCodeTimeEstimator::calculate_layer_time()
+    {
+        for (int i = 0; i < (int)m_blocks.size(); ++i)
+        {
+            if (m_blocks[i].delta_pos[Z] == 0)
+            {
+                int j = 0;
+                bool layer_found = false;
+                while (j < (int)m_layers.size())
+                {
+                    if (m_blocks[i].z == m_layers[j].z) {
+                        m_layers[j].time += m_blocks[i].time;
+                        layer_found = true;
+                    }
+                    j++;
+                }
+                if (!layer_found) {
+                    m_layers.push_back({ m_blocks[i].z, m_blocks[i].time });
+                }
+            }
+        }
+    }
+
+    float GCodeTimeEstimator::get_layer_time(float z)
+    {
+        int j = 0;
+        while (j < (int)m_layers.size())
+        {
+            if (z == m_layers[j].z) {
+                return m_layers[j].time;
+            }
+            j++;
+        }
+        return 0;
+     }
 
 #if ENABLE_MOVE_STATS
     void GCodeTimeEstimator::_log_moves_stats() const
