@@ -32,14 +32,13 @@ Maybe you need these too
 
 #### Build with cmake (Tested on Ubuntu 16.04, 18.04LTS & 19.04)
 
+    export PERL5LIB=$PWD/local-lib/lib/perl5
+    
     mkdir build
 
     cd build
 
     cmake ..
-
-    export PERL5LIB=<PATH_TO_SLIC3R_SOURCE>/local-lib/lib/perl5
-    (e.g. /home/zip-o-mat/Slic3r/local-lib/lib/perl5)
 
     make
 
