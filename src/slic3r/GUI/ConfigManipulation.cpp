@@ -246,7 +246,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
         "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "perimeter_loop", "perimeter_loop_seam" })
         toggle_field(el, have_perimeters);
 
-    for (auto el : { "external_perimeters_vase"})
+    for (auto el : { "external_perimeters_vase", "external_perimeters_nothole", "external_perimeters_hole"})
         toggle_field(el, config->opt_bool("external_perimeters_first"));
 
     for (auto el : { "thin_walls_min_width", "thin_walls_overlap" })
@@ -254,6 +254,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 
     toggle_field("perimeter_loop_seam", config->opt_bool("perimeter_loop"));
 
+    toggle_field("gap_fill_min_area", config->opt_bool("gap_fill"));
 
     bool have_infill = config->option<ConfigOptionPercent>("fill_density")->value > 0;
     // infill_extruder uses the same logic as in Print::extruders()

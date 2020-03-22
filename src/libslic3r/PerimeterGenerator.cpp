@@ -588,6 +588,7 @@ void PerimeterGenerator::process()
                 }
             }
             // at this point, all loops should be in contours[0] (= contours.front() )
+            // collection of loops to add into loops
             ExtrusionEntityCollection entities;
             if (config->perimeter_loop.value) {
                 //onlyone_perimter = >fusion all perimeterLoops
@@ -614,9 +615,46 @@ void PerimeterGenerator::process()
             // if brim will be printed, reverse the order of perimeters so that
             // we continue inwards after having finished the brim
             // TODO: add test for perimeter order
-            if (this->config->external_perimeters_first || 
-                (this->layer_id == 0 && this->print_config->brim_width.value > 0))
-                    entities.reverse();
+            if (this->config->external_perimeters_first ||
+                (this->layer_id == 0 && this->print_config->brim_width.value > 0)) {
+                if (this->config->external_perimeters_nothole.value) {
+                    if (this->config->external_perimeters_hole.value) {
+                        entities.reverse();
+                    } else {
+                        //reverse only not-hole perimeters
+                        ExtrusionEntityCollection coll2;
+                        for (const auto loop : entities.entities) {
+                            std::cout << loop->is_loop() <<" test " << (((ExtrusionLoop*)loop)->loop_role()) <<" & " << ExtrusionLoopRole::elrHole <<"\n";
+                            if (loop->is_loop() && !(((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0) {
+                                coll2.entities.push_back(loop);
+                            }
+                        }
+                        coll2.reverse();
+                        for (const auto loop : entities.entities) {
+                            if (!loop->is_loop() || (((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0) {
+                                coll2.entities.push_back(loop);
+                            }
+                        }
+                        entities = coll2;
+                    }
+                } else if (this->config->external_perimeters_hole.value) {
+                    //reverse the hole, and put them in first place.
+                    ExtrusionEntityCollection coll2;
+                    for (const auto loop : entities.entities) {
+                        if (loop->is_loop() && (((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0) {
+                            coll2.entities.push_back(loop);
+                        }
+                    }
+                    coll2.reverse();
+                    for (const auto loop : entities.entities) {
+                        if (!loop->is_loop() || !(((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0) {
+                            coll2.entities.push_back(loop);
+                        }
+                    }
+                    entities = coll2;
+                }
+
+            }
             // append perimeters for this slice as a collection
             if (!entities.empty())
                 this->loops->append(entities);
@@ -708,18 +746,21 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
         bool is_external = loop.is_external();
         
         ExtrusionRole role;
-        ExtrusionLoopRole loop_role;
+        ExtrusionLoopRole loop_role = ExtrusionLoopRole::elrDefault;
         role = is_external ? erExternalPerimeter : erPerimeter;
         if (loop.is_internal_contour()) {
             // Note that we set loop role to ContourInternalPerimeter
             // also when loop is both internal and external (i.e.
             // there's only one contour loop).
-            loop_role = elrInternal;
-        } else {
-            loop_role = elrDefault;
+            loop_role = ExtrusionLoopRole::elrInternal;
         }
         if (!loop.is_contour) {
-            loop_role = (ExtrusionLoopRole)(loop_role | elrHole);
+            loop_role = (ExtrusionLoopRole)(loop_role | ExtrusionLoopRole::elrHole);
+        }
+        if (this->config->external_perimeters_vase.value && this->config->external_perimeters_first.value && is_external) {
+            if ((loop.is_contour && this->config->external_perimeters_nothole.value) || (!loop.is_contour && this->config->external_perimeters_hole.value)) {
+                loop_role = (ExtrusionLoopRole)(loop_role | ExtrusionLoopRole::elrVase);
+            }
         }
         
         // detect overhanging/bridging perimeters

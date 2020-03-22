@@ -41,6 +41,8 @@ group:Advanced
 	line:External Perimeter
 		setting:external_perimeters_first
 		setting:external_perimeters_vase
+		setting:external_perimeters_nothole
+		setting:external_perimeters_hole
 	end_line
 	line:Looping perimeter
 		setting:perimeter_loop

@@ -492,7 +492,6 @@ public:
     ConfigOptionFloat               elefant_foot_compensation;
     ConfigOptionBool                exact_last_layer_height;
     ConfigOptionFloatOrPercent      extrusion_width;
-    ConfigOptionBool                external_perimeters_vase;
     ConfigOptionFloatOrPercent      first_layer_height;
     ConfigOptionBool                infill_only_where_needed;
     // Force the generation of solid shells between adjacent materials/volumes.
@@ -546,7 +545,6 @@ protected:
         OPT_PTR(elefant_foot_compensation);
         OPT_PTR(exact_last_layer_height);
         OPT_PTR(extrusion_width);
-        OPT_PTR(external_perimeters_vase);
         OPT_PTR(first_layer_height);
         OPT_PTR(infill_only_where_needed);
         OPT_PTR(interface_shells);
@@ -611,6 +609,9 @@ public:
     ConfigOptionFloatOrPercent      external_perimeter_extrusion_width;
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
+    ConfigOptionBool                external_perimeters_vase;
+    ConfigOptionBool                external_perimeters_nothole;
+    ConfigOptionBool                external_perimeters_hole;
     ConfigOptionBool                extra_perimeters;
     ConfigOptionBool                extra_perimeters_odd_layers;
     ConfigOptionBool                only_one_perimeter_top;
@@ -683,6 +684,9 @@ protected:
         OPT_PTR(external_perimeter_extrusion_width);
         OPT_PTR(external_perimeter_speed);
         OPT_PTR(external_perimeters_first);
+        OPT_PTR(external_perimeters_vase);
+        OPT_PTR(external_perimeters_nothole);
+        OPT_PTR(external_perimeters_hole);
         OPT_PTR(extra_perimeters);
         OPT_PTR(extra_perimeters_odd_layers);
         OPT_PTR(only_one_perimeter_top);

@@ -403,8 +403,10 @@ const std::vector<std::string>& Preset::print_options()
         "thin_walls", "overhangs", 
         "overhangs_width",
         "seam_position", 
-        "external_perimeters_first", 
-        "external_perimeters_vase", 
+        "external_perimeters_first",
+        "external_perimeters_vase",
+        "external_perimeters_nothole",
+        "external_perimeters_hole",
         "fill_density"
         , "fill_pattern"
         , "fill_top_flow_ratio"

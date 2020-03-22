@@ -39,12 +39,14 @@ enum ExtrusionRole : uint8_t {
 
 // Special flags describing loop
 enum ExtrusionLoopRole : uint16_t {
-    elrDefault=0x1,
+    elrDefault = 0,
     // doesn't contains more contour: it's the most internal one
-    elrInternal=0x10,
-    elrSkirt = 0x100,
+    elrInternal = 1 << 1, //2
+    elrSkirt =    1 << 2,  //4
     //it's a modifier that indicate that the loop is around a hole, not around the infill
-    elrHole = 0x1000,
+    elrHole = 1 << 3, // 16
+    //it's a modifier that indicate that the loop should be printed as vase
+    elrVase = 1 << 4, //32
 };
 
 
@@ -448,7 +450,7 @@ public:
 #endif /* NDEBUG */
 
 private:
-    ExtrusionLoopRole m_loop_role;
+    ExtrusionLoopRole m_loop_role{ elrDefault };
 };
 
 inline void extrusion_paths_append(ExtrusionPaths &dst, Polylines &polylines, ExtrusionRole role, double mm3_per_mm, float width, float height)

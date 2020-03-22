@@ -6,10 +6,60 @@
 #include "../../libslic3r/ClipperUtils.hpp"
 #include "../../libslic3r/MedialAxis.hpp"
 #include "../../libslic3r/SVG.hpp"
+#include "../../libslic3r/GCode.hpp"
 
 using namespace Slic3r;
 using namespace Slic3r::Geometry;
+using namespace Slic3r::Test;
 
+class ExtrusionVolumeVisitor : public ExtrusionVisitorConst {
+    double volume = 0;
+public:
+    virtual void use(const ExtrusionPath &path) override { 
+        for (int i = 0; i < path.polyline.size() - 1; i++) volume += path.polyline.points[i].distance_to(path.polyline.points[i + 1]) * path.mm3_per_mm;
+    };
+    virtual void use(const ExtrusionPath3D &path3D) override { std::cout << "error, not supported"; };
+    virtual void use(const ExtrusionMultiPath &multipath) override {
+        for (const ExtrusionPath &path : multipath.paths) use(path);
+    }
+    virtual void use(const ExtrusionMultiPath3D &multipath) override { std::cout << "error, not supported"; };
+    virtual void use(const ExtrusionLoop &loop) override {
+        for (const ExtrusionEntity &path : loop.paths) path.visit(*this);
+    }
+    virtual void use(const ExtrusionEntityCollection &collection) override {
+        for (const ExtrusionEntity *path : collection.entities) path->visit(*this);
+    }
+    double compute(const ExtrusionEntity &entity) && {
+        entity.visit(*this);
+        return volume;
+    }
+};
+
+
+SCENARIO("extrude_thinwalls") {
+    GIVEN("ThickLine") {
+        ExPolygon expolygon;
+        expolygon.contour = Slic3r::Polygon{ Points{
+            Point::new_scale(-0.5, 0),
+            Point::new_scale(0.5, 0),
+            Point::new_scale(0.3, 10),
+            Point::new_scale(-0.3, 10) } };
+        ThickPolylines res;
+
+        MedialAxis{ expolygon, scale_(1.1), scale_(0.5), scale_(0.2) }.build(res);
+        Flow periflow{ 1.1, 0.2, 0.4 };
+        ExtrusionEntityCollection gap_fill = thin_variable_width(res, erGapFill, periflow);
+
+
+        //std::string gcode = gcodegen.get_visitor_gcode();
+        THEN("analyse extrusion.") {
+            ExtrusionVolumeVisitor vis;
+            std::cout << " volume is " << ExtrusionVolumeVisitor{}.compute(gap_fill) << "\n";
+            std::cout << " wanted volume is " << ((0.6*0.2 * 10) + (0.2*0.2 * 10)) << "\n";
+            REQUIRE(std::abs(ExtrusionVolumeVisitor{}.compute(gap_fill) - ((0.6*0.2 * 10) + (0.2*0.2 * 10)))<0.01);
+        }
+    }
+}
 
 SCENARIO("thin walls: ")
 {
@@ -48,7 +98,7 @@ SCENARIO("thin walls: ")
         }
     }
 
-    GIVEN("narrow rectangle"){
+    GIVEN("narrow rectangle") {
         ExPolygon expolygon;
         expolygon.contour = Slic3r::Polygon{ Points{
             Point::new_scale(100, 100),
@@ -67,15 +117,15 @@ SCENARIO("thin walls: ")
             Point::new_scale(100, 200) } };
         Polylines res2;
         expolygon.medial_axis(scale_(20), scale_(0.5), &res2);
-        WHEN("creating the medial axis"){
+        WHEN("creating the medial axis") {
 
-            THEN("medial axis of a narrow rectangle is a single line"){
+            THEN("medial axis of a narrow rectangle is a single line") {
                 REQUIRE(res.size() == 1);
                 THEN("medial axis has reasonable length") {
                     REQUIRE(res[0].length() >= scale_(200 - 100 - (120 - 100)) - SCALED_EPSILON);
                 }
             }
-            THEN("medial axis of a narrow rectangle with an extra vertex is still a single line"){
+            THEN("medial axis of a narrow rectangle with an extra vertex is still a single line") {
                 REQUIRE(res2.size() == 1);
                 THEN("medial axis of a narrow rectangle with an extra vertex has reasonable length") {
                     REQUIRE(res2[0].length() >= scale_(200 - 100 - (120 - 100)) - SCALED_EPSILON);

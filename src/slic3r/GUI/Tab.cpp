@@ -1557,6 +1557,8 @@ void TabPrint::build()
         line = { _(L("External Perimeter")), "" };
         line.append_option(optgroup->get_option("external_perimeters_first"));
         line.append_option(optgroup->get_option("external_perimeters_vase"));
+        line.append_option(optgroup->get_option("external_perimeters_nothole"));
+        line.append_option(optgroup->get_option("external_perimeters_hole"));
         optgroup->append_line(line);
         line = { _(L("Looping perimeter")), "" };
         line.append_option(optgroup->get_option("perimeter_loop"));

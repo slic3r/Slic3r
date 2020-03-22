@@ -2533,6 +2533,8 @@ std::vector<float> polygon_angles_at_vertices(const Polygon &polygon, const std:
 //like extrude_loop but with varying z and two full round
 std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const std::string &description, double speed, std::unique_ptr<EdgeGrid::Grid> *lower_layer_edge_grid)
 {
+    //don't keep the speed
+    speed = -1;
     // get a copy; don't modify the orientation of the original loop object otherwise
     // next copies (if any) would not detect the correct orientation
     ExtrusionLoop loop = original_loop;
@@ -2561,6 +2563,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     // extrude all loops ccw
     //no! this was decided in perimeter_generator
     bool is_hole_loop = loop.loop_role() & ExtrusionLoopRole::elrHole != 0;// loop.make_counter_clockwise();
+    bool reverse_turn = loop.polygon().is_clockwise() ^ is_hole_loop;
 
     split_at_seam_pos(loop, lower_layer_edge_grid);
 
@@ -2576,9 +2579,9 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     loop.clip_end(clip_length, &paths);
     if (paths.empty()) return "";
 
-    // apply the small perimeter speed
+    // apply the small/external? perimeter speed
     if (is_perimeter(paths.front().role()) && loop.length() <= SMALL_PERIMETER_LENGTH && speed == -1)
-        speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+        speed = m_config.external_perimeter_speed.get_abs_value(m_config.perimeter_speed);
 
     //get extrusion length
     coordf_t length = 0;
@@ -2586,7 +2589,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
         //path->simplify(SCALED_RESOLUTION); //not useful, this should have been done before.
         length += path->length() * SCALING_FACTOR;
     }
-
+    
     //all in unscaled coordinates (hence why it's coordf_t and not coord_t)
     const coordf_t min_height = EXTRUDER_CONFIG(min_layer_height);
     const coordf_t bot_init_z = - this->m_layer->height;
@@ -2594,25 +2597,77 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     const coordf_t init_z = bot_init_z + min_height;
     //const coordf_t last_z = bot_init_z + this->m_layer->height;
 
+    Point inward_point;
+    //move the seam point inward a little bit
+    if (paths.back().role() == erExternalPerimeter && m_layer != NULL && m_config.perimeters.value > 1 && paths.front().size() >= 2 && paths.back().polyline.points.size() >= 3) {
+        // detect angle between last and first segment
+        // the side depends on the original winding order of the polygon (left for contours, right for holes)
+        //FIXME improve the algorithm in case the loop is tiny.
+        //FIXME improve the algorithm in case the loop is split into segments with a low number of points (see the Point b query).
+        Point a = paths.front().polyline.points[1];  // second point
+        Point b = *(paths.back().polyline.points.end() - 3);       // second to last point
+        if (reverse_turn) {
+            // swap points
+            Point c = a; a = b; b = c;
+        }
+
+        double angle = paths.front().first_point().ccw_angle(a, b)*2 / 3;
+
+        // turn left if contour, turn right if hole
+        if (reverse_turn) angle *= -1;
+
+        // create the destination point along the first segment and rotate it
+        // we make sure we don't exceed the segment length because we don't know
+        // the rotation of the second segment so we might cross the object boundary
+        Vec2d  p1 = paths.front().polyline.points.front().cast<double>();
+        Vec2d  p2 = paths.front().polyline.points[1].cast<double>();
+        Vec2d  v = p2 - p1;
+        double nd = scale_(EXTRUDER_CONFIG(nozzle_diameter));
+        double l2 = v.squaredNorm();
+        // Shift by no more than a nozzle diameter.
+        //FIXME Hiding the seams will not work nicely for very densely discretized contours!
+        inward_point = ((nd * nd >= l2) ? p2 : (p1 + v * (nd / sqrt(l2)))).cast<coord_t>();
+        inward_point.rotate(angle, paths.front().polyline.points.front());
+    }
+
     coordf_t current_pos_in_length = 0;
-    coordf_t current_z = init_z;
+    coordf_t current_z = 0; // over init_z
     coordf_t current_height = min_height;
+    coordf_t starting_height = min_height;
     enum Step {
         INCR = 0,
         FLAT = 1
     };
     std::string gcode;
     for (int step = 0; step < 2; step++) {
+        current_pos_in_length = 0;
+        current_z = 0;
         const coordf_t z_per_length = (step == Step::INCR) ? ((this->m_layer->height - (min_height + min_height)) / length) : 0;
         const coordf_t height_per_length = (step == Step::INCR) ? ((this->m_layer->height- (min_height + min_height)) / length) : ((-this->m_layer->height + (min_height + min_height)) / length);
         if (step == Step::FLAT) {
-            current_z = 0;
             current_height = this->m_layer->height - min_height;
+            starting_height = this->m_layer->height - min_height;
         }
         Vec3d previous;
         for (ExtrusionPaths::iterator path = paths.begin(); path != paths.end(); ++path) {
-
+            if (path == paths.begin() ){
+                if (step == Step::INCR) {
+                    if (paths.back().role() == erExternalPerimeter && m_layer != NULL && m_config.perimeters.value > 1 && paths.front().size() >= 2 && paths.back().polyline.points.size() >= 3) {
+                        paths[0].polyline.points.insert(paths[0].polyline.points.begin(), inward_point);
+                    }
+                    this->m_writer.travel_to_z(this->m_layer->print_z + init_z);
+                } else {
+                    //ensure we're at the right height
+                    this->m_writer.travel_to_z(this->m_layer->print_z);
+                }
+            }
             gcode += this->_before_extrude(*path, description, speed);
+            if (path == paths.begin() && step == Step::INCR){
+                if (paths.back().role() == erExternalPerimeter && m_layer != NULL && m_config.perimeters.value > 1 && paths.front().size() >= 2 && paths.back().polyline.points.size() >= 3) {
+                    paths[0].polyline.points.erase(paths[0].polyline.points.begin());
+                    gcode += m_writer.extrude_to_xy(this->point_to_gcode(paths[0].polyline.points.front()), 0);
+                }
+            }
 
             // calculate extrusion length per distance unit
             double e_per_mm_per_height = m_writer.extruder()->e_per_mm3() * path->mm3_per_mm / this->m_layer->height;
@@ -2636,9 +2691,10 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
                     for (int i = 0; i < nb_sections - 1; i++) {
                         Vec3d new_point = last_point + pos_increment;
                         gcode += m_writer.extrude_to_xyz(new_point,
-                            e_per_mm_per_height * line_length * current_height_internal,
+                            e_per_mm_per_height * (line_length / nb_sections) * current_height_internal,
                             description);
                         current_height_internal += height_increment;
+                        last_point = new_point;
                     }
                     //last bit will go to the exact last pos
                     last_point.x() = this->point_to_gcode(line.b).x();
@@ -2646,14 +2702,14 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
                     last_point.z() = current_z + z_per_length * line_length;
                     gcode += m_writer.extrude_to_xyz(
                         last_point,
-                        e_per_mm_per_height * line_length * current_height_internal,
+                        e_per_mm_per_height * (line_length / nb_sections) * current_height_internal,
                         comment);
                     previous = last_point;
 
                     //update vars for next line
                     current_pos_in_length += line_length;
-                    current_z = last_point.z();
-                    current_height += height_per_length * line_length;
+                    current_z = current_pos_in_length * z_per_length;//last_point.z();
+                    current_height = starting_height + current_pos_in_length * height_per_length;
                 }
             }
             gcode += this->_after_extrude(*path);
@@ -2696,7 +2752,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
         //FIXME improve the algorithm in case the loop is split into segments with a low number of points (see the Point b query).
         Point a = paths.front().polyline.points[1];  // second point
         Point b = *(paths.back().polyline.points.end() - 3);       // second to last point
-        if (is_hole_loop) {
+        if (reverse_turn) {
             // swap points
             Point c = a; a = b; b = c;
         }
@@ -2704,7 +2760,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
         double angle = paths.front().first_point().ccw_angle(a, b) / 3;
 
         // turn left if contour, turn right if hole
-        if (is_hole_loop) angle *= -1;
+        if (reverse_turn) angle *= -1;
 
         // create the destination point along the first segment and rotate it
         // we make sure we don't exceed the segment length because we don't know
@@ -2716,10 +2772,11 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
         double l2 = v.squaredNorm();
         // Shift by no more than a nozzle diameter.
         //FIXME Hiding the seams will not work nicely for very densely discretized contours!
-        Point  pt = ((nd * nd >= l2) ? p2 : (p1 + v * (nd / sqrt(l2)))).cast<coord_t>();
-        pt.rotate(angle, paths.front().polyline.points.front());
+        inward_point = ((nd * nd >= l2) ? p2 : (p1 + v * (nd / sqrt(l2)))).cast<coord_t>();
+        inward_point.rotate(angle, paths.front().polyline.points.front());
+        
         // generate the travel move
-        gcode += m_writer.travel_to_xy(this->point_to_gcode(pt), "move inwards before travel");
+        gcode += m_writer.travel_to_xy(this->point_to_gcode(inward_point), "move inwards before travel");
     }
 
     return gcode;
@@ -2895,7 +2952,7 @@ void GCode::split_at_seam_pos(ExtrusionLoop &loop, std::unique_ptr<EdgeGrid::Gri
             loop.split_at(polygon.points[idx_min], true);
 
     } else if (seam_position == spRandom) {
-        if (loop.loop_role() & elrInternal != 0) {
+        if (loop.loop_role() & elrInternal == 0) {
             // This loop does not contain any other (not-hole) loop. Set a random position.
             // The other loops will get a seam close to the random point chosen
             // on the inner most contour.
@@ -2928,13 +2985,13 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
 #endif
 
     //no-seam code path redirect
-    if (original_loop.role() == ExtrusionRole::erExternalPerimeter && this->m_config.external_perimeters_vase && !this->m_config.spiral_vase 
+    if (original_loop.role() == ExtrusionRole::erExternalPerimeter && (original_loop.loop_role() & elrVase) != 0 && !this->m_config.spiral_vase
         //but not for the first layer
         && this->m_layer->id() > 0
         //exclude if min_layer_height * 2 > layer_height (increase from 2 to 3 because it's working but uses in-between)
-        && this->m_layer->height >= EXTRUDER_CONFIG(min_layer_height) * 2
+        && this->m_layer->height >= EXTRUDER_CONFIG(min_layer_height) * 2 - EPSILON
         ) {
-
+        std::cout << " ok, loop vase @"<< this->m_layer->id()<<", "<< this->m_layer->print_z<<"\n";
         return extrude_loop_vase(original_loop, description, speed, lower_layer_edge_grid);
     }
 
@@ -3040,7 +3097,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         // generate the travel move
         gcode += m_writer.travel_to_xy(this->point_to_gcode(pt), "move inwards before travel");
     }
-    
+
     return gcode;
 }
 

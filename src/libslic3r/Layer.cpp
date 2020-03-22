@@ -131,6 +131,9 @@ void Layer::make_perimeters()
                 && config.perimeter_speed           == other_config.perimeter_speed // it os mandatory? can't this be set at gcode.cpp?
                 && config.external_perimeter_extrusion_width == other_config.external_perimeter_extrusion_width
                 && config.external_perimeters_first == other_config.external_perimeters_first
+                && config.external_perimeters_vase == other_config.external_perimeters_vase
+                && config.external_perimeters_hole == other_config.external_perimeters_hole
+                && config.external_perimeters_nothole == other_config.external_perimeters_nothole
                 && config.external_perimeter_speed  == other_config.external_perimeter_speed
                 && config.extra_perimeters_odd_layers == other_config.extra_perimeters_odd_layers
                 && config.gap_fill                  == other_config.gap_fill

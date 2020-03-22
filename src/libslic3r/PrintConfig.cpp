@@ -668,6 +668,25 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("external_perimeters_nothole", coBool);
+    def->label = L("only for outter side");
+    def->full_label = L("ext peri first for outter side");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("Only do the vase trick on the external side. Useful when the thikness is too low.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(true));
+
+    def = this->add("external_perimeters_hole", coBool);
+    def->label = L("only for inner side");
+    def->full_label = L("ext peri first for inner side");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("Only do the vase trick on the external side. Useful when you only want to remode seam from screw hole.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(true));
+
+    ConfigOptionBool                external_perimeters_nothole;
+    ConfigOptionBool                external_perimeters_hole;
+
     def = this->add("perimeter_loop", coBool);
     def->label = L("");
     def->full_label = L("Perimeters loop");
@@ -679,7 +698,7 @@ void PrintConfigDef::init_fff_params()
     
     def = this->add("perimeter_loop_seam", coEnum);
     def->label = L("Seam position");
-    def->full_label = L("Perimeter loop");
+    def->full_label = L("Perimeter loop seam");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Position of perimeters starting points.");
     def->enum_keys_map = &ConfigOptionEnum<SeamPosition>::get_enum_values();
