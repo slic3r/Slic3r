@@ -38,7 +38,7 @@ namespace Slic3r {
         else params_modifided.flow_mult *= (float)percentFlow[idx];
 
         //choose if we are going to extrude with or without overlap
-        if ((params.flow->bridge && idx == 0) || has_overlap[idx]){
+        if ((params.flow->bridge && idx == 0) || has_overlap[idx] || this->no_overlap_expolygons.empty()){
             this->fill_expolygon(idx, *eec, srf_source, params_modifided, volume);
         }
         else{
@@ -90,12 +90,12 @@ namespace Slic3r {
                 good_role = params.flow->bridge && idx == 0 ? erBridgeInfill : rolePass[idx];
             }
             // print
-            float mult_flow = (params.fill_exactly /*&& idx == 0*/ ? std::min(2., volume / extrudedVolume) : 1);
+            float mult_flow = float(params.fill_exactly /*&& idx == 0*/ ? std::min(2., volume / extrudedVolume) : 1);
             extrusion_entities_append_paths(
                 eec.entities, std::move(polylines_layer),
                 good_role,
                 params.flow->mm3_per_mm() * params.flow_mult * mult_flow,
-                //min-reduced flow width for a better view (it's only a gui thing)
+                //min-reduced flow width for a better view (it's mostly a gui thing, but some support code can want to mess with it)
                 (float)(params.flow->width * (params.flow_mult* mult_flow < 0.1 ? 0.1 : params.flow_mult * mult_flow)), (float)params.flow->height);
         }
     }
@@ -120,6 +120,9 @@ namespace Slic3r {
 
             //extruded volume: see http://manual.slic3r.org/advanced/flow-math, and we need to remove a circle at an end (as the flow continue)
             volumeToOccupy += poylineVolume;
+        }
+        if (this->no_overlap_expolygons.empty()) {
+            volumeToOccupy = unscaled(unscaled(surface->area())) * params.flow->height;
         }
 
         //create root node

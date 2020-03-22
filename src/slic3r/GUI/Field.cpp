@@ -935,7 +935,7 @@ void Choice::set_value(const boost::any& value, bool change_event)
     case coEnum: {
         int val = boost::any_cast<int>(value);
         if (m_opt_id == "top_fill_pattern" || m_opt_id == "bottom_fill_pattern" || m_opt_id == "solid_fill_pattern"
-            || m_opt_id == "fill_pattern" || m_opt_id == "support_fill_pattern")
+            || m_opt_id == "fill_pattern" || m_opt_id == "support_material_interface_pattern")
         {
             val = idx_from_enum_value<InfillPattern>(val);
         } else if (m_opt_id.compare("perimeter_loop_seam") == 0) {

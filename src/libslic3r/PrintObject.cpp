@@ -2349,41 +2349,39 @@ end:
 }
 
 ExPolygons PrintObject::_offset_holes(double hole_delta, const ExPolygons &polys) const{
-    if (hole_delta != 0.f) {
-        ExPolygons new_polys;
-        for (const ExPolygon &ex_poly : polys) {
-            ExPolygon new_ex_poly(ex_poly);
-            new_ex_poly.holes.clear();
-            for (const Polygon &hole : ex_poly.holes) {
-                //check if convex to reduce it
-                // check whether first point forms a convex angle
-                //note: we allow a deviation of 5.7° (0.01rad = 0.57°)
-                bool ok = true;
-                ok = (hole.points.front().ccw_angle(hole.points.back(), *(hole.points.begin() + 1)) <= PI + 0.1);
-                // check whether points 1..(n-1) form convex angles
-                if (ok)
-                    for (Points::const_iterator p = hole.points.begin() + 1; p != hole.points.end() - 1; ++p) {
-                        ok = (p->ccw_angle(*(p - 1), *(p + 1)) <= PI + 0.1);
-                        if (!ok) break;
-                    }
-
-                // check whether last point forms a convex angle
-                ok &= (hole.points.back().ccw_angle(*(hole.points.end() - 2), hole.points.front()) <= PI + 0.1);
-
-                if (ok) {
-                    for (Polygon newHole : offset(hole, hole_delta)) {
-                        //reverse because it's a hole, not an object
-                        newHole.make_clockwise();
-                        new_ex_poly.holes.push_back(newHole);
-                    }
-                } else {
-                    new_ex_poly.holes.push_back(hole);
+    ExPolygons new_polys;
+    for (const ExPolygon &ex_poly : polys) {
+        ExPolygon new_ex_poly(ex_poly);
+        new_ex_poly.holes.clear();
+        for (const Polygon &hole : ex_poly.holes) {
+            //check if convex to reduce it
+            // check whether first point forms a convex angle
+            //note: we allow a deviation of 5.7° (0.01rad = 0.57°)
+            bool ok = true;
+            ok = (hole.points.front().ccw_angle(hole.points.back(), *(hole.points.begin() + 1)) <= PI + 0.1);
+            // check whether points 1..(n-1) form convex angles
+            if (ok)
+                for (Points::const_iterator p = hole.points.begin() + 1; p != hole.points.end() - 1; ++p) {
+                    ok = (p->ccw_angle(*(p - 1), *(p + 1)) <= PI + 0.1);
+                    if (!ok) break;
                 }
+
+            // check whether last point forms a convex angle
+            ok &= (hole.points.back().ccw_angle(*(hole.points.end() - 2), hole.points.front()) <= PI + 0.1);
+
+            if (ok) {
+                for (Polygon newHole : offset(hole, hole_delta)) {
+                    //reverse because it's a hole, not an object
+                    newHole.make_clockwise();
+                    new_ex_poly.holes.push_back(newHole);
+                }
+            } else {
+                new_ex_poly.holes.push_back(hole);
             }
-            new_polys.push_back(new_ex_poly);
         }
-        return new_polys;
+        new_polys.push_back(new_ex_poly);
     }
+    return new_polys;
 }
 
 /// max angle: you ahve to be lwer than that to divide it. PI => all accepted
@@ -2475,6 +2473,7 @@ ExPolygons PrintObject::_smooth_curves(const ExPolygons & input, const PrintRegi
         ExPolygons new_polys;
         for (const ExPolygon &ex_poly : input) {
             ExPolygon new_ex_poly(ex_poly);
+            new_ex_poly.contour.remove_collinear(SCALED_RESOLUTION);
             new_ex_poly.contour = _smooth_curve(new_ex_poly.contour, PI,
                 conf.curve_smoothing_angle_convex.value*PI / 180.0,
                 conf.curve_smoothing_angle_concave.value*PI / 180.0,
@@ -2482,13 +2481,14 @@ ExPolygons PrintObject::_smooth_curves(const ExPolygons & input, const PrintRegi
                 scale_(conf.curve_smoothing_precision.value));
             for (Polygon &phole : new_ex_poly.holes){
                 phole.reverse(); // make_counter_clockwise();
+                phole.remove_collinear(SCALED_RESOLUTION);
                 phole = _smooth_curve(phole, PI,
                     conf.curve_smoothing_angle_convex.value*PI / 180.0,
                     conf.curve_smoothing_angle_concave.value*PI / 180.0,
                     scale_(conf.curve_smoothing_cutoff_dist.value),
                     scale_(conf.curve_smoothing_precision.value));
                 phole.reverse(); // make_clockwise();
-            }
+                }
             new_polys.push_back(new_ex_poly);
         }
         return new_polys;
