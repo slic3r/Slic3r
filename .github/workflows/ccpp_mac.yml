@@ -13,7 +13,9 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: change date in version
-      run: sed "s/+UNKNOWN/_$(date '+%F')/" version.inc
+      run: |
+        sed "s/+UNKNOWN/_$(date '+%F')/" version.inc > version.date.inc
+        mv version.date.inc version.inc
     - name: mkdir in deps
       run: mkdir deps/build
     - name: cmake deps
@@ -33,6 +35,9 @@ jobs:
     - name: make slic3r
       working-directory: ./build
       run: make slic3r
+    - name: update Info.plist
+      working-directory: ./build/src
+      run: sed "s/+UNKNOWN/_$(date '+%F')/" Info.plist >Info.date.plist
     - name: create directory and copy into it
       working-directory: ./build
       run: |
@@ -46,14 +51,22 @@ jobs:
       working-directory: ./build
       run: |
         cp -Rf ../resources Slic3r++/Slic3r++.app/Contents/resources
-        cp Slic3r++/Slic3r++.app/Contents/resources/icons/slic3r.icns Slic3r++/Slic3r++.app/Contents/resources/slic3r.icns
-        cp src/Info.plist Slic3r++/Slic3r++.app/Contents/Info.plist
-        echo -n -e '\xff\xfeAPPL\x3f\x00\x3f\x00\x3f\x00\x3f\x00\x0a\x00' > PkgInfo
+        cp Slic3r++/Slic3r++.app/Contents/resources/icons/slic3r.icns Slic3r++/Slic3r++.app/Contents/resources/Slic3r.icns
+        cp src/Info.date.plist Slic3r++/Slic3r++.app/Contents/Info.plist
+        echo -n -e 'APPL????\x0a' > PkgInfo
+        cp PkgInfo Slic3r++/Slic3r++.app/Contents/PkgInfo
+#        echo -n -e '\xff\xfeAPPL\x3f\x00\x3f\x00\x3f\x00\x3f\x00\x0a\x00' > PkgInfo
     - name: copy bin
       working-directory: ./build
       run: |
         cp -f src/slic3r++ Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
-        chmod 777 Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
+        chmod u+x Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
+        tar -cvf slic3r++.tar Slic3r++
+    - name: create dmg
+      working-directory: ./build
+      run: |
+        hdiutil create -ov -fs HFS+ -volname "Slic3r++" -srcfolder "Slic3r++" temp.dmg
+        hdiutil convert temp.dmg -format UDZO -o Slic3r++.dmg
 #    - name: signing resources (creating CodeResources inside _CodeSignature)
 #      working-directory: .
 #      run: codesign -s <identity> resources
@@ -61,5 +74,10 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: nightly_macos
-        path: build/Slic3r++/
+        name: nightly_macos.tar
+        path: build/slic3r++.tar
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: nightly_macos.dmg
+        path: build/Slic3r++.dmg
