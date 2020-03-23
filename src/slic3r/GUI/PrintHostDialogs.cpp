@@ -250,7 +250,7 @@ void PrintHostQueueDialog::on_list_select()
 
 void PrintHostQueueDialog::on_progress(Event &evt)
 {
-    wxCHECK_RET(evt.job_id < job_list->GetItemCount(), "Out of bounds access to job list");
+    wxCHECK_RET(evt.job_id < (size_t)job_list->GetItemCount(), "Out of bounds access to job list");
 
     if (evt.progress < 100) {
         set_state(evt.job_id, ST_PROGRESS);
@@ -265,22 +265,22 @@ void PrintHostQueueDialog::on_progress(Event &evt)
 
 void PrintHostQueueDialog::on_error(Event &evt)
 {
-    wxCHECK_RET(evt.job_id < job_list->GetItemCount(), "Out of bounds access to job list");
+    wxCHECK_RET(evt.job_id < (size_t)job_list->GetItemCount(), "Out of bounds access to job list");
 
     set_state(evt.job_id, ST_ERROR);
 
-    auto errormsg = wxString::Format("%s\n%s", _(L("Error uploading to print host:")), evt.error);
+    auto errormsg = from_u8((boost::format("%1%\n%2%") % _utf8(L("Error uploading to print host:")) % std::string(evt.error.ToUTF8())).str());
     job_list->SetValue(wxVariant(0), evt.job_id, COL_PROGRESS);
     job_list->SetValue(wxVariant(errormsg), evt.job_id, COL_ERRORMSG);    // Stashes the error message into a hidden column for later
 
     on_list_select();
 
-    GUI::show_error(nullptr, std::move(errormsg));
+    GUI::show_error(nullptr, errormsg);
 }
 
 void PrintHostQueueDialog::on_cancel(Event &evt)
 {
-    wxCHECK_RET(evt.job_id < job_list->GetItemCount(), "Out of bounds access to job list");
+    wxCHECK_RET(evt.job_id < (size_t)job_list->GetItemCount(), "Out of bounds access to job list");
 
     set_state(evt.job_id, ST_CANCELLED);
     job_list->SetValue(wxVariant(0), evt.job_id, COL_PROGRESS);

@@ -54,30 +54,48 @@ public:
 
     enum EType : unsigned char
     {
-        Undefined,
+        // Order must match index in m_gizmos!
         Move,
         Scale,
         Rotate,
         Flatten,
         Cut,
+        Hollow,
         SlaSupports,
-        Num_Types
+        Undefined
     };
 
 private:
+    struct Layout
+    {
+        float scale{ 1.0f };
+        float icons_size{ Default_Icons_Size };
+        float border{ 5.0f };
+        float gap_y{ 5.0f };
+
+        float stride_y() const { return icons_size + gap_y;}
+
+        float scaled_icons_size() const { return scale * icons_size; }
+        float scaled_border() const { return scale * border; }
+        float scaled_gap_y() const { return scale * gap_y; }
+        float scaled_stride_y() const { return scale * stride_y(); }
+    };
+
     GLCanvas3D& m_parent;
     bool m_enabled;
-    typedef std::map<EType, GLGizmoBase*> GizmosMap;
-    GizmosMap m_gizmos;
+    std::vector<std::unique_ptr<GLGizmoBase>> m_gizmos;
     mutable GLTexture m_icons_texture;
     mutable bool m_icons_texture_dirty;
     BackgroundTexture m_background_texture;
+    Layout m_layout;
     EType m_current;
+    EType m_hover;
 
-    float m_overlay_icons_size;
-    float m_overlay_scale;
-    float m_overlay_border;
-    float m_overlay_gap_y;
+    std::vector<size_t> get_selectable_idxs() const;
+    std::vector<size_t> get_activable_idxs() const;
+    size_t get_gizmo_idx_from_mouse(const Vec2d& mouse_pos) const;
+
+    void activate_gizmo(EType type);
 
     struct MouseCapture
     {
@@ -95,10 +113,10 @@ private:
     MouseCapture m_mouse_capture;
     std::string m_tooltip;
     bool m_serializing;
+    std::unique_ptr<CommonGizmosData> m_common_gizmos_data;
 
 public:
     explicit GLGizmosManager(GLCanvas3D& parent);
-    ~GLGizmosManager();
 
     bool init();
 
@@ -110,18 +128,19 @@ public:
 
         m_serializing = true;
 
+        // Following is needed to know which to be turn on, but not actually modify
+        // m_current prematurely, so activate_gizmo is not confused.
+        EType old_current = m_current;
         ar(m_current);
+        EType new_current = m_current;
+        m_current = old_current;
 
-        GLGizmoBase* curr = get_current();
-		for (GizmosMap::const_iterator it = m_gizmos.begin(); it != m_gizmos.end(); ++it) {
-			GLGizmoBase* gizmo = it->second;
-			if (gizmo != nullptr) {
-				gizmo->set_hover_id(-1);
-				gizmo->set_state((it->second == curr) ? GLGizmoBase::On : GLGizmoBase::Off);
-				if (gizmo == curr)
-					gizmo->load(ar);
-			}
-		}
+        // activate_gizmo call sets m_current and calls set_state for the gizmo
+        // it does nothing in case the gizmo is already activated
+        // it can safely be called for Undefined gizmo
+        activate_gizmo(new_current);
+        if (m_current != Undefined)
+            m_gizmos[m_current]->load(ar);
     }
 
     template<class Archive>
@@ -132,9 +151,8 @@ public:
 
         ar(m_current);
 
-        GLGizmoBase* curr = get_current();
-        if (curr != nullptr)
-            curr->save(ar);
+        if (m_current != Undefined && !m_gizmos.empty())
+            m_gizmos[m_current]->save(ar);
     }
 
     bool is_enabled() const { return m_enabled; }
@@ -153,6 +171,7 @@ public:
     void update_data();
 
     EType get_current_type() const { return m_current; }
+    GLGizmoBase* get_current() const;
 
     bool is_running() const;
     bool handle_shortcut(int key);
@@ -185,7 +204,7 @@ public:
 
     void render_overlay() const;
 
-    const std::string& get_tooltip() const { return m_tooltip; }
+    std::string get_tooltip() const;
 
     bool on_mouse(wxMouseEvent& evt);
     bool on_mouse_wheel(wxMouseEvent& evt);
@@ -195,22 +214,76 @@ public:
     void update_after_undo_redo(const UndoRedo::Snapshot& snapshot);
 
 private:
-    void reset();
-
     void render_background(float left, float top, float right, float bottom, float border) const;
     void do_render_overlay() const;
 
-    float get_total_overlay_height() const;
-    float get_total_overlay_width() const;
-
-    GLGizmoBase* get_current() const;
+    float get_scaled_total_height() const;
+    float get_scaled_total_width() const;
 
     bool generate_icons_texture() const;
 
     void update_on_off_state(const Vec2d& mouse_pos);
     std::string update_hover_state(const Vec2d& mouse_pos);
-    bool overlay_contains_mouse(const Vec2d& mouse_pos) const;
     bool grabber_contains_mouse() const;
+};
+
+
+
+class MeshRaycaster;
+class MeshClipper;
+
+// This class is only for sharing SLA related data between SLA gizmos
+// and its synchronization with backend data. It should not be misused
+// for anything else.
+class CommonGizmosData {
+public:
+    CommonGizmosData();
+    const TriangleMesh* mesh() const {
+        return (! m_mesh ? nullptr : m_mesh); //(m_cavity_mesh ? m_cavity_mesh.get() : m_mesh));
+    }
+
+    bool update_from_backend(GLCanvas3D& canvas, ModelObject* model_object);
+    bool recent_update = false;
+    static constexpr float HoleStickOutLength = 1.f;
+
+    ModelObject* m_model_object = nullptr;
+    const TriangleMesh* m_mesh;
+    std::unique_ptr<MeshRaycaster> m_mesh_raycaster;
+    std::unique_ptr<MeshClipper> m_object_clipper;
+    std::unique_ptr<MeshClipper> m_supports_clipper;
+
+    //std::unique_ptr<TriangleMesh> m_cavity_mesh;
+    //std::unique_ptr<GLVolume> m_volume_with_cavity;
+
+    int m_active_instance = -1;
+    float m_active_instance_bb_radius = 0;
+    ObjectID m_model_object_id = 0;
+    int m_print_object_idx = -1;
+    int m_print_objects_count = -1;
+    int m_old_timestamp = -1;
+
+    float m_clipping_plane_distance = 0.f;
+    std::unique_ptr<ClippingPlane> m_clipping_plane;
+    bool m_clipping_plane_was_moved = false;
+
+    void stash_clipping_plane() {
+        m_clipping_plane_distance_stash = m_clipping_plane_distance;
+    }
+
+    void unstash_clipping_plane() {
+        m_clipping_plane_distance = m_clipping_plane_distance_stash;
+    }
+
+    bool has_drilled_mesh() const { return m_has_drilled_mesh; }
+
+    void build_AABB_if_needed();
+
+private:
+    const TriangleMesh* m_old_mesh;
+    TriangleMesh m_backend_mesh_transformed;
+    float m_clipping_plane_distance_stash = 0.f;
+    bool m_has_drilled_mesh = false;
+    bool m_schedule_aabb_calculation = false;
 };
 
 } // namespace GUI

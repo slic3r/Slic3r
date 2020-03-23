@@ -2,7 +2,10 @@
 #define slic3r_GLGizmos_hpp_
 
 // this describes events being passed from GLCanvas3D to SlaSupport gizmo
-enum class SLAGizmoEventType {
+namespace Slic3r {
+namespace GUI {
+
+enum class SLAGizmoEventType : unsigned char {
     LeftDown = 1,
     LeftUp,
     RightDown,
@@ -20,11 +23,15 @@ enum class SLAGizmoEventType {
     ResetClippingPlane
 };
 
+} // namespace GUI
+} // namespace Slic3r
+
 #include "slic3r/GUI/Gizmos/GLGizmoMove.hpp"
 #include "slic3r/GUI/Gizmos/GLGizmoScale.hpp"
 #include "slic3r/GUI/Gizmos/GLGizmoRotate.hpp"
 #include "slic3r/GUI/Gizmos/GLGizmoFlatten.hpp"
 #include "slic3r/GUI/Gizmos/GLGizmoSlaSupports.hpp"
 #include "slic3r/GUI/Gizmos/GLGizmoCut.hpp"
+#include "slic3r/GUI/Gizmos/GLGizmoHollow.hpp"
 
 #endif //slic3r_GLGizmos_hpp_

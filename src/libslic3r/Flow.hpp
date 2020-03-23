@@ -27,6 +27,31 @@ enum FlowRole {
     frSupportMaterialInterface,
 };
 
+class FlowError : public std::invalid_argument
+{
+public:
+	FlowError(const std::string& what_arg) : invalid_argument(what_arg) {}
+	FlowError(const char* what_arg) : invalid_argument(what_arg) {}
+};
+
+class FlowErrorNegativeSpacing : public FlowError
+{
+public:
+    FlowErrorNegativeSpacing();
+};
+
+class FlowErrorNegativeFlow : public FlowError
+{
+public:
+    FlowErrorNegativeFlow();
+};
+
+class FlowErrorMissingVariable : public FlowError
+{
+public:
+    FlowErrorMissingVariable(const std::string& what_arg) : FlowError(what_arg) {}
+};
+
 class Flow
 {
 public:
@@ -56,12 +81,24 @@ public:
     // Enable some perimeter squish (see INSET_OVERLAP_TOLERANCE).
     // Here an overlap of 0.2x external perimeter spacing is allowed for by the elephant foot compensation.
     coord_t scaled_elephant_foot_spacing() const { return coord_t(0.5f * float(this->scaled_width() + 0.6f * this->scaled_spacing())); }
+
+    bool operator==(const Flow &rhs) const { return this->width == rhs.width && this->height == rhs.height && this->nozzle_diameter == rhs.nozzle_diameter && this->bridge == rhs.bridge; }
     
     static Flow new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent &width, float nozzle_diameter, float height, float bridge_flow_ratio);
     // Create a flow from the spacing of extrusion lines.
     // This method is used exclusively to calculate new flow of 100% infill, where the extrusion width was allowed to scale
     // to fit a region with integer number of lines.
     static Flow new_from_spacing(float spacing, float nozzle_diameter, float height, bool bridge);
+
+    // Sane extrusion width defautl based on nozzle diameter.
+    // The defaults were derived from manual Prusa MK3 profiles.
+    static float auto_extrusion_width(FlowRole role, float nozzle_diameter);
+
+    // Extrusion width from full config, taking into account the defaults (when set to zero) and ratios (percentages).
+    // Precise value depends on layer index (1st layer vs. other layers vs. variable layer height),
+    // on active extruder etc. Therefore the value calculated by this function shall be used as a hint only.
+	static double extrusion_width(const std::string &opt_key, const ConfigOptionFloatOrPercent *opt, const ConfigOptionResolver &config, const unsigned int first_printing_extruder = 0);
+	static double extrusion_width(const std::string &opt_key, const ConfigOptionResolver &config, const unsigned int first_printing_extruder = 0);
 };
 
 extern Flow support_material_flow(const PrintObject *object, float layer_height = 0.f);

@@ -3,6 +3,7 @@
 
 #include "GLCanvas3D.hpp"
 #include "GUI_App.hpp"
+#include "GUI.hpp"
 #include "GUI_ObjectManipulation.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Gizmos/GLGizmoBase.hpp"
@@ -310,7 +311,7 @@ void Selection::remove_volume(unsigned int object_idx, unsigned int volume_idx)
     for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i)
     {
         GLVolume* v = (*m_volumes)[i];
-        if ((v->object_idx() == object_idx) && (v->volume_idx() == volume_idx))
+        if ((v->object_idx() == (int)object_idx) && (v->volume_idx() == (int)volume_idx))
             do_remove_volume(i);
     }
 
@@ -410,7 +411,7 @@ void Selection::set_deserialized(EMode mode, const std::vector<std::pair<size_t,
     if (! m_valid)
         return;
 
-	m_mode = mode;
+    m_mode = mode;
     for (unsigned int i : m_list)
         (*m_volumes)[i]->selected = false;
     m_list.clear();
@@ -472,7 +473,7 @@ void Selection::volumes_changed(const std::vector<size_t> &map_volume_old_to_new
     for (unsigned int idx : m_list)
         if (map_volume_old_to_new[idx] != size_t(-1)) {
             unsigned int new_idx = (unsigned int)map_volume_old_to_new[idx];
-            assert((*m_volumes)[new_idx]->selected);
+            (*m_volumes)[new_idx]->selected = true;
             list_new.insert(new_idx);
         }
     m_list = std::move(list_new);
@@ -992,7 +993,7 @@ void Selection::translate(unsigned int object_idx, const Vec3d& displacement)
     for (unsigned int i : m_list)
     {
         GLVolume* v = (*m_volumes)[i];
-        if (v->object_idx() == object_idx)
+        if (v->object_idx() == (int)object_idx)
             v->set_instance_offset(v->get_instance_offset() + displacement);
     }
 
@@ -1037,7 +1038,7 @@ void Selection::translate(unsigned int object_idx, unsigned int instance_idx, co
     for (unsigned int i : m_list)
     {
         GLVolume* v = (*m_volumes)[i];
-        if ((v->object_idx() == object_idx) && (v->instance_idx() == instance_idx))
+        if ((v->object_idx() == (int)object_idx) && (v->instance_idx() == (int)instance_idx))
             v->set_instance_offset(v->get_instance_offset() + displacement);
     }
 
@@ -1063,7 +1064,7 @@ void Selection::translate(unsigned int object_idx, unsigned int instance_idx, co
                 continue;
 
             GLVolume* v = (*m_volumes)[j];
-            if ((v->object_idx() != object_idx) || (v->instance_idx() != instance_idx))
+            if ((v->object_idx() != object_idx) || (v->instance_idx() != (int)instance_idx))
                 continue;
 
             v->set_instance_offset(v->get_instance_offset() + displacement);
@@ -1154,7 +1155,7 @@ void Selection::erase()
         for (const ItemForDelete& i : items_set) {
             if (i.type == ItemType::itVolume) {
                 const int vol_in_obj_cnt = volumes_in_obj.find(i.obj_idx) == volumes_in_obj.end() ? 0 : volumes_in_obj.at(i.obj_idx);
-                if (vol_in_obj_cnt == m_model->objects[i.obj_idx]->volumes.size()) {
+                if (vol_in_obj_cnt == (int)m_model->objects[i.obj_idx]->volumes.size()) {
                     if (i.sub_obj_idx == vol_in_obj_cnt - 1)
                         items.emplace_back(ItemType::itObject, i.obj_idx, 0);
                     continue;
@@ -1328,6 +1329,7 @@ void Selection::copy_to_clipboard()
 		static_cast<DynamicPrintConfig&>(dst_object->config) = static_cast<const DynamicPrintConfig&>(src_object->config);
         dst_object->sla_support_points   = src_object->sla_support_points;
         dst_object->sla_points_status    = src_object->sla_points_status;
+        dst_object->sla_drain_holes      = src_object->sla_drain_holes;
         dst_object->layer_config_ranges  = src_object->layer_config_ranges;     // #ys_FIXME_experiment
         dst_object->layer_height_profile = src_object->layer_height_profile;
         dst_object->origin_translation   = src_object->origin_translation;
@@ -1389,7 +1391,7 @@ std::vector<unsigned int> Selection::get_volume_idxs_from_object(unsigned int ob
 
     for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i)
     {
-        if ((*m_volumes)[i]->object_idx() == object_idx)
+        if ((*m_volumes)[i]->object_idx() == (int)object_idx)
             idxs.push_back(i);
     }
 
@@ -1403,7 +1405,7 @@ std::vector<unsigned int> Selection::get_volume_idxs_from_instance(unsigned int 
     for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i)
     {
         const GLVolume* v = (*m_volumes)[i];
-        if ((v->object_idx() == object_idx) && (v->instance_idx() == instance_idx))
+        if ((v->object_idx() == (int)object_idx) && (v->instance_idx() == (int)instance_idx))
             idxs.push_back(i);
     }
 
@@ -1417,9 +1419,9 @@ std::vector<unsigned int> Selection::get_volume_idxs_from_volume(unsigned int ob
     for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i)
     {
         const GLVolume* v = (*m_volumes)[i];
-        if ((v->object_idx() == object_idx) && (v->volume_idx() == volume_idx))
+        if ((v->object_idx() == (int)object_idx) && (v->volume_idx() == (int)volume_idx))
         {
-            if ((instance_idx != -1) && (v->instance_idx() == instance_idx))
+            if (((int)instance_idx != -1) && (v->instance_idx() == (int)instance_idx))
                 idxs.push_back(i);
         }
     }
@@ -1469,9 +1471,10 @@ void Selection::toggle_instance_printable_state()
             ModelInstance* instance = model_object->instances[instance_idx];
             const bool printable = !instance->printable;
 
-            wxString snapshot_text = model_object->instances.size() == 1 ? wxString::Format("%s %s",
-                                     printable ? _(L("Set Printable")) : _(L("Set Unprintable")), model_object->name) :
-                                     printable ? _(L("Set Printable Instance")) : _(L("Set Unprintable Instance"));
+            wxString snapshot_text = model_object->instances.size() == 1 ? from_u8((boost::format("%1% %2%")
+                                         % (printable ? _utf8(L("Set Printable")) : _utf8(L("Set Unprintable")))
+                                         % model_object->name).str()) :
+                                     (printable ? _(L("Set Printable Instance")) : _(L("Set Unprintable Instance")));
             wxGetApp().plater()->take_snapshot(snapshot_text);
 
             instance->printable = printable;
@@ -1607,7 +1610,7 @@ void Selection::update_type()
             }
             else
             {
-                int sels_cntr = 0;
+                unsigned int sels_cntr = 0;
                 for (ObjectIdxsToInstanceIdxsMap::iterator it = m_cache.content.begin(); it != m_cache.content.end(); ++it)
                 {
                     const ModelObject* model_object = m_model->objects[it->first];
@@ -1759,7 +1762,7 @@ void Selection::do_remove_instance(unsigned int object_idx, unsigned int instanc
     for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i)
     {
         GLVolume* v = (*m_volumes)[i];
-        if ((v->object_idx() == object_idx) && (v->instance_idx() == instance_idx))
+        if ((v->object_idx() == (int)object_idx) && (v->instance_idx() == (int)instance_idx))
             do_remove_volume(i);
     }
 }
@@ -1769,7 +1772,7 @@ void Selection::do_remove_object(unsigned int object_idx)
     for (unsigned int i = 0; i < (unsigned int)m_volumes->size(); ++i)
     {
         GLVolume* v = (*m_volumes)[i];
-        if (v->object_idx() == object_idx)
+        if (v->object_idx() == (int)object_idx)
             do_remove_volume(i);
     }
 }
@@ -1836,7 +1839,6 @@ void Selection::render_synchronized_volumes() const
     {
         const GLVolume* volume = (*m_volumes)[i];
         int object_idx = volume->object_idx();
-        int instance_idx = volume->instance_idx();
         int volume_idx = volume->volume_idx();
         for (unsigned int j = 0; j < (unsigned int)m_volumes->size(); ++j)
         {
@@ -2005,7 +2007,7 @@ void Selection::render_sidebar_layers_hints(const std::string& sidebar_field) co
     const float max_y = box.max(1) + Margin;
 
     // view dependend order of rendering to keep correct transparency
-    bool camera_on_top = wxGetApp().plater()->get_camera().get_theta() <= 90.0f;
+    bool camera_on_top = wxGetApp().plater()->get_camera().is_looking_downward();
     float z1 = camera_on_top ? min_z : max_z;
     float z2 = camera_on_top ? max_z : min_z;
 

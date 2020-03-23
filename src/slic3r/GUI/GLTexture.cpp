@@ -56,7 +56,7 @@ bool GLTexture::Compressor::unsent_compressed_data_available() const
 {
 	if (m_levels.empty())
 		return false;
-	// Querying the atomic m_num_levels_compressed value synchronizes processor caches, so that the dat of m_levels modified by the worker thread are accessible to the calling thread.
+	// Querying the atomic m_num_levels_compressed value synchronizes processor caches, so that the data of m_levels modified by the worker thread are accessible to the calling thread.
 	unsigned int num_compressed = m_num_levels_compressed;
 	for (unsigned int i = 0; i < num_compressed; ++ i)
         if (! m_levels[i].sent_to_gpu && ! m_levels[i].compressed_data.empty())
@@ -89,8 +89,8 @@ void GLTexture::Compressor::send_compressed_data_to_gpu()
     }
     glsafe(::glBindTexture(GL_TEXTURE_2D, 0));
 
-    if (num_compressed == (unsigned int)m_levels.size())
-    	// Finalize the worker thread, close it.
+    if (num_compressed == (int)m_levels.size())
+        // Finalize the worker thread, close it.
     	this->reset();
 }
 
@@ -107,8 +107,8 @@ void GLTexture::Compressor::compress()
             break;
 
         // stb_dxt library, despite claiming that the needed size of the destination buffer is equal to (source buffer size)/4,
-        // crashes if doing so, so we start with twice the required size
-        level.compressed_data = std::vector<unsigned char>(level.w * level.h * 2, 0);
+        // crashes if doing so, requiring a minimum of 16 bytes and up to a third of the source buffer size, so we set the destination buffer initial size to be half the source buffer size
+        level.compressed_data = std::vector<unsigned char>(std::max((unsigned int)16, level.w * level.h * 2), 0);
         int compressed_size = 0;
         rygCompress(level.compressed_data.data(), level.src_data.data(), level.w, level.h, 1, compressed_size);
         level.compressed_data.resize(compressed_size);
@@ -168,12 +168,16 @@ bool GLTexture::load_from_svg_files_as_sprites_array(const std::vector<std::stri
     if (filenames.empty() || states.empty() || (sprite_size_px == 0))
         return false;
 
-    m_width = (int)(sprite_size_px * states.size());
-    m_height = (int)(sprite_size_px * filenames.size());
+    // every tile needs to have a 1px border around it to avoid artifacts when linear sampling on its edges
+    unsigned int sprite_size_px_ex = sprite_size_px + 1;
+
+    m_width = 1 + (int)(sprite_size_px_ex * states.size());
+    m_height = 1 + (int)(sprite_size_px_ex * filenames.size());
+
     int n_pixels = m_width * m_height;
-    int sprite_n_pixels = sprite_size_px * sprite_size_px;
+    int sprite_n_pixels = sprite_size_px_ex * sprite_size_px_ex;
+    int sprite_stride = sprite_size_px_ex * 4;
     int sprite_bytes = sprite_n_pixels * 4;
-    int sprite_stride = sprite_size_px * 4;
 
     if (n_pixels <= 0)
     {
@@ -211,7 +215,8 @@ bool GLTexture::load_from_svg_files_as_sprites_array(const std::vector<std::stri
 
         float scale = (float)sprite_size_px / std::max(image->width, image->height);
 
-        nsvgRasterize(rast, image, 0, 0, scale, sprite_data.data(), sprite_size_px, sprite_size_px, sprite_stride);
+        // offset by 1 to leave the first pixel empty (both in x and y)
+        nsvgRasterize(rast, image, 1, 1, scale, sprite_data.data(), sprite_size_px, sprite_size_px, sprite_stride);
 
         // makes white only copy of the sprite
         ::memcpy((void*)sprite_white_only_data.data(), (const void*)sprite_data.data(), sprite_bytes);
@@ -231,7 +236,7 @@ bool GLTexture::load_from_svg_files_as_sprites_array(const std::vector<std::stri
                 ::memset((void*)&sprite_gray_only_data.data()[offset], 128, 3);
         }
 
-        int sprite_offset_px = sprite_id * sprite_size_px * m_width;
+        int sprite_offset_px = sprite_id * (int)sprite_size_px_ex * m_width;
         int state_id = -1;
         for (const std::pair<int, bool>& state : states)
         {
@@ -250,19 +255,25 @@ bool GLTexture::load_from_svg_files_as_sprites_array(const std::vector<std::stri
             // applies background, if needed
             if (state.second)
             {
-                for (int i = 0; i < sprite_n_pixels; ++i)
+                float inv_255 = 1.0f / 255.0f;
+                // offset by 1 to leave the first pixel empty (both in x and y)
+                for (unsigned int r = 1; r <= sprite_size_px; ++r)
                 {
-                    int offset = i * 4;
-                    float alpha = (float)output_data.data()[offset + 3] / 255.0f;
-                    output_data.data()[offset + 0] = (unsigned char)(output_data.data()[offset + 0] * alpha);
-                    output_data.data()[offset + 1] = (unsigned char)(output_data.data()[offset + 1] * alpha);
-                    output_data.data()[offset + 2] = (unsigned char)(output_data.data()[offset + 2] * alpha);
-                    output_data.data()[offset + 3] = (unsigned char)(128 * (1.0f - alpha) + output_data.data()[offset + 3] * alpha);
+                    unsigned int offset_r = r * sprite_size_px_ex;
+                    for (unsigned int c = 1; c <= sprite_size_px; ++c)
+                    {
+                        unsigned int offset = (offset_r + c) * 4;
+                        float alpha = (float)output_data.data()[offset + 3] * inv_255;
+                        output_data.data()[offset + 0] = (unsigned char)(output_data.data()[offset + 0] * alpha);
+                        output_data.data()[offset + 1] = (unsigned char)(output_data.data()[offset + 1] * alpha);
+                        output_data.data()[offset + 2] = (unsigned char)(output_data.data()[offset + 2] * alpha);
+                        output_data.data()[offset + 3] = (unsigned char)(128 * (1.0f - alpha) + output_data.data()[offset + 3] * alpha);
+                    }
                 }
             }
 
-            int state_offset_px = sprite_offset_px + state_id * sprite_size_px;
-            for (int j = 0; j < (int)sprite_size_px; ++j)
+            int state_offset_px = sprite_offset_px + state_id * sprite_size_px_ex;
+            for (int j = 0; j < (int)sprite_size_px_ex; ++j)
             {
                 ::memcpy((void*)&data.data()[(state_offset_px + j * m_width) * 4], (const void*)&output_data.data()[j * sprite_stride], sprite_stride);
             }
@@ -455,8 +466,7 @@ bool GLTexture::load_from_png(const std::string& filename, bool use_mipmaps, ECo
         int lod_w = m_width;
         int lod_h = m_height;
         GLint level = 0;
-        // we do not need to generate all levels down to 1x1
-        while ((lod_w > 16) || (lod_h > 16))
+        while ((lod_w > 1) || (lod_h > 1))
         {
             ++level;
 
@@ -600,8 +610,7 @@ bool GLTexture::load_from_svg(const std::string& filename, bool use_mipmaps, boo
         int lod_w = m_width;
         int lod_h = m_height;
         GLint level = 0;
-        // we do not need to generate all levels down to 1x1
-        while ((lod_w > 16) || (lod_h > 16))
+        while ((lod_w > 1) || (lod_h > 1))
         {
             ++level;
 

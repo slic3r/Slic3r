@@ -24,18 +24,18 @@
 
 namespace Slic3r {
 
-enum GCodeFlavor {
+enum GCodeFlavor : unsigned char {
     gcfRepRap, gcfRepetier, gcfTeacup, gcfMakerWare, gcfMarlin, gcfSailfish, gcfMach3, gcfMachinekit,
     gcfSmoothie, gcfNoExtrusion,
 };
 
 enum PrintHostType {
-    htOctoPrint, htDuet
+    htOctoPrint, htDuet, htFlashAir, htAstroBox
 };
 
 enum InfillPattern {
     ipRectilinear, ipGrid, ipTriangles, ipStars, ipCubic, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
-    ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral,
+    ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral, ipCount,
 };
 
 enum SupportMaterialPattern {
@@ -46,11 +46,13 @@ enum SeamPosition {
     spRandom, spNearest, spAligned, spRear
 };
 
-/*
-enum FilamentType {
-    ftPLA, ftABS, ftPET, ftHIPS, ftFLEX, ftSCAFF, ftEDGE, ftNGEN, ftPVA
+enum SLAMaterial {
+    slamTough,
+    slamFlex,
+    slamCasting,
+    slamDental,
+    slamHeatResistant,
 };
-*/
 
 enum SLADisplayOrientation {
     sladoLandscape,
@@ -94,6 +96,8 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<PrintHostType>::g
     if (keys_map.empty()) {
         keys_map["octoprint"]       = htOctoPrint;
         keys_map["duet"]            = htDuet;
+        keys_map["flashair"]        = htFlashAir;
+        keys_map["astrobox"]        = htAstroBox;
     }
     return keys_map;
 }
@@ -139,24 +143,6 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<SeamPosition>::ge
     return keys_map;
 }
 
-/*
-template<> inline const t_config_enum_values& ConfigOptionEnum<FilamentType>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["PLA"]             = ftPLA;
-        keys_map["ABS"]             = ftABS;
-        keys_map["PET"]             = ftPET;
-        keys_map["HIPS"]            = ftHIPS;
-        keys_map["FLEX"]            = ftFLEX;
-        keys_map["SCAFF"]           = ftSCAFF;
-        keys_map["EDGE"]            = ftEDGE;
-        keys_map["NGEN"]            = ftNGEN;
-        keys_map["PVA"]             = ftPVA;
-    }
-    return keys_map;
-}
-*/
-
 template<> inline const t_config_enum_values& ConfigOptionEnum<SLADisplayOrientation>::get_enum_values() {
     static const t_config_enum_values keys_map = {
         { "landscape", sladoLandscape},
@@ -185,6 +171,8 @@ public:
 
     static void handle_legacy(t_config_option_key &opt_key, std::string &value);
 
+    // Array options growing with the number of extruders
+    const std::vector<std::string>& extruder_option_keys() const { return m_extruder_option_keys; }
     // Options defining the extruder retract properties. These keys are sorted lexicographically.
     // The extruder retract keys could be overidden by the same values defined at the Filament level
     // (then the key is further prefixed with the "filament_" prefix).
@@ -193,15 +181,18 @@ public:
 private:
     void init_common_params();
     void init_fff_params();
-    void init_extruder_retract_keys();
+    void init_extruder_option_keys();
     void init_sla_params();
 
+    std::vector<std::string> 	m_extruder_option_keys;
     std::vector<std::string> 	m_extruder_retract_keys;
 };
 
 // The one and only global definition of SLic3r configuration options.
 // This definition is constant.
 extern const PrintConfigDef print_config_def;
+
+class StaticPrintConfig;
 
 // Slic3r dynamic configuration, used to override the configuration
 // per object, per modification volume or per printing material.
@@ -213,15 +204,19 @@ class DynamicPrintConfig : public DynamicConfig
 {
 public:
     DynamicPrintConfig() {}
-    DynamicPrintConfig(const DynamicPrintConfig &other) : DynamicConfig(other) {}
+    DynamicPrintConfig(const DynamicPrintConfig &rhs) : DynamicConfig(rhs) {}
+    explicit DynamicPrintConfig(const StaticPrintConfig &rhs);
+    explicit DynamicPrintConfig(const ConfigBase &rhs) : DynamicConfig(rhs) {}
 
-    static DynamicPrintConfig* new_from_defaults();
+    static DynamicPrintConfig  full_print_config();
     static DynamicPrintConfig* new_from_defaults_keys(const std::vector<std::string> &keys);
 
     // Overrides ConfigBase::def(). Static configuration definition. Any value stored into this ConfigBase shall have its definition here.
     const ConfigDef*    def() const override { return &print_config_def; }
 
     void                normalize();
+
+    void 				set_num_extruders(unsigned int num_extruders);
 
     // Validate the PrintConfig. Returns an empty string on success, otherwise an error message is returned.
     std::string         validate();
@@ -249,6 +244,8 @@ public:
 
     // Overrides ConfigBase::def(). Static configuration definition. Any value stored into this ConfigBase shall have its definition here.
     const ConfigDef*    def() const override { return &print_config_def; }
+    // Reference to the cached list of keys.
+	virtual const t_config_option_keys& keys_ref() const = 0;
 
 protected:
     // Verify whether the opt_key has not been obsoleted or renamed.
@@ -333,10 +330,14 @@ protected:
 #define STATIC_PRINT_CONFIG_CACHE_BASE(CLASS_NAME) \
 public: \
     /* Overrides ConfigBase::optptr(). Find ando/or create a ConfigOption instance for a given name. */ \
+    const ConfigOption*      optptr(const t_config_option_key &opt_key) const override \
+        { return s_cache_##CLASS_NAME.optptr(opt_key, this); } \
+    /* Overrides ConfigBase::optptr(). Find ando/or create a ConfigOption instance for a given name. */ \
     ConfigOption*            optptr(const t_config_option_key &opt_key, bool create = false) override \
         { return s_cache_##CLASS_NAME.optptr(opt_key, this); } \
     /* Overrides ConfigBase::keys(). Collect names of all configuration values maintained by this configuration store. */ \
     t_config_option_keys     keys() const override { return s_cache_##CLASS_NAME.keys(); } \
+    const t_config_option_keys& keys_ref() const override { return s_cache_##CLASS_NAME.keys(); } \
     static const CLASS_NAME& defaults() { initialize_cache(); return s_cache_##CLASS_NAME.defaults(); } \
 private: \
     static void initialize_cache() \
@@ -465,6 +466,7 @@ class PrintRegionConfig : public StaticPrintConfig
 public:
     ConfigOptionFloat               bridge_angle;
     ConfigOptionInt                 bottom_solid_layers;
+    ConfigOptionFloat               bottom_solid_min_thickness;
     ConfigOptionFloat               bridge_flow_ratio;
     ConfigOptionFloat               bridge_speed;
     ConfigOptionBool                ensure_vertical_shell_thickness;
@@ -500,6 +502,7 @@ public:
     ConfigOptionBool                thin_walls;
     ConfigOptionFloatOrPercent      top_infill_extrusion_width;
     ConfigOptionInt                 top_solid_layers;
+    ConfigOptionFloat 				top_solid_min_thickness;
     ConfigOptionFloatOrPercent      top_solid_infill_speed;
     ConfigOptionBool                wipe_into_infill;
 
@@ -508,6 +511,7 @@ protected:
     {
         OPT_PTR(bridge_angle);
         OPT_PTR(bottom_solid_layers);
+        OPT_PTR(bottom_solid_min_thickness);
         OPT_PTR(bridge_flow_ratio);
         OPT_PTR(bridge_speed);
         OPT_PTR(ensure_vertical_shell_thickness);
@@ -541,6 +545,7 @@ protected:
         OPT_PTR(top_infill_extrusion_width);
         OPT_PTR(top_solid_infill_speed);
         OPT_PTR(top_solid_layers);
+        OPT_PTR(top_solid_min_thickness);
         OPT_PTR(wipe_into_infill);
     }
 };
@@ -648,6 +653,7 @@ public:
     ConfigOptionStrings             start_filament_gcode;
     ConfigOptionBool                single_extruder_multi_material;
     ConfigOptionBool                single_extruder_multi_material_priming;
+    ConfigOptionBool                wipe_tower_no_sparse_layers;
     ConfigOptionString              toolchange_gcode;
     ConfigOptionFloat               travel_speed;
     ConfigOptionBool                use_firmware_retraction;
@@ -718,6 +724,7 @@ protected:
         OPT_PTR(retract_speed);
         OPT_PTR(single_extruder_multi_material);
         OPT_PTR(single_extruder_multi_material_priming);
+        OPT_PTR(wipe_tower_no_sparse_layers);
         OPT_PTR(start_gcode);
         OPT_PTR(start_filament_gcode);
         OPT_PTR(toolchange_gcode);
@@ -793,6 +800,7 @@ public:
     ConfigOptionBools               retract_layer_change;
     ConfigOptionFloat               skirt_distance;
     ConfigOptionInt                 skirt_height;
+    ConfigOptionBool                draft_shield;
     ConfigOptionInt                 skirts;
     ConfigOptionInts                slowdown_below_layer_time;
     ConfigOptionBool                spiral_vase;
@@ -865,6 +873,7 @@ protected:
         OPT_PTR(retract_layer_change);
         OPT_PTR(skirt_distance);
         OPT_PTR(skirt_height);
+        OPT_PTR(draft_shield);
         OPT_PTR(skirts);
         OPT_PTR(slowdown_below_layer_time);
         OPT_PTR(spiral_vase);
@@ -973,6 +982,9 @@ public:
 
     // Radius in mm of the support pillars.
     ConfigOptionFloat support_pillar_diameter /*= 0.8*/;
+    
+    // How much bridge (supporting another pinhead) can be placed on a pillar.
+    ConfigOptionInt   support_max_bridges_on_pillar;
 
     // How the pillars are bridged together
     ConfigOptionEnum<SLAPillarConnectionMode> support_pillar_connection_mode;
@@ -993,7 +1005,7 @@ public:
     ConfigOptionFloat support_base_height /*= 1.0*/;
 
     // The minimum distance of the pillar base from the model in mm.
-    ConfigOptionFloat support_base_safety_distance; /*= 1.0*/;
+    ConfigOptionFloat support_base_safety_distance; /*= 1.0*/
 
     // The default angle for connecting support sticks and junctions.
     ConfigOptionFloat support_critical_angle /*= 45*/;
@@ -1022,6 +1034,9 @@ public:
 
     // The height of the pad from the bottom to the top not considering the pit
     ConfigOptionFloat pad_wall_height /*= 5*/;
+    
+    // How far should the pad extend around the contained geometry
+    ConfigOptionFloat pad_brim_size;
 
     // The greatest distance where two individual pads are merged into one. The
     // distance is measured roughly from the centroids of the pads.
@@ -1035,14 +1050,16 @@ public:
 
     // /////////////////////////////////////////////////////////////////////////
     // Zero elevation mode parameters:
-    //    - The object pad will be derived from the the model geometry.
+    //    - The object pad will be derived from the model geometry.
     //    - There will be a gap between the object pad and the generated pad
     //      according to the support_base_safety_distance parameter.
     //    - The two pads will be connected with tiny connector sticks
     // /////////////////////////////////////////////////////////////////////////
 
     // Disable the elevation (ignore its value) and use the zero elevation mode
-    ConfigOptionBool  pad_around_object;
+    ConfigOptionBool pad_around_object;
+    
+    ConfigOptionBool pad_around_object_everywhere;
 
     // This is the gap between the object bottom and the generated pad
     ConfigOptionFloat pad_object_gap;
@@ -1055,6 +1072,28 @@ public:
 
     // How much should the tiny connectors penetrate into the model body
     ConfigOptionFloat pad_object_connector_penetration;
+    
+    // /////////////////////////////////////////////////////////////////////////
+    // Model hollowing parameters:
+    //   - Models can be hollowed out as part of the SLA print process
+    //   - Thickness of the hollowed model walls can be adjusted
+    //   -
+    //   - Additional holes will be drilled into the hollow model to allow for
+    //   - resin removal.
+    // /////////////////////////////////////////////////////////////////////////
+    
+    ConfigOptionBool hollowing_enable;
+    
+    // The minimum thickness of the model walls to maintain. Note that the 
+    // resulting walls may be thicker due to smoothing out fine cavities where
+    // resin could stuck.
+    ConfigOptionFloat hollowing_min_thickness;
+    
+    // Indirectly controls the voxel size (resolution) used by openvdb
+    ConfigOptionFloat hollowing_quality;
+   
+    // Indirectly controls the minimum size of created cavities.
+    ConfigOptionFloat hollowing_closing_distance;
 
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
@@ -1067,6 +1106,7 @@ protected:
         OPT_PTR(support_head_penetration);
         OPT_PTR(support_head_width);
         OPT_PTR(support_pillar_diameter);
+        OPT_PTR(support_max_bridges_on_pillar);
         OPT_PTR(support_pillar_connection_mode);
         OPT_PTR(support_buildplate_only);
         OPT_PTR(support_pillar_widening_factor);
@@ -1082,14 +1122,20 @@ protected:
         OPT_PTR(pad_enable);
         OPT_PTR(pad_wall_thickness);
         OPT_PTR(pad_wall_height);
+        OPT_PTR(pad_brim_size);
         OPT_PTR(pad_max_merge_distance);
         // OPT_PTR(pad_edge_radius);
         OPT_PTR(pad_wall_slope);
         OPT_PTR(pad_around_object);
+        OPT_PTR(pad_around_object_everywhere);
         OPT_PTR(pad_object_gap);
         OPT_PTR(pad_object_connector_stride);
         OPT_PTR(pad_object_connector_width);
         OPT_PTR(pad_object_connector_penetration);
+        OPT_PTR(hollowing_enable);
+        OPT_PTR(hollowing_min_thickness);
+        OPT_PTR(hollowing_quality);
+        OPT_PTR(hollowing_closing_distance);
     }
 };
 
@@ -1098,6 +1144,10 @@ class SLAMaterialConfig : public StaticPrintConfig
     STATIC_PRINT_CONFIG_CACHE(SLAMaterialConfig)
 public:
     ConfigOptionFloat                       initial_layer_height;
+    ConfigOptionFloat                       bottle_cost;
+    ConfigOptionFloat                       bottle_volume;
+    ConfigOptionFloat                       bottle_weight;
+    ConfigOptionFloat                       material_density;
     ConfigOptionFloat                       exposure_time;
     ConfigOptionFloat                       initial_exposure_time;
     ConfigOptionFloats                      material_correction;
@@ -1105,6 +1155,10 @@ protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
         OPT_PTR(initial_layer_height);
+        OPT_PTR(bottle_cost);
+        OPT_PTR(bottle_volume);
+        OPT_PTR(bottle_weight);
+        OPT_PTR(material_density);
         OPT_PTR(exposure_time);
         OPT_PTR(initial_exposure_time);
         OPT_PTR(material_correction);
@@ -1127,6 +1181,8 @@ public:
     ConfigOptionBool                        display_mirror_y;
     ConfigOptionFloats                      relative_correction;
     ConfigOptionFloat                       absolute_correction;
+    ConfigOptionFloat                       elefant_foot_compensation;
+    ConfigOptionFloat                       elefant_foot_min_width;
     ConfigOptionFloat                       gamma_correction;
     ConfigOptionFloat                       fast_tilt_time;
     ConfigOptionFloat                       slow_tilt_time;
@@ -1150,6 +1206,8 @@ protected:
         OPT_PTR(display_orientation);
         OPT_PTR(relative_correction);
         OPT_PTR(absolute_correction);
+        OPT_PTR(elefant_foot_compensation);
+        OPT_PTR(elefant_foot_min_width);
         OPT_PTR(gamma_correction);
         OPT_PTR(fast_tilt_time);
         OPT_PTR(slow_tilt_time);

@@ -34,9 +34,14 @@ public:
     void remove_type(const SurfaceType type);
     void remove_types(const SurfaceType *types, int ntypes);
     void filter_by_type(SurfaceType type, Polygons* polygons);
+    void set_type(SurfaceType type) {
+    	for (Surface &surface : this->surfaces)
+    		surface.surface_type = type;
+    }
 
     void clear() { surfaces.clear(); }
     bool empty() const { return surfaces.empty(); }
+	size_t size() const { return surfaces.size(); }
     bool has(SurfaceType type) const { 
         for (const Surface &surface : this->surfaces) 
             if (surface.surface_type == type) return true;

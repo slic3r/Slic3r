@@ -1,5 +1,5 @@
+cmake_minimum_required(VERSION 3.8)
 project(libslic3r_gui)
-cmake_minimum_required(VERSION 2.6)
 
 include(PrecompiledHeader)
 
@@ -47,6 +47,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Gizmos/GLGizmoFlatten.hpp
     GUI/Gizmos/GLGizmoCut.cpp
     GUI/Gizmos/GLGizmoCut.hpp
+    GUI/Gizmos/GLGizmoHollow.cpp
+    GUI/Gizmos/GLGizmoHollow.hpp
     GUI/GLSelectionRectangle.cpp
     GUI/GLSelectionRectangle.hpp
     GUI/GLTexture.hpp
@@ -85,6 +87,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/GUI_ObjectLayers.hpp
     GUI/LambdaObjectDialog.cpp
     GUI/LambdaObjectDialog.hpp
+    GUI/MeshUtils.cpp
+    GUI/MeshUtils.hpp
     GUI/Tab.cpp
     GUI/Tab.hpp
     GUI/ConfigManipulation.cpp
@@ -103,10 +107,14 @@ set(SLIC3R_GUI_SOURCES
     GUI/Camera.hpp
     GUI/wxExtensions.cpp
     GUI/wxExtensions.hpp
+    GUI/ExtruderSequenceDialog.cpp
+    GUI/ExtruderSequenceDialog.hpp
     GUI/WipeTowerDialog.cpp
     GUI/WipeTowerDialog.hpp
     GUI/RammingChart.cpp
     GUI/RammingChart.hpp
+    GUI/RemovableDriveManager.cpp
+    GUI/RemovableDriveManager.hpp
     GUI/BonjourDialog.cpp
     GUI/BonjourDialog.hpp
     GUI/ButtonsDescription.cpp
@@ -123,6 +131,7 @@ set(SLIC3R_GUI_SOURCES
     Utils/Serial.hpp
     GUI/ConfigWizard.cpp
     GUI/ConfigWizard.hpp
+    GUI/ConfigWizard_private.hpp
     GUI/MsgDialog.cpp
     GUI/MsgDialog.hpp
     GUI/UpdateDialogs.cpp
@@ -134,6 +143,13 @@ set(SLIC3R_GUI_SOURCES
     GUI/ProgressStatusBar.cpp
     GUI/PrintHostDialogs.cpp
     GUI/PrintHostDialogs.hpp
+    GUI/Job.hpp
+    GUI/Mouse3DController.cpp
+    GUI/Mouse3DController.hpp
+    GUI/DoubleSlider.cpp
+    GUI/DoubleSlider.hpp
+    GUI/ObjectDataViewModel.cpp
+    GUI/ObjectDataViewModel.hpp
     Utils/Http.cpp
     Utils/Http.hpp
     Utils/FixModelByWin10.cpp
@@ -142,6 +158,10 @@ set(SLIC3R_GUI_SOURCES
     Utils/OctoPrint.hpp
     Utils/Duet.cpp
     Utils/Duet.hpp
+    Utils/FlashAir.cpp
+    Utils/FlashAir.hpp
+    Utils/AstroBox.cpp
+    Utils/AstroBox.hpp
     Utils/PrintHost.cpp
     Utils/PrintHost.hpp
     Utils/Bonjour.cpp
@@ -152,20 +172,31 @@ set(SLIC3R_GUI_SOURCES
     Utils/UndoRedo.hpp
     Utils/HexFile.cpp
     Utils/HexFile.hpp
+    Utils/Thread.hpp
 )
 
 if (APPLE)
     list(APPEND SLIC3R_GUI_SOURCES
             Utils/RetinaHelperImpl.mm
             Utils/MacDarkMode.mm
+            GUI/RemovableDriveManagerMM.mm
+            GUI/RemovableDriveManagerMM.h
+            GUI/Mouse3DHandlerMac.mm
         )
+    FIND_LIBRARY(DISKARBITRATION_LIBRARY DiskArbitration)
+
 endif ()
 
 add_library(libslic3r_gui STATIC ${SLIC3R_GUI_SOURCES})
 
 encoding_check(libslic3r_gui)
 
-target_link_libraries(libslic3r_gui libslic3r avrdude cereal imgui ${GLEW_LIBRARIES})
+target_link_libraries(libslic3r_gui libslic3r avrdude cereal imgui GLEW::GLEW OpenGL::GL OpenGL::GLU hidapi libcurl ${wxWidgets_LIBRARIES})
+
+if(APPLE)
+    target_link_libraries(libslic3r_gui ${DISKARBITRATION_LIBRARY})
+endif()
+
 if (SLIC3R_PCH AND NOT SLIC3R_SYNTAXONLY)
     add_precompiled_header(libslic3r_gui pchheader.hpp FORCEINCLUDE)
 endif ()

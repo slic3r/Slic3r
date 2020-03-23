@@ -18,6 +18,8 @@
 
 #include "SVG.hpp"
 #include <Eigen/Dense>
+#include "GCodeWriter.hpp"
+#include "GCode/PreviewData.hpp"
 
 namespace Slic3r {
 
@@ -41,6 +43,9 @@ Model& Model::assign_copy(const Model &rhs)
         mo->set_model(this);
 		this->objects.emplace_back(mo);
     }
+
+    // copy custom code per height
+    this->custom_gcode_per_print_z = rhs.custom_gcode_per_print_z;
     return *this;
 }
 
@@ -59,6 +64,9 @@ Model& Model::assign_copy(Model &&rhs)
     for (ModelObject *model_object : this->objects)
         model_object->set_model(this);
     rhs.objects.clear();
+
+    // copy custom code per height
+    this->custom_gcode_per_print_z = std::move(rhs.custom_gcode_per_print_z);
     return *this;
 }
 
@@ -118,6 +126,9 @@ Model Model::read_from_file(const std::string& input_file, DynamicPrintConfig* c
     if (add_default_instances)
         model.add_default_instances();
 
+    CustomGCode::update_custom_gcode_per_print_z_from_config(model.custom_gcode_per_print_z, config);
+    CustomGCode::check_mode_for_custom_gcode_per_print_z(model.custom_gcode_per_print_z);
+
     return model;
 }
 
@@ -141,17 +152,20 @@ Model Model::read_from_archive(const std::string& input_file, DynamicPrintConfig
 
     for (ModelObject *o : model.objects)
     {
-        if (boost::algorithm::iends_with(input_file, ".zip.amf"))
-        {
-            // we remove the .zip part of the extension to avoid it be added to filenames when exporting
-            o->input_file = boost::ireplace_last_copy(input_file, ".zip.", ".");
-        }
-        else
+//        if (boost::algorithm::iends_with(input_file, ".zip.amf"))
+//        {
+//            // we remove the .zip part of the extension to avoid it be added to filenames when exporting
+//            o->input_file = boost::ireplace_last_copy(input_file, ".zip.", ".");
+//        }
+//        else
             o->input_file = input_file;
     }
 
     if (add_default_instances)
         model.add_default_instances();
+
+    CustomGCode::update_custom_gcode_per_print_z_from_config(model.custom_gcode_per_print_z, config);
+    CustomGCode::check_mode_for_custom_gcode_per_print_z(model.custom_gcode_per_print_z);
 
     return model;
 }
@@ -170,6 +184,9 @@ ModelObject* Model::add_object(const char *name, const char *path, const Triangl
     new_object->input_file = path;
     ModelVolume *new_volume = new_object->add_volume(mesh);
     new_volume->name = name;
+    new_volume->source.input_file = path;
+    new_volume->source.object_idx = (int)this->objects.size() - 1;
+    new_volume->source.volume_idx = (int)new_object->volumes.size() - 1;
     new_object->invalidate_bounding_box();
     return new_object;
 }
@@ -182,6 +199,9 @@ ModelObject* Model::add_object(const char *name, const char *path, TriangleMesh 
     new_object->input_file = path;
     ModelVolume *new_volume = new_object->add_volume(std::move(mesh));
     new_volume->name = name;
+    new_volume->source.input_file = path;
+    new_volume->source.object_idx = (int)this->objects.size() - 1;
+    new_volume->source.volume_idx = (int)new_object->volumes.size() - 1;
     new_object->invalidate_bounding_box();
     return new_object;
 }
@@ -600,6 +620,7 @@ ModelObject& ModelObject::assign_copy(const ModelObject &rhs)
     assert(this->config.id() == rhs.config.id());
     this->sla_support_points          = rhs.sla_support_points;
     this->sla_points_status           = rhs.sla_points_status;
+    this->sla_drain_holes             = rhs.sla_drain_holes;
     this->layer_config_ranges         = rhs.layer_config_ranges;    // #ys_FIXME_experiment
     this->layer_height_profile        = rhs.layer_height_profile;
     this->printable                   = rhs.printable;
@@ -640,6 +661,7 @@ ModelObject& ModelObject::assign_copy(ModelObject &&rhs)
     assert(this->config.id() == rhs.config.id());
     this->sla_support_points          = std::move(rhs.sla_support_points);
     this->sla_points_status           = std::move(rhs.sla_points_status);
+    this->sla_drain_holes             = std::move(rhs.sla_drain_holes);
     this->layer_config_ranges         = std::move(rhs.layer_config_ranges); // #ys_FIXME_experiment
     this->layer_height_profile        = std::move(rhs.layer_height_profile);
     this->origin_translation          = std::move(rhs.origin_translation);
@@ -825,7 +847,7 @@ TriangleMesh ModelObject::mesh() const
 }
 
 // Non-transformed (non-rotated, non-scaled, non-translated) sum of non-modifier object volumes.
-// Currently used by ModelObject::mesh(), to calculate the 2D envelope for 2D platter
+// Currently used by ModelObject::mesh(), to calculate the 2D envelope for 2D plater
 // and to display the object statistics at ModelObject::print_info().
 TriangleMesh ModelObject::raw_mesh() const
 {
@@ -885,10 +907,8 @@ const BoundingBoxf3& ModelObject::raw_bounding_box() const
 
         const Transform3d& inst_matrix = this->instances.front()->get_transformation().get_matrix(true);
         for (const ModelVolume *v : this->volumes)
-        {
             if (v->is_model_part())
                 m_raw_bounding_box.merge(v->mesh().transformed_bounding_box(inst_matrix * v->get_matrix()));
-        }
     }
 	return m_raw_bounding_box;
 }
@@ -1093,17 +1113,19 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
     if (keep_upper) {
         upper->set_model(nullptr);
         upper->sla_support_points.clear();
+        upper->sla_drain_holes.clear();
         upper->sla_points_status = sla::PointsStatus::NoPoints;
         upper->clear_volumes();
-        upper->input_file = "";
+        upper->input_file.clear();
     }
 
     if (keep_lower) {
         lower->set_model(nullptr);
         lower->sla_support_points.clear();
+        lower->sla_drain_holes.clear();
         lower->sla_points_status = sla::PointsStatus::NoPoints;
         lower->clear_volumes();
-        lower->input_file = "";
+        lower->input_file.clear();
     }
 
     // Because transformations are going to be applied to meshes directly,
@@ -1136,7 +1158,8 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
             if (keep_upper) { upper->add_volume(*volume); }
             if (keep_lower) { lower->add_volume(*volume); }
         }
-        else {
+        else if (! volume->mesh().empty()) {
+            
             TriangleMesh upper_mesh, lower_mesh;
 
             // Transform the mesh by the combined transformation matrix.
@@ -1144,7 +1167,9 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
 			TriangleMesh mesh(volume->mesh());
 			mesh.transform(instance_matrix * volume_matrix, true);
 			volume->reset_mesh();
-
+            
+            mesh.require_shared_vertices();
+            
             // Perform cut
             TriangleMeshSlicer tms(&mesh);
             tms.cut(float(z), &upper_mesh, &lower_mesh);
@@ -1269,6 +1294,8 @@ void ModelObject::split(ModelObjectPtrs* new_objects)
         }
 
         new_vol->set_offset(Vec3d::Zero());
+        // reset the source to disable reload from disk
+        new_vol->source = ModelVolume::Source();
         new_objects->emplace_back(new_object);
         delete mesh;
     }
@@ -1324,6 +1351,8 @@ void ModelObject::bake_xy_rotation_into_meshes(size_t instance_idx)
         model_volume->set_mirror(Vec3d(1., 1., 1.));
         // Move the reference point of the volume to compensate for the change of the instance trafo.
         model_volume->set_offset(volume_offset_correction * volume_trafo.get_offset());
+        // reset the source to disable reload from disk
+        model_volume->source = ModelVolume::Source();
     }
 
     this->invalidate_bounding_box();
@@ -1462,7 +1491,7 @@ stl_stats ModelObject::get_object_stl_stats() const
         return this->volumes[0]->mesh().stl.stats;
 
     stl_stats full_stats;
-    memset(&full_stats, 0, sizeof(stl_stats));
+    full_stats.volume = 0.f;
 
     // fill full_stats from all objet's meshes
     for (ModelVolume* volume : this->volumes)
@@ -1543,7 +1572,7 @@ bool ModelVolume::is_splittable() const
     return m_is_splittable == 1;
 }
 
-void ModelVolume::center_geometry_after_creation()
+void ModelVolume::center_geometry_after_creation(bool update_source_offset)
 {
     Vec3d shift = this->mesh().bounding_box().center();
     if (!shift.isApprox(Vec3d::Zero()))
@@ -1554,6 +1583,9 @@ void ModelVolume::center_geometry_after_creation()
 			const_cast<TriangleMesh*>(m_convex_hull.get())->translate(-(float)shift(0), -(float)shift(1), -(float)shift(2));
         translate(shift);
     }
+
+    if (update_source_offset)
+        source.mesh_offset = shift;
 }
 
 void ModelVolume::calculate_convex_hull()
@@ -1632,6 +1664,8 @@ size_t ModelVolume::split(unsigned int max_extruders)
             this->calculate_convex_hull();
             // Assign a new unique ID, so that a new GLVolume will be generated.
             this->set_new_unique_id();
+            // reset the source to disable reload from disk
+            this->source = ModelVolume::Source();
         }
         else
             this->object->volumes.insert(this->object->volumes.begin() + (++ivolume), new ModelVolume(object, *this, std::move(*mesh)));

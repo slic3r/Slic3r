@@ -113,7 +113,11 @@ void OptionsGroup::add_undo_buttuns_to_sizer(wxSizer* sizer, const t_field& fiel
 }
 
 void OptionsGroup::append_line(const Line& line, wxStaticText**	full_Label/* = nullptr*/) {
-	if ( (line.sizer != nullptr || line.widget != nullptr) && line.full_width) {
+	if ( line.full_width && (
+		 line.sizer  != nullptr				|| 
+		 line.widget != nullptr				||
+		!line.get_extra_widgets().empty() ) 
+		) {
 		if (line.sizer != nullptr) {
             sizer->Add(line.sizer, 0, wxEXPAND | wxALL, wxOSX ? 0 : 15);
             return;
@@ -122,18 +126,39 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	full_Label/* = n
             sizer->Add(line.widget(this->ctrl_parent()), 0, wxEXPAND | wxALL, wxOSX ? 0 : 15);
             return;
         }
+		if (!line.get_extra_widgets().empty()) {
+			const auto h_sizer = new wxBoxSizer(wxHORIZONTAL);
+			sizer->Add(h_sizer, 1, wxEXPAND | wxALL, wxOSX ? 0 : 15);
+
+            bool is_first_item = true;
+			for (auto extra_widget : line.get_extra_widgets()) {
+				h_sizer->Add(extra_widget(this->ctrl_parent()), is_first_item ? 1 : 0, wxLEFT, 15);
+				is_first_item = false;
+			}
+			return;
+		}
     }
 
 	auto option_set = line.get_options();
 	for (auto opt : option_set) 
 		m_options.emplace(opt.opt_id, opt);
 
+	// Set sidetext width for a better alignment of options in line
+	// "m_show_modified_btns==true" means that options groups are in tabs
+	if (option_set.size() > 1 && m_show_modified_btns) {
+		sidetext_width = Field::def_width_thinner();
+		/* Temporary commented till UI-review will be completed
+		if (m_show_modified_btns) // means that options groups are in tabs
+		    sublabel_width = Field::def_width();
+	    */
+	}
+
     // add mode value for current line to m_options_mode
     if (!option_set.empty())
         m_options_mode.push_back(option_set[0].opt.mode);
 
 	// if we have a single option with no label, no sidetext just add it directly to sizer
-	if (option_set.size() == 1 && label_width == 0 && option_set.front().opt.full_width &&
+    if (option_set.size() == 1 && label_width == 0 && option_set.front().opt.full_width &&
         option_set.front().opt.label.empty() &&
 		option_set.front().opt.sidetext.size() == 0 && option_set.front().side_widget == nullptr && 
 		line.get_extra_widgets().size() == 0) {
@@ -233,7 +258,7 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	full_Label/* = n
 
 		add_undo_buttuns_to_sizer(sizer, field);
 		if (is_window_field(field)) 
-			sizer->Add(field->getWindow(), option.opt.full_width ? 1 : 0, //(option.opt.full_width ? wxEXPAND : 0) |
+            sizer->Add(field->getWindow(), option.opt.full_width ? 1 : 0, //(option.opt.full_width ? wxEXPAND : 0) |
             wxBOTTOM | wxTOP | (option.opt.full_width ? wxEXPAND : wxALIGN_CENTER_VERTICAL), (wxOSX || !staticbox) ? 0 : 2);
 		if (is_sizer_field(field)) 
 			sizer->Add(field->getSizer(), 1, /*(*/option.opt.full_width ? wxEXPAND : /*0) |*/ wxALIGN_CENTER_VERTICAL, 0);
@@ -244,15 +269,16 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	full_Label/* = n
 		ConfigOptionDef option = opt.opt;
 		wxSizer* sizer_tmp = sizer;
 		// add label if any
-		if (option.label != "") {
+		if (!option.label.empty()) {
 //!			To correct translation by context have to use wxGETTEXT_IN_CONTEXT macro from wxWidget 3.1.1
 			wxString str_label = (option.label == L_CONTEXT("Top", "Layers") || option.label == L_CONTEXT("Bottom", "Layers")) ?
 								_CTX(option.label, "Layers") :
 								_(option.label);
-			label = new wxStaticText(this->ctrl_parent(), wxID_ANY, str_label + ": ", wxDefaultPosition, wxDefaultSize);
+			label = new wxStaticText(this->ctrl_parent(), wxID_ANY, str_label + ": ", wxDefaultPosition, //wxDefaultSize); 
+				wxSize(sublabel_width != -1 ? sublabel_width * wxGetApp().em_unit() : -1, -1), wxALIGN_RIGHT);
 			label->SetBackgroundStyle(wxBG_STYLE_PAINT);
             label->SetFont(wxGetApp().normal_font());
-			sizer_tmp->Add(label, 0, /*wxALIGN_RIGHT |*/ wxALIGN_CENTER_VERTICAL, 0);
+			sizer_tmp->Add(label, 0, wxALIGN_CENTER_VERTICAL, 0);
 		}
 
 		// add field
@@ -274,9 +300,9 @@ void OptionsGroup::append_line(const Line& line, wxStaticText**	full_Label/* = n
 			sizer_tmp->Add(field->getWindow(), 0, wxALIGN_CENTER_VERTICAL, 0);
 		
 		// add sidetext if any
-		if (option.sidetext != "") {
+		if (!option.sidetext.empty() || sidetext_width > 0) {
 			auto sidetext = new wxStaticText(	this->ctrl_parent(), wxID_ANY, _(option.sidetext), wxDefaultPosition, 
-												wxSize(sidetext_width != -1 ? sidetext_width*wxGetApp().em_unit() : -1, -1) /*wxDefaultSize*/, wxALIGN_LEFT);
+												wxSize(sidetext_width != -1 ? sidetext_width*wxGetApp().em_unit() : -1, -1), wxALIGN_LEFT);
 			sidetext->SetBackgroundStyle(wxBG_STYLE_PAINT);
             sidetext->SetFont(wxGetApp().normal_font());
 			sizer_tmp->Add(sidetext, 0, wxLEFT | wxALIGN_CENTER_VERTICAL, 4);
@@ -401,7 +427,9 @@ void ConfigOptionsGroup::back_to_config_value(const DynamicPrintConfig& config, 
 		auto   *nozzle_diameter = dynamic_cast<const ConfigOptionFloats*>(config.option("nozzle_diameter"));
 		value = int(nozzle_diameter->values.size());
 	}
-    else if (m_opt_map.find(opt_key) == m_opt_map.end() || opt_key == "bed_shape") {
+    else if (m_opt_map.find(opt_key) == m_opt_map.end() ||
+		    // This option don't have corresponded field
+		     opt_key == "bed_shape" || opt_key == "compatible_printers" || opt_key == "compatible_prints" ) {
         value = get_config_value(config, opt_key);
         change_opt_value(*m_config, opt_key, value);
         return;
@@ -457,8 +485,9 @@ void ConfigOptionsGroup::Show(const bool show)
 bool ConfigOptionsGroup::update_visibility(ConfigOptionMode mode) {
     if (m_options_mode.empty())
         return true;
-    if (m_grid_sizer->GetEffectiveRowsCount() != m_options_mode.size() &&
-        m_options_mode.size() == 1)
+    int opt_mode_size = m_options_mode.size();
+    if (m_grid_sizer->GetEffectiveRowsCount() != opt_mode_size &&
+        opt_mode_size == 1)
         return m_options_mode[0] <= mode;
 
     Show(true);
@@ -476,7 +505,7 @@ bool ConfigOptionsGroup::update_visibility(ConfigOptionMode mode) {
         coef+= cols;
 	}
 
-    if (hidden_row_cnt == m_options_mode.size()) {
+    if (hidden_row_cnt == opt_mode_size) {
         sizer->ShowItems(false);
         return false;
     }
@@ -497,7 +526,7 @@ void ConfigOptionsGroup::msw_rescale()
 
     // update undo buttons : rescale bitmaps
     for (const auto& field : m_fields)
-        field.second->msw_rescale();
+        field.second->msw_rescale(sidetext_width>0);
 
     const int em = em_unit(parent());
 
@@ -617,7 +646,7 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 		ret = static_cast<wxString>(config.opt_string(opt_key));
 		break;
 	case coStrings:
-		if (opt_key.compare("compatible_printers") == 0) {
+		if (opt_key == "compatible_printers" || opt_key == "compatible_prints") {
 			ret = config.option<ConfigOptionStrings>(opt_key)->values;
 			break;
 		}
@@ -702,7 +731,7 @@ Field* ConfigOptionsGroup::get_fieldc(const t_config_option_key& opt_key, int op
 void ogStaticText::SetText(const wxString& value, bool wrap/* = true*/)
 {
 	SetLabel(value);
-    if (wrap) Wrap(40 * wxGetApp().em_unit());
+    if (wrap) Wrap(60 * wxGetApp().em_unit());
 	GetParent()->Layout();
 }
 

@@ -5,6 +5,7 @@
 #include <utility>
 #include <functional>
 #include <type_traits>
+#include <system_error>
 
 #include "libslic3r.h"
 
@@ -63,8 +64,23 @@ extern std::string normalize_utf8_nfc(const char *src);
 // for a short while, so the file may not be movable. Retry while we see recoverable errors.
 extern std::error_code rename_file(const std::string &from, const std::string &to);
 
+enum CopyFileResult {
+	SUCCESS = 0,
+	FAIL_COPY_FILE,
+	FAIL_FILES_DIFFERENT,
+	FAIL_RENAMING,
+	FAIL_CHECK_ORIGIN_NOT_OPENED,
+	FAIL_CHECK_TARGET_NOT_OPENED
+};
 // Copy a file, adjust the access attributes, so that the target is writable.
-extern int copy_file(const std::string &from, const std::string &to);
+CopyFileResult copy_file_inner(const std::string &from, const std::string &to);
+// Copy file to a temp file first, then rename it to the final file name.
+// If with_check is true, then the content of the copied file is compared to the content
+// of the source file before renaming.
+extern CopyFileResult copy_file(const std::string &from, const std::string &to, const bool with_check = false);
+
+// Compares two files if identical.
+extern CopyFileResult check_copy(const std::string& origin, const std::string& copy);
 
 // Ignore system and hidden files, which may be created by the DropBox synchronisation process.
 // https://github.com/prusa3d/PrusaSlicer/issues/1298
@@ -164,6 +180,57 @@ template<class T> size_t next_highest_power_of_2(T v,
     return next_highest_power_of_2(uint32_t(v));
 }
 
+template<typename INDEX_TYPE>
+inline INDEX_TYPE prev_idx_modulo(INDEX_TYPE idx, const INDEX_TYPE count)
+{
+	if (idx == 0)
+		idx = count;
+	return -- idx;
+}
+
+template<typename INDEX_TYPE>
+inline INDEX_TYPE next_idx_modulo(INDEX_TYPE idx, const INDEX_TYPE count)
+{
+	if (++ idx == count)
+		idx = 0;
+	return idx;
+}
+
+template<typename CONTAINER_TYPE>
+inline typename CONTAINER_TYPE::size_type prev_idx_modulo(typename CONTAINER_TYPE::size_type idx, const CONTAINER_TYPE &container) 
+{ 
+	return prev_idx_modulo(idx, container.size());
+}
+
+template<typename CONTAINER_TYPE>
+inline typename CONTAINER_TYPE::size_type next_idx_modulo(typename CONTAINER_TYPE::size_type idx, const CONTAINER_TYPE &container)
+{ 
+	return next_idx_modulo(idx, container.size());
+}
+
+template<typename CONTAINER_TYPE>
+inline const typename CONTAINER_TYPE::value_type& prev_value_modulo(typename CONTAINER_TYPE::size_type idx, const CONTAINER_TYPE &container)
+{ 
+	return container[prev_idx_modulo(idx, container.size())];
+}
+
+template<typename CONTAINER_TYPE>
+inline typename CONTAINER_TYPE::value_type& prev_value_modulo(typename CONTAINER_TYPE::size_type idx, CONTAINER_TYPE &container) 
+{ 
+	return container[prev_idx_modulo(idx, container.size())];
+}
+
+template<typename CONTAINER_TYPE>
+inline const typename CONTAINER_TYPE::value_type& next_value_modulo(typename CONTAINER_TYPE::size_type idx, const CONTAINER_TYPE &container)
+{ 
+	return container[next_idx_modulo(idx, container.size())];
+}
+
+template<typename CONTAINER_TYPE>
+inline typename CONTAINER_TYPE::value_type& next_value_modulo(typename CONTAINER_TYPE::size_type idx, CONTAINER_TYPE &container)
+{ 
+	return container[next_idx_modulo(idx, container.size())];
+}
 
 extern std::string xml_escape(std::string text);
 

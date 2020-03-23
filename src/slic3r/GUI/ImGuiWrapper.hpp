@@ -56,16 +56,22 @@ public:
 
     bool begin(const std::string &name, int flags = 0);
     bool begin(const wxString &name, int flags = 0);
+    bool begin(const std::string& name, bool* close, int flags = 0);
+    bool begin(const wxString& name, bool* close, int flags = 0);
     void end();
 
     bool button(const wxString &label);
     bool radio_button(const wxString &label, bool active);
     bool input_double(const std::string &label, const double &value, const std::string &format = "%.3f");
+    bool input_double(const wxString &label, const double &value, const std::string &format = "%.3f");
     bool input_vec3(const std::string &label, const Vec3d &value, float width, const std::string &format = "%.3f");
     bool checkbox(const wxString &label, bool &value);
     void text(const char *label);
     void text(const std::string &label);
     void text(const wxString &label);
+    bool slider_float(const char* label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
+    bool slider_float(const std::string& label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
+    bool slider_float(const wxString& label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
     bool combo(const wxString& label, const std::vector<std::string>& options, int& selection);   // Use -1 to not mark any option as selected
     bool undo_redo_list(const ImVec2& size, const bool is_undo, bool (*items_getter)(const bool, int, const char**), int& hovered, int& selected);
 

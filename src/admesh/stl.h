@@ -89,33 +89,34 @@ struct stl_neighbors {
 };
 
 struct stl_stats {
-	stl_stats() { this->reset(); }
-	void reset() { memset(this, 0, sizeof(stl_stats)); this->volume = -1.0; }
-	char          header[81];
-	stl_type      type;
-	uint32_t      number_of_facets;
-	stl_vertex    max;
-	stl_vertex    min;
-	stl_vertex    size;
-	float         bounding_diameter;
-	float         shortest_edge;
-	float         volume;
-	int           connected_edges;
-	int           connected_facets_1_edge;
-	int           connected_facets_2_edge;
-	int           connected_facets_3_edge;
-	int           facets_w_1_bad_edge;
-	int           facets_w_2_bad_edge;
-	int           facets_w_3_bad_edge;
-	int           original_num_facets;
-	int           edges_fixed;
-	int           degenerate_facets;
-	int           facets_removed;
-	int           facets_added;
-	int           facets_reversed;
-	int           backwards_edges;
-	int           normals_fixed;
-	int           number_of_parts;
+    stl_stats() { memset(&header, 0, 81); }
+    char          header[81];
+    stl_type      type                      = (stl_type)0;
+    uint32_t      number_of_facets          = 0;
+    stl_vertex    max                       = stl_vertex::Zero();
+    stl_vertex    min                       = stl_vertex::Zero();
+    stl_vertex    size                      = stl_vertex::Zero();
+    float         bounding_diameter         = 0.f;
+    float         shortest_edge             = 0.f;
+    float         volume                    = -1.f;
+    int           connected_edges           = 0;
+    int           connected_facets_1_edge   = 0;
+    int           connected_facets_2_edge   = 0;
+    int           connected_facets_3_edge   = 0;
+    int           facets_w_1_bad_edge       = 0;
+    int           facets_w_2_bad_edge       = 0;
+    int           facets_w_3_bad_edge       = 0;
+    int           original_num_facets       = 0;
+    int           edges_fixed               = 0;
+    int           degenerate_facets         = 0;
+    int           facets_removed            = 0;
+    int           facets_added              = 0;
+    int           facets_reversed           = 0;
+    int           backwards_edges           = 0;
+    int           normals_fixed             = 0;
+    int           number_of_parts           = 0;
+
+    void clear() { *this = stl_stats(); }
 };
 
 struct stl_file {
@@ -124,7 +125,7 @@ struct stl_file {
 	void clear() {
 		this->facet_start.clear();
 		this->neighbors_start.clear();
-		this->stats.reset();
+        this->stats.clear();
 	}
 
 	size_t memsize() const {
@@ -183,10 +184,21 @@ extern void stl_mirror_xz(stl_file *stl);
 
 extern void stl_get_size(stl_file *stl);
 
+// the following function is not used
+/*
 template<typename T>
 extern void stl_transform(stl_file *stl, T *trafo3x4)
 {
-	for (uint32_t i_face = 0; i_face < stl->stats.number_of_facets; ++ i_face) {
+    Eigen::Matrix<T, 3, 3, Eigen::DontAlign> trafo3x3;
+    for (int i = 0; i < 3; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+        {
+            trafo3x3(i, j) = (i * 4) + j;
+        }
+    }
+    Eigen::Matrix<T, 3, 3, Eigen::DontAlign> r = trafo3x3.inverse().transpose();
+    for (uint32_t i_face = 0; i_face < stl->stats.number_of_facets; ++ i_face) {
 		stl_facet &face = stl->facet_start[i_face];
 		for (int i_vertex = 0; i_vertex < 3; ++ i_vertex) {
 			stl_vertex &v_dst = face.vertex[i_vertex];
@@ -195,21 +207,18 @@ extern void stl_transform(stl_file *stl, T *trafo3x4)
 			v_dst(1) = T(trafo3x4[4] * v_src(0) + trafo3x4[5] * v_src(1) + trafo3x4[6]  * v_src(2) + trafo3x4[7]);
 			v_dst(2) = T(trafo3x4[8] * v_src(0) + trafo3x4[9] * v_src(1) + trafo3x4[10] * v_src(2) + trafo3x4[11]);
 		}
-		stl_vertex &v_dst = face.normal;
-		stl_vertex  v_src = v_dst;
-		v_dst(0) = T(trafo3x4[0] * v_src(0) + trafo3x4[1] * v_src(1) + trafo3x4[2]  * v_src(2));
-		v_dst(1) = T(trafo3x4[4] * v_src(0) + trafo3x4[5] * v_src(1) + trafo3x4[6]  * v_src(2));
-		v_dst(2) = T(trafo3x4[8] * v_src(0) + trafo3x4[9] * v_src(1) + trafo3x4[10] * v_src(2));
-	}
+        face.normal = (r * face.normal.template cast<T>()).template cast<float>().eval();
+    }
 
 	stl_get_size(stl);
 }
+*/
 
 template<typename T>
 inline void stl_transform(stl_file *stl, const Eigen::Transform<T, 3, Eigen::Affine, Eigen::DontAlign>& t)
 {
-	const Eigen::Matrix<double, 3, 3, Eigen::DontAlign> r = t.matrix().template block<3, 3>(0, 0);
-	for (size_t i = 0; i < stl->stats.number_of_facets; ++ i) {
+    const Eigen::Matrix<T, 3, 3, Eigen::DontAlign> r = t.matrix().template block<3, 3>(0, 0).inverse().transpose();
+    for (size_t i = 0; i < stl->stats.number_of_facets; ++ i) {
 		stl_facet &f = stl->facet_start[i];
 		for (size_t j = 0; j < 3; ++j)
 			f.vertex[j] = (t * f.vertex[j].template cast<T>()).template cast<float>().eval();
@@ -222,12 +231,13 @@ inline void stl_transform(stl_file *stl, const Eigen::Transform<T, 3, Eigen::Aff
 template<typename T>
 inline void stl_transform(stl_file *stl, const Eigen::Matrix<T, 3, 3, Eigen::DontAlign>& m)
 {
-	for (size_t i = 0; i < stl->stats.number_of_facets; ++ i) {
+    const Eigen::Matrix<T, 3, 3, Eigen::DontAlign> r = m.inverse().transpose();
+    for (size_t i = 0; i < stl->stats.number_of_facets; ++ i) {
 		stl_facet &f = stl->facet_start[i];
 		for (size_t j = 0; j < 3; ++j)
 			f.vertex[j] = (m * f.vertex[j].template cast<T>()).template cast<float>().eval();
-		f.normal = (m * f.normal.template cast<T>()).template cast<float>().eval();
-	}
+        f.normal = (r * f.normal.template cast<T>()).template cast<float>().eval();
+    }
 
 	stl_get_size(stl);
 }
@@ -247,7 +257,7 @@ extern void its_transform(indexed_triangle_set &its, T *trafo3x4)
 template<typename T>
 inline void its_transform(indexed_triangle_set &its, const Eigen::Transform<T, 3, Eigen::Affine, Eigen::DontAlign>& t)
 {
-	const Eigen::Matrix<double, 3, 3, Eigen::DontAlign> r = t.matrix().template block<3, 3>(0, 0);
+	//const Eigen::Matrix<double, 3, 3, Eigen::DontAlign> r = t.matrix().template block<3, 3>(0, 0);
 	for (stl_vertex &v : its.vertices)
 		v = (t * v.template cast<T>()).template cast<float>().eval();
 }

@@ -1,8 +1,8 @@
 #include "Layer.hpp"
 #include "ClipperUtils.hpp"
-#include "Geometry.hpp"
 #include "Print.hpp"
 #include "Fill/Fill.hpp"
+#include "ShortestPath.hpp"
 #include "SVG.hpp"
 
 #include <boost/log/trivial.hpp>
@@ -47,8 +47,8 @@ void Layer::make_slices()
         slices = union_ex(slices_p);
     }
     
-    this->slices.expolygons.clear();
-    this->slices.expolygons.reserve(slices.size());
+    this->lslices.clear();
+    this->lslices.reserve(slices.size());
     
     // prepare ordering points
     Points ordering_points;
@@ -57,24 +57,25 @@ void Layer::make_slices()
         ordering_points.push_back(ex.contour.first_point());
     
     // sort slices
-    std::vector<Points::size_type> order;
-    Slic3r::Geometry::chained_path(ordering_points, order);
+    std::vector<Points::size_type> order = chain_points(ordering_points);
     
     // populate slices vector
     for (size_t i : order)
-        this->slices.expolygons.push_back(std::move(slices[i]));
+        this->lslices.emplace_back(std::move(slices[i]));
 }
 
 // Merge typed slices into untyped slices. This method is used to revert the effects of detect_surfaces_type() called for posPrepareInfill.
 void Layer::merge_slices()
 {
-    if (m_regions.size() == 1) {
+    if (m_regions.size() == 1 && (this->id() > 0 || this->object()->config().elefant_foot_compensation.value == 0)) {
         // Optimization, also more robust. Don't merge classified pieces of layerm->slices,
         // but use the non-split islands of a layer. For a single region print, these shall be equal.
-        m_regions.front()->slices.set(this->slices.expolygons, stInternal);
+        // Don't use this optimization on 1st layer with Elephant foot compensation applied, as this->lslices are uncompensated,
+        // while regions are compensated.
+        m_regions.front()->slices.set(this->lslices, stInternal);
     } else {
         for (LayerRegion *layerm : m_regions)
-            // without safety offset, artifacts are generated (GH #2494)
+            // without safety offset, artifacts are generated (upstream Slic3r GH #2494)
             layerm->slices.set(union_ex(to_polygons(std::move(layerm->slices.surfaces)), true), stInternal);
     }
 }
@@ -89,8 +90,12 @@ ExPolygons Layer::merged(float offset_scaled) const
 		offset_scaled2 = float(- EPSILON);
     }
     Polygons polygons;
-    for (LayerRegion *layerm : m_regions)
-		append(polygons, offset(to_expolygons(layerm->slices.surfaces), offset_scaled));
+	for (LayerRegion *layerm : m_regions) {
+		const PrintRegionConfig &config = layerm->region()->config();
+		// Our users learned to bend Slic3r to produce empty volumes to act as subtracters. Only add the region if it is non-empty.
+		if (config.bottom_solid_layers > 0 || config.top_solid_layers > 0 || config.fill_density > 0. || config.perimeters > 0)
+			append(polygons, offset(to_expolygons(layerm->slices.surfaces), offset_scaled));
+	}
     ExPolygons out = union_ex(polygons);
 	if (offset_scaled2 != 0.f)
 		out = offset_ex(out, offset_scaled2);
@@ -107,83 +112,83 @@ void Layer::make_perimeters()
     // keep track of regions whose perimeters we have already generated
     std::vector<unsigned char> done(m_regions.size(), false);
     
-    for (LayerRegionPtrs::iterator layerm = m_regions.begin(); layerm != m_regions.end(); ++ layerm) {
-        size_t region_id = layerm - m_regions.begin();
-        if (done[region_id])
-            continue;
-        BOOST_LOG_TRIVIAL(trace) << "Generating perimeters for layer " << this->id() << ", region " << region_id;
-        done[region_id] = true;
-        const PrintRegionConfig &config = (*layerm)->region()->config();
-        
-        // find compatible regions
-        LayerRegionPtrs layerms;
-        layerms.push_back(*layerm);
-        for (LayerRegionPtrs::const_iterator it = layerm + 1; it != m_regions.end(); ++it) {
-            LayerRegion* other_layerm = *it;
-            const PrintRegionConfig &other_config = other_layerm->region()->config();
-            
-            if (config.perimeter_extruder   == other_config.perimeter_extruder
-                && config.perimeters        == other_config.perimeters
-                && config.perimeter_speed   == other_config.perimeter_speed
-                && config.external_perimeter_speed == other_config.external_perimeter_speed
-                && config.gap_fill_speed    == other_config.gap_fill_speed
-                && config.overhangs         == other_config.overhangs
-                && config.opt_serialize("perimeter_extrusion_width") == other_config.opt_serialize("perimeter_extrusion_width")
-                && config.thin_walls        == other_config.thin_walls
-                && config.external_perimeters_first == other_config.external_perimeters_first) {
-                layerms.push_back(other_layerm);
-                done[it - m_regions.begin()] = true;
-            }
-        }
-        
-        if (layerms.size() == 1) {  // optimization
-            (*layerm)->fill_surfaces.surfaces.clear();
-            (*layerm)->make_perimeters((*layerm)->slices, &(*layerm)->fill_surfaces);
-            (*layerm)->fill_expolygons = to_expolygons((*layerm)->fill_surfaces.surfaces);
-        } else {
-            SurfaceCollection new_slices;
-            {
-                // group slices (surfaces) according to number of extra perimeters
-                std::map<unsigned short, Surfaces> slices;  // extra_perimeters => [ surface, surface... ]
-                for (LayerRegion *layerm : layerms)
-                    for (Surface &surface : layerm->slices.surfaces)
-                        slices[surface.extra_perimeters].emplace_back(surface);
-                // merge the surfaces assigned to each group
-                for (std::pair<const unsigned short,Surfaces> &surfaces_with_extra_perimeters : slices)
-                    new_slices.append(union_ex(surfaces_with_extra_perimeters.second, true), surfaces_with_extra_perimeters.second.front());
-            }
-            
-            // make perimeters
-            SurfaceCollection fill_surfaces;
-            (*layerm)->make_perimeters(new_slices, &fill_surfaces);
+    for (LayerRegionPtrs::iterator layerm = m_regions.begin(); layerm != m_regions.end(); ++ layerm) 
+    	if ((*layerm)->slices.empty()) {
+ 			(*layerm)->perimeters.clear();
+ 			(*layerm)->fills.clear();
+ 			(*layerm)->thin_fills.clear();
+    	} else {
+	        size_t region_id = layerm - m_regions.begin();
+	        if (done[region_id])
+	            continue;
+	        BOOST_LOG_TRIVIAL(trace) << "Generating perimeters for layer " << this->id() << ", region " << region_id;
+	        done[region_id] = true;
+	        const PrintRegionConfig &config = (*layerm)->region()->config();
+	        
+	        // find compatible regions
+	        LayerRegionPtrs layerms;
+	        layerms.push_back(*layerm);
+	        for (LayerRegionPtrs::const_iterator it = layerm + 1; it != m_regions.end(); ++it)
+	            if (! (*it)->slices.empty()) {
+		            LayerRegion* other_layerm = *it;
+		            const PrintRegionConfig &other_config = other_layerm->region()->config();
+		            if (config.perimeter_extruder   == other_config.perimeter_extruder
+		                && config.perimeters        == other_config.perimeters
+		                && config.perimeter_speed   == other_config.perimeter_speed
+		                && config.external_perimeter_speed == other_config.external_perimeter_speed
+		                && config.gap_fill_speed    == other_config.gap_fill_speed
+		                && config.overhangs         == other_config.overhangs
+		                && config.opt_serialize("perimeter_extrusion_width") == other_config.opt_serialize("perimeter_extrusion_width")
+		                && config.thin_walls        == other_config.thin_walls
+		                && config.external_perimeters_first == other_config.external_perimeters_first
+		                && config.infill_overlap    == other_config.infill_overlap)
+		            {
+			 			other_layerm->perimeters.clear();
+			 			other_layerm->fills.clear();
+			 			other_layerm->thin_fills.clear();
+		                layerms.push_back(other_layerm);
+		                done[it - m_regions.begin()] = true;
+		            }
+		        }
+	        
+	        if (layerms.size() == 1) {  // optimization
+	            (*layerm)->fill_surfaces.surfaces.clear();
+	            (*layerm)->make_perimeters((*layerm)->slices, &(*layerm)->fill_surfaces);
+	            (*layerm)->fill_expolygons = to_expolygons((*layerm)->fill_surfaces.surfaces);
+	        } else {
+	            SurfaceCollection new_slices;
+	            // Use the region with highest infill rate, as the make_perimeters() function below decides on the gap fill based on the infill existence.
+	            LayerRegion *layerm_config = layerms.front();
+	            {
+	                // group slices (surfaces) according to number of extra perimeters
+	                std::map<unsigned short, Surfaces> slices;  // extra_perimeters => [ surface, surface... ]
+	                for (LayerRegion *layerm : layerms) {
+	                    for (Surface &surface : layerm->slices.surfaces)
+	                        slices[surface.extra_perimeters].emplace_back(surface);
+	                    if (layerm->region()->config().fill_density > layerm_config->region()->config().fill_density)
+	                    	layerm_config = layerm;
+	                }
+	                // merge the surfaces assigned to each group
+	                for (std::pair<const unsigned short,Surfaces> &surfaces_with_extra_perimeters : slices)
+	                    new_slices.append(union_ex(surfaces_with_extra_perimeters.second, true), surfaces_with_extra_perimeters.second.front());
+	            }
+	            
+	            // make perimeters
+	            SurfaceCollection fill_surfaces;
+	            layerm_config->make_perimeters(new_slices, &fill_surfaces);
 
-            // assign fill_surfaces to each layer
-            if (!fill_surfaces.surfaces.empty()) { 
-                for (LayerRegionPtrs::iterator l = layerms.begin(); l != layerms.end(); ++l) {
-                    // Separate the fill surfaces.
-                    ExPolygons expp = intersection_ex(to_polygons(fill_surfaces), (*l)->slices);
-                    (*l)->fill_expolygons = expp;
-                    (*l)->fill_surfaces.set(std::move(expp), fill_surfaces.surfaces.front());
-                }
-            }
-        }
-    }
+	            // assign fill_surfaces to each layer
+	            if (!fill_surfaces.surfaces.empty()) { 
+	                for (LayerRegionPtrs::iterator l = layerms.begin(); l != layerms.end(); ++l) {
+	                    // Separate the fill surfaces.
+	                    ExPolygons expp = intersection_ex(to_polygons(fill_surfaces), (*l)->slices);
+	                    (*l)->fill_expolygons = expp;
+	                    (*l)->fill_surfaces.set(std::move(expp), fill_surfaces.surfaces.front());
+	                }
+	            }
+	        }
+	    }
     BOOST_LOG_TRIVIAL(trace) << "Generating perimeters for layer " << this->id() << " - Done";
-}
-
-void Layer::make_fills()
-{
-    #ifdef SLIC3R_DEBUG
-    printf("Making fills for layer " PRINTF_ZU "\n", this->id());
-    #endif
-    for (LayerRegion *layerm : m_regions) {
-        layerm->fills.clear();
-        make_fill(*layerm, layerm->fills);
-#ifndef NDEBUG
-        for (size_t i = 0; i < layerm->fills.entities.size(); ++ i)
-            assert(dynamic_cast<ExtrusionEntityCollection*>(layerm->fills.entities[i]) != NULL);
-#endif
-    }
 }
 
 void Layer::export_region_slices_to_svg(const char *path) const

@@ -63,6 +63,7 @@
 #include <boost/bind.hpp>
 #include <boost/config.hpp>
 #include <boost/config/warning_disable.hpp>
+#include <boost/container/small_vector.hpp>
 #include <boost/date_time/local_time/local_time.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
@@ -105,6 +106,8 @@
 #include <cereal/access.hpp>
 #include <cereal/types/base_class.hpp>
 
+#include <clipper/clipper_z.hpp>
+#include <clipper/clipper.hpp>
 #include "BoundingBox.hpp"
 #include "ClipperUtils.hpp"
 #include "Config.hpp"

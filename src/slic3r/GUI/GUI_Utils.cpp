@@ -21,6 +21,12 @@
 namespace Slic3r {
 namespace GUI {
 
+#ifdef _WIN32
+wxDEFINE_EVENT(EVT_HID_DEVICE_ATTACHED, HIDDeviceAttachedEvent);
+wxDEFINE_EVENT(EVT_HID_DEVICE_DETACHED, HIDDeviceDetachedEvent);
+wxDEFINE_EVENT(EVT_VOLUME_ATTACHED, VolumeAttachedEvent);
+wxDEFINE_EVENT(EVT_VOLUME_DETACHED, VolumeDetachedEvent);
+#endif // _WIN32
 
 wxTopLevelWindow* find_toplevel_parent(wxWindow *window)
 {
@@ -55,7 +61,7 @@ void on_window_geometry(wxTopLevelWindow *tlw, std::function<void()> callback)
 #endif
 }
 
-wxDEFINE_EVENT(EVT_DPI_CHANGED, DpiChangedEvent);
+wxDEFINE_EVENT(EVT_DPI_CHANGED_SLICER, DpiChangedEvent);
 
 #ifdef _WIN32
 template<class F> typename F::FN winapi_get_function(const wchar_t *dll, const char *fn_name) {
@@ -110,6 +116,9 @@ int get_dpi_for_window(wxWindow *window)
     // TODO
     return DPI_DEFAULT;
 #elif defined __APPLE__
+    // TODO
+    return DPI_DEFAULT;
+#else // freebsd and others
     // TODO
     return DPI_DEFAULT;
 #endif

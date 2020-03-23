@@ -173,9 +173,8 @@ namespace Slic3r {
     const std::string GCodeTimeEstimator::Normal_Last_M73_Output_Placeholder_Tag = "; _TE_NORMAL_LAST_M73_OUTPUT_PLACEHOLDER";
     const std::string GCodeTimeEstimator::Silent_Last_M73_Output_Placeholder_Tag = "; _TE_SILENT_LAST_M73_OUTPUT_PLACEHOLDER";
 
-    // temporary human readable form to use until not removed from gcode by the new post-process method
     const std::string GCodeTimeEstimator::Color_Change_Tag = "PRINT_COLOR_CHANGE";
-//    const std::string GCodeTimeEstimator::Color_Change_Tag = "_TE_COLOR_CHANGE";
+    const std::string GCodeTimeEstimator::Pause_Print_Tag  = "PRINT_PAUSE";
 
     GCodeTimeEstimator::GCodeTimeEstimator(EMode mode)
         : m_mode(mode)
@@ -214,8 +213,8 @@ namespace Slic3r {
         }
         _calculate_time();
 
-        if (m_needs_color_times && (m_color_time_cache != 0.0f))
-            m_color_times.push_back(m_color_time_cache);
+        if (m_needs_custom_gcode_times && (m_custom_gcode_time_cache != 0.0f))
+            m_custom_gcode_times.push_back({ cgtColorChange, m_custom_gcode_time_cache });
 
 #if ENABLE_MOVE_STATS
         _log_moves_stats();
@@ -232,8 +231,8 @@ namespace Slic3r {
 
         _calculate_time();
 
-        if (m_needs_color_times && (m_color_time_cache != 0.0f))
-            m_color_times.push_back(m_color_time_cache);
+        if (m_needs_custom_gcode_times && (m_custom_gcode_time_cache != 0.0f))
+            m_custom_gcode_times.push_back({ cgtColorChange, m_custom_gcode_time_cache });
 
 #if ENABLE_MOVE_STATS
         _log_moves_stats();
@@ -247,8 +246,8 @@ namespace Slic3r {
         m_parser.parse_file(file, boost::bind(&GCodeTimeEstimator::_process_gcode_line, this, _1, _2));
         _calculate_time();
 
-        if (m_needs_color_times && (m_color_time_cache != 0.0f))
-            m_color_times.push_back(m_color_time_cache);
+        if (m_needs_custom_gcode_times && (m_custom_gcode_time_cache != 0.0f))
+            m_custom_gcode_times.push_back({ cgtColorChange, m_custom_gcode_time_cache });
 
 #if ENABLE_MOVE_STATS
         _log_moves_stats();
@@ -265,138 +264,149 @@ namespace Slic3r {
             m_parser.parse_line(line, action);
         _calculate_time();
 
-        if (m_needs_color_times && (m_color_time_cache != 0.0f))
-            m_color_times.push_back(m_color_time_cache);
+        if (m_needs_custom_gcode_times && (m_custom_gcode_time_cache != 0.0f))
+            m_custom_gcode_times.push_back({ cgtColorChange, m_custom_gcode_time_cache});
 
 #if ENABLE_MOVE_STATS
         _log_moves_stats();
 #endif // ENABLE_MOVE_STATS
     }
 
-    bool GCodeTimeEstimator::post_process_remaining_times(const std::string& filename, float interval)
+    bool GCodeTimeEstimator::post_process(const std::string& filename, float interval_sec, const PostProcessData* const normal_mode, const PostProcessData* const silent_mode)
     {
         boost::nowide::ifstream in(filename);
         if (!in.good())
-            throw std::runtime_error(std::string("Remaining times export failed.\nCannot open file for reading.\n"));
+            throw std::runtime_error(std::string("Time estimator post process export failed.\nCannot open file for reading.\n"));
 
-        std::string path_tmp = filename + ".times";
+        std::string path_tmp = filename + ".postprocess";
 
         FILE* out = boost::nowide::fopen(path_tmp.c_str(), "wb");
         if (out == nullptr)
-            throw std::runtime_error(std::string("Remaining times export failed.\nCannot open file for writing.\n"));
+            throw std::runtime_error(std::string("Time estimator post process export failed.\nCannot open file for writing.\n"));
 
-        std::string time_mask;
-        switch (m_mode)
-        {
-        default:
-        case Normal:
-        {
-            time_mask = "M73 P%s R%s\n";
-            break;
-        }
-        case Silent:
-        {
-            time_mask = "M73 Q%s S%s\n";
-            break;
-        }
-        }
+        std::string normal_time_mask = "M73 P%s R%s\n";
+        std::string silent_time_mask = "M73 Q%s S%s\n";
+        char line_M73[64];
 
-        unsigned int g1_lines_count = 0;
-        float last_recorded_time = 0.0f;
         std::string gcode_line;
         // buffer line to export only when greater than 64K to reduce writing calls
         std::string export_line;
-        char time_line[64];
-		G1LineIdToBlockIdMap::const_iterator it_line_id = m_g1_line_ids.begin();
-		while (std::getline(in, gcode_line))
-        {
-            if (!in.good())
-            {
-                fclose(out);
-                throw std::runtime_error(std::string("Remaining times export failed.\nError while reading from file.\n"));
-            }
 
-            // replaces placeholders for initial line M73 with the real lines
-            if (((m_mode == Normal) && (gcode_line == Normal_First_M73_Output_Placeholder_Tag)) ||
-                ((m_mode == Silent) && (gcode_line == Silent_First_M73_Output_Placeholder_Tag)))
-            {
-                sprintf(time_line, time_mask.c_str(), "0", _get_time_minutes(m_time).c_str());
-                gcode_line = time_line;
-            }
-            // replaces placeholders for final line M73 with the real lines
-            else if (((m_mode == Normal) && (gcode_line == Normal_Last_M73_Output_Placeholder_Tag)) ||
-                     ((m_mode == Silent) && (gcode_line == Silent_Last_M73_Output_Placeholder_Tag)))
-            {
-                sprintf(time_line, time_mask.c_str(), "100", "0");
-                gcode_line = time_line;
-            }
-            else
-               gcode_line += "\n";
-
-
-            // add remaining time lines where needed
-            m_parser.parse_line(gcode_line,
-                [this, &it_line_id, &g1_lines_count, &last_recorded_time, &time_line, &gcode_line, time_mask, interval](GCodeReader& reader, const GCodeReader::GCodeLine& line)
-            {
-                if (line.cmd_is("G1"))
-                {
-                    ++g1_lines_count;
-
-					assert(it_line_id == m_g1_line_ids.end() || it_line_id->first >= g1_lines_count);
-
-					const Block *block = nullptr;
-					if (it_line_id != m_g1_line_ids.end() && it_line_id->first == g1_lines_count) {
-						if (line.has_e() && it_line_id->second < (unsigned int)m_blocks.size())
-							block = &m_blocks[it_line_id->second];
-						++it_line_id;
-					}
-
-					if (block != nullptr && block->elapsed_time != -1.0f) {
-                        float block_remaining_time = m_time - block->elapsed_time;
-                        if (std::abs(last_recorded_time - block_remaining_time) > interval)
-                        {
-                            sprintf(time_line, time_mask.c_str(), std::to_string((int)(100.0f * block->elapsed_time / m_time)).c_str(), _get_time_minutes(block_remaining_time).c_str());
-                            gcode_line += time_line;
-
-                            last_recorded_time = block_remaining_time;
-                        }
-                    }
-                }
-            });
-
-            export_line += gcode_line;
-            if (export_line.length() > 65535)
-            {
-                fwrite((const void*)export_line.c_str(), 1, export_line.length(), out);
-                if (ferror(out))
-                {
-                    in.close();
-                    fclose(out);
-                    boost::nowide::remove(path_tmp.c_str());
-                    throw std::runtime_error(std::string("Remaining times export failed.\nIs the disk full?\n"));
-                }
-                export_line.clear();
-            }
-        }
-
-        if (export_line.length() > 0)
-        {
+        // helper function to write to disk
+        auto write_string = [&](const std::string& str) {
             fwrite((const void*)export_line.c_str(), 1, export_line.length(), out);
             if (ferror(out))
             {
                 in.close();
                 fclose(out);
                 boost::nowide::remove(path_tmp.c_str());
-                throw std::runtime_error(std::string("Remaining times export failed.\nIs the disk full?\n"));
+                throw std::runtime_error(std::string("Time estimator post process export failed.\nIs the disk full?\n"));
             }
+            export_line.clear();
+        };
+
+        GCodeReader parser;
+        unsigned int g1_lines_count = 0;
+        int normal_g1_line_id = 0;
+        float normal_last_recorded_time = 0.0f;
+        int silent_g1_line_id = 0;
+        float silent_last_recorded_time = 0.0f;
+
+        // helper function to process g1 lines
+        auto process_g1_line = [&](const PostProcessData* const data, const GCodeReader::GCodeLine& line, int& g1_line_id, float& last_recorded_time, const std::string& time_mask) {
+            if (data == nullptr)
+                return;
+
+            assert((g1_line_id >= (int)data->g1_line_ids.size()) || (data->g1_line_ids[g1_line_id].first >= g1_lines_count));
+            const Block* block = nullptr;
+            if (g1_line_id < (int)data->g1_line_ids.size())
+            {
+                const G1LineIdToBlockId& map_item = data->g1_line_ids[g1_line_id];
+                if (map_item.first == g1_lines_count)
+                {
+                    if (line.has_e() && (map_item.second < (unsigned int)data->blocks.size()))
+                        block = &data->blocks[map_item.second];
+                    ++g1_line_id;
+                }
+            }
+
+            if ((block != nullptr) && (block->elapsed_time != -1.0f))
+            {
+                float block_remaining_time = data->time - block->elapsed_time;
+                if (std::abs(last_recorded_time - block_remaining_time) > interval_sec)
+                {
+                    sprintf(line_M73, time_mask.c_str(), std::to_string((int)(100.0f * block->elapsed_time / data->time)).c_str(), _get_time_minutes(block_remaining_time).c_str());
+                    gcode_line += line_M73;
+
+                    last_recorded_time = block_remaining_time;
+                }
+            }
+        };
+
+        while (std::getline(in, gcode_line))
+        {
+            if (!in.good())
+            {
+                fclose(out);
+                throw std::runtime_error(std::string("Time estimator post process export failed.\nError while reading from file.\n"));
+            }
+
+            // check tags
+            // remove Color_Change_Tag and Pause_Print_Tag
+            if (gcode_line == "; " + Color_Change_Tag || gcode_line == "; " + Pause_Print_Tag)
+                continue;
+
+            // replaces placeholders for initial line M73 with the real lines
+            if ((normal_mode != nullptr) && (gcode_line == Normal_First_M73_Output_Placeholder_Tag))
+            {
+                sprintf(line_M73, normal_time_mask.c_str(), "0", _get_time_minutes(normal_mode->time).c_str());
+                gcode_line = line_M73;
+            }
+            else if ((silent_mode != nullptr) && (gcode_line == Silent_First_M73_Output_Placeholder_Tag))
+            {
+                sprintf(line_M73, silent_time_mask.c_str(), "0", _get_time_minutes(silent_mode->time).c_str());
+                gcode_line = line_M73;
+            }
+            // replaces placeholders for final line M73 with the real lines
+            else if ((normal_mode != nullptr) && (gcode_line == Normal_Last_M73_Output_Placeholder_Tag))
+            {
+                sprintf(line_M73, normal_time_mask.c_str(), "100", "0");
+                gcode_line = line_M73;
+            }
+            else if ((silent_mode != nullptr) && (gcode_line == Silent_Last_M73_Output_Placeholder_Tag))
+            {
+                sprintf(line_M73, silent_time_mask.c_str(), "100", "0");
+                gcode_line = line_M73;
+            }
+            else
+                gcode_line += "\n";
+
+            // add remaining time lines where needed
+            parser.parse_line(gcode_line,
+                [&](GCodeReader& reader, const GCodeReader::GCodeLine& line)
+                {
+                    if (line.cmd_is("G1"))
+                    {
+                        ++g1_lines_count;
+                        process_g1_line(silent_mode, line, silent_g1_line_id, silent_last_recorded_time, silent_time_mask);
+                        process_g1_line(normal_mode, line, normal_g1_line_id, normal_last_recorded_time, normal_time_mask);
+                    }
+                });
+
+            export_line += gcode_line;
+            if (export_line.length() > 65535)
+                write_string(export_line);
         }
+
+        if (!export_line.empty())
+            write_string(export_line);
 
         fclose(out);
         in.close();
 
         if (rename_file(path_tmp, filename))
             throw std::runtime_error(std::string("Failed to rename the output G-code file from ") + path_tmp + " to " + filename + '\n' +
-            "Is " + path_tmp + " locked?" + '\n');
+                "Is " + path_tmp + " locked?" + '\n');
 
         return true;
     }
@@ -404,6 +414,11 @@ namespace Slic3r {
     void GCodeTimeEstimator::set_axis_position(EAxis axis, float position)
     {
         m_state.axis[axis].position = position;
+    }
+
+    void GCodeTimeEstimator::set_axis_origin(EAxis axis, float position)
+    {
+        m_state.axis[axis].origin = position;
     }
 
     void GCodeTimeEstimator::set_axis_max_feedrate(EAxis axis, float feedrate_mm_sec)
@@ -424,6 +439,11 @@ namespace Slic3r {
     float GCodeTimeEstimator::get_axis_position(EAxis axis) const
     {
         return m_state.axis[axis].position;
+    }
+
+    float GCodeTimeEstimator::get_axis_origin(EAxis axis) const
+    {
+        return m_state.axis[axis].origin;
     }
 
     float GCodeTimeEstimator::get_axis_max_feedrate(EAxis axis) const
@@ -688,30 +708,36 @@ namespace Slic3r {
         return _get_time_dhms(get_time());
     }
 
+    std::string GCodeTimeEstimator::get_time_dhm() const
+    {
+        return _get_time_dhm(get_time());
+    }
+
     std::string GCodeTimeEstimator::get_time_minutes() const
     {
         return _get_time_minutes(get_time());
     }
 
-    std::vector<float> GCodeTimeEstimator::get_color_times() const
+    std::vector<std::pair<CustomGcodeType, float>> GCodeTimeEstimator::get_custom_gcode_times() const
     {
-        return m_color_times;
+        return m_custom_gcode_times;
     }
 
     std::vector<std::string> GCodeTimeEstimator::get_color_times_dhms(bool include_remaining) const
     {
         std::vector<std::string> ret;
         float total_time = 0.0f;
-        for (float t : m_color_times)
+//        for (float t : m_color_times)
+        for (auto t : m_custom_gcode_times)
         {
-            std::string time = _get_time_dhms(t);
+            std::string time = _get_time_dhms(t.second);
             if (include_remaining)
             {
                 time += " (";
                 time += _get_time_dhms(m_time - total_time);
                 time += ")";
             }
-            total_time += t;
+            total_time += t.second;
             ret.push_back(time);
         }
         return ret;
@@ -721,17 +747,39 @@ namespace Slic3r {
     {
         std::vector<std::string> ret;
         float total_time = 0.0f;
-        for (float t : m_color_times)
+//        for (float t : m_color_times)
+        for (auto t : m_custom_gcode_times)
         {
-            std::string time = _get_time_minutes(t);
+            std::string time = _get_time_minutes(t.second);
             if (include_remaining)
             {
                 time += " (";
                 time += _get_time_minutes(m_time - total_time);
                 time += ")";
             }
-            total_time += t;
+            total_time += t.second;
         }
+        return ret;
+    }
+
+    std::vector<std::pair<CustomGcodeType, std::string>> GCodeTimeEstimator::get_custom_gcode_times_dhm(bool include_remaining) const
+    {
+        std::vector<std::pair<CustomGcodeType, std::string>> ret;
+
+        float total_time = 0.0f;
+        for (auto t : m_custom_gcode_times)
+        {
+            std::string time = _get_time_dhm(t.second);
+            if (include_remaining)
+            {
+                time += " (";
+                time += _get_time_dhm(m_time - total_time);
+                time += ")";
+            }
+            total_time += t.second;
+            ret.push_back({t.first, time});
+        }
+
         return ret;
     }
 
@@ -752,6 +800,10 @@ namespace Slic3r {
         set_axis_position(X, 0.0f);
         set_axis_position(Y, 0.0f);
         set_axis_position(Z, 0.0f);
+        set_axis_origin(X, 0.0f);
+        set_axis_origin(Y, 0.0f);
+        set_axis_origin(Z, 0.0f);
+
         if (get_e_local_positioning_type() == Absolute)
             set_axis_position(E, 0.0f);
 
@@ -763,9 +815,9 @@ namespace Slic3r {
 
         m_last_st_synchronized_block_id = -1;
 
-        m_needs_color_times = false;
-        m_color_times.clear();
-        m_color_time_cache = 0.0f;
+        m_needs_custom_gcode_times = false;
+        m_custom_gcode_times.clear();
+        m_custom_gcode_time_cache = 0.0f;
     }
 
     void GCodeTimeEstimator::_reset_time()
@@ -786,7 +838,7 @@ namespace Slic3r {
         _recalculate_trapezoids();
 
         m_time += get_additional_time();
-        m_color_time_cache += get_additional_time();
+        m_custom_gcode_time_cache += get_additional_time();
 
         for (int i = m_last_st_synchronized_block_id + 1; i < (int)m_blocks.size(); ++i)
         {
@@ -807,7 +859,7 @@ namespace Slic3r {
             it->second.time += block_time;
 #endif // ENABLE_MOVE_STATS
 
-            m_color_time_cache += block_time;
+            m_custom_gcode_time_cache += block_time;
         }
 
         m_last_st_synchronized_block_id = (int)m_blocks.size() - 1;
@@ -948,34 +1000,35 @@ namespace Slic3r {
         }
     }
 
-    // Returns the new absolute position on the given axis in dependence of the given parameters
-    float axis_absolute_position_from_G1_line(GCodeTimeEstimator::EAxis axis, const GCodeReader::GCodeLine& lineG1, GCodeTimeEstimator::EUnits units, bool is_relative, float current_absolute_position)
-    {
-        float lengthsScaleFactor = (units == GCodeTimeEstimator::Inches) ? INCHES_TO_MM : 1.0f;
-        if (lineG1.has(Slic3r::Axis(axis)))
-        {
-            float ret = lineG1.value(Slic3r::Axis(axis)) * lengthsScaleFactor;
-            return is_relative ? current_absolute_position + ret : ret;
-        }
-        else
-            return current_absolute_position;
-    }
-
     void GCodeTimeEstimator::_processG1(const GCodeReader::GCodeLine& line)
     {
+        auto axis_absolute_position = [this](GCodeTimeEstimator::EAxis axis, const GCodeReader::GCodeLine& lineG1) -> float
+        {
+            float current_absolute_position = get_axis_position(axis);
+            float current_origin = get_axis_origin(axis);
+            float lengthsScaleFactor = (get_units() == GCodeTimeEstimator::Inches) ? INCHES_TO_MM : 1.0f;
+
+            bool is_relative = (get_global_positioning_type() == Relative);
+            if (axis == E)
+                is_relative |= (get_e_local_positioning_type() == Relative);
+
+            if (lineG1.has(Slic3r::Axis(axis)))
+            {
+                float ret = lineG1.value(Slic3r::Axis(axis)) * lengthsScaleFactor;
+                return is_relative ? current_absolute_position + ret : ret + current_origin;
+            }
+            else
+                return current_absolute_position;
+        };
+
         PROFILE_FUNC();
         increment_g1_line_id();
 
         // updates axes positions from line
-        EUnits units = get_units();
         float new_pos[Num_Axis];
         for (unsigned char a = X; a < Num_Axis; ++a)
         {
-            bool is_relative = (get_global_positioning_type() == Relative);
-            if (a == E)
-                is_relative |= (get_e_local_positioning_type() == Relative);
-
-            new_pos[a] = axis_absolute_position_from_G1_line((EAxis)a, line, units, is_relative, get_axis_position((EAxis)a));
+            new_pos[a] = axis_absolute_position((EAxis)a, line);
         }
 
         // updates feedrate from line, if present
@@ -1219,24 +1272,26 @@ namespace Slic3r {
 
         if (line.has_x())
         {
-            set_axis_position(X, line.x() * lengthsScaleFactor);
+            set_axis_origin(X, get_axis_position(X) - line.x() * lengthsScaleFactor);
             anyFound = true;
         }
 
         if (line.has_y())
         {
-            set_axis_position(Y, line.y() * lengthsScaleFactor);
+            set_axis_origin(Y, get_axis_position(Y) - line.y() * lengthsScaleFactor);
             anyFound = true;
         }
 
         if (line.has_z())
         {
-            set_axis_position(Z, line.z() * lengthsScaleFactor);
+            set_axis_origin(Z, get_axis_position(Z) - line.z() * lengthsScaleFactor);
             anyFound = true;
         }
 
         if (line.has_e())
         {
+            // extruder coordinate can grow to the point where its float representation does not allow for proper addition with small increments,
+            // we set the value taken from the G92 line as the new current position for it
             set_axis_position(E, line.e() * lengthsScaleFactor);
             anyFound = true;
         }
@@ -1247,7 +1302,7 @@ namespace Slic3r {
         {
             for (unsigned char a = X; a < Num_Axis; ++a)
             {
-                set_axis_position((EAxis)a, 0.0f);
+                set_axis_origin((EAxis)a, get_axis_position((EAxis)a));
             }
         }
     }
@@ -1435,26 +1490,34 @@ namespace Slic3r {
     {
         std::string comment = line.comment();
 
-        // color change tag
+        // Color_Change_Tag
         size_t pos = comment.find(Color_Change_Tag);
         if (pos != comment.npos)
         {
-            _process_color_change_tag();
+            _process_custom_gcode_tag(cgtColorChange);
+            return true;
+        }
+
+        // Pause_Print_Tag
+        pos = comment.find(Pause_Print_Tag);
+        if (pos != comment.npos)
+        {
+            _process_custom_gcode_tag(cgtPausePrint);
             return true;
         }
 
         return false;
     }
 
-    void GCodeTimeEstimator::_process_color_change_tag()
+    void GCodeTimeEstimator::_process_custom_gcode_tag(CustomGcodeType code)
     {
         PROFILE_FUNC();
-        m_needs_color_times = true;
+        m_needs_custom_gcode_times = true;
         _calculate_time();
-        if (m_color_time_cache != 0.0f)
+        if (m_custom_gcode_time_cache != 0.0f)
         {
-            m_color_times.push_back(m_color_time_cache);
-            m_color_time_cache = 0.0f;
+            m_custom_gcode_times.push_back({code, m_custom_gcode_time_cache});
+            m_custom_gcode_time_cache = 0.0f;
         }
     }
 
@@ -1586,6 +1649,29 @@ namespace Slic3r {
             ::sprintf(buffer, "%dm %ds", minutes, (int)time_in_secs);
         else
             ::sprintf(buffer, "%ds", (int)time_in_secs);
+
+        return buffer;
+    }
+
+    std::string GCodeTimeEstimator::_get_time_dhm(float time_in_secs)
+    {
+        char buffer[64];
+
+		int minutes = std::round(time_in_secs / 60.);
+    	if (minutes <= 0) {
+            ::sprintf(buffer, "%ds", (int)time_in_secs);
+    	} else {
+	        int days = minutes / 1440;
+	        minutes -= days * 1440;
+	        int hours = minutes / 60;
+	        minutes -= hours * 60;
+	        if (days > 0)
+	            ::sprintf(buffer, "%dd %dh %dm", days, hours, minutes);
+	        else if (hours > 0)
+	            ::sprintf(buffer, "%dh %dm", hours, minutes);
+	        else
+	            ::sprintf(buffer, "%dm", minutes);
+	    }
 
         return buffer;
     }

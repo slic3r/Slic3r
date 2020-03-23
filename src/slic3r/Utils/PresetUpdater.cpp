@@ -73,13 +73,16 @@ struct Update
 	std::string vendor;
 	std::string changelog_url;
 
+	bool forced_update;
+
 	Update() {}
-	Update(fs::path &&source, fs::path &&target, const Version &version, std::string vendor, std::string changelog_url)
+	Update(fs::path &&source, fs::path &&target, const Version &version, std::string vendor, std::string changelog_url, bool forced = false)
 		: source(std::move(source))
 		, target(std::move(target))
 		, version(version)
 		, vendor(std::move(vendor))
 		, changelog_url(std::move(changelog_url))
+		, forced_update(forced)
 	{}
 
 	void install() const
@@ -154,7 +157,7 @@ struct PresetUpdater::priv
 	bool get_file(const std::string &url, const fs::path &target_path) const;
 	void prune_tmps() const;
 	void sync_version() const;
-	void sync_config(const std::set<VendorProfile> vendors);
+	void sync_config(const VendorMap vendors);
 
 	void check_install_indices() const;
 	Updates get_config_updates(const Semver& old_slic3r_version) const;
@@ -248,6 +251,16 @@ void PresetUpdater::priv::sync_version() const
 		})
 		.on_complete([&](std::string body, unsigned /* http_status */) {
 			boost::trim(body);
+			const auto nl_pos = body.find_first_of("\n\r");
+			if (nl_pos != std::string::npos) {
+				body.resize(nl_pos);
+			}
+
+			if (! Semver::parse(body)) {
+				BOOST_LOG_TRIVIAL(warning) << boost::format("Received invalid contents from `%1%`: Not a correct semver: `%2%`") % SLIC3R_APP_NAME % body;
+				return;
+			}
+
 			BOOST_LOG_TRIVIAL(info) << boost::format("Got %1% online version: `%2%`. Sending to GUI thread...") % SLIC3R_APP_NAME % body;
 
 			wxCommandEvent* evt = new wxCommandEvent(EVT_SLIC3R_VERSION_ONLINE);
@@ -259,7 +272,7 @@ void PresetUpdater::priv::sync_version() const
 
 // Download vendor indices. Also download new bundles if an index indicates there's a new one available.
 // Both are saved in cache.
-void PresetUpdater::priv::sync_config(const std::set<VendorProfile> vendors)
+void PresetUpdater::priv::sync_config(const VendorMap vendors)
 {
 	BOOST_LOG_TRIVIAL(info) << "Syncing configuration cache";
 
@@ -270,13 +283,13 @@ void PresetUpdater::priv::sync_config(const std::set<VendorProfile> vendors)
 	for (auto &index : index_db) {
 		if (cancel) { return; }
 
-		const auto vendor_it = vendors.find(VendorProfile(index.vendor()));
+		const auto vendor_it = vendors.find(index.vendor());
 		if (vendor_it == vendors.end()) {
 			BOOST_LOG_TRIVIAL(warning) << "No such vendor: " << index.vendor();
 			continue;
 		}
 
-		const VendorProfile &vendor = *vendor_it;
+		const VendorProfile &vendor = vendor_it->second;
 		if (vendor.config_update_url.empty()) {
 			BOOST_LOG_TRIVIAL(info) << "Vendor has no config_update_url: " << vendor.name;
 			continue;
@@ -287,6 +300,12 @@ void PresetUpdater::priv::sync_config(const std::set<VendorProfile> vendors)
 		const auto idx_url = vendor.config_update_url + "/" + INDEX_FILENAME;
 		const std::string idx_path = (cache_path / (vendor.id + ".idx")).string();
 		const std::string idx_path_temp = idx_path + "-update";
+		//check if idx_url is leading to our site 
+		if (! boost::starts_with(idx_url, "http://files.prusa3d.com/wp-content/uploads/repository/"))
+		{
+			BOOST_LOG_TRIVIAL(warning) << "unsafe url path for vendor \"" << vendor.name << "\" rejected: " << idx_url;
+			continue;
+		}
 		if (!get_file(idx_url, idx_path_temp)) { continue; }
 		if (cancel) { return; }
 
@@ -375,7 +394,7 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 		auto bundle_path_idx = vendor_path / idx.path().filename();
 
 		if (! fs::exists(bundle_path)) {
-			BOOST_LOG_TRIVIAL(info) << "Confing bundle not installed for vendor %1%, skipping: " << idx.vendor();
+			BOOST_LOG_TRIVIAL(info) << boost::format("Confing bundle not installed for vendor %1%, skipping: ") % idx.vendor();
 			continue;
 		}
 
@@ -404,15 +423,20 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 			// Any published config shall be always found in the latest config index.
 			auto message = (boost::format("Preset bundle `%1%` version not found in index: %2%") % idx.vendor() % vp.config_version.to_string()).str();
 			BOOST_LOG_TRIVIAL(error) << message;
-			GUI::show_error(nullptr, GUI::from_u8(message));
+			GUI::show_error(nullptr, message);
 			continue;
 		}
 
-		if (ver_current_found && !ver_current->is_current_slic3r_supported()) {
-			// "Reconfigure" situation.
-			BOOST_LOG_TRIVIAL(warning) << "Current Slic3r incompatible with installed bundle: " << bundle_path.string();
-			updates.incompats.emplace_back(std::move(bundle_path), *ver_current, vp.name);
-			continue;
+		bool current_not_supported = false; //if slcr is incompatible but situation is not downgrade, we do forced updated and this bool is information to do it 
+
+		if (ver_current_found && !ver_current->is_current_slic3r_supported()){
+			if(ver_current->is_current_slic3r_downgrade()) {
+				// "Reconfigure" situation.
+				BOOST_LOG_TRIVIAL(warning) << "Current Slic3r incompatible with installed bundle: " << bundle_path.string();
+				updates.incompats.emplace_back(std::move(bundle_path), *ver_current, vp.name);
+				continue;
+			}
+		current_not_supported = true;
 		}
 
 		if (recommended->config_version < vp.config_version) {
@@ -452,7 +476,7 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 				if (new_vp.config_version == recommended->config_version) {
 					// The config bundle from the cache directory matches the recommended version of the index from the cache directory.
 					// This is the newest known recommended config. Use it.
-					new_update = Update(std::move(path_in_cache), std::move(bundle_path), *recommended, vp.name, vp.changelog_url);
+					new_update = Update(std::move(path_in_cache), std::move(bundle_path), *recommended, vp.name, vp.changelog_url, current_not_supported);
 					// and install the config index from the cache into vendor's directory.
 					bundle_path_idx_to_install = idx.path();
 					found = true;
@@ -482,7 +506,7 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 				}
 				recommended = rsrc_idx.recommended();
 				if (recommended != rsrc_idx.end() && recommended->config_version == rsrc_vp.config_version && recommended->config_version > vp.config_version) {
-					new_update = Update(std::move(path_in_rsrc), std::move(bundle_path), *recommended, vp.name, vp.changelog_url);
+					new_update = Update(std::move(path_in_rsrc), std::move(bundle_path), *recommended, vp.name, vp.changelog_url, current_not_supported);
 					bundle_path_idx_to_install = path_idx_in_rsrc;
 					found = true;
 				} else {
@@ -503,24 +527,27 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 					// Find a recommended config bundle version for the slic3r version last executed. This makes sure that a config bundle update will not be missed
 					// when upgrading an application. On the other side, the user will be bugged every time he will switch between slic3r versions.
 					const auto existing_recommended = existing_idx.recommended(old_slic3r_version);
-					if (existing_recommended != existing_idx.end() && recommended->config_version == existing_recommended->config_version) {
+					/*if (existing_recommended != existing_idx.end() && recommended->config_version == existing_recommended->config_version) {
 						// The user has already seen (and presumably rejected) this update
 						BOOST_LOG_TRIVIAL(info) << boost::format("Downloaded index for `%1%` is the same as installed one, not offering an update.") % idx.vendor();
 						continue;
-					}
+					}*/
 				} catch (const std::exception &err) {
 					BOOST_LOG_TRIVIAL(error) << boost::format("Cannot load the installed index at `%1%`: %2%") % bundle_path_idx % err.what();
 				}
 			}
 
 			// Check if the update is already present in a snapshot
-			const auto recommended_snap = SnapshotDB::singleton().snapshot_with_vendor_preset(vp.name, recommended->config_version);
-			if (recommended_snap != SnapshotDB::singleton().end()) {
-				BOOST_LOG_TRIVIAL(info) << boost::format("Bundle update %1% %2% already found in snapshot %3%, skipping...")
-					% vp.name
-					% recommended->config_version.to_string()
-					% recommended_snap->id;
-				continue;
+			if(!current_not_supported)
+			{
+				const auto recommended_snap = SnapshotDB::singleton().snapshot_with_vendor_preset(vp.name, recommended->config_version);
+				if (recommended_snap != SnapshotDB::singleton().end()) {
+					BOOST_LOG_TRIVIAL(info) << boost::format("Bundle update %1% %2% already found in snapshot %3%, skipping...")
+						% vp.name
+						% recommended->config_version.to_string()
+						% recommended_snap->id;
+					continue;
+				}
 			}
 
 			updates.updates.emplace_back(std::move(new_update));
@@ -544,14 +571,17 @@ void PresetUpdater::priv::perform_updates(Updates &&updates, bool snapshot) cons
 			BOOST_LOG_TRIVIAL(info) << "Taking a snapshot...";
 			SnapshotDB::singleton().take_snapshot(*GUI::wxGetApp().app_config, Snapshot::SNAPSHOT_DOWNGRADE);
 		}
-
+		
 		BOOST_LOG_TRIVIAL(info) << boost::format("Deleting %1% incompatible bundles") % updates.incompats.size();
 
 		for (auto &incompat : updates.incompats) {
 			BOOST_LOG_TRIVIAL(info) << '\t' << incompat;
 			incompat.remove();
 		}
+
+		
 	} else if (updates.updates.size() > 0) {
+		
 		if (snapshot) {
 			BOOST_LOG_TRIVIAL(info) << "Taking a snapshot...";
 			SnapshotDB::singleton().take_snapshot(*GUI::wxGetApp().app_config, Snapshot::SNAPSHOT_UPGRADE);
@@ -625,7 +655,7 @@ void PresetUpdater::sync(PresetBundle *preset_bundle)
 	// Copy the whole vendors data for use in the background thread
 	// Unfortunatelly as of C++11, it needs to be copied again
 	// into the closure (but perhaps the compiler can elide this).
-	std::set<VendorProfile> vendors = preset_bundle->vendors;
+	VendorMap vendors = preset_bundle->vendors;
 
 	p->thread = std::move(std::thread([this, vendors]() {
 		this->p->prune_tmps();
@@ -672,14 +702,15 @@ PresetUpdater::UpdateResult PresetUpdater::config_update(const Semver &old_slic3
 			const auto max_slic3r = incompat.version.max_slic3r_version;
 			wxString restrictions;
 			if (min_slic3r != Semver::zero() && max_slic3r != Semver::inf()) {
-				restrictions = wxString::Format(_(L("requires min. %s and max. %s")),
-					min_slic3r.to_string(),
-					max_slic3r.to_string()
+                restrictions = GUI::from_u8((boost::format(_utf8(L("requires min. %s and max. %s")))
+                    % min_slic3r.to_string()
+                    % max_slic3r.to_string()).str()
 				);
 			} else if (min_slic3r != Semver::zero()) {
-				restrictions = wxString::Format(_(L("requires min. %s")), min_slic3r.to_string());
+                restrictions = GUI::from_u8((boost::format(_utf8(L("requires min. %s"))) % min_slic3r.to_string()).str());
+				BOOST_LOG_TRIVIAL(debug) << "Bundle is not downgrade, user will now have to do whole wizard. This should not happen.";
 			} else {
-				restrictions = wxString::Format(_(L("requires max. %s")), max_slic3r.to_string());
+                restrictions = GUI::from_u8((boost::format(_utf8(L("requires max. %s"))) % max_slic3r.to_string()).str());
 			}
 
 			incompats_map.emplace(std::make_pair(incompat.vendor, std::move(restrictions)));
@@ -694,19 +725,59 @@ PresetUpdater::UpdateResult PresetUpdater::config_update(const Semver &old_slic3
 			// (snapshot is taken beforehand)
 			p->perform_updates(std::move(updates));
 
-			GUI::ConfigWizard wizard(nullptr, GUI::ConfigWizard::RR_DATA_INCOMPAT);
-
-			if (! wizard.run(GUI::wxGetApp().preset_bundle, this)) {
+			if (!GUI::wxGetApp().run_wizard(GUI::ConfigWizard::RR_DATA_INCOMPAT)) {
 				return R_INCOMPAT_EXIT;
 			}
 
-			GUI::wxGetApp().load_current_presets();
 			return R_INCOMPAT_CONFIGURED;
-		} else {
+		}
+		else {
 			BOOST_LOG_TRIVIAL(info) << "User wants to exit Slic3r, bye...";
 			return R_INCOMPAT_EXIT;
 		}
+
 	} else if (updates.updates.size() > 0) {
+
+		bool incompatible_version = false;
+		for (const auto& update : updates.updates) {
+			incompatible_version = (update.forced_update ? true : incompatible_version);
+			//td::cout << update.forced_update << std::endl;
+			//BOOST_LOG_TRIVIAL(info) << boost::format("Update requires higher version.");
+		}
+
+		//forced update
+		if(incompatible_version)
+		{
+			BOOST_LOG_TRIVIAL(info) << boost::format("Update of %1% bundles available. At least one requires higher version of Slicer.") % updates.updates.size();
+
+			std::vector<GUI::MsgUpdateForced::Update> updates_msg;
+			for (const auto& update : updates.updates) {
+				std::string changelog_url = update.version.config_version.prerelease() == nullptr ? update.changelog_url : std::string();
+				updates_msg.emplace_back(update.vendor, update.version.config_version, update.version.comment, std::move(changelog_url));
+			}
+
+			GUI::MsgUpdateForced dlg(updates_msg);
+
+			const auto res = dlg.ShowModal();
+			if (res == wxID_OK) {
+				BOOST_LOG_TRIVIAL(info) << "User wants to update...";
+
+				p->perform_updates(std::move(updates));
+
+				// Reload global configuration
+				auto* app_config = GUI::wxGetApp().app_config;
+				GUI::wxGetApp().preset_bundle->load_presets(*app_config);
+				GUI::wxGetApp().load_current_presets();
+				GUI::wxGetApp().plater()->set_bed_shape();
+				return R_UPDATE_INSTALLED;
+			}
+			else {
+				BOOST_LOG_TRIVIAL(info) << "User wants to exit Slic3r, bye...";
+				return R_INCOMPAT_EXIT;
+			}
+		}
+
+		// regular update
 		BOOST_LOG_TRIVIAL(info) << boost::format("Update of %1% bundles available. Asking for confirmation ...") % updates.updates.size();
 
 		std::vector<GUI::MsgUpdateConfig::Update> updates_msg;
@@ -745,8 +816,8 @@ void PresetUpdater::install_bundles_rsrc(std::vector<std::string> bundles, bool 
 	BOOST_LOG_TRIVIAL(info) << boost::format("Installing %1% bundles from resources ...") % bundles.size();
 
 	for (const auto &bundle : bundles) {
-		auto path_in_rsrc = p->rsrc_path / bundle;
-		auto path_in_vendors = p->vendor_path / bundle;
+		auto path_in_rsrc = (p->rsrc_path / bundle).replace_extension(".ini");
+		auto path_in_vendors = (p->vendor_path / bundle).replace_extension(".ini");
 		updates.updates.emplace_back(std::move(path_in_rsrc), std::move(path_in_vendors), Version(), "", "");
 	}
 

@@ -12,6 +12,7 @@
 
 #include "boost/nowide/iostream.hpp"
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem.hpp>
 
 #include <algorithm>
 
@@ -212,7 +213,18 @@ wxPanel* BedShapePanel::init_texture_panel()
                 wxStaticText* lbl = dynamic_cast<wxStaticText*>(e.GetEventObject());
                 if (lbl != nullptr)
                 {
-                    wxString tooltip_text = (m_custom_texture == NONE) ? "" : _(m_custom_texture);
+                    bool exists = (m_custom_texture == NONE) || boost::filesystem::exists(m_custom_texture);
+                    lbl->SetForegroundColour(exists ? wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT) : wxColor(*wxRED));
+
+                    wxString tooltip_text = "";
+                    if (m_custom_texture != NONE)
+                    {
+                        if (!exists)
+                            tooltip_text += _(L("Not found:")) + " ";
+
+                        tooltip_text += _(m_custom_texture);
+                    }
+
                     wxToolTip* tooltip = lbl->GetToolTip();
                     if ((tooltip == nullptr) || (tooltip->GetTip() != tooltip_text))
                         lbl->SetToolTip(tooltip_text);
@@ -280,7 +292,18 @@ wxPanel* BedShapePanel::init_model_panel()
                 wxStaticText* lbl = dynamic_cast<wxStaticText*>(e.GetEventObject());
                 if (lbl != nullptr)
                 {
-                    wxString tooltip_text = (m_custom_model == NONE) ? "" : _(m_custom_model);
+                    bool exists = (m_custom_model == NONE) || boost::filesystem::exists(m_custom_model);
+                    lbl->SetForegroundColour(exists ? wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT) : wxColor(*wxRED));
+
+                    wxString tooltip_text = "";
+                    if (m_custom_model != NONE)
+                    {
+                        if (!exists)
+                            tooltip_text += _(L("Not found:")) + " ";
+
+                        tooltip_text += _(m_custom_model);
+                    }
+
                     wxToolTip* tooltip = lbl->GetToolTip();
                     if ((tooltip == nullptr) || (tooltip->GetTip() != tooltip_text))
                         lbl->SetToolTip(tooltip_text);
@@ -446,7 +469,7 @@ void BedShapePanel::update_shape()
 		auto twopi = 2 * PI;
         auto edges = 72;
         std::vector<Vec2d> points;
-        for (size_t i = 1; i <= edges; ++i) {
+        for (int i = 1; i <= edges; ++i) {
             auto angle = i * twopi / edges;
 			points.push_back(Vec2d(r*cos(angle), r*sin(angle)));
 		}
@@ -455,7 +478,7 @@ void BedShapePanel::update_shape()
     else if (page_idx == SHAPE_CUSTOM) 
         m_shape = m_loaded_shape;
 
-	update_preview();
+    update_preview();
 }
 
 // Loads an stl file, projects it to the XY plane and calculates a polygon.

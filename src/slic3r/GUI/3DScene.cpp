@@ -10,7 +10,7 @@
 #include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/Slicing.hpp"
 #include "libslic3r/GCode/Analyzer.hpp"
-#include "slic3r/GUI/PresetBundle.hpp"
+#include "slic3r/GUI/BitmapCache.hpp"
 #include "libslic3r/Format/STL.hpp"
 #include "libslic3r/Utils.hpp"
 
@@ -417,7 +417,7 @@ void GLVolume::render(int color_id, int detection_id, int worldmatrix_id) const
 }
 
 bool GLVolume::is_sla_support() const { return this->composite_id.volume_id == -int(slaposSupportTree); }
-bool GLVolume::is_sla_pad() const { return this->composite_id.volume_id == -int(slaposBasePool); }
+bool GLVolume::is_sla_pad() const { return this->composite_id.volume_id == -int(slaposPad); }
 
 std::vector<int> GLVolumeCollection::load_object(
     const ModelObject       *model_object,
@@ -501,7 +501,7 @@ void GLVolumeCollection::load_object_auxiliary(
     TriangleMesh convex_hull = mesh.convex_hull_3d();
     for (const std::pair<size_t, size_t>& instance_idx : instances) {
         const ModelInstance& model_instance = *print_object->model_object()->instances[instance_idx.first];
-        this->volumes.emplace_back(new GLVolume((milestone == slaposBasePool) ? GLVolume::SLA_PAD_COLOR : GLVolume::SLA_SUPPORT_COLOR));
+        this->volumes.emplace_back(new GLVolume((milestone == slaposPad) ? GLVolume::SLA_PAD_COLOR : GLVolume::SLA_SUPPORT_COLOR));
         GLVolume& v = *this->volumes.back();
         v.indexed_vertex_array.load_mesh(mesh);
 	    v.indexed_vertex_array.finalize_geometry(opengl_initialized);
@@ -707,23 +707,23 @@ bool GLVolumeCollection::check_outside_state(const DynamicPrintConfig* config, M
     print_volume.min(2) = -1e10;
 
     ModelInstance::EPrintVolumeState state = ModelInstance::PVS_Inside;
-    bool all_contained = true;
 
     bool contained_min_one = false;
 
     for (GLVolume* volume : this->volumes)
     {
-        if ((volume == nullptr) || !volume->printable || volume->is_modifier || (volume->is_wipe_tower && !volume->shader_outside_printer_detection_enabled) || ((volume->composite_id.volume_id < 0) && !volume->shader_outside_printer_detection_enabled))
+        if ((volume == nullptr) || volume->is_modifier || (volume->is_wipe_tower && !volume->shader_outside_printer_detection_enabled) || ((volume->composite_id.volume_id < 0) && !volume->shader_outside_printer_detection_enabled))
             continue;
 
         const BoundingBoxf3& bb = volume->transformed_convex_hull_bounding_box();
         bool contained = print_volume.contains(bb);
-        all_contained &= contained;
+
+        volume->is_outside = !contained;
+        if (!volume->printable)
+            continue;
 
         if (contained)
             contained_min_one = true;
-
-        volume->is_outside = !contained;
 
         if ((state == ModelInstance::PVS_Inside) && volume->is_outside)
             state = ModelInstance::PVS_Fully_Outside;
@@ -735,7 +735,7 @@ bool GLVolumeCollection::check_outside_state(const DynamicPrintConfig* config, M
     if (out_state != nullptr)
         *out_state = state;
 
-    return /*all_contained*/ contained_min_one; // #ys_FIXME_delete_after_testing
+    return contained_min_one;
 }
 
 void GLVolumeCollection::reset_outside_state()
@@ -792,14 +792,14 @@ void GLVolumeCollection::update_colors_by_extruder(const DynamicPrintConfig* con
     for (unsigned int i = 0; i < colors_count; ++i)
     {
         const std::string& txt_color = config->opt_string("extruder_colour", i);
-        if (PresetBundle::parse_color(txt_color, rgb))
+        if (Slic3r::GUI::BitmapCache::parse_color(txt_color, rgb))
         {
             colors[i].set(txt_color, rgb);
         }
         else
         {
             const std::string& txt_color = config->opt_string("filament_colour", i);
-            if (PresetBundle::parse_color(txt_color, rgb))
+            if (Slic3r::GUI::BitmapCache::parse_color(txt_color, rgb))
                 colors[i].set(txt_color, rgb);
         }
     }
@@ -877,13 +877,10 @@ bool can_export_to_obj(const GLVolume& volume)
     if (!volume.is_active || !volume.is_extrusion_path)
         return false;
 
-    if (volume.indexed_vertex_array.triangle_indices.empty() && (std::min(volume.indexed_vertex_array.triangle_indices_size, volume.tverts_range.second - volume.tverts_range.first) == 0))
-        return false;
+    bool has_triangles = !volume.indexed_vertex_array.triangle_indices.empty() || (std::min(volume.indexed_vertex_array.triangle_indices_size, volume.tverts_range.second - volume.tverts_range.first) > 0);
+    bool has_quads = !volume.indexed_vertex_array.quad_indices.empty() || (std::min(volume.indexed_vertex_array.quad_indices_size, volume.qverts_range.second - volume.qverts_range.first) > 0);
 
-    if (volume.indexed_vertex_array.quad_indices.empty() && (std::min(volume.indexed_vertex_array.quad_indices_size, volume.qverts_range.second - volume.qverts_range.first) == 0))
-        return false;
-
-    return true;
+    return has_triangles || has_quads;
 }
 
 bool GLVolumeCollection::has_toolpaths_to_export() const
@@ -1142,7 +1139,7 @@ void GLVolumeCollection::export_toolpaths_to_obj(const char* filename) const
         Color color;
         ::memcpy((void*)color.data(), (const void*)volume->color, 4 * sizeof(float));
         fprintf(fp, "\n# material volume %d\n", volumes_count);
-        fprintf(fp, "usemtl material_%lld\n", 1 + std::distance(colors.begin(), colors.find(color)));
+        fprintf(fp, "usemtl material_%lld\n", (long long)(1 + std::distance(colors.begin(), colors.find(color))));
 
         int base_vertex_id = vertices_count + 1;
         int base_normal_id = normals_count + 1;
@@ -1242,8 +1239,8 @@ static void thick_lines_to_indexed_vertex_array(
         // calculate new XY normals
         Vec2d xy_right_normal = unscale(line.normal()).normalized();
 
-        int idx_a[4];
-        int idx_b[4];
+        int idx_a[4] = { 0, 0, 0, 0 }; // initialized to avoid warnings
+        int idx_b[4] = { 0, 0, 0, 0 }; // initialized to avoid warnings
         int idx_last = int(volume.vertices_and_normals_interleaved.size() / 6);
 
         bool bottom_z_different = bottom_z_prev != bottom_z;
@@ -1717,13 +1714,18 @@ static void thick_point_to_verts(const Vec3crd& point,
     point_to_indexed_vertex_array(point, width, height, volume.indexed_vertex_array);
 }
 
+void _3DScene::extrusionentity_to_verts(const Polyline &polyline, float width, float height, float print_z, GLVolume& volume)
+{
+	if (polyline.size() >= 2) {
+		size_t num_segments = polyline.size() - 1;
+		thick_lines_to_verts(polyline.lines(), std::vector<double>(num_segments, width), std::vector<double>(num_segments, height), false, print_z, volume);
+	}
+}
+
 // Fill in the qverts and tverts with quads and triangles for the extrusion_path.
 void _3DScene::extrusionentity_to_verts(const ExtrusionPath &extrusion_path, float print_z, GLVolume &volume)
 {
-    Lines               lines = extrusion_path.polyline.lines();
-    std::vector<double> widths(lines.size(), extrusion_path.width);
-    std::vector<double> heights(lines.size(), extrusion_path.height);
-    thick_lines_to_verts(lines, widths, heights, false, print_z, volume);
+	extrusionentity_to_verts(extrusion_path.polyline, extrusion_path.width, extrusion_path.height, print_z, volume);
 }
 
 // Fill in the qverts and tverts with quads and triangles for the extrusion_path.

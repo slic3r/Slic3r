@@ -92,9 +92,9 @@ public:
     Point(coord_t x, coord_t y) : Vec2crd(x, y) {}
     Point(int64_t x, int64_t y) : Vec2crd(coord_t(x), coord_t(y)) {} // for Clipper
     Point(double x, double y) : Vec2crd(coord_t(lrint(x)), coord_t(lrint(y))) {}
-    Point(const Point& rhs) { *this = rhs; }
-    explicit Point(const Vec2d& rhs) : Vec2crd(coord_t(lrint(rhs.x())), coord_t(lrint(rhs.y()))) {}
-    // This constructor allows you to construct Point from Eigen expressions
+    Point(const Point &rhs) { *this = rhs; }
+	explicit Point(const Vec2d& rhs) : Vec2crd(coord_t(lrint(rhs.x())), coord_t(lrint(rhs.y()))) {}
+	// This constructor allows you to construct Point from Eigen expressions
     template<typename OtherDerived>
     Point(const Eigen::MatrixBase<OtherDerived> &other) : Vec2crd(other) {}
     static Point new_scale(coordf_t x, coordf_t y) { return Point(coord_t(scale_(x)), coord_t(scale_(y))); }
@@ -127,6 +127,36 @@ public:
     Point  projection_onto(const MultiPoint &poly) const;
     Point  projection_onto(const Line &line) const;
 };
+
+inline bool is_approx(const Point &p1, const Point &p2, coord_t epsilon = coord_t(SCALED_EPSILON))
+{
+	Point d = (p2 - p1).cwiseAbs();
+	return d.x() < epsilon && d.y() < epsilon;
+}
+
+inline bool is_approx(const Vec2f &p1, const Vec2f &p2, float epsilon = float(EPSILON))
+{
+	Vec2f d = (p2 - p1).cwiseAbs();
+	return d.x() < epsilon && d.y() < epsilon;
+}
+
+inline bool is_approx(const Vec2d &p1, const Vec2d &p2, double epsilon = EPSILON)
+{
+	Vec2d d = (p2 - p1).cwiseAbs();
+	return d.x() < epsilon && d.y() < epsilon;
+}
+
+inline bool is_approx(const Vec3f &p1, const Vec3f &p2, float epsilon = float(EPSILON))
+{
+	Vec3f d = (p2 - p1).cwiseAbs();
+	return d.x() < epsilon && d.y() < epsilon && d.z() < epsilon;
+}
+
+inline bool is_approx(const Vec3d &p1, const Vec3d &p2, double epsilon = EPSILON)
+{
+	Vec3d d = (p2 - p1).cwiseAbs();
+	return d.x() < epsilon && d.y() < epsilon && d.z() < epsilon;
+}
 
 namespace int128 {
     // Exact orientation predicate,

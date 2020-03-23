@@ -1,5 +1,5 @@
+cmake_minimum_required(VERSION 3.8)
 project(PrusaSlicer)
-cmake_minimum_required(VERSION 3.2)
 
 include("version.inc")
 include(GNUInstallDirs)
@@ -37,7 +37,7 @@ set(SLIC3R_GTK "2" CACHE STRING "GTK version to use with wxWidgets on Linux")
 
 # Proposal for C++ unit tests and sandboxes
 option(SLIC3R_BUILD_SANDBOXES   "Build development sandboxes" OFF)
-option(SLIC3R_BUILD_TESTS       "Build unit tests" OFF)
+option(SLIC3R_BUILD_TESTS       "Build unit tests" ON)
 
 # Print out the SLIC3R_* cache options
 get_cmake_property(_cache_vars CACHE_VARIABLES)
@@ -72,6 +72,9 @@ if (MSVC)
     # error C3859: virtual memory range for PCH exceeded; please recompile with a command line option of '-Zm90' or greater
     # Generate symbols at every build target, even for the release.
     add_compile_options(-bigobj -Zm520 /Zi)
+    # Disable STL4007: Many result_type typedefs and all argument_type, first_argument_type, and second_argument_type typedefs are deprecated in C++17.
+    #FIXME Remove this line after eigen library adapts to the new C++17 adaptor rules.
+    add_compile_options(-D_SILENCE_CXX17_ADAPTOR_TYPEDEFS_DEPRECATION_WARNING)
 endif ()
 
 if (MINGW)
@@ -101,8 +104,8 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules/)
 
 enable_testing ()
 
-# Enable C++11 language standard.
-set(CMAKE_CXX_STANDARD 11)
+# Enable C++17 language standard.
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(NOT WIN32)
@@ -173,10 +176,11 @@ if (NOT MSVC AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMP
     # On GCC and Clang, no return from a non-void function is a warning only. Here, we make it an error.
     add_compile_options(-Werror=return-type)
 
-    #removes LOTS of extraneous Eigen warnings (GCC only supports it since 6.1)
-    #if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 6.1)
-        # add_compile_options(-Wno-ignored-attributes) # Tamas: Eigen include dirs are marked as SYSTEM
-    #endif()
+    # removes LOTS of extraneous Eigen warnings (GCC only supports it since 6.1)
+    # https://eigen.tuxfamily.org/bz/show_bug.cgi?id=1221
+    if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 6.0)
+        add_compile_options(-Wno-ignored-attributes) # Tamas: Eigen include dirs are marked as SYSTEM
+    endif()
 
     #GCC generates loads of -Wunknown-pragmas when compiling igl. The fix is not easy due to a bug in gcc, see
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66943 or
@@ -190,6 +194,7 @@ if (NOT MSVC AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMP
         add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address")
+        set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fsanitize=address")
 
         if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
             set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lasan")
@@ -221,6 +226,9 @@ if(WIN32)
 endif(WIN32)
 
 add_definitions(-DwxUSE_UNICODE -D_UNICODE -DUNICODE -DWXINTL_NO_GETTEXT_MACRO)
+
+# Disable unsafe implicit wxString to const char* / std::string and vice versa. This implicit conversion breaks the UTF-8 encoding quite often.
+add_definitions(-DwxNO_UNSAFE_WXSTRING_CONV)
 
 if (SLIC3R_PROFILE)
     message("PrusaSlicer will be built with a Shiny invasive profiler")
@@ -254,7 +262,8 @@ if(NOT WIN32)
     # boost::process was introduced first in version 1.64.0
     set(MINIMUM_BOOST_VERSION "1.64.0")
 endif()
-find_package(Boost ${MINIMUM_BOOST_VERSION} REQUIRED COMPONENTS system filesystem thread log locale regex)
+set(_boost_components "system;filesystem;thread;log;locale;regex;chrono;atomic;date_time")
+find_package(Boost ${MINIMUM_BOOST_VERSION} REQUIRED COMPONENTS ${_boost_components})
 
 add_library(boost_libs INTERFACE)
 add_library(boost_headeronly INTERFACE)
@@ -268,22 +277,40 @@ if(NOT SLIC3R_STATIC)
     target_compile_definitions(boost_headeronly INTERFACE BOOST_LOG_DYN_LINK)
 endif()
 
+function(slic3r_remap_configs targets from_Cfg to_Cfg)
+    if(MSVC)
+        string(TOUPPER ${from_Cfg} from_CFG)
+    
+        foreach(tgt ${targets})
+            if(TARGET ${tgt})
+                set_target_properties(${tgt} PROPERTIES MAP_IMPORTED_CONFIG_${from_CFG} ${to_Cfg})
+            endif()
+        endforeach()
+    endif()
+endfunction()
+
 if(TARGET Boost::system)
     message(STATUS "Boost::boost exists")
     target_link_libraries(boost_headeronly INTERFACE Boost::boost)
+
+    # Only from cmake 3.12
+    # list(TRANSFORM _boost_components PREPEND Boost:: OUTPUT_VARIABLE _boost_targets)
+    set(_boost_targets "")
+    foreach(comp ${_boost_components})
+        list(APPEND _boost_targets "Boost::${comp}")
+    endforeach()
+
     target_link_libraries(boost_libs INTERFACE
         boost_headeronly # includes the custom compile definitions as well
-        Boost::system
-        Boost::filesystem
-        Boost::thread
-        Boost::log
-        Boost::locale
-        Boost::regex
+        ${_boost_targets}
         )
+    slic3r_remap_configs("${_boost_targets}" RelWithDebInfo Release)
 else()
     target_include_directories(boost_headeronly INTERFACE ${Boost_INCLUDE_DIRS})
     target_link_libraries(boost_libs INTERFACE boost_headeronly ${Boost_LIBRARIES})
 endif()
+
+
 
 # Find and configure intel-tbb
 if(SLIC3R_STATIC)
@@ -291,23 +318,31 @@ if(SLIC3R_STATIC)
 endif()
 set(TBB_DEBUG 1)
 find_package(TBB REQUIRED)
-include_directories(${TBB_INCLUDE_DIRS})
-add_definitions(${TBB_DEFINITIONS})
-if(MSVC)
-    # Suppress implicit linking of the TBB libraries by the Visual Studio compiler.
-    add_definitions(-D__TBB_NO_IMPLICIT_LINKAGE)
-endif()
+# include_directories(${TBB_INCLUDE_DIRS})
+# add_definitions(${TBB_DEFINITIONS})
+# if(MSVC)
+#     # Suppress implicit linking of the TBB libraries by the Visual Studio compiler.
+#     add_definitions(-D__TBB_NO_IMPLICIT_LINKAGE)
+# endif()
 # The Intel TBB library will use the std::exception_ptr feature of C++11.
-add_definitions(-DTBB_USE_CAPTURED_EXCEPTION=0)
+# add_definitions(-DTBB_USE_CAPTURED_EXCEPTION=0)
 
 find_package(CURL REQUIRED)
-include_directories(${CURL_INCLUDE_DIRS})
+
+add_library(libcurl INTERFACE)
+target_link_libraries(libcurl INTERFACE CURL::libcurl)
+
+if (NOT WIN32)
+    # Required by libcurl
+    find_package(ZLIB REQUIRED)
+    target_link_libraries(libcurl INTERFACE ZLIB::ZLIB)
+endif()
 
 if (SLIC3R_STATIC)
     if (NOT APPLE)
         # libcurl is always linked dynamically to the system libcurl on OSX.
         # On other systems, libcurl is linked statically if SLIC3R_STATIC is set.
-        add_definitions(-DCURL_STATICLIB)
+        target_compile_definitions(libcurl INTERFACE CURL_STATICLIB)
     endif()
     if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         # As of now, our build system produces a statically linked libcurl,
@@ -315,7 +350,8 @@ if (SLIC3R_STATIC)
         find_package(OpenSSL REQUIRED)
         message("OpenSSL include dir: ${OPENSSL_INCLUDE_DIR}")
         message("OpenSSL libraries: ${OPENSSL_LIBRARIES}")
-        include_directories(${OPENSSL_INCLUDE_DIR})
+        target_include_directories(libcurl INTERFACE ${OPENSSL_INCLUDE_DIR})
+        target_link_libraries(libcurl INTERFACE ${OPENSSL_LIBRARIES})
     endif()
 endif()
 
@@ -348,32 +384,97 @@ if (NOT EXPAT_FOUND)
 endif ()
 include_directories(${EXPAT_INCLUDE_DIRS})
 
+find_package(OpenGL REQUIRED)
+
 # Find glew or use bundled version
-if (NOT SLIC3R_STATIC)
-    find_package(GLEW)
-endif ()
+if (SLIC3R_STATIC)
+    set(GLEW_USE_STATIC_LIBS ON)
+    set(GLEW_VERBOSE ON)
+endif()
+
+find_package(GLEW)
 if (NOT GLEW_FOUND)
+    message(STATUS "GLEW not found, using bundled version.")
     add_library(glew STATIC ${LIBDIR}/glew/src/glew.c)
-    set(GLEW_FOUND 1)
+    set(GLEW_FOUND TRUE)
     set(GLEW_INCLUDE_DIRS ${LIBDIR}/glew/include/)
-    set(GLEW_LIBRARIES glew)
-    add_definitions(-DGLEW_STATIC)
+    target_compile_definitions(glew PUBLIC GLEW_STATIC)
+    target_include_directories(glew PUBLIC ${GLEW_INCLUDE_DIRS})
+    add_library(GLEW::GLEW ALIAS glew)
 endif ()
-include_directories(${GLEW_INCLUDE_DIRS})
 
 # Find the Cereal serialization library
-add_library(cereal INTERFACE)
-target_include_directories(cereal INTERFACE include)
+find_package(cereal REQUIRED)
 
 # l10n
 set(L10N_DIR "${SLIC3R_RESOURCES_DIR}/localization")
-add_custom_target(pot
-    COMMAND xgettext --keyword=L --keyword=L_CONTEXT:1,2c --keyword=_L_PLURAL:1,2 --add-comments=TRN --from-code=UTF-8 --debug
+add_custom_target(gettext_make_pot
+    COMMAND xgettext --keyword=L --keyword=_L --keyword=_u8L --keyword=L_CONTEXT:1,2c --keyword=_L_PLURAL:1,2 --add-comments=TRN --from-code=UTF-8 --debug
         -f "${L10N_DIR}/list.txt"
         -o "${L10N_DIR}/PrusaSlicer.pot"
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     COMMENT "Generate pot file from strings in the source tree"
 )
+add_custom_target(gettext_po_to_mo
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    COMMENT "Generate localization po files (binary) from mo files (texts)"
+)
+file(GLOB L10N_PO_FILES "${L10N_DIR}/*/PrusaSlicer*.po")
+foreach(po_file ${L10N_PO_FILES})
+    GET_FILENAME_COMPONENT(po_dir "${po_file}" DIRECTORY)
+    SET(mo_file "${po_dir}/PrusaSlicer.mo")
+    add_custom_command(
+        TARGET gettext_po_to_mo PRE_BUILD
+        COMMAND msgfmt ARGS -o ${mo_file} ${po_file}
+        DEPENDS ${po_file}
+    )
+endforeach()
+
+find_package(NLopt 1.4 REQUIRED)
+
+if(SLIC3R_STATIC)
+    set(OPENVDB_USE_STATIC_LIBS ON)
+    set(USE_BLOSC TRUE)
+endif()
+
+find_package(OpenVDB 5.0 REQUIRED COMPONENTS openvdb)
+if(OpenVDB_FOUND)
+    slic3r_remap_configs(IlmBase::Half RelWithDebInfo Release)
+    slic3r_remap_configs(Blosc::blosc RelWithDebInfo Release)
+endif()
+
+set(TOP_LEVEL_PROJECT_DIR ${PROJECT_SOURCE_DIR})
+function(prusaslicer_copy_dlls target)
+    if ("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+        set(_bits 64)
+    elseif ("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+        set(_bits 32)
+    endif ()
+    
+    get_property(_is_multi GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    get_target_property(_alt_out_dir ${target} RUNTIME_OUTPUT_DIRECTORY)
+
+    if (_alt_out_dir)
+        set (_out_dir "${_alt_out_dir}")
+    elseif (_is_multi)
+        set (_out_dir "$<TARGET_PROPERTY:${target},BINARY_DIR>/$<CONFIG>")
+    else ()
+        set (_out_dir "$<TARGET_PROPERTY:${target},BINARY_DIR>")
+    endif ()
+    
+    # This has to be a separate target due to the windows command line lenght limits    
+    add_custom_command(TARGET ${target} POST_BUILD 
+        COMMAND ${CMAKE_COMMAND} -E copy ${TOP_LEVEL_PROJECT_DIR}/deps/GMP/gmp/lib/win${_bits}/libgmp-10.dll ${_out_dir}
+        COMMENT "Copy gmp runtime to build tree"
+        VERBATIM)
+    
+    add_custom_command(TARGET ${target} POST_BUILD 
+        COMMAND ${CMAKE_COMMAND} -E copy ${TOP_LEVEL_PROJECT_DIR}/deps/MPFR/mpfr/lib/win${_bits}/libmpfr-4.dll ${_out_dir}
+        COMMENT "Copy mpfr runtime to build tree"
+        VERBATIM)
+
+endfunction()
+
 
 # libslic3r, PrusaSlicer GUI and the PrusaSlicer executable.
 add_subdirectory(src)

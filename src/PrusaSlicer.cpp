@@ -162,11 +162,28 @@ int CLI::run(int argc, char **argv)
 
     // Initialize full print configs for both the FFF and SLA technologies.
     FullPrintConfig    fff_print_config;
-//    SLAFullPrintConfig sla_print_config;
-    fff_print_config.apply(m_print_config, true);
-//    sla_print_config.apply(m_print_config, true);
-
+    SLAFullPrintConfig sla_print_config;
+    
+    // Synchronize the default parameters and the ones received on the command line.
+    if (printer_technology == ptFFF) {
+        fff_print_config.apply(m_print_config, true);
+        m_print_config.apply(fff_print_config, true);
+    } else if (printer_technology == ptSLA) {
+        // The default value has to be different from the one in fff mode.
+        sla_print_config.output_filename_format.value = "[input_filename_base].sl1";
+        
+        // The default bed shape should reflect the default display parameters
+        // and not the fff defaults.
+        double w = sla_print_config.display_width.getFloat();
+        double h = sla_print_config.display_height.getFloat();
+        sla_print_config.bed_shape.values = { Vec2d(0, 0), Vec2d(w, 0), Vec2d(w, h), Vec2d(0, h) };
+        
+        sla_print_config.apply(m_print_config, true);
+        m_print_config.apply(sla_print_config, true);
+    }
+    
     // Loop through transform options.
+    bool user_center_specified = false;
     for (auto const &opt_key : m_transforms) {
         if (opt_key == "merge") {
             Model m;
@@ -209,6 +226,7 @@ int CLI::run(int argc, char **argv)
             for (auto &model : m_models)
                 model.duplicate_objects_grid(x, y, (distance > 0) ? distance : 6);  // TODO: this is not the right place for setting a default
         } else if (opt_key == "center") {
+        	user_center_specified = true;
             for (auto &model : m_models) {
                 model.add_default_instances();
                 // this affects instances:
@@ -403,7 +421,9 @@ int CLI::run(int argc, char **argv)
                 if (! m_config.opt_bool("dont_arrange")) {
                     //FIXME make the min_object_distance configurable.
                     model.arrange_objects(fff_print.config().min_object_distance());
-                    model.center_instances_around_point(m_config.option<ConfigOptionPoint>("center")->value);
+                    model.center_instances_around_point((! user_center_specified && m_print_config.has("bed_shape")) ? 
+                    	BoundingBoxf(m_print_config.opt<ConfigOptionPoints>("bed_shape")->values).center() : 
+                    	m_config.option<ConfigOptionPoint>("center")->value);
                 }
                 if (printer_technology == ptFFF) {
                     for (auto* mo : model.objects)
@@ -587,7 +607,7 @@ bool CLI::setup(int argc, char **argv)
     // Initialize with defaults.
     for (const t_optiondef_map *options : { &cli_actions_config_def.options, &cli_transform_config_def.options, &cli_misc_config_def.options })
         for (const std::pair<t_config_option_key, ConfigOptionDef> &optdef : *options)
-            m_config.optptr(optdef.first, true);
+            m_config.option(optdef.first, true);
 
     set_data_dir(m_config.opt_string("datadir"));
 
@@ -637,10 +657,10 @@ bool CLI::export_models(IO::ExportFormat format)
         const std::string path = this->output_filepath(model, format);
         bool success = false;
         switch (format) {
-            case IO::AMF: success = Slic3r::store_amf(path.c_str(), &model, nullptr); break;
+            case IO::AMF: success = Slic3r::store_amf(path.c_str(), &model, nullptr, false); break;
             case IO::OBJ: success = Slic3r::store_obj(path.c_str(), &model);          break;
             case IO::STL: success = Slic3r::store_stl(path.c_str(), &model, true);    break;
-            case IO::TMF: success = Slic3r::store_3mf(path.c_str(), &model, nullptr); break;
+            case IO::TMF: success = Slic3r::store_3mf(path.c_str(), &model, nullptr, false); break;
             default: assert(false); break;
         }
         if (success)
@@ -687,7 +707,7 @@ extern "C" {
         for (size_t i = 0; i < argc; ++ i)
             argv_narrow.emplace_back(boost::nowide::narrow(argv[i]));
         for (size_t i = 0; i < argc; ++ i)
-            argv_ptrs[i] = const_cast<char*>(argv_narrow[i].data());
+            argv_ptrs[i] = argv_narrow[i].data();
         // Call the UTF8 main.
         return CLI().run(argc, argv_ptrs.data());
     }

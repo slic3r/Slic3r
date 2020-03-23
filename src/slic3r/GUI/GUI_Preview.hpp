@@ -5,6 +5,7 @@
 #include "libslic3r/Point.hpp"
 
 #include <string>
+#include "libslic3r/Model.hpp"
 
 class wxNotebook;
 class wxGLCanvas;
@@ -12,8 +13,8 @@ class wxBoxSizer;
 class wxStaticText;
 class wxChoice;
 class wxComboCtrl;
+class wxBitmapComboBox;
 class wxCheckBox;
-class DoubleSlider;
 
 namespace Slic3r {
 
@@ -22,6 +23,10 @@ class Print;
 class BackgroundSlicingProcess;
 class GCodePreviewData;
 class Model;
+
+namespace DoubleSlider {
+    class Control;
+};
 
 namespace GUI {
 
@@ -101,7 +106,7 @@ class Preview : public wxPanel
     bool m_loaded;
     bool m_enabled;
 
-    DoubleSlider* m_slider {nullptr};
+    DoubleSlider::Control*       m_slider {nullptr};
 
 public:
     Preview(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar, Model* model, DynamicPrintConfig* config, 
@@ -114,7 +119,6 @@ public:
     void set_as_dirty();
 
     void set_number_extruders(unsigned int number_extruders);
-    void set_canvas_as_dirty();
     void set_enabled(bool enabled);
     void bed_shape_changed();
     void select_view(const std::string& direction);
@@ -128,7 +132,7 @@ public:
     void move_double_slider(wxKeyEvent& evt);
     void edit_double_slider(wxKeyEvent& evt);
 
-    void update_view_type();
+    void update_view_type(bool slice_completed);
 
     bool is_loaded() const { return m_loaded; }
 
@@ -140,7 +144,7 @@ private:
 
     void show_hide_ui_elements(const std::string& what);
 
-    void reset_sliders();
+    void reset_sliders(bool reset_all);
     void update_sliders(const std::vector<double>& layers_z, bool keep_z_range = false);
 
     void on_size(wxSizeEvent& evt);
@@ -154,10 +158,11 @@ private:
 
     // Create/Update/Reset double slider on 3dPreview
     void create_double_slider();
-    void update_double_slider(const std::vector<double>& layers_z, bool keep_z_range = false);
-    void fill_slider_values(std::vector<std::pair<int, double>> &values,
-                            const std::vector<double> &layers_z);
+    void check_slider_values(std::vector<CustomGCode::Item> &ticks_from_model,
+                             const std::vector<double> &layers_z);
     void reset_double_slider();
+    void update_double_slider(const std::vector<double>& layers_z, bool keep_z_range = false);
+    void update_double_slider_mode();
     // update DoubleSlider after keyDown in canvas
     void update_double_slider_from_canvas(wxKeyEvent& event);
 

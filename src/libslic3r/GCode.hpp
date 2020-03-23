@@ -113,7 +113,7 @@ public:
 
 private:
     WipeTowerIntegration& operator=(const WipeTowerIntegration&);
-    std::string append_tcr(GCode &gcodegen, const WipeTower::ToolChangeResult &tcr, int new_extruder_id) const;
+    std::string append_tcr(GCode &gcodegen, const WipeTower::ToolChangeResult &tcr, int new_extruder_id, double z = -1.) const;
 
     // Postprocesses gcode: rotates and moves G1 extrusions and returns result
     std::string post_process_wipe_tower_moves(const WipeTower::ToolChangeResult& tcr, const Vec2f& translation, float angle) const;
@@ -134,6 +134,7 @@ private:
     int                                                          m_tool_change_idx;
     bool                                                         m_brim_done;
     bool                                                         i_have_brim = false;
+    double                                                       m_last_wipe_tower_print_z = 0.f;
 };
 
 class GCode {
@@ -196,24 +197,26 @@ public:
     // append full config to the given string
     static void append_full_config(const Print& print, std::string& str);
 
-protected:
+    // Object and support extrusions of the same PrintObject at the same print_z.
+    // public, so that it could be accessed by free helper functions from GCode.cpp
+    struct LayerToPrint
+    {
+        LayerToPrint() : object_layer(nullptr), support_layer(nullptr) {}
+        const Layer* 		object_layer;
+        const SupportLayer* support_layer;
+        const Layer* 		layer()   const { return (object_layer != nullptr) ? object_layer : support_layer; }
+        const PrintObject* 	object()  const { return (this->layer() != nullptr) ? this->layer()->object() : nullptr; }
+        coordf_t            print_z() const { return (object_layer != nullptr && support_layer != nullptr) ? 0.5 * (object_layer->print_z + support_layer->print_z) : this->layer()->print_z; }
+    };
+
+private:
 #if ENABLE_THUMBNAIL_GENERATOR
-    void            _do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thumbnail_cb);
+    void            _do_export(Print &print, FILE *file, ThumbnailsGeneratorCallback thumbnail_cb);
 #else
     void            _do_export(Print &print, FILE *file);
 #endif //ENABLE_THUMBNAIL_GENERATOR
 
-    // Object and support extrusions of the same PrintObject at the same print_z.
-    struct LayerToPrint
-    {
-        LayerToPrint() : object_layer(nullptr), support_layer(nullptr) {}
-        const Layer          *object_layer;
-        const SupportLayer   *support_layer;
-        const Layer*          layer() const { return (object_layer != nullptr) ? object_layer : support_layer; }
-        const PrintObject*    object() const { return (this->layer() != nullptr) ? this->layer()->object() : nullptr; }
-        coordf_t              print_z() const { return (object_layer != nullptr && support_layer != nullptr) ? 0.5 * (object_layer->print_z + support_layer->print_z) : this->layer()->print_z; }
-    };
-    static std::vector<GCode::LayerToPrint>                            collect_layers_to_print(const PrintObject &object);
+    static std::vector<LayerToPrint>        		                   collect_layers_to_print(const PrintObject &object);
     static std::vector<std::pair<coordf_t, std::vector<LayerToPrint>>> collect_layers_to_print(const Print &print);
     void            process_layer(
         // Write into the output file.
@@ -221,7 +224,9 @@ protected:
         const Print                     &print,
         // Set of object & print layers of the same PrintObject and with the same print_z.
         const std::vector<LayerToPrint> &layers,
-        const LayerTools  &layer_tools,
+        const LayerTools  				&layer_tools,
+		// Pairs of PrintObject index and its instance index.
+		const std::vector<const PrintInstance*> *ordering,
         // If set to size_t(-1), then print all copies of all objects.
         // Otherwise print a single copy of a single object.
         const size_t                     single_object_idx = size_t(-1));
@@ -236,7 +241,6 @@ protected:
     std::string     extrude_multi_path(ExtrusionMultiPath multipath, std::string description = "", double speed = -1.);
     std::string     extrude_path(ExtrusionPath path, std::string description = "", double speed = -1.);
 
-    typedef std::vector<int> ExtruderPerCopy;
     // Extruding multiple objects with soluble / non-soluble / combined supports
     // on a multi-material printer, trying to minimize tool switches.
     // Following structures sort extrusions by the extruder ID, by an order of objects and object islands.
@@ -250,25 +254,55 @@ protected:
         struct Island
         {
             struct Region {
-                ExtrusionEntityCollection perimeters;
-                ExtrusionEntityCollection infills;
+            	// Non-owned references to LayerRegion::perimeters::entities
+            	// std::vector<const ExtrusionEntity*> would be better here, but there is no way in C++ to convert from std::vector<T*> std::vector<const T*> without copying.
+                ExtrusionEntitiesPtr perimeters;
+            	// Non-owned references to LayerRegion::fills::entities
+                ExtrusionEntitiesPtr infills;
 
-                std::vector<const ExtruderPerCopy*> infills_overrides;
-                std::vector<const ExtruderPerCopy*> perimeters_overrides;
+                std::vector<const WipingExtrusions::ExtruderPerCopy*> infills_overrides;
+                std::vector<const WipingExtrusions::ExtruderPerCopy*> perimeters_overrides;
+
+	            enum Type {
+	            	PERIMETERS,
+	            	INFILL,
+	            };
 
                 // Appends perimeter/infill entities and writes don't indices of those that are not to be extruder as part of perimeter/infill wiping
-                void append(const std::string& type, const ExtrusionEntityCollection* eec, const ExtruderPerCopy* copy_extruders, unsigned int object_copies_num);
+                void append(const Type type, const ExtrusionEntityCollection* eec, const WipingExtrusions::ExtruderPerCopy* copy_extruders);
             };
 
-            std::vector<Region> by_region;                                    // all extrusions for this island, grouped by regions
-            const std::vector<Region>& by_region_per_copy(unsigned int copy, int extruder, bool wiping_entities = false); // returns reference to subvector of by_region
 
-        private:
-            std::vector<Region> by_region_per_copy_cache;   // caches vector generated by function above to avoid copying and recalculating
+            std::vector<Region> by_region;                                    // all extrusions for this island, grouped by regions
+
+            // Fills in by_region_per_copy_cache and returns its reference.
+            const std::vector<Region>& by_region_per_copy(std::vector<Region> &by_region_per_copy_cache, unsigned int copy, unsigned int extruder, bool wiping_entities = false) const;
         };
         std::vector<Island>         islands;
     };
 
+	struct InstanceToPrint
+	{
+		InstanceToPrint(ObjectByExtruder &object_by_extruder, size_t layer_id, const PrintObject &print_object, size_t instance_id) :
+			object_by_extruder(object_by_extruder), layer_id(layer_id), print_object(print_object), instance_id(instance_id) {}
+
+		// Repository 
+		ObjectByExtruder		&object_by_extruder;
+		// Index into std::vector<LayerToPrint>, which contains Object and Support layers for the current print_z, collected for a single object, or for possibly multiple objects with multiple instances.
+		const size_t       		 layer_id;
+		const PrintObject 		&print_object;
+		// Instance idx of the copy of a print object.
+		const size_t			 instance_id;
+	};
+
+	std::vector<InstanceToPrint> sort_print_object_instances(
+		std::vector<ObjectByExtruder> 					&objects_by_extruder,
+		// Object and Support layers for the current print_z, collected for a single object, or for possibly multiple objects with multiple instances.
+		const std::vector<LayerToPrint> 				&layers,
+		// Ordering must be defined for normal (non-sequential print).
+		const std::vector<const PrintInstance*>     	*ordering,
+		// For sequential print, the instance of the object to be printing has to be defined.
+		const size_t                     				 single_object_instance_idx);
 
     std::string     extrude_perimeters(const Print &print, const std::vector<ObjectByExtruder::Island::Region> &by_region, std::unique_ptr<EdgeGrid::Grid> &lower_layer_edge_grid);
     std::string     extrude_infill(const Print &print, const std::vector<ObjectByExtruder::Island::Region> &by_region);
@@ -332,7 +366,7 @@ protected:
 #endif /* HAS_PRESSURE_EQUALIZER */
     std::unique_ptr<WipeTowerIntegration> m_wipe_tower;
 
-    // Heights at which the skirt has already been extruded.
+    // Heights (print_z) at which the skirt has already been extruded.
     std::vector<coordf_t>               m_skirt_done;
     // Has the brim been extruded already? Brim is being extruded only for the first object of a multi-object print.
     bool                                m_brim_done;
@@ -340,9 +374,6 @@ protected:
     bool                                m_second_layer_things_done;
     // Index of a last object copy extruded.
     std::pair<const PrintObject*, Point> m_last_obj_copy;
-    // Layer heights for colorprint - updated before the export and erased during the process
-    // so no toolchange occurs twice.
-    std::vector<float> m_colorprint_heights;
 
     // Time estimators
     GCodeTimeEstimator m_normal_time_estimator;
@@ -386,6 +417,8 @@ protected:
     friend class Wipe;
     friend class WipeTowerIntegration;
 };
+
+std::vector<const PrintInstance*> sort_object_instances_by_model_order(const Print& print);
 
 }
 

@@ -30,7 +30,8 @@ static const float CONSTRAINED_COLOR[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
 
 
 class ImGuiWrapper;
-
+class GLCanvas3D;
+class ClippingPlane;
 
 class GLGizmoBase
 {
@@ -69,7 +70,6 @@ public:
     enum EState
     {
         Off,
-        Hover,
         On,
         Num_States
     };
@@ -100,9 +100,12 @@ protected:
     mutable std::vector<Grabber> m_grabbers;
     ImGuiWrapper* m_imgui;
     bool m_first_input_window_render;
+    mutable std::string m_tooltip;
 
 public:
-    GLGizmoBase(GLCanvas3D& parent, const std::string& icon_filename, unsigned int sprite_id);
+    GLGizmoBase(GLCanvas3D& parent,
+                const std::string& icon_filename,
+                unsigned int sprite_id);
     virtual ~GLGizmoBase() {}
 
     bool init() { return on_init(); }
@@ -143,9 +146,11 @@ public:
 
     void update(const UpdateData& data);
 
-    void render() const { on_render(); }
+    void render() const { m_tooltip.clear(); on_render(); }
     void render_for_picking() const { on_render_for_picking(); }
     void render_input_window(float x, float y, float bottom_limit);
+
+    virtual std::string get_tooltip() const { return ""; }
 
 protected:
     virtual bool on_init() = 0;
@@ -172,7 +177,6 @@ protected:
     void render_grabbers(float size) const;
     void render_grabbers_for_picking(const BoundingBoxf3& box) const;
 
-    void set_tooltip(const std::string& tooltip) const;
     std::string format(float value, unsigned int decimals) const;
 };
 

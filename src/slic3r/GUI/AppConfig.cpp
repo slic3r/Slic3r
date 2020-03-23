@@ -26,7 +26,10 @@ namespace Slic3r {
 
 static const std::string VENDOR_PREFIX = "vendor:";
 static const std::string MODEL_PREFIX = "model:";
-static const std::string VERSION_CHECK_URL = "http://files.prusa3d.com/wp-content/uploads/repository/PrusaSlicer-settings-master/live/PrusaSlicer.version";
+static const std::string VERSION_CHECK_URL = "https://files.prusa3d.com/wp-content/uploads/repository/PrusaSlicer-settings-master/live/PrusaSlicer.version";
+
+const std::string AppConfig::SECTION_FILAMENTS = "filaments";
+const std::string AppConfig::SECTION_MATERIALS = "sla_materials";
 
 void AppConfig::reset()
 {
@@ -58,6 +61,9 @@ void AppConfig::set_defaults()
     if (get("preset_update").empty())
         set("preset_update", "1");
 
+    if (get("export_sources_full_pathnames").empty())
+        set("export_sources_full_pathnames", "0");
+
     // remove old 'use_legacy_opengl' parameter from this config, if present
     if (!get("use_legacy_opengl").empty())
         erase("", "use_legacy_opengl");
@@ -70,6 +76,9 @@ void AppConfig::set_defaults()
     if (get("remember_output_path").empty())
         set("remember_output_path", "1");
 
+	if (get("remember_output_path_removable").empty())
+		set("remember_output_path_removable", "1");
+
     if (get("use_custom_toolbar_size").empty())
         set("use_custom_toolbar_size", "0");
 
@@ -78,6 +87,9 @@ void AppConfig::set_defaults()
 
     if (get("use_perspective_camera").empty())
         set("use_perspective_camera", "1");
+
+    if (get("use_free_camera").empty())
+        set("use_free_camera", "0");
 
     // Remove legacy window positions/sizes
     erase("", "main_frame_maximized");
@@ -100,7 +112,7 @@ void AppConfig::load()
         // Error while parsing config file. We'll customize the error message and rethrow to be displayed.
         throw std::runtime_error(
         	_utf8(L("Error parsing PrusaSlicer config file, it is probably corrupted. "
-                    "Try to manualy delete the file to recover from the error. Your user profiles will not be affected.")) + 
+                    "Try to manually delete the file to recover from the error. Your user profiles will not be affected.")) + 
         	"\n\n" + AppConfig::config_path() + "\n\n" + ex.what());
     }
 
@@ -268,6 +280,33 @@ void AppConfig::set_recent_projects(const std::vector<std::string>& recent_proje
     }
 }
 
+void AppConfig::set_mouse_device(const std::string& name, double translation_speed, double translation_deadzone, float rotation_speed, float rotation_deadzone, double zoom_speed, bool swap_yz)
+{
+    std::string key = std::string("mouse_device:") + name;
+    auto it = m_storage.find(key);
+    if (it == m_storage.end())
+        it = m_storage.insert(std::map<std::string, std::map<std::string, std::string>>::value_type(key, std::map<std::string, std::string>())).first;
+
+    it->second.clear();
+    it->second["translation_speed"] = std::to_string(translation_speed);
+    it->second["translation_deadzone"] = std::to_string(translation_deadzone);
+    it->second["rotation_speed"] = std::to_string(rotation_speed);
+    it->second["rotation_deadzone"] = std::to_string(rotation_deadzone);
+    it->second["zoom_speed"] = std::to_string(zoom_speed);
+    it->second["swap_yz"] = swap_yz ? "1" : "0";
+}
+
+std::vector<std::string> AppConfig::get_mouse_device_names() const
+{
+	static constexpr char   *prefix     = "mouse_device:";
+    static constexpr size_t  prefix_len = 13; // strlen(prefix); reports error C2131: expression did not evaluate to a constant on VS2019
+	std::vector<std::string> out;
+    for (const std::pair<std::string, std::map<std::string, std::string>>& key_value_pair : m_storage)
+        if (boost::starts_with(key_value_pair.first, "mouse_device:") && key_value_pair.first.size() > prefix_len)
+            out.emplace_back(key_value_pair.first.substr(prefix_len));
+	return out;
+}
+
 void AppConfig::update_config_dir(const std::string &dir)
 {
     this->set("recent", "config_directory", dir);
@@ -277,9 +316,10 @@ void AppConfig::update_skein_dir(const std::string &dir)
 {
     this->set("recent", "skein_directory", dir);
 }
-
+/*
 std::string AppConfig::get_last_output_dir(const std::string &alt) const
 {
+	
     const auto it = m_storage.find("");
     if (it != m_storage.end()) {
         const auto it2 = it->second.find("last_output_path");
@@ -294,6 +334,26 @@ void AppConfig::update_last_output_dir(const std::string &dir)
 {
     this->set("", "last_output_path", dir);
 }
+*/
+std::string AppConfig::get_last_output_dir(const std::string& alt, const bool removable) const
+{
+	std::string s1 = (removable ? "last_output_path_removable" : "last_output_path");
+	std::string s2 = (removable ? "remember_output_path_removable" : "remember_output_path");
+	const auto it = m_storage.find("");
+	if (it != m_storage.end()) {
+		const auto it2 = it->second.find(s1);
+		const auto it3 = it->second.find(s2);
+		if (it2 != it->second.end() && it3 != it->second.end() && !it2->second.empty() && it3->second == "1")
+			return it2->second;
+	}
+	return alt;
+}
+
+void AppConfig::update_last_output_dir(const std::string& dir, const bool removable)
+{
+	this->set("", (removable ? "last_output_path_removable" : "last_output_path"), dir);
+}
+
 
 void AppConfig::reset_selections()
 {

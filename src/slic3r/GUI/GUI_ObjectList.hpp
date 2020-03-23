@@ -3,6 +3,7 @@
 
 #include <map>
 #include <vector>
+#include <set>
 
 #include <wx/bitmap.h>
 #include <wx/dataview.h>
@@ -10,8 +11,10 @@
 
 #include "Event.hpp"
 #include "wxExtensions.hpp"
+#include "ObjectDataViewModel.hpp"
 
 class wxBoxSizer;
+class wxBitmapComboBox;
 class wxMenuItem;
 class ObjectDataViewModel;
 class MenuWithSeparators;
@@ -132,12 +135,15 @@ private:
     MenuWithSeparators  m_menu_sla_object;
     MenuWithSeparators  m_menu_instance;
     MenuWithSeparators  m_menu_layer;
+    MenuWithSeparators  m_menu_default;
     wxMenuItem* m_menu_item_settings { nullptr };
     wxMenuItem* m_menu_item_split_instances { nullptr };
 
     ObjectDataViewModel         *m_objects_model{ nullptr };
     DynamicPrintConfig          *m_config {nullptr};
     std::vector<ModelObject*>   *m_objects{ nullptr };
+
+    wxBitmapComboBox            *m_extruder_editor { nullptr };
 
     std::vector<wxBitmap*>      m_bmp_vector;
 
@@ -167,6 +173,12 @@ private:
     SettingsBundle m_freq_settings_sla;
 #endif
 
+    inline void ensure_current_item_visible()
+    {
+        if (const auto &item = this->GetCurrentItem())
+            this->EnsureVisible(item);
+    }
+
 public:
     ObjectList(wxWindow* parent);
     ~ObjectList();
@@ -182,15 +194,15 @@ public:
 
     void                create_objects_ctrl();
     void                create_popup_menus();
-    wxDataViewColumn*   create_objects_list_extruder_column(int extruders_count);
-    void                update_objects_list_extruder_column(int extruders_count);
+    void                update_objects_list_extruder_column(size_t extruders_count);
+    void                update_extruder_colors();
     // show/hide "Extruder" column for Objects List
     void                set_extruder_column_hidden(const bool hide) const;
     // update extruder in current config
     void                update_extruder_in_config(const wxDataViewItem& item);
     // update changed name in the object model
     void                update_name_in_model(const wxDataViewItem& item) const;
-    void                update_extruder_values_for_items(const int max_extruder);
+    void                update_extruder_values_for_items(const size_t max_extruder);
 
     void                init_icons();
     void                msw_rescale_icons();
@@ -208,7 +220,8 @@ public:
     void                set_tooltip_for_item(const wxPoint& pt);
 
     void                selection_changed();
-    void                show_context_menu();
+    void                show_context_menu(const bool evt_context_menu);
+    void                extruder_editing();
 #ifndef __WXOSX__
     void                key_event(wxKeyEvent& event);
 #endif /* __WXOSX__ */
@@ -221,25 +234,28 @@ public:
     void                get_settings_choice(const wxString& category_name);
     void                get_freq_settings_choice(const wxString& bundle_name);
     void                show_settings(const wxDataViewItem settings_item);
+    bool                is_instance_or_object_selected();
 
     wxMenu*             append_submenu_add_generic(wxMenu* menu, const ModelVolumeType type);
     void                append_menu_items_add_volume(wxMenu* menu);
     wxMenuItem*         append_menu_item_split(wxMenu* menu);
-    wxMenuItem*         append_menu_item_layers_editing(wxMenu* menu);
+    wxMenuItem*         append_menu_item_layers_editing(wxMenu* menu, wxWindow* parent);
     wxMenuItem*         append_menu_item_settings(wxMenu* menu);
-    wxMenuItem*         append_menu_item_change_type(wxMenu* menu);
+    wxMenuItem*         append_menu_item_change_type(wxMenu* menu, wxWindow* parent = nullptr);
     wxMenuItem*         append_menu_item_instance_to_object(wxMenu* menu, wxWindow* parent);
     wxMenuItem*         append_menu_item_printable(wxMenu* menu, wxWindow* parent);
     void                append_menu_items_osx(wxMenu* menu);
     wxMenuItem*         append_menu_item_fix_through_netfabb(wxMenu* menu);
-    void                append_menu_item_export_stl(wxMenu* menu) const ;
-    void                append_menu_item_change_extruder(wxMenu* menu) const;
+    void                append_menu_item_export_stl(wxMenu* menu) const;
+    void                append_menu_item_reload_from_disk(wxMenu* menu) const;
+    void                append_menu_item_change_extruder(wxMenu* menu);
     void                append_menu_item_delete(wxMenu* menu);
     void                append_menu_item_scale_selection_to_fit_print_volume(wxMenu* menu);
     void                create_object_popupmenu(wxMenu *menu);
     void                create_sla_object_popupmenu(wxMenu*menu);
     void                create_part_popupmenu(wxMenu*menu);
     void                create_instance_popupmenu(wxMenu*menu);
+    void                create_default_popupmenu(wxMenu *menu);
     wxMenu*             create_settings_popupmenu(wxMenu *parent_menu);
     void                create_freq_settings_popupmenu(wxMenu *parent_menu, const bool is_object_settings = true);
 
@@ -248,6 +264,7 @@ public:
     void                load_subobject(ModelVolumeType type);
     void                load_part(ModelObject* model_object, std::vector<std::pair<wxString, bool>> &volumes_info, ModelVolumeType type);
 	void                load_generic_subobject(const std::string& type_name, const ModelVolumeType type);
+    void                load_shape_object(const std::string &type_name);
     void                del_object(const int obj_idx);
     void                del_subobject_item(wxDataViewItem& item);
     void                del_settings_from_config(const wxDataViewItem& parent_item);
@@ -267,7 +284,7 @@ public:
     bool                selected_instances_of_same_object();
     bool                can_split_instances();
 
-    wxPoint             get_mouse_position_in_control();
+    wxPoint             get_mouse_position_in_control() const { return wxGetMousePosition() - this->GetScreenPosition(); }
     wxBoxSizer*         get_sizer() {return  m_sizer;}
     int                 get_selected_obj_idx() const;
     DynamicPrintConfig& get_item_config(const wxDataViewItem& item) const;
@@ -303,13 +320,27 @@ public:
     // Remove objects/sub-object from the list
     void remove();
     void del_layer_range(const t_layer_height_range& range);
-    void add_layer_range_after_current(const t_layer_height_range& current_range);
+    // Add a new layer height after the current range if possible.
+    // The current range is shortened and the new range is entered after the shortened current range if it fits.
+    // If no range fits after the current range, then no range is inserted.
+    // The layer range panel is updated even if this function does not change the layer ranges, as the panel update
+    // may have been postponed from the "kill focus" event of a text field, if the focus was lost for the "add layer" button.
+    // Rather providing the range by a value than by a reference, so that the memory referenced cannot be invalidated.
+    void add_layer_range_after_current(const t_layer_height_range current_range);
+    wxString can_add_new_range_after_current( t_layer_height_range current_range);
     void add_layer_item (const t_layer_height_range& range, 
                          const wxDataViewItem layers_item, 
                          const int layer_idx = -1);
     bool edit_layer_range(const t_layer_height_range& range, coordf_t layer_height);
+    // This function may be called when a text field loses focus for a "add layer" or "remove layer" button.
+    // In that case we don't want to destroy the panel with that "add layer" or "remove layer" buttons, as some messages
+    // are already planned for them and destroying these widgets leads to crashes at least on OSX.
+    // In that case the "add layer" or "remove layer" button handlers are responsible for always rebuilding the panel
+    // even if the "add layer" or "remove layer" buttons did not update the layer spans or layer heights.
     bool edit_layer_range(const t_layer_height_range& range, 
-                          const t_layer_height_range& new_range);
+                          const t_layer_height_range& new_range,
+                          // Don't destroy the panel with the "add layer" or "remove layer" buttons.
+                          bool suppress_ui_update = false);
 
     void init_objects();
     bool multiple_selection() const ;
@@ -357,12 +388,14 @@ public:
     void update_printable_state(int obj_idx, int instance_idx);
     void toggle_printable_state(wxDataViewItem item);
 
+    void show_multi_selection_menu();
+
 private:
 #ifdef __WXOSX__
 //    void OnChar(wxKeyEvent& event);
 #endif /* __WXOSX__ */
     void OnContextMenu(wxDataViewEvent &event);
-    void list_manipulation();
+    void list_manipulation(const wxPoint& mouse_pos, bool evt_context_menu = false);
 
     void OnBeginDrag(wxDataViewEvent &event);
     void OnDropPossible(wxDataViewEvent &event);
@@ -375,8 +408,6 @@ private:
 	void OnEditingStarted(wxDataViewEvent &event);
 #endif /* __WXMSW__ */
     void OnEditingDone(wxDataViewEvent &event);
-
-    void show_multi_selection_menu();
     void extruder_selection();
     void set_extruder_for_selected_items(const int extruder) const ;
 

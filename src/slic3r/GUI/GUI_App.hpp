@@ -6,6 +6,7 @@
 #include "libslic3r/PrintConfig.hpp"
 #include "MainFrame.hpp"
 #include "ImGuiWrapper.hpp"
+#include "ConfigWizard.hpp"
 
 #include <wx/app.h>
 #include <wx/colour.h>
@@ -28,9 +29,9 @@ class PresetUpdater;
 class ModelObject;
 class PrintHostJobQueue;
 
-namespace GUI
-{
 
+namespace GUI{
+class RemovableDriveManager;
 enum FileType
 {
     FT_STL,
@@ -69,6 +70,7 @@ enum ConfigMenuIDs {
 };
 
 class Tab;
+class ConfigWizard;
 
 static wxString dots("…", wxConvUTF8);
 
@@ -85,7 +87,7 @@ class GUI_App : public wxApp
     wxFont		    m_bold_font;
 	wxFont			m_normal_font;
 
-    size_t          m_em_unit; // width of a "m"-symbol in pixels for current system font 
+    int          m_em_unit; // width of a "m"-symbol in pixels for current system font
                                // Note: for 100% Scale m_em_unit = 10 -> it's a good enough coefficient for a size setting of controls
 
     std::unique_ptr<wxLocale> 	  m_wxLocale;
@@ -94,19 +96,21 @@ class GUI_App : public wxApp
     // Best translation language, provided by Windows or OSX, owned by wxWidgets.
     const wxLanguageInfo		 *m_language_info_best   = nullptr;
 
+	std::unique_ptr<RemovableDriveManager> m_removable_drive_manager;
+
     std::unique_ptr<ImGuiWrapper> m_imgui;
     std::unique_ptr<PrintHostJobQueue> m_printhost_job_queue;
+    ConfigWizard* m_wizard;    // Managed by wxWindow tree
 
 public:
     bool            OnInit() override;
     bool            initialized() const { return m_initialized; }
 
     GUI_App();
-    ~GUI_App();
+    ~GUI_App() override;
 
     static unsigned get_colour_approx_luma(const wxColour &colour);
     static bool     dark_mode();
-    static bool     dark_mode_menus();
     void            init_label_colours();
     void            update_label_colours_from_appconfig();
     void            init_fonts();
@@ -121,8 +125,7 @@ public:
     const wxFont&   small_font()            { return m_small_font; }
     const wxFont&   bold_font()             { return m_bold_font; }
     const wxFont&   normal_font()           { return m_normal_font; }
-    size_t          em_unit() const         { return m_em_unit; }
-    void            set_em_unit(const size_t em_unit)    { m_em_unit = em_unit; }
+    int             em_unit() const         { return m_em_unit; }
     float           toolbar_icon_scale(const bool is_limited = false) const;
 
     void            recreate_GUI();
@@ -152,7 +155,7 @@ public:
 	// Translate the language code to a code, for which Prusa Research maintains translations. Defaults to "en_US".
     wxString 		current_language_code_safe() const;
 
-    virtual bool OnExceptionInMainLoop();
+    virtual bool OnExceptionInMainLoop() override;
 
 #ifdef __APPLE__
     // wxWidgets override to get an event on open files.
@@ -179,11 +182,19 @@ public:
 
     std::vector<Tab *>      tabs_list;
 
+	RemovableDriveManager* removable_drive_manager() { return m_removable_drive_manager.get(); }
+
     ImGuiWrapper* imgui() { return m_imgui.get(); }
 
     PrintHostJobQueue& printhost_job_queue() { return *m_printhost_job_queue.get(); }
 
     void            open_web_page_localized(const std::string &http_address);
+    bool            run_wizard(ConfigWizard::RunReason reason, ConfigWizard::StartPage start_page = ConfigWizard::SP_WELCOME);
+
+#if ENABLE_THUMBNAIL_GENERATOR_DEBUG
+    // temporary and debug only -> extract thumbnails from selected gcode and save them as png files
+    void            gcode_thumbnails_debug();
+#endif // ENABLE_THUMBNAIL_GENERATOR_DEBUG
 
 private:
     bool            on_init_inner();
@@ -191,6 +202,10 @@ private:
     void            window_pos_restore(wxTopLevelWindow* window, const std::string &name, bool default_maximized = false);
     void            window_pos_sanitize(wxTopLevelWindow* window);
     bool            select_language();
+
+    bool            config_wizard_startup();
+	void            check_updates(const bool verbose);
+
 #ifdef __WXMSW__
     void            associate_3mf_files();
 #endif // __WXMSW__

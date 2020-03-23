@@ -10,10 +10,16 @@
 
 #include <wx/glcanvas.h>
 #include <wx/timer.h>
+#include <wx/msgdlg.h>
 
 #include <vector>
 #include <string>
 #include <iostream>
+
+#if ENABLE_HACK_CLOSING_ON_OSX_10_9_5
+// Part of temporary hack to remove crash when closing on OSX 10.9.5
+#include <wx/platinfo.h>
+#endif // ENABLE_HACK_CLOSING_ON_OSX_10_9_5
 
 #ifdef __APPLE__
 #include "../Utils/MacDarkMode.hpp"
@@ -107,7 +113,12 @@ void GLCanvas3DManager::GLInfo::detect() const
         m_renderer = data;
 
     glsafe(::glGetIntegerv(GL_MAX_TEXTURE_SIZE, &m_max_tex_size));
-    
+
+    m_max_tex_size /= 2;
+
+    if (Slic3r::total_physical_memory() / (1024 * 1024 * 1024) < 6)
+        m_max_tex_size /= 2;
+
     if (GLEW_EXT_texture_filter_anisotropic)
         glsafe(::glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &m_max_anisotropy));
 
@@ -189,6 +200,11 @@ GLCanvas3DManager::EMultisampleState GLCanvas3DManager::s_multisample = GLCanvas
 bool GLCanvas3DManager::s_compressed_textures_supported = false;
 GLCanvas3DManager::EFramebufferType GLCanvas3DManager::s_framebuffers_type = GLCanvas3DManager::FB_None;
 GLCanvas3DManager::GLInfo GLCanvas3DManager::s_gl_info;
+#if ENABLE_HACK_CLOSING_ON_OSX_10_9_5
+#ifdef __APPLE__ 
+GLCanvas3DManager::OSInfo GLCanvas3DManager::s_os_info;
+#endif // __APPLE__ 
+#endif // ENABLE_HACK_CLOSING_ON_OSX_10_9_5
 
 GLCanvas3DManager::GLCanvas3DManager()
     : m_context(nullptr)
@@ -220,6 +236,15 @@ bool GLCanvas3DManager::add(wxGLCanvas* canvas, Bed3D& bed, Camera& camera, GLTo
         m_context = new wxGLContext(canvas);
         if (m_context == nullptr)
             return false;
+
+#if ENABLE_HACK_CLOSING_ON_OSX_10_9_5
+#ifdef __APPLE__ 
+        // Part of temporary hack to remove crash when closing on OSX 10.9.5
+        s_os_info.major = wxPlatformInfo::Get().GetOSMajorVersion();
+        s_os_info.minor = wxPlatformInfo::Get().GetOSMinorVersion();
+        s_os_info.micro = wxPlatformInfo::Get().GetOSMicroVersion();
+#endif //__APPLE__
+#endif // ENABLE_HACK_CLOSING_ON_OSX_10_9_5
     }
 
     canvas3D->set_context(m_context);
@@ -277,9 +302,9 @@ void GLCanvas3DManager::init_gl()
 
         if (! s_gl_info.is_version_greater_or_equal_to(2, 0)) {
         	// Complain about the OpenGL version.
-        	wxString message = wxString::Format(
-        		_(L("PrusaSlicer requires OpenGL 2.0 capable graphics driver to run correctly, \n"
-        			"while OpenGL version %s, render %s, vendor %s was detected.")), wxString(s_gl_info.get_version()), wxString(s_gl_info.get_renderer()), wxString(s_gl_info.get_vendor()));
+            wxString message = from_u8((boost::format(
+                _utf8(L("PrusaSlicer requires OpenGL 2.0 capable graphics driver to run correctly, \n"
+                    "while OpenGL version %s, render %s, vendor %s was detected."))) % s_gl_info.get_version() % s_gl_info.get_renderer() % s_gl_info.get_vendor()).str());
         	message += "\n";
         	message += _(L("You may need to update your graphics card driver."));
 #ifdef _WIN32
@@ -304,6 +329,15 @@ void GLCanvas3DManager::destroy()
 {
     if (m_context != nullptr)
     {
+#if ENABLE_HACK_CLOSING_ON_OSX_10_9_5
+#ifdef __APPLE__ 
+        // this is a temporary ugly hack to solve the crash happening when closing the application on OSX 10.9.5
+        // the crash is inside wxGLContext destructor
+        if (s_os_info.major == 10 && s_os_info.minor == 9 && s_os_info.micro == 5)
+            return;
+#endif //__APPLE__
+#endif // ENABLE_HACK_CLOSING_ON_OSX_10_9_5
+
         delete m_context;
         m_context = nullptr;
     }
@@ -367,9 +401,7 @@ bool GLCanvas3DManager::init(GLCanvas3D& canvas)
 void GLCanvas3DManager::detect_multisample(int* attribList)
 {
     int wxVersion = wxMAJOR_VERSION * 10000 + wxMINOR_VERSION * 100 + wxRELEASE_NUMBER;
-    const AppConfig* app_config = GUI::get_app_config();
     bool enable_multisample = wxVersion >= 30003;
-
     s_multisample = (enable_multisample && wxGLCanvas::IsDisplaySupported(attribList)) ? MS_Enabled : MS_Disabled;
     // Alternative method: it was working on previous version of wxWidgets but not with the latest, at least on Windows
     // s_multisample = enable_multisample && wxGLCanvas::IsExtensionSupported("WGL_ARB_multisample");

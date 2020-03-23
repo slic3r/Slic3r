@@ -10,6 +10,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/nowide/convert.hpp>
 
 #include <wx/stdpaths.h>
 #include <wx/imagpng.h>
@@ -38,7 +39,6 @@
 #include "../Utils/PresetUpdater.hpp"
 #include "../Utils/PrintHost.hpp"
 #include "../Utils/MacDarkMode.hpp"
-#include "ConfigWizard.hpp"
 #include "slic3r/Config/Snapshot.hpp"
 #include "ConfigSnapshotDialog.hpp"
 #include "FirmwareDialog.hpp"
@@ -46,14 +46,23 @@
 #include "Tab.hpp"
 #include "SysInfoDialog.hpp"
 #include "KBShortcutsDialog.hpp"
+#include "UpdateDialogs.hpp"
+#include "RemovableDriveManager.hpp"
 
 #ifdef __WXMSW__
 #include <Shlobj.h>
+#include <dbt.h>
 #endif // __WXMSW__
+
+#if ENABLE_THUMBNAIL_GENERATOR_DEBUG
+#include <boost/beast/core/detail/base64.hpp>
+#include <boost/nowide/fstream.hpp>
+#endif // ENABLE_THUMBNAIL_GENERATOR_DEBUG
 
 namespace Slic3r {
 namespace GUI {
 
+class MainFrame;
 
 wxString file_wildcards(FileType file_type, const std::string &custom_extension)
 {
@@ -90,9 +99,9 @@ wxString file_wildcards(FileType file_type, const std::string &custom_extension)
 
 static std::string libslic3r_translate_callback(const char *s) { return wxGetTranslation(wxString(s, wxConvUTF8)).utf8_str().data(); }
 
-static void register_dpi_event()
-{
 #ifdef WIN32
+static void register_win32_dpi_event()
+{
     enum { WM_DPICHANGED_ = 0x02e0 };
 
     wxWindow::MSWRegisterMessageHandler(WM_DPICHANGED_, [](wxWindow *win, WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam) {
@@ -100,14 +109,57 @@ static void register_dpi_event()
         const auto rect = reinterpret_cast<PRECT>(lParam);
         const wxRect wxrect(wxPoint(rect->top, rect->left), wxPoint(rect->bottom, rect->right));
 
-        DpiChangedEvent evt(EVT_DPI_CHANGED, dpi, wxrect);
+        DpiChangedEvent evt(EVT_DPI_CHANGED_SLICER, dpi, wxrect);
         win->GetEventHandler()->AddPendingEvent(evt);
 
         return true;
     });
-#endif
 }
 
+static GUID GUID_DEVINTERFACE_HID = { 0x4D1E55B2, 0xF16F, 0x11CF, 0x88, 0xCB, 0x00, 0x11, 0x11, 0x00, 0x00, 0x30 };
+
+static void register_win32_device_notification_event()
+{
+    enum { WM_DPICHANGED_ = 0x02e0 };
+
+    wxWindow::MSWRegisterMessageHandler(WM_DEVICECHANGE, [](wxWindow *win, WXUINT /* nMsg */, WXWPARAM wParam, WXLPARAM lParam) {
+        // Some messages are sent to top level windows by default, some messages are sent to only registered windows, and we explictely register on MainFrame only.
+        auto main_frame = dynamic_cast<MainFrame*>(win);
+        auto plater = (main_frame == nullptr) ? nullptr : main_frame->plater();
+        if (plater == nullptr)
+            // Maybe some other top level window like a dialog or maybe a pop-up menu?
+            return true;
+		PDEV_BROADCAST_HDR lpdb = (PDEV_BROADCAST_HDR)lParam;
+        switch (wParam) {
+        case DBT_DEVICEARRIVAL:
+			if (lpdb->dbch_devicetype == DBT_DEVTYP_VOLUME)
+		        plater->GetEventHandler()->AddPendingEvent(VolumeAttachedEvent(EVT_VOLUME_ATTACHED));
+			else if (lpdb->dbch_devicetype == DBT_DEVTYP_DEVICEINTERFACE) {
+				PDEV_BROADCAST_DEVICEINTERFACE lpdbi = (PDEV_BROADCAST_DEVICEINTERFACE)lpdb;
+//				if (lpdbi->dbcc_classguid == GUID_DEVINTERFACE_VOLUME) {
+//					printf("DBT_DEVICEARRIVAL %d - Media has arrived: %ws\n", msg_count, lpdbi->dbcc_name);
+				if (lpdbi->dbcc_classguid == GUID_DEVINTERFACE_HID)
+			        plater->GetEventHandler()->AddPendingEvent(HIDDeviceAttachedEvent(EVT_HID_DEVICE_ATTACHED, boost::nowide::narrow(lpdbi->dbcc_name)));
+			}
+            break;
+		case DBT_DEVICEREMOVECOMPLETE:
+			if (lpdb->dbch_devicetype == DBT_DEVTYP_VOLUME)
+                plater->GetEventHandler()->AddPendingEvent(VolumeDetachedEvent(EVT_VOLUME_DETACHED));
+			else if (lpdb->dbch_devicetype == DBT_DEVTYP_DEVICEINTERFACE) {
+				PDEV_BROADCAST_DEVICEINTERFACE lpdbi = (PDEV_BROADCAST_DEVICEINTERFACE)lpdb;
+//				if (lpdbi->dbcc_classguid == GUID_DEVINTERFACE_VOLUME)
+//					printf("DBT_DEVICEARRIVAL %d - Media was removed: %ws\n", msg_count, lpdbi->dbcc_name);
+				if (lpdbi->dbcc_classguid == GUID_DEVINTERFACE_HID)
+        			plater->GetEventHandler()->AddPendingEvent(HIDDeviceDetachedEvent(EVT_HID_DEVICE_DETACHED, boost::nowide::narrow(lpdbi->dbcc_name)));
+			}
+			break;
+        default:
+            break;
+        }
+        return true;
+    });
+}
+#endif // WIN32
 
 static void generic_exception_handle()
 {
@@ -148,6 +200,8 @@ GUI_App::GUI_App()
     : wxApp()
     , m_em_unit(10)
     , m_imgui(new ImGuiWrapper())
+    , m_wizard(nullptr)
+	, m_removable_drive_manager(std::make_unique<RemovableDriveManager>())
 {}
 
 GUI_App::~GUI_App()
@@ -179,7 +233,9 @@ bool GUI_App::on_init_inner()
     wxCHECK_MSG(wxDirExists(resources_dir), false,
         wxString::Format("Resources path does not exist or is not a directory: %s", resources_dir));
 
+    // Profiles for the alpha are stored into the PrusaSlicer-alpha directory to not mix with the current release.
     SetAppName(SLIC3R_APP_KEY);
+//    SetAppName(SLIC3R_APP_KEY "-beta");
     SetAppDisplayName(SLIC3R_APP_NAME);
 
 // Enable this to get the default Win32 COMCTRL32 behavior of static boxes.
@@ -204,7 +260,6 @@ bool GUI_App::on_init_inner()
     // supplied as argument to --datadir; in that case we should still run the wizard
     preset_bundle->setup_directories();
 
-    app_conf_exists = app_config->exists();
     // load settings
     app_conf_exists = app_config->exists();
     if (app_conf_exists) {
@@ -236,10 +291,13 @@ bool GUI_App::on_init_inner()
     try {
         preset_bundle->load_presets(*app_config);
     } catch (const std::exception &ex) {
-        show_error(nullptr, from_u8(ex.what()));
+        show_error(nullptr, ex.what());
     }
 
-    register_dpi_event();
+#ifdef WIN32
+    register_win32_dpi_event();
+    register_win32_device_notification_event();
+#endif // WIN32
 
     // Let the libslic3r know the callback, which will translate messages on demand.
     Slic3r::I18N::set_translate_callback(libslic3r_translate_callback);
@@ -254,6 +312,7 @@ bool GUI_App::on_init_inner()
 
     m_printhost_job_queue.reset(new PrintHostJobQueue(mainframe->printhost_queue_dlg()));
 
+
     Bind(wxEVT_IDLE, [this](wxIdleEvent& event)
     {
         if (! plater_)
@@ -264,33 +323,23 @@ bool GUI_App::on_init_inner()
 
         this->obj_manipul()->update_if_dirty();
 
-        // Preset updating & Configwizard are done after the above initializations,
-        // and after MainFrame is created & shown.
-        // The extra CallAfter() is needed because of Mac, where this is the only way
-        // to popup a modal dialog on start without screwing combo boxes.
-        // This is ugly but I honestly found no better way to do it.
-        // Neither wxShowEvent nor wxWindowCreateEvent work reliably.
+		// Preset updating & Configwizard are done after the above initializations,
+	    // and after MainFrame is created & shown.
+	    // The extra CallAfter() is needed because of Mac, where this is the only way
+	    // to popup a modal dialog on start without screwing combo boxes.
+	    // This is ugly but I honestly found no better way to do it.
+	    // Neither wxShowEvent nor wxWindowCreateEvent work reliably. 
+
         static bool once = true;
         if (once) {
             once = false;
+			check_updates(false);
 
-            PresetUpdater::UpdateResult updater_result;
-            try {
-                updater_result = preset_updater->config_update(app_config->orig_version());
-                if (updater_result == PresetUpdater::R_INCOMPAT_EXIT) {
-                    mainframe->Close();
-                } else if (updater_result == PresetUpdater::R_INCOMPAT_CONFIGURED) {
-                    app_conf_exists = true;
-                }
-            } catch (const std::exception &ex) {
-                show_error(nullptr, from_u8(ex.what()));
-            }
-
-            CallAfter([this] {
-                config_wizard_startup(app_conf_exists);
-                preset_updater->slic3r_update_notify();
-                preset_updater->sync(preset_bundle);
-            });
+			CallAfter([this] {
+				config_wizard_startup();
+				preset_updater->slic3r_update_notify();
+				preset_updater->sync(preset_bundle);
+				});
         }
     });
 
@@ -302,8 +351,9 @@ bool GUI_App::on_init_inner()
      * change min hight of object list to the normal min value (15 * wxGetApp().em_unit()) 
      * after first whole Mainframe updating/layouting
      */
-    if (obj_list()->GetMinSize().GetY() > 15 * em_unit())
-        obj_list()->SetMinSize(wxSize(-1, 15 * em_unit()));
+    const int list_min_height = 15 * em_unit();
+    if (obj_list()->GetMinSize().GetY() > list_min_height)
+        obj_list()->SetMinSize(wxSize(-1, list_min_height));
 
     update_mode(); // update view mode after fix of the object_list size
 
@@ -326,16 +376,15 @@ unsigned GUI_App::get_colour_approx_luma(const wxColour &colour)
 
 bool GUI_App::dark_mode()
 {
+#if __APPLE__
+    // The check for dark mode returns false positive on 10.12 and 10.13,
+    // which allowed setting dark menu bar and dock area, which is
+    // is detected as dark mode. We must run on at least 10.14 where the
+    // proper dark mode was first introduced.
+    return wxPlatformInfo::Get().CheckOSVersion(10, 14) && mac_dark_mode();
+#else
     const unsigned luma = get_colour_approx_luma(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
     return luma < 128;
-}
-
-bool GUI_App::dark_mode_menus()
-{
-#if __APPLE__
-    return mac_dark_mode();
-#else
-    return dark_mode();
 #endif
 }
 
@@ -433,50 +482,37 @@ float GUI_App::toolbar_icon_scale(const bool is_limited/* = false*/) const
 
 void GUI_App::recreate_GUI()
 {
-    // Weird things happen as the Paint messages are floating around the windows being destructed.
-    // Avoid the Paint messages by hiding the main window.
-    // Also the application closes much faster without these unnecessary screen refreshes.
-    // In addition, there were some crashes due to the Paint events sent to already destructed windows.
-    mainframe->Show(false);
+    mainframe->shutdown();
 
     const auto msg_name = _(L("Changing of an application language")) + dots;
     wxProgressDialog dlg(msg_name, msg_name);
     dlg.Pulse();
-
-    // to make sure nobody accesses data from the soon-to-be-destroyed widgets:
-    tabs_list.clear();
-    plater_ = nullptr;
-
     dlg.Update(10, _(L("Recreating")) + dots);
 
-    MainFrame* topwindow = mainframe;
+    MainFrame *old_main_frame = mainframe;
     mainframe = new MainFrame();
-    sidebar().obj_list()->init_objects(); // propagate model objects to object list
+    // Propagate model objects to object list.
+    sidebar().obj_list()->init_objects();
+    SetTopWindow(mainframe);
 
-    if (topwindow) {
-        SetTopWindow(mainframe);
-
-        dlg.Update(30, _(L("Recreating")) + dots);
-        topwindow->Destroy();
-    }
+    dlg.Update(30, _(L("Recreating")) + dots);
+    old_main_frame->Destroy();
+    // For this moment ConfigWizard is deleted, invalidate it.
+    m_wizard = nullptr;
 
     dlg.Update(80, _(L("Loading of current presets")) + dots);
-
     m_printhost_job_queue.reset(new PrintHostJobQueue(mainframe->printhost_queue_dlg()));
-
     load_current_presets();
-
     mainframe->Show(true);
 
     dlg.Update(90, _(L("Loading of a mode view")) + dots);
-
     /* Temporary workaround for the correct behavior of the Scrolled sidebar panel:
     * change min hight of object list to the normal min value (15 * wxGetApp().em_unit())
     * after first whole Mainframe updating/layouting
     */
-    if (obj_list()->GetMinSize().GetY() > 15 * em_unit())
-        obj_list()->SetMinSize(wxSize(-1, 15 * em_unit()));
-
+    const int list_min_height = 15 * em_unit();
+    if (obj_list()->GetMinSize().GetY() > list_min_height)
+        obj_list()->SetMinSize(wxSize(-1, list_min_height));
     update_mode();
 
     // #ys_FIXME_delete_after_testing  Do we still need this  ?
@@ -571,7 +607,6 @@ void GUI_App::import_model(wxWindow *parent, wxArrayString& input_files) const
 bool GUI_App::switch_language()
 {
     if (select_language()) {
-        _3DScene::remove_all_canvases();
         recreate_GUI();
         return true;
     } else {
@@ -723,7 +758,7 @@ bool GUI_App::load_language(wxString language, bool initial)
 #endif
         if (initial)
         	message + "\n\nApplication will close.";
-		wxMessageBox(message, "PrusaSlicer - Switching language failed", wxOK | wxICON_ERROR);
+        wxMessageBox(message, "PrusaSlicer - Switching language failed", wxOK | wxICON_ERROR);
         if (initial)
 			std::exit(EXIT_FAILURE);
 		else
@@ -750,7 +785,7 @@ Tab* GUI_App::get_tab(Preset::Type type)
 {
     for (Tab* tab: tabs_list)
         if (tab->type() == type)
-            return tab->complited() ? tab : nullptr; // To avoid actions with no-completed Tab
+            return tab->completed() ? tab : nullptr; // To avoid actions with no-completed Tab
     return nullptr;
 }
 
@@ -789,13 +824,13 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
     auto local_menu = new wxMenu();
     wxWindowID config_id_base = wxWindow::NewControlId(int(ConfigMenuCnt));
 
-    const auto config_wizard_name = _(ConfigWizard::name(true).wx_str());
-    const auto config_wizard_tooltip = wxString::Format(_(L("Run %s")), config_wizard_name);
+    const auto config_wizard_name = _(ConfigWizard::name(true));
+    const auto config_wizard_tooltip = from_u8((boost::format(_utf8(L("Run %s"))) % config_wizard_name).str());
     // Cmd+, is standard on OS X - what about other operating systems?
     local_menu->Append(config_id_base + ConfigMenuWizard, config_wizard_name + dots, config_wizard_tooltip);
     local_menu->Append(config_id_base + ConfigMenuSnapshots, _(L("&Configuration Snapshots")) + dots, _(L("Inspect / activate configuration snapshots")));
     local_menu->Append(config_id_base + ConfigMenuTakeSnapshot, _(L("Take Configuration &Snapshot")), _(L("Capture a configuration snapshot")));
-    // 	local_menu->Append(config_id_base + ConfigMenuUpdate, 		_(L("Check for updates")), 					_(L("Check for configuration updates")));
+    local_menu->Append(config_id_base + ConfigMenuUpdate, 		_(L("Check for updates")), 					_(L("Check for configuration updates")));
     local_menu->AppendSeparator();
     local_menu->Append(config_id_base + ConfigMenuPreferences, _(L("&Preferences")) + dots + 
 #ifdef __APPLE__
@@ -815,7 +850,7 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
 
     local_menu->AppendSubMenu(mode_menu, _(L("Mode")), wxString::Format(_(L("%s View Mode")), SLIC3R_APP_NAME));
     local_menu->AppendSeparator();
-    local_menu->Append(config_id_base + ConfigMenuLanguage, _(L("Change Application &Language")));
+    local_menu->Append(config_id_base + ConfigMenuLanguage, _(L("&Language")));
     local_menu->AppendSeparator();
     local_menu->Append(config_id_base + ConfigMenuFlashFirmware, _(L("Flash printer &firmware")), _(L("Upload a firmware image into an Arduino based printer")));
     // TODO: for when we're able to flash dictionaries
@@ -824,8 +859,11 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
     local_menu->Bind(wxEVT_MENU, [this, config_id_base](wxEvent &event) {
         switch (event.GetId() - config_id_base) {
         case ConfigMenuWizard:
-            config_wizard(ConfigWizard::RR_USER);
+            run_wizard(ConfigWizard::RR_USER);
             break;
+		case ConfigMenuUpdate:
+			check_updates(true);
+			break;
         case ConfigMenuTakeSnapshot:
             // Take a configuration snapshot.
             if (check_unsaved_changes()) {
@@ -871,14 +909,19 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
             /* Before change application language, let's check unsaved changes on 3D-Scene
              * and draw user's attention to the application restarting after a language change
              */
-            wxMessageDialog dialog(nullptr,
-                _(L("Switching the language will trigger application restart.\n"
-                    "You will lose content of the plater.")) + "\n\n" +
-                _(L("Do you want to proceed?")),
-                wxString(SLIC3R_APP_NAME) + " - " + _(L("Language selection")),
-                wxICON_QUESTION | wxOK | wxCANCEL);
-            if ( dialog.ShowModal() == wxID_CANCEL)
-                return;
+            {
+                // the dialog needs to be destroyed before the call to switch_language()
+                // or sometimes the application crashes into wxDialogBase() destructor
+                // so we put it into an inner scope
+                wxMessageDialog dialog(nullptr,
+                    _(L("Switching the language will trigger application restart.\n"
+                        "You will lose content of the plater.")) + "\n\n" +
+                    _(L("Do you want to proceed?")),
+                    wxString(SLIC3R_APP_NAME) + " - " + _(L("Language selection")),
+                    wxICON_QUESTION | wxOK | wxCANCEL);
+                if (dialog.ShowModal() == wxID_CANCEL)
+                    return;
+            }
 
             switch_language();
             break;
@@ -908,11 +951,13 @@ bool GUI_App::check_unsaved_changes(const wxString &header)
     wxString dirty;
     PrinterTechnology printer_technology = preset_bundle->printers.get_edited_preset().printer_technology();
     for (Tab *tab : tabs_list)
-        if (tab->supports_printer_technology(printer_technology) && tab->current_preset_is_dirty())
+        if (tab->supports_printer_technology(printer_technology) && tab->current_preset_is_dirty()) {
             if (dirty.empty())
                 dirty = tab->title();
             else
                 dirty += wxString(", ") + tab->title();
+        }
+
     if (dirty.empty())
         // No changes, the application may close or reload presets.
         return true;
@@ -943,8 +988,11 @@ void GUI_App::load_current_presets()
 	this->plater()->set_printer_technology(printer_technology);
     for (Tab *tab : tabs_list)
 		if (tab->supports_printer_technology(printer_technology)) {
-			if (tab->type() == Preset::TYPE_PRINTER)
+			if (tab->type() == Preset::TYPE_PRINTER) {
 				static_cast<TabPrinter*>(tab)->update_pages();
+				// Mark the plater to update print bed by tab->load_current_preset() from Plater::on_config_change().
+				this->plater()->force_print_bed_update();
+			}
 			tab->load_current_preset();
 		}
 }
@@ -1053,6 +1101,97 @@ void GUI_App::open_web_page_localized(const std::string &http_address)
     wxLaunchDefaultBrowser(http_address + "&lng=" + this->current_language_code_safe());
 }
 
+bool GUI_App::run_wizard(ConfigWizard::RunReason reason, ConfigWizard::StartPage start_page)
+{
+    wxCHECK_MSG(mainframe != nullptr, false, "Internal error: Main frame not created / null");
+
+    if (! m_wizard) {
+        m_wizard = new ConfigWizard(mainframe);
+    }
+
+    const bool res = m_wizard->run(reason, start_page);
+
+    if (res) {
+        load_current_presets();
+
+        if (preset_bundle->printers.get_edited_preset().printer_technology() == ptSLA
+            && Slic3r::model_has_multi_part_objects(wxGetApp().model())) {
+            GUI::show_info(nullptr,
+                _(L("It's impossible to print multi-part object(s) with SLA technology.")) + "\n\n" +
+                _(L("Please check and fix your object list.")),
+                _(L("Attention!")));
+        }
+    }
+
+    return res;
+}
+
+#if ENABLE_THUMBNAIL_GENERATOR_DEBUG
+void GUI_App::gcode_thumbnails_debug()
+{
+    const std::string BEGIN_MASK = "; thumbnail begin";
+    const std::string END_MASK = "; thumbnail end";
+    std::string gcode_line;
+    bool reading_image = false;
+    unsigned int width = 0;
+    unsigned int height = 0;
+
+    wxFileDialog dialog(GetTopWindow(), _(L("Select a gcode file:")), "", "", "G-code files (*.gcode)|*.gcode;*.GCODE;", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+    if (dialog.ShowModal() != wxID_OK)
+        return;
+
+    std::string in_filename = into_u8(dialog.GetPath());
+    std::string out_path = boost::filesystem::path(in_filename).remove_filename().append(L"thumbnail").string();
+
+    boost::nowide::ifstream in_file(in_filename.c_str());
+    std::vector<std::string> rows;
+    std::string row;
+    if (in_file.good())
+    {
+        while (std::getline(in_file, gcode_line))
+        {
+            if (in_file.good())
+            {
+                if (boost::starts_with(gcode_line, BEGIN_MASK))
+                {
+                    reading_image = true;
+                    gcode_line = gcode_line.substr(BEGIN_MASK.length() + 1);
+                    std::string::size_type x_pos = gcode_line.find('x');
+                    std::string width_str = gcode_line.substr(0, x_pos);
+                    width = (unsigned int)::atoi(width_str.c_str());
+                    std::string height_str = gcode_line.substr(x_pos + 1);
+                    height = (unsigned int)::atoi(height_str.c_str());
+                    row.clear();
+                }
+                else if (reading_image && boost::starts_with(gcode_line, END_MASK))
+                {
+                    std::string out_filename = out_path + std::to_string(width) + "x" + std::to_string(height) + ".png";
+                    boost::nowide::ofstream out_file(out_filename.c_str(), std::ios::binary);
+                    if (out_file.good())
+                    {
+                        std::string decoded;
+                        decoded.resize(boost::beast::detail::base64::decoded_size(row.size()));
+                        decoded.resize(boost::beast::detail::base64::decode((void*)&decoded[0], row.data(), row.size()).first);
+
+                        out_file.write(decoded.c_str(), decoded.size());
+                        out_file.close();
+                    }
+
+                    reading_image = false;
+                    width = 0;
+                    height = 0;
+                    rows.clear();
+                }
+                else if (reading_image)
+                    row += gcode_line.substr(2);
+            }
+        }
+
+        in_file.close();
+    }
+}
+#endif // ENABLE_THUMBNAIL_GENERATOR_DEBUG
+
 void GUI_App::window_pos_save(wxTopLevelWindow* window, const std::string &name)
 {
     if (name.empty()) { return; }
@@ -1085,7 +1224,7 @@ void GUI_App::window_pos_restore(wxTopLevelWindow* window, const std::string &na
 
 void GUI_App::window_pos_sanitize(wxTopLevelWindow* window)
 {
-    unsigned display_idx = wxDisplay::GetFromWindow(window);
+    /*unsigned*/int display_idx = wxDisplay::GetFromWindow(window);
     wxRect display;
     if (display_idx == wxNOT_FOUND) {
         display = wxDisplay(0u).GetClientArea();
@@ -1101,6 +1240,48 @@ void GUI_App::window_pos_sanitize(wxTopLevelWindow* window)
     }
 }
 
+bool GUI_App::config_wizard_startup()
+{
+    if (!app_conf_exists || preset_bundle->printers.size() <= 1) {
+        run_wizard(ConfigWizard::RR_DATA_EMPTY);
+        return true;
+    } else if (get_app_config()->legacy_datadir()) {
+        // Looks like user has legacy pre-vendorbundle data directory,
+        // explain what this is and run the wizard
+
+        MsgDataLegacy dlg;
+        dlg.ShowModal();
+
+        run_wizard(ConfigWizard::RR_DATA_LEGACY);
+        return true;
+    }
+    return false;
+}
+
+void GUI_App::check_updates(const bool verbose)
+{
+	
+	PresetUpdater::UpdateResult updater_result;
+	try {
+		updater_result = preset_updater->config_update(app_config->orig_version());
+		if (updater_result == PresetUpdater::R_INCOMPAT_EXIT) {
+			mainframe->Close();
+		}
+		else if (updater_result == PresetUpdater::R_INCOMPAT_CONFIGURED) {
+			app_conf_exists = true;
+		}
+		else if(verbose && updater_result == PresetUpdater::R_NOOP)
+		{
+			MsgNoUpdates dlg;
+			dlg.ShowModal();
+		}
+	}
+	catch (const std::exception & ex) {
+		show_error(nullptr, ex.what());
+	}
+
+	
+}
 // static method accepting a wxWindow object as first parameter
 // void warning_catcher{
 //     my($self, $message_dialog) = @_;
