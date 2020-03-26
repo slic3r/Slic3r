@@ -361,7 +361,6 @@ public:
 	}
 	void			set_value(const boost::any& value, bool change_event = false) {
 		m_disable_change_event = !change_event;
-        std::cout << value.type().name() << "==int !0\n";
 		tmp_value = boost::any_cast<int>(value);
         m_value = value;
 		dynamic_cast<wxSpinCtrl*>(window)->SetValue(tmp_value);

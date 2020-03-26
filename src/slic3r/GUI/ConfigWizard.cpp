@@ -165,7 +165,7 @@ PrinterPicker::PrinterPicker(wxWindow *parent, const VendorProfile &vendor, wxSt
     , vendor_id(vendor.id)
     , width(0)
 {
-    const auto &models = vendor.models;
+    const std::vector<VendorProfile::PrinterModel> &models = vendor.models;
 
     auto *sizer = new wxBoxSizer(wxVERTICAL);
 
@@ -184,12 +184,15 @@ PrinterPicker::PrinterPicker(wxWindow *parent, const VendorProfile &vendor, wxSt
 
     bool is_variants = false;
 
-    for (const auto &model : models) {
+    for (const VendorProfile::PrinterModel &model : models) {
         if (! filter(model)) { continue; }
 
         wxBitmap bitmap;
         int bitmap_width = 0;
-        const wxString bitmap_file = GUI::from_u8(Slic3r::resources_dir() + "/profiles/" + vendor.id + "/" + model.id + "_thumbnail.png");
+        const wxString bitmap_file =
+            (model.thumbnail.empty()) ?
+            GUI::from_u8(Slic3r::resources_dir() + "/profiles/" + vendor.id + "/" + model.id + "_thumbnail.png") :
+            GUI::from_u8(Slic3r::resources_dir() + "/profiles/" + vendor.id + "/" + model.thumbnail);
         if (wxFileExists(bitmap_file)) {
             bitmap.LoadFile(bitmap_file, wxBITMAP_TYPE_PNG);
             bitmap_width = bitmap.GetWidth();
@@ -545,12 +548,16 @@ std::set<std::string> PagePrinters::get_selected_models()
 
 void PagePrinters::set_run_reason(ConfigWizard::RunReason run_reason)
 {
+#ifdef ALLOW_PRUSA_FIRST
     if (technology == T_FFF
         && (run_reason == ConfigWizard::RR_DATA_EMPTY || run_reason == ConfigWizard::RR_DATA_LEGACY)
         && printer_pickers.size() > 0 
         && printer_pickers[0]->vendor_id == PresetBundle::PRUSA_BUNDLE) {
         printer_pickers[0]->select_one(0, true);
     }
+#else
+    //didn't select the first prusa even if it's the first start: let the user choose
+#endif
 }
 
 
@@ -2119,14 +2126,19 @@ ConfigWizard::ConfigWizard(wxWindow *parent)
     p->add_page(p->page_custom = new PageCustom(this));
     p->custom_printer_selected = p->page_custom->custom_wanted();
 #else
-    for (const auto &vendor : p->bundles) {
+    std::vector<std::string> sorted_vendors;
+    for (const auto &vendor : p->bundles) sorted_vendors.push_back(vendor.first);
+    std::sort(sorted_vendors.begin(), sorted_vendors.end());
+
+    for (const std::string &vendor_name : sorted_vendors) {
+        const Bundle &vendor = p->bundles[vendor_name];
         bool first = true;
-        for (const PrinterTechnology &tech : vendor.second.vendor_profile->technologies) {
-            wxString name = _(L(vendor.second.vendor_profile->name));
+        for (const PrinterTechnology &tech : vendor.vendor_profile->technologies) {
+            wxString name = _(L(vendor.vendor_profile->name));
             name.Replace("{technology}", tech_to_string.at(tech));
-            wxString description = _(L(vendor.second.vendor_profile->full_name));
+            wxString description = _(L(vendor.vendor_profile->full_name));
             description.Replace("{technology}", tech_to_string.at(tech));
-            p->pages_vendors.push_back(new PagePrinters(this, description, name, *vendor.second.vendor_profile, (uint32_t)(vendor.second.vendor_profile->technologies.size()>1 && !first ? 1 : 0), (Technology)(uint8_t)tech));
+            p->pages_vendors.push_back(new PagePrinters(this, description, name, *vendor.vendor_profile, (uint32_t)(vendor.vendor_profile->technologies.size()>1 && !first ? 1 : 0), (Technology)(uint8_t)tech));
             p->add_page(p->pages_vendors.back());
             first = false;
         }

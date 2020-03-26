@@ -1458,16 +1458,8 @@ bool Tab::create_pages(std::string setting_type_name)
             };
             current_group->append_line(current_line);
         }
-        else if (boost::starts_with(full_line, "preset_description_line")) {
-            build_preset_description_line(current_group.get());
-        }
         else if (boost::starts_with(full_line, "parent_preset_description")) {
-            current_line = Line{ "", "" };
-            current_line.full_width = 1;
-            current_line.widget = [this](wxWindow* parent) {
-                return description_line_widget(parent, &this->m_parent_preset_description_line);
-            };
-            current_group->append_line(current_line);
+            build_preset_description_line(current_group.get());
         }
         else if (boost::starts_with(full_line, "cooling_description")) {
             TabFilament* tab = nullptr;
@@ -1523,42 +1515,11 @@ bool Tab::create_pages(std::string setting_type_name)
             tab->build_printhost(current_group.get());
         }
         else if (full_line == "bed_shape"){
-            Line myline = current_group->create_single_option_line("bed_shape");//{ _(L("Bed shape")), "" };
-            myline.widget = [this](wxWindow* parent) {
-                ScalableButton* btn;
-                add_scaled_button(parent, &btn, "printer_white", " " + _(L("Set")) + " " + dots, wxBU_LEFT | wxBU_EXACTFIT);
-                btn->SetFont(wxGetApp().normal_font());
-
-                auto sizer = new wxBoxSizer(wxHORIZONTAL);
-                sizer->Add(btn);
-
-                btn->Bind(wxEVT_BUTTON, ([this](wxCommandEvent e)
-                {
-                    BedShapeDialog dlg(this);
-                    dlg.build_dialog(*m_config->option<ConfigOptionPoints>("bed_shape"),
-                        *m_config->option<ConfigOptionString>("bed_custom_texture"),
-                        *m_config->option<ConfigOptionString>("bed_custom_model"));
-                    if (dlg.ShowModal() == wxID_OK) {
-                        const std::vector<Vec2d>& shape = dlg.get_shape();
-                        const std::string& custom_texture = dlg.get_custom_texture();
-                        const std::string& custom_model = dlg.get_custom_model();
-                        if (!shape.empty())
-                        {
-                            load_key_value("bed_shape", shape);
-                            load_key_value("bed_custom_texture", custom_texture);
-                            load_key_value("bed_custom_model", custom_model);
-                            update_changed_ui();
-                        }
-                    }
-                }));
-
-                return sizer;
-            };
-            wxStaticText* label = (m_colored_Labels.find("bed_shape") == m_colored_Labels.end()) ? nullptr : m_colored_Labels.at("bed_shape");
-            if (label != nullptr)
-                current_group->append_line(myline, &label);
-            else
-                current_group->append_line(myline);
+            TabPrinter* tab = nullptr;
+            if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
+            create_line_with_widget(current_group.get(), "bed_shape", [tab](wxWindow* parent) {
+                return 	tab->create_bed_shape_widget(parent);
+            });
         }
         else if (full_line == "extruders_count") {
             ConfigOptionDef def;

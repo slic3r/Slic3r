@@ -9,6 +9,11 @@ group:Horizontal shells
 		setting:top_solid_layers
 		setting:label$Bottom:bottom_solid_layers
 	end_line
+	line:Minimum shell thickness
+		setting:top_solid_min_thickness
+		setting:bottom_solid_min_thickness
+	end_line
+	top_bottom_shell_thickness_explanation
 	setting:enforce_full_fill_volume
 group:Quality (slower slicing)
 	line:Extra perimeters
@@ -120,6 +125,7 @@ group:Skirt
 	setting:skirts
 	setting:skirt_distance
 	setting:skirt_height
+	setting:draft_shield
 	setting:min_skirt_length
 group:Brim
 	setting:brim_width

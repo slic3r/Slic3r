@@ -37,7 +37,7 @@ group:Cooling thresholds
 
 page:Advanced:wrench
 group:Filament properties
-	setting:filament_type
+	setting:width$7:filament_type
 	setting:filament_soluble
 group:Multimaterial toolchange temperature 
 	setting:filament_enable_toolchange_temp
