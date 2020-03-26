@@ -13,6 +13,7 @@
 
 #include "libslic3r/PrintConfig.hpp"
 #include "slic3r/GUI/I18N.hpp"
+#include "slic3r/GUI/GUI.hpp"
 #include "Http.hpp"
 
 
@@ -27,8 +28,6 @@ OctoPrint::OctoPrint(DynamicPrintConfig *config) :
     apikey(config->opt_string("printhost_apikey")),
     cafile(config->opt_string("printhost_cafile"))
 {}
-
-OctoPrint::~OctoPrint() {}
 
 const char* OctoPrint::get_name() const { return "OctoPrint"; }
 
@@ -67,7 +66,7 @@ bool OctoPrint::test(wxString &msg) const
                 const auto text = ptree.get_optional<std::string>("text");
                 res = validate_version_text(text);
                 if (! res) {
-                    msg = wxString::Format(_(L("Mismatched type of print host: %s")), text ? *text : "OctoPrint");
+                    msg = GUI::from_u8((boost::format(_utf8(L("Mismatched type of print host: %s"))) % (text ? *text : "OctoPrint")).str());
                 }
             }
             catch (const std::exception &) {
@@ -87,8 +86,10 @@ wxString OctoPrint::get_test_ok_msg () const
 
 wxString OctoPrint::get_test_failed_msg (wxString &msg) const
 {
-    return wxString::Format("%s: %s\n\n%s",
-        _(L("Could not connect to OctoPrint")), msg, _(L("Note: OctoPrint version at least 1.1.0 is required.")));
+    return GUI::from_u8((boost::format("%s: %s\n\n%s")
+        % _utf8(L("Could not connect to OctoPrint"))
+        % std::string(msg.ToUTF8())
+        % _utf8(L("Note: OctoPrint version at least 1.1.0 is required."))).str());
 }
 
 bool OctoPrint::upload(PrintHostUpload upload_data, ProgressFn prorgess_fn, ErrorFn error_fn) const
@@ -142,21 +143,6 @@ bool OctoPrint::upload(PrintHostUpload upload_data, ProgressFn prorgess_fn, Erro
     return res;
 }
 
-bool OctoPrint::has_auto_discovery() const
-{
-    return true;
-}
-
-bool OctoPrint::can_test() const
-{
-    return true;
-}
-
-bool OctoPrint::can_start_print() const
-{
-    return true;
-}
-
 bool OctoPrint::validate_version_text(const boost::optional<std::string> &version_text) const
 {
     return version_text ? boost::starts_with(*version_text, "OctoPrint") : true;
@@ -186,9 +172,6 @@ std::string OctoPrint::make_url(const std::string &path) const
 
 
 // SL1Host
-
-SL1Host::~SL1Host() {}
-
 const char* SL1Host::get_name() const { return "SL1Host"; }
 
 wxString SL1Host::get_test_ok_msg () const
@@ -198,18 +181,14 @@ wxString SL1Host::get_test_ok_msg () const
 
 wxString SL1Host::get_test_failed_msg (wxString &msg) const
 {
-    return wxString::Format("%s: %s", _(L("Could not connect to Prusa SLA")), msg);
-}
-
-bool SL1Host::can_start_print() const
-{
-    return false;
+    return GUI::from_u8((boost::format("%s: %s")
+                    % _utf8(L("Could not connect to Prusa SLA"))
+                    % std::string(msg.ToUTF8())).str());
 }
 
 bool SL1Host::validate_version_text(const boost::optional<std::string> &version_text) const
 {
     return version_text ? boost::starts_with(*version_text, "Prusa SLA") : false;
 }
-
 
 }

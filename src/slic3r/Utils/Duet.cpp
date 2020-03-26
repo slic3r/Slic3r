@@ -32,8 +32,6 @@ Duet::Duet(DynamicPrintConfig *config) :
 	password(config->opt_string("printhost_apikey"))
 {}
 
-Duet::~Duet() {}
-
 const char* Duet::get_name() const { return "Duet"; }
 
 bool Duet::test(wxString &msg) const
@@ -53,7 +51,9 @@ wxString Duet::get_test_ok_msg () const
 
 wxString Duet::get_test_failed_msg (wxString &msg) const
 {
-	return wxString::Format("%s: %s", _(L("Could not connect to Duet")), msg);
+    return GUI::from_u8((boost::format("%s: %s")
+                    % _utf8(L("Could not connect to Duet"))
+                    % std::string(msg.ToUTF8())).str());
 }
 
 bool Duet::upload(PrintHostUpload upload_data, ProgressFn prorgess_fn, ErrorFn error_fn) const
@@ -109,21 +109,6 @@ bool Duet::upload(PrintHostUpload upload_data, ProgressFn prorgess_fn, ErrorFn e
 	disconnect();
 
 	return res;
-}
-
-bool Duet::has_auto_discovery() const
-{
-	return false;
-}
-
-bool Duet::can_test() const
-{
-	return true;
-}
-
-bool Duet::can_start_print() const
-{
-	return true;
 }
 
 bool Duet::connect(wxString &msg) const

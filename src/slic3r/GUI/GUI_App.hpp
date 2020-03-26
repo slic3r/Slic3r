@@ -29,9 +29,9 @@ class PresetUpdater;
 class ModelObject;
 class PrintHostJobQueue;
 
-namespace GUI
-{
 
+namespace GUI{
+class RemovableDriveManager;
 enum FileType
 {
     FT_STL,
@@ -95,6 +95,8 @@ class GUI_App : public wxApp
     const wxLanguageInfo		 *m_language_info_system = nullptr;
     // Best translation language, provided by Windows or OSX, owned by wxWidgets.
     const wxLanguageInfo		 *m_language_info_best   = nullptr;
+
+	std::unique_ptr<RemovableDriveManager> m_removable_drive_manager;
 
     std::unique_ptr<ImGuiWrapper> m_imgui;
     std::unique_ptr<PrintHostJobQueue> m_printhost_job_queue;
@@ -180,6 +182,8 @@ public:
 
     std::vector<Tab *>      tabs_list;
 
+	RemovableDriveManager* removable_drive_manager() { return m_removable_drive_manager.get(); }
+
     ImGuiWrapper* imgui() { return m_imgui.get(); }
 
     PrintHostJobQueue& printhost_job_queue() { return *m_printhost_job_queue.get(); }
@@ -200,6 +204,7 @@ private:
     bool            select_language();
 
     bool            config_wizard_startup();
+	void            check_updates(const bool verbose);
 
 #ifdef __WXMSW__
     void            associate_3mf_files();

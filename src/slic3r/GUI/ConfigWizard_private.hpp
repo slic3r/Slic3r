@@ -82,14 +82,6 @@ struct Materials
         }
     }
 
-    bool exist_preset(const std::string& preset_name) const
-    {
-        for (const Preset* preset : presets)
-            if (preset->name == preset_name)
-                return true;
-        return false;
-    }
-
     static const std::string UNKNOWN;
     static const std::string& get_filament_type(const Preset *preset);
     static const std::string& get_filament_vendor(const Preset *preset);
@@ -100,12 +92,15 @@ struct Materials
 struct Bundle
 {
     std::unique_ptr<PresetBundle> preset_bundle;
-    VendorProfile *vendor_profile;
-    const bool is_in_resources;
-    const bool is_prusa_bundle;
+    VendorProfile *vendor_profile { nullptr };
+    bool is_in_resources { false };
+    bool is_prusa_bundle { false };
 
-    Bundle(fs::path source_path, bool is_in_resources, bool is_prusa_bundle = false);
+    Bundle() = default;
     Bundle(Bundle &&other);
+
+    // Returns false if not loaded. Reason for that is logged as boost::log error.
+    bool load(fs::path source_path, bool is_in_resources, bool is_prusa_bundle = false);
 
     const std::string& vendor_id() const { return vendor_profile->id; }
 };
@@ -149,6 +144,7 @@ struct PrinterPicker: wxPanel
     void select_all(bool select, bool alternates = false);
     void select_one(size_t i, bool select);
     bool any_selected() const;
+    std::set<std::string> get_selected_models() const ;
 
     int get_width() const { return width; }
     const std::vector<int>& get_button_indexes() { return m_button_indexes; }
@@ -216,6 +212,9 @@ struct PagePrinters: ConfigWizardPage
     void select_all(bool select, bool alternates = false);
     int get_width() const;
     bool any_selected() const;
+    std::set<std::string> get_selected_models();
+
+    std::string get_vendor_id() const { return printer_pickers.empty() ? "" : printer_pickers[0]->vendor_id; }
 
     virtual void set_run_reason(ConfigWizard::RunReason run_reason) override;
 };
@@ -300,6 +299,13 @@ struct PageUpdate: ConfigWizardPage
     bool preset_update;
 
     PageUpdate(ConfigWizard *parent);
+};
+
+struct PageReloadFromDisk : ConfigWizardPage
+{
+    bool full_pathnames;
+
+    PageReloadFromDisk(ConfigWizard* parent);
 };
 
 struct PageMode: ConfigWizardPage
@@ -437,6 +443,7 @@ struct ConfigWizard::priv
     std::unique_ptr<DynamicPrintConfig> custom_config;           // Backing for custom printer definition
     bool any_fff_selected;        // Used to decide whether to display Filaments page
     bool any_sla_selected;        // Used to decide whether to display SLA Materials page
+	bool custom_printer_selected; 
 
     wxScrolledWindow *hscroll = nullptr;
     wxBoxSizer *hscroll_sizer = nullptr;
@@ -454,6 +461,7 @@ struct ConfigWizard::priv
     PageMaterials    *page_sla_materials = nullptr;
     PageCustom       *page_custom = nullptr;
     PageUpdate       *page_update = nullptr;
+    PageReloadFromDisk *page_reload_from_disk = nullptr;
     PageMode         *page_mode = nullptr;
 #ifdef ALLOW_PRUSA_FIRST
     PagePrinters     *page_fff = nullptr;
@@ -492,13 +500,16 @@ struct ConfigWizard::priv
     void set_run_reason(RunReason run_reason);
     void update_materials(Technology technology);
 
-    void on_custom_setup();
+    void on_custom_setup(const bool custom_wanted);
     void on_printer_pick(PagePrinters *page, const PrinterPickerEvent &evt);
+    void select_default_materials_for_printer_model(const VendorProfile::PrinterModel &printer_model, Technology technology);
+    void select_default_materials_for_printer_models(Technology technology, const std::set<const VendorProfile::PrinterModel*> &printer_models);
 #ifdef ALLOW_PRUSA_FIRST
     void on_3rdparty_install(const VendorProfile *vendor, bool install);
 #endif
 
-    bool check_material_config(Technology technology);
+    bool on_bnt_finish();
+    bool check_and_install_missing_materials(Technology technology, const std::string &only_for_model_id = std::string());
     void apply_config(AppConfig *app_config, PresetBundle *preset_bundle, const PresetUpdater *updater);
     // #ys_FIXME_alise
     void update_presets_in_config(const std::string& section, const std::string& alias_key, bool add);

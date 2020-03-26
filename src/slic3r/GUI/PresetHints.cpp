@@ -1,6 +1,7 @@
 #include <cassert>
 
 #include "libslic3r/Flow.hpp"
+#include "libslic3r/Slicing.hpp"
 #include "libslic3r/libslic3r.h"
 
 #include "PresetBundle.hpp"
@@ -250,7 +251,7 @@ std::string PresetHints::recommended_thin_wall_thickness(const PresetBundle &pre
     float   nozzle_diameter                     = float(printer_config.opt_float("nozzle_diameter", 0));
     
     std::string out;
-	if (layer_height <= 0.f){
+	if (layer_height <= 0.f) {
 		out += _utf8(L("Recommended object min thin wall thickness: Not available due to invalid layer height."));
 		return out;
 	}
@@ -270,12 +271,83 @@ std::string PresetHints::recommended_thin_wall_thickness(const PresetBundle &pre
         out += (boost::format(_utf8(L("Recommended object min (thick) wall thickness for layer height %.2f and"))) % layer_height).str() + " ";
         out += (boost::format(_utf8(L("%d perimeter: %.2f mm"))) % 1 % (external_perimeter_flow.width + external_perimeter_flow.spacing())).str() + " ";
         // Start with the width of two closely spaced 
-        double width = 2*(external_perimeter_flow.width + external_perimeter_flow.spacing(perimeter_flow));
-        for (int i = 2; i <= num_lines; thin_walls ? ++ i : i ++) {
-            out += ", " + (boost::format(_utf8(L("%d perimeter: %.2f mm"))) % i %  width).str() + " ";
-            width += perimeter_flow.spacing()*2;
+        try {
+            double width = 2*(external_perimeter_flow.width + external_perimeter_flow.spacing(perimeter_flow));
+            for (int i = 2; i <= num_lines; thin_walls ? ++ i : i ++) {
+                out += ", " + (boost::format(_utf8(L("%d perimeter: %.2f mm"))) % i %  width).str() + " ";
+                width += perimeter_flow.spacing() * 2;
+            }
+        } catch (const FlowErrorNegativeSpacing &) {
+            out = _utf8(L("Recommended object thin wall thickness: Not available due to excessively small extrusion width."));
         }
     }
+    return out;
+}
+
+
+// Produce a textual explanation of the combined effects of the top/bottom_solid_layers
+// versus top/bottom_min_shell_thickness. Which of the two values wins depends
+// on the active layer height.
+std::string PresetHints::top_bottom_shell_thickness_explanation(const PresetBundle &preset_bundle)
+{
+    const DynamicPrintConfig &print_config    = preset_bundle.prints   .get_edited_preset().config;
+    const DynamicPrintConfig &printer_config  = preset_bundle.printers .get_edited_preset().config;
+
+    std::string out;
+
+    int     top_solid_layers                = print_config.opt_int("top_solid_layers");
+    int     bottom_solid_layers             = print_config.opt_int("bottom_solid_layers");
+    bool    has_top_layers 					= top_solid_layers > 0;
+    bool    has_bottom_layers 				= bottom_solid_layers > 0;
+    double  top_solid_min_thickness        	= print_config.opt_float("top_solid_min_thickness");
+    double  bottom_solid_min_thickness  	= print_config.opt_float("bottom_solid_min_thickness");
+    double  layer_height                    = print_config.opt_float("layer_height");
+    bool    variable_layer_height			= printer_config.opt_bool("variable_layer_height");
+    //FIXME the following lines take into account the 1st extruder only.
+    double  min_layer_height				= variable_layer_height ? Slicing::min_layer_height_from_nozzle(printer_config, 1) : layer_height;
+    double  max_layer_height				= variable_layer_height ? Slicing::max_layer_height_from_nozzle(printer_config, 1) : layer_height;
+
+	if (layer_height <= 0.f) {
+		out += _utf8(L("Top / bottom shell thickness hint: Not available due to invalid layer height."));
+		return out;
+	}
+
+    if (has_top_layers) {
+    	double top_shell_thickness = top_solid_layers * layer_height;
+    	if (top_shell_thickness < top_solid_min_thickness) {
+    		// top_solid_min_shell_thickness triggers even in case of normal layer height. Round the top_shell_thickness up
+    		// to an integer multiply of layer_height.
+    		double n = ceil(top_solid_min_thickness / layer_height);
+    		top_shell_thickness = n * layer_height;
+    	}
+    	double top_shell_thickness_minimum = std::max(top_solid_min_thickness, top_solid_layers * min_layer_height);
+        out += (boost::format(_utf8(L("Top shell is %1% mm thick for layer height %2% mm."))) % top_shell_thickness % layer_height).str();
+        if (variable_layer_height && top_shell_thickness_minimum < top_shell_thickness) {
+        	out += " ";
+	        out += (boost::format(_utf8(L("Minimum top shell thickness is %1% mm."))) % top_shell_thickness_minimum).str();        	
+        }
+    } else
+        out += _utf8(L("Top is open."));
+
+    out += "\n";
+
+    if (has_bottom_layers) {
+    	double bottom_shell_thickness = bottom_solid_layers * layer_height;
+    	if (bottom_shell_thickness < bottom_solid_min_thickness) {
+    		// bottom_solid_min_shell_thickness triggers even in case of normal layer height. Round the bottom_shell_thickness up
+    		// to an integer multiply of layer_height.
+    		double n = ceil(bottom_solid_min_thickness / layer_height);
+    		bottom_shell_thickness = n * layer_height;
+    	}
+    	double bottom_shell_thickness_minimum = std::max(bottom_solid_min_thickness, bottom_solid_layers * min_layer_height);
+        out += (boost::format(_utf8(L("Bottom shell is %1% mm thick for layer height %2% mm."))) % bottom_shell_thickness % layer_height).str();
+        if (variable_layer_height && bottom_shell_thickness_minimum < bottom_shell_thickness) {
+        	out += " ";
+	        out += (boost::format(_utf8(L("Minimum bottom shell thickness is %1% mm."))) % bottom_shell_thickness_minimum).str();        	
+        }
+    } else 
+        out += _utf8(L("Bottom is open."));
+
     return out;
 }
 

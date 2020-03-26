@@ -1,4 +1,5 @@
 #include "GCodeWriter.hpp"
+#include "CustomGCode.hpp"
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
@@ -21,12 +22,13 @@ void GCodeWriter::apply_print_config(const PrintConfig &print_config)
     this->config.apply(print_config, true);
     m_extrusion_axis = this->config.get_extrusion_axis();
     m_single_extruder_multi_material = print_config.single_extruder_multi_material.value;
-    m_max_acceleration = (print_config.gcode_flavor.value == gcfMarlin || print_config.gcode_flavor.value == gcfKlipper) ?
-        print_config.machine_max_acceleration_extruding.values.front() : 0;
+    m_max_acceleration = std::lrint((print_config.gcode_flavor.value == gcfMarlin || print_config.gcode_flavor.value == gcfKlipper) ?
+        print_config.machine_max_acceleration_extruding.values.front() : 0);
 }
 
-void GCodeWriter::set_extruders(const std::vector<unsigned int> &extruder_ids)
+void GCodeWriter::set_extruders(std::vector<unsigned int> extruder_ids)
 {
+    std::sort(extruder_ids.begin(), extruder_ids.end());
     m_extruders.clear();
     m_extruders.reserve(extruder_ids.size());
     for (unsigned int extruder_id : extruder_ids)
@@ -244,16 +246,17 @@ std::string GCodeWriter::update_progress(unsigned int num, unsigned int tot, boo
 std::string GCodeWriter::toolchange_prefix() const
 {
     return FLAVOR_IS(gcfMakerWare) ? "M135 T" :
-            FLAVOR_IS(gcfSailfish) ? "M108 T" :
-            FLAVOR_IS(gcfKlipper) ? "ACTIVATE_EXTRUDER EXTRUDER=extruder" : "T";
+           FLAVOR_IS(gcfSailfish) ? "M108 T" :
+           FLAVOR_IS(gcfKlipper) ? "ACTIVATE_EXTRUDER EXTRUDER=extruder" :
+           "T";
 }
 
 std::string GCodeWriter::toolchange(unsigned int extruder_id)
 {
     // set the new extruder
-    auto it_extruder = std::lower_bound(m_extruders.begin(), m_extruders.end(), Extruder::key(extruder_id));
-    assert(it_extruder != m_extruders.end());
-    m_extruder = const_cast<Extruder*>(&*it_extruder);
+	auto it_extruder = Slic3r::lower_bound_by_predicate(m_extruders.begin(), m_extruders.end(), [extruder_id](const Extruder &e) { return e.id() < extruder_id; });
+    assert(it_extruder != m_extruders.end() && it_extruder->id() == extruder_id);
+    m_extruder = &*it_extruder;
 
     // return the toolchange command
     // if we are running a single-extruder setup, just set the extruder and return nothing

@@ -50,7 +50,7 @@ using namespace Slic3r;
 
 PrinterTechnology get_printer_technology(const DynamicConfig &config)
 {
-	const ConfigOptionEnum<PrinterTechnology> *opt = config.option<ConfigOptionEnum<PrinterTechnology>>("printer_technology");
+    const ConfigOptionEnum<PrinterTechnology> *opt = config.option<ConfigOptionEnum<PrinterTechnology>>("printer_technology");
     return (opt == nullptr) ? ptUnknown : opt->value;
 }
 
@@ -84,14 +84,14 @@ int CLI::run(int argc, char **argv)
 
     bool							start_gui			= m_actions.empty() &&
         // cutting transformations are setting an "export" action.
-		std::find(m_transforms.begin(), m_transforms.end(), "cut") == m_transforms.end() &&
-		std::find(m_transforms.begin(), m_transforms.end(), "cut_x") == m_transforms.end() &&
-		std::find(m_transforms.begin(), m_transforms.end(), "cut_y") == m_transforms.end();
+        std::find(m_transforms.begin(), m_transforms.end(), "cut") == m_transforms.end() &&
+        std::find(m_transforms.begin(), m_transforms.end(), "cut_x") == m_transforms.end() &&
+        std::find(m_transforms.begin(), m_transforms.end(), "cut_y") == m_transforms.end();
     PrinterTechnology				printer_technology	= get_printer_technology(m_extra_config);
-	const std::vector<std::string> &load_configs		= m_config.option<ConfigOptionStrings>("load", true)->values;
-    
+    const std::vector<std::string> &load_configs		= m_config.option<ConfigOptionStrings>("load", true)->values;
+
     // load config files supplied via --load
-	for (auto const &file : load_configs) {
+    for (auto const &file : load_configs) {
         if (! boost::filesystem::exists(file)) {
             if (m_config.opt_bool("ignore_nonexistent_config")) {
                 continue;
@@ -153,13 +153,29 @@ int CLI::run(int argc, char **argv)
     m_print_config.normalize();
 
     if (printer_technology == ptUnknown)
-		printer_technology = std::find(m_actions.begin(), m_actions.end(), "export_sla") == m_actions.end() ? ptFFF : ptSLA;
+        printer_technology = std::find(m_actions.begin(), m_actions.end(), "export_sla") == m_actions.end() ? ptFFF : ptSLA;
 
     // Initialize full print configs for both the FFF and SLA technologies.
     FullPrintConfig    fff_print_config;
-//    SLAFullPrintConfig sla_print_config;
-    fff_print_config.apply(m_print_config, true);
-//    sla_print_config.apply(m_print_config, true);
+    SLAFullPrintConfig sla_print_config;
+    
+    // Synchronize the default parameters and the ones received on the command line.
+    if (printer_technology == ptFFF) {
+        fff_print_config.apply(m_print_config, true);
+        m_print_config.apply(fff_print_config, true);
+    } else if (printer_technology == ptSLA) {
+        // The default value has to be different from the one in fff mode.
+        sla_print_config.output_filename_format.value = "[input_filename_base].sl1";
+        
+        // The default bed shape should reflect the default display parameters
+        // and not the fff defaults.
+        double w = sla_print_config.display_width.getFloat();
+        double h = sla_print_config.display_height.getFloat();
+        sla_print_config.bed_shape.values = { Vec2d(0, 0), Vec2d(w, 0), Vec2d(w, h), Vec2d(0, h) };
+        
+        sla_print_config.apply(m_print_config, true);
+        m_print_config.apply(sla_print_config, true);
+    }
     
     // Loop through transform options.
     bool user_center_specified = false;
@@ -167,8 +183,8 @@ int CLI::run(int argc, char **argv)
         if (opt_key == "merge") {
             Model m;
             for (auto &model : m_models)
-				for (ModelObject *o : model.objects)
-					m.add_object(*o);
+                for (ModelObject *o : model.objects)
+                    m.add_object(*o);
             // Rearrange instances unless --dont-arrange is supplied
             if (! m_config.opt_bool("dont_arrange")) {
                 m.add_default_instances();
@@ -180,8 +196,8 @@ int CLI::run(int argc, char **argv)
                     this->has_print_action() ? &bb : nullptr
                 );
             }
-			m_models.clear();
-			m_models.emplace_back(std::move(m));
+            m_models.clear();
+            m_models.emplace_back(std::move(m));
         } else if (opt_key == "duplicate") {
             const BoundingBoxf &bb = fff_print_config.bed_shape.values;
             for (auto &model : m_models) {
@@ -211,11 +227,11 @@ int CLI::run(int argc, char **argv)
                 // this affects instances:
                 model.center_instances_around_point(m_config.option<ConfigOptionPoint>("center")->value);
                 // this affects volumes:
-				//FIXME Vojtech: Who knows why the complete model should be aligned with Z as a single rigid body?
+                //FIXME Vojtech: Who knows why the complete model should be aligned with Z as a single rigid body?
                 //model.align_to_ground();
                 BoundingBoxf3 bbox;
                 for (ModelObject *model_object : model.objects)
-					// We are interested into the Z span only, therefore it is sufficient to measure the bounding box of the 1st instance only.
+                    // We are interested into the Z span only, therefore it is sufficient to measure the bounding box of the 1st instance only.
                     bbox.merge(model_object->instance_bounding_box(0, false));
                 for (ModelObject *model_object : model.objects)
                     for (ModelInstance *model_instance : model_object->instances)
@@ -226,7 +242,7 @@ int CLI::run(int argc, char **argv)
             for (auto &model : m_models) {
                 BoundingBoxf3 bb = model.bounding_box();
                 // this affects volumes:
-				model.translate(-(bb.min.x() - p.x()), -(bb.min.y() - p.y()), -bb.min.z());
+                model.translate(-(bb.min.x() - p.x()), -(bb.min.y() - p.y()), -bb.min.z());
             }
         } else if (opt_key == "dont_arrange") {
             // do nothing - this option alters other transform options
@@ -264,8 +280,8 @@ int CLI::run(int argc, char **argv)
             std::vector<Model> new_models;
             for (auto &model : m_models) {
                 model.translate(0, 0, -model.bounding_box().min.z());  // align to z = 0
-				size_t num_objects = model.objects.size();
-				for (size_t i = 0; i < num_objects; ++ i) {
+                size_t num_objects = model.objects.size();
+                for (size_t i = 0; i < num_objects; ++ i) {
 
 #if 0
                     if (opt_key == "cut_x") {
@@ -276,15 +292,15 @@ int CLI::run(int argc, char **argv)
                         o->cut(Z, m_config.opt_float("cut"), &out);
                     }
 #else
-					model.objects.front()->cut(0, m_config.opt_float("cut"), true, true, true);
+                    model.objects.front()->cut(0, m_config.opt_float("cut"), true, true, true);
 #endif
-					model.delete_object(size_t(0));
+                    model.delete_object(size_t(0));
                 }
             }
-            
+
             // TODO: copy less stuff around using pointers
             m_models = new_models;
-            
+
             if (m_actions.empty())
                 m_actions.push_back("export_stl");
         }
@@ -294,7 +310,7 @@ int CLI::run(int argc, char **argv)
             for (auto &model : m_models) {
                 TriangleMesh mesh = model.mesh();
                 mesh.repair();
-            
+
                 TriangleMeshPtrs meshes = mesh.cut_by_grid(m_config.option<ConfigOptionPoint>("cut_grid")->value);
                 size_t i = 0;
                 for (TriangleMesh* m : meshes) {
@@ -305,10 +321,10 @@ int CLI::run(int argc, char **argv)
                     delete m;
                 }
             }
-            
+
             // TODO: copy less stuff around using pointers
             m_models = new_models;
-            
+
             if (m_actions.empty())
                 m_actions.push_back("export_stl");
         }
@@ -322,7 +338,7 @@ int CLI::run(int argc, char **argv)
                 }
             }
         } else if (opt_key == "repair") {
-			// Models are repaired by default.
+            // Models are repaired by default.
             //for (auto &model : m_models)
             //    model.repair();
         } else {
@@ -330,7 +346,7 @@ int CLI::run(int argc, char **argv)
             return 1;
         }
     }
-    
+
     // loop through action options
     for (auto const &opt_key : m_actions) {
         if (opt_key == "help") {
@@ -373,14 +389,14 @@ int CLI::run(int argc, char **argv)
                 boost::nowide::cerr << "error: cannot export SLA slices for a SLA configuration" << std::endl;
                 return 1;
             }
-			// Make a copy of the model if the current action is not the last action, as the model may be
-			// modified by the centering and such.
-			Model model_copy;
-			bool  make_copy = &opt_key != &m_actions.back();
+            // Make a copy of the model if the current action is not the last action, as the model may be
+            // modified by the centering and such.
+            Model model_copy;
+            bool  make_copy = &opt_key != &m_actions.back();
             for (Model &model_in : m_models) {
-				if (make_copy)
-					model_copy = model_in;
-				Model &model = make_copy ? model_copy : model_in;
+                if (make_copy)
+                    model_copy = model_in;
+                Model &model = make_copy ? model_copy : model_in;
                 // If all objects have defined instances, their relative positions will be
                 // honored when printing (they will be only centered, unless --dont-arrange
                 // is supplied); if any object has no instances, it will get a default one
@@ -401,8 +417,8 @@ int CLI::run(int argc, char **argv)
                     //FIXME make the min_object_distance configurable.
                     model.arrange_objects(fff_print.config().min_object_distance());
                     model.center_instances_around_point((! user_center_specified && m_print_config.has("bed_shape")) ? 
-                        BoundingBoxf(m_print_config.opt<ConfigOptionPoints>("bed_shape")->values).center() : 
-                        m_config.option<ConfigOptionPoint>("center")->value);
+                    	BoundingBoxf(m_print_config.opt<ConfigOptionPoints>("bed_shape")->values).center() : 
+                    	m_config.option<ConfigOptionPoint>("center")->value);
                 }
                 if (printer_technology == ptFFF) {
                     for (auto* mo : model.objects)
@@ -416,7 +432,7 @@ int CLI::run(int argc, char **argv)
                 }
                 if (print->empty())
                     boost::nowide::cout << "Nothing to print for " << outfile << " . Either the print is empty or no object is fully inside the print volume." << std::endl;
-                else 
+                else
                     try {
                         std::string outfile_final;
                         print->process();
@@ -523,7 +539,7 @@ int CLI::run(int argc, char **argv)
 bool CLI::setup(int argc, char **argv)
 {
     {
-        Slic3r::set_logging_level(1);
+	    Slic3r::set_logging_level(1);
         const char *loglevel = boost::nowide::getenv("SLIC3R_LOGLEVEL");
         if (loglevel != nullptr) {
             if (loglevel[0] >= '0' && loglevel[0] <= '9' && loglevel[1] == 0)
@@ -586,7 +602,7 @@ bool CLI::setup(int argc, char **argv)
     // Initialize with defaults.
     for (const t_optiondef_map *options : { &cli_actions_config_def.options, &cli_transform_config_def.options, &cli_misc_config_def.options })
         for (const std::pair<t_config_option_key, ConfigOptionDef> &optdef : *options)
-            m_config.optptr(optdef.first, true);
+            m_config.option(optdef.first, true);
 
     set_data_dir(m_config.opt_string("datadir"));
 
@@ -636,10 +652,10 @@ bool CLI::export_models(IO::ExportFormat format)
         std::string path = this->output_filepath(model, format);
         bool success = false;
         switch (format) {
-            case IO::AMF: success = Slic3r::store_amf(path, &model, nullptr); break;
+            case IO::AMF: success = Slic3r::store_amf(path, &model, nullptr, false); break;
             case IO::OBJ: success = Slic3r::store_obj(path.c_str(), &model);          break;
             case IO::STL: success = Slic3r::store_stl(path.c_str(), &model, true);    break;
-            case IO::TMF: success = Slic3r::store_3mf(path.c_str(), &model, nullptr); break;
+            case IO::TMF: success = Slic3r::store_3mf(path.c_str(), &model, nullptr, false); break;
             default: assert(false); break;
         }
         if (success)
@@ -686,7 +702,7 @@ extern "C" {
         for (size_t i = 0; i < argc; ++ i)
             argv_narrow.emplace_back(boost::nowide::narrow(argv[i]));
         for (size_t i = 0; i < argc; ++ i)
-            argv_ptrs[i] = const_cast<char*>(argv_narrow[i].data());
+            argv_ptrs[i] = argv_narrow[i].data();
         // Call the UTF8 main.
         return CLI().run(argc, argv_ptrs.data());
     }

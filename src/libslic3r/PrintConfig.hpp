@@ -47,7 +47,7 @@ enum GCodeFlavor : unsigned char {
 };
 
 enum PrintHostType {
-    htOctoPrint, htDuet, htFlashAir
+    htOctoPrint, htDuet, htFlashAir, htAstroBox
 };
 
 enum InfillPattern {
@@ -63,13 +63,6 @@ enum SupportMaterialPattern {
 enum SeamPosition {
     spRandom, spNearest, spAligned, spRear, spHidden
 };
-
-/*
-enum FilamentType {
-    ftPLA, ftABS, ftPET, ftHIPS, ftFLEX, ftSCAFF, ftEDGE, ftNGEN, ftPVA
-    , ftOther0, ftOther1, ftOther2, ftOther3, ftOther4, ftOther5, ftOther6, ftOther7, ftOther8, ftOther9
-};
-*/
 
 enum SLAMaterial {
     slamTough,
@@ -145,6 +138,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<PrintHostType>::g
         keys_map["octoprint"]       = htOctoPrint;
         keys_map["duet"]            = htDuet;
         keys_map["flashair"]        = htFlashAir;
+        keys_map["astrobox"]        = htAstroBox;
     }
     return keys_map;
 }
@@ -199,34 +193,6 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<SeamPosition>::ge
     }
     return keys_map;
 }
-
-/*
-template<> inline const t_config_enum_values& ConfigOptionEnum<FilamentType>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["PLA"]             = ftPLA;
-        keys_map["ABS"]             = ftABS;
-        keys_map["PET"]             = ftPET;
-        keys_map["HIPS"]            = ftHIPS;
-        keys_map["FLEX"]            = ftFLEX;
-        keys_map["SCAFF"]           = ftSCAFF;
-        keys_map["EDGE"]            = ftEDGE;
-        keys_map["NGEN"]            = ftNGEN;
-        keys_map["PVA"]             = ftPVA;
-        keys_map["other0"]          = ftOther0;
-        keys_map["other1"]          = ftOther1;
-        keys_map["other2"]          = ftOther2;
-        keys_map["other3"]          = ftOther3;
-        keys_map["other4"]          = ftOther4;
-        keys_map["other5"]          = ftOther5;
-        keys_map["other6"]          = ftOther6;
-        keys_map["other7"]          = ftOther7;
-        keys_map["other8"]          = ftOther8;
-        keys_map["other9"]          = ftOther9;
-    }
-    return keys_map;
-}
-*/
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>::get_enum_values() {
     static const t_config_enum_values keys_map = {
@@ -444,6 +410,9 @@ protected:
 #define STATIC_PRINT_CONFIG_CACHE_BASE(CLASS_NAME) \
 public: \
     /* Overrides ConfigBase::optptr(). Find ando/or create a ConfigOption instance for a given name. */ \
+    const ConfigOption*      optptr(const t_config_option_key &opt_key) const override \
+        { return s_cache_##CLASS_NAME.optptr(opt_key, this); } \
+    /* Overrides ConfigBase::optptr(). Find ando/or create a ConfigOption instance for a given name. */ \
     ConfigOption*            optptr(const t_config_option_key &opt_key, bool create = false) override \
         { return s_cache_##CLASS_NAME.optptr(opt_key, this); } \
     /* Overrides ConfigBase::keys(). Collect names of all configuration values maintained by this configuration store. */ \
@@ -593,7 +562,7 @@ class PrintRegionConfig : public StaticPrintConfig
 public:
     ConfigOptionFloat               bridge_angle;
     ConfigOptionInt                 bottom_solid_layers;
-    ConfigOptionFloatOrPercent      bridge_flow_ratio;
+    ConfigOptionFloat               bottom_solid_min_thickness;    ConfigOptionFloatOrPercent      bridge_flow_ratio;
     ConfigOptionFloatOrPercent      over_bridge_flow_ratio;
     ConfigOptionFloatOrPercent      bridge_overlap;
     ConfigOptionEnum<InfillPattern> bottom_fill_pattern;
@@ -660,6 +629,7 @@ public:
     ConfigOptionEnum<InfillPattern> top_fill_pattern;
     ConfigOptionFloatOrPercent      top_infill_extrusion_width;
     ConfigOptionInt                 top_solid_layers;
+    ConfigOptionFloat               top_solid_min_thickness;
     ConfigOptionFloatOrPercent      top_solid_infill_speed;
     ConfigOptionBool                wipe_into_infill;
 
@@ -668,6 +638,7 @@ protected:
     {
         OPT_PTR(bridge_angle);
         OPT_PTR(bottom_solid_layers);
+        OPT_PTR(bottom_solid_min_thickness);
         OPT_PTR(bridge_flow_ratio);
         OPT_PTR(over_bridge_flow_ratio);
         OPT_PTR(bridge_overlap);
@@ -733,6 +704,7 @@ protected:
         OPT_PTR(top_infill_extrusion_width);
         OPT_PTR(top_solid_infill_speed);
         OPT_PTR(top_solid_layers);
+        OPT_PTR(top_solid_min_thickness);
         OPT_PTR(wipe_into_infill);
     }
 };
@@ -1033,6 +1005,7 @@ public:
     ConfigOptionBools               retract_layer_change;
     ConfigOptionFloat               skirt_distance;
     ConfigOptionInt                 skirt_height;
+    ConfigOptionBool                draft_shield;
     ConfigOptionInt                 skirts;
     ConfigOptionInts                slowdown_below_layer_time;
     ConfigOptionBool                spiral_vase;
@@ -1112,6 +1085,7 @@ protected:
         OPT_PTR(retract_layer_change);
         OPT_PTR(skirt_distance);
         OPT_PTR(skirt_height);
+        OPT_PTR(draft_shield);
         OPT_PTR(skirts);
         OPT_PTR(slowdown_below_layer_time);
         OPT_PTR(spiral_vase);
@@ -1221,6 +1195,9 @@ public:
 
     // Radius in mm of the support pillars.
     ConfigOptionFloat support_pillar_diameter /*= 0.8*/;
+    
+    // How much bridge (supporting another pinhead) can be placed on a pillar.
+    ConfigOptionInt   support_max_bridges_on_pillar;
 
     // How the pillars are bridged together
     ConfigOptionEnum<SLAPillarConnectionMode> support_pillar_connection_mode;
@@ -1241,7 +1218,7 @@ public:
     ConfigOptionFloat support_base_height /*= 1.0*/;
 
     // The minimum distance of the pillar base from the model in mm.
-    ConfigOptionFloat support_base_safety_distance; /*= 1.0*/;
+    ConfigOptionFloat support_base_safety_distance; /*= 1.0*/
 
     // The default angle for connecting support sticks and junctions.
     ConfigOptionFloat support_critical_angle /*= 45*/;
@@ -1286,7 +1263,7 @@ public:
 
     // /////////////////////////////////////////////////////////////////////////
     // Zero elevation mode parameters:
-    //    - The object pad will be derived from the the model geometry.
+    //    - The object pad will be derived from the model geometry.
     //    - There will be a gap between the object pad and the generated pad
     //      according to the support_base_safety_distance parameter.
     //    - The two pads will be connected with tiny connector sticks
@@ -1308,6 +1285,28 @@ public:
 
     // How much should the tiny connectors penetrate into the model body
     ConfigOptionFloat pad_object_connector_penetration;
+    
+    // /////////////////////////////////////////////////////////////////////////
+    // Model hollowing parameters:
+    //   - Models can be hollowed out as part of the SLA print process
+    //   - Thickness of the hollowed model walls can be adjusted
+    //   -
+    //   - Additional holes will be drilled into the hollow model to allow for
+    //   - resin removal.
+    // /////////////////////////////////////////////////////////////////////////
+    
+    ConfigOptionBool hollowing_enable;
+    
+    // The minimum thickness of the model walls to maintain. Note that the 
+    // resulting walls may be thicker due to smoothing out fine cavities where
+    // resin could stuck.
+    ConfigOptionFloat hollowing_min_thickness;
+    
+    // Indirectly controls the voxel size (resolution) used by openvdb
+    ConfigOptionFloat hollowing_quality;
+   
+    // Indirectly controls the minimum size of created cavities.
+    ConfigOptionFloat hollowing_closing_distance;
 
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
@@ -1320,6 +1319,7 @@ protected:
         OPT_PTR(support_head_penetration);
         OPT_PTR(support_head_width);
         OPT_PTR(support_pillar_diameter);
+        OPT_PTR(support_max_bridges_on_pillar);
         OPT_PTR(support_pillar_connection_mode);
         OPT_PTR(support_buildplate_only);
         OPT_PTR(support_pillar_widening_factor);
@@ -1345,6 +1345,10 @@ protected:
         OPT_PTR(pad_object_connector_stride);
         OPT_PTR(pad_object_connector_width);
         OPT_PTR(pad_object_connector_penetration);
+        OPT_PTR(hollowing_enable);
+        OPT_PTR(hollowing_min_thickness);
+        OPT_PTR(hollowing_quality);
+        OPT_PTR(hollowing_closing_distance);
     }
 };
 
@@ -1390,6 +1394,8 @@ public:
     ConfigOptionBool                        display_mirror_y;
     ConfigOptionFloats                      relative_correction;
     ConfigOptionFloat                       absolute_correction;
+    ConfigOptionFloat                       elefant_foot_compensation;
+    ConfigOptionFloat                       elefant_foot_min_width;
     ConfigOptionFloat                       gamma_correction;
     ConfigOptionFloat                       fast_tilt_time;
     ConfigOptionFloat                       slow_tilt_time;
@@ -1413,6 +1419,8 @@ protected:
         OPT_PTR(display_orientation);
         OPT_PTR(relative_correction);
         OPT_PTR(absolute_correction);
+        OPT_PTR(elefant_foot_compensation);
+        OPT_PTR(elefant_foot_min_width);
         OPT_PTR(gamma_correction);
         OPT_PTR(fast_tilt_time);
         OPT_PTR(slow_tilt_time);

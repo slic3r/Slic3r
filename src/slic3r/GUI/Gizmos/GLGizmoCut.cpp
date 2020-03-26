@@ -9,6 +9,8 @@
 #include <wx/stattext.h>
 #include <wx/sizer.h>
 
+#include <algorithm>
+
 #include "slic3r/GUI/GUI_App.hpp"
 
 
@@ -27,6 +29,11 @@ GLGizmoCut::GLGizmoCut(GLCanvas3D& parent, const std::string& icon_filename, uns
     , m_keep_lower(true)
     , m_rotate_lower(false)
 {}
+
+std::string GLGizmoCut::get_tooltip() const
+{
+    return (m_hover_id == 0 || m_grabbers[0].dragging) ? "Z: " + format(m_cut_z, 2) : "";
+}
 
 bool GLGizmoCut::on_init()
 {
@@ -77,10 +84,6 @@ void GLGizmoCut::on_update(const UpdateData& data)
 
 void GLGizmoCut::on_render() const
 {
-    if (m_grabbers[0].dragging) {
-        set_tooltip("Z: " + format(m_cut_z, 2));
-    }
-
     const Selection& selection = m_parent.get_selection();
 
     update_max_z(selection);
@@ -189,7 +192,7 @@ void GLGizmoCut::update_max_z(const Selection& selection) const
 void GLGizmoCut::set_cut_z(double cut_z) const
 {
     // Clamp the plane to the object's bounding box
-    m_cut_z = std::max(0.0, std::min(m_max_z, cut_z));
+    m_cut_z = std::clamp(cut_z, 0.0, m_max_z);
 }
 
 void GLGizmoCut::perform_cut(const Selection& selection)

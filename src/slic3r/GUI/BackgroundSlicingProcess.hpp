@@ -53,11 +53,11 @@ public:
     void set_thumbnail_cb(ThumbnailsGeneratorCallback cb) { m_thumbnail_cb = cb; }
 #endif // ENABLE_THUMBNAIL_GENERATOR
 
-	// The following wxCommandEvent will be sent to the UI thread / Platter window, when the slicing is finished
+	// The following wxCommandEvent will be sent to the UI thread / Plater window, when the slicing is finished
 	// and the background processing will transition into G-code export.
 	// The wxCommandEvent is sent to the UI thread asynchronously without waiting for the event to be processed.
 	void set_slicing_completed_event(int event_id) { m_event_slicing_completed_id = event_id; }
-	// The following wxCommandEvent will be sent to the UI thread / Platter window, when the G-code export is finished.
+	// The following wxCommandEvent will be sent to the UI thread / Plater window, when the G-code export is finished.
 	// The wxCommandEvent is sent to the UI thread asynchronously without waiting for the event to be processed.
 	void set_finished_event(int event_id) { m_event_finished_id = event_id; }
 
@@ -98,7 +98,7 @@ public:
 
 	// Set the export path of the G-code.
 	// Once the path is set, the G-code 
-	void schedule_export(const std::string &path);
+	void schedule_export(const std::string &path, bool export_path_on_removable_media);
 	// Set print host upload job data to be enqueued to the PrintHostJobQueue
 	// after current print slicing is complete
 	void schedule_upload(Slic3r::PrintHostJob upload_job);
@@ -132,11 +132,6 @@ public:
     // This "finished" flag does not account for the final export of the output file (.gcode or zipped PNGs),
     // and it does not account for the OctoPrint scheduling.
     bool    finished() const { return m_print->finished(); }
-
-    void    set_force_update_print_regions(bool force_update_print_regions) {
-        if (m_fff_print)
-	        m_fff_print->set_force_update_print_regions(force_update_print_regions);
-	}
     
 private:
 	void 	thread_proc();
@@ -162,13 +157,14 @@ private:
 	GCodePreviewData 		   *m_gcode_preview_data = nullptr;
 #if ENABLE_THUMBNAIL_GENERATOR
     // Callback function, used to write thumbnails into gcode.
-    ThumbnailsGeneratorCallback m_thumbnail_cb = nullptr;
+    ThumbnailsGeneratorCallback m_thumbnail_cb 		 = nullptr;
 #endif // ENABLE_THUMBNAIL_GENERATOR
 	// Temporary G-code, there is one defined for the BackgroundSlicingProcess, differentiated from the other processes by a process ID.
 	std::string 				m_temp_output_path;
 	// Output path provided by the user. The output path may be set even if the slicing is running,
 	// but once set, it cannot be re-set.
 	std::string 				m_export_path;
+	bool 						m_export_path_on_removable_media = false;
 	// Print host upload job to schedule after slicing is complete, used by schedule_upload(),
 	// empty by default (ie. no upload to schedule)
 	PrintHostJob                m_upload_job;
@@ -191,9 +187,9 @@ private:
     void                throw_if_canceled() const { if (m_print->canceled()) throw CanceledException(); }
     void                prepare_upload();
 
-	// wxWidgets command ID to be sent to the platter to inform that the slicing is finished, and the G-code export will continue.
+	// wxWidgets command ID to be sent to the plater to inform that the slicing is finished, and the G-code export will continue.
 	int 						m_event_slicing_completed_id 	= 0;
-	// wxWidgets command ID to be sent to the platter to inform that the task finished.
+	// wxWidgets command ID to be sent to the plater to inform that the task finished.
 	int 						m_event_finished_id  			= 0;
 };
 

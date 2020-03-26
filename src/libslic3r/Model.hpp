@@ -8,9 +8,11 @@
 #include "Point.hpp"
 #include "PrintConfig.hpp"
 #include "Slicing.hpp"
-#include "SLA/SLACommon.hpp"
+#include "SLA/SupportPoint.hpp"
+#include "SLA/Hollowing.hpp"
 #include "TriangleMesh.hpp"
 #include "Arrange.hpp"
+#include "CustomGCode.hpp"
 
 #include <map>
 #include <memory>
@@ -198,10 +200,13 @@ public:
     // This vector holds position of selected support points for SLA. The data are
     // saved in mesh coordinates to allow using them for several instances.
     // The format is (x, y, z, point_size, supports_island)
-    std::vector<sla::SupportPoint>      sla_support_points;
+    sla::SupportPoints      sla_support_points;
     // To keep track of where the points came from (used for synchronization between
     // the SLA gizmo and the backend).
-    sla::PointsStatus sla_points_status = sla::PointsStatus::NoPoints;
+    sla::PointsStatus       sla_points_status = sla::PointsStatus::NoPoints;
+
+    // Holes to be drilled into the object so resin can flow out
+    sla::DrainHoles         sla_drain_holes;
 
     /* This vector accumulates the total translation applied to the object by the
         center_around_origin() method. Callers might want to apply the same translation
@@ -236,7 +241,7 @@ public:
     // A mesh containing all transformed instances of this object.
     TriangleMesh mesh() const;
     // Non-transformed (non-rotated, non-scaled, non-translated) sum of non-modifier object volumes.
-    // Currently used by ModelObject::mesh() and to calculate the 2D envelope for 2D platter.
+    // Currently used by ModelObject::mesh() and to calculate the 2D envelope for 2D plater.
     TriangleMesh raw_mesh() const;
     // Non-transformed (non-rotated, non-scaled, non-translated) sum of all object volumes.
     TriangleMesh full_raw_mesh() const;
@@ -372,7 +377,7 @@ private:
 	template<class Archive> void serialize(Archive &ar) {
 		ar(cereal::base_class<ObjectBase>(this));
 		Internal::StaticSerializationWrapper<ModelConfig> config_wrapper(config);
-        ar(name, input_file, instances, volumes, config_wrapper, layer_config_ranges, layer_height_profile, sla_support_points, sla_points_status, printable, origin_translation,
+        ar(name, input_file, instances, volumes, config_wrapper, layer_config_ranges, layer_height_profile, sla_support_points, sla_points_status, sla_drain_holes, printable, origin_translation,
             m_bounding_box, m_bounding_box_valid, m_raw_bounding_box, m_raw_bounding_box_valid, m_raw_mesh_bounding_box, m_raw_mesh_bounding_box_valid);
 	}
 };
@@ -399,13 +404,9 @@ public:
         int object_idx{ -1 };
         int volume_idx{ -1 };
         Vec3d mesh_offset{ Vec3d::Zero() };
-#if ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
         Geometry::Transformation transform;
 
         template<class Archive> void serialize(Archive& ar) { ar(input_file, object_idx, volume_idx, mesh_offset, transform); }
-#else
-        template<class Archive> void serialize(Archive& ar) { ar(input_file, object_idx, volume_idx, mesh_offset); }
-#endif // ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
     };
     Source              source;
 
@@ -673,6 +674,7 @@ public:
         set_rotation(Z, rotation);
         set_offset(X, unscale<double>(offs(X)));
         set_offset(Y, unscale<double>(offs(Y)));
+        this->object->invalidate_bounding_box();
     }
 
 protected:
@@ -753,32 +755,7 @@ public:
     ModelWipeTower	    wipe_tower;
 
     // Extensions for color print
-    struct CustomGCode
-    {
-        bool operator<(const CustomGCode& other) const { return other.print_z > this->print_z; }
-        bool operator==(const CustomGCode& other) const
-        {
-            return (other.print_z   == this->print_z    ) && 
-                   (other.gcode     == this->gcode      ) && 
-                   (other.extruder  == this->extruder   ) && 
-                   (other.color     == this->color      );
-        }
-        bool operator!=(const CustomGCode& other) const
-        {
-            return (other.print_z   != this->print_z    ) || 
-                   (other.gcode     != this->gcode      ) || 
-                   (other.extruder  != this->extruder   ) || 
-                   (other.color     != this->color      );
-        }
-        
-        double      print_z;
-        std::string gcode;
-        int         extruder;   // 0    - "gcode" will be applied for whole print
-                                // else - "gcode" will be applied only for "extruder" print
-        std::string color;      // if gcode is equal to PausePrintCode, 
-                                // this field is used for save a short message shown on Printer display 
-    };
-    std::vector<CustomGCode> custom_gcode_per_print_z;
+    CustomGCode::Info custom_gcode_per_print_z;
     
     // Default constructor assigns a new ID to the model.
     Model() { assert(this->id().valid()); }
@@ -844,9 +821,6 @@ public:
     // Propose an output path, replace extension. The new_extension shall contain the initial dot.
     std::string   propose_export_file_name_and_path(const std::string &new_extension) const;
 
-    // from custom_gcode_per_print_z get just tool_change codes
-    std::vector<std::pair<double, DynamicPrintConfig>> get_custom_tool_changes(double default_layer_height, size_t num_extruders) const;
-
 private:
 	explicit Model(int) : ObjectBase(-1) { assert(this->id().invalid()); };
 	void assign_new_unique_ids_recursive();
@@ -880,10 +854,6 @@ extern bool model_volume_list_changed(const ModelObject &model_object_old, const
 extern bool model_has_multi_part_objects(const Model &model);
 // If the model has advanced features, then it cannot be processed in simple mode.
 extern bool model_has_advanced_features(const Model &model);
-/* If loaded configuration has a "colorprint_heights" option (if it was imported from older Slicer), 
- * then model.custom_gcode_per_print_z should be updated considering this option
- * */
-extern void update_custom_gcode_per_print_z_from_config(std::vector<Model::CustomGCode>& custom_gcode_per_print_z, DynamicPrintConfig* config);
 
 #ifndef NDEBUG
 // Verify whether the IDs of Model / ModelObject / ModelVolume / ModelInstance / ModelMaterial are valid and unique.

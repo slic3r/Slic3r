@@ -66,7 +66,7 @@ Model& Model::assign_copy(Model &&rhs)
     rhs.objects.clear();
 
     // copy custom code per height
-    this->custom_gcode_per_print_z = rhs.custom_gcode_per_print_z;
+    this->custom_gcode_per_print_z = std::move(rhs.custom_gcode_per_print_z);
     return *this;
 }
 
@@ -126,7 +126,8 @@ Model Model::read_from_file(const std::string& input_file, DynamicPrintConfig* c
     if (add_default_instances)
         model.add_default_instances();
 
-    update_custom_gcode_per_print_z_from_config(model.custom_gcode_per_print_z, config);
+    CustomGCode::update_custom_gcode_per_print_z_from_config(model.custom_gcode_per_print_z, config);
+    CustomGCode::check_mode_for_custom_gcode_per_print_z(model.custom_gcode_per_print_z);
 
     return model;
 }
@@ -163,7 +164,8 @@ Model Model::read_from_archive(const std::string& input_file, DynamicPrintConfig
     if (add_default_instances)
         model.add_default_instances();
 
-    update_custom_gcode_per_print_z_from_config(model.custom_gcode_per_print_z, config);
+    CustomGCode::update_custom_gcode_per_print_z_from_config(model.custom_gcode_per_print_z, config);
+    CustomGCode::check_mode_for_custom_gcode_per_print_z(model.custom_gcode_per_print_z);
 
     return model;
 }
@@ -525,13 +527,13 @@ void Model::convert_multipart_object(unsigned int max_extruders)
     unsigned int extruder_counter = 0;
     for (const ModelObject* o : this->objects)
     	for (const ModelVolume* v : o->volumes) {
-                // If there are more than one object, put all volumes together 
-                // Each object may contain any number of volumes and instances
-                // The volumes transformations are relative to the object containing them...
+            // If there are more than one object, put all volumes together 
+            // Each object may contain any number of volumes and instances
+            // The volumes transformations are relative to the object containing them...
             Geometry::Transformation trafo_volume = v->get_transformation();
             // Revert the centering operation.
             trafo_volume.set_offset(trafo_volume.get_offset() - o->origin_translation);
-                int counter = 1;
+            int counter = 1;
             auto copy_volume = [o, max_extruders, &counter, &extruder_counter](ModelVolume *new_v) {
                 assert(new_v != nullptr);
                 new_v->name = o->name + "_" + std::to_string(counter++);
@@ -543,9 +545,9 @@ void Model::convert_multipart_object(unsigned int max_extruders)
             } else {
                 for (const ModelInstance* i : o->instances)
                         // ...so, transform everything to a common reference system (world)
-                	copy_volume(object->add_volume(*v))->set_transformation(i->get_transformation() * trafo_volume);                    
-                    }
-                }
+                    copy_volume(object->add_volume(*v))->set_transformation(i->get_transformation() * trafo_volume);                    
+            }
+        }
 
     // commented-out to fix #2868
 //    object->add_instance();
@@ -598,21 +600,6 @@ std::string Model::propose_export_file_name_and_path(const std::string &new_exte
     return boost::filesystem::path(this->propose_export_file_name_and_path()).replace_extension(new_extension).string();
 }
 
-std::vector<std::pair<double, DynamicPrintConfig>> Model::get_custom_tool_changes(double default_layer_height, size_t num_extruders) const
-{
-    std::vector<std::pair<double, DynamicPrintConfig>> custom_tool_changes;
-    for (const CustomGCode& custom_gcode : custom_gcode_per_print_z)
-        if (custom_gcode.gcode == ExtruderChangeCode) {
-            DynamicPrintConfig config;
-            // If extruder count in PrinterSettings was changed, use default (0) extruder for extruders, more than num_extruders
-            config.set_key_value("extruder", new ConfigOptionInt(custom_gcode.extruder > num_extruders ? 0 : custom_gcode.extruder));
-            // For correct extruders(tools) changing, we should decrease custom_gcode.height value by one default layer height
-            custom_tool_changes.push_back({ custom_gcode.print_z - default_layer_height, config });
-        }
-
-    return custom_tool_changes;
-}
-
 ModelObject::~ModelObject()
 {
     this->clear_volumes();
@@ -633,6 +620,7 @@ ModelObject& ModelObject::assign_copy(const ModelObject &rhs)
     assert(this->config.id() == rhs.config.id());
     this->sla_support_points          = rhs.sla_support_points;
     this->sla_points_status           = rhs.sla_points_status;
+    this->sla_drain_holes             = rhs.sla_drain_holes;
     this->layer_config_ranges         = rhs.layer_config_ranges;    // #ys_FIXME_experiment
     this->layer_height_profile        = rhs.layer_height_profile;
     this->printable                   = rhs.printable;
@@ -673,6 +661,7 @@ ModelObject& ModelObject::assign_copy(ModelObject &&rhs)
     assert(this->config.id() == rhs.config.id());
     this->sla_support_points          = std::move(rhs.sla_support_points);
     this->sla_points_status           = std::move(rhs.sla_points_status);
+    this->sla_drain_holes             = std::move(rhs.sla_drain_holes);
     this->layer_config_ranges         = std::move(rhs.layer_config_ranges); // #ys_FIXME_experiment
     this->layer_height_profile        = std::move(rhs.layer_height_profile);
     this->origin_translation          = std::move(rhs.origin_translation);
@@ -858,7 +847,7 @@ TriangleMesh ModelObject::mesh() const
 }
 
 // Non-transformed (non-rotated, non-scaled, non-translated) sum of non-modifier object volumes.
-// Currently used by ModelObject::mesh(), to calculate the 2D envelope for 2D platter
+// Currently used by ModelObject::mesh(), to calculate the 2D envelope for 2D plater
 // and to display the object statistics at ModelObject::print_info().
 TriangleMesh ModelObject::raw_mesh() const
 {
@@ -921,7 +910,7 @@ const BoundingBoxf3& ModelObject::raw_bounding_box() const
         {
             if (v->is_model_part())
                 m_raw_bounding_box.merge(v->mesh().transformed_bounding_box(inst_matrix * v->get_matrix()));
-            }
+        }
     }
 	return m_raw_bounding_box;
 }
@@ -1126,17 +1115,19 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
     if (keep_upper) {
         upper->set_model(nullptr);
         upper->sla_support_points.clear();
+        upper->sla_drain_holes.clear();
         upper->sla_points_status = sla::PointsStatus::NoPoints;
         upper->clear_volumes();
-        upper->input_file = "";
+        upper->input_file.clear();
     }
 
     if (keep_lower) {
         lower->set_model(nullptr);
         lower->sla_support_points.clear();
+        lower->sla_drain_holes.clear();
         lower->sla_points_status = sla::PointsStatus::NoPoints;
         lower->clear_volumes();
-        lower->input_file = "";
+        lower->input_file.clear();
     }
 
     // Because transformations are going to be applied to meshes directly,
@@ -1169,7 +1160,8 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
             if (keep_upper) { upper->add_volume(*volume); }
             if (keep_lower) { lower->add_volume(*volume); }
         }
-        else {
+        else if (! volume->mesh().empty()) {
+            
             TriangleMesh upper_mesh, lower_mesh;
 
             // Transform the mesh by the combined transformation matrix.
@@ -1177,7 +1169,9 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
 			TriangleMesh mesh(volume->mesh());
 			mesh.transform(instance_matrix * volume_matrix, true);
 			volume->reset_mesh();
-
+            
+            mesh.require_shared_vertices();
+            
             // Perform cut
             TriangleMeshSlicer tms(&mesh);
             tms.cut(float(z), &upper_mesh, &lower_mesh);
@@ -1340,8 +1334,8 @@ void ModelObject::bake_xy_rotation_into_meshes(size_t instance_idx)
 
     // Adjust the meshes.
     // Transformation to be applied to the meshes.
-    Eigen::Matrix3d    mesh_trafo_3x3           = reference_trafo.get_matrix(true, false, uniform_scaling, ! has_mirrorring).matrix().block<3, 3>(0, 0);
-	Transform3d volume_offset_correction = this->instances[instance_idx]->get_transformation().get_matrix().inverse() * reference_trafo.get_matrix();
+    Eigen::Matrix3d mesh_trafo_3x3           = reference_trafo.get_matrix(true, false, uniform_scaling, ! has_mirrorring).matrix().block<3, 3>(0, 0);
+	Transform3d     volume_offset_correction = this->instances[instance_idx]->get_transformation().get_matrix().inverse() * reference_trafo.get_matrix();
     for (ModelVolume *model_volume : this->volumes) {
         const Geometry::Transformation volume_trafo = model_volume->get_transformation();
         bool   volume_left_handed        = volume_trafo.is_left_handed();
@@ -1398,7 +1392,7 @@ double ModelObject::get_instance_min_z(size_t instance_idx) const
 		for (const stl_facet &facet : hull.stl.facet_start)
 			for (int i = 0; i < 3; ++ i)
 				min_z = std::min(min_z, (mv * facet.vertex[i].cast<double>()).z());
-        }
+    }
 
     return min_z + inst->get_offset(Z);
 }
@@ -1942,30 +1936,6 @@ extern bool model_has_advanced_features(const Model &model)
             	return true;
     }
     return false;
-}
-
-extern void update_custom_gcode_per_print_z_from_config(std::vector<Model::CustomGCode>& custom_gcode_per_print_z, DynamicPrintConfig* config)
-{
-    if (!config->has("colorprint_heights"))
-        return;
-
-    const std::vector<std::string>& colors = GCodePreviewData::ColorPrintColors();
-
-    const auto& colorprint_values = config->option<ConfigOptionFloats>("colorprint_heights")->values;
-    
-    if (!colorprint_values.empty())
-    {
-        custom_gcode_per_print_z.clear();
-        custom_gcode_per_print_z.reserve(colorprint_values.size());
-        int i = 0;
-        for (auto val : colorprint_values)
-            custom_gcode_per_print_z.emplace_back(Model::CustomGCode{ val, ColorChangeCode, 1, colors[(++i)%7] });
-    }
-
-    /* There is one and only place this configuration option is used now.
-     * It wouldn't be used in the future, so erase it.
-     * */
-    config->erase("colorprint_heights");
 }
 
 #ifndef NDEBUG

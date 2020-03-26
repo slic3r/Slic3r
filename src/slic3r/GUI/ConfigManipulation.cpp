@@ -81,14 +81,14 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
             && config->opt_bool("extra_perimeters") == false
             )) {
         wxString msg_text = _(L("The Spiral Vase mode requires:\n"
-			"- one perimeter\n"
-			"- no top solid layers\n"
-			"- 0% fill density\n"
-			"- no support material\n"
-			"- no ensure_vertical_shell_thickness\n"
-			"- unchecked 'exact last layer height'\n"
-			"- unchecked 'dense infill'\n"
-			"- unchecked 'extra perimeters'\n"));
+                                "- one perimeter\n"
+                                "- no top solid layers\n"
+                                "- 0% fill density\n"
+                                "- no support material\n"
+                                "- Ensure vertical shell thickness enabled\n"
+                                "- unchecked 'exact last layer height'\n"
+                                "- unchecked 'dense infill'\n"
+                                "- unchecked 'extra perimeters'"));
         if (is_global_config)
             msg_text += "\n\n" + _(L("Shall I adjust those settings in order to enable Spiral Vase?"));
         wxMessageDialog dialog(nullptr, msg_text, _(L("Spiral Vase")),
@@ -270,15 +270,21 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     for (auto el : { "infill_dense_algo" })
         toggle_field(el, have_infill_dense);
 
-    bool have_solid_infill = config->opt_int("top_solid_layers") > 0 || config->opt_int("bottom_solid_layers") > 0;
+    bool has_spiral_vase         = config->opt_bool("spiral_vase");
+    bool has_top_solid_infill 	 = config->opt_int("top_solid_layers") > 0;
+    bool has_bottom_solid_infill = config->opt_int("bottom_solid_layers") > 0;
+    bool has_solid_infill 		 = has_top_solid_infill || has_bottom_solid_infill;
     // solid_infill_extruder uses the same logic as in Print::extruders()
     for (auto el : { "top_fill_pattern", "bottom_fill_pattern", "solid_fill_pattern", "enforce_full_fill_volume", "external_infill_margin",
         "infill_first", "solid_infill_extruder", "solid_infill_extrusion_width", "solid_infill_speed" })
-        toggle_field(el, have_solid_infill);
+        toggle_field(el, has_solid_infill);
 
     for (auto el : { "fill_angle", "bridge_angle", "infill_extrusion_width",
                     "infill_speed", "bridge_speed" })
-        toggle_field(el, have_infill || have_solid_infill);
+        toggle_field(el, have_infill || has_solid_infill);
+
+    toggle_field("top_solid_min_thickness", ! has_spiral_vase && has_top_solid_infill);
+    toggle_field("bottom_solid_min_thickness", ! has_spiral_vase && has_bottom_solid_infill);
 
     // gap fill  can appear in infill
     //toggle_field("gap_fill_speed", have_perimeters && config->opt_bool("gap_fill"));
@@ -288,15 +294,16 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 
     bool have_top_solid_infill = config->opt_int("top_solid_layers") > 0;
     for (auto el : { "top_infill_extrusion_width", "top_solid_infill_speed" })
-        toggle_field(el, have_top_solid_infill);
+        toggle_field(el, has_top_solid_infill);
 
     bool have_default_acceleration = config->opt_float("default_acceleration") > 0;
     for (auto el : { "perimeter_acceleration", "infill_acceleration",
                     "bridge_acceleration", "first_layer_acceleration" })
         toggle_field(el, have_default_acceleration);
 
-    bool have_skirt = config->opt_int("skirts") > 0 || config->opt_float("min_skirt_length") > 0;
-    for (auto el : { "skirt_distance", "skirt_height" })
+    bool have_skirt = config->opt_int("skirts") > 0;
+    toggle_field("skirt_height", have_skirt && !config->opt_bool("draft_shield"));
+    for (auto el : { "skirt_distance", "draft_shield", "min_skirt_length" })
         toggle_field(el, have_skirt);
 
     bool have_brim = config->opt_float("brim_width") > 0 || config->opt_float("brim_width_interior") > 0;
@@ -346,7 +353,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 
 
     for (auto el : { "fill_smooth_width", "fill_smooth_distribution" })
-        toggle_field(el, (have_solid_infill && (config->option<ConfigOptionEnum<InfillPattern>>("top_fill_pattern")->value == InfillPattern::ipSmooth
+        toggle_field(el, (has_solid_infill && (config->option<ConfigOptionEnum<InfillPattern>>("top_fill_pattern")->value == InfillPattern::ipSmooth
             || config->option<ConfigOptionEnum<InfillPattern>>("bottom_fill_pattern")->value == InfillPattern::ipSmooth
             || config->option<ConfigOptionEnum<InfillPattern>>("solid_fill_pattern")->value == InfillPattern::ipSmooth))
             || (config->option<ConfigOptionEnum<InfillPattern>>("support_material_interface_pattern")->value == InfillPattern::ipSmooth && have_support_material));
@@ -390,6 +397,7 @@ void ConfigManipulation::toggle_print_sla_options(DynamicPrintConfig* config)
     toggle_field("support_head_penetration", supports_en);
     toggle_field("support_head_width", supports_en);
     toggle_field("support_pillar_diameter", supports_en);
+    toggle_field("support_max_bridges_on_pillar", supports_en);
     toggle_field("support_pillar_connection_mode", supports_en);
     toggle_field("support_buildplate_only", supports_en);
     toggle_field("support_base_diameter", supports_en);

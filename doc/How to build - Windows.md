@@ -87,8 +87,83 @@ Then use either `ninja` or `nmake` to start the build.
 
 To install, use `msbuild /P:Configuration=Release INSTALL.vcxproj` , `ninja install` , or `nmake install` .
 
-### building tests
+### Building the dependencies package yourself
 
-You must use visual studio 2017 or higher, and build all deps & all projects with it (not the same compiler as vs 2013). Also, you have to add the "CRT SDK" to your installation (can be done via the VS intaller).
-Tested only with vs 2017. Should work with 2015 and 2019.
+The dependencies package is built using CMake scripts inside the `deps` subdirectory of PrusaSlicer sources.
+(This is intentionally not interconnected with the CMake scripts in the rest of the sources.)
 
+Open the preferred Visual Studio command line (64 or 32 bit variant) and `cd` into the directory with PrusaSlicer sources.
+Then `cd` into the `deps` directory and use these commands to build:
+
+    mkdir build
+    cd build
+    cmake .. -G "Visual Studio 12 Win64" -DDESTDIR="C:\local\destdir-custom"
+    msbuild /m ALL_BUILD.vcxproj
+
+You can also use the Visual Studio GUI or other generators as mentioned above.
+
+The `DESTDIR` option is the location where the bundle will be installed.
+This may be customized. If you leave it empty, the `DESTDIR` will be placed inside the same `build` directory.
+
+Warning: If the `build` directory is nested too deep inside other folders, various file paths during the build
+become too long and the build might fail due to file writing errors (\*). For this reason, it is recommended to
+place the `build` directory relatively close to the drive root.
+
+Note that the build variant that you may choose using Visual Studio (i.e. _Release_ or _Debug_ etc.) when building the dependency package is **not relevant**.
+The dependency build will by default build _both_ the _Release_ and _Debug_ variants regardless of what you choose in Visual Studio.
+You can disable building of the debug variant by passing the
+
+    -DDEP_DEBUG=OFF
+
+option to CMake, this will only produce a _Release_ build.
+
+Refer to the CMake scripts inside the `deps` directory to see which dependencies are built in what versions and how this is done.
+
+\*) Specifically, the problem arises when building boost. Boost build tool appends all build options into paths of
+intermediate files, which are not handled correctly by either `b2.exe` or possibly `ninja` (?).
+
+
+# Noob guide (step by step)
+
+Install Visual Studio Community 2019 from
+visualstudio.microsoft.com/vs/
+Select all workload options for C++ 
+
+Install git for Windows from
+gitforwindows.org
+download and run the exe accepting all defaults
+
+download PrusaSlicer-master.zip from github
+I downloaded this to c:\PrusaSlicer and unzipped to c:\PrusaSlicer\PrusaSlicer-master\ so this will be my prefix for all my steps. Substitute your prefix.
+
+Go to the Windows Start Menu and Click on "Visual Studio 2019" folder, then select the ->"x64 Native Tools Command Prompt" to open a command window
+
+cd c:\PrusaSlicer\PrusaSlicer-master\deps
+
+mkdir build
+
+cd build
+
+cmake .. -G "Visual Studio 16 2019" -DDESTDIR="c:\PrusaSlicer\PrusaSlicer-master"
+
+msbuild /m ALL_BUILD.vcxproj // This took 13.5 minutes on my machine: core I7-7700K @ 4.2Ghz with 32GB main memory and 20min on a average laptop
+
+cd c:\PrusaSlicer\PrusaSlicer-master\
+
+mkdir build
+
+cd build
+
+cmake .. -G "Visual Studio 16 2019" -DCMAKE_PREFIX_PATH="c:\PrusaSlicer\PrusaSlicer-master\usr\local"
+
+open Visual Studio for c++ development (VS asks this the first time you start it)
+
+Open->Project/Solution or File->Open->Project/Solution (depending on which dialog comes up first)
+
+click on c:\PrusaSlicer\PrusaSlicer-master\build\PrusaSlicer.sln
+
+Debug->Start Debugging or Debug->Start Without debugging
+PrusaSlicer should start. You're up and running!
+
+
+note: Thanks to @douggorgen for the original guide, as an answer for a issue 

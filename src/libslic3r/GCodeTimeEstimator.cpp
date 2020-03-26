@@ -174,6 +174,7 @@ namespace Slic3r {
     const std::string GCodeTimeEstimator::Silent_Last_M73_Output_Placeholder_Tag = "; _TE_SILENT_LAST_M73_OUTPUT_PLACEHOLDER";
 
     const std::string GCodeTimeEstimator::Color_Change_Tag = "PRINT_COLOR_CHANGE";
+    const std::string GCodeTimeEstimator::Pause_Print_Tag  = "PRINT_PAUSE";
 
     GCodeTimeEstimator::GCodeTimeEstimator(EMode mode)
         : m_mode(mode)
@@ -212,8 +213,8 @@ namespace Slic3r {
         }
         _calculate_time();
 
-        if (m_needs_color_times && (m_color_time_cache != 0.0f))
-            m_color_times.push_back(m_color_time_cache);
+        if (m_needs_custom_gcode_times && (m_custom_gcode_time_cache != 0.0f))
+            m_custom_gcode_times.push_back({ cgtColorChange, m_custom_gcode_time_cache });
 
 #if ENABLE_MOVE_STATS
         _log_moves_stats();
@@ -230,8 +231,8 @@ namespace Slic3r {
 
         _calculate_time();
 
-        if (m_needs_color_times && (m_color_time_cache != 0.0f))
-            m_color_times.push_back(m_color_time_cache);
+        if (m_needs_custom_gcode_times && (m_custom_gcode_time_cache != 0.0f))
+            m_custom_gcode_times.push_back({ cgtColorChange, m_custom_gcode_time_cache });
 
 #if ENABLE_MOVE_STATS
         _log_moves_stats();
@@ -245,8 +246,8 @@ namespace Slic3r {
         m_parser.parse_file(file, boost::bind(&GCodeTimeEstimator::_process_gcode_line, this, _1, _2));
         _calculate_time();
 
-        if (m_needs_color_times && (m_color_time_cache != 0.0f))
-            m_color_times.push_back(m_color_time_cache);
+        if (m_needs_custom_gcode_times && (m_custom_gcode_time_cache != 0.0f))
+            m_custom_gcode_times.push_back({ cgtColorChange, m_custom_gcode_time_cache });
 
 #if ENABLE_MOVE_STATS
         _log_moves_stats();
@@ -263,8 +264,8 @@ namespace Slic3r {
             m_parser.parse_line(line, action);
         _calculate_time();
 
-        if (m_needs_color_times && (m_color_time_cache != 0.0f))
-            m_color_times.push_back(m_color_time_cache);
+        if (m_needs_custom_gcode_times && (m_custom_gcode_time_cache != 0.0f))
+            m_custom_gcode_times.push_back({ cgtColorChange, m_custom_gcode_time_cache});
 
 #if ENABLE_MOVE_STATS
         _log_moves_stats();
@@ -351,8 +352,8 @@ namespace Slic3r {
             }
 
             // check tags
-            // remove color change tag
-            if (gcode_line == "; " + Color_Change_Tag)
+            // remove Color_Change_Tag and Pause_Print_Tag
+            if (gcode_line == "; " + Color_Change_Tag || gcode_line == "; " + Pause_Print_Tag)
                 continue;
 
             // replaces placeholders for initial line M73 with the real lines
@@ -707,30 +708,36 @@ namespace Slic3r {
         return _get_time_dhms(get_time());
     }
 
+    std::string GCodeTimeEstimator::get_time_dhm() const
+    {
+        return _get_time_dhm(get_time());
+    }
+
     std::string GCodeTimeEstimator::get_time_minutes() const
     {
         return _get_time_minutes(get_time());
     }
 
-    std::vector<float> GCodeTimeEstimator::get_color_times() const
+    std::vector<std::pair<CustomGcodeType, float>> GCodeTimeEstimator::get_custom_gcode_times() const
     {
-        return m_color_times;
+        return m_custom_gcode_times;
     }
 
     std::vector<std::string> GCodeTimeEstimator::get_color_times_dhms(bool include_remaining) const
     {
         std::vector<std::string> ret;
         float total_time = 0.0f;
-        for (float t : m_color_times)
+//        for (float t : m_color_times)
+        for (auto t : m_custom_gcode_times)
         {
-            std::string time = _get_time_dhms(t);
+            std::string time = _get_time_dhms(t.second);
             if (include_remaining)
             {
                 time += " (";
                 time += _get_time_dhms(m_time - total_time);
                 time += ")";
             }
-            total_time += t;
+            total_time += t.second;
             ret.push_back(time);
         }
         return ret;
@@ -740,17 +747,39 @@ namespace Slic3r {
     {
         std::vector<std::string> ret;
         float total_time = 0.0f;
-        for (float t : m_color_times)
+//        for (float t : m_color_times)
+        for (auto t : m_custom_gcode_times)
         {
-            std::string time = _get_time_minutes(t);
+            std::string time = _get_time_minutes(t.second);
             if (include_remaining)
             {
                 time += " (";
                 time += _get_time_minutes(m_time - total_time);
                 time += ")";
             }
-            total_time += t;
+            total_time += t.second;
         }
+        return ret;
+    }
+
+    std::vector<std::pair<CustomGcodeType, std::string>> GCodeTimeEstimator::get_custom_gcode_times_dhm(bool include_remaining) const
+    {
+        std::vector<std::pair<CustomGcodeType, std::string>> ret;
+
+        float total_time = 0.0f;
+        for (auto t : m_custom_gcode_times)
+        {
+            std::string time = _get_time_dhm(t.second);
+            if (include_remaining)
+            {
+                time += " (";
+                time += _get_time_dhm(m_time - total_time);
+                time += ")";
+            }
+            total_time += t.second;
+            ret.push_back({t.first, time});
+        }
+
         return ret;
     }
 
@@ -786,9 +815,9 @@ namespace Slic3r {
 
         m_last_st_synchronized_block_id = -1;
 
-        m_needs_color_times = false;
-        m_color_times.clear();
-        m_color_time_cache = 0.0f;
+        m_needs_custom_gcode_times = false;
+        m_custom_gcode_times.clear();
+        m_custom_gcode_time_cache = 0.0f;
     }
 
     void GCodeTimeEstimator::_reset_time()
@@ -809,7 +838,7 @@ namespace Slic3r {
         _recalculate_trapezoids();
 
         m_time += get_additional_time();
-        m_color_time_cache += get_additional_time();
+        m_custom_gcode_time_cache += get_additional_time();
 
         for (int i = m_last_st_synchronized_block_id + 1; i < (int)m_blocks.size(); ++i)
         {
@@ -830,7 +859,7 @@ namespace Slic3r {
             it->second.time += block_time;
 #endif // ENABLE_MOVE_STATS
 
-            m_color_time_cache += block_time;
+            m_custom_gcode_time_cache += block_time;
         }
 
         m_last_st_synchronized_block_id = (int)m_blocks.size() - 1;
@@ -1262,7 +1291,9 @@ namespace Slic3r {
 
         if (line.has_e())
         {
-            set_axis_origin(E, get_axis_position(E) - line.e() * lengthsScaleFactor);
+            // extruder coordinate can grow to the point where its float representation does not allow for proper addition with small increments,
+            // we set the value taken from the G92 line as the new current position for it
+            set_axis_position(E, line.e() * lengthsScaleFactor);
             anyFound = true;
         }
         else
@@ -1460,26 +1491,34 @@ namespace Slic3r {
     {
         std::string comment = line.comment();
 
-        // color change tag
+        // Color_Change_Tag
         size_t pos = comment.find(Color_Change_Tag);
         if (pos != comment.npos)
         {
-            _process_color_change_tag();
+            _process_custom_gcode_tag(cgtColorChange);
+            return true;
+        }
+
+        // Pause_Print_Tag
+        pos = comment.find(Pause_Print_Tag);
+        if (pos != comment.npos)
+        {
+            _process_custom_gcode_tag(cgtPausePrint);
             return true;
         }
 
         return false;
     }
 
-    void GCodeTimeEstimator::_process_color_change_tag()
+    void GCodeTimeEstimator::_process_custom_gcode_tag(CustomGcodeType code)
     {
         PROFILE_FUNC();
-        m_needs_color_times = true;
+        m_needs_custom_gcode_times = true;
         _calculate_time();
-        if (m_color_time_cache != 0.0f)
+        if (m_custom_gcode_time_cache != 0.0f)
         {
-            m_color_times.push_back(m_color_time_cache);
-            m_color_time_cache = 0.0f;
+            m_custom_gcode_times.push_back({code, m_custom_gcode_time_cache});
+            m_custom_gcode_time_cache = 0.0f;
         }
     }
 
@@ -1611,6 +1650,29 @@ namespace Slic3r {
             ::sprintf(buffer, "%dm %ds", minutes, (int)time_in_secs);
         else
             ::sprintf(buffer, "%ds", (int)time_in_secs);
+
+        return buffer;
+    }
+
+    std::string GCodeTimeEstimator::_get_time_dhm(float time_in_secs)
+    {
+        char buffer[64];
+
+		int minutes = std::round(time_in_secs / 60.);
+    	if (minutes <= 0) {
+            ::sprintf(buffer, "%ds", (int)time_in_secs);
+    	} else {
+	        int days = minutes / 1440;
+	        minutes -= days * 1440;
+	        int hours = minutes / 60;
+	        minutes -= hours * 60;
+	        if (days > 0)
+	            ::sprintf(buffer, "%dd %dh %dm", days, hours, minutes);
+	        else if (hours > 0)
+	            ::sprintf(buffer, "%dh %dm", hours, minutes);
+	        else
+	            ::sprintf(buffer, "%dm", minutes);
+	    }
 
         return buffer;
     }

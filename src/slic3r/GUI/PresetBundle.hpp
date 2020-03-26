@@ -42,6 +42,8 @@ public:
     PresetCollection            sla_prints;
     PresetCollection            filaments;
     PresetCollection            sla_materials;
+	PresetCollection& 			materials(PrinterTechnology pt)       { return pt == ptFFF ? this->filaments : this->sla_materials; }
+	const PresetCollection& 	materials(PrinterTechnology pt) const { return pt == ptFFF ? this->filaments : this->sla_materials; }
     PrinterPresetCollection     printers;
     // Filament preset names for a multi-extruder or multi-material print.
     // extruders.size() should be the same as printers.get_edited_preset().config.nozzle_diameter.size()
@@ -54,8 +56,7 @@ public:
 
     // There will be an entry for each system profile loaded, 
     // and the system profiles will point to the VendorProfile instances owned by PresetBundle::vendors.
-    // std::set<VendorProfile>     vendors;
-    VendorMap                      vendors;
+    VendorMap                   vendors;
 
     struct ObsoletePresets {
         std::vector<std::string> prints;
@@ -109,8 +110,8 @@ public:
     // Export a config bundle file containing all the presets and the names of the active presets.
     void                        export_configbundle(const std::string &path, bool export_system_settings = false);
 
-    // Update a filament selection combo box on the platter for an idx_extruder.
-    void                        update_platter_filament_ui(unsigned int idx_extruder, GUI::PresetComboBox *ui);
+    // Update a filament selection combo box on the plater for an idx_extruder.
+    void                        update_plater_filament_ui(unsigned int idx_extruder, GUI::PresetComboBox *ui);
 
     // Enable / disable the "- default -" preset.
     void                        set_default_suppressed(bool default_suppressed);
@@ -128,11 +129,10 @@ public:
     // Also updates the is_visible flag of each preset.
     // If select_other_if_incompatible is true, then the print or filament preset is switched to some compatible
     // preset if the current print or filament preset is not compatible.
-    void                        update_compatible(bool select_other_if_incompatible);
+    void                        update_compatible(PresetSelectCompatibleType select_other_print_if_incompatible, PresetSelectCompatibleType select_other_filament_if_incompatible);
+    void                        update_compatible(PresetSelectCompatibleType select_other_if_incompatible) { this->update_compatible(select_other_if_incompatible, select_other_if_incompatible); }
 
-    static bool                 parse_color(const std::string &scolor, unsigned char *rgb_out);
-
-    void                        load_default_preset_bitmaps(wxWindow *window);
+    void                        load_default_preset_bitmaps();
 
     // Set the is_visible flag for printer vendors, printer models and printer variants
     // based on the user configuration.
@@ -146,6 +146,8 @@ private:
     std::string                 load_system_presets();
     // Merge one vendor's presets with the other vendor's presets, report duplicates.
     std::vector<std::string>    merge_presets(PresetBundle &&other);
+    // Update renamed_from and alias maps of system profiles.
+    void 						update_system_maps();
 
     // Set the is_visible flag for filaments and sla materials,
     // apply defaults based on enabled printers when no filaments/materials are installed.
@@ -161,7 +163,7 @@ private:
     // If it is not an external config, then the config will be stored into the user profile directory.
     void                        load_config_file_config(const std::string &name_or_path, bool is_external, DynamicPrintConfig &&config);
     void                        load_config_file_config_bundle(const std::string &path, const boost::property_tree::ptree &tree);
-    void                        load_compatible_bitmaps(wxWindow *window);
+    void                        load_compatible_bitmaps();
 
     DynamicPrintConfig          full_fff_config() const;
     DynamicPrintConfig          full_sla_config() const;

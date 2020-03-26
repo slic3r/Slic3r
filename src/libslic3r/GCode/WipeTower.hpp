@@ -181,7 +181,7 @@ public:
         float               cooling_final_speed = 0.f;
         // start skinnydip
         bool                filament_enable_toolchange_temp = false;
-        int                 filament_toolchange_temp = 222.f;
+        int                 filament_toolchange_temp = 222;
         bool                filament_enable_toolchange_part_fan = false;
         int                 filament_toolchange_part_fan_speed = 0;
         bool                filament_use_skinnydip = true;
@@ -248,9 +248,10 @@ private:
         CircularBed
     } m_bed_shape;
     float m_bed_width; // width of the bed bounding box
+    Vec2f m_bed_bottom_left; // bottom-left corner coordinates (for rectangular beds)
 
     float m_perimeter_width = 0.4f * Width_To_Nozzle_Ratio; // Width of an extrusion line, also a perimeter spacing for 100% infill.
-    float m_brim_width = 0.4 * Width_To_Nozzle_Ratio * Width_To_Nozzle_Ratio; // Width of an extrusion line, also a perimeter spacing for 100% infill.
+    float m_brim_width = 0.4f * Width_To_Nozzle_Ratio * Width_To_Nozzle_Ratio; // Width of an extrusion line, also a perimeter spacing for 100% infill.
     float m_extrusion_flow = 0.038f; //0.029f;// Extrusion flow is derived from m_perimeter_width, layer height and filament diameter.
 
 	// Extruder specific parameters.

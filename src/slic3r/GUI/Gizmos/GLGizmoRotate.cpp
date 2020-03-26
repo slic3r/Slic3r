@@ -67,6 +67,18 @@ void GLGizmoRotate::set_angle(double angle)
     m_angle = angle;
 }
 
+std::string GLGizmoRotate::get_tooltip() const
+{
+    std::string axis;
+    switch (m_axis)
+    {
+    case X: { axis = "X"; break; }
+    case Y: { axis = "Y"; break; }
+    case Z: { axis = "Z"; break; }
+    }
+    return (m_hover_id == 0 || m_grabbers[0].dragging) ? axis + ": " + format((float)Geometry::rad2deg(m_angle), 4) : "";
+}
+
 bool GLGizmoRotate::on_init()
 {
     m_grabbers.push_back(Grabber());
@@ -127,19 +139,7 @@ void GLGizmoRotate::on_render() const
     const Selection& selection = m_parent.get_selection();
     const BoundingBoxf3& box = selection.get_bounding_box();
 
-    std::string axis;
-    switch (m_axis)
-    {
-    case X: { axis = "X"; break; }
-    case Y: { axis = "Y"; break; }
-    case Z: { axis = "Z"; break; }
-    }
-
-    if (!m_dragging && (m_hover_id == 0))
-        set_tooltip(axis);
-    else if (m_dragging)
-        set_tooltip(axis + ": " + format((float)Geometry::rad2deg(m_angle), 4) + "\u00B0");
-    else
+    if (m_hover_id != 0 && !m_grabbers[0].dragging)
     {
         m_center = box.center();
         m_radius = Offset + box.radius();
@@ -449,12 +449,10 @@ std::string GLGizmoRotate3D::on_get_name() const
     return (_(L("Rotate")) + " [R]").ToUTF8().data();
 }
 
-#if ENABLE_GIZMO_ICONS_NON_ACTIVABLE_STATE
 bool GLGizmoRotate3D::on_is_activable() const
 {
     return !m_parent.get_selection().is_empty();
 }
-#endif // ENABLE_GIZMO_ICONS_NON_ACTIVABLE_STATE
 
 void GLGizmoRotate3D::on_start_dragging()
 {

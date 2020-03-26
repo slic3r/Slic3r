@@ -226,7 +226,7 @@ public:
 		}
 		if (m_grid_resolution > 0)
 			++ m_grid_log2;
-		m_grid_resolution = 1 << m_grid_log2;
+		m_grid_resolution = ((coord_t)1) << m_grid_log2;
 		assert(m_grid_resolution >= gridres);
 		assert(gridres > m_grid_resolution / 2);
     }

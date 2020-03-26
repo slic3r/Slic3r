@@ -79,6 +79,11 @@ void Field::PostInitialize()
 	BUILD();
 }
 
+// Values of width to alignments of fields
+int Field::def_width()			{ return wxOSX ? 8 : 7; }
+int Field::def_width_wider()	{ return 14; }
+int Field::def_width_thinner()	{ return 4; }
+
 void Field::on_kill_focus()
 {
 	// call the registered function if it is available
@@ -167,7 +172,7 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
 			if		(label.Last() == '\n')	label.RemoveLast();
 			while	(label.Last() == ' ')	label.RemoveLast();
 			if		(label.Last() == ':')	label.RemoveLast();
-			show_error(m_parent, wxString::Format(_(L("%s doesn't support percentage")), label));
+            show_error(m_parent, from_u8((boost::format(_utf8(L("%s doesn't support percentage"))) % label).str()));
 			set_value(double_to_string(m_opt.min), true);
 			m_value = double(m_opt.min);
 			break;
@@ -232,14 +237,16 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
 
                 const std::string sidetext = m_opt.sidetext.rfind("mm/s") != std::string::npos ? "mm/s" : "mm";
                 const wxString stVal = double_to_string(val, 2);
-                const wxString msg_text = wxString::Format(_(L("Do you mean %s%% instead of %s %s?\n"
+                const wxString msg_text = from_u8((boost::format(_utf8(L("Do you mean %s%% instead of %s %s?\n"
                     "Select YES if you want to change this value to %s%%, \n"
-                    "or NO if you are sure that %s %s is a correct value.")), stVal, stVal, sidetext, stVal, stVal, sidetext);
+                    "or NO if you are sure that %s %s is a correct value."))) % stVal % stVal % sidetext % stVal % stVal % sidetext).str());
                 wxMessageDialog dialog(m_parent, msg_text, _(L("Parameter validation")) + ": " + m_opt_id , wxICON_WARNING | wxYES | wxNO);
                 if (dialog.ShowModal() == wxID_YES) {
-                    set_value(wxString::Format("%s%%", stVal), false/*true*/);
+                    set_value(from_u8((boost::format("%s%%") % stVal).str()), false/*true*/);
                     str += "%%";
                 }
+				else
+					set_value(stVal, false); // it's no needed but can be helpful, when inputted value contained "," instead of "."
             }
         }
     
@@ -247,6 +254,23 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
 		break; }
 	default:
 		break;
+	}
+}
+
+void Field::msw_rescale(bool rescale_sidetext)
+{
+	m_Undo_to_sys_btn->msw_rescale();
+	m_Undo_btn->msw_rescale();
+
+	// update em_unit value
+	m_em_unit = em_unit(m_parent);
+
+	// update sidetext if it is needed
+	if (m_side_text && rescale_sidetext)
+	{
+		auto size = wxSize(def_width_thinner() * m_em_unit, -1);
+		m_side_text->SetSize(size);
+		m_side_text->SetMinSize(size);
 	}
 }
 
@@ -259,7 +283,7 @@ bool is_defined_input_value(wxWindow* win, const ConfigOptionType& type)
 }
 
 void TextCtrl::BUILD() {
-    auto size = wxSize(wxDefaultSize);
+    auto size = wxSize(def_width()*m_em_unit, wxDefaultCoord);
     if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
     if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
 
@@ -350,14 +374,26 @@ void TextCtrl::BUILD() {
 	temp->Bind(wxEVT_KILL_FOCUS, ([this, temp](wxEvent& e)
 	{
 		e.Skip();
+#ifdef __WXOSX__
+		// OSX issue: For some unknown reason wxEVT_KILL_FOCUS is emitted twice in a row in some cases 
+	    // (like when information dialog is shown during an update of the option value)
+		// Thus, suppress its second call
+		if (bKilledFocus)
+			return;
+		bKilledFocus = true;
+#endif // __WXOSX__
+
 #if !defined(__WXGTK__)
 		temp->GetToolTip()->Enable(true);
 #endif // __WXGTK__
-        if (bEnterPressed) {
+        if (bEnterPressed)
             bEnterPressed = false;
-            return;
-        }
-        propagate_value();
+		else
+            propagate_value();
+#ifdef __WXOSX__
+		// After processing of KILL_FOCUS event we should to invalidate a bKilledFocus flag
+		bKilledFocus = false;
+#endif // __WXOSX__
 	}), temp->GetId());
 
 	// select all text using Ctrl+A
@@ -406,10 +442,12 @@ bool TextCtrl::value_was_changed()
 
 void TextCtrl::propagate_value()
 {
-    if (is_defined_input_value<wxTextCtrl>(window, m_opt.type) && value_was_changed())
-        on_change_field();
-    else
+	if (!is_defined_input_value<wxTextCtrl>(window, m_opt.type) )
+		// on_kill_focus() cause a call of OptionsGroup::reload_config(),
+		// Thus, do it only when it's really needed (when undefined value was input)
         on_kill_focus();
+	else if (value_was_changed())
+        on_change_field();
 }
 
 void TextCtrl::set_value(const boost::any& value, bool change_event/* = false*/) {
@@ -455,10 +493,10 @@ boost::any& TextCtrl::get_value()
 	return m_value;
 }
 
-void TextCtrl::msw_rescale()
+void TextCtrl::msw_rescale(bool rescale_sidetext/* = false*/)
 {
-    Field::msw_rescale();
-    auto size = wxSize(wxDefaultSize);
+    Field::msw_rescale(rescale_sidetext);
+    auto size = wxSize(def_width() * m_em_unit, wxDefaultCoord);
     if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
     if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
 
@@ -521,8 +559,9 @@ void CheckBox::set_value(const boost::any& value, bool change_event)
             m_last_meaningful_value = value;
         dynamic_cast<wxCheckBox*>(window)->SetValue(m_is_na_val ? false : boost::any_cast<unsigned char>(value) != 0);
     }
-    else
+    else{
         dynamic_cast<wxCheckBox*>(window)->SetValue(boost::any_cast<bool>(value));
+	}
     m_disable_change_event = false;
 }
 
@@ -555,7 +594,7 @@ boost::any& CheckBox::get_value()
  	return m_value;
 }
 
-void CheckBox::msw_rescale()
+void CheckBox::msw_rescale(bool rescale_sidetext/* = false*/)
 {
     Field::msw_rescale();
 
@@ -565,7 +604,7 @@ void CheckBox::msw_rescale()
 
 
 void SpinCtrl::BUILD() {
-	auto size = wxSize(wxDefaultSize);
+	auto size = wxSize(def_width() * m_em_unit, wxDefaultCoord);
     if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
     if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
 
@@ -690,19 +729,19 @@ void SpinCtrl::propagate_value()
     suppress_propagation = false;
 }
 
-void SpinCtrl::msw_rescale()
+void SpinCtrl::msw_rescale(bool rescale_sidetext/* = false*/)
 {
-    Field::msw_rescale();
+    Field::msw_rescale(rescale_sidetext);
     auto size = wxSize(wxDefaultSize);
     if (m_opt.height >= 0) size.SetHeight(m_opt.height * m_em_unit);
     if (m_opt.width >= 0) size.SetWidth(m_opt.width * m_em_unit);
 
     wxSpinCtrl* field = dynamic_cast<wxSpinCtrl*>(window);
-    field->SetMinSize(wxSize(-1, int(1.9f*field->GetFont().GetPixelSize().y)));
+    field->SetMinSize(wxSize(def_width() * m_em_unit, int(1.9f*field->GetFont().GetPixelSize().y)));
 }
 
 void Choice::BUILD() {
-    wxSize size(m_width * m_em_unit, -1);
+    wxSize size(def_width_wider() * m_em_unit, wxDefaultCoord);
     if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
     if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
 
@@ -911,10 +950,10 @@ void Choice::set_value(const boost::any& value, bool change_event)
 	case coString:
 	case coStrings: {
 		wxString text_value;
-		if (m_opt.type == coInt) 
-			text_value = wxString::Format(_T("%i"), int(boost::any_cast<int>(value)));
+		if (m_opt.type == coInt)
+    		text_value = wxString::Format(_T("%i"), int(boost::any_cast<int>(value)));
 		else
-			text_value = boost::any_cast<wxString>(value);
+	    	text_value = boost::any_cast<wxString>(value);
         size_t idx = 0;
 		for (auto el : m_opt.enum_values)
 		{
@@ -1061,7 +1100,7 @@ boost::any& Choice::get_value()
 	return m_value;
 }
 
-void Choice::msw_rescale()
+void Choice::msw_rescale(bool rescale_sidetext/* = false*/)
 {
     Field::msw_rescale();
 
@@ -1077,7 +1116,7 @@ void Choice::msw_rescale()
 	 */
     field->Clear();
     wxSize size(wxDefaultSize);
-    size.SetWidth((m_opt.width > 0 ? m_opt.width : m_width) * m_em_unit);
+    size.SetWidth((m_opt.width > 0 ? m_opt.width : def_width_wider()) * m_em_unit);
  
     // Set rescaled min height to correct layout
     field->SetMinSize(wxSize(-1, int(1.5f*field->GetFont().GetPixelSize().y + 0.5f)));
@@ -1108,7 +1147,7 @@ void Choice::msw_rescale()
 
 void ColourPicker::BUILD()
 {
-	auto size = wxSize(wxDefaultSize);
+	auto size = wxSize(def_width() * m_em_unit, wxDefaultCoord);
     if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
     if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
 
@@ -1176,11 +1215,16 @@ boost::any& ColourPicker::get_value()
 	return m_value;
 }
 
-void ColourPicker::msw_rescale()
+void ColourPicker::msw_rescale(bool rescale_sidetext/* = false*/)
 {
     Field::msw_rescale();
 
-    wxColourPickerCtrl* field = dynamic_cast<wxColourPickerCtrl*>(window);
+	wxColourPickerCtrl* field = dynamic_cast<wxColourPickerCtrl*>(window);
+    auto size = wxSize(def_width() * m_em_unit, wxDefaultCoord);
+	if (m_opt.height >= 0) size.SetHeight(m_opt.height * m_em_unit);
+	if (m_opt.width >= 0) size.SetWidth(m_opt.width * m_em_unit);
+	field->SetMinSize(size);
+
     if (field->GetColour() == wxTransparentColour)
         set_undef_value(field);
 }
@@ -1232,7 +1276,7 @@ void PointCtrl::BUILD()
 	y_textctrl->SetToolTip(get_tooltip_text(X+", "+Y));
 }
 
-void PointCtrl::msw_rescale()
+void PointCtrl::msw_rescale(bool rescale_sidetext/* = false*/)
 {
     Field::msw_rescale();
 
@@ -1302,7 +1346,7 @@ void StaticText::BUILD()
 	temp->SetToolTip(get_tooltip_text(legend));
 }
 
-void StaticText::msw_rescale()
+void StaticText::msw_rescale(bool rescale_sidetext/* = false*/)
 {
     Field::msw_rescale();
 

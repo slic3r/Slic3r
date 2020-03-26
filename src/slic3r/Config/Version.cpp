@@ -66,6 +66,10 @@ bool Version::is_current_slic3r_supported() const
 	return this->is_slic3r_supported(Slic3r::SEMVER);
 }
 
+bool Version::is_current_slic3r_downgrade() const
+{
+	return Slic3r::SEMVER < min_slic3r_version;
+}
 #if 0
 //TODO: This test should be moved to a unit test, once we have C++ unit tests in place.
 static int version_test()
@@ -205,7 +209,7 @@ size_t Index::load(const boost::filesystem::path &path)
 #endif
     	++ idx_line;
     	// Skip the initial white spaces.
-    	char *key = left_trim(const_cast<char*>(line.data()));
+    	char *key = left_trim(line.data());
 		if (*key == '#')
 			// Skip a comment line.
 			continue;

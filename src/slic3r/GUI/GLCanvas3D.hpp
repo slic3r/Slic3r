@@ -3,6 +3,9 @@
 
 #include <stddef.h>
 #include <memory>
+#if ENABLE_CANVAS_DELAYED_TOOLTIP_USING_IMGUI
+#include <chrono>
+#endif // ENABLE_CANVAS_DELAYED_TOOLTIP_USING_IMGUI
 
 #include "3DScene.hpp"
 #include "GLToolbar.hpp"
@@ -83,9 +86,6 @@ using Vec3dEvent = Event<Vec3d>;
 template <size_t N> using Vec3dsEvent = ArrayEvent<Vec3d, N>;
 
 
-#if !ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
-wxDECLARE_EVENT(EVT_GLCANVAS_INIT, SimpleEvent);
-#endif // !ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 wxDECLARE_EVENT(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_RIGHT_CLICK, RBtnEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_REMOVE_OBJECT, SimpleEvent);
@@ -94,6 +94,7 @@ wxDECLARE_EVENT(EVT_GLCANVAS_SELECT_ALL, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_QUESTION_MARK, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_INCREASE_INSTANCES, Event<int>); // data: +1 => increase, -1 => decrease
 wxDECLARE_EVENT(EVT_GLCANVAS_INSTANCE_MOVED, SimpleEvent);
+wxDECLARE_EVENT(EVT_GLCANVAS_FORCE_UPDATE, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_WIPETOWER_MOVED, Vec3dEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_INSTANCE_ROTATED, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_INSTANCE_SCALED, SimpleEvent);
@@ -108,12 +109,11 @@ wxDECLARE_EVENT(EVT_GLCANVAS_MOVE_DOUBLE_SLIDER, wxKeyEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_EDIT_COLOR_CHANGE, wxKeyEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_UNDO, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_REDO, SimpleEvent);
-#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 using HeightProfileSmoothEvent = Event< Slic3r::HeightProfileSmoothingParams>;
 wxDECLARE_EVENT(EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_ADAPTIVE_LAYER_HEIGHT_PROFILE, Event<float>);
 wxDECLARE_EVENT(EVT_GLCANVAS_SMOOTH_LAYER_HEIGHT_PROFILE, HeightProfileSmoothEvent);
-#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
+wxDECLARE_EVENT(EVT_GLCANVAS_RELOAD_FROM_DISK, SimpleEvent);
 
 class GLCanvas3D
 {
@@ -163,17 +163,10 @@ private:
 
     private:
         static const float THICKNESS_BAR_WIDTH;
-#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-        static const float THICKNESS_RESET_BUTTON_HEIGHT;
-#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
         bool                        m_enabled;
         Shader                      m_shader;
         unsigned int                m_z_texture_id;
-#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-        mutable GLTexture           m_tooltip_texture;
-        mutable GLTexture           m_reset_texture;
-#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
         // Not owned by LayersEditing.
         const DynamicPrintConfig   *m_config;
         // ModelObject for the currently selected object (Model::objects[last_object_id]).
@@ -185,10 +178,8 @@ private:
         std::vector<double>         m_layer_height_profile;
         bool                        m_layer_height_profile_modified;
 
-#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
         mutable float               m_adaptive_quality;
         mutable HeightProfileSmoothingParams m_smooth_params;
-#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
         class LayersTexture
         {
@@ -236,24 +227,13 @@ private:
 		void adjust_layer_height_profile();
 		void accept_changes(GLCanvas3D& canvas);
         void reset_layer_height_profile(GLCanvas3D& canvas);
-#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
         void adaptive_layer_height_profile(GLCanvas3D& canvas, float quality_factor);
         void smooth_layer_height_profile(GLCanvas3D& canvas, const HeightProfileSmoothingParams& smoothing_params);
-#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
         static float get_cursor_z_relative(const GLCanvas3D& canvas);
         static bool bar_rect_contains(const GLCanvas3D& canvas, float x, float y);
-#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-        static bool reset_rect_contains(const GLCanvas3D& canvas, float x, float y);
-#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
         static Rect get_bar_rect_screen(const GLCanvas3D& canvas);
-#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-        static Rect get_reset_rect_screen(const GLCanvas3D& canvas);
-#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
         static Rect get_bar_rect_viewport(const GLCanvas3D& canvas);
-#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-        static Rect get_reset_rect_viewport(const GLCanvas3D& canvas);
-#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
         float object_max_z() const { return m_object_max_z; }
 
@@ -262,18 +242,11 @@ private:
     private:
         bool is_initialized() const;
         void generate_layer_height_texture();
-#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-        void _render_tooltip_texture(const GLCanvas3D& canvas, const Rect& bar_rect, const Rect& reset_rect) const;
-        void _render_reset_texture(const Rect& reset_rect) const;
-#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
         void render_active_object_annotations(const GLCanvas3D& canvas, const Rect& bar_rect) const;
         void render_profile(const Rect& bar_rect) const;
         void update_slicing_parameters();
 
         static float thickness_bar_width(const GLCanvas3D &canvas);
-#if !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
-        static float reset_button_height(const GLCanvas3D &canvas);
-#endif // !ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
     };
 
     struct Mouse
@@ -406,6 +379,44 @@ private:
     };
 #endif // ENABLE_RENDER_STATISTICS
 
+    class Labels
+    {
+        bool m_enabled{ false };
+        bool m_shown{ false };
+        GLCanvas3D& m_canvas;
+
+    public:
+        explicit Labels(GLCanvas3D& canvas) : m_canvas(canvas) {}
+        void enable(bool enable) { m_enabled = enable; }
+        void show(bool show) { m_shown = m_enabled ? show : false; }
+        bool is_shown() const { return m_shown; }
+        void render(const std::vector<const ModelInstance*>& sorted_instances) const;
+    };
+
+#if ENABLE_CANVAS_TOOLTIP_USING_IMGUI
+    class Tooltip
+    {
+        std::string m_text;
+#if ENABLE_CANVAS_DELAYED_TOOLTIP_USING_IMGUI
+        std::chrono::steady_clock::time_point m_start_time;
+#endif // ENABLE_CANVAS_DELAYED_TOOLTIP_USING_IMGUI
+        // Indicator that the mouse is inside an ImGUI dialog, therefore the tooltip should be suppressed.
+        bool 		m_in_imgui = false;
+
+    public:
+        bool is_empty() const { return m_text.empty(); }
+#if ENABLE_CANVAS_DELAYED_TOOLTIP_USING_IMGUI
+        void set_text(const std::string& text);
+        void render(const Vec2d& mouse_position, GLCanvas3D& canvas) const;
+#else
+        void set_text(const std::string& text) { m_text = text; }
+        void render(const Vec2d& mouse_position) const;
+#endif // ENABLE_CANVAS_DELAYED_TOOLTIP_USING_IMGUI
+        // Indicates that the mouse is inside an ImGUI dialog, therefore the tooltip should be suppressed.
+        void set_in_imgui(bool b) { m_in_imgui = b; }
+    };
+#endif // ENABLE_CANVAS_TOOLTIP_USING_IMGUI
+
 public:
     enum ECursorType : unsigned char
     {
@@ -483,6 +494,11 @@ private:
     mutable int m_imgui_undo_redo_hovered_pos{ -1 };
     int m_selected_extruder;
 
+    Labels m_labels;
+#if ENABLE_CANVAS_TOOLTIP_USING_IMGUI
+    mutable Tooltip m_tooltip;
+#endif // ENABLE_CANVAS_TOOLTIP_USING_IMGUI
+
 public:
     GLCanvas3D(wxGLCanvas* canvas, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar);
     ~GLCanvas3D();
@@ -498,6 +514,7 @@ public:
     void set_as_dirty();
 
     unsigned int get_volumes_count() const;
+    const GLVolumeCollection& get_volumes() const { return m_volumes; }
     void reset_volumes();
     int check_volumes_outside_state() const;
 
@@ -509,6 +526,7 @@ public:
     void set_config(const DynamicPrintConfig* config);
     void set_process(BackgroundSlicingProcess* process);
     void set_model(Model* model);
+    const Model* get_model() const { return m_model; }
 
     const Selection& get_selection() const { return m_selection; }
     Selection& get_selection() { return m_selection; }
@@ -532,6 +550,7 @@ public:
     void set_color_by(const std::string& value);
 
     const Camera& get_camera() const { return m_camera; }
+    const Shader& get_shader() const { return m_shader; }
     Camera& get_camera() { return m_camera; }
 
     BoundingBoxf3 volumes_bounding_box() const;
@@ -540,11 +559,9 @@ public:
     bool is_layers_editing_enabled() const;
     bool is_layers_editing_allowed() const;
 
-#if ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
     void reset_layer_height_profile();
     void adaptive_layer_height_profile(float quality_factor);
     void smooth_layer_height_profile(const HeightProfileSmoothingParams& smoothing_params);
-#endif // ENABLE_ADAPTIVE_LAYER_HEIGHT_PROFILE
 
     bool is_reload_delayed() const;
 
@@ -557,6 +574,7 @@ public:
     void enable_main_toolbar(bool enable);
     void enable_undoredo_toolbar(bool enable);
     void enable_dynamic_background(bool enable);
+    void enable_labels(bool enable) { m_labels.enable(enable); }
     void allow_multisample(bool allow);
 
     void zoom_to_bed();
@@ -592,7 +610,7 @@ public:
 
     void load_gcode_preview(const GCodePreviewData& preview_data, const std::vector<std::string>& str_tool_colors);
     void load_sla_preview();
-    void load_preview(const std::vector<std::string>& str_tool_colors, const std::vector<Model::CustomGCode>& color_print_values);
+    void load_preview(const std::vector<std::string>& str_tool_colors, const std::vector<CustomGCode::Item>& color_print_values);
     void bind_event_handlers();
     void unbind_event_handlers();
 
@@ -678,15 +696,16 @@ public:
 
     void mouse_up_cleanup();
 
+    bool are_labels_shown() const { return m_labels.is_shown(); }
+    void show_labels(bool show) { m_labels.show(show); }
+
 private:
     bool _is_shown_on_screen() const;
 
     bool _init_toolbars();
     bool _init_main_toolbar();
     bool _init_undoredo_toolbar();
-#if ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
     bool _init_view_toolbar();
-#endif // ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 
     bool _set_current();
     void _resize(unsigned int w, unsigned int h);
@@ -757,7 +776,7 @@ private:
     // Adds a new Slic3r::GUI::3DScene::Volume to $self->volumes,
     // one for perimeters, one for infill and one for supports.
     void _load_print_object_toolpaths(const PrintObject& print_object, const std::vector<std::string>& str_tool_colors,
-                                      const std::vector<Model::CustomGCode>& color_print_values);
+                                      const std::vector<CustomGCode::Item>& color_print_values);
     // Create 3D thick extrusion lines for wipe tower extrusions
     void _load_wipe_tower_toolpaths(const std::vector<std::string>& str_tool_colors);
 

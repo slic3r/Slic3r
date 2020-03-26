@@ -10,7 +10,7 @@
 #include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/Slicing.hpp"
 #include "libslic3r/GCode/Analyzer.hpp"
-#include "slic3r/GUI/PresetBundle.hpp"
+#include "slic3r/GUI/BitmapCache.hpp"
 #include "libslic3r/Format/STL.hpp"
 #include "libslic3r/Utils.hpp"
 
@@ -792,14 +792,14 @@ void GLVolumeCollection::update_colors_by_extruder(const DynamicPrintConfig* con
     for (unsigned int i = 0; i < colors_count; ++i)
     {
         const std::string& txt_color = config->opt_string("extruder_colour", i);
-        if (PresetBundle::parse_color(txt_color, rgb))
+        if (Slic3r::GUI::BitmapCache::parse_color(txt_color, rgb))
         {
             colors[i].set(txt_color, rgb);
         }
         else
         {
             const std::string& txt_color = config->opt_string("filament_colour", i);
-            if (PresetBundle::parse_color(txt_color, rgb))
+            if (Slic3r::GUI::BitmapCache::parse_color(txt_color, rgb))
                 colors[i].set(txt_color, rgb);
         }
     }
@@ -877,13 +877,10 @@ bool can_export_to_obj(const GLVolume& volume)
     if (!volume.is_active || !volume.is_extrusion_path)
         return false;
 
-    if (volume.indexed_vertex_array.triangle_indices.empty() && (std::min(volume.indexed_vertex_array.triangle_indices_size, volume.tverts_range.second - volume.tverts_range.first) == 0))
-        return false;
+    bool has_triangles = !volume.indexed_vertex_array.triangle_indices.empty() || (std::min(volume.indexed_vertex_array.triangle_indices_size, volume.tverts_range.second - volume.tverts_range.first) > 0);
+    bool has_quads = !volume.indexed_vertex_array.quad_indices.empty() || (std::min(volume.indexed_vertex_array.quad_indices_size, volume.qverts_range.second - volume.qverts_range.first) > 0);
 
-    if (volume.indexed_vertex_array.quad_indices.empty() && (std::min(volume.indexed_vertex_array.quad_indices_size, volume.qverts_range.second - volume.qverts_range.first) == 0))
-        return false;
-
-    return true;
+    return has_triangles || has_quads;
 }
 
 bool GLVolumeCollection::has_toolpaths_to_export() const

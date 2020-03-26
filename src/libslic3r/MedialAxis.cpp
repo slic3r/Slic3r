@@ -671,7 +671,7 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
         // prevent the line from touching on the other side, otherwise intersection() might return that solution
         if (polyline.points.size() == 2 && this->expolygon.contains(line.midpoint())) line.a = line.midpoint();
 
-        line.extend_end(max_width);
+        line.extend_end((double)max_width);
         Point new_back;
         if (this->expolygon.contour.has_boundary_point(polyline.points.back())) {
             new_back = polyline.points.back();
@@ -749,7 +749,7 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
         }*/
         // find anchor
         Point best_anchor;
-        double shortest_dist = max_width;
+        double shortest_dist = (double)max_width;
         for (const ExPolygon& a : anchors) {
             Point p_maybe_inside = a.contour.centroid();
             double test_dist = new_bound.distance_to(p_maybe_inside) + new_back.distance_to(p_maybe_inside);
@@ -766,7 +766,7 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
             p_obj.x() /= 2;
             p_obj.y() /= 2;
             Line l2 = Line(new_back, p_obj);
-            l2.extend_end(max_width);
+            l2.extend_end((double)max_width);
             (void)bounds->contour.first_intersection(l2, &new_bound);
         }
         if (new_bound.coincides_with_epsilon(new_back))
@@ -1003,8 +1003,8 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                 size_t idx_point = 1;
                 while (idx_point < std::min(polyline.points.size(), best_candidate->points.size())) {
                     //fusion
-                    polyline.points[idx_point].x() = polyline.points[idx_point].x() * coeff_poly + best_candidate->points[idx_point].x() * coeff_candi;
-                    polyline.points[idx_point].y() = polyline.points[idx_point].y() * coeff_poly + best_candidate->points[idx_point].y() * coeff_candi;
+                    polyline.points[idx_point].x() = (coord_t)( polyline.points[idx_point].x() * coeff_poly + best_candidate->points[idx_point].x() * coeff_candi);
+                    polyline.points[idx_point].y() = (coord_t)(polyline.points[idx_point].y() * coeff_poly + best_candidate->points[idx_point].y() * coeff_candi);
 
                     // The width decrease with distance from the centerline.
                     // This formula is what works the best, even if it's not perfect (created empirically).  0->3% error on a gap fill on some tests.

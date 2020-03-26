@@ -72,6 +72,9 @@ if (MSVC)
     # error C3859: virtual memory range for PCH exceeded; please recompile with a command line option of '-Zm90' or greater
     # Generate symbols at every build target, even for the release.
     add_compile_options(-bigobj -Zm520 /Zi)
+    # Disable STL4007: Many result_type typedefs and all argument_type, first_argument_type, and second_argument_type typedefs are deprecated in C++17.
+    #FIXME Remove this line after eigen library adapts to the new C++17 adaptor rules.
+    add_compile_options(-D_SILENCE_CXX17_ADAPTOR_TYPEDEFS_DEPRECATION_WARNING)
 endif ()
 
 if (MINGW)
@@ -101,7 +104,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules/)
 
 enable_testing ()
 
-# Enable C++11 language standard.
+# Enable C++17 language standard.
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -224,6 +227,9 @@ endif(WIN32)
 
 add_definitions(-DwxUSE_UNICODE -D_UNICODE -DUNICODE -DWXINTL_NO_GETTEXT_MACRO)
 
+# Disable unsafe implicit wxString to const char* / std::string and vice versa. This implicit conversion breaks the UTF-8 encoding quite often.
+add_definitions(-DwxNO_UNSAFE_WXSTRING_CONV)
+
 if (SLIC3R_PROFILE)
     message("Slic3r will be built with a Shiny invasive profiler")
     add_definitions(-DSLIC3R_PROFILE)
@@ -326,13 +332,21 @@ find_package(TBB REQUIRED)
 # add_definitions(-DTBB_USE_CAPTURED_EXCEPTION=0)
 
 find_package(CURL REQUIRED)
-include_directories(${CURL_INCLUDE_DIRS})
+
+add_library(libcurl INTERFACE)
+target_link_libraries(libcurl INTERFACE CURL::libcurl)
+
+if (NOT WIN32)
+    # Required by libcurl
+    find_package(ZLIB REQUIRED)
+    target_link_libraries(libcurl INTERFACE ZLIB::ZLIB)
+endif()
 
 if (SLIC3R_STATIC)
     if (NOT APPLE)
         # libcurl is always linked dynamically to the system libcurl on OSX.
         # On other systems, libcurl is linked statically if SLIC3R_STATIC is set.
-        add_definitions(-DCURL_STATICLIB)
+        target_compile_definitions(libcurl INTERFACE CURL_STATICLIB)
     endif()
     if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         # As of now, our build system produces a statically linked libcurl,
@@ -340,7 +354,8 @@ if (SLIC3R_STATIC)
         find_package(OpenSSL REQUIRED)
         message("OpenSSL include dir: ${OPENSSL_INCLUDE_DIR}")
         message("OpenSSL libraries: ${OPENSSL_LIBRARIES}")
-        include_directories(${OPENSSL_INCLUDE_DIR})
+        target_include_directories(libcurl INTERFACE ${OPENSSL_INCLUDE_DIR})
+        target_link_libraries(libcurl INTERFACE ${OPENSSL_LIBRARIES})
     endif()
 endif()
 
@@ -393,13 +408,12 @@ if (NOT GLEW_FOUND)
 endif ()
 
 # Find the Cereal serialization library
-add_library(cereal INTERFACE)
-target_include_directories(cereal INTERFACE include)
+find_package(cereal REQUIRED)
 
 # l10n
 set(L10N_DIR "${SLIC3R_RESOURCES_DIR}/localization")
 add_custom_target(gettext_make_pot
-    COMMAND xgettext --keyword=L --keyword=L_CONTEXT:1,2c --keyword=_L_PLURAL:1,2 --add-comments=TRN --from-code=UTF-8 --debug
+    COMMAND xgettext --keyword=L --keyword=_L --keyword=_u8L --keyword=L_CONTEXT:1,2c --keyword=_L_PLURAL:1,2 --add-comments=TRN --from-code=UTF-8 --debug
         -f "${L10N_DIR}/list.txt"
         -o "${L10N_DIR}/Slic3r++.pot"
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
@@ -427,6 +441,12 @@ if(SLIC3R_STATIC)
     set(USE_BLOSC TRUE)
 endif()
 
+find_package(OpenVDB 5.0 REQUIRED COMPONENTS openvdb)
+if(OpenVDB_FOUND)
+    slic3r_remap_configs(IlmBase::Half RelWithDebInfo Release)
+    slic3r_remap_configs(Blosc::blosc RelWithDebInfo Release)
+endif()
+
 set(TOP_LEVEL_PROJECT_DIR ${PROJECT_SOURCE_DIR})
 function(prusaslicer_copy_dlls target)
     if ("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
@@ -435,23 +455,30 @@ function(prusaslicer_copy_dlls target)
         set(_bits 32)
     endif ()
     
-    get_target_property(_out_dir ${target} BINARY_DIR)
+    get_property(_is_multi GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    get_target_property(_alt_out_dir ${target} RUNTIME_OUTPUT_DIRECTORY)
+
+    if (_alt_out_dir)
+        set (_out_dir "${_alt_out_dir}")
+    elseif (_is_multi)
+        set (_out_dir "$<TARGET_PROPERTY:${target},BINARY_DIR>/$<CONFIG>")
+    else ()
+        set (_out_dir "$<TARGET_PROPERTY:${target},BINARY_DIR>")
+    endif ()
     
     # This has to be a separate target due to the windows command line lenght limits    
     add_custom_command(TARGET ${target} POST_BUILD 
-        COMMAND ${CMAKE_COMMAND} -E copy ${TOP_LEVEL_PROJECT_DIR}/deps/GMP/gmp/lib/win${_bits}/libgmp-10.dll ${_out_dir}/
+        COMMAND ${CMAKE_COMMAND} -E copy ${TOP_LEVEL_PROJECT_DIR}/deps/GMP/gmp/lib/win${_bits}/libgmp-10.dll ${_out_dir}
         COMMENT "Copy gmp runtime to build tree"
         VERBATIM)
     
     add_custom_command(TARGET ${target} POST_BUILD 
-        COMMAND ${CMAKE_COMMAND} -E copy ${TOP_LEVEL_PROJECT_DIR}/deps/MPFR/mpfr/lib/win${_bits}/libmpfr-4.dll ${_out_dir}/
+        COMMAND ${CMAKE_COMMAND} -E copy ${TOP_LEVEL_PROJECT_DIR}/deps/MPFR/mpfr/lib/win${_bits}/libmpfr-4.dll ${_out_dir}
         COMMENT "Copy mpfr runtime to build tree"
         VERBATIM)
 
 endfunction()
 
-#find_package(OpenVDB 5.0 COMPONENTS openvdb)
-#slic3r_remap_configs(IlmBase::Half RelWithDebInfo Release)
 
 # libslic3r, Slic3r GUI and the slic3r executable.
 add_subdirectory(src)

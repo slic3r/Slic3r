@@ -218,20 +218,20 @@ Polygon convex_hull(Points points)
     // sort input points
     std::sort(points.begin(), points.end(), sort_points);
 
-    int n = points.size(), k = 0;
+    size_t n = points.size(), k = 0;
     Polygon hull;
 
     if (n >= 3) {
         hull.points.resize(2 * n);
 
         // Build lower hull
-        for (int i = 0; i < n; i++) {
+        for (size_t i = 0; i < n; i++) {
             while (k >= 2 && points[i].ccw(hull[k-2], hull[k-1]) <= 0) k--;
             hull[k++] = points[i];
         }
 
         // Build upper hull
-        for (int i = n-2, t = k+1; i >= 0; i--) {
+        for (size_t i = n-2, t = k+1; i < n; i--) {
             while (k >= t && points[i].ccw(hull[k-2], hull[k-1]) <= 0) k--;
             hull[k++] = points[i];
         }
@@ -558,8 +558,8 @@ arrange(size_t total_parts, const Vec2d &part_size, coordf_t dist, const Boundin
     }
     
     // this is how many cells we have available into which to put parts
-    size_t cellw = floor((area(0) + dist) / part(0));
-    size_t cellh = floor((area(1) + dist) / part(1));
+    size_t cellw = (size_t)( floor((area(0) + dist) / part(0)) );
+    size_t cellh = (size_t)( floor((area(1) + dist) / part(1)) );
     if (total_parts > (cellw * cellh))
         return false;
     

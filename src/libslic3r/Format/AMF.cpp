@@ -13,6 +13,7 @@
 #include "../Utils.hpp"
 #include "../I18N.hpp"
 #include "../Geometry.hpp"
+#include "../CustomGCode.hpp"
 
 #include "AMF.hpp"
 
@@ -156,6 +157,7 @@ struct AMFParserContext
         NODE_TYPE_PRINTABLE,            // amf/constellation/instance/mirrorz
         NODE_TYPE_CUSTOM_GCODE,         // amf/custom_code_per_height
         NODE_TYPE_GCODE_PER_HEIGHT,     // amf/custom_code_per_height/code
+        NODE_TYPE_CUSTOM_GCODE_MODE,    // amf/custom_code_per_height/mode
         NODE_TYPE_METADATA,             // anywhere under amf/*/metadata
     };
 
@@ -308,12 +310,18 @@ void AMFParserContext::startElement(const char *name, const char **atts)
             else
                 this->stop();
         } 
-        else if (strcmp(name, "code") == 0 && m_path[1] == NODE_TYPE_CUSTOM_GCODE) {
-            node_type_new = NODE_TYPE_GCODE_PER_HEIGHT;
-            m_value[0] = get_attribute(atts, "height");
-            m_value[1] = get_attribute(atts, "gcode");
-            m_value[2] = get_attribute(atts, "extruder");
-            m_value[3] = get_attribute(atts, "color");
+        else if (m_path[1] == NODE_TYPE_CUSTOM_GCODE) {
+            if (strcmp(name, "code") == 0) {
+                node_type_new = NODE_TYPE_GCODE_PER_HEIGHT;
+                m_value[0] = get_attribute(atts, "print_z");
+                m_value[1] = get_attribute(atts, "gcode");
+                m_value[2] = get_attribute(atts, "extruder");
+                m_value[3] = get_attribute(atts, "color");
+            }
+            else if (strcmp(name, "mode") == 0) {
+                node_type_new = NODE_TYPE_CUSTOM_GCODE_MODE;
+                m_value[0] = get_attribute(atts, "value");
+            }
         }
         break;
     case 3:
@@ -585,36 +593,20 @@ void AMFParserContext::endElement(const char * /* name */)
         stl_allocate(&stl);
 
         bool has_transform = ! m_volume_transform.isApprox(Transform3d::Identity(), 1e-10);
-#if !ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
-        Transform3d inv_matrix = m_volume_transform.inverse();
-#endif // !ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
         for (size_t i = 0; i < m_volume_facets.size();) {
             stl_facet &facet = stl.facet_start[i/3];
             for (unsigned int v = 0; v < 3; ++v)
             {
                 unsigned int tri_id = m_volume_facets[i++] * 3;
-#if ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
                 facet.vertex[v] = Vec3f(m_object_vertices[tri_id + 0], m_object_vertices[tri_id + 1], m_object_vertices[tri_id + 2]);
-#else
-                Vec3f vertex(m_object_vertices[tri_id + 0], m_object_vertices[tri_id + 1], m_object_vertices[tri_id + 2]);
-                facet.vertex[v] = has_transform ?
-                    // revert the vertices to the original mesh reference system
-                    (inv_matrix * vertex.cast<double>()).cast<float>() :
-                    vertex;
-#endif // ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
             }
         }        
         stl_get_size(&stl);
         mesh.repair();
 		m_volume->set_mesh(std::move(mesh));
-#if ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
         // stores the volume matrix taken from the metadata, if present
         if (has_transform)
             m_volume->source.transform = Slic3r::Geometry::Transformation(m_volume_transform);
-#else
-        if (has_transform)
-            m_volume->set_transformation(m_volume_transform);
-#endif // ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
         if (m_volume->source.input_file.empty() && (m_volume->type() == ModelVolumeType::MODEL_PART))
         {
             m_volume->source.object_idx = (int)m_model.objects.size() - 1;
@@ -648,13 +640,24 @@ void AMFParserContext::endElement(const char * /* name */)
         break;
 
     case NODE_TYPE_GCODE_PER_HEIGHT: {
-        double height = double(atof(m_value[0].c_str()));
+        double print_z = double(atof(m_value[0].c_str()));
         const std::string& gcode = m_value[1];
         int extruder = atoi(m_value[2].c_str());
         const std::string& color = m_value[3];
 
-        m_model.custom_gcode_per_print_z.push_back(Model::CustomGCode{height, gcode, extruder, color});
+        m_model.custom_gcode_per_print_z.gcodes.push_back(CustomGCode::Item{print_z, gcode, extruder, color});
 
+        for (std::string& val: m_value)
+            val.clear();
+        break;
+        }
+
+    case NODE_TYPE_CUSTOM_GCODE_MODE: {
+        const std::string& mode = m_value[0];
+
+        m_model.custom_gcode_per_print_z.mode = mode == CustomGCode::SingleExtruderMode ? CustomGCode::Mode::SingleExtruder :
+                                                mode == CustomGCode::MultiAsSingleMode  ? CustomGCode::Mode::MultiAsSingle  :
+                                                                                          CustomGCode::Mode::MultiExtruder;
         for (std::string& val: m_value)
             val.clear();
         break;
@@ -683,7 +686,7 @@ void AMFParserContext::endElement(const char * /* name */)
                     config->set_deserialize(opt_key, m_value[1]);
             } else if (m_path.size() == 3 && m_path[1] == NODE_TYPE_OBJECT && m_object && strcmp(opt_key, "layer_height_profile") == 0) {
                 // Parse object's layer height profile, a semicolon separated list of floats.
-                char *p = const_cast<char*>(m_value[1].c_str());
+                char *p = m_value[1].data();
                 for (;;) {
                     char *end = strchr(p, ';');
                     if (end != nullptr)
@@ -698,7 +701,7 @@ void AMFParserContext::endElement(const char * /* name */)
                 // Parse object's layer height profile, a semicolon separated list of floats.
                 unsigned char coord_idx = 0;
                 Eigen::Matrix<float, 5, 1, Eigen::DontAlign> point(Eigen::Matrix<float, 5, 1, Eigen::DontAlign>::Zero());
-                char *p = const_cast<char*>(m_value[1].c_str());
+                char *p = m_value[1].data();
                 for (;;) {
                     char *end = strchr(p, ';');
                     if (end != nullptr)
@@ -718,7 +721,7 @@ void AMFParserContext::endElement(const char * /* name */)
             else if (m_path.size() == 5 && m_path[1] == NODE_TYPE_OBJECT && m_path[3] == NODE_TYPE_RANGE && 
                      m_object && strcmp(opt_key, "layer_height_range") == 0) {
                 // Parse object's layer_height_range, a semicolon separated doubles.
-                char* p = const_cast<char*>(m_value[1].c_str());
+                char* p = m_value[1].data();
                 char* end = strchr(p, ';');
                 *end = 0;
 
@@ -1010,7 +1013,7 @@ bool load_amf(const char* path, DynamicPrintConfig* config, Model* model, bool c
             return false;
 
         std::string zip_mask(2, '\0');
-        file.read(const_cast<char*>(zip_mask.data()), 2);
+        file.read(zip_mask.data(), 2);
         file.close();
 
         return (zip_mask == "PK") ? load_amf_archive(path, config, model, check_version) : load_amf_file(path, config, model);
@@ -1019,7 +1022,7 @@ bool load_amf(const char* path, DynamicPrintConfig* config, Model* model, bool c
         return false;
 }
 
-bool store_amf(std::string &path, Model *model, const DynamicPrintConfig *config)
+bool store_amf(std::string &path, Model *model, const DynamicPrintConfig *config, bool fullpath_sources)
 {
     if ((path.empty()) || (model == nullptr))
         return false;
@@ -1158,11 +1161,7 @@ bool store_amf(std::string &path, Model *model, const DynamicPrintConfig *config
                 stream << "        <metadata type=\"slic3r.modifier\">1</metadata>\n";
             stream << "        <metadata type=\"slic3r.volume_type\">" << ModelVolume::type_to_string(volume->type()) << "</metadata>\n";
             stream << "        <metadata type=\"slic3r.matrix\">";
-#if ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
             const Transform3d& matrix = volume->get_matrix() * volume->source.transform.get_matrix();
-#else
-            const Transform3d& matrix = volume->get_matrix();
-#endif // ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
             stream << std::setprecision(std::numeric_limits<double>::max_digits10);
             for (int r = 0; r < 4; ++r)
             {
@@ -1176,7 +1175,8 @@ bool store_amf(std::string &path, Model *model, const DynamicPrintConfig *config
             stream << "</metadata>\n";
             if (!volume->source.input_file.empty())
             {
-                stream << "        <metadata type=\"slic3r.source_file\">" << xml_escape(volume->source.input_file) << "</metadata>\n";
+                std::string input_file = xml_escape(fullpath_sources ? volume->source.input_file : boost::filesystem::path(volume->source.input_file).filename().string());
+                stream << "        <metadata type=\"slic3r.source_file\">" << input_file << "</metadata>\n";
                 stream << "        <metadata type=\"slic3r.source_object_id\">" << volume->source.object_idx << "</metadata>\n";
                 stream << "        <metadata type=\"slic3r.source_volume_id\">" << volume->source.volume_idx << "</metadata>\n";
                 stream << "        <metadata type=\"slic3r.source_offset_x\">" << volume->source.mesh_offset(0) << "</metadata>\n";
@@ -1240,22 +1240,29 @@ bool store_amf(std::string &path, Model *model, const DynamicPrintConfig *config
         stream << "  </constellation>\n";
     }
 
-    if (!model->custom_gcode_per_print_z.empty())
+    if (!model->custom_gcode_per_print_z.gcodes.empty())
     {
         std::string out = "";
         pt::ptree tree;
 
         pt::ptree& main_tree = tree.add("custom_gcodes_per_height", "");
 
-        for (const Model::CustomGCode& code : model->custom_gcode_per_print_z)
+        for (const CustomGCode::Item& code : model->custom_gcode_per_print_z.gcodes)
         {
             pt::ptree& code_tree = main_tree.add("code", "");
-            // store minX and maxZ
+            // store custom_gcode_per_print_z gcodes information 
             code_tree.put("<xmlattr>.print_z"   , code.print_z  );
             code_tree.put("<xmlattr>.gcode"     , code.gcode    );
             code_tree.put("<xmlattr>.extruder"  , code.extruder );
             code_tree.put("<xmlattr>.color"     , code.color    );
         }
+
+        pt::ptree& mode_tree = main_tree.add("mode", "");
+        // store mode of a custom_gcode_per_print_z 
+        mode_tree.put("<xmlattr>.value", 
+                      model->custom_gcode_per_print_z.mode == CustomGCode::Mode::SingleExtruder ? CustomGCode::SingleExtruderMode : 
+                      model->custom_gcode_per_print_z.mode == CustomGCode::Mode::MultiAsSingle  ?
+                      CustomGCode::MultiAsSingleMode  : CustomGCode::MultiExtruderMode);
 
         if (!tree.empty())
         {
@@ -1269,6 +1276,7 @@ bool store_amf(std::string &path, Model *model, const DynamicPrintConfig *config
 
             // Post processing("beautification") of the output string
             boost::replace_all(out, "><code", ">\n  <code");
+            boost::replace_all(out, "><mode", ">\n  <mode");
             boost::replace_all(out, "><", ">\n<");
 
             stream << out << "\n";

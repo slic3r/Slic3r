@@ -38,6 +38,10 @@ public:
     void remove_types(const SurfaceType *types, int ntypes);
     void filter_by_type(const SurfaceType type, Polygons* polygons) const;
     void filter_by_type_flag(Polygons* polygons, const SurfaceType flags_needed, const SurfaceType flags_not_allowed = stNone) const;
+    void set_type(SurfaceType type) {
+        for (Surface &surface : this->surfaces)
+            surface.surface_type = type;
+    }
 
     void clear() { surfaces.clear(); }
     bool empty() const { return surfaces.empty(); }

@@ -36,7 +36,9 @@ void AboutDialogLogo::onRepaint(wxEvent &event)
 // CopyrightsDialog
 // -----------------------------------------
 CopyrightsDialog::CopyrightsDialog()
-    : DPIDialog(NULL, wxID_ANY, wxString::Format("%s - %s", SLIC3R_APP_NAME, _(L("Portions copyright"))), 
+    : DPIDialog(NULL, wxID_ANY, from_u8((boost::format("%1% - %2%")
+                                                       % SLIC3R_APP_NAME
+                                                       % _utf8(L("Portions copyright"))).str()),
                 wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
     this->SetFont(wxGetApp().normal_font());
@@ -196,7 +198,7 @@ void CopyrightsDialog::onCloseDialog(wxEvent &)
 }
 
 AboutDialog::AboutDialog()
-    : DPIDialog(NULL, wxID_ANY, wxString::Format(_(L("About %s")), SLIC3R_APP_NAME), wxDefaultPosition, 
+    : DPIDialog(NULL, wxID_ANY, from_u8((boost::format(_utf8(L("About %s"))) % SLIC3R_APP_NAME).str()), wxDefaultPosition,
                 wxDefaultSize, /*wxCAPTION*/wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
     SetFont(wxGetApp().normal_font());
@@ -253,33 +255,34 @@ AboutDialog::AboutDialog()
         int size[] = {fs,fs,fs,fs,fs,fs,fs};
         m_html->SetFonts(font.GetFaceName(), font.GetFaceName(), size);
         m_html->SetBorders(2);
-        const wxString copyright_str = _(L("Copyright"));
+        const std::string copyright_str = _utf8(L("Copyright"));
         // TRN "Slic3r _is licensed under the_ License"
-        const wxString is_lecensed_str = _(L("is licensed under the"));
-        const wxString license_str = _(L("GNU Affero General Public License, version 3"));
-        const wxString based_on_str = _(L("Slic3r++ is based on PrusaSlicer which is based on Slic3r by Alessandro Ranellucci and the RepRap community."));
-        const wxString contributors_str = _(L("Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik, Durand Rémi and numerous others."));
-		const auto text = wxString::Format(
+        const std::string is_lecensed_str = _utf8(L("is licensed under the"));
+        const std::string license_str = _utf8(L("GNU Affero General Public License, version 3"));
+        const std::string based_on_str = _utf8(L("Slic3r++ is based on PrusaSlicer which is based on Slic3r by Alessandro Ranellucci and the RepRap community."));
+        const std::string contributors_str = _utf8(L("Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik, Durand Rémi and numerous others."));
+        const auto text = from_u8(
+            (boost::format(
             "<html>"
-            "<body bgcolor= %s link= %s>"
-            "<font color=%s>"
-            "Copyright &copy; 2018-2019 Durand Rémi. <br />"
-            "Copyright &copy; 2016-2019 Prusa Research. <br />"
-            "Copyright &copy; 2011-2017 Alessandro Ranellucci. <br />"
-            "<a href=\"http://slic3r.org/\">Slic3r</a> is licensed under the "
-            "<a href=\"http://www.gnu.org/licenses/agpl-3.0.html\">GNU Affero General Public License, version 3</a>."
+            "<body bgcolor= %1% link= %2%>"
+            "<font color=%3%>"
+            "%5% &copy; 2018-2020 Durand Rémi. <br />"
+            "%4% &copy; 2016-2020 Prusa Research. <br />"
+            "%5% &copy; 2011-2018 Alessandro Ranellucci. <br />"
+            "<a href=\"http://slic3r.org/\">Slic3r</a> %6% "
+            "<a href=\"http://www.gnu.org/licenses/agpl-3.0.html\">%7%</a>."
             "<br /><br />"
-            "Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik, Durand Rémi and numerous others. "
-            "Manual by Gary Hodgson. Inspired by the RepRap community. <br />"
-            "Slic3r logo designed by Corey Daniels, <a href=\"http://www.famfamfam.com/lab/icons/silk/\">Silk Icon Set</a> designed by Mark James. "
+            "%8%"
+            "<br /><br />"
+            "%9%"
             "</font>"
             "</body>"
-            "</html>", bgr_clr_str, text_clr_str, text_clr_str,
-            copyright_str, copyright_str,
-            is_lecensed_str,
-            license_str,
-            based_on_str,
-            contributors_str);
+            "</html>") % bgr_clr_str % text_clr_str % text_clr_str
+            % copyright_str % copyright_str
+            % is_lecensed_str
+            % license_str
+            % based_on_str
+            % contributors_str).str());
         m_html->SetPage(text);
         vsizer->Add(m_html, 1, wxEXPAND | wxBOTTOM, 10);
         m_html->Bind(wxEVT_HTML_LINK_CLICKED, &AboutDialog::onLinkClicked, this);
