@@ -116,9 +116,15 @@ SCENARIO("set_speed emits values with fixed-point output.") {
 
     GIVEN("GCodeWriter instance") {
         GCodeWriter writer;
-        WHEN("set_speed is called to set speed to 1.09321e+06") {
-            THEN("Output string is G1 F1093210.000") {
-                REQUIRE_THAT(writer.set_speed(1.09321e+06), Catch::Equals("G1 F1093210.000\n"));
+        //max in assert is 100k
+        //WHEN("set_speed is called to set speed to 1.09321e+06") {
+        //    THEN("Output string is G1 F1093210.000") {
+        //        REQUIRE_THAT(writer.set_speed(1.09321e+06), Catch::Equals("G1 F1093210.000\n"));
+        //    }
+        //}
+        WHEN("set_speed is called to set speed to 9.99321e+04") {
+            THEN("Output string is G1 F99932.100") {
+                REQUIRE_THAT(writer.set_speed(9.99321e+04), Catch::Equals("G1 F10932.100\n"));
             }
         }
         WHEN("set_speed is called to set speed to 1") {

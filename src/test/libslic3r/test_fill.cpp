@@ -289,8 +289,8 @@ TEST_CASE("Fill: extrude gcode and check it")
             }
         });
 
-        double perimeterRoundGapRemove = unscaled(print.objects()[0]->layers()[0]->slices[0].contour.length()) * 0.1*0.1 * (2 - (PI / 2));
-        double perimeterRoundGapAdd = unscaled(print.objects()[0]->layers()[0]->slices[0].contour.length()) * 0.1*0.1 * ((PI / 2));
+        double perimeterRoundGapRemove = unscaled(print.objects()[0]->layers()[0]->lslices[0].contour.length()) * 0.1*0.1 * (2 - (PI / 2));
+        double perimeterRoundGapAdd = unscaled(print.objects()[0]->layers()[0]->lslices[0].contour.length()) * 0.1*0.1 * ((PI / 2));
         //for (Line &l : print.objects()[0]->layers()[0]->slices.expolygons[0].contour.lines()) {
 
         //}
@@ -397,8 +397,8 @@ TEST_CASE("Fill: extrude gcode and check it")
             }
         });
 
-        double perimeterRoundGapRemove = unscaled(print.objects()[0]->layers()[0]->slices[0].contour.length()) * 0.1*0.1 * (2 - (PI / 2));
-        double perimeterRoundGapAdd = unscaled(print.objects()[0]->layers()[0]->slices[0].contour.length()) * 0.1*0.1 * ((PI / 2));
+        double perimeterRoundGapRemove = unscaled(print.objects()[0]->layers()[0]->lslices[0].contour.length()) * 0.1*0.1 * (2 - (PI / 2));
+        double perimeterRoundGapAdd = unscaled(print.objects()[0]->layers()[0]->lslices[0].contour.length()) * 0.1*0.1 * ((PI / 2));
 
         double volumeExtrPerimeter = ExtrusionGetVolume{}.get(print.objects()[0]->layers()[0]->regions()[0]->perimeters);
         double volumeExtrInfill = ExtrusionGetVolume{}.get(print.objects()[0]->layers()[0]->regions()[0]->fills);
