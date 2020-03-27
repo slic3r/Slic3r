@@ -280,7 +280,7 @@ int wmain(int argc, wchar_t **argv)
 //	printf("Loading Slic3r library: %S\n", path_to_slic3r);
 	HINSTANCE hInstance_Slic3r = LoadLibraryExW(path_to_slic3r, nullptr, 0);
 	if (hInstance_Slic3r == nullptr) {
-		printf("slic3r.dll was not loaded\n");
+		printf("slic3r.dll was not loaded, error code: %d\n", GetLastError());
 		return -1;
 	}
 
