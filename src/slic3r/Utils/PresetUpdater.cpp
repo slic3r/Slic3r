@@ -399,7 +399,7 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 		}
 
 		// Perform a basic load and check the version of the installed preset bundle.
-		auto vp = VendorProfile::from_ini(bundle_path, false);
+		VendorProfile vp = VendorProfile::from_ini(bundle_path, false);
 
 		// Getting a recommended version from the latest index, wich may have been downloaded
 		// from the internet, or installed / updated from the installation resources.
