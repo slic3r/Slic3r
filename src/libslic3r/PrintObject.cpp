@@ -3003,14 +3003,14 @@ void PrintObject::discover_horizontal_shells()
             // If ensure_vertical_shell_thickness, then the rest has already been performed by discover_vertical_shells().
             if (region_config.ensure_vertical_shell_thickness.value)
                 continue;
-            
+
             coordf_t print_z  = layer->print_z;
             coordf_t bottom_z = layer->bottom_z();
             for (size_t idx_surface_type = 0; idx_surface_type < 3; ++ idx_surface_type) {
                 m_print->throw_if_canceled();
                 SurfaceType type = (idx_surface_type == 0) ? (stPosTop | stDensSolid) : 
                     ( (idx_surface_type == 1) ? (stPosBottom | stDensSolid) : (stPosBottom | stDensSolid |stModBridge));
-                int num_solid_layers = (type & stPosTop == stPosTop) ? region_config.top_solid_layers.value : region_config.bottom_solid_layers.value;
+                int num_solid_layers = ( (type & stPosTop) == stPosTop) ? region_config.top_solid_layers.value : region_config.bottom_solid_layers.value;
                 if (num_solid_layers == 0)
                     continue;
                 // Find slices of current type for current layer.

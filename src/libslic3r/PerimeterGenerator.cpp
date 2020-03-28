@@ -624,7 +624,6 @@ void PerimeterGenerator::process()
                         //reverse only not-hole perimeters
                         ExtrusionEntityCollection coll2;
                         for (const auto loop : entities.entities) {
-                            std::cout << loop->is_loop() <<" test " << (((ExtrusionLoop*)loop)->loop_role()) <<" & " << ExtrusionLoopRole::elrHole <<"\n";
                             if (loop->is_loop() && !(((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0) {
                                 coll2.entities.push_back(loop);
                             }
@@ -922,7 +921,6 @@ PerimeterGenerator::_get_nearest_point(const PerimeterGeneratorLoops &children, 
                 coord_t dist = (coord_t)nearest_p.distance_to(p);
                 //if no projection, go to next
                 if (dist == 0) continue;
-                //std::cout << " child point " << idx_point << "/" << (myPolylines[idx_poly].me.polyline.points.size() - 1 )<< " dist = " << unscale(dist) << " < ? " << unscale(intersect.distance)<<" \n";
                 if (dist + SCALED_EPSILON / 2 < intersect.distance) {
                     //ok, copy the idx
                     intersect.distance = dist;
@@ -951,11 +949,6 @@ PerimeterGenerator::_get_nearest_point(const PerimeterGeneratorLoops &children, 
                 coord_t dist = (coord_t)nearest_p.distance_to(p);
                 //if no projection, go to next
                 if (dist == 0) continue;
-                //if (nearest_p.coincides_with_epsilon(myPolylines.paths[idx_poly].polyline.points.back())) {
-                //    Line segment(*(myPolylines.paths[idx_poly].polyline.points.end() - 2), myPolylines.paths[idx_poly].polyline.points.back());
-                //    dist = (coord_t)segment.point_at(segment.length() - dist_cut).distance_to(p);
-                //}
-                //std::cout << " my point " << idx_point << " dist=" << unscale(dist) << " <? " << unscale(intersect.distance) << " \n";
                 if (dist + SCALED_EPSILON / 2 < intersect.distance) {
                     //ok, copy the idx
                     intersect.distance = dist;
@@ -993,9 +986,7 @@ PerimeterGenerator::_extrude_and_cut_loop(const PerimeterGeneratorLoop &loop, co
         single_point.paths.back().polyline = poly_point;
         return single_point;
     }
-    //std::cout << "idx_closest_from_entry_point : " << loop.polygon.closest_point_index(entry_point) << "/" << loop.polygon.points.size()<<"\n";
     const size_t idx_closest_from_entry_point = loop.polygon.closest_point_index(entry_point);
-    //std::cout << "loop.polygon.points[idx_closest_from_entry_point].distance_to(entry_point) : " << unscale(loop.polygon.points[idx_closest_from_entry_point].distance_to(entry_point)) << "\n";
     if (loop.polygon.points[idx_closest_from_entry_point].distance_to(entry_point) > SCALED_EPSILON) {
         //create new Point
         //get first point
@@ -1007,7 +998,7 @@ PerimeterGenerator::_extrude_and_cut_loop(const PerimeterGeneratorLoop &loop, co
                 break;
             }
         }
-        if (idx_before == (size_t)-1) std::cout << "ERROR: _traverse_and_join_loops : idx_before can't be finded to create new point\n";
+        if (idx_before == (size_t)-1) std::cerr << "ERROR: _traverse_and_join_loops : idx_before can't be finded to create new point\n";
         initial_polyline = loop.polygon.split_at_index(idx_before);
         initial_polyline.points.push_back(entry_point);
         initial_polyline.points[0] = entry_point;
@@ -1197,7 +1188,7 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                     }
                 }
                 if (idx_before == (size_t)-1) {
-                    std::cout << "ERROR: idx_before can't be finded\n";
+                    std::cerr << "ERROR: idx_before can't be finded\n";
                     continue;
                 }
 
