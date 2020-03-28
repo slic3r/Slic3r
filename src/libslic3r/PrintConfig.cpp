@@ -2706,7 +2706,7 @@ void PrintConfigDef::init_fff_params()
         "for the first object layer. Can be a % of the extruding width used for the interface layers.");
     def->sidetext = L("mm");
     def->enum_labels.push_back((boost::format("0.2 (%1%)") % L("detachable")).str());
-//    def->min = 0;
+    def->min = 0;
     def->enum_values.push_back("0");
     def->enum_values.push_back("0.2");
     def->enum_labels.push_back(L("0 (soluble)"));
@@ -2722,6 +2722,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("The vertical distance between object and support material interface"
         "(when the support is printed on top of the object). Can be a % of the extruding width used for the interface layers.");
     def->sidetext = L("mm");
+    def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0.2,false));
 
