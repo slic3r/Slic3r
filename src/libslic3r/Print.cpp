@@ -1664,7 +1664,7 @@ void Print::process()
         for (PrintObject *obj : m_objects) {
             obj->m_brim.clear();
         }
-        if (m_config.brim_width > 0) {
+        if (m_config.brim_width > 0 || m_config.brim_width_interior > 0) {
             this->set_status(88, L("Generating brim"));
             if (config().complete_objects){
                 for (PrintObject *obj : m_objects){
@@ -1672,11 +1672,15 @@ void Print::process()
                     const std::vector<PrintInstance> copies{ obj->instances() };
                     obj->m_instances.clear();
                     obj->m_instances.emplace_back();
-                    ExPolygons brim_area = (config().brim_ears)
-                        ?   this->_make_brim_ears({ obj }, obj->m_brim)
-                        :   this->_make_brim({ obj }, obj->m_brim);
-                    if (config().brim_width_interior > 0)
+                    ExPolygons brim_area;
+                    if (m_config.brim_width > 0) {
+                        brim_area = (config().brim_ears)
+                            ? this->_make_brim_ears({ obj }, obj->m_brim)
+                            : this->_make_brim({ obj }, obj->m_brim);
+                    }
+                    if (config().brim_width_interior > 0) {
                         _make_brim_interior({ obj }, brim_area, obj->m_brim);
+                    }
                     obj->m_instances = copies;
                 }
             } else {
@@ -2159,7 +2163,7 @@ ExPolygons Print::_make_brim_interior(const PrintObjectPtrs &objects, const ExPo
                 brimmable_areas.back().holes.push_back(poly);
                 brimmable_areas.back().holes.back().make_clockwise();
             }
-            islands_to_loops = brimmable_areas.back().contour;
+            islands_to_loops.insert(islands_to_loops.begin(), brimmable_areas.back().contour);
         }
     }
 
