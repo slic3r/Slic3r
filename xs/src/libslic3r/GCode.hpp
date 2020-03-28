@@ -21,21 +21,21 @@ class GCode;
 
 class AvoidCrossingPerimeters {
     public:
-    
+
     // this flag triggers the use of the external configuration space
     bool use_external_mp;
     bool use_external_mp_once;  // just for the next travel move
-    
+
     // this flag disables avoid_crossing_perimeters just for the next travel move
     // we enable it by default for the first travel move in print
     bool disable_once;
-    
+
     AvoidCrossingPerimeters();
     ~AvoidCrossingPerimeters();
     void init_external_mp(const ExPolygons &islands);
     void init_layer_mp(const ExPolygons &islands);
     Polyline travel_to(GCode &gcodegen, Point point);
-    
+
     private:
     MotionPlanner* _external_mp;
     MotionPlanner* _layer_mp;
@@ -45,11 +45,11 @@ class OozePrevention {
     public:
     bool enable;
     Points standby_points;
-    
+
     OozePrevention();
     std::string pre_toolchange(GCode &gcodegen);
     std::string post_toolchange(GCode &gcodegen);
-    
+
     private:
     int _get_temp(GCode &gcodegen);
 };
@@ -58,7 +58,7 @@ class Wipe {
     public:
     bool enable;
     Polyline path;
-    
+
     Wipe();
     bool has_path();
     void reset_path();
@@ -67,81 +67,85 @@ class Wipe {
 
 class GCode {
     public:
-    
-    /* Origin of print coordinates expressed in unscaled G-code coordinates.
-       This affects the input arguments supplied to the extrude*() and travel_to()
-       methods. */
-    Pointf origin;
-    FullPrintConfig config;
-    GCodeWriter writer;
-    PlaceholderParser* placeholder_parser;
-    OozePrevention ooze_prevention;
-    Wipe wipe;
-    AvoidCrossingPerimeters avoid_crossing_perimeters;
-    bool enable_loop_clipping;
-    // If enabled, the G-code generator will put following comments at the ends
-    // of the G-code lines: _EXTRUDE_SET_SPEED, _WIPE, _BRIDGE_FAN_START, _BRIDGE_FAN_END
-    // Those comments are received and consumed (removed from the G-code) by the CoolingBuffer.pm Perl module.
-    bool enable_cooling_markers;
-    size_t layer_count;
-    int layer_index; // just a counter
-    const Layer* layer;
-    std::map<const PrintObject*,Point> _seam_position;
-    bool first_layer; // this flag triggers first layer speeds
-    // Used by the CoolingBuffer.pm Perl module to calculate time spent per layer change.
-    // This value is not quite precise. First it only accouts for extrusion moves and travel moves,
-    // it does not account for wipe, retract / unretract moves.
-    // second it does not account for the velocity profiles of the printer.
-    float elapsed_time, elapsed_time_bridges, elapsed_time_external; // seconds
-    double volumetric_speed;
-    
-    GCode();
-    const Point& last_pos() const;
-    void set_last_pos(const Point &pos);
-    bool last_pos_defined() const;
-    void apply_print_config(const PrintConfig &print_config);
 
-    /// Template function.
-    template <typename Iter>
-    void set_extruders(Iter begin, Iter end) {
-        this->writer.set_extruders(begin, end);
-        // enable wipe path generation if any extruder has wipe enabled
-        this->wipe.enable = false;
-        for (Iter it = begin; it != end; ++it) {
-            if (this->config.wipe.get_at(*it)) {
-                this->wipe.enable = true;
-                break;
+        /* Origin of print coordinates expressed in unscaled G-code coordinates.
+           This affects the input arguments supplied to the extrude*() and travel_to()
+           methods. */
+        Pointf origin;
+        FullPrintConfig config;
+        GCodeWriter writer;
+        PlaceholderParser* placeholder_parser;
+        OozePrevention ooze_prevention;
+        Wipe wipe;
+        AvoidCrossingPerimeters avoid_crossing_perimeters;
+        bool enable_loop_clipping;
+        // If enabled, the G-code generator will put following comments at the ends
+        // of the G-code lines: _EXTRUDE_SET_SPEED, _WIPE, _BRIDGE_FAN_START, _BRIDGE_FAN_END
+        // Those comments are received and consumed (removed from the G-code) by the CoolingBuffer.pm Perl module.
+        bool enable_cooling_markers;
+        size_t layer_count;
+        int layer_index; // just a counter
+        const Layer* layer;
+        std::map<const PrintObject*,Point> _seam_position;
+        bool first_layer; // this flag triggers first layer speeds
+        // Used by the CoolingBuffer.pm Perl module to calculate time spent per layer change.
+        // This value is not quite precise. First it only accouts for extrusion moves and travel moves,
+        // it does not account for wipe, retract / unretract moves.
+        // second it does not account for the velocity profiles of the printer.
+        float elapsed_time, elapsed_time_bridges, elapsed_time_external; // seconds
+        double volumetric_speed;
+
+        GCode();
+        const Point& last_pos() const;
+        void set_last_pos(const Point &pos);
+        bool last_pos_defined() const;
+        void apply_print_config(const PrintConfig &print_config);
+
+        /// Template function.
+        template <typename Iter>
+        void set_extruders(Iter begin, Iter end) {
+            this->writer.set_extruders(begin, end);
+            // enable wipe path generation if any extruder has wipe enabled
+            this->wipe.enable = false;
+            for (Iter it = begin; it != end; ++it) {
+                if (this->config.wipe.get_at(*it)) {
+                    this->wipe.enable = true;
+                    break;
+                }
             }
         }
-    }
-    template <typename T>
-    void set_extruders(const std::vector<T> &extruder_ids) {
-        this->set_extruders(extruder_ids.cbegin(), extruder_ids.cend());
-    }
+        template <typename T>
+        void set_extruders(const std::vector<T> &extruder_ids) {
+            this->set_extruders(extruder_ids.cbegin(), extruder_ids.cend());
+        }
 
-    template <typename T>
-    void set_extruders(const std::set<T> &extruder_ids) {
-        this->set_extruders(extruder_ids.cbegin(), extruder_ids.cend());
-    }
+        template <typename T>
+        void set_extruders(const std::set<T> &extruder_ids) {
+            this->set_extruders(extruder_ids.cbegin(), extruder_ids.cend());
+        }
 
-    void set_origin(const Pointf &pointf);
-    std::string preamble();
-    std::string notes();
-    std::string change_layer(const Layer &layer);
-    std::string extrude(const ExtrusionEntity &entity, std::string description = "", double speed = -1);
-    std::string extrude(ExtrusionLoop loop, std::string description = "", double speed = -1);
-    std::string extrude(const ExtrusionPath &path, std::string description = "", double speed = -1);
-    std::string travel_to(const Point &point, ExtrusionRole role, std::string comment);
-    bool needs_retraction(const Polyline &travel, ExtrusionRole role = erNone);
-    std::string retract(bool toolchange = false);
-    std::string unretract();
-    std::string set_extruder(unsigned int extruder_id);
-    Pointf point_to_gcode(const Point &point);
-    
+        void set_origin(const Pointf &pointf);
+        std::string preamble();
+        std::string notes();
+        std::string change_layer(const Layer &layer);
+        std::string extrude(const ExtrusionEntity &entity, std::string description = "", double speed = -1);
+        std::string extrude(ExtrusionLoop loop, std::string description = "", double speed = -1);
+        std::string extrude(const ExtrusionPath &path, std::string description = "", double speed = -1);
+        std::string travel_to(const Point &point, ExtrusionRole role, std::string comment);
+        bool needs_retraction(const Polyline &travel, ExtrusionRole role = erNone);
+        std::string retract(bool toolchange = false);
+        std::string unretract();
+        std::string set_extruder(unsigned int extruder_id);
+        Pointf point_to_gcode(const Point &point);
+        Pointf3 get_cog();
+        std::string cog_stats();
+
     private:
-    Point _last_pos;
-    bool _last_pos_defined;
-    std::string _extrude(ExtrusionPath path, std::string description = "", double speed = -1);
+        Point _last_pos;
+        bool _last_pos_defined;
+        std::string _extrude(ExtrusionPath path, std::string description = "", double speed = -1);
+        Pointf3 _cog;
+        float _extrusion_length = 0;
 };
 
 }

@@ -22,7 +22,7 @@ GCodeWriter::apply_print_config(const PrintConfig &print_config)
 }
 
 std::string
-GCodeWriter::notes() 
+GCodeWriter::notes()
 {
     std::ostringstream gcode;
 
@@ -104,7 +104,7 @@ GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool) cons
         code = "M104";
         comment = "set temperature";
     }
-    
+
     std::ostringstream gcode;
     gcode << code << " ";
     if (FLAVOR_IS(gcfMach3) || FLAVOR_IS(gcfMachinekit)) {
@@ -117,13 +117,13 @@ GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool) cons
         gcode << " T" << tool;
     }
     gcode << " ; " << comment << "\n";
-    
+
     if (FLAVOR_IS(gcfTeacup) && wait)
         gcode << "M116 ; wait for temperature to be reached\n";
-    
+
     if (wait && tool !=-1 && (FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)))
         gcode << "M6 T" << tool << " ; wait for temperature to be reached\n";
-    
+
     return gcode.str();
 }
 
@@ -143,7 +143,7 @@ GCodeWriter::set_bed_temperature(unsigned int temperature, bool wait) const
         code = "M140";
         comment = "set bed temperature";
     }
-    
+
     std::ostringstream gcode;
     gcode << code << " ";
     if (FLAVOR_IS(gcfMach3) || FLAVOR_IS(gcfMachinekit)) {
@@ -152,10 +152,10 @@ GCodeWriter::set_bed_temperature(unsigned int temperature, bool wait) const
         gcode << "S";
     }
     gcode << temperature << " ; " << comment << "\n";
-    
+
     if (FLAVOR_IS(gcfTeacup) && wait)
         gcode << "M116 ; wait for bed temperature to be reached\n";
-    
+
     return gcode.str();
 }
 
@@ -166,7 +166,7 @@ GCodeWriter::set_fan(unsigned int speed, bool dont_save)
     const double baseline_factor = (this->config.fan_percentage ? 100.0 : 255.0);
     if (this->_last_fan_speed != speed || dont_save) {
         if (!dont_save) this->_last_fan_speed = speed;
-        
+
         if (speed == 0) {
             if (FLAVOR_IS(gcfTeacup)) {
                 gcode << "M106 S0";
@@ -201,9 +201,9 @@ GCodeWriter::set_acceleration(unsigned int acceleration)
 {
     if (acceleration == 0 || acceleration == this->_last_acceleration)
         return "";
-    
+
     this->_last_acceleration = acceleration;
-    
+
     std::ostringstream gcode;
     if (FLAVOR_IS(gcfRepetier) || (FLAVOR_IS(gcfRepRap))) {
         gcode << "M201 X" << acceleration << " Y" << acceleration;
@@ -219,7 +219,7 @@ GCodeWriter::set_acceleration(unsigned int acceleration)
     }
     if (this->config.gcode_comments) gcode << " ; adjust acceleration";
     gcode << "\n";
-    
+
     return gcode.str();
 }
 
@@ -230,12 +230,12 @@ GCodeWriter::reset_e(bool force)
         || FLAVOR_IS(gcfMakerWare)
         || FLAVOR_IS(gcfSailfish))
         return "";
-    
+
     if (this->_extruder != NULL) {
         if (this->_extruder->E == 0 && !force) return "";
         this->_extruder->E = 0;
     }
-    
+
     if (!this->_extrusion_axis.empty() && !this->config.use_relative_e_distances) {
         std::ostringstream gcode;
         gcode << "G92 " << this->_extrusion_axis << "0";
@@ -252,10 +252,10 @@ GCodeWriter::update_progress(unsigned int num, unsigned int tot, bool allow_100)
 {
     if (FLAVOR_IS_NOT(gcfMakerWare) && FLAVOR_IS_NOT(gcfSailfish))
         return "";
-    
+
     unsigned int percent = 100.0 * num / tot;
     if (!allow_100) percent = std::min(percent, (unsigned int)99);
-    
+
     std::ostringstream gcode;
     gcode << "M73 P" << percent;
     if (this->config.gcode_comments) gcode << " ; update progress";
@@ -281,13 +281,13 @@ std::string
 GCodeWriter::toolchange(unsigned int extruder_id)
 {
     std::ostringstream gcode;
-    
+
     // set the new extruder
     this->_extruder = &this->extruders.find(extruder_id)->second;
-    
+
     //first thing to do : reset E (because a new item is now printed or with a new extruder)
     gcode << this->reset_e(true);
-    
+
     // return the toolchange command
     // if we are running a single-extruder setup, just set the extruder and return nothing
     if (this->multiple_extruders) {
@@ -323,7 +323,7 @@ GCodeWriter::travel_to_xy(const Pointf &point, const std::string &comment)
 {
     this->_pos.x = point.x;
     this->_pos.y = point.y;
-    
+
     std::ostringstream gcode;
     gcode << "G1 X" << XYZF_NUM(point.x)
           <<   " Y" << XYZF_NUM(point.y)
@@ -338,19 +338,19 @@ GCodeWriter::travel_to_xyz(const Pointf3 &point, const std::string &comment)
 {
     /*  If target Z is lower than current Z but higher than nominal Z we
         don't perform the Z move but we only move in the XY plane and
-        adjust the nominal Z by reducing the lift amount that will be 
+        adjust the nominal Z by reducing the lift amount that will be
         used for unlift. */
     if (!this->will_move_z(point.z)) {
         double nominal_z = this->_pos.z - this->_lifted;
         this->_lifted = this->_lifted - (point.z - nominal_z);
         return this->travel_to_xy(point);
     }
-    
+
     /*  In all the other cases, we perform an actual XYZ move and cancel
         the lift. */
     this->_lifted = 0;
     this->_pos = point;
-    
+
     std::ostringstream gcode;
     gcode << "G1 X" << XYZF_NUM(point.x)
           <<   " Y" << XYZF_NUM(point.y)
@@ -372,7 +372,7 @@ GCodeWriter::travel_to_z(double z, const std::string &comment)
         this->_lifted -= (z - nominal_z);
         return "";
     }
-    
+
     /*  In all the other cases, we perform an actual Z move and cancel
         the lift. */
     this->_lifted = 0;
@@ -383,7 +383,7 @@ std::string
 GCodeWriter::_travel_to_z(double z, const std::string &comment)
 {
     this->_pos.z = z;
-    
+
     std::ostringstream gcode;
     gcode << "G1 Z" << XYZF_NUM(z)
           <<   " F" << XYZF_NUM(this->config.travel_speed.value * 60.0);
@@ -411,7 +411,7 @@ GCodeWriter::extrude_to_xy(const Pointf &point, double dE, const std::string &co
     this->_pos.x = point.x;
     this->_pos.y = point.y;
     this->_extruder->extrude(dE);
-    
+
     std::ostringstream gcode;
     gcode << "G1 X" << XYZF_NUM(point.x)
           <<   " Y" << XYZF_NUM(point.y)
@@ -427,7 +427,7 @@ GCodeWriter::extrude_to_xyz(const Pointf3 &point, double dE, const std::string &
     this->_pos = point;
     this->_lifted = 0;
     this->_extruder->extrude(dE);
-    
+
     std::ostringstream gcode;
     gcode << "G1 X" << XYZF_NUM(point.x)
           <<   " Y" << XYZF_NUM(point.y)
@@ -466,12 +466,12 @@ GCodeWriter::_retract(double length, double restart_extra, const std::string &co
     std::ostringstream outcomment;
 
     outcomment << comment;
-    
+
     /*  If firmware retraction is enabled, we use a fake value of 1
-        since we ignore the actual configured retract_length which 
+        since we ignore the actual configured retract_length which
         might be 0, in which case the retraction logic gets skipped. */
     if (this->config.use_firmware_retraction) length = 1;
-    
+
     // If we use volumetric E values we turn lengths into volumes */
     if (this->config.use_volumetric_e) {
         double d = this->_extruder->filament_diameter();
@@ -497,10 +497,10 @@ GCodeWriter::_retract(double length, double restart_extra, const std::string &co
         COMMENT(outcomment.str());
         gcode << "\n";
     }
-    
+
     if (FLAVOR_IS(gcfMakerWare))
         gcode << "M103 ; extruder off\n";
-    
+
     return gcode.str();
 }
 
@@ -508,10 +508,10 @@ std::string
 GCodeWriter::unretract()
 {
     std::ostringstream gcode;
-    
+
     if (FLAVOR_IS(gcfMakerWare))
         gcode << "M101 ; extruder on\n";
-    
+
     double dE = this->_extruder->unretract();
     if (dE != 0) {
         if (this->config.use_firmware_retraction) {
@@ -530,7 +530,7 @@ GCodeWriter::unretract()
             gcode << "\n";
         }
     }
-    
+
     return gcode.str();
 }
 
@@ -548,7 +548,7 @@ GCodeWriter::lift()
         if (this->_pos.z >= above && (below == 0 || this->_pos.z <= below))
             target_lift = this->config.retract_lift.get_at(this->_extruder->id);
     }
-    
+
     // compare against epsilon because travel_to_z() does math on it
     // and subtracting layer_height from retract_lift might not give
     // exactly zero
@@ -556,7 +556,7 @@ GCodeWriter::lift()
         this->_lifted = target_lift;
         return this->_travel_to_z(this->_pos.z + target_lift, "lift Z");
     }
-    
+
     return "";
 }
 

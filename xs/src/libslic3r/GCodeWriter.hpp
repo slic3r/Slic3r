@@ -14,7 +14,7 @@ public:
     GCodeConfig config;
     std::map<unsigned int,Extruder> extruders;
     bool multiple_extruders;
-    
+
     GCodeWriter()
         : multiple_extruders(false), _extrusion_axis("E"), _extruder(NULL),
             _last_acceleration(0), _last_fan_speed(0), _lifted(0)
@@ -75,7 +75,7 @@ private:
     unsigned int _last_fan_speed;
     double _lifted;
     Pointf3 _pos;
-    
+
     std::string _travel_to_z(double z, const std::string &comment);
     std::string _retract(double length, double restart_extra, const std::string &comment, bool long_retract = false);
 };

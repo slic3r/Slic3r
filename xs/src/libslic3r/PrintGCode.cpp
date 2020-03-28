@@ -320,6 +320,8 @@ PrintGCode::output()
         fh << _gcodegen.writer.set_bed_temperature(0, 0);
     }
 
+    fh << _gcodegen.cog_stats();
+
     // Get filament stats
     _print.filament_stats.clear();
     _print.total_used_filament = 0.0;
@@ -405,7 +407,7 @@ PrintGCode::process_layer(size_t idx, const Layer* layer, const Points& copies)
         for (auto region_id = 0U; region_id < _print.regions.size(); ++region_id) {
             const PrintRegion* region = _print.get_region(region_id);
             if( region_id >= layer->region_count() ){
-		Slic3r::Log::error("Layer processing") << "Layer #" << layer->id() 
+		Slic3r::Log::error("Layer processing") << "Layer #" << layer->id()
 		    << " doesn't have region " << region_id << ". "
 		    << " The layer has " << layer->region_count() << " regions."
 		    << std::endl;
@@ -807,4 +809,3 @@ PrintGCode::PrintGCode(Slic3r::Print& print, std::ostream& _fh) :
 }
 
 } // namespace Slic3r
-

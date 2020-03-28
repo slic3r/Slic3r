@@ -10,22 +10,22 @@
 %name{Slic3r::GCode::AvoidCrossingPerimeters} class AvoidCrossingPerimeters {
     AvoidCrossingPerimeters();
     ~AvoidCrossingPerimeters();
-    
+
     void init_external_mp(ExPolygons islands);
     void init_layer_mp(ExPolygons islands);
     Clone<Polyline> travel_to(GCode* gcode, Point* point)
         %code{% RETVAL = THIS->travel_to(*gcode, *point); %};
-    
+
     bool use_external_mp()
         %code{% RETVAL = THIS->use_external_mp; %};
     void set_use_external_mp(bool value)
         %code{% THIS->use_external_mp = value; %};
-    
+
     bool use_external_mp_once()
         %code{% RETVAL = THIS->use_external_mp_once; %};
     void set_use_external_mp_once(bool value)
         %code{% THIS->use_external_mp_once = value; %};
-    
+
     bool disable_once()
         %code{% RETVAL = THIS->disable_once; %};
     void set_disable_once(bool value)
@@ -35,17 +35,17 @@
 %name{Slic3r::GCode::OozePrevention} class OozePrevention {
     OozePrevention();
     ~OozePrevention();
-    
+
     bool enable()
         %code{% RETVAL = THIS->enable; %};
     void set_enable(bool value)
         %code{% THIS->enable = value; %};
-    
+
     Points standby_points()
         %code{% RETVAL = THIS->standby_points; %};
     void set_standby_points(Points points)
         %code{% THIS->standby_points = points; %};
-    
+
     std::string pre_toolchange(GCode* gcodegen)
         %code{% RETVAL = THIS->pre_toolchange(*gcodegen); %};
     std::string post_toolchange(GCode* gcodegen)
@@ -55,17 +55,17 @@
 %name{Slic3r::GCode::Wipe} class Wipe {
     Wipe();
     ~Wipe();
-    
+
     bool has_path();
     void reset_path();
     std::string wipe(GCode* gcodegen, bool toolchange = false)
         %code{% RETVAL = THIS->wipe(*gcodegen, toolchange); %};
-    
+
     bool enable()
         %code{% RETVAL = THIS->enable; %};
     void set_enable(bool value)
         %code{% THIS->enable = value; %};
-    
+
     Ref<Polyline> path()
         %code{% RETVAL = &(THIS->path); %};
     void set_path(Polyline* value)
@@ -77,7 +77,7 @@
         %code{% RETVAL = new CoolingBuffer(*gcode); %};
     ~CoolingBuffer();
     Ref<GCode> gcodegen();
-    
+
     std::string append(std::string gcode, std::string obj_id, size_t layer_id, float print_z);
     std::string flush();
 };
@@ -86,7 +86,7 @@
     SpiralVase(StaticPrintConfig* config)
         %code{% RETVAL = new SpiralVase(*dynamic_cast<PrintConfig*>(config)); %};
     ~SpiralVase();
-    
+
     bool enable()
         %code{% RETVAL = THIS->enable; %};
     void set_enable(bool enable)
@@ -97,78 +97,78 @@
 %name{Slic3r::GCode} class GCode {
     GCode();
     ~GCode();
-    
+
     Ref<Pointf> origin()
         %code{% RETVAL = &(THIS->origin); %};
-    
+
     Ref<StaticPrintConfig> config()
         %code{% RETVAL = &(THIS->config); %};
-    
+
     Ref<GCodeWriter> writer()
         %code{% RETVAL = &(THIS->writer); %};
-    
+
     Ref<PlaceholderParser> placeholder_parser()
         %code{% RETVAL = THIS->placeholder_parser; %};
     void set_placeholder_parser(PlaceholderParser* ptr)
         %code{% THIS->placeholder_parser = ptr; %};
-    
+
     Ref<OozePrevention> ooze_prevention()
         %code{% RETVAL = &(THIS->ooze_prevention); %};
-    
+
     Ref<Wipe> wipe()
         %code{% RETVAL = &(THIS->wipe); %};
-    
+
     Ref<AvoidCrossingPerimeters> avoid_crossing_perimeters()
         %code{% RETVAL = &(THIS->avoid_crossing_perimeters); %};
-    
+
     bool enable_loop_clipping()
         %code{% RETVAL = THIS->enable_loop_clipping; %};
     void set_enable_loop_clipping(bool value)
         %code{% THIS->enable_loop_clipping = value; %};
-    
+
     bool enable_cooling_markers()
         %code{% RETVAL = THIS->enable_cooling_markers; %};
     void set_enable_cooling_markers(bool value)
         %code{% THIS->enable_cooling_markers = value; %};
-    
+
     int layer_count()
         %code{% RETVAL = THIS->layer_count; %};
     void set_layer_count(int value)
         %code{% THIS->layer_count = value; %};
-    
+
     int layer_index()
         %code{% RETVAL = THIS->layer_index; %};
     void set_layer_index(int value)
         %code{% THIS->layer_index = value; %};
-    
+
     bool has_layer()
         %code{% RETVAL = THIS->layer != NULL; %};
     Ref<Layer> layer()
         %code{% RETVAL = THIS->layer; %};
     void set_layer(Layer* ptr)
         %code{% THIS->layer = ptr; %};
-    
+
     bool first_layer()
         %code{% RETVAL = THIS->first_layer; %};
     void set_first_layer(bool value)
         %code{% THIS->first_layer = value; %};
-    
+
     float elapsed_time()
         %code{% RETVAL = THIS->elapsed_time; %};
     void set_elapsed_time(float value)
         %code{% THIS->elapsed_time = value; %};
-    
+
     bool last_pos_defined();
     Ref<Point> last_pos()
         %code{% RETVAL = &(THIS->last_pos()); %};
     void set_last_pos(Point* pos)
         %code{% THIS->set_last_pos(*pos); %};
-    
+
     double volumetric_speed()
         %code{% RETVAL = THIS->volumetric_speed; %};
     void set_volumetric_speed(double value)
         %code{% THIS->volumetric_speed = value; %};
-    
+
     void apply_print_config(StaticPrintConfig* print_config)
         %code{%
             if (const PrintConfig* config = dynamic_cast<PrintConfig*>(print_config)) {
@@ -195,6 +195,8 @@
     std::string retract(bool toolchange = false);
     std::string unretract();
     std::string set_extruder(unsigned int extruder_id);
+    Clone<Pointf3> get_cog();
+    std::string cog_stats();
     Clone<Pointf> point_to_gcode(Point* point)
         %code{% RETVAL = THIS->point_to_gcode(*point); %};
 
