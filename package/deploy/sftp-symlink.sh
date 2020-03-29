@@ -4,7 +4,7 @@
 #   UPLOAD_USER - user to upload to sftp server
 # KEY is assumed to be path to a ssh key for UPLOAD_USER
 
-DIR=$1
+DIR=${BASE_DIR}$1
 shift
 KEY=$1
 shift
@@ -25,7 +25,7 @@ if [ ! -z ${PR_ID+x} ]; then
     exit 0
 fi
 if [ ! -z ${PR_ID+x} ] || [ $current_branch != "master" ]; then
-    DIR=${BASE_DIR}${DIR}/branches
+    DIR=${DIR}/branches
 fi
 
 if [ -s $KEY ]; then
