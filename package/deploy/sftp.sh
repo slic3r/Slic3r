@@ -35,7 +35,7 @@ if [ -s $KEY ]; then
         tmpfile=$(mktemp)
         echo put $filepath > $tmpfile
 	echo $tmpfile
-        sftp -b $tmpfile -i$KEY -P 2222 "${UPLOAD_USER}@s1.mlab.cz:$DIR/"
+        sftp -b $tmpfile -i$KEY -P 2222 "${UPLOAD_USER}@s1.mlab.cz:$DIR/" -vvv
         result=$?
         if [ $? -eq 1 ]; then
             echo "Error with SFTP"
