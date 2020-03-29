@@ -1,9 +1,12 @@
-![](var/Slic3r_128px.png) Slic3r [![Build Status](https://travis-ci.org/slic3r/Slic3r.svg?branch=master)](https://travis-ci.org/slic3r/Slic3r) [![Build status](https://ci.appveyor.com/api/projects/status/8iqmeat6cj158vo6?svg=true)](https://ci.appveyor.com/project/lordofhyphens/slic3r) [![Build Status](http://osx-build.slic3r.org:8080/buildStatus/icon?job=Slic3r)](http://osx-build.slic3r.org:8080/job/Slic3r)![Coverity Status](https://scan.coverity.com/projects/17257/badge.svg)
+![](var/Slic3r_128px.png) Slic3r 
+
+[![Build Status](https://travis-ci.com/ThunderFly-aerospace/Slic3r.svg?branch=master)](https://travis-ci.com/ThunderFly-aerospace/Slic3r) [![Build status](https://ci.appveyor.com/api/projects/status/v3dvu45tmjwmkc92?svg=true)](https://ci.appveyor.com/project/roman-dvorak/slic3r) ![Coverity Status](https://scan.coverity.com/projects/17257/badge.svg)
 ======
 
-We have automated builds for Windows (64-bit) and OSX (>= 10.7). [Get a fresh build now](http://dl.slic3r.org/dev/) and stay up-to-date with the development!
+We have automated builds for Windows (64-bit), OSX (>= 10.7) and linux. [Get a fresh build now](https://s1.mlab.cz/deploy/slic3r/) and stay up-to-date with the development!
 
-The MacOS X build server is kindly sponsored by: <img width=150 src=https://cloud.githubusercontent.com/assets/31754/22719818/09998c92-ed6d-11e6-9fa0-09de638f3a36.png />
+# This is ThunderFly fork of Slic3r
+This for contains some new features. 
 
 ### So, what's this Slic3r?
 
@@ -16,7 +19,7 @@ Slic3r is:
 * **Open:** it is totally **open source** and it's **independent from any commercial company** or printer manufacturer. We want to keep 3D printing open and free.
 * **Compatible:** it supports all the known G-code dialects (Marlin, Repetier, Mach3, LinuxCNC, Machinekit, Smoothie, Makerware, Sailfish).
 * **Advanced:** many configuration options allow for fine-tuning and full control. While novice users often need just few options, Slic3r is mostly used by advanced users.
-* **Community-driven:** new features or issues are discussed in the [GitHub repository](https://github.com/slic3r/Slic3r/issues). Join our collaborative effort and help improve it!
+* **Community-driven:** new features or issues are discussed in the [GitHub repository](https://github.com/ThunderFly-aerospace/Slic3r/issues). Join our collaborative effort and help improve it!
 * **Robust:** the codebase includes more than 1,000 unit and regression tests, collected in 6 years of development.
 * **Modular:** the core of Slic3r is libslic3r, a C++ library that provides a granular API and reusable components.
 * **Embeddable:** a complete and powerful command line interface allows Slic3r to be used from the shell or integrated with server-side applications.
@@ -44,17 +47,17 @@ The core parts of Slic3r are written in C++11, with multithreading. The graphica
 
 ### How to install?
 
-You can download a precompiled package from [slic3r.org](http://slic3r.org/) (releases) or from [dl.slicr3r.org](http://dl.slic3r.org/dev/) (automated builds).
+You can download a precompiled package from [s1.mlab.cz/deploy/slic3r](https://s1.mlab.cz/deploy/slic3r) (automated builds).
 
 If you want to compile the source yourself follow the instructions on one of these wiki pages:
-* [Linux](https://github.com/slic3r/Slic3r/wiki/Running-Slic3r-from-git-on-GNU-Linux)
-* [Windows](https://github.com/slic3r/Slic3r/wiki/Running-Slic3r-from-git-on-Windows)
-* [Mac OSX](https://github.com/slic3r/Slic3r/wiki/Running-Slic3r-from-git-on-OS-X)
+* [Linux](https://github.com/ThunderFly-aerospace/Slic3r/wiki/Running-Slic3r-from-git-on-GNU-Linux)
+* [Windows](https://github.com/ThunderFly-aerospace/Slic3r/wiki/Running-Slic3r-from-git-on-Windows)
+* [Mac OSX](https://github.com/ThunderFly-aerospace/Slic3r/wiki/Running-Slic3r-from-git-on-OS-X)
 
 ### Can I help?
 
 Sure, but please read the
-[CONTRIBUTING](https://github.com/slic3r/Slic3r/blob/master/.github/CONTRIBUTING.md)
+[CONTRIBUTING](https://github.com/ThunderFly-aerospace/Slic3r/blob/master/.github/CONTRIBUTING.md)
 document first!
 
 ### Directory structure
