@@ -22,11 +22,11 @@ if [ -s $KEY ]; then
         # clean up old copies of the same branch/PR
         if [ ! -z ${PR_ID+x} ]; then
             echo "BBB"
-            echo "rm *PR${PR_ID}*" | sftp -i$KEY -P 2222 "${UPLOAD_USER}@s1.mlab.cz:$DIR/"
+            echo "rm *PR${PR_ID}*" | sftp -i$KEY -o StrictHostKeyChecking=no -P 2222 "${UPLOAD_USER}@s1.mlab.cz:$DIR/"
         fi
         if [ $current_branch != "master" ]; then
             echo "CCC"
-            echo "rm *${current_branch}*" | sftp -i$KEY -P 2222 "${UPLOAD_USER}@s1.mlab.cz:$DIR/"
+            echo "rm *${current_branch}*" | sftp -i$KEY -o StrictHostKeyChecking=no -P 2222 "${UPLOAD_USER}@s1.mlab.cz:$DIR/"
         fi
     fi
     for i in $FILES; do
@@ -35,7 +35,7 @@ if [ -s $KEY ]; then
         tmpfile=$(mktemp)
         echo put $filepath > $tmpfile
 	echo $tmpfile
-        sftp -b $tmpfile -i$KEY -vvv -P 2222 "${UPLOAD_USER}@s1.mlab.cz:$DIR/"
+        sftp -b $tmpfile -i$KEY -o StrictHostKeyChecking=no -vvv -P 2222 "${UPLOAD_USER}@s1.mlab.cz:$DIR/"
         result=$?
         if [ $? -eq 1 ]; then
             echo "Error with SFTP"
