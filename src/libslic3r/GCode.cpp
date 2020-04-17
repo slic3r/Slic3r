@@ -2664,7 +2664,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
 
     // extrude all loops ccw
     //no! this was decided in perimeter_generator
-    bool is_hole_loop = loop.loop_role() & ExtrusionLoopRole::elrHole != 0;// loop.make_counter_clockwise();
+    bool is_hole_loop = (loop.loop_role() & ExtrusionLoopRole::elrHole) != 0;// loop.make_counter_clockwise();
     bool reverse_turn = loop.polygon().is_clockwise() ^ is_hole_loop;
 
     split_at_seam_pos(loop, lower_layer_edge_grid);
@@ -3055,7 +3055,7 @@ void GCode::split_at_seam_pos(ExtrusionLoop &loop, std::unique_ptr<EdgeGrid::Gri
             loop.split_at(polygon.points[idx_min], true);
 
     } else if (seam_position == spRandom) {
-        if (loop.loop_role() & elrInternal == 0) {
+        if ( (loop.loop_role() & elrInternal) == 0) {
             // This loop does not contain any other (not-hole) loop. Set a random position.
             // The other loops will get a seam close to the random point chosen
             // on the inner most contour.

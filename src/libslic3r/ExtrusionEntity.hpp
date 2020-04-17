@@ -39,7 +39,7 @@ enum ExtrusionRole : uint8_t {
 
 // Special flags describing loop
 enum ExtrusionLoopRole : uint16_t {
-    elrDefault = 0,
+    elrDefault = 1 << 0, //1
     // doesn't contains more contour: it's the most internal one
     elrInternal = 1 << 1, //2
     elrSkirt =    1 << 2,  //4
