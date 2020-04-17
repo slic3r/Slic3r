@@ -2537,31 +2537,28 @@ Polygon _smooth_curve(Polygon &p, double max_angle, double min_angle_convex, dou
 }
 
 ExPolygons PrintObject::_smooth_curves(const ExPolygons & input, const PrintRegionConfig &conf) const {
-
-    if (conf.curve_smoothing_precision.value > 0.f) {
-        ExPolygons new_polys;
-        for (const ExPolygon &ex_poly : input) {
-            ExPolygon new_ex_poly(ex_poly);
-            new_ex_poly.contour.remove_collinear(SCALED_RESOLUTION);
-            new_ex_poly.contour = _smooth_curve(new_ex_poly.contour, PI,
+    ExPolygons new_polys;
+    for (const ExPolygon &ex_poly : input) {
+        ExPolygon new_ex_poly(ex_poly);
+        new_ex_poly.contour.remove_collinear(SCALED_RESOLUTION);
+        new_ex_poly.contour = _smooth_curve(new_ex_poly.contour, PI,
+            conf.curve_smoothing_angle_convex.value*PI / 180.0,
+            conf.curve_smoothing_angle_concave.value*PI / 180.0,
+            scale_(conf.curve_smoothing_cutoff_dist.value),
+            scale_(conf.curve_smoothing_precision.value));
+        for (Polygon &phole : new_ex_poly.holes){
+            phole.reverse(); // make_counter_clockwise();
+            phole.remove_collinear(SCALED_RESOLUTION);
+            phole = _smooth_curve(phole, PI,
                 conf.curve_smoothing_angle_convex.value*PI / 180.0,
                 conf.curve_smoothing_angle_concave.value*PI / 180.0,
                 scale_(conf.curve_smoothing_cutoff_dist.value),
                 scale_(conf.curve_smoothing_precision.value));
-            for (Polygon &phole : new_ex_poly.holes){
-                phole.reverse(); // make_counter_clockwise();
-                phole.remove_collinear(SCALED_RESOLUTION);
-                phole = _smooth_curve(phole, PI,
-                    conf.curve_smoothing_angle_convex.value*PI / 180.0,
-                    conf.curve_smoothing_angle_concave.value*PI / 180.0,
-                    scale_(conf.curve_smoothing_cutoff_dist.value),
-                    scale_(conf.curve_smoothing_precision.value));
-                phole.reverse(); // make_clockwise();
-                }
-            new_polys.push_back(new_ex_poly);
-        }
-        return new_polys;
+            phole.reverse(); // make_clockwise();
+            }
+        new_polys.push_back(new_ex_poly);
     }
+    return new_polys;
 }
 
 // To be used only if there are no layer span specific configurations applied, which would lead to z ranges being generated for this region.
