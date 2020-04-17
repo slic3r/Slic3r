@@ -250,6 +250,8 @@ group:Advanced
 	setting:interface_shells
 
 page:Output options:output+page_white
+group:Plater
+	setting:duplicate_distance
 group:Sequential printing
 	setting:complete_objects
 	line:Extruder clearance (mm)
