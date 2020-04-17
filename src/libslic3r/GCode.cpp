@@ -3662,7 +3662,8 @@ std::string GCode::travel_to(const Point &point, ExtrusionRole role, std::string
     if (needs_retraction
         && m_config.avoid_crossing_perimeters
         && ! m_avoid_crossing_perimeters.disable_once
-        && m_avoid_crossing_perimeters.is_init()) {
+        && m_avoid_crossing_perimeters.is_init()
+        && !(m_config.avoid_crossing_not_first_layer && this->on_first_layer())) {
         travel = m_avoid_crossing_perimeters.travel_to(*this, point);
         
         // check again whether the new travel path still needs a retraction

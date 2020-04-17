@@ -309,6 +309,8 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 
     toggle_field("gap_fill_min_area", config->opt_bool("gap_fill"));
 
+    toggle_field("avoid_crossing_not_first_layer", config->opt_bool("avoid_crossing_perimeters"));
+
     bool have_infill = config->option<ConfigOptionPercent>("fill_density")->value > 0;
     // infill_extruder uses the same logic as in Print::extruders()
     for (auto el : { "fill_pattern", "infill_every_layers", "infill_only_where_needed",

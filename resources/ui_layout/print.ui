@@ -22,7 +22,10 @@ group:Quality (slower slicing)
 	end_line
 	setting:only_one_perimeter_top
 	setting:ensure_vertical_shell_thickness
-	setting:avoid_crossing_perimeters
+	line:Avoid crossing perimeters
+		setting:label$:avoid_crossing_perimeters
+		setting:label$not on first layer:avoid_crossing_not_first_layer
+	end_line
 	setting:thin_perimeters
 	line:Thin walls
 		setting:thin_walls

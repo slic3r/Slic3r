@@ -147,10 +147,18 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Avoid crossing perimeters");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Optimize travel moves in order to minimize the crossing of perimeters. "
-                   "This is mostly useful with Bowden extruders which suffer from oozing. "
-                   "This feature slows down both the print and the G-code generation.");
+        "This is mostly useful with Bowden extruders which suffer from oozing. "
+        "This feature slows down both the print and the G-code generation.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("avoid_crossing_not_first_layer", coBool);
+    def->label = L("Don't avoid crossing on 1st layer");
+    def->full_label = L("Don't avoid crossing on 1st layer");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("Do not use the 'Avoid crossing perimeters' on the first layer.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(true));
 
     def = this->add("bed_temperature", coInts);
     def->label = L("Other layers");

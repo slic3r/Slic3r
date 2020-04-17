@@ -427,6 +427,7 @@ const std::vector<std::string>& Preset::print_options()
         "extra_perimeters",
         "extra_perimeters_odd_layers",
         "only_one_perimeter_top", "ensure_vertical_shell_thickness", "avoid_crossing_perimeters", 
+        "avoid_crossing_not_first_layer",
         "thin_perimeters",
         "thin_walls", "overhangs", 
         "overhangs_width",

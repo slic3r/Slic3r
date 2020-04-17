@@ -1598,6 +1598,7 @@ void TabPrint::build()
         optgroup->append_single_option_line("only_one_perimeter_top");
         optgroup->append_single_option_line("ensure_vertical_shell_thickness");
         optgroup->append_single_option_line("avoid_crossing_perimeters");
+        optgroup->append_single_option_line("avoid_crossing_not_first_layer");
         optgroup->append_single_option_line("thin_perimeters");
         line = { _(L("Thin walls")), "" };
         line.append_option(optgroup->get_option("thin_walls"));

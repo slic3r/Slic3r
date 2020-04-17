@@ -953,6 +953,7 @@ public:
     static double                   min_object_distance(const ConfigBase *config);
 
     ConfigOptionBool                avoid_crossing_perimeters;
+    ConfigOptionBool                avoid_crossing_not_first_layer;
     ConfigOptionPoints              bed_shape;
     ConfigOptionInts                bed_temperature;
     ConfigOptionFloat               bridge_acceleration;
@@ -1033,6 +1034,7 @@ protected:
         this->MachineEnvelopeConfig::initialize(cache, base_ptr);
         this->GCodeConfig::initialize(cache, base_ptr);
         OPT_PTR(avoid_crossing_perimeters);
+        OPT_PTR(avoid_crossing_not_first_layer);
         OPT_PTR(bed_shape);
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);
