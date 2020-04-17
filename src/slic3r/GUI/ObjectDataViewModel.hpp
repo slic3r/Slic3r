@@ -4,6 +4,7 @@
 #include <wx/dataview.h>
 
 #include <vector>
+#include "libslic3r/Config.hpp"
 
 namespace Slic3r {
 
