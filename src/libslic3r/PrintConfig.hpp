@@ -562,9 +562,10 @@ class PrintRegionConfig : public StaticPrintConfig
 public:
     ConfigOptionFloat               bridge_angle;
     ConfigOptionInt                 bottom_solid_layers;
-    ConfigOptionFloat               bottom_solid_min_thickness;    ConfigOptionFloatOrPercent      bridge_flow_ratio;
-    ConfigOptionFloatOrPercent      over_bridge_flow_ratio;
-    ConfigOptionFloatOrPercent      bridge_overlap;
+    ConfigOptionFloat               bottom_solid_min_thickness;
+    ConfigOptionPercent             bridge_flow_ratio;
+    ConfigOptionPercent             over_bridge_flow_ratio;
+    ConfigOptionPercent             bridge_overlap;
     ConfigOptionEnum<InfillPattern> bottom_fill_pattern;
     ConfigOptionFloatOrPercent      bridged_infill_margin;
     ConfigOptionFloat               bridge_speed; 
@@ -587,7 +588,7 @@ public:
     ConfigOptionFloat               fill_angle;
     ConfigOptionPercent             fill_density;
     ConfigOptionEnum<InfillPattern> fill_pattern;
-    ConfigOptionFloatOrPercent      fill_top_flow_ratio;
+    ConfigOptionPercent             fill_top_flow_ratio;
     ConfigOptionFloatOrPercent      fill_smooth_distribution;
     ConfigOptionFloatOrPercent      fill_smooth_width;
     ConfigOptionBool                gap_fill;
@@ -979,7 +980,7 @@ public:
     ConfigOptionFloat               first_layer_acceleration;
     ConfigOptionInts                first_layer_bed_temperature;
     ConfigOptionFloatOrPercent      first_layer_extrusion_width;
-    ConfigOptionFloatOrPercent      first_layer_flow_ratio;
+    ConfigOptionPercent             first_layer_flow_ratio;
     ConfigOptionFloatOrPercent      first_layer_speed;
     ConfigOptionFloatOrPercent      first_layer_infill_speed;
     ConfigOptionInts                first_layer_temperature;

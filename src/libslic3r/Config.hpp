@@ -123,7 +123,7 @@ enum ConfigOptionType {
     coString        = 3,
     // vector of strings
     coStrings       = coString + coVectorType,
-    // percent value. Currently only used for infill.
+    // percent value. Currently only used for infill & flow ratio.
     coPercent       = 4,
     // percents value. Currently used for retract before wipe only.
     coPercents      = coPercent + coVectorType,

@@ -155,6 +155,59 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
         apply(config, &new_conf);
     }
 
+    // check forgotten '%'
+    {
+        struct optDescr {
+            ConfigOptionFloatOrPercent* opt;
+            std::string name;
+            float min;
+            float max;
+        };
+        float diameter = 0.4f;
+        if (config->option<ConfigOptionFloatOrPercent>("extrusion_width")->percent) {
+            //has to be percent
+            diameter = 0;
+        }
+        else {
+            diameter = config->option<ConfigOptionFloatOrPercent>("extrusion_width")->value;
+        }
+        std::vector<optDescr> opts;
+        opts.push_back({ config->option<ConfigOptionFloatOrPercent>("infill_overlap"), "infill_overlap", 0, diameter * 10 });
+        for (int i = 0; i < opts.size(); i++) {
+            if ( (!opts[i].opt->percent) && (opts[i].opt->get_abs_value(diameter) < opts[i].min || opts[i].opt->get_abs_value(diameter) > opts[i].max) ) {
+                wxString msg_text = _(L("Did you forgot to put a '%' in the "+opts[i].name+" field? "
+                    "it's currently set to "+std::to_string(opts[i].opt->get_abs_value(diameter)) + " mm."));
+                if (is_global_config)
+                    msg_text += "\n\n" + _(L("Shall I add the '%'?"));
+                wxMessageDialog dialog(nullptr, msg_text, _(L("Wipe Tower")),
+                    wxICON_WARNING | (is_global_config ? wxYES | wxNO : wxOK));
+                DynamicPrintConfig new_conf = *config;
+                auto answer = dialog.ShowModal();
+                if (!is_global_config || answer == wxID_YES) {
+                    new_conf.set_key_value(opts[i].name, new ConfigOptionFloatOrPercent(opts[i].opt->value*100, true));
+                    apply(config, &new_conf);
+                }
+            }
+        }
+    }
+
+    // check changes from FloatOrPercent to percent (useful to migrate cofnig from prusa to slic3r++)
+    {
+        std::vector<std::string> names;
+        names.push_back("bridge_flow_ratio");
+        names.push_back("over_bridge_flow_ratio");
+        names.push_back("bridge_overlap");
+        names.push_back("fill_top_flow_ratio");
+        names.push_back("first_layer_flow_ratio");
+        for (int i = 0; i < names.size(); i++) {
+            if (config->option<ConfigOptionPercent>(names[i])->value <= 2) {
+                DynamicPrintConfig new_conf = *config;
+                new_conf.set_key_value(names[i], new ConfigOptionPercent(config->option<ConfigOptionPercent>(names[i])->value * 100));
+                apply(config, &new_conf);
+            }
+        }
+    }
+
     static bool support_material_overhangs_queried = false;
 
     if (config->opt_bool("support_material")) {

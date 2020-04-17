@@ -247,38 +247,43 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInts{ 100 });
 
-    def = this->add("bridge_flow_ratio", coFloatOrPercent);
+    def = this->add("bridge_flow_ratio", coPercent);
     def->label = L("Bridge");
     def->full_label = L("Bridge flow ratio");
+    def->sidetext = L("%");
     def->category = OptionCategory::width;
     def->tooltip = L("This factor affects the amount of plastic for bridging. "
                    "You can decrease it slightly to pull the extrudates and prevent sagging, "
                    "although default settings are usually good and you should experiment "
                    "with cooling (use a fan) before tweaking this.");
-    def->min = 0;
-    def->max = 2;
+    def->min = 1;
+    def->max = 200;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
+    def->set_default_value(new ConfigOptionPercent(100));
 
-    def = this->add("over_bridge_flow_ratio", coFloatOrPercent);
+    def = this->add("over_bridge_flow_ratio", coPercent);
     def->label = L("Above the bridges");
     def->full_label = L("Above bridge flow ratio");
+    def->sidetext = L("%");
     def->category = OptionCategory::width;
     def->tooltip = L("Flow ratio to compensate for the gaps in a bridged top surface. Used for ironing infill"
         "pattern to prevent regions where the low-flow pass does not provide a smooth surface due to a lack of plastic."
         " You can increase it slightly to pull the top layer at the correct height. Recommended maximum: 120%.");
-    def->min = 0;
+    def->min = 1;
+    def->max = 200;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
+    def->set_default_value(new ConfigOptionPercent(100));
 
-    def = this->add("bridge_overlap", coFloatOrPercent);
+    def = this->add("bridge_overlap", coPercent);
     def->label = L("Bridge overlap");
     def->full_label = L("Bridge overlap");
+    def->sidetext = L("%");
     def->category = OptionCategory::width;
     def->tooltip = L("Amount of overlap between lines of the bridge. If your bridge flow ratio is low, it may be useful to increaase this setting to let lines touch each other. Default to 100%. A value of 200% will create two times more lines.");
-    def->min = 0;
+    def->min = 50;
+    def->max = 200;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(105, true));
+    def->set_default_value(new ConfigOptionPercent(100));
 
     def = this->add("bridge_speed", coFloat);
     def->label = L("Bridges");
@@ -1252,23 +1257,25 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Scattered Rectilinear"));
     def->set_default_value( new ConfigOptionEnum<InfillPattern>(ipStars));
 
-    def = this->add("fill_top_flow_ratio", coFloatOrPercent);
+    def = this->add("fill_top_flow_ratio", coPercent);
     def->label = L("Top fill");
     def->full_label = L("Top fill flow ratio");
+    def->sidetext = L("%");
     def->category = OptionCategory::width;
     def->tooltip = L("You can increase this to over-extrude on the top layer if there are not enough plastic to make a good fill.");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
+    def->set_default_value(new ConfigOptionPercent(100));
 
-    def = this->add("first_layer_flow_ratio", coFloatOrPercent);
+    def = this->add("first_layer_flow_ratio", coPercent);
     def->label = L("First layer");
     def->full_label = L("First layer flow ratio");
+    def->sidetext = L("%");
     def->category = OptionCategory::width;
     def->tooltip = L("You can increase this to over-extrude on the first layer if there are not enough plastic because your bed isn't levelled.");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
+    def->set_default_value(new ConfigOptionPercent(100));
 
     def = this->add("fill_smooth_width", coFloatOrPercent);
     def->label = L("width");
