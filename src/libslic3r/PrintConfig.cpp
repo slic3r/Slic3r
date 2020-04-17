@@ -3231,7 +3231,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Convert round holes to polyholes");
     def->full_label = L("Convert round holes to polyholes");
     def->category = OptionCategory::slicing;
-    def->tooltip = L("Search for almost-circular holes that span more than one layer and conert the geometry to polyholes."
+    def->tooltip = L("Search for almost-circular holes that span more than one layer and convert the geometry to polyholes."
         " Use the nozzle size and the (biggest) diameter to compute the polyhole."
         "\nSee http://hydraraptor.blogspot.com/2011/02/polyholes.html");
     def->mode = comAdvanced;

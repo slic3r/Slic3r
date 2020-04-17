@@ -8100,7 +8100,7 @@ msgstr "Trous rond changé en polyholes"
 
 #: src/libslic3r/PrintConfig.cpp:3135
 msgid ""
-"Search for almost-circular holes that span more than one layer and conert the geometry to polyholes. Use the nozzle size and the (biggest) diameter to compute the polyhole.\n"
+"Search for almost-circular holes that span more than one layer and convert the geometry to polyholes. Use the nozzle size and the (biggest) diameter to compute the polyhole.\n"
 "See http://hydraraptor.blogspot.com/2011/02/polyholes.html"
 msgstr ""
 "Recherchez des trous presque circulaires couvrant plus d'une couche et convertir leur géométrie en polyholes. Utilise la taille de la buse et le diamètre (le plus grand) pour calculer le polyhole.\n"
