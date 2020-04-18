@@ -80,6 +80,7 @@ group:label_width$8:Modifying slices
 	end_line
 group:Other
 	setting:clip_multipart_objects
+	setting:allow_empty_layers
 
 page:Infill:infill
 group:Infill

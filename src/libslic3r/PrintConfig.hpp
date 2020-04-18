@@ -952,6 +952,7 @@ public:
     double                          min_object_distance() const;
     static double                   min_object_distance(const ConfigBase *config);
 
+    ConfigOptionBool                allow_empty_layers;
     ConfigOptionBool                avoid_crossing_perimeters;
     ConfigOptionBool                avoid_crossing_not_first_layer;
     ConfigOptionPoints              bed_shape;
@@ -1033,6 +1034,7 @@ protected:
     {
         this->MachineEnvelopeConfig::initialize(cache, base_ptr);
         this->GCodeConfig::initialize(cache, base_ptr);
+        OPT_PTR(allow_empty_layers);
         OPT_PTR(avoid_crossing_perimeters);
         OPT_PTR(avoid_crossing_not_first_layer);
         OPT_PTR(bed_shape);

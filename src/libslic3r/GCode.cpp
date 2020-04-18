@@ -645,7 +645,7 @@ std::vector<GCode::LayerToPrint> GCode::collect_layers_to_print(const PrintObjec
             bool has_extrusions = (layer_to_print.object_layer && layer_to_print.object_layer->has_extrusions())
                                || (layer_to_print.support_layer && layer_to_print.support_layer->has_extrusions());
 
-            if (has_extrusions && layer_to_print.print_z() > maximal_print_z + 2. * EPSILON)
+            if (!object.print()->config().allow_empty_layers && has_extrusions && layer_to_print.print_z() > maximal_print_z + 2. * EPSILON)
                 throw std::runtime_error(_(L("Empty layers detected, the output would not be printable.")) + "\n\n" +
                     _(L("Object name")) + ": " + object.model_object()->name + "\n" + _(L("Print z")) + ": " +
                     std::to_string(layers_to_print.back().print_z()) + "\n\n" + _(L("This is "

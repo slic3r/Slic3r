@@ -143,6 +143,14 @@ void PrintConfigDef::init_fff_params()
     // Maximum extruder temperature, bumped to 1500 to support printing of glass.
     const int max_temp = 1500;
 
+    def = this->add("allow_empty_layers", coBool);
+    def->label = L("Allow empty layers");
+    def->full_label = L("Allow empty layers");
+    def->category = OptionCategory::slicing;
+    def->tooltip = L("Do not prevent the gcode builder to trigger an exception if a full layer is empty and so the print will have to start from thin air afterward.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("avoid_crossing_perimeters", coBool);
     def->label = L("Avoid crossing perimeters");
     def->category = OptionCategory::perimeter;
