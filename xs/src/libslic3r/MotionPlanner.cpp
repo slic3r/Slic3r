@@ -359,7 +359,7 @@ MotionPlannerGraph::shortest_path(node_t from, node_t to)
         previous.resize(n, -1);
         std::vector<bool> visited(n);
         
-        auto cmp = [&dist](const node_t &a, const node_t &b){ return dist[a] < dist[b]; };
+        auto cmp = [&dist](const node_t &a, const node_t &b){ return dist[a] > dist[b]; };
         // Type is a pair of node_t where the the first value is the index of the node and
         // the second value is the previous node
         std::priority_queue<node_t, std::vector<node_t>, decltype(cmp)> Q(cmp);
@@ -386,9 +386,6 @@ MotionPlannerGraph::shortest_path(node_t from, node_t to)
             {
                 // neighbor node is v
                 node_t v = neighbor_iter->target;
-                
-                // skip if we already visited this
-                if (visited[v]) continue;
                 
                 // calculate total distance
                 weight_t distance = dist[u] + neighbor_iter->weight;
