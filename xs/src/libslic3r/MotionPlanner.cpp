@@ -359,27 +359,27 @@ MotionPlannerGraph::shortest_path(node_t from, node_t to)
         previous.resize(n, -1);
         std::vector<bool> visited(n);
         
-        auto cmp = [dist](const std::pair<node_t, node_t> &a, const std::pair<node_t, node_t> &b){ return dist[a.first] < dist[b.first]; };
+        auto cmp = [&dist](const node_t &a, const node_t &b){ return dist[a] < dist[b]; };
         // Type is a pair of node_t where the the first value is the index of the node and
         // the second value is the previous node
-        std::priority_queue<std::pair<node_t, node_t>, std::vector<std::pair<node_t, node_t>>, decltype(cmp)> Q(cmp);
-        Q.emplace(from, -1);
-        
+        std::priority_queue<node_t, std::vector<node_t>, decltype(cmp)> Q(cmp);
+        Q.push(from);
+        node_t u;
+
         while (!Q.empty()) 
         {
             // get node in Q having the minimum dist ('from' in the first loop)
-            std::pair<node_t, node_t> u = Q.top();
+            u = Q.top();
             Q.pop();
-            if (visited[u.first])
+            if (visited[u])
                 continue;
-            previous[u.first] = u.second;
-            visited[u.first] = true;
+            visited[u] = true;
             
             // stop searching if we reached our destination
-            if (u.first == to) break;
+            if (u == to) break;
             
             // Visit each edge starting from node u
-            const std::vector<neighbor> &neighbors = this->adjacency_list[u.first];
+            const std::vector<neighbor> &neighbors = this->adjacency_list[u];
             for (std::vector<neighbor>::const_iterator neighbor_iter = neighbors.begin();
                  neighbor_iter != neighbors.end();
                  ++neighbor_iter)
@@ -391,9 +391,12 @@ MotionPlannerGraph::shortest_path(node_t from, node_t to)
                 if (visited[v]) continue;
                 
                 // calculate total distance
-                dist[v] = dist[u.first] + neighbor_iter->weight;
+                weight_t distance = dist[u] + neighbor_iter->weight;
+                if (distance >= dist[v]) continue;
+                previous[v] = u;
+                dist[v] = distance;
                 // insert in the priority queue
-                Q.emplace(v, u.first);
+                Q.emplace(v);
             }
         }
     }
