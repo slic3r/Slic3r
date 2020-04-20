@@ -2283,10 +2283,10 @@ end:
     BOOST_LOG_TRIVIAL(debug) << "Slicing objects - make_slices in parallel - begin";
     {
         // Uncompensated slices for the first layer in case the Elephant foot compensation is applied.
-        ExPolygons  lslices_1st_layer;
         tbb::parallel_for(
           tbb::blocked_range<size_t>(0, m_layers.size()),
-          [this, upscaled, clipped, &lslices_1st_layer](const tbb::blocked_range<size_t>& range) {
+          [this, upscaled, clipped](const tbb::blocked_range<size_t>& range) {
+            ExPolygons expolygons_first_layer;
             for (size_t layer_id = range.begin(); layer_id < range.end(); ++ layer_id) {
                 m_print->throw_if_canceled();
                 Layer *layer = m_layers[layer_id];
@@ -2294,21 +2294,21 @@ end:
                 float delta = float(scale_(m_config.xy_size_compensation.value));
                 float hole_delta = float(scale_(this->config().hole_size_compensation.value));
                 //FIXME only apply the compensation if no raft is enabled.
-                float elephant_foot_compensation = 0.f;
-                if (layer_id == 0 && m_config.raft_layers == 0) {
+                float first_layer_compensation = 0.f;
+                if (layer_id == 0 && m_config.raft_layers == 0 && m_config.elefant_foot_compensation.value != 0) {
                     // Only enable Elephant foot compensation if printing directly on the print bed.
-                    elephant_foot_compensation = float(scale_(m_config.elefant_foot_compensation.value));
-                    if (elephant_foot_compensation > 0) {
-                        delta += elephant_foot_compensation;
-                        elephant_foot_compensation = 0;
+                    first_layer_compensation = float(scale_(m_config.elefant_foot_compensation.value));
+                    if (first_layer_compensation > 0) {
+                        delta += first_layer_compensation;
+                        first_layer_compensation = 0;
                     }
                     else if (delta > 0) {
-                        if (-elephant_foot_compensation < delta) {
-                            delta += elephant_foot_compensation;
-                            elephant_foot_compensation = 0;
+                        if (-first_layer_compensation < delta) {
+                            delta += first_layer_compensation;
+                            first_layer_compensation = 0;
                         }
                         else {
-                            elephant_foot_compensation += delta;
+                            first_layer_compensation += delta;
                             delta = 0;
                         }
                     }
@@ -2319,28 +2319,40 @@ end:
                     LayerRegion *layerm = layer->regions().front();
                     ExPolygons expolygons = to_expolygons(std::move(layerm->slices().surfaces));
                     // Apply the XY hole compensation.
-                    if (hole_delta > 0)
+                    if (hole_delta > 0) {
                         expolygons = _offset_holes(-hole_delta, expolygons);
-                    // Apply the XY compensation.
-                    if (delta > 0.f)
-                        expolygons = offset_ex(expolygons, delta);
-                        // Apply the elephant foot compensation.
-                    if (layer_id == 0 && elephant_foot_compensation != 0.f) {
-                        expolygons = union_ex(Slic3r::elephant_foot_compensation(expolygons, layerm->flow(frExternalPerimeter), unscale<double>(-elephant_foot_compensation)));
+                        if (layer_id == 0 && first_layer_compensation != 0) 
+                            expolygons_first_layer = expolygons;
                     }
                     // Apply the XY compensation.
-                    if (delta < 0.f)
+                    if (delta > 0.f) {
                         expolygons = offset_ex(expolygons, delta);
-                    // Apply the XY hole compensation.
-                    if (hole_delta < 0)
+                        if (layer_id == 0 && first_layer_compensation != 0) 
+                            expolygons_first_layer = offset_ex(expolygons_first_layer, float(scale_(m_config.xy_size_compensation.value)));
+                    }
+                        // Apply the elephant foot compensation.
+                    if (layer_id == 0 && first_layer_compensation != 0.f) {
+                        expolygons = union_ex(Slic3r::elephant_foot_compensation(expolygons, layerm->flow(frExternalPerimeter), 
+                            unscale<double>(-first_layer_compensation)));
+                    }
+                    // Apply the negative XY compensation.
+                    if (delta < 0.f) {
+                        expolygons = offset_ex(expolygons, delta);
+                        if (layer_id == 0 && first_layer_compensation != 0) 
+                            expolygons_first_layer = offset_ex(expolygons_first_layer, float(scale_(m_config.xy_size_compensation.value)));
+                    }
+                    // Apply the negative XY hole compensation.
+                    if (hole_delta < 0) {
                         expolygons = _offset_holes(-hole_delta, expolygons);
+                        if (layer_id == 0 && first_layer_compensation != 0) 
+                            expolygons_first_layer = _offset_holes(-hole_delta, expolygons_first_layer);
+                    }
                     
                     if (layer->regions().front()->region()->config().curve_smoothing_precision > 0.f) {
                         //smoothing
                         expolygons = _smooth_curves(expolygons, layer->regions().front()->region()->config());
-                    }
-                    if (layer_id == 0 && elephant_foot_compensation != 0.f) {
-                        lslices_1st_layer = expolygons;
+                        if (layer_id == 0 && first_layer_compensation != 0) 
+                            expolygons_first_layer = _smooth_curves(expolygons_first_layer, layer->regions().front()->region()->config());
                     }
                     layerm->m_slices.set(std::move(expolygons), stPosInternal | stDensSparse);
                 } else {
@@ -2364,8 +2376,8 @@ end:
                                 slices = intersection_ex(offset_ex(slices, hole_delta), merged_poly_for_holes_growing);
                             }
                             // Apply the XY compensation if >0.
-                            if (upscale || (layer_id == 0 && elephant_foot_compensation > 0))
-                                slices = offset_ex(std::move(slices), std::max(delta, 0.f) + std::max(elephant_foot_compensation, 0.f));
+                            if (upscale || (layer_id == 0 && first_layer_compensation > 0))
+                                slices = offset_ex(std::move(slices), std::max(delta, 0.f) + std::max(first_layer_compensation, 0.f));
                             //smoothing
                             if (layerm->region()->config().curve_smoothing_precision > 0.f)
                                 slices = _smooth_curves(slices, layerm->region()->config());
@@ -2378,14 +2390,14 @@ end:
                             layerm->m_slices.set(std::move(slices), stPosInternal | stDensSparse);
                         }
                     }
-                    if (delta < 0.f || elephant_foot_compensation != 0.f || hole_delta < 0.f) {
+                    if (delta < 0.f || first_layer_compensation != 0.f || hole_delta < 0.f) {
                         // Apply the negative XY compensation. (the ones that is <0)
                         ExPolygons trimming;
                         static const float eps = float(scale_(m_config.slice_closing_radius.value) * 1.5);
-                        if (layer_id == 0 && elephant_foot_compensation < 0.f) {
-                            trimming = Slic3r::elephant_foot_compensation(offset_ex(layer->merged(eps), std::min(delta, 0.f) - eps),
-                                layer->regions().front()->flow(frExternalPerimeter), unscale<double>(-elephant_foot_compensation));
-                            lslices_1st_layer = trimming;
+                        if (layer_id == 0 && first_layer_compensation < 0.f) {
+                            expolygons_first_layer = offset_ex(layer->merged(eps), std::min(delta, 0.f) - eps);
+                            trimming = Slic3r::elephant_foot_compensation(expolygons_first_layer,
+                                layer->regions().front()->flow(frExternalPerimeter), unscale<double>(-first_layer_compensation));
                         }
                         else if (delta != 0.f) {
                             trimming = offset_ex(layer->merged(float(SCALED_EPSILON)), delta - float(SCALED_EPSILON));
@@ -2403,13 +2415,14 @@ end:
                 }
                 // Merge all regions' slices to get islands, chain them by a shortest path.
                 layer->make_slices();
-            }
-            if (float(scale_(m_config.elefant_foot_compensation.value)) > 0.f && m_config.raft_layers == 0) {
-                // The Elephant foot has been compensated, therefore the 1st layer's lslices are shrank with the Elephant foot compensation value.
-                // Store the uncompensated value there.
-                assert(! m_layers.empty());
-                assert(m_layers.front()->id() == 0);
-                m_layers.front()->lslices = std::move(lslices_1st_layer);
+                //FIXME: can't make it work in multi-region object, it seems useful to avoid bridge on top of first layer compensation
+                if (layer->regions().size() == 1 && layer_id == 0 && first_layer_compensation < 0 && m_config.raft_layers == 0) {
+                    // The Elephant foot has been compensated, therefore the 1st layer's lslices are shrank with the Elephant foot compensation value.
+                    // Store the uncompensated value there.
+                    assert(! m_layers.empty());
+                    assert(m_layers.front()->id() == 0);
+                    m_layers.front()->lslices = offset_ex(std::move(m_layers.front()->lslices), -first_layer_compensation);
+                }
             }
         });
     }
