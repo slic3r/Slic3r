@@ -42,7 +42,7 @@ public:
     // Collection of perimeter surfaces. This is a cached result of diff(slices, fill_surfaces).
     // While not necessary, the memory consumption is meager and it speeds up calculation.
     // The perimeter_surfaces keep the IDs of the slices (top/bottom/)
-    SurfaceCollection           perimeter_surfaces;
+    //SurfaceCollection           perimeter_surfaces;
 
     // collection of expolygons representing the bridged areas (thus not
     // needing support material)

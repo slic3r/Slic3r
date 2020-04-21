@@ -131,6 +131,7 @@ void Layer::make_perimeters()
         for (LayerRegionPtrs::const_iterator it = layerm + 1; it != m_regions.end(); ++it) {
             LayerRegion* other_layerm = *it;
             const PrintRegionConfig &other_config = other_layerm->region()->config();
+            if (other_layerm->slices().empty()) continue;
             /// !!! add here the settings you want to be added in the per-object menu.
             /// if you don't do that, objects will share the same region, and the same settings.
             if (config.perimeter_extruder           == other_config.perimeter_extruder
@@ -138,8 +139,8 @@ void Layer::make_perimeters()
                 && config.perimeter_speed           == other_config.perimeter_speed // it os mandatory? can't this be set at gcode.cpp?
                 && config.external_perimeter_extrusion_width == other_config.external_perimeter_extrusion_width
                 && config.external_perimeters_first == other_config.external_perimeters_first
-                && config.external_perimeters_vase == other_config.external_perimeters_vase
-                && config.external_perimeters_hole == other_config.external_perimeters_hole
+                && config.external_perimeters_vase  == other_config.external_perimeters_vase
+                && config.external_perimeters_hole  == other_config.external_perimeters_hole
                 && config.external_perimeters_nothole == other_config.external_perimeters_nothole
                 && config.external_perimeter_speed  == other_config.external_perimeter_speed
                 && config.extra_perimeters_odd_layers == other_config.extra_perimeters_odd_layers
@@ -200,8 +201,14 @@ void Layer::make_perimeters()
                     // Separate the fill surfaces.
                     ExPolygons expp = intersection_ex(to_polygons(fill_surfaces), (*l)->slices());
                     (*l)->fill_expolygons = expp;
-                    (*l)->fill_no_overlap_expolygons = (*layerm)->fill_no_overlap_expolygons;
-                    (*l)->fill_surfaces.set(std::move(expp), fill_surfaces.surfaces.front());
+                    (*l)->fill_no_overlap_expolygons = (layerm_config)->fill_no_overlap_expolygons;
+                    //(*l)->perimeters = (layerm_config)->perimeters;
+                    //(*l)->thin_fills = (layerm_config)->thin_fills;
+                    (*l)->fill_surfaces.clear();
+                    for (Surface &surf: fill_surfaces.surfaces) {
+                        ExPolygons exp = intersection_ex(to_polygons(surf.expolygon), (*l)->slices());
+                        (*l)->fill_surfaces.append(std::move(exp), surf);
+                    }
                 }
             }
         }
