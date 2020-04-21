@@ -469,6 +469,7 @@ const std::vector<std::string>& Preset::print_options()
         "brim_width_interior",
         "brim_ears",
         "brim_ears_max_angle",
+        "brim_offset",
         "support_material", "support_material_auto", "support_material_threshold", "support_material_enforce_layers", 
         "raft_layers", "support_material_pattern", "support_material_with_sheath", "support_material_spacing", 
         "support_material_interface_pattern",

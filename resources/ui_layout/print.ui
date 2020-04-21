@@ -139,6 +139,7 @@ group:Brim
 		setting:brim_ears
 		setting:width$3:brim_ears_max_angle
 	end_line
+	setting:brim_offset
 
 page:Support material:support
 group:Support material

@@ -1889,24 +1889,24 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
 //TODO: test if no regression vs old _make_brim.
 // this new one can extrude brim for an object inside an other object.
 ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out) {
-
     Flow        flow = this->brim_flow();
+    coord_t brim_offset = scale_(config().brim_offset.value);
     ExPolygons    islands;
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
         for (ExPolygon &expoly : object->m_layers.front()->lslices)
             if(config().brim_inside_holes || config().brim_width_interior > 0)
-                object_islands.push_back(expoly);
+                object_islands.push_back(brim_offset == 0 ? expoly : offset_ex(expoly, brim_offset)[0]);
             else
-                object_islands.emplace_back(to_expolygon(expoly.contour));
+                object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly.contour) : offset_ex(to_expolygon(expoly.contour), brim_offset)[0]);
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
             for (Polygon poly : polys)
                 for (ExPolygon & expoly2 : union_ex(poly))
                     if (config().brim_inside_holes || config().brim_width_interior > 0)
-                        object_islands.emplace_back(expoly2);
+                        object_islands.emplace_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
                     else
-                        object_islands.emplace_back(to_expolygon(expoly2.contour));
+                        object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly2.contour) : offset_ex(to_expolygon(expoly2.contour), brim_offset)[0]);
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_instances.size());
         for (const PrintInstance &pt : object->m_instances)
@@ -1927,7 +1927,7 @@ ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityColl
     unbrimmable_areas = islands;
 
     //get the brimmable area
-    const size_t num_loops = size_t(floor(m_config.brim_width.value / flow.spacing()));
+    const size_t num_loops = size_t(floor((m_config.brim_width.value - config().brim_offset.value) / flow.spacing()));
     ExPolygons brimmable_areas;
     for (ExPolygon &expoly : islands) {
         for (Polygon poly : offset(expoly.contour, num_loops * flow.scaled_width(), jtSquare)) {
@@ -2026,22 +2026,23 @@ ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityColl
 ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out) {
     Flow        flow = this->brim_flow();
     Points pt_ears;
+    coord_t brim_offset = scale_(config().brim_offset.value);
     ExPolygons islands;
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
         for (const ExPolygon &expoly : object->m_layers.front()->lslices)
             if (config().brim_inside_holes || config().brim_width_interior > 0)
-                object_islands.push_back(expoly);
+                object_islands.push_back(brim_offset==0?expoly:offset_ex(expoly, brim_offset)[0]);
             else
-                object_islands.emplace_back(to_expolygon(expoly.contour));
+                object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly.contour) : offset_ex(to_expolygon(expoly.contour), brim_offset)[0]);
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
             for (Polygon poly : polys)
                 for (ExPolygon & expoly2 : union_ex(poly))
                     if (config().brim_inside_holes || config().brim_width_interior > 0)
-                        object_islands.push_back(expoly2);
+                        object_islands.push_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
                     else
-                        object_islands.emplace_back(to_expolygon(expoly2.contour));
+                        object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly2.contour) : offset_ex(to_expolygon(expoly2.contour), brim_offset)[0]);
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_instances.size());
         for (const PrintInstance &copy_pt : object->m_instances)
@@ -2058,7 +2059,7 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
     islands = union_ex(islands, true);
 
     //get the brimmable area (for the return value only)
-    const size_t num_loops = size_t(floor(m_config.brim_width.value / flow.spacing()));
+    const size_t num_loops = size_t(floor((m_config.brim_width.value - config().brim_offset.value) / flow.spacing()));
     ExPolygons brimmable_areas;
     for (ExPolygon &expoly : islands) {
         for (Polygon poly : offset(expoly.contour, num_loops * flow.scaled_width(), jtSquare)) {
@@ -2090,7 +2091,7 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
     loops = union_pt_chained(loops, false);
 
     //create ear pattern
-    coord_t size_ear = (scale_(m_config.brim_width.value) - flow.scaled_spacing());
+    coord_t size_ear = (scale_((m_config.brim_width.value - config().brim_offset.value)) - flow.scaled_spacing());
     Polygon point_round;
     for (size_t i = 0; i < POLY_SIDES; i++) {
         double angle = (2.0 * PI * i) / POLY_SIDES;
@@ -2130,16 +2131,17 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
 ExPolygons Print::_make_brim_interior(const PrintObjectPtrs &objects, const ExPolygons &unbrimmable_areas, ExtrusionEntityCollection &out) {
     // Brim is only printed on first layer and uses perimeter extruder.
     Flow        flow = this->brim_flow();
+    coord_t brim_offset = scale_(config().brim_offset.value);
     ExPolygons    islands;
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
         for (ExPolygon &expoly : object->m_layers.front()->lslices)
-            object_islands.push_back(expoly);
+            object_islands.push_back(brim_offset == 0 ? expoly : offset_ex(expoly, brim_offset)[0]);
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
             for (Polygon poly : polys)
                 for (ExPolygon & expoly2 : union_ex(poly))
-                    object_islands.push_back(expoly2);
+                    object_islands.push_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
         }
         islands.reserve(islands.size() + object_islands.size() * object->instances().size());
         for (const PrintInstance &instance : object->instances())
@@ -2152,7 +2154,7 @@ ExPolygons Print::_make_brim_interior(const PrintObjectPtrs &objects, const ExPo
     islands = union_ex(islands);
 
     //to have the brimmable areas, get all holes, use them as contour , add smaller hole inside and make a diff with unbrimmable
-    const size_t num_loops = size_t(floor(m_config.brim_width_interior.value / flow.spacing()));
+    const size_t num_loops = size_t(floor((m_config.brim_width_interior.value - config().brim_offset.value) / flow.spacing()));
     ExPolygons brimmable_areas;
     Polygons islands_to_loops;
     for (const ExPolygon &expoly : islands) {

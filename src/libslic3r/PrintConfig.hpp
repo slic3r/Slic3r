@@ -964,6 +964,7 @@ public:
     ConfigOptionFloat               brim_width_interior;
     ConfigOptionBool                brim_ears;
     ConfigOptionFloat               brim_ears_max_angle;
+    ConfigOptionFloat               brim_offset;
     ConfigOptionInts                chamber_temperature;
     ConfigOptionBool                complete_objects;
     ConfigOptionFloats              colorprint_heights;
@@ -1046,6 +1047,7 @@ protected:
         OPT_PTR(brim_width_interior);
         OPT_PTR(brim_ears);
         OPT_PTR(brim_ears_max_angle);
+        OPT_PTR(brim_offset);
         OPT_PTR(chamber_temperature);
         OPT_PTR(complete_objects);
         OPT_PTR(colorprint_heights);
