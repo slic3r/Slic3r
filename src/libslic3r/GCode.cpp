@@ -2329,8 +2329,6 @@ void GCode::process_layer(
                             extruder_id, 
                             print_wipe_extrusions != 0) : 
                         island.by_region;
-                    if (m_layer_index == 110)
-                        std::cout << "test point\n";
                     gcode += this->extrude_infill(print, by_region_specific, true);
                     gcode += this->extrude_perimeters(print, by_region_specific, lower_layer_edge_grids[instance_to_print.layer_id]);
                     gcode += this->extrude_infill(print, by_region_specific, false);
