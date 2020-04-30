@@ -370,19 +370,20 @@ void PerimeterGenerator::process()
                      if (this->config->thin_walls) {
                         // detect edge case where a curve can be split in multiple small chunks.
                         ExPolygons no_thin_onion = offset_ex(last, double( - ext_perimeter_width / 2));
-                        float div = 2;
-                        while (no_thin_onion.size() > 0 && next_onion.size() > no_thin_onion.size() && no_thin_onion.size() + next_onion.size() > 3) {
-                            div -= 0.3;
-                            if (div == 2) div -= 0.3;
+                        std::vector<float> divs = {2.2,1.75,1.5}; //don't go too far, it's not possible to print thinw wall after that
+                        size_t idx_div = 0;
+                        while (no_thin_onion.size() > 0 && next_onion.size() > no_thin_onion.size() && next_onion.size() > 2 
+                            && idx_div < divs.size() ) {
+                            float div = divs[idx_div];
                             //use a sightly bigger spacing to try to drastically improve the split, that can lead to very thick gapfill
                             ExPolygons next_onion_secondTry = offset2_ex(
                                 last,
-                                -(float)(ext_perimeter_width / 2 + ext_min_spacing / div - 1),
-                                +(float)(ext_min_spacing / div - 1));
-                            if (next_onion.size() >  next_onion_secondTry.size() * 1.1) {
+                                -(float)((ext_perimeter_width / 2) + (ext_min_spacing / div) - 1),
+                                +(float)((ext_min_spacing / div) - 1));
+                            if (next_onion.size() >  next_onion_secondTry.size() * 1.2 || next_onion.size() - next_onion_secondTry.size() > 3) {
                                 next_onion = next_onion_secondTry;
                             }
-                            if (div > 3 || div < 1.2) break;
+                            idx_div++;
                         }
 
                         // the following offset2 ensures almost nothing in @thin_walls is narrower than $min_width
@@ -403,6 +404,7 @@ void PerimeterGenerator::process()
                         if (half_thins.size() > 0) {
                             no_thin_zone = diff_ex(last, offset_ex(half_thins, double(min_width / 2 - SCALED_EPSILON)), true);
                         }
+                        ExPolygons thins;
                         // compute a bit of overlap to anchor thin walls inside the print.
                         for (ExPolygon &half_thin : half_thins) {
                             //growing back the polygon
@@ -418,9 +420,10 @@ void PerimeterGenerator::process()
                                     //be sure it's not too small to extrude reliably
                                     thin[0].remove_point_too_near((coord_t)SCALED_RESOLUTION);
                                     if (thin[0].area() > min_width*(ext_perimeter_width + ext_perimeter_spacing2)) {
+                                        thins.push_back(thin[0]);
                                         bound.remove_point_too_near((coord_t)SCALED_RESOLUTION);
-                                        // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop (*1.1 because of circles approx.)
-                                        Slic3r::MedialAxis ma{ thin[0], (coord_t)((ext_perimeter_width + ext_perimeter_spacing2)*1.1),
+                                        // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop (*1.2 because of circles approx. and enlrgment from 'div')
+                                        Slic3r::MedialAxis ma{ thin[0], (coord_t)((ext_perimeter_width + ext_perimeter_spacing2)*1.2),
                                             min_width, coord_t(this->layer_height) };
                                         ma.use_bounds(bound)
                                             .use_min_real_width((coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter))
@@ -430,6 +433,14 @@ void PerimeterGenerator::process()
                                     break;
                                 }
                             }
+                        }
+                        // use perimeters to extrude area that can't be printed by thin walls
+                        // it's a bit like re-add thin area in to perimeter area.
+                        // it can over-extrude a bit, but it's for a better good.
+                        {
+                            next_onion = offset2_ex(diff_ex(last, thins, true), 
+                                -(float)((ext_perimeter_width / 2) + (ext_min_spacing / 4)), 
+                                (float)(ext_min_spacing / 4));
                         }
                     }
                 } else {
