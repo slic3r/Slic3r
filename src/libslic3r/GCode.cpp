@@ -1991,7 +1991,7 @@ void GCode::process_layer(
     // Check whether it is possible to apply the spiral vase logic for this layer.
     // Just a reminder: A spiral vase mode is allowed for a single object, single material print only.
     if (m_spiral_vase && layers.size() == 1 && support_layer == nullptr) {
-        bool enable = (layer.id() > 0 || print.config().brim_width.value == 0.) && (layer.id() >= (size_t)print.config().skirt_height.value && ! print.has_infinite_skirt());
+        bool enable = (layer.id() > 0 || layer.object()->config().brim_width.value == 0.) && (layer.id() >= (size_t)print.config().skirt_height.value && ! print.has_infinite_skirt());
         if (enable) {
             for (const LayerRegion *layer_region : layer.regions())
                 if (size_t(layer_region->region()->config().bottom_solid_layers.value) > layer.id() ||

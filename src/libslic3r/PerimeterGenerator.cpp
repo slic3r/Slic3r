@@ -622,12 +622,12 @@ void PerimeterGenerator::process()
                 entities = this->_traverse_loops(contours.front(), thin_walls);
             }
 
-
+            
             // if brim will be printed, reverse the order of perimeters so that
             // we continue inwards after having finished the brim
             // TODO: add test for perimeter order
             if (this->config->external_perimeters_first ||
-                (this->layer_id == 0 && this->print_config->brim_width.value > 0)) {
+                (this->layer_id == 0 && this->object_config->brim_width.value > 0)) {
                 if (this->config->external_perimeters_nothole.value) {
                     if (this->config->external_perimeters_hole.value) {
                         entities.reverse();

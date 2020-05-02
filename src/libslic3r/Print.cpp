@@ -1662,34 +1662,84 @@ void Print::process()
     }
 	if (this->set_started(psBrim)) {
         m_brim.clear();
+        //group object per brim settings
+        std::vector<std::vector<PrintObject*>> obj_groups;
         for (PrintObject *obj : m_objects) {
             obj->m_brim.clear();
-        }
-        if (m_config.brim_width > 0 || m_config.brim_width_interior > 0) {
-            this->set_status(88, L("Generating brim"));
-            if (config().complete_objects){
-                for (PrintObject *obj : m_objects){
-                    //create a brim "pattern" (one per object)
-                    const std::vector<PrintInstance> copies{ obj->instances() };
-                    obj->m_instances.clear();
-                    obj->m_instances.emplace_back();
-                    ExPolygons brim_area;
-                    if (m_config.brim_width > 0) {
-                        brim_area = (config().brim_ears)
-                            ? this->_make_brim_ears({ obj }, obj->m_brim)
-                            : this->_make_brim({ obj }, obj->m_brim);
-                    }
-                    if (config().brim_width_interior > 0) {
-                        _make_brim_interior({ obj }, brim_area, obj->m_brim);
-                    }
-                    obj->m_instances = copies;
+            bool added = false;
+            for (std::vector<PrintObject*> &obj_group : obj_groups) {
+                if (obj_group.front()->config().brim_ears.value == obj->config().brim_ears.value
+                    && obj_group.front()->config().brim_ears_max_angle.value == obj->config().brim_ears_max_angle.value
+                    && obj_group.front()->config().brim_inside_holes.value == obj->config().brim_inside_holes.value
+                    && obj_group.front()->config().brim_offset.value == obj->config().brim_offset.value
+                    && obj_group.front()->config().brim_width.value == obj->config().brim_width.value
+                    && obj_group.front()->config().brim_width_interior.value == obj->config().brim_width_interior.value) {
+                    added = true;
+                    std::cout << " add object to existing group: "<< obj_group.front()->config().brim_width.value<< " == "<< obj->config().brim_width.value << "\n";
+                    obj_group.push_back(obj);
                 }
-            } else {
-                ExPolygons brim_area = (config().brim_ears)
-                    ?   this->_make_brim_ears(m_objects, m_brim)
-                    :   this->_make_brim(m_objects, m_brim);
-                if (config().brim_width_interior > 0)
-                    _make_brim_interior(m_objects, brim_area, m_brim);
+            }
+            if (!added) {
+                obj_groups.emplace_back();
+                obj_groups.back().push_back(obj);
+            }
+        }
+        ExPolygons brim_area;
+        if (obj_groups.size() > 1) {
+            for (std::vector<PrintObject*> &obj_group : obj_groups)
+                for (const PrintObject *object : obj_group)
+                    if (!object->m_layers.empty())
+                        for (const PrintInstance &pt : object->m_instances) {
+                            int first_idx = brim_area.size();
+                            brim_area.insert(brim_area.end(), object->m_layers.front()->lslices.begin(), object->m_layers.front()->lslices.end());
+                            for (int i = first_idx; i < brim_area.size(); i++) {
+                                brim_area[i].translate(pt.shift.x(), pt.shift.y());
+                            }
+                        }
+        }
+        for (std::vector<PrintObject*> &obj_group : obj_groups) {
+            const PrintObjectConfig &brim_config = obj_group.front()->config();
+            if (brim_config.brim_width > 0 || brim_config.brim_width_interior > 0) {
+                this->set_status(88, L("Generating brim"));
+                if (config().complete_objects) {
+                    for (PrintObject *obj : obj_group) {
+                        //get flow
+                        std::vector<unsigned int> set_extruders = this->object_extruders({ obj });
+                        append(set_extruders, this->support_material_extruders());
+                        sort_remove_duplicates(set_extruders);
+                        Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front());
+                        //don't consider other objects/instances. It's not possible because it's duplicated by some code afterward... i think.
+                        brim_area.clear();
+                        //create a brim "pattern" (one per object)
+                        const std::vector<PrintInstance> copies{ obj->instances() };
+                        obj->m_instances.clear();
+                        obj->m_instances.emplace_back();
+                        if (brim_config.brim_width > 0) {
+                            if (brim_config.brim_ears)
+                                this->_make_brim_ears(flow, { obj }, brim_area, obj->m_brim);
+                            else
+                                this->_make_brim(flow, { obj }, brim_area, obj->m_brim);
+                        }
+                        if (brim_config.brim_width_interior > 0) {
+                            _make_brim_interior(flow, { obj }, brim_area, obj->m_brim);
+                        }
+                        obj->m_instances = copies;
+                    }
+                } else {
+                    if (obj_groups.size() > 1)
+                        brim_area = union_ex(brim_area);
+                    //get the first extruder in the list for these objects... replicating gcode generation
+                    std::vector<unsigned int> set_extruders = this->object_extruders(m_objects);
+                    append(set_extruders, this->support_material_extruders());
+                    sort_remove_duplicates(set_extruders);
+                    Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front());
+                    if (brim_config.brim_ears)
+                        this->_make_brim_ears(flow, obj_group, brim_area, m_brim);
+                    else
+                        this->_make_brim(flow, obj_group, brim_area, m_brim);
+                    if (brim_config.brim_width_interior > 0)
+                        _make_brim_interior(flow, obj_group, brim_area, m_brim);
+                }
             }
         }
        this->set_done(psBrim);
@@ -1904,19 +1954,14 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
 
 //TODO: test if no regression vs old _make_brim.
 // this new one can extrude brim for an object inside an other object.
-ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out) {
-    //get the first extruder in the list for these objects... TODO: replicate gcode generation
-    std::vector<unsigned int> set_extruders = this->object_extruders(objects);
-    append(set_extruders, this->support_material_extruders());
-    sort_remove_duplicates(set_extruders);
-    Flow        flow = this->brim_flow(set_extruders.empty()?m_regions.front()->config().perimeter_extruder - 1: set_extruders.front());
-
-    coord_t brim_offset = scale_(config().brim_offset.value);
+void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out) {
+    const PrintObjectConfig &brim_config = objects.front()->config();
+    coord_t brim_offset = scale_(brim_config.brim_offset.value);
     ExPolygons    islands;
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
         for (ExPolygon &expoly : object->m_layers.front()->lslices)
-            if(config().brim_inside_holes || config().brim_width_interior > 0)
+            if(brim_config.brim_inside_holes || brim_config.brim_width_interior > 0)
                 object_islands.push_back(brim_offset == 0 ? expoly : offset_ex(expoly, brim_offset)[0]);
             else
                 object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly.contour) : offset_ex(to_expolygon(expoly.contour), brim_offset)[0]);
@@ -1924,17 +1969,19 @@ ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityColl
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
             for (Polygon poly : polys)
                 for (ExPolygon & expoly2 : union_ex(poly))
-                    if (config().brim_inside_holes || config().brim_width_interior > 0)
+                    if (brim_config.brim_inside_holes || brim_config.brim_width_interior > 0)
                         object_islands.emplace_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
                     else
                         object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly2.contour) : offset_ex(to_expolygon(expoly2.contour), brim_offset)[0]);
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_instances.size());
-        for (const PrintInstance &pt : object->m_instances)
+        for (const PrintInstance &pt : object->m_instances) {
+            std::cout << "brim draw: push obj to " << pt.shift.x() << " : " << pt.shift.y() << "\n";
             for (ExPolygon &poly : object_islands) {
                 islands.push_back(poly);
                 islands.back().translate(pt.shift.x(), pt.shift.y());
             }
+        }
     }
 
     this->throw_if_canceled();
@@ -1948,7 +1995,7 @@ ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityColl
     unbrimmable_areas = islands;
 
     //get the brimmable area
-    const size_t num_loops = size_t(floor((m_config.brim_width.value - config().brim_offset.value) / flow.spacing()));
+    const size_t num_loops = size_t(floor((brim_config.brim_width.value - brim_config.brim_offset.value) / flow.spacing()));
     ExPolygons brimmable_areas;
     for (ExPolygon &expoly : islands) {
         for (Polygon poly : offset(expoly.contour, num_loops * flow.scaled_width(), jtSquare)) {
@@ -1964,6 +2011,7 @@ ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityColl
 
     //don't collide with objects
     brimmable_areas = diff_ex(brimmable_areas, unbrimmable_areas, true);
+    brimmable_areas = diff_ex(brimmable_areas, unbrimmable, true);
 
     this->throw_if_canceled();
     //now get all holes, use them to create loops
@@ -2041,23 +2089,18 @@ ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityColl
         float(this->skirt_first_layer_height())
     );
 
-    return brimmable_areas;
+    unbrimmable.insert(unbrimmable.end(), brimmable_areas.begin(), brimmable_areas.end());
 }
 
-ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out) {
-    //get the first extruder in the list for these objects... TODO: replicate gcode generation
-    std::vector<unsigned int> set_extruders = this->object_extruders(objects);
-    append(set_extruders, this->support_material_extruders());
-    sort_remove_duplicates(set_extruders);
-    Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front());
-
+void Print::_make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out) {
+    const PrintObjectConfig &brim_config = objects.front()->config();
     Points pt_ears;
-    coord_t brim_offset = scale_(config().brim_offset.value);
+    coord_t brim_offset = scale_(brim_config.brim_offset.value);
     ExPolygons islands;
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
         for (const ExPolygon &expoly : object->m_layers.front()->lslices)
-            if (config().brim_inside_holes || config().brim_width_interior > 0)
+            if (brim_config.brim_inside_holes || brim_config.brim_width_interior > 0)
                 object_islands.push_back(brim_offset==0?expoly:offset_ex(expoly, brim_offset)[0]);
             else
                 object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly.contour) : offset_ex(to_expolygon(expoly.contour), brim_offset)[0]);
@@ -2065,7 +2108,7 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
             for (Polygon poly : polys)
                 for (ExPolygon & expoly2 : union_ex(poly))
-                    if (config().brim_inside_holes || config().brim_width_interior > 0)
+                    if (brim_config.brim_inside_holes || brim_config.brim_width_interior > 0)
                         object_islands.push_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
                     else
                         object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly2.contour) : offset_ex(to_expolygon(expoly2.contour), brim_offset)[0]);
@@ -2075,7 +2118,7 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
             for (const ExPolygon &poly : object_islands) {
                 islands.push_back(poly);
                 islands.back().translate(copy_pt.shift.x(), copy_pt.shift.y());
-                for (const Point &p : poly.contour.convex_points(config().brim_ears_max_angle.value * PI / 180.0)) {
+                for (const Point &p : poly.contour.convex_points(brim_config.brim_ears_max_angle.value * PI / 180.0)) {
                     pt_ears.push_back(p);
                     pt_ears.back() += (copy_pt.shift);
                 }
@@ -2085,7 +2128,7 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
     islands = union_ex(islands, true);
 
     //get the brimmable area (for the return value only)
-    const size_t num_loops = size_t(floor((m_config.brim_width.value - config().brim_offset.value) / flow.spacing()));
+    const size_t num_loops = size_t(floor((brim_config.brim_width.value - brim_config.brim_offset.value) / flow.spacing()));
     ExPolygons brimmable_areas;
     for (ExPolygon &expoly : islands) {
         for (Polygon poly : offset(expoly.contour, num_loops * flow.scaled_width(), jtSquare)) {
@@ -2097,6 +2140,7 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
         }
     }
     brimmable_areas = union_ex(brimmable_areas);
+    brimmable_areas = diff_ex(brimmable_areas, unbrimmable, true);
 
     this->throw_if_canceled();
     //create loops (same as standard brim)
@@ -2117,7 +2161,7 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
     loops = union_pt_chained(loops, false);
 
     //create ear pattern
-    coord_t size_ear = (scale_((m_config.brim_width.value - config().brim_offset.value)) - flow.scaled_spacing());
+    coord_t size_ear = (scale_((brim_config.brim_width.value - brim_config.brim_offset.value)) - flow.scaled_spacing());
     Polygon point_round;
     for (size_t i = 0; i < POLY_SIDES; i++) {
         double angle = (2.0 * PI * i) / POLY_SIDES;
@@ -2151,19 +2195,15 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
         float(this->skirt_first_layer_height())
     );
 
-    return intersection_ex(brimmable_areas, mouse_ears_ex);
+    ExPolygons new_brim_area = intersection_ex(brimmable_areas, mouse_ears_ex);
+    unbrimmable.insert(unbrimmable.end(), new_brim_area.begin(), new_brim_area.end());
 }
 
-ExPolygons Print::_make_brim_interior(const PrintObjectPtrs &objects, const ExPolygons &unbrimmable_areas, ExtrusionEntityCollection &out) {
+void Print::_make_brim_interior(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable_areas, ExtrusionEntityCollection &out) {
     // Brim is only printed on first layer and uses perimeter extruder.
 
-    //get the first extruder in the list for these objects... TODO: replicate gcode generation
-    std::vector<unsigned int> set_extruders = this->object_extruders(objects);
-    append(set_extruders, this->support_material_extruders());
-    sort_remove_duplicates(set_extruders);
-    Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front());
-
-    coord_t brim_offset = scale_(config().brim_offset.value);
+    const PrintObjectConfig &brim_config = objects.front()->config();
+    coord_t brim_offset = scale_(brim_config.brim_offset.value);
     ExPolygons    islands;
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
@@ -2186,7 +2226,7 @@ ExPolygons Print::_make_brim_interior(const PrintObjectPtrs &objects, const ExPo
     islands = union_ex(islands);
 
     //to have the brimmable areas, get all holes, use them as contour , add smaller hole inside and make a diff with unbrimmable
-    const size_t num_loops = size_t(floor((m_config.brim_width_interior.value - config().brim_offset.value) / flow.spacing()));
+    const size_t num_loops = size_t(floor((brim_config.brim_width_interior.value - brim_config.brim_offset.value) / flow.spacing()));
     ExPolygons brimmable_areas;
     Polygons islands_to_loops;
     for (const ExPolygon &expoly : islands) {
@@ -2247,7 +2287,7 @@ ExPolygons Print::_make_brim_interior(const PrintObjectPtrs &objects, const ExPo
         float(this->skirt_first_layer_height())
     );
 
-    return brimmable_areas;
+    unbrimmable_areas.insert(unbrimmable_areas.end(), brimmable_areas.begin(), brimmable_areas.end());
 }
 
 /// reorder & join polyline if their ending are near enough, then extrude the brim from the polyline into 'out'.

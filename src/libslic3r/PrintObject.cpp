@@ -1993,6 +1993,7 @@ SlicingParameters PrintObject::slicing_parameters(const DynamicPrintConfig& full
         if (model_volume->is_model_part()) {
             PrintRegion::collect_object_printing_extruders(
                 print_config,
+                object_config,
                 region_config_from_model_volume(default_region_config, nullptr, *model_volume, num_extruders),
                 object_extruders);
             for (const std::pair<const t_layer_height_range, DynamicPrintConfig> &range_and_config : model_object.layer_config_ranges)
@@ -2001,6 +2002,7 @@ SlicingParameters PrintObject::slicing_parameters(const DynamicPrintConfig& full
                     range_and_config.second.has("solid_infill_extruder"))
                     PrintRegion::collect_object_printing_extruders(
                         print_config,
+                        object_config,
                         region_config_from_model_volume(default_region_config, &range_and_config.second, *model_volume, num_extruders),
                         object_extruders);
         }

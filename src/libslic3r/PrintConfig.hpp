@@ -456,6 +456,12 @@ class PrintObjectConfig : public StaticPrintConfig
 {
     STATIC_PRINT_CONFIG_CACHE(PrintObjectConfig)
 public:
+    ConfigOptionBool                brim_inside_holes;
+    ConfigOptionFloat               brim_width;
+    ConfigOptionFloat               brim_width_interior;
+    ConfigOptionBool                brim_ears;
+    ConfigOptionFloat               brim_ears_max_angle;
+    ConfigOptionFloat               brim_offset;
     ConfigOptionBool                clip_multipart_objects;
     ConfigOptionBool                dont_support_bridges;
     ConfigOptionFloat               elefant_foot_compensation;
@@ -509,6 +515,12 @@ public:
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
+        OPT_PTR(brim_inside_holes);
+        OPT_PTR(brim_width);
+        OPT_PTR(brim_width_interior);
+        OPT_PTR(brim_ears);
+        OPT_PTR(brim_ears_max_angle);
+        OPT_PTR(brim_offset);
         OPT_PTR(clip_multipart_objects);
         OPT_PTR(dont_support_bridges);
         OPT_PTR(elefant_foot_compensation);
@@ -959,12 +971,6 @@ public:
     ConfigOptionInts                bed_temperature;
     ConfigOptionFloat               bridge_acceleration;
     ConfigOptionInts                bridge_fan_speed;
-    ConfigOptionBool                brim_inside_holes;
-    ConfigOptionFloat               brim_width;
-    ConfigOptionFloat               brim_width_interior;
-    ConfigOptionBool                brim_ears;
-    ConfigOptionFloat               brim_ears_max_angle;
-    ConfigOptionFloat               brim_offset;
     ConfigOptionInts                chamber_temperature;
     ConfigOptionBool                complete_objects;
     ConfigOptionFloats              colorprint_heights;
@@ -1042,12 +1048,6 @@ protected:
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);
         OPT_PTR(bridge_fan_speed);
-        OPT_PTR(brim_inside_holes);
-        OPT_PTR(brim_width);
-        OPT_PTR(brim_width_interior);
-        OPT_PTR(brim_ears);
-        OPT_PTR(brim_ears_max_angle);
-        OPT_PTR(brim_offset);
         OPT_PTR(chamber_temperature);
         OPT_PTR(complete_objects);
         OPT_PTR(colorprint_heights);

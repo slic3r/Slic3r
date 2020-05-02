@@ -66,7 +66,7 @@ public:
 
     // Collect 0-based extruder indices used to print this region's object.
 	void                        collect_object_printing_extruders(std::vector<unsigned int> &object_extruders) const;
-	static void                 collect_object_printing_extruders(const PrintConfig &print_config, const PrintRegionConfig &region_config, std::vector<unsigned int> &object_extruders);
+	static void                 collect_object_printing_extruders(const PrintConfig &print_config, const PrintObjectConfig &object_config, const PrintRegionConfig &region_config, std::vector<unsigned int> &object_extruders);
 
 // Methods modifying the PrintRegion's state:
 public:
@@ -457,9 +457,9 @@ private:
 		DynamicPrintConfig &filament_overrides) const;
 
     void                _make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
-    ExPolygons          _make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
-    ExPolygons          _make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
-    ExPolygons          _make_brim_interior(const PrintObjectPtrs &objects, const ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
+    void                _make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
+    void                _make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
+    void                _make_brim_interior(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
     Polylines           _reorder_brim_polyline(Polylines lines, ExtrusionEntityCollection &out, const Flow &flow);
     void                _make_wipe_tower();
 
