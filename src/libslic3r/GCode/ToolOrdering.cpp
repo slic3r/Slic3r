@@ -130,7 +130,7 @@ ToolOrdering::ToolOrdering(const Print &print, unsigned int first_extruder, bool
 	// Do it only if all the objects were configured to be printed with a single extruder.
 	std::vector<std::pair<double, unsigned int>> per_layer_extruder_switches;
 	if (auto num_extruders = unsigned(print.config().nozzle_diameter.size());
-		num_extruders > 1 && print.object_extruders().size() == 1 && // the current Print's configuration is CustomGCode::MultiAsSingle
+		num_extruders > 1 && print.object_extruders(print.objects()).size() == 1 && // the current Print's configuration is CustomGCode::MultiAsSingle
 		print.model().custom_gcode_per_print_z.mode == CustomGCode::MultiAsSingle) {
 		// Printing a single extruder platter on a printer with more than 1 extruder (or single-extruder multi-material).
 		// There may be custom per-layer tool changes available at the model.
@@ -468,7 +468,7 @@ void ToolOrdering::assign_custom_gcodes(const Print &print)
 	auto 						num_extruders = unsigned(print.config().nozzle_diameter.size());
 	CustomGCode::Mode 			mode          =
 		(num_extruders == 1) ? CustomGCode::SingleExtruder :
-		print.object_extruders().size() == 1 ? CustomGCode::MultiAsSingle : CustomGCode::MultiExtruder;
+		print.object_extruders(print.objects()).size() == 1 ? CustomGCode::MultiAsSingle : CustomGCode::MultiExtruder;
 	CustomGCode::Mode           model_mode    = print.model().custom_gcode_per_print_z.mode;
 	std::vector<unsigned char> 	extruder_printing_above(num_extruders, false);
 	auto 						custom_gcode_it = custom_gcode_per_print_z.gcodes.rbegin();

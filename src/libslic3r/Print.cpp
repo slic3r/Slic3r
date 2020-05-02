@@ -302,12 +302,12 @@ bool Print::is_step_done(PrintObjectStep step) const
 }
 
 // returns 0-based indices of used extruders
-std::vector<unsigned int> Print::object_extruders() const
+std::vector<unsigned int> Print::object_extruders(const PrintObjectPtrs &objects) const
 {
     std::vector<unsigned int> extruders;
     extruders.reserve(m_regions.size() * 3);
     std::vector<unsigned char> region_used(m_regions.size(), false);
-    for (const PrintObject *object : m_objects)
+    for (const PrintObject *object : objects)
 		for (const std::vector<std::pair<t_layer_height_range, int>> &volumes_per_region : object->region_volumes)
         	if (! volumes_per_region.empty())
         		region_used[&volumes_per_region - &object->region_volumes.front()] = true;
@@ -346,7 +346,7 @@ std::vector<unsigned int> Print::support_material_extruders() const
 
     if (support_uses_current_extruder)
         // Add all object extruders to the support extruders as it is not know which one will be used to print supports.
-        append(extruders, this->object_extruders());
+        append(extruders, this->object_extruders(m_objects));
     
     sort_remove_duplicates(extruders);
     return extruders;
@@ -355,7 +355,7 @@ std::vector<unsigned int> Print::support_material_extruders() const
 // returns 0-based indices of used extruders
 std::vector<unsigned int> Print::extruders() const
 {
-    std::vector<unsigned int> extruders = this->object_extruders();
+    std::vector<unsigned int> extruders = this->object_extruders(m_objects);
     append(extruders, this->support_material_extruders());
     sort_remove_duplicates(extruders);
     return extruders;
@@ -1544,7 +1544,7 @@ double Print::skirt_first_layer_height() const
     return m_objects.front()->config().get_abs_value("first_layer_height");
 }
 
-Flow Print::brim_flow() const
+Flow Print::brim_flow(size_t extruder_id) const
 {
     ConfigOptionFloatOrPercent width = m_config.first_layer_extrusion_width;
     if (width.value <= 0) 
@@ -1560,13 +1560,13 @@ Flow Print::brim_flow() const
     return Flow::new_from_config_width(
         frPerimeter,
 		width,
-        (float)m_config.nozzle_diameter.get_at(m_regions.front()->config().perimeter_extruder-1),
+        (float)m_config.nozzle_diameter.get_at(extruder_id),
 		(float)this->skirt_first_layer_height(),
         0
     );
 }
 
-Flow Print::skirt_flow() const
+Flow Print::skirt_flow(size_t extruder_id) const
 {
     ConfigOptionFloatOrPercent width = m_config.first_layer_extrusion_width;
     if (width.value <= 0) 
@@ -1582,7 +1582,7 @@ Flow Print::skirt_flow() const
     return Flow::new_from_config_width(
         frPerimeter,
 		width,
-		(float)m_config.nozzle_diameter.get_at(m_objects.front()->config().support_material_extruder-1),
+		(float)m_config.nozzle_diameter.get_at(extruder_id),
 		(float)this->skirt_first_layer_height(),
         0
     );
@@ -1811,17 +1811,19 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
     // but loops must be aligned so can't vary width/spacing
     // TODO: use each extruder's own flow
     double first_layer_height = this->skirt_first_layer_height();
-    Flow   flow = this->skirt_flow();
-    float  spacing = flow.spacing();
-    double mm3_per_mm = flow.mm3_per_mm();
     
     std::vector<size_t> extruders;
     std::vector<double> extruders_e_per_mm;
     {
-        auto set_extruders = this->extruders();
+        std::vector<unsigned int> set_extruders = this->object_extruders(objects);
+        append(set_extruders, this->support_material_extruders());
+        sort_remove_duplicates(set_extruders);
         extruders.reserve(set_extruders.size());
         extruders_e_per_mm.reserve(set_extruders.size());
-        for (auto &extruder_id : set_extruders) {
+        for (unsigned int extruder_id : set_extruders) {
+            Flow   flow = this->skirt_flow(extruder_id);
+            float  spacing = flow.spacing();
+            double mm3_per_mm = flow.mm3_per_mm();
             extruders.push_back(extruder_id);
             extruders_e_per_mm.push_back(Extruder((unsigned int)extruder_id, &m_config).e_per_mm(mm3_per_mm));
         }
@@ -1834,14 +1836,21 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
 
     // Initial offset of the brim inner edge from the object (possible with a support & raft).
     // The skirt will touch the brim if the brim is extruded.
-    auto   distance = float(scale_(m_config.skirt_distance.value) - spacing/2.);
+    auto   distance = float(scale_(m_config.skirt_distance.value) - this->skirt_flow(extruders[extruders.size()-1]).spacing()/2.);
+
+    size_t lines_per_extruder = (n_skirts + extruders.size() - 1) / extruders.size();
+    size_t current_lines_per_extruder = n_skirts - lines_per_extruder * (extruders.size() - 1);
+
     // Draw outlines from outside to inside.
     // Loop while we have less skirts than required or any extruder hasn't reached the min length if any.
     std::vector<coordf_t> extruded_length(extruders.size(), 0.);
-    for (size_t i = n_skirts, extruder_idx = 0; i > 0; -- i) {
+    for (size_t i = n_skirts, extruder_idx = 0, nb_skirts = 1; i > 0; -- i) {
+        Flow   flow = this->skirt_flow(extruders[extruders.size() - (1+ extruder_idx)]);
+        float  spacing = flow.spacing();
+        double mm3_per_mm = flow.mm3_per_mm();
         this->throw_if_canceled();
         // Offset the skirt outside.
-        distance += float(scale_(spacing));
+        distance += float(scale_(spacing/2));
         // Generate the skirt centerline.
         Polygon loop;
         {
@@ -1851,6 +1860,7 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
 				break;
 			loop = loops.front();
         }
+        distance += float(scale_(spacing / 2));
         // Extrude the skirt loop.
         ExtrusionLoop eloop(elrSkirt);
         eloop.paths.emplace_back(ExtrusionPath(
@@ -1876,7 +1886,13 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
                 // Enough extruded with the current extruder. Extrude with the next one,
                 // until the prescribed number of skirt loops is extruded.
                 if (extruder_idx + 1 < extruders.size())
-                    ++ extruder_idx;
+                    if (nb_skirts < current_lines_per_extruder) {
+                        nb_skirts++;
+                    } else {
+                        current_lines_per_extruder = lines_per_extruder;
+                        nb_skirts = 1;
+                        ++extruder_idx;
+                    }
             }
         } else {
             // The skirt lenght is not limited, extrude the skirt with the 1st extruder only.
@@ -1889,7 +1905,12 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
 //TODO: test if no regression vs old _make_brim.
 // this new one can extrude brim for an object inside an other object.
 ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out) {
-    Flow        flow = this->brim_flow();
+    //get the first extruder in the list for these objects... TODO: replicate gcode generation
+    std::vector<unsigned int> set_extruders = this->object_extruders(objects);
+    append(set_extruders, this->support_material_extruders());
+    sort_remove_duplicates(set_extruders);
+    Flow        flow = this->brim_flow(set_extruders.empty()?m_regions.front()->config().perimeter_extruder - 1: set_extruders.front());
+
     coord_t brim_offset = scale_(config().brim_offset.value);
     ExPolygons    islands;
     for (PrintObject *object : objects) {
@@ -2024,7 +2045,12 @@ ExPolygons Print::_make_brim(const PrintObjectPtrs &objects, ExtrusionEntityColl
 }
 
 ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out) {
-    Flow        flow = this->brim_flow();
+    //get the first extruder in the list for these objects... TODO: replicate gcode generation
+    std::vector<unsigned int> set_extruders = this->object_extruders(objects);
+    append(set_extruders, this->support_material_extruders());
+    sort_remove_duplicates(set_extruders);
+    Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front());
+
     Points pt_ears;
     coord_t brim_offset = scale_(config().brim_offset.value);
     ExPolygons islands;
@@ -2113,7 +2139,7 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
     this->throw_if_canceled();
 
     //reorder & extrude them
-    Polylines lines_sorted = _reorder_brim_polyline(lines, out);
+    Polylines lines_sorted = _reorder_brim_polyline(lines, out, flow);
 
     //push into extrusions
     extrusion_entities_append_paths(
@@ -2130,7 +2156,13 @@ ExPolygons Print::_make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntit
 
 ExPolygons Print::_make_brim_interior(const PrintObjectPtrs &objects, const ExPolygons &unbrimmable_areas, ExtrusionEntityCollection &out) {
     // Brim is only printed on first layer and uses perimeter extruder.
-    Flow        flow = this->brim_flow();
+
+    //get the first extruder in the list for these objects... TODO: replicate gcode generation
+    std::vector<unsigned int> set_extruders = this->object_extruders(objects);
+    append(set_extruders, this->support_material_extruders());
+    sort_remove_duplicates(set_extruders);
+    Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front());
+
     coord_t brim_offset = scale_(config().brim_offset.value);
     ExPolygons    islands;
     for (PrintObject *object : objects) {
@@ -2219,9 +2251,7 @@ ExPolygons Print::_make_brim_interior(const PrintObjectPtrs &objects, const ExPo
 }
 
 /// reorder & join polyline if their ending are near enough, then extrude the brim from the polyline into 'out'.
-Polylines Print::_reorder_brim_polyline(Polylines lines, ExtrusionEntityCollection &out) {
-    Flow        flow = this->brim_flow();
-
+Polylines Print::_reorder_brim_polyline(Polylines lines, ExtrusionEntityCollection &out, const Flow &flow) {
     //reorder them
     std::sort(lines.begin(), lines.end(), [](const Polyline &a, const Polyline &b)->bool { return a.closest_point(Point(0, 0))->y() < b.closest_point(Point(0, 0))->y(); });
     Polylines lines_sorted;

@@ -399,10 +399,10 @@ public:
     // Returns an empty string if valid, otherwise returns an error message.
     std::string         validate() const override;
     double              skirt_first_layer_height() const;
-    Flow                brim_flow() const;
-    Flow                skirt_flow() const;
+    Flow                brim_flow(size_t extruder_id) const;
+    Flow                skirt_flow(size_t extruder_id) const;
     
-    std::vector<unsigned int> object_extruders() const;
+    std::vector<unsigned int> object_extruders(const PrintObjectPtrs &objects) const;
     std::vector<unsigned int> support_material_extruders() const;
     std::vector<unsigned int> extruders() const;
     double              max_allowed_layer_height() const;
@@ -460,7 +460,7 @@ private:
     ExPolygons          _make_brim(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
     ExPolygons          _make_brim_ears(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
     ExPolygons          _make_brim_interior(const PrintObjectPtrs &objects, const ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
-    Polylines           _reorder_brim_polyline(Polylines lines, ExtrusionEntityCollection &out);
+    Polylines           _reorder_brim_polyline(Polylines lines, ExtrusionEntityCollection &out, const Flow &flow);
     void                _make_wipe_tower();
 
     // Declared here to have access to Model / ModelObject / ModelInstance
