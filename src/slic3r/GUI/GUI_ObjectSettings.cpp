@@ -145,7 +145,13 @@ bool ObjectSettings::update_settings_list()
                 option.opt.width = 12;
                 if (is_extruders_cat)
                     option.opt.max = wxGetApp().extruders_edited_cnt();
+                //use the full label in the gui item
+                std::string label = option.opt.label;
+                option.opt.label = option.opt.get_full_label();
+                //create the gui item
                 optgroup->append_single_option_line(option);
+                //restore label, in case of it's ised afterwards.
+                option.opt.label = label;
 
                 optgroup->get_field(opt)->m_on_change = [optgroup](const std::string& opt_id, const boost::any& value) {
                     // first of all take a snapshot and then change value in configuration

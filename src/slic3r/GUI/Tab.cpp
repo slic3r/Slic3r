@@ -1946,7 +1946,7 @@ void TabFilament::add_filament_overrides_page()
         Line line {"",""};
         if (opt_key == "filament_retract_lift_above" || opt_key == "filament_retract_lift_below") {
             Option opt = optgroup->get_option(opt_key);
-            opt.opt.label = opt.opt.full_label;
+            opt.opt.label = opt.opt.get_full_label();
             line = optgroup->create_single_option_line(opt);
         }
         else
@@ -3528,9 +3528,7 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection* presets /*= nullptr
         /*std::string*/wxString name = "";
         if (opt.category != OptionCategory::none)
             name += _(toString(opt.category)) + " > ";
-        name += !opt.full_label.empty() ?
-                _(opt.full_label) :
-                _(opt.label);
+        name += opt.get_full_label();
         changes += tab + /*from_u8*/(name) + "\n";
     }
     // Show a confirmation dialog with the list of dirty options.

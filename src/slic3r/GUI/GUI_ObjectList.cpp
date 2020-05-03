@@ -1216,7 +1216,7 @@ void ObjectList::get_options_menu(settings_menu_hierarchy& settings_menu, const 
         if (improper_category(category, extruders_cnt, !is_part))
             continue;
 
-        const std::string& label = !opt->full_label.empty() ? opt->full_label : opt->label;
+        const std::string& label = opt->get_full_label();
         std::pair<std::string, std::string> option_label(option, label);
         std::vector< std::pair<std::string, std::string> > new_category;
         std::vector< std::pair<std::string, std::string> >& cat_opt_label = 
