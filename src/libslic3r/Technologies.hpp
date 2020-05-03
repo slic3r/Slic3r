@@ -34,7 +34,7 @@
 //====================
 // 2.2.0.alpha1 techs
 //====================
-#define ENABLE_2_2_0_ALPHA1 0
+#define ENABLE_2_2_0_ALPHA1 1
 
 // Enable thumbnail generator
 // When removing this technology, remove it also from stable branch, 
