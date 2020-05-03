@@ -639,6 +639,7 @@ public:
     ConfigOptionBool                thin_walls;
     ConfigOptionFloatOrPercent      thin_walls_min_width;
     ConfigOptionFloatOrPercent      thin_walls_overlap;
+    ConfigOptionFloat               thin_walls_speed;
     ConfigOptionEnum<InfillPattern> top_fill_pattern;
     ConfigOptionFloatOrPercent      top_infill_extrusion_width;
     ConfigOptionInt                 top_solid_layers;
@@ -713,6 +714,7 @@ protected:
         OPT_PTR(thin_walls);
         OPT_PTR(thin_walls_min_width);
         OPT_PTR(thin_walls_overlap);
+        OPT_PTR(thin_walls_speed);
         OPT_PTR(top_fill_pattern);
         OPT_PTR(top_infill_extrusion_width);
         OPT_PTR(top_solid_infill_speed);

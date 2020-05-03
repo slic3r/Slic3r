@@ -189,8 +189,9 @@ group:label_width$8:Speed for print moves
 	line:Bridge speed
 		setting:label$_:width$4:bridge_speed
 	end_line
-	line:Gap fill speed
-		setting:label$_:width$4:gap_fill_speed
+	line:Thin extrusions speed
+		setting:width$4:gap_fill_speed
+		setting:width$4:thin_walls_speed
 	end_line
 group:Speed for non-print moves
 	setting:travel_speed

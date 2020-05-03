@@ -3524,6 +3524,8 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             speed = m_config.get_abs_value("solid_infill_speed");
         } else if (path.role() == erTopSolidInfill) {
             speed = m_config.get_abs_value("top_solid_infill_speed");
+        } else if (path.role() == erThinWall) {
+            speed = m_config.get_abs_value("thin_walls_speed");
         } else if (path.role() == erGapFill) {
             speed = m_config.get_abs_value("gap_fill_speed");
         } else if (path.role() == erNone) {
@@ -3620,6 +3622,8 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
         else
             comment = ";_EXTRUDE_SET_SPEED";
         if (path.role() == erExternalPerimeter)
+            comment += ";_EXTERNAL_PERIMETER";
+        if (path.role() == erThinWall)
             comment += ";_EXTERNAL_PERIMETER";
     }
     // F is mm per minute.
@@ -3995,6 +3999,8 @@ GCode::extrusion_role_to_string_for_parser(const ExtrusionRole & role) {
         return "TopSolidInfill";
     case erBridgeInfill:
         return "BridgeInfill";
+    case erThinWall:
+        return "ThinWall";
     case erGapFill:
         return "GapFill";
     case erSkirt:

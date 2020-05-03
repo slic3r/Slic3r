@@ -613,7 +613,7 @@ void PerimeterGenerator::process()
                 // append thin walls
                 if (!thin_walls.empty()) {
                     ExtrusionEntityCollection tw = thin_variable_width
-                        (thin_walls, erExternalPerimeter, this->ext_perimeter_flow);
+                        (thin_walls, erThinWall, this->ext_perimeter_flow);
 
                     entities.append(tw.entities);
                     thin_walls.clear();
@@ -814,7 +814,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     
     // append thin walls to the nearest-neighbor search (only for first iteration)
     if (!thin_walls.empty()) {
-        ExtrusionEntityCollection tw = thin_variable_width(thin_walls, erExternalPerimeter, this->ext_perimeter_flow);
+        ExtrusionEntityCollection tw = thin_variable_width(thin_walls, erThinWall, this->ext_perimeter_flow);
         coll.append(tw.entities);
         thin_walls.clear();
     }

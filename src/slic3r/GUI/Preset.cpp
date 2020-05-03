@@ -506,7 +506,8 @@ const std::vector<std::string>& Preset::print_options()
         , "infill_not_connected"
         , "first_layer_infill_speed"
         , "thin_walls_min_width"
-        , "thin_walls_overlap"
+        , "thin_walls_overlap",
+        "thin_walls_speed"
         , "model_precision"
         , "curve_smoothing_precision"
         , "curve_smoothing_cutoff_dist"

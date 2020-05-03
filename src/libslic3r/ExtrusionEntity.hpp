@@ -23,6 +23,7 @@ enum ExtrusionRole : uint8_t {
     erSolidInfill,
     erTopSolidInfill,
     erBridgeInfill,
+    erThinWall,
     erGapFill,
     erSkirt,
     erSupportMaterial,
@@ -54,6 +55,7 @@ inline bool is_perimeter(ExtrusionRole role)
 {
     return role == erPerimeter
         || role == erExternalPerimeter
+        || role == erThinWall
         || role == erOverhangPerimeter;
 }
 

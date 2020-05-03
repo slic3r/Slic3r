@@ -2973,6 +2973,16 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
 
+    def = this->add("thin_walls_speed", coFloat);
+    def->label = L("Thin walls");
+    def->full_label = L("Thin walls speed");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("Speed for thin wall (external extrusion that are alone because the obect is too thin at these places).");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(30));
+
     def = this->add("threads", coInt);
     def->label = L("Threads");
     def->tooltip = L("Threads are used to parallelize long-running tasks. Optimal threads number "
