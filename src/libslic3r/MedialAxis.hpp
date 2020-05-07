@@ -112,6 +112,8 @@ class MedialAxis {
         void taper_ends(ThickPolylines& pp);
         //cleaning method
         void check_width(ThickPolylines& pp, double max_width, std::string msg);
+        //removing small extrusion that won't be useful and will harm print. A bit like fusion_corners but more lenient and with just del.
+        void remove_bits(ThickPolylines& pp);
 };
     
     /// create a ExtrusionEntityCollection from ThickPolylines, discretizing the variable width into little sections (of 4*SCALED_RESOLUTION length) where needed.

@@ -677,18 +677,55 @@ void PerimeterGenerator::process()
             //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
             min = std::max(min, double(Flow::new_from_spacing(EPSILON, nozzle_diameter, this->layer_height, false).scaled_width()));
             double max = 2.2 * perimeter_spacing;
-            ExPolygons gaps_ex = diff_ex(
-                offset2_ex(gaps, double(-min / 2), double(+min / 2)),
+            //remove areas that are too big (shouldn't occur...)
+            ExPolygons gaps_ex_to_test = diff_ex(
+                gaps,
                 offset2_ex(gaps, double(-max / 2), double(+max / 2)),
                 true);
-            ThickPolylines polylines;
-            for (const ExPolygon &ex : gaps_ex) {
+            ExPolygons gaps_ex;
+            const double minarea = scale_(scale_(this->config->gap_fill_min_area.get_abs_value(unscaled(perimeter_width)*unscaled(perimeter_width))));
+            // check each gapfill area to see if it's printable.
+            for (const ExPolygon &expoly : gaps_ex_to_test) {
                 //remove too small gaps that are too hard to fill.
                 //ie one that are smaller than an extrusion with width of min and a length of max.
-                if (ex.area() > scale_(scale_(this->config->gap_fill_min_area.get_abs_value(unscaled(perimeter_width)*unscaled(perimeter_width))))) {
-                    MedialAxis{ ex, coord_t(max*1.1), coord_t(min), coord_t(this->layer_height) }.build(polylines);
+                if (expoly.area() > minarea) {
+                    ExPolygons expoly_after_shrink_test = offset_ex(ExPolygons{ expoly }, double(-min * 0.5));
+                    //if the shrink split the area in multipe bits
+                    if (expoly_after_shrink_test.size() > 1) {
+                        //remove too small bits
+                        for (int i = 0; i < expoly_after_shrink_test.size(); i++)
+                            if (offset_ex(ExPolygons{ expoly_after_shrink_test[i] }, min*0.5)[0].area() < minarea) {
+                                expoly_after_shrink_test.erase(expoly_after_shrink_test.begin() + i);
+                                i--;
+                            }
+                        //maybe some areas are a just bit too thin, try with just a little more offset to remove them.
+                        ExPolygons expoly_after_shrink_test2 = offset_ex(ExPolygons{ expoly }, double(-min *0.8));
+                        for (int i = 0; i < expoly_after_shrink_test2.size(); i++)
+                            if (offset_ex(ExPolygons{ expoly_after_shrink_test2[i] }, min*0.5)[0].area() < minarea) {
+                                expoly_after_shrink_test2.erase(expoly_after_shrink_test2.begin() + i);
+                                i--;
+                            }
+                        //it's better if there are significantly less extrusions
+                        if (expoly_after_shrink_test.size()/1.42 > expoly_after_shrink_test2.size()) {
+                            expoly_after_shrink_test2 = offset_ex(expoly_after_shrink_test2, double(min * 0.8));
+                            //insert with move instead of copy
+                            std::move(expoly_after_shrink_test2.begin(), expoly_after_shrink_test2.end(), std::back_inserter(gaps_ex));
+                        } else {
+                            expoly_after_shrink_test = offset_ex(expoly_after_shrink_test, double(min * 0.8));
+                            std::move(expoly_after_shrink_test.begin(), expoly_after_shrink_test.end(), std::back_inserter(gaps_ex));
+                        }
+                    } else {
+                        expoly_after_shrink_test = offset_ex(expoly_after_shrink_test, double(min * 0.8));
+                        std::move(expoly_after_shrink_test.begin(), expoly_after_shrink_test.end(), std::back_inserter(gaps_ex));
+                    }
                 }
             }
+            // create lines from the area
+            ThickPolylines polylines;
+            for (const ExPolygon &ex : gaps_ex) {
+                    MedialAxis{ ex, coord_t(max*1.1), coord_t(min), coord_t(this->layer_height) }.build(polylines);
+            }
+            // create extrusion from lines
             if (!polylines.empty()) {
                 ExtrusionEntityCollection gap_fill = thin_variable_width(polylines, 
                     erGapFill, this->solid_infill_flow);
@@ -704,6 +741,7 @@ void PerimeterGenerator::process()
                 last = diff_ex(to_polygons(last), gap_fill.polygons_covered_by_width(10.f));
             }
         }
+        //TODO: if a gapfill extrusion is a loop and with width always >= periemter width then change the type to perimeter and put it at the right place in the loops vector.
 
         // create one more offset to be used as boundary for fill
         // we offset by half the perimeter spacing (to get to the actual infill boundary)

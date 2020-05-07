@@ -559,6 +559,67 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
 }
 
 void
+MedialAxis::remove_bits(ThickPolylines &pp)
+{
+
+    //remove small bits that stick out of the path
+    bool changes = false;
+    for (size_t i = 0; i < pp.size(); ++i) {
+        ThickPolyline& polyline = pp[i];
+        // only consider polyline with 0-end
+        if (polyline.endpoints.first) polyline.reverse();
+        else if (!polyline.endpoints.second) continue;
+        if (polyline.width.back() > 0) continue;
+
+        //check my length is small
+        coord_t length = (coord_t)polyline.length();
+        if (length > max_width*1.5) {
+            continue;
+        }
+
+        // look if other end is a cross point with multiple other branch
+        std::vector<size_t> crosspoint;
+        for (size_t j = 0; j < pp.size(); ++j) {
+            if (j == i) continue;
+            ThickPolyline& other = pp[j];
+            if (polyline.first_point().coincides_with(other.last_point())) {
+                other.reverse();
+                crosspoint.push_back(j);
+            } else if (polyline.first_point().coincides_with(other.first_point())) {
+                crosspoint.push_back(j);
+            }
+        }
+        if (crosspoint.size() < 2) continue;
+
+        //check if is smaller or the other ones are not endpoits
+        int nb_better_than_me = 0;
+        for (int i = 0; i < crosspoint.size(); i++) {
+            if (!pp[crosspoint[0]].endpoints.second || length <= pp[crosspoint[0]].length()) 
+                nb_better_than_me++;
+        }
+        if (nb_better_than_me < 2) continue;
+
+        //check if the length of the polyline is small vs width of the other lines
+        double max_width = 0;
+        for (int i = 0; i < crosspoint.size(); i++) {
+            max_width = std::max(max_width, pp[crosspoint[i]].width[0]);
+        }
+        if (length > max_width + min_width)
+            continue;
+
+        //delete the now unused polyline
+        pp.erase(pp.begin() + i);
+        --i;
+        changes = true;
+    }
+    if (changes) {
+        concatThickPolylines(pp);
+        ///reorder, in case of change
+        std::sort(pp.begin(), pp.end(), [](const ThickPolyline & a, const ThickPolyline & b) { return a.length() < b.length(); });
+    }
+}
+
+void
 MedialAxis::fusion_corners(ThickPolylines &pp)
 {
 
@@ -567,7 +628,7 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         // only consider polyline with 0-end
-        if (polyline.points.size() != 2) continue;
+        //if (polyline.points.size() != 2) continue; // maybe we should have something to merge X-point to 2-point if it's near enough.
         if (polyline.endpoints.first) polyline.reverse();
         else if (!polyline.endpoints.second) continue;
         if (polyline.width.back() > 0) continue;
@@ -1716,6 +1777,10 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    svg.draw(pp);
     //    svg.Close();
     //}
+
+    remove_bits(pp);
+
+    //sort_polylines(pp);
 
     //for (auto &p : pp) {
     //    std::cout << " polyline : ";
