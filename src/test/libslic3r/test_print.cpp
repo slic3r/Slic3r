@@ -155,8 +155,8 @@ SCENARIO("Print: Brim generation") {
             Print print{};
             Slic3r::Test::init_print(print, { m }, model, &config);
             print.process();
-            double nbLoops = 6.0 / print.brim_flow().spacing();
-            THEN("Brim Extrusion collection has " + std::to_string(nbLoops) + " loops in it (flow="+ std::to_string(print.brim_flow().spacing())+")") {
+            double nbLoops = 6.0 / print.brim_flow(print.extruders().front()).spacing();
+            THEN("Brim Extrusion collection has " + std::to_string(nbLoops) + " loops in it (flow="+ std::to_string(print.brim_flow(print.extruders().front()).spacing())+")") {
                 REQUIRE(print.brim().items_count() == floor(nbLoops));
             }
         }
