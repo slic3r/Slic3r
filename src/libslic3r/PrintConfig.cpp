@@ -1308,12 +1308,14 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::infill;
     def->tooltip = L("This is the width of the ironing pass, in a % of the top extrusion width, should not be more than 50%"
         " (two times more lines, 50% overlap). It's not necessary to go below 25% (four times more lines, 75% overlap). \nIf you have problems with your ironing process,"
-        " don't forget to look at the flow->above bridge flow, as this setting should be set to min 110% to let you have enough plastic in the top layer.");
+        " don't forget to look at the flow->above bridge flow, as this setting should be set to min 110% to let you have enough plastic in the top layer."
+        " A value too low will make your extruder eat the filament.");
     def->min = 0;
     def->mode = comExpert;
+    def->sidetext = L("% or mm");
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
 
-    def = this->add("fill_smooth_distribution", coFloatOrPercent);
+    def = this->add("fill_smooth_distribution", coPercent);
     def->label = L("distribution");
     def->full_label = L("Ironing flow distribution");
     def->category = OptionCategory::infill;
@@ -1323,7 +1325,8 @@ void PrintConfigDef::init_fff_params()
     //def->min = 0;
     //def->max = 0.9;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloatOrPercent(10, true));
+    def->sidetext = L("%");
+    def->set_default_value(new ConfigOptionPercent(10));
 
     def = this->add("first_layer_acceleration", coFloat);
     def->label = L("First layer");
@@ -2941,7 +2944,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Allow external perimeter to overlap each other to avoid the use of thin walls. Note that their flow isn't adjusted and so it will result in over-extruding and undefined behavior.");
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionBool(false));
+    def->set_default_value(new ConfigOptionBool(true));
 
     def = this->add("thin_walls", coBool);
     def->label = L("");

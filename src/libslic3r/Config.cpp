@@ -514,7 +514,7 @@ bool ConfigBase::set_deserialize_nothrow(const t_config_option_key &opt_key_src,
 void ConfigBase::set_deserialize(const t_config_option_key &opt_key_src, const std::string &value_src, bool append)
 {
 	if (! this->set_deserialize_nothrow(opt_key_src, value_src, append))
-		throw BadOptionTypeException("ConfigBase::set_deserialize() failed");
+		throw BadOptionTypeException(("ConfigBase::set_deserialize() failed for '"+ opt_key_src+"' = '"+ value_src+"'").c_str());
 }
 
 void ConfigBase::set_deserialize(std::initializer_list<SetDeserializeItem> items)
@@ -560,7 +560,11 @@ bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, con
     ConfigOption *opt = this->option(opt_key, true);
     if (opt == nullptr)
         throw new UnknownOptionException(opt_key);
-    return opt->deserialize(value, append);
+    bool ok= opt->deserialize(value, append);
+    if (!ok) {
+        return opt->deserialize(value, append);
+    }
+    return true;
 }
 
 // Return an absolute value of a possibly relative config variable.

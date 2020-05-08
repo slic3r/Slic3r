@@ -601,7 +601,7 @@ public:
     ConfigOptionPercent             fill_density;
     ConfigOptionEnum<InfillPattern> fill_pattern;
     ConfigOptionPercent             fill_top_flow_ratio;
-    ConfigOptionFloatOrPercent      fill_smooth_distribution;
+    ConfigOptionPercent             fill_smooth_distribution;
     ConfigOptionFloatOrPercent      fill_smooth_width;
     ConfigOptionBool                gap_fill;
     ConfigOptionFloatOrPercent      gap_fill_min_area;
