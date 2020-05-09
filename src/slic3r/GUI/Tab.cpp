@@ -2770,10 +2770,15 @@ void TabPrinter::append_option_line_kinematics(ConfigOptionsGroupShp optgroup, c
 PageShp TabPrinter::build_kinematics_page()
 {
     auto page = add_options_page(_(L("Machine limits")), "cog", true);
+    ConfigOptionsGroupShp optgroup;
+    if (m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value != gcfMarlin) {
+        optgroup = page->new_optgroup(_(L("not-marlin firmware compensation"))); 
+        optgroup->append_single_option_line("time_estimation_compensation");
+    }
 
     if (m_use_silent_mode) {
         // Legend for OptionsGroups
-        auto optgroup = page->new_optgroup("");
+        optgroup = page->new_optgroup("");
         optgroup->set_show_modified_btns_val(false);
         optgroup->title_width = 23;// 230;
         auto line = Line{ "", "" };
@@ -2798,7 +2803,7 @@ PageShp TabPrinter::build_kinematics_page()
     }
 
     std::vector<std::string> axes{ "x", "y", "z", "e" };
-    auto optgroup = page->new_optgroup(_(L("Maximum feedrates")));
+    optgroup = page->new_optgroup(_(L("Maximum feedrates")));
         for (const std::string &axis : axes) {
             append_option_line_kinematics(optgroup, "machine_max_feedrate_" + axis);
         }
@@ -2831,7 +2836,6 @@ PageShp TabPrinter::build_kinematics_page()
 void TabPrinter::build_unregular_pages()
 {
     size_t		n_before_extruders = 2;			//	Count of pages before Extruder pages
-    bool		is_marlin_flavor = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfMarlin;
 
     /* ! Freeze/Thaw in this function is needed to avoid call OnPaint() for erased pages
      * and be cause of application crash, when try to change Preset in moment,
@@ -2851,18 +2855,18 @@ void TabPrinter::build_unregular_pages()
     };
 #endif //__WXMSW__
 
-    // Add/delete Kinematics page according to is_marlin_flavor
+    // Add/delete Kinematics page
     size_t existed_page = 0;
     for (size_t i = n_before_extruders; i < m_pages.size(); ++i) // first make sure it's not there already
         if (m_pages[i]->title().find(_(L("Machine limits"))) != std::string::npos) {
-            if (!is_marlin_flavor || m_rebuild_kinematics_page)
+            if (m_rebuild_kinematics_page)
                 m_pages.erase(m_pages.begin() + i);
             else
                 existed_page = i;
             break;
         }
 
-    if (existed_page < n_before_extruders && is_marlin_flavor) {
+    if (existed_page < n_before_extruders) {
         auto page = build_kinematics_page();
 #ifdef __WXMSW__
         layout_page(page);
@@ -2870,8 +2874,7 @@ void TabPrinter::build_unregular_pages()
         m_pages.insert(m_pages.begin() + n_before_extruders, page);
     }
 
-    if (is_marlin_flavor)
-        n_before_extruders++;
+    n_before_extruders++; // kinematic page
     size_t		n_after_single_extruder_MM = 2; //	Count of pages after single_extruder_multi_material page
 
     if (m_extruders_count_old == m_extruders_count ||
@@ -3126,6 +3129,11 @@ void TabPrinter::update_fff()
         GCodeWriter::PausePrintCode = "PAUSE";
     else 
         GCodeWriter::PausePrintCode = "M601";
+
+    if (m_is_marlin != is_marlin_flavor) {
+        m_is_marlin = is_marlin_flavor;
+        m_rebuild_kinematics_page = true;
+    }
 
     if (m_use_silent_mode != m_config->opt_bool("silent_mode")) {
         m_rebuild_kinematics_page = true;

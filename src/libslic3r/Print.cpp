@@ -142,6 +142,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "standby_temperature_delta",
         "start_gcode",
         "start_filament_gcode",
+        "time_estimation_compensation",
         "toolchange_gcode",
         "threads",
         "travel_speed",

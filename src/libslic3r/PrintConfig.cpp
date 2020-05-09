@@ -316,7 +316,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Brim inside holes");
     def->full_label = L("Brim inside holes");
     def->category = OptionCategory::skirtBrim;
-    def->tooltip = L("Allow to create brim when over an island when this one is inside a hole.");
+    def->tooltip = L("Allow to create a brim over an island when it's inside a hole (or surrounded by an object).");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
@@ -2998,13 +2998,22 @@ void PrintConfigDef::init_fff_params()
         def->cli = ConfigOptionDef::nocli;
     }
 
+    def = this->add("time_estimation_compensation", coPercent);
+    def->label = L("Time estimation compensation");
+    def->category = OptionCategory::firmware;
+    def->tooltip = L("This setting allow you to modify the time estiamtion by a % amount. As slic3r only use the marlin algorithm, it's not precise enough if an other firmware is used.");
+    def->mode = comAdvanced;
+    def->sidetext = L("%");
+    def->min = 0;
+    def->set_default_value(new ConfigOptionPercent(100));
+
     def = this->add("toolchange_gcode", coString);
     def->label = L("Tool change G-code");
     def->category = OptionCategory::customgcode;
     def->tooltip = L("This custom code is inserted at every extruder change. If you don't leave this empty, you are "
-                     "expected to take care of the toolchange yourself - slic3r will not output any other G-code to "
-                     "change the filament. You can use placeholder variables for all Slic3r settings as well as [previous_extruder] "
-                     "and [next_extruder], so e.g. the standard toolchange command can be scripted as T[next_extruder].");
+        "expected to take care of the toolchange yourself - slic3r will not output any other G-code to "
+        "change the filament. You can use placeholder variables for all Slic3r settings as well as [previous_extruder] "
+        "and [next_extruder], so e.g. the standard toolchange command can be scripted as T[next_extruder].");
     def->multiline = true;
     def->full_width = true;
     def->height = 5;

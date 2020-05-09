@@ -359,6 +359,9 @@ namespace Slic3r {
         // Call this method before to start adding lines using add_gcode_line() when reusing an instance of GCodeTimeEstimator
         void reset();
 
+        // multiply the stored time by a factor.
+        void scale_time(float scaling);
+
         // Returns the estimated time, in seconds
         float get_time() const;
 

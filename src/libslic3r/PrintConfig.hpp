@@ -1024,6 +1024,7 @@ public:
     ConfigOptionInt                 standby_temperature_delta;
     ConfigOptionInts                temperature;
     ConfigOptionInt                 threads;
+    ConfigOptionPercent             time_estimation_compensation;
     ConfigOptionInts                top_fan_speed;
     ConfigOptionBools               wipe;
     ConfigOptionBool                wipe_tower;
@@ -1101,6 +1102,7 @@ protected:
         OPT_PTR(standby_temperature_delta);
         OPT_PTR(temperature);
         OPT_PTR(threads);
+        OPT_PTR(time_estimation_compensation);
         OPT_PTR(top_fan_speed);
         OPT_PTR(wipe);
         OPT_PTR(wipe_tower);

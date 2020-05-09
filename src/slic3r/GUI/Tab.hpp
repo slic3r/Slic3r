@@ -383,7 +383,8 @@ public:
     void build_printhost(ConfigOptionsGroup *optgroup);
 
     bool		m_has_single_extruder_MM_page = false;
-    bool		m_use_silent_mode = false;
+	bool		m_is_marlin = false;
+	bool		m_use_silent_mode = false;
     void		append_option_line_kinematics(ConfigOptionsGroupShp optgroup, const std::string opt_key);
     bool		m_rebuild_kinematics_page = false;
 

@@ -698,6 +698,11 @@ namespace Slic3r {
         _reset();
     }
 
+    void GCodeTimeEstimator::scale_time(float scaling)
+    {
+        m_time *= scaling;
+    }
+
     float GCodeTimeEstimator::get_time() const
     {
         return m_time;

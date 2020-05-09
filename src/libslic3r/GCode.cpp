@@ -1551,6 +1551,11 @@ void GCode::_do_export(Print &print, FILE *file)
     m_normal_time_estimator.calculate_time(false);
     if (m_silent_time_estimator_enabled)
         m_silent_time_estimator.calculate_time(false);
+    if (config().time_estimation_compensation.get_abs_value(1) != 1) {
+        m_normal_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
+        if (m_silent_time_estimator_enabled)
+            m_silent_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
+    }
 
     // Get filament stats.
     _write(file, DoExport::update_print_stats_and_format_filament_stats(
