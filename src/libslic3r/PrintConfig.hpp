@@ -975,6 +975,7 @@ public:
     ConfigOptionInts                bridge_fan_speed;
     ConfigOptionInts                chamber_temperature;
     ConfigOptionBool                complete_objects;
+    ConfigOptionBool                complete_objects_one_skirt;
     ConfigOptionFloats              colorprint_heights;
     ConfigOptionBools               cooling;
     ConfigOptionFloat               default_acceleration;
@@ -1053,6 +1054,7 @@ protected:
         OPT_PTR(bridge_fan_speed);
         OPT_PTR(chamber_temperature);
         OPT_PTR(complete_objects);
+        OPT_PTR(complete_objects_one_skirt);
         OPT_PTR(colorprint_heights);
         OPT_PTR(cooling);
         OPT_PTR(default_acceleration);

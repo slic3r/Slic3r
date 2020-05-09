@@ -434,9 +434,17 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Complete individual objects");
     def->category = OptionCategory::output;
     def->tooltip = L("When printing multiple objects or copies, this feature will complete "
-                   "each object before moving onto next one (and starting it from its bottom layer). "
-                   "This feature is useful to avoid the risk of ruined prints. "
-                   "Slic3r should warn and prevent you from extruder collisions, but beware.");
+        "each object before moving onto next one (and starting it from its bottom layer). "
+        "This feature is useful to avoid the risk of ruined prints. "
+        "Slic3r should warn and prevent you from extruder collisions, but beware.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("complete_objects_one_skirt", coBool);
+    def->label = L("Allow only one skirt loop");
+    def->category = OptionCategory::output;
+    def->tooltip = L("When using 'Complete individual objects', the default behavior is to draw the skirt around each object."
+        " if you prefer to have only one skirt for the whole plater, use this option.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 

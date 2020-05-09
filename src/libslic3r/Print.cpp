@@ -172,6 +172,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             || opt_key == "draft_shield"
             || opt_key == "skirt_distance"
             || opt_key == "min_skirt_length"
+			|| opt_key == "complete_objects_one_skirt"
             || opt_key == "ooze_prevention"
             || opt_key == "wipe_tower_x"
             || opt_key == "wipe_tower_y"
@@ -1646,7 +1647,7 @@ void Print::process()
         }
         if (this->has_skirt()) {
             this->set_status(88, L("Generating skirt"));
-            if (config().complete_objects){
+            if (config().complete_objects && !config().complete_objects_one_skirt){
                 for (PrintObject *obj : m_objects){
                     //create a skirt "pattern" (one per object)
                     const std::vector<PrintInstance> copies{ obj->instances() };

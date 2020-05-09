@@ -260,6 +260,7 @@ group:Plater
 	setting:duplicate_distance
 group:Sequential printing
 	setting:complete_objects
+	setting:complete_objects_one_skirt
 	line:Extruder clearance (mm)
 		setting:width$6:extruder_clearance_radius
 		setting:width$6:extruder_clearance_height
