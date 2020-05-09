@@ -1241,10 +1241,36 @@ void Sidebar::update_sliced_info_sizer()
                                                 (ps.total_used_filament - ps.total_wipe_tower_filament) / 1000,
                                                 ps.total_wipe_tower_filament / 1000) :
                                 wxString::Format("%.2f", ps.total_used_filament / 1000);
-            p->sliced_info->SetTextAndShow(siFilament_m,    info_text,      new_label);
+            if (ps.color_extruderid_to_used_filament.size() > 0) {
+                double total_length = 0;
+                for (int i = 0; i < ps.color_extruderid_to_used_filament.size(); i++) {
+                    new_label+= from_u8((boost::format("\n    - %1% %2%") % _utf8(L("Color")) % i ).str());
+                    total_length += ps.color_extruderid_to_used_filament[i].second;
+                    info_text += wxString::Format("\n%.2f (%.2f)", ps.color_extruderid_to_used_filament[i].second / 1000, total_length / 1000);
+                }
+                new_label += from_u8((boost::format("\n    - %1% %2%") % _utf8(L("Color")) % ps.color_extruderid_to_used_filament.size()).str());
+                info_text += wxString::Format("\n%.2f (%.2f)", (ps.total_used_filament - total_length) / 1000, ps.total_used_filament / 1000);
+            }
+            p->sliced_info->SetTextAndShow(siFilament_m, info_text, new_label);
 
             p->sliced_info->SetTextAndShow(siFilament_mm3,  wxString::Format("%.2f", ps.total_extruded_volume));
-            p->sliced_info->SetTextAndShow(siFilament_g,    ps.total_weight == 0.0 ? "N/A" : wxString::Format("%.2f", ps.total_weight));
+
+            if (ps.color_extruderid_to_used_weight.size() > 0  && ps.total_weight != 0) {
+                new_label = _(L("Used Filament (g)"));
+                info_text = wxString::Format("%.2f", ps.total_weight);
+                double total_weight = 0;
+                for (int i = 0; i < ps.color_extruderid_to_used_weight.size(); i++) {
+                    new_label += from_u8((boost::format("\n    - %1% %2%") % _utf8(L("Color")) % i).str());
+                    total_weight += ps.color_extruderid_to_used_weight[i].second;
+                    info_text += (ps.color_extruderid_to_used_weight[i].second == 0 ? "\nN/A": wxString::Format("\n%.2f", ps.color_extruderid_to_used_weight[i].second / 1000))
+                        + (total_weight == 0 ? " (N/A)" : wxString::Format(" (%.2f)", total_weight / 1000));
+                }
+                new_label += from_u8((boost::format("\n    - %1% %2%") % _utf8(L("Color")) % ps.color_extruderid_to_used_weight.size()).str());
+                info_text += ((ps.total_weight - total_weight / 1000) == 0 ? "\nN/A" : wxString::Format("\n%.2f", (ps.total_weight - total_weight / 1000)))
+                    + wxString::Format(" (%.2f)", ps.total_weight);
+                p->sliced_info->SetTextAndShow(siFilament_g, info_text, new_label);
+            }else
+                p->sliced_info->SetTextAndShow(siFilament_g,    ps.total_weight == 0.0 ? "N/A" : wxString::Format("%.2f", ps.total_weight), _(L("Used Filament (g)")));
 
             new_label = _(L("Cost"));
             if (is_wipe_tower)

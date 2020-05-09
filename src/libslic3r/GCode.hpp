@@ -200,6 +200,9 @@ public:
     // append full config to the given string
     static void append_full_config(const Print& print, std::string& str);
 
+    // called by porcess_layer, do the color change / custom gcode
+    std::string emit_custom_gcode_per_print_z(const CustomGCode::Item* custom_gcode, unsigned int first_extruder_id, const Print& print, PrintStatistics& stats);
+
     // Object and support extrusions of the same PrintObject at the same print_z.
     // public, so that it could be accessed by free helper functions from GCode.cpp
     struct LayerToPrint
@@ -225,6 +228,7 @@ private:
         // Write into the output file.
         FILE                            *file,
         const Print                     &print,
+        PrintStatistics                 &print_stat,
         // Set of object & print layers of the same PrintObject and with the same print_z.
         const std::vector<LayerToPrint> &layers,
         const LayerTools  				&layer_tools,

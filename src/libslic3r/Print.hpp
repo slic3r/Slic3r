@@ -321,10 +321,12 @@ struct PrintStatistics
     std::vector<std::pair<CustomGcodeType, std::string>>    estimated_normal_custom_gcode_print_times;
     std::vector<std::pair<CustomGcodeType, std::string>>    estimated_silent_custom_gcode_print_times;
     double                          total_used_filament;
+    std::vector<std::pair<size_t, double>> color_extruderid_to_used_filament;
     double                          total_extruded_volume;
     double                          total_cost;
     int                             total_toolchanges;
     double                          total_weight;
+    std::vector<std::pair<size_t, double>> color_extruderid_to_used_weight;
     double                          total_wipe_tower_cost;
     double                          total_wipe_tower_filament;
     std::map<size_t, float>         filament_stats;

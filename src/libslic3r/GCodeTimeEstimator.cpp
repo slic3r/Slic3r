@@ -772,7 +772,7 @@ namespace Slic3r {
         std::vector<std::pair<CustomGcodeType, std::string>> ret;
 
         float total_time = 0.0f;
-        for (auto t : m_custom_gcode_times)
+        for (const std::pair<CustomGcodeType, float> &t : m_custom_gcode_times)
         {
             std::string time = _get_time_dhm(t.second);
             if (include_remaining)
