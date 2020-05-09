@@ -23,6 +23,7 @@ TODO LIST
 
 #include "Analyzer.hpp"
 #include "BoundingBox.hpp"
+#include "Flow.hpp"
 
 #if defined(__linux) || defined(__GNUC__ )
 #include <strings.h>
@@ -523,6 +524,7 @@ private:
 
 
 WipeTower::WipeTower(const PrintConfig& config, const std::vector<std::vector<float>>& wiping_matrix, size_t initial_tool) :
+    m_config(&config),
     m_semm(config.single_extruder_multi_material.value),
     m_wipe_tower_pos(config.wipe_tower_x, config.wipe_tower_y),
     m_wipe_tower_width(float(config.wipe_tower_width)),
@@ -556,53 +558,54 @@ WipeTower::WipeTower(const PrintConfig& config, const std::vector<std::vector<fl
 
 
 
-void WipeTower::set_extruder(size_t idx, const PrintConfig& config)
+void WipeTower::set_extruder(size_t idx)
 {
     //while (m_filpar.size() < idx+1)   // makes sure the required element is in the vector
     m_filpar.push_back(FilamentParameters());
 
-    m_filpar[idx].material = config.filament_type.get_at(idx);
-    m_filpar[idx].temperature = config.temperature.get_at(idx);
-    m_filpar[idx].first_layer_temperature = config.first_layer_temperature.get_at(idx);
+    m_filpar[idx].material = m_config->filament_type.get_at(idx);
+    m_filpar[idx].temperature = m_config->temperature.get_at(idx);
+    m_filpar[idx].first_layer_temperature = m_config->first_layer_temperature.get_at(idx);
 
     // If this is a single extruder MM printer, we will use all the SE-specific config values.
     // Otherwise, the defaults will be used to turn off the SE stuff.
     if (m_semm) {
-        m_filpar[idx].loading_speed           = float(config.filament_loading_speed.get_at(idx));
-        m_filpar[idx].loading_speed_start     = float(config.filament_loading_speed_start.get_at(idx));
-        m_filpar[idx].unloading_speed         = float(config.filament_unloading_speed.get_at(idx));
-        m_filpar[idx].unloading_speed_start   = float(config.filament_unloading_speed_start.get_at(idx));
-        m_filpar[idx].delay                   = float(config.filament_toolchange_delay.get_at(idx));
-        m_filpar[idx].cooling_moves           = config.filament_cooling_moves.get_at(idx);
-        m_filpar[idx].cooling_initial_speed   = float(config.filament_cooling_initial_speed.get_at(idx));
-        m_filpar[idx].cooling_final_speed     = float(config.filament_cooling_final_speed.get_at(idx));
+        m_filpar[idx].loading_speed           = float(m_config->filament_loading_speed.get_at(idx));
+        m_filpar[idx].loading_speed_start     = float(m_config->filament_loading_speed_start.get_at(idx));
+        m_filpar[idx].unloading_speed         = float(m_config->filament_unloading_speed.get_at(idx));
+        m_filpar[idx].unloading_speed_start   = float(m_config->filament_unloading_speed_start.get_at(idx));
+        m_filpar[idx].delay                   = float(m_config->filament_toolchange_delay.get_at(idx));
+        m_filpar[idx].cooling_moves           = m_config->filament_cooling_moves.get_at(idx);
+        m_filpar[idx].cooling_initial_speed   = float(m_config->filament_cooling_initial_speed.get_at(idx));
+        m_filpar[idx].cooling_final_speed     = float(m_config->filament_cooling_final_speed.get_at(idx));
         //start skinnydip
-        m_filpar[idx].filament_enable_toolchange_temp     = config.filament_enable_toolchange_temp.get_at(idx);     // skinnydip
-        m_filpar[idx].filament_toolchange_temp            = config.filament_toolchange_temp.get_at(idx);            // skinnydip
-        m_filpar[idx].filament_enable_toolchange_part_fan = config.filament_enable_toolchange_part_fan.get_at(idx); // skinnydip
-        m_filpar[idx].filament_toolchange_part_fan_speed  = config.filament_toolchange_part_fan_speed.get_at(idx);  // skinnydip
-        m_filpar[idx].filament_use_skinnydip              = config.filament_use_skinnydip.get_at(idx);              // skinnydip
-        m_filpar[idx].filament_use_fast_skinnydip         = config.filament_use_fast_skinnydip.get_at(idx);         // skinnydip
-        m_filpar[idx].filament_skinnydip_distance         = float(config.filament_skinnydip_distance.get_at(idx));  // skinnydip
-        m_filpar[idx].filament_melt_zone_pause            = config.filament_melt_zone_pause.get_at(idx);            // skinnydip
-        m_filpar[idx].filament_cooling_zone_pause         = config.filament_cooling_zone_pause.get_at(idx);         // skinnydip
-        m_filpar[idx].filament_dip_insertion_speed        = float(config.filament_dip_insertion_speed.get_at(idx)); // skinnydip
-        m_filpar[idx].filament_dip_extraction_speed       = float(config.filament_dip_extraction_speed.get_at(idx));// skinnydip
+        m_filpar[idx].filament_enable_toolchange_temp     = m_config->filament_enable_toolchange_temp.get_at(idx);     // skinnydip
+        m_filpar[idx].filament_toolchange_temp            = m_config->filament_toolchange_temp.get_at(idx);            // skinnydip
+        m_filpar[idx].filament_enable_toolchange_part_fan = m_config->filament_enable_toolchange_part_fan.get_at(idx); // skinnydip
+        m_filpar[idx].filament_toolchange_part_fan_speed  = m_config->filament_toolchange_part_fan_speed.get_at(idx);  // skinnydip
+        m_filpar[idx].filament_use_skinnydip              = m_config->filament_use_skinnydip.get_at(idx);              // skinnydip
+        m_filpar[idx].filament_use_fast_skinnydip         = m_config->filament_use_fast_skinnydip.get_at(idx);         // skinnydip
+        m_filpar[idx].filament_skinnydip_distance         = float(m_config->filament_skinnydip_distance.get_at(idx));  // skinnydip
+        m_filpar[idx].filament_melt_zone_pause            = m_config->filament_melt_zone_pause.get_at(idx);            // skinnydip
+        m_filpar[idx].filament_cooling_zone_pause         = m_config->filament_cooling_zone_pause.get_at(idx);         // skinnydip
+        m_filpar[idx].filament_dip_insertion_speed        = float(m_config->filament_dip_insertion_speed.get_at(idx)); // skinnydip
+        m_filpar[idx].filament_dip_extraction_speed       = float(m_config->filament_dip_extraction_speed.get_at(idx));// skinnydip
         //end_skinnydip
     }
 
-    m_filpar[idx].filament_area = float((M_PI/4.f) * pow(config.filament_diameter.get_at(idx), 2)); // all extruders are assumed to have the same filament diameter at this point
-    float nozzle_diameter = float(config.nozzle_diameter.get_at(idx));
+    m_filpar[idx].filament_area = float((M_PI/4.f) * pow(m_config->filament_diameter.get_at(idx), 2)); // all extruders are assumed to have the same filament diameter at this point
+    float nozzle_diameter = float(m_config->nozzle_diameter.get_at(idx));
     m_filpar[idx].nozzle_diameter = nozzle_diameter; // to be used in future with (non-single) multiextruder MM
 
-    float max_vol_speed = float(config.filament_max_volumetric_speed.get_at(idx));
+    float max_vol_speed = float(m_config->filament_max_volumetric_speed.get_at(idx));
     if (max_vol_speed!= 0.f)
         m_filpar[idx].max_e_speed = (max_vol_speed / filament_area());
 
+    m_nozzle_diameter = nozzle_diameter; // all extruders are now assumed to have the same diameter
     m_perimeter_width = nozzle_diameter * Width_To_Nozzle_Ratio; // all extruders are now assumed to have the same diameter
 
     if (m_semm) {
-        std::istringstream stream{config.filament_ramming_parameters.get_at(idx)};
+        std::istringstream stream{m_config->filament_ramming_parameters.get_at(idx)};
         float speed = 0.f;
         stream >> m_filpar[idx].ramming_line_width_multiplicator >> m_filpar[idx].ramming_step_multiplicator;
         m_filpar[idx].ramming_line_width_multiplicator /= 100;
@@ -849,27 +852,24 @@ WipeTower::ToolChangeResult WipeTower::toolchange_Brim(bool sideOnly, float y_of
 		Vec2f::Zero(),
 		m_wipe_tower_width,
 		m_wipe_tower_depth);
+    double unscaled_brim_width = m_config->wipe_tower_brim.get_abs_value(m_nozzle_diameter);
+    Slic3r::Flow brim_flow(m_config->first_layer_extrusion_width.get_abs_value(m_nozzle_diameter), m_layer_height, m_nozzle_diameter);
 
-	WipeTowerWriter writer(m_layer_height, m_brim_width, m_gcode_flavor, m_filpar);
-	writer.set_extrusion_flow(m_extrusion_flow * 1.1f)
-		  .set_z(m_z_pos) // Let the writer know the current Z position as a base for Z-hop.
-		  .set_initial_tool(m_current_tool)
-		  .append(";-------------------------------------\n"
-				  "; CP WIPE TOWER FIRST LAYER BRIM START\n");
-
-	Vec2f initial_position = wipeTower_box.lu - Vec2f(m_brim_width * 6.f, 0);
-	writer.set_initial_position(initial_position, m_wipe_tower_width, m_wipe_tower_depth, m_internal_rotation);
-
-    writer.extrude_explicit(wipeTower_box.ld - Vec2f(m_brim_width * 6.f, 0), // Prime the extruder left of the wipe tower.
-        1.5f * m_extrusion_flow * (wipeTower_box.lu.y() - wipeTower_box.ld.y()), 2400);
+    WipeTowerWriter writer(m_layer_height, brim_flow.width, m_gcode_flavor, m_filpar);
+    std::cout << "flow from " << (m_extrusion_flow * 1.1f) << " to " << brim_flow.mm3_per_mm() << "\n";
+    writer.set_extrusion_flow(brim_flow.mm3_per_mm())
+          .set_z(m_z_pos) // Let the writer know the current Z position as a base for Z-hop.
+          .set_initial_tool(m_current_tool)
+          .append(";-------------------------------------\n"
+              "; CP WIPE TOWER FIRST LAYER BRIM START\n");
 
     // The tool is supposed to be active and primed at the time when the wipe tower brim is extruded.
-    // Extrude 4 rounds of a brim around the future wipe tower.
+    // Extrude X rounds of a brim around the future wipe tower.
     box_coordinates box(wipeTower_box);
+    box.expand(brim_flow.spacing()- brim_flow.width); // ensure that the brim is attached to the wipe tower
     // the brim shall have 'normal' spacing with no extra void space
-    float spacing = m_brim_width - m_layer_height*float(1.-M_PI_4);
-    for (size_t i = 0; i < 4; ++ i) {
-        box.expand(spacing);
+    for (float i = 0; i < unscaled_brim_width; i += brim_flow.spacing()) {
+        box.expand(brim_flow.spacing());
         writer.travel (box.ld, 7000)
                 .extrude(box.lu, 2100).extrude(box.ru)
                 .extrude(box.rd      ).extrude(box.ld);
@@ -883,7 +883,7 @@ WipeTower::ToolChangeResult WipeTower::toolchange_Brim(bool sideOnly, float y_of
 
     // Save actual brim width to be later passed to the Print object, which will use it
     // for skirt calculation and pass it to GLCanvas for precise preview box
-    m_wipe_tower_brim_width = wipeTower_box.ld.x() - box.ld.x() + spacing/2.f;
+    m_wipe_tower_brim_width = wipeTower_box.ld.x() - box.ld.x() + brim_flow.spacing() /2.f;
 
     m_print_brim = false;  // Mark the brim as extruded
 

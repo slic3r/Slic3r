@@ -247,6 +247,7 @@ group:Wipe tower
 		setting:label_width$3:width$5:sidetext$mm:wipe_tower_x
 		setting:label_width$3:width$5:sidetext$mm:wipe_tower_y
 	end_line
+	setting:wipe_tower_brim
 	setting:wipe_tower_width
 	setting:wipe_tower_rotation_angle
 	setting:wipe_tower_bridging

@@ -234,7 +234,8 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             || opt_key == "cooling_tube_retraction"
             || opt_key == "cooling_tube_length"
             || opt_key == "extra_loading_move"
-            || opt_key == "z_offset") {
+            || opt_key == "z_offset"
+            || opt_key == "wipe_tower_brim") {
             steps.emplace_back(psWipeTower);
             steps.emplace_back(psSkirt);
         }
@@ -2380,10 +2381,10 @@ const WipeTowerData& Print::wipe_tower_data(size_t extruders_cnt, double first_l
     if (! is_step_done(psWipeTower) && extruders_cnt !=0) {
 
         float width = float(m_config.wipe_tower_width);
-        float brim_spacing = float(nozzle_diameter * 1.25f - first_layer_height * (1. - M_PI_4));
+		float unscaled_brim_width = m_config.wipe_tower_brim.get_abs_value(nozzle_diameter);
 
         const_cast<Print*>(this)->m_wipe_tower_data.depth = (900.f/width) * float(extruders_cnt - 1);
-        const_cast<Print*>(this)->m_wipe_tower_data.brim_width = 4.5f * brim_spacing;
+        const_cast<Print*>(this)->m_wipe_tower_data.brim_width = unscaled_brim_width;
     }
 
     return m_wipe_tower_data;
@@ -2457,8 +2458,7 @@ void Print::_make_wipe_tower()
 
     // Set the extruder & material properties at the wipe tower object.
     for (size_t i = 0; i < number_of_extruders; ++i)
-
-        wipe_tower.set_extruder(i, m_config);
+        wipe_tower.set_extruder(i);
 
     m_wipe_tower_data.priming = Slic3r::make_unique<std::vector<WipeTower::ToolChangeResult>>(
         wipe_tower.prime((float)this->skirt_first_layer_height(), m_wipe_tower_data.tool_ordering.all_extruders(), false));

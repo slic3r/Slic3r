@@ -496,6 +496,7 @@ const std::vector<std::string>& Preset::print_options()
         "hole_to_polyhole",
         "threads", "resolution",
         "wipe_tower", "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_bridging",
+        "wipe_tower_brim",
         "single_extruder_multi_material_priming", 
         "wipe_tower_no_sparse_layers",
         "compatible_printers", "compatible_printers_condition", "inherits", 

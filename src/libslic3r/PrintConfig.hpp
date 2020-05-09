@@ -1029,6 +1029,7 @@ public:
     ConfigOptionInts                top_fan_speed;
     ConfigOptionBools               wipe;
     ConfigOptionBool                wipe_tower;
+    ConfigOptionFloatOrPercent      wipe_tower_brim;
     ConfigOptionFloat               wipe_tower_x;
     ConfigOptionFloat               wipe_tower_y;
     ConfigOptionFloat               wipe_tower_width;
@@ -1108,6 +1109,7 @@ protected:
         OPT_PTR(top_fan_speed);
         OPT_PTR(wipe);
         OPT_PTR(wipe_tower);
+        OPT_PTR(wipe_tower_brim);
         OPT_PTR(wipe_tower_x);
         OPT_PTR(wipe_tower_y);
         OPT_PTR(wipe_tower_width);

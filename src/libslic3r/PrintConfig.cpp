@@ -3206,6 +3206,12 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionEnum<WipeAlgo>(waLinear));
 
+    def = this->add("wipe_tower_brim", coFloatOrPercent);
+    def->label = L("Wipe tower brim width");
+    def->tooltip = L("Width of the brim for the wipe tower. Can be in mm of in % of the (assumed) only one nozzle diameter.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(150,true));
+
     def = this->add("wipe_tower_x", coFloat);
     def->label = L("X");
     def->full_label = L("Wipe tower X");
