@@ -369,11 +369,9 @@ void PerimeterGenerator::process()
                     // look for thin walls
                      if (this->config->thin_walls) {
                         // detect edge case where a curve can be split in multiple small chunks.
-                        ExPolygons no_thin_onion = offset_ex(last, double( - ext_perimeter_width / 2));
                         std::vector<float> divs = {2.2,1.75,1.5}; //don't go too far, it's not possible to print thinw wall after that
                         size_t idx_div = 0;
-                        while (no_thin_onion.size() > 0 && next_onion.size() > no_thin_onion.size() && next_onion.size() > 2 
-                            && idx_div < divs.size() ) {
+                        while (next_onion.size() > last.size() && idx_div < divs.size()) {
                             float div = divs[idx_div];
                             //use a sightly bigger spacing to try to drastically improve the split, that can lead to very thick gapfill
                             ExPolygons next_onion_secondTry = offset2_ex(
@@ -438,9 +436,13 @@ void PerimeterGenerator::process()
                         // it's a bit like re-add thin area in to perimeter area.
                         // it can over-extrude a bit, but it's for a better good.
                         {
-                            next_onion = offset2_ex(diff_ex(last, thins, true), 
-                                -(float)((ext_perimeter_width / 2) + (ext_min_spacing / 4)), 
-                                (float)(ext_min_spacing / 4));
+                            if(config->thin_perimeters)
+                                next_onion = union_ex(next_onion, offset_ex(diff_ex(last, thins, true),
+                                    -(float)(ext_perimeter_width / 2)));
+                            else
+                                next_onion = union_ex(next_onion, offset2_ex(diff_ex(last, thins, true),
+                                    -(float)((ext_perimeter_width / 2) + (ext_min_spacing / 4)), 
+                                    (float)(ext_min_spacing / 4)));
                         }
                     }
                 } else {
@@ -694,17 +696,20 @@ void PerimeterGenerator::process()
                     if (expoly_after_shrink_test.size() > 1) {
                         //remove too small bits
                         for (int i = 0; i < expoly_after_shrink_test.size(); i++)
-                            if (offset_ex(ExPolygons{ expoly_after_shrink_test[i] }, min*0.5)[0].area() < minarea) {
+                            if (expoly_after_shrink_test[i].area() < (SCALED_EPSILON*SCALED_EPSILON * 4)
+                                    || offset_ex(ExPolygons{ expoly_after_shrink_test[i] }, min*0.5)[0].area() < minarea) {
                                 expoly_after_shrink_test.erase(expoly_after_shrink_test.begin() + i);
                                 i--;
                             }
                         //maybe some areas are a just bit too thin, try with just a little more offset to remove them.
                         ExPolygons expoly_after_shrink_test2 = offset_ex(ExPolygons{ expoly }, double(-min *0.8));
-                        for (int i = 0; i < expoly_after_shrink_test2.size(); i++)
-                            if (offset_ex(ExPolygons{ expoly_after_shrink_test2[i] }, min*0.5)[0].area() < minarea) {
+                        for (int i = 0; i < expoly_after_shrink_test2.size(); i++) {
+                            if (expoly_after_shrink_test2[i].area() < (SCALED_EPSILON*SCALED_EPSILON * 4)
+                                    || offset_ex(ExPolygons{ expoly_after_shrink_test2[i] }, min*0.5)[0].area() < minarea) {
                                 expoly_after_shrink_test2.erase(expoly_after_shrink_test2.begin() + i);
                                 i--;
                             }
+                        }
                         //it's better if there are significantly less extrusions
                         if (expoly_after_shrink_test.size()/1.42 > expoly_after_shrink_test2.size()) {
                             expoly_after_shrink_test2 = offset_ex(expoly_after_shrink_test2, double(min * 0.8));
