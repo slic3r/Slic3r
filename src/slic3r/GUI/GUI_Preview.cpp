@@ -198,10 +198,25 @@ Preview::Preview(
     }
 }
 
+enum ScreenWidth {
+    large,
+    medium,
+    tiny
+};
+
 bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view_toolbar, Model* model)
 {
     if (!Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0 /* disable wxTAB_TRAVERSAL */))
         return false;
+
+    //get display size to see if we have to compress the labels
+    wxDisplay display(wxDisplay::GetFromWindow(parent));
+    wxRect screen = display.GetClientArea();
+    ScreenWidth width_screen = ScreenWidth::large;
+    if (screen.width < 1900)
+        width_screen = ScreenWidth::medium;
+    if (screen.width < 1600)
+        width_screen = ScreenWidth::tiny;
 
     m_canvas_widget = GLCanvas3DManager::create_wxglcanvas(this);
     _3DScene::add_canvas(m_canvas_widget, bed, camera, view_toolbar);
@@ -219,21 +234,21 @@ bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view
     m_label_view_type = new wxStaticText(this, wxID_ANY, _(L("View")));
 
     m_choice_view_type = new wxChoice(this, wxID_ANY);
-    m_choice_view_type->Append(_(L("Feature type")));
+    m_choice_view_type->Append(_(L(width_screen == tiny ? "Feature": "Feature type")));
     m_choice_view_type->Append(_(L("Height")));
     m_choice_view_type->Append(_(L("Width")));
     m_choice_view_type->Append(_(L("Speed")));
-    m_choice_view_type->Append(_(L("Fan speed")));
-    m_choice_view_type->Append(_(L("Volumetric flow rate")));
+    m_choice_view_type->Append(_(L(width_screen == tiny ? "Fan" : "Fan speed")));
+    m_choice_view_type->Append(_(L(width_screen == tiny ? "Vol. flow" :"Volumetric flow rate")));
     m_choice_view_type->Append(_(L("Tool")));
     m_choice_view_type->Append(_(L("Filament")));
-    m_choice_view_type->Append(_(L("Color Print")));
+    m_choice_view_type->Append(_(L(width_screen == tiny ? "Color":"Color Print")));
     m_choice_view_type->SetSelection(0);
 
     m_label_show_features = new wxStaticText(this, wxID_ANY, _(L("Show")));
-
     m_combochecklist_features = new wxComboCtrl();
-    m_combochecklist_features->Create(this, wxID_ANY, _(L("Extrusion type")), wxDefaultPosition, wxSize(35 * wxGetApp().em_unit(), -1), wxCB_READONLY);
+    m_combochecklist_features->Create(this, wxID_ANY, _(L("Extrusion type")), wxDefaultPosition, 
+        wxSize((width_screen == large ? 35: (width_screen == medium ?20:15)) * wxGetApp().em_unit(), -1), wxCB_READONLY);
     std::string feature_text = GUI::into_u8(_(L("Feature types")));
     std::string feature_items = GUI::into_u8(
         _(L("Perimeter")) + "|" +
@@ -246,15 +261,15 @@ bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view
         _(L("Gap fill")) + "|" +
         _(L("Skirt")) + "|" +
         _(L("Support material")) + "|" +
-        _(L("Support material interface")) + "|" +
+        _(L(width_screen == large? "Support material interface": "Sup. mat. interface")) + "|" +
         _(L("Wipe tower")) + "|" +
         _(L("Custom"))
     );
     Slic3r::GUI::create_combochecklist(m_combochecklist_features, feature_text, feature_items, true);
 
     m_checkbox_travel = new wxCheckBox(this, wxID_ANY, _(L("Travel")));
-    m_checkbox_retractions = new wxCheckBox(this, wxID_ANY, _(L("Retractions")));
-    m_checkbox_unretractions = new wxCheckBox(this, wxID_ANY, _(L("Unretractions")));
+    m_checkbox_retractions = new wxCheckBox(this, wxID_ANY, _(L(width_screen == tiny ? "Retr." : "Retractions")));
+    m_checkbox_unretractions = new wxCheckBox(this, wxID_ANY, _(L(width_screen == tiny ? "Unre." : "Unretractions")));
     m_checkbox_shells = new wxCheckBox(this, wxID_ANY, _(L("Shells")));
     m_checkbox_legend = new wxCheckBox(this, wxID_ANY, _(L("Legend")));
     m_checkbox_legend->SetValue(true);
