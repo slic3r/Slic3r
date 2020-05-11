@@ -3255,9 +3255,19 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::wipe;
     def->label = L("Wipe into this object");
     def->tooltip = L("Object will be used to purge the nozzle after a toolchange to save material "
-                     "that would otherwise end up in the wipe tower and decrease print time. "
-                     "Colours of the objects will be mixed as a result.");
+        "that would otherwise end up in the wipe tower and decrease print time. "
+        "Colours of the objects will be mixed as a result.");
     def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("wipe_extra_perimeter", coFloats);
+    def->category = OptionCategory::extruders;
+    def->label = L("Extra Wipe for external perimeters");
+    def->tooltip = L("When the external perimeter loop extrusion end, a wipe is done, going a bit inside the print."
+        " The number put in this setting increase the wipe by moving the nozzle again along the loop before the final wipe.");
+    def->min = 0;
+    def->sidetext = L("mm");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloats{ 0.f });
 
     def = this->add("wipe_tower_bridging", coFloat);
     def->label = L("Maximal bridging distance");
@@ -3353,6 +3363,7 @@ void PrintConfigDef::init_extruder_option_keys()
         "retract_restart_extra",
         "retract_before_travel",
         "wipe",
+		"wipe_extra_perimeter",
         "retract_layer_change",
         "retract_length_toolchange",
         "retract_restart_extra_toolchange",

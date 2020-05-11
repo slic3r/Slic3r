@@ -2975,6 +2975,7 @@ void TabPrinter::build_unregular_pages()
             optgroup->append_single_option_line("retract_layer_change", extruder_idx);
             optgroup->append_single_option_line("wipe", extruder_idx);
             optgroup->append_single_option_line("retract_before_wipe", extruder_idx);
+            optgroup->append_single_option_line("wipe_extra_perimeter", extruder_idx);
 
             optgroup = page->new_optgroup(_(L("Retraction when tool is disabled (advanced settings for multi-extruder setups)")));
             optgroup->append_single_option_line("retract_length_toolchange", extruder_idx);

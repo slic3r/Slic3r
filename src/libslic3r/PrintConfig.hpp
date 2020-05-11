@@ -860,6 +860,7 @@ public:
     ConfigOptionBool                wipe_advanced;
     ConfigOptionFloat               wipe_advanced_nozzle_melted_volume;
     ConfigOptionFloat               wipe_advanced_multiplier;
+    ConfigOptionFloats              wipe_extra_perimeter;
     ConfigOptionEnum<WipeAlgo>               wipe_advanced_algo;
 
     std::string get_extrusion_axis() const
@@ -954,6 +955,7 @@ protected:
         OPT_PTR(wipe_advanced_nozzle_melted_volume);
         OPT_PTR(wipe_advanced_multiplier);
         OPT_PTR(wipe_advanced_algo);
+        OPT_PTR(wipe_extra_perimeter);
     }
 };
 

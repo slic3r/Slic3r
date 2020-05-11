@@ -3117,7 +3117,6 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         //exclude if min_layer_height * 2 > layer_height (increase from 2 to 3 because it's working but uses in-between)
         && this->m_layer->height >= EXTRUDER_CONFIG(min_layer_height) * 2 - EPSILON
         ) {
-        std::cout << " ok, loop vase @"<< this->m_layer->id()<<", "<< this->m_layer->print_z<<"\n";
         return extrude_loop_vase(original_loop, description, speed, lower_layer_edge_grid);
     }
 
@@ -3189,21 +3188,65 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     
     if (m_wipe.enable)
         m_wipe.path = paths.front().polyline;  // TODO: don't limit wipe to last path
-    
-    // make a little move inwards before leaving loop
-	if (paths.back().role() == erExternalPerimeter && m_layer != NULL && m_config.perimeters.value > 1 && paths.front().size() >= 2 && paths.back().polyline.points.size() >= 3) {
+
+    //wipe for External Perimeter
+    if (paths.back().role() == erExternalPerimeter && m_layer != NULL && m_config.perimeters.value > 1 && paths.front().size() >= 2 && paths.back().polyline.points.size() >= 2) {
+        //get points for wipe
+        Point prev_point = *(paths.back().polyline.points.end() - 2);       // second to last point
+        // *(paths.back().polyline.points.end() - 2) this is the same as (or should be) as paths.front().first_point();
+        Point current_point = paths.front().first_point();
+        Point next_point = paths.front().polyline.points[1];  // second point
+
+        //extra wipe before the little move.
+        if (EXTRUDER_CONFIG(wipe_extra_perimeter) > 0) {
+            coord_t wipe_dist = scale_(EXTRUDER_CONFIG(wipe_extra_perimeter));
+            ExtrusionPaths paths_wipe;
+            for (int i = 0; i < paths.size(); i++) {
+                ExtrusionPath& path = paths[i];
+                if (path.length() < wipe_dist) {
+                    wipe_dist -= path.length();
+                    paths_wipe.push_back(path);
+                } else {
+                    paths_wipe.push_back(path);
+                    paths_wipe.back().clip_end(path.length() - wipe_dist);
+
+                    ExtrusionPath next_point_path = path;
+                    next_point_path.reverse();
+                    next_point_path.clip_end(wipe_dist);
+                    next_point_path.reverse();
+                    if (next_point_path.size() > 1) {
+                        next_point = next_point_path.polyline.points[1];
+                    } else if (i + 1 < paths.size()) {
+                        next_point = paths[i + 1].first_point();
+                    } else {
+                        next_point = paths[0].first_point();
+                    }
+                    break;
+                }
+            }
+            //move
+            for (ExtrusionPath& path : paths_wipe) {
+                for (Point& pt : path.polyline.points) {
+                    prev_point = current_point;
+                    current_point = pt;
+                    gcode += m_writer.travel_to_xy(this->point_to_gcode(pt), config().gcode_comments ? "; extra wipe" : "");
+                }
+            }
+        }
+
+        // make a little move inwards before leaving loop
+
         // detect angle between last and first segment
         // the side depends on the original winding order of the polygon (left for contours, right for holes)
-		//FIXME improve the algorithm in case the loop is tiny.
-		//FIXME improve the algorithm in case the loop is split into segments with a low number of points (see the Point b query).
-        Point a = paths.front().polyline.points[1];  // second point
-        Point b = *(paths.back().polyline.points.end()-3);       // second to last point
+        //FIXME improve the algorithm in case the loop is tiny.
+        //FIXME improve the algorithm in case the loop is split into segments with a low number of points (see the Point b query).
+        Point a = next_point;  // second point
+        Point b = prev_point;  // second to last point
         if (is_hole_loop ? loop.polygon().is_counter_clockwise() : loop.polygon().is_clockwise()) {
             // swap points
             Point c = a; a = b; b = c;
         }
-        
-        double angle = paths.front().first_point().ccw_angle(a, b) / 3;
+        double angle = current_point.ccw_angle(a, b) / 3;
         
         // turn left if contour, turn right if hole
         if (is_hole_loop ? loop.polygon().is_counter_clockwise() : loop.polygon().is_clockwise()) angle *= -1;
@@ -3211,15 +3254,15 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         // create the destination point along the first segment and rotate it
         // we make sure we don't exceed the segment length because we don't know
         // the rotation of the second segment so we might cross the object boundary
-        Vec2d  p1 = paths.front().polyline.points.front().cast<double>();
-        Vec2d  p2 = paths.front().polyline.points[1].cast<double>();
-        Vec2d  v  = p2 - p1;
+        Vec2d  current_pos = current_point.cast<double>();
+        Vec2d  next_pos = next_point.cast<double>();
+        Vec2d  vec_dist  = next_pos - current_pos;
         double nd = scale_(EXTRUDER_CONFIG(nozzle_diameter));
-        double l2 = v.squaredNorm();
+        double l2 = vec_dist.squaredNorm();
         // Shift by no more than a nozzle diameter.
         //FIXME Hiding the seams will not work nicely for very densely discretized contours!
-        Point  pt = ((nd * nd >= l2) ? p2 : (p1 + v * (nd / sqrt(l2)))).cast<coord_t>();
-        pt.rotate(angle, paths.front().polyline.points.front());
+        Point  pt = ((nd * nd >= l2) ? next_pos : (current_pos + vec_dist * (nd / sqrt(l2)))).cast<coord_t>();
+        pt.rotate(angle, current_point);
         // generate the travel move
         gcode += m_writer.travel_to_xy(this->point_to_gcode(pt), "move inwards before travel");
     }
