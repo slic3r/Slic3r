@@ -1335,7 +1335,8 @@ void GCode::_do_export(Print &print, FILE *file)
     this->print_machine_envelope(file, print);
 
     // Disable fan.
-    if (! print.config().cooling.get_at(initial_extruder_id) || print.config().disable_fan_first_layers.get_at(initial_extruder_id))
+    if ( (! print.config().cooling.get_at(initial_extruder_id) || print.config().disable_fan_first_layers.get_at(initial_extruder_id))
+        && config().gcode_flavor != gcfKlipper)
         _write(file, m_writer.set_fan(0, true));
 
     // Let the start-up script prime the 1st printing tool.
@@ -1702,7 +1703,7 @@ void GCode::_print_first_layer_bed_temperature(FILE *file, Print &print, const s
     // Always call m_writer.set_bed_temperature() so it will set the internal "current" state of the bed temp as if
     // the custom start G-code emited these.
     std::string set_temp_gcode = m_writer.set_bed_temperature(temp, wait);
-    if (! temp_set_by_gcode)
+    if ( !temp_set_by_gcode && this->config().gcode_flavor != gcfKlipper)
         _write(file, set_temp_gcode);
 }
 
@@ -1720,7 +1721,7 @@ void GCode::_print_first_layer_extruder_temperatures(FILE *file, Print &print, c
         if (temp_by_gcode >= 0 && temp_by_gcode < 1000)
             temp = temp_by_gcode;
         m_writer.set_temperature(temp, wait, first_printing_extruder_id);
-    } else {
+    } else if(this->config().gcode_flavor != gcfKlipper){
         // Custom G-code does not set the extruder temperature. Do it now.
         if (print.config().single_extruder_multi_material.value) {
             // Set temperature of the first printing extruder only.
