@@ -597,6 +597,7 @@ public:
     ConfigOptionBool                external_perimeters_hole;
     ConfigOptionBool                extra_perimeters;
     ConfigOptionBool                extra_perimeters_odd_layers;
+    ConfigOptionBool                extra_perimeters_overhangs;
     ConfigOptionBool                only_one_perimeter_top;
     ConfigOptionFloat               fill_angle;
     ConfigOptionPercent             fill_density;
@@ -620,6 +621,8 @@ public:
     // Detect bridging perimeters
     ConfigOptionBool                overhangs;
     ConfigOptionFloatOrPercent      overhangs_width;
+    ConfigOptionBool                overhangs_reverse;
+    ConfigOptionFloatOrPercent      overhangs_reverse_threshold;
     ConfigOptionEnum<NoPerimeterUnsupportedAlgo> no_perimeter_unsupported_algo;
     ConfigOptionInt                 perimeter_extruder;
     ConfigOptionFloatOrPercent      perimeter_extrusion_width;
@@ -675,6 +678,7 @@ protected:
         OPT_PTR(external_perimeters_hole);
         OPT_PTR(extra_perimeters);
         OPT_PTR(extra_perimeters_odd_layers);
+        OPT_PTR(extra_perimeters_overhangs);
         OPT_PTR(only_one_perimeter_top);
         OPT_PTR(fill_angle);
         OPT_PTR(fill_density);
@@ -697,6 +701,8 @@ protected:
         OPT_PTR(infill_first);
         OPT_PTR(overhangs);
         OPT_PTR(overhangs_width);
+        OPT_PTR(overhangs_reverse);
+        OPT_PTR(overhangs_reverse_threshold);
 		OPT_PTR(no_perimeter_unsupported_algo);
         OPT_PTR(perimeter_extruder);
         OPT_PTR(perimeter_extrusion_width);

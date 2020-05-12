@@ -144,6 +144,7 @@ void Layer::make_perimeters()
                 && config.external_perimeters_nothole == other_config.external_perimeters_nothole
                 && config.external_perimeter_speed  == other_config.external_perimeter_speed
                 && config.extra_perimeters_odd_layers == other_config.extra_perimeters_odd_layers
+                && config.extra_perimeters_overhangs == other_config.extra_perimeters_overhangs
                 && config.gap_fill                  == other_config.gap_fill
                 && config.gap_fill_min_area         == other_config.gap_fill_min_area
                 && config.gap_fill_speed            == other_config.gap_fill_speed
@@ -153,6 +154,8 @@ void Layer::make_perimeters()
                 && config.only_one_perimeter_top    == other_config.only_one_perimeter_top
                 && config.overhangs                 == other_config.overhangs
                 && config.overhangs_width           == other_config.overhangs_width
+                && config.overhangs_reverse         == other_config.overhangs_reverse
+                && config.overhangs_reverse_threshold == other_config.overhangs_reverse_threshold
                 && config.perimeter_extrusion_width == other_config.perimeter_extrusion_width
                 && config.perimeter_loop            == other_config.perimeter_loop
                 && config.perimeter_loop_seam       == other_config.perimeter_loop_seam

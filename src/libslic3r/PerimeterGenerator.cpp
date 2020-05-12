@@ -295,8 +295,8 @@ void PerimeterGenerator::process()
 
             // Add perimeters on overhangs : initialization
             ExPolygons overhangs_unsupported;
-            if (this->config->extra_perimeters && !last.empty()
-                && this->lower_slices != NULL  && !this->lower_slices->empty()) {
+            if ( (this->config->extra_perimeters_overhangs || (this->config->overhangs_reverse && this->layer_id % 2 == 1))
+                && !last.empty()  && this->lower_slices != NULL  && !this->lower_slices->empty()) {
                 //remove holes from lower layer, we only ant that for overhangs, not bridges!
                 ExPolygons lower_without_holes;
                 for (const ExPolygon &exp : *this->lower_slices)
@@ -330,6 +330,18 @@ void PerimeterGenerator::process()
                     }
                 }
             }
+            bool has_steep_overhang = false;
+            if (this->layer_id % 2 == 1 && this->config->overhangs_reverse //check if my option is set and good layer
+                && !last.empty() && !overhangs_unsupported.empty() //has something to work with
+                ) {
+                coord_t offset = scale_(config->overhangs_reverse_threshold.get_abs_value(this->perimeter_flow.width));
+                //version with °: scale_(std::tan(PI * (0.5f / 90) * config->overhangs_reverse_threshold.value ) * this->layer_height)
+
+                if (offset_ex(overhangs_unsupported, -offset / 2).size() > 0) {
+                    //allow this loop to be printed in reverse
+                    has_steep_overhang = true;
+                }
+            }
 
             // In case no perimeters are to be generated, loop_number will equal to -1.            
             std::vector<PerimeterGeneratorLoops> contours(loop_number+1);    // depth => loops
@@ -341,10 +353,10 @@ void PerimeterGenerator::process()
                 // We can add more perimeters if there are uncovered overhangs
                 // improvement for future: find a way to add perimeters only where it's needed.
                 bool has_overhang = false;
-                if (this->config->extra_perimeters && !last.empty() && !overhangs_unsupported.empty()) {
+                if ( this->config->extra_perimeters_overhangs && !last.empty() && !overhangs_unsupported.empty()) {
                     overhangs_unsupported = intersection_ex(overhangs_unsupported, last, true);
                     if (overhangs_unsupported.size() > 0) {
-                        //add fake perimeters here
+                        //please don't stop adding periemter yet.
                         has_overhang = true;
                     }
                 }
@@ -512,11 +524,11 @@ void PerimeterGenerator::process()
 
                 for (const ExPolygon &expolygon : next_onion) {
                     //TODO: add width here to allow variable width (if we want to extrude a sightly bigger perimeter, see thin wall)
-                    contours[i].emplace_back(PerimeterGeneratorLoop(expolygon.contour, i, true, has_overhang));
+                    contours[i].emplace_back(expolygon.contour, i, true, has_steep_overhang);
                     if (! expolygon.holes.empty()) {
                         holes[i].reserve(holes[i].size() + expolygon.holes.size());
                         for (const Polygon &hole : expolygon.holes)
-                            holes[i].emplace_back(PerimeterGeneratorLoop(hole, i, false, has_overhang));
+                            holes[i].emplace_back(hole, i, false, has_steep_overhang);
                     }
                 }
                 last = std::move(next_onion);
@@ -889,7 +901,8 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
             ExtrusionLoop *eloop = static_cast<ExtrusionLoop*>(coll.entities[idx.first]);
             coll.entities[idx.first] = nullptr;
             if (loop.is_contour) {
-                if (loop.is_overhang && this->layer_id % 2 == 1)
+                //note: this->layer_id % 2 == 1 already taken into account in the is_steep_overhang compute (to save time).
+                if (loop.is_steep_overhang && this->layer_id % 2 == 1)
                     eloop->make_clockwise();
                 else
                     eloop->make_counter_clockwise();

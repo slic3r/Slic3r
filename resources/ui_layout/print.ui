@@ -15,12 +15,12 @@ group:Horizontal shells
 	end_line
 	top_bottom_shell_thickness_explanation
 	setting:enforce_full_fill_volume
-group:Quality (slower slicing)
+group:Quality
+	setting:only_one_perimeter_top
 	line:Extra perimeters
-		setting:extra_perimeters
+		setting:extra_perimeters_overhangs
 		setting:extra_perimeters_odd_layers
 	end_line
-	setting:only_one_perimeter_top
 	setting:ensure_vertical_shell_thickness
 	line:Avoid crossing perimeters
 		setting:label$:avoid_crossing_perimeters
@@ -32,12 +32,17 @@ group:Quality (slower slicing)
 		setting:width$5:thin_walls_min_width
 		setting:width$5:thin_walls_overlap
 	end_line
-	line:Overhangs
-		setting:overhangs
+group:Overhangs
+	line:On perimeters
+		setting:sidetext_width$1:overhangs
 		setting:width$5:overhangs_width
 	end_line
-	setting:no_perimeter_unsupported_algo
+	line:Extrusion direction
+		setting:sidetext_width$1:overhangs_reverse
+		setting:width$5:overhangs_reverse_threshold
+	end_line
 group:Advanced
+	setting:no_perimeter_unsupported_algo
 	line:Gap Fill
 		setting:gap_fill
 		setting:width$5:gap_fill_min_area

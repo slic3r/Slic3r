@@ -29,7 +29,7 @@ public:
     // Contours are CCW oriented, holes are CW oriented.
     bool is_contour;
     //overhang may need to be reversed
-    bool is_overhang;
+    bool is_steep_overhang;
     // Depth in the hierarchy. External perimeter has depth = 0. An external perimeter could be both a contour and a hole.
     unsigned short depth;
     // Children contour, may be both CCW and CW oriented (outer contours or holes).
@@ -37,9 +37,9 @@ public:
 
 
     PerimeterGeneratorLoop(Polygon polygon, unsigned short depth, bool is_contour) :
-        polygon(polygon), is_contour(is_contour), depth(depth), is_overhang(false) {}
-    PerimeterGeneratorLoop(Polygon polygon, unsigned short depth, bool is_contour, bool is_overhang) :
-        polygon(polygon), is_contour(is_contour), depth(depth), is_overhang(is_overhang) {}
+        polygon(polygon), is_contour(is_contour), depth(depth), is_steep_overhang(false) {}
+    PerimeterGeneratorLoop(Polygon polygon, unsigned short depth, bool is_contour, bool is_steep_overhang) :
+        polygon(polygon), is_contour(is_contour), depth(depth), is_steep_overhang(is_steep_overhang) {}
     // External perimeter. It may be CCW or CW oriented (outer contour or hole contour).
     bool is_external() const { return this->depth == 0; }
     // An island, which may have holes, but it does not have another internal island.

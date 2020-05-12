@@ -294,10 +294,15 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
 void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 {
     bool have_perimeters = config->opt_int("perimeters") > 0;
-    for (auto el : { "extra_perimeters", "extra_perimeters_odd_layers", "only_one_perimeter_top", "ensure_vertical_shell_thickness", "thin_walls", "overhangs",
+    for (auto el : { "extra_perimeters", "extra_perimeters_overhangs", "extra_perimeters_odd_layers",
+        "only_one_perimeter_top", "ensure_vertical_shell_thickness", "thin_walls", 
+        "overhangs", "overhangs_reverse",
         "seam_position", "external_perimeters_first", "external_perimeters_vase", "external_perimeter_extrusion_width",
         "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "perimeter_loop", "perimeter_loop_seam" })
         toggle_field(el, have_perimeters);
+
+    toggle_field("overhangs_width", config->opt_bool("overhangs"));
+    toggle_field("overhangs_reverse_threshold", config->opt_bool("overhangs_reverse"));
 
     for (auto el : { "external_perimeters_vase", "external_perimeters_nothole", "external_perimeters_hole"})
         toggle_field(el, config->opt_bool("external_perimeters_first"));

@@ -761,12 +761,24 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("extra_perimeters", coBool);
     def->label = L("filling horizontal gaps on slopes");
-    def->full_label = L("Extra perimeters if needed");
+    def->full_label = L("Extra perimeters (do nothing)");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Add more perimeters when needed for avoiding gaps in sloping walls. "
         "Slic3r keeps adding perimeters, until more than 70% of the loop immediately above "
-        "is supported, and keep adding periemter until all overhangs are filled."
-        "\n!! this is a very slow algorithm !!");
+        "is supported."
+        "\nIf you succeed to trigger the algorihtm behind this setting, please send me a message."
+        " Personally, i think it's useless.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("extra_perimeters_overhangs", coBool);
+    def->label = L("on overhangs");
+    def->full_label = L("Extra perimeters in overhangs");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("Add more perimeters when needed for avoiding gaps in sloping walls. "
+        "Slic3r keeps adding periemter until all overhangs are filled."
+        "\n!! this is a very slow algorithm !!"
+        "\nIf you use this setting, consider strongly using also overhangs_reverse.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
@@ -2030,12 +2042,30 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(true));
 
     def = this->add("overhangs_width", coFloatOrPercent);
-    def->label = L("Threshold");
-    def->full_label = L("Overhang Threshold");
+    def->label = L("As bridge threshold");
+    def->full_label = L("Overhang bridge threshold");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Minimum unsupported width for an extrusion to be considered an overhang. Can be in mm or in a % of the nozzle diameter.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
+
+    def = this->add("overhangs_reverse", coBool);
+    def->label = L("Reverse on odd");
+    def->full_label = L("Overhang reversal");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("Extrude perimeters that have a part over an overhang in the reverse direction in odd layers. That alternating pattern can drastically improve steep overhang."
+        "\n!! this is a very slow algorithm (it uses the same results as extra_perimeters_overhangs) !!");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("overhangs_reverse_threshold", coFloatOrPercent);
+    def->label = L("Reverse threshold");
+    def->full_label = L("Overhang reversal threshold");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("Number of mm the overhang need to be for the reversal to be considered useful. Can be a % of the periemter width.");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(250, true));
 
     def = this->add("no_perimeter_unsupported_algo", coEnum);
     def->label = L("No perimeters on bridge areas");
