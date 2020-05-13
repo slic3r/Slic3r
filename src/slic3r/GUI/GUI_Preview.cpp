@@ -20,6 +20,7 @@
 #include <wx/choice.h>
 #include <wx/combo.h>
 #include <wx/checkbox.h>
+#include <wx/display.h>
 
 // this include must follow the wxWidgets ones or it won't compile on Windows -> see http://trac.wxwidgets.org/ticket/2421
 #include "libslic3r/Print.hpp"
@@ -210,7 +211,9 @@ bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view
         return false;
 
     //get display size to see if we have to compress the labels
-    wxDisplay display(wxDisplay::GetFromWindow(parent));
+
+    const auto idx = wxDisplay::GetFromWindow(parent);
+    wxDisplay display(idx != wxNOT_FOUND ? idx : 0u);
     wxRect screen = display.GetClientArea();
     ScreenWidth width_screen = ScreenWidth::large;
     if (screen.width < 1900)
