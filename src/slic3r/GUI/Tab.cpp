@@ -1986,6 +1986,7 @@ void TabFilament::add_filament_overrides_page()
                                         "filament_retract_before_travel",
                                         "filament_retract_layer_change",
                                         "filament_wipe",
+                                        "filament_wipe_extra_perimeter",
                                         "filament_retract_before_wipe"
                                      })
         append_single_option_line(opt_key, extruder_idx);
@@ -2013,6 +2014,7 @@ void TabFilament::update_filament_overrides_page()
                                             "filament_retract_before_travel",
                                             "filament_retract_layer_change",
                                             "filament_wipe",
+                                            "filament_wipe_extra_perimeter",
                                             "filament_retract_before_wipe"
                                         };
 

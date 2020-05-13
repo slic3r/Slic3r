@@ -3355,6 +3355,7 @@ void PrintConfigDef::init_fff_params()
     for (const char *opt_key : {
         // floats
         "retract_length", "retract_lift", "retract_lift_above", "retract_lift_below", "retract_speed", "deretract_speed", "retract_restart_extra", "retract_before_travel",
+        "wipe_extra_perimeter",
         // bools
         "retract_layer_change", "wipe",
         // percents
@@ -3414,7 +3415,8 @@ void PrintConfigDef::init_extruder_option_keys()
         "retract_lift_below",
         "retract_restart_extra",
         "retract_speed",
-        "wipe"
+        "wipe",
+        "wipe_extra_perimeter"
     };
     assert(std::is_sorted(m_extruder_retract_keys.begin(), m_extruder_retract_keys.end()));
 }
