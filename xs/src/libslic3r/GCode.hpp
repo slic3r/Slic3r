@@ -140,6 +140,7 @@ class GCode {
     
     private:
     Point _last_pos;
+    Pointf3 _cog;
     bool _last_pos_defined;
     std::string _extrude(ExtrusionPath path, std::string description = "", double speed = -1);
 };
