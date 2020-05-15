@@ -503,6 +503,12 @@ std::string GCodeWriter::lift()
         if (m_pos.z() >= above && (below == 0 || m_pos.z() <= below))
             target_lift = this->config.retract_lift.get_at(m_extruder->id());
     }
+
+    if (this->extra_lift > 0) {
+        target_lift += this->extra_lift;
+        this->extra_lift = 0;
+    }
+
     // compare against epsilon because travel_to_z() does math on it
     // and subtracting layer_height from retract_lift might not give
     // exactly zero

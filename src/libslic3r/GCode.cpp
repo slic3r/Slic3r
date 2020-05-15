@@ -2332,6 +2332,14 @@ void GCode::process_layer(
                     gcode += std::string("; printing object ") + instance_to_print.print_object.model_object()->name 
                         + " id:" + std::to_string(std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin()) 
                         + " copy " + std::to_string(instance_to_print.instance_id) + "\n";
+                //if first layer, ask for a bigger lift for travel to object, to be on the safe side
+                if (layer.id() == 0 && print.config().retract_lift.get_at(extruder_id) != 0) {
+                    //get biggest first layer height and set extra lift for first travel, to be safe.
+                    double extra_lift_value = 0;
+                    for (const PrintObject* obj : print.objects())
+                        extra_lift_value = std::max(extra_lift_value, obj->config().first_layer_height.get_abs_value(print.config().nozzle_diameter.get_at(0)));
+                    m_writer.set_extra_lift(extra_lift_value * 2);
+                }
                 // When starting a new object, use the external motion planner for the first travel move.
                 const Point &offset = instance_to_print.print_object.instances()[instance_to_print.instance_id].shift;
                 std::pair<const PrintObject*, Point> this_object_copy(&instance_to_print.print_object, offset);

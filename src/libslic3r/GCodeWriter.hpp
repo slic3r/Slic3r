@@ -69,6 +69,7 @@ public:
     std::string unlift();
     Vec3d       get_position() const { return m_pos; }
 
+    void set_extra_lift(double extra_zlift) { this->extra_lift = extra_zlift; }
 private:
 	// Extruders are sorted by their ID, so that binary search is possible.
     std::vector<Extruder> m_extruders;
@@ -87,6 +88,9 @@ private:
 
     std::string _travel_to_z(double z, const std::string &comment);
     std::string _retract(double length, double restart_extra, const std::string &comment);
+
+    // if positive, it's set, and the next lift wil have this extra lift
+    double extra_lift = 0;
 };
 
 } /* namespace Slic3r */
