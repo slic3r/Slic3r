@@ -463,7 +463,7 @@ public:
 	wxComboBox*		m_combo;
 
 	void			build(const wxString& title, const std::string& default_name, std::vector<std::string> &values);
-	void			accept();
+	void			accept(bool rename = false);
 	std::string		get_name() { return m_chosen_name; }
 };
 

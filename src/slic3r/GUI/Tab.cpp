@@ -3674,9 +3674,15 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach)
 
         SavePresetWindow dlg(parent());
         dlg.build(title(), default_name, values);
-        if (dlg.ShowModal() != wxID_OK)
+        auto result = dlg.ShowModal();
+        // OK => ADD, APPLY => RENAME
+        if (result != wxID_OK && result != wxID_APPLY)
             return;
         name = dlg.get_name();
+        if (result == wxID_APPLY && preset.is_system) {
+            show_error(this, _(L("Cannot modify a system profile name.")));
+            return;
+        }
         if (name == "") {
             show_error(this, _(L("The supplied name is empty. It can't be saved.")));
             return;
@@ -3701,6 +3707,11 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach)
 
             // Remove the preset from the list.
             m_presets->delete_preset(name);
+        }
+        //if RENAME
+        if (result == wxID_APPLY) {
+            // Remove the old preset from the list.
+            m_presets->delete_preset(preset.name);
         }
     }
 
@@ -4102,15 +4113,22 @@ void SavePresetWindow::build(const wxString& title, const std::string& default_n
     auto text = new wxStaticText(this, wxID_ANY, from_u8((boost::format(_utf8(L("Save %s as:"))) % into_u8(title)).str()),
                                     wxDefaultPosition, wxDefaultSize);
     m_combo = new wxComboBox(this, wxID_ANY, from_u8(default_name),
-                            wxDefaultPosition, wxDefaultSize, 0, 0, wxTE_PROCESS_ENTER);
+                            wxDefaultPosition, wxSize(35 * wxGetApp().em_unit(), -1), 0, 0, wxTE_PROCESS_ENTER);
+    
+
     for (auto value : values)
         m_combo->Append(from_u8(value));
-    auto buttons = CreateStdDialogButtonSizer(wxOK | wxCANCEL);
+    wxStdDialogButtonSizer * buttons = CreateStdDialogButtonSizer(wxOK | wxNO | wxCANCEL);
 
     auto sizer = new wxBoxSizer(wxVERTICAL);
     sizer->Add(text, 0, wxEXPAND | wxALL, 10);
     sizer->Add(m_combo, 0, wxEXPAND | wxLEFT | wxRIGHT, 10);
     sizer->Add(buttons, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, 10);
+
+    //rename no in rename and add callback
+    wxButton* btn_no = static_cast<wxButton*>(FindWindowById(wxID_NO, this));
+    btn_no->SetLabel(_utf8(L("Rename")));
+    btn_no->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { accept(true); });
 
     wxButton* btn = static_cast<wxButton*>(FindWindowById(wxID_OK, this));
     btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { accept(); });
@@ -4120,7 +4138,7 @@ void SavePresetWindow::build(const wxString& title, const std::string& default_n
     sizer->SetSizeHints(this);
 }
 
-void SavePresetWindow::accept()
+void SavePresetWindow::accept(bool rename)
 {
     m_chosen_name = normalize_utf8_nfc(m_combo->GetValue().ToUTF8());
     if (!m_chosen_name.empty()) {
@@ -4150,7 +4168,7 @@ void SavePresetWindow::accept()
             show_error(this, _(L("The supplied name is not available.")));
         }
         else {
-            EndModal(wxID_OK);
+            EndModal(rename? wxID_APPLY :wxID_OK);
         }
     }
 }
