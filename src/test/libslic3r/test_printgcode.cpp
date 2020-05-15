@@ -49,12 +49,6 @@ SCENARIO( "PrintGCode basic functionality") {
                 REQUIRE(exported.find(";_EXTRUDE_SET_SPEED") == std::string::npos);
             }
 
-            THEN("Exported text contain cooling cog parameters") {
-                REQUIRE(exported.find("; cog_x") != std::string::npos);
-                REQUIRE(exported.find("; cog_y") != std::string::npos);
-                REQUIRE(exported.find("; cog_z") != std::string::npos);
-            }
-
             THEN("GCode preamble is emitted.") {
                 REQUIRE(exported.find("G21 ; set units to millimeters") != std::string::npos);
             }
