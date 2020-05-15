@@ -27,9 +27,6 @@ SCENARIO( "Test of COG calculation") {
         auto gcode {std::stringstream("")};
 
         WHEN("the output is executed with no support material") {
-            //config->set("first_layer_extrusion_width", 0);
-            //config->set("gcode_comments", true);
-            //config->set("start_gcode", "");
             Slic3r::Model model;
             auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
             print->process();
@@ -46,7 +43,7 @@ SCENARIO( "Test of COG calculation") {
                 REQUIRE(exported.find("; cog_z") != std::string::npos);
             }
 
-            THEN("Values are correct") {
+            THEN("Check if COG values are correct") {
 
                 int cog_x_start = exported.find("; cog_x = ");
                 int cog_x_len = exported.substr(cog_x_start).find('\n');
