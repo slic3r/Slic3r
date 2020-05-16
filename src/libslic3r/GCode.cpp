@@ -279,6 +279,18 @@ std::string Wipe::wipe(GCode &gcodegen, bool toolchange)
     return gcode;
 }
 
+//if first layer, ask for a bigger lift for travel to object, to be on the safe side
+static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeWriter & writer, int extruder_id) {
+    //if first layer, ask for a bigger lift for travel to object, to be on the safe side
+    if (layer.id() == 0 && print.config().retract_lift.get_at(extruder_id) != 0) {
+        //get biggest first layer height and set extra lift for first travel, to be safe.
+        double extra_lift_value = 0;
+        for (const PrintObject* obj : print.objects())
+            extra_lift_value = std::max(extra_lift_value, obj->config().first_layer_height.get_abs_value(print.config().nozzle_diameter.get_at(0)));
+        writer.set_extra_lift(extra_lift_value * 2);
+    }
+}
+
 static inline Point wipe_tower_point_to_object_point(GCode &gcodegen, const Vec2f &wipe_tower_pt)
 {
     return Point(scale_(wipe_tower_pt.x() - gcodegen.origin()(0)), scale_(wipe_tower_pt.y() - gcodegen.origin()(1)));
@@ -2250,6 +2262,9 @@ void GCode::process_layer(
         if (m_enable_analyzer && layer_tools.has_wipe_tower && m_wipe_tower)
             m_last_analyzer_extrusion_role = erWipeTower;
 
+        //if first layer, ask for a bigger lift for travel to object, to be on the safe side
+        set_extra_lift(layer, print, m_writer, extruder_id);
+
         if (auto loops_it = skirt_loops_per_extruder.find(extruder_id); loops_it != skirt_loops_per_extruder.end()) {
             const std::pair<size_t, size_t> loops = loops_it->second;
             this->set_origin(0., 0.);
@@ -2275,6 +2290,9 @@ void GCode::process_layer(
 
         // Extrude brim with the extruder of the 1st region.
         if (! m_brim_done) {
+            //if first layer, ask for a bigger lift for travel to object, to be on the safe side
+            set_extra_lift(layer, print, m_writer, extruder_id);
+
             this->set_origin(0., 0.);
             m_avoid_crossing_perimeters.use_external_mp = true;
             for (const ExtrusionEntity *ee : print.brim().entities) {
@@ -2288,6 +2306,9 @@ void GCode::process_layer(
         //extrude object-only skirt
         if (single_object_instance_idx != size_t(-1) && !layers.front().object()->skirt().empty()
             && extruder_id == layer_tools.extruders.front()) {
+            //if first layer, ask for a bigger lift for travel to object, to be on the safe side
+            set_extra_lift(layer, print, m_writer, extruder_id);
+
             const PrintObject *print_object = layers.front().object();
             this->set_origin(unscale(print_object->instances()[single_object_instance_idx].shift));
             if (this->m_layer != nullptr && this->m_layer->id() < m_config.skirt_height) {
@@ -2298,6 +2319,9 @@ void GCode::process_layer(
         //extrude object-only brim
         if (single_object_instance_idx != size_t(-1) && !layers.front().object()->brim().empty()
             && extruder_id == layer_tools.extruders.front()) {
+            //if first layer, ask for a bigger lift for travel to object, to be on the safe side
+            set_extra_lift(layer, print, m_writer, extruder_id);
+
             const PrintObject *print_object = layers.front().object();
             this->set_origin(unscale(print_object->instances()[single_object_instance_idx].shift));
             if (this->m_layer != nullptr && this->m_layer->id() == 0) {
@@ -2333,13 +2357,7 @@ void GCode::process_layer(
                         + " id:" + std::to_string(std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin()) 
                         + " copy " + std::to_string(instance_to_print.instance_id) + "\n";
                 //if first layer, ask for a bigger lift for travel to object, to be on the safe side
-                if (layer.id() == 0 && print.config().retract_lift.get_at(extruder_id) != 0) {
-                    //get biggest first layer height and set extra lift for first travel, to be safe.
-                    double extra_lift_value = 0;
-                    for (const PrintObject* obj : print.objects())
-                        extra_lift_value = std::max(extra_lift_value, obj->config().first_layer_height.get_abs_value(print.config().nozzle_diameter.get_at(0)));
-                    m_writer.set_extra_lift(extra_lift_value * 2);
-                }
+                set_extra_lift(layer, print, m_writer, extruder_id);
                 // When starting a new object, use the external motion planner for the first travel move.
                 const Point &offset = instance_to_print.print_object.instances()[instance_to_print.instance_id].shift;
                 std::pair<const PrintObject*, Point> this_object_copy(&instance_to_print.print_object, offset);
