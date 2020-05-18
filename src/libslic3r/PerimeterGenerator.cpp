@@ -707,19 +707,31 @@ void PerimeterGenerator::process()
                     //if the shrink split the area in multipe bits
                     if (expoly_after_shrink_test.size() > 1) {
                         //remove too small bits
-                        for (int i = 0; i < expoly_after_shrink_test.size(); i++)
-                            if (expoly_after_shrink_test[i].area() < (SCALED_EPSILON*SCALED_EPSILON * 4)
-                                    || offset_ex(ExPolygons{ expoly_after_shrink_test[i] }, min*0.5)[0].area() < minarea) {
+                        for (int i = 0; i < expoly_after_shrink_test.size(); i++) {
+                            if (expoly_after_shrink_test[i].area() < (SCALED_EPSILON * SCALED_EPSILON * 4)) {
                                 expoly_after_shrink_test.erase(expoly_after_shrink_test.begin() + i);
                                 i--;
+                            } else {
+                                ExPolygons wider = offset_ex(ExPolygons{ expoly_after_shrink_test[i] }, min * 0.5);
+                                if (wider.empty() || wider[0].area() < minarea) {
+                                    expoly_after_shrink_test.erase(expoly_after_shrink_test.begin() + i);
+                                    i--;
+                                }
                             }
+                        }
                         //maybe some areas are a just bit too thin, try with just a little more offset to remove them.
                         ExPolygons expoly_after_shrink_test2 = offset_ex(ExPolygons{ expoly }, double(-min *0.8));
                         for (int i = 0; i < expoly_after_shrink_test2.size(); i++) {
-                            if (expoly_after_shrink_test2[i].area() < (SCALED_EPSILON*SCALED_EPSILON * 4)
-                                    || offset_ex(ExPolygons{ expoly_after_shrink_test2[i] }, min*0.5)[0].area() < minarea) {
+                            if (expoly_after_shrink_test2[i].area() < (SCALED_EPSILON * SCALED_EPSILON * 4)) {
                                 expoly_after_shrink_test2.erase(expoly_after_shrink_test2.begin() + i);
                                 i--;
+
+                            }else{
+                                ExPolygons wider = offset_ex(ExPolygons{ expoly_after_shrink_test2[i] }, min * 0.5);
+                                if (wider.empty() || wider[0].area() < minarea) {
+                                    expoly_after_shrink_test2.erase(expoly_after_shrink_test2.begin() + i);
+                                    i--;
+                                }
                             }
                         }
                         //it's better if there are significantly less extrusions
