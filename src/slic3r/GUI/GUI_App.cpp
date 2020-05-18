@@ -40,6 +40,10 @@
 #include "../Utils/PrintHost.hpp"
 #include "../Utils/MacDarkMode.hpp"
 #include "slic3r/Config/Snapshot.hpp"
+#include "CalibrationBedDialog.hpp"
+#include "CalibrationBridgeDialog.hpp"
+#include "CalibrationFlowDialog.hpp"
+#include "CalibrationTempDialog.hpp"
 #include "ConfigSnapshotDialog.hpp"
 #include "FirmwareDialog.hpp"
 #include "Preferences.hpp"
@@ -206,6 +210,8 @@ GUI_App::GUI_App()
 
 GUI_App::~GUI_App()
 {
+    delete_calibration_dialog();
+
     if (app_config != nullptr)
         delete app_config;
 
@@ -280,6 +286,7 @@ bool GUI_App::on_init_inner()
     // initialize label colors and fonts
     init_label_colours();
     init_fonts();
+    wxImage::AddHandler(new wxJPEGHandler());
 
     // If load_language() fails, the application closes.
     load_language(wxString(), true);
@@ -530,6 +537,44 @@ void GUI_App::keyboard_shortcuts()
 {
     KBShortcutsDialog dlg;
     dlg.ShowModal();
+}
+
+void GUI_App::delete_calibration_dialog() {
+    if (not_modal_dialog.get() != nullptr) {
+        not_modal_dialog->Destroy();
+    }
+    not_modal_dialog.release();
+}
+
+void GUI_App::bed_leveling_dialog()
+{
+    delete_calibration_dialog();
+    not_modal_dialog.reset(new CalibrationBedDialog(this, mainframe));
+    not_modal_dialog->Show();
+}
+void GUI_App::flow_ratio_dialog()
+{
+    delete_calibration_dialog();
+    not_modal_dialog.reset(new CalibrationFlowDialog(this, mainframe));
+    not_modal_dialog->Show();
+}
+void GUI_App::over_bridge_dialog()
+{
+    delete_calibration_dialog();
+    not_modal_dialog.reset(new CalibrationFlowDialog(this, mainframe));
+    not_modal_dialog->Show();
+}
+void GUI_App::bridge_tuning_dialog()
+{
+    delete_calibration_dialog();
+    not_modal_dialog.reset(new CalibrationBridgeDialog(this, mainframe));
+    not_modal_dialog->Show();
+}
+void GUI_App::filament_temperature_dialog()
+{
+    delete_calibration_dialog();
+    not_modal_dialog.reset(new CalibrationTempDialog(this, mainframe));
+    not_modal_dialog->Show();
 }
 
 // static method accepting a wxWindow object as first parameter

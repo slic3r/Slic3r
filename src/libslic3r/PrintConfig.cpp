@@ -873,11 +873,24 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Extrusion multiplier");
     def->category = OptionCategory::filament;
     def->tooltip = L("This factor changes the amount of flow proportionally. You may need to tweak "
-                   "this setting to get nice surface finish and correct single wall widths. "
-                   "Usual values are between 0.9 and 1.1. If you think you need to change this more, "
-                   "check filament diameter and your firmware E steps.");
+        "this setting to get nice surface finish and correct single wall widths. "
+        "Usual values are between 0.9 and 1.1. If you think you need to change this more, "
+        "check filament diameter and your firmware E steps.");
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionFloats { 1. });
+
+    def = this->add("print_extrusion_multiplier", coPercent);
+    def->label = L("Extrusion multiplier");
+    def->category = OptionCategory::width;
+    def->tooltip = L("This factor changes the amount of flow proportionally. You may need to tweak "
+        "this setting to get nice surface finish and correct single wall widths. "
+        "Usual values are between 0.9 and 1.1. If you think you need to change this more, "
+        "check filament diameter and your firmware E steps."
+        " This print setting is multiplied against the extrusion_multiplier from the filament tab."
+        " Its only purpose is to offer the same functionality but with a per-object basis.");
+    def->mode = comSimple;
+    def->min = 2;
+    def->set_default_value(new ConfigOptionPercent(100));
 
     def = this->add("extrusion_width", coFloatOrPercent);
     def->label = L("Default extrusion width");
@@ -1720,7 +1733,7 @@ void PrintConfigDef::init_fff_params()
         " It assume infinite acceleration for this time estimation, and only takes into account G1 and G0 moves. Use 0 to deactivate, negative to remove the 'D' option.");
     def->sidetext = L("s");
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloat(-1));
 
     {
         struct AxisDefault {

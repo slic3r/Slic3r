@@ -726,7 +726,7 @@ void Tab::update_tab_ui()
 void Tab::load_config(const DynamicPrintConfig& config)
 {
     bool modified = 0;
-    for(auto opt_key : m_config->diff(config)) {
+    for (auto opt_key : m_config->diff(config)) {
         m_config->set_key_value(opt_key, config.option(opt_key)->clone());
         modified = 1;
     }

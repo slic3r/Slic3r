@@ -631,6 +631,7 @@ public:
     ConfigOptionFloat               perimeter_speed;
     // Total number of perimeters.
     ConfigOptionInt                 perimeters;
+    ConfigOptionPercent             print_extrusion_multiplier;
     ConfigOptionFloatOrPercent      small_perimeter_speed;
     ConfigOptionEnum<InfillPattern> solid_fill_pattern;
     ConfigOptionFloat               solid_infill_below_area;
@@ -710,6 +711,7 @@ protected:
         OPT_PTR(perimeter_loop_seam);
         OPT_PTR(perimeter_speed);
         OPT_PTR(perimeters);
+        OPT_PTR(print_extrusion_multiplier);
         OPT_PTR(small_perimeter_speed);
         OPT_PTR(solid_fill_pattern);
         OPT_PTR(solid_infill_below_area);

@@ -759,6 +759,22 @@ void MainFrame::init_menubar()
             [this]() { return m_plater->is_view3D_shown(); }, [this]() { return m_plater->are_view3D_labels_shown(); }, this);
     }
 
+    // objects menu
+    auto objectsMenu = new wxMenu();
+    {
+        append_menu_item(objectsMenu, wxID_ANY, _(L("Bed/Extruder levelling")), _(L("Create a test print to help you to level your printer bed.")),
+            [this](wxCommandEvent&) { wxGetApp().bed_leveling_dialog(); });
+        append_menu_item(objectsMenu, wxID_ANY, _(L("Flow tuning")), _(L("Create a test print to help you to set your filament extrusion multiplier.")),
+            [this](wxCommandEvent&) { wxGetApp().flow_ratio_dialog(); });
+        //append_menu_item(objectsMenu, wxID_ANY, _(L("Ironing pattern tuning")), _(L("Create a test print to help you to set your over-bridge flow ratio.")),
+        //    [this](wxCommandEvent&) { wxGetApp().over_bridge_dialog(); });
+        //append_menu_item(objectsMenu, wxID_ANY, _(L("Filament temperature tuning")), _(L("Create a test print to help you to set your filament temperature.")),
+        //    [this](wxCommandEvent&) { wxGetApp().filament_temperature_dialog(); });
+        //append_menu_item(objectsMenu, wxID_ANY, _(L("Bridge pattern tuning")), _(L("Create a test print to help you to set your over-bridge flow ratio.")),
+        //    [this](wxCommandEvent&) { wxGetApp().bridge_tuning_dialog(); });
+
+    }
+
     // Help menu
     auto helpMenu = new wxMenu();
     {
@@ -809,6 +825,7 @@ void MainFrame::init_menubar()
     if (viewMenu) menubar->Append(viewMenu, _(L("&View")));
         // Add additional menus from C++
         wxGetApp().add_config_menu(menubar);
+    menubar->Append(objectsMenu, _(L("C&alibration")));
     menubar->Append(helpMenu, _(L("&Help")));
         SetMenuBar(menubar);
 

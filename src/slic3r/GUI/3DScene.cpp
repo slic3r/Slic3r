@@ -163,8 +163,8 @@ void GLIndexedVertexArray::render(
     const std::pair<size_t, size_t>& tverts_range,
     const std::pair<size_t, size_t>& qverts_range) const
 {
-    assert(this->vertices_and_normals_interleaved_VBO_id != 0);
-    assert(this->triangle_indices_VBO_id != 0 || this->quad_indices_VBO_id != 0);
+//    assert(this->vertices_and_normals_interleaved_VBO_id != 0);
+//    assert(this->triangle_indices_VBO_id != 0 || this->quad_indices_VBO_id != 0);
 
     // Render using the Vertex Buffer Objects.
     glsafe(::glBindBuffer(GL_ARRAY_BUFFER, this->vertices_and_normals_interleaved_VBO_id));

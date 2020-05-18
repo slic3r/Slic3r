@@ -215,7 +215,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 
         if (surface.has_fill_solid()) {
             density = 100.;
-            fill_pattern = ipRectilinear;
+            fill_pattern = ipRectilinearWGapFill;
             if (surface.has_pos_external() && !is_bridge)
                 fill_pattern = surface.has_pos_top() ? layerm.region()->config().top_fill_pattern.value : layerm.region()->config().bottom_fill_pattern.value;
             else if (!is_bridge)

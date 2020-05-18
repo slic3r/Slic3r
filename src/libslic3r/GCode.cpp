@@ -2821,7 +2821,9 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
             }
 
             // calculate extrusion length per distance unit
-            double e_per_mm_per_height = m_writer.extruder()->e_per_mm3() * path->mm3_per_mm / this->m_layer->height;
+            double e_per_mm_per_height = (path->mm3_per_mm / this->m_layer->height)
+                * m_writer.extruder()->e_per_mm3()
+                * this->config().print_extrusion_multiplier.get_abs_value(1);
             if (m_writer.extrusion_axis().empty()) e_per_mm_per_height = 0;
             {
                 std::string comment = m_config.gcode_comments ? description : "";
@@ -3322,7 +3324,9 @@ std::string GCode::extrude_multi_path3D(const ExtrusionMultiPath3D &multipath3D,
         gcode += this->_before_extrude(path, description, speed);
 
         // calculate extrusion length per distance unit
-        double e_per_mm = m_writer.extruder()->e_per_mm3() * path.mm3_per_mm;
+        double e_per_mm = path.mm3_per_mm
+            * m_writer.extruder()->e_per_mm3()
+            * this->config().print_extrusion_multiplier.get_abs_value(1);
         if (m_writer.extrusion_axis().empty()) e_per_mm = 0;
         double path_length = 0.;
         {
@@ -3389,7 +3393,9 @@ std::string GCode::extrude_path_3D(const ExtrusionPath3D &path, const std::strin
     std::string gcode = this->_before_extrude(path, description, speed);
 
     // calculate extrusion length per distance unit
-    double e_per_mm = m_writer.extruder()->e_per_mm3() * path.mm3_per_mm;
+    double e_per_mm = path.mm3_per_mm
+        * m_writer.extruder()->e_per_mm3()
+        * this->config().print_extrusion_multiplier.get_abs_value(1);
     if (m_writer.extrusion_axis().empty()) e_per_mm = 0;
     double path_length = 0.;
     {
@@ -3548,7 +3554,9 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
     std::string gcode = this->_before_extrude(path, description, speed);
 
     // calculate extrusion length per distance unit
-    double e_per_mm = m_writer.extruder()->e_per_mm3() * path.mm3_per_mm;
+    double e_per_mm = path.mm3_per_mm
+        * m_writer.extruder()->e_per_mm3()
+        * this->config().print_extrusion_multiplier.get_abs_value(1);
     if (this->m_layer_index <= 0) e_per_mm *= this->config().first_layer_flow_ratio.get_abs_value(1);
     if (m_writer.extrusion_axis().empty()) e_per_mm = 0;
     double path_length = 0.;

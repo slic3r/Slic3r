@@ -213,6 +213,7 @@ public:
     void fix_through_netfabb(const int obj_idx, const int vol_idx = -1);
     void send_gcode();
 	void eject_drive();
+    void arrange();
 
     void take_snapshot(const std::string &snapshot_name);
     void take_snapshot(const wxString &snapshot_name);

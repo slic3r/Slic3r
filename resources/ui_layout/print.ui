@@ -125,7 +125,7 @@ group:sidetext_width$3:Advanced
 	setting:infill_first
 group:Advanced Infill
 	line:Ironing tuning
-		setting:label_width$6:width$5:fill_smooth_width
+		setting:label_width$6:width$5:sidetext_width$7:fill_smooth_width
 		setting:label_width$9:width$5:fill_smooth_distribution
 	end_line
 
@@ -157,16 +157,16 @@ group:Raft
 	setting:raft_layers
 group:Options for support material and raft
 	line:Z-offset
-		setting:support_material_contact_distance_type
-		setting:support_material_contact_distance_top
-		setting:support_material_contact_distance_bottom
+		setting:width$12:support_material_contact_distance_type
+		setting:width$6:support_material_contact_distance_top
+		setting:width$6:support_material_contact_distance_bottom
 	end_line
 	setting:support_material_pattern
 	setting:support_material_with_sheath
 	setting:support_material_spacing
 	setting:support_material_angle
 	setting:support_material_buildplate_only
-	setting:support_material_xy_spacing
+	setting:sidetext_width$7:support_material_xy_spacing
 	setting:dont_support_bridges
 	setting:support_material_synchronize_layers
 group:Options for support material interface

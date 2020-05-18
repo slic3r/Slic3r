@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Filament flow calibration</title>
+</head>
+<body>
+<h1>Filament flow calibration</h1>
+<p>You need to do the bed level calibration before this one.</p>
+<p>This test will print five tests samples with various level of flow. You can choose the flow difference between each steps. You should start with the 10% one. After verifying the result with the help of the tabel below, you have to modify the filamant extrusion multiplier in your filament preset (if the -20 is the best, change the multiplier from 1 to 0.8, see the formula below). Don't forget to save it afterwards. You can continue with the 2.5 step if you want a bit more precision.</p>
+<h2>Results</h2>
+<table>
+<tbody>
+<h4>Exemple:</h4>
+<tr>
+<td><img src="./m20.jpg" alt="too low, by far" width="150" height="150" /></td>
+<td><img src="./m10.jpg" alt="too low, by far" width="150" height="150" /></td>
+<td><img src="./0_v1.jpg" alt="too low, by far" width="150" height="150" /></td>
+<td><img src="./p10.jpg" alt="too low, by far" width="150" height="150" /></td>
+<td><img src="./p20.jpg" alt="too low, by far" width="150" height="150" /></td>
+</tr>
+<tr>
+<td style="text-align: center;">not flat</td>
+<td style="text-align: center;">not flat</td>
+<td style="text-align: center;">not flat</td>
+<td style="text-align: center;">flat<br />But the circle<br />isn't flat enough</td>
+<td style="text-align: center;">Flat surface<br />and good circle</td>
+</tr>
+<p>So here, I should </p>
+</table>
+<p>The flow you want to choose is the lowest that don't create gaps in the top surface. Here it seems that the good flow is below +20. So you have to change your extrusion multiplier to 1.2 and print the second set of test (or put 1.15 and call it for now).</p>
+<h2>How to tune your printer</h2>
+<p>You have to change the extrusion multiplier for the filament you calibrate for (and save it). Formula for the new extrusion multipler: new_multiplier = ( (100 + choosen_number) / 100 ) * old_multiplier<br />
+Exemple: first step, i choose the -10, so i have ((100-10)/100) * 1 = (0.9) * 1 = 0.9<br />
+second step i chooe +5, so i have ((100+5)/100) * 0.9 = (1.05) * 0.9 = 0.945
+</p>
+<p>If you want to make this change permanent and left your extrusion multipler to 1 in slic3r++, you can change your firmware configuration by mutiplying (or dividing, depends of the firmware/setting) the 'extruder speed setting' (e-step, step_distance) by this extrusion multipler.</p>
+<h2>Advice</h2>
+<p>Before doing this test, it's preferable to calibrate your extruder (it's easier on bowden setup):</p>
+<ul>
+<li>Remove the extruder bowden tube from the output of the extruder (or remove the extruder assembly from the nozzle assembly if you have a direct-extruder)</li>
+<li>Put the filament through it (by hand or using the software control)</li>
+<li>Cut the filament flush with the output of the extruder. Measure with your spring-steel ruler that you measure just 0mm. If not, note the value and don't forget to remove it from every other measure you do.</li>
+<li>Ask your extruder to extrude 200mm of filament (gcode: G1 E200).</li>
+<li>Measure the length o the extruded filament. Repeat this process two times more if you want to be more precise.</li>
+<li>You have to change your extruder multiplier (estep, step_distance) by multipliying (or dividing, depending on your firmware) the current value by (200 / average_measured_value).</li>
+<p>Note that this value may change if you change the pressure the extuder exerce against the filament.</p>
+</ul>
+<h2>Notes</h2>
+<p>It's very difficult to tune the flow below the 2% mark, and no filament is consistent enought to warrant it anyway. A filament that have a guarantee of +-0,03mm have a ~7% variation between the low and high end cross section.</p>
+<p>Most of the calibrations need to done is the right order. This one should be the second.</p>
+<p>You may want to re-do the bed level calibration is the result is below 0.9 or higher than 1.1.</p>
+<p>Note that the filament extrusion multipler can change with a different filament material, as a softer one can be squished/dented more by the extruder and so have a lower diameter in the extruder gears.</p>
+<p>If your printer extruder eat the filament and can't complete the top layer, you have to increase the ironing distribution (by 5% increment). (Expert seting, print -> infill)</p>
+
+</body>
+</html>

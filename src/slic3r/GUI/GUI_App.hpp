@@ -131,6 +131,13 @@ public:
     void            recreate_GUI();
     void            system_info();
     void            keyboard_shortcuts();
+    void            delete_calibration_dialog();
+    void            bed_leveling_dialog();
+    void            flow_ratio_dialog();
+    void            filament_temperature_dialog();
+    void            bridge_tuning_dialog();
+    void            over_bridge_dialog();
+    //void            support_tuning(); //have to do multiple, in a submenu
     void            load_project(wxWindow *parent, wxString& input_file) const;
     void            import_model(wxWindow *parent, wxArrayString& input_files) const;
     static bool     catch_error(std::function<void()> cb, const std::string& err);
@@ -175,6 +182,7 @@ public:
     PresetUpdater*  preset_updater{ nullptr };
     MainFrame*      mainframe{ nullptr };
     Plater*         plater_{ nullptr };
+    std::unique_ptr<wxDialog> not_modal_dialog;
 
     wxNotebook*     tab_panel() const ;
     int             extruders_cnt() const;

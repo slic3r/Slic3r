@@ -4779,6 +4779,9 @@ void Plater::remove_selected()
     Plater::TakeSnapshot snapshot(this, _(L("Delete Selected Objects")));
     this->p->view3D->delete_selected();
 }
+void Plater::arrange() {
+    p->arrange();
+}
 
 void Plater::increase_instances(size_t num)
 {

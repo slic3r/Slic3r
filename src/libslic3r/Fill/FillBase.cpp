@@ -48,7 +48,7 @@ Fill* Fill::new_from_type(const InfillPattern type)
     case ipSmoothHilbert:       return new FillSmoothHilbert();
     case ipRectiWithPerimeter:  return new FillRectilinear2Peri();
     case ipSawtooth:            return new FillRectilinearSawtooth();
-    default: throw std::invalid_argument("unknown type");
+    default: throw std::invalid_argument("unknown type : "+type);
     }
 }
 

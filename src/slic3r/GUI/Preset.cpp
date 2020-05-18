@@ -519,7 +519,8 @@ const std::vector<std::string>& Preset::print_options()
         , "curve_smoothing_precision"
         , "curve_smoothing_cutoff_dist"
         , "curve_smoothing_angle_convex"
-        , "curve_smoothing_angle_concave"
+        , "curve_smoothing_angle_concave",
+        "print_extrusion_multiplier"
     };
     return s_opts;
 }
