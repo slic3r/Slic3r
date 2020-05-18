@@ -180,8 +180,12 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             || opt_key == "wipe_tower_rotation_angle") {
             steps.emplace_back(psSkirt);
         } else if (
-            opt_key == "complete_objects"
-			|| opt_key == "brim_inside_holes"
+            opt_key == "complete_objects") {
+            steps.emplace_back(psBrim);
+            steps.emplace_back(psSkirt);
+            steps.emplace_back(psWipeTower);
+        } else if (
+            opt_key == "brim_inside_holes"
             || opt_key == "brim_width"
             || opt_key == "brim_ears"
             || opt_key == "brim_ears_max_angle") {
