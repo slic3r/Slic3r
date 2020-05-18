@@ -6,35 +6,26 @@
 
     sudo apt-get install gcc cmake build-essential libgtk2.0-dev libwxgtk3.0-dev libwx-perl libmodule-build-perl git cpanminus libextutils-cppguess-perl libboost-all-dev libxmu-dev liblocal-lib-perl wx-common libopengl-perl libwx-glcanvas-perl libtbb-dev libxmu-dev freeglut3-dev libwxgtk-media3.0-dev libboost-thread-dev libboost-system-dev libboost-filesystem-dev libcurl4-openssl-dev libextutils-makemaker-cpanfile-perl
 
+Or look up prerequisites here:
+[Original Wiki](https://github.com/slic3r/Slic3r/wiki/Running-Slic3r-from-git-on-GNU-Linux)
+
 #### Get repository
 
     git clone https://github.com/Zip-o-mat/Slic3r.git
 
     cd Slic3r
 
-    git checkout nonplanar
+    git checkout BRANCHNAME
 
 #### Install Perl libs
+
+    export LDLOADLIBS=-lstdc++
 
     perl Build.PL
 
     perl Build.PL --gui
 
-#### Build with cmake (Tested on Ubuntu 16.04, 18.04LTS & 19.04)
-
-    mkdir build
-
-    cd build
-
-    cmake ..
-
-    export PERL5LIB=<PATH_TO_SOURCE>/Slic3r/local-lib/lib/perl5
-
-    make
-
 #### Start
-
-    cd ..
 
     perl slic3r.pl
 
