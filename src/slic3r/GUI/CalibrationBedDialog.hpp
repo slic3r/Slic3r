@@ -19,6 +19,7 @@ class CalibrationBedDialog : public DPIDialog
 
 public:
     CalibrationBedDialog(GUI_App* app, MainFrame* mainframe);
+    virtual ~CalibrationBedDialog() { if (gui_app != nullptr) gui_app->change_calibration_dialog(this, nullptr); }
     
 protected:
     void on_dpi_changed(const wxRect &suggested_rect) override;

@@ -3,10 +3,11 @@
 #include "libslic3r/Utils.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
-#include "tab.hpp"
+#include "Tab.hpp"
 #include <wx/scrolwin.h>
 #include <wx/display.h>
 #include <wx/file.h>
+#include <cmath>
 #include "wxExtensions.hpp"
 
 #if ENABLE_SCROLLABLE
@@ -41,7 +42,6 @@ namespace GUI {
     auto main_sizer = new wxBoxSizer(wxVERTICAL);
 
     //html
-    std::cout << "display test.html\n";
     html_viewer = new wxHtmlWindow(this, wxID_ANY,
         wxDefaultPosition, wxSize(800, 500), wxHW_SCROLLBAR_AUTO);
     html_viewer->LoadPage("./resources/calibration/bed_leveling/bed_leveling.html");
@@ -65,7 +65,7 @@ namespace GUI {
 }
 
 void CalibrationBedDialog::closeMe(wxCommandEvent& event_args) {
-    gui_app->delete_calibration_dialog();
+    this->Destroy();
 }
 
 void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {

@@ -210,8 +210,6 @@ GUI_App::GUI_App()
 
 GUI_App::~GUI_App()
 {
-    delete_calibration_dialog();
-
     if (app_config != nullptr)
         delete app_config;
 
@@ -539,42 +537,59 @@ void GUI_App::keyboard_shortcuts()
     dlg.ShowModal();
 }
 
-void GUI_App::delete_calibration_dialog() {
-    if (not_modal_dialog.get() != nullptr) {
-        not_modal_dialog->Destroy();
+void GUI_App::change_calibration_dialog(const wxDialog* have_to_destroy, wxDialog* new_one){
+    std::string str;
+    if (have_to_destroy == nullptr) {
+        wxDialog* to_destroy = nullptr;
+        {
+            //hove to ensure that this release is "atomic"
+            std::unique_lock<std::mutex> lock(not_modal_dialog_mutex);
+            to_destroy = not_modal_dialog;
+            not_modal_dialog = nullptr;
+        }
+        if (to_destroy != nullptr) {
+            to_destroy->Destroy();
+        }
+    } else {
+        //hove to ensure that these two command are "atomic"
+        std::unique_lock<std::mutex> lock(not_modal_dialog_mutex);
+        if (not_modal_dialog == have_to_destroy) {
+            not_modal_dialog = nullptr;
+        }
     }
-    not_modal_dialog.release();
+    if (new_one != nullptr) {
+        {
+            //hove to ensure that these command are "atomic"
+            std::unique_lock<std::mutex> lock(not_modal_dialog_mutex);
+            if (not_modal_dialog != nullptr)
+                not_modal_dialog->Destroy();
+            not_modal_dialog = new_one;
+        }
+        new_one->Show();
+    }
+    std::cout << str;
+    
 }
 
 void GUI_App::bed_leveling_dialog()
 {
-    delete_calibration_dialog();
-    not_modal_dialog.reset(new CalibrationBedDialog(this, mainframe));
-    not_modal_dialog->Show();
+    change_calibration_dialog(nullptr, new CalibrationBedDialog(this, mainframe));
 }
 void GUI_App::flow_ratio_dialog()
 {
-    delete_calibration_dialog();
-    not_modal_dialog.reset(new CalibrationFlowDialog(this, mainframe));
-    not_modal_dialog->Show();
+    change_calibration_dialog(nullptr, new CalibrationFlowDialog(this, mainframe));
 }
 void GUI_App::over_bridge_dialog()
 {
-    delete_calibration_dialog();
-    not_modal_dialog.reset(new CalibrationFlowDialog(this, mainframe));
-    not_modal_dialog->Show();
+    change_calibration_dialog(nullptr, new CalibrationFlowDialog(this, mainframe));
 }
 void GUI_App::bridge_tuning_dialog()
 {
-    delete_calibration_dialog();
-    not_modal_dialog.reset(new CalibrationBridgeDialog(this, mainframe));
-    not_modal_dialog->Show();
+    change_calibration_dialog(nullptr, new CalibrationBridgeDialog(this, mainframe));
 }
 void GUI_App::filament_temperature_dialog()
 {
-    delete_calibration_dialog();
-    not_modal_dialog.reset(new CalibrationTempDialog(this, mainframe));
-    not_modal_dialog->Show();
+    change_calibration_dialog(nullptr, new CalibrationTempDialog(this, mainframe));
 }
 
 // static method accepting a wxWindow object as first parameter

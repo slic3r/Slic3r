@@ -4,7 +4,7 @@
 #include "GLCanvas3D.hpp "
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
-#include "tab.hpp"
+#include "Tab.hpp"
 #include <wx/scrolwin.h>
 #include <wx/display.h>
 #include <wx/file.h>
@@ -43,8 +43,8 @@ namespace GUI {
 
     //html
     html_viewer = new wxHtmlWindow(this, wxID_ANY,
-        wxDefaultPosition, wxSize(600, 500), wxHW_SCROLLBAR_AUTO);
-    html_viewer->SetMinSize(wxSize(1000, 500));
+        wxDefaultPosition, wxSize(500, 500), wxHW_SCROLLBAR_AUTO);
+    html_viewer->SetMinSize(wxSize(900, 500));
     html_viewer->LoadPage("./resources/calibration/filament_flow/filament_flow.html");
     main_sizer->Add(html_viewer, 1, wxEXPAND | wxALL, 5);
 
@@ -72,7 +72,7 @@ namespace GUI {
 }
 
 void CalibrationFlowDialog::closeMe(wxCommandEvent& event_args) {
-    gui_app->delete_calibration_dialog();
+    this->Destroy();
 }
 
 void CalibrationFlowDialog::create_geometry_10(wxCommandEvent& event_args) {

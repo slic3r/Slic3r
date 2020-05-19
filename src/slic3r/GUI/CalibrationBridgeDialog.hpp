@@ -19,6 +19,7 @@ class CalibrationBridgeDialog : public DPIDialog
 
 public:
     CalibrationBridgeDialog(GUI_App* app, MainFrame* mainframe);
+    virtual ~CalibrationBridgeDialog() { if (gui_app != nullptr) gui_app->change_calibration_dialog(this, nullptr); }
     
 protected:
     void on_dpi_changed(const wxRect &suggested_rect) override;

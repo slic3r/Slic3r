@@ -131,7 +131,7 @@ public:
     void            recreate_GUI();
     void            system_info();
     void            keyboard_shortcuts();
-    void            delete_calibration_dialog();
+    void            change_calibration_dialog(const wxDialog* have_to_destroy = nullptr, wxDialog* new_one = nullptr);
     void            bed_leveling_dialog();
     void            flow_ratio_dialog();
     void            filament_temperature_dialog();
@@ -182,7 +182,8 @@ public:
     PresetUpdater*  preset_updater{ nullptr };
     MainFrame*      mainframe{ nullptr };
     Plater*         plater_{ nullptr };
-    std::unique_ptr<wxDialog> not_modal_dialog;
+    std::mutex      not_modal_dialog_mutex;
+    wxDialog*       not_modal_dialog = nullptr;
 
     wxNotebook*     tab_panel() const ;
     int             extruders_cnt() const;
