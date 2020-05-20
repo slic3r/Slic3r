@@ -4297,8 +4297,9 @@ std::string FullPrintConfig::validate()
         this->gcode_flavor.value != gcfMarlin &&
         this->gcode_flavor.value != gcfMachinekit &&
         this->gcode_flavor.value != gcfRepetier &&
+        this->gcode_flavor.value != gcfKlipper &&
         this->gcode_flavor.value != gcfLerdge)
-        return "--use-firmware-retraction is only supported by Marlin, Smoothie, Repetier, Machinekit and Lerdge firmware";
+        return "--use-firmware-retraction is only supported by Marlin, Smoothie, Repetier, Machinekit, Klipper and Lerdge firmware";
 
     if (this->use_firmware_retraction.value)
         for (unsigned char wipe : this->wipe.values)
