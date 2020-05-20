@@ -43,15 +43,33 @@ namespace GUI {
     //html
     html_viewer = new wxHtmlWindow(this, wxID_ANY,
         wxDefaultPosition, wxSize(800, 500), wxHW_SCROLLBAR_AUTO);
-    html_viewer->LoadPage("./resources/calibration/filament_temp/filament_temp.html");
+    html_viewer->LoadPage(Slic3r::resources_dir()+"/calibration/filament_temp/filament_temp.html");
     main_sizer->Add(html_viewer, 1, wxEXPAND | wxALL, 5);
+    wxString choices_steps[] = { "5","10","15","20" };
+    steps = new wxComboBox(this, wxID_ANY, wxString{ "10" }, wxDefaultPosition, wxDefaultSize, 4, choices_steps);
+    steps->SetToolTip(_(L("Select the step in celcius between two tests.")));
+    steps->SetSelection(1);
+    wxString choices_nb[] = { "0","1","2","3","4","5","6","7" };
+    nb_down = new wxComboBox(this, wxID_ANY, wxString{ "2" }, wxDefaultPosition, wxDefaultSize, 4, choices_nb);
+    nb_down->SetToolTip(_(L("Select the number of tests with lower temperature than the current one.")));
+    nb_down->SetSelection(2);
+    nb_up = new wxComboBox(this, wxID_ANY, wxString{ "2" }, wxDefaultPosition, wxDefaultSize, 4, choices_nb);
+    nb_up->SetToolTip(_(L("Select the number of tests with higher temperature than the current one.")));
+    nb_up->SetSelection(2);
 
     wxStdDialogButtonSizer* buttons = new wxStdDialogButtonSizer();
-    wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Generate +- 10")));
-    bt->Bind(wxEVT_BUTTON, &CalibrationTempDialog::create_geometry_2, this);
-    buttons->Add(bt);
-    bt = new wxButton(this, wxID_FILE1, _(L("Generate +- 20")));
-    bt->Bind(wxEVT_BUTTON, &CalibrationTempDialog::create_geometry_4, this);
+    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "nb down:" }));
+    buttons->Add(nb_down);
+    buttons->AddSpacer(15);
+    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "nb up:" }));
+    buttons->Add(nb_up);
+    buttons->AddSpacer(40);
+    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "steps:" }));
+    buttons->Add(steps);
+    buttons->AddSpacer(40);
+
+    wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Generate")));
+    bt->Bind(wxEVT_BUTTON, &CalibrationTempDialog::create_geometry, this);
     buttons->Add(bt);
     wxButton* close = new wxButton(this, wxID_CLOSE, _(L("Close")));
     close->Bind(wxEVT_BUTTON, &CalibrationTempDialog::closeMe, this);
@@ -116,12 +134,12 @@ ModelObject* CalibrationTempDialog::add_part(ModelObject* model_object, std::str
     return model.objects.empty()?nullptr: model.objects[0];
 }
 
-void CalibrationTempDialog::create_geometry(uint8_t nb_delta) {
+void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
     plat->reset();
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
-            "./resources/calibration/filament_temp/Smart_compact_temperature_calibration_item.amf"}, true, false);
+            Slic3r::resources_dir()+"/calibration/filament_temp/Smart_compact_temperature_calibration_item.amf"}, true, false);
 
     assert(objs_idx.size() == 1);
     const DynamicPrintConfig* printConfig = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();
@@ -131,8 +149,15 @@ void CalibrationTempDialog::create_geometry(uint8_t nb_delta) {
     // -- get temps
     const ConfigOptionInts* temperature_config = filamentConfig->option<ConfigOptionInts>("temperature");
     assert(temperature_config->values.size() >= 1);
-    int16_t temperature = 5* (temperature_config->values[0]/5);
-    size_t nb_items = 1 + 2 * nb_delta;
+    int idx_steps = steps->GetSelection();
+    int idx_up = nb_up->GetSelection();
+    int idx_down = nb_down->GetSelection();
+    int16_t temperature = 5 * (temperature_config->values[0] / 5);
+    size_t step_temp = 5 + (idx_steps == wxNOT_FOUND ? 0 : (idx_steps * 5));
+    size_t nb_items = 1 + (idx_down == wxNOT_FOUND ? 0 : idx_down)
+        + (idx_up == wxNOT_FOUND ? 0 : idx_up);
+    //start at the highest temp
+    temperature = temperature + step_temp * (idx_up == wxNOT_FOUND ? 0 : idx_up);
     
     /// --- scale ---
     //model is created for a 0.4 nozzle, scale xy with nozzle size.
@@ -153,15 +178,15 @@ void CalibrationTempDialog::create_geometry(uint8_t nb_delta) {
     std::vector<ModelObject*>tower;
     tower.push_back(model.objects[objs_idx[0]]);
     float zshift = (1 - xyzScale) / 2;
-    if (temperature - (int8_t)nb_delta * 5 > 175 && temperature - (int8_t)nb_delta * 5 < 290) {
-        tower.push_back(add_part(model.objects[objs_idx[0]], "./resources/calibration/filament_temp/t"+std::to_string(temperature - (int8_t)nb_delta * 5 )+".amf",
+    if (temperature > 175 && temperature < 290) {
+        tower.push_back(add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_temp/t"+std::to_string(temperature)+".amf",
             Vec3d{ xyzScale * 5, - xyzScale * 2.5, zshift - xyzScale * 2.5}, Vec3d{ xyzScale, xyzScale, xyzScale * 0.43 }));
     }
     for (int16_t i = 1; i < nb_items; i++) {
-        tower.push_back(add_part(model.objects[objs_idx[0]], "./resources/calibration/filament_temp/Smart_compact_temperature_calibration_item.amf", 
+        tower.push_back(add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_temp/Smart_compact_temperature_calibration_item.amf", 
             Vec3d{ 0,0, zshift + i * 10 }, Vec3d{ xyzScale, xyzScale * 0.5, xyzScale }));
-        if (temperature - (int8_t)nb_delta * 5 + i * 5 > 175 && temperature - (int8_t)nb_delta * 5 + i * 5 < 290) {
-            tower.push_back(add_part(model.objects[objs_idx[0]], "./resources/calibration/filament_temp/t" + std::to_string(temperature - (int8_t)nb_delta * 5 + i * 5) + ".amf",
+        if (temperature - i * step_temp > 175 && temperature - i * step_temp < 290) {
+            tower.push_back(add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_temp/t" + std::to_string(temperature - i * step_temp) + ".amf",
                 Vec3d{ xyzScale * 5, -xyzScale * 2.5, zshift + xyzScale * (i * 10 - 2.5) }, Vec3d{ xyzScale, xyzScale, xyzScale * 0.43 }));
         }
     }
@@ -178,13 +203,16 @@ void CalibrationTempDialog::create_geometry(uint8_t nb_delta) {
     new_print_config.set_key_value("complete_objects", new ConfigOptionBool(false));
     
     /// -- generate the heat change gcode
-    std::string str_layer_gcode = "{if layer_num > 0 and layer_z  <= " + std::to_string(2 * xyzScale) + "}\nM104 S" + std::to_string(temperature - (int8_t)nb_delta * 5);
+    //std::string str_layer_gcode = "{if layer_num > 0 and layer_z  <= " + std::to_string(2 * xyzScale) + "}\nM104 S" + std::to_string(temperature - (int8_t)nb_delta * 5);
+    //    double print_z, std::string gcode,int extruder, std::string color
+    model.custom_gcode_per_print_z.gcodes.emplace_back(CustomGCode::Item{ nozzle_diameter, "M104 S" + std::to_string(temperature) + " ; ground floor temp tower set", -1, "" });
     for (int16_t i = 1; i < nb_items; i++) {
-        str_layer_gcode += "\n{ elsif layer_z >= " + std::to_string(i * 10 * xyzScale) + " and layer_z <= " + std::to_string((1 + i * 10) * xyzScale) + " }\nM104 S" + std::to_string(temperature - (int8_t)nb_delta * 5 + i * 5);
+        model.custom_gcode_per_print_z.gcodes.emplace_back(CustomGCode::Item{ (i * 10 * xyzScale) , "M104 S" + std::to_string(temperature - i * step_temp) + " ; floor "+std::to_string(i)+" of the temp tower set", -1, "" });
+        //str_layer_gcode += "\n{ elsif layer_z >= " + std::to_string(i * 10 * xyzScale) + " and layer_z <= " + std::to_string((1 + i * 10) * xyzScale) + " }\nM104 S" + std::to_string(temperature - (int8_t)nb_delta * 5 + i * 5);
     }
-    str_layer_gcode += "\n{endif}\n";
-    DynamicPrintConfig new_printer_config = *printerConfig; //make a copy
-    new_printer_config.set_key_value("layer_gcode", new ConfigOptionString(str_layer_gcode));
+    //str_layer_gcode += "\n{endif}\n";
+    //DynamicPrintConfig new_printer_config = *printerConfig; //make a copy
+    //new_printer_config.set_key_value("layer_gcode", new ConfigOptionString(str_layer_gcode));
 
     /// --- custom config ---
     float brim_width = printConfig->option<ConfigOptionFloat>("brim_width")->value;
@@ -207,11 +235,12 @@ void CalibrationTempDialog::create_geometry(uint8_t nb_delta) {
     //update plater
     this->gui_app->get_tab(Preset::TYPE_PRINT)->load_config(new_print_config);
     plat->on_config_change(new_print_config);
-    this->gui_app->get_tab(Preset::TYPE_PRINTER)->load_config(new_printer_config);
-    plat->on_config_change(new_printer_config);
+    //this->gui_app->get_tab(Preset::TYPE_PRINTER)->load_config(new_printer_config);
+    //plat->on_config_change(new_printer_config);
     plat->changed_objects(objs_idx);
     this->gui_app->get_tab(Preset::TYPE_PRINT)->update_dirty();
     this->gui_app->get_tab(Preset::TYPE_PRINTER)->update_dirty();
+    plat->is_preview_shown();
     //update everything, easier to code.
     ObjectList* obj = this->gui_app->obj_list();
     obj->update_after_undo_redo();

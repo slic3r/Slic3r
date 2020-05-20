@@ -44,7 +44,7 @@ namespace GUI {
     html_viewer = new wxHtmlWindow(this, wxID_ANY,
         wxDefaultPosition, wxSize(500, 500), wxHW_SCROLLBAR_AUTO);
     html_viewer->SetMinSize(wxSize(900, 500));
-    html_viewer->LoadPage("./resources/calibration/filament_flow/filament_flow.html");
+    html_viewer->LoadPage(Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow.html");
     main_sizer->Add(html_viewer, 1, wxEXPAND | wxALL, 5);
 
     wxStdDialogButtonSizer* buttons = new wxStdDialogButtonSizer();
@@ -130,11 +130,11 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
     Model& model = plat->model();
     plat->reset();
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
-            "./resources/calibration/filament_flow/filament_flow_test_cube.amf",
-            "./resources/calibration/filament_flow/filament_flow_test_cube.amf",
-            "./resources/calibration/filament_flow/filament_flow_test_cube.amf",
-            "./resources/calibration/filament_flow/filament_flow_test_cube.amf",
-            "./resources/calibration/filament_flow/filament_flow_test_cube.amf"}, true, false);
+            Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow_test_cube.amf",
+            Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow_test_cube.amf",
+            Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow_test_cube.amf",
+            Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow_test_cube.amf",
+            Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow_test_cube.amf"}, true, false);
 
 
     assert(objs_idx.size() == 5);
@@ -163,20 +163,20 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
     //add sub-part after scale
     float zshift = (1 - zscale) / 2;
     if (delta == 10.f && start == 80.f) {
-        add_part(model.objects[objs_idx[0]], "./resources/calibration/filament_flow/m20.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[1]], "./resources/calibration/filament_flow/m10.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[2]], "./resources/calibration/filament_flow/_0.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[3]], "./resources/calibration/filament_flow/p10.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[4]], "./resources/calibration/filament_flow/p20.amf", Vec3d{ 9,0,zshift });
+        add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_flow/m20.amf", Vec3d{ 9,0,zshift });
+        add_part(model.objects[objs_idx[1]], Slic3r::resources_dir()+"/calibration/filament_flow/m10.amf", Vec3d{ 9,0,zshift });
+        add_part(model.objects[objs_idx[2]], Slic3r::resources_dir()+"/calibration/filament_flow/_0.amf", Vec3d{ 9,0,zshift });
+        add_part(model.objects[objs_idx[3]], Slic3r::resources_dir()+"/calibration/filament_flow/p10.amf", Vec3d{ 9,0,zshift });
+        add_part(model.objects[objs_idx[4]], Slic3r::resources_dir()+"/calibration/filament_flow/p20.amf", Vec3d{ 9,0,zshift });
     } else if (delta == 2.f && start == 92.f) {
-        add_part(model.objects[objs_idx[0]], "./resources/calibration/filament_flow/m8.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[1]], "./resources/calibration/filament_flow/m6.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[2]], "./resources/calibration/filament_flow/m4.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[3]], "./resources/calibration/filament_flow/m2.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[4]], "./resources/calibration/filament_flow/_0.amf", Vec3d{ 9,0,zshift });
+        add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_flow/m8.amf", Vec3d{ 9,0,zshift });
+        add_part(model.objects[objs_idx[1]], Slic3r::resources_dir()+"/calibration/filament_flow/m6.amf", Vec3d{ 9,0,zshift });
+        add_part(model.objects[objs_idx[2]], Slic3r::resources_dir()+"/calibration/filament_flow/m4.amf", Vec3d{ 9,0,zshift });
+        add_part(model.objects[objs_idx[3]], Slic3r::resources_dir()+"/calibration/filament_flow/m2.amf", Vec3d{ 9,0,zshift });
+        add_part(model.objects[objs_idx[4]], Slic3r::resources_dir()+"/calibration/filament_flow/_0.amf", Vec3d{ 9,0,zshift });
     }
     for (size_t i = 0; i < 5; i++) {
-        add_part(model.objects[objs_idx[i]], "./resources/calibration/filament_flow/O.amf", Vec3d{ 0,0,zscale/2.f + 0.5 }, Vec3d{1,1,xyScale });
+        add_part(model.objects[objs_idx[i]], Slic3r::resources_dir()+"/calibration/filament_flow/O.amf", Vec3d{ 0,0,zscale/2.f + 0.5 }, Vec3d{1,1,xyScale });
     }
 
     /// --- translate ---;

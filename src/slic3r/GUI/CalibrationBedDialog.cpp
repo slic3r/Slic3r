@@ -43,7 +43,7 @@ namespace GUI {
     //html
     html_viewer = new wxHtmlWindow(this, wxID_ANY,
         wxDefaultPosition, wxSize(800, 500), wxHW_SCROLLBAR_AUTO);
-    html_viewer->LoadPage("./resources/calibration/bed_leveling/bed_leveling.html");
+    html_viewer->LoadPage(Slic3r::resources_dir()+"/calibration/bed_leveling/bed_leveling.html");
     main_sizer->Add(html_viewer, 1, wxEXPAND | wxALL, 5);
 
     wxStdDialogButtonSizer* buttons = new wxStdDialogButtonSizer();
@@ -72,11 +72,11 @@ void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
     Model& model = plat->model();
     plat->reset();
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
-            "./resources/calibration/bed_leveling/patch.amf",
-            "./resources/calibration/bed_leveling/patch.amf",
-            "./resources/calibration/bed_leveling/patch.amf",
-            "./resources/calibration/bed_leveling/patch.amf",
-            "./resources/calibration/bed_leveling/patch.amf"}, true, false);
+            Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
+            Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
+            Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
+            Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
+            Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf"}, true, false);
 
     assert(objs_idx.size() == 5);
     const DynamicPrintConfig* printConfig = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();

@@ -27,14 +27,15 @@ protected:
 private:
     void closeMe(wxCommandEvent& event_args);
     ModelObject* add_part(ModelObject* model_object, std::string input_file, Vec3d move, Vec3d scale = Vec3d{ 1,1,1 });
-    void create_geometry_2(wxCommandEvent& event_args) { create_geometry(2); }
-    void create_geometry_4(wxCommandEvent& event_args) { create_geometry(4); }
-    void create_geometry(uint8_t nb_delta);
+    void create_geometry(wxCommandEvent& event_args);
     wxPanel* create_header(wxWindow* parent, const wxFont& bold_font);
 
     wxHtmlWindow* html_viewer;
     MainFrame* main_frame;
     GUI_App* gui_app;
+    wxComboBox* steps;
+    wxComboBox* nb_down;
+    wxComboBox* nb_up;
 
 };
 

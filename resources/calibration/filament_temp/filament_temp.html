@@ -7,22 +7,22 @@
 <body>
 <h1>Filament temperature calibration</h1>
 <p>You need to do the bed level calibration before this one, and it's preferable to have also done the flow calibration. This calibration will help you to choose the right temperature with respect of bonding, overhangs and ooze. Note that this test is dependant of the cooling you selected. You can print this multiple times with more or less cooling to find your perfect spot.</p>
-<p>This test will print a tower of prints printed with a different temperature for each floor. The middle one will be printed with the current temperature selected in your filament configuration. Each other floor will differ by 5°c. You can choose to generate 5 or 9 floors.</p>
+<p>This test will print a tower of prints printed with a different temperature for each floor. The "middle" one will be printed with the current temperature selected in your filament configuration. The first item, on the build plate will be the hottest and the higher will be the coolest. You can choose the delta of temperature between each test and the number of tests (how many tests below the current temperature, and how many tests hotter than the current) but you can let them as-is to begun.</p>
 <h2>Results : observation</h2>
 <p>The goal is to choose the highest temperature that doesn't produce artifacts.</p>
 <p>First, you have to analyse the tower. Each floor has the temperature written on it.</p>
 <table>
 <tbody>
 <tr>
-<td><img src="./low_ll.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./low_l.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./low.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./good.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./high.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./high_h.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./high_hh.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./high_h.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./high_hh.jpg" alt="too low, by far" width="100" height="200" /></td>
+<td><img src="./low_ll.jpg" width="100" height="200" /></td>
+<td><img src="./low_l.jpg" width="100" height="200" /></td>
+<td><img src="./low.jpg" width="100" height="200" /></td>
+<td><img src="./good.jpg" width="100" height="200" /></td>
+<td><img src="./high.jpg" width="100" height="200" /></td>
+<td><img src="./high_h.jpg" width="100" height="200" /></td>
+<td><img src="./high_hh.jpg" width="100" height="200" /></td>
+<td><img src="./high_h.jpg" width="100" height="200" /></td>
+<td><img src="./high_hh.jpg" width="100" height="200" /></td>
 </tr>
 <tr>
 <td style="text-align: center;">TODO</td>
@@ -44,6 +44,7 @@
 </ul>
 <h2>Notes</h2>
 <p>Most of the calibrations need to done is the right order. This one should be the third.</p>
+<p>The temperature numbers will only be shown between 180 and 285. Higher or lower values won't be displayed but the test will be conducted successfully, you just have to remember them.</p>
 <p>This tower is made with the 3D model created by gaaZolee and available here https://www.thingiverse.com/thing:2729076 with the CC BY-SA 3.0 licence.<p>
 <p>Licence for models used for this calibration test: CC BY-SA 3.0</p>
 </body>

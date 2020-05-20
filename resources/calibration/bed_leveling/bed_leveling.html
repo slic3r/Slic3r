@@ -11,17 +11,18 @@
 <h2>How it works</h2>
 <p>First, select your printer and your default print profile, with the filament profile for a filament you have. Note that this works with your first extruder if you have multiple ones.</p>
 <p>When clicking on the Generate button, the program will create and slice the test print. You have to send it to your printer and print it. After the print end, check the result of each corners and the middle one against the photo below. You will have to tune your printer/firmware to correct the height if needed.</p>
+<p>Read the notes and advices below for more informations.</p>
 <h2>Results</h2>
 <table>
 <tbody>
 <tr>
-<td><img src="./low_ll.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./low_l.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./low.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./good.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./high.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./high_h.jpg" alt="too low, by far" width="100" height="200" /></td>
-<td><img src="./high_hh.jpg" alt="too low, by far" width="100" height="200" /></td>
+<td><img src="./low_ll.jpg" width="100" height="200" /></td>
+<td><img src="./low_l.jpg" width="100" height="200" /></td>
+<td><img src="./low.jpg" width="100" height="200" /></td>
+<td><img src="./good.jpg" width="100" height="200" /></td>
+<td><img src="./high.jpg" width="100" height="200" /></td>
+<td><img src="./high_h.jpg" width="100" height="200" /></td>
+<td><img src="./high_hh.jpg" width="100" height="200" /></td>
 </tr>
 <tr>
 <td style="text-align: center;">Too far away</td>
@@ -44,6 +45,7 @@
 <li>You can disable/enable z-hop for the first layer by increasing "only lift z"-&gt; above Z" to a higher value than your first layer height. Enbaling it may pull the filament from the bed and diabling may let the nozzle strke &amp; push the deposited filament, so you have to test and keep the best. (Advanced setting, printer -> extruder)</li>
 </ul>
 <h2>Notes</h2>
+<p>This test use your current first layer height, but you may want to increase it up to 80% of your nozzle height (before using 'generate') if it's the first time you level your bed, to reduce the risk of a nozzle crash.</p>
 <p>After the filament flow calibration, if it appears that the flow was very wrong, you may want to redo this calibration just after.</p>
 <p>Most of the calibrations need to done is the right order. This one is the first to do. But ou have to have a "good enough" extruder calibration: when you ask for 100mm of filament, that's ~ what the extruder has to scroll into the nozzle.</p>
 <p>This test set the setting "complete individual objects" to true, so you may want to reset your print settigns afterwards</p>
