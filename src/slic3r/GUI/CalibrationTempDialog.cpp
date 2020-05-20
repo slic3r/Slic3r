@@ -1,7 +1,6 @@
 #include "CalibrationTempDialog.hpp"
 #include "I18N.hpp"
 #include "libslic3r/Utils.hpp"
-#include "GLCanvas3D.hpp "
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Tab.hpp"

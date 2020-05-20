@@ -2,7 +2,7 @@
 #include "I18N.hpp"
 #include "libslic3r/Utils.hpp"
 #include "GUI.hpp"
-#include "tab.hpp"
+#include "Tab.hpp"
 #include <wx/scrolwin.h>
 #include <wx/display.h>
 #include <wx/file.h>
@@ -105,8 +105,8 @@ void CalibrationBridgeDialog::create_geometry(wxCommandEvent& event_args) {
     float offsetx = 10 + 10 * xyScale;
     float offsety = 10 + 10 * xyScale;
     if (bed_shape->values.size() > 4) {
-        offsetx = bed_size.x() / 2 - bed_size.x() * std::sqrtf(2) / 4 + 10 * xyScale;
-        offsety = bed_size.y() / 2 - bed_size.y() * std::sqrtf(2) / 4 + 10 * xyScale;
+        offsetx = bed_size.x() / 2 - bed_size.x() * 1.412 / 4 + 10 * xyScale;
+        offsety = bed_size.y() / 2 - bed_size.y() * 1.412 / 4 + 10 * xyScale;
     }
     bool large_enough = bed_shape->values.size() == 4 ?
         (bed_size.x() > offsetx * 3 && bed_size.y() > offsety * 3) :
