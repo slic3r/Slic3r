@@ -21,50 +21,10 @@ static wxSize get_screen_size(wxWindow* window)
 namespace Slic3r {
 namespace GUI {
 
-    CalibrationBedDialog::CalibrationBedDialog(GUI_App* app, MainFrame* mainframe)
-        : DPIDialog(NULL, wxID_ANY, wxString(SLIC3R_APP_NAME) + " - " + _(L("Bed calibration - test objects generation")),
-#if ENABLE_SCROLLABLE
-        wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
-#else
-        wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE)
-#endif // ENABLE_SCROLLABLE
-{
-    this->gui_app = app;
-    this->main_frame = mainframe;
-    SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-
-    // fonts
-    const wxFont& font = wxGetApp().normal_font();
-    const wxFont& bold_font = wxGetApp().bold_font();
-    SetFont(font);
-
-    auto main_sizer = new wxBoxSizer(wxVERTICAL);
-
-    //html
-    html_viewer = new wxHtmlWindow(this, wxID_ANY,
-        wxDefaultPosition, wxSize(800, 500), wxHW_SCROLLBAR_AUTO);
-    html_viewer->LoadPage(Slic3r::resources_dir()+"/calibration/bed_leveling/bed_leveling.html");
-    main_sizer->Add(html_viewer, 1, wxEXPAND | wxALL, 5);
-
-    wxStdDialogButtonSizer* buttons = new wxStdDialogButtonSizer();
+void CalibrationBedDialog::create_buttons(wxStdDialogButtonSizer* buttons){
     wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Generate")));
     bt->Bind(wxEVT_BUTTON, &CalibrationBedDialog::create_geometry, this);
     buttons->Add(bt);
-    wxButton* close = new wxButton(this, wxID_CLOSE, _(L("Close")));
-    close->Bind(wxEVT_BUTTON, &CalibrationBedDialog::closeMe, this);
-    buttons->AddButton(close);
-    close->SetDefault();
-    close->SetFocus();
-    SetAffirmativeId(wxID_CLOSE);
-    buttons->Realize();
-    main_sizer->Add(buttons, 0, wxEXPAND | wxALL, 5);
-
-    SetSizer(main_sizer);
-    main_sizer->SetSizeHints(this);
-}
-
-void CalibrationBedDialog::closeMe(wxCommandEvent& event_args) {
-    this->Destroy();
 }
 
 void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
@@ -175,40 +135,6 @@ void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
     plat->reslice();
     plat->select_view_3D("Preview");
 
-}
-
-void CalibrationBedDialog::on_dpi_changed(const wxRect& suggested_rect)
-{
-    msw_buttons_rescale(this, em_unit(), { wxID_OK });
-
-    Layout();
-    Fit();
-    Refresh();
-}
-
-wxPanel* CalibrationBedDialog::create_header(wxWindow* parent, const wxFont& bold_font)
-{
-    wxPanel* panel = new wxPanel(parent);
-    wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
-
-    wxFont header_font = bold_font;
-#ifdef __WXOSX__
-    header_font.SetPointSize(14);
-#else
-    header_font.SetPointSize(bold_font.GetPointSize() + 2);
-#endif // __WXOSX__
-
-    sizer->AddStretchSpacer();
-
-    // text
-    wxStaticText* text = new wxStaticText(panel, wxID_ANY, _(L("Keyboard shortcuts")));
-    text->SetFont(header_font);
-    sizer->Add(text, 0, wxALIGN_CENTER_VERTICAL);
-
-    sizer->AddStretchSpacer();
-
-    panel->SetSizer(sizer);
-    return panel;
 }
 
 } // namespace GUI

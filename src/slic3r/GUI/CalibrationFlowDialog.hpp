@@ -1,40 +1,23 @@
 #ifndef slic3r_GUI_CalibrationFlowDialog_hpp_
 #define slic3r_GUI_CalibrationFlowDialog_hpp_
 
-#include <wx/wx.h>
-#include <map>
-#include <vector>
-
-#include "GUI_App.hpp"
-#include "GUI_Utils.hpp"
-#include "MainFrame.hpp"
-#include "wxExtensions.hpp"
-#include <wx/html/htmlwin.h>
+#include "CalibrationAbstractDialog.hpp"
 
 namespace Slic3r { 
 namespace GUI {
 
-class CalibrationFlowDialog : public DPIDialog
+class CalibrationFlowDialog : public CalibrationAbstractDialog
 {
 
 public:
-    CalibrationFlowDialog(GUI_App* app, MainFrame* mainframe);
-    virtual ~CalibrationFlowDialog() { if (gui_app != nullptr) gui_app->change_calibration_dialog(this, nullptr); }
+    CalibrationFlowDialog(GUI_App* app, MainFrame* mainframe) : CalibrationAbstractDialog(app, mainframe, "Flow calibration") { create("/calibration/filament_flow/filament_flow.html");  }
+    virtual ~CalibrationFlowDialog() {}
     
 protected:
-    void on_dpi_changed(const wxRect &suggested_rect) override;
-
-private:
-    void closeMe(wxCommandEvent& event_args);
-    void create_geometry_10(wxCommandEvent& event_args);
-    void create_geometry_2_5(wxCommandEvent& event_args);
-    void add_part(ModelObject* model_object, std::string input_file, Vec3d move, Vec3d scale = Vec3d{ 1,1,1 });
+    void create_buttons(wxStdDialogButtonSizer* sizer) override;
     void create_geometry(float start, float delta);
-    wxPanel* create_header(wxWindow* parent, const wxFont& bold_font);
-
-    wxHtmlWindow* html_viewer;
-    MainFrame* main_frame;
-    GUI_App* gui_app;
+    void create_geometry_10(wxCommandEvent& event_args) { create_geometry(80.f, 10.f); }
+    void create_geometry_2_5(wxCommandEvent& event_args) { create_geometry(92.f, 2.F); }
 
 };
 

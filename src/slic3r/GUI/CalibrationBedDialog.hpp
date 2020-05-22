@@ -1,38 +1,21 @@
 #ifndef slic3r_GUI_CalibrationBedDialog_hpp_
 #define slic3r_GUI_CalibrationBedDialog_hpp_
 
-#include <wx/wx.h>
-#include <map>
-#include <vector>
-
-#include "GUI_App.hpp"
-#include "GUI_Utils.hpp"
-#include "MainFrame.hpp"
-#include "wxExtensions.hpp"
-#include <wx/html/htmlwin.h>
+#include "CalibrationAbstractDialog.hpp"
 
 namespace Slic3r { 
 namespace GUI {
 
-class CalibrationBedDialog : public DPIDialog
+class CalibrationBedDialog : public CalibrationAbstractDialog
 {
 
 public:
-    CalibrationBedDialog(GUI_App* app, MainFrame* mainframe);
-    virtual ~CalibrationBedDialog() { if (gui_app != nullptr) gui_app->change_calibration_dialog(this, nullptr); }
-    
+    CalibrationBedDialog(GUI_App* app, MainFrame* mainframe) : CalibrationAbstractDialog(app, mainframe, "Bed leveling calibration") { create("/calibration/bed_leveling/bed_leveling.html");  }
+    virtual ~CalibrationBedDialog() {}
 protected:
-    void on_dpi_changed(const wxRect &suggested_rect) override;
-
+    void create_buttons(wxStdDialogButtonSizer* sizer) override;
 private:
-
-    void closeMe(wxCommandEvent& event_args);
     void create_geometry(wxCommandEvent& event_args);
-    wxPanel* create_header(wxWindow* parent, const wxFont& bold_font);
-
-    wxHtmlWindow* html_viewer;
-    MainFrame* main_frame;
-    GUI_App* gui_app;
 
 };
 

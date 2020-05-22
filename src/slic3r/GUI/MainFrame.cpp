@@ -771,10 +771,10 @@ void MainFrame::init_menubar()
             [this](wxCommandEvent&) { wxGetApp().flow_ratio_dialog(); });
         append_menu_item(objectsMenu, wxID_ANY, _(L("Filament temperature tuning")), _(L("Create a test print to help you to set your filament temperature.")),
             [this](wxCommandEvent&) { wxGetApp().filament_temperature_dialog(); });
-        //append_menu_item(objectsMenu, wxID_ANY, _(L("Ironing pattern tuning")), _(L("Create a test print to help you to set your over-bridge flow ratio.")),
-        //    [this](wxCommandEvent&) { wxGetApp().over_bridge_dialog(); });
-        //append_menu_item(objectsMenu, wxID_ANY, _(L("Bridge pattern tuning")), _(L("Create a test print to help you to set your over-bridge flow ratio.")),
-        //    [this](wxCommandEvent&) { wxGetApp().bridge_tuning_dialog(); });
+        append_menu_item(objectsMenu, wxID_ANY, _(L("Bridge pattern tuning")), _(L("Create a test print to help you to set your bridge flow ratio.")),
+            [this](wxCommandEvent&) { wxGetApp().bridge_tuning_dialog(); });
+        append_menu_item(objectsMenu, wxID_ANY, _(L("Ironing pattern tuning")), _(L("Create a test print to help you to set your over-bridge flow ratio and ironing pattern.")),
+            [this](wxCommandEvent&) { wxGetApp().over_bridge_dialog(); });
 
     }
 

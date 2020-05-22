@@ -43,6 +43,7 @@
 #include "CalibrationBedDialog.hpp"
 #include "CalibrationBridgeDialog.hpp"
 #include "CalibrationFlowDialog.hpp"
+#include "CalibrationOverBridgeDialog.hpp"
 #include "CalibrationTempDialog.hpp"
 #include "ConfigSnapshotDialog.hpp"
 #include "FirmwareDialog.hpp"
@@ -581,7 +582,7 @@ void GUI_App::flow_ratio_dialog()
 }
 void GUI_App::over_bridge_dialog()
 {
-    change_calibration_dialog(nullptr, new CalibrationFlowDialog(this, mainframe));
+    change_calibration_dialog(nullptr, new CalibrationOverBridgeDialog(this, mainframe));
 }
 void GUI_App::bridge_tuning_dialog()
 {

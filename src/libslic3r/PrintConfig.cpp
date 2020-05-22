@@ -2084,10 +2084,11 @@ void PrintConfigDef::init_fff_params()
     def->label = L("No perimeters on bridge areas");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Experimental option to remove perimeters where there is nothing under it and where a bridged infill should be better. "
-        "\n * Remove perimeters: remove the unsupported perimeter, let the bridge area as-is."
-        "\n * Keep only bridges: remove the unsupported perimeter, kep only bridges that end in solid area."
-        "\n * Keep bridges and overhangs: remove the unsupported perimeter, keep only bridges that end in solid area, fill the rest with overhang perimeters+bridges."
-        "\n * Fill the voids with bridges: remove the unsupported perimeter, draw bridges over the whole hole. !! can lead to problems with overhangs shape like  /\\, consider carefully before using this option!"
+        "\n * Remove perimeters: remove the unsupported perimeters, let the bridge area as-is."
+        "\n * Keep only bridges: remove the perimeters in the bridge areas, keep only bridges that end in solid area."
+        "\n * Keep bridges and overhangs: remove the unsupported perimeters, keep only bridges that end in solid area, fill the rest with overhang perimeters+bridges."
+        "\n * Fill the voids with bridges: remove the unsupported perimeters, draw bridges over the whole hole.*"
+        " !! this one can escalate to problems with overhangs shape like  /\\, so you should use it only on one layer at a time via the height-range modifier!"
         "\n!!Computationally intensive!!. ");
     def->enum_keys_map = &ConfigOptionEnum<NoPerimeterUnsupportedAlgo>::get_enum_values();
     def->enum_values.push_back("none");
