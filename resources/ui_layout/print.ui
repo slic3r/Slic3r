@@ -235,6 +235,7 @@ group:Flow
 		setting:fill_top_flow_ratio
 		setting:first_layer_flow_ratio
 	end_line
+	setting:external_perimeter_cut_corners
 
 page:Multiple extruders:funnel
 group:Extruders

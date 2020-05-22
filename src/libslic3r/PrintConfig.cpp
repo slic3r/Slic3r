@@ -677,12 +677,22 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("External perimeters width");
     def->category = OptionCategory::width;
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for external perimeters. "
-                   "If left zero, default extrusion width will be used if set, otherwise 1.05 x nozzle diameter will be used. "
-                   "If expressed as percentage (for example 112.5%), it will be computed over nozzle diameter.");
+        "If left zero, default extrusion width will be used if set, otherwise 1.05 x nozzle diameter will be used. "
+        "If expressed as percentage (for example 112.5%), it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+
+    def = this->add("external_perimeter_cut_corners", coPercent);
+    def->label = L("Cutting corners");
+    def->full_label = L("Ext. peri. cut corners");
+    def->category = OptionCategory::width;
+    def->tooltip = L("Activate this option to modify the flow to acknoledge that the nozzle is round and the corners will have a round shape, and so change the flow to realized that and avoid over-extrusion."
+        " 100% is activated, 0% is deactivated and 50% is half-activated");
+    def->sidetext = L("%");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionPercent(0));
 
     def = this->add("external_perimeter_speed", coFloatOrPercent);
     def->label = L("External");

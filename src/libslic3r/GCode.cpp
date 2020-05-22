@@ -3552,23 +3552,81 @@ void GCode::_write_format(FILE* file, const char* format, ...)
 std::string GCode::_extrude(const ExtrusionPath &path, const std::string &description, double speed) {
 
     std::string gcode = this->_before_extrude(path, description, speed);
-
+    
     // calculate extrusion length per distance unit
     double e_per_mm = path.mm3_per_mm
         * m_writer.extruder()->e_per_mm3()
         * this->config().print_extrusion_multiplier.get_abs_value(1);
     if (this->m_layer_index <= 0) e_per_mm *= this->config().first_layer_flow_ratio.get_abs_value(1);
     if (m_writer.extrusion_axis().empty()) e_per_mm = 0;
-    double path_length = 0.;
-    {
-        std::string comment = m_config.gcode_comments ? description : "";
-        for (const Line &line : path.polyline.lines()) {
-            const double line_length = line.length() * SCALING_FACTOR;
-            path_length += line_length;
-            gcode += m_writer.extrude_to_xy(
-                this->point_to_gcode(line.b),
-                e_per_mm * line_length,
-                comment);
+    if (path.polyline.lines().size() > 0) {
+        //get last direction //TODO: save it
+        {
+            std::string comment = m_config.gcode_comments ? description : "";
+            if (path.role() != erExternalPerimeter || config().external_perimeter_cut_corners.value == 0) {
+                // normal & legacy pathcode
+                for (const Line& line : path.polyline.lines()) {
+                    gcode += m_writer.extrude_to_xy(
+                        this->point_to_gcode(line.b),
+                        e_per_mm * unscaled(line.length()),
+                        comment);
+                }
+            } else {
+                // external_perimeter_cut_corners pathcode
+                Point last_pos = path.polyline.lines()[0].a;
+                for (const Line& line : path.polyline.lines()) {
+                    //check the angle
+                    double angle = line.a == last_pos ? PI : line.a.ccw_angle(last_pos, line.b);
+                    if (angle > 1) angle = 2 * PI - angle;
+                    double coeff = std::cos(angle) + 1;
+                    //Create extrusion mult
+                    double mult = config().external_perimeter_cut_corners.get_abs_value(0.05375) * coeff; // 0.94625 = 3.78 / 4 = (4 - ((4 - pi) / 4)) / 4  // 4 = carre, 3.14 = disk
+                    double length1 = scale_(path.width) / 4;
+
+                    //extrude in three steps: one short with big mult, one of nozzle size with the rest and then the normal one.
+                    //it's a very rough approx of a cos.
+                    length1 /= (2.1 - coeff);
+                    if (line.length() > length1 && mult > 0.001) {
+                        //Create a point
+                        Point inter_point1 = line.point_at(length1);
+                        //extrude very reduced
+                        gcode += m_writer.extrude_to_xy(
+                            this->point_to_gcode(inter_point1),
+                            e_per_mm * unscaled(length1) * (1 - mult * 2.5),
+                            comment);
+
+                        double length2 = scale_(path.width);
+                        length2 /= (2.1 - coeff);
+                        if (line.length() > length2) {
+                            Point inter_point2 = line.point_at(length2);
+                            //extrude reduced
+                            gcode += m_writer.extrude_to_xy(
+                                this->point_to_gcode(inter_point2),
+                                e_per_mm * unscaled(length2 - length1) * (1 - mult / 2),
+                                comment);
+
+                            //extrude normal
+                            gcode += m_writer.extrude_to_xy(
+                                this->point_to_gcode(line.b),
+                                e_per_mm * unscaled(line.length() - length2),
+                                comment);
+                        } else {
+                            gcode += m_writer.extrude_to_xy(
+                                this->point_to_gcode(line.b),
+                                e_per_mm * unscaled(line.length() - length1) * (1 - mult / 2),
+                                comment);
+                        }
+                    } else {
+                        gcode += m_writer.extrude_to_xy(
+                            this->point_to_gcode(line.b),
+                            e_per_mm * unscaled(line.length() - length1) * (1 - mult * path.width / unscaled(line.length())),
+                            comment);
+                    }
+
+                    //relance
+                    last_pos = line.a;
+                }
+            }
         }
     }
     gcode += this->_after_extrude(path);

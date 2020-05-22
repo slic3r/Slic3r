@@ -466,6 +466,7 @@ public:
     ConfigOptionBool                clip_multipart_objects;
     ConfigOptionBool                dont_support_bridges;
     ConfigOptionFloat               elefant_foot_compensation;
+    ConfigOptionPercent             external_perimeter_cut_corners;
     ConfigOptionBool                exact_last_layer_height;
     ConfigOptionFloatOrPercent      extrusion_width;
     ConfigOptionFloatOrPercent      first_layer_height;
@@ -525,6 +526,7 @@ protected:
         OPT_PTR(clip_multipart_objects);
         OPT_PTR(dont_support_bridges);
         OPT_PTR(elefant_foot_compensation);
+        OPT_PTR(external_perimeter_cut_corners);
         OPT_PTR(exact_last_layer_height);
         OPT_PTR(extrusion_width);
         OPT_PTR(first_layer_height);
