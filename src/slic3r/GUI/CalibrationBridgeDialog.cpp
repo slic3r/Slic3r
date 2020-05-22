@@ -40,10 +40,10 @@ void CalibrationBridgeDialog::create_buttons(wxStdDialogButtonSizer* buttons){
     wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Test Flow Ratio")));
     bt->Bind(wxEVT_BUTTON, &CalibrationBridgeDialog::create_geometry_flow_ratio, this);
     buttons->Add(bt);
-    buttons->AddSpacer(15);
-    bt = new wxButton(this, wxID_FILE1, _(L("Test Overlap")));
-    bt->Bind(wxEVT_BUTTON, &CalibrationBridgeDialog::create_geometry_overlap, this);
-    buttons->Add(bt);
+    //buttons->AddSpacer(15);
+    //bt = new wxButton(this, wxID_FILE1, _(L("Test Overlap")));
+    //bt->Bind(wxEVT_BUTTON, &CalibrationBridgeDialog::create_geometry_overlap, this);
+    //buttons->Add(bt);
 }
 
 void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool add) {
@@ -58,7 +58,7 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
 
     std::vector<std::string> items;
     for (size_t i = 0; i < nb_items; i++)
-        items.emplace_back("./resources/calibration/bridge_flow/bridge_test.amf");
+        items.emplace_back(Slic3r::resources_dir()+"/calibration/bridge_flow/bridge_test.amf");
     std::vector<size_t> objs_idx = plat->load_files(items, true, false);
 
     assert(objs_idx.size() == nb_items);
@@ -107,6 +107,8 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
 
     /// --- custom config ---
     for (size_t i = 0; i < nb_items; i++) {
+        model.objects[objs_idx[i]]->config.set_key_value("brim_width", new ConfigOptionFloat(std::max (print_config->option<ConfigOptionFloat>("brim_width")->value, nozzle_diameter * 5.)));
+        model.objects[objs_idx[i]]->config.set_key_value("brim_ears", new ConfigOptionBool(false));
         model.objects[objs_idx[i]]->config.set_key_value("perimeters", new ConfigOptionInt(2));
         model.objects[objs_idx[i]]->config.set_key_value("bottom_solid_layers", new ConfigOptionInt(2));
         model.objects[objs_idx[i]]->config.set_key_value("gap_fill", new ConfigOptionBool(false));

@@ -16,8 +16,8 @@ public:
 protected:
     void create_buttons(wxStdDialogButtonSizer* buttons) override;
     void create_geometry(std::string setting_key, bool add);
-    void CalibrationBridgeDialog::create_geometry_flow_ratio(wxCommandEvent& event_args) { create_geometry("bridge_flow_ratio", false);  }
-    void CalibrationBridgeDialog::create_geometry_overlap(wxCommandEvent& event_args) { create_geometry("bridge_overlap", true); }
+    void create_geometry_flow_ratio(wxCommandEvent& event_args) { create_geometry("bridge_flow_ratio", false);  }
+    void create_geometry_overlap(wxCommandEvent& event_args) { create_geometry("bridge_overlap", true); }
 
     wxComboBox* steps;
     wxComboBox* nb_tests;
