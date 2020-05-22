@@ -35,6 +35,12 @@
 
 namespace Slic3r {
 
+enum CompleteObjectSort {
+    cosObject, 
+	cosZ, 
+	cosY,
+};
+
 enum WipeAlgo {
     waLinear,
     waQuadra,
@@ -92,14 +98,24 @@ enum SLAPillarConnectionMode {
     slapcmZigZag,
     slapcmCross,
     slapcmDynamic
-};
+}; 
+
+template<> inline const t_config_enum_values& ConfigOptionEnum<CompleteObjectSort>::get_enum_values() {
+    static t_config_enum_values keys_map;
+    if (keys_map.empty()) {
+        keys_map["object"] = cosObject;
+        keys_map["lowy"] = cosY;
+        keys_map["lowz"] = cosY;
+    }
+    return keys_map;
+}
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<PrinterTechnology>::get_enum_values() {
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
-        keys_map["FFF"]             = ptFFF;
-        keys_map["SLA"]             = ptSLA;
-        keys_map["SLS"]             = ptSLS;
+        keys_map["FFF"] = ptFFF;
+        keys_map["SLA"] = ptSLA;
+        keys_map["SLS"] = ptSLS;
     }
     return keys_map;
 }
@@ -989,6 +1005,7 @@ public:
     ConfigOptionInts                chamber_temperature;
     ConfigOptionBool                complete_objects;
     ConfigOptionBool                complete_objects_one_skirt;
+    ConfigOptionEnum<CompleteObjectSort> complete_objects_sort;
     ConfigOptionFloats              colorprint_heights;
     ConfigOptionBools               cooling;
     ConfigOptionFloat               default_acceleration;
@@ -1069,6 +1086,7 @@ protected:
         OPT_PTR(chamber_temperature);
         OPT_PTR(complete_objects);
         OPT_PTR(complete_objects_one_skirt);
+        OPT_PTR(complete_objects_sort);
         OPT_PTR(colorprint_heights);
         OPT_PTR(cooling);
         OPT_PTR(default_acceleration);

@@ -1346,7 +1346,7 @@ bool Tab::create_pages(std::string setting_type_name)
             if (params.size() > 1) setting_id = params.back();
             if (setting_id.size() < 2) continue;
             if (!m_config->has(setting_id)) {
-                std::cerr << "No " << setting_id << " in tab ConfigOptionsGroup config.\n";
+                std::cerr << "No " << setting_id << " in ConfigOptionsGroup config, tab "<< setting_type_name <<".\n";
                 continue;
             }
 

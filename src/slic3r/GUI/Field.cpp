@@ -980,6 +980,8 @@ void Choice::set_value(const boost::any& value, bool change_event)
         } else if (m_opt_id.compare("perimeter_loop_seam") == 0) {
             val = idx_from_enum_value<SeamPosition>(val);
         }
+        else if (m_opt_id.compare("complete_objects_sort") == 0)
+            val = idx_from_enum_value<CompleteObjectSort>(val);
         else if (m_opt_id.compare("gcode_flavor") == 0)
             val = idx_from_enum_value<GCodeFlavor>(val);
         else if (m_opt_id.compare("support_material_pattern") == 0)
@@ -1063,6 +1065,8 @@ boost::any& Choice::get_value()
             convert_to_enum_value<InfillPattern>(ret_enum);
         else if (m_opt_id.compare("gcode_flavor") == 0)
             convert_to_enum_value<GCodeFlavor>(ret_enum);
+        else if (m_opt_id.compare("complete_objects_sort") == 0)
+            convert_to_enum_value<CompleteObjectSort>(ret_enum);
         else if (m_opt_id.compare("support_material_pattern") == 0)
             convert_to_enum_value<SupportMaterialPattern>(ret_enum);
         else if (m_opt_id.compare("seam_position") == 0)

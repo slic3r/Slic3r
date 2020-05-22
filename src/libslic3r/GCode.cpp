@@ -9,6 +9,7 @@
 #include "ShortestPath.hpp"
 #include "Utils.hpp"
 #include "libslic3r.h"
+#include "PrintConfig.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -1113,16 +1114,45 @@ namespace DoExport {
 }
 
 // Sort the PrintObjects by their increasing Z, likely useful for avoiding colisions on Deltas during sequential prints.
-static inline std::vector<const PrintInstance*> sort_object_instances_by_max_z(const Print &print)
+static inline std::vector<const PrintInstance*> sort_object_instances_by_max_z(const Print& print)
 {
     std::vector<const PrintObject*> objects(print.objects().begin(), print.objects().end());
-	std::sort(objects.begin(), objects.end(), [](const PrintObject *po1, const PrintObject *po2) { return po1->height() < po2->height(); });
-	std::vector<const PrintInstance*> instances;
-	instances.reserve(objects.size());
-	for (const PrintObject *object : objects)
-		for (size_t i = 0; i < object->instances().size(); ++ i)
-			instances.emplace_back(&object->instances()[i]);
-	return instances;
+    std::sort(objects.begin(), objects.end(), [](const PrintObject* po1, const PrintObject* po2) { return po1->height() < po2->height(); });
+    std::vector<const PrintInstance*> instances;
+    instances.reserve(objects.size());
+    for (const PrintObject* object : objects)
+        for (size_t i = 0; i < object->instances().size(); ++i)
+            instances.emplace_back(&object->instances()[i]);
+    return instances;
+}
+
+// Sort the PrintObjects by their increasing Y, likely useful for avoiding colisions on printer with a x-bar during sequential prints.
+static inline std::vector<const PrintInstance*> sort_object_instances_by_max_y(const Print& print)
+{
+    std::vector<const PrintObject*> objects(print.objects().begin(), print.objects().end());
+    std::sort(objects.begin(), objects.end(), [](const PrintObject* po1, const PrintObject* po2) { return po1->height() < po2->height(); });
+    std::vector<const PrintInstance*> instances;
+    instances.reserve(objects.size());
+    std::map<const PrintInstance*, coord_t> map_min_y;
+    for (const PrintObject* object : objects) {
+        for (size_t i = 0; i < object->instances().size(); ++i) {
+            instances.emplace_back(&object->instances()[i]);
+            // Calculate the convex hull of a printable object. 
+            Polygon poly = object->model_object()->convex_hull_2d(
+                Geometry::assemble_transform(Vec3d::Zero(),
+                    object->instances()[i].model_instance->get_rotation(), 
+                    object->instances()[i].model_instance->get_scaling_factor(), 
+                    object->instances()[i].model_instance->get_mirror()));
+            poly.translate(object->instances()[i].shift - object->center_offset());
+            coord_t min_y = poly.first_point().y();
+            for (const Point& point : poly.points)
+                if (point.y() < min_y)
+                    min_y = point.y();
+            map_min_y[instances.back()] = min_y;
+        }
+    }
+    std::sort(instances.begin(), instances.end(), [&map_min_y](const PrintInstance* po1, const PrintInstance* po2) { return map_min_y[po1] < map_min_y[po2]; });
+    return instances;
 }
 
 // Produce a vector of PrintObjects in the order of their respective ModelObjects in print.model().
@@ -1302,8 +1332,12 @@ void GCode::_do_export(Print &print, FILE *file)
     std::vector<const PrintInstance*>::const_iterator 	print_object_instance_sequential_active;
     if (print.config().complete_objects.value) {
         // Order object instances for sequential print.
-        print_object_instances_ordering = sort_object_instances_by_model_order(print);
-//        print_object_instances_ordering = sort_object_instances_by_max_z(print);
+        if(print.config().complete_objects_sort.value == cosObject)
+            print_object_instances_ordering = sort_object_instances_by_model_order(print);
+        else if (print.config().complete_objects_sort.value == cosZ)
+            print_object_instances_ordering = sort_object_instances_by_max_z(print);
+        else if (print.config().complete_objects_sort.value == cosY)
+            print_object_instances_ordering = sort_object_instances_by_max_y(print);
         // Find the 1st printing object, find its tool ordering and the initial extruder ID.
         print_object_instance_sequential_active = print_object_instances_ordering.begin();
         for (; print_object_instance_sequential_active != print_object_instances_ordering.end(); ++ print_object_instance_sequential_active) {

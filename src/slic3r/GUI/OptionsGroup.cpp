@@ -746,6 +746,9 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 			opt_key == "fill_pattern" ) {
 			ret = static_cast<int>(config.option<ConfigOptionEnum<InfillPattern>>(opt_key)->value);
 		}
+		else if (opt_key.compare("complete_objects_sort") == 0 ) {
+			ret = static_cast<int>(config.option<ConfigOptionEnum<CompleteObjectSort>>(opt_key)->value);
+		}
 		else if (opt_key.compare("gcode_flavor") == 0 ) {
 			ret = static_cast<int>(config.option<ConfigOptionEnum<GCodeFlavor>>(opt_key)->value);
 		}

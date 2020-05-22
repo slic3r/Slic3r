@@ -448,6 +448,23 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("complete_objects_sort", coEnum);
+    def->label = L("Object sort");
+    def->category = OptionCategory::output;
+    def->tooltip = L("When printing multiple objects or copies on after another, this will help you to choose how it's ordered."
+        "\nObject will sort them by the order of the right panel."
+        "\nLowest Y will sort them by their lowest Y point. Useful for printers with a X-bar."
+        "\nLowest Z will sort them by their height, useful for delta printers.");
+    def->mode = comAdvanced;
+    def->enum_keys_map = &ConfigOptionEnum<CompleteObjectSort>::get_enum_values();
+    def->enum_values.push_back("object");
+    def->enum_values.push_back("lowy");
+    def->enum_values.push_back("lowz");
+    def->enum_labels.push_back(L("Right panel"));
+    def->enum_labels.push_back(L("lowest Y"));
+    def->enum_labels.push_back(L("lowest Z"));
+    def->set_default_value(new ConfigOptionEnum<CompleteObjectSort>(cosObject));
+
     def = this->add("cooling", coBools);
     def->label = L("Enable auto cooling");
     def->category = OptionCategory::cooling;

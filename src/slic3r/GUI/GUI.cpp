@@ -188,7 +188,9 @@ void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt
 				opt_key == "bottom_fill_pattern" ||
 				opt_key == "solid_fill_pattern" ||
 				opt_key == "fill_pattern")
-				config.set_key_value(opt_key, new ConfigOptionEnum<InfillPattern>(boost::any_cast<InfillPattern>(value))); 
+				config.set_key_value(opt_key, new ConfigOptionEnum<InfillPattern>(boost::any_cast<InfillPattern>(value)));
+			else if (opt_key.compare("complete_objects_sort") == 0)
+				config.set_key_value(opt_key, new ConfigOptionEnum<CompleteObjectSort>(boost::any_cast<CompleteObjectSort>(value)));  
 			else if (opt_key.compare("gcode_flavor") == 0)
 				config.set_key_value(opt_key, new ConfigOptionEnum<GCodeFlavor>(boost::any_cast<GCodeFlavor>(value))); 
 			else if (opt_key.compare("support_material_interface_pattern") == 0)
