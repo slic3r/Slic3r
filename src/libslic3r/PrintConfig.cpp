@@ -295,10 +295,10 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Bridge overlap");
     def->sidetext = L("%");
     def->category = OptionCategory::width;
-    def->tooltip = L("Amount of overlap between lines of the bridge. If your bridge flow ratio is low, it may be useful to increaase this setting to let lines touch each other. Default to 100%. A value of 200% will create two times more lines.");
+    def->tooltip = L("Amount of overlap between lines of the bridge. If want more space between line (or less), you can modify it. Default to 100%. A value of 50% will create two times less lines.");
     def->min = 50;
     def->max = 200;
-    def->mode = comAdvanced;
+    def->mode = comExpert;
     def->set_default_value(new ConfigOptionPercent(100));
 
     def = this->add("bridge_speed", coFloat);
@@ -830,7 +830,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Extruder");
     def->category = OptionCategory::extruders;
     def->tooltip = L("The extruder to use (unless more specific extruder settings are specified). "
-                   "This value overrides perimeter and infill extruders, but not the support extruders.");
+        "This value overrides perimeter and infill extruders, but not the support extruders.");
     def->min = 0;  // 0 = inherit defaults
     def->enum_labels.push_back("default");  // override label for item 0
     def->enum_labels.push_back("1");
@@ -1942,6 +1942,31 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(0);
     def->set_default_value(new ConfigOptionFloat(0));
 #endif /* HAS_PRESSURE_EQUALIZER */
+
+    def = this->add("milling_cutter", coInt);
+    def->gui_type = "i_enum_open";
+    def->label = L("Milling cutter");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L("The milling cutter to use (unless more specific extruder settings are specified). ");
+    def->min = 0;  // 0 = inherit defaults
+    def->enum_labels.push_back("default");  // override label for item 0
+    def->enum_labels.push_back("1");
+    def->enum_labels.push_back("2");
+    def->enum_labels.push_back("3");
+    def->enum_labels.push_back("4");
+    def->enum_labels.push_back("5");
+    def->enum_labels.push_back("6");
+    def->enum_labels.push_back("7");
+    def->enum_labels.push_back("8");
+    def->enum_labels.push_back("9");
+
+    def = this->add("milling_diameter", coFloats);
+    def->label = L("Milling diameter");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L("This is the diameter of your cutting tool.");
+    def->sidetext = L("mm");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats(2.14));
 
     def = this->add("min_fan_speed", coInts);
     def->label = L("Min");
@@ -3460,6 +3485,9 @@ void PrintConfigDef::init_extruder_option_keys()
         "wipe_extra_perimeter"
     };
     assert(std::is_sorted(m_extruder_retract_keys.begin(), m_extruder_retract_keys.end()));
+    m_milling_option_keys = {
+        "milling_diameter",
+    };
 }
 
 void PrintConfigDef::init_sla_params()
@@ -4219,15 +4247,27 @@ void DynamicPrintConfig::normalize()
 
 void DynamicPrintConfig::set_num_extruders(unsigned int num_extruders)
 {
-    const auto &defaults = FullPrintConfig::defaults();
-    for (const std::string &key : print_config_def.extruder_option_keys()) {
+    const auto& defaults = FullPrintConfig::defaults();
+    for (const std::string& key : print_config_def.extruder_option_keys()) {
         if (key == "default_filament_profile")
             continue;
-        auto *opt = this->option(key, false);
+        auto* opt = this->option(key, false);
         assert(opt != nullptr);
         assert(opt->is_vector());
         if (opt != nullptr && opt->is_vector())
             static_cast<ConfigOptionVectorBase*>(opt)->resize(num_extruders, defaults.option(key));
+    }
+}
+
+void DynamicPrintConfig::set_num_milling(unsigned int num_milling)
+{
+    const auto& defaults = FullPrintConfig::defaults();
+    for (const std::string& key : print_config_def.milling_option_keys()) {
+        auto* opt = this->option(key, false);
+        assert(opt != nullptr);
+        assert(opt->is_vector());
+        if (opt != nullptr && opt->is_vector())
+            static_cast<ConfigOptionVectorBase*>(opt)->resize(num_milling, defaults.option(key));
     }
 }
 

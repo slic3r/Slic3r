@@ -305,6 +305,10 @@ void Preset::normalize(DynamicPrintConfig &config)
                 static_cast<ConfigOptionStrings*>(opt)->values.resize(n, std::string());
         }
     }
+    auto *milling_diameter = dynamic_cast<const ConfigOptionFloats*>(config.option("milling_diameter"));
+    if (milling_diameter != nullptr)
+        // Loaded the FFF Printer settings. Verify, that all extruder dependent values have enough values.
+        config.set_num_milling((unsigned int)milling_diameter->values.size());
 }
 
 std::string Preset::remove_invalid_keys(DynamicPrintConfig &config, const DynamicPrintConfig &default_config)
@@ -385,6 +389,9 @@ bool is_compatible_with_printer(const PresetWithVendorProfile &preset, const Pre
     const ConfigOption *opt = active_printer.preset.config.option("nozzle_diameter");
     if (opt)
         config.set_key_value("num_extruders", new ConfigOptionInt((int)static_cast<const ConfigOptionFloats*>(opt)->values.size()));
+    opt = active_printer.preset.config.option("milling_diameter");
+    if (opt)
+        config.set_key_value("num_milling", new ConfigOptionInt((int)static_cast<const ConfigOptionFloats*>(opt)->values.size()));
     return is_compatible_with_printer(preset, active_printer, &config);
 }
 
@@ -591,6 +598,7 @@ const std::vector<std::string>& Preset::printer_options()
             "fan_speedup_time"
         };
         s_opts.insert(s_opts.end(), Preset::nozzle_options().begin(), Preset::nozzle_options().end());
+        s_opts.insert(s_opts.end(), Preset::milling_options().begin(), Preset::milling_options().end());
     }
     return s_opts;
 }
@@ -599,7 +607,12 @@ const std::vector<std::string>& Preset::printer_options()
 // of the nozzle_diameter vector.
 const std::vector<std::string>& Preset::nozzle_options()
 {
-	return print_config_def.extruder_option_keys();
+    return print_config_def.extruder_option_keys();
+}
+
+const std::vector<std::string>& Preset::milling_options()
+{
+    return print_config_def.milling_option_keys();
 }
 
 const std::vector<std::string>& Preset::sla_print_options()
@@ -1204,6 +1217,9 @@ size_t PresetCollection::update_compatible_internal(const PresetWithVendorProfil
     const ConfigOption *opt = active_printer.preset.config.option("nozzle_diameter");
     if (opt)
         config.set_key_value("num_extruders", new ConfigOptionInt((int)static_cast<const ConfigOptionFloats*>(opt)->values.size()));
+    opt = active_printer.preset.config.option("milling_diameter");
+    if (opt)
+        config.set_key_value("num_milling", new ConfigOptionInt((int)static_cast<const ConfigOptionFloats*>(opt)->values.size()));
     bool some_compatible = false;
     for (size_t idx_preset = m_num_default_presets; idx_preset < m_presets.size(); ++ idx_preset) {
         bool    selected        = idx_preset == m_idx_selected;
@@ -1521,7 +1537,7 @@ void add_correct_opts_to_diff(const std::string &opt_key, t_config_option_keys& 
     for (int i = 0; i < opt_cur->values.size(); i++)
     {
         int init_id = i <= opt_init_max_id ? i : 0;
-        if (opt_cur->values[i] != opt_init->values[init_id])
+        if (opt_init_max_id < 0 || opt_cur->values[i] != opt_init->values[init_id])
             vec.emplace_back(opt_key + "#" + std::to_string(i));
     }
 }

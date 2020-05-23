@@ -107,7 +107,6 @@ protected:
 wxDECLARE_EVENT(EVT_TAB_VALUE_CHANGED, wxCommandEvent);
 wxDECLARE_EVENT(EVT_TAB_PRESETS_CHANGED, SimpleEvent);
 
-
 using PageShp = std::shared_ptr<Page>;
 class Tab: public wxPanel
 {
@@ -324,7 +323,7 @@ protected:
 	void			fill_icon_descriptions();
 	void			set_tooltips_text();
 
-    bool create_pages(std::string setting_type_name);
+	bool create_pages(std::string setting_type_name, int idx = -1);
 
     ConfigManipulation m_config_manipulation;
     ConfigManipulation get_config_manipulation();
@@ -397,6 +396,10 @@ public:
 	size_t		m_extruders_count_old = 0;
 	size_t		m_initial_extruders_count;
 	size_t		m_sys_extruders_count;
+	size_t		m_milling_count;
+	size_t		m_milling_count_old = 0;
+	size_t		m_initial_milling_count;
+	size_t		m_sys_milling_count;
 
     PrinterTechnology               m_printer_technology = ptFFF;
 
@@ -414,6 +417,7 @@ public:
     void        update_pages(); // update m_pages according to printer technology
 	void		update_serial_ports();
 	void		extruders_count_changed(size_t extruders_count);
+	void		milling_count_changed(size_t extruders_count);
 	PageShp		build_kinematics_page();
 	void		build_unregular_pages();
 	void		on_preset_loaded() override;

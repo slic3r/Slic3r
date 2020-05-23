@@ -274,6 +274,8 @@ public:
     // The extruder retract keys could be overidden by the same values defined at the Filament level
     // (then the key is further prefixed with the "filament_" prefix).
     const std::vector<std::string>& extruder_retract_keys() const { return m_extruder_retract_keys; }
+    // Array options growing with the number of milling cutters
+    const std::vector<std::string>& milling_option_keys() const { return m_milling_option_keys; }
 
 private:
     void init_common_params();
@@ -283,6 +285,7 @@ private:
 
     std::vector<std::string> 	m_extruder_option_keys;
     std::vector<std::string> 	m_extruder_retract_keys;
+    std::vector<std::string> 	m_milling_option_keys;
 };
 
 // The one and only global definition of SLic3r configuration options.
@@ -314,6 +317,8 @@ public:
     void                normalize();
 
     void 				set_num_extruders(unsigned int num_extruders);
+
+    void 				set_num_milling(unsigned int num_milling);
 
     // Validate the PrintConfig. Returns an empty string on success, otherwise an error message is returned.
     std::string         validate();
@@ -1029,9 +1034,10 @@ public:
     ConfigOptionFloat               infill_acceleration;
     ConfigOptionInts                max_fan_speed;
     ConfigOptionFloats              max_layer_height;
+    ConfigOptionFloat               max_print_height;
+    ConfigOptionFloats              milling_diameter;
     ConfigOptionInts                min_fan_speed;
     ConfigOptionFloats              min_layer_height;
-    ConfigOptionFloat               max_print_height;
     ConfigOptionFloats              min_print_speed;
     ConfigOptionFloat               min_skirt_length;
     ConfigOptionString              notes;
@@ -1110,9 +1116,10 @@ protected:
         OPT_PTR(infill_acceleration);
         OPT_PTR(max_fan_speed);
         OPT_PTR(max_layer_height);
+        OPT_PTR(max_print_height);
+        OPT_PTR(milling_diameter);
         OPT_PTR(min_fan_speed);
         OPT_PTR(min_layer_height);
-        OPT_PTR(max_print_height);
         OPT_PTR(min_print_speed);
         OPT_PTR(min_skirt_length);
         OPT_PTR(notes);

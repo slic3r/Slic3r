@@ -462,6 +462,9 @@ void ConfigOptionsGroup::back_to_config_value(const DynamicPrintConfig& config, 
 	if (opt_key == "extruders_count") {
 		auto   *nozzle_diameter = dynamic_cast<const ConfigOptionFloats*>(config.option("nozzle_diameter"));
 		value = int(nozzle_diameter->values.size());
+	} else if (opt_key == "milling_count") {
+		auto   *milling_diameter = dynamic_cast<const ConfigOptionFloats*>(config.option("milling_diameter"));
+		value = int(milling_diameter->values.size());
 	}
     else if (m_opt_map.find(opt_key) == m_opt_map.end() ||
             // This option don't have corresponded field

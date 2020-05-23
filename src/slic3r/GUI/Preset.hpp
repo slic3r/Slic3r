@@ -224,6 +224,9 @@ public:
     // Resize the extruder specific fields, initialize them with the content of the 1st extruder.
     void                set_num_extruders(unsigned int n) { this->config.set_num_extruders(n); }
 
+    // Resize the milling specific fields, initialize them with the content of the 1st extruder.
+    void                set_num_milling(unsigned int n) { this->config.set_num_milling(n); }
+
     // Sort lexicographically by a preset name. The preset name shall be unique across a single PresetCollection.
     bool                operator<(const Preset &other) const { return this->name < other.name; }
 
@@ -233,6 +236,7 @@ public:
     static const std::vector<std::string>&  printer_options();
     // Nozzle options of the printer options.
     static const std::vector<std::string>&  nozzle_options();
+    static const std::vector<std::string>&  milling_options();
 
     static const std::vector<std::string>&  sla_printer_options();
     static const std::vector<std::string>&  sla_material_options();

@@ -290,11 +290,13 @@ class ConfigOptionVector : public ConfigOptionVectorBase
 {
 public:
     ConfigOptionVector() {}
-    explicit ConfigOptionVector(size_t n, const T &value) : values(n, value) {}
+    explicit ConfigOptionVector(const T& default_val) : default_value(default_val) {}
+    explicit ConfigOptionVector(size_t n, const T& value) : values(n, value) {}
     explicit ConfigOptionVector(std::initializer_list<T> il) : values(std::move(il)) {}
     explicit ConfigOptionVector(const std::vector<T> &values) : values(values) {}
     explicit ConfigOptionVector(std::vector<T> &&values) : values(std::move(values)) {}
     std::vector<T> values;
+    T default_value;
     
     void set(const ConfigOption *rhs) override
     {
@@ -350,8 +352,8 @@ public:
 
     const T& get_at(size_t i) const
     {
-        assert(! this->values.empty());
-        return (i < this->values.size()) ? this->values[i] : this->values.front();
+        //assert(! this->values.empty());
+        return (i < this->values.size()) ? this->values[i] : (this->values.empty()? default_value : this->values.front());
     }
 
     T& get_at(size_t i) { return const_cast<T&>(std::as_const(*this).get_at(i)); }
@@ -370,10 +372,13 @@ public:
         else if (n > this->values.size()) {
             if (this->values.empty()) {
                 if (opt_default == nullptr)
-                    throw std::runtime_error("ConfigOptionVector::resize(): No default value provided.");
+                    this->values.resize(n, this->default_value);
                 if (opt_default->type() != this->type())
                     throw std::runtime_error("ConfigOptionVector::resize(): Extending with an incompatible type.");
-                this->values.resize(n, static_cast<const ConfigOptionVector<T>*>(opt_default)->values.front());
+                if(static_cast<const ConfigOptionVector<T>*>(opt_default)->values.empty())
+                    this->values.resize(n, this->default_value);
+                else
+                    this->values.resize(n, static_cast<const ConfigOptionVector<T>*>(opt_default)->values.front());
             } else {
                 // Resize by duplicating the last value.
                 this->values.resize(n, this->values./*back*/front());
@@ -501,6 +506,7 @@ class ConfigOptionFloatsTempl : public ConfigOptionVector<double>
 {
 public:
     ConfigOptionFloatsTempl() : ConfigOptionVector<double>() {}
+    explicit ConfigOptionFloatsTempl(double default_value) : ConfigOptionVector<double>(default_value) {}
     explicit ConfigOptionFloatsTempl(size_t n, double value) : ConfigOptionVector<double>(n, value) {}
     explicit ConfigOptionFloatsTempl(std::initializer_list<double> il) : ConfigOptionVector<double>(std::move(il)) {}
     explicit ConfigOptionFloatsTempl(const std::vector<double> &vec) : ConfigOptionVector<double>(vec) {}

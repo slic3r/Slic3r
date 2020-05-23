@@ -767,13 +767,13 @@ void MainFrame::init_menubar()
     {
         append_menu_item(objectsMenu, wxID_ANY, _(L("Bed/Extruder levelling")), _(L("Create a test print to help you to level your printer bed.")),
             [this](wxCommandEvent&) { wxGetApp().bed_leveling_dialog(); });
-        append_menu_item(objectsMenu, wxID_ANY, _(L("Flow tuning")), _(L("Create a test print to help you to set your filament extrusion multiplier.")),
+        append_menu_item(objectsMenu, wxID_ANY, _(L("Flow calibration")), _(L("Create a test print to help you to set your filament extrusion multiplier.")),
             [this](wxCommandEvent&) { wxGetApp().flow_ratio_dialog(); });
-        append_menu_item(objectsMenu, wxID_ANY, _(L("Filament temperature tuning")), _(L("Create a test print to help you to set your filament temperature.")),
+        append_menu_item(objectsMenu, wxID_ANY, _(L("Filament temperature calibration")), _(L("Create a test print to help you to set your filament temperature.")),
             [this](wxCommandEvent&) { wxGetApp().filament_temperature_dialog(); });
-        append_menu_item(objectsMenu, wxID_ANY, _(L("Bridge pattern tuning")), _(L("Create a test print to help you to set your bridge flow ratio.")),
+        append_menu_item(objectsMenu, wxID_ANY, _(L("Bridge flow calibration")), _(L("Create a test print to help you to set your bridge flow ratio.")),
             [this](wxCommandEvent&) { wxGetApp().bridge_tuning_dialog(); });
-        append_menu_item(objectsMenu, wxID_ANY, _(L("Ironing pattern tuning")), _(L("Create a test print to help you to set your over-bridge flow ratio and ironing pattern.")),
+        append_menu_item(objectsMenu, wxID_ANY, _(L("Ironing pattern calibration")), _(L("Create a test print to help you to set your over-bridge flow ratio and ironing pattern.")),
             [this](wxCommandEvent&) { wxGetApp().over_bridge_dialog(); });
 
     }
@@ -1221,6 +1221,7 @@ void MainFrame::on_value_changed(wxCommandEvent& event)
         m_plater->on_config_change(*tab->get_config()); // propagate config change events to the plater
         if (opt_key == "extruders_count") {
             auto value = event.GetInt();
+            //to update filaments gui
             m_plater->on_extruders_change(value);
         }
     }

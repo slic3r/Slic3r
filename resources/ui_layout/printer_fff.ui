@@ -4,9 +4,10 @@ group:Size and coordinates
 	bed_shape
 	setting:max_print_height
 	setting:z_offset
-group:extruders_count_event:Capabilities
+group:extruders_count_event:milling_count_event:Capabilities
 	extruders_count
 	setting:single_extruder_multi_material
+	milling_count
 group:Print Host upload
 	printhost
 group:silent_mode_event:Firmware
