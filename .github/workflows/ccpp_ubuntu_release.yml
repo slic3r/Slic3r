@@ -2,8 +2,7 @@ name: C/C++ CI ubuntu
 
 on:
   release:
-    types:
-      - created
+    types: [published]
 
 jobs:
   build:

@@ -81,3 +81,32 @@ jobs:
       with:
         name: nightly_macos.dmg
         path: build/Slic3r++.dmg
+# build again, but the debug one this time
+    - name: cmake
+      working-directory: ./build
+      run: cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13" -DSLIC3R_STATIC=1
+    - name: make slic3r
+      working-directory: ./build
+      run: make slic3r
+    - name: copy bin
+      working-directory: ./build
+      run: |
+        cp -f src/slic3r++ Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
+        chmod u+x Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
+        tar -cvf slic3r++.tar Slic3r++
+    - name: create dmg
+      working-directory: ./build
+      run: |
+        hdiutil create -ov -fs HFS+ -volname "Slic3r++" -srcfolder "Slic3r++" temp.dmg
+        hdiutil convert temp.dmg -format UDZO -o Slic3r++.dmg
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: nightly_macos_DEBUG.dmg
+        path: build/Slic3r++.dmg
+# just to see what's inside. to remove
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: build_folder
+        path: build
