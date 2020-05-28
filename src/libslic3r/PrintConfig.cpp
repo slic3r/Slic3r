@@ -706,10 +706,22 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Ext. peri. cut corners");
     def->category = OptionCategory::width;
     def->tooltip = L("Activate this option to modify the flow to acknoledge that the nozzle is round and the corners will have a round shape, and so change the flow to realized that and avoid over-extrusion."
-        " 100% is activated, 0% is deactivated and 50% is half-activated");
+        " 100% is activated, 0% is deactivated and 50% is half-activated."
+        "\nNote: this change the flow by ~5% over a very small distance (~nozzle diameter), so it shouldn't be noticeable unless you have a very big nozzle and a very precise printer."
+        "\nIt's very experimental, please report about the usefulness. It may be removed if there is no use of it.");
     def->sidetext = L("%");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionPercent(0));
+
+    def = this->add("external_perimeter_overlap", coPercent);
+    def->label = L("external periemter overlap");
+    def->full_label = L("Ext. peri. overlap");
+    def->category = OptionCategory::width;
+    def->tooltip = L("This perimeter allow you to reduce the overlap between the perimeters and the external one, to reduce the impact of the perimeters artifacts."
+        "\nIt's very experimental, please report about the usefulness. It may be removed if there is no use of it.");
+    def->sidetext = L("%");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionPercent(100));
 
     def = this->add("external_perimeter_speed", coFloatOrPercent);
     def->label = L("External");

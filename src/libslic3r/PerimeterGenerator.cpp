@@ -39,13 +39,23 @@ void PerimeterGenerator::process()
     // other perimeters
     this->_mm3_per_mm               = this->perimeter_flow.mm3_per_mm();
     coord_t perimeter_width         = this->perimeter_flow.scaled_width();
+    //spacing between internal perimeters
     coord_t perimeter_spacing       = this->perimeter_flow.scaled_spacing();
     
     // external perimeters
     this->_ext_mm3_per_mm           = this->ext_perimeter_flow.mm3_per_mm();
     coord_t ext_perimeter_width     = this->ext_perimeter_flow.scaled_width();
+    //spacing between two external perimeter (where you don't have the space to add other loops)
     coord_t ext_perimeter_spacing   = this->ext_perimeter_flow.scaled_spacing();
+    //spacing between external perimeter and the second
     coord_t ext_perimeter_spacing2  = this->ext_perimeter_flow.scaled_spacing(this->perimeter_flow);
+    //external_perimeter_overlap effect: change distance between the extrenal periemter and the other ones.
+    if (this->config->external_perimeter_overlap.get_abs_value(1) != 1) {
+        //choose between the normal spacing and "don't touch it".
+        ext_perimeter_spacing2 =
+            ext_perimeter_spacing2 * this->config->external_perimeter_overlap.get_abs_value(1)
+            + (ext_perimeter_width + perimeter_width) * 0.5f * (1 - this->config->external_perimeter_overlap.get_abs_value(1));
+    }
     
     // overhang perimeters
     this->_mm3_per_mm_overhang      = this->overhang_flow.mm3_per_mm();
@@ -429,11 +439,11 @@ void PerimeterGenerator::process()
                                 if (!intersection_ex(thin[0], bound).empty()) {
                                     //be sure it's not too small to extrude reliably
                                     thin[0].remove_point_too_near((coord_t)SCALED_RESOLUTION);
-                                    if (thin[0].area() > min_width*(ext_perimeter_width + ext_perimeter_spacing2)) {
+                                    if (thin[0].area() > min_width*(ext_perimeter_width + ext_perimeter_spacing)) {
                                         thins.push_back(thin[0]);
                                         bound.remove_point_too_near((coord_t)SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop (*1.2 because of circles approx. and enlrgment from 'div')
-                                        Slic3r::MedialAxis ma{ thin[0], (coord_t)((ext_perimeter_width + ext_perimeter_spacing2)*1.2),
+                                        Slic3r::MedialAxis ma{ thin[0], (coord_t)((ext_perimeter_width + ext_perimeter_spacing)*1.2),
                                             min_width, coord_t(this->layer_height) };
                                         ma.use_bounds(bound)
                                             .use_min_real_width((coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter))

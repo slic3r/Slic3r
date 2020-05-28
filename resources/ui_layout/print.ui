@@ -228,6 +228,7 @@ group:Extrusion width
 group:Overlap
 	setting:infill_overlap
 	setting:bridge_overlap
+	setting:external_perimeter_overlap
 group:Flow
 	line:Flow ratio
 		setting:bridge_flow_ratio
