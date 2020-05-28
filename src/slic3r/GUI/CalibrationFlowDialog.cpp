@@ -54,9 +54,12 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
     float nozzle_diameter = nozzle_diameter_config->values[0];
     float xyScale = nozzle_diameter / 0.4;
     //scale z to have 6 layers
-    const ConfigOptionFloatOrPercent* first_layer_height = printConfig->option<ConfigOptionFloatOrPercent>("first_layer_height");
-    const ConfigOptionFloat* layer_height = printConfig->option<ConfigOptionFloat>("layer_height");
-    float zscale = first_layer_height->get_abs_value(nozzle_diameter) + 5 * layer_height->value;
+    const ConfigOptionFloatOrPercent* first_layer_height_setting = printConfig->option<ConfigOptionFloatOrPercent>("first_layer_height");
+    double first_layer_height = first_layer_height_setting->get_abs_value(nozzle_diameter);
+    double layer_height = nozzle_diameter / 2.;
+    first_layer_height = std::max(first_layer_height, nozzle_diameter / 2.);
+
+    float zscale = first_layer_height + 5 * layer_height;
     zscale *= (1 + 0.3 * (10. / delta));
     //do scaling
     if (xyScale < 0.9 || 1.2 < xyScale) {
@@ -69,18 +72,19 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
 
     //add sub-part after scale
     float zshift = (1 - zscale) / 2;
+    float zscale_number = (first_layer_height + layer_height) / 0.4;
     if (delta == 10.f && start == 80.f) {
-        add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_flow/m20.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[1]], Slic3r::resources_dir()+"/calibration/filament_flow/m10.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[2]], Slic3r::resources_dir()+"/calibration/filament_flow/_0.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[3]], Slic3r::resources_dir()+"/calibration/filament_flow/p10.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[4]], Slic3r::resources_dir()+"/calibration/filament_flow/p20.amf", Vec3d{ 9,0,zshift });
+        add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_flow/m20.amf", Vec3d{ 3 + 6 * xyScale,0,zshift }, Vec3d{ 1,1, zscale_number});
+        add_part(model.objects[objs_idx[1]], Slic3r::resources_dir()+"/calibration/filament_flow/m10.amf", Vec3d{ 3 + 6 * xyScale,0,zshift }, Vec3d{ 1,1, zscale_number });
+        add_part(model.objects[objs_idx[2]], Slic3r::resources_dir()+"/calibration/filament_flow/_0.amf", Vec3d{ 3 + 6 * xyScale,0,zshift }, Vec3d{ 1,1, zscale_number });
+        add_part(model.objects[objs_idx[3]], Slic3r::resources_dir()+"/calibration/filament_flow/p10.amf", Vec3d{ 3 + 6 * xyScale,0,zshift }, Vec3d{ 1,1, zscale_number });
+        add_part(model.objects[objs_idx[4]], Slic3r::resources_dir()+"/calibration/filament_flow/p20.amf", Vec3d{ 3 + 6 * xyScale,0,zshift }, Vec3d{ 1,1, zscale_number });
     } else if (delta == 2.f && start == 92.f) {
-        add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_flow/m8.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[1]], Slic3r::resources_dir()+"/calibration/filament_flow/m6.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[2]], Slic3r::resources_dir()+"/calibration/filament_flow/m4.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[3]], Slic3r::resources_dir()+"/calibration/filament_flow/m2.amf", Vec3d{ 9,0,zshift });
-        add_part(model.objects[objs_idx[4]], Slic3r::resources_dir()+"/calibration/filament_flow/_0.amf", Vec3d{ 9,0,zshift });
+        add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_flow/m8.amf", Vec3d{ 3 + 6 * xyScale,0,zshift }, Vec3d{ 1,1, zscale_number });
+        add_part(model.objects[objs_idx[1]], Slic3r::resources_dir()+"/calibration/filament_flow/m6.amf", Vec3d{ 3 + 6 * xyScale,0,zshift }, Vec3d{ 1,1, zscale_number });
+        add_part(model.objects[objs_idx[2]], Slic3r::resources_dir()+"/calibration/filament_flow/m4.amf", Vec3d{ 3 + 6 * xyScale,0,zshift }, Vec3d{ 1,1, zscale_number });
+        add_part(model.objects[objs_idx[3]], Slic3r::resources_dir()+"/calibration/filament_flow/m2.amf", Vec3d{ 3 + 6 * xyScale,0,zshift }, Vec3d{ 1,1, zscale_number });
+        add_part(model.objects[objs_idx[4]], Slic3r::resources_dir()+"/calibration/filament_flow/_0.amf", Vec3d{ 3 + 6 * xyScale,0,zshift }, Vec3d{ 1,1, zscale_number });
     }
     for (size_t i = 0; i < 5; i++) {
         add_part(model.objects[objs_idx[i]], Slic3r::resources_dir()+"/calibration/filament_flow/O.amf", Vec3d{ 0,0,zscale/2.f + 0.5 }, Vec3d{1,1,xyScale });
@@ -118,14 +122,8 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
         model.objects[objs_idx[i]]->config.set_key_value("thin_walls", new ConfigOptionBool(true));
         model.objects[objs_idx[i]]->config.set_key_value("thin_walls_min_width", new ConfigOptionFloatOrPercent(50,true));
         model.objects[objs_idx[i]]->config.set_key_value("gap_fill", new ConfigOptionBool(true)); 
-        model.objects[objs_idx[i]]->config.set_key_value("layer_height", new ConfigOptionFloat(nozzle_diameter/2));
-        if (nozzle_diameter < 0.3) {
-            //ensure that the first layer is good and safe, mandatory as we mess wit the first_layer_height.
-            model.objects[objs_idx[i]]->config.set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(nozzle_diameter, false));
-            model.objects[objs_idx[i]]->config.set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(150, true));
-        } else {
-            model.objects[objs_idx[i]]->config.set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(std::max(0.2f, nozzle_diameter / 2), false));
-        }
+        model.objects[objs_idx[i]]->config.set_key_value("layer_height", new ConfigOptionFloat(layer_height));
+        model.objects[objs_idx[i]]->config.set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(first_layer_height, false));
         model.objects[objs_idx[i]]->config.set_key_value("external_infill_margin", new ConfigOptionFloatOrPercent(100, true));
         model.objects[objs_idx[i]]->config.set_key_value("solid_fill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinearWGapFill));
         model.objects[objs_idx[i]]->config.set_key_value("top_fill_pattern", new ConfigOptionEnum<InfillPattern>(ipSmooth));

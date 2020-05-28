@@ -42,6 +42,7 @@
 #include "slic3r/Config/Snapshot.hpp"
 #include "CalibrationBedDialog.hpp"
 #include "CalibrationBridgeDialog.hpp"
+#include "CalibrationCubeDialog.hpp"
 #include "CalibrationFlowDialog.hpp"
 #include "CalibrationOverBridgeDialog.hpp"
 #include "CalibrationTempDialog.hpp"
@@ -591,6 +592,10 @@ void GUI_App::bridge_tuning_dialog()
 void GUI_App::filament_temperature_dialog()
 {
     change_calibration_dialog(nullptr, new CalibrationTempDialog(this, mainframe));
+}
+void GUI_App::calibration_cube_dialog()
+{
+    change_calibration_dialog(nullptr, new CalibrationCubeDialog(this, mainframe));
 }
 
 // static method accepting a wxWindow object as first parameter

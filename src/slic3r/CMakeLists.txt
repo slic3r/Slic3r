@@ -24,6 +24,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/CalibrationBedDialog.hpp
     GUI/CalibrationBridgeDialog.cpp
     GUI/CalibrationBridgeDialog.hpp
+    GUI/CalibrationCubeDialog.cpp
+    GUI/CalibrationCubeDialog.hpp
     GUI/CalibrationFlowDialog.cpp
     GUI/CalibrationFlowDialog.hpp
     GUI/CalibrationOverBridgeDialog.cpp
