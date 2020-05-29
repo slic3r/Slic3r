@@ -3832,13 +3832,15 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             throw std::invalid_argument("Invalid speed");
         }
     }
+    if (m_volumetric_speed != 0. && speed == 0)
+        speed = m_volumetric_speed / path.mm3_per_mm;
+    if (speed == 0) // this code shouldn't trigger as if it's 0, you have to get a m_volumetric_speed
+        speed = m_config.max_print_speed.value;
     if (this->on_first_layer())
         if (path.role() == erInternalInfill || path.role() == erSolidInfill)
             speed = std::min(m_config.get_abs_value("first_layer_infill_speed", speed), speed);
         else
             speed = std::min(m_config.get_abs_value("first_layer_speed", speed), speed);
-    if (m_volumetric_speed != 0. && speed == 0)
-        speed = m_volumetric_speed / path.mm3_per_mm;
     if (m_config.max_volumetric_speed.value > 0) {
         // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
         speed = std::min(

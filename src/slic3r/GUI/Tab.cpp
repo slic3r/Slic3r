@@ -1184,17 +1184,17 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             if (params.size() < 2) continue;
             if (params.size() == 2) params.push_back("wrench");
 
-            std::wstring label = _(L(params[params.size()-2]));
+            std::string label = L(params[params.size()-2]);
 
             for (int i = 1; i < params.size() - 1; i++) {
                 if (params[i] == "idx")
                 {
-                    label = label + _(L(" " + std::to_string(int(idx_page + 1))));
+                    label = label + " " + std::to_string(int(idx_page + 1));
                 }
             }
 
             if(logs) std::cout << "create page " << label.c_str() <<" : "<< params[params.size() - 1] << "\n";
-            current_page = add_options_page(label, params[params.size() - 1]);
+            current_page = add_options_page(_(label), params[params.size() - 1]);
         }
         else if (boost::starts_with(full_line, "end_page"))
         {
