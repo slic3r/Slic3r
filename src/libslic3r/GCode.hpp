@@ -240,7 +240,7 @@ private:
 
     void            set_last_pos(const Point &pos) { m_last_pos = pos; m_last_pos_defined = true; }
     bool            last_pos_defined() const { return m_last_pos_defined; }
-    void            set_extruders(const std::vector<unsigned int> &extruder_ids);
+    void            set_extruders(const std::vector<uint16_t> &extruder_ids);
     std::string     preamble();
     std::string     change_layer(coordf_t print_z);
     std::string     visitor_gcode;

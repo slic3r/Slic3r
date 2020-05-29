@@ -220,6 +220,72 @@ void Layer::make_perimeters()
     BOOST_LOG_TRIVIAL(trace) << "Generating perimeters for layer " << this->id() << " - Done";
 }
 
+void Layer::make_milling_post_process() {
+    if (this->object()->print()->config().milling_diameter.empty()) return;
+
+    BOOST_LOG_TRIVIAL(trace) << "Generating milling_post_process for layer " << this->id();
+
+    // keep track of regions whose perimeters we have already generated
+    std::vector<unsigned char> done(m_regions.size(), false);
+
+    for (LayerRegionPtrs::iterator layerm = m_regions.begin(); layerm != m_regions.end(); ++layerm) {
+        if ((*layerm)->slices().empty()) {
+            (*layerm)->milling.clear();
+        } else {
+            size_t region_id = layerm - m_regions.begin();
+            if (done[region_id])
+                continue;
+            BOOST_LOG_TRIVIAL(trace) << "Generating milling_post_process for layer " << this->id() << ", region " << region_id;
+            done[region_id] = true;
+            const PrintRegionConfig& config = (*layerm)->region()->config();
+
+            // find compatible regions
+            LayerRegionPtrs layerms;
+            layerms.push_back(*layerm);
+            for (LayerRegionPtrs::const_iterator it = layerm + 1; it != m_regions.end(); ++it) {
+                LayerRegion* other_layerm = *it;
+                const PrintRegionConfig& other_config = other_layerm->region()->config();
+                if (other_layerm->slices().empty()) continue;
+                /// !!! add here the settings you want to be added in the per-object menu.
+                /// if you don't do that, objects will share the same region, and the same settings.
+                if (config.milling_post_process == other_config.milling_post_process
+                    && config.milling_extra_size == other_config.milling_extra_size
+                    && (config.milling_after_z == other_config.milling_after_z ||
+                        this->bottom_z() > std::min(config.milling_after_z.get_abs_value(this->object()->print()->config().milling_diameter.values[0]),
+                            other_config.milling_after_z.get_abs_value(this->object()->print()->config().milling_diameter.values[0])))) {
+                    layerms.push_back(other_layerm);
+                    done[it - m_regions.begin()] = true;
+                }
+            }
+
+            if (layerms.size() == 1) {  // optimization
+                (*layerm)->make_milling_post_process((*layerm)->slices());
+            } else {
+                SurfaceCollection new_slices;
+                // Use a region if you ned a specific settgin, be sure to choose the good one, curtly there is o need.
+                LayerRegion* layerm_config = layerms.front();
+                {
+                    // group slices (surfaces) according to number of extra perimeters
+                    std::map<unsigned short, Surfaces> slices;  // extra_perimeters => [ surface, surface... ]
+                    for (LayerRegion* layerm : layerms) {
+                        for (const Surface& surface : layerm->slices().surfaces)
+                            slices[surface.extra_perimeters].emplace_back(surface);
+                        layerm->milling.clear();
+                    }
+                    // merge the surfaces assigned to each group
+                    for (std::pair<const unsigned short, Surfaces>& surfaces_with_extra_perimeters : slices)
+                        new_slices.append(union_ex(surfaces_with_extra_perimeters.second, true), surfaces_with_extra_perimeters.second.front());
+                }
+
+                // make perimeters
+                layerm_config->make_milling_post_process(new_slices);
+
+            }
+        }
+    }
+    BOOST_LOG_TRIVIAL(trace) << "Generating milling_post_process for layer " << this->id() << " - Done";
+}
+
 void Layer::make_fills()
 {
     #ifdef SLIC3R_DEBUG

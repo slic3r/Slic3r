@@ -2,6 +2,7 @@
 #include "BridgeDetector.hpp"
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
+#include "Milling/MillingPostProcess.hpp"
 #include "PerimeterGenerator.hpp"
 #include "Print.hpp"
 #include "Surface.hpp"
@@ -61,7 +62,6 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollec
     PerimeterGenerator g(
         // input:
         &slices,
-        this->layer()->height,
         this->flow(frPerimeter),
         &this->region()->config(),
         &this->layer()->object()->config(),
@@ -79,7 +79,7 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollec
     if (this->layer()->upper_layer != NULL)
         g.upper_slices = &this->layer()->upper_layer->lslices;
     
-    g.layer_id              = (int)this->layer()->id();
+    g.layer                 = this->layer();
     g.ext_perimeter_flow    = this->flow(frExternalPerimeter);
     g.overhang_flow         = this->region()->flow(frPerimeter, -1, true, false, -1, *this->layer()->object());
     g.solid_infill_flow     = this->flow(frSolidInfill);
@@ -87,6 +87,17 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollec
     g.process();
 
     this->fill_no_overlap_expolygons = g.fill_no_overlap;
+}
+
+void LayerRegion::make_milling_post_process(const SurfaceCollection& slices) {
+    MillingPostProcess mill(// input:
+        &slices,
+        (this->layer()->lower_layer != nullptr) ? &this->layer()->lower_layer->lslices : nullptr,
+        &this->region()->config(),
+        &this->layer()->object()->config(),
+        &this->layer()->object()->print()->config()
+    );
+    milling = mill.process(this->layer());
 }
 
 //#define EXTERNAL_SURFACES_OFFSET_PARAMETERS ClipperLib::jtMiter, 3.

@@ -17,26 +17,48 @@ public:
     bool multiple_extruders;
     
     GCodeWriter() : 
-        multiple_extruders(false), m_extrusion_axis("E"), m_extruder(nullptr),
+        multiple_extruders(false), m_extrusion_axis("E"), m_tool(nullptr),
         m_single_extruder_multi_material(false),
         m_last_acceleration(0), m_max_acceleration(0), m_last_fan_speed(0), 
         m_last_bed_temperature(0), m_last_bed_temperature_reached(true), 
         m_lifted(0)
         {}
-    Extruder*            extruder()             { return m_extruder; }
-    const Extruder*      extruder()     const   { return m_extruder; }
+    Tool*               tool()             { return m_tool; }
+    const Tool*         tool()     const   { return m_tool; }
 
-    std::string          extrusion_axis() const { return m_extrusion_axis; }
-    void                 apply_print_config(const PrintConfig &print_config);
+    std::string         extrusion_axis() const { return m_extrusion_axis; }
+    void                apply_print_config(const PrintConfig &print_config);
     // Extruders are expected to be sorted in an increasing order.
-    void                 set_extruders(std::vector<unsigned int> extruder_ids);
+    void                set_extruders(std::vector<uint16_t> extruder_ids);
     const std::vector<Extruder>& extruders() const { return m_extruders; }
-    std::vector<unsigned int> extruder_ids() const { 
-        std::vector<unsigned int> out; 
-        out.reserve(m_extruders.size()); 
-        for (const Extruder &e : m_extruders) 
-            out.push_back(e.id()); 
+    std::vector<uint16_t> extruder_ids() const {
+        std::vector<uint16_t> out;
+        out.reserve(m_extruders.size());
+        for (const Extruder& e : m_extruders)
+            out.push_back(e.id());
         return out;
+    }
+    void                 set_mills(std::vector<uint16_t> extruder_ids);
+    const std::vector<Mill>& mills() const { return m_millers; }
+    std::vector<uint16_t> mill_ids() const {
+        std::vector<uint16_t> out;
+        out.reserve(m_millers.size());
+        for (const Tool& e : m_millers)
+            out.push_back(e.id());
+        return out;
+    }
+    //give the first mill id or an id after the last extruder. Can be used to see if an id is an extruder or a mill
+    uint16_t first_mill() const {
+        if (m_millers.empty()) {
+            uint16_t max = 0;
+            for (const Extruder& e : m_extruders)
+                max = std::max(max, e.id());
+            max++;
+            return (uint16_t)max;
+        }else return m_millers.front().id();
+    }
+    bool tool_is_extruder() const {
+        return m_tool->id() < first_mill();
     }
     std::string preamble();
     std::string postamble() const;
@@ -47,14 +69,14 @@ public:
     std::string reset_e(bool force = false);
     std::string update_progress(unsigned int num, unsigned int tot, bool allow_100 = false) const;
     // return false if this extruder was already selected
-    bool        need_toolchange(unsigned int extruder_id) const 
-        { return m_extruder == nullptr || m_extruder->id() != extruder_id; }
-    std::string set_extruder(unsigned int extruder_id)
-        { return this->need_toolchange(extruder_id) ? this->toolchange(extruder_id) : ""; }
+    bool        need_toolchange(unsigned int tool_id) const 
+        { return m_tool == nullptr || m_tool->id() != tool_id; }
+    std::string set_tool(unsigned int tool_id)
+        { return this->need_toolchange(tool_id) ? this->toolchange(tool_id) : ""; }
     // Prefix of the toolchange G-code line, to be used by the CoolingBuffer to separate sections of the G-code
     // printed with the same extruder.
     std::string toolchange_prefix() const;
-    std::string toolchange(unsigned int extruder_id);
+    std::string toolchange(unsigned int tool_id);
     std::string set_speed(double F, const std::string &comment = std::string(), const std::string &cooling_marker = std::string()) const;
     std::string travel_to_xy(const Vec2d &point, const std::string &comment = std::string());
     std::string travel_to_xyz(const Vec3d &point, const std::string &comment = std::string());
@@ -73,9 +95,10 @@ public:
 private:
 	// Extruders are sorted by their ID, so that binary search is possible.
     std::vector<Extruder> m_extruders;
+    std::vector<Mill> m_millers;
     std::string     m_extrusion_axis;
     bool            m_single_extruder_multi_material;
-    Extruder*       m_extruder;
+    Tool*           m_tool;
     unsigned int    m_last_acceleration;
     // Limit for setting the acceleration, to respect the machine limits set for the Marlin firmware.
     // If set to zero, the limit is not in action.

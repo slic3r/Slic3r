@@ -353,14 +353,29 @@ void PrintObject::make_perimeters()
     tbb::parallel_for(
         tbb::blocked_range<size_t>(0, m_layers.size()),
         [this](const tbb::blocked_range<size_t>& range) {
-            for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++ layer_idx) {
-                m_print->throw_if_canceled();
-                m_layers[layer_idx]->make_perimeters();
-            }
+        for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++layer_idx) {
+            m_print->throw_if_canceled();
+            m_layers[layer_idx]->make_perimeters();
         }
+    }
     );
     m_print->throw_if_canceled();
     BOOST_LOG_TRIVIAL(debug) << "Generating perimeters in parallel - end";
+
+    if (print()->config().milling_diameter.size() > 0 ) {
+        BOOST_LOG_TRIVIAL(debug) << "Generating milling post-process in parallel - start";
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, m_layers.size()),
+            [this](const tbb::blocked_range<size_t>& range) {
+            for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++layer_idx) {
+                m_print->throw_if_canceled();
+                m_layers[layer_idx]->make_milling_post_process();
+            }
+        }
+        );
+        m_print->throw_if_canceled();
+        BOOST_LOG_TRIVIAL(debug) << "Generating milling post-process in parallel - end";
+    }
 
     this->set_done(posPerimeters);
 }
@@ -1991,7 +2006,7 @@ SlicingParameters PrintObject::slicing_parameters(const DynamicPrintConfig& full
     size_t              num_extruders = print_config.nozzle_diameter.size();
     object_config = object_config_from_model_object(object_config, model_object, num_extruders);
 
-    std::vector<unsigned int> object_extruders;
+    std::vector<uint16_t> object_extruders;
     for (const ModelVolume* model_volume : model_object.volumes)
         if (model_volume->is_model_part()) {
             PrintRegion::collect_object_printing_extruders(
@@ -2017,9 +2032,9 @@ SlicingParameters PrintObject::slicing_parameters(const DynamicPrintConfig& full
 }
 
 // returns 0-based indices of extruders used to print the object (without brim, support and other helper extrusions)
-std::vector<unsigned int> PrintObject::object_extruders() const
+std::vector<uint16_t> PrintObject::object_extruders() const
 {
-    std::vector<unsigned int> extruders;
+    std::vector<uint16_t> extruders;
     extruders.reserve(this->region_volumes.size() * 3);    
     for (size_t idx_region = 0; idx_region < this->region_volumes.size(); ++ idx_region)
         if (! this->region_volumes[idx_region].empty())

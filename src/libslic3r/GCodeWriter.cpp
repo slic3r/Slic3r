@@ -26,18 +26,31 @@ void GCodeWriter::apply_print_config(const PrintConfig &print_config)
         print_config.machine_max_acceleration_extruding.values.front() : 0);
 }
 
-void GCodeWriter::set_extruders(std::vector<unsigned int> extruder_ids)
+void GCodeWriter::set_extruders(std::vector<uint16_t> extruder_ids)
 {
     std::sort(extruder_ids.begin(), extruder_ids.end());
     m_extruders.clear();
     m_extruders.reserve(extruder_ids.size());
-    for (unsigned int extruder_id : extruder_ids)
+    for (uint16_t extruder_id : extruder_ids)
         m_extruders.emplace_back(Extruder(extruder_id, &this->config));
-    
+
     /*  we enable support for multiple extruder if any extruder greater than 0 is used
         (even if prints only uses that one) since we need to output Tx commands
         first extruder has index 0 */
-    this->multiple_extruders = (*std::max_element(extruder_ids.begin(), extruder_ids.end())) > 0;
+    this->multiple_extruders = this->multiple_extruders || (*std::max_element(extruder_ids.begin(), extruder_ids.end())) > 0;
+}
+
+void GCodeWriter::set_mills(std::vector<uint16_t> mill_ids)
+{
+    std::sort(mill_ids.begin(), mill_ids.end());
+    m_millers.clear();
+    m_millers.reserve(mill_ids.size());
+    for (uint16_t mill_id : mill_ids) {
+        m_millers.emplace_back(Mill(mill_id, &this->config));
+    }
+
+    /*  we enable support for multiple extruder */
+    this->multiple_extruders = this->multiple_extruders || !mill_ids.empty();
 }
 
 std::string GCodeWriter::preamble()
@@ -211,10 +224,10 @@ std::string GCodeWriter::reset_e(bool force)
         || FLAVOR_IS(gcfSailfish))
         return "";
     
-    if (m_extruder != nullptr) {
-        if (m_extruder->E() == 0. && ! force)
+    if (m_tool != nullptr) {
+        if (m_tool->E() == 0. && ! force)
             return "";
-        m_extruder->reset_E();
+        m_tool->reset_E();
     }
 
     if (! m_extrusion_axis.empty() && ! this->config.use_relative_e_distances) {
@@ -251,18 +264,35 @@ std::string GCodeWriter::toolchange_prefix() const
            "T";
 }
 
-std::string GCodeWriter::toolchange(unsigned int extruder_id)
+std::string GCodeWriter::toolchange(unsigned int tool_id)
 {
     // set the new extruder
-	auto it_extruder = Slic3r::lower_bound_by_predicate(m_extruders.begin(), m_extruders.end(), [extruder_id](const Extruder &e) { return e.id() < extruder_id; });
-    assert(it_extruder != m_extruders.end() && it_extruder->id() == extruder_id);
-    m_extruder = &*it_extruder;
+	/*auto it_extruder = Slic3r::lower_bound_by_predicate(m_extruders.begin(), m_extruders.end(), [tool_id](const Extruder &e) { return e.id() < tool_id; });
+    assert(it_extruder != m_extruders.end() && it_extruder->id() == extruder_id);*/
+    //less optimized but it's easier to modify and it's not needed, as it's not called often.
+    bool found = false;
+    for (Extruder& extruder : m_extruders) {
+        if (tool_id == extruder.id()) {
+            m_tool = &extruder;
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        for (Tool& mill : m_millers) {
+            if (tool_id == mill.id()) {
+                m_tool = &mill;
+                found = true;
+                break;
+            }
+        }
+    }
 
     // return the toolchange command
     // if we are running a single-extruder setup, just set the extruder and return nothing
     std::ostringstream gcode;
     if (this->multiple_extruders) {
-        gcode << this->toolchange_prefix() << extruder_id;
+        gcode << this->toolchange_prefix() << tool_id;
         if (this->config.gcode_comments)
             gcode << " ; change extruder";
         gcode << "\n";
@@ -375,12 +405,13 @@ std::string GCodeWriter::extrude_to_xy(const Vec2d &point, double dE, const std:
 {
     m_pos.x() = point.x();
     m_pos.y() = point.y();
-    m_extruder->extrude(dE);
+    bool is_extrude = m_tool->extrude(dE) != 0;
     
     std::ostringstream gcode;
     gcode << "G1 X" << XYZF_NUM(point.x())
-          <<   " Y" << XYZF_NUM(point.y())
-          <<    " " << m_extrusion_axis << E_NUM(m_extruder->E());
+        << " Y" << XYZF_NUM(point.y());
+    if(is_extrude)
+        gcode <<    " " << m_extrusion_axis << E_NUM(m_tool->E());
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();
@@ -391,13 +422,14 @@ std::string GCodeWriter::extrude_to_xyz(const Vec3d &point, double dE, const std
     m_pos.x() = point.x();
     m_pos.y() = point.y();
     m_lifted = 0;
-    m_extruder->extrude(dE);
+    bool is_extrude = m_tool->extrude(dE) != 0;
     
     std::ostringstream gcode;
     gcode << "G1 X" << XYZF_NUM(point.x())
-          <<   " Y" << XYZF_NUM(point.y())
-          <<   " Z" << XYZF_NUM(point.z() + m_pos.z())
-          <<    " " << m_extrusion_axis << E_NUM(m_extruder->E());
+        << " Y" << XYZF_NUM(point.y())
+        << " Z" << XYZF_NUM(point.z() + m_pos.z());
+    if (is_extrude)
+            gcode <<    " " << m_extrusion_axis << E_NUM(m_tool->E());
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();
@@ -405,22 +437,22 @@ std::string GCodeWriter::extrude_to_xyz(const Vec3d &point, double dE, const std
 
 std::string GCodeWriter::retract(bool before_wipe)
 {
-    double factor = before_wipe ? m_extruder->retract_before_wipe() : 1.;
+    double factor = before_wipe ? m_tool->retract_before_wipe() : 1.;
     assert(factor >= 0. && factor <= 1. + EPSILON);
     return this->_retract(
-        factor * m_extruder->retract_length(),
-        factor * m_extruder->retract_restart_extra(),
+        factor * m_tool->retract_length(),
+        factor * m_tool->retract_restart_extra(),
         "retract"
     );
 }
 
 std::string GCodeWriter::retract_for_toolchange(bool before_wipe)
 {
-    double factor = before_wipe ? m_extruder->retract_before_wipe() : 1.;
+    double factor = before_wipe ? m_tool->retract_before_wipe() : 1.;
     assert(factor >= 0. && factor <= 1. + EPSILON);
     return this->_retract(
-        factor * m_extruder->retract_length_toolchange(),
-        factor * m_extruder->retract_restart_extra_toolchange(),
+        factor * m_tool->retract_length_toolchange(),
+        factor * m_tool->retract_restart_extra_toolchange(),
         "retract for toolchange"
     );
 }
@@ -436,13 +468,13 @@ std::string GCodeWriter::_retract(double length, double restart_extra, const std
     
     // If we use volumetric E values we turn lengths into volumes */
     if (this->config.use_volumetric_e) {
-        double d = m_extruder->filament_diameter();
+        double d = m_tool->filament_diameter();
         double area = d * d * PI/4;
         length = length * area;
         restart_extra = restart_extra * area;
     }
     
-    double dE = m_extruder->retract(length, restart_extra);
+    double dE = m_tool->retract(length, restart_extra);
     if (dE != 0) {
         if (this->config.use_firmware_retraction) {
             if (FLAVOR_IS(gcfMachinekit))
@@ -450,8 +482,8 @@ std::string GCodeWriter::_retract(double length, double restart_extra, const std
             else
                 gcode << "G10 ; retract\n";
         } else {
-            gcode << "G1 " << m_extrusion_axis << E_NUM(m_extruder->E())
-                           << " F" << float(m_extruder->retract_speed() * 60.);
+            gcode << "G1 " << m_extrusion_axis << E_NUM(m_tool->E())
+                           << " F" << float(m_tool->retract_speed() * 60.);
             COMMENT(comment);
             gcode << "\n";
         }
@@ -470,7 +502,7 @@ std::string GCodeWriter::unretract()
     if (FLAVOR_IS(gcfMakerWare))
         gcode << "M101 ; extruder on\n";
     
-    double dE = m_extruder->unretract();
+    double dE = m_tool->unretract();
     if (dE != 0) {
         if (this->config.use_firmware_retraction) {
             if (FLAVOR_IS(gcfMachinekit))
@@ -480,8 +512,8 @@ std::string GCodeWriter::unretract()
             gcode << this->reset_e();
         } else {
             // use G1 instead of G0 because G0 will blend the restart with the previous travel move
-            gcode << "G1 " << m_extrusion_axis << E_NUM(m_extruder->E())
-                           << " F" << float(m_extruder->deretract_speed() * 60.);
+            gcode << "G1 " << m_extrusion_axis << E_NUM(m_tool->E())
+                           << " F" << float(m_tool->deretract_speed() * 60.);
             if (this->config.gcode_comments) gcode << " ; unretract";
             gcode << "\n";
         }
@@ -497,11 +529,14 @@ std::string GCodeWriter::lift()
 {
     // check whether the above/below conditions are met
     double target_lift = 0;
-    {
-        double above = this->config.retract_lift_above.get_at(m_extruder->id());
-        double below = this->config.retract_lift_below.get_at(m_extruder->id());
+    if(this->tool_is_extruder()){
+        //these two should be in the Tool class methods....
+        double above = this->config.retract_lift_above.get_at(m_tool->id());
+        double below = this->config.retract_lift_below.get_at(m_tool->id());
         if (m_pos.z() >= above && (below == 0 || m_pos.z() <= below))
-            target_lift = this->config.retract_lift.get_at(m_extruder->id());
+            target_lift = m_tool->retract_lift();
+    } else {
+        target_lift = m_tool->retract_lift();
     }
 
     if (this->extra_lift > 0) {

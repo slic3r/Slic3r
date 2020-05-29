@@ -31,7 +31,7 @@ struct SlicingParameters
         const PrintConfig       &print_config, 
         const PrintObjectConfig &object_config,
         coordf_t                 object_height,
-        const std::vector<unsigned int> &object_extruders);
+        const std::vector<uint16_t> &object_extruders);
 
     // Has any raft layers?
     bool        has_raft() const { return raft_layers() > 0; }

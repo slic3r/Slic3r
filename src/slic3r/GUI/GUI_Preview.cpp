@@ -266,6 +266,7 @@ bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view
         _(L("Support material")) + "|" +
         _(L(width_screen == large? "Support material interface": "Sup. mat. interface")) + "|" +
         _(L("Wipe tower")) + "|" +
+        _(L("Mill")) + "|" +
         _(L("Custom"))
     );
     Slic3r::GUI::create_combochecklist(m_combochecklist_features, feature_text, feature_items, true);
@@ -323,6 +324,7 @@ bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view
         "Support material", "00FF00",
         "Support material interface", "008000",
         "Wipe tower", "B3E3AB",
+        "Mill", "B3B3B3",
         "Custom", "28CC94"
     };
     m_gcode_preview_data->set_extrusion_paths_colors(extrusion_roles_colors);

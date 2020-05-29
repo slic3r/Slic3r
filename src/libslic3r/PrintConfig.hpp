@@ -282,6 +282,7 @@ private:
     void init_fff_params();
     void init_extruder_option_keys();
     void init_sla_params();
+    void init_milling_params();
 
     std::vector<std::string> 	m_extruder_option_keys;
     std::vector<std::string> 	m_extruder_retract_keys;
@@ -642,6 +643,10 @@ public:
     ConfigOptionBool                infill_dense;
     ConfigOptionEnum<DenseInfillAlgo> infill_dense_algo;
     ConfigOptionBool                infill_first;
+    ConfigOptionFloatOrPercent      milling_after_z;
+    ConfigOptionFloatOrPercent      milling_extra_size;
+    ConfigOptionBool                milling_post_process;
+    ConfigOptionFloat               milling_speed;
     // Detect bridging perimeters
     ConfigOptionBool                overhangs;
     ConfigOptionFloatOrPercent      overhangs_width;
@@ -725,6 +730,10 @@ protected:
         OPT_PTR(infill_not_connected);
         OPT_PTR(infill_dense_algo);
         OPT_PTR(infill_first);
+        OPT_PTR(milling_after_z);
+        OPT_PTR(milling_extra_size);
+        OPT_PTR(milling_post_process);
+        OPT_PTR(milling_speed);
         OPT_PTR(overhangs);
         OPT_PTR(overhangs_width);
         OPT_PTR(overhangs_reverse);
@@ -859,6 +868,7 @@ public:
     ConfigOptionString              feature_gcode;
     ConfigOptionFloat               max_print_speed;
     ConfigOptionFloat               max_volumetric_speed;
+    ConfigOptionFloats              milling_z_lift;
 #ifdef HAS_PRESSURE_EQUALIZER
     ConfigOptionFloat               max_volumetric_extrusion_rate_slope_positive;
     ConfigOptionFloat               max_volumetric_extrusion_rate_slope_negative;
@@ -953,6 +963,7 @@ protected:
         OPT_PTR(feature_gcode);
         OPT_PTR(max_print_speed);
         OPT_PTR(max_volumetric_speed);
+        OPT_PTR(milling_z_lift);
 #ifdef HAS_PRESSURE_EQUALIZER
         OPT_PTR(max_volumetric_extrusion_rate_slope_positive);
         OPT_PTR(max_volumetric_extrusion_rate_slope_negative);
@@ -1038,6 +1049,10 @@ public:
     ConfigOptionFloats              max_layer_height;
     ConfigOptionFloat               max_print_height;
     ConfigOptionFloats              milling_diameter;
+    ConfigOptionStrings             milling_toolchange_end_gcode;
+    ConfigOptionStrings             milling_toolchange_start_gcode;
+    //ConfigOptionPoints              milling_offset;
+    //ConfigOptionFloats              milling_z_offset;
     ConfigOptionInts                min_fan_speed;
     ConfigOptionFloats              min_layer_height;
     ConfigOptionFloats              min_print_speed;
@@ -1120,6 +1135,10 @@ protected:
         OPT_PTR(max_layer_height);
         OPT_PTR(max_print_height);
         OPT_PTR(milling_diameter);
+        OPT_PTR(milling_toolchange_end_gcode);
+        OPT_PTR(milling_toolchange_start_gcode);
+        //OPT_PTR(milling_offset);
+        //OPT_PTR(milling_z_offset);
         OPT_PTR(min_fan_speed);
         OPT_PTR(min_layer_height);
         OPT_PTR(min_print_speed);

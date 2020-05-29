@@ -55,6 +55,9 @@ public:
     // (this collection contains only ExtrusionEntityCollection objects)
     ExtrusionEntityCollection   perimeters;
 
+    // collection of expolygons representing the milling path of the first milling cutter
+    ExtrusionEntityCollection   milling;
+
     // ordered collection of extrusion paths to fill surfaces
     // (this collection contains only ExtrusionEntityCollection objects)
     ExtrusionEntityCollection   fills;
@@ -62,7 +65,8 @@ public:
     Flow    flow(FlowRole role, bool bridge = false, double width = -1) const;
     void    slices_to_fill_surfaces_clipped();
     void    prepare_fill_surfaces();
-    void    make_perimeters(const SurfaceCollection &slices, SurfaceCollection* fill_surfaces);
+    void    make_perimeters(const SurfaceCollection& slices, SurfaceCollection* fill_surfaces);
+    void    make_milling_post_process(const SurfaceCollection& slices);
     void    process_external_surfaces(const Layer *lower_layer, const Polygons *lower_layer_covered);
     double  infill_area_threshold() const;
     // Trim surfaces by trimming polygons. Used by the elephant foot compensation at the 1st layer.
@@ -142,6 +146,7 @@ public:
         return false;
     }
     void                    make_perimeters();
+    void                    make_milling_post_process();
     void                    make_fills();
 
     void                    export_region_slices_to_svg(const char *path) const;

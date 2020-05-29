@@ -1426,8 +1426,8 @@ std::set<int> TickCodeInfo::get_used_extruders_for_tick(int tick, int only_extru
         auto it_layer_tools = std::lower_bound(tool_ordering.begin(), tool_ordering.end(), LayerTools(print_z));
         for (; it_layer_tools != tool_ordering.end(); ++it_layer_tools)
         {
-            const std::vector<unsigned>& extruders = it_layer_tools->extruders;
-            for (const auto& extruder : extruders)
+            const std::vector<uint16_t>& extruders = it_layer_tools->extruders;
+            for (const uint16_t& extruder : extruders)
                 used_extruders.emplace(extruder+1);
         }
 

@@ -121,6 +121,8 @@ add_library(libslic3r STATIC
     Line.hpp
     MedialAxis.cpp
     MedialAxis.hpp
+	Milling/MillingPostProcess.cpp
+	Milling/MillingPostProcess.hpp
     Model.cpp
     Model.hpp
     CustomGCode.cpp

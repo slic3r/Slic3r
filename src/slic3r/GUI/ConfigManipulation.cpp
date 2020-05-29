@@ -418,6 +418,11 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
             || config->option<ConfigOptionEnum<InfillPattern>>("bottom_fill_pattern")->value == InfillPattern::ipSmooth
             || config->option<ConfigOptionEnum<InfillPattern>>("solid_fill_pattern")->value == InfillPattern::ipSmooth))
             || (config->option<ConfigOptionEnum<InfillPattern>>("support_material_interface_pattern")->value == InfillPattern::ipSmooth && have_support_material));
+
+    //TODO: can the milling_diameter or the milling_cutter be check to enable/disable this?
+    for (auto el : { "milling_after_z", "milling_extra_size", "milling_speed" })
+        toggle_field(el, config->opt_bool("milling_post_process"));
+
 }
 
 void ConfigManipulation::update_print_sla_config(DynamicPrintConfig* config, const bool is_global_config/* = false*/)

@@ -29,6 +29,7 @@ enum ExtrusionRole : uint8_t {
     erSupportMaterial,
     erSupportMaterialInterface,
     erWipeTower,
+    erMilling,
     erCustom,
     // Extrusion role for a collection with multiple extrusion roles.
     erMixed,
@@ -175,9 +176,9 @@ public:
     Polyline polyline;
     // Volumetric velocity. mm^3 of plastic per mm of linear head motion. Used by the G-code generator.
     double mm3_per_mm;
-    // Width of the extrusion, used for visualization purposes.
+    // Width of the extrusion, used for visualization purposes. Unscaled
     float width;
-    // Height of the extrusion, used for visualization purposes.
+    // Height of the extrusion, used for visualization purposes. Unscaled
     float height;
 
     ExtrusionPath(ExtrusionRole role) : mm3_per_mm(-1), width(-1), height(-1), m_role(role) {};

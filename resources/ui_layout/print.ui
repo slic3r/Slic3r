@@ -278,7 +278,12 @@ group:Output file
 	setting:gcode_comments
 	setting:gcode_label_objects
 	setting:full_width:output_filename_format
-group:Post-processing scripts
+group:Post-processing milling
+	setting:milling_post_process
+	setting:milling_extra_size
+	setting:milling_after_z
+	setting:milling_speed
+group:Post-processing script
 	setting:full_width:height$5:post_process
 
 page:Notes:note

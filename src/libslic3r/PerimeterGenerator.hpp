@@ -5,6 +5,7 @@
 #include <vector>
 #include "ExPolygonCollection.hpp"
 #include "Flow.hpp"
+#include "Layer.hpp"
 #include "Polygon.hpp"
 #include "PrintConfig.hpp"
 #include "SurfaceCollection.hpp"
@@ -54,8 +55,7 @@ public:
     const SurfaceCollection     *slices;
     const ExPolygons            *upper_slices;
     const ExPolygons            *lower_slices;
-    double                       layer_height;
-    int                          layer_id;
+    Layer                       *layer;
     Flow                         perimeter_flow;
     Flow                         ext_perimeter_flow;
     Flow                         overhang_flow;
@@ -71,8 +71,7 @@ public:
     
     PerimeterGenerator(
         // Input:
-        const SurfaceCollection*    slices, 
-        double                      layer_height,
+        const SurfaceCollection*    slices,
         Flow                        flow,
         const PrintRegionConfig*    config,
         const PrintObjectConfig*    object_config,
@@ -84,8 +83,8 @@ public:
         ExtrusionEntityCollection*  gap_fill,
         // Infills without the gap fills
         SurfaceCollection*          fill_surfaces)
-        : slices(slices), lower_slices(nullptr), upper_slices(nullptr), layer_height(layer_height),
-            layer_id(-1), perimeter_flow(flow), ext_perimeter_flow(flow),
+        : slices(slices), lower_slices(nullptr), upper_slices(nullptr),
+            perimeter_flow(flow), ext_perimeter_flow(flow),
             overhang_flow(flow), solid_infill_flow(flow),
             config(config), object_config(object_config), print_config(print_config),
             loops(loops), gap_fill(gap_fill), fill_surfaces(fill_surfaces),

@@ -12,6 +12,7 @@
 #include "BoundingBox.hpp"
 #include "ExPolygon.hpp"
 #include "Geometry.hpp"
+#include "Milling/MillingPostProcess.hpp"
 #include "Polygon.hpp"
 #include "Line.hpp"
 #include "ClipperUtils.hpp"
@@ -86,6 +87,19 @@ void PerimeterGenerator::process()
         // in the current layer
         this->_lower_slices_p = offset(*this->lower_slices, double(scale_(config->overhangs_width.get_abs_value(nozzle_diameter))));
     }
+
+    // have to grown the periemters if mill post-process
+    MillingPostProcess miller(this->slices, this->lower_slices, config, object_config, print_config);
+    bool have_to_grow_for_miller =  miller.can_be_milled(layer) && config->milling_extra_size.get_abs_value(1) > 0;
+    ExPolygons unmillable;
+    coord_t mill_extra_size = 0;
+    if (have_to_grow_for_miller) {
+        unmillable = miller.get_unmillable_areas(layer);
+        double spacing_vs_width = ext_perimeter_flow.width - ext_perimeter_flow.spacing();
+        mill_extra_size = scale_(config->milling_extra_size.get_abs_value(spacing_vs_width));
+        have_to_grow_for_miller = mill_extra_size > SCALED_EPSILON;
+    }
+
     
     // we need to process each island separately because we might have different
     // extra perimeters for each one
@@ -287,7 +301,7 @@ void PerimeterGenerator::process()
     }
 
     surface_idx = 0;
-    const int extra_odd_perimeter = (config->extra_perimeters_odd_layers && layer_id % 2 == 1 ? 1:0);
+    const int extra_odd_perimeter = (config->extra_perimeters_odd_layers && layer->id() % 2 == 1 ? 1:0);
     for (const Surface &surface : all_surfaces) {
         // detect how many perimeters must be generated for this island
         int        loop_number = this->config->perimeters + surface.extra_perimeters - 1 + extra_odd_perimeter;  // 0-indexed loops
@@ -303,9 +317,21 @@ void PerimeterGenerator::process()
         ExPolygons last        = union_ex(surface.expolygon.simplify_p(SCALED_RESOLUTION));
         if (loop_number >= 0) {
 
+            //increase surface for milling_post-process
+            if (have_to_grow_for_miller) {
+                if (unmillable.empty())
+                    last = offset_ex(last, mill_extra_size);
+                else {
+                    ExPolygons growth = diff_ex(offset_ex(last, mill_extra_size), unmillable, true);
+                    last.insert(last.end(), growth.begin(), growth.end());
+                    last = union_ex(last);
+                }
+            }
+
+
             // Add perimeters on overhangs : initialization
             ExPolygons overhangs_unsupported;
-            if ( (this->config->extra_perimeters_overhangs || (this->config->overhangs_reverse && this->layer_id % 2 == 1))
+            if ( (this->config->extra_perimeters_overhangs || (this->config->overhangs_reverse && this->layer->id() % 2 == 1))
                 && !last.empty()  && this->lower_slices != NULL  && !this->lower_slices->empty()) {
                 //remove holes from lower layer, we only ant that for overhangs, not bridges!
                 ExPolygons lower_without_holes;
@@ -341,11 +367,11 @@ void PerimeterGenerator::process()
                 }
             }
             bool has_steep_overhang = false;
-            if (this->layer_id % 2 == 1 && this->config->overhangs_reverse //check if my option is set and good layer
+            if (this->layer->id() % 2 == 1 && this->config->overhangs_reverse //check if my option is set and good layer
                 && !last.empty() && !overhangs_unsupported.empty() //has something to work with
                 ) {
                 coord_t offset = scale_(config->overhangs_reverse_threshold.get_abs_value(this->perimeter_flow.width));
-                //version with °: scale_(std::tan(PI * (0.5f / 90) * config->overhangs_reverse_threshold.value ) * this->layer_height)
+                //version with °: scale_(std::tan(PI * (0.5f / 90) * config->overhangs_reverse_threshold.value ) * this->layer->height)
 
                 if (offset_ex(overhangs_unsupported, -offset / 2).size() > 0) {
                     //allow this loop to be printed in reverse
@@ -444,7 +470,7 @@ void PerimeterGenerator::process()
                                         bound.remove_point_too_near((coord_t)SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop (*1.2 because of circles approx. and enlrgment from 'div')
                                         Slic3r::MedialAxis ma{ thin[0], (coord_t)((ext_perimeter_width + ext_perimeter_spacing)*1.2),
-                                            min_width, coord_t(this->layer_height) };
+                                            min_width, coord_t(this->layer->height) };
                                         ma.use_bounds(bound)
                                             .use_min_real_width((coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter))
                                             .use_tapers(overlap)
@@ -554,7 +580,12 @@ void PerimeterGenerator::process()
                         offset_top_surface -= 0.9 * (config->perimeters <= 1 ? 0. : (perimeter_spacing * (config->perimeters - 1)));
                     else offset_top_surface = 0;
                     // get the real top surface
-                    ExPolygons top_polygons = diff_ex(last, *this->upper_slices, true);
+                    ExPolygons top_polygons = (!have_to_grow_for_miller) ? diff_ex(last, *this->upper_slices, true)
+                        :(unmillable.empty())?
+                            diff_ex(last, offset_ex(*this->upper_slices, mill_extra_size), true)
+                                :
+                        diff_ex(last, diff_ex(offset_ex(*this->upper_slices, mill_extra_size), unmillable, true));
+                    
                     //get the not-top surface, from the "real top" but enlarged by external_infill_margin
                     ExPolygons inner_polygons = diff_ex(last, offset_ex(top_polygons, offset_top_surface), true);
                     // get the enlarged top surface, by using inner_polygons instead of upper_slices
@@ -651,7 +682,7 @@ void PerimeterGenerator::process()
             // we continue inwards after having finished the brim
             // TODO: add test for perimeter order
             if (this->config->external_perimeters_first ||
-                (this->layer_id == 0 && this->object_config->brim_width.value > 0)) {
+                (this->layer->id() == 0 && this->object_config->brim_width.value > 0)) {
                 if (this->config->external_perimeters_nothole.value) {
                     if (this->config->external_perimeters_hole.value) {
                         entities.reverse();
@@ -699,7 +730,7 @@ void PerimeterGenerator::process()
             // collapse 
             double min = 0.2 * perimeter_width * (1 - INSET_OVERLAP_TOLERANCE);
             //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
-            min = std::max(min, double(Flow::new_from_spacing(EPSILON, nozzle_diameter, this->layer_height, false).scaled_width()));
+            min = std::max(min, double(Flow::new_from_spacing(EPSILON, nozzle_diameter, this->layer->height, false).scaled_width()));
             double max = 2.2 * perimeter_spacing;
             //remove areas that are too big (shouldn't occur...)
             ExPolygons gaps_ex_to_test = diff_ex(
@@ -762,7 +793,7 @@ void PerimeterGenerator::process()
             // create lines from the area
             ThickPolylines polylines;
             for (const ExPolygon &ex : gaps_ex) {
-                    MedialAxis{ ex, coord_t(max*1.1), coord_t(min), coord_t(this->layer_height) }.build(polylines);
+                    MedialAxis{ ex, coord_t(max*1.1), coord_t(min), coord_t(this->layer->height) }.build(polylines);
             }
             // create extrusion from lines
             if (!polylines.empty()) {
@@ -852,7 +883,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
         
         // detect overhanging/bridging perimeters
         ExtrusionPaths paths;
-        if (this->config->overhangs && this->layer_id > 0
+        if (this->config->overhangs && this->layer->id() > 0
             && !(this->object_config->support_material && this->object_config->support_material_contact_distance_type.value == zdNone)) {
             // get non-overhang paths by intersecting this loop with the grown lower slices
             extrusion_paths_append(
@@ -861,7 +892,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
                 role,
                 is_external ? this->_ext_mm3_per_mm           : this->_mm3_per_mm,
                 is_external ? this->ext_perimeter_flow.width  : this->perimeter_flow.width,
-                (float) this->layer_height);
+                (float) this->layer->height);
             
             // get overhang paths by checking what parts of this loop fall 
             // outside the grown lower slices (thus where the distance between
@@ -882,7 +913,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
             path.polyline   = loop.polygon.split_at_first_point();
             path.mm3_per_mm = is_external ? this->_ext_mm3_per_mm           : this->_mm3_per_mm;
             path.width      = is_external ? this->ext_perimeter_flow.width  : this->perimeter_flow.width;
-            path.height     = (float) this->layer_height;
+            path.height     = (float) this->layer->height;
             paths.push_back(path);
         }
         
@@ -923,8 +954,8 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
             ExtrusionLoop *eloop = static_cast<ExtrusionLoop*>(coll.entities[idx.first]);
             coll.entities[idx.first] = nullptr;
             if (loop.is_contour) {
-                //note: this->layer_id % 2 == 1 already taken into account in the is_steep_overhang compute (to save time).
-                if (loop.is_steep_overhang && this->layer_id % 2 == 1)
+                //note: this->layer->id() % 2 == 1 already taken into account in the is_steep_overhang compute (to save time).
+                if (loop.is_steep_overhang && this->layer->id() % 2 == 1)
                     eloop->make_clockwise();
                 else
                     eloop->make_counter_clockwise();
@@ -1071,7 +1102,7 @@ PerimeterGenerator::_extrude_and_cut_loop(const PerimeterGeneratorLoop &loop, co
             loop.is_external() ? erExternalPerimeter : erPerimeter,
             (double)(loop.is_external() ? this->_ext_mm3_per_mm : this->_mm3_per_mm),
             (float)(loop.is_external() ? this->ext_perimeter_flow.width : this->perimeter_flow.width),
-            (float)(this->layer_height));
+            (float)(this->layer->height));
         single_point.paths.back().polyline = poly_point;
         return single_point;
     }
@@ -1119,7 +1150,7 @@ PerimeterGenerator::_extrude_and_cut_loop(const PerimeterGeneratorLoop &loop, co
         }
 
         // detect overhanging/bridging perimeters
-        if (this->config->overhangs && this->layer_id > 0
+        if (this->config->overhangs && this->layer->id() > 0
             && !(this->object_config->support_material && this->object_config->support_material_contact_distance_type.value == zdNone)) {
             ExtrusionPaths paths;
             // get non-overhang paths by intersecting this loop with the grown lower slices
@@ -1129,7 +1160,7 @@ PerimeterGenerator::_extrude_and_cut_loop(const PerimeterGeneratorLoop &loop, co
                 role,
                 is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm,
                 is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width,
-                (float) this->layer_height);
+                (float) this->layer->height);
 
             // get overhang paths by checking what parts of this loop fall 
             // outside the grown lower slices (thus where the distance between
@@ -1203,7 +1234,7 @@ PerimeterGenerator::_extrude_and_cut_loop(const PerimeterGeneratorLoop &loop, co
             if (need_to_reverse) path.polyline.reverse();
             path.mm3_per_mm = is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm;
             path.width = is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width;
-            path.height = (float)(this->layer_height);
+            path.height = (float)(this->layer->height);
             my_loop.paths.emplace_back(path);
         }
 

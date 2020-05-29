@@ -57,7 +57,7 @@ public:
     const Print*                print() const { return m_print; }
     const PrintRegionConfig&    config() const { return m_config; }
 	// 1-based extruder identifier for this region and role.
-	unsigned int 				extruder(FlowRole role) const;
+	uint16_t 				    extruder(FlowRole role) const;
     Flow                        flow(FlowRole role, double layer_height, bool bridge, bool first_layer, double width, const PrintObject &object) const;
     // Average diameter of nozzles participating on extruding this region.
     coordf_t                    nozzle_dmr_avg(const PrintConfig &print_config) const;
@@ -65,8 +65,8 @@ public:
     coordf_t                    bridging_height_avg(const PrintConfig &print_config) const;
 
     // Collect 0-based extruder indices used to print this region's object.
-	void                        collect_object_printing_extruders(std::vector<unsigned int> &object_extruders) const;
-	static void                 collect_object_printing_extruders(const PrintConfig &print_config, const PrintObjectConfig &object_config, const PrintRegionConfig &region_config, std::vector<unsigned int> &object_extruders);
+	void                        collect_object_printing_extruders(std::vector<uint16_t> &object_extruders) const;
+	static void                 collect_object_printing_extruders(const PrintConfig &print_config, const PrintObjectConfig &object_config, const PrintRegionConfig &region_config, std::vector<uint16_t> &object_extruders);
 
 // Methods modifying the PrintRegion's state:
 public:
@@ -184,7 +184,7 @@ public:
     static SlicingParameters    slicing_parameters(const DynamicPrintConfig &full_config, const ModelObject &model_object, float object_max_z);
 
     // returns 0-based indices of extruders used to print the object (without brim, support and other helper extrusions)
-    std::vector<unsigned int>   object_extruders() const;
+    std::vector<uint16_t>   object_extruders() const;
 
     // Called when slicing to SVG (see Print.pm sub export_svg), and used by perimeters.t
     void slice();
@@ -404,9 +404,9 @@ public:
     Flow                brim_flow(size_t extruder_id) const;
     Flow                skirt_flow(size_t extruder_id) const;
     
-    std::vector<unsigned int> object_extruders(const PrintObjectPtrs &objects) const;
-    std::vector<unsigned int> support_material_extruders() const;
-    std::vector<unsigned int> extruders() const;
+    std::vector<uint16_t> object_extruders(const PrintObjectPtrs &objects) const;
+    std::vector<uint16_t> support_material_extruders() const;
+    std::vector<uint16_t> extruders() const;
     double              max_allowed_layer_height() const;
     bool                has_support_material() const;
     // Make sure the background processing has no access to this model_object during this call!
@@ -422,7 +422,7 @@ public:
     const PrintRegionPtrs&      regions() const { return m_regions; }
     // How many of PrintObject::copies() over all print objects are there?
     // If zero, then the print is empty and the print shall not be executed.
-    unsigned int                num_object_instances() const;
+    uint16_t                    num_object_instances() const;
 
     const ExtrusionEntityCollection& skirt() const { return m_skirt; }
     const ExtrusionEntityCollection& brim() const { return m_brim; }

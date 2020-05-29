@@ -530,7 +530,11 @@ const std::vector<std::string>& Preset::print_options()
         , "curve_smoothing_angle_concave",
         "print_extrusion_multiplier",
         "external_perimeter_cut_corners",
-        "external_perimeter_overlap"
+        "external_perimeter_overlap",
+        "milling_after_z",
+        "milling_post_process",
+        "milling_extra_size",
+        "milling_speed",
     };
     return s_opts;
 }

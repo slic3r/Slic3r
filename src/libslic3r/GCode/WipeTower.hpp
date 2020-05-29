@@ -25,14 +25,14 @@ public:
 
     struct Extrusion
     {
-		Extrusion(const Vec2f &pos, float width, unsigned int tool) : pos(pos), width(width), tool(tool) {}
+		Extrusion(const Vec2f &pos, float width, uint16_t tool) : pos(pos), width(width), tool(tool) {}
 		// End position of this extrusion.
 		Vec2f				pos;
 		// Width of a squished extrusion, corrected for the roundings of the squished extrusions.
 		// This is left zero if it is a travel move.
 		float 			width;
 		// Current extruder index.
-		unsigned int    tool;
+		uint16_t    tool;
 	};
 
 	struct ToolChangeResult
@@ -88,7 +88,7 @@ public:
 
 	// Appends into internal structure m_plan containing info about the future wipe tower
 	// to be used before building begins. The entries must be added ordered in z.
-	void plan_toolchange(float z_par, float layer_height_par, unsigned int old_tool, unsigned int new_tool, bool brim, float wipe_volume = 0.f);
+	void plan_toolchange(float z_par, float layer_height_par, uint16_t old_tool, uint16_t new_tool, bool brim, float wipe_volume = 0.f);
 
 	// Iterates through prepared m_plan, generates ToolChangeResults and appends them to "result"
 	void generate(std::vector<std::vector<ToolChangeResult>> &result);
@@ -146,7 +146,7 @@ public:
 		// print_z of the first layer.
 		float 						first_layer_height, 
 		// Extruder indices, in the order to be primed. The last extruder will later print the wipe tower brim, print brim and the object.
-		const std::vector<unsigned int> &tools,
+		const std::vector<uint16_t> &tools,
 		// If true, the last priming are will be the same as the other priming areas, and the rest of the wipe will be performed inside the wipe tower.
 		// If false, the last priming are will be large enough to wipe the last extruder sufficiently.
 		bool 						last_wipe_inside_wipe_tower);
@@ -259,9 +259,9 @@ private:
 
 
 	// State of the wipe tower generator.
-	unsigned int m_num_layer_changes = 0; // Layer change counter for the output statistics.
-	unsigned int m_num_tool_changes  = 0; // Tool change change counter for the output statistics.
-	///unsigned int 	m_idx_tool_change_in_layer = 0; // Layer change counter in this layer. Counting up to m_max_color_changes.
+	uint32_t m_num_layer_changes = 0; // Layer change counter for the output statistics.
+	uint32_t m_num_tool_changes  = 0; // Tool change change counter for the output statistics.
+	///uint16_t 	m_idx_tool_change_in_layer = 0; // Layer change counter in this layer. Counting up to m_max_color_changes.
 	bool m_print_brim = true;
 	// A fill-in direction (positive Y, negative Y) alternates with each layer.
 	wipe_shape   	m_current_shape = SHAPE_NORMAL;

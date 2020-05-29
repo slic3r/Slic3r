@@ -294,15 +294,15 @@ std::vector<PerExtruderAdjustments> CoolingBuffer::parse_layer_gcode(const std::
 {
     const FullPrintConfig       &config        = m_gcodegen.config();
     const std::vector<Extruder> &extruders     = m_gcodegen.writer().extruders();
-    unsigned int                 num_extruders = 0;
+    uint16_t                 num_extruders = 0;
     for (const Extruder &ex : extruders)
-        num_extruders = std::max(ex.id() + 1, num_extruders);
+        num_extruders = std::max(uint16_t(ex.id() + 1), num_extruders);
     
     std::vector<PerExtruderAdjustments> per_extruder_adjustments(extruders.size());
     std::vector<size_t>                 map_extruder_to_per_extruder_adjustment(num_extruders, 0);
     for (size_t i = 0; i < extruders.size(); ++ i) {
         PerExtruderAdjustments &adj         = per_extruder_adjustments[i];
-        unsigned int            extruder_id = extruders[i].id();
+        uint16_t            extruder_id = extruders[i].id();
         adj.extruder_id               = extruder_id;
         adj.cooling_slow_down_enabled = config.cooling.get_at(extruder_id);
         adj.slowdown_below_layer_time = float(config.slowdown_below_layer_time.get_at(extruder_id));
@@ -311,7 +311,7 @@ std::vector<PerExtruderAdjustments> CoolingBuffer::parse_layer_gcode(const std::
     }
 
     const std::string toolchange_prefix = m_gcodegen.writer().toolchange_prefix();
-    unsigned int      current_extruder  = m_current_extruder;
+    uint16_t        current_extruder  = m_current_extruder;
     PerExtruderAdjustments *adjustment  = &per_extruder_adjustments[map_extruder_to_per_extruder_adjustment[current_extruder]];
     const char       *line_start = gcode.c_str();
     const char       *line_end   = line_start;
@@ -418,7 +418,7 @@ std::vector<PerExtruderAdjustments> CoolingBuffer::parse_layer_gcode(const std::
             line.type = CoolingLine::TYPE_EXTRUDE_END;
             active_speed_modifier = size_t(-1);
         } else if (boost::starts_with(sline, toolchange_prefix)) {
-            unsigned int new_extruder = (unsigned int)atoi(sline.c_str() + toolchange_prefix.size());
+            uint16_t new_extruder = (uint16_t)atoi(sline.c_str() + toolchange_prefix.size());
             // Only change extruder in case the number is meaningful. User could provide an out-of-range index through custom gcodes - those shall be ignored.
             if (new_extruder < map_extruder_to_per_extruder_adjustment.size()) {
                 if (new_extruder != current_extruder) {

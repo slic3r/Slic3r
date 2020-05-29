@@ -66,6 +66,9 @@ enum OptionCategory : int
     wipe,
 
     hollowing,
+
+    milling_extruders,
+    milling,
 };
 std::string toString(OptionCategory opt);
 
@@ -157,6 +160,10 @@ enum PrinterTechnology : uint8_t
     ptSLA = 1 << 1,
     // Selective Laser-Sintering
     ptSLS = 1 << 2,
+    // CNC
+    ptMill = 1 << 3,
+    // Laser engraving
+    ptLaser = 1 << 4,
     // Any technology, useful for parameters compatible with both ptFFF and ptSLA
     ptAny = 1+2+4,
     // Unknown, useful for command line processing
@@ -774,7 +781,8 @@ class ConfigOptionStrings : public ConfigOptionVector<std::string>
 {
 public:
     ConfigOptionStrings() : ConfigOptionVector<std::string>() {}
-    explicit ConfigOptionStrings(size_t n, const std::string &value) : ConfigOptionVector<std::string>(n, value) {}
+    explicit ConfigOptionStrings(const std::string& value) : ConfigOptionVector<std::string>(value) {}
+    explicit ConfigOptionStrings(size_t n, const std::string& value) : ConfigOptionVector<std::string>(n, value) {}
     explicit ConfigOptionStrings(const std::vector<std::string> &values) : ConfigOptionVector<std::string>(values) {}
     explicit ConfigOptionStrings(std::vector<std::string> &&values) : ConfigOptionVector<std::string>(std::move(values)) {}
     explicit ConfigOptionStrings(std::initializer_list<std::string> il) : ConfigOptionVector<std::string>(std::move(il)) {}
@@ -990,7 +998,8 @@ class ConfigOptionPoints : public ConfigOptionVector<Vec2d>
 {
 public:
     ConfigOptionPoints() : ConfigOptionVector<Vec2d>() {}
-    explicit ConfigOptionPoints(size_t n, const Vec2d &value) : ConfigOptionVector<Vec2d>(n, value) {}
+    explicit ConfigOptionPoints(const Vec2d& value) : ConfigOptionVector<Vec2d>(value) {}
+    explicit ConfigOptionPoints(size_t n, const Vec2d& value) : ConfigOptionVector<Vec2d>(n, value) {}
     explicit ConfigOptionPoints(std::initializer_list<Vec2d> il) : ConfigOptionVector<Vec2d>(std::move(il)) {}
     explicit ConfigOptionPoints(const std::vector<Vec2d> &values) : ConfigOptionVector<Vec2d>(values) {}
 

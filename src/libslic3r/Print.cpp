@@ -117,6 +117,11 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "min_print_speed",
         "max_print_speed",
         "max_volumetric_speed",
+        "milling_toolchange_end_gcode",
+        "milling_toolchange_start_gcode",
+        "milling_offset",
+        "milling_z_offset",
+        "milling_z_lift",
 #ifdef HAS_PRESSURE_EQUALIZER
         "max_volumetric_extrusion_rate_slope_positive",
         "max_volumetric_extrusion_rate_slope_negative",
@@ -312,9 +317,9 @@ bool Print::is_step_done(PrintObjectStep step) const
 }
 
 // returns 0-based indices of used extruders
-std::vector<unsigned int> Print::object_extruders(const PrintObjectPtrs &objects) const
+std::vector<uint16_t> Print::object_extruders(const PrintObjectPtrs &objects) const
 {
-    std::vector<unsigned int> extruders;
+    std::vector<uint16_t> extruders;
     extruders.reserve(m_regions.size() * 3);
     std::vector<unsigned char> region_used(m_regions.size(), false);
     for (const PrintObject *object : objects)
@@ -329,11 +334,11 @@ std::vector<unsigned int> Print::object_extruders(const PrintObjectPtrs &objects
 }
 
 // returns 0-based indices of used extruders
-std::vector<unsigned int> Print::support_material_extruders() const
+std::vector<uint16_t> Print::support_material_extruders() const
 {
-    std::vector<unsigned int> extruders;
+    std::vector<uint16_t> extruders;
     bool support_uses_current_extruder = false;
-    auto num_extruders = (unsigned int)m_config.nozzle_diameter.size();
+    auto num_extruders = (uint16_t)m_config.nozzle_diameter.size();
 
     for (PrintObject *object : m_objects) {
         if (object->has_support_material()) {
@@ -341,14 +346,14 @@ std::vector<unsigned int> Print::support_material_extruders() const
             if (object->config().support_material_extruder == 0)
                 support_uses_current_extruder = true;
             else {
-            	unsigned int i = (unsigned int)object->config().support_material_extruder - 1;
+                uint16_t i = (uint16_t)object->config().support_material_extruder - 1;
                 extruders.emplace_back((i >= num_extruders) ? 0 : i);
             }
         	assert(object->config().support_material_interface_extruder >= 0);
             if (object->config().support_material_interface_extruder == 0)
                 support_uses_current_extruder = true;
             else {
-            	unsigned int i = (unsigned int)object->config().support_material_interface_extruder - 1;
+                uint16_t i = (uint16_t)object->config().support_material_interface_extruder - 1;
                 extruders.emplace_back((i >= num_extruders) ? 0 : i);
         }
     }
@@ -363,19 +368,19 @@ std::vector<unsigned int> Print::support_material_extruders() const
 }
 
 // returns 0-based indices of used extruders
-std::vector<unsigned int> Print::extruders() const
+std::vector<uint16_t> Print::extruders() const
 {
-    std::vector<unsigned int> extruders = this->object_extruders(m_objects);
+    std::vector<uint16_t> extruders = this->object_extruders(m_objects);
     append(extruders, this->support_material_extruders());
     sort_remove_duplicates(extruders);
     return extruders;
 }
 
-unsigned int Print::num_object_instances() const
+uint16_t Print::num_object_instances() const
 {
-	size_t instances = 0;
+    uint16_t instances = 0;
     for (const PrintObject *print_object : m_objects)
-        instances += (unsigned int)print_object->instances().size();
+        instances += (uint16_t)print_object->instances().size();
     return instances;
 }
 
@@ -1403,12 +1408,12 @@ std::string Print::validate() const
     }
     
 	{
-		std::vector<unsigned int> extruders = this->extruders();
+		std::vector<uint16_t> extruders = this->extruders();
 
 		// Find the smallest used nozzle diameter and the number of unique nozzle diameters.
 		double min_nozzle_diameter = std::numeric_limits<double>::max();
 		double max_nozzle_diameter = 0;
-		for (unsigned int extruder_id : extruders) {
+		for (uint16_t extruder_id : extruders) {
 			double dmr = m_config.nozzle_diameter.get_at(extruder_id);
 			min_nozzle_diameter = std::min(min_nozzle_diameter, dmr);
 			max_nozzle_diameter = std::max(max_nozzle_diameter, dmr);
@@ -1724,7 +1729,7 @@ void Print::process()
                 if (config().complete_objects) {
                     for (PrintObject *obj : obj_group) {
                         //get flow
-                        std::vector<unsigned int> set_extruders = this->object_extruders({ obj });
+                        std::vector<uint16_t> set_extruders = this->object_extruders({ obj });
                         append(set_extruders, this->support_material_extruders());
                         sort_remove_duplicates(set_extruders);
                         Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front());
@@ -1749,7 +1754,7 @@ void Print::process()
                     if (obj_groups.size() > 1)
                         brim_area = union_ex(brim_area);
                     //get the first extruder in the list for these objects... replicating gcode generation
-                    std::vector<unsigned int> set_extruders = this->object_extruders(m_objects);
+                    std::vector<uint16_t> set_extruders = this->object_extruders(m_objects);
                     append(set_extruders, this->support_material_extruders());
                     sort_remove_duplicates(set_extruders);
                     Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front());
@@ -1885,7 +1890,7 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
     std::vector<size_t> extruders;
     std::vector<double> extruders_e_per_mm;
     {
-        std::vector<unsigned int> set_extruders = this->object_extruders(objects);
+        std::vector<uint16_t> set_extruders = this->object_extruders(objects);
         append(set_extruders, this->support_material_extruders());
         sort_remove_duplicates(set_extruders);
         extruders.reserve(set_extruders.size());

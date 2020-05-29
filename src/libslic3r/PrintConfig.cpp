@@ -34,6 +34,8 @@ PrintConfigDef::PrintConfigDef()
     assign_printer_technology_to_unknown(this->options, ptFFF);
     this->init_sla_params();
     assign_printer_technology_to_unknown(this->options, ptSLA);
+    this->init_milling_params();
+    assign_printer_technology_to_unknown(this->options, ptMill);
 }
 
 void PrintConfigDef::init_common_params()
@@ -1955,31 +1957,6 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(0));
 #endif /* HAS_PRESSURE_EQUALIZER */
 
-    def = this->add("milling_cutter", coInt);
-    def->gui_type = "i_enum_open";
-    def->label = L("Milling cutter");
-    def->category = OptionCategory::extruders;
-    def->tooltip = L("The milling cutter to use (unless more specific extruder settings are specified). ");
-    def->min = 0;  // 0 = inherit defaults
-    def->enum_labels.push_back("default");  // override label for item 0
-    def->enum_labels.push_back("1");
-    def->enum_labels.push_back("2");
-    def->enum_labels.push_back("3");
-    def->enum_labels.push_back("4");
-    def->enum_labels.push_back("5");
-    def->enum_labels.push_back("6");
-    def->enum_labels.push_back("7");
-    def->enum_labels.push_back("8");
-    def->enum_labels.push_back("9");
-
-    def = this->add("milling_diameter", coFloats);
-    def->label = L("Milling diameter");
-    def->category = OptionCategory::extruders;
-    def->tooltip = L("This is the diameter of your cutting tool.");
-    def->sidetext = L("mm");
-    def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloats(2.14));
-
     def = this->add("min_fan_speed", coInts);
     def->label = L("Min");
     def->full_label = ("Min fan speed");
@@ -3497,9 +3474,129 @@ void PrintConfigDef::init_extruder_option_keys()
         "wipe_extra_perimeter"
     };
     assert(std::is_sorted(m_extruder_retract_keys.begin(), m_extruder_retract_keys.end()));
+}
+
+void PrintConfigDef::init_milling_params()
+{
     m_milling_option_keys = {
         "milling_diameter",
+        "milling_toolchange_end_gcode",
+        "milling_toolchange_start_gcode",
+        //"milling_offset",
+        //"milling_z_offset",
+        "milling_z_lift",
+
     };
+
+    ConfigOptionDef* def;
+
+    // Milling Printer settings
+
+    def = this->add("milling_cutter", coInt);
+    def->gui_type = "i_enum_open";
+    def->label = L("Milling cutter");
+    def->category = OptionCategory::general;
+    def->tooltip = L("The milling cutter to use (unless more specific extruder settings are specified). ");
+    def->min = 0;  // 0 = inherit defaults
+    def->enum_labels.push_back("default");  // override label for item 0
+    def->enum_labels.push_back("1");
+    def->enum_labels.push_back("2");
+    def->enum_labels.push_back("3");
+    def->enum_labels.push_back("4");
+    def->enum_labels.push_back("5");
+    def->enum_labels.push_back("6");
+    def->enum_labels.push_back("7");
+    def->enum_labels.push_back("8");
+    def->enum_labels.push_back("9");
+
+    def = this->add("milling_diameter", coFloats);
+    def->label = L("Milling diameter");
+    def->category = OptionCategory::milling_extruders;
+    def->tooltip = L("This is the diameter of your cutting tool.");
+    def->sidetext = L("mm");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats(3.14));
+
+    def = this->add("milling_offset", coPoints);
+    def->label = L("Tool offset");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L("If your firmware doesn't handle the extruder displacement you need the G-code "
+        "to take it into account. This option lets you specify the displacement of each extruder "
+        "with respect to the first one. It expects positive coordinates (they will be subtracted "
+        "from the XY coordinate).");
+    def->sidetext = L("mm");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionPoints( Vec2d(0,0) ));
+
+    def = this->add("milling_z_offset", coFloats);
+    def->label = L("Tool z offset");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L(".");
+    def->sidetext = L("mm");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats(0));
+
+    def = this->add("milling_z_lift", coFloats);
+    def->label = L("Tool z lift");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L("Amount of lift for travel.");
+    def->sidetext = L("mm");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats(2));
+
+    def = this->add("milling_toolchange_start_gcode", coStrings);
+    def->label = L("G-Code to switch to this toolhead");
+    def->category = OptionCategory::milling_extruders;
+    def->tooltip = L("Put here the gcode to change the toolhead (called after the g-code T[next_extruder]). You have access to [next_extruder] and [previous_extruder]."
+        " next_extruder is the 'extruder number' of the new milling tool, it's equal to the index (begining at 0) of the milling tool plus the number of extruders."
+        " previous_extruder is the 'extruder number' of the previous tool, it may be a normal extruder, if it's below the number of extruders."
+        " The numbe rof extruder is available at [extruder]and the number of milling tool is available at [milling_cutter].");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionStrings(""));
+
+    def = this->add("milling_toolchange_end_gcode", coStrings);
+    def->label = L("G-Code to switch from this toolhead");
+    def->category = OptionCategory::milling_extruders;
+    def->tooltip = L("Put here the gcode to end the toolhead action, like stopping the spindle. You have access to [next_extruder] and [previous_extruder]."
+        " previous_extruder is the 'extruder number' of the current milling tool, it's equal to the index (begining at 0) of the milling tool plus the number of extruders."
+        " next_extruder is the 'extruder number' of the next tool, it may be a normal extruder, if it's below the number of extruders."
+        " The numbe rof extruder is available at [extruder]and the number of milling tool is available at [milling_cutter].");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionStrings(""));
+
+    def = this->add("milling_post_process", coBool);
+    def->label = L("Milling post-processing");
+    def->category = OptionCategory::milling;
+    def->tooltip = L("If activated, at the end of each layer, the printer will switch to a milling ead and mill the external periemters."
+        "\nYou should set the 'Milling extra XY size' to a value high enough to have enough plastic to mill. Also, be sure that your piece is firmly glued to the bed.");
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("milling_extra_size", coFloatOrPercent);
+    def->label = L("Milling extra XY size");
+    def->category = OptionCategory::milling;
+    def->tooltip = L("This increase the size of the object by a certain amount to have enough plastic to mill."
+        " You can set a number of mm or a percentage of the calculated optimal extra width (from flow calculation).");
+    def->sidetext = L("mm or %");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(150, true));
+
+    def = this->add("milling_after_z", coFloatOrPercent);
+    def->label = L("Milling only after");
+    def->category = OptionCategory::milling;
+    def->tooltip = L("THis setting restrict the post-process milling to a certain height, to avoid milling the bed. It can be a mm of a % of the first layer height (so it can depends of the object).");
+    def->sidetext = L("mm or %");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(200, true));
+
+    def = this->add("milling_speed", coFloat);
+    def->label = L("Milling Speed");
+    def->category = OptionCategory::milling;
+    def->tooltip = L("Speed for milling tool.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(30));
 }
 
 void PrintConfigDef::init_sla_params()

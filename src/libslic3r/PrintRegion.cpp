@@ -3,7 +3,7 @@
 namespace Slic3r {
 
 // 1-based extruder identifier for this region and role.
-unsigned int PrintRegion::extruder(FlowRole role) const
+uint16_t PrintRegion::extruder(FlowRole role) const
 {
     size_t extruder = 0;
     if (role == frPerimeter || role == frExternalPerimeter)
@@ -65,7 +65,7 @@ coordf_t PrintRegion::bridging_height_avg(const PrintConfig &print_config) const
     return this->nozzle_dmr_avg(print_config) * sqrt(m_config.bridge_flow_ratio.get_abs_value(1));
 }
 
-void PrintRegion::collect_object_printing_extruders(const PrintConfig &print_config, const PrintObjectConfig &object_config, const PrintRegionConfig &region_config, std::vector<unsigned int> &object_extruders)
+void PrintRegion::collect_object_printing_extruders(const PrintConfig &print_config, const PrintObjectConfig &object_config, const PrintRegionConfig &region_config, std::vector<uint16_t> &object_extruders)
 {
     // These checks reflect the same logic used in the GUI for enabling/disabling extruder selection fields.
     auto num_extruders = (int)print_config.nozzle_diameter.size();
@@ -81,7 +81,7 @@ void PrintRegion::collect_object_printing_extruders(const PrintConfig &print_con
     	emplace_extruder(region_config.solid_infill_extruder);
 }
 
-void PrintRegion::collect_object_printing_extruders(std::vector<unsigned int> &object_extruders) const
+void PrintRegion::collect_object_printing_extruders(std::vector<uint16_t> &object_extruders) const
 {
     // PrintRegion, if used by some PrintObject, shall have all the extruders set to an existing printer extruder.
     // If not, then there must be something wrong with the Print::apply() function.
