@@ -834,7 +834,7 @@ PageReloadFromDisk::PageReloadFromDisk(ConfigWizard* parent)
 PageMode::PageMode(ConfigWizard *parent)
     : ConfigWizardPage(parent, _(L("View mode")), _(L("View mode")))
 {
-    append_text(_(L("Slic3r++'s user interfaces comes in three variants:\nSimple, Advanced, and Expert.\n"
+    append_text(_(L("SuperSlicer's user interfaces comes in three variants:\nSimple, Advanced, and Expert.\n"
         "The Simple mode shows only the most frequently used settings relevant for regular 3D printing. "
         "The other two offer progressively more sophisticated fine-tuning, "
         "they are suitable for advanced and expert users, respectively.")));

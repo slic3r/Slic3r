@@ -1700,7 +1700,6 @@ void Print::process()
                     && obj_group.front()->config().brim_width.value == obj->config().brim_width.value
                     && obj_group.front()->config().brim_width_interior.value == obj->config().brim_width_interior.value) {
                     added = true;
-                    std::cout << " add object to existing group: "<< obj_group.front()->config().brim_width.value<< " == "<< obj->config().brim_width.value << "\n";
                     obj_group.push_back(obj);
                 }
             }
@@ -2001,7 +2000,6 @@ void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolyg
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_instances.size());
         for (const PrintInstance &pt : object->m_instances) {
-            std::cout << "brim draw: push obj to " << pt.shift.x() << " : " << pt.shift.y() << "\n";
             for (ExPolygon &poly : object_islands) {
                 islands.push_back(poly);
                 islands.back().translate(pt.shift.x(), pt.shift.y());

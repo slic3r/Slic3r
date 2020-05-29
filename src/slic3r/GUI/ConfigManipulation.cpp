@@ -191,7 +191,7 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
         }
     }
 
-    // check changes from FloatOrPercent to percent (useful to migrate cofnig from prusa to slic3r++)
+    // check changes from FloatOrPercent to percent (useful to migrate config from prusa to SuperSlicer)
     {
         std::vector<std::string> names;
         names.push_back("bridge_flow_ratio");

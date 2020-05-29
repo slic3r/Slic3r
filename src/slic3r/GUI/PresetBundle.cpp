@@ -31,7 +31,7 @@
 #include "libslic3r/Utils.hpp"
 #include "GUI_App.hpp"
 
-// Store the print/filament/printer presets into a "presets" subdirectory of the Slic3r++ config dir.
+// Store the print/filament/printer presets into a "presets" subdirectory of the SuperSlicer config dir.
 // This breaks compatibility with the upstream Slic3r if the --datadir is used to switch between the two versions.
 // #define SLIC3R_PROFILE_USE_PRESETS_SUBDIR
 

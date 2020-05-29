@@ -79,4 +79,4 @@ exemple:
     end_page
 
 ## notes
-A print.ui.legacy is here with the prusaslicer tabs, just rename print.ui and remove the .legacy to switch from the slic3r++ print layout to prusaslicer print layout.
+A print.ui.legacy is here with the prusaslicer tabs, just rename print.ui and remove the .legacy to switch from the SuperSlicer print layout to prusaslicer print layout.

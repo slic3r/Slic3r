@@ -303,15 +303,15 @@ void GLCanvas3DManager::init_gl()
         if (! s_gl_info.is_version_greater_or_equal_to(2, 0)) {
         	// Complain about the OpenGL version.
             wxString message = from_u8((boost::format(
-                _utf8(L("Slic3r++ requires OpenGL 2.0 capable graphics driver to run correctly, \n"
+                _utf8(L("SuperSlicer requires OpenGL 2.0 capable graphics driver to run correctly, \n"
                     "while OpenGL version %s, render %s, vendor %s was detected."))) % s_gl_info.get_version() % s_gl_info.get_renderer() % s_gl_info.get_vendor()).str());
         	message += "\n";
         	message += _(L("You may need to update your graphics card driver."));
 #ifdef _WIN32
         	message += "\n";
-        	message += _(L("As a workaround, you may run Slic3r++ with a software rendered 3D graphics by running prusa-slicer.exe with the --sw_renderer parameter."));
+        	message += _(L("As a workaround, you may run SuperSlicer with a software rendered 3D graphics by running prusa-slicer.exe with the --sw_renderer parameter."));
 #endif
-        	wxMessageBox(message, wxString("Slic3r++ - ") + _(L("Unsupported OpenGL version")), wxOK | wxICON_ERROR);
+        	wxMessageBox(message, wxString("SuperSlicer - ") + _(L("Unsupported OpenGL version")), wxOK | wxICON_ERROR);
         }
     }
 }

@@ -24,9 +24,9 @@ SCENARIO("lift() and unlift() behavior with large values of Z", "[!shouldfail]")
         config.set_defaults();
         config.load(std::string{ testfile_dir } +"test_gcodewriter/config_lift_unlift.ini"s);
 
-        std::vector<unsigned int> extruder_ids {0};
+        std::vector<uint16_t> extruder_ids {0};
         writer.set_extruders(extruder_ids);
-        writer.set_extruder(0);
+        writer.set_tool(0);
 
         WHEN("Z is set to 9007199254740992") {
             double trouble_Z{ 9007199254740992 };
@@ -57,9 +57,9 @@ SCENARIO("lift() is not ignored after unlift() at normal values of Z") {
         config.set_defaults();
         config.load(std::string{ testfile_dir } +"test_gcodewriter/config_lift_unlift.ini"s);
 
-        std::vector<unsigned int> extruder_ids {0};
+        std::vector<uint16_t> extruder_ids {0};
         writer.set_extruders(extruder_ids);
-        writer.set_extruder(0);
+        writer.set_tool(0);
 
         WHEN("Z is set to 203") {
             double trouble_Z{ 203 };

@@ -50,7 +50,7 @@ jobs:
       run: mkdir build
     - name: cmake
       working-directory: ./build
-      run: cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH="d:\a\Slic3r\Slic3r\deps\destdir\usr\local"
+      run: cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH="d:\a\SuperSlicer\SuperSlicer\deps\destdir\usr\local"
     - name: make
       working-directory: ./build
       run: msbuild /m /P:Configuration=Release INSTALL.vcxproj
@@ -65,7 +65,7 @@ jobs:
     - name: copy from release
       working-directory: ./build
       shell: powershell
-      run: '(new-object System.Net.WebClient).DownloadFile("https://github.com/supermerill/Slic3r/releases/download/2.1.45.0/Slic3r++_2.1.45.0_win64_191104.zip", "Slic3r++_2.1.45.0_win64_191104.zip")'
+      run: '(new-object System.Net.WebClient).DownloadFile("https://github.com/supermerill/SuperSlicer/releases/download/2.1.45.0/Slic3r++_2.1.45.0_win64_191104.zip", "Slic3r++_2.1.45.0_win64_191104.zip")'
     - name: unzip
       working-directory: ./build
       shell: cmd

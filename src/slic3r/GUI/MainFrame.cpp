@@ -783,12 +783,12 @@ void MainFrame::init_menubar()
     // Help menu
     auto helpMenu = new wxMenu();
     {
-        append_menu_item(helpMenu, wxID_ANY, _(L("Slic3r++ Releases")), _(L("Open the slic3r++ releases page in your browser")),
-            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/slic3r/releases"); });
-        append_menu_item(helpMenu, wxID_ANY, _(L("Slic3r++ wiki")), _(L("Open the slic3r++ wiki in your browser")),
-            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/slic3r/wiki"); });
-        append_menu_item(helpMenu, wxID_ANY, _(L("Slic3r++ website")), _(L("Open the slic3r++ website in your browser")),
-            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/slic3r"); });
+        append_menu_item(helpMenu, wxID_ANY, _(L("SuperSlicer Releases")), _(L("Open the SuperSlicer releases page in your browser")),
+            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/SuperSlicer/releases"); });
+        append_menu_item(helpMenu, wxID_ANY, _(L("SuperSlicer wiki")), _(L("Open the SuperSlicer wiki in your browser")),
+            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/SuperSlicer/wiki"); });
+        append_menu_item(helpMenu, wxID_ANY, _(L("SuperSlicer website")), _(L("Open the SuperSlicer website in your browser")),
+            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/SuperSlicer"); });
         append_menu_item(helpMenu, wxID_ANY, _(L("Prusa Edition website")), _(L("Open the Prusa Edition website in your browser")), 
             [this](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/prusa3d/PrusaSlicer"); });
 //#        my $versioncheck = $self->_append_menu_item($helpMenu, "Check for &Updates...", "Check for new Slic3r versions", sub{

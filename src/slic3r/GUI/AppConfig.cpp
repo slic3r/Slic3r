@@ -111,7 +111,7 @@ void AppConfig::load()
     } catch (pt::ptree_error& ex) {
         // Error while parsing config file. We'll customize the error message and rethrow to be displayed.
         throw std::runtime_error(
-        	_utf8(L("Error parsing Slic3r++ config file, it is probably corrupted. "
+        	_utf8(L("Error parsing SuperSlicer config file, it is probably corrupted. "
                     "Try to manually delete the file to recover from the error. Your user profiles will not be affected.")) + 
         	"\n\n" + AppConfig::config_path() + "\n\n" + ex.what());
     }

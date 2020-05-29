@@ -1,7 +1,7 @@
 
-# Building Slic3r++ on Microsoft Windows
+# Building SuperSlicer on Microsoft Windows
 
-The currently supported way of building Slic3r++ on Windows is with CMake and MS Visual Studio 2017.
+The currently supported way of building SuperSlicer on Windows is with CMake and MS Visual Studio 2017.
 You can use the free [Visual Studio 2017 Community Edition](https://www.visualstudio.com/vs/older-downloads/).
 CMake installer can be downloaded from [the official website](https://cmake.org/download/).~~
 
@@ -10,10 +10,10 @@ Building with newer versions of MSVS (2019) should work too.
 
 ### Building the dependencies package yourself
 
-The dependencies package is built using CMake scripts inside the `deps` subdirectory of Slic3r++ sources.
+The dependencies package is built using CMake scripts inside the `deps` subdirectory of SuperSlicer sources.
 (This is intentionally not interconnected with the CMake scripts in the rest of the sources.)
 
-Open the preferred Visual Studio command line (64 or 32 bit variant, or just a cmd window) and `cd` into the directory with Slic3r++ sources.
+Open the preferred Visual Studio command line (64 or 32 bit variant, or just a cmd window) and `cd` into the directory with SuperSlicer sources.
 Then `cd` into the `deps` directory and use these commands to build:
 
     mkdir build
@@ -45,13 +45,13 @@ Refer to the CMake scripts inside the `deps` directory to see which dependencies
 * Specifically, the problem arises when building boost. Boost build tool appends all build options into paths of intermediate files, which are not handled correctly by either `b2.exe` or possibly `ninja` (?).
 
 
-### Building Slic3r++ with Visual Studio
+### Building SuperSlicer with Visual Studio
 
-First obtain the Slic3r++ sources via either git or by extracting the source archive.
+First obtain the SuperSlicer sources via either git or by extracting the source archive.
 
 Then you will need to note down the so-called 'prefix path' to the dependencies, this is the location of the dependencies packages + `\usr\local` appended.
 
-When ready, open the relevant Visual Studio command line and `cd` into the directory with Slic3r++ sources.
+When ready, open the relevant Visual Studio command line and `cd` into the directory with SuperSlicer sources.
 Use these commands to prepare Visual Studio solution file:
 
     mkdir build
@@ -60,14 +60,14 @@ Use these commands to prepare Visual Studio solution file:
 
 Note that the '-G "Visual Studio 15 Win64"' have to be the same as the one you sue for building the dependencies. So replace it the same way your replace it when you built the dependencies (if you did).
 
-If `cmake` has finished without errors, go to the build directory and open the `Slic3r++.sln` solution file in Visual Studio.
-Before building, make sure you're building the right project (use one of those starting with `Slic3r++_app_...`) and that you're building with the right configuration, i.e. _Release_ vs. _Debug_. When unsure, choose _Release_.
+If `cmake` has finished without errors, go to the build directory and open the `SuperSlicer.sln` solution file in Visual Studio.
+Before building, make sure you're building the right project (use one of those starting with `SuperSlicer_app_...`) and that you're building with the right configuration, i.e. _Release_ vs. _Debug_. When unsure, choose _Release_.
 Note that you won't be able to build a _Debug_ variant against a _Release_-only dependencies package.
 
 #### Installing using the `INSTALL` project
 
-Slic3r++ can be run from the Visual Studio or from Visual Studio's build directory (`src\Release` or `src\Debug`), but for longer-term usage you might want to install somewhere using the `INSTALL` project.
-By default, this installs into `C:\Program Files\Slic3r++`.
+SuperSlicer can be run from the Visual Studio or from Visual Studio's build directory (`src\Release` or `src\Debug`), but for longer-term usage you might want to install somewhere using the `INSTALL` project.
+By default, this installs into `C:\Program Files\SuperSlicer`.
 To customize the install path, use the `-DCMAKE_INSTALL_PREFIX=<path of your choice>` when invoking `cmake`.
 
 ### Building from the command line

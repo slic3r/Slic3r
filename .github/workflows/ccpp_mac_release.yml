@@ -43,32 +43,32 @@ jobs:
     - name: create directory and copy into it
       working-directory: ./build
       run: |
-        mkdir Slic3r++
-        mkdir Slic3r++/Slic3r++.app
-        mkdir Slic3r++/Slic3r++.app/Contents
-        mkdir Slic3r++/Slic3r++.app/Contents/_CodeSignature
-        mkdir Slic3r++/Slic3r++.app/Contents/Frameworks
-        mkdir Slic3r++/Slic3r++.app/Contents/MacOS
+        mkdir SuperSlicer
+        mkdir SuperSlicer/SuperSlicer.app
+        mkdir SuperSlicer/SuperSlicer.app/Contents
+        mkdir SuperSlicer/SuperSlicer.app/Contents/_CodeSignature
+        mkdir SuperSlicer/SuperSlicer.app/Contents/Frameworks
+        mkdir SuperSlicer/SuperSlicer.app/Contents/MacOS
     - name: copy resources
       working-directory: ./build
       run: |
-        cp -Rf ../resources Slic3r++/Slic3r++.app/Contents/resources
-        cp Slic3r++/Slic3r++.app/Contents/resources/icons/slic3r.icns Slic3r++/Slic3r++.app/Contents/resources/Slic3r.icns
-        cp src/Info.date.plist Slic3r++/Slic3r++.app/Contents/Info.plist
+        cp -Rf ../resources SuperSlicer/SuperSlicer.app/Contents/resources
+        cp SuperSlicer/SuperSlicer.app/Contents/resources/icons/slic3r.icns SuperSlicer/SuperSlicer.app/Contents/resources/Slic3r.icns
+        cp src/Info.date.plist SuperSlicer/SuperSlicer.app/Contents/Info.plist
         echo -n -e 'APPL????\x0a' > PkgInfo
-        cp PkgInfo Slic3r++/Slic3r++.app/Contents/PkgInfo
+        cp PkgInfo SuperSlicer/SuperSlicer.app/Contents/PkgInfo
 #        echo -n -e '\xff\xfeAPPL\x3f\x00\x3f\x00\x3f\x00\x3f\x00\x0a\x00' > PkgInfo
     - name: copy bin
       working-directory: ./build
       run: |
-        cp -f src/slic3r++ Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
-        chmod u+x Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
-        tar -zcvf slic3r++.tar.gz Slic3r++
+        cp -f src/superslicer SuperSlicer/SuperSlicer.app/Contents/MacOS/superslicer
+        chmod u+x SuperSlicer/SuperSlicer.app/Contents/MacOS/superslicer
+        tar -zcvf SuperSlicer.tar.gz SuperSlicer
     - name: create dmg
       working-directory: ./build
       run: |
-        hdiutil create -ov -fs HFS+ -volname "Slic3r++" -srcfolder "Slic3r++" temp.dmg
-        hdiutil convert temp.dmg -format UDZO -o Slic3r++.dmg
+        hdiutil create -ov -fs HFS+ -volname "SuperSlicer" -srcfolder "SuperSlicer" temp.dmg
+        hdiutil convert temp.dmg -format UDZO -o SuperSlicer.dmg
 #    - name: signing resources (creating CodeResources inside _CodeSignature)
 #      working-directory: .
 #      run: codesign -s <identity> resources
@@ -80,8 +80,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./build/slic3r++.tar.gz
-        asset_name: slic3r++_${{ github.event.release.tag_name }}_macos_${{steps.date.outputs.date}}.tar.gz
+        asset_path: ./build/SuperSlicer.tar.gz
+        asset_name: SuperSlicer_${{ github.event.release.tag_name }}_macos_${{steps.date.outputs.date}}.tar.gz
         asset_content_type: application/gzip
     - name: Upload Release Asset
       id: upload-release-asset 
@@ -91,5 +91,5 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./build/nightly_macos.dmg
-        asset_name: slic3r++_${{ github.event.release.tag_name }}_macos_${{steps.date.outputs.date}}.dmg
+        asset_name: SuperSlicer_${{ github.event.release.tag_name }}_macos_${{steps.date.outputs.date}}.dmg
         asset_content_type: application/x-apple-diskimage

@@ -1,7 +1,7 @@
 
 # SuperSlicer
 
-**A PrusaSlicer fork (which is a slic3r fork)**
+**A PrusaSlicer fork (which is a slic3r fork)** (previously Slic3r++)
 
 Prebuilt Windows 64b releases are available through the [git releases page](https://github.com/supermerill/SuperSlicer/releases).
 Nightly builds for windows, Linux and macos are available through the [git actions page](https://github.com/supermerill/SuperSlicer/actions). Click on the a build for your plateform and then on 'Artifacts (1)' in the top right corner.
