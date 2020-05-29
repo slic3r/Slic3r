@@ -1,32 +1,25 @@
-_Q: Oh cool, a new fork of slic3r?_
 
-A: Yeah!
+# SuperSlicer
 
-Slic3r++
-======
-Prebuilt Windows 64b releases are available through the [git releases page](https://github.com/supermerill/Slic3r/releases).
-Nightly builds for windows, Linux and macos are available through the [git actions page](https://github.com/supermerill/Slic3r/actions). Click on the a build for your plateform and then on 'Artifacts (1)' in the top right corner.
+**A PrusaSlicer fork (which is a slic3r fork)**
 
-Slic3r++ takes 3D models (STL, OBJ, AMF) and converts them into G-code
+Prebuilt Windows 64b releases are available through the [git releases page](https://github.com/supermerill/SuperSlicer/releases).
+Nightly builds for windows, Linux and macos are available through the [git actions page](https://github.com/supermerill/SuperSlicer/actions). Click on the a build for your plateform and then on 'Artifacts (1)' in the top right corner.
+
+SuperSlicer takes 3D models (STL, OBJ, AMF) and converts them into G-code
 instructions for FFF printers or PNG layers for mSLA 3D printers. It's
 compatible with any modern printer based on the RepRap toolchain, including all
-those based on the Marlin, Prusa, Sprinter and Repetier firmware. It also works
-with Mach3, LinuxCNC and Machinekit controllers.
+those based on the Marlin, Prusa, Klipper and more firmware.
 
-Slic3r++ is based on [Slic3r](https://github.com/Slic3r/Slic3r) by Alessandro Ranelucci and the RepRap community.
+SuperSlicer is based on [PrusaSlicer](https://github.com/prusa3d/PrusaSlicer) by Prusa Research.
+PrusaSlicer is based on [Slic3r](https://github.com/Slic3r/Slic3r) by Alessandro Ranelucci and the RepRap community.
 
-See the [project homepage](https://www.prusa3d.com/slic3r-prusa-edition/) and
-the [documentation directory](doc/) for more information.
+See the [wiki](https://github.com/supermerill/SuperSlicer/wiki) and
+the [documentation directory](doc/) for information about compilation.
 
-### What language is it written in?
+### What are SuperSlicer main features? main new features/differences?
 
-Almost everything are written in C++,
-
-The slicing core is the `libslic3r` library, which can be built and used in a standalone way.
-The command line interface is a thin wrapper over `libslic3r`.
-
-### What are this fork main features/differences?
-
+* Custom-made generated calibration tests.
 * **Ironing** top surface & many new settings to fine-tune the top surface quality, like 'only one perimeter on top'.
 * A "denser infill" option for supporting the (solid) top layers.
 * Better **Thin walls** (anchored inside the print, no more random bits at the ends).
@@ -38,11 +31,11 @@ The command line interface is a thin wrapper over `libslic3r`.
 * Many other little options and corrections (like the filled concentric pattern).
 * It has also all the current slic3rPE/PrusaSlicer features.
 
-### Complete changelog [here](https://github.com/supermerill/Slic3r/wiki)
+### Complete changelog [here](https://github.com/supermerill/SuperSlicer/wiki)
 
 See the wiki for examples.
 
-### What are Slic3r's main features?
+### What are SuperSlicer / PrusaSlicer / Slic3r's main features?
 
 Key features are:
 
@@ -69,11 +62,20 @@ Other major features are:
 * support for **post-processing scripts**
 * **cooling logic** controlling fan speed and dynamic print speed
 
-### Development
+[Command Line Interface](https://github.com/prusa3d/PrusaSlicer/wiki/Command-Line-Interface) wiki page.
 
+## Development
+
+### What language is it written in?
+
+Almost everything are written in C++,
+
+The slicing core is the `libslic3r` library, which can be built and used in a standalone way.
+The command line interface is a thin wrapper over `libslic3r`.
 You can download a precompiled package from the release page.
 it will run without the need for any dependency.
 
+### How to compile
 
 If you want to compile the source yourself, follow the instructions on one of
 these documentation pages:
@@ -86,17 +88,21 @@ Also, you can look at the worklow yaml files for [git actions](https://github.co
 ### Can I help?
 
 Sure! You can do the following to find things that are available to help with:
-* Add an issue to the github tracker if it isn't already present.
+* Add an issue to the github tracker **if it isn't already present**.
 
 Before sending patches and pull requests contact me (preferably through opening a github issue or commenting on an existing, related, issue) to discuss your proposed
 changes: this way we'll ensure nobody wastes their time and no conflicts arise in development.
 
-Slic3r++ is licensed under the _GNU Affero General Public License, version 3_.
-The Slic3r++ is originally based on Slic3r by Alessandro Ranellucci.
+## Licence and attribution
+
+SuperSlicer is licensed under the _GNU Affero General Public License, version 3_.
+The SuperSlicer is based on PrusaSlicer by PrusaResearch.
+
+PrusaSlicer is licensed under the _GNU Affero General Public License, version 3_.
+PrusaSlicer is owned by Prusa Research.
+PrusaSlicer is originally based on Slic3r by Alessandro Ranellucci.
 
 Slic3r is licensed under the _GNU Affero General Public License, version 3_.
 The first author is Alessandro Ranellucci, and many contributors
-Then the Prusa team
-Then Durand remi for this fork
 
-Please refer to the [Command Line Interface](https://github.com/prusa3d/PrusaSlicer/wiki/Command-Line-Interface) wiki page.
+The _GNU Affero General Public License, version 3_ ensure that if you **use** any part of this software in any way (even behind a web server), your software must be released under the same licence.
