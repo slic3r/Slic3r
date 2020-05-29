@@ -4414,22 +4414,24 @@ double PrintConfig::min_object_distance(const ConfigBase *config)
         for (double val : vals) max_nozzle_diam = std::fmax(max_nozzle_diam, val);
 
         // min object distance is max(duplicate_distance, clearance_radius)
-        double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat();
+		//add 1 as safety offset.
+        double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat() + 1;
         if (extruder_clearance_radius > base_dist) {
             base_dist = extruder_clearance_radius;
         }
         //add brim width
+        //FIXME: does not take into account object-defined brim !!! you can crash yoursefl with it
         if (config->option("brim_width")->getFloat() > 0) {
-            base_dist += config->option("brim_width")->getFloat() * 2;
+            base_dist += config->option("brim_width")->getFloat();
         }
         //add the skirt
-        if (config->option("skirts")->getInt() > 0) {
+        if (config->option("skirts")->getInt() > 0 && !config->option("complete_objects_one_skirt")->getBool()) {
             //add skirt dist
             double dist_skirt = config->option("skirt_distance")->getFloat();
+            dist_skirt += max_nozzle_diam * config->option("skirts")->getInt() * 1.5;
+            //add skirt width if needed
             if (dist_skirt > config->option("brim_width")->getFloat())
-                base_dist += (dist_skirt - config->option("brim_width")->getFloat()) * 2;
-            //add skirt width
-            base_dist += max_nozzle_diam * config->option("skirts")->getInt() * 1.5 * 2;
+                base_dist += (dist_skirt - config->option("brim_width")->getFloat());
         }
     }
     return base_dist;
