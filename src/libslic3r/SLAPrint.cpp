@@ -602,7 +602,7 @@ std::string SLAPrint::output_filename(const std::string &filename_base) const
     return this->PrintBase::output_filename(m_print_config.output_filename_format.value, ".sl1", filename_base, &config);
 }
 
-std::string SLAPrint::validate() const
+std::pair<PrintError, std::string>SLAPrint::validate() const
 {
     for(SLAPrintObject * po : m_objects) {
 
@@ -612,8 +612,8 @@ std::string SLAPrint::validate() const
         if(supports_en &&
            mo->sla_points_status == sla::PointsStatus::UserModified &&
            mo->sla_support_points.empty())
-            return L("Cannot proceed without support points! "
-                     "Add support points or disable support generation.");
+            return { PrintError::WrongSettings, L("Cannot proceed without support points! "
+                     "Add support points or disable support generation.") };
 
         sla::SupportConfig cfg = make_support_cfg(po->config());
 
@@ -623,21 +623,21 @@ std::string SLAPrint::validate() const
         sla::PadConfig::EmbedObject &builtinpad = padcfg.embed_object;
         
         if(supports_en && !builtinpad.enabled && elv < cfg.head_fullwidth())
-            return L(
+            return { PrintError::WrongSettings, L(
                 "Elevation is too low for object. Use the \"Pad around "
-                "object\" feature to print the object without elevation.");
+                "object\" feature to print the object without elevation.") };
         
         if(supports_en && builtinpad.enabled &&
            cfg.pillar_base_safety_distance_mm < builtinpad.object_gap_mm) {
-            return L(
+            return { PrintError::WrongSettings, L(
                 "The endings of the support pillars will be deployed on the "
                 "gap between the object and the pad. 'Support base safety "
                 "distance' has to be greater than the 'Pad object gap' "
-                "parameter to avoid this.");
+                "parameter to avoid this.") };
         }
         
         std::string pval = padcfg.validate();
-        if (!pval.empty()) return pval;
+        if (!pval.empty()) return { PrintError::WrongSettings, pval };
     }
 
     double expt_max = m_printer_config.max_exposure_time.getFloat();
@@ -645,16 +645,16 @@ std::string SLAPrint::validate() const
     double expt_cur = m_material_config.exposure_time.getFloat();
 
     if (expt_cur < expt_min || expt_cur > expt_max)
-        return L("Exposition time is out of printer profile bounds.");
+        return { PrintError::WrongSettings, L("Exposition time is out of printer profile bounds.") };
 
     double iexpt_max = m_printer_config.max_initial_exposure_time.getFloat();
     double iexpt_min = m_printer_config.min_initial_exposure_time.getFloat();
     double iexpt_cur = m_material_config.initial_exposure_time.getFloat();
 
     if (iexpt_cur < iexpt_min || iexpt_cur > iexpt_max)
-        return L("Initial exposition time is out of printer profile bounds.");
+        return { PrintError::WrongSettings, L("Initial exposition time is out of printer profile bounds.") };
 
-    return "";
+    return { PrintError::None, "" };
 }
 
 bool SLAPrint::invalidate_step(SLAPrintStep step)

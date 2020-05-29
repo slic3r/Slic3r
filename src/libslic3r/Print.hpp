@@ -399,7 +399,7 @@ public:
     bool                has_skirt() const;
 
     // Returns an empty string if valid, otherwise returns an error message.
-    std::string         validate() const override;
+    std::pair<PrintError, std::string> validate() const override;
     double              skirt_first_layer_height() const;
     Flow                brim_flow(size_t extruder_id) const;
     Flow                skirt_flow(size_t extruder_id) const;

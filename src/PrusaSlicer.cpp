@@ -425,9 +425,9 @@ int CLI::run(int argc, char **argv)
                         fff_print.auto_assign_extruders(mo);
                 }
                 print->apply(model, m_print_config);
-                std::string err = print->validate();
-                if (! err.empty()) {
-                    boost::nowide::cerr << err << std::endl;
+                std::pair<PrintError, std::string> err = print->validate();
+                if (! err.first == PrintError::None) {
+                    boost::nowide::cerr << err.second << std::endl;
                     return 1;
                 }
                 if (print->empty())

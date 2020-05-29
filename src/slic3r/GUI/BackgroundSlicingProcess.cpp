@@ -373,7 +373,7 @@ bool BackgroundSlicingProcess::empty() const
 	return m_print->empty();
 }
 
-std::string BackgroundSlicingProcess::validate()
+std::pair<PrintError, std::string> BackgroundSlicingProcess::validate()
 {
 	assert(m_print != nullptr);
 	return m_print->validate();

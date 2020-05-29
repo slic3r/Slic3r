@@ -314,12 +314,13 @@ private:
             ToolpathOutside,
             SlaSupportsOutside,
             SomethingNotShown,
+            PrintWarning,
             ObjectClashed
         };
 
         // Sets a warning of the given type to be active/inactive. If several warnings are active simultaneously,
         // only the last one is shown (decided by the order in the enum above).
-        void activate(WarningTexture::Warning warning, bool state, const GLCanvas3D& canvas);
+        void activate(WarningTexture::Warning warning, bool state, const GLCanvas3D& canvas, std::string str_override = "");
         void render(const GLCanvas3D& canvas) const;
 
         // function used to get an information for rescaling of the warning
@@ -698,6 +699,13 @@ public:
 
     bool are_labels_shown() const { return m_labels.is_shown(); }
     void show_labels(bool show) { m_labels.show(show); }
+
+    void show_print_warning(std::string str) { 
+        if (str.empty())
+            m_warning_texture.activate(WarningTexture::Warning::PrintWarning, false, *this);
+        else 
+            m_warning_texture.activate(WarningTexture::Warning::PrintWarning, true, *this, str); 
+    }
 
 private:
     bool _is_shown_on_screen() const;

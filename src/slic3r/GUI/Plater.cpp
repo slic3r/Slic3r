@@ -3165,8 +3165,9 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
 		// The delayed error message is no more valid.
 		this->delayed_error_message.clear();
         // The state of the Print changed, and it is non-zero. Let's validate it and give the user feedback on errors.
-        std::string err = this->background_process.validate();
-        if (err.empty()) {
+        std::pair<PrintError, std::string> err = this->background_process.validate();
+        this->get_current_canvas3D()->show_print_warning("");
+        if (err.first == PrintError::None) {
             if (invalidated != Print::APPLY_STATUS_UNCHANGED && this->background_processing_enabled())
                 return_state |= UPDATE_BACKGROUND_PROCESS_RESTART;
         } else {
@@ -3176,12 +3177,14 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
             while (p->GetParent())
                 p = p->GetParent();
             auto *top_level_wnd = dynamic_cast<wxTopLevelWindow*>(p);
-            if (! postpone_error_messages && top_level_wnd && top_level_wnd->IsActive()) {
+            if ( (err.first == PrintError::WrongPosition || err.first == PrintError::NoPrint)  && top_level_wnd && top_level_wnd->IsActive()) {
+                this->get_current_canvas3D()->show_print_warning(err.second);
+            } else if (!postpone_error_messages && top_level_wnd && top_level_wnd->IsActive()) {
                 // The error returned from the Print needs to be translated into the local language.
-                GUI::show_error(this->q, err);
+                GUI::show_error(this->q, err.second);
             } else {
                 // Show the error message once the main window gets activated.
-                this->delayed_error_message = err;
+                this->delayed_error_message = err.second;
             }
             return_state |= UPDATE_BACKGROUND_PROCESS_INVALID;
         }

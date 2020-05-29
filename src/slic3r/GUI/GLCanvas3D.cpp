@@ -658,7 +658,7 @@ GLCanvas3D::WarningTexture::WarningTexture()
 {
 }
 
-void GLCanvas3D::WarningTexture::activate(WarningTexture::Warning warning, bool state, const GLCanvas3D& canvas)
+void GLCanvas3D::WarningTexture::activate(WarningTexture::Warning warning, bool state, const GLCanvas3D& canvas, std::string str_override)
 {
     auto it = std::find(m_warnings.begin(), m_warnings.end(), warning);
 
@@ -682,19 +682,24 @@ void GLCanvas3D::WarningTexture::activate(WarningTexture::Warning warning, bool 
     }
 
     // Look at the end of our vector and generate proper texture.
-    std::string text;
+    std::string text = str_override;
     bool red_colored = false;
-    switch (m_warnings.back()) {
-        case ObjectOutside      : text = L("An object outside the print area was detected"); break;
-        case ToolpathOutside    : text = L("A toolpath outside the print area was detected"); break;
-        case SlaSupportsOutside : text = L("SLA supports outside the print area were detected"); break;
-        case SomethingNotShown  : text = L("Some objects are not visible"); break;
+    if (text.empty()) {
+        switch (m_warnings.back()) {
+        case ObjectOutside: text = L("An object outside the print area was detected"); break;
+        case ToolpathOutside: text = L("A toolpath outside the print area was detected"); break;
+        case SlaSupportsOutside: text = L("SLA supports outside the print area were detected"); break;
+        case SomethingNotShown: text = L("Some objects are not visible"); break;
         case ObjectClashed: {
             text = L("An object outside the print area was detected\n"
-                     "Resolve the current problem to continue slicing");
+                "Resolve the current problem to continue slicing");
             red_colored = true;
             break;
         }
+        default: text = L("An error occured");
+        }
+    } else {
+        red_colored = true;
     }
 
     generate(text, canvas, true, red_colored); // GUI::GLTexture::reset() is called at the beginning of generate(...)
@@ -6664,7 +6669,7 @@ void GLCanvas3D::_show_warning_texture_if_needed(WarningTexture::Warning warning
 {
     _set_current();
     _set_warning_texture(warning, _is_any_volume_outside());
-    }
+}
 
 std::vector<float> GLCanvas3D::_parse_colors(const std::vector<std::string>& colors)
 {
