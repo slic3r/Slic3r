@@ -10,7 +10,9 @@ jobs:
     runs-on: windows-latest
     
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+      with:
+        ref: 'CI'
     - uses: ilammy/msvc-dev-cmd@v1
     - name: mkdir in deps
       run: mkdir deps/build
