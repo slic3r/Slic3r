@@ -2,7 +2,6 @@
 #define slic3r_MillingPostProcess_hpp_
 
 #include "../libslic3r.h"
-#include <vector>
 #include "../ExPolygonCollection.hpp"
 #include "../Polygon.hpp"
 #include "../Layer.hpp"

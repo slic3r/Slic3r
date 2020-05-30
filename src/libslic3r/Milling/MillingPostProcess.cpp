@@ -1,5 +1,6 @@
 #include "MillingPostProcess.hpp"
 #include "../Layer.hpp"
+#include "../ClipperUtils.hpp"
 
 namespace Slic3r {
 
@@ -121,9 +122,11 @@ namespace Slic3r {
 
         ExtrusionEntityCollection all_milling;
         for (ExPolygon &ex_poly : milling_lines) {
-            getExtrusionLoop(layer, ex_poly.contour, intersection_pl(offset(ex_poly.contour, milling_diameter / 4), entrypoints_poly), all_milling);
+            Polylines good_entry_point = intersection_pl(offset(ex_poly.contour, milling_diameter / 4), entrypoints_poly);
+            getExtrusionLoop(layer, ex_poly.contour, good_entry_point, all_milling);
             for (Polygon& hole : ex_poly.holes) {
-                getExtrusionLoop(layer, hole, intersection_pl(offset(hole, milling_diameter / 3), entrypoints_poly), all_milling);
+                good_entry_point = intersection_pl(offset(hole, milling_diameter / 3), entrypoints_poly);
+                getExtrusionLoop(layer, hole, good_entry_point, all_milling);
             }
         }
 
