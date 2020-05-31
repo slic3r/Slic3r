@@ -1522,7 +1522,7 @@ struct Plater::priv
             apply_wipe_tower();
         }
 
-        ArrangePolygon get_arrange_polygon() const
+        ArrangePolygon get_arrange_polygon(const Print &print) const
         {
             Polygon p({
                 {coord_t(0), coord_t(0)},
@@ -1627,7 +1627,7 @@ struct Plater::priv
 
         // Set up arrange polygon for a ModelInstance and Wipe tower
         template<class T> ArrangePolygon get_arrange_poly(T *obj) const {
-            ArrangePolygon ap = obj->get_arrange_polygon();
+            ArrangePolygon ap = obj->get_arrange_polygon(this->plater().fff_print);
             ap.priority       = 0;
             ap.bed_idx        = ap.translation.x() / bed_stride();
             ap.setter         = [obj, this](const ArrangePolygon &p) {
@@ -2885,7 +2885,7 @@ void Plater::priv::find_new_position(const ModelInstancePtrs &instances,
     for (const ModelObject *mo : model.objects)
         for (const ModelInstance *inst : mo->instances) {
             auto it = std::find(instances.begin(), instances.end(), inst);
-            auto arrpoly = inst->get_arrange_polygon();
+            auto arrpoly = inst->get_arrange_polygon(this->fff_print);
 
             if (it == instances.end())
                 fixed.emplace_back(std::move(arrpoly));
@@ -2894,7 +2894,7 @@ void Plater::priv::find_new_position(const ModelInstancePtrs &instances,
         }
 
     if (updated_wipe_tower())
-        fixed.emplace_back(wipetower.get_arrange_polygon());
+        fixed.emplace_back(wipetower.get_arrange_polygon(this->fff_print));
 
     arrangement::arrange(movable, fixed, min_d, get_bed_shape_hint());
 

@@ -1016,7 +1016,7 @@ class PrintConfig : public MachineEnvelopeConfig, public GCodeConfig
     PrintConfig() : MachineEnvelopeConfig(0), GCodeConfig(0) { initialize_cache(); *this = s_cache_PrintConfig.defaults(); }
 public:
     double                          min_object_distance() const;
-    static double                   min_object_distance(const ConfigBase *config);
+    static double                   min_object_distance(const ConfigBase *config, double height = 0);
 
     ConfigOptionBool                allow_empty_layers;
     ConfigOptionBool                avoid_crossing_perimeters;

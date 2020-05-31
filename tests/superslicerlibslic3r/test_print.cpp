@@ -1,7 +1,9 @@
 
-//#define CATCH_CONFIG_DISABLE
+#define CATCH_CONFIG_DISABLE
 
-#include <catch_main.hpp>
+//#include <catch_main.hpp>
+#include <catch2/catch.hpp>
+
 #include "test_data.hpp"
 #include <libslic3r/libslic3r.h>
 #include <libslic3r/SVG.hpp>

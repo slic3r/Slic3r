@@ -286,7 +286,7 @@ void init_print(Print& print, std::initializer_list<TestMesh> meshes, Slic3r::Mo
         inst->set_scaling_factor(Vec3d(1, 1, 1));
     }
 
-    model.arrange_objects(print.config().min_object_distance());
+    model.arrange_objects(print);
     model.center_instances_around_point(Slic3r::Vec2d(100,100));
     for (auto* mo : model.objects) {
         print.auto_assign_extruders(mo);
@@ -318,7 +318,7 @@ void init_print(Print& print, std::initializer_list<TriangleMesh> meshes, Slic3r
 		inst->set_scaling_factor(Vec3d(1, 1, 1));
     }
 
-    model.arrange_objects(print.config().min_object_distance());
+    model.arrange_objects(print);
     model.center_instances_around_point(Slic3r::Vec2d(100,100));
 	print.apply(model, config);
 	for (ModelObject* mo : model.objects) {

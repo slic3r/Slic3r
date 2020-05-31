@@ -1,5 +1,6 @@
 #include "Model.hpp"
 #include "Geometry.hpp"
+#include "Print.hpp"
 #include "MTUtils.hpp"
 
 #include "Format/AMF.hpp"
@@ -386,7 +387,7 @@ static bool _arrange(const Pointfs &sizes, coordf_t dist, const BoundingBoxf* bb
 
 /*  arrange objects preserving their instance count
     but altering their instance positions */
-bool Model::arrange_objects(coordf_t dist, const BoundingBoxf* bb)
+bool Model::arrange_objects(const Print &print, const BoundingBoxf* bb)
 {    
     size_t count = 0;
     for (auto obj : objects) count += obj->instances.size();
@@ -397,7 +398,7 @@ bool Model::arrange_objects(coordf_t dist, const BoundingBoxf* bb)
     instances.reserve(count);
     for (ModelObject *mo : objects)
         for (ModelInstance *minst : mo->instances) {
-            input.emplace_back(minst->get_arrange_polygon());
+            input.emplace_back(minst->get_arrange_polygon(print));
             instances.emplace_back(minst);
         }
     
@@ -410,7 +411,7 @@ bool Model::arrange_objects(coordf_t dist, const BoundingBoxf* bb)
             BoundingBox(scaled(bb->min), scaled(bb->max)));
     }
 
-    arrangement::arrange(input, scaled(dist), bedhint);
+    arrangement::arrange(input, scale_(1), bedhint);
     
     bool ret = true;
     coord_t stride = bedwidth + bedwidth / 5;
@@ -450,8 +451,7 @@ void Model::duplicate(size_t copies_num, coordf_t dist, const BoundingBoxf* bb)
     }
 }
 
-/*  this will append more instances to each object
-    and then automatically rearrange everything */
+/*  this will append more instances to each object */
 void Model::duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb)
 {
     for (ModelObject *o : this->objects) {
@@ -461,8 +461,6 @@ void Model::duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBo
             for (size_t k = 2; k <= copies_num; ++ k)
                 o->add_instance(*i);
     }
-    
-    this->arrange_objects(dist, bb);
 }
 
 void Model::duplicate_objects_grid(size_t x, size_t y, coordf_t dist)
@@ -1820,7 +1818,7 @@ void ModelInstance::transform_polygon(Polygon* polygon) const
     polygon->scale(get_scaling_factor(X), get_scaling_factor(Y)); // scale around polygon origin
 }
 
-arrangement::ArrangePolygon ModelInstance::get_arrange_polygon() const
+arrangement::ArrangePolygon ModelInstance::get_arrange_polygon(const Print& print) const
 {
     static const double SIMPLIFY_TOLERANCE_MM = 0.1;
     
@@ -1838,7 +1836,13 @@ arrangement::ArrangePolygon ModelInstance::get_arrange_polygon() const
     // https://github.com/prusa3d/PrusaSlicer/issues/2209
     if (!p.points.empty()) {
         Polygons pp{p};
-        pp = p.simplify(scaled<double>(SIMPLIFY_TOLERANCE_MM));
+        //grow
+        double dist = print.config().min_object_distance(&print.full_print_config());
+        std::cout << "min_object_distance = " << dist << "\n";
+        pp = offset(pp, scale_(dist));
+        //simplify
+        if (!pp.empty())
+            pp = pp.front().simplify(scaled<double>(SIMPLIFY_TOLERANCE_MM));
         if (!pp.empty()) p = pp.front();
     }
    

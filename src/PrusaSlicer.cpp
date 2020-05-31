@@ -186,16 +186,18 @@ int CLI::run(int argc, char **argv)
                 for (ModelObject *o : model.objects)
                     m.add_object(*o);
             // Rearrange instances unless --dont-arrange is supplied
-            if (! m_config.opt_bool("dont_arrange")) {
-                m.add_default_instances();
-                const BoundingBoxf &bb = fff_print_config.bed_shape.values;
-                m.arrange_objects(
-                    fff_print_config.min_object_distance(),
-                    // If we are going to use the merged model for printing, honor
-                    // the configured print bed for arranging, otherwise do it freely.
-                    this->has_print_action() ? &bb : nullptr
-                );
-            }
+            //shoudl be done later
+            //TODO: test it!
+            //if (! m_config.opt_bool("dont_arrange")) {
+            //    m.add_default_instances();
+            //    const BoundingBoxf &bb = fff_print_config.bed_shape.values;
+            //    m.arrange_objects(
+            //        fff_print_config,
+            //        // If we are going to use the merged model for printing, honor
+            //        // the configured print bed for arranging, otherwise do it freely.
+            //        this->has_print_action() ? &bb : nullptr
+            //    );
+            //}
             m_models.clear();
             m_models.emplace_back(std::move(m));
         } else if (opt_key == "duplicate") {
@@ -415,7 +417,7 @@ int CLI::run(int argc, char **argv)
                 PrintBase  *print = (printer_technology == ptFFF) ? static_cast<PrintBase*>(&fff_print) : static_cast<PrintBase*>(&sla_print);
                 if (! m_config.opt_bool("dont_arrange")) {
                     //FIXME make the min_object_distance configurable.
-                    model.arrange_objects(fff_print.config().min_object_distance());
+                    model.arrange_objects(fff_print);
                     model.center_instances_around_point((! user_center_specified && m_print_config.has("bed_shape")) ? 
                     	BoundingBoxf(m_print_config.opt<ConfigOptionPoints>("bed_shape")->values).center() : 
                     	m_config.option<ConfigOptionPoint>("center")->value);

@@ -1,4 +1,5 @@
 #include "PrintConfig.hpp"
+#include "Flow.hpp"
 #include "I18N.hpp"
 
 #include <set>
@@ -4427,43 +4428,53 @@ double PrintConfig::min_object_distance() const
     return PrintConfig::min_object_distance(static_cast<const ConfigBase*>(this));
 }
 
-double PrintConfig::min_object_distance(const ConfigBase *config)
+double PrintConfig::min_object_distance(const ConfigBase *config, double ref_height)
 {
     double duplicate_distance = config->option("duplicate_distance")->getFloat();
-    double base_dist = duplicate_distance;
+    double base_dist = duplicate_distance / 2;
+    //std::cout << "START min_object_distance =>" << base_dist << "\n";
     if (config->option("complete_objects")->getBool()) {
-        std::vector<double> vals = dynamic_cast<const ConfigOptionFloats*>(config->option("nozzle_diameter"))->values;
-        double max_nozzle_diam = 0;
-        for (double val : vals) max_nozzle_diam = std::fmax(max_nozzle_diam, val);
+        double brim_dist = 0;
+        double skirt_dist = 0;
+        try {
+            std::vector<double> vals = dynamic_cast<const ConfigOptionFloats*>(config->option("nozzle_diameter"))->values;
+            double max_nozzle_diam = 0;
+            for (double val : vals) max_nozzle_diam = std::fmax(max_nozzle_diam, val);
 
-        // min object distance is max(duplicate_distance, clearance_radius)
-		//add 1 as safety offset.
-        double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat() + 1;
-        if (extruder_clearance_radius > base_dist) {
-            base_dist = extruder_clearance_radius;
+            // min object distance is max(duplicate_distance, clearance_radius)
+		    //add 1 as safety offset.
+            double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat();
+            if (extruder_clearance_radius > base_dist) {
+                base_dist = extruder_clearance_radius / 2;
+            }
+
+            //std::cout << "  min_object_distance add extruder_clearance_radius ("<< extruder_clearance_radius <<") =>" << base_dist << "\n";
+            //add brim width
+            const double first_layer_height = config->get_abs_value("first_layer_height");
+            if (ref_height <= first_layer_height) {
+                //FIXME: does not take into account object-defined brim !!! you can crash yoursefl with it
+                if (config->option("brim_width")->getFloat() > 0) {
+                    brim_dist += config->option("brim_width")->getFloat();
+                    //std::cout << "  Set  brim=" << config->option("brim_width")->getFloat() << " => " << brim_dist << "\n";
+                }
+            }
+            //add the skirt
+            if (config->option("skirts")->getInt() > 0 && config->option("skirt_height")->getInt() > 0 && !config->option("complete_objects_one_skirt")->getBool()) {
+                double skirt_height = ((double)config->option("skirt_height")->getInt() - 1) * config->get_abs_value("layer_height") + first_layer_height;
+                if (ref_height <= skirt_height) {
+                    skirt_dist = config->option("skirt_distance")->getFloat();
+                    const double first_layer_width = config->get_abs_value("first_layer_extrusion_width");
+                    Flow flow(first_layer_width, first_layer_height, max_nozzle_diam);
+                    skirt_dist += first_layer_width + (flow.spacing() * ((double)config->option("skirts")->getInt() - 1));
+                    //std::cout << "  Set  skirt_dist=" << config->option("skirt_distance")->getFloat() << " => " << skirt_dist << "\n";
+                }
+            }
         }
-        //std::cout << "min_object_distance! extruder_clearance_radius=" << extruder_clearance_radius << "\n";
-        //add brim width
-        //FIXME: does not take into account object-defined brim !!! you can crash yoursefl with it
-        if (config->option("brim_width")->getFloat() > 0) {
-            base_dist += config->option("brim_width")->getFloat();
+        catch (const std::exception & ex) {
+            boost::nowide::cerr << ex.what() << std::endl;
         }
-        //std::cout << "min_object_distance! adding brim=" << config->option("brim_width")->getFloat()<< " => "<< base_dist << "\n";
-        //add the skirt
-        if (config->option("skirts")->getInt() > 0 && !config->option("complete_objects_one_skirt")->getBool()) {
-            //add skirt dist
-            double dist_skirt = config->option("skirt_distance")->getFloat();
-            dist_skirt += max_nozzle_diam * config->option("skirts")->getInt() * 1.5;
-            //std::cout << "min_object_distance! adding dist_skirt=" << dist_skirt << " ? " << (dist_skirt > config->option("brim_width")->getFloat())
-            //    << " ?x2 " << (dist_skirt * 2 > config->option("brim_width")->getFloat() && config->option("skirt_height")->getInt() > 3);
-            //add skirt width if needed
-            if (dist_skirt > config->option("brim_width")->getFloat())
-                base_dist += (dist_skirt - config->option("brim_width")->getFloat());
-            //consider skrit as part of  the object if it's tall enough to be considered as a ooze shield.
-            else if (dist_skirt * 2 > config->option("brim_width")->getFloat() && config->option("skirt_height")->getInt() > 3)
-                base_dist += (dist_skirt * 2 - config->option("brim_width")->getFloat());
-        }
-        //std::cout << " => " << base_dist << "\n";
+        //std::cout << "END  min_object_distance =>" << (base_dist + std::max(skirt_dist, brim_dist)) << "\n";
+        return base_dist + std::max(skirt_dist, brim_dist);
     }
     return base_dist;
 }
