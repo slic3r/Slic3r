@@ -579,6 +579,12 @@ double ConfigBase::get_abs_value(const t_config_option_key &opt_key) const
     }
     if (raw_opt->type() == coFloat)
         return static_cast<const ConfigOptionFloat*>(raw_opt)->value;
+    if (raw_opt->type() == coInt)
+        return static_cast<const ConfigOptionInt*>(raw_opt)->value;
+    if (raw_opt->type() == coBool)
+        return static_cast<const ConfigOptionBool*>(raw_opt)->value?1:0;
+    const ConfigOptionDef* opt_def = nullptr;
+    const ConfigOptionPercent* cast_opt = nullptr;
     if (raw_opt->type() == coFloatOrPercent) {
         if(!static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->percent)
             return static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->value;
@@ -586,13 +592,37 @@ double ConfigBase::get_abs_value(const t_config_option_key &opt_key) const
         const ConfigDef *def = this->def();
         if (def == nullptr)
             throw NoDefinitionException(opt_key);
-        const ConfigOptionDef *opt_def = def->get(opt_key);
+        opt_def = def->get(opt_key);
+        cast_opt = static_cast<const ConfigOptionFloatOrPercent*>(raw_opt);
         assert(opt_def != nullptr);
+    }
+    if (raw_opt->type() == coPercent) {
+        // Get option definition.
+        const ConfigDef* def = this->def();
+        if (def == nullptr)
+            throw NoDefinitionException(opt_key);
+        opt_def = def->get(opt_key);
+        assert(opt_def != nullptr);
+        cast_opt = static_cast<const ConfigOptionPercent*>(raw_opt);
+    }
+    if (opt_def != nullptr) {
+        //if over no other key, it's most probably a simple %
+        if (opt_def->ratio_over == "")
+            return cast_opt->get_abs_value(1);
+        if (opt_def->ratio_over == "nozzle_diameter") {
+            //use the first... i guess.
+            //TODO: find a better way, like a "current_extruder_idx" config option.
+            if (this->option(opt_def->ratio_over) == nullptr) {
+                std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " need nozzle_diameter but can't acess it. Please use get_abs_value(nozzle_diam).";
+                throw std::runtime_error(ss.str());
+            }
+            return static_cast<const ConfigOptionFloats*>(this->option(opt_def->ratio_over))->values[0];
+        }
         // Compute absolute value over the absolute value of the base option.
         //FIXME there are some ratio_over chains, which end with empty ratio_with.
         // For example, XXX_extrusion_width parameters are not handled by get_abs_value correctly.
-        return opt_def->ratio_over.empty() ? 0. : 
-            static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->get_abs_value(this->get_abs_value(opt_def->ratio_over));
+        return opt_def->ratio_over.empty() ? 0. :
+            cast_opt->get_abs_value(this->get_abs_value(opt_def->ratio_over));
     }
     std::stringstream ss; ss << "ConfigBase::get_abs_value(): "<< opt_key<<" has not a valid option type for get_abs_value()";
     throw std::runtime_error(ss.str());
@@ -823,7 +853,14 @@ ConfigOption* DynamicConfig::optptr(const t_config_option_key &opt_key, bool cre
 const ConfigOption* DynamicConfig::optptr(const t_config_option_key &opt_key) const
 {
     auto it = options.find(opt_key);
-    return (it == options.end()) ? nullptr : it->second.get();
+    if (it == options.end()) {
+        //if not find, try with the parent config.
+        if (parent != nullptr)
+            return parent->option(opt_key);
+        else
+            return nullptr;
+    }else 
+        return it->second.get();
 }
 
 void DynamicConfig::read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra, t_config_option_keys* keys)

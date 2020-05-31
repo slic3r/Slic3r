@@ -677,6 +677,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::infill;
     def->tooltip = L("This parameter grows the top/bottom/solid layers by the specified MM to anchor them into the part. Put 0 to deactivate it. Can be a % of the width of the perimeters.");
     def->sidetext = L("mm");
+    def->ratio_over = "perimeter_extrusion_width";
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(150, true));
@@ -687,6 +688,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::infill;
     def->tooltip = L("This parameter grows the bridged solid infill layers by the specified MM to anchor them into the part. Put 0 to deactivate it. Can be a % of the width of the external perimeter.");
     def->sidetext = L("mm");
+    def->ratio_over = "external_perimeter_extrusion_width";
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(200, true));
@@ -699,6 +701,7 @@ void PrintConfigDef::init_fff_params()
         "If left zero, default extrusion width will be used if set, otherwise 1.05 x nozzle diameter will be used. "
         "If expressed as percentage (for example 112.5%), it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -709,7 +712,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::width;
     def->tooltip = L("Activate this option to modify the flow to acknoledge that the nozzle is round and the corners will have a round shape, and so change the flow to realized that and avoid over-extrusion."
         " 100% is activated, 0% is deactivated and 50% is half-activated."
-        "\nNote: this change the flow by ~5% over a very small distance (~nozzle diameter), so it shouldn't be noticeable unless you have a very big nozzle and a very precise printer."
+        "\nNote: At 100% this change the flow by ~5% over a very small distance (~nozzle diameter), so it shouldn't be noticeable unless you have a very big nozzle and a very precise printer."
         "\nIt's very experimental, please report about the usefulness. It may be removed if there is no use of it.");
     def->sidetext = L("%");
     def->mode = comExpert;
@@ -925,10 +928,11 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::width;
     def->tooltip = L("This factor changes the amount of flow proportionally. You may need to tweak "
         "this setting to get nice surface finish and correct single wall widths. "
-        "Usual values are between 0.9 and 1.1. If you think you need to change this more, "
+        "Usual values are between 90% and 110%. If you think you need to change this more, "
         "check filament diameter and your firmware E steps."
         " This print setting is multiplied against the extrusion_multiplier from the filament tab."
         " Its only purpose is to offer the same functionality but with a per-object basis.");
+    def->sidetext = L("%");
     def->mode = comSimple;
     def->min = 2;
     def->set_default_value(new ConfigOptionPercent(100));
@@ -941,6 +945,7 @@ void PrintConfigDef::init_fff_params()
                    "(see the tooltips for perimeter extrusion width, infill extrusion width etc). "
                    "If expressed as percentage (for example: 105%), it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -1380,10 +1385,11 @@ void PrintConfigDef::init_fff_params()
     def->label = L("width");
     def->full_label = L("Ironing width");
     def->category = OptionCategory::infill;
-    def->tooltip = L("This is the width of the ironing pass, in a % of the top extrusion width, should not be more than 50%"
+    def->tooltip = L("This is the width of the ironing pass, in a % of the top infill extrusion width, should not be more than 50%"
         " (two times more lines, 50% overlap). It's not necessary to go below 25% (four times more lines, 75% overlap). \nIf you have problems with your ironing process,"
         " don't forget to look at the flow->above bridge flow, as this setting should be set to min 110% to let you have enough plastic in the top layer."
         " A value too low will make your extruder eat the filament.");
+    def->ratio_over = "top_infill_extrusion_width";
     def->min = 0;
     def->mode = comExpert;
     def->sidetext = L("% or mm");
@@ -1434,7 +1440,7 @@ void PrintConfigDef::init_fff_params()
                    "of the nozzle used for the type of extrusion. "
                    "If set to zero, it will use the default extrusion width.");
     def->sidetext = L("mm or %");
-    def->ratio_over = "first_layer_height";
+    def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(140, true));
@@ -1447,7 +1453,7 @@ void PrintConfigDef::init_fff_params()
                    "This can be expressed as an absolute value or as a percentage (for example: 75%) "
                    "over the default nozzle width.");
     def->sidetext = L("mm or %");
-    def->ratio_over = "layer_height";
+    def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(75, true));
@@ -1461,6 +1467,7 @@ void PrintConfigDef::init_fff_params()
                    "speed if it's lower than that. If expressed as a percentage "
                    "(for example: 40%) it will scale the 'default' speeds.");
     def->sidetext = L("mm/s or %");
+    def->ratio_over = "depends";
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(30, false));
@@ -1474,6 +1481,7 @@ void PrintConfigDef::init_fff_params()
                    "speed if it's lower than that. If expressed as a percentage "
                    "(for example: 40%) it will scale the 'default' speed.");
     def->sidetext = L("mm/s or %");
+    def->ratio_over = "depends";
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(30, false));
@@ -1503,6 +1511,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = ("Min gap-fill surface");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("This setting represents the minimum mm² for a gapfill extrusion to be created.\nCan be a % of (perimeter width)²");
+    def->ratio_over = "perimeter_width_square";
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent{ 100,true });
@@ -1651,6 +1660,7 @@ void PrintConfigDef::init_fff_params()
                    "You may want to use fatter extrudates to speed up the infill and make your parts stronger. "
                    "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -2100,6 +2110,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Overhang bridge threshold");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Minimum unsupported width for an extrusion to be considered an overhang. Can be in mm or in a % of the nozzle diameter.");
+    def->ratio_over = "nozzle_diameter";
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
 
@@ -2117,6 +2128,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Overhang reversal threshold");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Number of mm the overhang need to be for the reversal to be considered useful. Can be a % of the periemter width.");
+    def->ratio_over = "perimeter_extrusion_width";
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(250, true));
@@ -2643,6 +2655,7 @@ void PrintConfigDef::init_fff_params()
                    "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
                    "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -2652,7 +2665,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = ("Solid infill speed");
     def->category = OptionCategory::speed;
     def->tooltip = L("Speed for printing solid regions (top/bottom/internal horizontal shells). "
-                   "This can be expressed as a percentage (for example: 80%) over the default "
+                   "This can be expressed as a percentage (for example: 80%) over the default infill speed "
                    "infill speed above. Set to zero for auto.");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "infill_speed";
@@ -2834,6 +2847,7 @@ void PrintConfigDef::init_fff_params()
         "(when the object is printed on top of the support). "
         "Setting this to 0 will also prevent Slic3r from using bridge flow and speed "
         "for the first object layer. Can be a % of the extruding width used for the interface layers.");
+    def->ratio_over = "top_infill_extrusion_width";
     def->sidetext = L("mm");
     def->enum_labels.push_back((boost::format("0.2 (%1%)") % L("detachable")).str());
     def->min = 0;
@@ -2851,6 +2865,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::support;
     def->tooltip = L("The vertical distance between object and support material interface"
         "(when the support is printed on top of the object). Can be a % of the extruding width used for the interface layers.");
+    def->ratio_over = "top_infill_extrusion_width";
     def->sidetext = L("mm");
     def->min = 0;
     def->mode = comAdvanced;
@@ -2886,6 +2901,7 @@ void PrintConfigDef::init_fff_params()
                    "If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. "
                    "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -3058,6 +3074,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Minimum width for the extrusion to be extruded (widths lower than the nozzle diameter will be over-extruded at the nozzle diameter)."
         " If expressed as percentage (for example 110%) it will be computed over nozzle diameter."
         " The default behavior of slic3r and slic3rPE is with a 33% value. Put 100% to avoid any sort of over-extrusion.");
+    def->ratio_over = "nozzle_diameter";
     def->mode = comExpert;
     def->min = 0;
     def->set_default_value(new ConfigOptionFloatOrPercent(33, true));
@@ -3067,6 +3084,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Thin wall overlap");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Overlap between the thin wall and the perimeters. Can be a % of the external perimeter width (default 50%)");
+    def->ratio_over = "external_periemter_extrusion_width";
     def->mode = comExpert;
     def->min = 0;
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
@@ -3123,6 +3141,7 @@ void PrintConfigDef::init_fff_params()
                    "If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. "
                    "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -3296,6 +3315,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("wipe_tower_brim", coFloatOrPercent);
     def->label = L("Wipe tower brim width");
     def->tooltip = L("Width of the brim for the wipe tower. Can be in mm of in % of the (assumed) only one nozzle diameter.");
+    def->ratio_over = "nozzle_diameter";
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(150,true));
 
@@ -3478,6 +3498,7 @@ void PrintConfigDef::init_extruder_option_keys()
 
 void PrintConfigDef::init_milling_params()
 {
+    // ConfigOptionFloats, ConfigOptionPercents, ConfigOptionBools, ConfigOptionStrings
     m_milling_option_keys = {
         "milling_diameter",
         "milling_toolchange_end_gcode",
@@ -3578,6 +3599,7 @@ void PrintConfigDef::init_milling_params()
     def->tooltip = L("This increase the size of the object by a certain amount to have enough plastic to mill."
         " You can set a number of mm or a percentage of the calculated optimal extra width (from flow calculation).");
     def->sidetext = L("mm or %");
+    def->ratio_over = "computed_on_the_fly";
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(150, true));
 
@@ -3586,6 +3608,7 @@ void PrintConfigDef::init_milling_params()
     def->category = OptionCategory::milling;
     def->tooltip = L("THis setting restrict the post-process milling to a certain height, to avoid milling the bed. It can be a mm of a % of the first layer height (so it can depends of the object).");
     def->sidetext = L("mm or %");
+    def->ratio_over = "first_layer_height";
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(200, true));
 
@@ -4419,20 +4442,28 @@ double PrintConfig::min_object_distance(const ConfigBase *config)
         if (extruder_clearance_radius > base_dist) {
             base_dist = extruder_clearance_radius;
         }
+        //std::cout << "min_object_distance! extruder_clearance_radius=" << extruder_clearance_radius << "\n";
         //add brim width
         //FIXME: does not take into account object-defined brim !!! you can crash yoursefl with it
         if (config->option("brim_width")->getFloat() > 0) {
             base_dist += config->option("brim_width")->getFloat();
         }
+        //std::cout << "min_object_distance! adding brim=" << config->option("brim_width")->getFloat()<< " => "<< base_dist << "\n";
         //add the skirt
         if (config->option("skirts")->getInt() > 0 && !config->option("complete_objects_one_skirt")->getBool()) {
             //add skirt dist
             double dist_skirt = config->option("skirt_distance")->getFloat();
             dist_skirt += max_nozzle_diam * config->option("skirts")->getInt() * 1.5;
+            //std::cout << "min_object_distance! adding dist_skirt=" << dist_skirt << " ? " << (dist_skirt > config->option("brim_width")->getFloat())
+            //    << " ?x2 " << (dist_skirt * 2 > config->option("brim_width")->getFloat() && config->option("skirt_height")->getInt() > 3);
             //add skirt width if needed
             if (dist_skirt > config->option("brim_width")->getFloat())
                 base_dist += (dist_skirt - config->option("brim_width")->getFloat());
+            //consider skrit as part of  the object if it's tall enough to be considered as a ooze shield.
+            else if (dist_skirt * 2 > config->option("brim_width")->getFloat() && config->option("skirt_height")->getInt() > 3)
+                base_dist += (dist_skirt * 2 - config->option("brim_width")->getFloat());
         }
+        //std::cout << " => " << base_dist << "\n";
     }
     return base_dist;
 }

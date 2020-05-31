@@ -68,6 +68,9 @@ PrintObject::PrintObject(Print* print, ModelObject* model_object, const Transfor
     m_size = (bbox.size() * (1. / SCALING_FACTOR)).cast<coord_t>();
 
     this->set_instances(std::move(instances));
+
+    //create config hierarchy
+    m_config.parent = &print->config();
 }
 
 PrintBase::ApplyStatus PrintObject::set_instances(PrintInstances &&instances)

@@ -2060,11 +2060,12 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     : q(q)
     , main_frame(main_frame)
     , config(Slic3r::DynamicPrintConfig::new_from_defaults_keys({
+        // These keys are used by (at least) printconfig::min_object_distance
         "bed_shape", "bed_custom_texture", "bed_custom_model", 
         "complete_objects",
 		"complete_objects_sort",
         "complete_objects_one_skirt",
-        "duplicate_distance", "extruder_clearance_radius", "skirts", "skirt_distance",
+        "duplicate_distance", "extruder_clearance_radius", "skirts", "skirt_distance", "skirt_height",
         "brim_width", "variable_layer_height", "serial_port", "serial_speed", "host_type", "print_host",
         "printhost_apikey", "printhost_cafile", "nozzle_diameter", "single_extruder_multi_material",
         "wipe_tower", "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_brim",
@@ -3165,9 +3166,9 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
 		// The delayed error message is no more valid.
 		this->delayed_error_message.clear();
         // The state of the Print changed, and it is non-zero. Let's validate it and give the user feedback on errors.
-        std::pair<PrintError, std::string> err = this->background_process.validate();
+        std::pair<PrintValidationError, std::string> err = this->background_process.validate();
         this->get_current_canvas3D()->show_print_warning("");
-        if (err.first == PrintError::None) {
+        if (err.first == PrintValidationError::None) {
             if (invalidated != Print::APPLY_STATUS_UNCHANGED && this->background_processing_enabled())
                 return_state |= UPDATE_BACKGROUND_PROCESS_RESTART;
         } else {
@@ -3177,7 +3178,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
             while (p->GetParent())
                 p = p->GetParent();
             auto *top_level_wnd = dynamic_cast<wxTopLevelWindow*>(p);
-            if ( (err.first == PrintError::WrongPosition || err.first == PrintError::NoPrint)  && top_level_wnd && top_level_wnd->IsActive()) {
+            if ( (err.first == PrintValidationError::WrongPosition || err.first == PrintValidationError::NoPrint)  && top_level_wnd && top_level_wnd->IsActive()) {
                 this->get_current_canvas3D()->show_print_warning(err.second);
             } else if (!postpone_error_messages && top_level_wnd && top_level_wnd->IsActive()) {
                 // The error returned from the Print needs to be translated into the local language.

@@ -309,10 +309,11 @@ SCENARIO("Circle Fit, TaubinFit with Newton's method", "[Geometry]") {
 SCENARIO("Path chaining", "[Geometry]") {
 	GIVEN("A path") {
 		std::vector<Point> points = { Point(26,26),Point(52,26),Point(0,26),Point(26,52),Point(26,0),Point(0,52),Point(52,52),Point(52,0) };
-		THEN("Chained with no diagonals (thus 26 units long)") {
+		THEN("Chained with no diagonals (thus 26 units long)") { //this will fail as i deactivated the pusa traveller salesman code.
 			std::vector<Points::size_type> indices = chain_points(points);
 			for (Points::size_type i = 0; i + 1 < indices.size(); ++ i) {
 				double dist = (points.at(indices.at(i)).cast<double>() - points.at(indices.at(i+1)).cast<double>()).norm();
+                std::stringstream log;
 				REQUIRE(std::abs(dist-26) <= EPSILON);
 			}
 		}

@@ -84,7 +84,7 @@ private:
     PrintRegionConfig  m_config;
     
     //PrintRegion(Print* print) : m_refcnt(0), m_print(print) {}
-    PrintRegion(Print* print, const PrintRegionConfig &config) : m_refcnt(0), m_print(print), m_config(config) {}
+    PrintRegion(Print* print, const PrintRegionConfig& config) : m_refcnt(0), m_print(print), m_config(config) {}
     ~PrintRegion() = default;
 };
 
@@ -364,7 +364,12 @@ private: // Prevents erroneous use by other classes.
     typedef PrintBaseWithState<PrintStep, psCount> Inherited;
 
 public:
-    Print() = default;
+    //Print() = default;
+    Print() {
+        //create config hierachy
+        m_default_object_config.parent = &m_config;
+        m_default_region_config.parent = &m_default_object_config;
+    };
 	virtual ~Print() { this->clear(); }
 
 	PrinterTechnology	technology() const noexcept override { return ptFFF; }
@@ -399,7 +404,7 @@ public:
     bool                has_skirt() const;
 
     // Returns an empty string if valid, otherwise returns an error message.
-    std::pair<PrintError, std::string> validate() const override;
+    std::pair<PrintValidationError, std::string> validate() const override;
     double              skirt_first_layer_height() const;
     Flow                brim_flow(size_t extruder_id) const;
     Flow                skirt_flow(size_t extruder_id) const;

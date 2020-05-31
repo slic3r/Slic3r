@@ -203,12 +203,6 @@ protected:
     ModelObject                  *m_model_object;
 };
 
-enum PrintError {
-    None,
-    WrongPosition,
-    NoPrint,
-    WrongSettings,
-};
 
 /**
  * @brief Printing involves slicing and export of device dependent instructions.
@@ -235,8 +229,15 @@ public:
     // or after apply() over a model, where no object is printable (all outside the print volume).
     virtual bool            empty() const = 0;
 
+    enum PrintValidationError {
+        None,
+        WrongPosition,
+        NoPrint,
+        WrongSettings,
+    };
+
     // Validate the print, return empty string if valid, return error if process() cannot (or should not) be started.
-    virtual std::pair<PrintError, std::string> validate() const { return { PrintError::None, std::string() }; }
+    virtual std::pair<PrintValidationError, std::string> validate() const { return { PrintValidationError::None, std::string() }; }
 
     enum ApplyStatus {
         // No change after the Print::apply() call.

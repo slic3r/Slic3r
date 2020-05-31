@@ -1625,11 +1625,16 @@ public:
     ConfigBase() {}
     ~ConfigBase() override {}
 
+    // to get to the config more generic than this one, if available
+    const ConfigBase* parent = nullptr;
+
     // Virtual overridables:
 public:
     // Static configuration definition. Any value stored into this ConfigBase shall have its definition here.
+    // will search in parent definition if not found here.
     virtual const ConfigDef*        def() const = 0;
     // Find ando/or create a ConfigOption instance for a given name.
+    // won't search in parent definition, as you can't change a parent value
     virtual ConfigOption*           optptr(const t_config_option_key &opt_key, bool create = false) = 0;
     // Collect names of all configuration values maintained by this configuration store.
     virtual t_config_option_keys    keys() const = 0;

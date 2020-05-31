@@ -434,7 +434,12 @@ protected:
 public: \
     /* Overrides ConfigBase::optptr(). Find ando/or create a ConfigOption instance for a given name. */ \
     const ConfigOption*      optptr(const t_config_option_key &opt_key) const override \
-        { return s_cache_##CLASS_NAME.optptr(opt_key, this); } \
+        {   const ConfigOption* opt = s_cache_##CLASS_NAME.optptr(opt_key, this); \
+            if (opt == nullptr && parent != nullptr) \
+                /*if not find, try with the parent config.*/ \
+                opt = parent->option(opt_key); \
+            return opt; \
+        } \
     /* Overrides ConfigBase::optptr(). Find ando/or create a ConfigOption instance for a given name. */ \
     ConfigOption*            optptr(const t_config_option_key &opt_key, bool create = false) override \
         { return s_cache_##CLASS_NAME.optptr(opt_key, this); } \

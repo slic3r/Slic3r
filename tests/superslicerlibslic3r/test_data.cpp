@@ -1,9 +1,10 @@
 #include "test_data.hpp"
-#include "../libslic3r/TriangleMesh.hpp"
-#include "../libslic3r/GCodeReader.hpp"
-#include "../libslic3r/Config.hpp"
-#include "../libslic3r/Print.hpp"
-#include "../libslic3r/Point.hpp"
+#include <test_utils.hpp>
+#include <libslic3r/TriangleMesh.hpp>
+#include <libslic3r/GCodeReader.hpp>
+#include <libslic3r/Config.hpp>
+#include <libslic3r/Print.hpp>
+#include <libslic3r/Point.hpp>
 #include <cstdlib>
 #include <string>
 #include <fstream>
@@ -293,7 +294,7 @@ void init_print(Print& print, std::initializer_list<TestMesh> meshes, Slic3r::Mo
     }
     print.apply(model, config);
 
-    std::pair<PrintValidationError, std::string> err = print.validate();
+    std::pair<PrintBase::PrintValidationError, std::string> err = print.validate();
     //std::cout << "validate result : " << err << ", mempty print? " << print.empty() << "\n";
 
 }
@@ -335,7 +336,7 @@ void gcode(std::string& gcode_path, Print& _print) {
 
 std::string read_to_string(const std::string& name) {
     std::stringstream buf;
-    std::ifstream f{ testfile(name) };
+    std::ifstream f{ get_model_path(name) };
     if (!f.good()) f = std::ifstream{ name };
     if (!f.good()) return ""s;
     std::copy(std::istreambuf_iterator<char>(f),
@@ -353,11 +354,11 @@ void clean_file(const std::string& name, const std::string& ext, bool glob) {
 
     bool file_exist = false;
     {
-        std::ifstream f{ testfile(filename) };
+        std::ifstream f{ get_model_path(filename) };
         file_exist = f.good();
         f.close();
     }
-    if (file_exist) std::remove(testfile(filename).c_str());
+    if (file_exist) std::remove(get_model_path(filename).c_str());
     else {
         std::ifstream f{ filename };
         file_exist = f.good();
