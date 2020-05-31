@@ -428,7 +428,7 @@ int CLI::run(int argc, char **argv)
                 }
                 print->apply(model, m_print_config);
                 std::pair<PrintBase::PrintValidationError, std::string> err = print->validate();
-                if (err.first != PrintBase::PrintValidationError::None) {
+                if (err.first != PrintBase::PrintValidationError::pveNone) {
                     boost::nowide::cerr << err.second << std::endl;
                     return 1;
                 }

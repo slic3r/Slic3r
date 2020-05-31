@@ -1,5 +1,7 @@
 #include "Model.hpp"
 #include "Geometry.hpp"
+#include "Polygon.hpp"
+#include "ClipperUtils.hpp"
 #include "Print.hpp"
 #include "MTUtils.hpp"
 

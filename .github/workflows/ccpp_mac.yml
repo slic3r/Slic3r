@@ -96,12 +96,6 @@ jobs:
         cp -f src/superslicer SuperSlicer/SuperSlicer.app/Contents/MacOS/superslicer
         chmod u+x SuperSlicer/SuperSlicer.app/Contents/MacOS/superslicer
         tar -cvf SuperSlicer.tar SuperSlicer
-# just to see what's inside. to remove
-    - name: Upload artifact
-      uses: actions/upload-artifact@v1.0.0
-      with:
-        name: build_folder
-        path: build
     - name: create dmg
       working-directory: ./build
       run: |

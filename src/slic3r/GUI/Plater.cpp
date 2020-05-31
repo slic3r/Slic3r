@@ -3168,7 +3168,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
         // The state of the Print changed, and it is non-zero. Let's validate it and give the user feedback on errors.
         std::pair<PrintBase::PrintValidationError, std::string> err = this->background_process.validate();
         this->get_current_canvas3D()->show_print_warning("");
-        if (err.first == PrintBase::PrintValidationError::None) {
+        if (err.first == PrintBase::PrintValidationError::pveNone) {
             if (invalidated != Print::APPLY_STATUS_UNCHANGED && this->background_processing_enabled())
                 return_state |= UPDATE_BACKGROUND_PROCESS_RESTART;
         } else {
@@ -3178,7 +3178,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
             while (p->GetParent())
                 p = p->GetParent();
             auto *top_level_wnd = dynamic_cast<wxTopLevelWindow*>(p);
-            if ( (err.first == PrintBase::PrintValidationError::WrongPosition || err.first == PrintBase::PrintValidationError::NoPrint)  && top_level_wnd && top_level_wnd->IsActive()) {
+            if ( (err.first == PrintBase::PrintValidationError::pveWrongPosition || err.first == PrintBase::PrintValidationError::pveNoPrint)  && top_level_wnd && top_level_wnd->IsActive()) {
                 this->get_current_canvas3D()->show_print_warning(err.second);
             } else if (!postpone_error_messages && top_level_wnd && top_level_wnd->IsActive()) {
                 // The error returned from the Print needs to be translated into the local language.

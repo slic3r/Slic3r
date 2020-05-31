@@ -1280,16 +1280,16 @@ static inline bool sequential_print_vertical_clearance_valid(const Print &print)
 std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
 {
     if (m_objects.empty())
-        return { PrintBase::PrintValidationError::WrongPosition, L("All objects are outside of the print volume.") };
+        return { PrintBase::PrintValidationError::pveWrongPosition, L("All objects are outside of the print volume.") };
 
     if (extruders().empty())
-        return { PrintBase::PrintValidationError::NoPrint, L("The supplied settings will cause an empty print.") };
+        return { PrintBase::PrintValidationError::pveNoPrint, L("The supplied settings will cause an empty print.") };
 
     if (m_config.complete_objects) {
     	if (! sequential_print_horizontal_clearance_valid(*this))
-            return { PrintBase::PrintValidationError::WrongPosition, L("Some objects are too close; your extruder will collide with them.") };
+            return { PrintBase::PrintValidationError::pveWrongPosition, L("Some objects are too close; your extruder will collide with them.") };
         if (! sequential_print_vertical_clearance_valid(*this))
-            return { PrintBase::PrintValidationError::WrongPosition,L("Some objects are too tall and cannot be printed without extruder collisions.") };
+            return { PrintBase::PrintValidationError::pveWrongPosition,L("Some objects are too tall and cannot be printed without extruder collisions.") };
     }
 
     if (m_config.spiral_vase) {
@@ -1298,14 +1298,14 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
             total_copies_count += object->instances().size();
         // #4043
         if (total_copies_count > 1 && ! m_config.complete_objects.value)
-            return { PrintBase::PrintValidationError::WrongSettings,L("The Spiral Vase option can only be used when printing a single object.") };
+            return { PrintBase::PrintValidationError::pveWrongSettings,L("The Spiral Vase option can only be used when printing a single object.") };
         assert(m_objects.size() == 1 || config().complete_objects.value);
         size_t num_regions = 0;
         for (const std::vector<std::pair<t_layer_height_range, int>> &volumes_per_region : m_objects.front()->region_volumes)
         	if (! volumes_per_region.empty())
         		++ num_regions;
         if (num_regions > 1)
-            return { PrintBase::PrintValidationError::WrongSettings,L("The Spiral Vase option can only be used when printing single material objects.") };
+            return { PrintBase::PrintValidationError::pveWrongSettings,L("The Spiral Vase option can only be used when printing single material objects.") };
     }
 
     if (this->has_wipe_tower() && ! m_objects.empty()) {
@@ -1318,21 +1318,21 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
             double filament_diam = m_config.filament_diameter.get_at(extruder_idx);
             if (nozzle_diam - EPSILON > first_nozzle_diam || nozzle_diam + EPSILON < first_nozzle_diam
              || std::abs((filament_diam-first_filament_diam)/first_filament_diam) > 0.1)
-                return { PrintBase::PrintValidationError::WrongSettings,L("The wipe tower is only supported if all extruders have the same nozzle diameter "
+                return { PrintBase::PrintValidationError::pveWrongSettings,L("The wipe tower is only supported if all extruders have the same nozzle diameter "
                          "and use filaments of the same diameter.") };
         }
 
         if (m_config.gcode_flavor != gcfRepRap && m_config.gcode_flavor != gcfRepetier && m_config.gcode_flavor != gcfMarlin
             && m_config.gcode_flavor != gcfKlipper)
-            return { PrintBase::PrintValidationError::WrongSettings,L("The Wipe Tower is currently only supported for the Marlin, RepRap/Sprinter and Repetier G-code flavors.") };
+            return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is currently only supported for the Marlin, RepRap/Sprinter and Repetier G-code flavors.") };
         if (! m_config.use_relative_e_distances)
-            return { PrintBase::PrintValidationError::WrongSettings,L("The Wipe Tower is currently only supported with the relative extruder addressing (use_relative_e_distances=1).") };
+            return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is currently only supported with the relative extruder addressing (use_relative_e_distances=1).") };
         if (m_config.ooze_prevention)
-            return { PrintBase::PrintValidationError::WrongSettings,L("Ooze prevention is currently not supported with the wipe tower enabled.") };
+            return { PrintBase::PrintValidationError::pveWrongSettings,L("Ooze prevention is currently not supported with the wipe tower enabled.") };
         if (m_config.use_volumetric_e)
-            return { PrintBase::PrintValidationError::WrongSettings,L("The Wipe Tower currently does not support volumetric E (use_volumetric_e=0).") };
+            return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower currently does not support volumetric E (use_volumetric_e=0).") };
         if (m_config.complete_objects && extruders().size() > 1)
-            return { PrintBase::PrintValidationError::WrongSettings,L("The Wipe Tower is currently not supported for multimaterial sequential prints.") };
+            return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is currently not supported for multimaterial sequential prints.") };
         
         if (m_objects.size() > 1) {
             bool                                has_custom_layering = false;
@@ -1353,15 +1353,15 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
                 const SlicingParameters &slicing_params = object->slicing_parameters();
             if (std::abs(slicing_params.first_print_layer_height - slicing_params0.first_print_layer_height) > EPSILON ||
                 std::abs(slicing_params.layer_height             - slicing_params0.layer_height            ) > EPSILON)
-                return { PrintBase::PrintValidationError::WrongSettings,L("The Wipe Tower is only supported for multiple objects if they have equal layer heights") };
+                return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is only supported for multiple objects if they have equal layer heights") };
             if (slicing_params.raft_layers() != slicing_params0.raft_layers())
-                return { PrintBase::PrintValidationError::WrongSettings,L("The Wipe Tower is only supported for multiple objects if they are printed over an equal number of raft layers") };
+                return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is only supported for multiple objects if they are printed over an equal number of raft layers") };
             if (object->config().support_material_contact_distance_type != m_objects.front()->config().support_material_contact_distance_type
                 || object->config().support_material_contact_distance_top != m_objects.front()->config().support_material_contact_distance_top
                 || object->config().support_material_contact_distance_bottom != m_objects.front()->config().support_material_contact_distance_bottom)
-                return { PrintBase::PrintValidationError::WrongSettings,L("The Wipe Tower is only supported for multiple objects if they are printed with the same support_material_contact_distance") };
+                return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is only supported for multiple objects if they are printed with the same support_material_contact_distance") };
             if (! equal_layering(slicing_params, slicing_params0))
-                return { PrintBase::PrintValidationError::WrongSettings,L("The Wipe Tower is only supported for multiple objects if they are sliced equally.") };
+                return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is only supported for multiple objects if they are sliced equally.") };
                 if (has_custom_layering) {
                     PrintObject::update_layer_height_profile(*object->model_object(), slicing_params, layer_height_profiles[i]);
                     if (*(layer_height_profiles[i].end()-2) > *(layer_height_profiles[tallest_object_idx].end()-2))
@@ -1403,7 +1403,7 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
                             } while (ref_z == next_ref_z);
                         }
                         if (std::abs(this_height - ref_height) > EPSILON)
-                            return { PrintBase::PrintValidationError::WrongSettings,L("The Wipe tower is only supported if all objects have the same variable layer height") };
+                            return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe tower is only supported if all objects have the same variable layer height") };
                         i += 2;
                     }
                 }
@@ -1452,7 +1452,7 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
                     // The object has some form of support and either support_material_extruder or support_material_interface_extruder
                     // will be printed with the current tool without a forced tool change. Play safe, assert that all object nozzles
                     // are of the same diameter.
-                    return { PrintBase::PrintValidationError::WrongSettings,L("Printing with multiple extruders of differing nozzle diameters. "
+                    return { PrintBase::PrintValidationError::pveWrongSettings,L("Printing with multiple extruders of differing nozzle diameters. "
                            "If support is to be printed with the current extruder (support_material_extruder == 0 or support_material_interface_extruder == 0), "
                            "all nozzles have to be of the same diameter.") };
                 }
@@ -1460,11 +1460,11 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
                     if (object->config().support_material_contact_distance_type == zdNone) {
                         // Soluble interface
                         if (! object->config().support_material_synchronize_layers)
-                            return { PrintBase::PrintValidationError::WrongSettings,L("For the Wipe Tower to work with the soluble supports, the support layers need to be synchronized with the object layers.") };
+                            return { PrintBase::PrintValidationError::pveWrongSettings,L("For the Wipe Tower to work with the soluble supports, the support layers need to be synchronized with the object layers.") };
                     } else {
                         // Non-soluble interface
                         if (object->config().support_material_extruder != 0 || object->config().support_material_interface_extruder != 0)
-                            return { PrintBase::PrintValidationError::WrongSettings,L("The Wipe Tower currently supports the non-soluble supports only if they are printed with the current extruder without triggering a tool change. "
+                            return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower currently supports the non-soluble supports only if they are printed with the current extruder without triggering a tool change. "
                                      "(both support_material_extruder and support_material_interface_extruder need to be set to 0).") };
                     }
                 }
@@ -1486,27 +1486,27 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
                 first_layer_min_nozzle_diameter = min_nozzle_diameter;
             }
             if (first_layer_height > first_layer_min_nozzle_diameter)
-                return { PrintBase::PrintValidationError::WrongSettings,L("First layer height can't be greater than nozzle diameter") };
+                return { PrintBase::PrintValidationError::pveWrongSettings,L("First layer height can't be greater than nozzle diameter") };
             
             // validate layer_height
             double layer_height = object->config().layer_height.value;
             if (layer_height > min_nozzle_diameter)
-                return { PrintBase::PrintValidationError::WrongSettings,L("Layer height can't be greater than nozzle diameter") };
+                return { PrintBase::PrintValidationError::pveWrongSettings,L("Layer height can't be greater than nozzle diameter") };
 
             // Validate extrusion widths.
             std::string err_msg;
             if (! validate_extrusion_width(object->config(), "extrusion_width", layer_height, err_msg))
-                return { PrintBase::PrintValidationError::WrongSettings,err_msg };
+                return { PrintBase::PrintValidationError::pveWrongSettings,err_msg };
             if ((object->config().support_material || object->config().raft_layers > 0) && ! validate_extrusion_width(object->config(), "support_material_extrusion_width", layer_height, err_msg))
-                return { PrintBase::PrintValidationError::WrongSettings,err_msg };
+                return { PrintBase::PrintValidationError::pveWrongSettings,err_msg };
             for (const char *opt_key : { "perimeter_extrusion_width", "external_perimeter_extrusion_width", "infill_extrusion_width", "solid_infill_extrusion_width", "top_infill_extrusion_width" })
                 for (size_t i = 0; i < object->region_volumes.size(); ++ i)
                     if (! object->region_volumes[i].empty() && ! validate_extrusion_width(this->get_region(i)->config(), opt_key, layer_height, err_msg))
-                        return { PrintBase::PrintValidationError::WrongSettings, err_msg };
+                        return { PrintBase::PrintValidationError::pveWrongSettings, err_msg };
         }
     }
 
-    return { PrintValidationError::None, std::string() };
+    return { PrintValidationError::pveNone, std::string() };
 }
 
 #if 0

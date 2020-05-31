@@ -229,10 +229,10 @@ public:
     // or after apply() over a model, where no object is printable (all outside the print volume).
     virtual bool            empty() const = 0;
 
-    enum class PrintValidationError {None,WrongPosition,NoPrint,WrongSettings};
+    enum PrintValidationError {pveNone, pveWrongPosition, pveNoPrint, pveWrongSettings};
 
     // Validate the print, return empty string if valid, return error if process() cannot (or should not) be started.
-    virtual std::pair<PrintValidationError, std::string> validate() const { return { PrintValidationError::None, std::string() }; }
+    virtual std::pair<PrintValidationError, std::string> validate() const { return { PrintValidationError::pveNone, std::string() }; }
 
     enum ApplyStatus {
         // No change after the Print::apply() call.
