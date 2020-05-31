@@ -1,6 +1,7 @@
 #include "MillingPostProcess.hpp"
 #include "../Layer.hpp"
 #include "../ClipperUtils.hpp"
+#include "../BoundingBox.hpp"
 
 namespace Slic3r {
 

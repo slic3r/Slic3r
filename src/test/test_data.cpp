@@ -293,7 +293,7 @@ void init_print(Print& print, std::initializer_list<TestMesh> meshes, Slic3r::Mo
     }
     print.apply(model, config);
 
-    std::pair<PrintValidationError, std::string> err = print.validate();
+    std::pair<PrintBase::PrintValidationError, std::string> err = print.validate();
     //std::cout << "validate result : " << err << ", mempty print? " << print.empty() << "\n";
 
 }

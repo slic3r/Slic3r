@@ -612,7 +612,7 @@ std::pair<PrintBase::PrintValidationError, std::string> SLAPrint::validate() con
         if(supports_en &&
            mo->sla_points_status == sla::PointsStatus::UserModified &&
            mo->sla_support_points.empty())
-            return { PrintValidationError::WrongSettings, L("Cannot proceed without support points! "
+            return { PrintBase::PrintValidationError::WrongSettings, L("Cannot proceed without support points! "
                      "Add support points or disable support generation.") };
 
         sla::SupportConfig cfg = make_support_cfg(po->config());
@@ -623,13 +623,13 @@ std::pair<PrintBase::PrintValidationError, std::string> SLAPrint::validate() con
         sla::PadConfig::EmbedObject &builtinpad = padcfg.embed_object;
         
         if(supports_en && !builtinpad.enabled && elv < cfg.head_fullwidth())
-            return { PrintValidationError::WrongSettings, L(
+            return { PrintBase::PrintValidationError::WrongSettings, L(
                 "Elevation is too low for object. Use the \"Pad around "
                 "object\" feature to print the object without elevation.") };
         
         if(supports_en && builtinpad.enabled &&
            cfg.pillar_base_safety_distance_mm < builtinpad.object_gap_mm) {
-            return { PrintValidationError::WrongSettings, L(
+            return { PrintBase::PrintValidationError::WrongSettings, L(
                 "The endings of the support pillars will be deployed on the "
                 "gap between the object and the pad. 'Support base safety "
                 "distance' has to be greater than the 'Pad object gap' "
@@ -637,7 +637,7 @@ std::pair<PrintBase::PrintValidationError, std::string> SLAPrint::validate() con
         }
         
         std::string pval = padcfg.validate();
-        if (!pval.empty()) return { PrintValidationError::WrongSettings, pval };
+        if (!pval.empty()) return { PrintBase::PrintValidationError::WrongSettings, pval };
     }
 
     double expt_max = m_printer_config.max_exposure_time.getFloat();
@@ -645,16 +645,16 @@ std::pair<PrintBase::PrintValidationError, std::string> SLAPrint::validate() con
     double expt_cur = m_material_config.exposure_time.getFloat();
 
     if (expt_cur < expt_min || expt_cur > expt_max)
-        return { PrintValidationError::WrongSettings, L("Exposition time is out of printer profile bounds.") };
+        return { PrintBase::PrintValidationError::WrongSettings, L("Exposition time is out of printer profile bounds.") };
 
     double iexpt_max = m_printer_config.max_initial_exposure_time.getFloat();
     double iexpt_min = m_printer_config.min_initial_exposure_time.getFloat();
     double iexpt_cur = m_material_config.initial_exposure_time.getFloat();
 
     if (iexpt_cur < iexpt_min || iexpt_cur > iexpt_max)
-        return { PrintValidationError::WrongSettings, L("Initial exposition time is out of printer profile bounds.") };
+        return { PrintBase::PrintValidationError::WrongSettings, L("Initial exposition time is out of printer profile bounds.") };
 
-    return { PrintValidationError::None, "" };
+    return { PrintBase::PrintValidationError::None, "" };
 }
 
 bool SLAPrint::invalidate_step(SLAPrintStep step)
