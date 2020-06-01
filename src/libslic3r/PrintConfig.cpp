@@ -8,6 +8,7 @@
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
+#include <boost/nowide/cstdio.hpp>
 
 #include <float.h>
 

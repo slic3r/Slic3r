@@ -15,7 +15,6 @@ add_subdirectory(qhull)
 add_subdirectory(Shiny)
 add_subdirectory(semver)
 add_subdirectory(libigl)
-add_subdirectory(test)
 
 # Adding libnest2d project for bin packing...
 add_subdirectory(libnest2d)
@@ -78,8 +77,6 @@ else ()
     add_executable(slic3r PrusaSlicer.cpp PrusaSlicer.hpp)
 endif ()
 
-add_library(slic3r_lib STATIC PrusaSlicer.cpp PrusaSlicer.hpp)
-
 if (MINGW)
     target_link_options(slic3r PUBLIC "-Wl,-allow-multiple-definition")
     set_target_properties(slic3r PROPERTIES PREFIX "")
@@ -91,41 +88,33 @@ if (NOT WIN32)
 endif ()
 
 target_link_libraries(slic3r libslic3r cereal)
-target_link_libraries(slic3r_lib libslic3r cereal)
 if (APPLE)
 #    add_compile_options(-stdlib=libc++)
 #    add_definitions(-DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE)
     # -liconv: boost links to libiconv by default
     target_link_libraries(slic3r "-liconv -framework IOKit" "-framework CoreFoundation" -lc++)
-    target_link_libraries(slic3r_lib "-liconv -framework IOKit" "-framework CoreFoundation" -lc++)
 elseif (MSVC)
     # Manifest is provided through slic3r.rc, don't generate your own.
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /MANIFEST:NO")
 else ()
     # Boost on Raspberry-Pi does not link to pthreads explicitely.
     target_link_libraries(slic3r ${CMAKE_DL_LIBS} -lstdc++ Threads::Threads)
-    target_link_libraries(slic3r_lib ${CMAKE_DL_LIBS} -lstdc++)
 endif ()
 
 # Add the Slic3r GUI library, libcurl, OpenGL and GLU libraries.
 if (SLIC3R_GUI)
 #    target_link_libraries(PrusaSlicer ws2_32 uxtheme setupapi libslic3r_gui ${wxWidgets_LIBRARIES})
 target_link_libraries(slic3r libslic3r_gui)
-target_link_libraries(slic3r_lib libslic3r_gui)
     if (MSVC)
         # Generate debug symbols even in release mode.
         target_link_options(slic3r PUBLIC "$<$<CONFIG:RELEASE>:/DEBUG>")
         target_link_libraries(slic3r user32.lib Setupapi.lib)
-        target_link_libraries(slic3r_lib user32.lib Setupapi.lib)
     elseif (MINGW)
         target_link_libraries(slic3r ws2_32 uxtheme setupapi)
-        target_link_libraries(slic3r_lib -lopengl32)
     elseif (APPLE)
         target_link_libraries(slic3r "-framework OpenGL")
-        target_link_libraries(slic3r_lib "-framework OpenGL")
     else ()
         target_link_libraries(slic3r -ldl)
-        target_link_libraries(slic3r_lib -ldl)
     endif ()
 endif ()
 

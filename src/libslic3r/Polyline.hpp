@@ -150,10 +150,13 @@ bool remove_degenerate(Polylines &polylines);
 /// join something or is a dead-end.
 class ThickPolyline : public Polyline {
 public:
+    enum StartPos : int8_t{tpspBegin = -1, tpspBoth = 0, tpspEnd = 1};
     /// width size must be == point size
     std::vector<coordf_t> width;
     /// if true => it's an endpoint, if false it join an other ThickPolyline. first is at front(), second is at back()
     std::pair<bool, bool> endpoints;
+    //if it's important to begin at a specific bit.
+    StartPos start_at = tpspBoth;
 
     ThickPolyline() : endpoints(std::make_pair(false, false)) {}
     ThickLines thicklines() const;
@@ -161,6 +164,7 @@ public:
         Polyline::reverse();
         std::reverse(this->width.begin(), this->width.end());
         std::swap(this->endpoints.first, this->endpoints.second);
+        start_at = StartPos(-start_at);
     }
 };
 
