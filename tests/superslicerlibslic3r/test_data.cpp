@@ -286,6 +286,7 @@ void init_print(Print& print, std::initializer_list<TestMesh> meshes, Slic3r::Mo
         inst->set_scaling_factor(Vec3d(1, 1, 1));
     }
 
+    print.apply(model, config); // apply config for the arrange_objects
     model.arrange_objects(print);
     model.center_instances_around_point(Slic3r::Vec2d(100,100));
     for (auto* mo : model.objects) {
@@ -298,7 +299,8 @@ void init_print(Print& print, std::initializer_list<TestMesh> meshes, Slic3r::Mo
     //std::cout << "validate result : " << err << ", mempty print? " << print.empty() << "\n";
 
 }
-void init_print(Print& print, std::initializer_list<TriangleMesh> meshes, Slic3r::Model& model, DynamicPrintConfig* _config, bool comments) {
+
+void init_print(Print& print, std::vector<TriangleMesh> meshes, Slic3r::Model& model, DynamicPrintConfig* _config, bool comments) {
 	DynamicPrintConfig &config = Slic3r::DynamicPrintConfig::full_print_config();
     config.apply(*_config);
 
@@ -308,7 +310,9 @@ void init_print(Print& print, std::initializer_list<TriangleMesh> meshes, Slic3r
     //if (tests_gcode != ""s)
         //config->set_key_value("gcode_comments", new ConfigOptionBool(true));
 
-    for (const TriangleMesh& t : meshes) {
+    for (TriangleMesh& t : meshes) {
+        if(!t.repaired)
+            t.repair();
 		ModelObject* object {model.add_object()};
 		object->name += "object.stl"s;
         object->add_volume(t);
@@ -318,6 +322,7 @@ void init_print(Print& print, std::initializer_list<TriangleMesh> meshes, Slic3r
 		inst->set_scaling_factor(Vec3d(1, 1, 1));
     }
 
+    print.apply(model, config); // apply config for the arrange_objects
     model.arrange_objects(print);
     model.center_instances_around_point(Slic3r::Vec2d(100,100));
 	print.apply(model, config);

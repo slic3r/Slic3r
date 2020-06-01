@@ -46,9 +46,9 @@ enum ExtrusionLoopRole : uint16_t {
     elrInternal = 1 << 1, //2
     elrSkirt =    1 << 2,  //4
     //it's a modifier that indicate that the loop is around a hole, not around the infill
-    elrHole = 1 << 3, // 16
+    elrHole = 1 << 3, // 8
     //it's a modifier that indicate that the loop should be printed as vase
-    elrVase = 1 << 4, //32
+    elrVase = 1 << 4, //16
 };
 
 

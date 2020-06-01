@@ -75,19 +75,19 @@ SCENARIO("Complete objects separatly") {
             THEN("complete objects") {
                 config.set_key_value("complete_objects", new ConfigOptionBool(true));
                 result = init_print_with_dist(config, 22)->validate();
-                REQUIRE(result.first == PrintBase::PrintValidationError::WrongPosition);
+                REQUIRE(result.first == PrintBase::PrintValidationError::pveWrongPosition);
             }
         }
         WHEN("at the limit (~30 mm)") {
             config.set_key_value("complete_objects", new ConfigOptionBool(true));
             THEN("(too near)") {
                 result = init_print_with_dist(config, 29.9)->validate();
-                REQUIRE(result.first == PrintBase::PrintValidationError::WrongPosition);
+                REQUIRE(result.first == PrintBase::PrintValidationError::pveWrongPosition);
             }
             THEN("(ok far)") {
                 result = init_print_with_dist(config, 30.1)->validate();
                 REQUIRE(result.second == "");
-                REQUIRE(result.first == PrintBase::PrintValidationError::None);
+                REQUIRE(result.first == PrintBase::PrintValidationError::pveNone);
             }
         }
         WHEN("with a 10 mm brim, so the dist should be 40mm ") {
@@ -95,12 +95,12 @@ SCENARIO("Complete objects separatly") {
             config.set_deserialize("brim_width", "10");
             THEN("(too near)") {
                 result = init_print_with_dist(config, 39.9)->validate();
-                REQUIRE(result.first == PrintBase::PrintValidationError::WrongPosition);
+                REQUIRE(result.first == PrintBase::PrintValidationError::pveWrongPosition);
             }
             THEN("(ok far)") {
                 result = init_print_with_dist(config, 40.1)->validate();
                 REQUIRE(result.second == "");
-                REQUIRE(result.first == PrintBase::PrintValidationError::None);
+                REQUIRE(result.first == PrintBase::PrintValidationError::pveNone);
             }
         }
         WHEN("with a 10 mm dist short skirt, so the dist should be 40mm +extrusionwidth") {
@@ -112,12 +112,12 @@ SCENARIO("Complete objects separatly") {
             
             THEN("(too near)") {
                 result = init_print_with_dist(config, 40)->validate();
-                REQUIRE(result.first == PrintBase::PrintValidationError::WrongPosition);
+                REQUIRE(result.first == PrintBase::PrintValidationError::pveWrongPosition);
             }
             THEN("(ok far)") {
                 result = init_print_with_dist(config, 40.8)->validate();
                 REQUIRE(result.second == "");
-                REQUIRE(result.first == PrintBase::PrintValidationError::None);
+                REQUIRE(result.first == PrintBase::PrintValidationError::pveNone);
             }
         }
     }
