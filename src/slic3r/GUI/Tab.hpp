@@ -353,6 +353,7 @@ class TabFilament : public Tab
 public:
 	ogStaticText*	m_volumetric_speed_description_line;
 	ogStaticText*	m_cooling_description_line;
+	ogStaticText*	m_machine_limits_descr;
     void            add_filament_overrides_page();
 protected:
     void            update_filament_overrides_page();

@@ -1732,29 +1732,55 @@ static bool custom_gcode_sets_temperature(const std::string &gcode, const int mc
 // Do not process this piece of G-code by the time estimator, it already knows the values through another sources.
 void GCode::print_machine_envelope(FILE *file, Print &print)
 {
-    if (print.config().gcode_flavor.value == gcfMarlin || print.config().gcode_flavor.value == gcfLerdge) {
-        fprintf(file, "M201 X%d Y%d Z%d E%d ; sets maximum accelerations, mm/sec^2\n",
-            int(print.config().machine_max_acceleration_x.values.front() + 0.5),
-            int(print.config().machine_max_acceleration_y.values.front() + 0.5),
-            int(print.config().machine_max_acceleration_z.values.front() + 0.5),
-            int(print.config().machine_max_acceleration_e.values.front() + 0.5));
-        fprintf(file, "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/sec\n",
-            int(print.config().machine_max_feedrate_x.values.front() + 0.5),
-            int(print.config().machine_max_feedrate_y.values.front() + 0.5),
-            int(print.config().machine_max_feedrate_z.values.front() + 0.5),
-            int(print.config().machine_max_feedrate_e.values.front() + 0.5));
-        fprintf(file, "M204 P%d R%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
-            int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
-            int(print.config().machine_max_acceleration_retracting.values.front() + 0.5),
-            int(print.config().machine_max_acceleration_extruding.values.front() + 0.5));
-        fprintf(file, "M205 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
-            print.config().machine_max_jerk_x.values.front(),
-            print.config().machine_max_jerk_y.values.front(),
-            print.config().machine_max_jerk_z.values.front(),
-            print.config().machine_max_jerk_e.values.front());
-        fprintf(file, "M205 S%d T%d ; sets the minimum extruding and travel feed rate, mm/sec\n",
-            int(print.config().machine_min_extruding_rate.values.front() + 0.5),
-            int(print.config().machine_min_travel_rate.values.front() + 0.5));
+   // gcfRepRap, gcfRepetier, gcfTeacup, gcfMakerWare, gcfMarlin, gcfKlipper, gcfSailfish, gcfMach3, gcfMachinekit,
+   ///     gcfSmoothie, gcfNoExtrusion, gcfLerdge,
+    if (print.config().print_machine_envelope) {
+        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap}.count(print.config().gcode_flavor.value) > 0)
+            fprintf(file, "M201 X%d Y%d Z%d E%d ; sets maximum accelerations, mm/sec^2\n",
+                int(print.config().machine_max_acceleration_x.values.front() + 0.5),
+                int(print.config().machine_max_acceleration_y.values.front() + 0.5),
+                int(print.config().machine_max_acceleration_z.values.front() + 0.5),
+                int(print.config().machine_max_acceleration_e.values.front() + 0.5));
+        if (std::set<uint8_t>{gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
+            fprintf(file, "M202 X%d Y%d ; sets maximum travel speed\n",
+                int(print.config().travel_speed.value),
+                int(print.config().travel_speed.value));
+        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap, gcfSmoothie}.count(print.config().gcode_flavor.value) > 0)
+            fprintf(file, "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/sec\n",
+                int(print.config().machine_max_feedrate_x.values.front() + 0.5),
+                int(print.config().machine_max_feedrate_y.values.front() + 0.5),
+                int(print.config().machine_max_feedrate_z.values.front() + 0.5),
+                int(print.config().machine_max_feedrate_e.values.front() + 0.5));
+        if (std::set<uint8_t>{gcfMarlin, gcfLerdge}.count(print.config().gcode_flavor.value) > 0)
+            fprintf(file, "M204 P%d R%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
+                int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
+                int(print.config().machine_max_acceleration_retracting.values.front() + 0.5),
+                int(print.config().machine_max_acceleration_extruding.values.front() + 0.5));
+        if (std::set<uint8_t>{gcfRepRap, gcfKlipper}.count(print.config().gcode_flavor.value) > 0)
+            fprintf(file, "M204 P%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
+                int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
+                int(print.config().machine_max_acceleration_retracting.values.front() + 0.5));
+        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
+            fprintf(file, "M566 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
+                print.config().machine_max_jerk_x.values.front(),
+                print.config().machine_max_jerk_y.values.front(),
+                print.config().machine_max_jerk_z.values.front(),
+                print.config().machine_max_jerk_e.values.front());
+        if (std::set<uint8_t>{gcfRepRap}.count(print.config().gcode_flavor.value) > 0)
+            fprintf(file, "M205 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
+                print.config().machine_max_jerk_x.values.front(),
+                print.config().machine_max_jerk_y.values.front(),
+                print.config().machine_max_jerk_z.values.front(),
+                print.config().machine_max_jerk_e.values.front());
+        if (std::set<uint8_t>{gcfSmoothie}.count(print.config().gcode_flavor.value) > 0)
+            fprintf(file, "M205 X%.2lf Z%.2lf ; sets the jerk limits, mm/sec\n",
+                std::min(print.config().machine_max_jerk_x.values.front(),
+                print.config().machine_max_jerk_y.values.front()),
+                print.config().machine_max_jerk_z.values.front());
+        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
+            fprintf(file, "M205 S%d T%d ; sets the minimum extruding and travel feed rate, mm/sec\n",
+                int(print.config().machine_min_extruding_rate.values.front() + 0.5),
+                int(print.config().machine_min_travel_rate.values.front() + 0.5));
     }
 }
 

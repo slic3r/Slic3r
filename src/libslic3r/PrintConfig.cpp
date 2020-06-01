@@ -1467,7 +1467,8 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to all the print moves "
                    "but infill of the first layer, it can be overwrite by the 'default' (default depends of the type of the path) "
                    "speed if it's lower than that. If expressed as a percentage "
-                   "(for example: 40%) it will scale the 'default' speeds.");
+                   "it will scale the current speed."
+                   "\nSet it at 100% to remove any first layer speed modification (with first_layer_infill_speed).");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "depends";
     def->min = 0;
@@ -1481,7 +1482,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to infill moves "
                    "of the first layer, it can be overwrite by the 'default' (solid infill or infill if not bottom) "
                    "speed if it's lower than that. If expressed as a percentage "
-                   "(for example: 40%) it will scale the 'default' speed.");
+                   "(for example: 40%) it will scale the current infill speed.");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "depends";
     def->min = 0;
@@ -2066,9 +2067,19 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Hostname, IP or URL");
     def->category = OptionCategory::general;
     def->tooltip = L("Slic3r can upload G-code files to a printer host. This field should contain "
-                   "the hostname, IP address or URL of the printer host instance.");
+        "the hostname, IP address or URL of the printer host instance.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionString(""));
+
+    def = this->add("print_machine_envelope", coBool);
+    def->label = L("Print machine envelope in gcode");
+    def->category = OptionCategory::limits;
+    def->tooltip = L("Slic3r can add M201 M203 M202 M204 and M205 gcodes to pass the machine limits defined here to the firmware."
+            "Gcodes printed will depends of the firmware selected (please Report an issue if you found something wrong)."
+            "\nIf you want only a selection, you can write your gcode with these value, example: "
+            "\nM204 P[machine_max_acceleration_extruding] T[machine_max_acceleration_retracting]");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("only_retract_when_crossing_perimeters", coBool);
     def->label = L("Only retract when crossing perimeters");
@@ -2129,7 +2140,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Reverse threshold");
     def->full_label = L("Overhang reversal threshold");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("Number of mm the overhang need to be for the reversal to be considered useful. Can be a % of the periemter width.");
+    def->tooltip = L("Number of mm the overhang need to be for the reversal to be considered useful. Can be a % of the perimeter width.");
     def->ratio_over = "perimeter_extrusion_width";
     def->min = 0;
     def->mode = comAdvanced;

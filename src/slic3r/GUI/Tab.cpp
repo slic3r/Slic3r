@@ -2165,6 +2165,17 @@ PageShp TabPrinter::build_kinematics_page()
         optgroup = page->new_optgroup(_(L("not-marlin/lerdge firmware compensation"))); 
         optgroup->append_single_option_line("time_estimation_compensation");
     }
+    optgroup = page->new_optgroup(_(L("Usage")));
+    Line current_line = Line{ "", "" };
+    current_line.full_width = 1;
+    current_line.widget = [this](wxWindow* parent) {
+        ogStaticText* text;
+        auto result = description_line_widget(parent, &text);
+        text->SetText(_(L("This tab is used to calculate the time estimation. SuperSlicer can also write these limits in the beginning of the gcode file, if the setting below is checked. It's not used by anything else.")));
+        return result;
+    };
+    optgroup->append_line(current_line);
+    optgroup->append_single_option_line("print_machine_envelope");
 
     if (m_use_silent_mode) {
         // Legend for OptionsGroups

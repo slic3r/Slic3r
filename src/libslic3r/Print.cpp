@@ -131,6 +131,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "output_filename_format",
         "perimeter_acceleration",
         "post_process",
+        "print_machine_envelope",
         "printer_notes",
         "retract_before_travel",
         "retract_before_wipe",
