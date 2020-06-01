@@ -250,7 +250,8 @@ void PrintConfigDef::init_fff_params()
     def = this->add("bridge_fan_speed", coInts);
     def->label = L("Bridges fan speed");
     def->category = OptionCategory::cooling;
-    def->tooltip = L("This fan speed is enforced during all bridges and overhangs.");
+    def->tooltip = L("This fan speed is enforced during all bridges and overhangs. It won't slow down the fan if it's currently running at a higher speed."
+        "\nSet to 0 to disable this override. Can only be overriden by disable_fan_first_layers.");
     def->sidetext = L("%");
     def->min = 0;
     def->max = 100;
@@ -260,12 +261,13 @@ void PrintConfigDef::init_fff_params()
     def = this->add("top_fan_speed", coInts);
     def->label = L("Top fan speed");
     def->category = OptionCategory::cooling;
-    def->tooltip = L("This fan speed is enforced during all top fills.");
+    def->tooltip = L("This fan speed is enforced during all top fills."
+        "\nSet to 0 to disable this override. Can only be overriden by disable_fan_first_layers.");
     def->sidetext = L("%");
     def->min = 0;
     def->max = 100;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionInts{ 100 });
+    def->set_default_value(new ConfigOptionInts{ 0 });
 
     def = this->add("bridge_flow_ratio", coPercent);
     def->label = L("Bridge");
@@ -469,6 +471,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("lowest Z"));
     def->set_default_value(new ConfigOptionEnum<CompleteObjectSort>(cosObject));
 
+    //not used anymore, to remove !! @DEPRECATED
     def = this->add("cooling", coBools);
     def->label = L("Enable auto cooling");
     def->category = OptionCategory::cooling;
@@ -955,8 +958,8 @@ void PrintConfigDef::init_fff_params()
     def = this->add("fan_always_on", coBools);
     def->label = L("Keep fan always on");
     def->category = OptionCategory::cooling;
-    def->tooltip = L("If this is enabled, fan will never be disabled and will be kept running at least "
-                   "at its minimum speed. Useful for PLA, harmful for ABS.");
+    def->tooltip = L("If this is enabled, fan will continuously run at base speed if no setting override the speed."
+                " Useful for PLA, harmful for ABS.");
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionBools{ false });
 
@@ -964,7 +967,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Enable fan if layer print time is below");
     def->category = OptionCategory::cooling;
     def->tooltip = L("If layer print time is estimated below this number of seconds, fan will be enabled "
-                   "and its speed will be calculated by interpolating the minimum and maximum speeds.");
+                "and its speed will be calculated by interpolating the default and maximum speeds."
+                "\nSet to 0 to disable.");
     def->sidetext = L("approximate seconds");
     def->min = 0;
     def->max = 1000;
@@ -1903,7 +1907,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Max");
     def->full_label = ("Max fan speed");
     def->category = OptionCategory::cooling;
-    def->tooltip = L("This setting represents the maximum speed of your fan.");
+    def->tooltip = L("This setting represents the maximum speed of your fan, used when the layer print time is Very short.");
     def->sidetext = L("%");
     def->min = 0;
     def->max = 100;
@@ -1971,10 +1975,10 @@ void PrintConfigDef::init_fff_params()
 #endif /* HAS_PRESSURE_EQUALIZER */
 
     def = this->add("min_fan_speed", coInts);
-    def->label = L("Min");
-    def->full_label = ("Min fan speed");
+    def->label = L("Default fan speed");
+    def->full_label = ("Default fan speed");
     def->category = OptionCategory::cooling;
-    def->tooltip = L("This setting represents the minimum PWM your fan needs to work.");
+    def->tooltip = L("This setting represents the base fan speed this filament needs, or at least the minimum PWM your fan needs to work.");
     def->sidetext = L("%");
     def->min = 0;
     def->max = 100;
@@ -1995,7 +1999,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("min_print_speed", coFloats);
     def->label = L("Min print speed");
     def->category = OptionCategory::speed;
-    def->tooltip = L("Slic3r will not scale speed down below this speed.");
+    def->tooltip = L("Slic3r will never scale the speed below this one.");
     def->sidetext = L("mm/s");
     def->min = 0;
     def->mode = comExpert;
@@ -2556,12 +2560,13 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Slow down if layer print time is below");
     def->category = OptionCategory::cooling;
     def->tooltip = L("If layer print time is estimated below this number of seconds, print moves "
-                   "speed will be scaled down to extend duration to this value.");
+        "speed will be scaled down to extend duration to this value, if possible."
+        "\nSet to 0 to disable.");
     def->sidetext = L("approximate seconds");
     def->min = 0;
     def->max = 1000;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionInts { 5 });
+    def->set_default_value(new ConfigOptionInts{ 5 });
 
     def = this->add("small_perimeter_speed", coFloatOrPercent);
     def->label = L("Small");

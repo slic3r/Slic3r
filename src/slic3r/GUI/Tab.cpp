@@ -1886,11 +1886,18 @@ void TabFilament::update()
     bool cooling = m_config->opt_bool("cooling", 0);
     bool fan_always_on = cooling || m_config->opt_bool("fan_always_on", 0);
 
-    for (auto el : { "max_fan_speed", "fan_below_layer_time", "slowdown_below_layer_time", "min_print_speed" })
-        get_field(el)->toggle(cooling);
+    //get_field("max_fan_speed")->toggle(m_config->opt_int("fan_below_layer_time", 0) > 0);
+    get_field("min_print_speed")->toggle(m_config->opt_int("slowdown_below_layer_time", 0) > 0);
 
-    for (auto el : { "min_fan_speed", "disable_fan_first_layers" })
-        get_field(el)->toggle(fan_always_on);
+    // hidden 'cooling', it's now deactivated.
+    //for (auto el : { "max_fan_speed", "fan_below_layer_time", "slowdown_below_layer_time", "min_print_speed" })
+    //    get_field(el)->toggle(cooling);
+
+
+    //for (auto el : { "min_fan_speed", "disable_fan_first_layers" })
+    //    get_field(el)->toggle(fan_always_on);
+
+    get_field("max_fan_speed")->toggle(m_config->opt_int("fan_below_layer_time", 0) > 0 || m_config->opt_int("slowdown_below_layer_time", 0) > 0);
 
     update_filament_overrides_page();
 

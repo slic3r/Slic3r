@@ -14,45 +14,84 @@
 
 namespace Slic3r {
 
-#define MIN_BUF_LENGTH	4096
+#define MIN_BUF_LENGTH  4096
 std::string PresetHints::cooling_description(const Preset &preset)
 {
-	std::string out;
+    std::string out;
+    int     min_fan_speed = preset.config.opt_int("min_fan_speed", 0);
+    int     max_fan_speed = preset.config.opt_int("max_fan_speed", 0);
+    int     top_fan_speed = preset.config.opt_int("top_fan_speed", 0);
+    int     bridge_fan_speed = preset.config.opt_int("bridge_fan_speed", 0);
+    int     disable_fan_first_layers = preset.config.opt_int("disable_fan_first_layers", 0);
+    int     slowdown_below_layer_time = preset.config.opt_int("slowdown_below_layer_time", 0);
+    int     min_print_speed = int(preset.config.opt_float("min_print_speed", 0) + 0.5);
+    int     fan_below_layer_time = preset.config.opt_int("fan_below_layer_time", 0);
 
-    if (preset.config.opt_bool("cooling", 0)) {
-		int 	slowdown_below_layer_time 	= preset.config.opt_int("slowdown_below_layer_time", 0);
-		int 	min_fan_speed 				= preset.config.opt_int("min_fan_speed", 0);
-		int 	max_fan_speed 				= preset.config.opt_int("max_fan_speed", 0);
-		int 	min_print_speed				= int(preset.config.opt_float("min_print_speed", 0) + 0.5);
-		int 	fan_below_layer_time		= preset.config.opt_int("fan_below_layer_time", 0);
+    //if (preset.config.opt_bool("cooling", 0)) {
+    out = _utf8(L("Fan"));
+    if (preset.config.opt_bool("fan_always_on", 0)) {
 
-        out += (boost::format(_utf8(L("If estimated layer time is below ~%1%s, "
-                                      "fan will run at %2%%% and print speed will be reduced "
-                                      "so that no less than %3%s are spent on that layer "
-                                      "(however, speed will never be reduced below %4%mm/s)."))) 
-                                      % slowdown_below_layer_time % max_fan_speed % slowdown_below_layer_time % min_print_speed).str();
+        out += " " + (boost::format(_utf8(L("will run at %1%%% by default"))) % min_fan_speed).str() ;
 
-        if (fan_below_layer_time > slowdown_below_layer_time) {
-            out += "\n" + (boost::format(_utf8(L("If estimated layer time is greater, but still below ~%1%s, "
-                                          "fan will run at a proportionally decreasing speed between %2%%% and %3%%%."))) 
-                                          % fan_below_layer_time % max_fan_speed % min_fan_speed).str();
+        if (top_fan_speed > 0 && top_fan_speed != min_fan_speed) {
+            out += ", " + (boost::format(_utf8(L("at %1%%% over top fill surfaces"))) % top_fan_speed).str();
         }
-        out += "\n" + _utf8(L("During the other layers, fan")) + " ";
-    } else {
-        out = _utf8(L("Fan")) + " ";
-    }
-	if (preset.config.opt_bool("fan_always_on", 0)) {
-		int 	disable_fan_first_layers 	= preset.config.opt_int("disable_fan_first_layers", 0);
-		int 	min_fan_speed 				= preset.config.opt_int("min_fan_speed", 0);
-
-	    out += (boost::format(_utf8(L("will always run at %1%%%"))) % min_fan_speed).str() + " ";
-
+        if (bridge_fan_speed > 0 && bridge_fan_speed > min_fan_speed) {
+            out += ", " + (boost::format(_utf8(L("at %1%%% over bridges"))) % bridge_fan_speed).str();
+        }
         if (disable_fan_first_layers > 1)
-            out += (boost::format(_utf8(L("except for the first %1% layers."))) % disable_fan_first_layers).str();
+            out += ", " + (boost::format(_utf8(L("except for the first %1% layers where the fan is disabled"))) % disable_fan_first_layers).str();
         else if (disable_fan_first_layers == 1)
-        	out += _utf8(L("except for the first layer."));
+            out += ", " + _utf8(L("except for the first layer where the fan is disabled"));
+        out += ".";
     } else
-       out += _utf8(L("will be turned off."));
+       out += " " + _utf8(L("will be turned off by default."));
+
+
+    if (fan_below_layer_time > 0
+        && fan_below_layer_time > slowdown_below_layer_time
+        && max_fan_speed > min_fan_speed) {
+        
+        out += (boost::format(_utf8(L("\n\nIf estimated layer time is below ~%1%s, but still greater than ~%2%s, "
+            "fan will run at a proportionally increasing speed between %3%%% and %4%%%")))
+            % fan_below_layer_time % slowdown_below_layer_time % min_fan_speed % max_fan_speed).str();
+
+        if (top_fan_speed > 0) {
+            out += ", " + (boost::format(_utf8(L("at %1%%% over top fill surfaces"))) % top_fan_speed).str();
+        }
+        if (bridge_fan_speed > max_fan_speed) {
+            out += ", " + (boost::format(_utf8(L("at %1%%% over bridges"))) % bridge_fan_speed).str();
+        }else if (bridge_fan_speed > min_fan_speed) {
+            out += ", " + (boost::format(_utf8(L("at %1%%% over bridges if it's below the current computed fan speed value"))) % bridge_fan_speed).str();
+        }
+        if (disable_fan_first_layers > 1)
+            out += " ; " + ((boost::format(_utf8(L("except for the first %1% layers where the fan is disabled"))) % disable_fan_first_layers).str());
+        else if (disable_fan_first_layers == 1)
+            out += " ; "+ _utf8(L("except for the first layer where the fan is disabled"));
+        out += ".";
+    }
+
+    if (slowdown_below_layer_time > 0) {
+
+        out += (boost::format(_utf8(L("\n\nIf estimated layer time is below ~%1%s")))
+            % slowdown_below_layer_time).str();
+        if (max_fan_speed > 0 && max_fan_speed > min_fan_speed) {
+            out += " " + (boost::format(_utf8(L("fan will run by default to %1%%%")))
+                % max_fan_speed).str();
+
+            if (disable_fan_first_layers > 1)
+                out += " (" + (boost::format(_utf8(L("except for the first %1% layers where the fan is disabled"))) % disable_fan_first_layers).str() + ")";
+            else if (disable_fan_first_layers == 1)
+                out += " (" + _utf8(L("except for the first layer where the fan is disabled")) + ")";
+
+            out += " and";
+        }
+            
+        out += " " + (boost::format(_utf8(L("print speed will be reduced "
+            "so that no less than %1%s are spent on that layer "
+            "(however, speed will never be reduced below %2%mm/s).")))
+            % slowdown_below_layer_time % min_print_speed).str();
+    }
 
     return out;
 }

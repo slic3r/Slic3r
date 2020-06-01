@@ -694,7 +694,7 @@ std::string CoolingBuffer::apply_layer_cooldown(
             int   max_fan_speed             = EXTRUDER_CONFIG(max_fan_speed);
             float slowdown_below_layer_time = float(EXTRUDER_CONFIG(slowdown_below_layer_time));
             float fan_below_layer_time      = float(EXTRUDER_CONFIG(fan_below_layer_time));
-            if (EXTRUDER_CONFIG(cooling)) {
+            //if (EXTRUDER_CONFIG(cooling)) {
                 if (layer_time < slowdown_below_layer_time) {
                     // Layer time very short. Enable the fan to a full throttle.
                     fan_speed_new = max_fan_speed;
@@ -704,12 +704,12 @@ std::string CoolingBuffer::apply_layer_cooldown(
                     double t = (layer_time - slowdown_below_layer_time) / (fan_below_layer_time - slowdown_below_layer_time);
                     fan_speed_new = int(floor(t * min_fan_speed + (1. - t) * max_fan_speed) + 0.5);
                 }
-            }
+            //}
             bridge_fan_speed   = EXTRUDER_CONFIG(bridge_fan_speed);
             top_fan_speed      = EXTRUDER_CONFIG(top_fan_speed);
 #undef EXTRUDER_CONFIG
-            bridge_fan_control = bridge_fan_speed > fan_speed_new;
-            top_fan_control    = top_fan_speed != fan_speed_new;
+            bridge_fan_control = bridge_fan_speed > fan_speed_new && bridge_fan_speed != 0;
+            top_fan_control    = top_fan_speed != fan_speed_new && top_fan_speed != 0;
         } else {
             bridge_fan_control = false;
             bridge_fan_speed   = 0;
