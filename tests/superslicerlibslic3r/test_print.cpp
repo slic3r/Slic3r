@@ -1,5 +1,5 @@
 
-#define CATCH_CONFIG_DISABLE
+//#define CATCH_CONFIG_DISABLE
 
 //#include <catch_main.hpp>
 #include <catch2/catch.hpp>
@@ -176,3 +176,41 @@ SCENARIO("Print: Brim generation") {
         }
     }
 }
+
+SCENARIO("Print: perimeter generation") {
+    GIVEN("cube with hole, just enough space for two loops at a point") {
+        DynamicPrintConfig& config = Slic3r::DynamicPrintConfig::full_print_config();
+        Slic3r::Model model{};
+        config.set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(0.42, false));
+        config.set_deserialize("nozzle_diameter", "0.4");
+        config.set_deserialize("layer_height", "0.2");
+        config.set_deserialize("first_layer_height", "0.2");
+        config.set_key_value("only_one_perimeter_top", new ConfigOptionBool(false));
+        Print print{};
+        auto facets = std::vector<Vec3i32>{
+                Vec3i32(1,4,3),Vec3i32(4,1,2),Vec3i32(16,12,14),Vec3i32(16,10,12),Vec3i32(10,4,6),Vec3i32(4,10,16),Vec3i32(8,14,12),Vec3i32(8,2,14),
+                    Vec3i32(6,2,8),Vec3i32(2,6,4),Vec3i32(14,15,16),Vec3i32(15,14,13),Vec3i32(15,4,16),Vec3i32(4,15,3),Vec3i32(13,11,15),Vec3i32(13,7,11),
+                    Vec3i32(7,1,5),Vec3i32(1,7,13),Vec3i32(9,15,11),Vec3i32(9,3,15),Vec3i32(5,3,9),Vec3i32(3,5,1),Vec3i32(1,14,2),Vec3i32(14,1,13),
+                    Vec3i32(9,12,10),Vec3i32(12,9,11),Vec3i32(6,9,10),Vec3i32(9,6,5),Vec3i32(8,5,6),Vec3i32(5,8,7),Vec3i32(7,12,11),Vec3i32(12,7,8)
+        };
+        for (Vec3i32& vec : facets)
+            vec -= Vec3i32(1, 1, 1);
+        TriangleMesh tm = TriangleMesh{ std::vector<Vec3d>{Vec3d(-5,-5,-0.1),Vec3d(-5,-5,0.1),Vec3d(-5,5,-0.1),Vec3d(-5,5,0.1),
+            Vec3d(-1.328430,0,-0.1),Vec3d(-1.328430,0,0.1),Vec3d(1.5,-2.828430,-0.1),Vec3d(1.5,-2.828430,0.1),
+            Vec3d(1.5,2.828430,-0.1),Vec3d(1.5,2.828430,0.1),Vec3d(4.328430,0,-0.1),Vec3d(4.328430,0,0.1),
+            Vec3d(5,-5,-0.1),Vec3d(5,-5,0.1),Vec3d(5,5,-0.1),Vec3d(5,5,0.1)},
+             facets };
+        Slic3r::Test::init_print(print, {tm}, model, &config);
+        print.process();
+        THEN("hole perimeter should not be printed first") {
+            ExtrusionEntity* loop = print.objects()[0]->layers()[0]->regions()[0]->perimeters.entities[0];
+            REQUIRE(loop->is_collection());
+            loop = ((ExtrusionEntityCollection*)loop)->entities.front();
+            REQUIRE(loop->is_loop());
+            // what we don't want in first is something that is (((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0 && loop->role() == elrExternalPerimeter
+            REQUIRE( (((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) == 0);
+
+        }
+    }
+}
+

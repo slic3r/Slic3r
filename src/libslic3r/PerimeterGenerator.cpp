@@ -107,7 +107,6 @@ void PerimeterGenerator::process()
     Surfaces all_surfaces = this->slices->surfaces;
 
     //store surface for bridge infill to avoid unsupported perimeters (but the first one, this one is always good)
-    
     if (this->config->no_perimeter_unsupported_algo != npuaNone
         && this->lower_slices != NULL && !this->lower_slices->empty()) {
 
@@ -683,8 +682,10 @@ void PerimeterGenerator::process()
             // TODO: add test for perimeter order
             if (this->config->external_perimeters_first ||
                 (this->layer->id() == 0 && this->object_config->brim_width.value > 0)) {
-                if (this->config->external_perimeters_nothole.value) {
-                    if (this->config->external_perimeters_hole.value) {
+                if (this->config->external_perimeters_nothole.value ||
+                    (this->layer->id() == 0 && this->object_config->brim_width.value > 0)) {
+                    if (this->config->external_perimeters_hole.value ||
+                        (this->layer->id() == 0 && this->object_config->brim_width.value > 0)) {
                         entities.reverse();
                     } else {
                         //reverse only not-hole perimeters
@@ -926,31 +927,44 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
         coll.append(tw.entities);
         thin_walls.clear();
     }
-    
+
     // traverse children and build the final collection
     Point zero_point(0, 0);
     //result is  [idx, needReverse] ?
     std::vector<std::pair<size_t, bool>> chain = chain_extrusion_entities(coll.entities, &zero_point);
-    ExtrusionEntityCollection entities;
-    for (const std::pair<size_t, bool> &idx : chain) {
+    ExtrusionEntityCollection coll_out;
+
+    //little check: if you have external holes with only one extrusion and internal things, please draw the internal first, just in case it can help print the hole better.
+    std::vector<std::pair<size_t, bool>> better_chain;
+    for (const std::pair<size_t, bool>& idx : chain) {
+        if (!loops[idx.first].is_external() || (!loops[idx.first].is_contour && !loops[idx.first].children.empty()))
+            better_chain.push_back(idx);
+    }
+    for (const std::pair<size_t, bool>& idx : chain) {
+        if (loops[idx.first].is_external() && !(!loops[idx.first].is_contour && !loops[idx.first].children.empty()))
+            better_chain.push_back(idx);
+    }
+
+    //move from coll to coll_out and gettign children of each in the same time. (deep first)
+    for (const std::pair<size_t, bool> &idx : better_chain) {
         
         if (idx.first >= loops.size()) {
             // this is a thin wall
             // let's get it from the sorted collection as it might have been reversed
-            entities.entities.reserve(entities.entities.size() + 1);
-            entities.entities.emplace_back(coll.entities[idx.first]);
+            coll_out.entities.reserve(coll_out.entities.size() + 1);
+            coll_out.entities.emplace_back(coll.entities[idx.first]);
             coll.entities[idx.first] = nullptr;
             if (idx.second)
-                entities.entities.back()->reverse();
+                coll_out.entities.back()->reverse();
             //if thin extrusion is a loop, make it ccw like a normal contour.
-            if (ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(entities.entities.back())) {
+            if (ExtrusionLoop* loop = dynamic_cast<ExtrusionLoop*>(coll_out.entities.back())) {
                 loop->make_counter_clockwise();
             }
         } else {
             const PerimeterGeneratorLoop &loop = loops[idx.first];
             assert(thin_walls.empty());
             ExtrusionEntityCollection children = this->_traverse_loops(loop.children, thin_walls);
-            entities.entities.reserve(entities.entities.size() + children.entities.size() + 1);
+            coll_out.entities.reserve(coll_out.entities.size() + children.entities.size() + 1);
             ExtrusionLoop *eloop = static_cast<ExtrusionLoop*>(coll.entities[idx.first]);
             coll.entities[idx.first] = nullptr;
             if (loop.is_contour) {
@@ -959,16 +973,16 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
                     eloop->make_clockwise();
                 else
                     eloop->make_counter_clockwise();
-                entities.append(std::move(children.entities));
-                entities.append(*eloop);
+                coll_out.append(std::move(children.entities));
+                coll_out.append(*eloop);
             } else {
                 eloop->make_clockwise();
-                entities.append(*eloop);
-                entities.append(std::move(children.entities));
+                coll_out.append(*eloop);
+                coll_out.append(std::move(children.entities));
             }
         }
     }
-    return entities;
+    return coll_out;
 }
 
 PerimeterIntersectionPoint

@@ -43,7 +43,7 @@ public:
         polygon(polygon), is_contour(is_contour), depth(depth), is_steep_overhang(is_steep_overhang) {}
     // External perimeter. It may be CCW or CW oriented (outer contour or hole contour).
     bool is_external() const { return this->depth == 0; }
-    // An island, which may have holes, but it does not have another internal island.
+    // it's the last loop of the contour (not hol), so the first to be printed (if all goes well)
     bool is_internal_contour() const;
 };
 
