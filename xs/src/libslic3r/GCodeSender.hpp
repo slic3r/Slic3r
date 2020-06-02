@@ -7,13 +7,16 @@
 #include <string>
 #include <vector>
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/core/noncopyable.hpp>
 
 namespace Slic3r {
 
 namespace asio = boost::asio;
+
+using boost::placeholders::_1;
+using boost::placeholders::_2;
 
 class GCodeSender : private boost::noncopyable {
     public:

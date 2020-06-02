@@ -7,8 +7,11 @@
 #include <iostream>
 #include <complex>
 #include <cstdio>
+#include <boost/bind/bind.hpp>
 
 namespace Slic3r {
+
+using boost::placeholders::_1;
 
 void
 SLAPrint::slice()

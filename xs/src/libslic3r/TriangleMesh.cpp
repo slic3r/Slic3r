@@ -15,12 +15,15 @@
 #include <stdexcept>
 #include <boost/config.hpp>
 #include <boost/nowide/convert.hpp>
+#include <boost/bind/bind.hpp>
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
 #endif
 
 namespace Slic3r {
+
+using boost::placeholders::_1;
 
 TriangleMesh::TriangleMesh()
     : repaired(false)

@@ -1,8 +1,11 @@
 #include "GCodeTimeEstimator.hpp"
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <cmath>
 
 namespace Slic3r {
+
+using boost::placeholders::_1;
+using boost::placeholders::_2;
 
 void
 GCodeTimeEstimator::parse(const std::string &gcode)
