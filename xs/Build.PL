@@ -22,13 +22,13 @@ $ENV{LD_RUN_PATH} //= "";
 my @cflags = qw(-D_GLIBCXX_USE_C99 -DHAS_BOOL -DNOGDI -DSLIC3RXS -DBOOST_ASIO_DISABLE_KQUEUE -Dexprtk_disable_rtl_io_file -Dexprtk_disable_return_statement -Dexprtk_disable_rtl_vecops -Dexprtk_disable_string_capabilities -Dexprtk_disable_enhanced_features);
 push @cflags, "-DSLIC3R_BUILD_COMMIT=$ENV{SLIC3R_GIT_VERSION}" if defined $ENV{SLIC3R_GIT_VERSION};
 
-if ($cpp_guess->is_gcc)	{
-	# GCC is pedantic with c++11 std, so undefine strict ansi to get M_PI back
-	push @cflags, qw(-U__STRICT_ANSI__);
-}
-
 # std=c++11 Enforce usage of C++11 (required now). Minimum compiler supported: gcc 4.9, clang 3.3, MSVC 14.0
-push @cflags, qw(-std=c++11);
+if ($cpp_guess->is_gcc)	{
+	# GCC is pedantic with c++11 std, so use -std=gnu++11 to be able to use M_PI
+	push @cflags, qw(-std=gnu++11);
+} else {
+	push @cflags, qw(-std=c++11);
+}
 
 my @ldflags = ();
 
