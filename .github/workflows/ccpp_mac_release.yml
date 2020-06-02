@@ -61,8 +61,8 @@ jobs:
     - name: copy bin
       working-directory: ./build
       run: |
-        cp -f src/superslicer SuperSlicer/SuperSlicer.app/Contents/MacOS/superslicer
-        chmod u+x SuperSlicer/SuperSlicer.app/Contents/MacOS/superslicer
+        cp -f src/superslicer SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
+        chmod u+x SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
         tar -zcvf SuperSlicer.tar.gz SuperSlicer
     - name: create dmg
       working-directory: ./build

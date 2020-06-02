@@ -58,11 +58,11 @@ jobs:
         echo -n -e 'APPL????\x0a' > PkgInfo
         cp PkgInfo SuperSlicer/SuperSlicer.app/Contents/PkgInfo
 #        echo -n -e '\xff\xfeAPPL\x3f\x00\x3f\x00\x3f\x00\x3f\x00\x0a\x00' > PkgInfo
-    - name: copy bin
+    - name: copy bin and do not let it lower case
       working-directory: ./build
       run: |
-        cp -f src/superslicer SuperSlicer/SuperSlicer.app/Contents/MacOS/superslicer
-        chmod u+x SuperSlicer/SuperSlicer.app/Contents/MacOS/superslicer
+        cp -f src/superslicer SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
+        chmod u+x SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
         tar -cvf SuperSlicer.tar SuperSlicer
     - name: create dmg
       working-directory: ./build
@@ -90,11 +90,11 @@ jobs:
     - name: make slic3r
       working-directory: ./build
       run: make slic3r
-    - name: copy bin
+    - name: copy bin and do not let it lower case
       working-directory: ./build
       run: |
-        cp -f src/superslicer SuperSlicer/SuperSlicer.app/Contents/MacOS/superslicer
-        chmod u+x SuperSlicer/SuperSlicer.app/Contents/MacOS/superslicer
+        cp -f src/superslicer SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
+        chmod u+x SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
         tar -cvf SuperSlicer.tar SuperSlicer
     - name: create dmg
       working-directory: ./build
