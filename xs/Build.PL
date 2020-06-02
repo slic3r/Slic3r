@@ -152,7 +152,7 @@ if (defined $ENV{BOOST_LIBRARYPATH}) {
 }
 # In order to generate the -l switches we need to know how Boost libraries are named
 my $have_boost = 0;
-my @boost_libraries = qw(system thread filesystem);  # we need these
+my @boost_libraries = qw(system thread filesystem nowide);  # we need these
 # check without explicit lib path (works on Linux)
 if (! $mswin) {
     $have_boost = 1
