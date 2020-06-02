@@ -22,8 +22,8 @@ namespace Slic3r {
 namespace GUI {
 
 void CalibrationBridgeDialog::create_buttons(wxStdDialogButtonSizer* buttons){
-    wxString choices_steps[] = { "2.5","5","10" };
-    steps = new wxComboBox(this, wxID_ANY, wxString{ "5" }, wxDefaultPosition, wxDefaultSize, 3, choices_steps);
+    wxString choices_steps[] = { "5","10","15" };
+    steps = new wxComboBox(this, wxID_ANY, wxString{ "10" }, wxDefaultPosition, wxDefaultSize, 3, choices_steps);
     steps->SetToolTip(_(L("Select the step in % between two tests.")));
     steps->SetSelection(1);
     wxString choices_nb[] = { "1","2","3","4","5","6" };
@@ -53,7 +53,7 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
 
     int idx_steps = steps->GetSelection();
     int idx_nb = nb_tests->GetSelection();
-    size_t step = 5 + (idx_steps == wxNOT_FOUND ? 0 : (idx_steps == 0 ? 2.5f : idx_steps == 1 ? 5.F : 10.f));
+    size_t step = 5 + (idx_steps == wxNOT_FOUND ? 0 : idx_steps * 5);
     size_t nb_items = 1 + (idx_nb == wxNOT_FOUND ? 0 : idx_nb);
 
     std::vector<std::string> items;

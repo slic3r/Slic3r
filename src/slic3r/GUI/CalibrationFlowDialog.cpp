@@ -22,10 +22,10 @@ namespace Slic3r {
 namespace GUI {
 
 void CalibrationFlowDialog::create_buttons(wxStdDialogButtonSizer* buttons){
-    wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Generate 10% intervals")));
+    wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Generate 10% intervals around current value")));
     bt->Bind(wxEVT_BUTTON, &CalibrationFlowDialog::create_geometry_10, this);
     buttons->Add(bt);
-    bt = new wxButton(this, wxID_FILE2, _(L("Generate 2.5% intervals")));
+    bt = new wxButton(this, wxID_FILE2, _(L("Generate 2% intervals below current value")));
     bt->Bind(wxEVT_BUTTON, &CalibrationFlowDialog::create_geometry_2_5, this);
     buttons->Add(bt);
 }

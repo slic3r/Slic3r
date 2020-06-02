@@ -39,13 +39,13 @@ namespace GUI {
 
     }
 
-void CalibrationAbstractDialog::create(std::string html_path){
+void CalibrationAbstractDialog::create(std::string html_path, wxSize dialog_size){
 
     auto main_sizer = new wxBoxSizer(wxVERTICAL);
 
     //html
     html_viewer = new wxHtmlWindow(this, wxID_ANY,
-        wxDefaultPosition, wxSize(800, 500), wxHW_SCROLLBAR_AUTO);
+        wxDefaultPosition, dialog_size, wxHW_SCROLLBAR_AUTO);
     html_viewer->LoadPage(Slic3r::resources_dir()+ html_path);
     main_sizer->Add(html_viewer, 1, wxEXPAND | wxALL, 5);
 
