@@ -917,7 +917,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
             path.height     = (float) this->layer->height;
             paths.push_back(path);
         }
-        
+
         coll.append(ExtrusionLoop(paths, loop_role));
     }
     
@@ -933,19 +933,20 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     //result is  [idx, needReverse] ?
     std::vector<std::pair<size_t, bool>> chain = chain_extrusion_entities(coll.entities, &zero_point);
     ExtrusionEntityCollection coll_out;
+    if (chain.empty()) return coll_out;
 
     //little check: if you have external holes with only one extrusion and internal things, please draw the internal first, just in case it can help print the hole better.
     std::vector<std::pair<size_t, bool>> better_chain;
     for (const std::pair<size_t, bool>& idx : chain) {
-        if (!loops[idx.first].is_external() || (!loops[idx.first].is_contour && !loops[idx.first].children.empty()))
+        if (idx.first >= loops.size() || !loops[idx.first].is_external() || (!loops[idx.first].is_contour && !loops[idx.first].children.empty()))
             better_chain.push_back(idx);
     }
     for (const std::pair<size_t, bool>& idx : chain) {
-        if (loops[idx.first].is_external() && !(!loops[idx.first].is_contour && !loops[idx.first].children.empty()))
+        if (idx.first < loops.size() && loops[idx.first].is_external() && !(!loops[idx.first].is_contour && !loops[idx.first].children.empty()))
             better_chain.push_back(idx);
     }
 
-    //move from coll to coll_out and gettign children of each in the same time. (deep first)
+    //move from coll to coll_out and getting children of each in the same time. (deep first)
     for (const std::pair<size_t, bool> &idx : better_chain) {
         
         if (idx.first >= loops.size()) {
