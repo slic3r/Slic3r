@@ -82,8 +82,7 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     float xyzScale = nozzle_diameter / 0.4;
     //do scaling
     if (xyzScale < 0.9 || 1.1 < xyzScale) {
-        for (size_t i = 0; i < 5; i++)
-            model.objects[objs_idx[0]]->scale(xyzScale, xyzScale * 0.5, xyzScale);
+        model.objects[objs_idx[0]]->scale(xyzScale, xyzScale * 0.5, xyzScale);
     } else {
         xyzScale = 1;
         model.objects[objs_idx[0]]->scale(xyzScale, xyzScale * 0.5, xyzScale);
@@ -99,7 +98,7 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     }
     for (int16_t i = 1; i < nb_items; i++) {
         tower.push_back(add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_temp/Smart_compact_temperature_calibration_item.amf", 
-            Vec3d{ 0,0, zshift + i * 10 }, Vec3d{ xyzScale, xyzScale * 0.5, xyzScale }));
+            Vec3d{ 0,0, zshift + i * 10 * xyzScale }, Vec3d{ xyzScale, xyzScale * 0.5, xyzScale }));
         if (temperature - i * step_temp > 175 && temperature - i * step_temp < 290) {
             tower.push_back(add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_temp/t" + std::to_string(temperature - i * step_temp) + ".amf",
                 Vec3d{ xyzScale * 5, -xyzScale * 2.5, zshift + xyzScale * (i * 10 - 2.5) }, Vec3d{ xyzScale, xyzScale, xyzScale * 0.43 }));
