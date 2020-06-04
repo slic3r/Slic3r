@@ -918,7 +918,7 @@ void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
         update_wiping_button_visibility();
 
     if (opt_key == "extruders_count")
-        wxGetApp().plater()->on_extruders_change(boost::any_cast<size_t>(value));
+        wxGetApp().plater()->on_extruders_change(boost::any_cast<int>(value));
 
     update();
 }
@@ -1117,8 +1117,15 @@ t_change set_or_add(t_change previous, t_change toadd) {
         return toadd;
     else
         return [previous, toadd](t_config_option_key opt_key, boost::any value) {
-        previous(opt_key, value);
-        toadd(opt_key, value);
+        try {
+            toadd(opt_key, value);
+            previous(opt_key, value);
+
+        }
+        catch (const std::exception & ex) {
+            std::cout << "Exception while calling group event about "<<opt_key<<": " << ex.what();
+            throw ex;
+        }
     };
 }
 
@@ -1245,48 +1252,43 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                         // optgroup->get_value() return int for def.type == coInt,
                         // Thus, there should be boost::any_cast<int> !
                         // Otherwise, boost::any_cast<size_t> causes an "unhandled unknown exception"
-                        size_t extruders_count = size_t(boost::any_cast<int>(current_group->get_value("extruders_count")));
-                        wxTheApp->CallAfter([this, tab, opt_key, value, extruders_count]() {
-                            if (opt_key == "extruders_count" || opt_key == "single_extruder_multi_material") {
-                                tab->extruders_count_changed(extruders_count);
-                                init_options_list(); // m_options_list should be updated before UI updating
-                                update_dirty();
-                                if (opt_key == "single_extruder_multi_material") { // the single_extruder_multimaterial was added to force pages
-                                    on_value_change(opt_key, value);                      // rebuild - let's make sure the on_value_change is not skipped
+                        if (opt_key == "extruders_count" || opt_key == "single_extruder_multi_material") {
+                            size_t extruders_count = size_t(boost::any_cast<int>(current_group->get_value("extruders_count")));
+                            tab->extruders_count_changed(extruders_count);
+                            init_options_list(); // m_options_list should be updated before UI updating
+                            update_dirty();
+                            if (opt_key == "single_extruder_multi_material") { // the single_extruder_multimaterial was added to force pages
+                                on_value_change(opt_key, value);                      // rebuild - let's make sure the on_value_change is not skipped
 
-                                    if (boost::any_cast<bool>(value) && tab->m_extruders_count > 1) {
-                                        SuppressBackgroundProcessingUpdate sbpu;
-                                        std::vector<double> nozzle_diameters = static_cast<const ConfigOptionFloats*>(m_config->option("nozzle_diameter"))->values;
-                                        const double frst_diam = nozzle_diameters[0];
+                                if (boost::any_cast<bool>(value) && tab->m_extruders_count > 1) {
+                                    SuppressBackgroundProcessingUpdate sbpu;
+                                    std::vector<double> nozzle_diameters = static_cast<const ConfigOptionFloats*>(m_config->option("nozzle_diameter"))->values;
+                                    const double frst_diam = nozzle_diameters[0];
 
-                                        for (auto cur_diam : nozzle_diameters) {
-                                            // if value is differs from first nozzle diameter value
-                                            if (fabs(cur_diam - frst_diam) > EPSILON) {
-                                                const wxString msg_text = _(L("Single Extruder Multi Material is selected, \n"
-                                                    "and all extruders must have the same diameter.\n"
-                                                    "Do you want to change the diameter for all extruders to first extruder nozzle diameter value?"));
-                                                wxMessageDialog dialog(parent(), msg_text, _(L("Nozzle diameter")), wxICON_WARNING | wxYES_NO);
+                                    for (auto cur_diam : nozzle_diameters) {
+                                        // if value is differs from first nozzle diameter value
+                                        if (fabs(cur_diam - frst_diam) > EPSILON) {
+                                            const wxString msg_text = _(L("Single Extruder Multi Material is selected, \n"
+                                                "and all extruders must have the same diameter.\n"
+                                                "Do you want to change the diameter for all extruders to first extruder nozzle diameter value?"));
+                                            wxMessageDialog dialog(parent(), msg_text, _(L("Nozzle diameter")), wxICON_WARNING | wxYES_NO);
 
-                                                DynamicPrintConfig new_conf = *m_config;
-                                                if (dialog.ShowModal() == wxID_YES) {
-                                                    for (size_t i = 1; i < nozzle_diameters.size(); i++)
-                                                        nozzle_diameters[i] = frst_diam;
+                                            DynamicPrintConfig new_conf = *m_config;
+                                            if (dialog.ShowModal() == wxID_YES) {
+                                                for (size_t i = 1; i < nozzle_diameters.size(); i++)
+                                                    nozzle_diameters[i] = frst_diam;
 
-                                                    new_conf.set_key_value("nozzle_diameter", new ConfigOptionFloats(nozzle_diameters));
-                                                } else
-                                                    new_conf.set_key_value("single_extruder_multi_material", new ConfigOptionBool(false));
+                                                new_conf.set_key_value("nozzle_diameter", new ConfigOptionFloats(nozzle_diameters));
+                                            } else
+                                                new_conf.set_key_value("single_extruder_multi_material", new ConfigOptionBool(false));
 
-                                                load_config(new_conf);
-                                                break;
-                                            }
+                                            load_config(new_conf);
+                                            break;
                                         }
                                     }
                                 }
-                            } else {
-                                update_dirty();
-                                on_value_change(opt_key, value);
                             }
-                        });
+                        }
                     });
                 } else if (params[i] == "milling_count_event") {
                     TabPrinter* tab = nullptr;
@@ -1295,39 +1297,29 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                         // optgroup->get_value() return int for def.type == coInt,
                         // Thus, there should be boost::any_cast<int> !
                         // Otherwise, boost::any_cast<size_t> causes an "unhandled unknown exception"
-                        size_t milling_count = size_t(boost::any_cast<int>(current_group->get_value("milling_count")));
-                        wxTheApp->CallAfter([this, tab, opt_key, value, milling_count]() {
-                            if (opt_key == "milling_count") {
-                                tab->milling_count_changed(milling_count);
-                                init_options_list(); // m_options_list should be updated before UI updating
-                                update_dirty();
-                            } else {
-                                update_dirty();
-                                on_value_change(opt_key, value);
-                            }
-                        });
+                        if (opt_key == "milling_count") {
+                            size_t milling_count = size_t(boost::any_cast<int>(current_group->get_value("milling_count")));
+                            tab->milling_count_changed(milling_count);
+                            init_options_list(); // m_options_list should be updated before UI updating
+                        }
                     });
                 }
                 else if (params[i] == "silent_mode_event") {
                     TabPrinter* tab = nullptr;
                     if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
-                    current_group->m_on_change = [this, tab](t_config_option_key opt_key, boost::any value) {
-                        wxTheApp->CallAfter([this, tab, opt_key, value]() {
-                            if (opt_key == "silent_mode") {
-                                bool val = boost::any_cast<bool>(value);
-                                if (tab->m_use_silent_mode != val) {
-                                    tab->m_rebuild_kinematics_page = true;
-                                    tab->m_use_silent_mode = val;
-                                }
+                    current_group->m_on_change = set_or_add(current_group->m_on_change, [this, tab](t_config_option_key opt_key, boost::any value) {
+                        if (opt_key == "silent_mode") {
+                            bool val = boost::any_cast<bool>(value);
+                            if (tab->m_use_silent_mode != val) {
+                                tab->m_rebuild_kinematics_page = true;
+                                tab->m_use_silent_mode = val;
                             }
-                            tab->build_unregular_pages();
-                            update_dirty();
-                            on_value_change(opt_key, value);
-                        });
-                    };
+                        }
+                        tab->build_unregular_pages();
+                    });
                 }
                 else if (params[i] == "material_density_event") {
-                    current_group->m_on_change = [this, current_group](t_config_option_key opt_key, boost::any value)
+                    current_group->m_on_change = set_or_add(current_group->m_on_change, [this, current_group](t_config_option_key opt_key, boost::any value)
                     {
                         DynamicPrintConfig new_conf = *m_config;
 
@@ -1346,14 +1338,11 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
 
                         load_config(new_conf);
 
-                        update_dirty();
-                        on_value_change(opt_key, value);
-
                         if (opt_key == "bottle_volume" || opt_key == "bottle_cost") {
                             wxGetApp().sidebar().update_sliced_info_sizer();
                             wxGetApp().sidebar().Layout();
                         }
-                    };
+                    });
                 }
             }
             if (logs) std::cout << "create group " << params.back() << "\n";
@@ -1598,7 +1587,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             Option option(def, "milling_count");
             current_group->append_single_option_line(option);
         } else if (full_line == "update_nozzle_diameter") {
-            current_group->m_on_change = [this, idx_page](const t_config_option_key& opt_key, boost::any value)
+            current_group->m_on_change = set_or_add(current_group->m_on_change, [this, idx_page](const t_config_option_key& opt_key, boost::any value)
             {
                 TabPrinter* tab = nullptr;
                 if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) return;
@@ -1630,9 +1619,8 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                     }
                 }
 
-                update_dirty();
                 update();
-            };
+            });
         }else if(full_line == "reset_to_filament_color") {
             TabPrinter* tab = nullptr;
             if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
@@ -2124,7 +2112,7 @@ void TabPrinter::extruders_count_changed(size_t extruders_count)
     build_unregular_pages();
 
     if (is_count_changed) {
-        on_value_change("extruders_count", extruders_count);
+        on_value_change("extruders_count", (int)extruders_count);
         wxGetApp().sidebar().update_objects_list_extruder_column(extruders_count);
     }
 }
@@ -2244,6 +2232,7 @@ PageShp TabPrinter::build_kinematics_page()
 void TabPrinter::build_unregular_pages()
 {
     size_t		n_before_extruders = 2;			//	Count of pages before Extruder pages
+    bool changed = false;
 
     /* ! Freeze/Thaw in this function is needed to avoid call OnPaint() for erased pages
      * and be cause of application crash, when try to change Preset in moment,
@@ -2276,6 +2265,8 @@ void TabPrinter::build_unregular_pages()
 
     if (existed_page < n_before_extruders) {
         auto page = build_kinematics_page();
+        changed = true;
+        m_rebuild_kinematics_page = false;
 #ifdef __WXMSW__
         layout_page(page);
 #endif
@@ -2292,6 +2283,7 @@ void TabPrinter::build_unregular_pages()
         for (size_t i = 0; i < m_pages.size(); ++i) // first make sure it's not there already
             if (m_pages[i]->title().find(_(L("Single extruder MM setup"))) != std::string::npos) {
                 m_pages.erase(m_pages.begin() + i);
+                changed = true;
                 break;
             }
         m_has_single_extruder_MM_page = false;
@@ -2312,6 +2304,7 @@ void TabPrinter::build_unregular_pages()
         optgroup->append_single_option_line("wipe_advanced_algo");
         m_pages.insert(m_pages.end() - n_after_single_extruder_MM, page);
         m_has_single_extruder_MM_page = true;
+        changed = true;
     }
 
     // Build missed extruder pages
@@ -2319,14 +2312,16 @@ void TabPrinter::build_unregular_pages()
 
         if (this->create_pages("extruder.ui", extruder_idx)) {
             std::rotate(m_pages.begin() + n_before_extruders + extruder_idx, m_pages.end() - 1, m_pages.end());
-            continue;
+            changed = true;
         }
 
     }
     // # remove extra pages
-    if (m_extruders_count < m_extruders_count_old)
+    if (m_extruders_count < m_extruders_count_old) {
         m_pages.erase(m_pages.begin() + n_before_extruders + m_extruders_count,
             m_pages.begin() + n_before_extruders + m_extruders_count_old);
+        changed = true;
+    }
     m_extruders_count_old = m_extruders_count;
 
     // Build missed milling pages
@@ -2334,19 +2329,22 @@ void TabPrinter::build_unregular_pages()
 
         if (this->create_pages("milling.ui", milling_idx)) {
             std::rotate(m_pages.begin() + n_before_extruders + m_extruders_count + milling_idx, m_pages.end() - 1, m_pages.end());
-            continue;
+            changed = true;
         }
 
     }
     // # remove extra pages
-    if (m_milling_count < m_milling_count_old)
-        m_pages.erase( m_pages.begin() + n_before_extruders + m_extruders_count + m_milling_count,
-                        m_pages.begin() + n_before_extruders + m_extruders_count + m_milling_count_old);
+    if (m_milling_count < m_milling_count_old) {
+        m_pages.erase(m_pages.begin() + n_before_extruders + m_extruders_count + m_milling_count,
+            m_pages.begin() + n_before_extruders + m_extruders_count + m_milling_count_old);
+        changed = true;
+    }
     m_milling_count_old = m_milling_count;
 
     Thaw();
 
-    rebuild_page_tree();
+    if(changed)
+        rebuild_page_tree();
 
     // Reload preset pages with current configuration values
     reload_config();
@@ -2371,6 +2369,7 @@ void TabPrinter::on_preset_loaded()
 
 void TabPrinter::update_pages()
 {
+
     // update m_pages ONLY if printer technology is changed
     const PrinterTechnology new_printer_technology = m_presets->get_edited_preset().printer_technology();
     if (new_printer_technology == m_printer_technology)
@@ -2394,7 +2393,7 @@ void TabPrinter::update_pages()
             if (m_extruders_count > 1)
             {
                 m_preset_bundle->update_multi_material_filament_presets();
-                on_value_change("extruders_count", m_extruders_count);
+                on_value_change("extruders_count", (int)m_extruders_count);
             }
         }
         else
