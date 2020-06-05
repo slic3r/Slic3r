@@ -1123,7 +1123,7 @@ t_change set_or_add(t_change previous, t_change toadd) {
 
         }
         catch (const std::exception & ex) {
-            std::cout << "Exception while calling group event about "<<opt_key<<": " << ex.what();
+            std::cerr << "Exception while calling group event about "<<opt_key<<": " << ex.what();
             throw ex;
         }
     };
@@ -1131,10 +1131,13 @@ t_change set_or_add(t_change previous, t_change toadd) {
 
 bool Tab::create_pages(std::string setting_type_name, int idx_page)
 {
-    std::cout << "create settings  " << setting_type_name << "\n";
     //search for the file
     const boost::filesystem::path ui_layout_file = (boost::filesystem::path(resources_dir()) / "ui_layout" / setting_type_name).make_preferred();
-    if (! boost::filesystem::exists(ui_layout_file)) return false;
+    if (!boost::filesystem::exists(ui_layout_file)) {
+        std::cerr << "Error: cannot create " << setting_type_name << "settings, cannot find file " << ui_layout_file << "\n";
+        return false;
+    }else
+        std::cout << "create settings  " << setting_type_name << "\n";
 
 #ifdef __WXMSW__
     bool first_page = true;
@@ -3268,6 +3271,7 @@ wxSizer* TabPrinter::create_bed_shape_widget(wxWindow* parent)
 
 void Tab::compatible_widget_reload(PresetDependencies &deps)
 {
+    if (deps.btn == nullptr) return; // check if it has been initalised (should be, but someone may want to remove it from the ui)
     bool has_any = ! m_config->option<ConfigOptionStrings>(deps.key_list)->values.empty();
     has_any ? deps.btn->Enable() : deps.btn->Disable();
     deps.checkbox->SetValue(! has_any);
