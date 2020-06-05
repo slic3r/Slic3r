@@ -4335,7 +4335,7 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
     } else if (opt_key == "elefant_foot_compensation") {
         opt_key = "first_layer_size_compensation";
         float v = boost::lexical_cast<float>(value);
-        if (v != 0)
+        if (v > 0)
             value = boost::lexical_cast<std::string>(-v);
     }
 
