@@ -23,6 +23,7 @@ group:Fan speed - default
 	setting:min_fan_speed
 	setting:bridge_fan_speed
 	setting:top_fan_speed
+	setting:external_perimeter_fan_speed
 	setting:disable_fan_first_layers
 group:Short layer time - began to increase base fan speed
 	setting:fan_below_layer_time

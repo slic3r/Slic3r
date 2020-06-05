@@ -732,11 +732,11 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("%");
     def->min = 0;
     def->max = 100;
-    def->mode = comExpert;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInts { 0 });
 
     def = this->add("external_perimeter_overlap", coPercent);
-    def->label = L("external periemter overlap");
+    def->label = L("external perimeter overlap");
     def->full_label = L("Ext. peri. overlap");
     def->category = OptionCategory::width;
     def->tooltip = L("This perimeter allow you to reduce the overlap between the perimeters and the external one, to reduce the impact of the perimeters artifacts."
@@ -837,7 +837,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Extra perimeters in overhangs");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Add more perimeters when needed for avoiding gaps in sloping walls. "
-        "Slic3r keeps adding periemter until all overhangs are filled."
+        "Slic3r keeps adding perimeter until all overhangs are filled."
         "\n!! this is a very slow algorithm !!"
         "\nIf you use this setting, consider strongly using also overhangs_reverse.");
     def->mode = comAdvanced;
@@ -3114,7 +3114,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Thin wall overlap");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Overlap between the thin wall and the perimeters. Can be a % of the external perimeter width (default 50%)");
-    def->ratio_over = "external_periemter_extrusion_width";
+    def->ratio_over = "external_perimeter_extrusion_width";
     def->mode = comExpert;
     def->min = 0;
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
@@ -3618,7 +3618,7 @@ void PrintConfigDef::init_milling_params()
     def = this->add("milling_post_process", coBool);
     def->label = L("Milling post-processing");
     def->category = OptionCategory::milling;
-    def->tooltip = L("If activated, at the end of each layer, the printer will switch to a milling ead and mill the external periemters."
+    def->tooltip = L("If activated, at the end of each layer, the printer will switch to a milling ead and mill the external perimeters."
         "\nYou should set the 'Milling extra XY size' to a value high enough to have enough plastic to mill. Also, be sure that your piece is firmly glued to the bed.");
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionBool(false));

@@ -685,7 +685,9 @@ std::string CoolingBuffer::apply_layer_cooldown(
     int  bridge_fan_speed = 0;
     bool top_fan_control = false;
     int  top_fan_speed = 0;
-    auto change_extruder_set_fan = [this, layer_id, layer_time, &new_gcode, &fan_speed, &bridge_fan_control, &bridge_fan_speed, &top_fan_control, &top_fan_speed]() {
+    bool ext_peri_fan_control = false;
+    int  ext_peri_fan_speed = 0;
+    auto change_extruder_set_fan = [this, layer_id, layer_time, &new_gcode, &fan_speed, &bridge_fan_control, &bridge_fan_speed, &top_fan_control, &top_fan_speed, &ext_peri_fan_control, &ext_peri_fan_speed]() {
         const FullPrintConfig &config = m_gcodegen.config();
 #define EXTRUDER_CONFIG(OPT) config.OPT.get_at(m_current_extruder)
         int min_fan_speed = EXTRUDER_CONFIG(min_fan_speed);
@@ -706,15 +708,19 @@ std::string CoolingBuffer::apply_layer_cooldown(
                 }
             //}
             bridge_fan_speed   = EXTRUDER_CONFIG(bridge_fan_speed);
-            top_fan_speed      = EXTRUDER_CONFIG(top_fan_speed);
+            top_fan_speed = EXTRUDER_CONFIG(top_fan_speed);
+            ext_peri_fan_speed = EXTRUDER_CONFIG(external_perimeter_fan_speed);
 #undef EXTRUDER_CONFIG
             bridge_fan_control = bridge_fan_speed > fan_speed_new && bridge_fan_speed != 0;
             top_fan_control    = top_fan_speed != fan_speed_new && top_fan_speed != 0;
+            ext_peri_fan_control = ext_peri_fan_speed != fan_speed_new && ext_peri_fan_speed != 0;
         } else {
             bridge_fan_control = false;
             bridge_fan_speed   = 0;
             top_fan_control    = false;
             top_fan_speed      = 0;
+            ext_peri_fan_control = false;
+            ext_peri_fan_speed = 0;
             fan_speed_new      = 0;
         }
         if (fan_speed_new != fan_speed) {
@@ -722,7 +728,8 @@ std::string CoolingBuffer::apply_layer_cooldown(
             new_gcode += m_gcodegen.writer().set_fan(fan_speed);
         }
     };
-
+    //set to know all fan modifiers that can be applied ( TYPE_BRIDGE_FAN_END, TYPE_TOP_FAN_START, TYPE_EXTERNAL_PERIMETER).
+    std::unordered_set<CoolingLine::Type> current_fan_sections;
     const char         *pos               = gcode.c_str();
     int                 current_feedrate  = 0;
     const std::string   toolchange_prefix = m_gcodegen.writer().toolchange_prefix();
@@ -730,6 +737,7 @@ std::string CoolingBuffer::apply_layer_cooldown(
     for (const CoolingLine *line : lines) {
         const char *line_start  = gcode.c_str() + line->line_start;
         const char *line_end    = gcode.c_str() + line->line_end;
+        bool fan_need_set = false;
         if (line_start > pos)
             new_gcode.append(pos, line_start - pos);
         if (line->type & CoolingLine::TYPE_SET_TOOL) {
@@ -740,20 +748,37 @@ std::string CoolingBuffer::apply_layer_cooldown(
             }
             new_gcode.append(line_start, line_end - line_start);
         } else if (line->type & CoolingLine::TYPE_BRIDGE_FAN_START) {
-            if (bridge_fan_control)
-                new_gcode += m_gcodegen.writer().set_fan(bridge_fan_speed, true);
+            if (bridge_fan_control && current_fan_sections.find(CoolingLine::TYPE_BRIDGE_FAN_START) == current_fan_sections.end()) {
+                fan_need_set = true;
+                current_fan_sections.insert(CoolingLine::TYPE_BRIDGE_FAN_START);
+            }
         } else if (line->type & CoolingLine::TYPE_BRIDGE_FAN_END) {
-            if (bridge_fan_control)
-                new_gcode += m_gcodegen.writer().set_fan(fan_speed, true);
+            if (bridge_fan_control || current_fan_sections.find(CoolingLine::TYPE_BRIDGE_FAN_START) != current_fan_sections.end()) {
+                fan_need_set = true;
+                current_fan_sections.erase(CoolingLine::TYPE_BRIDGE_FAN_START);
+            }
         } else if (line->type & CoolingLine::TYPE_TOP_FAN_START) {
-            if (top_fan_control)
-                new_gcode += m_gcodegen.writer().set_fan(top_fan_speed, true);
+            if (top_fan_control && current_fan_sections.find(CoolingLine::TYPE_TOP_FAN_START) == current_fan_sections.end()) {
+                fan_need_set = true;
+                current_fan_sections.insert(CoolingLine::TYPE_TOP_FAN_START);
+            }
         } else if (line->type & CoolingLine::TYPE_TOP_FAN_END) {
-            if (top_fan_control)
-                new_gcode += m_gcodegen.writer().set_fan(fan_speed, true);
+            if (top_fan_control || current_fan_sections.find(CoolingLine::TYPE_TOP_FAN_START) != current_fan_sections.end()) {
+                fan_need_set = true;
+                current_fan_sections.erase(CoolingLine::TYPE_TOP_FAN_START);
+            }
         } else if (line->type & CoolingLine::TYPE_EXTRUDE_END) {
-            // Just remove this comment.
+            if (ext_peri_fan_control || current_fan_sections.find(CoolingLine::TYPE_EXTERNAL_PERIMETER) != current_fan_sections.end()) {
+                fan_need_set = true;
+                current_fan_sections.erase(CoolingLine::TYPE_EXTERNAL_PERIMETER);
+            }
         } else if (line->type & (CoolingLine::TYPE_ADJUSTABLE | CoolingLine::TYPE_EXTERNAL_PERIMETER | CoolingLine::TYPE_WIPE | CoolingLine::TYPE_HAS_F)) {
+            //ext_peri_fan_speed
+            if ((line->type & CoolingLine::TYPE_EXTERNAL_PERIMETER) != 0 && ext_peri_fan_control && current_fan_sections.find(CoolingLine::TYPE_EXTERNAL_PERIMETER) == current_fan_sections.end()) {
+                fan_need_set = true;
+                current_fan_sections.insert(CoolingLine::TYPE_EXTERNAL_PERIMETER);
+            }
+
             // Find the start of a comment, or roll to the end of line.
             const char *end = line_start;
             for (; end < line_end && *end != ';'; ++ end);
@@ -823,6 +848,18 @@ std::string CoolingBuffer::apply_layer_cooldown(
             }
         } else {
             new_gcode.append(line_start, line_end - line_start);
+        }
+        if (fan_need_set) {
+            //choose the speed with highest priority
+            if(current_fan_sections.find(CoolingLine::TYPE_BRIDGE_FAN_START) != current_fan_sections.end())
+                new_gcode += m_gcodegen.writer().set_fan(bridge_fan_speed);
+            else if (current_fan_sections.find(CoolingLine::TYPE_TOP_FAN_START) != current_fan_sections.end())
+                new_gcode += m_gcodegen.writer().set_fan(top_fan_speed);
+            else if (current_fan_sections.find(CoolingLine::TYPE_EXTERNAL_PERIMETER) != current_fan_sections.end())
+                new_gcode += m_gcodegen.writer().set_fan(ext_peri_fan_speed);
+            else
+                new_gcode += m_gcodegen.writer().set_fan(fan_speed);
+            fan_need_set = false;
         }
         pos = line_end;
     }
