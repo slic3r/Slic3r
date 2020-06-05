@@ -492,11 +492,12 @@ public:
     ConfigOptionFloat               brim_offset;
     ConfigOptionBool                clip_multipart_objects;
     ConfigOptionBool                dont_support_bridges;
-    ConfigOptionFloat               elefant_foot_compensation;
     ConfigOptionPercent             external_perimeter_cut_corners;
     ConfigOptionBool                exact_last_layer_height;
     ConfigOptionFloatOrPercent      extrusion_width;
     ConfigOptionFloatOrPercent      first_layer_height;
+    ConfigOptionFloat               first_layer_size_compensation;
+    ConfigOptionFloat               hole_size_compensation;
     ConfigOptionBool                infill_only_where_needed;
     // Force the generation of solid shells between adjacent materials/volumes.
     ConfigOptionBool                interface_shells;
@@ -538,7 +539,7 @@ public:
     ConfigOptionBool                support_material_with_sheath;
     ConfigOptionFloatOrPercent      support_material_xy_spacing;
     ConfigOptionFloat               xy_size_compensation;
-    ConfigOptionFloat               hole_size_compensation;
+    ConfigOptionFloat               xy_inner_size_compensation;
     ConfigOptionBool                wipe_into_objects;
 
 protected:
@@ -552,11 +553,12 @@ protected:
         OPT_PTR(brim_offset);
         OPT_PTR(clip_multipart_objects);
         OPT_PTR(dont_support_bridges);
-        OPT_PTR(elefant_foot_compensation);
         OPT_PTR(external_perimeter_cut_corners);
         OPT_PTR(exact_last_layer_height);
         OPT_PTR(extrusion_width);
+        OPT_PTR(hole_size_compensation);
         OPT_PTR(first_layer_height);
+        OPT_PTR(first_layer_size_compensation);
         OPT_PTR(infill_only_where_needed);
         OPT_PTR(interface_shells);
         OPT_PTR(layer_height);
@@ -592,7 +594,7 @@ protected:
         OPT_PTR(support_material_threshold);
         OPT_PTR(support_material_with_sheath);
         OPT_PTR(xy_size_compensation);
-        OPT_PTR(hole_size_compensation);
+        OPT_PTR(xy_inner_size_compensation);
         OPT_PTR(wipe_into_objects);
     }
 };
@@ -1477,8 +1479,8 @@ public:
     ConfigOptionBool                        display_mirror_y;
     ConfigOptionFloats                      relative_correction;
     ConfigOptionFloat                       absolute_correction;
-    ConfigOptionFloat                       elefant_foot_compensation;
-    ConfigOptionFloat                       elefant_foot_min_width;
+    ConfigOptionFloat                       first_layer_size_compensation;
+    ConfigOptionFloat                       elephant_foot_min_width;
     ConfigOptionFloat                       gamma_correction;
     ConfigOptionFloat                       fast_tilt_time;
     ConfigOptionFloat                       slow_tilt_time;
@@ -1502,8 +1504,8 @@ protected:
         OPT_PTR(display_orientation);
         OPT_PTR(relative_correction);
         OPT_PTR(absolute_correction);
-        OPT_PTR(elefant_foot_compensation);
-        OPT_PTR(elefant_foot_min_width);
+        OPT_PTR(first_layer_size_compensation);
+        OPT_PTR(elephant_foot_min_width);
         OPT_PTR(gamma_correction);
         OPT_PTR(fast_tilt_time);
         OPT_PTR(slow_tilt_time);

@@ -85,8 +85,8 @@ void SLAPrint::Steps::apply_printer_corrections(SLAPrintObject &po, SliceOrigin 
     if (o == soSupport && !po.m_supportdata) return;
     
     auto faded_lyrs = size_t(po.m_config.faded_layers.getInt());
-    double min_w = m_print->m_printer_config.elefant_foot_min_width.getFloat() / 2.;
-    double start_efc = m_print->m_printer_config.elefant_foot_compensation.getFloat();
+    double min_w = m_print->m_printer_config.elephant_foot_min_width.getFloat() / 2.;
+    double start_efc = m_print->m_printer_config.first_layer_size_compensation.getFloat();
     
     double doffs = m_print->m_printer_config.absolute_correction.getFloat();
     coord_t clpr_offs = scaled(doffs);

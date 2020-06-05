@@ -80,7 +80,8 @@ group:label_width$8:Modifying slices
 	setting:hole_to_polyhole
 	line:XY compensation
 		setting:width$6:xy_size_compensation
-		setting:width$6:elefant_foot_compensation
+		setting:width$6:xy_inner_size_compensation
+		setting:width$6:first_layer_size_compensation
 		setting:width$6:hole_size_compensation
 	end_line
 group:Other

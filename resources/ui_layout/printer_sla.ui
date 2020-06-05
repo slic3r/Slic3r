@@ -28,8 +28,8 @@ group:Corrections
 		setting:label$Z:id$1:relative_correction
 	end_line
 	setting:absolute_correction
-	setting:elefant_foot_compensation
-	setting:elefant_foot_min_width
+	setting:first_layer_size_compensation
+	setting:elephant_foot_min_width
 	setting:gamma_correction
 group:Exposure
 	setting:min_exposure_time

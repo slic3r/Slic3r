@@ -127,16 +127,6 @@ void PrintConfigDef::init_common_params()
                    "If left blank, the default OS CA certificate repository is used.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionString(""));
-    
-    def = this->add("elefant_foot_compensation", coFloat);
-    def->label = L("First layer");
-    def->full_label = L("XY First layer compensation");
-    def->category = OptionCategory::slicing;
-    def->tooltip = L("The first layer will be grown / shrunk in the XY plane by the configured value "
-                   "to compensate for the 1st layer squish aka an Elephant Foot effect. (should be negative = inwards)");
-    def->sidetext = L("mm");
-    def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloat(0));
 
 }
 
@@ -1398,6 +1388,16 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionPercent(100));
+
+    def = this->add("first_layer_size_compensation", coFloat);
+    def->label = L("First layer");
+    def->full_label = L("XY First layer compensation");
+    def->category = OptionCategory::slicing;
+    def->tooltip = L("The first layer will be grown / shrunk in the XY plane by the configured value "
+        "to compensate for the 1st layer squish aka an Elephant Foot effect. (should be negative = inwards)");
+    def->sidetext = L("mm");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("fill_smooth_width", coFloatOrPercent);
     def->label = L("width");
@@ -3414,12 +3414,23 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(10.));
 
     def = this->add("xy_size_compensation", coFloat);
-    def->label = L("All layers");
-    def->full_label = L("XY size compensation");
+    def->label = L("Outter");
+    def->full_label = L("Outter XY size compensation");
     def->category = OptionCategory::slicing;
     def->tooltip = L("The object will be grown/shrunk in the XY plane by the configured value "
-                   "(negative = inwards, positive = outwards). This might be useful "
-                   "for fine-tuning sizes.");
+        "(negative = inwards, positive = outwards). This might be useful for fine-tuning sizes."
+        "\nThis one only applies to the 'exterior' shell of the object");
+    def->sidetext = L("mm");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0));
+
+    def = this->add("xy_inner_size_compensation", coFloat);
+    def->label = L("Inner");
+    def->full_label = L("Inner XY size compensation");
+    def->category = OptionCategory::slicing;
+    def->tooltip = L("The object will be grown/shrunk in the XY plane by the configured value "
+        "(negative = inwards, positive = outwards). This might be useful for fine-tuning sizes."
+        "\nThis one only applies to the 'inner' shell of the object");
     def->sidetext = L("mm");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0));
@@ -3430,7 +3441,8 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::slicing;
     def->tooltip = L("The convex holes will be grown / shrunk in the XY plane by the configured value"
         " (negative = inwards, positive = outwards, should be negative as the holes are always a bit smaller irl)."
-        " This might be useful for fine-tuning hole sizes.");
+        " This might be useful for fine-tuning hole sizes."
+        "\nThis setting behave the same as 'Inner XY size compensation' but only for convex shapes. It's added to 'Inner XY size compensation', it does not replace it. ");
     def->sidetext = L("mm");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0));
@@ -3752,7 +3764,7 @@ void PrintConfigDef::init_sla_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0.0));
     
-    def = this->add("elefant_foot_min_width", coFloat);
+    def = this->add("elephant_foot_min_width", coFloat);
     def->label = L("Elephant foot minimum width");
     def->category = OptionCategory::slicing;
     def->tooltip = L("Minimum width of features to maintain when doing elephant foot compensation.");
@@ -4320,6 +4332,11 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         opt_key = "printhost_cafile";
     } else if (opt_key == "octoprint_apikey") {
         opt_key = "printhost_apikey";
+    } else if (opt_key == "elefant_foot_compensation") {
+        opt_key = "first_layer_size_compensation";
+        float v = boost::lexical_cast<float>(value);
+        if (v != 0)
+            value = boost::lexical_cast<std::string>(-v);
     }
 
     // Ignore the following obsolete configuration keys:

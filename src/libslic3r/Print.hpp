@@ -227,7 +227,8 @@ private:
     void generate_support_material();
 
     void _slice(const std::vector<coordf_t> &layer_height_profile);
-    ExPolygons _offset_holes(double hole_delta, const ExPolygons &input) const;
+    ExPolygons _shrink_contour_holes(double contour_delta, double default_delta, double convex_delta, const ExPolygons& input) const;
+    ExPolygons _grow_contour_holes(double contour_delta, double default_delta, double convex_delta, const ExPolygons& input) const;
     void _transform_hole_to_polyholes();
     ExPolygons _smooth_curves(const ExPolygons &input, const PrintRegionConfig &conf) const;
     std::string _fix_slicing_errors();

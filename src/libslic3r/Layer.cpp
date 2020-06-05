@@ -67,7 +67,7 @@ void Layer::make_slices()
 // Merge typed slices into untyped slices. This method is used to revert the effects of detect_surfaces_type() called for posPrepareInfill.
 void Layer::merge_slices()
 {
-    if (m_regions.size() == 1 && (this->id() > 0 || this->object()->config().elefant_foot_compensation.value == 0)) {
+    if (m_regions.size() == 1 && (this->id() > 0 || this->object()->config().first_layer_size_compensation.value == 0)) {
         // Optimization, also more robust. Don't merge classified pieces of layerm->slices,
         // but use the non-split islands of a layer. For a single region print, these shall be equal.
         // Don't use this optimization on 1st layer with Elephant foot compensation applied, as this->lslices are uncompensated,

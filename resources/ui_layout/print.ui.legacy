@@ -204,14 +204,8 @@ group:Filtering
 	setting:model_precision
 	setting:slice_closing_radius
 group:Modifying slices
-	line:Curve smoothing
-		setting:curve_smoothing_precision
-		setting:curve_smoothing_angle_convex
-		setting:curve_smoothing_angle_concave
-		setting:curve_smoothing_cutoff_dist
-	end_line
 	setting:full_label:xy_size_compensation
-	setting:full_label:elefant_foot_compensation
+	setting:full_label:first_layer_size_compensation
 	setting:full_label:hole_size_compensation
 	setting:hole_to_polyhole
 group:Other
