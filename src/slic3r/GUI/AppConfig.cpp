@@ -56,6 +56,9 @@ void AppConfig::set_defaults()
     if (get("show_incompatible_presets").empty())
         set("show_incompatible_presets", "0");
 
+    if (get("freecad_path").empty())
+        set("freecad_path", ".");
+
     if (get("version_check").empty())
         set("version_check", "1");
     if (get("preset_update").empty())

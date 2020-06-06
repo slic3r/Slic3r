@@ -138,6 +138,7 @@ public:
     void            bridge_tuning_dialog();
     void            over_bridge_dialog();
     void            calibration_cube_dialog();
+    void            freecad_script_dialog();
     //void            support_tuning(); //have to do multiple, in a submenu
     void            load_project(wxWindow *parent, wxString& input_file) const;
     void            import_model(wxWindow *parent, wxArrayString& input_files) const;

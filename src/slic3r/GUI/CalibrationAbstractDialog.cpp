@@ -66,6 +66,7 @@ void CalibrationAbstractDialog::create(std::string html_path, wxSize dialog_size
 }
 
 void CalibrationAbstractDialog::closeMe(wxCommandEvent& event_args) {
+    this->gui_app->change_calibration_dialog(this, nullptr);
     this->Destroy();
 }
 

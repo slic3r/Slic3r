@@ -777,7 +777,14 @@ void MainFrame::init_menubar()
             [this](wxCommandEvent&) { wxGetApp().over_bridge_dialog(); });
         append_menu_item(objectsMenu, wxID_ANY, _(L("Calibration cube")), _(L("Print a calibration cube, for various calibration goals.")),
             [this](wxCommandEvent&) { wxGetApp().calibration_cube_dialog(); });
-        
+    }
+
+    // objects menu
+    auto generationMenu = new wxMenu();
+    {
+        append_menu_item(generationMenu, wxID_ANY, _(L("FreeCad python script")), _(L("Create an object by writing little easy script.")),
+            [this](wxCommandEvent&) { wxGetApp().freecad_script_dialog(); });
+
     }
 
     // Help menu
@@ -831,6 +838,7 @@ void MainFrame::init_menubar()
         // Add additional menus from C++
         wxGetApp().add_config_menu(menubar);
     menubar->Append(objectsMenu, _(L("C&alibration")));
+    menubar->Append(generationMenu, _(L("&Generate")));
     menubar->Append(helpMenu, _(L("&Help")));
         SetMenuBar(menubar);
 

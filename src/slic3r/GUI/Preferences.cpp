@@ -100,6 +100,19 @@ void PreferencesDialog::build()
 	option = Option (def,"show_incompatible_presets");
 	m_optgroup_general->append_single_option_line(option);
 
+	m_optgroup_paths = std::make_shared<ConfigOptionsGroup>(this, _(L("General")));
+	m_optgroup_paths->title_width = 10;
+	m_optgroup_paths->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
+		m_values[opt_key] = boost::any_cast<std::string>(value);
+	};
+	def.label = L("FreeCAD path");
+	def.type = coString;
+	def.tooltip = L("If it pont to a valid freecad instance, you can use the built-in script to generate quickly things in a scripted python.");
+	def.set_default_value(new ConfigOptionString{ app_config->get("freecad_path") });
+	option = Option(def, "freecad_path");
+	option.opt.full_width = true;
+	m_optgroup_paths->append_single_option_line(option);
+
 #if __APPLE__
 	def.label = L("Use Retina resolution for the 3D scene");
 	def.type = coBool;
@@ -152,7 +165,8 @@ void PreferencesDialog::build()
 
 	auto sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(m_optgroup_general->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
-	sizer->Add(m_optgroup_camera->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
+	sizer->Add(m_optgroup_paths->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
+	sizer->Add(m_optgroup_camera->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10); 
 	sizer->Add(m_optgroup_gui->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
 
     SetFont(wxGetApp().normal_font());
