@@ -2505,6 +2505,8 @@ ExPolygons PrintObject::_shrink_contour_holes(double contour_delta, double defau
                 }
                 continue;
             }
+        } else {
+            contours.push_back(ex_poly.contour);
         }
     }
     return diff_ex(union_(contours), union_(holes));
