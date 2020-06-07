@@ -260,7 +260,7 @@ std::string GCodeWriter::toolchange_prefix() const
 {
     return FLAVOR_IS(gcfMakerWare) ? "M135 T" :
            FLAVOR_IS(gcfSailfish) ? "M108 T" :
-           FLAVOR_IS(gcfKlipper) ? "ACTIVATE_EXTRUDER EXTRUDER=extruder" :
+           FLAVOR_IS(gcfKlipper) ? "ACTIVATE_EXTRUDER EXTRUDER=" :
            "T";
 }
 
@@ -292,7 +292,13 @@ std::string GCodeWriter::toolchange(unsigned int tool_id)
     // if we are running a single-extruder setup, just set the extruder and return nothing
     std::ostringstream gcode;
     if (this->multiple_extruders) {
-        gcode << this->toolchange_prefix() << tool_id;
+        if (FLAVOR_IS(gcfKlipper)) {
+            gcode << this->toolchange_prefix() << "extruder";
+            if (tool_id > 0)
+                gcode << tool_id;
+        } else {
+            gcode << this->toolchange_prefix() << tool_id;
+        }
         if (this->config.gcode_comments)
             gcode << " ; change extruder";
         gcode << "\n";

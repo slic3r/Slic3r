@@ -301,6 +301,19 @@ void GCodeAnalyzer::_process_gcode_line(GCodeReader&, const GCodeReader::GCodeLi
                 break;
             }
         }
+        if (this->m_gcode_flavor == GCodeFlavor::gcfKlipper) {
+            if (cmd == "ACTIVATE_EXTRUDER") {
+                std::string rawline = line.raw();
+                std::string trsf;
+                while (rawline.back() >= '0' && rawline.back() <= '9') {
+                    trsf = rawline.back() + trsf;
+                    rawline.resize(rawline.size() - 1);
+                }
+                if (trsf.empty())
+                    trsf = "0";
+                _processT("T"+ trsf);
+            }
+        }
     }
 
     // puts the line back into the gcode
