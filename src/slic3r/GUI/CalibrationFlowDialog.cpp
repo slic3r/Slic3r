@@ -44,7 +44,7 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
 
 
     assert(objs_idx.size() == 5);
-    const DynamicPrintConfig* printConfig = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();
+    const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();
     const DynamicPrintConfig* printerConfig = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
     
     /// --- scale ---
@@ -54,7 +54,7 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
     float nozzle_diameter = nozzle_diameter_config->values[0];
     float xyScale = nozzle_diameter / 0.4;
     //scale z to have 6 layers
-    const ConfigOptionFloatOrPercent* first_layer_height_setting = printConfig->option<ConfigOptionFloatOrPercent>("first_layer_height");
+    const ConfigOptionFloatOrPercent* first_layer_height_setting = print_config->option<ConfigOptionFloatOrPercent>("first_layer_height");
     double first_layer_height = first_layer_height_setting->get_abs_value(nozzle_diameter);
     double layer_height = nozzle_diameter / 2.;
     first_layer_height = std::max(first_layer_height, nozzle_diameter / 2.);
@@ -91,28 +91,34 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
     }
 
     /// --- translate ---;
-    const ConfigOptionFloat* extruder_clearance_radius = printConfig->option<ConfigOptionFloat>("extruder_clearance_radius");
+    const ConfigOptionFloat* extruder_clearance_radius = print_config->option<ConfigOptionFloat>("extruder_clearance_radius");
     const ConfigOptionPoints* bed_shape = printerConfig->option<ConfigOptionPoints>("bed_shape");
+    const double brim_width = nozzle_diameter * 3.5;
     Vec2d bed_size = BoundingBoxf(bed_shape->values).size();
     Vec2d bed_min = BoundingBoxf(bed_shape->values).min;
-    float offsetx = 5 + extruder_clearance_radius->value + 10 * xyScale;
-    float offsety = 5 + extruder_clearance_radius->value + 10 * xyScale;
-    model.objects[objs_idx[0]]->translate({ bed_min.x() + bed_size.x() / 2 - offsetx, bed_min.y() + bed_size.y() / 2 - offsety * 1.5, 0 });
-    model.objects[objs_idx[1]]->translate({ bed_min.x() + bed_size.x() / 2 - offsetx, bed_min.y() + bed_size.y() / 2                , 0 });
-    model.objects[objs_idx[2]]->translate({ bed_min.x() + bed_size.x() / 2 - offsetx, bed_min.y() + bed_size.y() / 2 + offsety * 1.5, 0 });
-    model.objects[objs_idx[3]]->translate({ bed_min.x() + bed_size.x() / 2 + offsetx, bed_min.y() + bed_size.y() / 2 - offsety      , 0 });
-    model.objects[objs_idx[4]]->translate({ bed_min.x() + bed_size.x() / 2 + offsetx, bed_min.y() + bed_size.y() / 2 + offsety      , 0 });
+    float offsetx = 3 + 20 * xyScale + extruder_clearance_radius->value + brim_width + (brim_width > extruder_clearance_radius->value ? brim_width - extruder_clearance_radius->value : 0);
+    float offsety = 3 + 20 * xyScale + extruder_clearance_radius->value + brim_width + (brim_width > extruder_clearance_radius->value ? brim_width - extruder_clearance_radius->value : 0);
+    model.objects[objs_idx[0]]->translate({ bed_min.x() + bed_size.x() / 2 - offsetx / 2, bed_min.y() + bed_size.y() / 2 - offsety, 0 });
+    model.objects[objs_idx[1]]->translate({ bed_min.x() + bed_size.x() / 2 - offsetx / 2, bed_min.y() + bed_size.y() / 2          , 0 });
+    model.objects[objs_idx[2]]->translate({ bed_min.x() + bed_size.x() / 2 - offsetx / 2, bed_min.y() + bed_size.y() / 2 + offsety, 0 });
+    model.objects[objs_idx[3]]->translate({ bed_min.x() + bed_size.x() / 2 + offsetx / 2, bed_min.y() + bed_size.y() / 2 - offsety, 0 });
+    model.objects[objs_idx[4]]->translate({ bed_min.x() + bed_size.x() / 2 + offsetx / 2, bed_min.y() + bed_size.y() / 2 + offsety, 0 });
     //TODO: if not enough space, forget about complete_objects
 
 
     /// --- main config, please modify object config when possible ---
-    DynamicPrintConfig new_print_config = *printConfig; //make a copy
+    DynamicPrintConfig new_print_config = *print_config; //make a copy
     new_print_config.set_key_value("complete_objects", new ConfigOptionBool(true));
+    //if skirt, use only one
+    if (print_config->option<ConfigOptionInt>("skirts")->getInt() > 0 && print_config->option<ConfigOptionInt>("skirt_height")->getInt() > 0) {
+        new_print_config.set_key_value("complete_objects_one_skirt", new ConfigOptionBool(true));
+    }
+
 
     /// --- custom config ---
     for (size_t i = 0; i < 5; i++) {
         //brim to have some time to build up pressure in the nozzle
-        model.objects[objs_idx[i]]->config.set_key_value("brim_width", new ConfigOptionFloat(nozzle_diameter * 3.5));
+        model.objects[objs_idx[i]]->config.set_key_value("brim_width", new ConfigOptionFloat(brim_width));
         model.objects[objs_idx[i]]->config.set_key_value("brim_ears", new ConfigOptionBool(false));
         model.objects[objs_idx[i]]->config.set_key_value("perimeters", new ConfigOptionInt(3));
         model.objects[objs_idx[i]]->config.set_key_value("only_one_perimeter_top", new ConfigOptionBool(true));

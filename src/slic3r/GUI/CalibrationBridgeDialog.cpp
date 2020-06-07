@@ -91,9 +91,10 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     /// --- translate ---;
     const ConfigOptionFloat* extruder_clearance_radius = print_config->option<ConfigOptionFloat>("extruder_clearance_radius");
     const ConfigOptionPoints* bed_shape = printer_config->option<ConfigOptionPoints>("bed_shape");
+    const float brim_width = std::max(print_config->option<ConfigOptionFloat>("brim_width")->value, nozzle_diameter * 5.);
     Vec2d bed_size = BoundingBoxf(bed_shape->values).size();
     Vec2d bed_min = BoundingBoxf(bed_shape->values).min;
-    float offsety = 5 + extruder_clearance_radius->value + 10;
+    float offsety = 2 + 10 * 1 + extruder_clearance_radius->value + brim_width + (brim_width> extruder_clearance_radius->value ? brim_width - extruder_clearance_radius->value :0);
     model.objects[objs_idx[0]]->translate({ bed_min.x() + bed_size.x() / 2, bed_min.y() + bed_size.y() / 2, 0 });
     for (int i = 1; i < nb_items; i++) {
         model.objects[objs_idx[i]]->translate({ bed_min.x() + bed_size.x() / 2, bed_min.y() + bed_size.y() / 2 + (i%2==0?-1:1) * offsety * ((i+1)/2), 0 });
@@ -104,10 +105,14 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     /// --- main config, please modify object config when possible ---
     DynamicPrintConfig new_print_config = *print_config; //make a copy
     new_print_config.set_key_value("complete_objects", new ConfigOptionBool(true));
+    //if skirt, use only one
+    if (print_config->option<ConfigOptionInt>("skirts")->getInt() > 0 && print_config->option<ConfigOptionInt>("skirt_height")->getInt() > 0) {
+        new_print_config.set_key_value("complete_objects_one_skirt", new ConfigOptionBool(true));
+    }
 
     /// --- custom config ---
     for (size_t i = 0; i < nb_items; i++) {
-        model.objects[objs_idx[i]]->config.set_key_value("brim_width", new ConfigOptionFloat(std::max (print_config->option<ConfigOptionFloat>("brim_width")->value, nozzle_diameter * 5.)));
+        model.objects[objs_idx[i]]->config.set_key_value("brim_width", new ConfigOptionFloat(brim_width));
         model.objects[objs_idx[i]]->config.set_key_value("brim_ears", new ConfigOptionBool(false));
         model.objects[objs_idx[i]]->config.set_key_value("perimeters", new ConfigOptionInt(2));
         model.objects[objs_idx[i]]->config.set_key_value("bottom_solid_layers", new ConfigOptionInt(2));
