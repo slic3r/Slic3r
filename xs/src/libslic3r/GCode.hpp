@@ -137,9 +137,13 @@ class GCode {
     std::string unretract();
     std::string set_extruder(unsigned int extruder_id);
     Pointf point_to_gcode(const Point &point);
+    Pointf3 get_cog();
+    std::string cog_stats();
     
     private:
     Point _last_pos;
+    Pointf3 _cog;
+    float _extrusion_length;
     bool _last_pos_defined;
     std::string _extrude(ExtrusionPath path, std::string description = "", double speed = -1);
 };

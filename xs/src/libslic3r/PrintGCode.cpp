@@ -320,6 +320,8 @@ PrintGCode::output()
         fh << _gcodegen.writer.set_bed_temperature(0, 0);
     }
 
+    fh << _gcodegen.cog_stats();
+
     // Get filament stats
     _print.filament_stats.clear();
     _print.total_used_filament = 0.0;
