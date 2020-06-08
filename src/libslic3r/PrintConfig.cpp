@@ -2088,7 +2088,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionString(""));
 
     def = this->add("print_machine_envelope", coBool);
-    def->label = L("Print machine envelope in gcode");
+    def->label = L("Enable Limits");
     def->category = OptionCategory::limits;
     def->tooltip = L("Slic3r can add M201 M203 M202 M204 and M205 gcodes to pass the machine limits defined here to the firmware."
             "Gcodes printed will depends of the firmware selected (please Report an issue if you found something wrong)."
