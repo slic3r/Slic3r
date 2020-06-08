@@ -323,6 +323,7 @@ sub export {
 
     print $fh $gcodegen->writer->update_progress($gcodegen->layer_count, $gcodegen->layer_count, 1);  # 100%
     print $fh $gcodegen->writer->postamble;
+    print $fh $gcodegen->cog_stats;
     
     # get filament stats
     $self->print->clear_filament_stats;

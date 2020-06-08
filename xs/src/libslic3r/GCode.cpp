@@ -575,6 +575,7 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
     std::string comment = ";_EXTRUDE_SET_SPEED";
     if (path.role == erExternalPerimeter) comment += ";_EXTERNAL_PERIMETER";
     gcode += this->writer.set_speed(F, "", this->enable_cooling_markers ? comment : "");
+    Pointf start;
     double path_length = 0;
     {
         std::string comment = this->config.gcode_comments ? description : "";
@@ -582,7 +583,12 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
         for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
             const double line_length = line->length() * SCALING_FACTOR;
             path_length += line_length;
-            
+
+            this->_cog.x += (this->point_to_gcode(line->a).x + this->point_to_gcode(line->b).x)/2 * line_length;
+            this->_cog.y += (this->point_to_gcode(line->a).y + this->point_to_gcode(line->b).y)/2 * line_length;
+            this->_cog.z += this->writer.get_position().z * line_length;
+            this->_extrusion_length += line_length;
+
             gcode += this->writer.extrude_to_xy(
                 this->point_to_gcode(line->b),
                 e_per_mm * line_length,
@@ -773,5 +779,27 @@ GCode::point_to_gcode(const Point &point)
         unscale(point.y) + this->origin.y - extruder_offset.y
     );
 }
+}
 
+
+Pointf3
+GCode::get_cog() {
+    Pointf3 result_cog;
+
+    result_cog.x = this->_cog.x/this->_extrusion_length;
+    result_cog.y = this->_cog.y/this->_extrusion_length;
+    result_cog.z = this->_cog.z/this->_extrusion_length;
+
+    return result_cog;
+}
+
+std::string
+GCode::cog_stats() {
+    std::string gcode;
+
+    gcode += "; cog_x = " + std::to_string(this->_cog.x/this->_extrusion_length) + "\n";
+    gcode += "; cog_y = " + std::to_string(this->_cog.y/this->_extrusion_length) + "\n";
+    gcode += "; cog_z = " + std::to_string(this->_cog.z/this->_extrusion_length) + "\n";
+
+    return gcode;
 }

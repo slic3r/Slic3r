@@ -195,6 +195,8 @@
     std::string retract(bool toolchange = false);
     std::string unretract();
     std::string set_extruder(unsigned int extruder_id);
+    Clone<Pointf3> get_cog();
+    std::string cog_stats();
     Clone<Pointf> point_to_gcode(Point* point)
         %code{% RETVAL = THIS->point_to_gcode(*point); %};
 
