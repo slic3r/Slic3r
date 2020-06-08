@@ -619,7 +619,7 @@ GCode::_extrude(ExtrusionPath path, std::string description, double speed)
 std::string
 GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
 {    
-    /*  Define the travel move as a line between current position and the taget point.
+    /*  Define the travel move as a line between current position and the target point.
         This is expressed in print coordinates, so it will need to be translated by
         this->origin in order to get G-code coordinates.  */
     Polyline travel;

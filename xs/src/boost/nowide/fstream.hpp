@@ -18,7 +18,7 @@
 
 namespace boost {
 ///
-/// \brief This namespace includes implementation of the standard library functios
+/// \brief This namespace includes implementation of the standard library functions
 /// such that they accept UTF-8 strings on Windows. On other platforms it is just an alias
 /// of std namespace (i.e. not on Windows)
 ///

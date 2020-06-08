@@ -13,8 +13,8 @@ our $DEFAULT_COLORSCHEME   = 1;
 our $SOLID_BACKGROUNDCOLOR = 0;
 our @SELECTED_COLOR   = (0, 1, 0);
 our @HOVER_COLOR      = (0.4, 0.9, 0);           # Hover over Model
-our @TOP_COLOR        = (10/255,98/255,144/255); # TOP Backgroud color
-our @BOTTOM_COLOR     = (0,0,0);                 # BOTTOM Backgroud color
+our @TOP_COLOR        = (10/255,98/255,144/255); # TOP Background color
+our @BOTTOM_COLOR     = (0,0,0);                 # BOTTOM Background color
 our @BACKGROUND_COLOR = @TOP_COLOR;              # SOLID background color
 our @GRID_COLOR       = (0.2, 0.2, 0.2, 0.4);    # Grid color
 our @GROUND_COLOR     = (0.8, 0.6, 0.5, 0.4);    # Ground or Plate color
@@ -130,7 +130,7 @@ sub getSolarized { # add this name to Preferences.pm
     @BED_SKIRT        = map { ceil($_ * 255) } @COLOR_BASE01;     # Brim/Skirt
     @BED_CLEARANCE    = map { ceil($_ * 255) } @COLOR_BLUE;       # not sure what that does
     @BED_DARK         = map { ceil($_ * 255) } @COLOR_BASE01;     # not sure what that does
-    @BACKGROUND255    = map { ceil($_ * 255) } @BACKGROUND_COLOR; # Backgroud color, this time RGB
+    @BACKGROUND255    = map { ceil($_ * 255) } @BACKGROUND_COLOR; # Background color, this time RGB
     
     # 2DToolpaths.pm colors : LAYERS Tab
     @TOOL_DARK        = @COLOR_BASE01;  # Brim/Skirt

@@ -145,14 +145,14 @@ protected:
                 r=std::codecvt_base::partial;
                 break;
             }
-            // Normal codepoints go direcly to stream
+            // Normal codepoints go directly to stream
             if(ch <= 0xFFFF) {
                 *to++=ch;
             }
             else {
                 // for  other codepoints we do following
                 //
-                // 1. We can't consume our input as we may find ourselfs
+                // 1. We can't consume our input as we may find ourselves
                 //    in state where all input consumed but not all output written,i.e. only
                 //    1st pair is written
                 // 2. We only write first pair and mark this in the state, we also revert back

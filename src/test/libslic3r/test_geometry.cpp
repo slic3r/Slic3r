@@ -154,7 +154,7 @@ TEST_CASE("Bounding boxes are scaled appropriately"){
 }
 
 
-TEST_CASE("Offseting a line generates a polygon correctly"){
+TEST_CASE("Offsetting a line generates a polygon correctly"){
     auto line = Line(Point(10,10), Point(20,10));
     Polyline tmp(line);
     Polygon area = offset(tmp,5).at(0);

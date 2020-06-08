@@ -125,7 +125,7 @@ struct AMFParserContext
     std::vector<AMFNodeType> m_path;
     // Current object allocated for an amf/object XML subtree.
     ModelObject             *m_object;
-    // Map from obect name to object idx & instances.
+    // Map from object name to object idx & instances.
     std::map<std::string, Object> m_object_instances_map;
     // Vertices parsed for the current m_object.
     std::vector<float>       m_object_vertices;

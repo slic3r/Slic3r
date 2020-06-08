@@ -96,7 +96,7 @@ void Preview3D::load_print() {
         std::sort(layers_z.begin(),layers_z.end());
         slider->SetRange(0, layers_z.size()-1);
         z_idx = slider->GetValue();
-        // If invalide z_idx,  move the slider to the top
+        // If invalid z_idx,  move the slider to the top
         if (z_idx >= layers_z.size() || slider->GetValue() == 0) {
             slider->SetValue(layers_z.size()-1);
             //$z_idx = @{$self->{layer_z}} ? -1 : undef;

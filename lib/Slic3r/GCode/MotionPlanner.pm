@@ -14,7 +14,7 @@ use Slic3r::Geometry::Clipper qw(offset offset_ex diff_ex intersection_pl);
 has '_inner_margin' => (is => 'ro', default => sub { scale 1 });
 has '_outer_margin' => (is => 'ro', default => sub { scale 2 });
 
-# this factor weigths the crossing of a perimeter 
+# this factor weighs the crossing of a perimeter 
 # vs. the alternative path. a value of 5 means that
 # a perimeter will be crossed if the alternative path
 # is >= 5x the length of the straight line we could

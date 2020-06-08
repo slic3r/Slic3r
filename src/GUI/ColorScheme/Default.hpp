@@ -9,8 +9,8 @@ public:
     const bool SOLID_BACKGROUNDCOLOR() const { return false; };
     const wxColour SELECTED_COLOR() const { return wxColour(0, 255, 0); };
     const wxColour HOVER_COLOR() const { return wxColour(255*0.4, 255*0.9, 0); };            //<Hover over Model
-    const wxColour TOP_COLOR() const { return wxColour(10,98,144); };    //<TOP Backgroud color
-    const wxColour BOTTOM_COLOR() const { return wxColour(0,0,0); };                 //<BOTTOM Backgroud color
+    const wxColour TOP_COLOR() const { return wxColour(10,98,144); };    //<TOP Background color
+    const wxColour BOTTOM_COLOR() const { return wxColour(0,0,0); };                 //<BOTTOM Background color
     const wxColour BACKGROUND_COLOR() const {return TOP_COLOR();}                      //< SOLID background color
     const wxColour GRID_COLOR() const { return wxColour(255*0.2, 255*0.2, 255*0.2, 255*0.4); };      //<Grid color
     const wxColour GROUND_COLOR() const { return wxColour(255*0.8, 255*0.6, 255*0.5, 255*0.4); };    //<Ground or Plate color
