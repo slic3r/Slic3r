@@ -1500,7 +1500,7 @@ sub reset {
     my $current_model = $self->{model}->clone;
 
     if (!defined $dont_push) {
-        # Get the identifiers of the curent model objects.
+        # Get the identifiers of the current model objects.
         my $objects_identifiers = [];
         for (my $i = 0; $i <= $#{$self->{objects}}; $i++){
             push @{$objects_identifiers}, $self->{objects}->[$i]->identifier;
@@ -1929,7 +1929,7 @@ sub split_object {
     
     $self->pause_background_process;
 
-    # Save the curent model object for undo/redo operataions.
+    # Save the current model object for undo/redo operataions.
     my $org_object_model = Slic3r::Model->new;
     $org_object_model->add_object($current_model_object);
 
@@ -1955,7 +1955,7 @@ sub split_object {
     # remove the original object before spawning the object_loaded event, otherwise 
     # we'll pass the wrong $obj_idx to it (which won't be recognized after the
     # thumbnail thread returns)
-    $self->remove($obj_idx, 'true'); # Don't push to the undo stack it's considered a split opeation not a remove one.
+    $self->remove($obj_idx, 'true'); # Don't push to the undo stack it's considered a split operation not a remove one.
     $current_object = $obj_idx = undef;
 
     # Save the object identifiers used in undo/redo operations.

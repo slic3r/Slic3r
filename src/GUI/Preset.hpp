@@ -106,7 +106,7 @@ public:
 private:
 
     /// store to keep config options for this preset
-    /// This is intented to be a "pristine" copy from the underlying
+    /// This is intended to be a "pristine" copy from the underlying
     /// file store.
     config_ptr  _config { nullptr };
 

@@ -1603,7 +1603,7 @@ TriangleMeshSlicer<A>::TriangleMeshSlicer(TriangleMesh* _mesh) : mesh(_mesh), v_
     
     {
         t_edges edges;
-        // reserve() instad of resize() because otherwise we couldn't read .size() below to assign edge_idx
+        // reserve() instead of resize() because otherwise we couldn't read .size() below to assign edge_idx
         edges.reserve(this->mesh->stl.stats.number_of_facets * 3);  // number of edges = number of facets * 3
         t_edges_map edges_map;
         for (int facet_idx = 0; facet_idx < this->mesh->stl.stats.number_of_facets; facet_idx++) {

@@ -49,7 +49,7 @@ const double EPSILON = 1e-12;
 enum Orientation { CW, CCW, COLLINEAR };
 
 /**
- * Forumla to calculate signed area<br>
+ * Formula to calculate signed area<br>
  * Positive if CCW<br>
  * Negative if CW<br>
  * 0 if collinear<br>

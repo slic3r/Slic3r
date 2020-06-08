@@ -105,7 +105,7 @@ template<> inline t_config_enum_values ConfigOptionEnum<SeamPosition>::get_enum_
     return keys_map;
 }
 
-// Defines each and every confiuration option of Slic3r, including the properties of the GUI dialogs.
+// Defines each and every configuration option of Slic3r, including the properties of the GUI dialogs.
 // Does not store the actual values, but defines default values.
 class PrintConfigDef : public ConfigDef
 {

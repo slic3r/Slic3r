@@ -273,7 +273,7 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
                 //assert polyline.size == best_candidate->size (see selection loop, an 'if' takes care of that)
 
                 //iterate the points
-                // as voronoi should create symetric thing, we can iterate synchonously
+                // as voronoi should create symmetric thing, we can iterate synchonously
                 unsigned int idx_point = 1;
                 while (idx_point < polyline.points.size() && polyline.points[idx_point].distance_to(best_candidate->points[idx_point]) < max_width) {
                     //fusion

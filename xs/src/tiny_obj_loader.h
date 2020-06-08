@@ -394,7 +394,7 @@ struct vertex_index_t {
 // index + smoothing group.
 struct face_t {
   unsigned int
-      smoothing_group_id;  // smoothing group id. 0 = smoothing groupd is off.
+      smoothing_group_id;  // smoothing group id. 0 = smoothing group id is off.
   int pad_;
   std::vector<vertex_index_t> vertex_indices;  // face vertex indices.
 

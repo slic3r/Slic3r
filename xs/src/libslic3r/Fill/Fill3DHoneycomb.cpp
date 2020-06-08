@@ -9,7 +9,7 @@ namespace Slic3r {
 /*
 Creates a contiguous sequence of points at a specified height that make
 up a horizontal slice of the edges of a space filling truncated
-octahedron tesselation. The octahedrons are oriented so that the
+octahedron tessellation. The octahedrons are oriented so that the
 square faces are in the horizontal plane with edges parallel to the X
 and Y axes.
 

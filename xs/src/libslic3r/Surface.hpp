@@ -109,7 +109,7 @@ inline ExPolygons to_expolygons(const SurfacesPtr &src)
 }
 
 
-// Count a nuber of polygons stored inside the vector of expolygons.
+// Count a number of polygons stored inside the vector of expolygons.
 // Useful for allocating space for polygons when converting expolygons to polygons.
 inline size_t number_polygons(const Surfaces &surfaces)
 {

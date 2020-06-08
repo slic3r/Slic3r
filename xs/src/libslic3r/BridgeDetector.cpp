@@ -10,7 +10,7 @@ BridgeDetector::BridgeDetector(const ExPolygon &_expolygon, const ExPolygonColle
     : expolygon(_expolygon), extrusion_width(_extrusion_width),
         resolution(PI/36.0), angle(-1)
 {
-    /*  outset our bridge by an arbitrary amout; we'll use this outer margin
+    /*  outset our bridge by an arbitrary amount; we'll use this outer margin
         for detecting anchors */
     Polygons grown = offset(this->expolygon, this->extrusion_width);
     
@@ -163,7 +163,7 @@ BridgeDetector::detect_angle()
     std::sort(candidates.begin(), candidates.end());
     
     // if any other direction is within extrusion width of coverage, prefer it if shorter
-    // TODO: There are two options here - within width of the angle with most coverage, or within width of the currently perferred?
+    // TODO: There are two options here - within width of the angle with most coverage, or within width of the currently preferred?
     size_t i_best = 0;
     for (size_t i = 1; i < candidates.size() && candidates[i_best].coverage - candidates[i].coverage < this->extrusion_width; ++ i)
         if (candidates[i].max_length < candidates[i_best].max_length)

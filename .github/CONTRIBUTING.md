@@ -21,7 +21,7 @@ When possible, please include the following information when [reporting an issue
     * STL, OBJ or AMF input file (please make sure the input file is not broken, e.g. non-manifold, before reporting a bug)
     * a screenshot of the G-code layer with the issue (e.g. using [Pronterface](https://github.com/kliment/Printrun) or preferably the internal preview tab in Slic3r).
 * If the issue is a request for a new feature, be ready to explain why you think it's needed.
-    * Doing more prepatory work on your end makes it more likely it'll get done. This includes the "how" it can be done in addition to the "what". 
+    * Doing more preparatory work on your end makes it more likely it'll get done. This includes the "how" it can be done in addition to the "what". 
     * Define the "What" as strictly as you can. Consider what might happen with different infills than simple rectilinear.
 
 Please make sure only to include one issue per report. If you encounter multiple, unrelated issues, please report them as such.

@@ -490,7 +490,7 @@ PrintObject::bridge_over_infill()
             printf("Bridging %zu internal areas at layer %zu\n", to_bridge.size(), layer->id());
             #endif
             
-            // compute the remaning internal solid surfaces as difference
+            // compute the remaining internal solid surfaces as difference
             const ExPolygons not_to_bridge = diff_ex(internal_solid, to_polygons(to_bridge), true);
             
             // build the new collection of fill_surfaces
@@ -681,9 +681,9 @@ std::vector<coordf_t> PrintObject::generate_object_layers(coordf_t first_layer_h
                 // we need to thicken last layer
                 coordf_t new_h = result[last_layer] - result[last_layer-1];
                 if(this->config.adaptive_slicing.value) { // use min/max layer_height values from adaptive algo.
-                    new_h = std::min(max_layer_height, new_h - diff); // add (negativ) diff value
+                    new_h = std::min(max_layer_height, new_h - diff); // add (negative) diff value
                 }else{
-                    new_h = std::min(min_nozzle_diameter, new_h - diff); // add (negativ) diff value
+                    new_h = std::min(min_nozzle_diameter, new_h - diff); // add (negative) diff value
                 }
                 result[last_layer] = result[last_layer-1] + new_h;
             } else {
@@ -1628,7 +1628,7 @@ PrintObject::_discover_neighbor_horizontal_shells(LayerRegion* layerm, const siz
                         append_to(tmp, (Polygons)s);
                 const auto grown = intersection(
                     offset(too_narrow, +margin),
-                    // Discard bridges as they are grown for anchoring and we cant
+                    // Discard bridges as they are grown for anchoring and we can't
                     // remove such anchors. (This may happen when a bridge is being 
                     // anchored onto a wall where little space remains after the bridge
                     // is grown, and that little space is an internal solid shell so 

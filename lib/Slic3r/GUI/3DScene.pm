@@ -96,14 +96,14 @@ sub new {
     # wxWidgets expect the attrib list to be ended by zero.
     push(@$attrib, 0);
 
-    # we request a depth buffer explicitely because it looks like it's not created by 
+    # we request a depth buffer explicitly because it looks like it's not created by 
     # default on Linux, causing transparency issues
     my $self = $class->SUPER::new($parent, -1, Wx::wxDefaultPosition, Wx::wxDefaultSize, 0, "", $attrib);
 
     if (Wx::wxVERSION >= 3.000003) {
         # Wx 3.0.3 contains an ugly hack to support some advanced OpenGL attributes through the attribute list.
         # The attribute list is transferred between the wxGLCanvas and wxGLContext constructors using a single static array s_wglContextAttribs.
-        # Immediatelly force creation of the OpenGL context to consume the static variable s_wglContextAttribs.
+        # Immediately force creation of the OpenGL context to consume the static variable s_wglContextAttribs.
         $self->GetContext();
     }
 

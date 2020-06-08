@@ -565,7 +565,7 @@ class ModelVolume
 
     /// Add a new ModelMaterial to this ModelVolume
     /// \param material_id t_model_material_id the id of the material to be added
-    /// \param material ModelMaterial the material to be coppied
+    /// \param material ModelMaterial the material to be copied
     void set_material(t_model_material_id material_id, const ModelMaterial &material);
 
     /// Add a unique ModelMaterial to the current ModelVolume
