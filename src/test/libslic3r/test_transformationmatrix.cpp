@@ -16,10 +16,10 @@ bool check_elements(TransformationMatrix const & matrix,
 bool check_point(const Pointf3 & point, coordf_t x, coordf_t y, coordf_t z);
 double degtorad(double value){ return PI / 180.0 * value; }
 
-SCENARIO("TransformationMatrix: constructors, copytor, comparing"){
+SCENARIO("TransformationMatrix: constructors, copytor, comparing, basic operations"){
     GIVEN("a default constructed Matrix") {
         auto trafo_default = TransformationMatrix();
-        THEN("it is equivalent to the eye matrix") {
+        THEN("comparing to the eye matrix") {
             REQUIRE(check_elements(trafo_default, 
                 1.0, 0.0, 0.0, 0.0,
                 0.0, 1.0, 0.0, 0.0,
@@ -28,34 +28,32 @@ SCENARIO("TransformationMatrix: constructors, copytor, comparing"){
 
         WHEN("copied") {
             auto trafo_eq_assigned = trafo_default;
-            THEN("the second is also equivalent to the eye matrix") {
+            THEN("comparing the second to the eye matrix") {
                 REQUIRE(check_elements(trafo_eq_assigned, 
                     1.0, 0.0, 0.0, 0.0,
                     0.0, 1.0, 0.0, 0.0,
                     0.0, 0.0, 1.0, 0.0));
             }
-            THEN("they are regarded as equivalent to each other")
+            THEN("comparing them to each other")
             {
                 REQUIRE(trafo_default == trafo_eq_assigned);
                 REQUIRE(!(trafo_default != trafo_eq_assigned));
             }
             trafo_eq_assigned.m00 = 2.0;
-            THEN("they are not the same object") {
+            THEN("testing uniqueness") {
                 REQUIRE(trafo_default != trafo_eq_assigned);
             }
         }
     }
     GIVEN("a directly set matrix") {
-        WHEN("set via constructor") {
+        THEN("set via constructor") {
             auto trafo_set = TransformationMatrix(1,2,3,4,5,6,7,8,9,10,11,12);
-            THEN("correctly set") {
-                REQUIRE(check_elements(trafo_set,
-                    1,2,3,4,
-                    5,6,7,8,
-                    9,10,11,12));
-            }
+            REQUIRE(check_elements(trafo_set,
+                1,2,3,4,
+                5,6,7,8,
+                9,10,11,12));
         }
-        WHEN("set via vector") {
+        THEN("set via vector") {
             std::vector<double> elements;
             elements.reserve(12);
             elements.push_back(1);
@@ -71,24 +69,22 @@ SCENARIO("TransformationMatrix: constructors, copytor, comparing"){
             elements.push_back(11);
             elements.push_back(12);
             auto trafo_vec = TransformationMatrix(elements);
-            THEN("correctly set") {
-                REQUIRE(check_elements(trafo_vec,
-                    1,2,3,4,
-                    5,6,7,8,
-                    9,10,11,12));
-            }
+            REQUIRE(check_elements(trafo_vec,
+                1,2,3,4,
+                5,6,7,8,
+                9,10,11,12));
         }
     }
-    GIVEN("two seperate matrices") {
+    GIVEN("two separate matrices") {
         auto mat1 = TransformationMatrix(1,2,3,4,5,6,7,8,9,10,11,12);
         auto mat2 = TransformationMatrix(1,4,7,10,2,5,8,11,3,6,9,12);
-        THEN("static multiplication produces correct output") {
+        THEN("static multiplication") {
             auto mat3 = TransformationMatrix::multiply(mat1, mat2);
             REQUIRE(check_elements(mat3,14,32,50,72,38,92,146,208,62,152,242,344));
             mat3 = TransformationMatrix::multiply(mat2, mat1);
             REQUIRE(check_elements(mat3,84,96,108,130,99,114,129,155,114,132,150,180));
         }
-        THEN("direct multiplication produces correct output") {
+        THEN("direct multiplication") {
             REQUIRE(check_elements(mat1.multiplyRight(mat2),14,32,50,72,38,92,146,208,62,152,242,344));
             REQUIRE(check_elements(mat2.multiplyLeft(mat1),14,32,50,72,38,92,146,208,62,152,242,344));
         }
