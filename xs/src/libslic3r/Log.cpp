@@ -49,8 +49,20 @@ void _Log::warn(const std::string& topic, const std::wstring& message) { this->w
 void _Log::info(const std::string& topic, const std::wstring& message) { this->info(topic, boost::locale::conv::utf_to_utf<char>(message)); }
 void _Log::debug(const std::string& topic, const std::wstring& message) { this->debug(topic, boost::locale::conv::utf_to_utf<char>(message)); }
 
+void _Log::fatal_error(const char topic[], const char message[]) {
+    this->fatal_error(std::string(topic), std::string(message));
+}
+
+void _Log::fatal_error(const char topic[], const wchar_t message[]) {
+    this->fatal_error(std::string(topic), std::wstring(message));
+}
+
 void _Log::fatal_error(const std::string& topic, const std::string& message) {
     this->fatal_error(topic) << message << std::endl;
+}
+
+std::ostream& _Log::fatal_error(const char topic[], bool multiline) {
+    return this->fatal_error(std::string(topic), multiline);
 }
 std::ostream& _Log::fatal_error(const std::string& topic, bool multiline) {
     if (this->_has_log_level(log_t::FERR) && this->_has_topic(topic)) {
@@ -61,8 +73,19 @@ std::ostream& _Log::fatal_error(const std::string& topic, bool multiline) {
     return null_log;
 }
 
+void _Log::error(const char topic[], const char message[]) {
+    this->error(std::string(topic), std::string(message));
+}
+
+void _Log::error(const char topic[], const wchar_t message[]) {
+    this->error(std::string(topic), std::wstring(message));
+}
+
 void _Log::error(const std::string& topic, const std::string& message) {
     this->error(topic) << message << std::endl;
+}
+std::ostream& _Log::error(const char topic[], bool multiline) {
+    return this->error(std::string(topic), multiline);
 }
 std::ostream& _Log::error(const std::string& topic, bool multiline) {
     if (this->_has_log_level(log_t::ERR) && this->_has_topic(topic)) {
@@ -73,8 +96,21 @@ std::ostream& _Log::error(const std::string& topic, bool multiline) {
     return null_log;
 }
 
+
 void _Log::info(const std::string& topic, const std::string& message) {
     this->info(topic) << message << std::endl;
+}
+
+void _Log::info(const char topic[], const wchar_t message[]) {
+    this->info(std::string(topic), std::wstring(message));
+}
+
+void _Log::info(const char topic[], const char message[]) {
+    this->info(std::string(topic), std::string(message));
+}
+
+std::ostream& _Log::info(const char topic[], bool multiline) {
+    return this->info(std::string(topic), multiline);
 }
 
 std::ostream& _Log::info(const std::string& topic, bool multiline) {
@@ -86,8 +122,20 @@ std::ostream& _Log::info(const std::string& topic, bool multiline) {
     return null_log;
 }
 
+void _Log::warn(const char topic[], const char message[]) {
+    this->warn(std::string(topic), std::string(message));
+}
+
+void _Log::warn(const char topic[], const wchar_t message[]) {
+    this->warn(std::string(topic), std::wstring(message));
+}
+
 void _Log::warn(const std::string& topic, const std::string& message) {
     this->warn(topic) << message << std::endl;
+}
+
+std::ostream& _Log::warn(const char topic[], bool multiline) {
+    return this->warn(std::string(topic), multiline);
 }
 
 std::ostream& _Log::warn(const std::string& topic, bool multiline) {
@@ -99,8 +147,20 @@ std::ostream& _Log::warn(const std::string& topic, bool multiline) {
     return null_log;
 }
 
+void _Log::debug(const char topic[], const char message[]) {
+    this->debug(std::string(topic), std::string(message));
+}
+
+void _Log::debug(const char topic[], const wchar_t message[]) {
+    this->debug(std::string(topic), std::wstring(message));
+}
+
 void _Log::debug(const std::string& topic, const std::string& message) {
     this->debug(topic) << message << std::endl;
+}
+
+std::ostream& _Log::debug(const char topic[], bool multiline) {
+    return this->debug(std::string(topic), multiline);
 }
 
 std::ostream& _Log::debug(const std::string& topic, bool multiline) {
@@ -110,6 +170,14 @@ std::ostream& _Log::debug(const std::string& topic, bool multiline) {
         return _out;
     }
     return null_log;
+}
+
+void _Log::raw(const char message[]) {
+    this->raw(std::string(message));
+}
+
+void _Log::raw(const wchar_t message[]) {
+    this->raw(std::wstring(message));
 }
 
 void _Log::raw(const std::string& message) {

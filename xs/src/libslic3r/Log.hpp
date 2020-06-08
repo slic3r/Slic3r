@@ -40,23 +40,41 @@ public:
         tmp->set_level(log_t::WARN);
         return tmp;
     }
+    void fatal_error(const char topic[], const char message[]);
+    void fatal_error(const char topic[], const wchar_t message[]);
     void fatal_error(const std::string& topic, const std::string& message);
     void fatal_error(const std::string& topic, const std::wstring& message);
     std::ostream& fatal_error(const std::string& topic, bool multiline = false);
+    std::ostream& fatal_error(const char topic[], bool multiline = false);
 
+    void error(const char topic[], const char message[]);
+    void error(const char topic[], const wchar_t message[]);
     void error(const std::string& topic, const std::string& message);
     void error(const std::string& topic, const std::wstring& message);
     std::ostream& error(const std::string& topic, bool multiline = false);
+    std::ostream& error(const char topic[], bool multiline = false);
 
     void info(const std::string& topic, const std::string& message);
     void info(const std::string& topic, const std::wstring& message);
+    void info(const char topic[], const char message[]);
+    void info(const char topic[], const wchar_t message[]);
     std::ostream& info(const std::string& topic, bool multiline = false);
+    std::ostream& info(const char topic[], bool multiline = false);
+    void debug(const char topic[], const char message[]);
+    void debug(const char topic[], const wchar_t message[]);
     void debug(const std::string& topic, const std::string& message);
     void debug(const std::string& topic, const std::wstring& message);
     std::ostream& debug(const std::string& topic, bool multiline = false);
+    std::ostream& debug(const char topic[], bool multiline = false);
+    void warn(const char topic[], const char message[]);
+    void warn(const char topic[], const wchar_t message[]);
     void warn(const std::string& topic, const std::string& message);
     void warn(const std::string& topic, const std::wstring& message);
     std::ostream& warn(const std::string& topic, bool multiline = false);
+    std::ostream& warn(const char topic[], bool multiline = false);
+
+    void raw(const char message[]);
+    void raw(const wchar_t message[]);
     void raw(const std::string& message);
     void raw(const std::wstring& message);
     std::ostream& raw();
