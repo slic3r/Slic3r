@@ -7,7 +7,7 @@
 
 using namespace Slic3r;
 
-constexpr auto THRESHOLD_EQUALITY=1.0e-3
+constexpr auto THRESHOLD_EQUALITY = 1.0e-3;
 
 bool check_elements(TransformationMatrix const & matrix, 
     double m00, double m01, double m02, double m03,
