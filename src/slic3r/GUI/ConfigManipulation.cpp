@@ -303,6 +303,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 
     toggle_field("overhangs_width", config->opt_bool("overhangs"));
     toggle_field("overhangs_reverse_threshold", config->opt_bool("overhangs_reverse"));
+    toggle_field("min_width_top_surface", config->opt_bool("only_one_perimeter_top"));
 
     for (auto el : { "external_perimeters_vase", "external_perimeters_nothole", "external_perimeters_hole"})
         toggle_field(el, config->opt_bool("external_perimeters_first"));

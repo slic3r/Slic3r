@@ -483,6 +483,9 @@ void PerimeterGenerator::process()
                         // it's a bit like re-add thin area in to perimeter area.
                         // it can over-extrude a bit, but it's for a better good.
                         {
+
+
+
                             if(config->thin_perimeters)
                                 next_onion = union_ex(next_onion, offset_ex(diff_ex(last, thins, true),
                                     -(float)(ext_perimeter_width / 2)));
@@ -578,15 +581,18 @@ void PerimeterGenerator::process()
                     if (offset_top_surface > 0.9 * (config->perimeters <= 1 ? 0. : (perimeter_spacing * (config->perimeters - 1))))
                         offset_top_surface -= 0.9 * (config->perimeters <= 1 ? 0. : (perimeter_spacing * (config->perimeters - 1)));
                     else offset_top_surface = 0;
+                    //don't takes into account too thin areas
+                    ExPolygons grown_upper_slices = this->config->min_width_top_surface.value == 0 ? *this->upper_slices :
+                        offset_ex(*this->upper_slices, this->config->min_width_top_surface.get_abs_value(perimeter_width));
                     // get the real top surface
-                    ExPolygons top_polygons = (!have_to_grow_for_miller) ? diff_ex(last, *this->upper_slices, true)
+                    ExPolygons top_polygons = (!have_to_grow_for_miller) ? diff_ex(last, grown_upper_slices, true)
                         :(unmillable.empty())?
-                            diff_ex(last, offset_ex(*this->upper_slices, mill_extra_size), true)
+                            diff_ex(last, offset_ex(grown_upper_slices, mill_extra_size), true)
                                 :
-                        diff_ex(last, diff_ex(offset_ex(*this->upper_slices, mill_extra_size), unmillable, true));
+                        diff_ex(last, diff_ex(offset_ex(grown_upper_slices, mill_extra_size), unmillable, true));
                     
-                    //get the not-top surface, from the "real top" but enlarged by external_infill_margin
-                    ExPolygons inner_polygons = diff_ex(last, offset_ex(top_polygons, offset_top_surface), true);
+                    //get the not-top surface, from the "real top" but enlarged by external_infill_margin (and the min_width_top_surface we removed a bit before)
+                    ExPolygons inner_polygons = diff_ex(last, offset_ex(top_polygons, offset_top_surface + this->config->min_width_top_surface.get_abs_value(perimeter_width)), true);
                     // get the enlarged top surface, by using inner_polygons instead of upper_slices
                     top_polygons = diff_ex(last, inner_polygons, true);
                     // increase by half peri the inner space to fill the frontier between last and stored.

@@ -654,6 +654,7 @@ public:
     ConfigOptionFloatOrPercent      milling_extra_size;
     ConfigOptionBool                milling_post_process;
     ConfigOptionFloat               milling_speed;
+    ConfigOptionFloatOrPercent      min_width_top_surface;
     // Detect bridging perimeters
     ConfigOptionBool                overhangs;
     ConfigOptionFloatOrPercent      overhangs_width;
@@ -741,6 +742,7 @@ protected:
         OPT_PTR(milling_extra_size);
         OPT_PTR(milling_post_process);
         OPT_PTR(milling_speed);
+        OPT_PTR(min_width_top_surface);
         OPT_PTR(overhangs);
         OPT_PTR(overhangs_width);
         OPT_PTR(overhangs_reverse);

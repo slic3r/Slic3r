@@ -16,7 +16,10 @@ group:Horizontal shells
 	top_bottom_shell_thickness_explanation
 	setting:enforce_full_fill_volume
 group:Quality
-	setting:only_one_perimeter_top
+	line:Only one perimeter on Top surfaces
+		setting:label$ :only_one_perimeter_top
+		setting:label$Minimum width:min_width_top_surface
+	end_line
 	line:Extra perimeters
 		setting:extra_perimeters_overhangs
 		setting:extra_perimeters_odd_layers

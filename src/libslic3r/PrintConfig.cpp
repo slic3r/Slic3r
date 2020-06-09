@@ -2008,6 +2008,18 @@ void PrintConfigDef::init_fff_params()
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionFloats { 0.07 });
 
+    def = this->add("min_width_top_surface", coFloatOrPercent);
+    def->label = L("minimum top width for infill");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("If a top surface has to be printed and it's partially covered by an other layer, it won't be considered at a top layer where his width is below this value."
+        " This can be useful to not let the 'one perimeter on top' trigger on surface that should be covered only by periemters."
+        " This value can be a mm or a % of the perimeter extrusion width.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "perimeter_extrusion_width";
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
+
     def = this->add("min_print_speed", coFloats);
     def->label = L("Min print speed");
     def->category = OptionCategory::speed;
@@ -2015,7 +2027,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/s");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloats { 10. });
+    def->set_default_value(new ConfigOptionFloats{ 10. });
 
     def = this->add("min_skirt_length", coFloat);
     def->label = L("Minimal filament extrusion length");
