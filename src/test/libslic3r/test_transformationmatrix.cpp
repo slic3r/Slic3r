@@ -5,8 +5,6 @@
 #include "libslic3r.h"
 #include "TransformationMatrix.hpp"
 
-#include "Log.hpp"
-
 using namespace Slic3r;
 
 bool check_elements(TransformationMatrix const & matrix, 
