@@ -7,6 +7,8 @@
 
 using namespace Slic3r;
 
+constexpr auto THRESHOLD_EQUALITY=1.0e-3
+
 bool check_elements(TransformationMatrix const & matrix, 
     double m00, double m01, double m02, double m03,
     double m10, double m11, double m12, double m13,
@@ -93,7 +95,7 @@ SCENARIO("TransformationMatrix: constructors, copytor, comparing, basic operatio
             -0.9311,0.531,-0.5026,7.7931,
             -0.1225,0.5904,0.2576,-7.316);
         THEN("computing the determinante") {
-            REQUIRE(std::abs(mat.determinante() - 0.5539) < 1.0e-3);
+            REQUIRE(std::abs(mat.determinante() - 0.5539) < THRESHOLD_EQUALITY);
         }
         THEN("computing the inverse") {
             REQUIRE(check_elements(mat.inverse(),
@@ -136,7 +138,7 @@ SCENARIO("TransformationMatrix: application") {
             THEN("testing arbituary axis mirroring") {
                 auto mat = TransformationMatrix::mat_mirror(vec2);
                 REQUIRE(check_point(mat.transform(vec1),-0.1034,2.8276,2.4483));
-                REQUIRE(std::abs(mat.determinante() + 1.0) < 1.0e-3);
+                REQUIRE(std::abs(mat.determinante() + 1.0) < THRESHOLD_EQUALITY);
             }
         }
         WHEN("testing translation") {
@@ -161,17 +163,17 @@ SCENARIO("TransformationMatrix: application") {
             THEN("testing arbituary axis rotation") {
                 auto mat = TransformationMatrix::mat_rotation(degtorad(80), vec2);
                 REQUIRE(check_point(mat.transform(vec1),3.0069,1.8341,-1.2627));
-                REQUIRE(std::abs(mat.determinante() - 1.0) < 1.0e-3);
+                REQUIRE(std::abs(mat.determinante() - 1.0) < THRESHOLD_EQUALITY);
             }
             THEN("testing quaternion rotation") {
                 auto mat = TransformationMatrix::mat_rotation(-0.4775,0.3581,-0.2387,0.7660);
                 REQUIRE(check_point(mat.transform(vec1),3.0069,1.8341,-1.2627));
-                REQUIRE(std::abs(mat.determinante() - 1.0) < 1.0e-3);
+                REQUIRE(std::abs(mat.determinante() - 1.0) < THRESHOLD_EQUALITY);
             }
             THEN("testing vector to vector") {
                 auto mat = TransformationMatrix::mat_rotation(vec1,vec2);
                 REQUIRE(check_point(mat.transform(vec1),-2.7792,2.0844,-1.3896));
-                REQUIRE(std::abs(mat.determinante() - 1.0) < 1.0e-3);
+                REQUIRE(std::abs(mat.determinante() - 1.0) < THRESHOLD_EQUALITY);
                 mat = TransformationMatrix::mat_rotation(vec1,vec1.negative());
                 REQUIRE(check_point(mat.transform(vec1),-1,-2,-3)); // colinear, opposite direction
                 mat = TransformationMatrix::mat_rotation(vec1,vec1);
@@ -189,29 +191,27 @@ bool check_elements(const TransformationMatrix & matrix,
     double m10, double m11, double m12, double m13,
     double m20, double m21, double m22, double m23)
 {
-    const double EPSILON = 1.0e-3;
     bool equal = true;
-    equal &= std::abs(matrix.m00 - m00) < EPSILON;
-    equal &= std::abs(matrix.m01 - m01) < EPSILON;
-    equal &= std::abs(matrix.m02 - m02) < EPSILON;
-    equal &= std::abs(matrix.m03 - m03) < EPSILON;
-    equal &= std::abs(matrix.m10 - m10) < EPSILON;
-    equal &= std::abs(matrix.m11 - m11) < EPSILON;
-    equal &= std::abs(matrix.m12 - m12) < EPSILON;
-    equal &= std::abs(matrix.m13 - m13) < EPSILON;
-    equal &= std::abs(matrix.m20 - m20) < EPSILON;
-    equal &= std::abs(matrix.m21 - m21) < EPSILON;
-    equal &= std::abs(matrix.m22 - m22) < EPSILON;
-    equal &= std::abs(matrix.m23 - m23) < EPSILON;
+    equal &= std::abs(matrix.m00 - m00) < THRESHOLD_EQUALITY;
+    equal &= std::abs(matrix.m01 - m01) < THRESHOLD_EQUALITY;
+    equal &= std::abs(matrix.m02 - m02) < THRESHOLD_EQUALITY;
+    equal &= std::abs(matrix.m03 - m03) < THRESHOLD_EQUALITY;
+    equal &= std::abs(matrix.m10 - m10) < THRESHOLD_EQUALITY;
+    equal &= std::abs(matrix.m11 - m11) < THRESHOLD_EQUALITY;
+    equal &= std::abs(matrix.m12 - m12) < THRESHOLD_EQUALITY;
+    equal &= std::abs(matrix.m13 - m13) < THRESHOLD_EQUALITY;
+    equal &= std::abs(matrix.m20 - m20) < THRESHOLD_EQUALITY;
+    equal &= std::abs(matrix.m21 - m21) < THRESHOLD_EQUALITY;
+    equal &= std::abs(matrix.m22 - m22) < THRESHOLD_EQUALITY;
+    equal &= std::abs(matrix.m23 - m23) < THRESHOLD_EQUALITY;
     return equal;
 }
 
 bool check_point(const Pointf3 & point, coordf_t x, coordf_t y, coordf_t z)
 {
-    const coordf_t EPSILON = 1.0e-3;
     bool equal = true;
-    equal &= std::abs(point.x - x) < EPSILON;
-    equal &= std::abs(point.y - y) < EPSILON;
-    equal &= std::abs(point.z - z) < EPSILON;
+    equal &= std::abs(point.x - x) < THRESHOLD_EQUALITY;
+    equal &= std::abs(point.y - y) < THRESHOLD_EQUALITY;
+    equal &= std::abs(point.z - z) < THRESHOLD_EQUALITY;
     return equal;
 }
