@@ -50,6 +50,7 @@ std::string toString(OptionCategory opt) {
     case pad: return "Pad";
     case padSupp: return "Pad and Support";
     case wipe: return "Wipe Options";
+    case milling: return "milling";
     }
     return "error";
 }
