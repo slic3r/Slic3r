@@ -162,7 +162,7 @@ namespace Slic3r {
             FeedrateProfile feedrate;
             Trapezoid trapezoid;
             float elapsed_time;
-            float time;
+            float duration;
 
             Block();
 
@@ -209,7 +209,12 @@ namespace Slic3r {
         struct Layer
         {
             float z;
-            float time;
+            float duration;
+            float min_time;
+
+            Layer(float z, float duration, float min_time)
+                : z(z), duration(duration), min_time(min_time)
+            {}
         };
 
         typedef std::vector<Layer> LayersList;
@@ -365,7 +370,9 @@ namespace Slic3r {
         void set_additional_time(float timeSec);
         float get_additional_time() const;
 
-        void calculate_layer_time();
+        //function for layer duration
+        void calculate_layer_duration();
+        float get_layer_duration(float z);
         float get_layer_time(float z);
         void reset_layers();
 

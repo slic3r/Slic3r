@@ -202,7 +202,9 @@ public:
         // Color mapping by fan speed.
         Range fan_speed;
         // Color mapping by layer time.
-        Range layer_time;
+        Range layer_duration;
+        // Color mapping by time.
+        Range elapsed_time;
         // Color mapping by volumetric extrusion rate.
         Range volumetric_rate;
     };
@@ -228,6 +230,7 @@ public:
             FanSpeed,
             LayerTime,
             LayerTimeLog,
+            Chronology,
             VolumetricRate,
             Tool,
             Filament,
@@ -259,7 +262,9 @@ public:
 		    // Fan speed for the extrusion, used for visualization purposes.
 		    float 			fan_speed;
             // Layer time for the extrusion, used for visualization purposes.
-            float 			layer_time;
+            float 			layer_duration;
+            // time since print start, used for visualization purposes.
+            float 			elapsed_time;
         };
 		using Paths = std::vector<Path>;
 
@@ -385,8 +390,9 @@ public:
     Color get_width_color(float width) const;
     Color get_feedrate_color(float feedrate) const;
     Color get_fan_speed_color(float fan_speed) const;
-    Color get_layer_time_color(float layer_time) const;
-    Color get_layer_time_log_color(float layer_time) const;
+    Color get_layer_duration_color(float layer_time) const;
+    Color get_layer_duration_log_color(float layer_time) const;
+    Color get_elapsed_time_color(float elapsed_time) const;
     Color get_volumetric_rate_color(float rate) const;
 
     void set_extrusion_role_color(const std::string& role_name, float red, float green, float blue, float alpha);

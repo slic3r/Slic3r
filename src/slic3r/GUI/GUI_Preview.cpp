@@ -242,7 +242,9 @@ bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view
     m_choice_view_type->Append(_(L("Width")));
     m_choice_view_type->Append(_(L("Speed")));
     m_choice_view_type->Append(_(L(width_screen == tiny ? "Fan" : "Fan speed")));
-    m_choice_view_type->Append(_(L(width_screen == tiny ?"time":"Layer time")));
+    m_choice_view_type->Append(_(L(width_screen == tiny ? "time" : "Layer time")));
+    m_choice_view_type->Append(_(L(width_screen == tiny ? "Log time" : "Layer time (log)")));
+    m_choice_view_type->Append(_(L(width_screen == tiny ? "Chrono" : "Chronology")));
     m_choice_view_type->Append(_(L(width_screen == tiny ? "Vol. flow" :"Volumetric flow rate")));
     m_choice_view_type->Append(_(L("Tool")));
     m_choice_view_type->Append(_(L("Filament")));

@@ -854,7 +854,7 @@ namespace Slic3r {
             block_time += block.deceleration_time();
             m_time += block_time;
             block.elapsed_time = m_time;
-            block.time = block_time;
+            block.duration = block_time;
 
 #if ENABLE_MOVE_STATS
             MovesStatsMap::iterator it = _moves_stats.find(block.move_type);
@@ -1032,7 +1032,6 @@ namespace Slic3r {
 
         // updates axes positions from line
         float new_pos[Num_Axis];
-        long raw_axis_absolute_position;
         for (unsigned char a = X; a < Num_Axis; ++a)
         {
             new_pos[a] = axis_absolute_position((EAxis)a, line);
@@ -1696,7 +1695,7 @@ namespace Slic3r {
         m_layers.clear();
     }
 
-    void GCodeTimeEstimator::calculate_layer_time()
+    void GCodeTimeEstimator::calculate_layer_duration()
     {
         for (int i = 0; i < (int)m_blocks.size(); ++i)
         {
@@ -1707,30 +1706,43 @@ namespace Slic3r {
                 while (j < (int)m_layers.size())
                 {
                     if (m_blocks[i].z == m_layers[j].z) {
-                        m_layers[j].time += m_blocks[i].time;
+                        m_layers[j].duration += m_blocks[i].duration;
+                        m_layers[j].min_time = std::min(m_layers[j].min_time, m_blocks[i].elapsed_time);
                         layer_found = true;
                     }
                     j++;
                 }
                 if (!layer_found) {
-                    m_layers.push_back({ m_blocks[i].z, m_blocks[i].time });
+                    m_layers.emplace_back( m_blocks[i].z, m_blocks[i].duration, m_blocks[i].elapsed_time );
                 }
             }
         }
+        std::sort(m_layers.begin(), m_layers.end(), [](const Layer& e1, const Layer& e2){return e1.z < e2.z; });
+    }
+
+    float GCodeTimeEstimator::get_layer_duration(float z)
+    {
+        for (const Layer &layer : m_layers)
+        {
+            if (z <= layer.z + EPSILON) {
+                return layer.duration;
+            }
+        }
+        return 0;
     }
 
     float GCodeTimeEstimator::get_layer_time(float z)
     {
-        int j = 0;
-        while (j < (int)m_layers.size())
+        float time = 0;
+        for (const Layer& layer : m_layers)
         {
-            if (z == m_layers[j].z) {
-                return m_layers[j].time;
+            if (z <= layer.z + EPSILON) {
+                return time;
             }
-            j++;
+            time += layer.duration;
         }
         return 0;
-     }
+    }
 
 #if ENABLE_MOVE_STATS
     void GCodeTimeEstimator::_log_moves_stats() const

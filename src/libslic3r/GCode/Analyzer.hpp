@@ -60,11 +60,13 @@ public:
         float height;    // mm
         float feedrate;  // mm/s
         float fan_speed; // percentage
-        float layer_time; //s
+        float layer_duration; //s
+        float layer_elapsed_time; //s
         unsigned int cp_color_id;
 
         Metadata();
-        Metadata(ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, float width, float height, float feedrate, float fan_speed, float layer_time, unsigned int cp_color_id = 0);
+        Metadata(ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm,
+            float width, float height, float feedrate, float fan_speed, float layer_duration, float layer_elapsed_time, unsigned int cp_color_id);
 
         bool operator != (const Metadata& other) const;
     };
@@ -88,7 +90,9 @@ public:
         Vec3d end_position;
         float delta_extruder;
 
-        GCodeMove(EType type, ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, float width, float height, float feedrate, const Vec3d& start_position, const Vec3d& end_position, float delta_extruder, float fan_speed, float layer_time, unsigned int cp_color_id = 0);
+        GCodeMove(EType type, ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm,
+            float width, float height, float feedrate, const Vec3d& start_position, const Vec3d& end_position, float delta_extruder,
+            float fan_speed, float layer_duration, float layer_elapsed_time, unsigned int cp_color_id);
         GCodeMove(EType type, const Metadata& data, const Vec3d& start_position, const Vec3d& end_position, float delta_extruder);
     };
 
@@ -264,8 +268,8 @@ private:
     void _set_fan_speed(float fan_speed_percentage);
     float _get_fan_speed() const;
 
-    void _set_layer_time(float layer_time_sec);
-    float _get_layer_time() const;
+    void _set_layer_duration(float layer_duration_sec);
+    float _get_layer_duration() const;
 
     void _set_axis_position(EAxis axis, float position);
     float _get_axis_position(EAxis axis) const;

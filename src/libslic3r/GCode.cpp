@@ -803,8 +803,7 @@ void GCode::do_export(Print *print, const char *path, GCodePreviewData *preview_
     // starts analyzer calculations
     if (m_enable_analyzer) {
         BOOST_LOG_TRIVIAL(debug) << "Preparing G-code preview data" << log_memory_info();
-        GCodeTimeEstimator* time_estimator = &m_normal_time_estimator;
-        m_analyzer.calc_gcode_preview_data(*preview_data, *time_estimator, [print]() { print->throw_if_canceled(); });
+        m_analyzer.calc_gcode_preview_data(*preview_data, m_normal_time_estimator, [print]() { print->throw_if_canceled(); });
         m_analyzer.reset();
     }
 
@@ -2504,7 +2503,7 @@ void GCode::process_layer(
             //switch to mill
             gcode += "; milling ok\n";
             uint32_t current_extruder_filament = m_writer.tool()->id();
-            uint32_t milling_extruder_id = config().nozzle_diameter.values.size();
+            uint32_t milling_extruder_id = uint32_t(config().nozzle_diameter.values.size());
             gcode += "; toolchange:\n";
             gcode += m_writer.toolchange(milling_extruder_id);
             gcode += "; toolchange done\n";
