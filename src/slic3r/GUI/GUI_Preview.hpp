@@ -6,6 +6,7 @@
 
 #include <string>
 #include "libslic3r/Model.hpp"
+#include "libslic3r/GCode/PreviewData.hpp"
 
 class wxNotebook;
 class wxGLCanvas;
@@ -101,7 +102,11 @@ class Preview : public wxPanel
     std::function<void()> m_schedule_background_process;
 
     unsigned int m_number_extruders;
-    std::string m_preferred_color_mode;
+    std::string m_preferred_color_mode; // neutered / deprecated, ready to remove
+    //fields to see what color to display
+    GCodePreviewData::Extrusion::EViewType m_last_choice = GCodePreviewData::Extrusion::EViewType::FeatureType;
+    bool m_has_switched_to_color = false;
+    bool m_has_switched_to_extruders = false;
 
     bool m_loaded;
     bool m_enabled;

@@ -1,5 +1,4 @@
 #include "libslic3r/libslic3r.h"
-#include "libslic3r/GCode/PreviewData.hpp"
 #include "GUI_Preview.hpp"
 #include "GUI_App.hpp"
 #include "GUI.hpp"
@@ -358,13 +357,10 @@ void Preview::set_number_extruders(unsigned int number_extruders)
     if (m_number_extruders != number_extruders)
     {
         m_number_extruders = number_extruders;
-        int tool_idx = m_choice_view_type->FindString(_(L("Tool")));
-        int type = (number_extruders > 1) ? tool_idx /* color by a tool number */  : 0; // color by a feature type
+        int type = (number_extruders > 1) ? (int)GCodePreviewData::Extrusion::Tool /* color by a tool number */  : 0; // color by a feature type
         m_choice_view_type->SetSelection(type);
-        if ((0 <= type) && (type < (int)GCodePreviewData::Extrusion::Num_View_Types))
-            m_gcode_preview_data->extrusion.view_type = (GCodePreviewData::Extrusion::EViewType)type;
-
-        m_preferred_color_mode = (type == tool_idx) ? "tool_or_feature" : "feature";
+        m_gcode_preview_data->extrusion.view_type = (GCodePreviewData::Extrusion::EViewType)type;
+        //m_preferred_color_mode = (type == tool_idx) ? "tool_or_feature" : "feature";
     }
 }
 
@@ -542,10 +538,12 @@ void Preview::on_size(wxSizeEvent& evt)
 
 void Preview::on_choice_view_type(wxCommandEvent& evt)
 {
-    m_preferred_color_mode = (m_choice_view_type->GetStringSelection() == L("Tool")) ? "tool" : "feature";
+    //m_preferred_color_mode = (m_choice_view_type->GetStringSelection() == L("Tool")) ? "tool" : "feature";
     int selection = m_choice_view_type->GetCurrentSelection();
-    if ((0 <= selection) && (selection < (int)GCodePreviewData::Extrusion::Num_View_Types))
-        m_gcode_preview_data->extrusion.view_type = (GCodePreviewData::Extrusion::EViewType)selection;
+    if ((0 <= selection) && (selection < (int)GCodePreviewData::Extrusion::Num_View_Types)) {
+        m_last_choice = (GCodePreviewData::Extrusion::EViewType)selection;
+        m_gcode_preview_data->extrusion.view_type = m_last_choice;
+    }
 
     reload_print();
 }
@@ -592,20 +590,20 @@ void Preview::on_checkbox_legend(wxCommandEvent& evt)
 void Preview::update_view_type(bool slice_completed)
 {
     const DynamicPrintConfig& config = wxGetApp().preset_bundle->project_config;
-
-    const wxString& choice = !wxGetApp().plater()->model().custom_gcode_per_print_z.gcodes.empty() /*&&
-                             (wxGetApp().extruders_edited_cnt()==1 || !slice_completed) */? 
-                                _(L("Color Print")) :
-                                config.option<ConfigOptionFloats>("wiping_volumes_matrix")->values.size() > 1 ?
-                                    _(L("Tool")) : 
-                                    _(L("Feature type"));
-
-    int type = m_choice_view_type->FindString(choice);
-    if (m_choice_view_type->GetSelection() != type) {
-        m_choice_view_type->SetSelection(type);
-        if (0 <= type && type < (int)GCodePreviewData::Extrusion::Num_View_Types)
-            m_gcode_preview_data->extrusion.view_type = (GCodePreviewData::Extrusion::EViewType)type;
-        m_preferred_color_mode = "feature";
+    bool has_color_print = !wxGetApp().plater()->model().custom_gcode_per_print_z.gcodes.empty()/*&&
+                             (wxGetApp().extruders_edited_cnt()==1 || !slice_completed) */;
+     bool has_multi_tool = config.option<ConfigOptionFloats>("wiping_volumes_matrix")->values.size() > 1;
+    if (!m_has_switched_to_color && has_color_print) {
+        m_last_choice = GCodePreviewData::Extrusion::ColorPrint;
+        m_has_switched_to_color = true;
+    } else if (!m_has_switched_to_extruders && has_multi_tool) {
+        m_last_choice = GCodePreviewData::Extrusion::Tool;
+        m_has_switched_to_color = true;
+    }
+    if (m_last_choice != m_gcode_preview_data->extrusion.view_type) {
+        m_gcode_preview_data->extrusion.view_type = m_last_choice;
+        m_choice_view_type->SetSelection(m_last_choice);
+        //m_preferred_color_mode = "feature";
     }
 }
 
