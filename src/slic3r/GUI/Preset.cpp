@@ -457,7 +457,8 @@ const std::vector<std::string>& Preset::print_options()
         , "bottom_fill_pattern"
         , "solid_fill_pattern",
         "infill_every_layers", "infill_only_where_needed", "solid_infill_every_layers", "fill_angle", "bridge_angle", 
-        "solid_infill_below_area", "only_retract_when_crossing_perimeters", "infill_first", "max_print_speed", 
+        "solid_infill_below_area", "only_retract_when_crossing_perimeters", "infill_first", 
+        "max_print_speed",
         "max_volumetric_speed", 
 #ifdef HAS_PRESSURE_EQUALIZER
         "max_volumetric_extrusion_rate_slope_positive", "max_volumetric_extrusion_rate_slope_negative", 
@@ -566,7 +567,10 @@ const std::vector<std::string>& Preset::filament_options()
         "max_fan_speed", "bridge_fan_speed"
         , "top_fan_speed"
         , "disable_fan_first_layers"
-        , "fan_below_layer_time", "slowdown_below_layer_time", "min_print_speed",
+        , "fan_below_layer_time", 
+        "slowdown_below_layer_time",
+        "max_speed_reduction",
+        "min_print_speed",
         "start_filament_gcode", "end_filament_gcode",
         "external_perimeter_fan_speed",
         // Retract overrides

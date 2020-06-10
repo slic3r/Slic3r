@@ -26,6 +26,7 @@ std::string PresetHints::cooling_description(const Preset &preset)
     int     disable_fan_first_layers = preset.config.opt_int("disable_fan_first_layers", 0);
     int     slowdown_below_layer_time = preset.config.opt_int("slowdown_below_layer_time", 0);
     int     min_print_speed = int(preset.config.opt_float("min_print_speed", 0) + 0.5);
+    int     max_speed_reduc = int(preset.config.opt_float("max_speed_reduction", 0));
     int     fan_below_layer_time = preset.config.opt_int("fan_below_layer_time", 0);
 
     //if (preset.config.opt_bool("cooling", 0)) {
@@ -97,9 +98,14 @@ std::string PresetHints::cooling_description(const Preset &preset)
         }
             
         out += " " + (boost::format(_utf8(L("print speed will be reduced "
-            "so that no less than %1%s are spent on that layer "
-            "(however, speed will never be reduced below %2%mm/s).")))
-            % slowdown_below_layer_time % min_print_speed).str();
+            "so that no less than %1%s are spent on that layer"))) % slowdown_below_layer_time).str();
+        if(min_print_speed > 0)
+            if(max_speed_reduc > 0)
+                out += " " + (boost::format(_utf8(L("(however, speed will never be reduced below %1%mm/s or up to %2%%% reduction)")))
+                    % min_print_speed % max_speed_reduc).str();
+            else
+                out += " " + (boost::format(_utf8(L("(however, speed will never be reduced below %1%mm/s)")))
+                    % min_print_speed).str();
     }
 
     return out;

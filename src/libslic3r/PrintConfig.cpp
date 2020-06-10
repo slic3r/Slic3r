@@ -1943,12 +1943,22 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Max print speed");
     def->category = OptionCategory::speed;
     def->tooltip = L("When setting other speed settings to 0 Slic3r will autocalculate the optimal speed "
-                   "in order to keep constant extruder pressure. This experimental setting is used "
-                   "to set the highest print speed you want to allow.");
+        "in order to keep constant extruder pressure. This experimental setting is used "
+        "to set the highest print speed you want to allow.");
     def->sidetext = L("mm/s");
     def->min = 1;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(80));
+
+    def = this->add("max_speed_reduction", coPercents);
+    def->label = L("Max speed reduction");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("Amount of speed you can reduce per extrusion speed.");
+    def->sidetext = L("%");
+    def->min = 0;
+    def->max = 100;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionPercents{ 90 });
 
     def = this->add("max_volumetric_speed", coFloat);
     def->label = L("Max volumetric speed");

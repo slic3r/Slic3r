@@ -193,6 +193,11 @@ struct PerExtruderAdjustments
             if (line.feedrate > min_feedrate) {
                 line.time *= std::max(1.f, line.feedrate / min_feedrate);
                 line.feedrate = min_feedrate;
+                //test to never go over max_time
+                if (line.time > line.time_max) {
+                    line.time = line.time_max;
+                    line.feedrate = line.length / line.time;
+                }
                 line.slowdown = true;
             }
         }
@@ -206,6 +211,8 @@ struct PerExtruderAdjustments
     float                       slowdown_below_layer_time = 0.f;
     // Minimum print speed allowed for this extruder.
     float                       min_print_speed     = 0.f;
+    // Max speed reduction allowed for this extruder.
+    float                       max_speed_reduction = 1;
 
     // Parsed lines.
     std::vector<CoolingLine>    lines;
@@ -307,6 +314,7 @@ std::vector<PerExtruderAdjustments> CoolingBuffer::parse_layer_gcode(const std::
         adj.cooling_slow_down_enabled = config.cooling.get_at(extruder_id);
         adj.slowdown_below_layer_time = float(config.slowdown_below_layer_time.get_at(extruder_id));
         adj.min_print_speed           = float(config.min_print_speed.get_at(extruder_id));
+        adj.max_speed_reduction       = float(config.max_speed_reduction.get_at(extruder_id) / 100);
         map_extruder_to_per_extruder_adjustment[extruder_id] = i;
     }
 
@@ -394,8 +402,11 @@ std::vector<PerExtruderAdjustments> CoolingBuffer::parse_layer_gcode(const std::
                 if (line.length > 0)
                     line.time = line.length / line.feedrate;
                 line.time_max = line.time;
-                if ((line.type & CoolingLine::TYPE_ADJUSTABLE) || active_speed_modifier != size_t(-1))
+                if ((line.type & CoolingLine::TYPE_ADJUSTABLE) || active_speed_modifier != size_t(-1)) {
                     line.time_max = (adjustment->min_print_speed == 0.f) ? FLT_MAX : std::max(line.time, line.length / adjustment->min_print_speed);
+                    if(adjustment->max_speed_reduction > 0)
+                        line.time_max = std::min(line.time_max, line.time / (1- adjustment->max_speed_reduction));
+                }
                 if (active_speed_modifier < adjustment->lines.size() && (line.type & CoolingLine::TYPE_G1)) {
                     // Inside the ";_EXTRUDE_SET_SPEED" blocks, there must not be a G1 Fxx entry.
                     assert((line.type & CoolingLine::TYPE_HAS_F) == 0);
@@ -534,8 +545,10 @@ static inline void extruder_range_slow_down_non_proportional(
     }
     assert(feedrate > 0.f);
     // Sort by min_print_speed, maximum speed first.
+    //multiplied by max_speed_reductionto be able to sort them when only this one change.
     std::sort(by_min_print_speed.begin(), by_min_print_speed.end(), 
-        [](const PerExtruderAdjustments *p1, const PerExtruderAdjustments *p2){ return p1->min_print_speed > p2->min_print_speed; });
+        [](const PerExtruderAdjustments *p1, const PerExtruderAdjustments *p2){ 
+        return (1 - p1->max_speed_reduction) * p1->min_print_speed > (1 - p2->max_speed_reduction) * p2->min_print_speed; });
     // Slow down, fast moves first.
     for (;;) {
         // For each extruder, find the span of lines with a feedrate close to feedrate.
@@ -552,6 +565,7 @@ static inline void extruder_range_slow_down_non_proportional(
         // Slow down, limited by max(feedrate_next, min_print_speed).
         for (auto adj = by_min_print_speed.begin(); adj != by_min_print_speed.end();) {
             // Slow down at most by time_stretch.
+            //note: the max_speed reduction is used via the max_time, nothing else to do as it's a proportional limit.
             if ((*adj)->min_print_speed == 0.f) {
                 // All the adjustable speeds are now lowered to the same speed,
                 // and the minimum speed is set to zero.
@@ -580,7 +594,7 @@ static inline void extruder_range_slow_down_non_proportional(
             }
             // Skip the other extruders with nearly the same min_print_speed, as they have been processed already.
             auto next = adj;
-            for (++ next; next != by_min_print_speed.end() && (*next)->min_print_speed > (*adj)->min_print_speed - EPSILON; ++ next);
+            for (++ next; next != by_min_print_speed.end() && (*next)->min_print_speed > (*adj)->min_print_speed - EPSILON && (*next)->max_speed_reduction < (*adj)->max_speed_reduction + EPSILON; ++ next);
             adj = next;
         }
         if (feedrate_next == 0.f)

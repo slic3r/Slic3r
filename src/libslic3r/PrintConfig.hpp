@@ -1060,6 +1060,7 @@ public:
     ConfigOptionInts                max_fan_speed;
     ConfigOptionFloats              max_layer_height;
     ConfigOptionFloat               max_print_height;
+    ConfigOptionPercents            max_speed_reduction;
     ConfigOptionFloats              milling_diameter;
     ConfigOptionStrings             milling_toolchange_end_gcode;
     ConfigOptionStrings             milling_toolchange_start_gcode;
@@ -1148,6 +1149,7 @@ protected:
         OPT_PTR(max_fan_speed);
         OPT_PTR(max_layer_height);
         OPT_PTR(max_print_height);
+        OPT_PTR(max_speed_reduction);
         OPT_PTR(milling_diameter);
         OPT_PTR(milling_toolchange_end_gcode);
         OPT_PTR(milling_toolchange_start_gcode);

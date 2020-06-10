@@ -30,7 +30,8 @@ group:Short layer time - began to increase base fan speed
 	setting:label$Max fan speed:max_fan_speed
 group:Very short layer time - began to decrease extrusion rate
 	setting:label$Layer time goal:slowdown_below_layer_time
-	setting:min_print_speed
+	setting:width$4:max_speed_reduction
+	setting:width$4:min_print_speed
 group:Behavior
 	cooling_description
 

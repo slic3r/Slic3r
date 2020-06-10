@@ -867,6 +867,7 @@ public:
     ConfigOption*           clone() const override { return new ConfigOptionPercentsTempl(*this); }
     ConfigOptionPercentsTempl&   operator=(const ConfigOption *opt) { this->set(opt); return *this; }
     bool                    operator==(const ConfigOptionPercentsTempl &rhs) const { return this->values == rhs.values; }
+    double                  get_abs_value(size_t i, double ratio_over) const { return is_nil(i) ? 0 : ratio_over * get_at(i) / 100; }
 
     std::string serialize() const override
     {
