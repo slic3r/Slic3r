@@ -2576,6 +2576,33 @@ void TabPrinter::update_fff()
                 field->toggle(have_advanced_wipe_volume);
         }
     }
+
+    //z step checks
+    {
+        double z_step = m_config->opt_float("z_step");
+        DynamicPrintConfig new_conf;
+        bool has_changed = false;
+        const std::vector<double>& min_layer_height = m_config->option<ConfigOptionFloats>("min_layer_height")->values;
+        for (int i = 0; i < min_layer_height.size(); i++)
+            if (min_layer_height[i] / z_step != 0) {
+                if(!has_changed )
+                    new_conf = *m_config;
+                new_conf.option<ConfigOptionFloats>("min_layer_height")->values[i] = std::max(z_step, check_z_step(new_conf.option<ConfigOptionFloats>("min_layer_height")->values[i], z_step));
+                has_changed = true;
+            }
+        const std::vector<double>& max_layer_height = m_config->option<ConfigOptionFloats>("max_layer_height")->values;
+        for (int i = 0; i < max_layer_height.size(); i++)
+            if (max_layer_height[i] / z_step != 0) {
+                if (!has_changed)
+                    new_conf = *m_config;
+                new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i] = std::max(z_step, check_z_step(new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i], z_step));
+                has_changed = true;
+            }
+        if (has_changed) {
+            load_config(new_conf);
+        }
+    }
+
 //    Thaw();
 }
 

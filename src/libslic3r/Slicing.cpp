@@ -24,11 +24,23 @@ namespace Slic3r
 static const coordf_t MIN_LAYER_HEIGHT = 0.01;
 static const coordf_t MIN_LAYER_HEIGHT_DEFAULT = 0.07;
 
+inline coordf_t check_z_step(coordf_t val, coordf_t z_step) {
+    uint64_t valint = uint64_t(val * 100000. + 0.1);
+    uint64_t stepint = uint64_t(z_step * 100000. + 0.1);
+    return (((valint + (stepint/2)) / stepint) * stepint) / 100000.;
+    //return int((val + z_step * 0.5) / z_step) * z_step;
+}
+inline bool test_z_step(coordf_t val, coordf_t z_step) {
+    uint64_t valint = uint64_t(val * 100000. + 0.1);
+    uint64_t stepint = uint64_t(z_step * 100000. + 0.1);
+    return valint % stepint == 0;
+}
+
 // Minimum layer height for the variable layer height algorithm.
 inline coordf_t min_layer_height_from_nozzle(const PrintConfig &print_config, int idx_nozzle)
 {
     coordf_t min_layer_height = print_config.min_layer_height.get_at(idx_nozzle - 1);
-    return (min_layer_height == 0.) ? MIN_LAYER_HEIGHT_DEFAULT : std::max(MIN_LAYER_HEIGHT, min_layer_height);
+    return check_z_step( (min_layer_height == 0.) ? (MIN_LAYER_HEIGHT_DEFAULT) : std::max(MIN_LAYER_HEIGHT, min_layer_height), print_config.z_step);
 }
 
 // Maximum layer height for the variable layer height algorithm, 3/4 of a nozzle dimaeter by default,
@@ -38,14 +50,14 @@ inline coordf_t max_layer_height_from_nozzle(const PrintConfig &print_config, in
     coordf_t min_layer_height = min_layer_height_from_nozzle(print_config, idx_nozzle);
     coordf_t max_layer_height = print_config.max_layer_height.get_at(idx_nozzle - 1);
     coordf_t nozzle_dmr       = print_config.nozzle_diameter.get_at(idx_nozzle - 1);
-    return std::max(min_layer_height, (max_layer_height == 0.) ? (0.75 * nozzle_dmr) : max_layer_height);
+    return check_z_step(std::max(min_layer_height, (max_layer_height == 0.) ? (0.75 * nozzle_dmr) : max_layer_height), print_config.z_step);
 }
 
 // Minimum layer height for the variable layer height algorithm.
 coordf_t Slicing::min_layer_height_from_nozzle(const DynamicPrintConfig &print_config, int idx_nozzle)
 {
     coordf_t min_layer_height = print_config.opt_float("min_layer_height", idx_nozzle - 1);
-    return (min_layer_height == 0.) ? MIN_LAYER_HEIGHT_DEFAULT : std::max(MIN_LAYER_HEIGHT, min_layer_height);
+    return check_z_step((min_layer_height == 0.) ? (MIN_LAYER_HEIGHT_DEFAULT) : std::max(MIN_LAYER_HEIGHT, min_layer_height), print_config.opt_float("z_step"));
 }
 
 // Maximum layer height for the variable layer height algorithm, 3/4 of a nozzle dimaeter by default,
@@ -55,7 +67,7 @@ coordf_t Slicing::max_layer_height_from_nozzle(const DynamicPrintConfig &print_c
     coordf_t min_layer_height = min_layer_height_from_nozzle(print_config, idx_nozzle);
     coordf_t max_layer_height = print_config.opt_float("max_layer_height", idx_nozzle - 1);
     coordf_t nozzle_dmr       = print_config.opt_float("nozzle_diameter", idx_nozzle - 1);
-    return std::max(min_layer_height, (max_layer_height == 0.) ? (0.75 * nozzle_dmr) : max_layer_height);
+    return check_z_step(std::max(min_layer_height, (max_layer_height == 0.) ? (0.75 * nozzle_dmr) : max_layer_height), print_config.opt_float("z_step"));
 }
 
 SlicingParameters SlicingParameters::create_from_config(
@@ -65,10 +77,11 @@ SlicingParameters SlicingParameters::create_from_config(
 	const std::vector<uint16_t> &object_extruders)
 {
     //first layer height is got from the first_layer_height setting unless the value was garbage.
-    // if the first_layer_height setting depends of the nozzle width, use the first one.
+    // if the first_layer_height setting depends of the nozzle width, use the first one. Apply the z_step
     coordf_t first_layer_height = (object_config.first_layer_height.get_abs_value(print_config.nozzle_diameter.empty() ? 0. : print_config.nozzle_diameter.get_at(0)) <= 0) ?
         object_config.layer_height.value : 
         object_config.first_layer_height.get_abs_value(print_config.nozzle_diameter.get_at(0));
+    first_layer_height = check_z_step(first_layer_height, print_config.z_step);
     // If object_config.support_material_extruder == 0 resp. object_config.support_material_interface_extruder == 0,
     // print_config.nozzle_diameter.get_at(size_t(-1)) returns the 0th nozzle diameter,
     // which is consistent with the requirement that if support_material_extruder == 0 resp. support_material_interface_extruder == 0,
@@ -86,6 +99,12 @@ SlicingParameters SlicingParameters::create_from_config(
     params.object_print_z_max = object_height;
     params.base_raft_layers = object_config.raft_layers.value;
     params.soluble_interface = soluble_interface;
+    params.z_step = print_config.z_step;
+
+    //apply z_step to layer_height
+    params.layer_height = check_z_step(params.layer_height , params.z_step);
+    params.object_print_z_max = check_z_step(params.object_print_z_max, params.z_step);
+    if (params.object_print_z_max < object_height) params.object_print_z_max += params.z_step;
 
     // Miniumum/maximum of the minimum layer height over all extruders.
     params.min_layer_height = MIN_LAYER_HEIGHT;
@@ -112,10 +131,16 @@ SlicingParameters SlicingParameters::create_from_config(
     }
     params.min_layer_height = std::min(params.min_layer_height, params.layer_height);
     params.max_layer_height = std::max(params.max_layer_height, params.layer_height);
+    //apply z_step to min/max
+    params.min_layer_height = check_z_step(params.min_layer_height, params.z_step);
+    params.max_layer_height = check_z_step(params.max_layer_height, params.z_step);
+    params.max_suport_layer_height = check_z_step(params.max_suport_layer_height, params.z_step);
 
     if (! soluble_interface) {
         params.gap_raft_object = object_config.support_material_contact_distance_top.get_abs_value(support_material_interface_extruder_dmr);
+        params.gap_raft_object = check_z_step(params.gap_raft_object, params.z_step);
         params.gap_object_support = object_config.support_material_contact_distance_bottom.get_abs_value(support_material_interface_extruder_dmr);
+        params.gap_object_support = check_z_step(params.gap_object_support, params.z_step);
         params.gap_support_object = params.gap_raft_object;
     }
 
@@ -124,11 +149,14 @@ SlicingParameters SlicingParameters::create_from_config(
         params.base_raft_layers -= params.interface_raft_layers;
         // Use as large as possible layer height for the intermediate raft layers.
         params.base_raft_layer_height       = std::max(params.layer_height, 0.75 * support_material_extruder_dmr);
+        params.base_raft_layer_height = check_z_step(params.base_raft_layer_height, params.z_step);
         params.interface_raft_layer_height  = std::max(params.layer_height, 0.75 * support_material_interface_extruder_dmr);
+        params.interface_raft_layer_height = check_z_step(params.interface_raft_layer_height, params.z_step);
         params.contact_raft_layer_height_bridging = false;
         params.first_object_layer_bridging  = false;
         #if 1
         params.contact_raft_layer_height    = std::max(params.layer_height, 0.75 * support_material_interface_extruder_dmr);
+        params.contact_raft_layer_height = check_z_step(params.contact_raft_layer_height, params.z_step);
         if (! soluble_interface) {
             // Compute the average of all nozzles used for printing the object over a raft.
             //FIXME It is expected, that the 1st layer of the object is printed with a bridging flow over a full raft. Shall it not be vice versa?
@@ -143,6 +171,7 @@ SlicingParameters SlicingParameters::create_from_config(
         }
         #else
         params.contact_raft_layer_height    = soluble_interface ? support_material_interface_extruder_dmr : 0.75 * support_material_interface_extruder_dmr;
+        params.contact_raft_layer_height = check_z_step(params.contact_raft_layer_height, params.z_step);
         params.contact_raft_layer_height_bridging = ! soluble_interface;
         ...
         #endif
@@ -169,6 +198,24 @@ SlicingParameters SlicingParameters::create_from_config(
         params.object_print_z_max += print_z;
     }
 
+    assert(test_z_step(params.interface_raft_layer_height , params.z_step));
+    assert(test_z_step(params.base_raft_layer_height, params.z_step));
+    assert(test_z_step(params.contact_raft_layer_height, params.z_step));
+    assert(test_z_step(params.layer_height, params.z_step));
+    assert(test_z_step(params.min_layer_height, params.z_step));
+    assert(test_z_step(params.max_layer_height, params.z_step));
+    assert(test_z_step(params.max_suport_layer_height, params.z_step));
+    assert(test_z_step(params.first_print_layer_height, params.z_step));
+    assert(test_z_step(params.first_object_layer_height, params.z_step));
+    assert(test_z_step(params.gap_raft_object, params.z_step));
+    assert(test_z_step(params.gap_object_support, params.z_step));
+    assert(test_z_step(params.gap_support_object, params.z_step));
+    assert(test_z_step(params.raft_base_top_z, params.z_step));
+    assert(test_z_step(params.raft_interface_top_z, params.z_step));
+    assert(test_z_step(params.raft_contact_top_z, params.z_step));
+    assert(test_z_step(params.object_print_z_min, params.z_step));
+    assert(test_z_step(params.object_print_z_max, params.z_step));
+
     params.valid = true;
     return params;
 }
@@ -177,8 +224,12 @@ std::vector<std::pair<t_layer_height_range, coordf_t>> layer_height_ranges(const
 {
 	std::vector<std::pair<t_layer_height_range, coordf_t>> out;
 	out.reserve(config_ranges.size());
-	for (const auto &kvp : config_ranges)
-		out.emplace_back(kvp.first, kvp.second.option("layer_height")->getFloat());
+    for (const auto& kvp : config_ranges) {
+        coordf_t z_step = kvp.second.opt_float("z_step");
+        coordf_t layer_height = kvp.second.opt_float("layer_height");
+        out.emplace_back(kvp.first, check_z_step(layer_height, z_step));
+        
+    }
 	return out;
 }
 
@@ -203,6 +254,9 @@ std::vector<coordf_t> layer_height_profile_from_ranges(
         if (! ranges_non_overlapping.empty())
             // Trim current low with the last high.
             lo = std::max(lo, ranges_non_overlapping.back().first.second);
+        lo = check_z_step(lo, slicing_params.z_step);
+        hi = check_z_step(hi, slicing_params.z_step);
+        height = check_z_step(height, slicing_params.z_step);
         if (lo + EPSILON < hi)
             // Ignore too narrow ranges.
             ranges_non_overlapping.push_back(std::pair<t_layer_height_range,coordf_t>(t_layer_height_range(lo, hi), height));
@@ -294,6 +348,7 @@ std::vector<double> layer_height_profile_adaptive(const SlicingParameters& slici
             }
         }
 #endif
+        cusp_height = check_z_step(cusp_height, slicing_params.z_step);
         height = std::min((coordf_t)cusp_height, height);
 
         // apply z-gradation
@@ -373,6 +428,7 @@ std::vector<double> smooth_height_profile(const std::vector<double>& profile, co
         for (size_t i = 0; i < skip_count; ++i)
         {
             ret.push_back(profile[i]);
+            ret[i] = check_z_step(ret[i], slicing_params.z_step);
         }
 
         // smooth the rest of the profile by biasing a gaussian blur
@@ -384,6 +440,7 @@ std::vector<double> smooth_height_profile(const std::vector<double>& profile, co
         for (size_t i = skip_count; i < size; i += 2)
         {
             double zi = profile[i];
+            zi = check_z_step(zi, slicing_params.z_step);
             double hi = profile[i + 1];
             ret.push_back(zi);
             ret.push_back(0.0);
@@ -407,6 +464,7 @@ std::vector<double> smooth_height_profile(const std::vector<double>& profile, co
             height = clamp(slicing_params.min_layer_height, slicing_params.max_layer_height, (weight_total != 0.0) ? height /= weight_total : hi);
             if (smoothing_params.keep_min)
                 height = std::min(height, hi);
+            height = check_z_step(height, slicing_params.z_step);
         }
 
         return ret;
@@ -482,7 +540,7 @@ void adjust_layer_height_profile(
 	coordf_t lo = std::max(z_span_variable.first,  z - 0.5 * band_width);
     // Do not limit the upper side of the band, so that the modifications to the top point of the profile will be allowed.
     coordf_t hi = z + 0.5 * band_width;
-    coordf_t z_step = 0.1;
+    coordf_t z_step_adjust = 0.1;
     size_t idx = 0;
     while (idx < layer_height_profile.size() && layer_height_profile[idx] < lo)
         idx += 2;
@@ -548,7 +606,7 @@ void adjust_layer_height_profile(
             profile_new.push_back(height);
         }
         // Limit zz to the object height, so the next iteration the last profile point will be set.
-		zz = std::min(zz + z_step, z_span_variable.second);
+		zz = std::min(zz + z_step_adjust, z_span_variable.second);
         idx = next;
         while (idx < layer_height_profile.size() && layer_height_profile[idx] < zz)
             idx += 2;
@@ -589,6 +647,10 @@ void adjust_layer_height_profile(
             }
         }
     }
+
+    //i'm not sure it's needed. just in case.
+    for (size_t i = 0; i < layer_height_profile.size(); i ++)
+        layer_height_profile[i] = check_z_step(layer_height_profile[i], slicing_params.z_step);
 
 	assert(layer_height_profile.size() > 2);
 	assert(layer_height_profile.size() % 2 == 0);
@@ -638,10 +700,12 @@ std::vector<coordf_t> generate_object_layers(
             coordf_t z1 = layer_height_profile[idx_layer_height_profile];
             coordf_t h1 = layer_height_profile[idx_layer_height_profile + 1];
             height = h1;
+            height = check_z_step(height, slicing_params.z_step);
             if (next < layer_height_profile.size()) {
                 coordf_t z2 = layer_height_profile[next];
                 coordf_t h2 = layer_height_profile[next + 1];
                 height = lerp(h1, h2, (slice_z - z1) / (z2 - z1));
+                height = check_z_step(height, slicing_params.z_step);
                 assert(height >= slicing_params.min_layer_height - EPSILON && height <= slicing_params.max_layer_height + EPSILON);
             }
         }
@@ -684,6 +748,10 @@ std::vector<coordf_t> generate_object_layers(
         }
     }
 
+#ifdef _DEBUG
+    for (size_t i = 0; i < out.size(); i++)
+        assert(test_z_step(out[i], slicing_params.z_step/2));
+#endif
     return out;
 }
 

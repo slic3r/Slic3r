@@ -606,7 +606,8 @@ const std::vector<std::string>& Preset::printer_options()
             "machine_max_jerk_x", "machine_max_jerk_y", "machine_max_jerk_z", "machine_max_jerk_e",
             "time_estimation_compensation",
             "print_machine_envelope",
-            "fan_speedup_time"
+            "fan_speedup_time",
+            "z_step"
         };
         s_opts.insert(s_opts.end(), Preset::nozzle_options().begin(), Preset::nozzle_options().end());
         s_opts.insert(s_opts.end(), Preset::milling_options().begin(), Preset::milling_options().end());

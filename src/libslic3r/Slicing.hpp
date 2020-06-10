@@ -20,6 +20,8 @@ class PrintConfig;
 class PrintObjectConfig;
 class ModelObject;
 
+coordf_t check_z_step(coordf_t val, coordf_t z_step);
+
 // Parameters to guide object slicing and support generation.
 // The slicing parameters account for a raft and whether the 1st object layer is printed with a normal or a bridging flow
 // (using a normal flow over a soluble support, using a bridging flow over a non-soluble support).
@@ -65,6 +67,8 @@ struct SlicingParameters
     coordf_t    max_layer_height;
     coordf_t    max_suport_layer_height;
     bool        exact_last_layer_height;
+    // min common divisor for all layer height
+    coordf_t 	z_step;
 
     // First layer height of the print, this may be used for the first layer of the raft
     // or for the first layer of the print.

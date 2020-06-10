@@ -3480,6 +3480,16 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0));
 
+    def = this->add("z_step", coFloat);
+    def->label = L("Z full step");
+    def->tooltip = L("Set this to the height moved when your Z motor (or equivalent) turns one step."
+                    "If your motor needs 200 steps to move your head/plater by 1mm, this field have to be 1/200 = 0.005");
+    def->cli = "z-step=f";
+    def->sidetext = L("mm");
+    def->min = 0.0001;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.005));
+
     // Declare retract values for filament profile, overriding the printer's extruder profile.
     for (const char *opt_key : {
         // floats
@@ -4349,6 +4359,10 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         float v = boost::lexical_cast<float>(value);
         if (v > 0)
             value = boost::lexical_cast<std::string>(-v);
+    } else if (opt_key == "z_steps_per_mm") {
+        opt_key = "z_step";
+        float v = boost::lexical_cast<float>(value);
+        value = boost::lexical_cast<std::string>(1/v);
     }
 
     // Ignore the following obsolete configuration keys:
