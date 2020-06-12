@@ -18,7 +18,7 @@ before_install:
     - export SLIC3R_GIT_VERSION=$(git rev-parse --short HEAD)
 
 script:
-    - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "main" ]]; then ./package/linux/travis-build-main.sh || travis_terminate 1; fi
+    - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "main" ]]; then ./package/linux/travis-build-main.sh -p -b -w || travis_terminate 1; fi
     - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "cpp"  ]]; then ./package/linux/travis-build-cpp.sh || travis_terminate 1; fi
     - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$TARGET" == "main" ]]; then ./package/osx/travis-build-main.sh || travis_terminate 1; fi
     - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$TARGET" == "cpp"  ]]; then ./package/osx/travis-build-cpp.sh || travis_terminate 1; fi
@@ -32,6 +32,8 @@ branches:
 
 addons:
   apt:
+    sources:
+      - sourceline: "ppa:mhier/libboost-latest"
     packages:
     - g++
     - gcc
@@ -40,8 +42,15 @@ addons:
     - freeglut3
     - cmake
     - wx3.0-headers
+    - perl
+    - wx3.0-i18n
+    - libwx-perl
+    - libwxgtk3.0-0v5
     - libwxgtk3.0-dev
     - wx-common
+    - libboost
+    - libboost-dev
+
   ssh_known_hosts: dl.slic3r.org
 
 matrix:
@@ -51,12 +60,9 @@ matrix:
             - TARGET=main
           cache:
             directories:
-              - $HOME/boost_1_63_0
-              - $HOME/perl5
-              - $HOME/wx302
               - local-lib
           after_success:
-            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then source ${HOME}/perl5/perlbrew/etc/bashrc; perlbrew switch slic3r-perl; ./package/linux/travis-deploy-main.sh || travis_terminate 1; fi
+            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/linux/travis-deploy-main.sh || travis_terminate 1; fi
 
         - os: linux
           env: 
