@@ -28,6 +28,7 @@ branches:
   - master
   - cppgui
   - coverity-scan
+  - use-xenial
 
 addons:
   apt:
