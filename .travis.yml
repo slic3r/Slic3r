@@ -11,7 +11,7 @@
 # - deploy to dl.slic3r.org (except for the cppgui branch)
 
 language: generic
-dist: trusty
+dist: xenial
 
 before_install:
     - sh package/common/travis-decrypt-key
@@ -31,13 +31,9 @@ branches:
 
 addons:
   apt:
-    sources:
-    - ubuntu-toolchain-r-test
     packages:
-    - g++-7
-    - gcc-7
-    - g++-8
-    - gcc-8
+    - g++
+    - gcc
     - libgtk2.0-0 
     - libgtk2.0-dev
     - freeglut3
