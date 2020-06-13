@@ -50,6 +50,8 @@ addons:
     - wx-common
     - libboost1.70
     - libboost1.70-dev
+    - liblocal-lib-perl
+
 
 ssh_known_hosts: dl.slic3r.org
 
