@@ -32,6 +32,7 @@
 #include <wx/wupdlock.h>
 
 #include <libslic3r/GCodeWriter.hpp>
+#include <libslic3r/Slicing.hpp>
 
 #include "GUI_App.hpp"
 #include "GUI_ObjectList.hpp"
@@ -43,6 +44,13 @@ namespace GUI {
 
 wxDEFINE_EVENT(EVT_TAB_VALUE_CHANGED, wxCommandEvent);
 wxDEFINE_EVENT(EVT_TAB_PRESETS_CHANGED, SimpleEvent);
+
+inline coordf_t check_z_step_temp(coordf_t val, coordf_t z_step) {
+    uint64_t valint = uint64_t(val * 100000. + 0.1);
+    uint64_t stepint = uint64_t(z_step * 100000. + 0.1);
+    return (((valint + (stepint / 2)) / stepint) * stepint) / 100000.;
+    //return int((val + z_step * 0.5) / z_step) * z_step;
+}
 
 Tab::Tab(wxNotebook* parent, const wxString& title, Preset::Type type) :
     m_parent(parent), m_title(title), m_type(type)
@@ -2177,7 +2185,9 @@ PageShp TabPrinter::build_kinematics_page()
     current_line.widget = [this](wxWindow* parent) {
         ogStaticText* text;
         auto result = description_line_widget(parent, &text);
-        text->SetText(_(L("Description: The information below is used to calculate estimated printing time only, unless you enable the limits via the checkbox above.")));
+        text->SetText(_(L("Description: The information below is used to calculate estimated printing time and as safegard when generating gcode"
+            " (even if the acceleration is set to 3000 in the print profile, if this is at 1500, it won't export a gcode that will tell to go over 1500)."
+            " You can also export these limits to the start gcode via the checkbox above (the output depends on the selected firmare).")));
         return result;
     };
     optgroup->append_line(current_line);
@@ -2587,7 +2597,7 @@ void TabPrinter::update_fff()
             if (min_layer_height[i] / z_step != 0) {
                 if(!has_changed )
                     new_conf = *m_config;
-                new_conf.option<ConfigOptionFloats>("min_layer_height")->values[i] = std::max(z_step, check_z_step(new_conf.option<ConfigOptionFloats>("min_layer_height")->values[i], z_step));
+                new_conf.option<ConfigOptionFloats>("min_layer_height")->values[i] = std::max(z_step, check_z_step_temp(new_conf.option<ConfigOptionFloats>("min_layer_height")->values[i], z_step));
                 has_changed = true;
             }
         const std::vector<double>& max_layer_height = m_config->option<ConfigOptionFloats>("max_layer_height")->values;
@@ -2595,7 +2605,7 @@ void TabPrinter::update_fff()
             if (max_layer_height[i] / z_step != 0) {
                 if (!has_changed)
                     new_conf = *m_config;
-                new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i] = std::max(z_step, check_z_step(new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i], z_step));
+                new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i] = std::max(z_step, check_z_step_temp(new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i], z_step));
                 has_changed = true;
             }
         if (has_changed) {
