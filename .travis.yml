@@ -48,10 +48,10 @@ addons:
     - libwxgtk3.0-0v5
     - libwxgtk3.0-dev
     - wx-common
-    - libboost
-    - libboost-dev
+    - libboost1.70
+    - libboost1.70-dev
 
-  ssh_known_hosts: dl.slic3r.org
+ssh_known_hosts: dl.slic3r.org
 
 matrix:
     include:
