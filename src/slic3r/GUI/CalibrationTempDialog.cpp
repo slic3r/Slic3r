@@ -54,7 +54,7 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     Model& model = plat->model();
     plat->reset();
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
-            Slic3r::resources_dir()+"/calibration/filament_temp/Smart_compact_temperature_calibration_item.amf"}, true, false);
+            Slic3r::resources_dir()+"/calibration/filament_temp/Smart_compact_temperature_calibration_item.amf"}, true, false, false);
 
     assert(objs_idx.size() == 1);
     const DynamicPrintConfig* printConfig = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();

@@ -37,7 +37,7 @@ void CalibrationOverBridgeDialog::create_geometry(wxCommandEvent& event_args) {
             Slic3r::resources_dir()+"/calibration/over-bridge_tuning/over-bridge_flow_ratio_test.amf",
             Slic3r::resources_dir()+"/calibration/over-bridge_tuning/over-bridge_flow_ratio_test.amf",
             Slic3r::resources_dir()+"/calibration/over-bridge_tuning/over-bridge_flow_ratio_test.amf",
-            Slic3r::resources_dir()+"/calibration/over-bridge_tuning/over-bridge_flow_ratio_test.amf"}, true, false);
+            Slic3r::resources_dir()+"/calibration/over-bridge_tuning/over-bridge_flow_ratio_test.amf"}, true, false, false);
 
     assert(objs_idx.size() == 6);
     const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();

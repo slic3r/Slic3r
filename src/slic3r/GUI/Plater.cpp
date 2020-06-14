@@ -1883,7 +1883,7 @@ struct Plater::priv
     arrangement::BedShapeHint get_bed_shape_hint() const;
     
     void find_new_position(const ModelInstancePtrs  &instances, coord_t min_d);
-    std::vector<size_t> load_files(const std::vector<fs::path>& input_files, bool load_model, bool load_config);
+    std::vector<size_t> load_files(const std::vector<fs::path>& input_files, bool load_model, bool load_config, bool update_dirs = true);
     std::vector<size_t> load_model_objects(const ModelObjectPtrs &model_objects);
     wxString get_export_file(GUI::FileType file_type);
 
@@ -2349,7 +2349,7 @@ BoundingBox Plater::priv::scaled_bed_shape_bb() const
     return bed_shape.bounding_box();
 }
 
-std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_files, bool load_model, bool load_config)
+std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_files, bool load_model, bool load_config, bool update_dirs)
 {
     if (input_files.empty()) { return std::vector<size_t>(); }
 
@@ -2428,7 +2428,8 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         wxGetApp().load_current_presets();
                         is_project_file = true;
                     }
-                    wxGetApp().app_config->update_config_dir(path.parent_path().string());
+                    if(update_dirs)
+                        wxGetApp().app_config->update_config_dir(path.parent_path().string());
                 }
             }
             else {
@@ -2516,7 +2517,8 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
 
     if (load_model)
     {
-        wxGetApp().app_config->update_skein_dir(input_files[input_files.size() - 1].parent_path().string());
+        if(update_dirs)
+            wxGetApp().app_config->update_skein_dir(input_files[input_files.size() - 1].parent_path().string());
         // XXX: Plater.pm had @loaded_files, but didn't seem to fill them with the filenames...
         statusbar()->set_status_text(_(L("Loaded")));
     }
@@ -4737,16 +4739,18 @@ void Plater::extract_config_from_project()
     load_files(input_paths, false, true);
 }
 
-std::vector<size_t> Plater::load_files(const std::vector<fs::path>& input_files, bool load_model, bool load_config) { return p->load_files(input_files, load_model, load_config); }
+std::vector<size_t> Plater::load_files(const std::vector<fs::path>& input_files, bool load_model, bool load_config, bool update_dirs) { 
+    return p->load_files(input_files, load_model, load_config, update_dirs);
+}
 
 // To be called when providing a list of files to the GUI slic3r on command line.
-std::vector<size_t> Plater::load_files(const std::vector<std::string>& input_files, bool load_model, bool load_config)
+std::vector<size_t> Plater::load_files(const std::vector<std::string>& input_files, bool load_model, bool load_config, bool update_dirs)
 {
     std::vector<fs::path> paths;
     paths.reserve(input_files.size());
     for (const std::string& path : input_files)
         paths.emplace_back(path);
-    return p->load_files(paths, load_model, load_config);
+    return p->load_files(paths, load_model, load_config, update_dirs);
 }
 
 void Plater::update() { p->update(); }

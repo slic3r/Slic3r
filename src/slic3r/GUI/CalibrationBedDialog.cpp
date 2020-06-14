@@ -36,7 +36,7 @@ void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
             Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
             Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
             Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
-            Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf"}, true, false);
+            Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf"}, true, false, false);
 
     assert(objs_idx.size() == 5);
     const DynamicPrintConfig* printConfig = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();

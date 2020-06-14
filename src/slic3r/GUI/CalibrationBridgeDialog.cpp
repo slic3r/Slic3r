@@ -59,7 +59,7 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     std::vector<std::string> items;
     for (size_t i = 0; i < nb_items; i++)
         items.emplace_back(Slic3r::resources_dir()+"/calibration/bridge_flow/bridge_test.amf");
-    std::vector<size_t> objs_idx = plat->load_files(items, true, false);
+    std::vector<size_t> objs_idx = plat->load_files(items, true, false, false);
 
     assert(objs_idx.size() == nb_items);
     const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();

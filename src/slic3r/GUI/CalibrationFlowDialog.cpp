@@ -40,7 +40,7 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
             Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow_test_cube.amf",
             Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow_test_cube.amf",
             Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow_test_cube.amf",
-            Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow_test_cube.amf"}, true, false);
+            Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow_test_cube.amf"}, true, false, false);
 
 
     assert(objs_idx.size() == 5);

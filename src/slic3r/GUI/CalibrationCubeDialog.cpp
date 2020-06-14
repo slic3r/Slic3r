@@ -54,7 +54,7 @@ void CalibrationCubeDialog::create_geometry(std::string calibration_path) {
     Model& model = plat->model();
     plat->reset();
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
-            Slic3r::resources_dir()+"/calibration/cube/"+ calibration_path}, true, false);
+            Slic3r::resources_dir()+"/calibration/cube/"+ calibration_path}, true, false, false);
 
     assert(objs_idx.size() == 1);
     const DynamicPrintConfig* printConfig = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();

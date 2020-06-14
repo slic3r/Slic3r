@@ -157,9 +157,9 @@ public:
     void add_model();
     void extract_config_from_project();
 
-    std::vector<size_t> load_files(const std::vector<boost::filesystem::path>& input_files, bool load_model = true, bool load_config = true);
+    std::vector<size_t> load_files(const std::vector<boost::filesystem::path>& input_files, bool load_model = true, bool load_config = true, bool update_dirs = true);
     // To be called when providing a list of files to the GUI slic3r on command line.
-    std::vector<size_t> load_files(const std::vector<std::string>& input_files, bool load_model = true, bool load_config = true);
+    std::vector<size_t> load_files(const std::vector<std::string>& input_files, bool load_model = true, bool load_config = true, bool update_dirs = true);
 
     void update();
     void stop_jobs();
