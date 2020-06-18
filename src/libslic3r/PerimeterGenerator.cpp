@@ -954,11 +954,18 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     //little check: if you have external holes with only one extrusion and internal things, please draw the internal first, just in case it can help print the hole better.
     std::vector<std::pair<size_t, bool>> better_chain;
     for (const std::pair<size_t, bool>& idx : chain) {
-        if (idx.first >= loops.size() || !loops[idx.first].is_external() || (!loops[idx.first].is_contour && !loops[idx.first].children.empty()))
-            better_chain.push_back(idx);
+        if(idx.first < loops.size())
+            if (!loops[idx.first].is_external() || (!loops[idx.first].is_contour && !loops[idx.first].children.empty()))
+                better_chain.push_back(idx);
     }
     for (const std::pair<size_t, bool>& idx : chain) {
-        if (idx.first < loops.size() && loops[idx.first].is_external() && !(!loops[idx.first].is_contour && !loops[idx.first].children.empty()))
+        if (idx.first < loops.size())
+            if (idx.first < loops.size() && loops[idx.first].is_external() && !(!loops[idx.first].is_contour && !loops[idx.first].children.empty()))
+                better_chain.push_back(idx);
+    }
+    //thin walls always last!
+    for (const std::pair<size_t, bool>& idx : chain) {
+        if (idx.first >= loops.size())
             better_chain.push_back(idx);
     }
 
