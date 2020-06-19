@@ -717,7 +717,12 @@ void PerimeterGenerator::process()
                     thin_walls.clear();
                 }
             } else {
-                entities = this->_traverse_loops(contours.front(), thin_walls);
+                if (this->object_config->thin_walls_merge) {
+                    entities = this->_traverse_loops(contours.front(), ThickPolylines{});
+                    _merge_thin_walls(entities, thin_walls);
+                } else {
+                    entities = this->_traverse_loops(contours.front(), thin_walls);
+                }
             }
 
             
@@ -917,7 +922,6 @@ void PerimeterGenerator::process()
     } // for each island
 }
 
-
 ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     const PerimeterGeneratorLoops &loops, ThickPolylines &thin_walls) const
 {
@@ -1054,6 +1058,170 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
         }
     }
     return coll_out;
+}
+
+void PerimeterGenerator::_merge_thin_walls(ExtrusionEntityCollection &extrusions, ThickPolylines &thin_walls) const {
+    class ChangeFlow : public ExtrusionVisitor {
+    public:
+        float percent_extrusion;
+        std::vector<ExtrusionPath> paths;
+        virtual void use(ExtrusionPath &path) override {
+            path.mm3_per_mm *= percent_extrusion;
+            path.width *= percent_extrusion;
+            paths.emplace_back(std::move(path));
+        }
+        virtual void use(ExtrusionPath3D &path3D) override { /*shouldn't happen*/ }
+        virtual void use(ExtrusionMultiPath &multipath) override { /*shouldn't happen*/ }
+        virtual void use(ExtrusionMultiPath3D &multipath) { /*shouldn't happen*/ }
+        virtual void use(ExtrusionLoop &loop) override {
+            for (ExtrusionPath &path : loop.paths)
+                this->use(path);
+        }
+        virtual void use(ExtrusionEntityCollection &collection) override {
+            for (ExtrusionEntity *entity : collection.entities)
+                entity->visit(*this);
+        }
+    };
+    struct BestPoint {
+        //Point p;
+        ExtrusionPath *path;
+        size_t idx_path;
+        ExtrusionLoop *loop;
+        size_t idx_line;
+        Line line;
+        double dist;
+        bool from_start;
+    };
+    //use a visitor to found the best point.
+    class SearchBestPoint : public ExtrusionVisitor {
+    public:
+        ThickPolyline* thin_wall;
+        BestPoint search_result;
+        size_t idx_path;
+        ExtrusionLoop *current_loop = nullptr;
+        virtual void use(ExtrusionPath &path) override {
+            //don't consider other thin walls.
+            if (path.role() == erThinWall) return;
+            //for each segment
+            Lines lines = path.polyline.lines();
+            for (size_t idx_line = 0; idx_line < lines.size(); idx_line++) {
+                //look for nearest point
+                double dist = lines[idx_line].distance_to_squared(thin_wall->points.front());
+                if (dist < search_result.dist) {
+                    search_result.path = &path;
+                    search_result.idx_path = idx_path;
+                    search_result.idx_line = idx_line;
+                    search_result.line = lines[idx_line];
+                    search_result.dist = dist;
+                    search_result.from_start = true;
+                    search_result.loop = current_loop;
+                }
+                dist = lines[idx_line].distance_to_squared(thin_wall->points.back());
+                if (dist < search_result.dist) {
+                    search_result.path = &path;
+                    search_result.idx_path = idx_path;
+                    search_result.idx_line = idx_line;
+                    search_result.line = lines[idx_line];
+                    search_result.dist = dist;
+                    search_result.from_start = false;
+                    search_result.loop = current_loop;
+                }
+            }
+        }
+        virtual void use(ExtrusionPath3D &path3D) override { /*shouldn't happen*/ }
+        virtual void use(ExtrusionMultiPath &multipath) override { /*shouldn't happen*/ }
+        virtual void use(ExtrusionMultiPath3D &multipath) { /*shouldn't happen*/ }
+        virtual void use(ExtrusionLoop &loop) override {
+            ExtrusionLoop * last_loop = current_loop;
+            current_loop = &loop;
+            //for each extrusion path
+            idx_path = 0;
+            for (ExtrusionPath &path : loop.paths) {
+                this->use(path);
+                idx_path++;
+            }
+            current_loop = last_loop;
+        }
+        virtual void use(ExtrusionEntityCollection &collection) override {
+            collection.no_sort = false;
+            //for each loop? (or other collections)
+            for (ExtrusionEntity *entity : collection.entities)
+                entity->visit(*this);
+        }
+    };
+    //max dist to branch: ~half external periemeter width
+    coord_t max_width = this->ext_perimeter_flow.scaled_width();
+    SearchBestPoint searcher;
+    ThickPolylines not_added;
+    //search the best extusion/point to branch into
+     //for each thin wall
+    int idx = 0;
+    for (ThickPolyline &tw : thin_walls) {
+        searcher.thin_wall = &tw;
+        searcher.search_result.dist = max_width;
+        searcher.search_result.dist *= searcher.search_result.dist;
+        searcher.search_result.path = nullptr;
+        searcher.use(extrusions);
+        idx++;
+        //now insert thin wall if it has a point
+        //it found a segment
+        if (searcher.search_result.path != nullptr) {
+            if (!searcher.search_result.from_start)
+                tw.reverse();
+            //get the point
+            Point point = tw.points.front().projection_onto(searcher.search_result.line);
+            //we have to create 3 paths: 1: thinwall extusion, 2: thinwall return, 3: end of the path
+            //create new path : end of the path
+            Polyline poly_after;
+            poly_after.points.push_back(point);
+            poly_after.points.insert(poly_after.points.end(),
+                searcher.search_result.path->polyline.points.begin() + searcher.search_result.idx_line + 1,
+                searcher.search_result.path->polyline.points.end());
+            searcher.search_result.path->polyline.points.erase(
+                searcher.search_result.path->polyline.points.begin() + searcher.search_result.idx_line + 1,
+                searcher.search_result.path->polyline.points.end());
+            searcher.search_result.loop->paths[searcher.search_result.idx_path].polyline.points.push_back(point);
+            searcher.search_result.loop->paths.insert(searcher.search_result.loop->paths.begin() + 1 + searcher.search_result.idx_path, 
+                ExtrusionPath(poly_after, *searcher.search_result.path));
+            //create thin wall path exttrusion
+            ExtrusionEntityCollection tws = thin_variable_width({ tw }, erThinWall, this->ext_perimeter_flow);
+            ChangeFlow change_flow;
+            if (tws.entities.size() == 1 && tws.entities[0]->is_loop()) {
+                //loop, just add it 
+                change_flow.percent_extrusion = 1;
+                change_flow.use(tws);
+                //add move back
+
+                searcher.search_result.loop->paths.insert(searcher.search_result.loop->paths.begin() + 1 + searcher.search_result.idx_path,
+                    change_flow.paths.begin(), change_flow.paths.end());
+                //add move to
+
+            } else {
+                //first add the return path
+                ExtrusionEntityCollection tws_second = tws;
+                tws_second.reverse();
+                change_flow.percent_extrusion = 0.1;
+                change_flow.use(tws_second);
+                for (ExtrusionPath &path : change_flow.paths)
+                    path.reverse();
+                //std::reverse(change_flow.paths.begin(), change_flow.paths.end());
+                searcher.search_result.loop->paths.insert(searcher.search_result.loop->paths.begin() + 1 + searcher.search_result.idx_path,
+                    change_flow.paths.begin(), change_flow.paths.end());
+                //add the real extrusion path
+                change_flow.percent_extrusion = 0.9;
+                change_flow.paths = std::vector<ExtrusionPath>();
+                change_flow.use(tws);
+                searcher.search_result.loop->paths.insert(searcher.search_result.loop->paths.begin() + 1 + searcher.search_result.idx_path,
+                    change_flow.paths.begin(), change_flow.paths.end());
+            }
+        } else {
+            not_added.push_back(tw);
+        }
+    }
+
+    //now add thinwalls that have no anchor (make them reversable)
+    ExtrusionEntityCollection tws = thin_variable_width(not_added, erThinWall, this->ext_perimeter_flow);
+    extrusions.append(tws.entities);
 }
 
 PerimeterIntersectionPoint

@@ -541,6 +541,7 @@ public:
     ConfigOptionInt                 support_material_threshold;
     ConfigOptionBool                support_material_with_sheath;
     ConfigOptionFloatOrPercent      support_material_xy_spacing;
+    ConfigOptionBool                thin_walls_merge;
     ConfigOptionFloat               xy_size_compensation;
     ConfigOptionFloat               xy_inner_size_compensation;
     ConfigOptionBool                wipe_into_objects;
@@ -599,6 +600,7 @@ protected:
         OPT_PTR(support_material_xy_spacing);
         OPT_PTR(support_material_threshold);
         OPT_PTR(support_material_with_sheath);
+        OPT_PTR(thin_walls_merge);
         OPT_PTR(xy_size_compensation);
         OPT_PTR(xy_inner_size_compensation);
         OPT_PTR(wipe_into_objects);

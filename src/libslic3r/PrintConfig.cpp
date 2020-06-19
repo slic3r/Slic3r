@@ -3174,6 +3174,15 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
 
+    def = this->add("thin_walls_merge", coBool);
+    def->label = L("merging with perimeters");
+    def->full_label = L("Thin wall merge");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("Allow the external periemter to merge the thin wals int he path. !!! IF you disable this setting, please explain me why (via help->report issue)"
+        " because I'm going to DELETE this setting next release, as i don't see why someone may want to disable it.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(true));
+
     def = this->add("thin_walls_speed", coFloat);
     def->label = L("Thin walls");
     def->full_label = L("Thin walls speed");

@@ -1901,10 +1901,13 @@ thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow fl
             if (paths.front().first_point().coincides_with(paths.back().last_point())) {
                 coll.append(ExtrusionLoop(paths));
             } else {
-                //not a loop : avoid to "sort" it.
-                ExtrusionEntityCollection unsortable_coll(paths);
-                unsortable_coll.no_sort = true;
-                coll.append(unsortable_coll);
+                if (role == erThinWall){
+                    //thin walls : avoid to cut them, please.
+                    ExtrusionEntityCollection unsortable_coll(paths);
+                    unsortable_coll.no_sort = true;
+                    coll.append(unsortable_coll);
+                }else //gap fill : cut them as much as you want
+                    coll.append(paths);
             }
         }
     }

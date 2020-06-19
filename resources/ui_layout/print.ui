@@ -34,6 +34,7 @@ group:Quality
 		setting:thin_walls
 		setting:width$5:thin_walls_min_width
 		setting:width$5:thin_walls_overlap
+		setting:thin_walls_merge
 	end_line
 group:Overhangs
 	line:On perimeters
