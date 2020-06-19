@@ -294,7 +294,7 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
 void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 {
     bool have_perimeters = config->opt_int("perimeters") > 0;
-    for (auto el : { "extra_perimeters", "extra_perimeters_overhangs", "extra_perimeters_odd_layers",
+    for (auto el : { "extra_perimeters", "extra_perimeters_overhangs",
         "only_one_perimeter_top", "ensure_vertical_shell_thickness", "thin_walls", 
         "overhangs", "overhangs_reverse",
         "seam_position", "external_perimeters_first", "external_perimeters_vase", "external_perimeter_extrusion_width",
