@@ -386,9 +386,14 @@ void FreeCADDialog::on_autocomp_complete(wxStyledTextEvent& event) {
     wxStyledTextCtrl* stc = (wxStyledTextCtrl*)event.GetEventObject();
     int currentPos = stc->GetCurrentPos();
     bool has_already_parenthese = stc->GetCharAt(currentPos) == '(';
-    if ( ((command->type & PyCommandType::pctOPERATION) != 0) && !has_already_parenthese) {
-        stc->InsertText(currentPos, "()(),");
-        if(((command->type & PyCommandType::pctNO_PARAMETER) != 0))
+    if ( ((command->type & PyCommandType::pctOPERATION) != 0)) {
+        //check if it ends by an existing () , if so, use that at param list
+        if (has_already_parenthese) {
+            stc->InsertText(currentPos, "()");
+        } else {
+            stc->InsertText(currentPos, "()(),");
+        }
+        if (((command->type & PyCommandType::pctNO_PARAMETER) != 0))
             stc->GotoPos(currentPos + 3);
         else
             stc->GotoPos(currentPos + 1);
@@ -399,12 +404,21 @@ void FreeCADDialog::on_autocomp_complete(wxStyledTextEvent& event) {
         else
             stc->GotoPos(currentPos + 1);
     } else if (((command->type & PyCommandType::pctMODIFIER) != 0) && !has_already_parenthese) {
-        stc->InsertText(currentPos, "()");
+        int nb_add_pos = 0;
+        //check if there's not a forgotten '.' before
+        std::cout << "char before the word : " << stc->GetCharAt(currentPos - command->name.length() - 1) << "\n";
+        if (stc->GetCharAt(currentPos - command->name.length() - 1) == ')') {
+            stc->InsertText(currentPos - command->name.length(), ".");
+            nb_add_pos++;
+        }
+        stc->InsertText(currentPos + nb_add_pos, "()");
         if (((command->type & PyCommandType::pctNO_PARAMETER) != 0))
-            stc->GotoPos(currentPos + 2);
+            nb_add_pos += 2;
         else
-            stc->GotoPos(currentPos + 1);
+            nb_add_pos++;
+        stc->GotoPos(currentPos + nb_add_pos);
         //TODO: check if it's a object.modif(), a modif()(object) a modif().object ?
+
     }
     if (!command->tooltip.empty())
         stc->CallTipShow(currentPos, command->tooltip);
@@ -529,7 +543,7 @@ void FreeCADDialog::on_key_type(wxKeyEvent& event)
             }
             m_text->AutoCompShow(0, possible);
             return;
-        }   
+        }
         //propose words
         int nb_words = 0;
         wxString possible;
@@ -542,15 +556,14 @@ void FreeCADDialog::on_key_type(wxKeyEvent& event)
         // Display the autocompletion list
         if (nb_words >= 1)
             m_text->AutoCompShow(str.length(), possible);
-    }else if (event.GetKeyCode() == WXK_BACK && event.GetModifiers() == wxMOD_NONE)
+    } else if (event.GetKeyCode() == WXK_BACK && event.GetModifiers() == wxMOD_NONE)
     {
-        
         //check if we can delete the whole word in one go
         //see if previous word is a command
         int current_pos = m_text->GetCurrentPos();
         if (m_text->GetCharAt(current_pos - 1) == '(' && m_text->GetCharAt(current_pos) == ')')
             current_pos--;
-        while (m_text->GetCharAt(current_pos - 2) == '(' && m_text->GetCharAt(current_pos -1) == ')')
+        if (m_text->GetCharAt(current_pos - 2) == '(' && m_text->GetCharAt(current_pos - 1) == ')')
             current_pos -= 2;
         int word_start_pos = m_text->WordStartPosition(current_pos, true);
         wxString str = m_text->GetTextRange(word_start_pos, current_pos);
@@ -559,19 +572,30 @@ void FreeCADDialog::on_key_type(wxKeyEvent& event)
             if (m_text->GetCharAt(current_pos) == '(' && m_text->GetCharAt(current_pos + 1) == ')') {
                 del_more += 2;
             }
-            if (m_text->GetCharAt(current_pos+2) == '(' && m_text->GetCharAt(current_pos + 3) == ')') {
+            if (m_text->GetCharAt(current_pos + 2) == '(' && m_text->GetCharAt(current_pos + 3) == ')') {
                 del_more += 2;
             }
             const PyCommand *cmd = get_command(str);
             if (cmd != nullptr) {
                 //delete the whole word
-                m_text->SetTargetStart(current_pos - str.length());
-                m_text->SetTargetEnd(current_pos + del_more);
+                if( (cmd->type & pctMODIFIER) != 0){
+                    m_text->SetTargetStart(current_pos - str.length() -1);
+                    m_text->SetTargetEnd(current_pos + del_more +1);
+                } else {
+                    //del ',' if it ends by that
+                    if (m_text->GetCharAt(current_pos + del_more + 1) == ',') {
+                        del_more++;
+                    }
+                    m_text->SetTargetStart(current_pos - str.length());
+                    m_text->SetTargetEnd(current_pos + del_more);
+                }
                 m_text->ReplaceTarget("");
                 return; // don't use the backdel event, it's already del 
             }
         }
         event.Skip(true);
+    } else if (event.GetKeyCode() == WXK_ESCAPE && m_text != nullptr && m_text->AutoCompActive()) {
+        m_text->AutoCompCancel();
     } else {
         event.Skip(true);
     }
