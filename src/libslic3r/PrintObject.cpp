@@ -2435,13 +2435,14 @@ end:
                 // Merge all regions' slices to get islands, chain them by a shortest path.
                 layer->make_slices();
                 //FIXME: can't make it work in multi-region object, it seems useful to avoid bridge on top of first layer compensation
-                if (layer->regions().size() == 1 && layer_id == 0 && first_layer_compensation < 0 && m_config.raft_layers == 0) {
-                    // The Elephant foot has been compensated, therefore the 1st layer's lslices are shrank with the Elephant foot compensation value.
-                    // Store the uncompensated value there.
-                    assert(! m_layers.empty());
-                    assert(m_layers.front()->id() == 0);
-                    m_layers.front()->lslices = offset_ex(std::move(m_layers.front()->lslices), -first_layer_compensation);
-                }
+                //so it's disable, if you want an offset, use the offset field.
+                //if (layer->regions().size() == 1 && layer_id == 0 && first_layer_compensation < 0 && m_config.raft_layers == 0) {
+                //    // The Elephant foot has been compensated, therefore the 1st layer's lslices are shrank with the Elephant foot compensation value.
+                //    // Store the uncompensated value there.
+                //    assert(! m_layers.empty());
+                //    assert(m_layers.front()->id() == 0);
+                //    m_layers.front()->lslices = offset_ex(std::move(m_layers.front()->lslices), -first_layer_compensation);
+                //}
             }
         });
     }
