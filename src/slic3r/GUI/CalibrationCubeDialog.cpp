@@ -27,7 +27,7 @@ void CalibrationCubeDialog::create_buttons(wxStdDialogButtonSizer* buttons){
     scale->SetToolTip(_(L("You can choose the dimension of the cube. It's a simple scale, you can modify it in the right panel yourself if you prefer. It's just quicker to select it here.")));
     scale->SetSelection(1);
     wxString choices_goal[] = { "Dimensional accuracy (default)" , "infill/perimeter overlap"/*, "external perimeter overlap"*/};
-    calibrate = new wxComboBox(this, wxID_ANY, wxString{ "Dimensional accuracy (default)" }, wxDefaultPosition, wxDefaultSize, 3, choices_goal);
+    calibrate = new wxComboBox(this, wxID_ANY, wxString{ "Dimensional accuracy (default)" }, wxDefaultPosition, wxDefaultSize, 2, choices_goal);
     calibrate->SetToolTip(_(L("Select a goal, this will change settings to increase the effects to search.")));
     calibrate->SetSelection(0);
 

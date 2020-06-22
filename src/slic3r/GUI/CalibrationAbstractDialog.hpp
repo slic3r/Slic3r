@@ -36,6 +36,18 @@ protected:
 
 };
 
+
+class HtmlDialog : public CalibrationAbstractDialog
+{
+
+public:
+    HtmlDialog(GUI_App* app, MainFrame* mainframe, std::string title, std::string html_path) : CalibrationAbstractDialog(app, mainframe, title) { create(html_path); }
+    virtual ~HtmlDialog() {}
+protected:
+    void create_buttons(wxStdDialogButtonSizer* sizer) override {}
+
+};
+
 } // namespace GUI
 } // namespace Slic3r
 

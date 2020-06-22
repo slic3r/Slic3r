@@ -574,6 +574,10 @@ void GUI_App::change_calibration_dialog(const wxDialog* have_to_destroy, wxDialo
     
 }
 
+void GUI_App::html_dialog()
+{
+    change_calibration_dialog(nullptr, new HtmlDialog(this, mainframe,"Introduction to calibrations", "/calibration/introduction.html"));
+}
 void GUI_App::bed_leveling_dialog()
 {
     change_calibration_dialog(nullptr, new CalibrationBedDialog(this, mainframe));

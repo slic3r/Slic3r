@@ -132,6 +132,7 @@ public:
     void            system_info();
     void            keyboard_shortcuts();
     void            change_calibration_dialog(const wxDialog* have_to_destroy = nullptr, wxDialog* new_one = nullptr);
+    void            html_dialog();
     void            bed_leveling_dialog();
     void            flow_ratio_dialog();
     void            filament_temperature_dialog();
