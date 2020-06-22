@@ -27,7 +27,7 @@ protected:
     void create(std::string html_path, wxSize dialogsize = wxSize(800, 500));
     virtual void create_buttons(wxStdDialogButtonSizer*) = 0;
     void on_dpi_changed(const wxRect& suggested_rect) override;
-    void closeMe(wxCommandEvent& event_args);
+    void close_me(wxCommandEvent& event_args);
     ModelObject* add_part(ModelObject* model_object, std::string input_file, Vec3d move, Vec3d scale = Vec3d{ 1,1,1 });
 
     wxHtmlWindow* html_viewer;

@@ -12,6 +12,7 @@
 #include <wx/stc/stc.h>
 #include <wx/html/htmlwin.h>
 #include <wx/textctrl.h>
+#include <wx/gbsizer.h>
 #include <boost/process.hpp>
 
 namespace Slic3r { 
@@ -49,7 +50,7 @@ public:
     virtual ~FreeCADDialog() { }
     
 protected:
-    void closeMe(wxCommandEvent& event_args);
+    void close_me(wxCommandEvent& event_args);
     void createSTC();
 
     bool init_start_python();
@@ -75,6 +76,7 @@ protected:
     wxTextCtrl* m_help;
     MainFrame* main_frame;
     GUI_App* gui_app;
+    wxGridBagSizer* main_sizer;
 
     std::vector<PyCommand> commands;
 

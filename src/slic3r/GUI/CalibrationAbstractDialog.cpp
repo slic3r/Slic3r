@@ -53,7 +53,7 @@ void CalibrationAbstractDialog::create(std::string html_path, wxSize dialog_size
     create_buttons(buttons);
 
     wxButton* close = new wxButton(this, wxID_CLOSE, _(L("Close")));
-    close->Bind(wxEVT_BUTTON, &CalibrationAbstractDialog::closeMe, this);
+    close->Bind(wxEVT_BUTTON, &CalibrationAbstractDialog::close_me, this);
     buttons->AddButton(close);
     close->SetDefault();
     close->SetFocus();
@@ -65,7 +65,7 @@ void CalibrationAbstractDialog::create(std::string html_path, wxSize dialog_size
     main_sizer->SetSizeHints(this);
 }
 
-void CalibrationAbstractDialog::closeMe(wxCommandEvent& event_args) {
+void CalibrationAbstractDialog::close_me(wxCommandEvent& event_args) {
     this->gui_app->change_calibration_dialog(this, nullptr);
     this->Destroy();
 }

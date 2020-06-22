@@ -135,11 +135,11 @@ std::string create_help_text() {
 
 FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     : DPIDialog(NULL, wxID_ANY, wxString(SLIC3R_APP_NAME) + " - " + _(L("FreePySCAD : script engine for FreeCAD")),
-#if ENABLE_SCROLLABLE
+//#if ENABLE_SCROLLABLE
         wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
-#else
-    wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE)
-#endif // ENABLE_SCROLLABLE
+//#else
+//    wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE)
+//#endif // ENABLE_SCROLLABLE
 {
 
     this->gui_app = app;
@@ -147,9 +147,7 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
 
     //def
-    PyCommand py1{ "cube", PyCommandType::pctOBJECT, {"x","y","z"}, "cube(x,y,z)\ncube(l)" };
-    PyCommand py2 = { "cube", PyCommandType::pctOBJECT, {"x","y","z"}, "cube(x,y,z)\ncube(l)" };
-    commands.emplace_back(PyCommand{ "cube", PyCommandType::pctOBJECT, {"x","y","z"}, "cube(x,y,z)\ncube(l)" });
+    commands.emplace_back(PyCommand{ "cube", PyCommandType::pctOBJECT, {"x","y","z"}, "cube(x,y,z)\ncube(size)" });
     commands.emplace_back(PyCommand{"cylinder", PyCommandType::pctOBJECT, { "r","h","fn=","angle=","d=","r1=","r2=","d1=","d2=" },
         "cylinder(r,h)\ncylinder(d=,h=,[fn=,angle=])\ncylinder(r1=,r2=,h=)\ncylinder(d1=,d2=,h=)"});
     commands.emplace_back(PyCommand{"move", PyCommandType::pctMODIFIER, { "x","y","z" }, "move(x,y,z)"});
@@ -211,7 +209,7 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     //sadly, this do nothing in dialog
     //this->SetIcon(freecad_icon);
 
-    auto main_sizer = new wxGridBagSizer(1,1); //(int vgap, int hgap)
+    main_sizer = new wxGridBagSizer(1,1); //(int vgap, int hgap)
     // |       |_icon_|
     // |editor_| help |
     // |_err___|______|
@@ -237,13 +235,13 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     //main_sizer->Add(m_icons, wxGBPosition(1, 2), wxGBSpan(1, 1), 0, 2);
     //main_sizer->Add(m_help, wxGBPosition(2, 2), wxGBSpan(2, 1), wxEXPAND | wxVERTICAL, 2);
     main_sizer->Add(m_help, wxGBPosition(1, 2), wxGBSpan(3, 1), wxEXPAND | wxVERTICAL, 2);
-    main_sizer->Add(m_errors, wxGBPosition(3, 1), wxGBSpan(1, 1), 0, 2);
+    main_sizer->Add(m_errors, wxGBPosition(3, 1), wxGBSpan(1, 1), wxEXPAND | wxHORIZONTAL, 2);
+
+    this->main_sizer->AddGrowableCol(1);
+    this->main_sizer->AddGrowableRow(2);
     
     wxStdDialogButtonSizer* buttons = new wxStdDialogButtonSizer();
 
-    wxButton* bt_create_geometry = new wxButton(this, wxID_FILE1, _(L("Generate")));
-    bt_create_geometry->Bind(wxEVT_BUTTON, &FreeCADDialog::create_geometry, this);
-    buttons->Add(bt_create_geometry);
     wxButton* bt_new = new wxButton(this, wxID_FILE3, _(L("New")));
     bt_new->Bind(wxEVT_BUTTON, &FreeCADDialog::new_script, this);
     buttons->Add(bt_new);
@@ -258,8 +256,13 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     bt_quick_save->Hide();
     buttons->Add(bt_quick_save);
 
+    buttons->AddSpacer(30);
+    wxButton* bt_create_geometry = new wxButton(this, wxID_FILE1, _(L("Generate")));
+    bt_create_geometry->Bind(wxEVT_BUTTON, &FreeCADDialog::create_geometry, this);
+    buttons->Add(bt_create_geometry);
+
     wxButton* close = new wxButton(this, wxID_CLOSE, _(L("Close")));
-    close->Bind(wxEVT_BUTTON, &FreeCADDialog::closeMe, this);
+    close->Bind(wxEVT_BUTTON, &FreeCADDialog::close_me, this);
     buttons->AddButton(close);
     close->SetDefault();
     close->SetFocus();
@@ -271,19 +274,20 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     main_sizer->SetSizeHints(this);
 
     //set keyboard shortcut
-    wxAcceleratorEntry entries[2];
+    wxAcceleratorEntry entries[6];
     //entries[0].Set(wxACCEL_CTRL, (int) 'X', bt_create_geometry->GetId());
     //entries[2].Set(wxACCEL_SHIFT, (int) 'W', wxID_FILE1);
-    entries[0].Set(wxACCEL_NORMAL, WXK_ESCAPE, wxID_CLOSE);
+    entries[0].Set(wxACCEL_CTRL, WXK_ESCAPE, wxID_CLOSE);
     entries[1].Set(wxACCEL_NORMAL, WXK_F5, bt_create_geometry->GetId()); // wxID_FILE1);
-    entries[1].Set(wxACCEL_CTRL, (int) 'N', bt_new->GetId());
-    entries[1].Set(wxACCEL_CTRL | wxACCEL_SHIFT, (int) 'S', bt_save->GetId());
-    entries[1].Set(wxACCEL_CTRL, (int) 'S', bt_quick_save->GetId());
-    this->SetAcceleratorTable(wxAcceleratorTable(2, entries));
+    entries[2].Set(wxACCEL_CTRL, (int) 'G', bt_create_geometry->GetId());
+    entries[3].Set(wxACCEL_CTRL, (int) 'N', bt_new->GetId());
+    entries[4].Set(wxACCEL_CTRL | wxACCEL_SHIFT, (int) 'S', bt_save->GetId());
+    entries[5].Set(wxACCEL_CTRL, (int) 'S', bt_quick_save->GetId());
+    this->SetAcceleratorTable(wxAcceleratorTable(6, entries));
 
 }
 
-void FreeCADDialog::closeMe(wxCommandEvent& event_args) {
+void FreeCADDialog::close_me(wxCommandEvent& event_args) {
     bool ok = this->write_text_in_file(m_text->GetText(), boost::filesystem::path(Slic3r::data_dir()) / "temp" / "current_pyscad.py");
     this->gui_app->change_calibration_dialog(this, nullptr);
     this->Destroy();
