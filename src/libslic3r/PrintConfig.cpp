@@ -2934,12 +2934,7 @@ void PrintConfigDef::init_fff_params()
         "for the first object layer. Can be a % of the extruding width used for the interface layers.");
     def->ratio_over = "top_infill_extrusion_width";
     def->sidetext = L("mm");
-    def->enum_labels.push_back((boost::format("0.2 (%1%)") % L("detachable")).str());
     def->min = 0;
-    def->enum_values.push_back("0");
-    def->enum_values.push_back("0.2");
-    def->enum_labels.push_back(L("0 (soluble)"));
-    def->enum_labels.push_back(L("0.2 (detachable)"));
     def->mode = comAdvanced;
     def->aliases = { "support_material_contact_distance" };
     def->set_default_value(new ConfigOptionFloatOrPercent(0.2, false));
