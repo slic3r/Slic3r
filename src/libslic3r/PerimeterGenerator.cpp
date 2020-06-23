@@ -718,7 +718,8 @@ void PerimeterGenerator::process()
                 }
             } else {
                 if (this->object_config->thin_walls_merge) {
-                    entities = this->_traverse_loops(contours.front(), ThickPolylines{});
+                    ThickPolylines no_thin_walls;
+                    entities = this->_traverse_loops(contours.front(), no_thin_walls);
                     _merge_thin_walls(entities, thin_walls);
                 } else {
                     entities = this->_traverse_loops(contours.front(), thin_walls);

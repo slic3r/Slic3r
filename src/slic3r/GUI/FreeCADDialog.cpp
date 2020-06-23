@@ -1,4 +1,5 @@
 #include "FreeCADDialog.hpp"
+
 #include "I18N.hpp"
 #include "libslic3r/Utils.hpp"
 #include "GUI.hpp"
@@ -6,24 +7,26 @@
 #include "slic3r/Utils/Http.hpp"
 #include "AppConfig.hpp"
 #include "Tab.hpp"
+
+#include <iostream>
+#include <ctime>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include <wx/scrolwin.h>
 #include <wx/display.h>
 #include <wx/file.h>
 #include <wx/gbsizer.h>
 #include "wxExtensions.hpp"
-#include <iostream>
 
-//C++11
-
-#include <ctime>
-#include <stdio.h>
-#include <stdlib.h>
-#include <regex>
 #include <boost/locale.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/tee.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 #if ENABLE_SCROLLABLE
 static wxSize get_screen_size(wxWindow* window)
@@ -74,7 +77,7 @@ namespace GUI {
     }
 
     // Downloads a file (http get operation). Cancels if the Updater is being destroyed.
-    void get_string_from_web_async(const std::string &url, FreeCADDialog* free, std::function<void(FreeCADDialog*, std::string)> listener)
+    void get_string_from_web_async(const std::string &url, FreeCADDialog* free, std::function<void(FreeCADDialog*, std::string&)> listener)
     {
 
         Slic3r::Http::get(url)
@@ -96,20 +99,19 @@ namespace GUI {
 std::string create_help_text() {
     std::stringstream ss;
 
-    ss << " == common 3D primitives ==\n";
+    ss << " == 3D obj ==\n";
     ss << "cube(x,y,z)\n";
     ss << "cylinder(r|d,h)\n";
-    ss << "poly_int(a,nb)\n";
-    ss << "poly_ext(r,nb)\n";
-    ss << "cone(r1|d2,r2|d2,h)\n";
-    ss << "iso_thread(d,p,h,internal,offset)\n";
-    ss << "solid_slices(array_points, centers)\n";
-    ss << "importStl(filepath)\n"; 
-    ss << " == common 3D operation ==\n";
+    ss << "ngon(a|r,n,h)\n";
+    ss << "cone(r1,r2,h)\n";
+    ss << "iso_thread(d,p,h\n  ,internal,offset)\n";
+    ss << "solid_slices(...)\n";
+    ss << "importStl(file)\n"; 
+    ss << " == 3D op ==\n";
     ss << "cut()(...3D)\n";
     ss << "union()(...3D)\n";
     ss << "intersection()(...3D)\n";
-    ss << " == common object modifier ==\n";
+    ss << " == Object modifier ==\n";
     ss << ".x/y/z() | .center()\n";
     ss << ".move(x,y,z)\n";
     ss << ".rotate(x,y,z)\n";
@@ -162,8 +164,7 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     commands.emplace_back(PyCommand{"offset", PyCommandType::pctOPERATION, { "length","fillet" }, "offset(length,fillet)(...obj)"});
     commands.emplace_back(PyCommand{"chamfer", PyCommandType::pctOPERATION, { "l" }, "chamfer(l)(...obj)"});
     commands.emplace_back(PyCommand{"fillet", PyCommandType::pctOPERATION, { "l" }, "fillet(l)(...obj)"});
-    commands.emplace_back(PyCommand{"poly_ext", PyCommandType::pctOBJECT, {"r", "nb", "h", "d="}, "poly_ext(r,nb,h)\npoly_ext(d=,nb=,h=)"});
-    commands.emplace_back(PyCommand{"poly_int", PyCommandType::pctOBJECT, { "a", "nb", "h", "d=" }, "poly_int(a,nb,h)\npoly_int(d=,nb=,h=)"});
+    commands.emplace_back(PyCommand{"ngon", PyCommandType::pctOBJECT, {"r", "nb", "h", "a=", "d="}, "ngon(r,n,h)\ngon(d=,n=,h=)\ngon(a=,n=,h=)" });
     commands.emplace_back(PyCommand{"triangle", PyCommandType::pctOBJECT, { "x","y","z" }, "triangle(x,y,z)"});
     commands.emplace_back(PyCommand{ "iso_thread", PyCommandType::pctOBJECT, {"d","p","h","internal","offset","fn="},
         "iso_thread(d,p,h,internal, offset,[fn=])\nm3 screw: iso_thread(3,0.5,10,False,0)\nm3 nut: cut()(...,iso_thread(3,0.5,3,True,0.15))" });
@@ -179,6 +180,8 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     commands.emplace_back(PyCommand{"bezier", PyCommandType::pctOBJECT});
     commands.emplace_back(PyCommand{"square", PyCommandType::pctOBJECT});
     commands.emplace_back(PyCommand{"importSvg", PyCommandType::pctOBJECT, "importSvg(filename,ids)"});
+    commands.emplace_back(PyCommand{"poly_ext", PyCommandType::pctOBJECT, {"r", "nb", "h", "d="}, "poly_ext(r,nb,h)\npoly_ext(d=,nb=,h=)" });
+    commands.emplace_back(PyCommand{"poly_int", PyCommandType::pctOBJECT, { "a", "nb", "h", "d=" }, "poly_int(a,nb,h)\npoly_int(d=,nb=,h=)" });
     commands.emplace_back(PyCommand{"xy", PyCommandType::pctMODIFIER | PyCommandType::pctNO_PARAMETER});
     commands.emplace_back(PyCommand{"z", PyCommandType::pctMODIFIER | PyCommandType::pctNO_PARAMETER});
     commands.emplace_back(PyCommand{"center", PyCommandType::pctMODIFIER | PyCommandType::pctNO_PARAMETER});
@@ -201,7 +204,7 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
 
     // fonts
     const wxFont& font = wxGetApp().normal_font();
-    const wxFont& bold_font = wxGetApp().bold_font();
+    //const wxFont& bold_font = wxGetApp().bold_font();
     SetFont(font);
 
     wxIcon *freecad_icon = new wxIcon();
@@ -288,7 +291,7 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
 }
 
 void FreeCADDialog::close_me(wxCommandEvent& event_args) {
-    bool ok = this->write_text_in_file(m_text->GetText(), boost::filesystem::path(Slic3r::data_dir()) / "temp" / "current_pyscad.py");
+    this->write_text_in_file(m_text->GetText(), boost::filesystem::path(Slic3r::data_dir()) / "temp" / "current_pyscad.py");
     this->gui_app->change_calibration_dialog(this, nullptr);
     this->Destroy();
 }
@@ -488,7 +491,7 @@ void FreeCADDialog::on_char_add(wxStyledTextEvent& event) {
     // Find the word start
     int current_pos = stc->GetCurrentPos();
     int word_start_pos = stc->WordStartPosition(current_pos, true);
-    int len_entered = current_pos - word_start_pos;
+    //int len_entered = current_pos - word_start_pos;
     const wxString str = stc->GetTextRange(word_start_pos, current_pos + 1);
     //if(current_pos>1)
     //    std::cout << "char typed: " << (char)stc->GetCharAt(current_pos)<<" with length "<< len_entered 
@@ -552,7 +555,7 @@ void FreeCADDialog::on_key_type(wxKeyEvent& event)
         int nb_words = 0;
         wxString possible;
         for (const PyCommand &cmd : commands) {
-            if (str.IsEmpty() || cmd.name.StartsWith(str) && ((cmd.type & PyCommandType::pctDO_NOT_SHOW) == 0)) {
+            if ( (str.IsEmpty() || cmd.name.StartsWith(str)) && ((cmd.type & PyCommandType::pctDO_NOT_SHOW) == 0) ){
                 nb_words++; possible += possible.empty() ? cmd.name : (" " + cmd.name);
             }
         }
@@ -637,24 +640,24 @@ void FreeCADDialog::createSTC()
             (wxObject*)NULL,
             this);
 
-    m_text->StyleSetForeground(wxSTC_P_DEFAULT, wxColour(0, 0, 0));
-    m_text->StyleSetForeground(wxSTC_P_COMMENTLINE, wxColour(128, 255, 128)); // comment, grennsish
-    m_text->StyleSetForeground(wxSTC_P_COMMENTBLOCK, wxColour(128, 255, 128)); // comment, grennsish
-    m_text->StyleSetForeground(wxSTC_P_NUMBER, wxColour(255, 128, 0)); // number red-orange
-    m_text->StyleSetForeground(wxSTC_P_STRING, wxColour(128, 256, 0)); // string, light green
-    m_text->StyleSetBackground(wxSTC_P_STRINGEOL, wxColour(255, 0, 0)); // End of line where string is not closed
-    m_text->StyleSetForeground(wxSTC_P_CHARACTER, wxColour(128, 256, 0));
-    m_text->StyleSetForeground(wxSTC_P_WORD, wxColour(0, 0, 128));
+    m_text->StyleSetForeground(wxSTC_P_DEFAULT, wxColour(0u, 0u, 0u));
+    m_text->StyleSetForeground(wxSTC_P_COMMENTLINE, wxColour(128u, 255u, 128u)); // comment, grennsish
+    m_text->StyleSetForeground(wxSTC_P_COMMENTBLOCK, wxColour(128u, 255u, 128u)); // comment, grennsish
+    m_text->StyleSetForeground(wxSTC_P_NUMBER, wxColour(255u, 128u, 0u)); // number red-orange
+    m_text->StyleSetForeground(wxSTC_P_STRING, wxColour(128u, 256u, 0u)); // string, light green
+    m_text->StyleSetBackground(wxSTC_P_STRINGEOL, wxColour(255u, 0u, 0u)); // End of line where string is not closed
+    m_text->StyleSetForeground(wxSTC_P_CHARACTER, wxColour(128u, 256u, 0u));
+    m_text->StyleSetForeground(wxSTC_P_WORD, wxColour(0u, 0u, 128u));
     m_text->StyleSetBold(wxSTC_P_WORD, true),
-        m_text->StyleSetForeground(wxSTC_P_WORD2, wxColour(0, 0, 128));
-    m_text->StyleSetForeground(wxSTC_P_TRIPLE, wxColour(128, 0, 0)); // triple quote
-    m_text->StyleSetForeground(wxSTC_P_TRIPLEDOUBLE, wxColour(128, 0, 0)); //triple double quote
-    m_text->StyleSetForeground(wxSTC_P_DEFNAME, wxColour(0, 128, 128)); // Function or method name definition
+    m_text->StyleSetForeground(wxSTC_P_WORD2, wxColour(0u, 0u, 128u));
+    m_text->StyleSetForeground(wxSTC_P_TRIPLE, wxColour(128u, 0u, 0u)); // triple quote
+    m_text->StyleSetForeground(wxSTC_P_TRIPLEDOUBLE, wxColour(128u, 0u, 0u)); //triple double quote
+    m_text->StyleSetForeground(wxSTC_P_DEFNAME, wxColour(0u, 128u, 128u)); // Function or method name definition
     m_text->StyleSetBold(wxSTC_P_DEFNAME, true),
-    m_text->StyleSetForeground(wxSTC_P_OPERATOR, wxColour(255, 0, 0));
+    m_text->StyleSetForeground(wxSTC_P_OPERATOR, wxColour(255u, 0u, 0u));
     m_text->StyleSetBold(wxSTC_P_OPERATOR, true),
     
-    m_text->StyleSetForeground(wxSTC_P_IDENTIFIER, wxColour(255, 64, 255)); // function call and almost all defined words in the language, violet
+    m_text->StyleSetForeground(wxSTC_P_IDENTIFIER, wxColour(255u, 64u, 255u)); // function call and almost all defined words in the language, violet
 
     //add text if the saved file exist
     boost::filesystem::path temp_file(Slic3r::data_dir());
@@ -809,7 +812,7 @@ void FreeCADDialog::create_geometry(wxCommandEvent& event_args) {
     temp_file = temp_file / "exec_temp.py";
     wxString text = m_text->GetText();
     if (text.find("scene().redraw(") == std::string::npos) {
-        int redraw_pos = text.find("redraw()");
+        size_t redraw_pos = text.find("redraw()");
         if (redraw_pos == std::string::npos) {
             text = "scene().redraw(\n" + text + "\n)";
         } else {

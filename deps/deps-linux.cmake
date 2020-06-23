@@ -108,6 +108,8 @@ ExternalProject_Add(dep_wxwidgets
         --with-opengl
         --enable-unicode
         --enable-graphics_ctx
+        --enable-stc
+		--enable-aui
         --with-regex=builtin
         --with-libpng=builtin
         --with-libxpm=builtin

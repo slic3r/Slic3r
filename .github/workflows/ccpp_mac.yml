@@ -26,6 +26,15 @@ jobs:
     - name: make deps
       working-directory: ./deps/build
       run: make
+    - name: ls libs
+      working-directory: ./deps/build
+      run: ls ./destdir/usr/local/lib
+    - name: rename wxscintilla
+      working-directory: ./deps/build/destdir/usr/local/lib
+      run: cp libwxscintilla-3.1.a libwx_osx_cocoau_scintilla-3.1.a
+    - name: ls libs
+      working-directory: ./deps/build
+      run: ls ./destdir/usr/local/lib
     - name: clean deps
       working-directory: ./deps/build
       run: rm -rf dep_*

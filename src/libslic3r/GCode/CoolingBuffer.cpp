@@ -5,6 +5,7 @@
 #include <boost/log/trivial.hpp>
 #include <iostream>
 #include <float.h>
+#include <unordered_set>
 
 #if 0
     #define DEBUG

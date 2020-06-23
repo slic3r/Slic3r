@@ -3,6 +3,7 @@
 
 #include <map>
 #include <vector>
+#include <regex>
 
 #include "GUI_App.hpp"
 #include "GUI_Utils.hpp"
@@ -14,6 +15,7 @@
 #include <wx/textctrl.h>
 #include <wx/gbsizer.h>
 #include <boost/process.hpp>
+#include <boost/asio.hpp>
 
 namespace Slic3r { 
 namespace GUI {
@@ -34,7 +36,7 @@ public:
     PyCommandType type;
     wxString tooltip;
     std::vector<std::string> args;
-    PyCommand(wxString lbl, PyCommandType modifier) : name(lbl), type(modifier) { auto lol = { "Z","z" }; }
+    PyCommand(wxString lbl, PyCommandType modifier) : name(lbl), type(modifier) { }
     PyCommand(wxString lbl, uint16_t modifier) : name(lbl), type(PyCommandType(modifier)) {}
     PyCommand(wxString lbl, PyCommandType modifier, std::string tooltip) : name(lbl), type(modifier), tooltip(tooltip) {}
     PyCommand(wxString lbl, uint16_t modifier, std::string tooltip) : name(lbl), type(PyCommandType(modifier)), tooltip(tooltip) {}
