@@ -2039,6 +2039,9 @@ msgstr "Remplissage des trous"
 msgid "Skirt"
 msgstr "Jupe"
 
+msgid "Skirt & Brim"
+msgstr "Jupe et Bordure"
+
 #: src/slic3r/GUI/GUI_Preview.cpp:245 src/slic3r/GUI/Tab.cpp:1178
 #: src/libslic3r/PrintConfig.cpp:2674
 msgid "Support material"
@@ -2821,7 +2824,7 @@ msgstr "&Vue"
 
 #: src/slic3r/GUI/MainFrame.cpp:701
 msgid "&Help"
-msgstr "&Aidez-moi"
+msgstr "&Aide"
 
 #: src/slic3r/GUI/MainFrame.cpp:723
 msgid "E&xport"
@@ -3018,11 +3021,11 @@ msgstr "Remplissage"
 
 #: src/slic3r/GUI/Plater.cpp:504 src/slic3r/GUI/Tab.cpp:1168
 msgid "Brim"
-msgstr "Bordure"
+msgstr "Jupe"
 
 #: src/slic3r/GUI/Plater.cpp:506
 msgid "This flag enables the brim that will be printed around each object on the first layer."
-msgstr "Cette option permet l'impression de la bordure qui entoure chaque objet lors de la première couche."
+msgstr "Cette option permet l'impression de la jupe qui entoure chaque objet lors de la première couche."
 
 #: src/slic3r/GUI/Plater.cpp:514
 msgid "Purging volumes"
@@ -5332,7 +5335,7 @@ msgstr "Génération de la jupe"
 
 #: src/libslic3r/Print.cpp:1580
 msgid "Generating brim"
-msgstr "Génération de la bordure"
+msgstr "Génération de la jupe"
 
 #: src/libslic3r/Print.cpp:1627
 msgid "Exporting G-code"
@@ -5642,11 +5645,11 @@ msgstr "Permet la création de jupe autour d'un ilôt même si celui-ci est à l
 
 #: src/libslic3r/PrintConfig.cpp:276
 msgid "Brim width"
-msgstr "Largeur de la bordure"
+msgstr "Largeur de la jupe"
 
 #: src/libslic3r/PrintConfig.cpp:278
 msgid "Horizontal width of the brim that will be printed around each object on the first layer."
-msgstr "Largeur horizontale de la bordure qui sera imprimée autour de chaque objet sur la première couche."
+msgstr "Largeur horizontale de la jupe qui sera imprimée autour de chaque objet sur la première couche."
 
 #: src/libslic3r/PrintConfig.cpp:285
 msgid "Interior Brim width"
@@ -5970,6 +5973,9 @@ msgstr "mm ou %"
 #: src/libslic3r/PrintConfig.cpp:632
 msgid "External"
 msgstr "Externe"
+
+msgid "Inner"
+msgstr "Intérieur"
 
 #: src/libslic3r/PrintConfig.cpp:633
 msgid "External perimeters speed"
@@ -6993,7 +6999,7 @@ msgstr "Longueur minimale d'extrusion de filament"
 
 #: src/libslic3r/PrintConfig.cpp:1833
 msgid "Generate no less than the number of skirt loops required to consume the specified amount of filament on the bottom layer. For multi-extruder machines, this minimum applies to each extruder."
-msgstr "Nombre minimum de contours à générer afin de consommer la quantité de filament spécifiée sur la couche inférieure. Pour les machines multi-extrudeurs, ce minimum s'applique à chaque extrudeur."
+msgstr "Nombre minimum de bordures à générer afin de consommer la quantité de filament spécifiée sur la couche inférieure. Pour les machines multi-extrudeurs, ce minimum s'applique à chaque extrudeur."
 
 #: src/libslic3r/PrintConfig.cpp:1842
 msgid "Configuration notes"
@@ -7025,7 +7031,7 @@ msgstr "Désactiver la rétraction lorsque le chemin de déplacement ne franchit
 
 #: src/libslic3r/PrintConfig.cpp:1907
 msgid "This option will drop the temperature of the inactive extruders to prevent oozing. It will enable a tall skirt automatically and move extruders outside such skirt when changing temperatures."
-msgstr "Cette option abaissera la température des extrudeurs inutilisés pour prévenir le oozing (suintement). Cela active automatiquement la génération d'une grande jupe et le déplacement des extrudeurs hors de cette jupe lors des changements de température."
+msgstr "Cette option abaissera la température des extrudeurs inutilisés pour prévenir le oozing (suintement). Cela active automatiquement la génération d'une haute bordure et le déplacement des extrudeurs hors de cette bordure lors des changements de température."
 
 #: src/libslic3r/PrintConfig.cpp:1914
 msgid "Output filename format"
@@ -7131,7 +7137,7 @@ msgstr "Extrudeur pour les périmètres"
 
 #: src/libslic3r/PrintConfig.cpp:1996
 msgid "The extruder to use when printing perimeters and brim. First extruder is 1."
-msgstr "L'extrudeur à utiliser pour imprimer les périmètres et la bordure. Le premier extrudeur a le numéro 1."
+msgstr "L'extrudeur à utiliser pour imprimer les périmètres et la jupe. Le premier extrudeur a le numéro 1."
 
 #: src/libslic3r/PrintConfig.cpp:2006
 msgid "Set this to a non-zero value to set a manual extrusion width for perimeters. You may want to use thinner extrudates to get more accurate surfaces. If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. If expressed as percentage (for example 105%) it will be computed over nozzle diameter."
@@ -7399,15 +7405,15 @@ msgstr "Distance de l'objet"
 
 #: src/libslic3r/PrintConfig.cpp:2311
 msgid "Distance between skirt and object(s). Set this to zero to attach the skirt to the object(s) and get a brim for better adhesion."
-msgstr "Distance entre le ou les objet(s) et la jupe. Mettez zéro pour attacher la jupe a(ux) objet(s) et obtenir une bordure pour une meilleure adhésion."
+msgstr "Distance entre le ou les objet(s) et la bordure. Mettez zéro pour attacher la bordure a(ux) objet(s) et obtenir une jupe pour une meilleure adhésion."
 
 #: src/libslic3r/PrintConfig.cpp:2319
 msgid "Skirt height"
-msgstr "Hauteur de la jupe"
+msgstr "Hauteur de la bordure"
 
 #: src/libslic3r/PrintConfig.cpp:2321
 msgid "Height of skirt expressed in layers. Set this to a tall value to use skirt as a shield against drafts."
-msgstr "Hauteur de la jupe exprimée en couches. Mettez une valeur élevée pour utiliser la jupe comme un bouclier contre les flux d'airs."
+msgstr "Hauteur de la bordure exprimée en couches. Mettez une valeur élevée pour utiliser la bordure comme un bouclier contre les flux d'air."
 
 #: src/libslic3r/PrintConfig.cpp:2328
 msgid "Loops (minimum)"
@@ -7415,11 +7421,11 @@ msgstr "Boucles (minimum)"
 
 #: src/libslic3r/PrintConfig.cpp:2329
 msgid "Skirt Loops"
-msgstr "Boucles de la Jupe"
+msgstr "Boucles de la Bordure"
 
 #: src/libslic3r/PrintConfig.cpp:2331
 msgid "Number of loops for the skirt. If the Minimum Extrusion Length option is set, the number of loops might be greater than the one configured here. Set this to zero to disable skirt completely."
-msgstr "Nombre de boucles pour la jupe. Si la Longueur Minimale d'Extrusion est paramétrée, le nombre de boucles minimal sera plus grand que celui configuré ici. Mettez à zéro pour désactiver complètement la jupe."
+msgstr "Nombre de boucles pour la bordure. Si la Longueur Minimale d'Extrusion est paramétrée, le nombre de boucles minimal sera plus grand que celui configuré ici. Mettez à zéro pour désactiver complètement la bordure."
 
 #: src/libslic3r/PrintConfig.cpp:2339
 msgid "Slow down if layer print time is below"
@@ -7549,7 +7555,7 @@ msgstr "Variation de température"
 
 #: src/libslic3r/PrintConfig.cpp:2492
 msgid "Temperature difference to be applied when an extruder is not active. Enables a full-height \"sacrificial\" skirt on which the nozzles are periodically wiped."
-msgstr "Différence de température devant être appliquée quand un extrudeur n'est pas actif. Permet la génération d'un contour complet \"sacrificiel\" sur lequel les buses sont nettoyées régulièrement."
+msgstr "Différence de température devant être appliquée quand un extrudeur n'est pas actif. Permet la génération d'une bordure sacrificielle de même hauteur sur laquelle les buses peuvent s'auto-nettoyer régulièrement."
 
 #: src/libslic3r/PrintConfig.cpp:2503
 msgid "This start procedure is inserted at the beginning, after bed has reached the target temperature and extruder just started heating, and before extruder has finished heating. If Slic3r detects M104 or M190 in your custom codes, such commands will not be prepended automatically so you're free to customize the order of heating commands and other custom actions. Note that you can use placeholder variables for all Slic3r settings, so you can put a \"M109 S[first_layer_temperature]\" command wherever you want."
@@ -7671,11 +7677,11 @@ msgstr "Renforcer le support pour les n premières couches"
 
 #: src/libslic3r/PrintConfig.cpp:2665
 msgid "Support material/raft/skirt extruder"
-msgstr "Extrudeur pour support/raft/jupe"
+msgstr "Extrudeur pour support/raft/bordure"
 
 #: src/libslic3r/PrintConfig.cpp:2667
 msgid "The extruder to use when printing support material, raft and skirt (1+, 0 to use the current extruder to minimize tool changes)."
-msgstr "L'extrudeur à utiliser pour imprimer des supports, du raft ou des contours (1+,0 pour utiliser l'extrudeur actuel et limiter les changements d'outil)."
+msgstr "L'extrudeur à utiliser pour imprimer des supports, du raft ou des bordures (1+,0 pour utiliser l'extrudeur actuel et limiter les changements d'outil)."
 
 #: src/libslic3r/PrintConfig.cpp:2675
 msgid "Support material width"
