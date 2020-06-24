@@ -319,7 +319,8 @@ public:
     double min_mm3_per_mm() const override {
         double min_mm3_per_mm = std::numeric_limits<double>::max();
         for (const THING &entity : this->paths)
-            min_mm3_per_mm = std::min(min_mm3_per_mm, entity.min_mm3_per_mm());
+            if (entity.role() != erGapFill && entity.role() != erThinWall && entity.role() != erMilling)
+                min_mm3_per_mm = std::min(min_mm3_per_mm, entity.min_mm3_per_mm());
         return min_mm3_per_mm;
     }
 
