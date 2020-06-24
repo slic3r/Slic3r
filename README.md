@@ -3,8 +3,8 @@
 
 **A PrusaSlicer fork (which is a slic3r fork)** (previously Slic3r++)
 
-Prebuilt Windows 64b releases are available through the [git releases page](https://github.com/supermerill/SuperSlicer/releases).
-Nightly builds for windows, Linux and macos are available through the [git actions page](https://github.com/supermerill/SuperSlicer/actions). Click on the a build for your plateform and then on 'Artifacts (1)' in the top right corner.
+Prebuilt Windows, Linux and macos 64b releases are available through the [git releases page](https://github.com/supermerill/SuperSlicer/releases). The linux & macos aren't tested (by me), just compiled, so report me any bugs that can occur on them.
+Nightly builds are available through the [git actions page](https://github.com/supermerill/SuperSlicer/actions). Click on the a build for your plateform and then on 'Artifacts (1)' in the top right corner.
 
 SuperSlicer takes 3D models (STL, OBJ, AMF) and converts them into G-code
 instructions for FFF printers or PNG layers for mSLA 3D printers. It's
@@ -22,11 +22,13 @@ the [documentation directory](doc/) for information about compilation.
 * Custom-made generated calibration tests.
 * **Ironing** top surface & many new settings to fine-tune the top surface quality, like 'only one perimeter on top'.
 * A "denser infill" option for supporting the (solid) top layers.
-* Better **Thin walls** (anchored inside the print, no more random bits at the ends).
+* Better **Thin walls** (anchored inside the print, no more random bits at the ends, embedded in perimeter loops).
 * Options to change holes dimensions and/or geometry, to print them at the right size.
 * Better overhangs (add perimeters if needed, slice them in opposite direction each layer).
-* Brim rework: many more options (inside, outside only, 'ears')
+* Brim rework: many more options (inside, outside only, 'ears', per object)
 * Some new seam options, to help hide them.
+* built-in calibration prints
+* built-in object generation script
 * Can join perimeters into a big one to avoid travel moves.
 * Many other little options and corrections (like the filled concentric pattern).
 * It has also all the current slic3rPE/PrusaSlicer features.
