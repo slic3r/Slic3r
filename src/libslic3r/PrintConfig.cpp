@@ -2061,7 +2061,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "perimeter_extrusion_width";
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(200, true));
 
     def = this->add("min_print_speed", coFloats);
     def->label = L("Min print speed");
@@ -3530,7 +3530,9 @@ void PrintConfigDef::init_fff_params()
     def = this->add("z_step", coFloat);
     def->label = L("Z full step");
     def->tooltip = L("Set this to the height moved when your Z motor (or equivalent) turns one step."
-                    "If your motor needs 200 steps to move your head/plater by 1mm, this field have to be 1/200 = 0.005");
+                    "If your motor needs 200 steps to move your head/plater by 1mm, this field have to be 1/200 = 0.005."
+                    "\nNote that the gcode will write the z values with 6 digits after the dot if z_step is set (it's 3 digits if it's disabled)."
+                    "\nPut 0 to disable.");
     def->cli = "z-step=f";
     def->sidetext = L("mm");
     def->min = 0.0001;

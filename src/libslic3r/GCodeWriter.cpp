@@ -353,12 +353,15 @@ std::string GCodeWriter::travel_to_xyz(const Vec3d &point, const std::string &co
         the lift. */
     m_lifted = 0;
     m_pos = point;
-    
     std::ostringstream gcode;
     gcode << "G1 X" << XYZF_NUM(point.x())
-          <<   " Y" << XYZF_NUM(point.y())
-          <<   " Z" << XYZF_NUM(point.z())
-          <<   " F" << XYZF_NUM(this->config.travel_speed.value * 60.0);
+          << " Y" << XYZF_NUM(point.y());
+    if (config.z_step > SCALING_FACTOR)
+        gcode << " Z" << PRECISION(point.z(), 6);
+    else
+        gcode << " Z" << XYZF_NUM(point.z());
+    gcode <<   " F" << XYZF_NUM(this->config.travel_speed.value * 60.0);
+
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();
@@ -388,8 +391,11 @@ std::string GCodeWriter::_travel_to_z(double z, const std::string &comment)
     m_pos.z() = z;
     
     std::ostringstream gcode;
-    gcode << "G1 Z" << XYZF_NUM(z)
-          <<   " F" << XYZF_NUM(this->config.travel_speed.value * 60.0);
+    if (config.z_step > SCALING_FACTOR)
+        gcode << "G1 Z" << PRECISION(z, 6);
+    else
+        gcode << "G1 Z" << XYZF_NUM(z);
+    gcode <<   " F" << XYZF_NUM(this->config.travel_speed.value * 60.0);
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();
