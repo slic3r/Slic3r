@@ -45,7 +45,10 @@ namespace GUI {
 wxDEFINE_EVENT(EVT_TAB_VALUE_CHANGED, wxCommandEvent);
 wxDEFINE_EVENT(EVT_TAB_PRESETS_CHANGED, SimpleEvent);
 
+//same as the slicing.cpp method, but it's easier to redefine it here
+// maybe i should have written it in the header.
 inline coordf_t check_z_step_temp(coordf_t val, coordf_t z_step) {
+    if (z_step <= EPSILON) return val;
     uint64_t valint = uint64_t(val * 100000. + 0.1);
     uint64_t stepint = uint64_t(z_step * 100000. + 0.1);
     return (((valint + (stepint / 2)) / stepint) * stepint) / 100000.;

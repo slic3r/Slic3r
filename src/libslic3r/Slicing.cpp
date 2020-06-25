@@ -25,12 +25,14 @@ static const coordf_t MIN_LAYER_HEIGHT = 0.01;
 static const coordf_t MIN_LAYER_HEIGHT_DEFAULT = 0.07;
 
 inline coordf_t check_z_step(coordf_t val, coordf_t z_step) {
+    if (z_step <= EPSILON) return val;
     uint64_t valint = uint64_t(val * 100000. + 0.1);
     uint64_t stepint = uint64_t(z_step * 100000. + 0.1);
     return (((valint + (stepint/2)) / stepint) * stepint) / 100000.;
     //return int((val + z_step * 0.5) / z_step) * z_step;
 }
 inline bool test_z_step(coordf_t val, coordf_t z_step) {
+    if (z_step <= EPSILON) return val;
     uint64_t valint = uint64_t(val * 100000. + 0.1);
     uint64_t stepint = uint64_t(z_step * 100000. + 0.1);
     return valint % stepint == 0;
