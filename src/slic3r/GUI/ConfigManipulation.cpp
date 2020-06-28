@@ -271,13 +271,13 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
             if (!correct_100p_fill) {
                 wxString msg_text = GUI::from_u8((boost::format(_utf8(L("The %1% infill pattern is not supposed to work at 100%% density."))) % str_fill_pattern).str());
                 if (is_global_config)
-                    msg_text += "\n\n" + _(L("Shall I switch to "+ str_fill_pattern +" fill pattern?"));
+                    msg_text += "\n\n" + _(L("Shall I switch to rectilinear fill pattern?"));
                 wxMessageDialog dialog(nullptr, msg_text, _(L("Infill")),
                                                   wxICON_WARNING | (is_global_config ? wxYES | wxNO : wxOK) );
                 DynamicPrintConfig new_conf = *config;
                 auto answer = dialog.ShowModal();
                 if (!is_global_config || answer == wxID_YES) {
-                    new_conf.set_key_value("fill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinear));
+                    new_conf.set_key_value("fill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinearWGapFill));
                     fill_density = 100;
                 }
                 else
