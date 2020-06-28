@@ -845,6 +845,7 @@ namespace DoExport {
 	    if (config.gcode_flavor.value == gcfMarlin || config.gcode_flavor.value == gcfLerdge) {
 	        normal_time_estimator.set_max_acceleration((float)config.machine_max_acceleration_extruding.values[0]);
 	        normal_time_estimator.set_retract_acceleration((float)config.machine_max_acceleration_retracting.values[0]);
+            normal_time_estimator.set_max_travel_acceleration((float)config.machine_max_acceleration_travel.values[0]);
 	        normal_time_estimator.set_minimum_feedrate((float)config.machine_min_extruding_rate.values[0]);
 	        normal_time_estimator.set_minimum_travel_feedrate((float)config.machine_min_travel_rate.values[0]);
 	        normal_time_estimator.set_axis_max_acceleration(GCodeTimeEstimator::X, (float)config.machine_max_acceleration_x.values[0]);
@@ -1755,11 +1756,11 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
             fprintf(file, "M204 P%d R%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
                 int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_retracting.values.front() + 0.5),
-                int(print.config().machine_max_acceleration_extruding.values.front() + 0.5));
+                int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
         if (std::set<uint8_t>{gcfRepRap, gcfKlipper}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, "M204 P%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
+            fprintf(file, "M204 P%d T%d ; sets acceleration (P, T), mm/sec^2\n",
                 int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
-                int(print.config().machine_max_acceleration_retracting.values.front() + 0.5));
+                int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M566 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
                 print.config().machine_max_jerk_x.values.front(),
@@ -3827,7 +3828,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             acceleration = m_config.infill_acceleration.value;
         } else {
             acceleration = m_config.default_acceleration.value;
-        }
+        }//TODO: add travel accel?
         gcode += m_writer.set_acceleration((unsigned int)floor(acceleration + 0.5));
     }
 

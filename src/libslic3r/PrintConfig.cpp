@@ -335,7 +335,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("brim_ears", coBool);
-    def->label = L("");
+    def->label = ("");
     def->full_label = L("Brim ears");
     def->category = OptionCategory::skirtBrim;
     def->tooltip = L("Only draw brim over the sharp edges of the model.");
@@ -1932,17 +1932,27 @@ void PrintConfigDef::init_fff_params()
     def = this->add("machine_max_acceleration_extruding", coFloats);
     def->full_label = L("Maximum acceleration when extruding");
     def->category = OptionCategory::limits;
-    def->tooltip = L("Maximum acceleration when extruding (M204 S)");
+    def->tooltip = L("Maximum acceleration when extruding (M204 P)");
+    def->sidetext = L("mm/s²");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats{ 1500., 1250. });
+
+    // M204 R... [mm/sec^2]
+    def = this->add("machine_max_acceleration_retracting", coFloats);
+    def->full_label = L("Maximum acceleration when retracting");
+    def->category = OptionCategory::limits;
+    def->tooltip = L("Maximum acceleration when retracting (M204 R)");
     def->sidetext = L("mm/s²");
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloats{ 1500., 1250. });
 
     // M204 T... [mm/sec^2]
-    def = this->add("machine_max_acceleration_retracting", coFloats);
-    def->full_label = L("Maximum acceleration when retracting");
+    def = this->add("machine_max_acceleration_travel", coFloats);
+    def->full_label = L("Maximum acceleration when travelling");
     def->category = OptionCategory::limits;
-    def->tooltip = L("Maximum acceleration when retracting (M204 T)");
+    def->tooltip = L("Maximum acceleration when travelling (M204 T)");
     def->sidetext = L("mm/s²");
     def->min = 0;
     def->mode = comAdvanced;

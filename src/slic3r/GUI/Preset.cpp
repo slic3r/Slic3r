@@ -607,6 +607,7 @@ const std::vector<std::string>& Preset::printer_options()
             "wipe_advanced_multiplier",
             "wipe_advanced_algo",
             "remaining_times", "silent_mode", "machine_max_acceleration_extruding", "machine_max_acceleration_retracting",
+			"machine_max_acceleration_travel",
 			"machine_max_acceleration_x", "machine_max_acceleration_y", "machine_max_acceleration_z", "machine_max_acceleration_e",
         	"machine_max_feedrate_x", "machine_max_feedrate_y", "machine_max_feedrate_z", "machine_max_feedrate_e",
         	"machine_min_extruding_rate", "machine_min_travel_rate",

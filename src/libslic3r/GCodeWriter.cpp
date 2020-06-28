@@ -61,7 +61,7 @@ std::string GCodeWriter::preamble()
         gcode << "G21 ; set units to millimeters\n";
         gcode << "G90 ; use absolute coordinates\n";
     }
-    if (FLAVOR_IS(gcfRepRap) || FLAVOR_IS(gcfMarlin) || FLAVOR_IS(gcfTeacup) || FLAVOR_IS(gcfRepetier) || FLAVOR_IS(gcfSmoothie)
+    if (FLAVOR_IS(gcfRepRap) || FLAVOR_IS(gcfMarlin) || FLAVOR_IS(gcfLerdge) || FLAVOR_IS(gcfTeacup) || FLAVOR_IS(gcfRepetier) || FLAVOR_IS(gcfSmoothie)
 		 || FLAVOR_IS(gcfKlipper) || FLAVOR_IS(gcfLerdge)) {
         if (this->config.use_relative_e_distances) {
             gcode << "M83 ; use relative distances for extrusion\n";
@@ -200,13 +200,13 @@ std::string GCodeWriter::set_acceleration(unsigned int acceleration)
     m_last_acceleration = acceleration;
     
     std::ostringstream gcode;
+	//try to set only printing acceleration, travel should be untouched if possible
     if (FLAVOR_IS(gcfRepetier)) {
         // M201: Set max printing acceleration
         gcode << "M201 X" << acceleration << " Y" << acceleration;
-        if (this->config.gcode_comments) gcode << " ; adjust acceleration";
-        gcode << "\n";
-        // M202: Set max travel acceleration
-        gcode << "M202 X" << acceleration << " Y" << acceleration;
+    } else if(FLAVOR_IS(gcfMarlin) || FLAVOR_IS(gcfLerdge)){
+        // M204: Set printing acceleration
+        gcode << "M204 P" << acceleration;
     } else {
         // M204: Set default acceleration
         gcode << "M204 S" << acceleration;

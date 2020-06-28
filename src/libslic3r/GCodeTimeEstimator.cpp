@@ -496,6 +496,31 @@ namespace Slic3r {
         return m_state.max_acceleration;
     }
 
+    void GCodeTimeEstimator::set_max_travel_acceleration(float acceleration_mm_sec2)
+    {
+        m_state.max_travel_acceleration = acceleration_mm_sec2;
+        if (acceleration_mm_sec2 > 0)
+            m_state.travel_acceleration = acceleration_mm_sec2;
+    }
+
+    float GCodeTimeEstimator::get_max_travel_acceleration() const
+    {
+        return m_state.max_travel_acceleration;
+    }
+
+    void GCodeTimeEstimator::set_travel_acceleration(float acceleration_mm_sec2)
+    {
+        m_state.travel_acceleration = (m_state.max_travel_acceleration == 0) ?
+            acceleration_mm_sec2 :
+            // Clamp the acceleration with the maximum.
+            std::min(m_state.max_travel_acceleration, acceleration_mm_sec2);
+    }
+
+    float GCodeTimeEstimator::get_travel_acceleration() const
+    {
+        return m_state.travel_acceleration;
+    }
+
     void GCodeTimeEstimator::set_retract_acceleration(float acceleration_mm_sec2)
     {
         m_state.retract_acceleration = acceleration_mm_sec2;
@@ -670,7 +695,9 @@ namespace Slic3r {
         // Setting the maximum acceleration to zero means that the there is no limit and the G-code
         // is allowed to set excessive values.
         set_max_acceleration(0);
+        set_max_travel_acceleration(0);
         set_acceleration(DEFAULT_ACCELERATION);
+        set_travel_acceleration(DEFAULT_ACCELERATION);
         set_retract_acceleration(DEFAULT_RETRACT_ACCELERATION);
         set_minimum_feedrate(DEFAULT_MINIMUM_FEEDRATE);
         set_minimum_travel_feedrate(DEFAULT_MINIMUM_TRAVEL_FEEDRATE);
@@ -1087,7 +1114,7 @@ namespace Slic3r {
         }
 
         // calculates block acceleration
-        float acceleration = block.is_extruder_only_move() ? get_retract_acceleration() : get_acceleration();
+        float acceleration = block.is_extruder_only_move() ? get_retract_acceleration() : block.is_travel_move() ? get_travel_acceleration() :  get_acceleration();
 
         for (unsigned char a = X; a < Num_Axis; ++a)
         {
@@ -1406,8 +1433,7 @@ namespace Slic3r {
                 set_retract_acceleration(value);
             if (line.has_value('T', value)) {
                 // Interpret the T value as the travel acceleration in the new Marlin format.
-                //FIXME Prusa3D firmware currently does not support travel acceleration value independent from the extruding acceleration value.
-                // set_travel_acceleration(value);
+                set_travel_acceleration(value);
             }
         }
     }
