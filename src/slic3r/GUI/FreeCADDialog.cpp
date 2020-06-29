@@ -528,11 +528,69 @@ void FreeCADDialog::on_char_add(wxStyledTextEvent& event) {
         stc->InsertText(current_pos, "\"");
     }
 }
+void FreeCADDialog::comment(bool is_switch) {
+    //if selction, do that for every line
+    std::vector<int> lines;
+    if (m_text->LineFromPosition(m_text->GetSelectionStart()) < m_text->LineFromPosition(m_text->GetSelectionEnd()) ) {
+        for(int i= m_text->LineFromPosition(m_text->GetSelectionStart()); i <= m_text->LineFromPosition(m_text->GetSelectionEnd()); i++)
+            lines.push_back(i);
+    } else {
+        lines.push_back(m_text->GetCurrentLine());
+    }
+
+    //get last \n pos or 0
+    int saved_pos = m_text->GetCurrentPos();
+    int begin = m_text->GetSelectionStart();
+    int end = m_text->GetSelectionEnd();
+
+    for (int l : lines) {
+        int commentpos = m_text->PositionFromLine(l);
+        //skip ' ' and '\t'
+        if(is_switch)
+            while (m_text->GetCharAt(commentpos) == ' ' || m_text->GetCharAt(commentpos) == '\t')
+                commentpos++;
+        if (m_text->GetCharAt(commentpos) == '#' && is_switch) {
+            m_text->SetTargetStart(commentpos);
+            m_text->SetTargetEnd(commentpos + 1);
+            m_text->ReplaceTarget("");
+            if (commentpos < begin) {
+                begin--;
+            }
+            end--;
+            saved_pos--;
+        } else {
+            m_text->InsertText(commentpos, "#");
+            if (commentpos < begin) {
+                begin++;
+            }
+            end++;
+            saved_pos++;
+        }
+    }
+
+    m_text->SetCurrentPos(saved_pos); //TODO +- some if # added/removed
+    if (begin < end) {
+        m_text->SetSelectionStart(begin);
+        m_text->SetSelectionEnd(end);
+    }
+}
+
+void FreeCADDialog::on_char_type(wxKeyEvent &event) {
+    //std::cout << "on_char_type " << event.GetUnicodeKey() <<", " << event.GetModifiers() << "\n";
+    if (event.GetUnicodeKey() == 'Q' && event.GetModifiers() == wxMOD_CONTROL) {
+        comment(true);
+    } else if (event.GetUnicodeKey() == 'K' && event.GetModifiers() == wxMOD_CONTROL) {
+        comment(false);
+    } else {
+        event.Skip(true);
+    }
+}
 
 // note: this works on KEY, not on CHAR, so be sure the key is the right one for all keyboard layout.
 // space, back, del are ok but no ascii char
 void FreeCADDialog::on_key_type(wxKeyEvent& event)
 {
+    //std::cout << "on_key_type " << event.GetUnicodeKey() << " ? "<< int('Q') <<", "<< event.GetKeyCode() << ", " << event.GetModifiers() << "\n";
     if (event.GetKeyCode() == WXK_SPACE && event.GetModifiers() == wxMOD_CONTROL)
     {
         //get word, if any
@@ -603,6 +661,10 @@ void FreeCADDialog::on_key_type(wxKeyEvent& event)
         event.Skip(true);
     } else if (event.GetKeyCode() == WXK_ESCAPE && m_text != nullptr && m_text->AutoCompActive()) {
         m_text->AutoCompCancel();
+    }else if (event.GetUnicodeKey() == 'Q' && event.GetModifiers() == wxMOD_CONTROL) {
+        comment(true);
+    } else if (event.GetUnicodeKey() == 'K' && event.GetModifiers() == wxMOD_CONTROL) {
+        comment(false);
     } else {
         event.Skip(true);
     }
@@ -633,6 +695,7 @@ void FreeCADDialog::createSTC()
     m_text->Bind(wxEVT_STC_MODIFIED, &FreeCADDialog::on_word_change_for_autocomplete, this);
     m_text->Bind(wxEVT_STC_CHARADDED, &FreeCADDialog::on_char_add, this);
     m_text->Bind(wxEVT_KEY_DOWN, &FreeCADDialog::on_key_type, this);
+    m_text->Bind(wxEVT_CHAR, &FreeCADDialog::on_char_type, this);
     m_text->Bind(wxEVT_STC_AUTOCOMP_COMPLETED, &FreeCADDialog::on_autocomp_complete, this);
     m_text->Connect(wxID_ANY,
             wxEVT_KEY_DOWN,
