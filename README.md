@@ -4,9 +4,17 @@
 
 #### Installing prerequisites
 
+##### Ubuntu 18.04
+
     sudo apt-get install gcc cmake build-essential libgtk2.0-dev libwxgtk3.0-dev libwx-perl libmodule-build-perl git cpanminus libextutils-cppguess-perl libboost-all-dev libxmu-dev liblocal-lib-perl wx-common libopengl-perl libwx-glcanvas-perl libtbb-dev libxmu-dev freeglut3-dev libwxgtk-media3.0-dev libboost-thread-dev libboost-system-dev libboost-filesystem-dev libcurl4-openssl-dev libextutils-makemaker-cpanfile-perl
 
-Or look up prerequisites here:
+##### Ubuntu 20.04
+
+    sudo apt-get install gcc cmake build-essential libgtk2.0-dev libwxgtk3.0-gtk3-dev libwx-perl libmodule-build-perl git cpanminus libextutils-cppguess-perl libboost-all-dev libxmu-dev liblocal-lib-perl wx-common libopengl-perl libwx-glcanvas-perl libtbb-dev libxmu-dev freeglut3-dev libwxgtk-media3.0-gtk3-dev libboost-thread-dev libboost-system-dev libboost-filesystem-dev libcurl4-openssl-dev libextutils-makemaker-cpanfile-perl
+
+##### Anything else
+
+Look up prerequisites here:
 [Original Wiki](https://github.com/slic3r/Slic3r/wiki/Running-Slic3r-from-git-on-GNU-Linux)
 
 #### Get repository
@@ -15,7 +23,7 @@ Or look up prerequisites here:
 
     cd Slic3r
 
-    git checkout BRANCHNAME
+    git checkout nonplanar-master-merge
 
 #### Install Perl libs
 
