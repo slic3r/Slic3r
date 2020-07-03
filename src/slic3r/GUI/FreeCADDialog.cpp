@@ -733,9 +733,22 @@ bool FreeCADDialog::init_start_python() {
 
     // Get the freecad path (python path)
     boost::filesystem::path pythonpath(gui_app->app_config->get("freecad_path"));
-    pythonpath = pythonpath / "python.exe";
+    if (pythonpath.filename().string().find("python") == std::string::npos) {
+        if (pythonpath.filename().string() != "bin") {
+            pythonpath = pythonpath / "bin";
+        }
+#ifdef __WINDOWS__
+        pythonpath = pythonpath / "python.exe";
+#endif
+#ifdef __APPLE__
+        pythonpath = pythonpath / "python";
+#endif
+#ifdef __linux__
+        pythonpath = pythonpath / "python";
+#endif
+    }
     if (!exists(pythonpath)) {
-        m_errors->AppendText("Error, cannot find the freecad (version 0.19 or higher) python at '" + pythonpath.string() + "', please update your freecad bin directory in the preferences.");
+        m_errors->AppendText("Error, cannot find the freecad (version 0.19 or higher) python at '" + pythonpath.string() + "', please update your freecad python path in the preferences.");
         return false;
     }
 
