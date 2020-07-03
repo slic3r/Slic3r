@@ -8,7 +8,7 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     
     steps:
     - uses: actions/checkout@v2
@@ -72,8 +72,12 @@ jobs:
     - name: build appimage
       working-directory: ./build/package
       run: |
-        chmod +x ../../src/platform/unix/build_appimage.sh "/home/runner/work/SuperSlicer/SuperSlicer"
-        "../../src/platform/unix/build_appimage.sh SuperSlicer_${{ github.event.release.tag_name }}_ubu64_${{steps.date.outputs.date}}.AppImage"
-        
+        chmod +x ../../src/platform/unix/build_appimage.sh
+        ../../src/platform/unix/build_appimage.sh SuperSlicer_ubu64.AppImage
+    - name: Upload appimage
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: SuperSlicer-AppImage.tar
+        path: build/package/SuperSlicer_ubu64.AppImage
         
         
