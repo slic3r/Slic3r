@@ -2210,7 +2210,7 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
                 float delta   = float(scale_(m_config.xy_size_compensation.value));
                 // Only upscale together with clipping if there are no modifiers, as the modifiers shall be applied before upscaling
                 // (upscaling may grow the object outside of the modifier mesh).
-                bool  upscale = delta > 0 && num_modifiers == 0;
+                bool  upscale = false && delta > 0 && num_modifiers == 0;
                 for (size_t layer_id = range.begin(); layer_id < range.end(); ++ layer_id) {
                     m_print->throw_if_canceled();
                     // Trim volumes in a single layer, one by the other, possibly apply upscaling.
@@ -2248,7 +2248,7 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
             });
         BOOST_LOG_TRIVIAL(debug) << "Slicing objects - parallel clipping - end";
         clipped  = true;
-        upscaled = m_config.xy_size_compensation.value > 0 && num_modifiers == 0;
+        upscaled = false && m_config.xy_size_compensation.value > 0 && num_modifiers == 0;
     }
 
     // Slice all modifier volumes.
@@ -2348,12 +2348,14 @@ end:
                 }
                 // Optimized version for a single region layer.
                 if (layer->regions().size() == 1) {
+                    assert(!upscaled);
+                    assert(!clipped);
                     // Single region, growing or shrinking.
                     LayerRegion *layerm = layer->regions().front();
                     ExPolygons expolygons = to_expolygons(std::move(layerm->m_slices.surfaces));
                     // Apply all three main XY compensation.
                     if (hole_delta > 0 || inner_delta > 0 || outter_delta > 0) {
-                        expolygons = _grow_contour_holes(std::max(0.f, outter_delta), std::max(0.f, inner_delta), std::max(0.f, hole_delta), expolygons);
+                        expolygons = _shrink_contour_holes(std::max(0.f, outter_delta), std::max(0.f, inner_delta), std::max(0.f, hole_delta), expolygons);
                         if (layer_id == 0 && first_layer_compensation != 0) 
                             expolygons_first_layer = expolygons;
                     }
@@ -2385,7 +2387,7 @@ end:
                         //merge polygons because region can cut "holes".
                         //then, cut them to give them again later to their region
                         merged_poly_for_holes_growing = layer->merged(float(SCALED_EPSILON));
-                        merged_poly_for_holes_growing = _grow_contour_holes(std::max(0.f, outter_delta), std::max(0.f, inner_delta), std::max(0.f, hole_delta), union_ex(merged_poly_for_holes_growing));
+                        merged_poly_for_holes_growing = _shrink_contour_holes(std::max(0.f, outter_delta), std::max(0.f, inner_delta), std::max(0.f, hole_delta), union_ex(merged_poly_for_holes_growing));
                     }
                     if (clip || max_growth > 0) {
                         // Multiple regions, growing or just clipping one region by the other.
@@ -2394,7 +2396,7 @@ end:
                         for (size_t region_id = 0; region_id < layer->regions().size(); ++ region_id) {
                             LayerRegion *layerm = layer->regions()[region_id];
                             ExPolygons slices = to_expolygons(std::move(layerm->slices().surfaces));
-                            if (hole_delta > 0.f) {
+                            if (max_growth > 0.f) {
                                 slices = intersection_ex(offset_ex(slices, max_growth), merged_poly_for_holes_growing);
                             }
                             // Apply the first_layer_compensation if >0.
@@ -2451,9 +2453,10 @@ end:
 }
 
 ExPolygons PrintObject::_shrink_contour_holes(double contour_delta, double default_delta, double convex_delta, const ExPolygons& polys) const {
-    Polygons contours;
-    Polygons holes;
+    ExPolygons new_ex_polys;
     for (const ExPolygon& ex_poly : polys) {
+        Polygons contours;
+        Polygons holes;
         for (const Polygon& hole : ex_poly.holes) {
             //check if convex to reduce it
             // check whether first point forms a convex angle
@@ -2484,7 +2487,7 @@ ExPolygons PrintObject::_shrink_contour_holes(double contour_delta, double defau
                 if (default_delta != 0) {
                     for (Polygon &newHole : offset(hole, -default_delta)) {
                         newHole.make_counter_clockwise();
-                        holes.push_back(std::move(newHole));
+                        holes.emplace_back(std::move(newHole));
                     }
                 } else {
                     holes.push_back(hole);
@@ -2495,85 +2498,16 @@ ExPolygons PrintObject::_shrink_contour_holes(double contour_delta, double defau
         //modify contour
         if (contour_delta != 0) {
             Polygons new_contours = offset(ex_poly.contour, contour_delta);
-            if (new_contours.size() == 1)
-                contours = new_contours[0];
-            else if (new_contours.size() == 0)
+            if (new_contours.size() == 0)
                 continue;
-            else {
-                //create a new expolygon for each contour
-                for (Polygon& contour : new_contours) {
-                    contours.emplace_back(std::move(contour));
-                }
-                continue;
-            }
+            contours.insert(contours.end(), std::make_move_iterator(new_contours.begin()), std::make_move_iterator(new_contours.end()));
         } else {
             contours.push_back(ex_poly.contour);
         }
+        ExPolygons temp = diff_ex(union_(contours), union_(holes));
+        new_ex_polys.insert(new_ex_polys.end(), std::make_move_iterator(temp.begin()), std::make_move_iterator(temp.end()));
     }
-    return diff_ex(union_(contours), union_(holes));
-}
-
-ExPolygons PrintObject::_grow_contour_holes(double contour_delta, double default_delta, double convex_delta, const ExPolygons &polys) const{
-    ExPolygons new_polys;
-    for (const ExPolygon &ex_poly : polys) {
-        ExPolygon new_ex_poly(ex_poly);
-        new_ex_poly.holes.clear();
-        for (const Polygon &hole : ex_poly.holes) {
-            //check if convex to reduce it
-            // check whether first point forms a convex angle
-            //note: we allow a deviation of 5.7° (0.01rad = 0.57°)
-            bool ok = true;
-            ok = (hole.points.front().ccw_angle(hole.points.back(), *(hole.points.begin() + 1)) <= PI + 0.1);
-            // check whether points 1..(n-1) form convex angles
-            if (ok)
-                for (Points::const_iterator p = hole.points.begin() + 1; p != hole.points.end() - 1; ++p) {
-                    ok = (p->ccw_angle(*(p - 1), *(p + 1)) <= PI + 0.1);
-                    if (!ok) break;
-                }
-
-            // check whether last point forms a convex angle
-            ok = ok && (hole.points.back().ccw_angle(*(hole.points.end() - 2), hole.points.front()) <= PI + 0.1);
-
-            if (ok) {
-                if (convex_delta != 0) {
-                    for (Polygon &newHole : offset(hole, -convex_delta)) {
-                        //reverse because it's a hole, not an object
-                        newHole.make_clockwise();
-                        new_ex_poly.holes.emplace_back(std::move(newHole));
-                    }
-                } else
-                    new_ex_poly.holes.push_back(hole);
-            } else {
-                if (default_delta != 0) {
-                    for (Polygon &newHole : offset(hole, -default_delta)) {
-                        //reverse because it's a hole, not an object
-                        newHole.make_clockwise();
-                        new_ex_poly.holes.emplace_back(std::move(newHole));
-                    }
-                } else
-                    new_ex_poly.holes.push_back(hole);
-            }
-        }
-        //modify contour
-        if (contour_delta != 0) {
-            Polygons new_contours = offset(ex_poly.contour, contour_delta);
-            if (new_contours.size() == 1)
-                new_ex_poly.contour = new_contours[0];
-            else if (new_contours.size() == 0)
-                continue;
-            else {
-                //create a new expolygon for each contour (unlikely to happen)
-                for (Polygon& contour : new_contours) {
-                    ExPolygon new_ex_poly_w_contour(new_ex_poly);
-                    new_ex_poly_w_contour.contour = std::move(contour);
-                    new_polys.emplace_back(std::move(new_ex_poly_w_contour));
-                }
-                continue;
-            }
-        }
-        new_polys.push_back(new_ex_poly);
-    }
-    return union_ex(new_polys);
+    return union_ex(new_ex_polys);
 }
 
 /// max angle: you ahve to be lwer than that to divide it. PI => all accepted
