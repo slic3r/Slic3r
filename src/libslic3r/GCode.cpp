@@ -3036,7 +3036,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     }
 
     // reset acceleration
-    gcode += m_writer.set_acceleration((unsigned int)(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)(m_config.default_acceleration.value + 0.5));
 
     //don't wipe here
     //if (m_wipe.enable)
@@ -3380,7 +3380,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     }
     
     // reset acceleration
-    gcode += m_writer.set_acceleration((unsigned int)(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)(m_config.default_acceleration.value + 0.5));
     
     if (m_wipe.enable)
         m_wipe.path = paths.front().polyline;  // TODO: don't limit wipe to last path
@@ -3480,7 +3480,7 @@ std::string GCode::extrude_multi_path(const ExtrusionMultiPath &multipath, const
         m_wipe.path.reverse();
     }
     // reset acceleration
-    gcode += m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
     return gcode;
 }
 
@@ -3517,7 +3517,7 @@ std::string GCode::extrude_multi_path3D(const ExtrusionMultiPath3D &multipath3D,
         m_wipe.path.reverse();
     }
     // reset acceleration
-    gcode += m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
     return gcode;
 }
 
@@ -3551,7 +3551,7 @@ std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &de
         m_wipe.path.reverse();
     }
     // reset acceleration
-    gcode += m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
     return gcode;
 }
 
@@ -3586,7 +3586,7 @@ std::string GCode::extrude_path_3D(const ExtrusionPath3D &path, const std::strin
         m_wipe.path.reverse();
     }
     // reset acceleration
-    gcode += m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
     return gcode;
 }
 
@@ -3834,7 +3834,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
         } else {
             acceleration = m_config.default_acceleration.value;
         }//TODO: add travel accel?
-        gcode += m_writer.set_acceleration((unsigned int)floor(acceleration + 0.5));
+        m_writer.set_acceleration((unsigned int)floor(acceleration + 0.5));
     }
 
 

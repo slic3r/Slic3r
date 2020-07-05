@@ -65,7 +65,8 @@ public:
     std::string set_temperature(unsigned int temperature, bool wait = false, int tool = -1) const;
     std::string set_bed_temperature(unsigned int temperature, bool wait = false);
     std::string set_fan(unsigned int speed, bool dont_save = false);
-    std::string set_acceleration(unsigned int acceleration);
+    void        set_acceleration(unsigned int acceleration);
+    std::string write_acceleration();
     std::string reset_e(bool force = false);
     std::string update_progress(unsigned int num, unsigned int tot, bool allow_100 = false) const;
     // return false if this extruder was already selected
@@ -100,6 +101,7 @@ private:
     bool            m_single_extruder_multi_material;
     Tool*           m_tool;
     unsigned int    m_last_acceleration;
+    unsigned int    m_current_acceleration;
     // Limit for setting the acceleration, to respect the machine limits set for the Marlin firmware.
     // If set to zero, the limit is not in action.
     unsigned int    m_max_acceleration;
