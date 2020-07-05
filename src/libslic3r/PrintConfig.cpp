@@ -534,7 +534,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(true));
 
     def = this->add("duplicate_distance", coFloat);
-    def->label = L("Distance between copies");
+    def->label = L("Distance between objects");
     def->category = OptionCategory::output;
     def->tooltip = L("Distance used for the auto-arrange feature of the plater.");
     def->sidetext = L("mm");
@@ -1996,7 +1996,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("max_speed_reduction", coPercents);
     def->label = L("Max speed reduction");
     def->category = OptionCategory::speed;
-    def->tooltip = L("Amount of speed you can reduce per extrusion speed.");
+    def->tooltip = L("Set to 90% if you don't want the speed to be reduced by more than 90%.");
     def->sidetext = L("%");
     def->min = 0;
     def->max = 100;
@@ -2156,7 +2156,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Enable Limits");
     def->category = OptionCategory::limits;
     def->tooltip = L("Slic3r can add M201 M203 M202 M204 and M205 gcodes to pass the machine limits defined here to the firmware."
-            "Gcodes printed will depends of the firmware selected (please Report an issue if you found something wrong)."
+            " Gcodes printed will depends of the firmware selected (please Report an issue if you found something wrong)."
             "\nIf you want only a selection, you can write your gcode with these value, example: "
             "\nM204 P[machine_max_acceleration_extruding] T[machine_max_acceleration_retracting]");
     def->mode = comAdvanced;
@@ -2200,7 +2200,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(true));
 
     def = this->add("overhangs_width", coFloatOrPercent);
-    def->label = L("As bridge threshold");
+    def->label = L("'As bridge' threshold");
     def->full_label = L("Overhang bridge threshold");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Minimum unsupported width for an extrusion to be considered an overhang. Can be in mm or in a % of the nozzle diameter.");
@@ -2760,8 +2760,8 @@ void PrintConfigDef::init_fff_params()
     def->full_label = ("Solid infill speed");
     def->category = OptionCategory::speed;
     def->tooltip = L("Speed for printing solid regions (top/bottom/internal horizontal shells). "
-                   "This can be expressed as a percentage (for example: 80%) over the default infill speed "
-                   "infill speed above. Set to zero for auto.");
+                   "This can be expressed as a percentage (for example: 80%) over the default infill speed."
+                   " Set to zero for auto.");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "infill_speed";
     def->aliases = { "solid_infill_feed_rate" };
@@ -3183,7 +3183,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("merging with perimeters");
     def->full_label = L("Thin wall merge");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("Allow the external periemter to merge the thin wals int he path. !!! IF you disable this setting, please explain me why (via help->report issue)"
+    def->tooltip = L("Allow the external perimeter to merge the thin walls in the path. !!! IF you disable this setting, please explain me why (via help->report issue)"
         " because I'm going to DELETE this setting next release, as i don't see why someone may want to disable it.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(true));
@@ -3540,7 +3540,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("z_step", coFloat);
     def->label = L("Z full step");
     def->tooltip = L("Set this to the height moved when your Z motor (or equivalent) turns one step."
-                    "If your motor needs 200 steps to move your head/plater by 1mm, this field have to be 1/200 = 0.005."
+                    " If your motor needs 200 steps to move your head/plater by 1mm, this field have to be 1/200 = 0.005."
                     "\nThe gcode can't write a value below 0.001 so any value below or equal that is equivalent to disabling the feature."
                     "\n0 to disable.");
     def->cli = "z-step=f";
@@ -3694,7 +3694,7 @@ void PrintConfigDef::init_milling_params()
     def->tooltip = L("Put here the gcode to change the toolhead (called after the g-code T[next_extruder]). You have access to [next_extruder] and [previous_extruder]."
         " next_extruder is the 'extruder number' of the new milling tool, it's equal to the index (begining at 0) of the milling tool plus the number of extruders."
         " previous_extruder is the 'extruder number' of the previous tool, it may be a normal extruder, if it's below the number of extruders."
-        " The numbe rof extruder is available at [extruder]and the number of milling tool is available at [milling_cutter].");
+        " The number of extruder is available at [extruder] and the number of milling tool is available at [milling_cutter].");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionStrings(""));
 
@@ -3704,14 +3704,14 @@ void PrintConfigDef::init_milling_params()
     def->tooltip = L("Put here the gcode to end the toolhead action, like stopping the spindle. You have access to [next_extruder] and [previous_extruder]."
         " previous_extruder is the 'extruder number' of the current milling tool, it's equal to the index (begining at 0) of the milling tool plus the number of extruders."
         " next_extruder is the 'extruder number' of the next tool, it may be a normal extruder, if it's below the number of extruders."
-        " The numbe rof extruder is available at [extruder]and the number of milling tool is available at [milling_cutter].");
+        " The number of extruder is available at [extruder]and the number of milling tool is available at [milling_cutter].");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionStrings(""));
 
     def = this->add("milling_post_process", coBool);
     def->label = L("Milling post-processing");
     def->category = OptionCategory::milling;
-    def->tooltip = L("If activated, at the end of each layer, the printer will switch to a milling ead and mill the external perimeters."
+    def->tooltip = L("If activated, at the end of each layer, the printer will switch to a milling head and mill the external perimeters."
         "\nYou should set the 'Milling extra XY size' to a value high enough to have enough plastic to mill. Also, be sure that your piece is firmly glued to the bed.");
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionBool(false));
@@ -3729,7 +3729,7 @@ void PrintConfigDef::init_milling_params()
     def = this->add("milling_after_z", coFloatOrPercent);
     def->label = L("Milling only after");
     def->category = OptionCategory::milling;
-    def->tooltip = L("THis setting restrict the post-process milling to a certain height, to avoid milling the bed. It can be a mm of a % of the first layer height (so it can depends of the object).");
+    def->tooltip = L("This setting restrict the post-process milling to a certain height, to avoid milling the bed. It can be a mm of a % of the first layer height (so it can depends of the object).");
     def->sidetext = L("mm or %");
     def->ratio_over = "first_layer_height";
     def->mode = comAdvanced;
