@@ -222,21 +222,14 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     createSTC();
 
     m_errors = new wxTextCtrl(this, wxID_ANY, "",
-        wxDefaultPosition, wxSize(600, 100), wxHW_SCROLLBAR_AUTO | wxTE_MULTILINE);
+        wxDefaultPosition, wxSize(200, 100 * this->scale_factor()), wxHW_SCROLLBAR_AUTO | wxTE_MULTILINE);
     m_errors->SetEditable(false);
 
     m_help = new wxTextCtrl(this, wxID_ANY, create_help_text(),
-        wxDefaultPosition, wxSize(200, 500), wxTE_MULTILINE);
+        wxDefaultPosition, wxSize(200 * this->scale_factor(), 200), wxTE_MULTILINE);
     m_help->SetEditable(false);
 
-    //wxBoxSizer *m_icons = new wxBoxSizer(wxHORIZONTAL);
-    //m_icons->Add(16,16,0,0,0,freecad_icon);
-
-    //wxSizerItem* Add(wxSizer * sizer, const wxGBPosition & pos, const wxGBSpan & span = wxDefaultSpan, int flag = 0, int border = 0, wxObject * userData = NULL)
-    //wxSizerItem* Add(wxSizer * sizer,                                              int proportion = 0, int flag = 0, int border = 0, wxObject * userData = NULL)
     main_sizer->Add(m_text, wxGBPosition(1,1), wxGBSpan(2,1), wxEXPAND | wxALL, 2);
-    //main_sizer->Add(m_icons, wxGBPosition(1, 2), wxGBSpan(1, 1), 0, 2);
-    //main_sizer->Add(m_help, wxGBPosition(2, 2), wxGBSpan(2, 1), wxEXPAND | wxVERTICAL, 2);
     main_sizer->Add(m_help, wxGBPosition(1, 2), wxGBSpan(3, 1), wxEXPAND | wxVERTICAL, 2);
     main_sizer->Add(m_errors, wxGBPosition(3, 1), wxGBSpan(1, 1), wxEXPAND | wxHORIZONTAL, 2);
 
@@ -245,7 +238,7 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     
     wxStdDialogButtonSizer* buttons = new wxStdDialogButtonSizer();
 
-    wxButton* bt_new = new wxButton(this, wxID_FILE3, _(L("New")));
+    wxButton* bt_new = new wxButton(this, wxID_FILE1, _(L("New")));
     bt_new->Bind(wxEVT_BUTTON, &FreeCADDialog::new_script, this);
     buttons->Add(bt_new);
     wxButton* bt_load = new wxButton(this, wxID_FILE2, _(L("Load")));
@@ -260,7 +253,7 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     buttons->Add(bt_quick_save);
 
     buttons->AddSpacer(30);
-    wxButton* bt_create_geometry = new wxButton(this, wxID_FILE1, _(L("Generate")));
+    wxButton* bt_create_geometry = new wxButton(this, wxID_APPLY, _(L("Generate")));
     bt_create_geometry->Bind(wxEVT_BUTTON, &FreeCADDialog::create_geometry, this);
     buttons->Add(bt_create_geometry);
 
@@ -275,6 +268,14 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
 
     SetSizer(main_sizer);
     main_sizer->SetSizeHints(this);
+
+    wxSize dialog_size(800 * this->scale_factor(), 600 * this->scale_factor());
+    wxDisplay display(wxDisplay::GetFromWindow(main_frame));
+    wxRect screen = display.GetClientArea();
+    dialog_size.x = std::min(dialog_size.x, screen.width - 50);
+    dialog_size.y = std::min(dialog_size.y, screen.height - 50);
+
+    this->SetSize(dialog_size);
 
     //set keyboard shortcut
     wxAcceleratorEntry entries[6];
@@ -611,7 +612,7 @@ void FreeCADDialog::on_key_type(wxKeyEvent& event)
 void FreeCADDialog::createSTC()
 {
     m_text = new wxStyledTextCtrl(this, wxID_ANY,
-        wxDefaultPosition, wxSize(600,400), wxHW_SCROLLBAR_AUTO);
+        wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO);
 
     //m_text->SetMarginWidth(MARGIN_LINE_NUMBERS, 50);
     m_text->StyleSetForeground(wxSTC_STYLE_LINENUMBER, wxColour(75, 75, 75));
@@ -624,6 +625,7 @@ void FreeCADDialog::createSTC()
     m_text->SetIndentationGuides(wxSTC_IV_LOOKFORWARD);
     m_text->SetBackSpaceUnIndents(true);
     m_text->SetTabIndents(true);
+    m_text->SetZoom(int((this->scale_factor() - 1) * 10));
 
     m_text->SetWrapMode(wxSTC_WRAP_WORD);
 
@@ -668,10 +670,15 @@ void FreeCADDialog::createSTC()
 
 void FreeCADDialog::on_dpi_changed(const wxRect& suggested_rect)
 {
-    msw_buttons_rescale(this, em_unit(), { wxID_OK });
+    msw_buttons_rescale(this, em_unit(), { wxID_FILE1, wxID_FILE2, wxID_FILE3, wxID_FILE4, wxID_APPLY, wxID_CLOSE });
 
+    m_errors->SetMinSize(wxSize(200, 100 * this->scale_factor()));
+    m_help->SetMinSize(wxSize(200 * this->scale_factor(), 200));
+    m_text->SetZoom(int((this->scale_factor() - 1) * 10));
+
+    wxSize oldSize = this->GetSize();
     Layout();
-    Fit();
+    this->SetSize(oldSize.x * this->scale_factor() / this->prev_scale_factor(), oldSize.y * this->scale_factor() / this->prev_scale_factor());
     Refresh();
 }
 
