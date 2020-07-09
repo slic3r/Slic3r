@@ -25,7 +25,7 @@ namespace GUI {
 #if ENABLE_SCROLLABLE
             wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 #else
-        wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE)
+        wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 #endif // ENABLE_SCROLLABLE
     {
         this->gui_app = app;
@@ -45,9 +45,14 @@ void CalibrationAbstractDialog::create(std::string html_path, wxSize dialog_size
 
     //html
     html_viewer = new wxHtmlWindow(this, wxID_ANY,
-        wxDefaultPosition, dialog_size, wxHW_SCROLLBAR_AUTO);
+        wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO);
     html_viewer->LoadPage(Slic3r::resources_dir()+ html_path);
     main_sizer->Add(html_viewer, 1, wxEXPAND | wxALL, 5);
+
+    wxDisplay display(wxDisplay::GetFromWindow(main_frame));
+    wxRect screen = display.GetClientArea();
+    dialog_size.x = std::min(int(dialog_size.x * this->scale_factor()), screen.width - 50);
+    dialog_size.y = std::min(int(dialog_size.y * this->scale_factor()), screen.height - 50);
 
     wxStdDialogButtonSizer* buttons = new wxStdDialogButtonSizer();
     create_buttons(buttons);
@@ -63,6 +68,7 @@ void CalibrationAbstractDialog::create(std::string html_path, wxSize dialog_size
 
     SetSizer(main_sizer);
     main_sizer->SetSizeHints(this);
+    this->SetSize(dialog_size.x, dialog_size.y);
 }
 
 void CalibrationAbstractDialog::close_me(wxCommandEvent& event_args) {
@@ -120,8 +126,9 @@ void CalibrationAbstractDialog::on_dpi_changed(const wxRect& suggested_rect)
 {
     msw_buttons_rescale(this, em_unit(), { wxID_OK });
 
+    wxSize oldSize = this->GetSize();
     Layout();
-    Fit();
+    this->SetSize(oldSize.x * this->scale_factor() / this->prev_scale_factor(), oldSize.y * this->scale_factor() / this->prev_scale_factor());
     Refresh();
 }
 
