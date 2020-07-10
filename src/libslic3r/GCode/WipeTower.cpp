@@ -1045,7 +1045,10 @@ void WipeTower::toolchange_Unload(
     }
     //otherwise, if toolchange temperature changes are on and in normal mode, return to the previously set temperature 
     else if (m_semm && (m_filpar[m_current_tool].filament_enable_toolchange_temp && (m_filpar[m_current_tool].filament_use_fast_skinnydip == false))) {
-        writer.restore_pre_toolchange_temp(m_filpar[m_current_tool].temperature, false); //skinnydip normal mode only
+        if (new_temperature != 0)
+            writer.restore_pre_toolchange_temp(new_temperature, false); //skinnydip normal mode only
+        else
+            writer.restore_pre_toolchange_temp(m_filpar[m_current_tool].temperature, false); //skinnydip normal mode only
     }
 
     // Cooling:
@@ -1108,7 +1111,10 @@ void WipeTower::toolchange_Unload(
     if ((!m_is_first_layer) && (m_filpar[m_current_tool].filament_enable_toolchange_temp == true) && 
             (m_filpar[m_current_tool].filament_use_fast_skinnydip == true)) {
         //begin to restore pre toolchange temp after skinnydip move completes without delay  (SKINNYDIP--fast method)
-        writer.restore_pre_toolchange_temp(m_filpar[m_current_tool].temperature, true); //skinnydip fast mode only
+        if (new_temperature != 0)
+            writer.restore_pre_toolchange_temp(new_temperature, true); //skinnydip fast mode only
+        else
+            writer.restore_pre_toolchange_temp(m_filpar[m_current_tool].temperature, true); //skinnydip fast mode only
     }
     //the following temperature change is suppressed if using skinnydip normal mode since it has already happened
     else if (m_is_first_layer && (m_filpar[m_current_tool].filament_enable_toolchange_temp == true) && 
