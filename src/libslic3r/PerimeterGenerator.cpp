@@ -317,7 +317,7 @@ void PerimeterGenerator::process()
         int        loop_number = this->config->perimeters + surface.extra_perimeters - 1 + extra_odd_perimeter;  // 0-indexed loops
         surface_idx++;
 
-        if (this->config->only_one_perimeter_top && this->upper_slices == NULL){
+        if (this->config->only_one_perimeter_top && loop_number > 0 && this->upper_slices == NULL){
             loop_number = 0;
         }
         
