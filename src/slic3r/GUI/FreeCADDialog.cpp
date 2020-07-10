@@ -207,10 +207,6 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     //const wxFont& bold_font = wxGetApp().bold_font();
     SetFont(font);
 
-    wxIcon *freecad_icon = new wxIcon();
-    freecad_icon->LoadFile( (boost::filesystem::path(Slic3r::resources_dir()) / "icons" / "Freecad.svg").generic_string());
-    //sadly, this do nothing in dialog
-    //this->SetIcon(freecad_icon);
 
     main_sizer = new wxGridBagSizer(1,1); //(int vgap, int hgap)
     // |       |_icon_|
@@ -221,6 +217,9 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     //main view
     createSTC();
 
+    wxStaticBitmap* logo = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap);
+    logo->SetBitmap(create_scaled_bitmap("freecad", this, 64));
+
     m_errors = new wxTextCtrl(this, wxID_ANY, "",
         wxDefaultPosition, wxSize(200, 100 * this->scale_factor()), wxHW_SCROLLBAR_AUTO | wxTE_MULTILINE);
     m_errors->SetEditable(false);
@@ -230,7 +229,8 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     m_help->SetEditable(false);
 
     main_sizer->Add(m_text, wxGBPosition(1,1), wxGBSpan(2,1), wxEXPAND | wxALL, 2);
-    main_sizer->Add(m_help, wxGBPosition(1, 2), wxGBSpan(3, 1), wxEXPAND | wxVERTICAL, 2);
+    main_sizer->Add(logo, wxGBPosition(1, 2), wxGBSpan(1, 1), wxALIGN_RIGHT, 2);
+    main_sizer->Add(m_help, wxGBPosition(2, 2), wxGBSpan(2, 1), wxEXPAND | wxVERTICAL, 2);
     main_sizer->Add(m_errors, wxGBPosition(3, 1), wxGBSpan(1, 1), wxEXPAND | wxHORIZONTAL, 2);
 
     this->main_sizer->AddGrowableCol(1);
@@ -252,19 +252,19 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     bt_quick_save->Hide();
     buttons->Add(bt_quick_save);
 
-    buttons->AddSpacer(30);
+    buttons->AddStretchSpacer();
     wxButton* bt_create_geometry = new wxButton(this, wxID_APPLY, _(L("Generate")));
     bt_create_geometry->Bind(wxEVT_BUTTON, &FreeCADDialog::create_geometry, this);
-    buttons->Add(bt_create_geometry);
+    buttons->SetAffirmativeButton(bt_create_geometry);
+    bt_create_geometry->SetDefault();
+    bt_create_geometry->SetFocus();
+    buttons->Realize();
+    main_sizer->Add(buttons, wxGBPosition(4, 1), wxGBSpan(1, 1), wxEXPAND, 5);
 
     wxButton* close = new wxButton(this, wxID_CLOSE, _(L("Close")));
     close->Bind(wxEVT_BUTTON, &FreeCADDialog::close_me, this);
-    buttons->AddButton(close);
-    close->SetDefault();
-    close->SetFocus();
     SetAffirmativeId(wxID_CLOSE);
-    buttons->Realize();
-    main_sizer->Add(buttons, wxGBPosition(4, 1), wxGBSpan(1, 2), wxEXPAND | wxALL, 5);
+    main_sizer->Add(close, wxGBPosition(4, 2), wxGBSpan(1, 2), wxEXPAND | wxALIGN_RIGHT, 5);
 
     SetSizer(main_sizer);
     main_sizer->SetSizeHints(this);
@@ -758,6 +758,7 @@ bool FreeCADDialog::init_start_python() {
         m_errors->AppendText("Error, cannot find the freecad (version 0.19 or higher) python at '" + pythonpath.string() + "', please update your freecad python path in the preferences.");
         return false;
     }
+    boost::filesystem::path freecadpath = pythonpath.parent_path().parent_path();
 
     const boost::filesystem::path scripts_path(boost::filesystem::path(Slic3r::data_dir()) / "scripts");
     boost::filesystem::create_directories(scripts_path / "FreePySCAD");
@@ -777,10 +778,14 @@ bool FreeCADDialog::init_start_python() {
 
     exec_var->process.reset(new boost::process::child(pythonpath.string() + " -u -i", boost::process::std_in < exec_var->pyin, 
         boost::process::std_out > exec_var->data_out, boost::process::std_err > exec_var->data_err, exec_var->ios));
+    exec_var->pyin << "import sys" << std::endl;
+#ifndef __WINDOWS__
+    // add freecad lib path if not already done
+    exec_var->pyin << "sys.path.append('" << (freecadpath / "lib").string() << "')" << std::endl;
+#endif
     exec_var->pyin << "import FreeCAD" << std::endl;
     exec_var->pyin << "import Part" << std::endl;
     exec_var->pyin << "import Draft" << std::endl;
-    exec_var->pyin << "import sys" << std::endl;
     exec_var->pyin << "sys.path.append('" << scripts_path.generic_string() << "')" << std::endl;
     //std::cout << "sys.path.append('" << pyscad_path.generic_string() << "')" << std::endl;
     exec_var->pyin << "from FreePySCAD.freepyscad import *" << std::endl;

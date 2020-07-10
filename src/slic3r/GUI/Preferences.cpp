@@ -114,7 +114,7 @@ void PreferencesDialog::build()
 	};
 	def.label = L("FreeCAD path");
 	def.type = coString;
-	def.tooltip = L("If it pont to a valid freecad instance, you can use the built-in script to generate quickly things in a scripted python.");
+	def.tooltip = L("If it point to a valid freecad instance (the bin directory or the python executable), you can use the built-in python script to quickly generate geometry.");
 	def.set_default_value(new ConfigOptionString{ app_config->get("freecad_path") });
 	option = Option(def, "freecad_path");
 	option.opt.full_width = true;
