@@ -20,6 +20,7 @@ group:Advanced
 	setting:use_relative_e_distances
 	setting:use_firmware_retraction
 	setting:use_volumetric_e
+	setting:min_length
 	setting:variable_layer_height
 
 page:Custom G-code:cog

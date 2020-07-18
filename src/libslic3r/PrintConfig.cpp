@@ -2061,6 +2061,16 @@ void PrintConfigDef::init_fff_params()
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionFloats { 0.07 });
 
+    def = this->add("min_length", coFloat);
+    def->label = L("minimum extrusion length");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("Too many too small commands may overload the firmware / connection. Put a higher value here if you see strange slowdown."
+                     "\n0 to disable.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.035));
+
     def = this->add("min_width_top_surface", coFloatOrPercent);
     def->label = L("minimum top width for infill");
     def->category = OptionCategory::speed;

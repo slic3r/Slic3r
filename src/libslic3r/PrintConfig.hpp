@@ -886,11 +886,12 @@ public:
     ConfigOptionString              feature_gcode;
     ConfigOptionFloat               max_print_speed;
     ConfigOptionFloat               max_volumetric_speed;
-    ConfigOptionFloats              milling_z_lift;
 #ifdef HAS_PRESSURE_EQUALIZER
     ConfigOptionFloat               max_volumetric_extrusion_rate_slope_positive;
     ConfigOptionFloat               max_volumetric_extrusion_rate_slope_negative;
 #endif
+    ConfigOptionFloats              milling_z_lift;
+    ConfigOptionFloat               min_length;
     ConfigOptionPercents            retract_before_wipe;
     ConfigOptionFloats              retract_length;
     ConfigOptionFloats              retract_length_toolchange;
@@ -983,6 +984,7 @@ protected:
         OPT_PTR(max_print_speed);
         OPT_PTR(max_volumetric_speed);
         OPT_PTR(milling_z_lift);
+        OPT_PTR(min_length);
 #ifdef HAS_PRESSURE_EQUALIZER
         OPT_PTR(max_volumetric_extrusion_rate_slope_positive);
         OPT_PTR(max_volumetric_extrusion_rate_slope_negative);

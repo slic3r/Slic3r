@@ -3540,11 +3540,59 @@ void GCode::use(const ExtrusionEntityCollection &collection) {
     }
 }
 
+std::string extrusion_role_2_string(const ExtrusionRole &er) {
+    switch (er) {
+        case erNone: return " none";
+        case erPerimeter: return " perimeter";
+        case erExternalPerimeter: return " external_perimeter";
+        case erOverhangPerimeter: return " overhang_perimeter";
+        case erInternalInfill: return " internal_infill";
+        case erSolidInfill: return " solid_infill";
+        case erTopSolidInfill: return " top_solid_infill";
+        case erBridgeInfill: return " bridge_infill";
+        case erThinWall: return " thin_wall";
+        case erGapFill: return " gap_fill";
+        case erSkirt: return " skirt";
+        case erSupportMaterial: return " support_material";
+        case erSupportMaterialInterface: return " support_material_interface";
+        case erWipeTower: return " wipe_tower";
+        case erMilling: return " milling";
+        case erCustom: return " custom";
+        case erMixed: return " mixed";
+        case erCount: return " count";
+    }
+    return " unkown";
+}
+
 std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &description, double speed) {
-    //    description += ExtrusionRole2String(path.role());
+
+    std::string descr = extrusion_role_2_string(path.role());
     ExtrusionPath simplifed_path = path;
-    simplifed_path.simplify(SCALED_RESOLUTION);
-    std::string gcode = this->_extrude(simplifed_path, description, speed);
+    if (this->config().min_length.value != 0 && !m_last_too_small.empty()) {
+        //descr += " trys fusion " + std::to_string(unscaled(m_last_too_small.last_point().x())) + " , " + std::to_string(unscaled(path.first_point().x()));
+        //ensure that it's a continous thing
+        if (m_last_too_small.last_point().distance_to_square(path.first_point()) < scale_(this->config().min_length)) {
+            //descr += " ! fusion " + std::to_string(simplifed_path.polyline.points.size());
+            simplifed_path.height = (m_last_too_small.height * m_last_too_small.length() + path.height * path.length()) / (m_last_too_small.length() + path.length());
+            simplifed_path.mm3_per_mm = (m_last_too_small.mm3_per_mm * m_last_too_small.length() + path.mm3_per_mm * path.length()) / (m_last_too_small.length() + path.length());
+            simplifed_path.polyline.points.insert(simplifed_path.polyline.points.begin(), m_last_too_small.polyline.points.begin(), m_last_too_small.polyline.points.end()-1);
+        }
+        m_last_too_small.polyline.points.clear();
+    }
+    simplifed_path.simplify(this->config().min_length.value != 0 ? scale_(this->config().min_length) : SCALED_RESOLUTION);
+    if (this->config().min_length.value != 0 && simplifed_path.length() < scale_(this->config().min_length)) {
+        m_last_too_small = simplifed_path;
+        return "";
+            //"; "+ descr+" .... too small for extrude: "+std::to_string(simplifed_path.length())+" < "+ std::to_string(scale_(this->config().min_length))
+            //+ " ; " + std::to_string(unscaled(path.first_point().x())) + " : " + std::to_string(unscaled(path.last_point().x()))
+            //+" =;=> " + std::to_string(unscaled(simplifed_path.first_point().x())) + " : " + std::to_string(unscaled(simplifed_path.last_point().x()))
+            //+ "\n";
+    }
+
+    std::string gcode = this->_extrude(simplifed_path, description + descr, speed);
+
+    //gcode += " ; " + std::to_string(unscaled(path.first_point().x())) + " : " + std::to_string(unscaled(path.last_point().x()));
+    //gcode += " =;=> " + std::to_string(unscaled(simplifed_path.first_point().x())) + " : " + std::to_string(unscaled(simplifed_path.last_point().x()));
 
     if (m_wipe.enable) {
         m_wipe.path = std::move(simplifed_path.polyline);
@@ -3556,9 +3604,9 @@ std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &de
 }
 
 std::string GCode::extrude_path_3D(const ExtrusionPath3D &path, const std::string &description, double speed) {
-    //    description += ExtrusionRole2String(path.role());
+    std::string descr = extrusion_role_2_string(path.role());
     //path.simplify(SCALED_RESOLUTION);
-    std::string gcode = this->_before_extrude(path, description, speed);
+    std::string gcode = this->_before_extrude(path, description + descr, speed);
 
     // calculate extrusion length per distance unit
     double e_per_mm = path.mm3_per_mm
