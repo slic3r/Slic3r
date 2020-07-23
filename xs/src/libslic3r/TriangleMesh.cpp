@@ -13,9 +13,12 @@
 #include <math.h>
 #include <assert.h>
 #include <stdexcept>
+#include <boost/version.hpp>
 #include <boost/config.hpp>
 #include <boost/nowide/convert.hpp>
+#if BOOST_VERSION >= 107300
 #include <boost/bind/bind.hpp>
+#endif
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
@@ -23,7 +26,10 @@
 
 namespace Slic3r {
 
+
+#if BOOST_VERSION >= 107300
 using boost::placeholders::_1;
+#endif
 
 TriangleMesh::TriangleMesh()
     : repaired(false)

@@ -7,7 +7,13 @@
 #include <string>
 #include <vector>
 #include <boost/asio.hpp>
+
+#include <boost/version.hpp>
+#if BOOST_VERSION >= 107300
 #include <boost/bind/bind.hpp>
+#else
+#include <boost/bind.hpp>
+#endif
 #include <boost/thread.hpp>
 #include <boost/core/noncopyable.hpp>
 
@@ -15,8 +21,10 @@ namespace Slic3r {
 
 namespace asio = boost::asio;
 
+#if BOOST_VERSION >= 107300
 using boost::placeholders::_1;
 using boost::placeholders::_2;
+#endif
 
 class GCodeSender : private boost::noncopyable {
     public:

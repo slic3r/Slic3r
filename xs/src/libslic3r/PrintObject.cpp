@@ -4,14 +4,19 @@
 #include "Geometry.hpp"
 #include "Log.hpp"
 #include "TransformationMatrix.hpp"
+#include <boost/version.hpp>
+#if BOOST_VERSION >= 107300
 #include <boost/bind/bind.hpp>
+#endif
 #include <algorithm>
 #include <vector>
 #include <limits>
 
 namespace Slic3r {
 
+#if BOOST_VERSION >= 107300
 using boost::placeholders::_1;
+#endif
 
 PrintObject::PrintObject(Print* print, ModelObject* model_object, const BoundingBoxf3 &modobj_bbox)
 :   layer_height_spline(model_object->layer_height_spline),

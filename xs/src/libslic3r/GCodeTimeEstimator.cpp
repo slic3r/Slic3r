@@ -1,11 +1,16 @@
 #include "GCodeTimeEstimator.hpp"
-#include <boost/bind/bind.hpp>
 #include <cmath>
+#include <boost/version.hpp>
+#if BOOST_VERSION >= 107300
+#include <boost/bind/bind.hpp>
+#endif
 
 namespace Slic3r {
 
+#if BOOST_VERSION >= 107300
 using boost::placeholders::_1;
 using boost::placeholders::_2;
+#endif
 
 void
 GCodeTimeEstimator::parse(const std::string &gcode)
