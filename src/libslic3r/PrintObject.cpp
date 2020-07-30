@@ -649,7 +649,8 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "support_material_contact_distance_bottom" 
             || opt_key == "xy_size_compensation"
             || opt_key == "hole_size_compensation"
-            || opt_key == "hole_to_polyhole") {
+            || opt_key == "hole_to_polyhole"
+            || opt_key == "z_step") {
             steps.emplace_back(posSlice);
         } else if (opt_key == "support_material") {
             steps.emplace_back(posSupportMaterial);

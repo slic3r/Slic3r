@@ -20,7 +20,7 @@ class PrintConfig;
 class PrintObjectConfig;
 class ModelObject;
 
-coordf_t check_z_step(coordf_t val, coordf_t z_step);
+coordf_t check_z_step(const coordf_t val,const coordf_t z_step);
 
 // Parameters to guide object slicing and support generation.
 // The slicing parameters account for a raft and whether the 1st object layer is printed with a normal or a bridging flow
