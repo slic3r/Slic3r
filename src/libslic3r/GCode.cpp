@@ -1295,17 +1295,19 @@ void GCode::_do_export(Print &print, FILE *file)
             this->m_ordered_objects.push_back(print_object);
             unsigned int copy_id = 0;
             for (const PrintInstance &print_instance : print_object->instances()) {
-                const Point &pos = print_instance.shift;
                 std::string object_name = print_object->model_object()->name;
                 size_t pos_dot = object_name.find(".", 0);
                 if (pos_dot != std::string::npos && pos_dot > 0)
                     object_name = object_name.substr(0, pos_dot);
+                //get bounding box for the instance
+                BoundingBoxf3 raw_bbox = print_object->model_object()->raw_mesh_bounding_box();
+                BoundingBoxf3 m_bounding_box = print_instance.model_instance->transform_bounding_box(raw_bbox);
                 _write_format(file, "; object:{\"name\":\"%s\",\"id\":\"%s id:%d copy %d\",\"object_center\":[%f,%f,%f],\"boundingbox_center\":[%f,%f,%f],\"boundingbox_size\":[%f,%f,%f]}\n",
                     object_name.c_str(), print_object->model_object()->name.c_str(), this->m_ordered_objects.size() - 1, copy_id,
-                    print_object->model_object()->bounding_box().center().x(), print_object->model_object()->bounding_box().center().y(), 0,
-                    print_object->model_object()->bounding_box().center().x(), print_object->model_object()->bounding_box().center().y(), print_object->model_object()->bounding_box().center().z(),
-                    print_object->model_object()->bounding_box().size().x(), print_object->model_object()->bounding_box().size().y(), print_object->model_object()->bounding_box().size().z()
-                    );
+                    m_bounding_box.center().x(), m_bounding_box.center().y(), 0,
+                    m_bounding_box.center().x(), m_bounding_box.center().y(), m_bounding_box.center().z(),
+                    m_bounding_box.size().x(), m_bounding_box.size().y(), m_bounding_box.size().z()
+                );
                 copy_id++;
             }
         }
