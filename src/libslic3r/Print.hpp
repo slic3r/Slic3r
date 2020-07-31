@@ -355,6 +355,21 @@ struct PrintStatistics
     }
 };
 
+class BrimLoop {
+public:
+    BrimLoop(const Polygon& p) : line(p.split_at_first_point()), is_loop(true) {}
+    BrimLoop(const Polyline& l) : line(l), is_loop(false) {}
+    Polyline line;
+    std::vector<BrimLoop> children;
+    bool is_loop;
+    Polygon polygon() const{
+        Polygon poly = Polygon(line.points);
+        if (poly.points.front() == poly.points.back())
+            poly.points.resize(poly.points.size() - 1);
+        return poly;
+    }
+};
+
 typedef std::vector<PrintObject*> PrintObjectPtrs;
 typedef std::vector<PrintRegion*> PrintRegionPtrs;
 
@@ -468,6 +483,7 @@ private:
     void                _make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
     void                _make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
     void                _make_brim_interior(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
+    void                _extrude_brim_from_tree(std::vector<std::vector<BrimLoop>> &loops, const Polygons &frontiers, const Flow &flow, ExtrusionEntityCollection &out, bool reversed = false);
     Polylines           _reorder_brim_polyline(Polylines lines, ExtrusionEntityCollection &out, const Flow &flow);
     void                _make_wipe_tower();
 

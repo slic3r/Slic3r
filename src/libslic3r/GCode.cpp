@@ -2382,9 +2382,7 @@ void GCode::process_layer(
 
             this->set_origin(0., 0.);
             m_avoid_crossing_perimeters.use_external_mp = true;
-            for (const ExtrusionEntity *ee : print.brim().entities) {
-                gcode += this->extrude_entity(*ee, "brim", m_config.support_material_speed.value);
-            }
+            gcode += this->extrude_entity(print.brim(), "brim", m_config.support_material_speed.value);
             m_brim_done = true;
             m_avoid_crossing_perimeters.use_external_mp = false;
             // Allow a straight travel move to the first object point.
@@ -3528,11 +3526,15 @@ std::string GCode::extrude_entity(const ExtrusionEntity &entity, const std::stri
 }
 
 void GCode::use(const ExtrusionEntityCollection &collection) {
-    ExtrusionEntityCollection chained;
-    if (collection.no_sort) chained = collection;
-    else chained = collection.chained_path_from(m_last_pos);
-    for (const ExtrusionEntity *next_entity : chained.entities) {
-        next_entity->visit(*this);
+    if (collection.no_sort || collection.role() == erMixed) {
+        for (const ExtrusionEntity* next_entity : collection.entities) {
+            next_entity->visit(*this);
+        }
+    } else {
+        ExtrusionEntityCollection chained = collection.chained_path_from(m_last_pos);
+        for (const ExtrusionEntity* next_entity : chained.entities) {
+            next_entity->visit(*this);
+        }
     }
 }
 
