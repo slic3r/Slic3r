@@ -2132,10 +2132,12 @@ void GCode::process_layer(
     std::string gcode;
 
     // Set new layer - this will change Z and force a retraction if retract_layer_change is enabled.
+    coordf_t previous_print_z = m_layer != nullptr ? m_layer->print_z : 0;
     if (! print.config().before_layer_gcode.value.empty()) {
         DynamicConfig config;
+        config.set_key_value("previous_layer_z", new ConfigOptionFloat(previous_print_z));
         config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index + 1));
-        config.set_key_value("layer_z",   new ConfigOptionFloat(print_z));
+        config.set_key_value("layer_z", new ConfigOptionFloat(print_z));
         gcode += this->placeholder_parser_process("before_layer_gcode",
             print.config().before_layer_gcode.value, m_writer.tool()->id(), &config)
             + "\n";
@@ -2144,6 +2146,7 @@ void GCode::process_layer(
 	m_layer = &layer;
     if (! print.config().layer_gcode.value.empty()) {
         DynamicConfig config;
+        config.set_key_value("previous_layer_z", new ConfigOptionFloat(previous_print_z));
         config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index));
         config.set_key_value("layer_z",   new ConfigOptionFloat(print_z));
         gcode += this->placeholder_parser_process("layer_gcode",
@@ -2516,6 +2519,7 @@ void GCode::process_layer(
                 config.set_key_value("previous_extruder", new ConfigOptionInt((int)current_extruder_filament));
                 config.set_key_value("next_extruder", new ConfigOptionInt((int)milling_extruder_id));
                 config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index));
+                config.set_key_value("previous_layer_z", new ConfigOptionFloat(previous_print_z));
                 config.set_key_value("layer_z", new ConfigOptionFloat(print_z));
                 // Process the start_mill_gcode for the new filament.
                 gcode += this->placeholder_parser_process("milling_toolchange_start_gcode", start_mill_gcode, current_extruder_filament, &config);
@@ -2547,6 +2551,7 @@ void GCode::process_layer(
                 config.set_key_value("previous_extruder", new ConfigOptionInt((int)milling_extruder_id));
                 config.set_key_value("next_extruder", new ConfigOptionInt((int)current_extruder_filament));
                 config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index));
+                config.set_key_value("previous_layer_z", new ConfigOptionFloat(previous_print_z));
                 config.set_key_value("layer_z", new ConfigOptionFloat(print_z));
                 // Process the end_mill_gcode for the new filament.
                 gcode += this->placeholder_parser_process("milling_toolchange_start_gcode", end_mill_gcode, current_extruder_filament, &config);
