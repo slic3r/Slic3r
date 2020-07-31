@@ -26,10 +26,9 @@ ExtrusionEntityCollection::ExtrusionEntityCollection(const ExtrusionPaths &paths
 
 ExtrusionEntityCollection& ExtrusionEntityCollection::operator= (const ExtrusionEntityCollection &other)
 {
-    this->entities      = other.entities;
-    for (size_t i = 0; i < this->entities.size(); ++i)
-        this->entities[i] = this->entities[i]->clone();
-    this->no_sort       = other.no_sort;
+    this->no_sort = other.no_sort;
+    clear();
+    this->append(other.entities);
     return *this;
 }
 
@@ -54,14 +53,6 @@ ExtrusionEntityCollection::operator ExtrusionPaths() const
             paths.push_back(*path);
     }
     return paths;
-}
-
-ExtrusionEntityCollection* ExtrusionEntityCollection::clone() const
-{
-    ExtrusionEntityCollection* coll = new ExtrusionEntityCollection(*this);
-    for (size_t i = 0; i < coll->entities.size(); ++i)
-        coll->entities[i] = this->entities[i]->clone();
-    return coll;
 }
 
 void ExtrusionEntityCollection::reverse()
@@ -118,7 +109,7 @@ ExtrusionEntityCollection ExtrusionEntityCollection::chained_path_from(const Ext
     ExtrusionEntityCollection out;
     out.entities = filter_by_extrusion_role(extrusion_entities, role);
     // Clone the extrusion entities.
-    for (auto &ptr : out.entities)
+    for (ExtrusionEntity* &ptr : out.entities)
         ptr = ptr->clone();
     chain_and_reorder_extrusion_entities(out.entities, &start_near);
     return out;

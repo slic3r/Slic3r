@@ -24,7 +24,7 @@ inline ExtrusionEntitiesPtr filter_by_extrusion_role(const ExtrusionEntitiesPtr 
 class ExtrusionEntityCollection : public ExtrusionEntity
 {
 public:
-    virtual ExtrusionEntityCollection* clone() const override;
+    virtual ExtrusionEntityCollection* clone() const override { return new ExtrusionEntityCollection(*this); }
     // Create a new object, initialize it with this object using the move semantics.
 	virtual ExtrusionEntityCollection* clone_move() override { return new ExtrusionEntityCollection(std::move(*this)); }
 
@@ -86,8 +86,13 @@ public:
     void replace(size_t i, const ExtrusionEntity &entity);
     void remove(size_t i);
     static ExtrusionEntityCollection chained_path_from(const ExtrusionEntitiesPtr &extrusion_entities, const Point &start_near, ExtrusionRole role = erMixed);
-    ExtrusionEntityCollection chained_path_from(const Point &start_near, ExtrusionRole role = erMixed) const 
-    	{ return (this->no_sort || (role == erMixed) )? *this : chained_path_from(this->entities, start_near, role); }
+    ExtrusionEntityCollection chained_path_from(const Point &start_near, ExtrusionRole role = erNone) const {
+        if (role == erNone) role = this->role();
+        if( this->no_sort || (role == erMixed) )
+            return *this;
+        else
+            return chained_path_from(this->entities, start_near, role); 
+    }
     void reverse() override;
     const Point& first_point() const override { return this->entities.front()->first_point(); }
     const Point& last_point() const override { return this->entities.back()->last_point(); }
