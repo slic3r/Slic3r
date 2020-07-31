@@ -2073,7 +2073,8 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
         // These values are necessary to construct SlicingParameters by the Canvas3D variable layer height editor.
         "layer_height", "first_layer_height", "min_layer_height", "max_layer_height",
         "brim_width", "perimeters", "perimeter_extruder", "fill_density", "infill_extruder", "top_solid_layers", 
-        "support_material", "support_material_extruder", "support_material_interface_extruder", "support_material_contact_distance", "raft_layers"
+        "support_material", "support_material_extruder", "support_material_interface_extruder", "support_material_contact_distance", "raft_layers",
+        "z_step"
         }))
     , sidebar(new Sidebar(q))
     , delayed_scene_refresh(false)
