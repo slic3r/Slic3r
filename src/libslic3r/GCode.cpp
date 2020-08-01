@@ -3715,6 +3715,21 @@ void GCode::_write_format(FILE* file, const char* format, ...)
     va_end(args);
 }
 
+//external_perimeter_cut_corners cache, from 30deg to 145deg (115 deg)
+std::vector<double> cut_corner_cache = {
+    0.001537451157993,0.001699627500179,0.001873176359929,0.002058542095754,0.002256177154906,0.002466542444994,0.002690107718482,0.002927351970781,0.003178763852686,0.003444842097951,
+    0.003726095966834,0.004023045706492,0.004336223029152,0.00466617160904,0.005013447599101,0.005378620168593,0.005762272062727,0.006165000185567,0.006587416207474,0.007030147198493,
+    0.007493836289104,0.007979143359902,0.008486745761834,0.009017339068734,0.00957163786399,0.010150376563326,0.010754310275767,0.011384215705013,0.012040892093603,0.012725162212361,
+    0.013437873397832,0.01417989864057,0.01495213772733,0.01575551844043,0.016590997817786,0.017459563477334,0.018362235009846,0.019300065444398,0.020274142791089,0.021285591665892,
+    0.022335575002924,0.023425295859755,0.024555999321851,0.025728974512639,0.026945556716223,0.028207129620272,0.029515127687218,0.030871038662503,0.032276406229305,0.033732832819934,
+    0.035241982594887,0.036805584601441,0.038425436124638,0.040103406244574,0.041841439615055,0.043641560479958,0.045505876945025,0.047436585524337,0.049435975982392,0.051506436494553,
+    0.053650459150638,0.055870645828676,0.058169714468295,0.0605505057759,0.063015990396837,0.065569276592991,0.068213618467979,0.070952424786126,0.073789268435947,0.076727896593837,
+    0.079772241649261,0.082926432958949,0.086194809504486,0.089581933535469,0.093092605289007,0.096731878886046,0.100505079515854,0.10441782203221,0.108476031098559,0.112685963034856,
+    0.117054229536308,0.121587823453898,0.126294146848979,0.131181041559526,0.136256822544454,0.141530314305188,0.147010890721085,0.152708518678027,0.158633805918466,0.164798053597366,
+    0.17121331409307,0.17789245469658,0.184849227888721,0.192098349014236,0.199655582277462,0.207537836118677,0.215763269187181,0.224351408310655,0.233323280075731,0.242701557887958,
+    0.252510726678311,0.262777267777188,0.27352986689699,0.284799648665007,0.296620441746888,0.309029079319231,0.322065740515038,0.335774339512048,0.350202970204428,0.365404415947691,
+    0.381436735764648,0.398363940736199,0.416256777189962,0.435193636891737,0.455261618934834 };
+
 std::string GCode::_extrude(const ExtrusionPath &path, const std::string &description, double speed) {
 
     std::string gcode = this->_before_extrude(path, description, speed);
@@ -3732,6 +3747,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
             if (path.role() != erExternalPerimeter || config().external_perimeter_cut_corners.value == 0) {
                 // normal & legacy pathcode
                 for (const Line& line : path.polyline.lines()) {
+                    if (line.a == line.b) continue; //todo: investigate if it happens (it happens in perimeters)
                     gcode += m_writer.extrude_to_xy(
                         this->point_to_gcode(line.b),
                         e_per_mm * unscaled(line.length()),
@@ -3741,51 +3757,80 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
                 // external_perimeter_cut_corners pathcode
                 Point last_pos = path.polyline.lines()[0].a;
                 for (const Line& line : path.polyline.lines()) {
+                    if (line.a == line.b) continue; //todo: investigate if it happens (it happens in perimeters)
                     //check the angle
                     double angle = line.a == last_pos ? PI : line.a.ccw_angle(last_pos, line.b);
-                    if (angle > 1) angle = 2 * PI - angle;
-                    double coeff = std::cos(angle) + 1;
-                    //Create extrusion mult
-                    double mult = config().external_perimeter_cut_corners.get_abs_value(0.05375) * coeff; // 0.94625 = 3.78 / 4 = (4 - ((4 - pi) / 4)) / 4  // 4 = carre, 3.14 = disk
-                    double length1 = scale_(path.width) / 4;
-
-                    //extrude in three steps: one short with big mult, one of nozzle size with the rest and then the normal one.
-                    //it's a very rough approx of a cos.
-                    length1 /= (2.1 - coeff);
-                    if (line.length() > length1 && mult > 0.001) {
-                        //Create a point
-                        Point inter_point1 = line.point_at(length1);
-                        //extrude very reduced
-                        gcode += m_writer.extrude_to_xy(
-                            this->point_to_gcode(inter_point1),
-                            e_per_mm * unscaled(length1) * (1 - mult * 2.5),
-                            comment);
-
-                        double length2 = scale_(path.width);
-                        length2 /= (2.1 - coeff);
-                        if (line.length() > length2) {
-                            Point inter_point2 = line.point_at(length2);
-                            //extrude reduced
+                    //convert the angle from the angle of the line to the angle of the "joint" (Circular segment)
+                    if (angle > PI) angle = angle - PI;
+                    else angle = PI - angle;
+                    int idx_angle = int(180 * angle / PI);
+                    // the coeff is below 0.01 i the angle is higher than 125, so it's not useful
+                    if (idx_angle < 60) {
+                        //don't compensate if the angle is under 35, as it's already a 50% compensation, it's enough! 
+                        if (idx_angle > 144) angle = 144;
+                        //surface extruded in path.width is path.width * path.width
+                        // define R = path.width/2 and a = angle/2
+                        // then i have to print only 4RR + RR(2a-sin(2a))/2 - RR*sina*sina*tana if i want to remove the bits out of the external curve, if the internal overlap go to the exterior.
+                        // so over RR, i have to multiply the extrudion per 1 + (2a-sin(2a))/8 - (sina*sina*tana)/4
+                        //double R = scale_(path.width) / 2;
+                        //double A = (PI - angle) / 2;
+                        //double added = (A - std::sin(A + A) / 2);
+                        //double removed = std::sin(A); removed = removed * removed * std::tan(A) / 4;
+                        //double coeff = 1. + added - removed;
+                        //we have to remove coeff percentage on path.width length
+                        double coeff = cut_corner_cache[idx_angle];
+                        //the length, do half of the work on width/4 and the other half on width/2
+                        coordf_t length1 = (path.width) / 4;
+                        coordf_t line_length = unscaled(line.length());
+                        if (line_length > length1) {
+                            double mult1 = 1 - coeff * 2;
+                            double length2 = (path.width) / 2;
+                            double mult2 = 1 - coeff;
+                            double sum = 0;
+                            //Create a point
+                            Point inter_point1 = line.point_at(length1);
+                            //extrude very reduced
                             gcode += m_writer.extrude_to_xy(
-                                this->point_to_gcode(inter_point2),
-                                e_per_mm * unscaled(length2 - length1) * (1 - mult / 2),
+                                this->point_to_gcode(inter_point1),
+                                e_per_mm * (length1) * mult1,
                                 comment);
+                            sum += e_per_mm * (length1) * mult1;
 
-                            //extrude normal
-                            gcode += m_writer.extrude_to_xy(
-                                this->point_to_gcode(line.b),
-                                e_per_mm * unscaled(line.length() - length2),
-                                comment);
+                            if (line_length - length1 > length2) {
+                                Point inter_point2 = line.point_at(length2);
+                                //extrude reduced
+                                gcode += m_writer.extrude_to_xy(
+                                    this->point_to_gcode(inter_point2),
+                                    e_per_mm * (length2) * mult2,
+                                    comment);
+                                sum += e_per_mm * (length2) * mult2;
+
+                                //extrude normal
+                                gcode += m_writer.extrude_to_xy(
+                                    this->point_to_gcode(line.b),
+                                    e_per_mm * (line_length - (length1 + length2)),
+                                    comment);
+                                sum += e_per_mm * (line_length - (length1 + length2));
+                            } else {
+                                mult2 = 1 - coeff * (length2 / (line_length - length1));
+                                gcode += m_writer.extrude_to_xy(
+                                    this->point_to_gcode(line.b),
+                                    e_per_mm * (line_length - length1) * mult2,
+                                    comment);
+                                sum += e_per_mm * (line_length - length1) * mult2;
+                            }
                         } else {
+                            double mult = std::max(0.1, 1 - coeff * (scale_(path.width) / line_length));
                             gcode += m_writer.extrude_to_xy(
                                 this->point_to_gcode(line.b),
-                                e_per_mm * unscaled(line.length() - length1) * (1 - mult / 2),
+                                e_per_mm * line_length * mult,
                                 comment);
                         }
                     } else {
+                        // nothing special, angle is too shallow to have any impact.
                         gcode += m_writer.extrude_to_xy(
                             this->point_to_gcode(line.b),
-                            e_per_mm * unscaled(line.length() - length1) * (1 - mult * path.width / unscaled(line.length())),
+                            e_per_mm * unscaled(line.length()),
                             comment);
                     }
 
