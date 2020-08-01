@@ -277,7 +277,7 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
                 DynamicPrintConfig new_conf = *config;
                 auto answer = dialog.ShowModal();
                 if (!is_global_config || answer == wxID_YES) {
-                    new_conf.set_key_value("fill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinearWGapFill));
+                    new_conf.set_key_value("fill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinear));
                     fill_density = 100;
                 }
                 else
