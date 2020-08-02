@@ -416,7 +416,6 @@ bool GCodeWriter::will_move_z(double z) const
 std::string GCodeWriter::extrude_to_xy(const Vec2d &point, double dE, const std::string &comment)
 {
     assert(dE == dE);
-    assert(dE > 0);
     m_pos.x() = point.x();
     m_pos.y() = point.y();
     bool is_extrude = m_tool->extrude(dE) != 0;
@@ -434,7 +433,6 @@ std::string GCodeWriter::extrude_to_xy(const Vec2d &point, double dE, const std:
 std::string GCodeWriter::extrude_to_xyz(const Vec3d &point, double dE, const std::string &comment)
 {
     assert(dE == dE);
-    assert(dE > 0);
     m_pos.x() = point.x();
     m_pos.y() = point.y();
     m_lifted = 0;
