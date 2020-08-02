@@ -204,7 +204,7 @@ private:
     public:
         EState state;
         float band_width;
-        float strength;
+        //float strength;
         int last_object_id;
         float last_z;
         LayerHeightEditActionType last_action;

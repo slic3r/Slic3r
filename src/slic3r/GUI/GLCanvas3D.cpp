@@ -141,7 +141,6 @@ GLCanvas3D::LayersEditing::LayersEditing()
     , m_adaptive_quality(0.5f)
     , state(Unknown)
     , band_width(2.0f)
-    , strength(0.005f)
     , last_object_id(-1)
     , last_z(0.0f)
     , last_action(LAYER_HEIGHT_EDIT_ACTION_INCREASE)
@@ -534,7 +533,10 @@ void GLCanvas3D::LayersEditing::adjust_layer_height_profile()
 {
 	this->update_slicing_parameters();
 	PrintObject::update_layer_height_profile(*m_model_object, *m_slicing_parameters, m_layer_height_profile);
-	Slic3r::adjust_layer_height_profile(*m_slicing_parameters, m_layer_height_profile, this->last_z, this->strength, this->band_width, this->last_action);
+    //update strength
+    float strength = 0.005f;
+    if (m_slicing_parameters->z_step > EPSILON) strength = (float)Slic3r::check_z_step(std::max(0.005, m_slicing_parameters->z_step), m_slicing_parameters->z_step);
+	Slic3r::adjust_layer_height_profile(*m_slicing_parameters, m_layer_height_profile, this->last_z, strength, this->band_width, this->last_action);
 	m_layer_height_profile_modified = true;
     m_layers_texture.valid = false;
 }

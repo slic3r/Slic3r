@@ -45,16 +45,6 @@ namespace GUI {
 wxDEFINE_EVENT(EVT_TAB_VALUE_CHANGED, wxCommandEvent);
 wxDEFINE_EVENT(EVT_TAB_PRESETS_CHANGED, SimpleEvent);
 
-//same as the slicing.cpp method, but it's easier to redefine it here
-// maybe i should have written it in the header.
-inline coordf_t check_z_step_temp(coordf_t val, coordf_t z_step) {
-    if (z_step <= EPSILON) return val;
-    uint64_t valint = uint64_t(val * 100000000. + 0.1);
-    uint64_t stepint = uint64_t(z_step * 100000000. + 0.1);
-    return (((valint + (stepint / 2)) / stepint) * stepint) / 100000000.;
-    //return int((val + z_step * 0.5) / z_step) * z_step;
-}
-
 Tab::Tab(wxNotebook* parent, const wxString& title, Preset::Type type) :
     m_parent(parent), m_title(title), m_type(type)
 {
@@ -2600,7 +2590,7 @@ void TabPrinter::update_fff()
             if (min_layer_height[i] / z_step != 0) {
                 if(!has_changed )
                     new_conf = *m_config;
-                new_conf.option<ConfigOptionFloats>("min_layer_height")->values[i] = std::max(z_step, check_z_step_temp(new_conf.option<ConfigOptionFloats>("min_layer_height")->values[i], z_step));
+                new_conf.option<ConfigOptionFloats>("min_layer_height")->values[i] = std::max(z_step, Slic3r::check_z_step(new_conf.option<ConfigOptionFloats>("min_layer_height")->values[i], z_step));
                 has_changed = true;
             }
         const std::vector<double>& max_layer_height = m_config->option<ConfigOptionFloats>("max_layer_height")->values;
@@ -2608,7 +2598,7 @@ void TabPrinter::update_fff()
             if (max_layer_height[i] / z_step != 0) {
                 if (!has_changed)
                     new_conf = *m_config;
-                new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i] = std::max(z_step, check_z_step_temp(new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i], z_step));
+                new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i] = std::max(z_step, Slic3r::check_z_step(new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i], z_step));
                 has_changed = true;
             }
         if (has_changed) {
