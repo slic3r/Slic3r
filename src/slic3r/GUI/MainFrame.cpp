@@ -780,6 +780,8 @@ void MainFrame::init_menubar()
             [this](wxCommandEvent&) { wxGetApp().bridge_tuning_dialog(); });
         append_menu_item(calibrationMenu, wxID_ANY, _(L("Ironing pattern calibration")), _(L("Create a test print to help you to set your over-bridge flow ratio and ironing pattern.")),
             [this](wxCommandEvent&) { wxGetApp().over_bridge_dialog(); });
+        append_menu_item(calibrationMenu, wxID_ANY, _(L("Extruder retraction calibration")), _(L("Create a test print to help you to set your retraction length.")),
+            [this](wxCommandEvent&) { wxGetApp().calibration_retraction_dialog(); });
         calibrationMenu->AppendSeparator();
         append_menu_item(calibrationMenu, wxID_ANY, _(L("Calibration cube")), _(L("Print a calibration cube, for various calibration goals.")),
             [this](wxCommandEvent&) { wxGetApp().calibration_cube_dialog(); });

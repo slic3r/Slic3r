@@ -26,6 +26,11 @@ void GCodeWriter::apply_print_config(const PrintConfig &print_config)
         print_config.machine_max_acceleration_extruding.values.front() : 0);
 }
 
+void GCodeWriter::apply_print_region_config(const PrintRegionConfig& print_region_config)
+{
+    config_region = &print_region_config;
+}
+
 void GCodeWriter::set_extruders(std::vector<uint16_t> extruder_ids)
 {
     std::sort(extruder_ids.begin(), extruder_ids.end());
@@ -474,6 +479,14 @@ std::string GCodeWriter::retract(bool before_wipe)
 {
     double factor = before_wipe ? m_tool->retract_before_wipe() : 1.;
     assert(factor >= 0. && factor <= 1. + EPSILON);
+    //check for override
+    if (config_region && config_region->print_retract_length >= 0) {
+        return this->_retract(
+            factor * config_region->print_retract_length,
+            factor * m_tool->retract_restart_extra(),
+            "retract"
+        );
+    }
     return this->_retract(
         factor * m_tool->retract_length(),
         factor * m_tool->retract_restart_extra(),

@@ -57,12 +57,12 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
             Slic3r::resources_dir()+"/calibration/filament_temp/Smart_compact_temperature_calibration_item.amf"}, true, false, false);
 
     assert(objs_idx.size() == 1);
-    const DynamicPrintConfig* printConfig = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();
-    const DynamicPrintConfig* filamentConfig = this->gui_app->get_tab(Preset::TYPE_FILAMENT)->get_config();
-    const DynamicPrintConfig* printerConfig = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
+    const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();
+    const DynamicPrintConfig* filament_config = this->gui_app->get_tab(Preset::TYPE_FILAMENT)->get_config();
+    const DynamicPrintConfig* printer_config = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
 
     // -- get temps
-    const ConfigOptionInts* temperature_config = filamentConfig->option<ConfigOptionInts>("temperature");
+    const ConfigOptionInts* temperature_config = filament_config->option<ConfigOptionInts>("temperature");
     assert(temperature_config->values.size() >= 1);
     int idx_steps = steps->GetSelection();
     int idx_up = nb_up->GetSelection();
@@ -76,7 +76,7 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     
     /// --- scale ---
     //model is created for a 0.4 nozzle, scale xy with nozzle size.
-    const ConfigOptionFloats* nozzle_diameter_config = printerConfig->option<ConfigOptionFloats>("nozzle_diameter");
+    const ConfigOptionFloats* nozzle_diameter_config = printer_config->option<ConfigOptionFloats>("nozzle_diameter");
     assert(nozzle_diameter_config->values.size() > 0);
     float nozzle_diameter = nozzle_diameter_config->values[0];
     float xyzScale = nozzle_diameter / 0.4;
@@ -107,13 +107,13 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
 
 
     /// --- translate ---
-    const ConfigOptionPoints* bed_shape = printerConfig->option<ConfigOptionPoints>("bed_shape");
+    const ConfigOptionPoints* bed_shape = printer_config->option<ConfigOptionPoints>("bed_shape");
     Vec2d bed_size = BoundingBoxf(bed_shape->values).size();
     Vec2d bed_min = BoundingBoxf(bed_shape->values).min;
     model.objects[objs_idx[0]]->translate({ bed_min.x() + bed_size.x() / 2, bed_min.y() + bed_size.y() / 2, 0 });
 
     /// --- main config, please modify object config when possible ---
-    DynamicPrintConfig new_print_config = *printConfig; //make a copy
+    DynamicPrintConfig new_print_config = *print_config; //make a copy
     new_print_config.set_key_value("complete_objects", new ConfigOptionBool(false));
     
     /// -- generate the heat change gcode
@@ -129,7 +129,7 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     //new_printer_config.set_key_value("layer_gcode", new ConfigOptionString(str_layer_gcode));
 
     /// --- custom config ---
-    float brim_width = printConfig->option<ConfigOptionFloat>("brim_width")->value;
+    float brim_width = print_config->option<ConfigOptionFloat>("brim_width")->value;
     if (brim_width < nozzle_diameter * 8) {
         model.objects[objs_idx[0]]->config.set_key_value("brim_width", new ConfigOptionFloat(nozzle_diameter * 8));
     }
@@ -152,7 +152,7 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     //plat->on_config_change(new_printer_config);
     plat->changed_objects(objs_idx);
     this->gui_app->get_tab(Preset::TYPE_PRINT)->update_dirty();
-    this->gui_app->get_tab(Preset::TYPE_PRINTER)->update_dirty();
+    //this->gui_app->get_tab(Preset::TYPE_PRINTER)->update_dirty();
     plat->is_preview_shown();
     //update everything, easier to code.
     ObjectList* obj = this->gui_app->obj_list();

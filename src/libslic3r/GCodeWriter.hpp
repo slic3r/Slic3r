@@ -15,6 +15,8 @@ public:
     static std::string PausePrintCode;
     GCodeConfig config;
     bool multiple_extruders;
+    // override from region
+    const PrintRegionConfig* config_region = nullptr;
     
     GCodeWriter() : 
         multiple_extruders(false), m_extrusion_axis("E"), m_tool(nullptr),
@@ -28,6 +30,7 @@ public:
 
     std::string         extrusion_axis() const { return m_extrusion_axis; }
     void                apply_print_config(const PrintConfig &print_config);
+    void                apply_print_region_config(const PrintRegionConfig& print_region_config);
     // Extruders are expected to be sorted in an increasing order.
     void                set_extruders(std::vector<uint16_t> extruder_ids);
     const std::vector<Extruder>& extruders() const { return m_extruders; }

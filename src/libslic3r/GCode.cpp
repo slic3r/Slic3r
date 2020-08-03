@@ -234,9 +234,12 @@ std::string Wipe::wipe(GCode &gcodegen, bool toolchange)
     double wipe_speed = gcodegen.writer().config.travel_speed.value * 0.8;
     
     // get the retraction length
-    double length = toolchange
-        ? gcodegen.writer().tool()->retract_length_toolchange()
-        : gcodegen.writer().tool()->retract_length();
+    double length = gcodegen.writer().tool()->retract_length();
+    if (toolchange) {
+        length = gcodegen.writer().tool()->retract_length_toolchange();
+    } else if (gcodegen.writer().config_region && gcodegen.writer().config_region->print_retract_length.value >= 0) {
+        length = gcodegen.writer().config_region->print_retract_length.value;
+    }
     // Shorten the retraction length by the amount already retracted before wipe.
     length *= (1. - gcodegen.writer().tool()->retract_before_wipe());
 
@@ -2501,7 +2504,7 @@ void GCode::process_layer(
                     m_layer = layers[instance_to_print.layer_id].layer();
                 }
                 for (ObjectByExtruder::Island &island : instance_to_print.object_by_extruder.islands) {
-                    const auto& by_region_specific = 
+                    const std::vector<ObjectByExtruder::Island::Region>& by_region_specific =
                         is_anything_overridden ? 
                         island.by_region_per_copy(by_region_per_copy_cache, 
                             static_cast<unsigned int>(instance_to_print.instance_id), 
@@ -3732,8 +3735,9 @@ std::string GCode::extrude_perimeters(const Print &print, const std::vector<Obje
 {
     std::string gcode;
     for (const ObjectByExtruder::Island::Region &region : by_region)
-        if (! region.perimeters.empty()) {
+        if (!region.perimeters.empty()) {
             m_config.apply(print.regions()[&region - &by_region.front()]->config());
+            m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
             for (const ExtrusionEntity *ee : region.perimeters)
                 gcode += this->extrude_entity(*ee, "", -1., &lower_layer_edge_grid);
         }
@@ -3745,8 +3749,9 @@ std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectBy
 {
     std::string gcode;
     for (const ObjectByExtruder::Island::Region &region : by_region) {
-        if (print.regions()[&region - &by_region.front()]->config().infill_first == is_infill_first) {
+        if (!region.infills.empty() && print.regions()[&region - &by_region.front()]->config().infill_first == is_infill_first) {
             m_config.apply(print.regions()[&region - &by_region.front()]->config());
+            m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
             ExtrusionEntitiesPtr extrusions { region.infills };
             chain_and_reorder_extrusion_entities(extrusions, &m_last_pos);
             for (const ExtrusionEntity *fill : extrusions) {

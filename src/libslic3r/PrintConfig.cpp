@@ -2463,6 +2463,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Retraction is not triggered when travel moves are shorter than this length.");
     def->sidetext = L("mm");
     def->mode = comAdvanced;
+    def->min = 0;
     def->set_default_value(new ConfigOptionFloats { 2. });
 
     def = this->add("retract_before_wipe", coPercents);
@@ -2488,7 +2489,15 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("When retraction is triggered, filament is pulled back by the specified amount "
                    "(the length is measured on raw filament, before it enters the extruder).");
     def->sidetext = L("mm (zero to disable)");
+    def->min = 0;
     def->set_default_value(new ConfigOptionFloats { 2. });
+
+    def = this->add("print_retract_length", coFloat);
+    def->label = L("Retraction length");
+    def->category = OptionCategory::width;
+    def->tooltip = L("Override the retract_length settign from the printer config. Used for calibration. Set negative to disable");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat( -1.f));
 
     def = this->add("retract_length_toolchange", coFloats);
     def->label = L("Length");
@@ -2498,6 +2507,7 @@ void PrintConfigDef::init_fff_params()
                    "the extruder).");
     def->sidetext = L("mm (zero to disable)");
     def->mode = comExpert;
+    def->min = 0;
     def->set_default_value(new ConfigOptionFloats { 10. });
 
     def = this->add("retract_lift", coFloats);

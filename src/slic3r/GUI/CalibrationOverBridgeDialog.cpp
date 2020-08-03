@@ -41,11 +41,11 @@ void CalibrationOverBridgeDialog::create_geometry(wxCommandEvent& event_args) {
 
     assert(objs_idx.size() == 6);
     const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();
-    const DynamicPrintConfig* printerConfig = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
+    const DynamicPrintConfig* printer_config = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
 
     /// --- scale ---
     // model is created for a 0.4 nozzle, scale xy with nozzle size.
-    const ConfigOptionFloats* nozzle_diameter_config = printerConfig->option<ConfigOptionFloats>("nozzle_diameter");
+    const ConfigOptionFloats* nozzle_diameter_config = printer_config->option<ConfigOptionFloats>("nozzle_diameter");
     assert(nozzle_diameter_config->values.size() > 0);
     float nozzle_diameter = nozzle_diameter_config->values[0];
     float xyz_scale = (0.2 + nozzle_diameter) / 0.6;
@@ -68,7 +68,7 @@ void CalibrationOverBridgeDialog::create_geometry(wxCommandEvent& event_args) {
 
     /// --- translate ---;
     const ConfigOptionFloat* extruder_clearance_radius = print_config->option<ConfigOptionFloat>("extruder_clearance_radius");
-    const ConfigOptionPoints* bed_shape = printerConfig->option<ConfigOptionPoints>("bed_shape");
+    const ConfigOptionPoints* bed_shape = printer_config->option<ConfigOptionPoints>("bed_shape");
     const float brim_width = print_config->option<ConfigOptionFloat>("brim_width")->getFloat();
     Vec2d bed_size = BoundingBoxf(bed_shape->values).size();
     Vec2d bed_min = BoundingBoxf(bed_shape->values).min;

@@ -32,6 +32,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/CalibrationOverBridgeDialog.hpp
     GUI/CalibrationTempDialog.cpp
     GUI/CalibrationTempDialog.hpp
+    GUI/CalibrationRetractionDialog.cpp
+    GUI/CalibrationRetractionDialog.hpp
     GUI/ConfigSnapshotDialog.cpp
     GUI/ConfigSnapshotDialog.hpp
     GUI/3DScene.cpp
