@@ -474,6 +474,7 @@ const std::vector<std::string>& Preset::print_options()
         "bridge_acceleration", "first_layer_acceleration", "default_acceleration", 
         "duplicate_distance",
         "skirts", "skirt_distance", "skirt_height",
+		"skirt_extrusion_width",
         "min_skirt_length",
         "draft_shield",
         "brim_inside_holes",

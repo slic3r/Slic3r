@@ -232,6 +232,7 @@ group:Extrusion width
 	setting:solid_infill_extrusion_width
 	setting:top_infill_extrusion_width
 	setting:support_material_extrusion_width
+	setting:skirt_extrusion_width
 group:Overlap
 	line:Perimeter overlap
 		setting:label$External:external_perimeter_overlap

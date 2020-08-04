@@ -2625,6 +2625,15 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(1));
 
+    def = this->add("skirt_extrusion_width", coFloatOrPercent);
+    def->label = L("Skirt");
+    def->category = OptionCategory::width;
+    def->tooltip = L("Horizontal width of the skirt that will be printed around each object.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+
     def = this->add("draft_shield", coBool);
     def->label = L("Draft shield");
     def->tooltip = L("If enabled, the skirt will be as tall as a highest printed object. "

@@ -1096,6 +1096,7 @@ public:
     ConfigOptionBools               retract_layer_change;
     ConfigOptionFloat               skirt_distance;
     ConfigOptionInt                 skirt_height;
+    ConfigOptionFloatOrPercent      skirt_extrusion_width;
     ConfigOptionBool                draft_shield;
     ConfigOptionInt                 skirts;
     ConfigOptionInts                slowdown_below_layer_time;
@@ -1184,6 +1185,7 @@ protected:
         OPT_PTR(retract_before_travel);
         OPT_PTR(retract_layer_change);
         OPT_PTR(skirt_distance);
+        OPT_PTR(skirt_extrusion_width);
         OPT_PTR(skirt_height);
         OPT_PTR(draft_shield);
         OPT_PTR(skirts);
