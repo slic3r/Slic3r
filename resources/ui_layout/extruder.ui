@@ -16,8 +16,10 @@ group:Retraction
 		setting:idx:retract_lift_below
 		setting:idx:retract_lift_not_last_layer
 	end_line
-	setting:idx:retract_speed
-	setting:idx:deretract_speed
+	line:"Retraction Speed"
+		setting:idx:retract_speed
+		setting:idx:label$Deretraction:deretract_speed
+	end_line
 	setting:idx:retract_restart_extra
 	setting:idx:retract_before_travel
 	setting:idx:retract_layer_change

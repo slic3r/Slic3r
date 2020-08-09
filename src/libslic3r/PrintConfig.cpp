@@ -3491,7 +3491,7 @@ void PrintConfigDef::init_fff_params()
         " The number put in this setting increase the wipe by moving the nozzle again along the loop before the final wipe.");
     def->min = 0;
     def->sidetext = L("mm");
-    def->mode = comExpert;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloats{ 0.f });
 
     def = this->add("wipe_tower_bridging", coFloat);
