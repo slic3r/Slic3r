@@ -798,8 +798,10 @@ public:
     ConfigOptionFloats              machine_max_feedrate_e;
     // M204 S... [mm/sec^2]
     ConfigOptionFloats              machine_max_acceleration_extruding;
-    // M204 T... [mm/sec^2]
+    // M204 R... [mm/sec^2]
     ConfigOptionFloats              machine_max_acceleration_retracting;
+    // M204 T... [mm/sec^2]
+    ConfigOptionFloats              machine_max_acceleration_travel;
     // M205 X... Y... Z... E... [mm/sec]
     ConfigOptionFloats              machine_max_jerk_x;
     ConfigOptionFloats              machine_max_jerk_y;
@@ -823,6 +825,7 @@ protected:
         OPT_PTR(machine_max_feedrate_e);
         OPT_PTR(machine_max_acceleration_extruding);
         OPT_PTR(machine_max_acceleration_retracting);
+        OPT_PTR(machine_max_acceleration_travel);
         OPT_PTR(machine_max_jerk_x);
         OPT_PTR(machine_max_jerk_y);
         OPT_PTR(machine_max_jerk_z);
@@ -883,11 +886,12 @@ public:
     ConfigOptionString              feature_gcode;
     ConfigOptionFloat               max_print_speed;
     ConfigOptionFloat               max_volumetric_speed;
-    ConfigOptionFloats              milling_z_lift;
 #ifdef HAS_PRESSURE_EQUALIZER
     ConfigOptionFloat               max_volumetric_extrusion_rate_slope_positive;
     ConfigOptionFloat               max_volumetric_extrusion_rate_slope_negative;
 #endif
+    ConfigOptionFloats              milling_z_lift;
+    ConfigOptionFloat               min_length;
     ConfigOptionPercents            retract_before_wipe;
     ConfigOptionFloats              retract_length;
     ConfigOptionFloats              retract_length_toolchange;
@@ -980,6 +984,7 @@ protected:
         OPT_PTR(max_print_speed);
         OPT_PTR(max_volumetric_speed);
         OPT_PTR(milling_z_lift);
+        OPT_PTR(min_length);
 #ifdef HAS_PRESSURE_EQUALIZER
         OPT_PTR(max_volumetric_extrusion_rate_slope_positive);
         OPT_PTR(max_volumetric_extrusion_rate_slope_negative);
@@ -1091,6 +1096,7 @@ public:
     ConfigOptionBools               retract_layer_change;
     ConfigOptionFloat               skirt_distance;
     ConfigOptionInt                 skirt_height;
+    ConfigOptionFloatOrPercent      skirt_extrusion_width;
     ConfigOptionBool                draft_shield;
     ConfigOptionInt                 skirts;
     ConfigOptionInts                slowdown_below_layer_time;
@@ -1179,6 +1185,7 @@ protected:
         OPT_PTR(retract_before_travel);
         OPT_PTR(retract_layer_change);
         OPT_PTR(skirt_distance);
+        OPT_PTR(skirt_extrusion_width);
         OPT_PTR(skirt_height);
         OPT_PTR(draft_shield);
         OPT_PTR(skirts);

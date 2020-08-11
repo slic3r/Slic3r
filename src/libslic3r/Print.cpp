@@ -1599,7 +1599,9 @@ Flow Print::brim_flow(size_t extruder_id) const
 
 Flow Print::skirt_flow(size_t extruder_id) const
 {
-    ConfigOptionFloatOrPercent width = m_config.first_layer_extrusion_width;
+    ConfigOptionFloatOrPercent width = m_config.skirt_extrusion_width;
+    if (width.value <= 0 && m_config.first_layer_extrusion_width.value > 0)
+        width = m_config.first_layer_extrusion_width;
     if (width.value <= 0) 
         width = m_regions.front()->config().perimeter_extrusion_width;
     if (width.value <= 0)
@@ -1610,6 +1612,7 @@ Flow Print::skirt_flow(size_t extruder_id) const
        extruders and take the one with, say, the smallest index;
        The same logic should be applied to the code that selects the extruder during G-code
        generation as well. */
+    /* or select the used extruder with the highest nozzle diameter, to be on the safe side.*/
     return Flow::new_from_config_width(
         frPerimeter,
 		width,

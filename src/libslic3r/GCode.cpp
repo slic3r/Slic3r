@@ -845,6 +845,7 @@ namespace DoExport {
 	    if (config.gcode_flavor.value == gcfMarlin || config.gcode_flavor.value == gcfLerdge) {
 	        normal_time_estimator.set_max_acceleration((float)config.machine_max_acceleration_extruding.values[0]);
 	        normal_time_estimator.set_retract_acceleration((float)config.machine_max_acceleration_retracting.values[0]);
+            normal_time_estimator.set_max_travel_acceleration((float)config.machine_max_acceleration_travel.values[0]);
 	        normal_time_estimator.set_minimum_feedrate((float)config.machine_min_extruding_rate.values[0]);
 	        normal_time_estimator.set_minimum_travel_feedrate((float)config.machine_min_travel_rate.values[0]);
 	        normal_time_estimator.set_axis_max_acceleration(GCodeTimeEstimator::X, (float)config.machine_max_acceleration_x.values[0]);
@@ -1757,11 +1758,11 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
             fprintf(file, "M204 P%d R%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
                 int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_retracting.values.front() + 0.5),
-                int(print.config().machine_max_acceleration_extruding.values.front() + 0.5));
+                int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
         if (std::set<uint8_t>{gcfRepRap, gcfKlipper}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, "M204 P%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
+            fprintf(file, "M204 P%d T%d ; sets acceleration (P, T), mm/sec^2\n",
                 int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
-                int(print.config().machine_max_acceleration_retracting.values.front() + 0.5));
+                int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
         if (std::set<uint8_t>{gcfRepRap}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M566 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
                 print.config().machine_max_jerk_x.values.front(),
@@ -2133,10 +2134,12 @@ void GCode::process_layer(
     std::string gcode;
 
     // Set new layer - this will change Z and force a retraction if retract_layer_change is enabled.
+    coordf_t previous_print_z = m_layer != nullptr ? m_layer->print_z : 0;
     if (! print.config().before_layer_gcode.value.empty()) {
         DynamicConfig config;
+        config.set_key_value("previous_layer_z", new ConfigOptionFloat(previous_print_z));
         config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index + 1));
-        config.set_key_value("layer_z",   new ConfigOptionFloat(print_z));
+        config.set_key_value("layer_z", new ConfigOptionFloat(print_z));
         gcode += this->placeholder_parser_process("before_layer_gcode",
             print.config().before_layer_gcode.value, m_writer.tool()->id(), &config)
             + "\n";
@@ -2145,6 +2148,7 @@ void GCode::process_layer(
 	m_layer = &layer;
     if (! print.config().layer_gcode.value.empty()) {
         DynamicConfig config;
+        config.set_key_value("previous_layer_z", new ConfigOptionFloat(previous_print_z));
         config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index));
         config.set_key_value("layer_z",   new ConfigOptionFloat(print_z));
         gcode += this->placeholder_parser_process("layer_gcode",
@@ -2515,6 +2519,7 @@ void GCode::process_layer(
                 config.set_key_value("previous_extruder", new ConfigOptionInt((int)current_extruder_filament));
                 config.set_key_value("next_extruder", new ConfigOptionInt((int)milling_extruder_id));
                 config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index));
+                config.set_key_value("previous_layer_z", new ConfigOptionFloat(previous_print_z));
                 config.set_key_value("layer_z", new ConfigOptionFloat(print_z));
                 // Process the start_mill_gcode for the new filament.
                 gcode += this->placeholder_parser_process("milling_toolchange_start_gcode", start_mill_gcode, current_extruder_filament, &config);
@@ -2546,6 +2551,7 @@ void GCode::process_layer(
                 config.set_key_value("previous_extruder", new ConfigOptionInt((int)milling_extruder_id));
                 config.set_key_value("next_extruder", new ConfigOptionInt((int)current_extruder_filament));
                 config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index));
+                config.set_key_value("previous_layer_z", new ConfigOptionFloat(previous_print_z));
                 config.set_key_value("layer_z", new ConfigOptionFloat(print_z));
                 // Process the end_mill_gcode for the new filament.
                 gcode += this->placeholder_parser_process("milling_toolchange_start_gcode", end_mill_gcode, current_extruder_filament, &config);
@@ -3030,7 +3036,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     }
 
     // reset acceleration
-    gcode += m_writer.set_acceleration((unsigned int)(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)(m_config.default_acceleration.value + 0.5));
 
     //don't wipe here
     //if (m_wipe.enable)
@@ -3374,7 +3380,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     }
     
     // reset acceleration
-    gcode += m_writer.set_acceleration((unsigned int)(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)(m_config.default_acceleration.value + 0.5));
     
     if (m_wipe.enable)
         m_wipe.path = paths.front().polyline;  // TODO: don't limit wipe to last path
@@ -3474,7 +3480,7 @@ std::string GCode::extrude_multi_path(const ExtrusionMultiPath &multipath, const
         m_wipe.path.reverse();
     }
     // reset acceleration
-    gcode += m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
     return gcode;
 }
 
@@ -3511,7 +3517,7 @@ std::string GCode::extrude_multi_path3D(const ExtrusionMultiPath3D &multipath3D,
         m_wipe.path.reverse();
     }
     // reset acceleration
-    gcode += m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
     return gcode;
 }
 
@@ -3538,25 +3544,73 @@ void GCode::use(const ExtrusionEntityCollection &collection) {
     }
 }
 
+std::string extrusion_role_2_string(const ExtrusionRole &er) {
+    switch (er) {
+        case erNone: return " none";
+        case erPerimeter: return " perimeter";
+        case erExternalPerimeter: return " external_perimeter";
+        case erOverhangPerimeter: return " overhang_perimeter";
+        case erInternalInfill: return " internal_infill";
+        case erSolidInfill: return " solid_infill";
+        case erTopSolidInfill: return " top_solid_infill";
+        case erBridgeInfill: return " bridge_infill";
+        case erThinWall: return " thin_wall";
+        case erGapFill: return " gap_fill";
+        case erSkirt: return " skirt";
+        case erSupportMaterial: return " support_material";
+        case erSupportMaterialInterface: return " support_material_interface";
+        case erWipeTower: return " wipe_tower";
+        case erMilling: return " milling";
+        case erCustom: return " custom";
+        case erMixed: return " mixed";
+        case erCount: return " count";
+    }
+    return " unkown";
+}
+
 std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &description, double speed) {
-    //    description += ExtrusionRole2String(path.role());
+
+    std::string descr = extrusion_role_2_string(path.role());
     ExtrusionPath simplifed_path = path;
-    simplifed_path.simplify(SCALED_RESOLUTION);
-    std::string gcode = this->_extrude(simplifed_path, description, speed);
+    if (this->config().min_length.value != 0 && !m_last_too_small.empty()) {
+        //descr += " trys fusion " + std::to_string(unscaled(m_last_too_small.last_point().x())) + " , " + std::to_string(unscaled(path.first_point().x()));
+        //ensure that it's a continous thing
+        if (m_last_too_small.last_point().distance_to_square(path.first_point()) < scale_(this->config().min_length)) {
+            //descr += " ! fusion " + std::to_string(simplifed_path.polyline.points.size());
+            simplifed_path.height = (m_last_too_small.height * m_last_too_small.length() + path.height * path.length()) / (m_last_too_small.length() + path.length());
+            simplifed_path.mm3_per_mm = (m_last_too_small.mm3_per_mm * m_last_too_small.length() + path.mm3_per_mm * path.length()) / (m_last_too_small.length() + path.length());
+            simplifed_path.polyline.points.insert(simplifed_path.polyline.points.begin(), m_last_too_small.polyline.points.begin(), m_last_too_small.polyline.points.end()-1);
+        }
+        m_last_too_small.polyline.points.clear();
+    }
+    simplifed_path.simplify(this->config().min_length.value != 0 ? scale_(this->config().min_length) : SCALED_RESOLUTION);
+    if (this->config().min_length.value != 0 && simplifed_path.length() < scale_(this->config().min_length)) {
+        m_last_too_small = simplifed_path;
+        return "";
+            //"; "+ descr+" .... too small for extrude: "+std::to_string(simplifed_path.length())+" < "+ std::to_string(scale_(this->config().min_length))
+            //+ " ; " + std::to_string(unscaled(path.first_point().x())) + " : " + std::to_string(unscaled(path.last_point().x()))
+            //+" =;=> " + std::to_string(unscaled(simplifed_path.first_point().x())) + " : " + std::to_string(unscaled(simplifed_path.last_point().x()))
+            //+ "\n";
+    }
+
+    std::string gcode = this->_extrude(simplifed_path, description + descr, speed);
+
+    //gcode += " ; " + std::to_string(unscaled(path.first_point().x())) + " : " + std::to_string(unscaled(path.last_point().x()));
+    //gcode += " =;=> " + std::to_string(unscaled(simplifed_path.first_point().x())) + " : " + std::to_string(unscaled(simplifed_path.last_point().x()));
 
     if (m_wipe.enable) {
         m_wipe.path = std::move(simplifed_path.polyline);
         m_wipe.path.reverse();
     }
     // reset acceleration
-    gcode += m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
     return gcode;
 }
 
 std::string GCode::extrude_path_3D(const ExtrusionPath3D &path, const std::string &description, double speed) {
-    //    description += ExtrusionRole2String(path.role());
+    std::string descr = extrusion_role_2_string(path.role());
     //path.simplify(SCALED_RESOLUTION);
-    std::string gcode = this->_before_extrude(path, description, speed);
+    std::string gcode = this->_before_extrude(path, description + descr, speed);
 
     // calculate extrusion length per distance unit
     double e_per_mm = path.mm3_per_mm
@@ -3584,7 +3638,7 @@ std::string GCode::extrude_path_3D(const ExtrusionPath3D &path, const std::strin
         m_wipe.path.reverse();
     }
     // reset acceleration
-    gcode += m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
     return gcode;
 }
 
@@ -3876,8 +3930,8 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             acceleration = m_config.infill_acceleration.value;
         } else {
             acceleration = m_config.default_acceleration.value;
-        }
-        gcode += m_writer.set_acceleration((unsigned int)floor(acceleration + 0.5));
+        }//TODO: add travel accel?
+        m_writer.set_acceleration((unsigned int)floor(acceleration + 0.5));
     }
 
 

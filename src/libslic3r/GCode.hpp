@@ -161,7 +161,8 @@ public:
         m_normal_time_estimator(GCodeTimeEstimator::Normal),
         m_silent_time_estimator(GCodeTimeEstimator::Silent),
         m_silent_time_estimator_enabled(false),
-        m_last_obj_copy(nullptr, Point(std::numeric_limits<coord_t>::max(), std::numeric_limits<coord_t>::max()))
+        m_last_obj_copy(nullptr, Point(std::numeric_limits<coord_t>::max(), std::numeric_limits<coord_t>::max())),
+        m_last_too_small(ExtrusionRole::erNone)
         {}
     ~GCode() {}
 
@@ -379,6 +380,9 @@ private:
 
     Point                               m_last_pos;
     bool                                m_last_pos_defined;
+
+    // a previous extrusion path that is too small to be extruded, have to fusion it into the next call.
+    ExtrusionPath                       m_last_too_small;
 
     std::unique_ptr<CoolingBuffer>      m_cooling_buffer;
     std::unique_ptr<SpiralVase>         m_spiral_vase;

@@ -84,6 +84,9 @@ namespace Slic3r {
             float acceleration;                 // mm/s^2
             // hard limit for the acceleration, to which the firmware will clamp.
             float max_acceleration;             // mm/s^2
+            float travel_acceleration;                 // mm/s^2
+            // hard limit for the travel_acceleration, to which the firmware will clamp.
+            float max_travel_acceleration;             // mm/s^2
             float retract_acceleration;         // mm/s^2
             float additional_time;              // s
             float minimum_feedrate;             // mm/s
@@ -326,6 +329,13 @@ namespace Slic3r {
         // Maximum acceleration for the machine. The firmware simulator will clamp the M204 Sxxx to this maximum.
         void set_max_acceleration(float acceleration_mm_sec2);
         float get_max_acceleration() const;
+
+        void set_travel_acceleration(float acceleration_mm_sec2);
+        float get_travel_acceleration() const;
+
+        // Maximum acceleration for the machine. The firmware simulator will clamp the M204 Txxx to this maximum.
+        void set_max_travel_acceleration(float acceleration_mm_sec2);
+        float get_max_travel_acceleration() const;
 
         void set_retract_acceleration(float acceleration_mm_sec2);
         float get_retract_acceleration() const;

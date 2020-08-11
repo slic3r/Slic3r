@@ -61,7 +61,7 @@ std::string GCodeWriter::preamble()
         gcode << "G21 ; set units to millimeters\n";
         gcode << "G90 ; use absolute coordinates\n";
     }
-    if (FLAVOR_IS(gcfRepRap) || FLAVOR_IS(gcfMarlin) || FLAVOR_IS(gcfTeacup) || FLAVOR_IS(gcfRepetier) || FLAVOR_IS(gcfSmoothie)
+    if (FLAVOR_IS(gcfRepRap) || FLAVOR_IS(gcfMarlin) || FLAVOR_IS(gcfLerdge) || FLAVOR_IS(gcfTeacup) || FLAVOR_IS(gcfRepetier) || FLAVOR_IS(gcfSmoothie)
 		 || FLAVOR_IS(gcfKlipper) || FLAVOR_IS(gcfLerdge)) {
         if (this->config.use_relative_e_distances) {
             gcode << "M83 ; use relative distances for extrusion\n";
@@ -188,28 +188,35 @@ std::string GCodeWriter::set_fan(unsigned int speed, bool dont_save)
     return gcode.str();
 }
 
-std::string GCodeWriter::set_acceleration(unsigned int acceleration)
+void GCodeWriter::set_acceleration(unsigned int acceleration)
 {
     // Clamp the acceleration to the allowed maximum.
     if (m_max_acceleration > 0 && acceleration > m_max_acceleration)
         acceleration = m_max_acceleration;
 
-    if (acceleration == 0 || acceleration == m_last_acceleration)
-        return std::string();
-    
-    m_last_acceleration = acceleration;
-    
+    if (acceleration == 0 || acceleration == m_current_acceleration)
+        return;
+
+    m_current_acceleration = acceleration;
+}
+
+std::string GCodeWriter::write_acceleration(){
+    if (m_current_acceleration == m_last_acceleration || m_current_acceleration == 0)
+        return "";
+
+    m_last_acceleration = m_current_acceleration;
+
     std::ostringstream gcode;
+	//try to set only printing acceleration, travel should be untouched if possible
     if (FLAVOR_IS(gcfRepetier)) {
         // M201: Set max printing acceleration
-        gcode << "M201 X" << acceleration << " Y" << acceleration;
-        if (this->config.gcode_comments) gcode << " ; adjust acceleration";
-        gcode << "\n";
-        // M202: Set max travel acceleration
-        gcode << "M202 X" << acceleration << " Y" << acceleration;
+        gcode << "M201 X" << m_current_acceleration << " Y" << m_current_acceleration;
+    } else if(FLAVOR_IS(gcfMarlin) || FLAVOR_IS(gcfLerdge)){
+        // M204: Set printing acceleration
+        gcode << "M204 P" << m_current_acceleration;
     } else {
         // M204: Set default acceleration
-        gcode << "M204 S" << acceleration;
+        gcode << "M204 S" << m_current_acceleration;
     }
     if (this->config.gcode_comments) gcode << " ; adjust acceleration";
     gcode << "\n";
@@ -321,10 +328,12 @@ std::string GCodeWriter::set_speed(double F, const std::string &comment, const s
 
 std::string GCodeWriter::travel_to_xy(const Vec2d &point, const std::string &comment)
 {
+    std::ostringstream gcode;
+    gcode << write_acceleration();
+
     m_pos.x() = point.x();
     m_pos.y() = point.y();
     
-    std::ostringstream gcode;
     gcode << "G1 X" << XYZF_NUM(point.x())
           <<   " Y" << XYZF_NUM(point.y())
           <<   " F" << XYZF_NUM(this->config.travel_speed.value * 60.0);
@@ -353,7 +362,9 @@ std::string GCodeWriter::travel_to_xyz(const Vec3d &point, const std::string &co
         the lift. */
     m_lifted = 0;
     m_pos = point;
+
     std::ostringstream gcode;
+    gcode << write_acceleration();
     gcode << "G1 X" << XYZF_NUM(point.x())
           << " Y" << XYZF_NUM(point.y());
     if (config.z_step > SCALING_FACTOR)
@@ -389,9 +400,10 @@ std::string GCodeWriter::travel_to_z(double z, const std::string &comment)
 std::string GCodeWriter::_travel_to_z(double z, const std::string &comment)
 {
     m_pos.z() = z;
-    
+
     std::ostringstream gcode;
-    if (config.z_step > SCALING_FACTOR)
+
+    gcode << write_acceleration();    if (config.z_step > SCALING_FACTOR)
         gcode << "G1 Z" << PRECISION(z, 6);
     else
         gcode << "G1 Z" << XYZF_NUM(z);
@@ -419,8 +431,9 @@ std::string GCodeWriter::extrude_to_xy(const Vec2d &point, double dE, const std:
     m_pos.x() = point.x();
     m_pos.y() = point.y();
     bool is_extrude = m_tool->extrude(dE) != 0;
-    
+
     std::ostringstream gcode;
+    gcode << write_acceleration();
     gcode << "G1 X" << XYZF_NUM(point.x())
         << " Y" << XYZF_NUM(point.y());
     if(is_extrude)
@@ -437,8 +450,9 @@ std::string GCodeWriter::extrude_to_xyz(const Vec3d &point, double dE, const std
     m_pos.y() = point.y();
     m_lifted = 0;
     bool is_extrude = m_tool->extrude(dE) != 0;
-    
+
     std::ostringstream gcode;
+    gcode << write_acceleration();
     gcode << "G1 X" << XYZF_NUM(point.x())
         << " Y" << XYZF_NUM(point.y())
         << " Z" << XYZF_NUM(point.z() + m_pos.z());
