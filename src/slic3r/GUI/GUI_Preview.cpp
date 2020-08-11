@@ -263,6 +263,7 @@ bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view
         _(L("Solid infill")) + "|" +
         _(L("Top solid infill")) + "|" +
         _(L("Bridge infill")) + "|" +
+        _(L("Thin wall")) + "|" +
         _(L("Gap fill")) + "|" +
         _(L("Skirt")) + "|" +
         _(L("Support material")) + "|" +
