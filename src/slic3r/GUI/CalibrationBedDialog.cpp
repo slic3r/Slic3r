@@ -101,7 +101,6 @@ void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
     /// --- main config, please modify object config when possible ---
     DynamicPrintConfig new_print_config = *printConfig; //make a copy
     new_print_config.set_key_value("complete_objects", new ConfigOptionBool(true));
-    new_print_config.set_key_value("skirts", new ConfigOptionInt(2));
 
     /// --- custom config ---
     for (size_t i = 0; i < 5; i++) {
