@@ -1762,13 +1762,13 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
             fprintf(file, "M204 P%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
                 int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_retracting.values.front() + 0.5));
-        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
+        if (std::set<uint8_t>{gcfRepRap}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M566 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
                 print.config().machine_max_jerk_x.values.front(),
                 print.config().machine_max_jerk_y.values.front(),
                 print.config().machine_max_jerk_z.values.front(),
                 print.config().machine_max_jerk_e.values.front());
-        if (std::set<uint8_t>{gcfRepRap}.count(print.config().gcode_flavor.value) > 0)
+        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M205 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
                 print.config().machine_max_jerk_x.values.front(),
                 print.config().machine_max_jerk_y.values.front(),
