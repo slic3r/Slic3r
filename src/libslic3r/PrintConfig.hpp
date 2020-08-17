@@ -639,6 +639,7 @@ public:
     ConfigOptionBool                extra_perimeters_overhangs;
     ConfigOptionBool                only_one_perimeter_top;
     ConfigOptionFloat               fill_angle;
+    ConfigOptionFloat               fill_angle_increment;
     ConfigOptionPercent             fill_density;
     ConfigOptionEnum<InfillPattern> fill_pattern;
     ConfigOptionPercent             fill_top_flow_ratio;
@@ -726,6 +727,7 @@ protected:
         OPT_PTR(extra_perimeters_overhangs);
         OPT_PTR(only_one_perimeter_top);
         OPT_PTR(fill_angle);
+        OPT_PTR(fill_angle_increment);
         OPT_PTR(fill_density);
         OPT_PTR(fill_pattern);
         OPT_PTR(fill_top_flow_ratio);

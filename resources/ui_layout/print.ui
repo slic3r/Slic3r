@@ -123,6 +123,7 @@ group:sidetext_width$3:Advanced
 	line:Angle
 		setting:label_width$6:width$5:fill_angle
 		setting:label_width$6:width$5:bridge_angle
+		setting:label_width$6:width$5:label$increment:fill_angle_increment
 	end_line
 	line:Anchor solid infill by X mm
 		setting:label_width$6:width$5:external_infill_margin

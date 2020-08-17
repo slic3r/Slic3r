@@ -1329,6 +1329,19 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(45));
 
+    def = this->add("fill_angle_increment", coFloat);
+    def->label = L("Fill");
+    def->full_label = L("Fill angle increment");
+    def->category = OptionCategory::infill;
+    def->tooltip = L("Add this angle each layer to the base angle for infill. "
+                    "May be useful for art, or to be sure to hit every object's feature even with very low infill. "
+                    "Still experiemental, tell me what makes it useful, or the problems that arise using it.");
+    def->sidetext = L("°");
+    def->min = 0;
+    def->max = 360;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0));
+
     def = this->add("fill_density", coPercent);
     def->gui_type = "f_enum_open";
     def->gui_flags = "show_value";

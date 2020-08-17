@@ -709,6 +709,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "solid_fill_pattern"
             || opt_key == "enforce_full_fill_volume"
             || opt_key == "fill_angle"
+            || opt_key == "fill_angle_increment"
             || opt_key == "fill_pattern"
             || opt_key == "fill_top_flow_ratio"
             || opt_key == "fill_smooth_width"

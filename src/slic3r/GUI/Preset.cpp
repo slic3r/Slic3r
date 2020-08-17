@@ -456,7 +456,10 @@ const std::vector<std::string>& Preset::print_options()
         , "top_fill_pattern"
         , "bottom_fill_pattern"
         , "solid_fill_pattern",
-        "infill_every_layers", "infill_only_where_needed", "solid_infill_every_layers", "fill_angle", "bridge_angle", 
+        "infill_every_layers", "infill_only_where_needed", "solid_infill_every_layers",
+        "fill_angle",
+        "fill_angle_increment",
+        "bridge_angle", 
         "solid_infill_below_area", "only_retract_when_crossing_perimeters", "infill_first", 
         "max_print_speed",
         "max_volumetric_speed", 

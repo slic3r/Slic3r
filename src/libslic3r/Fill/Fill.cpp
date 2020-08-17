@@ -303,6 +303,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         f->z = layerm.layer()->print_z;
         if (is_denser)f->angle = 0;
         else f->angle = float(Geometry::deg2rad(layerm.region()->config().fill_angle.value));
+        f->angle += PI * (layerm.region()->config().fill_angle_increment.value * layerm.layer()->id()) / 180.;
         // Maximum length of the perimeter segment linking two infill lines.
         f->link_max_length = (coord_t)scale_(link_max_length);
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
