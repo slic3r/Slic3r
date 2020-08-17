@@ -1011,9 +1011,14 @@ namespace DoExport {
 	    // Write thumbnails using base64 encoding
 	    if (thumbnail_cb != nullptr)
 	    {
+            std::vector<Vec2d> good_sizes;
+            for (const Vec2d &size : sizes)
+                if (size.x() > 0 && size.y() > 0)
+                    good_sizes.push_back(size);
+
 	        const size_t max_row_length = 78;
 	        ThumbnailsList thumbnails;
-	        thumbnail_cb(thumbnails, sizes, true, true, true, true);
+	        thumbnail_cb(thumbnails, good_sizes, true, true, true, true);
 	        for (const ThumbnailData& data : thumbnails)
 	        {
 	            if (data.is_valid())

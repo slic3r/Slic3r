@@ -61,8 +61,9 @@ void Field::PostInitialize()
 	{
 	case coPercents:
 	case coFloats:
-	case coStrings:	
-	case coBools:		
+	case coStrings:
+	case coBools:
+	case coPoints:
 	case coInts: {
 		auto tag_pos = m_opt_id.find("#");
 		if (tag_pos != std::string::npos)

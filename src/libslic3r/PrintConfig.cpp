@@ -74,7 +74,7 @@ void PrintConfigDef::init_common_params()
     def = this->add("thumbnails", coPoints);
     def->label = L("Picture sizes to be stored into a .gcode and .sl1 files");
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionPoints());
+    def->set_default_value(new ConfigOptionPoints{ Vec2d(0,0), Vec2d(0,0) });
 
     def = this->add("layer_height", coFloat);
     def->label = L("Base Layer height");

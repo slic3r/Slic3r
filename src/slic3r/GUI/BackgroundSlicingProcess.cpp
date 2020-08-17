@@ -165,8 +165,12 @@ void BackgroundSlicingProcess::process_sla()
             if (m_thumbnail_cb != nullptr)
             {
                 ThumbnailsList thumbnails;
-                m_thumbnail_cb(thumbnails, current_print()->full_print_config().option<ConfigOptionPoints>("thumbnails")->values, true, true, true, true);
-//                m_thumbnail_cb(thumbnails, current_print()->full_print_config().option<ConfigOptionPoints>("thumbnails")->values, true, false, true, true); // renders also supports and pad
+                std::vector<Vec2d> good_sizes;
+                for (const Vec2d &size : current_print()->full_print_config().option<ConfigOptionPoints>("thumbnails")->values)
+                    if (size.x() > 0 && size.y() > 0)
+                        good_sizes.push_back(size);
+                m_thumbnail_cb(thumbnails, good_sizes, true, true, true, true);
+//                m_thumbnail_cb(thumbnails, good_sizes, true, false, true, true); // renders also supports and pad
                 for (const ThumbnailData& data : thumbnails)
                 {
                     if (data.is_valid())
@@ -493,8 +497,12 @@ void BackgroundSlicingProcess::prepare_upload()
         if (m_thumbnail_cb != nullptr)
         {
             ThumbnailsList thumbnails;
-            m_thumbnail_cb(thumbnails, current_print()->full_print_config().option<ConfigOptionPoints>("thumbnails")->values, true, true, true, true);
-//            m_thumbnail_cb(thumbnails, current_print()->full_print_config().option<ConfigOptionPoints>("thumbnails")->values, true, false, true, true); // renders also supports and pad
+            std::vector<Vec2d> good_sizes;
+            for (const Vec2d &size : current_print()->full_print_config().option<ConfigOptionPoints>("thumbnails")->values)
+                if (size.x() > 0 && size.y() > 0)
+                    good_sizes.push_back(size);
+            m_thumbnail_cb(thumbnails, good_sizes, true, true, true, true);
+//            m_thumbnail_cb(thumbnails, good_sizes, true, false, true, true); // renders also supports and pad
             for (const ThumbnailData& data : thumbnails)
             {
                 if (data.is_valid())
