@@ -985,10 +985,14 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
                 } else {
                     // Vertical line intersects a contour segment at a general position (not at one of its end points).
                     // or the contour just touches this vertical line with a vertical segment or a sequence of vertical segments.
-                    // Keep both intersection points.
-                    if (j < i)
-                        sil.intersections[j] = sil.intersections[i];
-                    ++ j;
+
+                    //if you have to remove a point, be sure to remove also its sibling.
+                    if (sil.intersections[j].pos() != sil.intersections[i].pos() || j + 1 != i) {
+                        // Keep both intersection points.
+                        if (j < i)
+                            sil.intersections[j] = sil.intersections[i];
+                        ++j;
+                    }
                 }
             } else {
                 // Vertical line intersects a contour segment at a general position (not at one of its end points).
