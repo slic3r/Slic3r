@@ -21,9 +21,13 @@
 #include <wx/checkbox.h>
 #include <wx/display.h>
 
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/path.hpp>
+
 // this include must follow the wxWidgets ones or it won't compile on Windows -> see http://trac.wxwidgets.org/ticket/2421
 #include "libslic3r/Print.hpp"
 #include "libslic3r/SLAPrint.hpp"
+#include "libslic3r/FileParserError.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -330,6 +334,26 @@ bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view
         "Mill", "B3B3B3",
         "Custom", "28CC94"
     };
+
+    //try to laod colors from ui file
+    boost::property_tree::ptree tree_colors;
+    boost::filesystem::path path_colors = boost::filesystem::path(resources_dir()) / "ui_layout" / "colors.ini";
+    try {
+        boost::nowide::ifstream ifs;
+        ifs.imbue(boost::locale::generator()("en_US.UTF-8"));
+        ifs.open(path_colors.string());
+        boost::property_tree::read_ini(ifs, tree_colors);
+    } catch (const std::ifstream::failure &err) {
+        throw file_parser_error(std::string("The color file cannot be loaded. Reason: ") + err.what(), path_colors.string());
+    } catch (const std::runtime_error &err) {
+        throw file_parser_error(std::string("Failed loading the color file. Reason: ") + err.what(), path_colors.string());
+    }
+
+    for (int i = 0; i < extrusion_roles_colors.size(); i += 2) {
+        std::string color_code = tree_colors.get<std::string>(extrusion_roles_colors[i]);
+        extrusion_roles_colors[i + 1] = color_code;
+    }
+
     m_gcode_preview_data->set_extrusion_paths_colors(extrusion_roles_colors);
 
     return true;
