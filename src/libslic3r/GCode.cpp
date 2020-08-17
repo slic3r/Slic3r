@@ -3553,12 +3553,12 @@ std::string extrusion_role_2_string(const ExtrusionRole &er) {
     switch (er) {
         case erNone: return " none";
         case erPerimeter: return " perimeter";
-        case erExternalPerimeter: return " external_perimeter";
-        case erOverhangPerimeter: return " overhang_perimeter";
-        case erInternalInfill: return " internal_infill";
-        case erSolidInfill: return " solid_infill";
-        case erTopSolidInfill: return " top_solid_infill";
-        case erBridgeInfill: return " bridge_infill";
+        case erExternalPerimeter: return " perimeter external";
+        case erOverhangPerimeter: return " perimeter overhang";
+        case erInternalInfill: return " infill internal";
+        case erSolidInfill: return " infill solid";
+        case erTopSolidInfill: return " infill solid top";
+        case erBridgeInfill: return " infill bridge";
         case erThinWall: return " thin_wall";
         case erGapFill: return " gap_fill";
         case erSkirt: return " skirt";
@@ -3575,7 +3575,6 @@ std::string extrusion_role_2_string(const ExtrusionRole &er) {
 
 std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &description, double speed) {
 
-    std::string descr = extrusion_role_2_string(path.role());
     ExtrusionPath simplifed_path = path;
     if (this->config().min_length.value != 0 && !m_last_too_small.empty()) {
         //descr += " trys fusion " + std::to_string(unscaled(m_last_too_small.last_point().x())) + " , " + std::to_string(unscaled(path.first_point().x()));
@@ -3598,7 +3597,7 @@ std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &de
             //+ "\n";
     }
 
-    std::string gcode = this->_extrude(simplifed_path, description + descr, speed);
+    std::string gcode = this->_extrude(simplifed_path, description, speed);
 
     //gcode += " ; " + std::to_string(unscaled(path.first_point().x())) + " : " + std::to_string(unscaled(path.last_point().x()));
     //gcode += " =;=> " + std::to_string(unscaled(simplifed_path.first_point().x())) + " : " + std::to_string(unscaled(simplifed_path.last_point().x()));
@@ -3613,9 +3612,8 @@ std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &de
 }
 
 std::string GCode::extrude_path_3D(const ExtrusionPath3D &path, const std::string &description, double speed) {
-    std::string descr = extrusion_role_2_string(path.role());
     //path.simplify(SCALED_RESOLUTION);
-    std::string gcode = this->_before_extrude(path, description + descr, speed);
+    std::string gcode = this->_before_extrude(path, description, speed);
 
     // calculate extrusion length per distance unit
     double e_per_mm = path.mm3_per_mm
@@ -3655,7 +3653,7 @@ std::string GCode::extrude_perimeters(const Print &print, const std::vector<Obje
         if (! region.perimeters.empty()) {
             m_config.apply(print.regions()[&region - &by_region.front()]->config());
             for (const ExtrusionEntity *ee : region.perimeters)
-                gcode += this->extrude_entity(*ee, "perimeter", -1., &lower_layer_edge_grid);
+                gcode += this->extrude_entity(*ee, "", -1., &lower_layer_edge_grid);
         }
     return gcode;
 }
@@ -3670,7 +3668,7 @@ std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectBy
             ExtrusionEntitiesPtr extrusions { region.infills };
             chain_and_reorder_extrusion_entities(extrusions, &m_last_pos);
             for (const ExtrusionEntity *fill : extrusions) {
-                gcode += extrude_entity(*fill, "infill");
+                gcode += extrude_entity(*fill, "");
             }
         }
     }
@@ -3791,7 +3789,8 @@ std::vector<double> cut_corner_cache = {
 
 std::string GCode::_extrude(const ExtrusionPath &path, const std::string &description, double speed) {
 
-    std::string gcode = this->_before_extrude(path, description, speed);
+    std::string descr = description + extrusion_role_2_string(path.role());
+    std::string gcode = this->_before_extrude(path, descr, speed);
     
     // calculate extrusion length per distance unit
     double e_per_mm = path.mm3_per_mm
@@ -3802,7 +3801,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
     if (path.polyline.lines().size() > 0) {
         //get last direction //TODO: save it
         {
-            std::string comment = m_config.gcode_comments ? description : "";
+            std::string comment = m_config.gcode_comments ? descr : "";
             if (path.role() != erExternalPerimeter || config().external_perimeter_cut_corners.value == 0) {
                 // normal & legacy pathcode
                 for (const Line& line : path.polyline.lines()) {
