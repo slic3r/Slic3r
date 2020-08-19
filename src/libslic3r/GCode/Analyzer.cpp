@@ -22,6 +22,7 @@ static const unsigned int DEFAULT_COLOR_PRINT_ID = 0;
 static const Slic3r::Vec3d DEFAULT_START_POSITION = Slic3r::Vec3d(0.0f, 0.0f, 0.0f);
 static const float DEFAULT_START_EXTRUSION = 0.0f;
 static const float DEFAULT_FAN_SPEED = 0.0f;
+static const float DEFAULT_EXTRUDER_TEMP = 0.0f;
 static const float DEFAULT_LAYER_DURATION = 0.0f;
 static const float DEFAULT_LAYER_ELAPSED_TIME = 0.0f;
 
@@ -48,13 +49,15 @@ GCodeAnalyzer::Metadata::Metadata()
     , height(GCodeAnalyzer::Default_Height)
     , feedrate(DEFAULT_FEEDRATE)
     , fan_speed(DEFAULT_FAN_SPEED)
+    , extruder_temp(DEFAULT_EXTRUDER_TEMP)
     , layer_duration(DEFAULT_LAYER_DURATION)
     , layer_elapsed_time(DEFAULT_LAYER_ELAPSED_TIME)
     , cp_color_id(DEFAULT_COLOR_PRINT_ID)
 {
 }
 
-GCodeAnalyzer::Metadata::Metadata(ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, float width, float height, float feedrate, float fan_speed, float layer_duration, float layer_elapsed_time, unsigned int cp_color_id)
+GCodeAnalyzer::Metadata::Metadata(ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, float width, float height, float feedrate, 
+    float fan_speed, float extruder_temp, float layer_duration, float layer_elapsed_time, unsigned int cp_color_id)
     : extrusion_role(extrusion_role)
     , extruder_id(extruder_id)
     , mm3_per_mm(mm3_per_mm)
@@ -62,6 +65,7 @@ GCodeAnalyzer::Metadata::Metadata(ExtrusionRole extrusion_role, unsigned int ext
     , height(height)
     , feedrate(feedrate)
     , fan_speed(fan_speed)
+    , extruder_temp(extruder_temp)
     , layer_duration(layer_duration)
     , layer_elapsed_time(layer_elapsed_time)
     , cp_color_id(cp_color_id)
@@ -91,6 +95,9 @@ bool GCodeAnalyzer::Metadata::operator != (const GCodeAnalyzer::Metadata& other)
     if (fan_speed != other.fan_speed)
         return true;
 
+    if (extruder_temp != other.extruder_temp)
+        return true;
+
     if (layer_duration != other.layer_duration)
         return true;
 
@@ -102,9 +109,9 @@ bool GCodeAnalyzer::Metadata::operator != (const GCodeAnalyzer::Metadata& other)
 
 GCodeAnalyzer::GCodeMove::GCodeMove(GCodeMove::EType type, ExtrusionRole extrusion_role, unsigned int extruder_id, double mm3_per_mm, 
     float width, float height, float feedrate, const Vec3d& start_position, const Vec3d& end_position, float delta_extruder, 
-    float fan_speed, float layer_duration, float layer_elapsed_time, unsigned int cp_color_id)
+    float fan_speed, float extruder_temp, float layer_duration, float layer_elapsed_time, unsigned int cp_color_id)
     : type(type)
-    , data(extrusion_role, extruder_id, mm3_per_mm, width, height, feedrate, fan_speed, layer_duration, layer_elapsed_time, cp_color_id)
+    , data(extrusion_role, extruder_id, mm3_per_mm, width, height, feedrate, fan_speed, extruder_temp, layer_duration, layer_elapsed_time, cp_color_id)
     , start_position(start_position)
     , end_position(end_position)
     , delta_extruder(delta_extruder)
@@ -142,6 +149,7 @@ void GCodeAnalyzer::reset()
     _set_start_position(DEFAULT_START_POSITION);
     _set_start_extrusion(DEFAULT_START_EXTRUSION);
     _set_fan_speed(DEFAULT_FAN_SPEED);
+    _set_extruder_temp(DEFAULT_EXTRUDER_TEMP);
     _set_layer_duration(DEFAULT_LAYER_DURATION);
     _reset_axes_position();
     _reset_axes_origin();
@@ -269,6 +277,12 @@ void GCodeAnalyzer::_process_gcode_line(GCodeReader&, const GCodeReader::GCodeLi
                 case 83: // Set extruder to relative mode
                     {
                         _processM83(line);
+                        break;
+                    }
+                case 104: //set extruder temp
+                case 109:
+                    {
+                        _processM104orM109(line);
                         break;
                     }
                 case 106: // Set fan speed
@@ -489,6 +503,15 @@ void GCodeAnalyzer::_processM82(const GCodeReader::GCodeLine& line)
 void GCodeAnalyzer::_processM83(const GCodeReader::GCodeLine& line)
 {
     _set_e_local_positioning_type(Relative);
+}
+
+void GCodeAnalyzer::_processM104orM109(const GCodeReader::GCodeLine& line)
+{
+    float new_temp;
+    if (line.has_value('S', new_temp))
+    {
+        _set_extruder_temp(new_temp);
+    }
 }
 
 void GCodeAnalyzer::_processM106(const GCodeReader::GCodeLine& line)
@@ -850,6 +873,16 @@ float GCodeAnalyzer::_get_feedrate() const
     return m_state.data.feedrate;
 }
 
+void GCodeAnalyzer::_set_extruder_temp(float new_temperature)
+{
+    m_state.data.extruder_temp = new_temperature;
+}
+
+float GCodeAnalyzer::_get_extruder_temp() const
+{
+    return m_state.data.extruder_temp;
+}
+
 void GCodeAnalyzer::_set_fan_speed(float fan_speed_percentage)
 {
     m_state.data.fan_speed = fan_speed_percentage;
@@ -959,7 +992,7 @@ void GCodeAnalyzer::_store_move(GCodeAnalyzer::GCodeMove::EType type)
     Vec3d end_position = _get_end_position() + extruder_offset;
     it->second.emplace_back(type, _get_extrusion_role(), extruder_id, _get_mm3_per_mm(), 
         _get_width(), _get_height(), _get_feedrate(), start_position, end_position, _get_delta_extrusion(), 
-        _get_fan_speed(), _get_layer_duration(), m_state.data.layer_elapsed_time, _get_cp_color_id());
+        _get_fan_speed(), _get_extruder_temp(), _get_layer_duration(), m_state.data.layer_elapsed_time, _get_cp_color_id());
 }
 
 bool GCodeAnalyzer::_is_valid_extrusion_role(int value) const
@@ -1003,6 +1036,7 @@ void GCodeAnalyzer::_calc_gcode_preview_extrusion_layers(GCodePreviewData& previ
                 path.extruder_id = data.extruder_id;
                 path.cp_color_id = data.cp_color_id;
                 path.fan_speed = data.fan_speed;
+                path.extruder_temp = data.extruder_temp;
                 path.layer_duration = data.layer_duration;
                 path.elapsed_time = data.layer_elapsed_time;
             }
@@ -1023,6 +1057,7 @@ void GCodeAnalyzer::_calc_gcode_preview_extrusion_layers(GCodePreviewData& previ
     GCodePreviewData::MultiRange<GCodePreviewData::FeedrateKind> feedrate_range;
     GCodePreviewData::Range volumetric_rate_range;
     GCodePreviewData::Range fan_speed_range;
+    GCodePreviewData::Range extruder_temp_range;
     GCodePreviewData::Range layer_duration_range;
     GCodePreviewData::Range elapsed_time_range;
 
@@ -1069,6 +1104,7 @@ void GCodeAnalyzer::_calc_gcode_preview_extrusion_layers(GCodePreviewData& previ
             feedrate_range.update_from(move.data.feedrate, GCodePreviewData::FeedrateKind::EXTRUSION);
             volumetric_rate_range.update_from(volumetric_rate);
             fan_speed_range.update_from(move.data.fan_speed);
+            extruder_temp_range.update_from(move.data.extruder_temp);
             layer_duration_range.update_from(move.data.layer_duration);
             elapsed_time_range.update_from(move.data.layer_elapsed_time);
         }
@@ -1090,6 +1126,7 @@ void GCodeAnalyzer::_calc_gcode_preview_extrusion_layers(GCodePreviewData& previ
     preview_data.ranges.feedrate.update_from(feedrate_range);
     preview_data.ranges.volumetric_rate.update_from(volumetric_rate_range);
     preview_data.ranges.fan_speed.update_from(fan_speed_range);
+    preview_data.ranges.extruder_temp.update_from(extruder_temp_range);
     preview_data.ranges.layer_duration.update_from(layer_duration_range);
     preview_data.ranges.elapsed_time.update_from(elapsed_time_range);
 

@@ -252,6 +252,7 @@ bool Preview::init(wxWindow* parent, Bed3D& bed, Camera& camera, GLToolbar& view
     m_choice_view_type->Append(_(L("Tool")));
     m_choice_view_type->Append(_(L("Filament")));
     m_choice_view_type->Append(_(L(width_screen == tiny ? "Color":"Color Print")));
+    m_choice_view_type->Append(_(L((width_screen == tiny ? "Temp" : "Temperature"))));
     m_choice_view_type->SetSelection(0);
 
     m_label_show_features = new wxStaticText(this, wxID_ANY, _(L("Show")));

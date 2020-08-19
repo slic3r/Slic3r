@@ -6207,6 +6207,8 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
                 return path.feedrate;
             case GCodePreviewData::Extrusion::FanSpeed:
                 return path.fan_speed;
+            case GCodePreviewData::Extrusion::ExtruderTemp:
+                return path.extruder_temp;
             case GCodePreviewData::Extrusion::LayerTime:
                 return path.layer_duration;
             case GCodePreviewData::Extrusion::LayerTimeLog:
@@ -6241,6 +6243,8 @@ void GLCanvas3D::_load_gcode_extrusion_paths(const GCodePreviewData& preview_dat
                 return data.get_feedrate_color(value);
             case GCodePreviewData::Extrusion::FanSpeed:
                 return data.get_fan_speed_color(value);
+            case GCodePreviewData::Extrusion::ExtruderTemp:
+                return data.get_extruder_temp_color(value);
             case GCodePreviewData::Extrusion::LayerTime:
                 return data.get_layer_duration_color(value);
             case GCodePreviewData::Extrusion::LayerTimeLog:

@@ -263,6 +263,7 @@ void GCodePreviewData::reset()
     ranges.fan_speed.reset();
     ranges.volumetric_rate.reset();
     ranges.fan_speed.reset();
+    ranges.extruder_temp.reset();
     ranges.layer_duration.reset();
     ranges.elapsed_time.reset();
     extrusion.layers.clear();
@@ -299,6 +300,11 @@ Color GCodePreviewData::get_feedrate_color(float feedrate) const
 Color GCodePreviewData::get_fan_speed_color(float fan_speed) const
 {
     return ranges.fan_speed.get_color_at(fan_speed);
+}
+
+Color GCodePreviewData::get_extruder_temp_color(float temp) const
+{
+    return ranges.extruder_temp.get_color_at(temp);
 }
 
 Color GCodePreviewData::get_layer_duration_color(float layer_time) const
@@ -501,21 +507,26 @@ GCodePreviewData::LegendItemsList GCodePreviewData::get_legend_items(const std::
             Helper::FillListFromRange(items, ranges.fan_speed, 0, 1.0f);
             break;
         }
+    case Extrusion::ExtruderTemp:
+        {
+            Helper::FillListFromRange(items, ranges.extruder_temp, 0, 1.0f);
+            break;
+        }
     case Extrusion::LayerTime:
-    {
-        Helper::FillListFromRange(items, ranges.layer_duration, 1, 1.0f, true);
-        break;
-    }
+        {
+            Helper::FillListFromRange(items, ranges.layer_duration, 1, 1.0f, true);
+            break;
+        }
     case Extrusion::LayerTimeLog:
-    {
-        Helper::FillListFromRange(items, ranges.layer_duration, 1, 1.0f, true, true);
-        break;
-    }
+        {
+            Helper::FillListFromRange(items, ranges.layer_duration, 1, 1.0f, true, true);
+            break;
+        }
     case Extrusion::Chronology:
-    {
-        Helper::FillListFromRange(items, ranges.elapsed_time, 1, 1.0f, true);
-        break;
-    }
+        {
+            Helper::FillListFromRange(items, ranges.elapsed_time, 1, 1.0f, true);
+            break;
+        }
     case Extrusion::VolumetricRate:
         {
             Helper::FillListFromRange(items, ranges.volumetric_rate, 3, 1.0f);

@@ -201,6 +201,8 @@ public:
         MultiRange<FeedrateKind> feedrate;
         // Color mapping by fan speed.
         Range fan_speed;
+        // Color mapping by fan speed.
+        Range extruder_temp;
         // Color mapping by layer time.
         Range layer_duration;
         // Color mapping by time.
@@ -235,6 +237,7 @@ public:
             Tool,
             Filament,
             ColorPrint,
+            ExtruderTemp,
             Num_View_Types
         };
 
@@ -259,8 +262,10 @@ public:
 		    uint32_t		extruder_id;
 		    // Id of the color, used for visualization purposes in the color printing case.
 		    uint32_t	 	cp_color_id;
-		    // Fan speed for the extrusion, used for visualization purposes.
-		    float 			fan_speed;
+            // Fan speed for the extrusion, used for visualization purposes.
+            float 			fan_speed;
+            // Temperature of the extuder
+            float 			extruder_temp;
             // Layer time for the extrusion, used for visualization purposes.
             float 			layer_duration;
             // time since print start, used for visualization purposes.
@@ -390,6 +395,7 @@ public:
     Color get_width_color(float width) const;
     Color get_feedrate_color(float feedrate) const;
     Color get_fan_speed_color(float fan_speed) const;
+    Color get_extruder_temp_color(float temp) const;
     Color get_layer_duration_color(float layer_time) const;
     Color get_layer_duration_log_color(float layer_time) const;
     Color get_elapsed_time_color(float elapsed_time) const;
