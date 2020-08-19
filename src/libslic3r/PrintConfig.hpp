@@ -1065,6 +1065,7 @@ public:
     ConfigOptionInts                fan_below_layer_time;
     ConfigOptionStrings             filament_colour;
     ConfigOptionStrings             filament_notes;
+    ConfigOptionPercents            filament_shrink;
     ConfigOptionFloat               first_layer_acceleration;
     ConfigOptionInts                first_layer_bed_temperature;
     ConfigOptionFloatOrPercent      first_layer_extrusion_width;
@@ -1156,6 +1157,7 @@ protected:
         OPT_PTR(fan_below_layer_time);
         OPT_PTR(filament_colour);
         OPT_PTR(filament_notes);
+        OPT_PTR(filament_shrink);
         OPT_PTR(first_layer_acceleration);
         OPT_PTR(first_layer_bed_temperature);
         OPT_PTR(first_layer_extrusion_width);

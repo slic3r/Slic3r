@@ -16,6 +16,14 @@ group:Temperature °C
 		setting:label:Other layers:bed_temperature
 	end_line
 	setting:chamber_temperature
+group:Filament properties
+	setting:width$7:filament_type
+	setting:filament_soluble
+    setting:filament_shrink
+group:Print speed override
+	setting:filament_max_wipe_tower_speed
+	setting:filament_max_volumetric_speed
+	volumetric_speed_description
 
 page:Cooling:time
 group:Fan speed - default
@@ -35,10 +43,7 @@ group:Very short layer time - began to decrease extrusion rate
 group:Behavior
 	cooling_description
 
-page:Advanced:wrench
-group:Filament properties
-	setting:width$7:filament_type
-	setting:filament_soluble
+page:Multimaterial:funnel
 group:Multimaterial toolchange temperature 
 	setting:filament_enable_toolchange_temp
 	setting:filament_toolchange_temp 
@@ -52,10 +57,6 @@ group:Multimaterial toolchange string reduction
 	setting:filament_cooling_zone_pause
 	setting:filament_dip_insertion_speed
 	setting:filament_dip_extraction_speed
-group:Print speed override
-	setting:filament_max_wipe_tower_speed
-	setting:filament_max_volumetric_speed
-	volumetric_speed_description
 group:Wipe tower parameters
 	setting:filament_minimal_purge_on_wipe_tower
 group:Toolchange parameters with single extruder MM printers

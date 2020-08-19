@@ -1240,9 +1240,20 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Enter your filament diameter here. Good precision is required, so use a caliper "
                    "and do multiple measurements along the filament, then compute the average.");
     def->sidetext = L("mm");
-    def->min = 0; 
+    def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloats{ 1.75 });
+
+    def = this->add("filament_shrink", coPercents);
+    def->label = L("Shrikage");
+    def->tooltip = L("Enter the shrinkage percentage that the filament will get after cooling (94% if you measure 94mm instead of 100mm)."
+                    " The part will be scaled in xy to conpensate."
+                    " Only the filament used for the perimeter is taken into account."
+                    "\nBe sure to let enough space between objects, as this compensation is done after the checks.");
+    def->sidetext = L("%");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionPercents{ 100 });
 
     def = this->add("filament_density", coFloats);
     def->label = L("Density");

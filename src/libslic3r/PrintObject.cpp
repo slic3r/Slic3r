@@ -2161,6 +2161,14 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
             BOOST_LOG_TRIVIAL(debug) << "Slicing objects - region " << region_id;
             // slicing in parallel
             std::vector<ExPolygons> expolygons_by_layer = this->slice_region(region_id, slice_zs, slicing_mode);
+            //scale for shrinkage
+            double scale = print()->config().filament_shrink.get_abs_value(this->print()->regions()[region_id]->extruder(FlowRole::frPerimeter) - 1, 1);
+            if (scale != 1) {
+                scale = 1 / scale;
+                for (ExPolygons &polys : expolygons_by_layer)
+                    for (ExPolygon &poly : polys)
+                        poly.scale(scale);
+            }
             m_print->throw_if_canceled();
             BOOST_LOG_TRIVIAL(debug) << "Slicing objects - append slices " << region_id << " start";
             for (size_t layer_id = 0; layer_id < expolygons_by_layer.size(); ++ layer_id)
@@ -2202,6 +2210,16 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
                     i = j;
                 } else
                     ++ i;
+            }
+        }
+        //scale for shrinkage
+        for (SlicedVolume &sv : sliced_volumes) {
+            double scale = print()->config().filament_shrink.get_abs_value(this->print()->regions()[sv.region_id]->extruder(FlowRole::frPerimeter) - 1, 1);
+            if (scale != 1) {
+                scale = 1 / scale;
+                for (ExPolygons &polys : sv.expolygons_by_layer)
+                    for (ExPolygon &poly : polys)
+                        poly.scale(scale);
             }
         }
         // Second clip the volumes in the order they are presented at the user interface.
