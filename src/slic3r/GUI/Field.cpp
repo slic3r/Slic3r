@@ -986,7 +986,7 @@ void Choice::set_value(const boost::any& value, bool change_event)
     case coEnum: {
         int val = boost::any_cast<int>(value);
         if (m_opt_id == "top_fill_pattern" || m_opt_id == "bottom_fill_pattern" || m_opt_id == "solid_fill_pattern"
-            || m_opt_id == "fill_pattern" || m_opt_id == "support_material_interface_pattern")
+            || m_opt_id == "fill_pattern" || m_opt_id == "support_material_interface_pattern" || m_opt_id == "brim_ears_pattern")
         {
             val = idx_from_enum_value<InfillPattern>(val);
         } else if (m_opt_id.compare("perimeter_loop_seam") == 0) {
@@ -1073,7 +1073,7 @@ boost::any& Choice::get_value()
     {
         int ret_enum = field->GetSelection(); 
         if (m_opt_id == "top_fill_pattern" || m_opt_id == "bottom_fill_pattern" || m_opt_id == "solid_fill_pattern" 
-            || m_opt_id == "support_material_interface_pattern" || m_opt_id == "fill_pattern")
+            || m_opt_id == "support_material_interface_pattern" || m_opt_id == "fill_pattern" || m_opt_id == "brim_ears_pattern")
             convert_to_enum_value<InfillPattern>(ret_enum);
         else if (m_opt_id.compare("gcode_flavor") == 0)
             convert_to_enum_value<GCodeFlavor>(ret_enum);

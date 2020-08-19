@@ -757,6 +757,15 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "wipe_into_objects") {
             invalidated |= m_print->invalidate_step(psWipeTower);
             invalidated |= m_print->invalidate_step(psGCodeExport);
+        } else if (
+            opt_key == "brim_inside_holes"
+            || opt_key == "brim_width"
+            || opt_key == "brim_width_interior"
+            || opt_key == "brim_offset"
+            || opt_key == "brim_ears"
+            || opt_key == "brim_ears_max_angle"
+            || opt_key == "brim_ears_pattern") {
+            invalidated |= m_print->invalidate_step(psBrim);
         } else {
             // for legacy, if we can't handle this option let's invalidate all steps
             this->invalidate_all_steps();

@@ -898,7 +898,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
         surface->expolygon, 
         - rotate_vector.first, 
         scale_(0 /*this->overlap*/ - (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->spacing),
-        scale_(0 /*this->overlap*/ - 0.5 * this->spacing));
+        scale_(0 /*this->overlap*/ - (params.full_infill() && params.fill_exactly ? 0.5 + INFILL_OVERLAP_OVER_SPACING : 0.5) * this->spacing));
     if (poly_with_offset.n_contours_inner == 0) {
         // Not a single infill line fits.
         //Prusa: maybe one shall trigger the gap fill here?
@@ -909,7 +909,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     BoundingBox bounding_box = poly_with_offset.bounding_box_src();
 
     // define flow spacing according to requested density
-    if (params.full_infill() && !params.dont_adjust) {
+    if (params.full_infill() && !params.dont_adjust || line_spacing == 0 ) {
         //it's == this->_adjust_solid_spacing(bounding_box.size()(0), line_spacing) because of the init_spacing
         line_spacing = scale_(this->spacing);
     } else {

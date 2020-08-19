@@ -490,6 +490,7 @@ public:
     ConfigOptionFloat               brim_width_interior;
     ConfigOptionBool                brim_ears;
     ConfigOptionFloat               brim_ears_max_angle;
+    ConfigOptionEnum<InfillPattern> brim_ears_pattern;
     ConfigOptionFloat               brim_offset;
     ConfigOptionBool                clip_multipart_objects;
     ConfigOptionBool                dont_support_bridges;
@@ -555,6 +556,7 @@ protected:
         OPT_PTR(brim_width_interior);
         OPT_PTR(brim_ears);
         OPT_PTR(brim_ears_max_angle);
+        OPT_PTR(brim_ears_pattern);
         OPT_PTR(brim_offset);
         OPT_PTR(clip_multipart_objects);
         OPT_PTR(dont_support_bridges);

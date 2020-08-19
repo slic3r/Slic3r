@@ -5,6 +5,7 @@
 #include "ClipperUtils.hpp"
 #include "Extruder.hpp"
 #include "Flow.hpp"
+#include "Fill/FillBase.hpp"
 #include "Geometry.hpp"
 #include "I18N.hpp"
 #include "ShortestPath.hpp"
@@ -196,8 +197,11 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         } else if (
             opt_key == "brim_inside_holes"
             || opt_key == "brim_width"
+            || opt_key == "brim_width_interior"
+            || opt_key == "brim_offset"
             || opt_key == "brim_ears"
-            || opt_key == "brim_ears_max_angle") {
+            || opt_key == "brim_ears_max_angle"
+            || opt_key == "brim_ears_pattern") {
             steps.emplace_back(psBrim);
             steps.emplace_back(psSkirt);
         } else if (
@@ -1712,6 +1716,7 @@ void Print::process()
             for (std::vector<PrintObject*> &obj_group : obj_groups) {
                 if (obj_group.front()->config().brim_ears.value == obj->config().brim_ears.value
                     && obj_group.front()->config().brim_ears_max_angle.value == obj->config().brim_ears_max_angle.value
+                    && obj_group.front()->config().brim_ears_pattern.value == obj->config().brim_ears_pattern.value
                     && obj_group.front()->config().brim_inside_holes.value == obj->config().brim_inside_holes.value
                     && obj_group.front()->config().brim_offset.value == obj->config().brim_offset.value
                     && obj_group.front()->config().brim_width.value == obj->config().brim_width.value
@@ -2281,61 +2286,102 @@ void Print::_make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, Ex
     brimmable_areas = diff_ex(brimmable_areas, unbrimmable, true);
 
     this->throw_if_canceled();
-    //create loops (same as standard brim)
-    Polygons loops;
-    islands = offset_ex(islands, -0.5f * double(flow.scaled_spacing()));
-    for (size_t i = 0; i < num_loops; ++i) {
-        this->throw_if_canceled();
-        islands = offset_ex(islands, double(flow.scaled_spacing()), jtSquare);
-        for (ExPolygon &expoly : islands) {
-            Polygon poly = expoly.contour;
-            poly.points.push_back(poly.points.front());
-            Points p = MultiPoint::_douglas_peucker(poly.points, SCALED_RESOLUTION);
-            p.pop_back();
-            poly.points = std::move(p);
-            loops.push_back(poly);
+
+    if (brim_config.brim_ears_pattern.value == InfillPattern::ipConcentric) {
+
+        //create loops (same as standard brim)
+        Polygons loops;
+        islands = offset_ex(islands, -0.5f * double(flow.scaled_spacing()));
+        for (size_t i = 0; i < num_loops; ++i) {
+            this->throw_if_canceled();
+            islands = offset_ex(islands, double(flow.scaled_spacing()), jtSquare);
+            for (ExPolygon &expoly : islands) {
+                Polygon poly = expoly.contour;
+                poly.points.push_back(poly.points.front());
+                Points p = MultiPoint::_douglas_peucker(poly.points, SCALED_RESOLUTION);
+                p.pop_back();
+                poly.points = std::move(p);
+                loops.push_back(poly);
+            }
         }
+        //order path with least travel possible
+        loops = union_pt_chained(loops, false);
+
+        //create ear pattern
+        coord_t size_ear = (scale_((brim_config.brim_width.value - brim_config.brim_offset.value)) - flow.scaled_spacing());
+        Polygon point_round;
+        for (size_t i = 0; i < POLY_SIDES; i++) {
+            double angle = (2.0 * PI * i) / POLY_SIDES;
+            point_round.points.emplace_back(size_ear * cos(angle), size_ear * sin(angle));
+        }
+
+        //create ears
+        Polygons mouse_ears;
+        ExPolygons mouse_ears_ex;
+        for (Point pt : pt_ears) {
+            mouse_ears.push_back(point_round);
+            mouse_ears.back().translate(pt);
+            mouse_ears_ex.emplace_back();
+            mouse_ears_ex.back().contour = mouse_ears.back();
+        }
+
+        //intersection
+        Polylines lines = intersection_pl(loops, mouse_ears);
+        this->throw_if_canceled();
+
+        //reorder & extrude them
+        Polylines lines_sorted = _reorder_brim_polyline(lines, out, flow);
+
+        //push into extrusions
+        extrusion_entities_append_paths(
+            out.entities,
+            lines_sorted,
+            erSkirt,
+            float(flow.mm3_per_mm()),
+            float(flow.width),
+            float(this->skirt_first_layer_height())
+        );
+
+        ExPolygons new_brim_area = intersection_ex(brimmable_areas, mouse_ears_ex);
+        unbrimmable.insert(unbrimmable.end(), new_brim_area.begin(), new_brim_area.end());
+    } else {
+
+        
+        //create ear pattern
+        coord_t size_ear = (scale_((brim_config.brim_width.value - brim_config.brim_offset.value)) - flow.scaled_spacing());
+        Polygon point_round;
+        for (size_t i = 0; i < POLY_SIDES; i++) {
+            double angle = (2.0 * PI * i) / POLY_SIDES;
+            point_round.points.emplace_back(size_ear * cos(angle), size_ear * sin(angle));
+        }
+
+        //create ears
+        ExPolygons mouse_ears_ex;
+        for (Point pt : pt_ears) {
+            mouse_ears_ex.emplace_back();
+            mouse_ears_ex.back().contour = point_round;
+            mouse_ears_ex.back().contour.translate(pt);
+        }
+
+        ExPolygons new_brim_area = intersection_ex(brimmable_areas, mouse_ears_ex);
+
+        std::unique_ptr<Fill> filler = std::unique_ptr<Fill>(Fill::new_from_type(ipRectiWithPerimeter));
+        filler->angle = 0;
+
+        FillParams fill_params;
+        fill_params.density = 1.f;
+        fill_params.fill_exactly = true;
+        fill_params.flow = &flow;
+        fill_params.role = erSkirt;
+        filler->init_spacing(flow.spacing(), fill_params);
+        for (const ExPolygon &expoly : new_brim_area) {
+            Surface surface(stPosInternal | stDensSparse, expoly);
+            filler->fill_surface_extrusion(&surface, fill_params, out.entities);
+        }
+
+        unbrimmable.insert(unbrimmable.end(), new_brim_area.begin(), new_brim_area.end());
     }
-    //order path with least travel possible
-    loops = union_pt_chained(loops, false);
 
-    //create ear pattern
-    coord_t size_ear = (scale_((brim_config.brim_width.value - brim_config.brim_offset.value)) - flow.scaled_spacing());
-    Polygon point_round;
-    for (size_t i = 0; i < POLY_SIDES; i++) {
-        double angle = (2.0 * PI * i) / POLY_SIDES;
-        point_round.points.emplace_back(size_ear * cos(angle), size_ear * sin(angle));
-    }
-
-    //create ears
-    Polygons mouse_ears;
-    ExPolygons mouse_ears_ex;
-    for (Point pt : pt_ears) {
-        mouse_ears.push_back(point_round);
-        mouse_ears.back().translate(pt);
-        mouse_ears_ex.emplace_back();
-        mouse_ears_ex.back().contour = mouse_ears.back();
-    }
-
-    //intersection
-    Polylines lines = intersection_pl(loops, mouse_ears);
-    this->throw_if_canceled();
-
-    //reorder & extrude them
-    Polylines lines_sorted = _reorder_brim_polyline(lines, out, flow);
-
-    //push into extrusions
-    extrusion_entities_append_paths(
-        out.entities,
-        lines_sorted,
-        erSkirt,
-        float(flow.mm3_per_mm()),
-        float(flow.width),
-        float(this->skirt_first_layer_height())
-    );
-
-    ExPolygons new_brim_area = intersection_ex(brimmable_areas, mouse_ears_ex);
-    unbrimmable.insert(unbrimmable.end(), new_brim_area.begin(), new_brim_area.end());
 }
 
 void Print::_make_brim_interior(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable_areas, ExtrusionEntityCollection &out) {

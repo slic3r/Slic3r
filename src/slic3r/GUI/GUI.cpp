@@ -187,7 +187,8 @@ void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt
 			if (opt_key == "top_fill_pattern" ||
 				opt_key == "bottom_fill_pattern" ||
 				opt_key == "solid_fill_pattern" ||
-				opt_key == "fill_pattern")
+				opt_key == "fill_pattern" ||
+				opt_key == "brim_ears_pattern")
 				config.set_key_value(opt_key, new ConfigOptionEnum<InfillPattern>(boost::any_cast<InfillPattern>(value)));
 			else if (opt_key.compare("complete_objects_sort") == 0)
 				config.set_key_value(opt_key, new ConfigOptionEnum<CompleteObjectSort>(boost::any_cast<CompleteObjectSort>(value)));  

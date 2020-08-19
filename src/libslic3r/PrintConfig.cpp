@@ -352,6 +352,19 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(125));
 
+    def = this->add("brim_ears_pattern", coEnum);
+    def->label = L("Pattern");
+    def->full_label = L("Ear pattern");
+    def->category = OptionCategory::infill;
+    def->tooltip = L("Pattern for the ear. The concentric id the default one."
+                    " The rectilinear has a perimeter around it, you can try it if the concentric has too many problems to stick to the build plate.");
+    def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
+    def->enum_values.push_back("concentric");
+    def->enum_values.push_back("rectilinear");
+    def->enum_labels.push_back(L("Concentric"));
+    def->enum_labels.push_back(L("Rectilinear"));
+    def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipConcentric));
+
     def = this->add("brim_offset", coFloat);
     def->label = L("brim offset");
     def->category = OptionCategory::skirtBrim;
@@ -4735,6 +4748,10 @@ std::string FullPrintConfig::validate()
     // --solid-fill-pattern
     if (!print_config_def.get("solid_fill_pattern")->has_enum_value(this->solid_fill_pattern.serialize()))
         return "Invalid value for --solid-fill-pattern";
+
+    // --brim-ears-pattern
+    if (!print_config_def.get("brim_ears_pattern")->has_enum_value(this->brim_ears_pattern.serialize()))
+        return "Invalid value for --brim-ears-pattern";
 
     // --fill-density
     if (fabs(this->fill_density.value - 100.) < EPSILON &&

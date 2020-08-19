@@ -746,7 +746,8 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 		if (opt_key == "top_fill_pattern" ||
 			opt_key == "bottom_fill_pattern" ||
 			opt_key == "solid_fill_pattern" ||
-			opt_key == "fill_pattern" ) {
+			opt_key == "fill_pattern" ||
+			opt_key == "brim_ears_pattern" ) {
 			ret = static_cast<int>(config.option<ConfigOptionEnum<InfillPattern>>(opt_key)->value);
 		}
 		else if (opt_key.compare("complete_objects_sort") == 0 ) {
