@@ -7,7 +7,7 @@
 #include "test_data.hpp"
 #include <libslic3r/libslic3r.h>
 #include <libslic3r/SVG.hpp>
-#include <libslic3r/config.hpp>
+//#include <libslic3r/config.hpp>
 #include <string>
 
 using namespace Slic3r;

@@ -429,7 +429,7 @@ void Print::model_volume_list_update_supports_seams(ModelObject &model_object_ds
             assert(model_volume_dst->get_matrix().isApprox(model_volume_src->get_matrix()));
         } else {
             // The volume was not found in the old list. Create a new copy.
-            assert(model_volume_src->is_support_modifier() || model_volume_dst->is_seam_position());
+            assert(model_volume_src->is_support_modifier() || model_volume_src->is_seam_position());
             model_object_dst.volumes.emplace_back(new ModelVolume(*model_volume_src));
             model_object_dst.volumes.back()->set_model_object(&model_object_dst);
         }
