@@ -389,6 +389,7 @@ enum class ModelVolumeType : int {
     PARAMETER_MODIFIER,
     SUPPORT_ENFORCER,
     SUPPORT_BLOCKER,
+    SEAM_POSITION,
 };
 
 // An object STL, or a modifier volume, over which a different set of parameters shall be applied.
@@ -429,7 +430,8 @@ public:
 	bool                is_modifier()           const { return m_type == ModelVolumeType::PARAMETER_MODIFIER; }
 	bool                is_support_enforcer()   const { return m_type == ModelVolumeType::SUPPORT_ENFORCER; }
 	bool                is_support_blocker()    const { return m_type == ModelVolumeType::SUPPORT_BLOCKER; }
-	bool                is_support_modifier()   const { return m_type == ModelVolumeType::SUPPORT_BLOCKER || m_type == ModelVolumeType::SUPPORT_ENFORCER; }
+    bool                is_support_modifier()   const { return m_type == ModelVolumeType::SUPPORT_BLOCKER || m_type == ModelVolumeType::SUPPORT_ENFORCER; }
+    bool                is_seam_position()      const { return m_type == ModelVolumeType::SEAM_POSITION; }
     t_model_material_id material_id() const { return m_material_id; }
     void                set_material_id(t_model_material_id material_id);
     ModelMaterial*      material() const;

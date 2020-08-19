@@ -488,7 +488,7 @@ private:
     void                _make_wipe_tower();
 
     // Declared here to have access to Model / ModelObject / ModelInstance
-    static void         model_volume_list_update_supports(ModelObject &model_object_dst, const ModelObject &model_object_src);
+    static void         model_volume_list_update_supports_seams(ModelObject &model_object_dst, const ModelObject &model_object_src);
 
     PrintConfig                             m_config;
     PrintObjectConfig                       m_default_object_config;

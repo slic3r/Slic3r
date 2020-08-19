@@ -127,6 +127,7 @@ private:
     ScalableBitmap	    m_bmp_solidmesh;
     ScalableBitmap	    m_bmp_support_enforcer;
     ScalableBitmap	    m_bmp_support_blocker;
+    ScalableBitmap      m_bmp_seam_position;
     ScalableBitmap	    m_bmp_manifold_warning;
     ScalableBitmap	    m_bmp_cog;
 

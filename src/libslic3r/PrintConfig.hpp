@@ -67,7 +67,7 @@ enum SupportMaterialPattern {
 };
 
 enum SeamPosition {
-    spRandom, spNearest, spAligned, spRear, spHidden
+    spRandom, spNearest, spAligned, spRear, spHidden, spCustom
 };
 
 enum SLAMaterial {
@@ -207,6 +207,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<SeamPosition>::ge
         keys_map["aligned"]             = spAligned;
         keys_map["rear"]                = spRear;
         keys_map["hidden"]              = spHidden;
+        keys_map["custom"]              = spCustom;
     }
     return keys_map;
 }

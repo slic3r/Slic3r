@@ -288,8 +288,8 @@ void GLVolume::set_color_from_model_volume(const ModelVolume *model_volume)
 {
     if (model_volume->is_modifier()) {
         color[0] = 0.2f;
-        color[1] = 1.0f;
-        color[2] = 0.2f;
+        color[1] = 0.2f;
+        color[2] = 1.0f;
     }
     else if (model_volume->is_support_blocker()) {
         color[0] = 1.0f;
@@ -298,6 +298,11 @@ void GLVolume::set_color_from_model_volume(const ModelVolume *model_volume)
     }
     else if (model_volume->is_support_enforcer()) {
         color[0] = 0.2f;
+        color[1] = 1.0f;
+        color[2] = 0.2f;
+    }
+    else if (model_volume->is_seam_position()) {
+        color[0] = 0.9f;
         color[1] = 0.2f;
         color[2] = 1.0f;
     }

@@ -397,7 +397,7 @@ double Print::max_allowed_layer_height() const
 // Add or remove support modifier ModelVolumes from model_object_dst to match the ModelVolumes of model_object_new
 // in the exact order and with the same IDs.
 // It is expected, that the model_object_dst already contains the non-support volumes of model_object_new in the correct order.
-void Print::model_volume_list_update_supports(ModelObject &model_object_dst, const ModelObject &model_object_new)
+void Print::model_volume_list_update_supports_seams(ModelObject &model_object_dst, const ModelObject &model_object_new)
 {
 	typedef std::pair<const ModelVolume*, bool> ModelVolumeWithStatus;
 	std::vector<ModelVolumeWithStatus> old_volumes;
@@ -420,7 +420,7 @@ void Print::model_volume_list_update_supports(ModelObject &model_object_dst, con
 			// For support modifiers, the type may have been switched from blocker to enforcer and vice versa.
 			assert((model_volume_dst->is_support_modifier() && model_volume_src->is_support_modifier()) || model_volume_dst->type() == model_volume_src->type());
             model_object_dst.volumes.emplace_back(model_volume_dst);
-			if (model_volume_dst->is_support_modifier()) {
+			if (model_volume_dst->is_support_modifier() || model_volume_dst->is_seam_position()) {
 				// For support modifiers, the type may have been switched from blocker to enforcer and vice versa.
 				model_volume_dst->set_type(model_volume_src->type());
 				model_volume_dst->set_transformation(model_volume_src->get_transformation());
@@ -428,7 +428,7 @@ void Print::model_volume_list_update_supports(ModelObject &model_object_dst, con
             assert(model_volume_dst->get_matrix().isApprox(model_volume_src->get_matrix()));
         } else {
             // The volume was not found in the old list. Create a new copy.
-            assert(model_volume_src->is_support_modifier());
+            assert(model_volume_src->is_support_modifier() || model_volume_dst->is_seam_position());
             model_object_dst.volumes.emplace_back(new ModelVolume(*model_volume_src));
             model_object_dst.volumes.back()->set_model_object(&model_object_dst);
         }
@@ -895,7 +895,8 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
         bool modifiers_differ           = model_volume_list_changed(model_object, model_object_new, ModelVolumeType::PARAMETER_MODIFIER);
         bool support_blockers_differ    = model_volume_list_changed(model_object, model_object_new, ModelVolumeType::SUPPORT_BLOCKER);
         bool support_enforcers_differ   = model_volume_list_changed(model_object, model_object_new, ModelVolumeType::SUPPORT_ENFORCER);
-        if (model_parts_differ || modifiers_differ || 
+        bool seam_position_differ       = model_volume_list_changed(model_object, model_object_new, ModelVolumeType::SEAM_POSITION);
+        if (model_parts_differ || modifiers_differ ||
             model_object.origin_translation         != model_object_new.origin_translation   ||
             model_object.layer_height_profile       != model_object_new.layer_height_profile ||
             ! layer_height_ranges_equal(model_object.layer_config_ranges, model_object_new.layer_config_ranges, model_object_new.layer_height_profile.empty())) {
@@ -916,7 +917,15 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
             for (auto it = range.first; it != range.second; ++ it)
                 update_apply_status(it->print_object->invalidate_step(posSupportMaterial));
             // Copy just the support volumes.
-            model_volume_list_update_supports(model_object, model_object_new);
+            model_volume_list_update_supports_seams(model_object, model_object_new);
+        }else if (seam_position_differ) {
+            // First stop background processing before shuffling or deleting the ModelVolumes in the ModelObject's list.
+            this->call_cancel_callback();
+            update_apply_status(false);
+            // Invalidate just the gcode step.
+            invalidate_step(psGCodeExport);
+            // Copy just the seam volumes.
+            model_volume_list_update_supports_seams(model_object, model_object_new);
         }
         if (! model_parts_differ && ! modifiers_differ) {
             // Synchronize Object's config.
@@ -1051,11 +1060,9 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
     for (PrintRegion *region : m_regions)
         region->m_refcnt = 0;
     for (PrintObject *print_object : m_objects) {
-        int idx_region = 0;
-        for (const auto &volumes : print_object->region_volumes) {
-            if (! volumes.empty())
-				++ m_regions[idx_region]->m_refcnt;
-            ++ idx_region;
+        for (int idx_region = 0; idx_region < print_object->region_volumes.size(); ++idx_region) {
+            if (!print_object->region_volumes[idx_region].empty())
+                ++ m_regions[idx_region]->m_refcnt;
         }
     }
 

@@ -51,7 +51,8 @@ static std::vector<std::pair<std::string, std::string>> ADD_VOLUME_MENU_ITEMS = 
     {L("Add part"),              "add_part" },           // ~ModelVolumeType::MODEL_PART
     {L("Add modifier"),          "add_modifier"},        // ~ModelVolumeType::PARAMETER_MODIFIER
     {L("Add support enforcer"),  "support_enforcer"},    // ~ModelVolumeType::SUPPORT_ENFORCER
-    {L("Add support blocker"),   "support_blocker"}      // ~ModelVolumeType::SUPPORT_BLOCKER
+    {L("Add support blocker"),   "support_blocker"},     // ~ModelVolumeType::SUPPORT_BLOCKER
+    {L("Add seam position"),     "add_seam"}             // ~ModelVolumeType::SEAM_POSITION
 };
 
 static PrinterTechnology printer_technology()
@@ -577,13 +578,15 @@ void ObjectList::init_icons()
     m_bmp_solidmesh         = ScalableBitmap(this, ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::MODEL_PART)        ].second);
     m_bmp_modifiermesh      = ScalableBitmap(this, ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::PARAMETER_MODIFIER)].second);
     m_bmp_support_enforcer  = ScalableBitmap(this, ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::SUPPORT_ENFORCER)  ].second);
-    m_bmp_support_blocker   = ScalableBitmap(this, ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::SUPPORT_BLOCKER)   ].second); 
+    m_bmp_support_blocker   = ScalableBitmap(this, ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::SUPPORT_BLOCKER)   ].second);
+    m_bmp_seam_position     = ScalableBitmap(this, ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::SEAM_POSITION)     ].second);
 
     m_bmp_vector.reserve(4); // bitmaps for different types of parts 
-    m_bmp_vector.push_back(&m_bmp_solidmesh.bmp());         
-    m_bmp_vector.push_back(&m_bmp_modifiermesh.bmp());      
-    m_bmp_vector.push_back(&m_bmp_support_enforcer.bmp());  
-    m_bmp_vector.push_back(&m_bmp_support_blocker.bmp());   
+    m_bmp_vector.push_back(&m_bmp_solidmesh.bmp());
+    m_bmp_vector.push_back(&m_bmp_modifiermesh.bmp());
+    m_bmp_vector.push_back(&m_bmp_support_enforcer.bmp());
+    m_bmp_vector.push_back(&m_bmp_support_blocker.bmp());
+    m_bmp_vector.push_back(&m_bmp_seam_position.bmp());
 
 
     // Set volumes default bitmaps for the model
@@ -605,7 +608,8 @@ void ObjectList::msw_rescale_icons()
     for (ScalableBitmap* bitmap : { &m_bmp_solidmesh,            // Add part
                                     &m_bmp_modifiermesh,         // Add modifier
                                     &m_bmp_support_enforcer,     // Add support enforcer
-                                    &m_bmp_support_blocker })    // Add support blocker                                                           
+                                    &m_bmp_support_blocker,      // Add support blocker
+                                    &m_bmp_seam_position })      // Add seam position
     {
         bitmap->msw_rescale();
         m_bmp_vector.push_back(& bitmap->bmp());
@@ -1442,12 +1446,15 @@ wxMenu* ObjectList::append_submenu_add_generic(wxMenu* menu, const ModelVolumeTy
     sub_menu->AppendSeparator();
     }
 
-    for (auto& item : { L("Box"), L("Cylinder"), L("Sphere"), L("Slab") })
+    std::vector<std::string> items = { "Box", "Cylinder", "Sphere", "Slab" };
+    if(type == ModelVolumeType::SEAM_POSITION) items = { "Sphere" };
+
+    for (std::string& item : items)
     {
-        if (type == ModelVolumeType::INVALID && strncmp(item, "Slab", 4) == 0)
+        if (type == ModelVolumeType::INVALID && item == "Slab")
             continue;
-        append_menu_item(sub_menu, wxID_ANY, _(item), "",
-            [this, type, item](wxCommandEvent&) { load_generic_subobject(item, type); }, "", menu);
+        append_menu_item(sub_menu, wxID_ANY, _(L(item)), "",
+            [this, type, item](wxCommandEvent&) { load_generic_subobject(L(item), type); }, "", menu);
     }
 
     return sub_menu;
@@ -1481,6 +1488,10 @@ void ObjectList::append_menu_items_add_volume(wxMenu* menu)
             [this](wxCommandEvent&) { load_generic_subobject(L("Box"), ModelVolumeType::SUPPORT_BLOCKER); },
             ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::SUPPORT_BLOCKER)].second, nullptr,
             [this]() { return is_instance_or_object_selected(); }, parent);
+        append_menu_item(menu, wxID_ANY, _(ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::SEAM_POSITION)].first), "",
+            [this](wxCommandEvent&) { load_generic_subobject(L("Sphere"), ModelVolumeType::SEAM_POSITION); },
+            ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::SEAM_POSITION)].second, nullptr,
+            [this]() { return is_instance_or_object_selected(); }, parent);
 
         return;
     }
@@ -1488,10 +1499,16 @@ void ObjectList::append_menu_items_add_volume(wxMenu* menu)
     for (size_t type = (mode == comExpert || wxGetApp().app_config->get("objects_always_expert") == "1" ? 0 : 1) ; type < ADD_VOLUME_MENU_ITEMS.size(); type++)
     {
         auto& item = ADD_VOLUME_MENU_ITEMS[type];
-
-        wxMenu* sub_menu = append_submenu_add_generic(menu, ModelVolumeType(type));
-        append_submenu(menu, sub_menu, wxID_ANY, _(item.first), "", item.second,
-            [this]() { return is_instance_or_object_selected(); }, parent);
+        if (type == int(ModelVolumeType::SEAM_POSITION)) {
+            append_menu_item(menu, wxID_ANY, _(item.first), "",
+                [this](wxCommandEvent&) { load_generic_subobject(L("Sphere"), ModelVolumeType::SEAM_POSITION); },
+                item.second, nullptr,
+                [this]() { return is_instance_or_object_selected(); }, parent);
+        } else {
+            wxMenu* sub_menu = append_submenu_add_generic(menu, ModelVolumeType(type));
+            append_submenu(menu, sub_menu, wxID_ANY, _(item.first), "", item.second,
+                [this]() { return is_instance_or_object_selected(); }, parent);
+        }
     }
 }
 
@@ -1969,7 +1986,7 @@ static TriangleMesh create_mesh(const std::string& type_name, const BoundingBoxf
     else if (type_name == "Cylinder")
         // Centered around 0, sitting on the print bed.
         // The cylinder has the same volume as the box above.
-        mesh = make_cylinder(0.564 * side, side);
+        mesh = make_cylinder(0.564 * side, bb.size().z()>0 ? bb.size().z() : side);
     else if (type_name == "Sphere")
         // Centered around 0, half the sphere below the print bed, half above.
         // The sphere has the same volume as the box above.
@@ -2011,6 +2028,9 @@ void ObjectList::load_generic_subobject(const std::string& type_name, const Mode
     // Bounding box of the selected instance in world coordinate system including the translation, without modifiers.
     BoundingBoxf3 instance_bb = model_object.instance_bounding_box(instance_idx);
 
+    if(type == ModelVolumeType::SEAM_POSITION)
+        model_object.config.set_key_value("seam_position", new ConfigOptionEnum<SeamPosition>(spCustom));
+
     TriangleMesh mesh = create_mesh(type_name, instance_bb);
     
 	// Mesh will be centered when loading.
@@ -2033,7 +2053,11 @@ void ObjectList::load_generic_subobject(const std::string& type_name, const Mode
         new_volume->set_offset(v->get_instance_transformation().get_matrix(true).inverse() * offset);
     }
 
-    const wxString name = _(L("Generic")) + "-" + _(type_name);
+    std::string base_name = "Generic";
+    if (type == ModelVolumeType::SEAM_POSITION) base_name = "Seam";
+    if (type == ModelVolumeType::SUPPORT_ENFORCER) base_name = "Support";
+    if (type == ModelVolumeType::SUPPORT_BLOCKER) base_name = "Blocker";
+    const wxString name = _(L(base_name)) + "-" + _(type_name);
     new_volume->name = into_u8(name);
     // set a default extruder value, since user can't add it manually
     new_volume->config.set_key_value("extruder", new ConfigOptionInt(0));
@@ -2049,6 +2073,8 @@ void ObjectList::load_generic_subobject(const std::string& type_name, const Mode
 //#ifndef __WXOSX__ //#ifdef __WXMSW__ // #ys_FIXME
     selection_changed();
 //#endif //no __WXOSX__ //__WXMSW__
+    if (type == ModelVolumeType::SEAM_POSITION)
+        this->update_after_undo_redo();
 }
 
 void ObjectList::load_shape_object(const std::string& type_name)

@@ -3120,7 +3120,7 @@ void GCode::split_at_seam_pos(ExtrusionLoop &loop, std::unique_ptr<EdgeGrid::Gri
     Point last_pos = this->last_pos();
     if (m_config.spiral_vase) {
         loop.split_at(last_pos, false);
-    } else if (seam_position == spNearest || seam_position == spAligned || seam_position == spRear || seam_position == spHidden) {
+    } else if (seam_position == spNearest || seam_position == spAligned || seam_position == spRear || seam_position == spHidden || seam_position == spCustom) {
         Polygon        polygon = loop.polygon();
         const coordf_t nozzle_dmr = EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, loop.paths.front().width);
         const coord_t  nozzle_r = coord_t(scale_(0.5 * nozzle_dmr) + 0.5);
@@ -3128,6 +3128,33 @@ void GCode::split_at_seam_pos(ExtrusionLoop &loop, std::unique_ptr<EdgeGrid::Gri
         // Retrieve the last start position for this object.
         float last_pos_weight = 1.f;
 
+        if (seam_position == spCustom) {
+            // Seam is aligned to be nearest to the position of a "lambda-seam"-named modifier in this or any preceding layer
+            last_pos = m_layer->object()->bounding_box().center();
+            // Look for all lambda-seam-modifiers below current z, choose the highest one
+            ModelVolume *v_lambda_seam = nullptr;
+            Vec3d lambda_pos;
+            for (ModelVolume *v : m_layer->object()->model_object()->volumes)
+                if (v->is_seam_position()) {
+                    Vec3d test_lambda_pos = m_layer->object()->model_object()->instances.front()->transform_vector(v->get_offset());
+                    //use this one if the first or nearer (in z)
+                    if (v_lambda_seam == nullptr || std::abs(m_layer->print_z - test_lambda_pos.z()) < std::abs(m_layer->print_z - lambda_pos.z())) {
+                        v_lambda_seam = v;
+                        lambda_pos = m_layer->object()->model_object()->instances.front()->transform_vector(v_lambda_seam->get_offset());
+                    }
+                }
+
+            if (v_lambda_seam != nullptr) {
+                lambda_pos = m_layer->object()->model_object()->instances.front()->transform_vector(v_lambda_seam->get_offset(), true);
+                // Found, get the center point and apply rotation and scaling of Model instance. Continues to spAligned if not found or Weight set to Zero.
+                last_pos = Point::new_scale(lambda_pos.x(), lambda_pos.y());
+                // Weight is set by user and stored in the radius of the sphere
+                double weight_temp = (m_layer->object()->model_object()->instances.front()->transform_bounding_box(v_lambda_seam->mesh().bounding_box(), true).size().x() / 2.0);
+                last_pos_weight = std::max(0.0, std::round(100 * (weight_temp - 0.5)));
+                if (last_pos_weight <= 0.0)
+                    seam_position = spHidden;
+            }
+        }
         if (seam_position == spAligned) {
             // Seam is aligned to the seam at the preceding layer.
             if (m_layer != NULL && m_seam_position.count(m_layer->object()) > 0) {
@@ -3202,7 +3229,9 @@ void GCode::split_at_seam_pos(ExtrusionLoop &loop, std::unique_ptr<EdgeGrid::Gri
                     std::min(lengths[i] - lengths[last_pos_proj_idx], lengths.back() - lengths[i] + lengths[last_pos_proj_idx]);
                 penalty -= last_pos_weight * bspline_kernel(dist_to_last_pos_proj / dist_max);
             }
-            penalties[i] = std::max(0.f, penalty);
+            // Allow negative penalties to overcome penalty for overhangs when in Custom mode
+            penalties[i] = (seam_position == spCustom) ? penalty : std::max(0.f, penalty);
+
         }
 
         // Penalty for overhangs.
@@ -3232,7 +3261,7 @@ void GCode::split_at_seam_pos(ExtrusionLoop &loop, std::unique_ptr<EdgeGrid::Gri
         size_t idx_min = std::min_element(penalties.begin(), penalties.end()) - penalties.begin();
 
         // if (seam_position == spAligned)
-        // For all (aligned, nearest, rear) seams:
+        // For all (aligned, nearest, rear, hidden, custom) seams:
         {
             // Very likely the weight of idx_min is very close to the weight of last_pos_proj_idx.
             // In that case use last_pos_proj_idx instead.
