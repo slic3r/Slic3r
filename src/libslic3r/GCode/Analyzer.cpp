@@ -421,8 +421,16 @@ void GCodeAnalyzer::_processG1(const GCodeReader::GCodeLine& line)
 
 void GCodeAnalyzer::_processG10(const GCodeReader::GCodeLine& line)
 {
+    //special case for reprap (temp done, TODO: offsets)
+    float new_temp;
+    if (m_gcode_flavor == gcfRepRap && line.has_value('S', new_temp))
+    {
+        _set_extruder_temp(new_temp);
+    }
     // stores retract move
-    _store_move(GCodeMove::Retract);
+    else {
+        _store_move(GCodeMove::Retract);
+    }
 }
 
 void GCodeAnalyzer::_processG11(const GCodeReader::GCodeLine& line)

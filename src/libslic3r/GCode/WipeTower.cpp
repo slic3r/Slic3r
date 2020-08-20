@@ -103,7 +103,7 @@ public:
     }
 
     WipeTowerWriter&            disable_linear_advance() {
-        if(m_gcode_flavor == gcfRepRap)
+        if(m_gcode_flavor == gcfRepRap || m_gcode_flavor == gcfSprinter)
              m_gcode += std::string("M572 D0 S0\n");
          else if(m_gcode_flavor == gcfKlipper)
              m_gcode += std::string("SET_PRESSURE_ADVANCE ADVANCE=0\n");
@@ -407,7 +407,7 @@ public:
 	{
         if (m_gcode_flavor == gcfKlipper)
             return *this;
-        if (m_gcode_flavor == gcfRepRap)
+        if (m_gcode_flavor == gcfRepRap || m_gcode_flavor == gcfSprinter)
             m_gcode += "M906 E";
         else
             m_gcode += "M907 E";

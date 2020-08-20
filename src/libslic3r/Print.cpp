@@ -1336,7 +1336,7 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
                          "and use filaments of the same diameter.") };
         }
 
-        if (m_config.gcode_flavor != gcfRepRap && m_config.gcode_flavor != gcfRepetier && m_config.gcode_flavor != gcfMarlin
+        if (m_config.gcode_flavor != gcfRepRap && m_config.gcode_flavor != gcfSprinter && m_config.gcode_flavor != gcfRepetier && m_config.gcode_flavor != gcfMarlin
             && m_config.gcode_flavor != gcfKlipper)
             return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is currently only supported for the Marlin, RepRap/Sprinter and Repetier G-code flavors.") };
         if (! m_config.use_relative_e_distances)

@@ -687,7 +687,7 @@ namespace Slic3r {
     void GCodeTimeEstimator::set_default()
     {
         set_units(Millimeters);
-        set_dialect(gcfRepRap);
+        set_dialect(gcfSprinter);
         set_global_positioning_type(Absolute);
         set_e_local_positioning_type(Absolute);
 
@@ -1261,7 +1261,8 @@ namespace Slic3r {
             (dialect == gcfKlipper) ||
             (dialect == gcfSmoothie) ||
             (dialect == gcfLerdge) ||
-            (dialect == gcfRepRap))
+            (dialect == gcfRepRap)||
+            (dialect == gcfSprinter))
         {
             if (line.has_value('S', value))
                 add_additional_time(value);
@@ -1373,7 +1374,7 @@ namespace Slic3r {
         GCodeFlavor dialect = get_dialect();
 
         // see http://reprap.org/wiki/G-code#M201:_Set_max_printing_acceleration
-        float factor = ((dialect != gcfRepRap) && (get_units() == GCodeTimeEstimator::Inches)) ? INCHES_TO_MM : 1.0f;
+        float factor = ((dialect != gcfRepRap) && (dialect != gcfSprinter) && (get_units() == GCodeTimeEstimator::Inches)) ? INCHES_TO_MM : 1.0f;
 
         if (line.has_x())
             set_axis_max_acceleration(X, line.x() * factor);

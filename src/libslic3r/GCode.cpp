@@ -527,7 +527,7 @@ std::string WipeTowerIntegration::prime(GCode &gcodegen)
 
 
     // Disable linear advance for the wipe tower operations.
-        //gcode += (gcodegen.config().gcode_flavor == gcfRepRap ? std::string("M572 D0 S0\n") : std::string("M900 K0\n"));
+        //gcode += (gcodegen.config().gcode_flavor == gcfRepRap || m_gcode_flavor == gcfSprinter ? std::string("M572 D0 S0\n") : std::string("M900 K0\n"));
 
     for (const WipeTower::ToolChangeResult& tcr : m_priming) {
         if (!tcr.extrusions.empty())
@@ -1774,10 +1774,10 @@ static bool custom_gcode_sets_temperature(const std::string &gcode, const int mc
 // Do not process this piece of G-code by the time estimator, it already knows the values through another sources.
 void GCode::print_machine_envelope(FILE *file, Print &print)
 {
-   // gcfRepRap, gcfRepetier, gcfTeacup, gcfMakerWare, gcfMarlin, gcfKlipper, gcfSailfish, gcfMach3, gcfMachinekit,
+   // gcfRepRap, gcfRepetier, gcfTeacup, gcfMakerWare, gcfMarlin, gcfKlipper, gcfSailfish, gcfSprinter, gcfMach3, gcfMachinekit,
    ///     gcfSmoothie, gcfNoExtrusion, gcfLerdge,
     if (print.config().print_machine_envelope) {
-        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap}.count(print.config().gcode_flavor.value) > 0)
+        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap,  gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M201 X%d Y%d Z%d E%d ; sets maximum accelerations, mm/sec^2\n",
                 int(print.config().machine_max_acceleration_x.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_y.values.front() + 0.5),
@@ -1787,7 +1787,7 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
             fprintf(file, "M202 X%d Y%d ; sets maximum travel speed\n",
                 int(print.config().travel_speed.value),
                 int(print.config().travel_speed.value));
-        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap, gcfSmoothie}.count(print.config().gcode_flavor.value) > 0)
+        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap, gcfSmoothie, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/sec\n",
                 int(print.config().machine_max_feedrate_x.values.front() + 0.5),
                 int(print.config().machine_max_feedrate_y.values.front() + 0.5),
@@ -1798,7 +1798,7 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
                 int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_retracting.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
-        if (std::set<uint8_t>{gcfRepRap, gcfKlipper}.count(print.config().gcode_flavor.value) > 0)
+        if (std::set<uint8_t>{gcfRepRap, gcfKlipper, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M204 P%d T%d ; sets acceleration (P, T), mm/sec^2\n",
                 int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
@@ -1828,8 +1828,8 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
 
 // Write 1st layer bed temperatures into the G-code.
 // Only do that if the start G-code does not already contain any M-code controlling an extruder temperature.
-// M140 - Set Extruder Temperature
-// M190 - Set Extruder Temperature and Wait
+// M140 - Set Bed Temperature
+// M190 - Set Bed Temperature and Wait
 void GCode::_print_first_layer_bed_temperature(FILE *file, Print &print, const std::string &gcode, unsigned int first_printing_extruder_id, bool wait)
 {
     // Initial bed temperature based on the first extruder.

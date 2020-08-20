@@ -62,7 +62,7 @@ std::string GCodeWriter::preamble()
         gcode << "G90 ; use absolute coordinates\n";
     }
     if (FLAVOR_IS(gcfRepRap) || FLAVOR_IS(gcfMarlin) || FLAVOR_IS(gcfLerdge) || FLAVOR_IS(gcfTeacup) || FLAVOR_IS(gcfRepetier) || FLAVOR_IS(gcfSmoothie)
-		 || FLAVOR_IS(gcfKlipper) || FLAVOR_IS(gcfLerdge)) {
+		 || FLAVOR_IS(gcfSprinter) || FLAVOR_IS(gcfKlipper) || FLAVOR_IS(gcfLerdge)) {
         if (this->config.use_relative_e_distances) {
             gcode << "M83 ; use relative distances for extrusion\n";
         } else {
@@ -88,7 +88,7 @@ std::string GCodeWriter::set_temperature(unsigned int temperature, bool wait, in
         return "";
     
     std::string code, comment;
-    if (wait && FLAVOR_IS_NOT(gcfTeacup) && FLAVOR_IS_NOT(gcfRepRap)) {
+    if (wait && FLAVOR_IS_NOT(gcfTeacup) && FLAVOR_IS_NOT(gcfRepRap) && FLAVOR_IS_NOT(gcfSprinter)) {
         code = "M109";
         comment = "set temperature and wait for it to be reached";
     } else {

@@ -1642,9 +1642,10 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("mach3");
     def->enum_values.push_back("machinekit");
     def->enum_values.push_back("smoothie");
+    def->enum_values.push_back("sprinter");
     def->enum_values.push_back("lerdge");
     def->enum_values.push_back("no-extrusion");
-    def->enum_labels.push_back("RepRap/Sprinter");
+    def->enum_labels.push_back("RepRap");
     def->enum_labels.push_back("Repetier");
     def->enum_labels.push_back("Teacup");
     def->enum_labels.push_back("MakerWare (MakerBot)");
@@ -1654,6 +1655,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back("Mach3/LinuxCNC");
     def->enum_labels.push_back("Machinekit");
     def->enum_labels.push_back("Smoothie");
+    def->enum_labels.push_back("Sprinter");
     def->enum_labels.push_back("Lerdge");
     def->enum_labels.push_back(L("No extrusion"));
     def->mode = comAdvanced;
@@ -4716,6 +4718,7 @@ std::string FullPrintConfig::validate()
 
     if (this->use_firmware_retraction.value &&
         this->gcode_flavor.value != gcfSmoothie &&
+        this->gcode_flavor.value != gcfSprinter &&
         this->gcode_flavor.value != gcfRepRap &&
         this->gcode_flavor.value != gcfMarlin &&
         this->gcode_flavor.value != gcfMachinekit &&
