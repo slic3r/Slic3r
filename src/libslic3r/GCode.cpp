@@ -3162,19 +3162,39 @@ void GCode::split_at_seam_pos(ExtrusionLoop &loop, std::unique_ptr<EdgeGrid::Gri
         // Retrieve the last start position for this object.
         float last_pos_weight = 1.f;
 
-        if (seam_position == spCustom) {
+        bool has_seam_custom = false;
+        for (ModelVolume *v : m_layer->object()->model_object()->volumes)
+            if (v->is_seam_position()) {
+                has_seam_custom = true;
+                break;
+            }
+        if (has_seam_custom) {
             // Seam is aligned to be nearest to the position of a "lambda-seam"-named modifier in this or any preceding layer
             last_pos = m_layer->object()->bounding_box().center();
             // Look for all lambda-seam-modifiers below current z, choose the highest one
             ModelVolume *v_lambda_seam = nullptr;
             Vec3d lambda_pos;
+            double lambda_dist;
+            double lambda_radius;
             for (ModelVolume *v : m_layer->object()->model_object()->volumes)
                 if (v->is_seam_position()) {
-                    Vec3d test_lambda_pos = m_layer->object()->model_object()->instances.front()->transform_vector(v->get_offset());
+                    //xy in object coordinates, z in plater coordinates
+                    Vec3d test_lambda_pos = m_layer->object()->model_object()->instances.front()->transform_vector(v->get_offset(), true);
+                    Vec3d test_lambda_pos_plater = m_layer->object()->model_object()->instances.front()->transform_vector(v->get_offset(), false);
+                    Point xy_lambda(scale_(test_lambda_pos.x()), scale_(test_lambda_pos.y()));
+                    Point nearest = polygon.point_projection(xy_lambda);
+                    Vec3d polygon_3dpoint{ unscaled(nearest.x()), unscaled(nearest.y()), (double)m_layer->print_z };
+                    double test_lambda_dist = (polygon_3dpoint - test_lambda_pos).norm();
+                    double sphere_radius = m_layer->object()->model_object()->instances.front()->transform_bounding_box(v->mesh().bounding_box(), true).size().x() / 2;
+                    //if (test_lambda_dist > sphere_radius)
+                    //    continue;
+
                     //use this one if the first or nearer (in z)
-                    if (v_lambda_seam == nullptr || std::abs(m_layer->print_z - test_lambda_pos.z()) < std::abs(m_layer->print_z - lambda_pos.z())) {
+                    if (v_lambda_seam == nullptr || lambda_dist > test_lambda_dist) {
                         v_lambda_seam = v;
-                        lambda_pos = m_layer->object()->model_object()->instances.front()->transform_vector(v_lambda_seam->get_offset());
+                        lambda_pos = test_lambda_pos;
+                        lambda_radius = sphere_radius;
+                        lambda_dist = test_lambda_dist;
                     }
                 }
 
@@ -3183,10 +3203,9 @@ void GCode::split_at_seam_pos(ExtrusionLoop &loop, std::unique_ptr<EdgeGrid::Gri
                 // Found, get the center point and apply rotation and scaling of Model instance. Continues to spAligned if not found or Weight set to Zero.
                 last_pos = Point::new_scale(lambda_pos.x(), lambda_pos.y());
                 // Weight is set by user and stored in the radius of the sphere
-                double weight_temp = (m_layer->object()->model_object()->instances.front()->transform_bounding_box(v_lambda_seam->mesh().bounding_box(), true).size().x() / 2.0);
-                last_pos_weight = std::max(0.0, std::round(100 * (weight_temp - 0.5)));
-                if (last_pos_weight <= 0.0)
-                    seam_position = spHidden;
+                last_pos_weight = std::max(0.0, std::round(100 * (lambda_radius)));
+                if (last_pos_weight > 0.0)
+                    seam_position = spCustom;
             }
         }
         if (seam_position == spAligned) {

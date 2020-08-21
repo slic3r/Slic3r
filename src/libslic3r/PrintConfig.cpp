@@ -2578,24 +2578,21 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Seam position");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Position of perimeters starting points."
-                    "\n --- When using Custom ---"
+                    "\n --- When using Custom seam ---"
                     "\nYou have to create one or more seam sphere in the context menu of the object."
-                    " Note that the custom setting is automatically added to the object when creating a seam object,"
-                    " so you shouldn't have to set it in the global config."
-                    " The center of the seam sphere is used to position the seam. If you set multiple spheres, the nearest in z is chosen for a given layer.");
+                    " When an object has a seam object, this setting is not taken into account nymore for the object."
+                    " Refer to the wiki/help menu for more information.");
     def->enum_keys_map = &ConfigOptionEnum<SeamPosition>::get_enum_values();
     def->enum_values.push_back("random");
     def->enum_values.push_back("near");
     def->enum_values.push_back("aligned");
     def->enum_values.push_back("rear");
     def->enum_values.push_back("hidden");
-    def->enum_values.push_back("custom");
     def->enum_labels.push_back(L("Random"));
     def->enum_labels.push_back(L("Nearest"));
     def->enum_labels.push_back(L("Aligned"));
     def->enum_labels.push_back(L("Rear"));
     def->enum_labels.push_back(L("Corners"));
-    def->enum_labels.push_back(L("Custom"));
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionEnum<SeamPosition>(spHidden));
 
