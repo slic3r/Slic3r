@@ -3905,7 +3905,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
                     else angle = PI - angle;
                     int idx_angle = int(180 * angle / PI);
                     // the coeff is below 0.01 i the angle is higher than 125, so it's not useful
-                    if (idx_angle < 60) {
+                    if (idx_angle > 60) {
                         //don't compensate if the angle is under 35, as it's already a 50% compensation, it's enough! 
                         if (idx_angle > 144) angle = 144;
                         //surface extruded in path.width is path.width * path.width
@@ -3928,7 +3928,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
                             double mult2 = 1 - coeff;
                             double sum = 0;
                             //Create a point
-                            Point inter_point1 = line.point_at(length1);
+                            Point inter_point1 = line.point_at(scale_(length1));
                             //extrude very reduced
                             gcode += m_writer.extrude_to_xy(
                                 this->point_to_gcode(inter_point1),
@@ -3937,7 +3937,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
                             sum += e_per_mm * (length1) * mult1;
 
                             if (line_length - length1 > length2) {
-                                Point inter_point2 = line.point_at(length2);
+                                Point inter_point2 = line.point_at(scale_(length2));
                                 //extrude reduced
                                 gcode += m_writer.extrude_to_xy(
                                     this->point_to_gcode(inter_point2),
