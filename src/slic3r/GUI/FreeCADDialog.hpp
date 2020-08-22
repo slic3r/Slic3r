@@ -81,6 +81,7 @@ protected:
     MainFrame* main_frame;
     GUI_App* gui_app;
     wxGridBagSizer* main_sizer;
+    wxComboBox* cmb_add_replace;
 
     std::vector<PyCommand> commands;
 

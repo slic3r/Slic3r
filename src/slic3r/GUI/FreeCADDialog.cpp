@@ -2,6 +2,7 @@
 
 #include "I18N.hpp"
 #include "libslic3r/Utils.hpp"
+#include "libslic3r/Format/STL.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "slic3r/Utils/Http.hpp"
@@ -251,6 +252,12 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     bt_quick_save->Bind(wxEVT_BUTTON, &FreeCADDialog::quick_save, this);
     bt_quick_save->Hide();
     buttons->Add(bt_quick_save);
+    wxString choices_add[] = { "replace", "insert" };
+    cmb_add_replace = new wxComboBox(this, wxID_ANY, wxString{ "replace" }, wxDefaultPosition, wxDefaultSize, 2, choices_add);
+    cmb_add_replace->SetToolTip(_(L("What to do with the result? insert it into the existing plater or replacing the current plater by a new one?")));
+    cmb_add_replace->SetSelection(0);
+    buttons->AddSpacer(15);
+    buttons->Add(cmb_add_replace);
 
     buttons->AddStretchSpacer();
     wxButton* bt_create_geometry = new wxButton(this, wxID_APPLY, _(L("Generate")));
@@ -907,8 +914,49 @@ void FreeCADDialog::create_geometry(wxCommandEvent& event_args) {
             text = text.substr(0, redraw_pos) + "scene()." + text.substr(redraw_pos);
         }
     }
-    if (!this->write_text_in_file(text, temp_file)) {
-        m_errors->AppendText("Error, cannot write into "+ temp_file.string() + "!");
+    //search for $[0-9]+ to replace them with importstl("temp stl path from plater export")
+    const std::wregex reg_dollnum(L"\\$([0-9]+)");
+    std::wstring text_std = text.ToStdWstring();
+    std::wstring text_out;
+    size_t last_pos = 0;
+    std::set<int> object_used;
+    for (std::wsregex_iterator it = std::wsregex_iterator(text_std.begin(), text_std.end(), reg_dollnum);
+        it != std::wsregex_iterator(); ++it) {
+        //add all previous
+        text_out.append(text_std.begin() + last_pos, text_std.begin() + it->position());
+        //get number
+        int nb = std::stoi((*it)[1]);
+        object_used.insert(nb);
+        std::stringstream ss; ss << "plater_" << nb << ".stl";
+        boost::filesystem::path temp_stl(Slic3r::data_dir());
+        temp_stl = temp_stl / "temp" / ss.str();
+        //add replaced
+        std::wstring txt_new = L"importStl(\"";
+        txt_new += temp_stl.generic_wstring();
+        txt_new += L"\")";
+        text_out.append(txt_new);
+        //relance
+        last_pos = it->position() + it->size();
+    }
+    text_out.append(text_std.begin() + last_pos, text_std.end());
+    //export stls
+    for (size_t idx_plater_obj : object_used) {
+        if (idx_plater_obj <= this->main_frame->plater()->model().objects.size()) {
+            std::stringstream ss; ss << "plater_" << idx_plater_obj << ".stl";
+            boost::filesystem::path temp_stl(Slic3r::data_dir());
+            temp_stl = temp_stl / "temp" / ss.str();
+            Slic3r::store_stl(temp_stl.generic_string().c_str(), 
+                (idx_plater_obj == 0) ? &this->main_frame->plater()->model().mesh() : &this->main_frame->plater()->model().objects[idx_plater_obj-1]->mesh(),
+                true);
+        } else {
+            m_errors->AppendText("Error, cannot find object " + std::to_string(idx_plater_obj) 
+                + ", there is only "+ std::to_string(this->main_frame->plater()->model().objects.size()) +" objects!");
+            return;
+        }
+    }
+    //write script in temp file
+    if (!this->write_text_in_file(text_out, temp_file)) {
+        m_errors->AppendText("Error, cannot write into " + temp_file.string() + "!");
         return;
     }
 
@@ -916,7 +964,8 @@ void FreeCADDialog::create_geometry(wxCommandEvent& event_args) {
     //std::cout<< "scene().redraw(" << boost::replace_all_copy(boost::replace_all_copy(m_text->GetText(), "\r", ""), "\n", "") << ")" << std::endl;
     //exec_var->pyin << "scene().redraw("<< boost::replace_all_copy(boost::replace_all_copy(m_text->GetText(), "\r", ""), "\n", "") <<")" << std::endl;
     exec_var->pyin << ("exec(open('" + temp_file.generic_string() + "').read())\n");
-    exec_var->pyin << "Mesh.export(App.ActiveDocument.RootObjects, u\"" << object_path.generic_string() << "\")" << std::endl;
+    //filter to avoid importing "intermediate" object like ones from importStl
+    exec_var->pyin << "Mesh.export(list(filter(lambda x: isinstance(x, Part.Feature),App.ActiveDocument.RootObjects)), u\"" << object_path.generic_string() << "\")" << std::endl;
     exec_var->pyin << "print('exported!')" << std::endl;
     exec_var->pyin << "App.ActiveDocument.RootObjects" << std::endl;
 
@@ -941,7 +990,8 @@ void FreeCADDialog::create_geometry(wxCommandEvent& event_args) {
 
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    plat->reset();
+    if(cmb_add_replace->GetSelection() == 0)
+        plat->reset();
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{ object_path.generic_string() }, true, false, false);
     if (objs_idx.empty()) return;
     /// --- translate ---
