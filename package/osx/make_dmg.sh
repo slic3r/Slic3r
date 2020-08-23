@@ -183,8 +183,8 @@ find -d $macosfolder/local-lib -name libwx_osx_cocoau_webview-3.* -delete
 rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/include
 find -d $macosfolder/local-lib -type d -empty -delete
 
-# remove wxrc
-rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/bin/wxrc*
+# remove wx build tools
+rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/bin
 
 # Remove all broken symlinks
 find -L $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni -type l -exec rm {} \;
