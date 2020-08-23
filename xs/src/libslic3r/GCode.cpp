@@ -470,11 +470,21 @@ GCode::extrude(const ExtrusionEntity &entity, std::string description, double sp
         return this->extrude(*path, description, speed);
     } else if (const ExtrusionLoop* loop = dynamic_cast<const ExtrusionLoop*>(&entity)) {
         return this->extrude(*loop, description, speed);
+    } else if (const ExtrusionEntityCollection* coll = dynamic_cast<const ExtrusionEntityCollection*>(&entity)) {
+        std::string gcode;
+        ExtrusionEntityCollection chained;
+        if (coll->no_sort) chained = *coll;
+        else coll->chained_path_from(_last_pos, &chained, false);
+        for (ExtrusionEntity *next_entity : chained.entities) {
+            gcode += extrude(*next_entity, description, speed);
+        }
+        return gcode;
     } else {
         CONFESS("Invalid argument supplied to extrude()");
         return "";
     }
 }
+
 
 std::string
 GCode::extrude(const ExtrusionPath &path, std::string description, double speed)

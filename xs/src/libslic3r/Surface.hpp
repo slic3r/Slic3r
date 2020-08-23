@@ -14,7 +14,8 @@ enum SurfaceType : uint16_t {
     stInternal       = 0b100,     /// stInternal: not top nor bottom
     stSolid          = 0b1000,    /// stSolid: modify the stInternal to say it should be at 100% infill
     stBridge         = 0b10000,   /// stBridge: modify stBottom or stInternal to say it should be extruded as a bridge
-    stVoid           = 0b100000   /// stVoid: modify stInternal to say it should be at 0% infill
+    stOverBridge     = 0b100000,  /// stOverBridge: surafec over a stBridge one. modify stSolid/stTop to say it should over-extrude to compensate the bridge drop.
+    stVoid           = 0b1000000  /// stVoid: modify stInternal to say it should be at 0% infill
 };
 inline SurfaceType operator|(SurfaceType a, SurfaceType b)
 {return static_cast<SurfaceType>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b));}
@@ -47,6 +48,7 @@ class Surface
     bool is_top() const;
     bool is_bottom() const;
     bool is_bridge() const;
+    bool is_over_bridge() const;
 };
 
 typedef std::vector<Surface> Surfaces;

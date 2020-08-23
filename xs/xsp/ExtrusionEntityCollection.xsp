@@ -23,6 +23,13 @@
             RETVAL = new ExtrusionEntityCollection();
             THIS->chained_path_from(*start_near, RETVAL, no_reverse);
         %};
+    ExtrusionEntityCollection* flatten_if_sortable()
+        %code{%
+            RETVAL = new ExtrusionEntityCollection();
+            THIS->flatten_if_sortable(RETVAL);
+        %};
+    bool is_solid_infill()
+        %code{% RETVAL = THIS->is_solid_infill(); %};
     Clone<Point> first_point();
     Clone<Point> last_point();
     int count()

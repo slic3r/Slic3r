@@ -27,7 +27,7 @@ FillRectilinear::_fill_single_direction(ExPolygon expolygon,
     // rotate polygons so that we can work with vertical lines here
     expolygon.rotate(-direction.first);
     
-    assert(this->density > 0.0001f && this->density <= 1.f);
+    assert(this->density > 0.0001f);
     const coord_t min_spacing   = scale_(this->min_spacing);
     coord_t line_spacing        = (double) min_spacing / this->density;
     

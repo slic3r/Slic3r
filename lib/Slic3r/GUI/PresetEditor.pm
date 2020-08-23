@@ -473,7 +473,7 @@ sub options {
         extrusion_width first_layer_extrusion_width perimeter_extrusion_width 
         external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
         top_infill_extrusion_width support_material_extrusion_width
-        support_material_interface_extrusion_width infill_overlap bridge_flow_ratio
+        support_material_interface_extrusion_width infill_overlap bridge_flow_ratio over_bridge_flow_ratio
         xy_size_compensation resolution shortcuts compatible_printers
         print_settings_id
     )
@@ -704,6 +704,7 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Flow');
             $optgroup->append_single_option_line('bridge_flow_ratio');
+            $optgroup->append_single_option_line('over_bridge_flow_ratio');
         }
         {
             my $optgroup = $page->new_optgroup('Other');

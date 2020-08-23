@@ -11,11 +11,13 @@ PrintConfigDef::PrintConfigDef()
     external_fill_pattern.type = coEnum;
     external_fill_pattern.enum_keys_map = ConfigOptionEnum<InfillPattern>::get_enum_values();
     external_fill_pattern.enum_values.push_back("rectilinear");
+    external_fill_pattern.enum_values.push_back("smooth");
     external_fill_pattern.enum_values.push_back("concentric");
     external_fill_pattern.enum_values.push_back("hilbertcurve");
     external_fill_pattern.enum_values.push_back("archimedeanchords");
     external_fill_pattern.enum_values.push_back("octagramspiral");
     external_fill_pattern.enum_labels.push_back(__TRANS("Rectilinear"));
+    external_fill_pattern.enum_labels.push_back(__TRANS("Smooth (ironing)"));
     external_fill_pattern.enum_labels.push_back(__TRANS("Concentric"));
     external_fill_pattern.enum_labels.push_back(__TRANS("Hilbert Curve"));
     external_fill_pattern.enum_labels.push_back(__TRANS("Archimedean Chords"));
@@ -135,6 +137,14 @@ PrintConfigDef::PrintConfigDef()
     def->category = __TRANS("Advanced");
     def->tooltip = __TRANS("This factor affects the amount of plastic for bridging. You can decrease it slightly to pull the extrudates and prevent sagging, although default settings are usually good and you should experiment with cooling (use a fan) before tweaking this.");
     def->cli = "bridge-flow-ratio=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(1);
+
+    def = this->add("over_bridge_flow_ratio", coFloat);
+    def->label = __TRANS("Over-bridge flow ratio");
+    def->category = __TRANS("Advanced");
+    def->tooltip = __TRANS("Flow ratio to compensate for the gaps in a bridged top surface. Used for ironing infill pattern to prevent regions where the low-flow pass does not provide a smooth surface due to a lack of plastic. You can increase it slightly to pull the top layer at the correct height. Recommended maximum: 1.2.");
+    def->cli = "over-bridge-flow-ratio=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(1);
 

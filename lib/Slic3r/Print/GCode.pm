@@ -633,27 +633,27 @@ sub process_layer {
             }
             
             # process infill
-            # $layerm->fills is a collection of ExtrusionPath::Collection objects, each one containing
-            # the ExtrusionPath objects of a certain infill "group" (also called "surface"
+            # $layerm->fills is a collection of ExtrusionEntity::Collection objects, each one containing
+            # the ExtrusionEntity objects of a certain infill "group" (also called "surface"
             # throughout the code). We can redefine the order of such Collections but we have to 
             # do each one completely at once.
             foreach my $fill (@{$layerm->fills}) {
                 next if $fill->empty;  # this shouldn't happen but first_point() would fail
                 
                 # init by_extruder item only if we actually use the extruder
-                my $extruder_id = $fill->[0]->is_solid_infill
+                my $extruder_id = $fill->is_solid_infill()
                     ? $region->config->solid_infill_extruder-1
                     : $region->config->infill_extruder-1;
                 
                 $by_extruder{$extruder_id} //= [];
                 
-                # $fill is an ExtrusionPath::Collection object
+                # $fill is an ExtrusionEntity::Collection object (ExtrusionEntityEollection)
                 for my $i (0 .. $n_slices) {
                     if ($i == $n_slices
                         || $point_inside_surface->($i, $fill->first_point)) {
                         $by_extruder{$extruder_id}[$i] //= { infill => {} };
                         $by_extruder{$extruder_id}[$i]{infill}{$region_id} //= [];
-                        push @{ $by_extruder{$extruder_id}[$i]{infill}{$region_id} }, $fill;
+                        push @{ $by_extruder{$extruder_id}[$i]{infill}{$region_id} }, $fill->flatten_if_sortable();
                         last;
                     }
                 }
@@ -731,12 +731,7 @@ sub _extrude_infill {
         
         my $collection = Slic3r::ExtrusionPath::Collection->new(@{ $entities_by_region->{$region_id} });
         for my $fill (@{$collection->chained_path_from($self->_gcodegen->last_pos, 0)}) {
-            if ($fill->isa('Slic3r::ExtrusionPath::Collection')) {
-                $gcode .= $self->_gcodegen->extrude($_, 'infill', -1) 
-                    for @{$fill->chained_path_from($self->_gcodegen->last_pos, 0)};
-            } else {
-                $gcode .= $self->_gcodegen->extrude($fill, 'infill', -1) ;
-            }
+            $gcode .= $self->_gcodegen->extrude($fill, 'infill', -1) ;
         }
     }
     return $gcode;

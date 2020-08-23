@@ -64,7 +64,7 @@ LayerRegion::make_fill()
                 const Surface &surface = *groups[i].front();
                 // we can only merge solid non-bridge surfaces, so discard
                 // non-solid or bridge surfaces
-                if (!surface.is_solid() || surface.is_bridge()) continue;
+                if (!surface.is_solid() || surface.is_bridge() || surface.is_over_bridge()) continue;
                 
                 group_attrib[i].is_solid = true;
                 group_attrib[i].fw = (surface.is_top()) ? top_solid_infill_flow.width : solid_infill_flow.width;
@@ -209,7 +209,6 @@ LayerRegion::make_fill()
         );
         
         // calculate flow spacing for infill pattern generation
-        bool using_internal_flow = false;
         if (!surface.is_solid() && !is_bridge) {
             // it's internal infill, so we can calculate a generic flow spacing
             // for all layers, for avoiding the ugly effect of
@@ -224,7 +223,6 @@ LayerRegion::make_fill()
                 *this->layer()->object()
             );
             f->min_spacing = internal_flow.spacing();
-            using_internal_flow = true;
         } else {
             f->min_spacing = flow.spacing();
         }
@@ -246,48 +244,12 @@ LayerRegion::make_fill()
         // apply half spacing using this flow's own spacing and generate infill
         f->density = density/100;
         f->dont_adjust = false;
-        /*
-        std::cout << surface.expolygon.dump_perl() << std::endl
-            << " layer_id: " << f->layer_id << " z: " << f->z
-            << " angle: " << f->angle << " min-spacing: " << f->min_spacing
-            << " endpoints_overlap: " << f->endpoints_overlap << std::endl << std::endl;
-        */
-        Polylines polylines = f->fill_surface(surface);
-        if (polylines.empty())
-            continue;
 
-        // calculate actual flow from spacing (which might have been adjusted by the infill
-        // pattern generator)
-        if (using_internal_flow) {
-            // if we used the internal flow we're not doing a solid infill
-            // so we can safely ignore the slight variation that might have
-            // been applied to f->spacing()
-        } else {
-            flow = Flow::new_from_spacing(f->spacing(), flow.nozzle_diameter, h, is_bridge || f->use_bridge_flow());
+        if(surface.is_over_bridge()){
+            f->density = this->region()->config.over_bridge_flow_ratio;
         }
-
-        // Save into layer.
-        ExtrusionEntityCollection* coll = new ExtrusionEntityCollection();
-        coll->no_sort = f->no_sort();
-        this->fills.entities.push_back(coll);
         
-        {
-            ExtrusionRole role;
-            if (is_bridge) {
-                role = erBridgeInfill;
-            } else if (surface.is_solid()) {
-                role = (surface.is_top()) ? erTopSolidInfill : erSolidInfill;
-            } else {
-                role = erInternalInfill;
-            }
-            
-            ExtrusionPath templ(role);
-            templ.mm3_per_mm    = flow.mm3_per_mm();
-            templ.width         = flow.width;
-            templ.height        = flow.height;
-            
-            coll->append(STDMOVE(polylines), templ);
-        }
+        f->fill_surface_extrusion(surface, flow, this->fills.entities, erNone);
     }
 
     // add thin fill regions

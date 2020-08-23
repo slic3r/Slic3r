@@ -6,6 +6,7 @@
 #include "../Geometry.hpp"
 #include "../Surface.hpp"
 #include "../PrintConfig.hpp"
+#include "../ExtrusionEntityCollection.hpp"
 
 #include "Fill.hpp"
 #include "FillConcentric.hpp"
@@ -14,6 +15,8 @@
 #include "FillGyroid.hpp"
 #include "FillPlanePath.hpp"
 #include "FillRectilinear.hpp"
+#include "FillSmooth.hpp"
+
 
 namespace Slic3r {
 
@@ -29,6 +32,7 @@ Fill::new_from_type(const InfillPattern type)
         case ipRectilinear:         return new FillRectilinear();
         case ipAlignedRectilinear:  return new FillAlignedRectilinear();
         case ipGrid:                return new FillGrid();
+        case ipSmooth:              return new FillSmooth();
         
         case ipTriangles:           return new FillTriangles();
         case ipStars:               return new FillStars();
@@ -108,6 +112,52 @@ Fill::_infill_direction(const Surface &surface) const
 
     out_angle += float(M_PI/2.);
     return direction_t(out_angle, out_shift);
+}
+
+void
+Fill::fill_surface_extrusion(const Surface &surface, const Flow &flow, ExtrusionEntitiesPtr &out, const ExtrusionRole &role)
+{
+    //call fill_surface
+    Polylines polylines = this->fill_surface(surface);
+    if (polylines.empty())
+        return;
+
+    // calculate actual flow from spacing (which might have been adjusted by the infill
+    // pattern generator)
+    Flow goodFlow = flow;
+    if (density == 1) {
+        // if we used the internal flow we're not doing a solid infill
+        // so we can safely ignore the slight variation that might have
+        // been applied to f->spacing()
+    } else {
+        goodFlow = Flow::new_from_spacing(spacing(), flow.nozzle_diameter, flow.height, flow.bridge || use_bridge_flow());
+    }
+
+    // Save into layer.
+    ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
+    /// pass the no_sort attribute to the extrusion path
+    eec->no_sort = this->no_sort();
+    /// add it into the collection
+    out.push_back(eec);
+	/// get the role
+	ExtrusionRole good_role = role;
+	if(good_role == erNone){
+            if (flow.bridge) {
+                good_role = erBridgeInfill;
+            } else if (surface.is_solid()) {
+                good_role = (surface.is_top()) ? erTopSolidInfill : erSolidInfill;
+            } else {
+                good_role = erInternalInfill;
+            }
+	}
+    /// push the path
+    ExtrusionPath templ(good_role);
+    templ.mm3_per_mm    = goodFlow.mm3_per_mm();
+    templ.width         = goodFlow.width;
+    templ.height        = goodFlow.height;
+            
+    eec->append(STDMOVE(polylines), templ);
+    
 }
 
 } // namespace Slic3r

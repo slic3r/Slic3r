@@ -542,6 +542,66 @@ PrintObject::bridge_over_infill()
             */
         }
     }
+	
+    this->replaceSurfaceType( stInternal | stSolid, stInternal | stSolid | stOverBridge, stBridge);
+    this->replaceSurfaceType( stTop, stTop | stOverBridge, stBridge);
+}
+
+void
+PrintObject::replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_replacement, SurfaceType st_under_it)
+{
+    FOREACH_REGION(this->_print, region) {
+        size_t region_id = region - this->_print->regions.begin();
+        
+        FOREACH_LAYER(this, layer_it) {
+            // skip first layer
+            if (layer_it == this->layers.begin()) continue;
+            
+            Layer* layer        = *layer_it;
+            LayerRegion* layerm = layer->regions[region_id];
+            
+            Polygons poly_to_check;
+            // extract the surfaces that might be transformed
+            layerm->fill_surfaces.filter_by_type(st_to_replace, &poly_to_check);
+            Polygons poly_to_replace = poly_to_check;
+                
+            // check the lower layer
+            if (int(layer_it - this->layers.begin()) - 1 >= 0) {
+                const Layer* lower_layer = this->layers[int(layer_it - this->layers.begin()) - 1];
+                    
+                // iterate through regions and collect internal surfaces
+                Polygons lower_internal;
+                FOREACH_LAYERREGION(lower_layer, lower_layerm_it){
+                    (*lower_layerm_it)->fill_surfaces.filter_by_incl_type(st_under_it, &lower_internal);
+                }
+                        
+                // intersect such lower internal surfaces with the candidate solid surfaces
+                poly_to_replace = intersection(poly_to_replace, lower_internal);
+            }
+
+            if (poly_to_replace.empty()) continue;
+            
+            // compute the remaning internal solid surfaces as difference
+            ExPolygons not_expoly_to_replace = diff_ex(poly_to_check, poly_to_replace, true);
+            // build the new collection of fill_surfaces
+            {
+                Surfaces new_surfaces;
+                for (Surface& surface : layerm->fill_surfaces.surfaces) {
+                    if (surface.surface_type != st_to_replace)
+                        new_surfaces.push_back(surface);
+                }
+
+                for (ExPolygon &ex : union_ex(poly_to_replace)) {
+                    new_surfaces.push_back(Surface(st_replacement, ex));
+                }
+                for (ExPolygon &ex : not_expoly_to_replace){
+                    new_surfaces.push_back(Surface(st_to_replace, ex));
+                }
+
+                layerm->fill_surfaces.surfaces = new_surfaces;
+            }
+        }
+    }
 }
 
 // adjust the layer height to the next multiple of the z full-step resolution

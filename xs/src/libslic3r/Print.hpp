@@ -159,6 +159,12 @@ class PrintObject
     void process_external_surfaces();
 
     void bridge_over_infill();
+    /// This method split surfaces (of type st_to_replace) to get only the area where there are surface 
+	/// with falg st_flag_under_it under it and replace the surface type from st_to_replace to st_replacement.
+	/// \param st_to_replace research every surface with this surface type.
+    /// \param st_replacement the new suraface type to set for replaced surface.
+    /// \param st_flag_under_it To be replaced, the st_to_replace surface must have a surface under it with a type that contains the flag st_flag_under_it
+    void replaceSurfaceType(SurfaceType st_to_replace, SurfaceType st_replacement, SurfaceType st_flag_under_it);
     coordf_t adjust_layer_height(coordf_t layer_height) const;
     std::vector<coordf_t> generate_object_layers(coordf_t first_layer_height);
     void _slice();

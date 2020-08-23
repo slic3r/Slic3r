@@ -71,7 +71,7 @@ ExtrusionEntityCollection::reverse()
     for (ExtrusionEntitiesPtr::iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
         // Don't reverse it if it's a loop, as it doesn't change anything in terms of elements ordering
         // and caller might rely on winding order
-        if (!(*it)->is_loop()) (*it)->reverse();
+        if (!(*it)->is_loop() && (*it)->can_reverse()) (*it)->reverse();
     }
     std::reverse(this->entities.begin(), this->entities.end());
 }
@@ -258,6 +258,45 @@ ExtrusionEntityCollection::flatten(bool preserve_ordering) const
     return coll;
 }
 
+/* Returns a vector of chained (new) pointers to all non-collection items contained in this one */
+void
+ExtrusionEntityCollection::flatten_if_sortable(ExtrusionEntityCollection* retval) const
+{
+    if (no_sort){
+        ExtrusionEntityCollection *unsortable = new ExtrusionEntityCollection(*this);
+        retval->append(*unsortable);
+        unsortable->entities.clear();
+        for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
+            if ((*it)->is_collection()) {
+                ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
+                collection->flatten_if_sortable(unsortable);
+            }
+            else {
+                unsortable->append(**it);
+            }
+        }
+    }
+    else{
+        for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
+            if ((*it)->is_collection()) {
+                ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
+                retval->append(collection->flatten_if_sortable().entities);
+            }
+            else {
+                retval->append(**it);
+            }
+        }
+    }
+}
+
+ExtrusionEntityCollection
+ExtrusionEntityCollection::flatten_if_sortable() const
+{
+    ExtrusionEntityCollection coll;
+    this->flatten_if_sortable(&coll);
+    return coll;
+}
+
 double
 ExtrusionEntityCollection::min_mm3_per_mm() const
 {
@@ -272,5 +311,11 @@ ExtrusionEntityCollection::min_mm3_per_mm() const
     }
     return min_mm3_per_mm;
 }
+
+bool
+ExtrusionEntityCollection::is_solid_infill() const
+{
+    return entities.empty()?false:entities.front()->is_solid_infill();
+};
 
 }

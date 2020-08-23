@@ -49,4 +49,10 @@ Surface::is_bridge() const
     return (this->surface_type & stBridge) != 0;
 }
 
+bool
+Surface::is_over_bridge() const
+{
+    return (this->surface_type & stOverBridge) != 0;
+}
+
 }

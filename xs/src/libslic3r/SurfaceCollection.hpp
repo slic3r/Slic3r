@@ -32,6 +32,8 @@ class SurfaceCollection
         return this->filter_by_type({ type });
     };
     SurfacesConstPtr filter_by_type(std::initializer_list<SurfaceType> types) const;
+	/// like filter_by_type but instead of using x==y, it uses (x|y) !=0
+    void filter_by_incl_type(SurfaceType flags_type, Polygons* polygons);
 
     /// deletes all surfaces that match the supplied type.
     void remove_type(const SurfaceType type);

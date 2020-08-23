@@ -68,13 +68,12 @@ class ExtrusionEntityCollection : public ExtrusionEntity
     /// \param preserve_ordering Flag to method that will flatten if and only if the underlying collection is sortable when True (default: False).
     ExtrusionEntityCollection flatten(bool preserve_ordering = false) const;
 
-
     double min_mm3_per_mm() const;
     Polyline as_polyline() const {
         CONFESS("Calling as_polyline() on a ExtrusionEntityCollection");
         return Polyline();
     };
-
+    virtual bool is_solid_infill() const;
     ExtrusionEntitiesPtr::iterator begin() { return entities.begin(); }
     ExtrusionEntitiesPtr::iterator end() { return entities.end(); }
     ExtrusionEntitiesPtr::const_iterator begin() const { return entities.cbegin(); }

@@ -127,9 +127,18 @@ SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types) cons
 void
 SurfaceCollection::filter_by_type(SurfaceType type, Polygons* polygons)
 {
-    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
-        if (surface->surface_type == type)
-            append_to(*polygons, (Polygons)surface->expolygon);
+    for (Surface& s : this->surfaces) {
+        if (s.surface_type == type)
+            append_to(*polygons, (Polygons)s.expolygon);
+    }
+}
+
+void
+SurfaceCollection::filter_by_incl_type(SurfaceType flags_type, Polygons* polygons)
+{
+    for (Surface& s : this->surfaces) {
+        if ( (s.surface_type | flags_type) != 0)
+            append_to(*polygons, (Polygons)s.expolygon);
     }
 }
 

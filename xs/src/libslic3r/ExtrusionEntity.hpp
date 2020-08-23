@@ -98,7 +98,7 @@ public:
             || this->role == erSolidInfill
             || this->role == erTopSolidInfill;
     };
-    bool is_solid_infill() const {
+    virtual bool is_solid_infill() const {
         return this->role == erBridgeInfill
             || this->role == erSolidInfill
             || this->role == erTopSolidInfill;
@@ -158,7 +158,7 @@ class ExtrusionLoop : public ExtrusionEntity
             || this->paths.front().role == erSolidInfill
             || this->paths.front().role == erTopSolidInfill;
     };
-    bool is_solid_infill() const {
+    virtual bool is_solid_infill() const {
         return this->paths.front().role == erBridgeInfill
             || this->paths.front().role == erSolidInfill
             || this->paths.front().role == erTopSolidInfill;

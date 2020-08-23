@@ -11,6 +11,7 @@
 #include "../ExPolygon.hpp"
 #include "../Polyline.hpp"
 #include "../PrintConfig.hpp"
+#include "../Flow.hpp"
 
 namespace Slic3r {
 
@@ -77,7 +78,12 @@ public:
     /// Can this pattern be used for solid infill?
     virtual bool can_solid() const { return false; };
 
-    /// Perform the fill.
+	
+    /// Perform the fill (call fill_surface)
+    virtual void fill_surface_extrusion(const Surface &surface, const Flow &flow, 
+        ExtrusionEntitiesPtr &out, const ExtrusionRole &role);
+
+    /// perform the fill (called by fill_surface_extrusion, call _fill_surface_single)
     virtual Polylines fill_surface(const Surface &surface);
     
     coordf_t spacing() const { return this->_spacing; };
@@ -102,8 +108,9 @@ protected:
         {};
     
     typedef std::pair<float, Point> direction_t;
-    
-    /// The expolygon may be modified by the method to avoid a copy.
+	
+	
+    /// The expolygon may be modified by the method to avoid a copy. (called by fill_surface)
     virtual void _fill_surface_single(
         unsigned int                    thickness_layers,
         const direction_t               &direction, 
