@@ -3253,8 +3253,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("merging with perimeters");
     def->full_label = L("Thin wall merge");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("Allow the external perimeter to merge the thin walls in the path. !!! IF you disable this setting, please explain me why (via help->report issue)"
-        " because I'm going to DELETE this setting next release, as i don't see why someone may want to disable it.");
+    def->tooltip = L("Allow the external perimeter to merge the thin walls in the path."
+                    " You can deactivate it if you use thin walls as a custom support, to reduce adhesion a little bit.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(true));
 
