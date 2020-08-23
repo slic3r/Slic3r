@@ -186,8 +186,8 @@ find -d $macosfolder/local-lib -type d -empty -delete
 # remove wxrc
 rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/bin/wxrc*
 
-# Apparently the symlinks aren't necessary, remove because they are causing the system to choke
-find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni -type l -exec rm {} \; -print
+# Remove all broken symlinks
+find -L $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni -type l -exec rm {} \;
 
 make_plist
 
