@@ -29,7 +29,8 @@ if [ -s $KEY ]; then
     for i in $FILES; do
         filepath=$i  # this is expected to be an absolute path
         tmpfile=$(mktemp)
-        echo put $filepath > $tmpfile
+        echo progress > $tmpfile
+        echo put $filepath >> $tmpfile
 
         sftp -b $tmpfile -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
         result=$?
@@ -37,6 +38,7 @@ if [ -s $KEY ]; then
             echo "Error with SFTP"
             exit $result;
         fi
+        rm $tmpfile
     done
 else
     echo "$KEY is not available, not deploying."

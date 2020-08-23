@@ -62,7 +62,7 @@ namespace nowide {
     ///
     /// \brief  UTF-8 aware setenv, \a key - the variable name, \a value is a new UTF-8 value,
     /// 
-    /// if override is not 0, that the old value is always overridded, otherwise,
+    /// if override is not 0, that the old value is always overridden, otherwise,
     /// if the variable exists it remains unchanged
     ///
     inline int setenv(char const *key,char const *value,int override)
@@ -83,7 +83,7 @@ namespace nowide {
         return -1;
     }
     ///
-    /// \brief Remove enviroment variable \a key
+    /// \brief Remove environment variable \a key
     ///
     inline int unsetenv(char const *key)
     {

@@ -11,11 +11,11 @@ use base 'Wx::Dialog';
 
 sub new {
     my $class = shift;
-    my ($parent,$default_selection) = @_;
-    my $self = $class->SUPER::new($parent, -1, "Additional parts and modifiers detected", wxDefaultPosition, [350,100], wxDEFAULT_DIALOG_STYLE);
+    my ($parent,$default_selection,$default_preserve) = @_;
+    my $self = $class->SUPER::new($parent, -1, "Reload options", wxDefaultPosition, [350,100], wxDEFAULT_DIALOG_STYLE);
     
     # label
-    my $text = Wx::StaticText->new($self, -1, "Additional parts and modifiers are loaded in the current model. \n\nHow do you want to proceed?", wxDefaultPosition, wxDefaultSize);
+    my $text_additional = Wx::StaticText->new($self, -1, "Handling of additional parts and modifiers:", wxDefaultPosition, wxDefaultSize);
 
     # selector
     $self->{choice} = my $choice = Wx::Choice->new($self, -1, wxDefaultPosition, wxDefaultSize, []);
@@ -24,14 +24,23 @@ sub new {
     $choice->Append("Reload main file, discard added parts & modifiers");
     $choice->SetSelection($default_selection);
     
-    # checkbox
-    $self->{checkbox} = my $checkbox = Wx::CheckBox->new($self, -1, "Don't ask again");
+    # label
+    my $text_trafo = Wx::StaticText->new($self, -1, "Handling of transformations made inside Slic3r:", wxDefaultPosition, wxDefaultSize);
+    
+    # cb_Transformation
+    $self->{cb_Transformation} = my $cb_Transformation = Wx::CheckBox->new($self, -1, "Preserve transformations");
+    $cb_Transformation->SetValue($default_preserve);
+    
+    # cb_HideDialog
+    $self->{cb_HideDialog} = my $cb_HideDialog = Wx::CheckBox->new($self, -1, "Don't ask again");
 
     my $vsizer = Wx::BoxSizer->new(wxVERTICAL);
     my $hsizer = Wx::BoxSizer->new(wxHORIZONTAL);
-    $vsizer->Add($text, 0, wxEXPAND | wxALL, 10);
-    $vsizer->Add($choice, 0, wxEXPAND | wxALL, 10);
-    $hsizer->Add($checkbox, 1, wxEXPAND | wxALL, 10);
+    $vsizer->Add($text_additional, 0, wxEXPAND | wxALL, 10);
+    $vsizer->Add($choice, 0, wxEXPAND | wxLEFT | wxBOTTOM | wxRIGHT, 10);
+    $vsizer->Add($text_trafo, 0, wxEXPAND | wxALL, 10);
+    $vsizer->Add($cb_Transformation, 0, wxEXPAND | wxLEFT | wxBOTTOM | wxRIGHT, 10);
+    $hsizer->Add($cb_HideDialog, 1, wxEXPAND | wxALL, 10);
     $hsizer->Add($self->CreateButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, 10);
     $vsizer->Add($hsizer, 0, wxEXPAND | wxALL, 0);
     
@@ -48,13 +57,17 @@ sub new {
     return $self;
 }
 
-sub GetSelection {
+sub GetAdditionalOption {
     my ($self) = @_;
     return $self->{choice}->GetSelection;
 }
+sub GetPreserveTrafo {
+    my ($self) = @_;
+    return $self->{cb_Transformation}->GetValue;
+}
 sub GetHideOnNext {
     my ($self) = @_;
-    return $self->{checkbox}->GetValue;
+    return $self->{cb_HideDialog}->GetValue;
 }
 
 1;

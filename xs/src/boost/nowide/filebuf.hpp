@@ -396,7 +396,7 @@ namespace nowide {
     };
     
     ///
-    /// \brief Convinience typedef
+    /// \brief Convenience typedef
     ///
     typedef basic_filebuf<char> filebuf;
     

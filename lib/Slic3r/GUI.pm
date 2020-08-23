@@ -96,7 +96,8 @@ our $Settings = {
         nudge_val => 1,
         rotation_controls => 'z',
         reload_hide_dialog => 0,
-        reload_behavior => 0
+        reload_behavior => 0,
+        reload_preserve_trafo => 1
     },
 };
 

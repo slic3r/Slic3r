@@ -262,7 +262,7 @@ void Plate2D::mouse_up(wxMouseEvent& e) {
         try {
             if (this->drag_object.obj != -1 && this->drag_object.inst != -1) this->on_instances_moved();
         } catch (std::bad_function_call &ex) {
-            Slic3r::Log::error(LogChannel, L"On_instances_moved was not intialized to a function.");
+            Slic3r::Log::error(LogChannel, L"On_instances_moved was not initialized to a function.");
         }
         this->drag_start_pos = wxPoint(-1, -1);
         this->drag_object = {-1, -1};

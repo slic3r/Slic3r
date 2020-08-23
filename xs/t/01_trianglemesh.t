@@ -3,8 +3,8 @@
 use strict;
 use warnings;
 
+use Test::More;
 use Slic3r::XS;
-use Test::More tests => 49;
 
 use constant Z => 2;
 
@@ -31,6 +31,8 @@ my $cube = {
         is_deeply $m2->vertices, $cube->{vertices}, 'cloned vertices arrayref roundtrip';
         is_deeply $m2->facets, $cube->{facets}, 'cloned facets arrayref roundtrip';
         $m2->scale(3);  # check that it does not affect $m
+        ok $m2->stats->{volume} != $m->stats->{volume}, 'cloned transform not affecting original'
+
     }
     
     {
@@ -75,6 +77,19 @@ my $cube = {
         my $meshes = $m->split;
         is scalar(@$meshes), 2, 'split';
     }
+}
+
+{
+    my $m = Slic3r::TriangleMesh->new;
+    $m->ReadFromPerl($cube->{vertices}, $cube->{facets});
+    $m->repair;
+
+    my $trafo = Slic3r::TransformationMatrix->new;
+    $trafo->set_scale_uni(2);
+
+    $m->transform($trafo);
+
+    ok abs($m->stats->{volume} - 40*40*40) < 1E-2, 'general purpose transformation';
 }
 
 {
@@ -137,5 +152,7 @@ my $cube = {
         is $lower->facets_count, 2+12+6, 'lower mesh has the expected number of facets';
     }
 }
+
+done_testing();
 
 __END__

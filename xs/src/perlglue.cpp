@@ -60,6 +60,7 @@ REGISTER_CLASS(SLAPrint, "SLAPrint");
 REGISTER_CLASS(SlicingAdaptive, "SlicingAdaptive");
 REGISTER_CLASS(Surface, "Surface");
 REGISTER_CLASS(SurfaceCollection, "Surface::Collection");
+REGISTER_CLASS(TransformationMatrix, "TransformationMatrix");
 REGISTER_CLASS(TriangleMesh, "TriangleMesh");
 REGISTER_CLASS(GLVertexArray, "GUI::_3DScene::GLVertexArray");
 

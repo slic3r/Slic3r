@@ -43,7 +43,7 @@ fi
 rm -rf $WD/_tmp
 mkdir -p $WD/_tmp
 
-# Set  the application folder infomation.
+# Set the application folder information.
 appfolder="$WD/${appname}"
 archivefolder=$appfolder
 resourcefolder=$appfolder

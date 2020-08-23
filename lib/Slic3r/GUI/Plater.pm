@@ -1042,14 +1042,29 @@ sub undo {
 
     my $type = $operation->{type};
 
-    if ($type eq "ROTATE") {
+    if ($type eq "TRANSFORM") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $trafo = $operation->{attributes}->[0];
+        $self->transform($trafo->inverse(), 'true'); # Apply inverse transformation.
+
+    } elsif ($type eq "ROTATE_Z") {
         my $object_id = $operation->{object_identifier};
         my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
 
         my $angle = $operation->{attributes}->[0];
-        my $axis = $operation->{attributes}->[1];
-        $self->rotate(-1 * $angle, $axis, 'true'); # Apply inverse transformation.
+        $self->rotate(-1 * $angle, Z, 'true'); # Apply inverse transformation.
+
+    } elsif ($type eq "SCALE_UNIFORM") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $new_scale = $operation->{attributes}->[0];
+        $self->changescale(undef, undef, $new_scale, 'true');
 
     } elsif ($type eq "INCREASE") {
         my $object_id = $operation->{object_identifier};
@@ -1067,14 +1082,6 @@ sub undo {
         my $copies = $operation->{attributes}->[0];
         $self->increase($copies, 'true');
 
-    } elsif ($type eq "MIRROR") {
-        my $object_id = $operation->{object_identifier};
-        my $obj_idx = $self->get_object_index($object_id);
-        $self->select_object($obj_idx);
-
-        my $axis = $operation->{attributes}->[0];
-        $self->mirror($axis, 'true');
-
     } elsif ($type eq "REMOVE") {
         my $_model = $operation->{attributes}->[0];
         $self->load_model_objects(@{$_model->objects});
@@ -1091,16 +1098,6 @@ sub undo {
         $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
         $self->{object_identifier}--;
         $self->{objects}->[-1]->identifier($operation->{object_identifier}); # Add the original assigned identifier.
-
-    } elsif ($type eq "CHANGE_SCALE") {
-        my $object_id = $operation->{object_identifier};
-        my $obj_idx = $self->get_object_index($object_id);
-        $self->select_object($obj_idx);
-
-        my $axis = $operation->{attributes}->[0];
-        my $tosize = $operation->{attributes}->[1];
-        my $saved_scale = $operation->{attributes}->[3];
-        $self->changescale($axis, $tosize, $saved_scale, 'true');
 
     } elsif ($type eq "RESET") {
         # Revert changes to the plater object identifier. It's modified when adding new objects only not when undo/redo is executed.
@@ -1145,14 +1142,29 @@ sub redo {
 
     my $type = $operation->{type};
 
-    if ($type eq "ROTATE") {
+    if ($type eq "TRANSFORM") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $trafo = $operation->{attributes}->[0];
+        $self->transform($trafo, 'true'); # Reapply transformation.
+
+    } elsif ($type eq "ROTATE_Z") {
         my $object_id = $operation->{object_identifier};
         my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
 
         my $angle = $operation->{attributes}->[0];
-        my $axis = $operation->{attributes}->[1];
-        $self->rotate($angle, $axis, 'true');
+        $self->rotate($angle, Z, 'true'); # Reapply transformation.
+
+    } elsif ($type eq "SCALE_UNIFORM") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $new_scale = $operation->{attributes}->[1];
+        $self->changescale(undef, undef, $new_scale, 'true');
 
     } elsif ($type eq "INCREASE") {
         my $object_id = $operation->{object_identifier};
@@ -1169,14 +1181,6 @@ sub redo {
 
         my $copies = $operation->{attributes}->[0];
         $self->decrease($copies, 'true');
-
-    } elsif ($type eq "MIRROR") {
-        my $object_id = $operation->{object_identifier};
-        my $obj_idx = $self->get_object_index($object_id);
-        $self->select_object($obj_idx);
-
-        my $axis = $operation->{attributes}->[0];
-        $self->mirror($axis, 'true');
 
     } elsif ($type eq "REMOVE") {
         my $object_id = $operation->{object_identifier};
@@ -1199,16 +1203,6 @@ sub redo {
             $self->{objects}->[-$obj_count]->identifier($obj_identifiers_start++);
             $obj_count--;
         }
-    } elsif ($type eq "CHANGE_SCALE") {
-        my $object_id = $operation->{object_identifier};
-        my $obj_idx = $self->get_object_index($object_id);
-        $self->select_object($obj_idx);
-
-        my $axis = $operation->{attributes}->[0];
-        my $tosize = $operation->{attributes}->[1];
-        my $old_scale = $operation->{attributes}->[2];
-        $self->changescale($axis, $tosize, $old_scale, 'true');
-
     } elsif ($type eq "RESET") {
         $self->reset('true');
     } elsif ($type eq "ADD") {
@@ -1506,7 +1500,7 @@ sub reset {
     my $current_model = $self->{model}->clone;
 
     if (!defined $dont_push) {
-        # Get the identifiers of the curent model objects.
+        # Get the identifiers of the current model objects.
         my $objects_identifiers = [];
         for (my $i = 0; $i <= $#{$self->{objects}}; $i++){
             push @{$objects_identifiers}, $self->{objects}->[$i]->identifier;
@@ -1533,12 +1527,8 @@ sub increase {
     for my $i (1..$copies) {
         $instance = $model_object->add_instance(
             offset          => Slic3r::Pointf->new(map 10+$_, @{$instance->offset}),
-            z_translation   => $instance->z_translation,
             scaling_factor  => $instance->scaling_factor,
-            scaling_vector  => $instance->scaling_vector,
             rotation        => $instance->rotation,
-            x_rotation      => $instance->x_rotation,
-            y_rotation      => $instance->y_rotation,
         );
         $self->{print}->objects->[$obj_idx]->add_copy($instance->offset);
     }
@@ -1638,23 +1628,38 @@ sub rotate_face {
     return if !defined $normal;
     my $axis = $dlg->SelectedAxis;
     return if !defined $axis;
-    
-    # Actual math to rotate
-    my $angleToXZ = atan2($normal->y(),$normal->x());
-    my $angleToZ = acos(-$normal->z());
-    $self->rotate(-rad2deg($angleToXZ),Z);
-    $self->rotate(rad2deg($angleToZ),Y);
-    
+
+    my $axis_vec = Slic3r::Pointf3->new(0,0,0);
     if($axis == Z){
-        $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-2));
+        $axis_vec->set_z(-1);
     } else {
         if($axis == X){
-            $self->rotate(90,Y);
+            $axis_vec->set_x(-1);
         } else {
-            $self->rotate(90,X);
+            $axis_vec->set_y(-1);
         }
-        $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-3));
     }
+
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    my $model_instance = $model_object->instances->[0];
+
+    $model_object->transform_by_instance($model_instance, 1);
+
+    $model_object->reset_undo_trafo();
+    $model_object->rotate_vec_to_vec($normal,$axis_vec);
+
+    # realign object to Z = 0
+    $model_object->align_to_ground;
+    $self->make_thumbnail($obj_idx);
+
+    $model_object->update_bounding_box;
+    # update print and start background processing
+    $self->{print}->add_model_object($model_object, $obj_idx);
+
+    $self->selection_changed;  # refresh info (size etc.)
+    $self->on_model_change;
+    
+    $self->add_undo_operation("TRANSFORM", $object->identifier, $model_object->get_undo_trafo());
 }
 
 sub rotate {
@@ -1680,6 +1685,8 @@ sub rotate {
         $angle = Wx::GetTextFromUser("Enter the rotation angle:", "Rotate around $axis_name axis",
             $default, $self);
         return if !$angle || $angle !~ /^-?\d*(?:\.\d*)?$/ || $angle == -1;
+        
+        $angle = $angle - $default;
     }
     
     $self->stop_background_process;
@@ -1688,24 +1695,30 @@ sub rotate {
         my $new_angle = deg2rad($angle);
         $_->set_rotation($_->rotation + $new_angle) for @{ $model_object->instances };
         $object->transform_thumbnail($self->{model}, $obj_idx);
+
+        if (!defined $dont_push) {
+            $self->add_undo_operation("ROTATE_Z", $object->identifier, $angle);
+        }
     } else {
         # rotation around X and Y needs to be performed on mesh
         # so we first apply any Z rotation
         $model_object->transform_by_instance($model_instance, 1);
+
+        $model_object->reset_undo_trafo();
         $model_object->rotate(deg2rad($angle), $axis);
         
         # realign object to Z = 0
-        $model_object->center_around_origin;
+        $model_object->align_to_ground;
         $self->make_thumbnail($obj_idx);
+
+        if (!defined $dont_push) {
+            $self->add_undo_operation("TRANSFORM", $object->identifier, $model_object->get_undo_trafo());
+        }
     }
 
     $model_object->update_bounding_box;
     # update print and start background processing
     $self->{print}->add_model_object($model_object, $obj_idx);
-
-    if (!defined $dont_push) {
-        $self->add_undo_operation("ROTATE", $object->identifier, $angle, $axis);
-    }
 
     $self->selection_changed;  # refresh info (size etc.)
     $self->on_model_change;
@@ -1723,11 +1736,11 @@ sub mirror {
     # apply Z rotation before mirroring
     $model_object->transform_by_instance($model_instance, 1);
     
+    $model_object->reset_undo_trafo();
     $model_object->mirror($axis);
-    $model_object->update_bounding_box;
     
     # realign object to Z = 0
-    $model_object->center_around_origin;
+    $model_object->align_to_ground;
     $self->make_thumbnail($obj_idx);
         
     # update print and start background processing
@@ -1735,7 +1748,38 @@ sub mirror {
     $self->{print}->add_model_object($model_object, $obj_idx);
 
     if (!defined $dont_push) {
-        $self->add_undo_operation("MIRROR", $object->identifier, $axis);
+        $self->add_undo_operation("TRANSFORM", $object->identifier, $model_object->get_undo_trafo());
+    }
+
+    $self->selection_changed;  # refresh info (size etc.)
+    $self->on_model_change;
+}
+
+sub transform {
+    my ($self, $trafo, $dont_push) = @_;
+    
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+    
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    my $model_instance = $model_object->instances->[0];
+    
+    # apply Z rotation before mirroring
+    $model_object->transform_by_instance($model_instance, 1);
+    
+    $model_object->apply_transformation($trafo);
+    $model_object->update_bounding_box;
+    
+    # realign object to Z = 0
+    $model_object->align_to_ground;
+    $self->make_thumbnail($obj_idx);
+        
+    # update print and start background processing
+    $self->stop_background_process;
+    $self->{print}->add_model_object($model_object, $obj_idx);
+
+    if (!defined $dont_push) {
+        $self->add_undo_operation("TRANSFORM", $object->identifier, $trafo);
     }
 
     $self->selection_changed;  # refresh info (size etc.)
@@ -1791,9 +1835,17 @@ sub changescale {
         
         my $versor = [1,1,1];
         $versor->[$axis] = $scale/100;
+
+        $model_object->reset_undo_trafo();
         $model_object->scale_xyz(Slic3r::Pointf3->new(@$versor));
+
         # object was already aligned to Z = 0, so no need to realign it
         $self->make_thumbnail($obj_idx);
+
+        # Add the new undo operation.
+        if (!defined $dont_push) {
+            $self->add_undo_operation("TRANSFORM", $object->identifier, $model_object->get_undo_trafo());
+        }
     } else {
         if (!defined $saved_scale) {
             if ($tosize) {
@@ -1828,12 +1880,13 @@ sub changescale {
         $object->transform_thumbnail($self->{model}, $obj_idx);
 
         $scale *= 100;
+
+        # Add the new undo operation.
+        if (!defined $dont_push) {
+            $self->add_undo_operation("SCALE_UNIFORM", $object->identifier, $old_scale, $scale);
+        }
     }
 
-    # Add the new undo operation.
-    if (!defined $dont_push) {
-        $self->add_undo_operation("CHANGE_SCALE", $object->identifier, $axis, $tosize, $scale, $old_scale);
-    }
 
     $model_object->update_bounding_box;
     
@@ -1876,7 +1929,7 @@ sub split_object {
     
     $self->pause_background_process;
 
-    # Save the curent model object for undo/redo operataions.
+    # Save the current model object for undo/redo operataions.
     my $org_object_model = Slic3r::Model->new;
     $org_object_model->add_object($current_model_object);
 
@@ -1902,7 +1955,7 @@ sub split_object {
     # remove the original object before spawning the object_loaded event, otherwise 
     # we'll pass the wrong $obj_idx to it (which won't be recognized after the
     # thumbnail thread returns)
-    $self->remove($obj_idx, 'true'); # Don't push to the undo stack it's considered a split opeation not a remove one.
+    $self->remove($obj_idx, 'true'); # Don't push to the undo stack it's considered a split operation not a remove one.
     $current_object = $obj_idx = undef;
 
     # Save the object identifiers used in undo/redo operations.
@@ -2302,8 +2355,9 @@ sub on_export_completed {
         $estimator->parse_file($self->{export_gcode_output_file});
         my $time = $estimator->time;
         $self->{print_info_tim}->SetLabel(sprintf(
-            "%d minutes and %d seconds",
-            int($time / 60),
+            "%d hours, %d minutes and %d seconds",
+            int($time / 3600),
+            int(($time % 3600) / 60),
             int($time % 60),
         ));
     }
@@ -2481,51 +2535,38 @@ sub export_stl {
 sub reload_from_disk {
     my ($self) = @_;
     
-    my ($obj_idx, $object) = $self->selected_object;
+    my ($obj_idx, $org_obj_plater) = $self->selected_object;
     return if !defined $obj_idx;
     
-    if (!$object->input_file) {
+    if (!$org_obj_plater->input_file) {
         Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because it isn't referenced to its input file any more. This is the case after performing operations like cut or split.");
         return;
     }
-    if (!-e $object->input_file) {
+    if (!-e $org_obj_plater->input_file) {
         Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the file doesn't exist anymore on the disk.");
         return;
     }
-    
-    # Only reload the selected object and not all objects from the input file.
-    my @new_obj_idx = $self->load_file($object->input_file, $object->input_file_obj_idx);
-    if (!@new_obj_idx) {
-        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the new file doesn't contain the object.");
-        return;
-    }
-
-    my $org_obj = $self->{model}->objects->[$obj_idx];
-
-    # check if the object is dependant of more than one file
-    my $org_obj_has_modifiers=0;
-    for my $i (0..($org_obj->volumes_count-1)) {
-        if ($org_obj->input_file ne $org_obj->get_volume($i)->input_file) {
-            $org_obj_has_modifiers=1;
-            last;
-        }
-    }
 
     my $reload_behavior = $Slic3r::GUI::Settings->{_}{reload_behavior};
+    my $reload_preserve_trafo = $Slic3r::GUI::Settings->{_}{reload_preserve_trafo};
 
     # ask the user how to proceed, if option is selected in preferences
-    if ($org_obj_has_modifiers && !$Slic3r::GUI::Settings->{_}{reload_hide_dialog}) {
-        my $dlg = Slic3r::GUI::ReloadDialog->new(undef,$reload_behavior);
+    if (!$Slic3r::GUI::Settings->{_}{reload_hide_dialog}) {
+        my $dlg = Slic3r::GUI::ReloadDialog->new(undef,$reload_behavior,$reload_preserve_trafo);
         my $res = $dlg->ShowModal;
         if ($res==wxID_CANCEL) {
-            $self->remove($_) for @new_obj_idx;
             $dlg->Destroy;
             return;
         }
-        $reload_behavior = $dlg->GetSelection;
+        $reload_behavior = $dlg->GetAdditionalOption;
+        $reload_preserve_trafo = $dlg->GetPreserveTrafo;
         my $save = 0;
         if ($reload_behavior != $Slic3r::GUI::Settings->{_}{reload_behavior}) {
             $Slic3r::GUI::Settings->{_}{reload_behavior} = $reload_behavior;
+            $save = 1;
+        }
+        if ($reload_preserve_trafo != $Slic3r::GUI::Settings->{_}{reload_preserve_trafo}) {
+            $Slic3r::GUI::Settings->{_}{reload_preserve_trafo} = $reload_preserve_trafo;
             $save = 1;
         }
         if ($dlg->GetHideOnNext) {
@@ -2535,6 +2576,15 @@ sub reload_from_disk {
         Slic3r::GUI->save_settings if $save;
         $dlg->Destroy;
     }
+    
+    # Only reload the selected object and not all objects from the input file.
+    my @new_obj_idx = $self->load_file($org_obj_plater->input_file, $org_obj_plater->input_file_obj_idx);
+    if (!@new_obj_idx) {
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the new file doesn't contain the object.");
+        return;
+    }
+
+    my $org_obj = my $new_obj = $self->{model}->objects->[$obj_idx];
 
     my $volume_unmatched=0;
 
@@ -2543,6 +2593,7 @@ sub reload_from_disk {
         $new_obj->clear_instances;
         $new_obj->add_instance($_) for @{$org_obj->instances};
         $new_obj->config->apply($org_obj->config);
+        $new_obj->set_trafo_obj($org_obj->get_trafo_obj()) if $reload_preserve_trafo;
         
         my $new_vol_idx = 0;
         my $org_vol_idx = 0;
@@ -2551,10 +2602,12 @@ sub reload_from_disk {
         
         while ($new_vol_idx<=$new_vol_count-1) {
             if (($org_vol_idx<=$org_vol_count-1) && ($org_obj->get_volume($org_vol_idx)->input_file eq $new_obj->input_file)) {
-                # apply config from the matching volumes
+                # apply config and trafo from the matching volumes
+                $new_obj->get_volume($new_vol_idx)->apply_transformation($org_obj->get_volume($org_vol_idx)->get_transformation) if $reload_preserve_trafo;
                 $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume($org_vol_idx++)->config);
             } else {
-                # reload has more volumes than original (first file), apply config from the first volume
+                # reload has more volumes than original (first file), apply config and trafo from the parent object
+                $new_obj->get_volume($new_vol_idx)->apply_transformation($org_obj->get_trafo_obj()) if $reload_preserve_trafo;
                 $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume(0)->config);
                 $volume_unmatched=1;
             }
@@ -2566,10 +2619,11 @@ sub reload_from_disk {
             $volume_unmatched=1;
         }
         while ($org_vol_idx<=$org_vol_count-1) {
+            my $org_volume = $org_obj->get_volume($org_vol_idx);
+
             if ($reload_behavior==1) { # Reload behavior: copy
-                my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx));
-                $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
-                $new_volume->mesh->translate(@{$new_obj->origin_translation});
+
+                my $new_volume = $new_obj->add_volume($org_volume);
                 if ($new_volume->name =~ m/link to path\z/) {
                     my $new_name = $new_volume->name;
                     $new_name =~ s/ - no link to path$/ - copied/;
@@ -2577,35 +2631,37 @@ sub reload_from_disk {
                 }elsif(!($new_volume->name =~ m/copied\z/)) {
                     $new_volume->set_name($new_volume->name . " - copied");
                 }
+
             }else{ # Reload behavior: Reload all, also fallback solution if ini was manually edited to a wrong value
-                if ($org_obj->get_volume($org_vol_idx)->input_file) {
-                    my $model = eval { Slic3r::Model->read_from_file($org_obj->get_volume($org_vol_idx)->input_file) };
+
+                if ($org_volume->input_file) {
+                    my $model = eval { Slic3r::Model->read_from_file($org_volume->input_file) };
                     if ($@) {
-                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
-                    }elsif ($org_obj->get_volume($org_vol_idx)->input_file_obj_idx > ($model->objects_count-1)) {
+                        $org_volume->set_input_file("");
+                    }elsif ($org_volume->input_file_obj_idx > ($model->objects_count-1)) {
                         # Object Index for that part / modifier not found in current version of the file
-                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                        $org_volume->set_input_file("");
                     }else{
-                        my $prt_mod_obj = $model->objects->[$org_obj->get_volume($org_vol_idx)->input_file_obj_idx];
-                        if ($org_obj->get_volume($org_vol_idx)->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
+                        my $prt_mod_obj = $model->objects->[$org_volume->input_file_obj_idx];
+                        if ($org_volume->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
                             # Volume Index for that part / modifier not found in current version of the file
-                            $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                            $org_volume->set_input_file("");
                         }else{
                             # all checks passed, load new mesh and copy metadata
-                            my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_obj->get_volume($org_vol_idx)->input_file_vol_idx));
-                            $new_volume->set_input_file($org_obj->get_volume($org_vol_idx)->input_file);
-                            $new_volume->set_input_file_obj_idx($org_obj->get_volume($org_vol_idx)->input_file_obj_idx);
-                            $new_volume->set_input_file_vol_idx($org_obj->get_volume($org_vol_idx)->input_file_vol_idx);
-                            $new_volume->config->apply($org_obj->get_volume($org_vol_idx)->config);
-                            $new_volume->set_modifier($org_obj->get_volume($org_vol_idx)->modifier);
-                            $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                            my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_volume->input_file_vol_idx));
+
+                            $new_volume->apply_transformation($org_volume->get_transformation()) if $reload_preserve_trafo;
+
+                            $new_volume->set_input_file($org_volume->input_file);
+                            $new_volume->set_input_file_obj_idx($org_volume->input_file_obj_idx);
+                            $new_volume->set_input_file_vol_idx($org_volume->input_file_vol_idx);
+                            $new_volume->config->apply($org_volume->config);
+                            $new_volume->set_modifier($org_volume->modifier);
                         }
                     }
                 }
-                if (!$org_obj->get_volume($org_vol_idx)->input_file) {
-                    my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx)); # error -> copy old mesh
-                    $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
-                    $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                if (!$org_volume->input_file) {
+                    my $new_volume = $new_obj->add_volume($org_volume); # error -> copy old mesh
                     if ($new_volume->name =~ m/copied\z/) {
                         my $new_name = $new_volume->name;
                         $new_name =~ s/ - copied$/ - no link to path/;
@@ -2618,6 +2674,7 @@ sub reload_from_disk {
             }
             $org_vol_idx++;
         }
+        $new_obj->center_around_origin();
     }
     $self->remove($obj_idx);
     
@@ -3387,9 +3444,7 @@ sub make_thumbnail {
     my $mesh = $model->objects->[$obj_idx]->raw_mesh;
     # Apply x, y rotations and scaling vector in case of reading a 3MF model object.
     my $model_instance = $model->objects->[$obj_idx]->instances->[0];
-    $mesh->rotate_x($model_instance->x_rotation);
-    $mesh->rotate_y($model_instance->y_rotation);
-    $mesh->scale_xyz($model_instance->scaling_vector);
+    $mesh->transform($model_instance->additional_trafo);
 
     if ($mesh->facets_count <= 5000) {
         # remove polygons with area <= 1mm

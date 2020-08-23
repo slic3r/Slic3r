@@ -3,13 +3,14 @@
 use strict;
 use warnings;
 
-use Slic3r::XS;
 use Test::More;
 use IO::Uncompress::Unzip qw(unzip $UnzipError) ;
 use Cwd qw(abs_path);
 use File::Basename qw(dirname);
 
 require Encode;
+
+use Slic3r::XS;
 
 # Removes '\n' and '\r\n' from a string.
 sub clean {
@@ -73,19 +74,14 @@ my $expected_relationships = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n"
 
     # Check the affine transformation matrix decomposition.
     # Check translation.
-    cmp_ok($model->get_object(0)->get_instance(0)->offset()->x(), '<=', 0.0001, 'Test 2: X translation check.');
-    cmp_ok($model->get_object(0)->get_instance(0)->offset()->y(), '<=', 0.0001, 'Test 2: Y translation check.');
-    cmp_ok($model->get_object(0)->get_instance(0)->z_translation() - 0.0345364, '<=', 0.0001, 'Test 2: Z translation check.');
+    cmp_ok(abs($model->get_object(0)->get_instance(0)->offset()->x() + 76.4989), '<=', 0.0001, 'Test 2: X translation check.');
+    cmp_ok(abs($model->get_object(0)->get_instance(0)->offset()->y() + 142.501), '<=', 0.0001, 'Test 2: Y translation check.');
 
     # Check scale.
-    cmp_ok($model->get_object(0)->get_instance(0)->scaling_vector()->x() - 25.4, '<=', 0.0001, 'Test 2: X scale check.');
-    cmp_ok($model->get_object(0)->get_instance(0)->scaling_vector()->y() - 25.4, '<=', 0.0001, 'Test 2: Y scale check.');
-    cmp_ok($model->get_object(0)->get_instance(0)->scaling_vector()->z() - 25.4, '<=', 0.0001, 'Test 2: Z scale check.');
+    cmp_ok(abs($model->get_object(0)->get_instance(0)->scaling_factor() - 25.4), '<=', 0.0001, 'Test 2: scale check.');
 
-    # Check X, Y, & Z rotation.
-    cmp_ok($model->get_object(0)->get_instance(0)->x_rotation() - 6.2828, '<=', 0.0001, 'Test 2: X rotation check.');
-    cmp_ok($model->get_object(0)->get_instance(0)->y_rotation() - 6.2828, '<=', 0.0001, 'Test 2: Y rotation check.');
-    cmp_ok($model->get_object(0)->get_instance(0)->rotation(), '<=', 0.0001, 'Test 2: Z rotation check.');
+    # Check Z rotation.
+    cmp_ok(abs($model->get_object(0)->get_instance(0)->rotation()), '<=', 0.0001, 'Test 2: Z rotation check.');
 
 }
 

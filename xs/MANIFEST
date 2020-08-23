@@ -163,6 +163,8 @@ src/libslic3r/SurfaceCollection.cpp
 src/libslic3r/SurfaceCollection.hpp
 src/libslic3r/SVG.cpp
 src/libslic3r/SVG.hpp
+src/libslic3r/TransformationMatrix.cpp
+src/libslic3r/TransformationMatrix.hpp
 src/libslic3r/TriangleMesh.cpp
 src/libslic3r/TriangleMesh.hpp
 src/libslic3r/utils.cpp
@@ -260,6 +262,7 @@ xsp/SlicingAdaptive.xsp
 xsp/SupportMaterial.xsp
 xsp/Surface.xsp
 xsp/SurfaceCollection.xsp
+xsp/TransformationMatrix.xsp
 xsp/TriangleMesh.xsp
 xsp/typemap.xspt
 xsp/XS.xsp

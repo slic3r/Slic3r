@@ -39,7 +39,7 @@ sub process {
             # This is a print move.
             my $F = $args->{F} // $reader->F;
             if ($F != $self->_last_print_F || ($F == $self->_last_print_F && $self->_advance == 0)) {
-                # We are setting a (potentially) new speed or a discharge event happend since the last speed change, so we calculate the new advance amount.
+                # We are setting a (potentially) new speed or a discharge event happened since the last speed change, so we calculate the new advance amount.
             
                 # First calculate relative flow rate (mm of filament over mm of travel)
                 my $rel_flow_rate = $info->{dist_E} / $info->{dist_XY};

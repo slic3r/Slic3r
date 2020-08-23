@@ -129,19 +129,19 @@ private:
 };  //basic_stackstring
 
 ///
-/// Convinience typedef
+/// Convenience typedef
 ///
 typedef basic_stackstring<wchar_t,char,256> wstackstring;
 ///
-/// Convinience typedef
+/// Convenience typedef
 ///
 typedef basic_stackstring<char,wchar_t,256> stackstring;
 ///
-/// Convinience typedef
+/// Convenience typedef
 ///
 typedef basic_stackstring<wchar_t,char,16> wshort_stackstring;
 ///
-/// Convinience typedef
+/// Convenience typedef
 ///
 typedef basic_stackstring<char,wchar_t,16> short_stackstring;
 

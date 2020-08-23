@@ -215,10 +215,14 @@ ModelMaterial::attributes()
     void set_layer_height_spline(LayerHeightSpline* spline)
         %code%{ THIS->layer_height_spline = *spline; %};
 
-    Ref<Pointf3> origin_translation()
-        %code%{ RETVAL = &THIS->origin_translation; %};
-    void set_origin_translation(Pointf3* point)
-        %code%{ THIS->origin_translation = *point; %};
+    Clone<Pointf3> origin_translation()
+        %code%{ RETVAL = THIS->origin_translation(); %};
+
+    Clone<TransformationMatrix> get_trafo_obj()
+        %code%{ RETVAL = THIS->get_trafo_obj(); %};
+
+    void set_trafo_obj(TransformationMatrix* trafo)
+        %code%{ THIS->set_trafo_obj(*trafo); %};
     
     bool needed_repair() const;
     int materials_count() const;
@@ -228,8 +232,17 @@ ModelMaterial::attributes()
     void translate(double x, double y, double z);
     void scale_xyz(Pointf3* versor)
         %code{% THIS->scale(*versor); %};
-    void rotate(float angle, Axis axis);
+    void rotate(double angle, Axis axis);
+    void rotate_vec_to_vec(Pointf3* origin, Pointf3* target)
+        %code{% THIS->rotate(*origin, *target); %};
     void mirror(Axis axis);
+    void apply_transformation(TransformationMatrix* trafo)
+        %code{% THIS->apply_transformation(*trafo); %};
+
+    void reset_undo_trafo();
+    Clone<TransformationMatrix> get_undo_trafo()
+        %code{% RETVAL = THIS->get_undo_trafo(); %};
+
     void transform_by_instance(ModelInstance* instance, bool dont_translate = false)
         %code{% THIS->transform_by_instance(*instance, dont_translate); %};
     
@@ -272,6 +285,9 @@ ModelMaterial::attributes()
     void set_input_file_vol_idx(int vol_idx)
         %code%{ THIS->input_file_vol_idx = vol_idx; %};
 
+    Clone<TransformationMatrix> get_transformation()
+        %code%{ RETVAL = THIS->trafo; %};
+
     t_model_material_id material_id();
     void set_material_id(t_model_material_id material_id)
         %code%{ THIS->material_id(material_id); %};
@@ -280,17 +296,31 @@ ModelMaterial::attributes()
     Clone<BoundingBoxf3> bounding_box()
         %code%{
             try {
-                RETVAL = THIS->mesh.bounding_box();
+                RETVAL = THIS->bounding_box();
             } catch (std::exception& e) {
                 croak("%s", e.what());
             }
         %};
-    
+
+    void translate(double x, double y, double z);
+    void scale_xyz(Pointf3* versor)
+        %code{% THIS->scale(*versor); %};
+    void rotate(double angle, Axis axis);
+
+    void apply_transformation(TransformationMatrix* trafo)
+        %code{% THIS->apply_transformation(*trafo); %};
+
     Ref<DynamicPrintConfig> config()
         %code%{ RETVAL = &THIS->config; %};
     Ref<TriangleMesh> mesh()
         %code%{ RETVAL = &THIS->mesh; %};
-    
+
+    Clone<TriangleMesh> get_transformed_mesh(ModelInstance * instance)
+        %code%{
+            TransformationMatrix trafo = instance->get_trafo_matrix(false);
+            RETVAL = THIS->get_transformed_mesh(trafo);
+        %};
+
     bool modifier()
         %code%{ RETVAL = THIS->modifier; %};
     void set_modifier(bool modifier)
@@ -315,34 +345,20 @@ ModelMaterial::attributes()
 
     double rotation()
         %code%{ RETVAL = THIS->rotation; %};
-    double x_rotation()
-        %code%{ RETVAL = THIS->x_rotation; %};
-    double y_rotation()
-        %code%{ RETVAL = THIS->y_rotation; %};
     double scaling_factor()
         %code%{ RETVAL = THIS->scaling_factor; %};
-    Ref<Pointf3> scaling_vector()
-        %code%{ RETVAL = &THIS->scaling_vector; %};
     Ref<Pointf> offset()
         %code%{ RETVAL = &THIS->offset; %};
-    double z_translation()
-        %code%{ RETVAL = THIS->z_translation; %};
+    Ref<TransformationMatrix> additional_trafo()
+        %code%{ RETVAL = &THIS->additional_trafo; %};
 
     void set_rotation(double val)
         %code%{ THIS->rotation = val; %};
-    void set_x_rotation(double val)
-        %code%{ THIS->x_rotation = val; %};
-    void set_y_rotation(double val)
-        %code%{ THIS->y_rotation = val; %};
     void set_scaling_factor(double val)
         %code%{ THIS->scaling_factor = val; %};
-    void set_scaling_vector(Pointf3 *vec)
-        %code%{ THIS->scaling_vector = *vec; %};
     void set_offset(Pointf *offset)
         %code%{ THIS->offset = *offset; %};
-    void set_z_translation(double val)
-        %code%{ THIS->z_translation = val; %};
-    
-    void transform_mesh(TriangleMesh* mesh, bool dont_translate = false) const;
+
+    void transform_mesh(TriangleMesh* mesh, bool dont_translate) const;
     void transform_polygon(Polygon* polygon) const;
 };

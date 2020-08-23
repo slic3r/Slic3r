@@ -299,7 +299,7 @@ _clipper_do(const ClipperLib::ClipType clipType, const Polygons &subject,
 // Namely, the function Clipper::JoinCommonEdges() has potentially a terrible time complexity if the output
 // of the operation is of the PolyTree type.
 // This function implements a following workaround:
-// 1) Peform the Clipper operation with the output to Paths. This method handles overlaps in a reasonable time.
+// 1) Perform the Clipper operation with the output to Paths. This method handles overlaps in a reasonable time.
 // 2) Run Clipper Union once again to extract the PolyTree from the result of 1).
 inline ClipperLib::PolyTree _clipper_do_polytree2(const ClipperLib::ClipType clipType, const Polygons &subject, 
     const Polygons &clip, const ClipperLib::PolyFillType fillType, const bool safety_offset_)

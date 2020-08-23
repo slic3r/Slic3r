@@ -10,6 +10,7 @@
 #include "Point.hpp"
 #include "Polygon.hpp"
 #include "ExPolygon.hpp"
+#include "TransformationMatrix.hpp"
 
 namespace Slic3r {
 
@@ -61,6 +62,9 @@ class TriangleMesh
     float volume();
     bool is_manifold() const;
     void WriteOBJFile(const std::string &output_file) const;
+
+    /// Direct manipulators
+
     void scale(float factor);
     void scale(const Pointf3 &versor);
 
@@ -86,12 +90,22 @@ class TriangleMesh
     void rotate(double angle, const Point& center);
     void rotate(double angle, Point* center);
 
+
+    void align_to_bed();
+
+
+    /// Matrix manipulators
+    TriangleMesh get_transformed_mesh(TransformationMatrix const & trafo) const;
+    void transform(TransformationMatrix const & trafo);
+
+
     TriangleMeshPtrs split() const;
     TriangleMeshPtrs cut_by_grid(const Pointf &grid) const;
     void merge(const TriangleMesh &mesh);
     ExPolygons horizontal_projection() const;
     Polygon convex_hull();
     BoundingBoxf3 bounding_box() const;
+    BoundingBoxf3 get_transformed_bounding_box(TransformationMatrix const & trafo) const;
     void reset_repair_stats();
     bool needed_repair() const;
     size_t facets_count() const;

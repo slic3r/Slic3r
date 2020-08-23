@@ -104,7 +104,7 @@ SCENARIO("Config accessor functions perform as expected.") {
             }
         }
         WHEN("A numeric option is set to a non-numeric value.") {
-            THEN("A BadOptionTypeException exception is thown.") {
+            THEN("A BadOptionTypeException exception is thrown.") {
                 REQUIRE_THROWS_AS(config->set("perimeter_speed", "zzzz"), BadOptionTypeException);
             }
             THEN("The value does not change.") {

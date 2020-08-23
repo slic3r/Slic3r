@@ -397,6 +397,28 @@ void TriangleMesh::rotate(double angle, const Point& center)
     this->translate(+center.x, +center.y, 0);
 }
 
+void TriangleMesh::align_to_bed()
+{
+    stl_translate_relative(&(this->stl), 0.0f, 0.0f, -this->stl.stats.min.z);
+    stl_invalidate_shared_vertices(&this->stl);
+}
+
+TriangleMesh TriangleMesh::get_transformed_mesh(TransformationMatrix const & trafo) const
+{
+    TriangleMesh mesh;
+    std::vector<double> trafo_arr = trafo.matrix3x4f();
+    stl_get_transform(&(this->stl), &(mesh.stl), trafo_arr.data());
+    stl_invalidate_shared_vertices(&(mesh.stl));
+    return mesh;
+}
+
+void TriangleMesh::transform(TransformationMatrix const & trafo)
+{
+    std::vector<double> trafo_arr = trafo.matrix3x4f();
+    stl_transform(&(this->stl), trafo_arr.data());
+    stl_invalidate_shared_vertices(&(this->stl));
+}
+
 Pointf3s TriangleMesh::vertices()
 {
     Pointf3s tmp {};
@@ -440,7 +462,7 @@ Pointf3s TriangleMesh::normals() const
     } else {
         Slic3r::Log::warn("TriangleMesh", "normals() requires repair()");
     }
-    return std::move(tmp);
+    return tmp;
 }
 
 Pointf3 TriangleMesh::size() const
@@ -669,6 +691,26 @@ TriangleMesh::bounding_box() const
     bb.max.y = this->stl.stats.max.y;
     bb.max.z = this->stl.stats.max.z;
     return bb;
+}
+
+BoundingBoxf3
+TriangleMesh::get_transformed_bounding_box(TransformationMatrix const & trafo) const
+{
+    BoundingBoxf3 bbox;
+    for (int i = 0; i < this->stl.stats.number_of_facets; ++ i) {
+        const stl_facet &facet = this->stl.facet_start[i];
+        for (int j = 0; j < 3; ++ j) {
+            double v_x = facet.vertex[j].x;
+            double v_y = facet.vertex[j].y;
+            double v_z = facet.vertex[j].z;
+            Pointf3 poi;
+            poi.x = float(trafo.m00*v_x + trafo.m01*v_y + trafo.m02*v_z + trafo.m03);
+            poi.y = float(trafo.m10*v_x + trafo.m11*v_y + trafo.m12*v_z + trafo.m13);
+            poi.z = float(trafo.m20*v_x + trafo.m21*v_y + trafo.m22*v_z + trafo.m23);
+            bbox.merge(poi);
+        }
+    }
+    return bbox;
 }
 
 void
@@ -1558,7 +1600,7 @@ TriangleMeshSlicer<A>::TriangleMeshSlicer(TriangleMesh* _mesh) : mesh(_mesh), v_
     
     {
         t_edges edges;
-        // reserve() instad of resize() because otherwise we couldn't read .size() below to assign edge_idx
+        // reserve() instead of resize() because otherwise we couldn't read .size() below to assign edge_idx
         edges.reserve(this->mesh->stl.stats.number_of_facets * 3);  // number of edges = number of facets * 3
         t_edges_map edges_map;
         for (int facet_idx = 0; facet_idx < this->mesh->stl.stats.number_of_facets; facet_idx++) {

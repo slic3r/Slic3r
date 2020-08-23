@@ -172,7 +172,7 @@ sub new {
         $class->SUPER::new($parent, -1, Wx::wxDefaultPosition, Wx::wxDefaultSize, 0, "",
             [WX_GL_RGBA, WX_GL_DOUBLEBUFFER, WX_GL_DEPTH_SIZE, 24, 0]) :
         $class->SUPER::new($parent);
-    # Immediatelly force creation of the OpenGL context to consume the static variable s_wglContextAttribs.
+    # Immediately force creation of the OpenGL context to consume the static variable s_wglContextAttribs.
     $self->GetContext();
     $self->print($print);
     $self->_zoom(1);
@@ -356,7 +356,7 @@ sub Render {
     
     my $tess;
     if (!(&Wx::wxMSW && $OpenGL::VERSION < 0.6704)) {
-        # We can't use the GLU tesselator on MSW with older OpenGL versions
+        # We can't use the GLU tessellator on MSW with older OpenGL versions
         # because of an upstream bug:
         # http://sourceforge.net/p/pogl/bugs/16/
         $tess = gluNewTess();

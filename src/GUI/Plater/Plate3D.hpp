@@ -28,7 +28,7 @@ public:
     void selection_changed(){Refresh();}
  protected:
     // Render each volume as a different color and check what color is beneath
-    // the mouse to detemine the hovered volume
+    // the mouse to determine the hovered volume
     void before_render();
 
     // Mouse events are needed to handle selecting and moving objects
