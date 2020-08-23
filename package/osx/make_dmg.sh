@@ -183,6 +183,12 @@ find -d $macosfolder/local-lib -name libwx_osx_cocoau_webview-3.* -delete
 rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/include
 find -d $macosfolder/local-lib -type d -empty -delete
 
+# remove wxrc
+rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/bin/wxrc*
+
+# Apparently the symlinks aren't necessary, remove because they are causing the system to choke
+find $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni -type l -exec rm {} \; -print
+
 make_plist
 
 echo $PkgInfoContents >$appfolder/Contents/PkgInfo
@@ -212,7 +218,7 @@ if [ ! -z $KEYCHAIN_FILE_ ]; then
     security list-keychains -s "${KEYCHAIN_FILE_}"
     security default-keychain -s "${KEYCHAIN_FILE_}"
     security unlock-keychain -p "${KEYCHAIN_PASSWORD_}" "${KEYCHAIN_FILE_}"
-    codesign --sign "${KEYCHAIN_IDENTITY_}" --deep "$appfolder"
+    codesign --sign "${KEYCHAIN_IDENTITY_}" --strict --deep "$appfolder"
 else
     echo "No KEYCHAIN_FILE or KEYCHAIN_BASE64 env variable; skipping codesign"
 fi
@@ -229,7 +235,7 @@ if [ ! -z $KEYCHAIN_FILE_ ]; then
     security list-keychains -s "${KEYCHAIN_FILE_}"
     security default-keychain -s "${KEYCHAIN_FILE_}"
     security unlock-keychain -p "${KEYCHAIN_PASSWORD_}" "${KEYCHAIN_FILE_}"
-    codesign --sign "${KEYCHAIN_IDENTITY_}" "$dmgfile"
+    codesign --sign "${KEYCHAIN_IDENTITY_}" --strict "$dmgfile"
 fi
 
 rm -rf $WD/_tmp
