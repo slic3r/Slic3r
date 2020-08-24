@@ -218,7 +218,7 @@ if [ ! -z $KEYCHAIN_FILE_ ]; then
     security list-keychains -s "${KEYCHAIN_FILE_}"
     security default-keychain -s "${KEYCHAIN_FILE_}"
     security unlock-keychain -p "${KEYCHAIN_PASSWORD_}" "${KEYCHAIN_FILE_}"
-    codesign --sign "${KEYCHAIN_IDENTITY_}" --strict --deep "$appfolder"
+    codesign --sign "${KEYCHAIN_IDENTITY_}" --options=runtime --strict --deep "$appfolder"
 else
     echo "No KEYCHAIN_FILE or KEYCHAIN_BASE64 env variable; skipping codesign"
 fi
@@ -235,7 +235,7 @@ if [ ! -z $KEYCHAIN_FILE_ ]; then
     security list-keychains -s "${KEYCHAIN_FILE_}"
     security default-keychain -s "${KEYCHAIN_FILE_}"
     security unlock-keychain -p "${KEYCHAIN_PASSWORD_}" "${KEYCHAIN_FILE_}"
-    codesign --sign "${KEYCHAIN_IDENTITY_}" --strict "$dmgfile"
+    codesign --sign "${KEYCHAIN_IDENTITY_}" --options=runtime --strict "$dmgfile"
 fi
 
 rm -rf $WD/_tmp
