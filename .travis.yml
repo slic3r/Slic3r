@@ -86,7 +86,8 @@ matrix:
         #       - local-lib
 
         - os: osx
-          osx_image: xcode9.4 # OS X 10.13
+          # xcode 11.6 is required to have access to the notarization tools.
+          osx_image: xcode11.6 # OS X 10.13
           env:
             - TARGET=main
           cache:
