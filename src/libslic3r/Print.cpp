@@ -2112,6 +2112,11 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector< BrimLoop>>& loops, 
     };
     extrude_ptr = &extrude;
 
+    if (loops.empty()) {
+        BOOST_LOG_TRIVIAL(error) << "Failed to extrude brim: no loops to extrude, are you sure your settings are ok?";
+        return;
+    }
+
     //launch extrude
     for (BrimLoop& loop : loops[0]) {
         extrude(loop, &out);
