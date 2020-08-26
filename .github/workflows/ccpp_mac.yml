@@ -58,11 +58,11 @@ jobs:
         mkdir SuperSlicer/SuperSlicer.app/Contents/_CodeSignature
         mkdir SuperSlicer/SuperSlicer.app/Contents/Frameworks
         mkdir SuperSlicer/SuperSlicer.app/Contents/MacOS
-    - name: copy resources
+    - name: copy Resources
       working-directory: ./build
       run: |
-        cp -Rf ../resources SuperSlicer/SuperSlicer.app/Contents/resources
-        cp SuperSlicer/SuperSlicer.app/Contents/resources/icons/slic3r.icns SuperSlicer/SuperSlicer.app/Contents/resources/Slic3r.icns
+        cp -Rf ../resources SuperSlicer/SuperSlicer.app/Contents/Resources
+        cp SuperSlicer/SuperSlicer.app/Contents/Resources/icons/slic3r.icns SuperSlicer/SuperSlicer.app/Contents/resources/Slic3r.icns
         cp src/Info.date.plist SuperSlicer/SuperSlicer.app/Contents/Info.plist
         echo -n -e 'APPL????\x0a' > PkgInfo
         cp PkgInfo SuperSlicer/SuperSlicer.app/Contents/PkgInfo
@@ -78,9 +78,9 @@ jobs:
       run: |
         hdiutil create -ov -fs HFS+ -volname "SuperSlicer" -srcfolder "SuperSlicer" temp.dmg
         hdiutil convert temp.dmg -format UDZO -o SuperSlicer.dmg
-#    - name: signing resources (creating CodeResources inside _CodeSignature)
+#    - name: signing Resources (creating CodeResources inside _CodeSignature)
 #      working-directory: .
-#      run: codesign -s <identity> resources
+#      run: codesign -s <identity> Resources
 # maybe i should just try to do that on a separate pc and copy the file here, more secure as a signing process.
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
