@@ -945,8 +945,9 @@ void FreeCADDialog::create_geometry(wxCommandEvent& event_args) {
             std::stringstream ss; ss << "plater_" << idx_plater_obj << ".stl";
             boost::filesystem::path temp_stl(Slic3r::data_dir());
             temp_stl = temp_stl / "temp" / ss.str();
+            TriangleMesh mesh = (idx_plater_obj == 0) ? this->main_frame->plater()->model().mesh() : this->main_frame->plater()->model().objects[idx_plater_obj - 1]->mesh();
             Slic3r::store_stl(temp_stl.generic_string().c_str(), 
-                (idx_plater_obj == 0) ? &this->main_frame->plater()->model().mesh() : &this->main_frame->plater()->model().objects[idx_plater_obj-1]->mesh(),
+                &mesh,
                 true);
         } else {
             m_errors->AppendText("Error, cannot find object " + std::to_string(idx_plater_obj) 
