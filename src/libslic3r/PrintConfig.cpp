@@ -343,7 +343,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("brim_ears_max_angle", coFloat);
-    def->label = L("max angle");
+    def->label = L("Max angle");
     def->category = OptionCategory::skirtBrim;
     def->tooltip = L("Maximum angle to let a brim ear appear. \nIf set to 0, no brim will be created. \nIf set to ~178, brim will be created on everything but strait sections.");
     def->sidetext = L("°");
@@ -366,7 +366,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipConcentric));
 
     def = this->add("brim_offset", coFloat);
-    def->label = L("brim offset");
+    def->label = L("Brim offset");
     def->category = OptionCategory::skirtBrim;
     def->tooltip = L("Distance between the brim and the part. Should be kept at 0 unless you encounter great difficulties to separate them. It's subtracted to brim_width and brim_width_interior., so it has to be lower than them");
     def->sidetext = L("mm");
@@ -804,7 +804,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("external_perimeters_vase", coBool);
-    def->label = L("in vase mode (no seam)");
+    def->label = L("In vase mode (no seam)");
     def->full_label = L("ExternalPerimeter in vase mode");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Print contour perimeters in two circle, in a contiunous way, like for a vase mode. It needs the external_perimeters_first parameter do work."
@@ -869,8 +869,8 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("extra_perimeters_overhangs", coBool);
-    def->label = L("on overhangs");
-    def->full_label = L("Extra perimeters in overhangs");
+    def->label = L("On overhangs");
+    def->full_label = L("Extra perimeters over overhangs");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Add more perimeters when needed for avoiding gaps in sloping walls. "
         "Slic3r keeps adding perimeter until all overhangs are filled."
@@ -880,7 +880,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("extra_perimeters_odd_layers", coBool);
-    def->label = L("on odd layers");
+    def->label = L("On odd layers");
     def->full_label = L("Extra perimeter on odd layers");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Add one perimeter every odd layer. With this, infill is taken into sandwitch"
@@ -1363,7 +1363,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("°");
     def->min = 0;
     def->max = 360;
-    def->mode = comAdvanced;
+    def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("fill_density", coPercent);
@@ -1470,7 +1470,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("fill_smooth_width", coFloatOrPercent);
-    def->label = L("width");
+    def->label = L("Width");
     def->full_label = L("Ironing width");
     def->category = OptionCategory::infill;
     def->tooltip = L("This is the width of the ironing pass, in a % of the top infill extrusion width, should not be more than 50%"
@@ -1484,7 +1484,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
 
     def = this->add("fill_smooth_distribution", coPercent);
-    def->label = L("distribution");
+    def->label = L("Distribution");
     def->full_label = L("Ironing flow distribution");
     def->category = OptionCategory::infill;
     def->tooltip = L("This is the percentage of the flow that is used for the second ironing pass. Typical 10-20%. "
@@ -1869,7 +1869,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(true));
 
     def = this->add("fan_speedup_time", coFloat);
-    def->label = L("fan startup delay");
+    def->label = L("Fan startup delay");
     def->category = OptionCategory::firmware;
     def->tooltip = L("Move the M106 in the past by at least this delay (in seconds, you can use decimals) and add the 'D' option to it to tell to the firware when the fan have to be at this speed."
         " It assume infinite acceleration for this time estimation, and only takes into account G1 and G0 moves. Use 0 to deactivate, negative to remove the 'D' option.");
@@ -2101,7 +2101,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloats { 0.07 });
 
     def = this->add("min_length", coFloat);
-    def->label = L("minimum extrusion length");
+    def->label = L("Minimum extrusion length");
     def->category = OptionCategory::speed;
     def->tooltip = L("Too many too small commands may overload the firmware / connection. Put a higher value here if you see strange slowdown."
                      "\n0 to disable.");
@@ -2111,7 +2111,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(0.035));
 
     def = this->add("min_width_top_surface", coFloatOrPercent);
-    def->label = L("minimum top width for infill");
+    def->label = L("Minimum top width for infill");
     def->category = OptionCategory::speed;
     def->tooltip = L("If a top surface has to be printed and it's partially covered by an other layer, it won't be considered at a top layer where his width is below this value."
         " This can be useful to not let the 'one perimeter on top' trigger on surface that should be covered only by perimeters."
@@ -3228,7 +3228,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(true));
 
     def = this->add("thin_walls_min_width", coFloatOrPercent);
-    def->label = L("min width");
+    def->label = L("Min width");
     def->full_label = L("Thin walls min width");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Minimum width for the extrusion to be extruded (widths lower than the nozzle diameter will be over-extruded at the nozzle diameter)."
@@ -3240,7 +3240,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloatOrPercent(33, true));
 
     def = this->add("thin_walls_overlap", coFloatOrPercent);
-    def->label = L("overlap");
+    def->label = L("Overlap");
     def->full_label = L("Thin wall overlap");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Overlap between the thin wall and the perimeters. Can be a % of the external perimeter width (default 50%)");
@@ -3250,7 +3250,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
 
     def = this->add("thin_walls_merge", coBool);
-    def->label = L("merging with perimeters");
+    def->label = L("Merging with perimeters");
     def->full_label = L("Thin wall merge");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Allow the external perimeter to merge the thin walls in the path."

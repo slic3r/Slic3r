@@ -11,12 +11,12 @@ group:Position (for multi-extruder printers)
 group:Retraction
 	setting:idx:retract_length
 	setting:idx:retract_lift
-	line:"Only lift Z"
+	line:Only lift Z
 		setting:idx:retract_lift_above
 		setting:idx:retract_lift_below
 		setting:idx:retract_lift_not_last_layer
 	end_line
-	line:"Retraction Speed"
+	line:Retraction Speed
 		setting:idx:retract_speed
 		setting:idx:label$Deretraction:deretract_speed
 	end_line

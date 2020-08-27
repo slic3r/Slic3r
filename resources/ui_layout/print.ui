@@ -27,11 +27,11 @@ group:Quality
 	setting:ensure_vertical_shell_thickness
 	line:Avoid crossing perimeters
 		setting:label$:avoid_crossing_perimeters
-		setting:label$not on first layer:avoid_crossing_not_first_layer
+		setting:label$Not on first layer:avoid_crossing_not_first_layer
 	end_line
 	line:Overlapping external perimeter
 		setting:label$:thin_perimeters
-		setting:label$also for all perimeters:thin_perimeters_all
+		setting:label$Also for all perimeters:thin_perimeters_all
 	end_line
 	line:Thin walls
 		setting:thin_walls
@@ -104,7 +104,7 @@ group:Infill
 	end_line
 	line:Pattern
 		setting:label_width$5:label$_:fill_pattern
-		setting:label$don't connect:infill_not_connected
+		setting:label$Don't connect:infill_not_connected
 	end_line
 	line:External patterns
 		setting:label_width$5:top_fill_pattern

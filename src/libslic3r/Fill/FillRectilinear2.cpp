@@ -883,7 +883,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
 
     // Shrink the input polygon a bit first to not push the infill lines out of the perimeters.
 //    const float INFILL_OVERLAP_OVER_SPACING = 0.3f;
-    const float INFILL_OVERLAP_OVER_SPACING = 0.45f;
+    const float INFILL_OVERLAP_OVER_SPACING = 0.45f; //merill: what is this value??? shouldn't it be like flow.width()?
     assert(INFILL_OVERLAP_OVER_SPACING > 0 && INFILL_OVERLAP_OVER_SPACING < 0.5f);
 
     // Rotate polygons so that we can work with vertical lines here
@@ -898,7 +898,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
         surface->expolygon, 
         - rotate_vector.first, 
         scale_(0 /*this->overlap*/ - (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->spacing),
-        scale_(0 /*this->overlap*/ - (params.full_infill() && params.fill_exactly ? 0.5 + INFILL_OVERLAP_OVER_SPACING : 0.5) * this->spacing));
+        scale_(0 /*this->overlap*/ - 0.5 * this->spacing));
     if (poly_with_offset.n_contours_inner == 0) {
         // Not a single infill line fits.
         //Prusa: maybe one shall trigger the gap fill here?
