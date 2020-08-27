@@ -1188,6 +1188,51 @@ std::vector<const PrintInstance*> sort_object_instances_by_model_order(const Pri
     return instances;
 }
 
+// set standby temp for extruders
+// Parse the custom G-code, try to find T, and add it if not present
+static void init_multiextruders(FILE *file, Print &print, GCodeWriter & writer,  ToolOrdering &tool_ordering, const std::string &custom_gcode )
+{
+
+    //set standby temp for reprap
+    if (std::set<uint8_t>{gcfRepRap}.count(print.config().gcode_flavor.value) > 0) {
+        for (uint16_t tool_id : tool_ordering.all_extruders()) {
+            fprintf(file, "G10 P%d R%d S%d ; sets the standby temperature\n",
+                tool_id,
+                int(print.config().filament_toolchange_temp.get_at(tool_id)),
+                int(print.config().temperature.get_at(tool_id)));
+        }
+    }
+    //activate first extruder is multi-extruder and not in start-gcode
+    if (writer.multiple_extruders) {
+        if (std::set<uint8_t>{gcfRepRap}.count(print.config().gcode_flavor.value) > 0) {
+            //if not in gcode
+            bool find = false;
+            if (!custom_gcode.empty()) {
+                const char *ptr = custom_gcode.data();
+                while (*ptr != 0) {
+                    // Skip whitespaces.
+                    for (; *ptr == ' ' || *ptr == '\t'; ++ptr);
+                    if (*ptr == 'T') {
+                        find = true;
+                        break;
+                    } else if (*ptr == 'A') {
+                        //TODO: ACTIVATE_EXTRUDER for klipper (if used)
+                    }
+                    // Skip the rest of the line.
+                    for (; *ptr != 0 && *ptr != '\r' && *ptr != '\n'; ++ptr);
+                    // Skip the end of line indicators.
+                    for (; *ptr == '\r' || *ptr == '\n'; ++ptr);
+                }
+            }
+            if (!find) {
+                fprintf(file, writer.toolchange(tool_ordering.first_extruder()).c_str());
+            }
+        }
+        writer.toolchange(tool_ordering.first_extruder());
+    }
+}
+
+
 #if ENABLE_THUMBNAIL_GENERATOR
 void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thumbnail_cb)
 #else
@@ -1431,6 +1476,10 @@ void GCode::_do_export(Print &print, FILE *file)
     std::string start_gcode = this->placeholder_parser_process("start_gcode", print.config().start_gcode.value, initial_extruder_id);
     // Set bed temperature if the start G-code does not contain any bed temp control G-codes.
     this->_print_first_layer_bed_temperature(file, print, start_gcode, initial_extruder_id, true);
+
+    //init extruders
+    init_multiextruders(file, print, m_writer, tool_ordering, start_gcode);
+
     // Set extruder(s) temperature before and after start G-code.
     this->_print_first_layer_extruder_temperatures(file, print, start_gcode, initial_extruder_id, false);
 
