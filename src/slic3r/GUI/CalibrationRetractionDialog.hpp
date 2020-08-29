@@ -20,7 +20,8 @@ protected:
 
     wxComboBox* steps;
     wxComboBox* nb_steps;
-    wxComboBox* start_step;
+    //wxComboBox* start_step;
+    wxTextCtrl* temp_start;
     wxComboBox* decr_temp;
 };
 
