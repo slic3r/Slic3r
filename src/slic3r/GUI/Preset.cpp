@@ -539,7 +539,8 @@ const std::vector<std::string>& Preset::print_options()
         , "curve_smoothing_angle_convex"
         , "curve_smoothing_angle_concave",
         "print_extrusion_multiplier",
-		"print_retract_length",
+        "print_retract_length",
+        "print_temperature",
         "external_perimeter_cut_corners",
         "external_perimeter_overlap",
         "perimeter_bonding",

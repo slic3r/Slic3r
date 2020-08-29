@@ -65,7 +65,7 @@ public:
     }
     std::string preamble();
     std::string postamble() const;
-    std::string set_temperature(unsigned int temperature, bool wait = false, int tool = -1) const;
+    std::string set_temperature(unsigned int temperature, bool wait = false, int tool = -1);
     std::string set_bed_temperature(unsigned int temperature, bool wait = false);
     std::string set_fan(unsigned int speed, bool dont_save = false);
     void        set_acceleration(unsigned int acceleration);
@@ -109,6 +109,7 @@ private:
     // If set to zero, the limit is not in action.
     unsigned int    m_max_acceleration;
     unsigned int    m_last_fan_speed;
+    unsigned int    m_last_temperature;
     unsigned int    m_last_bed_temperature;
     bool            m_last_bed_temperature_reached;
     double          m_lifted;

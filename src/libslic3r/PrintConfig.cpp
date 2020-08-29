@@ -978,7 +978,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("print_extrusion_multiplier", coPercent);
     def->label = L("Extrusion multiplier");
-    def->category = OptionCategory::width;
+    def->category = OptionCategory::filament;
     def->tooltip = L("This factor changes the amount of flow proportionally. You may need to tweak "
         "this setting to get nice surface finish and correct single wall widths. "
         "Usual values are between 90% and 110%. If you think you need to change this more, "
@@ -2494,7 +2494,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("print_retract_length", coFloat);
     def->label = L("Retraction length");
-    def->category = OptionCategory::width;
+    def->category = OptionCategory::filament;
     def->tooltip = L("Override the retract_length settign from the printer config. Used for calibration. Set negative to disable");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat( -1.f));
@@ -3210,6 +3210,13 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->max = max_temp;
     def->set_default_value(new ConfigOptionInts { 200 });
+
+    def = this->add("print_temperature", coInt);
+    def->label = L("Temperature");
+    def->category = OptionCategory::filament;
+    def->tooltip = L("Override the temperature of the extruder. Avoid doing too many changes, it won't stop for cooling/heating. 0 to disable.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(0));
 
     def = this->add("thin_perimeters", coBool);
     def->label = L("Overlapping external perimeter");

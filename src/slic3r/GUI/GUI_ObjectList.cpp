@@ -109,6 +109,7 @@ void fill_CATEGORY_ICON(std::map<OptionCategory, wxBitmap> &CATEGORY_ICON)
     CATEGORY_ICON[OptionCategory::hollowing] = create_scaled_bitmap("hollowing");
     //others
     CATEGORY_ICON[OptionCategory::milling] = create_scaled_bitmap("milling");
+    CATEGORY_ICON[OptionCategory::filament] = create_scaled_bitmap("spool");
 }
 
 ObjectList::ObjectList(wxWindow* parent) :

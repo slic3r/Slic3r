@@ -689,7 +689,7 @@ public:
     ConfigOptionFloatOrPercent      solid_infill_extrusion_width;
     ConfigOptionInt                 solid_infill_every_layers;
     ConfigOptionFloatOrPercent      solid_infill_speed;
-    // Detect thin walls.
+    ConfigOptionInt                 print_temperature;
     ConfigOptionBool                thin_perimeters;
     ConfigOptionBool                thin_perimeters_all;
     ConfigOptionBool                thin_walls;
@@ -777,6 +777,7 @@ protected:
         OPT_PTR(solid_infill_extrusion_width);
         OPT_PTR(solid_infill_every_layers);
         OPT_PTR(solid_infill_speed);
+        OPT_PTR(print_temperature);
         OPT_PTR(thin_perimeters);
         OPT_PTR(thin_perimeters_all);
         OPT_PTR(thin_walls);

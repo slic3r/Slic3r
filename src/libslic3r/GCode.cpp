@@ -2498,9 +2498,10 @@ void GCode::process_layer(
                 this->set_origin(unscale(offset));
                 if (instance_to_print.object_by_extruder.support != nullptr && !print_wipe_extrusions) {
                     m_layer = layers[instance_to_print.layer_id].support_layer;
-                        gcode += this->extrude_support(
-                            // support_extrusion_role is erSupportMaterial, erSupportMaterialInterface or erMixed for all extrusion paths.
-                        instance_to_print.object_by_extruder.support->chained_path_from(m_last_pos, instance_to_print.object_by_extruder.support_extrusion_role));
+                    gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
+                    gcode += this->extrude_support(
+                        // support_extrusion_role is erSupportMaterial, erSupportMaterialInterface or erMixed for all extrusion paths.
+                    instance_to_print.object_by_extruder.support->chained_path_from(m_last_pos, instance_to_print.object_by_extruder.support_extrusion_role));
                     m_layer = layers[instance_to_print.layer_id].layer();
                 }
                 for (ObjectByExtruder::Island &island : instance_to_print.object_by_extruder.islands) {
@@ -3738,6 +3739,10 @@ std::string GCode::extrude_perimeters(const Print &print, const std::vector<Obje
         if (!region.perimeters.empty()) {
             m_config.apply(print.regions()[&region - &by_region.front()]->config());
             m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
+            if (m_config.print_temperature > 0)
+                gcode += m_writer.set_temperature(m_config.print_temperature.value, false, m_writer.tool()->id());
+            else
+                gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
             for (const ExtrusionEntity *ee : region.perimeters)
                 gcode += this->extrude_entity(*ee, "", -1., &lower_layer_edge_grid);
         }
@@ -3752,6 +3757,10 @@ std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectBy
         if (!region.infills.empty() && print.regions()[&region - &by_region.front()]->config().infill_first == is_infill_first) {
             m_config.apply(print.regions()[&region - &by_region.front()]->config());
             m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
+            if (m_config.print_temperature > 0)
+                gcode += m_writer.set_temperature(m_config.print_temperature.value, false, m_writer.tool()->id());
+            else
+                gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
             ExtrusionEntitiesPtr extrusions { region.infills };
             chain_and_reorder_extrusion_entities(extrusions, &m_last_pos);
             for (const ExtrusionEntity *fill : extrusions) {
