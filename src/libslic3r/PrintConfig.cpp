@@ -1258,7 +1258,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloats{ 1.75 });
 
     def = this->add("filament_shrink", coPercents);
-    def->label = L("Shrikage");
+    def->label = L("Shrinkage");
     def->tooltip = L("Enter the shrinkage percentage that the filament will get after cooling (94% if you measure 94mm instead of 100mm)."
                     " The part will be scaled in xy to conpensate."
                     " Only the filament used for the perimeter is taken into account."
