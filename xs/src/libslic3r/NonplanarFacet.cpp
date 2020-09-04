@@ -63,7 +63,10 @@ NonplanarFacet::scale(float versor[3])
 float
 NonplanarFacet::calculate_surface_area()
 {
-    return Slic3r::Geometry::triangle_surface(Point(this->vertex[0].x, this->vertex[0].y), Point(this->vertex[1].x, this->vertex[1].y), Point(this->vertex[2].x, this->vertex[2].y));;
+    return 0.5 * ((this->vertex[1].x - this->vertex[0].x) * 
+		  (this->vertex[2].y - this->vertex[0].y) - 
+		  (this->vertex[1].y - this->vertex[0].y) *
+    		  (this->vertex[2].x - this->vertex[0].x));
 }
 
 }
