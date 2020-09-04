@@ -1499,6 +1499,16 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             };
             current_group->append_line(current_line);
         }
+        else if (boost::starts_with(full_line, "recommended_extrusion_width_description")) {
+            TabPrint* tab = nullptr;
+            if ((tab = dynamic_cast<TabPrint*>(this)) == nullptr) continue;
+            current_line = { "", "" };
+            current_line.full_width = 1;
+            current_line.widget = [this, tab](wxWindow* parent) {
+                return description_line_widget(parent, &(tab->m_recommended_extrusion_width_description_line));
+            };
+            current_group->append_line(current_line);
+        }
         else if (boost::starts_with(full_line, "top_bottom_shell_thickness_explanation")) {
             TabPrint* tab = nullptr;
             if ((tab = dynamic_cast<TabPrint*>(this)) == nullptr) continue;
@@ -1706,6 +1716,9 @@ void TabPrint::update()
     if (m_recommended_thin_wall_thickness_description_line)
         m_recommended_thin_wall_thickness_description_line->SetText(
             from_u8(PresetHints::recommended_thin_wall_thickness(*m_preset_bundle)));
+    if (m_recommended_extrusion_width_description_line)
+        m_recommended_extrusion_width_description_line->SetText(
+            from_u8(PresetHints::recommended_extrusion_width(*m_preset_bundle)));
     if(m_top_bottom_shell_thickness_explanation)
         m_top_bottom_shell_thickness_explanation->SetText(
             from_u8(PresetHints::top_bottom_shell_thickness_explanation(*m_preset_bundle)));
@@ -1731,6 +1744,9 @@ void TabPrint::OnActivate()
     if (m_recommended_thin_wall_thickness_description_line)
         m_recommended_thin_wall_thickness_description_line->SetText(
             from_u8(PresetHints::recommended_thin_wall_thickness(*m_preset_bundle)));
+    if (m_recommended_extrusion_width_description_line)
+        m_recommended_extrusion_width_description_line->SetText(
+            from_u8(PresetHints::recommended_extrusion_width(*m_preset_bundle)));
     if(m_top_bottom_shell_thickness_explanation)
         m_top_bottom_shell_thickness_explanation->SetText(
         from_u8(PresetHints::top_bottom_shell_thickness_explanation(*m_preset_bundle)));

@@ -294,50 +294,78 @@ std::string PresetHints::maximum_volumetric_flow_description(const PresetBundle 
  	return out;
 }
 
-std::string PresetHints::recommended_thin_wall_thickness(const PresetBundle &preset_bundle)
+std::string PresetHints::recommended_thin_wall_thickness(const PresetBundle& preset_bundle)
 {
-    const DynamicPrintConfig &print_config    = preset_bundle.prints   .get_edited_preset().config;
-    const DynamicPrintConfig &printer_config  = preset_bundle.printers .get_edited_preset().config;
+    const DynamicPrintConfig& print_config = preset_bundle.prints.get_edited_preset().config;
+    const DynamicPrintConfig& printer_config = preset_bundle.printers.get_edited_preset().config;
 
-    float   layer_height                        = float(print_config.opt_float("layer_height"));
-    int     num_perimeters                      = print_config.opt_int("perimeters");
-    bool    thin_walls                          = print_config.opt_bool("thin_walls");
-    float   nozzle_diameter                     = float(printer_config.opt_float("nozzle_diameter", 0));
-    
+    float   layer_height = float(print_config.opt_float("layer_height"));
+    int     num_perimeters = print_config.opt_int("perimeters");
+    bool    thin_walls = print_config.opt_bool("thin_walls");
+    float   nozzle_diameter = float(printer_config.opt_float("nozzle_diameter", 0));
+
     std::string out;
-	if (layer_height <= 0.f) {
-		out += _utf8(L("Recommended object min thin wall thickness: Not available due to invalid layer height."));
-		return out;
-	}
+    if (layer_height <= 0.f) {
+        out += _utf8(L("Recommended object min thin wall thickness: Not available due to invalid layer height."));
+        return out;
+    }
 
-    Flow    external_perimeter_flow             = Flow::new_from_config_width(
-        frExternalPerimeter, 
-        *print_config.opt<ConfigOptionFloatOrPercent>("external_perimeter_extrusion_width"), 
+    Flow    external_perimeter_flow = Flow::new_from_config_width(
+        frExternalPerimeter,
+        *print_config.opt<ConfigOptionFloatOrPercent>("external_perimeter_extrusion_width"),
         nozzle_diameter, layer_height, false);
-    Flow    perimeter_flow                      = Flow::new_from_config_width(
-        frPerimeter, 
-        *print_config.opt<ConfigOptionFloatOrPercent>("perimeter_extrusion_width"), 
+    Flow    perimeter_flow = Flow::new_from_config_width(
+        frPerimeter,
+        *print_config.opt<ConfigOptionFloatOrPercent>("perimeter_extrusion_width"),
         nozzle_diameter, layer_height, false);
 
     //set spacing
     external_perimeter_flow.spacing_ratio = print_config.opt<ConfigOptionPercent>("external_perimeter_overlap")->get_abs_value(1);
     perimeter_flow.spacing_ratio = print_config.opt<ConfigOptionPercent>("perimeter_overlap")->get_abs_value(1);
-    
+
     if (num_perimeters > 0) {
         int num_lines = std::min(num_perimeters, 6);
         out += (boost::format(_utf8(L("Recommended object min (thick) wall thickness for layer height %.2f and"))) % layer_height).str() + " ";
         out += (boost::format(_utf8(L("%d perimeter: %.2f mm"))) % 1 % (external_perimeter_flow.width + external_perimeter_flow.spacing())).str() + " ";
         // Start with the width of two closely spaced 
         try {
-            double width = 2*(external_perimeter_flow.width + external_perimeter_flow.spacing(perimeter_flow));
-            for (int i = 2; i <= num_lines; thin_walls ? ++ i : i ++) {
-                out += ", " + (boost::format(_utf8(L("%d perimeter: %.2f mm"))) % i %  width).str() + " ";
+            double width = 2 * (external_perimeter_flow.width + external_perimeter_flow.spacing(perimeter_flow));
+            for (int i = 2; i <= num_lines; thin_walls ? ++i : i++) {
+                out += ", " + (boost::format(_utf8(L("%d perimeter: %.2f mm"))) % i % width).str() + " ";
                 width += perimeter_flow.spacing() * 2;
             }
-        } catch (const FlowErrorNegativeSpacing &) {
+        }
+        catch (const FlowErrorNegativeSpacing&) {
             out = _utf8(L("Recommended object thin wall thickness: Not available due to excessively small extrusion width."));
         }
     }
+    return out;
+}
+
+std::string PresetHints::recommended_extrusion_width(const PresetBundle& preset_bundle)
+{
+    const DynamicPrintConfig& print_config = preset_bundle.prints.get_edited_preset().config;
+    const DynamicPrintConfig& printer_config = preset_bundle.printers.get_edited_preset().config;
+
+    int nb_nozzles = printer_config.option<ConfigOptionFloats>("nozzle_diameter")->values.size();
+
+    double nozzle_diameter = 0;
+    for(int i=0; i< nb_nozzles; i++)
+        nozzle_diameter = std::max(nozzle_diameter, printer_config.opt_float("nozzle_diameter", i));
+    double layer_height = print_config.opt_float("layer_height");
+    double first_layer_height = print_config.option<ConfigOptionFloatOrPercent>("first_layer_height")->get_abs_value(nozzle_diameter);
+
+    std::string out;
+
+    Flow first_layer_flow = Flow::new_from_spacing(nozzle_diameter, nozzle_diameter, first_layer_height, false);
+    Flow layer_flow = Flow::new_from_spacing(nozzle_diameter, nozzle_diameter, layer_height, false);
+
+    out += _utf8(L("Ideally, the spacing between two extrusions shouldn't be lower than the nozzle diameter. Below are the extrusion widths for a spacing equal to the nozzle diameter.\n"));
+    out += (boost::format(_utf8(L("Recommended min extrusion width for the first layer (with a first layer height of %1%) is %2$.3f mm (or %3%%%)\n"))) 
+        % first_layer_height % first_layer_flow.width % int(first_layer_flow.width * 100. / nozzle_diameter)).str();
+    out += (boost::format(_utf8(L("Recommended min extrusion width for other layers (with a layer height of %1%) is %2$.3f mm (or %3%%%).\n"))) 
+        % layer_height % layer_flow.width % int(layer_flow.width * 100. / nozzle_diameter)).str();
+
     return out;
 }
 

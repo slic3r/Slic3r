@@ -336,8 +336,9 @@ public:
 // 		Tab(parent, _(L("Print Settings")), L("print")) {}
         Tab(parent, _(L("Print Settings")), Slic3r::Preset::TYPE_PRINT) {}
 	~TabPrint() {}
-
+	
 	ogStaticText*	m_recommended_thin_wall_thickness_description_line = nullptr;
+	ogStaticText*	m_recommended_extrusion_width_description_line = nullptr; 
 	ogStaticText*	m_top_bottom_shell_thickness_explanation = nullptr;
 	bool			m_support_material_overhangs_queried = false;
 
