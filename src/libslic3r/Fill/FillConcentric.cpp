@@ -104,13 +104,18 @@ FillConcentricWGapFill::fill_surface_extrusion(
         ExPolygons gaps;
         Polygons loops = (Polygons)expolygon;
         Polygons last = loops;
+        bool first = true;
         while (!last.empty()) {
             Polygons next_onion = offset2(last, -(distance + scale_(this->spacing) / 2), +scale_(this->spacing) / 2);
             loops.insert(loops.end(), next_onion.begin(), next_onion.end());
             append(gaps, diff_ex(
                 offset(last, -0.5f * distance),
-                offset(next_onion, 0.5f * distance + 10)));  // safety offset
+                offset(next_onion, 0.5f * distance + 10)));  // safety offset                
             last = next_onion;
+            if (first && !this->no_overlap_expolygons.empty()) {
+                gaps = intersection_ex(gaps, this->no_overlap_expolygons);
+            }
+            first = false;
         }
 
         // generate paths from the outermost to the innermost, to avoid
@@ -164,6 +169,24 @@ FillConcentricWGapFill::fill_surface_extrusion(
             out.push_back(coll_nosort);
         else delete coll_nosort;
     }
+
+    // external gapfill
+    ExPolygons gapfill_areas = diff_ex({ surface->expolygon }, offset_ex(expp, double(scale_(0.5 * this->spacing))));
+    gapfill_areas = union_ex(gapfill_areas, true);
+    if (gapfill_areas.size() > 0) {
+        const double minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow->width)) * params.flow->scaled_width();
+        for (int i = 0; i < gapfill_areas.size(); i++) {
+            if (gapfill_areas[i].area() < minarea) {
+                gapfill_areas.erase(gapfill_areas.begin() + i);
+                i--;
+            }
+        }
+        FillParams params2{ params };
+        params2.role = erGapFill;
+
+        do_gap_fill(intersection_ex(gapfill_areas, no_overlap_expolygons), params2, out);
+    }
+
 }
 
 } // namespace Slic3r
