@@ -58,6 +58,7 @@ std::vector<std::pair<size_t, bool>> chain_segments_closest_point(std::vector<En
 		EndPointType &end_point = end_points[next_idx];
 		//set the new entry point as taken
 		end_point.chain_id = 1;
+		assert((next_idx & 1) == 0 || could_reverse_func(next_idx >> 1));
 		out.emplace_back(next_idx / 2, (next_idx & 1) != 0);
 		//now switch to the other end of the segment
 		this_idx = next_idx ^ 1;

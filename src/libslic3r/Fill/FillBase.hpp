@@ -22,49 +22,46 @@ namespace Slic3r {
 class ExPolygon;
 class Surface;
 
+class InfillFailedException : public std::runtime_error {
+public:
+    InfillFailedException() : std::runtime_error("Infill failed") {}
+};
+
 struct FillParams
 {
-    FillParams() { 
-        memset(this, 0, sizeof(FillParams));
-        // Adjustment does not work.
-        dont_adjust = true;
-        flow_mult = 1.f;
-        fill_exactly = false;
-        role = erNone;
-        flow = NULL;
-        config = NULL;
-    }
-
     bool        full_infill() const { return density > 0.9999f && density < 1.0001f; }
 
     // Fill density, fraction in <0, 1>
-    float       density;
+    float       density     { 0.f };
 
     // Fill extruding flow multiplier, fraction in <0, 1>. Used by "over bridge compensation"
-    float       flow_mult;
+    float       flow_mult   { 1.0f };
 
     // Don't connect the fill lines around the inner perimeter.
-    bool        dont_connect;
+    bool        dont_connect{ false };
 
     // Don't adjust spacing to fill the space evenly.
-    bool        dont_adjust;
+    bool        dont_adjust { true };
+
+    // Monotonous infill - strictly left to right for better surface quality of top infills.
+    bool        monotonous  { false };
 
     // Try to extrude the exact amount of plastic to fill the volume requested
-    bool        fill_exactly;
+    bool        fill_exactly{ false };
 
     // For Honeycomb.
     // we were requested to complete each loop;
     // in this case we don't try to make more continuous paths
-    bool        complete;
+    bool        complete    { false };
 
     // if role == erNone or ERCustom, this method have to choose the best role itself, else it must use the argument's role.
-    ExtrusionRole role;
+    ExtrusionRole role      { erNone };
 
     //flow to use
-    Flow  const *flow;
+    Flow  const* flow       { nullptr };
 
     //full configuration for the region, to avoid copying every bit that is needed. Use this for process-specific parameters.
-    PrintRegionConfig const *config;
+    PrintRegionConfig const *config{ nullptr };
 };
 static_assert(IsTriviallyCopyable<FillParams>::value, "FillParams class is not POD (and it should be - see constructor).");
 

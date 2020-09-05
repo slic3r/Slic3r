@@ -24,7 +24,7 @@ namespace Slic3r {
         
         // Save into layer smoothing path.
         ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
-        eec->no_sort = false;
+        eec->no_sort = params.monotonous;
         FillParams params_modifided = params;
         if (params.config != NULL && idx > 0) params_modifided.density /= (float)params.config->fill_smooth_width.get_abs_value(1);
         else if (params.config != NULL && idx == 0) params_modifided.density *= 1;
@@ -133,14 +133,18 @@ namespace Slic3r {
         // first infill
         perform_single_fill(0, *eecroot, *surface, params, volumeToOccupy);
 
+        //use monotonous for ironing pass
+        FillParams monotonous_params = params;
+        monotonous_params.monotonous = true;
+
         //second infill
         if (nbPass > 1){
-            perform_single_fill(1, *eecroot, *surface, params, volumeToOccupy);
+            perform_single_fill(1, *eecroot, *surface, monotonous_params, volumeToOccupy);
         }
 
         // third infill
         if (nbPass > 2){
-            perform_single_fill(2, *eecroot, *surface, params, volumeToOccupy);
+            perform_single_fill(2, *eecroot, *surface, monotonous_params, volumeToOccupy);
         }
         
         if (!eecroot->entities.empty()) 

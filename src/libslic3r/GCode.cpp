@@ -4501,6 +4501,7 @@ void GCode::ObjectByExtruder::Island::Region::append(const Type type, const Extr
 
     // First we append the entities, there are eec->entities.size() of them:
     //don't do fill->entities because it will discard no_sort, we must use flatten(preserve_ordering = true)
+    // this method will encapsulate every no_sort into an other collection, so we can get the entities directly.
     ExtrusionEntitiesPtr entities = eec->flatten(true).entities;
     size_t old_size = perimeters_or_infills->size();
     size_t new_size = old_size + entities.size();

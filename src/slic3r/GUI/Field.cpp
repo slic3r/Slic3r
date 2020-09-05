@@ -987,11 +987,9 @@ void Choice::set_value(const boost::any& value, bool change_event)
         int val = boost::any_cast<int>(value);
         if (m_opt_id == "top_fill_pattern" || m_opt_id == "bottom_fill_pattern" || m_opt_id == "solid_fill_pattern"
             || m_opt_id == "fill_pattern" || m_opt_id == "support_material_interface_pattern" || m_opt_id == "brim_ears_pattern")
-        {
             val = idx_from_enum_value<InfillPattern>(val);
-        } else if (m_opt_id.compare("perimeter_loop_seam") == 0) {
+        else if (m_opt_id.compare("perimeter_loop_seam") == 0)
             val = idx_from_enum_value<SeamPosition>(val);
-        }
         else if (m_opt_id.compare("complete_objects_sort") == 0)
             val = idx_from_enum_value<CompleteObjectSort>(val);
         else if (m_opt_id.compare("gcode_flavor") == 0)

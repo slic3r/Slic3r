@@ -151,14 +151,13 @@ ExtrusionEntityCollection ExtrusionEntityCollection::flatten(bool preserve_order
 }
 void
 FlatenEntities::use(const ExtrusionEntityCollection &coll) {
-    if (coll.no_sort && preserve_ordering) {
+    if ((coll.no_sort || this->to_fill.no_sort) && preserve_ordering) {
         FlatenEntities unsortable(coll, preserve_ordering);
         for (const ExtrusionEntity* entity : coll.entities) {
             entity->visit(unsortable);
         }
         to_fill.append(std::move(unsortable.to_fill));
-    }
-    else {
+    } else {
         for (const ExtrusionEntity* entity : coll.entities) {
             entity->visit(*this);
         }

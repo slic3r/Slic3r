@@ -32,6 +32,7 @@ Fill* Fill::new_from_type(const InfillPattern type)
     case ipGyroid:              return new FillGyroid();
     case ipRectilinear:         return new FillRectilinear2();
 //  case ipRectilinear:         return new FillRectilinear();
+    case ipMonotonous:          return new FillMonotonous();
     case ipRectilinearWGapFill: return new FillRectilinear2WGapFill();
     case ipScatteredRectilinear:return new FillScatteredRectilinear();
     case ipLine:                return new FillLine();
@@ -146,7 +147,11 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
 
 void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const {
     //add overlap & call fill_surface
-    Polylines polylines = this->fill_surface(surface, params);
+    Polylines polylines;
+    try {
+        polylines = this->fill_surface(surface, params);
+    } catch (InfillFailedException&) {
+    }
     if (polylines.empty())
         return;
     // ensure it doesn't over or under-extrude
@@ -590,10 +595,11 @@ Fill::do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, Ext
     //    offset2_ex(gapfill_areas, double(-max / 2), double(+max / 2)),
     //    true);
     ExPolygons gapfill_areas_collapsed = offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2));
+    const double minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow->width) ) * params.flow->scaled_width();
     for (const ExPolygon &ex : gapfill_areas_collapsed) {
         //remove too small gaps that are too hard to fill.
         //ie one that are smaller than an extrusion with width of min and a length of max.
-        if (ex.area() > scale_(params.flow->nozzle_diameter)*scale_(params.flow->nozzle_diameter) * 2) {
+        if (ex.area() > minarea) {
             MedialAxis{ ex, params.flow->scaled_width() * 2, params.flow->scaled_width() / 5, coord_t(params.flow->height) }.build(polylines_gapfill);
         }
     }

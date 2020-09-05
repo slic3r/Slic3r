@@ -59,7 +59,9 @@ enum PrintHostType {
 enum InfillPattern {
     ipRectilinear, ipGrid, ipTriangles, ipStars, ipCubic, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
     ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral, ipSmooth, ipSmoothHilbert, ipSmoothTriple,
-    ipRectiWithPerimeter, ipConcentricGapFill, ipScatteredRectilinear, ipSawtooth, ipRectilinearWGapFill, ipCount
+    ipRectiWithPerimeter, ipConcentricGapFill, ipScatteredRectilinear, ipSawtooth, ipRectilinearWGapFill, 
+    ipMonotonous,
+    ipCount
 };
 
 enum SupportMaterialPattern {
@@ -165,6 +167,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<InfillPattern>::g
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
         keys_map["rectilinear"]         = ipRectilinear;
+        keys_map["monotonous"]          = ipMonotonous;
         keys_map["grid"]                = ipGrid;
         keys_map["triangles"]           = ipTriangles;
         keys_map["stars"]               = ipStars;
@@ -182,8 +185,8 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<InfillPattern>::g
         keys_map["smoothtriple"]        = ipSmoothTriple;
         keys_map["smoothhilbert"]       = ipSmoothHilbert;
         keys_map["rectiwithperimeter"]  = ipRectiWithPerimeter;
-        keys_map["scatteredrectilinear"] = ipScatteredRectilinear;
-        keys_map["rectilineargapfill"] = ipRectilinearWGapFill;
+        keys_map["scatteredrectilinear"]= ipScatteredRectilinear;
+        keys_map["rectilineargapfill"]  = ipRectilinearWGapFill;
         keys_map["sawtooth"]            = ipSawtooth;
     }
     return keys_map;
