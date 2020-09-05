@@ -389,7 +389,7 @@ static bool _arrange(const Pointfs &sizes, coordf_t dist, const BoundingBoxf* bb
 
 /*  arrange objects preserving their instance count
     but altering their instance positions */
-bool Model::arrange_objects(const Print &print, const BoundingBoxf* bb)
+bool Model::arrange_objects(const PrintBase *print, const BoundingBoxf* bb)
 {    
     size_t count = 0;
     for (auto obj : objects) count += obj->instances.size();
@@ -1823,7 +1823,7 @@ void ModelInstance::transform_polygon(Polygon* polygon) const
     polygon->scale(get_scaling_factor(X), get_scaling_factor(Y)); // scale around polygon origin
 }
 
-arrangement::ArrangePolygon ModelInstance::get_arrange_polygon(const Print& print) const
+arrangement::ArrangePolygon ModelInstance::get_arrange_polygon(const PrintBase *print_base) const
 {
     static const double SIMPLIFY_TOLERANCE_MM = 0.1;
     
@@ -1841,13 +1841,17 @@ arrangement::ArrangePolygon ModelInstance::get_arrange_polygon(const Print& prin
     // https://github.com/prusa3d/PrusaSlicer/issues/2209
     if (!p.points.empty()) {
         Polygons pp{p};
-        //grow
-        double dist = print.config().min_object_distance(&print.full_print_config());
-        std::cout << "min_object_distance = " << dist << "\n";
-        pp = offset(pp, scale_(dist));
-        //simplify
-        if (!pp.empty())
-            pp = pp.front().simplify(scaled<double>(SIMPLIFY_TOLERANCE_MM));
+        if (const Print* print = dynamic_cast<const Print*>(print_base))
+        {
+            //grow
+            double dist = print->config().min_object_distance(&print->full_print_config());
+            std::cout << "min_object_distance = " << dist << "\n";
+            pp = offset(pp, scale_(dist));
+            //simplify
+            if (!pp.empty())
+                pp = pp.front().simplify(scaled<double>(SIMPLIFY_TOLERANCE_MM));
+        }else
+            pp = p.simplify(scaled<double>(SIMPLIFY_TOLERANCE_MM));
         if (!pp.empty()) p = pp.front();
     }
    

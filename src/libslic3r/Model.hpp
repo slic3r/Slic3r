@@ -37,6 +37,7 @@ class ModelMaterial;
 class ModelObject;
 class ModelVolume;
 class ModelWipeTower;
+class PrintBase;
 class Print;
 class SLAPrint;
 
@@ -667,7 +668,7 @@ public:
     bool is_printable() const { return object->printable && printable && (print_volume_state == PVS_Inside); }
 
     // Getting the input polygon for arrange
-    arrangement::ArrangePolygon get_arrange_polygon(const Print& print) const;
+    arrangement::ArrangePolygon get_arrange_polygon(const PrintBase* print) const;
     
     // Apply the arrange result on the ModelInstance
     void apply_arrange_result(const Vec2crd& offs, double rotation)
@@ -804,7 +805,7 @@ public:
     bool 		  center_instances_around_point(const Vec2d &point);
     void 		  translate(coordf_t x, coordf_t y, coordf_t z) { for (ModelObject *o : this->objects) o->translate(x, y, z); }
     TriangleMesh  mesh() const;
-    bool 		  arrange_objects(const Print& print, const BoundingBoxf* bb = NULL);
+    bool 		  arrange_objects(const PrintBase* print, const BoundingBoxf* bb = NULL);
     // Croaks if the duplicated objects do not fit the print bed.
     void 		  duplicate(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);
     void 	      duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb = NULL);

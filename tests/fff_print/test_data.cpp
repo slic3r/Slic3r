@@ -174,7 +174,7 @@ void init_print(std::vector<TriangleMesh> &&meshes, Slic3r::Print &print, Slic3r
     }
 
 	print.apply(model, config);
-    model.arrange_objects(print);
+    model.arrange_objects(&print);
     print.apply(model, config);
     print.validate();
     print.set_status_silent();
