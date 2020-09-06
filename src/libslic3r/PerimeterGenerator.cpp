@@ -900,13 +900,20 @@ void PerimeterGenerator::process()
         this->fill_surfaces->append(infill_exp, stPosInternal | stDensSparse);
             
         if (infill_peri_overlap != 0) {
-            ExPolygons polyWithoutOverlap = offset2_ex(
-                not_filled_exp,
-                -inset - infill_gap - min_perimeter_infill_spacing / 2,
-                (float) min_perimeter_infill_spacing / 2);
+            ExPolygons polyWithoutOverlap;
+            if (min_perimeter_infill_spacing / 2 > infill_peri_overlap)
+                polyWithoutOverlap = offset2_ex(
+                    not_filled_exp,
+                    -inset - infill_gap - min_perimeter_infill_spacing / 2 + infill_peri_overlap,
+                    (float)min_perimeter_infill_spacing / 2 - infill_peri_overlap);
+            else
+                polyWithoutOverlap = offset_ex(
+                    not_filled_exp,
+                    -inset - infill_gap);
             if (!top_fills.empty()) {
                 polyWithoutOverlap = union_ex(polyWithoutOverlap, top_infill_exp);
-                this->fill_no_overlap.insert(this->fill_no_overlap.end(), polyWithoutOverlap.begin(), polyWithoutOverlap.end());
+            }
+            this->fill_no_overlap.insert(this->fill_no_overlap.end(), polyWithoutOverlap.begin(), polyWithoutOverlap.end());
                 /*{
                     std::stringstream stri;
                     stri << this->layer->id() << "_2_end_makeperimeter_" << this->layer->id() << ".svg";
@@ -919,7 +926,6 @@ void PerimeterGenerator::process()
                     svg.draw(to_polylines(top_infill_exp), "orange");
                     svg.Close();
                 }*/
-            }
         }
     } // for each island
 }

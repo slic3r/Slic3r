@@ -1,4 +1,5 @@
 min_slic3r_version = 2.2.0-alpha3
+0.2.5 superslicer: remove top_fan_speed
 0.2.4 slic3r++ adaptation: overlapping & top pattern.
 0.2.3 changed flow ratio from float to %
 0.2.2 version

@@ -25,6 +25,7 @@ namespace Slic3r {
 
 class Model;
 class ModelObject;
+class PrintBase;
 class Print;
 class SLAPrint;
 enum SLAPrintObjectStep : unsigned int;
@@ -150,6 +151,7 @@ public:
     Print& fff_print();
     const SLAPrint& sla_print() const;
     SLAPrint& sla_print();
+    const PrintBase* current_print() const;
 
     void new_project();
     void load_project();

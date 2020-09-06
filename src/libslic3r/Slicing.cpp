@@ -32,7 +32,7 @@ coordf_t check_z_step(const coordf_t val, const coordf_t z_step) {
     //return int((val + z_step * 0.5) / z_step) * z_step;
 }
 inline bool test_z_step(const coordf_t val, const coordf_t z_step) {
-    if (z_step <= EPSILON) return val;
+    if (z_step <= EPSILON) return true;
     uint64_t valint = uint64_t(val * 100000000. + 0.1);
     uint64_t stepint = uint64_t(z_step * 100000000. + 0.1);
     return valint % stepint == 0;

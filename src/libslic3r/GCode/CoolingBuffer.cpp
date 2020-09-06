@@ -726,9 +726,17 @@ std::string CoolingBuffer::apply_layer_cooldown(
             top_fan_speed = EXTRUDER_CONFIG(top_fan_speed);
             ext_peri_fan_speed = EXTRUDER_CONFIG(external_perimeter_fan_speed);
 #undef EXTRUDER_CONFIG
-            bridge_fan_control = bridge_fan_speed > fan_speed_new && bridge_fan_speed != 0;
-            top_fan_control    = top_fan_speed != fan_speed_new && top_fan_speed != 0;
-            ext_peri_fan_control = ext_peri_fan_speed != fan_speed_new && ext_peri_fan_speed != 0;
+            // 0 is deprecated for diable: take care of temp settings.
+            if (bridge_fan_speed == 0) bridge_fan_speed = -1;
+            if (ext_peri_fan_speed == 0) ext_peri_fan_speed = -1;
+            if (top_fan_speed == 0) top_fan_speed = -1;
+            if (bridge_fan_speed == 1) bridge_fan_speed = 0;
+            if (ext_peri_fan_speed == 1) ext_peri_fan_speed = 0;
+            if (top_fan_speed == 1) top_fan_speed = 0;
+            // end deprecation
+            bridge_fan_control = bridge_fan_speed > fan_speed_new && bridge_fan_speed >= 0;
+            top_fan_control    = top_fan_speed != fan_speed_new && top_fan_speed >= 0;
+            ext_peri_fan_control = ext_peri_fan_speed != fan_speed_new && ext_peri_fan_speed >= 0;
         } else {
             bridge_fan_control = false;
             bridge_fan_speed   = 0;

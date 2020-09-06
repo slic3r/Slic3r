@@ -270,9 +270,11 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Bridges fan speed");
     def->category = OptionCategory::cooling;
     def->tooltip = L("This fan speed is enforced during all bridges and overhangs. It won't slow down the fan if it's currently running at a higher speed."
-        "\nSet to 0 to disable this override. Can only be overriden by disable_fan_first_layers.");
+        "\nSet to 1 to disable the fan."
+        "\nSet to -1 to disable this override."
+        "\nCan only be overriden by disable_fan_first_layers.");
     def->sidetext = L("%");
-    def->min = 0;
+    def->min = -1;
     def->max = 100;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInts { 100 });
@@ -281,12 +283,14 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Top fan speed");
     def->category = OptionCategory::cooling;
     def->tooltip = L("This fan speed is enforced during all top fills."
-        "\nSet to 0 to disable this override. Can only be overriden by disable_fan_first_layers.");
+        "\nSet to 1 to disable the fan."
+        "\nSet to -1 to disable this override."
+        "\nCan only be overriden by disable_fan_first_layers.");
     def->sidetext = L("%");
-    def->min = 0;
+    def->min = -1;
     def->max = 100;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionInts{ 0 });
+    def->set_default_value(new ConfigOptionInts{ -1 });
 
     def = this->add("bridge_flow_ratio", coPercent);
     def->label = L("Bridge");
@@ -764,14 +768,15 @@ void PrintConfigDef::init_fff_params()
     def = this->add("external_perimeter_fan_speed", coInts);
     def->label = L("External perimeter fan speed");
     def->tooltip = L("When set to a non-zero value this fan speed is used only for external perimeters (visible ones). "
-                    "When set to zero the normal fan speed is used on external perimeters. "
+                    "\nSet to 1 to disable the fan."
+                    "\nSet to -1 to use the normal fan speed on external perimeters."
                     "External perimeters can benefit from higher fan speed to improve surface finish, "
                     "while internal perimeters, infill, etc. benefit from lower fan speed to improve layer adhesion.");
     def->sidetext = L("%");
-    def->min = 0;
+    def->min = -1;
     def->max = 100;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionInts { 0 });
+    def->set_default_value(new ConfigOptionInts { -1 });
 
     def = this->add("external_perimeter_overlap", coPercent);
     def->label = L("external perimeter overlap");
@@ -1293,7 +1298,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloats{ 1.75 });
 
     def = this->add("filament_shrink", coPercents);
-    def->label = L("Shrikage");
+    def->label = L("Shrinkage");
     def->tooltip = L("Enter the shrinkage percentage that the filament will get after cooling (94% if you measure 94mm instead of 100mm)."
                     " The part will be scaled in xy to conpensate."
                     " Only the filament used for the perimeter is taken into account."
@@ -1491,7 +1496,9 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("First layer flow ratio");
     def->sidetext = L("%");
     def->category = OptionCategory::width;
-    def->tooltip = L("You can increase this to over-extrude on the first layer if there are not enough plastic because your bed isn't levelled.");
+    def->tooltip = L("You can increase this to over-extrude on the first layer if there are not enough plastic because your bed isn't levelled."
+                    "\nNote: DON'T USE THIS if your only problem is bed levelling, LEVEL YOUR BED!"
+                    " Use this setting only as last resort after all calibrations failed.");
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionPercent(100));
@@ -4544,6 +4551,9 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         float v = boost::lexical_cast<float>(value);
         if (v > 0)
             value = boost::lexical_cast<std::string>(-v);
+    } else if (opt_key == "thumbnails") {
+        if (value.empty())
+            value = "0x0,0x0";
     } else if (opt_key == "z_steps_per_mm") {
         opt_key = "z_step";
         float v = boost::lexical_cast<float>(value);
