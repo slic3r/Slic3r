@@ -241,9 +241,11 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Bridges fan speed");
     def->category = OptionCategory::cooling;
     def->tooltip = L("This fan speed is enforced during all bridges and overhangs. It won't slow down the fan if it's currently running at a higher speed."
-        "\nSet to 0 to disable this override. Can only be overriden by disable_fan_first_layers.");
+        "\nSet to 1 to disable the fan."
+        "\nSet to -1 to disable this override."
+        "\nCan only be overriden by disable_fan_first_layers.");
     def->sidetext = L("%");
-    def->min = 0;
+    def->min = -1;
     def->max = 100;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInts { 100 });
@@ -252,12 +254,14 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Top fan speed");
     def->category = OptionCategory::cooling;
     def->tooltip = L("This fan speed is enforced during all top fills."
-        "\nSet to 0 to disable this override. Can only be overriden by disable_fan_first_layers.");
+        "\nSet to 1 to disable the fan."
+        "\nSet to -1 to disable this override."
+        "\nCan only be overriden by disable_fan_first_layers.");
     def->sidetext = L("%");
-    def->min = 0;
+    def->min = -1;
     def->max = 100;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionInts{ 0 });
+    def->set_default_value(new ConfigOptionInts{ -1 });
 
     def = this->add("bridge_flow_ratio", coPercent);
     def->label = L("Bridge");
@@ -729,14 +733,15 @@ void PrintConfigDef::init_fff_params()
     def = this->add("external_perimeter_fan_speed", coInts);
     def->label = L("External perimeter fan speed");
     def->tooltip = L("When set to a non-zero value this fan speed is used only for external perimeters (visible ones). "
-                    "When set to zero the normal fan speed is used on external perimeters. "
+                    "\nSet to 1 to disable the fan."
+                    "\nSet to -1 to use the normal fan speed on external perimeters."
                     "External perimeters can benefit from higher fan speed to improve surface finish, "
                     "while internal perimeters, infill, etc. benefit from lower fan speed to improve layer adhesion.");
     def->sidetext = L("%");
-    def->min = 0;
+    def->min = -1;
     def->max = 100;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionInts { 0 });
+    def->set_default_value(new ConfigOptionInts { -1 });
 
     def = this->add("external_perimeter_overlap", coPercent);
     def->label = L("external perimeter overlap");
