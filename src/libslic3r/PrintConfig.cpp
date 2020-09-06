@@ -1454,7 +1454,9 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("First layer flow ratio");
     def->sidetext = L("%");
     def->category = OptionCategory::width;
-    def->tooltip = L("You can increase this to over-extrude on the first layer if there are not enough plastic because your bed isn't levelled.");
+    def->tooltip = L("You can increase this to over-extrude on the first layer if there are not enough plastic because your bed isn't levelled."
+                    "\nNote: DON'T USE THIS if your only problem is bed levelling, LEVEL YOUR BED!"
+                    " Use this setting only as last resort after all calibrations failed.");
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionPercent(100));
