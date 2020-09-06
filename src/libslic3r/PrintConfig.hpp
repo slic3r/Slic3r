@@ -48,8 +48,19 @@ enum WipeAlgo {
 };
 
 enum GCodeFlavor : uint8_t {
-    gcfRepRap, gcfRepetier, gcfTeacup, gcfMakerWare, gcfMarlin, gcfKlipper, gcfSailfish, gcfMach3, gcfMachinekit,
-    gcfSmoothie, gcfSprinter, gcfNoExtrusion, gcfLerdge,
+    gcfRepRap,
+    gcfRepetier,
+    gcfTeacup,
+    gcfMakerWare,
+    gcfMarlin, 
+    gcfKlipper,
+    gcfSailfish,
+    gcfMach3,
+    gcfMachinekit,
+    gcfSmoothie,
+    gcfSprinter,
+    gcfNoExtrusion,
+ gcfLerdge,
 };
 
 enum PrintHostType {

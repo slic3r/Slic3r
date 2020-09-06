@@ -1313,13 +1313,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                     TabPrinter* tab = nullptr;
                     if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
                     current_group->m_on_change = set_or_add(current_group->m_on_change, [this, tab](t_config_option_key opt_key, boost::any value) {
-                        if (opt_key == "silent_mode") {
-                            bool val = boost::any_cast<bool>(value);
-                            if (tab->m_use_silent_mode != val) {
-                                tab->m_rebuild_kinematics_page = true;
-                                tab->m_use_silent_mode = val;
-                            }
-                        }
+                        tab->update_fff(); //check for kinematic rebuild
                         tab->build_unregular_pages();
                     });
                 }
@@ -2166,14 +2160,18 @@ void TabPrinter::milling_count_changed(size_t milling_count)
     //}
 }
 
-void TabPrinter::append_option_line_kinematics(ConfigOptionsGroupShp optgroup, const std::string opt_key)
+void TabPrinter::append_option_line_kinematics(ConfigOptionsGroupShp optgroup, const std::string opt_key, const std::string override_sidetext)
 {
     Option option = optgroup->get_option(opt_key, 0);
+    if (!override_sidetext.empty())
+        option.opt.sidetext = override_sidetext;
     Line line = Line{ _(option.opt.full_label), "" };
     option.opt.width = 10;
     line.append_option(option);
     if (m_use_silent_mode) {
         option = optgroup->get_option(opt_key, 1);
+        if (!override_sidetext.empty())
+            option.opt.sidetext = override_sidetext;
         option.opt.width = 10;
         line.append_option(option);
     }
@@ -2185,7 +2183,7 @@ PageShp TabPrinter::build_kinematics_page()
     auto page = add_options_page(_(L("Machine limits")), "cog", true);
     ConfigOptionsGroupShp optgroup;
     if (m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value != gcfMarlin && m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value != gcfLerdge) {
-        optgroup = page->new_optgroup(_(L("not-marlin/lerdge firmware compensation"))); 
+        optgroup = page->new_optgroup(_(L("not-marlin/lerdge firmware compensation")));
         optgroup->append_single_option_line("time_estimation_compensation");
     }
     optgroup = page->new_optgroup(_(L("Machine Limits")));
@@ -2230,27 +2228,34 @@ PageShp TabPrinter::build_kinematics_page()
 
     std::vector<std::string> axes{ "x", "y", "z", "e" };
     optgroup = page->new_optgroup(_(L("Maximum feedrates")));
-        for (const std::string &axis : axes) {
+    for (const std::string& axis : axes) {
+        if (m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfRepRap)
+            append_option_line_kinematics(optgroup, "machine_max_feedrate_" + axis, "mm/min");
+        else
             append_option_line_kinematics(optgroup, "machine_max_feedrate_" + axis);
-        }
+    }
 
     optgroup = page->new_optgroup(_(L("Maximum accelerations")));
-        for (const std::string &axis : axes) {
-            append_option_line_kinematics(optgroup, "machine_max_acceleration_" + axis);
-        }
-        append_option_line_kinematics(optgroup, "machine_max_acceleration_extruding");
-        append_option_line_kinematics(optgroup, "machine_max_acceleration_retracting");
-        append_option_line_kinematics(optgroup, "machine_max_acceleration_travel");
+    for (const std::string& axis : axes) {
+        append_option_line_kinematics(optgroup, "machine_max_acceleration_" + axis);
+    }
+    append_option_line_kinematics(optgroup, "machine_max_acceleration_extruding");
+    append_option_line_kinematics(optgroup, "machine_max_acceleration_retracting");
+    append_option_line_kinematics(optgroup, "machine_max_acceleration_travel");
 
     optgroup = page->new_optgroup(_(L("Jerk limits")));
-        for (const std::string &axis : axes) {
-            append_option_line_kinematics(optgroup, "machine_max_jerk_" + axis);
-        }
+    for (const std::string& axis : axes) {
+        append_option_line_kinematics(optgroup, "machine_max_jerk_" + axis);
+    }
 
     optgroup = page->new_optgroup(_(L("Minimum feedrates")));
-        append_option_line_kinematics(optgroup, "machine_min_extruding_rate");
-        append_option_line_kinematics(optgroup, "machine_min_travel_rate");
-
+        if (m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfRepRap){
+            append_option_line_kinematics(optgroup, "machine_min_extruding_rate", "mm/min");
+            append_option_line_kinematics(optgroup, "machine_min_travel_rate", "mm/min");
+        } else {
+            append_option_line_kinematics(optgroup, "machine_min_extruding_rate");
+            append_option_line_kinematics(optgroup, "machine_min_travel_rate");
+        }
     return page;
 }
 
@@ -2503,8 +2508,8 @@ void TabPrinter::update_fff()
     else 
         GCodeWriter::PausePrintCode = "M601";
 
-    if (m_is_marlin != is_marlin_flavor) {
-        m_is_marlin = is_marlin_flavor;
+    if (m_last_gcode_flavor != uint8_t(m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value)) {
+        m_last_gcode_flavor = uint8_t(m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value);
         m_rebuild_kinematics_page = true;
     }
 

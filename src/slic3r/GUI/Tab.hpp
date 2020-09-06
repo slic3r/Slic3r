@@ -384,9 +384,9 @@ public:
     void build_printhost(ConfigOptionsGroup *optgroup);
 
     bool		m_has_single_extruder_MM_page = false;
-	bool		m_is_marlin = false;
+	uint8_t		m_last_gcode_flavor = uint8_t(255);
 	bool		m_use_silent_mode = false;
-    void		append_option_line_kinematics(ConfigOptionsGroupShp optgroup, const std::string opt_key);
+    void		append_option_line_kinematics(ConfigOptionsGroupShp optgroup, const std::string opt_key, const std::string override_units = "");
     bool		m_rebuild_kinematics_page = false;
 
 	wxButton*	m_serial_test_btn = nullptr;
