@@ -1161,14 +1161,21 @@ void Choice::msw_rescale(bool rescale_sidetext/* = false*/)
 
 void ColourPicker::BUILD()
 {
-	auto size = wxSize(def_width() * m_em_unit, wxDefaultCoord);
-    if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
-    if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
+    auto size = wxSize(def_width() * m_em_unit, wxDefaultCoord);
+    if (m_opt.height >= 0) size.SetHeight(m_opt.height * m_em_unit);
+    if (m_opt.width >= 0) size.SetWidth(m_opt.width * m_em_unit);
 
-	// Validate the color
-	wxString clr_str(m_opt.get_default_value<ConfigOptionStrings>()->get_at(m_opt_idx));
-	wxColour clr(clr_str);
-	if (clr_str.IsEmpty() || !clr.IsOk()) {
+    // Validate the color 
+    wxColour clr = wxTransparentColour;
+    if (m_opt.type == coStrings)
+        clr = wxColour{wxString{ m_opt.get_default_value<ConfigOptionStrings>()->get_at(m_opt_idx) }};
+    if (m_opt.type == coString)
+        clr = wxColour{ wxString{ m_opt.get_default_value<ConfigOptionString>()->value } };
+    if (m_opt.type == coInts)
+        clr = wxColour{ (unsigned long)m_opt.get_default_value<ConfigOptionInts>()->get_at(m_opt_idx) };
+    if (m_opt.type == coInt)
+        clr = wxColour{ (unsigned long)m_opt.get_default_value<ConfigOptionInt>()->value };
+	if (!clr.IsOk()) {
 		clr = wxTransparentColour;
 	}
 
@@ -1181,7 +1188,7 @@ void ColourPicker::BUILD()
 
 	temp->Bind(wxEVT_COLOURPICKER_CHANGED, ([this](wxCommandEvent e) { on_change_field(); }), temp->GetId());
 
-	temp->SetToolTip(get_tooltip_text(clr_str));
+	temp->SetToolTip(get_tooltip_text(clr.GetAsString()));
 }
 
 void ColourPicker::set_undef_value(wxColourPickerCtrl* field)

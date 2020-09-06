@@ -1120,6 +1120,9 @@ public:
     ConfigOptionInts                temperature;
     ConfigOptionInt                 threads;
     ConfigOptionPoints              thumbnails;
+    ConfigOptionString              thumbnails_color;
+    ConfigOptionBool                thumbnails_custom_color;
+    ConfigOptionBool                thumbnails_with_bed;
     ConfigOptionPercent             time_estimation_compensation;
     ConfigOptionInts                top_fan_speed;
     ConfigOptionBools               wipe;
@@ -1212,6 +1215,9 @@ protected:
         OPT_PTR(temperature);
         OPT_PTR(threads);
         OPT_PTR(thumbnails);
+        OPT_PTR(thumbnails_color);
+        OPT_PTR(thumbnails_custom_color);
+        OPT_PTR(thumbnails_with_bed);
         OPT_PTR(time_estimation_compensation);
         OPT_PTR(top_fan_speed);
         OPT_PTR(wipe);
@@ -1526,6 +1532,11 @@ public:
     ConfigOptionFloat                       max_exposure_time;
     ConfigOptionFloat                       min_initial_exposure_time;
     ConfigOptionFloat                       max_initial_exposure_time;
+    ConfigOptionPoints                      thumbnails;
+    ConfigOptionString                      thumbnails_color;
+    ConfigOptionBool                        thumbnails_custom_color;
+    ConfigOptionBool                        thumbnails_with_bed;
+    ConfigOptionBool                        thumbnails_with_support;
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
@@ -1551,6 +1562,11 @@ protected:
         OPT_PTR(max_exposure_time);
         OPT_PTR(min_initial_exposure_time);
         OPT_PTR(max_initial_exposure_time);
+        OPT_PTR(thumbnails);
+        OPT_PTR(thumbnails_color);
+        OPT_PTR(thumbnails_custom_color);
+        OPT_PTR(thumbnails_with_bed);
+        OPT_PTR(thumbnails_with_support);
     }
 };
 

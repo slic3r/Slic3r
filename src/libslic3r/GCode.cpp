@@ -1009,7 +1009,7 @@ namespace DoExport {
 
 	#if ENABLE_THUMBNAIL_GENERATOR
 	template<typename WriteToOutput, typename ThrowIfCanceledCallback>
-	static void export_thumbnails_to_file(ThumbnailsGeneratorCallback &thumbnail_cb, const std::vector<Vec2d> &sizes, WriteToOutput output, ThrowIfCanceledCallback throw_if_canceled)
+	static void export_thumbnails_to_file(ThumbnailsGeneratorCallback &thumbnail_cb, const std::vector<Vec2d> &sizes, bool thumbnails_with_bed, WriteToOutput output, ThrowIfCanceledCallback throw_if_canceled)
 	{
 	    // Write thumbnails using base64 encoding
 	    if (thumbnail_cb != nullptr)
@@ -1021,7 +1021,7 @@ namespace DoExport {
 
 	        const size_t max_row_length = 78;
 	        ThumbnailsList thumbnails;
-	        thumbnail_cb(thumbnails, good_sizes, true, true, true, true);
+	        thumbnail_cb(thumbnails, good_sizes, true, true, thumbnails_with_bed, true);
 	        for (const ThumbnailData& data : thumbnails)
 	        {
 	            if (data.is_valid())
@@ -1263,7 +1263,10 @@ void GCode::_do_export(Print &print, FILE *file)
     _write_format(file, "; %s\n\n", Slic3r::header_slic3r_generated().c_str());
 
 #if ENABLE_THUMBNAIL_GENERATOR
-    DoExport::export_thumbnails_to_file(thumbnail_cb, print.full_print_config().option<ConfigOptionPoints>("thumbnails")->values, 
+    const ConfigOptionBool *thumbnails_with_bed = print.full_print_config().option<ConfigOptionBool>("thumbnails_with_bed");
+    DoExport::export_thumbnails_to_file(thumbnail_cb, 
+        print.full_print_config().option<ConfigOptionPoints>("thumbnails")->values,
+        thumbnails_with_bed==nullptr? false:thumbnails_with_bed->value,
         [this, file](const char* sz) { this->_write(file, sz); }, 
         [&print]() { print.throw_if_canceled(); });
 #endif // ENABLE_THUMBNAIL_GENERATOR

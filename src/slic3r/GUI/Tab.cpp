@@ -2467,6 +2467,10 @@ void TabPrinter::update_fff()
     if (field)
         field->toggle(have_multiple_extruders);
 
+    //thumbnails
+    bool custom_color = m_config->opt_bool("thumbnails_custom_color");
+    get_field("thumbnails_color")->toggle(custom_color);
+
     bool is_marlin_flavor = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfMarlin;
 
     {

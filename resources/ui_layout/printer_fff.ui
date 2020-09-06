@@ -13,13 +13,19 @@ group:Print Host upload
 	printhost
 group:silent_mode_event:Firmware
 	setting:gcode_flavor
-	line:Gcode thumbnails
-		setting:id$0:label$Small:thumbnails
-		setting:id$1:label$Big:thumbnails
-	end_line
 	setting:silent_mode
 	setting:remaining_times
 	setting:fan_speedup_time
+group:Thumbnails
+	line:Size for Gcode
+		setting:id$0:label$Small:thumbnails
+		setting:id$1:label$Big:thumbnails
+	end_line
+	line:Color override
+		setting:label$:sidetext_width$1:thumbnails_custom_color
+		setting:label$:label_width$1:thumbnails_color
+	end_line
+	setting:thumbnails_with_bed
 group:Advanced
 	setting:use_relative_e_distances
 	setting:use_firmware_retraction

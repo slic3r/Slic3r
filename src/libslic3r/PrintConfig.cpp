@@ -72,9 +72,38 @@ void PrintConfigDef::init_common_params()
     def->set_default_value(new ConfigOptionString(""));
 
     def = this->add("thumbnails", coPoints);
-    def->label = L("Picture sizes to be stored into a .gcode and .sl1 files");
+    def->label = L("Thumbnails size");
+    def->tooltip = L("Picture sizes to be stored into a .gcode and .sl1 files");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionPoints{ Vec2d(0,0), Vec2d(0,0) });
+
+    def = this->add("thumbnails_color", coString);
+    def->label = L("Color");
+    def->full_label = L("Thumbnail color");
+    def->category = OptionCategory::filament;
+    def->tooltip = L("This is the color that will be enforce on objects in the thumbnails.");
+    def->gui_type = "color";
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionString("#018aff"));
+
+    def = this->add("thumbnails_custom_color", coBool);
+    def->label = L("Enforce thumbnail color");
+    def->tooltip = L("Enforce a specific color on thumbnails."
+        " If not enforced, their color will be the one defined by the filament.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("thumbnails_with_bed", coBool);
+    def->label = L("Bed on thumbnail");
+    def->tooltip = L("Show the bed texture on the thumbnail picture.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(true));
+
+    def = this->add("thumbnails_with_support", coBool);
+    def->label = L("Support on thumbnail");
+    def->tooltip = L("Show the suppots (and pads) on the thumbnail picture.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("layer_height", coFloat);
     def->label = L("Base Layer height");

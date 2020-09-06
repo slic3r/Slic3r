@@ -169,8 +169,11 @@ void BackgroundSlicingProcess::process_sla()
                 for (const Vec2d &size : current_print()->full_print_config().option<ConfigOptionPoints>("thumbnails")->values)
                     if (size.x() > 0 && size.y() > 0)
                         good_sizes.push_back(size);
-                m_thumbnail_cb(thumbnails, good_sizes, true, true, true, true);
-//                m_thumbnail_cb(thumbnails, good_sizes, true, false, true, true); // renders also supports and pad
+                m_thumbnail_cb(thumbnails, good_sizes,
+                    true, // printable_only
+                    !m_sla_print->printer_config().thumbnails_with_support.value, // parts_only
+                    m_sla_print->printer_config().thumbnails_with_bed.value, // show_bed
+                    true); // transparent_background
                 for (const ThumbnailData& data : thumbnails)
                 {
                     if (data.is_valid())
@@ -488,7 +491,7 @@ void BackgroundSlicingProcess::prepare_upload()
 		}
 		run_post_process_scripts(source_path.string(), m_fff_print->config());
 		m_upload_job.upload_data.upload_path = m_fff_print->print_statistics().finalize_output_path(m_upload_job.upload_data.upload_path.string());
-    } else {
+    } else if (m_print == m_sla_print) {
 		m_upload_job.upload_data.upload_path = m_sla_print->print_statistics().finalize_output_path(m_upload_job.upload_data.upload_path.string());
 
         Zipper zipper{source_path.string()};
@@ -501,8 +504,11 @@ void BackgroundSlicingProcess::prepare_upload()
             for (const Vec2d &size : current_print()->full_print_config().option<ConfigOptionPoints>("thumbnails")->values)
                 if (size.x() > 0 && size.y() > 0)
                     good_sizes.push_back(size);
-            m_thumbnail_cb(thumbnails, good_sizes, true, true, true, true);
-//            m_thumbnail_cb(thumbnails, good_sizes, true, false, true, true); // renders also supports and pad
+            m_thumbnail_cb(thumbnails, good_sizes, 
+                true, // printable_only
+                !m_sla_print->printer_config().thumbnails_with_support.value, // parts_only
+                m_sla_print->printer_config().thumbnails_with_bed.value, // show_bed
+                true); // transparent_background
             for (const ThumbnailData& data : thumbnails)
             {
                 if (data.is_valid())

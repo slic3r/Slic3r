@@ -622,6 +622,9 @@ const std::vector<std::string>& Preset::printer_options()
         	"machine_min_extruding_rate", "machine_min_travel_rate",
             "machine_max_jerk_x", "machine_max_jerk_y", "machine_max_jerk_z", "machine_max_jerk_e",
             "thumbnails",
+            "thumbnails_color",
+            "thumbnails_custom_color",
+            "thumbnails_with_bed",
             "time_estimation_compensation",
             "print_machine_envelope",
             "fan_speedup_time",
@@ -742,7 +745,12 @@ const std::vector<std::string>& Preset::sla_printer_options()
             "min_initial_exposure_time", "max_initial_exposure_time",
             "print_host", "printhost_apikey", "printhost_cafile",
             "printer_notes",
-            "inherits"
+            "inherits",
+            "thumbnails",
+            "thumbnails_color",
+            "thumbnails_custom_color",
+            "thumbnails_with_bed",
+            "thumbnails_with_support"
         };
     }
     return s_opts;

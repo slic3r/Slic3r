@@ -442,7 +442,7 @@ int CLI::run(int argc, char **argv)
                             // The outfile is processed by a PlaceholderParser.
                             outfile = fff_print.export_gcode(outfile, nullptr);
                             outfile_final = fff_print.print_statistics().finalize_output_path(outfile);
-                        } else {
+                        } else if (printer_technology == ptSLA) {
                             outfile = sla_print.output_filepath(outfile);
                             // We need to finalize the filename beforehand because the export function sets the filename inside the zip metadata
                             outfile_final = sla_print.print_statistics().finalize_output_path(outfile);

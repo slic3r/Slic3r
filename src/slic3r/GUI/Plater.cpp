@@ -5131,7 +5131,19 @@ void Plater::export_3mf(const boost::filesystem::path& output_path)
     bool full_pathnames = wxGetApp().app_config->get("export_sources_full_pathnames") == "1";
 #if ENABLE_THUMBNAIL_GENERATOR
     ThumbnailData thumbnail_data;
-    p->generate_thumbnail(thumbnail_data, THUMBNAIL_SIZE_3MF.first, THUMBNAIL_SIZE_3MF.second, false, true, true, true);
+    
+    const DynamicPrintConfig* printer_config = wxGetApp().get_tab(Preset::TYPE_PRINTER)->get_config();
+    bool show_bed_on_thumbnails = true;
+    if (const ConfigOptionBool* conf = printer_config->option<ConfigOptionBool>("thumbnails_with_bed"))
+        show_bed_on_thumbnails = conf->value;
+    bool show_support_on_thumbnails = false;
+    if (const ConfigOptionBool* conf = printer_config->option<ConfigOptionBool>("thumbnails_with_support"))
+        show_support_on_thumbnails = conf->value;
+    p->generate_thumbnail(thumbnail_data, THUMBNAIL_SIZE_3MF.first, THUMBNAIL_SIZE_3MF.second, 
+        false, // printable_only
+        !show_support_on_thumbnails, // parts_only
+        show_bed_on_thumbnails, // show_bed
+        true); // transparent_background
     if (Slic3r::store_3mf(path_u8.c_str(), &p->model, export_config ? &cfg : nullptr, full_pathnames, &thumbnail_data)) {
 #else
     if (Slic3r::store_3mf(path_u8.c_str(), &p->model, export_config ? &cfg : nullptr, full_pathnames)) {

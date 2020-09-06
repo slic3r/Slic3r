@@ -36,6 +36,19 @@ group:Exposure
 	setting:max_exposure_time
 	setting:min_initial_exposure_time
 	setting:max_initial_exposure_time
+group:Thumbnails
+	line:Size for Gcode
+		setting:id$0:label$Small:thumbnails
+		setting:id$1:label$Big:thumbnails
+	end_line
+	line:Color override
+		setting:label$:sidetext_width$1:thumbnails_custom_color
+		setting:label$:label_width$1:thumbnails_color
+	end_line
+	line:Options
+		setting:thumbnails_with_bed
+		setting:thumbnails_with_support
+	end_line
 group:Print Host upload
 	build_printhost
 

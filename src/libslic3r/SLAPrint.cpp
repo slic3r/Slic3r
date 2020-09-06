@@ -821,7 +821,12 @@ bool SLAPrint::invalidate_state_by_config_options(const std::vector<t_config_opt
         "bottle_cost",
         "bottle_volume",
         "bottle_weight",
-        "material_density"
+        "material_density",
+        "thumbnails",
+        "thumbnails_color",
+        "thumbnails_custom_color",
+        "thumbnails_with_bed",
+        "thumbnails_with_support"
     };
 
     std::vector<SLAPrintStep> steps;

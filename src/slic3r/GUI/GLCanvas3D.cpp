@@ -4268,7 +4268,6 @@ void GLCanvas3D::_render_thumbnail_internal(ThumbnailData& thumbnail_data, bool 
         return ret;
     };
 
-    static const GLfloat orange[] = { 0.923f, 0.504f, 0.264f, 1.0f };
     static const GLfloat gray[] = { 0.64f, 0.64f, 0.64f, 1.0f };
 
     GLVolumePtrs visible_volumes;
@@ -4329,12 +4328,30 @@ void GLCanvas3D::_render_thumbnail_internal(ThumbnailData& thumbnail_data, bool 
     if (print_box_detection_id != -1)
         glsafe(::glUniform1i(print_box_detection_id, 0));
 
+    //parse custom color from config
+    float custom_color[] = { -1.0f, 0.0f, 0.0f, 1.0f };
+    if(Tab* tab = wxGetApp().get_tab(Preset::TYPE_PRINTER))
+        if(const DynamicPrintConfig* printer_config = tab->get_config())
+            if(const ConfigOptionBool *conf_ok = printer_config->option<ConfigOptionBool>("thumbnails_custom_color"))
+                if(conf_ok->value)
+                    if (const ConfigOptionString* conf_color = printer_config->option<ConfigOptionString>("thumbnails_color"))
+                        if(conf_color->value.length() > 6)
+                        {
+                            wxColour clr(conf_color->value);
+                            custom_color[0] = clr.Red() / 255.f;
+                            custom_color[1] = clr.Green() / 255.f;
+                            custom_color[2] = clr.Blue() / 255.f;
+                        }
     for (const GLVolume* vol : visible_volumes)
     {
         if (color_id >= 0)
-            glsafe(::glUniform4fv(color_id, 1, (vol->printable && !vol->is_outside) ? orange : gray));
+            glsafe(::glUniform4fv(color_id, 1, (vol->printable && !vol->is_outside)
+                ? (custom_color[0]<0 ? vol->color : custom_color)
+                : gray));
         else
-            glsafe(::glColor4fv((vol->printable && !vol->is_outside) ? orange : gray));
+            glsafe(::glColor4fv((vol->printable && !vol->is_outside)
+                ? (custom_color[0] < 0 ? vol->color : custom_color)
+                : gray));
 
         vol->render();
     }
