@@ -417,6 +417,10 @@ std::string WipeTowerIntegration::append_tcr(GCode &gcodegen, const WipeTower::T
     gcode += tcr_gcode;
     check_add_eol(toolchange_gcode_str);
 
+    if (gcodegen.writer().tool() && gcodegen.m_config.filament_enable_toolchange_part_fan.values[gcodegen.writer().tool()->id()]) {
+        //if the fan may ahve been changed silently by the wipetower, recover it.
+        gcode += gcodegen.m_writer.set_fan(gcodegen.m_writer.get_fan(), true);
+    }
 
     // A phony move to the end position at the wipe tower.
     gcodegen.writer().travel_to_xy(end_pos.cast<double>());
@@ -425,19 +429,17 @@ std::string WipeTowerIntegration::append_tcr(GCode &gcodegen, const WipeTower::T
         gcode += gcodegen.writer().retract();
         gcode += gcodegen.writer().travel_to_z(current_z, "Travel back up to the topmost object layer.");
         gcode += gcodegen.writer().unretract();
-    }
-
-    else {
-    // Prepare a future wipe.
-    gcodegen.m_wipe.path.points.clear();
-    if (new_extruder_id >= 0) {
-        // Start the wipe at the current position.
-        gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen, end_pos));
-        // Wipe end point: Wipe direction away from the closer tower edge to the further tower edge.
-        gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen, 
-            Vec2f((std::abs(m_left - end_pos.x()) < std::abs(m_right - end_pos.x())) ? m_right : m_left,
-            end_pos.y())));
-    }
+    } else {
+        // Prepare a future wipe.
+        gcodegen.m_wipe.path.points.clear();
+        if (new_extruder_id >= 0) {
+            // Start the wipe at the current position.
+            gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen, end_pos));
+            // Wipe end point: Wipe direction away from the closer tower edge to the further tower edge.
+            gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen, 
+                Vec2f((std::abs(m_left - end_pos.x()) < std::abs(m_right - end_pos.x())) ? m_right : m_left,
+                end_pos.y())));
+        }
     }
 
     // Let the planner know we are traveling between objects.
