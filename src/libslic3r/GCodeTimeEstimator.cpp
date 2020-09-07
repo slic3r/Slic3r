@@ -794,27 +794,6 @@ namespace Slic3r {
         return ret;
     }
 
-    std::vector<std::pair<CustomGcodeType, std::string>> GCodeTimeEstimator::get_custom_gcode_times_dhm(bool include_remaining) const
-    {
-        std::vector<std::pair<CustomGcodeType, std::string>> ret;
-
-        float total_time = 0.0f;
-        for (const std::pair<CustomGcodeType, float> &t : m_custom_gcode_times)
-        {
-            std::string time = _get_time_dhm(t.second);
-            if (include_remaining)
-            {
-                time += " (";
-                time += _get_time_dhm(m_time - total_time);
-                time += ")";
-            }
-            total_time += t.second;
-            ret.push_back({t.first, time});
-        }
-
-        return ret;
-    }
-
     // Return an estimate of the memory consumed by the time estimator.
 	size_t GCodeTimeEstimator::memory_used() const
     {

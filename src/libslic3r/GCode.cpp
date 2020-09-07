@@ -1070,9 +1070,9 @@ namespace DoExport {
 	    print_statistics.clear();
 	    print_statistics.estimated_normal_print_time = normal_time_estimator.get_time_dhm/*s*/();
 	    print_statistics.estimated_silent_print_time = silent_time_estimator_enabled ? silent_time_estimator.get_time_dhm/*s*/() : "N/A";
-	    print_statistics.estimated_normal_custom_gcode_print_times = normal_time_estimator.get_custom_gcode_times_dhm(true);
+	    print_statistics.estimated_normal_custom_gcode_print_times = normal_time_estimator.get_custom_gcode_times();
 	    if (silent_time_estimator_enabled)
-	        print_statistics.estimated_silent_custom_gcode_print_times = silent_time_estimator.get_custom_gcode_times_dhm(true);
+	        print_statistics.estimated_silent_custom_gcode_print_times = silent_time_estimator.get_custom_gcode_times();
 	    print_statistics.total_toolchanges = std::max(0, wipe_tower_data.number_of_toolchanges);
 	    if (! extruders.empty()) {
 	        std::pair<std::string, unsigned int> out_filament_used_mm ("; filament used [mm] = ", 0);

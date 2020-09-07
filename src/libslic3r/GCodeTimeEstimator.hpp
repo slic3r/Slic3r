@@ -417,10 +417,6 @@ namespace Slic3r {
         // If include_remaining==true the strings will be formatted as: "time for color (remaining time at color start)"
         std::vector<std::string> get_color_times_minutes(bool include_remaining) const;
 
-        // Returns the estimated time, in format DDd HHh MMm, for each custom_gcode
-        // If include_remaining==true the strings will be formatted as: "time for custom_gcode (remaining time at color start)"
-        std::vector<std::pair<CustomGcodeType, std::string>> get_custom_gcode_times_dhm(bool include_remaining) const;
-
         // Return an estimate of the memory consumed by the time estimator.
         size_t memory_used() const;
 
