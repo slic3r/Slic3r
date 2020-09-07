@@ -1456,7 +1456,7 @@ void GCode::_do_export(Print &print, FILE *file)
     this->print_machine_envelope(file, print);
 
     // Disable fan.
-    if ( (! print.config().cooling.get_at(initial_extruder_id) || print.config().disable_fan_first_layers.get_at(initial_extruder_id))
+    if ( print.config().disable_fan_first_layers.get_at(initial_extruder_id)
         && config().gcode_flavor != gcfKlipper)
         _write(file, m_writer.set_fan(0, true));
 

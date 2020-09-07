@@ -1889,8 +1889,7 @@ void TabFilament::update()
     this->update_volumetric_flow_preset_hints();
     Layout();
 
-    bool cooling = m_config->opt_bool("cooling", 0);
-    bool fan_always_on = cooling || m_config->opt_bool("fan_always_on", 0);
+    bool fan_always_on = m_config->opt_bool("fan_always_on", 0);
 
     //get_field("max_fan_speed")->toggle(m_config->opt_int("fan_below_layer_time", 0) > 0);
     Field* min_print_speed_field = get_field("min_print_speed");

@@ -572,11 +572,15 @@ const std::vector<std::string>& Preset::filament_options()
         "filament_toolchange_part_fan_speed",
         "filament_dip_insertion_speed",
         "filament_dip_extraction_speed",  //skinnydip params end
-        "temperature", "first_layer_temperature", "bed_temperature", "first_layer_bed_temperature", "fan_always_on", "cooling", "min_fan_speed",
-        "max_fan_speed", "bridge_fan_speed"
-        , "top_fan_speed"
-        , "disable_fan_first_layers"
-        , "fan_below_layer_time", 
+        "temperature", "first_layer_temperature", "bed_temperature", "first_layer_bed_temperature", 
+        "cooling",
+        "fan_always_on", 
+        "min_fan_speed",
+        "max_fan_speed", 
+        "bridge_fan_speed",
+        "top_fan_speed",
+        "disable_fan_first_layers",
+        "fan_below_layer_time", 
         "slowdown_below_layer_time",
         "max_speed_reduction",
         "min_print_speed",
