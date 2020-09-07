@@ -844,7 +844,8 @@ namespace DoExport {
 	    // If the following block is enabled for other firmwares than the Marlin, then the function
 	    // this->print_machine_envelope(file, print);
 	    // shall be adjusted as well to produce a G-code block compatible with the particular firmware flavor.
-	    if (config.gcode_flavor.value == gcfMarlin || config.gcode_flavor.value == gcfLerdge) {
+        // supermerill: done
+	    if (true) {
 	        normal_time_estimator.set_max_acceleration((float)config.machine_max_acceleration_extruding.values[0]);
 	        normal_time_estimator.set_retract_acceleration((float)config.machine_max_acceleration_retracting.values[0]);
             normal_time_estimator.set_max_travel_acceleration((float)config.machine_max_acceleration_travel.values[0]);
