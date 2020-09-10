@@ -21,7 +21,6 @@ group:Filament properties
 	setting:filament_soluble
     setting:filament_shrink
 group:Print speed override
-	setting:filament_max_wipe_tower_speed
 	setting:filament_max_volumetric_speed
 	volumetric_speed_description
 
@@ -59,6 +58,7 @@ group:Multimaterial toolchange string reduction
 	setting:filament_dip_extraction_speed
 group:Wipe tower parameters
 	setting:filament_minimal_purge_on_wipe_tower
+	setting:filament_max_wipe_tower_speed
 group:Toolchange parameters with single extruder MM printers
 	setting:filament_loading_speed_start
 	setting:filament_loading_speed

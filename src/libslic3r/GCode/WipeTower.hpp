@@ -135,11 +135,13 @@ public:
 	}
 
 	// Return the wipe tower position.
-	const Vec2f& 		 position() const { return m_wipe_tower_pos; }
+	const Vec2f& 		position() const { return m_wipe_tower_pos; }
 	// Return the wipe tower width.
-	float     		 width()    const { return m_wipe_tower_width; }
+	float     			width()    const { return m_wipe_tower_width; }
 	// The wipe tower is finished, there should be no more tool changes or wipe tower prints.
-	bool 	  		 finished() const { return m_max_color_changes == 0; }
+	bool 	  			finished() const { return m_max_color_changes == 0; }
+	// get the speed reduction from the current filament material
+	float				get_speed_reduction() const;
 
 	// Returns gcode to prime the nozzles at the front edge of the print bed.
 	std::vector<ToolChangeResult> prime(
@@ -366,14 +368,12 @@ private:
 	void toolchange_Unload(
 		WipeTowerWriter &writer,
 		const box_coordinates  &cleaning_box, 
-		const std::string&	 	current_material,
 		const int 				new_temperature,
         const size_t            temp_tool);
 
 	void toolchange_Change(
 		WipeTowerWriter &writer,
-        const size_t		new_tool,
-		const std::string& 		new_material);
+        const size_t		new_tool);
 	
 	void toolchange_Load(
 		WipeTowerWriter &writer,
