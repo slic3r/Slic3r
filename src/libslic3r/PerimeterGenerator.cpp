@@ -752,7 +752,11 @@ void PerimeterGenerator::process()
                                 coll2.entities.push_back(loop);
                             }
                         }
-                        entities = coll2;
+                        //note: this hacky thing is possible because coll2.entities contains in fact entities's entities
+                        //if you does entities = coll2, you'll delete entities's entities and then you have nothing.
+                        entities.entities = coll2.entities;
+                        //and you have to empty coll2 or it will delete his content, hence crashing our hack
+                        coll2.entities.clear();
                     }
                 } else if (this->config->external_perimeters_hole.value) {
                     //reverse the hole, and put them in first place.
@@ -768,13 +772,19 @@ void PerimeterGenerator::process()
                             coll2.entities.push_back(loop);
                         }
                     }
-                    entities = coll2;
+                    //note: this hacky thing is possible because coll2.entities contains in fact entities's entities
+                    //if you does entities = coll2, you'll delete entities's entities and then you have nothing.
+                    entities.entities = coll2.entities;
+                    //and you have to empty coll2 or it will delete his content, hence crashing our hack
+                    coll2.entities.clear();
                 }
 
             }
             // append perimeters for this slice as a collection
-            if (!entities.empty())
-                this->loops->append(entities);
+            if (!entities.empty()) {
+                //move it, to avoid to clone evrything and then delete it
+                this->loops->entities.emplace_back( new ExtrusionEntityCollection(std::move(entities)));
+            }
         } // for each loop of an island
 
         // fill gaps
