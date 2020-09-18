@@ -525,19 +525,19 @@ void PerimeterGenerator::process()
                             +(float)(min_spacing / 2 - 1));
 
                         ExPolygons no_thin_onion = offset_ex(last, double(-good_spacing));
-                        float div = 2;
-                        while (no_thin_onion.size() > 0 && next_onion.size() > no_thin_onion.size() && no_thin_onion.size() + next_onion.size() > 3) {
-                            div -= 0.3;
-                            if (div == 2) div -= 0.3;
+                        std::vector<float> divs { 1.8, 1.6 }; //don't over-extrude, so don't use divider >2
+                        size_t idx_div = 0;
+                        while (next_onion.size() > no_thin_onion.size() && idx_div < divs.size()) {
+                            float div = divs[idx_div];
                             //use a sightly bigger spacing to try to drastically improve the split, that can lead to very thick gapfill
                             ExPolygons next_onion_secondTry = offset2_ex(
                                 last,
-                                -(float)(good_spacing + min_spacing / div - 1),
-                                +(float)(min_spacing / div - 1));
-                            if (next_onion.size() >  next_onion_secondTry.size() * 1.1) {
+                                -(float)(good_spacing + (min_spacing / div) - 1),
+                                +(float)((min_spacing / div) - 1));
+                            if (next_onion.size() > next_onion_secondTry.size() * 1.2  && next_onion.size() > next_onion_secondTry.size() + 2) {
                                 next_onion = next_onion_secondTry;
                             }
-                            if (div > 3 || div < 1.2) break;
+                            idx_div++;
                         }
 
                     } else {
