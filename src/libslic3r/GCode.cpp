@@ -1699,6 +1699,18 @@ void GCode::_do_export(Print &print, FILE *file)
         if (m_silent_time_estimator_enabled)
             m_silent_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
     }
+    //try to compensate fora random bug #364
+    if (m_normal_time_estimator.get_time() < 0) {
+        std::cerr << "error, negative time estimation : " << m_normal_time_estimator.get_time() << ", retry.\n";
+        m_normal_time_estimator.calculate_time(true);
+        if (m_silent_time_estimator_enabled)
+            m_silent_time_estimator.calculate_time(true);
+        if (config().time_estimation_compensation.get_abs_value(1) != 1) {
+            m_normal_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
+            if (m_silent_time_estimator_enabled)
+                m_silent_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
+        }
+    }
 
     // Get filament stats.
     _write(file, DoExport::update_print_stats_and_format_filament_stats(
