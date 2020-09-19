@@ -1244,7 +1244,7 @@ void Sidebar::update_sliced_info_sizer()
             if (ps.color_extruderid_to_used_filament.size() > 0) {
                 double total_length = 0;
                 for (int i = 0; i < ps.color_extruderid_to_used_filament.size(); i++) {
-                    new_label+= from_u8((boost::format("\n    - %1% %2%") % _utf8(L("Color")) % i ).str());
+                    new_label+= from_u8((boost::format("\n    - %1% %2%") % _utf8(L("Color")) % (i+1) ).str());
                     total_length += ps.color_extruderid_to_used_filament[i].second;
                     info_text += wxString::Format("\n%.2f (%.2f)", ps.color_extruderid_to_used_filament[i].second / 1000, total_length / 1000);
                 }
@@ -1260,7 +1260,7 @@ void Sidebar::update_sliced_info_sizer()
                 info_text = wxString::Format("%.2f", ps.total_weight);
                 double total_weight = 0;
                 for (int i = 0; i < ps.color_extruderid_to_used_weight.size(); i++) {
-                    new_label += from_u8((boost::format("\n    - %1% %2%") % _utf8(L("Color")) % i).str());
+                    new_label += from_u8((boost::format("\n    - %1% %2%") % _utf8(L("Color")) % (i + 1)).str());
                     total_weight += ps.color_extruderid_to_used_weight[i].second;
                     info_text += (ps.color_extruderid_to_used_weight[i].second == 0 ? "\nN/A": wxString::Format("\n%.2f", ps.color_extruderid_to_used_weight[i].second / 1000))
                         + (total_weight == 0 ? " (N/A)" : wxString::Format(" (%.2f)", total_weight / 1000));
@@ -1292,25 +1292,23 @@ void Sidebar::update_sliced_info_sizer()
                 wxString str_color = _(L("Color"));
                 wxString str_pause = _(L("Pause"));
 
-                auto fill_labels = [str_color, str_pause](const std::vector<std::pair<CustomGcodeType, std::string>>& times, 
+                auto fill_labels = [str_color, str_pause](const std::vector<std::pair<CustomGcodeType, float>>& times,
                                                           wxString& new_label, wxString& info_text)
                 {
-                    int color_change_count = 0;
-                    for (auto time : times)
-                        if (time.first == cgtColorChange)
-                            color_change_count++;
-
-                    for (int i = (int)times.size() - 1; i >= 0; --i)
+                    int color_change_count = 1;
+                    float time_from_beginning = 0;
+                    for (size_t i =  0; i < times.size(); ++i)
                     {
-                        if (i == 0 || times[i - 1].first == cgtPausePrint)
+                        if (times[i].first == cgtPausePrint)
                             new_label += from_u8((boost::format("\n      - %1%%2%") % (std::string(str_color.ToUTF8()) + " ") % color_change_count).str());
-                        else if (times[i - 1].first == cgtColorChange)
-                            new_label += from_u8((boost::format("\n      - %1%%2%") % (std::string(str_color.ToUTF8()) + " ") % color_change_count--).str());
+                        else if (times[i].first == cgtColorChange)
+                            new_label += from_u8((boost::format("\n      - %1%%2%") % (std::string(str_color.ToUTF8()) + " ") % color_change_count++).str());
 
                         if (i != (int)times.size() - 1 && times[i].first == cgtPausePrint)
                             new_label += from_u8((boost::format(" -> %1%") % std::string(str_pause.ToUTF8())).str());
 
-                        info_text += from_u8((boost::format("\n%1%") % times[i].second).str());
+                        time_from_beginning += times[i].second;
+                        info_text += from_u8((boost::format("\n%1% (%2%)") % get_time_dhm(times[i].second) % get_time_dhm(time_from_beginning)).str());
                     }
                 };
 

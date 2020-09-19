@@ -525,19 +525,19 @@ void PerimeterGenerator::process()
                             +(float)(min_spacing / 2 - 1));
 
                         ExPolygons no_thin_onion = offset_ex(last, double(-good_spacing));
-                        float div = 2;
-                        while (no_thin_onion.size() > 0 && next_onion.size() > no_thin_onion.size() && no_thin_onion.size() + next_onion.size() > 3) {
-                            div -= 0.3;
-                            if (div == 2) div -= 0.3;
+                        std::vector<float> divs { 1.8, 1.6 }; //don't over-extrude, so don't use divider >2
+                        size_t idx_div = 0;
+                        while (next_onion.size() > no_thin_onion.size() && idx_div < divs.size()) {
+                            float div = divs[idx_div];
                             //use a sightly bigger spacing to try to drastically improve the split, that can lead to very thick gapfill
                             ExPolygons next_onion_secondTry = offset2_ex(
                                 last,
-                                -(float)(good_spacing + min_spacing / div - 1),
-                                +(float)(min_spacing / div - 1));
-                            if (next_onion.size() >  next_onion_secondTry.size() * 1.1) {
+                                -(float)(good_spacing + (min_spacing / div) - 1),
+                                +(float)((min_spacing / div) - 1));
+                            if (next_onion.size() > next_onion_secondTry.size() * 1.2  && next_onion.size() > next_onion_secondTry.size() + 2) {
                                 next_onion = next_onion_secondTry;
                             }
-                            if (div > 3 || div < 1.2) break;
+                            idx_div++;
                         }
 
                     } else {
@@ -752,7 +752,11 @@ void PerimeterGenerator::process()
                                 coll2.entities.push_back(loop);
                             }
                         }
-                        entities = coll2;
+                        //note: this hacky thing is possible because coll2.entities contains in fact entities's entities
+                        //if you does entities = coll2, you'll delete entities's entities and then you have nothing.
+                        entities.entities = coll2.entities;
+                        //and you have to empty coll2 or it will delete his content, hence crashing our hack
+                        coll2.entities.clear();
                     }
                 } else if (this->config->external_perimeters_hole.value) {
                     //reverse the hole, and put them in first place.
@@ -768,13 +772,19 @@ void PerimeterGenerator::process()
                             coll2.entities.push_back(loop);
                         }
                     }
-                    entities = coll2;
+                    //note: this hacky thing is possible because coll2.entities contains in fact entities's entities
+                    //if you does entities = coll2, you'll delete entities's entities and then you have nothing.
+                    entities.entities = coll2.entities;
+                    //and you have to empty coll2 or it will delete his content, hence crashing our hack
+                    coll2.entities.clear();
                 }
 
             }
             // append perimeters for this slice as a collection
-            if (!entities.empty())
-                this->loops->append(entities);
+            if (!entities.empty()) {
+                //move it, to avoid to clone evrything and then delete it
+                this->loops->entities.emplace_back( new ExtrusionEntityCollection(std::move(entities)));
+            }
         } // for each loop of an island
 
         // fill gaps

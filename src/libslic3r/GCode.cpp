@@ -420,6 +420,10 @@ std::string WipeTowerIntegration::append_tcr(GCode &gcodegen, const WipeTower::T
     gcode += tcr_gcode;
     check_add_eol(toolchange_gcode_str);
 
+    if (gcodegen.writer().tool() && gcodegen.m_config.filament_enable_toolchange_part_fan.values[gcodegen.writer().tool()->id()]) {
+        //if the fan may ahve been changed silently by the wipetower, recover it.
+        gcode += gcodegen.m_writer.set_fan(gcodegen.m_writer.get_fan(), true);
+    }
 
     // A phony move to the end position at the wipe tower.
     gcodegen.writer().travel_to_xy(end_pos.cast<double>());
@@ -428,19 +432,17 @@ std::string WipeTowerIntegration::append_tcr(GCode &gcodegen, const WipeTower::T
         gcode += gcodegen.writer().retract();
         gcode += gcodegen.writer().travel_to_z(current_z, "Travel back up to the topmost object layer.");
         gcode += gcodegen.writer().unretract();
-    }
-
-    else {
-    // Prepare a future wipe.
-    gcodegen.m_wipe.path.points.clear();
-    if (new_extruder_id >= 0) {
-        // Start the wipe at the current position.
-        gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen, end_pos));
-        // Wipe end point: Wipe direction away from the closer tower edge to the further tower edge.
-        gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen, 
-            Vec2f((std::abs(m_left - end_pos.x()) < std::abs(m_right - end_pos.x())) ? m_right : m_left,
-            end_pos.y())));
-    }
+    } else {
+        // Prepare a future wipe.
+        gcodegen.m_wipe.path.points.clear();
+        if (new_extruder_id >= 0) {
+            // Start the wipe at the current position.
+            gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen, end_pos));
+            // Wipe end point: Wipe direction away from the closer tower edge to the further tower edge.
+            gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen, 
+                Vec2f((std::abs(m_left - end_pos.x()) < std::abs(m_right - end_pos.x())) ? m_right : m_left,
+                end_pos.y())));
+        }
     }
 
     // Let the planner know we are traveling between objects.
@@ -845,7 +847,8 @@ namespace DoExport {
 	    // If the following block is enabled for other firmwares than the Marlin, then the function
 	    // this->print_machine_envelope(file, print);
 	    // shall be adjusted as well to produce a G-code block compatible with the particular firmware flavor.
-	    if (config.gcode_flavor.value == gcfMarlin || config.gcode_flavor.value == gcfLerdge) {
+        // supermerill: done
+	    if (true) {
 	        normal_time_estimator.set_max_acceleration((float)config.machine_max_acceleration_extruding.values[0]);
 	        normal_time_estimator.set_retract_acceleration((float)config.machine_max_acceleration_retracting.values[0]);
             normal_time_estimator.set_max_travel_acceleration((float)config.machine_max_acceleration_travel.values[0]);
@@ -1073,9 +1076,9 @@ namespace DoExport {
 	    print_statistics.clear();
 	    print_statistics.estimated_normal_print_time = normal_time_estimator.get_time_dhm/*s*/();
 	    print_statistics.estimated_silent_print_time = silent_time_estimator_enabled ? silent_time_estimator.get_time_dhm/*s*/() : "N/A";
-	    print_statistics.estimated_normal_custom_gcode_print_times = normal_time_estimator.get_custom_gcode_times_dhm(true);
+	    print_statistics.estimated_normal_custom_gcode_print_times = normal_time_estimator.get_custom_gcode_times();
 	    if (silent_time_estimator_enabled)
-	        print_statistics.estimated_silent_custom_gcode_print_times = silent_time_estimator.get_custom_gcode_times_dhm(true);
+	        print_statistics.estimated_silent_custom_gcode_print_times = silent_time_estimator.get_custom_gcode_times();
 	    print_statistics.total_toolchanges = std::max(0, wipe_tower_data.number_of_toolchanges);
 	    if (! extruders.empty()) {
 	        std::pair<std::string, unsigned int> out_filament_used_mm ("; filament used [mm] = ", 0);
@@ -1204,34 +1207,6 @@ static void init_multiextruders(FILE *file, Print &print, GCodeWriter & writer, 
                 int(print.config().filament_toolchange_temp.get_at(tool_id)),
                 int(print.config().temperature.get_at(tool_id)));
         }
-    }
-    //activate first extruder is multi-extruder and not in start-gcode
-    if (writer.multiple_extruders) {
-        if (std::set<uint8_t>{gcfRepRap}.count(print.config().gcode_flavor.value) > 0) {
-            //if not in gcode
-            bool find = false;
-            if (!custom_gcode.empty()) {
-                const char *ptr = custom_gcode.data();
-                while (*ptr != 0) {
-                    // Skip whitespaces.
-                    for (; *ptr == ' ' || *ptr == '\t'; ++ptr);
-                    if (*ptr == 'T') {
-                        find = true;
-                        break;
-                    } else if (*ptr == 'A') {
-                        //TODO: ACTIVATE_EXTRUDER for klipper (if used)
-                    }
-                    // Skip the rest of the line.
-                    for (; *ptr != 0 && *ptr != '\r' && *ptr != '\n'; ++ptr);
-                    // Skip the end of line indicators.
-                    for (; *ptr == '\r' || *ptr == '\n'; ++ptr);
-                }
-            }
-            if (!find) {
-                fprintf(file, writer.toolchange(tool_ordering.first_extruder()).c_str());
-            }
-        }
-        writer.toolchange(tool_ordering.first_extruder());
     }
 }
 
@@ -1462,7 +1437,7 @@ void GCode::_do_export(Print &print, FILE *file)
     this->print_machine_envelope(file, print);
 
     // Disable fan.
-    if ( (! print.config().cooling.get_at(initial_extruder_id) || print.config().disable_fan_first_layers.get_at(initial_extruder_id))
+    if ( print.config().disable_fan_first_layers.get_at(initial_extruder_id)
         && config().gcode_flavor != gcfKlipper)
         _write(file, m_writer.set_fan(0, true));
 
@@ -1521,10 +1496,47 @@ void GCode::_do_export(Print &print, FILE *file)
     // Calculate wiping points if needed
     DoExport::init_ooze_prevention(print, m_ooze_prevention);
     print.throw_if_canceled();
-    
-    if (! (has_wipe_tower && print.config().single_extruder_multi_material_priming)) {
-        // Set initial extruder only after custom start G-code.
-        // Ugly hack: Do not set the initial extruder if the extruder is primed using the MMU priming towers at the edge of the print bed.
+
+    //activate first extruder is multi-extruder and not in start-gcode
+    if (m_writer.multiple_extruders) {
+        //if not in gcode
+        bool find = false;
+        if (!start_gcode.empty()) {
+            const char *ptr = start_gcode.data();
+            while (*ptr != 0) {
+                // Skip whitespaces.
+                for (; *ptr == ' ' || *ptr == '\t'; ++ptr);
+                if (*ptr == 'T') {
+                    // TX for most of the firmwares
+                    find = true;
+                    break;
+                } else if (*ptr == 'A' && print.config().gcode_flavor.value == gcfKlipper) {
+                    // ACTIVATE_EXTRUDER for klipper (if used)
+                    if (std::string::npos != start_gcode.find("ACTIVATE_EXTRUDER", size_t(ptr - start_gcode.data()))) {
+                        find = true;
+                        break;
+                    }
+                }
+                // Skip the rest of the line.
+                for (; *ptr != 0 && *ptr != '\r' && *ptr != '\n'; ++ptr);
+                // Skip the end of line indicators.
+                for (; *ptr == '\r' || *ptr == '\n'; ++ptr);
+            }
+        }
+        if (!find) {
+            // Set initial extruder only after custom start G-code.
+            // Ugly hack: Do not set the initial extruder if the extruder is primed using the MMU priming towers at the edge of the print bed.
+            if (!(has_wipe_tower && print.config().single_extruder_multi_material_priming)) {
+                _write(file, this->set_extruder(initial_extruder_id, 0.));
+            } else {
+                m_writer.toolchange(initial_extruder_id);
+            }
+        } else {
+            // set writer to the tool as should be set in the start_gcode.
+            _write(file, this->set_extruder(initial_extruder_id, 0., true));
+        }
+    } else {
+        // if we are running a single-extruder setup, just set the extruder and "return nothing"
         _write(file, this->set_extruder(initial_extruder_id, 0.));
     }
 
@@ -1692,6 +1704,18 @@ void GCode::_do_export(Print &print, FILE *file)
         m_normal_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
         if (m_silent_time_estimator_enabled)
             m_silent_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
+    }
+    //try to compensate fora random bug #364
+    if (m_normal_time_estimator.get_time() < 0) {
+        std::cerr << "error, negative time estimation : " << m_normal_time_estimator.get_time() << ", retry.\n";
+        m_normal_time_estimator.calculate_time(true);
+        if (m_silent_time_estimator_enabled)
+            m_silent_time_estimator.calculate_time(true);
+        if (config().time_estimation_compensation.get_abs_value(1) != 1) {
+            m_normal_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
+            if (m_silent_time_estimator_enabled)
+                m_silent_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
+        }
     }
 
     // Get filament stats.
@@ -1915,7 +1939,7 @@ void GCode::_print_first_layer_extruder_temperatures(FILE *file, Print &print, c
         if (temp_by_gcode >= 0 && temp_by_gcode < 1000)
             temp = temp_by_gcode;
         m_writer.set_temperature(temp, wait, first_printing_extruder_id);
-    } else if(this->config().gcode_flavor != gcfKlipper){
+    } else if(this->config().gcode_flavor != gcfKlipper || print.config().start_gcode.value.empty()){
         // Custom G-code does not set the extruder temperature. Do it now.
         if (print.config().single_extruder_multi_material.value) {
             // Set temperature of the first printing extruder only.
@@ -4339,7 +4363,7 @@ std::string GCode::retract(bool toolchange)
     return gcode;
 }
 
-std::string GCode::set_extruder(unsigned int extruder_id, double print_z)
+std::string GCode::set_extruder(unsigned int extruder_id, double print_z, bool no_toolchange /*=false*/)
 {
     if (!m_writer.need_toolchange(extruder_id))
         return "";
@@ -4410,7 +4434,7 @@ std::string GCode::set_extruder(unsigned int extruder_id, double print_z)
 
     // We inform the writer about what is happening, but we may not use the resulting gcode.
     std::string toolchange_command = m_writer.toolchange(extruder_id);
-    if (! custom_gcode_changes_tool(toolchange_gcode_parsed, m_writer.toolchange_prefix(), extruder_id))
+    if (! custom_gcode_changes_tool(toolchange_gcode_parsed, m_writer.toolchange_prefix(), extruder_id) && !no_toolchange)
         gcode += toolchange_command;
     else {
         // user provided his own toolchange gcode, no need to do anything

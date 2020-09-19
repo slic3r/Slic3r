@@ -417,6 +417,7 @@ int CLI::run(int argc, char **argv)
                 PrintBase  *print = (printer_technology == ptFFF) ? static_cast<PrintBase*>(&fff_print) : static_cast<PrintBase*>(&sla_print);
                 if (! m_config.opt_bool("dont_arrange")) {
                     //FIXME make the min_object_distance configurable.
+                    print->apply(model, m_print_config); // arrange_objects needs that the print has the config
                     model.arrange_objects(print);
                     model.center_instances_around_point((! user_center_specified && m_print_config.has("bed_shape")) ? 
                     	BoundingBoxf(m_print_config.opt<ConfigOptionPoints>("bed_shape")->values).center() : 

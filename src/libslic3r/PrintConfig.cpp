@@ -1095,8 +1095,16 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("filament_max_wipe_tower_speed", coFloats);
     def->label = L("Max speed on the wipe tower");
-    def->tooltip = L("This setting is used to set the maximum speed when extruding inside the wipe tower (use M220). In %, set 0 to disable and use the Filament type instead.");
-    def->sidetext = L("% of mm/s");
+    def->tooltip = L("This setting is used to set the maximum speed when extruding inside the wipe tower (use M220)."
+        " In %, set 0 to disable and use the Filament type instead."
+        "\nIf disabled, these filament types will have a defaut value of:"
+        "\n - PVA: 80% to 60%"
+        "\n - SCAFF: 35%"
+        "\n - FLEX: 35%"
+        "\n - OTHERS: 100%"
+        "\nNote that the wipe tower reset the speed at 100% for the unretract in any case."
+        "\nIf using marlin, M220 B/R is used to save the speed override before the wipe tower print.");
+    def->sidetext = L("%");
     def->min = 0;
     def->max = 200;
     def->mode = comExpert;
@@ -1304,7 +1312,7 @@ void PrintConfigDef::init_fff_params()
                     " Only the filament used for the perimeter is taken into account."
                     "\nBe sure to let enough space between objects, as this compensation is done after the checks.");
     def->sidetext = L("%");
-    def->min = 0;
+    def->min = 10;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionPercents{ 100 });
 

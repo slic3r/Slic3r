@@ -67,6 +67,7 @@ public:
     std::string postamble() const;
     std::string set_temperature(unsigned int temperature, bool wait = false, int tool = -1);
     std::string set_bed_temperature(unsigned int temperature, bool wait = false);
+    unsigned int get_fan() { return m_last_fan_speed; }
     std::string set_fan(unsigned int speed, bool dont_save = false);
     void        set_acceleration(unsigned int acceleration);
     std::string write_acceleration();

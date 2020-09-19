@@ -440,6 +440,8 @@ public:
 	{
         if (m_gcode_flavor == gcfMarlin)
             m_gcode += "M220 R\n";
+        else
+            m_gcode += "M220 S100\n";
 		return *this;
     }
 
@@ -715,7 +717,8 @@ std::vector<WipeTower::ToolChangeResult> WipeTower::prime(
 
         uint16_t tool = tools[idx_tool];
         m_left_to_right = true;
-        toolchange_Change(writer, tool, m_filpar[tool].material); // Select the tool, set a speed override for soluble and flex materials.
+        toolchange_Change(writer, tool); // Select the tool, set a speed override for soluble and flex materials.
+        writer.speed_override(int(100 * get_speed_reduction()));
         toolchange_Load(writer, cleaning_box); // Prime the tool.
         if (idx_tool + 1 == tools.size()) {
             // Last tool should not be unloaded, but it should be wiped enough to become of a pure color.
@@ -726,7 +729,7 @@ std::vector<WipeTower::ToolChangeResult> WipeTower::prime(
             toolchange_Wipe(writer, cleaning_box , 20.f);
             box_coordinates box = cleaning_box;
             box.translate(0.f, writer.y() - cleaning_box.ld.y() + m_perimeter_width);
-            toolchange_Unload(writer, box , m_filpar[m_current_tool].material, m_filpar[tools[idx_tool + 1]].first_layer_temperature, idx_tool + 1);
+            toolchange_Unload(writer, box , m_filpar[tools[idx_tool + 1]].first_layer_temperature, idx_tool + 1);
             cleaning_box.translate(prime_section_width, 0.f);
             writer.travel(cleaning_box.ld, 7200);
         }
@@ -833,15 +836,17 @@ WipeTower::ToolChangeResult WipeTower::tool_change(size_t tool, bool last_in_lay
 
     // Ram the hot material out of the melt zone, retract the filament into the cooling tubes and let it cool.
     if (tool != (unsigned int)-1){ 			// This is not the last change.
-        toolchange_Unload(writer, cleaning_box, m_filpar[m_current_tool].material,
+        toolchange_Unload(writer, cleaning_box,
                           m_is_first_layer ? m_filpar[tool].first_layer_temperature : m_filpar[tool].temperature, tool);
-        toolchange_Change(writer, tool, m_filpar[tool].material); // Change the tool, set a speed override for soluble and flex materials.
+        toolchange_Change(writer, tool); // Change the tool, set a speed override for soluble and flex materials.
+        writer.speed_override(int(100 * get_speed_reduction()));
         toolchange_Load(writer, cleaning_box);
         writer.travel(writer.x(), writer.y()-m_perimeter_width); // cooling and loading were done a bit down the road
+        writer.speed_override(int(100 * get_speed_reduction()));
         toolchange_Wipe(writer, cleaning_box, wipe_volume);     // Wipe the newly loaded filament until the end of the assigned wipe area.
         ++ m_num_tool_changes;
     } else
-        toolchange_Unload(writer, cleaning_box, m_filpar[m_current_tool].material, m_filpar[m_current_tool].temperature, m_current_tool);
+        toolchange_Unload(writer, cleaning_box, m_filpar[m_current_tool].temperature, m_current_tool);
 
     m_depth_traversed += wipe_area;
 
@@ -952,7 +957,6 @@ WipeTower::ToolChangeResult WipeTower::toolchange_Brim(bool sideOnly, float y_of
 void WipeTower::toolchange_Unload(
 	WipeTowerWriter &writer,
 	const box_coordinates 	&cleaning_box,
-	const std::string&		 current_material,
 	const int 				 new_temperature,
     const size_t             next_tool)
 {
@@ -1184,8 +1188,7 @@ void WipeTower::toolchange_Unload(
 // Change the tool, set a speed override for soluble and flex materials.
 void WipeTower::toolchange_Change(
 	WipeTowerWriter &writer,
-    const size_t 	new_tool,
-	const std::string&  new_material)
+    const size_t 	new_tool)
 {
     // Ask the writer about how much of the old filament we consumed:
     if (m_current_tool < m_used_filament_length.size())
@@ -1244,6 +1247,19 @@ void WipeTower::toolchange_Load(
     }
 }
 
+float WipeTower::get_speed_reduction() const
+{
+    float speed_override = m_config->filament_max_wipe_tower_speed.get_at(m_current_tool) / 100.f;
+    if (speed_override <= 0) {
+        speed_override = 1;
+        std::string material_upp = boost::algorithm::to_upper_copy(m_filpar[m_current_tool].material);
+        if (material_upp == "PVA") speed_override = (m_z_pos < 0.80f) ? 0.60 : 0.80;
+        if (material_upp == "SCAFF") speed_override = 0.35;
+        if (material_upp == "FLEX") speed_override = 0.35;
+    }
+    return speed_override;
+}
+
 // Wipe the newly loaded filament until the end of the assigned wipe area.
 void WipeTower::toolchange_Wipe(
 	WipeTowerWriter &writer,
@@ -1256,6 +1272,9 @@ void WipeTower::toolchange_Wipe(
 	float wipe_coeff = m_is_first_layer ? 0.5f : 1.f;
 	const float& xl = cleaning_box.ld.x();
 	const float& xr = cleaning_box.rd.x();
+
+    // Speed override for the material. Go slow for flex and soluble materials.
+    wipe_coeff *= get_speed_reduction();
 
 	// Variables x_to_wipe and traversed_x are here to be able to make sure it always wipes at least
     //   the ordered volume, even if it means violating the box. This can later be removed and simply
@@ -1332,6 +1351,7 @@ WipeTower::ToolChangeResult WipeTower::finish_layer()
 
 	// Slow down on the 1st layer.
 	float speed_factor = m_is_first_layer ? 0.5f : 1.f;
+    speed_factor *= get_speed_reduction();
 	float current_depth = m_layer_info->depth - m_layer_info->toolchanges_depth();
 	box_coordinates fill_box(Vec2f(m_perimeter_width, m_depth_traversed + m_perimeter_width),
 							 m_wipe_tower_width - 2 * m_perimeter_width, current_depth-m_perimeter_width);
