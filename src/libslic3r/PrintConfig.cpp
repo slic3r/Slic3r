@@ -1269,7 +1269,7 @@ void PrintConfigDef::init_fff_params()
                     " Only the filament used for the perimeter is taken into account."
                     "\nBe sure to let enough space between objects, as this compensation is done after the checks.");
     def->sidetext = L("%");
-    def->min = 0;
+    def->min = 10;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionPercents{ 100 });
 
