@@ -1921,7 +1921,7 @@ void GCode::_print_first_layer_extruder_temperatures(FILE *file, Print &print, c
         if (temp_by_gcode >= 0 && temp_by_gcode < 1000)
             temp = temp_by_gcode;
         m_writer.set_temperature(temp, wait, first_printing_extruder_id);
-    } else if(this->config().gcode_flavor != gcfKlipper){
+    } else if(this->config().gcode_flavor != gcfKlipper || print.config().start_gcode.value.empty()){
         // Custom G-code does not set the extruder temperature. Do it now.
         if (print.config().single_extruder_multi_material.value) {
             // Set temperature of the first printing extruder only.
