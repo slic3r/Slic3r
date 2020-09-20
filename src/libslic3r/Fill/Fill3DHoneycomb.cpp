@@ -168,7 +168,7 @@ void Fill3DHoneycomb::_fill_surface_single(
 
     // connect lines if needed
     if (! polylines_chained.empty()) {
-        if (params.dont_connect)
+        if (params.connection == icNotConnected)
             append(polylines_out, std::move(polylines_chained));
         else
             this->connect_infill(std::move(polylines_chained), expolygon, polylines_out, this->spacing, params);

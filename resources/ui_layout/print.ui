@@ -104,7 +104,7 @@ group:Infill
 	end_line
 	line:Pattern
 		setting:label_width$5:label$_:fill_pattern
-		setting:label$Don't connect:infill_not_connected
+		setting:width$19:label$_:infill_connection
 	end_line
 	line:External patterns
 		setting:label_width$5:top_fill_pattern

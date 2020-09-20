@@ -774,6 +774,9 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
         else if (opt_key.compare("no_perimeter_unsupported_algo") == 0){
             ret = static_cast<int>(config.option<ConfigOptionEnum<NoPerimeterUnsupportedAlgo>>(opt_key)->value);
         }
+        else if (opt_key.compare("infill_connection") == 0) {
+            ret = static_cast<int>(config.option<ConfigOptionEnum<InfillConnection>>(opt_key)->value);
+        }
         else if (opt_key.compare("wipe_advanced_algo") == 0){
             ret = static_cast<int>(config.option<ConfigOptionEnum<WipeAlgo>>(opt_key)->value);
         }

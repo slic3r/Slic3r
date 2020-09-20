@@ -89,16 +89,31 @@ void FillRectilinear::_fill_surface_single(
         // offset the expolygon by max(min_spacing/2, extra)
         ExPolygon expolygon_off;
         {
-            ExPolygons expolygons_off = offset_ex(expolygon, this->_min_spacing/2);
-            if (! expolygons_off.empty()) {
-                // When expanding a polygon, the number of islands could only shrink. Therefore the offset_ex shall generate exactly one expanded island for one input island.
-                assert(expolygons_off.size() == 1);
-                std::swap(expolygon_off, expolygons_off.front());
+            if (params.connection == icConnected || params.connection == icHoles) {
+                ExPolygons expolygons_off = offset_ex(expolygon, this->_min_spacing / 2);
+                if (!expolygons_off.empty()) {
+                    // When expanding a polygon, the number of islands could only shrink. Therefore the offset_ex shall generate exactly one expanded island for one input island.
+                    assert(expolygons_off.size() == 1);
+                    std::swap(expolygon_off, expolygons_off.front());
+                }
+                //restore contour for hole-only.
+                if (params.connection == icHoles) {
+                    expolygon_off.contour = expolygon.contour;
+                }
+            } else if (params.connection == icOuterShell) {
+                // shrink only the contour
+                expolygon_off = expolygon;
+                Polygons bigcontour = offset(expolygon_off.contour, this->_min_spacing / 2);
+                if (!bigcontour.empty()) {
+                    // When expanding a polygon, the number of islands could only shrink. Therefore the offset_ex shall generate exactly one expanded island for one input island.
+                    assert(bigcontour.size() == 1);
+                    std::swap(expolygon_off.contour, bigcontour.front());
+                }
             }
         }
         bool first = true;
         for (Polyline &polyline : chain_polylines(std::move(polylines))) {
-            if (!params.dont_connect && !first) {
+            if (params.connection != icNotConnected && !first) {
                 // Try to connect the lines.
                 Points &pts_end = polylines_out.back().points;
                 const Point &first_point = polyline.points.front();

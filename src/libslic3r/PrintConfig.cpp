@@ -1763,12 +1763,23 @@ void PrintConfigDef::init_fff_params()
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionBool(false));
 
-    def = this->add("infill_not_connected", coBool);
+    def = this->add("infill_connection", coEnum);
     def->label = L("Do not connect infill lines to each other");
     def->category = OptionCategory::infill;
-    def->tooltip = L("If checked, the infill algorithm will try to not connect the lines near the infill. Can be useful for art or with high infill/perimeter overlap.");
+    def->tooltip = L("Give to the infill algorithm if the infill needs to be connected, and on which periemters"
+        " Can be useful for art or with high infill/perimeter overlap."
+        " The result amy varies between infill typers.");
+    def->enum_keys_map = &ConfigOptionEnum<InfillConnection>::get_enum_values();
+    def->enum_values.push_back("connected");
+    def->enum_values.push_back("holes");
+    def->enum_values.push_back("outershell");
+    def->enum_values.push_back("notconnected");
+    def->enum_labels.push_back(L("Connected"));
+    def->enum_labels.push_back(L("Connected to hole perimeters"));
+    def->enum_labels.push_back(L("Connected to outer perimeters"));
+    def->enum_labels.push_back(L("Not connected"));
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionBool(false));
+    def->set_default_value(new ConfigOptionEnum<InfillConnection>(icConnected));
     
     def = this->add("infill_dense_algo", coEnum);
     def->label = L("Algorithm");
@@ -4566,6 +4577,12 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         opt_key = "z_step";
         float v = boost::lexical_cast<float>(value);
         value = boost::lexical_cast<std::string>(1/v);
+    } else if (opt_key == "infill_not_connected") {
+        opt_key = "infill_connection";
+        if (value == "1")
+            value = "notconnected";
+        else
+            value = "connected";
     }
 
     // Ignore the following obsolete configuration keys:
@@ -4575,10 +4592,11 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         "standby_temperature", "scale", "rotate", "duplicate", "duplicate_grid",
         "start_perimeters_at_concave_points", "start_perimeters_at_non_overhang", "randomize_start",
         "seal_position", "vibration_limit", "bed_size",
-        "print_center", "g0", "threads", "pressure_advance", "wipe_tower_per_color_wipe"
+        "print_center", "g0", "threads", "pressure_advance", "wipe_tower_per_color_wipe",
 #ifndef HAS_PRESSURE_EQUALIZER
-        , "max_volumetric_extrusion_rate_slope_positive", "max_volumetric_extrusion_rate_slope_negative"
+        "max_volumetric_extrusion_rate_slope_positive", "max_volumetric_extrusion_rate_slope_negative",
 #endif /* HAS_PRESSURE_EQUALIZER */
+        "cooling"
     };
 
     if (ignore.find(opt_key) != ignore.end()) {

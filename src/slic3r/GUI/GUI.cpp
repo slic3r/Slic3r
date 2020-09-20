@@ -200,18 +200,20 @@ void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt
                 config.set_key_value(opt_key, new ConfigOptionEnum<SupportMaterialPattern>(boost::any_cast<SupportMaterialPattern>(value)));
             else if (opt_key.compare("seam_position") == 0 || opt_key.compare("perimeter_loop_seam") == 0)
                 config.set_key_value(opt_key, new ConfigOptionEnum<SeamPosition>(boost::any_cast<SeamPosition>(value)));
-			else if (opt_key.compare("host_type") == 0)
+            else if (opt_key.compare("host_type") == 0)
                 config.set_key_value(opt_key, new ConfigOptionEnum<PrintHostType>(boost::any_cast<PrintHostType>(value)));
             else if (opt_key.compare("infill_dense_algo") == 0)
                 config.set_key_value(opt_key, new ConfigOptionEnum<DenseInfillAlgo>(boost::any_cast<DenseInfillAlgo>(value)));
             else if (opt_key.compare("no_perimeter_unsupported_algo") == 0)
-                config.set_key_value(opt_key, new ConfigOptionEnum<NoPerimeterUnsupportedAlgo>(boost::any_cast<NoPerimeterUnsupportedAlgo>(value)));
+                config.set_key_value(opt_key, new ConfigOptionEnum<DenseInfillAlgo>(boost::any_cast<DenseInfillAlgo>(value)));
+            else if (opt_key.compare("infill_connection") == 0)
+                config.set_key_value(opt_key, new ConfigOptionEnum<InfillConnection>(boost::any_cast<InfillConnection>(value)));
             else if (opt_key.compare("wipe_advanced_algo") == 0)
                 config.set_key_value(opt_key, new ConfigOptionEnum<WipeAlgo>(boost::any_cast<WipeAlgo>(value)));
             else if (opt_key.compare("support_material_contact_distance_type") == 0)
                 config.set_key_value(opt_key, new ConfigOptionEnum<SupportZDistanceType>(boost::any_cast<SupportZDistanceType>(value)));
-			else if (opt_key.compare("display_orientation") == 0)
-				config.set_key_value(opt_key, new ConfigOptionEnum<SLADisplayOrientation>(boost::any_cast<SLADisplayOrientation>(value)));
+            else if (opt_key.compare("display_orientation") == 0)
+                config.set_key_value(opt_key, new ConfigOptionEnum<SLADisplayOrientation>(boost::any_cast<SLADisplayOrientation>(value)));
             else if(opt_key.compare("support_pillar_connection_mode") == 0)
                 config.set_key_value(opt_key, new ConfigOptionEnum<SLAPillarConnectionMode>(boost::any_cast<SLAPillarConnectionMode>(value)));
 			}

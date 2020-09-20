@@ -1361,7 +1361,7 @@ static bool fill_hatching_segments_legacy(
                     (distNext < distPrev) : 
                     intrsctn_type_next == INTERSECTION_TYPE_OTHER_VLINE_OK;
                 assert(intrsctn->is_inner());
-                bool skip = params.dont_connect || (link_max_length > 0 && (take_next ? distNext : distPrev) > link_max_length);
+                bool skip = params.connection == icNotConnected || (link_max_length > 0 && (take_next ? distNext : distPrev) > link_max_length);
                 if (skip) {
                     // Just skip the connecting contour and start a new path.
                     goto dont_connect;
@@ -1423,7 +1423,7 @@ static bool fill_hatching_segments_legacy(
                          distance_of_segmens(poly, intrsctn->iSegment, iSegNext, false)) :
                         (vert_seg_dir_valid_mask == DIR_FORWARD);
                     // Skip this perimeter line?
-                    bool skip = params.dont_connect;
+                    bool skip = params.connection == icNotConnected;
                     if (! skip && link_max_length > 0) {
                         coordf_t link_length = measure_perimeter_segment_on_vertical_line_length(
                             poly_with_offset, segs, i_vline, intrsctn->iContour, i_intersection, iNext, dir_forward);

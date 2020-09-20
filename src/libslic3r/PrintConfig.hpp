@@ -98,6 +98,10 @@ enum NoPerimeterUnsupportedAlgo {
     npuaNone, npuaNoPeri, npuaBridges, npuaBridgesOverhangs, npuaFilled,
 };
 
+enum InfillConnection {
+    icConnected, icHoles, icOuterShell, icNotConnected,
+};
+
 enum SupportZDistanceType {
     zdFilament, zdPlane, zdNone,
 };
@@ -243,6 +247,16 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<NoPerimeterUnsupp
         { "bridges", npuaBridges },
         { "bridgesoverhangs", npuaBridgesOverhangs },
         { "filled", npuaFilled }
+    };
+    return keys_map;
+}
+
+template<> inline const t_config_enum_values& ConfigOptionEnum<InfillConnection>::get_enum_values() {
+    static const t_config_enum_values keys_map = {
+        { "connected", icConnected },
+        { "holes", icHoles },
+        { "outershell", icOuterShell },
+        { "notconnected", icNotConnected }
     };
     return keys_map;
 }
@@ -672,7 +686,7 @@ public:
     ConfigOptionInt                 infill_every_layers;
     ConfigOptionFloatOrPercent      infill_overlap;
     ConfigOptionFloat               infill_speed;
-    ConfigOptionBool                infill_not_connected;
+    ConfigOptionEnum<InfillConnection> infill_connection;
     ConfigOptionBool                infill_dense;
     ConfigOptionEnum<DenseInfillAlgo> infill_dense_algo;
     ConfigOptionBool                infill_first;
@@ -763,7 +777,7 @@ protected:
         OPT_PTR(infill_overlap);
         OPT_PTR(infill_speed);
         OPT_PTR(infill_dense);
-        OPT_PTR(infill_not_connected);
+        OPT_PTR(infill_connection);
         OPT_PTR(infill_dense_algo);
         OPT_PTR(infill_first);
         OPT_PTR(milling_after_z);

@@ -241,7 +241,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         params.density = float(0.01 * density);
         params.dont_adjust = false;
         params.fill_exactly = layerm.region()->config().enforce_full_fill_volume.getBool();
-        params.dont_connect = layerm.region()->config().infill_not_connected.getBool();
+        params.connection = layerm.region()->config().infill_connection.value;
         //adjust flow (to over-extrude when needed)
         float flow_percent = 1;
         if (surface.has_pos_top()) flow_percent *= layerm.region()->config().fill_top_flow_ratio.get_abs_value(1);

@@ -123,6 +123,8 @@ struct SegmentIntersection
     int64_t     pos_p{ 0 };
     uint32_t    pos_q{ 1 };
 
+    bool        is_hole{ false };
+
     coord_t     pos() const {
         // Division rounds both positive and negative down to zero.
         // Add half of q for an arithmetic rounding effect.
@@ -591,8 +593,8 @@ static inline void emit_perimeter_prev_next_segment(
 }
 
 static inline coordf_t measure_perimeter_segment_on_vertical_line_length(
-    const ExPolygonWithOffset                     &poly_with_offset,
-    const std::vector<SegmentedIntersectionLine>  &segs,
+    const ExPolygonWithOffset& poly_with_offset,
+    const std::vector<SegmentedIntersectionLine>& segs,
     size_t                                         iVerticalLine,
     size_t                                         iIntersection,
     size_t                                         iIntersection2,
@@ -759,6 +761,7 @@ std::vector<SegmentedIntersectionLine> FillRectilinear2::_vert_lines_for_polygon
     }
     for (size_t iContour = 0; iContour < poly_with_offset.n_contours; ++ iContour) {
         const Points &contour = poly_with_offset.contour(iContour).points;
+        bool is_hole = poly_with_offset.contour(iContour).is_clockwise();
         if (contour.size() < 2)
             continue;
         // For each segment
@@ -791,6 +794,7 @@ std::vector<SegmentedIntersectionLine> FillRectilinear2::_vert_lines_for_polygon
                 SegmentIntersection is;
                 is.iContour = iContour;
                 is.iSegment = iSegment;
+                is.is_hole = is_hole;
                 assert(l <= this_x);
                 assert(r >= this_x);
                 // Calculate the intersection position in y axis. x is known.
@@ -1064,8 +1068,10 @@ static void connect_segment_intersections_by_contours(
                     itsct.next_on_contour_quality = SegmentIntersection::LinkQuality::Invalid;
                 }
             }
-
-            if (params.dont_connect) {
+            if (params.connection == icNotConnected
+                || (params.connection == icOuterShell && itsct.is_hole) // not: don't work as expected because the algo only start from top and go bottom.
+                || (params.connection == icHoles && !itsct.is_hole)
+                ) {
                 if (itsct.prev_on_contour_quality == SegmentIntersection::LinkQuality::Valid)
                     itsct.prev_on_contour_quality = SegmentIntersection::LinkQuality::TooLong;
                 if (itsct.next_on_contour_quality == SegmentIntersection::LinkQuality::Valid)
@@ -1082,8 +1088,8 @@ static void connect_segment_intersections_by_contours(
                         measure_perimeter_segment_on_vertical_line_length(poly_with_offset, segs, i_vline, i_intersection, inext, forward) :
                         measure_perimeter_horizontal_segment_length(poly_with_offset, segs, i_vline, i_intersection, inext)) > link_max_length)
                     itsct.next_on_contour_quality = SegmentIntersection::LinkQuality::TooLong;
+                }
             }
-        }
 
         // Make the LinkQuality::Invalid symmetric on vertical connections.
         for (size_t i_intersection = 0; i_intersection < il.intersections.size(); ++i_intersection) {
@@ -1092,7 +1098,7 @@ static void connect_segment_intersections_by_contours(
                 SegmentIntersection& it2 = il.intersections[it.left_vertical()];
                 assert(it2.left_vertical() == i_intersection);
                 it2.prev_on_contour_quality = SegmentIntersection::LinkQuality::Invalid;
-            }
+    }
             if (it.has_right_vertical() && it.next_on_contour_quality == SegmentIntersection::LinkQuality::Invalid) {
                 SegmentIntersection& it2 = il.intersections[it.right_vertical()];
                 assert(it2.right_vertical() == i_intersection);
@@ -2704,7 +2710,7 @@ Polylines FillTriangles::fill_surface(const Surface *surface, const FillParams &
     FillParams params2 = params;
     params2.density *= 0.333333333f;
     FillParams params3 = params2;
-    params3.dont_connect = true;
+    params3.connection = icNotConnected;
     Polylines polylines_out;
     if (! fill_surface_by_lines(surface, params2, 0.f, 0., polylines_out) ||
         ! fill_surface_by_lines(surface, params2, float(M_PI / 3.), 0., polylines_out) ||
@@ -2720,7 +2726,7 @@ Polylines FillStars::fill_surface(const Surface *surface, const FillParams &para
     FillParams params2 = params;
     params2.density *= 0.333333333f;
     FillParams params3 = params2;
-    params3.dont_connect = true;
+    params3.connection = icNotConnected;
     Polylines polylines_out;
     if (! fill_surface_by_lines(surface, params2, 0.f, 0.f, polylines_out) ||
         ! fill_surface_by_lines(surface, params2, float(M_PI / 3.), 0.f, polylines_out) ||
@@ -2736,7 +2742,7 @@ Polylines FillCubic::fill_surface(const Surface *surface, const FillParams &para
     FillParams params2 = params;
     params2.density *= 0.333333333f;
     FillParams params3 = params2;
-    params3.dont_connect = true;
+    params3.connection = icNotConnected;
     Polylines polylines_out;
     coordf_t dx = sqrt(0.5) * z;
     if (! fill_surface_by_lines(surface, params2, 0.f, float(dx), polylines_out) ||

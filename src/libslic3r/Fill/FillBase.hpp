@@ -38,7 +38,7 @@ struct FillParams
     float       flow_mult   { 1.0f };
 
     // Don't connect the fill lines around the inner perimeter.
-    bool        dont_connect{ false };
+    InfillConnection connection{ icConnected };
 
     // Don't adjust spacing to fill the space evenly.
     bool        dont_adjust { true };

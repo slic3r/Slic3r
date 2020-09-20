@@ -1011,6 +1011,7 @@ void Fill::connect_infill(Polylines &&infill_ordered, const ExPolygon &boundary_
 			[&boundary](const std::pair<size_t, size_t> &contour_point) {
 				return contour_point.first < boundary.size() && contour_point.second < boundary[contour_point.first].size();
 			}));
+        assert(boundary_data.size() == boundary_src.holes.size() + 1);
 #endif /* NDEBUG */
 	}
 
@@ -1064,6 +1065,20 @@ void Fill::connect_infill(Polylines &&infill_ordered, const ExPolygon &boundary_
 		}
 	}
 	std::sort(connections_sorted.begin(), connections_sorted.end(), [](const ConnectionCost& l, const ConnectionCost& r) { return l.cost < r.cost; });
+
+    //mark point as used depends of connection parameter
+    if (params.connection == icOuterShell) {
+        for (auto it = boundary_data.begin() + 1; it != boundary_data.end(); ++it) {
+            for (ContourPointData& pt : *it) {
+                pt.point_consumed = true;
+            }
+        }
+    } else if (params.connection == icHoles) {
+        for (ContourPointData& pt : boundary_data[0]) {
+            pt.point_consumed = true;
+        }
+    }
+    assert(boundary_data.size() == boundary_src.holes.size() + 1);
 
 	size_t idx_chain_last = 0;
 	for (ConnectionCost &connection_cost : connections_sorted) {

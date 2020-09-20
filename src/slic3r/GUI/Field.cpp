@@ -1004,6 +1004,8 @@ void Choice::set_value(const boost::any& value, bool change_event)
             val = idx_from_enum_value<DenseInfillAlgo>(val);
         else if (m_opt_id.compare("no_perimeter_unsupported_algo") == 0)
             val = idx_from_enum_value<NoPerimeterUnsupportedAlgo>(val);
+        else if (m_opt_id.compare("infill_connection") == 0)
+            val = idx_from_enum_value<InfillConnection>(val);
         else if (m_opt_id.compare("wipe_advanced_algo") == 0)
             val = idx_from_enum_value<WipeAlgo>(val);
         else if (m_opt_id.compare("support_material_contact_distance_type") == 0)
@@ -1089,6 +1091,8 @@ boost::any& Choice::get_value()
             convert_to_enum_value<DenseInfillAlgo>(ret_enum);
         else if (m_opt_id.compare("no_perimeter_unsupported_algo") == 0)
             convert_to_enum_value<NoPerimeterUnsupportedAlgo>(ret_enum);
+        else if (m_opt_id.compare("infill_connection") == 0)
+            convert_to_enum_value<InfillConnection>(ret_enum);
         else if (m_opt_id.compare("wipe_advanced_algo") == 0)
             convert_to_enum_value<WipeAlgo>(ret_enum);
         else if (m_opt_id.compare("support_material_contact_distance_type") == 0)

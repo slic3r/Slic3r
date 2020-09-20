@@ -523,15 +523,15 @@ const std::vector<std::string>& Preset::print_options()
         "compatible_printers", "compatible_printers_condition", "inherits", 
         "infill_dense", "infill_dense_algo",
         "no_perimeter_unsupported_algo",
-        "support_material_solid_first_layer"
-        , "exact_last_layer_height"
-        , "perimeter_loop"
-        , "perimeter_loop_seam"
-        , "seam_travel"
-        , "infill_not_connected"
-        , "first_layer_infill_speed"
-        , "thin_walls_min_width"
-        , "thin_walls_overlap",
+        "support_material_solid_first_layer",
+        "exact_last_layer_height",
+        "perimeter_loop",
+        "perimeter_loop_seam",
+        "seam_travel",
+        "infill_connection",
+        "first_layer_infill_speed",
+        "thin_walls_min_width",
+        "thin_walls_overlap",
         "thin_walls_speed"
         , "model_precision"
         , "curve_smoothing_precision"
