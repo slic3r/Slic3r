@@ -1,5 +1,5 @@
 #include "NonplanarSurface.hpp"
-
+#include <unordered_set>
 
 namespace Slic3r {
 
@@ -177,11 +177,21 @@ NonplanarSurface::mark_neighbor_surfaces(int id)
 {
     //if already marked return
     if(this->mesh.find(id) == this->mesh.end() || this->mesh[id].marked == true) return;
-    //mark this facet
-    this->mesh[id].marked = true;
-    //mark all neighbors
-    for(int j = 0; j < 3; j++) {
-        this->mark_neighbor_surfaces(this->mesh[id].neighbor[j]);
+
+    std::unordered_set<int> todo;
+    todo.insert(id);
+    while (!todo.empty()) {
+        int id = *todo.begin();
+        todo.erase(todo.begin());
+        //mark this facet
+        this->mesh[id].marked = true;
+        //mark all neighbors
+        for(int j = 0; j < 3; j++) {
+            int neighbor_id = this->mesh[id].neighbor[j];
+            if(this->mesh.find(neighbor_id) != this->mesh.end() && !this->mesh[neighbor_id].marked) {
+                todo.insert(neighbor_id);
+            }
+        }
     }
 }
 
