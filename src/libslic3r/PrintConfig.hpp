@@ -884,6 +884,8 @@ public:
     ConfigOptionFloats              deretract_speed;
     ConfigOptionString              end_gcode;
     ConfigOptionStrings             end_filament_gcode;
+    ConfigOptionPercents            extruder_fan_offset;
+    ConfigOptionFloats              extruder_temperature_offset;
     ConfigOptionString              extrusion_axis;
     ConfigOptionFloats              extrusion_multiplier;
     ConfigOptionFloat               fan_speedup_time;
@@ -981,6 +983,8 @@ protected:
         OPT_PTR(deretract_speed);
         OPT_PTR(end_gcode);
         OPT_PTR(end_filament_gcode);
+        OPT_PTR(extruder_fan_offset);
+        OPT_PTR(extruder_temperature_offset);
         OPT_PTR(extrusion_axis);
         OPT_PTR(extrusion_multiplier);
         OPT_PTR(fan_speedup_time);

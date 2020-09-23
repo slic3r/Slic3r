@@ -147,6 +147,16 @@ double Tool::retract_restart_extra_toolchange() const
     return 0;
 }
 
+int Tool::temp_offset() const
+{
+    return 0;
+}
+
+int Tool::fan_offset() const
+{
+    return 0;
+}
+
 double Extruder::filament_diameter() const
 {
     return m_config->filament_diameter.get_at(m_id);
@@ -207,6 +217,16 @@ double Extruder::retract_length_toolchange() const
 double Extruder::retract_restart_extra_toolchange() const
 {
     return m_config->retract_restart_extra_toolchange.get_at(m_id);
+}
+
+int Extruder::temp_offset() const
+{
+    return m_config->extruder_temperature_offset.get_at(m_id);
+}
+
+int Extruder::fan_offset() const
+{
+    return m_config->extruder_fan_offset.get_at(m_id);
 }
 
 double Mill::retract_lift() const {

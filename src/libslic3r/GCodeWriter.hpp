@@ -110,7 +110,9 @@ private:
     // If set to zero, the limit is not in action.
     unsigned int    m_max_acceleration;
     unsigned int    m_last_fan_speed;
+    unsigned int    m_last_fan_speed_with_offset;
     unsigned int    m_last_temperature;
+    unsigned int    m_last_temperature_with_offset;
     unsigned int    m_last_bed_temperature;
     bool            m_last_bed_temperature_reached;
     double          m_lifted;

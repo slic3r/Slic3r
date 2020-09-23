@@ -1432,6 +1432,7 @@ void GCode::_do_export(Print &print, FILE *file)
     print.throw_if_canceled();
 
     m_cooling_buffer->set_current_extruder(initial_extruder_id);
+    m_writer.toolchange(initial_extruder_id);
 
     // Emit machine envelope limits for the Marlin firmware.
     this->print_machine_envelope(file, print);
@@ -4441,7 +4442,8 @@ std::string GCode::set_extruder(unsigned int extruder_id, double print_z, bool n
     }
 
     // Set the temperature if the wipe tower didn't (not needed for non-single extruder MM)
-    if (m_config.single_extruder_multi_material && !m_config.wipe_tower) {
+    // supermerill change: try to set the good temp, because the wipe tower don't use the gcode writer and so can write wrong stuff.
+    if (m_config.single_extruder_multi_material /*&& !m_config.wipe_tower*/) {
         int temp = (m_layer_index <= 0 ? m_config.first_layer_temperature.get_at(extruder_id) :
                                          m_config.temperature.get_at(extruder_id));
 

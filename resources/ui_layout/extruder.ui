@@ -6,8 +6,10 @@ group:Size
 group:Layer height limits
 	setting:idx:min_layer_height
 	setting:idx:max_layer_height
-group:Position (for multi-extruder printers)
+group:Offsets (for multi-extruder printers)
 	setting:idx:extruder_offset
+	setting:idx:extruder_temperature_offset
+	setting:idx:extruder_fan_offset
 group:Retraction
 	setting:idx:retract_length
 	setting:idx:retract_lift

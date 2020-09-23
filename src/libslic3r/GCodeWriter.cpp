@@ -87,9 +87,14 @@ std::string GCodeWriter::postamble() const
     return gcode.str();
 }
 
-std::string GCodeWriter::set_temperature(unsigned int temperature, bool wait, int tool)
+std::string GCodeWriter::set_temperature(const unsigned int temperature, bool wait, int tool)
 {
-    if (m_last_temperature == temperature)
+    //add offset
+    int16_t temp_w_offset = int16_t(temperature);
+    temp_w_offset += int16_t(m_tool->temp_offset());
+    temp_w_offset = std::max(int16_t(0), std::min(int16_t(2000), temp_w_offset));
+
+    if (m_last_temperature_with_offset == temp_w_offset)
         return "";
     if (wait && (FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)))
         return "";
@@ -116,7 +121,7 @@ std::string GCodeWriter::set_temperature(unsigned int temperature, bool wait, in
     } else {
         gcode << "S";
     }
-    gcode << temperature;
+    gcode << temp_w_offset;
     bool multiple_tools = this->multiple_extruders && ! m_single_extruder_multi_material;
     if (tool != -1 && (multiple_tools || FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)) ) {
         if (FLAVOR_IS_NOT(gcfRepRap)) {
@@ -129,6 +134,7 @@ std::string GCodeWriter::set_temperature(unsigned int temperature, bool wait, in
         gcode << "M116 ; wait for temperature to be reached\n";
     
     m_last_temperature = temperature;
+    m_last_temperature_with_offset = temp_w_offset;
 
     return gcode.str();
 }
@@ -169,13 +175,25 @@ std::string GCodeWriter::set_bed_temperature(unsigned int temperature, bool wait
     return gcode.str();
 }
 
-std::string GCodeWriter::set_fan(unsigned int speed, bool dont_save)
+std::string GCodeWriter::set_fan(const unsigned int speed, bool dont_save)
 {
     std::ostringstream gcode;
-    if (m_last_fan_speed != speed || dont_save) {
-        if (!dont_save) m_last_fan_speed = speed;
+
+    //add fan_offset
+    int16_t fan_speed = int16_t(speed);
+    fan_speed += int8_t(m_tool->fan_offset());
+    fan_speed = std::max(int16_t(0), std::min(int16_t(100), fan_speed));
+
+    //test if it's useful to write it
+    if (m_last_fan_speed_with_offset != fan_speed || dont_save) {
+        //save new current value
+        if (!dont_save) {
+            m_last_fan_speed = speed;
+            m_last_fan_speed_with_offset = fan_speed;
+        }
         
-        if (speed == 0) {
+        // write it
+        if (fan_speed == 0) {
             if (FLAVOR_IS(gcfTeacup)) {
                 gcode << "M106 S0";
             } else if (FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)) {
@@ -195,7 +213,7 @@ std::string GCodeWriter::set_fan(unsigned int speed, bool dont_save)
                 } else {
                     gcode << "S";
                 }
-                gcode << (255.0 * speed / 100.0);
+                gcode << (255.0 * fan_speed / 100.0);
             }
             if (this->config.gcode_comments) gcode << " ; enable fan";
             gcode << "\n";

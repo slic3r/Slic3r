@@ -992,12 +992,31 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Extruder offset");
     def->category = OptionCategory::extruders;
     def->tooltip = L("If your firmware doesn't handle the extruder displacement you need the G-code "
-                   "to take it into account. This option lets you specify the displacement of each extruder "
-                   "with respect to the first one. It expects positive coordinates (they will be subtracted "
-                   "from the XY coordinate).");
+        "to take it into account. This option lets you specify the displacement of each extruder "
+        "with respect to the first one. It expects positive coordinates (they will be subtracted "
+        "from the XY coordinate).");
     def->sidetext = L("mm");
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionPoints { Vec2d(0,0) });
+    def->set_default_value(new ConfigOptionPoints{ Vec2d(0,0) });
+
+    def = this->add("extruder_temperature_offset", coFloats);
+    def->label = L("Extruder temp offset");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L("This offset will be added to all extruder temperature set by the filament settings."
+        "\nNote that you should set 'M104 S{first_layer_temperature[initial_extruder] + extruder_temperature_offset[initial_extruder]}'"
+        "\ninstead of 'M104 S[first_layer_temperature]' in the start_gcode");
+    def->sidetext = L("°C");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloats{ 0 });
+
+    def = this->add("extruder_fan_offset", coPercents);
+    def->label = L("Extruder fan offset");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L("This offset wil be add to all fan value set by the filament properties. It won't make them go higher than 100% and lower than 0%.");
+    def->sidetext = L("%");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionPercents{ 0 });
+
 
     def = this->add("extrusion_axis", coString);
     def->label = L("Extrusion axis");
@@ -3735,6 +3754,8 @@ void PrintConfigDef::init_extruder_option_keys()
         "min_layer_height",
         "max_layer_height",
         "extruder_offset",
+        "extruder_fan_offset",
+        "extruder_temperature_offset",
         "retract_length",
         "retract_lift",
         "retract_lift_above",
