@@ -23,8 +23,8 @@ void FillPlanePath::_fill_surface_single(
     Point shift = this->_centered() ? 
         bounding_box.center() :
         bounding_box.min;
-    expolygon.translate(-shift(0), -shift(1));
-    bounding_box.translate(-shift(0), -shift(1));
+    expolygon.translate(-double(shift.x()), -double(shift.y()));
+    bounding_box.translate(-double(shift.x()), -double(shift.y()));
 
     Pointfs pts = _generate(
         coord_t(ceil(coordf_t(bounding_box.min(0)) / distance_between_lines)),
@@ -61,7 +61,7 @@ void FillPlanePath::_fill_surface_single(
         
         // paths must be repositioned and rotated back
         for (Polylines::iterator it = polylines.begin(); it != polylines.end(); ++ it) {
-            it->translate(shift(0), shift(1));
+            it->translate(double(shift.x()), double(shift.y()));
             it->rotate(direction.first);
         }
     }

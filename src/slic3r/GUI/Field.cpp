@@ -175,7 +175,7 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
 			if		(label.Last() == ':')	label.RemoveLast();
             show_error(m_parent, from_u8((boost::format(_utf8(L("%s doesn't support percentage"))) % label).str()));
 			set_value(double_to_string(m_opt.min), true);
-			m_value = double(m_opt.min);
+			m_value = m_opt.min;
 			break;
 		}
 		double val;
@@ -643,7 +643,7 @@ void SpinCtrl::BUILD() {
 		break;
 	}
 
-    const int min_val = m_opt.min == INT_MIN 
+    const double min_val = m_opt.min == INT_MIN 
 #ifdef __WXOSX__
     // We will forcibly set the input value for SpinControl, since the value 
     // inserted from the keyboard is not updated under OSX.
@@ -652,8 +652,8 @@ void SpinCtrl::BUILD() {
     // less then min_val.
     || m_opt.min > 0 
 #endif
-    ? 0 : m_opt.min;
-	const int max_val = m_opt.max < 2147483647 ? m_opt.max : 2147483647;
+    ? 0. : m_opt.min;
+	const double max_val = m_opt.max < 2147483647 ? m_opt.max : 2147483647.;
 
 	auto temp = new wxSpinCtrl(m_parent, wxID_ANY, text_value, wxDefaultPosition, size,
 		0|wxTE_PROCESS_ENTER, min_val, max_val, default_value);
@@ -1386,9 +1386,9 @@ void SliderCtrl::BUILD()
 
 	auto temp = new wxBoxSizer(wxHORIZONTAL);
 
-	auto def_val = m_opt.get_default_value<ConfigOptionInt>()->value;
-	auto min = m_opt.min == INT_MIN ? 0 : m_opt.min;
-	auto max = m_opt.max == INT_MAX ? 100 : m_opt.max;
+	int def_val = m_opt.get_default_value<ConfigOptionInt>()->value;
+    int min = m_opt.min == INT_MIN ? 0 : int(m_opt.min);
+    int max = m_opt.max == INT_MAX ? 100 : int(m_opt.max);
 
 	m_slider = new wxSlider(m_parent, wxID_ANY, def_val * m_scale,
 							min * m_scale, max * m_scale,

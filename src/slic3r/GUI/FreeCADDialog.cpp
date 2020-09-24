@@ -716,9 +716,9 @@ void FreeCADDialog::createSTC()
     m_text->StyleSetForeground(wxSTC_P_COMMENTLINE, wxColour(128u, 255u, 128u)); // comment, grennsish
     m_text->StyleSetForeground(wxSTC_P_COMMENTBLOCK, wxColour(128u, 255u, 128u)); // comment, grennsish
     m_text->StyleSetForeground(wxSTC_P_NUMBER, wxColour(255u, 128u, 0u)); // number red-orange
-    m_text->StyleSetForeground(wxSTC_P_STRING, wxColour(128u, 256u, 0u)); // string, light green
+    m_text->StyleSetForeground(wxSTC_P_STRING, wxColour(128u, 255u, 0u)); // string, light green
     m_text->StyleSetBackground(wxSTC_P_STRINGEOL, wxColour(255u, 0u, 0u)); // End of line where string is not closed
-    m_text->StyleSetForeground(wxSTC_P_CHARACTER, wxColour(128u, 256u, 0u));
+    m_text->StyleSetForeground(wxSTC_P_CHARACTER, wxColour(128u, 255u, 0u));
     m_text->StyleSetForeground(wxSTC_P_WORD, wxColour(0u, 0u, 128u));
     m_text->StyleSetBold(wxSTC_P_WORD, true),
     m_text->StyleSetForeground(wxSTC_P_WORD2, wxColour(0u, 0u, 128u));

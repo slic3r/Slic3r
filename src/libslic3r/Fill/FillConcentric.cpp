@@ -38,7 +38,7 @@ FillConcentric::_fill_surface_single(
     Polygons loops = (Polygons)expolygon;
     Polygons last  = loops;
     while (! last.empty()) {
-        last = offset2(last, -(distance + scale_(this->spacing) /2), +scale_(this->spacing) /2);
+        last = offset2(last, -double(distance + scale_(this->spacing) /2), +double(scale_(this->spacing) /2));
         loops.insert(loops.end(), last.begin(), last.end());
     }
 
@@ -58,7 +58,7 @@ FillConcentric::_fill_surface_single(
     // Keep valid paths only.
     size_t j = iPathFirst;
     for (size_t i = iPathFirst; i < polylines_out.size(); ++ i) {
-        polylines_out[i].clip_end(this->loop_clipping);
+        polylines_out[i].clip_end(double(this->loop_clipping));
         if (polylines_out[i].is_valid()) {
             if (j < i)
                 polylines_out[j] = std::move(polylines_out[i]);
@@ -105,7 +105,7 @@ FillConcentricWGapFill::fill_surface_extrusion(
         Polygons loops = (Polygons)expolygon;
         Polygons last = loops;
         while (!last.empty()) {
-            Polygons next_onion = offset2(last, -(distance + scale_(this->spacing) / 2), +scale_(this->spacing) / 2);
+            Polygons next_onion = offset2(last, -double(distance + scale_(this->spacing) / 2), +double(scale_(this->spacing) / 2));
             loops.insert(loops.end(), next_onion.begin(), next_onion.end());
             append(gaps, diff_ex(
                 offset(last, -0.5f * distance),

@@ -101,9 +101,9 @@ std::string get_cfg_value(const DynamicPrintConfig &cfg, const std::string &key)
 void append_full_config(const DynamicPrintConfig &cfg, std::map<std::string, std::string> &keys)
 {
     using namespace std::literals::string_view_literals;
-    
+
     // Sorted list of config keys, which shall not be stored into the ini.
-    static constexpr auto banned_keys = { 
+    static const auto banned_keys = { 
 		"compatible_printers"sv,
         "compatible_prints"sv,
         "print_host"sv,

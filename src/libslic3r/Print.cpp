@@ -1267,7 +1267,9 @@ static inline bool sequential_print_horizontal_clearance_valid(const Print &prin
 	        // Conver the shift from the PrintObject's coordinates into ModelObject's coordinates by removing the centering offset.
             for(Polygon &poly : convex_hull)
 	            poly.translate(instance.shift - print_object->center_offset());
-	        if (! intersection(convex_hulls_other, offset(convex_hull[0], scale_(print.config().min_object_distance(&instance.print_object->config(),0.)) - SCALED_EPSILON, jtRound, float(scale_(0.1)))).empty())
+	        if (! intersection(
+                    convex_hulls_other, 
+                    offset(convex_hull[0], double(scale_(print.config().min_object_distance(&instance.print_object->config(),0.)) - SCALED_EPSILON), jtRound, scale_(0.1))).empty())
 	            return false;
             double extra_grow = print.config().min_object_distance(&instance.print_object->config(), 1.);
             if (extra_grow > 0)

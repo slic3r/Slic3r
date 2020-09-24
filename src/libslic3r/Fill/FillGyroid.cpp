@@ -37,10 +37,10 @@ static inline Polyline make_wave(
     double period = points.back()(0);
     if (width != period) // do not extend if already truncated
     {
-        points.reserve(one_period.size() * floor(width / period));
+        points.reserve(one_period.size() * size_t(floor(width / period)));
         points.pop_back();
 
-        int n = points.size();
+        size_t n = points.size();
         do {
             points.emplace_back(Vec2d(points[points.size()-n](0) + period, points[points.size()-n](1)));
         } while (points.back()(0) < width - EPSILON);
@@ -67,7 +67,7 @@ static std::vector<Vec2d> make_one_period(double width, double scaleFactor, doub
     std::vector<Vec2d> points;
     double dx = M_PI_2; // exact coordinates on main inflexion lobes
     double limit = std::min(2*M_PI, width);
-    points.reserve(ceil(limit / tolerance / 3));
+    points.reserve(size_t(ceil(limit / tolerance / 3)));
 
     for (double x = 0.; x < limit - EPSILON; x += dx) {
         points.emplace_back(Vec2d(x, f(x, z_sin, z_cos, vertical, flip)));
@@ -155,7 +155,7 @@ void FillGyroid::_fill_surface_single(
     ExPolygon                       &expolygon, 
     Polylines                       &polylines_out) const
 {
-    float infill_angle = this->angle + (CorrectionAngle * 2*M_PI) / 360.;
+    float infill_angle = float(this->angle + (CorrectionAngle * 2 * M_PI) / 360.f);
     if(abs(infill_angle) >= EPSILON)
         expolygon.rotate(-infill_angle);
 
@@ -170,7 +170,7 @@ void FillGyroid::_fill_surface_single(
 
     // generate pattern
     Polylines polylines = make_gyroid_waves(
-        scale_(this->z),
+        (double)scale_(this->z),
         density_adjusted,
         this->spacing,
         ceil(bb.size()(0) / distance) + 1.,
