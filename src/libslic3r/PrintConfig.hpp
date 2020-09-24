@@ -895,6 +895,7 @@ public:
     ConfigOptionFloats              filament_density;
     ConfigOptionFloats              filament_diameter;
     ConfigOptionBools               filament_soluble;
+    ConfigOptionFloats              filament_max_speed;
     ConfigOptionFloats              filament_max_volumetric_speed;
     ConfigOptionFloats              filament_max_wipe_tower_speed;
     ConfigOptionStrings             filament_type;
@@ -995,6 +996,7 @@ protected:
         OPT_PTR(filament_type);
         OPT_PTR(filament_soluble);
         OPT_PTR(filament_cost);
+        OPT_PTR(filament_max_speed);
         OPT_PTR(filament_max_volumetric_speed);
         OPT_PTR(filament_max_wipe_tower_speed);
         OPT_PTR(filament_loading_speed);

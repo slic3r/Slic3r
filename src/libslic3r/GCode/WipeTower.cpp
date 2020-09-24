@@ -1285,6 +1285,9 @@ void WipeTower::toolchange_Wipe(
 	float x_to_wipe = volume_to_length(wipe_volume, m_perimeter_width, m_layer_height);
 	float dy = m_extra_spacing*m_perimeter_width;
 	float wipe_speed = 1600.f;
+    if (this->m_config->filament_max_speed.get_at(this->m_current_tool) > 0) {
+        wipe_speed = this->m_config->filament_max_speed.get_at(this->m_current_tool);
+    }
 
     // if there is less than 2.5*m_perimeter_width to the edge, advance straightaway (there is likely a blob anyway)
     if ((m_left_to_right ? xr-writer.x() : writer.x()-xl) < 2.5f*m_perimeter_width) {
@@ -1294,7 +1297,7 @@ void WipeTower::toolchange_Wipe(
     
     // now the wiping itself:
 	for (int i = 0; true; ++i)	{
-		if (i!=0) {
+		if (i!=0 && this->m_config->filament_max_speed.get_at(this->m_current_tool) > 0) {
 			if (wipe_speed < 1610.f) wipe_speed = 1800.f;
 			else if (wipe_speed < 1810.f) wipe_speed = 2200.f;
 			else if (wipe_speed < 2210.f) wipe_speed = 4200.f;

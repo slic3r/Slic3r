@@ -4165,12 +4165,17 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             m_config.max_volumetric_speed.value / path.mm3_per_mm
             );
     }
-    if (EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_volumetric_speed,0) > 0) {
+    if (EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_volumetric_speed, 0) > 0) {
         // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
         speed = std::min(
             speed,
             EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_volumetric_speed, speed) / path.mm3_per_mm
-            );
+        );
+    }
+    if (EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_speed, 0) > 0) {
+        speed = std::min(
+            speed,
+            EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_speed, speed));
     }
     double F = speed * 60;  // convert mm/sec to mm/min
     
