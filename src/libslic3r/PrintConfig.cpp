@@ -1748,7 +1748,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Automatic, only for small areas"));
     def->enum_labels.push_back(L("Anchored"));
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionEnum<DenseInfillAlgo>(dfaAutomatic));
+    def->set_default_value(new ConfigOptionEnum<DenseInfillAlgo>(dfaAutoNotFull));
 
     def = this->add("infill_extruder", coInt);
     def->label = L("Infill extruder");
