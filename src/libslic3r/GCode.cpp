@@ -1858,8 +1858,8 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
                 int(print.config().machine_max_acceleration_e.values.front() + 0.5));
         if (std::set<uint8_t>{gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M202 X%d Y%d ; sets maximum travel speed\n",
-                int(print.config().travel_speed.value),
-                int(print.config().travel_speed.value));
+                int(print.config().machine_max_acceleration_travel.values.front() + 0.5),
+                int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap, gcfSmoothie, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/sec\n",
                 int(print.config().machine_max_feedrate_x.values.front() + 0.5),
