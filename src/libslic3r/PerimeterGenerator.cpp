@@ -38,8 +38,8 @@ namespace Slic3r {
 void PerimeterGenerator::process()
 {
     //set spacing
-    this->perimeter_flow.spacing_ratio = this->object_config->perimeter_overlap.get_abs_value(1);
-    this->ext_perimeter_flow.spacing_ratio = this->object_config->external_perimeter_overlap.get_abs_value(1);
+    this->perimeter_flow.spacing_ratio = this->config->perimeter_overlap.get_abs_value(1);
+    this->ext_perimeter_flow.spacing_ratio = this->config->external_perimeter_overlap.get_abs_value(1);
 
     // other perimeters
     this->_mm3_per_mm               = this->perimeter_flow.mm3_per_mm();
@@ -58,12 +58,16 @@ void PerimeterGenerator::process()
     // overhang perimeters
     this->_mm3_per_mm_overhang = this->overhang_flow.mm3_per_mm();
 
+    //gap fill
+    coord_t gap_fill_spacing = this->config->gap_fill_overlap.get_abs_value(this->perimeter_flow.scaled_spacing())  
+        + this->perimeter_flow.scaled_width() * (100 - this->config->gap_fill_overlap.value) / 100.;
+
     // solid infill
     coord_t solid_infill_spacing = this->solid_infill_flow.scaled_spacing();
 
     //infill / perimeter
     coord_t infill_peri_overlap = (coord_t)scale_(this->config->get_abs_value("infill_overlap", unscale<coordf_t>(perimeter_spacing + solid_infill_spacing) / 2));
-    // infill gap to add vs periemter (useful if using perimeter bonding)
+    // infill gap to add vs perimeter (useful if using perimeter bonding)
     coord_t infill_gap = 0;
 
 
@@ -541,7 +545,7 @@ void PerimeterGenerator::process()
                         }
 
                     } else {
-                        // If "detect thin walls" is not enabled, this paths will be entered, which 
+                        // If "overlapping_perimeters" is enabled, this paths will be entered, which 
                         // leads to overflows, as in prusa3d/Slic3r GH #32
                         next_onion = offset_ex(last, double( - good_spacing));
                     }
@@ -553,7 +557,7 @@ void PerimeterGenerator::process()
                         // (but still long enough to escape the area threshold) that gap fill
                         // won't be able to fill but we'd still remove from infill area
                         append(gaps, diff_ex(
-                            offset(last, -0.5f*good_spacing),
+                            offset(last, -0.5f * gap_fill_spacing),
                             offset(next_onion, 0.5f * good_spacing + 10)));  // safety offset
                 }
 

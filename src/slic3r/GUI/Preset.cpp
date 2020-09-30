@@ -472,6 +472,7 @@ const std::vector<std::string>& Preset::print_options()
         "bridge_speed",
         "gap_fill",
         "gap_fill_min_area",
+        "gap_fill_overlap",
         "gap_fill_speed",
         "travel_speed", "first_layer_speed", "perimeter_acceleration", "infill_acceleration",
         "bridge_acceleration", "first_layer_acceleration", "default_acceleration", 

@@ -525,7 +525,6 @@ public:
     ConfigOptionBool                dont_support_bridges;
     ConfigOptionPercent             external_perimeter_cut_corners;
     ConfigOptionBool                exact_last_layer_height;
-    ConfigOptionPercent             external_perimeter_overlap;
     ConfigOptionFloatOrPercent      extrusion_width;
     ConfigOptionFloatOrPercent      first_layer_height;
     ConfigOptionFloat               first_layer_size_compensation;
@@ -536,7 +535,6 @@ public:
     ConfigOptionFloat               layer_height;
     ConfigOptionFloat               model_precision;
     ConfigOptionPercent             perimeter_bonding;
-    ConfigOptionPercent             perimeter_overlap;
     ConfigOptionInt                 raft_layers;
     ConfigOptionEnum<SeamPosition>  seam_position;
     ConfigOptionBool                seam_travel;
@@ -591,7 +589,6 @@ protected:
         OPT_PTR(dont_support_bridges);
         OPT_PTR(external_perimeter_cut_corners);
         OPT_PTR(exact_last_layer_height);
-        OPT_PTR(external_perimeter_overlap);
         OPT_PTR(extrusion_width);
         OPT_PTR(hole_size_compensation);
         OPT_PTR(first_layer_height);
@@ -601,7 +598,6 @@ protected:
         OPT_PTR(layer_height);
         OPT_PTR(model_precision);
         OPT_PTR(perimeter_bonding);
-        OPT_PTR(perimeter_overlap);
         OPT_PTR(raft_layers);
         OPT_PTR(seam_position);
         OPT_PTR(seam_travel);
@@ -661,11 +657,12 @@ public:
     ConfigOptionBool                enforce_full_fill_volume;
     ConfigOptionFloatOrPercent      external_infill_margin;
     ConfigOptionFloatOrPercent      external_perimeter_extrusion_width;
+    ConfigOptionPercent             external_perimeter_overlap;
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
-    ConfigOptionBool                external_perimeters_vase;
-    ConfigOptionBool                external_perimeters_nothole;
     ConfigOptionBool                external_perimeters_hole;
+    ConfigOptionBool                external_perimeters_nothole;
+    ConfigOptionBool                external_perimeters_vase;
     ConfigOptionBool                extra_perimeters;
     ConfigOptionBool                extra_perimeters_odd_layers;
     ConfigOptionBool                extra_perimeters_overhangs;
@@ -679,6 +676,7 @@ public:
     ConfigOptionFloatOrPercent      fill_smooth_width;
     ConfigOptionBool                gap_fill;
     ConfigOptionFloatOrPercent      gap_fill_min_area;
+    ConfigOptionPercent             gap_fill_overlap;
     ConfigOptionFloat               gap_fill_speed;
     ConfigOptionBool                hole_to_polyhole;
     ConfigOptionInt                 infill_extruder;
@@ -705,6 +703,7 @@ public:
     ConfigOptionFloatOrPercent      perimeter_extrusion_width;
     ConfigOptionBool                perimeter_loop;
     ConfigOptionEnum<SeamPosition>  perimeter_loop_seam;
+    ConfigOptionPercent             perimeter_overlap;
     ConfigOptionFloat               perimeter_speed;
     // Total number of perimeters.
     ConfigOptionInt                 perimeters;
@@ -751,11 +750,12 @@ protected:
         OPT_PTR(enforce_full_fill_volume);
         OPT_PTR(external_infill_margin);
         OPT_PTR(external_perimeter_extrusion_width);
+        OPT_PTR(external_perimeter_overlap);
         OPT_PTR(external_perimeter_speed);
         OPT_PTR(external_perimeters_first);
-        OPT_PTR(external_perimeters_vase);
-        OPT_PTR(external_perimeters_nothole);
         OPT_PTR(external_perimeters_hole);
+        OPT_PTR(external_perimeters_nothole);
+        OPT_PTR(external_perimeters_vase);
         OPT_PTR(extra_perimeters);
         OPT_PTR(extra_perimeters_odd_layers);
         OPT_PTR(extra_perimeters_overhangs);
@@ -769,6 +769,7 @@ protected:
         OPT_PTR(fill_smooth_width);
         OPT_PTR(gap_fill);
         OPT_PTR(gap_fill_min_area);
+        OPT_PTR(gap_fill_overlap);
         OPT_PTR(gap_fill_speed);
         OPT_PTR(hole_to_polyhole);
         OPT_PTR(infill_extruder);
@@ -794,6 +795,7 @@ protected:
         OPT_PTR(perimeter_extrusion_width);
         OPT_PTR(perimeter_loop);
         OPT_PTR(perimeter_loop_seam);
+        OPT_PTR(perimeter_overlap);
         OPT_PTR(perimeter_speed);
         OPT_PTR(perimeters);
         OPT_PTR(print_extrusion_multiplier);

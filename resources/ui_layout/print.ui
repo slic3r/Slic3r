@@ -224,8 +224,8 @@ group:Acceleration control (advanced)
 	setting:first_layer_acceleration
 	setting:default_acceleration
 group:Autospeed (advanced)
+	setting:label$Volumetric speed for Autospeed:max_volumetric_speed
 	setting:max_print_speed
-	setting:max_volumetric_speed
 
 page:Width & Flow:width
 group:Extrusion width
@@ -241,8 +241,9 @@ group:Extrusion width
 	recommended_extrusion_width_description
 group:Overlap
 	line:Perimeter overlap
+		setting:label$Default:perimeter_overlap
 		setting:label$External:external_perimeter_overlap
-		setting:label$Inner:perimeter_overlap
+		setting:label$Gap Fill:gap_fill_overlap
 	end_line
 	setting:infill_overlap
 	setting:bridge_overlap

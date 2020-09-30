@@ -136,17 +136,18 @@ void Layer::make_perimeters()
             /// if you don't do that, objects will share the same region, and the same settings.
             if (config.perimeter_extruder           == other_config.perimeter_extruder
                 && config.perimeters                == other_config.perimeters
-                && config.perimeter_speed           == other_config.perimeter_speed // it os mandatory? can't this be set at gcode.cpp?
                 && config.external_perimeter_extrusion_width == other_config.external_perimeter_extrusion_width
+                && config.external_perimeter_overlap == other_config.external_perimeter_overlap
+                && config.external_perimeter_speed == other_config.external_perimeter_speed // it os mandatory? can't this be set at gcode.cpp?
                 && config.external_perimeters_first == other_config.external_perimeters_first
-                && config.external_perimeters_vase  == other_config.external_perimeters_vase
                 && config.external_perimeters_hole  == other_config.external_perimeters_hole
                 && config.external_perimeters_nothole == other_config.external_perimeters_nothole
-                && config.external_perimeter_speed  == other_config.external_perimeter_speed
+                && config.external_perimeters_vase == other_config.external_perimeters_vase
                 && config.extra_perimeters_odd_layers == other_config.extra_perimeters_odd_layers
                 && config.extra_perimeters_overhangs == other_config.extra_perimeters_overhangs
                 && config.gap_fill                  == other_config.gap_fill
                 && config.gap_fill_min_area         == other_config.gap_fill_min_area
+                && config.gap_fill_overlap          == other_config.gap_fill_overlap
                 && config.gap_fill_speed            == other_config.gap_fill_speed
                 && config.infill_dense              == other_config.infill_dense
                 && config.infill_dense_algo         == other_config.infill_dense_algo
@@ -159,13 +160,15 @@ void Layer::make_perimeters()
                 && config.perimeter_extrusion_width == other_config.perimeter_extrusion_width
                 && config.perimeter_loop            == other_config.perimeter_loop
                 && config.perimeter_loop_seam       == other_config.perimeter_loop_seam
-                && config.perimeter_speed           == other_config.perimeter_speed
+                && config.perimeter_overlap         == other_config.perimeter_overlap
+                && config.perimeter_speed           == other_config.perimeter_speed // it os mandatory? can't this be set at gcode.cpp?
                 && config.small_perimeter_speed     == other_config.small_perimeter_speed
                 && config.thin_walls                == other_config.thin_walls
                 && config.thin_walls_min_width      == other_config.thin_walls_min_width
                 && config.thin_walls_overlap        == other_config.thin_walls_overlap
                 && config.thin_perimeters           == other_config.thin_perimeters
                 && config.thin_perimeters_all       == other_config.thin_perimeters_all
+                && config.thin_walls_speed          == other_config.thin_walls_speed
                 && config.infill_overlap            == other_config.infill_overlap
                 && config.perimeter_loop            == other_config.perimeter_loop) {
                 layerms.push_back(other_layerm);

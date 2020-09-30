@@ -1676,6 +1676,19 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent{ 100,true });
 
+    def = this->add("gap_fill_overlap", coPercent);
+    def->label = L("Gap fill overlap");
+    def->full_label = L("Gap fill overlap");
+    def->category = OptionCategory::width;
+    def->tooltip = L("This setting allow you to reduce the overlap between the perimeters and the gap fill."
+        " 100% means that no gaps is left, and 0% means that the gap fill won't touch the perimeters."
+        "\nIt's very experimental, please report about the usefulness. It may be removed if there is no use for it.");
+    def->sidetext = L("%");
+    def->min = 0;
+    def->max = 100;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionPercent(100));
+
     def = this->add("gap_fill_speed", coFloat);
     def->label = L("Gap fill");
     def->full_label = L("Gap fill speed");
