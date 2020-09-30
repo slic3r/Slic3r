@@ -610,30 +610,27 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
     std::vector<PrintObjectStep> steps;
     bool invalidated = false;
     for (const t_config_option_key &opt_key : opt_keys) {
-        if (   opt_key == "perimeters"
-            || opt_key == "extra_perimeters"
-            || opt_key == "extra_perimeters_odd_layers"
-            || opt_key == "gap_fill"
-            || opt_key == "gap_fill_speed"
+        if ( 
+            opt_key == "gap_fill"
+            || opt_key == "gap_fill_min_area"
+            || opt_key == "only_one_perimeter_top"
             || opt_key == "overhangs"
             || opt_key == "overhangs_width"
             || opt_key == "overhangs_reverse"
             || opt_key == "overhangs_reverse_threshold"
-            || opt_key == "first_layer_extrusion_width"
             || opt_key == "perimeter_extrusion_width"
             || opt_key == "infill_overlap"
             || opt_key == "thin_perimeters"
+            || opt_key == "thin_perimeters_all"
             || opt_key == "thin_walls"
             || opt_key == "thin_walls_min_width"
             || opt_key == "thin_walls_overlap"
             || opt_key == "external_perimeters_first"
-            || opt_key == "external_perimeters_vase"
-            || opt_key == "external_perimeters_nothole"
             || opt_key == "external_perimeters_hole"
+            || opt_key == "external_perimeters_nothole"
+            || opt_key == "external_perimeters_vase"
             || opt_key == "perimeter_loop"
-            || opt_key == "perimeter_loop_seam"
-            || opt_key == "only_one_perimeter_top"
-            || opt_key == "no_perimeter_unsupported_algo") {
+            || opt_key == "perimeter_loop_seam") {
             steps.emplace_back(posPerimeters);
         } else if (
                opt_key == "layer_height"
@@ -684,24 +681,25 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "support_material_solid_first_layer") {
             steps.emplace_back(posSupportMaterial);
         } else if (
-               opt_key == "interface_shells"
-            || opt_key == "infill_only_where_needed"
-            || opt_key == "infill_every_layers"
-            || opt_key == "solid_infill_every_layers"
-            || opt_key == "infill_dense"
-            || opt_key == "infill_not_connected"
-            || opt_key == "infill_dense_algo"
-            || opt_key == "bottom_solid_layers"
+            opt_key == "bottom_solid_layers"
             || opt_key == "bottom_solid_min_thickness"
-            || opt_key == "top_solid_layers"
-            || opt_key == "top_solid_min_thickness"
-            || opt_key == "solid_infill_below_area"
-            || opt_key == "infill_extruder"
-            || opt_key == "solid_infill_extruder"
-            || opt_key == "infill_extrusion_width"
-            || opt_key == "ensure_vertical_shell_thickness"
             || opt_key == "bridged_infill_margin"
-            || opt_key == "bridge_angle") {
+            || opt_key == "bridge_angle"
+            || opt_key == "ensure_vertical_shell_thickness"
+            || opt_key == "fill_density"
+            || opt_key == "interface_shells"
+            || opt_key == "infill_extruder"
+            || opt_key == "infill_extrusion_width"
+            || opt_key == "infill_every_layers"
+            || opt_key == "infill_dense"
+            || opt_key == "infill_dense_algo"
+            || opt_key == "infill_not_connected"
+            || opt_key == "infill_only_where_needed"
+            || opt_key == "solid_infill_below_area"
+            || opt_key == "solid_infill_extruder"
+            || opt_key == "solid_infill_every_layers"
+            || opt_key == "top_solid_layers"
+            || opt_key == "top_solid_min_thickness") {
             steps.emplace_back(posPrepareInfill);
         } else if (
             opt_key == "top_fill_pattern"
@@ -718,8 +716,15 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "first_layer_extrusion_width") {
             steps.emplace_back(posInfill);
         } else if (
-               opt_key == "fill_density"
+            opt_key == "extra_perimeters"
+            || opt_key == "extra_perimeters_odd_layers"
             || opt_key == "external_infill_margin"
+            || opt_key == "external_perimeter_overlap"
+            || opt_key == "first_layer_extrusion_width"
+            || opt_key == "gap_fill_overlap"
+            || opt_key == "no_perimeter_unsupported_algo"
+            || opt_key == "perimeters"
+            || opt_key == "perimeter_overlap"
             || opt_key == "solid_infill_extrusion_width") {
             steps.emplace_back(posPerimeters);
             steps.emplace_back(posPrepareInfill);
@@ -737,19 +742,21 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
                 steps.emplace_back(posSupportMaterial);
             //}
         } else if (
-               opt_key == "seam_position"
-            || opt_key == "seam_travel"
-            || opt_key == "seam_preferred_direction"
-            || opt_key == "seam_preferred_direction_jitter"
-            || opt_key == "support_material_speed"
-            || opt_key == "support_material_interface_speed"
-            || opt_key == "bridge_speed"
+            opt_key == "bridge_speed"
             || opt_key == "external_perimeter_speed"
             || opt_key == "external_perimeters_vase"
+            || opt_key == "gap_fill_speed"
             || opt_key == "infill_speed"
             || opt_key == "perimeter_speed"
+            || opt_key == "seam_position"
+            || opt_key == "seam_preferred_direction"
+            || opt_key == "seam_preferred_direction_jitter"
+            || opt_key == "seam_travel"
             || opt_key == "small_perimeter_speed"
             || opt_key == "solid_infill_speed"
+            || opt_key == "support_material_interface_speed"
+            || opt_key == "support_material_speed"
+            || opt_key == "thin_walls_speed"
             || opt_key == "top_solid_infill_speed") {
             invalidated |= m_print->invalidate_step(psGCodeExport);
         } else if (
