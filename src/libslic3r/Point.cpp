@@ -83,12 +83,12 @@ int32_t Point::nearest_point_index(const PointConstPtrs &points) const
     for (PointConstPtrs::const_iterator it = points.begin(); it != points.end(); ++it) {
         /* If the X distance of the candidate is > than the total distance of the
            best previous candidate, we know we don't want it */
-        double d = sqr<double>((*this)(0) - (*it)->x());
+        double d = sqr<double>(double((*this).x() - (*it)->x()));
         if (distance != -1 && d > distance) continue;
         
         /* If the Y distance of the candidate is > than the total distance of the
            best previous candidate, we know we don't want it */
-        d += sqr<double>((*this)(1) - (*it)->y());
+        d += sqr<double>(double((*this).y() - (*it)->y()));
         if (distance != -1 && d > distance) continue;
         
         idx = (int32_t)(it - points.begin());
@@ -103,8 +103,8 @@ int32_t Point::nearest_point_index(const PointConstPtrs &points) const
 /* distance to the closest point of line */
 double
 Point::distance_to(const Line &line) const {
-    const double dx = line.b.x() - line.a.x();
-    const double dy = line.b.y() - line.a.y();
+    const double dx = double(line.b.x() - line.a.x());
+    const double dy = double(line.b.y() - line.a.y());
 
     const double l2 = dx*dx + dy*dy;  // avoid a sqrt
     if (l2 == 0.0) return this->distance_to(line.a);   // line.a == line.b case
@@ -217,8 +217,8 @@ Point Point::projection_onto(const Line &line) const
 Point Point::interpolate(const double percent, const Point &p2) const
 {
     Point p_out;
-    p_out.x() = this->x()*(1 - percent) + p2.x()*(percent);
-    p_out.y() = this->y()*(1 - percent) + p2.y()*(percent);
+    p_out.x() = coord_t(this->x()*(1 - percent) + p2.x()*(percent));
+    p_out.y() = coord_t(this->y()*(1 - percent) + p2.y()*(percent));
     return p_out;
 }
 

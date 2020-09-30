@@ -1838,7 +1838,9 @@ wxMenu* ObjectList::create_settings_popupmenu(wxMenu *parent_menu)
     const wxDataViewItem selected_item = GetSelection();
     wxDataViewItem item = m_objects_model->GetItemType(selected_item) & itSettings ? m_objects_model->GetParent(selected_item) : selected_item;
 
-    const bool is_part = !(m_objects_model->GetItemType(item) == itObject || scene_selection().is_single_full_object());
+    //const bool is_part = !(m_objects_model->GetItemType(item) == itObject || scene_selection().is_single_full_object());
+    const ItemType item_type = m_objects_model->GetItemType(item);
+    const bool is_part = item_type & (itVolume | itLayer);
     get_options_menu(settings_menu, is_part);
 
     //note: as settings_menu_hierarchy is a map<OptionCategory,...>, it's automatically sorted by enum order

@@ -629,7 +629,7 @@ void Preview::update_view_type(bool slice_completed)
         m_has_switched_to_color = true;
     } else if (!m_has_switched_to_extruders && has_multi_tool) {
         m_last_choice = GCodePreviewData::Extrusion::Tool;
-        m_has_switched_to_color = true;
+        m_has_switched_to_extruders = true;
     }
     if (m_last_choice != m_gcode_preview_data->extrusion.view_type) {
         m_gcode_preview_data->extrusion.view_type = m_last_choice;

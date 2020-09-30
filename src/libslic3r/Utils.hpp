@@ -342,7 +342,7 @@ inline std::string get_time_dhm(float time_in_secs)
 {
     char buffer[64];
 
-    int minutes = std::round(time_in_secs / 60.);
+    int minutes = (int)std::round(time_in_secs / 60.);
     if (minutes <= 0) {
         ::sprintf(buffer, "%ds", (int)time_in_secs);
     } else {

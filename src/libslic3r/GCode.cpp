@@ -1342,7 +1342,7 @@ void GCode::_do_export(Print &print, FILE *file)
                 }
                 _write_format(file, "; object:{\"name\":\"%s\",\"id\":\"%s id:%d copy %d\",\"object_center\":[%f,%f,%f],\"boundingbox_center\":[%f,%f,%f],\"boundingbox_size\":[%f,%f,%f]}\n",
                     object_name.c_str(), print_object->model_object()->name.c_str(), this->m_ordered_objects.size() - 1, copy_id,
-                    m_bounding_box.center().x(), m_bounding_box.center().y(), 0,
+                    m_bounding_box.center().x(), m_bounding_box.center().y(), 0.,
                     m_bounding_box.center().x(), m_bounding_box.center().y(), m_bounding_box.center().z(),
                     m_bounding_box.size().x(), m_bounding_box.size().y(), m_bounding_box.size().z()
                 );
@@ -1876,8 +1876,8 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
                 int(print.config().machine_max_acceleration_e.values.front() + 0.5));
         if (std::set<uint8_t>{gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M202 X%d Y%d ; sets maximum travel speed\n",
-                int(print.config().travel_speed.value),
-                int(print.config().travel_speed.value));
+                int(print.config().machine_max_acceleration_travel.values.front() + 0.5),
+                int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap, gcfSmoothie, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/sec\n",
                 int(print.config().machine_max_feedrate_x.values.front() + 0.5),

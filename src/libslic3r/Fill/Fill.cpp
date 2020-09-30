@@ -61,7 +61,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         //if internal infill can be dense, place it on his own group
         if (layerm.region()->config().infill_dense.getBool() && layerm.region()->config().fill_density<40) {
             SurfacesPtr *denseGroup = NULL;
-            const uint32_t nbGroups = groups.size();
+            const size_t nbGroups = groups.size();
             for (uint32_t num_group = 0; num_group < nbGroups; ++num_group) {
                 for (uint32_t num_srf = 0; num_srf < groups[num_group].size(); ++num_srf) {
                     Surface *srf = groups[num_group][num_srf];
@@ -244,11 +244,12 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         params.connection = layerm.region()->config().infill_connection.value;
         //adjust flow (to over-extrude when needed)
         float flow_percent = 1;
-        if (surface.has_pos_top()) flow_percent *= layerm.region()->config().fill_top_flow_ratio.get_abs_value(1);
+        if (surface.has_pos_top())
+            flow_percent *= float(layerm.region()->config().fill_top_flow_ratio.get_abs_value(1));
         params.flow_mult = flow_percent;
         //adjust spacing (to over-extrude when needed)
         if (surface.has_mod_overBridge()) {
-            params.density = layerm.region()->config().over_bridge_flow_ratio.get_abs_value(1);
+            params.density = float(layerm.region()->config().over_bridge_flow_ratio.get_abs_value(1));
         }
         params.config = &layerm.region()->config();
         
@@ -303,7 +304,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         f->z = layerm.layer()->print_z;
         if (is_denser)f->angle = 0;
         else f->angle = float(Geometry::deg2rad(layerm.region()->config().fill_angle.value));
-        f->angle += PI * (layerm.region()->config().fill_angle_increment.value * layerm.layer()->id()) / 180.;
+        f->angle += float(PI * (layerm.region()->config().fill_angle_increment.value * layerm.layer()->id()) / 180.f);
         // Maximum length of the perimeter segment linking two infill lines.
         f->link_max_length = (coord_t)scale_(link_max_length);
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
@@ -329,13 +330,13 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             // so we can safely ignore the slight variation that might have
             // been applied to $f->flow_spacing
         } else {
-            flow = Flow::new_from_spacing(f->get_spacing(), flow.nozzle_diameter, (float)h, is_bridge);
+            flow = Flow::new_from_spacing((float)f->get_spacing(), flow.nozzle_diameter, (float)h, is_bridge);
         }
         params.flow = &flow;
 
         //apply bridge_overlap if needed
         if (is_bridge && density > 99 && layerm.region()->config().bridge_overlap.get_abs_value(1) != 1) {
-            params.density *= layerm.region()->config().bridge_overlap.get_abs_value(1);
+            params.density *= float(layerm.region()->config().bridge_overlap.get_abs_value(1));
         }
 
         f->fill_surface_extrusion(&surface, params, out.entities);

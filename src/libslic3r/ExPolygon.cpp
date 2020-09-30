@@ -531,7 +531,7 @@ void ExPolygon::triangulate_p2t(Polygons* polygons) const
         std::vector<p2t::Point*> ContourPoints;
         for (const Point &pt : ex->contour.points)
             // We should delete each p2t::Point object
-            ContourPoints.push_back(new p2t::Point(pt(0), pt(1)));
+            ContourPoints.push_back(new p2t::Point(double(pt.x()), double(pt.y())));
         p2t::CDT cdt(ContourPoints);
 
         // holes
@@ -539,7 +539,7 @@ void ExPolygon::triangulate_p2t(Polygons* polygons) const
             std::vector<p2t::Point*> points;
             for (const Point &pt : hole->points)
                 // will be destructed in SweepContext::~SweepContext
-                points.push_back(new p2t::Point(pt(0), pt(1)));
+                points.push_back(new p2t::Point(double(pt.x()), double(pt.y())));
             cdt.AddHole(points);
         }
         

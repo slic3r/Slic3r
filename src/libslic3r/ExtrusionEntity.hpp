@@ -255,7 +255,7 @@ public:
     ExtrusionPath3D& operator=(ExtrusionPath3D &&rhs) { m_role = rhs.m_role; this->mm3_per_mm = rhs.mm3_per_mm; this->width = rhs.width; this->height = rhs.height; 
         this->polyline = std::move(rhs.polyline); z_offsets = std::move(rhs.z_offsets); return *this;
     }
-    virtual ExtrusionPath3D* clone() const { return new ExtrusionPath3D(*this); }
+    virtual ExtrusionPath3D* clone() const override { return new ExtrusionPath3D(*this); }
     virtual ExtrusionPath3D* clone_move() override { return new ExtrusionPath3D(std::move(*this)); }
     virtual void visit(ExtrusionVisitor &visitor) override { visitor.use(*this); };
     virtual void visit(ExtrusionVisitorConst &visitor) const override { visitor.use(*this); };
@@ -407,7 +407,7 @@ public:
     virtual bool can_reverse() const override { return false; }
     virtual ExtrusionEntity* clone() const override{ return new ExtrusionLoop (*this); }
     // Create a new object, initialize it with this object using the move semantics.
-    ExtrusionEntity* clone_move() override { return new ExtrusionLoop(std::move(*this)); }
+    virtual ExtrusionEntity* clone_move() override { return new ExtrusionLoop(std::move(*this)); }
     bool make_clockwise();
     bool make_counter_clockwise();
     virtual void reverse() override;

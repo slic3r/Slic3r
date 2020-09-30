@@ -141,7 +141,7 @@ const Color GCodePreviewData::Extrusion::Default_Extrusion_Role_Colors[erCount] 
     Color(0.0f, 0.5f, 0.0f, 1.0f),   // erSupportMaterial
     Color(0.0f, 0.0f, 0.5f, 1.0f),   // erSupportMaterialInterface
     Color(0.7f, 0.89f, 0.67f, 1.0f), // erWipeTower
-    Color(0.7f, 0.7, 0.7,   1.0f),   // erMilling
+    Color(0.7f, 0.7f, 0.7f,   1.0f), // erMilling
     Color(1.0f, 1.0f, 0.0f, 1.0f),   // erCustom
     Color(0.0f, 0.0f, 0.0f, 1.0f)    // erMixed
 };

@@ -40,7 +40,7 @@ Contour3D::Contour3D(const EigenMesh3D &emesh) {
 
 Contour3D &Contour3D::merge(const Contour3D &ctr)
 {
-    auto N = coord_t(points.size());
+    int32_t N = int32_t(points.size());
     auto N_f3 = faces3.size();
     auto N_f4 = faces4.size();
     
@@ -49,11 +49,16 @@ Contour3D &Contour3D::merge(const Contour3D &ctr)
     faces4.insert(faces4.end(), ctr.faces4.begin(), ctr.faces4.end());
     
     for(size_t n = N_f3; n < faces3.size(); n++) {
-        auto& idx = faces3[n]; idx.x() += N; idx.y() += N; idx.z() += N;
+        Vec3i32& idx = faces3[n]; 
+        idx.x() += N; 
+        idx.y() += N; 
+        idx.z() += N;
     }
     
     for(size_t n = N_f4; n < faces4.size(); n++) {
-        auto& idx = faces4[n]; for (int k = 0; k < 4; k++) idx(k) += N;
+        Vec4i& idx = faces4[n]; 
+        for (int k = 0; k < 4; k++) 
+            idx(k) += int(N);
     }        
     
     return *this;
