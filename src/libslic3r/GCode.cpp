@@ -3873,7 +3873,7 @@ void GCode::_write(FILE* file, const char *what)
         
         //const char * gcode_pp = _post_process(what).c_str();
         std::string str_preproc{ what };
-        //_post_process(str_preproc);
+        _post_process(str_preproc);
 
         const std::string str_ana = m_analyzer.process_gcode(str_preproc);
 
