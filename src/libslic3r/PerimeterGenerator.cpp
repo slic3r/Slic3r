@@ -244,16 +244,17 @@ void PerimeterGenerator::process()
 
                                     if (this->config->no_perimeter_unsupported_algo == npuaBridges) {
                                         ExPolygons unbridgeable = unsupported_filtered;
-                                        for (ExPolygon &expol : unbridgeable)expol.holes.clear();
+                                        for (ExPolygon &expol : unbridgeable)
+                                            expol.holes.clear();
                                         unbridgeable = diff_ex(unbridgeable, bridgeable_simplified);
                                         unbridgeable = offset2_ex(unbridgeable, -ext_perimeter_width*2, ext_perimeter_width*2);
                                         ExPolygons bridges_temp = intersection_ex(last, diff_ex(unsupported_filtered, unbridgeable));
-                                        //remove the overhangs section form the surface polygons
+                                        //remove the overhangs section from the surface polygons
                                         ExPolygons reference = last;
                                         last = diff_ex(last, unsupported_filtered);
                                         //ExPolygons no_bridge = diff_ex(offset_ex(unbridgeable, ext_perimeter_width * 3 / 2), last);
                                         //bridges_temp = diff_ex(bridges_temp, no_bridge);
-                                        unsupported_filtered = diff_ex(offset_ex(bridges_temp, ext_perimeter_width * 3 / 2), offset_ex(unbridgeable, ext_perimeter_width*2, jtSquare));
+                                        unsupported_filtered = diff_ex(offset_ex(bridges_temp, ext_perimeter_width * 3 / 2), offset_ex(unbridgeable, ext_perimeter_width * 2, jtSquare));
                                         unsupported_filtered = intersection_ex(unsupported_filtered, reference);
                                     } else {
                                         ExPolygons unbridgeable = intersection_ex(unsupported, diff_ex(unsupported_filtered, offset_ex(bridgeable_simplified, ext_perimeter_width / 2)));
