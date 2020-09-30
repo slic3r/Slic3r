@@ -1323,6 +1323,7 @@ void GCode::_do_export(Print &print, FILE *file)
         _write_format(file, "\n");
     }
     if (this->config().gcode_label_objects) {
+        BoundingBoxf3 global_bounding_box;
         for (PrintObject *print_object : print.objects()) {
             this->m_ordered_objects.push_back(print_object);
             unsigned int copy_id = 0;
@@ -1334,6 +1335,11 @@ void GCode::_do_export(Print &print, FILE *file)
                 //get bounding box for the instance
                 BoundingBoxf3 raw_bbox = print_object->model_object()->raw_mesh_bounding_box();
                 BoundingBoxf3 m_bounding_box = print_instance.model_instance->transform_bounding_box(raw_bbox);
+                if (global_bounding_box.size().norm() == 0) {
+                    global_bounding_box = m_bounding_box;
+                } else {
+                    global_bounding_box.merge(m_bounding_box);
+                }
                 _write_format(file, "; object:{\"name\":\"%s\",\"id\":\"%s id:%d copy %d\",\"object_center\":[%f,%f,%f],\"boundingbox_center\":[%f,%f,%f],\"boundingbox_size\":[%f,%f,%f]}\n",
                     object_name.c_str(), print_object->model_object()->name.c_str(), this->m_ordered_objects.size() - 1, copy_id,
                     m_bounding_box.center().x(), m_bounding_box.center().y(), 0,
@@ -1343,6 +1349,11 @@ void GCode::_do_export(Print &print, FILE *file)
                 copy_id++;
             }
         }
+        _write_format(file, "; plater:{\"center\":[%f,%f,%f],\"boundingbox_center\":[%f,%f,%f],\"boundingbox_size\":[%f,%f,%f]}\n",
+            global_bounding_box.center().x(), global_bounding_box.center().y(), 0.,
+            global_bounding_box.center().x(), global_bounding_box.center().y(), global_bounding_box.center().z(),
+            global_bounding_box.size().x(), global_bounding_box.size().y(), global_bounding_box.size().z()
+        );
         _write_format(file, "\n");
     }
 
