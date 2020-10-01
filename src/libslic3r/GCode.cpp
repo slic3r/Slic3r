@@ -3702,24 +3702,24 @@ void GCode::use(const ExtrusionEntityCollection &collection) {
 
 std::string extrusion_role_2_string(const ExtrusionRole &er) {
     switch (er) {
-        case erNone: return " none";
-        case erPerimeter: return " perimeter";
-        case erExternalPerimeter: return " perimeter external";
-        case erOverhangPerimeter: return " perimeter overhang";
-        case erInternalInfill: return " infill internal";
-        case erSolidInfill: return " infill solid";
-        case erTopSolidInfill: return " infill solid top";
-        case erBridgeInfill: return " infill bridge";
-        case erThinWall: return " thin_wall";
-        case erGapFill: return " gap_fill";
-        case erSkirt: return " skirt";
-        case erSupportMaterial: return " support_material";
-        case erSupportMaterialInterface: return " support_material_interface";
-        case erWipeTower: return " wipe_tower";
-        case erMilling: return " milling";
-        case erCustom: return " custom";
-        case erMixed: return " mixed";
-        case erCount: return " count";
+        case erNone: return "none";
+        case erPerimeter: return "perimeter";
+        case erExternalPerimeter: return "perimeter external";
+        case erOverhangPerimeter: return "perimeter overhang";
+        case erInternalInfill: return "infill internal";
+        case erSolidInfill: return "infill solid";
+        case erTopSolidInfill: return "infill solid top";
+        case erBridgeInfill: return "infill bridge";
+        case erThinWall: return "thin_wall";
+        case erGapFill: return "gap_fill";
+        case erSkirt: return "skirt";
+        case erSupportMaterial: return "support_material";
+        case erSupportMaterialInterface: return "support_material_interface";
+        case erWipeTower: return "wipe_tower";
+        case erMilling: return "milling";
+        case erCustom: return "custom";
+        case erMixed: return "mixed";
+        case erCount: return "count";
     }
     return " unkown";
 }
@@ -3976,7 +3976,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
                     // the coeff is below 0.01 i the angle is higher than 125, so it's not useful
                     if (idx_angle > 60) {
                         //don't compensate if the angle is under 35, as it's already a 50% compensation, it's enough! 
-                        if (idx_angle > 144) angle = 144;
+                        if (idx_angle > 144) idx_angle = 144;
                         //surface extruded in path.width is path.width * path.width
                         // define R = path.width/2 and a = angle/2
                         // then i have to print only 4RR + RR(2a-sin(2a))/2 - RR*sina*sina*tana if i want to remove the bits out of the external curve, if the internal overlap go to the exterior.
@@ -3987,7 +3987,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
                         //double removed = std::sin(A); removed = removed * removed * std::tan(A) / 4;
                         //double coeff = 1. + added - removed;
                         //we have to remove coeff percentage on path.width length
-                        double coeff = cut_corner_cache[idx_angle];
+                        double coeff = cut_corner_cache[idx_angle-30];
                         //the length, do half of the work on width/4 and the other half on width/2
                         coordf_t length1 = (path.width) / 4;
                         coordf_t line_length = unscaled(line.length());

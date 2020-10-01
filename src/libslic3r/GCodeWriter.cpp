@@ -510,6 +510,8 @@ std::string GCodeWriter::_retract(double length, double restart_extra, const std
     }
     
     double dE = m_tool->retract(length, restart_extra);
+    assert(dE >= 0);
+    assert(dE < 10000000);
     if (dE != 0) {
         if (this->config.use_firmware_retraction) {
             if (FLAVOR_IS(gcfMachinekit))
@@ -538,6 +540,8 @@ std::string GCodeWriter::unretract()
         gcode << "M101 ; extruder on\n";
     
     double dE = m_tool->unretract();
+    assert(dE >= 0);
+    assert(dE < 10000000);
     if (dE != 0) {
         if (this->config.use_firmware_retraction) {
             if (FLAVOR_IS(gcfMachinekit))
