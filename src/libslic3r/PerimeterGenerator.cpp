@@ -430,7 +430,7 @@ void PerimeterGenerator::process()
                     // look for thin walls
                      if (this->config->thin_walls) {
                         // detect edge case where a curve can be split in multiple small chunks.
-                        std::vector<float> divs = {2.2f,1.75f,1.5f}; //don't go too far, it's not possible to print thinw wall after that
+                        std::vector<float> divs = { 2.1f, 1.9f, 2.2f, 1.75f, 1.5f}; //don't go too far, it's not possible to print thin wall after that
                         size_t idx_div = 0;
                         while (next_onion.size() > last.size() && idx_div < divs.size()) {
                             float div = divs[idx_div];
@@ -439,7 +439,7 @@ void PerimeterGenerator::process()
                                 last,
                                 -(float)((ext_perimeter_width / 2) + (ext_min_spacing / div) - 1),
                                 +(float)((ext_min_spacing / div) - 1));
-                            if (next_onion.size() >  next_onion_secondTry.size() * 1.2 || next_onion.size() - next_onion_secondTry.size() > 3) {
+                            if (next_onion.size() > next_onion_secondTry.size() * 1.2 && next_onion.size() > next_onion_secondTry.size() + 2) {
                                 next_onion = next_onion_secondTry;
                             }
                             idx_div++;
