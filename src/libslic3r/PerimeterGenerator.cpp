@@ -275,7 +275,6 @@ void PerimeterGenerator::process()
 
                     if (!unsupported_filtered.empty()) {
 
-
                         //add this directly to the infill list.
                         // this will avoid to throw wrong offsets into a good polygons
                         this->fill_surfaces->append(
@@ -303,9 +302,7 @@ void PerimeterGenerator::process()
             } else {
                 surface->expolygon = last[0];
                 for (size_t idx = 1; idx < last.size(); idx++) {
-                    Surface new_surf = *surface;
-                    new_surf.expolygon = last[idx];
-                    all_surfaces.push_back(new_surf);
+                    all_surfaces.emplace_back(*surface, last[idx]);
                 }
             }
         }
