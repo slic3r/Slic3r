@@ -108,24 +108,24 @@ Point::nearest_point_index(const PointConstPtrs &points) const
 {
     int idx = -1;
     double distance = -1;  // double because long is limited to 2147483647 on some platforms and it's not enough
-    
+
     for (PointConstPtrs::const_iterator it = points.begin(); it != points.end(); ++it) {
         /* If the X distance of the candidate is > than the total distance of the
            best previous candidate, we know we don't want it */
         double d = pow(this->x - (*it)->x, 2);
         if (distance != -1 && d > distance) continue;
-        
+
         /* If the Y distance of the candidate is > than the total distance of the
            best previous candidate, we know we don't want it */
         d += pow(this->y - (*it)->y, 2);
         if (distance != -1 && d > distance) continue;
-        
+
         idx = it - points.begin();
         distance = d;
-        
+
         if (distance < EPSILON) break;
     }
-    
+
     return idx;
 }
 
@@ -135,23 +135,23 @@ Point::nearest_waypoint_index(const Points &points, const Point &dest) const
 {
     size_t idx = -1;
     double distance = -1;  // double because long is limited to 2147483647 on some platforms and it's not enough
-    
+
     for (Points::const_iterator p = points.begin(); p != points.end(); ++p) {
         // distance from this to candidate
         double d = pow(this->x - p->x, 2) + pow(this->y - p->y, 2);
-        
+
         // distance from candidate to dest
         d += pow(p->x - dest.x, 2) + pow(p->y - dest.y, 2);
-        
+
         // if the total distance is greater than current min distance, ignore it
         if (distance != -1 && d > distance) continue;
-        
+
         idx = p - points.begin();
         distance = d;
-        
+
         if (distance < EPSILON) break;
     }
-    
+
     return idx;
 }
 
@@ -198,12 +198,12 @@ Point::distance_to(const Line &line) const
 {
     const double dx = line.b.x - line.a.x;
     const double dy = line.b.y - line.a.y;
-    
+
     const double l2 = dx*dx + dy*dy;  // avoid a sqrt
     if (l2 == 0.0) return this->distance_to(line.a);   // line.a == line.b case
-    
+
     // Consider the line extending the segment, parameterized as line.a + t (line.b - line.a).
-    // We find projection of this point onto the line. 
+    // We find projection of this point onto the line.
     // It falls where t = [(this-line.a) . (line.b-line.a)] / |line.b-line.a|^2
     const double t = ((this->x - line.a.x) * dx + (this->y - line.a.y) * dy) / l2;
     if (t < 0.0)      return this->distance_to(line.a);  // beyond the 'a' end of the segment
@@ -219,10 +219,10 @@ double
 Point::perp_distance_to(const Line &line) const
 {
     if (line.a.coincides_with(line.b)) return this->distance_to(line.a);
-    
+
     double n = (double)(line.b.x - line.a.x) * (double)(line.a.y - this->y)
         - (double)(line.a.x - this->x) * (double)(line.b.y - line.a.y);
-    
+
     return std::abs(n) / line.length();
 }
 
@@ -252,7 +252,7 @@ Point::ccw_angle(const Point &p1, const Point &p2) const
 {
     double angle = atan2(p1.x - this->x, p1.y - this->y)
                  - atan2(p2.x - this->x, p2.y - this->y);
-    
+
     // we only want to return only positive angles
     return angle <= 0 ? angle + 2*PI : angle;
 }
@@ -262,7 +262,7 @@ Point::projection_onto(const MultiPoint &poly) const
 {
     Point running_projection = poly.first_point();
     double running_min = this->distance_to(running_projection);
-    
+
     Lines lines = poly.lines();
     for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
         Point point_temp = this->projection_onto(*line);
@@ -278,7 +278,7 @@ Point
 Point::projection_onto(const Line &line) const
 {
     if (line.a.coincides_with(line.b)) return line.a;
-    
+
     /*
         (Ported from VisiLibity by Karl J. Obermeyer)
         The projection of point_temp onto the line determined by
@@ -288,12 +288,12 @@ Point::projection_onto(const Line &line) const
         If theta is outside the interval [0,1], then one of the Line_Segment's endpoints
         must be closest to calling Point.
     */
-    double theta = ( (double)(line.b.x - this->x)*(double)(line.b.x - line.a.x) + (double)(line.b.y- this->y)*(double)(line.b.y - line.a.y) ) 
+    double theta = ( (double)(line.b.x - this->x)*(double)(line.b.x - line.a.x) + (double)(line.b.y- this->y)*(double)(line.b.y - line.a.y) )
           / ( (double)pow(line.b.x - line.a.x, 2) + (double)pow(line.b.y - line.a.y, 2) );
-    
+
     if (0.0 <= theta && theta <= 1.0)
         return theta * line.a + (1.0-theta) * line.b;
-    
+
     // Else pick closest endpoint.
     if (this->distance_to(line.a) < this->distance_to(line.b)) {
         return line.a;
