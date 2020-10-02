@@ -515,7 +515,7 @@ PrintObject::move_nonplanar_surfaces_up()
 {
     //skip if not active
     if(!this->config.nonplanar_layers.value) return;
-    
+
     FOREACH_REGION(this->_print, region_it) {
         size_t region_id = region_it - this->_print->regions.begin();
         const PrintRegion &region = **region_it;
@@ -608,6 +608,7 @@ PrintObject::move_nonplanar_surfaces_up()
 
                             //save nonplanar_surface to home_layers nonplanar_surface list
                             home_layerm.append_nonplanar_surface(nonplanar_surface);
+
                         }
                     }
                     //increase distance to the top layer
