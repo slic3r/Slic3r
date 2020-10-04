@@ -280,7 +280,6 @@ void PerimeterGenerator::process()
 
                     if (!unsupported_filtered.empty()) {
 
-
                         //add this directly to the infill list.
                         // this will avoid to throw wrong offsets into a good polygons
                         this->fill_surfaces->append(
@@ -308,9 +307,7 @@ void PerimeterGenerator::process()
             } else {
                 surface->expolygon = last[0];
                 for (size_t idx = 1; idx < last.size(); idx++) {
-                    Surface new_surf = *surface;
-                    new_surf.expolygon = last[idx];
-                    all_surfaces.push_back(new_surf);
+                    all_surfaces.emplace_back(*surface, last[idx]);
                 }
             }
         }
@@ -438,7 +435,7 @@ void PerimeterGenerator::process()
                     // look for thin walls
                      if (this->config->thin_walls) {
                         // detect edge case where a curve can be split in multiple small chunks.
-                        std::vector<float> divs = {2.2f,1.75f,1.5f}; //don't go too far, it's not possible to print thinw wall after that
+                        std::vector<float> divs = { 2.1f, 1.9f, 2.2f, 1.75f, 1.5f}; //don't go too far, it's not possible to print thin wall after that
                         size_t idx_div = 0;
                         while (next_onion.size() > last.size() && idx_div < divs.size()) {
                             float div = divs[idx_div];
@@ -447,7 +444,7 @@ void PerimeterGenerator::process()
                                 last,
                                 -(float)((ext_perimeter_width / 2) + (ext_min_spacing / div) - 1),
                                 +(float)((ext_min_spacing / div) - 1));
-                            if (next_onion.size() >  next_onion_secondTry.size() * 1.2 || next_onion.size() - next_onion_secondTry.size() > 3) {
+                            if (next_onion.size() > next_onion_secondTry.size() * 1.2 && next_onion.size() > next_onion_secondTry.size() + 2) {
                                 next_onion = next_onion_secondTry;
                             }
                             idx_div++;

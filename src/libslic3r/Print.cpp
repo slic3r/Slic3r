@@ -1372,17 +1372,17 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
             for (size_t i = 1; i < m_objects.size(); ++ i) {
                 const PrintObject       *object         = m_objects[i];
                 const SlicingParameters &slicing_params = object->slicing_parameters();
-            if (std::abs(slicing_params.first_print_layer_height - slicing_params0.first_print_layer_height) > EPSILON ||
-                std::abs(slicing_params.layer_height             - slicing_params0.layer_height            ) > EPSILON)
-                return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is only supported for multiple objects if they have equal layer heights") };
-            if (slicing_params.raft_layers() != slicing_params0.raft_layers())
-                return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is only supported for multiple objects if they are printed over an equal number of raft layers") };
-            if (object->config().support_material_contact_distance_type != m_objects.front()->config().support_material_contact_distance_type
-                || object->config().support_material_contact_distance_top != m_objects.front()->config().support_material_contact_distance_top
-                || object->config().support_material_contact_distance_bottom != m_objects.front()->config().support_material_contact_distance_bottom)
-                return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is only supported for multiple objects if they are printed with the same support_material_contact_distance") };
-            if (! equal_layering(slicing_params, slicing_params0))
-                return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is only supported for multiple objects if they are sliced equally.") };
+                if (std::abs(slicing_params.first_print_layer_height - slicing_params0.first_print_layer_height) > EPSILON ||
+                    std::abs(slicing_params.layer_height             - slicing_params0.layer_height            ) > EPSILON)
+                    return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is only supported for multiple objects if they have equal layer heights") };
+                if (slicing_params.raft_layers() != slicing_params0.raft_layers())
+                    return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is only supported for multiple objects if they are printed over an equal number of raft layers") };
+                if (object->config().support_material_contact_distance_type != m_objects.front()->config().support_material_contact_distance_type
+                    || object->config().support_material_contact_distance_top != m_objects.front()->config().support_material_contact_distance_top
+                    || object->config().support_material_contact_distance_bottom != m_objects.front()->config().support_material_contact_distance_bottom)
+                    return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is only supported for multiple objects if they are printed with the same support_material_contact_distance") };
+                if (! equal_layering(slicing_params, slicing_params0))
+                    return { PrintBase::PrintValidationError::pveWrongSettings,L("The Wipe Tower is only supported for multiple objects if they are sliced equally.") };
                 if (has_custom_layering) {
                     PrintObject::update_layer_height_profile(*object->model_object(), slicing_params, layer_height_profiles[i]);
                     if (*(layer_height_profiles[i].end()-2) > *(layer_height_profiles[tallest_object_idx].end()-2))
