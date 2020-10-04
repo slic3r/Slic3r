@@ -3947,7 +3947,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
     double e_per_mm = path.mm3_per_mm
         * m_writer.tool()->e_per_mm3()
         * this->config().print_extrusion_multiplier.get_abs_value(1);
-    if (this->m_layer_index <= 0) e_per_mm *= this->config().first_layer_flow_ratio.get_abs_value(1);
+    if (std::abs(this->m_layer->height - this->m_layer->print_z) < EPSILON) e_per_mm *= this->config().first_layer_flow_ratio.get_abs_value(1);
     if (m_writer.extrusion_axis().empty()) e_per_mm = 0;
     if (path.polyline.lines().size() > 0) {
         //get last direction //TODO: save it
