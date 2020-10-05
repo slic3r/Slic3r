@@ -2991,7 +2991,8 @@ void PrintConfigDef::init_fff_params()
                    "such commands will not be prepended automatically so you're free to customize "
                    "the order of heating commands and other custom actions. Note that you can use "
                    "placeholder variables for all Slic3r settings, so you can put "
-                   "a \"M109 S[first_layer_temperature]\" command wherever you want.");
+                   "a \"M109 S[first_layer_temperature]\" command wherever you want."
+                    "\n placeholders: initial_extruder, total_layer_count, has_wipe_tower, has_single_extruder_multi_material_priming, total_toolchanges, bounding_box[minx,miny,maxx,maxy]");
     def->multiline = true;
     def->full_width = true;
     def->height = 12;

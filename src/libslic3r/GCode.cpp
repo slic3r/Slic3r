@@ -1322,40 +1322,42 @@ void GCode::_do_export(Print &print, FILE *file)
             _write_format(file, "; first layer extrusion width = %.2fmm\n",   region->flow(frPerimeter, first_layer_height, false, true, -1., *first_object).width);
         _write_format(file, "\n");
     }
-    if (this->config().gcode_label_objects) {
-        BoundingBoxf3 global_bounding_box;
-        for (PrintObject *print_object : print.objects()) {
-            this->m_ordered_objects.push_back(print_object);
-            unsigned int copy_id = 0;
-            for (const PrintInstance &print_instance : print_object->instances()) {
-                std::string object_name = print_object->model_object()->name;
-                size_t pos_dot = object_name.find(".", 0);
-                if (pos_dot != std::string::npos && pos_dot > 0)
-                    object_name = object_name.substr(0, pos_dot);
-                //get bounding box for the instance
-                BoundingBoxf3 raw_bbox = print_object->model_object()->raw_mesh_bounding_box();
-                BoundingBoxf3 m_bounding_box = print_instance.model_instance->transform_bounding_box(raw_bbox);
-                if (global_bounding_box.size().norm() == 0) {
-                    global_bounding_box = m_bounding_box;
-                } else {
-                    global_bounding_box.merge(m_bounding_box);
-                }
+    BoundingBoxf3 global_bounding_box;
+    for (PrintObject *print_object : print.objects()) {
+        this->m_ordered_objects.push_back(print_object);
+        unsigned int copy_id = 0;
+        for (const PrintInstance &print_instance : print_object->instances()) {
+            std::string object_name = print_object->model_object()->name;
+            size_t pos_dot = object_name.find(".", 0);
+            if (pos_dot != std::string::npos && pos_dot > 0)
+                object_name = object_name.substr(0, pos_dot);
+            //get bounding box for the instance
+            BoundingBoxf3 raw_bbox = print_object->model_object()->raw_mesh_bounding_box();
+            BoundingBoxf3 m_bounding_box = print_instance.model_instance->transform_bounding_box(raw_bbox);
+            if (global_bounding_box.size().norm() == 0) {
+                global_bounding_box = m_bounding_box;
+            } else {
+                global_bounding_box.merge(m_bounding_box);
+            }
+            if (this->config().gcode_label_objects) {
                 _write_format(file, "; object:{\"name\":\"%s\",\"id\":\"%s id:%d copy %d\",\"object_center\":[%f,%f,%f],\"boundingbox_center\":[%f,%f,%f],\"boundingbox_size\":[%f,%f,%f]}\n",
                     object_name.c_str(), print_object->model_object()->name.c_str(), this->m_ordered_objects.size() - 1, copy_id,
                     m_bounding_box.center().x(), m_bounding_box.center().y(), 0.,
                     m_bounding_box.center().x(), m_bounding_box.center().y(), m_bounding_box.center().z(),
                     m_bounding_box.size().x(), m_bounding_box.size().y(), m_bounding_box.size().z()
                 );
-                copy_id++;
             }
+            copy_id++;
         }
+    }
+    if (this->config().gcode_label_objects) {
         _write_format(file, "; plater:{\"center\":[%f,%f,%f],\"boundingbox_center\":[%f,%f,%f],\"boundingbox_size\":[%f,%f,%f]}\n",
             global_bounding_box.center().x(), global_bounding_box.center().y(), 0.,
             global_bounding_box.center().x(), global_bounding_box.center().y(), global_bounding_box.center().z(),
             global_bounding_box.size().x(), global_bounding_box.size().y(), global_bounding_box.size().z()
         );
-        _write_format(file, "\n");
     }
+    _write_format(file, "\n");
 
     print.throw_if_canceled();
     
@@ -1465,6 +1467,8 @@ void GCode::_do_export(Print &print, FILE *file)
     m_placeholder_parser.set("has_wipe_tower", has_wipe_tower);
     m_placeholder_parser.set("has_single_extruder_multi_material_priming", has_wipe_tower && print.config().single_extruder_multi_material_priming);
     m_placeholder_parser.set("total_toolchanges", std::max(0, print.wipe_tower_data().number_of_toolchanges)); // Check for negative toolchanges (single extruder mode) and set to 0 (no tool change).
+    m_placeholder_parser.set("bounding_box", new ConfigOptionFloats({ global_bounding_box.min.x(), global_bounding_box.min.y(), global_bounding_box.max.x(), global_bounding_box.max.y() }));
+
 
     std::string start_gcode = this->placeholder_parser_process("start_gcode", print.config().start_gcode.value, initial_extruder_id);
     // Set bed temperature if the start G-code does not contain any bed temp control G-codes.
