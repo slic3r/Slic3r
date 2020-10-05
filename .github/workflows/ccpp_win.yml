@@ -67,15 +67,15 @@ jobs:
     - name: copy from release
       working-directory: ./build
       shell: powershell
-      run: '(new-object System.Net.WebClient).DownloadFile("https://github.com/supermerill/SuperSlicer/releases/download/2.1.45.0/Slic3r++_2.1.45.0_win64_191104.zip", "Slic3r++_2.1.45.0_win64_191104.zip")'
+      run: '(new-object System.Net.WebClient).DownloadFile("https://github.com/supermerill/SuperSlicer/releases/download/2.2.53.3/SuperSlicer_2.2.53.3_win64_20201005.zip", "SuperSlicer_2.2.53.3_win64_20201005.zip")'
     - name: unzip
       working-directory: ./build
       shell: cmd
-      run: '"C:/Program Files/7-Zip/7z.exe" x Slic3r++_2.1.45.0_win64_191104.zip'
+      run: '"C:/Program Files/7-Zip/7z.exe" x SuperSlicer_2.2.53.3_win64_20201005.zip'
     - name: copy old release content
       working-directory: ./build
       shell: cmd
-      run: xcopy /RCYIE Slic3r++_2.1.45.0_win64_191104\* package\
+      run: xcopy /RCYIE SuperSlicer_2.2.53.3_win64_20201005\* package\
     - name: copy new resources
       working-directory: ./build
       shell: cmd
