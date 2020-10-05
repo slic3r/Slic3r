@@ -61,7 +61,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("nonplanar_layers_collision_angle", coFloat);
     def->label = "Maximum nonplanar collision angle";
     def->category = "Layers and Perimeters";
-    def->tooltip = "This is the maximum angle the printer can print without collisions.";
+    def->tooltip = "This is the maximum angle the printer can print without collisions. Set to 90° to disable collision checks.";
     def->sidetext = "°";
     def->cli = "nonplanar_layers_collision_angle=f";
     def->min = 0;
@@ -79,7 +79,7 @@ PrintConfigDef::PrintConfigDef()
     def = this->add("nonplanar_layers_height", coFloat);
     def->label = "Maximum nonplanar collision height";
     def->category = "Layers and Perimeters";
-    def->tooltip = "This is the maximum height the printer can print without collisions.";
+    def->tooltip = "This is the maximum height the printer can print without collisions. Set to printers z-height to disable.";
     def->sidetext = "mm";
     def->cli = "nonplanar_layers_height=f";
     def->min = 0;

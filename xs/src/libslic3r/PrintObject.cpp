@@ -1237,11 +1237,13 @@ PrintObject::find_nonplanar_surfaces()
             }
 
             //check if surfaces area is not too small
-            for (NonplanarSurfaces::iterator it = this->nonplanar_surfaces.begin(); it!=this->nonplanar_surfaces.end();) {
-                if((*it).check_surface_area(this->config.nonplanar_minimal_area.value)) {
-                    it = this->nonplanar_surfaces.erase(it);
-                }else {
-                    it++;
+            if (this->config.nonplanar_minimal_area.value > 0.0) {
+                for (NonplanarSurfaces::iterator it = this->nonplanar_surfaces.begin(); it!=this->nonplanar_surfaces.end();) {
+                    if((*it).check_surface_area(this->config.nonplanar_minimal_area.value)) {
+                        it = this->nonplanar_surfaces.erase(it);
+                    }else {
+                        it++;
+                    }
                 }
             }
 
@@ -1251,11 +1253,13 @@ PrintObject::find_nonplanar_surfaces()
             }
 
             //check if surfaces areas collide
-            for (NonplanarSurfaces::iterator it = this->nonplanar_surfaces.begin(); it!=this->nonplanar_surfaces.end();) {
-                if(check_nonplanar_collisions((*it),std::distance(nonplanar_surfaces.begin(), it))) {
-                    it = this->nonplanar_surfaces.erase(it);
-                }else {
-                    it++;
+            if (this->config.nonplanar_layers_collision_angle < 90.0) {
+                for (NonplanarSurfaces::iterator it = this->nonplanar_surfaces.begin(); it!=this->nonplanar_surfaces.end();) {
+                    if(check_nonplanar_collisions((*it),std::distance(nonplanar_surfaces.begin(), it))) {
+                        it = this->nonplanar_surfaces.erase(it);
+                    }else {
+                        it++;
+                    }
                 }
             }
         }
