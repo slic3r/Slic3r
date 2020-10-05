@@ -4982,16 +4982,10 @@ std::string FullPrintConfig::validate()
             out_of_range = fopt->get_abs_value(1) < optdef->min || fopt->get_abs_value(1) > optdef->max;
             break;
         }
+        case coPercents:
         case coFloats:
             for (double v : static_cast<const ConfigOptionVector<double>*>(opt)->values)
                 if (v < optdef->min || v > optdef->max) {
-                    out_of_range = true;
-                    break;
-                }
-            break;
-        case coPercents:
-            for (double v : static_cast<const ConfigOptionVector<double>*>(opt)->values)
-                if (v*0.01 < optdef->min || v * 0.01 > optdef->max) {
                     out_of_range = true;
                     break;
                 }
