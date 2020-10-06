@@ -523,6 +523,7 @@ PrintObject::move_nonplanar_surfaces_up()
         //repeat detection for every nonplanar_surface
         for (auto& nonplanar_surface: this->nonplanar_surfaces) {
             float distance_to_top = 0.0f;
+            ExPolygons nonplanar_projection = nonplanar_surface.horizontal_projection();
             for (int shell_thickness = 0; region.config.top_solid_layers > shell_thickness; ++shell_thickness){
                 //search home layer where the area is projected to
                 for (LayerPtrs::reverse_iterator home_layer_it = this->layers.rbegin(); home_layer_it != this->layers.rend(); ++home_layer_it){
@@ -543,16 +544,16 @@ PrintObject::move_nonplanar_surfaces_up()
                         //skip if bottom layer because we dont want to project the bottom layers up
                         if (layer->lower_layer == NULL) continue;
 
-                        Polygons layerm_slices_surfaces = layerm.slices;
+                        Polygons layerm_slices_surfaces_copy = layerm.slices;
                         SurfaceCollection topNonplanar;
+
                         if (layer->upper_layer != NULL) {
                             //append layers where nothing is above
                             Layer* upper_layer = layer->upper_layer;
                             LayerRegion &upper_layerm = *upper_layer->regions[region_id];
-                            Polygons upper_slices = upper_layerm.slices;
                             topNonplanar.append(
-                                intersection_ex(nonplanar_surface.horizontal_projection(),
-                                union_ex(diff(layerm_slices_surfaces, upper_slices, false), false), false),
+                                intersection_ex(nonplanar_projection,
+                                union_ex(diff(layerm_slices_surfaces_copy, upper_layerm.slices, false), false), false),
                                 (shell_thickness == 0 ? stTopNonplanar : stInternalSolidNonplanar),
                                 distance_to_top
                             );
@@ -566,18 +567,17 @@ PrintObject::move_nonplanar_surfaces_up()
                             }
                             if (upper_nonplanar.size() > 0)
                             topNonplanar.append(
-                                intersection_ex(nonplanar_surface.horizontal_projection(),
-                                upper_nonplanar, false),
+                                intersection_ex(nonplanar_projection,
+                                intersection_ex(layerm_slices_surfaces_copy, upper_nonplanar, false), false),
                                 (shell_thickness == 0 ? stTopNonplanar : stInternalSolidNonplanar),
                                 distance_to_top
                             );
 
-
                         }
                         else {
                             topNonplanar.append(
-                                intersection_ex(nonplanar_surface.horizontal_projection(),
-                                union_ex(layerm_slices_surfaces, false),false),
+                                intersection_ex(nonplanar_projection,
+                                union_ex(layerm_slices_surfaces_copy, false),false),
                                 (shell_thickness == 0 ? stTopNonplanar : stInternalSolidNonplanar),
                                 distance_to_top
                             );
@@ -599,7 +599,7 @@ PrintObject::move_nonplanar_surfaces_up()
 
                             // append internal surfaces without the found topNonplanar surfaces
                             layerm.slices.append(
-                                diff_ex(union_ex(layerm_slices_surfaces), ExPolygons(topNonplanar), false),
+                                diff_ex(union_ex(layerm_slices_surfaces_copy), ExPolygons(topNonplanar), false),
                                 stInternal
                             );
 
