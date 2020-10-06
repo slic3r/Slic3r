@@ -34,41 +34,21 @@ public:
     // Extruders are expected to be sorted in an increasing order.
     void                set_extruders(std::vector<uint16_t> extruder_ids);
     const std::vector<Extruder>& extruders() const { return m_extruders; }
-    std::vector<uint16_t> extruder_ids() const {
-        std::vector<uint16_t> out;
-        out.reserve(m_extruders.size());
-        for (const Extruder& e : m_extruders)
-            out.push_back(e.id());
-        return out;
-    }
+    std::vector<uint16_t> extruder_ids() const;
     void                 set_mills(std::vector<uint16_t> extruder_ids);
     const std::vector<Mill>& mills() const { return m_millers; }
-    std::vector<uint16_t> mill_ids() const {
-        std::vector<uint16_t> out;
-        out.reserve(m_millers.size());
-        for (const Tool& e : m_millers)
-            out.push_back(e.id());
-        return out;
-    }
+    std::vector<uint16_t> mill_ids() const;
     //give the first mill id or an id after the last extruder. Can be used to see if an id is an extruder or a mill
-    uint16_t first_mill() const {
-        if (m_millers.empty()) {
-            uint16_t max = 0;
-            for (const Extruder& e : m_extruders)
-                max = std::max(max, e.id());
-            max++;
-            return (uint16_t)max;
-        }else return m_millers.front().id();
-    }
-    bool tool_is_extruder() const {
-        return m_tool->id() < first_mill();
-    }
+    uint16_t first_mill() const;
+    bool tool_is_extruder() const;
+    const Tool* get_tool(uint16_t id) const;
     std::string preamble();
     std::string postamble() const;
     std::string set_temperature(unsigned int temperature, bool wait = false, int tool = -1);
     std::string set_bed_temperature(unsigned int temperature, bool wait = false);
     unsigned int get_fan() { return m_last_fan_speed; }
-    std::string set_fan(unsigned int speed, bool dont_save = false);
+    /// set fan at speed. Save it as current fan speed if !dont_save, and use tool default_tool if the internal m_tool is null (no toolchange done yet).
+    std::string set_fan(unsigned int speed, bool dont_save = false, uint16_t default_tool = 0);
     void        set_acceleration(unsigned int acceleration);
     std::string write_acceleration();
     std::string reset_e(bool force = false);

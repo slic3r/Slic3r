@@ -1445,7 +1445,6 @@ void GCode::_do_export(Print &print, FILE *file)
     print.throw_if_canceled();
 
     m_cooling_buffer->set_current_extruder(initial_extruder_id);
-    m_writer.toolchange(initial_extruder_id);
 
     // Emit machine envelope limits for the Marlin firmware.
     this->print_machine_envelope(file, print);
@@ -1453,7 +1452,7 @@ void GCode::_do_export(Print &print, FILE *file)
     // Disable fan.
     if ( print.config().disable_fan_first_layers.get_at(initial_extruder_id)
         && config().gcode_flavor != gcfKlipper)
-        _write(file, m_writer.set_fan(0, true));
+        _write(file, m_writer.set_fan(0, true, initial_extruder_id));
 
     // Let the start-up script prime the 1st printing tool.
     m_placeholder_parser.set("initial_tool", initial_extruder_id);
