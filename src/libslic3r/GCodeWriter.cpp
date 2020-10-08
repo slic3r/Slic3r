@@ -136,7 +136,7 @@ std::string GCodeWriter::set_temperature(const unsigned int temperature, bool wa
     temp_w_offset += int16_t(get_tool(tool)->temp_offset());
     temp_w_offset = std::max(int16_t(0), std::min(int16_t(2000), temp_w_offset));
 
-    if (m_last_temperature_with_offset == temp_w_offset)
+    if (m_last_temperature_with_offset == temp_w_offset && !wait)
         return "";
     if (wait && (FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)))
         return "";

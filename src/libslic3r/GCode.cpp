@@ -2297,8 +2297,7 @@ void GCode::process_layer(
                 // In single extruder multi material mode, set the temperature for the current extruder only.
                 continue;
             int temperature = print.config().temperature.get_at(extruder.id());
-            if (temperature > 0 && temperature != print.config().first_layer_temperature.get_at(extruder.id()))
-                gcode += m_writer.set_temperature(temperature, false, extruder.id());
+            gcode += m_writer.set_temperature(temperature, false, extruder.id());
         }
         gcode += m_writer.set_bed_temperature(print.config().bed_temperature.get_at(first_extruder_id));
         // Mark the temperature transition from 1st to 2nd layer to be finished.
@@ -2589,7 +2588,10 @@ void GCode::process_layer(
                 this->set_origin(unscale(offset));
                 if (instance_to_print.object_by_extruder.support != nullptr && !print_wipe_extrusions) {
                     m_layer = layers[instance_to_print.layer_id].support_layer;
-                    gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
+                    if (m_layer != nullptr && m_layer->bottom_z() < EPSILON)
+                        gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
+                    else
+                        gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
                     gcode += this->extrude_support(
                         // support_extrusion_role is erSupportMaterial, erSupportMaterialInterface or erMixed for all extrusion paths.
                     instance_to_print.object_by_extruder.support->chained_path_from(m_last_pos, instance_to_print.object_by_extruder.support_extrusion_role));
@@ -3828,6 +3830,8 @@ std::string GCode::extrude_perimeters(const Print &print, const std::vector<Obje
             m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
             if (m_config.print_temperature > 0)
                 gcode += m_writer.set_temperature(m_config.print_temperature.value, false, m_writer.tool()->id());
+            else if (m_layer != nullptr && m_layer->bottom_z() < EPSILON)
+                gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
             else
                 gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
             for (const ExtrusionEntity *ee : region.perimeters)
@@ -3846,6 +3850,8 @@ std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectBy
             m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
             if (m_config.print_temperature > 0)
                 gcode += m_writer.set_temperature(m_config.print_temperature.value, false, m_writer.tool()->id());
+            else if(m_layer!=nullptr && m_layer->bottom_z() < EPSILON)
+                gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
             else
                 gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
             ExtrusionEntitiesPtr extrusions { region.infills };
@@ -3979,7 +3985,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
     double e_per_mm = path.mm3_per_mm
         * m_writer.tool()->e_per_mm3()
         * this->config().print_extrusion_multiplier.get_abs_value(1);
-    if (std::abs(this->m_layer->height - this->m_layer->print_z) < EPSILON) e_per_mm *= this->config().first_layer_flow_ratio.get_abs_value(1);
+    if (m_layer->bottom_z() < EPSILON) e_per_mm *= this->config().first_layer_flow_ratio.get_abs_value(1);
     if (m_writer.extrusion_axis().empty()) e_per_mm = 0;
     if (path.polyline.lines().size() > 0) {
         //get last direction //TODO: save it
