@@ -153,7 +153,7 @@ void Layer::make_perimeters()
                 && config.infill_dense_algo         == other_config.infill_dense_algo
                 && config.no_perimeter_unsupported_algo == other_config.no_perimeter_unsupported_algo
                 && config.only_one_perimeter_top    == other_config.only_one_perimeter_top
-                && config.overhangs                 == other_config.overhangs
+                && config.overhangs_width_speed     == other_config.overhangs_width_speed
                 && config.overhangs_width           == other_config.overhangs_width
                 && config.overhangs_reverse         == other_config.overhangs_reverse
                 && config.overhangs_reverse_threshold == other_config.overhangs_reverse_threshold

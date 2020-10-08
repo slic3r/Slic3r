@@ -40,9 +40,9 @@ group:Quality
 		setting:thin_walls_merge
 	end_line
 group:Overhangs
-	line:On perimeters
-		setting:sidetext_width$1:overhangs
-		setting:width$5:overhangs_width
+	line:threshold for
+		setting:label$bridge speed and fan:width$5:overhangs_width_speed
+		setting:label$bridge flow:width$5:overhangs_width
 	end_line
 	line:Extrusion direction
 		setting:sidetext_width$1:overhangs_reverse

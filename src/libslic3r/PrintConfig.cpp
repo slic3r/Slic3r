@@ -2345,23 +2345,29 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionString("[input_filename_base].gcode"));
 
-    def = this->add("overhangs", coBool);
-    def->label = L("As bridge");
-    def->full_label = L("Overhangs as bridge");
+    def = this->add("overhangs_width_speed", coFloatOrPercent);
+    def->label = L("'As bridge' speed threshold");
+    def->full_label = L("Overhang bridge speed threshold");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("Option to adjust flow for overhangs (bridge flow will be used), "
-        "to apply bridge speed to them and enable fan.");
+    def->tooltip = L("Minimum unsupported width for an extrusion to apply the bridge speed & fan to this overhang."
+        " Can be in mm or in a % of the nozzle diameter."
+        " Set to 0 to deactivate.");
+    def->ratio_over = "nozzle_diameter";
+    def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionBool(true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(50,true));
 
     def = this->add("overhangs_width", coFloatOrPercent);
-    def->label = L("'As bridge' threshold");
-    def->full_label = L("Overhang bridge threshold");
+    def->label = L("'As bridge' flow threshold");
+    def->full_label = L("Overhang bridge flow threshold");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("Minimum unsupported width for an extrusion to be considered an overhang. Can be in mm or in a % of the nozzle diameter.");
+    def->tooltip = L("Minimum unsupported width for an extrusion to apply the bridge flow to this overhang."
+        " Can be in mm or in a % of the nozzle diameter."
+        " Set to 0 to deactivate.");
     def->ratio_over = "nozzle_diameter";
+    def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(75, true));
 
     def = this->add("overhangs_reverse", coBool);
     def->label = L("Reverse on odd");
@@ -4629,6 +4635,12 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
             value = "notconnected";
         else
             value = "connected";
+    } else if (opt_key == "overhangs") {
+        opt_key = "overhangs_width_speed";
+        if (value == "1")
+            value = "50%";
+        else
+            value = "0";
     }
 
     // Ignore the following obsolete configuration keys:

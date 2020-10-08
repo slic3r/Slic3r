@@ -210,7 +210,7 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
         model.objects[objs_idx[i]]->config.set_key_value("fill_density", new ConfigOptionPercent(0));
         //model.objects[objs_idx[i]]->config.set_key_value("fill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinear));
         model.objects[objs_idx[i]]->config.set_key_value("only_one_perimeter_top", new ConfigOptionBool(false));
-        model.objects[objs_idx[i]]->config.set_key_value("overhangs", new ConfigOptionBool(false));
+        model.objects[objs_idx[i]]->config.set_key_value("overhangs_width_speed", new ConfigOptionFloatOrPercent(0,false));
         model.objects[objs_idx[i]]->config.set_key_value("thin_walls", new ConfigOptionBool(true));
         model.objects[objs_idx[i]]->config.set_key_value("thin_walls_min_width", new ConfigOptionFloatOrPercent(2,true));
         model.objects[objs_idx[i]]->config.set_key_value("gap_fill", new ConfigOptionBool(false));

@@ -2130,7 +2130,7 @@ void PrintObjectSupportMaterial::trim_support_layers_by_object(
                             polygons_append(polygons_trimming, 
                                 offset(to_expolygons(region->fill_surfaces.filter_by_type(stPosBottom | stDensSolid | stModBridge)), 
                                        gap_xy_scaled, SUPPORT_SURFACES_OFFSET_PARAMETERS));
-                            if (region->region()->config().overhangs.value)
+                            if (region->region()->config().overhangs_width.value > 0)
                                 SupportMaterialInternal::collect_bridging_perimeter_areas(region->perimeters.entities, gap_xy_scaled, polygons_trimming);
                         }
                         if (! some_region_overlaps)

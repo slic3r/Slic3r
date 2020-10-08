@@ -614,7 +614,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             opt_key == "gap_fill"
             || opt_key == "gap_fill_min_area"
             || opt_key == "only_one_perimeter_top"
-            || opt_key == "overhangs"
+            || opt_key == "overhangs_width_speed"
             || opt_key == "overhangs_width"
             || opt_key == "overhangs_reverse"
             || opt_key == "overhangs_reverse_threshold"

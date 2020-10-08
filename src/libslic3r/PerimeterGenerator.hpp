@@ -96,7 +96,11 @@ private:
     double      _ext_mm3_per_mm;
     double      _mm3_per_mm;
     double      _mm3_per_mm_overhang;
-    Polygons    _lower_slices_p;
+    Polygons    _lower_slices_bridge_flow;
+    Polygons    _lower_slices_bridge_speed;
+
+    template<typename LINE>
+    ExtrusionPaths create_overhangs(LINE loop_polygons, ExtrusionRole role, bool is_external) const;
 
     // transform loops into ExtrusionEntityCollection, adding also thin walls into it.
     ExtrusionEntityCollection _traverse_loops(const PerimeterGeneratorLoops &loops, ThickPolylines &thin_walls) const;

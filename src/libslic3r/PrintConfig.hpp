@@ -694,8 +694,8 @@ public:
     ConfigOptionFloat               milling_speed;
     ConfigOptionFloatOrPercent      min_width_top_surface;
     // Detect bridging perimeters
-    ConfigOptionBool                overhangs;
     ConfigOptionFloatOrPercent      overhangs_width;
+    ConfigOptionFloatOrPercent      overhangs_width_speed;
     ConfigOptionBool                overhangs_reverse;
     ConfigOptionFloatOrPercent      overhangs_reverse_threshold;
     ConfigOptionEnum<NoPerimeterUnsupportedAlgo> no_perimeter_unsupported_algo;
@@ -786,8 +786,8 @@ protected:
         OPT_PTR(milling_post_process);
         OPT_PTR(milling_speed);
         OPT_PTR(min_width_top_surface);
-        OPT_PTR(overhangs);
         OPT_PTR(overhangs_width);
+        OPT_PTR(overhangs_width_speed);
         OPT_PTR(overhangs_reverse);
         OPT_PTR(overhangs_reverse_threshold);
 		OPT_PTR(no_perimeter_unsupported_algo);
