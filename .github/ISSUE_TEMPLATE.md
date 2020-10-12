@@ -1,13 +1,8 @@
 ### Version
-_Version of SupserSlicer used goes here_
-
-_Use `About->About SuperSlicer` for release versions_
-
-_For -dev versions, use `git describe --tag` or get the hash value for the version you downloaded or `git rev-parse HEAD`_
+_Version of SupserSlicer used goes here, Use `About->About SuperSlicer`_
 
 ### Operating system type + version
-_What OS are you using, and state any version #s_
-_In case of 3D rendering issues, please attach the content of menu Help -> System Info dialog_
+_What OS are you using (and version)_
 
 ### 3D printer brand / version + firmware version (if known)
 _What 3D printer brand / version are you printing on, is it a stock model or did you modify the printer, what firmware is running on your printer, version of the firmware #s_
@@ -20,7 +15,5 @@ _What 3D printer brand / version are you printing on, is it a stock model or did
 * _Actual Results_
   * _Screenshots from __*SuperSlicer*__ preview are preferred_
 
-_Is this a new feature request?_
-
 #### Project File (.3MF) where problem occurs
-_Upload a SuperSlicer Project File (.3MF) (`Plater -> Export plate as 3MF` for Slic3r PE 1.41.2 and older, `File -> Save` / `Save Project` for SuperSlicer, Slic3r PE 1.42.0-alpha and newer)_
+_Upload a SuperSlicer Project File (.3MF) (`File -> Save` / `Save Project`)_
