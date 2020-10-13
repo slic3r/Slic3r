@@ -451,11 +451,11 @@ PrintObject::check_nonplanar_collisions(NonplanarSurface &surface, int id)
             shrinking_nonplanar_polygon = diff(shrinking_nonplanar_polygon, layer_nonplanar_polygon[layer->slice_z], true);
 
             //debug
-            SVG svg("svg/polygon_" + std::to_string(id) + "_" + std::to_string(layer->id()) + "_" + std::to_string(layer->slice_z) + ".svg");
-            svg.draw_outline(layer_nonplanar_polygon[layer->slice_z],"green");
-            svg.draw_outline(shrinking_nonplanar_polygon, "cyan");
-            svg.arrows = false;
-            svg.Close();
+            // SVG svg("svg/polygon_" + std::to_string(id) + "_" + std::to_string(layer->id()) + "_" + std::to_string(layer->slice_z) + ".svg");
+            // svg.draw_outline(layer_nonplanar_polygon[layer->slice_z],"green");
+            // svg.draw_outline(shrinking_nonplanar_polygon, "cyan");
+            // svg.arrows = false;
+            // svg.Close();
         }
 
         //check each layer
@@ -494,15 +494,15 @@ PrintObject::check_nonplanar_collisions(NonplanarSurface &surface, int id)
                         ClipperLib::jtMiter);
 
             //debug
-            SVG svg("svg/collider_" + std::to_string(id) + "_" + std::to_string(layer->id()) + "_" + std::to_string(layer->slice_z) + ".svg");
-            svg.draw(layerm_slices_surfaces, "blue");
-            svg.draw(union_ex(diff(collider,nonplanar_polygon)), "yellow", 0.7f);
-            svg.draw(collisions, "red", 0.9f);
-            svg.draw_outline(collider);
-            svg.draw_outline(layer_nonplanar_polygon[layer->slice_z],"green");
-            svg.draw_outline(nonplanar_polygon, "cyan");
-            svg.arrows = false;
-            svg.Close();
+            // SVG svg("svg/collider_" + std::to_string(id) + "_" + std::to_string(layer->id()) + "_" + std::to_string(layer->slice_z) + ".svg");
+            // svg.draw(layerm_slices_surfaces, "blue");
+            // svg.draw(union_ex(diff(collider,nonplanar_polygon)), "yellow", 0.7f);
+            // svg.draw(collisions, "red", 0.9f);
+            // svg.draw_outline(collider);
+            // svg.draw_outline(layer_nonplanar_polygon[layer->slice_z],"green");
+            // svg.draw_outline(nonplanar_polygon, "cyan");
+            // svg.arrows = false;
+            // svg.Close();
 
         }
     }
@@ -519,101 +519,84 @@ PrintObject::move_nonplanar_surfaces_up()
     FOREACH_REGION(this->_print, region_it) {
         size_t region_id = region_it - this->_print->regions.begin();
         const PrintRegion &region = **region_it;
-
-        //repeat detection for every nonplanar_surface
+        //assign all nonplanar surfaces to the corresponding layers
         for (auto& nonplanar_surface: this->nonplanar_surfaces) {
-            float distance_to_top = 0.0f;
-            ExPolygons nonplanar_projection = nonplanar_surface.horizontal_projection();
-            for (int shell_thickness = 0; region.config.top_solid_layers > shell_thickness; ++shell_thickness){
-                //search home layer where the area is projected to
-                for (LayerPtrs::reverse_iterator home_layer_it = this->layers.rbegin(); home_layer_it != this->layers.rend(); ++home_layer_it){
-                    Layer* home_layer        = *home_layer_it;
-                    LayerRegion &home_layerm = *home_layer->regions[region_id];
-                    //continue if home layer is not maximum height of nonplanar_surface - the desired distance to the top of the surface for more than one top solid layer
-                    if (home_layer->slice_z > nonplanar_surface.stats.max.z - distance_to_top) continue;
-
-                    //process layers
-                    for (LayerPtrs::iterator layer_it = this->layers.begin(); layer_it != this->layers.end(); ++layer_it){
-                        Layer* layer        = *layer_it;
-                        LayerRegion &layerm = *layer->regions[region_id];
-
-                        //skip if below minimum nonplanar surface and below the last possible surface layer
-                        if (nonplanar_surface.stats.min.z-layer->height-distance_to_top > layer->slice_z) continue;
-                        //break if above home layer
-                        if (home_layer->slice_z < layer->slice_z) break;
-                        //skip if bottom layer because we dont want to project the bottom layers up
-                        if (layer->lower_layer == NULL) continue;
-
-                        Polygons layerm_slices_surfaces_copy = layerm.slices;
-                        SurfaceCollection topNonplanar;
-
-                        if (layer->upper_layer != NULL) {
-                            //append layers where nothing is above
-                            Layer* upper_layer = layer->upper_layer;
-                            LayerRegion &upper_layerm = *upper_layer->regions[region_id];
-                            topNonplanar.append(
-                                intersection_ex(nonplanar_projection,
-                                union_ex(diff(layerm_slices_surfaces_copy, upper_layerm.slices, false), false), false),
-                                (shell_thickness == 0 ? stTopNonplanar : stInternalSolidNonplanar),
-                                distance_to_top
-                            );
-
-                            //append layers where nonplanar areas with a lower distance_to_top are above
-                            SurfaceCollection upper_nonplanar;
-                            for (auto& s : upper_layerm.slices.surfaces){
-                                if (s.is_nonplanar() && s.distance_to_top < distance_to_top){
-                                    upper_nonplanar.surfaces.push_back(s);
-                                }
-                            }
-                            if (upper_nonplanar.size() > 0)
-                            topNonplanar.append(
-                                intersection_ex(nonplanar_projection,
-                                intersection_ex(layerm_slices_surfaces_copy, upper_nonplanar, false), false),
-                                (shell_thickness == 0 ? stTopNonplanar : stInternalSolidNonplanar),
-                                distance_to_top
-                            );
-
-                        }
-                        else {
-                            topNonplanar.append(
-                                intersection_ex(nonplanar_projection,
-                                union_ex(layerm_slices_surfaces_copy, false),false),
-                                (shell_thickness == 0 ? stTopNonplanar : stInternalSolidNonplanar),
-                                distance_to_top
-                            );
-                        }
-
-                        if (topNonplanar.size() > 0){
-                            //save previously detected nonplanar surfaces
-                            SurfaceCollection polyNonplanar;
-                            for(Surface s : layerm.slices.surfaces) {
-                                if (s.is_nonplanar()) {
-                                    polyNonplanar.surfaces.push_back(s);
-                                }
-                            }
-
-                            //save internal surfaces
-
-                            layerm.slices.clear();
-                            //add old surfaces again
-
-                            // append internal surfaces without the found topNonplanar surfaces
-                            layerm.slices.append(
-                                diff_ex(union_ex(layerm_slices_surfaces_copy), ExPolygons(topNonplanar), false),
-                                stInternal
-                            );
-
-                            //move nonplanar surfaces to home layer
-                            home_layerm.slices.append(STDMOVE(topNonplanar));
-
-                            //save nonplanar_surface to home_layers nonplanar_surface list
-                            home_layerm.append_nonplanar_surface(nonplanar_surface);
-
-                        }
+            //search home layer where the area is projected to (from top to bottom)
+            for (size_t i = this->layers.size()-1; i > 0; i--){
+                //when found, itterate down for number of top nonplanar layers
+                if (layers[i]->slice_z < nonplanar_surface.stats.max.z) {
+                    for (size_t j = i; (j > 0 && (i-j) < region.config.top_solid_layers ); j--){
+                        layers[j]->regions[region_id]->append_nonplanar_surface(nonplanar_surface, (i-j)*layers[i]->height);
                     }
-                    //increase distance to the top layer
-                    distance_to_top += home_layer->height;
                     break;
+                }
+            }
+        }
+        
+        //move nonplanar surfaces up
+        for (size_t i = layers.size()-1; i > 0 ; i--) {
+            LayerRegion &home_layerm = *layers[i]->regions[region_id];
+
+            //if there is no nonplanar surface in this layer continue to next one
+            if (home_layerm.nonplanar_surfaces.empty()) continue;
+            
+            //merge all polygons of the layer and determine their Z boundaries
+            float minZ = 9999999999.0f;
+            ExPolygons nonplanar_projection;
+            for (size_t i = 0; i < home_layerm.nonplanar_surfaces.size(); i++){
+                for (auto& expolygon: home_layerm.nonplanar_surfaces[i].horizontal_projection()) {
+                    nonplanar_projection.push_back(expolygon);
+                }
+                minZ = std::min(minZ, home_layerm.nonplanar_surfaces[i].stats.min.z-home_layerm.distances_to_top[i]);
+            }
+            //remove the current toplayer from projection
+            nonplanar_projection = diff_ex(nonplanar_projection, layers[i]->regions[region_id]->slices, false);
+
+            //collect all nonplanar surface candidates from the other layers
+            size_t j;
+            std::vector<ExPolygons> nonplar_candidates;
+            for (j = i-1; j >= 1; j--) {
+                if (minZ > layers[j]->slice_z) break;
+
+                Polygons layerm_slices_surfaces_copy = layers[j]->regions[region_id]->slices;
+
+                //debug output
+                SVG svg("svg/layer_" + std::to_string(layers[i]->id()) + "_" + std::to_string(j) + ".svg");
+                svg.draw_outline(layerm_slices_surfaces_copy, "blue");
+                svg.draw(nonplanar_projection, "black", 0.3);
+                svg.draw(intersection_ex(nonplanar_projection, union_ex(layerm_slices_surfaces_copy, false),false) , "green", 0.3);
+
+                ExPolygons candidate = intersection_ex(nonplanar_projection,
+                        union_ex(diff(layerm_slices_surfaces_copy, layers[j]->upper_layer->regions[region_id]->slices, false), false), false);
+
+                //select intersection of top most region and nonplanar projection
+                nonplar_candidates.push_back(candidate);
+                
+                //remove new found region from projection
+                if (candidate.size() > 0){
+                    nonplanar_projection = diff_ex(nonplanar_projection, candidate, false);
+                }
+                svg.draw(candidate , "red", 0.3);
+                //debug output
+                svg.arrows = false;
+                svg.Close();
+            }
+
+            //remove them from the old layers and append them to the home layer
+            for (j=j+1; j < i ; j++){
+                ExPolygons candidate = nonplar_candidates[i-j-1];
+                if (candidate.size() > 0){
+                    //save surfaces
+                    Polygons layerm_slices_surfaces_copy = layers[j]->regions[region_id]->slices;
+
+                    //clear layer
+                    layers[j]->regions[region_id]->slices.clear();
+
+                    // append internal surfaces without the found topNonplanar surfaces
+                    layers[j]->regions[region_id]->slices.append(diff_ex(union_ex(layerm_slices_surfaces_copy), candidate, false), stInternal);
+
+                    //append nonplanar layers to home layer
+                    home_layerm.slices.append(candidate, stTopNonplanar);
                 }
             }
         }
