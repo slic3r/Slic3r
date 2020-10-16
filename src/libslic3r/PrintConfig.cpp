@@ -152,7 +152,6 @@ void PrintConfigDef::init_common_params()
     def = this->add("printhost_slug", coString);
     def->label = L("Printer");
     def->tooltip = L("Name of the printer");
-    def->gui_type = "select_open";
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionString(""));
     
