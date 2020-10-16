@@ -24,11 +24,11 @@ namespace GUI {
 void CalibrationRetractionDialog::create_buttons(wxStdDialogButtonSizer* buttons){
     wxString choices_steps[] = { "0.1","0.2","0.5","1" };
     steps = new wxComboBox(this, wxID_ANY, wxString{ "0.2" }, wxDefaultPosition, wxDefaultSize, 4, choices_steps);
-    steps->SetToolTip(_(L("Each militer add this value to the retraction value. ")));
+    steps->SetToolTip(_L("Each militer add this value to the retraction value. "));
     steps->SetSelection(1);
     wxString choices_nb[] = { "2","4","6","8","10","15","20","25" };
     nb_steps = new wxComboBox(this, wxID_ANY, wxString{ "15" }, wxDefaultPosition, wxDefaultSize, 8, choices_nb);
-    nb_steps->SetToolTip(_(L("Select the number milimeters for the tower.")));
+    nb_steps->SetToolTip(_L("Select the number milimeters for the tower."));
     nb_steps->SetSelection(5);
     //wxString choices_start[] = { "current","260","250","240","230","220","210" };
     //start_step = new wxComboBox(this, wxID_ANY, wxString{ "current" }, wxDefaultPosition, wxDefaultSize, 7, choices_start);
@@ -38,9 +38,10 @@ void CalibrationRetractionDialog::create_buttons(wxStdDialogButtonSizer* buttons
     int temp = int((2 + filament_config->option<ConfigOptionInts>("temperature")->get_at(0)) / 5) * 5;
     auto size = wxSize(4 * em_unit(), wxDefaultCoord);
     temp_start = new wxTextCtrl(this, wxID_ANY, std::to_string(temp), wxDefaultPosition, size);
-    wxString choices_decr[] = { "one test","2x10°","3x10°","4x10°","3x5°","5x5°" };
+    wxString degree = L'°' ;
+    wxString choices_decr[] = { "one test","2x10"+ degree,"3x10"+ degree, L"4x10°", _("3x50°"), _L("5x5°") };
     decr_temp = new wxComboBox(this, wxID_ANY, wxString{ "current" }, wxDefaultPosition, wxDefaultSize, 6, choices_decr);
-    decr_temp->SetToolTip(_(L("Select the number tower to print, and by how many degrees C to decrease each time.")));
+    decr_temp->SetToolTip(_L("Select the number tower to print, and by how many degrees C to decrease each time."));
     decr_temp->SetSelection(0);
 
     buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "step:" }));

@@ -616,7 +616,7 @@ Fill::do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, Ext
 #endif
 
         ExtrusionEntityCollection gap_fill = thin_variable_width(polylines_gapfill, erGapFill, *params.flow);
-        //set role if needed (it will confuse the auto-speed, so don't change it from gap fill)
+        //set role if needed
         /*if (params.role != erSolidInfill) {
             ExtrusionSetRole set_good_role(params.role);
             gap_fill.visit(set_good_role);

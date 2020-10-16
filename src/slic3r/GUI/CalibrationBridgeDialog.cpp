@@ -84,7 +84,7 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     int start = bridge_flow_ratio->value;
     float zshift = 2.3 * (1 - z_scale);
     for (size_t i = 0; i < nb_items; i++) {
-        if((start + (add ? 1 : -1) * i * step) < 180 && start + (start + (add ? 1 : -1) * i * step) > 20)
+        if((start + (add ? 1 : -1) * i * step) < 180 && (start + (add ? 1 : -1) * i * step) > 20)
             add_part(model.objects[objs_idx[i]], Slic3r::resources_dir() + "/calibration/bridge_flow/f"+std::to_string(start + (add ? 1 : -1) * i * step)+".amf", Vec3d{ -10,0, zshift + 4.6 * z_scale }, Vec3d{ 1,1,z_scale });
     }
 
