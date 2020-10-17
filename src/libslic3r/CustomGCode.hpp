@@ -8,38 +8,40 @@ namespace Slic3r {
 
 class DynamicPrintConfig;
 
-// Additional Codes which can be set by user using DoubleSlider
-static constexpr char ColorChangeCode[] = "M600";
-static constexpr char PausePrintCode[]  = "M601";
-static constexpr char ToolChangeCode[]  = "tool_change";
-
-enum CustomGcodeType
-{
-    cgtColorChange,
-    cgtPausePrint,
-};
-
 namespace CustomGCode {
+
+enum Type
+{
+    ColorChange,
+    PausePrint,
+    ToolChange,
+    Template,
+    Custom
+};
 
 struct Item
 {
     bool operator<(const Item& rhs) const { return this->print_z < rhs.print_z; }
     bool operator==(const Item& rhs) const
     {
-        return (rhs.print_z   == this->print_z    ) &&
-               (rhs.gcode     == this->gcode      ) &&
-               (rhs.extruder  == this->extruder   ) &&
-               (rhs.color     == this->color      );
+        return (rhs.print_z     == this->print_z    ) &&
+               (rhs.type        == this->type       ) &&
+               (rhs.extruder    == this->extruder   ) &&
+               (rhs.color       == this->color      ) &&
+               (rhs.extra       == this->extra      );
     }
     bool operator!=(const Item& rhs) const { return ! (*this == rhs); }
     
     double      print_z;
-    std::string gcode;
+    Type        type;
     int         extruder;   // Informative value for ColorChangeCode and ToolChangeCode
                             // "gcode" == ColorChangeCode   => M600 will be applied for "extruder" extruder
                             // "gcode" == ToolChangeCode    => for whole print tool will be switched to "extruder" extruder
     std::string color;      // if gcode is equal to PausePrintCode, 
                             // this field is used for save a short message shown on Printer display 
+    std::string extra;      // this field is used for the extra data like :
+                            // - G-code text for the Type::Custom 
+                            // - message text for the Type::PausePrint
 };
 
 enum Mode

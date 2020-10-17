@@ -3,8 +3,10 @@
 
 #include "libslic3r/Point.hpp"
 #include "libslic3r/Geometry.hpp"
-#include "libslic3r/SLA/EigenMesh3D.hpp"
+#include "libslic3r/SLA/IndexedMesh.hpp"
+#include "admesh/stl.h"
 
+#include "slic3r/GUI/3DScene.hpp"
 
 #include <cfloat>
 
@@ -26,10 +28,7 @@ class ClippingPlane
 public:
     ClippingPlane()
     {
-        m_data[0] = 0.0;
-        m_data[1] = 0.0;
-        m_data[2] = 1.0;
-        m_data[3] = 0.0;
+        *this = ClipsNothing();
     }
 
     ClippingPlane(const Vec3d& direction, double offset)
@@ -83,9 +82,9 @@ public:
     // into world coordinates.
     void set_transformation(const Geometry::Transformation& trafo);
 
-    // Return the triangulated cut. The points are returned directly
-    // in world coordinates.
-    const std::vector<Vec3f>& get_triangles();
+    // Render the triangulated cut. Transformation matrices should
+    // be set in world coords.
+    void render_cut();
 
 private:
     void recalculate_triangles();
@@ -94,7 +93,7 @@ private:
     const TriangleMesh* m_mesh = nullptr;
     ClippingPlane m_plane;
     std::vector<Vec2f> m_triangles2d;
-    std::vector<Vec3f> m_triangles3d;
+    GLIndexedVertexArray m_vertex_array;
     bool m_triangles_valid = false;
     std::unique_ptr<TriangleMeshSlicer> m_tms;
 };
@@ -105,11 +104,18 @@ private:
 // whether certain points are visible or obscured by the mesh etc.
 class MeshRaycaster {
 public:
-    // The class makes a copy of the mesh as EigenMesh3D.
-    // The pointer can be invalidated after constructor returns.
+    // The class references extern TriangleMesh, which must stay alive
+    // during MeshRaycaster existence.
     MeshRaycaster(const TriangleMesh& mesh)
         : m_emesh(mesh)
-    {}
+    {
+        m_normals.reserve(mesh.stl.facet_start.size());
+        for (const stl_facet& facet : mesh.stl.facet_start)
+            m_normals.push_back(facet.normal);
+    }
+
+    void line_from_mouse_pos(const Vec2d& mouse_pos, const Transform3d& trafo, const Camera& camera,
+                             Vec3d& point, Vec3d& direction) const;
 
     // Given a mouse position, this returns true in case it is on the mesh.
     bool unproject_on_mesh(
@@ -118,7 +124,8 @@ public:
         const Camera& camera, // current camera position
         Vec3f& position, // where to save the positibon of the hit (mesh coords)
         Vec3f& normal, // normal of the triangle that was hit
-        const ClippingPlane* clipping_plane = nullptr // clipping plane (if active)
+        const ClippingPlane* clipping_plane = nullptr, // clipping plane (if active)
+        size_t* facet_idx = nullptr // index of the facet hit
     ) const;
 
     // Given a vector of points in woorld coordinates, this returns vector
@@ -134,10 +141,14 @@ public:
     // Given a point in world coords, the method returns closest point on the mesh.
     // The output is in mesh coords.
     // normal* can be used to also get normal of the respective triangle.
+
     Vec3f get_closest_point(const Vec3f& point, Vec3f* normal = nullptr) const;
 
+    Vec3f get_triangle_normal(size_t facet_idx) const;
+
 private:
-    sla::EigenMesh3D m_emesh;
+    sla::IndexedMesh m_emesh;
+    std::vector<stl_normal> m_normals;
 };
 
     

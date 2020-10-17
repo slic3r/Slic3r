@@ -132,9 +132,9 @@ FillConcentricWGapFill::fill_surface_extrusion(
         extrusion_entities_append_loops(
             coll_nosort->entities, loops,
             good_role,
-            params.flow->mm3_per_mm() * params.flow_mult,
-            params.flow->width * params.flow_mult,
-            params.flow->height);
+            params.flow.mm3_per_mm() * params.flow_mult,
+            params.flow.width * params.flow_mult,
+            params.flow.height);
 
         //add gapfills
         if (!gaps.empty() && params.density >= 1) {
@@ -150,11 +150,11 @@ FillConcentricWGapFill::fill_surface_extrusion(
                 //remove too small gaps that are too hard to fill.
                 //ie one that are smaller than an extrusion with width of min and a length of max.
                 if (ex.area() > min*max) {
-                    MedialAxis{ ex, coord_t(max), coord_t(min), coord_t(params.flow->height) }.build(polylines);
+                    MedialAxis{ ex, coord_t(max), coord_t(min), coord_t(params.flow.height) }.build(polylines);
                 }
             }
             if (!polylines.empty() && good_role != erBridgeInfill) {
-                ExtrusionEntityCollection gap_fill = thin_variable_width(polylines, erGapFill, *params.flow);
+                ExtrusionEntityCollection gap_fill = thin_variable_width(polylines, erGapFill, params.flow);
                 //set role if needed
                 if (good_role != erSolidInfill) {
                     ExtrusionSetRole set_good_role(good_role);
@@ -174,7 +174,7 @@ FillConcentricWGapFill::fill_surface_extrusion(
     ExPolygons gapfill_areas = diff_ex({ surface->expolygon }, offset_ex(expp, double(scale_(0.5 * this->spacing))));
     gapfill_areas = union_ex(gapfill_areas, true);
     if (gapfill_areas.size() > 0) {
-        const double minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow->width)) * params.flow->scaled_width();
+        const double minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow.width)) * params.flow.scaled_width();
         for (int i = 0; i < gapfill_areas.size(); i++) {
             if (gapfill_areas[i].area() < minarea) {
                 gapfill_areas.erase(gapfill_areas.begin() + i);

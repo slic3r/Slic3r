@@ -22,6 +22,7 @@ enum ExtrusionRole : uint8_t {
     erInternalInfill,
     erSolidInfill,
     erTopSolidInfill,
+    erIroning,
     erBridgeInfill,
     erThinWall,
     erGapFill,
@@ -65,14 +66,16 @@ inline bool is_infill(ExtrusionRole role)
     return role == erBridgeInfill
         || role == erInternalInfill
         || role == erSolidInfill
-        || role == erTopSolidInfill;
+        || role == erTopSolidInfill
+        || role == erIroning;
 }
 
 inline bool is_solid_infill(ExtrusionRole role)
 {
     return role == erBridgeInfill
         || role == erSolidInfill
-        || role == erTopSolidInfill;
+        || role == erTopSolidInfill
+        || role == erIroning;
 }
 
 inline bool is_bridge(ExtrusionRole role) {
@@ -166,6 +169,7 @@ public:
     virtual void visit(ExtrusionVisitorConst &visitor) const = 0;
 
     static std::string role_to_string(ExtrusionRole role);
+    static ExtrusionRole string_to_role(const std::string& role);
 };
 
 typedef std::vector<ExtrusionEntity*> ExtrusionEntitiesPtr;
@@ -181,8 +185,8 @@ public:
     // Height of the extrusion, used for visualization purposes. Unscaled
     float height;
 
-    ExtrusionPath(ExtrusionRole role) : mm3_per_mm(-1), width(-1), height(-1), m_role(role) {};
-    ExtrusionPath(ExtrusionRole role, double mm3_per_mm, float width, float height) : mm3_per_mm(mm3_per_mm), width(width), height(height), m_role(role) {};
+    ExtrusionPath(ExtrusionRole role) : mm3_per_mm(-1), width(-1), height(-1), m_role(role) {}
+    ExtrusionPath(ExtrusionRole role, double mm3_per_mm, float width, float height) : mm3_per_mm(mm3_per_mm), width(width), height(height), m_role(role) {}
     ExtrusionPath(const ExtrusionPath& rhs) : polyline(rhs.polyline), mm3_per_mm(rhs.mm3_per_mm), width(rhs.width), height(rhs.height), m_role(rhs.m_role) {}
     ExtrusionPath(ExtrusionPath&& rhs) : polyline(std::move(rhs.polyline)), mm3_per_mm(rhs.mm3_per_mm), width(rhs.width), height(rhs.height), m_role(rhs.m_role) {}
     ExtrusionPath(const Polyline &polyline, const ExtrusionPath &rhs) : polyline(polyline), mm3_per_mm(rhs.mm3_per_mm), width(rhs.width), height(rhs.height), m_role(rhs.m_role) {}

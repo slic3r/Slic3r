@@ -17,6 +17,7 @@
     #endif /* SLIC3R_GUI */
 #endif /* WIN32 */
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/cenv.hpp>
@@ -29,6 +30,7 @@
 #include "libslic3r/Config.hpp"
 #include "libslic3r/Geometry.hpp"
 #include "libslic3r/Model.hpp"
+#include "libslic3r/ModelArrange.hpp"
 #include "libslic3r/Print.hpp"
 #include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/TriangleMesh.hpp"
@@ -36,7 +38,9 @@
 #include "libslic3r/Format/3mf.hpp"
 #include "libslic3r/Format/STL.hpp"
 #include "libslic3r/Format/OBJ.hpp"
+#include "libslic3r/Format/SL1.hpp"
 #include "libslic3r/Utils.hpp"
+#include "libslic3r/AppConfig.hpp" 
 
 #include "PrusaSlicer.hpp"
 
@@ -44,18 +48,22 @@
     #include "slic3r/GUI/GUI.hpp"
     #include "slic3r/GUI/GUI_App.hpp"
     #include "slic3r/GUI/3DScene.hpp"
+    #include "slic3r/GUI/InstanceCheck.hpp" 
+    #include "slic3r/GUI/MainFrame.hpp"
+    #include "slic3r/GUI/Plater.hpp"
 #endif /* SLIC3R_GUI */
 
 using namespace Slic3r;
 
-PrinterTechnology get_printer_technology(const DynamicConfig &config)
+int CLI::run(int argc, char **argv)
 {
-    const ConfigOptionEnum<PrinterTechnology> *opt = config.option<ConfigOptionEnum<PrinterTechnology>>("printer_technology");
-    return (opt == nullptr) ? ptUnknown : opt->value;
-}
+#ifdef __WXGTK__
+    // On Linux, wxGTK has no support for Wayland, and the app crashes on
+    // startup if gtk3 is used. This env var has to be set explicitly to
+    // instruct the window manager to fall back to X server mode.
+    ::setenv("GDK_BACKEND", "x11", /* replace */ true);
+#endif
 
-int CLI::run(int argc, char **argv) 
-{
 	// Switch boost::filesystem to utf8.
     try {
         boost::nowide::nowide_filesystem();
@@ -80,14 +88,23 @@ int CLI::run(int argc, char **argv)
 		return 1;
 
     m_extra_config.apply(m_config, true);
-    m_extra_config.normalize();
+    m_extra_config.normalize_fdm();
+    
+    PrinterTechnology printer_technology = Slic3r::printer_technology(m_config);
 
     bool							start_gui			= m_actions.empty() &&
         // cutting transformations are setting an "export" action.
         std::find(m_transforms.begin(), m_transforms.end(), "cut") == m_transforms.end() &&
         std::find(m_transforms.begin(), m_transforms.end(), "cut_x") == m_transforms.end() &&
         std::find(m_transforms.begin(), m_transforms.end(), "cut_y") == m_transforms.end();
-    PrinterTechnology				printer_technology	= get_printer_technology(m_extra_config);
+    bool 							start_as_gcodeviewer =
+#ifdef _WIN32
+            false;
+#else
+            // On Unix systems, the prusa-slicer binary may be symlinked to give the application a different meaning.
+            boost::algorithm::iends_with(boost::filesystem::path(argv[0]).filename().string(), "gcodeviewer");
+#endif // _WIN32
+
     const std::vector<std::string> &load_configs		= m_config.option<ConfigOptionStrings>("load", true)->values;
 
     // load config files supplied via --load
@@ -107,8 +124,8 @@ int CLI::run(int argc, char **argv)
             boost::nowide::cerr << "Error while reading config file: " << ex.what() << std::endl;
             return 1;
         }
-        config.normalize();
-        PrinterTechnology other_printer_technology = get_printer_technology(config);
+        config.normalize_fdm();
+        PrinterTechnology other_printer_technology = Slic3r::printer_technology(config);
         if (printer_technology == ptUnknown) {
             printer_technology = other_printer_technology;
         } else if (printer_technology != other_printer_technology && other_printer_technology != ptUnknown) {
@@ -118,42 +135,74 @@ int CLI::run(int argc, char **argv)
         m_print_config.apply(config);
     }
         
-    // Read input file(s) if any.
-    for (const std::string &file : m_input_files) {
-        if (! boost::filesystem::exists(file)) {
-            boost::nowide::cerr << "No such file: " << file << std::endl;
-            exit(1);
+#if ENABLE_GCODE_VIEWER
+    // are we starting as gcodeviewer ?
+    for (auto it = m_actions.begin(); it != m_actions.end(); ++it) {
+        if (*it == "gcodeviewer") {
+            start_gui = true;
+            start_as_gcodeviewer = true;
+            m_actions.erase(it);
+            break;
         }
-        Model model;
-        try {
-            // When loading an AMF or 3MF, config is imported as well, including the printer technology.
-            model = Model::read_from_file(file, &m_print_config, true);
-            PrinterTechnology other_printer_technology = get_printer_technology(m_print_config);
-            if (printer_technology == ptUnknown) {
-                printer_technology = other_printer_technology;
-            } else if (printer_technology != other_printer_technology && other_printer_technology != ptUnknown) {
-                boost::nowide::cerr << "Mixing configurations for FFF and SLA technologies" << std::endl;
+    }
+#endif // ENABLE_GCODE_VIEWER
+
+    // Read input file(s) if any.
+#if ENABLE_GCODE_VIEWER
+#if ENABLE_GCODE_DRAG_AND_DROP_GCODE_FILES
+    for (const std::string& file : m_input_files) {
+        std::string ext = boost::filesystem::path(file).extension().string();
+        if (boost::filesystem::path(file).extension().string() == ".gcode") {
+            if (boost::filesystem::exists(file)) {
+                start_as_gcodeviewer = true;
+                break;
+            }
+        }
+    }
+#endif // ENABLE_GCODE_DRAG_AND_DROP_GCODE_FILES
+    if (!start_as_gcodeviewer) {
+#endif // ENABLE_GCODE_VIEWER
+        for (const std::string& file : m_input_files) {
+            if (!boost::filesystem::exists(file)) {
+                boost::nowide::cerr << "No such file: " << file << std::endl;
+                exit(1);
+            }
+            Model model;
+            try {
+                // When loading an AMF or 3MF, config is imported as well, including the printer technology.
+                DynamicPrintConfig config;
+                model = Model::read_from_file(file, &config, true);
+                PrinterTechnology other_printer_technology = Slic3r::printer_technology(config);
+                if (printer_technology == ptUnknown) {
+                    printer_technology = other_printer_technology;
+                }
+                else if (printer_technology != other_printer_technology && other_printer_technology != ptUnknown) {
+                    boost::nowide::cerr << "Mixing configurations for FFF and SLA technologies" << std::endl;
+                    return 1;
+                }
+                // config is applied to m_print_config before the current m_config values.
+                config += std::move(m_print_config);
+                m_print_config = std::move(config);
+            }
+            catch (std::exception& e) {
+                boost::nowide::cerr << file << ": " << e.what() << std::endl;
                 return 1;
             }
-        } catch (std::exception &e) {
-            boost::nowide::cerr << file << ": " << e.what() << std::endl;
-            return 1;
+            if (model.objects.empty()) {
+                boost::nowide::cerr << "Error: file is empty: " << file << std::endl;
+                continue;
+            }
+            m_models.push_back(model);
         }
-        if (model.objects.empty()) {
-            boost::nowide::cerr << "Error: file is empty: " << file << std::endl;
-            continue;
-        }
-        m_models.push_back(model);
+#if ENABLE_GCODE_VIEWER
     }
+#endif // ENABLE_GCODE_VIEWER
 
     // Apply command line options to a more specific DynamicPrintConfig which provides normalize()
     // (command line options override --load files)
     m_print_config.apply(m_extra_config, true);
     // Normalizing after importing the 3MFs / AMFs
-    m_print_config.normalize();
-
-    if (printer_technology == ptUnknown)
-        printer_technology = std::find(m_actions.begin(), m_actions.end(), "export_sla") == m_actions.end() ? ptFFF : ptSLA;
+    m_print_config.normalize_fdm();
 
     // Initialize full print configs for both the FFF and SLA technologies.
     FullPrintConfig    fff_print_config;
@@ -165,6 +214,7 @@ int CLI::run(int argc, char **argv)
         m_print_config.apply(fff_print_config, true);
     } else if (printer_technology == ptSLA) {
         // The default value has to be different from the one in fff mode.
+        sla_print_config.printer_technology.value = ptSLA;
         sla_print_config.output_filename_format.value = "[input_filename_base].sl1";
         
         // The default bed shape should reflect the default display parameters
@@ -177,8 +227,19 @@ int CLI::run(int argc, char **argv)
         m_print_config.apply(sla_print_config, true);
     }
     
+    std::string validity = m_print_config.validate();
+    if (!validity.empty()) {
+        boost::nowide::cerr << "error: " << validity << std::endl;
+        return 1;
+    }
+    
     // Loop through transform options.
     bool user_center_specified = false;
+    Points bed = get_bed_shape(m_print_config);
+    ArrangeParams arrange_cfg;
+    arrange_cfg.min_obj_distance = scaled(PrintConfig::min_object_distance(&m_print_config));
+    int dups = 1;
+    
     for (auto const &opt_key : m_transforms) {
         if (opt_key == "merge") {
             Model m;
@@ -186,34 +247,27 @@ int CLI::run(int argc, char **argv)
                 for (ModelObject *o : model.objects)
                     m.add_object(*o);
             // Rearrange instances unless --dont-arrange is supplied
-            //shoudl be done later
+            //should be done later
             //TODO: test it!
             //if (! m_config.opt_bool("dont_arrange")) {
             //    m.add_default_instances();
-            //    const BoundingBoxf &bb = fff_print_config.bed_shape.values;
-            //    m.arrange_objects(
-            //        fff_print_config,
-            //        // If we are going to use the merged model for printing, honor
-            //        // the configured print bed for arranging, otherwise do it freely.
-            //        this->has_print_action() ? &bb : nullptr
-            //    );
+            //    if (this->has_print_action())
+            //        arrange_objects(m, bed, arrange_cfg);
+            //    else
+            //        arrange_objects(m, InfiniteBed{}, arrange_cfg);
             //}
             m_models.clear();
             m_models.emplace_back(std::move(m));
         } else if (opt_key == "duplicate") {
-            const BoundingBoxf &bb = fff_print_config.bed_shape.values;
             for (auto &model : m_models) {
                 const bool all_objects_have_instances = std::none_of(
                     model.objects.begin(), model.objects.end(),
                     [](ModelObject* o){ return o->instances.empty(); }
                 );
-                if (all_objects_have_instances) {
-                    // if all input objects have defined position(s) apply duplication to the whole model
-                    model.duplicate(m_config.opt_int("duplicate"), fff_print_config.min_object_distance(), &bb);
-                } else {
-                    model.add_default_instances();
-                    model.duplicate_objects(m_config.opt_int("duplicate"), fff_print_config.min_object_distance(), &bb);
-                }
+                
+                dups = m_config.opt_int("duplicate");
+                if (!all_objects_have_instances) model.add_default_instances();
+                
             }
         } else if (opt_key == "duplicate_grid") {
             std::vector<int> &ints = m_config.option<ConfigOptionInts>("duplicate_grid")->values;
@@ -406,7 +460,8 @@ int CLI::run(int argc, char **argv)
                 std::string outfile = m_config.opt_string("output");
                 Print       fff_print;
                 SLAPrint    sla_print;
-
+                SL1Archive  sla_archive(sla_print.printer_config());
+                sla_print.set_printer(&sla_archive);
                 sla_print.set_status_callback(
                             [](const PrintBase::SlicingStatus& s)
                 {
@@ -415,13 +470,24 @@ int CLI::run(int argc, char **argv)
                 });
 
                 PrintBase  *print = (printer_technology == ptFFF) ? static_cast<PrintBase*>(&fff_print) : static_cast<PrintBase*>(&sla_print);
+                
+                
                 if (! m_config.opt_bool("dont_arrange")) {
-                    //FIXME make the min_object_distance configurable.
                     print->apply(model, m_print_config); // arrange_objects needs that the print has the config
-                    model.arrange_objects(print);
-                    model.center_instances_around_point((! user_center_specified && m_print_config.has("bed_shape")) ? 
-                    	BoundingBoxf(m_print_config.opt<ConfigOptionPoints>("bed_shape")->values).center() : 
-                    	m_config.option<ConfigOptionPoint>("center")->value);
+                    if (dups > 1) {
+                            try {
+                            // if all input objects have defined position(s) apply duplication to the whole model
+                            duplicate(print, model, size_t(dups), bed, arrange_cfg);
+                        } catch (std::exception & ex) {
+                            boost::nowide::cerr << "error: " << ex.what() << std::endl;
+                            return 1;
+                        }
+                    }
+                    if (user_center_specified) {
+                        Vec2d c = m_config.option<ConfigOptionPoint>("center")->value;
+                        arrange_objects(print, model, InfiniteBed{scaled(c)}, arrange_cfg);
+                    } else
+                        arrange_objects(print, model, bed, arrange_cfg);
                 }
                 if (printer_technology == ptFFF) {
                     for (auto* mo : model.objects)
@@ -441,13 +507,17 @@ int CLI::run(int argc, char **argv)
                         print->process();
                         if (printer_technology == ptFFF) {
                             // The outfile is processed by a PlaceholderParser.
+#if ENABLE_GCODE_VIEWER
+                            outfile = fff_print.export_gcode(outfile, nullptr, nullptr);
+#else
                             outfile = fff_print.export_gcode(outfile, nullptr);
+#endif // ENABLE_GCODE_VIEWER
                             outfile_final = fff_print.print_statistics().finalize_output_path(outfile);
                         } else if (printer_technology == ptSLA) {
                             outfile = sla_print.output_filepath(outfile);
                             // We need to finalize the filename beforehand because the export function sets the filename inside the zip metadata
                             outfile_final = sla_print.print_statistics().finalize_output_path(outfile);
-                            sla_print.export_raster(outfile_final);
+                            sla_archive.export_print(outfile_final, sla_print);
                         }
                         if (outfile != outfile_final && Slic3r::rename_file(outfile, outfile_final)) {
                             boost::nowide::cerr << "Renaming file " << outfile << " to " << outfile_final << " failed" << std::endl;
@@ -489,6 +559,11 @@ int CLI::run(int argc, char **argv)
                     << " (" << print.total_extruded_volume()/1000 << "cm3)" << std::endl;
 */
             }
+#if !ENABLE_GCODE_VIEWER
+        } else if (opt_key == "gcodeviewer") {
+            start_gui = true;
+        	start_as_gcodeviewer = true;
+#endif // !ENABLE_GCODE_VIEWER
         } else {
             boost::nowide::cerr << "error: option not supported yet: " << opt_key << std::endl;
             return 1;
@@ -498,35 +573,66 @@ int CLI::run(int argc, char **argv)
     if (start_gui) {
 #ifdef SLIC3R_GUI
 // #ifdef USE_WX
+#if ENABLE_GCODE_VIEWER
+        GUI::GUI_App* gui = new GUI::GUI_App(start_as_gcodeviewer ? GUI::GUI_App::EAppMode::GCodeViewer : GUI::GUI_App::EAppMode::Editor);
+#else
         GUI::GUI_App *gui = new GUI::GUI_App();
+#endif // ENABLE_GCODE_VIEWER
+
+        if(!start_as_gcodeviewer) { // gcode viewer is currently not performing instance check
+		    bool gui_single_instance_setting = gui->app_config->get("single_instance") == "1";
+		    if (Slic3r::instance_check(argc, argv, gui_single_instance_setting)) {
+			    //TODO: do we have delete gui and other stuff?
+			    return -1;
+		    }
+        }
 //		gui->autosave = m_config.opt_string("autosave");
         GUI::GUI_App::SetInstance(gui);
+#if ENABLE_GCODE_VIEWER
+        gui->m_after_init_loads.set_params(load_configs, m_extra_config, m_input_files, start_as_gcodeviewer);
+#else
+        gui->m_after_init_loads.set_params(load_configs, m_extra_config, m_input_files);
+#endif // ENABLE_GCODE_VIEWER
+/*
+#if ENABLE_GCODE_VIEWER
+        gui->CallAfter([gui, this, &load_configs, start_as_gcodeviewer] {
+#else
         gui->CallAfter([gui, this, &load_configs] {
+#endif // ENABLE_GCODE_VIEWER
             if (!gui->initialized()) {
                 return;
             }
+
+#if ENABLE_GCODE_VIEWER
+            if (start_as_gcodeviewer) {
+                if (!m_input_files.empty())
+                    gui->plater()->load_gcode(wxString::FromUTF8(m_input_files[0].c_str()));
+            } else {
+#endif // ENABLE_GCODE_VIEWER_AS
 #if 0
-            // Load the cummulative config over the currently active profiles.
-            //FIXME if multiple configs are loaded, only the last one will have an effect.
-            // We need to decide what to do about loading of separate presets (just print preset, just filament preset etc).
-            // As of now only the full configs are supported here.
-            if (!m_print_config.empty())
-                gui->mainframe->load_config(m_print_config);
+                // Load the cummulative config over the currently active profiles.
+                //FIXME if multiple configs are loaded, only the last one will have an effect.
+                // We need to decide what to do about loading of separate presets (just print preset, just filament preset etc).
+                // As of now only the full configs are supported here.
+                if (!m_print_config.empty())
+                    gui->mainframe->load_config(m_print_config);
 #endif
-            if (! load_configs.empty())
-                // Load the last config to give it a name at the UI. The name of the preset may be later
-                // changed by loading an AMF or 3MF.
-                //FIXME this is not strictly correct, as one may pass a print/filament/printer profile here instead of a full config.
-                gui->mainframe->load_config_file(load_configs.back());
-            // If loading a 3MF file, the config is loaded from the last one.
-            if (! m_input_files.empty())
-                gui->plater()->load_files(m_input_files, true, true);
-            if (! m_extra_config.empty())
-                gui->mainframe->load_config(m_extra_config);
+                if (!load_configs.empty())
+                    // Load the last config to give it a name at the UI. The name of the preset may be later
+                    // changed by loading an AMF or 3MF.
+                    //FIXME this is not strictly correct, as one may pass a print/filament/printer profile here instead of a full config.
+                    gui->mainframe->load_config_file(load_configs.back());
+                // If loading a 3MF file, the config is loaded from the last one.
+                if (!m_input_files.empty())
+                    gui->plater()->load_files(m_input_files, true, true);
+                if (!m_extra_config.empty())
+                    gui->mainframe->load_config(m_extra_config);
+#if ENABLE_GCODE_VIEWER
+            }
+#endif // ENABLE_GCODE_VIEWER
         });
+*/
         int result = wxEntry(argc, argv);
-        //FIXME this is a workaround for the PrusaSlicer 2.1 release.
-		_3DScene::destroy();
         return result;
 #else /* SLIC3R_GUI */
         // No GUI support. Just print out a help.
@@ -601,6 +707,8 @@ bool CLI::setup(int argc, char **argv)
         if (opt_loglevel != 0)
             set_logging_level(opt_loglevel->value);
     }
+    
+    std::string validity = m_config.validate();
 
     // Initialize with defaults.
     for (const t_optiondef_map *options : { &cli_actions_config_def.options, &cli_transform_config_def.options, &cli_misc_config_def.options })
@@ -608,6 +716,11 @@ bool CLI::setup(int argc, char **argv)
             m_config.option(optdef.first, true);
 
     set_data_dir(m_config.opt_string("datadir"));
+    
+    if (!validity.empty()) {
+        boost::nowide::cerr << "error: " << validity << std::endl;
+        return false;
+    }
 
     return true;
 }
@@ -637,6 +750,14 @@ void CLI::print_help(bool include_print_options, PrinterTechnology printer_techn
         << std::endl
         << "Other options:" << std::endl;
         cli_misc_config_def.print_cli_help(boost::nowide::cout, false);
+
+    boost::nowide::cout
+        << std::endl
+        << "Print options are processed in the following order:" << std::endl
+        << "\t1) Config keys from the command line, for example --fill-pattern=stars" << std::endl
+        << "\t   (highest priority, overwrites everything below)" << std::endl
+        << "\t2) Config files loaded with --load" << std::endl
+	    << "\t3) Config values loaded from amf or 3mf files" << std::endl;
 
     if (include_print_options) {
         boost::nowide::cout << std::endl;

@@ -7,6 +7,7 @@
 
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/filesystem.hpp>
 
 #include <wx/string.h>
 #include <wx/event.h>
@@ -15,16 +16,50 @@
 
 #include <GL/glew.h>
 
+#ifndef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
+#endif
 #include <imgui/imgui_internal.h>
 
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/Utils.hpp"
-#include "3DScene.hpp"
+#include "3DScene.hpp"+
 #include "GUI.hpp"
+#include "I18N.hpp"
+#include "Search.hpp"
+
+#include "../Utils/MacDarkMode.hpp"
+#include "nanosvg/nanosvg.h"
+#include "nanosvg/nanosvgrast.h"
 
 namespace Slic3r {
 namespace GUI {
 
+
+static const std::map<const char, std::string> font_icons = {
+    {ImGui::PrintIconMarker       , "cog"                           },
+    {ImGui::PrinterIconMarker     , "printer"                       },
+    {ImGui::PrinterSlaIconMarker  , "sla_printer"                   },
+    {ImGui::FilamentIconMarker    , "spool"                         },
+    {ImGui::MaterialIconMarker    , "resin"                         },
+	{ImGui::CloseIconMarker       , "notification_close"            },
+	{ImGui::CloseIconHoverMarker  , "notification_close_hover"      },
+	//{ImGui::TimerDotMarker      , "timer_dot"                     },
+    //{ImGui::TimerDotEmptyMarker , "timer_dot_empty"               },
+    {ImGui::MinimalizeMarker      , "notification_minimalize"       },
+    {ImGui::MinimalizeHoverMarker , "notification_minimalize_hover" },
+	{ImGui::WarningMarker         , "notification_warning"          },
+    {ImGui::ErrorMarker           , "notification_error"            }
+};
+
+const ImVec4 ImGuiWrapper::COL_GREY_DARK         = { 0.333f, 0.333f, 0.333f, 1.0f };
+const ImVec4 ImGuiWrapper::COL_GREY_LIGHT        = { 0.4f, 0.4f, 0.4f, 1.0f };
+const ImVec4 ImGuiWrapper::COL_ORANGE_DARK       = { 0.757f, 0.404f, 0.216f, 1.0f };
+const ImVec4 ImGuiWrapper::COL_ORANGE_LIGHT      = { 1.0f, 0.49f, 0.216f, 1.0f };
+const ImVec4 ImGuiWrapper::COL_WINDOW_BACKGROUND = { 0.133f, 0.133f, 0.133f, 0.8f };
+const ImVec4 ImGuiWrapper::COL_BUTTON_BACKGROUND = COL_ORANGE_DARK;
+const ImVec4 ImGuiWrapper::COL_BUTTON_HOVERED    = COL_ORANGE_LIGHT;
+const ImVec4 ImGuiWrapper::COL_BUTTON_ACTIVE     = ImGuiWrapper::COL_BUTTON_HOVERED;
 
 ImGuiWrapper::ImGuiWrapper()
     : m_glyph_ranges(nullptr)
@@ -158,6 +193,9 @@ bool ImGuiWrapper::update_mouse_data(wxMouseEvent& evt)
     io.MouseDown[0] = evt.LeftIsDown();
     io.MouseDown[1] = evt.RightIsDown();
     io.MouseDown[2] = evt.MiddleIsDown();
+    float wheel_delta = static_cast<float>(evt.GetWheelDelta());
+    if (wheel_delta != 0.0f)
+        io.MouseWheel = static_cast<float>(evt.GetWheelRotation()) / wheel_delta;
 
     unsigned buttons = (evt.LeftIsDown() ? 1 : 0) | (evt.RightIsDown() ? 2 : 0) | (evt.MiddleIsDown() ? 4 : 0);
     m_mouse_buttons = buttons;
@@ -244,6 +282,11 @@ void ImGuiWrapper::set_next_window_bg_alpha(float alpha)
     ImGui::SetNextWindowBgAlpha(alpha);
 }
 
+void ImGuiWrapper::set_next_window_size(float x, float y, ImGuiCond cond)
+{
+	ImGui::SetNextWindowSize(ImVec2(x, y), cond);
+}
+
 bool ImGuiWrapper::begin(const std::string &name, int flags)
 {
     return ImGui::Begin(name.c_str(), nullptr, (ImGuiWindowFlags)flags);
@@ -275,10 +318,21 @@ bool ImGuiWrapper::button(const wxString &label)
     return ImGui::Button(label_utf8.c_str());
 }
 
+bool ImGuiWrapper::button(const wxString& label, float width, float height)
+{
+	auto label_utf8 = into_u8(label);
+	return ImGui::Button(label_utf8.c_str(), ImVec2(width, height));
+}
+
 bool ImGuiWrapper::radio_button(const wxString &label, bool active)
 {
     auto label_utf8 = into_u8(label);
     return ImGui::RadioButton(label_utf8.c_str(), active);
+}
+
+bool ImGuiWrapper::image_button()
+{
+	return false;
 }
 
 bool ImGuiWrapper::input_double(const std::string &label, const double &value, const std::string &format)
@@ -319,7 +373,7 @@ bool ImGuiWrapper::checkbox(const wxString &label, bool &value)
 
 void ImGuiWrapper::text(const char *label)
 {
-    ImGui::Text(label, NULL);
+    ImGui::Text("%s", label);
 }
 
 void ImGuiWrapper::text(const std::string &label)
@@ -331,6 +385,22 @@ void ImGuiWrapper::text(const wxString &label)
 {
     auto label_utf8 = into_u8(label);
     this->text(label_utf8.c_str());
+}
+
+void ImGuiWrapper::text_colored(const ImVec4& color, const char* label)
+{
+    ImGui::TextColored(color, "%s", label);
+}
+
+void ImGuiWrapper::text_colored(const ImVec4& color, const std::string& label)
+{
+    this->text_colored(color, label.c_str());
+}
+
+void ImGuiWrapper::text_colored(const ImVec4& color, const wxString& label)
+{
+    auto label_utf8 = into_u8(label);
+    this->text_colored(color, label_utf8.c_str());
 }
 
 bool ImGuiWrapper::slider_float(const char* label, float* v, float v_min, float v_max, const char* format/* = "%.3f"*/, float power/* = 1.0f*/)
@@ -355,10 +425,10 @@ bool ImGuiWrapper::combo(const wxString& label, const std::vector<std::string>& 
     text(label);
     ImGui::SameLine();
 
-    int selection_out = -1;
+    int selection_out = selection;
     bool res = false;
 
-    const char *selection_str = selection < (int)options.size() ? options[selection].c_str() : "";
+    const char *selection_str = selection < int(options.size()) && selection >= 0 ? options[selection].c_str() : "";
     if (ImGui::BeginCombo("", selection_str)) {
         for (int i = 0; i < (int)options.size(); i++) {
             if (ImGui::Selectable(options[i].c_str(), i == selection)) {
@@ -374,7 +444,40 @@ bool ImGuiWrapper::combo(const wxString& label, const std::vector<std::string>& 
     return res;
 }
 
-bool ImGuiWrapper::undo_redo_list(const ImVec2& size, const bool is_undo, bool (*items_getter)(const bool , int , const char**), int& hovered, int& selected)
+// Scroll up for one item 
+static void scroll_up()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    float item_size_y = window->DC.PrevLineSize.y + g.Style.ItemSpacing.y;
+    float win_top = window->Scroll.y;
+
+    ImGui::SetScrollY(win_top - item_size_y);
+}
+
+// Scroll down for one item 
+static void scroll_down()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    float item_size_y = window->DC.PrevLineSize.y + g.Style.ItemSpacing.y;
+    float win_top = window->Scroll.y;
+
+    ImGui::SetScrollY(win_top + item_size_y);
+}
+
+static void process_mouse_wheel(int& mouse_wheel)
+{
+    if (mouse_wheel > 0)
+        scroll_up();
+    else if (mouse_wheel < 0)
+        scroll_down();
+    mouse_wheel = 0;
+}
+
+bool ImGuiWrapper::undo_redo_list(const ImVec2& size, const bool is_undo, bool (*items_getter)(const bool , int , const char**), int& hovered, int& selected, int& mouse_wheel)
 {
     bool is_hovered = false;
     ImGui::ListBoxHeader("", size);
@@ -396,8 +499,314 @@ bool ImGuiWrapper::undo_redo_list(const ImVec2& size, const bool is_undo, bool (
         i++;
     }
 
+    if (is_hovered)
+        process_mouse_wheel(mouse_wheel);
+
     ImGui::ListBoxFooter();
     return is_hovered;
+}
+
+// It's a copy of IMGui::Selactable function.
+// But a little beat modified to change a label text.
+// If item is hovered we should use another color for highlighted letters.
+// To do that we push a ColorMarkerHovered symbol at the very beginning of the label
+// This symbol will be used to a color selection for the highlighted letters.
+// see imgui_draw.cpp, void ImFont::RenderText()
+static bool selectable(const char* label, bool selected, ImGuiSelectableFlags flags = 0, const ImVec2& size_arg = ImVec2(0, 0))
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.CurrentColumns) // FIXME-OPT: Avoid if vertically clipped.
+        ImGui::PushColumnsBackground();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
+    ImVec2 size(size_arg.x != 0.0f ? size_arg.x : label_size.x, size_arg.y != 0.0f ? size_arg.y : label_size.y);
+    ImVec2 pos = window->DC.CursorPos;
+    pos.y += window->DC.CurrLineTextBaseOffset;
+    ImRect bb_inner(pos, pos + size);
+    ImGui::ItemSize(size, 0.0f);
+
+    // Fill horizontal space.
+    ImVec2 window_padding = window->WindowPadding;
+    float max_x = (flags & ImGuiSelectableFlags_SpanAllColumns) ? ImGui::GetWindowContentRegionMax().x : ImGui::GetContentRegionMax().x;
+    float w_draw = ImMax(label_size.x, window->Pos.x + max_x - window_padding.x - pos.x);
+    ImVec2 size_draw((size_arg.x != 0 && !(flags & ImGuiSelectableFlags_DrawFillAvailWidth)) ? size_arg.x : w_draw, size_arg.y != 0.0f ? size_arg.y : size.y);
+    ImRect bb(pos, pos + size_draw);
+    if (size_arg.x == 0.0f || (flags & ImGuiSelectableFlags_DrawFillAvailWidth))
+        bb.Max.x += window_padding.x;
+
+    // Selectables are tightly packed together so we extend the box to cover spacing between selectable.
+    const float spacing_x = style.ItemSpacing.x;
+    const float spacing_y = style.ItemSpacing.y;
+    const float spacing_L = IM_FLOOR(spacing_x * 0.50f);
+    const float spacing_U = IM_FLOOR(spacing_y * 0.50f);
+    bb.Min.x -= spacing_L;
+    bb.Min.y -= spacing_U;
+    bb.Max.x += (spacing_x - spacing_L);
+    bb.Max.y += (spacing_y - spacing_U);
+
+    bool item_add;
+    if (flags & ImGuiSelectableFlags_Disabled)
+    {
+        ImGuiItemFlags backup_item_flags = window->DC.ItemFlags;
+        window->DC.ItemFlags |= ImGuiItemFlags_Disabled | ImGuiItemFlags_NoNavDefaultFocus;
+        item_add = ImGui::ItemAdd(bb, id);
+        window->DC.ItemFlags = backup_item_flags;
+    }
+    else
+    {
+        item_add = ImGui::ItemAdd(bb, id);
+    }
+    if (!item_add)
+    {
+        if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.CurrentColumns)
+            ImGui::PopColumnsBackground();
+        return false;
+    }
+
+    // We use NoHoldingActiveID on menus so user can click and _hold_ on a menu then drag to browse child entries
+    ImGuiButtonFlags button_flags = 0;
+    if (flags & ImGuiSelectableFlags_NoHoldingActiveID) { button_flags |= ImGuiButtonFlags_NoHoldingActiveId; }
+    if (flags & ImGuiSelectableFlags_PressedOnClick) { button_flags |= ImGuiButtonFlags_PressedOnClick; }
+    if (flags & ImGuiSelectableFlags_PressedOnRelease) { button_flags |= ImGuiButtonFlags_PressedOnRelease; }
+    if (flags & ImGuiSelectableFlags_Disabled) { button_flags |= ImGuiButtonFlags_Disabled; }
+    if (flags & ImGuiSelectableFlags_AllowDoubleClick) { button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick; }
+    if (flags & ImGuiSelectableFlags_AllowItemOverlap) { button_flags |= ImGuiButtonFlags_AllowItemOverlap; }
+
+    if (flags & ImGuiSelectableFlags_Disabled)
+        selected = false;
+
+    const bool was_selected = selected;
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held, button_flags);
+
+    // Update NavId when clicking or when Hovering (this doesn't happen on most widgets), so navigation can be resumed with gamepad/keyboard
+    if (pressed || (hovered && (flags & ImGuiSelectableFlags_SetNavIdOnHover)))
+    {
+        if (!g.NavDisableMouseHover && g.NavWindow == window && g.NavLayer == window->DC.NavLayerCurrent)
+        {
+            g.NavDisableHighlight = true;
+            ImGui::SetNavID(id, window->DC.NavLayerCurrent, window->DC.NavFocusScopeIdCurrent);
+        }
+    }
+    if (pressed)
+        ImGui::MarkItemEdited(id);
+
+    if (flags & ImGuiSelectableFlags_AllowItemOverlap)
+        ImGui::SetItemAllowOverlap();
+
+    // In this branch, Selectable() cannot toggle the selection so this will never trigger.
+    if (selected != was_selected) //-V547
+        window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_ToggledSelection;
+
+    // Render
+    if (held && (flags & ImGuiSelectableFlags_DrawHoveredWhenHeld))
+        hovered = true;
+    if (hovered || selected)
+    {
+        const ImU32 col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
+        ImGui::RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
+        ImGui::RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_TypeThin | ImGuiNavHighlightFlags_NoRounding);
+    }
+
+    if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.CurrentColumns)
+    {
+        ImGui::PopColumnsBackground();
+        bb.Max.x -= (ImGui::GetContentRegionMax().x - max_x);
+    }
+
+    // mark a label with a ImGui::ColorMarkerHovered, if item is hovered
+    char* marked_label = new char[255];
+    if (hovered)
+        sprintf(marked_label, "%c%s", ImGui::ColorMarkerHovered, label);
+    else
+        strcpy(marked_label, label);
+
+    if (flags & ImGuiSelectableFlags_Disabled) ImGui::PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
+    ImGui::RenderTextClipped(bb_inner.Min, bb_inner.Max, marked_label, NULL, &label_size, style.SelectableTextAlign, &bb);
+    if (flags & ImGuiSelectableFlags_Disabled) ImGui::PopStyleColor();
+
+    delete[] marked_label;
+
+    // Automatically close popups
+    if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_DontClosePopups) && !(window->DC.ItemFlags & ImGuiItemFlags_SelectableDontClosePopup)) ImGui::CloseCurrentPopup();
+
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags);
+    return pressed;
+}
+
+// Scroll so that the hovered item is at the top of the window
+static void scroll_y(int hover_id)
+{
+    if (hover_id < 0)
+        return;
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    float item_size_y = window->DC.PrevLineSize.y + g.Style.ItemSpacing.y;
+    float item_delta = 0.5 * item_size_y;
+
+    float item_top = item_size_y * hover_id;
+    float item_bottom = item_top + item_size_y;
+
+    float win_top = window->Scroll.y;
+    float win_bottom = window->Scroll.y + window->Size.y;
+
+    if (item_bottom + item_delta >= win_bottom)
+        ImGui::SetScrollY(win_top + item_size_y);
+    else if (item_top - item_delta <= win_top)
+        ImGui::SetScrollY(win_top - item_size_y);
+}
+
+// Use this function instead of ImGui::IsKeyPressed.
+// ImGui::IsKeyPressed is related for *GImGui.IO.KeysDownDuration[user_key_index]
+// And after first key pressing IsKeyPressed() return "true" always even if key wasn't pressed
+static void process_key_down(ImGuiKey imgui_key, std::function<void()> f)
+{
+    if (ImGui::IsKeyDown(ImGui::GetKeyIndex(imgui_key)))
+    {
+        f();
+        // set KeysDown to false to avoid redundant key down processing
+        ImGuiContext& g = *GImGui;
+        g.IO.KeysDown[ImGui::GetKeyIndex(imgui_key)] = false;
+    }
+}
+
+void ImGuiWrapper::search_list(const ImVec2& size_, bool (*items_getter)(int, const char** label, const char** tooltip), char* search_str,
+                               Search::OptionViewParameters& view_params, int& selected, bool& edited, int& mouse_wheel, bool is_localized)
+{
+    int& hovered_id = view_params.hovered_id;
+    // ImGui::ListBoxHeader("", size);
+    {   
+        // rewrote part of function to add a TextInput instead of label Text
+        ImGuiContext& g = *GImGui;
+        ImGuiWindow* window = ImGui::GetCurrentWindow();
+        if (window->SkipItems)
+            return ;
+
+        const ImGuiStyle& style = g.Style;
+
+        // Size default to hold ~7 items. Fractional number of items helps seeing that we can scroll down/up without looking at scrollbar.
+        ImVec2 size = ImGui::CalcItemSize(size_, ImGui::CalcItemWidth(), ImGui::GetTextLineHeightWithSpacing() * 7.4f + style.ItemSpacing.y);
+        ImRect frame_bb(window->DC.CursorPos, ImVec2(window->DC.CursorPos.x + size.x, window->DC.CursorPos.y + size.y));
+
+        ImRect bb(frame_bb.Min, frame_bb.Max);
+        window->DC.LastItemRect = bb; // Forward storage for ListBoxFooter.. dodgy.
+        g.NextItemData.ClearFlags();
+
+        if (!ImGui::IsRectVisible(bb.Min, bb.Max))
+        {
+            ImGui::ItemSize(bb.GetSize(), style.FramePadding.y);
+            ImGui::ItemAdd(bb, 0, &frame_bb);
+            return ;
+        }
+
+        ImGui::BeginGroup();
+
+        const ImGuiID id = ImGui::GetID(search_str);
+        ImVec2 search_size = ImVec2(size.x, ImGui::GetTextLineHeightWithSpacing() + style.ItemSpacing.y);
+
+        if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
+            ImGui::SetKeyboardFocusHere(0);
+
+        // The press on Esc key invokes editing of InputText (removes last changes)
+        // So we should save previous value...
+        std::string str = search_str;
+        ImGui::InputTextEx("", NULL, search_str, 20, search_size, ImGuiInputTextFlags_AutoSelectAll, NULL, NULL);
+        edited = ImGui::IsItemEdited();
+        if (edited)
+            hovered_id = 0;
+
+        process_key_down(ImGuiKey_Escape, [&selected, search_str, str]() {
+            // use 9999 to mark selection as a Esc key
+            selected = 9999;
+            // ... and when Esc key was pressed, than revert search_str value
+            strcpy(search_str, str.c_str());
+        });
+
+        ImGui::BeginChildFrame(id, frame_bb.GetSize());
+    }
+
+    int i = 0;
+    const char* item_text;
+    const char* tooltip;
+    int mouse_hovered = -1;
+
+    while (items_getter(i, &item_text, &tooltip))
+    {
+        selectable(item_text, i == hovered_id);
+
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", /*item_text*/tooltip);
+                hovered_id = -1;
+            mouse_hovered = i;
+        }
+
+        if (ImGui::IsItemClicked())
+            selected = i;
+        i++;
+    }
+
+    // Process mouse wheel
+    if (mouse_hovered > 0)
+        process_mouse_wheel(mouse_wheel);
+
+    // process Up/DownArrows and Enter
+    process_key_down(ImGuiKey_UpArrow, [&hovered_id, mouse_hovered]() {
+        if (mouse_hovered > 0)
+            scroll_up();
+        else {
+            if (hovered_id > 0)
+                --hovered_id;
+            scroll_y(hovered_id);
+        }
+    });
+
+    process_key_down(ImGuiKey_DownArrow, [&hovered_id, mouse_hovered, i]() {
+        if (mouse_hovered > 0)
+            scroll_down();
+        else {
+            if (hovered_id < 0)
+                hovered_id = 0;
+            else if (hovered_id < i - 1)
+                ++hovered_id;
+            scroll_y(hovered_id);
+        }
+    });
+
+    process_key_down(ImGuiKey_Enter, [&selected, hovered_id]() {
+        selected = hovered_id;
+    });
+
+    ImGui::ListBoxFooter();
+
+    auto check_box = [&edited, this](const wxString& label, bool& check) {
+        ImGui::SameLine();
+        bool ch = check;
+        checkbox(label, ch);
+        if (ImGui::IsItemClicked()) {
+            check = !check;
+            edited = true;
+        }
+    };
+
+    // add checkboxes for show/hide Categories and Groups
+    text(_L("Use for search")+":");
+    check_box(_L("Category"),   view_params.category);
+    if (is_localized)
+        check_box(_L("Search in English"), view_params.english);
+}
+
+void ImGuiWrapper::title(const std::string& str)
+{
+    text(str);
+    ImGui::Separator();
 }
 
 void ImGuiWrapper::disabled_begin(bool disabled)
@@ -451,6 +860,49 @@ static const ImWchar ranges_keyboard_shortcuts[] =
 };
 #endif // __APPLE__
 
+
+std::vector<unsigned char> ImGuiWrapper::load_svg(const std::string& bitmap_name, unsigned target_width, unsigned target_height)
+{
+    std::vector<unsigned char> empty_vector;
+
+#ifdef __WXMSW__
+    std::string folder = "white\\";
+#else
+    std::string folder = "white/";
+#endif        
+    if (!boost::filesystem::exists(Slic3r::var(folder + bitmap_name + ".svg")))
+        folder.clear();
+
+    NSVGimage* image = ::nsvgParseFromFile(Slic3r::var(folder + bitmap_name + ".svg").c_str(), "px", 96.0f);
+    if (image == nullptr)
+        return empty_vector;
+
+    float svg_scale = target_height != 0 ?
+        (float)target_height / image->height : target_width != 0 ?
+        (float)target_width / image->width : 1;
+
+    int   width = (int)(svg_scale * image->width + 0.5f);
+    int   height = (int)(svg_scale * image->height + 0.5f);
+    int   n_pixels = width * height;
+    if (n_pixels <= 0) {
+        ::nsvgDelete(image);
+        return empty_vector;
+    }
+
+    NSVGrasterizer* rast = ::nsvgCreateRasterizer();
+    if (rast == nullptr) {
+        ::nsvgDelete(image);
+        return empty_vector;
+    }
+
+    std::vector<unsigned char> data(n_pixels * 4, 0);
+    ::nsvgRasterize(rast, image, 0, 0, svg_scale, data.data(), width, height, width * 4);
+    ::nsvgDeleteRasterizer(rast);
+    ::nsvgDelete(image);
+
+    return data;
+}
+
 void ImGuiWrapper::init_font(bool compress)
 {
     destroy_font();
@@ -475,7 +927,7 @@ void ImGuiWrapper::init_font(bool compress)
     if (font == nullptr) {
         font = io.Fonts->AddFontDefault();
         if (font == nullptr) {
-            throw std::runtime_error("ImGui: Could not load deafult font");
+            throw Slic3r::RuntimeError("ImGui: Could not load deafult font");
         }
     }
 
@@ -489,10 +941,32 @@ void ImGuiWrapper::init_font(bool compress)
     }
 #endif
 
+    float font_scale = m_font_size/15;
+    int icon_sz = lround(16 * font_scale); // default size of icon is 16 px
+
+    int rect_id = io.Fonts->CustomRects.Size;  // id of the rectangle added next
+    // add rectangles for the icons to the font atlas
+    for (auto& icon : font_icons)
+        io.Fonts->AddCustomRectFontGlyph(font, icon.first, icon_sz, icon_sz, 3.0 * font_scale + icon_sz);
+
     // Build texture atlas
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bits (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+
+    // Fill rectangles from the SVG-icons
+    for (auto icon : font_icons) {
+        if (const ImFontAtlas::CustomRect* rect = io.Fonts->GetCustomRectByIndex(rect_id)) {
+            std::vector<unsigned char> raw_data = load_svg(icon.second, icon_sz, icon_sz);
+            const ImU32* pIn = (ImU32*)raw_data.data();
+            for (int y = 0; y < icon_sz; y++) {
+                ImU32* pOut = (ImU32*)pixels + (rect->Y + y) * width + (rect->X);
+                for (int x = 0; x < icon_sz; x++)
+                    *pOut++ = *pIn++;
+            }
+        }
+        rect_id++;
+    }
 
     // Upload texture to graphics system
     GLint last_texture;
@@ -554,23 +1028,13 @@ void ImGuiWrapper::init_style()
 {
     ImGuiStyle &style = ImGui::GetStyle();
 
-    auto set_color = [&](ImGuiCol_ col, unsigned hex_color) {
-        style.Colors[col] = ImVec4(
-            ((hex_color >> 24) & 0xff) / 255.0f,
-            ((hex_color >> 16) & 0xff) / 255.0f,
-            ((hex_color >> 8) & 0xff) / 255.0f,
-            (hex_color & 0xff) / 255.0f);
+    auto set_color = [&](ImGuiCol_ entity, ImVec4 color) {
+        style.Colors[entity] = color;
     };
-
-    static const unsigned COL_WINDOW_BACKGROND = 0x222222cc;
-    static const unsigned COL_GREY_DARK = 0x555555ff;
-    static const unsigned COL_GREY_LIGHT = 0x666666ff;
-    static const unsigned COL_ORANGE_DARK = 0xc16737ff;
-    static const unsigned COL_ORANGE_LIGHT = 0xff7d38ff;
 
     // Window
     style.WindowRounding = 4.0f;
-    set_color(ImGuiCol_WindowBg, COL_WINDOW_BACKGROND);
+    set_color(ImGuiCol_WindowBg, COL_WINDOW_BACKGROUND);
     set_color(ImGuiCol_TitleBgActive, COL_ORANGE_DARK);
 
     // Generics
@@ -582,9 +1046,9 @@ void ImGuiWrapper::init_style()
     set_color(ImGuiCol_TextSelectedBg, COL_ORANGE_DARK);
 
     // Buttons
-    set_color(ImGuiCol_Button, COL_ORANGE_DARK);
-    set_color(ImGuiCol_ButtonHovered, COL_ORANGE_LIGHT);
-    set_color(ImGuiCol_ButtonActive, COL_ORANGE_LIGHT);
+    set_color(ImGuiCol_Button, COL_BUTTON_BACKGROUND);
+    set_color(ImGuiCol_ButtonHovered, COL_BUTTON_HOVERED);
+    set_color(ImGuiCol_ButtonActive, COL_BUTTON_ACTIVE);
 
     // Checkbox
     set_color(ImGuiCol_CheckMark, COL_ORANGE_LIGHT);
@@ -600,6 +1064,13 @@ void ImGuiWrapper::init_style()
 
     // Separator
     set_color(ImGuiCol_Separator, COL_ORANGE_LIGHT);
+
+    // Tabs
+    set_color(ImGuiCol_Tab, COL_ORANGE_DARK);
+    set_color(ImGuiCol_TabHovered, COL_ORANGE_LIGHT);
+    set_color(ImGuiCol_TabActive, COL_ORANGE_LIGHT);
+    set_color(ImGuiCol_TabUnfocused, COL_GREY_DARK);
+    set_color(ImGuiCol_TabUnfocusedActive, COL_GREY_LIGHT);
 }
 
 void ImGuiWrapper::render_draw_data(ImDrawData *draw_data)

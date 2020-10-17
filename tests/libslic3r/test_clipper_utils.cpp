@@ -245,7 +245,7 @@ size_t count_polys(const ExPolygons& expolys)
 TEST_CASE("Traversing Clipper PolyTree", "[ClipperUtils]") {
     // Create a polygon representing unit box
     Polygon unitbox;
-    const int32_t UNIT = int32_t(1. / SCALING_FACTOR);
+    const coord_t UNIT = coord_t(1. / SCALING_FACTOR);
     unitbox.points = Points{Point{0, 0}, Point{UNIT, 0}, Point{UNIT, UNIT}, Point{0, UNIT}};
     
     Polygon box_frame = unitbox;

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.13)
 project(Slic3r)
 
 include("version.inc")
@@ -34,6 +34,11 @@ option(SLIC3R_PERL_XS           "Compile XS Perl module and enable Perl unit and
 option(SLIC3R_ASAN              "Enable ASan on Clang and GCC" 0)
 
 set(SLIC3R_GTK "2" CACHE STRING "GTK version to use with wxWidgets on Linux")
+
+if (APPLE)
+    set(CMAKE_FIND_FRAMEWORK LAST)
+    set(CMAKE_FIND_APPBUNDLE LAST)
+endif ()
 
 # Proposal for C++ unit tests and sandboxes
 option(SLIC3R_BUILD_SANDBOXES   "Build development sandboxes" OFF)
@@ -160,6 +165,9 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Boost on Raspberry-Pi does not link to pthreads.
     set(THREADS_PREFER_PTHREAD_FLAG ON)
     find_package(Threads REQUIRED)
+
+    find_package(DBus REQUIRED)
+    include_directories(${DBUS_INCLUDE_DIRS})
 endif()
 
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUXX)
@@ -373,9 +381,9 @@ include_directories(BEFORE SYSTEM ${EIGEN3_INCLUDE_DIR})
 
 # Find expat or use bundled version
 # Always use the system libexpat on Linux.
-if (NOT SLIC3R_STATIC OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    find_package(EXPAT)
-endif ()
+
+find_package(EXPAT)
+
 if (NOT EXPAT_FOUND)
     add_library(expat STATIC
         ${LIBDIR}/expat/xmlparse.c
@@ -386,7 +394,8 @@ if (NOT EXPAT_FOUND)
     set(EXPAT_INCLUDE_DIRS ${LIBDIR}/expat/)
     set(EXPAT_LIBRARIES expat)
 endif ()
-include_directories(${EXPAT_INCLUDE_DIRS})
+
+find_package(PNG REQUIRED)
 
 find_package(OpenGL REQUIRED)
 
@@ -396,7 +405,7 @@ if (SLIC3R_STATIC)
     set(GLEW_VERBOSE ON)
 endif()
 
-    find_package(GLEW)
+find_package(GLEW)
 if (NOT GLEW_FOUND)
     message(STATUS "GLEW not found, using bundled version.")
     add_library(glew STATIC ${LIBDIR}/glew/src/glew.c)

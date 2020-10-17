@@ -519,7 +519,7 @@ SCENARIO("Elephant foot compensation", "[ElephantFoot]") {
 		// Rectangle
 		ExPolygon expoly;
 		int32_t scaled_w = int32_t(scale_(10)); //should be coord_t but it's eaisier to create that way
-		expoly.contour.points = { { 0, 0 }, { 0, scaled_w, }, { scaled_w, scaled_w }, { scaled_w, 0 } };
+		expoly.contour.points = { Vec2crd{ 0, 0 }, Vec2crd{ 0, scaled_w, }, Vec2crd{ scaled_w, scaled_w }, Vec2crd{ scaled_w, 0 } };
 		// Narrow part
 		ExPolygon expoly2;
         int32_t scaled_h = int32_t(scale_(0.8));

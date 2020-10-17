@@ -3,12 +3,15 @@
 #include "I18N.hpp"
 #include "Field.hpp"
 #include "wxExtensions.hpp"
+#include "Plater.hpp"
+#include "MainFrame.hpp"
 
 #include "libslic3r/PrintConfig.hpp"
 
 #include <regex>
 #include <wx/numformatter.h>
 #include <wx/tooltip.h>
+#include <wx/notebook.h>
 #include <boost/algorithm/string/predicate.hpp>
 
 #ifdef __WXOSX__
@@ -48,6 +51,20 @@ wxString double_to_string(double const value, const int max_precision /*= 4*/)
     return s;
 }
 
+Field::~Field()
+{
+	if (m_on_kill_focus)
+		m_on_kill_focus = nullptr;
+	if (m_on_set_focus)
+		m_on_set_focus = nullptr;
+	if (m_on_change)
+		m_on_change = nullptr;
+	if (m_back_to_initial_value)
+		m_back_to_initial_value = nullptr;
+	if (m_back_to_sys_value)
+		m_back_to_sys_value = nullptr;
+}
+
 void Field::PostInitialize()
 {
 	auto color = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
@@ -56,6 +73,8 @@ void Field::PostInitialize()
 
     m_Undo_btn->Bind(wxEVT_BUTTON, ([this](wxCommandEvent) { on_back_to_initial_value(); }));
 	m_Undo_to_sys_btn->Bind(wxEVT_BUTTON, ([this](wxCommandEvent) { on_back_to_sys_value(); }));
+
+	m_blinking_bmp		= new BlinkingBitmap(m_parent);
 
 	switch (m_opt.type)
 	{
@@ -78,6 +97,35 @@ void Field::PostInitialize()
     m_em_unit = em_unit(m_parent);
 
 	BUILD();
+
+	// For the mode, when settings are in non-modal dialog, neither dialog nor tabpanel doesn't receive wxEVT_KEY_UP event, when some field is selected.
+	// So, like a workaround check wxEVT_KEY_UP event for the Filed and switch between tabs if Ctrl+(1-4) was pressed 
+	if (getWindow())
+		getWindow()->Bind(wxEVT_KEY_UP, [](wxKeyEvent& evt) {
+		    if ((evt.GetModifiers() & wxMOD_CONTROL) != 0) {
+			    int tab_id = -1;
+			    switch (evt.GetKeyCode()) {
+			    case '1': { tab_id = 0; break; }
+			    case '2': { tab_id = 1; break; }
+				case '3': { tab_id = 2; break; }
+				case '4': { tab_id = 3; break; }
+#ifdef __APPLE__
+				case 'f':
+#else /* __APPLE__ */
+				case WXK_CONTROL_F:
+#endif /* __APPLE__ */
+				case 'F': { wxGetApp().plater()->search(false); break; }
+			    default: break;
+			    }
+			    if (tab_id >= 0)
+					wxGetApp().mainframe->select_tab(tab_id);
+				if (tab_id > 0)
+					// tab panel should be focused for correct navigation between tabs
+				    wxGetApp().tab_panel()->SetFocus();
+		    }
+			    
+		    evt.Skip();
+	    });
 }
 
 // Values of width to alignments of fields
@@ -273,6 +321,7 @@ void Field::msw_rescale(bool rescale_sidetext)
 {
 	m_Undo_to_sys_btn->msw_rescale();
 	m_Undo_btn->msw_rescale();
+	m_blinking_bmp->msw_rescale();
 
 	// update em_unit value
 	m_em_unit = em_unit(m_parent);
@@ -286,10 +335,16 @@ void Field::msw_rescale(bool rescale_sidetext)
 	}
 }
 
+void Field::sys_color_changed()
+{
+	m_Undo_to_sys_btn->msw_rescale();
+	m_Undo_btn->msw_rescale();
+}
+
 template<class T>
 bool is_defined_input_value(wxWindow* win, const ConfigOptionType& type)
 {
-    if (static_cast<T*>(win)->GetValue().empty() && type != coString && type != coStrings)
+    if (!win || (static_cast<T*>(win)->GetValue().empty() && type != coString && type != coStrings))
         return false;
     return true;
 }
@@ -407,7 +462,7 @@ void TextCtrl::BUILD() {
 		bKilledFocus = false;
 #endif // __WXOSX__
 	}), temp->GetId());
-
+/*
 	// select all text using Ctrl+A
 	temp->Bind(wxEVT_CHAR, ([temp](wxKeyEvent& event)
 	{
@@ -415,7 +470,7 @@ void TextCtrl::BUILD() {
 			temp->SetSelection(-1, -1); //select all
 		event.Skip();
 	}));
-
+*/
     // recast as a wxWindow to fit the calling convention
     window = dynamic_cast<wxWindow*>(temp);
 }	
@@ -526,7 +581,7 @@ void TextCtrl::disable() { dynamic_cast<wxTextCtrl*>(window)->Disable(); dynamic
 #ifdef __WXGTK__
 void TextCtrl::change_field_value(wxEvent& event)
 {
-	if (bChangedValueEvent = (event.GetEventType()==wxEVT_KEY_UP))
+    if ((bChangedValueEvent = (event.GetEventType()==wxEVT_KEY_UP)))
 		on_change_field();
     event.Skip();
 };
@@ -1079,6 +1134,8 @@ boost::any& Choice::get_value()
             convert_to_enum_value<GCodeFlavor>(ret_enum);
         else if (m_opt_id.compare("complete_objects_sort") == 0)
             convert_to_enum_value<CompleteObjectSort>(ret_enum);
+		else if (m_opt_id.compare("machine_limits_usage") == 0)
+			m_value = static_cast<MachineLimitsUsage>(ret_enum);
         else if (m_opt_id.compare("support_material_pattern") == 0)
             convert_to_enum_value<SupportMaterialPattern>(ret_enum);
         else if (m_opt_id.compare("seam_position") == 0)
@@ -1101,6 +1158,8 @@ boost::any& Choice::get_value()
             convert_to_enum_value<SLADisplayOrientation>(ret_enum);
         else if (m_opt_id.compare("support_pillar_connection_mode") == 0)
             convert_to_enum_value<SLAPillarConnectionMode>(ret_enum);
+		else if (m_opt_id == "printhost_authorization_type")
+			m_value = static_cast<AuthorizationType>(ret_enum);
 	}
     else if (m_opt.gui_type == "f_enum_open") {
         const int ret_enum = field->GetSelection();
@@ -1123,8 +1182,7 @@ void Choice::msw_rescale(bool rescale_sidetext/* = false*/)
     Field::msw_rescale();
 
     wxBitmapComboBox* field = dynamic_cast<wxBitmapComboBox*>(window);
-
-    const wxString selection = field->GetString(field->GetSelection());
+    const wxString selection = field->GetValue();// field->GetString(index);
 
 	/* To correct scaling (set new controll size) of a wxBitmapCombobox 
 	 * we need to refill control with new bitmaps. So, in our case : 
@@ -1311,12 +1369,24 @@ void PointCtrl::msw_rescale(bool rescale_sidetext/* = false*/)
     y_textctrl->SetMinSize(field_size);
 }
 
+bool PointCtrl::value_was_changed(wxTextCtrl* win)
+{
+	if (m_value.empty())
+		return true;
+
+	boost::any val = m_value;
+	// update m_value!
+	get_value();
+
+	return boost::any_cast<Vec2d>(m_value) != boost::any_cast<Vec2d>(val);
+}
+
 void PointCtrl::propagate_value(wxTextCtrl* win)
 {
-    if (!win->GetValue().empty()) 
-        on_change_field();
-    else
+    if (win->GetValue().empty())
         on_kill_focus();
+	else if (value_was_changed(win))
+        on_change_field();
 }
 
 void PointCtrl::set_value(const Vec2d& value, bool change_event)
@@ -1348,8 +1418,25 @@ void PointCtrl::set_value(const boost::any& value, bool change_event)
 boost::any& PointCtrl::get_value()
 {
 	double x, y;
-	x_textctrl->GetValue().ToDouble(&x);
-	y_textctrl->GetValue().ToDouble(&y);
+	if (!x_textctrl->GetValue().ToDouble(&x) ||
+		!y_textctrl->GetValue().ToDouble(&y))
+	{
+		set_value(m_value.empty() ? Vec2d(0.0, 0.0) : m_value, true);
+		show_error(m_parent, _L("Invalid numeric input."));
+	}
+	else
+	if (m_opt.min > x || x > m_opt.max ||
+		m_opt.min > y || y > m_opt.max)
+	{		
+		if (m_opt.min > x) x = m_opt.min;
+		if (x > m_opt.max) x = m_opt.max;
+		if (m_opt.min > y) y = m_opt.min;
+		if (y > m_opt.max) y = m_opt.max;
+		set_value(Vec2d(x, y), true);
+
+		show_error(m_parent, _L("Input value is out of range"));
+	}
+
 	return m_value = Vec2d(x, y);
 }
 

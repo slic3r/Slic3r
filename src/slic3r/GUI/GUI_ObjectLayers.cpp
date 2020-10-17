@@ -2,9 +2,11 @@
 #include "GUI_ObjectList.hpp"
 
 #include "OptionsGroup.hpp"
-#include "PresetBundle.hpp"
+#include "GUI_App.hpp"
+#include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/Model.hpp"
 #include "GLCanvas3D.hpp"
+#include "Plater.hpp"
 
 #include <boost/algorithm/string.hpp>
 
@@ -32,6 +34,7 @@ ObjectLayers::ObjectLayers(wxWindow* parent) :
         m_grid_sizer->Add(temp);
     }
 
+    m_og->activate();
     m_og->sizer->Clear(true);
     m_og->sizer->Add(m_grid_sizer, 0, wxEXPAND | wxALL, wxOSX ? 0 : 5);
 
@@ -151,7 +154,7 @@ wxSizer* ObjectLayers::create_layer(const t_layer_height_range& range, PlusMinus
     
 void ObjectLayers::create_layers_list()
 {
-    for (const auto layer : m_object->layer_config_ranges)
+    for (const auto &layer : m_object->layer_config_ranges)
     {
         const t_layer_height_range& range = layer.first;
         auto del_btn = new PlusMinusButton(m_parent, m_bmp_delete, range);
@@ -266,6 +269,33 @@ void ObjectLayers::msw_rescale()
                     if (button != nullptr)
                         button->msw_rescale();
                 }                
+            }
+        }
+    }
+    m_grid_sizer->Layout();
+}
+
+void ObjectLayers::sys_color_changed()
+{
+    m_bmp_delete.msw_rescale();
+    m_bmp_add.msw_rescale();
+
+    m_grid_sizer->SetHGap(wxGetApp().em_unit());
+
+    // rescale edit-boxes
+    const int cells_cnt = m_grid_sizer->GetCols() * m_grid_sizer->GetEffectiveRowsCount();
+    for (int i = 0; i < cells_cnt; i++)
+    {
+        const wxSizerItem* item = m_grid_sizer->GetItem(i);
+        if (item->IsSizer()) {// case when we have editor with buttons
+            const std::vector<size_t> btns = {2, 3};  // del_btn, add_btn
+            for (auto btn : btns) {
+                wxSizerItem* b_item = item->GetSizer()->GetItem(btn);
+                if (b_item->IsWindow()) {
+                    auto button = dynamic_cast<PlusMinusButton*>(b_item->GetWindow());
+                    if (button != nullptr)
+                        button->msw_rescale();
+                }
             }
         }
     }

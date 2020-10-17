@@ -5,6 +5,7 @@
 #include <memory.h>
 #include <float.h>
 #include <stdint.h>
+#include <stdexcept>
 
 #include <type_traits>
 #include <boost/log/trivial.hpp>
@@ -12,6 +13,7 @@
 #include "../libslic3r.h"
 #include "../BoundingBox.hpp"
 #include "../PrintConfig.hpp"
+#include "../Exception.hpp"
 #include "../Utils.hpp"
 #include "../Flow.hpp"
 #include "../ExtrusionEntity.hpp"
@@ -21,10 +23,16 @@ namespace Slic3r {
 
 class ExPolygon;
 class Surface;
+enum InfillPattern : int;
 
-class InfillFailedException : public std::runtime_error {
+namespace FillAdaptive {
+    struct Octree;
+};
+
+// Infill shall never fail, therefore the error is classified as RuntimeError, not SlicingError.
+class InfillFailedException : public Slic3r::RuntimeError {
 public:
-    InfillFailedException() : std::runtime_error("Infill failed") {}
+    InfillFailedException() : Slic3r::RuntimeError("Infill failed") {}
 };
 
 struct FillParams
@@ -58,7 +66,7 @@ struct FillParams
     ExtrusionRole role      { erNone };
 
     //flow to use
-    Flow  const* flow       { nullptr };
+    Flow          flow      = Flow(0.f, 0.f, 0.f, false);
 
     //full configuration for the region, to avoid copying every bit that is needed. Use this for process-specific parameters.
     PrintRegionConfig const *config{ nullptr };
@@ -85,6 +93,9 @@ public:
     coord_t     loop_clipping;
     // In scaled coordinates. Bounding box of the 2D projection of the object.
     BoundingBox bounding_box;
+
+    // Octree builds on mesh for usage in the adaptive cubic infill
+    FillAdaptive::Octree* adapt_fill_octree = nullptr;
 protected:
     // in unscaled coordinates, please use init (after settings all others settings) as some algos want to modify the value
     coordf_t    spacing;
@@ -146,7 +157,7 @@ protected:
 
     ExtrusionRole getRoleFromSurfaceType(const FillParams &params, const Surface *surface) const {
         if (params.role == erNone || params.role == erCustom) {
-            return params.flow->bridge ?
+            return params.flow.bridge ?
             erBridgeInfill :
                            (surface->has_fill_solid() ?
                            ((surface->has_pos_top()) ? erTopSolidInfill : erSolidInfill) :

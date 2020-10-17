@@ -1,8 +1,11 @@
 #include "CalibrationTempDialog.hpp"
 #include "I18N.hpp"
 #include "libslic3r/Utils.hpp"
+#include "libslic3r/CustomGCode.hpp"
+#include "libslic3r/Model.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
+#include "Plater.hpp"
 #include "Tab.hpp"
 #include <wx/scrolwin.h>
 #include <wx/display.h>
@@ -119,9 +122,9 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     /// -- generate the heat change gcode
     //std::string str_layer_gcode = "{if layer_num > 0 and layer_z  <= " + std::to_string(2 * xyzScale) + "}\nM104 S" + std::to_string(temperature - (int8_t)nb_delta * 5);
     //    double print_z, std::string gcode,int extruder, std::string color
-    model.custom_gcode_per_print_z.gcodes.emplace_back(CustomGCode::Item{ nozzle_diameter, "M104 S" + std::to_string(temperature) + " ; ground floor temp tower set", -1, "" });
+    model.custom_gcode_per_print_z.gcodes.emplace_back(CustomGCode::Item{ nozzle_diameter, CustomGCode::Type::Custom, -1, "", "M104 S" + std::to_string(temperature) + " ; ground floor temp tower set" });
     for (int16_t i = 1; i < nb_items; i++) {
-        model.custom_gcode_per_print_z.gcodes.emplace_back(CustomGCode::Item{ (i * 10 * xyzScale) , "M104 S" + std::to_string(temperature - i * step_temp) + " ; floor "+std::to_string(i)+" of the temp tower set", -1, "" });
+        model.custom_gcode_per_print_z.gcodes.emplace_back(CustomGCode::Item{ (i * 10 * xyzScale), CustomGCode::Type::Custom , -1, "", "M104 S" + std::to_string(temperature - i * step_temp) + " ; floor " + std::to_string(i) + " of the temp tower set" });
         //str_layer_gcode += "\n{ elsif layer_z >= " + std::to_string(i * 10 * xyzScale) + " and layer_z <= " + std::to_string((1 + i * 10) * xyzScale) + " }\nM104 S" + std::to_string(temperature - (int8_t)nb_delta * 5 + i * 5);
     }
     //str_layer_gcode += "\n{endif}\n";

@@ -9,6 +9,7 @@
 #include "Flow.hpp"
 #include <vector>
 
+#define BOOST_VORONOI_USE_GMP 1
 #include "boost/polygon/voronoi.hpp"
 using boost::polygon::voronoi_builder;
 using boost::polygon::voronoi_diagram;

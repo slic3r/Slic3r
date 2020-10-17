@@ -3,6 +3,9 @@
 #include "libslic3r/Utils.hpp"
 #include "../Utils/MacDarkMode.hpp"
 #include "GUI.hpp"
+#if ENABLE_GCODE_VIEWER
+#include "GUI_Utils.hpp"
+#endif // ENABLE_GCODE_VIEWER
 
 #include <boost/filesystem.hpp>
 
@@ -281,16 +284,19 @@ wxBitmap* BitmapCache::load_svg(const std::string &bitmap_name, unsigned target_
         auto it = m_map.find(folder + bitmap_key);
         if (it != m_map.end())
             return it->second;
-        else {
+        // It's expensive to check if the bitmap exists every time, but otherwise:
+        // For the case, when application was started in Light mode and then switched to the Dark,
+        // we will never get a white bitmaps, if check m_map.find(bitmap_key) 
+        // before boost::filesystem::exists(var(folder + bitmap_name + ".svg"))
+        if (!boost::filesystem::exists(var(folder + bitmap_name + ".svg"))) {
+            folder.clear();
+        
             it = m_map.find(bitmap_key);
             if (it != m_map.end())
                 return it->second;
         }
 
-        if (!boost::filesystem::exists(Slic3r::var(folder + bitmap_name + ".svg")))
-            folder.clear();
-        else
-            bitmap_key = folder + bitmap_key;
+        bitmap_key = folder + bitmap_key;
     }
     else 
     {
@@ -352,6 +358,7 @@ wxBitmap BitmapCache::mksolid(size_t width, size_t height, unsigned char r, unsi
 }
 
 
+#if !ENABLE_GCODE_VIEWER
 static inline int hex_digit_to_int(const char c)
 {
     return
@@ -359,6 +366,7 @@ static inline int hex_digit_to_int(const char c)
         (c >= 'A' && c <= 'F') ? int(c - 'A') + 10 :
         (c >= 'a' && c <= 'f') ? int(c - 'a') + 10 : -1;
 }
+#endif // !ENABLE_GCODE_VIEWER
 
 bool BitmapCache::parse_color(const std::string& scolor, unsigned char* rgb_out)
 {

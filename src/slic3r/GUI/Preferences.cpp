@@ -1,7 +1,8 @@
 #include "Preferences.hpp"
-#include "AppConfig.hpp"
 #include "OptionsGroup.hpp"
+#include "GUI_App.hpp"
 #include "I18N.hpp"
+#include "libslic3r/AppConfig.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -120,6 +121,17 @@ void PreferencesDialog::build()
 	option.opt.full_width = true;
 	m_optgroup_paths->append_single_option_line(option);
 
+	def.label = L("Single Instance");
+	def.type = coBool;
+#if __APPLE__
+	def.tooltip = L("On OSX there is always only one instance of app running by default. However it is allowed to run multiple instances of same app from the command line. In such case this settings will allow only one instance.");
+#else
+	def.tooltip = L("If this is enabled, when staring PrusaSlicer and another instance of same PrusaSlicer is running, that instance will be reactivated instead.");
+#endif
+	def.set_default_value(new ConfigOptionBool{ app_config->has("single_instance") ? app_config->get("single_instance") == "1" : false });
+	option = Option(def, "single_instance");
+	m_optgroup_general->append_single_option_line(option);
+
 #if __APPLE__
 	def.label = L("Use Retina resolution for the 3D scene");
 	def.type = coBool;
@@ -129,6 +141,26 @@ void PreferencesDialog::build()
 	option = Option (def, "use_retina_opengl");
 	m_optgroup_general->append_single_option_line(option);
 #endif
+/*  // ysFIXME THis part is temporary commented
+    // The using of inches is implemented just for object's size and position
+    
+	def.label = L("Use inches instead of millimeters");
+	def.type = coBool;
+	def.tooltip = L("Use inches instead of millimeters for the object's size");
+	def.set_default_value(new ConfigOptionBool{ app_config->get("use_inches") == "1" });
+	option = Option(def, "use_inches");
+	m_optgroup_general->append_single_option_line(option);
+*/
+
+    // Show/Hide splash screen
+	def.label = L("Show splash screen");
+	def.type = coBool;
+	def.tooltip = L("Show splash screen");
+	def.set_default_value(new ConfigOptionBool{ app_config->get("show_splash_screen") == "1" });
+	option = Option(def, "show_splash_screen");
+	m_optgroup_general->append_single_option_line(option);
+
+	m_optgroup_general->activate();
 
 	m_optgroup_camera = std::make_shared<ConfigOptionsGroup>(this, _(L("Camera")));
 	m_optgroup_camera->label_width = 40;
@@ -150,6 +182,8 @@ void PreferencesDialog::build()
 	option = Option(def, "use_free_camera");
 	m_optgroup_camera->append_single_option_line(option);
 
+	m_optgroup_camera->activate();
+
 	m_optgroup_gui = std::make_shared<ConfigOptionsGroup>(this, _(L("GUI")));
 	m_optgroup_gui->label_width = 40;
 	m_optgroup_gui->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
@@ -160,6 +194,13 @@ void PreferencesDialog::build()
 		}
 	};
 
+	def.label = L("Show sidebar collapse/expand button");
+	def.type = coBool;
+	def.tooltip = L("If enabled, the button for the collapse sidebar will be appeared in top right corner of the 3D Scene");
+	def.set_default_value(new ConfigOptionBool{ app_config->get("show_collapse_button") == "1" });
+	option = Option(def, "show_collapse_button");
+	m_optgroup_gui->append_single_option_line(option);
+
 	def.label = L("Use custom size for toolbar icons");
 	def.type = coBool;
 	def.tooltip = L("If enabled, you can change size of toolbar icons manually.");
@@ -167,21 +208,45 @@ void PreferencesDialog::build()
 	option = Option(def, "use_custom_toolbar_size");
 	m_optgroup_gui->append_single_option_line(option);
 
+	m_optgroup_gui->activate();
+
 	create_icon_size_slider();
 	m_icon_size_sizer->ShowItems(app_config->get("use_custom_toolbar_size") == "1");
+
+	create_settings_mode_widget();
+
+#if ENABLE_ENVIRONMENT_MAP
+	m_optgroup_render = std::make_shared<ConfigOptionsGroup>(this, _(L("Render")));
+	m_optgroup_render->label_width = 40;
+	m_optgroup_render->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
+		m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
+	};
+
+	def.label = L("Use environment map");
+	def.type = coBool;
+	def.tooltip = L("If enabled, renders object using the environment map.");
+	def.set_default_value(new ConfigOptionBool{ app_config->get("use_environment_map") == "1" });
+	option = Option(def, "use_environment_map");
+	m_optgroup_render->append_single_option_line(option);
+
+	m_optgroup_render->activate();
+#endif // ENABLE_ENVIRONMENT_MAP
 
 	auto sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(m_optgroup_general->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
 	sizer->Add(m_optgroup_paths->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
 	sizer->Add(m_optgroup_camera->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10); 
 	sizer->Add(m_optgroup_gui->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
+#if ENABLE_ENVIRONMENT_MAP
+	sizer->Add(m_optgroup_render->sizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, 10);
+#endif // ENABLE_ENVIRONMENT_MAP
 
     SetFont(wxGetApp().normal_font());
 
 	auto buttons = CreateStdDialogButtonSizer(wxOK | wxCANCEL);
 	wxButton* btn = static_cast<wxButton*>(FindWindowById(wxID_OK, this));
 	btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { accept(); });
-	sizer->Add(buttons, 0, wxALIGN_CENTER_HORIZONTAL | wxBOTTOM, 10);
+	sizer->Add(buttons, 0, wxALIGN_CENTER_HORIZONTAL | wxBOTTOM, 5);
 
 	SetSizer(sizer);
 	sizer->SetSizeHints(this);
@@ -194,12 +259,28 @@ void PreferencesDialog::accept()
 	}
 
 	auto app_config = get_app_config();
-	for (std::map<std::string, std::string>::iterator it = m_values.begin(); it != m_values.end(); ++it) {
-		app_config->set(it->first, it->second);
+
+	m_settings_layout_changed = false;
+	for (const std::string& key : {"old_settings_layout_mode",
+								   "new_settings_layout_mode",
+								   "dlg_settings_layout_mode" })
+	{
+	    auto it = m_values.find(key);
+	    if (it != m_values.end() && app_config->get(key) != it->second) {
+			m_settings_layout_changed = true;
+			break;
+	}
 	}
 
+	for (std::map<std::string, std::string>::iterator it = m_values.begin(); it != m_values.end(); ++it)
+		app_config->set(it->first, it->second);
+
+	app_config->save();
 	EndModal(wxID_OK);
 
+	if (m_settings_layout_changed)
+		;// application will be recreated after Preference dialog will be destroyed
+	else
 	// Nothify the UI to update itself from the ini file.
     wxGetApp().update_ui_from_settings();
 }
@@ -282,6 +363,38 @@ void PreferencesDialog::create_icon_size_slider()
     }
 
     m_optgroup_gui->sizer->Add(m_icon_size_sizer, 0, wxEXPAND | wxALL, em);
+}
+
+void PreferencesDialog::create_settings_mode_widget()
+{
+	wxString choices[] = {	_L("Old regular layout with the tab bar"),
+							_L("New layout without the tab bar on the plater"),
+							_L("Settings will be shown in the non-modal dialog")		};
+
+	auto app_config = get_app_config();
+	int selection = app_config->get("old_settings_layout_mode") == "1" ? 0 :
+	                app_config->get("new_settings_layout_mode") == "1" ? 1 :
+	                app_config->get("dlg_settings_layout_mode") == "1" ? 2 : 0;
+
+	wxWindow* parent = m_optgroup_gui->ctrl_parent();
+
+	m_layout_mode_box = new wxRadioBox(parent, wxID_ANY, _L("Settings layout mode"), wxDefaultPosition, wxDefaultSize, WXSIZEOF(choices), choices,
+		3, wxRA_SPECIFY_ROWS);
+	m_layout_mode_box->SetFont(wxGetApp().normal_font());
+	m_layout_mode_box->SetSelection(selection);
+
+	m_layout_mode_box->Bind(wxEVT_RADIOBOX, [this](wxCommandEvent& e) {
+		int selection = e.GetSelection();
+
+		m_values["old_settings_layout_mode"] = boost::any_cast<bool>(selection == 0) ? "1" : "0";
+		m_values["new_settings_layout_mode"] = boost::any_cast<bool>(selection == 1) ? "1" : "0";
+		m_values["dlg_settings_layout_mode"] = boost::any_cast<bool>(selection == 2) ? "1" : "0";
+	});
+
+	auto sizer = new wxBoxSizer(wxHORIZONTAL);
+	sizer->Add(m_layout_mode_box, 1, wxALIGN_CENTER_VERTICAL);
+
+	m_optgroup_gui->sizer->Add(sizer, 0, wxEXPAND);
 }
 
 

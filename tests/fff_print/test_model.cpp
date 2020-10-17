@@ -2,6 +2,7 @@
 
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/Model.hpp"
+#include "libslic3r/ModelArrange.hpp"
 
 #include <boost/nowide/cstdio.hpp>
 #include <boost/filesystem.hpp>
@@ -41,9 +42,8 @@ SCENARIO("Model construction", "[Model]") {
 				}
             }
             model_object->add_instance();
-			print.apply(model, config); // apply config for arrange_objects
-			model.arrange_objects(&print);
-			model.center_instances_around_point(Slic3r::Vec2d(100, 100));
+            print.apply(model, config); // apply config for arrange_objects
+            arrange_objects(print, model, InfiniteBed{scaled(Vec2d(100, 100))}, ArrangeParams{scaled(min_object_distance(config))});
 			model_object->ensure_on_bed();
 			print.auto_assign_extruders(model_object);
 			THEN("Print works?") {
@@ -51,7 +51,11 @@ SCENARIO("Model construction", "[Model]") {
 				print.apply(model, config);
 				print.process();
 				boost::filesystem::path temp = boost::filesystem::unique_path();
+#if ENABLE_GCODE_VIEWER
+				print.export_gcode(temp.string(), nullptr, nullptr);
+#else
 				print.export_gcode(temp.string(), nullptr);
+#endif // ENABLE_GCODE_VIEWER
 				REQUIRE(boost::filesystem::exists(temp));
 				REQUIRE(boost::filesystem::is_regular_file(temp));
 				REQUIRE(boost::filesystem::file_size(temp) > 0);

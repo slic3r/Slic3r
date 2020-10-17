@@ -1,6 +1,7 @@
 #include "BoundingBox.hpp"
 #include "ExPolygon.hpp"
-#include "MedialAxis.hpp"
+
+#include "Exception.hpp"#include "MedialAxis.hpp"
 #include "Geometry.hpp"
 #include "Polygon.hpp"
 #include "Line.hpp"
@@ -369,7 +370,7 @@ void ExPolygon::triangulate_pp(Polygons* polygons) const
         {
             TPPLPoly p;
             p.Init(int(ex->contour.points.size()));
-            //printf(PRINTF_ZU "\n0\n", ex->contour.points.size());
+            //printf("%zu\n0\n", ex->contour.points.size());
             for (const Point &point : ex->contour.points) {
                 size_t i = &point - &ex->contour.points.front();
                 p[i].x = point(0);
@@ -384,7 +385,7 @@ void ExPolygon::triangulate_pp(Polygons* polygons) const
         for (Polygons::const_iterator hole = ex->holes.begin(); hole != ex->holes.end(); ++hole) {
             TPPLPoly p;
             p.Init(hole->points.size());
-            //printf(PRINTF_ZU "\n1\n", hole->points.size());
+            //printf("%zu\n1\n", hole->points.size());
             for (const Point &point : hole->points) {
                 size_t i = &point - &hole->points.front();
                 p[i].x = point(0);
@@ -400,7 +401,7 @@ void ExPolygon::triangulate_pp(Polygons* polygons) const
     std::list<TPPLPoly> output;
     int res = TPPLPartition().Triangulate_MONO(&input, &output);
     if (res != 1)
-        throw std::runtime_error("Triangulation failed");
+        throw Slic3r::RuntimeError("Triangulation failed");
     
     // convert output polygons
     for (std::list<TPPLPoly>::iterator poly = output.begin(); poly != output.end(); ++poly) {
@@ -513,7 +514,7 @@ void ExPolygon::triangulate_pp(Points *triangles) const
     int res = TPPLPartition().Triangulate_MONO(&input, &output);
 // int TPPLPartition::Triangulate_EC(TPPLPolyList *inpolys, TPPLPolyList *triangles) {
     if (res != 1)
-        throw std::runtime_error("Triangulation failed");
+        throw Slic3r::RuntimeError("Triangulation failed");
     *triangles = polypartition_output_to_triangles(output);
 }
 
@@ -556,7 +557,7 @@ void ExPolygon::triangulate_p2t(Polygons* polygons) const
             }
             polygons->push_back(p);
         }
-        } catch (const std::runtime_error & /* err */) {
+        } catch (const Slic3r::RuntimeError & /* err */) {
             assert(false);
             // just ignore, don't triangulate
         }

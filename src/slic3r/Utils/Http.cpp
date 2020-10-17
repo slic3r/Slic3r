@@ -7,12 +7,21 @@
 #include <sstream>
 #include <exception>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/format.hpp>
+#include <boost/log/trivial.hpp>
 
 #include <curl/curl.h>
 
-#include "libslic3r/libslic3r.h"
-#include "libslic3r/Utils.hpp"
+#ifdef OPENSSL_CERT_OVERRIDE
+#include <openssl/x509.h>
+#endif
+
+#include <libslic3r/libslic3r.h>
+#include <libslic3r/Utils.hpp>
+#include <slic3r/GUI/I18N.hpp>
+#include <slic3r/GUI/format.hpp>
 
 namespace fs = boost::filesystem;
 
@@ -22,13 +31,74 @@ namespace Slic3r {
 
 // Private
 
-class CurlGlobalInit
+struct CurlGlobalInit
 {
-	static const CurlGlobalInit instance;
+    static std::unique_ptr<CurlGlobalInit> instance;
+    std::string message;
+    
+	CurlGlobalInit()
+    {
+#ifdef OPENSSL_CERT_OVERRIDE // defined if SLIC3R_STATIC=ON
+        
+        // Look for a set of distro specific directories. Don't change the
+        // order: https://bugzilla.redhat.com/show_bug.cgi?id=1053882
+        static const char * CA_BUNDLES[] = {
+            "/etc/pki/tls/certs/ca-bundle.crt",   // Fedora/RHEL 6
+            "/etc/ssl/certs/ca-certificates.crt", // Debian/Ubuntu/Gentoo etc.
+            "/usr/share/ssl/certs/ca-bundle.crt",
+            "/usr/local/share/certs/ca-root-nss.crt", // FreeBSD
+            "/etc/ssl/cert.pem",
+            "/etc/ssl/ca-bundle.pem"              // OpenSUSE Tumbleweed              
+        };
+        
+        namespace fs = boost::filesystem;
+        // Env var name for the OpenSSL CA bundle (SSL_CERT_FILE nomally)
+        const char *const SSL_CA_FILE = X509_get_default_cert_file_env();
+        const char * ssl_cafile = ::getenv(SSL_CA_FILE);
+        
+        if (!ssl_cafile)
+            ssl_cafile = X509_get_default_cert_file();
+        
+        int replace = true;
+        if (!ssl_cafile || !fs::exists(fs::path(ssl_cafile))) {
+            const char * bundle = nullptr;
+            for (const char * b : CA_BUNDLES) {
+                if (fs::exists(fs::path(b))) {
+                    ::setenv(SSL_CA_FILE, bundle = b, replace);
+                    break;
+                }
+            }
 
-	CurlGlobalInit()  { ::curl_global_init(CURL_GLOBAL_DEFAULT); }
+            if (!bundle)
+                message = _u8L("Could not detect system SSL certificate store. "
+                               "PrusaSlicer will be unable to establish secure "
+                               "network connections.");
+            else
+                message = Slic3r::GUI::format(
+					_L("PrusaSlicer detected system SSL certificate store in: %1%"),
+                    bundle);
+
+            message += "\n" + Slic3r::GUI::format(
+				_L("To specify the system certificate store manually, please "
+                   "set the %1% environment variable to the correct CA bundle "
+                   "and restart the application."),
+                SSL_CA_FILE);
+        }
+
+#endif // OPENSSL_CERT_OVERRIDE
+        
+        if (CURLcode ec = ::curl_global_init(CURL_GLOBAL_DEFAULT)) {
+            message += _u8L("CURL init has failed. PrusaSlicer will be unable to establish "
+                            "network connections. See logs for additional details.");
+            
+            BOOST_LOG_TRIVIAL(error) << ::curl_easy_strerror(ec);
+        }
+    }
+    
 	~CurlGlobalInit() { ::curl_global_cleanup(); }
 };
+
+std::unique_ptr<CurlGlobalInit> CurlGlobalInit::instance;
 
 struct Http::priv
 {
@@ -83,8 +153,10 @@ Http::priv::priv(const std::string &url)
 	, limit(0)
 	, cancel(false)
 {
+    Http::tls_global_init();
+    
 	if (curl == nullptr) {
-		throw std::runtime_error(std::string("Could not construct Curl object"));
+		throw Slic3r::RuntimeError(std::string("Could not construct Curl object"));
 	}
 
 	set_timeout_connect(DEFAULT_TIMEOUT_CONNECT);
@@ -343,6 +415,16 @@ Http& Http::remove_header(std::string name)
 	return *this;
 }
 
+// Authorization by HTTP digest, based on RFC2617.
+Http& Http::auth_digest(const std::string &user, const std::string &password)
+{
+	curl_easy_setopt(p->curl, CURLOPT_USERNAME, user.c_str());
+	curl_easy_setopt(p->curl, CURLOPT_PASSWORD, password.c_str());
+	curl_easy_setopt(p->curl, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
+
+	return *this;
+}
+
 Http& Http::ca_file(const std::string &name)
 {
 	if (p && priv::ca_file_supported(p->curl)) {
@@ -442,7 +524,26 @@ bool Http::ca_file_supported()
 	::CURL *curl = ::curl_easy_init();
 	bool res = priv::ca_file_supported(curl);
 	if (curl != nullptr) { ::curl_easy_cleanup(curl); }
-	return res;
+    return res;
+}
+
+std::string Http::tls_global_init()
+{
+    if (!CurlGlobalInit::instance)
+        CurlGlobalInit::instance = std::make_unique<CurlGlobalInit>();
+    
+    return CurlGlobalInit::instance->message;
+}
+
+std::string Http::tls_system_cert_store()
+{
+    std::string ret;
+
+#ifdef OPENSSL_CERT_OVERRIDE
+    ret = ::getenv(X509_get_default_cert_file_env());
+#endif
+    
+    return ret;
 }
 
 std::string Http::url_encode(const std::string &str)

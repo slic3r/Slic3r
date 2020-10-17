@@ -11,7 +11,7 @@
 #include "libslic3r/PrintConfig.hpp"
 
 #include "Field.hpp"
-#include "GUI_App.hpp"
+#include "I18N.hpp"
 
 // Translate the ifdef 
 #ifdef __WXOSX__
@@ -23,6 +23,9 @@
 #define BORDER(a, b) ((wxOSX ? a : b))
 
 namespace Slic3r { namespace GUI {
+
+// Thrown if the building of a parameter page is canceled.
+class UIBuildCanceled : public std::exception {};
 
 /// Widget type describes a function object that returns a wxWindow (our widget) and accepts a wxWidget (parent window).
 using widget_t = std::function<wxSizer*(wxWindow*)>;//!std::function<wxWindow*(wxWindow*)>;
@@ -48,7 +51,7 @@ public:
     wxString	label {wxString("")};
     wxString	label_tooltip {wxString("")};
     size_t		full_width {0}; 
-    wxSizer*	sizer {nullptr};
+	wxStaticText**	full_Label {nullptr};
     widget_t	widget {nullptr};
     std::function<wxWindow*(wxWindow*)>	near_label_widget{ nullptr };
 
@@ -59,7 +62,7 @@ public:
 		m_extra_widgets.push_back(widget);
     }
 	Line(wxString label, wxString tooltip) :
-		label(label), label_tooltip(tooltip) {}
+		label(_(label)), label_tooltip(_(tooltip)) {}
 
     const std::vector<widget_t>&	get_extra_widgets() const {return m_extra_widgets;}
     const std::vector<Option>&		get_options() const { return m_options; }
@@ -78,7 +81,7 @@ class OptionsGroup {
 	wxStaticBox*	stb;
 public:
     const bool		staticbox {true};
-    const wxString	title {wxString("")};
+    const wxString	title;
     size_t			title_width = 20;// {200};
     wxSizer*		sizer {nullptr};
     column_t		extra_column {nullptr};
@@ -120,7 +123,15 @@ public:
     	return this->stb ? (wxWindow*)this->stb : this->parent();
     }
 
-	void		append_line(const Line& line, wxStaticText** full_Label = nullptr);
+	void		append_line(const Line& line);
+	// create controls for the option group
+	void		activate_line(Line& line);
+
+	// create all controls for the option group from the m_lines
+	bool		activate(std::function<void()> throw_if_canceled = [](){});
+	// delete all controls from the option group
+	void		clear();
+
     Line		create_single_option_line(const Option& option) const;
     void		append_single_option_line(const Option& option) { append_line(create_single_option_line(option)); }
 
@@ -150,6 +161,13 @@ public:
 							return true;
     }
 
+	void			show_field(const t_config_option_key& opt_key, bool show = true) {
+		                    Field* field = get_field(opt_key);
+		                    field->getWindow()->Show(show);
+		                    field->getLabel()->Show(show);
+    }
+	void			hide_field(const t_config_option_key& opt_key) {  show_field(opt_key, false);  }
+
 	void			set_name(const wxString& new_name) {
 							stb->SetLabel(new_name);
     }
@@ -166,36 +184,13 @@ public:
 
     void            hide_labels() {
         title_width = 0;
-        m_grid_sizer->SetCols(m_grid_sizer->GetEffectiveColsCount()-1);
-        static_cast<wxFlexGridSizer*>(m_grid_sizer)->AddGrowableCol(!extra_column ? 0 : 1);
+        // del from 2.3
+        //m_grid_sizer->SetCols(m_grid_sizer->GetEffectiveColsCount()-1);
+        //static_cast<wxFlexGridSizer*>(m_grid_sizer)->AddGrowableCol(!extra_column ? 0 : 1);
     }
 
 	OptionsGroup(	wxWindow* _parent, const wxString& title, bool is_tab_opt = false, 
-					column_t extra_clmn = nullptr) :
-					m_parent(_parent), title(title), 
-                    m_show_modified_btns(is_tab_opt),
-					staticbox(title!=""), extra_column(extra_clmn) {
-        if (staticbox) {
-            stb = new wxStaticBox(_parent, wxID_ANY, title);
-            if (!wxOSX) stb->SetBackgroundStyle(wxBG_STYLE_PAINT);
-            stb->SetFont(wxGetApp().bold_font());
-        } else
-        	stb = nullptr;
-        sizer = (staticbox ? new wxStaticBoxSizer(stb, wxVERTICAL) : new wxBoxSizer(wxVERTICAL));
-        auto num_columns = 1U;
-        if (title_width != 0) num_columns++;
-        if (extra_column != nullptr) num_columns++;
-        m_grid_sizer = new wxFlexGridSizer(0, num_columns, 1,0);
-        static_cast<wxFlexGridSizer*>(m_grid_sizer)->SetFlexibleDirection(wxBOTH/*wxHORIZONTAL*/);
-        static_cast<wxFlexGridSizer*>(m_grid_sizer)->AddGrowableCol(title_width == 0 ? 0 : !extra_column ? 1 : 2 );
-#if 0//#ifdef __WXGTK__
-        m_panel = new wxPanel( _parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-        sizer->Fit(m_panel);
-        sizer->Add(m_panel, 0, wxEXPAND | wxALL, wxOSX||!staticbox ? 0: 5);
-#else
-        sizer->Add(m_grid_sizer, 0, wxEXPAND | wxALL, wxOSX||!staticbox ? 0: 5);
-#endif /* __WXGTK__ */
-    }
+                    column_t extra_clmn = nullptr);
 
     wxGridSizer*        get_grid_sizer() { return m_grid_sizer; }
 
@@ -206,6 +201,8 @@ protected:
     std::vector<wxSizer*>                   m_line_sizer;
     std::vector<wxWindow*>                  m_extra_column_item_ptrs;
     std::vector<wxWindow*>                  m_near_label_widget_ptrs;
+
+    std::vector<Line>                       m_lines;
 
     /// Field list, contains unique_ptrs of the derived type.
     /// using types that need to know what it is beyond the public interface 
@@ -229,7 +226,7 @@ protected:
 	const t_field&		build_field(const t_config_option_key& id, const ConfigOptionDef& opt, wxStaticText* label = nullptr);
 	const t_field&		build_field(const t_config_option_key& id, wxStaticText* label = nullptr);
 	const t_field&		build_field(const Option& opt, wxStaticText* label = nullptr);
-	void				add_undo_buttuns_to_sizer(wxSizer* sizer, const t_field& field, std::vector<size_t> *widget_idx_in_sizer = nullptr);
+	void				add_undo_buttons_to_sizer(wxSizer* sizer, const t_field& field, std::vector<size_t> *widget_idx_in_sizer = nullptr);
 
     virtual void		on_kill_focus(const std::string& opt_key) {};
 	virtual void		on_set_focus(const std::string& opt_key);
@@ -240,16 +237,18 @@ protected:
 
 class ConfigOptionsGroup: public OptionsGroup {
 public:
-	ConfigOptionsGroup(	wxWindow* parent, const wxString& title, DynamicPrintConfig* _config = nullptr, 
+	ConfigOptionsGroup(	wxWindow* parent, const wxString& title, DynamicPrintConfig* config = nullptr, 
 						bool is_tab_opt = false, column_t extra_clmn = nullptr) :
-		OptionsGroup(parent, title, is_tab_opt, extra_clmn), m_config(_config) {}
+		OptionsGroup(parent, title, is_tab_opt, extra_clmn), m_config(config) {}
+	ConfigOptionsGroup(	wxWindow* parent, const wxString& title, ModelConfig* config, 
+						bool is_tab_opt = false, column_t extra_clmn = nullptr) :
+		OptionsGroup(parent, title, is_tab_opt, extra_clmn), m_config(&config->get()), m_modelconfig(config) {}
 
-    /// reference to libslic3r config, non-owning pointer (?).
-    DynamicPrintConfig*		m_config {nullptr};
-    bool					m_full_labels {0};
-	t_opt_map				m_opt_map;
+	const std::string& config_category() const throw() { return m_config_category; }
+	const t_opt_map&   opt_map() const throw() { return m_opt_map; }
 
-    void        set_config(DynamicPrintConfig* config) { m_config = config; }
+	void 		set_config_category(const std::string &category) { this->m_config_category = category; }
+    void        set_config(DynamicPrintConfig* config) { m_config = config; m_modelconfig = nullptr; }
 	Option		get_option(const std::string& opt_key, int opt_index = -1);
 	Line		create_single_option_line(const std::string& title, int idx = -1) /*const*/{
 		Option option = get_option(title, idx);
@@ -276,12 +275,28 @@ public:
     // return value shows visibility : false => all options are hidden
     void        Hide();
     void        Show(const bool show);
+    bool        is_visible(ConfigOptionMode mode);
     bool        update_visibility(ConfigOptionMode mode);
     void        msw_rescale();
+    void        sys_color_changed();
 	boost::any	config_value(const std::string& opt_key, int opt_index, bool deserialize);
 	// return option value from config 
 	boost::any	get_config_value(const DynamicPrintConfig& config, const std::string& opt_key, int opt_index = -1);
 	Field*		get_fieldc(const t_config_option_key& opt_key, int opt_index);
+
+private:
+    // Reference to libslic3r config or ModelConfig::get(), non-owning pointer.
+    // The reference is const, so that the spots which modify m_config are clearly
+    // demarcated by const_cast and m_config_changed_callback is called afterwards.
+    const DynamicPrintConfig*	m_config {nullptr};
+    // If the config is modelconfig, then ModelConfig::touch() has to be called after value change.
+    ModelConfig*				m_modelconfig { nullptr };
+	bool						m_full_labels{ 0 };
+	t_opt_map					m_opt_map;
+    std::string             	m_config_category;
+
+    // Change an option on m_config, possibly call ModelConfig::touch().
+	void 	change_opt_value(const t_config_option_key& opt_key, const boost::any& value, int opt_index = 0);
 };
 
 //  Static text shown among the options.

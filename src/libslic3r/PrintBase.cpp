@@ -1,3 +1,4 @@
+#include "Exception.hpp"
 #include "PrintBase.hpp"
 
 #include <boost/filesystem.hpp>
@@ -68,7 +69,7 @@ std::string PrintBase::output_filename(const std::string &format, const std::str
             filename = boost::filesystem::change_extension(filename, default_ext);
         return filename.string();
     } catch (std::runtime_error &err) {
-        throw std::runtime_error(L("Failed processing of the output_filename_format template.") + "\n" + err.what());
+        throw Slic3r::RuntimeError(L("Failed processing of the output_filename_format template.") + "\n" + err.what());
     }
 }
 
@@ -88,6 +89,14 @@ std::string PrintBase::output_filepath(const std::string &path, const std::strin
     return path;
 }
 
+void PrintBase::status_update_warnings(ObjectID object_id, int step, PrintStateBase::WarningLevel /* warning_level */, const std::string &message)
+{
+    if (this->m_status_callback)
+        m_status_callback(SlicingStatus(*this, step));
+    else if (! message.empty())
+    	printf("%s warning: %s\n", (object_id == this->id()) ? "print" : "print object", message.c_str());
+}
+
 tbb::mutex& PrintObjectBase::state_mutex(PrintBase *print)
 { 
 	return print->state_mutex();
@@ -96,6 +105,11 @@ tbb::mutex& PrintObjectBase::state_mutex(PrintBase *print)
 std::function<void()> PrintObjectBase::cancel_callback(PrintBase *print)
 { 
 	return print->cancel_callback();
+}
+
+void PrintObjectBase::status_update_warnings(PrintBase *print, int step, PrintStateBase::WarningLevel warning_level, const std::string &message)
+{
+	print->status_update_warnings(this->id(), step, warning_level, message);
 }
 
 } // namespace Slic3r

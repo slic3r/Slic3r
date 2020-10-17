@@ -53,7 +53,7 @@ void BridgeDetector::initialize()
     this->_edges = intersection_pl(to_polylines(grown), contours);
     
     #ifdef SLIC3R_DEBUG
-    printf("  bridge has " PRINTF_ZU " support(s)\n", this->_edges.size());
+    printf("  bridge has %zu support(s)\n", this->_edges.size());
     #endif
     
     // detect anchors as intersection between our bridge expolygon and the lower slices
@@ -90,7 +90,7 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
     /*  Outset the bridge expolygon by half the amount we used for detecting anchors;
         we'll use this one to clip our test lines and be sure that their endpoints
         are inside the anchors and not on their contours leading to false negatives. */
-    Polygons clip_area = offset(this->expolygons, 0.5f * this->spacing);
+    Polygons clip_area = offset(this->expolygons, 0.5f * float(this->spacing));
     
     /*  we'll now try several directions using a rudimentary visibility check:
         bridge in several directions and then sum the length of lines having both
@@ -233,7 +233,7 @@ Polygons BridgeDetector::coverage(double angle, bool precise) const {
             // Outset the bridge expolygon by half the amount we used for detecting anchors;
             // we'll use this one to generate our trapezoids and be sure that their vertices
             // are inside the anchors and not on their contours leading to false negatives.
-            for (ExPolygon &expoly : offset_ex(expolygon, 0.5f * this->spacing)) {
+            for (ExPolygon &expoly : offset_ex(expolygon, 0.5f * float(this->spacing))) {
                 // Compute trapezoids according to a vertical orientation
                 Polygons trapezoids;
                 if (!precise) expoly.get_trapezoids2(&trapezoids, PI / 2);

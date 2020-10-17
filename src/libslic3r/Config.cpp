@@ -1,10 +1,10 @@
 #include "Config.hpp"
+#include "format.hpp"
 #include "Utils.hpp"
 #include <assert.h>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
-#include <exception> // std::runtime_error
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/erase.hpp>
@@ -249,7 +249,7 @@ ConfigOption* ConfigOptionDef::create_empty_option() const
 	    case coInts:            return new ConfigOptionIntsNullable();
 	    case coPercents:        return new ConfigOptionPercentsNullable();
 	    case coBools:           return new ConfigOptionBoolsNullable();
-	    default:                throw std::runtime_error(std::string("Unknown option type for nullable option ") + this->label);
+	    default:                throw Slic3r::RuntimeError(std::string("Unknown option type for nullable option ") + this->label);
 	    }
 	} else {
 	    switch (this->type) {
@@ -269,7 +269,7 @@ ConfigOption* ConfigOptionDef::create_empty_option() const
 	    case coBool:            return new ConfigOptionBool();
 	    case coBools:           return new ConfigOptionBools();
 	    case coEnum:            return new ConfigOptionEnumGeneric(this->enum_keys_map);
-	    default:                throw std::runtime_error(std::string("Unknown option type for option ") + this->label);
+	    default:                throw Slic3r::RuntimeError(std::string("Unknown option type for option ") + this->label);
 	    }
 	}
 }
@@ -515,7 +515,7 @@ bool ConfigBase::set_deserialize_nothrow(const t_config_option_key &opt_key_src,
 void ConfigBase::set_deserialize(const t_config_option_key &opt_key_src, const std::string &value_src, bool append)
 {
 	if (! this->set_deserialize_nothrow(opt_key_src, value_src, append))
-		throw BadOptionTypeException(("ConfigBase::set_deserialize() failed for '"+ opt_key_src+"' = '"+ value_src+"'").c_str());
+		throw BadOptionTypeException(format("ConfigBase::set_deserialize() failed for parameter \"%1%\", value \"%2%\"", opt_key_src,  value_src));
 }
 
 void ConfigBase::set_deserialize(std::initializer_list<SetDeserializeItem> items)
@@ -626,7 +626,7 @@ double ConfigBase::get_abs_value(const t_config_option_key &opt_key) const
             cast_opt->get_abs_value(this->get_abs_value(opt_def->ratio_over));
     }
     std::stringstream ss; ss << "ConfigBase::get_abs_value(): "<< opt_key<<" has not a valid option type for get_abs_value()";
-    throw std::runtime_error(ss.str());
+    throw Slic3r::RuntimeError(ss.str());
 }
 
 // Return an absolute value of a possibly relative config variable.
@@ -637,7 +637,7 @@ double ConfigBase::get_abs_value(const t_config_option_key &opt_key, double rati
     const ConfigOption *raw_opt = this->option(opt_key);
     assert(raw_opt != nullptr);
     if (raw_opt->type() != coFloatOrPercent)
-        throw std::runtime_error("ConfigBase::get_abs_value(): opt_key is not of coFloatOrPercent");
+        throw Slic3r::RuntimeError("ConfigBase::get_abs_value(): opt_key is not of coFloatOrPercent");
     // Compute absolute value.
     return static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->get_abs_value(ratio_over);
 }
@@ -704,7 +704,7 @@ void ConfigBase::load_from_gcode_file(const std::string &file)
             strncmp(slic3rpp_gcode_header, firstline.c_str(), strlen(slic3rpp_gcode_header)) != 0 &&
             strncmp(superslicer_gcode_header, firstline.c_str(), strlen(superslicer_gcode_header)) != 0 &&
             strncmp(prusaslicer_gcode_header, firstline.c_str(), strlen(prusaslicer_gcode_header)) != 0)
-            throw std::runtime_error("Not a PrusaSlicer / Slic3r / SuperSlicer generated g-code.");
+			throw Slic3r::RuntimeError("Not a PrusaSlicer / SuperSlicer generated g-code.");
     }
     ifs.seekg(0, ifs.end);
 	auto file_length = ifs.tellg();
@@ -716,7 +716,7 @@ void ConfigBase::load_from_gcode_file(const std::string &file)
 
     size_t key_value_pairs = load_from_gcode_string(data.data());
     if (key_value_pairs < 80)
-        throw std::runtime_error((boost::format("Suspiciously low number of configuration values extracted from %1%: %2%") % file % key_value_pairs).str());
+        throw Slic3r::RuntimeError(format("Suspiciously low number of configuration values extracted from %1%: %2%", file, key_value_pairs));
 }
 
 // Load the config keys from the given string.
@@ -845,7 +845,7 @@ ConfigOption* DynamicConfig::optptr(const t_config_option_key &opt_key, bool cre
         throw NoDefinitionException(opt_key);
     const ConfigOptionDef *optdef = def->get(opt_key);
     if (optdef == nullptr)
-//        throw std::runtime_error(std::string("Invalid option name: ") + opt_key);
+//        throw Slic3r::RuntimeError(std::string("Invalid option name: ") + opt_key);
         // Let the parent decide what to do if the opt_key is not defined by this->def().
         return nullptr;
     ConfigOption *opt = optdef->create_default_option();

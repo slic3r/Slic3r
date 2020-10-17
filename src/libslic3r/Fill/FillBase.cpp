@@ -17,6 +17,7 @@
 #include "FillRectilinear.hpp"
 #include "FillRectilinear2.hpp"
 #include "FillRectilinear3.hpp"
+#include "FillAdaptive.hpp"
 #include "FillSmooth.hpp"
 #include "../MedialAxis.hpp"
 
@@ -31,7 +32,6 @@ Fill* Fill::new_from_type(const InfillPattern type)
     case ip3DHoneycomb:         return new Fill3DHoneycomb();
     case ipGyroid:              return new FillGyroid();
     case ipRectilinear:         return new FillRectilinear2();
-//  case ipRectilinear:         return new FillRectilinear();
     case ipMonotonous:          return new FillMonotonous();
     case ipRectilinearWGapFill: return new FillRectilinear2WGapFill();
     case ipScatteredRectilinear:return new FillScatteredRectilinear();
@@ -49,6 +49,8 @@ Fill* Fill::new_from_type(const InfillPattern type)
     case ipSmoothHilbert:       return new FillSmoothHilbert();
     case ipRectiWithPerimeter:  return new FillRectilinear2Peri();
     case ipSawtooth:            return new FillRectilinearSawtooth();
+    case ipAdaptiveCubic:       return new FillAdaptive::Filler();
+    case ipSupportCubic:        return new FillAdaptive::Filler();
     default: throw std::invalid_argument("unknown type : "+type);
     }
 }
@@ -154,9 +156,10 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
     }
     if (polylines.empty())
         return;
+
     // ensure it doesn't over or under-extrude
     double multFlow = 1;
-    if (!params.dont_adjust && params.full_infill() && !params.flow->bridge && params.fill_exactly){
+    if (!params.dont_adjust && params.full_infill() && !params.flow.bridge && params.fill_exactly){
         // compute the path of the nozzle -> extruded volume
         double lengthTot = 0;
         int nbLines = 0;
@@ -167,11 +170,11 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
                 nbLines++;
             }
         }
-        double extrudedVolume = params.flow->mm3_per_mm() * lengthTot;
+        double extrudedVolume = params.flow.mm3_per_mm() * lengthTot;
         // compute real volume
         double poylineVolume = 0;
         for (auto poly = this->no_overlap_expolygons.begin(); poly != this->no_overlap_expolygons.end(); ++poly) {
-            poylineVolume += params.flow->height*unscaled(unscaled(poly->area()));
+            poylineVolume += params.flow.height*unscaled(unscaled(poly->area()));
         }
         //printf("process want %f mm3 extruded for a volume of %f space : we mult by %f %i\n",
         //    extrudedVolume,
@@ -196,9 +199,9 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
     extrusion_entities_append_paths(
         eec->entities, std::move(polylines),
         good_role,
-        params.flow->mm3_per_mm() * params.flow_mult * multFlow,
-        (float)(params.flow->width * params.flow_mult * multFlow),
-        (float)params.flow->height);
+        params.flow.mm3_per_mm() * params.flow_mult * multFlow,
+        (float)(params.flow.width * params.flow_mult * multFlow),
+        (float)params.flow.height);
     
 }
 
@@ -585,22 +588,22 @@ void
 Fill::do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, ExtrusionEntitiesPtr &coll_out) const {
 
     ThickPolylines polylines_gapfill;
-    double min = 0.4 * scale_(params.flow->nozzle_diameter) * (1 - INSET_OVERLAP_TOLERANCE);
-    double max = 2. * params.flow->scaled_width();
+    double min = 0.4 * scale_(params.flow.nozzle_diameter) * (1 - INSET_OVERLAP_TOLERANCE);
+    double max = 2. * params.flow.scaled_width();
     // collapse 
     //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
-    min = std::max(min, double(Flow::new_from_spacing((float)EPSILON, (float)params.flow->nozzle_diameter, (float)params.flow->height, false).scaled_width()));
+    min = std::max(min, double(Flow::new_from_spacing((float)EPSILON, (float)params.flow.nozzle_diameter, (float)params.flow.height, false).scaled_width()));
     //ExPolygons gapfill_areas_collapsed = diff_ex(
     //    offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2)),
     //    offset2_ex(gapfill_areas, double(-max / 2), double(+max / 2)),
     //    true);
     ExPolygons gapfill_areas_collapsed = offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2));
-    const double minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow->width) ) * params.flow->scaled_width();
+    const double minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow.width) ) * params.flow.scaled_width();
     for (const ExPolygon &ex : gapfill_areas_collapsed) {
         //remove too small gaps that are too hard to fill.
         //ie one that are smaller than an extrusion with width of min and a length of max.
         if (ex.area() > minarea) {
-            MedialAxis{ ex, params.flow->scaled_width() * 2, params.flow->scaled_width() / 5, coord_t(params.flow->height) }.build(polylines_gapfill);
+            MedialAxis{ ex, params.flow.scaled_width() * 2, params.flow.scaled_width() / 5, coord_t(params.flow.height) }.build(polylines_gapfill);
         }
     }
     if (!polylines_gapfill.empty() && params.role != erBridgeInfill) {
@@ -608,14 +611,14 @@ Fill::do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, Ext
 #ifdef _DEBUG
         for (ThickPolyline poly : polylines_gapfill) {
             for (coordf_t width : poly.width) {
-                if (width > params.flow->scaled_width() * 2.2) {
-                    std::cerr << "ERRROR!!!! gapfill width = " << unscaled(width) << " > max_width = " << (params.flow->width * 2) << "\n";
+                if (width > params.flow.scaled_width() * 2.2) {
+                    std::cerr << "ERRROR!!!! gapfill width = " << unscaled(width) << " > max_width = " << (params.flow.width * 2) << "\n";
                 }
             }
         }
 #endif
 
-        ExtrusionEntityCollection gap_fill = thin_variable_width(polylines_gapfill, erGapFill, *params.flow);
+        ExtrusionEntityCollection gap_fill = thin_variable_width(polylines_gapfill, erGapFill, params.flow);
         //set role if needed
         if (params.role != erSolidInfill) {
             ExtrusionSetRole set_good_role(params.role);
@@ -721,7 +724,7 @@ static inline SegmentPoint clip_start_segment_and_point(const Points &polyline, 
 	SegmentPoint out;
 	if (polyline.size() >= 2) {
 	    Vec2d pt_prev = polyline.front().cast<double>();
-		for (int i = 1; i < polyline.size(); ++ i) {
+        for (size_t i = 1; i < polyline.size(); ++ i) {
 			Vec2d pt = polyline[i].cast<double>();
 			Vec2d v = pt - pt_prev;
 	        double l2 = v.squaredNorm();
@@ -955,7 +958,8 @@ void Fill::connect_infill(Polylines &&infill_ordered, const ExPolygon &boundary_
 	boundary_data.assign(boundary_src.holes.size() + 1, std::vector<ContourPointData>());
 	// Mapping the infill_ordered end point to a (contour, point) of boundary.
 	std::vector<std::pair<size_t, size_t>> map_infill_end_point_to_boundary;
-	map_infill_end_point_to_boundary.assign(infill_ordered.size() * 2, std::pair<size_t, size_t>(std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()));
+    static constexpr auto                       boundary_idx_unconnected = std::numeric_limits<size_t>::max();
+	map_infill_end_point_to_boundary.assign(infill_ordered.size() * 2, std::pair<size_t, size_t>(boundary_idx_unconnected, boundary_idx_unconnected));
 	{
 		// Project the infill_ordered end points onto boundary_src.
 		std::vector<std::pair<EdgeGrid::Grid::ClosestPointResult, size_t>> intersection_points;
@@ -1005,14 +1009,15 @@ void Fill::connect_infill(Polylines &&infill_ordered, const ExPolygon &boundary_
 			contour_data.front().param = contour_data.back().param + (contour_dst.back().cast<float>() - contour_dst.front().cast<float>()).norm();
 		}
 
-#ifndef NDEBUG
 		assert(boundary.size() == boundary_src.num_contours());
+#if 0
+        // Adaptive Cubic Infill produces infill lines, which not always end at the outer boundary.
 		assert(std::all_of(map_infill_end_point_to_boundary.begin(), map_infill_end_point_to_boundary.end(),
 			[&boundary](const std::pair<size_t, size_t> &contour_point) {
 				return contour_point.first < boundary.size() && contour_point.second < boundary[contour_point.first].size();
 			}));
         assert(boundary_data.size() == boundary_src.holes.size() + 1);
-#endif /* NDEBUG */
+#endif
 	}
 
 	// Mark the points and segments of split boundary as consumed if they are very close to some of the infill line.
@@ -1043,9 +1048,9 @@ void Fill::connect_infill(Polylines &&infill_ordered, const ExPolygon &boundary_
 		const Polyline 						&pl2 			= infill_ordered[idx_chain];
 		const std::pair<size_t, size_t>		*cp1			= &map_infill_end_point_to_boundary[(idx_chain - 1) * 2 + 1];
 		const std::pair<size_t, size_t>		*cp2			= &map_infill_end_point_to_boundary[idx_chain * 2];
-		const std::vector<ContourPointData>	&contour_data	= boundary_data[cp1->first];
-		if (cp1->first == cp2->first) {
+		if (cp1->first != boundary_idx_unconnected && cp1->first == cp2->first) {
 			// End points on the same contour. Try to connect them.
+		const std::vector<ContourPointData>	&contour_data	= boundary_data[cp1->first];
 			float param_lo  = (cp1->second == 0) ? 0.f : contour_data[cp1->second].param;
 			float param_hi  = (cp2->second == 0) ? 0.f : contour_data[cp2->second].param;
 			float param_end = contour_data.front().param;
@@ -1086,7 +1091,7 @@ void Fill::connect_infill(Polylines &&infill_ordered, const ExPolygon &boundary_
 		const std::pair<size_t, size_t>	*cp1prev = cp1 - 1;
 		const std::pair<size_t, size_t>	*cp2     = &map_infill_end_point_to_boundary[(connection_cost.idx_first + 1) * 2];
 		const std::pair<size_t, size_t>	*cp2next = cp2 + 1;
-		assert(cp1->first == cp2->first);
+		assert(cp1->first == cp2->first && cp1->first != boundary_idx_unconnected);
 		std::vector<ContourPointData>	&contour_data = boundary_data[cp1->first];
 		if (connection_cost.reversed)
 			std::swap(cp1, cp2);

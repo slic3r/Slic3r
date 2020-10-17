@@ -6,6 +6,7 @@
 
 #include "test_data.hpp"
 #include <libslic3r/libslic3r.h>
+#include <libslic3r/Layer.hpp>
 #include <libslic3r/SVG.hpp>
 //#include <libslic3r/config.hpp>
 #include <string>
@@ -79,8 +80,8 @@ void test_is_solid_infill(Print &p, size_t obj_id, size_t layer_id ) {
     // iterate over all of the regions in the layer
     for (const LayerRegion* reg : layer.regions()) {
         // for each region, iterate over the fill surfaces
-        for (const Surface& s : reg->fill_surfaces.surfaces) {
-            CHECK(s.has_fill_solid());
+        for (const Surface& su : reg->fill_surfaces.surfaces) {
+            CHECK(su.has_fill_solid());
         }
     }
 }

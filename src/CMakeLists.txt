@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.13)
 project(Slic3r-native)
 
 add_subdirectory(build-utils)
@@ -59,6 +59,29 @@ if (SLIC3R_GUI)
 
     include(${wxWidgets_USE_FILE})
 
+    string(REGEX MATCH "wxpng" WX_PNG_BUILTIN ${wxWidgets_LIBRARIES})
+    if (PNG_FOUND AND NOT WX_PNG_BUILTIN)
+        list(FILTER wxWidgets_LIBRARIES EXCLUDE REGEX png)
+        list(APPEND wxWidgets_LIBRARIES ${PNG_LIBRARIES})
+    endif ()
+
+    string(REGEX MATCH "wxexpat" WX_EXPAT_BUILTIN ${wxWidgets_LIBRARIES})
+    if (EXPAT_FOUND AND NOT WX_EXPAT_BUILTIN)
+        list(FILTER wxWidgets_LIBRARIES EXCLUDE REGEX expat)
+        list(APPEND wxWidgets_LIBRARIES ${EXPAT_LIBRARIES})
+    endif ()
+
+    # This is an issue in the new wxWidgets cmake build, doesn't deal with librt
+    find_library(LIBRT rt)
+    if(LIBRT)
+        list(APPEND wxWidgets_LIBRARIES ${LIBRT})
+    endif()
+
+    # This fixes a OpenGL linking issue on OSX. wxWidgets cmake build includes
+    # wrong libs for opengl in the link line and it does not link to it by himself.
+    # libslic3r_gui will link to opengl anyway, so lets override wx
+    list(FILTER wxWidgets_LIBRARIES EXCLUDE REGEX OpenGL)
+
 #    list(REMOVE_ITEM wxWidgets_LIBRARIES oleacc)
     message(STATUS "wx libs: ${wxWidgets_LIBRARIES}")
 
@@ -69,6 +92,7 @@ endif()
 # Create a slic3r executable
 # Process mainfests for various platforms.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platform/msw/PrusaSlicer.rc.in ${CMAKE_CURRENT_BINARY_DIR}/slic3r.rc @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platform/msw/PrusaSlicer-gcodeviewer.rc.in ${CMAKE_CURRENT_BINARY_DIR}/PrusaSlicer-gcodeviewer.rc @ONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platform/msw/PrusaSlicer.manifest.in ${CMAKE_CURRENT_BINARY_DIR}/slic3r.manifest @ONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platform/osx/Info.plist.in ${CMAKE_CURRENT_BINARY_DIR}/Info.plist @ONLY)
 if (WIN32)
@@ -82,8 +106,8 @@ if (MINGW)
     set_target_properties(slic3r PROPERTIES PREFIX "")
 endif (MINGW)
 
-if (NOT WIN32)
-    # Binary name on unix like systems (OSX, Linux)
+if (NOT WIN32 AND NOT APPLE)
+    # Binary name on unix like systems (Linux, Unix)
     set_target_properties(slic3r PROPERTIES OUTPUT_NAME "superslicer")
 endif ()
 
@@ -138,12 +162,22 @@ if (WIN32)
     add_executable(slic3r_app_console PrusaSlicer_app_msvc.cpp ${CMAKE_CURRENT_BINARY_DIR}/slic3r.rc)
     # Generate debug symbols even in release mode.
     if (MSVC)
-    target_link_options(slic3r_app_console PUBLIC "$<$<CONFIG:RELEASE>:/DEBUG>")
+        target_link_options(slic3r_app_console PUBLIC "$<$<CONFIG:RELEASE>:/DEBUG>")
     endif ()
     target_compile_definitions(slic3r_app_console PRIVATE -DSLIC3R_WRAPPER_CONSOLE)
     add_dependencies(slic3r_app_console slic3r)
     set_target_properties(slic3r_app_console PROPERTIES OUTPUT_NAME "superslicer_console")
     target_link_libraries(slic3r_app_console PRIVATE boost_headeronly)
+
+    add_executable(PrusaSlicer_app_gcodeviewer WIN32 PrusaSlicer_app_msvc.cpp ${CMAKE_CURRENT_BINARY_DIR}/PrusaSlicer-gcodeviewer.rc)
+    # Generate debug symbols even in release mode.
+    if (MSVC)
+        target_link_options(PrusaSlicer_app_gcodeviewer PUBLIC "$<$<CONFIG:RELEASE>:/DEBUG>")
+    endif ()
+    target_compile_definitions(PrusaSlicer_app_gcodeviewer PRIVATE -DSLIC3R_WRAPPER_NOCONSOLE -DSLIC3R_WRAPPER_GCODEVIEWER)
+    add_dependencies(PrusaSlicer_app_gcodeviewer slic3r)
+    set_target_properties(PrusaSlicer_app_gcodeviewer PROPERTIES OUTPUT_NAME "prusa-gcodeviewer")
+    target_link_libraries(PrusaSlicer_app_gcodeviewer PRIVATE boost_headeronly)
 endif ()
 
 # Link the resources dir to where Slic3r GUI expects it
@@ -175,20 +209,34 @@ if (WIN32)
     add_custom_target(slic3rDllsCopy ALL DEPENDS slic3r)
     prusaslicer_copy_dlls(slic3rDllsCopy)
     
-elseif (XCODE)
-    # Because of Debug/Release/etc. configurations (similar to MSVC) the slic3r binary is located in an extra level
-    add_custom_command(TARGET slic3r POST_BUILD
-        COMMAND ln -sf "${SLIC3R_RESOURCES_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/resources"
-        COMMENT "Symlinking the resources directory into the build tree"
-        VERBATIM
-    )
 else ()
+    if (APPLE)
+        # On OSX, the name of the binary matches the name of the Application.
+        add_custom_command(TARGET slic3r POST_BUILD
+            COMMAND ln -sf slic3r superslicer
+            COMMAND ln -sf slic3r prusa-gcodeviewer
+            COMMAND ln -sf slic3r PrusaGCodeViewer
+            WORKING_DIRECTORY "$<TARGET_FILE_DIR:slic3r>"
+            COMMENT "Symlinking the G-code viewer to slic3r, symlinking to prusa-slicer and prusa-gcodeviewer"
+            VERBATIM)
+    else ()
+        add_custom_command(TARGET slic3r POST_BUILD
+            COMMAND ln -sf superslicer prusa-gcodeviewer
+            WORKING_DIRECTORY "$<TARGET_FILE_DIR:slic3r>"
+            COMMENT "Symlinking the G-code viewer to slic3r"
+            VERBATIM)
+    endif ()
+    if (XCODE)
+        # Because of Debug/Release/etc. configurations (similar to MSVC) the slic3r binary is located in an extra level
+        set(BIN_RESOURCES_DIR "${CMAKE_CURRENT_BINARY_DIR}/resources")
+    else ()
+        set(BIN_RESOURCES_DIR "${CMAKE_CURRENT_BINARY_DIR}/../resources")
+    endif ()
     add_custom_command(TARGET slic3r POST_BUILD
-        COMMAND ln -sf "${SLIC3R_RESOURCES_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/../resources"
+        COMMAND ln -sfn "${SLIC3R_RESOURCES_DIR}" "${BIN_RESOURCES_DIR}"
         COMMENT "Symlinking the resources directory into the build tree"
-        VERBATIM
-    )
-endif()
+        VERBATIM)
+endif ()
 
 # Slic3r binary install target
 if (WIN32)

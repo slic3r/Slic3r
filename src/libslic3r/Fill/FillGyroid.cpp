@@ -18,8 +18,7 @@ static inline double f(double x, double z_sin, double z_cos, bool vertical, bool
         double res = z_sin * cos(x + phase_offset + (flip ? M_PI : 0.));
         double r   = sqrt(sqr(a) + sqr(b));
         return asin(a/r) + asin(res/r) + M_PI;
-    }
-    else {
+    } else {
         double phase_offset = z_sin < 0 ? M_PI : 0.;
         double a   = cos(x + phase_offset);
         double b   = - z_sin;
@@ -156,7 +155,7 @@ void FillGyroid::_fill_surface_single(
     Polylines                       &polylines_out) const
 {
     float infill_angle = float(this->angle + (CorrectionAngle * 2 * M_PI) / 360.f);
-    if(abs(infill_angle) >= EPSILON)
+    if(std::abs(infill_angle) >= EPSILON)
         expolygon.rotate(-infill_angle);
 
     BoundingBox bb = expolygon.contour.bounding_box();
@@ -199,9 +198,9 @@ void FillGyroid::_fill_surface_single(
             this->connect_infill(std::move(polylines), expolygon, polylines_out, this->spacing, params);
         }
         // new paths must be rotated back
-        if (abs(infill_angle) >= EPSILON) {
+        if (std::abs(infill_angle) >= EPSILON) {
             for (auto it = polylines_out.begin() + polylines_out_first_idx; it != polylines_out.end(); ++ it)
-               it->rotate(infill_angle);
+                it->rotate(infill_angle);
         }
     }
 }

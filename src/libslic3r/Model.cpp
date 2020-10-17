@@ -1,9 +1,12 @@
+#include "Exception.hpp"
 #include "Model.hpp"
+#include "ModelArrange.hpp"
 #include "Geometry.hpp"
 #include "Polygon.hpp"
 #include "ClipperUtils.hpp"
 #include "Print.hpp"
 #include "MTUtils.hpp"
+#include "TriangleSelector.hpp"
 
 #include "Format/AMF.hpp"
 #include "Format/OBJ.hpp"
@@ -22,7 +25,9 @@
 #include "SVG.hpp"
 #include <Eigen/Dense>
 #include "GCodeWriter.hpp"
+#if !ENABLE_GCODE_VIEWER
 #include "GCode/PreviewData.hpp"
+#endif // !ENABLE_GCODE_VIEWER
 
 namespace Slic3r {
 
@@ -115,13 +120,13 @@ Model Model::read_from_file(const std::string& input_file, DynamicPrintConfig* c
     else if (boost::algorithm::iends_with(input_file, ".prusa"))
         result = load_prus(input_file.c_str(), &model);
     else
-        throw std::runtime_error("Unknown file format. Input file must have .stl, .obj, .amf(.xml) or .prusa extension.");
+        throw Slic3r::RuntimeError("Unknown file format. Input file must have .stl, .obj, .amf(.xml) or .prusa extension.");
 
     if (! result)
-        throw std::runtime_error("Loading of a model file failed.");
+        throw Slic3r::RuntimeError("Loading of a model file failed.");
 
     if (model.objects.empty())
-        throw std::runtime_error("The supplied file couldn't be read because it's empty");
+        throw Slic3r::RuntimeError("The supplied file couldn't be read because it's empty");
     
     for (ModelObject *o : model.objects)
         o->input_file = input_file;
@@ -145,13 +150,13 @@ Model Model::read_from_archive(const std::string& input_file, DynamicPrintConfig
     else if (boost::algorithm::iends_with(input_file, ".zip.amf"))
         result = load_amf(input_file.c_str(), config, &model, check_version);
     else
-        throw std::runtime_error("Unknown file format. Input file must have .3mf or .zip.amf extension.");
+        throw Slic3r::RuntimeError("Unknown file format. Input file must have .3mf or .zip.amf extension.");
 
     if (!result)
-        throw std::runtime_error("Loading of a model file failed.");
+        throw Slic3r::RuntimeError("Loading of a model file failed.");
 
     if (model.objects.empty())
-        throw std::runtime_error("The supplied file couldn't be read because it's empty");
+        throw Slic3r::RuntimeError("The supplied file couldn't be read because it's empty");
 
     for (ModelObject *o : model.objects)
     {
@@ -358,113 +363,6 @@ TriangleMesh Model::mesh() const
     return mesh;
 }
 
-static bool _arrange(const Pointfs &sizes, coordf_t dist, const BoundingBoxf* bb, Pointfs &out)
-{
-    if (sizes.empty())
-        // return if the list is empty or the following call to BoundingBoxf constructor will lead to a crash
-        return true;
-
-    // we supply unscaled data to arrange()
-    bool result = Slic3r::Geometry::arrange(
-        sizes.size(),               // number of parts
-        BoundingBoxf(sizes).max,    // width and height of a single cell
-        dist,                       // distance between cells
-        bb,                         // bounding box of the area to fill
-        out                         // output positions
-    );
-
-    if (!result && bb != nullptr) {
-        // Try to arrange again ignoring bb
-        result = Slic3r::Geometry::arrange(
-            sizes.size(),               // number of parts
-            BoundingBoxf(sizes).max,    // width and height of a single cell
-            dist,                       // distance between cells
-            nullptr,                    // bounding box of the area to fill
-            out                         // output positions
-        );
-    }
-    
-    return result;
-}
-
-/*  arrange objects preserving their instance count
-    but altering their instance positions */
-bool Model::arrange_objects(const PrintBase *print, const BoundingBoxf* bb)
-{    
-    size_t count = 0;
-    for (auto obj : objects) count += obj->instances.size();
-    
-    arrangement::ArrangePolygons input;
-    ModelInstancePtrs instances;
-    input.reserve(count);
-    instances.reserve(count);
-    for (ModelObject *mo : objects)
-        for (ModelInstance *minst : mo->instances) {
-            input.emplace_back(minst->get_arrange_polygon(print));
-            instances.emplace_back(minst);
-        }
-    
-    arrangement::BedShapeHint bedhint;
-    coord_t bedwidth = 0;
-    
-    if (bb) {
-        bedwidth = scaled(bb->size().x());
-        bedhint = arrangement::BedShapeHint(
-            BoundingBox(scaled(bb->min), scaled(bb->max)));
-    }
-
-    arrangement::arrange(input, scale_(1), bedhint);
-    
-    bool ret = true;
-    coord_t stride = bedwidth + bedwidth / 5;
-    
-    for(size_t i = 0; i < input.size(); ++i) {
-        if (input[i].bed_idx != 0) ret = false;
-        if (input[i].bed_idx >= 0) {
-            input[i].translation += Vec2crd{input[i].bed_idx * stride, 0};
-            instances[i]->apply_arrange_result(input[i].translation,
-                                               input[i].rotation);
-        }
-    }
-    
-    return ret;
-}
-
-// Duplicate the entire model preserving instance relative positions.
-void Model::duplicate(size_t copies_num, coordf_t dist, const BoundingBoxf* bb)
-{
-    Pointfs model_sizes(copies_num-1, to_2d(this->bounding_box().size()));
-    Pointfs positions;
-    if (! _arrange(model_sizes, dist, bb, positions))
-        throw std::invalid_argument("Cannot duplicate part as the resulting objects would not fit on the print bed.\n");
-    
-    // note that this will leave the object count unaltered
-    
-    for (ModelObject *o : this->objects) {
-        // make a copy of the pointers in order to avoid recursion when appending their copies
-        ModelInstancePtrs instances = o->instances;
-        for (const ModelInstance *i : instances) {
-            for (const Vec2d &pos : positions) {
-                ModelInstance *instance = o->add_instance(*i);
-                instance->set_offset(instance->get_offset() + Vec3d(pos(0), pos(1), 0.0));
-            }
-        }
-        o->invalidate_bounding_box();
-    }
-}
-
-/*  this will append more instances to each object */
-void Model::duplicate_objects(size_t copies_num, coordf_t dist, const BoundingBoxf* bb)
-{
-    for (ModelObject *o : this->objects) {
-        // make a copy of the pointers in order to avoid recursion when appending their copies
-        ModelInstancePtrs instances = o->instances;
-        for (const ModelInstance *i : instances)
-            for (size_t k = 2; k <= copies_num; ++ k)
-                o->add_instance(*i);
-    }
-}
-
 void Model::duplicate_objects_grid(size_t x, size_t y, coordf_t dist)
 {
     if (this->objects.size() > 1) throw "Grid duplication is not supported with multiple objects";
@@ -555,6 +453,26 @@ void Model::convert_multipart_object(unsigned int max_extruders)
 
     this->clear_objects();
     this->objects.push_back(object);
+}
+
+bool Model::looks_like_imperial_units() const
+{
+    if (this->objects.size() == 0)
+        return false;
+
+    for (ModelObject* obj : this->objects)
+        if (obj->get_object_stl_stats().volume < 9.0) // 9 = 3*3*3;
+            return true;
+
+    return false;
+}
+
+void Model::convert_from_imperial_units()
+{
+    double in_to_mm = 25.4;
+    for (ModelObject* obj : this->objects)
+        if (obj->get_object_stl_stats().volume < 9.0) // 9 = 3*3*3;
+            obj->scale_mesh_after_creation(Vec3d(in_to_mm, in_to_mm, in_to_mm));
 }
 
 void Model::adjust_min_z()
@@ -862,6 +780,38 @@ TriangleMesh ModelObject::raw_mesh() const
     return mesh;
 }
 
+// Non-transformed (non-rotated, non-scaled, non-translated) sum of non-modifier object volumes.
+// Currently used by ModelObject::mesh(), to calculate the 2D envelope for 2D plater
+// and to display the object statistics at ModelObject::print_info().
+indexed_triangle_set ModelObject::raw_indexed_triangle_set() const
+{
+    size_t num_vertices = 0;
+    size_t num_faces    = 0;
+    for (const ModelVolume *v : this->volumes)
+        if (v->is_model_part()) {
+            num_vertices += v->mesh().its.vertices.size();
+            num_faces    += v->mesh().its.indices.size();
+        }
+    indexed_triangle_set out;
+    out.vertices.reserve(num_vertices);
+    out.indices.reserve(num_faces);
+    for (const ModelVolume *v : this->volumes)
+        if (v->is_model_part()) {
+            size_t i = out.vertices.size();
+            size_t j = out.indices.size();
+            append(out.vertices, v->mesh().its.vertices);
+            append(out.indices,  v->mesh().its.indices);
+            auto m = v->get_matrix();
+            for (; i < out.vertices.size(); ++ i)
+                out.vertices[i] = (m * out.vertices[i].cast<double>()).cast<float>().eval();
+            if (v->is_left_handed()) {
+                for (; j < out.indices.size(); ++ j)
+                    std::swap(out.indices[j][0], out.indices[j][1]);
+            }
+        }
+    return out;
+}
+
 // Non-transformed (non-rotated, non-scaled, non-translated) sum of all object volumes.
 TriangleMesh ModelObject::full_raw_mesh() const
 {
@@ -903,7 +853,7 @@ const BoundingBoxf3& ModelObject::raw_bounding_box() const
         m_raw_bounding_box_valid = true;
         m_raw_bounding_box.reset();
         if (this->instances.empty())
-            throw std::invalid_argument("Can't call raw_bounding_box() with no instances");
+            throw Slic3r::InvalidArgument("Can't call raw_bounding_box() with no instances");
 
         const Transform3d& inst_matrix = this->instances.front()->get_transformation().get_matrix(true);
         for (const ModelVolume *v : this->volumes)
@@ -1077,6 +1027,57 @@ void ModelObject::scale_mesh_after_creation(const Vec3d &versor)
     this->invalidate_bounding_box();
 }
 
+void ModelObject::convert_units(ModelObjectPtrs& new_objects, bool from_imperial, std::vector<int> volume_idxs)
+{
+    BOOST_LOG_TRIVIAL(trace) << "ModelObject::convert_units - start";
+
+    ModelObject* new_object = new_clone(*this);
+
+    double koef = from_imperial ? 25.4 : 0.0393700787;
+    const Vec3d versor = Vec3d(koef, koef, koef);
+
+    new_object->set_model(nullptr);
+    new_object->sla_support_points.clear();
+    new_object->sla_drain_holes.clear();
+    new_object->sla_points_status = sla::PointsStatus::NoPoints;
+    new_object->clear_volumes();
+    new_object->input_file.clear();
+
+    int vol_idx = 0;
+    for (ModelVolume* volume : volumes)
+    {
+        volume->m_supported_facets.clear();
+        volume->m_seam_facets.clear();
+        if (!volume->mesh().empty()) {
+            TriangleMesh mesh(volume->mesh());
+            mesh.require_shared_vertices();
+
+            ModelVolume* vol = new_object->add_volume(mesh);
+            vol->name = volume->name;
+            // Don't copy the config's ID.
+            vol->config.assign_config(volume->config);
+            assert(vol->config.id().valid());
+            assert(vol->config.id() != volume->config.id());
+            vol->set_material(volume->material_id(), *volume->material());
+
+            // Perform conversion
+            if (volume_idxs.empty() || 
+                std::find(volume_idxs.begin(), volume_idxs.end(), vol_idx) != volume_idxs.end()) {
+                vol->scale_geometry_after_creation(versor);
+                vol->set_offset(versor.cwiseProduct(vol->get_offset()));
+            }
+            else
+                vol->set_offset(volume->get_offset());
+        }
+        vol_idx ++;
+    }
+    new_object->invalidate_bounding_box();
+
+    new_objects.push_back(new_object);
+
+    BOOST_LOG_TRIVIAL(trace) << "ModelObject::convert_units - end";
+}
+
 size_t ModelObject::materials_count() const
 {
     std::set<t_model_material_id> material_ids;
@@ -1151,6 +1152,9 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
     for (ModelVolume *volume : volumes) {
         const auto volume_matrix = volume->get_matrix();
 
+        volume->m_supported_facets.clear();
+        volume->m_seam_facets.clear();
+
         if (! volume->is_model_part()) {
             // Modifiers are not cut, but we still need to add the instance transformation
             // to the modifier volume transformation to preserve their shape properly.
@@ -1194,7 +1198,7 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
                 ModelVolume* vol = upper->add_volume(upper_mesh);
                 vol->name	= volume->name;
                 // Don't copy the config's ID.
-				static_cast<DynamicPrintConfig&>(vol->config) = static_cast<const DynamicPrintConfig&>(volume->config);
+                vol->config.assign_config(volume->config);
     			assert(vol->config.id().valid());
 	    		assert(vol->config.id() != volume->config.id());
                 vol->set_material(volume->material_id(), *volume->material());
@@ -1203,7 +1207,7 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
                 ModelVolume* vol = lower->add_volume(lower_mesh);
                 vol->name	= volume->name;
                 // Don't copy the config's ID.
-				static_cast<DynamicPrintConfig&>(vol->config) = static_cast<const DynamicPrintConfig&>(volume->config);
+                vol->config.assign_config(volume->config);
     			assert(vol->config.id().valid());
 	    		assert(vol->config.id() != volume->config.id());
                 vol->set_material(volume->material_id(), *volume->material());
@@ -1281,7 +1285,7 @@ void ModelObject::split(ModelObjectPtrs* new_objects)
         ModelObject* new_object = m_model->add_object();    
         new_object->name   = this->name;
         // Don't copy the config's ID.
-		static_cast<DynamicPrintConfig&>(new_object->config) = static_cast<const DynamicPrintConfig&>(this->config);
+		new_object->config.assign_config(this->config);
 		assert(new_object->config.id().valid());
 		assert(new_object->config.id() != this->config.id());
         new_object->instances.reserve(this->instances.size());
@@ -1303,6 +1307,27 @@ void ModelObject::split(ModelObjectPtrs* new_objects)
     }
     
     return;
+}
+
+void ModelObject::merge()
+{
+    if (this->volumes.size() == 1) {
+        // We can't merge meshes if there's just one volume
+        return;
+    }
+
+    TriangleMesh mesh;
+
+    for (ModelVolume* volume : volumes)
+        if (!volume->mesh().empty())
+            mesh.merge(volume->mesh());
+    mesh.repair();
+
+    this->clear_volumes();
+    ModelVolume* vol = this->add_volume(mesh);
+
+    if (!vol)
+        return;
 }
 
 // Support for non-uniform scaling of instances. If an instance is rotated by angles, which are not multiples of ninety degrees,
@@ -1417,8 +1442,8 @@ unsigned int ModelObject::check_instances_print_volume_state(const BoundingBoxf3
                     inside_outside |= OUTSIDE;
             }
         model_instance->print_volume_state = 
-            (inside_outside == (INSIDE | OUTSIDE)) ? ModelInstance::PVS_Partly_Outside :
-            (inside_outside == INSIDE) ? ModelInstance::PVS_Inside : ModelInstance::PVS_Fully_Outside;
+            (inside_outside == (INSIDE | OUTSIDE)) ? ModelInstancePVS_Partly_Outside :
+            (inside_outside == INSIDE) ? ModelInstancePVS_Inside : ModelInstancePVS_Fully_Outside;
         if (inside_outside == INSIDE)
             ++ num_printable;
     }
@@ -1498,9 +1523,6 @@ stl_stats ModelObject::get_object_stl_stats() const
     // fill full_stats from all objet's meshes
     for (ModelVolume* volume : this->volumes)
     {
-        if (volume->id() == this->volumes[0]->id())
-            continue;
-
         const stl_stats& stats = volume->mesh().stl.stats;
 
         // initialize full_stats (for repaired errors)
@@ -1845,7 +1867,6 @@ arrangement::ArrangePolygon ModelInstance::get_arrange_polygon(const PrintBase *
         {
             //grow
             double dist = print->config().min_object_distance(&print->full_print_config());
-            std::cout << "min_object_distance = " << dist << "\n";
             pp = offset(pp, scale_(dist));
             //simplify
             if (!pp.empty())
@@ -1861,6 +1882,114 @@ arrangement::ArrangePolygon ModelInstance::get_arrange_polygon(const PrintBase *
     ret.rotation     = get_rotation(Z);
 
     return ret;
+}
+
+//
+//arrangement::ArrangePolygon ModelInstance::get_arrange_polygon() const
+//{
+//    static const double SIMPLIFY_TOLERANCE_MM = 0.1;
+//
+//    Vec3d rotation = get_rotation();
+//    rotation.z() = 0.;
+//    Transform3d trafo_instance =
+//        Geometry::assemble_transform(Vec3d::Zero(), rotation,
+//            get_scaling_factor(), get_mirror());
+//
+//    Polygon p = get_object()->convex_hull_2d(trafo_instance);
+//
+//    assert(!p.points.empty());
+//
+//    // this may happen for malformed models, see:
+//    // https://github.com/prusa3d/PrusaSlicer/issues/2209
+//    if (!p.points.empty()) {
+//        Polygons pp{ p };
+//        pp = p.simplify(scaled<double>(SIMPLIFY_TOLERANCE_MM));
+//        if (!pp.empty()) p = pp.front();
+//    }
+//
+//    arrangement::ArrangePolygon ret;
+//    ret.poly.contour = std::move(p);
+//    ret.translation = Vec2crd{ scaled(get_offset(X)), scaled(get_offset(Y)) };
+//    ret.rotation = get_rotation(Z);
+//
+//    return ret;
+//}
+
+indexed_triangle_set FacetsAnnotation::get_facets(const ModelVolume& mv, EnforcerBlockerType type) const
+{
+    TriangleSelector selector(mv.mesh());
+    selector.deserialize(m_data);
+    indexed_triangle_set out = selector.get_facets(type);
+    return out;
+}
+
+bool FacetsAnnotation::set(const TriangleSelector& selector)
+{
+    std::map<int, std::vector<bool>> sel_map = selector.serialize();
+    if (sel_map != m_data) {
+        m_data = sel_map;
+        this->touch();
+        return true;
+    }
+    return false;
+}
+
+void FacetsAnnotation::clear()
+{
+    m_data.clear();
+    this->reset_timestamp();
+}
+
+// Following function takes data from a triangle and encodes it as string
+// of hexadecimal numbers (one digit per triangle). Used for 3MF export,
+// changing it may break backwards compatibility !!!!!
+std::string FacetsAnnotation::get_triangle_as_string(int triangle_idx) const
+{
+    std::string out;
+
+    auto triangle_it = m_data.find(triangle_idx);
+    if (triangle_it != m_data.end()) {
+        const std::vector<bool>& code = triangle_it->second;
+        int offset = 0;
+        while (offset < int(code.size())) {
+            int next_code = 0;
+            for (int i=3; i>=0; --i) {
+                next_code = next_code << 1;
+                next_code |= int(code[offset + i]);
+            }
+            offset += 4;
+
+            assert(next_code >=0 && next_code <= 15);
+            char digit = next_code < 10 ? next_code + '0' : (next_code-10)+'A';
+            out.insert(out.begin(), digit);
+        }
+    }
+    return out;
+}
+
+// Recover triangle splitting & state from string of hexadecimal values previously
+// generated by get_triangle_as_string. Used to load from 3MF.
+void FacetsAnnotation::set_triangle_from_string(int triangle_id, const std::string& str)
+{
+    assert(! str.empty());
+    m_data[triangle_id] = std::vector<bool>(); // zero current state or create new
+    std::vector<bool>& code = m_data[triangle_id];
+
+    for (auto it = str.crbegin(); it != str.crend(); ++it) {
+        const char ch = *it;
+        int dec = 0;
+        if (ch >= '0' && ch<='9')
+            dec = int(ch - '0');
+        else if (ch >='A' && ch <= 'F')
+            dec = 10 + int(ch - 'A');
+        else
+            assert(false);
+
+        // Convert to binary and append into code.
+        for (int i=0; i<4; ++i) {
+            code.insert(code.end(), bool(dec & (1 << i)));
+        }
+    }
 }
 
 // Test whether the two models contain the same number of ModelObjects with the same set of IDs
@@ -1926,6 +2055,26 @@ bool model_volume_list_changed(const ModelObject &model_object_old, const ModelO
     return false;
 }
 
+bool model_custom_supports_data_changed(const ModelObject& mo, const ModelObject& mo_new) {
+    assert(! model_volume_list_changed(mo, mo_new, ModelVolumeType::MODEL_PART));
+    assert(mo.volumes.size() == mo_new.volumes.size());
+    for (size_t i=0; i<mo.volumes.size(); ++i) {
+        if (! mo_new.volumes[i]->m_supported_facets.timestamp_matches(mo.volumes[i]->m_supported_facets))
+            return true;
+    }
+    return false;
+}
+
+bool model_custom_seam_data_changed(const ModelObject& mo, const ModelObject& mo_new) {
+    assert(! model_volume_list_changed(mo, mo_new, ModelVolumeType::MODEL_PART));
+    assert(mo.volumes.size() == mo_new.volumes.size());
+    for (size_t i=0; i<mo.volumes.size(); ++i) {
+        if (! mo_new.volumes[i]->m_seam_facets.timestamp_matches(mo.volumes[i]->m_seam_facets))
+            return true;
+    }
+    return false;
+}
+
 extern bool model_has_multi_part_objects(const Model &model)
 {
     for (const ModelObject *model_object : model.objects)
@@ -1936,7 +2085,7 @@ extern bool model_has_multi_part_objects(const Model &model)
 
 extern bool model_has_advanced_features(const Model &model)
 {
-	auto config_is_advanced = [](const DynamicPrintConfig &config) {
+	auto config_is_advanced = [](const ModelConfig &config) {
         return ! (config.empty() || (config.size() == 1 && config.cbegin()->first == "extruder"));
 	};
     for (const ModelObject *model_object : model.objects) {
@@ -2006,6 +2155,7 @@ void check_model_ids_equal(const Model &model1, const Model &model2)
         }
     }
 }
+
 #endif /* NDEBUG */
 
 }

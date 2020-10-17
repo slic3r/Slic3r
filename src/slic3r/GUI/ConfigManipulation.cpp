@@ -2,7 +2,8 @@
 #include "ConfigManipulation.hpp"
 #include "I18N.hpp"
 #include "GUI_App.hpp"
-#include "PresetBundle.hpp"
+#include "libslic3r/Model.hpp"
+#include "libslic3r/PresetBundle.hpp"
 
 #include <wx/msgdlg.h>
 
@@ -27,9 +28,7 @@ void ConfigManipulation::toggle_field(const std::string& opt_key, const bool tog
         if (local_config->option(opt_key) == nullptr)
             return;
     }
-    Field* field = get_field(opt_key, opt_index);
-    if (field==nullptr) return;
-    field->toggle(toggle);
+    cb_toggle_field(opt_key, toggle, opt_index);
 }
 
 void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, const bool is_global_config)
@@ -97,25 +96,25 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
         auto answer = dialog.ShowModal();
 
         if (!is_global_config) {
-            if (this->local_config->optptr("spiral_vase"))
+            if (this->local_config->get().optptr("spiral_vase"))
                 new_conf.set_key_value("spiral_vase", new ConfigOptionBool(false));
-            else if (this->local_config->optptr("perimeters"))
+            else if (this->local_config->get().optptr("perimeters"))
                 new_conf.set_key_value("perimeters", new ConfigOptionInt(1));
-            else if (this->local_config->optptr("top_solid_layers"))
+            else if (this->local_config->get().optptr("top_solid_layers"))
                 new_conf.set_key_value("top_solid_layers", new ConfigOptionInt(0));
-            else if (this->local_config->optptr("fill_density"))
+            else if (this->local_config->get().optptr("fill_density"))
                 new_conf.set_key_value("fill_density", new ConfigOptionPercent(0));
-            else if (this->local_config->optptr("support_material"))
+            else if (this->local_config->get().optptr("support_material"))
                 new_conf.set_key_value("support_material", new ConfigOptionBool(false));
-            else if (this->local_config->optptr("support_material_enforce_layers"))
+            else if (this->local_config->get().optptr("support_material_enforce_layers"))
                 new_conf.set_key_value("support_material_enforce_layers", new ConfigOptionInt(0));
-            else if (this->local_config->optptr("exact_last_layer_height"))
+            else if (this->local_config->get().optptr("exact_last_layer_height"))
                 new_conf.set_key_value("exact_last_layer_height", new ConfigOptionBool(false));
-            else if (this->local_config->optptr("ensure_vertical_shell_thickness"))
+            else if (this->local_config->get().optptr("ensure_vertical_shell_thickness"))
                 new_conf.set_key_value("ensure_vertical_shell_thickness", new ConfigOptionBool(false));
-            else if (this->local_config->optptr("infill_dense"))
+            else if (this->local_config->get().optptr("infill_dense"))
                 new_conf.set_key_value("infill_dense", new ConfigOptionBool(false));
-            else if (this->local_config->optptr("extra_perimeters"))
+            else if (this->local_config->get().optptr("extra_perimeters"))
                 new_conf.set_key_value("extra_perimeters", new ConfigOptionBool(false));
             this->local_config->apply_only(new_conf, this->local_config->keys(), true);
         } else if (answer == wxID_YES) {
@@ -151,15 +150,15 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
         DynamicPrintConfig new_conf = *config;
         auto answer = dialog.ShowModal();
         if (!is_global_config) {
-            if (this->local_config->optptr("wipe_tower"))
+            if (this->local_config->get().optptr("wipe_tower"))
                 new_conf.set_key_value("wipe_tower", new ConfigOptionBool(false));
-            else if (this->local_config->optptr("support_material_extruder"))
+            else if (this->local_config->get().optptr("support_material_extruder"))
                 new_conf.set_key_value("support_material_extruder", new ConfigOptionInt(0));
-            else if (this->local_config->optptr("support_material_interface_extruder"))
+            else if (this->local_config->get().optptr("support_material_interface_extruder"))
                 new_conf.set_key_value("support_material_interface_extruder", new ConfigOptionInt(0));
-            else if (this->local_config->optptr("support_material_contact_distance_type"))
+            else if (this->local_config->get().optptr("support_material_contact_distance_type"))
                 new_conf.set_key_value("support_material_contact_distance_type", new ConfigOptionEnum<SupportZDistanceType>(zdNone));
-            else if (this->local_config->optptr("support_material"))
+            else if (this->local_config->get().optptr("support_material"))
                 new_conf.set_key_value("support_material", new ConfigOptionBool(false)); 
             this->local_config->apply_only(new_conf, this->local_config->keys(), true);
         } else if (answer == wxID_YES) {
@@ -183,13 +182,13 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
         DynamicPrintConfig new_conf = *config;
         auto answer = dialog.ShowModal();
         if (!is_global_config) {
-            if (this->local_config->optptr("wipe_tower"))
+            if (this->local_config->get().optptr("wipe_tower"))
                 new_conf.set_key_value("wipe_tower", new ConfigOptionBool(false));
-            else if (this->local_config->optptr("support_material_synchronize_layers"))
+            else if (this->local_config->get().optptr("support_material_synchronize_layers"))
                 new_conf.set_key_value("support_material_synchronize_layers", new ConfigOptionBool(true));
-            else if (this->local_config->optptr("support_material_contact_distance_type"))
+            else if (this->local_config->get().optptr("support_material_contact_distance_type"))
                 new_conf.set_key_value("support_material_contact_distance_type", new ConfigOptionEnum<SupportZDistanceType>(zdFilament));
-            else if (this->local_config->optptr("support_material"))
+            else if (this->local_config->get().optptr("support_material"))
                     new_conf.set_key_value("support_material", new ConfigOptionBool(false));
             this->local_config->apply_only(new_conf, this->local_config->keys(), true);
         } else if (answer == wxID_YES) {
@@ -465,6 +464,10 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     toggle_field("support_material_extruder", have_support_material || have_skirt);
     toggle_field("support_material_speed", have_support_material || have_brim || have_skirt);
 
+    bool has_ironing = config->opt_bool("ironing");
+    for (auto el : { "ironing_type", "ironing_flowrate", "ironing_spacing", "ironing_speed" })
+    	toggle_field(el, has_ironing);
+
     bool have_sequential_printing = config->opt_bool("complete_objects");
     for (auto el : { /*"extruder_clearance_radius", "extruder_clearance_height",*/ "complete_objects_one_skirt",
 		"complete_objects_sort"})
@@ -474,7 +477,8 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     toggle_field("standby_temperature_delta", have_ooze_prevention);
 
     bool have_wipe_tower = config->opt_bool("wipe_tower");
-    for (auto el : { "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_bridging", "wipe_tower_brim" })
+    for (auto el : { "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle",
+                     "wipe_tower_bridging", "wipe_tower_brim", "wipe_tower_no_sparse_layers", "single_extruder_multi_material_priming" })
         toggle_field(el, have_wipe_tower);
 
 
@@ -528,6 +532,7 @@ void ConfigManipulation::toggle_print_sla_options(DynamicPrintConfig* config)
     toggle_field("support_head_penetration", supports_en);
     toggle_field("support_head_width", supports_en);
     toggle_field("support_pillar_diameter", supports_en);
+    toggle_field("support_small_pillar_diameter_percent", supports_en);
     toggle_field("support_max_bridges_on_pillar", supports_en);
     toggle_field("support_pillar_connection_mode", supports_en);
     toggle_field("support_buildplate_only", supports_en);

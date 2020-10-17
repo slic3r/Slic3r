@@ -1,25 +1,34 @@
 #include "FreeCADDialog.hpp"
 
 #include "I18N.hpp"
+#include "libslic3r/AppConfig.hpp"
+#include "libslic3r/Model.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Format/STL.hpp"
 #include "GUI.hpp"
+#include "GUI_Utils.hpp"
 #include "GUI_ObjectList.hpp"
+#include "Plater.hpp"
 #include "slic3r/Utils/Http.hpp"
-#include "AppConfig.hpp"
 #include "Tab.hpp"
+
+#include "MainFrame.hpp"
+#include "wxExtensions.hpp"
 
 #include <iostream>
 #include <ctime>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <wx/wx.h>
 #include <wx/scrolwin.h>
 #include <wx/display.h>
 #include <wx/file.h>
-#include <wx/gbsizer.h>
+#include <wx/html/htmlwin.h>
+#include <wx/textctrl.h>
 #include "wxExtensions.hpp"
 
+#include <boost/asio.hpp>
 #include <boost/locale.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
@@ -28,6 +37,13 @@
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+
+// hack for process.hpp : it uses pid_t to set it as alias of int, but vc_x64_lib (wx thingy) as a '#define pid_t int'
+// and so boost/process has a line 'typedef int int'instead of 'typedef int pid_t' that makes it crash
+// note: don't put it in a header, as it can create problems. Here it's safe enough to be used, as it's just applied for the process.hpp file and this source code.
+#define pid_t pid_t
+#include <boost/process.hpp>
+
 
 #if ENABLE_SCROLLABLE
 static wxSize get_screen_size(wxWindow* window)
@@ -40,6 +56,16 @@ static wxSize get_screen_size(wxWindow* window)
 
 namespace Slic3r {
 namespace GUI {
+
+    //now that we have process.hpp, we can define the ExecVar
+    class ExecVar {
+    public:
+        boost::process::opstream pyin;
+        boost::asio::io_service ios;
+        std::future<std::string> data_out;
+        std::future<std::string> data_err;
+        std::unique_ptr<boost::process::child> process;
+};
 
     //TODO: auto tab
 
@@ -134,6 +160,11 @@ std::string create_help_text() {
     ss << "rotate_extrude(angle)(obj_2D)\n";
     ss << "path_extrude(frenet,transition)(path_1D, patron_2D)\n";
     return ss.str();
+}
+
+FreeCADDialog::~FreeCADDialog() {
+    if (exec_var != nullptr)
+        delete exec_var;
 }
 
 FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
@@ -806,7 +837,9 @@ void FreeCADDialog::test_update_script_file(std::string &json) {
 
 bool FreeCADDialog::init_start_python() {
     //reinit
-    exec_var.reset(new ExecVar());
+    if (exec_var != nullptr)
+        delete exec_var;
+    exec_var = new ExecVar();
 
     // Get the freecad path (python path)
     boost::filesystem::path pythonpath(gui_app->app_config->get("freecad_path"));

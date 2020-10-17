@@ -145,11 +145,13 @@ public:
 
     Field(const ConfigOptionDef& opt, const t_config_option_key& id) : m_opt(opt), m_opt_id(id) {};
     Field(wxWindow* parent, const ConfigOptionDef& opt, const t_config_option_key& id) : m_parent(parent), m_opt(opt), m_opt_id(id) {};
-    virtual ~Field() {}
+    virtual ~Field();
 
     /// If you don't know what you are getting back, check both methods for nullptr. 
     virtual wxSizer*	getSizer()  { return nullptr; }
     virtual wxWindow*	getWindow() { return nullptr; }
+
+	wxStaticText*		getLabel()	{ return m_Label; }
 
 	bool				is_matched(const std::string& string, const std::string& pattern);
 	void				get_value_by_opt_type(wxString& str, const bool check_value = true);
@@ -221,6 +223,7 @@ public:
     }
 
     virtual void msw_rescale(bool rescale_sidetext = false);
+    void sys_color_changed();
 
     bool get_enter_pressed() const { return bEnterPressed; }
     void set_enter_pressed(bool pressed) { bEnterPressed = pressed; }
@@ -229,6 +232,8 @@ public:
 	static int def_width()			;
 	static int def_width_wider()	;
 	static int def_width_thinner()	;
+
+	BlinkingBitmap*			blinking_bitmap() const { return m_blinking_bmp;}
 
 protected:
 	RevertButton*			m_Undo_btn = nullptr;
@@ -239,6 +244,8 @@ protected:
 	// Bitmap and Tooltip text for m_Undo_to_sys_btn. The wxButton will be updated only if the new wxBitmap pointer differs from the currently rendered one.
     const ScalableBitmap*   m_undo_to_sys_bitmap = nullptr;
 	const wxString*		    m_undo_to_sys_tooltip = nullptr;
+
+	BlinkingBitmap*			m_blinking_bmp{ nullptr };
 
 	wxStaticText*		m_Label = nullptr;
 	// Color for Label. The wxColour will be updated only if the new wxColour pointer differs from the currently rendered one.
@@ -450,6 +457,7 @@ public:
 	wxTextCtrl*		y_textctrl{ nullptr };
 
 	void			BUILD()  override;
+	bool			value_was_changed(wxTextCtrl* win);
     // Propagate value from field to the OptionGroupe and Config after kill_focus/ENTER
     void            propagate_value(wxTextCtrl* win);
 	void			set_value(const Vec2d& value, bool change_event = false);
@@ -465,6 +473,7 @@ public:
 		x_textctrl->Disable();
 		y_textctrl->Disable(); }
 	wxSizer*		getSizer() override { return sizer; }
+	wxWindow*		getWindow() override { return dynamic_cast<wxWindow*>(x_textctrl); }
 };
 
 class StaticText : public Field {

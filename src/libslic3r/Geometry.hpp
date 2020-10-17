@@ -11,8 +11,6 @@
 // Serialization through the Cereal library
 #include <cereal/access.hpp>
 
-#include "boost/polygon/voronoi.hpp"
-
 namespace ClipperLib {
 class PolyNode;
 using PolyNodes = std::vector<PolyNode*>;
@@ -125,32 +123,94 @@ inline bool segment_segment_intersection(const Vec2d &p1, const Vec2d &v1, const
     return true;
 }
 
-
-inline int segments_could_intersect(
+inline bool segments_intersect(
 	const Slic3r::Point &ip1, const Slic3r::Point &ip2, 
 	const Slic3r::Point &jp1, const Slic3r::Point &jp2)
-{
+{    
+    assert(ip1 != ip2);
+    assert(jp1 != jp2);
+
+    auto segments_could_intersect = [](
+        const Slic3r::Point &ip1, const Slic3r::Point &ip2,
+        const Slic3r::Point &jp1, const Slic3r::Point &jp2) -> std::pair<int, int>
+    {
 	Vec2i64 iv   = (ip2 - ip1).cast<int64_t>();
 	Vec2i64 vij1 = (jp1 - ip1).cast<int64_t>();
 	Vec2i64 vij2 = (jp2 - ip1).cast<int64_t>();
 	int64_t tij1 = cross2(iv, vij1);
 	int64_t tij2 = cross2(iv, vij2);
-	int     sij1 = (tij1 > 0) ? 1 : ((tij1 < 0) ? -1 : 0); // signum
-	int     sij2 = (tij2 > 0) ? 1 : ((tij2 < 0) ? -1 : 0);
-	return sij1 * sij2;
+        return std::make_pair(
+            // signum
+            (tij1 > 0) ? 1 : ((tij1 < 0) ? -1 : 0),
+            (tij2 > 0) ? 1 : ((tij2 < 0) ? -1 : 0));
+    };
+
+    std::pair<int, int> sign1 = segments_could_intersect(ip1, ip2, jp1, jp2);
+    std::pair<int, int> sign2 = segments_could_intersect(jp1, jp2, ip1, ip2);
+    int                 test1 = sign1.first * sign1.second;
+    int                 test2 = sign2.first * sign2.second;
+    if (test1 <= 0 && test2 <= 0) {
+        // The segments possibly intersect. They may also be collinear, but not intersect.
+        if (test1 != 0 || test2 != 0)
+            // Certainly not collinear, then the segments intersect.
+            return true;
+        // If the first segment is collinear with the other, the other is collinear with the first segment.
+        assert((sign1.first == 0 && sign1.second == 0) == (sign2.first == 0 && sign2.second == 0));
+        if (sign1.first == 0 && sign1.second == 0) {
+            // The segments are certainly collinear. Now verify whether they overlap.
+            Slic3r::Point vi = ip2 - ip1;
+            // Project both on the longer coordinate of vi.
+            int axis = std::abs(vi.x()) > std::abs(vi.y()) ? 0 : 1;
+            coord_t i = ip1(axis);
+            coord_t j = ip2(axis);
+            coord_t k = jp1(axis);
+            coord_t l = jp2(axis);
+            if (i > j)
+                std::swap(i, j);
+            if (k > l)
+                std::swap(k, l);
+            return (k >= i && k <= j) || (i >= k && i <= l);
+        }
+    }
+    return false;
 }
 
-inline bool segments_intersect(
-	const Slic3r::Point &ip1, const Slic3r::Point &ip2, 
-	const Slic3r::Point &jp1, const Slic3r::Point &jp2)
+template<typename T> inline T foot_pt(const T &line_pt, const T &line_dir, const T &pt)
 {
-	return segments_could_intersect(ip1, ip2, jp1, jp2) <= 0 && 
-		   segments_could_intersect(jp1, jp2, ip1, ip2) <= 0;
+    T      v   = pt - line_pt;
+    auto   l2  = line_dir.squaredNorm();
+    auto   t   = (l2 == 0) ? 0 : v.dot(line_dir) / l2;
+    return line_pt + line_dir * t;
+}
+
+inline Vec2d foot_pt(const Line &iline, const Point &ipt)
+{
+    return foot_pt<Vec2d>(iline.a.cast<double>(), (iline.b - iline.a).cast<double>(), ipt.cast<double>());
+}
+
+template<typename T> inline auto ray_point_distance_squared(const T &ray_pt, const T &ray_dir, const T &pt)
+{
+    return (foot_pt(ray_pt, ray_dir, pt) - pt).squaredNorm();
+}
+
+template<typename T> inline auto ray_point_distance(const T &ray_pt, const T &ray_dir, const T &pt)
+{
+    return (foot_pt(ray_pt, ray_dir, pt) - pt).norm();
+}
+
+inline double ray_point_distance_squared(const Line &iline, const Point &ipt)
+{
+    return (foot_pt(iline, ipt) - ipt.cast<double>()).squaredNorm();
+}
+
+inline double ray_point_distance(const Line &iline, const Point &ipt)
+{
+    return (foot_pt(iline, ipt) - ipt.cast<double>()).norm();
 }
 
 // Based on Liang-Barsky function by Daniel White @ http://www.skytopia.com/project/articles/compsci/clipping.html
 template<typename T>
-bool liang_barsky_line_clipping(
+inline bool liang_barsky_line_clipping(
 	// Start and end points of the source line, result will be stored there as well.
 	Eigen::Matrix<T, 2, 1, Eigen::DontAlign> 						&x0,
 	Eigen::Matrix<T, 2, 1, Eigen::DontAlign> 						&x1,
@@ -229,7 +289,7 @@ bool directions_parallel(double angle1, double angle2, double max_diff = 0);
 template<class T> bool contains(const std::vector<T> &vector, const Point &point);
 template<typename T> T rad2deg(T angle) { return T(180.0) * angle / T(PI); }
 double rad2deg_dir(double angle);
-template<typename T> T deg2rad(T angle) { return T(PI) * angle / T(180.0); }
+template<typename T> constexpr T deg2rad(const T angle) { return T(PI) * angle / T(180.0); }
 template<typename T> T angle_to_0_2PI(T angle)
 {
     static const T TWO_PI = T(2) * T(PI);

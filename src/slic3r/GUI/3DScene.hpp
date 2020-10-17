@@ -6,41 +6,28 @@
 #include "libslic3r/Line.hpp"
 #include "libslic3r/TriangleMesh.hpp"
 #include "libslic3r/Utils.hpp"
-#include "libslic3r/Model.hpp"
-#include "slic3r/GUI/GLCanvas3DManager.hpp"
+#include "libslic3r/Geometry.hpp"
 
 #include <functional>
-#include <memory>
 
-#ifndef NDEBUG
-#define HAS_GLSAFE
+#if ENABLE_OPENGL_ERROR_LOGGING || ! defined(NDEBUG)
+    #define HAS_GLSAFE
 #endif
 
 #ifdef HAS_GLSAFE
-extern void glAssertRecentCallImpl(const char *file_name, unsigned int line, const char *function_name);
-inline void glAssertRecentCall() { glAssertRecentCallImpl(__FILE__, __LINE__, __FUNCTION__); }
-#define glsafe(cmd) do { cmd; glAssertRecentCallImpl(__FILE__, __LINE__, __FUNCTION__); } while (false)
-#define glcheck() do { glAssertRecentCallImpl(__FILE__, __LINE__, __FUNCTION__); } while (false)
-#else
-inline void glAssertRecentCall() { }
-#define glsafe(cmd) cmd
-#define glcheck()
-#endif
+    extern void glAssertRecentCallImpl(const char *file_name, unsigned int line, const char *function_name);
+    inline void glAssertRecentCall() { glAssertRecentCallImpl(__FILE__, __LINE__, __FUNCTION__); }
+    #define glsafe(cmd) do { cmd; glAssertRecentCallImpl(__FILE__, __LINE__, __FUNCTION__); } while (false)
+    #define glcheck() do { glAssertRecentCallImpl(__FILE__, __LINE__, __FUNCTION__); } while (false)
+#else // HAS_GLSAFE
+    inline void glAssertRecentCall() { }
+    #define glsafe(cmd) cmd
+    #define glcheck()
+#endif // HAS_GLSAFE
 
 namespace Slic3r {
-namespace GUI {
-class Bed3D;
-struct Camera;
-class GLToolbar;
-} // namespace GUI
-
-class Print;
-class PrintObject;
-class SLAPrint;
 class SLAPrintObject;
 enum  SLAPrintObjectStep : unsigned int;
-class Model;
-class ModelObject;
 class DynamicPrintConfig;
 class ExtrusionPath;
 class ExtrusionMultiPath;
@@ -48,6 +35,9 @@ class ExtrusionMultiPath3D;
 class ExtrusionLoop;
 class ExtrusionEntity;
 class ExtrusionEntityCollection;
+class ModelObject;
+class ModelVolume;
+enum ModelInstanceEPrintVolumeState : unsigned char;
 
 // A container for interleaved arrays of 3D vertices and normals,
 // possibly indexed by triangles and / or quads.
@@ -130,8 +120,13 @@ public:
     unsigned int       triangle_indices_VBO_id{ 0 };
     unsigned int       quad_indices_VBO_id{ 0 };
 
-    void load_mesh_full_shading(const TriangleMesh &mesh);
+#if ENABLE_SMOOTH_NORMALS
+    void load_mesh_full_shading(const TriangleMesh& mesh, bool smooth_normals = false);
+    void load_mesh(const TriangleMesh& mesh, bool smooth_normals = false) { this->load_mesh_full_shading(mesh, smooth_normals); }
+#else
+    void load_mesh_full_shading(const TriangleMesh& mesh);
     void load_mesh(const TriangleMesh& mesh) { this->load_mesh_full_shading(mesh); }
+#endif // ENABLE_SMOOTH_NORMALS
 
     inline bool has_VBOs() const { return vertices_and_normals_interleaved_VBO_id != 0; }
 
@@ -257,6 +252,7 @@ public:
     static const float MODEL_COLOR[4][4];
     static const float SLA_SUPPORT_COLOR[4];
     static const float SLA_PAD_COLOR[4];
+    static const float NEUTRAL_COLOR[4];
 
     enum EHoverState : unsigned char
     {
@@ -342,6 +338,8 @@ public:
 	    bool                force_transparent : 1;
 	    // Whether or not always use the volume's own color (not using SELECTED/HOVER/DISABLED/OUTSIDE)
 	    bool                force_native_color : 1;
+        // Whether or not render this volume in neutral
+        bool                force_neutral_color : 1;
 	};
 
     // Is mouse or rectangle selection over this object to select/deselect it ?
@@ -450,7 +448,6 @@ public:
     void                set_range(double low, double high);
 
     void                render() const;
-    void                render(int color_id, int detection_id, int worldmatrix_id) const;
 
     void                finalize_geometry(bool opengl_initialized) { this->indexed_vertex_array.finalize_geometry(opengl_initialized); }
     void                release_geometry() { this->indexed_vertex_array.release_geometry(); }
@@ -486,20 +483,29 @@ public:
 
 private:
     // min and max vertex of the print box volume
-    float print_box_min[3];
-    float print_box_max[3];
+    float m_print_box_min[3];
+    float m_print_box_max[3];
 
     // z range for clipping in shaders
-    float z_range[2];
+    float m_z_range[2];
 
     // plane coeffs for clipping in shaders
-    float clipping_plane[4];
+    float m_clipping_plane[4];
+
+    struct Slope
+    {
+        // toggle for slope rendering 
+        bool active{ false };
+        float normal_z;
+    };
+
+    Slope m_slope;
 
 public:
     GLVolumePtrs volumes;
 
-    GLVolumeCollection() {};
-    ~GLVolumeCollection() { clear(); };
+    GLVolumeCollection() { set_default_slope_normal_z(); }
+    ~GLVolumeCollection() { clear(); }
 
     std::vector<int> load_object(
         const ModelObject 		*model_object,
@@ -550,16 +556,23 @@ public:
     void set_range(double low, double high) { for (GLVolume *vol : this->volumes) vol->set_range(low, high); }
 
     void set_print_box(float min_x, float min_y, float min_z, float max_x, float max_y, float max_z) {
-        print_box_min[0] = min_x; print_box_min[1] = min_y; print_box_min[2] = min_z;
-        print_box_max[0] = max_x; print_box_max[1] = max_y; print_box_max[2] = max_z;
+        m_print_box_min[0] = min_x; m_print_box_min[1] = min_y; m_print_box_min[2] = min_z;
+        m_print_box_max[0] = max_x; m_print_box_max[1] = max_y; m_print_box_max[2] = max_z;
     }
 
-    void set_z_range(float min_z, float max_z) { z_range[0] = min_z; z_range[1] = max_z; }
-    void set_clipping_plane(const double* coeffs) { clipping_plane[0] = coeffs[0]; clipping_plane[1] = coeffs[1]; clipping_plane[2] = coeffs[2]; clipping_plane[3] = coeffs[3]; }
+    void set_z_range(float min_z, float max_z) { m_z_range[0] = min_z; m_z_range[1] = max_z; }
+    void set_clipping_plane(const double* coeffs) { m_clipping_plane[0] = coeffs[0]; m_clipping_plane[1] = coeffs[1]; m_clipping_plane[2] = coeffs[2]; m_clipping_plane[3] = coeffs[3]; }
+
+    bool is_slope_active() const { return m_slope.active; }
+    void set_slope_active(bool active) { m_slope.active = active; }
+
+    float get_slope_normal_z() const { return m_slope.normal_z; }
+    void set_slope_normal_z(float normal_z) { m_slope.normal_z = normal_z; }
+    void set_default_slope_normal_z() { m_slope.normal_z = -::cos(Geometry::deg2rad(90.0f - 45.0f)); }
 
     // returns true if all the volumes are completely contained in the print volume
     // returns the containment state in the given out_state, if non-null
-    bool check_outside_state(const DynamicPrintConfig* config, ModelInstance::EPrintVolumeState* out_state);
+    bool check_outside_state(const DynamicPrintConfig* config, ModelInstanceEPrintVolumeState* out_state);
     void reset_outside_state();
 
     void update_colors_by_extruder(const DynamicPrintConfig* config);
@@ -576,8 +589,10 @@ public:
     std::string         log_memory_info() const;
 
     bool                has_toolpaths_to_export() const;
+#if !ENABLE_GCODE_VIEWER
     // Export the geometry of the GLVolumes toolpaths of this collection into the file with the given path, in obj format 
     void                export_toolpaths_to_obj(const char* filename) const;
+#endif // !ENABLE_GCODE_VIEWER
 
 private:
     GLVolumeCollection(const GLVolumeCollection &other);
@@ -586,6 +601,7 @@ private:
 
 GLVolumeWithIdAndZList volumes_to_render(const GLVolumePtrs& volumes, GLVolumeCollection::ERenderType type, const Transform3d& view_matrix, std::function<bool(const GLVolume&)> filter_func = nullptr);
 
+#if !ENABLE_GCODE_VIEWER
 class GLModel
 {
 protected:
@@ -645,23 +661,10 @@ class GLBed : public GLModel
 protected:
     bool on_init_from_file(const std::string& filename) override;
 };
+#endif // !ENABLE_GCODE_VIEWER
 
-class _3DScene
+struct _3DScene
 {
-    static GUI::GLCanvas3DManager s_canvas_mgr;
-
-public:
-    static std::string get_gl_info(bool format_as_html, bool extensions);
-
-    static bool add_canvas(wxGLCanvas* canvas, GUI::Bed3D& bed, GUI::Camera& camera, GUI::GLToolbar& view_toolbar);
-    static bool remove_canvas(wxGLCanvas* canvas);
-    static void remove_all_canvases();
-
-    static bool init(wxGLCanvas* canvas);
-    static void destroy();
-
-    static GUI::GLCanvas3D* get_canvas(wxGLCanvas* canvas);
-
     static void thick_lines_to_verts(const Lines& lines, const std::vector<double>& widths, const std::vector<double>& heights, bool closed, double top_z, GLVolume& volume);
     static void thick_lines_to_verts(const Lines3& lines, const std::vector<double>& widths, const std::vector<double>& heights, bool closed, GLVolume& volume);
 	static void extrusionentity_to_verts(const Polyline &polyline, float width, float height, float print_z, GLVolume& volume);

@@ -1,8 +1,10 @@
 #include "CalibrationFlowDialog.hpp"
 #include "I18N.hpp"
+#include "libslic3r/Model.hpp"
 #include "libslic3r/Utils.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
+#include "Plater.hpp"
 #include "Tab.hpp"
 #include <wx/scrolwin.h>
 #include <wx/display.h>

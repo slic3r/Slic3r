@@ -13,6 +13,10 @@ class Layer;
 class PrintRegion;
 class PrintObject;
 
+namespace FillAdaptive {
+    struct Octree;
+};
+
 class LayerRegion
 {
 public:
@@ -38,11 +42,6 @@ public:
     ExPolygons                  fill_no_overlap_expolygons;
     // collection of surfaces for infill generation
     SurfaceCollection           fill_surfaces;
-
-    // Collection of perimeter surfaces. This is a cached result of diff(slices, fill_surfaces).
-    // While not necessary, the memory consumption is meager and it speeds up calculation.
-    // The perimeter_surfaces keep the IDs of the slices (top/bottom/)
-    //SurfaceCollection           perimeter_surfaces;
 
     // collection of expolygons representing the bridged areas (thus not
     // needing support material)
@@ -146,8 +145,10 @@ public:
         return false;
     }
     void                    make_perimeters();
-    void                    make_milling_post_process();
-    void                    make_fills();
+
+    void                    make_milling_post_process();    void                    make_fills() { this->make_fills(nullptr, nullptr); };
+    void                    make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive::Octree* support_fill_octree);
+    void                    make_ironing();
 
     void                    export_region_slices_to_svg(const char *path) const;
     void                    export_region_fill_surfaces_to_svg(const char *path) const;
@@ -178,6 +179,7 @@ class SupportLayer : public Layer
 {
 public:
     // Polygons covered by the supports: base, interface and contact areas.
+    // Used to suppress retraction if moving for a support extrusion over these support_islands.
     ExPolygonCollection         support_islands;
     // Extrusion paths for the support base and for the support interface and contacts.
     ExtrusionEntityCollection   support_fills;

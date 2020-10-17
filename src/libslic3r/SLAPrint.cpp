@@ -35,13 +35,16 @@ bool is_zero_elevation(const SLAPrintObjectConfig &c)
 }
 
 // Compile the argument for support creation from the static print config.
-sla::SupportConfig make_support_cfg(const SLAPrintObjectConfig& c)
+sla::SupportTreeConfig make_support_cfg(const SLAPrintObjectConfig& c)
 {
-    sla::SupportConfig scfg;
+    sla::SupportTreeConfig scfg;
     
     scfg.enabled = c.supports_enable.getBool();
     scfg.head_front_radius_mm = 0.5*c.support_head_front_diameter.getFloat();
-    scfg.head_back_radius_mm = 0.5*c.support_pillar_diameter.getFloat();
+    double pillar_r = 0.5 * c.support_pillar_diameter.getFloat();
+    scfg.head_back_radius_mm = pillar_r;
+    scfg.head_fallback_radius_mm =
+        0.01 * c.support_small_pillar_diameter_percent.getFloat() * pillar_r;
     scfg.head_penetration_mm = c.support_head_penetration.getFloat();
     scfg.head_width_mm = c.support_head_width.getFloat();
     scfg.object_elevation_mm = is_zero_elevation(c) ?
@@ -182,7 +185,6 @@ SLAPrint::ApplyStatus SLAPrint::apply(const Model &model, DynamicPrintConfig con
     config.option("sla_print_settings_id",    true);
     config.option("sla_material_settings_id", true);
     config.option("printer_settings_id",      true);
-    config.normalize();
     // Collect changes to print config.
     t_config_option_keys print_diff    = m_print_config.diff(config);
     t_config_option_keys printer_diff  = m_printer_config.diff(config);
@@ -227,6 +229,8 @@ SLAPrint::ApplyStatus SLAPrint::apply(const Model &model, DynamicPrintConfig con
     m_material_config.apply_only(config, material_diff, true);
     // Handle changes to object config defaults
     m_default_object_config.apply_only(config, object_diff, true);
+    
+    if (m_printer) m_printer->apply(m_printer_config);
 
     struct ModelObjectStatus {
         enum Status {
@@ -390,12 +394,12 @@ SLAPrint::ApplyStatus SLAPrint::apply(const Model &model, DynamicPrintConfig con
                 model_object.assign_copy(model_object_new);
             } else {
                 // Synchronize Object's config.
-                bool object_config_changed = model_object.config != model_object_new.config;
+                bool object_config_changed = ! model_object.config.timestamp_matches(model_object_new.config);
                 if (object_config_changed)
-					static_cast<DynamicPrintConfig&>(model_object.config) = static_cast<const DynamicPrintConfig&>(model_object_new.config);
+                    model_object.config.assign_config(model_object_new.config);
                 if (! object_diff.empty() || object_config_changed) {
                     SLAPrintObjectConfig new_config = m_default_object_config;
-                    normalize_and_apply_config(new_config, model_object.config);
+                    new_config.apply(model_object.config.get(), true);
                     if (it_print_object_status != print_object_status.end()) {
                         t_config_option_keys diff = it_print_object_status->print_object->config().diff(new_config);
                         if (! diff.empty()) {
@@ -459,9 +463,8 @@ SLAPrint::ApplyStatus SLAPrint::apply(const Model &model, DynamicPrintConfig con
 
             print_object->set_instances(std::move(new_instances));
 
-            SLAPrintObjectConfig new_config = m_default_object_config;
-            normalize_and_apply_config(new_config, model_object.config);
-            print_object->config_apply(new_config, true);
+            print_object->config_apply(m_default_object_config, true);
+            print_object->config_apply(model_object.config.get(), true);
             print_objects_new.emplace_back(print_object);
             new_objects = true;
         }
@@ -482,7 +485,6 @@ SLAPrint::ApplyStatus SLAPrint::apply(const Model &model, DynamicPrintConfig con
     }
     
     if(m_objects.empty()) {
-        m_printer.reset();
         m_printer_input = {};
         m_print_statistics = {};
     }
@@ -615,7 +617,7 @@ std::pair<PrintBase::PrintValidationError, std::string> SLAPrint::validate() con
             return { PrintBase::PrintValidationError::pveWrongSettings, L("Cannot proceed without support points! "
                      "Add support points or disable support generation.") };
 
-        sla::SupportConfig cfg = make_support_cfg(po->config());
+        sla::SupportTreeConfig cfg = make_support_cfg(po->config());
 
         double elv = cfg.object_elevation_mm;
         
@@ -657,6 +659,12 @@ std::pair<PrintBase::PrintValidationError, std::string> SLAPrint::validate() con
     return { PrintBase::PrintValidationError::pveNone, "" };
 }
 
+void SLAPrint::set_printer(SLAPrinter *arch)
+{
+    invalidate_step(slapsRasterize);
+    m_printer = arch;
+}
+
 bool SLAPrint::invalidate_step(SLAPrintStep step)
 {
     bool invalidated = Inherited::invalidate_step(step);
@@ -676,7 +684,7 @@ void SLAPrint::process()
     // Assumption: at this point the print objects should be populated only with
     // the model objects we have to process and the instances are also filtered
     
-    Steps printsteps{this};
+    Steps printsteps(this);
 
     // We want to first process all objects...
     std::vector<SLAPrintObjectStep> level1_obj_steps = {
@@ -729,7 +737,7 @@ void SLAPrint::process()
                     throw_if_canceled();
                     po->set_done(step);
                 }
-
+                
                 incr = printsteps.progressrange(step);
             }
         }
@@ -754,7 +762,7 @@ void SLAPrint::process()
             throw_if_canceled();
             set_done(currentstep);
         }
-
+        
         st += printsteps.progressrange(currentstep);
     }
 
@@ -860,36 +868,6 @@ bool SLAPrint::invalidate_state_by_config_options(const std::vector<t_config_opt
     return invalidated;
 }
 
-sla::RasterWriter & SLAPrint::init_printer()
-{
-    sla::Raster::Resolution res;
-    sla::Raster::PixelDim   pxdim;
-    std::array<bool, 2>     mirror;
-
-    double w  = m_printer_config.display_width.getFloat();
-    double h  = m_printer_config.display_height.getFloat();
-    auto   pw = size_t(m_printer_config.display_pixels_x.getInt());
-    auto   ph = size_t(m_printer_config.display_pixels_y.getInt());
-
-    mirror[X] = m_printer_config.display_mirror_x.getBool();
-    mirror[Y] = m_printer_config.display_mirror_y.getBool();
-
-    auto orientation = get_printer_orientation();
-    if (orientation == sla::Raster::roPortrait) {
-        std::swap(w, h);
-        std::swap(pw, ph);
-    }
-
-    res   = sla::Raster::Resolution{pw, ph};
-    pxdim = sla::Raster::PixelDim{w / pw, h / ph};
-    sla::Raster::Trafo tr{orientation, mirror};
-    tr.gamma = m_printer_config.gamma_correction.getFloat();
-    
-    m_printer.reset(new sla::RasterWriter(res, pxdim, tr));
-    m_printer->set_config(m_full_print_config);
-    return *m_printer;
-}
-
 // Returns true if an object step is done on all objects and there's at least one object.
 bool SLAPrint::is_step_done(SLAPrintObjectStep step) const
 {
@@ -953,6 +931,7 @@ bool SLAPrintObject::invalidate_state_by_config_options(const std::vector<t_conf
             || opt_key == "support_head_penetration"
             || opt_key == "support_head_width"
             || opt_key == "support_pillar_diameter"
+            || opt_key == "support_small_pillar_diameter_percent"
             || opt_key == "support_max_bridges_on_pillar"
             || opt_key == "support_pillar_connection_mode"
             || opt_key == "support_buildplate_only"
@@ -1205,6 +1184,12 @@ sla::DrainHoles SLAPrintObject::transformed_drainhole_points() const
         hl.normal = Vec3f(hl.normal(0)/(sc(0)*sc(0)),
                           hl.normal(1)/(sc(1)*sc(1)),
                           hl.normal(2)/(sc(2)*sc(2)));
+
+        // Now shift the hole a bit above the object and make it deeper to
+        // compensate for it. This is to avoid problems when the hole is placed
+        // on (nearly) flat surface.
+        hl.pos -= hl.normal.normalized() * sla::HoleStickOutLength;
+        hl.height += sla::HoleStickOutLength;
     }
 
     return pts;

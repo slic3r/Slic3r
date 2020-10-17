@@ -4,7 +4,6 @@
 #include "libslic3r/Point.hpp"
 
 #include "slic3r/GUI/I18N.hpp"
-#include "slic3r/GUI/Selection.hpp"
 
 #include <cereal/archives/binary.hpp>
 
@@ -31,7 +30,9 @@ static const float CONSTRAINED_COLOR[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
 
 class ImGuiWrapper;
 class GLCanvas3D;
-class ClippingPlane;
+enum class CommonGizmosDataID;
+class CommonGizmosDataPool;
+class Selection;
 
 class GLGizmoBase
 {
@@ -101,6 +102,7 @@ protected:
     ImGuiWrapper* m_imgui;
     bool m_first_input_window_render;
     mutable std::string m_tooltip;
+    CommonGizmosDataPool* m_c;
 
 public:
     GLGizmoBase(GLCanvas3D& parent,
@@ -122,12 +124,13 @@ public:
     void set_state(EState state) { m_state = state; on_set_state(); }
 
     int get_shortcut_key() const { return m_shortcut_key; }
-    void set_shortcut_key(int key) { m_shortcut_key = key; }
 
     const std::string& get_icon_filename() const { return m_icon_filename; }
 
     bool is_activable() const { return on_is_activable(); }
     bool is_selectable() const { return on_is_selectable(); }
+    CommonGizmosDataID get_requirements() const { return on_get_requirements(); }
+    void set_common_data_pool(CommonGizmosDataPool* ptr) { m_c = ptr; }
 
     unsigned int get_sprite_id() const { return m_sprite_id; }
 
@@ -161,6 +164,7 @@ protected:
     virtual void on_set_hover_id() {}
     virtual bool on_is_activable() const { return true; }
     virtual bool on_is_selectable() const { return true; }
+    virtual CommonGizmosDataID on_get_requirements() const { return CommonGizmosDataID(0); }
     virtual void on_enable_grabber(unsigned int id) {}
     virtual void on_disable_grabber(unsigned int id) {}
     virtual void on_start_dragging() {}

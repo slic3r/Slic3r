@@ -3,15 +3,16 @@
 
 #include <memory>
 #include <string>
-#include "libslic3r/PrintConfig.hpp"
-#include "MainFrame.hpp"
 #include "ImGuiWrapper.hpp"
 #include "ConfigWizard.hpp"
+#include "OpenGLManager.hpp"
+#include "libslic3r/Preset.hpp"
 
 #include <wx/app.h>
 #include <wx/colour.h>
 #include <wx/font.h>
 #include <wx/string.h>
+#include <wx/snglinst.h>
 
 #include <mutex>
 #include <stack>
@@ -28,10 +29,21 @@ class PresetBundle;
 class PresetUpdater;
 class ModelObject;
 class PrintHostJobQueue;
-
+class Model;
 
 namespace GUI{
 class RemovableDriveManager;
+class OtherInstanceMessageHandler;
+class MainFrame;
+class Sidebar;
+class ObjectManipulation;
+class ObjectSettings;
+class ObjectList;
+class ObjectLayers;
+class Plater;
+
+
+
 enum FileType
 {
     FT_STL,
@@ -74,10 +86,30 @@ class ConfigWizard;
 
 static wxString dots("…", wxConvUTF8);
 
+// Does our wxWidgets version support markup?
+// https://github.com/prusa3d/PrusaSlicer/issues/4282#issuecomment-634676371
+#if wxUSE_MARKUP && wxCHECK_VERSION(3, 1, 1)
+    #define SUPPORTS_MARKUP
+#endif
+
 class GUI_App : public wxApp
 {
+#if ENABLE_GCODE_VIEWER
+public:
+    enum class EAppMode : unsigned char
+    {
+        Editor,
+        GCodeViewer
+    };
+
+private:
+#endif // ENABLE_GCODE_VIEWER
+
     bool            m_initialized { false };
     bool            app_conf_exists{ false };
+#if ENABLE_GCODE_VIEWER
+    EAppMode        m_app_mode{ EAppMode::Editor };
+#endif // ENABLE_GCODE_VIEWER
 
     wxColour        m_color_label_modified;
     wxColour        m_color_label_sys;
@@ -96,18 +128,67 @@ class GUI_App : public wxApp
     // Best translation language, provided by Windows or OSX, owned by wxWidgets.
     const wxLanguageInfo		 *m_language_info_best   = nullptr;
 
+    OpenGLManager m_opengl_mgr;
+
 	std::unique_ptr<RemovableDriveManager> m_removable_drive_manager;
 
     std::unique_ptr<ImGuiWrapper> m_imgui;
     std::unique_ptr<PrintHostJobQueue> m_printhost_job_queue;
     ConfigWizard* m_wizard;    // Managed by wxWindow tree
+	std::unique_ptr <OtherInstanceMessageHandler> m_other_instance_message_handler;
+    std::unique_ptr <wxSingleInstanceChecker> m_single_instance_checker;
+    std::string m_instance_hash_string;
+	size_t m_instance_hash_int;
+
+    // parameters needed for the after OnInit() loads
+    struct AFTER_INIT_LOADS
+    {
+        std::vector<std::string>    m_load_configs;
+        DynamicPrintConfig          m_extra_config;
+        std::vector<std::string>    m_input_files;
+#if ENABLE_GCODE_VIEWER
+        bool                        m_start_as_gcodeviewer;
+#endif // ENABLE_GCODE_VIEWER
+
+        void set_params(
+            const std::vector<std::string>& load_configs,
+            const DynamicPrintConfig&       extra_config,
+            const std::vector<std::string>& input_files,
+#if ENABLE_GCODE_VIEWER
+            bool                            start_as_gcodeviewer
+#endif // ENABLE_GCODE_VIEWER
+        ) {
+            m_load_configs = load_configs;
+            m_extra_config = extra_config;
+            m_input_files = input_files;
+#if ENABLE_GCODE_VIEWER
+            m_start_as_gcodeviewer = start_as_gcodeviewer;
+#endif // ENABLE_GCODE_VIEWER
+        }
+
+        void on_loads(GUI_App* gui);
+    };
 
 public:
     bool            OnInit() override;
     bool            initialized() const { return m_initialized; }
 
+#if ENABLE_GCODE_VIEWER
+    explicit GUI_App(EAppMode mode = EAppMode::Editor);
+#else
     GUI_App();
+#endif // ENABLE_GCODE_VIEWER
     ~GUI_App() override;
+
+#if ENABLE_GCODE_VIEWER
+    EAppMode get_app_mode() const { return m_app_mode; }
+    bool is_editor() const { return m_app_mode == EAppMode::Editor; }
+    bool is_gcode_viewer() const { return m_app_mode == EAppMode::GCodeViewer; }
+#endif // ENABLE_GCODE_VIEWER
+
+    static std::string get_gl_info(bool format_as_html, bool extensions);
+    wxGLContext* init_glcontext(wxGLCanvas& canvas);
+    bool init_opengl();
 
     static unsigned get_colour_approx_luma(const wxColour &colour);
     static bool     dark_mode();
@@ -126,9 +207,12 @@ public:
     const wxFont&   bold_font()             { return m_bold_font; }
     const wxFont&   normal_font()           { return m_normal_font; }
     int             em_unit() const         { return m_em_unit; }
+    wxSize          get_min_size() const;
     float           toolbar_icon_scale(const bool is_limited = false) const;
+    void            set_auto_toolbar_icon_scale(float scale) const;
+    void            check_printer_presets();
 
-    void            recreate_GUI();
+    void            recreate_GUI(const wxString& message);
     void            system_info();
     void            keyboard_shortcuts();
     void            change_calibration_dialog(const wxDialog* have_to_destroy = nullptr, wxDialog* new_one = nullptr);
@@ -144,6 +228,10 @@ public:
     //void            support_tuning(); //have to do multiple, in a submenu
     void            load_project(wxWindow *parent, wxString& input_file) const;
     void            import_model(wxWindow *parent, wxArrayString& input_files) const;
+#if ENABLE_GCODE_VIEWER
+    void            load_gcode(wxWindow* parent, wxString& input_file) const;
+#endif // ENABLE_GCODE_VIEWER
+
     static bool     catch_error(std::function<void()> cb, const std::string& err);
 
     void            persist_window_geometry(wxTopLevelWindow *window, bool default_maximized = false);
@@ -165,6 +253,7 @@ public:
     wxString        current_language_code() const { return m_wxLocale->GetCanonicalName(); }
 	// Translate the language code to a code, for which Prusa Research maintains translations. Defaults to "en_US".
     wxString 		current_language_code_safe() const;
+    bool            is_localized() const { return m_wxLocale->GetLocale() != "English"; }
 
     virtual bool OnExceptionInMainLoop() override;
 
@@ -181,13 +270,18 @@ public:
     Plater*             plater();
     Model&      		model();
 
+
     AppConfig*      app_config{ nullptr };
     PresetBundle*   preset_bundle{ nullptr };
     PresetUpdater*  preset_updater{ nullptr };
     MainFrame*      mainframe{ nullptr };
     Plater*         plater_{ nullptr };
+
+    AFTER_INIT_LOADS m_after_init_loads;
     std::mutex      not_modal_dialog_mutex;
     wxDialog*       not_modal_dialog = nullptr;
+
+	PresetUpdater* get_preset_updater() { return preset_updater; }
 
     wxNotebook*     tab_panel() const ;
     int             extruders_cnt() const;
@@ -196,6 +290,13 @@ public:
     std::vector<Tab *>      tabs_list;
 
 	RemovableDriveManager* removable_drive_manager() { return m_removable_drive_manager.get(); }
+	OtherInstanceMessageHandler* other_instance_message_handler() { return m_other_instance_message_handler.get(); }
+    wxSingleInstanceChecker* single_instance_checker() {return m_single_instance_checker.get();}
+    
+	void        init_single_instance_checker(const std::string &name, const std::string &path);
+	void        set_instance_hash (const size_t hash) { m_instance_hash_int = hash; m_instance_hash_string = std::to_string(hash); }
+    std::string get_instance_hash_string ()           { return m_instance_hash_string; }
+	size_t      get_instance_hash_int ()              { return m_instance_hash_int; }
 
     ImGuiWrapper* imgui() { return m_imgui.get(); }
 
@@ -209,8 +310,15 @@ public:
     void            gcode_thumbnails_debug();
 #endif // ENABLE_THUMBNAIL_GENERATOR_DEBUG
 
+    GLShaderProgram* get_shader(const std::string& shader_name) { return m_opengl_mgr.get_shader(shader_name); }
+    GLShaderProgram* get_current_shader() { return m_opengl_mgr.get_current_shader(); }
+
+    bool is_gl_version_greater_or_equal_to(unsigned int major, unsigned int minor) const { return m_opengl_mgr.get_gl_info().is_version_greater_or_equal_to(major, minor); }
+    bool is_glsl_version_greater_or_equal_to(unsigned int major, unsigned int minor) const { return m_opengl_mgr.get_gl_info().is_glsl_version_greater_or_equal_to(major, minor); }
+
 private:
     bool            on_init_inner();
+	void            init_app_config();
     void            window_pos_save(wxTopLevelWindow* window, const std::string &name);
     void            window_pos_restore(wxTopLevelWindow* window, const std::string &name, bool default_maximized = false);
     void            window_pos_sanitize(wxTopLevelWindow* window);
@@ -226,6 +334,6 @@ private:
 DECLARE_APP(GUI_App)
 
 } // GUI
-} //Slic3r
+} // Slic3r
 
 #endif // slic3r_GUI_App_hpp_

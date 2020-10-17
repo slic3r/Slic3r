@@ -2789,9 +2789,9 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
             eec->entities,
             polylines_1,
             good_role,
-            params.flow->mm3_per_mm() * params.flow_mult,
-            params.flow->width * params.flow_mult,
-            params.flow->height);
+            params.flow.mm3_per_mm() * params.flow_mult,
+            params.flow.width * params.flow_mult,
+            params.flow.height);
     }
 
 
@@ -2821,9 +2821,9 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
             eec->entities,
             polylines_2,
             good_role,
-            params.flow->mm3_per_mm() * params.flow_mult,
-            params.flow->width * params.flow_mult,
-            params.flow->height);
+            params.flow.mm3_per_mm() * params.flow_mult,
+            params.flow.width * params.flow_mult,
+            params.flow.height);
     }
 
     // === end ===
@@ -2901,7 +2901,7 @@ std::vector<SegmentedIntersectionLine> FillScatteredRectilinear::_vert_lines_for
 
 void
 FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const {
-    const coord_t scaled_nozzle_diam = scale_(params.flow->nozzle_diameter);
+    const coord_t scaled_nozzle_diam = scale_(params.flow.nozzle_diameter);
     const coord_t clearance = scaled_nozzle_diam * 2;
     const coord_t tooth_spacing_min = scaled_nozzle_diam;
     const coord_t tooth_spacing_max = scaled_nozzle_diam * 3;
@@ -2921,7 +2921,7 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
             if (!poly.is_valid()) continue;
 
             ExtrusionMultiPath3D *extrusions = new ExtrusionMultiPath3D();
-            extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow->mm3_per_mm() * params.flow_mult, params.flow->width * params.flow_mult, params.flow->height));
+            extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow.mm3_per_mm() * params.flow_mult, params.flow.width * params.flow_mult, params.flow.height));
             ExtrusionPath3D *current_extrusion = &(extrusions->paths.back());
             Points &pts = poly.points;
             coord_t next_zhop = tooth_spacing_min + (coord_t)abs((rand() / (float)RAND_MAX) * (tooth_spacing_max - tooth_spacing_min));
@@ -2958,13 +2958,13 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
                     }
 
                     //add new extrusion that go up with nozzle_flow
-                    extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow->nozzle_diameter * params.flow->nozzle_diameter * PI / 4, params.flow->nozzle_diameter, params.flow->nozzle_diameter));
+                    extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow.nozzle_diameter * params.flow.nozzle_diameter * PI / 4, params.flow.nozzle_diameter, params.flow.nozzle_diameter));
                     current_extrusion = &(extrusions->paths.back());
                     current_extrusion->push_back(last, 0);
                     current_extrusion->push_back(last, tooth_zhop);
 
                     //add new extrusion that move a bit to let the palce for the nozzle tip
-                    extrusions->paths.push_back(ExtrusionPath3D(good_role, 0, params.flow->nozzle_diameter / 10, params.flow->nozzle_diameter / 10));
+                    extrusions->paths.push_back(ExtrusionPath3D(good_role, 0, params.flow.nozzle_diameter / 10, params.flow.nozzle_diameter / 10));
                     current_extrusion = &(extrusions->paths.back());
                     current_extrusion->push_back(last, tooth_zhop);
                     //add next point
@@ -2973,7 +2973,7 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
                     current_extrusion->push_back(last, tooth_zhop);
 
                     // add new extrusion that go down with no nozzle_flow / sqrt(2)
-                    extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow->mm3_per_mm() / std::sqrt(2), params.flow->width / std::sqrt(2), params.flow->height));
+                    extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow.mm3_per_mm() / std::sqrt(2), params.flow.width / std::sqrt(2), params.flow.height));
                     current_extrusion = &(extrusions->paths.back());
                     current_extrusion->push_back(last, tooth_zhop);
                     //add next point
@@ -2982,7 +2982,7 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
                     current_extrusion->push_back(last, 0);
 
                     // now go back to normal flow
-                    extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow->mm3_per_mm() * params.flow_mult, params.flow->width * params.flow_mult, params.flow->height));
+                    extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow.mm3_per_mm() * params.flow_mult, params.flow.width * params.flow_mult, params.flow.height));
                     current_extrusion = &(extrusions->paths.back());
                     current_extrusion->push_back(last, 0);
                     line_length = (coord_t)last.distance_to(pts[idx]);
@@ -3019,8 +3019,8 @@ FillRectilinear2WGapFill::split_polygon_gap_fill(const Surface &surface, const F
     //choose between 2 to avoid dotted line  effect.
     float factor1 = 0.99f;
     float factor2 = 0.7f;
-    ExPolygons rectilinear_areas1 = offset2_ex(ExPolygons{ surface.expolygon }, -params.flow->scaled_spacing() * factor1, params.flow->scaled_spacing() * factor1);
-    ExPolygons rectilinear_areas2 = offset2_ex(ExPolygons{ surface.expolygon }, -params.flow->scaled_spacing() * factor2, params.flow->scaled_spacing() * factor2);
+    ExPolygons rectilinear_areas1 = offset2_ex(ExPolygons{ surface.expolygon }, -params.flow.scaled_spacing() * factor1, params.flow.scaled_spacing() * factor1);
+    ExPolygons rectilinear_areas2 = offset2_ex(ExPolygons{ surface.expolygon }, -params.flow.scaled_spacing() * factor2, params.flow.scaled_spacing() * factor2);
     //choose the best one
     rectilinear = rectilinear_areas1.size() <= rectilinear_areas2.size() + 1 || rectilinear_areas2.empty() ? rectilinear_areas1 : rectilinear_areas2;
     //get gapfill
@@ -3038,8 +3038,8 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
     ////choose between 2 to avoid dotted line  effect.
     //float factor1 = 0.99f;
     //float factor2 = 0.7f;
-    //ExPolygons rectilinear_areas1 = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow->scaled_spacing() * factor1, params.flow->scaled_spacing() * factor1);
-    //ExPolygons rectilinear_areas2 = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow->scaled_spacing() * factor2, params.flow->scaled_spacing() * factor2);
+    //ExPolygons rectilinear_areas1 = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow.scaled_spacing() * factor1, params.flow.scaled_spacing() * factor1);
+    //ExPolygons rectilinear_areas2 = offset2_ex(ExPolygons{ surface->expolygon }, -params.flow.scaled_spacing() * factor2, params.flow.scaled_spacing() * factor2);
     //std::cout << "FillRectilinear2WGapFill use " << (rectilinear_areas1.size() <= rectilinear_areas2.size() + 1 ? "1" : "2") << "\n";
     //ExPolygons &rectilinear_areas = rectilinear_areas1.size() <= rectilinear_areas2.size() + 1 ? rectilinear_areas1 : rectilinear_areas2;
     //ExPolygons gapfill_areas = diff_ex(ExPolygons{ surface->expolygon }, rectilinear_areas);
@@ -3057,7 +3057,7 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
     FillParams params_monotonous = params;
     params_monotonous.monotonous = true;
     for (const ExPolygon &rectilinear_area : rectilinear_areas) {
-        rectilinear_surface.expolygon = rectilinear_area, 0 - 0.5 * params.flow->scaled_spacing();
+        rectilinear_surface.expolygon = rectilinear_area, 0 - 0.5 * params.flow.scaled_spacing();
         if (!fill_surface_by_lines(&rectilinear_surface, params_monotonous, 0.f, 0.f, polylines_rectilinear)) {
             printf("FillRectilinear2::fill_surface() failed to fill a region.\n");
         }
@@ -3066,7 +3066,7 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
     if (!polylines_rectilinear.empty()) {
         double flow_mult_exact_volume = 1;
         //check if not over-extruding
-        if (!params.dont_adjust && params.full_infill() && !params.flow->bridge && params.fill_exactly) {
+        if (!params.dont_adjust && params.full_infill() && !params.flow.bridge && params.fill_exactly) {
             // compute the path of the nozzle -> extruded volume
             double lengthTot = 0;
             int nbLines = 0;
@@ -3077,18 +3077,18 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
                     nbLines++;
                 }
             }
-            double extrudedVolume = params.flow->mm3_per_mm() * lengthTot;
+            double extrudedVolume = params.flow.mm3_per_mm() * lengthTot;
             // compute real volume
             double poylineVolume = 0;
             ExPolygons rectilinear_no_overlap_areas = intersection_ex(rectilinear_areas, this->no_overlap_expolygons);
             for (const ExPolygon &poly : rectilinear_no_overlap_areas) {
-                poylineVolume += params.flow->height*unscaled(unscaled(poly.area()));
+                poylineVolume += params.flow.height*unscaled(unscaled(poly.area()));
                 // add external "perimeter gap"
-                double perimeterRoundGap = unscaled(poly.contour.length()) * params.flow->height * (1 - 0.25*PI) * 0.5;
+                double perimeterRoundGap = unscaled(poly.contour.length()) * params.flow.height * (1 - 0.25*PI) * 0.5;
                 // add holes "perimeter gaps"
                 double holesGaps = 0;
                 for (auto hole = poly.holes.begin(); hole != poly.holes.end(); ++hole) {
-                    holesGaps += unscaled(hole->length()) * params.flow->height * (1 - 0.25*PI) * 0.5;
+                    holesGaps += unscaled(hole->length()) * params.flow.height * (1 - 0.25*PI) * 0.5;
                 }
                 poylineVolume += perimeterRoundGap + holesGaps;
             }
@@ -3115,9 +3115,9 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
         extrusion_entities_append_paths(
             eec->entities, polylines_rectilinear,
             good_role,
-            params.flow->mm3_per_mm() * params.flow_mult * flow_mult_exact_volume,
-            params.flow->width * params.flow_mult * flow_mult_exact_volume,
-            params.flow->height);
+            params.flow.mm3_per_mm() * params.flow_mult * flow_mult_exact_volume,
+            params.flow.width * params.flow_mult * flow_mult_exact_volume,
+            params.flow.height);
 
         coll_nosort->entities.push_back(eec);
 
@@ -3130,7 +3130,7 @@ FillRectilinear2WGapFill::fill_surface_extrusion(const Surface *surface, const F
     gapfill_areas.insert(gapfill_areas.end(), unextruded_areas.begin(), unextruded_areas.end());
     gapfill_areas = union_ex(gapfill_areas, true);
     if (gapfill_areas.size() > 0) {
-        const double minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow->width)) * params.flow->scaled_width();
+        const double minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow.width)) * params.flow.scaled_width();
         for (int i = 0; i < gapfill_areas.size(); i++) {
             if (gapfill_areas[i].area() < minarea) {
                 gapfill_areas.erase(gapfill_areas.begin() + i);

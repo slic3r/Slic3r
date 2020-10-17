@@ -1,46 +1,63 @@
 #include <GL/glew.h>
 
+#if ENABLE_SMOOTH_NORMALS
+#include <igl/per_face_normals.h>
+#include <igl/per_corner_normals.h>
+#include <igl/per_vertex_normals.h>
+#endif // ENABLE_SMOOTH_NORMALS
+
 #include "3DScene.hpp"
+#include "GLShader.hpp"
+#include "GUI_App.hpp"
+#if ENABLE_ENVIRONMENT_MAP
+#include "Plater.hpp"
+#endif // ENABLE_ENVIRONMENT_MAP
 
 #include "libslic3r/ExtrusionEntity.hpp"
 #include "libslic3r/ExtrusionEntityCollection.hpp"
 #include "libslic3r/Geometry.hpp"
+#if !ENABLE_GCODE_VIEWER
 #include "libslic3r/GCode/PreviewData.hpp"
+#endif // !ENABLE_GCODE_VIEWER
 #include "libslic3r/Print.hpp"
 #include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/Slicing.hpp"
+#if !ENABLE_GCODE_VIEWER
 #include "libslic3r/GCode/Analyzer.hpp"
+#endif // !ENABLE_GCODE_VIEWER
 #include "slic3r/GUI/BitmapCache.hpp"
 #include "libslic3r/Format/STL.hpp"
 #include "libslic3r/Utils.hpp"
+#include "libslic3r/AppConfig.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <utility>
 #include <assert.h>
 
 #include <boost/log/trivial.hpp>
 
 #include <boost/filesystem/operations.hpp>
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <boost/nowide/cstdio.hpp>
 
-#include <tbb/parallel_for.h>
-#include <tbb/spin_mutex.h>
-
 #include <Eigen/Dense>
 
-#include "GUI.hpp"
-
 #ifdef HAS_GLSAFE
-void glAssertRecentCallImpl(const char *file_name, unsigned int line, const char *function_name)
+void glAssertRecentCallImpl(const char* file_name, unsigned int line, const char* function_name)
 {
+#if defined(NDEBUG) && ENABLE_OPENGL_ERROR_LOGGING
+    // In release mode, if OpenGL debugging was forced by ENABLE_OPENGL_ERROR_LOGGING, only show
+    // OpenGL errors if sufficiently high loglevel.
+    if (Slic3r::get_logging_level() < 5)
+        return;
+#endif // ENABLE_OPENGL_ERROR_LOGGING
+
     GLenum err = glGetError();
     if (err == GL_NO_ERROR)
         return;
-    const char *sErr = 0;
+    const char* sErr = 0;
     switch (err) {
     case GL_INVALID_ENUM:       sErr = "Invalid Enum";      break;
     case GL_INVALID_VALUE:      sErr = "Invalid Value";     break;
@@ -54,27 +71,111 @@ void glAssertRecentCallImpl(const char *file_name, unsigned int line, const char
 	BOOST_LOG_TRIVIAL(error) << "OpenGL error in " << file_name << ":" << line << ", function " << function_name << "() : " << (int)err << " - " << sErr;
     assert(false);
 }
-#endif
+#endif // HAS_GLSAFE
 
 namespace Slic3r {
 
-void GLIndexedVertexArray::load_mesh_full_shading(const TriangleMesh &mesh)
+#if ENABLE_SMOOTH_NORMALS
+static void smooth_normals_corner(TriangleMesh& mesh, std::vector<stl_normal>& normals)
+{
+    mesh.repair();
+
+    using MapMatrixXfUnaligned = Eigen::Map<const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor | Eigen::DontAlign>>;
+    using MapMatrixXiUnaligned = Eigen::Map<const Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor | Eigen::DontAlign>>;
+
+    std::vector<stl_normal> face_normals(mesh.stl.stats.number_of_facets);
+    for (uint32_t i = 0; i < mesh.stl.stats.number_of_facets; ++i) {
+        face_normals[i] = mesh.stl.facet_start[i].normal;
+    }
+
+    Eigen::MatrixXd vertices = MapMatrixXfUnaligned(mesh.its.vertices.front().data(),
+        Eigen::Index(mesh.its.vertices.size()), 3).cast<double>();
+    Eigen::MatrixXi indices = MapMatrixXiUnaligned(mesh.its.indices.front().data(),
+        Eigen::Index(mesh.its.indices.size()), 3);
+    Eigen::MatrixXd in_normals = MapMatrixXfUnaligned(face_normals.front().data(),
+        Eigen::Index(face_normals.size()), 3).cast<double>();
+    Eigen::MatrixXd out_normals;
+
+    igl::per_corner_normals(vertices, indices, in_normals, 1.0, out_normals);
+
+    normals = std::vector<stl_normal>(mesh.its.vertices.size());
+    for (size_t i = 0; i < mesh.its.indices.size(); ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            normals[mesh.its.indices[i][j]] = out_normals.row(i * 3 + j).cast<float>();
+        }
+    }
+}
+
+static void smooth_normals_vertex(TriangleMesh& mesh, std::vector<stl_normal>& normals)
+{
+    mesh.repair();
+
+    using MapMatrixXfUnaligned = Eigen::Map<const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor | Eigen::DontAlign>>;
+    using MapMatrixXiUnaligned = Eigen::Map<const Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor | Eigen::DontAlign>>;
+
+    Eigen::MatrixXd vertices = MapMatrixXfUnaligned(mesh.its.vertices.front().data(),
+        Eigen::Index(mesh.its.vertices.size()), 3).cast<double>();
+    Eigen::MatrixXi indices = MapMatrixXiUnaligned(mesh.its.indices.front().data(),
+        Eigen::Index(mesh.its.indices.size()), 3);
+    Eigen::MatrixXd out_normals;
+
+//    igl::per_vertex_normals(vertices, indices, igl::PER_VERTEX_NORMALS_WEIGHTING_TYPE_UNIFORM, out_normals);
+//    igl::per_vertex_normals(vertices, indices, igl::PER_VERTEX_NORMALS_WEIGHTING_TYPE_AREA, out_normals);
+    igl::per_vertex_normals(vertices, indices, igl::PER_VERTEX_NORMALS_WEIGHTING_TYPE_ANGLE, out_normals);
+//    igl::per_vertex_normals(vertices, indices, igl::PER_VERTEX_NORMALS_WEIGHTING_TYPE_DEFAULT, out_normals);
+
+    normals = std::vector<stl_normal>(mesh.its.vertices.size());
+    for (size_t i = 0; i < static_cast<size_t>(out_normals.rows()); ++i) {
+        normals[i] = out_normals.row(i).cast<float>();
+    }
+}
+#endif // ENABLE_SMOOTH_NORMALS
+
+#if ENABLE_SMOOTH_NORMALS
+void GLIndexedVertexArray::load_mesh_full_shading(const TriangleMesh& mesh, bool smooth_normals)
+#else
+void GLIndexedVertexArray::load_mesh_full_shading(const TriangleMesh& mesh)
+#endif // ENABLE_SMOOTH_NORMALS
 {
     assert(triangle_indices.empty() && vertices_and_normals_interleaved_size == 0);
     assert(quad_indices.empty() && triangle_indices_size == 0);
     assert(vertices_and_normals_interleaved.size() % 6 == 0 && quad_indices_size == vertices_and_normals_interleaved.size());
 
+#if ENABLE_SMOOTH_NORMALS
+    if (smooth_normals) {
+        TriangleMesh new_mesh(mesh);
+        std::vector<stl_normal> normals;
+        smooth_normals_corner(new_mesh, normals);
+//        smooth_normals_vertex(new_mesh, normals);
+
+        this->vertices_and_normals_interleaved.reserve(this->vertices_and_normals_interleaved.size() + 3 * 2 * new_mesh.its.vertices.size());
+        for (size_t i = 0; i < new_mesh.its.vertices.size(); ++i) {
+            const stl_vertex& v = new_mesh.its.vertices[i];
+            const stl_normal& n = normals[i];
+            this->push_geometry(v(0), v(1), v(2), n(0), n(1), n(2));
+        }
+
+        for (size_t i = 0; i < new_mesh.its.indices.size(); ++i) {
+            const stl_triangle_vertex_indices& idx = new_mesh.its.indices[i];
+            this->push_triangle(idx(0), idx(1), idx(2));
+        }
+    }
+    else {
+#endif // ENABLE_SMOOTH_NORMALS
     this->vertices_and_normals_interleaved.reserve(this->vertices_and_normals_interleaved.size() + 3 * 3 * 2 * mesh.facets_count());
 
     unsigned int vertices_count = 0;
     for (int i = 0; i < (int)mesh.stl.stats.number_of_facets; ++i) {
-        const stl_facet &facet = mesh.stl.facet_start[i];
+            const stl_facet& facet = mesh.stl.facet_start[i];
         for (int j = 0; j < 3; ++j)
             this->push_geometry(facet.vertex[j](0), facet.vertex[j](1), facet.vertex[j](2), facet.normal(0), facet.normal(1), facet.normal(2));
 
         this->push_triangle(vertices_count, vertices_count + 1, vertices_count + 2);
         vertices_count += 3;
     }
+#if ENABLE_SMOOTH_NORMALS
+    }
+#endif // ENABLE_SMOOTH_NORMALS
 }
 
 void GLIndexedVertexArray::finalize_geometry(bool opengl_initialized)
@@ -205,6 +306,7 @@ const float GLVolume::MODEL_COLOR[4][4] = {
 };
 const float GLVolume::SLA_SUPPORT_COLOR[4] = { 0.75f, 0.75f, 0.75f, 1.0f };
 const float GLVolume::SLA_PAD_COLOR[4] = { 0.0f, 0.2f, 0.0f, 1.0f };
+const float GLVolume::NEUTRAL_COLOR[4] = { 0.9f, 0.9f, 0.9f, 1.0f };
 
 GLVolume::GLVolume(float r, float g, float b, float a)
     : m_transformed_bounding_box_dirty(true)
@@ -226,6 +328,7 @@ GLVolume::GLVolume(float r, float g, float b, float a)
     , is_extrusion_path(false)
     , force_transparent(false)
     , force_native_color(false)
+    , force_neutral_color(false)
     , tverts_range(0, size_t(-1))
     , qverts_range(0, size_t(-1))
 {
@@ -251,12 +354,16 @@ void GLVolume::set_render_color(const float* rgba, unsigned int size)
 
 void GLVolume::set_render_color()
 {
-    if (force_native_color)
+    if (force_native_color || force_neutral_color)
     {
         if (is_outside && shader_outside_printer_detection_enabled)
             set_render_color(OUTSIDE_COLOR, 4);
+        else {
+            if (force_native_color)
+                set_render_color(color, 4);
         else
-            set_render_color(color, 4);
+                set_render_color(NEUTRAL_COLOR, 4);
+    }
     }
     else {
         if (hover == HS_Select)
@@ -351,7 +458,6 @@ BoundingBoxf3 GLVolume::transformed_convex_hull_bounding_box(const Transform3d &
         bounding_box().transformed(trafo);
 }
 
-
 void GLVolume::set_range(double min_z, double max_z)
 {
     this->qverts_range.first = 0;
@@ -405,22 +511,6 @@ void GLVolume::render() const
         glFrontFace(GL_CCW);
 }
 
-void GLVolume::render(int color_id, int detection_id, int worldmatrix_id) const
-{
-    if (color_id >= 0)
-        glsafe(::glUniform4fv(color_id, 1, (const GLfloat*)render_color));
-    else
-        glsafe(::glColor4fv(render_color));
-
-    if (detection_id != -1)
-        glsafe(::glUniform1i(detection_id, shader_outside_printer_detection_enabled ? 1 : 0));
-
-    if (worldmatrix_id != -1)
-        glsafe(::glUniformMatrix4fv(worldmatrix_id, 1, GL_FALSE, (const GLfloat*)world_matrix().cast<float>().data()));
-
-    render();
-}
-
 bool GLVolume::is_sla_support() const { return this->composite_id.volume_id == -int(slaposSupportTree); }
 bool GLVolume::is_sla_pad() const { return this->composite_id.volume_id == -int(slaposPad); }
 
@@ -466,7 +556,11 @@ int GLVolumeCollection::load_object_volume(
     this->volumes.emplace_back(new GLVolume(color));
     GLVolume& v = *this->volumes.back();
     v.set_color_from_model_volume(model_volume);
+#if ENABLE_SMOOTH_NORMALS
+    v.indexed_vertex_array.load_mesh(mesh, true);
+#else
     v.indexed_vertex_array.load_mesh(mesh);
+#endif // ENABLE_SMOOTH_NORMALS
     v.indexed_vertex_array.finalize_geometry(opengl_initialized);
     v.composite_id = GLVolume::CompositeID(obj_idx, volume_idx, instance_idx);
     if (model_volume->is_model_part())
@@ -508,7 +602,11 @@ void GLVolumeCollection::load_object_auxiliary(
         const ModelInstance& model_instance = *print_object->model_object()->instances[instance_idx.first];
         this->volumes.emplace_back(new GLVolume((milestone == slaposPad) ? GLVolume::SLA_PAD_COLOR : GLVolume::SLA_SUPPORT_COLOR));
         GLVolume& v = *this->volumes.back();
+#if ENABLE_SMOOTH_NORMALS
+        v.indexed_vertex_array.load_mesh(mesh, true);
+#else
         v.indexed_vertex_array.load_mesh(mesh);
+#endif // ENABLE_SMOOTH_NORMALS
 	    v.indexed_vertex_array.finalize_geometry(opengl_initialized);
         v.composite_id = GLVolume::CompositeID(obj_idx, -int(milestone), (int)instance_idx.first);
         v.geometry_id = std::pair<size_t, size_t>(timestamp, model_instance.id().id);
@@ -553,9 +651,9 @@ int GLVolumeCollection::load_wipe_tower_preview(
                                    {8, 10, 14}, {3, 12, 4}, {3, 13, 12}, {6, 13, 3}, {6, 14, 13}, {7, 14, 6}, {7, 15, 14}, {2, 15, 7}, {2, 8, 15}, {1, 8, 2}, {1, 9, 8},
                                    {0, 9, 1}, {0, 10, 9}, {5, 10, 0}, {5, 11, 10}, {4, 11, 5}, {4, 12, 11} };
         for (int i = 0; i < 16; ++i)
-            points.push_back(Vec3d(out_points_idx[i][0] / (100.f / min_width), out_points_idx[i][1] + depth, out_points_idx[i][2]));
+            points.emplace_back(out_points_idx[i][0] / (100.f / min_width), out_points_idx[i][1] + depth, out_points_idx[i][2]);
         for (int i = 0; i < 28; ++i)
-            facets.push_back(Vec3i32(out_facets_idx[i][0], out_facets_idx[i][1], out_facets_idx[i][2]));
+            facets.emplace_back(out_facets_idx[i][0], out_facets_idx[i][1], out_facets_idx[i][2]);
         TriangleMesh tooth_mesh(points, facets);
 
         // We have the mesh ready. It has one tooth and width of min_width. We will now append several of these together until we are close to
@@ -646,6 +744,10 @@ GLVolumeWithIdAndZList volumes_to_render(const GLVolumePtrs& volumes, GLVolumeCo
 
 void GLVolumeCollection::render(GLVolumeCollection::ERenderType type, bool disable_cullface, const Transform3d& view_matrix, std::function<bool(const GLVolume&)> filter_func) const
 {
+    GLShaderProgram* shader = GUI::wxGetApp().get_current_shader();
+    if (shader == nullptr)
+        return;
+
     glsafe(::glEnable(GL_BLEND));
     glsafe(::glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
@@ -656,34 +758,37 @@ void GLVolumeCollection::render(GLVolumeCollection::ERenderType type, bool disab
     glsafe(::glEnableClientState(GL_VERTEX_ARRAY));
     glsafe(::glEnableClientState(GL_NORMAL_ARRAY));
  
-    GLint current_program_id;
-    glsafe(::glGetIntegerv(GL_CURRENT_PROGRAM, &current_program_id));
-    GLint color_id = (current_program_id > 0) ? ::glGetUniformLocation(current_program_id, "uniform_color") : -1;
-    GLint z_range_id = (current_program_id > 0) ? ::glGetUniformLocation(current_program_id, "z_range") : -1;
-    GLint clipping_plane_id = (current_program_id > 0) ? ::glGetUniformLocation(current_program_id, "clipping_plane") : -1;
-    GLint print_box_min_id = (current_program_id > 0) ? ::glGetUniformLocation(current_program_id, "print_box.min") : -1;
-    GLint print_box_max_id = (current_program_id > 0) ? ::glGetUniformLocation(current_program_id, "print_box.max") : -1;
-    GLint print_box_detection_id = (current_program_id > 0) ? ::glGetUniformLocation(current_program_id, "print_box.volume_detection") : -1;
-    GLint print_box_worldmatrix_id = (current_program_id > 0) ? ::glGetUniformLocation(current_program_id, "print_box.volume_world_matrix") : -1;
+    shader->set_uniform("print_box.min", m_print_box_min, 3);
+    shader->set_uniform("print_box.max", m_print_box_max, 3);
+    shader->set_uniform("z_range", m_z_range, 2);
+    shader->set_uniform("clipping_plane", m_clipping_plane, 4);
+    shader->set_uniform("slope.normal_z", m_slope.normal_z);
+
+#if ENABLE_ENVIRONMENT_MAP
+    unsigned int environment_texture_id = GUI::wxGetApp().plater()->get_environment_texture_id();
+    bool use_environment_texture = environment_texture_id > 0 && GUI::wxGetApp().app_config->get("use_environment_map") == "1";
+    shader->set_uniform("use_environment_tex", use_environment_texture);
+    if (use_environment_texture)
+        glsafe(::glBindTexture(GL_TEXTURE_2D, environment_texture_id));
+#endif // ENABLE_ENVIRONMENT_MAP
     glcheck();
-
-    if (print_box_min_id != -1)
-        glsafe(::glUniform3fv(print_box_min_id, 1, (const GLfloat*)print_box_min));
-
-    if (print_box_max_id != -1)
-        glsafe(::glUniform3fv(print_box_max_id, 1, (const GLfloat*)print_box_max));
-
-    if (z_range_id != -1)
-        glsafe(::glUniform2fv(z_range_id, 1, (const GLfloat*)z_range));
-
-    if (clipping_plane_id != -1)
-        glsafe(::glUniform4fv(clipping_plane_id, 1, (const GLfloat*)clipping_plane));
 
     GLVolumeWithIdAndZList to_render = volumes_to_render(this->volumes, type, view_matrix, filter_func);
     for (GLVolumeWithIdAndZ& volume : to_render) {
         volume.first->set_render_color();
-        volume.first->render(color_id, print_box_detection_id, print_box_worldmatrix_id);
+        shader->set_uniform("uniform_color", volume.first->render_color, 4);
+        shader->set_uniform("print_box.actived", volume.first->shader_outside_printer_detection_enabled);
+        shader->set_uniform("print_box.volume_world_matrix", volume.first->world_matrix());
+        shader->set_uniform("slope.actived", m_slope.active && !volume.first->is_modifier && !volume.first->is_wipe_tower);
+        shader->set_uniform("slope.volume_world_normal_matrix", static_cast<Matrix3f>(volume.first->world_matrix().matrix().block(0, 0, 3, 3).inverse().transpose().cast<float>()));
+
+        volume.first->render();
     }
+
+#if ENABLE_ENVIRONMENT_MAP
+    if (use_environment_texture)
+        glsafe(::glBindTexture(GL_TEXTURE_2D, 0));
+#endif // ENABLE_ENVIRONMENT_MAP
 
     glsafe(::glBindBuffer(GL_ARRAY_BUFFER, 0));
     glsafe(::glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
@@ -697,7 +802,7 @@ void GLVolumeCollection::render(GLVolumeCollection::ERenderType type, bool disab
     glsafe(::glDisable(GL_BLEND));
 }
 
-bool GLVolumeCollection::check_outside_state(const DynamicPrintConfig* config, ModelInstance::EPrintVolumeState* out_state)
+bool GLVolumeCollection::check_outside_state(const DynamicPrintConfig* config, ModelInstanceEPrintVolumeState* out_state)
 {
     if (config == nullptr)
         return false;
@@ -711,7 +816,7 @@ bool GLVolumeCollection::check_outside_state(const DynamicPrintConfig* config, M
     // Allow the objects to protrude below the print bed
     print_volume.min(2) = -1e10;
 
-    ModelInstance::EPrintVolumeState state = ModelInstance::PVS_Inside;
+    ModelInstanceEPrintVolumeState state = ModelInstancePVS_Inside;
 
     bool contained_min_one = false;
 
@@ -730,11 +835,11 @@ bool GLVolumeCollection::check_outside_state(const DynamicPrintConfig* config, M
         if (contained)
             contained_min_one = true;
 
-        if ((state == ModelInstance::PVS_Inside) && volume->is_outside)
-            state = ModelInstance::PVS_Fully_Outside;
+        if ((state == ModelInstancePVS_Inside) && volume->is_outside)
+            state = ModelInstancePVS_Fully_Outside;
 
-        if ((state == ModelInstance::PVS_Fully_Outside) && volume->is_outside && print_volume.intersects(bb))
-            state = ModelInstance::PVS_Partly_Outside;
+        if ((state == ModelInstancePVS_Fully_Outside) && volume->is_outside && print_volume.intersects(bb))
+            state = ModelInstancePVS_Partly_Outside;
     }
 
     if (out_state != nullptr)
@@ -899,6 +1004,7 @@ bool GLVolumeCollection::has_toolpaths_to_export() const
     return false;
 }
 
+#if !ENABLE_GCODE_VIEWER
 void GLVolumeCollection::export_toolpaths_to_obj(const char* filename) const
 {
     if (filename == nullptr)
@@ -1180,6 +1286,7 @@ void GLVolumeCollection::export_toolpaths_to_obj(const char* filename) const
 
     fclose(fp);
 }
+#endif // !ENABLE_GCODE_VIEWER
 
 // caller is responsible for supplying NO lines with zero length
 static void thick_lines_to_indexed_vertex_array(
@@ -1823,8 +1930,7 @@ void _3DScene::point3_to_verts(const Vec3crd& point, double width, double height
     thick_point_to_verts(point, width, height, volume);
 }
 
-GUI::GLCanvas3DManager _3DScene::s_canvas_mgr;
-
+#if !ENABLE_GCODE_VIEWER
 GLModel::GLModel()
     : m_filename("")
 {
@@ -1880,6 +1986,10 @@ void GLModel::reset()
 
 void GLModel::render() const
 {
+    GLShaderProgram* shader = GUI::wxGetApp().get_current_shader();
+    if (shader == nullptr)
+        return;
+
     glsafe(::glEnable(GL_BLEND));
     glsafe(::glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
@@ -1887,12 +1997,8 @@ void GLModel::render() const
     glsafe(::glEnableClientState(GL_VERTEX_ARRAY));
     glsafe(::glEnableClientState(GL_NORMAL_ARRAY));
 
-    GLint current_program_id;
-    glsafe(::glGetIntegerv(GL_CURRENT_PROGRAM, &current_program_id));
-    GLint color_id = (current_program_id > 0) ? ::glGetUniformLocation(current_program_id, "uniform_color") : -1;
-    glcheck();
-
-    m_volume.render(color_id, -1, -1);
+    shader->set_uniform("uniform_color", m_volume.render_color, 4);
+    m_volume.render();
 
     glsafe(::glBindBuffer(GL_ARRAY_BUFFER, 0));
     glsafe(::glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
@@ -2105,40 +2211,6 @@ bool GLBed::on_init_from_file(const std::string& filename)
 
     return true;
 }
-
-std::string _3DScene::get_gl_info(bool format_as_html, bool extensions)
-{
-    return Slic3r::GUI::GLCanvas3DManager::get_gl_info().to_string(format_as_html, extensions);
-}
-
-bool _3DScene::add_canvas(wxGLCanvas* canvas, GUI::Bed3D& bed, GUI::Camera& camera, GUI::GLToolbar& view_toolbar)
-{
-    return s_canvas_mgr.add(canvas, bed, camera, view_toolbar);
-}
-
-bool _3DScene::remove_canvas(wxGLCanvas* canvas)
-{
-    return s_canvas_mgr.remove(canvas);
-}
-
-void _3DScene::remove_all_canvases()
-{
-    s_canvas_mgr.remove_all();
-}
-
-bool _3DScene::init(wxGLCanvas* canvas)
-{
-    return s_canvas_mgr.init(canvas);
-}
-
-void _3DScene::destroy()
-{
-    s_canvas_mgr.destroy();
-}
-
-GUI::GLCanvas3D* _3DScene::get_canvas(wxGLCanvas* canvas)
-{
-    return s_canvas_mgr.get_canvas(canvas);
-}
+#endif // !ENABLE_GCODE_VIEWER
 
 } // namespace Slic3r

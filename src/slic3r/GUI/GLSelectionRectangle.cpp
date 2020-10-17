@@ -2,6 +2,8 @@
 #include "Camera.hpp"
 #include "3DScene.hpp"
 #include "GLCanvas3D.hpp"
+#include "GUI_App.hpp"
+#include "Plater.hpp"
 
 #include <GL/glew.h>
 
@@ -35,7 +37,7 @@ namespace GUI {
 
         m_state = Off;
 
-        const Camera& camera = canvas.get_camera();
+        const Camera& camera = wxGetApp().plater()->get_camera();
         const std::array<int, 4>& viewport = camera.get_viewport();
         const Transform3d& modelview_matrix = camera.get_view_matrix();
         const Transform3d& projection_matrix = camera.get_projection_matrix();
@@ -68,7 +70,7 @@ namespace GUI {
         if (!is_dragging())
             return;
 
-        const Camera& camera = canvas.get_camera();
+        const Camera& camera = wxGetApp().plater()->get_camera();
         float inv_zoom = (float)camera.get_inv_zoom();
 
         Size cnv_size = canvas.get_canvas_size();

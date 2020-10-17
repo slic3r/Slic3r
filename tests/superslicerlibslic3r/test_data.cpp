@@ -3,6 +3,7 @@
 #include <libslic3r/TriangleMesh.hpp>
 #include <libslic3r/GCodeReader.hpp>
 #include <libslic3r/Config.hpp>
+#include <libslic3r/ModelArrange.hpp>
 #include <libslic3r/Print.hpp>
 #include <libslic3r/Point.hpp>
 #include <cstdlib>
@@ -287,7 +288,7 @@ void init_print(Print& print, std::initializer_list<TestMesh> meshes, Slic3r::Mo
     }
 
     print.apply(model, config); // apply config for the arrange_objects
-    model.arrange_objects(&print);
+    arrange_objects(&print, model, InfiniteBed{}, ArrangeParams{ scaled(min_object_distance(config)) });
     model.center_instances_around_point(Slic3r::Vec2d(100,100));
     for (auto* mo : model.objects) {
         print.auto_assign_extruders(mo);
@@ -323,7 +324,7 @@ void init_print(Print& print, std::vector<TriangleMesh> meshes, Slic3r::Model& m
     }
 
     print.apply(model, config); // apply config for the arrange_objects
-    model.arrange_objects(&print);
+    arrange_objects(&print, model, InfiniteBed{}, ArrangeParams{ scaled(min_object_distance(config)) });
     model.center_instances_around_point(Slic3r::Vec2d(100,100));
 	print.apply(model, config);
 	for (ModelObject* mo : model.objects) {

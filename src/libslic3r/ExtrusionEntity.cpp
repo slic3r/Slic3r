@@ -267,13 +267,18 @@ double ExtrusionLoop::min_mm3_per_mm() const
 std::string ExtrusionEntity::role_to_string(ExtrusionRole role)
 {
     switch (role) {
+#if ENABLE_GCODE_VIEWER
+        case erNone                         : return L("Unknown");
+#else
         case erNone                         : return L("None");
+#endif // ENABLE_GCODE_VIEWER
         case erPerimeter                    : return L("Perimeter");
         case erExternalPerimeter            : return L("External perimeter");
         case erOverhangPerimeter            : return L("Overhang perimeter");
         case erInternalInfill               : return L("Internal infill");
         case erSolidInfill                  : return L("Solid infill");
         case erTopSolidInfill               : return L("Top solid infill");
+        case erIroning                      : return L("Ironing");
         case erBridgeInfill                 : return L("Bridge infill");
         case erThinWall                     : return L("Thin wall");
         case erGapFill                      : return L("Gap fill");
@@ -290,7 +295,42 @@ std::string ExtrusionEntity::role_to_string(ExtrusionRole role)
     return "";
 }
 
-void ExtrusionPrinter::use(const ExtrusionPath &path) { 
+
+ExtrusionRole ExtrusionEntity::string_to_role(const std::string& role)
+{
+    if (role == L("Perimeter"))
+        return erPerimeter;
+    else if (role == L("External perimeter"))
+        return erExternalPerimeter;
+    else if (role == L("Overhang perimeter"))
+        return erOverhangPerimeter;
+    else if (role == L("Internal infill"))
+        return erInternalInfill;
+    else if (role == L("Solid infill"))
+        return erSolidInfill;
+    else if (role == L("Top solid infill"))
+        return erTopSolidInfill;
+    else if (role == L("Ironing"))
+        return erIroning;
+    else if (role == L("Bridge infill"))
+        return erBridgeInfill;
+    else if (role == L("Gap fill"))
+        return erGapFill;
+    else if (role == L("Skirt"))
+        return erSkirt;
+    else if (role == L("Support material"))
+        return erSupportMaterial;
+    else if (role == L("Support material interface"))
+        return erSupportMaterialInterface;
+    else if (role == L("Wipe tower"))
+        return erWipeTower;
+    else if (role == L("Custom"))
+        return erCustom;
+    else if (role == L("Mixed"))
+        return erMixed;
+    else
+        return erNone;
+}void ExtrusionPrinter::use(const ExtrusionPath &path) { 
     ss << "ExtrusionPath:" << (uint16_t)path.role() << "{";
     for (int i = 0; i < path.polyline.points.size(); i++) {
         if (i != 0) ss << ",";

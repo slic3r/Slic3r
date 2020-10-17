@@ -6,6 +6,7 @@
 #include "../BoundingBox.hpp"
 #include "../ExtrusionEntity.hpp"
 #include "../ExtrusionEntityCollection.hpp"
+#include "../Layer.hpp"
 #include "../Print.hpp"
 
 #include "PrintExtents.hpp"
@@ -93,7 +94,7 @@ static BoundingBoxf extrusionentity_extents(const ExtrusionEntity *extrusion_ent
     auto *extrusion_entity_collection = dynamic_cast<const ExtrusionEntityCollection*>(extrusion_entity);
     if (extrusion_entity_collection != nullptr)
         return extrusionentity_extents(*extrusion_entity_collection);
-    throw std::runtime_error("Unexpected extrusion_entity type in extrusionentity_extents()");
+    throw Slic3r::RuntimeError("Unexpected extrusion_entity type in extrusionentity_extents()");
     return BoundingBoxf();
 }
 

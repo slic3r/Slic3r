@@ -38,7 +38,7 @@ namespace Slic3r {
         else params_modifided.flow_mult *= (float)percentFlow[idx];
 
         //choose if we are going to extrude with or without overlap
-        if ((params.flow->bridge && idx == 0) || has_overlap[idx] || this->no_overlap_expolygons.empty()){
+        if ((params.flow.bridge && idx == 0) || has_overlap[idx] || this->no_overlap_expolygons.empty()){
             this->fill_expolygon(idx, *eec, srf_source, params_modifided, volume);
         }
         else{
@@ -81,22 +81,22 @@ namespace Slic3r {
                     nbLines++;
                 }
             }
-            double extrudedVolume = params.flow->mm3_per_mm() * lengthTot / params.density;
+            double extrudedVolume = params.flow.mm3_per_mm() * lengthTot / params.density;
             if (extrudedVolume == 0) extrudedVolume = volume;
 
             //get the role
             ExtrusionRole good_role = params.role;
             if (good_role == erNone || good_role == erCustom) {
-                good_role = params.flow->bridge && idx == 0 ? erBridgeInfill : rolePass[idx];
+                good_role = params.flow.bridge && idx == 0 ? erBridgeInfill : rolePass[idx];
             }
             // print
             float mult_flow = float(params.fill_exactly /*&& idx == 0*/ ? std::min(2., volume / extrudedVolume) : 1);
             extrusion_entities_append_paths(
                 eec.entities, std::move(polylines_layer),
                 good_role,
-                params.flow->mm3_per_mm() * params.flow_mult * mult_flow,
+                params.flow.mm3_per_mm() * params.flow_mult * mult_flow,
                 //min-reduced flow width for a better view (it's mostly a gui thing, but some support code can want to mess with it)
-                (float)(params.flow->width * (params.flow_mult* mult_flow < 0.1 ? 0.1 : params.flow_mult * mult_flow)), (float)params.flow->height);
+                (float)(params.flow.width * (params.flow_mult* mult_flow < 0.1 ? 0.1 : params.flow_mult * mult_flow)), (float)params.flow.height);
         }
     }
 
@@ -109,12 +109,12 @@ namespace Slic3r {
         double volumeToOccupy = 0;
         for (auto poly = this->no_overlap_expolygons.begin(); poly != this->no_overlap_expolygons.end(); ++poly) {
             // add external "perimeter gap"
-            double poylineVolume = params.flow->height*unscaled(unscaled(poly->area()));
-            double perimeterRoundGap = unscaled(poly->contour.length()) * params.flow->height * (1 - 0.25*PI) * 0.5;
+            double poylineVolume = params.flow.height*unscaled(unscaled(poly->area()));
+            double perimeterRoundGap = unscaled(poly->contour.length()) * params.flow.height * (1 - 0.25*PI) * 0.5;
             // add holes "perimeter gaps"
             double holesGaps = 0;
             for (auto hole = poly->holes.begin(); hole != poly->holes.end(); ++hole) {
-                holesGaps += unscaled(hole->length()) * params.flow->height * (1 - 0.25*PI) * 0.5;
+                holesGaps += unscaled(hole->length()) * params.flow.height * (1 - 0.25*PI) * 0.5;
             }
             poylineVolume += perimeterRoundGap + holesGaps;
 
@@ -122,7 +122,7 @@ namespace Slic3r {
             volumeToOccupy += poylineVolume;
         }
         if (this->no_overlap_expolygons.empty()) {
-            volumeToOccupy = unscaled(unscaled(surface->area())) * params.flow->height;
+            volumeToOccupy = unscaled(unscaled(surface->area())) * params.flow.height;
         }
 
         //create root node

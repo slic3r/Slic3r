@@ -290,21 +290,6 @@ void Layer::make_milling_post_process() {
     BOOST_LOG_TRIVIAL(trace) << "Generating milling_post_process for layer " << this->id() << " - Done";
 }
 
-void Layer::make_fills()
-{
-    #ifdef SLIC3R_DEBUG
-    printf("Making fills for layer " PRINTF_ZU "\n", this->id());
-    #endif
-    for (LayerRegion *layerm : m_regions) {
-        layerm->fills.clear();
-        make_fill(*layerm, layerm->fills);
-#ifndef NDEBUG
-        for (size_t i = 0; i < layerm->fills.entities.size(); ++ i)
-            assert(dynamic_cast<ExtrusionEntityCollection*>(layerm->fills.entities[i]) != NULL);
-#endif
-    }
-}
-
 void Layer::export_region_slices_to_svg(const char *path) const
 {
     BoundingBox bbox;

@@ -1,8 +1,10 @@
 #include "CalibrationBridgeDialog.hpp"
 #include "I18N.hpp"
+#include "libslic3r/Model.hpp"
 #include "libslic3r/Utils.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
+#include "Plater.hpp"
 #include "Tab.hpp"
 #include <wx/scrolwin.h>
 #include <wx/display.h>
@@ -37,7 +39,7 @@ void CalibrationBridgeDialog::create_buttons(wxStdDialogButtonSizer* buttons){
     buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "nb tests:" }));
     buttons->Add(nb_tests);
     buttons->AddSpacer(40);
-    wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Test Flow Ratio")));
+    wxButton* bt = new wxButton(this, wxID_FILE1, _L("Test Flow Ratio"));
     bt->Bind(wxEVT_BUTTON, &CalibrationBridgeDialog::create_geometry_flow_ratio, this);
     buttons->Add(bt);
     //buttons->AddSpacer(15);
