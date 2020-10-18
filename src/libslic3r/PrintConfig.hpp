@@ -890,7 +890,7 @@ class MachineEnvelopeConfig : public StaticPrintConfig
     STATIC_PRINT_CONFIG_CACHE(MachineEnvelopeConfig)
 public:
 	// Allowing the machine limits to be completely ignored or used just for time estimator.
-    ConfigOptionEnum<MachineLimitsUsage> machine_limits_type;
+    ConfigOptionEnum<MachineLimitsUsage> machine_limits_usage;
     // M201 X... Y... Z... E... [mm/sec^2]
     ConfigOptionFloats              machine_max_acceleration_x;
     ConfigOptionFloats              machine_max_acceleration_y;
@@ -920,7 +920,7 @@ public:
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
-    	OPT_PTR(machine_limits_type);
+        OPT_PTR(machine_limits_usage);
         OPT_PTR(machine_max_acceleration_x);
         OPT_PTR(machine_max_acceleration_y);
         OPT_PTR(machine_max_acceleration_z);
@@ -1793,8 +1793,6 @@ class ModelConfig
 public:
     void         clear() { m_data.clear(); m_timestamp = 1; }
 
-    // Modification of the ModelConfig is not thread safe due to the global timestamp counter!
-    // Don't call modification methods from the back-end!
     void         assign_config(const ModelConfig &rhs) {
         if (m_timestamp != rhs.m_timestamp) {
             m_data      = rhs.m_data;
@@ -1808,6 +1806,9 @@ public:
             rhs.clear();
         }
     }
+
+    // Modification of the ModelConfig is not thread safe due to the global timestamp counter!
+    // Don't call modification methods from the back-end!
     // Assign methods don't assign if src==dst to not having to bump the timestamp in case they are equal.
     void         assign_config(const DynamicPrintConfig &rhs)  { if (m_data != rhs) { m_data = rhs; this->touch(); } }
     void         assign_config(DynamicPrintConfig &&rhs)       { if (m_data != rhs) { m_data = std::move(rhs); this->touch(); } }

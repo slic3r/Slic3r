@@ -643,16 +643,17 @@ void GLCanvas3D::WarningTexture::activate(WarningTexture::Warning warning, bool 
         error = true;
         break;
     }
-    if(state) {
+    auto &notification_manager = *wxGetApp().plater()->get_notification_manager();
+    if (state) {
         if(error)
-            wxGetApp().plater()->get_notification_manager()->push_plater_error_notification(text,*(wxGetApp().plater()->get_current_canvas3D()));
+            notification_manager.push_plater_error_notification(text,*(wxGetApp().plater()->get_current_canvas3D()));
         else
-            wxGetApp().plater()->get_notification_manager()->push_plater_warning_notification(text, *(wxGetApp().plater()->get_current_canvas3D()));
+            notification_manager.push_plater_warning_notification(text, *(wxGetApp().plater()->get_current_canvas3D()));
     } else {
         if (error)
-            wxGetApp().plater()->get_notification_manager()->close_plater_error_notification(text);
+            notification_manager.close_plater_error_notification(text);
         else
-            wxGetApp().plater()->get_notification_manager()->close_plater_warning_notification(text);
+            notification_manager.close_plater_warning_notification(text);
     }
 
     /*
@@ -1538,7 +1539,7 @@ bool GLCanvas3D::init()
     if (m_initialized)
         return true;
 
-    if ((m_canvas == nullptr) || (m_context == nullptr))
+    if (m_canvas == nullptr || m_context == nullptr)
         return false;
 
     glsafe(::glClearColor(1.0f, 1.0f, 1.0f, 1.0f));
@@ -1586,14 +1587,6 @@ bool GLCanvas3D::init()
 
     if (m_main_toolbar.is_enabled())
         m_layers_editing.init();
-
-#if ENABLE_GCODE_VIEWER
-    if (!m_main_toolbar.is_enabled())
-    {
-        if (!m_gcode_viewer.init())
-        return false;
-    }
-#endif // ENABLE_GCODE_VIEWER
 
     // on linux the gl context is not valid until the canvas is not shown on screen
     // we defer the geometry finalization of volumes until the first call to render()
@@ -1678,8 +1671,9 @@ void GLCanvas3D::toggle_model_objects_visibility(bool visible, const ModelObject
                 } else {
                     const GLGizmosManager& gm = get_gizmos_manager();
                     auto gizmo_type = gm.get_current_type();
-                    if (gizmo_type == GLGizmosManager::FdmSupports
+                    if (    (gizmo_type == GLGizmosManager::FdmSupports
                      || gizmo_type == GLGizmosManager::Seam)
+                        && ! vol->is_modifier)
                         vol->force_neutral_color = true;
                     else
                         vol->force_native_color = true;
@@ -1953,6 +1947,9 @@ void GLCanvas3D::render()
     }
 
 #if ENABLE_ENVIRONMENT_MAP
+#if ENABLE_GCODE_VIEWER
+    if (wxGetApp().is_editor())
+#endif // ENABLE_GCODE_VIEWER
     wxGetApp().plater()->init_environment_texture();
 #endif // ENABLE_ENVIRONMENT_MAP
 
@@ -2092,7 +2089,7 @@ void GLCanvas3D::render()
 
     wxGetApp().plater()->get_mouse3d_controller().render_settings_dialog(*this);
 	
-	wxGetApp().plater()->get_notification_manager()->render_notifications(*this, get_overelay_window_width(), get_slope_window_width());
+	wxGetApp().plater()->get_notification_manager()->render_notifications(*this, get_overlay_window_width());
 
     wxGetApp().imgui()->render();
 
@@ -3219,6 +3216,10 @@ void GLCanvas3D::on_key(wxKeyEvent& evt)
                     // m_canvas->HandleAsNavigationKey(evt);   // XXX: Doesn't work in some cases / on Linux
                     post_event(SimpleEvent(EVT_GLCANVAS_TAB));
                 }
+                else if (keyCode == WXK_TAB && evt.ShiftDown()) {
+                    // Collapse side-panel with Shift+Tab
+                    post_event(SimpleEvent(EVT_GLCANVAS_COLLAPSE_SIDEBAR));
+                }
                 else if (keyCode == WXK_SHIFT)
                 {
                     translationProcessor.process(evt);
@@ -4248,7 +4249,7 @@ void GLCanvas3D::update_ui_from_settings()
 
 #if ENABLE_GCODE_VIEWER
     if (wxGetApp().is_editor())
-        wxGetApp().plater()->get_collapse_toolbar().set_enabled(wxGetApp().app_config->get("show_collapse_button") == "1");
+        wxGetApp().plater()->enable_collapse_toolbar(wxGetApp().app_config->get("show_collapse_button") == "1");
 #else
     bool enable_collapse = wxGetApp().app_config->get("show_collapse_button") == "1";
     wxGetApp().plater()->get_collapse_toolbar().set_enabled(enable_collapse);
@@ -4436,10 +4437,14 @@ bool GLCanvas3D::_render_search_list(float pos_x) const
 
     if (selected >= 0) {
         // selected == 9999 means that Esc kye was pressed
+        /*// revert commit https://github.com/prusa3d/PrusaSlicer/commit/91897589928789b261ca0dc735ffd46f2b0b99f2
         if (selected == 9999)
             action_taken = true;
         else
+            sidebar.jump_to_option(selected);*/
+        if (selected != 9999)
             sidebar.jump_to_option(selected);
+        action_taken = true;
     }
 
     imgui->end();
@@ -4472,8 +4477,7 @@ static void debug_output_thumbnail(const ThumbnailData& thumbnail_data)
 
 void GLCanvas3D::_render_thumbnail_internal(ThumbnailData& thumbnail_data, bool printable_only, bool parts_only, bool show_bed, bool transparent_background) const
 {
-    auto is_visible = [](const GLVolume& v) -> bool
-    {
+    auto is_visible = [](const GLVolume& v) {
         bool ret = v.printable;
         ret &= (!v.shader_outside_printer_detection_enabled || !v.is_outside);
         return ret;
@@ -4484,10 +4488,8 @@ void GLCanvas3D::_render_thumbnail_internal(ThumbnailData& thumbnail_data, bool 
 
     GLVolumePtrs visible_volumes;
 
-    for (GLVolume* vol : m_volumes.volumes)
-    {
-        if (!vol->is_modifier && !vol->is_wipe_tower && (!parts_only || (vol->composite_id.volume_id >= 0)))
-        {
+    for (GLVolume* vol : m_volumes.volumes) {
+        if (!vol->is_modifier && !vol->is_wipe_tower && (!parts_only || (vol->composite_id.volume_id >= 0))) {
             if (!printable_only || is_visible(*vol))
                 visible_volumes.emplace_back(vol);
         }
@@ -4497,8 +4499,7 @@ void GLCanvas3D::_render_thumbnail_internal(ThumbnailData& thumbnail_data, bool 
         return;
 
     BoundingBoxf3 box;
-    for (const GLVolume* vol : visible_volumes)
-    {
+    for (const GLVolume* vol : visible_volumes) {
         box.merge(vol->transformed_bounding_box());
     }
 
@@ -4512,8 +4513,7 @@ void GLCanvas3D::_render_thumbnail_internal(ThumbnailData& thumbnail_data, bool 
     double near_z = -1.0;
     double far_z = -1.0;
 
-    if (show_bed)
-    {
+    if (show_bed) {
         // extends the near and far z of the frustrum to avoid the bed being clipped
 
         // box in eye space
@@ -4524,7 +4524,7 @@ void GLCanvas3D::_render_thumbnail_internal(ThumbnailData& thumbnail_data, bool 
 
     camera.apply_projection(box, near_z, far_z);
 
-    GLShaderProgram* shader = wxGetApp().get_shader("gouraud");
+    GLShaderProgram* shader = wxGetApp().get_shader("gouraud_light");
     if (shader == nullptr)
         return;
 
@@ -5155,7 +5155,7 @@ bool GLCanvas3D::_set_current()
 
 void GLCanvas3D::_resize(unsigned int w, unsigned int h)
 {
-    if ((m_canvas == nullptr) && (m_context == nullptr))
+    if (m_canvas == nullptr && m_context == nullptr)
         return;
 
     auto *imgui = wxGetApp().imgui();
@@ -5440,6 +5440,7 @@ void GLCanvas3D::_render_bed(bool bottom, bool show_axes) const
     bool show_texture = ! bottom ||
             (m_gizmos.get_current_type() != GLGizmosManager::FdmSupports
           && m_gizmos.get_current_type() != GLGizmosManager::SlaSupports
+          && m_gizmos.get_current_type() != GLGizmosManager::Hollow
           && m_gizmos.get_current_type() != GLGizmosManager::Seam);
 
     wxGetApp().plater()->get_bed().render(const_cast<GLCanvas3D&>(*this), bottom, scale_factor, show_axes, show_texture);
@@ -5490,6 +5491,20 @@ void GLCanvas3D::_render_objects() const
             return (m_render_sla_auxiliaries || volume.composite_id.volume_id >= 0);
         });
     }
+
+        // In case a painting gizmo is open, it should render the painted triangles
+        // before transparent objects are rendered. Otherwise they would not be
+        // visible when inside modifier meshes etc.
+        {
+            const GLGizmosManager& gm = get_gizmos_manager();
+            GLGizmosManager::EType type = gm.get_current_type();
+            if (type == GLGizmosManager::FdmSupports
+             || type == GLGizmosManager::Seam) {
+                shader->stop_using();
+                gm.render_painter_gizmo();
+                shader->start_using();
+            }
+        }
 
         m_volumes.render(GLVolumeCollection::Transparent, false, wxGetApp().plater()->get_camera().get_view_matrix());
         shader->stop_using();

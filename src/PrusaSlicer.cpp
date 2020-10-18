@@ -149,7 +149,6 @@ int CLI::run(int argc, char **argv)
 
     // Read input file(s) if any.
 #if ENABLE_GCODE_VIEWER
-#if ENABLE_GCODE_DRAG_AND_DROP_GCODE_FILES
     for (const std::string& file : m_input_files) {
         std::string ext = boost::filesystem::path(file).extension().string();
         if (boost::filesystem::path(file).extension().string() == ".gcode") {
@@ -159,7 +158,6 @@ int CLI::run(int argc, char **argv)
             }
         }
     }
-#endif // ENABLE_GCODE_DRAG_AND_DROP_GCODE_FILES
     if (!start_as_gcodeviewer) {
 #endif // ENABLE_GCODE_VIEWER
         for (const std::string& file : m_input_files) {
@@ -519,9 +517,12 @@ int CLI::run(int argc, char **argv)
                             outfile_final = sla_print.print_statistics().finalize_output_path(outfile);
                             sla_archive.export_print(outfile_final, sla_print);
                         }
-                        if (outfile != outfile_final && Slic3r::rename_file(outfile, outfile_final)) {
-                            boost::nowide::cerr << "Renaming file " << outfile << " to " << outfile_final << " failed" << std::endl;
-                            return 1;
+                        if (outfile != outfile_final) {
+                            if (Slic3r::rename_file(outfile, outfile_final)) {
+                                boost::nowide::cerr << "Renaming file " << outfile << " to " << outfile_final << " failed" << std::endl;
+                                return 1;
+                            }
+                            outfile = outfile_final;
                         }
                         boost::nowide::cout << "Slicing result exported to " << outfile << std::endl;
                     } catch (const std::exception &ex) {
@@ -575,23 +576,24 @@ int CLI::run(int argc, char **argv)
 // #ifdef USE_WX
 #if ENABLE_GCODE_VIEWER
         GUI::GUI_App* gui = new GUI::GUI_App(start_as_gcodeviewer ? GUI::GUI_App::EAppMode::GCodeViewer : GUI::GUI_App::EAppMode::Editor);
+        if (gui->get_app_mode() != GUI::GUI_App::EAppMode::GCodeViewer) {
+            // G-code viewer is currently not performing instance check, a new G-code viewer is started every time.
+            bool gui_single_instance_setting = gui->app_config->get("single_instance") == "1";
+            if (Slic3r::instance_check(argc, argv, gui_single_instance_setting)) {
+                //TODO: do we have delete gui and other stuff?
+                return -1;
+            }
+        }
 #else
         GUI::GUI_App *gui = new GUI::GUI_App();
 #endif // ENABLE_GCODE_VIEWER
 
-        if(!start_as_gcodeviewer) { // gcode viewer is currently not performing instance check
-		    bool gui_single_instance_setting = gui->app_config->get("single_instance") == "1";
-		    if (Slic3r::instance_check(argc, argv, gui_single_instance_setting)) {
-			    //TODO: do we have delete gui and other stuff?
-			    return -1;
-		    }
-        }
 //		gui->autosave = m_config.opt_string("autosave");
         GUI::GUI_App::SetInstance(gui);
 #if ENABLE_GCODE_VIEWER
-        gui->m_after_init_loads.set_params(load_configs, m_extra_config, m_input_files, start_as_gcodeviewer);
+        gui->after_init_loads.set_params(load_configs, m_extra_config, m_input_files, start_as_gcodeviewer);
 #else
-        gui->m_after_init_loads.set_params(load_configs, m_extra_config, m_input_files);
+        gui->after_init_loads.set_params(load_configs, m_extra_config, m_input_files);
 #endif // ENABLE_GCODE_VIEWER
 /*
 #if ENABLE_GCODE_VIEWER
@@ -664,7 +666,7 @@ bool CLI::setup(int argc, char **argv)
 #ifdef __APPLE__
     // The application is packed in the .dmg archive as 'Slic3r.app/Contents/MacOS/Slic3r'
     // The resources are packed to 'Slic3r.app/Contents/Resources'
-    boost::filesystem::path path_resources = path_to_binary.parent_path() / "../Resources";
+    boost::filesystem::path path_resources = boost::filesystem::canonical(path_to_binary).parent_path() / "../Resources";
 #elif defined _WIN32
     // The application is packed in the .zip archive in the root,
     // The resources are packed to 'resources'
@@ -678,7 +680,7 @@ bool CLI::setup(int argc, char **argv)
     // The application is packed in the .tar.bz archive (or in AppImage) as 'bin/slic3r',
     // The resources are packed to 'resources'
     // Path from Slic3r binary to resources:
-    boost::filesystem::path path_resources = path_to_binary.parent_path() / "../resources";
+    boost::filesystem::path path_resources = boost::filesystem::canonical(path_to_binary).parent_path() / "../resources";
 #endif
 
     set_resources_dir(path_resources.string());

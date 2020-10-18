@@ -310,7 +310,6 @@ void Tab::create_preset_tab()
     // so that the cursor jumps to the last item.
     m_treectrl->Bind(wxEVT_TREE_SEL_CHANGED, [this](wxTreeEvent&) {
             if (!m_disable_tree_sel_changed_event && !m_pages.empty()) {
-#ifdef WIN32		    
                 if (m_page_switch_running)
                     m_page_switch_planned = true;
                 else {
@@ -321,10 +320,6 @@ void Tab::create_preset_tab()
                     } while (this->tree_sel_change_delayed());
                     m_page_switch_running = false;
             }
-#else
-                // Crashes on Linux on start-up without CallAfter.
-                this->CallAfter([this]() { this->tree_sel_change_delayed(); });
-#endif
         }
         });
 
@@ -364,7 +359,13 @@ void Tab::create_preset_tab()
 
     // Initialize the DynamicPrintConfig by default keys/values.
     build();
-//    rebuild_page_tree();
+
+    // ys_FIXME: Following should not be needed, the function will be called later
+    // (update_mode->update_visibility->rebuild_page_tree). This does not work, during the
+    // second call of rebuild_page_tree m_treectrl->GetFirstVisibleItem(); returns zero
+    // for some unknown reason (and the page is not refreshed until user does a selection).
+    rebuild_page_tree();
+
     m_completed = true;
 }
 
@@ -408,6 +409,11 @@ Slic3r::GUI::PageShp Tab::add_options_page(const wxString& title, const std::str
             icon_idx = ++m_icon_count;
             m_icon_index[icon] = icon_idx;
         }
+
+        if (m_category_icon.find(title) == m_category_icon.end()) {
+            // Add new category to the category_to_icon list.
+            m_category_icon[title] = icon;
+    }
     }
     // Initialize the page.
 #ifdef __WXOSX__
@@ -420,11 +426,6 @@ Slic3r::GUI::PageShp Tab::add_options_page(const wxString& title, const std::str
 #ifdef __WINDOWS__
 //	page->SetDoubleBuffered(true);
 #endif //__WINDOWS__
-
-    //page->SetScrollbars(1, 20, 1, 2);
-    //page->Hide();
-    //m_hsizer->Add(page.get(), 1, wxEXPAND | wxLEFT, 5);
-//    m_hsizer->Add(page->vsizer(), 1, wxEXPAND | wxLEFT, 5);
 
     if (!is_extruder_pages)
         m_pages.push_back(page);
@@ -471,7 +472,6 @@ void Tab::OnActivate()
 
     // create controls on active page
     activate_selected_page([](){});
-//    m_active_page->Show();
     m_hsizer->Layout();
     Refresh();
 }
@@ -819,10 +819,7 @@ void Tab::on_roll_back_value(const bool to_sys /*= true*/)
 
     m_postpone_update_ui = true;
 
-    //auto selection = m_treectrl->GetItemText(m_treectrl->GetSelection());
-    //for (auto page : m_pages)
-    //    if (_(page->title()) == selection)	{
-            for (auto group : /*page*/m_active_page->m_optgroups) {
+    for (auto group : m_active_page->m_optgroups) {
                 if (group->title == "Capabilities") {
                     if ((m_options_list["extruders_count"] & os) == 0)
                         to_sys ? group->back_to_sys_value("extruders_count") : group->back_to_initial_value("extruders_count");
@@ -863,8 +860,6 @@ void Tab::on_roll_back_value(const bool to_sys /*= true*/)
                         to_sys ? group->back_to_sys_value(opt_key) : group->back_to_initial_value(opt_key);
                 }
             }
-       //     break;
-       //}
 
     m_postpone_update_ui = false;
     update_changed_ui();
@@ -904,8 +899,6 @@ void Tab::load_config(const DynamicPrintConfig& config)
 // Reload current $self->{config} (aka $self->{presets}->edited_preset->config) into the UI fields.
 void Tab::reload_config()
 {
-    //for (auto page : m_pages)
-    //    page->reload_config();
     if (m_active_page)
         m_active_page->reload_config();
 }
@@ -1042,18 +1035,6 @@ void Tab::toggle_option(const std::string& opt_key, bool toggle, int opt_index/*
         field->toggle(toggle);
 };
 
-// Set a key/value pair on this page. Return true if the value has been modified.
-// Currently used for distributing extruders_count over preset pages of Slic3r::GUI::Tab::Printer
-// after a preset is loaded.
-//bool Tab::set_value(const t_config_option_key& opt_key, const boost::any& value) {
-//    bool changed = false;
-//    for(auto page: m_pages) {
-//        if (page->set_value(opt_key, value))
-//        changed = true;
-//    }
-//    return changed;
-//}
-
 // To be called by custom widgets, load a value into a config,
 // update the preset selection boxes (the dirty flags)
 // If value is saved before calling this function, put saved_value = true,
@@ -1149,19 +1130,6 @@ void Tab::update_wiping_button_visibility() {
 
 void Tab::activate_option(const std::string& opt_key, const wxString& category)
 {
-//    wxWindowUpdateLocker noUpdates(this);
-
-    // we should to activate a tab with searched option, if it doesn't.
-    //if (!wxGetApp().mainframe->is_active_tab(this)) {
-    //    wxNotebook* tap_panel = wxGetApp().tab_panel();
-    //    tap_panel->SetSelection(tap_panel->FindPage(this));
-    //}
-//    Page* page {nullptr};
-//    Field* field = get_field(opt_key, &page);
-
-    // for option, which doesn't have field but just a text or button
-//    wxString page_title = (!field || !page) ? category : page->title();
-
     wxString page_title = _(category);
 
     auto cur_item = m_treectrl->GetFirstVisibleItem();
@@ -1182,12 +1150,6 @@ void Tab::activate_option(const std::string& opt_key, const wxString& category)
     // we should to activate a tab with searched option, if it doesn't.
     wxGetApp().mainframe->select_tab(this);
     Field* field = get_field(opt_key);
-
-    // we should to activate a tab with searched option, if it doesn't.
-    //wxNotebook* tap_panel = wxGetApp().tab_panel();
-    //int page_id = tap_panel->FindPage(this);
-    //if (tap_panel->GetSelection() != page_id)
-    //    tap_panel->SetSelection(page_id);
 
     // focused selected field
     if (field) {
@@ -1245,7 +1207,6 @@ void Tab::on_presets_changed()
 
     // Instead of PostEvent (EVT_TAB_PRESETS_CHANGED) just call update_presets
     wxGetApp().plater()->sidebar().update_presets(m_type);
-//    update_preset_description_line();
 
     // Printer selected at the Printer tab, update "compatible" marks at the print and filament selectors.
     for (auto t: m_dependent_tabs)
@@ -2046,12 +2007,6 @@ void TabPrint::update()
     }
 }
 
-//void TabPrint::OnActivate()
-//{
-//    update_description_lines();
-//    Tab::OnActivate();
-//}
-
 void TabPrint::clear_pages()
 {
     Tab::clear_pages();
@@ -2121,10 +2076,6 @@ void TabFilament::update_filament_overrides_page()
 {
     if (!m_active_page || m_active_page->title() != "Filament Overrides")
         return;
-    //const auto page_it = std::find_if(m_pages.begin(), m_pages.end(), [](const PageShp page) { return page->title() == "Filament Overrides"; });
-    //if (page_it == m_pages.end())
-    //    return;
-    //PageShp page = *page_it;
     Page* page = m_active_page;
 
     const auto og_it = std::find_if(page->m_optgroups.begin(), page->m_optgroups.end(), [](const ConfigOptionsGroupShp og) { return og->title == "Retraction"; });
@@ -2255,12 +2206,6 @@ void TabFilament::update()
         wxGetApp().mainframe->on_config_changed(m_config);
 }
 
-//void TabFilament::OnActivate()
-//{
-//    update_description_lines();
-//    Tab::OnActivate();
-//}
-
 void TabFilament::clear_pages()
 {
     Tab::clear_pages();
@@ -2269,9 +2214,9 @@ void TabFilament::clear_pages()
 	m_cooling_description_line = nullptr;
 }
 
-wxSizer* Tab::description_line_widget(wxWindow* parent, ogStaticText* *StaticText)
+wxSizer* Tab::description_line_widget(wxWindow* parent, ogStaticText* *StaticText, wxString text /*= wxEmptyString*/)
 {
-    *StaticText = new ogStaticText(parent, "");
+    *StaticText = new ogStaticText(parent, text);
 
 //	auto font = (new wxSystemSettings)->GetFont(wxSYS_DEFAULT_GUI_FONT);
     (*StaticText)->SetFont(wxGetApp().normal_font());
@@ -2285,133 +2230,7 @@ bool Tab::current_preset_is_dirty()
 {
     return m_presets->current_is_dirty();
 }
-/*
-void TabPrinter::build_printhost(ConfigOptionsGroup *optgroup)
-{
-    const PrinterTechnology tech = m_presets->get_selected_preset().printer_technology();
 
-    // Only offer the host type selection for FFF, for SLA it's always the SL1 printer (at the moment)
-    if (tech == ptFFF) {
-        optgroup->append_single_option_line("host_type");
-    }
-
-    auto printhost_browse = [=](wxWindow* parent) {
-        add_scaled_button(parent, &m_printhost_browse_btn, "browse", _(L("Browse")) + " "+ dots, wxBU_LEFT | wxBU_EXACTFIT);
-        ScalableButton* btn = m_printhost_browse_btn;
-        btn->SetFont(Slic3r::GUI::wxGetApp().normal_font());
-
-        auto sizer = new wxBoxSizer(wxHORIZONTAL);
-        sizer->Add(btn);
-
-        btn->Bind(wxEVT_BUTTON, [=](wxCommandEvent &e) {
-            BonjourDialog dialog(parent, tech);
-            if (dialog.show_and_lookup()) {
-                optgroup->set_value("print_host", std::move(dialog.get_selected()), true);
-                optgroup->get_field("print_host")->field_changed();
-            }
-        });
-
-        return sizer;
-    };
-
-    auto print_host_test = [this](wxWindow* parent) {
-        add_scaled_button(parent, &m_print_host_test_btn, "test", _(L("Test")), wxBU_LEFT | wxBU_EXACTFIT);
-        ScalableButton* btn = m_print_host_test_btn;
-        btn->SetFont(Slic3r::GUI::wxGetApp().normal_font());
-        auto sizer = new wxBoxSizer(wxHORIZONTAL);
-        sizer->Add(btn);
-
-        btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent &e) {
-            std::unique_ptr<PrintHost> host(PrintHost::get_print_host(m_config));
-            if (! host) {
-                const wxString text = _(L("Could not get a valid Printer Host reference"));
-                show_error(this, text);
-                return;
-            }
-            wxString msg;
-            if (host->test(msg)) {
-                show_info(this, host->get_test_ok_msg(), _(L("Success!")));
-            } else {
-                show_error(this, host->get_test_failed_msg(msg));
-            }
-        });
-
-        return sizer;
-    };
-
-    // Set a wider width for a better alignment
-    Option option = optgroup->get_option("print_host");
-    option.opt.width = Field::def_width_wider();
-    Line host_line = optgroup->create_single_option_line(option);
-    host_line.append_widget(printhost_browse);
-    host_line.append_widget(print_host_test);
-    optgroup->append_line(host_line);
-    option = optgroup->get_option("printhost_apikey");
-    option.opt.width = Field::def_width_wider();
-    optgroup->append_single_option_line(option);
-
-    const auto ca_file_hint = _utf8(L("HTTPS CA file is optional. It is only needed if you use HTTPS with a self-signed certificate."));
-
-    if (Http::ca_file_supported()) {
-        option = optgroup->get_option("printhost_cafile");
-        option.opt.width = Field::def_width_wider();
-        Line cafile_line = optgroup->create_single_option_line(option);
-
-        auto printhost_cafile_browse = [this, optgroup] (wxWindow* parent) {
-            auto btn = new wxButton(parent, wxID_ANY, " " + _(L("Browse"))+" " +dots, wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
-            btn->SetFont(Slic3r::GUI::wxGetApp().normal_font());
-            btn->SetBitmap(create_scaled_bitmap("browse"));
-            auto sizer = new wxBoxSizer(wxHORIZONTAL);
-            sizer->Add(btn);
-
-            btn->Bind(wxEVT_BUTTON, [this, optgroup] (wxCommandEvent e) {
-                static const auto filemasks = _(L("Certificate files (*.crt, *.pem)|*.crt;*.pem|All files|*.*"));
-                wxFileDialog openFileDialog(this, _(L("Open CA certificate file")), "", "", filemasks, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
-                if (openFileDialog.ShowModal() != wxID_CANCEL) {
-                    optgroup->set_value("printhost_cafile", std::move(openFileDialog.GetPath()), true);
-                    optgroup->get_field("printhost_cafile")->field_changed();
-                }
-            });
-
-            return sizer;
-        };
-
-        cafile_line.append_widget(printhost_cafile_browse);
-        optgroup->append_line(cafile_line);
-
-        Line cafile_hint { "", "" };
-        cafile_hint.full_width = 1;
-        cafile_hint.widget = [this, ca_file_hint](wxWindow* parent) {
-            auto txt = new wxStaticText(parent, wxID_ANY, ca_file_hint);
-            auto sizer = new wxBoxSizer(wxHORIZONTAL);
-            sizer->Add(txt);
-            return sizer;
-        };
-        optgroup->append_line(cafile_hint);
-    } else {
-        Line line { "", "" };
-        line.full_width = 1;
-
-        line.widget = [ca_file_hint] (wxWindow* parent) {
-            std::string info = _utf8(L("HTTPS CA File")) + ":\n\t" +
-                (boost::format(_utf8(L("On this system, %s uses HTTPS certificates from the system Certificate Store or Keychain."))) % SLIC3R_APP_NAME).str() +
-                "\n\t" + _utf8(L("To use a custom CA file, please import your CA file into Certificate Store / Keychain."));
-
-            auto txt = new wxStaticText(parent, wxID_ANY, from_u8((boost::format("%1%\n\n\t%2%") % info % ca_file_hint).str()));
-/*    % (boost::format(_utf8(L("HTTPS CA File:\n\
-    \tOn this system, %s uses HTTPS certificates from the system Certificate Store or Keychain.\n\
-    \tTo use a custom CA file, please import your CA file into Certificate Store / Keychain."))) % SLIC3R_APP_NAME).str()
-    % std::string(ca_file_hint.ToUTF8())).str()));
-* /            txt->SetFont(Slic3r::GUI::wxGetApp().normal_font());
-            auto sizer = new wxBoxSizer(wxHORIZONTAL);
-            sizer->Add(txt, 1, wxEXPAND);
-            return sizer;
-        };
-
-        optgroup->append_line(line);
-    }
-}
-*/
 void TabPrinter::build()
 {
     m_presets = &m_preset_bundle->printers;
@@ -2420,6 +2239,27 @@ void TabPrinter::build()
     m_printer_technology = m_presets->get_selected_preset().printer_technology();
 
     m_presets->get_selected_preset().printer_technology() == ptSLA ? build_sla() : build_fff();
+}
+
+void TabPrinter::build_print_host_upload_group(Page* page)
+{
+    ConfigOptionsGroupShp optgroup = page->new_optgroup(L("Print Host upload"));
+
+    wxString description_line_text = _L(""
+        "Note: All parameters from this group are moved to the Physical Printer settings (see changelog).\n\n"
+        "A new Physical Printer profile is created by clicking on the \"cog\" icon right of the Printer profiles combo box, "
+        "by selecting the \"add or remove printers\" item in the Printer combo box. The Physical Printer profile editor opens "
+        "also when clicking on the \"cog\" icon in the Printer settings tab. The Physical Printer profiles are being stored "
+        "into PrusaSlicer/physical_printer directory.");
+
+    Line line = { "", "" };
+        line.full_width = 1;
+    line.widget = [this, description_line_text](wxWindow* parent) {
+        return description_line_widget(parent, m_presets->get_selected_preset().printer_technology() == ptFFF ?
+                                       &m_fff_print_host_upload_description_line : &m_sla_print_host_upload_description_line,
+                                       description_line_text);
+        };
+        optgroup->append_line(line);
 }
 
 void TabPrinter::build_fff()
@@ -2455,14 +2295,6 @@ void TabPrinter::build_sla()
 
 }
 
-/*
-void TabPrinter::update_serial_ports()
-{
-    Field *field = get_field("serial_port");
-    Choice *choice = static_cast<Choice *>(field);
-    choice->set_values(Utils::scan_serial_ports());
-}
-*/
 void TabPrinter::extruders_count_changed(size_t extruders_count)
 {
     bool is_count_changed = false;
@@ -2768,9 +2600,8 @@ void TabPrinter::update_pages()
     if (new_printer_technology == m_printer_technology)
         return;
 
-    // hide all old pages
-    //for (auto& el : m_pages)
-    //    el.get()->Hide();
+    //clear all active pages before switching
+    clear_pages();
 
     // set m_pages to m_pages_(technology before changing)
     m_printer_technology == ptFFF ? m_pages.swap(m_pages_fff) : m_pages.swap(m_pages_sla);
@@ -2806,7 +2637,7 @@ void TabPrinter::activate_selected_page(std::function<void()> throw_if_canceled)
 
     // "extruders_count" doesn't update from the update_config(),
     // so update it implicitly
-    if (m_active_page->title() == "General")
+    if (m_active_page && m_active_page->title() == "General")
         m_active_page->set_value("extruders_count", int(m_extruders_count));
 }
 
@@ -2858,7 +2689,7 @@ void TabPrinter::toggle_options()
     wxString extruder_number;
     long val;
     if (m_active_page->title().StartsWith("Extruder ", &extruder_number) && extruder_number.ToLong(&val) &&
-        val > 0 && val <= m_extruders_count)
+        val > 0 && (size_t)val <= m_extruders_count)
     {
         size_t i = size_t(val - 1);
         bool have_retract_length = m_config->opt_float("retract_length", i) > 0;
@@ -2991,6 +2822,8 @@ void TabPrinter::update()
     m_presets->get_edited_preset().printer_technology() == ptFFF ? update_fff() : update_sla();
     m_update_cnt--;
 
+    Layout();
+
     if (m_update_cnt == 0)
         wxGetApp().mainframe->on_config_changed(m_config);
 }
@@ -3057,6 +2890,13 @@ void Tab::load_current_preset()
             const PrinterTechnology printer_technology = m_presets->get_edited_preset().printer_technology();
             if (printer_technology != static_cast<TabPrinter*>(this)->m_printer_technology)
             {
+                // The change of the technology requires to remove some of unrelated Tabs
+                // During this action, wxNoteBook::RemovePage invoke wxEVT_NOTEBOOK_PAGE_CHANGED
+                // and as a result a function select_active_page() is called fron Tab::OnActive()
+                // But we don't need it. So, to avoid activation of the page, set m_active_page to NULL 
+                // till unusable Tabs will be deleted
+                Page* tmp_page = m_active_page;
+                m_active_page = nullptr;
                 for (auto tab : wxGetApp().tabs_list) {
                     if (tab->type() == Preset::TYPE_PRINTER) // Printer tab is shown every time
                         continue;
@@ -3075,6 +2915,7 @@ void Tab::load_current_preset()
                     }
                 }
                 static_cast<TabPrinter*>(this)->m_printer_technology = printer_technology;
+                m_active_page = tmp_page;
             }
             on_presets_changed();
             if (printer_technology == ptFFF) {
@@ -3341,7 +3182,7 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection* presets /*= nullptr
     if (presets == nullptr) presets = m_presets;
 
     UnsavedChangesDialog dlg(m_type, presets, new_printer_name);
-    if (dlg.ShowModal() == wxID_CANCEL)
+    if (wxGetApp().app_config->get("default_action_on_select_preset") == "none" && dlg.ShowModal() == wxID_CANCEL)
         return false;
 
     if (dlg.save_preset())  // save selected changes
@@ -3366,7 +3207,7 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection* presets /*= nullptr
                 wxGetApp().plater()->force_filament_colors_update();
     }
     }
-    else if (dlg.move_preset()) // move selected changes
+    else if (dlg.transfer_changes()) // move selected changes
     {
         std::vector<std::string> selected_options = dlg.get_selected_options();
         if (m_type == presets->type()) // move changes for the current preset from this tab
@@ -3413,8 +3254,7 @@ void Tab::clear_pages()
     m_page_sizer->Clear(true);
     // clear pages from the controlls
     for (auto p : m_pages)
-        p->clear(); 
-    int i = m_page_sizer->GetItemCount();
+        p->clear();
 
     // nulling pointers
     m_parent_preset_description_line = nullptr;
@@ -3492,9 +3332,6 @@ bool Tab::tree_sel_change_delayed()
         clear_pages();
         throw_if_canceled();
 
-        //for (auto& el : m_pages)
-        //    el.get()->Hide();
-
         if (wxGetApp().mainframe!=nullptr && wxGetApp().mainframe->is_active_and_shown_tab(this))
             activate_selected_page(throw_if_canceled);
 
@@ -3505,7 +3342,6 @@ bool Tab::tree_sel_change_delayed()
     update_undo_buttons();
         throw_if_canceled();
 
-    //    m_active_page->Show();
         m_hsizer->Layout();
         throw_if_canceled();
         Refresh();
@@ -3884,7 +3720,7 @@ void TabPrinter::update_machine_limits_description(const MachineLimitsUsage usag
 		break;
 	case MachineLimitsUsage::TimeEstimateOnly:
 		text = _L("Machine limits will NOT be emitted to G-code, however they will be used to estimate print time, "
-			      "which may herefore not be accurate as the printer may apply a different set of machine limits.");
+			      "which may therefore not be accurate as the printer may apply a different set of machine limits.");
 		break;
 	case MachineLimitsUsage::Ignore:
 		text = _L("Machine limits are not set, therefore the print time estimate may not be accurate.");
@@ -3892,8 +3728,6 @@ void TabPrinter::update_machine_limits_description(const MachineLimitsUsage usag
 	default: assert(false);
 	}
     m_machine_limits_description_line->SetText(text);
-
-    Layout();
 }
 
 void Tab::compatible_widget_reload(PresetDependencies &deps)
@@ -3975,11 +3809,8 @@ Page::Page(wxWindow* parent, const wxString& title, const int iconID, const std:
         m_iconID(iconID),
         m_mode_bitmap_cache(mode_bmp_cache)
 {
-//    Create(m_parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-//    m_vsizer = new wxBoxSizer(wxVERTICAL);
     m_vsizer = (wxBoxSizer*)parent->GetSizer();
     m_item_color = &wxGetApp().get_label_clr_default();
-//    SetSizer(m_vsizer);
 }
 
 void Page::reload_config()
@@ -4003,8 +3834,6 @@ void Page::update_visibility(ConfigOptionMode mode, bool update_contolls_visibil
 
 void Page::activate(ConfigOptionMode mode, std::function<void()> throw_if_canceled)
 {
-    //if (m_parent)
-    //m_parent->SetSizer(m_vsizer);
     for (auto group : m_optgroups) {
         if (!group->activate(throw_if_canceled))
             continue;
@@ -4113,7 +3942,6 @@ ConfigOptionsGroupShp Page::new_optgroup(const wxString& title, int noncommon_ti
         ctrl->SetBitmap(reinterpret_cast<ScalableBitmap*>(ctrl->GetClientData())->bmp());
     };
 
-//    vsizer()->Add(optgroup->sizer, 0, wxEXPAND | wxALL, 10);
     m_optgroups.push_back(optgroup);
 
     return optgroup;

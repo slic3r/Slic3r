@@ -106,9 +106,10 @@ private:
 #endif // ENABLE_GCODE_VIEWER
 
     bool            m_initialized { false };
-    bool            app_conf_exists{ false };
+    bool            m_app_conf_exists{ false };
 #if ENABLE_GCODE_VIEWER
     EAppMode        m_app_mode{ EAppMode::Editor };
+    bool            m_is_recreating_gui{ false };
 #endif // ENABLE_GCODE_VIEWER
 
     wxColour        m_color_label_modified;
@@ -118,6 +119,7 @@ private:
     wxFont		    m_small_font;
     wxFont		    m_bold_font;
 	wxFont			m_normal_font;
+	wxFont			m_code_font;
 
     int          m_em_unit; // width of a "m"-symbol in pixels for current system font
                                // Note: for 100% Scale m_em_unit = 10 -> it's a good enough coefficient for a size setting of controls
@@ -141,7 +143,7 @@ private:
 	size_t m_instance_hash_int;
 
     // parameters needed for the after OnInit() loads
-    struct AFTER_INIT_LOADS
+    struct AfterInitLoads 
     {
         std::vector<std::string>    m_load_configs;
         DynamicPrintConfig          m_extra_config;
@@ -153,9 +155,11 @@ private:
         void set_params(
             const std::vector<std::string>& load_configs,
             const DynamicPrintConfig&       extra_config,
-            const std::vector<std::string>& input_files,
 #if ENABLE_GCODE_VIEWER
+            const std::vector<std::string>& input_files,
             bool                            start_as_gcodeviewer
+#else
+            const std::vector<std::string>& input_files
 #endif // ENABLE_GCODE_VIEWER
         ) {
             m_load_configs = load_configs;
@@ -184,6 +188,7 @@ public:
     EAppMode get_app_mode() const { return m_app_mode; }
     bool is_editor() const { return m_app_mode == EAppMode::Editor; }
     bool is_gcode_viewer() const { return m_app_mode == EAppMode::GCodeViewer; }
+    bool is_recreating_gui() const { return m_is_recreating_gui; }
 #endif // ENABLE_GCODE_VIEWER
 
     static std::string get_gl_info(bool format_as_html, bool extensions);
@@ -206,6 +211,7 @@ public:
     const wxFont&   small_font()            { return m_small_font; }
     const wxFont&   bold_font()             { return m_bold_font; }
     const wxFont&   normal_font()           { return m_normal_font; }
+    const wxFont&   code_font()             { return m_code_font; }
     int             em_unit() const         { return m_em_unit; }
     wxSize          get_min_size() const;
     float           toolbar_icon_scale(const bool is_limited = false) const;
@@ -258,6 +264,7 @@ public:
     virtual bool OnExceptionInMainLoop() override;
 
 #ifdef __APPLE__
+    void            OSXStoreOpenFiles(const wxArrayString &files) override;
     // wxWidgets override to get an event on open files.
     void            MacOpenFiles(const wxArrayString &fileNames) override;
 #endif /* __APPLE */
@@ -276,8 +283,7 @@ public:
     PresetUpdater*  preset_updater{ nullptr };
     MainFrame*      mainframe{ nullptr };
     Plater*         plater_{ nullptr };
-
-    AFTER_INIT_LOADS m_after_init_loads;
+    AfterInitLoads  after_init_loads;
     std::mutex      not_modal_dialog_mutex;
     wxDialog*       not_modal_dialog = nullptr;
 
@@ -329,6 +335,7 @@ private:
 
 #ifdef __WXMSW__
     void            associate_3mf_files();
+    void            associate_gcode_files();
 #endif // __WXMSW__
 };
 DECLARE_APP(GUI_App)

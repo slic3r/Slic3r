@@ -611,6 +611,7 @@ void ModelObject::assign_new_unique_ids_recursive()
         model_volume->assign_new_unique_ids_recursive();
     for (ModelInstance *model_instance : this->instances)
         model_instance->assign_new_unique_ids_recursive();
+    this->layer_height_profile.set_new_unique_id();
 }
 
 // Clone this ModelObject including its volumes and instances, keep the IDs of the copies equal to the original.
@@ -1046,8 +1047,8 @@ void ModelObject::convert_units(ModelObjectPtrs& new_objects, bool from_imperial
     int vol_idx = 0;
     for (ModelVolume* volume : volumes)
     {
-        volume->m_supported_facets.clear();
-        volume->m_seam_facets.clear();
+        volume->supported_facets.clear();
+        volume->seam_facets.clear();
         if (!volume->mesh().empty()) {
             TriangleMesh mesh(volume->mesh());
             mesh.require_shared_vertices();
@@ -1152,8 +1153,8 @@ ModelObjectPtrs ModelObject::cut(size_t instance, coordf_t z, bool keep_upper, b
     for (ModelVolume *volume : volumes) {
         const auto volume_matrix = volume->get_matrix();
 
-        volume->m_supported_facets.clear();
-        volume->m_seam_facets.clear();
+        volume->supported_facets.clear();
+        volume->seam_facets.clear();
 
         if (! volume->is_model_part()) {
             // Modifiers are not cut, but we still need to add the instance transformation
@@ -1735,6 +1736,14 @@ void ModelObject::scale_to_fit(const Vec3d &size)
 */
 }
 
+void ModelVolume::assign_new_unique_ids_recursive()
+{
+    ObjectBase::set_new_unique_id();
+    config.set_new_unique_id();
+    supported_facets.set_new_unique_id();
+    seam_facets.set_new_unique_id();
+}
+
 void ModelVolume::rotate(double angle, Axis axis)
 {
     switch (axis)
@@ -2059,7 +2068,7 @@ bool model_custom_supports_data_changed(const ModelObject& mo, const ModelObject
     assert(! model_volume_list_changed(mo, mo_new, ModelVolumeType::MODEL_PART));
     assert(mo.volumes.size() == mo_new.volumes.size());
     for (size_t i=0; i<mo.volumes.size(); ++i) {
-        if (! mo_new.volumes[i]->m_supported_facets.timestamp_matches(mo.volumes[i]->m_supported_facets))
+        if (! mo_new.volumes[i]->supported_facets.timestamp_matches(mo.volumes[i]->supported_facets))
             return true;
     }
     return false;
@@ -2069,7 +2078,7 @@ bool model_custom_seam_data_changed(const ModelObject& mo, const ModelObject& mo
     assert(! model_volume_list_changed(mo, mo_new, ModelVolumeType::MODEL_PART));
     assert(mo.volumes.size() == mo_new.volumes.size());
     for (size_t i=0; i<mo.volumes.size(); ++i) {
-        if (! mo_new.volumes[i]->m_seam_facets.timestamp_matches(mo.volumes[i]->m_seam_facets))
+        if (! mo_new.volumes[i]->seam_facets.timestamp_matches(mo.volumes[i]->seam_facets))
             return true;
     }
     return false;

@@ -159,7 +159,7 @@ namespace Slic3r {
                          polygons_per_layer[i * 2] = union_(polys);
                      }
                  });
-                for (size_t i = 0; i < cnt / 2; ++i)
+                for (size_t i = 1; i < cnt / 2; ++i)
                  polygons_per_layer[i] = std::move(polygons_per_layer[i * 2]);
              if (cnt & 1)
                  polygons_per_layer[cnt / 2] = std::move(polygons_per_layer[cnt - 1]);
@@ -823,10 +823,14 @@ void GCode::do_export(Print* print, const char* path, GCodePreviewData* preview_
     }
 
 
-#endif // ENABLE_GCODE_VIEWER    if (rename_file(path_tmp, path))
-        throw Slic3r::RuntimeError(
-            std::string("Failed to rename the output G-code file from ") + path_tmp + " to " + path + '\n' +
-            "Is " + path_tmp + " locked?" + '\n');
+#endif // ENABLE_GCODE_VIEWER
+
+    std::error_code err_code;
+    if (rename_file(path_tmp, path))
+        if (copy_file(path_tmp, path, true) != SUCCESS)
+            throw Slic3r::RuntimeError(
+                std::string("Failed to rename the output G-code file from ") + path_tmp + " to " + path + '\n' +
+                "Is " + path_tmp + " locked? " + err_code.message() + '\n');
 
     BOOST_LOG_TRIVIAL(info) << "Exporting G-code finished" << log_memory_info();
 	print->set_done(psGCodeExport);
@@ -854,7 +858,7 @@ namespace DoExport {
 	    // shall be adjusted as well to produce a G-code block compatible with the particular firmware flavor.
         // supermerill: done
 	    if (true) {
-	    	if (config.machine_limits_type.value != MachineLimitsUsage::Ignore) {
+            if (config.machine_limits_usage.value != MachineLimitsUsage::Ignore) {
 	        normal_time_estimator.set_max_acceleration((float)config.machine_max_acceleration_extruding.values[0]);
 	        normal_time_estimator.set_retract_acceleration((float)config.machine_max_acceleration_retracting.values[0]);
             normal_time_estimator.set_max_travel_acceleration((float)config.machine_max_acceleration_travel.values[0]);
@@ -880,7 +884,7 @@ namespace DoExport {
 	            silent_time_estimator.set_dialect(config.gcode_flavor);
 	            silent_time_estimator.set_extrusion_axis(config.get_extrusion_axis()[0]);
 
-		    	if (config.machine_limits_type.value != MachineLimitsUsage::Ignore) {
+                if (config.machine_limits_usage.value != MachineLimitsUsage::Ignore) {
 	            /* "Stealth mode" values can be just a copy of "normal mode" values
 	            * (when they aren't input for a printer preset).
 	            * Thus, use back value from values, instead of second one, which could be absent
@@ -1955,7 +1959,7 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
 {
    // gcfRepRap, gcfRepetier, gcfTeacup, gcfMakerWare, gcfMarlin, gcfKlipper, gcfSailfish, gcfSprinter, gcfMach3, gcfMachinekit,
    ///     gcfSmoothie, gcfNoExtrusion, gcfLerdge,
-    if (print.config().machine_limits_type.value == MachineLimitsUsage::EmitToGCode) {
+    if (print.config().machine_limits_usage.value == MachineLimitsUsage::EmitToGCode) {
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap,  gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M201 X%d Y%d Z%d E%d ; sets maximum accelerations, mm/sec^2\n",
                 int(print.config().machine_max_acceleration_x.values.front() + 0.5),

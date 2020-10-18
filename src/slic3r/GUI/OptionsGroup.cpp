@@ -110,13 +110,6 @@ OptionsGroup::OptionsGroup(	wxWindow* _parent, const wxString& title,
                 m_show_modified_btns(is_tab_opt),
                 staticbox(title!=""), extra_column(extra_clmn)
 {
-    /*if (staticbox) {
-        stb = new wxStaticBox(_parent, wxID_ANY, _(title));
-        if (!wxOSX) stb->SetBackgroundStyle(wxBG_STYLE_PAINT);
-        stb->SetFont(wxOSX ? wxGetApp().normal_font() : wxGetApp().bold_font());
-    } else
-        stb = nullptr;
-    sizer = (staticbox ? new wxStaticBoxSizer(stb, wxVERTICAL) : new wxBoxSizer(wxVERTICAL));*/
 }
 
 void OptionsGroup::add_undo_buttons_to_sizer(wxSizer* sizer, const t_field& field, std::vector<size_t>* widget_idx_in_sizer)
@@ -453,17 +446,10 @@ bool OptionsGroup::activate(std::function<void()> throw_if_canceled)
 // delete all controls from the option group
 void OptionsGroup::clear()
 {
-	if (!sizer)//(sizer->IsEmpty())
+	if (!sizer)
 		return;
 
-//	m_grid_sizer->Clear(true);
 	m_grid_sizer = nullptr;
-
-//	sizer->Clear(true);
-	//if (stb) {
-	//	stb->SetContainingSizer(NULL);
-	//	stb->Destroy();
-	//}
 	sizer = nullptr;
 
 	for (Line& line : m_lines)
@@ -653,8 +639,8 @@ bool ConfigOptionsGroup::is_visible(ConfigOptionMode mode)
     if (opt_mode_size == 1 && m_options_mode[0].size() == 1 && m_options_mode[0].begin()->second.size() == 1)
 		return get_invisible_idx(m_options_mode[0], mode).empty();
 
-    int hidden_row_cnt = 0;
-	for (int i = 0; i < opt_mode_size; i++) {
+    size_t hidden_row_cnt = 0;
+	for (size_t i = 0; i < opt_mode_size; i++) {
 		if ((m_options_mode[i].size() == 1
 			&& m_options_mode[i].begin()->second.size() == 1
 			&& m_options_mode[i].begin()->second[0] == (size_t)-1
@@ -982,6 +968,16 @@ void ConfigOptionsGroup::change_opt_value(const t_config_option_key& opt_key, co
 	if (m_modelconfig)
 		m_modelconfig->touch();
 }
+
+ogStaticText::ogStaticText(wxWindow* parent, const wxString& text) : 
+    wxStaticText(parent, wxID_ANY, text, wxDefaultPosition, wxDefaultSize)
+{
+    if (!text.IsEmpty()) {
+		Wrap(60 * wxGetApp().em_unit());
+		GetParent()->Layout();
+    }
+}
+
 
 void ogStaticText::SetText(const wxString& value, bool wrap/* = true*/)
 {

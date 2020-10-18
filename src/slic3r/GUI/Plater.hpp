@@ -24,7 +24,8 @@ namespace Slic3r {
 class Model;
 class ModelObject;
 
-class ModelInstance;class PrintBase;
+class ModelInstance;
+class PrintBase;
 class Print;
 class SLAPrint;
 enum SLAPrintObjectStep : unsigned int;
@@ -145,6 +146,7 @@ public:
 #if ENABLE_GCODE_VIEWER
     void load_gcode();
     void load_gcode(const wxString& filename);
+    void refresh_print();
 #endif // ENABLE_GCODE_VIEWER
 
     std::vector<size_t> load_files(const std::vector<boost::filesystem::path>& input_files, bool load_model = true, bool load_config = true, bool update_dirs = true, bool imperial_units = false);
@@ -318,6 +320,7 @@ public:
 #if ENABLE_GCODE_VIEWER
     void update_preview_bottom_toolbar();
     void update_preview_moves_slider();
+    void enable_preview_moves_slider(bool enable);
 
     void reset_gcode_toolpaths();
     void reset_last_loaded_gcode() { m_last_loaded_gcode = ""; }
@@ -333,6 +336,8 @@ public:
     
 	const NotificationManager* get_notification_manager() const;
 	NotificationManager* get_notification_manager();
+
+    void bring_instance_forward();
 
 	// ROII wrapper for suppressing the Undo / Redo snapshot to be taken.
 	class SuppressSnapshots

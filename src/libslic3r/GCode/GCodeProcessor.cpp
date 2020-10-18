@@ -459,9 +459,11 @@ void GCodeProcessor::TimeProcessor::post_process(const std::string& filename)
     fclose(out);
     in.close();
 
-    if (rename_file(out_path, filename))
-        throw Slic3r::RuntimeError(std::string("Failed to rename the output G-code file from ") + out_path + " to " + filename + '\n' +
-            "Is " + out_path + " locked?" + '\n');
+    std::error_code err_code;
+    if (err_code = rename_file(out_path, filename))
+        if(copy_file(out_path, filename, true) != SUCCESS)
+            throw Slic3r::RuntimeError(std::string("Failed to rename the output G-code file from ") + out_path + " to " + filename + '\n' +
+                "Is " + out_path + " locked? (gcp)" + err_code.message() + '\n');
 }
 
 const std::vector<std::pair<GCodeProcessor::EProducer, std::string>> GCodeProcessor::Producers = {
@@ -505,7 +507,7 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
         m_filament_diameters[i] = static_cast<float>(config.filament_diameter.values[i]);
     }
 
-    if (config.machine_limits_type.value != MachineLimitsUsage::Ignore)
+    if (config.machine_limits_usage.value != MachineLimitsUsage::Ignore)
         m_time_processor.machine_limits = reinterpret_cast<const MachineEnvelopeConfig&>(config);
 
     // Filament load / unload times are not specific to a firmware flavor. Let anybody use it if they find it useful.
@@ -701,6 +703,7 @@ void GCodeProcessor::reset()
     m_height = 0.0f;
     m_mm3_per_mm = 0.0f;
     m_fan_speed = 0.0f;
+    m_temperature = 0.0f;
 
     m_extrusion_role = erNone;
     m_extruder_id = 0;
@@ -898,9 +901,11 @@ void GCodeProcessor::process_gcode_line(const GCodeReader::GCodeLine& line)
                 case 1:   { process_M1(line); break; }   // Sleep or Conditional stop
                 case 82:  { process_M82(line); break; }  // Set extruder to absolute mode
                 case 83:  { process_M83(line); break; }  // Set extruder to relative mode
+                case 104:  { process_M104_M109(line); break; } // Set extruder temp
                 case 106: { process_M106(line); break; } // Set fan speed
                 case 107: { process_M107(line); break; } // Disable fan
                 case 108: { process_M108(line); break; } // Set tool (Sailfish)
+                case 109: { process_M104_M109(line); break; } // Set extruder temp
                 case 132: { process_M132(line); break; } // Recall stored home offsets
                 case 135: { process_M135(line); break; } // Set tool (MakerWare)
                 case 201: { process_M201(line); break; } // Set max printing acceleration
@@ -922,6 +927,19 @@ void GCodeProcessor::process_gcode_line(const GCodeReader::GCodeLine& line)
                 break;
             }
         default: { break; }
+        }
+        if (this->m_flavor == GCodeFlavor::gcfKlipper) {
+            if (cmd == "ACTIVATE_EXTRUDER") {
+                std::string rawline = line.raw();
+                std::string trsf;
+                while (rawline.back() >= '0' && rawline.back() <= '9') {
+                    trsf = rawline.back() + trsf;
+                    rawline.resize(rawline.size() - 1);
+                }
+                if (trsf.empty())
+                    trsf = "0";
+                process_T("T" + trsf);
+            }
         }
     }
     else {
@@ -1456,7 +1474,8 @@ void GCodeProcessor::process_G1(const GCodeReader::GCodeLine& line)
             m_width = delta_pos[E] * static_cast<float>(M_PI * sqr(filament_radius)) / (delta_xyz * m_height) + static_cast<float>(1.0 - 0.25 * M_PI) * m_height;
 
         // clamp width to avoid artifacts which may arise from wrong values of m_height
-        m_width = std::min(m_width, 4.0f * m_height);
+        m_width = std::min(m_width, 1.0f);
+//        m_width = std::min(m_width, 4.0f * m_height);
 
 #if ENABLE_GCODE_VIEWER_DATA_CHECKING
         m_width_compare.update(m_width, m_extrusion_role);
@@ -1633,8 +1652,12 @@ void GCodeProcessor::process_G1(const GCodeReader::GCodeLine& line)
 
 void GCodeProcessor::process_G10(const GCodeReader::GCodeLine& line)
 {
-    // stores retract move
-    store_move_vertex(EMoveType::Retract);
+    // try to guess the meaning of this
+    if (!line.has('P'))
+        // stores retract move
+        store_move_vertex(EMoveType::Retract);
+    else if (line.has('S'))
+        process_M104_M109(line);
 }
 
 void GCodeProcessor::process_G11(const GCodeReader::GCodeLine& line)
@@ -1726,6 +1749,15 @@ void GCodeProcessor::process_M82(const GCodeReader::GCodeLine& line)
 void GCodeProcessor::process_M83(const GCodeReader::GCodeLine& line)
 {
     m_e_local_positioning_type = EPositioningType::Relative;
+}
+
+void GCodeProcessor::process_M104_M109(const GCodeReader::GCodeLine& line)
+{
+    float new_temp;
+    if (line.has_value('S', new_temp))
+    {
+        m_temperature = new_temp;
+    }
 }
 
 void GCodeProcessor::process_M106(const GCodeReader::GCodeLine& line)
@@ -2039,7 +2071,8 @@ void GCodeProcessor::store_move_vertex(EMoveType type)
         m_height,
         m_mm3_per_mm,
         m_fan_speed,
-        static_cast<float>(m_result.moves.size())
+        static_cast<float>(m_result.moves.size()),
+        m_temperature
     };
     m_result.moves.emplace_back(vertex);
 }

@@ -197,6 +197,7 @@ protected:
 
 	int					m_icon_count;
 	std::map<std::string, size_t>	m_icon_index;		// Map from an icon file name to its index
+	std::map<wxString, std::string>	m_category_icon;	// Map from a category name to an icon file name
 	std::vector<PageShp>			m_pages;
 	Page*				m_active_page {nullptr};
 	bool				m_disable_tree_sel_changed_event {false};
@@ -333,8 +334,7 @@ public:
 	Field*			get_field(const t_config_option_key& opt_key, int opt_index = -1) const;
     Field*          get_field(const t_config_option_key &opt_key, Page** selected_page, int opt_index = -1);
 	void			toggle_option(const std::string& opt_key, bool toggle, int opt_index = -1);
-//	bool			set_value(const t_config_option_key& opt_key, const boost::any& value);
-	wxSizer*		description_line_widget(wxWindow* parent, ogStaticText** StaticText);
+	wxSizer*		description_line_widget(wxWindow* parent, ogStaticText** StaticText, wxString text = wxEmptyString);
 	bool			current_preset_is_dirty();
 
 	DynamicPrintConfig*	get_config() { return m_config; }
@@ -347,6 +347,8 @@ public:
     void			apply_searcher();
 	void			cache_config_diff(const std::vector<std::string>& selected_options);
 	void			apply_config_from_cache();
+
+	const std::map<wxString, std::string>& get_category_icon_map() { return m_category_icon; }
 
 protected:
 	void			create_line_with_widget(ConfigOptionsGroup* optgroup, const std::string& opt_key, widget_t widget);
@@ -382,7 +384,6 @@ public:
 	void		update_description_lines() override;
 	void		toggle_options() override;
 	void		update() override;
-//	void		OnActivate() override;
 	void		clear_pages() override;
     bool 		supports_printer_technology(const PrinterTechnology tech) override { return tech == ptFFF; }
 
@@ -415,7 +416,6 @@ public:
 	void		update_description_lines() override;
 	void		toggle_options() override;
 	void		update() override;
-//	void		OnActivate() override;
 	void		clear_pages() override;
     bool 		supports_printer_technology(const PrinterTechnology tech) override { return tech == ptFFF; }
 };
@@ -424,6 +424,9 @@ class TabPrinter : public Tab
 {
 	ogStaticText* m_machine_limits_description_line {nullptr};
 	void 		update_machine_limits_description(const MachineLimitsUsage usage);
+
+	ogStaticText*	m_fff_print_host_upload_description_line {nullptr};
+	ogStaticText*	m_sla_print_host_upload_description_line {nullptr};
 
     std::vector<PageShp>			m_pages_fff;
     std::vector<PageShp>			m_pages_sla;
@@ -462,6 +465,7 @@ public:
 	~TabPrinter() {}
 
 	void		build() override;
+	void		build_print_host_upload_group(Page* page);
     void		build_fff();
     void		build_sla();
 	void		activate_selected_page(std::function<void()> throw_if_canceled) override;
@@ -471,7 +475,6 @@ public:
     void		update_fff();
     void		update_sla();
     void        update_pages(); // update m_pages according to printer technology
-//	void		update_serial_ports();
 	void		extruders_count_changed(size_t extruders_count);
 	void		milling_count_changed(size_t extruders_count);
 	PageShp		build_kinematics_page();

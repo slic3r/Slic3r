@@ -205,6 +205,7 @@ Preview(wxWindow* parent, Model* model, DynamicPrintConfig* config,
 #if ENABLE_GCODE_VIEWER
     void update_bottom_toolbar();
     void update_moves_slider();
+    void enable_moves_slider(bool enable);
     void hide_layers_slider();
 #endif // ENABLE_GCODE_VIEWER
 

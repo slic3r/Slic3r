@@ -252,6 +252,7 @@ namespace Slic3r {
             float mm3_per_mm{ 0.0f };
             float fan_speed{ 0.0f }; // percentage
             float time{ 0.0f }; // s
+            float temperature{ 0.0f }; // °
 
             float volumetric_rate() const { return feedrate * mm3_per_mm; }
         };
@@ -378,6 +379,7 @@ namespace Slic3r {
         float m_extruded_last_z;
         unsigned int m_layer_id;
         CpColor m_cp_color;
+        float m_temperature;
 
         enum class EProducer
         {
@@ -485,6 +487,9 @@ namespace Slic3r {
 
         // Set extruder to relative mode
         void process_M83(const GCodeReader::GCodeLine& line);
+
+        // Set extruder temp
+        void process_M104_M109(const GCodeReader::GCodeLine& line);
 
         // Set fan speed
         void process_M106(const GCodeReader::GCodeLine& line);

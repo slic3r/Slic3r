@@ -234,8 +234,7 @@ Preview::Preview(
     , m_volumes_cleanup_required(false)
 #endif // __linux__
 {
-    if (init(parent, model))
-    {
+    if (init(parent, model)) {
 #if !ENABLE_GCODE_VIEWER
         show_hide_ui_elements("none");
 #endif // !ENABLE_GCODE_VIEWER
@@ -383,6 +382,7 @@ bool Preview::init(wxWindow* parent, Model* model)
     right_sizer->Add(m_layers_slider_sizer, 1, wxEXPAND, 0);
 
     m_moves_slider = new DoubleSlider::Control(m_bottom_toolbar_panel, wxID_ANY, 0, 0, 0, 100, wxDefaultPosition, wxSize(-1, 3 * GetTextExtent("m").y), wxSL_HORIZONTAL);
+    m_moves_slider->set_lower_editable(get_app_config()->get("seq_top_layer_only") == "0");
     m_moves_slider->SetDrawMode(DoubleSlider::dmSequentialGCodeView);
 
     wxBoxSizer* bottom_toolbar_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -598,6 +598,9 @@ void Preview::refresh_print()
         return;
 
     load_print(true);
+#if ENABLE_GCODE_VIEWER
+    m_moves_slider->set_lower_editable(get_app_config()->get("seq_top_layer_only") == "0");
+#endif // ENABLE_GCODE_VIEWER
 }
 
 void Preview::msw_rescale()
@@ -917,6 +920,7 @@ wxBoxSizer* Preview::create_layers_slider_sizer()
 
     m_layers_slider->SetDrawMode(wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology() == ptSLA,
         wxGetApp().preset_bundle->prints.get_edited_preset().config.opt_bool("complete_objects"));
+    m_layers_slider->enable_action_icon(wxGetApp().is_editor());
 
     sizer->Add(m_layers_slider, 0, wxEXPAND, 0);
 
@@ -1232,14 +1236,22 @@ void Preview::update_moves_slider()
 
     std::vector<double> values(view.endpoints.last - view.endpoints.first + 1);
     unsigned int count = 0;
-    for (unsigned int i = view.endpoints.first; i <= view.endpoints.last; ++i)
-    {
+    for (unsigned int i = view.endpoints.first; i <= view.endpoints.last; ++i) {
         values[count++] = static_cast<double>(i + 1);
     }
 
     m_moves_slider->SetSliderValues(values);
     m_moves_slider->SetMaxValue(view.endpoints.last - view.endpoints.first);
     m_moves_slider->SetSelectionSpan(view.current.first - view.endpoints.first, view.current.last - view.endpoints.first);
+}
+
+void Preview::enable_moves_slider(bool enable)
+{
+    bool render_as_disabled = !enable;
+    if (m_moves_slider != nullptr && m_moves_slider->is_rendering_as_disabled() != render_as_disabled) {
+        m_moves_slider->set_render_as_disabled(render_as_disabled);
+        m_moves_slider->Refresh();
+    }
 }
 #else
 void Preview::update_double_slider_from_canvas(wxKeyEvent & event)
@@ -1273,8 +1285,8 @@ void Preview::update_double_slider_from_canvas(wxKeyEvent & event)
 void Preview::load_print_as_fff(bool keep_z_range)
 {
 #if ENABLE_GCODE_VIEWER
-    if (wxGetApp().mainframe == nullptr)
-        // avoid proessing while mainframe is being constructed
+    if (wxGetApp().mainframe == nullptr || wxGetApp().is_recreating_gui())
+        // avoid processing while mainframe is being constructed
         return;
 #endif // ENABLE_GCODE_VIEWER
 
