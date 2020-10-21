@@ -163,6 +163,8 @@ void Layer::make_perimeters()
                 && config.perimeter_overlap         == other_config.perimeter_overlap
                 && config.perimeter_speed           == other_config.perimeter_speed // it os mandatory? can't this be set at gcode.cpp?
                 && config.small_perimeter_speed     == other_config.small_perimeter_speed
+                && config.small_perimeter_min_length == other_config.small_perimeter_min_length
+                && config.small_perimeter_max_length == other_config.small_perimeter_max_length
                 && config.thin_walls                == other_config.thin_walls
                 && config.thin_walls_min_width      == other_config.thin_walls_min_width
                 && config.thin_walls_overlap        == other_config.thin_walls_overlap

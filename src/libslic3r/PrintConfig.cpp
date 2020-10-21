@@ -2838,17 +2838,43 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionInts{ 5 });
 
     def = this->add("small_perimeter_speed", coFloatOrPercent);
-    def->label = L("Small");
+    def->label = L("Speed");
     def->full_label = ("Small perimeters speed");
     def->category = OptionCategory::speed;
     def->tooltip = L("This separate setting will affect the speed of perimeters having radius <= 6.5mm "
-                   "(usually holes). If expressed as percentage (for example: 80%) it will be calculated "
-                   "on the perimeters speed setting above. Set to zero for auto.");
+        "(usually holes). If expressed as percentage (for example: 80%) it will be calculated "
+        "on the perimeters speed setting above. Set to zero for auto.");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "perimeter_speed";
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(15, false));
+
+    def = this->add("small_perimeter_min_length", coFloatOrPercent);
+    def->label = L("Min length");
+    def->full_label = ("Min small perimeters length");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("This set the threshold for small periemter length. Every loop with a length lower than that will be printed at small perimeter speed"
+        "\nCan be a mm or a % of the nozzle diameter.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(6, false));
+
+
+    def = this->add("small_perimeter_max_length", coFloatOrPercent);
+    def->label = L("Max length");
+    def->full_label = ("Max small perimeters length");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("This set the end of the threshold for small periemter length."
+        " Every periemter loop lower than that will see their speed reduced a bit, from their normal spee at this length down to small perimeter speed."
+        "\nCan be a mm or a % of the nozzle diameter.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(20, false));
 
     def = this->add("curve_smoothing_angle_convex", coFloat);
     def->label = L("Min convex angle");

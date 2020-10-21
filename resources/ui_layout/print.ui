@@ -192,7 +192,6 @@ group:label_width$8:Speed for print moves
 	line:Perimeter speed
 		setting:width$4:perimeter_speed
 		setting:width$4:external_perimeter_speed
-		setting:width$4:small_perimeter_speed
 	end_line
 	line:Infill speed
 		setting:width$4:infill_speed
@@ -217,6 +216,10 @@ group:Modifiers
 		setting:label_width$8:width$4:first_layer_speed
 		setting:label_width$8:width$4:first_layer_infill_speed
 	end_line
+	line:Small perimeter speed
+		setting:label_width$8:width$4:small_perimeter_min_length
+		setting:label_width$8:width$4:small_perimeter_max_length
+		setting:label_width$8:width$4:small_perimeter_speed
 group:Acceleration control (advanced)
 	setting:perimeter_acceleration
 	setting:infill_acceleration

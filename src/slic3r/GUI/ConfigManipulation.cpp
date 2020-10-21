@@ -359,7 +359,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
         "only_one_perimeter_top", "ensure_vertical_shell_thickness", "thin_walls", 
         "overhangs", "overhangs_reverse",
         "seam_position", "external_perimeters_first", "external_perimeters_vase", "external_perimeter_extrusion_width",
-        "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "perimeter_loop", "perimeter_loop_seam" })
+        "perimeter_speed", "small_perimeter_speed", "small_perimeter_min_length", " small_perimeter_max_length", "external_perimeter_speed", "perimeter_loop", "perimeter_loop_seam" })
         toggle_field(el, have_perimeters);
 
     toggle_field("overhangs_width", config->option<ConfigOptionFloatOrPercent>("overhangs_width_speed")->value > 0);

@@ -3034,8 +3034,16 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     if (paths.empty()) return "";
 
     // apply the small/external? perimeter speed
-    if (is_perimeter(paths.front().role()) && loop.length() <= SMALL_PERIMETER_LENGTH && speed == -1)
-        speed = m_config.external_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+    if (speed == -1 && is_perimeter(paths.front().role()) && loop.length() <=
+        scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)))) {
+        double min_length = scale_(this->m_config.small_perimeter_min_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        double max_length = scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        if (loop.length() <= min_length) {
+            speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+        } else {
+            speed = - (loop.length() - min_length) / (max_length - min_length);
+        }
+    }
 
     //get extrusion length
     coordf_t length = 0;
@@ -3552,8 +3560,16 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     if (paths.empty()) return "";
     
     // apply the small perimeter speed
-    if (is_perimeter(paths.front().role()) && loop.length() <= SMALL_PERIMETER_LENGTH && speed == -1)
-        speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+    if (speed == -1 && is_perimeter(paths.front().role()) && loop.length() <=
+        scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)))) {
+        double min_length = scale_(this->m_config.small_perimeter_min_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        double max_length = scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        if (loop.length() <= min_length) {
+            speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+        } else {
+            speed = -(loop.length() - min_length) / (max_length - min_length);
+        }
+    }
     
     // extrude along the path
     std::string gcode;
@@ -4130,7 +4146,10 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
 
 
     // set speed
-    if (speed == -1) {
+    if (speed < 0) {
+        //if speed == -1, then it's means "choose yourself, but if it's -1 < speed <0 , then it's a scaling from small_periemter.
+        //it's a bit hacky, so if you want to rework it, help yourself.
+        float factor = (-speed);
         if (path.role() == erPerimeter) {
             speed = m_config.get_abs_value("perimeter_speed");
         } else if (path.role() == erExternalPerimeter) {
@@ -4153,6 +4172,12 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             speed = m_config.get_abs_value("milling_speed");
         } else {
             throw std::invalid_argument("Invalid speed");
+        }
+        //don't modify bridge speed
+        if (factor < 1 && !(path.role() == erOverhangPerimeter || path.role() == erBridgeInfill)) {
+            float small_speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+            //apply factor between feature speed and small speed
+            speed = speed * factor + (1 - factor) * small_speed;
         }
     }
     if (m_volumetric_speed != 0. && speed == 0)

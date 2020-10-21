@@ -753,6 +753,8 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "seam_preferred_direction_jitter"
             || opt_key == "seam_travel"
             || opt_key == "small_perimeter_speed"
+            || opt_key == "small_perimeter_min_length"
+            || opt_key == "small_perimeter_max_length"
             || opt_key == "solid_infill_speed"
             || opt_key == "support_material_interface_speed"
             || opt_key == "support_material_speed"

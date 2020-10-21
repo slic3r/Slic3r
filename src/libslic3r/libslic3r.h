@@ -43,7 +43,7 @@ typedef double  coordf_t;
 // When extruding a closed loop, the loop is interrupted and shortened a bit to reduce the seam.
 #define LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER 0.15
 // Maximum perimeter length for the loop to apply the small perimeter speed. 
-#define SMALL_PERIMETER_LENGTH (6.5 / SCALING_FACTOR) * 2 * PI
+//#define SMALL_PERIMETER_LENGTH (6.5 / SCALING_FACTOR) * 2 * PI
 #define INSET_OVERLAP_TOLERANCE 0.4
 //FIXME Better to use an inline function with an explicit return type.
 //inline coord_t scale_(coordf_t v) { return coord_t(floor(v / SCALING_FACTOR + 0.5f)); }
