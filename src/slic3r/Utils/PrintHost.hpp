@@ -7,6 +7,7 @@
 #include <boost/filesystem/path.hpp>
 
 #include <wx/string.h>
+#include <wx/arrstr.h>
 
 #include "Http.hpp"
 
