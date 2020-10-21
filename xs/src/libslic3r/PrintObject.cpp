@@ -556,15 +556,15 @@ PrintObject::move_nonplanar_surfaces_up()
             size_t j;
             std::vector<ExPolygons> nonplar_candidates;
             for (j = i-1; j >= 1; j--) {
-                if (minZ > layers[j]->slice_z) break;
+                if (minZ >= layers[j]->print_z+layers[j]->height) break;
 
                 Polygons layerm_slices_surfaces_copy = layers[j]->regions[region_id]->slices;
 
                 //debug output
-                SVG svg("svg/layer_" + std::to_string(layers[i]->id()) + "_" + std::to_string(j) + ".svg");
-                svg.draw_outline(layerm_slices_surfaces_copy, "blue");
-                svg.draw(nonplanar_projection, "black", 0.3);
-                svg.draw(intersection_ex(nonplanar_projection, union_ex(layerm_slices_surfaces_copy, false),false) , "green", 0.3);
+                // SVG svg("svg/layer_" + std::to_string(layers[i]->id()) + "_" + std::to_string(j) + "_" + std::to_string(layers[j]->print_z) + ".svg");
+                // svg.draw_outline(layerm_slices_surfaces_copy, "blue");
+                // svg.draw(nonplanar_projection, "black", 0.3);
+                // svg.draw(intersection_ex(nonplanar_projection, union_ex(layerm_slices_surfaces_copy, false),false) , "green", 0.3);
 
                 ExPolygons candidate = intersection_ex(nonplanar_projection,
                         union_ex(diff(layerm_slices_surfaces_copy, layers[j]->upper_layer->regions[region_id]->slices, false), false), false);
@@ -576,10 +576,13 @@ PrintObject::move_nonplanar_surfaces_up()
                 if (candidate.size() > 0){
                     nonplanar_projection = diff_ex(nonplanar_projection, candidate, false);
                 }
-                svg.draw(candidate , "red", 0.3);
-                //debug output
-                svg.arrows = false;
-                svg.Close();
+                // svg.draw(candidate , "red", 0.3);
+                // for(auto& c:nonplar_candidates) {
+                //     svg.draw(c, "yellow", 0.3);
+                // }                
+                // //debug output
+                // svg.arrows = false;
+                // svg.Close();
             }
 
             //remove them from the old layers and append them to the home layer
