@@ -162,7 +162,6 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
     }
 
     //add sub-part after scale
-    float zshift = (1 - scale) / 2 + 0.4 * scale;
     float zscale_number = (first_layer_height + layer_height) / 0.4;
     std::vector < std::vector<ModelObject*>> part_tower;
     for (size_t id_item = 0; id_item < nb_items; id_item++) {
@@ -170,11 +169,14 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
         int mytemp = temp - temp_decr * id_item;
         if (mytemp > 285) mytemp = 285;
         if (mytemp < 180) mytemp = 180;
-        add_part(model.objects[objs_idx[id_item]], Slic3r::resources_dir() + "/calibration/filament_temp/t"+ std::to_string(mytemp) + ".amf", Vec3d{ 0,0,zshift - 5.2 * scale }, Vec3d{ scale,scale,scale });
+        add_part(model.objects[objs_idx[id_item]], Slic3r::resources_dir() + "/calibration/filament_temp/t"+ std::to_string(mytemp) + ".amf",
+            Vec3d{ 0,0, scale * 0.2 -4.8 }, Vec3d{ scale,scale,scale });
         model.objects[objs_idx[id_item]]->volumes[1]->rotate(PI / 2, Vec3d(0, 0, 1));
         model.objects[objs_idx[id_item]]->volumes[1]->rotate(-PI / 2, Vec3d(1, 0, 0));
         for (int num_retract = 0; num_retract < nb_retract; num_retract++) {
-            part_tower.back().push_back(add_part(model.objects[objs_idx[id_item]], Slic3r::resources_dir() + "/calibration/retraction/retraction_calibration_pillar.amf", Vec3d{ 0,0,zshift + scale * num_retract }, Vec3d{ scale,scale,scale }));
+            part_tower.back().push_back(add_part(model.objects[objs_idx[id_item]], 
+                Slic3r::resources_dir() + "/calibration/retraction/retraction_calibration_pillar.amf", 
+                Vec3d{ 0,0,scale * 0.7 - 0.3 + scale * num_retract }, Vec3d{ scale,scale,scale }));
         }
     }
 
