@@ -537,11 +537,11 @@ PrintObject::move_nonplanar_surfaces_up()
             //merge all polygons of the layer and determine their Z boundaries
             float minZ = 9999999999.0f;
             ExPolygons nonplanar_projection;
-            for (size_t i = 0; i < home_layerm.nonplanar_surfaces.size(); i++){
-                for (auto& expolygon: home_layerm.nonplanar_surfaces[i].horizontal_projection()) {
+            for (size_t k = 0; k < home_layerm.nonplanar_surfaces.size(); k++){
+                for (auto& expolygon: home_layerm.nonplanar_surfaces[k].horizontal_projection()) {
                     nonplanar_projection.push_back(expolygon);
                 }
-                minZ = std::min(minZ, home_layerm.nonplanar_surfaces[i].stats.min.z-home_layerm.distances_to_top[i]);
+                minZ = std::min(minZ, home_layerm.nonplanar_surfaces[k].stats.min.z-home_layerm.distances_to_top[k]);
             }
             //remove the current toplayer from projection
             nonplanar_projection = diff_ex(nonplanar_projection, layers[i]->regions[region_id]->slices, false);
