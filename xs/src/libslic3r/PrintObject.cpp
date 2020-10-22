@@ -459,51 +459,45 @@ PrintObject::check_nonplanar_collisions(NonplanarSurface &surface, int id)
         }
 
         //check each layer
-        for (LayerPtrs::iterator layer_it = this->layers.begin(); layer_it != this->layers.end(); ++layer_it){
-            Layer* layer        = *layer_it;
-
-
+        size_t minLayer = 0;
+        for (size_t i = 0; i < layers.size(); i++) {
             //skip if below minimum nonplanar surface
-            if (surface.stats.min.z-layer->height > layer->slice_z) continue;
+            if (surface.stats.min.z-layers[i]->height > layers[i]->slice_z) continue;
             //break if above nonplanar surface
-            if (surface.stats.max.z < layer->slice_z) break;
+            if (surface.stats.max.z < layers[i]->slice_z) break;
+            if (minLayer == 0) minLayer = i;
 
-            LayerRegion &layerm = *layer->regions[region_id];
-            float angle_offset = scale_(layer->height*std::sin(1.57079633-angle_rad)/std::sin(angle_rad));
-            Polygons layerm_slices_surfaces = layerm.slices;
+            // SVG svg("svg/collider_" + std::to_string(id) + "_" + std::to_string(i) + "_" + std::to_string(layers[i]->slice_z) + ".svg");
+            // svg.draw(Polygons(layers[i]->regions[region_id]->slices), "blue");
 
-            //check if current surface collides with previous collider
-            ExPolygons collisions = union_ex(intersection(layerm_slices_surfaces, diff(collider,nonplanar_polygon)));
-
-            if (!collisions.empty()){
-                for (auto& c : collisions){
-                    collision_area += c.area();
-                }
-
-                //collsion found abort when area > configured area
-                if (this->config.nonplanar_layers_ignore_collision_size.value < unscale(unscale(collision_area))) {
-                    std::cout << "Surface removed: collision on layer " << layer->print_z << "mm (" << unscale(unscale(collision_area)) << " mm²)" << '\n';
-                    return true;
-                }
-            }
-
-            collider= offset(union_(layer_nonplanar_polygon[layer->slice_z],
-                            collider),
+            //check for collisions on previous layers
+            for (size_t j = minLayer; j < i; j++) {
+                float layerdiff = layers[i]->slice_z - layers[j]->slice_z;
+                float angle_offset = scale_(layerdiff*std::sin(1.57079633-angle_rad)/std::sin(angle_rad));
+                Polygons offsetted = offset(layer_nonplanar_polygon[layers[j]->slice_z],
                         angle_offset,
                         100000.0,
-                        ClipperLib::jtMiter);
-
-            //debug
-            // SVG svg("svg/collider_" + std::to_string(id) + "_" + std::to_string(layer->id()) + "_" + std::to_string(layer->slice_z) + ".svg");
-            // svg.draw(layerm_slices_surfaces, "blue");
-            // svg.draw(union_ex(diff(collider,nonplanar_polygon)), "yellow", 0.7f);
-            // svg.draw(collisions, "red", 0.9f);
-            // svg.draw_outline(collider);
-            // svg.draw_outline(layer_nonplanar_polygon[layer->slice_z],"green");
-            // svg.draw_outline(nonplanar_polygon, "cyan");
+                        ClipperLib::jtSquare);
+                
+                ExPolygons collisions = union_ex(intersection(layers[i]->regions[region_id]->slices, diff(offsetted,nonplanar_polygon)));
+                
+                //add up the colliding areas
+                if (!collisions.empty()){
+                    for (auto& c : collisions){
+                        collision_area += c.area();
+                    }
+                }
+                // svg.draw(union_ex(diff(offsetted,nonplanar_polygon)), "yellow", 0.7f);
+                // svg.draw(collisions, "red", 0.9f);
+                // svg.draw_outline(layer_nonplanar_polygon[layers[j]->slice_z],"green");
+            }
+            //collsion found abort when area > configured area
+            if (this->config.nonplanar_layers_ignore_collision_size.value < unscale(unscale(collision_area))) {
+                std::cout << "Surface removed: collision on layer " << layers[i]->print_z << "mm (" << unscale(unscale(collision_area)) << " mm²)" << '\n';
+                return true;
+            }
             // svg.arrows = false;
             // svg.Close();
-
         }
     }
 
