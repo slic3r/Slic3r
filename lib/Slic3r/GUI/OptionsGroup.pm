@@ -205,6 +205,11 @@ sub _build_field {
             parent => $self->parent,
             option => $opt,
         );
+    } elsif ($type eq 'point3'){
+        $field = Slic3r::GUI::OptionsGroup::Field::Point3->new(
+            parent => $self->parent,
+            option => $opt,
+       );
     } elsif ($type eq 'slider') {
         $field = Slic3r::GUI::OptionsGroup::Field::Slider->new(
             parent => $self->parent,

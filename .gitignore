@@ -16,9 +16,4 @@ package/osx/Slic3r*.app
 *.dmg
 *.swp
 *.swo
-CMakeFiles
-xs/src/html
-xs/src/latex
-*.a
-core
-CMakeCache.txt
+svg

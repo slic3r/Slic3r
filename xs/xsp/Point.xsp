@@ -8,10 +8,10 @@
 %}
 
 %name{Slic3r::Point} class Point {
-    Point(long _x = 0, long _y = 0);
+    Point(long _x = 0, long _y = 0, long _z = -1);
     ~Point();
     Clone<Point> clone()
-        %code{% RETVAL=THIS; %}; 
+        %code{% RETVAL=THIS; %};
     void scale(double factor);
     void translate(double x, double y);
     SV* arrayref()
@@ -22,10 +22,14 @@
         %code{% RETVAL = THIS->x; %};
     long y()
         %code{% RETVAL = THIS->y; %};
+    long z()
+        %code{% RETVAL = THIS->z; %};
     void set_x(long val)
         %code{% THIS->x = val; %};
     void set_y(long val)
         %code{% THIS->y = val; %};
+    void set_z(long val)
+        %code{% THIS->z = val; %};
     int nearest_point_index(Points points);
     Clone<Point> nearest_point(Points points)
         %code{% Point p; THIS->nearest_point(points, &p); RETVAL = p; %};

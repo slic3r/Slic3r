@@ -286,7 +286,7 @@ LayerRegion::infill_area_threshold() const
 }
 
 void
-LayerRegion::append_nonplanar_surface(NonplanarSurface& surface)
+LayerRegion::append_nonplanar_surface(NonplanarSurface& surface, float distance_to_top)
 {
     for(auto & s : this->nonplanar_surfaces){
         if (s == surface){
@@ -294,6 +294,7 @@ LayerRegion::append_nonplanar_surface(NonplanarSurface& surface)
         }    
     }
     nonplanar_surfaces.push_back(surface);
+    distances_to_top.push_back(distance_to_top);
 }
 
 void

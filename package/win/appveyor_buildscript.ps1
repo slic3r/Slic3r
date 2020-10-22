@@ -13,15 +13,11 @@ cd C:\projects\slic3r
 rm -r 'C:\Program Files (x86)\Microsoft Vis*\bin' -Force
 
 Add-AppveyorCompilationMessage -Message "Building Slic3r XS"
-# Set up local-lib
-Invoke-Expression "$(perl -Mlocal::lib=C:\projects\slic3r\local-lib)"
 perl ./Build.pl
-cmake -G "MinGW Makefiles" -D SLIC3R_STATIC=$env:SLIC3R_STATIC .
-mingw32-make
 
-if ($LastExitCode -ne 0) { 
+if ($LastExitCode -ne 0) {
     Add-AppveyorCompilationMessage -Message "XS Failed to Build" -Category Error
-		$host.SetShouldExit($LastExitCode)  
+		$host.SetShouldExit($LastExitCode)
 		exit
 }
 

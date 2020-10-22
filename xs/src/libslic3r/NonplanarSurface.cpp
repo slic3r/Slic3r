@@ -9,7 +9,7 @@ NonplanarSurface::NonplanarSurface(std::map<int, NonplanarFacet> &_mesh)
     this->calculate_stats();
 }
 
-bool 
+bool
 NonplanarSurface::operator==(const NonplanarSurface& other) const {
    return (stats.min.x == other.stats.min.x &&
            stats.min.y == other.stats.min.y &&
@@ -106,7 +106,7 @@ void
 NonplanarSurface::debug_output()
 {
     std::cout << "Facets(" << this->mesh.size() << "): (min:X:" << this->stats.min.x << " Y:" << this->stats.min.y << " Z:" << this->stats.min.z <<
-                           " max:X:" << this->stats.max.x << " Y:" << this->stats.max.y << " Z:" << this->stats.max.z << ")" << 
+                           " max:X:" << this->stats.max.x << " Y:" << this->stats.max.y << " Z:" << this->stats.max.z << ")" <<
                            "Height " << this->stats.max.z - this->stats.min.z << std::endl;
     for(auto& facet : this->mesh) {
         std::cout << "triangle: (" << facet.first << ")(" << facet.second.marked << ") ";
@@ -163,7 +163,7 @@ NonplanarSurface::group_surfaces()
         NonplanarSurfaces nonplanar_surfaces;
         nonplanar_surfaces.push_back(*this);
         return nonplanar_surfaces;
-    } 
+    }
     else {
         //return union of this and recursion
         NonplanarSurfaces nonplanar_surfaces = newSurface.group_surfaces();
@@ -196,7 +196,7 @@ NonplanarSurface::mark_neighbor_surfaces(int id)
 }
 
 bool
-NonplanarSurface::check_max_printing_height(float height) 
+NonplanarSurface::check_max_printing_height(float height)
 {
     if ((this->stats.max.z - this->stats.min.z) > height ) {
         std::cout << "Surface removed: printheight too heigh (" << (this->stats.max.z - this->stats.min.z) << " mm)" << '\n';
@@ -207,14 +207,14 @@ NonplanarSurface::check_max_printing_height(float height)
 }
 
 bool
-NonplanarSurface::check_surface_area()
+NonplanarSurface::check_surface_area(float minimal_area)
 {
     //calculate surface area of nonplanar surface.
     float area = 0.0f;
     for(auto& facet : this->mesh) {
         area += facet.second.calculate_surface_area();
     }
-    if (area < 20.0f) {
+    if (area < minimal_area) {
         std::cout << "Surface removed: area too small (" << area << " mm²)" << '\n';
         return true;
     } else {

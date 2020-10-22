@@ -2,32 +2,22 @@ language: perl
 before_install:
 - sh package/linux/travis-decrypt-key
 install:
-- DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
-- export BOOST_DIR=${HOME}/boost_1_63_0
+- export BOOST_DIR=$HOME/boost_1_63_0
 - export SLIC3R_STATIC=1
-- export CXX_COMPILER=g++-4.9
-- export C_COMPILER=gcc-4.9
+- export CXX=g++-4.9
+- export CC=g++-4.9
 - source $HOME/perl5/perlbrew/etc/bashrc
-- mkdir -p ${DEPS_DIR} && cd ${DEPS_DIR}
-- |
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-      CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.0-Linux-x86_64.tar.gz"
-      mkdir cmake && travis_retry wget --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
-      export PATH=${DEPS_DIR}/cmake/bin:${PATH}
-    fi
-- cd ${TRAVIS_BUILD_DIR}
+script:
 - bash package/linux/travis-setup.sh
 - perlbrew switch slic3r-perl
-- eval $(perl -Mlocal::lib=${TRAVIS_BUILD_DIR}/local-lib)
-
-script:
-- perl Build.PL
-- CXX=${CXX_COMPILER} CC=${C_COMPILER} cmake -D SLIC3R_STATIC=${SLIC3R_STATIC} . && make -j4
+- perl ./Build.PL
 after_success:
 - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
 - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
 - package/linux/appimage.sh x86_64
 - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
+- package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
+- package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
 branches:
   only:
   - master
@@ -43,10 +33,9 @@ addons:
     packages:
     - g++-4.9
     - gcc-4.9
-    - libgtk2.0-0 
+    - libgtk2.0-0
     - libgtk2.0-dev
     - freeglut3
-    - cmake
   ssh_known_hosts: dl.slic3r.org
 notifications:
   irc:
@@ -58,7 +47,7 @@ notifications:
 sudo: required
 dist: trusty
 env:
-  matrix: 
+  matrix:
   global:
   - secure: eEVRZNMv7FM6jrOU9iAFkDhWxFQ1WtHBEaObImcvtFUxy6vWSt3ehFFeTRouj3uHQAnbvUzziDyvPPm8/95alv5g/du8ML6YzzqKBKfazM0xQ7SF6R2DQL8lfFIp+RSV7T02byEP1f1g7Zva7xH9szIlDcSfU0pXW4KWbkBFMd8=
   - secure: gj338h+qHGccTD/VQFmEJkqdg2McIe2pO0iZ4Ae9BvY5vxkIML4BpoYZQXQTqiAOETnUjlcknY9lx0hI/PfkDD9MSJc5BC/3fMYRCu3SgAclEwklWf9vvtodUeT69mtnZuw1zze1nTbExuOw2mepbqFjxKKMl+9l5oCz4O54fXU=

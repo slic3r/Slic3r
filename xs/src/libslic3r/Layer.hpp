@@ -59,6 +59,7 @@ class LayerRegion
     
     // Vector of nonplanar_surfaces which are homed in this layer
     NonplanarSurfaces nonplanar_surfaces;
+    std::vector<float> distances_to_top;
 
     /// Flow object which provides methods to predict material spacing.
     Flow flow(FlowRole role, bool bridge = false, double width = -1) const;
@@ -75,7 +76,7 @@ class LayerRegion
     /// Gets the smallest fillable area
     double infill_area_threshold() const;
     //append a new nonplanar surface to the list skip if already in list
-    void append_nonplanar_surface(NonplanarSurface& surface);
+    void append_nonplanar_surface(NonplanarSurface& surface, float distance_to_top);
     // Projects the paths of a collection regarding the structure of a stl mesh
     void project_nonplanar_extrusion(ExtrusionEntityCollection* collection);
     /// Projects nonplanar surfaces downwards regarding the structure of the stl mesh.

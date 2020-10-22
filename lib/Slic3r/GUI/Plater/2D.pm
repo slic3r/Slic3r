@@ -13,6 +13,9 @@ use Wx qw(:misc :pen :brush :sizer :font :cursor wxTAB_TRAVERSAL);
 use Wx::Event qw(EVT_MOUSE_EVENTS EVT_KEY_DOWN EVT_PAINT EVT_ERASE_BACKGROUND EVT_SIZE);
 use base 'Wx::Panel';
 
+# Color Scheme
+use Slic3r::GUI::ColorScheme;
+
 use constant CANVAS_TEXT => join('-', +(localtime)[3,4]) eq '13-8'
     ? 'What do you want to print today? ™' # Sept. 13, 2006. The first part ever printed by a RepRap to make another RepRap.
     : 'Drag your objects here';
@@ -21,9 +24,16 @@ sub new {
     my $class = shift;
     my ($parent, $size, $objects, $model, $config) = @_;
     
+    if ( ( defined $Slic3r::GUI::Settings->{_}{colorscheme} ) && ( Slic3r::GUI::ColorScheme->can($Slic3r::GUI::Settings->{_}{colorscheme}) ) ) {
+        my $myGetSchemeName = \&{"Slic3r::GUI::ColorScheme::$Slic3r::GUI::Settings->{_}{colorscheme}"};
+        $myGetSchemeName->();
+    } else {
+        Slic3r::GUI::ColorScheme->getDefault();
+    }
+    
     my $self = $class->SUPER::new($parent, -1, wxDefaultPosition, $size, wxTAB_TRAVERSAL);
     # This has only effect on MacOS. On Windows and Linux/GTK, the background is painted by $self->repaint().
-    $self->SetBackgroundColour(Wx::wxWHITE);
+    $self->SetBackgroundColour(Wx::Colour->new(@BACKGROUND255));
 
     $self->{objects}            = $objects;
     $self->{model}              = $model;
@@ -33,15 +43,17 @@ sub new {
     $self->{on_right_click}     = sub {};
     $self->{on_instances_moved} = sub {};
     
-    $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(210,210,210), wxSOLID);
-    $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(255,128,128), wxSOLID);
-    $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(255,166,128), wxSOLID);
-    $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(128,128,255), wxSOLID);
+    $self->{objects_brush}      = Wx::Brush->new(Wx::Colour->new(@BED_OBJECTS), wxSOLID);
+    $self->{instance_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_SELECTED), wxSOLID);
+    $self->{selected_brush}     = Wx::Brush->new(Wx::Colour->new(@BED_SELECTED), wxSOLID);
+    $self->{dragged_brush}      = Wx::Brush->new(Wx::Colour->new(@BED_DRAGGED), wxSOLID);
+    $self->{bed_brush}          = Wx::Brush->new(Wx::Colour->new(@BED_COLOR), wxSOLID);
     $self->{transparent_brush}  = Wx::Brush->new(Wx::Colour->new(0,0,0), wxTRANSPARENT);
-    $self->{grid_pen}           = Wx::Pen->new(Wx::Colour->new(230,230,230), 1, wxSOLID);
-    $self->{print_center_pen}   = Wx::Pen->new(Wx::Colour->new(200,200,200), 1, wxSOLID);
-    $self->{clearance_pen}      = Wx::Pen->new(Wx::Colour->new(0,0,200), 1, wxSOLID);
-    $self->{skirt_pen}          = Wx::Pen->new(Wx::Colour->new(150,150,150), 1, wxSOLID);
+    $self->{grid_pen}           = Wx::Pen->new(Wx::Colour->new(@BED_GRID), 1, wxSOLID);
+    $self->{print_center_pen}   = Wx::Pen->new(Wx::Colour->new(@BED_CENTER), 1, wxSOLID);
+    $self->{clearance_pen}      = Wx::Pen->new(Wx::Colour->new(@BED_CLEARANCE), 1, wxSOLID);
+    $self->{skirt_pen}          = Wx::Pen->new(Wx::Colour->new(@BED_SKIRT), 1, wxSOLID);
+    $self->{dark_pen}           = Wx::Pen->new(Wx::Colour->new(@BED_DARK), 1, wxSOLID);
 
     $self->{user_drawn_background} = $^O ne 'darwin';
 
@@ -109,21 +121,18 @@ sub repaint {
         # On MacOS the background is erased, on Windows the background is not erased 
         # and on Linux/GTK the background is erased to gray color.
         # Fill DC with the background on Windows & Linux/GTK.
-        my $brush_background = Wx::Brush->new(Wx::wxWHITE, wxSOLID);
-        $dc->SetPen(wxWHITE_PEN);
+        my $brush_background = Wx::Brush->new(Wx::Colour->new(@BACKGROUND255), wxSOLID);
+        my $pen_background   = Wx::Pen->new(Wx::Colour->new(@BACKGROUND255), 1, wxSOLID);
+        $dc->SetPen($pen_background);
         $dc->SetBrush($brush_background);
         my $rect = $self->GetUpdateRegion()->GetBox();
         $dc->DrawRectangle($rect->GetLeft(), $rect->GetTop(), $rect->GetWidth(), $rect->GetHeight());
     }
-
-    # draw grid
-    $dc->SetPen($self->{grid_pen});
-    $dc->DrawLine(map @$_, @$_) for @{$self->{grid}};
     
     # draw bed
     {
         $dc->SetPen($self->{print_center_pen});
-        $dc->SetBrush($self->{transparent_brush});
+        $dc->SetBrush($self->{bed_brush});
         $dc->DrawPolygon($self->scaled_points_to_pixel($self->{bed_polygon}, 1), 0, 0);
     }
     
@@ -141,20 +150,24 @@ sub repaint {
     
     # draw frame
     if (0) {
-        $dc->SetPen(wxBLACK_PEN);
+        $dc->SetPen($self->{dark_pen});
         $dc->SetBrush($self->{transparent_brush});
         $dc->DrawRectangle(0, 0, @size);
     }
     
     # draw text if plate is empty
     if (!@{$self->{objects}}) {
-        $dc->SetTextForeground(Wx::Colour->new(150,50,50));
+        $dc->SetTextForeground(Wx::Colour->new(@BED_OBJECTS));
         $dc->SetFont(Wx::Font->new(14, wxDEFAULT, wxNORMAL, wxNORMAL));
         $dc->DrawLabel(CANVAS_TEXT, Wx::Rect->new(0, 0, $self->GetSize->GetWidth, $self->GetSize->GetHeight), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+    } else {
+        # draw grid
+        $dc->SetPen($self->{grid_pen});
+        $dc->DrawLine(map @$_, @$_) for @{$self->{grid}};
     }
     
     # draw thumbnails
-    $dc->SetPen(wxBLACK_PEN);
+    $dc->SetPen($self->{dark_pen});
     $self->clean_instance_thumbnails;
     for my $obj_idx (0 .. $#{$self->{objects}}) {
         my $object = $self->{objects}[$obj_idx];

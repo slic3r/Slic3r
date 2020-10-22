@@ -143,6 +143,8 @@ class Pointf
     Vectorf vector_to(const Pointf &point) const;
 };
 
+std::ostream& operator<<(std::ostream &stm, const Pointf3 &pointf3);
+
 class Pointf3 : public Pointf
 {
     public:
@@ -183,7 +185,7 @@ to_points(const std::vector<T> &items)
 namespace boost { namespace polygon {
     template <>
     struct geometry_concept<coord_t> { typedef coordinate_concept type; };
-    
+
 /* Boost.Polygon already defines a specialization for coordinate_traits<long> as of 1.60:
    https://github.com/boostorg/polygon/commit/0ac7230dd1f8f34cb12b86c8bb121ae86d3d9b97 */
 #if BOOST_VERSION < 106000
@@ -200,16 +202,16 @@ namespace boost { namespace polygon {
 
     template <>
     struct geometry_concept<Point> { typedef point_concept type; };
-   
+
     template <>
     struct point_traits<Point> {
         typedef coord_t coordinate_type;
-    
+
         static inline coordinate_type get(const Point& point, orientation_2d orient) {
             return (orient == HORIZONTAL) ? point.x : point.y;
         }
     };
-    
+
     template <>
     struct point_mutable_traits<Point> {
         typedef coord_t coordinate_type;
@@ -222,7 +224,7 @@ namespace boost { namespace polygon {
         static inline Point construct(coord_t x_value, coord_t y_value) {
             Point retval;
             retval.x = x_value;
-            retval.y = y_value; 
+            retval.y = y_value;
             return retval;
         }
     };

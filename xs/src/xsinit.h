@@ -1,11 +1,6 @@
 #ifndef _xsinit_h_
 #define _xsinit_h_
 
-#ifdef _MSC_VER
-// Disable some obnoxious warnings given by Visual Studio with the default warning level 4.
-#pragma warning(disable: 4100 4127 4189 4244 4267 4700 4702 4800)
-#endif
-
 // undef some macros set by Perl which cause compilation errors on Win32
 #undef read
 #undef seekdir
@@ -31,8 +26,6 @@
 #undef socketpair
 #undef recvfrom
 #undef sendto
-#undef seed
-#undef pause
 
 // these need to be included early for Win32 (listing it in Build.PL is not enough)
 #include <ostream>
@@ -50,15 +43,10 @@ extern "C" {
 #undef do_close
 #undef bind
 #undef seed
-#undef push
-#undef pop
 #ifdef _MSC_VER
     // Undef some of the macros set by Perl <xsinit.h>, which cause compilation errors on Win32
     #undef send
     #undef connect
-    #undef seek
-    #undef send
-    #undef write
 #endif /* _MSC_VER */
 }
 #endif
@@ -74,18 +62,18 @@ extern "C" {
 #include <TriangleMesh.hpp>
 
 namespace Slic3r {
-    
+
 template<class T>
-struct ClassTraits { 
+struct ClassTraits {
     static const char* name;
-    static const char* name_ref; 
+    static const char* name_ref;
 };
 
 // use this for typedefs for which the forward prototype
 // in REGISTER_CLASS won't work
 #define __REGISTER_CLASS(cname, perlname)                                            \
     template <>const char* ClassTraits<cname>::name = "Slic3r::" perlname;           \
-    template <>const char* ClassTraits<cname>::name_ref = "Slic3r::" perlname "::Ref"; 
+    template <>const char* ClassTraits<cname>::name_ref = "Slic3r::" perlname "::Ref";
 
 #define REGISTER_CLASS(cname,perlname)                                               \
     class cname;                                                                     \
@@ -110,7 +98,7 @@ SV* perl_to_SV_clone_ref(const T &t) {
     return sv;
 }
 
-template <class T> 
+template <class T>
 class Ref {
     T* val;
 public:
@@ -120,7 +108,7 @@ public:
     operator T*() const { return val; }
     static const char* CLASS() { return ClassTraits<T>::name_ref; }
 };
-  
+
 template <class T>
 class Clone {
     T* val;
@@ -160,6 +148,10 @@ void from_SV_check(SV* point_sv, Point* point);
 SV* to_SV_pureperl(const Pointf* point);
 bool from_SV(SV* point_sv, Pointf* point);
 bool from_SV_check(SV* point_sv, Pointf* point);
+void from_SV(SV* point_sv, Point3* point);
+void from_SV_check(SV* point_sv, Point3* point);
+bool from_SV(SV* point_sv, Pointf3* point);
+bool from_SV_check(SV* point_sv, Pointf3* point);
 void from_SV_check(SV* surface_sv, Surface* THIS);
 SV* to_SV(TriangleMesh* THIS);
 SV* polynode_children_2_perl(const ClipperLib::PolyNode& node);
@@ -169,9 +161,9 @@ class Filler
 {
     public:
     Filler() : fill(NULL) {};
-    ~Filler() { 
+    ~Filler() {
         if (fill != NULL) {
-            delete fill; 
+            delete fill;
             fill = NULL;
         }
     };

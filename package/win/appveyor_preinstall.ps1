@@ -1,5 +1,5 @@
 mkdir C:\projects\slic3r\FreeGLUT
-if (!(Test-Path "C:\users\appveyor\freeglut.$env:ARCH.7z")) 
+if (!(Test-Path "C:\users\appveyor\freeglut.$env:ARCH.7z"))
 {
     wget "https://bintray.com/lordofhyphens/Slic3r/download_file?file_path=freeglut-mingw-3.0.0.$env:ARCH.7z" -o C:\users\appveyor\freeglut.$env:ARCH.7z
 }
@@ -77,12 +77,3 @@ if (!(Test-Path "C:\Users\appveyor\wxwidgets-$env:ARCH.7z")) {
     Add-AppveyorCompilationMessage -Message "Extracting prebuilt wxWidgets."
         7z x "C:\Users\appveyor\wxwidgets-$env:ARCH.7z" -oC:\dev
 }
-
-cpanm ExtUtils::ParseXS
-cpanm ExtUtils::Typemaps
-cpanm ExtUtils::Typemaps::Default
-cpanm ExtUtils::XSpp
-cpanm ExtUtils::XSpp::Cmd
-cpanm Module::Build::WithXSpp
-
-

@@ -4,11 +4,16 @@ libslic3r.doxygen
 MANIFEST			This list of files
 src/admesh/connect.c
 src/admesh/normals.c
+src/admesh/portable_endian.h
 src/admesh/shared.c
 src/admesh/stl.h
 src/admesh/stl_io.c
 src/admesh/stlinit.c
 src/admesh/util.c
+src/BSpline/BandedMatrix.h
+src/BSpline/BSpline.cpp
+src/BSpline/BSpline.h
+src/BSpline/COPYRIGHT
 src/boost/nowide/args.hpp
 src/boost/nowide/cenv.hpp
 src/boost/nowide/config.hpp
@@ -46,10 +51,13 @@ src/expat/xmltok.h
 src/expat/xmltok_impl.h
 src/expat/xmltok_impl.inc
 src/expat/xmltok_ns.inc
+src/exprtk/exprtk.hpp
 src/libslic3r/BoundingBox.cpp
 src/libslic3r/BoundingBox.hpp
 src/libslic3r/BridgeDetector.cpp
 src/libslic3r/BridgeDetector.hpp
+src/libslic3r/ConditionalGCode.cpp
+src/libslic3r/ConditionalGCode.hpp
 src/libslic3r/ClipperUtils.cpp
 src/libslic3r/ClipperUtils.hpp
 src/libslic3r/Config.cpp
@@ -70,6 +78,8 @@ src/libslic3r/Fill/Fill3DHoneycomb.cpp
 src/libslic3r/Fill/Fill3DHoneycomb.hpp
 src/libslic3r/Fill/FillConcentric.cpp
 src/libslic3r/Fill/FillConcentric.hpp
+src/libslic3r/Fill/FillGyroid.cpp
+src/libslic3r/Fill/FillGyroid.hpp
 src/libslic3r/Fill/FillHoneycomb.cpp
 src/libslic3r/Fill/FillHoneycomb.hpp
 src/libslic3r/Fill/FillPlanePath.cpp
@@ -114,6 +124,10 @@ src/libslic3r/MotionPlanner.cpp
 src/libslic3r/MotionPlanner.hpp
 src/libslic3r/MultiPoint.cpp
 src/libslic3r/MultiPoint.hpp
+src/libslic3r/NonplanarFacet.cpp
+src/libslic3r/NonplanarFacet.hpp
+src/libslic3r/NonplanarSurface.cpp
+src/libslic3r/NonplanarSurface.hpp
 src/libslic3r/PerimeterGenerator.cpp
 src/libslic3r/PerimeterGenerator.hpp
 src/libslic3r/PlaceholderParser.cpp
@@ -134,6 +148,8 @@ src/libslic3r/PrintObject.cpp
 src/libslic3r/PrintRegion.cpp
 src/libslic3r/SLAPrint.cpp
 src/libslic3r/SLAPrint.hpp
+src/libslic3r/SlicingAdaptive.cpp
+src/libslic3r/SlicingAdaptive.hpp
 src/libslic3r/SupportMaterial.hpp
 src/libslic3r/Surface.cpp
 src/libslic3r/Surface.hpp
@@ -144,6 +160,7 @@ src/libslic3r/SVG.hpp
 src/libslic3r/TriangleMesh.cpp
 src/libslic3r/TriangleMesh.hpp
 src/libslic3r/utils.cpp
+src/libslic3r/utils.hpp
 src/libslic3r/Zip/ZipArchive.cpp
 src/libslic3r/Zip/ZipArchive.hpp
 src/miniz/miniz.h
@@ -168,6 +185,8 @@ src/slic3r/GUI/3DScene.hpp
 src/slic3r/GUI/GUI.cpp
 src/slic3r/GUI/GUI.hpp
 src/tiny_obj_loader.h
+src/Zip/ZipArchive.cpp
+src/Zip/ZipArchive.hpp
 src/xsinit.h
 t/01_trianglemesh.t
 t/03_point.t
@@ -191,6 +210,7 @@ t/20_print.t
 t/21_gcode.t
 t/22_exception.t
 t/23_3mf.t
+t/24_gcodemath.t
 t/models/3mf/box.3mf
 t/models/3mf/chess.3mf
 t/models/3mf/gimblekeychain.3mf
@@ -201,6 +221,7 @@ xsp/BoundingBox.xsp
 xsp/BridgeDetector.xsp
 xsp/Clipper.xsp
 xsp/Config.xsp
+xsp/ConditionalGCode.xsp
 xsp/ExPolygon.xsp
 xsp/ExPolygonCollection.xsp
 xsp/Extruder.xsp
@@ -233,6 +254,7 @@ xsp/Polyline.xsp
 xsp/PolylineCollection.xsp
 xsp/Print.xsp
 xsp/SLAPrint.xsp
+xsp/SlicingAdaptive.xsp
 xsp/SupportMaterial.xsp
 xsp/Surface.xsp
 xsp/SurfaceCollection.xsp

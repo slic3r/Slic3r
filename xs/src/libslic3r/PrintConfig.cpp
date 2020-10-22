@@ -20,7 +20,7 @@ PrintConfigDef::PrintConfigDef()
     external_fill_pattern.enum_labels.push_back("Hilbert Curve");
     external_fill_pattern.enum_labels.push_back("Archimedean Chords");
     external_fill_pattern.enum_labels.push_back("Octagram Spiral");
-    
+
     ConfigOptionDef* def;
 
     def = this->add("adaptive_slicing", coBool);
@@ -41,31 +41,59 @@ PrintConfigDef::PrintConfigDef()
     def->gui_type = "slider";
     def->width = 200;
     def->default_value = new ConfigOptionPercent(75);
-    
+
     def = this->add("nonplanar_layers", coBool);
     def->label = "Use nonplanar layers";
     def->category = "Layers and Perimeters";
     def->tooltip = "Generate nonplanar layers ontop of the object";
     def->cli = "nonplanar_layers!";
     def->default_value = new ConfigOptionBool(false);
-    
+
     def = this->add("nonplanar_layers_angle", coFloat);
     def->label = "Maximum nonplanar angle";
     def->category = "Layers and Perimeters";
-    def->tooltip = "This is the maximum angle the printer can print without collisions.";
+    def->tooltip = "This is the maximum angle that will be printed as nonplanar layers. This must always be smaller than the collision angle";
     def->sidetext = "°";
     def->cli = "nonplanar_layers_angle=f";
     def->min = 0;
-    def->default_value = new ConfigOptionFloat(10.0);
-    
-    def = this->add("nonplanar_layers_height", coFloat);
-    def->label = "Maximum nonplanar height";
+    def->default_value = new ConfigOptionFloat(5.0);
+
+    def = this->add("nonplanar_layers_collision_angle", coFloat);
+    def->label = "Maximum nonplanar collision angle";
     def->category = "Layers and Perimeters";
-    def->tooltip = "This is the maximum height the printer can print without collisions.";
+    def->tooltip = "This is the maximum angle the printer can print without collisions. Set to 90° to disable collision checks.";
+    def->sidetext = "°";
+    def->cli = "nonplanar_layers_collision_angle=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(8.0);
+
+    def = this->add("nonplanar_minimal_area", coFloat);
+    def->label = "Minimum nonplanar area";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "Minimum suface area of a nonplanar surface to be printed.";
+    def->sidetext = "mm²";
+    def->cli = "nonplanar_minimal_area=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(20.0);
+
+    def = this->add("nonplanar_layers_height", coFloat);
+    def->label = "Maximum nonplanar collision height";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "This is the maximum height the printer can print without collisions. Set to printers z-height to disable.";
     def->sidetext = "mm";
     def->cli = "nonplanar_layers_height=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(10.0);
+
+    def = this->add("nonplanar_layers_ignore_collision_size", coFloat);
+    def->label = "Ignore collision size";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "Collisions that are smaller than this are ignored during collision check. This reduces false positives but has to be used with caution!";
+    def->sidetext = "mm²";
+    def->cli = "nonplanar_layers_ignore_collision_size=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(10.0);
+
 
     def = this->add("avoid_crossing_perimeters", coBool);
     def->label = "Avoid crossing perimeters";
@@ -91,7 +119,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "Unselecting this will suppress automatic generation of bed heating gcode.";
     def->cli = "has-heatbed!";
     def->default_value = new ConfigOptionBool(true);
-    
+
     def = this->add("bed_temperature", coInt);
     def->label = "Other layers";
     def->tooltip = "Bed temperature for layers after the first one.";
@@ -192,7 +220,7 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "brim-width=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0);
-    
+
     def = this->add("compatible_printers", coStrings);
     def->label = "Compatible printers";
     def->default_value = new ConfigOptionStrings();
@@ -274,7 +302,7 @@ PrintConfigDef::PrintConfigDef()
     def->aliases.push_back("solid_fill_pattern");
     def->shortcut.push_back("top_infill_pattern");
     def->shortcut.push_back("bottom_infill_pattern");
-    
+
     def = this->add("external_perimeter_extrusion_width", coFloatOrPercent);
     def->label = "↳ external";
     def->full_label = "External perimeters extrusion width";
@@ -371,7 +399,7 @@ PrintConfigDef::PrintConfigDef()
         opt->values.push_back(1);
         def->default_value = opt;
     }
-    
+
     def = this->add("extrusion_width", coFloatOrPercent);
     def->label = "Default extrusion width";
     def->gui_type = "f_enum_open";
@@ -471,10 +499,10 @@ PrintConfigDef::PrintConfigDef()
         opt->values.push_back(0);
         def->default_value = opt;
     }
-    
+
     def = this->add("filament_settings_id", coString);
     def->default_value = new ConfigOptionString("");
-    
+
     def = this->add("fill_angle", coFloat);
     def->label = "Fill angle";
     def->category = "Infill";
@@ -547,6 +575,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("honeycomb");
     def->enum_values.push_back("3dhoneycomb");
+    def->enum_values.push_back("gyroid");
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
@@ -559,6 +588,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Concentric");
     def->enum_labels.push_back("Honeycomb");
     def->enum_labels.push_back("3D Honeycomb");
+    def->enum_labels.push_back("Gyroid");
     def->enum_labels.push_back("Hilbert Curve");
     def->enum_labels.push_back("Archimedean Chords");
     def->enum_labels.push_back("Octagram Spiral");
@@ -623,7 +653,7 @@ PrintConfigDef::PrintConfigDef()
         opt->values.push_back(200);
         def->default_value = opt;
     }
-    
+
     def = this->add("gap_fill_speed", coFloatOrPercent);
     def->label = "↳ gaps";
     def->full_label = "Gap fill speed";
@@ -685,7 +715,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Octoprint");
     def->enum_labels.push_back("Duet");
     def->default_value = new ConfigOptionEnum<HostType>(htOctoprint);
-    
+
     def = this->add("infill_acceleration", coFloat);
     def->label = "Infill";
     def->category = "Speed > Acceleration";
@@ -939,7 +969,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "Experimental option to adjust flow for overhangs (bridge flow will be used), to apply bridge speed to them and enable fan.";
     def->cli = "overhangs|detect-bridging-perimeters!";
     def->default_value = new ConfigOptionBool(true);
-    
+
     def = this->add("shortcuts", coStrings);
     def->label = "Shortcuts";
     def->aliases.push_back("overridable");
@@ -1022,7 +1052,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("print_settings_id", coString);
     def->default_value = new ConfigOptionString("");
-    
+
     def = this->add("printer_settings_id", coString);
     def->default_value = new ConfigOptionString("");
 
@@ -1079,7 +1109,7 @@ PrintConfigDef::PrintConfigDef()
         opt->values.push_back(2);
         def->default_value = opt;
     }
-    
+
     def = this->add("retract_layer_change", coBools);
     def->label = "Retract on layer change";
     def->category = "Retraction";
@@ -1252,7 +1282,7 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "skirts=i";
     def->min = 0;
     def->default_value = new ConfigOptionInt(1);
-    
+
     def = this->add("slowdown_below_layer_time", coInt);
     def->label = "Slow down if layer print time is below";
     def->tooltip = "If layer print time is estimated below this number of seconds, print moves speed will be scaled down to extend duration to this value.";
@@ -1561,7 +1591,7 @@ PrintConfigDef::PrintConfigDef()
         opt->values.push_back(200);
         def->default_value = opt;
     }
-    
+
     def = this->add("thin_walls", coBool);
     def->label = "Detect thin walls";
     def->category = "Layers and Perimeters";
@@ -1578,7 +1608,7 @@ PrintConfigDef::PrintConfigDef()
         unsigned int threads = boost::thread::hardware_concurrency();
         def->default_value = new ConfigOptionInt(threads > 0 ? threads : 2);
     }
-    
+
     def = this->add("toolchange_gcode", coString);
     def->label = "Tool change G-code";
     def->tooltip = "This custom code is inserted right before every extruder change. Note that you can use placeholder variables for all Slic3r settings as well as [previous_extruder], [next_extruder], [previous_retraction] and [next_retraction].";
@@ -1726,7 +1756,7 @@ DynamicPrintConfig::normalize() {
                 this->option("support_material_interface_extruder", true)->setInt(extruder);
         }
     }
-    
+
     /*
     if (this->has("external_fill_pattern")) {
         InfillPattern p = this->opt<ConfigOptionEnum<InfillPattern> >("external_fill_pattern");
@@ -1737,10 +1767,10 @@ DynamicPrintConfig::normalize() {
             this->opt<ConfigOptionEnum<InfillPattern> >("top_infill_pattern", true)->value = p;
     }
     */
-    
+
     if (!this->has("solid_infill_extruder") && this->has("infill_extruder"))
         this->option("solid_infill_extruder", true)->setInt(this->option("infill_extruder")->getInt());
-    
+
     if (this->has("spiral_vase") && this->opt<ConfigOptionBool>("spiral_vase", true)->value) {
         {
             // this should be actually done only on the spiral layers instead of all
@@ -1760,7 +1790,7 @@ PrintConfigBase::min_object_distance() const
 {
     double extruder_clearance_radius = this->option("extruder_clearance_radius")->getFloat();
     double duplicate_distance = this->option("duplicate_distance")->getFloat();
-    
+
     // min object distance is max(duplicate_distance, clearance_radius)
     return (this->option("complete_objects")->getBool() && extruder_clearance_radius > duplicate_distance)
         ? extruder_clearance_radius
@@ -1785,7 +1815,7 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
         if (opt_key == "bottom_layer_speed") opt_key = "first_layer_speed";
         try {
             float v = boost::lexical_cast<float>(value);
-            if (v != 0) 
+            if (v != 0)
                 value = boost::lexical_cast<std::string>(v*100) + "%";
         } catch (boost::bad_lexical_cast &) {
             value = "0";
@@ -1822,23 +1852,23 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
         // transform it into the default value
         value = "60%";
     }
-    
+
     // cemetery of old config settings
-    if (opt_key == "duplicate_x" || opt_key == "duplicate_y" || opt_key == "multiply_x" 
-        || opt_key == "multiply_y" || opt_key == "support_material_tool" 
-        || opt_key == "acceleration" || opt_key == "adjust_overhang_flow" 
-        || opt_key == "standby_temperature" || opt_key == "scale" || opt_key == "rotate" 
-        || opt_key == "duplicate" || opt_key == "duplicate_grid" || opt_key == "rotate" 
-        || opt_key == "scale"  || opt_key == "duplicate_grid" 
-        || opt_key == "start_perimeters_at_concave_points" 
-        || opt_key == "start_perimeters_at_non_overhang" || opt_key == "randomize_start" 
-        || opt_key == "seal_position" || opt_key == "bed_size" || opt_key == "octoprint_host" 
+    if (opt_key == "duplicate_x" || opt_key == "duplicate_y" || opt_key == "multiply_x"
+        || opt_key == "multiply_y" || opt_key == "support_material_tool"
+        || opt_key == "acceleration" || opt_key == "adjust_overhang_flow"
+        || opt_key == "standby_temperature" || opt_key == "scale" || opt_key == "rotate"
+        || opt_key == "duplicate" || opt_key == "duplicate_grid" || opt_key == "rotate"
+        || opt_key == "scale"  || opt_key == "duplicate_grid"
+        || opt_key == "start_perimeters_at_concave_points"
+        || opt_key == "start_perimeters_at_non_overhang" || opt_key == "randomize_start"
+        || opt_key == "seal_position" || opt_key == "bed_size" || opt_key == "octoprint_host"
         || opt_key == "print_center" || opt_key == "g0" || opt_key == "threads")
     {
         opt_key = "";
         return;
     }
-    
+
     if (!this->def->has(opt_key)) {
         //printf("Unknown option %s\n", opt_key.c_str());
         opt_key = "";
@@ -1849,43 +1879,43 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
 CLIConfigDef::CLIConfigDef()
 {
     ConfigOptionDef* def;
-    
+
     def = this->add("cut", coFloat);
     def->label = "Cut";
     def->tooltip = "Cut model at the given Z.";
     def->cli = "cut";
     def->default_value = new ConfigOptionFloat(0);
-    
+
     def = this->add("cut_grid", coFloat);
     def->label = "Cut";
     def->tooltip = "Cut model in the XY plane into tiles of the specified max size.";
     def->cli = "cut-grid";
     def->default_value = new ConfigOptionPoint();
-    
+
     def = this->add("cut_x", coFloat);
     def->label = "Cut";
     def->tooltip = "Cut model at the given X.";
     def->cli = "cut-x";
     def->default_value = new ConfigOptionFloat(0);
-    
+
     def = this->add("cut_y", coFloat);
     def->label = "Cut";
     def->tooltip = "Cut model at the given Y.";
     def->cli = "cut-y";
     def->default_value = new ConfigOptionFloat(0);
-    
+
     def = this->add("export_obj", coBool);
     def->label = "Export SVG";
     def->tooltip = "Export the model as OBJ.";
     def->cli = "export-obj";
     def->default_value = new ConfigOptionBool(false);
-    
+
     def = this->add("export_pov", coBool);
     def->label = "Export POV";
     def->tooltip = "Export the model as POV-Ray definition.";
     def->cli = "export-pov";
     def->default_value = new ConfigOptionBool(false);
-    
+
     def = this->add("export_svg", coBool);
     def->label = "Export SVG";
     def->tooltip = "Slice the model and export slices as SVG.";
@@ -1897,55 +1927,55 @@ CLIConfigDef::CLIConfigDef()
     def->tooltip = "Slice the model and export slices as 3MF.";
     def->cli = "export-3mf";
     def->default_value = new ConfigOptionBool(false);
-    
+
     def = this->add("info", coBool);
     def->label = "Output Model Info";
     def->tooltip = "Write information about the model to the console.";
     def->cli = "info";
     def->default_value = new ConfigOptionBool(false);
-    
+
     def = this->add("load", coStrings);
     def->label = "Load config file";
     def->tooltip = "Load configuration from the specified file. It can be used more than once to load options from multiple files.";
     def->cli = "load";
     def->default_value = new ConfigOptionStrings();
-    
+
     def = this->add("output", coString);
     def->label = "Output File";
     def->tooltip = "The file where the output will be written (if not specified, it will be based on the input file).";
     def->cli = "output";
     def->default_value = new ConfigOptionString("");
-    
+
     def = this->add("rotate", coFloat);
     def->label = "Rotate";
     def->tooltip = "Rotation angle around the Z axis in degrees (0-360, default: 0).";
     def->cli = "rotate";
     def->default_value = new ConfigOptionFloat(0);
-    
+
     def = this->add("rotate_x", coFloat);
     def->label = "Rotate around X";
     def->tooltip = "Rotation angle around the X axis in degrees (0-360, default: 0).";
     def->cli = "rotate-x";
     def->default_value = new ConfigOptionFloat(0);
-    
+
     def = this->add("rotate_y", coFloat);
     def->label = "Rotate around Y";
     def->tooltip = "Rotation angle around the Y axis in degrees (0-360, default: 0).";
     def->cli = "rotate-y";
     def->default_value = new ConfigOptionFloat(0);
-    
+
     def = this->add("save", coString);
     def->label = "Save config file";
     def->tooltip = "Save configuration to the specified file.";
     def->cli = "save";
     def->default_value = new ConfigOptionString();
-    
+
     def = this->add("scale", coFloat);
     def->label = "Scale";
     def->tooltip = "Scaling factor (default: 1).";
     def->cli = "scale";
     def->default_value = new ConfigOptionFloat(1);
-    
+
     def = this->add("scale_to_fit", coPoint3);
     def->label = "Scale to Fit";
     def->tooltip = "Scale to fit the given volume.";
