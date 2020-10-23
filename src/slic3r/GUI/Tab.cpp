@@ -2151,10 +2151,14 @@ void TabPrinter::update_printers()
         for (int i = 0; i < printers.size(); i++) {
             slugs.push_back(printers[i].ToStdString());
         }
-                
+        
         Choice *choice = dynamic_cast<Choice *>(rs);
         choice->set_values(slugs);
-        
+        boost::any val = choice->get_value();
+        boost::any any_string_type = std::string("");
+        if ((val.empty() || (any_string_type.type() == val.type() && boost::any_cast<std::string>(val) == "")) && !slugs.empty()) {
+            change_opt_value(*m_config, "printhost_slug", slugs[0], 0);
+        }
         rs->enable();
     }
 }

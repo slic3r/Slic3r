@@ -805,9 +805,12 @@ void Choice::BUILD() {
      * 
      * Note: Set bitmap height to the Font size because of OSX rendering.
      */
-    wxBitmap empty_bmp(1, temp->GetFont().GetPixelSize().y + 2);
-    empty_bmp.SetWidth(0);
-    temp->SetItemBitmap(0, empty_bmp);
+    // Welll, it makes wx freak out... (in debug) if select_open
+    if (m_opt.gui_type != "select_open") {
+        wxBitmap empty_bmp(1, temp->GetFont().GetPixelSize().y + 2);
+        empty_bmp.SetWidth(0);
+        temp->SetItemBitmap(0, empty_bmp);
+    }
 #endif
 
 // 	temp->Bind(wxEVT_TEXT, ([this](wxCommandEvent e) { on_change_field(); }), temp->GetId());

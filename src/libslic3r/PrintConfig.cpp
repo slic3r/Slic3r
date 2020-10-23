@@ -153,6 +153,7 @@ void PrintConfigDef::init_common_params()
     def->label = L("Printer");
     def->tooltip = L("Name of the printer");
     def->mode = comAdvanced;
+    def->gui_type = "select_open";
     def->set_default_value(new ConfigOptionString(""));
     
     def = this->add("printhost_cafile", coString);
