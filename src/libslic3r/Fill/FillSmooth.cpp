@@ -131,7 +131,9 @@ namespace Slic3r {
         eecroot->no_sort = true;
 
         // first infill
-        perform_single_fill(0, *eecroot, *surface, params, volumeToOccupy);
+        FillParams first_pass_params = params;
+        first_pass_params.role = ExtrusionRole::erSolidInfill;
+        perform_single_fill(0, *eecroot, *surface, first_pass_params, volumeToOccupy);
 
         //use monotonous for ironing pass
         FillParams monotonous_params = params;

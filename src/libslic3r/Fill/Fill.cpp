@@ -111,6 +111,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                 params.extruder         = layerm.region()->extruder(extrusion_role);
                 params.pattern          = layerm.region()->config().fill_pattern.value;
                 params.density          = float(layerm.region()->config().fill_density) / 100.f;
+                params.dont_adjust      = false;
 
                 if (surface.has_fill_solid()) {
                     params.density = 1.f;
@@ -408,11 +409,11 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
             // so we can safely ignore the slight variation that might have
             // been applied to $f->flow_spacing
         } else {
-            surface_fill.params.flow = Flow::new_from_spacing((float)f->get_spacing(), surface_fill.params.flow.nozzle_diameter, (float)surface_fill.params.flow.height, is_bridge);
+            surface_fill.params.flow = Flow::new_from_spacing((float)f->get_spacing(), surface_fill.params.flow.nozzle_diameter, (float)surface_fill.params.flow.height, surface_fill.params.flow.bridge);
         }
 
         //apply bridge_overlap if needed
-        if (is_bridge && surface_fill.params.density > 99 && layerm->region()->config().bridge_overlap.get_abs_value(1) != 1) {
+        if (surface_fill.params.flow.bridge && surface_fill.params.density > 99 && layerm->region()->config().bridge_overlap.get_abs_value(1) != 1) {
             surface_fill.params.density *= float(layerm->region()->config().bridge_overlap.get_abs_value(1));
         }
 

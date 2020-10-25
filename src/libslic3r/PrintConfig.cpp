@@ -1985,7 +1985,8 @@ void PrintConfigDef::init_fff_params()
     def = this->add("ironing_flowrate", coPercent);
     def->label = L("Flow rate");
     def->category = OptionCategory::ironing;
-    def->tooltip = L("Percent of a flow rate relative to object's normal layer height.");
+    def->tooltip = L("Percent of a flow rate relative to object's normal layer height."
+                " It's the percentage of the layer that will be over-extruded on top to do the ironing.");
     def->sidetext = L("%");
     def->ratio_over = "layer_height";
     def->min = 0;
@@ -1993,7 +1994,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionPercent(15));
 
     def = this->add("ironing_spacing", coFloat);
-    def->label = L("Spacing between ironing passes");
+    def->label = L("Spacing between ironing lines");
     def->category = OptionCategory::ironing;
     def->tooltip = L("Distance between ironing lines");
     def->sidetext = L("mm");
