@@ -3227,7 +3227,7 @@ void GCode::split_at_seam_pos(ExtrusionLoop& loop, std::unique_ptr<EdgeGrid::Gri
             ? lower_layer_edge_grid->get()
             : nullptr;
         //TODO modify m_seam_placer to takers into account extra options.
-        Point seam = m_seam_placer.get_seam(m_layer->id(), seam_position, loop,
+        Point seam = m_seam_placer.get_seam(m_layer, seam_position, loop,
             last_pos, EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0),
             (m_layer == NULL ? nullptr : m_layer->object()),
             was_clockwise, edge_grid_ptr);

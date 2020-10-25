@@ -100,7 +100,7 @@ enum SupportMaterialPattern {
 };
 
 enum SeamPosition {
-    spRandom, spNearest, spAligned, spRear, spHidden, spCustom
+    spRandom, spNearest, spAligned, spRear, spCustom
 };
 
 enum SLAMaterial {
@@ -272,11 +272,11 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<SeamPosition>::ge
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
         keys_map["random"]              = spRandom;
-        keys_map["nearest"]             = spHidden;
+        keys_map["nearest"]             = spNearest;
         keys_map["near"]                = spNearest;
         keys_map["aligned"]             = spAligned;
         keys_map["rear"]                = spRear;
-        keys_map["hidden"]              = spHidden;
+        keys_map["hidden"]              = spNearest;
         keys_map["custom"]              = spCustom;
     }
     return keys_map;
@@ -587,7 +587,8 @@ public:
     ConfigOptionPercent             perimeter_bonding;
     ConfigOptionInt                 raft_layers;
     ConfigOptionEnum<SeamPosition>  seam_position;
-    ConfigOptionBool                seam_travel;
+    ConfigOptionPercent             seam_angle_cost;
+    ConfigOptionPercent             seam_travel_cost;
 //    ConfigOptionFloat               seam_preferred_direction;
 //    ConfigOptionFloat               seam_preferred_direction_jitter;
     ConfigOptionFloat               slice_closing_radius;
@@ -650,7 +651,8 @@ protected:
         OPT_PTR(perimeter_bonding);
         OPT_PTR(raft_layers);
         OPT_PTR(seam_position);
-        OPT_PTR(seam_travel);
+        OPT_PTR(seam_angle_cost);
+        OPT_PTR(seam_travel_cost);
         OPT_PTR(slice_closing_radius);
 //        OPT_PTR(seam_preferred_direction);
 //        OPT_PTR(seam_preferred_direction_jitter);

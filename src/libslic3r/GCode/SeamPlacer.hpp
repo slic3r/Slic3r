@@ -12,6 +12,7 @@ namespace Slic3r {
 class PrintObject;
 class ExtrusionLoop;
 class Print;
+class Layer;
 namespace EdgeGrid { class Grid; }
 
 
@@ -39,7 +40,7 @@ class SeamPlacer {
 public:
     void init(const Print& print);
 
-    Point get_seam(const size_t layer_idx, const SeamPosition seam_position,
+    Point get_seam(const Layer *layer, const SeamPosition seam_position,
                    const ExtrusionLoop& loop, Point last_pos,
                    coordf_t nozzle_diameter, const PrintObject* po,
                    bool was_clockwise, const EdgeGrid::Grid* lower_layer_edge_grid);

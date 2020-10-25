@@ -81,7 +81,7 @@ void PreferencesDialog::build()
 	def.label = L("Check for application updates");
 	def.type = coBool;
 	def.tooltip = L("If enabled, SuperSlicer will check for the new versions of itself online. When a new version becomes available a notification is displayed at the next application startup (never during program usage). This is only a notification mechanisms, no automatic installation is done.");
-	def.set_default_value(new ConfigOptionBool(app_config->get("version_check") == "0"));
+	def.set_default_value(new ConfigOptionBool(app_config->get("version_check") == "1"));
 		option = Option(def, "version_check");
 	m_optgroup_general->append_single_option_line(option);
 
@@ -97,7 +97,7 @@ void PreferencesDialog::build()
 	def.label = L("Update built-in Presets automatically");
 	def.type = coBool;
 	def.tooltip = L("If enabled, Slic3r downloads updates of built-in system presets in the background. These updates are downloaded into a separate temporary location. When a new preset version becomes available it is offered at application startup.");
-	def.set_default_value(new ConfigOptionBool(app_config->get("preset_update") == "0"));
+	def.set_default_value(new ConfigOptionBool(app_config->get("preset_update") == "1"));
 		option = Option(def, "preset_update");
 	m_optgroup_general->append_single_option_line(option);
 
@@ -117,25 +117,12 @@ void PreferencesDialog::build()
 		option = Option(def, "show_incompatible_presets");
 	m_optgroup_general->append_single_option_line(option);
 
-    def.label = L("Main GUI always in expert mode");
-    def.type = coBool;
-    def.tooltip = L("If enabled, the gui will be in expert mode even if the simple or advanced mode is selected (but not the setting tabs).");
-    def.set_default_value(new ConfigOptionBool{ app_config->get("objects_always_expert") == "1" });
-    option = Option(def, "objects_always_expert");
-    m_optgroup_general->append_single_option_line(option);
-
-	m_optgroup_paths = std::make_shared<ConfigOptionsGroup>(this, _(L("General")));
-	m_optgroup_paths->title_width = 10;
-	m_optgroup_paths->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
-		m_values[opt_key] = boost::any_cast<std::string>(value);
-	};
-	def.label = L("FreeCAD path");
-	def.type = coString;
-	def.tooltip = L("If it point to a valid freecad instance (the bin directory or the python executable), you can use the built-in python script to quickly generate geometry.");
-	def.set_default_value(new ConfigOptionString{ app_config->get("freecad_path") });
-	option = Option(def, "freecad_path");
-	option.opt.full_width = true;
-	m_optgroup_paths->append_single_option_line(option);
+	def.label = L("Main GUI always in expert mode");
+	def.type = coBool;
+	def.tooltip = L("If enabled, the gui will be in expert mode even if the simple or advanced mode is selected (but not the setting tabs).");
+	def.set_default_value(new ConfigOptionBool{ app_config->get("objects_always_expert") == "1" });
+	option = Option(def, "objects_always_expert");
+	m_optgroup_general->append_single_option_line(option);
 
 	def.label = L("Single Instance");
 	def.type = coBool;
@@ -194,6 +181,21 @@ void PreferencesDialog::build()
 	m_optgroup_general->append_single_option_line(option);
 
 	m_optgroup_general->activate();
+
+	m_optgroup_paths = std::make_shared<ConfigOptionsGroup>(this, _(L("Paths")));
+	m_optgroup_paths->title_width = 10;
+	m_optgroup_paths->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
+		m_values[opt_key] = boost::any_cast<std::string>(value);
+	};
+	def.label = L("FreeCAD path");
+	def.type = coString;
+	def.tooltip = L("If it point to a valid freecad instance (the bin directory or the python executable), you can use the built-in python script to quickly generate geometry.");
+	def.set_default_value(new ConfigOptionString{ app_config->get("freecad_path") });
+	option = Option(def, "freecad_path");
+	option.opt.full_width = true;
+	m_optgroup_paths->append_single_option_line(option);
+
+	m_optgroup_paths->activate();
 
 	m_optgroup_camera = std::make_shared<ConfigOptionsGroup>(this, _L("Camera"));
 	m_optgroup_camera->label_width = 40;

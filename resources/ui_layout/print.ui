@@ -49,14 +49,15 @@ group:Overhangs
 		setting:width$5:overhangs_reverse_threshold
 	end_line
 group:Advanced
-	setting:no_perimeter_unsupported_algo
+	setting:width$25:no_perimeter_unsupported_algo
 	line:Gap Fill
 		setting:gap_fill
 		setting:width$5:gap_fill_min_area
 	end_line
 	line:Seam
-		setting:seam_position
-		setting:seam_travel
+		setting:sidetext_width$2:seam_position
+		setting:label_width$10:width$3:sidetext_width$2:seam_angle_cost
+		setting:label_width$10:width$3:sidetext_width$2:seam_travel_cost
 	end_line
 	line:Looping perimeter
 		setting:perimeter_loop

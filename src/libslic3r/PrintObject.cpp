@@ -819,7 +819,8 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "seam_position"
             || opt_key == "seam_preferred_direction"
             || opt_key == "seam_preferred_direction_jitter"
-            || opt_key == "seam_travel"
+            || opt_key == "seam_angle_cost"
+            || opt_key == "seam_travel_cost"
             || opt_key == "small_perimeter_speed"
             || opt_key == "solid_infill_speed"
             || opt_key == "support_material_interface_speed"
@@ -2274,7 +2275,9 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
             // slicing in parallel
             std::vector<ExPolygons> expolygons_by_layer = this->slice_region(region_id, slice_zs, slicing_mode);
             //scale for shrinkage
-            double scale = print()->config().filament_shrink.get_abs_value(this->print()->regions()[region_id]->extruder(FlowRole::frPerimeter) - 1, 1);
+            std::cout << (&(this->print()->regions())) << " =?= " << (&(this->print()->m_regions)) << "\n";
+            const size_t extruder_id = this->print()->regions()[region_id]->extruder(FlowRole::frPerimeter) - 1;
+            double scale = print()->config().filament_shrink.get_abs_value(extruder_id, 1);
             if (scale != 1) {
                 scale = 1 / scale;
                 for (ExPolygons &polys : expolygons_by_layer)

@@ -932,28 +932,28 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
             }
             // Copy content of the ModelObject including its ID, do not change the parent.
             model_object.assign_copy(model_object_new);
-        } else if (supports_differ || model_custom_supports_data_changed(model_object, model_object_new)) {
+        } else if (supports_differ || seam_position_differ || model_custom_supports_data_changed(model_object, model_object_new)) {
             // First stop background processing before shuffling or deleting the ModelVolumes in the ModelObject's list.
             if (supports_differ) {
-            this->call_cancel_callback();
-            update_apply_status(false);
+                this->call_cancel_callback();
+                update_apply_status(false);
             }
             // Invalidate just the supports step.
             auto range = print_object_status.equal_range(PrintObjectStatus(model_object.id()));
             for (auto it = range.first; it != range.second; ++ it)
                 update_apply_status(it->print_object->invalidate_step(posSupportMaterial));
             if (supports_differ) {
-            // Copy just the support volumes.
-            model_volume_list_update_supports_seams(model_object, model_object_new);
-        }else if (seam_position_differ) {
-            // First stop background processing before shuffling or deleting the ModelVolumes in the ModelObject's list.
-            this->call_cancel_callback();
-            update_apply_status(false);
-            // Invalidate just the gcode step.
-            invalidate_step(psGCodeExport);
-            // Copy just the seam volumes.
-            model_volume_list_update_supports_seams(model_object, model_object_new);
-        }
+                // Copy just the support volumes.
+                model_volume_list_update_supports_seams(model_object, model_object_new);
+            }else if (seam_position_differ) {
+                // First stop background processing before shuffling or deleting the ModelVolumes in the ModelObject's list.
+                this->call_cancel_callback();
+                update_apply_status(false);
+                // Invalidate just the gcode step.
+                invalidate_step(psGCodeExport);
+                // Copy just the seam volumes.
+                model_volume_list_update_supports_seams(model_object, model_object_new);
+            }
         } else if (model_custom_seam_data_changed(model_object, model_object_new)) {
             update_apply_status(this->invalidate_step(psGCodeExport));
         }

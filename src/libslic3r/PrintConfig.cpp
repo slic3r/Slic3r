@@ -2796,31 +2796,38 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Seam position");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Position of perimeters starting points."
-                    "\n --- When using Custom seam ---"
-                    "\nYou have to create one or more seam sphere in the context menu of the object."
-                    " When an object has a seam object, this setting is not taken into account nymore for the object."
-                    " Refer to the wiki/help menu for more information.");
+                    "\n ");
     def->enum_keys_map = &ConfigOptionEnum<SeamPosition>::get_enum_values();
-    def->enum_values.push_back("random");
     def->enum_values.push_back("near");
+    def->enum_values.push_back("random");
     def->enum_values.push_back("aligned");
     def->enum_values.push_back("rear");
-    def->enum_values.push_back("hidden");
+    def->enum_labels.push_back(L("Cost-based"));
     def->enum_labels.push_back(L("Random"));
-    def->enum_labels.push_back(L("Nearest"));
     def->enum_labels.push_back(L("Aligned"));
     def->enum_labels.push_back(L("Rear"));
-    def->enum_labels.push_back(L("Corners"));
     def->mode = comSimple;
-    def->set_default_value(new ConfigOptionEnum<SeamPosition>(spHidden));
+    def->set_default_value(new ConfigOptionEnum<SeamPosition>(spNearest));
 
-    def = this->add("seam_travel", coBool);
-    def->label = L("Travel move reduced");
+    def = this->add("seam_angle_cost", coPercent);
+    def->label = L("Angle cost");
+    def->full_label = L("Seam angle cost");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("Add a big cost to travel paths when possible (when going into a loop), so it will prefer a less optimal seam posistion if it's nearer.");
-    def->cli = "seam-travel!";
+    def->tooltip = L("Cost of placing the seam at a bad angle. The worst angle (max penalty) is when it's flat.");
+    def->sidetext = L("%");
+    def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionBool(false));
+    def->set_default_value(new ConfigOptionPercent(100));
+
+    def = this->add("seam_travel_cost", coPercent);
+    def->label = L("Travel cost");
+    def->full_label = L("Seam travel cost");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("Cost of moving the extruder. The highest penalty is when the point is the farest from the position of the extruder before extruding the external periemter");
+    def->sidetext = L("%");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionPercent(100));
 
 #if 0
     def = this->add("seam_preferred_direction", coFloat);
@@ -4769,8 +4776,19 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
             value = "notconnected";
         else
             value = "connected";
+    } else if (opt_key == "seam_travel") {
+        if (value == "1") {
+            opt_key = "seam_travel_cost";
+            value = "200%";
+        } else {
+            opt_key = "";
+        }
+    } else if (opt_key == "seam_position") {
+        if (value == "hidden") {
+            opt_key = "seam_travel_cost";
+            value = "20%";
+        }
     }
-
     // Ignore the following obsolete configuration keys:
     static std::set<std::string> ignore = {
         "duplicate_x", "duplicate_y", "gcode_arcs", "multiply_x", "multiply_y",
