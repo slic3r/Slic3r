@@ -6,6 +6,7 @@
 #include "EdgeGrid.hpp"
 #include "Geometry.hpp"
 #include "GCode/Analyzer.hpp"
+#include "GCode/FanMover.hpp"
 #include "GCode/PrintExtents.hpp"
 #include "GCode/WipeTower.hpp"
 #include "ShortestPath.hpp"
@@ -1262,6 +1263,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     m_last_mm3_per_mm = 0.0;
     m_last_width = 0.0f;
 #endif // ENABLE_GCODE_VIEWER_DATA_CHECKING
+    m_fan_mover.release();
 #else
     m_last_mm3_per_mm = GCodeAnalyzer::Default_mm3_per_mm;
     m_last_width = GCodeAnalyzer::Default_Width;
@@ -1840,12 +1842,12 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
 #endif // ENABLE_GCODE_VIEWER
 
     // Append full config.
-    _write(file, "\n");
+    _write(file, "\n", true);
     {
         std::string full_config = "";
         append_full_config(print, full_config);
         if (!full_config.empty())
-            _write(file, full_config);
+            _write(file, full_config, true);
     }
     print.throw_if_canceled();
 }
@@ -3661,28 +3663,30 @@ std::string GCode::extrude_support(const ExtrusionEntityCollection &support_fill
 }
 
 
-void GCode::_post_process(std::string& what) {
-    //TODO reactivate it by a way or another
-#if !ENABLE_GCODE_VIEWER
+void GCode::_post_process(std::string& what, bool flush) {
+
     //if enabled, move the fan startup earlier.
     if (this->config().fan_speedup_time.value != 0) {
-        Slic3r::FanMover fen_post_process(std::abs(this->config().fan_speedup_time.value), this->config().fan_speedup_time.value>0);
-        what = fen_post_process.process_gcode(what);
+        if (this->m_fan_mover.get() == nullptr)
+            this->m_fan_mover.reset(new Slic3r::FanMover(
+            std::abs(this->config().fan_speedup_time.value), 
+            this->config().fan_speedup_time.value > 0,
+            this->config().use_relative_e_distances.value));
+        what = this->m_fan_mover->process_gcode(what, flush);
     }
-#endif // !ENABLE_GCODE_VIEWER
+
 }
 
-void GCode::_write(FILE* file, const char *what)
+void GCode::_write(FILE* file, const char *what, bool flush /*=false*/)
 {
     if (what != nullptr) {
         
-#if ENABLE_GCODE_VIEWER
-        const char* gcode = what;
-#else
         //const char * gcode_pp = _post_process(what).c_str();
         std::string str_preproc{ what };
-        _post_process(str_preproc);
-
+        _post_process(str_preproc, flush);
+#if ENABLE_GCODE_VIEWER
+        const char* gcode = str_preproc.c_str();
+#else
         const std::string str_ana = m_analyzer.process_gcode(str_preproc);
 
         // apply analyzer, if enabled

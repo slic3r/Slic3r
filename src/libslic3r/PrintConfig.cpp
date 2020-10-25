@@ -2068,7 +2068,7 @@ void PrintConfigDef::init_fff_params()
         " It assume infinite acceleration for this time estimation, and only takes into account G1 and G0 moves. Use 0 to deactivate, negative to remove the 'D' option.");
     def->sidetext = L("s");
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloat(-1));
+    def->set_default_value(new ConfigOptionFloat(-0.5));
 
     def = this->add("machine_limits_usage", coEnum);
     def->label = L("How to apply");
@@ -3877,7 +3877,7 @@ void PrintConfigDef::init_fff_params()
                     "\nPut 0 to disable.");
     def->cli = "z-step=f";
     def->sidetext = L("mm");
-    def->min = 0.0001;
+    def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0.005));
 

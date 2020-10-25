@@ -59,7 +59,7 @@ group:Advanced
 		setting:label_width$10:width$3:sidetext_width$2:seam_angle_cost
 		setting:label_width$10:width$3:sidetext_width$2:seam_travel_cost
 	end_line
-	line:Looping perimeter
+	line:One-loop perimeters
 		setting:perimeter_loop
 		setting:perimeter_loop_seam
 	end_line

@@ -22,7 +22,7 @@
 
 namespace Slic3r { namespace GUI {
 
-wxString double_to_string(double const value, const int max_precision /*= 4*/)
+wxString double_to_string(double const value, const int max_precision /*= 8*/)
 {
 // Style_NoTrailingZeroes does not work on OSX. It also does not work correctly with some locales on Windows.
 //	return wxNumberFormatter::ToString(value, max_precision, wxNumberFormatter::Style_NoTrailingZeroes);

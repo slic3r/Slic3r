@@ -134,7 +134,7 @@ public:
             memDC.SelectObject(bitmap);
 
             memDC.SetFont(m_action_font);
-            memDC.SetTextForeground(wxColour(237, 107, 33));
+            memDC.SetTextForeground(wxColour(0, 102, 255));
             memDC.DrawText(text, int(m_scale * 60), int(m_scale * 275));
 
             memDC.SelectObject(wxNullBitmap);
@@ -186,9 +186,9 @@ public:
         BitmapCache bmp_cache;
         int logo_size = lround(width * 0.25);
 #if ENABLE_GCODE_VIEWER
-        wxBitmap logo_bmp = *bmp_cache.load_svg(wxGetApp().is_editor() ? "prusa_slicer_logo" : "add_gcode", logo_size, logo_size);
+        wxBitmap logo_bmp = *bmp_cache.load_svg(wxGetApp().is_editor() ? "super_slicer_logo" : "add_gcode", logo_size, logo_size);
 #else
-        wxBitmap logo_bmp = *bmp_cache.load_svg("prusa_slicer_logo", logo_size, logo_size);
+        wxBitmap logo_bmp = *bmp_cache.load_svg("super_slicer_logo", logo_size, logo_size);
 #endif // ENABLE_GCODE_VIEWER
 
         wxCoord margin = int(m_scale * 20);
@@ -761,7 +761,7 @@ bool GUI_App::on_init_inner()
         }
 
         // create splash screen with updated bmp
-        scrn = new SplashScreen(bmp.IsOk() ? bmp : create_scaled_bitmap("prusa_slicer_logo", nullptr, 400), 
+        scrn = new SplashScreen(bmp.IsOk() ? bmp : create_scaled_bitmap("super_slicer_logo", nullptr, 400), 
                                 wxSPLASH_CENTRE_ON_SCREEN | wxSPLASH_TIMEOUT, 4000, splashscreen_pos);
         wxYield();
         scrn->SetText(_L("Loading configuration..."));
