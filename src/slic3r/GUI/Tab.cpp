@@ -1752,6 +1752,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 return description_line_widget(parent, &(tab->m_recommended_thin_wall_thickness_description_line));
             };
             current_group->append_line(current_line);
+            current_page->descriptions.push_back("wall_thickness");
         }
         else if (boost::starts_with(full_line, "recommended_extrusion_width_description")) {
             TabPrint* tab = nullptr;
@@ -1762,6 +1763,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 return description_line_widget(parent, &(tab->m_recommended_extrusion_width_description_line));
             };
             current_group->append_line(current_line);
+            current_page->descriptions.push_back("extrusion_width");
         }
         else if (boost::starts_with(full_line, "top_bottom_shell_thickness_explanation")) {
             TabPrint* tab = nullptr;
@@ -1772,6 +1774,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 return description_line_widget(parent, &(tab->m_top_bottom_shell_thickness_explanation));
             };
             current_group->append_line(current_line);
+            current_page->descriptions.push_back("top_bottom_shell");
         }
         else if (boost::starts_with(full_line, "parent_preset_description")) {
             build_preset_description_line(current_group.get());
@@ -1785,6 +1788,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 return description_line_widget(parent, &(tab->m_cooling_description_line));
             };
             current_group->append_line(current_line);
+            current_page->descriptions.push_back("cooling");
         }
         else if (boost::starts_with(full_line, "volumetric_speed_description")) {
             TabFilament* tab = nullptr;
@@ -1795,6 +1799,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 return description_line_widget(parent, &(tab->m_volumetric_speed_description_line));
             };
             current_group->append_line(current_line);
+            current_page->descriptions.push_back("volumetric_speed");
         }
         else if (boost::starts_with(full_line, "filament_ramming_parameters")) {
             Line thisline = current_group->create_single_option_line("filament_ramming_parameters");// { _(L("Ramming")), "" };
@@ -1964,14 +1969,26 @@ void TabPrint::update_description_lines()
     if (m_preset_bundle->printers.get_selected_preset().printer_technology() == ptSLA)
         return;
 
-    if (m_active_page && m_active_page->title() == "Layers and perimeters" && 
-        m_recommended_thin_wall_thickness_description_line && m_top_bottom_shell_thickness_explanation)
+    if (m_active_page && m_recommended_thin_wall_thickness_description_line
+        && std::find(m_active_page->descriptions.begin(), m_active_page->descriptions.end(), "wall_thickness") != m_active_page->descriptions.end())
     {
         m_recommended_thin_wall_thickness_description_line->SetText(
             from_u8(PresetHints::recommended_thin_wall_thickness(*m_preset_bundle)));
+    }
+    if (m_active_page && m_top_bottom_shell_thickness_explanation
+        && std::find(m_active_page->descriptions.begin(), m_active_page->descriptions.end(), "top_bottom_shell") != m_active_page->descriptions.end())
+    {
         m_top_bottom_shell_thickness_explanation->SetText(
             from_u8(PresetHints::top_bottom_shell_thickness_explanation(*m_preset_bundle)));
     }
+    if (m_active_page && m_recommended_extrusion_width_description_line
+        && std::find(m_active_page->descriptions.begin(), m_active_page->descriptions.end(), "extrusion_width") != m_active_page->descriptions.end())
+    {
+        m_recommended_extrusion_width_description_line->SetText(
+            from_u8(PresetHints::recommended_extrusion_width(*m_preset_bundle)));
+    }
+
+    
 }
 
 void TabPrint::toggle_options()
@@ -2151,9 +2168,9 @@ void TabFilament::update_description_lines()
     if (!m_active_page)
         return;
 
-    if (m_active_page->title() == "Cooling" && m_cooling_description_line)
+    if (std::find(m_active_page->descriptions.begin(), m_active_page->descriptions.end(), "cooling") != m_active_page->descriptions.end() && m_cooling_description_line)
         m_cooling_description_line->SetText(from_u8(PresetHints::cooling_description(m_presets->get_edited_preset())));
-    if (m_active_page->title() == "Advanced" && m_volumetric_speed_description_line)
+    if (std::find(m_active_page->descriptions.begin(), m_active_page->descriptions.end(), "volumetric_speed") != m_active_page->descriptions.end() && m_volumetric_speed_description_line)
         this->update_volumetric_flow_preset_hints();
 }
 

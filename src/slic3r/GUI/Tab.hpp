@@ -62,6 +62,7 @@ public:
     // Delayed layout after resizing the main window.
     const std::vector<ScalableBitmap>&   m_mode_bitmap_cache;
 
+	std::vector<std::string> descriptions;
 public:
 	std::vector <ConfigOptionsGroupShp> m_optgroups;
 	DynamicPrintConfig* m_config;
