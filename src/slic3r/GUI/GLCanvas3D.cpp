@@ -230,23 +230,23 @@ void GLCanvas3D::LayersEditing::render_overlay(const GLCanvas3D& canvas) const
 
     imgui.begin(_L("Variable layer height"), ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
 
-    imgui.text_colored(ImGuiWrapper::COL_ORANGE_LIGHT, _L("Left mouse button:"));
+    imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, _L("Left mouse button:"));
     ImGui::SameLine();
     imgui.text(_L("Add detail"));
 
-    imgui.text_colored(ImGuiWrapper::COL_ORANGE_LIGHT, _L("Right mouse button:"));
+    imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, _L("Right mouse button:"));
     ImGui::SameLine();
     imgui.text(_L("Remove detail"));
 
-    imgui.text_colored(ImGuiWrapper::COL_ORANGE_LIGHT, _L("Shift + Left mouse button:"));
+    imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, _L("Shift + Left mouse button:"));
     ImGui::SameLine();
     imgui.text(_L("Reset to base"));
 
-    imgui.text_colored(ImGuiWrapper::COL_ORANGE_LIGHT, _L("Shift + Right mouse button:"));
+    imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, _L("Shift + Right mouse button:"));
     ImGui::SameLine();
     imgui.text(_L("Smoothing"));
 
-    imgui.text_colored(ImGuiWrapper::COL_ORANGE_LIGHT, _L("Mouse wheel:"));
+    imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, _L("Mouse wheel:"));
     ImGui::SameLine();
     imgui.text(_L("Increase/decrease edit area"));
     

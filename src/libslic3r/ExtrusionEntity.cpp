@@ -314,6 +314,8 @@ ExtrusionRole ExtrusionEntity::string_to_role(const std::string& role)
         return erIroning;
     else if (role == L("Bridge infill"))
         return erBridgeInfill;
+    else if (role == L("Thin wall"))
+        return erThinWall;
     else if (role == L("Gap fill"))
         return erGapFill;
     else if (role == L("Skirt"))
@@ -324,13 +326,16 @@ ExtrusionRole ExtrusionEntity::string_to_role(const std::string& role)
         return erSupportMaterialInterface;
     else if (role == L("Wipe tower"))
         return erWipeTower;
+    else if (role == L("Mill"))
+        return erMilling;
     else if (role == L("Custom"))
         return erCustom;
     else if (role == L("Mixed"))
         return erMixed;
     else
         return erNone;
-}void ExtrusionPrinter::use(const ExtrusionPath &path) { 
+}
+void ExtrusionPrinter::use(const ExtrusionPath &path) { 
     ss << "ExtrusionPath:" << (uint16_t)path.role() << "{";
     for (int i = 0; i < path.polyline.points.size(); i++) {
         if (i != 0) ss << ",";

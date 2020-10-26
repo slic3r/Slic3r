@@ -240,7 +240,7 @@ void GCodeViewer::SequentialView::Marker::render() const
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::SetNextWindowBgAlpha(0.25f);
     imgui.begin(std::string("ToolPosition"), ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove);
-    imgui.text_colored(ImGuiWrapper::COL_ORANGE_LIGHT, _u8L("Tool position") + ":");
+    imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, _u8L("Tool position") + ":");
     ImGui::SameLine();
     char buf[1024];
     sprintf(buf, "X: %.2f, Y: %.2f, Z: %.2f", m_world_position(0), m_world_position(1), m_world_position(2));
@@ -259,27 +259,6 @@ void GCodeViewer::SequentialView::Marker::render() const
     imgui.end();
     ImGui::PopStyleVar();
 }
-
-const std::vector<GCodeViewer::Color> GCodeViewer::Extrusion_Role_Colors {{
-    { 0.75f, 0.75f, 0.75f },   // erNone
-    { 1.00f, 0.90f, 0.30f },   // erPerimeter
-    { 1.00f, 0.49f, 0.22f },   // erExternalPerimeter
-    { 0.12f, 0.12f, 1.00f },   // erOverhangPerimeter
-    { 0.69f, 0.19f, 0.16f },   // erInternalInfill
-    { 0.59f, 0.33f, 0.80f },   // erSolidInfill
-    { 0.94f, 0.25f, 0.25f },   // erTopSolidInfill
-    { 1.00f, 0.55f, 0.41f },   // erIroning
-    { 0.30f, 0.50f, 0.73f },   // erBridgeInfill
-    { 0.00f, 1.00f, 0.40f },  // erThinWall
-    { 1.00f, 1.00f, 1.00f },   // erGapFill
-    { 0.00f, 0.53f, 0.43f },   // erSkirt
-    { 0.00f, 1.00f, 0.00f },   // erSupportMaterial
-    { 0.00f, 0.50f, 0.00f },   // erSupportMaterialInterface
-    { 0.70f, 0.89f, 0.67f },   // erWipeTower
-    { 0.70f, 0.70f, 0.70f },   // erMilling
-    { 0.37f, 0.82f, 0.58f },   // erCustom
-    { 0.00f, 0.00f, 0.00f }    // erMixed
-}};
 
 const std::vector<GCodeViewer::Color> GCodeViewer::Options_Colors {{
     { 0.803f, 0.135f, 0.839f },   // Retractions
@@ -898,6 +877,58 @@ void GCodeViewer::init()
 {
     if (m_initialized)
         return;
+
+    //load Extrusion colors
+    {
+        this->Extrusion_Role_Colors = {
+            { 0.75f, 0.75f, 0.75f },   // erNone
+            { 1.00f, 0.90f, 0.30f },   // erPerimeter
+            { 1.00f, 0.49f, 0.22f },   // erExternalPerimeter
+            { 0.12f, 0.12f, 1.00f },   // erOverhangPerimeter
+            { 0.69f, 0.19f, 0.16f },   // erInternalInfill
+            { 0.59f, 0.33f, 0.80f },   // erSolidInfill
+            { 0.94f, 0.25f, 0.25f },   // erTopSolidInfill
+            { 1.00f, 0.55f, 0.41f },   // erIroning
+            { 0.30f, 0.50f, 0.73f },   // erBridgeInfill
+            { 0.00f, 1.00f, 0.40f },   // erThinWall
+            { 1.00f, 1.00f, 1.00f },   // erGapFill
+            { 0.00f, 0.53f, 0.43f },   // erSkirt
+            { 0.00f, 1.00f, 0.00f },   // erSupportMaterial
+            { 0.00f, 0.50f, 0.00f },   // erSupportMaterialInterface
+            { 0.70f, 0.89f, 0.67f },   // erWipeTower
+            { 0.70f, 0.70f, 0.70f },   // erMilling
+            { 0.37f, 0.82f, 0.58f },   // erCustom
+            { 0.00f, 0.00f, 0.00f }    // erMixed
+        };
+
+
+        //try to load colors from ui file
+        boost::property_tree::ptree tree_colors;
+        boost::filesystem::path path_colors = boost::filesystem::path(resources_dir()) / "ui_layout" / "colors.ini";
+        try {
+            boost::nowide::ifstream ifs;
+            ifs.imbue(boost::locale::generator()("en_US.UTF-8"));
+            ifs.open(path_colors.string());
+            boost::property_tree::read_ini(ifs, tree_colors);
+
+            for (int i = 0; i < Extrusion_Role_Colors.size(); i++) {
+                std::string color_code = tree_colors.get<std::string>(ExtrusionEntity::role_to_string((ExtrusionRole)i));
+                if (color_code.length() > 5) {
+                    wxColour color;
+                    color.Set((color_code[0] == '#') ? color_code : ("#" + color_code));
+                    Extrusion_Role_Colors[i][0] = color.Red() / 256.f;
+                    Extrusion_Role_Colors[i][1] = color.Green() / 256.f;
+                    Extrusion_Role_Colors[i][2] = color.Blue() / 256.f;
+                }
+            }
+        }
+        catch (const std::ifstream::failure & err) {
+            trace(1, (std::string("The color file cannot be loaded. Reason: ") + err.what(), path_colors.string()).c_str());
+        }
+        catch (const std::runtime_error & err) {
+            trace(1, (std::string("Failed loading the color file. Reason: ") + err.what(), path_colors.string()).c_str());
+        }
+    }
 
     for (size_t i = 0; i < m_buffers.size(); ++i) {
         TBuffer& buffer = m_buffers[i];
@@ -1742,6 +1773,10 @@ void GCodeViewer::refresh_render_paths(bool keep_sequential_current_first, bool 
             }
         }
     }
+    if (global_endpoints.first > global_endpoints.last) {
+        global_endpoints = { 0 , m_moves_count };
+        top_layer_endpoints = global_endpoints;
+    }
 
     // update current sequential position
     m_sequential_view.current.first = !top_layer_only && keep_sequential_current_first ? std::clamp(m_sequential_view.current.first, global_endpoints.first, global_endpoints.last) : global_endpoints.first;
@@ -2117,7 +2152,7 @@ void GCodeViewer::render_legend() const
                     pos = ImGui::GetCursorScreenPos();
                     float width = std::max(1.0f, percent_bar_size * percent / max_percent);
                     draw_list->AddRectFilled({ pos.x, pos.y + 2.0f }, { pos.x + width, pos.y + icon_size - 2.0f },
-                        ImGui::GetColorU32(ImGuiWrapper::COL_ORANGE_LIGHT));
+                        ImGui::GetColorU32(ImGuiWrapper::COL_BLUE_LIGHT));
                     ImGui::Dummy({ percent_bar_size, icon_size });
                     ImGui::SameLine();
                     char buf[64];
@@ -2647,7 +2682,7 @@ void GCodeViewer::render_statistics() const
     auto add_time = [this, &imgui](const std::string& label, long long time) {
         char buf[1024];
         sprintf(buf, "%lld ms (%s)", time, get_time_dhms(static_cast<float>(time) * 0.001f).c_str());
-        imgui.text_colored(ImGuiWrapper::COL_ORANGE_LIGHT, label);
+        imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, label);
         ImGui::SameLine(offset);
         imgui.text(buf);
     };
@@ -2662,7 +2697,7 @@ void GCodeViewer::render_statistics() const
             sprintf(buf, "%lld bytes (%.3f MB)", memory, static_cast<float>(memory) * inv_mb);
         else
             sprintf(buf, "%lld bytes (%.3f GB)", memory, static_cast<float>(memory) * inv_gb);
-        imgui.text_colored(ImGuiWrapper::COL_ORANGE_LIGHT, label);
+        imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, label);
         ImGui::SameLine(offset);
         imgui.text(buf);
     };
@@ -2670,7 +2705,7 @@ void GCodeViewer::render_statistics() const
     auto add_counter = [this, &imgui](const std::string& label, long long counter) {
         char buf[1024];
         sprintf(buf, "%lld", counter);
-        imgui.text_colored(ImGuiWrapper::COL_ORANGE_LIGHT, label);
+        imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, label);
         ImGui::SameLine(offset);
         imgui.text(buf);
     };

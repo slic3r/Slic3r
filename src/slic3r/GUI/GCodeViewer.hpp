@@ -21,7 +21,7 @@ class GCodeViewer
     using IndexBuffer = std::vector<unsigned int>;
     using MultiIndexBuffer = std::vector<IndexBuffer>;
 
-    static const std::vector<Color> Extrusion_Role_Colors;
+    std::vector<Color> Extrusion_Role_Colors;
     static const std::vector<Color> Options_Colors;
     static const std::vector<Color> Travel_Colors;
     static const std::vector<Color> Range_Colors;
