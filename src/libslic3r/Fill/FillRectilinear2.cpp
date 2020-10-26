@@ -2765,7 +2765,9 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
     // === extrude perimeter ===
     Polylines polylines_1;
     //generate perimeter:
-    ExPolygons path_perimeter = offset2_ex(surface->expolygon, scale_(-this->get_spacing()), scale_(this->get_spacing() / 2));
+    ExPolygons path_perimeter = offset2_ex(surface->expolygon, 
+        scale_(-this->get_spacing()), scale_(this->get_spacing() / 2), 
+        ClipperLib::jtMiter, scale_(this->get_spacing()) * 10);
     for (ExPolygon &expolygon : path_perimeter) {
         expolygon.contour.make_counter_clockwise();
         polylines_1.push_back(expolygon.contour.split_at_index(0));
