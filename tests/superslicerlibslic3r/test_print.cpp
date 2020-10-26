@@ -165,26 +165,30 @@ SCENARIO("Print: Brim generation") {
             }
         }
         WHEN("Brim without first layer compensation") {
-            config.set_key_value("brim_width", new ConfigOptionFloat(2));
+            config.set_key_value("brim_width", new ConfigOptionFloat(1));
             config.set_key_value("brim_offset", new ConfigOptionFloat(0));
             Print print{};
             Slic3r::Test::init_print(print, { m }, model, &config);
             print.process();
             THEN("First Brim Extrusion has a length of ~88") {
-                REQUIRE(unscaled(print.brim().entities.front()->length()) > 22*4);
-                REQUIRE(unscaled(print.brim().entities.front()->length()) < 22*4+1);
+                REQUIRE(print.brim().entities.size() > 0);
+                double dist = unscaled(ExtrusionLength{}.length(*print.brim().entities.front()));
+                REQUIRE(dist > 22*4);
+                REQUIRE(dist < 22*4+1);
             }
         }
         WHEN("Brim with 1mm first layer compensation") {
-            config.set_key_value("brim_width", new ConfigOptionFloat(2));
+            config.set_key_value("brim_width", new ConfigOptionFloat(1));
             config.set_key_value("brim_offset", new ConfigOptionFloat(0));
             config.set_key_value("first_layer_size_compensation", new ConfigOptionFloat(-1));
             Print print{};
             Slic3r::Test::init_print(print, { m }, model, &config);
             print.process();
             THEN("First Brim Extrusion has a length of ~80") {
-                REQUIRE(unscaled(print.brim().entities.front()->length()) > 20 * 4);
-                REQUIRE(unscaled(print.brim().entities.front()->length()) < 20 * 4 + 1);
+                REQUIRE(print.brim().entities.size() > 0);
+                double dist = unscaled(ExtrusionLength{}.length(*print.brim().entities.front()));
+                REQUIRE(dist > 20 * 4);
+                REQUIRE(dist < 20 * 4 + 1);
             }
         }
         WHEN("Brim is set to 6mm, extrusion width 0.5mm")  {

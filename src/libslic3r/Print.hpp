@@ -556,6 +556,10 @@ private:
     friend class PrintObject;
 };
 
+//for testing purpose
+ExPolygons dense_fill_fit_to_size(const ExPolygon &polygon_to_cover, const ExPolygons& allowedPoints,
+    const ExPolygon& growing_area, const coord_t offset, float coverage);
+
 } /* slic3r_Print_hpp_ */
 
 #endif

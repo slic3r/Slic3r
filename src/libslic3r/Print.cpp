@@ -1724,7 +1724,8 @@ void Print::process()
         m_skirt.clear();
 
         m_skirt_convex_hull.clear();
-        m_first_layer_convex_hull.points.clear();        for (PrintObject *obj : m_objects) {
+        m_first_layer_convex_hull.points.clear();
+        for (PrintObject *obj : m_objects) {
             obj->m_skirt.clear();
         }
         if (this->has_skirt()) {

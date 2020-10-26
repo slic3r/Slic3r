@@ -16,6 +16,7 @@ add_executable(${_TEST_NAME}_tests
 	test_data.hpp
 	test_data.cpp
 	# test_clipper_utils.cpp
+	test_dense_infill.cpp
 	)
 
     

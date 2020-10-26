@@ -1,7 +1,7 @@
 
-//#define CATCH_CONFIG_DISABLE
-//#include <catch2/catch.hpp>
-#include <catch_main.hpp>
+#define CATCH_CONFIG_DISABLE
+#include <catch2/catch.hpp>
+//#include <catch_main.hpp>
 
 #include <string>
 #include "test_data.hpp"
@@ -38,7 +38,7 @@ std::unique_ptr<Print> init_print_with_dist(DynamicPrintConfig &config, float di
 
     if (distance <= 0) {
         print->apply(model, config);
-        arrange_objects(*print, model, InfiniteBed{}, ArrangeParams{ scaled(min_object_distance(config)) });// print->config().min_object_distance(&print->config(), 999999));
+        arrange_objects(print.get(), model, InfiniteBed{}, ArrangeParams{ scaled(/*min_object_distance(config)) });/*/ print->config().min_object_distance(&print->config(), 999999)) });
         model.center_instances_around_point(Slic3r::Vec2d(100, 100));
     }
 

@@ -391,6 +391,13 @@ void ExtrusionPrinter::use(const ExtrusionEntityCollection &collection) {
 }
 
 
+void ExtrusionLength::default_use(const ExtrusionEntity& entity) { dist += entity.length(); };
+void ExtrusionLength::use(const ExtrusionEntityCollection& collection) {
+    for (int i = 0; i < collection.entities.size(); i++) {
+        collection.entities[i]->visit(*this);
+    }
+}
+
 //class ExtrusionTreeVisitor : ExtrusionVisitor {
 //public:
 //    //virtual void use(ExtrusionEntity &entity) { assert(false); };

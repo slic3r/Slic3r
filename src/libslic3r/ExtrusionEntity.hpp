@@ -552,16 +552,29 @@ class ExtrusionPrinter : public ExtrusionVisitorConst {
     bool trunc;
 public:
     ExtrusionPrinter(double mult = 0.0001, bool trunc = false) : mult(mult), trunc(trunc) { }
-    virtual void use(const ExtrusionPath &path) override;
-    virtual void use(const ExtrusionPath3D &path3D) override;
-    virtual void use(const ExtrusionMultiPath &multipath) override;
-    virtual void use(const ExtrusionMultiPath3D &multipath) override;
-    virtual void use(const ExtrusionLoop &loop) override;
-    virtual void use(const ExtrusionEntityCollection &collection) override;
+    virtual void use(const ExtrusionPath& path) override;
+    virtual void use(const ExtrusionPath3D& path3D) override;
+    virtual void use(const ExtrusionMultiPath& multipath) override;
+    virtual void use(const ExtrusionMultiPath3D& multipath) override;
+    virtual void use(const ExtrusionLoop& loop) override;
+    virtual void use(const ExtrusionEntityCollection& collection) override;
     std::string str() { return ss.str(); }
-    std::string print(const ExtrusionEntity &entity) && {
+    std::string print(const ExtrusionEntity& entity)&& {
         entity.visit(*this);
         return ss.str();
+    }
+};
+
+class ExtrusionLength : public ExtrusionVisitorConst {
+    double dist;
+public:
+    ExtrusionLength() : dist(0){ }
+    virtual void default_use(const ExtrusionEntity& path) override;
+    virtual void use(const ExtrusionEntityCollection& collection) override;
+    double get() { return dist; }
+    double length(const ExtrusionEntity& entity)&& {
+        entity.visit(*this);
+        return get();
     }
 };
 

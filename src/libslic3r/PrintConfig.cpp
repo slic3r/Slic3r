@@ -4865,7 +4865,7 @@ double PrintConfig::min_object_distance() const
     return PrintConfig::min_object_distance(static_cast<const ConfigBase*>(this));
 }
 
-double PrintConfig::min_object_distance(const ConfigBase *config, double ref_height)
+double PrintConfig::min_object_distance(const ConfigBase *config, double ref_height /* = 0*/)
 {
     if (printer_technology(*config) == ptSLA) return 6.;
     
