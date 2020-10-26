@@ -247,11 +247,10 @@ private:
             version = _L("Version") + " " + std::string(SLIC3R_VERSION);
 
             // credits infornation
-            credits =   title + " " +
-                        _L("is based on Slic3r by Alessandro Ranellucci and the RepRap community.") + "\n\n" +
+            credits =   title + " " + _L("is based on PrusaSlicer by Prusa and Slic3r by Alessandro Ranellucci and the RepRap community.") + "\n\n" +
                         title + " " + _L("is licensed under the") + " " + _L("GNU Affero General Public License, version 3") + "\n\n" +
-                        _L("Contributions by Vojtech Bubnik, Enrico Turri, Oleksandra Iushchenko, Tamas Meszaros, Lukas Matena, Vojtech Kral, David Kocik and numerous others.") + "\n\n" +
-                        _L("Artwork model by Nora Al-Badri and Jan Nikolai Nelles");
+                        _L("Contributions by Vojtech Bubnik, Enrico Turri, Oleksandra Iushchenko, Tamas Meszaros, Lukas Matena, Vojtech Kral, David Kocik, Durand Remi and numerous others.") + "\n\n" +
+                        _L("Artwork model by Durand Remi (not proud of it)");
 
             title_font = version_font = credits_font = init_font;
         }
