@@ -27,7 +27,7 @@
      inkscape:collect="always"><stop
        id="stop4568"
        offset="0"
-       style="stop-color:#ed6b21;stop-opacity:1;" /><stop
+       style="stop-color:#2172eb;stop-opacity:1;" /><stop
        id="stop4570"
        offset="1"
        style="stop-color:#808080;stop-opacity:1" /></linearGradient><linearGradient
@@ -61,7 +61,7 @@
    inkscape:current-layer="Layer_1" />
 
 <path
-   style="fill:none;fill-opacity:1;stroke:#ed6b21;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:round;stroke-opacity:1"
+   style="fill:none;fill-opacity:1;stroke:#2172eb;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:round;stroke-opacity:1"
    d="M 14.584078,1.5485052 V 14.453204 H 8.883029 v -1.370019"
    id="path4526"
    inkscape:connector-curvature="0" /><path

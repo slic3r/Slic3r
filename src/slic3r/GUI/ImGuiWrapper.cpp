@@ -54,10 +54,10 @@ static const std::map<const char, std::string> font_icons = {
 
 const ImVec4 ImGuiWrapper::COL_GREY_DARK         = { 0.333f, 0.333f, 0.333f, 1.0f };
 const ImVec4 ImGuiWrapper::COL_GREY_LIGHT        = { 0.4f, 0.4f, 0.4f, 1.0f };
-//const ImVec4 ImGuiWrapper::COL_BLUE_DARK       = { 0.757f, 0.404f, 0.216f, 1.0f };
-//const ImVec4 ImGuiWrapper::COL_BLUE_LIGHT      = { 1.0f, 0.49f, 0.216f, 1.0f };
-const ImVec4 ImGuiWrapper::COL_BLUE_DARK         = { 0.0f, 0.28f, 0.78f, 1.0f };
-const ImVec4 ImGuiWrapper::COL_BLUE_LIGHT        = { 0.0f, 0.4f, 1.0f, 1.0f };
+//const ImVec4 ImGuiWrapper::COL_ORANGE_DARK       = { 0.757f, 0.404f, 0.216f, 1.0f };
+//const ImVec4 ImGuiWrapper::COL_ORANGE_LIGHT      = { 1.0f, 0.49f, 0.216f, 1.0f };
+const ImVec4 ImGuiWrapper::COL_BLUE_DARK         = { 0.0f, 0.28f, 0.78f, 1.0f }; //0047c7
+const ImVec4 ImGuiWrapper::COL_BLUE_LIGHT        = { 0.13f, 0.45f, 0.92f, 1.0f }; //2172eb
 const ImVec4 ImGuiWrapper::COL_WINDOW_BACKGROUND = { 0.133f, 0.133f, 0.133f, 0.8f };
 const ImVec4 ImGuiWrapper::COL_BUTTON_BACKGROUND = COL_BLUE_DARK;
 const ImVec4 ImGuiWrapper::COL_BUTTON_HOVERED    = COL_BLUE_LIGHT;

@@ -126,17 +126,21 @@ Control::Control( wxWindow *parent,
 
     // control's view variables
     SLIDER_MARGIN     = 4 + GUI::wxGetApp().em_unit();
+    
+    //DARK_ORANGE_PEN   = wxPen(wxColour(237, 107, 33));
+    //ORANGE_PEN        = wxPen(wxColour(253, 126, 66));
+    //LIGHT_ORANGE_PEN  = wxPen(wxColour(254, 177, 139));
 
-    DARK_ORANGE_PEN   = wxPen(wxColour(237, 107, 33));
-    ORANGE_PEN        = wxPen(wxColour(253, 126, 66));
-    LIGHT_ORANGE_PEN  = wxPen(wxColour(254, 177, 139));
+    DARK_BLUE_PEN     = wxPen(wxColour(32, 113, 234));
+    BLUE_PEN          = wxPen(wxColour(66, 141, 253));
+    LIGHT_BLUE_PEN    = wxPen(wxColour(139, 185, 254));
 
     DARK_GREY_PEN     = wxPen(wxColour(128, 128, 128));
     GREY_PEN          = wxPen(wxColour(164, 164, 164));
     LIGHT_GREY_PEN    = wxPen(wxColour(204, 204, 204));
 
     m_line_pens = { &DARK_GREY_PEN, &GREY_PEN, &LIGHT_GREY_PEN };
-    m_segm_pens = { &DARK_ORANGE_PEN, &ORANGE_PEN, &LIGHT_ORANGE_PEN };
+    m_segm_pens = { &DARK_BLUE_PEN, &BLUE_PEN, &LIGHT_BLUE_PEN };
 
     const wxFont& font = GetFont();
     m_font = is_osx ? font.Smaller().Smaller() : font.Smaller();
@@ -501,7 +505,7 @@ void Control::draw_info_line_with_icon(wxDC& dc, const wxPoint& pos, const Selec
 {
     if (m_selection == selection) {
         //draw info line
-        dc.SetPen(DARK_ORANGE_PEN);
+        dc.SetPen(DARK_BLUE_PEN);
         const wxPoint pt_beg = is_horizontal() ? wxPoint(pos.x, pos.y - m_thumb_size.y) : wxPoint(pos.x - m_thumb_size.x, pos.y/* - 1*/);
         const wxPoint pt_end = is_horizontal() ? wxPoint(pos.x, pos.y + m_thumb_size.y) : wxPoint(pos.x + m_thumb_size.x, pos.y/* - 1*/);
         dc.DrawLine(pt_beg, pt_end);
@@ -549,7 +553,7 @@ void Control::draw_tick_on_mouse_position(wxDC& dc)
         wxCoord new_pos = get_position_from_value(tick);
         const wxPoint pos = is_horizontal() ? wxPoint(new_pos, height * 0.5) : wxPoint(0.5 * width, new_pos);
 
-        dc.SetPen(DARK_ORANGE_PEN);
+        dc.SetPen(DARK_BLUE_PEN);
 
         draw_ticks(dc, pos, -2);
         draw_ticks(dc, pos, 2 );
