@@ -2549,8 +2549,8 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     ExPolygonWithOffset poly_with_offset(
         surface->expolygon, 
         - rotate_vector.first, 
-        float(scale_(0 /*this->overlap*/ - (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->spacing)),
-        float(scale_(0 /*this->overlap*/ - 0.5 * this->spacing)));
+        float(scale_(0 /*this->overlap*/ - (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->get_spacing())),
+        float(scale_(0 /*this->overlap*/ - 0.5 * this->get_spacing())));
     if (poly_with_offset.n_contours_inner == 0) {
         // Not a single infill line fits.
         //Prusa: maybe one shall trigger the gap fill here?
@@ -2563,7 +2563,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     // define flow spacing according to requested density
     if (params.full_infill() && !params.dont_adjust || line_spacing == 0 ) {
         //it's == this->_adjust_solid_spacing(bounding_box.size()(0), line_spacing) because of the init_spacing
-        line_spacing = scale_(this->spacing);
+        line_spacing = scale_(this->get_spacing());
     } else {
         // extend bounding box so that our pattern will be aligned with other layers
         // Transform the reference point to the rotated coordinate system.
@@ -2730,7 +2730,7 @@ Polylines FillStars::fill_surface(const Surface *surface, const FillParams &para
     Polylines polylines_out;
     if (! fill_surface_by_lines(surface, params2, 0.f, 0.f, polylines_out) ||
         ! fill_surface_by_lines(surface, params2, float(M_PI / 3.), 0.f, polylines_out) ||
-        ! fill_surface_by_lines(surface, params3, float(2. * M_PI / 3.), float(0.5 * this->spacing / params2.density), polylines_out)) {
+        ! fill_surface_by_lines(surface, params3, float(2. * M_PI / 3.), float(0.5 * this->get_spacing() / params2.density), polylines_out)) {
         printf("FillStars::fill_surface() failed to fill a region.\n");
     }
     return polylines_out;
@@ -2765,7 +2765,7 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
     // === extrude perimeter ===
     Polylines polylines_1;
     //generate perimeter:
-    ExPolygons path_perimeter = offset2_ex(surface->expolygon, scale_(-this->spacing), scale_(this->spacing / 2));
+    ExPolygons path_perimeter = offset2_ex(surface->expolygon, scale_(-this->get_spacing()), scale_(this->get_spacing() / 2));
     for (ExPolygon &expolygon : path_perimeter) {
         expolygon.contour.make_counter_clockwise();
         polylines_1.push_back(expolygon.contour.split_at_index(0));
@@ -2799,7 +2799,7 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
     Polylines polylines_2;
     bool canFill = true;
     //50% overlap with the new perimeter
-    ExPolygons path_inner = offset2_ex(surface->expolygon, scale_(-this->spacing * 1.5), scale_(this->spacing));
+    ExPolygons path_inner = offset2_ex(surface->expolygon, scale_(-this->get_spacing() * 1.5), scale_(this->get_spacing()));
     for (ExPolygon &expolygon : path_inner) {
         Surface surfInner(*surface, expolygon);
         if (!fill_surface_by_lines(&surfInner, params, 0.f, 0.f, polylines_2)) {
@@ -2861,7 +2861,7 @@ coord_t FillScatteredRectilinear::_line_spacing_for_density(float density) const
      */
     (void) density;
 
-    return coord_t(scale_(this->spacing) / 1.0);
+    return coord_t(scale_(this->get_spacing()) / 1.0);
 }
 
 Polylines FillScatteredRectilinear::fill_surface(const Surface *surface, const FillParams &params) const
@@ -2869,7 +2869,7 @@ Polylines FillScatteredRectilinear::fill_surface(const Surface *surface, const F
     Polylines polylines_out;
 
     // Offset the pattern randomly using the current layer index as the generator
-    float offset = randomFloatFromSeed((uint32_t) layer_id) * 0.5f * this->spacing;
+    float offset = randomFloatFromSeed((uint32_t) layer_id) * 0.5f * this->get_spacing();
 
     if (!fill_surface_by_lines(surface, params, 0.f, offset, polylines_out)) {
         printf("FillScatteredRectilinear::fill_surface() failed to fill a region.\n");

@@ -8,8 +8,8 @@
 namespace Slic3r {
 
 void FillRectilinear::init_spacing(coordf_t spacing, const FillParams &params) {
-        this->spacing = spacing;
-        this->_min_spacing = scale_(this->spacing);
+        this->spacing_priv = spacing;
+        this->_min_spacing = scale_(this->get_spacing());
         assert(params.density > 0.0001f);
         this->_line_spacing = coord_t(coordf_t(this->_min_spacing) / params.density);
         this->_diagonal_distance = this->_line_spacing * 2;
@@ -17,7 +17,7 @@ void FillRectilinear::init_spacing(coordf_t spacing, const FillParams &params) {
     // define flow spacing according to requested density
         if (params.density > 0.9999f && !params.dont_adjust) {
             this->_line_spacing = this->_adjust_solid_spacing(bounding_box.size()(0), this->_line_spacing);
-            this->spacing = unscale<double>(this->_line_spacing);
+            this->spacing_priv = unscale<double>(this->_line_spacing);
         }
 }
 

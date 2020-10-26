@@ -601,7 +601,7 @@ void Filler::_fill_surface_single(
     if (params.connection == InfillConnection::icNotConnected || all_polylines.size() <= 1)
         append(polylines_out, std::move(all_polylines));
     else
-        connect_infill(chain_polylines(std::move(all_polylines)), expolygon, polylines_out, this->spacing, params);
+        connect_infill(chain_polylines(std::move(all_polylines)), expolygon, polylines_out, this->get_spacing(), params);
 
 #ifdef ADAPTIVE_CUBIC_INFILL_DEBUG_OUTPUT
     {

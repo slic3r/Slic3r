@@ -431,6 +431,8 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
                 f->no_overlap_expolygons.push_back(expoly);
             }
 
+            //init the surface with the current polygon
+            surface_fill.surface.expolygon = std::move(expoly);
             //make fill
             f->fill_surface_extrusion(&surface_fill.surface, surface_fill.params, m_regions[surface_fill.region_id]->fills.entities);
         }

@@ -1539,8 +1539,8 @@ bool FillRectilinear3::fill_surface_by_lines(const Surface *surface, const FillP
     // On the polygons of poly_with_offset, the infill lines will be connected.
     FillRectilinear3_Internal::ExPolygonWithOffset poly_with_offset(
         surface->expolygon,
-        float(scale_(- (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->spacing)),
-        float(scale_(- 0.5 * this->spacing)));
+        float(scale_(- (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->get_spacing())),
+        float(scale_(- 0.5 * this->get_spacing())));
     if (poly_with_offset.n_contours_inner == 0) {
         // Not a single infill line fits.
         //FIXME maybe one shall trigger the gap fill here?
@@ -1570,7 +1570,7 @@ Polylines FillRectilinear3::fill_surface(const Surface *surface, const FillParam
 {
     Polylines polylines_out;
     std::vector<FillDirParams> fill_dir_params;
-    fill_dir_params.emplace_back(FillDirParams(this->spacing, 0.f));
+    fill_dir_params.emplace_back(FillDirParams(this->get_spacing(), 0.f));
     if (! fill_surface_by_lines(surface, params, fill_dir_params, polylines_out))
         printf("FillRectilinear3::fill_surface() failed to fill a region.\n");
     //if (params.full_infill() && ! params.dont_adjust)
@@ -1587,8 +1587,8 @@ Polylines FillGrid3::fill_surface(const Surface *surface, const FillParams &para
     params2.density *= 0.5f;
     Polylines polylines_out;
     std::vector<FillDirParams> fill_dir_params;
-    fill_dir_params.emplace_back(FillDirParams(this->spacing, 0.f));
-    fill_dir_params.emplace_back(FillDirParams(this->spacing, float(M_PI / 2.)));
+    fill_dir_params.emplace_back(FillDirParams(this->get_spacing(), 0.f));
+    fill_dir_params.emplace_back(FillDirParams(this->get_spacing(), float(M_PI / 2.)));
     if (! fill_surface_by_lines(surface, params2, fill_dir_params, polylines_out))
         printf("FillGrid3::fill_surface() failed to fill a region.\n");
     return polylines_out;
@@ -1601,9 +1601,9 @@ Polylines FillTriangles3::fill_surface(const Surface *surface, const FillParams 
     params2.density *= 0.333333333f;
     Polylines polylines_out;
     std::vector<FillDirParams> fill_dir_params;
-    fill_dir_params.emplace_back(FillDirParams(this->spacing, 0.));
-    fill_dir_params.emplace_back(FillDirParams(this->spacing, M_PI / 3.));
-    fill_dir_params.emplace_back(FillDirParams(this->spacing, 2. * M_PI / 3.));
+    fill_dir_params.emplace_back(FillDirParams(this->get_spacing(), 0.));
+    fill_dir_params.emplace_back(FillDirParams(this->get_spacing(), M_PI / 3.));
+    fill_dir_params.emplace_back(FillDirParams(this->get_spacing(), 2. * M_PI / 3.));
     if (! fill_surface_by_lines(surface, params2, fill_dir_params, polylines_out))
         printf("FillTriangles3::fill_surface() failed to fill a region.\n");
     return polylines_out;
@@ -1616,9 +1616,9 @@ Polylines FillStars3::fill_surface(const Surface *surface, const FillParams &par
     params2.density *= 0.333333333f;
     Polylines polylines_out;
     std::vector<FillDirParams> fill_dir_params;
-    fill_dir_params.emplace_back(FillDirParams(this->spacing, 0.));
-    fill_dir_params.emplace_back(FillDirParams(this->spacing, M_PI / 3.));
-    fill_dir_params.emplace_back(FillDirParams(this->spacing, 2. * M_PI / 3., 0.5 * this->spacing / params2.density));
+    fill_dir_params.emplace_back(FillDirParams(this->get_spacing(), 0.));
+    fill_dir_params.emplace_back(FillDirParams(this->get_spacing(), M_PI / 3.));
+    fill_dir_params.emplace_back(FillDirParams(this->get_spacing(), 2. * M_PI / 3., 0.5 * this->get_spacing() / params2.density));
     if (! fill_surface_by_lines(surface, params2, fill_dir_params, polylines_out))
         printf("FillStars3::fill_surface() failed to fill a region.\n");
     return polylines_out;
@@ -1632,9 +1632,9 @@ Polylines FillCubic3::fill_surface(const Surface *surface, const FillParams &par
     Polylines polylines_out;
     std::vector<FillDirParams> fill_dir_params;
     coordf_t dx = sqrt(0.5) * z;
-    fill_dir_params.emplace_back(FillDirParams(this->spacing, 0.,             dx));
-    fill_dir_params.emplace_back(FillDirParams(this->spacing, M_PI / 3.,     -dx));
-    fill_dir_params.emplace_back(FillDirParams(this->spacing, 2. * M_PI / 3., dx));
+    fill_dir_params.emplace_back(FillDirParams(this->get_spacing(), 0.,             dx));
+    fill_dir_params.emplace_back(FillDirParams(this->get_spacing(), M_PI / 3.,     -dx));
+    fill_dir_params.emplace_back(FillDirParams(this->get_spacing(), 2. * M_PI / 3., dx));
     if (! fill_surface_by_lines(surface, params2, fill_dir_params, polylines_out))
         printf("FillCubic3::fill_surface() failed to fill a region.\n");
     return polylines_out;

@@ -162,7 +162,7 @@ void FillGyroid::_fill_surface_single(
     // Density adjusted to have a good %of weight.
     double      density_adjusted = std::max(0., params.density * DensityAdjust);
     // Distance between the gyroid waves in scaled coordinates.
-    coord_t     distance = coord_t(scale_(this->spacing) / density_adjusted);
+    coord_t     distance = coord_t(scale_(this->get_spacing()) / density_adjusted);
 
     // align bounding box to a multiple of our grid module
     bb.merge(_align_to_grid(bb.min, Point(2*M_PI*distance, 2*M_PI*distance)));
@@ -171,7 +171,7 @@ void FillGyroid::_fill_surface_single(
     Polylines polylines = make_gyroid_waves(
         (double)scale_(this->z),
         density_adjusted,
-        this->spacing,
+        this->get_spacing(),
         ceil(bb.size()(0) / distance) + 1.,
         ceil(bb.size()(1) / distance) + 1.);
 
@@ -185,7 +185,7 @@ void FillGyroid::_fill_surface_single(
 		// remove too small bits (larger than longer)
 		polylines.erase(
 			//FIXME what is the small size? Removing tiny extrusions disconnects walls!
-			std::remove_if(polylines.begin(), polylines.end(), [this](const Polyline &pl) { return pl.length() < scale_(this->spacing * 3); }),
+			std::remove_if(polylines.begin(), polylines.end(), [this](const Polyline &pl) { return pl.length() < scale_(this->get_spacing() * 3); }),
 			polylines.end());
 
 	if (! polylines.empty()) {
@@ -195,7 +195,7 @@ void FillGyroid::_fill_surface_single(
         if (params.connection == icNotConnected){
             append(polylines_out, std::move(polylines));
         } else {
-            this->connect_infill(std::move(polylines), expolygon, polylines_out, this->spacing, params);
+            this->connect_infill(std::move(polylines), expolygon, polylines_out, this->get_spacing(), params);
         }
         // new paths must be rotated back
         if (std::abs(infill_angle) >= EPSILON) {

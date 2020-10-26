@@ -65,7 +65,7 @@ Fill* Fill::new_from_type(const std::string &type)
 Polylines Fill::fill_surface(const Surface *surface, const FillParams &params) const
 {
     // Perform offset.
-    Slic3r::ExPolygons expp = offset_ex(surface->expolygon, double(scale_(0 - 0.5 * this->spacing)));
+    Slic3r::ExPolygons expp = offset_ex(surface->expolygon, double(scale_(0 - 0.5 * this->get_spacing())));
     // Create the infills for each of the regions.
     Polylines polylines_out;
     for (size_t i = 0; i < expp.size(); ++ i)
@@ -209,7 +209,7 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
 
 coord_t Fill::_line_spacing_for_density(float density) const
 {
-    return coord_t(scale_(this->spacing) / density);
+    return coord_t(scale_(this->get_spacing()) / density);
 }
 
 /// cut poly between poly.point[idx_1] & poly.point[idx_1+1]
@@ -476,7 +476,7 @@ Fill::connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary,
     Polylines polylines_frontier = to_polylines(((Polygons)boundary));
 
     Polylines polylines_blocker;
-    coord_t clip_size = scale_(this->spacing) * 2;
+    coord_t clip_size = scale_(this->get_spacing()) * 2;
     for (const Polyline &polyline : infill_ordered) {
         if (polyline.length() > 2.01 * clip_size) {
             polylines_blocker.push_back(polyline);
@@ -486,7 +486,7 @@ Fill::connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary,
     }
 
     //length between two lines
-    coordf_t ideal_length = (1 / params.density) * this->spacing;
+    coordf_t ideal_length = (1 / params.density) * this->get_spacing();
 
     Polylines polylines_connected_first;
     bool first = true;
@@ -496,8 +496,8 @@ Fill::connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary,
             Points &pts_end = polylines_connected_first.back().points;
             const Point &last_point = pts_end.back();
             const Point &first_point = polyline.points.front();
-            if (last_point.distance_to(first_point) < scale_(this->spacing) * 10) {
-                Points pts_frontier = getFrontier(polylines_frontier, last_point, first_point, scale_(this->spacing), polylines_blocker, scale_(ideal_length) * 2);
+            if (last_point.distance_to(first_point) < scale_(this->get_spacing()) * 10) {
+                Points pts_frontier = getFrontier(polylines_frontier, last_point, first_point, scale_(this->get_spacing()), polylines_blocker, scale_(ideal_length) * 2);
                 if (!pts_frontier.empty()) {
                     // The lines can be connected.
                     pts_end.insert(pts_end.end(), pts_frontier.begin(), pts_frontier.end());
@@ -522,7 +522,7 @@ Fill::connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary,
             const Point &first_point = polyline.points.front();
 
             Polylines before = polylines_frontier;
-            Points pts_frontier = getFrontier(polylines_frontier, last_point, first_point, scale_(this->spacing), polylines_blocker);
+            Points pts_frontier = getFrontier(polylines_frontier, last_point, first_point, scale_(this->get_spacing()), polylines_blocker);
             if (!pts_frontier.empty()) {
                 // The lines can be connected.
                 pts_end.insert(pts_end.end(), pts_frontier.begin(), pts_frontier.end());
@@ -559,7 +559,7 @@ Fill::connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary,
             Points pts_frontier = getFrontier(polylines_frontier, 
                 switch_id1 ? polylines_connected[idx1].first_point() : polylines_connected[idx1].last_point(), 
                 switch_id2 ? polylines_connected[min_idx].last_point() : polylines_connected[min_idx].first_point(),
-                scale_(this->spacing), polylines_blocker);
+                scale_(this->get_spacing()), polylines_blocker);
             if (!pts_frontier.empty()) {
                 if (switch_id1) polylines_connected[idx1].reverse();
                 if (switch_id2) polylines_connected[min_idx].reverse();
@@ -573,7 +573,7 @@ Fill::connect_infill(const Polylines &infill_ordered, const ExPolygon &boundary,
 
     //try to create some loops if possible
     for (Polyline &polyline : polylines_connected) {
-        Points pts_frontier = getFrontier(polylines_frontier, polyline.last_point(), polyline.first_point(), scale_(this->spacing), polylines_blocker);
+        Points pts_frontier = getFrontier(polylines_frontier, polyline.last_point(), polyline.first_point(), scale_(this->get_spacing()), polylines_blocker);
         if (!pts_frontier.empty()) {
             polyline.points.insert(polyline.points.end(), pts_frontier.begin(), pts_frontier.end());
             polyline.points.insert(polyline.points.begin(), polyline.points.back());

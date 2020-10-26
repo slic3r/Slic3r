@@ -98,7 +98,7 @@ public:
     FillAdaptive::Octree* adapt_fill_octree = nullptr;
 protected:
     // in unscaled coordinates, please use init (after settings all others settings) as some algos want to modify the value
-    coordf_t    spacing;
+    coordf_t    spacing_priv;
 
 public:
     virtual ~Fill() {}
@@ -107,8 +107,8 @@ public:
     static Fill* new_from_type(const std::string &type);
 
     void         set_bounding_box(const Slic3r::BoundingBox &bbox) { bounding_box = bbox; }
-    virtual void init_spacing(coordf_t spacing, const FillParams &params) { this->spacing = spacing;  }
-    coordf_t get_spacing() const { return spacing; }
+    virtual void init_spacing(coordf_t spacing, const FillParams &params) { this->spacing_priv = spacing;  }
+    coordf_t get_spacing() const { return spacing_priv; }
 
     // Do not sort the fill lines to optimize the print head path?
     virtual bool no_sort() const { return false; }
@@ -124,7 +124,7 @@ protected:
     Fill() :
         layer_id(size_t(-1)),
         z(0.),
-        spacing(0.),
+        spacing_priv(0.),
         // Infill / perimeter overlap.
         overlap(0.),
         // Initial angle is undefined.
