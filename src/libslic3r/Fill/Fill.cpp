@@ -224,8 +224,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 
             if (layerm.region()->config().infill_dense.getBool()
                 && layerm.region()->config().fill_density<40
-                && surface.maxNbSolidLayersOnTop <= 1
-                && surface.maxNbSolidLayersOnTop > 0) {
+                && surface.maxNbSolidLayersOnTop == 1) {
                 density = 42;
                 is_denser = true;
                 is_bridge = true;

@@ -845,7 +845,7 @@ static const PrintRegion* first_printing_region(const PrintObject &print_object)
 
 // Function used by fit_to_size. 
 // It check if polygon_to_check can be decimated, using only point into allowedPoints and also cover polygon_to_cover
-ExPolygon try_fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, const ExPolygons &allowedPoints) {
+ExPolygon try_fit_to_size(ExPolygon polygon_to_check, const ExPolygons& allowedPoints) {
 
     ExPolygon polygon_reduced = polygon_to_check;
     size_t pos_check = 0;
@@ -866,34 +866,63 @@ ExPolygon try_fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check
     return polygon_reduced;
 }
 
+ExPolygon try_fit_to_size2(ExPolygon polygon_to_check, const ExPolygon& allowedPoints) {
+
+    ExPolygon polygon_reduced = polygon_to_check;
+    size_t pos_check = 0;
+    bool has_del = false;
+    while ((polygon_reduced.contour.points.begin() + pos_check) != polygon_reduced.contour.points.end()) {
+        Point best_point = polygon_reduced.contour.points[pos_check].projection_onto(allowedPoints.contour);
+        for (const Polygon& hole : allowedPoints.holes) {
+            Point hole_point = polygon_reduced.contour.points[pos_check].projection_onto(hole);
+            if ((hole_point - polygon_reduced.contour.points[pos_check]).norm() < (best_point - polygon_reduced.contour.points[pos_check]).norm())
+                best_point = hole_point;
+        }
+        if ((best_point - polygon_reduced.contour.points[pos_check]).norm() < scale_(0.01)) ++pos_check;
+        else polygon_reduced.contour.points.erase(polygon_reduced.contour.points.begin() + pos_check);
+    }
+    return polygon_reduced;
+}
+
 // find one of the smallest polygon, growing polygon_to_check, only using point into allowedPoints and covering polygon_to_cover.
-ExPolygons fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, const ExPolygons &allowedPoints, 
+ExPolygons dense_fill_fit_to_size(const ExPolygon &polygon_to_cover, const ExPolygons &allowedPoints_todel,
     const ExPolygon &growing_area, const coord_t offset, float coverage) {
 
     //grow the polygon_to_check enough to cover polygon_to_cover
     float current_coverage = coverage;
     coord_t previous_offset = 0;
     coord_t current_offset = offset;
-    ExPolygon polygon_reduced = try_fit_to_size(polygon_to_cover, polygon_to_check, allowedPoints);
-    while (!diff_ex(polygon_to_cover, polygon_reduced).empty()){
+    //ExPolygon polygon_reduced = try_fit_to_size(polygon_to_cover, allowedPoints);
+    ExPolygon polygon_reduced = try_fit_to_size2(polygon_to_cover, growing_area);
+    ExPolygon polygon_check;
+    ExPolygons polygon_checks = offset_ex(intersection(ExPolygons{ polygon_to_cover }, allowedPoints_todel), -SCALED_RESOLUTION);
+    if (polygon_checks.empty())
+        polygon_check = polygon_to_cover;
+    else
+        polygon_check = polygon_checks[0];
+    while (!diff_ex(polygon_check, polygon_reduced).empty()){
         //not enough, use a bigger offset
         float percent_coverage = (float)(polygon_reduced.area() / growing_area.area());
         float next_coverage = percent_coverage + (percent_coverage - current_coverage) * 4;
         previous_offset = current_offset;
         current_offset *= 2;
+        double area = 0;
         if (next_coverage < 0.1) current_offset *= 2;
         //create the bigger polygon and test it
-        ExPolygons bigger_polygon = offset_ex(polygon_to_check, double(current_offset));
+        ExPolygons bigger_polygon = offset_ex(polygon_to_cover, double(current_offset));
         if (bigger_polygon.size() != 1) {
-            // Error, growing a single polygon result in many/no other  => fallback to full coverage
-            return ExPolygons({ growing_area });
+            // Error, growing a single polygon result in many/no other  => abord
+            return ExPolygons();
         }
         bigger_polygon = intersection_ex(bigger_polygon[0], growing_area);
         if (bigger_polygon.size() != 1 || bigger_polygon[0].area() > growing_area.area()) {
             // Growing too much  => we can as well use the full coverage, in this case
-            return ExPolygons() = { growing_area };
+            polygon_reduced = growing_area;
+            break;
+            //return ExPolygons() = { growing_area };
         }
-        polygon_reduced = try_fit_to_size(polygon_to_cover, bigger_polygon[0], allowedPoints);
+        //polygon_reduced = try_fit_to_size(bigger_polygon[0], allowedPoints);
+        polygon_reduced = try_fit_to_size2(bigger_polygon[0], growing_area);
     }
     //ok, we have a good one, now try to optimise (unless there are almost no growth)
     if (current_offset > offset * 3){
@@ -901,7 +930,7 @@ ExPolygons fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, c
         uint32_t nb_opti_max = 6;
         for (uint32_t i = 0; i < nb_opti_max; ++i){
             coord_t new_offset = (previous_offset + current_offset) / 2;
-            ExPolygons bigger_polygon = offset_ex(polygon_to_check, double(new_offset));
+            ExPolygons bigger_polygon = offset_ex(polygon_to_cover, double(new_offset));
             if (bigger_polygon.size() != 1) {
                 //Warn, growing a single polygon result in many/no other, use previous good result
                 break;
@@ -911,7 +940,8 @@ ExPolygons fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, c
                 //growing too much, use previous good result (imo, should not be possible to enter this branch)
                 break;
             }
-            ExPolygon polygon_test = try_fit_to_size(polygon_to_cover, bigger_polygon[0], allowedPoints);
+            //ExPolygon polygon_test = try_fit_to_size(bigger_polygon[0], allowedPoints);
+            ExPolygon polygon_test = try_fit_to_size2(bigger_polygon[0], growing_area);
             if (!diff_ex(polygon_to_cover, polygon_test).empty()){
                 //bad, not enough, use a bigger offset
                 previous_offset = new_offset;
@@ -984,29 +1014,26 @@ void PrintObject::tag_under_bridge() {
                                         //like intersect.empty() but more resilient
                                         if (layerm->region()->config().infill_dense_algo == dfaAutomatic
                                             || surf.area() > area_intersect * COEFF_SPLIT) {
+                                            ExPolygons cover_intersect;
 
                                             // it will be a dense infill, split the surface if needed
-                                            ExPolygons cover_intersect;
+                                            //ExPolygons cover_intersect;
                                             for (ExPolygon &expoly_tocover : intersect) {
-                                                ExPolygons temp = (fit_to_size(expoly_tocover, expoly_tocover,
-                                                    diff_ex(offset_ex(layerm->fill_no_overlap_expolygons, double(layerm->flow(frInfill).scaled_width())),
-                                                    offset_ex(layerm->fill_no_overlap_expolygons, double(-layerm->flow(frInfill).scaled_width()))),
+                                                ExPolygons temp = dense_fill_fit_to_size(
+                                                    expoly_tocover,
+                                                    diff_ex(offset_ex(layerm->fill_no_overlap_expolygons, double(layerm->flow(frInfill).scaled_width())), offset_ex(layerm->fill_no_overlap_expolygons, double(-layerm->flow(frInfill).scaled_width()))),
                                                     surf.expolygon,
-                                                    4 * layerm->flow(frInfill).scaled_width(), 0.01f));
+                                                    4 * layerm->flow(frInfill).scaled_width(), 
+                                                    0.01f);
                                                 cover_intersect.insert(cover_intersect.end(), temp.begin(), temp.end());
                                             }
-                                            intersect = offset2_ex(cover_intersect,
-                                                double(-layerm->flow(frInfill).scaled_width()),
-                                                double(layerm->flow(frInfill).scaled_width() * 2));
+                                            intersect = cover_intersect;
                                         } else {
                                             intersect.clear();
                                         }
                                     }
                                     if (!intersect.empty()) {
-                                        ExPolygons sparse_surfaces = offset2_ex(
-                                            diff_ex(sparse_polys, intersect, true),
-                                            double(-layerm->flow(frInfill).scaled_width()),
-                                            double(layerm->flow(frInfill).scaled_width()));
+                                        ExPolygons sparse_surfaces = diff_ex(sparse_polys, intersect, true);
                                         ExPolygons dense_surfaces = diff_ex(sparse_polys, sparse_surfaces, true);
                                         //assign (copy)
                                         sparse_polys = std::move(sparse_surfaces);
@@ -1024,7 +1051,7 @@ void PrintObject::tag_under_bridge() {
                             for (ExPolygon poly_inter : dense_polys) area_dense += poly_inter.area();
                             double area_sparse = 0;
                             for (ExPolygon poly_inter : sparse_polys) area_sparse += poly_inter.area();
-                            if (area_sparse > area_dense * COEFF_SPLIT) {
+                            if (area_sparse > area_dense * 0.1) {
                                 //split
                                 dense_polys = union_ex(dense_polys);
                                 for (ExPolygon dense_poly : dense_polys) {
@@ -2180,7 +2207,8 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
             // slicing in parallel
             std::vector<ExPolygons> expolygons_by_layer = this->slice_region(region_id, slice_zs, slicing_mode);
             //scale for shrinkage
-            double scale = print()->config().filament_shrink.get_abs_value(this->print()->regions()[region_id]->extruder(FlowRole::frPerimeter) - 1, 1);
+            const size_t extruder_id = this->print()->regions()[region_id]->extruder(FlowRole::frPerimeter) - 1;
+            double scale = print()->config().filament_shrink.get_abs_value(extruder_id, 1);
             if (scale != 1) {
                 scale = 1 / scale;
                 for (ExPolygons &polys : expolygons_by_layer)
