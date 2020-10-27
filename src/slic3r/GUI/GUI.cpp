@@ -201,7 +201,7 @@ void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt
             else if (opt_key.compare("infill_dense_algo") == 0)
                 config.set_key_value(opt_key, new ConfigOptionEnum<DenseInfillAlgo>(boost::any_cast<DenseInfillAlgo>(value)));
             else if (opt_key.compare("no_perimeter_unsupported_algo") == 0)
-                config.set_key_value(opt_key, new ConfigOptionEnum<DenseInfillAlgo>(boost::any_cast<DenseInfillAlgo>(value)));
+                config.set_key_value(opt_key, new ConfigOptionEnum<NoPerimeterUnsupportedAlgo>(boost::any_cast<NoPerimeterUnsupportedAlgo>(value)));
             else if (opt_key.compare("infill_connection") == 0)
                 config.set_key_value(opt_key, new ConfigOptionEnum<InfillConnection>(boost::any_cast<InfillConnection>(value)));
             else if (opt_key.compare("wipe_advanced_algo") == 0)

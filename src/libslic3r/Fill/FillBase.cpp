@@ -598,7 +598,8 @@ Fill::do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, Ext
     //    offset2_ex(gapfill_areas, double(-max / 2), double(+max / 2)),
     //    true);
     ExPolygons gapfill_areas_collapsed = offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2));
-    const double minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow.width) ) * params.flow.scaled_width();
+    double minarea = params.flow.scaled_width() * params.flow.scaled_width();
+    if (params.config != nullptr) minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow.width)) * params.flow.scaled_width();
     for (const ExPolygon &ex : gapfill_areas_collapsed) {
         //remove too small gaps that are too hard to fill.
         //ie one that are smaller than an extrusion with width of min and a length of max.
@@ -620,10 +621,10 @@ Fill::do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, Ext
 
         ExtrusionEntityCollection gap_fill = thin_variable_width(polylines_gapfill, erGapFill, params.flow);
         //set role if needed
-        if (params.role != erSolidInfill) {
+        /*if (params.role != erSolidInfill) {
             ExtrusionSetRole set_good_role(params.role);
             gap_fill.visit(set_good_role);
-        }
+        }*/
         //move them into the collection
         if (!gap_fill.entities.empty()) {
             ExtrusionEntityCollection *coll_gapfill = new ExtrusionEntityCollection();

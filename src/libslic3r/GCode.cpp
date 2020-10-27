@@ -1490,7 +1490,6 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     print.throw_if_canceled();
 
     m_cooling_buffer->set_current_extruder(initial_extruder_id);
-    m_writer.toolchange(initial_extruder_id);
 
     // Emit machine envelope limits for the Marlin firmware.
     this->print_machine_envelope(file, print);
@@ -1498,7 +1497,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     // Disable fan.
     if ( print.config().disable_fan_first_layers.get_at(initial_extruder_id)
         && config().gcode_flavor != gcfKlipper)
-        _write(file, m_writer.set_fan(0, true));
+        _write(file, m_writer.set_fan(0, true, initial_extruder_id));
 
     // Let the start-up script prime the 1st printing tool.
     m_placeholder_parser.set("initial_tool", initial_extruder_id);
@@ -1946,7 +1945,7 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
                 int(print.config().machine_max_acceleration_z.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_e.values.front() + 0.5));
         if (std::set<uint8_t>{gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, "M202 X%d Y%d ; sets maximum travel speed\n",
+            fprintf(file, "M202 X%d Y%d ; sets maximum travel acceleration\n",
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap, gcfSmoothie, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
@@ -2400,7 +2399,6 @@ void GCode::process_layer(
                 // In single extruder multi material mode, set the temperature for the current extruder only.
                 continue;
             int temperature = print.config().temperature.get_at(extruder.id());
-            if (temperature > 0 && temperature != print.config().first_layer_temperature.get_at(extruder.id()))
                 gcode += m_writer.set_temperature(temperature, false, extruder.id());
         }
         gcode += m_writer.set_bed_temperature(print.config().bed_temperature.get_at(first_extruder_id));
@@ -2698,6 +2696,9 @@ void GCode::process_layer(
                 this->set_origin(unscale(offset));
                 if (instance_to_print.object_by_extruder.support != nullptr && !print_wipe_extrusions) {
                     m_layer = layers[instance_to_print.layer_id].support_layer;
+                    if (m_layer != nullptr && m_layer->bottom_z() < EPSILON)
+                        gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
+                    else
                     gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
                     gcode += this->extrude_support(
                         // support_extrusion_role is erSupportMaterial, erSupportMaterialInterface or erMixed for all extrusion paths.
@@ -2861,7 +2862,8 @@ void GCode::append_full_config(const Print &print, std::string &str)
         "compatible_prints",
         "print_host",
         "printhost_apikey",
-        "printhost_cafile"
+		"printhost_cafile",
+		"printhost_slug"
     };
     assert(std::is_sorted(banned_keys.begin(), banned_keys.end()));
     auto is_banned = [banned_keys](const std::string &key) {
@@ -2985,8 +2987,16 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     if (paths.empty()) return "";
 
     // apply the small/external? perimeter speed
-    if (is_perimeter(paths.front().role()) && loop.length() <= SMALL_PERIMETER_LENGTH && speed == -1)
-        speed = m_config.external_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+    if (speed == -1 && is_perimeter(paths.front().role()) && loop.length() <=
+        scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)))) {
+        double min_length = scale_(this->m_config.small_perimeter_min_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        double max_length = scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        if (loop.length() <= min_length) {
+            speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+        } else {
+            speed = - (loop.length() - min_length) / (max_length - min_length);
+        }
+    }
 
     //get extrusion length
     coordf_t length = 0;
@@ -3295,9 +3305,17 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     if (paths.empty()) return "";
 
     // apply the small perimeter speed
-    if (is_perimeter(paths.front().role()) && loop.length() <= SMALL_PERIMETER_LENGTH && speed == -1)
+    if (speed == -1 && is_perimeter(paths.front().role()) && loop.length() <=
+        scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)))) {
+        double min_length = scale_(this->m_config.small_perimeter_min_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        double max_length = scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        if (loop.length() <= min_length) {
         speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
-
+        } else {
+            speed = -(loop.length() - min_length) / (max_length - min_length);
+        }
+    }
+    
     // extrude along the path
     std::string gcode;
     for (ExtrusionPaths::iterator path = paths.begin(); path != paths.end(); ++path) {
@@ -3574,6 +3592,8 @@ std::string GCode::extrude_perimeters(const Print &print, const std::vector<Obje
             m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
             if (m_config.print_temperature > 0)
                 gcode += m_writer.set_temperature(m_config.print_temperature.value, false, m_writer.tool()->id());
+            else if (m_layer != nullptr && m_layer->bottom_z() < EPSILON)
+                gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
             else
                 gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
             for (const ExtrusionEntity *ee : region.perimeters)
@@ -3600,6 +3620,8 @@ std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectBy
                 m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
                 if (m_config.print_temperature > 0)
                     gcode += m_writer.set_temperature(m_config.print_temperature.value, false, m_writer.tool()->id());
+            else if(m_layer!=nullptr && m_layer->bottom_z() < EPSILON)
+                gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
                 else
                     gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
                 ExtrusionEntitiesPtr extrusions { region.infills };
@@ -3745,7 +3767,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
     double e_per_mm = path.mm3_per_mm
         * m_writer.tool()->e_per_mm3()
         * this->config().print_extrusion_multiplier.get_abs_value(1);
-    if (std::abs(this->m_layer->height - this->m_layer->print_z) < EPSILON) e_per_mm *= this->config().first_layer_flow_ratio.get_abs_value(1);
+    if (m_layer->bottom_z() < EPSILON) e_per_mm *= this->config().first_layer_flow_ratio.get_abs_value(1);
     if (m_writer.extrusion_axis().empty()) e_per_mm = 0;
     if (path.polyline.lines().size() > 0) {
         //get last direction //TODO: save it
@@ -3889,7 +3911,10 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
 
 
     // set speed
-    if (speed == -1) {
+    if (speed < 0) {
+        //if speed == -1, then it's means "choose yourself, but if it's -1 < speed <0 , then it's a scaling from small_periemter.
+        //it's a bit hacky, so if you want to rework it, help yourself.
+        float factor = (-speed);
         if (path.role() == erPerimeter) {
             speed = m_config.get_abs_value("perimeter_speed");
         } else if (path.role() == erExternalPerimeter) {
@@ -3915,6 +3940,12 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
         } else {
             throw Slic3r::InvalidArgument("Invalid speed");
         }
+        //don't modify bridge speed
+        if (factor < 1 && !(path.role() == erOverhangPerimeter || path.role() == erBridgeInfill)) {
+            float small_speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+            //apply factor between feature speed and small speed
+            speed = speed * factor + (1 - factor) * small_speed;
+    }
     }
     if (m_volumetric_speed != 0. && speed == 0)
         speed = m_volumetric_speed / path.mm3_per_mm;

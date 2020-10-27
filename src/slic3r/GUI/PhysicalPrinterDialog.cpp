@@ -251,7 +251,7 @@ PhysicalPrinterDialog::~PhysicalPrinterDialog()
 void PhysicalPrinterDialog::build_printhost_settings(ConfigOptionsGroup* m_optgroup)
 {
     m_optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
-        if (opt_key == "printhost_authorization_type")
+        if (opt_key == "printhost_authorization_type" || opt_key == "host_type")
             this->update();
     };
 
@@ -302,6 +302,13 @@ void PhysicalPrinterDialog::build_printhost_settings(ConfigOptionsGroup* m_optgr
         return sizer;
     };
 
+    auto print_host_printers = [=](wxWindow* parent) {
+        auto sizer = create_sizer_with_btn(parent, &m_printhost_slug_browse_btn, "browse", _L("Refresh Printers"));
+
+        m_printhost_slug_browse_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent e) { update_printers(); });
+        return sizer;
+    };
+
     // Set a wider width for a better alignment
     Option option = m_optgroup->get_option("print_host");
     option.opt.width = Field::def_width_wider();
@@ -315,6 +322,12 @@ void PhysicalPrinterDialog::build_printhost_settings(ConfigOptionsGroup* m_optgr
     option = m_optgroup->get_option("printhost_apikey");
     option.opt.width = Field::def_width_wider();
     m_optgroup->append_single_option_line(option);
+
+    option = m_optgroup->get_option("printhost_slug");
+    option.opt.width = Field::def_width_wider();
+    Line slug_line = m_optgroup->create_single_option_line(option);
+    slug_line.append_widget(print_host_printers);
+    m_optgroup->append_line(slug_line);
 
     const auto ca_file_hint = _u8L("HTTPS CA file is optional. It is only needed if you use HTTPS with a self-signed certificate.");
 
@@ -405,9 +418,61 @@ void PhysicalPrinterDialog::update()
             m_optgroup->show_field(opt_key, auth_type == AuthorizationType::atUserPassword);
     }
 
+    {
+        std::unique_ptr<PrintHost> host(PrintHost::get_print_host(m_config));
+        if (m_printhost_test_btn)
+            m_printhost_test_btn->Enable(host->can_test());
+
+        if (m_printhost_browse_btn)
+            m_printhost_browse_btn->Enable(host->has_auto_discovery());
+
+        m_printhost_slug_browse_btn->Enable(host->can_support_multiple_printers());
+
+        Field* rs = m_optgroup->get_field("printhost_slug");
+        if (host->can_support_multiple_printers()) {
+            update_printers();
+            rs->enable();
+        } else {
+            rs->disable();
+        }
+    }
+
     this->Layout();
 }
 
+void PhysicalPrinterDialog::update_printers()
+{
+    std::unique_ptr<PrintHost> host(PrintHost::get_print_host(m_config));
+
+    wxArrayString printers;
+    Field* rs = m_optgroup->get_field("printhost_slug");
+    if (!host->get_printers(printers)) {
+        std::vector<std::string> slugs;
+
+        Choice* choice = dynamic_cast<Choice*>(rs);
+        choice->set_values(slugs);
+
+        rs->disable();
+    } else {
+        std::vector<std::string> slugs;
+        for (int i = 0; i < printers.size(); i++) {
+            slugs.push_back(printers[i].ToStdString());
+        }
+
+        Choice* choice = dynamic_cast<Choice*>(rs);
+        choice->set_values(slugs);
+        boost::any val = choice->get_value();
+        boost::any any_string_type = std::string("");
+        auto value_idx = std::find(slugs.begin(), slugs.end(), m_config->opt<ConfigOptionString>("printhost_slug")->value);
+        if ((val.empty() || (any_string_type.type() == val.type() && boost::any_cast<std::string>(val) == "")) && !slugs.empty() && value_idx == slugs.end()) {
+            change_opt_value(*m_config, "printhost_slug", slugs[0]);
+            choice->set_value(slugs[0],false);
+        } else if(value_idx != slugs.end() ){
+            choice->set_value(m_config->option<ConfigOptionString>("printhost_slug")->value, false);
+        }
+        rs->enable();
+    }
+}
 
 wxString PhysicalPrinterDialog::get_printer_name()
 {

@@ -442,8 +442,9 @@ const std::vector<std::string>& Preset::print_options()
         "avoid_crossing_perimeters", 
         "avoid_crossing_not_first_layer",
         "thin_perimeters", "thin_perimeters_all",
-        "thin_walls", "overhangs", 
+        "thin_walls",
         "overhangs_width",
+		"overhangs_width_speed", 
         "overhangs_reverse",
         "overhangs_reverse_threshold",
         "seam_position", 
@@ -475,7 +476,11 @@ const std::vector<std::string>& Preset::print_options()
         "max_volumetric_extrusion_rate_slope_positive", "max_volumetric_extrusion_rate_slope_negative", 
 #endif /* HAS_PRESSURE_EQUALIZER */
         "min_width_top_surface",
-        "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "infill_speed", "solid_infill_speed", 
+        "perimeter_speed",
+        "small_perimeter_speed",
+        "small_perimeter_min_length",
+        "small_perimeter_max_length",
+        "external_perimeter_speed", "infill_speed", "solid_infill_speed", 
         "top_solid_infill_speed", "support_material_speed", "support_material_xy_spacing", "support_material_interface_speed",
         "bridge_speed",
         "gap_fill",
@@ -639,7 +644,7 @@ const std::vector<std::string>& Preset::printer_options()
             "bed_shape", "bed_custom_texture", "bed_custom_model", "z_offset", "gcode_flavor", "use_relative_e_distances", "serial_port", "serial_speed",
             "use_firmware_retraction", "use_volumetric_e", "variable_layer_height",
             "min_length",
-            "host_type", "print_host", "printhost_apikey", "printhost_cafile",
+            "host_type", "print_host", "printhost_apikey", "printhost_cafile", "printhost_slug",
             "single_extruder_multi_material", "start_gcode", "end_gcode", "before_layer_gcode", "layer_gcode", "toolchange_gcode",
 
             "color_change_gcode", "pause_print_gcode", "template_custom_gcode",            "feature_gcode",
@@ -776,7 +781,7 @@ const std::vector<std::string>& Preset::sla_printer_options()
             "gamma_correction",
             "min_exposure_time", "max_exposure_time",
             "min_initial_exposure_time", "max_initial_exposure_time",
-            "print_host", "printhost_apikey", "printhost_cafile",
+            "print_host", "printhost_apikey", "printhost_cafile", "printhost_slug",
             "printer_notes",
             "inherits",
             "thumbnails",
@@ -909,15 +914,18 @@ static ProfileHostParams profile_host_params_same_or_anonymized(const DynamicPri
 	auto opt_print_host_old 	  = cfg_old.option<ConfigOptionString>("print_host");
 	auto opt_printhost_apikey_old = cfg_old.option<ConfigOptionString>("printhost_apikey");
 	auto opt_printhost_cafile_old = cfg_old.option<ConfigOptionString>("printhost_cafile");
+    auto opt_printhost_slug_old    = cfg_old.option<ConfigOptionString>("printhost_slug");
 
 	auto opt_print_host_new 	  = cfg_new.option<ConfigOptionString>("print_host");
 	auto opt_printhost_apikey_new = cfg_new.option<ConfigOptionString>("printhost_apikey");
 	auto opt_printhost_cafile_new = cfg_new.option<ConfigOptionString>("printhost_cafile");
+    auto opt_printhost_slug_new    = cfg_new.option<ConfigOptionString>("printhost_slug");
 
 	// If the new print host data is undefined, use the old data.
 	bool new_print_host_undefined = (opt_print_host_new 		== nullptr || opt_print_host_new		->empty()) &&
 									(opt_printhost_apikey_new 	== nullptr || opt_printhost_apikey_new	->empty()) &&
-									(opt_printhost_cafile_new 	== nullptr || opt_printhost_cafile_new	->empty());
+									(opt_printhost_cafile_new 	== nullptr || opt_printhost_cafile_new	->empty()) &&
+                                    (opt_printhost_slug_new     == nullptr || opt_printhost_slug_new    ->empty());
 	if (new_print_host_undefined)
 		return ProfileHostParams::Anonymized;
 
@@ -925,8 +933,9 @@ static ProfileHostParams profile_host_params_same_or_anonymized(const DynamicPri
 		return ((l == nullptr || l->empty()) && (r == nullptr || r->empty())) ||
 			   (l != nullptr && r != nullptr && l->value == r->value);
 	};
-	return (opt_same(opt_print_host_old, opt_print_host_new) && opt_same(opt_printhost_apikey_old, opt_printhost_apikey_new) && 
-		    opt_same(opt_printhost_cafile_old, opt_printhost_cafile_new)) ? ProfileHostParams::Same : ProfileHostParams::Different;
+	return (opt_same(opt_print_host_old, opt_print_host_new) && opt_same(opt_printhost_apikey_old, opt_printhost_apikey_new) &&
+            opt_same(opt_printhost_cafile_old, opt_printhost_cafile_new) && opt_same(opt_printhost_slug_old, opt_printhost_slug_new))
+		    ? ProfileHostParams::Same : ProfileHostParams::Different;
 }
 
 static bool profile_print_params_same(const DynamicPrintConfig &cfg_old, const DynamicPrintConfig &cfg_new)
@@ -938,7 +947,7 @@ static bool profile_print_params_same(const DynamicPrintConfig &cfg_old, const D
                              "compatible_printers", "compatible_printers_condition", "inherits",
                              "print_settings_id", "filament_settings_id", "sla_print_settings_id", "sla_material_settings_id", "printer_settings_id",
                              "printer_model", "printer_variant", "default_print_profile", "default_filament_profile", "default_sla_print_profile", "default_sla_material_profile",
-                             "print_host", "printhost_apikey", "printhost_cafile" })
+                             "print_host", "printhost_apikey", "printhost_slug", "printhost_cafile" })
         diff.erase(std::remove(diff.begin(), diff.end(), key), diff.end());
     // Preset with the same name as stored inside the config exists.
     return diff.empty() && profile_host_params_same_or_anonymized(cfg_old, cfg_new) != ProfileHostParams::Different;
@@ -988,6 +997,7 @@ Preset& PresetCollection::load_external_preset(
 	    	opt_update("print_host");
 	    	opt_update("printhost_apikey");
 	    	opt_update("printhost_cafile");
+            opt_update("printhost_slug");
 	    }
     }
     // Update the "inherits" field.
@@ -1565,8 +1575,9 @@ const std::vector<std::string>& PhysicalPrinter::printer_options()
 //            "printer_model",
             "host_type", 
             "print_host", 
-            "printhost_apikey", 
+            "printhost_apikey",
             "printhost_cafile",
+            "printhost_slug",
             "printhost_authorization_type",
             // HTTP digest authentization (RFC 2617)
             "printhost_user", 
@@ -1583,7 +1594,8 @@ const std::vector<std::string>& PhysicalPrinter::print_host_options()
         s_opts = {
             "print_host",
             "printhost_apikey",
-            "printhost_cafile"
+            "printhost_cafile",
+            "printhost_slug"
         };
     }
     return s_opts;
@@ -1619,7 +1631,8 @@ bool PhysicalPrinter::has_empty_config() const
             config.opt_string("printhost_apikey"  ).empty() && 
             config.opt_string("printhost_cafile"  ).empty() && 
             config.opt_string("printhost_user"    ).empty() && 
-            config.opt_string("printhost_password").empty();
+            config.opt_string("printhost_password").empty() && 
+            config.opt_string("printhost_slug"    ).empty();
 }
 
 void PhysicalPrinter::update_preset_names_in_config()

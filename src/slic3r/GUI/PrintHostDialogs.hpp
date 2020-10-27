@@ -7,6 +7,8 @@
 #include <wx/string.h>
 #include <wx/event.h>
 #include <wx/dialog.h>
+#include <wx/combobox.h>
+#include <wx/arrstr.h>
 
 #include "GUI.hpp"
 #include "GUI_Utils.hpp"
@@ -29,14 +31,16 @@ namespace GUI {
 class PrintHostSendDialog : public GUI::MsgDialog
 {
 public:
-    PrintHostSendDialog(const boost::filesystem::path &path, bool can_start_print);
+    PrintHostSendDialog(const boost::filesystem::path &path, bool can_start_print, wxArrayString& groups);
     boost::filesystem::path filename() const;
     bool start_print() const;
+    std::string group() const;
 
     virtual void EndModal(int ret) override;
 private:
     wxTextCtrl *txt_filename;
     wxCheckBox *box_print;
+    wxComboBox *combo_groups;
 };
 
 

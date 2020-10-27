@@ -150,7 +150,14 @@ void PrintConfigDef::init_common_params()
                    "the API Key or the password required for authentication.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionString(""));
-
+    
+    def = this->add("printhost_slug", coString);
+    def->label = L("Printer");
+    def->tooltip = L("Name of the printer");
+    def->mode = comAdvanced;
+    def->gui_type = "select_open";
+    def->set_default_value(new ConfigOptionString(""));
+    
     def = this->add("printhost_cafile", coString);
     def->label = L("HTTPS CA File");
     def->category = OptionCategory::general;
@@ -2380,10 +2387,12 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("duet");
     def->enum_values.push_back("flashair");
     def->enum_values.push_back("astrobox");
+    def->enum_values.push_back("repetier");
     def->enum_labels.push_back("OctoPrint");
     def->enum_labels.push_back("Duet");
     def->enum_labels.push_back("FlashAir");
     def->enum_labels.push_back("AstroBox");
+    def->enum_labels.push_back("Repetier");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionEnum<PrintHostType>(htOctoPrint));
 
@@ -2448,23 +2457,29 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionString("[input_filename_base].gcode"));
 
-    def = this->add("overhangs", coBool);
-    def->label = L("As bridge");
-    def->full_label = L("Overhangs as bridge");
+    def = this->add("overhangs_width_speed", coFloatOrPercent);
+    def->label = L("'As bridge' speed threshold");
+    def->full_label = L("Overhang bridge speed threshold");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("Option to adjust flow for overhangs (bridge flow will be used), "
-        "to apply bridge speed to them and enable fan.");
+    def->tooltip = L("Minimum unsupported width for an extrusion to apply the bridge speed & fan to this overhang."
+        " Can be in mm or in a % of the nozzle diameter."
+        " Set to 0 to deactivate.");
+    def->ratio_over = "nozzle_diameter";
+    def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionBool(true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(50,true));
 
     def = this->add("overhangs_width", coFloatOrPercent);
-    def->label = L("'As bridge' threshold");
-    def->full_label = L("Overhang bridge threshold");
+    def->label = L("'As bridge' flow threshold");
+    def->full_label = L("Overhang bridge flow threshold");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("Minimum unsupported width for an extrusion to be considered an overhang. Can be in mm or in a % of the nozzle diameter.");
+    def->tooltip = L("Minimum unsupported width for an extrusion to apply the bridge flow to this overhang."
+        " Can be in mm or in a % of the nozzle diameter."
+        " Set to 0 to deactivate.");
     def->ratio_over = "nozzle_diameter";
+    def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(75, true));
 
     def = this->add("overhangs_reverse", coBool);
     def->label = L("Reverse on odd");
@@ -2934,7 +2949,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionInts{ 5 });
 
     def = this->add("small_perimeter_speed", coFloatOrPercent);
-    def->label = L("Small");
+    def->label = L("Speed");
     def->full_label = ("Small perimeters speed");
     def->category = OptionCategory::speed;
     def->tooltip = L("This separate setting will affect the speed of perimeters having radius <= 6.5mm "
@@ -2945,6 +2960,32 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(15, false));
+
+    def = this->add("small_perimeter_min_length", coFloatOrPercent);
+    def->label = L("Min length");
+    def->full_label = ("Min small perimeters length");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("This set the threshold for small periemter length. Every loop with a length lower than that will be printed at small perimeter speed"
+        "\nCan be a mm or a % of the nozzle diameter.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(6, false));
+
+
+    def = this->add("small_perimeter_max_length", coFloatOrPercent);
+    def->label = L("Max length");
+    def->full_label = ("Max small perimeters length");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("This set the end of the threshold for small periemter length."
+        " Every periemter loop lower than that will see their speed reduced a bit, from their normal spee at this length down to small perimeter speed."
+        "\nCan be a mm or a % of the nozzle diameter.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(20, false));
 
     def = this->add("curve_smoothing_angle_convex", coFloat);
     def->label = L("Min convex angle");
@@ -4789,6 +4830,12 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
             opt_key = "seam_travel_cost";
             value = "20%";
         }
+    } else if (opt_key == "overhangs") {
+        opt_key = "overhangs_width_speed";
+        if (value == "1")
+            value = "50%";
+        else
+            value = "0";
     }
     // Ignore the following obsolete configuration keys:
     static std::set<std::string> ignore = {

@@ -40,9 +40,9 @@ group:Quality
 		setting:thin_walls_merge
 	end_line
 group:Overhangs
-	line:On perimeters
-		setting:sidetext_width$1:overhangs
-		setting:width$5:overhangs_width
+	line:threshold for
+		setting:label$bridge speed and fan:width$5:overhangs_width_speed
+		setting:label$bridge flow:width$5:overhangs_width
 	end_line
 	line:Extrusion direction
 		setting:sidetext_width$1:overhangs_reverse
@@ -202,7 +202,6 @@ group:label_width$8:Speed for print moves
 	line:Perimeter speed
 		setting:width$4:perimeter_speed
 		setting:width$4:external_perimeter_speed
-		setting:width$4:small_perimeter_speed
 	end_line
 	line:Infill speed
 		setting:width$4:infill_speed
@@ -228,6 +227,10 @@ group:Modifiers
 		setting:label_width$8:width$4:first_layer_speed
 		setting:label_width$8:width$4:first_layer_infill_speed
 	end_line
+	line:Small perimeter speed
+		setting:label_width$8:width$4:small_perimeter_min_length
+		setting:label_width$8:width$4:small_perimeter_max_length
+		setting:label_width$8:width$4:small_perimeter_speed
 group:Acceleration control (advanced)
 	setting:perimeter_acceleration
 	setting:infill_acceleration

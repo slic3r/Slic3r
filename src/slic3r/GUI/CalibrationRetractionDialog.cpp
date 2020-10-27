@@ -26,11 +26,11 @@ namespace GUI {
 void CalibrationRetractionDialog::create_buttons(wxStdDialogButtonSizer* buttons){
     wxString choices_steps[] = { "0.1","0.2","0.5","1" };
     steps = new wxComboBox(this, wxID_ANY, wxString{ "0.2" }, wxDefaultPosition, wxDefaultSize, 4, choices_steps);
-    steps->SetToolTip(_(L("Each militer add this value to the retraction value. ")));
+    steps->SetToolTip(_L("Each militer add this value to the retraction value. "));
     steps->SetSelection(1);
     wxString choices_nb[] = { "2","4","6","8","10","15","20","25" };
     nb_steps = new wxComboBox(this, wxID_ANY, wxString{ "15" }, wxDefaultPosition, wxDefaultSize, 8, choices_nb);
-    nb_steps->SetToolTip(_(L("Select the number milimeters for the tower.")));
+    nb_steps->SetToolTip(_L("Select the number milimeters for the tower."));
     nb_steps->SetSelection(5);
     //wxString choices_start[] = { "current","260","250","240","230","220","210" };
     //start_step = new wxComboBox(this, wxID_ANY, wxString{ "current" }, wxDefaultPosition, wxDefaultSize, 7, choices_start);
@@ -40,9 +40,10 @@ void CalibrationRetractionDialog::create_buttons(wxStdDialogButtonSizer* buttons
     int temp = int((2 + filament_config->option<ConfigOptionInts>("temperature")->get_at(0)) / 5) * 5;
     auto size = wxSize(4 * em_unit(), wxDefaultCoord);
     temp_start = new wxTextCtrl(this, wxID_ANY, std::to_string(temp), wxDefaultPosition, size);
-    wxString choices_decr[] = { "one test","2x10°","3x10°","4x10°","3x5°","5x5°" };
+    wxString degree = L'°' ;
+    wxString choices_decr[] = { "one test","2x10"+ degree,"3x10"+ degree, L"4x10°", _("3x50°"), _L("5x5°") };
     decr_temp = new wxComboBox(this, wxID_ANY, wxString{ "current" }, wxDefaultPosition, wxDefaultSize, 6, choices_decr);
-    decr_temp->SetToolTip(_(L("Select the number tower to print, and by how many degrees C to decrease each time.")));
+    decr_temp->SetToolTip(_L("Select the number tower to print, and by how many degrees C to decrease each time."));
     decr_temp->SetSelection(0);
 
     buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "step:" }));
@@ -163,7 +164,6 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
     }
 
     //add sub-part after scale
-    float zshift = (1 - scale) / 2 + 0.4 * scale;
     float zscale_number = (first_layer_height + layer_height) / 0.4;
     std::vector < std::vector<ModelObject*>> part_tower;
     for (size_t id_item = 0; id_item < nb_items; id_item++) {
@@ -171,11 +171,14 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
         int mytemp = temp - temp_decr * id_item;
         if (mytemp > 285) mytemp = 285;
         if (mytemp < 180) mytemp = 180;
-        add_part(model.objects[objs_idx[id_item]], Slic3r::resources_dir() + "/calibration/filament_temp/t"+ std::to_string(mytemp) + ".amf", Vec3d{ 0,0,zshift - 5.2 * scale }, Vec3d{ scale,scale,scale });
+        add_part(model.objects[objs_idx[id_item]], Slic3r::resources_dir() + "/calibration/filament_temp/t"+ std::to_string(mytemp) + ".amf",
+            Vec3d{ 0,0, scale * 0.2 -4.8 }, Vec3d{ scale,scale,scale });
         model.objects[objs_idx[id_item]]->volumes[1]->rotate(PI / 2, Vec3d(0, 0, 1));
         model.objects[objs_idx[id_item]]->volumes[1]->rotate(-PI / 2, Vec3d(1, 0, 0));
         for (int num_retract = 0; num_retract < nb_retract; num_retract++) {
-            part_tower.back().push_back(add_part(model.objects[objs_idx[id_item]], Slic3r::resources_dir() + "/calibration/retraction/retraction_calibration_pillar.amf", Vec3d{ 0,0,zshift + scale * num_retract }, Vec3d{ scale,scale,scale }));
+            part_tower.back().push_back(add_part(model.objects[objs_idx[id_item]], 
+                Slic3r::resources_dir() + "/calibration/retraction/retraction_calibration_pillar.amf", 
+                Vec3d{ 0,0,scale * 0.7 - 0.3 + scale * num_retract }, Vec3d{ scale,scale,scale }));
         }
     }
 
@@ -212,7 +215,7 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
         model.objects[objs_idx[i]]->config.set_key_value("fill_density", new ConfigOptionPercent(0));
         //model.objects[objs_idx[i]]->config.set_key_value("fill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinear));
         model.objects[objs_idx[i]]->config.set_key_value("only_one_perimeter_top", new ConfigOptionBool(false));
-        model.objects[objs_idx[i]]->config.set_key_value("overhangs", new ConfigOptionBool(false));
+        model.objects[objs_idx[i]]->config.set_key_value("overhangs_width_speed", new ConfigOptionFloatOrPercent(0,false));
         model.objects[objs_idx[i]]->config.set_key_value("thin_walls", new ConfigOptionBool(true));
         model.objects[objs_idx[i]]->config.set_key_value("thin_walls_min_width", new ConfigOptionFloatOrPercent(2,true));
         model.objects[objs_idx[i]]->config.set_key_value("gap_fill", new ConfigOptionBool(false));

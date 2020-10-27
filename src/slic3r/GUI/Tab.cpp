@@ -2312,6 +2312,7 @@ void TabPrinter::build_sla()
 
 }
 
+
 void TabPrinter::extruders_count_changed(size_t extruders_count)
 {
     bool is_count_changed = false;

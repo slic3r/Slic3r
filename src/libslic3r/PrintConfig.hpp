@@ -71,7 +71,7 @@ enum class MachineLimitsUsage {
 };
 
 enum PrintHostType {
-    htOctoPrint, htDuet, htFlashAir, htAstroBox
+    htOctoPrint, htDuet, htFlashAir, htAstroBox, htRepetier
 };
 
 enum AuthorizationType {
@@ -204,6 +204,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<PrintHostType>::g
         keys_map["duet"]            = htDuet;
         keys_map["flashair"]        = htFlashAir;
         keys_map["astrobox"]        = htAstroBox;
+        keys_map["repetier"]        = htRepetier;
     }
     return keys_map;
 }
@@ -753,8 +754,8 @@ public:
     ConfigOptionFloat               milling_speed;
     ConfigOptionFloatOrPercent      min_width_top_surface;
     // Detect bridging perimeters
-    ConfigOptionBool                overhangs;
     ConfigOptionFloatOrPercent      overhangs_width;
+    ConfigOptionFloatOrPercent      overhangs_width_speed;
     ConfigOptionBool                overhangs_reverse;
     ConfigOptionFloatOrPercent      overhangs_reverse_threshold;
     ConfigOptionEnum<NoPerimeterUnsupportedAlgo> no_perimeter_unsupported_algo;
@@ -769,6 +770,8 @@ public:
     ConfigOptionPercent             print_extrusion_multiplier;
     ConfigOptionFloat               print_retract_length;
     ConfigOptionFloatOrPercent      small_perimeter_speed;
+    ConfigOptionFloatOrPercent      small_perimeter_min_length;
+    ConfigOptionFloatOrPercent      small_perimeter_max_length;
     ConfigOptionEnum<InfillPattern> solid_fill_pattern;
     ConfigOptionFloat               solid_infill_below_area;
     ConfigOptionInt                 solid_infill_extruder;
@@ -850,8 +853,8 @@ protected:
         OPT_PTR(milling_post_process);
         OPT_PTR(milling_speed);
         OPT_PTR(min_width_top_surface);
-        OPT_PTR(overhangs);
         OPT_PTR(overhangs_width);
+        OPT_PTR(overhangs_width_speed);
         OPT_PTR(overhangs_reverse);
         OPT_PTR(overhangs_reverse_threshold);
         OPT_PTR(no_perimeter_unsupported_algo);
@@ -865,6 +868,8 @@ protected:
         OPT_PTR(print_extrusion_multiplier);
         OPT_PTR(print_retract_length);
         OPT_PTR(small_perimeter_speed);
+        OPT_PTR(small_perimeter_min_length);
+        OPT_PTR(small_perimeter_max_length);
         OPT_PTR(solid_fill_pattern);
         OPT_PTR(solid_infill_below_area);
         OPT_PTR(solid_infill_extruder);
@@ -1349,6 +1354,7 @@ public:
     ConfigOptionString              print_host;
     ConfigOptionString              printhost_apikey;
     ConfigOptionString              printhost_cafile;
+    ConfigOptionString              printhost_slug;
     ConfigOptionString              serial_port;
     ConfigOptionInt                 serial_speed;
 
@@ -1359,6 +1365,7 @@ protected:
         OPT_PTR(print_host);
         OPT_PTR(printhost_apikey);
         OPT_PTR(printhost_cafile);
+        OPT_PTR(printhost_slug);
         OPT_PTR(serial_port);
         OPT_PTR(serial_speed);
     }

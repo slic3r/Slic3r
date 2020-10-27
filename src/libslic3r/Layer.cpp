@@ -153,7 +153,7 @@ void Layer::make_perimeters()
                 && config.infill_dense_algo         == other_config.infill_dense_algo
                 && config.no_perimeter_unsupported_algo == other_config.no_perimeter_unsupported_algo
                 && config.only_one_perimeter_top    == other_config.only_one_perimeter_top
-                && config.overhangs                 == other_config.overhangs
+                && config.overhangs_width_speed     == other_config.overhangs_width_speed
                 && config.overhangs_width           == other_config.overhangs_width
                 && config.overhangs_reverse         == other_config.overhangs_reverse
                 && config.overhangs_reverse_threshold == other_config.overhangs_reverse_threshold
@@ -163,6 +163,8 @@ void Layer::make_perimeters()
                 && config.perimeter_overlap         == other_config.perimeter_overlap
                 && config.perimeter_speed           == other_config.perimeter_speed // it os mandatory? can't this be set at gcode.cpp?
                 && config.small_perimeter_speed     == other_config.small_perimeter_speed
+                && config.small_perimeter_min_length == other_config.small_perimeter_min_length
+                && config.small_perimeter_max_length == other_config.small_perimeter_max_length
                 && config.thin_walls                == other_config.thin_walls
                 && config.thin_walls_min_width      == other_config.thin_walls_min_width
                 && config.thin_walls_overlap        == other_config.thin_walls_overlap

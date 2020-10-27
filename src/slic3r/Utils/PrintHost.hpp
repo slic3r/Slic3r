@@ -7,6 +7,7 @@
 #include <boost/filesystem/path.hpp>
 
 #include <wx/string.h>
+#include <wx/arrstr.h>
 
 #include "Http.hpp"
 
@@ -20,6 +21,9 @@ struct PrintHostUpload
 {
     boost::filesystem::path source_path;
     boost::filesystem::path upload_path;
+    
+    std::string group;
+    
     bool start_print = false;
 };
 
@@ -41,7 +45,10 @@ public:
     virtual bool has_auto_discovery() const = 0;
     virtual bool can_test() const = 0;
     virtual bool can_start_print() const = 0;
+    virtual bool can_support_multiple_printers() const = 0;
     virtual std::string get_host() const = 0;
+    virtual bool get_groups(wxArrayString& groups) const = 0;
+    virtual bool get_printers(wxArrayString &printers) const = 0;
 
     static PrintHost* get_print_host(DynamicPrintConfig *config);
 

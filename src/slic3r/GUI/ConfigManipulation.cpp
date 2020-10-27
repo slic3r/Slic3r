@@ -275,9 +275,9 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
         // Ask only once.
         if (!support_material_overhangs_queried) {
             support_material_overhangs_queried = true;
-            if (!config->opt_bool("overhangs")/* != 1*/) {
+            if (config->option<ConfigOptionFloatOrPercent>("overhangs_width_speed") == 0) {
                 wxString msg_text = _(L("Supports work better, if the following feature is enabled:\n"
-                    "- Detect bridging perimeters"));
+                    "- overhangs with bridge speed & fan"));
                 if (is_global_config) {
                     msg_text += "\n\n" + _(L("Shall I adjust those settings for supports?"));
                     wxMessageDialog dialog(nullptr, msg_text, _(L("Support Generator")),
@@ -286,7 +286,7 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
                     auto answer = dialog.ShowModal();
                     if (!is_global_config || answer == wxID_YES) {
                         // Enable "detect bridging perimeters".
-                        new_conf.set_key_value("overhangs", new ConfigOptionBool(true));
+                        new_conf.set_key_value("overhangs_width_speed", new ConfigOptionFloatOrPercent(50, true));
                     } else if (answer == wxID_NO) {
                         // Do nothing, leave supports on and "detect bridging perimeters" off.
                     } else if (answer == wxID_CANCEL) {
@@ -358,10 +358,10 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
         "only_one_perimeter_top", "ensure_vertical_shell_thickness", "thin_walls", 
         "overhangs", "overhangs_reverse",
         "seam_position", "external_perimeters_first", "external_perimeters_vase", "external_perimeter_extrusion_width",
-        "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "perimeter_loop", "perimeter_loop_seam" })
+        "perimeter_speed", "small_perimeter_speed", "small_perimeter_min_length", " small_perimeter_max_length", "external_perimeter_speed", "perimeter_loop", "perimeter_loop_seam" })
         toggle_field(el, have_perimeters);
 
-    toggle_field("overhangs_width", config->opt_bool("overhangs"));
+    toggle_field("overhangs_width", config->option<ConfigOptionFloatOrPercent>("overhangs_width_speed")->value > 0);
     toggle_field("overhangs_reverse_threshold", config->opt_bool("overhangs_reverse"));
     toggle_field("min_width_top_surface", config->opt_bool("only_one_perimeter_top"));
     toggle_field("thin_perimeters_all", config->opt_bool("thin_perimeters"));

@@ -444,6 +444,8 @@ public:
 	wxButton*	m_serial_test_btn = nullptr;
 	ScalableButton*	m_print_host_test_btn = nullptr;
 	ScalableButton*	m_printhost_browse_btn = nullptr;
+    ScalableButton* m_printhost_browse_printer_btn = nullptr;
+    ScalableButton* m_printhost_slug_browse_btn = nullptr;
 	ScalableButton*	m_reset_to_filament_color = nullptr;
 
 	size_t		m_extruders_count = 0;
@@ -476,6 +478,7 @@ public:
     void		update_fff();
     void		update_sla();
     void        update_pages(); // update m_pages according to printer technology
+    void        update_printers();
 	void		extruders_count_changed(size_t extruders_count);
 	void		milling_count_changed(size_t extruders_count);
 	PageShp		build_kinematics_page();

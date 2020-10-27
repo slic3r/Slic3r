@@ -31,6 +31,44 @@ void GCodeWriter::apply_print_region_config(const PrintRegionConfig& print_regio
     config_region = &print_region_config;
 }
 
+std::vector<uint16_t> GCodeWriter::extruder_ids() const {
+    std::vector<uint16_t> out;
+    out.reserve(m_extruders.size());
+    for (const Extruder& e : m_extruders)
+        out.push_back(e.id());
+    return out;
+}
+
+std::vector<uint16_t> GCodeWriter::mill_ids() const {
+    std::vector<uint16_t> out;
+    out.reserve(m_millers.size());
+    for (const Tool& e : m_millers)
+        out.push_back(e.id());
+    return out;
+}
+
+uint16_t GCodeWriter::first_mill() const {
+    if (m_millers.empty()) {
+        uint16_t max = 0;
+        for (const Extruder& e : m_extruders)
+            max = std::max(max, e.id());
+        max++;
+        return (uint16_t)max;
+    } else return m_millers.front().id();
+}
+bool GCodeWriter::tool_is_extruder() const {
+    return m_tool->id() < first_mill();
+}
+const Tool* GCodeWriter::get_tool(uint16_t id) const{
+    for (const Extruder& e : m_extruders)
+        if (id == e.id())
+            return &e;
+    for (const Tool& e : m_millers)
+        if (id == e.id())
+            return &e;
+    return nullptr;
+}
+
 void GCodeWriter::set_extruders(std::vector<uint16_t> extruder_ids)
 {
     std::sort(extruder_ids.begin(), extruder_ids.end());
@@ -89,12 +127,16 @@ std::string GCodeWriter::postamble() const
 
 std::string GCodeWriter::set_temperature(const unsigned int temperature, bool wait, int tool)
 {
+    //use m_tool if tool isn't set
+    if (tool < 0 && m_tool != nullptr)
+        tool = m_tool->id();
+
     //add offset
     int16_t temp_w_offset = int16_t(temperature);
-    temp_w_offset += int16_t(m_tool->temp_offset());
+    temp_w_offset += int16_t(get_tool(tool)->temp_offset());
     temp_w_offset = std::max(int16_t(0), std::min(int16_t(2000), temp_w_offset));
 
-    if (m_last_temperature_with_offset == temp_w_offset)
+    if (m_last_temperature_with_offset == temp_w_offset && !wait)
         return "";
     if (wait && (FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)))
         return "";
@@ -177,13 +219,15 @@ std::string GCodeWriter::set_bed_temperature(unsigned int temperature, bool wait
     return gcode.str();
 }
 
-std::string GCodeWriter::set_fan(const unsigned int speed, bool dont_save)
+std::string GCodeWriter::set_fan(const unsigned int speed, bool dont_save, uint16_t default_tool)
 {
     std::ostringstream gcode;
 
+    const Tool *tool = m_tool == nullptr ? get_tool(default_tool) : m_tool;
     //add fan_offset
     int16_t fan_speed = int16_t(speed);
-    fan_speed += int8_t(m_tool->fan_offset());
+    if (tool != nullptr)
+        fan_speed += int8_t(tool->fan_offset());
     fan_speed = std::max(int16_t(0), std::min(int16_t(100), fan_speed));
 
     //test if it's useful to write it
