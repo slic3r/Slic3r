@@ -1778,7 +1778,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("sprinter");
     def->enum_values.push_back("lerdge");
     def->enum_values.push_back("no-extrusion");
-    def->enum_labels.push_back("RepRap");
+    def->enum_labels.push_back("RepRapFirmware");
     def->enum_labels.push_back("Repetier");
     def->enum_labels.push_back("Teacup");
     def->enum_labels.push_back("MakerWare (MakerBot)");
@@ -1792,7 +1792,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back("Lerdge");
     def->enum_labels.push_back(L("No extrusion"));
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionEnum<GCodeFlavor>(gcfRepRap));
+    def->set_default_value(new ConfigOptionEnum<GCodeFlavor>(gcfSprinter));
 
     def = this->add("gcode_label_objects", coBool);
     def->label = L("Label objects");

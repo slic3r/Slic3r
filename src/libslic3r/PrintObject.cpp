@@ -861,14 +861,14 @@ bool PrintObject::invalidate_step(PrintObjectStep step)
     
     // propagate to dependent steps
     if (step == posPerimeters) {
-        invalidated |= this->invalidate_steps({ posPrepareInfill, posInfill });
+		invalidated |= this->invalidate_steps({ posPrepareInfill, posInfill, posIroning });
         invalidated |= m_print->invalidate_steps({ psSkirt, psBrim });
     } else if (step == posPrepareInfill) {
-        invalidated |= this->invalidate_step(posInfill);
+        invalidated |= this->invalidate_steps({ posInfill, posIroning });
     } else if (step == posInfill) {
         invalidated |= m_print->invalidate_steps({ psSkirt, psBrim });
     } else if (step == posSlice) {
-        invalidated |= this->invalidate_steps({ posPerimeters, posPrepareInfill, posInfill, posSupportMaterial });
+		invalidated |= this->invalidate_steps({ posPerimeters, posPrepareInfill, posInfill, posIroning, posSupportMaterial });
         invalidated |= m_print->invalidate_steps({ psSkirt, psBrim });
         this->m_slicing_params.valid = false;
     } else if (step == posSupportMaterial) {
@@ -2227,12 +2227,6 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
     BOOST_LOG_TRIVIAL(info) << "Slicing objects..." << log_memory_info();
 
     m_typed_slices = false;
-
-#ifdef SLIC3R_PROFILE
-    // Disable parallelization so the Shiny profiler works
-    static tbb::task_scheduler_init *tbb_init = nullptr;
-    tbb_init = new tbb::task_scheduler_init(1);
-#endif
 
     // 1) Initialize layers and their slice heights.
     std::vector<float> slice_zs;

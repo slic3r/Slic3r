@@ -1055,6 +1055,7 @@ void ModelObject::convert_units(ModelObjectPtrs& new_objects, bool from_imperial
 
             ModelVolume* vol = new_object->add_volume(mesh);
             vol->name = volume->name;
+            vol->set_type(volume->type());
             // Don't copy the config's ID.
             vol->config.assign_config(volume->config);
             assert(vol->config.id().valid());
@@ -1065,7 +1066,7 @@ void ModelObject::convert_units(ModelObjectPtrs& new_objects, bool from_imperial
             if (volume_idxs.empty() || 
                 std::find(volume_idxs.begin(), volume_idxs.end(), vol_idx) != volume_idxs.end()) {
                 vol->scale_geometry_after_creation(versor);
-                vol->set_offset(versor.cwiseProduct(vol->get_offset()));
+                vol->set_offset(versor.cwiseProduct(volume->get_offset()));
             }
             else
                 vol->set_offset(volume->get_offset());

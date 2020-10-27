@@ -400,7 +400,7 @@ void GCodeProcessor::TimeProcessor::post_process(const std::string& filename)
             const TimeMachine& machine = machines[i];
             if (machine.enabled && g1_lines_counter < machine.g1_times_cache.size()) {
                 float elapsed_time = machine.g1_times_cache[g1_lines_counter];
-                std::pair<int, int> to_export = { int(::roundf(100.0f * elapsed_time / machine.time)), 
+                std::pair<int, int> to_export = { int(100.0f * elapsed_time / machine.time),
                                                   time_in_minutes(machine.time - elapsed_time) };
                 if (last_exported[i] != to_export) {
                     export_line += format_line_M73(machine.line_m73_mask.c_str(),
@@ -461,7 +461,8 @@ void GCodeProcessor::TimeProcessor::post_process(const std::string& filename)
 
     std::error_code err_code;
     if (err_code = rename_file(out_path, filename))
-        if(copy_file(out_path, filename, true) != SUCCESS)
+        if(copy_file(out_path, filename, (std::string("Failed to rename the output G-code file from ") + out_path + " to " + filename + '\n' +
+            "Is " + out_path + " locked? (gcp)" + err_code.message() + '\n'), true) != SUCCESS)
             throw Slic3r::RuntimeError(std::string("Failed to rename the output G-code file from ") + out_path + " to " + filename + '\n' +
                 "Is " + out_path + " locked? (gcp)" + err_code.message() + '\n');
 }
@@ -691,7 +692,7 @@ void GCodeProcessor::reset()
     m_global_positioning_type = EPositioningType::Absolute;
     m_e_local_positioning_type = EPositioningType::Absolute;
     m_extruder_offsets = std::vector<Vec3f>(Min_Extruder_Count, Vec3f::Zero());
-    m_flavor = gcfRepRap;
+    m_flavor = gcfSprinter;
 
     m_start_position = { 0.0f, 0.0f, 0.0f, 0.0f };
     m_end_position = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -1128,6 +1129,8 @@ bool GCodeProcessor::process_cura_tags(const std::string& comment)
             m_flavor = gcfRepetier;
         else if (flavor == "RepRap")
             m_flavor = gcfRepRap;
+        else if (flavor == "Sprinter")
+            m_flavor = gcfSprinter;
         else if (flavor == "Marlin")
             m_flavor = gcfMarlin;
         else
@@ -1832,7 +1835,7 @@ void GCodeProcessor::process_M201(const GCodeReader::GCodeLine& line)
         return;
 
     // see http://reprap.org/wiki/G-code#M201:_Set_max_printing_acceleration
-    float factor = (m_flavor != gcfRepRap && m_units == EUnits::Inches) ? INCHES_TO_MM : 1.0f;
+    float factor = ((m_flavor != gcfSprinter && m_flavor != gcfRepRap) && m_units == EUnits::Inches) ? INCHES_TO_MM : 1.0f;
 
     for (size_t i = 0; i < static_cast<size_t>(PrintEstimatedTimeStatistics::ETimeMode::Count); ++i) {
         if (line.has_x())

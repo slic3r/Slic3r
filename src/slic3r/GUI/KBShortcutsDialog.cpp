@@ -178,7 +178,7 @@ void KBShortcutsDialog::fill_shortcuts()
             { "O", L("Zoom out") },
             { "Tab", L("Switch between Editor/Preview") },
             { "Shift+Tab", L("Collapse/Expand the sidebar") },
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
             { ctrl + "M", L("Show/Hide 3Dconnexion devices settings dialog") },
 #endif // __linux__
 #if ENABLE_RENDER_PICKING_PASS
@@ -190,10 +190,13 @@ void KBShortcutsDialog::fill_shortcuts()
         m_full_shortcuts.push_back(std::make_pair(_L("Plater"), plater_shortcuts));
 
         Shortcuts gizmos_shortcuts = {
-            { "Shift+", L("Press to snap by 5% in Gizmo scale\nor to snap by 1mm in Gizmo move") },
-            { "F", L("Scale selection to fit print volume\nin Gizmo scale") },
-            { ctrl, L("Press to activate one direction scaling in Gizmo scale") },
-            { alt, L("Press to scale (in Gizmo scale) or rotate (in Gizmo rotate)\nselected objects around their own center") },
+            { ctrl, L("All gizmos: Press to rotate view with mouse left or to pan view with mouse right") },
+            { "Shift+", L("Gizmo move: Press to snap by 1mm") },
+            { "Shift+", L("Gizmo scale: Press to snap by 5%") },
+            { "F", L("Gizmo scale: Scale selection to fit print volume") },
+            { ctrl, L("Gizmo scale: Press to activate one direction scaling") },
+            { alt, L("Gizmo scale: Press to scale selected objects around their own center") },
+            { alt, L("Gizmo rotate: Press to rotate selected objects around their own center") },
         };
 
         m_full_shortcuts.push_back(std::make_pair(_L("Gizmos"), gizmos_shortcuts));
@@ -251,7 +254,11 @@ wxPanel* KBShortcutsDialog::create_header(wxWindow* parent, const wxFont& bold_f
     sizer->AddStretchSpacer();
 
     // logo
+#if ENABLE_GCODE_VIEWER
+    m_logo_bmp = ScalableBitmap(this, wxGetApp().is_editor() ? "Slic3r_32px.png" : "PrusaSlicer-gcodeviewer_32px.png", 32);
+#else
     m_logo_bmp = ScalableBitmap(this, "Slic3r_32px.png", 32);
+#endif // ENABLE_GCODE_VIEWER
     m_header_bitmap = new wxStaticBitmap(panel, wxID_ANY, m_logo_bmp.bmp());
     sizer->Add(m_header_bitmap, 0, wxEXPAND | wxLEFT | wxRIGHT, 10);
 

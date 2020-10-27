@@ -100,7 +100,7 @@ std::string GCodeWriter::set_temperature(const unsigned int temperature, bool wa
         return "";
     
     std::string code, comment;
-    if (wait && FLAVOR_IS_NOT(gcfTeacup) && FLAVOR_IS_NOT(gcfRepRap) && FLAVOR_IS_NOT(gcfSprinter)) {
+    if (wait && FLAVOR_IS_NOT(gcfTeacup) && FLAVOR_IS_NOT(gcfRepRap)) {
         code = "M109";
         comment = "set temperature and wait for it to be reached";
     } else {
@@ -124,7 +124,9 @@ std::string GCodeWriter::set_temperature(const unsigned int temperature, bool wa
     gcode << temp_w_offset;
     bool multiple_tools = this->multiple_extruders && ! m_single_extruder_multi_material;
     if (tool != -1 && (multiple_tools || FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)) ) {
-        if (FLAVOR_IS_NOT(gcfRepRap)) {
+        if (FLAVOR_IS(gcfRepRap)) {
+            gcode << " P" << tool;
+        } else {
             gcode << " T" << tool;
         }
     }

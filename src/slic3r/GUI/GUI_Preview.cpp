@@ -71,7 +71,6 @@ bool View3D::init(wxWindow* parent, Model* model, DynamicPrintConfig* config, Ba
 
     m_canvas = new GLCanvas3D(m_canvas_widget);
     m_canvas->set_context(wxGetApp().init_glcontext(*m_canvas_widget));
-    m_canvas->bind_event_handlers();
 
     m_canvas->allow_multisample(OpenGLManager::can_multisample());
     // XXX: If have OpenGL
@@ -278,7 +277,6 @@ bool Preview::init(wxWindow* parent, Model* model)
 
     m_canvas = new GLCanvas3D(m_canvas_widget);
     m_canvas->set_context(wxGetApp().init_glcontext(*m_canvas_widget));
-    m_canvas->bind_event_handlers();
     m_canvas->allow_multisample(OpenGLManager::can_multisample());
     m_canvas->set_config(m_config);
     m_canvas->set_model(model);
@@ -368,7 +366,7 @@ bool Preview::init(wxWindow* parent, Model* model)
 #else
     m_checkbox_travel = new wxCheckBox(this, wxID_ANY, _(L("Travel")));
     m_checkbox_retractions = new wxCheckBox(this, wxID_ANY, _(L(width_screen == tiny ? "Retr." : "Retractions")));
-    m_checkbox_unretractions = new wxCheckBox(this, wxID_ANY, _(L(width_screen == tiny ? "Unre." : "Unretractions")));
+    m_checkbox_unretractions = new wxCheckBox(this, wxID_ANY, _(L(width_screen == tiny ? "Dere." : "Deretractions")));
     m_checkbox_shells = new wxCheckBox(this, wxID_ANY, _(L("Shells")));
     m_checkbox_legend = new wxCheckBox(this, wxID_ANY, _(L("Legend")));
     m_checkbox_legend->SetValue(true);
@@ -382,7 +380,6 @@ bool Preview::init(wxWindow* parent, Model* model)
     right_sizer->Add(m_layers_slider_sizer, 1, wxEXPAND, 0);
 
     m_moves_slider = new DoubleSlider::Control(m_bottom_toolbar_panel, wxID_ANY, 0, 0, 0, 100, wxDefaultPosition, wxSize(-1, 3 * GetTextExtent("m").y), wxSL_HORIZONTAL);
-    m_moves_slider->set_lower_editable(get_app_config()->get("seq_top_layer_only") == "0");
     m_moves_slider->SetDrawMode(DoubleSlider::dmSequentialGCodeView);
 
     wxBoxSizer* bottom_toolbar_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -598,9 +595,6 @@ void Preview::refresh_print()
         return;
 
     load_print(true);
-#if ENABLE_GCODE_VIEWER
-    m_moves_slider->set_lower_editable(get_app_config()->get("seq_top_layer_only") == "0");
-#endif // ENABLE_GCODE_VIEWER
 }
 
 void Preview::msw_rescale()
@@ -1314,17 +1308,13 @@ void Preview::load_print_as_fff(bool keep_z_range)
     }
 
 #if ENABLE_GCODE_VIEWER
-    if (wxGetApp().is_editor() && !has_layers)
-#else
-    if (! has_layers)
-#endif // ENABLE_GCODE_VIEWER
-    {
-#if ENABLE_GCODE_VIEWER
+    if (wxGetApp().is_editor() && !has_layers) {
         hide_layers_slider();
         m_left_sizer->Hide(m_bottom_toolbar_panel);
         m_left_sizer->Layout();
         Refresh();
 #else
+    if (! has_layers) {
         reset_sliders(true);
         m_canvas->reset_legend_texture();
 #endif // ENABLE_GCODE_VIEWER
@@ -1332,8 +1322,7 @@ void Preview::load_print_as_fff(bool keep_z_range)
         return;
     }
 
-    if (m_preferred_color_mode == "tool_or_feature")
-    {
+    if (m_preferred_color_mode == "tool_or_feature") {
         // It is left to Slic3r to decide whether the print shall be colored by the tool or by the feature.
         // Color by feature if it is a single extruder print.
         unsigned int number_extruders = (unsigned int)print->extruders().size();
@@ -1362,18 +1351,21 @@ void Preview::load_print_as_fff(bool keep_z_range)
     std::vector<CustomGCode::Item> color_print_values = {};
     // set color print values, if it si selected "ColorPrint" view type
 #if ENABLE_GCODE_VIEWER
-    if (gcode_view_type == GCodeViewer::EViewType::ColorPrint)
+    if (gcode_view_type == GCodeViewer::EViewType::ColorPrint) {
 #else
-    if (m_gcode_preview_data->extrusion.view_type == GCodePreviewData::Extrusion::ColorPrint)
+    if (m_gcode_preview_data->extrusion.view_type == GCodePreviewData::Extrusion::ColorPrint) {
 #endif // ENABLE_GCODE_VIEWER
-    {
         colors = wxGetApp().plater()->get_colors_for_color_print();
 #if !ENABLE_GCODE_VIEWER
         colors.push_back("#808080"); // gray color for pause print or custom G-code 
 #endif // !ENABLE_GCODE_VIEWER
 
-        if (!gcode_preview_data_valid)
+        if (!gcode_preview_data_valid) {
             color_print_values = wxGetApp().plater()->model().custom_gcode_per_print_z.gcodes;
+#if ENABLE_GCODE_VIEWER
+            colors.push_back("#808080"); // gray color for pause print or custom G-code 
+#endif // ENABLE_GCODE_VIEWER
+    }
     }
 #if ENABLE_GCODE_VIEWER
     else if (gcode_preview_data_valid || gcode_view_type == GCodeViewer::EViewType::Filament)
@@ -1408,8 +1400,7 @@ void Preview::load_print_as_fff(bool keep_z_range)
         color_print_values.clear();
     }
 
-    if (IsShown())
-    {
+    if (IsShown()) {
 #if ENABLE_GCODE_VIEWER
         std::vector<double> zs;
 #endif // ENABLE_GCODE_VIEWER
@@ -1563,7 +1554,7 @@ wxString Preview::get_option_type_string(OptionType type) const
     {
     case OptionType::Travel:        { return _L("Travel"); }
     case OptionType::Retractions:   { return _L("Retractions"); }
-    case OptionType::Unretractions: { return _L("Unretractions"); }
+    case OptionType::Unretractions: { return _L("Deretractions"); }
     case OptionType::ToolChanges:   { return _L("Tool changes"); }
     case OptionType::ColorChanges:  { return _L("Color changes"); }
     case OptionType::PausePrints:   { return _L("Pause prints"); }

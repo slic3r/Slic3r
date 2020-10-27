@@ -1645,7 +1645,7 @@ struct Plater::priv
 #endif // ENABLE_GCODE_VIEWER
 
     void reset_all_gizmos();
-    void update_ui_from_settings();
+    void update_ui_from_settings(bool apply_free_camera_correction = true);
     void update_main_toolbar_tooltips();
     std::shared_ptr<ProgressStatusBar> statusbar();
     std::string get_config(const std::string &key) const;
@@ -1795,7 +1795,8 @@ struct Plater::priv
     // Caching last value of show_action_buttons parameter for show_action_buttons(), so that a callback which does not know this state will not override it.
     mutable bool    			ready_to_slice = { false };
     // Flag indicating that the G-code export targets a removable device, therefore the show_action_buttons() needs to be called at any case when the background processing finishes.
-    bool 						writing_to_removable_device = { false };
+    bool 						writing_to_removable_device { false };
+    bool 						show_ExportToRemovableFinished_notification { false };
     bool                        inside_snapshot_capture() { return m_prevent_snapshots != 0; }
 	bool                        process_completed_with_error { false };
 private:
@@ -2153,7 +2154,7 @@ void Plater::priv::select_view_3D(const std::string& name)
         set_current_panel(preview);
 
 #if ENABLE_GCODE_VIEWER
-    wxGetApp().update_ui_from_settings();
+    wxGetApp().update_ui_from_settings(false);
 #endif // ENABLE_GCODE_VIEWER
 }
 
@@ -2186,10 +2187,10 @@ void Plater::priv::reset_all_gizmos()
 
 // Called after the Preferences dialog is closed and the program settings are saved.
 // Update the UI based on the current preferences.
-void Plater::priv::update_ui_from_settings()
+void Plater::priv::update_ui_from_settings(bool apply_free_camera_correction)
 {
     camera.set_type(wxGetApp().app_config->get("use_perspective_camera"));
-    if (wxGetApp().app_config->get("use_free_camera") != "1")
+    if (apply_free_camera_correction && wxGetApp().app_config->get("use_free_camera") != "1")
         camera.recover_from_free_camera();
 
     view3D->get_canvas3d()->update_ui_from_settings();
@@ -3330,16 +3331,14 @@ void Plater::priv::set_current_panel(wxPanel* panel)
     if (current_panel == panel)
         return;
 
+    wxPanel* old_panel = current_panel;
     current_panel = panel;
     // to reduce flickering when changing view, first set as visible the new current panel
-    for (wxPanel* p : panels)
-    {
-        if (p == current_panel)
-        {
+    for (wxPanel* p : panels) {
+        if (p == current_panel) {
 #ifdef __WXMAC__
             // On Mac we need also to force a render to avoid flickering when changing view
-            if (force_render)
-            {
+            if (force_render) {
                 if (p == view3D)
                     dynamic_cast<View3D*>(p)->get_canvas3d()->render();
                 else if (p == preview)
@@ -3350,21 +3349,22 @@ void Plater::priv::set_current_panel(wxPanel* panel)
         }
     }
     // then set to invisible the other
-    for (wxPanel* p : panels)
-    {
+    for (wxPanel* p : panels) {
         if (p != current_panel)
             p->Hide();
     }
 
     panel_sizer->Layout();
 
-    if (current_panel == view3D)
-    {
-        if (view3D->is_reload_delayed())
-        {
+    if (current_panel == view3D) {
+        if (old_panel == preview)
+            preview->get_canvas3d()->unbind_event_handlers();
+
+        view3D->get_canvas3d()->bind_event_handlers();
+
+        if (view3D->is_reload_delayed()) {
             // Delayed loading of the 3D scene.
-            if (this->printer_technology == ptSLA)
-            {
+            if (this->printer_technology == ptSLA) {
                 // Update the SLAPrint from the current Model, so that the reload_scene()
                 // pulls the correct data.
                 this->update_restart_background_process(true, false);
@@ -3378,8 +3378,12 @@ void Plater::priv::set_current_panel(wxPanel* panel)
         if(notification_manager != nullptr)
             notification_manager->set_in_preview(false);
     }
-    else if (current_panel == preview)
-    {
+    else if (current_panel == preview) {
+        if (old_panel == view3D)
+            view3D->get_canvas3d()->unbind_event_handlers();
+
+        preview->get_canvas3d()->bind_event_handlers();
+
         // see: Plater::priv::object_list_changed()
         // FIXME: it may be better to have a single function making this check and let it be called wherever needed
         bool export_in_progress = this->background_process.is_export_scheduled();
@@ -3538,6 +3542,8 @@ void Plater::priv::on_export_began(wxCommandEvent& evt)
 {
 	if (show_warning_dialog)
 		warnings_dialog();
+    if (this->writing_to_removable_device)
+        this->show_ExportToRemovableFinished_notification = true;
 }
 void Plater::priv::on_slicing_began()
 {
@@ -3652,11 +3658,12 @@ void Plater::priv::on_process_completed(SlicingProcessCompletedEvent &evt)
     else if (wxGetApp().get_mode() == comSimple && wxGetApp().app_config->get("objects_always_expert") != "1") {
 		show_action_buttons(false);
 	}
-	else if (this->writing_to_removable_device)
-	{
+    // If writing to removable drive was scheduled, show notification with eject button
+    if (this->writing_to_removable_device && this->show_ExportToRemovableFinished_notification) {
 		show_action_buttons(false);
 		notification_manager->push_notification(NotificationType::ExportToRemovableFinished, *q->get_current_canvas3D());
 	}
+    this->show_ExportToRemovableFinished_notification = false;
     this->writing_to_removable_device = false;
 }
 
@@ -4736,7 +4743,9 @@ void Plater::load_gcode()
 
 void Plater::load_gcode(const wxString& filename)
 {
-    if (filename.empty() || m_last_loaded_gcode == filename)
+    if (filename.empty() ||
+        (!filename.Lower().EndsWith(".gcode") && !filename.Lower().EndsWith(".g")) ||
+        m_last_loaded_gcode == filename)
         return;
 
     m_last_loaded_gcode = filename;
@@ -4784,7 +4793,7 @@ void Plater::update() { p->update(); }
 
 void Plater::stop_jobs() { p->m_ui_jobs.stop_all(); }
 
-void Plater::update_ui_from_settings() { p->update_ui_from_settings(); }
+void Plater::update_ui_from_settings(bool apply_free_camera_correction) { p->update_ui_from_settings(apply_free_camera_correction); }
 
 void Plater::select_view(const std::string& direction) { p->select_view(direction); }
 
@@ -5022,12 +5031,13 @@ void Plater::export_gcode(bool prefer_removable)
 
     if (! output_path.empty()) {
 		bool path_on_removable_media = removable_drive_manager.set_and_verify_last_save_path(output_path.string());
+        p->writing_to_removable_device = path_on_removable_media;
         p->export_gcode(output_path, path_on_removable_media, PrintHostJob());
         // Storing a path to AppConfig either as path to removable media or a path to internal media.
         // is_path_on_removable_drive() is called with the "true" parameter to update its internal database as the user may have shuffled the external drives
         // while the dialog was open.
         appconfig.update_last_output_dir(output_path.parent_path().string(), path_on_removable_media);
-		p->writing_to_removable_device = path_on_removable_media;
+		
 	}
 }
 

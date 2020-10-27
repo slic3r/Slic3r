@@ -14,7 +14,7 @@
 #include "Tab.hpp"
 #include "ExtraRenderers.hpp"
 #include "wxExtensions.hpp"
-#include "PresetComboBoxes.hpp"
+#include "SavePresetDialog.hpp"
 #include "MainFrame.hpp"
 
 //#define FTS_FUZZY_MATCH_IMPLEMENTATION
@@ -597,7 +597,7 @@ void UnsavedChangesDialog::build(Preset::Type type, PresetCollection* dependent_
 #endif
         wxDataViewColumn* column = new wxDataViewColumn(label, rd, model_column, width, wxALIGN_TOP, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_CELL_INERT);
 #else
-        wxDataViewColumn* column = new wxDataViewColumn(label, new BitmapTextRenderer(true), model_column, width, wxALIGN_TOP, wxDATAVIEW_COL_RESIZABLE);
+        wxDataViewColumn* column = new wxDataViewColumn(label, new BitmapTextRenderer(true, wxDATAVIEW_CELL_INERT), model_column, width, wxALIGN_TOP, wxDATAVIEW_COL_RESIZABLE);
 #endif //__linux__
         m_tree->AppendColumn(column);
         if (set_expander)
@@ -727,8 +727,6 @@ void UnsavedChangesDialog::context_menu(wxDataViewEvent& event)
 
 void UnsavedChangesDialog::show_info_line(Action action, std::string preset_name)
 {
-    if (m_motion_action == action)
-        return;
     if (action == Action::Undef && !m_has_long_strings)
         m_info_line->Hide();
     else {
@@ -751,8 +749,6 @@ void UnsavedChangesDialog::show_info_line(Action action, std::string preset_name
         m_info_line->SetLabel(text);
         m_info_line->Show();
     }
-
-    m_motion_action = action;
 
     Layout();
     Refresh();
@@ -1013,7 +1009,7 @@ void UnsavedChangesDialog::update(Preset::Type type, PresetCollection* dependent
             action_msg = format_wxstr(_L("Preset \"%1%\" has the following unsaved changes:"), presets->get_edited_preset().name);
         }
         else {
-            action_msg = format_wxstr(Preset::TYPE_PRINTER ?
+            action_msg = format_wxstr(type == Preset::TYPE_PRINTER ?
                 _L("Preset \"%1%\" is not compatible with the new printer profile and it has the following unsaved changes:") :
                 _L("Preset \"%1%\" is not compatible with the new print profile and it has the following unsaved changes:"),
                 presets->get_edited_preset().name);

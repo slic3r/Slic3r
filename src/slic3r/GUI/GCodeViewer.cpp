@@ -2328,6 +2328,7 @@ void GCodeViewer::render_legend() const
                     m_extrusions.role_visibility_flags = visible ? m_extrusions.role_visibility_flags & ~(1 << role) : m_extrusions.role_visibility_flags | (1 << role);
                     // update buffers' render paths
                     refresh_render_paths(false, false);
+                    wxGetApp().plater()->update_preview_moves_slider();
                     wxGetApp().plater()->get_current_canvas3D()->set_as_dirty();
                     wxGetApp().plater()->update_preview_bottom_toolbar();
                 }
@@ -2600,7 +2601,7 @@ void GCodeViewer::render_legend() const
 
         // items
         add_option(EMoveType::Retract, EOptionsColors::Retractions, _u8L("Retractions"));
-        add_option(EMoveType::Unretract, EOptionsColors::Unretractions, _u8L("Unretractions"));
+        add_option(EMoveType::Unretract, EOptionsColors::Unretractions, _u8L("Deretractions"));
         add_option(EMoveType::Tool_change, EOptionsColors::ToolChanges, _u8L("Tool changes"));
         add_option(EMoveType::Color_change, EOptionsColors::ColorChanges, _u8L("Color changes"));
         add_option(EMoveType::Pause_Print, EOptionsColors::PausePrints, _u8L("Pause prints"));

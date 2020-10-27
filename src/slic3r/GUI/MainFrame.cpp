@@ -1302,7 +1302,7 @@ void MainFrame::init_menubar()
         append_menu_check_item(viewMenu, wxID_ANY, _L("Show &labels") + sep + "E", _L("Show object/instance labels in 3D scene"),
             [this](wxCommandEvent&) { m_plater->show_view3D_labels(!m_plater->are_view3D_labels_shown()); }, this,
             [this]() { return m_plater->is_view3D_shown(); }, [this]() { return m_plater->are_view3D_labels_shown(); }, this);
-        append_menu_check_item(viewMenu, wxID_ANY, _L("&Collapse sidebar"), _L("Collapse sidebar"),
+        append_menu_check_item(viewMenu, wxID_ANY, _L("&Collapse sidebar") + "\tShift+Tab", _L("Collapse sidebar"),
             [this](wxCommandEvent&) { m_plater->collapse_sidebar(!m_plater->is_sidebar_collapsed()); }, this,
             []() { return true; }, [this]() { return m_plater->is_sidebar_collapsed(); }, this);
     }
@@ -1989,7 +1989,7 @@ void MainFrame::add_to_recent_projects(const wxString& filename)
 //
 // Called after the Preferences dialog is closed and the program settings are saved.
 // Update the UI based on the current preferences.
-void MainFrame::update_ui_from_settings()
+void MainFrame::update_ui_from_settings(bool apply_free_camera_correction)
 {
 //    const bool bp_on = wxGetApp().app_config->get("background_processing") == "1";
 //     m_menu_item_reslice_now->Enable(!bp_on);
@@ -1998,7 +1998,7 @@ void MainFrame::update_ui_from_settings()
 //    m_plater->sidebar().Layout();
 
     if (m_plater)
-        m_plater->update_ui_from_settings();
+        m_plater->update_ui_from_settings(apply_free_camera_correction);
     for (auto tab: wxGetApp().tabs_list)
         tab->update_ui_from_settings();
 }

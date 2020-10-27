@@ -1,5 +1,6 @@
 #include "libslic3r/Technologies.hpp"
 #include "GUI_App.hpp"
+#include "GUI_Init.hpp"
 #include "GUI_ObjectList.hpp"
 #include "GUI_ObjectManipulation.hpp"
 #include "I18N.hpp"
@@ -24,7 +25,6 @@
 #include <wx/wupdlock.h>
 #include <wx/filefn.h>
 #include <wx/sysopt.h>
-#include <wx/msgdlg.h>
 #include <wx/richmsgdlg.h>
 #include <wx/log.h>
 #include <wx/intl.h>
@@ -71,7 +71,7 @@
 #include "InstanceCheck.hpp"
 #include "NotificationManager.hpp"
 #include "UnsavedChangesDialog.hpp"
-#include "PresetComboBoxes.hpp"
+#include "SavePresetDialog.hpp"
 
 #include "BitmapCache.hpp"
 
@@ -355,6 +355,63 @@ private:
     }
 };
 
+
+#ifdef __linux__
+bool static check_old_linux_datadir(const wxString& app_name) {
+    // If we are on Linux and the datadir does not exist yet, look into the old
+    // location where the datadir was before version 2.3. If we find it there,
+    // tell the user that he might wanna migrate to the new location.
+    // (https://github.com/prusa3d/PrusaSlicer/issues/2911)
+    // To be precise, the datadir should exist, it is created when single instance
+    // lock happens. Instead of checking for existence, check the contents.
+
+    namespace fs = boost::filesystem;
+
+    std::string new_path = Slic3r::data_dir();
+
+    wxString dir;
+    if (! wxGetEnv(wxS("XDG_CONFIG_HOME"), &dir) || dir.empty() )
+        dir = wxFileName::GetHomeDir() + wxS("/.config");
+    std::string default_path = (dir + "/" + app_name).ToUTF8().data();
+
+    if (new_path != default_path) {
+        // This happens when the user specifies a custom --datadir.
+        // Do not show anything in that case.
+        return true;
+    }
+
+    fs::path data_dir = fs::path(new_path);
+    if (! fs::is_directory(data_dir))
+        return true; // This should not happen.
+
+    int file_count = std::distance(fs::directory_iterator(data_dir), fs::directory_iterator());
+
+    if (file_count <= 1) { // just cache dir with an instance lock
+        std::string old_path = wxStandardPaths::Get().GetUserDataDir().ToUTF8().data();
+
+        if (fs::is_directory(old_path)) {
+            wxString msg = from_u8((boost::format(_u8L("Starting with %1% 2.3, configuration "
+                "directory on Linux has changed (according to XDG Base Directory Specification) to \n%2%.\n\n"
+                "This directory did not exist yet (maybe you run the new version for the first time).\nHowever, "
+                "an old %1% configuration directory was detected in \n%3%.\n\n"
+                "Consider moving the contents of the old directory to the new location in order to access "
+                "your profiles, etc.\nNote that if you decide to downgrade %1% in future, it will use the old "
+                "location again.\n\n"
+                "What do you want to do now?")) % SLIC3R_APP_NAME % new_path % old_path).str());
+            wxString caption = from_u8((boost::format(_u8L("%s - BREAKING CHANGE")) % SLIC3R_APP_NAME).str());
+            wxRichMessageDialog dlg(nullptr, msg, caption, wxYES_NO);
+            dlg.SetYesNoLabels(_L("Quit, I will move my data now"), _L("Start the application"));
+            if (dlg.ShowModal() != wxID_NO)
+                return false;
+        }
+    } else {
+        // If the new directory exists, be silent. The user likely already saw the message.
+    }
+    return true;
+}
+#endif
+
+
 wxString file_wildcards(FileType file_type, const std::string &custom_extension)
 {
     static const std::string defaults[FT_SIZE] = {
@@ -545,15 +602,16 @@ static void generic_exception_handle()
     }
 }
 
-void GUI_App::AfterInitLoads::on_loads(GUI_App* gui)
+void GUI_App::post_init()
 {
-    if (!gui->initialized())
-        return;
+    assert(initialized());
+    if (! this->initialized())
+        throw Slic3r::RuntimeError("Calling post_init() while not yet initialized");
 
 #if ENABLE_GCODE_VIEWER
-    if (m_start_as_gcodeviewer) {
-        if (!m_input_files.empty())
-            gui->plater()->load_gcode(wxString::FromUTF8(m_input_files[0].c_str()));
+    if (this->init_params->start_as_gcodeviewer) {
+        if (! this->init_params->input_files.empty())
+            this->plater()->load_gcode(wxString::FromUTF8(this->init_params->input_files[0].c_str()));
     }
     else {
 #endif // ENABLE_GCODE_VIEWER_AS
@@ -563,22 +621,22 @@ void GUI_App::AfterInitLoads::on_loads(GUI_App* gui)
         // We need to decide what to do about loading of separate presets (just print preset, just filament preset etc).
         // As of now only the full configs are supported here.
         if (!m_print_config.empty())
-            gui->mainframe->load_config(m_print_config);
+            this->gui->mainframe->load_config(m_print_config);
 #endif
-        if (!m_load_configs.empty())
+        if (! this->init_params->load_configs.empty())
             // Load the last config to give it a name at the UI. The name of the preset may be later
             // changed by loading an AMF or 3MF.
             //FIXME this is not strictly correct, as one may pass a print/filament/printer profile here instead of a full config.
-            gui->mainframe->load_config_file(m_load_configs.back());
+            this->mainframe->load_config_file(this->init_params->load_configs.back());
         // If loading a 3MF file, the config is loaded from the last one.
-        if (!m_input_files.empty())
-            gui->plater()->load_files(m_input_files, true, true);
-        if (!m_extra_config.empty())
-            gui->mainframe->load_config(m_extra_config);
+        if (! this->init_params->input_files.empty())
+            this->plater()->load_files(this->init_params->input_files, true, true);
+        if (! this->init_params->extra_config.empty())
+            this->mainframe->load_config(this->init_params->extra_config);
 #if ENABLE_GCODE_VIEWER
     }
 #endif // ENABLE_GCODE_VIEWER
-  }
+}
 
 IMPLEMENT_APP(GUI_App)
 
@@ -640,8 +698,18 @@ void GUI_App::init_app_config()
 	// Windows : "C:\Users\username\AppData\Roaming\Slic3r" or "C:\Documents and Settings\username\Application Data\Slic3r"
 	// Mac : "~/Library/Application Support/Slic3r"
 
-	if (data_dir().empty())
-		set_data_dir(wxStandardPaths::Get().GetUserDataDir().ToUTF8().data());
+    if (data_dir().empty()) {
+        #ifndef __linux__
+            set_data_dir(wxStandardPaths::Get().GetUserDataDir().ToUTF8().data());
+        #else
+            // Since version 2.3, config dir on Linux is in ${XDG_CONFIG_HOME}.
+            // https://github.com/prusa3d/PrusaSlicer/issues/2911
+            wxString dir;
+            if (! wxGetEnv(wxS("XDG_CONFIG_HOME"), &dir) || dir.empty() )
+                dir = wxFileName::GetHomeDir() + wxS("/.config");
+            set_data_dir((dir + "/" + GetAppName()).ToUTF8().data());
+        #endif
+    }
 
 	if (!app_config)
 #if ENABLE_GCODE_VIEWER
@@ -654,7 +722,6 @@ void GUI_App::init_app_config()
 	m_app_conf_exists = app_config->exists();
 	if (m_app_conf_exists) {
         std::string error = app_config->load();
-#if ENABLE_GCODE_VIEWER
         if (!error.empty()) {
             // Error while parsing config file. We'll customize the error message and rethrow to be displayed.
             if (is_editor()) {
@@ -670,14 +737,6 @@ void GUI_App::init_app_config()
                     "\n\n" + app_config->config_path() + "\n\n" + error);
             }
         }
-#else
-        if (!error.empty())
-            // Error while parsing config file. We'll customize the error message and rethrow to be displayed.
-            throw Slic3r::RuntimeError(
-                _u8L("Error parsing PrusaSlicer config file, it is probably corrupted. "
-                    "Try to manually delete the file to recover from the error. Your user profiles will not be affected.") +
-                "\n\n" + AppConfig::config_path() + "\n\n" + error);
-#endif // ENABLE_GCODE_VIEWER
     }
 }
 
@@ -703,6 +762,13 @@ bool GUI_App::on_init_inner()
     const wxString resources_dir = from_u8(Slic3r::resources_dir());
     wxCHECK_MSG(wxDirExists(resources_dir), false,
         wxString::Format("Resources path does not exist or is not a directory: %s", resources_dir));
+
+#ifdef __linux__
+    if (! check_old_linux_datadir(GetAppName())) {
+        std::cerr << "Quitting, user chose to move his data to new location." << std::endl;
+        return false;
+    }
+#endif
 
     // Enable this to get the default Win32 COMCTRL32 behavior of static boxes.
 //    wxSystemOptions::SetOption("msw.staticbox.optimized-paint", 0);
@@ -863,7 +929,7 @@ bool GUI_App::on_init_inner()
 #ifdef WIN32
             this->mainframe->register_win32_callbacks();
 #endif
-            this->after_init_loads.on_loads(this);
+            this->post_init();
         }
 
 		// Preset updating & Configwizard are done after the above initializations,
@@ -1259,9 +1325,9 @@ void fatal_error(wxWindow* parent)
 
 // Called after the Preferences dialog is closed and the program settings are saved.
 // Update the UI based on the current preferences.
-void GUI_App::update_ui_from_settings()
+void GUI_App::update_ui_from_settings(bool apply_free_camera_correction)
 {
-    mainframe->update_ui_from_settings();
+    mainframe->update_ui_from_settings(apply_free_camera_correction);
 }
 
 void GUI_App::persist_window_geometry(wxTopLevelWindow *window, bool default_maximized)
