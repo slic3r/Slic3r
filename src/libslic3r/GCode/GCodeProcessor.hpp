@@ -188,6 +188,7 @@ namespace Slic3r {
             float max_acceleration; // mm/s^2
             float extrude_factor_override_percentage;
             float time; // s
+            float time_acceleration;
             std::string line_m73_mask;
             State curr;
             State prev;

@@ -426,13 +426,13 @@ class TabPrinter : public Tab
 	ogStaticText* m_machine_limits_description_line {nullptr};
 	void 		update_machine_limits_description(const MachineLimitsUsage usage);
 
-	ogStaticText*	m_fff_print_host_upload_description_line {nullptr};
-	ogStaticText*	m_sla_print_host_upload_description_line {nullptr};
 
     std::vector<PageShp>			m_pages_fff;
     std::vector<PageShp>			m_pages_sla;
 
 public:
+	ogStaticText* m_fff_print_host_upload_description_line{ nullptr };
+	ogStaticText* m_sla_print_host_upload_description_line{ nullptr };
 //    void build_printhost(ConfigOptionsGroup *optgroup);
 
     bool		m_has_single_extruder_MM_page = false;
@@ -468,7 +468,6 @@ public:
 	~TabPrinter() {}
 
 	void		build() override;
-	void		build_print_host_upload_group(Page* page);
     void		build_fff();
     void		build_sla();
 	void		activate_selected_page(std::function<void()> throw_if_canceled) override;

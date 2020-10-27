@@ -663,7 +663,6 @@ const std::vector<std::string>& Preset::printer_options()
             "wipe_advanced_multiplier",
             "wipe_advanced_algo",
             "fan_speedup_time",
-            "print_machine_envelope",
             "time_estimation_compensation",
         };
         s_opts.insert(s_opts.end(), Preset::machine_limits_options().begin(), Preset::machine_limits_options().end());

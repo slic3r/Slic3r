@@ -2082,16 +2082,23 @@ void PrintConfigDef::init_fff_params()
     def->label = L("How to apply");
     def->full_label = L("Purpose of Machine Limits");
     def->category = OptionCategory::limits;
-    def->tooltip = L("How to apply the Machine Limits");
+    def->tooltip = L("How to apply the Machine Limits."
+                    "\n* In every case, they will be used as safeguard: Even if you use a print profile that set an acceleration of 5000,"
+                    " if your machine limits the acceleration is 4000, the outputted gcode will use the 4000 limit."
+                    "\n* You can also use it as safeguard and to have a better printing time estimate."
+                    "\n* You can also use it as safeguard, to have a better printing time estimate and emit the limits as the begining of the gcode file, with M201 M202 M203 M204 and M205 commands."
+                    " If you want only to write a sub-set, choose the 'for time estimate' option and write yourself gcodes in the custom gcode section.");
     def->enum_keys_map = &ConfigOptionEnum<MachineLimitsUsage>::get_enum_values();
     def->enum_values.push_back("emit_to_gcode");
     def->enum_values.push_back("time_estimate_only");
+    def->enum_values.push_back("limits");
     def->enum_values.push_back("ignore");
-    def->enum_labels.push_back("Emit to G-code");
-    def->enum_labels.push_back("Use for time estimate");
-    def->enum_labels.push_back("Ignore");
+    def->enum_labels.push_back("Also emit limits to G-code");
+    def->enum_labels.push_back("Use also for time estimate");
+    def->enum_labels.push_back("Use only as safeguards");
+    def->enum_labels.push_back("Disable");
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionEnum<MachineLimitsUsage>(MachineLimitsUsage::EmitToGCode));
+    def->set_default_value(new ConfigOptionEnum<MachineLimitsUsage>(MachineLimitsUsage::TimeEstimateOnly));
 
     {
         struct AxisDefault {
@@ -2418,16 +2425,6 @@ void PrintConfigDef::init_fff_params()
         "the hostname, IP address or URL of the printer host instance.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionString(""));
-
-    def = this->add("print_machine_envelope", coBool);
-    def->label = L("Enable Limits");
-    def->category = OptionCategory::limits;
-    def->tooltip = L("Slic3r can add M201 M203 M202 M204 and M205 gcodes to pass the machine limits defined here to the firmware."
-            " Gcodes printed will depends of the firmware selected (please Report an issue if you found something wrong)."
-            "\nIf you want only a selection, you can write your gcode with these value, example: "
-            "\nM204 P[machine_max_acceleration_extruding] T[machine_max_acceleration_retracting]");
-    def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("only_retract_when_crossing_perimeters", coBool);
     def->label = L("Only retract when crossing perimeters");
@@ -4836,7 +4833,14 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
             value = "50%";
         else
             value = "0";
+    } else if (opt_key == "print_machine_envelope") {
+        opt_key = "machine_limits_usage";
+        if (value == "1")
+            value = "emit_to_gcode";
+        else
+            value = "time_estimate_only";
     }
+
     // Ignore the following obsolete configuration keys:
     static std::set<std::string> ignore = {
         "duplicate_x", "duplicate_y", "gcode_arcs", "multiply_x", "multiply_y",

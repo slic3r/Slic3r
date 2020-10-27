@@ -1778,8 +1778,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
         }
         else if (boost::starts_with(full_line, "parent_preset_description")) {
             build_preset_description_line(current_group.get());
-        }
-        else if (boost::starts_with(full_line, "cooling_description")) {
+        } else if (boost::starts_with(full_line, "cooling_description")) {
             TabFilament* tab = nullptr;
             if ((tab = dynamic_cast<TabFilament*>(this)) == nullptr) continue;
             current_line = Line{ "", "" };
@@ -1789,8 +1788,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             };
             current_group->append_line(current_line);
             current_page->descriptions.push_back("cooling");
-        }
-        else if (boost::starts_with(full_line, "volumetric_speed_description")) {
+        } else if (boost::starts_with(full_line, "volumetric_speed_description")) {
             TabFilament* tab = nullptr;
             if ((tab = dynamic_cast<TabFilament*>(this)) == nullptr) continue;
             current_line = Line{ "", "" };
@@ -1800,8 +1798,26 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             };
             current_group->append_line(current_line);
             current_page->descriptions.push_back("volumetric_speed");
-        }
-        else if (boost::starts_with(full_line, "filament_ramming_parameters")) {
+        } else if (boost::starts_with(full_line, "print_host_upload_description")) {
+            TabPrinter* tab = nullptr;
+            if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
+            wxString description_line_text = _L(""
+                "Note: All parameters from this group are moved to the Physical Printer settings (see changelog).\n\n"
+                "A new Physical Printer profile is created by clicking on the \"cog\" icon right of the Printer profiles combo box, "
+                "by selecting the \"add or remove printers\" item in the Printer combo box. The Physical Printer profile editor opens "
+                "also when clicking on the \"cog\" icon in the Printer settings tab. The Physical Printer profiles are being stored "
+                "into SuperSlicer/physical_printer directory.");
+
+            current_line = { "", "" };
+            current_line.full_width = 1;
+            current_line.widget = [tab, description_line_text](wxWindow* parent) {
+                return tab->description_line_widget(parent, tab->m_presets->get_selected_preset().printer_technology() == ptFFF ?
+                    &tab->m_fff_print_host_upload_description_line : &tab->m_sla_print_host_upload_description_line,
+                    description_line_text);
+            };
+            current_group->append_line(current_line);
+            current_page->descriptions.push_back("print_host_upload");
+        } else if (boost::starts_with(full_line, "filament_ramming_parameters")) {
             Line thisline = current_group->create_single_option_line("filament_ramming_parameters");// { _(L("Ramming")), "" };
             thisline.widget = [this](wxWindow* parent) {
                 auto ramming_dialog_btn = new wxButton(parent, wxID_ANY, _(L("Ramming settings")) + dots, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
@@ -1829,11 +1845,6 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
             tab->build_unregular_pages();
         }
-        //else if (full_line == "printhost") {
-        //    TabPrinter* tab = nullptr;
-        //    if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
-        //    tab->build_printhost(current_group.get());
-        //}
         else if (full_line == "bed_shape"){
             TabPrinter* tab = nullptr;
             if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
@@ -2179,7 +2190,7 @@ void TabFilament::toggle_options()
     if (!m_active_page)
         return;
 
-    if (m_active_page->title() == "Cooling")
+    if ( std::find(m_active_page->descriptions.begin(), m_active_page->descriptions.end(), "cooling") != m_active_page->descriptions.end())
     {
         bool fan_always_on = m_config->opt_bool("fan_always_on", 0);
 
@@ -2256,27 +2267,6 @@ void TabPrinter::build()
     m_printer_technology = m_presets->get_selected_preset().printer_technology();
 
     m_presets->get_selected_preset().printer_technology() == ptSLA ? build_sla() : build_fff();
-}
-
-void TabPrinter::build_print_host_upload_group(Page* page)
-{
-    ConfigOptionsGroupShp optgroup = page->new_optgroup(L("Print Host upload"));
-
-    wxString description_line_text = _L(""
-        "Note: All parameters from this group are moved to the Physical Printer settings (see changelog).\n\n"
-        "A new Physical Printer profile is created by clicking on the \"cog\" icon right of the Printer profiles combo box, "
-        "by selecting the \"add or remove printers\" item in the Printer combo box. The Physical Printer profile editor opens "
-        "also when clicking on the \"cog\" icon in the Printer settings tab. The Physical Printer profiles are being stored "
-        "into PrusaSlicer/physical_printer directory.");
-
-    Line line = { "", "" };
-        line.full_width = 1;
-    line.widget = [this, description_line_text](wxWindow* parent) {
-        return description_line_widget(parent, m_presets->get_selected_preset().printer_technology() == ptFFF ?
-                                       &m_fff_print_host_upload_description_line : &m_sla_print_host_upload_description_line,
-                                       description_line_text);
-        };
-        optgroup->append_line(line);
 }
 
 void TabPrinter::build_fff()
@@ -2360,15 +2350,19 @@ void TabPrinter::milling_count_changed(size_t milling_count)
 void TabPrinter::append_option_line_kinematics(ConfigOptionsGroupShp optgroup, const std::string opt_key, const std::string override_sidetext)
 {
     Option option = optgroup->get_option(opt_key, 0);
-    if (!override_sidetext.empty())
+    if (!override_sidetext.empty()) {
         option.opt.sidetext = override_sidetext;
+        option.opt.sidetext_width = override_sidetext.length() + 1;
+    }
     Line line = Line{ _(option.opt.full_label), "" };
     option.opt.width = 10;
     line.append_option(option);
     if (m_use_silent_mode) {
         option = optgroup->get_option(opt_key, 1);
-        if (!override_sidetext.empty())
+        if (!override_sidetext.empty()) {
             option.opt.sidetext = override_sidetext;
+            option.opt.sidetext_width = override_sidetext.length() + 1;
+        }
         option.opt.width = 10;
         line.append_option(option);
     }
@@ -2384,18 +2378,6 @@ PageShp TabPrinter::build_kinematics_page()
         optgroup->append_single_option_line("time_estimation_compensation");
     }
     optgroup = page->new_optgroup(_(L("Machine Limits")));
-    Line current_line = Line{ "", "" };
-    current_line.full_width = 1;
-    current_line.widget = [this](wxWindow* parent) {
-        ogStaticText* text;
-        auto result = description_line_widget(parent, &text);
-        text->SetText(_(L("Description: The information below is used to calculate estimated printing time and as safegard when generating gcode"
-            " (even if the acceleration is set to 3000 in the print profile, if this is at 1500, it won't export a gcode that will tell to go over 1500)."
-            " You can also export these limits to the start gcode via the checkbox above (the output depends on the selected firmare).")));
-        return result;
-    };
-    optgroup->append_line(current_line);
-    optgroup->append_single_option_line("print_machine_envelope");
     optgroup->append_single_option_line("machine_limits_usage");
     Line line { "", "" };
     line.full_width = 1;
@@ -2403,6 +2385,7 @@ PageShp TabPrinter::build_kinematics_page()
         return description_line_widget(parent, &m_machine_limits_description_line);
     };
     optgroup->append_line(line);
+    page->descriptions.push_back("machine_limits");
 
     if (m_use_silent_mode) {
         // Legend for OptionsGroups
@@ -2431,12 +2414,13 @@ PageShp TabPrinter::build_kinematics_page()
     }
 
     std::vector<std::string> axes{ "x", "y", "z", "e" };
+    GCodeFlavor flavor = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value;
     optgroup = page->new_optgroup(L("Maximum feedrates"));
     for (const std::string& axis : axes) {
-        if (m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfRepRap)
-            append_option_line_kinematics(optgroup, "machine_max_feedrate_" + axis, "mm/min");
-        else
+        if(std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfSmoothie}.count(flavor) > 0)
             append_option_line_kinematics(optgroup, "machine_max_feedrate_" + axis);
+        else
+            append_option_line_kinematics(optgroup, "machine_max_feedrate_" + axis, "mm/min");
     }
 
     optgroup = page->new_optgroup(L("Maximum accelerations"));
@@ -2453,13 +2437,13 @@ PageShp TabPrinter::build_kinematics_page()
     }
 
     optgroup = page->new_optgroup(L("Minimum feedrates"));
-        if (m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfRepRap){
-            append_option_line_kinematics(optgroup, "machine_min_extruding_rate", "mm/min");
-            append_option_line_kinematics(optgroup, "machine_min_travel_rate", "mm/min");
-        } else {
+        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfSmoothie}.count(flavor) > 0) {
             append_option_line_kinematics(optgroup, "machine_min_extruding_rate");
             append_option_line_kinematics(optgroup, "machine_min_travel_rate");
-        }
+        } else {
+            append_option_line_kinematics(optgroup, "machine_min_extruding_rate", "mm/min");
+            append_option_line_kinematics(optgroup, "machine_min_travel_rate", "mm/min");
+        } 
     return page;
 }
 
@@ -2504,6 +2488,7 @@ void TabPrinter::build_unregular_pages()
             break;
         }
     }
+    GCodeFlavor flavor = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value;
     if (existed_page < n_before_extruders) {
         auto page = build_kinematics_page();
         changed = true;
@@ -2667,7 +2652,6 @@ void TabPrinter::clear_pages()
 
 void TabPrinter::toggle_options()
 {
-    //TODO: check if somethgin has not been wrongly erased.
     if (!m_active_page || m_presets->get_edited_preset().printer_technology() == ptSLA)
         return;
 
@@ -2687,7 +2671,7 @@ void TabPrinter::toggle_options()
     bool is_marlin_flavor = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfMarlin;
     // Disable silent mode for non-marlin firmwares.
     field = get_field("silent_mode");
-    if (field) field->toggle(is_marlin_flavor );
+    if (field) field->toggle(is_marlin_flavor);
 
     if (m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfKlipper)
         GCodeWriter::PausePrintCode = "PAUSE";
@@ -2699,9 +2683,9 @@ void TabPrinter::toggle_options()
         m_rebuild_kinematics_page = true;
     }
 
-    if (m_use_silent_mode != m_config->opt_bool("silent_mode")) {
+    if (m_use_silent_mode != (m_last_gcode_flavor == gcfMarlin) && m_config->opt_bool("silent_mode")) {
         m_rebuild_kinematics_page = true;
-        m_use_silent_mode = m_config->opt_bool("silent_mode");
+        m_use_silent_mode = (m_last_gcode_flavor == gcfMarlin) && m_config->opt_bool("silent_mode");
     }
 
     wxString extruder_number;
@@ -2709,7 +2693,7 @@ void TabPrinter::toggle_options()
     if (m_active_page->title().StartsWith("Extruder ", &extruder_number) && extruder_number.ToLong(&val) &&
         val > 0 && (size_t)val <= m_extruders_count)
     {
-        size_t i = size_t(val - 1);
+        size_t i = size_t(val) - 1;
         bool have_retract_length = m_config->opt_float("retract_length", i) > 0;
 
         // when using firmware retraction, firmware decides retraction length
@@ -2792,11 +2776,11 @@ void TabPrinter::toggle_options()
         }
     }
 
-    if (m_active_page->title() == "Machine limits") {
+    if (std::find(m_active_page->descriptions.begin(), m_active_page->descriptions.end(), "machine_limits") != m_active_page->descriptions.end()) {
         //assert(m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfMarlin);
 		const auto *machine_limits_usage = m_config->option<ConfigOptionEnum<MachineLimitsUsage>>("machine_limits_usage");
 		bool enabled = machine_limits_usage->value != MachineLimitsUsage::Ignore;
-        bool silent_mode = m_config->opt_bool("silent_mode");
+        bool silent_mode = (m_last_gcode_flavor == gcfMarlin) && m_config->opt_bool("silent_mode");
         int  max_field = silent_mode ? 2 : 1;
     	for (const std::string &opt : Preset::machine_limits_options())
             for (int i = 0; i < max_field; ++i) {
@@ -2804,6 +2788,8 @@ void TabPrinter::toggle_options()
                 if (field)
                     field->toggle(enabled);
             }
+        field = get_field("time_estimation_compensation");
+        if (field) field->toggle(machine_limits_usage->value <= MachineLimitsUsage::TimeEstimateOnly);
         update_machine_limits_description(machine_limits_usage->value);
     }
 
@@ -2848,11 +2834,6 @@ void TabPrinter::update()
 
 void TabPrinter::update_fff()
 {
-    if (m_use_silent_mode != m_config->opt_bool("silent_mode"))	{
-        m_rebuild_kinematics_page = true;
-        m_use_silent_mode = m_config->opt_bool("silent_mode");
-    }
-
     toggle_options();
 }
 
@@ -3732,21 +3713,80 @@ void TabPrinter::apply_extruder_cnt_from_cache()
 
 void TabPrinter::update_machine_limits_description(const MachineLimitsUsage usage)
 {
+    GCodeFlavor flavor = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value;
 	wxString text;
 	switch (usage) {
 	case MachineLimitsUsage::EmitToGCode:
-		text = _L("Machine limits will be emitted to G-code and used to estimate print time.");
+        text = _L("Machine limits will be emitted to G-code and used to estimate print time."
+            " They are also used as safegard when generating gcode");
+        text += " "+ _L("(even if the acceleration is set to 3000 in the print profile, if this is at 1500, it won't export a gcode that will tell to go over 1500).");
+        if (flavor != gcfMarlin)
+            text += "\n" + _L("Grey values means that they can't be send to your firmware (no g-code available).");
 		break;
 	case MachineLimitsUsage::TimeEstimateOnly:
-		text = _L("Machine limits will NOT be emitted to G-code, however they will be used to estimate print time, "
-			      "which may therefore not be accurate as the printer may apply a different set of machine limits.");
-		break;
-	case MachineLimitsUsage::Ignore:
-		text = _L("Machine limits are not set, therefore the print time estimate may not be accurate.");
-		break;
+		text = _L("Machine limits will NOT be emitted to G-code, however they will be used to estimate print time"
+			    ", which may therefore not be accurate as the printer may apply a different set of machine limits."
+                " They are also used as safegard when generating gcode");
+        text += " " + _L("(even if the acceleration is set to 3000 in the print profile, if this is at 1500, it won't export a gcode that will tell to go over 1500).");
+        break;
+    case MachineLimitsUsage::Limits:
+        text = _L("Machine limits are used as safegard when generating gcode");
+        text += " " + _L("(even if the acceleration is set to 3000 in the print profile, if this is at 1500, it won't export a gcode that will tell to go over 1500).");
+        break;
+    case MachineLimitsUsage::Ignore:
+        text = _L("Machine limits are disabled. They are not used for anything.");
+        break;
 	default: assert(false);
 	}
     m_machine_limits_description_line->SetText(text);
+
+    //update fields used
+    //no need to worry for "silent" version, as it's only for marlin.
+    if (usage == MachineLimitsUsage::EmitToGCode) {
+        wxColour greay_color(128, 128, 128);
+        Field* field;
+        std::vector<std::string> axes{ "x", "y", "z", "e" };
+        if (std::set<uint8_t>{gcfKlipper, gcfMach3, gcfMachinekit, gcfMakerWare, gcfSailfish, gcfTeacup}.count(flavor) > 0)
+            for (const std::string& axis : axes) {
+                field = m_active_page->get_field("machine_max_feedrate_" + axis, 0);
+                if (field) dynamic_cast<wxTextCtrl*>(field->getWindow())->SetForegroundColour(greay_color);
+            }
+        if (std::set<uint8_t>{gcfKlipper, gcfSmoothie, gcfMach3, gcfMachinekit, gcfMakerWare, gcfSailfish, gcfTeacup}.count(flavor) > 0)
+            for (const std::string& axis : axes) {
+                field = m_active_page->get_field("machine_max_acceleration_" + axis, 0);
+                if (field) dynamic_cast<wxTextCtrl*>(field->getWindow())->SetForegroundColour(greay_color);
+            }
+        if (std::set<uint8_t>{gcfSmoothie, gcfMach3, gcfMachinekit, gcfMakerWare, gcfSailfish, gcfTeacup}.count(flavor) > 0)
+        {
+            field = m_active_page->get_field("machine_max_acceleration_extruding", 0);
+            if (field) dynamic_cast<wxTextCtrl*>(field->getWindow())->SetForegroundColour(greay_color);
+        }
+        if (flavor != gcfMarlin)
+        {
+            field = m_active_page->get_field("machine_max_acceleration_retracting", 0);
+            if (field) dynamic_cast<wxTextCtrl*>(field->getWindow())->SetForegroundColour(greay_color);
+        }
+        if (std::set<uint8_t>{gcfSmoothie, gcfMach3, gcfMachinekit, gcfMakerWare, gcfSailfish, gcfTeacup}.count(flavor) > 0)
+        {
+            field = m_active_page->get_field("machine_max_acceleration_travel", 0);
+            if (field) dynamic_cast<wxTextCtrl*>(field->getWindow())->SetForegroundColour(greay_color);
+        }
+        if (std::set<uint8_t>{gcfKlipper, gcfMach3, gcfMachinekit, gcfMakerWare, gcfSailfish, gcfTeacup}.count(flavor) > 0)
+            for (const std::string& axis : axes) {
+                field = m_active_page->get_field("machine_max_jerk_" + axis, 0);
+                if (field) dynamic_cast<wxTextCtrl*>(field->getWindow())->SetForegroundColour(greay_color);
+            }
+        if (flavor != gcfMarlin && flavor != gcfRepRap)
+        {
+            field = m_active_page->get_field("machine_min_extruding_rate", 0);
+            if (field) dynamic_cast<wxTextCtrl*>(field->getWindow())->SetForegroundColour(greay_color);
+        }
+        if (flavor != gcfMarlin)
+        {
+            field = m_active_page->get_field("machine_min_travel_rate", 0);
+            if (field) dynamic_cast<wxTextCtrl*>(field->getWindow())->SetForegroundColour(greay_color);
+        }
+    }
 }
 
 void Tab::compatible_widget_reload(PresetDependencies &deps)

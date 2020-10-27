@@ -10,7 +10,7 @@ group:extruders_count_event:milling_count_event:Capabilities
 	setting:single_extruder_multi_material
 	milling_count
 group:Print Host upload
-	printhost
+	print_host_upload_description
 group:silent_mode_event:Firmware
 	setting:gcode_flavor
 	setting:silent_mode

@@ -49,23 +49,24 @@ enum WipeAlgo {
 
 enum GCodeFlavor : uint8_t {
     gcfRepRap,
+    gcfSprinter,
     gcfRepetier,
     gcfTeacup,
     gcfMakerWare,
-    gcfMarlin, 
+    gcfMarlin,
+    gcfLerdge,
     gcfKlipper,
     gcfSailfish,
     gcfMach3,
     gcfMachinekit,
     gcfSmoothie,
-    gcfSprinter,
     gcfNoExtrusion,
- gcfLerdge,
 };
 
-enum class MachineLimitsUsage {
+enum class MachineLimitsUsage : uint8_t {
     EmitToGCode,
     TimeEstimateOnly,
+    Limits,
     Ignore,
     Count,
 };
@@ -192,6 +193,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<MachineLimitsUsag
     if (keys_map.empty()) {
         keys_map["emit_to_gcode"]       = int(MachineLimitsUsage::EmitToGCode);
         keys_map["time_estimate_only"]  = int(MachineLimitsUsage::TimeEstimateOnly);
+        keys_map["limits"]            	= int(MachineLimitsUsage::Limits);
         keys_map["ignore"]            	= int(MachineLimitsUsage::Ignore);
     }
     return keys_map;
@@ -1214,7 +1216,6 @@ public:
     ConfigOptionString              output_filename_format;
     ConfigOptionFloat               perimeter_acceleration;
     ConfigOptionStrings             post_process;
-    ConfigOptionBool                print_machine_envelope;
     ConfigOptionString              printer_model;
     ConfigOptionString              printer_notes;
     ConfigOptionFloat               resolution;
@@ -1309,7 +1310,6 @@ protected:
         OPT_PTR(output_filename_format);
         OPT_PTR(perimeter_acceleration);
         OPT_PTR(post_process);
-        OPT_PTR(print_machine_envelope);
         OPT_PTR(printer_model);
         OPT_PTR(printer_notes);
         OPT_PTR(resolution);

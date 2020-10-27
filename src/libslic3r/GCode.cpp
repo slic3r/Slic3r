@@ -860,7 +860,7 @@ namespace DoExport {
 	    // shall be adjusted as well to produce a G-code block compatible with the particular firmware flavor.
         // supermerill: done
 	    if (true) {
-            if (config.machine_limits_usage.value != MachineLimitsUsage::Ignore) {
+            if (config.machine_limits_usage.value < MachineLimitsUsage::Limits) {
 	        normal_time_estimator.set_max_acceleration((float)config.machine_max_acceleration_extruding.values[0]);
 	        normal_time_estimator.set_retract_acceleration((float)config.machine_max_acceleration_retracting.values[0]);
             normal_time_estimator.set_max_travel_acceleration((float)config.machine_max_acceleration_travel.values[0]);
@@ -886,7 +886,7 @@ namespace DoExport {
 	            silent_time_estimator.set_dialect(config.gcode_flavor);
 	            silent_time_estimator.set_extrusion_axis(config.get_extrusion_axis()[0]);
 
-                if (config.machine_limits_usage.value != MachineLimitsUsage::Ignore) {
+                if (config.machine_limits_usage.value < MachineLimitsUsage::Limits) {
 	            /* "Stealth mode" values can be just a copy of "normal mode" values
 	            * (when they aren't input for a printer preset).
 	            * Thus, use back value from values, instead of second one, which could be absent
@@ -1793,13 +1793,13 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
 #endif // ENABLE_GCODE_VIEWER
 
     print.throw_if_canceled();
-
+    
     // calculates estimated printing time
 #if !ENABLE_GCODE_VIEWER
     m_normal_time_estimator.calculate_time(false);
     if (m_silent_time_estimator_enabled)
         m_silent_time_estimator.calculate_time(false);
-    if (config().time_estimation_compensation.get_abs_value(1) != 1) {
+    if (config().time_estimation_compensation.get_abs_value(1) != 1 && config().machine_limits_usage.value <= MachineLimitsUsage::TimeEstimateOnly) {
         m_normal_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
         if (m_silent_time_estimator_enabled)
             m_silent_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
@@ -1810,7 +1810,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
         m_normal_time_estimator.calculate_time(true);
         if (m_silent_time_estimator_enabled)
             m_silent_time_estimator.calculate_time(true);
-        if (config().time_estimation_compensation.get_abs_value(1) != 1) {
+        if (config().time_estimation_compensation.get_abs_value(1) != 1 && config().machine_limits_usage.value <= MachineLimitsUsage::TimeEstimateOnly) {
             m_normal_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
             if (m_silent_time_estimator_enabled)
                 m_silent_time_estimator.scale_time(config().time_estimation_compensation.get_abs_value(1));
@@ -1948,12 +1948,22 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
             fprintf(file, "M202 X%d Y%d ; sets maximum travel acceleration\n",
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
-        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap, gcfSmoothie, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/sec\n",
+        if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfSmoothie, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
+            fprintf(file, (print.config().gcode_flavor == gcfMarlin || print.config().gcode_flavor == gcfSmoothie) 
+                ? "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/sec\n"
+                : "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/min\n",
                 int(print.config().machine_max_feedrate_x.values.front() + 0.5),
                 int(print.config().machine_max_feedrate_y.values.front() + 0.5),
                 int(print.config().machine_max_feedrate_z.values.front() + 0.5),
                 int(print.config().machine_max_feedrate_e.values.front() + 0.5));
+        if (print.config().gcode_flavor == gcfRepRap) {
+            fprintf(file, "M203 X%d Y%d Z%d E%d I%d; sets maximum feedrates, mm/min\n",
+                int(print.config().machine_max_feedrate_x.values.front() + 0.5),
+                int(print.config().machine_max_feedrate_y.values.front() + 0.5),
+                int(print.config().machine_max_feedrate_z.values.front() + 0.5),
+                int(print.config().machine_max_feedrate_e.values.front() + 0.5),
+                int(print.config().machine_min_extruding_rate.values.front() + 0.5));
+        }
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge}.count(print.config().gcode_flavor.value) > 0)
             fprintf(file, "M204 P%d R%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
                 int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
@@ -3217,7 +3227,6 @@ void GCode::split_at_seam_pos(ExtrusionLoop& loop, std::unique_ptr<EdgeGrid::Gri
         const EdgeGrid::Grid* edge_grid_ptr = (lower_layer_edge_grid && *lower_layer_edge_grid)
             ? lower_layer_edge_grid->get()
             : nullptr;
-        //TODO modify m_seam_placer to takers into account extra options.
         Point seam = m_seam_placer.get_seam(m_layer, seam_position, loop,
             last_pos, EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0),
             (m_layer == NULL ? nullptr : m_layer->object()),
@@ -3905,7 +3914,8 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             acceleration = m_config.infill_acceleration.value;
         } else {
             acceleration = m_config.default_acceleration.value;
-        }//TODO: add travel accel?
+        }
+        //travel acceleration should be already set at startup via special gcode, and so it's automatically used by G0.
         m_writer.set_acceleration((unsigned int)floor(acceleration + 0.5));
     }
 
@@ -3944,7 +3954,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
         if (factor < 1 && !(path.role() == erOverhangPerimeter || path.role() == erBridgeInfill)) {
             float small_speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
             //apply factor between feature speed and small speed
-            speed = speed * factor + (1 - factor) * small_speed;
+            speed = speed * factor + (1.f - factor) * small_speed;
     }
     }
     if (m_volumetric_speed != 0. && speed == 0)

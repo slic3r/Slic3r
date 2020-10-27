@@ -166,6 +166,7 @@ void GCodeProcessor::TimeMachine::reset()
     max_acceleration = 0.0f;
     extrude_factor_override_percentage = 1.0f;
     time = 0.0f;
+    time_acceleration = 1.0f;
     curr.reset();
     prev.reset();
     gcode_time.reset();
@@ -277,7 +278,7 @@ void GCodeProcessor::TimeMachine::calculate_time(size_t keep_last_n_blocks)
     size_t n_blocks_process = blocks.size() - keep_last_n_blocks;
     for (size_t i = 0; i < n_blocks_process; ++i) {
         const TimeBlock& block = blocks[i];
-        float block_time = block.time();
+        float block_time = block.time() * time_acceleration;
         time += block_time;
         gcode_time.cache += block_time;
         moves_time[static_cast<size_t>(block.move_type)] += block_time;
@@ -364,7 +365,7 @@ void GCodeProcessor::TimeProcessor::post_process(const std::string& filename)
                 if (machine.enabled) {
                     ret += format_line_M73(machine.line_m73_mask.c_str(),
                         (line == First_Line_M73_Placeholder_Tag) ? 0 : 100,
-                        (line == First_Line_M73_Placeholder_Tag) ? time_in_minutes(machines[i].time) : 0);
+                        (line == First_Line_M73_Placeholder_Tag) ? time_in_minutes(machine.time) : 0);
                 }
             }
         }
@@ -508,7 +509,7 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
         m_filament_diameters[i] = static_cast<float>(config.filament_diameter.values[i]);
     }
 
-    if (config.machine_limits_usage.value != MachineLimitsUsage::Ignore)
+    if (config.machine_limits_usage.value < MachineLimitsUsage::Limits)
         m_time_processor.machine_limits = reinterpret_cast<const MachineEnvelopeConfig&>(config);
 
     // Filament load / unload times are not specific to a firmware flavor. Let anybody use it if they find it useful.
@@ -530,6 +531,13 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
     }
 
     m_time_processor.export_remaining_time_enabled = config.remaining_times.value;
+
+    if (config.option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value != gcfMarlin) {
+        double time_estimation_compensation = config.get_abs_value("time_estimation_compensation");
+        for (auto& machine : this->m_time_processor.machines) {
+            machine.time_acceleration = time_estimation_compensation;
+        }
+    }
 }
 
 void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
@@ -664,9 +672,11 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
     if (machine_max_acceleration_retracting != nullptr)
         m_time_processor.machine_limits.machine_max_acceleration_retracting.values = machine_max_acceleration_retracting->values;
 
-    const ConfigOptionFloats* machine_min_extruding_rate = config.option<ConfigOptionFloats>("machine_min_extruding_rate");
-    if (machine_min_extruding_rate != nullptr)
-        m_time_processor.machine_limits.machine_min_extruding_rate.values = machine_min_extruding_rate->values;
+    if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap}.count(m_flavor) > 0) {
+        const ConfigOptionFloats* machine_min_extruding_rate = config.option<ConfigOptionFloats>("machine_min_extruding_rate");
+        if (machine_min_extruding_rate != nullptr)
+            m_time_processor.machine_limits.machine_min_extruding_rate.values = machine_min_extruding_rate->values;
+    }
 
     const ConfigOptionFloats* machine_min_travel_rate = config.option<ConfigOptionFloats>("machine_min_travel_rate");
     if (machine_min_travel_rate != nullptr)
@@ -676,6 +686,23 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
         float max_acceleration = get_option_value(m_time_processor.machine_limits.machine_max_acceleration_extruding, i);
         m_time_processor.machines[i].max_acceleration = max_acceleration;
         m_time_processor.machines[i].acceleration = (max_acceleration > 0.0f) ? max_acceleration : DEFAULT_ACCELERATION;
+    }
+
+    //adapt to firmware units
+    if (m_flavor != gcfMarlin && m_flavor != gcfSmoothie && m_flavor != gcfSmoothie) {
+        //change some fields from mm/min to mm/sec as intended
+        for (double& val : m_time_processor.machine_limits.machine_max_feedrate_x.values) val /= 60;
+        for (double& val : m_time_processor.machine_limits.machine_max_feedrate_y.values) val /= 60;
+        for (double& val : m_time_processor.machine_limits.machine_max_feedrate_z.values) val /= 60;
+        for (double& val : m_time_processor.machine_limits.machine_min_extruding_rate.values) val /= 60;
+        for (double& val : m_time_processor.machine_limits.machine_min_travel_rate.values) val /= 60;
+    }
+
+    if (m_flavor != gcfMarlin) {
+        double time_estimation_compensation = config.get_abs_value("time_estimation_compensation");
+        for (auto& machine : this->m_time_processor.machines) {
+            machine.time_acceleration = time_estimation_compensation;
+        }
     }
 }
 
