@@ -3782,7 +3782,7 @@ void PrintConfigDef::init_fff_params()
                     "\nPut 0 to disable.");
     def->cli = "z-step=f";
     def->sidetext = L("mm");
-    def->min = 0.0001;
+    def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0.005));
 
