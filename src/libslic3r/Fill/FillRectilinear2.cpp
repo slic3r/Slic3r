@@ -2909,6 +2909,8 @@ FillRectilinear2Peri::fill_surface_extrusion(const Surface *surface, const FillP
     ExPolygons path_perimeter = offset2_ex(surface->expolygon, 
         scale_(-this->spacing), scale_(this->spacing / 2), 
         ClipperLib::jtMiter, scale_(this->spacing) * 10);
+    //fix a bug that can happens when (positive) offsetting with a big miter limit and two island merge. See https://github.com/supermerill/SuperSlicer/issues/609
+    path_perimeter = intersection_ex(path_perimeter, offset_ex(surface->expolygon, scale_(-this->get_spacing() / 2)));
     for (ExPolygon &expolygon : path_perimeter) {
         expolygon.contour.make_counter_clockwise();
         polylines_1.push_back(expolygon.contour.split_at_index(0));
