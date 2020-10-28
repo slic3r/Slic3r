@@ -89,7 +89,6 @@ struct SurfaceFill {
     SurfaceFillParams    params;
 };
 
-int fillidx = 0;
 std::vector<SurfaceFill> group_fills(const Layer &layer)
 {
     std::vector<SurfaceFill> surface_fills;
@@ -434,16 +433,6 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
             //init the surface with the current polygon
             surface_fill.surface.expolygon = std::move(expoly);
             //make fill
-            if (surface_fill.params.pattern == ipRectiWithPerimeter) {
-                {
-                    std::stringstream stri;
-                    stri << layerm->layer()->id() << "_" << fillidx++ << "_fill" << ".svg";
-                    SVG svg(stri.str());
-                    svg.draw((layerm->m_slices.surfaces[0].expolygon), "green");
-                    svg.draw(to_polylines(surface_fill.surface.expolygon), "orange");
-                    svg.Close();
-                }
-            }
             f->fill_surface_extrusion(&surface_fill.surface, surface_fill.params, m_regions[surface_fill.region_id]->fills.entities);
         }
     }
