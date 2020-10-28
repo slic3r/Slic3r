@@ -1,6 +1,7 @@
 #include "CalibrationBedDialog.hpp"
 #include "I18N.hpp"
 #include "libslic3r/Utils.hpp"
+#include "AppConfig.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Tab.hpp"
@@ -31,6 +32,12 @@ void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
     plat->reset();
+    bool autocenter = gui_app->app_config->get("autocenter") == "1";
+    if(autocenter) {
+        //disable aut-ocenter for this calibration.
+        gui_app->app_config->set("autocenter", "0");
+    }
+
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
             Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
             Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
@@ -133,7 +140,10 @@ void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
     //    plat->schedule_background_process();
     plat->reslice();
     plat->select_view_3D("Preview");
-
+    if (autocenter) {
+        //re-enable auto-center after this calibration.
+        gui_app->app_config->set("autocenter", "1");
+    }
 }
 
 } // namespace GUI

@@ -1,6 +1,7 @@
 #include "CalibrationFlowDialog.hpp"
 #include "I18N.hpp"
 #include "libslic3r/Utils.hpp"
+#include "AppConfig.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Tab.hpp"
@@ -35,6 +36,13 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
     plat->reset();
+
+    bool autocenter = gui_app->app_config->get("autocenter") == "1";
+    if (autocenter) {
+        //disable auto-center for this calibration.
+        gui_app->app_config->set("autocenter", "0");
+    }
+
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
             Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow_test_cube.amf",
             Slic3r::resources_dir()+"/calibration/filament_flow/filament_flow_test_cube.amf",
@@ -150,6 +158,11 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
 
     plat->reslice();
     plat->select_view_3D("Preview");
+
+    if (autocenter) {
+        //re-enable auto-center after this calibration.
+        gui_app->app_config->set("autocenter", "1");
+    }
 }
 
 } // namespace GUI

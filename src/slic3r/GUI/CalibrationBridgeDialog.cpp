@@ -1,6 +1,7 @@
 #include "CalibrationBridgeDialog.hpp"
 #include "I18N.hpp"
 #include "libslic3r/Utils.hpp"
+#include "AppConfig.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Tab.hpp"
@@ -51,6 +52,12 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     Model& model = plat->model();
     plat->reset();
 
+    bool autocenter = gui_app->app_config->get("autocenter") == "1";
+    if (autocenter) {
+        //disable auto-center for this calibration.
+        gui_app->app_config->set("autocenter", "0");
+    }
+
     int idx_steps = steps->GetSelection();
     int idx_nb = nb_tests->GetSelection();
     size_t step = 5 + (idx_steps == wxNOT_FOUND ? 0 : idx_steps * 5);
@@ -89,15 +96,15 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     }
 
     /// --- translate ---;
+    const float brim_width = std::max(print_config->option<ConfigOptionFloat>("brim_width")->value, nozzle_diameter * 5.);
     const ConfigOptionFloat* extruder_clearance_radius = print_config->option<ConfigOptionFloat>("extruder_clearance_radius");
     const ConfigOptionPoints* bed_shape = printer_config->option<ConfigOptionPoints>("bed_shape");
-    const float brim_width = std::max(print_config->option<ConfigOptionFloat>("brim_width")->value, nozzle_diameter * 5.);
     Vec2d bed_size = BoundingBoxf(bed_shape->values).size();
     Vec2d bed_min = BoundingBoxf(bed_shape->values).min;
-    float offsety = 2 + 10 * 1 + extruder_clearance_radius->value + brim_width + (brim_width> extruder_clearance_radius->value ? brim_width - extruder_clearance_radius->value :0);
+    float offsety = 2 + 10 * 1 + extruder_clearance_radius->value + brim_width + (brim_width > extruder_clearance_radius->value ? brim_width - extruder_clearance_radius->value : 0);
     model.objects[objs_idx[0]]->translate({ bed_min.x() + bed_size.x() / 2, bed_min.y() + bed_size.y() / 2, 0 });
     for (int i = 1; i < nb_items; i++) {
-        model.objects[objs_idx[i]]->translate({ bed_min.x() + bed_size.x() / 2, bed_min.y() + bed_size.y() / 2 + (i%2==0?-1:1) * offsety * ((i+1)/2), 0 });
+        model.objects[objs_idx[i]]->translate({ bed_min.x() + bed_size.x() / 2, bed_min.y() + bed_size.y() / 2 + (i % 2 == 0 ? -1 : 1) * offsety * ((i + 1) / 2), 0 });
     }
     //TODO: if not enough space, forget about complete_objects
 
@@ -135,6 +142,11 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
 
     plat->reslice();
     plat->select_view_3D("Preview");
+
+    if (autocenter) {
+        //re-enable auto-center after this calibration.
+        gui_app->app_config->set("autocenter", "1");
+    }
 }
 
 } // namespace GUI
