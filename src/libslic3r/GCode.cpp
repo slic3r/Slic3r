@@ -347,7 +347,13 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
 
     std::string tcr_rotated_gcode = post_process_wipe_tower_moves(tcr, wipe_tower_offset, wipe_tower_rotation);
 
-        if (! tcr.priming) {
+    //if needed, write the gcode_label_objects_end then priming tower
+    if (!gcodegen.m_gcode_label_objects_end.empty()) {
+        gcode += gcodegen.m_gcode_label_objects_end;
+        gcodegen.m_gcode_label_objects_end = "";
+    }
+
+    if (! tcr.priming) {
         // Move over the wipe tower.
         // Retract for a tool change, using the toolchange retract value and setting the priming extra length.
         gcode += gcodegen.retract(true);
@@ -1207,6 +1213,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
         _write_format(file, "\n");
     }
     BoundingBoxf3 global_bounding_box;
+    size_t nb_items = 0;
     for (PrintObject *print_object : print.objects()) {
         this->m_ordered_objects.push_back(print_object);
         unsigned int copy_id = 0;
@@ -1232,7 +1239,12 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
                 );
             }
             copy_id++;
+            nb_items++;
         }
+    }
+    if (this->config().gcode_label_objects && print.config().gcode_flavor.value == gcfMarlin) {
+        _write(file, "; Total objects to print: " + std::to_string(nb_items) + "\n");
+        _write(file, "M486 T" + std::to_string(nb_items) + "\n");
     }
     if (this->config().gcode_label_objects) {
         _write_format(file, "; plater:{\"center\":[%f,%f,%f],\"boundingbox_center\":[%f,%f,%f],\"boundingbox_size\":[%f,%f,%f]}\n",
@@ -1577,6 +1589,12 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
 
     // Write end commands to file.
     _write(file, this->retract());
+    //if needed, write the gcode_label_objects_end
+    {
+        std::string gcode;
+        _add_object_change_labels(gcode);
+        _write(file, gcode);
+    }
     _write(file, m_writer.set_fan(false));
 
     // adds tag for processor
@@ -2387,7 +2405,7 @@ void GCode::process_layer(
                     path.mm3_per_mm = mm3_per_mm;
                 }
                 //FIXME using the support_material_speed of the 1st object printed.
-                gcode += this->extrude_loop(loop, "skirt", m_config.support_material_speed.value);
+                gcode += this->extrude_loop(loop, "", m_config.support_material_speed.value);
             }
             m_avoid_crossing_perimeters.use_external_mp = false;
             // Allow a straight travel move to the first object point if this is the first layer (but don't in next layers).
@@ -2418,7 +2436,7 @@ void GCode::process_layer(
             this->set_origin(unscale(print_object->instances()[single_object_instance_idx].shift));
             if (this->m_layer != nullptr && this->m_layer->id() < m_config.skirt_height) {
                 for (const ExtrusionEntity *ee : print_object->skirt().entities)
-                    gcode += this->extrude_entity(*ee, "skirt", m_config.support_material_speed.value);
+                    gcode += this->extrude_entity(*ee, "", m_config.support_material_speed.value);
             }
         }
         //extrude object-only brim
@@ -2457,10 +2475,26 @@ void GCode::process_layer(
                 if (m_config.avoid_crossing_perimeters)
                     m_avoid_crossing_perimeters.init_layer_mp(union_ex(m_layer->lslices, true));
 
-                if (this->config().gcode_label_objects)
-                    gcode += std::string("; printing object ") + instance_to_print.print_object.model_object()->name 
-                        + " id:" + std::to_string(std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin()) 
+                //print object label to help the printer firmware know where it is (for removing the objects)
+                if (this->config().gcode_label_objects) {
+                    m_gcode_label_objects_start = std::string("; printing object ") + instance_to_print.print_object.model_object()->name
+                        + " id:" + std::to_string(std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin())
                         + " copy " + std::to_string(instance_to_print.instance_id) + "\n";
+                    gcode += std::string("; INIT printing object ") + instance_to_print.print_object.model_object()->name
+                        + " id:" + std::to_string(std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin())
+                        + " copy " + std::to_string(instance_to_print.instance_id) + "\n";
+                    if (print.config().gcode_flavor.value == gcfMarlin) {
+                        size_t instance_plater_id = 0;
+                        //get index of the current copy in the whole itemset;
+                        for (const PrintObject* obj : this->m_ordered_objects)
+                            if (obj == &instance_to_print.print_object)
+                                break;
+                            else
+                                instance_plater_id += obj->instances().size();
+                        instance_plater_id += instance_to_print.instance_id;
+                        m_gcode_label_objects_start += std::string("M486 S") + std::to_string(instance_plater_id) + "\n";
+                    }
+                }
                 //if first layer, ask for a bigger lift for travel to object, to be on the safe side
                 set_extra_lift(layer, print, m_writer, extruder_id);
                 // When starting a new object, use the external motion planner for the first travel move.
@@ -2494,10 +2528,17 @@ void GCode::process_layer(
                     gcode += this->extrude_infill(print, by_region_specific, false);
                     gcode += this->extrude_ironing(print, by_region_specific);
                 }
-                if (this->config().gcode_label_objects)
-                    gcode += std::string("; stop printing object ") + instance_to_print.print_object.model_object()->name 
-                        + " id:" + std::to_string((std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin())) 
+                if (this->config().gcode_label_objects) {
+                    m_gcode_label_objects_end = std::string("; stop printing object ") + instance_to_print.print_object.model_object()->name
+                        + " id:" + std::to_string((std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin()))
                         + " copy " + std::to_string(instance_to_print.instance_id) + "\n";
+                    gcode += std::string("; INIT stop printing object ") + instance_to_print.print_object.model_object()->name
+                        + " id:" + std::to_string((std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin()))
+                        + " copy " + std::to_string(instance_to_print.instance_id) + "\n";
+                    if (print.config().gcode_flavor.value == gcfMarlin) {
+                        m_gcode_label_objects_end += std::string("M486 S-1") + "\n";
+                    }
+                }
             }
         }
     }
@@ -2525,6 +2566,10 @@ void GCode::process_layer(
             }
         }
         if (milling_ok) {
+            if (!m_gcode_label_objects_end.empty()) {
+                gcode += m_gcode_label_objects_end;
+                m_gcode_label_objects_end = "";
+            }
             //switch to mill
             gcode += "; milling ok\n";
             uint32_t current_extruder_filament = m_writer.tool()->id();
@@ -2682,6 +2727,9 @@ std::string GCode::change_layer(coordf_t print_z)
     coordf_t z = print_z + m_config.z_offset.value;  // in unscaled coordinates
     if (BOOL_EXTRUDER_CONFIG(retract_layer_change) && m_writer.will_move_z(z))
         gcode += this->retract();
+
+    //if needed, write the gcode_label_objects_end then gcode_label_objects_start
+    _add_object_change_labels(gcode);
 
     {
         std::ostringstream comment;
@@ -3629,6 +3677,10 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
         );
     }
 
+    //if needed, write the gcode_label_objects_end then gcode_label_objects_start
+    //should be already done by travel_to, but just in case
+    _add_object_change_labels(gcode);
+
     // compensate retraction
     gcode += this->unretract();
 
@@ -3805,6 +3857,17 @@ std::string GCode::_after_extrude(const ExtrusionPath &path) {
     return gcode;
 }
 
+void GCode::_add_object_change_labels(std::string& gcode) {
+    if (!m_gcode_label_objects_end.empty()) {
+        gcode += m_gcode_label_objects_end;
+        m_gcode_label_objects_end = "";
+    }
+    if (!m_gcode_label_objects_start.empty()) {
+        gcode += m_gcode_label_objects_start;
+        m_gcode_label_objects_start = "";
+    }
+}
+
 // This method accepts &point in print coordinates.
 std::string GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
 {
@@ -3843,6 +3906,9 @@ std::string GCode::travel_to(const Point &point, ExtrusionRole role, std::string
     else
         // Reset the wipe path when traveling, so one would not wipe along an old path.
         m_wipe.reset_path();
+
+    //if needed, write the gcode_label_objects_end then gcode_label_objects_start
+    _add_object_change_labels(gcode);
 
     // use G1 because we rely on paths being straight (G0 may make round paths)
     Lines lines = travel.lines();

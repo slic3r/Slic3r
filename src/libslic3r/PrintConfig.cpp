@@ -2870,7 +2870,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("retract_layer_change", coBools);
     def->label = L("Retract on layer change");
     def->category = OptionCategory::extruders;
-    def->tooltip = L("This flag enforces a retraction whenever a Z move is done.");
+    def->tooltip = L("This flag enforces a retraction whenever a Z move is done (before it).");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBools { false });
 

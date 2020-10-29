@@ -410,6 +410,11 @@ private:
 
     // ordered list of object, to give them a unique id.
     std::vector<const PrintObject*> m_ordered_objects;
+    // gcode for the start/end of the current object block.
+    // as the retraction/unretraction can be written after the start/end of the algoruihtmblock, it has to be delayed.
+    std::string m_gcode_label_objects_start;
+    std::string m_gcode_label_objects_end;
+    void _add_object_change_labels(std::string &gcode);
 
     bool m_silent_time_estimator_enabled;
 
