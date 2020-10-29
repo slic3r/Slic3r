@@ -530,6 +530,7 @@ public:
     ConfigOptionFloatOrPercent      first_layer_height;
     ConfigOptionFloat               first_layer_size_compensation;
     ConfigOptionFloat               hole_size_compensation;
+    ConfigOptionFloat               hole_size_threshold;
     ConfigOptionBool                infill_only_where_needed;
     // Force the generation of solid shells between adjacent materials/volumes.
     ConfigOptionBool                interface_shells;
@@ -592,6 +593,7 @@ protected:
         OPT_PTR(exact_last_layer_height);
         OPT_PTR(extrusion_width);
         OPT_PTR(hole_size_compensation);
+        OPT_PTR(hole_size_threshold);
         OPT_PTR(first_layer_height);
         OPT_PTR(first_layer_size_compensation);
         OPT_PTR(infill_only_where_needed);

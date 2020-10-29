@@ -86,12 +86,15 @@ group:label_width$8:Modifying slices
 		setting:width$6:curve_smoothing_angle_concave
 		setting:width$6:curve_smoothing_cutoff_dist
 	end_line
-	setting:hole_to_polyhole
 	line:XY compensation
 		setting:width$6:xy_size_compensation
 		setting:width$6:xy_inner_size_compensation
 		setting:width$6:first_layer_size_compensation
+	end_line
+	line:Vertical Hole shrinking compensation
+		setting:hole_to_polyhole
 		setting:width$6:hole_size_compensation
+		setting:width$6:hole_size_threshold
 	end_line
 group:Other
 	setting:clip_multipart_objects

@@ -3725,7 +3725,8 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::slicing;
     def->tooltip = L("The object will be grown/shrunk in the XY plane by the configured value "
         "(negative = inwards, positive = outwards). This might be useful for fine-tuning sizes."
-        "\nThis one only applies to the 'exterior' shell of the object");
+        "\nThis one only applies to the 'exterior' shell of the object."
+        "\n !!! it's recommended you put the same value into the 'Inner XY size compensation', unless you are sure you don't have horizontal holes. !!! ");
     def->sidetext = L("mm");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0));
@@ -3736,7 +3737,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::slicing;
     def->tooltip = L("The object will be grown/shrunk in the XY plane by the configured value "
         "(negative = inwards, positive = outwards). This might be useful for fine-tuning sizes."
-        "\nThis one only applies to the 'inner' shell of the object");
+        "\nThis one only applies to the 'inner' shell of the object (!!! horizontal holes break the shell !!!)");
     def->sidetext = L("mm");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0));
@@ -3752,6 +3753,17 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0));
+
+    def = this->add("hole_size_threshold", coFloat);
+    def->label = L("Holes");
+    def->full_label = L("XY holes threshold");
+    def->category = OptionCategory::slicing;
+    def->tooltip = L("Maximum area for the hole where the hole_size_compensation will apply fully."
+            " After that, it will decraese down to 0 for four time this area."
+            " Set to 0 to let the hole_size_compensation apply fully for all detected holes");
+    def->sidetext = L("mm²");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(100));
 
     def = this->add("hole_to_polyhole", coBool);
     def->label = L("Convert round holes to polyholes");
