@@ -90,6 +90,13 @@ NEXT: ;
     return ok;
 }
 
+double get_default_acceleration(PrintConfig & config) {
+    double max = 0;
+// on 2.3, check for enable/disable if(config.print_machine_envelope)
+    max = config.machine_max_acceleration_extruding.values.front();
+    return config.default_acceleration.get_abs_value(max);
+}
+
 void AvoidCrossingPerimeters::init_external_mp(const Print &print)
 {
 	m_external_mp = Slic3r::make_unique<MotionPlanner>(union_ex(this->collect_contours_all_layers(print.objects())));
@@ -2790,6 +2797,8 @@ std::string GCode::preamble()
         before the first layer change will raise the extruder from the correct
         initial Z instead of 0.  */
     m_writer.travel_to_z(m_config.z_offset.value);
+    //as this phony thing skip the acceleration writing, they have to be reset after that for real initialisation at the next move/extrusion
+    m_writer.set_acceleration(0);
     
     return gcode;
 }
@@ -3181,7 +3190,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     }
 
     // reset acceleration
-    m_writer.set_acceleration((unsigned int)(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(get_default_acceleration(m_config) + 0.5));
 
     //don't wipe here
     //if (m_wipe.enable)
@@ -3579,7 +3588,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     }
     
     // reset acceleration
-    m_writer.set_acceleration((unsigned int)(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(get_default_acceleration(m_config) + 0.5));
     
     if (m_wipe.enable)
         m_wipe.path = paths.front().polyline;  // TODO: don't limit wipe to last path
@@ -3677,7 +3686,7 @@ std::string GCode::extrude_multi_path(const ExtrusionMultiPath &multipath, const
         m_wipe.path.reverse();
     }
     // reset acceleration
-    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(get_default_acceleration(m_config) + 0.5));
     return gcode;
 }
 
@@ -3714,7 +3723,7 @@ std::string GCode::extrude_multi_path3D(const ExtrusionMultiPath3D &multipath3D,
         m_wipe.path.reverse();
     }
     // reset acceleration
-    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(get_default_acceleration(m_config) + 0.5));
     return gcode;
 }
 
@@ -3799,7 +3808,7 @@ std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &de
         m_wipe.path.reverse();
     }
     // reset acceleration
-    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(get_default_acceleration(m_config) + 0.5));
     return gcode;
 }
 
@@ -3833,7 +3842,7 @@ std::string GCode::extrude_path_3D(const ExtrusionPath3D &path, const std::strin
         m_wipe.path.reverse();
     }
     // reset acceleration
-    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(get_default_acceleration(m_config) + 0.5));
     return gcode;
 }
 
@@ -4129,17 +4138,15 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
     
     // adjust acceleration
     {
-        double acceleration;
+        double acceleration = get_default_acceleration(m_config);
         if (this->on_first_layer() && m_config.first_layer_acceleration.value > 0) {
-            acceleration = m_config.first_layer_acceleration.value;
+            acceleration = m_config.first_layer_acceleration.get_abs_value(acceleration);
         } else if (m_config.perimeter_acceleration.value > 0 && is_perimeter(path.role())) {
-            acceleration = m_config.perimeter_acceleration.value;
+            acceleration = m_config.perimeter_acceleration.get_abs_value(acceleration);
         } else if (m_config.bridge_acceleration.value > 0 && is_bridge(path.role())) {
-            acceleration = m_config.bridge_acceleration.value;
+            acceleration = m_config.bridge_acceleration.get_abs_value(acceleration);
         } else if (m_config.infill_acceleration.value > 0 && is_infill(path.role())) {
-            acceleration = m_config.infill_acceleration.value;
-        } else {
-            acceleration = m_config.default_acceleration.value;
+            acceleration = m_config.infill_acceleration.get_abs_value(acceleration);
         }//TODO: add travel accel?
         m_writer.set_acceleration((unsigned int)floor(acceleration + 0.5));
     }

@@ -250,16 +250,17 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->set_default_value(new ConfigOptionFloat(0.));
 
-    def = this->add("bridge_acceleration", coFloat);
+    def = this->add("bridge_acceleration", coFloatOrPercent);
     def->label = L("Bridge");
     def->full_label = L("Bridge acceleration");
     def->category = OptionCategory::speed;
-    def->tooltip = L("This is the acceleration your printer will use for bridges. "
-                   "Set zero to disable acceleration control for bridges.");
-    def->sidetext = L("mm/s²");
+    def->tooltip = L("This is the acceleration your printer will use for bridges."
+                "\nCan be a % of the default acceleration"
+                "\nSet zero to disable acceleration control for bridges.");
+    def->sidetext = L("mm/s² or %");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
     def = this->add("bridge_angle", coFloat);
     def->label = L("Bridging");
@@ -541,17 +542,18 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(5.f));
 
-    def = this->add("default_acceleration", coFloat);
+    def = this->add("default_acceleration", coFloatOrPercent);
     def->label = L("Default");
     def->category = OptionCategory::speed;
     def->full_label = L("Default acceleration");
     def->tooltip = L("This is the acceleration your printer will be reset to after "
                    "the role-specific acceleration values are used (perimeter/infill). "
-                   "Set zero to prevent resetting acceleration at all.");
-    def->sidetext = L("mm/s²");
+                   "\nYou can set it as a % of the max of the X/Y machine acceleration limit."
+                   "\nSet zero to prevent resetting acceleration at all.");
+    def->sidetext = L("mm/s² or %");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
     def = this->add("default_filament_profile", coStrings);
     def->label = L("Default filament profile");
@@ -1585,16 +1587,17 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("%");
     def->set_default_value(new ConfigOptionPercent(10));
 
-    def = this->add("first_layer_acceleration", coFloat);
+    def = this->add("first_layer_acceleration", coFloatOrPercent);
     def->label = L("First layer");
     def->full_label = L("First layer acceleration");
     def->category = OptionCategory::speed;
-    def->tooltip = L("This is the acceleration your printer will use for first layer. Set zero "
-                   "to disable acceleration control for first layer.");
-    def->sidetext = L("mm/s²");
+    def->tooltip = L("This is the acceleration your printer will use for first layer."
+                "\nCan be a % of the default acceleration"
+                "\nSet zero to disable acceleration control for first layer.");
+    def->sidetext = L("mm/s² or %");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
     def = this->add("first_layer_bed_temperature", coInts);
     def->label = L("First layer");
@@ -1782,16 +1785,17 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(0));
 
-    def = this->add("infill_acceleration", coFloat);
+    def = this->add("infill_acceleration", coFloatOrPercent);
     def->label = L("Infill");
     def->full_label = L("Infill acceleration");
     def->category = OptionCategory::speed;
-    def->tooltip = L("This is the acceleration your printer will use for infill. Set zero to disable "
-                   "acceleration control for infill.");
-    def->sidetext = L("mm/s²");
+    def->tooltip = L("This is the acceleration your printer will use for infill."
+                "\nCan be a % of the default acceleration"
+                "\nSet zero to disable acceleration control for infill.");
+    def->sidetext = L("mm/s² or %");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
     def = this->add("infill_every_layers", coInt);
     def->label = L("Combine infill every");
@@ -2439,16 +2443,17 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(-2.f));
 
-    def = this->add("perimeter_acceleration", coFloat);
+    def = this->add("perimeter_acceleration", coFloatOrPercent);
     def->label = L("Perimeters");
     def->full_label = ("Perimeter acceleration");
     def->category = OptionCategory::speed;
     def->tooltip = L("This is the acceleration your printer will use for perimeters. "
-                   "A high value like 9000 usually gives good results if your hardware is up to the job. "
-                   "Set zero to disable acceleration control for perimeters.");
-    def->sidetext = L("mm/s²");
+                   "A high value like 9000 usually gives good results if your hardware is up to the job."
+                "\nCan be a % of the default acceleration"
+                "\nSet zero to disable acceleration control for perimeters.");
+    def->sidetext = L("mm/s² or %");
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
     def = this->add("perimeter_extruder", coInt);
     def->label = L("Perimeter extruder");

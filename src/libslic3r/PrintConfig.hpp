@@ -1094,7 +1094,7 @@ public:
     ConfigOptionBool                avoid_crossing_not_first_layer;
     ConfigOptionPoints              bed_shape;
     ConfigOptionInts                bed_temperature;
-    ConfigOptionFloat               bridge_acceleration;
+    ConfigOptionFloatOrPercent      bridge_acceleration;
     ConfigOptionInts                bridge_fan_speed;
     ConfigOptionInts                chamber_temperature;
     ConfigOptionBool                complete_objects;
@@ -1102,7 +1102,7 @@ public:
     ConfigOptionEnum<CompleteObjectSort> complete_objects_sort;
     ConfigOptionFloats              colorprint_heights;
     ConfigOptionBools               cooling;
-    ConfigOptionFloat               default_acceleration;
+    ConfigOptionFloatOrPercent      default_acceleration;
     ConfigOptionInts                disable_fan_first_layers;
     ConfigOptionFloat               duplicate_distance;
     ConfigOptionInts                external_perimeter_fan_speed;
@@ -1115,14 +1115,14 @@ public:
     ConfigOptionStrings             filament_colour;
     ConfigOptionStrings             filament_notes;
     ConfigOptionPercents            filament_shrink;
-    ConfigOptionFloat               first_layer_acceleration;
+    ConfigOptionFloatOrPercent      first_layer_acceleration;
     ConfigOptionInts                first_layer_bed_temperature;
     ConfigOptionFloatOrPercent      first_layer_extrusion_width;
     ConfigOptionPercent             first_layer_flow_ratio;
     ConfigOptionFloatOrPercent      first_layer_speed;
     ConfigOptionFloatOrPercent      first_layer_infill_speed;
     ConfigOptionInts                first_layer_temperature;
-    ConfigOptionFloat               infill_acceleration;
+    ConfigOptionFloatOrPercent      infill_acceleration;
     ConfigOptionInts                max_fan_speed;
     ConfigOptionFloats              max_layer_height;
     ConfigOptionFloat               max_print_height;
@@ -1141,7 +1141,7 @@ public:
     ConfigOptionBool                only_retract_when_crossing_perimeters;
     ConfigOptionBool                ooze_prevention;
     ConfigOptionString              output_filename_format;
-    ConfigOptionFloat               perimeter_acceleration;
+    ConfigOptionFloatOrPercent      perimeter_acceleration;
     ConfigOptionStrings             post_process;
     ConfigOptionBool                print_machine_envelope;
     ConfigOptionString              printer_model;
