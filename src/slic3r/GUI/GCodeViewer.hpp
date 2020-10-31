@@ -415,6 +415,7 @@ private:
     // bounding box of toolpaths + marker tools
     BoundingBoxf3 m_max_bounding_box;
     std::vector<Color> m_tool_colors;
+    std::vector<Color> m_filament_colors;
     std::vector<double> m_layers_zs;
     std::array<double, 2> m_layers_z_range;
     std::vector<ExtrusionRole> m_roles;

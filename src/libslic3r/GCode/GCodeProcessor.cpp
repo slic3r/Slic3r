@@ -575,17 +575,20 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
     // ensure at least one (default) color is defined
     std::string default_color = "#FF8000";
     m_result.extruder_colors = std::vector<std::string>(1, default_color);
+    m_result.filament_colors = std::vector<std::string>(1, default_color);
     const ConfigOptionStrings* extruder_colour = config.option<ConfigOptionStrings>("extruder_colour");
-    if (extruder_colour != nullptr) {
-        // takes colors from config
+    const ConfigOptionStrings* filament_colour = config.option<ConfigOptionStrings>("filament_colour");
+    // takes colors from config
+    if (extruder_colour != nullptr)
         m_result.extruder_colors = extruder_colour->values;
-        // try to replace missing values with filament colors
-        const ConfigOptionStrings* filament_colour = config.option<ConfigOptionStrings>("filament_colour");
-        if (filament_colour != nullptr && filament_colour->values.size() == m_result.extruder_colors.size()) {
-            for (size_t i = 0; i < m_result.extruder_colors.size(); ++i) {
-                if (m_result.extruder_colors[i].empty())
-                    m_result.extruder_colors[i] = filament_colour->values[i];
-            }
+    if (filament_colour != nullptr)
+        m_result.filament_colors = filament_colour->values;
+
+    // try to replace missing values with filament colors
+    if (filament_colour != nullptr && filament_colour != nullptr && m_result.extruder_colors.size() == m_result.filament_colors.size()) {
+        for (size_t i = 0; i < m_result.extruder_colors.size(); ++i) {
+            if (m_result.extruder_colors[i].empty())
+                m_result.extruder_colors[i] = m_result.filament_colors[i];
         }
     }
 
@@ -593,6 +596,10 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
     for (size_t i = 0; i < m_result.extruder_colors.size(); ++i) {
         if (m_result.extruder_colors[i].empty())
             m_result.extruder_colors[i] = default_color;
+    }
+    for (size_t i = 0; i < m_result.filament_colors.size(); ++i) {
+        if (m_result.filament_colors[i].empty())
+            m_result.filament_colors[i] = default_color;
     }
 
     m_extruder_colors.resize(m_result.extruder_colors.size());

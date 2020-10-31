@@ -368,6 +368,13 @@ void GCodeViewer::refresh(const GCodeProcessor::Result& gcode_result, const std:
         // update tool colors
         m_tool_colors = decode_colors(str_tool_colors);
 
+    if (m_view_type == EViewType::Filament && !gcode_result.filament_colors.empty())
+        // update tool colors from config stored in the gcode
+        m_filament_colors = decode_colors(gcode_result.filament_colors);
+    else
+        // update tool colors
+        m_filament_colors = decode_colors(str_tool_colors);
+
     // update ranges for coloring / legend
     m_extrusions.reset_ranges();
     for (size_t i = 0; i < m_moves_count; ++i) {
@@ -421,6 +428,7 @@ void GCodeViewer::reset()
     m_paths_bounding_box = BoundingBoxf3();
     m_max_bounding_box = BoundingBoxf3();
     m_tool_colors = std::vector<Color>();
+    m_filament_colors = std::vector<Color>();
     m_extruder_ids = std::vector<unsigned char>();
     m_extrusions.reset_role_visibility_flags();
     m_extrusions.reset_ranges();
@@ -1677,7 +1685,7 @@ void GCodeViewer::refresh_render_paths(bool keep_sequential_current_first, bool 
         case EViewType::Chronology:     { color = m_extrusions.ranges.elapsed_time.get_color_at(path.elapsed_time); break; }
         case EViewType::VolumetricRate: { color = m_extrusions.ranges.volumetric_rate.get_color_at(path.volumetric_rate); break; }
         case EViewType::Tool:           { color = m_tool_colors[path.extruder_id]; break; }
-        case EViewType::Filament:       { color = m_tool_colors[path.extruder_id]; break; }
+        case EViewType::Filament:       { color = m_filament_colors[path.extruder_id]; break; }
         case EViewType::ColorPrint:     { color = m_tool_colors[path.cp_color_id]; break; }
         case EViewType::ExtruderTemp:   { color = m_extrusions.ranges.extruder_temp.get_color_at(path.extruder_temp); break; }
         default:                        { color = { 1.0f, 1.0f, 1.0f }; break; }
@@ -2345,11 +2353,18 @@ void GCodeViewer::render_legend() const
     case EViewType::Chronology:     { append_range(m_extrusions.ranges.elapsed_time, 0); break; }
     case EViewType::VolumetricRate: { append_range(m_extrusions.ranges.volumetric_rate, 3); break; }
     case EViewType::Tool:
-    case EViewType::Filament:
     {
         // shows only extruders actually used
         for (unsigned char i : m_extruder_ids) {
             append_item(EItemType::Rect, m_tool_colors[i], _u8L("Extruder") + " " + std::to_string(i + 1));
+        }
+        break;
+    }
+    case EViewType::Filament:
+    {
+        // shows only filament actually used
+        for (unsigned char i : m_extruder_ids) {
+            append_item(EItemType::Rect, m_filament_colors[i], _u8L("Filament") + " " + std::to_string(i + 1));
         }
         break;
     }

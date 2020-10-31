@@ -265,6 +265,7 @@ namespace Slic3r {
             Pointfs bed_shape;
             std::string printer_settings_id;
             std::vector<std::string> extruder_colors;
+            std::vector<std::string> filament_colors;
             PrintEstimatedTimeStatistics time_statistics;
 
 #if ENABLE_GCODE_VIEWER_STATISTICS

@@ -1368,7 +1368,7 @@ void Preview::load_print_as_fff(bool keep_z_range)
     }
     }
 #if ENABLE_GCODE_VIEWER
-    else if (gcode_preview_data_valid || gcode_view_type == GCodeViewer::EViewType::Filament)
+    else if (gcode_view_type == GCodeViewer::EViewType::Filament)
 #else
     else if (m_gcode_preview_data->extrusion.view_type == GCodePreviewData::Extrusion::Filament)
 #endif // ENABLE_GCODE_VIEWER
