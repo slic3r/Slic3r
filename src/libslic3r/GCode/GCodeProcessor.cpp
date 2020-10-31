@@ -470,6 +470,7 @@ void GCodeProcessor::TimeProcessor::post_process(const std::string& filename)
 
 const std::vector<std::pair<GCodeProcessor::EProducer, std::string>> GCodeProcessor::Producers = {
     { EProducer::PrusaSlicer, "PrusaSlicer" },
+    { EProducer::SuperSlicer, "SuperSlicer" },
     { EProducer::Cura,        "Cura_SteamEngine" },
     { EProducer::Simplify3D,  "Simplify3D" },
     { EProducer::CraftWare,   "CraftWare" },
@@ -785,11 +786,11 @@ void GCodeProcessor::process_file(const std::string& filename, std::function<voi
                 if (comment.length() > 1 && detect_producer(comment))
                     m_parser.quit_parsing_file();
             }
-            });
+        });
 
-        // if the gcode was produced by PrusaSlicer,
+        // if the gcode was produced by SuperSlicer,
         // extract the config from it
-        if (m_producer == EProducer::PrusaSlicer) {
+        if (m_producer == EProducer::SuperSlicer) {
             DynamicPrintConfig config;
             config.apply(FullPrintConfig::defaults());
             config.load_from_gcode_file(filename);
@@ -824,10 +825,20 @@ void GCodeProcessor::process_file(const std::string& filename, std::function<voi
 
     update_estimated_times_stats();
 
+
     // post-process to add M73 lines into the gcode
     if (m_time_processor.export_remaining_time_enabled)
         m_time_processor.post_process(filename);
 
+    //update times for resuts
+    for (size_t i = 0; i < m_result.moves.size(); i++) {
+        size_t layer_id = m_result.moves[i].layer_duration;
+        std::vector<float>& layer_times = m_result.time_statistics.modes[0].layers_times;
+        if (layer_times.size() > layer_id - 1 && layer_id > 0)
+            m_result.moves[i].layer_duration = layer_times[layer_id - 1];
+        else
+            m_result.moves[i].layer_duration = 0;
+}
 #if ENABLE_GCODE_VIEWER_DATA_CHECKING
     std::cout << "\n";
     m_mm3_per_mm_compare.output();
@@ -1002,7 +1013,7 @@ void GCodeProcessor::process_tags(const std::string& comment)
         return;
     }
 
-    if (!m_producers_enabled || m_producer == EProducer::PrusaSlicer) {
+    if (!m_producers_enabled || m_producer == EProducer::PrusaSlicer || m_producer == EProducer::SuperSlicer) {
         // height tag
         pos = comment.find(Height_Tag);
         if (pos != comment.npos) {
@@ -1098,6 +1109,7 @@ bool GCodeProcessor::process_producers_tags(const std::string& comment)
     switch (m_producer)
     {
     case EProducer::PrusaSlicer: { return process_prusaslicer_tags(comment); }
+    case EProducer::SuperSlicer: { return process_prusaslicer_tags(comment); }
     case EProducer::Cura:        { return process_cura_tags(comment); }
     case EProducer::Simplify3D:  { return process_simplify3d_tags(comment); }
     case EProducer::CraftWare:   { return process_craftware_tags(comment); }
@@ -1490,7 +1502,7 @@ void GCodeProcessor::process_G1(const GCodeReader::GCodeLine& line)
         m_mm3_per_mm_compare.update(area_toolpath_cross_section, m_extrusion_role);
 #endif // ENABLE_GCODE_VIEWER_DATA_CHECKING
 
-        if ((m_producers_enabled && m_producer != EProducer::PrusaSlicer) || m_height == 0.0f) {
+        if ((m_producers_enabled && (m_producer != EProducer::PrusaSlicer && m_producer != EProducer::SuperSlicer) ) || m_height == 0.0f) {
             if (m_end_position[Z] > m_extruded_last_z + EPSILON) {
                 m_height = m_end_position[Z] - m_extruded_last_z;
 #if ENABLE_GCODE_VIEWER_DATA_CHECKING
@@ -2108,7 +2120,8 @@ void GCodeProcessor::store_move_vertex(EMoveType type)
         m_height,
         m_mm3_per_mm,
         m_fan_speed,
-        static_cast<float>(m_result.moves.size()),
+        m_layer_id, //layer_duration: set later
+        m_time_processor.machines[0].time, //time: set later
         m_temperature
     };
     m_result.moves.emplace_back(vertex);

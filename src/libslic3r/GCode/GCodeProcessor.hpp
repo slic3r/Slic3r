@@ -252,6 +252,7 @@ namespace Slic3r {
             float height{ 0.0f }; // mm
             float mm3_per_mm{ 0.0f };
             float fan_speed{ 0.0f }; // percentage
+            float layer_duration{ 0.0f }; // s
             float time{ 0.0f }; // s
             float temperature{ 0.0f }; // °
 
@@ -387,6 +388,7 @@ namespace Slic3r {
         {
             Unknown,
             PrusaSlicer,
+            SuperSlicer,
             Cura,
             Simplify3D,
             CraftWare,
