@@ -641,7 +641,11 @@ const std::vector<std::string>& Preset::printer_options()
     if (s_opts.empty()) {
         s_opts = {
             "printer_technology",
-            "bed_shape", "bed_custom_texture", "bed_custom_model", "z_offset", "gcode_flavor", "use_relative_e_distances", "serial_port", "serial_speed",
+            "bed_shape", "bed_custom_texture", "bed_custom_model", "z_offset",
+            "fan_kickstart",
+            "fan_speedup_overhangs",
+            "fan_speedup_time",
+            "gcode_flavor", "use_relative_e_distances", "serial_port", "serial_speed",
             "use_firmware_retraction", "use_volumetric_e", "variable_layer_height",
             "min_length",
             "host_type", "print_host", "printhost_apikey", "printhost_cafile", "printhost_slug",
@@ -662,7 +666,6 @@ const std::vector<std::string>& Preset::printer_options()
             "wipe_advanced_nozzle_melted_volume",
             "wipe_advanced_multiplier",
             "wipe_advanced_algo",
-            "fan_speedup_time",
             "time_estimation_compensation",
         };
         s_opts.insert(s_opts.end(), Preset::machine_limits_options().begin(), Preset::machine_limits_options().end());

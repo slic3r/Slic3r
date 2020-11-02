@@ -2072,11 +2072,28 @@ void PrintConfigDef::init_fff_params()
     def = this->add("fan_speedup_time", coFloat);
     def->label = L("Fan startup delay");
     def->category = OptionCategory::firmware;
-    def->tooltip = L("Move the M106 in the past by at least this delay (in seconds, you can use decimals) and add the 'D' option to it to tell to the firware when the fan have to be at this speed."
-        " It assume infinite acceleration for this time estimation, and only takes into account G1 and G0 moves. Use 0 to deactivate, negative to remove the 'D' option.");
+    def->tooltip = L("Move the fan start in the past by at least this delay (in seconds, you can use decimals)."
+        " It assumes infinite acceleration for this time estimation, and will only take into account G1 and G0 moves. Use 0 to deactivate.");
     def->sidetext = L("s");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(-0.5));
+
+    def = this->add("fan_speedup_overhangs", coBool);
+    def->label = L("Fan startup delay");
+    def->category = OptionCategory::firmware;
+    def->tooltip = L("Will only take into account the delay for the cooling of overhangs.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(true));
+
+    def = this->add("fan_kickstart", coFloat);
+    def->label = L("Fan KickStart time");
+    def->category = OptionCategory::firmware;
+    def->tooltip = L("Add a M106 S255 (max speed for fan) for this amount of seconds before gonig down to the desired speed to kick-start the cooling fan."
+                    "\nSet to 0 to deactivate.");
+    def->sidetext = L("s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("machine_limits_usage", coEnum);
     def->label = L("How to apply");

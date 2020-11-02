@@ -3495,30 +3495,6 @@ void GCode::use(const ExtrusionEntityCollection &collection) {
     }
 }
 
-std::string extrusion_role_2_string(const ExtrusionRole &er) {
-    switch (er) {
-        case erNone: return "none";
-        case erPerimeter: return "perimeter";
-        case erExternalPerimeter: return "perimeter external";
-        case erOverhangPerimeter: return "perimeter overhang";
-        case erInternalInfill: return "infill internal";
-        case erSolidInfill: return "infill solid";
-        case erTopSolidInfill: return "infill solid top";
-        case erBridgeInfill: return "infill bridge";
-        case erThinWall: return "thin_wall";
-        case erGapFill: return "gap_fill";
-        case erSkirt: return "skirt";
-        case erSupportMaterial: return "support_material";
-        case erSupportMaterialInterface: return "support_material_interface";
-        case erWipeTower: return "wipe_tower";
-        case erMilling: return "milling";
-        case erCustom: return "custom";
-        case erMixed: return "mixed";
-        case erCount: return "count";
-    }
-    return " unkown";
-}
-
 std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &description, double speed) {
 
     ExtrusionPath simplifed_path = path;
@@ -3676,12 +3652,15 @@ std::string GCode::extrude_support(const ExtrusionEntityCollection &support_fill
 void GCode::_post_process(std::string& what, bool flush) {
 
     //if enabled, move the fan startup earlier.
-    if (this->config().fan_speedup_time.value != 0) {
+    if (this->config().fan_speedup_time.value != 0 || this->config().fan_kickstart.value > 0) {
         if (this->m_fan_mover.get() == nullptr)
             this->m_fan_mover.reset(new Slic3r::FanMover(
-            std::abs(this->config().fan_speedup_time.value), 
-            this->config().fan_speedup_time.value > 0,
-            this->config().use_relative_e_distances.value));
+                this->m_writer,
+                std::abs(this->config().fan_speedup_time.value), 
+                this->config().fan_speedup_time.value > 0,
+                this->config().use_relative_e_distances.value,
+                this->config().fan_speedup_overhangs.value,
+                this->config().fan_kickstart.value));
         what = this->m_fan_mover->process_gcode(what, flush);
     }
 
@@ -3769,7 +3748,7 @@ std::vector<double> cut_corner_cache = {
 
 std::string GCode::_extrude(const ExtrusionPath &path, const std::string &description, double speed) {
 
-    std::string descr = description + extrusion_role_2_string(path.role());
+    std::string descr = description + ExtrusionEntity::role_to_string(path.role());
     std::string gcode = this->_before_extrude(path, descr, speed);
     
     // calculate extrusion length per distance unit

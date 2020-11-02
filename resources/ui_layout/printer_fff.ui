@@ -15,7 +15,12 @@ group:silent_mode_event:Firmware
 	setting:gcode_flavor
 	setting:silent_mode
 	setting:remaining_times
-	setting:fan_speedup_time
+group:Cooling fan
+	line:Speedup
+		setting:label$Speedup time:fan_speedup_time
+		setting:label$Only for overhangs:fan_speedup_overhangs
+	end_line
+	setting:label$Small:fan_kickstart
 group:Thumbnails
 	line:Size for Gcode
 		setting:id$0:label$Small:thumbnails

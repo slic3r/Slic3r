@@ -263,7 +263,6 @@ double ExtrusionLoop::min_mm3_per_mm() const
     return min_mm3_per_mm;
 }
 
-
 std::string ExtrusionEntity::role_to_string(ExtrusionRole role)
 {
     switch (role) {
