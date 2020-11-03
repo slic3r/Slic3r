@@ -2825,7 +2825,7 @@ void GCode::process_layer(
 
     // Apply cooling logic; this may alter speeds.
     if (m_cooling_buffer)
-        gcode = m_cooling_buffer->process_layer(gcode, layer.id());
+        gcode = m_cooling_buffer->process_layer(gcode, layer.id(), (support_layer != nullptr && object_layer == nullptr));
 
 #if !ENABLE_GCODE_VIEWER
     // add tag for analyzer
