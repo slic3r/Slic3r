@@ -359,7 +359,7 @@ bool Preview::init(wxWindow* parent, Model* model)
         get_option_type_string(OptionType::PausePrints) + "|0|" +
         get_option_type_string(OptionType::CustomGCodes) + "|0|" +
         get_option_type_string(OptionType::Shells) + "|0|" +
-        get_option_type_string(OptionType::ToolMarker) + "|0|" +
+        get_option_type_string(OptionType::ToolMarker) + "|1|" +
         get_option_type_string(OptionType::Legend) + "|1"
 );
     Slic3r::GUI::create_combochecklist(m_combochecklist_options, GUI::into_u8(_L("Options")), options_items);
@@ -612,6 +612,16 @@ void Preview::msw_rescale()
 
     // rescale legend
     refresh_print();
+}
+
+void Preview::jump_layers_slider(wxKeyEvent& evt)
+{
+#if ENABLE_GCODE_VIEWER
+    if (m_layers_slider) m_layers_slider->OnChar(evt);
+#else
+    if (m_slider)
+        m_slider->OnKeyDown(evt);
+#endif // ENABLE_GCODE_VIEWER
 }
 
 #if ENABLE_GCODE_VIEWER
@@ -1326,7 +1336,7 @@ void Preview::load_print_as_fff(bool keep_z_range)
         // It is left to Slic3r to decide whether the print shall be colored by the tool or by the feature.
         // Color by feature if it is a single extruder print.
         unsigned int number_extruders = (unsigned int)print->extruders().size();
-        int tool_idx = m_choice_view_type->FindString(_(L("Tool")));
+        int tool_idx = m_choice_view_type->FindString(_L("Tool"));
         int type = (number_extruders > 1) ? tool_idx /* color by a tool number */ : 0; // color by a feature type
         m_choice_view_type->SetSelection(type);
 #if ENABLE_GCODE_VIEWER

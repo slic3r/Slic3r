@@ -1465,6 +1465,7 @@ wxDEFINE_EVENT(EVT_GLCANVAS_MOVE_LAYERS_SLIDER, wxKeyEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_MOVE_DOUBLE_SLIDER, wxKeyEvent);
 #endif // ENABLE_GCODE_VIEWER
 wxDEFINE_EVENT(EVT_GLCANVAS_EDIT_COLOR_CHANGE, wxKeyEvent);
+wxDEFINE_EVENT(EVT_GLCANVAS_JUMP_TO, wxKeyEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_UNDO, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_REDO, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_COLLAPSE_SIDEBAR, SimpleEvent);
@@ -2907,6 +2908,7 @@ void GLCanvas3D::on_char(wxKeyEvent& evt)
     // see include/wx/defs.h enum wxKeyCode
     int keyCode = evt.GetKeyCode();
     int ctrlMask = wxMOD_CONTROL;
+    int shiftMask = wxMOD_SHIFT;
 
     auto imgui = wxGetApp().imgui();
     if (imgui->update_key_data(evt)) {
@@ -2942,6 +2944,15 @@ void GLCanvas3D::on_char(wxKeyEvent& evt)
             post_event(SimpleEvent(EVT_GLTOOLBAR_COPY));
         break;
 
+#if ENABLE_CTRL_M_ON_WINDOWS
+        case WXK_CONTROL_M:
+        {
+            Mouse3DController& controller = wxGetApp().plater()->get_mouse3d_controller();
+            controller.show_settings_dialog(!controller.is_settings_dialog_shown());
+            m_dirty = true;
+            break;
+        }
+#else
 #if defined(__linux__) || defined(__APPLE__)
         case WXK_CONTROL_M:
             {
@@ -2951,6 +2962,7 @@ void GLCanvas3D::on_char(wxKeyEvent& evt)
                 break;
             }
 #endif /* __linux__ */
+#endif // ENABLE_CTRL_M_ON_WINDOWS
 
 #ifdef __APPLE__
         case 'v':
@@ -2993,6 +3005,18 @@ void GLCanvas3D::on_char(wxKeyEvent& evt)
         case WXK_DELETE:
              post_event(SimpleEvent(EVT_GLTOOLBAR_DELETE_ALL)); break;
 		default:            evt.Skip();
+        }
+    }
+    else  if ((evt.GetModifiers() & shiftMask) != 0) {
+        switch (keyCode) {
+        case 'g':
+        case 'G': {
+            if (dynamic_cast<Preview*>(m_canvas->GetParent()) != nullptr)
+                post_event(wxKeyEvent(EVT_GLCANVAS_JUMP_TO, evt));
+            break;
+        }
+        default:
+            evt.Skip();
         }
     } else if (evt.HasModifiers()) {
         evt.Skip();
@@ -3217,7 +3241,7 @@ void GLCanvas3D::on_key(wxKeyEvent& evt)
                     // m_canvas->HandleAsNavigationKey(evt);   // XXX: Doesn't work in some cases / on Linux
                     post_event(SimpleEvent(EVT_GLCANVAS_TAB));
                 }
-                else if (keyCode == WXK_TAB && evt.ShiftDown()) {
+                else if (keyCode == WXK_TAB && evt.ShiftDown() && ! wxGetApp().is_gcode_viewer()) {
                     // Collapse side-panel with Shift+Tab
                     post_event(SimpleEvent(EVT_GLCANVAS_COLLAPSE_SIDEBAR));
                 }
@@ -3356,16 +3380,16 @@ void GLCanvas3D::on_mouse_wheel(wxMouseEvent& evt)
     if (evt.MiddleIsDown())
         return;
 
-    if (wxGetApp().imgui()->update_mouse_data(evt)) {
-        m_dirty = true;
-        return;
-    }
-
 #if ENABLE_RETINA_GL
     const float scale = m_retina_helper->get_scale_factor();
     evt.SetX(evt.GetX() * scale);
     evt.SetY(evt.GetY() * scale);
 #endif
+
+    if (wxGetApp().imgui()->update_mouse_data(evt)) {
+        m_dirty = true;
+        return;
+    }
 
 #ifdef __WXMSW__
 	// For some reason the Idle event is not being generated after the mouse scroll event in case of scrolling with the two fingers on the touch pad,
@@ -3407,7 +3431,8 @@ void GLCanvas3D::on_mouse_wheel(wxMouseEvent& evt)
         return;
 
     // Calculate the zoom delta and apply it to the current zoom factor
-    _update_camera_zoom((double)evt.GetWheelRotation() / (double)evt.GetWheelDelta());
+    double direction_factor = (wxGetApp().app_config->get("reverse_mouse_wheel_zoom") == "1") ? -1.0 : 1.0;
+    _update_camera_zoom(direction_factor * (double)evt.GetWheelRotation() / (double)evt.GetWheelDelta());
 }
 
 void GLCanvas3D::on_timer(wxTimerEvent& evt)

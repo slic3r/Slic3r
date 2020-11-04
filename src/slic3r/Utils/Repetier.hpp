@@ -28,7 +28,7 @@ public:
     bool has_auto_discovery() const override { return false; }
     bool can_test() const override { return true; }
     bool can_start_print() const override { return false; }
-    bool can_support_multiple_printers() const override { return true; }
+    bool supports_multiple_printers() const override { return true; }
     std::string get_host() const override { return host; }
     
     bool get_groups(wxArrayString &groups) const override;
@@ -41,7 +41,7 @@ private:
     std::string host;
     std::string apikey;
     std::string cafile;
-    std::string slug;
+    std::string port;
 
     void set_auth(Http &http) const;
     std::string make_url(const std::string &path) const;

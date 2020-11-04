@@ -62,8 +62,6 @@ add_library(libslic3r STATIC
     Fill/FillRectilinear.hpp
     Fill/FillRectilinear2.cpp
     Fill/FillRectilinear2.hpp
-    Fill/FillRectilinear3.cpp
-    Fill/FillRectilinear3.hpp
     Fill/FillSmooth.cpp
     Fill/FillSmooth.hpp
     Flow.cpp
@@ -83,8 +81,6 @@ add_library(libslic3r STATIC
     Format/STL.hpp
     Format/SL1.hpp
     Format/SL1.cpp
-    GCode/Analyzer.cpp
-    GCode/Analyzer.hpp
     GCode/ThumbnailData.cpp
     GCode/ThumbnailData.hpp
     GCode/CoolingBuffer.cpp
@@ -115,8 +111,6 @@ add_library(libslic3r STATIC
     GCodeReader.hpp
     # GCodeSender.cpp
     # GCodeSender.hpp
-    GCodeTimeEstimator.cpp
-    GCodeTimeEstimator.hpp
     GCodeWriter.cpp
     GCodeWriter.hpp
     Geometry.cpp

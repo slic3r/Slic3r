@@ -32,10 +32,6 @@
 #include "BitmapCache.hpp"
 #include "BonjourDialog.hpp"
 
-using Slic3r::GUI::format_wxstr;
-
-//static const std::pair<unsigned int, unsigned int> THUMBNAIL_SIZE_3MF = { 256, 256 };
-
 namespace Slic3r {
 namespace GUI {
 
@@ -248,10 +244,65 @@ PhysicalPrinterDialog::~PhysicalPrinterDialog()
     }
 }
 
+/* TODO: test for validity vs currnt method
+void PhysicalPrinterDialog::update_printers()
+{
+    wxBusyCursor wait;
+
+    std::unique_ptr<PrintHost> host(PrintHost::get_print_host(m_config));
+
+    wxArrayString printers;
+    Field *rs = m_optgroup->get_field("printhost_port");
+    try {
+        if (! host->get_printers(printers))
+            printers.clear();
+    } catch (const HostNetworkError &err) {
+        printers.clear();
+        show_error(this, _L("Querying printers connected to a print host failed.") + "\n\n" + from_u8(err.what()));
+    }
+    Choice *choice = dynamic_cast<Choice*>(rs);
+    choice->set_values(printers);
+    printers.empty() ? rs->disable() : rs->enable();
+}*/
+
+void PhysicalPrinterDialog::update_printers()
+{
+    std::unique_ptr<PrintHost> host(PrintHost::get_print_host(m_config));
+
+    wxArrayString printers;
+    Field* rs = m_optgroup->get_field("printhost_slug");
+    if (!host->get_printers(printers)) {
+        std::vector<std::string> slugs;
+
+        Choice* choice = dynamic_cast<Choice*>(rs);
+        choice->set_values(slugs);
+
+        rs->disable();
+    } else {
+        std::vector<std::string> slugs;
+        for (int i = 0; i < printers.size(); i++) {
+            slugs.push_back(printers[i].ToStdString());
+        }
+
+        Choice* choice = dynamic_cast<Choice*>(rs);
+        choice->set_values(slugs);
+        boost::any val = choice->get_value();
+        boost::any any_string_type = std::string("");
+        auto value_idx = std::find(slugs.begin(), slugs.end(), m_config->opt<ConfigOptionString>("printhost_slug")->value);
+        if ((val.empty() || (any_string_type.type() == val.type() && boost::any_cast<std::string>(val) == "")) && !slugs.empty() && value_idx == slugs.end()) {
+            change_opt_value(*m_config, "printhost_slug", slugs[0]);
+            choice->set_value(slugs[0],false);
+        } else if(value_idx != slugs.end() ){
+            choice->set_value(m_config->option<ConfigOptionString>("printhost_slug")->value, false);
+        }
+        rs->enable();
+    }
+}
+
 void PhysicalPrinterDialog::build_printhost_settings(ConfigOptionsGroup* m_optgroup)
 {
     m_optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
-        if (opt_key == "printhost_authorization_type" || opt_key == "host_type")
+        if (opt_key == "host_type" || opt_key == "printhost_authorization_type")
             this->update();
     };
 
@@ -291,21 +342,27 @@ void PhysicalPrinterDialog::build_printhost_settings(ConfigOptionsGroup* m_optgr
                 return;
             }
             wxString msg;
-            if (host->test(msg)) {
+            bool result;
+            {
+                // Show a wait cursor during the connection test, as it is blocking UI.
+                wxBusyCursor wait;
+                result = host->test(msg);
+            }
+            if (result)
                 show_info(this, host->get_test_ok_msg(), _L("Success!"));
-            }
-            else {
+            else
                 show_error(this, host->get_test_failed_msg(msg));
-            }
             });
 
         return sizer;
     };
 
-    auto print_host_printers = [=](wxWindow* parent) {
-        auto sizer = create_sizer_with_btn(parent, &m_printhost_slug_browse_btn, "browse", _L("Refresh Printers"));
-
-        m_printhost_slug_browse_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent e) { update_printers(); });
+    auto print_host_printers = [this, create_sizer_with_btn](wxWindow* parent) {
+        //add_scaled_button(parent, &m_printhost_port_browse_btn, "browse", _(L("Refresh Printers")), wxBU_LEFT | wxBU_EXACTFIT);
+        auto sizer = create_sizer_with_btn(parent, &m_printhost_port_browse_btn, "browse", _(L("Refresh Printers")));
+        ScalableButton* btn = m_printhost_port_browse_btn;
+        btn->SetFont(Slic3r::GUI::wxGetApp().normal_font());
+        btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent e) { update_printers(); });
         return sizer;
     };
 
@@ -323,11 +380,11 @@ void PhysicalPrinterDialog::build_printhost_settings(ConfigOptionsGroup* m_optgr
     option.opt.width = Field::def_width_wider();
     m_optgroup->append_single_option_line(option);
 
-    option = m_optgroup->get_option("printhost_slug");
+    option = m_optgroup->get_option("printhost_port");
     option.opt.width = Field::def_width_wider();
-    Line slug_line = m_optgroup->create_single_option_line(option);
-    slug_line.append_widget(print_host_printers);
-    m_optgroup->append_line(slug_line);
+    Line port_line = m_optgroup->create_single_option_line(option);
+    port_line.append_widget(print_host_printers);
+    m_optgroup->append_line(port_line);
 
     const auto ca_file_hint = _u8L("HTTPS CA file is optional. It is only needed if you use HTTPS with a self-signed certificate.");
 
@@ -390,6 +447,14 @@ void PhysicalPrinterDialog::build_printhost_settings(ConfigOptionsGroup* m_optgr
     }
 
     m_optgroup->activate();
+
+    // Always fill in the "printhost_port" combo box from the config and select it.
+    {
+        Choice* choice = dynamic_cast<Choice*>(m_optgroup->get_field("printhost_port"));
+        choice->set_values({ m_config->opt_string("printhost_port") });
+        choice->set_selection();
+    }
+
     update();
 }
 
@@ -399,11 +464,15 @@ void PhysicalPrinterDialog::update()
 
     const PrinterTechnology tech = Preset::printer_technology(*m_config);
     // Only offer the host type selection for FFF, for SLA it's always the SL1 printer (at the moment)
+    bool supports_multiple_printers = false;
     if (tech == ptFFF) {
         m_optgroup->show_field("host_type");
         m_optgroup->hide_field("printhost_authorization_type");
+        m_optgroup->show_field("printhost_apikey", true);
         for (const std::string& opt_key : std::vector<std::string>{ "printhost_user", "printhost_password" })
             m_optgroup->hide_field(opt_key);
+        const auto opt = m_config->option<ConfigOptionEnum<PrintHostType>>("host_type");
+        supports_multiple_printers = opt && opt->value == htRepetier;
     }
     else {
         m_optgroup->set_value("host_type", int(PrintHostType::htOctoPrint), false);
@@ -414,7 +483,7 @@ void PhysicalPrinterDialog::update()
         AuthorizationType auth_type = m_config->option<ConfigOptionEnum<AuthorizationType>>("printhost_authorization_type")->value;
         m_optgroup->show_field("printhost_apikey", auth_type == AuthorizationType::atKeyPassword);
 
-        for (const std::string& opt_key : std::vector<std::string>{ "printhost_user", "printhost_password" })
+        for (const char *opt_key : { "printhost_user", "printhost_password" })
             m_optgroup->show_field(opt_key, auth_type == AuthorizationType::atUserPassword);
     }
 
@@ -426,52 +495,12 @@ void PhysicalPrinterDialog::update()
         if (m_printhost_browse_btn)
             m_printhost_browse_btn->Enable(host->has_auto_discovery());
 
-        m_printhost_slug_browse_btn->Enable(host->can_support_multiple_printers());
+        m_printhost_slug_browse_btn->Enable(supports_multiple_printers);
 
-        Field* rs = m_optgroup->get_field("printhost_slug");
-        if (host->can_support_multiple_printers()) {
-            update_printers();
-            rs->enable();
-        } else {
-            rs->disable();
-        }
+        m_optgroup->show_field("printhost_port", supports_multiple_printers);
     }
 
     this->Layout();
-}
-
-void PhysicalPrinterDialog::update_printers()
-{
-    std::unique_ptr<PrintHost> host(PrintHost::get_print_host(m_config));
-
-    wxArrayString printers;
-    Field* rs = m_optgroup->get_field("printhost_slug");
-    if (!host->get_printers(printers)) {
-        std::vector<std::string> slugs;
-
-        Choice* choice = dynamic_cast<Choice*>(rs);
-        choice->set_values(slugs);
-
-        rs->disable();
-    } else {
-        std::vector<std::string> slugs;
-        for (int i = 0; i < printers.size(); i++) {
-            slugs.push_back(printers[i].ToStdString());
-        }
-
-        Choice* choice = dynamic_cast<Choice*>(rs);
-        choice->set_values(slugs);
-        boost::any val = choice->get_value();
-        boost::any any_string_type = std::string("");
-        auto value_idx = std::find(slugs.begin(), slugs.end(), m_config->opt<ConfigOptionString>("printhost_slug")->value);
-        if ((val.empty() || (any_string_type.type() == val.type() && boost::any_cast<std::string>(val) == "")) && !slugs.empty() && value_idx == slugs.end()) {
-            change_opt_value(*m_config, "printhost_slug", slugs[0]);
-            choice->set_value(slugs[0],false);
-        } else if(value_idx != slugs.end() ){
-            choice->set_value(m_config->option<ConfigOptionString>("printhost_slug")->value, false);
-        }
-        rs->enable();
-    }
 }
 
 wxString PhysicalPrinterDialog::get_printer_name()

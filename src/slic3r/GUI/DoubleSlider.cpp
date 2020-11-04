@@ -12,9 +12,7 @@
 #include "I18N.hpp"
 #include "ExtruderSequenceDialog.hpp"
 #include "libslic3r/Print.hpp"
-#if ENABLE_GCODE_VIEWER
 #include "libslic3r/AppConfig.hpp"
-#endif // ENABLE_GCODE_VIEWER
 
 #include <wx/button.h>
 #include <wx/dialog.h>
@@ -53,11 +51,6 @@ static std::string gcode(Type type)
     case Template:    return config.template_custom_gcode;
     default:          return "";
     }
-}
-
-static bool is_lower_thumb_editable()
-{
-    return Slic3r::GUI::get_app_config()->get("seq_top_layer_only") == "0";
 }
 
 Control::Control( wxWindow *parent,
@@ -305,6 +298,8 @@ wxSize Control::get_size() const
 void Control::get_size(int* w, int* h) const
 {
     GetSize(w, h);
+    if (m_draw_mode == dmSequentialGCodeView)
+        return; // we have no more icons for drawing
     is_horizontal() ? *w -= m_lock_icon_dim : *h -= m_lock_icon_dim;
 }
 
@@ -481,8 +476,10 @@ void Control::draw_action_icon(wxDC& dc, const wxPoint pt_beg, const wxPoint pt_
 {
     const int tick = m_selection == ssLower ? m_lower_value : m_higher_value;
 
+#if ENABLE_GCODE_VIEWER
     if (!m_enable_action_icon)
         return;
+#endif // ENABLE_GCODE_VIEWER
 
     // suppress add tick on first layer
     if (tick == 0)
@@ -918,6 +915,10 @@ void Control::draw_revert_icon(wxDC& dc)
 
 void Control::draw_cog_icon(wxDC& dc)
 {
+#if ENABLE_GCODE_VIEWER
+    if (m_draw_mode == dmSequentialGCodeView)
+        return;
+#endif // ENABLE_GCODE_VIEWER
     int width, height;
     get_size(&width, &height);
 
@@ -962,6 +963,13 @@ int Control::get_value_from_position(const wxCoord x, const wxCoord y)
         return int(double(x - SLIDER_MARGIN) / step + 0.5);
 
     return int(m_min_value + double(height - SLIDER_MARGIN - y) / step + 0.5);
+}
+
+bool Control::is_lower_thumb_editable()
+{
+    if (m_draw_mode == dmSequentialGCodeView)
+        return Slic3r::GUI::get_app_config()->get("seq_top_layer_only") == "0";
+    return true;
 }
 
 bool Control::detect_selected_slider(const wxPoint& pt)

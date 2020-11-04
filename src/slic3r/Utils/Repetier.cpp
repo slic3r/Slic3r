@@ -12,9 +12,11 @@
 
 #include <wx/progdlg.h>
 
+
 #include "libslic3r/PrintConfig.hpp"
 #include "slic3r/GUI/I18N.hpp"
 #include "slic3r/GUI/GUI.hpp"
+#include "slic3r/GUI/format.hpp"
 #include "Http.hpp"
 
 
@@ -28,7 +30,7 @@ Repetier::Repetier(DynamicPrintConfig *config) :
     host(config->opt_string("print_host")),
     apikey(config->opt_string("printhost_apikey")),
     cafile(config->opt_string("printhost_cafile")),
-    slug(config->opt_string("printhost_slug"))
+    port(config->opt_string("printhost_port"))
 {}
 
 const char* Repetier::get_name() const { return "Repetier"; }
@@ -105,7 +107,7 @@ bool Repetier::upload(PrintHostUpload upload_data, ProgressFn prorgess_fn, Error
 
     bool res = true;
 
-    auto url = make_url((boost::format("printer/model/%1%") % slug).str());
+    auto url = make_url((boost::format("printer/model/%1%") % port).str());
 
     BOOST_LOG_TRIVIAL(info) << boost::format("%1%: Uploading file %2% at %3%, filename: %4%, path: %5%, print: %6%, group: %7%")
         % name
@@ -178,7 +180,7 @@ bool Repetier::get_groups(wxArrayString& groups) const
     bool res = true;
     
     const char *name = get_name();
-    auto url = make_url((boost::format("printer/api/%1%") % slug).str());
+    auto url = make_url((boost::format("printer/api/%1%") % port).str());
 
     BOOST_LOG_TRIVIAL(info) << boost::format("%1%: Get groups at: %2%") % name % url;
 
@@ -200,7 +202,8 @@ bool Repetier::get_groups(wxArrayString& groups) const
                     if (v.second.data() == "#") {
                         groups.push_back(_utf8(L("Default")));
                     } else {
-                        groups.push_back(v.second.data());
+                        // Is it safe to assume that the data are utf-8 encoded?
+                        groups.push_back(GUI::from_u8(v.second.data()));
                     }
                 }
             }
@@ -226,33 +229,35 @@ bool Repetier::get_printers(wxArrayString& printers) const
     auto http = Http::get(std::move(url));
     set_auth(http);
     
-    auto &slugs = printers;
     http.on_error([&](std::string body, std::string error, unsigned status) {
             BOOST_LOG_TRIVIAL(error) << boost::format("%1%: Error listing printers: %2%, HTTP %3%, body: `%4%`") % name % error % status % body;
             res = false;
         })
-        .on_complete([&, this](std::string body, unsigned) {
-            BOOST_LOG_TRIVIAL(debug) << boost::format("%1%: Got printers: %2%") % name % body;
+        .on_complete([&, this](std::string body, unsigned http_status) {
+            BOOST_LOG_TRIVIAL(debug) << boost::format("%1%: Got printers: %2%, HTTP status: %3%") % name % body % http_status;
+            
+            if (http_status != 200)
+                throw HostNetworkError(GUI::format(_L("HTTP status: %1%\nMessage body: \"%2%\""), http_status, body));
+
+            std::stringstream ss(body);
+            pt::ptree ptree;
+            try {
+                pt::read_json(ss, ptree);
+            } catch (const pt::ptree_error &err) {
+                throw HostNetworkError(GUI::format(_L("Parsing of host response failed.\nMessage body: \"%1%\"\nError: \"%2%\""), body, err.what()));
+            }
+            
+            const auto error = ptree.get_optional<std::string>("error");
+            if (error)
+                throw HostNetworkError(*error);
 
             try {
-                std::stringstream ss(body);
-                pt::ptree ptree;
-                pt::read_json(ss, ptree);
-                
-                const auto error = ptree.get_optional<std::string>("error");
-                if (error) {
-                    res = false;
-                } else {
-                    BOOST_FOREACH(boost::property_tree::ptree::value_type &v, ptree.get_child("data.")) {
-                        const auto slug = v.second.get<std::string>("slug");
-                        printers.push_back(slug);
-                    }
-                    
-                    //res = !printers.empty();
+                BOOST_FOREACH(boost::property_tree::ptree::value_type &v, ptree.get_child("data.")) {
+                    const auto port = v.second.get<std::string>("slug");
+                    printers.push_back(Slic3r::GUI::from_u8(port));
                 }
-            }
-            catch (const std::exception &) {
-                res = false;
+            } catch (const std::exception &err) {
+                throw HostNetworkError(GUI::format(_L("Enumeration of host printers failed.\nMessage body: \"%1%\"\nError: \"%2%\""), body, err.what()));
             }
         })
         .perform_sync();

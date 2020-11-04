@@ -215,7 +215,7 @@ void FanMover::_remove_slow_fan(int16_t min_speed, float past_sec) {
 void FanMover::_process_gcode_line(GCodeReader& reader, const GCodeReader::GCodeLine& line)
 {
     // processes 'normal' gcode lines
-    std::string cmd = line.cmd();
+    std::string cmd(line.cmd());
     double time = 0;
     int16_t fan_speed = -1;
     if (cmd.length() > 1) {
@@ -272,7 +272,7 @@ void FanMover::_process_gcode_line(GCodeReader& reader, const GCodeReader::GCode
                         while (it != m_buffer.end() && time_count > 0) {
                             if (time_count - it->time < 0) {
                                 //found something that is lower than us
-                                _put_in_middle_G1(it, time_count, BufferData{ line.cmd(), 0, fan_speed });
+                                _put_in_middle_G1(it, time_count, BufferData( std::string(line.cmd()), 0, fan_speed ));
                                 //found, stop
                                 break;
                             }

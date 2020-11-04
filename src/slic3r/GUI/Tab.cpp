@@ -12,6 +12,7 @@
 #include "WipeTowerDialog.hpp"
 #include "ButtonsDescription.hpp"
 #include "Search.hpp"
+#include "OG_CustomCtrl.hpp"
 
 #include <wx/app.h>
 #include <wx/button.h>
@@ -59,40 +60,49 @@ wxDEFINE_EVENT(EVT_TAB_PRESETS_CHANGED, SimpleEvent);
 
 void Tab::Highlighter::set_timer_owner(wxEvtHandler* owner, int timerid/* = wxID_ANY*/)
 {
-    timer.SetOwner(owner, timerid);
+    m_timer.SetOwner(owner, timerid);
 }
 
-void Tab::Highlighter::init(BlinkingBitmap* bmp)
+void Tab::Highlighter::init(std::pair<OG_CustomCtrl*, bool*> params)
 {
-    if (timer.IsRunning())
+    if (m_timer.IsRunning())
         invalidate();
-    if (!bmp)
+    if (!params.first || !params.second)
         return;
 
-    timer.Start(300, false);
+    m_timer.Start(300, false);
 
-    bbmp = bmp;
-    bbmp->activate();
+    m_custom_ctrl = params.first;
+    m_show_blink_ptr = params.second;
+
+    *m_show_blink_ptr = true;
+    m_custom_ctrl->Refresh();
 }
 
 void Tab::Highlighter::invalidate()
 {
-    timer.Stop();
+    m_timer.Stop();
 
-    if (bbmp) {
-        bbmp->invalidate();
-        bbmp = nullptr;
+    if (m_custom_ctrl && m_show_blink_ptr) {
+        *m_show_blink_ptr = false;
+        m_custom_ctrl->Refresh();
+        m_show_blink_ptr = nullptr;
+        m_custom_ctrl = nullptr;
     }
-    blink_counter = 0;
+
+    m_blink_counter = 0;
 }
 
 void Tab::Highlighter::blink()
 {
-    if (!bbmp)
+    if (m_custom_ctrl && m_show_blink_ptr) {
+        *m_show_blink_ptr = !*m_show_blink_ptr;
+        m_custom_ctrl->Refresh();
+    }
+    else
         return;
 
-    bbmp->blink();
-    if ((++blink_counter) == 11)
+    if ((++m_blink_counter) == 11)
         invalidate();
 }
 
@@ -351,12 +361,6 @@ void Tab::create_preset_tab()
                 m_presets_choice->add_physical_printer();
         });
 
-    // Fill cache for mode bitmaps
-    m_mode_bitmap_cache.reserve(3);
-    m_mode_bitmap_cache.push_back(ScalableBitmap(this, "mode_simple"  , mode_icon_px_size()));
-    m_mode_bitmap_cache.push_back(ScalableBitmap(this, "mode_advanced", mode_icon_px_size()));
-    m_mode_bitmap_cache.push_back(ScalableBitmap(this, "mode_expert"  , mode_icon_px_size()));
-
     // Initialize the DynamicPrintConfig by default keys/values.
     build();
 
@@ -421,7 +425,7 @@ Slic3r::GUI::PageShp Tab::add_options_page(const wxString& title, const std::str
 #else
     auto panel = this;
 #endif
-    PageShp page(new Page(/*panel*/m_page_view, title, icon_idx, m_mode_bitmap_cache));
+    PageShp page(new Page(m_page_view, title, icon_idx));
 //	page->SetBackgroundStyle(wxBG_STYLE_SYSTEM);
 #ifdef __WINDOWS__
 //	page->SetDoubleBuffered(true);
@@ -494,17 +498,14 @@ void Tab::update_labels_colour()
         }
         if (opt.first == "bed_shape"            || opt.first == "filament_ramming_parameters" || 
             opt.first == "compatible_prints"    || opt.first == "compatible_printers"           ) {
-            wxStaticText* label = m_colored_Labels.find(opt.first) == m_colored_Labels.end() ? nullptr : m_colored_Labels.at(opt.first);
-            if (label) {
-                label->SetForegroundColour(*color);
-                label->Refresh(true);
-            }
+            if (m_colored_Label_colors.find(opt.first) != m_colored_Label_colors.end())
+                *m_colored_Label_colors.at(opt.first) = *color;
             continue;
         }
 
         Field* field = get_field(opt.first);
         if (field == nullptr) continue;
-        field->set_label_colour_force(color);
+        field->set_label_colour(color);
     }
 
     auto cur_item = m_treectrl->GetFirstVisibleItem();
@@ -532,17 +533,18 @@ void Tab::decorate()
 {
     for (const auto opt : m_options_list)
     {
-        wxStaticText*   label = nullptr;
         Field*          field = nullptr;
+        wxColour*   colored_label_clr = nullptr;
 
         if (opt.first == "bed_shape" || opt.first == "filament_ramming_parameters" ||
             opt.first == "compatible_prints" || opt.first == "compatible_printers")
-            label = (m_colored_Labels.find(opt.first) == m_colored_Labels.end()) ? nullptr : m_colored_Labels.at(opt.first);
+            colored_label_clr = (m_colored_Label_colors.find(opt.first) == m_colored_Label_colors.end()) ? nullptr : m_colored_Label_colors.at(opt.first);
 
-        if (!label)
+        if (!colored_label_clr) {
             field = get_field(opt.first);
-        if (!label && !field) 
+            if (!field)
             continue;
+        }
 
         bool is_nonsys_value = false;
         bool is_modified_value = true;
@@ -573,9 +575,8 @@ void Tab::decorate()
             tt = &m_tt_white_bullet;
         }
             
-            if (label) {
-                label->SetForegroundColour(*color);
-                label->Refresh(true);
+        if (colored_label_clr) {
+            *colored_label_clr = *color;
             continue;
         }
         
@@ -587,6 +588,9 @@ void Tab::decorate()
         field->set_undo_to_sys_tooltip(sys_tt);
         field->set_label_colour(color);
     }
+
+    if (m_active_page)
+        m_active_page->refresh();
 }
 
 // Update UI according to changes
@@ -674,6 +678,9 @@ void TabPrinter::msw_rescale()
     const std::vector<PageShp>& pages = m_printer_technology == ptFFF ? m_pages_sla : m_pages_fff;
     for (auto page : pages)
         page->msw_rescale();
+
+    if (m_reset_to_filament_color)
+        m_reset_to_filament_color->msw_rescale();
 
     Layout();
 }
@@ -944,10 +951,9 @@ void Tab::msw_rescale()
         btn->msw_rescale();
     for (const auto bmp : m_scaled_bitmaps)
         bmp->msw_rescale();
-    for (const auto ikon : m_blinking_ikons)
-        ikon.second->msw_rescale();
-    for (ScalableBitmap& bmp : m_mode_bitmap_cache)
-        bmp.msw_rescale();
+
+    if (m_detach_preset_btn)
+        m_detach_preset_btn->msw_rescale();
 
     // rescale icons for tree_ctrl
     for (ScalableBitmap& bmp : m_scaled_icons_list)
@@ -969,14 +975,13 @@ void Tab::msw_rescale()
 void Tab::sys_color_changed()
 {
     update_tab_ui();
+    m_presets_choice->msw_rescale();
 
     // update buttons and cached bitmaps
     for (const auto btn : m_scaled_buttons)
         btn->msw_rescale();
     for (const auto bmp : m_scaled_bitmaps)
         bmp->msw_rescale();
-//    for (ScalableBitmap& bmp : m_mode_bitmap_cache)
-//        bmp.msw_rescale();
 
     // update icons for tree_ctrl
     for (ScalableBitmap& bmp : m_scaled_icons_list)
@@ -1003,14 +1008,21 @@ void Tab::sys_color_changed()
 Field* Tab::get_field(const t_config_option_key& opt_key, int opt_index/* = -1*/) const
 {
     return m_active_page ? m_active_page->get_field(opt_key, opt_index) : nullptr;
+}
 
-    Field* field = nullptr;
-    for (auto page : m_pages) {
-        field = page->get_field(opt_key, opt_index);
-        if (field != nullptr)
-            return field;
+std::pair<OG_CustomCtrl*, bool*> Tab::get_custom_ctrl_with_blinking_ptr(const t_config_option_key& opt_key, int opt_index/* = -1*/)
+{
+    if (!m_active_page)
+        return {nullptr, nullptr};
+
+    std::pair<OG_CustomCtrl*, bool*> ret = {nullptr, nullptr};
+
+    for (auto opt_group : m_active_page->m_optgroups) {
+        ret = opt_group->get_custom_ctrl_with_blinking_ptr(opt_key, opt_index);
+        if (ret.first && ret.second)
+            break;
     }
-    return field;
+    return ret;
 }
 
 Field* Tab::get_field(const t_config_option_key& opt_key, Page** selected_page, int opt_index/* = -1*/)
@@ -1152,25 +1164,19 @@ void Tab::activate_option(const std::string& opt_key, const wxString& category)
     Field* field = get_field(opt_key);
 
     // focused selected field
-    if (field) {
+    if (field)
         field->getWindow()->SetFocus();
-        m_highlighter.init(field->blinking_bitmap());
-    }
-    else if (category == "Single extruder MM setup")
-    {
+    else if (category == "Single extruder MM setup") {
         // When we show and hide "Single extruder MM setup" page, 
         // related options are still in the search list
         // So, let's hightlighte a "single_extruder_multi_material" option, 
         // as a "way" to show hidden page again
         field = get_field("single_extruder_multi_material");
-        if (field) {
+        if (field)
             field->getWindow()->SetFocus();
-            m_highlighter.init(field->blinking_bitmap());
         }
-    }
-    else
-        m_highlighter.init(m_blinking_ikons[opt_key]);
 
+    m_highlighter.init(get_custom_ctrl_with_blinking_ptr(opt_key));
 }
 
 void Tab::apply_searcher()
@@ -1230,7 +1236,6 @@ void Tab::build_preset_description_line(ConfigOptionsGroup* optgroup)
     };
 
     auto detach_preset_btn = [this](wxWindow* parent) {
-        //add_scaled_button(parent, &m_detach_preset_btn, "lock_open_sys", _(L("Detach from system preset")), wxBU_LEFT | wxBU_EXACTFIT);
         m_detach_preset_btn = new ScalableButton(parent, wxID_ANY, "lock_open_sys", _L("Detach from system preset"), 
                                                  wxDefaultSize, wxDefaultPosition, wxBU_LEFT | wxBU_EXACTFIT, true);
         ScalableButton* btn = m_detach_preset_btn;
@@ -1620,13 +1625,21 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 if (logs) std::cout << "add line\n";
                 in_line = false;
             }
-            std::string arg = "";
-            if (full_line.size() > 6 && full_line.find(":") != std::string::npos)
-                arg = full_line.substr(full_line.find(":") + 1, full_line.size() - 1 - full_line.find(":"));
-            while (arg.size() > 1 && (arg.back() == ' ' || arg.back() == '\t')) arg = arg.substr(0, arg.size()-1);
-            current_line = { _(L(arg.c_str())), wxString{""} };
+            std::vector<std::string> params;
+            boost::split(params, full_line, boost::is_any_of(":"));
+            for (std::string& str : params) {
+                while (str.size() > 1 && (str.front() == ' ' || str.front() == '\t')) str = str.substr(1, str.size() - 1);
+                while (str.size() > 1 && (str.back() == ' ' || str.back() == '\t')) str = str.substr(0, str.size() - 1);
+            }
+
+            current_line = { _L(params.empty()?"":params.back().c_str()), wxString{""} };
+            for (int i = 1; i < params.size() - 1; i++) {
+                if (boost::starts_with(params[i], "url$")) { // only on line
+                    current_line.label_path = params[i].substr(4, params[i].size() - 4);
+                }
+            }
             in_line = true;
-            if (logs) std::cout << "create line " << arg << "\n";
+            if (logs) std::cout << "create line " << (params.empty() ? "" : params.back()) << "\n";
         }
         else if (boost::starts_with(full_line, "end_line"))
         {
@@ -1652,13 +1665,13 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             }
 
             if (setting_id == "compatible_printers") {
-                create_line_with_widget(current_group.get(),"compatible_printers", [this](wxWindow* parent) {
+                create_line_with_widget(current_group.get(),"compatible_printers", wxEmptyString, [this](wxWindow* parent) {
                     return compatible_widget_create(parent, m_compatible_printers);
                 });
                 continue;
             }
             else if (setting_id == "compatible_prints") {
-                create_line_with_widget(current_group.get(), "compatible_prints", [this](wxWindow* parent) {
+                create_line_with_widget(current_group.get(), "compatible_prints", wxEmptyString, [this](wxWindow* parent) {
                     return compatible_widget_create(parent, m_compatible_prints);
                 });
                 continue;
@@ -1675,6 +1688,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             Option option = current_group->get_option(setting_id, id);
 
             bool colored = false;
+            wxString label_path;
             for (int i = 1; i < params.size() - 1; i++) {
                 if (params[i] == "simple")
                 {
@@ -1719,6 +1733,9 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 else if (params[i] == "color") {
                     colored = true;
                 }
+                else if (boost::starts_with(params[i], "url$")) { // only on line
+                    label_path = params[i].substr(4, params[i].size() - 4);
+                }
             }
 
             if(height>0)
@@ -1726,14 +1743,16 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
 
             if (!in_line) {
                 if (colored) {
-                    m_colored_Labels[setting_id] = nullptr;
-                    Line l = current_group->create_single_option_line(option);
-                    l.full_Label = &m_colored_Labels[setting_id];
+                    m_colored_Label_colors[setting_id] = &m_default_text_clr;
+                    Line l = current_group->create_single_option_line(option, label_path.empty() ? wxEmptyString : label_path);
+                    l.full_Label_color = m_colored_Label_colors[setting_id];
                     current_group->append_line(l);
-                } else
-                    current_group->append_line(current_group->create_single_option_line(option));
-            } else
+                } else {
+                    current_group->append_line(current_group->create_single_option_line(option, label_path.empty() ? wxEmptyString : label_path));
+                }
+            } else {
                 current_line.append_option(option);
+            }
             if (logs) std::cout << "create setting " << setting_id <<"  with label "<< option.opt.label << "and height "<< option.opt.height<<" fw:"<< option.opt.full_width << "\n";
         }
         else if (boost::starts_with(full_line, "height")) {
@@ -1848,7 +1867,8 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
         else if (full_line == "bed_shape"){
             TabPrinter* tab = nullptr;
             if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
-            create_line_with_widget(current_group.get(), "bed_shape", [tab](wxWindow* parent) {
+            create_line_with_widget(current_group.get(), "bed_shape", 
+                "custom-svg-and-png-bed-textures_124612", [tab](wxWindow* parent) {
                 return 	tab->create_bed_shape_widget(parent);
             });
         } else if (full_line == "extruders_count") {
@@ -1910,10 +1930,9 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             TabPrinter* tab = nullptr;
             if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
             widget_t reset_to_filament_color = [this, idx_page, tab](wxWindow* parent) -> wxBoxSizer* {
-                add_scaled_button(parent, &tab->m_reset_to_filament_color, "undo",
-                    _(L("Reset to Filament Color")), wxBU_LEFT | wxBU_EXACTFIT);
                 ScalableButton* btn = tab->m_reset_to_filament_color;
                 btn->SetFont(Slic3r::GUI::wxGetApp().normal_font());
+                btn->SetSize(btn->GetBestSize());
                 wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
                 sizer->Add(btn);
 
@@ -1932,7 +1951,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
 
                 return sizer;
             };
-            current_line = current_group->create_single_option_line("extruder_colour", idx_page);
+            current_line = current_group->create_single_option_line("extruder_colour", wxEmptyString, idx_page);
             current_line.append_widget(reset_to_filament_color);
             current_group->append_line(current_line);
         }
@@ -2634,6 +2653,16 @@ void TabPrinter::update_pages()
     rebuild_page_tree();
 }
 
+void TabPrinter::reload_config()
+{
+    Tab::reload_config();
+
+    // "extruders_count" doesn't update from the update_config(),
+    // so update it implicitly
+    if (m_active_page && m_active_page->title() == "General")
+        m_active_page->set_value("extruders_count", int(m_extruders_count));
+}
+
 void TabPrinter::activate_selected_page(std::function<void()> throw_if_canceled)
 {
     Tab::activate_selected_page(throw_if_canceled);
@@ -3262,8 +3291,6 @@ void Tab::clear_pages()
 
     m_compatible_prints.checkbox    = nullptr;
     m_compatible_prints.btn         = nullptr;
-
-    m_blinking_ikons.clear();
 }
 
 void Tab::update_description_lines()
@@ -3550,13 +3577,15 @@ void Tab::update_ui_from_settings()
     }
 }
 
-void Tab::create_line_with_widget(ConfigOptionsGroup* optgroup, const std::string& opt_key, widget_t widget)
+void Tab::create_line_with_widget(ConfigOptionsGroup* optgroup, const std::string& opt_key, const wxString& path, widget_t widget)
 {
     Line line = optgroup->create_single_option_line(opt_key);
     line.widget = widget;
+    line.label_path = path;
 
-    m_colored_Labels[opt_key] = nullptr;
-    line.full_Label = &m_colored_Labels[opt_key];
+    m_colored_Label_colors[opt_key] = &m_default_text_clr;
+    line.full_Label_color = m_colored_Label_colors[opt_key];
+
     optgroup->append_line(line);
 }
 
@@ -3565,14 +3594,12 @@ wxSizer* Tab::compatible_widget_create(wxWindow* parent, PresetDependencies &dep
 {
     deps.checkbox = new wxCheckBox(parent, wxID_ANY, _(L("All")));
     deps.checkbox->SetFont(Slic3r::GUI::wxGetApp().normal_font());
-    deps.btn = new ScalableButton(parent, wxID_ANY, "printer_white", from_u8((boost::format(" %s %s") % _utf8(L("Set")) % std::string(dots.ToUTF8())).str()),
+    deps.btn = new ScalableButton(parent, wxID_ANY, "printer", from_u8((boost::format(" %s %s") % _utf8(L("Set")) % std::string(dots.ToUTF8())).str()),
                                   wxDefaultSize, wxDefaultPosition, wxBU_LEFT | wxBU_EXACTFIT, true);
     deps.btn->SetFont(Slic3r::GUI::wxGetApp().normal_font());
-
-    BlinkingBitmap* bbmp = new BlinkingBitmap(parent);
+    deps.btn->SetSize(deps.btn->GetBestSize());
 
     auto sizer = new wxBoxSizer(wxHORIZONTAL);
-    sizer->Add(bbmp, 0, wxALIGN_CENTER_VERTICAL);
     sizer->Add((deps.checkbox), 0, wxALIGN_CENTER_VERTICAL);
     sizer->Add((deps.btn), 0, wxALIGN_CENTER_VERTICAL);
 
@@ -3633,25 +3660,18 @@ wxSizer* Tab::compatible_widget_create(wxWindow* parent, PresetDependencies &dep
         }
     }));
 
-    // fill m_blinking_ikons map with options
-    {
-        m_blinking_ikons[deps.key_list] = bbmp;
-    }
-
     return sizer;
 }
 
 // Return a callback to create a TabPrinter widget to edit bed shape
 wxSizer* TabPrinter::create_bed_shape_widget(wxWindow* parent)
 {
-    ScalableButton* btn = new ScalableButton(parent, wxID_ANY, "printer_white", " " + _(L("Set")) + " " + dots,
+    ScalableButton* btn = new ScalableButton(parent, wxID_ANY, "printer", " " + _(L("Set")) + " " + dots,
         wxDefaultSize, wxDefaultPosition, wxBU_LEFT | wxBU_EXACTFIT, true);
     btn->SetFont(wxGetApp().normal_font());
-
-    BlinkingBitmap* bbmp = new BlinkingBitmap(parent);
+    btn->SetSize(btn->GetBestSize());
 
     auto sizer = new wxBoxSizer(wxHORIZONTAL);
-    sizer->Add(bbmp, 0, wxALIGN_CENTER_VERTICAL);
     sizer->Add(btn, 0, wxALIGN_CENTER_VERTICAL);
 
     btn->Bind(wxEVT_BUTTON, ([this](wxCommandEvent e)
@@ -3681,12 +3701,6 @@ wxSizer* TabPrinter::create_bed_shape_widget(wxWindow* parent)
         const Search::GroupAndCategory& gc = searcher.get_group_and_category("bed_shape");
         searcher.add_key("bed_custom_texture", gc.group, gc.category);
         searcher.add_key("bed_custom_model", gc.group, gc.category);
-    }
-
-    // fill m_blinking_ikons map with options
-    {
-        for (const std::string opt : {"bed_shape", "bed_custom_texture", "bed_custom_model"})
-            m_blinking_ikons[opt] = bbmp;
     }
 
     return sizer;
@@ -3862,11 +3876,10 @@ void Tab::set_tooltips_text()
                                 "Click to reset current value to the last saved preset."));
 }
 
-Page::Page(wxWindow* parent, const wxString& title, const int iconID, const std::vector<ScalableBitmap>& mode_bmp_cache) :
+Page::Page(wxWindow* parent, const wxString& title, int iconID) :
         m_parent(parent),
         m_title(title),
-        m_iconID(iconID),
-        m_mode_bitmap_cache(mode_bmp_cache)
+        m_iconID(iconID)
 {
     m_vsizer = (wxBoxSizer*)parent->GetSizer();
     m_item_color = &wxGetApp().get_label_clr_default();
@@ -3921,6 +3934,12 @@ void Page::sys_color_changed()
         group->sys_color_changed();
 }
 
+void Page::refresh()
+{
+    for (auto group : m_optgroups)
+        group->refresh();
+}
+
 Field* Page::get_field(const t_config_option_key& opt_key, int opt_index /*= -1*/) const
 {
     Field* field = nullptr;
@@ -3944,22 +3963,8 @@ bool Page::set_value(const t_config_option_key& opt_key, const boost::any& value
 // package Slic3r::GUI::Tab::Page;
 ConfigOptionsGroupShp Page::new_optgroup(const wxString& title, int noncommon_title_width /*= -1*/)
 {
-    auto extra_column = [this](wxWindow* parent, const Line& line)
-    {
-        std::string bmp_name;
-        const std::vector<Option>& options = line.get_options();
-        int mode_id = int(options[0].opt.mode);
-        const wxBitmap& bitmap = options.size() == 0 || options[0].opt.gui_type == "legend" ? wxNullBitmap :
-                                 m_mode_bitmap_cache[mode_id].bmp();
-        auto bmp = new wxStaticBitmap(parent, wxID_ANY, bitmap);
-        bmp->SetClientData((void*)&m_mode_bitmap_cache[mode_id]);
-
-        bmp->SetBackgroundStyle(wxBG_STYLE_PAINT);
-        return bmp;
-    };
-
     //! config_ have to be "right"
-    ConfigOptionsGroupShp optgroup = std::make_shared<ConfigOptionsGroup>(/*this*/m_parent, title, m_config, true, extra_column);
+    ConfigOptionsGroupShp optgroup = std::make_shared<ConfigOptionsGroup>(m_parent, title, m_config, true);
     optgroup->set_config_category(m_title.ToStdString());
     if (noncommon_title_width >= 0)
         optgroup->title_width = noncommon_title_width;
@@ -4081,7 +4086,7 @@ void TabSLAMaterial::build()
     page = add_options_page(L("Dependencies"), "wrench");
     optgroup = page->new_optgroup(L("Profile dependencies"));
 
-    create_line_with_widget(optgroup.get(), "compatible_printers", [this](wxWindow* parent) {
+    create_line_with_widget(optgroup.get(), "compatible_printers", wxEmptyString, [this](wxWindow* parent) {
         return compatible_widget_create(parent, m_compatible_printers);
     });
     
@@ -4089,7 +4094,7 @@ void TabSLAMaterial::build()
     option.opt.full_width = true;
     optgroup->append_single_option_line(option);
 
-    create_line_with_widget(optgroup.get(), "compatible_prints", [this](wxWindow* parent) {
+    create_line_with_widget(optgroup.get(), "compatible_prints", wxEmptyString, [this](wxWindow* parent) {
         return compatible_widget_create(parent, m_compatible_prints);
     });
 
@@ -4214,7 +4219,7 @@ void TabSLAPrint::build()
     page = add_options_page(L("Dependencies"), "wrench");
     optgroup = page->new_optgroup(L("Profile dependencies"));
 
-    create_line_with_widget(optgroup.get(), "compatible_printers", [this](wxWindow* parent) {
+    create_line_with_widget(optgroup.get(), "compatible_printers", wxEmptyString, [this](wxWindow* parent) {
         return compatible_widget_create(parent, m_compatible_printers);
     });
 

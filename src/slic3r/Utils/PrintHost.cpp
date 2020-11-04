@@ -9,6 +9,7 @@
 
 #include <wx/string.h>
 #include <wx/app.h>
+#include <wx/arrstr.h>
 
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/Channel.hpp"

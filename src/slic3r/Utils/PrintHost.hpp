@@ -7,10 +7,10 @@
 #include <boost/filesystem/path.hpp>
 
 #include <wx/string.h>
-#include <wx/arrstr.h>
 
 #include "Http.hpp"
 
+class wxArrayString;
 
 namespace Slic3r {
 
@@ -45,10 +45,14 @@ public:
     virtual bool has_auto_discovery() const = 0;
     virtual bool can_test() const = 0;
     virtual bool can_start_print() const = 0;
-    virtual bool can_support_multiple_printers() const = 0;
+    // A print host usually does not support multiple printers, with the exception of Repetier server.
+    virtual bool supports_multiple_printers() const { return false; }
     virtual std::string get_host() const = 0;
-    virtual bool get_groups(wxArrayString& groups) const = 0;
-    virtual bool get_printers(wxArrayString &printers) const = 0;
+
+    // Support for Repetier server multiple groups & printers. Not supported by other print hosts.
+    // Returns false if not supported. May throw HostNetworkError.
+    virtual bool get_groups(wxArrayString & /* groups */) const { return false; }
+    virtual bool get_printers(wxArrayString & /* printers */) const { return false; }
 
     static PrintHost* get_print_host(DynamicPrintConfig *config);
 

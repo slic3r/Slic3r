@@ -5,7 +5,6 @@
 #include "ExtrusionEntity.hpp"
 #include "EdgeGrid.hpp"
 #include "Geometry.hpp"
-#include "GCode/Analyzer.hpp"
 #include "GCode/FanMover.hpp"
 #include "GCode/PrintExtents.hpp"
 #include "GCode/WipeTower.hpp"
@@ -1135,14 +1134,14 @@ namespace DoExport {
 	                ++ dst.second;
 	            };
 	            print_statistics.filament_stats.insert(std::pair<size_t, float>{extruder.id(), (float)used_filament});
-	            append(out_filament_used_mm,  "%.1lf", used_filament);
-	            append(out_filament_used_cm3, "%.1lf", extruded_volume * 0.001);
+	            append(out_filament_used_mm,  "%.2lf", used_filament);
+	            append(out_filament_used_cm3, "%.2lf", extruded_volume * 0.001);
 	            if (filament_weight > 0.) {
 	                print_statistics.total_weight = print_statistics.total_weight + filament_weight;
-	                append(out_filament_used_g, "%.1lf", filament_weight);
+	                append(out_filament_used_g, "%.2lf", filament_weight);
 	                if (filament_cost > 0.) {
 	                    print_statistics.total_cost = print_statistics.total_cost + filament_cost;
-	                    append(out_filament_cost, "%.1lf", filament_cost);
+	                    append(out_filament_cost, "%.2lf", filament_cost);
 	                }
 	            }
 	            print_statistics.total_used_filament += used_filament;
@@ -1829,8 +1828,8 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
         // Modifies
         print.m_print_statistics));
     _write(file, "\n");
-    _write_format(file, "; total filament used [g] = %.1lf\n", print.m_print_statistics.total_weight);
-    _write_format(file, "; total filament cost = %.1lf\n", print.m_print_statistics.total_cost);
+    _write_format(file, "; total filament used [g] = %.2lf\n", print.m_print_statistics.total_weight);
+    _write_format(file, "; total filament cost = %.2lf\n", print.m_print_statistics.total_cost);
     if (print.m_print_statistics.total_toolchanges > 0)
     	_write_format(file, "; total toolchanges = %i\n", print.m_print_statistics.total_toolchanges);
 #if ENABLE_GCODE_VIEWER
@@ -1844,7 +1843,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     // Append full config.
     _write(file, "\n", true);
     {
-        std::string full_config = "";
+        std::string full_config;
         append_full_config(print, full_config);
         if (!full_config.empty())
             _write(file, full_config, true);
@@ -2174,7 +2173,7 @@ std::string GCode::emit_custom_gcode_per_print_z(
             // Color Change or Tool Change as Color Change.
 #if ENABLE_GCODE_VIEWER
                 // add tag for processor
-            gcode += "; " + GCodeProcessor::Color_Change_Tag + ",T" + std::to_string(m600_extruder_before_layer) + "\n";
+                gcode += ";" + GCodeProcessor::Color_Change_Tag + ",T" + std::to_string(m600_extruder_before_layer) + "\n";
 #else
                 // add tag for analyzer
             gcode += "; " + GCodeAnalyzer::Color_Change_Tag + ",T" + std::to_string(m600_extruder_before_layer) + "\n";
@@ -2198,7 +2197,7 @@ std::string GCode::emit_custom_gcode_per_print_z(
             {
 #if ENABLE_GCODE_VIEWER
                 // add tag for processor
-                gcode += "; " + GCodeProcessor::Pause_Print_Tag + "\n";
+                    gcode += ";" + GCodeProcessor::Pause_Print_Tag + "\n";
 #else
                 // add tag for analyzer
                 gcode += "; " + GCodeAnalyzer::Pause_Print_Tag + "\n";
@@ -2214,13 +2213,13 @@ std::string GCode::emit_custom_gcode_per_print_z(
             } else {
 #if ENABLE_GCODE_VIEWER
                 // add tag for processor
-                gcode += "; " + GCodeProcessor::Custom_Code_Tag + "\n";
+                    gcode += ";" + GCodeProcessor::Custom_Code_Tag + "\n";
 #else
                 // add tag for analyzer
                 gcode += "; " + GCodeAnalyzer::Custom_Code_Tag + "\n";
-#endif // ENABLE_GCODE_VIEWER
                 // add tag for time estimator
-                //gcode += "; " + GCodeTimeEstimator::Custom_Code_Tag + "\n";
+                    //gcode += "; " + GCodeTimeEstimator::Custom_Code_Tag + "\n";
+#endif // ENABLE_GCODE_VIEWER
                 if (gcode_type == CustomGCode::Template)    // Template Cistom Gcode
                     gcode += print.config().template_custom_gcode;
                 else                                        // custom Gcode
@@ -2870,10 +2869,11 @@ void GCode::append_full_config(const Print &print, std::string &str)
     const std::vector<std::string> banned_keys { 
         "compatible_printers",
         "compatible_prints",
+        //FIXME The print host keys should not be exported to full_print_config anymore. The following keys may likely be removed.
         "print_host",
         "printhost_apikey",
-		"printhost_cafile",
-		"printhost_slug"
+        "printhost_cafile",
+        "printhost_slug"
     };
     assert(std::is_sorted(banned_keys.begin(), banned_keys.end()));
     auto is_banned = [banned_keys](const std::string &key) {
