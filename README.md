@@ -12,7 +12,7 @@
 
 ##### Ubuntu 18.04
 
-    sudo apt-get install gcc cmake build-essential libgtk2.0-dev libwxgtk3.0-dev libwx-perl libmodule-build-perl git cpanminus libextutils-cppguess-perl libboost-all-dev libxmu-dev liblocal-lib-perl wx-common libopengl-perl libwx-glcanvas-perl libtbb-dev libxmu-dev freeglut3-dev libwxgtk-media3.0-dev libboost-thread-dev libboost-system-dev libboost-filesystem-dev libcurl4-openssl-dev libextutils-makemaker-cpanfile-perl
+    sudo apt-get install build-essential libgtk2.0-dev libwxgtk3.0-dev libwx-perl libmodule-build-perl git cpanminus libextutils-cppguess-perl libboost-all-dev libxmu-dev liblocal-lib-perl wx-common libopengl-perl libwx-glcanvas-perl libtbb-dev libxmu-dev freeglut3-dev libwxgtk-media3.0-dev libboost-thread-dev libboost-system-dev libboost-filesystem-dev libcurl4-openssl-dev libextutils-makemaker-cpanfile-perl
 
 Maybe you need these too
 
@@ -20,7 +20,7 @@ Maybe you need these too
 
 ##### Ubuntu 20.04
 
-    sudo apt-get install gcc cmake build-essential libgtk2.0-dev libwxgtk3.0-gtk3-dev libwx-perl libmodule-build-perl git cpanminus libextutils-cppguess-perl libboost-all-dev libxmu-dev liblocal-lib-perl wx-common libopengl-perl libwx-glcanvas-perl libtbb-dev libxmu-dev freeglut3-dev libwxgtk-media3.0-gtk3-dev libboost-thread-dev libboost-system-dev libboost-filesystem-dev libcurl4-openssl-dev libextutils-makemaker-cpanfile-perl
+    sudo apt-get install build-essential libgtk2.0-dev libwxgtk3.0-gtk3-dev libwx-perl libmodule-build-perl git cpanminus libextutils-cppguess-perl libboost-all-dev libxmu-dev liblocal-lib-perl wx-common libopengl-perl libwx-glcanvas-perl libtbb-dev libxmu-dev freeglut3-dev libwxgtk-media3.0-gtk3-dev libboost-thread-dev libboost-system-dev libboost-filesystem-dev libcurl4-openssl-dev libextutils-makemaker-cpanfile-perl
 
 ##### Anything else
 
@@ -42,18 +42,6 @@ Look up prerequisites here:
     perl Build.PL
 
     perl Build.PL --gui
-
-#### Build with cmake (Tested on Ubuntu 16.04, 18.04LTS & 19.04)
-
-    export PERL5LIB=$PWD/local-lib/lib/perl5
-    
-    mkdir build
-
-    cd build
-
-    cmake ..
-
-    make
 
 #### Start
 
