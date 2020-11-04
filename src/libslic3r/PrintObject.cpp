@@ -152,16 +152,16 @@ void PrintObject::slice()
 }
 
 
-Polygon create_polyhole(const Point center, const coord_t diameter, const coord_t nozzle_diameter)
+Polygon create_polyhole(const Point center, const coord_t radius, const coord_t nozzle_diameter)
 {
     // n = max(round(2 * d), 3); // for 0.4mm nozzle
-    size_t nb_polygons = (int)std::max(3, (int)std::round(2.0 * unscaled(diameter) * 0.4 / unscaled(nozzle_diameter)));
-    // cylinder(h = h, r = (d / 2) / cos (180 / n), $fn = n);
+    size_t nb_polygons = (int)std::max(3, (int)std::round(4.0 * unscaled(radius) * 0.4 / unscaled(nozzle_diameter)));
+    // cylinder(h = h, r = d / cos (180 / n), $fn = n);
     Points pts;
-    const float rayon = (diameter / 1) / std::cos(PI / nb_polygons);
+    const float new_radius = radius / std::cos(PI / nb_polygons);
     for (int i = 0; i < nb_polygons; ++i) {
         float angle = (PI * 2 * i) / nb_polygons;
-        pts.emplace_back(center.x() + rayon * cos(angle), center.y() + rayon * sin(angle));
+        pts.emplace_back(center.x() + new_radius * cos(angle), center.y() + new_radius * sin(angle));
     }
      return Polygon{ pts };
 }
@@ -194,12 +194,10 @@ void PrintObject::_transform_hole_to_polyholes()
                                 Point center{ center_x / hole.points.size(), center_y / hole.points.size() };
                                 double diameter_min = std::numeric_limits<float>::max(), diameter_max = 0;
                                 for (int i = 0; i < hole.points.size(); ++i) {
-                                    double dist = hole.points[i].distance_to_square(center);
+                                    double dist = hole.points[i].distance_to(center);
                                     diameter_min = std::min(diameter_min, dist);
                                     diameter_max = std::max(diameter_max, dist);
                                 }
-                                diameter_min = std::sqrt(diameter_min);
-                                diameter_max = std::sqrt(diameter_max);
                                 if (diameter_max - diameter_min < SCALED_EPSILON) {
                                     layerid2center[layer_idx].emplace_back(
                                         std::tuple<Point, float, int>{center, diameter_max, layer->m_regions[region_idx]->region()->config().perimeter_extruder.value}, &hole);
@@ -241,7 +239,8 @@ void PrintObject::_transform_hole_to_polyholes()
                     }
                 }
             }
-            if (holes.size() >= min_nb_layers) {
+            //check if strait hole or first layer hole (cause of first layer compensation)
+            if (holes.size() >= min_nb_layers || (holes.size() == 1 && holes[0].second == 0)) {
                 id2layerz2hole.emplace(std::move(id), std::move(holes));
             }
         }
@@ -2467,7 +2466,6 @@ end:
         tbb::parallel_for(
           tbb::blocked_range<size_t>(0, m_layers.size()),
           [this, upscaled, clipped](const tbb::blocked_range<size_t>& range) {
-            ExPolygons expolygons_first_layer;
             for (size_t layer_id = range.begin(); layer_id < range.end(); ++ layer_id) {
                 m_print->throw_if_canceled();
                 Layer *layer = m_layers[layer_id];
@@ -2513,8 +2511,6 @@ end:
                     // Apply all three main XY compensation.
                     if (hole_delta > 0 || inner_delta > 0 || outter_delta > 0) {
                         expolygons = _shrink_contour_holes(std::max(0.f, outter_delta), std::max(0.f, inner_delta), std::max(0.f, hole_delta), expolygons);
-                        if (layer_id == 0 && first_layer_compensation != 0) 
-                            expolygons_first_layer = expolygons;
                     }
                     // Apply the elephant foot compensation.
                     if (layer_id == 0 && first_layer_compensation != 0.f) {
@@ -2524,15 +2520,11 @@ end:
                     // Apply all three main negative XY compensation.
                     if (hole_delta < 0 || inner_delta < 0 || outter_delta < 0) {
                         expolygons = _shrink_contour_holes(std::min(0.f, outter_delta), std::min(0.f, inner_delta), std::min(0.f, hole_delta), expolygons);
-                        if (layer_id == 0 && first_layer_compensation != 0) 
-                            expolygons_first_layer = _shrink_contour_holes(std::min(0.f, outter_delta), std::min(0.f, inner_delta), std::min(0.f, hole_delta), expolygons_first_layer);
                     }
                     
                     if (layer->regions().front()->region()->config().curve_smoothing_precision > 0.f) {
                         //smoothing
                         expolygons = _smooth_curves(expolygons, layer->regions().front()->region()->config());
-                        if (layer_id == 0 && first_layer_compensation != 0) 
-                            expolygons_first_layer = _smooth_curves(expolygons_first_layer, layer->regions().front()->region()->config());
                     }
                     layerm->m_slices.set(std::move(expolygons), stPosInternal | stDensSparse);
                 } else {
@@ -2576,7 +2568,7 @@ end:
                         ExPolygons trimming;
                         static const float eps = float(scale_(m_config.slice_closing_radius.value) * 1.5);
                         if (layer_id == 0 && first_layer_compensation < 0.f) {
-                            expolygons_first_layer = offset_ex(layer->merged(eps), - eps);
+                            ExPolygons expolygons_first_layer = offset_ex(layer->merged(eps), - eps);
                             trimming = Slic3r::elephant_foot_compensation(expolygons_first_layer,
                                 layer->regions().front()->flow(frExternalPerimeter), unscale<double>(-first_layer_compensation));
                         }
