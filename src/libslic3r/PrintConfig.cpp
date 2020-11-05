@@ -348,6 +348,17 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(60));
+
+    def = this->add("bridge_speed_internal", coFloatOrPercent);
+    def->label = L("Internal bridges");
+    def->full_label = L("Internal bridge speed");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("Speed for printing the bridges that support the top layer.\nCan be a % of the bridge speed.");
+    def->sidetext = L("mm/s");
+    def->ratio_over = "bridge_speed";
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(150,true));
     
     def = this->add("brim_inside_holes", coBool);
     def->label = L("Brim inside holes");
@@ -2357,6 +2368,17 @@ void PrintConfigDef::init_fff_params()
     def->full_width = true;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionString("[input_filename_base].gcode"));
+
+    def = this->add("overhangs_speed", coFloatOrPercent);
+    def->label = L("Overhangs");
+    def->full_label = L("Overhangs speed");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("Speed for printing overhangs.\nCan be a % of the bridge speed.");
+    def->sidetext = L("mm/s");
+    def->ratio_over = "bridge_speed";
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(20, false));
 
     def = this->add("overhangs_width_speed", coFloatOrPercent);
     def->label = L("'As bridge' speed threshold");

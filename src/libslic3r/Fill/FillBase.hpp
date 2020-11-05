@@ -147,7 +147,7 @@ protected:
     ExtrusionRole getRoleFromSurfaceType(const FillParams &params, const Surface *surface) const {
         if (params.role == erNone || params.role == erCustom) {
             return params.flow->bridge ?
-            erBridgeInfill :
+                (surface->has_pos_bottom() ? erBridgeInfill :erInternalBridgeInfill) :
                            (surface->has_fill_solid() ?
                            ((surface->has_pos_top()) ? erTopSolidInfill : erSolidInfill) :
                            erInternalInfill);

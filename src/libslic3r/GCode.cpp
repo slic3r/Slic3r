@@ -954,12 +954,13 @@ namespace DoExport {
 	                if (region->config().get_abs_value("perimeter_speed") == 0 ||
 	                    region->config().get_abs_value("small_perimeter_speed") == 0 ||
 	                    region->config().get_abs_value("external_perimeter_speed") == 0 ||
-	                    region->config().get_abs_value("bridge_speed") == 0)
+	                    region->config().get_abs_value("overhangs_speed") == 0)
 	                    mm3_per_mm.push_back(layerm->perimeters.min_mm3_per_mm());
 	                if (region->config().get_abs_value("infill_speed") == 0 ||
 	                    region->config().get_abs_value("solid_infill_speed") == 0 ||
 	                    region->config().get_abs_value("top_solid_infill_speed") == 0 ||
-	                    region->config().get_abs_value("bridge_speed") == 0)
+	                    region->config().get_abs_value("bridge_speed") == 0 ||
+	                    region->config().get_abs_value("bridge_speed_internal") == 0)
 	                    mm3_per_mm.push_back(layerm->fills.min_mm3_per_mm());
 	            }
 	        }
@@ -3759,6 +3760,7 @@ std::string extrusion_role_2_string(const ExtrusionRole &er) {
         case erInternalInfill: return "infill internal";
         case erSolidInfill: return "infill solid";
         case erTopSolidInfill: return "infill solid top";
+        case erInternalBridgeInfill:
         case erBridgeInfill: return "infill bridge";
         case erThinWall: return "thin_wall";
         case erGapFill: return "gap_fill";
@@ -4161,8 +4163,12 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             speed = m_config.get_abs_value("perimeter_speed");
         } else if (path.role() == erExternalPerimeter) {
             speed = m_config.get_abs_value("external_perimeter_speed");
-        } else if (path.role() == erOverhangPerimeter || path.role() == erBridgeInfill) {
-            speed = m_config.get_abs_value("bridge_speed");
+        } else if (path.role() == erBridgeInfill) {
+            speed = m_config.get_abs_value("bridge_speed"); 
+        } else if (path.role() == erInternalBridgeInfill) {
+            speed = m_config.get_abs_value("bridge_speed_internal"); 
+        } else if (path.role() == erOverhangPerimeter) {
+            speed = m_config.get_abs_value("overhangs_speed");
         } else if (path.role() == erInternalInfill) {
             speed = m_config.get_abs_value("infill_speed");
         } else if (path.role() == erSolidInfill) {
@@ -4181,7 +4187,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             throw std::invalid_argument("Invalid speed");
         }
         //don't modify bridge speed
-        if (factor < 1 && !(path.role() == erOverhangPerimeter || path.role() == erBridgeInfill)) {
+        if (factor < 1 && !(path.role() == erOverhangPerimeter || path.role() == erBridgeInfill || path.role() == erInternalBridgeInfill)) {
             float small_speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
             //apply factor between feature speed and small speed
             speed = speed * factor + (1 - factor) * small_speed;
@@ -4667,6 +4673,7 @@ GCode::extrusion_role_to_string_for_parser(const ExtrusionRole & role) {
     case erTopSolidInfill:
         return "TopSolidInfill";
     case erBridgeInfill:
+    case erInternalBridgeInfill:
         return "BridgeInfill";
     case erThinWall:
         return "ThinWall";

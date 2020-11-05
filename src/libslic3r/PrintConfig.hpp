@@ -651,7 +651,8 @@ public:
     ConfigOptionPercent             bridge_overlap;
     ConfigOptionEnum<InfillPattern> bottom_fill_pattern;
     ConfigOptionFloatOrPercent      bridged_infill_margin;
-    ConfigOptionFloat               bridge_speed; 
+    ConfigOptionFloat               bridge_speed;
+    ConfigOptionFloatOrPercent      bridge_speed_internal;
     ConfigOptionFloat               curve_smoothing_precision;
     ConfigOptionFloat               curve_smoothing_cutoff_dist;
     ConfigOptionFloat               curve_smoothing_angle_convex;
@@ -697,6 +698,7 @@ public:
     ConfigOptionFloat               milling_speed;
     ConfigOptionFloatOrPercent      min_width_top_surface;
     // Detect bridging perimeters
+    ConfigOptionFloatOrPercent      overhangs_speed;
     ConfigOptionFloatOrPercent      overhangs_width;
     ConfigOptionFloatOrPercent      overhangs_width_speed;
     ConfigOptionBool                overhangs_reverse;
@@ -747,6 +749,7 @@ protected:
         OPT_PTR(bottom_fill_pattern);
         OPT_PTR(bridged_infill_margin);
         OPT_PTR(bridge_speed);
+        OPT_PTR(bridge_speed_internal);
         OPT_PTR(curve_smoothing_precision);
         OPT_PTR(curve_smoothing_cutoff_dist);
         OPT_PTR(curve_smoothing_angle_convex);
@@ -791,6 +794,7 @@ protected:
         OPT_PTR(milling_post_process);
         OPT_PTR(milling_speed);
         OPT_PTR(min_width_top_surface);
+        OPT_PTR(overhangs_speed);
         OPT_PTR(overhangs_width);
         OPT_PTR(overhangs_width_speed);
         OPT_PTR(overhangs_reverse);

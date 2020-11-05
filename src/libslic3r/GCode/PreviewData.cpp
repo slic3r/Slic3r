@@ -135,6 +135,7 @@ const Color GCodePreviewData::Extrusion::Default_Extrusion_Role_Colors[erCount] 
     Color(1.0f, 0.0f, 1.0f, 1.0f),   // erSolidInfill
     Color(0.0f, 1.0f, 1.0f, 1.0f),   // erTopSolidInfill
     Color(0.5f, 0.5f, 0.5f, 1.0f),   // erBridgeInfill
+    Color(0.4f, 0.4f, 0.4f, 1.0f),   // erInternalBridgeInfill
     Color(0.0f, 1.0f, 0.4f, 1.0f),   // erThinWall
     Color(1.0f, 1.0f, 1.0f, 1.0f),   // erGapFill
     Color(0.5f, 0.0f, 0.0f, 1.0f),   // erSkirt
