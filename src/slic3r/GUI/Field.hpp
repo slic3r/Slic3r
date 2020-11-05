@@ -480,7 +480,6 @@ public:
 	}
 	void			set_value(const boost::any& value, bool change_event = false) {
 		m_disable_change_event = !change_event;
-        std::cout << value.type().name() << "==wxString !1\n";
 		dynamic_cast<wxStaticText*>(window)->SetLabel(boost::any_cast<wxString>(value));
 		m_disable_change_event = false;
 	}
