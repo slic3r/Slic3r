@@ -51,7 +51,7 @@ struct SurfaceFillParams : FillParams
         RETURN_COMPARE_NON_EQUAL(overlap);
         RETURN_COMPARE_NON_EQUAL(angle);
         RETURN_COMPARE_NON_EQUAL(density);
-        RETURN_COMPARE_NON_EQUAL(monotonous);
+        RETURN_COMPARE_NON_EQUAL(monotonic);
         RETURN_COMPARE_NON_EQUAL_TYPED(unsigned, connection);
         RETURN_COMPARE_NON_EQUAL_TYPED(unsigned, dont_adjust);
         RETURN_COMPARE_NON_EQUAL(fill_exactly);
@@ -71,7 +71,7 @@ struct SurfaceFillParams : FillParams
                 this->overlap               == rhs.overlap          &&
                 this->angle                 == rhs.angle            &&
                 this->density               == rhs.density          &&
-                this->monotonous            == rhs.monotonous       &&
+                this->monotonic            == rhs.monotonic       &&
                 this->connection            == rhs.connection       &&
                 this->dont_adjust           == rhs.dont_adjust      &&
                 this->fill_exactly          == rhs.fill_exactly     &&
@@ -570,7 +570,7 @@ void Layer::make_ironing()
     fill_params.density     = 1.;
 //    fill_params.dont_connect = true;
     fill_params.connection  = InfillConnection::icConnected;
-    fill_params.monotonous  = true;
+    fill_params.monotonic  = true;
 
     for (size_t i = 0; i < by_extruder.size(); ++ i) {
         // Find span of regions equivalent to the ironing operation.

@@ -684,7 +684,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
     def->enum_values.push_back("rectilineargapfill");
-    def->enum_values.push_back("monotonous");
+    def->enum_values.push_back("monotonic");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("concentricgapfill");
     def->enum_values.push_back("hilbertcurve");
@@ -695,8 +695,8 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("smoothtriple");
     def->enum_values.push_back("smoothhilbert");
     def->enum_labels.push_back(L("Rectilinear"));
-    def->enum_labels.push_back(L("Monotonous (filled)"));
-    def->enum_labels.push_back(L("Monotonous"));
+    def->enum_labels.push_back(L("Monotonic (filled)"));
+    def->enum_labels.push_back(L("Monotonic"));
     def->enum_labels.push_back(L("Concentric"));
     def->enum_labels.push_back(L("Concentric (filled)"));
     def->enum_labels.push_back(L("Hilbert Curve"));
@@ -704,7 +704,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Octagram Spiral"));
     def->enum_labels.push_back(L("Sawtooth"));
     def->enum_labels.push_back(L("Ironing"));
-    def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipMonotonous));
+    def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipMonotonic));
 
     def = this->add("bottom_fill_pattern", coEnum);
     def->label = L("Bottom");
@@ -716,7 +716,7 @@ void PrintConfigDef::init_fff_params()
 
     def->enum_values.push_back("rectilinear");
     def->enum_values.push_back("rectilineargapfill");
-    def->enum_values.push_back("monotonous");
+    def->enum_values.push_back("monotonic");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("concentricgapfill");
     def->enum_values.push_back("hilbertcurve");
@@ -724,8 +724,8 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("octagramspiral");
     def->enum_values.push_back("smooth");
     def->enum_labels.push_back(L("Rectilinear"));
-    def->enum_labels.push_back(L("Monotonous (filled)"));
-    def->enum_labels.push_back(L("Monotonous"));
+    def->enum_labels.push_back(L("Monotonic (filled)"));
+    def->enum_labels.push_back(L("Monotonic"));
     def->enum_labels.push_back(L("Concentric"));
     def->enum_labels.push_back(L("Concentric (filled)"));
     def->enum_labels.push_back(L("Hilbert Curve"));
@@ -733,7 +733,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Octagram Spiral"));
     def->enum_labels.push_back(L("Ironing"));
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipMonotonous));
+    def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipMonotonic));
 
     def = this->add("solid_fill_pattern", coEnum);
     def->label = L("Solid pattern");
@@ -744,7 +744,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("smooth");
     def->enum_values.push_back("rectilinear");
     def->enum_values.push_back("rectilineargapfill");
-    def->enum_values.push_back("monotonous");
+    def->enum_values.push_back("monotonic");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("concentricgapfill");
     def->enum_values.push_back("hilbertcurve");
@@ -753,7 +753,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Ironing"));
     def->enum_labels.push_back(L("Rectilinear"));
     def->enum_labels.push_back(L("Rectilinear (filled)"));
-    def->enum_labels.push_back(L("Monotonous"));
+    def->enum_labels.push_back(L("Monotonic"));
     def->enum_labels.push_back(L("Concentric"));
     def->enum_labels.push_back(L("Concentric (filled)"));
     def->enum_labels.push_back(L("Hilbert Curve"));
@@ -1543,7 +1543,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Fill pattern for general low-density infill.");
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
-    def->enum_values.push_back("monotonous");
+    def->enum_values.push_back("monotonic");
     def->enum_values.push_back("grid");
     def->enum_values.push_back("triangles");
     def->enum_values.push_back("stars");
@@ -1560,7 +1560,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("adaptivecubic");
     def->enum_values.push_back("supportcubic");
     def->enum_labels.push_back(L("Rectilinear"));
-    def->enum_labels.push_back(L("Monotonous"));
+    def->enum_labels.push_back(L("Monotonic"));
     def->enum_labels.push_back(L("Grid"));
     def->enum_labels.push_back(L("Triangles"));
     def->enum_labels.push_back(L("Stars"));
@@ -3441,14 +3441,14 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Pattern for interface layer.");
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
-    def->enum_values.push_back("monotonous");
+    def->enum_values.push_back("monotonic");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("concentricgapfill");
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("sawtooth");
     def->enum_values.push_back("smooth");
     def->enum_labels.push_back(L("Rectilinear"));
-    def->enum_labels.push_back(L("Monotonous"));
+    def->enum_labels.push_back(L("Monotonic"));
     def->enum_labels.push_back(L("Concentric"));
     def->enum_labels.push_back(L("Concentric (filled)"));
     def->enum_labels.push_back(L("Hilbert Curve"));
@@ -4891,7 +4891,7 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         "cooling", "serial_port", "serial_speed"
     };
 
-    // In PrusaSlicer 2.3.0-alpha0 the "monotonous" infill was introduced, which was later renamed to "monotonic".
+    // In PrusaSlicer 2.3.0-alpha0 the "monotonic" infill was introduced, which was later renamed to "monotonous".
     if (value == "monotonous" && (opt_key == "top_fill_pattern" || opt_key == "bottom_fill_pattern" || opt_key == "fill_pattern"))
         value = "monotonic";
 

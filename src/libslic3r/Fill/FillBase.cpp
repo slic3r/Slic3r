@@ -31,7 +31,7 @@ Fill* Fill::new_from_type(const InfillPattern type)
     case ip3DHoneycomb:         return new Fill3DHoneycomb();
     case ipGyroid:              return new FillGyroid();
     case ipRectilinear:         return new FillRectilinear2();
-    case ipMonotonous:          return new FillMonotonous();
+    case ipMonotonic:          return new FillMonotonic();
     case ipRectilinearWGapFill: return new FillRectilinear2WGapFill();
     case ipScatteredRectilinear:return new FillScatteredRectilinear();
     case ipLine:                return new FillLine();
