@@ -330,21 +330,21 @@ bool Preview::init(wxWindow* parent, Model* model)
 #if ENABLE_GCODE_VIEWER
         _L("Unknown") + "|1|" +
 #endif // ENABLE_GCODE_VIEWER        _L("Perimeter") + "|" +
-        _L("External perimeter") + "|" +
-        _L("Overhang perimeter") + "|" +
-        _L("Internal infill") + "|" +
-        _L("Solid infill") + "|" +
-        _L("Top solid infill") + "|" +
-        _L("Bridge infill") + "|" +
-        _L("Internal bridge infill") + "|" +
-        _L("Thin wall") + "|" +
-        _L("Gap fill") + "|" +
-        _L("Skirt") + "|" +
-        _L("Support material") + "|" +
-        _L(width_screen == large? "Support material interface": "Sup. mat. interface") + "|" +
-        _L("Wipe tower") + "|" +
-        _L("Mill") + "|" +
-        _L("Custom")
+        _L("External perimeter") + "|1|" +
+        _L("Overhang perimeter") + "|1|" +
+        _L("Internal infill") + "|1|" +
+        _L("Solid infill") + "|1|" +
+        _L("Top solid infill") + "|1|" +
+        _L("Bridge infill") + "|1|" +
+        _L("Internal bridge infill") + "|1|" +
+        _L("Thin wall") + "|1|" +
+        _L("Gap fill") + "|1|" +
+        _L("Skirt") + "|1|" +
+        _L("Support material") + "|1|" +
+        _L(width_screen == large? "Support material interface": "Sup. mat. interface") + "|1|" +
+        _L("Wipe tower") + "|1|" +
+        _L("Mill") + "|1|" +
+        _L("Custom") + "|1"
     );
     Slic3r::GUI::create_combochecklist(m_combochecklist_features, GUI::into_u8(_L("Feature types")), feature_items);
 

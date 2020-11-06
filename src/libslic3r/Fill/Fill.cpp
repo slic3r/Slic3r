@@ -138,9 +138,13 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                     params.density = float(layerm.region()->config().over_bridge_flow_ratio.get_abs_value(1));
                 }
 
+                //note: same as getRoleFromSurfaceType()
                 params.role = erInternalInfill;
                 if (is_bridge) {
-                    params.role = erBridgeInfill;
+                    if(surface.has_pos_bottom())
+                        params.role = erBridgeInfill;
+                    else
+                        params.role = erInternalBridgeInfill;
                 } else if (surface.has_fill_solid()) {
                     if (surface.has_pos_top()) {
                         params.role = erTopSolidInfill;

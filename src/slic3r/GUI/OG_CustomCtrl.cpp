@@ -696,15 +696,15 @@ wxPoint OG_CustomCtrl::CtrlLine::draw_blinking_bmp(wxDC& dc, wxPoint pos, bool i
 wxCoord OG_CustomCtrl::CtrlLine::draw_act_bmps(wxDC& dc, wxPoint pos, const wxBitmap& bmp_undo_to_sys, const wxBitmap& bmp_undo, bool is_blinking, size_t rect_id)
 {
     wxCoord h_pos = pos.x;
-    wxCoord v_pos = pos.y;
+    wxCoord v_pos = pos.y + height / 2 - this->ctrl->m_bmp_blinking_sz.GetHeight() / 2;
 
-    dc.DrawBitmap(bmp_undo_to_sys, h_pos, v_pos + 5);
+    dc.DrawBitmap(bmp_undo_to_sys, h_pos, v_pos);
 
     int bmp_dim = get_bitmap_size(bmp_undo_to_sys).GetWidth();
     rects_undo_to_sys_icon[rect_id] = wxRect(h_pos, v_pos, bmp_dim, bmp_dim);
 
     h_pos += bmp_dim + ctrl->m_h_gap;
-    dc.DrawBitmap(bmp_undo, h_pos, v_pos + 5);
+    dc.DrawBitmap(bmp_undo, h_pos, v_pos);
 
     bmp_dim = get_bitmap_size(bmp_undo).GetWidth();
     rects_undo_icon[rect_id] = wxRect(h_pos, v_pos, bmp_dim, bmp_dim);

@@ -1282,7 +1282,7 @@ bool GCodeProcessor::process_simplify3d_tags(const std::string_view comment)
         return true;
     }
 
-    // ; bridge
+    // ; bridge (& internal bridge)
     pos = comment.find(" bridge");
     if (pos == 0) {
         m_extrusion_role = erBridgeInfill;
