@@ -363,7 +363,7 @@ void FanMover::_process_gcode_line(GCodeReader& reader, const GCodeReader::GCode
             remove_from_buffer(m_buffer.begin());
         }
     }
-    float sum = 0;
+    double sum = 0;
     for (auto& data : m_buffer) sum += data.time;
     assert( std::abs(m_buffer_time_size - sum) < 0.01);
 }

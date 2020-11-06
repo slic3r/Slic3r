@@ -1640,8 +1640,7 @@ Flow Print::brim_flow(size_t extruder_id) const
         frPerimeter,
 		width,
         (float)m_config.nozzle_diameter.get_at(extruder_id),
-		(float)this->skirt_first_layer_height(),
-        0
+		(float)this->skirt_first_layer_height()
     );
 }
 
@@ -1665,8 +1664,7 @@ Flow Print::skirt_flow(size_t extruder_id) const
         frPerimeter,
 		width,
 		(float)m_config.nozzle_diameter.get_at(extruder_id),
-		(float)this->skirt_first_layer_height(),
-        0
+		(float)this->skirt_first_layer_height()
     );
 }
 

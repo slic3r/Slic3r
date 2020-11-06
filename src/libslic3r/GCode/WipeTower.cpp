@@ -955,10 +955,9 @@ WipeTower::ToolChangeResult WipeTower::toolchange_Brim(bool sideOnly, float y_of
 		m_wipe_tower_width,
 		m_wipe_tower_depth);
     double unscaled_brim_width = m_config->wipe_tower_brim.get_abs_value(m_nozzle_diameter);
-    Slic3r::Flow brim_flow(m_config->first_layer_extrusion_width.get_abs_value(m_nozzle_diameter), m_layer_height, m_nozzle_diameter);
+    Slic3r::Flow brim_flow = Flow::new_from_config_width(FlowRole::frPerimeter, m_config->first_layer_extrusion_width, m_layer_height, m_nozzle_diameter);
 
     WipeTowerWriter writer(m_layer_height, brim_flow.width, m_gcode_flavor, m_filpar);
-    std::cout << "flow from " << (m_extrusion_flow * 1.1f) << " to " << brim_flow.mm3_per_mm() << "\n";
     writer.set_extrusion_flow(brim_flow.mm3_per_mm())
           .set_z(m_z_pos) // Let the writer know the current Z position as a base for Z-hop.
           .set_initial_tool(m_current_tool)
@@ -969,6 +968,7 @@ WipeTower::ToolChangeResult WipeTower::toolchange_Brim(bool sideOnly, float y_of
     // Extrude X rounds of a brim around the future wipe tower.
     box_coordinates box(wipeTower_box);
     box.expand(brim_flow.spacing()- brim_flow.width); // ensure that the brim is attached to the wipe tower
+    writer.set_initial_position(box.ld);
     // the brim shall have 'normal' spacing with no extra void space
     for (float i = 0; i < unscaled_brim_width; i += brim_flow.spacing()) {
         box.expand(brim_flow.spacing());

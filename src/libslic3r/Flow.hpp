@@ -87,7 +87,7 @@ public:
 
     bool operator==(const Flow &rhs) const { return this->width == rhs.width && this->height == rhs.height && this->nozzle_diameter == rhs.nozzle_diameter && this->bridge == rhs.bridge; }
     
-    static Flow new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent &width, float nozzle_diameter, float height, float bridge_flow_ratio);
+    static Flow new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent &width, float nozzle_diameter, float height, float bridge_flow_ratio = 0);
     // Create a flow from the spacing of extrusion lines.
     // This method is used exclusively to calculate new flow of 100% infill, where the extrusion width was allowed to scale
     // to fit a region with integer number of lines.
