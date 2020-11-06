@@ -764,7 +764,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Default infill margin");
     def->category = OptionCategory::infill;
     def->tooltip = L("This parameter grows the top/bottom/solid layers by the specified MM to anchor them into the part. Put 0 to deactivate it. Can be a % of the width of the perimeters.");
-    def->sidetext = L("mm");
+    def->sidetext = L("mm/%");
     def->ratio_over = "perimeter_extrusion_width";
     def->min = 0;
     def->mode = comExpert;
@@ -775,7 +775,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Bridge margin");
     def->category = OptionCategory::infill;
     def->tooltip = L("This parameter grows the bridged solid infill layers by the specified MM to anchor them into the part. Put 0 to deactivate it. Can be a % of the width of the external perimeter.");
-    def->sidetext = L("mm");
+    def->sidetext = L("mm/%");
     def->ratio_over = "external_perimeter_extrusion_width";
     def->min = 0;
     def->mode = comExpert;
@@ -897,15 +897,15 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("external_perimeters_nothole", coBool);
-    def->label = L("only for outter side");
-    def->full_label = L("ext peri first for outter side");
+    def->label = L("Only for outer side");
+    def->full_label = L("ext peri first for outer side");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Only do the vase trick on the external side. Useful when the thikness is too low.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(true));
 
     def = this->add("external_perimeters_hole", coBool);
-    def->label = L("only for inner side");
+    def->label = L("Only for inner side");
     def->full_label = L("ext peri first for inner side");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Only do the vase trick on the external side. Useful when you only want to remode seam from screw hole.");
@@ -1389,6 +1389,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("filament_density", coFloats);
     def->label = L("Density");
+    def->category = OptionCategory::filament;
     def->tooltip = L("Enter your filament density here. This is only for statistical information. "
                    "A decent way is to weigh a known length of filament and compute the ratio "
                    "of the length to volume. Better is to calculate the volume directly through displacement.");
@@ -1607,7 +1608,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "top_infill_extrusion_width";
     def->min = 0;
     def->mode = comExpert;
-    def->sidetext = L("% or mm");
+    def->sidetext = L("mm/%");
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
 
     def = this->add("fill_smooth_distribution", coPercent);
@@ -3850,8 +3851,8 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(10.));
 
     def = this->add("xy_size_compensation", coFloat);
-    def->label = L("Outter");
-    def->full_label = L("Outter XY size compensation");
+    def->label = L("outer");
+    def->full_label = L("outer XY size compensation");
     def->category = OptionCategory::slicing;
     def->tooltip = L("The object will be grown/shrunk in the XY plane by the configured value "
         "(negative = inwards, positive = outwards). This might be useful for fine-tuning sizes."

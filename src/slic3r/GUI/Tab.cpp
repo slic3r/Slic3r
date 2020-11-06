@@ -1930,6 +1930,8 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             TabPrinter* tab = nullptr;
             if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
             widget_t reset_to_filament_color = [this, idx_page, tab](wxWindow* parent) -> wxBoxSizer* {
+                tab->m_reset_to_filament_color = new ScalableButton(parent, wxID_ANY, "undo", _L("Reset to Filament Color"),
+                    wxDefaultSize, wxDefaultPosition, wxBU_LEFT | wxBU_EXACTFIT, true);
                 ScalableButton* btn = tab->m_reset_to_filament_color;
                 btn->SetFont(Slic3r::GUI::wxGetApp().normal_font());
                 btn->SetSize(btn->GetBestSize());

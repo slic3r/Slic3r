@@ -44,7 +44,7 @@ each parameter is separated by ':'
 	* full_label: to override the label by the "full one".
 	* full_width: to tell to create a field that span the full width.
 	* sidetext$STR: the suffix at the right of the widget (like 'mm').
-	* sidetext_width$INT: the suffix label length (override the group one). 0 for auto.
+	* sidetext_width$INT: the suffix label length (override the group one). -& for auto.
 	* simple|advanced|expert: add one of these to modify the mode in which this setting appear.
 	* width$INT: change the width of the field. Shouod work on most type of settings.
 	* height$INT: change the height of the field. Don't works with every type of setting.

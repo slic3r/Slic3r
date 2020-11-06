@@ -39,10 +39,10 @@ group:Quality
 		setting:width$5:thin_walls_overlap
 		setting:thin_walls_merge
 	end_line
-group:Overhangs
+group:label_width$12:Overhangs
 	line:threshold for
-		setting:label$bridge speed and fan:width$5:overhangs_width_speed
-		setting:label$bridge flow:width$5:overhangs_width
+		setting:label$Bridge speed and fan:width$5:overhangs_width_speed
+		setting:label$Bridge flow:width$5:overhangs_width
 	end_line
 	line:Extrusion direction
 		setting:sidetext_width$1:overhangs_reverse
@@ -80,12 +80,12 @@ group:Filtering
 	setting:resolution
 	setting:model_precision
 	setting:slice_closing_radius
-group:label_width$8:Modifying slices
+group:Modifying slices
 	line:Curve smoothing
 		setting:width$6:curve_smoothing_precision
 		setting:width$6:curve_smoothing_angle_convex
 		setting:width$6:curve_smoothing_angle_concave
-		setting:width$6:curve_smoothing_cutoff_dist
+		setting:label_width$6:width$6:curve_smoothing_cutoff_dist
 	end_line
 	setting:hole_to_polyhole
 	line:XY compensation
@@ -118,36 +118,36 @@ group:Reducing printing time
 	setting:infill_every_layers
 	setting:infill_only_where_needed
 	line:Supporting dense layer
-		setting:infill_dense
+		setting:sidetext_width$0:infill_dense
 		setting:infill_dense_algo
 	end_line
 group:sidetext_width$3:Advanced
 	setting:solid_infill_every_layers
 	setting:solid_infill_below_area
 	line:Angle
-		setting:label_width$6:width$5:fill_angle
+		setting:label_width$8:width$5:fill_angle
 		setting:label_width$6:width$5:bridge_angle
 		setting:label_width$6:width$5:label$increment:fill_angle_increment
 	end_line
 	line:Anchor solid infill by X mm
-		setting:label_width$6:width$5:external_infill_margin
+		setting:label_width$8:width$5:external_infill_margin
 		setting:label_width$6:width$5:bridged_infill_margin
 	end_line
 	setting:only_retract_when_crossing_perimeters
 	setting:infill_first
 group:Advanced Infill options
 	line:Ironing infill tuning
-		setting:label_width$9:width$5:fill_smooth_distribution
-		setting:label$Spacing between ironing lines:width$5:sidetext_width$7:fill_smooth_width
+		setting:label_width$8:width$5:fill_smooth_distribution
+		setting:label_width$26:label$Spacing between ironing lines:width$5:sidetext_width$7:fill_smooth_width
 	end_line
 group:Ironing post-process (This will go on top of infills and perimeters)
 	line:Enable ironing post-process
-		setting:label$_:ironing
+		setting:label$_:sidetext_width$0:ironing
 		setting:label$On:ironing_type
 	end_line
 	line:Tuning ironing
-		setting:ironing_flowrate
-		setting:ironing_spacing
+		setting:label_width$8:width$5:ironing_flowrate
+		setting:label_width$26:width$5:ironing_spacing
 	end_line
 
 page:Skirt & Brim:skirt+brim

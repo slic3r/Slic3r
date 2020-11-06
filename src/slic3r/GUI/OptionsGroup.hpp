@@ -109,8 +109,8 @@ public:
     
     wxFont			sidetext_font {wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
     wxFont			label_font {wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT) };
-    int			    sidetext_width{ -1 };
-    int			    label_width{ -1 };
+    int             sidetext_width{ -1 };
+    int             label_width{ -1 };
 	int				sublabel_width{ -1 };
 
     /// Returns a copy of the pointer of the parent wxWindow.
@@ -180,12 +180,7 @@ public:
 
     void            clear_fields_except_of(const std::vector<std::string> left_fields);
 
-    void            hide_labels() {
-        title_width = 0;
-        // del from 2.3
-        //m_grid_sizer->SetCols(m_grid_sizer->GetEffectiveColsCount()-1);
-        //static_cast<wxFlexGridSizer*>(m_grid_sizer)->AddGrowableCol(!extra_column ? 0 : 1);
-    }
+    void            hide_labels() { label_width = 0; title_width = 0;}
 
 	OptionsGroup(	wxWindow* _parent, const wxString& title, bool is_tab_opt = false, 
                     column_t extra_clmn = nullptr);
@@ -197,6 +192,8 @@ public:
 protected:
 	std::map<t_config_option_key, Option>	m_options;
     wxWindow*				m_parent {nullptr};
+    // vector: an entry per line
+    //map : mode -> items idx in the line
     std::vector<std::map<ConfigOptionMode, std::vector<size_t>>> m_options_mode;
     std::vector<wxSizer*>                   m_line_sizer;
     std::vector<wxWindow*>                  m_extra_column_item_ptrs;
