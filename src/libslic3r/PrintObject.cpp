@@ -713,6 +713,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "support_material_contact_distance_bottom" 
             || opt_key == "xy_size_compensation"
             || opt_key == "hole_size_compensation"
+            || opt_key == "hole_size_threshold"
             || opt_key == "hole_to_polyhole"
             || opt_key == "z_step") {
             steps.emplace_back(posSlice);
@@ -810,10 +811,12 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             //}
         } else if (
             opt_key == "bridge_speed"
+            || opt_key == "bridge_speed_internal"
             || opt_key == "external_perimeter_speed"
             || opt_key == "external_perimeters_vase"
             || opt_key == "gap_fill_speed"
             || opt_key == "infill_speed"
+            || opt_key == "overhangs_speed"
             || opt_key == "perimeter_speed"
             || opt_key == "seam_position"
             || opt_key == "seam_preferred_direction"
@@ -2603,6 +2606,7 @@ end:
 
 ExPolygons PrintObject::_shrink_contour_holes(double contour_delta, double default_delta, double convex_delta, const ExPolygons& polys) const {
     ExPolygons new_ex_polys;
+    double max_hole_area = scale_d(scale_d(m_config.hole_size_threshold.value));
     for (const ExPolygon& ex_poly : polys) {
         Polygons contours;
         Polygons holes;
@@ -2621,12 +2625,26 @@ ExPolygons PrintObject::_shrink_contour_holes(double contour_delta, double defau
 
             // check whether last point forms a convex angle
             ok &= (hole.points.back().ccw_angle(*(hole.points.end() - 2), hole.points.front()) <= PI + 0.1);
-
+             
             if (ok) {
                 if (convex_delta != 0) {
-                    for (Polygon &newHole : offset(hole, -convex_delta)) {
-                        newHole.make_counter_clockwise();
-                        holes.emplace_back(std::move(newHole));
+                    //apply hole threshold cutoff
+                    double convex_delta_adapted = convex_delta;
+                    double area = -hole.area();
+                    if (area > max_hole_area * 4) {
+                        convex_delta_adapted = 0;
+                    }else if (area > max_hole_area) {
+                        // not a hard threshold, to avoid artefacts on slopped holes.
+                        convex_delta_adapted = convex_delta * (max_hole_area * 4 - area) / (max_hole_area * 3);
+                    }
+                    if (convex_delta_adapted != 0) {
+                        for (Polygon &newHole : offset(hole, -convex_delta_adapted)) {
+                            newHole.make_counter_clockwise();
+                            holes.emplace_back(std::move(newHole));
+                        }
+                    } else {
+                        holes.push_back(hole);
+                        holes.back().make_counter_clockwise();
                     }
                 } else {
                     holes.push_back(hole);

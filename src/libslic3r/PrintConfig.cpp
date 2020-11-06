@@ -284,16 +284,17 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->set_default_value(new ConfigOptionFloat(0.));
 
-    def = this->add("bridge_acceleration", coFloat);
+    def = this->add("bridge_acceleration", coFloatOrPercent);
     def->label = L("Bridge");
     def->full_label = L("Bridge acceleration");
     def->category = OptionCategory::speed;
-    def->tooltip = L("This is the acceleration your printer will use for bridges. "
-                   "Set zero to disable acceleration control for bridges.");
-    def->sidetext = L("mm/s²");
+    def->tooltip = L("This is the acceleration your printer will use for bridges."
+                "\nCan be a % of the default acceleration"
+                "\nSet zero to disable acceleration control for bridges.");
+    def->sidetext = L("mm/s² or %");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
     def = this->add("bridge_angle", coFloat);
     def->label = L("Bridging");
@@ -381,6 +382,17 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(60));
+
+    def = this->add("bridge_speed_internal", coFloatOrPercent);
+    def->label = L("Internal bridges");
+    def->full_label = L("Internal bridge speed");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("Speed for printing the bridges that support the top layer.\nCan be a % of the bridge speed.");
+    def->sidetext = L("mm/s");
+    def->ratio_over = "bridge_speed";
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(150,true));
     
     def = this->add("brim_inside_holes", coBool);
     def->label = L("Brim inside holes");
@@ -575,17 +587,18 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(5.f));
 
-    def = this->add("default_acceleration", coFloat);
+    def = this->add("default_acceleration", coFloatOrPercent);
     def->label = L("Default");
     def->category = OptionCategory::speed;
     def->full_label = L("Default acceleration");
     def->tooltip = L("This is the acceleration your printer will be reset to after "
                    "the role-specific acceleration values are used (perimeter/infill). "
-                   "Set zero to prevent resetting acceleration at all.");
-    def->sidetext = L("mm/s²");
+                   "\nYou can set it as a % of the max of the X/Y machine acceleration limit."
+                   "\nSet zero to prevent resetting acceleration at all.");
+    def->sidetext = L("mm/s² or %");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
     def = this->add("default_filament_profile", coStrings);
     def->label = L("Default filament profile");
@@ -898,7 +911,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("external_perimeters_nothole", coBool);
     def->label = L("Only for outer side");
-    def->full_label = L("ext peri first for outer side");
+    def->full_label = L("Ext peri first for outer side");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Only do the vase trick on the external side. Useful when the thikness is too low.");
     def->mode = comExpert;
@@ -1624,16 +1637,17 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("%");
     def->set_default_value(new ConfigOptionPercent(10));
 
-    def = this->add("first_layer_acceleration", coFloat);
+    def = this->add("first_layer_acceleration", coFloatOrPercent);
     def->label = L("First layer");
     def->full_label = L("First layer acceleration");
     def->category = OptionCategory::speed;
-    def->tooltip = L("This is the acceleration your printer will use for first layer. Set zero "
-                   "to disable acceleration control for first layer.");
-    def->sidetext = L("mm/s²");
+    def->tooltip = L("This is the acceleration your printer will use for first layer."
+                "\nCan be a % of the default acceleration"
+                "\nSet zero to disable acceleration control for first layer.");
+    def->sidetext = L("mm/s² or %");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
     def = this->add("first_layer_bed_temperature", coInts);
     def->label = L("First layer");
@@ -1821,16 +1835,17 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(0));
 
-    def = this->add("infill_acceleration", coFloat);
+    def = this->add("infill_acceleration", coFloatOrPercent);
     def->label = L("Infill");
     def->full_label = L("Infill acceleration");
     def->category = OptionCategory::speed;
-    def->tooltip = L("This is the acceleration your printer will use for infill. Set zero to disable "
-                   "acceleration control for infill.");
-    def->sidetext = L("mm/s²");
+    def->tooltip = L("This is the acceleration your printer will use for infill."
+                "\nCan be a % of the default acceleration"
+                "\nSet zero to disable acceleration control for infill.");
+    def->sidetext = L("mm/s² or %");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
     def = this->add("infill_every_layers", coInt);
     def->label = L("Combine infill every");
@@ -2472,6 +2487,17 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionString("[input_filename_base].gcode"));
 
+    def = this->add("overhangs_speed", coFloatOrPercent);
+    def->label = L("Overhangs");
+    def->full_label = L("Overhangs speed");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("Speed for printing overhangs.\nCan be a % of the bridge speed.");
+    def->sidetext = L("mm/s");
+    def->ratio_over = "bridge_speed";
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(20, false));
+
     def = this->add("overhangs_width_speed", coFloatOrPercent);
     def->label = L("'As bridge' speed threshold");
     def->full_label = L("Overhang bridge speed threshold");
@@ -2557,16 +2583,17 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(-2.f));
 
-    def = this->add("perimeter_acceleration", coFloat);
+    def = this->add("perimeter_acceleration", coFloatOrPercent);
     def->label = L("Perimeters");
     def->full_label = ("Perimeter acceleration");
     def->category = OptionCategory::speed;
     def->tooltip = L("This is the acceleration your printer will use for perimeters. "
-                   "A high value like 9000 usually gives good results if your hardware is up to the job. "
-                   "Set zero to disable acceleration control for perimeters.");
-    def->sidetext = L("mm/s²");
+                   "A high value like 9000 usually gives good results if your hardware is up to the job."
+                "\nCan be a % of the default acceleration"
+                "\nSet zero to disable acceleration control for perimeters.");
+    def->sidetext = L("mm/s² or %");
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
     def = this->add("perimeter_extruder", coInt);
     def->label = L("Perimeter extruder");
@@ -3851,12 +3878,13 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(10.));
 
     def = this->add("xy_size_compensation", coFloat);
-    def->label = L("outer");
-    def->full_label = L("outer XY size compensation");
+    def->label = L("Outer");
+    def->full_label = L("Outer XY size compensation");
     def->category = OptionCategory::slicing;
     def->tooltip = L("The object will be grown/shrunk in the XY plane by the configured value "
         "(negative = inwards, positive = outwards). This might be useful for fine-tuning sizes."
-        "\nThis one only applies to the 'exterior' shell of the object");
+        "\nThis one only applies to the 'exterior' shell of the object."
+        "\n !!! it's recommended you put the same value into the 'Inner XY size compensation', unless you are sure you don't have horizontal holes. !!! ");
     def->sidetext = L("mm");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0));
@@ -3867,7 +3895,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::slicing;
     def->tooltip = L("The object will be grown/shrunk in the XY plane by the configured value "
         "(negative = inwards, positive = outwards). This might be useful for fine-tuning sizes."
-        "\nThis one only applies to the 'inner' shell of the object");
+        "\nThis one only applies to the 'inner' shell of the object (!!! horizontal holes break the shell !!!)");
     def->sidetext = L("mm");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0));
@@ -3883,6 +3911,17 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0));
+
+    def = this->add("hole_size_threshold", coFloat);
+    def->label = L("Holes");
+    def->full_label = L("XY holes threshold");
+    def->category = OptionCategory::slicing;
+    def->tooltip = L("Maximum area for the hole where the hole_size_compensation will apply fully."
+            " After that, it will decraese down to 0 for four time this area."
+            " Set to 0 to let the hole_size_compensation apply fully for all detected holes");
+    def->sidetext = L("mm²");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(100));
 
     def = this->add("hole_to_polyhole", coBool);
     def->label = L("Convert round holes to polyholes");

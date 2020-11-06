@@ -93,6 +93,8 @@ inline T unscale(Q v) { return T(v) * T(SCALING_FACTOR); }
 inline double unscaled(double v) { return v * SCALING_FACTOR; }
 inline coordf_t unscale_(coord_t v) { return v * SCALING_FACTOR; }
 inline coord_t scale_t(coordf_t v) { return (coord_t)(v / SCALING_FACTOR); }
+inline double scale_d(coordf_t v) { return (v / SCALING_FACTOR); }
+inline double scale_d(coord_t v) { return ((double)v / SCALING_FACTOR); }
 
 enum Axis { 
 	X=0,

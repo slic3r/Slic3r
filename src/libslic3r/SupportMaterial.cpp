@@ -808,7 +808,7 @@ namespace SupportMaterialInternal {
                     return true;
             } else {
                 assert(! ee->is_loop());
-                if (ee->role() == erBridgeInfill)
+                if (ee->role() == erBridgeInfill || ee->role() == erInternalBridgeInfill)
                     return true;
             }
         }

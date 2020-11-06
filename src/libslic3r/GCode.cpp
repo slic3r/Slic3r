@@ -90,8 +90,15 @@ namespace Slic3r {
     return ok;
     }
 
-    void AvoidCrossingPerimeters::init_external_mp(const Print& print)
-    {
+double get_default_acceleration(PrintConfig & config) {
+    double max = 0;
+// on 2.3, check for enable/disable if(config.print_machine_envelope)
+    max = config.machine_max_acceleration_extruding.values.front();
+    return config.default_acceleration.get_abs_value(max);
+}
+
+void AvoidCrossingPerimeters::init_external_mp(const Print &print)
+{
 	m_external_mp = Slic3r::make_unique<MotionPlanner>(union_ex(this->collect_contours_all_layers(print.objects())));
     }
 
@@ -974,12 +981,13 @@ namespace DoExport {
 	                if (region->config().get_abs_value("perimeter_speed") == 0 ||
 	                    region->config().get_abs_value("small_perimeter_speed") == 0 ||
 	                    region->config().get_abs_value("external_perimeter_speed") == 0 ||
-	                    region->config().get_abs_value("bridge_speed") == 0)
+	                    region->config().get_abs_value("overhangs_speed") == 0)
 	                    mm3_per_mm.push_back(layerm->perimeters.min_mm3_per_mm());
 	                if (region->config().get_abs_value("infill_speed") == 0 ||
 	                    region->config().get_abs_value("solid_infill_speed") == 0 ||
 	                    region->config().get_abs_value("top_solid_infill_speed") == 0 ||
-	                    region->config().get_abs_value("bridge_speed") == 0)
+	                    region->config().get_abs_value("bridge_speed") == 0 ||
+	                    region->config().get_abs_value("bridge_speed_internal") == 0)
 	                    mm3_per_mm.push_back(layerm->fills.min_mm3_per_mm());
 	            }
 	        }
@@ -2918,7 +2926,9 @@ std::string GCode::preamble()
         before the first layer change will raise the extruder from the correct
         initial Z instead of 0.  */
     m_writer.travel_to_z(m_config.z_offset.value);
-
+    //as this phony thing skip the acceleration writing, they have to be reset after that for real initialisation at the next move/extrusion
+    m_writer.set_acceleration(0);
+    
     return gcode;
 }
 
@@ -3144,7 +3154,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     }
 
     // reset acceleration
-    m_writer.set_acceleration((unsigned int)(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(get_default_acceleration(m_config) + 0.5));
 
     //don't wipe here
     //if (m_wipe.enable)
@@ -3333,7 +3343,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     }
 
     // reset acceleration
-    m_writer.set_acceleration((unsigned int)(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(get_default_acceleration(m_config) + 0.5));
 
     if (m_wipe.enable)
         m_wipe.path = paths.front().polyline;  // TODO: don't limit wipe to last path
@@ -3431,7 +3441,7 @@ std::string GCode::extrude_multi_path(const ExtrusionMultiPath &multipath, const
         m_wipe.path.reverse();
     }
     // reset acceleration
-    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(get_default_acceleration(m_config) + 0.5));
     return gcode;
 }
 
@@ -3468,7 +3478,7 @@ std::string GCode::extrude_multi_path3D(const ExtrusionMultiPath3D &multipath3D,
         m_wipe.path.reverse();
     }
     // reset acceleration
-    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(get_default_acceleration(m_config) + 0.5));
     return gcode;
 }
 
@@ -3529,7 +3539,7 @@ std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &de
         m_wipe.path.reverse();
     }
     // reset acceleration
-    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(get_default_acceleration(m_config) + 0.5));
     return gcode;
 }
 
@@ -3563,7 +3573,7 @@ std::string GCode::extrude_path_3D(const ExtrusionPath3D &path, const std::strin
         m_wipe.path.reverse();
     }
     // reset acceleration
-    m_writer.set_acceleration((unsigned int)floor(m_config.default_acceleration.value + 0.5));
+    m_writer.set_acceleration((unsigned int)floor(get_default_acceleration(m_config) + 0.5));
     return gcode;
 }
 
@@ -3882,17 +3892,15 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
 
     // adjust acceleration
     {
-        double acceleration;
+        double acceleration = get_default_acceleration(m_config);
         if (this->on_first_layer() && m_config.first_layer_acceleration.value > 0) {
-            acceleration = m_config.first_layer_acceleration.value;
+            acceleration = m_config.first_layer_acceleration.get_abs_value(acceleration);
         } else if (m_config.perimeter_acceleration.value > 0 && is_perimeter(path.role())) {
-            acceleration = m_config.perimeter_acceleration.value;
+            acceleration = m_config.perimeter_acceleration.get_abs_value(acceleration);
         } else if (m_config.bridge_acceleration.value > 0 && is_bridge(path.role())) {
-            acceleration = m_config.bridge_acceleration.value;
+            acceleration = m_config.bridge_acceleration.get_abs_value(acceleration);
         } else if (m_config.infill_acceleration.value > 0 && is_infill(path.role())) {
-            acceleration = m_config.infill_acceleration.value;
-        } else {
-            acceleration = m_config.default_acceleration.value;
+            acceleration = m_config.infill_acceleration.get_abs_value(acceleration);
         }
         //travel acceleration should be already set at startup via special gcode, and so it's automatically used by G0.
         m_writer.set_acceleration((unsigned int)floor(acceleration + 0.5));
@@ -3908,8 +3916,12 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             speed = m_config.get_abs_value("perimeter_speed");
         } else if (path.role() == erExternalPerimeter) {
             speed = m_config.get_abs_value("external_perimeter_speed");
-        } else if (path.role() == erOverhangPerimeter || path.role() == erBridgeInfill) {
-            speed = m_config.get_abs_value("bridge_speed");
+        } else if (path.role() == erBridgeInfill) {
+            speed = m_config.get_abs_value("bridge_speed"); 
+        } else if (path.role() == erInternalBridgeInfill) {
+            speed = m_config.get_abs_value("bridge_speed_internal"); 
+        } else if (path.role() == erOverhangPerimeter) {
+            speed = m_config.get_abs_value("overhangs_speed");
         } else if (path.role() == erInternalInfill) {
             speed = m_config.get_abs_value("infill_speed");
         } else if (path.role() == erSolidInfill) {
@@ -3930,7 +3942,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             throw Slic3r::InvalidArgument("Invalid speed");
         }
         //don't modify bridge speed
-        if (factor < 1 && !(path.role() == erOverhangPerimeter || path.role() == erBridgeInfill)) {
+        if (factor < 1 && !(path.role() == erOverhangPerimeter || path.role() == erBridgeInfill || path.role() == erInternalBridgeInfill)) {
             float small_speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
             //apply factor between feature speed and small speed
             speed = speed * factor + (1.f - factor) * small_speed;
@@ -3970,6 +3982,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
     if (path.role() != m_last_extrusion_role && !m_config.feature_gcode.value.empty()) {
         DynamicConfig config;
         config.set_key_value("extrusion_role", new ConfigOptionString(extrusion_role_to_string_for_parser(path.role())));
+        config.set_key_value("last_extrusion_role", new ConfigOptionString(extrusion_role_to_string_for_parser(m_last_extrusion_role)));
         config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index + 1));
         config.set_key_value("layer_z", new ConfigOptionFloat(m_config.z_offset.value));
         gcode += this->placeholder_parser_process("feature_gcode",
@@ -4444,6 +4457,7 @@ GCode::extrusion_role_to_string_for_parser(const ExtrusionRole & role) {
     case erTopSolidInfill:
         return "TopSolidInfill";
     case erBridgeInfill:
+    case erInternalBridgeInfill:
         return "BridgeInfill";
     case erThinWall:
         return "ThinWall";

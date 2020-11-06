@@ -2,6 +2,7 @@
 #include "I18N.hpp"
 #include "libslic3r/Model.hpp"
 #include "libslic3r/Utils.hpp"
+#include "AppConfig.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Plater.hpp"
@@ -99,6 +100,12 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
     plat->reset();
+
+    bool autocenter = gui_app->app_config->get("autocenter") == "1";
+    if (autocenter) {
+        //disable aut-ocenter for this calibration.
+        gui_app->app_config->set("autocenter", "0");
+    }
 
     size_t nb_retract = nb_steps->GetSelection() < 4 ? ((int(nb_steps->GetSelection()) + 1) * 2) : ((int(nb_steps->GetSelection()) - 2) * 5);
     size_t nb_items = 1;
@@ -258,6 +265,11 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
 
     plat->reslice();
     plat->select_view_3D("Preview");
+
+    if (autocenter) {
+        //re-enable auto-center after this calibration.
+        gui_app->app_config->set("autocenter", "1");
+    }
 }
 
 } // namespace GUI

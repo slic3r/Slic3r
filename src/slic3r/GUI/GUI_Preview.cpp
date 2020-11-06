@@ -336,6 +336,7 @@ bool Preview::init(wxWindow* parent, Model* model)
         _L("Solid infill") + "|" +
         _L("Top solid infill") + "|" +
         _L("Bridge infill") + "|" +
+        _L("Internal bridge infill") + "|" +
         _L("Thin wall") + "|" +
         _L("Gap fill") + "|" +
         _L("Skirt") + "|" +
@@ -446,6 +447,7 @@ bool Preview::init(wxWindow* parent, Model* model)
         "Solid infill", "D732D7",
         "Top solid infill", "FF1A1A",
         "Bridge infill", "9999FF",
+        "Internal bridge infill", "9999EE",
         "Thin wall", "FFB000",
         "Gap fill", "FFFFFF",
         "Skirt", "845321",

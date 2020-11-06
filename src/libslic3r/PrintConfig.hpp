@@ -581,6 +581,7 @@ public:
     ConfigOptionFloatOrPercent      first_layer_height;
     ConfigOptionFloat               first_layer_size_compensation;
     ConfigOptionFloat               hole_size_compensation;
+    ConfigOptionFloat               hole_size_threshold;
     ConfigOptionBool                infill_only_where_needed;
     // Force the generation of solid shells between adjacent materials/volumes.
     ConfigOptionBool                interface_shells;
@@ -644,6 +645,7 @@ protected:
         OPT_PTR(exact_last_layer_height);
         OPT_PTR(extrusion_width);
         OPT_PTR(hole_size_compensation);
+        OPT_PTR(hole_size_threshold);
         OPT_PTR(first_layer_height);
         OPT_PTR(first_layer_size_compensation);
         OPT_PTR(infill_only_where_needed);
@@ -702,7 +704,8 @@ public:
     ConfigOptionPercent             bridge_overlap;
     ConfigOptionEnum<InfillPattern> bottom_fill_pattern;
     ConfigOptionFloatOrPercent      bridged_infill_margin;
-    ConfigOptionFloat               bridge_speed; 
+    ConfigOptionFloat               bridge_speed;
+    ConfigOptionFloatOrPercent      bridge_speed_internal;
     ConfigOptionFloat               curve_smoothing_precision;
     ConfigOptionFloat               curve_smoothing_cutoff_dist;
     ConfigOptionFloat               curve_smoothing_angle_convex;
@@ -755,6 +758,7 @@ public:
     ConfigOptionFloat               milling_speed;
     ConfigOptionFloatOrPercent      min_width_top_surface;
     // Detect bridging perimeters
+    ConfigOptionFloatOrPercent      overhangs_speed;
     ConfigOptionFloatOrPercent      overhangs_width;
     ConfigOptionFloatOrPercent      overhangs_width_speed;
     ConfigOptionBool                overhangs_reverse;
@@ -805,6 +809,7 @@ protected:
         OPT_PTR(bottom_fill_pattern);
         OPT_PTR(bridged_infill_margin);
         OPT_PTR(bridge_speed);
+        OPT_PTR(bridge_speed_internal);
         OPT_PTR(curve_smoothing_precision);
         OPT_PTR(curve_smoothing_cutoff_dist);
         OPT_PTR(curve_smoothing_angle_convex);
@@ -854,6 +859,7 @@ protected:
         OPT_PTR(milling_post_process);
         OPT_PTR(milling_speed);
         OPT_PTR(min_width_top_surface);
+        OPT_PTR(overhangs_speed);
         OPT_PTR(overhangs_width);
         OPT_PTR(overhangs_width_speed);
         OPT_PTR(overhangs_reverse);
@@ -1170,7 +1176,7 @@ public:
     ConfigOptionBool                avoid_crossing_not_first_layer;
     ConfigOptionPoints              bed_shape;
     ConfigOptionInts                bed_temperature;
-    ConfigOptionFloat               bridge_acceleration;
+    ConfigOptionFloatOrPercent      bridge_acceleration;
     ConfigOptionInts                bridge_fan_speed;
     ConfigOptionInts                chamber_temperature;
     ConfigOptionBool                complete_objects;
@@ -1178,7 +1184,7 @@ public:
     ConfigOptionEnum<CompleteObjectSort> complete_objects_sort;
     ConfigOptionFloats              colorprint_heights;
     ConfigOptionBools               cooling;
-    ConfigOptionFloat               default_acceleration;
+    ConfigOptionFloatOrPercent      default_acceleration;
     ConfigOptionInts                disable_fan_first_layers;
     ConfigOptionFloat               duplicate_distance;
     ConfigOptionInts                external_perimeter_fan_speed;
@@ -1191,14 +1197,14 @@ public:
     ConfigOptionStrings             filament_colour;
     ConfigOptionStrings             filament_notes;
     ConfigOptionPercents            filament_shrink;
-    ConfigOptionFloat               first_layer_acceleration;
+    ConfigOptionFloatOrPercent      first_layer_acceleration;
     ConfigOptionInts                first_layer_bed_temperature;
     ConfigOptionFloatOrPercent      first_layer_extrusion_width;
     ConfigOptionPercent             first_layer_flow_ratio;
     ConfigOptionFloatOrPercent      first_layer_speed;
     ConfigOptionFloatOrPercent      first_layer_infill_speed;
     ConfigOptionInts                first_layer_temperature;
-    ConfigOptionFloat               infill_acceleration;
+    ConfigOptionFloatOrPercent      infill_acceleration;
     ConfigOptionInts                max_fan_speed;
     ConfigOptionFloats              max_layer_height;
     ConfigOptionFloat               max_print_height;
@@ -1217,7 +1223,7 @@ public:
     ConfigOptionBool                only_retract_when_crossing_perimeters;
     ConfigOptionBool                ooze_prevention;
     ConfigOptionString              output_filename_format;
-    ConfigOptionFloat               perimeter_acceleration;
+    ConfigOptionFloatOrPercent      perimeter_acceleration;
     ConfigOptionStrings             post_process;
     ConfigOptionString              printer_model;
     ConfigOptionString              printer_notes;

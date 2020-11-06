@@ -15,6 +15,41 @@ class ExtrusionEntityCollection;
 class Extruder;
 
 // Each ExtrusionRole value identifies a distinct set of { extruder, speed }
+/*
+enum ExtrusionRoleModifier : uint16_t {
+    ermPerimeter = (1 << 0),
+    ermInfill = (2 << 1),
+    ermThin = (2 << 2),
+    ermSkirt = (2 << 3),
+    ermOther = (2 << 4),
+    ermInternal = (1 << 10),
+    ermExternal = (1 << 11),
+    ermSolid = (1 << 12),
+    ermBridge = (1 << 13),
+    ermSupport = (1 << 13)
+};
+enum ExtrusionRole : uint16_t {
+    erNone = 0,
+    erPerimeter = ermPerimeter | ermInternal,
+    erExternalPerimeter = ermPerimeter | ermExternal,
+    erOverhangPerimeter = ermPerimeter | ermBridge,
+    erInternalInfill = ermInfill | ermInternal,
+    erSolidInfill = ermInfill | ermSolid | ermInternal,
+    erTopSolidInfill = ermInfill | ermSolid | ermExternal,
+    erBridgeInfill = ermInfill | ermSolid | ermBridge | ermExternal,
+    erInternalBridgeInfill = ermInfill | ermSolid | ermBridge,
+    erThinWall = ermThin | ermInternal,
+    erGapFill = ermThin | ermExternal,
+    erSkirt = ermSkirt,
+    erSupportMaterial = ermInfill | ermSupport | ermInternal,
+    erSupportMaterialInterface = ermInfill | ermSupport | ermExternal,
+    erWipeTower = ermSkirt | ermSupport,
+    erMilling = ermOther | ermPerimeter,
+    erCustom = ermOther | ermSkirt,
+    // Extrusion role for a collection with multiple extrusion roles.
+    erMixed = ermOther
+};
+*/
 enum ExtrusionRole : uint8_t {
     erNone,
     erPerimeter,
@@ -25,6 +60,7 @@ enum ExtrusionRole : uint8_t {
     erTopSolidInfill,
     erIroning,
     erBridgeInfill,
+    erInternalBridgeInfill,
     erThinWall,
     erGapFill,
     erSkirt,
@@ -37,6 +73,7 @@ enum ExtrusionRole : uint8_t {
     erMixed,
     erCount
 };
+
 // perimeter / infill / support / skirt / gapfill / wipetower / custom / mixed
 // side / internal / top / bottom
 // bridge

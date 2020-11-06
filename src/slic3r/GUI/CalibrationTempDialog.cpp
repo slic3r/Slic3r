@@ -3,6 +3,7 @@
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/CustomGCode.hpp"
 #include "libslic3r/Model.hpp"
+#include "AppConfig.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Plater.hpp"
@@ -110,10 +111,13 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
 
 
     /// --- translate ---
-    const ConfigOptionPoints* bed_shape = printer_config->option<ConfigOptionPoints>("bed_shape");
-    Vec2d bed_size = BoundingBoxf(bed_shape->values).size();
-    Vec2d bed_min = BoundingBoxf(bed_shape->values).min;
-    model.objects[objs_idx[0]]->translate({ bed_min.x() + bed_size.x() / 2, bed_min.y() + bed_size.y() / 2, 0 });
+    bool autocenter = gui_app->app_config->get("autocenter") == "1";
+    if (!autocenter) {
+        const ConfigOptionPoints* bed_shape = printer_config->option<ConfigOptionPoints>("bed_shape");
+        Vec2d bed_size = BoundingBoxf(bed_shape->values).size();
+        Vec2d bed_min = BoundingBoxf(bed_shape->values).min;
+        model.objects[objs_idx[0]]->translate({ bed_min.x() + bed_size.x() / 2, bed_min.y() + bed_size.y() / 2, 0 });
+    }
 
     /// --- main config, please modify object config when possible ---
     DynamicPrintConfig new_print_config = *print_config; //make a copy

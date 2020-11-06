@@ -162,7 +162,7 @@ struct SegmentIntersection
         // Vertical link, up.
         Up,
         // Vertical link, down.
-    	Down,
+        Down,
         // Phony intersection point has no link.
         Phony,
     };
@@ -2243,7 +2243,7 @@ static std::vector<MonotonousRegionLink> chain_monotonous_regions(
     // After how many rounds without an improvement to exit?
     constexpr int 	num_rounds_no_change_exit = 8;
     // With how many ants each of the run will be performed?
-	const int   	num_ants = std::min(int(regions.size()), 10);
+    const   int     num_ants = std::min(int(regions.size()), 10);
     // Base (initial) pheromone level. This value will be adjusted based on the length of the first greedy path found.
     float           pheromone_initial_deposit = 0.5f;
     // Evaporation rate of pheromones.

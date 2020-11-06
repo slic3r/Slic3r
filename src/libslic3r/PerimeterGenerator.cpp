@@ -97,14 +97,14 @@ void PerimeterGenerator::process()
     coord_t ext_min_spacing = (coord_t)( ext_perimeter_spacing2  * (1 - 0.05/*INSET_OVERLAP_TOLERANCE*/) );
     
     // prepare grown lower layer slices for overhang detection
-    if (this->lower_slices != NULL && this->config->overhangs_width > 0) {
+    if (this->lower_slices != NULL && this->config->overhangs_width.value > 0) {
         // We consider overhang any part where the entire nozzle diameter is not supported by the
         // lower layer, so we take lower slices and offset them by overhangs_width of the nozzle diameter used 
         // in the current layer
         double offset_val = double(scale_(config->overhangs_width.get_abs_value(nozzle_diameter))) - (float)(ext_perimeter_width / 2);
         this->_lower_slices_bridge_flow = offset(*this->lower_slices, offset_val);
     }
-    if (this->lower_slices != NULL && this->config->overhangs_width_speed > 0) {
+    if (this->lower_slices != NULL && this->config->overhangs_width_speed.value > 0) {
         double offset_val = double(scale_(config->overhangs_width_speed.get_abs_value(nozzle_diameter))) - (float)(ext_perimeter_width / 2);
         this->_lower_slices_bridge_speed = offset(*this->lower_slices, offset_val);
     }
@@ -950,11 +950,19 @@ template<typename LINE>
 ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, ExtrusionRole role, bool is_external) const {
     ExtrusionPaths paths;
     double nozzle_diameter = this->print_config->nozzle_diameter.get_at(this->config->perimeter_extruder - 1);
-    if (this->config->overhangs_width.get_abs_value(nozzle_diameter) > this->config->overhangs_width_speed.get_abs_value(nozzle_diameter)) {
+    if (this->config->overhangs_width.get_abs_value(nozzle_diameter) ==0 && 0== this->config->overhangs_width_speed.get_abs_value(nozzle_diameter)) {
+        //error
+        return paths;
+    
+    } else if (this->config->overhangs_width.get_abs_value(nozzle_diameter) > this->config->overhangs_width_speed.get_abs_value(nozzle_diameter)) {
+        //set the fan & speed before the flow
+
         // get non-overhang paths by intersecting this loop with the grown lower slices
         extrusion_paths_append(
             paths,
-            intersection_pl(loop_polygons, this->_lower_slices_bridge_speed),
+            (this->config->overhangs_width_speed.value > 0 ?
+                intersection_pl(loop_polygons, this->_lower_slices_bridge_speed) :
+                intersection_pl(loop_polygons, this->_lower_slices_bridge_flow)),
             role,
             is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm,
             is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width,
@@ -962,30 +970,38 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, Extrusio
 
         // get overhang paths by checking what parts of this loop fall 
         // outside the grown lower slices
-        Polylines poly_speed = diff_pl(loop_polygons, this->_lower_slices_bridge_speed);
+        Polylines poly_speed = 
+            (this->config->overhangs_width_speed.value > 0 ?
+                diff_pl(loop_polygons, this->_lower_slices_bridge_speed):
+                Polylines{});
+        if(this->config->overhangs_width_speed.value > 0)
+            extrusion_paths_append(
+                paths,
+                intersection_pl(poly_speed, this->_lower_slices_bridge_flow),
+                erOverhangPerimeter,
+                is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm,
+                is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width,
+                (float)this->layer->height);
 
         extrusion_paths_append(
             paths,
-            intersection_pl(poly_speed, this->_lower_slices_bridge_flow),
-            erOverhangPerimeter,
-            is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm,
-            is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width,
-            (float)this->layer->height);
-
-        extrusion_paths_append(
-            paths,
-            diff_pl(poly_speed, this->_lower_slices_bridge_flow),
+            (this->config->overhangs_width_speed.value > 0 ?
+                diff_pl(poly_speed, this->_lower_slices_bridge_flow):
+                diff_pl(loop_polygons, this->_lower_slices_bridge_flow)),
             erOverhangPerimeter,
             this->_mm3_per_mm_overhang,
             this->overhang_flow.width,
             this->overhang_flow.height);
 
     } else {
+        //can't set flow without fan & speed
 
         // get non-overhang paths by intersecting this loop with the grown lower slices
         extrusion_paths_append(
             paths,
-            intersection_pl(loop_polygons, this->_lower_slices_bridge_flow),
+            (this->config->overhangs_width.value > 0 ?
+                intersection_pl(loop_polygons, this->_lower_slices_bridge_flow) :
+                intersection_pl(loop_polygons, this->_lower_slices_bridge_speed) ),
             role,
             is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm,
             is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width,
@@ -993,13 +1009,23 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, Extrusio
 
         // get overhang paths by checking what parts of this loop fall 
         // outside the grown lower slices
-        extrusion_paths_append(
-            paths,
-            diff_pl(loop_polygons, this->_lower_slices_bridge_flow),
-            erOverhangPerimeter,
-            this->_mm3_per_mm_overhang,
-            this->overhang_flow.width,
-            this->overhang_flow.height);
+        if (this->config->overhangs_width.value > 0) {
+            extrusion_paths_append(
+                paths,
+                diff_pl(loop_polygons, this->_lower_slices_bridge_flow),
+                erOverhangPerimeter,
+                this->_mm3_per_mm_overhang,
+                this->overhang_flow.width,
+                this->overhang_flow.height);
+        } else {
+            extrusion_paths_append(
+                paths,
+                diff_pl(loop_polygons, this->_lower_slices_bridge_speed),
+                erOverhangPerimeter,
+                is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm,
+                is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width,
+                (float)this->layer->height);
+        }
     }
 
     // reapply the nearest point search for starting point
@@ -1038,7 +1064,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
         
         // detect overhanging/bridging perimeters
         ExtrusionPaths paths;
-        if ( this->config->overhangs_width_speed > 0 && this->layer->id() > 0
+        if ( this->config->overhangs_width_speed.value > 0 && this->layer->id() > 0
             && !(this->object_config->support_material && this->object_config->support_material_contact_distance_type.value == zdNone)) {
             paths = this->create_overhangs(loop.polygon, role, is_external);
         } else {
@@ -1468,7 +1494,7 @@ PerimeterGenerator::_extrude_and_cut_loop(const PerimeterGeneratorLoop &loop, co
         }
 
         // detect overhanging/bridging perimeters
-        if ( this->config->overhangs_width_speed > 0 && this->layer->id() > 0
+        if ( this->config->overhangs_width_speed.value > 0 && this->layer->id() > 0
             && !(this->object_config->support_material && this->object_config->support_material_contact_distance_type.value == zdNone)) {
             ExtrusionPaths paths = this->create_overhangs(initial_polyline, role, is_external);
             
