@@ -25,12 +25,21 @@ namespace Slic3r {
 namespace GUI {
 
 void CalibrationOverBridgeDialog::create_buttons(wxStdDialogButtonSizer* buttons){
-    wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Generate")));
-    bt->Bind(wxEVT_BUTTON, &CalibrationOverBridgeDialog::create_geometry, this);
-    buttons->Add(bt);
+    wxButton* bt1 = new wxButton(this, wxID_FILE1, _(L("Over-Bridge calibration")));
+    wxButton* bt2 = new wxButton(this, wxID_FILE1, _(L("Top flow calibration")));
+    bt1->Bind(wxEVT_BUTTON, &CalibrationOverBridgeDialog::create_geometry1, this);
+    bt2->Bind(wxEVT_BUTTON, &CalibrationOverBridgeDialog::create_geometry2, this);
+    buttons->Add(bt1);
+    buttons->Add(bt2);
 }
 
-void CalibrationOverBridgeDialog::create_geometry(wxCommandEvent& event_args) {
+void CalibrationOverBridgeDialog::create_geometry1(wxCommandEvent& event_args) {
+    create_geometry(true);
+}
+void CalibrationOverBridgeDialog::create_geometry2(wxCommandEvent& event_args) {
+    create_geometry(false);
+}
+void CalibrationOverBridgeDialog::create_geometry(bool over_bridge) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
     plat->reset();
@@ -108,7 +117,11 @@ void CalibrationOverBridgeDialog::create_geometry(wxCommandEvent& event_args) {
         model.objects[objs_idx[i]]->config.set_key_value("fill_density", new ConfigOptionPercent(5.5));
         model.objects[objs_idx[i]]->config.set_key_value("fill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinear));
         model.objects[objs_idx[i]]->config.set_key_value("infill_dense", new ConfigOptionBool(false));
-        model.objects[objs_idx[i]]->config.set_key_value("over_bridge_flow_ratio", new ConfigOptionPercent(100 + i * 5));
+        //calibration setting. Use 100 & 5 step as it's the numbers printed on the samples
+        if(over_bridge)
+            model.objects[objs_idx[i]]->config.set_key_value("over_bridge_flow_ratio", new ConfigOptionPercent(/*print_config->option<ConfigOptionPercent>("over_bridge_flow_ratio")->get_abs_value(100)*/100 + i * 5));
+        else
+            model.objects[objs_idx[i]]->config.set_key_value("fill_top_flow_ratio", new ConfigOptionPercent(/*print_config->option<ConfigOptionPercent>("fill_top_flow_ratio")->get_abs_value(100)*/100 + i * 5));
         model.objects[objs_idx[i]]->config.set_key_value("layer_height", new ConfigOptionFloat(nozzle_diameter / 2));
         model.objects[objs_idx[i]]->config.set_key_value("external_infill_margin", new ConfigOptionFloatOrPercent(400,true));
         model.objects[objs_idx[i]]->config.set_key_value("top_fill_pattern", new ConfigOptionEnum<InfillPattern>(ipSmooth));

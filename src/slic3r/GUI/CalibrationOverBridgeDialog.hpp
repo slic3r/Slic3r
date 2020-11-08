@@ -15,7 +15,9 @@ public:
     
 protected:
     void create_buttons(wxStdDialogButtonSizer* sizer) override;
-    void create_geometry(wxCommandEvent& event_args);
+    void create_geometry1(wxCommandEvent& event_args);
+    void create_geometry2(wxCommandEvent& event_args);
+    void create_geometry(bool over_bridge);
 
 };
 
