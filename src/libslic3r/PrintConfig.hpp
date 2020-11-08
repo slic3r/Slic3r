@@ -135,7 +135,13 @@ enum SLAPillarConnectionMode {
     slapcmZigZag,
     slapcmCross,
     slapcmDynamic
-}; 
+};
+
+enum ZLiftTop {
+    zltAll,
+    zltTop,
+    zltNotTop
+};
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<CompleteObjectSort>::get_enum_values() {
     static t_config_enum_values keys_map;
@@ -339,6 +345,15 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<SLAPillarConnecti
         {"dynamic", slapcmDynamic}
     };
 
+    return keys_map;
+}
+
+template<> inline const t_config_enum_values& ConfigOptionEnum<ZLiftTop>::get_enum_values() {
+    static const t_config_enum_values keys_map = {
+        {"everywhere", zltAll},
+        {"onlytop", zltTop},
+        {"nottop", zltNotTop}
+    };
     return keys_map;
 }
 
@@ -774,6 +789,7 @@ public:
     ConfigOptionInt                 perimeters;
     ConfigOptionPercent             print_extrusion_multiplier;
     ConfigOptionFloat               print_retract_length;
+    ConfigOptionFloat               print_retract_lift;
     ConfigOptionFloatOrPercent      small_perimeter_speed;
     ConfigOptionFloatOrPercent      small_perimeter_min_length;
     ConfigOptionFloatOrPercent      small_perimeter_max_length;
@@ -874,6 +890,7 @@ protected:
         OPT_PTR(perimeters);
         OPT_PTR(print_extrusion_multiplier);
         OPT_PTR(print_retract_length);
+        OPT_PTR(print_retract_lift);
         OPT_PTR(small_perimeter_speed);
         OPT_PTR(small_perimeter_min_length);
         OPT_PTR(small_perimeter_max_length);
@@ -1023,7 +1040,8 @@ public:
     ConfigOptionFloats              retract_lift;
     ConfigOptionFloats              retract_lift_above;
     ConfigOptionFloats              retract_lift_below;
-    ConfigOptionBools               retract_lift_not_last_layer;
+    ConfigOptionBools               retract_lift_first_layer;
+    ConfigOptionStrings             retract_lift_top;
     ConfigOptionFloats              retract_restart_extra;
     ConfigOptionFloats              retract_restart_extra_toolchange;
     ConfigOptionFloats              retract_speed;
@@ -1128,7 +1146,8 @@ protected:
         OPT_PTR(retract_lift);
         OPT_PTR(retract_lift_above);
         OPT_PTR(retract_lift_below);
-        OPT_PTR(retract_lift_not_last_layer);
+        OPT_PTR(retract_lift_first_layer);
+        OPT_PTR(retract_lift_top);
         OPT_PTR(retract_restart_extra);
         OPT_PTR(retract_restart_extra_toolchange);
         OPT_PTR(retract_speed);

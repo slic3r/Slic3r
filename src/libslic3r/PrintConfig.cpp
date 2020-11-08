@@ -2806,13 +2806,27 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloats { 0. });
 
-    def = this->add("retract_lift_not_last_layer", coBools);
-    def->label = L("Not on top");
-    def->full_label = L("Don't retract on top surfaces");
-    def->category = OptionCategory::support;
-    def->tooltip = L("Select this option to not use the z-lift on a top surface.");
+    def = this->add("retract_lift_first_layer", coBools);
+    def->label = L("Enforce on first layer");
+    def->full_label = L("Enforce lift on first layer");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L("Select this option to enforce z-lift on the first layer.");
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionBools { false });
+    def->set_default_value(new ConfigOptionBools{ false });
+
+    def = this->add("retract_lift_top", coStrings);
+    def->label = L("On surfaces");
+    def->full_label = L("Lift only on");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L("Select this option to not use/enforce the z-lift on a top surface.");
+    def->gui_type = "f_enum_open";
+    def->gui_flags = "show_value";
+    def->enum_values.push_back(("All surfaces"));
+    def->enum_values.push_back(("Not on top"));
+    def->enum_values.push_back(("Only on top"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionStrings{ "All surfaces" });
+
 
     def = this->add("retract_restart_extra", coFloats);
     def->label = L("Extra length on restart");
@@ -3522,9 +3536,17 @@ void PrintConfigDef::init_fff_params()
     def = this->add("print_temperature", coInt);
     def->label = L("Temperature");
     def->category = OptionCategory::filament;
-    def->tooltip = L("Override the temperature of the extruder. Avoid doing too many changes, it won't stop for cooling/heating. 0 to disable.");
+    def->tooltip = L("Override the temperature of the extruder. Avoid doing too many changes, it won't stop for cooling/heating. 0 to disable. May only works on Height range modifiers.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("print_retract_lift", coFloat);
+    def->label = L("Z-lift override");
+    def->category = OptionCategory::filament;
+    def->tooltip = L("Set the new lift-z value for this override. 0 will disable the z-lift. -& to disable. May only works on Height range modifiers.");
+    def->sidetext = L("mm");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(-1));
 
     def = this->add("thin_perimeters", coBool);
     def->label = L("Overlapping external perimeter");
@@ -3996,7 +4018,8 @@ void PrintConfigDef::init_extruder_option_keys()
         "retract_lift",
         "retract_lift_above",
         "retract_lift_below",
-        "retract_lift_not_last_layer",
+        "retract_lift_first_layer",
+        "retract_lift_top",
         "retract_speed",
         "deretract_speed",
         "retract_before_wipe",
@@ -4875,6 +4898,12 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
             value = "emit_to_gcode";
         else
             value = "time_estimate_only";
+    } else if (opt_key == "retract_lift_not_last_layer") {
+        opt_key = "retract_lift_top";
+        if (value == "1")
+            value = "Not on top";
+        else
+            value = "All surfaces";
     }
 
     // Ignore the following obsolete configuration keys:

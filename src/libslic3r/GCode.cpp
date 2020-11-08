@@ -4196,10 +4196,16 @@ std::string GCode::retract(bool toolchange)
         methods even if we performed wipe, since this will ensure the entire retraction
         length is honored in case wipe path was too short.  */
     gcode += toolchange ? m_writer.retract_for_toolchange() : m_writer.retract();
-    if (toolchange 
-        || !(BOOL_EXTRUDER_CONFIG(retract_lift_not_last_layer) && (this->m_last_extrusion_role == ExtrusionRole::erTopSolidInfill ))
-        || !m_writer.tool_is_extruder()
-        )
+    bool need_lift = !m_writer.tool_is_extruder() || toolchange || (BOOL_EXTRUDER_CONFIG(retract_lift_first_layer) && m_config.print_retract_lift.value != 0 && this->m_layer_index == 0);
+    if (!need_lift && m_config.print_retract_lift.value != 0) {
+        if (EXTRUDER_CONFIG_WITH_DEFAULT(retract_lift_top, "") == "Not on top")
+            need_lift = (this->m_last_extrusion_role != ExtrusionRole::erTopSolidInfill);
+        else if (EXTRUDER_CONFIG_WITH_DEFAULT(retract_lift_top, "") == "Only on top")
+            need_lift = (this->m_last_extrusion_role == ExtrusionRole::erTopSolidInfill);
+        else
+            need_lift = true;
+    }
+    if (need_lift)
         if (m_writer.tool()->retract_length() > 0 
             || m_config.use_firmware_retraction 
             || (!m_writer.tool_is_extruder() && m_writer.tool()->retract_lift() != 0)

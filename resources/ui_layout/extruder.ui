@@ -16,7 +16,10 @@ group:Retraction
 	line:Only lift Z
 		setting:idx:retract_lift_above
 		setting:idx:retract_lift_below
-		setting:idx:retract_lift_not_last_layer
+	end_line
+	line:Lift z enforcement
+		setting:idx:retract_lift_first_layer
+		setting:idx:retract_lift_top
 	end_line
 	line:Retraction Speed
 		setting:idx:retract_speed

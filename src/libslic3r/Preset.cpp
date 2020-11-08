@@ -559,6 +559,7 @@ const std::vector<std::string>& Preset::print_options()
         "print_extrusion_multiplier",
         "print_retract_length",
         "print_temperature",
+        "print_retract_lift",
         "external_perimeter_cut_corners",
         "external_perimeter_overlap",
         "perimeter_bonding",

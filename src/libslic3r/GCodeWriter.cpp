@@ -660,6 +660,11 @@ std::string GCodeWriter::lift()
         target_lift = m_tool->retract_lift();
     }
 
+    // use the override if set
+    if (target_lift > 0 && config_region && config_region->print_retract_lift.value >= 0) {
+        target_lift = config_region->print_retract_lift.value;
+    }
+
     if (this->extra_lift > 0) {
         target_lift += this->extra_lift;
         this->extra_lift = 0;
