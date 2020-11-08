@@ -23,7 +23,6 @@ namespace Slic3r {
 
 class ExPolygon;
 class Surface;
-enum InfillPattern : int;
 
 namespace FillAdaptive {
     struct Octree;

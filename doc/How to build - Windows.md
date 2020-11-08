@@ -1,12 +1,30 @@
 
 # Building SuperSlicer on Microsoft Windows
 
-The currently supported way of building SuperSlicer on Windows is with CMake and MS Visual Studio 2017.
-You can use the free [Visual Studio 2017 Community Edition](https://www.visualstudio.com/vs/older-downloads/).
+The currently supported way of building SuperSlicer on Windows is with CMake and [MS Visual Studio 2019](https://visualstudio.microsoft.com/fr/vs).
 CMake installer can be downloaded from [the official website](https://cmake.org/download/).~~
 
-Building with newer versions of MSVS (2019) should work too.
+Building with [Visual Studio 2017 Community Edition](https://www.visualstudio.com/vs/older-downloads/). should work too.
 
+### How to build
+
+You have to build the dependancies (in ./deps/build)
+```
+cmake .. -G "Visual Studio 16 2019" -A x64
+msbuild /m ALL_BUILD.vcxproj
+```
+
+and then build superslicer (in ./build):
+```
+cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH="PATH_TO_SuperSlicer\deps\destdir\usr\local"
+msbuild /m /P:Configuration=Release INSTALL.vcxproj
+```
+You can also build it in visual studio, for that open the .sln.
+Note that you need to have `libgmp-10.dll` and `libmpfr-4.dll` next to your built superslicer. You can get them from any superslicer release.
+
+If you want to create the zipped release, you can follow this [script](https://github.com/supermerill/SuperSlicer/blob/master/.github/workflows/ccpp_win.yml).
+
+# Old doc, not up-to-date:
 
 ### Building the dependencies package yourself
 

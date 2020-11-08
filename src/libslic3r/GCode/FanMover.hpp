@@ -73,13 +73,13 @@ private:
         m_buffer.emplace_back(data);
         return m_buffer.back();
     }
-    std::list<BufferData>::iterator remove_from_buffer(std::list<BufferData>::iterator& data) {
+    std::list<BufferData>::iterator remove_from_buffer(std::list<BufferData>::iterator data) {
         m_buffer_time_size -= data->time;
         return m_buffer.erase(data);
     }
     // Processes the given gcode line
     void _process_gcode_line(GCodeReader& reader, const GCodeReader::GCodeLine& line);
-    void _put_in_middle_G1(std::list<BufferData>::iterator& item_to_split, float nb_sec, BufferData&& line_to_write);
+    void _put_in_middle_G1(std::list<BufferData>::iterator item_to_split, float nb_sec, BufferData&& line_to_write);
     void _print_in_middle_G1(BufferData& line_to_split, float nb_sec, const std::string& line_to_write);
     void _remove_slow_fan(int16_t min_speed, float past_sec);
 };

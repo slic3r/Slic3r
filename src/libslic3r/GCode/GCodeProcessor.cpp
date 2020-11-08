@@ -479,11 +479,13 @@ void GCodeProcessor::TimeProcessor::post_process(const std::string& filename)
     in.close();
 
     std::error_code err_code;
-    if (err_code = rename_file(out_path, filename))
-        if(copy_file(out_path, filename, (std::string("Failed to rename the output G-code file from ") + out_path + " to " + filename + '\n' +
-            "Is " + out_path + " locked? (gcp)" + err_code.message() + '\n'), true) != SUCCESS)
+    if (err_code = rename_file(out_path, filename)) {
+        std::string err_msg = (std::string("Failed to rename the output G-code file from ") + out_path + " to " + filename + '\n' +
+            "Is " + out_path + " locked? (gcp)" + err_code.message() + '\n');
+        if (copy_file(out_path, filename, err_msg, true) != SUCCESS)
             throw Slic3r::RuntimeError(std::string("Failed to rename the output G-code file from ") + out_path + " to " + filename + '\n' +
                 "Is " + out_path + " locked? (gcp)" + err_code.message() + '\n');
+    }
 }
 
 const std::vector<std::pair<GCodeProcessor::EProducer, std::string>> GCodeProcessor::Producers = {

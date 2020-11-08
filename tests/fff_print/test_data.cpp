@@ -175,7 +175,7 @@ void init_print(std::vector<TriangleMesh> &&meshes, Slic3r::Print &print, Slic3r
     }
 
 	print.apply(model, config);
-    model.arrange_objects(model, InfiniteBed{}, ArrangeParams{ scaled(min_object_distance(config))});
+    arrange_objects(&print, model, InfiniteBed{}, ArrangeParams{ scaled(print.config().min_object_distance()) });
     print.apply(model, config);
     print.validate();
     print.set_status_silent();

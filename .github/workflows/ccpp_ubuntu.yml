@@ -21,7 +21,7 @@ jobs:
     - name: update apt
       run: sudo apt update
     - name: install gtk2 glew
-      run: sudo apt install libgtk2.0-dev libglew-dev libudev-dev
+      run: sudo apt install libgtk2.0-dev libglew-dev libudev-dev libdbus-1-dev
     - name: mkdir in deps
       run: mkdir deps/build
     - name: cmake deps

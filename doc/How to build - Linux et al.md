@@ -17,6 +17,16 @@ where `N` is the number of CPU cores available.
 
 Additional CMake flags may be applicable as explained below.
 
+### How to build
+
+You can follow the [script](https://github.com/supermerill/SuperSlicer/blob/master/.github/workflows/ccpp_ubuntu.yml) the build server use to create the ubuntu release.
+
+You have to execute each command at the right of the 'run: ' tags, in the directory that is at the right of the previous 'working-directory:' tag.
+
+You can stop after the `make slic3r` as the rest of the commands are for building the launch script and the appimage.
+
+# Old doc, not up-to-date:
+
 ### Dependency resolution
 
 By default SuperSlicer looks for dependencies the default way CMake looks for them, i.e. in default system locations.

@@ -92,7 +92,7 @@ int16_t get_fan_speed(const std::string &line, GCodeFlavor flavor) {
 
 }
 
-void FanMover::_put_in_middle_G1(std::list<BufferData>::iterator &item_to_split, float nb_sec, BufferData &&line_to_write) {
+void FanMover::_put_in_middle_G1(std::list<BufferData>::iterator item_to_split, float nb_sec, BufferData &&line_to_write) {
     //std::cout << "_put_in_middle_G1\n";
     assert(item_to_split != m_buffer.end());
     if (nb_sec < item_to_split->time * 0.1) {

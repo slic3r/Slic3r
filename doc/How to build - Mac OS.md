@@ -11,6 +11,17 @@ To build SuperSlicer on Mac OS, you will need the following software:
 XCode is available through Apple's App Store, the other three tools are available on
 [brew](https://brew.sh/) (use `brew install cmake git gettext` to install them).
 
+### How to build
+
+You can follow the [script](https://github.com/supermerill/SuperSlicer/blob/master/.github/workflows/ccpp_mac.yml) the build server use to create the ubuntu release.
+
+You have to execute each command at the right of the 'run: ' tags, in the directory that is at the right of the previous 'working-directory:' tag.
+
+You can stop after the `make slic3r` as the rest of the commands are for building the .dmg
+
+# Old doc, not up-to-date:
+
+
 ### Dependencies
 
 SuperSlicer comes with a set of CMake scripts to build its dependencies, it lives in the `deps` directory.
