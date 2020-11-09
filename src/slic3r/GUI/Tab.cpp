@@ -1744,11 +1744,11 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             if (!in_line) {
                 if (colored) {
                     m_colored_Label_colors[setting_id] = &m_default_text_clr;
-                    Line l = current_group->create_single_option_line(option, label_path.empty() ? wxEmptyString : label_path);
+                    Line l = current_group->create_single_option_line(option, label_path.empty() ? wxString(wxEmptyString) : wxString(label_path));
                     l.full_Label_color = m_colored_Label_colors[setting_id];
                     current_group->append_line(l);
                 } else {
-                    current_group->append_line(current_group->create_single_option_line(option, label_path.empty() ? wxEmptyString : label_path));
+                    current_group->append_line(current_group->create_single_option_line(option, label_path.empty() ? wxString(wxEmptyString) : wxString(label_path)));
                 }
             } else {
                 current_line.append_option(option);

@@ -832,13 +832,11 @@ void GCode::do_export(Print* print, const char* path, GCodePreviewData* preview_
 
 #endif // ENABLE_GCODE_VIEWER
 
-    std::error_code err_code;
-    if (rename_file(path_tmp, path))
-        if (copy_file(path_tmp, path, ("Failed to rename the output G-code file from " + path_tmp + " to " + path + '\n' +
-            "Is " + path_tmp + " locked? " + err_code.message() + '\n'), true) != CopyFileResult::SUCCESS)
-            throw Slic3r::RuntimeError(
-                std::string("Failed to rename the output G-code file from ") + path_tmp + " to " + path + '\n' +
-                "Is " + path_tmp + " locked? " + err_code.message() + '\n');
+    if (rename_file(path_tmp, path)) {
+        std::string err_msg = ("Failed to rename the output G-code file from " + path_tmp + " to " + path + '\n');
+        if (copy_file(path_tmp, path, err_msg, true) != CopyFileResult::SUCCESS)
+            throw Slic3r::RuntimeError(err_msg);
+    }
 
     BOOST_LOG_TRIVIAL(info) << "Exporting G-code finished" << log_memory_info();
 	print->set_done(psGCodeExport);

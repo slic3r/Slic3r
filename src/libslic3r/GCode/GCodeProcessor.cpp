@@ -2157,7 +2157,7 @@ void GCodeProcessor::store_move_vertex(EMoveType type)
         m_height,
         m_mm3_per_mm,
         m_fan_speed,
-        m_layer_id, //layer_duration: set later
+        float(m_layer_id), //layer_duration: set later
         m_time_processor.machines[0].time, //time: set later
         m_temperature
     };
