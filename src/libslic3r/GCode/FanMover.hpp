@@ -44,6 +44,7 @@ private:
     ExtrusionRole current_role = ExtrusionRole::erCustom;
     // in unit/second
     double m_current_speed = 1000 / 60.0;
+    bool m_is_custom_gcode = false;
 
     // variable for when you add a line (front of the buffer)
     int m_current_fan_speed = 0;

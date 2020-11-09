@@ -239,7 +239,7 @@ void FanMover::_process_gcode_line(GCodeReader& reader, const GCodeReader::GCode
         case 'M':
         {
             fan_speed = get_fan_speed(line.raw(), m_writer.config.gcode_flavor);
-            if (fan_speed > 0) {
+            if (fan_speed > 0 && !m_is_custom_gcode) {
                 if (!only_overhangs || current_role != ExtrusionRole::erOverhangPerimeter) {
                     // this M106 need to go in the past
                     //check if we have !( kickstart and not in slowdown )
@@ -307,6 +307,9 @@ void FanMover::_process_gcode_line(GCodeReader& reader, const GCodeReader::GCode
                 // get the type of the next extrusions
                 std::string extrusion_string = line.raw().substr(6, line.raw().size() - 6);
                 current_role = ExtrusionEntity::string_to_role(extrusion_string);
+            }
+            if (line.raw().size() > 16 && line.raw().rfind("; custom gcode", 0) == 0) {
+                m_is_custom_gcode = line.raw().rfind("; custom gcode end", 0) != 0;
             }
         }
     }
