@@ -93,26 +93,25 @@ jobs:
         name: nightly_macos.dmg
         path: build/SuperSlicer.dmg
 # build again, but the debug one this time
-    - name: cmake
-      working-directory: ./build
-      run: cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13" -DSLIC3R_STATIC=1
-    - name: make slic3r
-      working-directory: ./build
-      run: make slic3r
-    - name: copy bin and do not let it lower case
-      working-directory: ./build
-      run: |
-        cp -f src/superslicer SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
-        chmod u+x SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
-        tar -cvf SuperSlicer.tar SuperSlicer
-    - name: create dmg
-      working-directory: ./build
-      run: |
-        rm SuperSlicer.dmg
-        hdiutil create -ov -fs HFS+ -volname "SuperSlicer" -srcfolder "SuperSlicer" temp.dmg
-        hdiutil convert temp.dmg -format UDZO -o SuperSlicer.dmg
-    - name: Upload artifact
-      uses: actions/upload-artifact@v1.0.0
-      with:
-        name: nightly_macos_DEBUG.dmg
-        path: build/SuperSlicer.dmg
+#    - name: cmake
+#      working-directory: ./build
+#      run: cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13" -DSLIC3R_STATIC=1
+#    - name: make slic3r
+#      working-directory: ./build
+#      run: make slic3r
+#    - name: copy bin and do not let it lower case
+#      working-directory: ./build
+#      run: |
+#        cp -f src/superslicer SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
+#        chmod u+x SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
+#        tar -cvf SuperSlicer.tar SuperSlicer
+#    - name: create dmg
+#      working-directory: ./build
+#      run: |
+#        rm SuperSlicer.dmg
+#        hdiutil create -ov -fs HFS+ -volname "SuperSlicer" -srcfolder "SuperSlicer" temp.dmg
+#        hdiutil convert temp.dmg -format UDZO -o SuperSlicer.dmg
+#    - name: Upload artifact
+#      uses: actions/upload-artifact@v1.0.0
+#      with:
+#        name: nightly_macos_DEBUG.dmg
