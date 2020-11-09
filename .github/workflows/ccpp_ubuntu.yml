@@ -44,9 +44,9 @@ jobs:
     - name: cmake
       working-directory: ./build
       run: cmake .. -DCMAKE_PREFIX_PATH="/home/runner/work/SuperSlicer/SuperSlicer/deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
-    - name: make slic3r
+    - name: make SuperSlicer
       working-directory: ./build
-      run: make slic3r
+      run: make SuperSlicer
     - name: create directory and copy into it
       working-directory: ./build
       run: |

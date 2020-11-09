@@ -43,40 +43,41 @@ jobs:
     - name: cmake
       working-directory: ./build
       run: cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13" -DSLIC3R_STATIC=1
-    - name: make slic3r
+    - name: make SuperSlicer
       working-directory: ./build
-      run: make slic3r
+      run: make SuperSlicer
     - name: update Info.plist
       working-directory: ./build/src
       run: sed "s/+UNKNOWN/_$(date '+%F')/" Info.plist >Info.date.plist
     - name: create directory and copy into it
       working-directory: ./build
       run: |
-        mkdir SuperSlicer
-        mkdir SuperSlicer/SuperSlicer.app
-        mkdir SuperSlicer/SuperSlicer.app/Contents
-        mkdir SuperSlicer/SuperSlicer.app/Contents/_CodeSignature
-        mkdir SuperSlicer/SuperSlicer.app/Contents/Frameworks
-        mkdir SuperSlicer/SuperSlicer.app/Contents/MacOS
+        mkdir pack
+        mkdir pack/SuperSlicer
+        mkdir pack/SuperSlicer/SuperSlicer.app
+        mkdir pack/SuperSlicer/SuperSlicer.app/Contents
+        mkdir pack/SuperSlicer/SuperSlicer.app/Contents/_CodeSignature
+        mkdir pack/SuperSlicer/SuperSlicer.app/Contents/Frameworks
+        mkdir pack/SuperSlicer/SuperSlicer.app/Contents/MacOS
     - name: copy Resources
       working-directory: ./build
       run: |
-        cp -Rf ../resources SuperSlicer/SuperSlicer.app/Contents/Resources
-        cp SuperSlicer/SuperSlicer.app/Contents/Resources/icons/slic3r.icns SuperSlicer/SuperSlicer.app/Contents/resources/Slic3r.icns
-        cp src/Info.date.plist SuperSlicer/SuperSlicer.app/Contents/Info.plist
+        cp -Rf ../resources pack/SuperSlicer/SuperSlicer.app/Contents/Resources
+        cp pack/SuperSlicer/SuperSlicer.app/Contents/Resources/icons/slic3r.icns pack/SuperSlicer/SuperSlicer.app/Contents/resources/Slic3r.icns
+        cp src/Info.date.plist pack/SuperSlicer/SuperSlicer.app/Contents/Info.plist
         echo -n -e 'APPL????\x0a' > PkgInfo
-        cp PkgInfo SuperSlicer/SuperSlicer.app/Contents/PkgInfo
+        cp PkgInfo pack/SuperSlicer/SuperSlicer.app/Contents/PkgInfo
 #        echo -n -e '\xff\xfeAPPL\x3f\x00\x3f\x00\x3f\x00\x3f\x00\x0a\x00' > PkgInfo
     - name: copy bin and do not let it lower case
       working-directory: ./build
       run: |
-        cp -f src/superslicer SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
-        chmod u+x SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
-        tar -cvf SuperSlicer.tar SuperSlicer
+        cp -f src/SuperSlicer pack/SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
+        chmod u+x pack/SuperSlicer/SuperSlicer.app/Contents/MacOS/SuperSlicer
+        tar -cvf SuperSlicer.tar pack/SuperSlicer
     - name: create dmg
       working-directory: ./build
       run: |
-        hdiutil create -ov -fs HFS+ -volname "SuperSlicer" -srcfolder "SuperSlicer" temp.dmg
+        hdiutil create -ov -fs HFS+ -volname "SuperSlicer" -srcfolder "pack/SuperSlicer" temp.dmg
         hdiutil convert temp.dmg -format UDZO -o SuperSlicer.dmg
 #    - name: signing Resources (creating CodeResources inside _CodeSignature)
 #      working-directory: .
