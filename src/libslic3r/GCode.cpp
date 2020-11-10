@@ -431,7 +431,7 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
     check_add_eol(toolchange_gcode_str);
 
     if (gcodegen.writer().tool() && gcodegen.m_config.filament_enable_toolchange_part_fan.values[gcodegen.writer().tool()->id()]) {
-        //if the fan may ahve been changed silently by the wipetower, recover it.
+        //if the fan may have been changed silently by the wipetower, recover it.
         gcode += gcodegen.m_writer.set_fan(gcodegen.m_writer.get_fan(), true);
     }
 
@@ -1498,10 +1498,6 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     // Emit machine envelope limits for the Marlin firmware.
     this->print_machine_envelope(file, print);
 
-    // Disable fan.
-    if ( print.config().disable_fan_first_layers.get_at(initial_extruder_id)
-        && config().gcode_flavor != gcfKlipper)
-        _write(file, m_writer.set_fan(0, true, initial_extruder_id));
 
     // Let the start-up script prime the 1st printing tool.
     m_placeholder_parser.set("initial_tool", initial_extruder_id);
@@ -1541,13 +1537,15 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
 
     std::string start_gcode = this->placeholder_parser_process("start_gcode", print.config().start_gcode.value, initial_extruder_id);
     // Set bed temperature if the start G-code does not contain any bed temp control G-codes.
-    this->_print_first_layer_bed_temperature(file, print, start_gcode, initial_extruder_id, true);
+    if(this->config().gcode_flavor != gcfKlipper)
+        this->_print_first_layer_bed_temperature(file, print, start_gcode, initial_extruder_id, false);
 
     //init extruders
     init_multiextruders(file, print, m_writer, tool_ordering, start_gcode);
 
     // Set extruder(s) temperature before and after start G-code.
-    this->_print_first_layer_extruder_temperatures(file, print, start_gcode, initial_extruder_id, false);
+    if (this->config().gcode_flavor != gcfKlipper || print.config().start_gcode.value.empty())
+        this->_print_first_layer_extruder_temperatures(file, print, start_gcode, initial_extruder_id, false);
 
 #if ENABLE_GCODE_VIEWER
     // adds tag for processor
@@ -1570,7 +1568,15 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
             _writeln(file, this->placeholder_parser_process("start_filament_gcode", print.config().start_filament_gcode.values[initial_extruder_id], initial_extruder_id, &config));
     }
 */
+
+    //write temps after custom gcodes to ensure the temperature are good.
     this->_print_first_layer_extruder_temperatures(file, print, start_gcode, initial_extruder_id, true);
+    this->_print_first_layer_bed_temperature(file, print, start_gcode, initial_extruder_id, true);
+    // Disable fan.
+    if (print.config().disable_fan_first_layers.get_at(initial_extruder_id))
+        _write(file, m_writer.set_fan(0, true, initial_extruder_id));
+    //ensure fan is at the right speed
+
     print.throw_if_canceled();
 
     // Set other general things.
@@ -2023,7 +2029,7 @@ void GCode::_print_first_layer_bed_temperature(FILE *file, Print &print, const s
     // Always call m_writer.set_bed_temperature() so it will set the internal "current" state of the bed temp as if
     // the custom start G-code emited these.
     std::string set_temp_gcode = m_writer.set_bed_temperature(temp, wait);
-    if ( !temp_set_by_gcode && this->config().gcode_flavor != gcfKlipper)
+    if ( !temp_set_by_gcode)
         _write(file, set_temp_gcode);
 }
 
@@ -2043,7 +2049,7 @@ void GCode::_print_first_layer_extruder_temperatures(FILE *file, Print &print, c
         if (temp_by_gcode >= 0 && temp_by_gcode < 1000)
             temp = temp_by_gcode;
         m_writer.set_temperature(temp, wait, first_printing_extruder_id);
-    } else if(this->config().gcode_flavor != gcfKlipper || print.config().start_gcode.value.empty()){
+    } else {
         // Custom G-code does not set the extruder temperature. Do it now.
         if (print.config().single_extruder_multi_material.value) {
             // Set temperature of the first printing extruder only.
