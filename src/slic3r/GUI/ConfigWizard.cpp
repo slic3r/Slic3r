@@ -488,8 +488,8 @@ PagePrinters::PagePrinters(ConfigWizard *parent,
 
     AppConfig *appconfig = &this->wizard_p()->appconfig_new;
 
-    const auto families = vendor.families();
-    for (const auto &family : families) {
+    const t_config_option_keys families = vendor.families();
+    for (const std::string &family : families) {
         const auto filter = [&](const VendorProfile::PrinterModel &model) {
             return (model.technology == technology)
                 && model.family == family;
@@ -500,7 +500,10 @@ PagePrinters::PagePrinters(ConfigWizard *parent,
         }
 
         const auto picker_title = family.empty() ? wxString() : from_u8((boost::format(_utf8(L("%s Family"))) % family).str());
-        auto *picker = new PrinterPicker(this, vendor, picker_title, MAX_COLS, *appconfig, filter);
+        uint8_t max_cols = MAX_COLS;
+        if (vendor.family_2_line_size.find(family) != vendor.family_2_line_size.end())
+            max_cols = vendor.family_2_line_size.at(family);
+        auto *picker = new PrinterPicker(this, vendor, picker_title, max_cols, *appconfig, filter);
 
         picker->Bind(EVT_PRINTER_PICK, [this, appconfig](const PrinterPickerEvent &evt) {
             appconfig->set_variant(evt.vendor_id, evt.model_id, evt.variant_name, evt.enable);
@@ -1380,21 +1383,16 @@ void PageDiameters::apply_custom_config(DynamicPrintConfig &config)
     auto *opt_filam = new ConfigOptionFloats(1, spin_filam->GetValue());
     config.set_key_value("filament_diameter", opt_filam);
 
-    auto set_extrusion_width = [&config, opt_nozzle](const char *key, double dmr) {
-        char buf[64];
-        sprintf(buf, "%.2lf", dmr * opt_nozzle->values.front() / 0.4);
-		config.set_key_value(key, new ConfigOptionFloatOrPercent(atof(buf), false));
-	};
+    config.set_key_value("support_material_extrusion_width", new ConfigOptionFloatOrPercent(95, false));
+    config.set_key_value("top_infill_extrusion_width", new ConfigOptionFloatOrPercent(100, false));
+    config.set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(140, false));
+    config.set_key_value("extrusion_width", new ConfigOptionFloatOrPercent(110, false));
+    config.set_key_value("perimeter_extrusion_width", new ConfigOptionFloatOrPercent(110, false));
+    config.set_key_value("external_perimeter_extrusion_width", new ConfigOptionFloatOrPercent(105, false));
+    config.set_key_value("infill_extrusion_width", new ConfigOptionFloatOrPercent(110, false));
+    config.set_key_value("solid_infill_extrusion_width", new ConfigOptionFloatOrPercent(110, false));
+    config.set_key_value("solid_infill_extrusion_width", new ConfigOptionFloatOrPercent(110, false));
 
-    set_extrusion_width("support_material_extrusion_width",   0.35);
-	set_extrusion_width("top_infill_extrusion_width",		  0.40);
-	set_extrusion_width("first_layer_extrusion_width",		  0.42);
-
-	set_extrusion_width("extrusion_width",					  0.45);
-	set_extrusion_width("perimeter_extrusion_width",		  0.45);
-	set_extrusion_width("external_perimeter_extrusion_width", 0.45);
-	set_extrusion_width("infill_extrusion_width",			  0.45);
-	set_extrusion_width("solid_infill_extrusion_width",       0.45);
 }
 
 PageTemperatures::PageTemperatures(ConfigWizard *parent)

@@ -37,6 +37,9 @@ public:
     std::string                     config_update_url;
     std::string                     changelog_url;
 
+    //families
+    std::map<std::string, uint8_t> family_2_line_size;
+
     struct PrinterVariant {
         PrinterVariant() {}
         PrinterVariant(const std::string &name) : name(name) {}

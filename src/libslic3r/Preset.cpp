@@ -165,6 +165,18 @@ VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem
         res.changelog_url = changelog_url->second.data();
     }
 
+    //get family column size
+    auto family_size = tree.find("family_size");
+    if (family_size != tree.not_found()) {
+        for (auto it = family_size->second.begin(); it != family_size->second.end(); ++it) {
+            try {
+                res.family_2_line_size[it->first] = atoi(it->second.data().c_str());
+            } catch (const std::runtime_error & err) {
+                printf("Error, can't set the line width for family %s:\n%s\n", it->first.c_str(), err.what());
+            }
+        }
+    }
+
     if (! load_all) {
         return res;
     }

@@ -101,7 +101,7 @@ void PrintConfigDef::init_common_params()
 
     def = this->add("thumbnails_with_support", coBool);
     def->label = L("Support on thumbnail");
-    def->tooltip = L("Show the suppots (and pads) on the thumbnail picture.");
+    def->tooltip = L("Show the supports (and pads) on the thumbnail picture.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
 
