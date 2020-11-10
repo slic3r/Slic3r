@@ -222,11 +222,10 @@ void AvoidCrossingPerimeters::init_external_mp(const Print &print)
         std::string();
     }
 
-    int
-        OozePrevention::_get_temp(GCode& gcodegen)
+    int OozePrevention::_get_temp(GCode& gcodegen)
     {
     if (gcodegen.writer().tool_is_extruder())
-        return (gcodegen.layer() != NULL && gcodegen.layer()->id() == 0)
+        return (gcodegen.layer() == NULL || gcodegen.layer()->id() == 0)
             ? gcodegen.config().first_layer_temperature.get_at(gcodegen.writer().tool()->id())
             : gcodegen.config().temperature.get_at(gcodegen.writer().tool()->id());
     else
@@ -1933,7 +1932,7 @@ static bool custom_gcode_sets_temperature(const std::string &gcode, const int mc
                     }
                 }
             }
-                        }
+        }
         // Skip the rest of the line.
         for (; *ptr != 0 && *ptr != '\r' && *ptr != '\n'; ++ ptr);
 		// Skip the end of line indicators.
