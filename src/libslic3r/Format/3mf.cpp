@@ -1219,8 +1219,8 @@ namespace Slic3r {
 
                 pt::ptree tree = code.second;
                 double print_z          = tree.get<double>      ("<xmlattr>.print_z" );
-                int extruder            = tree.get<int>         ("<xmlattr>.extruder");
-                std::string color       = tree.get<std::string> ("<xmlattr>.color"   );
+                int extruder            = tree.get<int>         ("<xmlattr>.extruder", 0);
+                std::string color       = tree.get<std::string> ("<xmlattr>.color"   ,"" );
 
                 CustomGCode::Type   type;
                 std::string         extra;
@@ -1228,7 +1228,7 @@ namespace Slic3r {
                 {
                     // It means that data was saved in old version (2.2.0 and older) of PrusaSlicer
                     // read old data ... 
-                    std::string gcode       = tree.get<std::string> ("<xmlattr>.gcode");
+                    std::string gcode       = tree.get<std::string> ("<xmlattr>.gcode", "");
                     // ... and interpret them to the new data
                     type  = gcode == "M600"           ? CustomGCode::ColorChange : 
                             gcode == "M601"           ? CustomGCode::PausePrint  :   
@@ -1239,7 +1239,7 @@ namespace Slic3r {
                 else
                 {
                     type  = static_cast<CustomGCode::Type>(tree.get<int>("<xmlattr>.type"));
-                    extra = tree.get<std::string>("<xmlattr>.extra");
+                    extra = tree.get<std::string>("<xmlattr>.extra", "");
                 }
                 m_model->custom_gcode_per_print_z.gcodes.push_back(CustomGCode::Item{print_z, type, extruder, color, extra}) ;
             }
@@ -2805,6 +2805,7 @@ bool _3MF_Exporter::_add_custom_gcode_per_print_z_file_to_archive( mz_zip_archiv
             code_tree.put("<xmlattr>.print_z"   , code.print_z  );
             code_tree.put("<xmlattr>.type"      , static_cast<int>(code.type));
             code_tree.put("<xmlattr>.extruder"  , code.extruder );
+            code_tree.put("<xmlattr>.color"     , code.color    );
             code_tree.put("<xmlattr>.info"      , code.color    );
             code_tree.put("<xmlattr>.extra"     , code.extra    );
 

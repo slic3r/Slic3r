@@ -16,7 +16,7 @@ msbuild /m ALL_BUILD.vcxproj
 
 and then build superslicer (in ./build):
 ```
-cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH="PATH_TO_SuperSlicer\deps\destdir\usr\local"
+cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH="PATH_TO_SuperSlicer\deps\build\destdir\usr\local"
 msbuild /m /P:Configuration=Release INSTALL.vcxproj
 ```
 You can also build it in visual studio, for that open the .sln.
