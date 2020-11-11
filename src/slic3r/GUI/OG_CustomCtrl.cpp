@@ -539,7 +539,13 @@ void OG_CustomCtrl::CtrlLine::render(wxDC& dc, wxCoord v_pos)
         option_set.front().side_widget == nullptr && og_line.get_extra_widgets().size() == 0)
     {
         if (field && field->undo_to_sys_bitmap())
-            draw_act_bmps(dc, wxPoint(h_pos, v_pos), field->undo_to_sys_bitmap()->bmp(), field->undo_bitmap()->bmp(), field->blink());
+            h_pos = draw_act_bmps(dc, wxPoint(h_pos, v_pos), field->undo_to_sys_bitmap()->bmp(), field->undo_bitmap()->bmp(), field->blink());
+        h_pos += ctrl->m_h_gap;
+        //check for full_width width
+        if (option_set.front().opt.full_width) {
+            if (field->getWindow())
+                field->getWindow()->SetSize(this->ctrl->GetSize().x - h_pos, -1);
+        }
         return;
     }
 

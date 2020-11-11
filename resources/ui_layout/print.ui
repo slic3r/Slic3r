@@ -18,7 +18,7 @@ group:Horizontal shells
 group:Quality
 	line:Only one perimeter on Top surfaces
 		setting:label$ :only_one_perimeter_top
-		setting:label$Minimum width:min_width_top_surface
+		setting:label$Minimum width:sidetext_width$7:min_width_top_surface
 	end_line
 	line:Extra perimeters
 		setting:extra_perimeters_overhangs
@@ -201,7 +201,7 @@ group:Options for support material interface
 	setting:support_material_interface_contact_loops
 
 page:Speed:time
-group:label_width$8:Speed for print moves
+group:label_width$8:sidetext_width$7:Speed for print moves
 	line:Perimeter speed
 		setting:width$4:perimeter_speed
 		setting:width$4:external_perimeter_speed
@@ -227,7 +227,7 @@ group:label_width$8:Speed for print moves
 	setting:label$Ironing post-process speed:label_width$30:width$4:ironing_speed
 group:Speed for non-print moves
 	setting:travel_speed
-group:Modifiers
+group:sidetext_width$7:Modifiers
 	line:First layer speed
 		setting:label_width$8:width$4:first_layer_speed
 		setting:label_width$8:width$4:first_layer_infill_speed
@@ -264,7 +264,7 @@ group:Overlap
 		setting:label$External:external_perimeter_overlap
 		setting:label$Gap Fill:gap_fill_overlap
 	end_line
-	setting:infill_overlap
+	setting:sidetext_width$7:infill_overlap
 	setting:bridge_overlap
 group:Flow
 	line:Flow ratio
