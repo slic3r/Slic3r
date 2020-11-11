@@ -465,7 +465,7 @@ private:
 #endif // ENABLE_GCODE_VIEWER
 
     // Write a string into a file.
-    void _write(FILE* file, const std::string& what, bool flush = false) { this->_write(file, what.c_str()); }
+    void _write(FILE* file, const std::string& what, bool flush = false) { this->_write(file, what.c_str(), flush); }
     void _write(FILE* file, const char *what, bool flush = false);
 
     // Write a string into a file. 

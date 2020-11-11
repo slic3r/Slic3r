@@ -812,11 +812,16 @@ void GCodeProcessor::process_file(const std::string& filename, std::function<voi
 
         // if the gcode was produced by SuperSlicer,
         // extract the config from it
-        if (m_producer == EProducer::PrusaSlicer || m_producer == EProducer::SuperSlicer || m_producer == EProducer::Slic3rPE || m_producer == EProducer::Slic3r) {
-            DynamicPrintConfig config;
-            config.apply(FullPrintConfig::defaults());
-            config.load_from_gcode_file(filename);
-            apply_config(config);
+        try {
+            if (m_producer == EProducer::PrusaSlicer || m_producer == EProducer::SuperSlicer || m_producer == EProducer::Slic3rPE || m_producer == EProducer::Slic3r) {
+                DynamicPrintConfig config;
+                config.apply(FullPrintConfig::defaults());
+                config.load_from_gcode_file(filename);
+                apply_config(config);
+            }
+        }
+        catch (Exception ex) {
+            m_producer = EProducer::Unknown;
         }
     }
 
