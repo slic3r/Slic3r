@@ -1469,7 +1469,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             }
 
             if(logs) std::cout << "create page " << label.c_str() <<" : "<< params[params.size() - 1] << "\n";
-            current_page = add_options_page(_(label), params[params.size() - 1]);
+            current_page = add_options_page(L(label), params[params.size() - 1]);
         }
         else if (boost::starts_with(full_line, "end_page"))
         {
@@ -4020,7 +4020,7 @@ void TabSLAMaterial::build()
 
     if (create_pages("sla_material.ui")) return;
 
-    auto page = add_options_page(_(L("Material")), "resin");
+    auto page = add_options_page(L("Material"), "resin");
 
     auto optgroup = page->new_optgroup(L("Material"));
     optgroup->append_single_option_line("bottle_cost");

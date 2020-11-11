@@ -325,6 +325,8 @@ public:
     void            update_visibility();
     virtual void    msw_rescale();
     virtual void	sys_color_changed();
+	size_t          get_page_count() { return m_pages.size(); }
+	PageShp         get_page(size_t idx) { return m_pages[idx]; }
 	Field*			get_field(const t_config_option_key& opt_key, int opt_index = -1) const;
 	std::pair<OG_CustomCtrl*, bool*> get_custom_ctrl_with_blinking_ptr(const t_config_option_key& opt_key, int opt_index = -1);
 

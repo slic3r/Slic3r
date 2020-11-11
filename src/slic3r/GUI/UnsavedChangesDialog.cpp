@@ -1063,9 +1063,10 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
             wxString new_val = from_u8((boost::format("%1%") % new_config.opt<ConfigOptionStrings>("extruder_colour")->values.size()).str());
 
             ItemData item_data = { "extruders_count", local_label, old_val, new_val, type };
-            m_items_map.emplace(m_tree_model->AddOption(type, _L("General"), _L("Capabilities"), local_label, old_val, new_val, category_icon_map.at("General")), item_data);
-
+            if(wxGetApp().get_tab(type)->get_page_count() > 0)
+                m_items_map.emplace(m_tree_model->AddOption(type, _L(wxGetApp().get_tab(type)->get_page(0)->title()), _L("Capabilities"), local_label, old_val, new_val, category_icon_map.at(wxGetApp().get_tab(type)->get_page(0)->title())), item_data);
         }
+        //TODO same for milling head?
 
         for (const std::string& opt_key : dirty_options) {
             const Search::Option& option = searcher.get_option(opt_key);
