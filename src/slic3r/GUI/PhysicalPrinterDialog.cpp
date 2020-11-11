@@ -270,7 +270,7 @@ void PhysicalPrinterDialog::update_printers()
     std::unique_ptr<PrintHost> host(PrintHost::get_print_host(m_config));
 
     wxArrayString printers;
-    Field* rs = m_optgroup->get_field("printhost_slug");
+    Field* rs = m_optgroup->get_field("printhost_port");
     if (!host->get_printers(printers)) {
         std::vector<std::string> slugs;
 
@@ -288,12 +288,12 @@ void PhysicalPrinterDialog::update_printers()
         choice->set_values(slugs);
         boost::any val = choice->get_value();
         boost::any any_string_type = std::string("");
-        auto value_idx = std::find(slugs.begin(), slugs.end(), m_config->opt<ConfigOptionString>("printhost_slug")->value);
+        auto value_idx = std::find(slugs.begin(), slugs.end(), m_config->opt<ConfigOptionString>("printhost_port")->value);
         if ((val.empty() || (any_string_type.type() == val.type() && boost::any_cast<std::string>(val) == "")) && !slugs.empty() && value_idx == slugs.end()) {
-            change_opt_value(*m_config, "printhost_slug", slugs[0]);
+            change_opt_value(*m_config, "printhost_port", slugs[0]);
             choice->set_value(slugs[0],false);
         } else if(value_idx != slugs.end() ){
-            choice->set_value(m_config->option<ConfigOptionString>("printhost_slug")->value, false);
+            choice->set_value(m_config->option<ConfigOptionString>("printhost_port")->value, false);
         }
         rs->enable();
     }
@@ -495,7 +495,7 @@ void PhysicalPrinterDialog::update()
         if (m_printhost_browse_btn)
             m_printhost_browse_btn->Enable(host->has_auto_discovery());
 
-        m_printhost_slug_browse_btn->Enable(supports_multiple_printers);
+        m_printhost_port_browse_btn->Enable(supports_multiple_printers);
 
         m_optgroup->show_field("printhost_port", supports_multiple_printers);
     }

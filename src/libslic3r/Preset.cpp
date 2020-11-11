@@ -1596,7 +1596,7 @@ bool PhysicalPrinter::has_empty_config() const
             config.opt_string("printhost_port"    ).empty() &&
             config.opt_string("printhost_user"    ).empty() && 
             config.opt_string("printhost_password").empty() && 
-            config.opt_string("printhost_slug"    ).empty();
+            config.opt_string("printhost_port"    ).empty();
 }
 
 void PhysicalPrinter::update_preset_names_in_config()
