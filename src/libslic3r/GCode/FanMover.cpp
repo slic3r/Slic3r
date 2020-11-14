@@ -137,7 +137,6 @@ void FanMover::_put_in_middle_G1(std::list<BufferData>::iterator item_to_split, 
                 item_to_split->e += before.de;
                 item_to_split->de = item_to_split->de * (1 - percent);
                 change_axis_value(before.raw, 'E', before.e + before.de, 5);
-                change_axis_value(item_to_split->raw, 'E', item_to_split->e + item_to_split->de, 5);
             }
         }
         //add before then line_to_write, then there is the modified data.
@@ -181,7 +180,6 @@ void FanMover::_print_in_middle_G1(BufferData& line_to_split, float nb_sec, cons
                 change_axis_value(after, 'E', line_to_split.de * (1 - percent), 5);
             } else {
                 change_axis_value(before, 'E', line_to_split.e + line_to_split.de * percent, 5);
-                change_axis_value(after, 'E', line_to_split.e + line_to_split.de * (1 - percent), 5);
             }
         }
         m_process_output += before + "\n";
