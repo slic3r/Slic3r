@@ -282,11 +282,11 @@ int wmain(int argc, wchar_t **argv)
 
     wchar_t path_to_slic3r[MAX_PATH + 1] = { 0 };
     wcscpy(path_to_slic3r, path_to_exe);
-    wcscat(path_to_slic3r, L"slic3r.dll");
-//    printf("Loading Slic3r library: %S\n", path_to_slic3r);
+    wcscat(path_to_slic3r, L"SuperSlicer.dll");
+//    printf("Loading SuperSlicer library: %S\n", path_to_slic3r);
     HINSTANCE hInstance_Slic3r = LoadLibraryExW(path_to_slic3r, nullptr, 0);
     if (hInstance_Slic3r == nullptr) {
-        printf("slic3r.dll was not loaded, error code: %d\n", GetLastError());
+        printf("SuperSlicer.dll was not loaded, error code: %d\n", GetLastError());
         return -1;
     }
 
