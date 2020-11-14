@@ -201,8 +201,16 @@ wxPoint OG_CustomCtrl::get_pos(const Line& line, Field* field_in/* = nullptr*/)
                 h_pos += 2 * blinking_button_width;
                 
                 if (field == field_in)
-                    break;    
-                h_pos += field->getWindow()->GetSize().x;
+                    break;
+                if (field->getSizer()) {
+                    for (auto child : field->getSizer()->GetChildren()) {
+                        if (child->IsWindow() && child->IsShown()) {
+                            wxSize  sz = child->GetWindow()->GetSize();
+                            h_pos += sz.x + m_h_gap;
+                        }
+                    }
+                } else
+                    h_pos += field->getWindow()->GetSize().x;
 
                 if (option_set.size() == 1 && option_set.front().opt.full_width)
                     break;
