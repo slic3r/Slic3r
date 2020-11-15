@@ -1600,11 +1600,18 @@ MedialAxis::build(ThickPolylines &polylines_out)
     this->polyline_from_voronoi(this->expolygon.lines(), &pp);
 
     //sanity check, as the voronoi can return (abeit very rarely) randomly high values.
-    for (ThickPolyline &tp : pp) {
-        for (int i = 0; i < tp.width.size(); i++) {
+    for (size_t tp_idx = 0; tp_idx < pp.size(); tp_idx++) {
+        ThickPolyline& tp = pp[tp_idx];
+        for (size_t i = 0; i < tp.width.size(); i++) {
             if (tp.width[i] > this->max_width) {
                 tp.width[i] = this->max_width;
             }
+        }
+        // voronoi bugfix: when we have a wheel, it creates a polyline at the center, completly out of the polygon.
+        if (tp.endpoints.first && tp.endpoints.second && !this->expolygon.contains(tp.first_point()) && !this->expolygon.contains(tp.last_point())) {
+            //delete this out-of-bounds polyline
+            pp.erase(pp.begin() + tp_idx);
+            --tp_idx;
         }
     }
     //std::cout << "polyline_from_voronoi\n";
@@ -1724,7 +1731,7 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_5_expand_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(bounds);
+    //    svg.draw(*bounds);
     //    svg.draw(this->expolygon);
     //    svg.draw(pp);
     //    svg.Close();
@@ -1757,7 +1764,7 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_9.1_end_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(bounds);
+    //    svg.draw(*bounds);
     //    svg.draw(this->expolygon);
     //    svg.draw(pp);
     //    svg.Close();
@@ -1772,7 +1779,7 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_9.9_endnwithtaper_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(bounds);
+    //    svg.draw(*bounds);
     //    svg.draw(this->expolygon);
     //    svg.draw(pp);
     //    svg.Close();
