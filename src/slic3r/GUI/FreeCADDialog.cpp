@@ -1022,12 +1022,16 @@ void FreeCADDialog::create_geometry(wxCommandEvent& event_args) {
         return;
     }
 
+    //open file
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
     if(cmb_add_replace->GetSelection() == 0)
         plat->reset();
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{ object_path.generic_string() }, true, false, false);
     if (objs_idx.empty()) return;
+    //don't save in the temp directory: erase the link to it
+    for (int idx : objs_idx)
+        model.objects[idx]->input_file = "";
     /// --- translate ---
     const DynamicPrintConfig* printerConfig = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
     const ConfigOptionPoints* bed_shape = printerConfig->option<ConfigOptionPoints>("bed_shape");
@@ -1041,9 +1045,12 @@ void FreeCADDialog::create_geometry(wxCommandEvent& event_args) {
     ObjectList* obj = this->gui_app->obj_list();
     obj->update_after_undo_redo();
 
+    if (objs_idx.size() > 1)
+        plat->arrange();
 
     //plat->reslice();
     plat->select_view_3D("3D");
+
 }
 
 } // namespace GUI
