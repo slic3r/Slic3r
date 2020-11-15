@@ -2380,7 +2380,7 @@ void GCode::process_layer(
 
 #if ENABLE_GCODE_VIEWER
     // add tag for processor
-    gcode += "; " + GCodeProcessor::Layer_Change_Tag + "\n";
+    gcode += ";" + GCodeProcessor::Layer_Change_Tag + "\n";
     // export layer z
     char buf[64];
     sprintf(buf, ";Z:%g\n", print_z);

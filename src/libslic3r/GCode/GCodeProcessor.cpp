@@ -394,10 +394,11 @@ void GCodeProcessor::TimeProcessor::post_process(const std::string& filename)
     // check for temporary lines
     auto is_temporary_decoration = [](const std::string& gcode_line) {
         // remove trailing '\n'
-        std::string line = gcode_line.substr(0, gcode_line.length() - 1);
-        if (line == "; " + Layer_Change_Tag)
-            return true;
-        else
+        //std::string line = gcode_line.substr(0, gcode_line.length() - 1);
+        // Don't remove Layer_Change_Tag, it will render the layer_time view unusable
+        //if (line == "; " + Layer_Change_Tag)
+        //    return true;
+        //else
             return false;
     };
 
