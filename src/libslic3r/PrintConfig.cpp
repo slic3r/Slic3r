@@ -2496,7 +2496,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "bridge_speed";
     def->min = 0;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(20, false));
+    def->set_default_value(new ConfigOptionFloatOrPercent(100, true));
 
     def = this->add("overhangs_width_speed", coFloatOrPercent);
     def->label = L("'As bridge' speed threshold");
