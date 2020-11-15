@@ -617,7 +617,7 @@ double ConfigBase::get_abs_value(const t_config_option_key &opt_key) const
                 std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " need nozzle_diameter but can't acess it. Please use get_abs_value(nozzle_diam).";
                 throw std::runtime_error(ss.str());
             }
-            return static_cast<const ConfigOptionFloats*>(this->option(opt_def->ratio_over))->values[0];
+            return cast_opt->get_abs_value(static_cast<const ConfigOptionFloats*>(this->option(opt_def->ratio_over))->values[0]);
         }
         // Compute absolute value over the absolute value of the base option.
         //FIXME there are some ratio_over chains, which end with empty ratio_with.
