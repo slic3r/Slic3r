@@ -904,13 +904,19 @@ namespace SupportMaterialInternal {
                     polyline.extend_start(fw);
                     polyline.extend_end(fw);
                     // Is the straight perimeter segment supported at both sides?
-					for (size_t i = 0; i < lower_layer.lslices.size(); ++ i)
-						if (lower_layer.lslices_bboxes[i].contains(polyline.first_point()) && lower_layer.lslices_bboxes[i].contains(polyline.last_point()) && 
-							lower_layer.lslices[i].contains(polyline.first_point()) && lower_layer.lslices[i].contains(polyline.last_point())) {
-                        // Offset a polyline into a thick line.
-                        polygons_append(bridges, offset(polyline, 0.5f * w + 10.f));
-							break;
-                }
+                    bool first_point_supported = false;
+                    for (size_t i = 0; i < lower_layer.lslices.size(); ++ i)
+                        if (lower_layer.lslices_bboxes[i].contains(polyline.first_point()) &&lower_layer.lslices[i].contains(polyline.first_point()) ) {
+                            first_point_supported = true;
+                            break;
+                        }
+                    if(first_point_supported)
+                        for (size_t i = 0; i < lower_layer.lslices.size(); ++i)
+                            if (lower_layer.lslices_bboxes[i].contains(polyline.last_point()) && lower_layer.lslices[i].contains(polyline.last_point())) {
+                                // Offset a polyline into a thick line.
+                                polygons_append(bridges, offset(polyline, 0.5f * w + 10.f));
+                                break;
+                            }
                 }
             bridges = union_(bridges);
         }
