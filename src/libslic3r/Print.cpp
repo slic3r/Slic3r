@@ -160,6 +160,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "start_filament_gcode",
         "thin_walls_speed",
         "time_estimation_compensation",
+        "tool_name",
         "toolchange_gcode",
         "top_fan_speed",
         "threads",

@@ -1,6 +1,7 @@
 
 page:idx:Extruder:funnel
-group:Size
+group:Name and Size
+	setting:idx:tool_name
 	setting:idx:nozzle_diameter
 	update_nozzle_diameter
 group:Layer height limits

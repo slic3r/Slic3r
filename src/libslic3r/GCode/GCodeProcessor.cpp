@@ -491,7 +491,8 @@ void GCodeProcessor::TimeProcessor::post_process(const std::string& filename)
 
 const std::vector<std::pair<GCodeProcessor::EProducer, std::string>> GCodeProcessor::Producers = {
     { EProducer::PrusaSlicer, "PrusaSlicer" },
-    { EProducer::SuperSlicer, "SuperSlicer" },    { EProducer::Slic3rPE,    "Slic3r Prusa Edition" },
+    { EProducer::SuperSlicer, "SuperSlicer" },
+    { EProducer::Slic3rPE,    "Slic3r Prusa Edition" },
     { EProducer::Slic3r,      "Slic3r" },
     { EProducer::Cura,        "Cura_SteamEngine" },
     { EProducer::Simplify3D,  "Simplify3D" },
@@ -520,6 +521,11 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
     for (size_t i = 0; i < extruders_count; ++i) {
         Vec2f offset = config.extruder_offset.get_at(i).cast<float>();
         m_extruder_offsets[i] = { offset(0), offset(1), 0.0f };
+    }
+
+    m_extruder_names.resize(extruders_count);
+    for (size_t i = 0; i < extruders_count; ++i) {
+        m_extruder_names[i] = config.tool_name.values[i];
     }
 
     m_extruder_colors.resize(extruders_count);
@@ -555,7 +561,7 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
 
     m_time_processor.export_remaining_time_enabled = config.remaining_times.value;
 
-    if (config.option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value != gcfMarlin) {
+    if (m_flavor != gcfMarlin) {
         double time_estimation_compensation = config.get_abs_value("time_estimation_compensation");
         for (auto& machine : this->m_time_processor.machines) {
             machine.time_acceleration = time_estimation_compensation;
@@ -936,6 +942,45 @@ std::vector<float> GCodeProcessor::get_layers_time(PrintEstimatedTimeStatistics:
         std::vector<float>();
 }
 
+std::string get_klipper_param(std::string key, std::string line) {
+    size_t key_pos = line.find(key);
+    if (key_pos == std::string::npos) {
+        boost::to_lower(key);
+        key_pos = line.find(key);
+    }
+    if (key_pos != std::string::npos) {
+        size_t data_pos = key_pos + key.size();
+        while (data_pos < line.size() && (line[data_pos] == ' ' || line[data_pos] == '='))
+            data_pos++;
+        if (data_pos < line.size()) {
+            size_t end_pos = line.find(" ", data_pos);
+            if (end_pos == std::string::npos)
+                end_pos = line.size();
+            return line.substr(data_pos, end_pos - data_pos);
+        }
+    }
+    return "";
+}
+
+void GCodeProcessor::process_klipper_ACTIVATE_EXTRUDER(const GCodeReader::GCodeLine& line) {
+    uint8_t extruder_id = 0;
+    //check the config
+    std::string raw_value = get_klipper_param(" EXTRUDER", line.raw());
+    auto it = std::find(m_extruder_names.begin(), m_extruder_names.end(), raw_value);
+    if ( it != m_extruder_names.end()) {
+        process_T(uint8_t(it - m_extruder_names.begin()));
+        return;
+    }
+    std::string trsf;
+    while (raw_value.back() >= '0' && raw_value.back() <= '9') {
+        trsf = raw_value.back() + trsf;
+        raw_value.resize(raw_value.size() - 1);
+    }
+    if (trsf.empty())
+        trsf = "0";
+    process_T(uint8_t(std::stoi(trsf)));
+}
+
 void GCodeProcessor::process_gcode_line(const GCodeReader::GCodeLine& line)
 {
 /* std::cout << line.raw() << std::endl; */
@@ -944,7 +989,19 @@ void GCodeProcessor::process_gcode_line(const GCodeReader::GCodeLine& line)
     m_start_position = m_end_position;
 
     const std::string_view cmd = line.cmd();
-    if (cmd.length() > 1) {
+    if (cmd.length() > 10 && m_flavor == GCodeFlavor::gcfKlipper) {
+        try {
+            std::string cmd_up = boost::to_upper_copy<std::string>(std::string(cmd));
+            //klipper extendt comands
+            if (cmd_up == "TURN_OFF_HEATERS")
+                m_temperature = 0;
+            else if (cmd_up == "ACTIVATE_EXTRUDER")
+                process_klipper_ACTIVATE_EXTRUDER(line);
+        }
+        catch (...) {
+            BOOST_LOG_TRIVIAL(error) << "GCodeProcessor failed to parse the klipper command '" << line.raw() << "'.";
+        }
+    } else if (cmd.length() > 1) {
         // process command lines
         switch (::toupper(cmd[0]))
         {
@@ -1001,21 +1058,7 @@ void GCodeProcessor::process_gcode_line(const GCodeReader::GCodeLine& line)
             }
         default: { break; }
         }
-        if (this->m_flavor == GCodeFlavor::gcfKlipper) {
-            if (cmd == "ACTIVATE_EXTRUDER") {
-                std::string rawline = line.raw();
-                std::string trsf;
-                while (rawline.back() >= '0' && rawline.back() <= '9') {
-                    trsf = rawline.back() + trsf;
-                    rawline.resize(rawline.size() - 1);
-                }
-                if (trsf.empty())
-                    trsf = "0";
-                process_T("T" + trsf);
-            }
-        }
-    }
-    else {
+    } else {
         const std::string &comment = line.raw();
         if (comment.length() > 2 && comment.front() == ';')
             // Process tags embedded into comments. Tag comments always start at the start of a line
@@ -2121,33 +2164,38 @@ void GCodeProcessor::process_T(const std::string_view command)
 {
     if (command.length() > 1) {
         int eid;
-        if (! parse_number(command.substr(1), eid) || eid < 0 || eid > 255) {
+        if (!parse_number(command.substr(1), eid) || eid < 0 || eid > 255) {
             BOOST_LOG_TRIVIAL(error) << "GCodeProcessor encountered an invalid toolchange (" << command << ").";
         } else {
             unsigned char id = static_cast<unsigned char>(eid);
-            if (m_extruder_id != id) {
-                unsigned char extruders_count = static_cast<unsigned char>(m_extruder_offsets.size());
-                if (id >= extruders_count)
-                    BOOST_LOG_TRIVIAL(error) << "GCodeProcessor encountered an invalid toolchange, maybe from a custom gcode.";
-                else {
-                    unsigned char old_extruder_id = m_extruder_id;
-                    m_extruder_id = id;
-                    m_cp_color.current = m_extruder_colors[id];
-                    // Specific to the MK3 MMU2:
-                    // The initial value of extruder_unloaded is set to true indicating
-                    // that the filament is parked in the MMU2 unit and there is nothing to be unloaded yet.
-                    float extra_time = get_filament_unload_time(static_cast<size_t>(old_extruder_id));
-                    m_time_processor.extruder_unloaded = false;
-                    extra_time += get_filament_load_time(static_cast<size_t>(m_extruder_id));
-                    simulate_st_synchronize(extra_time);
-                }
-
-                // store tool change move
-                store_move_vertex(EMoveType::Tool_change);
-            }
-        }
+            process_T(id);
         }
     }
+}
+
+void GCodeProcessor::process_T(uint8_t new_id)
+{
+    if (m_extruder_id != new_id) {
+        unsigned char extruders_count = static_cast<unsigned char>(m_extruder_offsets.size());
+        if (new_id >= extruders_count)
+            BOOST_LOG_TRIVIAL(error) << "GCodeProcessor encountered an invalid toolchange, maybe from a custom gcode.";
+        else {
+            unsigned char old_extruder_id = m_extruder_id;
+            m_extruder_id = new_id;
+            m_cp_color.current = m_extruder_colors[new_id];
+            // Specific to the MK3 MMU2:
+            // The initial value of extruder_unloaded is set to true indicating
+            // that the filament is parked in the MMU2 unit and there is nothing to be unloaded yet.
+            float extra_time = get_filament_unload_time(static_cast<size_t>(old_extruder_id));
+            m_time_processor.extruder_unloaded = false;
+            extra_time += get_filament_load_time(static_cast<size_t>(m_extruder_id));
+            simulate_st_synchronize(extra_time);
+        }
+
+        // store tool change move
+        store_move_vertex(EMoveType::Tool_change);
+    }
+}
 
 void GCodeProcessor::store_move_vertex(EMoveType type)
 {

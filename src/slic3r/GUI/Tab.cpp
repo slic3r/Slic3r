@@ -1120,8 +1120,9 @@ void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
     if (opt_key == "wipe_tower" || opt_key == "single_extruder_multi_material" || opt_key == "extruders_count" )
         update_wiping_button_visibility();
 
-    if (opt_key == "extruders_count")
+    if (opt_key == "extruders_count") {
         wxGetApp().plater()->on_extruders_change(boost::any_cast<int>(value));
+    }
 
     update();
 }
@@ -2342,7 +2343,14 @@ void TabPrinter::extruders_count_changed(size_t extruders_count)
     build_unregular_pages();
 
     if (is_count_changed) {
+        //propagate change
         on_value_change("extruders_count", (int)extruders_count);
+        //update default tool_name => not used, no need to do that
+        //ConfigOptionStrings* names = this->m_config->option<ConfigOptionStrings>("tool_name");
+        //for (size_t ss = 0; ss < names->values.size(); ss++)
+        //    if (names->values[ss] == "")
+        //        names->values[ss] = std::to_string(ss);
+        //update gui
         wxGetApp().sidebar().update_objects_list_extruder_column(extruders_count);
     }
 }

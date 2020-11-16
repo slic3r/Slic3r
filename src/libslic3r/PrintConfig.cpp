@@ -3649,6 +3649,13 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionString(""));
 
+    def = this->add("tool_name", coStrings);
+    def->label = L("Tool name");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L("Only used for klipper, where you can name the extruder. If not set, will be 'extruderX' with 'X' replaced by the extruder number.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionStrings(""));
+
     def = this->add("top_infill_extrusion_width", coFloatOrPercent);
     def->label = L("Top solid infill");
     def->category = OptionCategory::width;
@@ -4014,6 +4021,7 @@ void PrintConfigDef::init_extruder_option_keys()
         "extruder_offset",
         "extruder_fan_offset",
         "extruder_temperature_offset",
+        "tool_name",
         "retract_length",
         "retract_lift",
         "retract_lift_above",
