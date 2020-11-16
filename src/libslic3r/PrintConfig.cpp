@@ -1161,7 +1161,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Maximum speed allowed for this filament. Limits the maximum "
         "speed of a print to the minimum of the print speed and the filament speed. "
         "Set to zero for no limit.");
-    def->sidetext = L("mm³/s");
+    def->sidetext = L("mm/s");
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloats{ 0. });
