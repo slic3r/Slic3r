@@ -648,6 +648,53 @@ void PerimeterGenerator::process()
             //svg.draw(to_polylines(top_fills), "green");
             //svg.Close();
             //}
+            // check for extracting extra perimeters from gapfill
+            if (!gaps.empty()) {
+                // if needed, add it to the first empty contour list
+                const size_t contours_size = loop_number + 1;
+                //first, find loops and try to extract a perimeter from them.
+                for (size_t i = 0; i < gaps.size(); i++) {
+                    ExPolygon& expoly = gaps[i];
+                    if (!expoly.holes.empty()) {
+                        //this is a a sort of a loop
+                        //try to see if it's possible to add a "perimeter"
+                        Polygons small_peri = offset(expoly.contour, -(float)(perimeter_spacing), ClipperLib::jtMiter, 3);
+                        Polygons small_holes = expoly.holes;
+                        polygons_reverse(small_holes);
+                        ExPolygons small_ex = diff_ex(small_peri, small_holes);
+                        if (small_ex.size() == 1 && !small_ex.front().holes.empty()) {
+                            //OK
+                            Polygons perimeter_line = offset(expoly.contour, -(float)(perimeter_spacing/2), ClipperLib::jtMiter, 3);
+                            if (perimeter_line.size() != 1)
+                                continue;
+                            // update list & variable to let the new perimeter be taken into account
+                            loop_number = contours_size;
+                            if (contours_size >= contours.size()) {
+                                contours.emplace_back();
+                                holes.emplace_back();
+                            }
+                            //Add the new periemter
+                            contours[contours_size].emplace_back(perimeter_line.front(), contours_size, true, has_steep_overhang);
+                            //create the new gapfills
+                            ExPolygon perimeter_area;
+                            perimeter_area.holes.emplace_back(small_ex.front().contour);
+                            perimeter_area.holes.front().reverse();
+                            perimeter_line = offset(perimeter_line.front(), (float)(perimeter_spacing / 2), ClipperLib::jtMiter, 3);
+                            if (perimeter_line.size() != 1) // should never happen
+                                perimeter_line = { expoly.contour };
+                            perimeter_area.contour = perimeter_line.front();
+                            ExPolygons to_add = diff_ex(expoly, perimeter_area);
+                            //add the new gapfill
+                            if (to_add.size() == 0)
+                                expoly.clear();
+                            else
+                                expoly = to_add.front();
+                            for (size_t j = 1; j < to_add.size(); j++)
+                                gaps.emplace_back(to_add[j]);
+                        }
+                    }
+                }
+            }
 
             // nest loops: holes first
             for (int d = 0; d <= loop_number; ++d) {
