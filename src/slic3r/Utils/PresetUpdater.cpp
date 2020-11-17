@@ -246,7 +246,6 @@ void PresetUpdater::priv::sync_version() const
 	BOOST_LOG_TRIVIAL(info) << format("Downloading %1% online version from: `%2%`", SLIC3R_APP_NAME, version_check_url);
 
 	Http::get(version_check_url)
-		.size_limit(SLIC3R_VERSION_BODY_MAX)
 		.on_progress([this](Http::Progress, bool &cancel) {
 			cancel = this->cancel;
 		})
@@ -258,21 +257,38 @@ void PresetUpdater::priv::sync_version() const
 				error);
 		})
 		.on_complete([&](std::string body, unsigned /* http_status */) {
-			boost::trim(body);
-			const auto nl_pos = body.find_first_of("\n\r");
-			if (nl_pos != std::string::npos) {
-				body.resize(nl_pos);
+			boost::property_tree::ptree root;
+			std::stringstream json_stream(body);
+			boost::property_tree::read_json(json_stream, root);
+			bool i_am_pre = false;
+			std::string best_pre = "1";
+			std::string best_release = "1";
+			std::string best_pre_url;
+			std::string best_release_url;
+			for (auto json_version : root) {
+				std::string tag = json_version.second.get<std::string>("tag_name");
+				if (SLIC3R_VERSION_FULL == tag)
+					i_am_pre = json_version.second.get<bool>("prerelease");
+				if (json_version.second.get<bool>("prerelease")) {
+					if (best_pre < tag) {
+						best_pre = tag;
+						best_pre_url = json_version.second.get<std::string>("html_url");
+					}
+				} else {
+					if (best_release < tag) {
+						best_release = tag;
+						best_release_url = json_version.second.get<std::string>("html_url");
+					}
+				}
 			}
 
-			if (! Semver::parse(body)) {
-				BOOST_LOG_TRIVIAL(warning) << format("Received invalid contents from `%1%`: Not a correct semver: `%2%`", SLIC3R_APP_NAME, body);
+			if ((i_am_pre ? best_pre : best_release) <= SLIC3R_VERSION_FULL)
 				return;
-			}
 
-			BOOST_LOG_TRIVIAL(info) << format("Got %1% online version: `%2%`. Sending to GUI thread...", SLIC3R_APP_NAME, body);
+			BOOST_LOG_TRIVIAL(info) << format("Got %1% online version: `%2%`. Sending to GUI thread...", SLIC3R_APP_NAME, i_am_pre? best_pre:best_release);
 
 			wxCommandEvent* evt = new wxCommandEvent(EVT_SLIC3R_VERSION_ONLINE);
-			evt->SetString(GUI::from_u8(body));
+			evt->SetString(i_am_pre ? best_pre : best_release);
 			GUI::wxGetApp().QueueEvent(evt);
 		})
 		.perform_sync();

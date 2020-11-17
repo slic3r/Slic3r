@@ -6,6 +6,8 @@
 #include "GLCanvas3D.hpp"
 #include "ImGuiWrapper.hpp"
 
+#include "libslic3r/AppConfig.hpp"
+
 #include "wxExtensions.hpp"
 
 #include <boost/algorithm/string.hpp>
@@ -626,7 +628,7 @@ bool NotificationManager::PopNotification::on_text_click()
 			wxPostEvent(m_evt_handler, PresetUpdateAvailableClickedEvent(EVT_PRESET_UPDATE_AVAILABLE_CLICKED));
 		break;
 	case NotificationType::NewAppAvailable:
-		wxLaunchDefaultBrowser("https://github.com/prusa3d/PrusaSlicer/releases");
+		wxLaunchDefaultBrowser("https://github.com/supermerill/SuperSlicer/releases/tag/" + Slic3r::GUI::get_app_config()->get("version_online"));
 		break;
 	default:
 		break;

@@ -244,7 +244,7 @@ private:
 #endif // ENABLE_GCODE_VIEWER
 
             // dynamically get the version to display
-            version = _L("Version") + " " + std::string(SLIC3R_VERSION);
+            version = _L("Version") + " " + std::string(SLIC3R_VERSION_FULL);
 
             // credits infornation
             credits =   title + " " + _L("is based on PrusaSlicer by Prusa and Slic3r by Alessandro Ranellucci and the RepRap community.") + "\n\n" +
@@ -806,7 +806,7 @@ bool GUI_App::on_init_inner()
     }
 #endif // ENABLE_GCODE_VIEWER
 
-    app_config->set("version", SLIC3R_VERSION);
+    app_config->set("version", SLIC3R_VERSION_FULL);
     app_config->save();
 
     wxInitAllImageHandlers();
@@ -846,19 +846,19 @@ bool GUI_App::on_init_inner()
     if (is_editor()) {
 #endif // ENABLE_GCODE_VIEWER
 #ifdef __WXMSW__ 
-    associate_3mf_files();
+        associate_3mf_files();
 #endif // __WXMSW__
 
-    preset_updater = new PresetUpdater();
+        preset_updater = new PresetUpdater();
         Bind(EVT_SLIC3R_VERSION_ONLINE, [this](const wxCommandEvent& evt) {
         app_config->set("version_online", into_u8(evt.GetString()));
         app_config->save();
             if (this->plater_ != nullptr) {
-                if (*Semver::parse(SLIC3R_VERSION) < *Semver::parse(into_u8(evt.GetString()))) {
+                //if (*Semver::parse(SLIC3R_VERSION_FULL) < *Semver::parse(into_u8(evt.GetString()))) {
                     this->plater_->get_notification_manager()->push_notification(NotificationType::NewAppAvailable, *(this->plater_->get_current_canvas3D()));
-                }
+                //}
             }
-    });
+        });
 #if ENABLE_GCODE_VIEWER
     }
     else {

@@ -39,7 +39,7 @@ std::string get_main_info(bool format_as_html)
 #else
         out << b_start << SLIC3R_APP_NAME << b_end << line_end;
 #endif // ENABLE_GCODE_VIEWER
-    out << b_start << "Version:   "             << b_end << SLIC3R_VERSION << line_end;
+    out << b_start << "Version:   "             << b_end << SLIC3R_VERSION_FULL << line_end;
 #if ENABLE_GCODE_VIEWER
     out << b_start << "Build:     " << b_end << (wxGetApp().is_editor() ? SLIC3R_BUILD_ID : GCODEVIEWER_BUILD_ID) << line_end;
 #else
