@@ -100,13 +100,13 @@ double get_default_acceleration(PrintConfig & config) {
 void AvoidCrossingPerimeters::init_external_mp(const Print &print)
 {
 	m_external_mp = Slic3r::make_unique<MotionPlanner>(union_ex(this->collect_contours_all_layers(print.objects())));
-    }
+}
 
     // Plan a travel move while minimizing the number of perimeter crossings.
     // point is in unscaled coordinates, in the coordinate system of the current active object
     // (set by gcodegen.set_origin()).
-    Polyline AvoidCrossingPerimeters::travel_to(const GCode& gcodegen, const Point& point)
-    {
+Polyline AvoidCrossingPerimeters::travel_to(const GCode& gcodegen, const Point& point)
+{
     // If use_external, then perform the path planning in the world coordinate system (correcting for the gcodegen offset).
     // Otherwise perform the path planning in the coordinate system of the active object.
     bool  use_external  = this->use_external_mp || this->use_external_mp_once;
@@ -116,77 +116,77 @@ void AvoidCrossingPerimeters::init_external_mp(const Print &print)
     if (use_external)
             result.translate(-scaled_origin);
     return result;
-    }
+}
 
-    // Collect outer contours of all objects over all layers.
-    // Discard objects only containing thin walls (offset would fail on an empty polygon).
-    // Used by avoid crossing perimeters feature.
-    Polygons AvoidCrossingPerimeters::collect_contours_all_layers(const PrintObjectPtrs& objects)
-    {
+// Collect outer contours of all objects over all layers.
+// Discard objects only containing thin walls (offset would fail on an empty polygon).
+// Used by avoid crossing perimeters feature.
+Polygons AvoidCrossingPerimeters::collect_contours_all_layers(const PrintObjectPtrs& objects)
+{
     Polygons islands;
         for (const PrintObject* object : objects) {
         // Reducing all the object slices into the Z projection in a logarithimc fashion.
         // First reduce to half the number of layers.
         std::vector<Polygons> polygons_per_layer((object->layers().size() + 1) / 2);
-         tbb::parallel_for(tbb::blocked_range<size_t>(0, object->layers().size() / 2),
+            tbb::parallel_for(tbb::blocked_range<size_t>(0, object->layers().size() / 2),
                 [&object, &polygons_per_layer](const tbb::blocked_range<size_t>& range) {
                     for (size_t i = range.begin(); i < range.end(); ++i) {
-                     const Layer* layer1 = object->layers()[i * 2];
-                     const Layer* layer2 = object->layers()[i * 2 + 1];
-                     Polygons polys;
-                     polys.reserve(layer1->lslices.size() + layer2->lslices.size());
+                        const Layer* layer1 = object->layers()[i * 2];
+                        const Layer* layer2 = object->layers()[i * 2 + 1];
+                        Polygons polys;
+                        polys.reserve(layer1->lslices.size() + layer2->lslices.size());
                         for (const ExPolygon& expoly : layer1->lslices)
                         //FIXME no holes?
                         polys.emplace_back(expoly.contour);
                         for (const ExPolygon& expoly : layer2->lslices)
                         //FIXME no holes?
                         polys.emplace_back(expoly.contour);
-                     polygons_per_layer[i] = union_(polys);
-                 }
-             });
-         if (object->layers().size() & 1) {
+                        polygons_per_layer[i] = union_(polys);
+                    }
+                });
+            if (object->layers().size() & 1) {
                 const Layer* layer = object->layers().back();
             Polygons polys;
             polys.reserve(layer->lslices.size());
                 for (const ExPolygon& expoly : layer->lslices)
                 //FIXME no holes?
                 polys.emplace_back(expoly.contour);
-             polygons_per_layer.back() = union_(polys);
-         }
-         // Now reduce down to a single layer.
-         size_t cnt = polygons_per_layer.size();
-         while (cnt > 1) {
-             tbb::parallel_for(tbb::blocked_range<size_t>(0, cnt / 2),
+                polygons_per_layer.back() = union_(polys);
+            }
+            // Now reduce down to a single layer.
+            size_t cnt = polygons_per_layer.size();
+            while (cnt > 1) {
+                tbb::parallel_for(tbb::blocked_range<size_t>(0, cnt / 2),
                     [&polygons_per_layer](const tbb::blocked_range<size_t>& range) {
                         for (size_t i = range.begin(); i < range.end(); ++i) {
-                         Polygons polys;
-                         polys.reserve(polygons_per_layer[i * 2].size() + polygons_per_layer[i * 2 + 1].size());
-                         polygons_append(polys, polygons_per_layer[i * 2]);
-                         polygons_append(polys, polygons_per_layer[i * 2 + 1]);
-                         polygons_per_layer[i * 2] = union_(polys);
-                     }
-                 });
+                            Polygons polys;
+                            polys.reserve(polygons_per_layer[i * 2].size() + polygons_per_layer[i * 2 + 1].size());
+                            polygons_append(polys, polygons_per_layer[i * 2]);
+                            polygons_append(polys, polygons_per_layer[i * 2 + 1]);
+                            polygons_per_layer[i * 2] = union_(polys);
+                        }
+                    });
                 for (size_t i = 1; i < cnt / 2; ++i)
-                 polygons_per_layer[i] = std::move(polygons_per_layer[i * 2]);
-             if (cnt & 1)
-                 polygons_per_layer[cnt / 2] = std::move(polygons_per_layer[cnt - 1]);
-             cnt = (cnt + 1) / 2;
-         }
-         // And collect copies of the objects.
+                    polygons_per_layer[i] = std::move(polygons_per_layer[i * 2]);
+                if (cnt & 1)
+                    polygons_per_layer[cnt / 2] = std::move(polygons_per_layer[cnt - 1]);
+                cnt = (cnt + 1) / 2;
+            }
+            // And collect copies of the objects.
             for (const PrintInstance& instance : object->instances()) {
             // All the layers were reduced to the 1st item of polygons_per_layer.
-             size_t i = islands.size();
-             polygons_append(islands, polygons_per_layer.front());
+                size_t i = islands.size();
+                polygons_append(islands, polygons_per_layer.front());
                 for (; i < islands.size(); ++i)
                 islands[i].translate(instance.shift);
         }
     }
     return islands;
-    }
+}
 
 
-    std::string OozePrevention::pre_toolchange(GCode& gcodegen)
-    {
+std::string OozePrevention::pre_toolchange(GCode& gcodegen)
+{
     std::string gcode;
 
     // move to the nearest standby point
@@ -213,27 +213,27 @@ void AvoidCrossingPerimeters::init_external_mp(const Print &print)
     }
 
     return gcode;
-    }
+}
 
-    std::string OozePrevention::post_toolchange(GCode& gcodegen)
-    {
+std::string OozePrevention::post_toolchange(GCode& gcodegen)
+{
     return (gcodegen.config().standby_temperature_delta.value != 0 && gcodegen.writer().tool_is_extruder()) ?
         gcodegen.writer().set_temperature(this->_get_temp(gcodegen), true, gcodegen.writer().tool()->id()) :
         std::string();
-    }
+}
 
-    int OozePrevention::_get_temp(GCode& gcodegen)
-    {
+int OozePrevention::_get_temp(GCode& gcodegen)
+{
     if (gcodegen.writer().tool_is_extruder())
         return (gcodegen.layer() == NULL || gcodegen.layer()->id() == 0)
             ? gcodegen.config().first_layer_temperature.get_at(gcodegen.writer().tool()->id())
             : gcodegen.config().temperature.get_at(gcodegen.writer().tool()->id());
     else
         return 0;
-    }
+}
 
-    std::string Wipe::wipe(GCode& gcodegen, bool toolchange)
-    {
+std::string Wipe::wipe(GCode& gcodegen, bool toolchange)
+{
     std::string gcode;
 
     /*  Reduce feedrate a bit; travel speed is often too high to move on existing material.
@@ -291,7 +291,7 @@ void AvoidCrossingPerimeters::init_external_mp(const Print &print)
     }
 
     return gcode;
-    }
+}
 
 //if first layer, ask for a bigger lift for travel to object, to be on the safe side
 static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeWriter & writer, int extruder_id) {
@@ -1237,9 +1237,12 @@ static void init_multiextruders(FILE *file, Print &print, GCodeWriter & writer, 
     //set standby temp for reprap
     if (std::set<uint8_t>{gcfRepRap}.count(print.config().gcode_flavor.value) > 0) {
         for (uint16_t tool_id : tool_ordering.all_extruders()) {
+            int standby_temp = int(print.config().temperature.get_at(tool_id));
+            if(print.config().ooze_prevention.value)
+                standby_temp += print.config().standby_temperature_delta.value;
             fprintf(file, "G10 P%d R%d S%d ; sets the standby temperature\n",
                 tool_id,
-                int(print.config().filament_toolchange_temp.get_at(tool_id)),
+                standby_temp,
                 int(print.config().temperature.get_at(tool_id)));
         }
     }
