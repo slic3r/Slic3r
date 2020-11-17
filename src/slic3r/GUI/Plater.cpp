@@ -5708,7 +5708,7 @@ std::vector<std::string> Plater::get_colors_for_color_print() const
 
     for (const CustomGCode::Item& code : p->model.custom_gcode_per_print_z.gcodes)
         if (code.type == CustomGCode::ColorChange)
-            colors.emplace_back(code.extra);
+            colors.emplace_back(code.color);
 
     return colors;
 }
