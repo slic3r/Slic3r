@@ -4728,7 +4728,7 @@ void Plater::add_model(bool imperial_units/* = false*/)
     }
 
     Plater::TakeSnapshot snapshot(this, snapshot_label);
-    load_files(paths, true, false, imperial_units);
+    load_files(paths, true, false, true, imperial_units);
 }
 
 void Plater::import_sl1_archive()
