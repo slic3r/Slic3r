@@ -238,14 +238,14 @@ void FanMover::_process_gcode_line(GCodeReader& reader, const GCodeReader::GCode
         {
             fan_speed = get_fan_speed(line.raw(), m_writer.config.gcode_flavor);
             if (fan_speed > 0 && !m_is_custom_gcode) {
-                if (!only_overhangs || current_role != ExtrusionRole::erOverhangPerimeter) {
+                if (nb_seconds_delay > 0 && (!only_overhangs || current_role != ExtrusionRole::erOverhangPerimeter)) {
                     // this M106 need to go in the past
                     //check if we have !( kickstart and not in slowdown )
                     if (kickstart <= 0 || fan_speed < m_current_fan_speed) {
                         // first erase everything lower that that value
                         _remove_slow_fan(fan_speed, m_buffer_time_size + 1);
                         // then write the fan command
-                        if (m_buffer_time_size > nb_seconds_delay) {
+                        if (std::abs(m_buffer_time_size - nb_seconds_delay) < EPSILON) {
                             _print_in_middle_G1(m_buffer.front(), m_buffer_time_size - nb_seconds_delay, line.raw());
                             remove_from_buffer(m_buffer.begin());
                         } else {
@@ -274,8 +274,8 @@ void FanMover::_process_gcode_line(GCodeReader& reader, const GCodeReader::GCode
                                 //found, stop
                                 break;
                             }
-                            ++it;
                             time_count -= it->time;
+                            ++it;
                         }
                     }
                 } else {
