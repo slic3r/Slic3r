@@ -206,6 +206,8 @@ void SeamPlacer::init(const Print& print)
        explgs = Slic3r::offset_ex(explgs, scale_(max_nozzle_dmr));
    for (ExPolygons& explgs : m_blockers)
        explgs = Slic3r::offset_ex(explgs, scale_(max_nozzle_dmr));
+
+   this->external_perimeters_first = print.default_region_config().external_perimeters_first;
 }
 
 
@@ -439,22 +441,30 @@ Point SeamPlacer::get_seam(const Layer *layer, SeamPosition seam_position,
         return polygon.points[idx_min];
 
     } else { // spRandom
-        if ( (loop.loop_role() & elrInternal) != 0 && loop.role() != erExternalPerimeter) {
+        if ( (loop.loop_role() & ExtrusionLoopRole::elrInternal) != 0 && loop.role() != erExternalPerimeter) {
             // This loop does not contain any other loop. Set a random position.
             // The other loops will get a seam close to the random point chosen
             // on the innermost contour.
-            //FIXME This works correctly for inner contours first only.
             last_pos = this->get_random_seam(layer_idx, polygon);
-        }
-        if (loop.role() == erExternalPerimeter && is_custom_seam_on_layer(layer_idx)) {
-            // There is a possibility that the loop will be influenced by custom
-            // seam enforcer/blocker. In this case do not inherit the seam
-            // from internal loops (which may conflict with the custom selection
-            // and generate another random one.
-            bool saw_custom = false;
-            Point candidate = this->get_random_seam(layer_idx, polygon, &saw_custom);
-            if (saw_custom)
-                last_pos = candidate;
+        } else if (loop.role() == erExternalPerimeter) {
+            if (is_custom_seam_on_layer(layer_idx)) {
+                // There is a possibility that the loop will be influenced by custom
+                // seam enforcer/blocker. In this case do not inherit the seam
+                // from internal loops (which may conflict with the custom selection
+                // and generate another random one.
+                bool saw_custom = false;
+                Point candidate = this->get_random_seam(layer_idx, polygon, &saw_custom);
+                if (saw_custom)
+                    last_pos = candidate;
+            } else if (external_perimeters_first || (loop.loop_role() & ExtrusionLoopRole::elrFirstLoop) != 0) {
+                // this is if external_perimeters_first
+                // this is if only space for one externalperimeter.
+                //in these case, there isn't a seam from the inner loops, so we had to creat our on
+                last_pos = this->get_random_seam(layer_idx, polygon);
+            }
+        } else if (loop.role() == erThinWall) {
+            //thin wall loop is like an external perimeter, but without anything near it.
+            last_pos = this->get_random_seam(layer_idx, polygon);
         }
         return last_pos;
     }

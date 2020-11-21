@@ -88,6 +88,8 @@ enum ExtrusionLoopRole : uint16_t {
     elrHole = 1 << 3, // 8
     //it's a modifier that indicate that the loop should be printed as vase
     elrVase = 1 << 4, //16
+    //it's a modifier that indicate that the loop does not contains an inner loop, used for random seam
+    elrFirstLoop = 1 << 5, //32
 };
 
 

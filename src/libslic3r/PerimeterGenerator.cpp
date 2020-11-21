@@ -1103,6 +1103,9 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
         if (!loop.is_contour) {
             loop_role = (ExtrusionLoopRole)(loop_role | ExtrusionLoopRole::elrHole);
         }
+        if (loop.children.empty()) {
+            loop_role = ExtrusionLoopRole(loop_role | ExtrusionLoopRole::elrFirstLoop);
+        }
         if (this->config->external_perimeters_vase.value && this->config->external_perimeters_first.value && is_external) {
             if ((loop.is_contour && this->config->external_perimeters_nothole.value) || (!loop.is_contour && this->config->external_perimeters_hole.value)) {
                 loop_role = (ExtrusionLoopRole)(loop_role | ExtrusionLoopRole::elrVase);

@@ -51,6 +51,9 @@ private:
 
     //std::map<const PrintObject*, Point>  m_last_seam_position;
     SeamHistory  m_seam_history;
+    
+    // if it's expected, we need to randomized at the external periemter.
+    bool external_perimeters_first;
 
     // Get indices of points inside enforcers and blockers.
     void get_enforcers_and_blockers(size_t layer_id,
