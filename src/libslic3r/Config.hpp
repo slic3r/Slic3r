@@ -1648,7 +1648,11 @@ protected:
     // Both opt_key and value may be modified by handle_legacy().
     // If the opt_key is no more valid in this version of Slic3r, opt_key is cleared by handle_legacy().
     // handle_legacy() is called internally by set_deserialize().
-    virtual void                    handle_legacy(t_config_option_key &/*opt_key*/, std::string &/*value*/) const {}
+    virtual void                    handle_legacy(t_config_option_key&/*opt_key*/, std::string&/*value*/) const {}
+    // Verify whether the opt_key has to be converted or isn't present int prusaslicer
+    // Both opt_key and value may be modified by to_prusa().
+    // If the opt_key is no more valid in this version of Slic3r, opt_key is cleared by to_prusa().
+    virtual void                    to_prusa(t_config_option_key&/*opt_key*/, std::string&/*value*/) const {}
 
 public:
 	using ConfigOptionResolver::option;

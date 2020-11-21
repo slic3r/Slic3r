@@ -364,7 +364,8 @@ class PrintConfigDef : public ConfigDef
 public:
     PrintConfigDef();
 
-    static void handle_legacy(t_config_option_key &opt_key, std::string &value);
+    static void handle_legacy(t_config_option_key& opt_key, std::string& value);
+    static void to_prusa(t_config_option_key& opt_key, std::string& value, const DynamicConfig& all_conf);
 
     // Array options growing with the number of extruders
     const std::vector<std::string>& extruder_option_keys() const { return m_extruder_option_keys; }
@@ -435,6 +436,9 @@ public:
     // handle_legacy() is called internally by set_deserialize().
     void                handle_legacy(t_config_option_key &opt_key, std::string &value) const override
         { PrintConfigDef::handle_legacy(opt_key, value); }
+
+    void                to_prusa(t_config_option_key& opt_key, std::string& value) const override
+        { PrintConfigDef::to_prusa(opt_key, value, *this); }
 };
 
 class StaticPrintConfig : public StaticConfig
@@ -1860,6 +1864,8 @@ public:
     // Not thread safe! Should not be called from other than the main thread!
     void                touch() { m_timestamp = ++ s_last_timestamp; }
 
+    void                to_prusa(t_config_option_key& opt_key, std::string& value) const
+        { m_data.to_prusa(opt_key, value); }
 private:
     friend class cereal::access;
     template<class Archive> void serialize(Archive& ar) { ar(m_timestamp); ar(m_data); }

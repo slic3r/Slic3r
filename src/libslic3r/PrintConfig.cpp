@@ -4943,6 +4943,214 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
     }
 }
 
+void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, const DynamicConfig& all_conf) {
+
+    std::unordered_set<std::string> to_remove_keys = {
+"thumbnails_color",
+"thumbnails_custom_color",
+"thumbnails_with_bed",
+"thumbnails_with_support",
+"allow_empty_layers",
+"avoid_crossing_not_first_layer",
+"top_fan_speed",
+"over_bridge_flow_ratio",
+"bridge_overlap",
+"bridge_speed_internal",
+"brim_inside_holes",
+"brim_width_interior",
+"brim_ears",
+"brim_ears_max_angle",
+"brim_ears_pattern",
+"brim_offset",
+"chamber_temperature",
+"complete_objects_one_skirt",
+"complete_objects_sort",
+"top_fill_pattern",
+"solid_fill_pattern",
+"enforce_full_fill_volume",
+"external_infill_margin",
+"bridged_infill_margin",
+"external_perimeter_cut_corners",
+"external_perimeter_fan_speed",
+"external_perimeter_overlap",
+"perimeter_overlap",
+"perimeter_bonding",
+"external_perimeters_vase",
+"external_perimeters_nothole",
+"external_perimeters_hole",
+"perimeter_loop",
+"perimeter_loop_seam",
+"extra_perimeters_overhangs",
+"extra_perimeters_odd_layers",
+"only_one_perimeter_top",
+"extruder_temperature_offset",
+"extruder_fan_offset",
+"print_extrusion_multiplier",
+"filament_max_speed",
+"filament_max_wipe_tower_speed",
+"filament_enable_toolchange_temp",
+"filament_use_fast_skinnydip",
+"filament_enable_toolchange_part_fan",
+"filament_toolchange_part_fan_speed",
+"filament_use_skinnydip",
+"filament_melt_zone_pause",
+"filament_cooling_zone_pause",
+"filament_dip_insertion_speed",
+"filament_dip_extraction_speed",
+"filament_toolchange_temp",
+"filament_skinnydip_distance",
+"filament_shrink",
+"fill_angle_increment",
+"fill_top_flow_ratio",
+"fill_top_flow_ratio",
+"first_layer_flow_ratio",
+"fill_smooth_width",
+"fill_smooth_distribution",
+"first_layer_infill_speed",
+"gap_fill",
+"gap_fill_min_area",
+"gap_fill_overlap",
+"infill_dense",
+"infill_connection",
+"infill_dense_algo",
+"feature_gcode",
+"exact_last_layer_height",
+"fan_speedup_time",
+"fan_speedup_overhangs",
+"fan_kickstart",
+"machine_max_acceleration_travel",
+"max_speed_reduction",
+"min_length",
+"min_width_top_surface",
+"printhost_apikey",
+"printhost_cafile",
+"print_host",
+"overhangs_speed",
+"overhangs_width_speed",
+"overhangs_reverse",
+"overhangs_reverse_threshold",
+"no_perimeter_unsupported_algo",
+"support_material_solid_first_layer",
+"print_retract_length",
+"retract_lift_first_layer",
+"retract_lift_top",
+"seam_angle_cost",
+"seam_travel_cost",
+"skirt_extrusion_width",
+"small_perimeter_min_length",
+"small_perimeter_max_length",
+"curve_smoothing_angle_convex",
+"curve_smoothing_angle_concave",
+"curve_smoothing_precision",
+"curve_smoothing_cutoff_dist",
+"model_precision",
+"support_material_contact_distance_type",
+"support_material_contact_distance_bottom",
+"support_material_interface_pattern",
+"print_temperature",
+"print_retract_lift",
+"thin_perimeters",
+"thin_perimeters_all",
+"thin_walls_min_width",
+"thin_walls_overlap",
+"thin_walls_merge",
+"thin_walls_speed",
+"time_estimation_compensation",
+"tool_name",
+"wipe_advanced",
+"wipe_advanced_nozzle_melted_volume",
+"filament_wipe_advanced_pigment",
+"wipe_advanced_multiplier",
+"wipe_advanced_algo",
+"wipe_tower_brim",
+"wipe_extra_perimeter",
+"xy_inner_size_compensation",
+"hole_size_compensation",
+"hole_size_threshold",
+"hole_to_polyhole",
+"z_step",
+"milling_cutter",
+"milling_diameter",
+"milling_offset",
+"milling_z_offset",
+"milling_z_lift",
+"milling_toolchange_start_gcode",
+"milling_toolchange_end_gcode",
+"milling_post_process",
+"milling_extra_size",
+"milling_after_z",
+"milling_speed"
+
+    };
+    //looks if it's to be removed, or have to be transformed
+    if (to_remove_keys.find(opt_key) != to_remove_keys.end()) {
+        opt_key = "";
+        value = "";
+    } else if (opt_key.find("_pattern") != std::string::npos) {
+        if ("smooth" == value || "smoothtriple" == value || "smoothhilbert" == value || "rectiwithperimeter" == value || "scatteredrectilinear" == value || "rectilineargapfill" == value || "sawtooth" == value) {
+            value = "rectilinear";
+        } else if ( "concentricgapfill" == value) {
+            value = "concentric";
+        }
+    } else if ("seam_position" == opt_key) {
+        if ("seam_travel_cost" == value || "near" == value || "hidden" == value) {
+            value = "nearest";
+        }
+    } else if ("first_layer_size_compensation" == opt_key) {
+        opt_key = "elefant_foot_compensation";
+        if (!value.empty()) {
+            if (value[0] == '-') {
+                value = value.substr(1);
+            } else {
+                value = "0";
+            }
+        }
+    } else if ("elephant_foot_min_width" == opt_key) {
+        opt_key = "elefant_foot_min_width";
+    } else if("first_layer_acceleration" == opt_key || "infill_acceleration" == opt_key || "bridge_acceleration" == opt_key || "default_acceleration" == opt_key || "overhangs_speed" == opt_key || "perimeter_acceleration" == opt_key){
+        if (value.find("%") != std::string::npos)
+            value = "0";
+    } else if ("gap_fill_speed" == opt_key && all_conf.has("gap_fill") && !all_conf.option<ConfigOptionBool>("gap_fill")->value) {
+        value = "0";
+    } else if ("bridge_flow_ratio" == opt_key && all_conf.has("bridge_flow_ratio")) {
+        value = boost::lexical_cast<std::string>(all_conf.option<ConfigOptionPercent>("bridge_flow_ratio")->get_abs_value(1));
+    } else if ("overhangs_width" == opt_key) {
+        opt_key = "overhangs";
+        if (value != "0")
+            value = "1";
+    } else if ("support_material_contact_distance_top" == opt_key) {
+        opt_key = "support_material_contact_distance";
+        //default : get the top value or 0.2 if a %
+        if (value.find("%") != std::string::npos)
+            value = "0.2";
+        try { //avoid most useless cheks and multiple corners cases with this try catch
+            SupportZDistanceType dist_type = all_conf.option<ConfigOptionEnum<SupportZDistanceType>>("support_material_contact_distance_type")->value;
+            if (SupportZDistanceType::zdNone == dist_type) {
+                value = "0";
+            } else {
+                double val = all_conf.option<ConfigOptionFloatOrPercent>("support_material_contact_distance_top")->get_abs_value(all_conf.option<ConfigOptionFloats>("nozzle_diameter")->values.front());
+                if (SupportZDistanceType::zdFilament == dist_type) { // not exact but good enough effort
+                    val += all_conf.option<ConfigOptionFloats>("nozzle_diameter")->values.front();
+                    val -= all_conf.get_abs_value("layer_height");
+                }
+                value = boost::lexical_cast<std::string>(val);
+            }
+        }
+        catch (...) {
+        }
+    } else if ("gcode_flavor" == opt_key) {
+        if ("reprap" == value)
+            value = "reprapfirmware";
+        else if ("sprinter" == value)
+            value = "reprap";
+        else if ("lerdge" == value)
+            value = "marlin";
+        else if ("klipper" == value)
+            value = "reprap";
+    }
+
+}
+
 const PrintConfigDef print_config_def;
 
 DynamicPrintConfig DynamicPrintConfig::full_print_config()
