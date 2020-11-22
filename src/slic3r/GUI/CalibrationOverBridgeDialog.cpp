@@ -3,6 +3,7 @@
 #include "libslic3r/Model.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/AppConfig.hpp"
+#include "Jobs/ArrangeJob.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Plater.hpp"
@@ -85,6 +86,7 @@ void CalibrationOverBridgeDialog::create_geometry(bool over_bridge) {
     }
 
     /// --- translate ---;
+    bool has_to_arrange = false;
     const ConfigOptionFloat* extruder_clearance_radius = print_config->option<ConfigOptionFloat>("extruder_clearance_radius");
     const ConfigOptionPoints* bed_shape = printer_config->option<ConfigOptionPoints>("bed_shape");
     const float brim_width = print_config->option<ConfigOptionFloat>("brim_width")->getFloat();
@@ -98,8 +100,10 @@ void CalibrationOverBridgeDialog::create_geometry(bool over_bridge) {
     model.objects[objs_idx[3]]->translate({ bed_min.x() + bed_size.x() / 2 + offsetx / 2, bed_min.y() + bed_size.y() / 2 - offsety, 0 });
     model.objects[objs_idx[4]]->translate({ bed_min.x() + bed_size.x() / 2 + offsetx / 2, bed_min.y() + bed_size.y() / 2          , 0 });
     model.objects[objs_idx[5]]->translate({ bed_min.x() + bed_size.x() / 2 + offsetx / 2, bed_min.y() + bed_size.y() / 2 + offsety, 0 });
-    //TODO: if not enough space, forget about complete_objects
 
+    // if not enough space, forget about complete_objects
+    if (bed_size.y() < offsety * 2 + 30 * xyz_scale + brim_width || bed_size.x() < offsetx + 35 * xyz_scale + brim_width)
+        has_to_arrange = true;
 
     /// --- main config, please modify object config when possible ---
     DynamicPrintConfig new_print_config = *print_config; //make a copy
@@ -136,6 +140,17 @@ void CalibrationOverBridgeDialog::create_geometry(bool over_bridge) {
     ObjectList* obj = this->gui_app->obj_list();
     obj->update_after_undo_redo();
 
+    // arrange if needed, after new settings, to take them into account
+    if (has_to_arrange) {
+        //update print config (done at reslice but we need it here)
+        if (plat->printer_technology() == ptFFF)
+            plat->fff_print().apply(plat->model(), *plat->config());
+        std::shared_ptr<ProgressIndicatorStub> fake_statusbar = std::make_shared<ProgressIndicatorStub>();
+        ArrangeJob arranger(std::dynamic_pointer_cast<ProgressIndicator>(fake_statusbar), plat);
+        arranger.prepare_all();
+        arranger.process();
+        arranger.finalize();
+    }
 
     plat->reslice();
     plat->select_view_3D("Preview");

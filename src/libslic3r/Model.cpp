@@ -1855,15 +1855,16 @@ void ModelInstance::transform_polygon(Polygon* polygon) const
     polygon->scale(get_scaling_factor(X), get_scaling_factor(Y)); // scale around polygon origin
 }
 
-arrangement::ArrangePolygon ModelInstance::get_arrange_polygon(const PrintBase *print_base) const
+
+arrangement::ArrangePolygon ModelInstance::get_arrange_polygon() const
 {
     static const double SIMPLIFY_TOLERANCE_MM = 0.1;
-    
+
     Vec3d rotation = get_rotation();
-    rotation.z()   = 0.;
+    rotation.z() = 0.;
     Transform3d trafo_instance =
         Geometry::assemble_transform(Vec3d::Zero(), rotation,
-                                     get_scaling_factor(), get_mirror());
+            get_scaling_factor(), get_mirror());
 
     Polygon p = get_object()->convex_hull_2d(trafo_instance);
 
@@ -1872,58 +1873,18 @@ arrangement::ArrangePolygon ModelInstance::get_arrange_polygon(const PrintBase *
     // this may happen for malformed models, see:
     // https://github.com/prusa3d/PrusaSlicer/issues/2209
     if (!p.points.empty()) {
-        Polygons pp{p};
-        if (const Print* print = dynamic_cast<const Print*>(print_base))
-        {
-            //grow
-            double dist = print->config().min_object_distance(&print->full_print_config());
-            pp = offset(pp, scale_(dist));
-            //simplify
-            if (!pp.empty())
-                pp = pp.front().simplify(scaled<double>(SIMPLIFY_TOLERANCE_MM));
-        }else
-            pp = p.simplify(scaled<double>(SIMPLIFY_TOLERANCE_MM));
+        Polygons pp{ p };
+        pp = p.simplify(scaled<double>(SIMPLIFY_TOLERANCE_MM));
         if (!pp.empty()) p = pp.front();
     }
-   
+
     arrangement::ArrangePolygon ret;
     ret.poly.contour = std::move(p);
-    ret.translation  = Vec2crd{scaled(get_offset(X)), scaled(get_offset(Y))};
-    ret.rotation     = get_rotation(Z);
+    ret.translation = Vec2crd{ scaled(get_offset(X)), scaled(get_offset(Y)) };
+    ret.rotation = get_rotation(Z);
 
     return ret;
 }
-
-//
-//arrangement::ArrangePolygon ModelInstance::get_arrange_polygon() const
-//{
-//    static const double SIMPLIFY_TOLERANCE_MM = 0.1;
-//
-//    Vec3d rotation = get_rotation();
-//    rotation.z() = 0.;
-//    Transform3d trafo_instance =
-//        Geometry::assemble_transform(Vec3d::Zero(), rotation,
-//            get_scaling_factor(), get_mirror());
-//
-//    Polygon p = get_object()->convex_hull_2d(trafo_instance);
-//
-//    assert(!p.points.empty());
-//
-//    // this may happen for malformed models, see:
-//    // https://github.com/prusa3d/PrusaSlicer/issues/2209
-//    if (!p.points.empty()) {
-//        Polygons pp{ p };
-//        pp = p.simplify(scaled<double>(SIMPLIFY_TOLERANCE_MM));
-//        if (!pp.empty()) p = pp.front();
-//    }
-//
-//    arrangement::ArrangePolygon ret;
-//    ret.poly.contour = std::move(p);
-//    ret.translation = Vec2crd{ scaled(get_offset(X)), scaled(get_offset(Y)) };
-//    ret.rotation = get_rotation(Z);
-//
-//    return ret;
-//}
 
 indexed_triangle_set FacetsAnnotation::get_facets(const ModelVolume& mv, EnforcerBlockerType type) const
 {

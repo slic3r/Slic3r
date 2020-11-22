@@ -24,50 +24,47 @@ using VirtualBedFn = std::function<void(arrangement::ArrangePolygon&)>;
     throw Slic3r::RuntimeError("Objects could not fit on the bed");
 }
 
-ArrangePolygons get_arrange_polys(const PrintBase* print, const Model &model, ModelInstancePtrs &instances);
-ArrangePolygon  get_arrange_poly(const PrintBase* print, const Model &model);
+ArrangePolygons get_arrange_polys(const Model &model, ModelInstancePtrs &instances);
+ArrangePolygon  get_arrange_poly(const Model &model);
 bool apply_arrange_polys(ArrangePolygons &polys, ModelInstancePtrs &instances, VirtualBedFn);
 
 void duplicate(Model &model, ArrangePolygons &copies, VirtualBedFn);
 void duplicate_objects(Model &model, size_t copies_num);
 
 template<class TBed>
-bool arrange_objects(PrintBase*           print,
-                     Model &              model,
+bool arrange_objects(Model &              model,
                      const TBed &         bed,
                      const ArrangeParams &params,
                      VirtualBedFn         vfn = throw_if_out_of_bed)
 {
     ModelInstancePtrs instances;
-    ArrangePolygons input = get_arrange_polys(print, model, instances);
+    ArrangePolygons input = get_arrange_polys(model, instances);
     arrangement::arrange(input, bed, params);
     
     return apply_arrange_polys(input, instances, vfn);
 }
 
 template<class TBed>
-void duplicate(PrintBase*           print,
-               Model &              model,
+void duplicate(Model &              model,
                size_t               copies_num,
                const TBed &         bed,
                const ArrangeParams &params,
                VirtualBedFn         vfn = throw_if_out_of_bed)
 {
-    ArrangePolygons copies(copies_num, get_arrange_poly(print, model));
+    ArrangePolygons copies(copies_num, get_arrange_poly(model));
     arrangement::arrange(copies, bed, params);
     duplicate(model, copies, vfn);
 }
 
 template<class TBed>
-void duplicate_objects(PrintBase*           print,
-                       Model &              model,
+void duplicate_objects(Model &              model,
                        size_t               copies_num,
                        const TBed &         bed,
                        const ArrangeParams &params,
                        VirtualBedFn         vfn = throw_if_out_of_bed)
 {
     duplicate_objects(model, copies_num);
-    arrange_objects(print, model, bed, params, vfn);
+    arrange_objects(model, bed, params, vfn);
 }
 
 }

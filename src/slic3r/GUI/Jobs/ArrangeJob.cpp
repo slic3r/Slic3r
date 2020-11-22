@@ -28,7 +28,7 @@ public:
         apply_wipe_tower();
     }
     
-    ArrangePolygon get_arrange_polygon(const PrintBase* print_base) const
+    ArrangePolygon get_arrange_polygon() const
     {
         Polygon ap({
             {coord_t(0), coord_t(0)},
@@ -80,11 +80,11 @@ void ArrangeJob::prepare_all() {
     for (ModelObject *obj: m_plater->model().objects)
         for (ModelInstance *mi : obj->instances) {
             ArrangePolygons & cont = mi->printable ? m_selected : m_unprintable;
-            cont.emplace_back(get_arrange_poly(m_plater->current_print(), mi));
+            cont.emplace_back(get_arrange_poly(mi));
         }
 
     if (auto wti = get_wipe_tower(*m_plater))
-        m_selected.emplace_back(wti.get_arrange_polygon(m_plater->current_print()));
+        m_selected.emplace_back(wti.get_arrange_polygon());
 }
 
 void ArrangeJob::prepare_selected() {
@@ -112,7 +112,7 @@ void ArrangeJob::prepare_selected() {
                 inst_sel[size_t(inst_id)] = true;
         
         for (size_t i = 0; i < inst_sel.size(); ++i) {
-            ArrangePolygon &&ap = get_arrange_poly(m_plater->current_print(), mo->instances[i]);
+            ArrangePolygon &&ap = get_arrange_poly(mo->instances[i]);
             
             ArrangePolygons &cont = mo->instances[i]->printable ?
                         (inst_sel[i] ? m_selected :
@@ -124,7 +124,7 @@ void ArrangeJob::prepare_selected() {
     }
     
     if (auto wti = get_wipe_tower(*m_plater)) {
-        ArrangePolygon &&ap = get_arrange_poly(m_plater->current_print(), &wti);
+        ArrangePolygon &&ap = get_arrange_poly(&wti);
         
         m_plater->get_selection().is_wipe_tower() ?
                     m_selected.emplace_back(std::move(ap)) :
@@ -149,10 +149,10 @@ void ArrangeJob::process()
 {
     static const auto arrangestr = _(L("Arranging"));
     
-    double dist = PrintConfig::min_object_distance(m_plater->config());
+    double dist = PrintConfig::min_object_distance(&m_plater->current_print()->full_print_config());
     
     arrangement::ArrangeParams params;
-    params.min_obj_distance = scaled(dist);
+    params.min_obj_distance = scaled(dist) * 2;
     
     auto count = unsigned(m_selected.size() + m_unprintable.size());
     Points bedpts = get_bed_shape(*m_plater->config());
@@ -214,7 +214,7 @@ void ArrangeJob::finalize() {
 
 arrangement::ArrangePolygon get_wipe_tower_arrangepoly(Plater &plater)
 {
-    return WipeTower{plater.canvas3D()->get_wipe_tower_info()}.get_arrange_polygon(plater.current_print());
+    return WipeTower{plater.canvas3D()->get_wipe_tower_info()}.get_arrange_polygon();
 }
 
 void apply_wipe_tower_arrangepoly(Plater &plater, const arrangement::ArrangePolygon &ap)

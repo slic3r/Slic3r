@@ -1259,35 +1259,49 @@ bool Print::has_skirt() const
 static inline bool sequential_print_horizontal_clearance_valid(const Print &print)
 {
 	Polygons convex_hulls_other;
-	//std::map<ObjectID, Polygon> map_model_object_to_convex_hull;
+	std::map<ObjectID, Polygon> map_model_object_to_convex_hull;
 	for (const PrintObject *print_object : print.objects()) {
+        double dist_grow = PrintConfig::min_object_distance(&print_object->config());
 	    assert(! print_object->model_object()->instances.empty());
 	    assert(! print_object->instances().empty());
-	    //ObjectID model_object_id = print_object->model_object()->id();
-	    //auto it_convex_hull = map_model_object_to_convex_hull.find(model_object_id);
+	    ObjectID model_object_id = print_object->model_object()->id();
+	    auto it_convex_hull = map_model_object_to_convex_hull.find(model_object_id);
         // Get convex hull of all printable volumes assigned to this print object.
-  //      ModelInstance *model_instance0 = print_object->model_object()->instances.front();
-	 //   if (it_convex_hull == map_model_object_to_convex_hull.end()) {
-	 //       // Calculate the convex hull of a printable object. 
-	 //       // Grow convex hull with the clearance margin.
-	 //       // FIXME: Arrangement has different parameters for offsetting (jtMiter, limit 2)
-	 //       // which causes that the warning will be showed after arrangement with the
-	 //       // appropriate object distance. Even if I set this to jtMiter the warning still shows up.
-	 //       it_convex_hull = map_model_object_to_convex_hull.emplace_hint(it_convex_hull, model_object_id, 
-  //              offset(print_object->model_object()->convex_hull_2d(
-	 //                       Geometry::assemble_transform(Vec3d::Zero(), model_instance0->get_rotation(), model_instance0->get_scaling_factor(), model_instance0->get_mirror())),
-  //              	// Shrink the extruder_clearance_radius a tiny bit, so that if the object arrangement algorithm placed the objects
-	 //               // exactly by satisfying the extruder_clearance_radius, this test will not trigger collision.
-	 //               float(scale_(0.5 * print.config().extruder_clearance_radius.value - EPSILON)),
-	 //               jtRound, float(scale_(0.1))).front());
-	 //   }
-	 //   // Make a copy, so it may be rotated for instances.
-  //      //FIXME seems like the rotation isn't taken into account
-	 //   Polygon convex_hull0 = it_convex_hull->second;
-  //      //this can create bugs in macos, for reasons.
-		//double z_diff = Geometry::rotation_diff_z(model_instance0->get_rotation(), print_object->instances().front().model_instance->get_rotation());
-		//if (std::abs(z_diff) > EPSILON)
-		//	convex_hull0.rotate(z_diff);
+        ModelInstance *model_instance0 = print_object->model_object()->instances.front();
+	    if (it_convex_hull == map_model_object_to_convex_hull.end()) {
+	        // Calculate the convex hull of a printable object. 
+	        // Grow convex hull with the clearance margin.
+	        // FIXME: Arrangement has different parameters for offsetting (jtMiter, limit 2)
+	        // which causes that the warning will be showed after arrangement with the
+	        // appropriate object distance. Even if I set this to jtMiter the warning still shows up.
+	        it_convex_hull = map_model_object_to_convex_hull.emplace_hint(it_convex_hull, model_object_id, 
+                offset(print_object->model_object()->convex_hull_2d(
+	                        Geometry::assemble_transform(Vec3d::Zero(), model_instance0->get_rotation(), model_instance0->get_scaling_factor(), model_instance0->get_mirror())),
+                	// Shrink the extruder_clearance_radius a tiny bit, so that if the object arrangement algorithm placed the objects
+	                // exactly by satisfying the extruder_clearance_radius, this test will not trigger collision.
+	                float(scale_(0.5 * dist_grow - EPSILON)),
+	                jtRound, float(scale_(0.1))).front());
+	    }
+	    // Make a copy, so it may be rotated for instances.
+        //FIXME seems like the rotation isn't taken into account
+	    Polygon convex_hull0 = it_convex_hull->second;
+        //this can create bugs in macos, for reasons.
+		double z_diff = Geometry::rotation_diff_z(model_instance0->get_rotation(), print_object->instances().front().model_instance->get_rotation());
+		if (std::abs(z_diff) > EPSILON)
+			convex_hull0.rotate(z_diff);
+        // Now we check that no instance of convex_hull intersects any of the previously checked object instances.
+        for (const PrintInstance& instance : print_object->instances()) {
+            Polygon convex_hull = convex_hull0;
+            // instance.shift is a position of a centered object, while model object may not be centered.
+            // Conver the shift from the PrintObject's coordinates into ModelObject's coordinates by removing the centering offset.
+            convex_hull.translate(instance.shift - print_object->center_offset());
+            if (!intersection(convex_hulls_other, convex_hull).empty())
+                return false;
+            polygons_append(convex_hulls_other, convex_hull);
+        }
+
+        /*
+        'old' superslicer sequential_print_horizontal_clearance_valid, that is better at skirts, but need some works, as the arrange has changed.
 	    // Now we check that no instance of convex_hull intersects any of the previously checked object instances.
 	    for (const PrintInstance &instance : print_object->instances()) {
             Polygons convex_hull = print_object->model_object()->convex_hull_2d(
@@ -1295,8 +1309,8 @@ static inline bool sequential_print_horizontal_clearance_valid(const Print &prin
                     instance.model_instance->get_rotation(), instance.model_instance->get_scaling_factor(), instance.model_instance->get_mirror()));
                 // Shrink the extruder_clearance_radius a tiny bit, so that if the object arrangement algorithm placed the objects
                 // exactly by satisfying the extruder_clearance_radius, this test will not trigger collision.
-                /*float(scale_(0.5 * print.config().extruder_clearance_radius.value - EPSILON)),
-                jtRound, float(scale_(0.1)));*/
+                //float(scale_(0.5 * print.config().extruder_clearance_radius.value - EPSILON)),
+                //jtRound, float(scale_(0.1)));
             if (convex_hull.empty())
                 continue;
 	        // instance.shift is a position of a centered object, while model object may not be centered.
@@ -1305,13 +1319,14 @@ static inline bool sequential_print_horizontal_clearance_valid(const Print &prin
 	            poly.translate(instance.shift - print_object->center_offset());
 	        if (! intersection(
                     convex_hulls_other, 
-                    offset(convex_hull[0], double(scale_(print.config().min_object_distance(&instance.print_object->config(),0.)) - SCALED_EPSILON), jtRound, scale_(0.1))).empty())
+                    offset(convex_hull[0], double(scale_(PrintConfig::min_object_distance(&instance.print_object->config(),0.)) - SCALED_EPSILON), jtRound, scale_(0.1))).empty())
 	            return false;
-            double extra_grow = print.config().min_object_distance(&instance.print_object->config(), 1.);
+            double extra_grow = PrintConfig::min_object_distance(&instance.print_object->config(), 1.);
             if (extra_grow > 0)
                 convex_hull = offset(convex_hull, scale_(extra_grow));
 	        polygons_append(convex_hulls_other, convex_hull);
 	    }
+        */
 	}
 	return true;
 }

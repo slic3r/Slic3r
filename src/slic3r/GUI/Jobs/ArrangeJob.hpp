@@ -29,9 +29,9 @@ class ArrangeJob : public Job
     double bed_stride() const;
     
     // Set up arrange polygon for a ModelInstance and Wipe tower
-    template<class T> ArrangePolygon get_arrange_poly(const PrintBase* print_base, T *obj) const
+    template<class T> ArrangePolygon get_arrange_poly(T *obj) const
     {
-        ArrangePolygon ap = obj->get_arrange_polygon(print_base);
+        ArrangePolygon ap = obj->get_arrange_polygon();
         ap.priority       = 0;
         ap.bed_idx        = ap.translation.x() / bed_stride();
         ap.setter         = [obj, this](const ArrangePolygon &p) {
@@ -44,8 +44,6 @@ class ArrangeJob : public Job
         return ap;
     }
     
-    // Prepare all objects on the bed regardless of the selection
-    void prepare_all();
     
     // Prepare the selected and unselected items separately. If nothing is
     // selected, behaves as if everything would be selected.
@@ -56,6 +54,11 @@ protected:
     void prepare() override;
     
 public:
+    // Prepare all objects on the bed regardless of the selection
+    //put on public to be accessed by calibrations
+    void prepare_all();
+
+
     ArrangeJob(std::shared_ptr<ProgressIndicator> pri, Plater *plater)
         : Job{std::move(pri)}, m_plater{plater}
     {}

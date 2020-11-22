@@ -5,7 +5,7 @@
 
 namespace Slic3r {
 
-arrangement::ArrangePolygons get_arrange_polys(const PrintBase* print, const Model &model, ModelInstancePtrs &instances)
+arrangement::ArrangePolygons get_arrange_polys(const Model &model, ModelInstancePtrs &instances)
 {
     size_t count = 0;
     for (auto obj : model.objects) count += obj->instances.size();
@@ -15,7 +15,7 @@ arrangement::ArrangePolygons get_arrange_polys(const PrintBase* print, const Mod
     instances.clear(); instances.reserve(count);
     for (ModelObject *mo : model.objects)
         for (ModelInstance *minst : mo->instances) {
-            input.emplace_back(minst->get_arrange_polygon(print));
+            input.emplace_back(minst->get_arrange_polygon());
             instances.emplace_back(minst);
         }
     
@@ -36,13 +36,13 @@ bool apply_arrange_polys(ArrangePolygons &input, ModelInstancePtrs &instances, V
     return ret;
 }
 
-Slic3r::arrangement::ArrangePolygon get_arrange_poly(const PrintBase* print, const Model &model)
+Slic3r::arrangement::ArrangePolygon get_arrange_poly(const Model &model)
 {
     ArrangePolygon ap;
     Points &apts = ap.poly.contour.points;
     for (const ModelObject *mo : model.objects)
         for (const ModelInstance *minst : mo->instances) {
-            ArrangePolygon obj_ap = minst->get_arrange_polygon(print);
+            ArrangePolygon obj_ap = minst->get_arrange_polygon();
             ap.poly.contour.rotate(obj_ap.rotation);
             ap.poly.contour.translate(obj_ap.translation.x(), obj_ap.translation.y());
             const Points &pts = obj_ap.poly.contour.points;

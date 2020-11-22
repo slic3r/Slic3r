@@ -232,8 +232,6 @@ int CLI::run(int argc, char **argv)
     // Loop through transform options.
     bool user_center_specified = false;
     Points bed = get_bed_shape(m_print_config);
-    ArrangeParams arrange_cfg;
-    arrange_cfg.min_obj_distance = scaled(PrintConfig::min_object_distance(&m_print_config));
     int dups = 1;
     
     for (auto const &opt_key : m_transforms) {
@@ -467,13 +465,13 @@ int CLI::run(int argc, char **argv)
 
                 PrintBase  *print = (printer_technology == ptFFF) ? static_cast<PrintBase*>(&fff_print) : static_cast<PrintBase*>(&sla_print);
                 
-                
                 if (! m_config.opt_bool("dont_arrange")) {
-                    print->apply(model, m_print_config); // arrange_objects needs that the print has the config
+                    ArrangeParams arrange_cfg;
+                    arrange_cfg.min_obj_distance = scaled(PrintConfig::min_object_distance(&m_print_config)) * 2;
                     if (dups > 1) {
                             try {
                             // if all input objects have defined position(s) apply duplication to the whole model
-                            duplicate(print, model, size_t(dups), bed, arrange_cfg);
+                            duplicate(model, size_t(dups), bed, arrange_cfg);
                         } catch (std::exception & ex) {
                             boost::nowide::cerr << "error: " << ex.what() << std::endl;
                             return 1;
@@ -481,9 +479,9 @@ int CLI::run(int argc, char **argv)
                     }
                     if (user_center_specified) {
                         Vec2d c = m_config.option<ConfigOptionPoint>("center")->value;
-                        arrange_objects(print, model, InfiniteBed{scaled(c)}, arrange_cfg);
+                        arrange_objects(model, InfiniteBed{scaled(c)}, arrange_cfg);
                     } else
-                        arrange_objects(print, model, bed, arrange_cfg);
+                        arrange_objects(model, bed, arrange_cfg);
                 }
                 if (printer_technology == ptFFF) {
                     for (auto* mo : model.objects)

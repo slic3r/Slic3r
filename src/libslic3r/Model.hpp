@@ -874,7 +874,7 @@ public:
     bool is_printable() const { return object->printable && printable && (print_volume_state == ModelInstancePVS_Inside); }
 
     // Getting the input polygon for arrange
-    arrangement::ArrangePolygon get_arrange_polygon(const PrintBase* print) const;
+    arrangement::ArrangePolygon get_arrange_polygon() const;
     
     // Apply the arrange result on the ModelInstance
     void apply_arrange_result(const Vec2d& offs, double rotation)

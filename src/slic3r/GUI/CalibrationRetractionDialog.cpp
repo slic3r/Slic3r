@@ -3,6 +3,7 @@
 #include "libslic3r/Model.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/AppConfig.hpp"
+#include "Jobs/ArrangeJob.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Plater.hpp"
@@ -190,20 +191,18 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
     }
 
     /// --- translate ---;
+    bool has_to_arrange = false;
     const ConfigOptionFloat* extruder_clearance_radius = print_config->option<ConfigOptionFloat>("extruder_clearance_radius");
     const ConfigOptionPoints* bed_shape = printer_config->option<ConfigOptionPoints>("bed_shape");
     const float brim_width = std::max(print_config->option<ConfigOptionFloat>("brim_width")->value, nozzle_diameter * 5.);
     Vec2d bed_size = BoundingBoxf(bed_shape->values).size();
     Vec2d bed_min = BoundingBoxf(bed_shape->values).min;
-    float offset = 4 + 26 * 1 + extruder_clearance_radius->value + brim_width + (brim_width > extruder_clearance_radius->value ? brim_width - extruder_clearance_radius->value : 0);
+    float offset = 4 + 26 * scale * 1 + extruder_clearance_radius->value + brim_width + (brim_width > extruder_clearance_radius->value ? brim_width - extruder_clearance_radius->value : 0);
     if (nb_items == 1) {
         model.objects[objs_idx[0]]->translate({ bed_min.x() + bed_size.x() / 2, bed_min.y() + bed_size.y() / 2, 0 });
     } else {
-        for (size_t i = 0; i < nb_items; i++) {
-            model.objects[objs_idx[i]]->translate({ bed_min.x() + bed_size.x() / 2 + (i%2 ==0 ? -offset/2: offset/2), bed_min.y() + bed_size.y() / 2 + ( (i/2) % 2 == 0 ? -1 : 1) * offset * (((i / 2) + 1) / 2), 0 });
-        }
+        has_to_arrange = true;
     }
-
 
 
     /// --- custom config ---
@@ -252,16 +251,29 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
             new_print_config.set_key_value("complete_objects_one_skirt", new ConfigOptionBool(true));
         }
         this->gui_app->get_tab(Preset::TYPE_PRINT)->load_config(new_print_config);
-        plat->on_config_change(new_print_config);
         this->gui_app->get_tab(Preset::TYPE_PRINT)->update_dirty();
+        plat->on_config_change(new_print_config);
     }
 
     //update plater
     plat->changed_objects(objs_idx);
+    //if (plat->printer_technology() == ptFFF)
+        //plat->fff_print().full_print_config().apply(plat->config());
     //update everything, easier to code.
     ObjectList* obj = this->gui_app->obj_list();
     obj->update_after_undo_redo();
 
+    // arrange if needed, after new settings, to take them into account
+    if (has_to_arrange) {
+        //update print config (done at reslice but we need it here)
+        if (plat->printer_technology() == ptFFF)
+            plat->fff_print().apply(plat->model(), *plat->config());
+        std::shared_ptr<ProgressIndicatorStub> fake_statusbar = std::make_shared<ProgressIndicatorStub>();
+        ArrangeJob arranger(std::dynamic_pointer_cast<ProgressIndicator>(fake_statusbar), plat);
+        arranger.prepare_all();
+        arranger.process();
+        arranger.finalize();
+    }
 
     plat->reslice();
     plat->select_view_3D("Preview");

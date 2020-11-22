@@ -5,6 +5,7 @@
 #include <map>
 #include <vector>
 
+#include "Jobs/ProgressIndicator.hpp"
 #include "GUI_App.hpp"
 #include "GUI_Utils.hpp"
 #include "MainFrame.hpp"
@@ -46,6 +47,18 @@ public:
 protected:
     void create_buttons(wxStdDialogButtonSizer* sizer) override {}
 
+};
+
+class ProgressIndicatorStub : ProgressIndicator {
+public:
+
+    virtual ~ProgressIndicatorStub() override = default;
+
+    virtual void set_range(int range) override {}
+    virtual void set_cancel_callback(CancelFn = CancelFn()) override {}
+    virtual void set_progress(int pr) override {}
+    virtual void set_status_text(const char*) override {}
+    virtual int  get_range() const override { return 0; }
 };
 
 } // namespace GUI

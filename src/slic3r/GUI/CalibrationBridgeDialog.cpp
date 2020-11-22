@@ -3,6 +3,7 @@
 #include "libslic3r/Model.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/AppConfig.hpp"
+#include "Jobs/ArrangeJob.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Plater.hpp"
@@ -98,6 +99,7 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     }
 
     /// --- translate ---;
+    bool has_to_arrange = false;
     const float brim_width = std::max(print_config->option<ConfigOptionFloat>("brim_width")->value, nozzle_diameter * 5.);
     const ConfigOptionFloat* extruder_clearance_radius = print_config->option<ConfigOptionFloat>("extruder_clearance_radius");
     const ConfigOptionPoints* bed_shape = printer_config->option<ConfigOptionPoints>("bed_shape");
@@ -108,7 +110,9 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     for (int i = 1; i < nb_items; i++) {
         model.objects[objs_idx[i]]->translate({ bed_min.x() + bed_size.x() / 2, bed_min.y() + bed_size.y() / 2 + (i % 2 == 0 ? -1 : 1) * offsety * ((i + 1) / 2), 0 });
     }
-    //TODO: if not enough space, forget about complete_objects
+    // if not enough space, forget about complete_objects
+    if (bed_size.y() < offsety * (nb_items + 1))
+        has_to_arrange = true;
 
 
     /// --- main config, please modify object config when possible ---
@@ -141,6 +145,17 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     ObjectList* obj = this->gui_app->obj_list();
     obj->update_after_undo_redo();
 
+    // arrange if needed, after new settings, to take them into account
+    if (has_to_arrange) {
+        //update print config (done at reslice but we need it here)
+        if (plat->printer_technology() == ptFFF)
+            plat->fff_print().apply(plat->model(), *plat->config());
+        std::shared_ptr<ProgressIndicatorStub> fake_statusbar = std::make_shared<ProgressIndicatorStub>();
+        ArrangeJob arranger(std::dynamic_pointer_cast<ProgressIndicator>(fake_statusbar), plat);
+        arranger.prepare_all();
+        arranger.process();
+        arranger.finalize();
+    }
 
     plat->reslice();
     plat->select_view_3D("Preview");

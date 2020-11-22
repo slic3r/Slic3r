@@ -5205,8 +5205,9 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
     //test if called from usaslicer::l240 where it's called on an empty config...
     if (dd_opt == nullptr) return 0;
 
-    double duplicate_distance = dd_opt->value;
-    double base_dist = duplicate_distance / 2;
+    // /2 becasue we only count the grawing for the current object
+    const double duplicate_distance = dd_opt->value / 2;
+    double base_dist = duplicate_distance;
     //std::cout << "START min_object_distance =>" << base_dist << "\n";
     const ConfigOptionBool* co_opt = config->option<ConfigOptionBool>("complete_objects");
     if (co_opt && co_opt->value) {
@@ -5218,24 +5219,35 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
             for (double val : vals) max_nozzle_diam = std::fmax(max_nozzle_diam, val);
 
             // min object distance is max(duplicate_distance, clearance_radius)
+            // /2 becasue we only count the grawing for the current object
 		    //add 1 as safety offset.
-            double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat();
+            double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat() / 2 + 1;
             if (extruder_clearance_radius > base_dist) {
-                base_dist = extruder_clearance_radius / 2;
+                base_dist = extruder_clearance_radius;
             }
 
             //std::cout << "  min_object_distance add extruder_clearance_radius ("<< extruder_clearance_radius <<") =>" << base_dist << "\n";
+            //FIXME: now brim can be per-object, so you ahve to get a different min_object_distance per object
             //add brim width
             const double first_layer_height = config->get_abs_value("first_layer_height");
-            if (ref_height <= first_layer_height) {
+            if (ref_height <= first_layer_height && ref_height != 0) {
                 //FIXME: does not take into account object-defined brim !!! you can crash yoursefl with it
                 if (config->option("brim_width")->getFloat() > 0) {
                     brim_dist += config->option("brim_width")->getFloat();
                     //std::cout << "  Set  brim=" << config->option("brim_width")->getFloat() << " => " << brim_dist << "\n";
                 }
+            } else if (config->option("brim_width")->getFloat() + 1 > base_dist) {
+                base_dist = config->option("brim_width")->getFloat();
             }
             //add the skirt
-            if (config->option("skirts")->getInt() > 0 && config->option("skirt_height")->getInt() > 0 && !config->option("complete_objects_one_skirt")->getBool()) {
+            if (config->option("skirts")->getInt() > 0 && config->option("skirt_height")->getInt() == 1 && ref_height == 0) {
+                skirt_dist = config->option("skirt_distance")->getFloat();
+                const double first_layer_width = config->get_abs_value("first_layer_extrusion_width");
+                Flow flow(first_layer_width, first_layer_height, max_nozzle_diam);
+                skirt_dist += first_layer_width + (flow.spacing() * ((double)config->option("skirts")->getInt() - 1));
+                base_dist = std::max(base_dist, skirt_dist + 1);
+                skirt_dist = 0;
+            }else if (config->option("skirts")->getInt() > 0 && config->option("skirt_height")->getInt() > 0 && !config->option("complete_objects_one_skirt")->getBool()) {
                 double skirt_height = ((double)config->option("skirt_height")->getInt() - 1) * config->get_abs_value("layer_height") + first_layer_height;
                 if (ref_height <= skirt_height) {
                     skirt_dist = config->option("skirt_distance")->getFloat();

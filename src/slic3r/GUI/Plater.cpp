@@ -2775,7 +2775,7 @@ void Plater::find_new_position(const ModelInstancePtrs &instances,
     for (const ModelObject *mo : p->model.objects)
         for (const ModelInstance *inst : mo->instances) {
             auto it = std::find(instances.begin(), instances.end(), inst);
-            arrangement::ArrangePolygon arrpoly = inst->get_arrange_polygon(this->current_print());
+            arrangement::ArrangePolygon arrpoly = inst->get_arrange_polygon();
 
             if (it == instances.end())
                 fixed.emplace_back(std::move(arrpoly));
