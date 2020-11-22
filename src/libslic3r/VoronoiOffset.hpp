@@ -4,9 +4,11 @@
 #define slic3r_VoronoiOffset_hpp_
 
 #include "libslic3r.h"
+#include "Polygon.hpp"
 
 #define BOOST_VORONOI_USE_GMP 1
 #include "boost/polygon/voronoi.hpp"
+#include "boost/polygon/segment_data.hpp"
 using boost::polygon::voronoi_builder;
 using boost::polygon::voronoi_diagram;
 

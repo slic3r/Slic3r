@@ -3,6 +3,7 @@
 #include "libslic3r/Print.hpp"
 #include "GCodeProcessor.hpp"
 
+#include <boost/algorithm/string/case_conv.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/nowide/fstream.hpp>
 #include <boost/nowide/cstdio.hpp>

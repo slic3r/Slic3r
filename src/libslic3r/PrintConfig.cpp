@@ -3,6 +3,7 @@
 #include "I18N.hpp"
 
 #include <set>
+#include <unordered_set>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/format.hpp>

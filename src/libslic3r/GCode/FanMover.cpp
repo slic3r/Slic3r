@@ -2,6 +2,7 @@
 
 #include "GCodeReader.hpp"
 
+#include <iomanip>
 /*
 #include <memory.h>
 #include <string.h>
