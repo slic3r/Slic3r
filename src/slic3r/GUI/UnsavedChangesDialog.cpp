@@ -938,22 +938,43 @@ static wxString get_string_value(std::string opt_key, const DynamicPrintConfig& 
     case coEnum: {
         if (opt_key == "top_fill_pattern" ||
             opt_key == "bottom_fill_pattern" ||
-            opt_key == "fill_pattern")
+            opt_key == "fill_pattern" ||
+            opt_key == "solid_fill_pattern" ||
+            opt_key == "brim_ears_pattern" ||
+            opt_key == "support_material_interface_pattern")
             return get_string_from_enum<InfillPattern>(opt_key, config, true);
-        if (opt_key == "gcode_flavor")
-            return get_string_from_enum<GCodeFlavor>(opt_key, config);
-        if (opt_key == "machine_limits_usage")
-            return get_string_from_enum<MachineLimitsUsage>(opt_key, config);
-        if (opt_key == "ironing_type")
-            return get_string_from_enum<IroningType>(opt_key, config);
-        if (opt_key == "support_material_pattern")
-            return get_string_from_enum<SupportMaterialPattern>(opt_key, config);
-        if (opt_key == "seam_position")
-            return get_string_from_enum<SeamPosition>(opt_key, config);
+        if (opt_key == "complete_objects_sort")
+            return get_string_from_enum<CompleteObjectSort>(opt_key, config);
         if (opt_key == "display_orientation")
             return get_string_from_enum<SLADisplayOrientation>(opt_key, config);
+        if (opt_key == "gcode_flavor")
+            return get_string_from_enum<GCodeFlavor>(opt_key, config);
+        if (opt_key == "host_type")
+            return get_string_from_enum<PrintHostType>(opt_key, config);
+        if (opt_key == "infill_connection")
+            return get_string_from_enum<InfillConnection>(opt_key, config);
+        if (opt_key == "infill_dense_algo")
+            return get_string_from_enum<DenseInfillAlgo>(opt_key, config);
+        if (opt_key == "ironing_type")
+            return get_string_from_enum<IroningType>(opt_key, config);
+        if (opt_key == "machine_limits_usage")
+            return get_string_from_enum<MachineLimitsUsage>(opt_key, config);
+        if (opt_key == "no_perimeter_unsupported_algo")
+            return get_string_from_enum<NoPerimeterUnsupportedAlgo>(opt_key, config);
+        if (opt_key == "perimeter_loop_seam")
+            return get_string_from_enum<SeamPosition>(opt_key, config, true);
+        if (opt_key == "printhost_authorization_type")
+            return get_string_from_enum<AuthorizationType>(opt_key, config);
+        if (opt_key == "seam_position")
+            return get_string_from_enum<SeamPosition>(opt_key, config);
+        if (opt_key == "support_material_contact_distance_type")
+            return get_string_from_enum<SupportZDistanceType>(opt_key, config);
+        if (opt_key == "support_material_pattern")
+            return get_string_from_enum<SupportMaterialPattern>(opt_key, config);
         if (opt_key == "support_pillar_connection_mode")
             return get_string_from_enum<SLAPillarConnectionMode>(opt_key, config);
+        if (opt_key == "wipe_advanced_algo")
+            return get_string_from_enum<WipeAlgo>(opt_key, config);
         break;
     }
     case coPoints: {

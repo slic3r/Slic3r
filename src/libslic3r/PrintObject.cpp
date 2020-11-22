@@ -763,6 +763,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "infill_dense_algo"
             || opt_key == "infill_not_connected"
             || opt_key == "infill_only_where_needed"
+            || opt_key == "ironing_type"
             || opt_key == "solid_infill_below_area"
             || opt_key == "solid_infill_extruder"
             || opt_key == "solid_infill_every_layers"
@@ -780,8 +781,8 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "fill_top_flow_ratio"
             || opt_key == "fill_smooth_width"
             || opt_key == "fill_smooth_distribution"
-            || opt_key == "top_infill_extrusion_width"
-            || opt_key == "first_layer_extrusion_width") {
+            || opt_key == "first_layer_extrusion_width"
+            || opt_key == "top_infill_extrusion_width") {
             steps.emplace_back(posInfill);
         } else if (
             opt_key == "extra_perimeters"

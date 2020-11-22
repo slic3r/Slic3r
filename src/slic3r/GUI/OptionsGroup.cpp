@@ -924,56 +924,39 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 			opt_key == "bottom_fill_pattern" ||
 			opt_key == "solid_fill_pattern" ||
 			opt_key == "fill_pattern" ||
-			opt_key == "brim_ears_pattern" ) {
+			opt_key == "brim_ears_pattern" ||
+            opt_key == "support_material_interface_pattern") {
 			ret = static_cast<int>(config.option<ConfigOptionEnum<InfillPattern>>(opt_key)->value);
-		}
-		else if (opt_key == "complete_objects_sort") {
+		} else if (opt_key == "complete_objects_sort") {
 			ret = static_cast<int>(config.option<ConfigOptionEnum<CompleteObjectSort>>(opt_key)->value);
-		}
-		else if (opt_key == "ironing_type") {
-			ret = static_cast<int>(config.option<ConfigOptionEnum<IroningType>>(opt_key)->value);
-		}
-		else if (opt_key == "gcode_flavor") {
+        } else if (opt_key == "display_orientation") {
+            ret = static_cast<int>(config.option<ConfigOptionEnum<SLADisplayOrientation>>(opt_key)->value);
+		} else if (opt_key == "gcode_flavor") {
 			ret = static_cast<int>(config.option<ConfigOptionEnum<GCodeFlavor>>(opt_key)->value);
-		}
-		else if (opt_key == "machine_limits_usage") {
-			ret = static_cast<int>(config.option<ConfigOptionEnum<MachineLimitsUsage>>(opt_key)->value);
-		}
-		else if (opt_key == "support_material_interface_pattern") {
-			ret = static_cast<int>(config.option<ConfigOptionEnum<InfillPattern>>(opt_key)->value);
-        }
-		else if (opt_key == "support_material_pattern") {
-			ret = static_cast<int>(config.option<ConfigOptionEnum<SupportMaterialPattern>>(opt_key)->value);
-        }
-        else if (opt_key.compare("seam_position") == 0 || opt_key.compare("perimeter_loop_seam") == 0) {
-            ret = static_cast<int>(config.option<ConfigOptionEnum<SeamPosition>>(opt_key)->value);
-        }
-        else if (opt_key.compare("host_type") == 0) {
+        } else if (opt_key == "host_type") {
             ret = static_cast<int>(config.option<ConfigOptionEnum<PrintHostType>>(opt_key)->value);
-        }
-        else if (opt_key == "infill_dense_algo"){
-            ret = static_cast<int>(config.option<ConfigOptionEnum<DenseInfillAlgo>>(opt_key)->value);
-        }
-        else if (opt_key == "no_perimeter_unsupported_algo"){
-            ret = static_cast<int>(config.option<ConfigOptionEnum<NoPerimeterUnsupportedAlgo>>(opt_key)->value);
-        }
-        else if (opt_key == "infill_connection") {
+        } else if (opt_key == "infill_connection") {
             ret = static_cast<int>(config.option<ConfigOptionEnum<InfillConnection>>(opt_key)->value);
-        }
-        else if (opt_key == "wipe_advanced_algo"){
-            ret = static_cast<int>(config.option<ConfigOptionEnum<WipeAlgo>>(opt_key)->value);
-        }
-        else if (opt_key == "support_material_contact_distance_type"){
+        } else if (opt_key == "infill_dense_algo") {
+            ret = static_cast<int>(config.option<ConfigOptionEnum<DenseInfillAlgo>>(opt_key)->value);
+        } else if (opt_key == "ironing_type") {
+            ret = static_cast<int>(config.option<ConfigOptionEnum<IroningType>>(opt_key)->value);
+		} else if (opt_key == "machine_limits_usage") {
+			ret = static_cast<int>(config.option<ConfigOptionEnum<MachineLimitsUsage>>(opt_key)->value);
+        } else if (opt_key == "no_perimeter_unsupported_algo") {
+            ret = static_cast<int>(config.option<ConfigOptionEnum<NoPerimeterUnsupportedAlgo>>(opt_key)->value);
+        } else if (opt_key == "printhost_authorization_type") {
+            ret = static_cast<int>(config.option<ConfigOptionEnum<AuthorizationType>>(opt_key)->value);
+        } else if (opt_key == "seam_position" || opt_key == "perimeter_loop_seam") {
+            ret = static_cast<int>(config.option<ConfigOptionEnum<SeamPosition>>(opt_key)->value);
+        } else if (opt_key == "support_material_contact_distance_type"){
             ret = static_cast<int>(config.option<ConfigOptionEnum<SupportZDistanceType>>(opt_key)->value);
-        }
-        else if (opt_key == "display_orientation") {
-            ret  = static_cast<int>(config.option<ConfigOptionEnum<SLADisplayOrientation>>(opt_key)->value);
-        }
-        else if (opt_key == "support_pillar_connection_mode") {
+        } else if (opt_key == "support_material_pattern") {
+            ret = static_cast<int>(config.option<ConfigOptionEnum<SupportMaterialPattern>>(opt_key)->value);
+        } else if (opt_key == "support_pillar_connection_mode") {
             ret  = static_cast<int>(config.option<ConfigOptionEnum<SLAPillarConnectionMode>>(opt_key)->value);
-        }
-        else if (opt_key == "printhost_authorization_type") {
-            ret  = static_cast<int>(config.option<ConfigOptionEnum<AuthorizationType>>(opt_key)->value);
+        } else if (opt_key == "wipe_advanced_algo") {
+            ret = static_cast<int>(config.option<ConfigOptionEnum<WipeAlgo>>(opt_key)->value);
         }
 	}
 		break;

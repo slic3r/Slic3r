@@ -1053,32 +1053,38 @@ void Choice::set_value(const boost::any& value, bool change_event)
         if (m_opt_id == "top_fill_pattern" || m_opt_id == "bottom_fill_pattern" || m_opt_id == "solid_fill_pattern"
             || m_opt_id == "fill_pattern" || m_opt_id == "support_material_interface_pattern" || m_opt_id == "brim_ears_pattern")
             val = idx_from_enum_value<InfillPattern>(val);
-        else if (m_opt_id.compare("perimeter_loop_seam") == 0)
-            val = idx_from_enum_value<SeamPosition>(val);
         else if (m_opt_id.compare("complete_objects_sort") == 0)
             val = idx_from_enum_value<CompleteObjectSort>(val);
-        else if (m_opt_id.compare("gcode_flavor") == 0)
-            val = idx_from_enum_value<GCodeFlavor>(val);
-        else if (m_opt_id.compare("support_material_pattern") == 0)
-            val = idx_from_enum_value<SupportMaterialPattern>(val);
-        else if (m_opt_id.compare("seam_position") == 0)
-            val = idx_from_enum_value<SeamPosition>(val);
-        else if (m_opt_id.compare("host_type") == 0)
-            val = idx_from_enum_value<PrintHostType>(val);
-        else if (m_opt_id.compare("infill_dense_algo") == 0)
-            val = idx_from_enum_value<DenseInfillAlgo>(val);
-        else if (m_opt_id.compare("no_perimeter_unsupported_algo") == 0)
-            val = idx_from_enum_value<NoPerimeterUnsupportedAlgo>(val);
-        else if (m_opt_id.compare("infill_connection") == 0)
-            val = idx_from_enum_value<InfillConnection>(val);
-        else if (m_opt_id.compare("wipe_advanced_algo") == 0)
-            val = idx_from_enum_value<WipeAlgo>(val);
-        else if (m_opt_id.compare("support_material_contact_distance_type") == 0)
-            val = idx_from_enum_value<SupportZDistanceType>(val);
         else if (m_opt_id.compare("display_orientation") == 0)
             val = idx_from_enum_value<SLADisplayOrientation>(val);
+        else if (m_opt_id.compare("gcode_flavor") == 0)
+            val = idx_from_enum_value<GCodeFlavor>(val);
+        else if (m_opt_id.compare("host_type") == 0)
+            val = idx_from_enum_value<PrintHostType>(val);
+        else if (m_opt_id.compare("infill_connection") == 0)
+            val = idx_from_enum_value<InfillConnection>(val);
+        else if (m_opt_id.compare("infill_dense_algo") == 0)
+            val = idx_from_enum_value<DenseInfillAlgo>(val);
+        else if (m_opt_id == "ironing_type")
+            val = idx_from_enum_value<IroningType>(val);
+        else if (m_opt_id.compare("machine_limits_usage") == 0)
+            val = idx_from_enum_value<MachineLimitsUsage>(val);
+        else if (m_opt_id.compare("no_perimeter_unsupported_algo") == 0)
+            val = idx_from_enum_value<NoPerimeterUnsupportedAlgo>(val);
+        else if (m_opt_id.compare("perimeter_loop_seam") == 0)
+            val = idx_from_enum_value<SeamPosition>(val);
+        else if (m_opt_id == "printhost_authorization_type")
+            val = idx_from_enum_value<AuthorizationType>(val);
+        else if (m_opt_id.compare("seam_position") == 0)
+            val = idx_from_enum_value<SeamPosition>(val);
+        else if (m_opt_id.compare("support_material_contact_distance_type") == 0)
+            val = idx_from_enum_value<SupportZDistanceType>(val);
+        else if (m_opt_id.compare("support_material_pattern") == 0)
+            val = idx_from_enum_value<SupportMaterialPattern>(val);
         else if (m_opt_id.compare("support_pillar_connection_mode") == 0)
             val = idx_from_enum_value<SLAPillarConnectionMode>(val);
+        else if (m_opt_id.compare("wipe_advanced_algo") == 0)
+            val = idx_from_enum_value<WipeAlgo>(val);
 		field->SetSelection(val);
 		break;
 	}
@@ -1161,37 +1167,39 @@ boost::any& Choice::get_value()
         if (m_opt_id == "top_fill_pattern" || m_opt_id == "bottom_fill_pattern" || m_opt_id == "solid_fill_pattern" 
             || m_opt_id == "support_material_interface_pattern" || m_opt_id == "fill_pattern" || m_opt_id == "brim_ears_pattern")
             convert_to_enum_value<InfillPattern>(ret_enum);
-        else if (m_opt_id.compare("gcode_flavor") == 0)
-            convert_to_enum_value<GCodeFlavor>(ret_enum);
         else if (m_opt_id.compare("complete_objects_sort") == 0)
             convert_to_enum_value<CompleteObjectSort>(ret_enum);
-		else if (m_opt_id.compare("machine_limits_usage") == 0)
-			m_value = static_cast<MachineLimitsUsage>(ret_enum);
-        else if (m_opt_id.compare("support_material_pattern") == 0)
-            convert_to_enum_value<SupportMaterialPattern>(ret_enum);
-        else if (m_opt_id.compare("seam_position") == 0)
-            convert_to_enum_value<SeamPosition>(ret_enum);
-        else if (m_opt_id.compare("perimeter_loop_seam") == 0)
-            convert_to_enum_value<SeamPosition>(ret_enum);
+        else if (m_opt_id.compare("display_orientation") == 0)
+            convert_to_enum_value<SLADisplayOrientation>(ret_enum);
+        else if (m_opt_id.compare("gcode_flavor") == 0)
+            convert_to_enum_value<GCodeFlavor>(ret_enum);
         else if (m_opt_id.compare("host_type") == 0)
             convert_to_enum_value<PrintHostType>(ret_enum);
-        else if (m_opt_id.compare("infill_dense_algo") == 0)
-            convert_to_enum_value<DenseInfillAlgo>(ret_enum);
-        else if (m_opt_id.compare("no_perimeter_unsupported_algo") == 0)
-            convert_to_enum_value<NoPerimeterUnsupportedAlgo>(ret_enum);
         else if (m_opt_id.compare("infill_connection") == 0)
             convert_to_enum_value<InfillConnection>(ret_enum);
-        else if (m_opt_id.compare("wipe_advanced_algo") == 0)
-            convert_to_enum_value<WipeAlgo>(ret_enum);
+        else if (m_opt_id.compare("infill_dense_algo") == 0)
+            convert_to_enum_value<DenseInfillAlgo>(ret_enum);
+        else if (m_opt_id == "ironing_type")
+            convert_to_enum_value<IroningType>(ret_enum);
+        else if (m_opt_id.compare("machine_limits_usage") == 0)
+            convert_to_enum_value<MachineLimitsUsage>(ret_enum);
+        else if (m_opt_id.compare("no_perimeter_unsupported_algo") == 0)
+            convert_to_enum_value<NoPerimeterUnsupportedAlgo>(ret_enum);
+        else if (m_opt_id.compare("perimeter_loop_seam") == 0)
+            convert_to_enum_value<SeamPosition>(ret_enum);
+        else if (m_opt_id == "printhost_authorization_type")
+            convert_to_enum_value<AuthorizationType>(ret_enum);
+        else if (m_opt_id.compare("seam_position") == 0)
+            convert_to_enum_value<SeamPosition>(ret_enum);
         else if (m_opt_id.compare("support_material_contact_distance_type") == 0)
             convert_to_enum_value<SupportZDistanceType>(ret_enum);
-		else if (m_opt_id.compare("display_orientation") == 0)
-            convert_to_enum_value<SLADisplayOrientation>(ret_enum);
+        else if (m_opt_id.compare("support_material_pattern") == 0)
+            convert_to_enum_value<SupportMaterialPattern>(ret_enum);
         else if (m_opt_id.compare("support_pillar_connection_mode") == 0)
             convert_to_enum_value<SLAPillarConnectionMode>(ret_enum);
-		else if (m_opt_id == "printhost_authorization_type")
-			m_value = static_cast<AuthorizationType>(ret_enum);
-	}
+        else if (m_opt_id.compare("wipe_advanced_algo") == 0)
+            convert_to_enum_value<WipeAlgo>(ret_enum);
+    }
     else if (m_opt.gui_type == "f_enum_open") {
         const int ret_enum = field->GetSelection();
         if (ret_enum < 0 || m_opt.enum_values.empty() || m_opt.type == coStrings ||
