@@ -8,19 +8,19 @@ namespace Slic3r {
 class FillConcentric : public Fill
 {
 public:
-    virtual ~FillConcentric() {}
+    ~FillConcentric() override {}
 
 protected:
-    virtual Fill* clone() const { return new FillConcentric(*this); };
+    Fill* clone() const override { return new FillConcentric(*this); };
     void init_spacing(coordf_t spacing, const FillParams &params) override;
-    virtual void _fill_surface_single(
+    void _fill_surface_single(
         const FillParams                &params,
         unsigned int                     thickness_layers,
         const std::pair<float, Point>   &direction,
-        ExPolygon                       &expolygon,
+        ExPolygon                        expolygon,
         Polylines                       &polylines_out) const override;
 
-	virtual bool no_sort() const { return true; }
+	bool no_sort() const override { return true; }
 };
 
 
@@ -29,10 +29,10 @@ public:
     virtual ~FillConcentricWGapFill() {}
 
 protected:
-    virtual Fill* clone() const { return new FillConcentricWGapFill(*this); };
-    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const override;
+    Fill* clone() const override { return new FillConcentricWGapFill(*this); };
+    void fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const override;
 
-    virtual bool no_sort() const { return true; }
+    bool no_sort() const override { return true; }
 };
 
 } // namespace Slic3r

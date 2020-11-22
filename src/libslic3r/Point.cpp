@@ -2,6 +2,7 @@
 #include "Line.hpp"
 #include "MultiPoint.hpp"
 #include "Int128.hpp"
+#include "BoundingBox.hpp"
 #include <algorithm>
 
 namespace Slic3r {
@@ -197,6 +198,19 @@ Point Point::projection_onto(const Line &line) const
     
     // Else pick closest endpoint.
     return ((line.a - *this).cast<double>().squaredNorm() < (line.b - *this).cast<double>().squaredNorm()) ? line.a : line.b;
+}
+
+BoundingBox get_extents(const Points &pts)
+{ 
+    return BoundingBox(pts);
+}
+
+BoundingBox get_extents(const std::vector<Points> &pts)
+{
+    BoundingBox bbox;
+    for (const Points &p : pts)
+        bbox.merge(get_extents(p));
+    return bbox;
 }
 
 /// This method create a new point on the line defined by this and p2.

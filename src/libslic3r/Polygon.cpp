@@ -6,8 +6,6 @@
 
 namespace Slic3r {
 
-
-
 Lines Polygon::lines() const
 {
     return to_lines(*this);
@@ -299,11 +297,6 @@ void Polygon::densify(float min_length, std::vector<float>* lengths_ptr)
         }
     }
     assert(points.size() == lengths.size() - 1);
-}
-
-BoundingBox get_extents(const Points &points)
-{ 
-    return BoundingBox(points);
 }
 
 size_t Polygon::remove_collinear(coord_t max_offset){

@@ -12,7 +12,7 @@ void FillHoneycomb::_fill_surface_single(
     const FillParams                &params, 
     unsigned int                     thickness_layers,
     const std::pair<float, Point>   &direction, 
-    ExPolygon                       &expolygon, 
+    ExPolygon                        expolygon,
     Polylines                       &polylines_out) const
 {
     // cache hexagons math
@@ -21,20 +21,20 @@ void FillHoneycomb::_fill_surface_single(
     if (it_m == FillHoneycomb::cache.end()) {
         it_m = FillHoneycomb::cache.insert(it_m, std::pair<CacheID, CacheData>(cache_id, CacheData()));
         CacheData &m = it_m->second;
-        coord_t min_spacing = scale_(this->get_spacing());
-        m.distance = coord_t(double(min_spacing) / params.density);
-        m.hex_side = coord_t(double(m.distance) / (sqrt(3)/2));
+        coord_t min_spacing = coord_t(scale_(this->get_spacing()));
+        m.distance          = coord_t(double(min_spacing) / params.density);
+        m.hex_side          = coord_t(double(m.distance) / (sqrt(3)/2));
         m.hex_width = m.distance * 2; // $m->{hex_width} == $m->{hex_side} * sqrt(3);
         coord_t hex_height = m.hex_side * 2;
         m.pattern_height = hex_height + m.hex_side;
-        m.y_short = coord_t(double(m.distance) * sqrt(3)/3);
+        m.y_short           = coord_t(double(m.distance) * sqrt(3)/3);
         m.x_offset = min_spacing / 2;
-        m.y_offset = coord_t(double(m.x_offset) * sqrt(3)/3);
+        m.y_offset          = coord_t(double(m.x_offset) * sqrt(3)/3);
         m.hex_center = Point(m.hex_width/2, m.hex_side);
     }
     CacheData &m = it_m->second;
 
-    Polygons polygons;
+    Polylines all_polylines;
     {
         // adjust actual bounding box to the nearest multiple of our hex pattern
         // and align it so that it matches across layers
@@ -54,7 +54,7 @@ void FillHoneycomb::_fill_surface_single(
 
         coord_t x = bounding_box.min(0);
         while (x <= bounding_box.max(0)) {
-            Polygon p;
+            Polyline p;
             coord_t ax[2] = { x + m.x_offset, x + m.distance - m.x_offset };
             for (size_t i = 0; i < 2; ++ i) {
                 std::reverse(p.points.begin(), p.points.end()); // turn first half upside down
@@ -71,55 +71,15 @@ void FillHoneycomb::_fill_surface_single(
                 x += m.distance;
             }
             p.rotate(-direction.first, m.hex_center);
-            polygons.push_back(p);
+            all_polylines.push_back(p);
         }
     }
     
-    if (params.complete || true) {
-        // we were requested to complete each loop;
-        // in this case we don't try to make more continuous paths
-        Polygons polygons_trimmed = intersection((Polygons)expolygon, polygons);
-        for (Polygons::iterator it = polygons_trimmed.begin(); it != polygons_trimmed.end(); ++ it)
-            polylines_out.push_back(it->split_at_first_point());
-    } else {
-        // consider polygons as polylines without re-appending the initial point:
-        // this cuts the last segment on purpose, so that the jump to the next 
-        // path is more straight
-        Polylines paths;
-        {
-            Polylines p;
-            for (Polygon &poly : polygons)
-                p.emplace_back(poly.points);
-            paths = intersection_pl(p, to_polygons(expolygon));
-        }
-
-        // connect paths
-        if (! paths.empty()) { // prevent calling leftmost_point() on empty collections
-            Polylines chained = chain_polylines(std::move(paths));
-            assert(paths.empty());
-            paths.clear();
-            for (Polyline &path : chained) {
-                if (! paths.empty()) {
-                    // distance between first point of this path and last point of last path
-                    double distance = (path.first_point() - paths.back().last_point()).cast<double>().norm();
-                    if (distance <= m.hex_width) {
-                        paths.back().points.insert(paths.back().points.end(), path.points.begin(), path.points.end());
-                        continue;
-                    }
-                }
-                // Don't connect the paths.
-                paths.push_back(std::move(path));
-            }
-        }
-        
-        // clip paths again to prevent connection segments from crossing the expolygon boundaries
-        paths = intersection_pl(paths, to_polygons(offset_ex(expolygon, (double)SCALED_EPSILON)));
-        // Move the polylines to the output, avoid a deep copy.
-        size_t j = polylines_out.size();
-        polylines_out.resize(j + paths.size(), Polyline());
-        for (size_t i = 0; i < paths.size(); ++ i)
-            std::swap(polylines_out[j ++], paths[i]);
-    }
+    all_polylines = intersection_pl(std::move(all_polylines), to_polygons(expolygon));
+    if (params.connection == icNotConnected || all_polylines.size() <= 1)
+        append(polylines_out, chain_polylines(std::move(all_polylines)));
+    else
+        connect_infill(std::move(all_polylines), expolygon, polylines_out, this->get_spacing(), params);
 }
 
 } // namespace Slic3r

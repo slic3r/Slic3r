@@ -11,7 +11,7 @@ class FillGyroid : public Fill
 {
 public:
     FillGyroid() {}
-    virtual Fill* clone() const { return new FillGyroid(*this); }
+    Fill* clone() const override { return new FillGyroid(*this); }
 
     // Correction applied to regular infill angle to maximize printing
     // speed in default configuration (degrees)
@@ -25,11 +25,11 @@ public:
 
 
 protected:
-    virtual void _fill_surface_single(
+    void _fill_surface_single(
         const FillParams                &params, 
         unsigned int                     thickness_layers,
         const std::pair<float, Point>   &direction, 
-        ExPolygon                       &expolygon, 
+        ExPolygon                        expolygon, 
         Polylines                       &polylines_out) const override;
 };
 

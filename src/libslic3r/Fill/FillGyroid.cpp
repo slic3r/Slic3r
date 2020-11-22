@@ -41,7 +41,7 @@ static inline Polyline make_wave(
 
         size_t n = points.size();
         do {
-            points.emplace_back(Vec2d(points[points.size()-n](0) + period, points[points.size()-n](1)));
+            points.emplace_back(points[points.size()-n].x() + period, points[points.size()-n].y());
         } while (points.back()(0) < width - EPSILON);
 
         points.emplace_back(Vec2d(width, f(width, z_sin, z_cos, vertical, flip)));
@@ -151,7 +151,7 @@ void FillGyroid::_fill_surface_single(
     const FillParams                &params, 
     unsigned int                     thickness_layers,
     const std::pair<float, Point>   &direction, 
-    ExPolygon                       &expolygon, 
+    ExPolygon                        expolygon, 
     Polylines                       &polylines_out) const
 {
     float infill_angle = float(this->angle + (CorrectionAngle * 2 * M_PI) / 360.f);
@@ -189,11 +189,10 @@ void FillGyroid::_fill_surface_single(
 			polylines.end());
 
 	if (! polylines.empty()) {
-		polylines = chain_polylines(polylines);
 		// connect lines
 		size_t polylines_out_first_idx = polylines_out.size();
         if (params.connection == icNotConnected){
-            append(polylines_out, std::move(polylines));
+            append(polylines_out, chain_polylines(polylines));
         } else {
             this->connect_infill(std::move(polylines), expolygon, polylines_out, this->get_spacing(), params);
         }

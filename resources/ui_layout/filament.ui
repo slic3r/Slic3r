@@ -1,11 +1,12 @@
 
 page:Filament:spool
-group:Filament
+group:filament_spool_weight_event:Filament
 	setting:filament_colour
 	setting:filament_diameter
 	setting:extrusion_multiplier
 	setting:filament_density
 	setting:filament_cost
+	setting:filament_spool_weight
 group:Temperature °C
 	line:Extruder
 		setting:first_layer_temperature

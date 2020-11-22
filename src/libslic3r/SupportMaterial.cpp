@@ -2341,7 +2341,6 @@ static inline void fill_expolygons_generate_paths(
 {
     FillParams fill_params;
     fill_params.density = density;
-    fill_params.complete = true;
     fill_params.dont_adjust = true;
     fill_params.flow = flow;
     fill_params.role = role;
@@ -2363,7 +2362,6 @@ static inline void fill_expolygons_generate_paths(
 {
     FillParams fill_params;
     fill_params.density = density;
-    fill_params.complete = true;
     fill_params.dont_adjust = true;
     fill_params.flow = flow;
     fill_params.role = role;

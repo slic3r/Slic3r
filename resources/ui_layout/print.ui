@@ -105,10 +105,11 @@ page:Infill:infill
 group:Infill
 	line:Fill density
 		setting:label_width$5:label$_:fill_density
+		setting:width$19:label$_:infill_connection
+		setting:infill_anchor
 	end_line
 	line:Pattern
 		setting:label_width$5:label$_:fill_pattern
-		setting:width$19:label$_:infill_connection
 	end_line
 	line:External patterns
 		setting:label_width$5:top_fill_pattern

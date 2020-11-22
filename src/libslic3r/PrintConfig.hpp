@@ -754,7 +754,7 @@ public:
     ConfigOptionFloatOrPercent      gap_fill_min_area;
     ConfigOptionPercent             gap_fill_overlap;
     ConfigOptionFloat               gap_fill_speed;
-    ConfigOptionBool                hole_to_polyhole;
+    ConfigOptionFloatOrPercent      infill_anchor;    ConfigOptionBool                hole_to_polyhole;
     ConfigOptionInt                 infill_extruder;
     ConfigOptionFloatOrPercent      infill_extrusion_width;
     ConfigOptionInt                 infill_every_layers;
@@ -859,7 +859,7 @@ protected:
         OPT_PTR(gap_fill_min_area);
         OPT_PTR(gap_fill_overlap);
         OPT_PTR(gap_fill_speed);
-        OPT_PTR(hole_to_polyhole);
+        OPT_PTR(infill_anchor);        OPT_PTR(hole_to_polyhole);
         OPT_PTR(infill_extruder);
         OPT_PTR(infill_extrusion_width);
         OPT_PTR(infill_every_layers);
@@ -998,6 +998,7 @@ public:
     ConfigOptionFloats              filament_diameter;
     ConfigOptionBools               filament_soluble;
     ConfigOptionFloats              filament_max_speed;
+    ConfigOptionFloats              filament_spool_weight;
     ConfigOptionFloats              filament_max_volumetric_speed;
     ConfigOptionFloats              filament_max_wipe_tower_speed;
     ConfigOptionStrings             filament_type;
@@ -1106,6 +1107,7 @@ protected:
         OPT_PTR(filament_soluble);
         OPT_PTR(filament_cost);
         OPT_PTR(filament_max_speed);
+        OPT_PTR(filament_spool_weight);
         OPT_PTR(filament_max_volumetric_speed);
         OPT_PTR(filament_max_wipe_tower_speed);
         OPT_PTR(filament_loading_speed);

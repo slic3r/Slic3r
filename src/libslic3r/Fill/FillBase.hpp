@@ -37,6 +37,8 @@ public:
 struct FillParams
 {
     bool        full_infill() const { return density > 0.9999f && density < 1.0001f; }
+    // Don't connect the fill lines around the inner perimeter.
+    bool        dont_connect() const { return anchor_length < 0.05f || connection == InfillConnection::icNotConnected; }
 
     // Fill density, fraction in <0, 1>
     float       density     { 0.f };
@@ -46,6 +48,10 @@ struct FillParams
 
     // Don't connect the fill lines around the inner perimeter.
     InfillConnection connection{ icConnected };
+
+    // Length of an infill anchor along the perimeter.
+    // 1000mm is roughly the maximum length line that fits into a 32bit coord_t.
+    float       anchor_length   { 1000.f };
 
     // Don't adjust spacing to fill the space evenly.
     bool        dont_adjust { true };
@@ -101,6 +107,7 @@ protected:
 
 public:
     virtual ~Fill() {}
+    virtual Fill* clone() const = 0;
 
     static Fill* new_from_type(const InfillPattern type);
     static Fill* new_from_type(const std::string &type);
@@ -118,7 +125,6 @@ public:
     // Perform the fill.
     virtual Polylines fill_surface(const Surface *surface, const FillParams &params) const;
 
-    virtual Fill* clone() const = 0;
 protected:
     Fill() :
         layer_id(size_t(-1)),
@@ -135,11 +141,11 @@ protected:
         {}
 
     // The expolygon may be modified by the method to avoid a copy.
-    virtual void    _fill_surface_single(
+    virtual void _fill_surface_single(
         const FillParams                & /* params */, 
         unsigned int                      /* thickness_layers */,
         const std::pair<float, Point>   & /* direction */, 
-        ExPolygon                       & /* expolygon */, 
+        ExPolygon                         /* expolygon */,
         Polylines                       & /* polylines_out */) const {
         BOOST_LOG_TRIVIAL(error)<<"Error, the fill isn't implemented";
     };
@@ -166,7 +172,9 @@ protected:
     }
 
 public:
-    static void connect_infill(Polylines &&infill_ordered, const ExPolygon &boundary, Polylines &polylines_out, double spacing, const FillParams &params);
+    static void connect_infill(Polylines &&infill_ordered, const ExPolygon &boundary, Polylines &polylines_out, const double spacing, const FillParams &params);
+    static void connect_infill(Polylines &&infill_ordered, const Polygons &boundary, const BoundingBox& bbox, Polylines &polylines_out, const double spacing, const FillParams &params);
+    static void connect_infill(Polylines &&infill_ordered, const std::vector<const Polygon*> &boundary, const BoundingBox &bbox, Polylines &polylines_out, double spacing, const FillParams &params);
 
     static coord_t  _adjust_solid_spacing(const coord_t width, const coord_t distance);
 

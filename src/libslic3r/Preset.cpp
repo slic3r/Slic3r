@@ -533,6 +533,7 @@ const std::vector<std::string>& Preset::print_options()
         "ooze_prevention", "standby_temperature_delta", "interface_shells", "extrusion_width", "first_layer_extrusion_width", 
         "perimeter_extrusion_width", "external_perimeter_extrusion_width", "infill_extrusion_width", "solid_infill_extrusion_width", 
         "top_infill_extrusion_width", "support_material_extrusion_width", "infill_overlap", "bridge_flow_ratio", 
+        "infill_anchor",
         "clip_multipart_objects",
         "over_bridge_flow_ratio",
         "bridge_overlap",
@@ -592,7 +593,7 @@ const std::vector<std::string>& Preset::filament_options()
         "filament_max_speed",
         "filament_max_volumetric_speed",
         "filament_max_wipe_tower_speed",
-        "extrusion_multiplier", "filament_density", "filament_cost", "filament_loading_speed", "filament_loading_speed_start", "filament_load_time",
+        "extrusion_multiplier", "filament_density", "filament_cost", "filament_spool_weight", "filament_loading_speed", "filament_loading_speed_start", "filament_load_time",
         "filament_unloading_speed", "filament_toolchange_delay", "filament_unloading_speed_start", "filament_unload_time", "filament_cooling_moves",
         "filament_cooling_initial_speed", "filament_cooling_final_speed", "filament_ramming_parameters", "filament_minimal_purge_on_wipe_tower",
         "filament_shrink",
@@ -2050,13 +2051,15 @@ namespace PresetUtils {
 		return out;
 	}
 
-#if ENABLE_GCODE_VIEWER
     std::string system_printer_bed_model(const Preset& preset)
     {
         std::string out;
         const VendorProfile::PrinterModel* pm = PresetUtils::system_printer_model(preset);
-        if (pm != nullptr && !pm->bed_model.empty())
+        if (pm != nullptr && !pm->bed_model.empty()) {
+            out = Slic3r::data_dir() + "/vendor/" + preset.vendor->id + "/" + pm->bed_model;
+            if (!boost::filesystem::exists(boost::filesystem::path(out)))
             out = Slic3r::resources_dir() + "/profiles/" + preset.vendor->id + "/" + pm->bed_model;
+        }
         return out;
     }
 
@@ -2064,11 +2067,13 @@ namespace PresetUtils {
     {
         std::string out;
         const VendorProfile::PrinterModel* pm = PresetUtils::system_printer_model(preset);
-        if (pm != nullptr && !pm->bed_texture.empty())
+        if (pm != nullptr && !pm->bed_texture.empty()) {
+            out = Slic3r::data_dir() + "/vendor/" + preset.vendor->id + "/" + pm->bed_texture;
+            if (!boost::filesystem::exists(boost::filesystem::path(out)))
             out = Slic3r::resources_dir() + "/profiles/" + preset.vendor->id + "/" + pm->bed_texture;
+        }
         return out;
     }
-#endif // ENABLE_GCODE_VIEWER
 } // namespace PresetUtils
 
 } // namespace Slic3r

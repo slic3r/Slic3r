@@ -12,15 +12,15 @@ namespace Slic3r {
 class Fill3DHoneycomb : public Fill
 {
 public:
-    virtual Fill* clone() const { return new Fill3DHoneycomb(*this); };
-    virtual ~Fill3DHoneycomb() {}
+    Fill* clone() const override { return new Fill3DHoneycomb(*this); };
+    ~Fill3DHoneycomb() override {}
 
 protected:
-	virtual void _fill_surface_single(
+	void _fill_surface_single(
 	    const FillParams                &params, 
 	    unsigned int                     thickness_layers,
 	    const std::pair<float, Point>   &direction, 
-	    ExPolygon                       &expolygon, 
+	    ExPolygon                        expolygon, 
 	    Polylines                       &polylines_out) const override;
 };
 

@@ -58,10 +58,10 @@ add_library(libslic3r STATIC
     Fill/FillGyroid.hpp
     Fill/FillPlanePath.cpp
     Fill/FillPlanePath.hpp
+    Fill/FillLine.cpp
+    Fill/FillLine.hpp
     Fill/FillRectilinear.cpp
     Fill/FillRectilinear.hpp
-    Fill/FillRectilinear2.cpp
-    Fill/FillRectilinear2.hpp
     Fill/FillSmooth.cpp
     Fill/FillSmooth.hpp
     Flow.cpp
@@ -91,8 +91,6 @@ add_library(libslic3r STATIC
     GCode/PostProcessor.hpp
 #    GCode/PressureEqualizer.cpp
 #    GCode/PressureEqualizer.hpp
-    GCode/PreviewData.cpp
-    GCode/PreviewData.hpp
     GCode/PrintExtents.cpp
     GCode/PrintExtents.hpp
     GCode/SpiralVase.cpp

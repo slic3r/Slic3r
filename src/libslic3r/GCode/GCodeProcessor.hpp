@@ -1,7 +1,6 @@
 #ifndef slic3r_GCodeProcessor_hpp_
 #define slic3r_GCodeProcessor_hpp_
 
-#if ENABLE_GCODE_VIEWER
 #include "libslic3r/GCodeReader.hpp"
 #include "libslic3r/Point.hpp"
 #include "libslic3r/ExtrusionEntity.hpp"
@@ -269,10 +268,24 @@ namespace Slic3r {
 
         struct Result
         {
+            struct SettingsIds
+            {
+                std::string print;
+                std::vector<std::string> filament;
+                std::string printer;
+
+                void reset()
+                {
+                    print = "";
+                    filament = std::vector<std::string>();
+                    printer = "";
+                }
+            };
             unsigned int id;
             std::vector<MoveVertex> moves;
             Pointfs bed_shape;
-            std::string printer_settings_id;
+            SettingsIds settings_ids;
+            size_t extruders_count;
             std::vector<std::string> extruder_colors;
             std::vector<std::string> filament_colors;
             PrintEstimatedTimeStatistics time_statistics;
@@ -285,6 +298,8 @@ namespace Slic3r {
                 moves = std::vector<MoveVertex>();
                 bed_shape = Pointfs();
                 extruder_colors = std::vector<std::string>();
+                extruders_count = 0;
+                settings_ids.reset();
             }
 #else
             void reset()
@@ -292,6 +307,8 @@ namespace Slic3r {
                 moves = std::vector<MoveVertex>();
                 bed_shape = Pointfs();
                 extruder_colors = std::vector<std::string>();
+                extruders_count = 0;
+                settings_ids.reset();
             }
 #endif // ENABLE_GCODE_VIEWER_STATISTICS
         };
@@ -439,7 +456,7 @@ namespace Slic3r {
 
         // Process the gcode contained in the file with the given filename
         // throws CanceledException through print->throw_if_canceled() (sent by the caller as callback).
-        void process_file(const std::string& filename, std::function<void()> cancel_callback = nullptr);
+        void process_file(const std::string& filename, bool apply_postprocess, std::function<void()> cancel_callback = nullptr);
 
         float get_time(PrintEstimatedTimeStatistics::ETimeMode mode) const;
         std::string get_time_dhm(PrintEstimatedTimeStatistics::ETimeMode mode) const;
@@ -576,8 +593,6 @@ namespace Slic3r {
    };
 
 } /* namespace Slic3r */
-
-#endif // ENABLE_GCODE_VIEWER
 
 #endif /* slic3r_GCodeProcessor_hpp_ */
 

@@ -226,7 +226,7 @@ void Tab::create_preset_tab()
                                    "or click this button.")));
 
     add_scaled_button(panel, &m_search_btn, "search");
-    m_search_btn->SetToolTip(format_wxstr(_L("Click to start a search or use %1% shortcut"), "Ctrl+F"));
+    m_search_btn->SetToolTip(format_wxstr(_L("Search in settings [%1%]"), "Ctrl+F"));
 
     // Bitmaps to be shown on the "Revert to system" aka "Lock to system" button next to each input field.
     add_scaled_bitmap(this, m_bmp_value_lock  , "lock_closed");
@@ -1606,6 +1606,17 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                             wxGetApp().sidebar().Layout();
                         }
                     });
+                }else if(params[i] == "filament_spool_weight_event") {
+                    current_group->m_on_change = set_or_add(current_group->m_on_change, [this, current_group](t_config_option_key opt_key, boost::any value)
+                    {
+                        update_dirty();
+                        if (opt_key == "filament_spool_weight") {
+                            // Change of this option influences for an update of "Sliced Info"
+                            wxGetApp().sidebar().update_sliced_info_sizer();
+                            wxGetApp().sidebar().Layout();
+                        } else
+                            on_value_change(opt_key, value);
+                    });
                 }
             }
             if (logs) std::cout << "create group " << params.back() << "\n";
@@ -1824,7 +1835,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             wxString description_line_text = _L(""
                 "Note: All parameters from this group are moved to the Physical Printer settings (see changelog).\n\n"
                 "A new Physical Printer profile is created by clicking on the \"cog\" icon right of the Printer profiles combo box, "
-                "by selecting the \"add or remove printers\" item in the Printer combo box. The Physical Printer profile editor opens "
+                "by selecting the \"Add physical printer\" item in the Printer combo box. The Physical Printer profile editor opens "
                 "also when clicking on the \"cog\" icon in the Printer settings tab. The Physical Printer profiles are being stored "
                 "into SuperSlicer/physical_printer directory.");
 
@@ -2419,13 +2430,11 @@ PageShp TabPrinter::build_kinematics_page()
     if (m_use_silent_mode) {
         // Legend for OptionsGroups
         optgroup = page->new_optgroup("");
-        optgroup->set_show_modified_btns_val(false);
-        optgroup->title_width = 23;// 230;
         auto line = Line{ "", "" };
 
         ConfigOptionDef def;
         def.type = coString;
-        def.width = 18;
+        def.width = 15;
         def.gui_type = "legend";
         def.mode = comAdvanced;
         def.tooltip = L("Values in this column are for Normal mode");
@@ -3409,7 +3418,7 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach)
 //!	m_treectrl->OnSetFocus();
 
     if (name.empty()) {
-        SavePresetDialog dlg(m_type, detach ? _u8L("Detached") : "");
+        SavePresetDialog dlg(m_parent, m_type, detach ? _u8L("Detached") : "");
         auto result = dlg.ShowModal();
         // OK => ADD, APPLY => RENAME
         if (result != wxID_OK && result != wxID_APPLY)
@@ -3502,7 +3511,7 @@ void Tab::delete_preset()
             std::vector<std::string> ph_printers_only   = physical_printers.get_printers_with_only_preset(current_preset.name);
 
             if (!ph_printers.empty()) {
-                msg += _L("Next physical printer(s) has/have selected preset") + ":";
+                msg += _L("The physical printer(s) below is based on the preset, you are going to delete.");
                 for (const std::string& printer : ph_printers)
                     msg += "\n    \"" + from_u8(printer) + "\",";
                 msg.RemoveLast();
@@ -3510,7 +3519,7 @@ void Tab::delete_preset()
             }
 
             if (!ph_printers_only.empty()) {
-                msg += _L("Next physical printer(s) has/have one and only selected preset") + ":";
+                msg += _L("The physical printer(s) below is based only on the preset, you are going to delete.");
                 for (const std::string& printer : ph_printers_only)
                     msg += "\n    \"" + from_u8(printer) + "\",";
                 msg.RemoveLast();
@@ -3919,7 +3928,7 @@ void Page::activate(ConfigOptionMode mode, std::function<void()> throw_if_cancel
     for (auto group : m_optgroups) {
         if (!group->activate(throw_if_canceled))
             continue;
-        m_vsizer->Add(group->sizer, 0, wxEXPAND | wxALL, 10);
+        m_vsizer->Add(group->sizer, 0, wxEXPAND | (group->is_legend_line() ? (wxLEFT|wxTOP) : wxALL), 10);
         group->update_visibility(mode);
         group->reload_config();
         throw_if_canceled();

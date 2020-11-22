@@ -10,7 +10,7 @@
 #include "../Surface.hpp"
 
 #include "FillBase.hpp"
-#include "FillRectilinear2.hpp"
+#include "FillRectilinear.hpp"
 
 namespace Slic3r {
 
@@ -54,7 +54,8 @@ struct SurfaceFillParams : FillParams
         RETURN_COMPARE_NON_EQUAL(monotonic);
         RETURN_COMPARE_NON_EQUAL_TYPED(unsigned, connection);
         RETURN_COMPARE_NON_EQUAL_TYPED(unsigned, dont_adjust);
-        RETURN_COMPARE_NON_EQUAL(fill_exactly);
+
+        RETURN_COMPARE_NON_EQUAL(anchor_length);        RETURN_COMPARE_NON_EQUAL(fill_exactly);
         RETURN_COMPARE_NON_EQUAL(flow.width);
         RETURN_COMPARE_NON_EQUAL(flow.height);
         RETURN_COMPARE_NON_EQUAL(flow.nozzle_diameter);
@@ -74,7 +75,8 @@ struct SurfaceFillParams : FillParams
                 this->monotonic            == rhs.monotonic       &&
                 this->connection            == rhs.connection       &&
                 this->dont_adjust           == rhs.dont_adjust      &&
-                this->fill_exactly          == rhs.fill_exactly     &&
+
+                this->anchor_length         == rhs.anchor_length    &&                this->fill_exactly          == rhs.fill_exactly     &&
                 this->flow                  == rhs.flow             &&
                 this->role                  == rhs.role;
     }
@@ -105,25 +107,26 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
             if (surface.surface_type == (stPosInternal | stDensVoid)) {
                 has_internal_voids = true;
             } else {
+                const PrintRegionConfig &region_config = layerm.region()->config();
                 FlowRole extrusion_role = surface.has_pos_top() ? frTopSolidInfill : (surface.has_fill_solid() ? frSolidInfill : frInfill);
                 bool     is_bridge      = layer.id() > 0 && surface.has_mod_bridge();
                 bool     is_denser      = false;
                 params.extruder         = layerm.region()->extruder(extrusion_role);
-                params.pattern          = layerm.region()->config().fill_pattern.value;
-                params.density          = float(layerm.region()->config().fill_density) / 100.f;
+                params.pattern          = region_config.fill_pattern.value;
+                params.density          = float(region_config.fill_density) / 100.f;
                 params.dont_adjust      = false;
 
                 if (surface.has_fill_solid()) {
                     params.density = 1.f;
                     params.pattern = ipRectilinear;
                     if (surface.has_pos_external() && !is_bridge)
-                        params.pattern = surface.has_pos_top() ? layerm.region()->config().top_fill_pattern.value : layerm.region()->config().bottom_fill_pattern.value;
+                        params.pattern = surface.has_pos_top() ? region_config.top_fill_pattern.value : region_config.bottom_fill_pattern.value;
                     else if (!is_bridge)
-                        params.pattern = layerm.region()->config().solid_fill_pattern.value;
+                        params.pattern = region_config.solid_fill_pattern.value;
                 } else {
 
-                    if (layerm.region()->config().infill_dense.getBool()
-                        && layerm.region()->config().fill_density < 40
+                    if (region_config.infill_dense.getBool()
+                        && region_config.fill_density < 40
                         && surface.maxNbSolidLayersOnTop == 1) {
                         params.density = 0.42f;
                         is_denser = true;
@@ -152,20 +155,20 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                         params.role = erSolidInfill;
                     }
                 }
-                params.fill_exactly = layerm.region()->config().enforce_full_fill_volume.getBool();
-                params.connection = layerm.region()->config().infill_connection.value;
+                params.fill_exactly = region_config.enforce_full_fill_volume.getBool();
+                params.connection = region_config.infill_connection.value;
                 params.bridge_angle = float(surface.bridge_angle);
                 if (is_denser) {
                     params.angle = 0;
                 } else {
-                    params.angle = float(Geometry::deg2rad(layerm.region()->config().fill_angle.value));
-                    params.angle += float(PI * (layerm.region()->config().fill_angle_increment.value * layerm.layer()->id()) / 180.f);
+                    params.angle = float(Geometry::deg2rad(region_config.fill_angle.value));
+                    params.angle += float(PI * (region_config.fill_angle_increment.value * layerm.layer()->id()) / 180.f);
                 }
 
                 //adjust flow (to over-extrude when needed)
                 params.flow_mult = 1;
                 if (surface.has_pos_top())
-                    params.flow_mult *= float(layerm.region()->config().fill_top_flow_ratio.get_abs_value(1));
+                    params.flow_mult *= float(region_config.fill_top_flow_ratio.get_abs_value(1));
 
                 params.config = &layerm.region()->config();
 
@@ -180,7 +183,11 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                 );
                 
                 // Calculate flow spacing for infill pattern generation.
-                if (! surface.has_fill_solid() && ! is_bridge) {
+                if (surface.has_fill_solid() || is_bridge) {
+                    params.spacing = params.flow.spacing();
+                    // Don't limit anchor length for solid or bridging infill.
+                    params.anchor_length = 1000.f;
+                } else {
                     // it's internal infill, so we can calculate a generic flow spacing 
                     // for all layers, for avoiding the ugly effect of
                     // misaligned infill on first layer because of different extrusion width and
@@ -193,8 +200,13 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                             -1,     // auto width
                             *layer.object()
                         ).spacing();
-                } else
-                    params.spacing = params.flow.spacing();
+                    // Anchor a sparse infill to inner perimeters with the following anchor length:
+                    params.anchor_length = float(region_config.infill_anchor);
+                    if (region_config.infill_anchor.percent)
+                        params.anchor_length *= 0.01 * params.spacing;
+                   // Don't limit anchor length for solid or bridging infill.
+                   //FIXEME: totest params.anchor_length = 1000.f;
+                }
 
                 auto it_params = set_surface_params.find(params);
                 if (it_params == set_surface_params.end())
@@ -406,6 +418,7 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
         //FillParams params;
         //params.density         = float(0.01 * surface_fill.params.density);
         //params.dont_adjust     = surface_fill.params.dont_adjust; // false
+        //params.anchor_length = surface_fill.params.anchor_length;
 
         if (using_internal_flow) {
             // if we used the internal flow we're not doing a solid infill
@@ -561,14 +574,13 @@ void Layer::make_ironing()
         }
     std::sort(by_extruder.begin(), by_extruder.end());
 
-    FillRectilinear2     fill;
+    FillRectilinear 	fill;
     FillParams             fill_params;
     fill.set_bounding_box(this->object()->bounding_box());
     fill.layer_id           = this->id();
     fill.z                  = this->print_z;
     fill.overlap            = 0;
     fill_params.density     = 1.;
-//    fill_params.dont_connect = true;
     fill_params.connection  = InfillConnection::icConnected;
     fill_params.monotonic  = true;
 

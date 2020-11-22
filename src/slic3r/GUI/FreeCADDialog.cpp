@@ -21,6 +21,7 @@
 #include <stdlib.h>
 
 #include <wx/wx.h>
+#include <wx/combobox.h>
 #include <wx/scrolwin.h>
 #include <wx/display.h>
 #include <wx/file.h>

@@ -16,7 +16,6 @@
     #include <utility>
 #endif
 
-#if ENABLE_GCODE_VIEWER
 #include <chrono>
 
 static const float INCHES_TO_MM = 25.4f;
@@ -393,14 +392,13 @@ void GCodeProcessor::TimeProcessor::post_process(const std::string& filename)
     };
 
     // check for temporary lines
-    auto is_temporary_decoration = [](const std::string& gcode_line) {
+    auto is_temporary_decoration = [](const std::string_view gcode_line) {
         // remove trailing '\n'
-        //std::string line = gcode_line.substr(0, gcode_line.length() - 1);
+        assert(! gcode_line.empty());
+        assert(gcode_line.back() == '\n');
         // Don't remove Layer_Change_Tag, it will render the layer_time view unusable
-        //if (line == "; " + Layer_Change_Tag)
-        //    return true;
-        //else
-            return false;
+        // return gcode_line.substr(0, gcode_line.length() - 1) == ";" + Layer_Change_Tag;
+        return false;
     };
 
     // Iterators for the normal and silent cached time estimate entry recently processed, used by process_line_G1.
@@ -517,6 +515,7 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
     m_flavor = config.gcode_flavor;
 
     size_t extruders_count = config.nozzle_diameter.values.size();
+    m_result.extruders_count = extruders_count;
 
     m_extruder_offsets.resize(extruders_count);
     for (size_t i = 0; i < extruders_count; ++i) {
@@ -582,9 +581,17 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
     if (bed_shape != nullptr)
         m_result.bed_shape = bed_shape->values;
 
+    const ConfigOptionString* print_settings_id = config.option<ConfigOptionString>("print_settings_id");
+    if (print_settings_id != nullptr)
+        m_result.settings_ids.print = print_settings_id->value;
+
+    const ConfigOptionStrings* filament_settings_id = config.option<ConfigOptionStrings>("filament_settings_id");
+    if (filament_settings_id != nullptr)
+        m_result.settings_ids.filament = filament_settings_id->values;
+
     const ConfigOptionString* printer_settings_id = config.option<ConfigOptionString>("printer_settings_id");
     if (printer_settings_id != nullptr)
-        m_result.printer_settings_id = printer_settings_id->value;
+        m_result.settings_ids.printer = printer_settings_id->value;
 
     const ConfigOptionFloats* filament_diameters = config.option<ConfigOptionFloats>("filament_diameter");
     if (filament_diameters != nullptr) {
@@ -592,6 +599,8 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
             m_filament_diameters.push_back(static_cast<float>(diam));
         }
     }
+
+    m_result.extruders_count = config.option<ConfigOptionFloats>("nozzle_diameter")->values.size();
 
     const ConfigOptionPoints* extruder_offset = config.option<ConfigOptionPoints>("extruder_offset");
     if (extruder_offset != nullptr) {
@@ -798,7 +807,7 @@ void GCodeProcessor::reset()
 #endif // ENABLE_GCODE_VIEWER_DATA_CHECKING
 }
 
-void GCodeProcessor::process_file(const std::string& filename, std::function<void()> cancel_callback)
+void GCodeProcessor::process_file(const std::string& filename, bool apply_postprocess, std::function<void()> cancel_callback)
 {
     auto last_cancel_callback_time = std::chrono::high_resolution_clock::now();
 
@@ -860,11 +869,15 @@ void GCodeProcessor::process_file(const std::string& filename, std::function<voi
 
     update_estimated_times_stats();
 
+    // ensure at least one (default) color is defined
+    if (m_result.extruder_colors.empty())
+        m_result.extruder_colors.push_back("#FF8000");
 
     // post-process to add M73 lines into the gcode
+    if (apply_postprocess)
         m_time_processor.post_process(filename);
 
-    //update times for resuts
+    //update times for results
     for (size_t i = 0; i < m_result.moves.size(); i++) {
         size_t layer_id = m_result.moves[i].layer_duration;
         std::vector<float>& layer_times = m_result.time_statistics.modes[0].layers_times;
@@ -2354,4 +2367,3 @@ void GCodeProcessor::update_estimated_times_stats()
 
 } /* namespace Slic3r */
 
-#endif // ENABLE_GCODE_VIEWER

@@ -686,6 +686,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("rectilinear");
     def->enum_values.push_back("rectilineargapfill");
     def->enum_values.push_back("monotonic");
+    def->enum_values.push_back("alignedrectilinear");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("concentricgapfill");
     def->enum_values.push_back("hilbertcurve");
@@ -698,6 +699,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Rectilinear"));
     def->enum_labels.push_back(L("Monotonic (filled)"));
     def->enum_labels.push_back(L("Monotonic"));
+    def->enum_labels.push_back(L("Aligned Rectilinear"));
     def->enum_labels.push_back(L("Concentric"));
     def->enum_labels.push_back(L("Concentric (filled)"));
     def->enum_labels.push_back(L("Hilbert Curve"));
@@ -1466,6 +1468,17 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->set_default_value(new ConfigOptionFloats { 0. });
 
+    def = this->add("filament_spool_weight", coFloats);
+    def->label = L("Spool weight");
+    def->category = OptionCategory::filament;
+    def->tooltip = L("Enter weight of the empty filament spool. "
+                     "One may weigh a partially consumed filament spool before printing and one may compare the measured weight "
+                     "with the calculated weight of the filament with the spool to find out whether the amount "
+                     "of filament on the spool is sufficient to finish the print.");
+    def->sidetext = L("g");
+    def->min = 0;
+    def->set_default_value(new ConfigOptionFloats { 0. });
+
     def = this->add("filament_settings_id", coStrings);
     def->set_default_value(new ConfigOptionStrings { "" });
     def->cli = ConfigOptionDef::nocli;
@@ -1720,9 +1733,9 @@ void PrintConfigDef::init_fff_params()
     
     def = this->add("first_layer_temperature", coInts);
     def->label = L("First layer");
-    def->full_label = L("First layer extruder temperature");
+    def->full_label = L("First layer nozzle temperature");
     def->category = OptionCategory::filament;
-    def->tooltip = L("Extruder temperature for first layer. If you want to control temperature manually "
+    def->tooltip = L("Extruder nozzle temperature for first layer. If you want to control temperature manually "
                    "during print, set this to zero to disable temperature control commands in the output file.");
     def->sidetext = L("°C");
     def->min = 0;
@@ -1858,6 +1871,30 @@ void PrintConfigDef::init_fff_params()
     def->min = 1;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(1));
+
+    def = this->add("infill_anchor", coFloatOrPercent);
+    def->label = L("Length of the infill anchor");
+    def->category = OptionCategory::infill;
+    def->tooltip = L("Connect an infill line to an internal perimeter with a short segment of an additional perimeter. "
+                     "If expressed as percentage (example: 15%) it is calculated over infill extrusion width.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "infill_extrusion_width";
+    def->gui_type = "f_enum_open";
+    def->enum_values.push_back("0");
+    def->enum_values.push_back("1");
+    def->enum_values.push_back("2");
+    def->enum_values.push_back("5");
+    def->enum_values.push_back("10");
+    def->enum_values.push_back("1000");
+    def->enum_labels.push_back(L("0 (not anchored)"));
+    def->enum_labels.push_back("1 mm");
+    def->enum_labels.push_back("2 mm");
+    def->enum_labels.push_back("5 mm");
+    def->enum_labels.push_back("10 mm");
+    def->enum_labels.push_back(L("1000 (unlimited)"));
+    def->mode = comAdvanced;
+//    def->set_default_value(new ConfigOptionFloatOrPercent(300, true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(1000, false));
 
     def = this->add("infill_dense", coBool);
     def->label = ("");
@@ -2027,9 +2064,9 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(0.1));
 
     def = this->add("ironing_speed", coFloat);
-    def->label = L("Ironing speed");
+    def->label = L("Ironing");
     def->category = OptionCategory::ironing;
-    def->tooltip = L("Ironing speed");
+    def->tooltip = L("Ironing");
     def->sidetext = L("mm/s");
     def->min = 0;
     def->mode = comAdvanced;
@@ -2113,7 +2150,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("machine_limits_usage", coEnum);
-    def->label = L("How to apply");
+    def->label = L("How to apply limits");
     def->full_label = L("Purpose of Machine Limits");
     def->category = OptionCategory::limits;
     def->tooltip = L("How to apply the Machine Limits."
@@ -2127,10 +2164,10 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("time_estimate_only");
     def->enum_values.push_back("limits");
     def->enum_values.push_back("ignore");
-    def->enum_labels.push_back("Also emit limits to G-code");
-    def->enum_labels.push_back("Use also for time estimate");
-    def->enum_labels.push_back("Use only as safeguards");
-    def->enum_labels.push_back("Disable");
+    def->enum_labels.push_back(L("Also emit limits to G-code"));
+    def->enum_labels.push_back(L("Use also for time estimate"));
+    def->enum_labels.push_back(L("Use only as safeguards"));
+    def->enum_labels.push_back(L("Disable"));
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionEnum<MachineLimitsUsage>(MachineLimitsUsage::TimeEstimateOnly));
 
@@ -3525,11 +3562,10 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Other layers");
     def->full_label = L("Temperature");
     def->category = OptionCategory::filament;
-    def->tooltip = L("Extruder temperature for layers after the first one. Set this to zero to disable "
-                   "temperature control commands in the output.");
+    def->tooltip = L("Extruder nozzle temperature for layers after the first one. Set this to zero to disable "
+                   "temperature control commands in the output G-code.");
     def->sidetext = L("°C");
-    def->full_label = L("Extruder temperature");
-    def->sidetext = L("°C");
+    def->full_label = L("Nozzle temperature");
     def->min = 0;
     def->max = max_temp;
     def->set_default_value(new ConfigOptionInts { 200 });
@@ -5774,7 +5810,7 @@ CLIMiscConfigDef::CLIMiscConfigDef()
     def->cli = "output|o";
 
     def = this->add("single_instance", coBool);
-    def->label = L("Single Instance");
+    def->label = L("Single instance mode");
     def->tooltip = L("If enabled, the command line arguments are sent to an existing instance of GUI PrusaSlicer, "
                      "or an existing PrusaSlicer window is activated. "
                      "Overrides the \"single_instance\" configuration value from application preferences.");

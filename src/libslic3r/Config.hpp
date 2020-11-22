@@ -34,6 +34,7 @@ extern std::string  escape_strings_cstyle(const std::vector<std::string> &strs);
 extern bool         unescape_string_cstyle(const std::string &str, std::string &out);
 extern bool         unescape_strings_cstyle(const std::string &str, std::vector<std::string> &out);
 
+extern std::string  escape_ampersand(const std::string& str);
 
 enum OptionCategory : int
 {
