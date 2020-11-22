@@ -3685,15 +3685,17 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
                 if (evt.LeftDown() && m_moving_enabled && m_mouse.drag.move_volume_idx == -1) {
                     // Only accept the initial position, if it is inside the volume bounding box.
                     int volume_idx = get_first_hover_volume_idx();
-                    BoundingBoxf3 volume_bbox = m_volumes.volumes[volume_idx]->transformed_bounding_box();
-                    volume_bbox.offset(1.0);
-                    if ((!any_gizmo_active || !evt.CmdDown()) && volume_bbox.contains(m_mouse.scene_position)) {
-                        m_volumes.volumes[volume_idx]->hover = GLVolume::HS_None;
-                        // The dragging operation is initiated.
-                        m_mouse.drag.move_volume_idx = volume_idx;
-                        m_selection.start_dragging();
-                        m_mouse.drag.start_position_3D = m_mouse.scene_position;
-                        m_moving = true;
+                    if (m_volumes.volumes.size() > volume_idx) { //can fail if the screen takes a bit of time to refresh
+                        BoundingBoxf3 volume_bbox = m_volumes.volumes[volume_idx]->transformed_bounding_box();
+                        volume_bbox.offset(1.0);
+                        if ((!any_gizmo_active || !evt.CmdDown()) && volume_bbox.contains(m_mouse.scene_position)) {
+                            m_volumes.volumes[volume_idx]->hover = GLVolume::HS_None;
+                            // The dragging operation is initiated.
+                            m_mouse.drag.move_volume_idx = volume_idx;
+                            m_selection.start_dragging();
+                            m_mouse.drag.start_position_3D = m_mouse.scene_position;
+                            m_moving = true;
+                        }
                     }
                 }
             }
