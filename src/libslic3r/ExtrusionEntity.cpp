@@ -68,7 +68,8 @@ void ExtrusionPath::polygons_covered_by_spacing(Polygons &out, const float scale
 {
     // Instantiating the Flow class to get the line spacing.
     // Don't know the nozzle diameter, setting to zero. It shall not matter it shall be optimized out by the compiler.
-    Flow flow(this->width, this->height, 0.f, is_bridge(this->role()));
+    // if the spacing is negative, use the width instead. can happen on ironing second pass.
+    Flow flow(this->width, this->height, 0.f, (this->width*4 < this->height)?true:is_bridge(this->role()));
     polygons_append(out, offset(this->polyline, 0.5f * double(flow.scaled_spacing()) + scaled_epsilon));
 }
 

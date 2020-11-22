@@ -132,7 +132,8 @@ namespace Slic3r {
 
         // first infill
         FillParams first_pass_params = params;
-        first_pass_params.role = ExtrusionRole::erSolidInfill;
+        if(first_pass_params.role != ExtrusionRole::erSupportMaterial && first_pass_params.role != ExtrusionRole::erSupportMaterialInterface)
+            first_pass_params.role = ExtrusionRole::erSolidInfill;
         perform_single_fill(0, *eecroot, *surface, first_pass_params, volumeToOccupy);
 
         //use monotonic for ironing pass
