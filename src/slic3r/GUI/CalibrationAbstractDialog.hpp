@@ -49,7 +49,7 @@ protected:
 
 };
 
-class ProgressIndicatorStub : ProgressIndicator {
+class ProgressIndicatorStub : public ProgressIndicator {
 public:
 
     virtual ~ProgressIndicatorStub() override = default;

@@ -165,7 +165,7 @@ void init_print(std::vector<TriangleMesh> &&meshes, Slic3r::Print &print, Slic3r
 	for (const TriangleMesh &t : meshes) {
 		ModelObject *object = model.add_object();
 		object->name += "object.stl";
-		object->add_volume(std::move(t));
+		object->add_volume(t);
 		object->add_instance();
 	}
 
@@ -175,7 +175,7 @@ void init_print(std::vector<TriangleMesh> &&meshes, Slic3r::Print &print, Slic3r
     }
 
 	print.apply(model, config);
-    arrange_objects(&print, model, InfiniteBed{}, ArrangeParams{ scaled(print.config().min_object_distance()) });
+    arrange_objects(model, InfiniteBed{}, ArrangeParams{ scaled(print.config().min_object_distance()) });
     print.apply(model, config);
     print.validate();
     print.set_status_silent();
