@@ -951,7 +951,8 @@ static wxString get_string_value(std::string opt_key, const DynamicPrintConfig& 
             return get_string_from_enum<GCodeFlavor>(opt_key, config);
         if (opt_key == "host_type")
             return get_string_from_enum<PrintHostType>(opt_key, config);
-        if (opt_key == "infill_connection")
+        if (opt_key =="infill_connection" || opt_key =="infill_connection_solid"
+                || opt_key =="infill_connection_top" || opt_key =="infill_connection_bottom")
             return get_string_from_enum<InfillConnection>(opt_key, config);
         if (opt_key == "infill_dense_algo")
             return get_string_from_enum<DenseInfillAlgo>(opt_key, config);

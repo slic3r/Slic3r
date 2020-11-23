@@ -754,13 +754,17 @@ public:
     ConfigOptionFloatOrPercent      gap_fill_min_area;
     ConfigOptionPercent             gap_fill_overlap;
     ConfigOptionFloat               gap_fill_speed;
-    ConfigOptionFloatOrPercent      infill_anchor;    ConfigOptionBool                hole_to_polyhole;
+    ConfigOptionFloatOrPercent      infill_anchor;
+    ConfigOptionBool                hole_to_polyhole;
     ConfigOptionInt                 infill_extruder;
     ConfigOptionFloatOrPercent      infill_extrusion_width;
     ConfigOptionInt                 infill_every_layers;
     ConfigOptionFloatOrPercent      infill_overlap;
     ConfigOptionFloat               infill_speed;
     ConfigOptionEnum<InfillConnection> infill_connection;
+    ConfigOptionEnum<InfillConnection> infill_connection_solid;
+    ConfigOptionEnum<InfillConnection> infill_connection_top;
+    ConfigOptionEnum<InfillConnection> infill_connection_bottom;
     ConfigOptionBool                infill_dense;
     ConfigOptionEnum<DenseInfillAlgo> infill_dense_algo;
     ConfigOptionBool                infill_first;
@@ -859,7 +863,8 @@ protected:
         OPT_PTR(gap_fill_min_area);
         OPT_PTR(gap_fill_overlap);
         OPT_PTR(gap_fill_speed);
-        OPT_PTR(infill_anchor);        OPT_PTR(hole_to_polyhole);
+        OPT_PTR(infill_anchor);
+        OPT_PTR(hole_to_polyhole);
         OPT_PTR(infill_extruder);
         OPT_PTR(infill_extrusion_width);
         OPT_PTR(infill_every_layers);
@@ -867,6 +872,9 @@ protected:
         OPT_PTR(infill_speed);
         OPT_PTR(infill_dense);
         OPT_PTR(infill_connection);
+        OPT_PTR(infill_connection_solid);
+        OPT_PTR(infill_connection_top);
+        OPT_PTR(infill_connection_bottom);
         OPT_PTR(infill_dense_algo);
         OPT_PTR(infill_first);
         OPT_PTR(ironing);

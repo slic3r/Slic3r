@@ -783,6 +783,10 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "fill_smooth_distribution"
             || opt_key == "first_layer_extrusion_width"
             || opt_key == "infill_anchor"
+            || opt_key == "infill_connection"
+            || opt_key == "infill_connection_solid"
+            || opt_key == "infill_connection_top"
+            || opt_key == "infill_connection_bottom"
             || opt_key == "top_infill_extrusion_width") {
             steps.emplace_back(posInfill);
         } else if (

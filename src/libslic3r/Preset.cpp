@@ -559,7 +559,7 @@ const std::vector<std::string>& Preset::print_options()
         "perimeter_loop_seam",
         "seam_angle_cost",
         "seam_travel_cost",
-        "infill_connection",
+        "infill_connection", "infill_connection_solid", "infill_connection_top", "infill_connection_bottom",
         "first_layer_infill_speed",
         "thin_walls_min_width",
         "thin_walls_overlap",

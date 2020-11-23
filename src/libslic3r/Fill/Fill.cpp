@@ -115,16 +115,25 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                 params.pattern          = region_config.fill_pattern.value;
                 params.density          = float(region_config.fill_density) / 100.f;
                 params.dont_adjust      = false;
+                params.connection       = region_config.infill_connection.value;
 
                 if (surface.has_fill_solid()) {
                     params.density = 1.f;
                     params.pattern = ipRectilinear;
+                    params.connection = region_config.infill_connection_solid.value;
+                    if (surface.has_pos_top())
+                        params.connection = region_config.infill_connection_top.value;
+                    if (surface.has_pos_bottom())
+                        params.connection = region_config.infill_connection_bottom.value;
+                    if (is_bridge)
+                        params.connection = InfillConnection::icConnected;
                     if (surface.has_pos_external() && !is_bridge)
                         params.pattern = surface.has_pos_top() ? region_config.top_fill_pattern.value : region_config.bottom_fill_pattern.value;
                     else if (!is_bridge)
                         params.pattern = region_config.solid_fill_pattern.value;
                 } else {
-
+                    if (is_bridge)
+                        params.connection = InfillConnection::icConnected;
                     if (region_config.infill_dense.getBool()
                         && region_config.fill_density < 40
                         && surface.maxNbSolidLayersOnTop == 1) {
@@ -132,6 +141,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                         is_denser = true;
                         is_bridge = true;
                         params.pattern = ipRectiWithPerimeter;
+                        params.connection = InfillConnection::icConnected;
                     }
                     if (params.density <= 0)
                         continue;
@@ -156,7 +166,6 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                     }
                 }
                 params.fill_exactly = region_config.enforce_full_fill_volume.getBool();
-                params.connection = region_config.infill_connection.value;
                 params.bridge_angle = float(surface.bridge_angle);
                 if (is_denser) {
                     params.angle = 0;
@@ -186,7 +195,8 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                 if (surface.has_fill_solid() || is_bridge) {
                     params.spacing = params.flow.spacing();
                     // Don't limit anchor length for solid or bridging infill.
-                    params.anchor_length = 1000.f;
+                    // use old algo to prevent possible weird stuff from sparse bridging
+                    params.anchor_length = is_bridge?0:1000.f;
                 } else {
                     // it's internal infill, so we can calculate a generic flow spacing 
                     // for all layers, for avoiding the ugly effect of
@@ -204,8 +214,6 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                     params.anchor_length = float(region_config.infill_anchor);
                     if (region_config.infill_anchor.percent)
                         params.anchor_length *= 0.01 * params.spacing;
-                   // Don't limit anchor length for solid or bridging infill.
-                   //FIXEME: totest params.anchor_length = 1000.f;
                 }
 
                 auto it_params = set_surface_params.find(params);

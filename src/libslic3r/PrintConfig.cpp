@@ -1876,7 +1876,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Length of the infill anchor");
     def->category = OptionCategory::infill;
     def->tooltip = L("Connect an infill line to an internal perimeter with a short segment of an additional perimeter. "
-                     "If expressed as percentage (example: 15%) it is calculated over infill extrusion width.");
+        "If expressed as percentage (example: 15%) it is calculated over infill extrusion width."
+        "\nIf set to 0, it will use a simpler algo that don't try to create a fake perimeter.");
     def->sidetext = L("mm or %");
     def->ratio_over = "infill_extrusion_width";
     def->gui_type = "f_enum_open";
@@ -1886,15 +1887,15 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("5");
     def->enum_values.push_back("10");
     def->enum_values.push_back("1000");
-    def->enum_labels.push_back(L("0 (not anchored)"));
+    def->enum_labels.push_back(L("0 (Simple connect)"));
     def->enum_labels.push_back("1 mm");
     def->enum_labels.push_back("2 mm");
     def->enum_labels.push_back("5 mm");
     def->enum_labels.push_back("10 mm");
     def->enum_labels.push_back(L("1000 (unlimited)"));
     def->mode = comAdvanced;
-//    def->set_default_value(new ConfigOptionFloatOrPercent(300, true));
-    def->set_default_value(new ConfigOptionFloatOrPercent(1000, false));
+    //    def->set_default_value(new ConfigOptionFloatOrPercent(300, true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
     def = this->add("infill_dense", coBool);
     def->label = ("");
@@ -1906,6 +1907,60 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("infill_connection", coEnum);
+    def->label = L("Do not connect infill lines to each other");
+    def->category = OptionCategory::infill;
+    def->tooltip = L("Give to the infill algorithm if the infill needs to be connected, and on which periemters"
+        " Can be useful for art or with high infill/perimeter overlap."
+        " The result amy varies between infill typers.");
+    def->enum_keys_map = &ConfigOptionEnum<InfillConnection>::get_enum_values();
+    def->enum_values.push_back("connected");
+    def->enum_values.push_back("holes");
+    def->enum_values.push_back("outershell");
+    def->enum_values.push_back("notconnected");
+    def->enum_labels.push_back(L("Connected"));
+    def->enum_labels.push_back(L("Connected to hole perimeters"));
+    def->enum_labels.push_back(L("Connected to outer perimeters"));
+    def->enum_labels.push_back(L("Not connected"));
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionEnum<InfillConnection>(icConnected));
+
+    def = this->add("infill_connection_top", coEnum);
+    def->label = L("Do not connect infill lines to each other");
+    def->category = OptionCategory::infill;
+    def->tooltip = L("Give to the infill algorithm if the infill needs to be connected, and on which periemters"
+        " Can be useful for art or with high infill/perimeter overlap."
+        " The result amy varies between infill typers.");
+    def->enum_keys_map = &ConfigOptionEnum<InfillConnection>::get_enum_values();
+    def->enum_values.push_back("connected");
+    def->enum_values.push_back("holes");
+    def->enum_values.push_back("outershell");
+    def->enum_values.push_back("notconnected");
+    def->enum_labels.push_back(L("Connected"));
+    def->enum_labels.push_back(L("Connected to hole perimeters"));
+    def->enum_labels.push_back(L("Connected to outer perimeters"));
+    def->enum_labels.push_back(L("Not connected"));
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionEnum<InfillConnection>(icConnected));
+
+    def = this->add("infill_connection_bottom", coEnum);
+    def->label = L("Do not connect infill lines to each other");
+    def->category = OptionCategory::infill;
+    def->tooltip = L("Give to the infill algorithm if the infill needs to be connected, and on which periemters"
+        " Can be useful for art or with high infill/perimeter overlap."
+        " The result amy varies between infill typers.");
+    def->enum_keys_map = &ConfigOptionEnum<InfillConnection>::get_enum_values();
+    def->enum_values.push_back("connected");
+    def->enum_values.push_back("holes");
+    def->enum_values.push_back("outershell");
+    def->enum_values.push_back("notconnected");
+    def->enum_labels.push_back(L("Connected"));
+    def->enum_labels.push_back(L("Connected to hole perimeters"));
+    def->enum_labels.push_back(L("Connected to outer perimeters"));
+    def->enum_labels.push_back(L("Not connected"));
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionEnum<InfillConnection>(icConnected));
+
+    def = this->add("infill_connection_solid", coEnum);
     def->label = L("Do not connect infill lines to each other");
     def->category = OptionCategory::infill;
     def->tooltip = L("Give to the infill algorithm if the infill needs to be connected, and on which periemters"
@@ -3967,7 +4022,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("hole_size_compensation", coFloat);
-    def->label = L("Holes");
+    def->label = L("XY compensation");
     def->full_label = L("XY holes compensation");
     def->category = OptionCategory::slicing;
     def->tooltip = L("The convex holes will be grown / shrunk in the XY plane by the configured value"
@@ -3979,7 +4034,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("hole_size_threshold", coFloat);
-    def->label = L("Holes");
+    def->label = L("Threshold");
     def->full_label = L("XY holes threshold");
     def->category = OptionCategory::slicing;
     def->tooltip = L("Maximum area for the hole where the hole_size_compensation will apply fully."

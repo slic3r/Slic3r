@@ -1050,7 +1050,8 @@ void Choice::set_value(const boost::any& value, bool change_event)
             val = idx_from_enum_value<GCodeFlavor>(val);
         else if (m_opt_id.compare("host_type") == 0)
             val = idx_from_enum_value<PrintHostType>(val);
-        else if (m_opt_id.compare("infill_connection") == 0)
+        else if (m_opt_id =="infill_connection" || m_opt_id =="infill_connection_solid"
+                || m_opt_id =="infill_connection_top" || m_opt_id =="infill_connection_bottom")
             val = idx_from_enum_value<InfillConnection>(val);
         else if (m_opt_id.compare("infill_dense_algo") == 0)
             val = idx_from_enum_value<DenseInfillAlgo>(val);
@@ -1164,7 +1165,8 @@ boost::any& Choice::get_value()
             convert_to_enum_value<GCodeFlavor>(ret_enum);
         else if (m_opt_id.compare("host_type") == 0)
             convert_to_enum_value<PrintHostType>(ret_enum);
-        else if (m_opt_id.compare("infill_connection") == 0)
+        else if (m_opt_id =="infill_connection" || m_opt_id =="infill_connection_solid"
+                || m_opt_id =="infill_connection_top" || m_opt_id =="infill_connection_bottom")
             convert_to_enum_value<InfillConnection>(ret_enum);
         else if (m_opt_id.compare("infill_dense_algo") == 0)
             convert_to_enum_value<DenseInfillAlgo>(ret_enum);

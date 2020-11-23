@@ -944,7 +944,8 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 			ret = static_cast<int>(config.option<ConfigOptionEnum<GCodeFlavor>>(opt_key)->value);
         } else if (opt_key == "host_type") {
             ret = static_cast<int>(config.option<ConfigOptionEnum<PrintHostType>>(opt_key)->value);
-        } else if (opt_key == "infill_connection") {
+        } else if (opt_key =="infill_connection" || opt_key =="infill_connection_solid"
+                || opt_key =="infill_connection_top" || opt_key =="infill_connection_bottom") {
             ret = static_cast<int>(config.option<ConfigOptionEnum<InfillConnection>>(opt_key)->value);
         } else if (opt_key == "infill_dense_algo") {
             ret = static_cast<int>(config.option<ConfigOptionEnum<DenseInfillAlgo>>(opt_key)->value);

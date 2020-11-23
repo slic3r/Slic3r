@@ -41,12 +41,12 @@ group:Quality
 	end_line
 group:label_width$12:Overhangs
 	line:threshold for
-		setting:label$Bridge speed and fan:width$5:overhangs_width_speed
-		setting:label$Bridge flow:width$5:overhangs_width
+		setting:label$Bridge speed and fan:width$5:sidetext_width$0:overhangs_width_speed
+		setting:label_width$12:label$Bridge flow:width$5:overhangs_width
 	end_line
 	line:Extrusion direction
-		setting:sidetext_width$1:overhangs_reverse
-		setting:width$5:overhangs_reverse_threshold
+		setting:sidetext_width$2:overhangs_reverse
+		setting:label_width$12:width$5:overhangs_reverse_threshold
 	end_line
 group:Advanced
 	setting:width$25:no_perimeter_unsupported_algo
@@ -55,13 +55,13 @@ group:Advanced
 		setting:width$5:gap_fill_min_area
 	end_line
 	line:Seam
-		setting:sidetext_width$2:seam_position
-		setting:label_width$10:width$3:sidetext_width$2:seam_angle_cost
-		setting:label_width$10:width$3:sidetext_width$2:seam_travel_cost
+		setting:label_width$12:sidetext_width$0:seam_position
+		setting:width$3:sidetext_width$0:seam_angle_cost
+		setting:width$3:sidetext_width$0:seam_travel_cost
 	end_line
 	line:One-loop perimeters
-		setting:perimeter_loop
-		setting:perimeter_loop_seam
+		setting:sidetext_width$0:perimeter_loop
+		setting:label_width$5:label$Seam:perimeter_loop_seam
 	end_line
 group: External perimeter first
 	setting:label$Activate:external_perimeters_first
@@ -102,28 +102,31 @@ group:Other
 	setting:allow_empty_layers
 
 page:Infill:infill
-group:Infill
-	line:Fill density
-		setting:label_width$5:label$_:fill_density
-		setting:width$19:label$_:infill_connection
-		setting:infill_anchor
+group:title_width$8:Infill
+	line:Sparse
+		setting:width$5:label$_:sidetext_width$1:fill_density
+		setting:label_width$1:label$_:fill_pattern
+		setting:label$_:width$18:infill_connection
+		setting:sidetext_width$7:infill_anchor
 	end_line
-	line:Pattern
-		setting:label_width$5:label$_:fill_pattern
+	line:Solid
+		setting:label_width$11:label$_:solid_fill_pattern
+		setting:label$_:width$18:infill_connection_solid
 	end_line
-	line:External patterns
-		setting:label_width$5:top_fill_pattern
-		setting:label_width$5:bottom_fill_pattern
+	line:Top
+		setting:label_width$11:label$_:top_fill_pattern
+		setting:label$_:width$18:infill_connection_top
 	end_line
-	line:Solid pattern
-		setting:label_width$5:label$_:solid_fill_pattern
+	line:Bottom
+		setting:label_width$11:label$_:bottom_fill_pattern
+		setting:label$_:width$18:infill_connection_bottom
 	end_line
 group:Reducing printing time
 	setting:infill_every_layers
 	setting:infill_only_where_needed
 	line:Supporting dense layer
 		setting:sidetext_width$0:infill_dense
-		setting:infill_dense_algo
+		setting:width$20:infill_dense_algo
 	end_line
 group:sidetext_width$3:Advanced
 	setting:solid_infill_every_layers
@@ -144,13 +147,13 @@ group:Advanced Infill options
 		setting:label_width$8:width$5:fill_smooth_distribution
 		setting:label_width$26:label$Spacing between ironing lines:width$5:sidetext_width$7:fill_smooth_width
 	end_line
-group:Ironing post-process (This will go on top of infills and perimeters)
+group:title_width$19:Ironing post-process (This will go on top of infills and perimeters)
 	line:Enable ironing post-process
 		setting:label$_:sidetext_width$0:ironing
 		setting:label$On:ironing_type
 	end_line
 	line:Tuning ironing
-		setting:label_width$8:width$5:ironing_flowrate
+		setting:label_width$9:width$5:ironing_flowrate
 		setting:label_width$26:width$5:ironing_spacing
 	end_line
 
@@ -183,7 +186,7 @@ group:Raft
 	setting:raft_layers
 group:Options for support material and raft
 	line:Z-offset
-		setting:width$12:support_material_contact_distance_type
+		setting:width$11:support_material_contact_distance_type
 		setting:width$6:support_material_contact_distance_top
 		setting:width$6:support_material_contact_distance_bottom
 	end_line

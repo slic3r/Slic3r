@@ -2889,7 +2889,8 @@ bool FillRectilinear::fill_surface_by_multilines(const Surface* surface, FillPar
             fill_lines = chain_polylines(std::move(fill_lines));
         append(polylines_out, std::move(fill_lines));
     } else
-        connect_infill(std::move(fill_lines), poly_with_offset_base.polygons_outer, get_extents(surface->expolygon.contour), polylines_out, this->get_spacing(), params);
+        //connect_infill(std::move(fill_lines), poly_with_offset_base.polygons_outer, get_extents(surface->expolygon.contour), polylines_out, this->get_spacing(), params);
+        connect_infill(std::move(fill_lines), surface->expolygon, poly_with_offset_base.polygons_outer, polylines_out, this->get_spacing(), params);
 
     return true;
 }
