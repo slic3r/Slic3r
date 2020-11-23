@@ -1,7 +1,8 @@
 #include "BoundingBox.hpp"
 #include "ExPolygon.hpp"
 
-#include "Exception.hpp"#include "MedialAxis.hpp"
+#include "Exception.hpp"
+#include "MedialAxis.hpp"
 #include "Geometry.hpp"
 #include "Polygon.hpp"
 #include "Line.hpp"

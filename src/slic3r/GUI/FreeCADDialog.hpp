@@ -7,6 +7,7 @@
 
 #include "GUI_App.hpp"
 
+#include <wx/combobox.h>
 #include <wx/gbsizer.h>
 #include <wx/stc/stc.h>
 

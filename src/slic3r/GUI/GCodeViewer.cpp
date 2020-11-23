@@ -20,8 +20,12 @@
 #include <imgui/imgui_internal.h>
 
 #include <GL/glew.h>
+#include <boost/locale/generator.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/nowide/cstdio.hpp>
+#include <boost/nowide/fstream.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
 #include <wx/progdlg.h>
 #include <wx/numformatter.h>
 

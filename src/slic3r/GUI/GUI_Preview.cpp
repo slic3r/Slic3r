@@ -216,7 +216,7 @@ bool Preview::init(wxWindow* parent, Model* model)
 #ifdef _WIN32 
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
 #else
-    SetBackgroundColour(Get*Parent()->GetBackgroundColour());
+    SetBackgroundColour(GetParent()->GetBackgroundColour());
 #endif // _WIN32 
 
     //get display size to see if we have to compress the labels
