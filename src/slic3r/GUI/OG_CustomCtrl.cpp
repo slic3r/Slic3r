@@ -150,6 +150,9 @@ wxPoint OG_CustomCtrl::get_pos(const Line& line, Field* field_in/* = nullptr*/)
                 break;
             }
 
+            //round it to next m_em_unit
+            h_pos += (h_pos % m_em_unit == 0) ? 0 : m_em_unit - (h_pos % m_em_unit);
+
             // If we have a single option with no sidetext
             const std::vector<Option>& option_set = line.get_options();
             if (option_set.size() == 1 && option_set.front().opt.sidetext.size() == 0 &&
@@ -180,7 +183,7 @@ wxPoint OG_CustomCtrl::get_pos(const Line& line, Field* field_in/* = nullptr*/)
                     if (!no_dots)
                         label += ":";
 
-                    if (!label.empty()) {
+                    if (!label.empty() || option.label_width > 0) {
                         wxCoord label_w, label_h;
 #ifdef __WXMSW__
                         // when we use 2 monitors with different DPIs, GetTextExtent() return value for the primary display
@@ -221,7 +224,12 @@ wxPoint OG_CustomCtrl::get_pos(const Line& line, Field* field_in/* = nullptr*/)
 #endif //__WXMSW__
                         h_pos += m_h_gap;
                     }
-                }                
+                }
+
+                //round it to next m_em_unit
+                h_pos += (h_pos % m_em_unit == 0) ? 0 : m_em_unit - (h_pos % m_em_unit);
+
+                // size of little widget before the real one
                 h_pos += 2 * blinking_button_width;
                 
                 if (field == field_in)
@@ -236,7 +244,7 @@ wxPoint OG_CustomCtrl::get_pos(const Line& line, Field* field_in/* = nullptr*/)
                         }
                     }
                 } else
-                    h_pos += field->getWindow()->GetSize().x;
+                    h_pos += field->getWindow()->GetSize().x + m_h_gap;
 
                 if (option_set.size() == 1 && option_set.front().opt.full_width)
                     break;
@@ -557,6 +565,9 @@ void OG_CustomCtrl::CtrlLine::render(wxDC& dc, wxCoord v_pos)
         return;
     }
 
+    //round it to next m_em_unit
+    h_pos += (h_pos % ctrl->m_em_unit == 0) ? 0 : ctrl->m_em_unit - (h_pos % ctrl->m_em_unit);
+
     // If we're here, we have more than one option or a single option with sidetext
     // so we need a horizontal sizer to arrange these things
 
@@ -589,7 +600,7 @@ void OG_CustomCtrl::CtrlLine::render(wxDC& dc, wxCoord v_pos)
             bool no_dots = label.empty() || option.label.back() == '_';
             if (!no_dots)
                 label += ":";
-            if (!label.empty()) {
+            if (!label.empty() || option.label_width > 0) {
                 int width = ctrl->opt_group->sublabel_width * ctrl->m_em_unit;
                 if (option.label_width >= 0) {
                     if (option.label_width != 0) {
@@ -608,6 +619,9 @@ void OG_CustomCtrl::CtrlLine::render(wxDC& dc, wxCoord v_pos)
                 h_pos = draw_text(dc, wxPoint(h_pos, v_pos), label, field ? field->label_color() : nullptr, width, is_url_string, true);
             }
         }
+
+        //round it to next m_em_unit
+        h_pos += (h_pos % ctrl->m_em_unit == 0 ) ? 0 : ctrl->m_em_unit - (h_pos % ctrl->m_em_unit);
 
         if (field && field->undo_to_sys_bitmap()) {
             h_pos = draw_act_bmps(dc, wxPoint(h_pos, v_pos), field->undo_to_sys_bitmap()->bmp(), field->undo_bitmap()->bmp(), field->blink(), bmp_rect_id++);

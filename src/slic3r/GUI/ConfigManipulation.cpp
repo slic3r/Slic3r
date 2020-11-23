@@ -372,6 +372,9 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     for (auto el : { "thin_walls_min_width", "thin_walls_overlap" })
         toggle_field(el, config->opt_bool("thin_walls"));
 
+    for (auto el : { "seam_angle_cost", "seam_travel_cost" })
+        toggle_field(el, config->option<ConfigOptionEnum<SeamPosition>>("seam_position")->value == SeamPosition::spNearest);
+
     toggle_field("perimeter_loop_seam", config->opt_bool("perimeter_loop"));
 
     toggle_field("gap_fill_min_area", config->opt_bool("gap_fill"));

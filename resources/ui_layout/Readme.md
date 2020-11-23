@@ -25,7 +25,7 @@ each parameter is separated by ':'
 * Page: 
 	page[:idx]:STR:STR
 	* first STR is for the label and the second for the icon, with or without the .svg / .png
-	* idx : append the index of the page (for extruder ui) to the name
+	* idx: append the index of the page (for extruder ui) to the name
 * Group: 
 	group[:nolabel][:title_width$INT][:label_width$INT][:sidetext_width$INT][:EVENT][:id$INT][:idx]:STR
 	* EVENT can be extruders_count_event if the group contains extruders_count and is a printer tab ; silent_mode_event if the group contains silent_mode and is a printer tab ; material_density_event if the group contains material_density.
@@ -35,21 +35,22 @@ each parameter is separated by ':'
 	* EVENT can be extruders_count_event (TabPrinter only), silent_mode_event (TabPrinter only), material_density_event.
 	* nolabel is used to remove the left column, where labels are draw.
 * Line:
-	line:STR
+	line:STR*
 * setting:
 	setting[label$STR][label_width$INT][:full_label][:full_width][:sidetext$STR][sidetext_width$INT][:simple|advanced|expert][:width$INT][:height$INT][:id$INT]:STR
 	* STR, the last parameter: the id name of the setting.
-	* label$STR : to override the label by this new one (if it ends with '_' it won't have a ':' ; if empty it won't have a length).
-	* label_width$INT: change the width of the label. Only works if it's in a line. Override the group one. 0 for auto.
+	* label$STR: to override the label by this new one (if it ends with '_' it won't have a ':' ; if empty it won't have a length).
+	* label_width$INT: change the width of the label. Only works if it's in a line. Override the group one. -1 for auto.
 	* full_label: to override the label by the "full one".
 	* full_width: to tell to create a field that span the full width.
 	* sidetext$STR: the suffix at the right of the widget (like 'mm').
-	* sidetext_width$INT: the suffix label length (override the group one). -& for auto.
+	* sidetext_width$INT: the suffix label length (override the group one). -1 for auto.
 	* simple|advanced|expert: add one of these to modify the mode in which this setting appear.
 	* width$INT: change the width of the field. Shouod work on most type of settings.
 	* height$INT: change the height of the field. Don't works with every type of setting.
-	* id $INT : for setting only a single value of a setting array.
-	* idx : for setting only a single value of a setting array, with the index of the page (for extruder ui page)
+	* url$STR: the url to call when clicking on it.
+	* id $INT: for setting only a single value of a setting array.
+	* idx: for setting only a single value of a setting array, with the index of the page (for extruder ui page)
 * recommended_thin_wall_thickness_description: create a text widget to explain recommended thin wall thickness (only in a fff print tab).
 * parent_preset_description: create a text widget to explain parent preset.
 * cooling_description: create a text widget to explain cooling (only in a filament tab).

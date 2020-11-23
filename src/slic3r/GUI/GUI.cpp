@@ -191,7 +191,8 @@ void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt
 				config.set_key_value(opt_key, new ConfigOptionEnum<GCodeFlavor>(boost::any_cast<GCodeFlavor>(value)));
 			else if (opt_key.compare("host_type") == 0)
 				config.set_key_value(opt_key, new ConfigOptionEnum<PrintHostType>(boost::any_cast<PrintHostType>(value)));
-			else if (opt_key.compare("infill_connection") == 0)
+			else if (opt_key =="infill_connection" || opt_key =="infill_connection_solid"
+					|| opt_key =="infill_connection_top" || opt_key =="infill_connection_bottom")
 				config.set_key_value(opt_key, new ConfigOptionEnum<InfillConnection>(boost::any_cast<InfillConnection>(value)));
 			else if (opt_key.compare("infill_dense_algo") == 0)
 				config.set_key_value(opt_key, new ConfigOptionEnum<DenseInfillAlgo>(boost::any_cast<DenseInfillAlgo>(value)));

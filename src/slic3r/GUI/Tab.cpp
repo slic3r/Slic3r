@@ -1698,6 +1698,10 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             }
 
             Option option = current_group->get_option(setting_id, id);
+            if (current_group->label_width >= 0)
+                option.opt.label_width = current_group->label_width;
+            if (current_group->sidetext_width >= 0)
+                option.opt.sidetext_width = current_group->sidetext_width;
 
             bool colored = false;
             wxString label_path;
