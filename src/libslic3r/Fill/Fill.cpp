@@ -437,7 +437,7 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
         }
 
         //apply bridge_overlap if needed
-        if (surface_fill.params.flow.bridge && surface_fill.params.density > 99 && layerm->region()->config().bridge_overlap.get_abs_value(1) != 1) {
+        if (surface_fill.params.flow.bridge && surface_fill.params.density > 0.99 && layerm->region()->config().bridge_overlap.get_abs_value(1) != 1) {
             surface_fill.params.density *= float(layerm->region()->config().bridge_overlap.get_abs_value(1));
         }
 
