@@ -1380,7 +1380,7 @@ void ObjectList::get_settings_choice(const wxString& category_name)
             int sel = 0;
             //sort per label, because there isn't a better one.
             std::sort(cat2idname.second.begin(), cat2idname.second.end(), 
-                [](const std::pair< std::string, std::string> &e1, const std::pair< std::string, std::string> &e2)->bool {return e1.second<e2.second; });
+                [](const std::pair< std::string, std::string> &e1, const std::pair< std::string, std::string> &e2)->bool {return _L(e1.second)< _L(e2.second); });
             for (auto& pair_strid_strname : cat2idname.second) {
                 names.Add(_(pair_strid_strname.second));
                 if (find(opt_keys.begin(), opt_keys.end(), pair_strid_strname.first) != opt_keys.end())
@@ -1395,7 +1395,7 @@ void ObjectList::get_settings_choice(const wxString& category_name)
     if (!settings_list)
         return;
 
-    if (wxGetSelectedChoices(selections, _(L("Select showing settings")), category_name, names) == -1)
+    if (wxGetSelectedChoices(selections, _L("Select showing settings"), category_name, names) == -1)
         return;
 
     const int selection_cnt = selections.size();

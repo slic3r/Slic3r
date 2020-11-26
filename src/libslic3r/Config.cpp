@@ -30,6 +30,7 @@ std::string toString(OptionCategory opt) {
     case perimeter: return "Perimeters & Shell";
     case slicing: return "Slicing";
     case infill: return "Infill";
+    case ironing: return "Ironing PP";
     case skirtBrim: return "Skirt & Brim";
     case support: return "Support material";
     case width: return "Width & Flow";

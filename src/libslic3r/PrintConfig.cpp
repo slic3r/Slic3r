@@ -686,7 +686,6 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("rectilinear");
     def->enum_values.push_back("rectilineargapfill");
     def->enum_values.push_back("monotonic");
-    def->enum_values.push_back("alignedrectilinear");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("concentricgapfill");
     def->enum_values.push_back("hilbertcurve");
@@ -699,7 +698,6 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Rectilinear"));
     def->enum_labels.push_back(L("Monotonic (filled)"));
     def->enum_labels.push_back(L("Monotonic"));
-    def->enum_labels.push_back(L("Aligned Rectilinear"));
     def->enum_labels.push_back(L("Concentric"));
     def->enum_labels.push_back(L("Concentric (filled)"));
     def->enum_labels.push_back(L("Hilbert Curve"));
@@ -1907,11 +1905,11 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("infill_connection", coEnum);
-    def->label = L("Do not connect infill lines to each other");
+    def->label = L("Connection of sparse infill lines");
     def->category = OptionCategory::infill;
     def->tooltip = L("Give to the infill algorithm if the infill needs to be connected, and on which periemters"
         " Can be useful for art or with high infill/perimeter overlap."
-        " The result amy varies between infill typers.");
+        " The result may varies between infill typers.");
     def->enum_keys_map = &ConfigOptionEnum<InfillConnection>::get_enum_values();
     def->enum_values.push_back("connected");
     def->enum_values.push_back("holes");
@@ -1925,11 +1923,11 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionEnum<InfillConnection>(icConnected));
 
     def = this->add("infill_connection_top", coEnum);
-    def->label = L("Do not connect infill lines to each other");
+    def->label = L("Connection of top infill lines");
     def->category = OptionCategory::infill;
     def->tooltip = L("Give to the infill algorithm if the infill needs to be connected, and on which periemters"
         " Can be useful for art or with high infill/perimeter overlap."
-        " The result amy varies between infill typers.");
+        " The result may varies between infill typers.");
     def->enum_keys_map = &ConfigOptionEnum<InfillConnection>::get_enum_values();
     def->enum_values.push_back("connected");
     def->enum_values.push_back("holes");
@@ -1943,11 +1941,11 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionEnum<InfillConnection>(icConnected));
 
     def = this->add("infill_connection_bottom", coEnum);
-    def->label = L("Do not connect infill lines to each other");
+    def->label = L("Connection of bottom infill lines");
     def->category = OptionCategory::infill;
     def->tooltip = L("Give to the infill algorithm if the infill needs to be connected, and on which periemters"
         " Can be useful for art or with high infill/perimeter overlap."
-        " The result amy varies between infill typers.");
+        " The result may varies between infill typers.");
     def->enum_keys_map = &ConfigOptionEnum<InfillConnection>::get_enum_values();
     def->enum_values.push_back("connected");
     def->enum_values.push_back("holes");
@@ -1961,11 +1959,11 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionEnum<InfillConnection>(icConnected));
 
     def = this->add("infill_connection_solid", coEnum);
-    def->label = L("Do not connect infill lines to each other");
+    def->label = L("Connection of solid infill lines");
     def->category = OptionCategory::infill;
     def->tooltip = L("Give to the infill algorithm if the infill needs to be connected, and on which periemters"
         " Can be useful for art or with high infill/perimeter overlap."
-        " The result amy varies between infill typers.");
+        " The result may varies between infill typers.");
     def->enum_keys_map = &ConfigOptionEnum<InfillConnection>::get_enum_values();
     def->enum_values.push_back("connected");
     def->enum_values.push_back("holes");
