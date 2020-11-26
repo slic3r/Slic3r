@@ -106,24 +106,7 @@ namespace Slic3r {
         coordf_t init_spacing = this->get_spacing();
 
         // compute the volume to extrude
-        double volumeToOccupy = 0;
-        for (auto poly = this->no_overlap_expolygons.begin(); poly != this->no_overlap_expolygons.end(); ++poly) {
-            // add external "perimeter gap"
-            double poylineVolume = params.flow.height*unscaled(unscaled(poly->area()));
-            double perimeterRoundGap = unscaled(poly->contour.length()) * params.flow.height * (1 - 0.25*PI) * 0.5;
-            // add holes "perimeter gaps"
-            double holesGaps = 0;
-            for (auto hole = poly->holes.begin(); hole != poly->holes.end(); ++hole) {
-                holesGaps += unscaled(hole->length()) * params.flow.height * (1 - 0.25*PI) * 0.5;
-            }
-            poylineVolume += perimeterRoundGap + holesGaps;
-
-            //extruded volume: see http://manual.slic3r.org/advanced/flow-math, and we need to remove a circle at an end (as the flow continue)
-            volumeToOccupy += poylineVolume;
-        }
-        if (this->no_overlap_expolygons.empty()) {
-            volumeToOccupy = unscaled(unscaled(surface->area())) * params.flow.height;
-        }
+        double volume_to_occupy = compute_unscaled_volume_to_fill(surface, params);
 
         //create root node
         ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
@@ -134,7 +117,7 @@ namespace Slic3r {
         FillParams first_pass_params = params;
         if(first_pass_params.role != ExtrusionRole::erSupportMaterial && first_pass_params.role != ExtrusionRole::erSupportMaterialInterface)
             first_pass_params.role = ExtrusionRole::erSolidInfill;
-        perform_single_fill(0, *eecroot, *surface, first_pass_params, volumeToOccupy);
+        perform_single_fill(0, *eecroot, *surface, first_pass_params, volume_to_occupy);
 
         //use monotonic for ironing pass
         FillParams monotonic_params = params;
@@ -142,12 +125,12 @@ namespace Slic3r {
 
         //second infill
         if (nbPass > 1){
-            perform_single_fill(1, *eecroot, *surface, monotonic_params, volumeToOccupy);
+            perform_single_fill(1, *eecroot, *surface, monotonic_params, volume_to_occupy);
         }
 
         // third infill
         if (nbPass > 2){
-            perform_single_fill(2, *eecroot, *surface, monotonic_params, volumeToOccupy);
+            perform_single_fill(2, *eecroot, *surface, monotonic_params, volume_to_occupy);
         }
         
         if (!eecroot->entities.empty()) 

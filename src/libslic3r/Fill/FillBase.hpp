@@ -156,7 +156,9 @@ protected:
 
     virtual std::pair<float, Point> _infill_direction(const Surface *surface) const;
 
-    void do_gap_fill(const ExPolygons &gapfill_areas, const FillParams &params, ExtrusionEntitiesPtr &coll_out) const;
+    void do_gap_fill(const ExPolygons& gapfill_areas, const FillParams& params, ExtrusionEntitiesPtr& coll_out) const;
+
+    double compute_unscaled_volume_to_fill(const Surface* surface, const FillParams& params) const;
 
     ExtrusionRole getRoleFromSurfaceType(const FillParams &params, const Surface *surface) const {
         if (params.role == erNone || params.role == erCustom) {

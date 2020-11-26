@@ -3287,19 +3287,7 @@ FillRectilinearWGapFill::fill_surface_extrusion(const Surface *surface, const Fi
             }
             double extrudedVolume = params.flow.mm3_per_mm() * lengthTot;
             // compute real volume
-            double poylineVolume = 0;
-            ExPolygons rectilinear_no_overlap_areas = intersection_ex(rectilinear_areas, this->no_overlap_expolygons);
-            for (const ExPolygon &poly : rectilinear_no_overlap_areas) {
-                poylineVolume += params.flow.height*unscaled(unscaled(poly.area()));
-                // add external "perimeter gap"
-                double perimeterRoundGap = unscaled(poly.contour.length()) * params.flow.height * (1 - 0.25*PI) * 0.5;
-                // add holes "perimeter gaps"
-                double holesGaps = 0;
-                for (auto hole = poly.holes.begin(); hole != poly.holes.end(); ++hole) {
-                    holesGaps += unscaled(hole->length()) * params.flow.height * (1 - 0.25*PI) * 0.5;
-                }
-                poylineVolume += perimeterRoundGap + holesGaps;
-            }
+            double poylineVolume = compute_unscaled_volume_to_fill(surface, params);
             //printf("process want %f mm3 extruded for a volume of %f space : we mult by %f %i\n",
             //    extrudedVolume,
             //    (poylineVolume),

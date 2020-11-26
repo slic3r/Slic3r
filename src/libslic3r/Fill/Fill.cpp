@@ -549,6 +549,7 @@ void Layer::make_ironing()
         // speed: 20 mm/sec
     };
 
+    std::unordered_map<ExtrusionEntityCollection*, ExtrusionEntityCollection*> fill_2_ironing_coll;
     std::vector<IroningParams> by_extruder;
     bool   extruder_dont_care   = this->object()->config().wipe_into_objects;
     double default_layer_height = this->object()->config().layer_height;
@@ -631,9 +632,33 @@ void Layer::make_ironing()
             } catch (InfillFailedException &) {
             }
             if (! polylines.empty()) {
+                //always extrude ironing after infill
+                ExtrusionEntityCollection* eec_ironing;
+                if (fill_2_ironing_coll.find(&ironing_params.layerm->fills) == fill_2_ironing_coll.end()) {
+                    if (ironing_params.layerm->fills.empty()) {
+                        eec_ironing = &ironing_params.layerm->fills;
+                        fill_2_ironing_coll[&ironing_params.layerm->fills] = eec_ironing;
+                    } else {
+                        //create the "normal fill" collection
+                        ExtrusionEntityCollection* eec_before_layer_ironing = new ExtrusionEntityCollection(ironing_params.layerm->fills);
+                        eec_before_layer_ironing->no_sort = ironing_params.layerm->fills.no_sort;
+                        //create the "ironing fill" collection
+                        eec_ironing = new ExtrusionEntityCollection();
+                        eec_ironing->no_sort = false;
+                        fill_2_ironing_coll[&ironing_params.layerm->fills] = eec_ironing;
+                        //add them as fills in the right order (and we need an other ExtrusionEntityCollection, as the no_sort of fills isn't read anywhere)
+                        ExtrusionEntityCollection* eec_root = new ExtrusionEntityCollection();
+                        ironing_params.layerm->fills.clear();
+                        ironing_params.layerm->fills.entities.push_back(eec_root);
+                        eec_root->entities.push_back(eec_before_layer_ironing);
+                        eec_root->entities.push_back(eec_ironing);
+                        eec_root->no_sort = true;
+                    }
+                } else
+                    eec_ironing = fill_2_ironing_coll[&ironing_params.layerm->fills];
                 // Save into layer.
-                ExtrusionEntityCollection *eec = nullptr;
-                ironing_params.layerm->fills.entities.push_back(eec = new ExtrusionEntityCollection());
+                ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
+                eec_ironing->entities.push_back(eec);
                 // Don't sort the ironing infill lines as they are monotonicly ordered.
                 eec->no_sort = true;
                 extrusion_entities_append_paths(

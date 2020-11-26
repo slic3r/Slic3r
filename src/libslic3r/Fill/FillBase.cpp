@@ -147,6 +147,26 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
     return std::pair<float, Point>(out_angle, out_shift);
 }
 
+double Fill::compute_unscaled_volume_to_fill(const Surface* surface, const FillParams& params) const {
+    double polyline_volume = 0;
+    for (auto poly = this->no_overlap_expolygons.begin(); poly != this->no_overlap_expolygons.end(); ++poly) {
+        polyline_volume += params.flow.height * unscaled(unscaled(poly->area()));
+        double perimeter_gap_usage = params.config->perimeter_overlap.get_abs_value(1);
+        // add external "perimeter gap"
+        double perimeter_round_gap = unscaled(poly->contour.length()) * params.flow.height * (1 - 0.25 * PI) * 0.5;
+        // add holes "perimeter gaps"
+        double holes_gaps = 0;
+        for (auto hole = poly->holes.begin(); hole != poly->holes.end(); ++hole) {
+            holes_gaps += unscaled(hole->length()) * params.flow.height * (1 - 0.25 * PI) * 0.5;
+        }
+        polyline_volume += (perimeter_round_gap + holes_gaps) * perimeter_gap_usage;
+    }
+    if (this->no_overlap_expolygons.empty()) {
+        polyline_volume = unscaled(unscaled(surface->area())) * params.flow.height;
+    }
+    return polyline_volume;
+}
+
 void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const {
     //add overlap & call fill_surface
     Polylines polylines;
@@ -158,33 +178,28 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
         return;
 
     // ensure it doesn't over or under-extrude
-    double multFlow = 1;
+    double mult_flow = 1;
     if (!params.dont_adjust && params.full_infill() && !params.flow.bridge && params.fill_exactly){
         // compute the path of the nozzle -> extruded volume
-        double lengthTot = 0;
-        int nbLines = 0;
+        double length_tot = 0;
         for (auto pline = polylines.begin(); pline != polylines.end(); ++pline){
             Lines lines = pline->lines();
             for (auto line = lines.begin(); line != lines.end(); ++line){
-                lengthTot += unscaled(line->length());
-                nbLines++;
+                length_tot += unscaled(line->length());
             }
         }
-        double extrudedVolume = params.flow.mm3_per_mm() * lengthTot;
+        double extruded_volume = params.flow.mm3_per_mm() * length_tot;
         // compute real volume
-        double poylineVolume = 0;
-        for (auto poly = this->no_overlap_expolygons.begin(); poly != this->no_overlap_expolygons.end(); ++poly) {
-            poylineVolume += params.flow.height*unscaled(unscaled(poly->area()));
-        }
+        double polyline_volume = compute_unscaled_volume_to_fill(surface, params);
         //printf("process want %f mm3 extruded for a volume of %f space : we mult by %f %i\n",
         //    extrudedVolume,
         //    (poylineVolume),
         //    (poylineVolume) / extrudedVolume,
         //    this->no_overlap_expolygons.size());
-        if (extrudedVolume != 0 && poylineVolume != 0) multFlow = poylineVolume / extrudedVolume;
+        if (extruded_volume != 0 && polyline_volume != 0) mult_flow = polyline_volume / extruded_volume;
         //failsafe, it can happen
-        if (multFlow > 1.3) multFlow = 1.3;
-        if (multFlow < 0.8) multFlow = 0.8;
+        if (mult_flow > 1.3) mult_flow = 1.3;
+        if (mult_flow < 0.8) mult_flow = 0.8;
     }
 
     // Save into layer.
@@ -199,8 +214,8 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
     extrusion_entities_append_paths(
         eec->entities, std::move(polylines),
         good_role,
-        params.flow.mm3_per_mm() * params.flow_mult * multFlow,
-        (float)(params.flow.width * params.flow_mult * multFlow),
+        params.flow.mm3_per_mm() * params.flow_mult * mult_flow,
+        (float)(params.flow.width * params.flow_mult * mult_flow),
         (float)params.flow.height);
     
 }

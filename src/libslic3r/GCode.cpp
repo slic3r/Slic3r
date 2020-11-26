@@ -2478,12 +2478,9 @@ void GCode::process_layer(
                             extruder_id, 
                             print_wipe_extrusions != 0) : 
                         island.by_region;
-                    gcode += this->extrude_infill(print, by_region_specific, true, false);
+                    gcode += this->extrude_infill(print, by_region_specific, true);
                     gcode += this->extrude_perimeters(print, by_region_specific, lower_layer_edge_grids[instance_to_print.layer_id]);
-                    gcode += this->extrude_infill(print, by_region_specific, false, false);
-
-                    // ironing
-                    gcode += this->extrude_infill(print,by_region_specific, false, true);
+                    gcode += this->extrude_infill(print, by_region_specific, false);
                 }
                 if (this->config().gcode_label_objects)
                     gcode += std::string("; stop printing object ") + instance_to_print.print_object.model_object()->name 
@@ -3329,32 +3326,24 @@ std::string GCode::extrude_perimeters(const Print &print, const std::vector<Obje
 }
 
 // Chain the paths hierarchically by a greedy algorithm to minimize a travel distance.
-std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectByExtruder::Island::Region> &by_region, bool is_infill_first, bool ironing)
+std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectByExtruder::Island::Region> &by_region, bool is_infill_first)
 {
     std::string gcode;
-    ExtrusionEntitiesPtr extrusions;
     for (const ObjectByExtruder::Island::Region &region : by_region) {
         if (!region.infills.empty() && 
-                ( ironing || print.regions()[&region - &by_region.front()]->config().infill_first == is_infill_first) ) {
-            extrusions.clear();
-            extrusions.reserve(region.infills.size());
-            for (ExtrusionEntity *ee : region.infills)
-                if ((ee->role() == erIroning) == ironing)
-                    extrusions.emplace_back(ee);
-            if (! extrusions.empty()) {
-                m_config.apply(print.regions()[&region - &by_region.front()]->config());
-                m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
-                if (m_config.print_temperature > 0)
-                    gcode += m_writer.set_temperature(m_config.print_temperature.value, false, m_writer.tool()->id());
+                ( print.regions()[&region - &by_region.front()]->config().infill_first == is_infill_first) ) {
+            m_config.apply(print.regions()[&region - &by_region.front()]->config());
+            m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
+            if (m_config.print_temperature > 0)
+                gcode += m_writer.set_temperature(m_config.print_temperature.value, false, m_writer.tool()->id());
             else if(m_layer!=nullptr && m_layer->bottom_z() < EPSILON)
                 gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
-                else
-                    gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
-                ExtrusionEntitiesPtr extrusions { region.infills };
-                chain_and_reorder_extrusion_entities(extrusions, &m_last_pos);
-                for (const ExtrusionEntity* fill : extrusions) {
-                    gcode += extrude_entity(*fill, "");
-                }
+            else
+                gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
+            ExtrusionEntitiesPtr extrusions { region.infills };
+            chain_and_reorder_extrusion_entities(extrusions, &m_last_pos);
+            for (const ExtrusionEntity* fill : extrusions) {
+                gcode += extrude_entity(*fill, "");
             }
         }
     }

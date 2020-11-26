@@ -2513,7 +2513,7 @@ end:
                 // Optimized version for a single region layer.
                 if (layer->regions().size() == 1) {
                     assert(!upscaled);
-                    assert(!clipped);
+                    //assert(!clipped); //can happen with z-range modifier
                     // Single region, growing or shrinking.
                     LayerRegion *layerm = layer->regions().front();
                     ExPolygons expolygons = to_expolygons(std::move(layerm->m_slices.surfaces));
