@@ -85,7 +85,7 @@ group:Modifying slices
 		setting:width$6:curve_smoothing_precision
 		setting:width$6:curve_smoothing_angle_convex
 		setting:width$6:curve_smoothing_angle_concave
-		setting:label_width$6:width$6:curve_smoothing_cutoff_dist
+		setting:width$6:curve_smoothing_cutoff_dist
 	end_line
 	line:XY compensation
 		setting:width$6:xy_size_compensation
@@ -107,9 +107,11 @@ group:title_width$8:Infill
 		setting:width$5:label$_:sidetext_width$1:fill_density
 		setting:label_width$1:label$_:fill_pattern
 		setting:label$_:width$18:infill_connection
-		setting:sidetext_width$7:infill_anchor
-		setting:sidetext_width$7:infill_anchor_max
 	end_line
+	line:_
+		setting:label$Connection length:label_width$20:sidetext_width$7:width$12:infill_anchor_max
+		setting:label$Perimeter anchor:sidetext_width$7:width$12:infill_anchor
+		end_line
 	line:Solid
 		setting:label_width$11:label$_:solid_fill_pattern
 		setting:label$_:width$18:infill_connection_solid

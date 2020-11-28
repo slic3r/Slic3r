@@ -2477,14 +2477,14 @@ void connect_infill(Polylines&& infill_ordered, const std::vector<const Polygon*
 }
 
 void Fill::connect_infill(Polylines&& infill_ordered, const ExPolygon& boundary, Polylines& polylines_out, const double spacing, const FillParams& params) {
-    if (params.anchor_length == 0) {
+    if (params.anchor_length_max == 0) {
         PrusaSimpleConnect::connect_infill(std::move(infill_ordered), boundary, polylines_out, spacing, params);
     } else {
         FakePerimeterConnect::connect_infill(std::move(infill_ordered), boundary, polylines_out, spacing, params);
     }
 }
 void Fill::connect_infill(Polylines&& infill_ordered, const ExPolygon& boundary, const Polygons& polygons_src, Polylines& polylines_out, const double spacing, const FillParams& params) {
-    if (params.anchor_length == 0) {
+    if (params.anchor_length_max == 0) {
         PrusaSimpleConnect::connect_infill(std::move(infill_ordered), boundary, polylines_out, spacing, params);
     } else {
         FakePerimeterConnect::connect_infill(std::move(infill_ordered), polygons_src, get_extents(boundary.contour), polylines_out, spacing, params);
