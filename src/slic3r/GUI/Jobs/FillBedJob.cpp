@@ -28,7 +28,7 @@ void FillBedJob::prepare()
     m_selected.reserve(model_object->instances.size());
     for (ModelInstance *inst : model_object->instances)
         if (inst->printable) {
-            ArrangePolygon ap = get_arrange_poly(inst, m_plater);
+            ArrangePolygon ap = get_arrange_poly(PtrWrapper{inst}, m_plater);
             ++ap.priority; // need to be included in the result
             m_selected.emplace_back(ap);
         }
@@ -40,8 +40,8 @@ void FillBedJob::prepare()
     auto &objects = m_plater->model().objects;
     for (size_t idx = 0; idx < objects.size(); ++idx)
         if (int(idx) != m_object_idx)
-            for (const ModelInstance *mi : objects[idx]->instances) {
-                m_unselected.emplace_back(mi->get_arrange_polygon());
+            for (ModelInstance *mi : objects[idx]->instances) {
+                m_unselected.emplace_back(get_arrange_poly(PtrWrapper{mi}, m_plater));
                 m_unselected.back().bed_idx = 0;
             }
 
@@ -90,11 +90,18 @@ void FillBedJob::process()
     params.min_obj_distance = scaled(settings.distance);
     params.allow_rotations  = settings.enable_rotation;
 
-    params.stopcondition = [this]() { return was_canceled(); };
+    bool do_stop = false;
+    params.stopcondition = [this, &do_stop]() {
+        return was_canceled() || do_stop;
+    };
 
     params.progressind = [this](unsigned st) {
         if (st > 0)
             update_status(int(m_status_range - st), _(L("Filling bed")));
+    };
+
+    params.on_packed = [&do_stop] (const ArrangePolygon &ap) {
+        do_stop = ap.bed_idx > 0 && ap.priority == 0;
     };
 
     arrangement::arrange(m_selected, m_unselected, m_bedpts, params);
@@ -115,7 +122,7 @@ void FillBedJob::finalize()
     size_t inst_cnt = model_object->instances.size();
 
     for (ArrangePolygon &ap : m_selected) {
-        if (ap.priority != 0 || !(ap.bed_idx == arrangement::UNARRANGED || ap.bed_idx > 0))
+        if (ap.bed_idx != arrangement::UNARRANGED && (ap.priority != 0 || ap.bed_idx == 0))
             ap.apply();
     }
 

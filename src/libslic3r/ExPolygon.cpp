@@ -269,23 +269,10 @@ void ExPolygon::get_trapezoids2(Polygons* polygons) const
     // find trapezoids by looping from first to next-to-last coordinate
     for (std::vector<coord_t>::const_iterator x = xx.begin(); x != xx.end()-1; ++x) {
         coord_t next_x = *(x + 1);
-        if (*x == next_x) continue;
-        
-        // build rectangle
-        Polygon poly;
-        poly.points.resize(4);
-        poly[0](0) = *x;
-        poly[0](1) = bb.min(1);
-        poly[1](0) = next_x;
-        poly[1](1) = bb.min(1);
-        poly[2](0) = next_x;
-        poly[2](1) = bb.max(1);
-        poly[3](0) = *x;
-        poly[3](1) = bb.max(1);
-        
-        // intersect with this expolygon
-        // append results to return value
-        polygons_append(*polygons, intersection(poly, to_polygons(*this)));
+        if (*x != next_x)
+            // intersect with rectangle
+            // append results to return value
+            polygons_append(*polygons, intersection({ { { *x, bb.min.y() }, { next_x, bb.min.y() }, { next_x, bb.max.y() }, { *x, bb.max.y() } } }, to_polygons(*this)));
     }
 }
 
@@ -341,7 +328,7 @@ ExPolygon::get_trapezoids3_half(Polygons* polygons, float spacing) const {
 
         // intersect with this expolygon
         // append results to return value
-        polygons_append(*polygons, intersection(poly, to_polygons(*this)));
+        polygons_append(*polygons, intersection(Polygons{ poly }, to_polygons(*this)));
     }
 }
 

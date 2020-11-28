@@ -347,8 +347,27 @@ public:
         };
         
         m_pconf.object_function = get_objfn();
+
+        auto on_packed = params.on_packed;
         
-        if (progressind) m_pck.progressIndicator(progressind);
+        if (progressind || on_packed)
+            m_pck.progressIndicator([this, progressind, on_packed](unsigned rem) {
+
+            if (progressind)
+                progressind(rem);
+
+            if (on_packed) {
+                int last_bed = m_pck.lastPackedBinId();
+                if (last_bed >= 0) {
+                    Item &last_packed = m_pck.lastResult()[last_bed].back();
+                    ArrangePolygon ap;
+                    ap.bed_idx = last_packed.binId();
+                    ap.priority = last_packed.priority();
+                    on_packed(ap);
+                }
+            }
+        });
+
         if (stopcond) m_pck.stopCondition(stopcond);
         
         m_pck.configure(m_pconf);

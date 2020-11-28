@@ -755,6 +755,7 @@ public:
     ConfigOptionPercent             gap_fill_overlap;
     ConfigOptionFloat               gap_fill_speed;
     ConfigOptionFloatOrPercent      infill_anchor;
+    ConfigOptionFloatOrPercent      infill_anchor_max;
     ConfigOptionBool                hole_to_polyhole;
     ConfigOptionInt                 infill_extruder;
     ConfigOptionFloatOrPercent      infill_extrusion_width;
@@ -864,6 +865,7 @@ protected:
         OPT_PTR(gap_fill_overlap);
         OPT_PTR(gap_fill_speed);
         OPT_PTR(infill_anchor);
+        OPT_PTR(infill_anchor_max);
         OPT_PTR(hole_to_polyhole);
         OPT_PTR(infill_extruder);
         OPT_PTR(infill_extrusion_width);

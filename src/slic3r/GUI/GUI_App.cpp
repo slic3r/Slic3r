@@ -94,7 +94,7 @@ class SplashScreen : public wxSplashScreen
 {
 public:
     SplashScreen(const wxBitmap& bitmap, long splashStyle, int milliseconds, wxPoint pos = wxDefaultPosition)
-        : wxSplashScreen(bitmap, splashStyle, milliseconds, (wxWindow*)wxGetApp().mainframe, wxID_ANY, wxDefaultPosition, wxDefaultSize, 
+        : wxSplashScreen(bitmap, splashStyle, milliseconds, static_cast<wxWindow*>(wxGetApp().mainframe), wxID_ANY, wxDefaultPosition, wxDefaultSize,
 #ifdef __APPLE__
             wxSIMPLE_BORDER | wxFRAME_NO_TASKBAR | wxSTAY_ON_TOP
 #else
@@ -549,7 +549,6 @@ static void register_win32_device_notification_event()
     });
 
 	wxWindow::MSWRegisterMessageHandler(WM_COPYDATA, [](wxWindow* win, WXUINT /* nMsg */, WXWPARAM wParam, WXLPARAM lParam) {
-
 		COPYDATASTRUCT* copy_data_structure = { 0 };
 		copy_data_structure = (COPYDATASTRUCT*)lParam;
 		if (copy_data_structure->dwData == 1) {
@@ -671,8 +670,8 @@ bool GUI_App::init_opengl()
 void GUI_App::init_app_config()
 {
 	// Profiles for the alpha are stored into the PrusaSlicer-alpha directory to not mix with the current release.
-	SetAppName(SLIC3R_APP_KEY);
-	SetAppName(SLIC3R_APP_KEY "-alpha");
+//	SetAppName(SLIC3R_APP_KEY);
+	SetAppName(SLIC3R_APP_KEY "-beta");
 //	SetAppDisplayName(SLIC3R_APP_NAME);
 
 	// Set the Slic3r data directory at the Slic3r XS module.
@@ -812,7 +811,14 @@ bool GUI_App::on_init_inner()
 
     if (is_editor()) {
 #ifdef __WXMSW__ 
-        associate_3mf_files();
+#if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+        if (app_config->get("associate_3mf") == "1")
+#endif // ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+            associate_3mf_files();
+#if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+        if (app_config->get("associate_stl") == "1")
+            associate_stl_files();
+#endif // ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 #endif // __WXMSW__
 
         preset_updater = new PresetUpdater();
@@ -828,7 +834,10 @@ bool GUI_App::on_init_inner()
     }
     else {
 #ifdef __WXMSW__ 
-        associate_gcode_files();
+#if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+        if (app_config->get("associate_gcode") == "1")
+#endif // ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+            associate_gcode_files();
 #endif // __WXMSW__
     }
 
@@ -1657,6 +1666,20 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
                 app_layout_changed = dlg.settings_layout_changed();
                 if (dlg.seq_top_layer_only_changed())
                     this->plater_->refresh_print();
+#if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+#ifdef _WIN32
+                if (is_editor()) {
+                    if (app_config->get("associate_3mf") == "1")
+                        associate_3mf_files();
+                    if (app_config->get("associate_stl") == "1")
+                        associate_stl_files();
+                }
+                else {
+                    if (app_config->get("associate_gcode") == "1")
+                        associate_gcode_files();
+                }
+#endif // _WIN32
+#endif // ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
             }
             if (app_layout_changed) {
                 // hide full main_sizer for mainFrame
@@ -1827,8 +1850,17 @@ void GUI_App::MacOpenFiles(const wxArrayString &fileNames)
         if (!non_gcode_files.empty()) 
             start_new_slicer(non_gcode_files, true);
     } else {
-        if (! files.empty())
+        if (! files.empty()) {
+#if ENABLE_DRAG_AND_DROP_FIX
+            wxArrayString input_files;
+            for (size_t i = 0; i < non_gcode_files.size(); ++i) {
+                input_files.push_back(non_gcode_files[i]);
+            }
+            this->plater()->load_files(input_files);
+#else
             this->plater()->load_files(files, true, true);
+#endif     
+        }
         for (const wxString &filename : gcode_files)
             start_new_gcodeviewer(&filename);
     }
@@ -2191,6 +2223,32 @@ void GUI_App::associate_3mf_files()
         // notify Windows only when any of the values gets changed
         ::SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
 }
+
+#if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+void GUI_App::associate_stl_files()
+{
+    wchar_t app_path[MAX_PATH];
+    ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
+
+    std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
+    std::wstring prog_id = L"Prusa.Slicer.1";
+    std::wstring prog_desc = L"PrusaSlicer";
+    std::wstring prog_command = prog_path + L" \"%1\"";
+    std::wstring reg_base = L"Software\\Classes";
+    std::wstring reg_extension = reg_base + L"\\.stl";
+    std::wstring reg_prog_id = reg_base + L"\\" + prog_id;
+    std::wstring reg_prog_id_command = reg_prog_id + L"\\Shell\\Open\\Command";
+
+    bool is_new = false;
+    is_new |= set_into_win_registry(HKEY_CURRENT_USER, reg_extension.c_str(), prog_id.c_str());
+    is_new |= set_into_win_registry(HKEY_CURRENT_USER, reg_prog_id.c_str(), prog_desc.c_str());
+    is_new |= set_into_win_registry(HKEY_CURRENT_USER, reg_prog_id_command.c_str(), prog_command.c_str());
+
+    if (is_new)
+        // notify Windows only when any of the values gets changed
+        ::SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
+}
+#endif // ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 
 void GUI_App::associate_gcode_files()
 {

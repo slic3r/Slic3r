@@ -269,6 +269,10 @@ std::string Wipe::wipe(GCode& gcodegen, bool toolchange)
 
         // subdivide the retraction in segments
             if (!wipe_path.empty()) {
+#if ENABLE_SHOW_WIPE_MOVES
+                // add tag for processor
+                gcode += ";" + GCodeProcessor::Wipe_Start_Tag + "\n";
+#endif // ENABLE_SHOW_WIPE_MOVES
                 for (const Line& line : wipe_path.lines()) {
                 double segment_length = line.length();
                 /*  Reduce retraction length a bit to avoid effective retraction speed to be greater than the configured one
@@ -283,6 +287,10 @@ std::string Wipe::wipe(GCode& gcodegen, bool toolchange)
                     "wipe and retract"
                 );
             }
+#if ENABLE_SHOW_WIPE_MOVES
+                // add tag for processor
+                gcode += ";" + GCodeProcessor::Wipe_End_Tag + "\n";
+#endif // ENABLE_SHOW_WIPE_MOVES
 			gcodegen.set_last_pos(wipe_path.points.back());
         }
 
@@ -2965,7 +2973,7 @@ void GCode::split_at_seam_pos(ExtrusionLoop& loop, std::unique_ptr<EdgeGrid::Gri
         const EdgeGrid::Grid* edge_grid_ptr = (lower_layer_edge_grid && *lower_layer_edge_grid)
             ? lower_layer_edge_grid->get()
             : nullptr;
-        Point seam = m_seam_placer.get_seam(m_layer, seam_position, loop,
+        Point seam = m_seam_placer.get_seam(*m_layer, seam_position, loop,
             last_pos, EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0),
             (m_layer == NULL ? nullptr : m_layer->object()),
             was_clockwise, edge_grid_ptr);

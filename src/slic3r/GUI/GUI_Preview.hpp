@@ -106,11 +106,7 @@ class Preview : public wxPanel
     unsigned int m_number_extruders;
     std::string m_preferred_color_mode; // neutered / deprecated, ready to remove
     //fields to see what color to display
-#if ENABLE_GCODE_VIEWER
     GCodeViewer::EViewType m_last_choice = GCodeViewer::EViewType::FeatureType;
-#else
-    GCodePreviewData::Extrusion::EViewType m_last_choice = GCodePreviewData::Extrusion::EViewType::FeatureType;
-#endif // ENABLE_GCODE_VIEWER
     bool m_has_switched_to_color = false;
     bool m_has_switched_to_extruders = false;
 
@@ -126,6 +122,9 @@ public:
     enum class OptionType : unsigned int
     {
         Travel,
+#if ENABLE_SHOW_WIPE_MOVES
+        Wipe,
+#endif // ENABLE_SHOW_WIPE_MOVES
         Retractions,
         Unretractions,
         ToolChanges,

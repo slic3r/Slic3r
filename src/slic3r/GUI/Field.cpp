@@ -263,6 +263,11 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
             double val = 0.;
 			// Replace the first occurence of comma in decimal number.
 			str.Replace(",", ".", false);
+
+            // remove space and "mm" substring, if any exists
+            str.Replace(" ", "", true);
+            str.Replace("m", "", true);
+
             if (!str.ToCDouble(&val))
             {
                 if (!check_value) {
@@ -292,13 +297,15 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
                     break;
                 }
 
+                bool infill_anchors = m_opt.opt_key == "infill_anchor" || m_opt.opt_key == "infill_anchor_max";
+
                 const std::string sidetext = m_opt.sidetext.rfind("mm/s") != std::string::npos ? "mm/s" : "mm";
                 const wxString stVal = double_to_string(val, 2);
                 const wxString msg_text = from_u8((boost::format(_utf8(L("Do you mean %s%% instead of %s %s?\n"
                     "Select YES if you want to change this value to %s%%, \n"
                     "or NO if you are sure that %s %s is a correct value."))) % stVal % stVal % sidetext % stVal % stVal % sidetext).str());
                 wxMessageDialog dialog(m_parent, msg_text, _(L("Parameter validation")) + ": " + m_opt_id , wxICON_WARNING | wxYES | wxNO);
-                if (dialog.ShowModal() == wxID_YES) {
+                if ((!infill_anchors || val > 100) && dialog.ShowModal() == wxID_YES) {
                     set_value(from_u8((boost::format("%s%%") % stVal).str()), false/*true*/);
                     str += "%%";
                 }
@@ -880,23 +887,37 @@ void Choice::BUILD() {
     }
 #endif
 
-// 	temp->Bind(wxEVT_TEXT, ([this](wxCommandEvent e) { on_change_field(); }), temp->GetId());
- 	temp->Bind(wxEVT_COMBOBOX, ([this](wxCommandEvent e) { on_change_field(); }), temp->GetId());
+    temp->Bind(wxEVT_MOUSEWHEEL, [this](wxMouseEvent& e) {
+        if (m_suppress_scroll && !m_is_dropped)
+            e.StopPropagation();
+        else
+            e.Skip();
+        });
+    temp->Bind(wxEVT_COMBOBOX_DROPDOWN, [this](wxCommandEvent&) { m_is_dropped = true; });
+    temp->Bind(wxEVT_COMBOBOX_CLOSEUP,  [this](wxCommandEvent&) { m_is_dropped = false; });
+
+    temp->Bind(wxEVT_COMBOBOX,          [this](wxCommandEvent&) { on_change_field(); }, temp->GetId());
 
     if (m_is_editable) {
         temp->Bind(wxEVT_KILL_FOCUS, ([this](wxEvent& e) {
             e.Skip();
-            if (m_opt.type == coStrings || m_opt.type == coFloatOrPercent) {
+            if (m_opt.type == coStrings) {
                 on_change_field();
                 return;
             }
 
-            double old_val = !m_value.empty() ? boost::any_cast<double>(m_value) : -99999;
             if (is_defined_input_value<choice_ctrl>(window, m_opt.type)) {
-                if (fabs(old_val - boost::any_cast<double>(get_value())) <= 0.0001)
-                    return;
-                else
-                    on_change_field();
+                if (m_opt.type == coFloatOrPercent) {
+                    std::string old_val = !m_value.empty() ? boost::any_cast<std::string>(m_value) : "";
+                    if (old_val == boost::any_cast<std::string>(get_value()))
+                        return;
+                }
+                else {
+                    double old_val = !m_value.empty() ? boost::any_cast<double>(m_value) : -99999;
+                    if (fabs(old_val - boost::any_cast<double>(get_value())) <= 0.0001)
+                        return;
+                }
+                on_change_field();
             }
             else
                 on_kill_focus();
@@ -904,6 +925,11 @@ void Choice::BUILD() {
     }
 
 	temp->SetToolTip(get_tooltip_text(temp->GetValue()));
+}
+
+void Choice::suppress_scroll()
+{
+    m_suppress_scroll = true;
 }
 
 void Choice::set_selection()
@@ -1021,13 +1047,14 @@ void Choice::set_value(const boost::any& value, bool change_event)
 		else
 			text_value = boost::any_cast<wxString>(value);
         size_t idx = 0;
-		for (auto el : m_opt.enum_values)
+        const std::vector<std::string>& enums = m_opt.enum_values.empty() ? m_opt.enum_labels : m_opt.enum_values;
+		for (auto el : enums)
 		{
 			if (el == text_value)
 				break;
 			++idx;
 		}
-        if (idx == m_opt.enum_values.size()) {
+        if (idx == enums.size()) {
             // For editable Combobox under OSX is needed to set selection to -1 explicitly,
             // otherwise selection doesn't be changed
             field->SetSelection(-1);

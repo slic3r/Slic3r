@@ -1008,8 +1008,8 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, Extrusio
         extrusion_paths_append(
             paths,
             (this->config->overhangs_width_speed.value > 0 ?
-                intersection_pl(loop_polygons, this->_lower_slices_bridge_speed) :
-                intersection_pl(loop_polygons, this->_lower_slices_bridge_flow)),
+                intersection_pl(std::vector<LINE>{ loop_polygons }, this->_lower_slices_bridge_speed) :
+                intersection_pl(std::vector<LINE>{ loop_polygons }, this->_lower_slices_bridge_flow)),
             role,
             is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm,
             is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width,
@@ -1019,7 +1019,7 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, Extrusio
         // outside the grown lower slices
         Polylines poly_speed = 
             (this->config->overhangs_width_speed.value > 0 ?
-                diff_pl(loop_polygons, this->_lower_slices_bridge_speed):
+                diff_pl(std::vector<LINE>{ loop_polygons }, this->_lower_slices_bridge_speed) :
                 Polylines{});
         if(this->config->overhangs_width_speed.value > 0)
             extrusion_paths_append(
@@ -1034,7 +1034,7 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, Extrusio
             paths,
             (this->config->overhangs_width_speed.value > 0 ?
                 diff_pl(poly_speed, this->_lower_slices_bridge_flow):
-                diff_pl(loop_polygons, this->_lower_slices_bridge_flow)),
+                diff_pl(std::vector<LINE>{ loop_polygons }, this->_lower_slices_bridge_flow)),
             erOverhangPerimeter,
             this->_mm3_per_mm_overhang,
             this->overhang_flow.width,
@@ -1047,8 +1047,8 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, Extrusio
         extrusion_paths_append(
             paths,
             (this->config->overhangs_width.value > 0 ?
-                intersection_pl(loop_polygons, this->_lower_slices_bridge_flow) :
-                intersection_pl(loop_polygons, this->_lower_slices_bridge_speed) ),
+                intersection_pl(std::vector<LINE>{ loop_polygons }, this->_lower_slices_bridge_flow) :
+                intersection_pl(std::vector<LINE>{ loop_polygons }, this->_lower_slices_bridge_speed)),
             role,
             is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm,
             is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width,
@@ -1059,7 +1059,7 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, Extrusio
         if (this->config->overhangs_width.value > 0) {
             extrusion_paths_append(
                 paths,
-                diff_pl(loop_polygons, this->_lower_slices_bridge_flow),
+                diff_pl(std::vector<LINE>{ loop_polygons }, this->_lower_slices_bridge_flow),
                 erOverhangPerimeter,
                 this->_mm3_per_mm_overhang,
                 this->overhang_flow.width,
@@ -1067,7 +1067,7 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, Extrusio
         } else {
             extrusion_paths_append(
                 paths,
-                diff_pl(loop_polygons, this->_lower_slices_bridge_speed),
+                diff_pl(std::vector<LINE>{ loop_polygons }, this->_lower_slices_bridge_speed),
                 erOverhangPerimeter,
                 is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm,
                 is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width,

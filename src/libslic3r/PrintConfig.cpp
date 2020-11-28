@@ -1870,12 +1870,15 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(1));
 
-    def = this->add("infill_anchor", coFloatOrPercent);
+    auto def_infill_anchor_min = def = this->add("infill_anchor", coFloatOrPercent);
     def->label = L("Length of the infill anchor");
     def->category = OptionCategory::infill;
     def->tooltip = L("Connect an infill line to an internal perimeter with a short segment of an additional perimeter. "
-        "If expressed as percentage (example: 15%) it is calculated over infill extrusion width."
-        "\nIf set to 0, it will use a simpler algo that don't try to create a fake perimeter.");
+                     "If expressed as percentage (example: 15%) it is calculated over infill extrusion width. "
+                     "PrusaSlicer tries to connect two close infill lines to a short perimeter segment. If no such perimeter segment "
+                     "shorter than infill_anchor_max is found, the infill line is connected to a perimeter segment at just one side "
+                     "and the length of the perimeter segment taken is limited to this parameter, but no longer than anchor_length_max. "
+                     "\nIf set to 0, it will use a simpler algo that don't try to create a fake perimeter.");
     def->sidetext = L("mm or %");
     def->ratio_over = "infill_extrusion_width";
     def->gui_type = "f_enum_open";
@@ -1892,8 +1895,30 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back("10 mm");
     def->enum_labels.push_back(L("1000 (unlimited)"));
     def->mode = comAdvanced;
-    //    def->set_default_value(new ConfigOptionFloatOrPercent(300, true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(1000, false));
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+
+    def = this->add("infill_anchor_max", coFloatOrPercent);
+    def->label = L("Maximum length of the infill anchor");
+    def->category    = def_infill_anchor_min->category;
+    def->tooltip = L("Connect an infill line to an internal perimeter with a short segment of an additional perimeter. "
+                     "If expressed as percentage (example: 15%) it is calculated over infill extrusion width. "
+                     "PrusaSlicer tries to connect two close infill lines to a short perimeter segment. If no such perimeter segment "
+                     "shorter than this parameter is found, the infill line is connected to a perimeter segment at just one side "
+                     "and the length of the perimeter segment taken is limited to infill_anchor, but no longer than this parameter. "
+                     "Set this parameter to zero to disable anchoring.");
+    def->sidetext    = def_infill_anchor_min->sidetext;
+    def->ratio_over  = def_infill_anchor_min->ratio_over;
+    def->gui_type    = def_infill_anchor_min->gui_type;
+    def->enum_values = def_infill_anchor_min->enum_values;
+    def->enum_labels.push_back(L("0 (not anchored)"));
+    def->enum_labels.push_back("1 mm");
+    def->enum_labels.push_back("2 mm");
+    def->enum_labels.push_back("5 mm");
+    def->enum_labels.push_back("10 mm");
+    def->enum_labels.push_back(L("1000 (unlimited)"));
+    def->mode        = def_infill_anchor_min->mode;
+    def->set_default_value(new ConfigOptionFloatOrPercent(50, false));
 
     def = this->add("infill_dense", coBool);
     def->label = ("");
@@ -2679,7 +2704,6 @@ void PrintConfigDef::init_fff_params()
     def->full_label = ("Perimeter acceleration");
     def->category = OptionCategory::speed;
     def->tooltip = L("This is the acceleration your printer will use for perimeters. "
-                   "A high value like 9000 usually gives good results if your hardware is up to the job."
                 "\nCan be a % of the default acceleration"
                 "\nSet zero to disable acceleration control for perimeters.");
     def->sidetext = L("mm/s² or %");

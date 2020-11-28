@@ -534,6 +534,7 @@ const std::vector<std::string>& Preset::print_options()
         "perimeter_extrusion_width", "external_perimeter_extrusion_width", "infill_extrusion_width", "solid_infill_extrusion_width", 
         "top_infill_extrusion_width", "support_material_extrusion_width", "infill_overlap", "bridge_flow_ratio", 
         "infill_anchor",
+        "infill_anchor_max",
         "clip_multipart_objects",
         "over_bridge_flow_ratio",
         "bridge_overlap",

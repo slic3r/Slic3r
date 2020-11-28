@@ -38,7 +38,7 @@ struct FillParams
 {
     bool        full_infill() const { return density > 0.9999f && density < 1.0001f; }
     // Don't connect the fill lines around the inner perimeter.
-    bool        dont_connect() const { return anchor_length < 0.05f || connection == InfillConnection::icNotConnected; }
+    bool        dont_connect() const { return connection == InfillConnection::icNotConnected; }
 
     // Fill density, fraction in <0, 1>
     float       density     { 0.f };
@@ -52,6 +52,7 @@ struct FillParams
     // Length of an infill anchor along the perimeter.
     // 1000mm is roughly the maximum length line that fits into a 32bit coord_t.
     float       anchor_length   { 1000.f };
+    float       anchor_length_max   { 1000.f };
 
     // Don't adjust spacing to fill the space evenly.
     bool        dont_adjust { true };

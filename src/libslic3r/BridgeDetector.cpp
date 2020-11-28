@@ -247,7 +247,7 @@ Polygons BridgeDetector::coverage(double angle, bool precise) const {
                             if (supported_line.length() >= this->spacing)
                                 ++n_supported;
                     } else {
-                        Polygons intersects = intersection(trapezoid, anchors);
+                        Polygons intersects = intersection(Polygons{trapezoid}, anchors);
                         n_supported = intersects.size();
 
                         if (n_supported >= 2) {

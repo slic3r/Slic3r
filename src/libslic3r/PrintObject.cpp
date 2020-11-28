@@ -11,7 +11,6 @@
 #include "Slicing.hpp"
 #include "Tesselate.hpp"
 #include "Utils.hpp"
-#include "AABBTreeIndirect.hpp"
 #include "Fill/FillAdaptive.hpp"
 #include "Format/STL.hpp"
 
@@ -783,6 +782,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "fill_smooth_distribution"
             || opt_key == "first_layer_extrusion_width"
             || opt_key == "infill_anchor"
+            || opt_key == "infill_anchor_max"
             || opt_key == "infill_connection"
             || opt_key == "infill_connection_solid"
             || opt_key == "infill_connection_top"

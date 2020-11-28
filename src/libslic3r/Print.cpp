@@ -1296,9 +1296,9 @@ static inline bool sequential_print_horizontal_clearance_valid(const Print &prin
             // instance.shift is a position of a centered object, while model object may not be centered.
             // Conver the shift from the PrintObject's coordinates into ModelObject's coordinates by removing the centering offset.
             convex_hull.translate(instance.shift - print_object->center_offset());
-            if (!intersection(convex_hulls_other, convex_hull).empty())
+	        if (! intersection(convex_hulls_other, (Polygons)convex_hull).empty())
                 return false;
-            polygons_append(convex_hulls_other, convex_hull);
+	        convex_hulls_other.emplace_back(std::move(convex_hull));
         }
 
         /*
@@ -2078,9 +2078,9 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector< BrimLoop>>& loops, 
     std::function<void(BrimLoop&)> cut_loop = [&frontiers](BrimLoop& to_cut) {
         Polylines result;
         if (to_cut.is_loop)
-            result = intersection_pl(to_cut.polygon(), frontiers, true);
+            result = intersection_pl(Polygons{ to_cut.polygon() }, frontiers, true);
         else
-            result = intersection_pl(to_cut.line, frontiers, true);
+            result = intersection_pl(Polylines{ to_cut.line }, frontiers, true);
         if (result.empty())
             to_cut.line.points.clear();
         else {
@@ -2182,12 +2182,15 @@ void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolyg
                 object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly.contour) : offset_ex(to_expolygon(expoly.contour), brim_offset)[0]);
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
-            for (Polygon poly : polys)
-                for (ExPolygon & expoly2 : union_ex(poly))
-                    if (brim_config.brim_inside_holes || brim_config.brim_width_interior > 0)
+            for (Polygon poly : polys) {
+                for (ExPolygon& expoly2 : union_ex(Polygons{ poly })) {
+                    if (brim_config.brim_inside_holes || brim_config.brim_width_interior > 0) {
                         object_islands.emplace_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
-                    else
+                    } else {
                         object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly2.contour) : offset_ex(to_expolygon(expoly2.contour), brim_offset)[0]);
+                    }
+                }
+            }
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_instances.size());
         for (const PrintInstance &pt : object->m_instances) {
@@ -2262,7 +2265,7 @@ void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolyg
             //also add hole, in case of it's merged with a contour. <= HOW? if there's an island inside a hole! (in the same object)
             for (Polygon &hole : expoly.holes)
                 //but remove the points that are inside the holes of islands
-                for(Polyline &pl : diff_pl(hole, unbrimmable_polygons, true))
+                for (Polyline& pl : diff_pl(Polygons{ hole }, unbrimmable_polygons, true))
                     loops[i].emplace_back(pl);
         }
     }
@@ -2299,7 +2302,7 @@ void Print::_make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, Ex
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
             for (Polygon poly : polys)
-                for (ExPolygon & expoly2 : union_ex(poly))
+                for (ExPolygon& expoly2 : union_ex(Polygons{ poly }))
                     if (brim_config.brim_inside_holes || brim_config.brim_width_interior > 0)
                         object_islands.push_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
                     else
@@ -2446,7 +2449,7 @@ void Print::_make_brim_interior(const Flow &flow, const PrintObjectPtrs &objects
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
             for (Polygon poly : polys)
-                for (ExPolygon & expoly2 : union_ex(poly))
+                for (ExPolygon& expoly2 : union_ex(Polygons{ poly }))
                     object_islands.push_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
         }
         islands.reserve(islands.size() + object_islands.size() * object->instances().size());

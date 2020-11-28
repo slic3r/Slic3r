@@ -31,7 +31,7 @@ namespace Slic3r {
 namespace GUI {
 
 KBShortcutsDialog::KBShortcutsDialog()
-    : DPIDialog((wxWindow*)wxGetApp().mainframe, wxID_ANY, wxString(wxGetApp().is_editor() ? SLIC3R_APP_NAME : GCODEVIEWER_APP_NAME) + " - " + _L("Keyboard Shortcuts"),
+    : DPIDialog(static_cast<wxWindow*>(wxGetApp().mainframe), wxID_ANY, wxString(wxGetApp().is_editor() ? SLIC3R_APP_NAME : GCODEVIEWER_APP_NAME) + " - " + _L("Keyboard Shortcuts"),
     wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
@@ -171,7 +171,11 @@ void KBShortcutsDialog::fill_shortcuts()
             { "Tab", L("Switch between Editor/Preview") },
             { "Shift+Tab", L("Collapse/Expand the sidebar") },
 #if ENABLE_CTRL_M_ON_WINDOWS
+#ifdef _WIN32
+            { ctrl + "M", L("Show/Hide 3Dconnexion devices settings dialog, if enabled") },
+#else
             { ctrl + "M", L("Show/Hide 3Dconnexion devices settings dialog") },
+#endif // _WIN32
 #else
 #if defined(__linux__) || defined(__APPLE__)
             { ctrl + "M", L("Show/Hide 3Dconnexion devices settings dialog") },

@@ -108,6 +108,7 @@ group:title_width$8:Infill
 		setting:label_width$1:label$_:fill_pattern
 		setting:label$_:width$18:infill_connection
 		setting:sidetext_width$7:infill_anchor
+		setting:sidetext_width$7:infill_anchor_max
 	end_line
 	line:Solid
 		setting:label_width$11:label$_:solid_fill_pattern

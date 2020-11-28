@@ -72,11 +72,12 @@ struct SurfaceFillParams : FillParams
                 this->overlap               == rhs.overlap          &&
                 this->angle                 == rhs.angle            &&
                 this->density               == rhs.density          &&
-                this->monotonic            == rhs.monotonic       &&
+                this->monotonic             == rhs.monotonic        &&
                 this->connection            == rhs.connection       &&
                 this->dont_adjust           == rhs.dont_adjust      &&
-
-                this->anchor_length         == rhs.anchor_length    &&                this->fill_exactly          == rhs.fill_exactly     &&
+                this->anchor_length         == rhs.anchor_length    &&
+                this->anchor_length_max     == rhs.anchor_length_max&&
+                this->fill_exactly          == rhs.fill_exactly     &&
                 this->flow                  == rhs.flow             &&
                 this->role                  == rhs.role;
     }
@@ -173,6 +174,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                     params.angle = float(Geometry::deg2rad(region_config.fill_angle.value));
                     params.angle += float(PI * (region_config.fill_angle_increment.value * layerm.layer()->id()) / 180.f);
                 }
+		        params.anchor_length = std::min(params.anchor_length, params.anchor_length_max);
 
                 //adjust flow (to over-extrude when needed)
                 params.flow_mult = 1;
@@ -213,7 +215,10 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                     // Anchor a sparse infill to inner perimeters with the following anchor length:
                     params.anchor_length = float(region_config.infill_anchor);
                     if (region_config.infill_anchor.percent)
-                        params.anchor_length *= 0.01 * params.spacing;
+                        params.anchor_length = float(params.anchor_length * 0.01 * params.spacing);
+                    params.anchor_length_max = float(region_config.infill_anchor_max);
+                    if (region_config.infill_anchor_max.percent)
+                        params.anchor_length_max = float(params.anchor_length_max * 0.01 * params.spacing);
                 }
 
                 auto it_params = set_surface_params.find(params);
@@ -427,6 +432,7 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
         //params.density         = float(0.01 * surface_fill.params.density);
         //params.dont_adjust     = surface_fill.params.dont_adjust; // false
         //params.anchor_length = surface_fill.params.anchor_length;
+        //params.anchor_length_max = surface_fill.params.anchor_length_max;
 
         if (using_internal_flow) {
             // if we used the internal flow we're not doing a solid infill

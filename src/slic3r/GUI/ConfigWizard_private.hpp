@@ -393,6 +393,25 @@ struct PageReloadFromDisk : ConfigWizardPage
     PageReloadFromDisk(ConfigWizard* parent);
 };
 
+#if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+#ifdef _WIN32
+struct PageFilesAssociation : ConfigWizardPage
+{
+private:
+    wxCheckBox* cb_3mf{ nullptr };
+    wxCheckBox* cb_stl{ nullptr };
+//    wxCheckBox* cb_gcode;
+
+public:
+    PageFilesAssociation(ConfigWizard* parent);
+
+    bool associate_3mf() const { return cb_3mf->IsChecked(); }
+    bool associate_stl() const { return cb_stl->IsChecked(); }
+//    bool associate_gcode() const { return cb_gcode->IsChecked(); }
+};
+#endif // _WIN32
+#endif // ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+
 struct PageMode: ConfigWizardPage
 {
     wxRadioButton *radio_simple;
@@ -549,6 +568,11 @@ struct ConfigWizard::priv
     PageCustom       *page_custom = nullptr;
     PageUpdate       *page_update = nullptr;
     PageReloadFromDisk *page_reload_from_disk = nullptr;
+#if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+#ifdef _WIN32
+    PageFilesAssociation* page_files_association = nullptr;
+#endif // _WIN32
+#endif // ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
     PageMode         *page_mode = nullptr;
 #ifdef ALLOW_PRUSA_FIRST
     PagePrinters     *page_fff = nullptr;
