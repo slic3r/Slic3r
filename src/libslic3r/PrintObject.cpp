@@ -2493,8 +2493,7 @@ end:
                         inner_delta += first_layer_compensation;
                         hole_delta += first_layer_compensation;
                         first_layer_compensation = 0;
-                    }
-                    else {
+                    } else {
                         float min_delta = std::min(outter_delta, std::min(inner_delta, hole_delta));
                         if (min_delta > 0) {
                             if (-first_layer_compensation < min_delta) {
@@ -2611,7 +2610,7 @@ end:
     BOOST_LOG_TRIVIAL(debug) << "Slicing objects - make_slices in parallel - end";
 }
 
-ExPolygons PrintObject::_shrink_contour_holes(double contour_delta, double default_delta, double convex_delta, const ExPolygons& polys) const {
+ExPolygons PrintObject::_shrink_contour_holes(double contour_delta, double not_convex_delta, double convex_delta, const ExPolygons& polys) const {
     ExPolygons new_ex_polys;
     double max_hole_area = scale_d(scale_d(m_config.hole_size_threshold.value));
     for (const ExPolygon& ex_poly : polys) {
@@ -2633,16 +2632,17 @@ ExPolygons PrintObject::_shrink_contour_holes(double contour_delta, double defau
             // check whether last point forms a convex angle
             ok &= (hole.points.back().ccw_angle(*(hole.points.end() - 2), hole.points.front()) <= PI + 0.1);
              
-            if (ok) {
+            if (ok && not_convex_delta != convex_delta) {
                 if (convex_delta != 0) {
                     //apply hole threshold cutoff
                     double convex_delta_adapted = convex_delta;
                     double area = -hole.area();
                     if (area > max_hole_area * 4) {
-                        convex_delta_adapted = 0;
+                        convex_delta_adapted = not_convex_delta;
                     }else if (area > max_hole_area) {
                         // not a hard threshold, to avoid artefacts on slopped holes.
-                        convex_delta_adapted = convex_delta * (max_hole_area * 4 - area) / (max_hole_area * 3);
+                        double percent = (max_hole_area * 4 - area) / (max_hole_area * 3);
+                        convex_delta_adapted = convex_delta * percent + (1 - percent) * not_convex_delta;
                     }
                     if (convex_delta_adapted != 0) {
                         for (Polygon &newHole : offset(hole, -convex_delta_adapted)) {
@@ -2658,8 +2658,8 @@ ExPolygons PrintObject::_shrink_contour_holes(double contour_delta, double defau
                     holes.back().make_counter_clockwise();
                 }
             } else {
-                if (default_delta != 0) {
-                    for (Polygon &newHole : offset(hole, -default_delta)) {
+                if (not_convex_delta != 0) {
+                    for (Polygon &newHole : offset(hole, -not_convex_delta)) {
                         newHole.make_counter_clockwise();
                         holes.emplace_back(std::move(newHole));
                     }
