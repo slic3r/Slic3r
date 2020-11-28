@@ -60,6 +60,7 @@ public:
     // ordered collection of extrusion paths to fill surfaces
     // (this collection contains only ExtrusionEntityCollection objects)
     ExtrusionEntityCollection   fills;
+    ExtrusionEntityCollection   ironings;
     
     Flow    flow(FlowRole role, bool bridge = false, double width = -1) const;
     void    slices_to_fill_surfaces_clipped();
@@ -81,7 +82,7 @@ public:
     void    export_region_fill_surfaces_to_svg_debug(const char *name) const;
 
     // Is there any valid extrusion assigned to this LayerRegion?
-    bool    has_extrusions() const { return ! this->perimeters.entities.empty() || ! this->fills.entities.empty(); }
+    bool    has_extrusions() const { return !this->perimeters.entities.empty() || !this->fills.entities.empty() || !this->ironings.entities.empty(); }
 
 protected:
     friend class Layer;
