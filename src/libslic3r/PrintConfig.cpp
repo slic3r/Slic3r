@@ -714,7 +714,6 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Fill pattern for bottom infill. This only affects the bottom visible layer, and not its adjacent solid shells.");
     def->cli = "bottom-fill-pattern|external-fill-pattern=s";
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
-
     def->enum_values.push_back("rectilinear");
     def->enum_values.push_back("rectilineargapfill");
     def->enum_values.push_back("monotonic");

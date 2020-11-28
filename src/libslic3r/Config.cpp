@@ -530,10 +530,11 @@ bool ConfigBase::set_deserialize_nothrow(const t_config_option_key &opt_key_src,
     return this->set_deserialize_raw(opt_key, value, append);
 }
 
-void ConfigBase::set_deserialize(const t_config_option_key &opt_key_src, const std::string &value_src, bool append)
+void ConfigBase::set_deserialize(const t_config_option_key& opt_key_src, const std::string& value_src, bool append)
 {
-	if (! this->set_deserialize_nothrow(opt_key_src, value_src, append))
-		throw BadOptionTypeException(format("ConfigBase::set_deserialize() failed for parameter \"%1%\", value \"%2%\"", opt_key_src,  value_src));
+    if (!this->set_deserialize_nothrow(opt_key_src, value_src, append)) {
+        throw BadOptionTypeException(format("ConfigBase::set_deserialize() failed for parameter \"%1%\", value \"%2%\"", opt_key_src, value_src));
+    }
 }
 
 void ConfigBase::set_deserialize(std::initializer_list<SetDeserializeItem> items)
@@ -580,10 +581,7 @@ bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, con
     if (opt == nullptr)
         throw new UnknownOptionException(opt_key);
     bool ok= opt->deserialize(value, append);
-    if (!ok) {
-        return opt->deserialize(value, append);
-    }
-    return true;
+    return ok;
 }
 
 // Return an absolute value of a possibly relative config variable.
@@ -783,8 +781,9 @@ size_t ConfigBase::load_from_gcode_string(const char* str)
         if (key == nullptr)
             break;
         try {
-            this->set_deserialize(std::string(key, key_end), std::string(value, end));
-            ++num_key_value_pairs;
+            //change it from set_deserialize to set_deserialize_nothrow to allow bad/old config to swtch to default value.
+            if(this->set_deserialize_nothrow(std::string(key, key_end), std::string(value, end)))
+                ++num_key_value_pairs;
         }
         catch (UnknownOptionException & /* e */) {
             // ignore
