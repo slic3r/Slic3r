@@ -512,6 +512,7 @@ const std::vector<std::string>& Preset::print_options()
         "brim_width",
         "brim_width_interior",
         "brim_ears",
+        "brim_ears_detection_length",
         "brim_ears_max_angle",
         "brim_ears_pattern",
         "brim_offset",

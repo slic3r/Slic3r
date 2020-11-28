@@ -849,6 +849,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "brim_width_interior"
             || opt_key == "brim_offset"
             || opt_key == "brim_ears"
+            || opt_key == "brim_ears_detection_length"
             || opt_key == "brim_ears_max_angle"
             || opt_key == "brim_ears_pattern") {
             invalidated |= m_print->invalidate_step(psBrim);

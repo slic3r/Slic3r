@@ -172,6 +172,7 @@ group:Brim
 	line:Brim ears
 		setting:brim_ears
 		setting:width$3:brim_ears_max_angle
+		setting:width$3:brim_ears_detection_length
 		setting:brim_ears_pattern
 	end_line
 	setting:brim_offset

@@ -210,6 +210,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             || opt_key == "brim_width_interior"
             || opt_key == "brim_offset"
             || opt_key == "brim_ears"
+            || opt_key == "brim_ears_detection_length"
             || opt_key == "brim_ears_max_angle"
             || opt_key == "brim_ears_pattern") {
             steps.emplace_back(psBrim);
@@ -2292,6 +2293,7 @@ void Print::_make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, Ex
     Points pt_ears;
     coord_t brim_offset = scale_(brim_config.brim_offset.value);
     ExPolygons islands;
+    ExPolygons unbrimmable_with_support = unbrimmable;
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
         for (const ExPolygon &expoly : object->m_layers.front()->lslices)
@@ -2299,21 +2301,37 @@ void Print::_make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, Ex
                 object_islands.push_back(brim_offset==0?expoly:offset_ex(expoly, brim_offset)[0]);
             else
                 object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly.contour) : offset_ex(to_expolygon(expoly.contour), brim_offset)[0]);
+
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
             for (Polygon poly : polys)
                 for (ExPolygon& expoly2 : union_ex(Polygons{ poly }))
-                    if (brim_config.brim_inside_holes || brim_config.brim_width_interior > 0)
-                        object_islands.push_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
-                    else
-                        object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly2.contour) : offset_ex(to_expolygon(expoly2.contour), brim_offset)[0]);
+                    //don't put ears over supports unless it's 100% fill
+                    if (object->config().support_material_solid_first_layer) {
+                        if (brim_config.brim_inside_holes || brim_config.brim_width_interior > 0)
+                            object_islands.push_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
+                        else
+                            object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly2.contour) : offset_ex(to_expolygon(expoly2.contour), brim_offset)[0]);
+                    } else {
+                        unbrimmable_with_support.push_back(expoly2);
+                    }
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_instances.size());
         for (const PrintInstance &copy_pt : object->m_instances)
             for (const ExPolygon &poly : object_islands) {
                 islands.push_back(poly);
                 islands.back().translate(copy_pt.shift.x(), copy_pt.shift.y());
-                for (const Point &p : poly.contour.convex_points(brim_config.brim_ears_max_angle.value * PI / 180.0)) {
+                Polygon decimated_polygon = poly.contour;
+                // brim_ears_detection_length codepath
+                if (object->config().brim_ears_detection_length.value > 0) {
+                    //copy
+                    decimated_polygon = poly.contour;
+                    //decimate polygon
+                    Points points = poly.contour.points;
+                    points.push_back(points.front());
+                    decimated_polygon = Polygon(MultiPoint::_douglas_peucker(points, scale_(object->config().brim_ears_detection_length.value)));
+                }
+                for (const Point &p : decimated_polygon.convex_points(brim_config.brim_ears_max_angle.value * PI / 180.0)) {
                     pt_ears.push_back(p);
                     pt_ears.back() += (copy_pt.shift);
                 }
@@ -2325,17 +2343,16 @@ void Print::_make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, Ex
     //get the brimmable area (for the return value only)
     const size_t num_loops = size_t(floor((brim_config.brim_width.value - brim_config.brim_offset.value) / flow.spacing()));
     ExPolygons brimmable_areas;
+    Polygons contours;
+    Polygons holes;
     for (ExPolygon &expoly : islands) {
         for (Polygon poly : offset(expoly.contour, num_loops * flow.scaled_width(), jtSquare)) {
-            brimmable_areas.emplace_back();
-            brimmable_areas.back().contour = poly;
-            brimmable_areas.back().contour.make_counter_clockwise();
-            brimmable_areas.back().holes.push_back(expoly.contour);
-            brimmable_areas.back().holes.back().make_clockwise();
+            contours.push_back(poly);
         }
+        holes.push_back(expoly.contour);
     }
-    brimmable_areas = union_ex(brimmable_areas);
-    brimmable_areas = diff_ex(brimmable_areas, unbrimmable, true);
+    brimmable_areas = diff_ex(union_(contours), union_(holes));
+    brimmable_areas = diff_ex(brimmable_areas, unbrimmable_with_support, true);
 
     this->throw_if_canceled();
 
@@ -2396,8 +2413,7 @@ void Print::_make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, Ex
 
         ExPolygons new_brim_area = intersection_ex(brimmable_areas, mouse_ears_ex);
         unbrimmable.insert(unbrimmable.end(), new_brim_area.begin(), new_brim_area.end());
-    } else {
-
+    } else /* brim_config.brim_ears_pattern.value == InfillPattern::ipRectilinear */{
         
         //create ear pattern
         coord_t size_ear = (scale_((brim_config.brim_width.value - brim_config.brim_offset.value)) - flow.scaled_spacing());

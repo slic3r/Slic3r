@@ -431,6 +431,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("brim_ears_max_angle", coFloat);
     def->label = L("Max angle");
+    def->full_label = L("Brim ear max angle");
     def->category = OptionCategory::skirtBrim;
     def->tooltip = L("Maximum angle to let a brim ear appear. \nIf set to 0, no brim will be created. \nIf set to ~178, brim will be created on everything but strait sections.");
     def->sidetext = L("°");
@@ -438,6 +439,17 @@ void PrintConfigDef::init_fff_params()
     def->max = 180;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(125));
+
+    def = this->add("brim_ears_detection_length", coFloat);
+    def->label = L("Detection radius");
+    def->full_label = L("Brim ear detection length");
+    def->category = OptionCategory::skirtBrim;
+    def->tooltip = L("The geometry will be decimated before dectecting sharp angles. This parameter indicate the minimum length of strait sections after decimation."
+                    "\n0 to deactivate");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(1));
 
     def = this->add("brim_ears_pattern", coEnum);
     def->label = L("Pattern");
@@ -450,6 +462,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("rectilinear");
     def->enum_labels.push_back(L("Concentric"));
     def->enum_labels.push_back(L("Rectilinear"));
+    def->mode = comExpert;
     def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipConcentric));
 
     def = this->add("brim_offset", coFloat);
@@ -5072,6 +5085,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "brim_inside_holes",
 "brim_width_interior",
 "brim_ears",
+"brim_ears_detection_length",
 "brim_ears_max_angle",
 "brim_ears_pattern",
 "brim_offset",
