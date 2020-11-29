@@ -88,16 +88,16 @@ void PreferencesDialog::build()
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 #ifdef _WIN32
 		// Please keep in sync with ConfigWizard
-		def.label = L("Associate .3mf files to PrusaSlicer");
+		def.label = L("Associate .3mf files to SuperSlicer");
 		def.type = coBool;
-		def.tooltip = L("If enabled, sets PrusaSlicer as default application to open .3mf files.");
+		def.tooltip = L("If enabled, sets SuperSlicer as default application to open .3mf files.");
 		def.set_default_value(new ConfigOptionBool(app_config->get("associate_3mf") == "1"));
 		option = Option(def, "associate_3mf");
 		m_optgroup_general->append_single_option_line(option);
 
-		def.label = L("Associate .stl files to PrusaSlicer");
+		def.label = L("Associate .stl files to SuperSlicer");
 		def.type = coBool;
-		def.tooltip = L("If enabled, sets PrusaSlicer as default application to open .stl files.");
+		def.tooltip = L("If enabled, sets SuperSlicer as default application to open .stl files.");
 		def.set_default_value(new ConfigOptionBool(app_config->get("associate_stl") == "1"));
 		option = Option(def, "associate_stl");
 		m_optgroup_general->append_single_option_line(option);
