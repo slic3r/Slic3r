@@ -603,11 +603,12 @@ void PerimeterGenerator::process()
                     else offset_top_surface = 0;
                     //don't takes into account too thin areas
                     double min_width_top_surface = std::max(double(ext_perimeter_spacing / 2 + 10), this->config->min_width_top_surface.get_abs_value(double(perimeter_width)));
-                    ExPolygons grown_upper_slices = offset_ex(*this->upper_slices, min_width_top_surface);
+                    //make thin upper surfaces disapear with -+offset_top_surface becasue it will be harder to do so later, as they can merge together to form big blob
+                    const ExPolygons grown_upper_slices = offset2_ex(*this->upper_slices, -offset_top_surface, offset_top_surface+min_width_top_surface);
                     //set the clip to a virtual "second perimeter"
                     fill_clip = offset_ex(last, -double(ext_perimeter_spacing));
                     // get the real top surface
-                    ExPolygons top_polygons = (!have_to_grow_for_miller) 
+                    const ExPolygons top_grown_polygons = (!have_to_grow_for_miller) 
                         ? diff_ex(last, grown_upper_slices, true)
                         :(unmillable.empty())
                                 ? diff_ex(last, offset_ex(grown_upper_slices, (double)mill_extra_size), true)
@@ -615,16 +616,16 @@ void PerimeterGenerator::process()
 
 
                     //get the not-top surface, from the "real top" but enlarged by external_infill_margin (and the min_width_top_surface we removed a bit before)
-                    ExPolygons inner_polygons = diff_ex(last, offset_ex(top_polygons, offset_top_surface + min_width_top_surface
+                    const ExPolygons inner_polygons = diff_ex(last, offset_ex(top_grown_polygons, offset_top_surface + min_width_top_surface
                         //also remove the ext_perimeter_spacing/2 width because we are faking the external periemter, and we will remove ext_perimeter_spacing2
                         - double(ext_perimeter_spacing / 2)), true);
                     // get the enlarged top surface, by using inner_polygons instead of upper_slices, and clip it for it to be exactly the polygons to fill.
-                    top_polygons = diff_ex(fill_clip, inner_polygons, true);
+                    const ExPolygons top_polygons = diff_ex(fill_clip, inner_polygons, true);
                     // increase by half peri the inner space to fill the frontier between last and stored.
                     top_fills = union_ex(top_fills, top_polygons);
                     //set the clip to the external wall but go bacjk inside by infill_extrusion_width/2 to be sure the extrusion won't go outside even with a 100% overlap.
                     fill_clip = offset_ex(last, double(ext_perimeter_spacing / 2) - this->config->infill_extrusion_width.get_abs_value(nozzle_diameter)/2);
-                    ExPolygons oldLast = last;
+                    // ExPolygons oldLast = last;
                     last = intersection_ex(inner_polygons, last);
                     //{
                     //    std::stringstream stri;
