@@ -2219,7 +2219,7 @@ void PrintConfigDef::init_fff_params()
         " It assumes infinite acceleration for this time estimation, and will only take into account G1 and G0 moves. Use 0 to deactivate.");
     def->sidetext = L("s");
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloat(-0.5));
+    def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("fan_speedup_overhangs", coBool);
     def->label = L("Fan startup delay");
