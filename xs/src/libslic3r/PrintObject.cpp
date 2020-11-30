@@ -405,10 +405,9 @@ PrintObject::check_nonplanar_collisions(NonplanarSurface &surface, int id)
 {
     FOREACH_REGION(this->_print, region_it) {
         size_t region_id = region_it - this->_print->regions.begin();
-        Polygons nonplanar_polygon = to_polygons(surface.horizontal_projection());
-        Polygons shrinking_nonplanar_polygon = nonplanar_polygon;
-        std::map<float,Polygons> layer_nonplanar_polygon;
-        Polygons collider;
+        ExPolygons nonplanar_polygon = surface.horizontal_projection();
+        ExPolygons shrinking_nonplanar_polygon = nonplanar_polygon;
+        std::map<coordf_t,ExPolygons> layer_nonplanar_polygon;
         float angle_rad = this->config.nonplanar_layers_collision_angle.value * 3.14159265/180.0;
         double collision_area = 0;
 
@@ -422,25 +421,25 @@ PrintObject::check_nonplanar_collisions(NonplanarSurface &surface, int id)
             if (surface.stats.min.z-layer->height > layer->slice_z) break;
 
             LayerRegion &layerm = *layer->regions[region_id];
-            Polygons layerm_slices_surfaces = layerm.slices;
-            Polygons current_top;
+            ExPolygons layerm_slices_surfaces = layerm.slices;
+            ExPolygons current_top;
 
             if (layer->upper_layer != NULL) {
                 Layer* upper_layer = layer->upper_layer;
                 LayerRegion &upper_layerm = *upper_layer->regions[region_id];
-                Polygons upper_slices = upper_layerm.slices;
+                ExPolygons upper_slices = upper_layerm.slices;
                 //set intersection as current top
-                current_top = diff(layerm_slices_surfaces, upper_slices, false);
+                current_top = diff_ex(layerm_slices_surfaces, upper_slices, false);
             } else {
                 // whole surface is current top
                 current_top = layerm_slices_surfaces;
             }
 
             //save intersection with shrinking_nonplanar_polygon for each layer
-            layer_nonplanar_polygon[layer->slice_z] = intersection(shrinking_nonplanar_polygon, current_top, true);
+            layer_nonplanar_polygon[layer->slice_z] = intersection_ex(shrinking_nonplanar_polygon, current_top, true);
 
             //remove small artifacts from Polygons
-            for (Polygons::iterator it=layer_nonplanar_polygon[layer->slice_z].begin(); it!=layer_nonplanar_polygon[layer->slice_z].end();) {
+            for (ExPolygons::iterator it=layer_nonplanar_polygon[layer->slice_z].begin(); it!=layer_nonplanar_polygon[layer->slice_z].end();) {
                 if(unscale(unscale(it->area())) <= 0.5)
                     it = layer_nonplanar_polygon[layer->slice_z].erase(it);
                 else
@@ -448,7 +447,7 @@ PrintObject::check_nonplanar_collisions(NonplanarSurface &surface, int id)
             }
 
             //remove current top from shrinking_nonplanar_polygon
-            shrinking_nonplanar_polygon = diff(shrinking_nonplanar_polygon, layer_nonplanar_polygon[layer->slice_z], true);
+            shrinking_nonplanar_polygon = diff_ex(shrinking_nonplanar_polygon, layer_nonplanar_polygon[layer->slice_z], true);
 
             //debug
             // SVG svg("svg/polygon_" + std::to_string(id) + "_" + std::to_string(layer->id()) + "_" + std::to_string(layer->slice_z) + ".svg");
@@ -474,12 +473,12 @@ PrintObject::check_nonplanar_collisions(NonplanarSurface &surface, int id)
             for (size_t j = minLayer; j < i; j++) {
                 float layerdiff = layers[i]->slice_z - layers[j]->slice_z;
                 float angle_offset = scale_(layerdiff*std::sin(1.57079633-angle_rad)/std::sin(angle_rad));
-                Polygons offsetted = offset(layer_nonplanar_polygon[layers[j]->slice_z],
+                ExPolygons offsetted = offset_ex(layer_nonplanar_polygon[layers[j]->slice_z],
                         angle_offset,
                         100000.0,
                         ClipperLib::jtSquare);
                 
-                ExPolygons collisions = union_ex(intersection(layers[i]->regions[region_id]->slices, diff(offsetted,nonplanar_polygon)));
+                ExPolygons collisions = intersection_ex(layers[i]->regions[region_id]->slices, diff_ex(offsetted,nonplanar_polygon));
                 
                 //add up the colliding areas
                 if (!collisions.empty()){
@@ -487,7 +486,7 @@ PrintObject::check_nonplanar_collisions(NonplanarSurface &surface, int id)
                         collision_area += c.area();
                     }
                 }
-                // svg.draw(union_ex(diff(offsetted,nonplanar_polygon)), "yellow", 0.7f);
+                // svg.draw(diff_ex(offsetted,nonplanar_polygon), "yellow", 0.7f);
                 // svg.draw(collisions, "red", 0.9f);
                 // svg.draw_outline(layer_nonplanar_polygon[layers[j]->slice_z],"green");
             }
@@ -552,16 +551,16 @@ PrintObject::move_nonplanar_surfaces_up()
             for (j = i-1; j >= 1; j--) {
                 if (minZ >= layers[j]->print_z+layers[j]->height) break;
 
-                Polygons layerm_slices_surfaces_copy = layers[j]->regions[region_id]->slices;
+                ExPolygons layerm_slices_surfaces_copy = layers[j]->regions[region_id]->slices;
 
                 //debug output
                 // SVG svg("svg/layer_" + std::to_string(layers[i]->id()) + "_" + std::to_string(j) + "_" + std::to_string(layers[j]->print_z) + ".svg");
                 // svg.draw_outline(layerm_slices_surfaces_copy, "blue");
                 // svg.draw(nonplanar_projection, "black", 0.3);
-                // svg.draw(intersection_ex(nonplanar_projection, union_ex(layerm_slices_surfaces_copy, false),false) , "green", 0.3);
+                // svg.draw(intersection_ex(nonplanar_projection, layerm_slices_surfaces_copy,false) , "green", 0.3);
 
                 ExPolygons candidate = intersection_ex(nonplanar_projection,
-                        union_ex(diff(layerm_slices_surfaces_copy, layers[j]->upper_layer->regions[region_id]->slices, false), false), false);
+                        diff_ex(layerm_slices_surfaces_copy, layers[j]->upper_layer->regions[region_id]->slices, false), false);
 
                 //select intersection of top most region and nonplanar projection
                 nonplar_candidates.push_back(candidate);
@@ -573,7 +572,7 @@ PrintObject::move_nonplanar_surfaces_up()
                 // svg.draw(candidate , "red", 0.3);
                 // for(auto& c:nonplar_candidates) {
                 //     svg.draw(c, "yellow", 0.3);
-                // }                
+                // }
                 // //debug output
                 // svg.arrows = false;
                 // svg.Close();
@@ -584,13 +583,13 @@ PrintObject::move_nonplanar_surfaces_up()
                 ExPolygons candidate = nonplar_candidates[i-j-1];
                 if (candidate.size() > 0){
                     //save surfaces
-                    Polygons layerm_slices_surfaces_copy = layers[j]->regions[region_id]->slices;
+                    ExPolygons layerm_slices_surfaces_copy = layers[j]->regions[region_id]->slices;
 
                     //clear layer
                     layers[j]->regions[region_id]->slices.clear();
 
                     // append internal surfaces without the found topNonplanar surfaces
-                    layers[j]->regions[region_id]->slices.append(diff_ex(union_ex(layerm_slices_surfaces_copy), candidate, false), stInternal);
+                    layers[j]->regions[region_id]->slices.append(diff_ex(layerm_slices_surfaces_copy, candidate, false), stInternal);
 
                     //append nonplanar layers to home layer
                     home_layerm.slices.append(candidate, stTopNonplanar);
