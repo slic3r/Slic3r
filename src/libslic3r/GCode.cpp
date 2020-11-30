@@ -1088,7 +1088,7 @@ static void init_multiextruders(FILE *file, Print &print, GCodeWriter & writer, 
             int standby_temp = int(print.config().temperature.get_at(tool_id));
             if(print.config().ooze_prevention.value)
                 standby_temp += print.config().standby_temperature_delta.value;
-            fprintf(file, "G10 P%d R%d S%d ; sets the standby temperature\n",
+            fprintf(file, "G10 P%d R%d ; sets the standby temperature\n",
                 tool_id,
                 standby_temp,
                 int(print.config().temperature.get_at(tool_id)));
