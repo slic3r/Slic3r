@@ -3778,7 +3778,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Tool name");
     def->category = OptionCategory::extruders;
     def->tooltip = L("Only used for klipper, where you can name the extruder. If not set, will be 'extruderX' with 'X' replaced by the extruder number.");
-    def->mode = comAdvanced;
+    def->mode = comExpert;
     def->set_default_value(new ConfigOptionStrings(""));
 
     def = this->add("top_infill_extrusion_width", coFloatOrPercent);

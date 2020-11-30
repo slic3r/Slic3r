@@ -1914,7 +1914,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             {
                 TabPrinter* tab = nullptr;
                 if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) return;
-                if (m_config->opt_bool("single_extruder_multi_material") && tab->m_extruders_count > 1 && opt_key.find_first_of("nozzle_diameter") != std::string::npos)
+                if (m_config->opt_bool("single_extruder_multi_material") && tab->m_extruders_count > 1 && opt_key.find("nozzle_diameter") != std::string::npos)
                 {
                     SuppressBackgroundProcessingUpdate sbpu;
                     const double new_nd = boost::any_cast<double>(value);
