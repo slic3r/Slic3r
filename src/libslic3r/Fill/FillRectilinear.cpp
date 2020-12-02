@@ -3328,7 +3328,7 @@ FillRectilinearWGapFill::fill_surface_extrusion(const Surface *surface, const Fi
     Polylines polylines_rectilinear;
     Surface rectilinear_surface{ *surface };
     FillParams params_monotonic = params;
-    params_monotonic.monotonic = true;
+    params_monotonic.monotonic = is_monotonic();
     for (const ExPolygon &rectilinear_area : rectilinear_areas) {
         rectilinear_surface.expolygon = rectilinear_area, 0 - 0.5 * params.flow.scaled_spacing();
         if (!fill_surface_by_lines(&rectilinear_surface, params_monotonic, 0.f, 0.f, polylines_rectilinear)) {
@@ -3368,7 +3368,7 @@ FillRectilinearWGapFill::fill_surface_extrusion(const Surface *surface, const Fi
         ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
         /// pass the no_sort attribute to the extrusion path
         //don't force monotonic if not top or bottom
-        if (surface->surface_type & (stPosTop | stPosBottom) != 0)
+        if (is_monotonic())
             eec->no_sort = true;
         else
             eec->no_sort = this->no_sort();

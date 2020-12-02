@@ -126,11 +126,22 @@ public:
 class FillRectilinearWGapFill : public FillRectilinear
 {
 public:
-
     Fill* clone() const override { return new FillRectilinearWGapFill(*this); };
     ~FillRectilinearWGapFill() override = default;
     void fill_surface_extrusion(const Surface* surface, const FillParams& params, ExtrusionEntitiesPtr& out) const override;
     static void split_polygon_gap_fill(const Surface& surface, const FillParams& params, ExPolygons& rectilinear, ExPolygons& gapfill);
+protected:
+    virtual bool is_monotonic() const { return false;  }
+};
+
+class FillMonotonicWGapFill : public FillRectilinearWGapFill
+{
+public:
+
+    Fill* clone() const override { return new FillMonotonicWGapFill(*this); };
+    ~FillMonotonicWGapFill() override = default;
+protected:
+    virtual bool is_monotonic() const override { return true; }
 };
 
 

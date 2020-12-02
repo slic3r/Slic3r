@@ -697,7 +697,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "top-fill-pattern|external-fill-pattern=s";
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
-    def->enum_values.push_back("rectilineargapfill");
+    def->enum_values.push_back("monotonicgapfillgapfill");
     def->enum_values.push_back("monotonic");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("concentricgapfill");
@@ -728,7 +728,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "bottom-fill-pattern|external-fill-pattern=s";
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
-    def->enum_values.push_back("rectilineargapfill");
+    def->enum_values.push_back("monotonicgapfill");
     def->enum_values.push_back("monotonic");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("concentricgapfill");

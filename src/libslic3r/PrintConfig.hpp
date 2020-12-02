@@ -83,8 +83,11 @@ enum InfillPattern : uint8_t{
     ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral,
     ipAdaptiveCubic, ipSupportCubic, 
     ipSmooth, ipSmoothHilbert, ipSmoothTriple,
-    ipRectiWithPerimeter, ipConcentricGapFill, ipScatteredRectilinear, ipSawtooth, ipRectilinearWGapFill, 
+    ipRectiWithPerimeter, ipConcentricGapFill, ipScatteredRectilinear, 
+    ipSawtooth,
+    ipRectilinearWGapFill,
     ipMonotonic,
+    ipMonotonicWGapFill,
     ipCount
 };
 
@@ -229,7 +232,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<InfillPattern>::g
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
         keys_map["rectilinear"]         = ipRectilinear;
-        keys_map["monotonic"]          = ipMonotonic;
+        keys_map["monotonic"]           = ipMonotonic;
         keys_map["grid"]                = ipGrid;
         keys_map["triangles"]           = ipTriangles;
         keys_map["stars"]               = ipStars;
@@ -249,6 +252,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<InfillPattern>::g
         keys_map["rectiwithperimeter"]  = ipRectiWithPerimeter;
         keys_map["scatteredrectilinear"]= ipScatteredRectilinear;
         keys_map["rectilineargapfill"]  = ipRectilinearWGapFill;
+        keys_map["monotonicgapfill"]    = ipMonotonicWGapFill;
         keys_map["sawtooth"]            = ipSawtooth;
         keys_map["adaptivecubic"]       = ipAdaptiveCubic;
         keys_map["supportcubic"]        = ipSupportCubic;
