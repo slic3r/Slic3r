@@ -1085,7 +1085,7 @@ size_t PresetBundle::load_configbundle(const std::string &path, unsigned int fla
     namespace pt = boost::property_tree;
     pt::ptree tree;
     boost::nowide::ifstream ifs(path);
-#ifdef __WXMSW__
+//#ifdef __WXMSW__
     try {
         pt::read_ini(ifs, tree);
     }catch(const std::exception& ex) {
@@ -1093,9 +1093,9 @@ size_t PresetBundle::load_configbundle(const std::string &path, unsigned int fla
         ss << "Error when reading bundle file " << path << ", error: " << ex.what();
         throw std::exception(ss.str().c_str());
     }
-#else
-        pt::read_ini(ifs, tree);
-#endif
+//#else
+//        pt::read_ini(ifs, tree);
+//#endif
     const VendorProfile *vendor_profile = nullptr;
     if (flags & (LOAD_CFGBNDLE_SYSTEM | LOAD_CFGBUNDLE_VENDOR_ONLY)) {
         auto vp = VendorProfile::from_ini(tree, path);
