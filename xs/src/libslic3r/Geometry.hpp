@@ -26,7 +26,7 @@ double rad2deg_dir(double angle);
 double deg2rad(double angle);
 
 double linint(double value, double oldmin, double oldmax, double newmin, double newmax);
-bool Point_in_triangle(Pointf pt, Pointf v1, Pointf v2, Pointf v3);
+bool Point_in_triangle(Pointf pt, Pointf v1, Pointf v2, Pointf v3, double epsilon);
 void Project_point_on_plane(Pointf3 v1,  Pointf3 n, Point &pt);
 Point* Line_intersection(Point p1, Point p2, Point p3, Point p4);
 float triangle_surface(Point p1, Point p2, Point p3);

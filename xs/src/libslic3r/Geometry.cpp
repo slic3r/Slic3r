@@ -343,6 +343,20 @@ linint(double value, double oldmin, double oldmax, double newmin, double newmax)
     return (value - oldmin) * (newmax - newmin) / (oldmax - oldmin) + newmin;
 }
 
+bool
+point_in_bounding_box(Pointf pt, Pointf v1, Pointf v2, Pointf v3, double epsilon)
+{
+    //check if point is in x range
+    if (pt.x < std::min({v1.x, v2.x, v3.x}) - epsilon || pt.x > std::max({v1.x, v2.x, v3.x}) + epsilon) {
+        return false;
+    }
+    //check if point is in y range
+    if (pt.y < std::min({v1.y, v2.y, v3.y}) - epsilon || pt.y > std::max({v1.y, v2.y, v3.y}) + epsilon) {
+        return false;
+    }
+    return true;
+}
+
 float
 sign(Pointf p1, Pointf p2, Pointf p3)
 {
@@ -350,7 +364,7 @@ sign(Pointf p1, Pointf p2, Pointf p3)
 }
 
 bool
-Point_in_triangle(Pointf pt, Pointf v1, Pointf v2, Pointf v3)
+Point_in_triangle_side(Pointf pt, Pointf v1, Pointf v2, Pointf v3)
 {
     //Check if point is right of every edge
     if (sign(pt, v1, v2) <= 0.0f) return false;
@@ -358,6 +372,68 @@ Point_in_triangle(Pointf pt, Pointf v1, Pointf v2, Pointf v3)
     if (sign(pt, v3, v1) <= 0.0f) return false;
 
     return true;
+}
+
+// bool
+// Point_in_triangle_barycentric(Pointf pt, Pointf v1, Pointf v2, Pointf v3)
+// {
+//     double denom = ((v2.y - v3.y)*(v1.x - v3.x) + (v3.x - v2.x)*(v1.y - v3.y));
+//     double a = ((v2.y - v3.y)*(pt.x - v3.x) + (v3.x - v2.x)*(pt.y - v3.y)) / denom;
+//     double b = ((v3.y - v1.y)*(pt.x - v3.x) + (v1.x - v3.x)*(pt.y - v3.y)) / denom;
+//     double c = 1 - a - b;
+    
+//     return (0 <= a && a <= 1 && 0 <= b && b <= 1 && 0 <= c && c <= 1);
+// }
+
+double
+distanceSquarePointToSegment(Pointf pt, Pointf v1, Pointf v2)
+{
+    double p1_p2_squareLength = (v2.x - v1.x)*(v2.x - v1.x) + (v2.y - v1.y)*(v2.y - v1.y);
+    double dotProduct = ((pt.x - v1.x)*(v2.x - v1.x) + (pt.y - v1.y)*(v2.y - v1.y)) / p1_p2_squareLength;
+    if ( dotProduct < 0 )
+    {
+        return (pt.x - v1.x)*(pt.x - v1.x) + (pt.y - v1.y)*(pt.y - v1.y);
+    }
+    else if ( dotProduct <= 1 )
+    {
+        double p_p1_squareLength = (v1.x - pt.x)*(v1.x - pt.x) + (v1.y - pt.y)*(v1.y - pt.y);
+        return p_p1_squareLength - dotProduct * dotProduct * p1_p2_squareLength;
+    }
+    else
+    {
+        return (pt.x - v2.x)*(pt.x - v2.x) + (pt.y - v2.y)*(pt.y - v2.y);
+    }
+}
+
+bool
+Point_in_triangle(Pointf pt, Pointf v1, Pointf v2, Pointf v3, double epsilon)
+{
+    const double EPSILON_SQUARE = epsilon*epsilon;
+
+    //taken from http://totologic.blogspot.com/2014/01/accurate-point-in-triangle-test.html
+    //check if pt is in bounding box
+    if (!point_in_bounding_box(pt,v1,v2,v3,epsilon)){
+        return false;
+    }
+
+    //check if point is in triangle
+    if (Point_in_triangle_side(pt,v1,v2,v3)){
+        //if yes, we trust the test
+        return true;
+    } else {
+        //if no, we dont trust the test and check further
+        if (distanceSquarePointToSegment(pt,v1,v2) <= EPSILON_SQUARE){
+            return true;
+        }
+        if (distanceSquarePointToSegment(pt,v2,v3) <= EPSILON_SQUARE){
+            return true;
+        }
+        if (distanceSquarePointToSegment(pt,v3,v1) <= EPSILON_SQUARE){
+            return true;
+        }
+        //if everything fails, the point is not in the triangle
+        return false;
+    }
 }
 
 //https://graphics.stanford.edu/~mdfisher/Code/Engine/Plane.cpp.html

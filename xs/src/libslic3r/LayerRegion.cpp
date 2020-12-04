@@ -368,27 +368,20 @@ LayerRegion::project_nonplanar_path(ExtrusionPath *path)
         for (auto& surface : this->nonplanar_surfaces) {
             float distance_to_top = surface.stats.max.z - this->layer()->print_z;
             for(auto& facet : surface.mesh) {
-                //skip if point is outside of the bounding box of the triangle
-                if (unscale(point.x) < std::min({facet.second.vertex[0].x, facet.second.vertex[1].x, facet.second.vertex[2].x}) ||
-                    unscale(point.x) > std::max({facet.second.vertex[0].x, facet.second.vertex[1].x, facet.second.vertex[2].x}) ||
-                    unscale(point.y) < std::min({facet.second.vertex[0].y, facet.second.vertex[1].y, facet.second.vertex[2].y}) ||
-                    unscale(point.y) > std::max({facet.second.vertex[0].y, facet.second.vertex[1].y, facet.second.vertex[2].y}))
-                {
-                    continue;
-                }
                 //check if point is inside of Triangle
                 if (Slic3r::Geometry::Point_in_triangle(
                     Pointf(unscale(point.x),unscale(point.y)),
                     Pointf(facet.second.vertex[0].x, facet.second.vertex[0].y),
                     Pointf(facet.second.vertex[1].x, facet.second.vertex[1].y),
-                    Pointf(facet.second.vertex[2].x, facet.second.vertex[2].y)))
+                    Pointf(facet.second.vertex[2].x, facet.second.vertex[2].y),
+                    0.1))
                 {
                     Slic3r::Geometry::Project_point_on_plane(Pointf3(facet.second.vertex[0].x,facet.second.vertex[0].y,facet.second.vertex[0].z),
                                                              Pointf3(facet.second.normal.x,facet.second.normal.y,facet.second.normal.z),
                                                              point);
                     //Shift down when on lower layer
                     point.z = point.z - scale_(distance_to_top);
-                    //break;
+                    break;
                 }
             }
         }
