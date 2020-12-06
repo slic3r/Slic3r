@@ -649,7 +649,7 @@ std::vector<GCode::LayerToPrint> GCode::collect_layers_to_print(const PrintObjec
             || (layer_to_print.support_layer && layer_to_print.support_layer->has_extrusions());
 
         // Check that there are extrusions on the very first layer.
-        if (layers_to_print.size() == 1u) {
+        if (layers_to_print.size() == 1u && !object.print()->config().allow_empty_layers.value) {
             if (!has_extrusions)
                 throw Slic3r::SlicingError(_(L("There is an object with no extrusions on the first layer.")));
         }
@@ -2068,7 +2068,7 @@ namespace Skirt {
             //FIXME infinite or high skirt does not make sense for sequential print!
             (skirt_done.size() < (size_t)print.config().skirt_height.value || print.has_infinite_skirt()) &&
             // This print_z has not been extruded yet (sequential print)
-            skirt_done.back() < layer_tools.print_z - EPSILON &&
+            !skirt_done.empty() && skirt_done.back() < layer_tools.print_z - EPSILON &&
             // and this layer is an object layer, or it is a raft layer.
             (layer_tools.has_object || support_layer->id() < (size_t)support_layer->object()->config().raft_layers.value)) {
 #if 0
