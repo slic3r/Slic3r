@@ -503,6 +503,7 @@ void Layer::make_ironing()
         double         height;
         double         speed;
         double         angle;
+        IroningType    type;
 
         bool operator<(const IroningParams &rhs) const {
             if (this->extruder < rhs.extruder)
@@ -535,7 +536,8 @@ void Layer::make_ironing()
         bool operator==(const IroningParams &rhs) const {
             return this->extruder == rhs.extruder && this->just_infill == rhs.just_infill &&
                    this->line_spacing == rhs.line_spacing && this->height == rhs.height && this->speed == rhs.speed &&
-                   this->angle == rhs.angle;
+                this->angle == rhs.angle &&
+                this->type == rhs.type;
         }
 
         LayerRegion *layerm        = nullptr;
@@ -577,6 +579,7 @@ void Layer::make_ironing()
                 }
             }
             if (ironing_params.extruder != -1) {
+                ironing_params.type              = config.ironing_type;
                 ironing_params.just_infill     = false;
                 ironing_params.line_spacing = config.ironing_spacing;
                 ironing_params.height         = default_layer_height * 0.01 * config.ironing_flowrate;
@@ -611,14 +614,25 @@ void Layer::make_ironing()
             // Just infill.
         } else {
             // Infill and perimeter.
-            // Merge top surfaces with the same ironing parameters.
-            Polygons polys;
-            for (size_t k = i; k < j; ++ k)
-                for (const Surface &surface : by_extruder[k].layerm->slices().surfaces)
-                    if (surface.has_pos_top())
-                        polygons_append(polys, surface.expolygon);
-            // Trim the top surfaces with half the nozzle diameter.
-            ironing_areas = intersection_ex(polys, offset(this->lslices, - float(scale_(0.5 * nozzle_dmr))));
+            if (ironing_params.type == IroningType::AllSolid) {
+                // Merge top surfaces with the same ironing parameters.
+                Polygons polys;
+                for (size_t k = i; k < j; ++k)
+                    for (const Surface& surface : by_extruder[k].layerm->slices().surfaces)
+                        if (surface.has_fill_solid())
+                            polygons_append(polys, surface.expolygon);
+                // Trim the top surfaces with half the nozzle diameter.
+                ironing_areas = intersection_ex(polys, offset(this->lslices, -float(scale_(0.5 * nozzle_dmr))));
+            } else {
+                // Merge top surfaces with the same ironing parameters.
+                Polygons polys;
+                for (size_t k = i; k < j; ++k)
+                    for (const Surface& surface : by_extruder[k].layerm->slices().surfaces)
+                        if (surface.has_pos_top())
+                            polygons_append(polys, surface.expolygon);
+                // Trim the top surfaces with half the nozzle diameter.
+                ironing_areas = intersection_ex(polys, offset(this->lslices, -float(scale_(0.5 * nozzle_dmr))));
+            }
         }
 
         // Create the filler object.
