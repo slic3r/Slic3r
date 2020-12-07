@@ -1102,7 +1102,7 @@ size_t PresetBundle::load_configbundle(const std::string &path, unsigned int fla
     }catch(const std::exception& ex) {
         std::stringstream ss;
         ss << "Error when reading bundle file " << path << ", error: " << ex.what();
-        throw std::exception(ss.str().c_str());
+        throw std::runtime_error(ss.str().c_str());
     }
 //#else
 //        pt::read_ini(ifs, tree);
