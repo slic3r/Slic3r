@@ -611,6 +611,7 @@ const std::vector<std::string>& Preset::filament_options()
         "filament_dip_insertion_speed",
         "filament_dip_extraction_speed",  //skinnydip params end
         "temperature", "first_layer_temperature", "bed_temperature", "first_layer_bed_temperature", 
+        "full_fan_speed_layer",
         "cooling",
         "fan_always_on", 
         "min_fan_speed",
@@ -943,22 +944,33 @@ static bool profile_print_params_same(const DynamicPrintConfig &cfg_old, const D
 
 // Load a preset from an already parsed config file, insert it into the sorted sequence of presets
 // and select it, losing previous modifications.
-// In case
-Preset& PresetCollection::load_external_preset(
+// Only a single profile could be edited at at the same time, which introduces complexity when loading
+// filament profiles for multi-extruder printers.
+std::pair<Preset*, bool> PresetCollection::load_external_preset(
     // Path to the profile source file (a G-code, an AMF or 3MF file, a config file)
     const std::string           &path,
     // Name of the profile, derived from the source file name.
     const std::string           &name,
     // Original name of the profile, extracted from the loaded config. Empty, if the name has not been stored.
     const std::string           &original_name,
-    // Config to initialize the preset from.
-    const DynamicPrintConfig    &config,
+    // Config to initialize the preset from. It may contain configs of all presets merged in a single dictionary!
+    const DynamicPrintConfig    &combined_config,
     // Select the preset after loading?
-    bool                         select)
+    LoadAndSelect                select)
 {
     // Load the preset over a default preset, so that the missing fields are filled in from the default preset.
-    DynamicPrintConfig cfg(this->default_preset_for(config).config);
-    cfg.apply_only(config, cfg.keys(), true);
+    DynamicPrintConfig cfg(this->default_preset_for(combined_config).config);
+    const auto        &keys = cfg.keys();
+    cfg.apply_only(combined_config, keys, true);
+    std::string                 &inherits = Preset::inherits(cfg);
+    if (select == LoadAndSelect::Never) {
+        // Some filament profile has been selected and modified already.
+        // Check whether this profile is equal to the modified edited profile.
+        const Preset &edited = this->get_edited_preset();
+        if ((edited.name == original_name || edited.name == inherits) && profile_print_params_same(edited.config, cfg))
+            // Just point to that already selected and edited profile.
+            return std::make_pair(&(*this->find_preset_internal(edited.name)), false);
+    }
     // Is there a preset already loaded with the name stored inside the config?
     std::deque<Preset>::iterator it = this->find_preset_internal(original_name);
     bool                         found = it != m_presets.end() && it->name == original_name;
@@ -969,19 +981,41 @@ Preset& PresetCollection::load_external_preset(
     }
     if (found && profile_print_params_same(it->config, cfg)) {
 	        // The preset exists and it matches the values stored inside config.
-	        if (select)
+        if (select == LoadAndSelect::Always)
 	            this->select_preset(it - m_presets.begin());
-	        return *it;
+        return std::make_pair(&(*it), false);
 	    }
-    // Update the "inherits" field.
-    std::string &inherits = Preset::inherits(cfg);
-    if (found && inherits.empty()) {
-        // There is a profile with the same name already loaded. Should we update the "inherits" field?
-        if (it->vendor == nullptr)
-            inherits = it->inherits();
-        else
-            inherits = it->name;
+    if (! found && select != LoadAndSelect::Never && ! inherits.empty()) {
+        // Try to use a system profile as a base to select the system profile
+        // and override its settings with the loaded ones.
+        assert(it == m_presets.end());
+        it    = this->find_preset_internal(inherits);
+        found = it != m_presets.end() && it->name == inherits;
+        if (found && profile_print_params_same(it->config, cfg)) {
+            // The system preset exists and it matches the values stored inside config.
+            if (select == LoadAndSelect::Always)
+                this->select_preset(it - m_presets.begin());
+            return std::make_pair(&(*it), false);
+        }
     }
+    if (found) {
+        if (select != LoadAndSelect::Never) {
+            // Select the existing preset and override it with new values, so that
+            // the differences will be shown in the preset editor against the referenced profile.
+            this->select_preset(it - m_presets.begin());
+            // The source config may contain keys from many possible preset types. Just copy those that relate to this preset.
+            this->get_edited_preset().config.apply_only(combined_config, keys, true);
+            this->update_dirty();
+            assert(this->get_edited_preset().is_dirty);
+            return std::make_pair(&(*it), this->get_edited_preset().is_dirty);
+        }
+        if (inherits.empty()) {
+    // Update the "inherits" field.
+        // There is a profile with the same name already loaded. Should we update the "inherits" field?
+            inherits = it->vendor ? it->name : it->inherits();
+    }
+    }
+
     // The external preset does not match an internal preset, load the external preset.
     std::string new_name;
     for (size_t idx = 0;; ++ idx) {
@@ -1002,19 +1036,19 @@ Preset& PresetCollection::load_external_preset(
             break;
         if (profile_print_params_same(it->config, cfg)) {
             // The preset exists and it matches the values stored inside config.
-            if (select)
+            if (select == LoadAndSelect::Always)
                 this->select_preset(it - m_presets.begin());
-            return *it;
+            return std::make_pair(&(*it), false);
         }
         // Form another profile name.
     }
     // Insert a new profile.
-    Preset &preset = this->load_preset(path, new_name, std::move(cfg), select);
+    Preset &preset = this->load_preset(path, new_name, std::move(cfg), select == LoadAndSelect::Always);
     preset.is_external = true;
     if (&this->get_selected_preset() == &preset)
         this->get_edited_preset().is_external = true;
 
-    return preset;
+    return std::make_pair(&preset, false);
 }
 
 Preset& PresetCollection::load_preset(const std::string &path, const std::string &name, DynamicPrintConfig &&config, bool select)

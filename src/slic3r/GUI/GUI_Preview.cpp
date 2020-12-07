@@ -181,27 +181,13 @@ void View3D::render()
 Preview::Preview(
     wxWindow* parent, Model* model, DynamicPrintConfig* config,
     BackgroundSlicingProcess* process, GCodeProcessor::Result* gcode_result, std::function<void()> schedule_background_process_func)
-    : m_canvas_widget(nullptr)
-    , m_canvas(nullptr)
-    , m_left_sizer(nullptr)
-    , m_layers_slider_sizer(nullptr)
-    , m_bottom_toolbar_panel(nullptr)
-    , m_label_view_type(nullptr)
-    , m_choice_view_type(nullptr)
-    , m_label_show(nullptr)
-    , m_combochecklist_features(nullptr)
-    , m_combochecklist_features_pos(0)
-    , m_combochecklist_options(nullptr)
-    , m_config(config)
+    : m_config(config)
     , m_process(process)
     , m_gcode_result(gcode_result)
-    , m_number_extruders(1)
+#if !ENABLE_PREVIEW_TYPE_CHANGE
     , m_preferred_color_mode("feature")
-    , m_loaded(false)
+#endif // !ENABLE_PREVIEW_TYPE_CHANGE
     , m_schedule_background_process(schedule_background_process_func)
-#ifdef __linux__
-    , m_volumes_cleanup_required(false)
-#endif // __linux__
 {
     if (init(parent, model))
         load_print();
@@ -291,9 +277,7 @@ bool Preview::init(wxWindow* parent, Model* model)
     m_combochecklist_options->Create(m_bottom_toolbar_panel, wxID_ANY, _L("Options"), wxDefaultPosition, wxDefaultSize, wxCB_READONLY);
     std::string options_items = GUI::into_u8(
         get_option_type_string(OptionType::Travel) + "|0|" +
-#if ENABLE_SHOW_WIPE_MOVES
         get_option_type_string(OptionType::Wipe) + "|0|" +
-#endif // ENABLE_SHOW_WIPE_MOVES
         get_option_type_string(OptionType::Retractions) + "|0|" +
         get_option_type_string(OptionType::Unretractions) + "|0|" +
         get_option_type_string(OptionType::ToolChanges) + "|0|" +
@@ -363,6 +347,7 @@ void Preview::set_as_dirty()
         m_canvas->set_as_dirty();
 }
 
+#if !ENABLE_PREVIEW_TYPE_CHANGE
 void Preview::set_number_extruders(unsigned int number_extruders)
 {
     if (m_number_extruders != number_extruders) {
@@ -375,6 +360,7 @@ void Preview::set_number_extruders(unsigned int number_extruders)
         //m_preferred_color_mode = (type == tool_idx) ? "tool_or_feature" : "feature";
     }
 }
+#endif // !ENABLE_PREVIEW_TYPE_CHANGE
 
 void Preview::bed_shape_changed()
 {
@@ -488,6 +474,13 @@ void Preview::unbind_event_handlers()
     m_moves_slider->Unbind(wxEVT_SCROLL_CHANGED, &Preview::on_moves_slider_scroll_changed, this);
 }
 
+#if ENABLE_ARROW_KEYS_WITH_SLIDERS
+void Preview::move_moves_slider(wxKeyEvent& evt)
+{
+    if (m_moves_slider != nullptr) m_moves_slider->OnKeyDown(evt);
+}
+#endif // ENABLE_ARROW_KEYS_WITH_SLIDERS
+
 void Preview::hide_layers_slider()
 {
     m_layers_slider_sizer->Hide((size_t)0);
@@ -502,12 +495,22 @@ void Preview::on_size(wxSizeEvent& evt)
 
 void Preview::on_choice_view_type(wxCommandEvent& evt)
 {
+#if !ENABLE_PREVIEW_TYPE_CHANGE
     //m_preferred_color_mode = (m_choice_view_type->GetStringSelection() == L("Tool")) ? "tool" : "feature";
+#endif // !ENABLE_PREVIEW_TYPE_CHANGE
     int selection = m_choice_view_type->GetCurrentSelection();
+#if ENABLE_PREVIEW_TYPE_CHANGE
+    if (0 <= selection && selection < static_cast<int>(GCodeViewer::EViewType::Count)) {
+        this->m_last_choice = static_cast<GCodeViewer::EViewType>(selection);
+        m_canvas->set_toolpath_view_type(this->m_last_choice);
+        m_keep_current_preview_type = true;
+    }
+#else
     if (0 <= selection && selection < static_cast<int>(GCodeViewer::EViewType::Count)) {
         this->m_last_choice = static_cast<GCodeViewer::EViewType>(selection);
         m_canvas->set_toolpath_view_type(this->m_last_choice);
     }
+#endif // ENABLE_PREVIEW_TYPE_CHANGE
 
     refresh_print();
 }
@@ -544,6 +547,7 @@ void Preview::on_combochecklist_options(wxCommandEvent& evt)
         m_canvas->set_as_dirty();
 }
 
+#if !ENABLE_PREVIEW_TYPE_CHANGE
 void Preview::update_view_type(bool keep_volumes)
 {
     const DynamicPrintConfig& config = wxGetApp().preset_bundle->project_config;
@@ -566,6 +570,7 @@ void Preview::update_view_type(bool keep_volumes)
 
     reload_print(keep_volumes);
 }
+#endif // !ENABLE_PREVIEW_TYPE_CHANGE
 
 void Preview::update_bottom_toolbar()
 {
@@ -622,7 +627,12 @@ wxBoxSizer* Preview::create_layers_slider_sizer()
         model.custom_gcode_per_print_z = m_layers_slider->GetTicksValues();
         m_schedule_background_process();
 
+#if ENABLE_PREVIEW_TYPE_CHANGE
+        m_keep_current_preview_type = false;
+        reload_print(false);
+#else
         update_view_type(false);
+#endif // ENABLE_PREVIEW_TYPE_CHANGE
         });
 
     return sizer;
@@ -796,12 +806,26 @@ void Preview::update_layers_slider_from_canvas(wxKeyEvent& event)
 
     const auto key = event.GetKeyCode();
 
+#if ENABLE_ARROW_KEYS_WITH_SLIDERS
+    if (key == 'S' || key == 'W') {
+        const int new_pos = key == 'W' ? m_layers_slider->GetHigherValue() + 1 : m_layers_slider->GetHigherValue() - 1;
+#else
     if (key == 'U' || key == 'D') {
         const int new_pos = key == 'U' ? m_layers_slider->GetHigherValue() + 1 : m_layers_slider->GetHigherValue() - 1;
+#endif // ENABLE_ARROW_KEYS_WITH_SLIDERS
         m_layers_slider->SetHigherValue(new_pos);
         if (event.ShiftDown() || m_layers_slider->is_one_layer()) m_layers_slider->SetLowerValue(m_layers_slider->GetHigherValue());
     }
+#if ENABLE_ARROW_KEYS_WITH_SLIDERS
+    else if (key == 'A' || key == 'D') {
+        const int new_pos = key == 'D' ? m_moves_slider->GetHigherValue() + 1 : m_moves_slider->GetHigherValue() - 1;
+        m_moves_slider->SetHigherValue(new_pos);
+        if (event.ShiftDown() || m_moves_slider->is_one_layer()) m_moves_slider->SetLowerValue(m_moves_slider->GetHigherValue());
+    }
+    else if (key == 'X')
+#else
     else if (key == 'S')
+#endif // ENABLE_ARROW_KEYS_WITH_SLIDERS
         m_layers_slider->ChangeOneLayerLock();
     else if (key == WXK_SHIFT)
         m_layers_slider->UseDefaultColors(false);
@@ -874,6 +898,7 @@ void Preview::load_print_as_fff(bool keep_z_range)
         return;
     }
 
+#if !ENABLE_PREVIEW_TYPE_CHANGE
     if (m_preferred_color_mode == "tool_or_feature") {
         // It is left to Slic3r to decide whether the print shall be colored by the tool or by the feature.
         // Color by feature if it is a single extruder print.
@@ -886,6 +911,7 @@ void Preview::load_print_as_fff(bool keep_z_range)
         // If the->SetSelection changed the following line, revert it to "decide yourself".
         m_preferred_color_mode = "tool_or_feature";
     }
+#endif // !ENABLE_PREVIEW_TYPE_CHANGE
 
     GCodeViewer::EViewType gcode_view_type = m_canvas->get_gcode_view_preview_type();
     bool gcode_preview_data_valid = !m_gcode_result->moves.empty();
@@ -956,6 +982,24 @@ void Preview::load_print_as_fff(bool keep_z_range)
         } else
             update_layers_slider(zs, keep_z_range);
     }
+
+#if ENABLE_PREVIEW_TYPE_CHANGE
+    unsigned int number_extruders = (unsigned int)print->extruders().size();
+
+    if (!m_keep_current_preview_type) {
+        const wxString choice = !wxGetApp().plater()->model().custom_gcode_per_print_z.gcodes.empty() ?
+            _L("Color Print") :
+            (number_extruders > 1) ? _L("Tool") : _L("Feature type");
+
+        int type = m_choice_view_type->FindString(choice);
+        if (m_choice_view_type->GetSelection() != type) {
+            if (0 <= type && type < static_cast<int>(GCodeViewer::EViewType::Count)) {
+                m_choice_view_type->SetSelection(type);
+                m_canvas->set_gcode_view_preview_type(static_cast<GCodeViewer::EViewType>(type));
+}
+        }
+    }
+#endif // ENABLE_PREVIEW_TYPE_CHANGE
 }
 
 void Preview::load_print_as_sla()
@@ -1027,9 +1071,7 @@ wxString Preview::get_option_type_string(OptionType type) const
     switch (type)
     {
     case OptionType::Travel:        { return _L("Travel"); }
-#if ENABLE_SHOW_WIPE_MOVES
     case OptionType::Wipe:          { return _L("Wipe"); }
-#endif // ENABLE_SHOW_WIPE_MOVES
     case OptionType::Retractions:   { return _L(m_width_screen == tiny ? "Retr." : "Retractions"); }
     case OptionType::Unretractions: { return _L(m_width_screen == tiny ? "Dere." : "Deretractions"); }
     case OptionType::ToolChanges:   { return _L(m_width_screen == tiny ? "Tool/C" : "Tool changes"); }

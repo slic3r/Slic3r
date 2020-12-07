@@ -5,6 +5,7 @@
 #include <vector>
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
+#include <boost/nowide/convert.hpp>
 
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/PresetBundle.hpp"
@@ -23,6 +24,12 @@
 #include "BitmapCache.hpp"
 
 using boost::optional;
+
+#ifdef __linux__
+#define wxLinux true
+#else
+#define wxLinux false
+#endif
 
 namespace Slic3r {
 
@@ -586,7 +593,7 @@ void UnsavedChangesDialog::build(Preset::Type type, PresetCollection* dependent_
     m_tree->AssociateModel(m_tree_model);
     m_tree_model->SetAssociatedControl(m_tree);
 
-    m_tree->AppendToggleColumn(L"\u2714", UnsavedChangesModel::colToggle, wxDATAVIEW_CELL_ACTIVATABLE, 6 * em);//2610,11,12 //2714
+    m_tree->AppendToggleColumn(L"\u2714", UnsavedChangesModel::colToggle, wxDATAVIEW_CELL_ACTIVATABLE, (wxLinux ? 8 : 6) * em);
 
     auto append_bmp_text_column = [this](const wxString& label, unsigned model_column, int width, bool set_expander = false) 
     {
@@ -1075,7 +1082,6 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
         // Collect dirty options.
         const bool deep_compare = (type == Preset::TYPE_PRINTER || type == Preset::TYPE_SLA_MATERIAL);
         auto dirty_options = presets->current_dirty_options(deep_compare);
-        auto dirty_options_ = presets->current_dirty_options();
 
         // process changes of extruders count
         if (type == Preset::TYPE_PRINTER && old_pt == ptFFF &&
@@ -1092,6 +1098,12 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
 
         for (const std::string& opt_key : dirty_options) {
             const Search::Option& option = searcher.get_option(opt_key);
+            if (option.opt_key != boost::nowide::widen(opt_key)) {
+                // When founded option isn't the correct one.
+                // It can be for dirty_options: "default_print_profile", "printer_model", "printer_settings_id",
+                // because of they don't exist in searcher
+                continue;
+            }
 
             ItemData item_data = { opt_key, option.label_local, get_string_value(opt_key, old_config), get_string_value(opt_key, new_config), type };
 

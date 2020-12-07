@@ -188,7 +188,7 @@ wxPoint OG_CustomCtrl::get_pos(const Line& line, Field* field_in/* = nullptr*/)
 #ifdef __WXMSW__
                         // when we use 2 monitors with different DPIs, GetTextExtent() return value for the primary display
                         // so, use dc.GetMultiLineTextExtent on Windows 
-                        wxPaintDC dc(this);
+                    wxClientDC dc(this);
                         dc.SetFont(m_font);
                         if (option.label_width >= 0) {
                             if (option.label_width != 0) {

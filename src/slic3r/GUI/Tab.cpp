@@ -28,7 +28,8 @@
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string/trim.hpp>
+
+#include <boost/algorithm/string/replace.hpp>#include <boost/algorithm/string/trim.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
 #include "wxExtensions.hpp"
@@ -438,6 +439,17 @@ Slic3r::GUI::PageShp Tab::add_options_page(const wxString& title, const std::str
     return page;
 }
 
+// Names of categories is save in English always. We translate them only for UI.
+// But category "Extruder n" can't be translated regularly (using _()), so
+// just for this category we should splite the title and translate "Extruder" word separately
+wxString Tab::translate_category(const wxString& title, Preset::Type preset_type)
+{
+    if (preset_type == Preset::TYPE_PRINTER && title.Contains("Extruder ")) {
+        return _("Extruder") + title.SubString(8, title.Last());
+    }
+    return _(title);
+}
+
 void Tab::OnActivate()
 {
     wxWindowUpdateLocker noUpdates(this);
@@ -515,7 +527,7 @@ void Tab::update_labels_colour()
         auto title = m_treectrl->GetItemText(cur_item);
         for (auto page : m_pages)
         {
-            if (_(page->title()) != title)
+            if (translate_category(page->title(), m_type) != title)
                 continue;
 
             const wxColor *clr = !page->m_is_nonsys_values ? &m_sys_label_clr :
@@ -746,7 +758,7 @@ void Tab::update_changed_tree_ui()
         auto title = m_treectrl->GetItemText(cur_item);
         for (auto page : m_pages)
         {
-            if (_(page->title()) != title)
+            if (translate_category(page->title(), m_type) != title)
                 continue;
             bool sys_page = true;
             bool modified_page = false;
@@ -1143,7 +1155,7 @@ void Tab::update_wiping_button_visibility() {
 
 void Tab::activate_option(const std::string& opt_key, const wxString& category)
 {
-    wxString page_title = _(category);
+    wxString page_title = translate_category(category, m_type);
 
     auto cur_item = m_treectrl->GetFirstVisibleItem();
     if (!cur_item || !m_treectrl->IsVisible(cur_item))
@@ -3017,7 +3029,7 @@ void Tab::rebuild_page_tree()
     {
         if (!p->get_show())
             continue;
-        auto itemId = m_treectrl->AppendItem(rootItem, _(p->title()), p->iconID());
+        auto itemId = m_treectrl->AppendItem(rootItem, translate_category(p->title(), m_type), p->iconID());
         m_treectrl->SetItemTextColour(itemId, p->get_item_colour());
         if (p->title() == selected)
             item = itemId;
@@ -3169,6 +3181,11 @@ void Tab::select_preset(std::string preset_name, bool delete_current /*=false*/,
                 // If preset selection was canceled and previously was selected physical printer, we should select it back
                 m_preset_bundle->physical_printers.select_printer(last_selected_ph_printer_name);
             }
+            if (m_preset_bundle->physical_printers.has_selection()) {
+                // If preset selection was canceled and physical printer was selected
+                // we must disable selection marker for the physical printers
+                m_preset_bundle->physical_printers.unselect_printer();
+        }
         }
 
         update_tab_ui();
@@ -3356,7 +3373,7 @@ bool Tab::tree_sel_change_delayed()
     const auto sel_item = m_treectrl->GetSelection();
     const auto selection = sel_item ? m_treectrl->GetItemText(sel_item) : "";
     for (auto p : m_pages)
-        if (_(p->title()) == selection)
+        if (translate_category(p->title(), m_type) == selection)
         {
             page = p.get();
             m_is_nonsys_values = page->m_is_nonsys_values;

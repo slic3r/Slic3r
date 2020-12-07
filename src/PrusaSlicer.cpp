@@ -29,6 +29,7 @@
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/Config.hpp"
 #include "libslic3r/Geometry.hpp"
+#include "libslic3r/GCode/PostProcessor.hpp"
 #include "libslic3r/Model.hpp"
 #include "libslic3r/ModelArrange.hpp"
 #include "libslic3r/Print.hpp"
@@ -99,7 +100,7 @@ int CLI::run(int argc, char **argv)
 #ifdef _WIN32
             false;
 #else
-            // On Unix systems, the prusa-slicer binary may be symlinked to give the application a different meaning.
+            // On Unix systems, the superslicer binary may be symlinked to give the application a different meaning.
             boost::algorithm::iends_with(boost::filesystem::path(argv[0]).filename().string(), "gcodeviewer");
 #endif // _WIN32
 
@@ -510,6 +511,8 @@ int CLI::run(int argc, char **argv)
                             }
                             outfile = outfile_final;
                         }
+                        // Run the post-processing scripts if defined.
+                        run_post_process_scripts(outfile, fff_print.full_print_config());
                         boost::nowide::cout << "Slicing result exported to " << outfile << std::endl;
                     } catch (const std::exception &ex) {
                         boost::nowide::cerr << ex.what() << std::endl;
@@ -664,7 +667,7 @@ void CLI::print_help(bool include_print_options, PrinterTechnology printer_techn
 #endif /* SLIC3R_GUI */
         << std::endl
         << "https://github.com/prusa3d/PrusaSlicer" << std::endl << std::endl
-        << "Usage: prusa-slicer [ ACTIONS ] [ TRANSFORM ] [ OPTIONS ] [ file.stl ... ]" << std::endl
+        << "Usage: superslicer [ ACTIONS ] [ TRANSFORM ] [ OPTIONS ] [ file.stl ... ]" << std::endl
         << std::endl
         << "Actions:" << std::endl;
     cli_actions_config_def.print_cli_help(boost::nowide::cout, false);

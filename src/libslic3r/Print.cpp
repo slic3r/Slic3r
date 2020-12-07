@@ -115,6 +115,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "first_layer_flow_ratio",
         "first_layer_speed",
         "first_layer_infill_speed",
+        "full_fan_speed_layer",
         "gap_fill_speed",
         "gcode_comments",
         "gcode_label_objects",
@@ -666,6 +667,7 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
 	new_full_config.option("print_settings_id",    true);
 	new_full_config.option("filament_settings_id", true);
 	new_full_config.option("printer_settings_id",  true);
+    new_full_config.option("physical_printer_settings_id", true);
     new_full_config.normalize_fdm();
 
     // Find modified keys of the various configs. Resolve overrides extruder retract values by filament profiles.
@@ -697,6 +699,7 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
 		m_placeholder_parser.set("print_preset",    new_full_config.option("print_settings_id")->clone());
 		m_placeholder_parser.set("filament_preset", new_full_config.option("filament_settings_id")->clone());
 		m_placeholder_parser.set("printer_preset",  new_full_config.option("printer_settings_id")->clone());
+        m_placeholder_parser.set("physical_printer_preset",   new_full_config.option("physical_printer_settings_id")->clone());
 		// We want the filament overrides to be applied over their respective extruder parameters by the PlaceholderParser.
 		// see "Placeholders do not respect filament overrides." GH issue #3649
 		m_placeholder_parser.apply_config(filament_overrides);

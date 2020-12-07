@@ -2284,8 +2284,10 @@ bool ConfigWizard::priv::check_and_install_missing_materials(Technology technolo
     const auto printer_model_list = [](const std::set<const VendorProfile::PrinterModel*> &printer_models) -> wxString {
     	wxString out;
     	for (const VendorProfile::PrinterModel *printer_model : printer_models) {
+            wxString name = from_u8(printer_model->name);
+            name.Replace("&", "&&", true);
     		out += "\t\t";
-    		out += from_u8(printer_model->name);
+    		out += name;
     		out += "\n";
     	}
     	return out;
@@ -2471,7 +2473,7 @@ void ConfigWizard::priv::apply_config(AppConfig *app_config, PresetBundle *prese
         page_temps->apply_custom_config(*custom_config);
 
         const std::string profile_name = page_custom->profile_name();
-        preset_bundle->load_config(profile_name, *custom_config);
+        preset_bundle->load_config_from_wizard(profile_name, *custom_config);
     }
 
     // Update the selections from the compatibilty.

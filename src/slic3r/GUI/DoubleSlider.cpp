@@ -1221,9 +1221,11 @@ wxString Control::get_tooltip(int tick/*=-1*/)
             return _L("Jump to move") + " (Shift + G)";
         else
             return m_mode == MultiAsSingle ?
-            GUI::from_u8((boost::format(_u8L("Jump to height %s Set ruler mode\n or "
-                "Set extruder sequence for the entire print")) % " (Shift + G)\n").str()) :
-            GUI::from_u8((boost::format(_u8L("Jump to height %s or Set ruler mode")) % " (Shift + G)\n").str());
+            GUI::from_u8((boost::format(_u8L("Jump to height %s\n"
+                                               "Set ruler mode\n"
+                                               "or Set extruder sequence for the entire print")) % "(Shift + G)").str()) :
+            GUI::from_u8((boost::format(_u8L("Jump to height %s\n"
+                                                "or Set ruler mode")) % "(Shift + G)").str());
     }
     if (m_focus == fiColorBand)
         return m_mode != SingleExtruder ? "" :
@@ -1523,6 +1525,10 @@ void Control::move_current_thumb(const bool condition)
     if (accelerator > 0)
         delta *= accelerator;
 
+#if ENABLE_ARROW_KEYS_WITH_SLIDERS
+    if (m_selection == ssUndef) m_selection = ssHigher;
+#endif // ENABLE_ARROW_KEYS_WITH_SLIDERS
+
     if (m_selection == ssLower) {
         m_lower_value -= delta;
         correct_lower_value();
@@ -1583,14 +1589,27 @@ void Control::OnKeyDown(wxKeyEvent &event)
             if (key == WXK_LEFT || key == WXK_RIGHT)
                 move_current_thumb(key == WXK_LEFT);
             else if (key == WXK_UP || key == WXK_DOWN) {
+#if ENABLE_ARROW_KEYS_WITH_SLIDERS
+                if (key == WXK_DOWN)
+                    m_selection = ssHigher;
+                else if (key == WXK_UP && is_lower_thumb_editable())
+                    m_selection = ssLower;
+#else
                 if (key == WXK_UP)
                     m_selection = ssHigher;
                 else if (key == WXK_DOWN && is_lower_thumb_editable())
                     m_selection = ssLower;
+#endif // ENABLE_ARROW_KEYS_WITH_SLIDERS
                 Refresh();
             }
         }
+#if ENABLE_ARROW_KEYS_WITH_SLIDERS
+        else {
+            if (key == WXK_LEFT || key == WXK_RIGHT)
+                move_current_thumb(key == WXK_LEFT);
         }
+#endif // ENABLE_ARROW_KEYS_WITH_SLIDERS
+    }
     else {
         if (m_is_focused) {
             if (key == WXK_LEFT || key == WXK_RIGHT) {
@@ -1603,6 +1622,12 @@ void Control::OnKeyDown(wxKeyEvent &event)
             else if (key == WXK_UP || key == WXK_DOWN)
                 move_current_thumb(key == WXK_UP);
         }
+#if ENABLE_ARROW_KEYS_WITH_SLIDERS
+        else {
+            if (key == WXK_UP || key == WXK_DOWN)
+                move_current_thumb(key == WXK_UP);
+    }
+#endif // ENABLE_ARROW_KEYS_WITH_SLIDERS
     }
 
     event.Skip(); // !Needed to have EVT_CHAR generated as well
@@ -1825,7 +1850,7 @@ void Control::show_cog_icon_context_menu()
 
     wxMenu* ruler_mode_menu = new wxMenu();
     if (ruler_mode_menu) {
-        append_menu_check_item(ruler_mode_menu, wxID_ANY, _L("None"), _L("Supprese show the ruler"), 
+        append_menu_check_item(ruler_mode_menu, wxID_ANY, _L("None"), _L("Hide ruler"), 
             [this](wxCommandEvent&) { if (m_extra_style != 0) m_extra_style = 0; }, ruler_mode_menu, 
             []() { return true; }, [this]() { return m_extra_style == 0; }, GUI::wxGetApp().plater());
 

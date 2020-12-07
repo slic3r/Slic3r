@@ -33,7 +33,10 @@ group:Fan speed - default
 	setting:bridge_fan_speed
 	setting:top_fan_speed
 	setting:external_perimeter_fan_speed
-	setting:disable_fan_first_layers
+	line:Disable fan for the first
+		setting:label$_:sidetext_width$12:disable_fan_first_layers
+		setting:full_fan_speed_layer
+	end_line
 group:Short layer time - began to increase base fan speed
 	setting:fan_below_layer_time
 	setting:label$Max fan speed:max_fan_speed

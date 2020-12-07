@@ -218,7 +218,7 @@ else ()
             COMMAND ln -sf SuperSlicer prusa-gcodeviewer
             COMMAND ln -sf SuperSlicer PrusaGCodeViewer
             WORKING_DIRECTORY "$<TARGET_FILE_DIR:SuperSlicer>"
-            COMMENT "Symlinking the G-code viewer to SuperSlicer, symlinking to prusa-slicer and prusa-gcodeviewer"
+            COMMENT "Symlinking the G-code viewer to SuperSlicer, symlinking to superslicer and prusa-gcodeviewer"
             VERBATIM)
     else ()
         add_custom_command(TARGET SuperSlicer POST_BUILD
@@ -251,5 +251,5 @@ else ()
     install(TARGETS SuperSlicer RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
     # Install the symlink for gcodeviewer
-    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink prusa-slicer prusa-gcodeviewer WORKING_DIRECTORY \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR})")
+    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink superslicer prusa-gcodeviewer WORKING_DIRECTORY \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR})")
 endif ()

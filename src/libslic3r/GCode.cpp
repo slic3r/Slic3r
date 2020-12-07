@@ -269,10 +269,8 @@ std::string Wipe::wipe(GCode& gcodegen, bool toolchange)
 
         // subdivide the retraction in segments
             if (!wipe_path.empty()) {
-#if ENABLE_SHOW_WIPE_MOVES
                 // add tag for processor
                 gcode += ";" + GCodeProcessor::Wipe_Start_Tag + "\n";
-#endif // ENABLE_SHOW_WIPE_MOVES
                 for (const Line& line : wipe_path.lines()) {
                 double segment_length = line.length();
                 /*  Reduce retraction length a bit to avoid effective retraction speed to be greater than the configured one
@@ -287,10 +285,8 @@ std::string Wipe::wipe(GCode& gcodegen, bool toolchange)
                     "wipe and retract"
                 );
             }
-#if ENABLE_SHOW_WIPE_MOVES
                 // add tag for processor
                 gcode += ";" + GCodeProcessor::Wipe_End_Tag + "\n";
-#endif // ENABLE_SHOW_WIPE_MOVES
 			gcodegen.set_last_pos(wipe_path.points.back());
         }
 
@@ -397,6 +393,7 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
     // Otherwise, leave control to the user completely.
     std::string toolchange_gcode_str;
         const std::string& toolchange_gcode = gcodegen.config().toolchange_gcode.value;
+//        m_max_layer_z = std::max(m_max_layer_z, tcr.print_z);
         if (! toolchange_gcode.empty()) {
             DynamicConfig config;
             int previous_extruder_id = gcodegen.writer().tool() ? (int)gcodegen.writer().tool()->id() : -1;
@@ -404,6 +401,7 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
             config.set_key_value("next_extruder",     new ConfigOptionInt((int)new_extruder_id));
             config.set_key_value("layer_num",         new ConfigOptionInt(gcodegen.m_layer_index));
             config.set_key_value("layer_z",           new ConfigOptionFloat(tcr.print_z));
+//            config.set_key_value("max_layer_z", new ConfigOptionFloat(m_max_layer_z));
             toolchange_gcode_str = gcodegen.placeholder_parser_process("toolchange_gcode", toolchange_gcode, new_extruder_id, &config);
             check_add_eol(toolchange_gcode_str);
         }
@@ -790,15 +788,17 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessor::Result* re
 
     if (! m_placeholder_parser_failed_templates.empty()) {
         // G-code export proceeded, but some of the PlaceholderParser substitutions failed.
+        //FIXME localize!
         std::string msg = std::string("G-code export to ") + path + " failed due to invalid custom G-code sections:\n\n";
-        for (const std::string &name : m_placeholder_parser_failed_templates)
-            msg += std::string("\t") + name + "\n";
+        for (const auto &name_and_error : m_placeholder_parser_failed_templates)
+            msg += name_and_error.first + "\n" + name_and_error.second + "\n";
         msg += "\nPlease inspect the file ";
         msg += path_tmp + " for error messages enclosed between\n";
         msg += "        !!!!! Failed to process the custom G-code template ...\n";
         msg += "and\n";
         msg += "        !!!!! End of an error report for the custom G-code template ...\n";
-        throw Slic3r::RuntimeError(msg);
+        msg += "for all macro processing errors.";
+        throw Slic3r::PlaceholderParserError(msg);
     }
 
     BOOST_LOG_TRIVIAL(debug) << "Start processing gcode, " << log_memory_info();
@@ -1111,11 +1111,12 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     DoExport::init_gcode_processor(print.config(), m_processor, m_silent_time_estimator_enabled);
 
     // resets analyzer's tracking data
-    m_last_height = 0.0f;
-    m_last_layer_z = 0.0f;
+    m_last_height  = 0.f;
+    m_last_layer_z = 0.f;
+    m_max_layer_z  = 0.f;
 #if ENABLE_GCODE_VIEWER_DATA_CHECKING
-    m_last_mm3_per_mm = 0.0;
-    m_last_width = 0.0f;
+    m_last_mm3_per_mm = 0.;
+    m_last_width   = 0.f;
 #endif // ENABLE_GCODE_VIEWER_DATA_CHECKING
     m_fan_mover.release();
 
@@ -1605,6 +1606,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
         DynamicConfig config;
         config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index));
         config.set_key_value("layer_z", new ConfigOptionFloat(m_writer.get_position()(2) - m_config.z_offset.value));
+        config.set_key_value("max_layer_z", new ConfigOptionFloat(m_max_layer_z));
         config.set_key_value("current_extruder_id", new ConfigOptionInt((int)m_writer.tool()->id()));
         if (m_writer.tool_is_extruder()) {
             if (print.config().single_extruder_multi_material) {
@@ -1670,7 +1672,11 @@ std::string GCode::placeholder_parser_process(const std::string &name, const std
         return gcode;
     } catch (std::runtime_error &err) {
         // Collect the names of failed template substitutions for error reporting.
-        m_placeholder_parser_failed_templates.insert(name);
+        auto it = m_placeholder_parser_failed_templates.find(name);
+        if (it == m_placeholder_parser_failed_templates.end())
+            // Only if there was no error reported for this template, store the first error message into the map to be reported.
+            // We don't want to collect error message for each and every occurence of a single custom G-code section.
+            m_placeholder_parser_failed_templates.insert(it, std::make_pair(name, std::string(err.what())));
         // Insert the macro error message into the G-code.
         return
             std::string("\n!!!!! Failed to process the custom G-code template ") + name + "\n" +
@@ -2163,6 +2169,7 @@ void GCode::process_layer(
     gcode += buf;
     // update caches
     m_last_layer_z = static_cast<float>(print_z);
+    m_max_layer_z  = std::max(m_max_layer_z, m_last_layer_z);
     m_last_height = height;
 
     // Set new layer - this will change Z and force a retraction if retract_layer_change is enabled.
@@ -2171,7 +2178,8 @@ void GCode::process_layer(
         DynamicConfig config;
         config.set_key_value("previous_layer_z", new ConfigOptionFloat(previous_print_z));
         config.set_key_value("layer_num", new ConfigOptionInt(m_layer_index + 1));
-        config.set_key_value("layer_z", new ConfigOptionFloat(print_z));
+        config.set_key_value("layer_z",     new ConfigOptionFloat(print_z));
+        config.set_key_value("max_layer_z", new ConfigOptionFloat(m_max_layer_z));
         gcode += this->placeholder_parser_process("before_layer_gcode",
             print.config().before_layer_gcode.value, m_writer.tool()->id(), &config)
             + "\n";
@@ -2186,6 +2194,7 @@ void GCode::process_layer(
         gcode += this->placeholder_parser_process("layer_gcode",
             print.config().layer_gcode.value, m_writer.tool()->id(), &config)
             + "\n";
+        config.set_key_value("max_layer_z", new ConfigOptionFloat(m_max_layer_z));
     }
 
     if (! first_layer && ! m_second_layer_things_done) {
@@ -4053,6 +4062,7 @@ std::string GCode::set_extruder(unsigned int extruder_id, double print_z, bool n
         config.set_key_value("next_extruder",     new ConfigOptionInt((int)extruder_id));
         config.set_key_value("layer_num",         new ConfigOptionInt(m_layer_index));
         config.set_key_value("layer_z",           new ConfigOptionFloat(print_z));
+        config.set_key_value("max_layer_z",       new ConfigOptionFloat(m_max_layer_z));
         toolchange_gcode_parsed = placeholder_parser_process("toolchange_gcode", toolchange_gcode, extruder_id, &config);
         gcode += toolchange_gcode_parsed;
         check_add_eol(gcode);

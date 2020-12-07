@@ -34,6 +34,8 @@
 #include "format.hpp"
 
 #include <fstream>
+#include <string_view>
+
 #include "GUI_App.hpp"
 
 #ifdef _WIN32
@@ -84,6 +86,31 @@ public:
 };
 #endif // __APPLE__
 
+// Load the icon either from the exe, or from the ico file.
+static wxIcon main_frame_icon(GUI_App::EAppMode app_mode)
+{
+#if _WIN32
+    std::wstring path(size_t(MAX_PATH), wchar_t(0));
+    int len = int(::GetModuleFileName(nullptr, path.data(), MAX_PATH));
+    if (len > 0 && len < MAX_PATH) {
+        path.erase(path.begin() + len, path.end());
+        if (app_mode == GUI_App::EAppMode::GCodeViewer) {
+            // Only in case the slicer was started with --gcodeviewer parameter try to load the icon from prusa-gcodeviewer.exe
+            // Otherwise load it from the exe.
+            for (const std::wstring_view exe_name : { std::wstring_view(L"superslicer.exe"), std::wstring_view(L"superslicer_console.exe") })
+                if (boost::iends_with(path, exe_name)) {
+                    path.erase(path.end() - exe_name.size(), path.end());
+                    path += L"prusa-gcodeviewer.exe";
+                    break;
+                }
+        }
+    }
+    return wxIcon(path, wxBITMAP_TYPE_ICO);
+#else // _WIN32
+    return wxIcon(Slic3r::var(app_mode == GUI_App::EAppMode::Editor ? "Slic3r_128px.png" : "PrusaSlicer-gcodeviewer_128px.png"), wxBITMAP_TYPE_PNG);
+#endif // _WIN32
+}
+
 MainFrame::MainFrame() :
 DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE, "mainframe"),
     m_printhost_queue_dlg(new PrintHostQueueDialog(this))
@@ -115,35 +142,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
 #endif // __APPLE__
 
     // Load the icon either from the exe, or from the ico file.
-#if _WIN32
-    {
-        wxString src_path;
-        wxFileName::SplitPath(wxStandardPaths::Get().GetExecutablePath(), &src_path, nullptr, nullptr, wxPATH_NATIVE);
-        switch (wxGetApp().get_app_mode()) {
-        default:
-        case GUI_App::EAppMode::Editor:      { src_path += "\\SuperSlicer.exe"; break; }
-        case GUI_App::EAppMode::GCodeViewer: { src_path += "\\prusa-gcodeviewer.exe"; break; }
-        }
-        wxIconLocation icon_location;
-        icon_location.SetFileName(src_path);
-        SetIcon(icon_location);
-    }
-#else
-    switch (wxGetApp().get_app_mode())
-    {
-    default:
-    case GUI_App::EAppMode::Editor:
-    {
-        SetIcon(wxIcon(Slic3r::var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG));
-        break;
-    }
-    case GUI_App::EAppMode::GCodeViewer:
-    {
-        SetIcon(wxIcon(Slic3r::var("PrusaSlicer-gcodeviewer_128px.png"), wxBITMAP_TYPE_PNG));
-        break;
-    }
-    }
-#endif // _WIN32
+    SetIcon(main_frame_icon(wxGetApp().get_app_mode()));
 
 	// initialize status bar
 	m_statusbar = std::make_shared<ProgressStatusBar>(this);
@@ -1151,9 +1150,15 @@ void MainFrame::init_menubar_as_editor()
             "paste_menu", nullptr, [this](){return m_plater->can_paste_from_clipboard(); }, this);
         
         editMenu->AppendSeparator();
+#ifdef __APPLE__
+        append_menu_item(editMenu, wxID_ANY, _L("Re&load from disk") + dots + "\tCtrl+Shift+R",
+            _L("Reload the plater from disk"), [this](wxCommandEvent&) { m_plater->reload_all_from_disk(); },
+            "", nullptr, [this]() {return !m_plater->model().objects.empty(); }, this);
+#else
         append_menu_item(editMenu, wxID_ANY, _L("Re&load from disk") + sep + "F5",
             _L("Reload the plater from disk"), [this](wxCommandEvent&) { m_plater->reload_all_from_disk(); },
             "", nullptr, [this]() {return !m_plater->model().objects.empty(); }, this);
+#endif // __APPLE__
 
         editMenu->AppendSeparator();
         append_menu_item(editMenu, wxID_ANY, _L("Searc&h") + "\tCtrl+F",
@@ -1196,9 +1201,8 @@ void MainFrame::init_menubar_as_editor()
             [this](wxCommandEvent&) { m_printhost_queue_dlg->Show(); }, "upload_queue", nullptr, []() {return true; }, this);
         
         windowMenu->AppendSeparator();
-        append_menu_item(windowMenu, wxID_ANY, _L("Open new instance") + "\tCtrl+I", _L("Open a new PrusaSlicer instance"),
+        append_menu_item(windowMenu, wxID_ANY, _L("Open new instance") + "\tCtrl+Shift+I", _L("Open a new PrusaSlicer instance"),
 			[this](wxCommandEvent&) { start_new_slicer(); }, "", nullptr, [this]() {return m_plater != nullptr && wxGetApp().app_config->get("single_instance") != "1"; }, this);
-
     }
 
     // View menu
@@ -1294,6 +1298,15 @@ void MainFrame::init_menubar_as_gcodeviewer()
         append_menu_item(fileMenu, wxID_ANY, _L("&Open G-code") + dots + "\tCtrl+O", _L("Open a G-code file"),
             [this](wxCommandEvent&) { if (m_plater != nullptr) m_plater->load_gcode(); }, "open", nullptr,
             [this]() {return m_plater != nullptr; }, this);
+#ifdef __APPLE__
+        append_menu_item(fileMenu, wxID_ANY, _L("Re&load from disk") + dots + "\tCtrl+Shift+R",
+            _L("Reload the plater from disk"), [this](wxCommandEvent&) { m_plater->reload_gcode_from_disk(); },
+            "", nullptr, [this]() { return !m_plater->get_last_loaded_gcode().empty(); }, this);
+#else
+        append_menu_item(fileMenu, wxID_ANY, _L("Re&load from disk") + sep + "F5",
+            _L("Reload the plater from disk"), [this](wxCommandEvent&) { m_plater->reload_gcode_from_disk(); },
+            "", nullptr, [this]() { return !m_plater->get_last_loaded_gcode().empty(); }, this);
+#endif // __APPLE__
         fileMenu->AppendSeparator();
         append_menu_item(fileMenu, wxID_ANY, _L("Export &toolpaths as OBJ") + dots, _L("Export toolpaths as OBJ"),
             [this](wxCommandEvent&) { if (m_plater != nullptr) m_plater->export_toolpaths_to_obj(); }, "export_plater", nullptr,

@@ -211,9 +211,13 @@ void SeamPlacer::init(const Print& print)
         po->project_and_append_custom_facets(true, EnforcerBlockerType::BLOCKER, temp_blk);
 
         // Offset the triangles out slightly.
-        for (auto* custom_per_object : {&temp_enf, &temp_blk})
-            for (ExPolygons& explgs : *custom_per_object)
-                explgs = Slic3r::offset_ex(explgs, scale_(max_nozzle_dmr));
+        for (auto* custom_per_object : {&temp_enf, &temp_blk}) {
+            float offset = max_nozzle_dmr - po->config().first_layer_size_compensation;
+            for (ExPolygons& explgs : *custom_per_object) {
+                explgs = Slic3r::offset_ex(explgs, scale_(offset));
+                offset = max_nozzle_dmr;
+            }
+        }
 
 //     FIXME: Offsetting should be done somehow cheaper, but following does not work
 //        for (auto* custom_per_object : {&temp_enf, &temp_blk}) {
@@ -497,7 +501,7 @@ Point SeamPlacer::get_seam(const Layer& layer, SeamPosition seam_position,
             float penalty_aligned  = penalties[last_pos_proj_idx];
             float penalty_min      = penalties[idx_min];
             float penalty_diff_abs = std::abs(penalties_with_custom_seam[idx_min] - penalties_with_custom_seam[last_pos_proj_idx]);
-            float penalty_max      = std::max(penalties[idx_min], penalties[last_pos_proj_idx]);
+            float penalty_max      = std::max(std::abs(penalties[idx_min]), std::abs(penalties[last_pos_proj_idx]));
             float penalty_diff_rel = (penalty_max == 0.f) ? 0.f : penalty_diff_abs / penalty_max;
             // printf("Align seams, penalty aligned: %f, min: %f, diff abs: %f, diff rel: %f\n", penalty_aligned, penalty_min, penalty_diff_abs, penalty_diff_rel);
             if (std::abs(penalty_diff_rel) < 0.05 && penalty_diff_abs < 3) {
@@ -637,10 +641,12 @@ void SeamPlacer::get_enforcers_and_blockers(size_t layer_id,
     auto is_inside = [](const Point& pt,
                         const CustomTrianglesPerLayer& custom_data) -> bool {
         assert(! custom_data.polys.empty());
-        // Now ask the AABB tree which polygon we should check and check it.
-        size_t candidate = AABBTreeIndirect::get_candidate_idx(custom_data.tree, pt);
-        if (candidate != size_t(-1)
-         && custom_data.polys[candidate].contains(pt))
+        // Now ask the AABB tree which polygons we should check and check them.
+        std::vector<size_t> candidates;
+        AABBTreeIndirect::get_candidate_idxs(custom_data.tree, pt, candidates);
+        if (! candidates.empty())
+            for (size_t idx : candidates)
+                if (custom_data.polys[idx].contains(pt))
             return true;
         return false;
     };
@@ -769,12 +775,14 @@ void SeamPlacer::apply_custom_seam(const Polygon& polygon, size_t po_idx,
 ////////////////////////
 //    std::ostringstream os;
 //    os << std::setw(3) << std::setfill('0') << layer_id;
-//    int a = scale_(20.);
+//    int a = scale_(30.);
 //    SVG svg("custom_seam" + os.str() + ".svg", BoundingBox(Point(-a, -a), Point(a, a)));
-//    /*if (! m_enforcers.empty())
-//        svg.draw(m_enforcers[layer_id], "blue");
-//    if (! m_blockers.empty())
-//        svg.draw(m_blockers[layer_id], "red");*/
+//    //if (! m_enforcers[po_idx].empty())
+//    //    svg.draw(m_enforcers[po_idx][layer_id].polys, "blue");
+//    //if (! m_blockers[po_idx].empty())
+//    //    svg.draw(m_blockers[po_idx][layer_id].polys, "red");
+
+
 
 //    size_t min_idx = std::min_element(penalties.begin(), penalties.end()) - penalties.begin();
 
@@ -785,13 +793,8 @@ void SeamPlacer::apply_custom_seam(const Polygon& polygon, size_t po_idx,
 //        if (min_idx == i) {
 //            fill = "yellow";
 //            size = 5e5;
-//        } else {
+//        } else
 //            fill = (std::find(enforcers_idxs.begin(), enforcers_idxs.end(), i) != enforcers_idxs.end() ? "green" : "black");
-//            if (std::find(enf_centers.begin(), enf_centers.end(), i) != enf_centers.end()) {
-//                size = 5e5;
-//                fill = "blue";
-//            }
-//        }
 //        if (i != 0)
 //            svg.draw(polygon.points[i], fill, size);
 //        else

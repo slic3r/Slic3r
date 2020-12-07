@@ -140,7 +140,9 @@ void PrintConfigDef::init_common_params()
     def->label = L("Hostname, IP or URL");
     def->category = OptionCategory::general;
     def->tooltip = L("Slic3r can upload G-code files to a printer host. This field should contain "
-                   "the hostname, IP address or URL of the printer host instance.");
+                   "the hostname, IP address or URL of the printer host instance. "
+                   "Print host behind HAProxy with basic auth enabled can be accessed by putting the user name and password into the URL "
+                   "in the following format: https://username:password@your-octopi-address/");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionString(""));
 
@@ -194,8 +196,8 @@ void PrintConfigDef::init_common_params()
     def->enum_keys_map = &ConfigOptionEnum<AuthorizationType>::get_enum_values();
     def->enum_values.push_back("key");
     def->enum_values.push_back("user");
-    def->enum_labels.push_back("KeyPassword");
-    def->enum_labels.push_back("UserPassword");
+    def->enum_labels.push_back(L("API key"));
+    def->enum_labels.push_back(L("HTTP digest"));
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionEnum<AuthorizationType>(atKeyPassword));
 }
@@ -1009,7 +1011,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("The extruder to use (unless more specific extruder settings are specified). "
         "This value overrides perimeter and infill extruders, but not the support extruders.");
     def->min = 0;  // 0 = inherit defaults
-    def->enum_labels.push_back("default");  // override label for item 0
+    def->enum_labels.push_back(L("default"));  // override label for item 0
     def->enum_labels.push_back("1");
     def->enum_labels.push_back("2");
     def->enum_labels.push_back("3");
@@ -1752,6 +1754,17 @@ void PrintConfigDef::init_fff_params()
     def->max = max_temp;
     def->set_default_value(new ConfigOptionInts { 200 });
 
+    def = this->add("full_fan_speed_layer", coInts);
+    def->label = L("Full fan speed at layer");
+    def->tooltip = L("Fan speed will be ramped up linearly from zero at layer \"disable_fan_first_layers\" "
+                   "to maximum at layer \"full_fan_speed_layer\". "
+                   "\"full_fan_speed_layer\" will be ignored if lower than \"disable_fan_first_layers\", in which case "
+                   "the fan will be running at maximum allowed speed at layer \"disable_fan_first_layers\" + 1.");
+    def->min = 0;
+    def->max = 1000;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInts { 0 });
+
     def = this->add("gap_fill", coBool);
     def->label = L("");
     def->full_label = L("Enable Gap Fill");
@@ -2126,9 +2139,9 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("top");
     def->enum_values.push_back("topmost");
     def->enum_values.push_back("solid");
-    def->enum_labels.push_back("All top surfaces");
-    def->enum_labels.push_back("Topmost surface only");
-    def->enum_labels.push_back("All solid surfaces");
+    def->enum_labels.push_back(L("All top surfaces"));
+    def->enum_labels.push_back(L("Topmost surface only"));
+    def->enum_labels.push_back(L("All solid surfaces"));
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionEnum<IroningType>(IroningType::TopSurfaces));
 
@@ -2816,6 +2829,10 @@ void PrintConfigDef::init_fff_params()
     def->cli = ConfigOptionDef::nocli;
 
     def = this->add("printer_settings_id", coString);
+    def->set_default_value(new ConfigOptionString(""));
+    def->cli = ConfigOptionDef::nocli;
+
+    def = this->add("physical_printer_settings_id", coString);
     def->set_default_value(new ConfigOptionString(""));
     def->cli = ConfigOptionDef::nocli;
 
@@ -4414,9 +4431,9 @@ void PrintConfigDef::init_sla_params()
     def->set_default_value(new ConfigOptionFloat(0.0));
     
     def = this->add("elephant_foot_min_width", coFloat);
-    def->label = L("Elephant foot minimum width");
+    def->label = L("minimum width");
     def->category = OptionCategory::slicing;
-    def->tooltip = L("Minimum width of features to maintain when doing elephant foot compensation.");
+    def->tooltip = L("Minimum width of features to maintain when doing the first layer compensation.");
     def->sidetext = L("mm");
     def->min = 0;
     def->mode = comAdvanced;
@@ -5234,8 +5251,8 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
                 value = "0";
             }
         }
-    } else if ("elephant_foot_min_width" == opt_key) {
-        opt_key = "elefant_foot_min_width";
+    } else if ("elefant_foot_min_width" == opt_key) {
+        opt_key = "elephant_foot_min_width";
     } else if("first_layer_acceleration" == opt_key || "infill_acceleration" == opt_key || "bridge_acceleration" == opt_key || "default_acceleration" == opt_key || "overhangs_speed" == opt_key || "perimeter_acceleration" == opt_key){
         if (value.find("%") != std::string::npos)
             value = "0";

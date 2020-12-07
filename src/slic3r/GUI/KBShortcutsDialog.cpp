@@ -118,7 +118,11 @@ void KBShortcutsDialog::fill_shortcuts()
             { ctrl + "Y", L("Redo") },
             { ctrl + "C", L("Copy to clipboard") },
             { ctrl + "V", L("Paste from clipboard") },
+#ifdef __APPLE__
+            { ctrl + "Shift+" + "R", L("Reload plater from disk") },
+#else
             { "F5", L("Reload plater from disk") },
+#endif // __APPLE__
             { ctrl + "F", L("Search") },
             // Window
             { ctrl + "1", L("Select Plater Tab") },
@@ -128,6 +132,7 @@ void KBShortcutsDialog::fill_shortcuts()
             { ctrl + "5", L("Switch to 3D") },
             { ctrl + "6", L("Switch to Preview") },
             { ctrl + "J", L("Print host upload queue") },
+            { ctrl + "Shift+" + "I", L("Open new instance") },
             // View
             { "0-6", L("Camera view") },
             { "E", L("Show/Hide object/instance labels") },
@@ -201,24 +206,62 @@ void KBShortcutsDialog::fill_shortcuts()
 
         m_full_shortcuts.push_back(std::make_pair(_L("Gizmos"), gizmos_shortcuts));
     }
+    else {
+        Shortcuts commands_shortcuts = {
+            { ctrl + "O", L("Open a G-code file") },
+#ifdef __APPLE__
+            { ctrl + "Shift+" + "R", L("Reload the plater from disk") },
+#else
+            { "F5", L("Reload plater from disk") },
+#endif // __APPLE__
+        };
+
+        m_full_shortcuts.push_back(std::make_pair(_L("Commands"), commands_shortcuts));
+    }
 
     Shortcuts preview_shortcuts = {
-        { L("Arrow Up"), L("Upper Layer") },
-        { L("Arrow Down"), L("Lower Layer") },
+#if ENABLE_ARROW_KEYS_WITH_SLIDERS
+        { L("Arrow Up"),    L("Vertical slider - Move active thumb Up") },
+        { L("Arrow Down"),  L("Vertical slider - Move active thumb Down") },
+        { L("Arrow Left"),  L("Horizontal slider - Move active thumb Left") },
+        { L("Arrow Right"), L("Horizontal slider - Move active thumb Right") },
+        { "W", L("Vertical slider - Move active thumb Up") },
+        { "S", L("Vertical slider - Move active thumb Down") },
+        { "A", L("Horizontal slider - Move active thumb Left") },
+        { "D", L("Horizontal slider - Move active thumb Right") },
+        { "X", L("On/Off one layer mode of the vertical slider") },
+        { "L", L("Show/Hide Legend and Estimated printing time") },
+#else
+        { L("Arrow Up"), L("Upper layer") },
+        { L("Arrow Down"), L("Lower layer") },
         { "U", L("Upper Layer") },
         { "D", L("Lower Layer") },
         { "L", L("Show/Hide Legend & Estimated printing time") },
+#endif // ENABLE_ARROW_KEYS_WITH_SLIDERS
     };
 
     m_full_shortcuts.push_back(std::make_pair(_L("Preview"), preview_shortcuts));
 
     Shortcuts layers_slider_shortcuts = {
+#if ENABLE_ARROW_KEYS_WITH_SLIDERS
+        { L("Arrow Up"),    L("Vertical slider - Move active thumb Up") },
+        { L("Arrow Down"),  L("Vertical slider - Move active thumb Down") },
+        { L("Arrow Left"),  L("Vertical slider - Set upper thumb as active") },
+        { L("Arrow Right"), L("Vertical slider - Set lower thumb as active") },
+        { "+", L("Vertical slider - Add color change marker for current layer") },
+        { "-", L("Vertical slider - Delete color change marker for current layer") },
+        { L("Arrow Up"),    L("Horizontal slider - Set left thumb as active") },
+        { L("Arrow Down"),  L("Horizontal slider - Set right thumb as active") },
+        { L("Arrow Left"),  L("Horizontal slider - Move active thumb Left") },
+        { L("Arrow Right"), L("Horizontal slider - Move active thumb Right") },
+#else
         { L("Arrow Up"), L("Move current slider thumb Up") },
         { L("Arrow Down"), L("Move current slider thumb Down") },
         { L("Arrow Left"), L("Set upper thumb to current slider thumb") },
         { L("Arrow Right"), L("Set lower thumb to current slider thumb") },
         { "+", L("Add color change marker for current layer") },
         { "-", L("Delete color change marker for current layer") },
+#endif // ENABLE_ARROW_KEYS_WITH_SLIDERS
         { "Shift+", L("Press to speed up 5 times while moving thumb\nwith arrow keys or mouse wheel") },
         { ctrl, L("Press to speed up 5 times while moving thumb\nwith arrow keys or mouse wheel") },
     };
@@ -226,8 +269,8 @@ void KBShortcutsDialog::fill_shortcuts()
     m_full_shortcuts.push_back(std::make_pair(_L("Layers Slider"), layers_slider_shortcuts));
 
     Shortcuts sequential_slider_shortcuts = {
-        { L("Arrow Left"), L("Move current slider thumb Left") },
-        { L("Arrow Right"), L("Move current slider thumb Right") },
+        { L("Arrow Left"),  L("Move active slider thumb Left") },
+        { L("Arrow Right"), L("Move active slider thumb Right") },
         { "Shift+", L("Press to speed up 5 times while moving thumb\nwith arrow keys or mouse wheel") },
         { ctrl, L("Press to speed up 5 times while moving thumb\nwith arrow keys or mouse wheel") },
     };
