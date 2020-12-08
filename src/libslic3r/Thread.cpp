@@ -194,7 +194,7 @@ void name_tbb_thread_pool_threads()
 		return;
 	initialized = true;
 
-	const size_t nthreads_hw = std::thread::hardware_concurrency();
+	const size_t nthreads_hw = tbb::task_scheduler_init::default_num_threads(); //std::thread::hardware_concurrency();
 	size_t 		 nthreads    = nthreads_hw;
 
 #ifdef SLIC3R_PROFILE
@@ -209,9 +209,10 @@ void name_tbb_thread_pool_threads()
 	std::condition_variable cv;
 	std::mutex				cv_m;
 	auto					master_thread_id = tbb::this_tbb_thread::get_id();
+	auto					now = std::chrono::system_clock::now();
     tbb::parallel_for(
         tbb::blocked_range<size_t>(0, nthreads, 1),
-        [&nthreads_running, nthreads, &master_thread_id, &cv, &cv_m](const tbb::blocked_range<size_t> &range) {
+        [&nthreads_running, nthreads, &master_thread_id, &cv, &cv_m, &now](const tbb::blocked_range<size_t> &range) {
         	assert(range.begin() + 1 == range.end());
         	if (nthreads_running.fetch_add(1) + 1 == nthreads) {
         		// All threads are spinning.
@@ -220,14 +221,15 @@ void name_tbb_thread_pool_threads()
         	} else {
         		// Wait for the last thread to wake the others.
 				std::unique_lock<std::mutex> lk(cv_m);
-			    cv.wait(lk, [&nthreads_running, nthreads]{return nthreads_running == nthreads;});
+				// here can be deadlock with the main that creates me.
+			    cv.wait_until(lk, now + std::chrono::milliseconds(50), [&nthreads_running, nthreads]{return nthreads_running == nthreads;});
         	}
         	auto thread_id = tbb::this_tbb_thread::get_id();
 			if (thread_id == master_thread_id) {
 				// The calling thread runs the 0'th task.
-				assert(range.begin() == 0);
+				//assert(range.begin() == 0);
 			} else {
-				assert(range.begin() > 0);
+				//assert(range.begin() > 0);
 				std::ostringstream name;
 		        name << "slic3r_tbb_" << range.begin();
 		        set_current_thread_name(name.str().c_str());
