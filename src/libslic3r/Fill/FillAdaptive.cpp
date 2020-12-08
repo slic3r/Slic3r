@@ -305,7 +305,7 @@ std::pair<double, double> adaptive_fill_line_spacing(const PrintObject &print_ob
             has_adaptive_infill ? Tristate::Maybe : Tristate::No,
             has_support_infill ? Tristate::Maybe : Tristate::No,
             config.fill_density,
-            config.infill_extrusion_width != 0. ? config.infill_extrusion_width : default_infill_extrusion_width
+            config.infill_extrusion_width != 0. ? config.infill_extrusion_width.get_abs_value(max_nozzle_diameter) : default_infill_extrusion_width
         }));
         build_octree |= has_adaptive_infill || has_support_infill;
     }
