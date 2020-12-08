@@ -3152,7 +3152,8 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     std::string gcode;
     for (ExtrusionPaths::iterator path = paths.begin(); path != paths.end(); ++path) {
         //path->simplify(SCALED_RESOLUTION); //should already be simplified
-        gcode += this->_extrude(*path, description, speed);
+        //gcode += this->_extrude(*path, description, speed);
+        gcode += extrude_path(*path, description, speed);
     }
 
     // reset acceleration
@@ -3245,9 +3246,10 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
 std::string GCode::extrude_multi_path(const ExtrusionMultiPath &multipath, const std::string &description, double speed) {
     // extrude along the path
     std::string gcode;
-    for (ExtrusionPath path : multipath.paths) {
+    for (const ExtrusionPath &path : multipath.paths) {
         //path.simplify(SCALED_RESOLUTION); //should already be simplified
-        gcode += this->_extrude(path, description, speed);
+        //gcode += this->_extrude(path, description, speed);
+        gcode += extrude_path(path, description, speed);
     }
     if (m_wipe.enable) {
         m_wipe.path = std::move(multipath.paths.back().polyline);  // TODO: don't limit wipe to last path
