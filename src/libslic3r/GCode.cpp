@@ -206,7 +206,7 @@ std::string OozePrevention::pre_toolchange(GCode& gcodegen)
             "move to standby position");
     }
 
-    if (gcodegen.config().standby_temperature_delta.value != 0 && gcodegen.writer().tool_is_extruder()) {
+    if (gcodegen.config().standby_temperature_delta.value != 0 && gcodegen.writer().tool_is_extruder() && this->_get_temp(gcodegen) > 0) {
         // we assume that heating is always slower than cooling, so no need to block
         gcode += gcodegen.writer().set_temperature
             (this->_get_temp(gcodegen) + gcodegen.config().standby_temperature_delta.value, false, gcodegen.writer().tool()->id());
@@ -217,15 +217,18 @@ std::string OozePrevention::pre_toolchange(GCode& gcodegen)
 
 std::string OozePrevention::post_toolchange(GCode& gcodegen)
 {
-    return (gcodegen.config().standby_temperature_delta.value != 0 && gcodegen.writer().tool_is_extruder()) ?
-        gcodegen.writer().set_temperature(this->_get_temp(gcodegen), true, gcodegen.writer().tool()->id()) :
-        std::string();
+    if (gcodegen.config().standby_temperature_delta.value != 0 && gcodegen.writer().tool_is_extruder()){
+        int temp = this->_get_temp(gcodegen);
+        if (temp > 0)
+            return gcodegen.writer().set_temperature(temp, true, gcodegen.writer().tool()->id());
+    }
+    return std::string();
 }
 
 int OozePrevention::_get_temp(GCode& gcodegen)
 {
     if (gcodegen.writer().tool_is_extruder())
-        return (gcodegen.layer() == NULL || gcodegen.layer()->id() == 0)
+        return (gcodegen.layer() == NULL || gcodegen.layer()->id() == 0) && gcodegen.config().first_layer_temperature.get_at(gcodegen.writer().tool()->id()) > 0
             ? gcodegen.config().first_layer_temperature.get_at(gcodegen.writer().tool()->id())
             : gcodegen.config().temperature.get_at(gcodegen.writer().tool()->id());
     else
@@ -1092,12 +1095,13 @@ static void init_multiextruders(FILE *file, Print &print, GCodeWriter & writer, 
     if (std::set<uint8_t>{gcfRepRap}.count(print.config().gcode_flavor.value) > 0) {
         for (uint16_t tool_id : tool_ordering.all_extruders()) {
             int standby_temp = int(print.config().temperature.get_at(tool_id));
-            if(print.config().ooze_prevention.value)
-                standby_temp += print.config().standby_temperature_delta.value;
-            fprintf(file, "G10 P%d R%d ; sets the standby temperature\n",
-                tool_id,
-                standby_temp,
-                int(print.config().temperature.get_at(tool_id)));
+            if (standby_temp > 0) {
+                if (print.config().ooze_prevention.value)
+                    standby_temp += print.config().standby_temperature_delta.value;
+                fprintf(file, "G10 P%d R%d ; sets the standby temperature\n",
+                    tool_id,
+                    standby_temp);
+            }
         }
     }
 }
@@ -1848,25 +1852,32 @@ void GCode::_print_first_layer_extruder_temperatures(FILE *file, Print &print, c
     if (custom_gcode_sets_temperature(gcode, 104, 109, include_g10, temp_by_gcode)) {
         // Set the extruder temperature at m_writer, but throw away the generated G-code as it will be written with the custom G-code.
         int temp = print.config().first_layer_temperature.get_at(first_printing_extruder_id);
+        if (temp == 0)
+            temp = print.config().temperature.get_at(first_printing_extruder_id);
         if (temp_by_gcode >= 0 && temp_by_gcode < 1000)
             temp = temp_by_gcode;
-        m_writer.set_temperature(temp, wait, first_printing_extruder_id);
+        std::string lol = m_writer.set_temperature(temp, wait, first_printing_extruder_id);
     } else {
         // Custom G-code does not set the extruder temperature. Do it now.
-        if (print.config().single_extruder_multi_material.value) {
-            // Set temperature of the first printing extruder only.
-            int temp = print.config().first_layer_temperature.get_at(first_printing_extruder_id);
-            if (temp > 0)
-                _write(file, m_writer.set_temperature(temp, wait, first_printing_extruder_id));
-        } else {
+        if (!print.config().single_extruder_multi_material.value) {
             // Set temperatures of all the printing extruders.
             for (unsigned int tool_id : print.extruders()) {
                 int temp = print.config().first_layer_temperature.get_at(tool_id);
+                if (temp == 0)
+                    temp = print.config().temperature.get_at(tool_id);
                 if (print.config().ooze_prevention.value)
                     temp += print.config().standby_temperature_delta.value;
                 if (temp > 0)
-                    _write(file, m_writer.set_temperature(temp, wait, tool_id));
+                    _write(file, m_writer.set_temperature(temp, false, tool_id));
             }
+        }
+        if (wait || print.config().single_extruder_multi_material.value) {
+            // Set temperature of the first printing extruder only.
+            int temp = print.config().first_layer_temperature.get_at(first_printing_extruder_id);
+            if (temp == 0)
+                temp = print.config().temperature.get_at(first_printing_extruder_id);
+            if (temp > 0)
+                _write(file, m_writer.set_temperature(temp, wait, first_printing_extruder_id));
         }
     }
 }
@@ -2205,6 +2216,7 @@ void GCode::process_layer(
                 // In single extruder multi material mode, set the temperature for the current extruder only.
                 continue;
             int temperature = print.config().temperature.get_at(extruder.id());
+            if(temperature > 0) // don't set it if disabled
                 gcode += m_writer.set_temperature(temperature, false, extruder.id());
         }
         gcode += m_writer.set_bed_temperature(print.config().bed_temperature.get_at(first_extruder_id));
@@ -2515,10 +2527,12 @@ void GCode::process_layer(
                 this->set_origin(unscale(offset));
                 if (instance_to_print.object_by_extruder.support != nullptr && !print_wipe_extrusions) {
                     m_layer = layers[instance_to_print.layer_id].support_layer;
-                    if (m_layer != nullptr && m_layer->bottom_z() < EPSILON)
-                        gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
-                    else
-                    gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
+                    if (m_config.print_temperature > 0)
+                        gcode += m_writer.set_temperature(m_config.print_temperature.value, false, m_writer.tool()->id());
+                    else if (m_layer != nullptr && m_layer->bottom_z() < EPSILON && m_config.first_layer_temperature.get_at(m_writer.tool()->id()) > 0)
+                            gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
+                    else if (m_config.temperature.get_at(m_writer.tool()->id()) > 0) // don't set it if disabled
+                        gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
                     gcode += this->extrude_support(
                         // support_extrusion_role is erSupportMaterial, erSupportMaterialInterface or erMixed for all extrusion paths.
                     instance_to_print.object_by_extruder.support->chained_path_from(m_last_pos, instance_to_print.object_by_extruder.support_extrusion_role));
@@ -3384,9 +3398,9 @@ std::string GCode::extrude_perimeters(const Print &print, const std::vector<Obje
             m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
             if (m_config.print_temperature > 0)
                 gcode += m_writer.set_temperature(m_config.print_temperature.value, false, m_writer.tool()->id());
-            else if (m_layer != nullptr && m_layer->bottom_z() < EPSILON)
+            else if (m_layer != nullptr && m_layer->bottom_z() < EPSILON && m_config.first_layer_temperature.get_at(m_writer.tool()->id()) > 0)
                 gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
-            else
+            else if (m_config.temperature.get_at(m_writer.tool()->id()) > 0) // don't set it if disabled
                 gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
             for (const ExtrusionEntity *ee : region.perimeters)
                 gcode += this->extrude_entity(*ee, "", -1., &lower_layer_edge_grid);
@@ -3405,9 +3419,9 @@ std::string GCode::extrude_infill(const Print& print, const std::vector<ObjectBy
             m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
             if (m_config.print_temperature > 0)
                 gcode += m_writer.set_temperature(m_config.print_temperature.value, false, m_writer.tool()->id());
-            else if (m_layer != nullptr && m_layer->bottom_z() < EPSILON)
-                gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
-            else
+            else if (m_layer != nullptr && m_layer->bottom_z() < EPSILON && m_config.first_layer_temperature.get_at(m_writer.tool()->id()) > 0)
+                    gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
+            else if (m_config.temperature.get_at(m_writer.tool()->id()) > 0) // don't set it if disabled
                 gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
             ExtrusionEntitiesPtr extrusions{ region.infills };
             chain_and_reorder_extrusion_entities(extrusions, &m_last_pos);
@@ -3429,9 +3443,9 @@ std::string GCode::extrude_ironing(const Print& print, const std::vector<ObjectB
             m_writer.apply_print_region_config(print.regions()[&region - &by_region.front()]->config());
             if (m_config.print_temperature > 0)
                 gcode += m_writer.set_temperature(m_config.print_temperature.value, false, m_writer.tool()->id());
-            else if (m_layer != nullptr && m_layer->bottom_z() < EPSILON)
-                gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
-            else
+            else if (m_layer != nullptr && m_layer->bottom_z() < EPSILON && m_config.first_layer_temperature.get_at(m_writer.tool()->id()) > 0)
+                    gcode += m_writer.set_temperature(m_config.first_layer_temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
+            else if (m_config.temperature.get_at(m_writer.tool()->id()) > 0)
                 gcode += m_writer.set_temperature(m_config.temperature.get_at(m_writer.tool()->id()), false, m_writer.tool()->id());
             ExtrusionEntitiesPtr extrusions{ region.ironings };
             chain_and_reorder_extrusion_entities(extrusions, &m_last_pos);
@@ -4079,10 +4093,10 @@ std::string GCode::set_extruder(unsigned int extruder_id, double print_z, bool n
     // Set the temperature if the wipe tower didn't (not needed for non-single extruder MM)
     // supermerill change: try to set the good temp, because the wipe tower don't use the gcode writer and so can write wrong stuff.
     if (m_config.single_extruder_multi_material /*&& !m_config.wipe_tower*/) {
-        int temp = (m_layer_index <= 0 ? m_config.first_layer_temperature.get_at(extruder_id) :
+        int temp = (m_layer_index <= 0 && m_config.first_layer_temperature.get_at(extruder_id) > 0 ? m_config.first_layer_temperature.get_at(extruder_id) :
                                          m_config.temperature.get_at(extruder_id));
-
-        gcode += m_writer.set_temperature(temp, false);
+        if (temp > 0)
+            gcode += m_writer.set_temperature(temp, false);
     }
 
     m_placeholder_parser.set("current_extruder", extruder_id);
