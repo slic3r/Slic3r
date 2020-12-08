@@ -1519,12 +1519,14 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
                 this->_print_first_layer_extruder_temperatures(file, print, between_objects_gcode, initial_extruder_id, false);
                 _writeln(file, between_objects_gcode);
             }
+            //reinit the seam placer on the new object
+            m_seam_placer.init(print);
             // Reset the cooling buffer internal state (the current position, feed rate, accelerations).
             m_cooling_buffer->reset();
             m_cooling_buffer->set_current_extruder(initial_extruder_id);
             // Pair the object layers with the support layers by z, extrude them.
             std::vector<LayerToPrint> layers_to_print = collect_layers_to_print(object);
-            for (const LayerToPrint &ltp : layers_to_print) {
+            for (LayerToPrint &ltp : layers_to_print) {
                 std::vector<LayerToPrint> lrs;
                 lrs.emplace_back(std::move(ltp));
                 this->process_layer(file, print, print.m_print_statistics, lrs, tool_ordering.tools_for_layer(ltp.print_z()), nullptr, *print_object_instance_sequential_active - object.instances().data());
