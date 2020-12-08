@@ -1,8 +1,7 @@
 min_slic3r_version = 2.3.0-beta2
-0.0.3 Removed obsolete host keys.
-min_slic3r_version = 2.2.0-alpha3
-
-0.0.5 General print quality improvements (??)0.0.4 superslicer: remove top_fan_speed
+0.0.5-susi remove resolution to use default
+0.0.5 General print quality improvements (??)
+0.0.4 superslicer: remove top_fan_speed
 0.0.3 slic3r++ adaptation: overlapping & top pattern.
 0.0.2 changed flow ratio from float to %
 0.0.1 Multiple Print models were unified into a single one.

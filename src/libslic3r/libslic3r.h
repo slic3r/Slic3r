@@ -31,7 +31,7 @@
 using coord_t = int32_t;
 #else
 //FIXME At least FillRectilinear2 and std::boost Voronoi require coord_t to be 32bit.
-typedef int64_t coord_t;
+using coord_t = int64_t;
 #endif
 
 using coordf_t = double;
@@ -47,9 +47,13 @@ static constexpr double EPSILON = 1e-4;
 // int32_t fits an interval of (-2147.48mm, +2147.48mm)
 // with int64_t we don't have to worry anymore about the size of the int.
 static constexpr double SCALING_FACTOR = 0.000001;
+static constexpr double UNSCALING_FACTOR = 1 / SCALING_FACTOR;
 // RESOLUTION, SCALED_RESOLUTION: Used as an error threshold for a Douglas-Peucker polyline simplification algorithm.
-#define RESOLUTION 0.0125
-#define SCALED_RESOLUTION (RESOLUTION / SCALING_FACTOR)
+//#define RESOLUTION 0.0125
+//#define SCALED_RESOLUTION 12500
+//#define SCALED_RESOLUTION (RESOLUTION / SCALING_FACTOR)
+static constexpr coordf_t RESOLUTION = 0.0125;
+static constexpr coord_t SCALED_RESOLUTION = 0.0125 * UNSCALING_FACTOR;
 //for creating circles (for brim_ear)
 #define POLY_SIDES 24
 #define PI 3.141592653589793238
@@ -92,9 +96,9 @@ inline T unscale(Q v) { return T(v) * T(SCALING_FACTOR); }
 
 inline double unscaled(double v) { return v * SCALING_FACTOR; }
 inline coordf_t unscale_(coord_t v) { return v * SCALING_FACTOR; }
-inline coord_t scale_t(coordf_t v) { return (coord_t)(v / SCALING_FACTOR); }
-inline double scale_d(coordf_t v) { return (v / SCALING_FACTOR); }
-inline double scale_d(coord_t v) { return ((double)v / SCALING_FACTOR); }
+inline coord_t scale_t(coordf_t v) { return (coord_t)(v * UNSCALING_FACTOR); }
+inline double scale_d(coordf_t v) { return (v * UNSCALING_FACTOR); }
+inline double scale_d(coord_t v) { return (double(v) * UNSCALING_FACTOR); }
 
 enum Axis { 
 	X=0,

@@ -108,14 +108,16 @@ namespace Slic3r {
         for (const Surface& surf : slices->surfaces) {
             ExPolygons surf_milling = offset_ex(surf.expolygon, milling_diameter/2, ClipperLib::jtRound);
             for (const ExPolygon& expoly : surf_milling)
-                expoly.simplify(SCALED_RESOLUTION, &milling_lines);
+//                expoly.simplify(SCALED_RESOLUTION, &milling_lines); // should already be done
+                milling_lines.push_back(expoly);
         }
         milling_lines = union_ex(milling_lines);
 
         ExPolygons secured_points = offset_ex(milling_lines, milling_diameter / 3);
         ExPolygons entrypoints;
         for (const ExPolygon& expoly : secured_points)
-            expoly.simplify(SCALED_RESOLUTION, &entrypoints);
+//            expoly.simplify(SCALED_RESOLUTION, &entrypoints); // should already be done
+            entrypoints.push_back(expoly);
         entrypoints = union_ex(entrypoints);
         Polygons entrypoints_poly;
         for (const ExPolygon& expoly : secured_points)
@@ -150,7 +152,8 @@ namespace Slic3r {
         for (const Surface& surf : slices->surfaces) {
             ExPolygons surf_milling = offset_ex(surf.expolygon, milling_radius, ClipperLib::jtRound);
             for (const ExPolygon& expoly : surf_milling)
-                expoly.simplify(SCALED_RESOLUTION, &milling_lines);
+//                expoly.simplify(SCALED_RESOLUTION, &milling_lines); // should already be done
+                milling_lines.push_back(expoly);
             surfaces.push_back(surf.expolygon);
         }
         union_ex(milling_lines, true);
@@ -166,7 +169,8 @@ namespace Slic3r {
         ExPolygons safe_umillable = diff_ex(offset_ex(exact_unmillable_area, safety_offset), surfaces, true);
         ExPolygons safe_umillable_simplified;
         for (const ExPolygon& expoly : safe_umillable)
-            expoly.simplify(SCALED_RESOLUTION, &safe_umillable_simplified);
+//            expoly.simplify(SCALED_RESOLUTION, &safe_umillable_simplified); // should already be done
+            safe_umillable_simplified.push_back(expoly);
         return  union_ex(safe_umillable_simplified, true);
     }
 

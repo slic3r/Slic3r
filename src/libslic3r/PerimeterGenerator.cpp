@@ -332,7 +332,9 @@ void PerimeterGenerator::process()
         //this var store infill surface removed from last to not add any more perimeters to it.
         ExPolygons top_fills;
         ExPolygons fill_clip;
-        ExPolygons last        = union_ex(surface.expolygon.simplify_p(SCALED_RESOLUTION));
+        // simplification already done at slicing
+        //ExPolygons last        = union_ex(surface.expolygon.simplify_p(SCALED_RESOLUTION));
+        ExPolygons last        = union_ex(surface.expolygon);
 
         if (loop_number >= 0) {
 

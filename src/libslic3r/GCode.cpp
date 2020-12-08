@@ -3151,7 +3151,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     // extrude along the path
     std::string gcode;
     for (ExtrusionPaths::iterator path = paths.begin(); path != paths.end(); ++path) {
-        path->simplify(SCALED_RESOLUTION);
+        //path->simplify(SCALED_RESOLUTION); //should already be simplified
         gcode += this->_extrude(*path, description, speed);
     }
 
@@ -3246,7 +3246,7 @@ std::string GCode::extrude_multi_path(const ExtrusionMultiPath &multipath, const
     // extrude along the path
     std::string gcode;
     for (ExtrusionPath path : multipath.paths) {
-        path.simplify(SCALED_RESOLUTION);
+        //path.simplify(SCALED_RESOLUTION); //should already be simplified
         gcode += this->_extrude(path, description, speed);
     }
     if (m_wipe.enable) {
@@ -3332,7 +3332,10 @@ std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &de
         }
         m_last_too_small.polyline.points.clear();
     }
-    simplifed_path.simplify(this->config().min_length.value != 0 ? scale_(this->config().min_length) : SCALED_RESOLUTION);
+    if (this->config().min_length.value > 0) {
+        simplifed_path.simplify(scale_(this->config().min_length));
+    }
+    //else simplifed_path.simplify(SCALED_RESOLUTION);  //should already be simplified
     if (this->config().min_length.value != 0 && simplifed_path.length() < scale_(this->config().min_length)) {
         m_last_too_small = simplifed_path;
         return "";

@@ -2642,13 +2642,13 @@ void PrintConfigDef::init_fff_params()
     def->label = L("'As bridge' speed threshold");
     def->full_label = L("Overhang bridge speed threshold");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("Minimum unsupported width for an extrusion to apply the bridge speed & fan to this overhang."
+    def->tooltip = L("Minimum unsupported width for an extrusion to apply the bridge fan & overhang speed to this overhang."
         " Can be in mm or in a % of the nozzle diameter."
         " Set to 0 to deactivate.");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloatOrPercent(50,true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(55,true));
 
     def = this->add("overhangs_width", coFloatOrPercent);
     def->label = L("'As bridge' flow threshold");
@@ -2860,11 +2860,12 @@ void PrintConfigDef::init_fff_params()
         "the slicing job and reducing memory usage. High-resolution models often carry "
         "more detail than printers can render. Set to zero to disable any simplification "
         "and use full resolution from input. "
-        "\nNote: slic3r simplify the geometry with a treshold of 0.0125mm and has an internal resolution of 0.0001mm.");
+        "\nNote: SuperSlicer has an internal resolution of 0.000001mm."
+        "\nInfill & Thin areas are simplified up to 0.0125mm.");
     def->sidetext = L("mm");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloat(0.0125));
 
     def = this->add("retract_before_travel", coFloats);
     def->label = L("Minimum travel after retraction");

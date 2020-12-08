@@ -126,8 +126,8 @@ void PrintObject::slice()
     if (! warning.empty())
         BOOST_LOG_TRIVIAL(info) << warning;
     // Simplify slices if required.
-    if (m_print->config().resolution)
-        this->simplify_slices(scale_(this->print()->config().resolution));
+    if (m_print->config().resolution.value > 0)
+        this->simplify_slices(scale_(this->print()->config().resolution.value));
 
     //create polyholes
     this->_transform_hole_to_polyholes();
@@ -2455,7 +2455,7 @@ void PrintObject::_slice(const std::vector<coordf_t> &layer_height_profile)
             BOOST_LOG_TRIVIAL(debug) << "Slicing modifier volumes - stealing " << region_id << " end";
         }
     }
-    
+
     BOOST_LOG_TRIVIAL(debug) << "Slicing objects - removing top empty layers";
     while (! m_layers.empty()) {
         const Layer *layer = m_layers.back();
@@ -2771,7 +2771,7 @@ ExPolygons PrintObject::_smooth_curves(const ExPolygons & input, const PrintRegi
     ExPolygons new_polys;
     for (const ExPolygon &ex_poly : input) {
         ExPolygon new_ex_poly(ex_poly);
-        new_ex_poly.contour.remove_collinear(SCALED_RESOLUTION);
+        new_ex_poly.contour.remove_collinear(SCALED_EPSILON * 10);
         new_ex_poly.contour = _smooth_curve(new_ex_poly.contour, PI,
             conf.curve_smoothing_angle_convex.value*PI / 180.0,
             conf.curve_smoothing_angle_concave.value*PI / 180.0,
@@ -2779,7 +2779,7 @@ ExPolygons PrintObject::_smooth_curves(const ExPolygons & input, const PrintRegi
             scale_(conf.curve_smoothing_precision.value));
         for (Polygon &phole : new_ex_poly.holes){
             phole.reverse(); // make_counter_clockwise();
-            phole.remove_collinear(SCALED_RESOLUTION);
+            phole.remove_collinear(SCALED_EPSILON * 10);
             phole = _smooth_curve(phole, PI,
                 conf.curve_smoothing_angle_convex.value*PI / 180.0,
                 conf.curve_smoothing_angle_concave.value*PI / 180.0,

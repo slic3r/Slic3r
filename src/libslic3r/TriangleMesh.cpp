@@ -1767,7 +1767,7 @@ void TriangleMeshSlicer::make_expolygons(const Polygons &loops, ExPolygons* slic
     //        p_slices = diff(p_slices, *loop);
     //}
 
-    //remove point in the same plane (have to do that before the safety offset to avoid workgin on a distored polygon)
+    //remove point in the same plane (have to do that before the safety offset to avoid working on a distored polygon)
     Polygons filered_polys = loops;
     if (this->model_precision > 0){
         for (Polygon &hole : filered_polys){
