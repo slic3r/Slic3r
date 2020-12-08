@@ -2216,7 +2216,7 @@ void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolyg
     unbrimmable_areas = islands;
 
     //get the brimmable area
-    const size_t num_loops = size_t(floor((brim_config.brim_width.value - brim_config.brim_offset.value) / flow.spacing()));
+    const size_t num_loops = size_t(floor(std::max(0.,(brim_config.brim_width.value - brim_config.brim_offset.value)) / flow.spacing()));
     ExPolygons brimmable_areas;
     for (ExPolygon &expoly : islands) {
         for (Polygon poly : offset(expoly.contour, num_loops * flow.scaled_spacing(), jtSquare)) {
