@@ -1251,10 +1251,10 @@ static void pinch_contours_insert_phony_outer_intersections(std::vector<Segmente
                             printf("Pinched %d\n", pinch_idx++);
 #endif
                             insert_after.emplace_back(hi - il.intersections.begin());
-        }
+                        }
+                    }
+                }
             }
-        }
-    }
 
             if (! insert_after.empty()) {
                 // Insert phony OUTER_HIGH / OUTER_LOW pairs, adjust indices pointing to intersection points on this contour.
@@ -1266,35 +1266,35 @@ static void pinch_contours_insert_phony_outer_intersections(std::vector<Segmente
                         for (; i <= idx_inset_after; ++ i) {
                             map.emplace_back(temp_intersections.size());
                             temp_intersections.emplace_back(il.intersections[i]);
-            }
+                        }
                         coord_t pos = (temp_intersections.back().pos() + il.intersections[i].pos()) / 2;
                         temp_intersections.emplace_back(phony_outer_intersection(SegmentIntersection::OUTER_HIGH, pos));
                         temp_intersections.emplace_back(phony_outer_intersection(SegmentIntersection::OUTER_LOW, pos));
-            }
+                    }
                     for (; i < il.intersections.size(); ++ i) {
                         map.emplace_back(temp_intersections.size());
                         temp_intersections.emplace_back(il.intersections[i]);
-            }
+                    }
                     temp_intersections.swap(il.intersections);
-            }
+                }
                 // Reindex references on current intersection line.
                 for (SegmentIntersection &ip : il.intersections) {
                     if (ip.has_left_vertical())
                         ip.prev_on_contour = map[ip.prev_on_contour];
                     if (ip.has_right_vertical())
                         ip.next_on_contour = map[ip.next_on_contour];
-        }
+                }
                 // Reindex references on previous intersection line.
                 for (SegmentIntersection &ip : segs[i_vline - 1].intersections)
                     if (ip.has_right_horizontal())
                         ip.next_on_contour = map[ip.next_on_contour];
-                if (i_vline < segs.size()) {
+                if (i_vline + 1 < segs.size()) {
                     // Reindex references on next intersection line.
                     for (SegmentIntersection &ip : segs[i_vline + 1].intersections)
                         if (ip.has_left_horizontal())
                             ip.prev_on_contour = map[ip.prev_on_contour];
-    }
-}
+                }
+            }
         }
     }
 
