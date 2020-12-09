@@ -1061,7 +1061,7 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, Extrusio
             (this->config->overhangs_width_speed.value > 0 ?
                 diff_pl(poly_speed, this->_lower_slices_bridge_flow):
                 diff_pl(std::vector<LINE>{ loop_polygons }, this->_lower_slices_bridge_flow)),
-            erOverhangPerimeter,
+            erBridgeInfill,
             this->_mm3_per_mm_overhang,
             this->overhang_flow.width,
             this->overhang_flow.height);
@@ -1086,7 +1086,7 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, Extrusio
             extrusion_paths_append(
                 paths,
                 diff_pl(std::vector<LINE>{ loop_polygons }, this->_lower_slices_bridge_flow),
-                erOverhangPerimeter,
+                erBridgeInfill,
                 this->_mm3_per_mm_overhang,
                 this->overhang_flow.width,
                 this->overhang_flow.height);
