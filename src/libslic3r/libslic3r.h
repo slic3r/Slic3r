@@ -47,13 +47,21 @@ static constexpr double EPSILON = 1e-4;
 // int32_t fits an interval of (-2147.48mm, +2147.48mm)
 // with int64_t we don't have to worry anymore about the size of the int.
 static constexpr double SCALING_FACTOR = 0.000001;
+#ifdef __linux__
+static constexpr double UNSCALING_FACTOR = 1000000;
+#else
 static constexpr double UNSCALING_FACTOR = 1 / SCALING_FACTOR;
+#endif
 // RESOLUTION, SCALED_RESOLUTION: Used as an error threshold for a Douglas-Peucker polyline simplification algorithm.
 //#define RESOLUTION 0.0125
 //#define SCALED_RESOLUTION 12500
 //#define SCALED_RESOLUTION (RESOLUTION / SCALING_FACTOR)
 static constexpr coordf_t RESOLUTION = 0.0125;
+#ifdef __linux__
+static constexpr coord_t SCALED_RESOLUTION = 12500;
+#else
 static constexpr coord_t SCALED_RESOLUTION = 0.0125 * UNSCALING_FACTOR;
+#endif
 //for creating circles (for brim_ear)
 #define POLY_SIDES 24
 #define PI 3.141592653589793238
