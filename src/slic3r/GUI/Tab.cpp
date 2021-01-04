@@ -3794,7 +3794,8 @@ void TabPrinter::update_machine_limits_description(const MachineLimitsUsage usag
         break;
 	default: assert(false);
 	}
-    m_machine_limits_description_line->SetText(text);
+    if(m_machine_limits_description_line)
+        m_machine_limits_description_line->SetText(text);
 
     //update fields used
     //no need to worry for "silent" version, as it's only for marlin.
