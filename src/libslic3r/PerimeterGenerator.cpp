@@ -517,6 +517,10 @@ void PerimeterGenerator::process()
                                     (float)(ext_min_spacing / 4)));
                         }
                     }
+                    if (m_spiral_vase && next_onion.size() > 1) {
+                        // Remove all but the largest area polygon.
+                        keep_largest_contour_only(next_onion);
+                    }
                 } else {
                     //FIXME Is this offset correct if the line width of the inner perimeters differs
                     // from the line width of the infill?

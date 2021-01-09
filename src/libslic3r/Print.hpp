@@ -162,6 +162,8 @@ public:
     // Get a layer approximately at print_z.
     const Layer*	get_layer_at_printz(coordf_t print_z, coordf_t epsilon) const;
     Layer*			get_layer_at_printz(coordf_t print_z, coordf_t epsilon);
+    // Get the first layer approximately bellow print_z.
+    const Layer*	get_first_layer_bellow_printz(coordf_t print_z, coordf_t epsilon) const;
 
     // print_z: top of the layer; slice_z: center of the layer.
     Layer* add_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z);
@@ -187,7 +189,7 @@ public:
     // returns 0-based indices of extruders used to print the object (without brim, support and other helper extrusions)
     std::vector<uint16_t>   object_extruders() const;
 
-    // Called when slicing to SVG (see Print.pm sub export_svg), and used by perimeters.t
+    // Called by make_perimeters()
     void slice();
 
     // Helpers to slice support enforcer / blocker meshes by the support generator.
@@ -275,9 +277,16 @@ private:
     // so that next call to make_perimeters() performs a union() before computing loops
     bool                                    m_typed_slices = false;
 
-    std::vector<ExPolygons> slice_region(size_t region_id, const std::vector<float> &z, SlicingMode mode) const;
+    std::vector<ExPolygons> slice_region(size_t region_id, const std::vector<float> &z, SlicingMode mode, size_t slicing_mode_normal_below_layer, SlicingMode mode_below) const;
+    std::vector<ExPolygons> slice_region(size_t region_id, const std::vector<float> &z, SlicingMode mode) const
+        { return this->slice_region(region_id, z, mode, 0, mode); }
     std::vector<ExPolygons> slice_modifiers(size_t region_id, const std::vector<float> &z) const;
-    std::vector<ExPolygons> slice_volumes(const std::vector<float> &z, SlicingMode mode, const std::vector<const ModelVolume*> &volumes) const;
+    std::vector<ExPolygons> slice_volumes(
+        const std::vector<float> &z, 
+        SlicingMode mode, size_t slicing_mode_normal_below_layer, SlicingMode mode_below, 
+        const std::vector<const ModelVolume*> &volumes) const;
+    std::vector<ExPolygons> slice_volumes(const std::vector<float> &z, SlicingMode mode, const std::vector<const ModelVolume*> &volumes) const
+        { return this->slice_volumes(z, mode, 0, mode, volumes); }
     std::vector<ExPolygons> slice_volume(const std::vector<float> &z, SlicingMode mode, const ModelVolume &volume) const;
     std::vector<ExPolygons> slice_volume(const std::vector<float> &z, const std::vector<t_layer_height_range> &ranges, SlicingMode mode, const ModelVolume &volume) const;
 

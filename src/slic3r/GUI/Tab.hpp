@@ -99,9 +99,6 @@ protected:
 };
 
 
-wxDECLARE_EVENT(EVT_TAB_VALUE_CHANGED, wxCommandEvent);
-wxDECLARE_EVENT(EVT_TAB_PRESETS_CHANGED, SimpleEvent);
-
 using PageShp = std::shared_ptr<Page>;
 class Tab: public wxPanel
 {
@@ -136,8 +133,8 @@ protected:
 		ScalableButton 	*btn  = nullptr;
 		std::string  key_list; // "compatible_printers"
 		std::string  key_condition;
-		std::string  dialog_title;
-		std::string  dialog_label;
+		wxString     dialog_title;
+		wxString     dialog_label;
 	};
 	PresetDependencies 	m_compatible_printers;
 	PresetDependencies 	m_compatible_prints;

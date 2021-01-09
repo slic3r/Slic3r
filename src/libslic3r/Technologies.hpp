@@ -12,7 +12,7 @@
 // Renders a small sphere in the center of the bounding box of the current selection when no gizmo is active
 #define ENABLE_RENDER_SELECTION_CENTER 0
 // Shows an imgui dialog with render related data
-#define ENABLE_RENDER_STATISTICS 1
+#define ENABLE_RENDER_STATISTICS 0
 // Shows an imgui dialog with camera related data
 #define ENABLE_CAMERA_STATISTICS 0
 //  Render the picking pass instead of the main scene (use [T] key to toggle between regular rendering and picking pass only rendering)
@@ -91,5 +91,21 @@
 #define ENABLE_NEW_NOTIFICATIONS_FADE_OUT (1 && ENABLE_2_3_0_BETA2) 
 #define ENABLE_PREVIEW_TYPE_CHANGE (1 && ENABLE_2_3_0_BETA2)
 
+
+//===================
+// 2.3.0.beta3 techs
+//===================
+#define ENABLE_2_3_0_BETA3 1
+
+#define ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE (1 && ENABLE_2_3_0_BETA3)
+#define ENABLE_RENDER_PATH_REFRESH_AFTER_OPTIONS_CHANGE (1 && ENABLE_2_3_0_BETA3)
+
+
+//=================
+// 2.3.0.rc1 techs
+//=================
+#define ENABLE_2_3_0_RC1 1
+
+#define ENABLE_VOLUMETRIC_EXTRUSION_PROCESSING (1 && ENABLE_2_3_0_RC1)
 
 #endif // _prusaslicer_technologies_h_

@@ -185,8 +185,17 @@ public:
     TriangleMeshSlicer(float closing_radius, float model_precision) : mesh(nullptr), closing_radius(closing_radius), model_precision(model_precision) {}
     TriangleMeshSlicer(const TriangleMesh* mesh) : mesh(mesh), closing_radius(0), model_precision(0) { this->init(mesh, []() {}); }
     void init(const TriangleMesh *mesh, throw_on_cancel_callback_type throw_on_cancel);
-    void slice(const std::vector<float> &z, SlicingMode mode, std::vector<Polygons>* layers, throw_on_cancel_callback_type throw_on_cancel) const;
-    void slice(const std::vector<float> &z, SlicingMode mode, std::vector<ExPolygons>* layers, throw_on_cancel_callback_type throw_on_cancel) const;
+    void slice(
+        const std::vector<float> &z, SlicingMode mode, size_t alternate_mode_first_n_layers, SlicingMode alternate_mode,
+        std::vector<Polygons>* layers, throw_on_cancel_callback_type throw_on_cancel) const;
+    void slice(const std::vector<float> &z, SlicingMode mode, std::vector<Polygons>* layers, throw_on_cancel_callback_type throw_on_cancel) const
+        { return this->slice(z, mode, 0, mode, layers, throw_on_cancel); }
+    void slice(
+        const std::vector<float> &z, SlicingMode mode, size_t alternate_mode_first_n_layers, SlicingMode alternate_mode,
+        std::vector<ExPolygons>* layers, throw_on_cancel_callback_type throw_on_cancel) const;
+    void slice(const std::vector<float> &z, SlicingMode mode, 
+        std::vector<ExPolygons>* layers, throw_on_cancel_callback_type throw_on_cancel) const
+        { this->slice(z, mode, 0, mode, layers, throw_on_cancel); }
     enum FacetSliceType {
         NoSlice = 0,
         Slicing = 1,

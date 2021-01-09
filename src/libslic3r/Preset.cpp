@@ -485,6 +485,7 @@ const std::vector<std::string>& Preset::print_options()
         "solid_infill_below_area", "only_retract_when_crossing_perimeters", "infill_first", 
         "max_print_speed",
         "max_volumetric_speed", 
+        "avoid_crossing_perimeters_max_detour",
 #ifdef HAS_PRESSURE_EQUALIZER
         "max_volumetric_extrusion_rate_slope_positive", "max_volumetric_extrusion_rate_slope_negative", 
 #endif /* HAS_PRESSURE_EQUALIZER */
@@ -1204,7 +1205,15 @@ const Preset* PresetCollection::get_preset_parent(const Preset& child) const
 		if (it != m_presets.end()) 
 			preset = &(*it);
     }
-    return (preset == nullptr/* || preset->is_default */|| preset->is_external) ? nullptr : preset;
+    return 
+         // not found
+        (preset == nullptr/* || preset->is_default */|| 
+         // this should not happen, user profile should not derive from an external profile
+         preset->is_external ||
+         // this should not happen, however people are creative, see GH #4996
+         preset == &child) ? 
+            nullptr : 
+            preset;
 }
 
 // Return vendor of the first parent profile, for which the vendor is defined, or null if such profile does not exist.
@@ -1360,18 +1369,22 @@ inline t_config_option_keys deep_diff(const ConfigBase &config_this, const Confi
         if (this_opt != nullptr && other_opt != nullptr && *this_opt != *other_opt)
         {
             if (opt_key == "bed_shape" || opt_key == "thumbnails" || opt_key == "compatible_prints" || opt_key == "compatible_printers") {
+                // Scalar variable, or a vector variable, which is independent from number of extruders,
+                // thus the vector is presented to the user as a single input.
                 diff.emplace_back(opt_key);
-                continue;
-            }
-            switch (other_opt->type())
-            {
-            case coInts:    add_correct_opts_to_diff<ConfigOptionInts       >(opt_key, diff, config_other, config_this);  break;
-            case coBools:   add_correct_opts_to_diff<ConfigOptionBools      >(opt_key, diff, config_other, config_this);  break;
-            case coFloats:  add_correct_opts_to_diff<ConfigOptionFloats     >(opt_key, diff, config_other, config_this);  break;
-            case coStrings: add_correct_opts_to_diff<ConfigOptionStrings    >(opt_key, diff, config_other, config_this);  break;
-            case coPercents:add_correct_opts_to_diff<ConfigOptionPercents   >(opt_key, diff, config_other, config_this);  break;
-            case coPoints:  add_correct_opts_to_diff<ConfigOptionPoints     >(opt_key, diff, config_other, config_this);  break;
-            default:        diff.emplace_back(opt_key);     break;
+            } else if (opt_key == "default_filament_profile") {
+                // Ignore this field, it is not presented to the user, therefore showing a "modified" flag for this parameter does not help.
+                // Also the length of this field may differ, which may lead to a crash if the block below is used.
+            } else {
+                switch (other_opt->type()) {
+                case coInts:    add_correct_opts_to_diff<ConfigOptionInts       >(opt_key, diff, config_other, config_this);  break;
+                case coBools:   add_correct_opts_to_diff<ConfigOptionBools      >(opt_key, diff, config_other, config_this);  break;
+                case coFloats:  add_correct_opts_to_diff<ConfigOptionFloats     >(opt_key, diff, config_other, config_this);  break;
+                case coStrings: add_correct_opts_to_diff<ConfigOptionStrings    >(opt_key, diff, config_other, config_this);  break;
+                case coPercents:add_correct_opts_to_diff<ConfigOptionPercents   >(opt_key, diff, config_other, config_this);  break;
+                case coPoints:  add_correct_opts_to_diff<ConfigOptionPoints     >(opt_key, diff, config_other, config_this);  break;
+                default:        diff.emplace_back(opt_key);     break;
+                }
             }
         }
     }
@@ -1524,6 +1537,8 @@ std::string PresetCollection::section_name() const
     }
 }
 
+// Used for validating the "inherits" flag when importing user's config bundles.
+// Returns names of all system presets including the former names of these presets.
 std::vector<std::string> PresetCollection::system_preset_names() const
 {
     size_t num = 0;
@@ -1533,8 +1548,10 @@ std::vector<std::string> PresetCollection::system_preset_names() const
     std::vector<std::string> out;
     out.reserve(num);
     for (const Preset &preset : m_presets)
-        if (preset.is_system)
+        if (preset.is_system) {
             out.emplace_back(preset.name);
+            out.insert(out.end(), preset.renamed_from.begin(), preset.renamed_from.end());
+        }
     std::sort(out.begin(), out.end());
     return out;
 }
@@ -1691,6 +1708,12 @@ bool PhysicalPrinter::add_preset(const std::string& preset_name)
 bool PhysicalPrinter::delete_preset(const std::string& preset_name)
 {
     return preset_names.erase(preset_name) > 0;
+}
+
+PhysicalPrinter::PhysicalPrinter(const std::string& name, const DynamicPrintConfig& default_config) : 
+    name(name), config(default_config)
+{
+    update_from_config(config);
 }
 
 PhysicalPrinter::PhysicalPrinter(const std::string& name, const DynamicPrintConfig &default_config, const Preset& preset) :
@@ -2047,6 +2070,13 @@ void PhysicalPrinterCollection::select_printer(const std::string& full_name)
         m_selected_preset = *it->preset_names.begin();
     else
         m_selected_preset = it->get_preset_name(full_name);
+}
+
+void PhysicalPrinterCollection::select_printer(const std::string& printer_name, const std::string& preset_name)
+{
+    if (preset_name.empty())
+        return select_printer(printer_name);
+    return select_printer(printer_name + PhysicalPrinter::separator() + preset_name);
 }
 
 void PhysicalPrinterCollection::select_printer(const PhysicalPrinter& printer)

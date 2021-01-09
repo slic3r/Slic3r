@@ -72,6 +72,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
     // or they are only notes not influencing the generated G-code.
     static std::unordered_set<std::string> steps_gcode = {
         "avoid_crossing_perimeters",
+        "avoid_crossing_perimeters_max_detour",
         "avoid_crossing_not_first_layer",
         "bed_shape",
         "bed_temperature",
@@ -1370,7 +1371,8 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
             total_copies_count += object->instances().size();
         // #4043
         if (total_copies_count > 1 && ! m_config.complete_objects.value)
-            return { PrintBase::PrintValidationError::pveWrongSettings,L("The Spiral Vase option can only be used when printing a single object.") };
+            return { PrintBase::PrintValidationError::pveWrongSettings,L("Only a single object may be printed at a time in Spiral Vase mode. "
+                     "Either remove all but the last object, or enable sequential mode by \"complete_objects\".") };
         assert(m_objects.size() == 1 || config().complete_objects.value);
         size_t num_regions = 0;
         for (const std::vector<std::pair<t_layer_height_range, int>> &volumes_per_region : m_objects.front()->region_volumes)

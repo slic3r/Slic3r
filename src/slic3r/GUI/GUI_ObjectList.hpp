@@ -208,6 +208,7 @@ public:
     ObjectList(wxWindow* parent);
     ~ObjectList();
 
+    void set_min_height();
 
     std::map<OptionCategory, wxBitmap> CATEGORY_ICON;
 
@@ -258,6 +259,8 @@ public:
     bool                paste_from_clipboard();
     void                undo();
     void                redo();
+    void                increase_instances();
+    void                decrease_instances();
 
     void                get_settings_choice(const wxString& category_name);
     void                get_freq_settings_choice(const wxString& bundle_name);
@@ -279,7 +282,7 @@ public:
     void                append_menu_item_change_extruder(wxMenu* menu);
     void                append_menu_item_delete(wxMenu* menu);
     void                append_menu_item_scale_selection_to_fit_print_volume(wxMenu* menu);
-    void                append_menu_items_convert_unit(wxMenu* menu);
+    void                append_menu_item_convert_unit(wxMenu* menu, int insert_pos = 1); // Add "Conver/Revert..." menu item after "Reload From Disk"
     void                append_menu_item_merge_to_multipart_object(wxMenu *menu);
     void                append_menu_item_merge_to_single_object(wxMenu *menu);
     void                create_object_popupmenu(wxMenu *menu);

@@ -451,6 +451,8 @@ public:
         { return dirty_options(&this->get_edited_preset(), this->get_selected_preset_parent(), deep_compare); }
 
     // Return a sorted list of system preset names.
+    // Used for validating the "inherits" flag when importing user's config bundles.
+    // Returns names of all system presets including the former names of these presets.
     std::vector<std::string>    system_preset_names() const;
 
     // Update a dirty flag of the current preset
@@ -568,7 +570,7 @@ namespace PresetUtils {
 class PhysicalPrinter
 {
 public:
-    PhysicalPrinter(const std::string& name, const DynamicPrintConfig &default_config) : name(name), config(default_config) {}
+    PhysicalPrinter(const std::string& name, const DynamicPrintConfig &default_config);
     PhysicalPrinter(const std::string& name, const DynamicPrintConfig &default_config, const Preset& preset);
     void set_name(const std::string &name);
 
@@ -709,6 +711,7 @@ public:
     // If full_name doesn't contain name of selected preset, then select first preset in the list for this printer
     void select_printer(const std::string& full_name);
     void select_printer(const PhysicalPrinter& printer);
+    void select_printer(const std::string& printer_name, const std::string& preset_name);
     bool has_selection() const;
     void unselect_printer() ;
     bool is_selected(ConstIterator it, const std::string &preset_name) const;

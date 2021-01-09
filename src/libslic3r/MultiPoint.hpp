@@ -26,7 +26,7 @@ public:
     MultiPoint& operator=(MultiPoint &&other) { points = std::move(other.points); return *this; }
     void scale(double factor);
     void scale(double factor_x, double factor_y);
-    void translate(double x, double y);
+    void translate(double x, double y) { this->translate(Point(coord_t(x), coord_t(y))); }
     void translate(const Point &vector);
     void rotate(double angle) { this->rotate(cos(angle), sin(angle)); }
     void rotate(double cos_angle, double sin_angle);
@@ -79,6 +79,7 @@ public:
 
     bool intersection(const Line& line, Point* intersection) const;
     bool first_intersection(const Line& line, Point* intersection) const;
+    bool intersections(const Line &line, Points *intersections) const;
     // Projection of a point onto the lines defined by the points.
     virtual Point point_projection(const Point &point) const;
     

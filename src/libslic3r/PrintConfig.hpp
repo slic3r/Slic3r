@@ -1216,7 +1216,8 @@ public:
 
     ConfigOptionBool                allow_empty_layers;
     ConfigOptionBool                avoid_crossing_perimeters;
-    ConfigOptionBool                avoid_crossing_not_first_layer;
+
+    ConfigOptionBool                avoid_crossing_not_first_layer;    ConfigOptionFloatOrPercent      avoid_crossing_perimeters_max_detour;
     ConfigOptionPoints              bed_shape;
     ConfigOptionInts                bed_temperature;
     ConfigOptionFloatOrPercent      bridge_acceleration;
@@ -1311,7 +1312,7 @@ protected:
         this->GCodeConfig::initialize(cache, base_ptr);
         OPT_PTR(allow_empty_layers);
         OPT_PTR(avoid_crossing_perimeters);
-        OPT_PTR(avoid_crossing_not_first_layer);
+        OPT_PTR(avoid_crossing_not_first_layer);        OPT_PTR(avoid_crossing_perimeters_max_detour);
         OPT_PTR(bed_shape);
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);

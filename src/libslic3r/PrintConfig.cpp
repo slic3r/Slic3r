@@ -74,8 +74,9 @@ void PrintConfigDef::init_common_params()
 
     def = this->add("thumbnails", coPoints);
     def->label = L("Thumbnails size");
-    def->tooltip = L("Picture sizes to be stored into a .gcode and .sl1 files");
+    def->tooltip = L("Picture sizes to be stored into a .gcode and .sl1 files, in the following format: \"XxY, XxY, ...\"");
     def->mode = comExpert;
+    //def->gui_type = "one_string"; //supermerill: test/see what this does.
     def->set_default_value(new ConfigOptionPoints{ Vec2d(0,0), Vec2d(0,0) });
 
     def = this->add("thumbnails_color", coString);
@@ -233,6 +234,16 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Do not use the 'Avoid crossing perimeters' on the first layer.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(true));
+    def = this->add("avoid_crossing_perimeters_max_detour", coFloatOrPercent);
+    def->label = L("Avoid crossing perimeters - Max detour length");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("The maximum detour length for avoid crossing perimeters. "
+                     "If the detour is longer than this value, avoid crossing perimeters is not applied for this travel path. "
+                     "Detour length could be specified either as an absolute value or as percentage (for example 50%) of a direct travel path.");
+    def->sidetext = L("mm or % (zero to disable)");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloatOrPercent(0., false));
 
     def = this->add("bed_temperature", coInts);
     def->label = L("Other layers");
@@ -1102,6 +1113,7 @@ void PrintConfigDef::init_fff_params()
         "Usual values are between 0.9 and 1.1. If you think you need to change this more, "
         "check filament diameter and your firmware E steps.");
     def->mode = comSimple;
+    def->max = 2;
     def->set_default_value(new ConfigOptionFloats { 1. });
 
     def = this->add("print_extrusion_multiplier", coPercent);
@@ -1128,6 +1140,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max = 1000;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -3299,7 +3312,7 @@ void PrintConfigDef::init_fff_params()
                    "in order to remove any visible seam. This option requires a single perimeter, "
                    "no infill, no top solid layers and no support material. You can still set "
                    "any number of bottom solid layers as well as skirt/brim loops. "
-                   "It won't work when printing more than an object.");
+                   "It won't work when printing more than one single object.");
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("standby_temperature_delta", coInt);
@@ -5455,8 +5468,11 @@ void DynamicPrintConfig::normalize_fdm()
     if (this->has("spiral_vase") && this->opt<ConfigOptionBool>("spiral_vase", true)->value) {
         {
             // this should be actually done only on the spiral layers instead of all
-            ConfigOptionBools* opt = this->opt<ConfigOptionBools>("retract_layer_change", true);
+            auto* opt = this->opt<ConfigOptionBools>("retract_layer_change", true);
             opt->values.assign(opt->values.size(), false);  // set all values to false
+            // Disable retract on layer change also for filament overrides.
+            auto* opt_n = this->opt<ConfigOptionBoolsNullable>("filament_retract_layer_change", true);
+            opt_n->values.assign(opt_n->values.size(), false);  // Set all values to false.
         }
         {
             this->opt<ConfigOptionInt>("perimeters", true)->value = 1;
@@ -5477,6 +5493,8 @@ void DynamicPrintConfig::set_num_extruders(unsigned int num_extruders)
     const auto& defaults = FullPrintConfig::defaults();
     for (const std::string& key : print_config_def.extruder_option_keys()) {
         if (key == "default_filament_profile")
+            // Don't resize this field, as it is presented to the user at the "Dependencies" page of the Printer profile and we don't want to present
+            // empty fields there, if not defined by the system profile.
             continue;
         auto* opt = this->option(key, false);
         assert(opt != nullptr);

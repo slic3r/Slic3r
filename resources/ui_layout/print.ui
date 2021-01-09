@@ -28,6 +28,7 @@ group:Quality
 	line:Avoid crossing perimeters
 		setting:label$:avoid_crossing_perimeters
 		setting:label$Not on first layer:avoid_crossing_not_first_layer
+		setting:avoid_crossing_perimeters_max_detour
 	end_line
 	line:Overlapping external perimeter
 		setting:label$:thin_perimeters

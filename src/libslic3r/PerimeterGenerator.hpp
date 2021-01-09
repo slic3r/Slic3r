@@ -76,6 +76,7 @@ public:
         const PrintRegionConfig*    config,
         const PrintObjectConfig*    object_config,
         const PrintConfig*          print_config,
+        const bool                  spiral_vase,
         // Output:
         // Loops with the external thin walls
         ExtrusionEntityCollection*  loops,
@@ -87,12 +88,14 @@ public:
             perimeter_flow(flow), ext_perimeter_flow(flow),
             overhang_flow(flow), solid_infill_flow(flow),
             config(config), object_config(object_config), print_config(print_config),
+            m_spiral_vase(spiral_vase),
             loops(loops), gap_fill(gap_fill), fill_surfaces(fill_surfaces),
             _ext_mm3_per_mm(-1), _mm3_per_mm(-1), _mm3_per_mm_overhang(-1)
         {};
     void process();
 
 private:
+    bool        m_spiral_vase;
     double      _ext_mm3_per_mm;
     double      _mm3_per_mm;
     double      _mm3_per_mm_overhang;

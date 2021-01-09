@@ -5,6 +5,7 @@
 #include "libslic3r/GCode/GCodeProcessor.hpp"
 #include "GLModel.hpp"
 
+#include <cstdint>
 #include <float.h>
 
 namespace Slic3r {
@@ -325,26 +326,30 @@ class GCodeViewer
     struct Statistics
     {
         // time
-        long long results_time{ 0 };
-        long long load_time{ 0 };
-        long long refresh_time{ 0 };
-        long long refresh_paths_time{ 0 };
+        int64_t results_time{ 0 };
+        int64_t load_time{ 0 };
+        int64_t refresh_time{ 0 };
+        int64_t refresh_paths_time{ 0 };
         // opengl calls
-        long long gl_multi_points_calls_count{ 0 };
-        long long gl_multi_lines_calls_count{ 0 };
-        long long gl_multi_triangles_calls_count{ 0 };
+        int64_t gl_multi_points_calls_count{ 0 };
+        int64_t gl_multi_lines_calls_count{ 0 };
+        int64_t gl_multi_triangles_calls_count{ 0 };
         // memory
-        long long results_size{ 0 };
-        long long vertices_gpu_size{ 0 };
-        long long indices_gpu_size{ 0 };
-        long long paths_size{ 0 };
-        long long render_paths_size{ 0 };
+        int64_t results_size{ 0 };
+        int64_t total_vertices_gpu_size{ 0 };
+        int64_t total_indices_gpu_size{ 0 };
+        int64_t max_vbuffer_gpu_size{ 0 };
+        int64_t max_ibuffer_gpu_size{ 0 };
+        int64_t paths_size{ 0 };
+        int64_t render_paths_size{ 0 };
         // other
-        long long travel_segments_count{ 0 };
-        long long wipe_segments_count{ 0 };
-        long long extrude_segments_count{ 0 };
-        long long max_vertices_in_vertex_buffer{ 0 };
-        long long max_indices_in_index_buffer{ 0 };
+        int64_t travel_segments_count{ 0 };
+        int64_t wipe_segments_count{ 0 };
+        int64_t extrude_segments_count{ 0 };
+        int64_t vbuffers_count{ 0 };
+        int64_t ibuffers_count{ 0 };
+        int64_t max_vertices_in_vertex_buffer{ 0 };
+        int64_t max_indices_in_index_buffer{ 0 };
 
         void reset_all() {
             reset_times();
@@ -368,8 +373,10 @@ class GCodeViewer
 
         void reset_sizes() {
             results_size = 0;
-            vertices_gpu_size = 0;
-            indices_gpu_size = 0;
+            total_vertices_gpu_size = 0;
+            total_indices_gpu_size = 0;
+            max_vbuffer_gpu_size = 0;
+            max_ibuffer_gpu_size = 0;
             paths_size = 0;
             render_paths_size = 0;
         }
@@ -378,6 +385,8 @@ class GCodeViewer
             travel_segments_count = 0;
             wipe_segments_count = 0;
             extrude_segments_count =  0;
+            vbuffers_count = 0;
+            ibuffers_count = 0;
             max_vertices_in_vertex_buffer = 0;
             max_indices_in_index_buffer = 0;
         }
@@ -480,6 +489,10 @@ public:
     void load(const GCodeProcessor::Result& gcode_result, const Print& print, bool initialized);
     // recalculate ranges in dependence of what is visible and sets tool/print colors
     void refresh(const GCodeProcessor::Result& gcode_result, const std::vector<std::string>& str_tool_colors);
+#if ENABLE_RENDER_PATH_REFRESH_AFTER_OPTIONS_CHANGE
+    void refresh_render_paths();
+#endif // ENABLE_RENDER_PATH_REFRESH_AFTER_OPTIONS_CHANGE
+    void update_shells_color_by_extruder(const DynamicPrintConfig* config);
 
     void reset();
     void render() const;
@@ -529,7 +542,7 @@ private:
         return role < erCount && (m_extrusions.role_visibility_flags & (1 << role)) != 0;
     }
     bool is_visible(const Path& path) const { return is_visible(path.role); }
-    void log_memory_used(const std::string& label, long long additional = 0) const;
+    void log_memory_used(const std::string& label, int64_t additional = 0) const;
 };
 
 } // namespace GUI

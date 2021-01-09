@@ -201,7 +201,7 @@ ObjectList::ObjectList(wxWindow* parent) :
 //    Bind(wxEVT_KEY_DOWN, &ObjectList::OnChar, this);
     {
         // Accelerators
-        wxAcceleratorEntry entries[8];
+        wxAcceleratorEntry entries[10];
         entries[0].Set(wxACCEL_CTRL, (int) 'C',    wxID_COPY);
         entries[1].Set(wxACCEL_CTRL, (int) 'X',    wxID_CUT);
         entries[2].Set(wxACCEL_CTRL, (int) 'V',    wxID_PASTE);
@@ -210,7 +210,9 @@ ObjectList::ObjectList(wxWindow* parent) :
         entries[5].Set(wxACCEL_CTRL, (int) 'Y',    wxID_REDO);
         entries[6].Set(wxACCEL_NORMAL, WXK_DELETE, wxID_DELETE);
         entries[7].Set(wxACCEL_NORMAL, WXK_BACK,   wxID_DELETE);
-        wxAcceleratorTable accel(8, entries);
+        entries[8].Set(wxACCEL_NORMAL, int('+'),   wxID_ADD);
+        entries[9].Set(wxACCEL_NORMAL, int('-'),   wxID_REMOVE);
+        wxAcceleratorTable accel(10, entries);
         SetAcceleratorTable(accel);
 
         this->Bind(wxEVT_MENU, [this](wxCommandEvent &evt) { this->copy();                      }, wxID_COPY);
@@ -219,6 +221,8 @@ ObjectList::ObjectList(wxWindow* parent) :
         this->Bind(wxEVT_MENU, [this](wxCommandEvent &evt) { this->remove();                    }, wxID_DELETE);
         this->Bind(wxEVT_MENU, [this](wxCommandEvent &evt) { this->undo();  					}, wxID_UNDO);
         this->Bind(wxEVT_MENU, [this](wxCommandEvent &evt) { this->redo();                    	}, wxID_REDO);
+        this->Bind(wxEVT_MENU, [this](wxCommandEvent &evt) { this->increase_instances();        }, wxID_ADD);
+        this->Bind(wxEVT_MENU, [this](wxCommandEvent &evt) { this->decrease_instances();        }, wxID_REMOVE);
     }
 #else //__WXOSX__
     Bind(wxEVT_CHAR, [this](wxKeyEvent& event) { key_event(event); }); // doesn't work on OSX
@@ -264,11 +268,23 @@ ObjectList::~ObjectList()
 {
 }
 
+void ObjectList::set_min_height()
+{
+    /* Temporary workaround for the correct behavior of the Scrolled sidebar panel:
+    * change min hight of object list to the normal min value (20 * wxGetApp().em_unit())
+    * after first whole Mainframe updating/layouting
+    */
+    const int list_min_height = 20 * wxGetApp().em_unit();
+    if (this->GetMinSize().GetY() > list_min_height)
+        this->SetMinSize(wxSize(-1, list_min_height));
+}
+
+
 void ObjectList::create_objects_ctrl()
 {
     /* Temporary workaround for the correct behavior of the Scrolled sidebar panel:
      * 1. set a height of the list to some big value 
-     * 2. change it to the normal min value (15 * wxGetApp().em_unit()) after first whole Mainframe updating/layouting
+     * 2. change it to the normal min value (20 * wxGetApp().em_unit()) after first whole Mainframe updating/layouting
      */
     SetMinSize(wxSize(-1, 3000));
 
@@ -986,6 +1002,8 @@ void ObjectList::show_context_menu(const bool evt_context_menu)
                        m_objects_model->GetParent(item) != wxDataViewItem(nullptr) ? &m_menu_part :
                        printer_technology() == ptFFF ? &m_menu_object : &m_menu_sla_object;
 
+        if (type & (itObject | itVolume))
+            append_menu_item_convert_unit(menu);
         if (!(type & itInstance))
             append_menu_item_settings(menu);
     }
@@ -1049,6 +1067,8 @@ bool ObjectList::copy_to_clipboard()
 {
     wxDataViewItemArray sels;
     GetSelections(sels);
+    if (sels.IsEmpty())
+        return false;
     ItemType type = m_objects_model->GetItemType(sels.front());
     if (!(type & (itSettings | itLayer | itLayerRoot))) {
         m_clipboard.reset();
@@ -1089,6 +1109,16 @@ void ObjectList::redo()
 	wxGetApp().plater()->redo();	
 }
 
+void ObjectList::increase_instances()
+{
+    wxGetApp().plater()->increase_instances(1);
+}
+
+void ObjectList::decrease_instances()
+{
+    wxGetApp().plater()->decrease_instances(1);
+}
+
 #ifndef __WXOSX__
 void ObjectList::key_event(wxKeyEvent& event)
 {
@@ -1113,6 +1143,10 @@ void ObjectList::key_event(wxKeyEvent& event)
         redo();
     else if (wxGetKeyState(wxKeyCode('Z')) && wxGetKeyState(WXK_CONTROL))
         undo();
+    else if (event.GetUnicodeKey() == '+')
+        increase_instances();
+    else if (event.GetUnicodeKey() == '-')
+        decrease_instances();
     else
         event.Skip();
 }
@@ -1868,13 +1902,57 @@ void ObjectList::append_menu_item_scale_selection_to_fit_print_volume(wxMenu* me
         [](wxCommandEvent&) { wxGetApp().plater()->scale_selection_to_fit_print_volume(); }, "", menu);
 }
 
-void ObjectList::append_menu_items_convert_unit(wxMenu* menu)
+void ObjectList::append_menu_item_convert_unit(wxMenu* menu, int insert_pos/* = 1*/)
 {
-    append_menu_item(menu, wxID_ANY, _L("Convert from imperial units"), _L("Convert from imperial units"),
-        [](wxCommandEvent&) { wxGetApp().plater()->convert_unit(true); }, "", menu);
+    std::vector<int> obj_idxs, vol_idxs;
+    get_selection_indexes(obj_idxs, vol_idxs);
+    if (obj_idxs.empty() && vol_idxs.empty())
+        return;
 
-    append_menu_item(menu, wxID_ANY, _L("Revert conversion from imperial units"), _L("Revert conversion from imperial units"),
-        [](wxCommandEvent&) { wxGetApp().plater()->convert_unit(false); }, "", menu);
+    auto can_append = [this, obj_idxs, vol_idxs](bool from_imperial_unit) {
+        ModelObjectPtrs objects;
+        for (int obj_idx : obj_idxs) {
+            ModelObject* object = (*m_objects)[obj_idx];
+            if (vol_idxs.empty()) {
+                for (ModelVolume* volume : object->volumes)
+                    if (volume->source.is_converted_from_inches == from_imperial_unit)
+                        return false;
+            }
+            else {
+                for (int vol_idx : vol_idxs)
+                    if (object->volumes[vol_idx]->source.is_converted_from_inches == from_imperial_unit)
+                        return false;
+            }
+        }
+        return true;
+    };
+
+    wxString convert_menu_name = _L("Convert from imperial units");
+    int      convert_menu_id   = menu->FindItem(convert_menu_name);
+    wxString revert_menu_name  = _L("Revert conversion from imperial units");
+    int      revert_menu_id    = menu->FindItem(revert_menu_name);
+
+    if (can_append(true)) {
+        // Delete revert menu item
+        if (revert_menu_id != wxNOT_FOUND)
+            menu->Destroy(revert_menu_id);
+        // Add convert menu item if it doesn't exist
+        if (convert_menu_id == wxNOT_FOUND)
+            append_menu_item(menu, wxID_ANY, convert_menu_name, convert_menu_name,
+                [](wxCommandEvent&) { wxGetApp().plater()->convert_unit(true); }, "", menu, 
+                []() {return true;}, nullptr, insert_pos);
+    }
+
+    if (can_append(false)) {
+        // Delete convert menu item
+        if (convert_menu_id != wxNOT_FOUND)
+            menu->Destroy(convert_menu_id);
+        // Add convert menu item if it doesn't exist
+        if (revert_menu_id == wxNOT_FOUND)
+            append_menu_item(menu, wxID_ANY, revert_menu_name, revert_menu_name,
+                [](wxCommandEvent&) { wxGetApp().plater()->convert_unit(false); }, "", menu,
+                []() {return true;}, nullptr, insert_pos);
+    }
 }
 
 void ObjectList::append_menu_item_merge_to_multipart_object(wxMenu* menu)
@@ -1900,7 +1978,6 @@ void ObjectList::create_object_popupmenu(wxMenu *menu)
 #endif // __WXOSX__
 
     append_menu_item_reload_from_disk(menu);
-    append_menu_items_convert_unit(menu);
     append_menu_item_export_stl(menu);
     append_menu_item_fix_through_netfabb(menu);
     append_menu_item_scale_selection_to_fit_print_volume(menu);
@@ -1929,7 +2006,6 @@ void ObjectList::create_sla_object_popupmenu(wxMenu *menu)
 #endif // __WXOSX__
 
     append_menu_item_reload_from_disk(menu);
-    append_menu_items_convert_unit(menu);
     append_menu_item_export_stl(menu);
     append_menu_item_fix_through_netfabb(menu);
     // rest of a object_sla_menu will be added later in:
@@ -1943,7 +2019,6 @@ void ObjectList::create_part_popupmenu(wxMenu *menu)
 #endif // __WXOSX__
 
     append_menu_item_reload_from_disk(menu);
-    append_menu_items_convert_unit(menu);
     append_menu_item_export_stl(menu);
     append_menu_item_fix_through_netfabb(menu);
 
@@ -2343,6 +2418,8 @@ void ObjectList::del_settings_from_config(const wxDataViewItem& parent_item)
         m_config->set_key_value("extruder", new ConfigOptionInt(extruder));
     if (is_layer_settings)
         m_config->set_key_value("layer_height", new ConfigOptionFloat(layer_height));
+
+    changed_object();
 }
 
 void ObjectList::del_instances_from_object(const int obj_idx)
@@ -4521,7 +4598,7 @@ void ObjectList::show_multi_selection_menu()
         return wxGetApp().plater()->can_reload_from_disk();
     }, wxGetApp().plater());
 
-    append_menu_items_convert_unit(menu);
+    append_menu_item_convert_unit(menu);
     if (can_merge_to_multipart_object())
         append_menu_item_merge_to_multipart_object(menu);
 

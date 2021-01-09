@@ -630,7 +630,7 @@ void Sidebar::priv::show_preset_comboboxes()
 // Sidebar / public
 
 Sidebar::Sidebar(Plater *parent)
-    : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(40 * wxGetApp().em_unit(), -1)), p(new priv(parent))
+    : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(42 * wxGetApp().em_unit(), -1)), p(new priv(parent))
 {
     p->scrolled = new wxScrolledWindow(this);
     p->scrolled->SetScrollbars(0, 100, 1, 2);
@@ -1365,6 +1365,9 @@ void Sidebar::update_ui_from_settings()
     p->object_manipulation->update_ui_from_settings();
     show_info_sizer();
     update_sliced_info_sizer();
+    // update Cut gizmo, if it's open
+    p->plater->canvas3D()->update_gizmos_on_off_state();
+    p->plater->canvas3D()->request_extra_frame();
 }
 
 std::vector<PlaterPresetComboBox*>& Sidebar::combos_filament()
@@ -2156,11 +2159,15 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
 		    if (evt.data.second) {
 			    this->show_action_buttons(this->ready_to_slice);
                     notification_manager->close_notification_of_type(NotificationType::ExportFinished);
-			        notification_manager->push_notification(format(_L("Successfully unmounted. The device %s(%s) can now be safely removed from the computer."),evt.data.first.name, evt.data.first.path),
-                        NotificationManager::NotificationLevel::RegularNotification);
+                notification_manager->push_notification(NotificationType::CustomNotification,
+                                                        NotificationManager::NotificationLevel::RegularNotification,
+                                                        format(_L("Successfully unmounted. The device %s(%s) can now be safely removed from the computer."), evt.data.first.name, evt.data.first.path)
+                    );
 		    } else {
-			    notification_manager->push_notification(format(_L("Ejecting of device %s(%s) has failed."), evt.data.first.name, evt.data.first.path),
-                    NotificationManager::NotificationLevel::ErrorNotification);
+                notification_manager->push_notification(NotificationType::CustomNotification,
+                                                        NotificationManager::NotificationLevel::ErrorNotification,
+                                                        format(_L("Ejecting of device %s(%s) has failed."), evt.data.first.name, evt.data.first.path)
+                    );
 		    }
 	    });
         this->q->Bind(EVT_REMOVABLE_DRIVES_CHANGED, [this, q](RemovableDrivesChangedEvent &) {
@@ -2429,24 +2436,26 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
         {
             // The model should now be initialized
 
-            auto convert_from_imperial_units = [](Model& model) {
-                model.convert_from_imperial_units();
-                wxGetApp().app_config->set("use_inches", "1");
+            auto convert_from_imperial_units = [](Model& model, bool only_small_volumes) {
+                model.convert_from_imperial_units(only_small_volumes);
+//                wxGetApp().app_config->set("use_inches", "1");
                 wxGetApp().sidebar().update_ui_from_settings();
             };
 
+            if (!is_project_file) {
             if (imperial_units)
-                convert_from_imperial_units(model);
-            // else if (model.looks_like_imperial_units()) {
-                // wxMessageDialog msg_dlg(q, format_wxstr(_L(
-                    // "Some object(s) in file %s looks like saved in inches.\n"
-                    // "Should I consider them as a saved in inches and convert them?"), from_path(filename)) + "\n",
-                    // _L("The object appears to be saved in inches"), wxICON_WARNING | wxYES | wxNO);
-                // if (msg_dlg.ShowModal() == wxID_YES)
-                    // convert_from_imperial_units(model);
-            //}
+                    // Convert even if the object is big.
+                    convert_from_imperial_units(model, false);
+//                else if (model.looks_like_imperial_units()) {
+//                    wxMessageDialog msg_dlg(q, format_wxstr(_L(
+//                        "Some object(s) in file %s looks like saved in inches.\n"
+//                        "Should I consider them as a saved in inches and convert them?"), from_path(filename)) + "\n",
+//                        _L("The object appears to be saved in inches"), wxICON_WARNING | wxYES | wxNO);
+//                    if (msg_dlg.ShowModal() == wxID_YES)
+//                        //FIXME up-scale only the small parts?
+//                        convert_from_imperial_units(model, true);
+//                }
 
-            if (! is_project_file) {
                 if (model.looks_like_multipart_object()) {
                     wxMessageDialog msg_dlg(q, _L(
                         "This file contains several objects positioned at multiple heights.\n"
@@ -3335,6 +3344,8 @@ void Plater::priv::reload_from_disk()
                     new_volume->set_material_id(old_volume->material_id());
                     new_volume->set_transformation(old_volume->get_transformation() * old_volume->source.transform);
                     new_volume->translate(new_volume->get_transformation().get_matrix(true) * (new_volume->source.mesh_offset - old_volume->source.mesh_offset));
+                    if (old_volume->source.is_converted_from_inches)
+                        new_volume->convert_from_imperial_units();
                     std::swap(old_model_object->volumes[sel_v.volume_idx], old_model_object->volumes.back());
                     old_model_object->delete_volume(old_model_object->volumes.size() - 1);
                     old_model_object->ensure_on_bed();
@@ -3392,10 +3403,54 @@ void Plater::priv::fix_through_netfabb(const int obj_idx, const int vol_idx/* = 
     if (obj_idx < 0)
         return;
 
-    Plater::TakeSnapshot snapshot(q, _L("Fix Throught NetFabb"));
+    // Do not fix anything when a gizmo is open. There might be issues with updates
+    // and what is worse, the snapshot time would refer to the internal stack.
+    if (q->canvas3D()->get_gizmos_manager().get_current_type() != GLGizmosManager::Undefined) {
+        notification_manager->push_notification(
+                    NotificationType::CustomSupportsAndSeamRemovedAfterRepair,
+                    NotificationManager::NotificationLevel::RegularNotification,
+                    _u8L("ERROR: Please close all manipulators available from "
+                         "the left toolbar before fixing the mesh."));
+        return;
+    }
 
-    fix_model_by_win10_sdk_gui(*model.objects[obj_idx], vol_idx);
-    sla::reproject_points_and_holes(model.objects[obj_idx]);
+    // size_t snapshot_time = undo_redo_stack().active_snapshot_time();
+    Plater::TakeSnapshot snapshot(q, _L("Fix through NetFabb"));
+
+    ModelObject* mo = model.objects[obj_idx];
+
+    // If there are custom supports/seams, remove them. Fixed mesh
+    // may be different and they would make no sense.
+    bool paint_removed = false;
+    for (ModelVolume* mv : mo->volumes) {
+        paint_removed |= ! mv->supported_facets.empty() || ! mv->seam_facets.empty();
+        mv->supported_facets.clear();
+        mv->seam_facets.clear();
+    }
+    if (paint_removed) {
+        // snapshot_time is captured by copy so the lambda knows where to undo/redo to.
+        notification_manager->push_notification(
+                    NotificationType::CustomSupportsAndSeamRemovedAfterRepair,
+                    NotificationManager::NotificationLevel::RegularNotification,
+                    _u8L("Custom supports and seams were removed after repairing the mesh."));
+//                    _u8L("Undo the repair"),
+//                    [this, snapshot_time](wxEvtHandler*){
+//                        // Make sure the snapshot is still available and that
+//                        // we are in the main stack and not in a gizmo-stack.
+//                        if (undo_redo_stack().has_undo_snapshot(snapshot_time)
+//                         && q->canvas3D()->get_gizmos_manager().get_current() == nullptr)
+//                            undo_redo_to(snapshot_time);
+//                        else
+//                            notification_manager->push_notification(
+//                                NotificationType::CustomSupportsAndSeamRemovedAfterRepair,
+//                                NotificationManager::NotificationLevel::RegularNotification,
+//                                _u8L("Cannot undo to before the mesh repair!"));
+//                        return true;
+//                    });
+    }
+
+    fix_model_by_win10_sdk_gui(*mo, vol_idx);
+    sla::reproject_points_and_holes(mo);
     this->update();
     this->object_list_changed();
     this->schedule_background_process();
@@ -3814,6 +3869,8 @@ void Plater::priv::on_right_click(RBtnEvent& evt)
         if (evt.data.second)
             return; 
 
+        int menu_item_convert_unit_position = 11;
+
         if (printer_technology == ptSLA)
             menu = &sla_object_menu;
         else
@@ -3823,8 +3880,11 @@ void Plater::priv::on_right_click(RBtnEvent& evt)
                                                 get_selection().is_single_full_object() || 
                                                 get_selection().is_multiple_full_instance();
             menu = is_some_full_instances ? &object_menu : &part_menu;
+            if (!is_some_full_instances)
+                menu_item_convert_unit_position = 2;
         }
 
+        sidebar->obj_list()->append_menu_item_convert_unit(menu, menu_item_convert_unit_position);
         sidebar->obj_list()->append_menu_item_settings(menu);
 
         if (printer_technology != ptSLA)
@@ -4039,7 +4099,6 @@ bool Plater::priv::init_common_menu(wxMenu* menu, const bool is_part/* = false*/
             }, menu_item_printable->GetId());
     }
 
-    sidebar->obj_list()->append_menu_items_convert_unit(menu);
     sidebar->obj_list()->append_menu_item_fix_through_netfabb(menu);
 
     wxMenu* mirror_menu = new wxMenu();
@@ -4844,7 +4903,6 @@ void Plater::load_gcode(const wxString& filename)
     // process gcode
     GCodeProcessor processor;
     processor.enable_producers(true);
-    processor.enable_machine_envelope_processing(true);
     processor.process_file(filename.ToUTF8().data(), false);
     p->gcode_result = std::move(processor.extract_result());
 
@@ -5913,15 +5971,14 @@ void Plater::force_print_bed_update()
 
 void Plater::on_activate()
 {
-#ifdef __linux__
+#if defined(__linux__) || defined(_WIN32)
     wxWindow *focus_window = wxWindow::FindFocus();
     // Activating the main frame, and no window has keyboard focus.
     // Set the keyboard focus to the visible Canvas3D.
-    if (this->p->view3D->IsShown() && (!focus_window || focus_window == this->p->view3D->get_wxglcanvas()))
-        this->p->view3D->get_wxglcanvas()->SetFocus();
-
-    else if (this->p->preview->IsShown() && (!focus_window || focus_window == this->p->view3D->get_wxglcanvas()))
-        this->p->preview->get_wxglcanvas()->SetFocus();
+    if (this->p->view3D->IsShown() && wxWindow::FindFocus() != this->p->view3D->get_wxglcanvas())
+        CallAfter([this]() { this->p->view3D->get_wxglcanvas()->SetFocus(); });
+    else if (this->p->preview->IsShown() && wxWindow::FindFocus() != this->p->view3D->get_wxglcanvas())
+        CallAfter([this]() { this->p->preview->get_wxglcanvas()->SetFocus(); });
 #endif
 
 	this->p->show_delayed_error_message();

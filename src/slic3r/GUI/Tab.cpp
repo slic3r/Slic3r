@@ -56,9 +56,6 @@ namespace Slic3r {
 namespace GUI {
 
 
-wxDEFINE_EVENT(EVT_TAB_VALUE_CHANGED, wxCommandEvent);
-wxDEFINE_EVENT(EVT_TAB_PRESETS_CHANGED, SimpleEvent);
-
 void Tab::Highlighter::set_timer_owner(wxEvtHandler* owner, int timerid/* = wxID_ANY*/)
 {
     m_timer.SetOwner(owner, timerid);
@@ -116,14 +113,14 @@ Tab::Tab(wxNotebook* parent, const wxString& title, Preset::Type type) :
     m_compatible_printers.type			= Preset::TYPE_PRINTER;
     m_compatible_printers.key_list		= "compatible_printers";
     m_compatible_printers.key_condition	= "compatible_printers_condition";
-    m_compatible_printers.dialog_title 	= _(L("Compatible printers")).ToUTF8();
-    m_compatible_printers.dialog_label 	= _(L("Select the printers this profile is compatible with.")).ToUTF8();
+    m_compatible_printers.dialog_title  = _L("Compatible printers");
+    m_compatible_printers.dialog_label  = _L("Select the printers this profile is compatible with.");
 
     m_compatible_prints.type			= Preset::TYPE_PRINT;
     m_compatible_prints.key_list 		= "compatible_prints";
     m_compatible_prints.key_condition	= "compatible_prints_condition";
-    m_compatible_prints.dialog_title 	= _(L("Compatible print profiles")).ToUTF8();
-    m_compatible_prints.dialog_label 	= _(L("Select the print profiles this profile is compatible with.")).ToUTF8();
+    m_compatible_prints.dialog_title 	= _L("Compatible print profiles");
+    m_compatible_prints.dialog_label 	= _L("Select the print profiles this profile is compatible with.");
 
     wxGetApp().tabs_list.push_back(this);
 
@@ -664,7 +661,7 @@ void TabPrinter::init_options_list()
 
     for (const auto opt_key : m_config->keys())
     {
-        if (opt_key == "bed_shape") {
+        if (opt_key == "bed_shape" || opt_key == "thumbnails") {
             m_options_list.emplace(opt_key, m_opt_status_value);
             continue;
         }
@@ -2842,7 +2839,7 @@ void TabPrinter::toggle_options()
         }
     }
 
-    if (std::find(m_active_page->descriptions.begin(), m_active_page->descriptions.end(), "machine_limits") != m_active_page->descriptions.end()) {
+    if (std::find(m_active_page->descriptions.begin(), m_active_page->descriptions.end(), "machine_limits") != m_active_page->descriptions.end() && m_machine_limits_description_line) {
         //assert(m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfMarlin);
 		const auto *machine_limits_usage = m_config->option<ConfigOptionEnum<MachineLimitsUsage>>("machine_limits_usage");
 		bool enabled = machine_limits_usage->value != MachineLimitsUsage::Ignore;
@@ -3031,7 +3028,7 @@ void Tab::rebuild_page_tree()
             continue;
         auto itemId = m_treectrl->AppendItem(rootItem, translate_category(p->title(), m_type), p->iconID());
         m_treectrl->SetItemTextColour(itemId, p->get_item_colour());
-        if (p->title() == selected)
+        if (translate_category(p->title(), m_type) == selected)
             item = itemId;
         }
     if (!item) {
@@ -3337,7 +3334,7 @@ void Tab::clear_pages()
 
 void Tab::update_description_lines()
 {
-    if (m_active_page && m_active_page->title() == "Dependencies")
+    if (m_active_page && m_active_page->title() == "Dependencies" && m_parent_preset_description_line)
         update_preset_description_line();
 }
 

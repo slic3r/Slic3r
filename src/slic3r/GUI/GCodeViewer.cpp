@@ -107,6 +107,12 @@ void GCodeViewer::IBuffer::reset()
 
 bool GCodeViewer::Path::matches(const GCodeProcessor::MoveVertex& move) const
 {
+#if ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
+    auto matches_percent = [](float value1, float value2, float max_percent) {
+        return std::abs(value2 - value1) / value1 <= max_percent;
+    };
+#endif // ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
+
     switch (move.type)
     {
     case EMoveType::Tool_change:
@@ -117,10 +123,17 @@ bool GCodeViewer::Path::matches(const GCodeProcessor::MoveVertex& move) const
     case EMoveType::Unretract:
     case EMoveType::Extrude: {
         // use rounding to reduce the number of generated paths
+#if ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
+        return type == move.type && extruder_id == move.extruder_id && cp_color_id == move.cp_color_id && role == move.extrusion_role &&
+            move.position[2] <= first.position[2] && feedrate == move.feedrate && fan_speed == move.fan_speed &&
+            height == round_to_nearest(move.height, 2) && width == round_to_nearest(move.width, 2) &&
+            matches_percent(volumetric_rate, move.volumetric_rate(), 0.05f);
+#else
         return type == move.type && move.position[2] <= first.position[2] && role == move.extrusion_role && height == round_to_nearest(move.height, 2) &&
             width == round_to_nearest(move.width, 2) && feedrate == move.feedrate && fan_speed == move.fan_speed &&
             volumetric_rate == round_to_nearest(move.volumetric_rate(), 2) && extruder_id == move.extruder_id &&
             cp_color_id == move.cp_color_id && extruder_temp == move.temperature;
+#endif // ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
     }
     case EMoveType::Travel: {
         return type == move.type && feedrate == move.feedrate && extruder_id == move.extruder_id && cp_color_id == move.cp_color_id;
@@ -147,10 +160,16 @@ void GCodeViewer::TBuffer::add_path(const GCodeProcessor::MoveVertex& move, unsi
 {
     Path::Endpoint endpoint = { b_id, i_id, s_id, move.position };
     // use rounding to reduce the number of generated paths
+#if ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
+    paths.push_back({ move.type, move.extrusion_role, endpoint, endpoint, move.delta_extruder,
+        round_to_nearest(move.height, 2), round_to_nearest(move.width, 2), move.feedrate, move.fan_speed,
+        move.volumetric_rate(), move.extruder_id, move.cp_color_id, move.layer_duration, move.time, move.temperature });
+#else
     paths.push_back({ move.type, move.extrusion_role, endpoint, endpoint, move.delta_extruder,
         round_to_nearest(move.height, 2), round_to_nearest(move.width, 2), move.feedrate, move.fan_speed,
         round_to_nearest(move.volumetric_rate(), 2), move.extruder_id, move.cp_color_id, move.layer_duration, move.time, move.temperature });
-} 
+#endif // ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
+}
 
 float GCodeViewer::Extrusions::Range::step_size(bool log) const
 {
@@ -356,6 +375,13 @@ void GCodeViewer::load(const GCodeProcessor::Result& gcode_result, const Print& 
     }
 
     m_time_statistics = gcode_result.time_statistics;
+
+    if (m_time_estimate_mode != PrintEstimatedTimeStatistics::ETimeMode::Normal) {
+        float time = m_time_statistics.modes[static_cast<size_t>(m_time_estimate_mode)].time;
+        if (time == 0.0f ||
+            short_time(get_time_dhms(time)) == short_time(get_time_dhms(m_time_statistics.modes[static_cast<size_t>(PrintEstimatedTimeStatistics::ETimeMode::Normal)].time)))
+            m_time_estimate_mode = PrintEstimatedTimeStatistics::ETimeMode::Normal;
+    }
 }
 
 void GCodeViewer::refresh(const GCodeProcessor::Result& gcode_result, const std::vector<std::string>& str_tool_colors)
@@ -426,9 +452,26 @@ void GCodeViewer::refresh(const GCodeProcessor::Result& gcode_result, const std:
 #endif // ENABLE_GCODE_VIEWER_STATISTICS
 
     // update buffers' render paths
+#if ENABLE_RENDER_PATH_REFRESH_AFTER_OPTIONS_CHANGE
+    refresh_render_paths();
+#else
     refresh_render_paths(false, false);
+#endif // ENABLE_RENDER_PATH_REFRESH_AFTER_OPTIONS_CHANGE
 
     log_memory_used("Refreshed G-code extrusion paths, ");
+}
+
+#if ENABLE_RENDER_PATH_REFRESH_AFTER_OPTIONS_CHANGE
+void GCodeViewer::refresh_render_paths()
+{
+    refresh_render_paths(false, false);
+}
+#endif // ENABLE_RENDER_PATH_REFRESH_AFTER_OPTIONS_CHANGE
+
+void GCodeViewer::update_shells_color_by_extruder(const DynamicPrintConfig* config)
+{
+    if (config != nullptr)
+        m_shells.volumes.update_colors_by_extruder(config);
 }
 
 void GCodeViewer::reset()
@@ -454,7 +497,6 @@ void GCodeViewer::reset()
     m_layers_z_range = { 0, 0 };
     m_roles = std::vector<ExtrusionRole>();
     m_time_statistics.reset();
-    m_time_estimate_mode = PrintEstimatedTimeStatistics::ETimeMode::Normal;
 
 #if ENABLE_GCODE_VIEWER_STATISTICS
     m_statistics.reset_all();
@@ -1061,11 +1103,11 @@ void GCodeViewer::load_toolpaths(const GCodeProcessor::Result& gcode_result)
     m_max_bounding_box.merge(m_paths_bounding_box.max + m_sequential_view.marker.get_bounding_box().size()[2] * Vec3d::UnitZ());
 
     auto log_memory_usage = [this](const std::string& label, const std::vector<std::vector<float>>& vertices, const std::vector<MultiIndexBuffer>& indices) {
-        long long vertices_size = 0;
+        int64_t vertices_size = 0;
         for (size_t i = 0; i < vertices.size(); ++i) {
             vertices_size += SLIC3R_STDVEC_MEMSIZE(vertices[i], float);
         }
-        long long indices_size = 0;
+        int64_t indices_size = 0;
         for (size_t i = 0; i < indices.size(); ++i) {
             for (size_t j = 0; j < indices[i].size(); ++j) {
                 indices_size += SLIC3R_STDVEC_MEMSIZE(indices[i][j], unsigned int);
@@ -1481,29 +1523,35 @@ void GCodeViewer::load_toolpaths(const GCodeProcessor::Result& gcode_result)
         const std::vector<float>& buffer_vertices = vertices[i];
         buffer.vertices.count = buffer_vertices.size() / buffer.vertices.vertex_size_floats();
 #if ENABLE_GCODE_VIEWER_STATISTICS
-        m_statistics.vertices_gpu_size += buffer_vertices.size() * sizeof(float);
-        m_statistics.max_vertices_in_vertex_buffer = std::max(m_statistics.max_vertices_in_vertex_buffer, static_cast<long long>(buffer.vertices.count));
+        m_statistics.total_vertices_gpu_size += buffer_vertices.size() * sizeof(float);
+        m_statistics.max_vbuffer_gpu_size = std::max(m_statistics.max_vbuffer_gpu_size, static_cast<int64_t>(buffer_vertices.size() * sizeof(float)));
+        m_statistics.max_vertices_in_vertex_buffer = std::max(m_statistics.max_vertices_in_vertex_buffer, static_cast<int64_t>(buffer.vertices.count));
 #endif // ENABLE_GCODE_VIEWER_STATISTICS
 
-        glsafe(::glGenBuffers(1, &buffer.vertices.id));
-        glsafe(::glBindBuffer(GL_ARRAY_BUFFER, buffer.vertices.id));
-        glsafe(::glBufferData(GL_ARRAY_BUFFER, buffer_vertices.size() * sizeof(float), buffer_vertices.data(), GL_STATIC_DRAW));
-        glsafe(::glBindBuffer(GL_ARRAY_BUFFER, 0));
+        if (buffer.vertices.count > 0) {
+#if ENABLE_GCODE_VIEWER_STATISTICS
+            ++m_statistics.vbuffers_count;
+#endif // ENABLE_GCODE_VIEWER_STATISTICS
+            glsafe(::glGenBuffers(1, &buffer.vertices.id));
+            glsafe(::glBindBuffer(GL_ARRAY_BUFFER, buffer.vertices.id));
+            glsafe(::glBufferData(GL_ARRAY_BUFFER, buffer_vertices.size() * sizeof(float), buffer_vertices.data(), GL_STATIC_DRAW));
+            glsafe(::glBindBuffer(GL_ARRAY_BUFFER, 0));
+        }
     }
 
     // dismiss vertices data, no more needed
     std::vector<std::vector<float>>().swap(vertices);
 
     // toolpaths data -> extract indices from result
-    // ensure that at least one index buffer is defined for each multibuffer
-    for (auto i : indices) {
-        i.push_back(IndexBuffer());
-    }
     // paths may have been filled while extracting vertices,
     // so reset them, they will be filled again while extracting indices
     for (TBuffer& buffer : m_buffers) {
         buffer.paths.clear();
     }
+
+    // max index buffer size
+    const size_t IBUFFER_THRESHOLD = 1024 * 1024 * 32;
+
     // variable used to keep track of the current size (in vertices) of the vertex buffer
     std::vector<size_t> curr_buffer_vertices_size(m_buffers.size(), 0);
     for (size_t i = 0; i < m_moves_count; ++i) {
@@ -1528,10 +1576,9 @@ void GCodeViewer::load_toolpaths(const GCodeProcessor::Result& gcode_result)
         if (buffer_indices.empty())
             buffer_indices.push_back(IndexBuffer());
 
-        static const size_t THRESHOLD = 1024 * 1024 * 128;
         // if adding the indices for the current segment exceeds the threshold size of the current index buffer
         // create another index buffer, and move the current path indices into it
-        if (buffer_indices.back().size() >= THRESHOLD - static_cast<size_t>(buffer.indices_per_segment())) {
+        if (buffer_indices.back().size() >= IBUFFER_THRESHOLD - static_cast<size_t>(buffer.indices_per_segment())) {
             buffer_indices.push_back(IndexBuffer());
             if (buffer.render_primitive_type != TBuffer::ERenderPrimitiveType::Point) {
                 if (!(prev.type != curr.type || !buffer.paths.back().matches(curr))) {
@@ -1587,11 +1634,15 @@ void GCodeViewer::load_toolpaths(const GCodeProcessor::Result& gcode_result)
             IBuffer& ibuffer = buffer.indices.back();
             ibuffer.count = buffer_indices.size();
 #if ENABLE_GCODE_VIEWER_STATISTICS
-            m_statistics.indices_gpu_size += ibuffer.count * sizeof(unsigned int);
-            m_statistics.max_indices_in_index_buffer = std::max(m_statistics.max_indices_in_index_buffer, static_cast<long long>(ibuffer.count));
+            m_statistics.total_indices_gpu_size += ibuffer.count * sizeof(unsigned int);
+            m_statistics.max_ibuffer_gpu_size = std::max(m_statistics.max_ibuffer_gpu_size, static_cast<int64_t>(ibuffer.count * sizeof(unsigned int)));
+            m_statistics.max_indices_in_index_buffer = std::max(m_statistics.max_indices_in_index_buffer, static_cast<int64_t>(ibuffer.count));
 #endif // ENABLE_GCODE_VIEWER_STATISTICS
 
             if (ibuffer.count > 0) {
+#if ENABLE_GCODE_VIEWER_STATISTICS
+                ++m_statistics.ibuffers_count;
+#endif // ENABLE_GCODE_VIEWER_STATISTICS
                 glsafe(::glGenBuffers(1, &ibuffer.id));
                 glsafe(::glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibuffer.id));
                 glsafe(::glBufferData(GL_ELEMENT_ARRAY_BUFFER, buffer_indices.size() * sizeof(unsigned int), buffer_indices.data(), GL_STATIC_DRAW));
@@ -2891,11 +2942,11 @@ void GCodeViewer::render_legend() const
 #if ENABLE_GCODE_VIEWER_STATISTICS
 void GCodeViewer::render_statistics() const
 {
-    static const float offset = 250.0f;
+    static const float offset = 275.0f;
 
     ImGuiWrapper& imgui = *wxGetApp().imgui();
 
-    auto add_time = [this, &imgui](const std::string& label, long long time) {
+    auto add_time = [this, &imgui](const std::string& label, int64_t time) {
         char buf[1024];
         sprintf(buf, "%lld ms (%s)", time, get_time_dhms(static_cast<float>(time) * 0.001f).c_str());
         imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, label);
@@ -2903,22 +2954,30 @@ void GCodeViewer::render_statistics() const
         imgui.text(buf);
     };
 
-    auto add_memory = [this, &imgui](const std::string& label, long long memory) {
-        static const float mb = 1024.0f * 1024.0f;
+    auto add_memory = [this, &imgui](const std::string& label, int64_t memory) {
+        auto format_string = [memory](const std::string& units, float value) {
+            char buf[1024];
+            sprintf(buf, "%lld bytes (%.3f %s)", memory, static_cast<float>(memory) * value, units.c_str());
+            return std::string(buf);
+        };
+
+        static const float kb = 1024.0f;
+        static const float inv_kb = 1.0f / kb;
+        static const float mb = 1024.0f * kb;
         static const float inv_mb = 1.0f / mb;
         static const float gb = 1024.0f * mb;
         static const float inv_gb = 1.0f / gb;
-        char buf[1024];
-        if (static_cast<float>(memory) < gb)
-            sprintf(buf, "%lld bytes (%.3f MB)", memory, static_cast<float>(memory) * inv_mb);
-        else
-            sprintf(buf, "%lld bytes (%.3f GB)", memory, static_cast<float>(memory) * inv_gb);
         imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, label);
         ImGui::SameLine(offset);
-        imgui.text(buf);
+        if (static_cast<float>(memory) < mb)
+            imgui.text(format_string("KB", inv_kb));
+        else if (static_cast<float>(memory) < gb)
+            imgui.text(format_string("MB", inv_mb));
+        else
+            imgui.text(format_string("GB", inv_gb));
     };
 
-    auto add_counter = [this, &imgui](const std::string& label, long long counter) {
+    auto add_counter = [this, &imgui](const std::string& label, int64_t counter) {
         char buf[1024];
         sprintf(buf, "%lld", counter);
         imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, label);
@@ -2927,7 +2986,7 @@ void GCodeViewer::render_statistics() const
     };
 
     imgui.set_next_window_pos(0.5f * wxGetApp().plater()->get_current_canvas3D()->get_canvas_size().get_width(), 0.0f, ImGuiCond_Once, 0.5f, 0.0f);
-    ImGui::SetNextWindowSizeConstraints({ 300, -1 }, { 600, -1 });
+    ImGui::SetNextWindowSizeConstraints({ 300.0f, 100.0f }, { 600.0f, 900.0f });
     imgui.begin(std::string("GCodeViewer Statistics"), ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize);
     ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
 
@@ -2961,8 +3020,11 @@ void GCodeViewer::render_statistics() const
     }
 
     if (ImGui::CollapsingHeader("GPU memory")) {
-        add_memory(std::string("Vertices:"), m_statistics.vertices_gpu_size);
-        add_memory(std::string("Indices:"), m_statistics.indices_gpu_size);
+        add_memory(std::string("Vertices:"), m_statistics.total_vertices_gpu_size);
+        add_memory(std::string("Indices:"), m_statistics.total_indices_gpu_size);
+        ImGui::Separator();
+        add_memory(std::string("Max VBuffer:"), m_statistics.max_vbuffer_gpu_size);
+        add_memory(std::string("Max IBuffer:"), m_statistics.max_ibuffer_gpu_size);
         wxGetApp().plater()->get_current_canvas3D()->set_as_dirty();
         wxGetApp().plater()->get_current_canvas3D()->request_extra_frame();
     }
@@ -2971,9 +3033,12 @@ void GCodeViewer::render_statistics() const
         add_counter(std::string("Travel segments count:"), m_statistics.travel_segments_count);
         add_counter(std::string("Wipe segments count:"), m_statistics.wipe_segments_count);
         add_counter(std::string("Extrude segments count:"), m_statistics.extrude_segments_count);
-        add_counter(std::string("Max vertices in vertex buffer:"), m_statistics.max_vertices_in_vertex_buffer);
-        add_counter(std::string("Max indices in index buffer:"), m_statistics.max_indices_in_index_buffer);
-
+        ImGui::Separator();
+        add_counter(std::string("VBuffers count:"), m_statistics.vbuffers_count);
+        add_counter(std::string("IBuffers  count:"), m_statistics.ibuffers_count);
+        ImGui::Separator();
+        add_counter(std::string("Max vertices in VBuffer:"), m_statistics.max_vertices_in_vertex_buffer);
+        add_counter(std::string("Max indices in IBuffer:"), m_statistics.max_indices_in_index_buffer);
         wxGetApp().plater()->get_current_canvas3D()->set_as_dirty();
         wxGetApp().plater()->get_current_canvas3D()->request_extra_frame();
     }
@@ -2982,11 +3047,11 @@ void GCodeViewer::render_statistics() const
 }
 #endif // ENABLE_GCODE_VIEWER_STATISTICS
 
-void GCodeViewer::log_memory_used(const std::string& label, long long additional) const
+void GCodeViewer::log_memory_used(const std::string& label, int64_t additional) const
 {
     if (Slic3r::get_logging_level() >= 5) {
-        long long paths_size = 0;
-        long long render_paths_size = 0;
+        int64_t paths_size = 0;
+        int64_t render_paths_size = 0;
         for (const TBuffer& buffer : m_buffers) {
             paths_size += SLIC3R_STDVEC_MEMSIZE(buffer.paths, Path);
             render_paths_size += SLIC3R_STDVEC_MEMSIZE(buffer.render_paths, RenderPath);
@@ -2995,7 +3060,7 @@ void GCodeViewer::log_memory_used(const std::string& label, long long additional
                 render_paths_size += SLIC3R_STDVEC_MEMSIZE(path.offsets, size_t);
             }
         }
-        long long layers_size = SLIC3R_STDVEC_MEMSIZE(m_layers.get_zs(), double);
+        int64_t layers_size = SLIC3R_STDVEC_MEMSIZE(m_layers.get_zs(), double);
         layers_size += SLIC3R_STDVEC_MEMSIZE(m_layers.get_endpoints(), Layers::Endpoints);
         BOOST_LOG_TRIVIAL(trace) << label
             << format_memsize_MB(additional + paths_size + render_paths_size + layers_size)
