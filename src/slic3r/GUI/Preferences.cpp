@@ -30,6 +30,7 @@ static std::shared_ptr<ConfigOptionsGroup>create_options_tab(const wxString& tit
 	tab->SetSizer(sizer);
 
 	std::shared_ptr<ConfigOptionsGroup> optgroup = std::make_shared<ConfigOptionsGroup>(tab);
+	optgroup->title_width = 40;
 	optgroup->label_width = 40;
 	return optgroup;
 }
@@ -247,10 +248,11 @@ void PreferencesDialog::build()
 	def.tooltip = L("If it point to a valid freecad instance (the bin directory or the python executable), you can use the built-in python script to quickly generate geometry.");
 	def.set_default_value(new ConfigOptionString{ app_config->get("freecad_path") });
 	option = Option(def, "freecad_path");
-	option.opt.full_width = true;
+	//option.opt.full_width = true;
+	option.opt.width = 50;
 	m_optgroup_paths->append_single_option_line(option);
 
-	m_optgroup_paths->activate();
+	activate_options_tab(m_optgroup_paths);
 
 	// Add "Camera" tab
 	m_optgroup_camera = create_options_tab(_L("Camera"), tabs);
@@ -415,7 +417,8 @@ void PreferencesDialog::accept()
 void PreferencesDialog::on_dpi_changed(const wxRect &suggested_rect)
 {
     m_optgroup_general->msw_rescale();
-    m_optgroup_camera->msw_rescale();
+	m_optgroup_paths->msw_rescale();
+	m_optgroup_camera->msw_rescale();
     m_optgroup_gui->msw_rescale();
 
     msw_buttons_rescale(this, em_unit(), { wxID_OK, wxID_CANCEL });
