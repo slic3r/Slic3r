@@ -3710,8 +3710,12 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             speed = speed * factor + (1.f - factor) * small_speed;
     }
     }
-    if (m_volumetric_speed != 0. && speed == 0)
+    if (m_volumetric_speed != 0. && speed == 0) {
+        //if m_volumetric_speed, use the max size for thinwall & gapfill, to avoid variations
         speed = m_volumetric_speed / path.mm3_per_mm;
+        if (speed > m_config.max_print_speed.value)
+            speed = m_config.max_print_speed.value;
+    }
     if (speed == 0) // this code shouldn't trigger as if it's 0, you have to get a m_volumetric_speed
         speed = m_config.max_print_speed.value;
     if (this->on_first_layer())

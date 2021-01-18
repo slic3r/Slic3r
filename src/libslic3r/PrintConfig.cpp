@@ -1815,7 +1815,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Gap fill speed");
     def->category = OptionCategory::speed;
     def->tooltip = L("Speed for filling small gaps using short zigzag moves. Keep this reasonably low "
-        "to avoid too much shaking and resonance issues. Set zero to disable gaps filling.");
+        "to avoid too much shaking and resonance issues.");
     def->sidetext = L("mm/s");
     def->min = 0;
     def->mode = comAdvanced;

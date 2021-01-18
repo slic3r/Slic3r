@@ -558,7 +558,7 @@ void PerimeterGenerator::process()
                         next_onion = offset_ex(last, double( - good_spacing));
                     }
                     // look for gaps
-                    if (this->config->gap_fill_speed.value > 0 && this->config->gap_fill 
+                    if (this->config->gap_fill 
                         //check if we are going to have an other perimeter
                         && (i <= loop_number || has_overhang || next_onion.empty()))
                         // not using safety offset here would "detect" very narrow gaps
