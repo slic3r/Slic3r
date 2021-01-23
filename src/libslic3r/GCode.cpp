@@ -1015,7 +1015,7 @@ std::vector<const PrintInstance*> sort_object_instances_by_model_order(const Pri
 
 // set standby temp for extruders
 // Parse the custom G-code, try to find T, and add it if not present
-static void init_multiextruders(FILE *file, Print &print, GCodeWriter & writer,  ToolOrdering &tool_ordering, const std::string &custom_gcode )
+void GCode::_init_multiextruders(FILE *file, Print &print, GCodeWriter & writer,  ToolOrdering &tool_ordering, const std::string &custom_gcode )
 {
 
     //set standby temp for reprap
@@ -1025,7 +1025,7 @@ static void init_multiextruders(FILE *file, Print &print, GCodeWriter & writer, 
             if (standby_temp > 0) {
                 if (print.config().ooze_prevention.value)
                     standby_temp += print.config().standby_temperature_delta.value;
-                fprintf(file, "G10 P%d R%d ; sets the standby temperature\n",
+                _write_format(file, "G10 P%d R%d ; sets the standby temperature\n",
                     tool_id,
                     standby_temp);
             }
@@ -1321,7 +1321,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
         this->_print_first_layer_bed_temperature(file, print, start_gcode, initial_extruder_id, false);
 
     //init extruders
-    init_multiextruders(file, print, m_writer, tool_ordering, start_gcode);
+    this->_init_multiextruders(file, print, m_writer, tool_ordering, start_gcode);
 
     // Set extruder(s) temperature before and after start G-code.
     if (this->config().gcode_flavor != gcfKlipper || print.config().start_gcode.value.empty())
