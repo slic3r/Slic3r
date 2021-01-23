@@ -1317,14 +1317,14 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
 
     std::string start_gcode = this->placeholder_parser_process("start_gcode", print.config().start_gcode.value, initial_extruder_id);
     // Set bed temperature if the start G-code does not contain any bed temp control G-codes.
-    if(this->config().gcode_flavor != gcfKlipper)
+    if(this->config().gcode_flavor != gcfKlipper && print.config().first_layer_bed_temperature.get_at(initial_extruder_id) != 0)
         this->_print_first_layer_bed_temperature(file, print, start_gcode, initial_extruder_id, false);
 
     //init extruders
     this->_init_multiextruders(file, print, m_writer, tool_ordering, start_gcode);
 
     // Set extruder(s) temperature before and after start G-code.
-    if (this->config().gcode_flavor != gcfKlipper || print.config().start_gcode.value.empty())
+    if ((this->config().gcode_flavor != gcfKlipper || print.config().start_gcode.value.empty()) && print.config().first_layer_temperature.get_at(initial_extruder_id) != 0)
         this->_print_first_layer_extruder_temperatures(file, print, start_gcode, initial_extruder_id, false);
 
     // adds tag for processor
@@ -1404,8 +1404,10 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     }
 
     //write temps after custom gcodes to ensure the temperature are good. (after tool selection)
-    this->_print_first_layer_extruder_temperatures(file, print, start_gcode, initial_extruder_id, true);
-    this->_print_first_layer_bed_temperature(file, print, start_gcode, initial_extruder_id, true);
+    if(print.config().first_layer_temperature.get_at(initial_extruder_id) != 0)
+        this->_print_first_layer_extruder_temperatures(file, print, start_gcode, initial_extruder_id, true);
+    if (print.config().first_layer_bed_temperature.get_at(initial_extruder_id) != 0)
+        this->_print_first_layer_bed_temperature(file, print, start_gcode, initial_extruder_id, true);
 
     // Do all objects for each layer.
     if (print.config().complete_objects.value) {
@@ -1766,6 +1768,8 @@ void GCode::_print_first_layer_bed_temperature(FILE *file, Print &print, const s
 {
     // Initial bed temperature based on the first extruder.
     int  temp = print.config().first_layer_bed_temperature.get_at(first_printing_extruder_id);
+    //disable bed temp control if 0
+    if (temp == 0) return;
     // Is the bed temperature set by the provided custom G-code?
     int  temp_by_gcode     = -1;
     bool temp_set_by_gcode = custom_gcode_sets_temperature(gcode, 140, 190, false, temp_by_gcode);
@@ -2161,7 +2165,8 @@ void GCode::process_layer(
             if(temperature > 0) // don't set it if disabled
                 gcode += m_writer.set_temperature(temperature, false, extruder.id());
         }
-        gcode += m_writer.set_bed_temperature(print.config().bed_temperature.get_at(first_extruder_id));
+        if(print.config().bed_temperature.get_at(first_extruder_id) > 0)  // don't set it if disabled
+            gcode += m_writer.set_bed_temperature(print.config().bed_temperature.get_at(first_extruder_id));
         // Mark the temperature transition from 1st to 2nd layer to be finished.
         m_second_layer_things_done = true;
     }
