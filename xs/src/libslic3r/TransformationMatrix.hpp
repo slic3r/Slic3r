@@ -101,7 +101,7 @@ public:
     /// generates a translation matrix
     static TransformationMatrix mat_translation(const Vectorf3 &vector);
 
-    /// generates a rotation matrix around coodinate axis
+    /// generates a rotation matrix around coordinate axis
     static TransformationMatrix mat_rotation(double angle_rad, const Axis &axis);
 
     /// generates a rotation matrix around arbitrary axis
