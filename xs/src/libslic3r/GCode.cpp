@@ -16,18 +16,15 @@ AvoidCrossingPerimeters::AvoidCrossingPerimeters()
 
 AvoidCrossingPerimeters::~AvoidCrossingPerimeters()
 {
-    if (this->_external_mp != NULL)
-        delete this->_external_mp;
+    delete this->_external_mp;
     
-    if (this->_layer_mp != NULL)
-        delete this->_layer_mp;
+    delete this->_layer_mp;
 }
 
 void
 AvoidCrossingPerimeters::init_external_mp(const ExPolygons &islands)
 {
-    if (this->_external_mp != NULL)
-        delete this->_external_mp;
+    delete this->_external_mp;
     
     this->_external_mp = new MotionPlanner(islands);
 }
@@ -35,8 +32,7 @@ AvoidCrossingPerimeters::init_external_mp(const ExPolygons &islands)
 void
 AvoidCrossingPerimeters::init_layer_mp(const ExPolygons &islands)
 {
-    if (this->_layer_mp != NULL)
-        delete this->_layer_mp;
+    delete this->_layer_mp;
     
     this->_layer_mp = new MotionPlanner(islands);
 }

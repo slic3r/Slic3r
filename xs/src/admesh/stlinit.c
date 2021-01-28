@@ -437,13 +437,9 @@ void
 stl_close(stl_file *stl) {
   if (stl->error) return;
 
-  if(stl->neighbors_start != NULL)
-    free(stl->neighbors_start);
-  if(stl->facet_start != NULL)
-    free(stl->facet_start);
-  if(stl->v_indices != NULL)
-    free(stl->v_indices);
-  if(stl->v_shared != NULL)
-    free(stl->v_shared);
+  free(stl->neighbors_start);
+  free(stl->facet_start);
+  free(stl->v_indices);
+  free(stl->v_shared);
 }
 

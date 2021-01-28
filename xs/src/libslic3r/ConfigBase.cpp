@@ -207,8 +207,7 @@ ConfigOptionDef::ConfigOptionDef(const ConfigOptionDef &other)
 
 ConfigOptionDef::~ConfigOptionDef()
 {
-    if (this->default_value != nullptr)
-        delete this->default_value;
+    delete this->default_value;
 }
 
 std::vector<std::string>
@@ -711,7 +710,7 @@ DynamicConfig::swap(DynamicConfig &other)
 DynamicConfig::~DynamicConfig () {
     for (t_options_map::iterator it = this->options.begin(); it != this->options.end(); ++it) {
         ConfigOption* opt = it->second;
-        if (opt != NULL) delete opt;
+        delete opt;
     }
 }
 
