@@ -867,7 +867,7 @@ ModelObject::transform_by_instance(ModelInstance instance, bool dont_translate)
     /*
       Let:
         * I1 be the trafo of the given instance, 
-        * V the originial volume trafo and
+        * V the original volume trafo and
         * I2 the trafo of the instance to be updated
       
       Then:
