@@ -145,9 +145,7 @@ Model::add_material(t_model_material_id material_id, const ModelMaterial &other)
 {
     // delete existing material if any
     ModelMaterial* material = this->get_material(material_id);
-    if (material != NULL) {
-        delete material;
-    }
+    delete material;
     
     // set new material
     material = new ModelMaterial(this, other);

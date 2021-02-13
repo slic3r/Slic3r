@@ -1650,7 +1650,7 @@ TriangleMeshSlicer<A>::TriangleMeshSlicer(TriangleMesh* _mesh) : mesh(_mesh), v_
 template <Axis A>
 TriangleMeshSlicer<A>::~TriangleMeshSlicer()
 {
-    if (this->v_scaled_shared != NULL) free(this->v_scaled_shared);
+    free(this->v_scaled_shared);
 }
 
 template class TriangleMeshSlicer<X>;
