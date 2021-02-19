@@ -161,8 +161,8 @@ src/libslic3r/TriangleMesh.cpp
 src/libslic3r/TriangleMesh.hpp
 src/libslic3r/utils.cpp
 src/libslic3r/utils.hpp
-src/libslic3r/Zip/ZipArchive.cpp
-src/libslic3r/Zip/ZipArchive.hpp
+src/Zip/ZipArchive.cpp
+src/Zip/ZipArchive.hpp
 src/miniz/miniz.h
 src/perlglue.cpp
 src/poly2tri/common/shapes.cc
