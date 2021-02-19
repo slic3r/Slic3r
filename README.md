@@ -1,4 +1,4 @@
-# This is a experimental version of the nonplanar slicing
+# This is a EXPERIMENTAL! version of the nonplanar slicing
 
 ## How to build
 
@@ -42,6 +42,8 @@ Look up prerequisites here:
     perl Build.PL
 
     perl Build.PL --gui
+  
+Please ignore the warning messages from the tests. I know they fail.
 
 #### Start
 
