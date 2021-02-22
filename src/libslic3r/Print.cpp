@@ -2379,7 +2379,7 @@ void Print::_make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, Ex
             }
         }
         //order path with least travel possible
-        loops = union_pt_chained(loops, false);
+        loops = union_pt_chained_outside_in(loops, false);
 
         //create ear pattern
         coord_t size_ear = (scale_((brim_config.brim_width.value - brim_config.brim_offset.value)) - flow.scaled_spacing());
@@ -2518,6 +2518,7 @@ void Print::_make_brim_interior(const Flow &flow, const PrintObjectPtrs &objects
         for (Polygon& poly : offset(islands_to_loops, 0.5f * double(flow.scaled_spacing())))
             loops[i].emplace_back(poly);
     }
+    //loops = union_pt_chained_outside_in(loops, false);
     std::reverse(loops.begin(), loops.end());
 
     //intersection

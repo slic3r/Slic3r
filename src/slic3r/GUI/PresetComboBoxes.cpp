@@ -32,6 +32,14 @@
 #include "PhysicalPrinterDialog.hpp"
 #include "SavePresetDialog.hpp"
 
+// A workaround for a set of issues related to text fitting into gtk widgets:
+// See e.g.: https://github.com/prusa3d/PrusaSlicer/issues/4584
+#if defined(__WXGTK20__) || defined(__WXGTK3__)
+    #include <glib-2.0/glib-object.h>
+    #include <pango-1.0/pango/pango-layout.h>
+    #include <gtk/gtk.h>
+#endif
+
 using Slic3r::GUI::format_wxstr;
 
 namespace Slic3r {
@@ -179,6 +187,25 @@ void PresetComboBox::update_selection()
 
     SetSelection(m_last_selected);
     SetToolTip(GetString(m_last_selected));
+
+// A workaround for a set of issues related to text fitting into gtk widgets:
+// See e.g.: https://github.com/prusa3d/PrusaSlicer/issues/4584
+#if defined(__WXGTK20__) || defined(__WXGTK3__)
+    GList* cells = gtk_cell_layout_get_cells(GTK_CELL_LAYOUT(m_widget));
+
+    // 'cells' contains the GtkCellRendererPixBuf for the icon,
+    // 'cells->next' contains GtkCellRendererText for the text we need to ellipsize
+    if (!cells || !cells->next) return;
+
+    auto cell = static_cast<GtkCellRendererText *>(cells->next->data);
+
+    if (!cell) return;
+
+    g_object_set(G_OBJECT(cell), "ellipsize", PANGO_ELLIPSIZE_END, NULL);
+
+    // Only the list of cells must be freed, the renderer isn't ours to free
+    g_list_free(cells);
+#endif
 }
 
 void PresetComboBox::update(std::string select_preset_name)
@@ -905,6 +932,13 @@ TabPresetComboBox::TabPresetComboBox(wxWindow* parent, Preset::Type preset_type)
         }
 
         evt.StopPropagation();
+#ifdef __WXMSW__
+        // From the Win 2004 preset combobox lose a focus after change the preset selection
+        // and that is why the up/down arrow doesn't work properly
+        // (see https://github.com/prusa3d/PrusaSlicer/issues/5531 ).
+        // So, set the focus to the combobox explicitly
+        this->SetFocus();
+#endif    
     });
 }
 
