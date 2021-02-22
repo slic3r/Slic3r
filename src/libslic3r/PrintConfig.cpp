@@ -2048,12 +2048,14 @@ void PrintConfigDef::init_fff_params()
     def->enum_keys_map = &ConfigOptionEnum<DenseInfillAlgo>::get_enum_values();
     def->enum_values.push_back("automatic");
     def->enum_values.push_back("autosmall");
+    def->enum_values.push_back("autoenlarged");
     def->enum_values.push_back("enlarged");
     def->enum_labels.push_back(L("Automatic"));
     def->enum_labels.push_back(L("Automatic, only for small areas"));
+    def->enum_labels.push_back(L("Automatic, or anchored if too big"));
     def->enum_labels.push_back(L("Anchored"));
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionEnum<DenseInfillAlgo>(dfaAutoNotFull));
+    def->set_default_value(new ConfigOptionEnum<DenseInfillAlgo>(dfaAutoOrEnlarged));
 
     def = this->add("infill_extruder", coInt);
     def->label = L("Infill extruder");

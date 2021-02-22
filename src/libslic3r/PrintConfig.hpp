@@ -114,7 +114,7 @@ enum SLAMaterial {
     slamHeatResistant,
 };
 enum DenseInfillAlgo {
-    dfaAutomatic, dfaAutoNotFull, dfaEnlarged,
+    dfaAutomatic, dfaAutoNotFull, dfaAutoOrEnlarged , dfaEnlarged,
 };
 
 enum NoPerimeterUnsupportedAlgo {
@@ -298,6 +298,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>:
     static const t_config_enum_values keys_map = {
         { "automatic", dfaAutomatic },
         { "autosmall", dfaAutoNotFull },
+        { "autoenlarged", dfaAutoOrEnlarged },
         { "enlarged", dfaEnlarged }
     };
     return keys_map;
