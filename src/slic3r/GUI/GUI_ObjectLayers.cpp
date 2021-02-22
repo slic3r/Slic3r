@@ -291,7 +291,7 @@ void ObjectLayers::sys_color_changed()
             const std::vector<size_t> btns = {2, 3};  // del_btn, add_btn
             for (auto btn : btns) {
                 wxSizerItem* b_item = item->GetSizer()->GetItem(btn);
-                if (b_item->IsWindow()) {
+                if (b_item != nullptr && b_item->IsWindow()) {
                     auto button = dynamic_cast<PlusMinusButton*>(b_item->GetWindow());
                     if (button != nullptr)
                         button->msw_rescale();

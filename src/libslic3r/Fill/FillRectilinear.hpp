@@ -8,7 +8,7 @@
 namespace Slic3r {
 
 class Surface;
-class SegmentedIntersectionLine;
+struct SegmentedIntersectionLine;
 struct ExPolygonWithOffset;
 
 class FillRectilinear : public Fill
