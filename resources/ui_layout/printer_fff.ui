@@ -15,6 +15,7 @@ group:silent_mode_event:Firmware
 	setting:gcode_flavor
 	setting:silent_mode
 	setting:remaining_times
+	setting:gcode_precision_xyz
 group:Cooling fan
 	line:Speedup
 		setting:label$Speedup time:fan_speedup_time

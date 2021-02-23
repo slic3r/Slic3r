@@ -666,7 +666,9 @@ const std::vector<std::string>& Preset::printer_options()
             "fan_kickstart",
             "fan_speedup_overhangs",
             "fan_speedup_time",
-            "gcode_flavor", "use_relative_e_distances",
+            "gcode_flavor", 
+            "gcode_precision_xyz",
+            "use_relative_e_distances",
             "use_firmware_retraction", "use_volumetric_e", "variable_layer_height",
             "min_length",
             //FIXME the print host keys are left here just for conversion from the Printer preset to Physical Printer preset.

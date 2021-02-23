@@ -1046,6 +1046,8 @@ public:
     ConfigOptionBool                gcode_comments;
     ConfigOptionEnum<GCodeFlavor>   gcode_flavor;
     ConfigOptionBool                gcode_label_objects;
+    ConfigOptionInt                 gcode_precision_xyz;
+    ConfigOptionInts                gcode_precision_e;
     ConfigOptionString              layer_gcode;
     ConfigOptionString              feature_gcode;
     ConfigOptionFloat               max_print_speed;
@@ -1154,6 +1156,8 @@ protected:
         OPT_PTR(gcode_comments);
         OPT_PTR(gcode_flavor);
         OPT_PTR(gcode_label_objects);
+        OPT_PTR(gcode_precision_xyz);
+        OPT_PTR(gcode_precision_e);
         OPT_PTR(layer_gcode);
         OPT_PTR(feature_gcode);
         OPT_PTR(max_print_speed);

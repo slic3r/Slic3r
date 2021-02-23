@@ -120,6 +120,8 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "gap_fill_speed",
         "gcode_comments",
         "gcode_label_objects",
+        "gcode_precision_xyz",
+        "gcode_precision_e",
         "infill_acceleration",
         "layer_gcode",
         "min_fan_speed",

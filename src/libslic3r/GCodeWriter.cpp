@@ -10,8 +10,8 @@
 #define FLAVOR_IS_NOT(val) this->config.gcode_flavor != val
 #define COMMENT(comment) if (this->config.gcode_comments && !comment.empty()) gcode << " ; " << comment;
 #define PRECISION(val, precision) std::fixed << std::setprecision(precision) << (val)
-#define XYZF_NUM(val) PRECISION(val, 3)
-#define E_NUM(val) PRECISION(val, 5)
+#define XYZF_NUM(val) PRECISION(val, this->config.gcode_precision_xyz.value)
+#define E_NUM(val) PRECISION(val, this->config.gcode_precision_e.get_at(m_tool->id()))
 
 namespace Slic3r {
 

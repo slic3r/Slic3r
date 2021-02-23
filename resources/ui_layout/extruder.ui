@@ -37,3 +37,5 @@ group:Retraction when tool is disabled (advanced settings for multi-extruder set
 	setting:idx:retract_restart_extra_toolchange
 group:Preview
 	reset_to_filament_color
+group:Gcode
+	setting:gcode_precision_e

@@ -1876,6 +1876,20 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(1));
 
+    def = this->add("gcode_precision_xyz", coInt);
+    def->label = L("xyz decimals");
+    def->category = OptionCategory::output;
+    def->tooltip = L("Choose how many digit after the dot for xyz coordinates.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(3));
+
+    def = this->add("gcode_precision_e", coInts);
+    def->label = L("Extruder decimals");
+    def->category = OptionCategory::output;
+    def->tooltip = L("Choose how many digit after the dot for extruder moves.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInts{ 5 });
+
     def = this->add("high_current_on_filament_swap", coBool);
     def->label = L("High extruder current on filament swap");
     def->category = OptionCategory::general;
@@ -4182,6 +4196,7 @@ void PrintConfigDef::init_extruder_option_keys()
         "extruder_offset",
         "extruder_fan_offset",
         "extruder_temperature_offset",
+        "gcode_precision_e",
         "tool_name",
         "retract_length",
         "retract_lift",
