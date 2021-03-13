@@ -159,6 +159,7 @@ group:title_width$19:Ironing post-process (This will go on top of infills and pe
 	line:Tuning ironing
 		setting:label_width$9:width$5:ironing_flowrate
 		setting:label_width$26:width$5:ironing_spacing
+		setting:label_width$26:width$5:ironing_angle
 	end_line
 
 page:Skirt & Brim:skirt+brim

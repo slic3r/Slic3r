@@ -778,6 +778,7 @@ public:
     ConfigOptionBool                infill_first;
     // Ironing options
     ConfigOptionBool                ironing;
+    ConfigOptionFloat               ironing_angle;
     ConfigOptionEnum<IroningType>   ironing_type;
     ConfigOptionPercent             ironing_flowrate;
     ConfigOptionFloat               ironing_spacing;
@@ -887,6 +888,7 @@ protected:
         OPT_PTR(infill_dense_algo);
         OPT_PTR(infill_first);
         OPT_PTR(ironing);
+        OPT_PTR(ironing_angle);
         OPT_PTR(ironing_type);
         OPT_PTR(ironing_flowrate);
         OPT_PTR(ironing_spacing);

@@ -479,6 +479,7 @@ const std::vector<std::string>& Preset::print_options()
         "ironing_flowrate",
         "ironing_speed",
         "ironing_spacing",
+        "ironing_angle",
         "fill_angle",
         "fill_angle_increment",
         "bridge_angle", 
