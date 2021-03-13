@@ -22,13 +22,15 @@ namespace Slic3r {
 /// you must use the setter to add the opptional settings before calling build().
 class MedialAxis {
     public:
+        //static int staticid;
+        //int id;
         /// _expolygon: the polygon to fill
         /// _max_width : maximum width of the extrusion. _expolygon shouldn't have a spot where a circle diameter is higher than that (or almost).
         /// _min_width : minimum width of the extrusion, every spot where a circle diameter is lower than that will be ignored (unless it's the tip of the extrusion)
         /// _height: height of the extrusion, used to compute the difference between width and spacing.
         MedialAxis(const ExPolygon &_expolygon, const coord_t _max_width, const coord_t _min_width, const coord_t _height)
             : surface(_expolygon), max_width(_max_width), min_width(_min_width), height(_height),
-            bounds(&_expolygon), nozzle_diameter(_min_width), taper_size(0), stop_at_min_width(true){};
+            bounds(&_expolygon), nozzle_diameter(_min_width), taper_size(0), stop_at_min_width(true){/*id= staticid;staticid++;*/};
 
         /// create the polylines_out collection of variable-width polyline to extrude.
         void build(ThickPolylines &polylines_out);
@@ -45,8 +47,6 @@ class MedialAxis {
         MedialAxis& set_stop_at_min_width(const bool stop_at_min_width) { this->stop_at_min_width = stop_at_min_width; return *this; }
 
     private:
-        /// Cache value: lines is here only to avoid passing it in argument of many methods. Initialized in polyline_from_voronoi.
-        Lines lines;
 
         /// input polygon to fill
         const ExPolygon& surface;
@@ -74,13 +74,10 @@ class MedialAxis {
             typedef boost::polygon::segment_data<coordinate_type>   segment_type;
             typedef boost::polygon::rectangle_data<coordinate_type> rect_type;
         };
-        VD vd;
-        std::set<const VD::edge_type*> edges, valid_edges;
-        std::map<const VD::edge_type*, std::pair<coordf_t, coordf_t> > thickness;
-        void process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* polyline);
-        bool validate_edge(const VD::edge_type* edge);
-        const Line& retrieve_segment(const VD::cell_type* cell) const;
-        const Point& retrieve_endpoint(const VD::cell_type* cell) const;
+        void process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* polyline, std::set<const VD::edge_type*> &edges, std::set<const VD::edge_type*> &valid_edges, std::map<const VD::edge_type*, std::pair<coordf_t, coordf_t> > &thickness);
+        bool validate_edge(const VD::edge_type* edge, Lines &lines, std::map<const VD::edge_type*, std::pair<coordf_t, coordf_t> > &thickness);
+        const Line& retrieve_segment(const VD::cell_type* cell, Lines& lines) const;
+        const Point& retrieve_endpoint(const VD::cell_type* cell, Lines& lines) const;
         void polyline_from_voronoi(const Lines& voronoi_edges, ThickPolylines* polylines_out);
 
         // functions called by build:

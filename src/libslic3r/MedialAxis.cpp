@@ -14,7 +14,9 @@
 
 namespace Slic3r {
     int count_error = 0;
-    
+
+    //int Slic3r::MedialAxis::staticid = 0;
+
 void
 MedialAxis::build(Polylines &polylines)
 {
@@ -26,34 +28,41 @@ MedialAxis::build(Polylines &polylines)
 void
 MedialAxis::polyline_from_voronoi(const Lines& voronoi_edges, ThickPolylines* polylines)
 {
-    this->lines = voronoi_edges;
-    construct_voronoi(lines.begin(), lines.end(), &this->vd);
+    std::map<const VD::edge_type*, std::pair<coordf_t, coordf_t> > thickness;
+    Lines lines = voronoi_edges;
+    VD vd;
+    construct_voronoi(lines.begin(), lines.end(), &vd);
 
     typedef const VD::edge_type   edge_t;
     
     // DEBUG: dump all Voronoi edges
-    /*{
-        for (VD::const_edge_iterator edge = this->vd.edges().begin(); edge != this->vd.edges().end(); ++edge) {
-            if (edge->is_infinite()) continue;
-            const edge_t* edgeptr = &*edge;
-            ThickPolyline polyline;
-            polyline.points.push_back(Point( edge->vertex0()->x(), edge->vertex0()->y() ));
-            polyline.points.push_back(Point( edge->vertex1()->x(), edge->vertex1()->y() ));
-            polyline.width.push_back(this->thickness[edgeptr].first);
-            polyline.width.push_back(this->thickness[edgeptr].second);
-            polylines->push_back(polyline);
-        }
-        return;
-    }*/
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_04_voronoi_" << this->id << ".svg";
+    //    SVG svg(stri.str());
+    //    for (VD::const_edge_iterator edge = vd.edges().begin(); edge != vd.edges().end(); ++edge) {
+    //        if (edge->is_infinite()) continue;
+    //        const edge_t* edgeptr = &*edge;
+    //        ThickPolyline polyline;
+    //        polyline.points.push_back(Point( edge->vertex0()->x(), edge->vertex0()->y() ));
+    //        polyline.points.push_back(Point( edge->vertex1()->x(), edge->vertex1()->y() ));
+    //        polyline.width.push_back(thickness[edgeptr].first);
+    //        polyline.width.push_back(thickness[edgeptr].second);
+    //        //polylines->push_back(polyline);
+    //        svg.draw(polyline, "red");
+    //    }
+    //    svg.Close();
+    //    return;
+    //}
     
     
     
     // collect valid edges (i.e. prune those not belonging to MAT)
     // note: this keeps twins, so it inserts twice the number of the valid edges
-    this->valid_edges.clear();
+    std::set<const VD::edge_type*> valid_edges;
     {
         std::set<const edge_t*> seen_edges;
-        for (VD::const_edge_iterator edge = this->vd.edges().begin(); edge != this->vd.edges().end(); ++edge) {
+        for (VD::const_edge_iterator edge = vd.edges().begin(); edge != vd.edges().end(); ++edge) {
             // if we only process segments representing closed loops, none if the
             // infinite edges (if any) would be part of our MAT anyway
             if (edge->is_secondary() || edge->is_infinite()) continue;
@@ -63,23 +72,23 @@ MedialAxis::polyline_from_voronoi(const Lines& voronoi_edges, ThickPolylines* po
             seen_edges.insert(&*edge);
             seen_edges.insert(edge->twin());
             
-            if (!this->validate_edge(&*edge)) continue;
-            this->valid_edges.insert(&*edge);
-            this->valid_edges.insert(edge->twin());
+            if (!this->validate_edge(&*edge, lines, thickness)) continue;
+            valid_edges.insert(&*edge);
+            valid_edges.insert(edge->twin());
         }
     }
-    this->edges = this->valid_edges;
+    std::set<const VD::edge_type*> edges = valid_edges;
     
     // iterate through the valid edges to build polylines
-    while (!this->edges.empty()) {
-        const edge_t* edge = *this->edges.begin();
-        if (this->thickness[edge].first > this->max_width*1.001) {
+    while (!edges.empty()) {
+        const edge_t* edge = *edges.begin();
+        if (thickness[edge].first > this->max_width*1.001) {
             //std::cerr << "Error, edge.first has a thickness of " << unscaled(this->thickness[edge].first) << " > " << unscaled(this->max_width) << "\n";
             //(void)this->edges.erase(edge);
             //(void)this->edges.erase(edge->twin());
             //continue;
         }
-        if (this->thickness[edge].second > this->max_width*1.001) {
+        if (thickness[edge].second > this->max_width*1.001) {
             //std::cerr << "Error, edge.second has a thickness of " << unscaled(this->thickness[edge].second) << " > " << unscaled(this->max_width) << "\n";
             //(void)this->edges.erase(edge);
             //(void)this->edges.erase(edge->twin());
@@ -90,20 +99,20 @@ MedialAxis::polyline_from_voronoi(const Lines& voronoi_edges, ThickPolylines* po
         ThickPolyline polyline;
         polyline.points.push_back(Point( edge->vertex0()->x(), edge->vertex0()->y() ));
         polyline.points.push_back(Point( edge->vertex1()->x(), edge->vertex1()->y() ));
-        polyline.width.push_back(this->thickness[edge].first);
-        polyline.width.push_back(this->thickness[edge].second);
+        polyline.width.push_back(thickness[edge].first);
+        polyline.width.push_back(thickness[edge].second);
         
         // remove this edge and its twin from the available edges
-        (void)this->edges.erase(edge);
-        (void)this->edges.erase(edge->twin());
+        (void)edges.erase(edge);
+        (void)edges.erase(edge->twin());
         
         // get next points
-        this->process_edge_neighbors(edge, &polyline);
+        this->process_edge_neighbors(edge, &polyline, edges, valid_edges, thickness);
         
         // get previous points
         {
             ThickPolyline rpolyline;
-            this->process_edge_neighbors(edge->twin(), &rpolyline);
+            this->process_edge_neighbors(edge->twin(), &rpolyline, edges, valid_edges, thickness);
             polyline.points.insert(polyline.points.begin(), rpolyline.points.rbegin(), rpolyline.points.rend());
             polyline.width.insert(polyline.width.begin(), rpolyline.width.rbegin(), rpolyline.width.rend());
             polyline.endpoints.first = rpolyline.endpoints.second;
@@ -139,7 +148,7 @@ MedialAxis::polyline_from_voronoi(const Lines& voronoi_edges, ThickPolylines* po
 }
 
 void
-MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* polyline)
+MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* polyline, std::set<const VD::edge_type*> &edges, std::set<const VD::edge_type*> &valid_edges, std::map<const VD::edge_type*, std::pair<coordf_t, coordf_t> > &thickness)
 {
     while (true) {
         // Since rot_next() works on the edge starting point but we want
@@ -151,7 +160,7 @@ MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* pol
         std::vector<const VD::edge_type*> neighbors;
         for (const VD::edge_type* neighbor = twin->rot_next(); neighbor != twin;
             neighbor = neighbor->rot_next()) {
-            if (this->valid_edges.count(neighbor) > 0) neighbors.push_back(neighbor);
+            if (valid_edges.count(neighbor) > 0) neighbors.push_back(neighbor);
         }
     
         // if we have a single neighbor then we can continue recursively
@@ -159,14 +168,14 @@ MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* pol
             const VD::edge_type* neighbor = neighbors.front();
             
             // break if this is a closed loop
-            if (this->edges.count(neighbor) == 0) return;
+            if (edges.count(neighbor) == 0) return;
             
             Point new_point(neighbor->vertex1()->x(), neighbor->vertex1()->y());
             polyline->points.push_back(new_point);
-            polyline->width.push_back(this->thickness[neighbor].second);
+            polyline->width.push_back(thickness[neighbor].second);
             
-            (void)this->edges.erase(neighbor);
-            (void)this->edges.erase(neighbor->twin());
+            (void)edges.erase(neighbor);
+            (void)edges.erase(neighbor->twin());
             edge = neighbor;
         } else if (neighbors.size() == 0) {
             polyline->endpoints.second = true;
@@ -179,7 +188,7 @@ MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* pol
 }
 
 bool
-MedialAxis::validate_edge(const VD::edge_type* edge)
+MedialAxis::validate_edge(const VD::edge_type* edge, Lines &lines, std::map<const VD::edge_type*, std::pair<coordf_t, coordf_t> > &thickness)
 {
     // prevent overflows and detect almost-infinite edges
     if (std::abs(edge->vertex0()->x()) > double(CLIPPER_MAX_COORD_UNSCALED) || 
@@ -217,8 +226,8 @@ MedialAxis::validate_edge(const VD::edge_type* edge)
     // retrieve the original line segments which generated the edge we're checking
     const VD::cell_type* cell_l = edge->cell();
     const VD::cell_type* cell_r = edge->twin()->cell();
-    const Line &segment_l = this->retrieve_segment(cell_l);
-    const Line &segment_r = this->retrieve_segment(cell_r);
+    const Line &segment_l = this->retrieve_segment(cell_l, lines);
+    const Line &segment_r = this->retrieve_segment(cell_r, lines);
     
     
     //SVG svg("edge.svg");
@@ -246,11 +255,11 @@ MedialAxis::validate_edge(const VD::edge_type* edge)
     
     coordf_t w0 = cell_r->contains_segment()
         ? line.a.distance_to(segment_r)*2
-        : line.a.distance_to(this->retrieve_endpoint(cell_r))*2;
+        : line.a.distance_to(this->retrieve_endpoint(cell_r, lines))*2;
     
     coordf_t w1 = cell_l->contains_segment()
         ? line.b.distance_to(segment_l)*2
-        : line.b.distance_to(this->retrieve_endpoint(cell_l))*2;
+        : line.b.distance_to(this->retrieve_endpoint(cell_l, lines))*2;
     
     //don't remove the line that goes to the intersection of the contour
     // we use them to create nicer thin wall lines
@@ -288,22 +297,22 @@ MedialAxis::validate_edge(const VD::edge_type* edge)
     if (w0 > this->max_width*1.05 && w1 > this->max_width*1.05)
         return false;
     
-    this->thickness[edge]         = std::make_pair(w0, w1);
-    this->thickness[edge->twin()] = std::make_pair(w1, w0);
+    thickness[edge]         = std::make_pair(w0, w1);
+    thickness[edge->twin()] = std::make_pair(w1, w0);
     
     return true;
 }
 
 const Line&
-MedialAxis::retrieve_segment(const VD::cell_type* cell) const
+MedialAxis::retrieve_segment(const VD::cell_type* cell, Lines& lines) const
 {
     return lines[cell->source_index()];
 }
 
 const Point&
-MedialAxis::retrieve_endpoint(const VD::cell_type* cell) const
+MedialAxis::retrieve_endpoint(const VD::cell_type* cell, Lines &lines) const
 {
-    const Line& line = this->retrieve_segment(cell);
+    const Line& line = this->retrieve_segment(cell, lines);
     if (cell->source_category() == boost::polygon::SOURCE_CATEGORY_SEGMENT_START_POINT) {
         return line.a;
     } else {
@@ -1598,6 +1607,49 @@ MedialAxis::build(ThickPolylines &polylines_out)
     // compute the Voronoi diagram and extract medial axis polylines
     ThickPolylines pp;
     this->polyline_from_voronoi(this->expolygon.lines(), &pp);
+    //FIXME this is a stop-gap for voronoi bug, see superslicer/issues/995
+    {
+        double ori_area = 0;
+        for (ThickPolyline& tp : pp) {
+            for (int i = 1; i < tp.points.size(); i++) {
+                ori_area += (tp.width[i - 1] + tp.width[i]) * tp.points[i - 1].distance_to(tp.points[i]) / 2;
+            }
+        }
+        double area = this->expolygon.area();
+        double ratio_area = ori_area / area;
+        if (ratio_area < 1) ratio_area = 1 / ratio_area;
+        //check if the returned voronoi is really off
+        if (ratio_area > 1.1) {
+            //add a little offset and retry
+            ExPolygons fixer = offset_ex(this->expolygon, SCALED_EPSILON);
+            if (fixer.size() == 1) {
+                ExPolygon fixPoly = fixer[0];
+                ThickPolylines pp_stopgap;
+                this->polyline_from_voronoi(fixPoly.lines(), &pp_stopgap);
+                double fix_area = 0;
+                for (ThickPolyline& tp : pp_stopgap) {
+                    for (int i = 1; i < tp.points.size(); i++) {
+                        fix_area += (tp.width[i - 1] + tp.width[i]) * tp.points[i - 1].distance_to(tp.points[i]) / 2;
+                    }
+                }
+                double fix_ratio_area = fix_area / area;
+                if (fix_ratio_area < 1) fix_ratio_area = 1 / fix_ratio_area;
+                //if it's less off, then use it.
+                if (fix_ratio_area < ratio_area) {
+                    pp = pp_stopgap;
+                }
+            }
+        }
+    }
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_0.9_voronoi_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    //svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.draw(pp);
+    //    svg.Close();
+    //}
 
     //sanity check, as the voronoi can return (abeit very rarely) randomly high values.
     for (size_t tp_idx = 0; tp_idx < pp.size(); tp_idx++) {
@@ -1619,7 +1671,7 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_1_voronoi_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    //svg.draw(bounds);
+    //    svg.draw(*bounds);
     //    svg.draw(this->expolygon);
     //    svg.draw(pp);
     //    svg.Close();
@@ -1634,7 +1686,7 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_1_voronoi_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(bounds);
+    //    svg.draw(*bounds);
     //    svg.draw(this->expolygon);
     //    svg.draw(pp);
     //    svg.Close();
@@ -1660,7 +1712,7 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_2_curve_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(bounds);
+    //    svg.draw(*bounds);
     //    svg.draw(this->expolygon);
     //    svg.draw(pp);
     //    svg.Close();
@@ -1716,7 +1768,7 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_5.0_thuinner_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(bounds);
+    //    svg.draw(*bounds);
     //    svg.draw(this->expolygon);
     //    svg.draw(pp);
     //    svg.Close();
@@ -1884,6 +1936,9 @@ thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow fl
                 flow.width = wanted_width;
                 path.polyline.append(line.a);
                 path.polyline.append(line.b);
+                assert(flow.mm3_per_mm() == flow.mm3_per_mm());
+                assert(flow.width == flow.width);
+                assert(flow.height == flow.height);
                 path.mm3_per_mm = flow.mm3_per_mm();
                 path.width = flow.width;
                 path.height = flow.height;
