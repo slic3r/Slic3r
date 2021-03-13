@@ -2025,8 +2025,9 @@ namespace Skirt {
         std::map<unsigned int, std::pair<size_t, size_t>> skirt_loops_per_extruder_out;
         if (print.has_skirt() && ! print.skirt().entities.empty() &&
             // Not enough skirt layers printed yet.
-            //FIXME infinite or high skirt does not make sense for sequential print!
             (skirt_done.size() < (size_t)print.config().skirt_height.value || print.has_infinite_skirt()) &&
+            // infinite or high skirt does not make sense for sequential print!
+            (layer_tools.print_z - skirt_done.back() < print.config().skirt_extrusion_width) &&
             // This print_z has not been extruded yet (sequential print)
             // FIXME: The skirt_done should not be empty at this point. The check is a workaround
             // of https://github.com/prusa3d/PrusaSlicer/issues/5652, but it deserves a real fix.
@@ -2369,6 +2370,8 @@ void GCode::process_layer(
                 // Adjust flow according to this layer's layer height.
                 ExtrusionLoop loop = *dynamic_cast<const ExtrusionLoop*>(print.skirt().entities[i]);
                 for (ExtrusionPath &path : loop.paths) {
+                    assert(layer_skirt_flow.height == layer_skirt_flow.height);
+                    assert(mm3_per_mm == mm3_per_mm);
                     path.height = layer_skirt_flow.height;
                     path.mm3_per_mm = mm3_per_mm;
                 }
@@ -3095,11 +3098,13 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     }
     
     // extrude along the path
+    //FIXME: we can have one-point paths in the loop that don't move : it's useless! and can create problems!
     std::string gcode;
     for (ExtrusionPaths::iterator path = paths.begin(); path != paths.end(); ++path) {
         //path->simplify(SCALED_RESOLUTION); //should already be simplified
         //gcode += this->_extrude(*path, description, speed);
-        gcode += extrude_path(*path, description, speed);
+        if(path->polyline.points.size()>1)
+            gcode += extrude_path(*path, description, speed);
     }
 
     // reset acceleration
@@ -3269,14 +3274,16 @@ void GCode::use(const ExtrusionEntityCollection &collection) {
 std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &description, double speed) {
 
     ExtrusionPath simplifed_path = path;
-    if (this->config().min_length.value != 0 && !m_last_too_small.empty()) {
+    if (this->config().min_length.value != 0 && !m_last_too_small.empty() /*&& m_last_too_small.length() > 0*/) {
         //descr += " trys fusion " + std::to_string(unscaled(m_last_too_small.last_point().x())) + " , " + std::to_string(unscaled(path.first_point().x()));
         //ensure that it's a continous thing
-        if (m_last_too_small.last_point().distance_to_square(path.first_point()) < scale_(this->config().min_length)) {
+        if (m_last_too_small.first_point().distance_to_square(path.first_point()) < scale_(this->config().min_length) /*&& m_last_too_small.first_point().distance_to_square(path.first_point()) > EPSILON*/) {
             //descr += " ! fusion " + std::to_string(simplifed_path.polyline.points.size());
-            simplifed_path.height = (m_last_too_small.height * m_last_too_small.length() + path.height * path.length()) / (m_last_too_small.length() + path.length());
-            simplifed_path.mm3_per_mm = (m_last_too_small.mm3_per_mm * m_last_too_small.length() + path.mm3_per_mm * path.length()) / (m_last_too_small.length() + path.length());
+            simplifed_path.height = (m_last_too_small.height * m_last_too_small.length() + simplifed_path.height * simplifed_path.length()) / (m_last_too_small.length() + simplifed_path.length());
+            simplifed_path.mm3_per_mm = (m_last_too_small.mm3_per_mm * m_last_too_small.length() + simplifed_path.mm3_per_mm * simplifed_path.length()) / (m_last_too_small.length() + simplifed_path.length());
             simplifed_path.polyline.points.insert(simplifed_path.polyline.points.begin(), m_last_too_small.polyline.points.begin(), m_last_too_small.polyline.points.end()-1);
+            assert(simplifed_path.height == simplifed_path.height);
+            assert(simplifed_path.mm3_per_mm == simplifed_path.mm3_per_mm);
         }
         m_last_too_small.polyline.points.clear();
     }

@@ -1153,6 +1153,9 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
             path.mm3_per_mm = is_external ? this->_ext_mm3_per_mm           : this->_mm3_per_mm;
             path.width      = is_external ? this->ext_perimeter_flow.width  : this->perimeter_flow.width;
             path.height     = (float) this->layer->height;
+            assert(path.mm3_per_mm == path.mm3_per_mm);
+            assert(path.width == path.width);
+            assert(path.height == path.height);
             paths.push_back(path);
         }
 
