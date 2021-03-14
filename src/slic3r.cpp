@@ -34,6 +34,9 @@ main(int argc, char **argv) {
 #endif // BUILD_TEST
 
 int CLI::run(int argc, char **argv) {
+    #ifdef SLIC3R_DEBUG
+        slic3r_log->set_level(log_t::DEBUG);
+    #endif
     // Convert arguments to UTF-8 (needed on Windows).
     // argv then points to memory owned by a.
     boost::nowide::args a(argc, argv);

@@ -8,10 +8,14 @@ option(SLIC3R_STATIC "Build and link Slic3r statically." ON)
 option(BUILD_EXTRUDE_TIN "Build and link the extrude-tin application." OFF)
 option(PROFILE "Build with gprof profiling output." OFF)
 option(COVERAGE "Build with gcov code coverage profiling." OFF)
+option(SLIC3R_DEBUG "Build with Slic3r's debug output" OFF)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
 add_compile_options(-ftemplate-backtrace-limit=0)
 add_compile_options(-DNO_PERL -DM_PI=3.14159265358979323846 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE)
+if(SLIC3R_DEBUG)
+    add_compile_options(-DSLIC3R_DEBUG)
+endif()
 
 if (MSVC)
     add_compile_options(-W3)

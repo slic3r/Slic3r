@@ -2,6 +2,7 @@
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
 #include "Print.hpp"
+#include "Log.hpp"
 
 namespace Slic3r {
 
