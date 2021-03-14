@@ -11710,7 +11710,7 @@ namespace exprtk
       {
       public:
 
-         // Function of N paramters.
+         // Function of N parameters.
          typedef expression_node<T>* expression_ptr;
          typedef std::pair<expression_ptr,bool> branch_t;
          typedef IFunction ifunction;
@@ -21226,7 +21226,7 @@ namespace exprtk
          if (index < error_list_.size())
             return error_list_[index];
          else
-            throw std::invalid_argument("parser::get_error() - Invalid error index specificed");
+            throw std::invalid_argument("parser::get_error() - Invalid error index specified");
       }
 
       inline std::string error() const

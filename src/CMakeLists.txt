@@ -115,7 +115,7 @@ endif(NOT GIT_VERSION STREQUAL "")
 find_package(Threads REQUIRED)
 
 set(Boost_NO_BOOST_CMAKE ON)
-find_package(Boost REQUIRED COMPONENTS system thread filesystem)
+find_package(Boost REQUIRED COMPONENTS system thread filesystem OPTIONAL_COMPONENTS nowide)
 
 set(LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/../xs/src/)
 set(GUI_LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/GUI/)
@@ -231,6 +231,9 @@ add_library(libslic3r STATIC
 target_compile_features(libslic3r PUBLIC cxx_std_11)
 target_include_directories(libslic3r SYSTEM PUBLIC ${SLIC3R_INCLUDES})
 target_include_directories(libslic3r PUBLIC ${LIBSLIC3R_INCLUDES})
+if (BOOST_NOWIDE_FOUND)
+    target_compile_options(libslic3r -DBOOST_INCLUDE_NOWIDE)
+endif()
 
 add_library(BSpline STATIC
     ${LIBDIR}/BSpline/BSpline.cpp
@@ -499,15 +502,17 @@ endif()
 
 # Windows needs a compiled component for Boost.nowide
 IF (WIN32)
-    add_library(boost-nowide STATIC 
-        ${LIBDIR}/boost/nowide/iostream.cpp
-    )
-    if(MSVC)
-        # Tell boost pragmas to not rename nowide as we are building it
-        add_definitions(-DBOOST_NOWIDE_NO_LIB)
-    endif()    
-    target_link_libraries(slic3r boost-nowide)
-    target_include_directories(boost-nowide PUBLIC ${COMMON_INCLUDES})
+    if (NOT BOOST_NOWIDE_FOUND)
+        add_library(boost-nowide STATIC 
+            ${LIBDIR}/boost/nowide/iostream.cpp
+        )
+        if(MSVC)
+            # Tell boost pragmas to not rename nowide as we are building it
+            add_definitions(-DBOOST_NOWIDE_NO_LIB)
+        endif()    
+        target_link_libraries(slic3r boost-nowide)
+        target_include_directories(boost-nowide PUBLIC ${COMMON_INCLUDES})
+    endif()
 
     # MinGW apparently has some multiple definitions of UUID-related items
     # deal with it.

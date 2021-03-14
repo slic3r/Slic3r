@@ -7,8 +7,16 @@
 #include <iostream>
 #include <complex>
 #include <cstdio>
+#include <boost/version.hpp>
+#if BOOST_VERSION >= 107300
+#include <boost/bind/bind.hpp>
+#endif
 
 namespace Slic3r {
+
+#if BOOST_VERSION >= 107300
+using boost::placeholders::_1;
+#endif
 
 void
 SLAPrint::slice()

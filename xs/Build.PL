@@ -151,18 +151,27 @@ if (defined $ENV{BOOST_LIBRARYPATH}) {
 }
 # In order to generate the -l switches we need to know how Boost libraries are named
 my $have_boost = 0;
+my $have_boost_optional = 0;
 my @boost_libraries = qw(system thread filesystem);  # we need these
+my @boost_optional_libraries = qw(nowide);  # we need these, but if they aren't present we can deal
 # check without explicit lib path (works on Linux)
 if (! $mswin) {
     $have_boost = 1
         if check_lib(
             lib     => [ map "boost_${_}", @boost_libraries ],
         );
+    $have_boost_optional = 1
+        if check_lib(
+            lib     => [ map "boost_${_}", @boost_optional_libraries ],
+        );
 }
 
 if (!$ENV{SLIC3R_STATIC} && $have_boost) {
     # The boost library was detected by check_lib on Linux.
     push @LIBS, map "-lboost_${_}", @boost_libraries;
+    if (!$ENV{SLIC3R_STATIC} && $have_boost_optional) {
+        push @LIBS, map "-lboost_${_}", @boost_optional_libraries;
+    }
 } else {
     # Either static linking, or check_lib could not be used to find the boost libraries.
     my $lib_prefix = 'libboost_';
