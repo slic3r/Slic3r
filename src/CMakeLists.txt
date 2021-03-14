@@ -336,7 +336,6 @@ cmake_policy(SET CMP0072 NEW)
 endif (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 3.10)
 
 
-find_package(OpenGL)
 
 if(SLIC3R_STATIC)
     set(Boost_USE_STATIC_LIBS ON)
@@ -362,15 +361,19 @@ endif(SLIC3R_STATIC)
 set_target_properties(bthread PROPERTIES IMPORTED_LOCATION ${bthread_l})
 include_directories(${Boost_INCLUDE_DIRS})
 
+if (Enable_GUI)
 if(SLIC3R_STATIC)
     set(wxWidgets_USE_STATIC ON)
 else(SLIC3R_STATIC)
     set(wxWidgets_USE_STATIC OFF)
 endif(SLIC3R_STATIC)
+endif()
 
+if (Enable_GUI)
+find_package(OpenGL)
 set(wxWidgets_USE_UNICODE ON)
-
 find_package(wxWidgets COMPONENTS net gl html aui adv core base)
+endif()
 
 IF(CMAKE_HOST_UNIX)
     #set(Boost_LIBRARIES bsystem bthread bfilesystem)
