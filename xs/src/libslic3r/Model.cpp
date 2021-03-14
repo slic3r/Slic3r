@@ -145,9 +145,7 @@ Model::add_material(t_model_material_id material_id, const ModelMaterial &other)
 {
     // delete existing material if any
     ModelMaterial* material = this->get_material(material_id);
-    if (material != NULL) {
-        delete material;
-    }
+    delete material;
     
     // set new material
     material = new ModelMaterial(this, other);
@@ -869,7 +867,7 @@ ModelObject::transform_by_instance(ModelInstance instance, bool dont_translate)
     /*
       Let:
         * I1 be the trafo of the given instance, 
-        * V the originial volume trafo and
+        * V the original volume trafo and
         * I2 the trafo of the instance to be updated
       
       Then:

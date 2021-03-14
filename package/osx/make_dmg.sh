@@ -183,6 +183,12 @@ find -d $macosfolder/local-lib -name libwx_osx_cocoau_webview-3.* -delete
 rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/include
 find -d $macosfolder/local-lib -type d -empty -delete
 
+# remove wx build tools
+rm -rf $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni/bin
+
+# Remove all broken symlinks
+find -L $macosfolder/local-lib/lib/perl5/darwin-thread-multi-2level/Alien/wxWidgets/osx_cocoa_3_0_2_uni -type l -exec rm {} \;
+
 make_plist
 
 echo $PkgInfoContents >$appfolder/Contents/PkgInfo
@@ -212,7 +218,7 @@ if [ ! -z $KEYCHAIN_FILE_ ]; then
     security list-keychains -s "${KEYCHAIN_FILE_}"
     security default-keychain -s "${KEYCHAIN_FILE_}"
     security unlock-keychain -p "${KEYCHAIN_PASSWORD_}" "${KEYCHAIN_FILE_}"
-    codesign --sign "${KEYCHAIN_IDENTITY_}" --deep "$appfolder"
+    codesign --sign "${KEYCHAIN_IDENTITY_}" --options=runtime --strict --deep "$appfolder"
 else
     echo "No KEYCHAIN_FILE or KEYCHAIN_BASE64 env variable; skipping codesign"
 fi
@@ -229,7 +235,7 @@ if [ ! -z $KEYCHAIN_FILE_ ]; then
     security list-keychains -s "${KEYCHAIN_FILE_}"
     security default-keychain -s "${KEYCHAIN_FILE_}"
     security unlock-keychain -p "${KEYCHAIN_PASSWORD_}" "${KEYCHAIN_FILE_}"
-    codesign --sign "${KEYCHAIN_IDENTITY_}" "$dmgfile"
+    codesign --sign "${KEYCHAIN_IDENTITY_}" --options=runtime --strict "$dmgfile"
 fi
 
 rm -rf $WD/_tmp

@@ -32,7 +32,7 @@ public:
 
     /// Destructor to take care of the owned default value.
     ~Option() {
-        if (_default != nullptr) delete _default; 
+        delete _default; 
         _default = nullptr;
     }
 

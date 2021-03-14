@@ -162,10 +162,8 @@ class Filler
     public:
     Filler() : fill(NULL) {};
     ~Filler() { 
-        if (fill != NULL) {
-            delete fill; 
-            fill = NULL;
-        }
+        delete fill; 
+        fill = NULL;
     };
     Fill* fill;
 };

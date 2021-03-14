@@ -26,7 +26,7 @@ TransformationMatrix::TransformationMatrix(const std::vector<double> &entries_ro
     if (entries_row_maj.size() != 12)
     {
         *this = TransformationMatrix();
-        CONFESS("Invalid number of entries when initalizing TransformationMatrix. Vector length must be 12.");
+        CONFESS("Invalid number of entries when initializing TransformationMatrix. Vector length must be 12.");
         return;
     }
     m00 = entries_row_maj[0];   m01 = entries_row_maj[1];   m02 = entries_row_maj[2];   m03 = entries_row_maj[3];
