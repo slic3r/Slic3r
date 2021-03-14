@@ -3,6 +3,7 @@
 
 namespace Slic3r
 {
+using boost::placeholders::_1;
 
 PolylineCollection _fill_surface(Fill *fill, Surface *surface)
 {
