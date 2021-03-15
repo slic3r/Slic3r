@@ -367,9 +367,8 @@ void AMFParserContext::endElement(const char *name)
         stl_allocate(&stl);
         for (size_t i = 0; i < m_volume_facets.size();) {
             stl_facet &facet = stl.facet_start[i/3];
-            for (unsigned int v = 0; v < 3; ++ v) {
+            for (unsigned int v = 0; v < 3; ++ v)
                 memcpy(&facet.vertex[v].x, &m_object_vertices[m_volume_facets[i ++] * 3], 3 * sizeof(float));
-            }
         }
         stl_get_size(&stl);
         m_volume->mesh.repair();
