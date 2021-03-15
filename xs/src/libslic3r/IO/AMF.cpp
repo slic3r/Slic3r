@@ -344,9 +344,13 @@ void AMFParserContext::endElement(const char *name)
     // Faces of the current volume:
     case NODE_TYPE_TRIANGLE:
         assert(m_object && m_volume);
-        m_volume_facets.push_back(atoi(m_value[0].c_str()));
-        m_volume_facets.push_back(atoi(m_value[1].c_str()));
-        m_volume_facets.push_back(atoi(m_value[2].c_str()));
+        if (strtoul(m_value[0].c_str(), nullptr, 10) < m_object_vertices.size() &&
+            strtoul(m_value[1].c_str(), nullptr, 10) < m_object_vertices.size() &&
+            strtoul(m_value[2].c_str(), nullptr, 10) < m_object_vertices.size()) {
+            m_volume_facets.push_back(atoi(m_value[0].c_str()));
+            m_volume_facets.push_back(atoi(m_value[1].c_str()));
+            m_volume_facets.push_back(atoi(m_value[2].c_str()));
+        }
         m_value[0].clear();
         m_value[1].clear();
         m_value[2].clear();
@@ -363,8 +367,9 @@ void AMFParserContext::endElement(const char *name)
         stl_allocate(&stl);
         for (size_t i = 0; i < m_volume_facets.size();) {
             stl_facet &facet = stl.facet_start[i/3];
-            for (unsigned int v = 0; v < 3; ++ v)
+            for (unsigned int v = 0; v < 3; ++ v) {
                 memcpy(&facet.vertex[v].x, &m_object_vertices[m_volume_facets[i ++] * 3], 3 * sizeof(float));
+            }
         }
         stl_get_size(&stl);
         m_volume->mesh.repair();
