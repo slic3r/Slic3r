@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <vector>
 #include <limits>
+#include <stdexcept>
 
 namespace Slic3r {
 
@@ -1537,16 +1538,28 @@ PrintObject::_discover_external_horizontal_shells(LayerRegion* layerm, const siz
         std::cout << "Layer " << i << " has " << (type == stTop ? "top" : "bottom") << " surfaces" << std::endl;
         #endif
         
-        auto solid_layers = type == stTop
+        size_t solid_layers = type == stTop
             ? region_config.top_solid_layers()
             : region_config.bottom_solid_layers();
+        solid_layers = min(solid_layers, this->layers.size());
 
         if (region_config.min_top_bottom_shell_thickness() > 0) {
             auto current_shell_thickness = static_cast<coordf_t>(solid_layers) * this->get_layer(i)->height;
             const auto min_shell_thickness = region_config.min_top_bottom_shell_thickness();
-            while (std::abs(min_shell_thickness - current_shell_thickness) > Slic3r::Geometry::epsilon) {
+            Slic3r::Log::debug("vertical_shell_thickness") << "Initial shell thickness for layer " << i << " " 
+                                                           << current_shell_thickness << " "
+                                                           << "Minimum: " << min_shell_thickness << "\n";
+            while (std::abs(min_shell_thickness - current_shell_thickness) > Slic3r::Geometry::epsilon && current_shell_thickness < min_shell_thickness) {
                 solid_layers++;
                 current_shell_thickness = static_cast<coordf_t>(solid_layers) * this->get_layer(i)->height;
+                Slic3r::Log::debug("vertical_shell_thickness") << "Solid layer count: "
+                                                               << solid_layers << "; "
+                                                               << "current_shell_thickness: "
+                                                               << current_shell_thickness
+                                                               << "\n";
+                if (solid_layers > this->layers.size()) {
+                    throw std::runtime_error("Infinite loop when determining vertical shell thickness");
+                }
             }
         }
         _discover_neighbor_horizontal_shells(layerm, i, region_id, type, solid, solid_layers);
