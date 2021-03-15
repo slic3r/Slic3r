@@ -115,7 +115,11 @@ endif(NOT GIT_VERSION STREQUAL "")
 find_package(Threads REQUIRED)
 
 set(Boost_NO_BOOST_CMAKE ON)
-find_package(Boost REQUIRED COMPONENTS system thread filesystem OPTIONAL_COMPONENTS nowide)
+find_package(Boost REQUIRED COMPONENTS system thread filesystem)
+
+if (${Boost_VERSION_MACRO} GREATER_EQUAL 107300)
+    find_package(Boost REQUIRED COMPONENTS system thread filesystem OPTIONAL_COMPONENTS nowide)
+endif()
 
 set(LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/../xs/src/)
 set(GUI_LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/GUI/)
