@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.9)
 project (slic3r)
 
 option(Enable_GUI "Use the wxWidgets code in slic3r.cpp" OFF)
-option(GUI_BUILD_TESTS "Build tests for Slic3r GUI." ON)
+option(GUI_BUILD_TESTS "Build tests for Slic3r GUI." OFF)
 option(SLIC3R_BUILD_TESTS "Build tests for libslic3r." ON)
 option(SLIC3R_STATIC "Build and link Slic3r statically." ON)
 option(BUILD_EXTRUDE_TIN "Build and link the extrude-tin application." OFF)
@@ -10,6 +10,7 @@ option(PROFILE "Build with gprof profiling output." OFF)
 option(COVERAGE "Build with gcov code coverage profiling." OFF)
 
 # only on newer GCCs: -ftemplate-backtrace-limit=0
+add_compile_options(-ftemplate-backtrace-limit=0)
 add_compile_options(-DNO_PERL -DM_PI=3.14159265358979323846 -DHAS_BOOL -DNOGDI -DBOOST_ASIO_DISABLE_KQUEUE)
 
 if (MSVC)
@@ -117,7 +118,7 @@ find_package(Threads REQUIRED)
 set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost REQUIRED COMPONENTS system thread filesystem)
 
-if (${Boost_VERSION_MACRO} GREATER_EQUAL 107300)
+if (${Boost_VERSION_MACRO} VERSION_GREATER_EQUAL "1.73.0")
     find_package(Boost REQUIRED COMPONENTS system thread filesystem OPTIONAL_COMPONENTS nowide)
 endif()
 
