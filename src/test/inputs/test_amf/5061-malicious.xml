@@ -10,7 +10,7 @@
             </vertices>
             <volume materialid="2">
                 <metadata type="name">Hard side</metadata>
-                <triangle><v1>2</v1><v2>1</v2><v3>2</v3></triangle>
+                <triangle><v1>9999992</v1><v2>1</v2><v3>2</v3></triangle>
                 <triangle><v1>0</v1><v2>0</v2><v3>2</v3></triangle>
             </volume>
         </mesh>
