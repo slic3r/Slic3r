@@ -123,7 +123,7 @@ set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost REQUIRED COMPONENTS system thread filesystem)
 
 if (${Boost_VERSION_MACRO} VERSION_GREATER_EQUAL "1.73.0")
-    find_package(Boost REQUIRED COMPONENTS system thread filesystem OPTIONAL_COMPONENTS nowide)
+    find_package(Boost OPTIONAL_COMPONENTS nowide)
 endif()
 
 set(LIBDIR ${CMAKE_CURRENT_SOURCE_DIR}/../xs/src/)
