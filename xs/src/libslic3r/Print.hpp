@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <exception>
+#include <stdexcept>
 #include <boost/thread.hpp>
 #include "BoundingBox.hpp"
 #include "Flow.hpp"
@@ -19,13 +21,11 @@
 #include "LayerHeightSpline.hpp"
 #include "SupportMaterial.hpp"
 
-#include <exception>
-
-#include <exception>
-
 namespace Slic3r {
 
-class InvalidObjectException : public std::exception {};
+class InvalidPrintException : public std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
 
 class Print;
 class PrintObject;
@@ -113,7 +113,7 @@ class PrintObject
     // TODO: Fill* fill_maker        => (is => 'lazy');
     PrintState<PrintObjectStep> state;
     
-    Print* print();
+    Print* print() { return this->_print; };
     ModelObject* model_object() { return this->_model_object; };
     const ModelObject& model_object() const { return *(this->_model_object); };
     
@@ -164,10 +164,7 @@ class PrintObject
     void _slice();
     std::vector<ExPolygons> _slice_region(size_t region_id, std::vector<float> z, bool modifier);
 
-    void _make_perimeters();
     void _infill();
-
-#ifndef SLIC3RXS
 
     /// Initialize and generate support material.
     void generate_support_material();
@@ -200,7 +197,9 @@ class PrintObject
     /// Idempotence of this method is guaranteed by the fact that we don't remove things from
     /// fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
     void clip_fill_surfaces();
-#endif // SLIC3RXS    
+    
+    void _simplify_slices(double distance);
+      
     private:
     Print* _print;
     ModelObject* _model_object;
@@ -211,12 +210,10 @@ class PrintObject
     PrintObject(Print* print, ModelObject* model_object, const BoundingBoxf3 &modobj_bbox);
     ~PrintObject();
 
-#ifndef SLIC3RXS
     /// Outer loop of logic for horizontal shell discovery
     void _discover_external_horizontal_shells(LayerRegion* layerm, const size_t& i, const size_t& region_id);
     /// Inner loop of logic for horizontal shell discovery
-    void _discover_neighbor_horizontal_shells(LayerRegion* layerm, const size_t& i, const size_t& region_id, const SurfaceType& type, Polygons& solid, const size_t& solid_layers);
-#endif // SLIC3RXS    
+    void _discover_neighbor_horizontal_shells(LayerRegion* layerm, const size_t& i, const size_t& region_id, const SurfaceType& type, Polygons& solid, const size_t& solid_layers);  
 
 };
 
@@ -233,20 +230,20 @@ class Print
     PrintObjectPtrs objects;
     PrintRegionPtrs regions;
     PlaceholderParser placeholder_parser;
-    // TODO: status_cb
-    #ifndef SLIC3RXS
+    
     std::function<void(int, const std::string&)> status_cb {nullptr};
 
     /// Function pointer for the UI side to call post-processing scripts.
     /// Vector is assumed to be the executable script and all arguments.
     std::function<void(std::vector<std::string>)> post_process_cb {nullptr};
-    #endif 
+    
     double total_used_filament, total_extruded_volume, total_cost, total_weight;
     std::map<size_t,float> filament_stats;
     PrintState<PrintStep> state;
 
     // ordered collections of extrusion paths to build skirt loops and brim
     ExtrusionEntityCollection skirt, brim;
+    double skirt_height_z {-1.0};
 
     Print();
     ~Print();
@@ -264,7 +261,6 @@ class Print
     const PrintRegion* get_region(size_t idx) const { return this->regions.at(idx); };
     PrintRegion* add_region();
 
-    #ifndef SLIC3RXS
     /// Triggers the rest of the print process
     void process(); 
 
@@ -272,12 +268,10 @@ class Print
     void export_gcode(std::ostream& output, bool quiet = false);
     
     /// Performs a gcode export and then runs post-processing scripts (if any)
-    void export_gcode(const std::string& filename, bool quiet = false);
+    void export_gcode(std::string filename, bool quiet = false);
 
     /// commands a gcode export to a temporary file and return its name
     std::string export_gcode(bool quiet = false);
-
-    #endif // SLIC3RXS
     
     // methods for handling state
     bool invalidate_state_by_config(const PrintConfigBase &config);
@@ -293,8 +287,8 @@ class Print
     bool apply_config(DynamicPrintConfig config);
     bool has_infinite_skirt() const;
     bool has_skirt() const;
-    // Returns an empty string if valid, otherwise returns an error message.
-    std::string validate() const;
+    // Throws exceptions if print is not valid.
+    void validate() const;
     BoundingBox bounding_box() const;
     BoundingBox total_bounding_box() const;
     double skirt_first_layer_height() const;
@@ -302,14 +296,12 @@ class Print
     Flow skirt_flow() const;
     void _make_brim();
 
-    #ifndef SLIC3RXS
     /// Generates a skirt around the union of all of 
     /// the objects in the print.
     void make_skirt();
 
     /// Generates a brim around all of the objects in the print.
     void make_brim();
-    #endif // SLIC3RXS
     
     
     std::set<size_t> object_extruders() const;

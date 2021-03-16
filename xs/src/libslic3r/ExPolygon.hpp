@@ -37,6 +37,8 @@ class ExPolygon
     bool contains_b(const Point &point) const;
     bool has_boundary_point(const Point &point) const;
     BoundingBox bounding_box() const { return this->contour.bounding_box(); };
+    /// removes collinear points within SCALED_EPSILON tolerance
+    void remove_colinear_points();
     void remove_vertical_collinear_points(coord_t tolerance);
     void simplify_p(double tolerance, Polygons* polygons) const;
     Polygons simplify_p(double tolerance) const;
@@ -55,7 +57,7 @@ class ExPolygon
     std::string dump_perl() const;
 };
 
-// Count a nuber of polygons stored inside the vector of expolygons.
+// Count a number of polygons stored inside the vector of expolygons.
 // Useful for allocating space for polygons when converting expolygons to polygons.
 inline size_t number_polygons(const ExPolygons &expolys)
 {

@@ -11,6 +11,8 @@
 
 namespace Slic3r { namespace Test {
 
+constexpr double MM_PER_MIN = 60.0;
+
 /// Enumeration of test meshes
 enum class TestMesh {
     A,
@@ -34,7 +36,7 @@ enum class TestMesh {
     two_hollow_squares
 };
 
-// Neccessary for <c++17
+// Necessary for <c++17
 struct TestMeshHash {
     std::size_t operator()(TestMesh tm) const {
         return static_cast<std::size_t>(tm);

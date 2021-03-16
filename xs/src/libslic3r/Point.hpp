@@ -85,6 +85,7 @@ class Point
     void align_to_grid(const Point &spacing, const Point &base = Point(0,0));
 };
 
+std::ostream& operator<<(std::ostream &stm, const Point &point);
 Point operator+(const Point& point1, const Point& point2);
 Point operator-(const Point& point1, const Point& point2);
 Point operator*(double scalar, const Point& point2);

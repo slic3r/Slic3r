@@ -7,15 +7,15 @@ std::unique_ptr<Settings> ui_settings {nullptr};
 
 Settings::Settings() {
     // Initialize fonts
-    _small_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
+    this->_small_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
     if (the_os == OS::Mac) _small_font.SetPointSize(11);
-    _small_bold_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
+    this->_small_bold_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
     if (the_os == OS::Mac) _small_bold_font.SetPointSize(11);
-    _small_bold_font.MakeBold();
-    _medium_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
-    _medium_font.SetPointSize(12);
+    this->_small_bold_font.MakeBold();
+    this->_medium_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
+    this->_medium_font.SetPointSize(12);
 
-    _scroll_step = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT).GetPointSize();
+    this->_scroll_step = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT).GetPointSize();
 }
 void Settings::save_settings() {
 /*

@@ -36,8 +36,8 @@ sub add_object {
             if defined $args{config};
         $new_object->set_layer_height_ranges($args{layer_height_ranges})
             if defined $args{layer_height_ranges};
-        $new_object->set_origin_translation($args{origin_translation})
-            if defined $args{origin_translation};
+        $new_object->apply_transformation($args{trafo_obj})
+            if defined $args{trafo_obj};
         
         return $new_object;
     }
@@ -128,18 +128,10 @@ sub add_instance {
         
         $new_instance->set_rotation($args{rotation})
             if defined $args{rotation};
-        $new_instance->set_x_rotation($args{x_rotation})
-            if defined $args{x_rotation};
-        $new_instance->set_y_rotation($args{y_rotation})
-            if defined $args{y_rotation};
         $new_instance->set_scaling_factor($args{scaling_factor})
             if defined $args{scaling_factor};
-        $new_instance->set_scaling_vector($args{scaling_vector})
-            if defined $args{scaling_vector};
         $new_instance->set_offset($args{offset})
             if defined $args{offset};
-        $new_instance->set_z_translation($args{z_translation})
-            if defined $args{z_translation};
         
         return $new_instance;
     }

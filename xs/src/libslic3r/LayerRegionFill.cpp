@@ -67,8 +67,8 @@ LayerRegion::make_fill()
                 if (!surface.is_solid() || surface.is_bridge()) continue;
                 
                 group_attrib[i].is_solid = true;
-                group_attrib[i].fw = (surface.surface_type == stTop) ? top_solid_infill_flow.width : solid_infill_flow.width;
-                group_attrib[i].pattern = surface.surface_type == stTop ? this->region()->config.top_infill_pattern.value
+                group_attrib[i].fw = (surface.is_top()) ? top_solid_infill_flow.width : solid_infill_flow.width;
+                group_attrib[i].pattern = surface.is_top() ? this->region()->config.top_infill_pattern.value
                     : surface.is_bottom() ? this->region()->config.bottom_infill_pattern.value
                     : ipRectilinear;
             }
@@ -137,7 +137,7 @@ LayerRegion::make_fill()
         );
             
         Polygons to_subtract;
-        surfaces.filter_by_type(stInternalVoid, &to_subtract);
+        surfaces.filter_by_type((stInternal | stVoid), &to_subtract);
                 
         append_to(to_subtract, collapsed);
         surfaces.append(
@@ -146,7 +146,7 @@ LayerRegion::make_fill()
                 to_subtract,
                 true
             ),
-            stInternalSolid
+            (stInternal | stSolid)
         );
     }
 
@@ -162,20 +162,20 @@ LayerRegion::make_fill()
         surface_it != surfaces.surfaces.end(); ++surface_it) {
         
         const Surface &surface = *surface_it;
-        if (surface.surface_type == stInternalVoid)
+        if (surface.surface_type == (stInternal | stVoid))
             continue;
         
         InfillPattern fill_pattern = this->region()->config.fill_pattern.value;
         double density = fill_density;
-        FlowRole role = (surface.surface_type == stTop) ? frTopSolidInfill
+        FlowRole role = (surface.is_top()) ? frTopSolidInfill
             : surface.is_solid() ? frSolidInfill
             : frInfill;
         const bool is_bridge = this->layer()->id() > 0 && surface.is_bridge();
         
         if (surface.is_solid()) {
             density = 100.;
-            fill_pattern = (surface.surface_type == stTop) ? this->region()->config.top_infill_pattern.value
-                : (surface.is_bottom() && !is_bridge)      ? this->region()->config.bottom_infill_pattern.value
+            fill_pattern = (surface.is_top()) ? this->region()->config.top_infill_pattern.value
+                : (surface.is_bottom() && !is_bridge) ? this->region()->config.bottom_infill_pattern.value
                 : ipRectilinear;
         } else if (density <= 0)
             continue;
@@ -229,9 +229,8 @@ LayerRegion::make_fill()
             f->min_spacing = flow.spacing();
         }
         
-        f->endpoints_overlap = this->region()->config.get_abs_value("infill_overlap",
-            (perimeter_spacing + scale_(f->min_spacing))/2);
-
+        f->endpoints_overlap = scale_(this->region()->config.get_abs_value("infill_overlap",
+            (unscale(perimeter_spacing) + (f->min_spacing))/2));
         f->layer_id = this->layer()->id();
         f->z        = this->layer()->print_z;
         f->angle    = Geometry::deg2rad(this->region()->config.fill_angle.value);
@@ -277,7 +276,7 @@ LayerRegion::make_fill()
             if (is_bridge) {
                 role = erBridgeInfill;
             } else if (surface.is_solid()) {
-                role = (surface.surface_type == stTop) ? erTopSolidInfill : erSolidInfill;
+                role = (surface.is_top()) ? erTopSolidInfill : erSolidInfill;
             } else {
                 role = erInternalInfill;
             }

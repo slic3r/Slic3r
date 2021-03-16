@@ -163,6 +163,7 @@ std::string
 GCodeWriter::set_fan(unsigned int speed, bool dont_save)
 {
     std::ostringstream gcode;
+    const double baseline_factor = (this->config.fan_percentage ? 100.0 : 255.0);
     if (this->_last_fan_speed != speed || dont_save) {
         if (!dont_save) this->_last_fan_speed = speed;
         
@@ -186,7 +187,7 @@ GCodeWriter::set_fan(unsigned int speed, bool dont_save)
                 } else {
                     gcode << "S";
                 }
-                gcode << (255.0 * speed / 100.0);
+                gcode << (baseline_factor * speed / 100.0);
             }
             if (this->config.gcode_comments) gcode << " ; enable fan";
             gcode << "\n";
@@ -309,7 +310,8 @@ GCodeWriter::set_speed(double F, const std::string &comment,
                        const std::string &cooling_marker) const
 {
     std::ostringstream gcode;
-    gcode << "G1 F" << F;
+    gcode.precision(3);
+    gcode << "G1 F" << std::fixed << F;
     COMMENT(comment);
     gcode << cooling_marker;
     gcode << "\n";

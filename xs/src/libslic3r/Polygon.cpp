@@ -157,6 +157,42 @@ Polygon::douglas_peucker(double tolerance)
 }
 
 void
+Polygon::remove_collinear_points()
+{
+    if(this->points.size() > 2) {
+        // copy points and append both 1 and last point in place to cover the boundaries
+        Points pp;
+        pp.reserve(this->points.size()+2);
+        pp.push_back(this->points.back());
+        pp.insert(pp.begin()+1, this->points.begin(), this->points.end());
+        pp.push_back(this->points.front());
+        // delete old points vector. Will be re-filled in the loop
+        this->points.clear();
+
+        size_t i = 0;
+        size_t k = 0;
+        while (i < pp.size()-2) {
+            k = i+1;
+            const Point &p1 = pp[i];
+            while (k < pp.size()-1) {
+                const Point &p2 = pp[k];
+                const Point &p3 = pp[k+1];
+                Line l(p1, p3);
+                if(l.distance_to(p2) < SCALED_EPSILON) {
+                    k++;
+                } else {
+                    if(i > 0) this->points.push_back(p1); // implicitly removes the first point we appended above
+                    i = k;
+                    break;
+                }
+            }
+            if(k > pp.size()-2) break; // all remaining points are collinear and can be skipped
+        }
+        this->points.push_back(pp[i]);
+    }
+}
+
+void
 Polygon::remove_vertical_collinear_points(coord_t tolerance)
 {
     Points &pp = this->points;

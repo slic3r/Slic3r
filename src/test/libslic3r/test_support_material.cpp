@@ -282,7 +282,7 @@ bool test_6_checks(Print &print)
 
     // Pre-Processing.
     PrintObject *print_object = print.objects.front();
-    print_object->_infill();
+    print_object->infill();
     SupportMaterial *support_material = print.objects.front()->_support_material();
     support_material->generate(print_object);
     // TODO but not needed in test 6 (make brims and make skirts).

@@ -1,0 +1,130 @@
+%module{Slic3r::XS};
+
+%{
+#include <xsinit.h>
+#include "libslic3r/libslic3r.h"
+#include "libslic3r/TransformationMatrix.hpp"
+#include "libslic3r/Point.hpp"
+%}
+
+%name{Slic3r::TransformationMatrix} class TransformationMatrix {
+    TransformationMatrix();
+
+    ~TransformationMatrix();
+    Clone<TransformationMatrix> clone()
+        %code{% RETVAL=THIS; %};
+
+    Clone<TransformationMatrix> inverse()
+        %code{% RETVAL = THIS->inverse(); %};
+
+    Clone<TransformationMatrix> multiplyLeft(TransformationMatrix* left)
+        %code{% RETVAL = THIS->multiplyLeft(*left); %};
+    void applyLeft(TransformationMatrix* left)
+        %code{% THIS->applyLeft(*left); %};
+
+    Clone<TransformationMatrix> multiplyRight(TransformationMatrix* right)
+        %code{% RETVAL = THIS->multiplyRight(*right); %};
+    void applyRight(TransformationMatrix* right)
+        %code{% THIS->applyRight(*right); %};
+
+    bool equal(TransformationMatrix* other)
+        %code{% RETVAL = (*THIS == *other); %};
+
+    double determinante();
+
+    double m00()
+        %code%{ RETVAL = THIS->m00; %};
+    void set_m00(double value)
+        %code%{ THIS->m00 = value; %};
+    double m01()
+        %code%{ RETVAL = THIS->m01; %};
+    void set_m01(double value)
+        %code%{ THIS->m01 = value; %};
+    double m02()
+        %code%{ RETVAL = THIS->m02; %};
+    void set_m02(double value)
+        %code%{ THIS->m02 = value; %};
+    double m03()
+        %code%{ RETVAL = THIS->m03; %};
+    void set_m03(double value)
+        %code%{ THIS->m03 = value; %};
+
+    double m10()
+        %code%{ RETVAL = THIS->m10; %};
+    void set_m10(double value)
+        %code%{ THIS->m10 = value; %};
+    double m11()
+        %code%{ RETVAL = THIS->m11; %};
+    void set_m11(double value)
+        %code%{ THIS->m11 = value; %};
+    double m12()
+        %code%{ RETVAL = THIS->m12; %};
+    void set_m12(double value)
+        %code%{ THIS->m12 = value; %};
+    double m13()
+        %code%{ RETVAL = THIS->m13; %};
+    void set_m13(double value)
+        %code%{ THIS->m13 = value; %};
+
+    double m20()
+        %code%{ RETVAL = THIS->m20; %};
+    void set_m20(double value)
+        %code%{ THIS->m20 = value; %};
+    double m21()
+        %code%{ RETVAL = THIS->m21; %};
+    void set_m21(double value)
+        %code%{ THIS->m21 = value; %};
+    double m22()
+        %code%{ RETVAL = THIS->m22; %};
+    void set_m22(double value)
+        %code%{ THIS->m22 = value; %};
+    double m23()
+        %code%{ RETVAL = THIS->m23; %};
+    void set_m23(double value)
+        %code%{ THIS->m23 = value; %};
+
+    void set_elements(
+        double m00, double m01, double m02, double m03,
+        double m10, double m11, double m12, double m13,
+        double m20, double m21, double m22, double m23)
+        %code{% *THIS = TransformationMatrix(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23); %};
+
+    void set_eye()
+        %code{% *THIS = TransformationMatrix::mat_eye(); %};
+
+    void set_scale_xyz(double x, double y, double z)
+        %code{% *THIS = TransformationMatrix::mat_scale(x, y, z); %};
+
+    void set_scale_uni(double scale)
+        %code{% *THIS = TransformationMatrix::mat_scale(scale); %};
+
+    void set_mirror_xyz(Axis axis)
+        %code{% *THIS = TransformationMatrix::mat_mirror(axis); %};
+
+    void set_mirror_vec(Pointf3* normal)
+        %code{% *THIS = TransformationMatrix::mat_mirror(*(normal)); %};
+
+    void set_translation_xyz(double x, double y, double z)
+        %code{% *THIS = TransformationMatrix::mat_translation(x, y, z); %};
+
+    void set_translation_vec(Pointf3* vector)
+        %code{% *THIS = TransformationMatrix::mat_translation(*(vector)); %};
+
+    void set_rotation_ang_xyz(double angle_rad, Axis axis)
+        %code{% *THIS = TransformationMatrix::mat_rotation(angle_rad, axis); %};
+
+
+    void set_rotation_ang_arb_axis(double angle_rad, Pointf3* axis)
+        %code{% *THIS = TransformationMatrix::mat_rotation(angle_rad, *(axis)); %};
+
+    void set_rotation_quat(double q1, double q2, double q3, double q4)
+        %code{% *THIS = TransformationMatrix::mat_rotation(q1, q2, q3, q4); %};
+
+
+    void set_rotation_vec_vec(Pointf3* origin, Pointf3* target)
+        %code{% *THIS = TransformationMatrix::mat_rotation(*(origin), *(target)); %};
+
+    void set_multiply(TransformationMatrix* left, TransformationMatrix* right)
+        %code{% *THIS = TransformationMatrix::multiply(*(left), *(right)); %};
+
+};

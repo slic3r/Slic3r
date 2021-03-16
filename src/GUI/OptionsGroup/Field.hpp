@@ -15,9 +15,11 @@
 #include "wx/checkbox.h"
 #include "wx/textctrl.h"
 #include "wx/combobox.h"
+#include "wx/choice.h"
 #include "wx/arrstr.h"
 #include "wx/stattext.h"
 #include "wx/sizer.h"
+#include "wx/ctrlsub.h"
 #include <wx/colour.h>
 #include <wx/clrpicker.h>
 #include <wx/slider.h>
@@ -230,7 +232,7 @@ private:
 class UI_Choice : public UI_Window {
 public:
     UI_Choice(wxWindow* parent, Slic3r::ConfigOptionDef _opt, wxWindowID id = wxID_ANY);
-    ~UI_Choice() { _choice->Destroy(); }
+    ~UI_Choice() { window->Destroy(); }
 
     std::string get_string() override;
 
@@ -240,7 +242,8 @@ public:
     std::function<void (const std::string&, std::string value)> on_change {nullptr};
 
     /// Returns a bare pointer to the underlying combobox, usually for test interface
-    wxComboBox* choice() { return this->_choice; }
+    wxChoice* choice() { return this->_choice; }
+    wxComboBox* combo() { return this->_combo; }
 protected:
     virtual std::string LogChannel() override { return "UI_Choice"s; }
 
@@ -250,7 +253,8 @@ protected:
         }
     }
 private:
-    wxComboBox* _choice {nullptr};
+    wxComboBox* _combo {nullptr};
+    wxChoice* _choice {nullptr};
 };
 
 

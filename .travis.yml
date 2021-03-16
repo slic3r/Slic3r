@@ -1,19 +1,34 @@
+# TravisCI configuration for Slic3r - https://slic3r.org
+# 
+# We build Linux and macOS versions on TravisCI, both the main program
+# (perl/C++) and the pure C++ one.
+# 
+# Each job performs the following steps:
+# - install dependencies (cached across builds)
+# - build
+# - test
+# - package
+# - deploy to dl.slic3r.org (except for the cppgui branch)
+
 language: generic
+dist: trusty
+
 before_install:
-    - sh package/linux/travis-decrypt-key
+    - sh package/common/travis-decrypt-key
+    - export SLIC3R_GIT_VERSION=$(git rev-parse --short HEAD)
+
 script:
-    - bash package/linux/travis-setup.sh
-    - if [[ "$BUILD_PL" == false ]]; then mkdir build && cd build; fi
-    - if [[ "$BUILD_PL" == false ]]; then cmake -DBOOST_ROOT=$BOOST_DIR -DSLIC3R_STATIC=ON -DCMAKE_BUILD_TYPE=Release ../src; fi
-    - if [[ "$BUILD_PL" == false ]]; then cmake --build .; fi
-    - if [[ "$BUILD_PL" == false ]]; then ./slic3r_test -s; fi
-    - if [[ "$BUILD_PL" == true ]]; then perlbrew switch slic3r-perl; fi
-    - if [[ "$BUILD_PL" == true ]]; then perl ./Build.PL; fi
-#    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ./gui_test -s; fi
+    - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "main" ]]; then ./package/linux/travis-build-main.sh || travis_terminate 1; fi
+    - if [[ "${TRAVIS_OS_NAME}" == "linux" && "$TARGET" == "cpp"  ]]; then ./package/linux/travis-build-cpp.sh || travis_terminate 1; fi
+    - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$TARGET" == "main" ]]; then ./package/osx/travis-build-main.sh || travis_terminate 1; fi
+    - if [[ "${TRAVIS_OS_NAME}" == "osx"   && "$TARGET" == "cpp"  ]]; then ./package/osx/travis-build-cpp.sh || travis_terminate 1; fi
+
 branches:
   only:
   - master
   - cppgui
+  - coverity-scan
+
 addons:
   apt:
     sources:
@@ -21,8 +36,8 @@ addons:
     packages:
     - g++-7
     - gcc-7
-    - g++-4.9
-    - gcc-4.9
+    - g++-8
+    - gcc-8
     - libgtk2.0-0 
     - libgtk2.0-dev
     - freeglut3
@@ -31,6 +46,76 @@ addons:
     - libwxgtk3.0-dev
     - wx-common
   ssh_known_hosts: dl.slic3r.org
+
+matrix:
+    include:
+        - os: linux
+          env:
+            - TARGET=main
+          cache:
+            directories:
+              - $HOME/boost_1_63_0
+              - $HOME/perl5
+              - $HOME/wx302
+              - local-lib
+          after_success:
+            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then source ${HOME}/perl5/perlbrew/etc/bashrc; perlbrew switch slic3r-perl; ./package/linux/travis-deploy-main.sh || travis_terminate 1; fi
+
+        - os: linux
+          env: 
+            - TARGET=cpp
+            - CACHE=$HOME/cache
+          cache:
+            apt: true
+            directories:
+              - $HOME/cache
+          after_success:
+            - package/linux/travis-deploy-cpp.sh
+
+        # While this works, it does not appear to be needed as the 10.13 builds
+        # work on 10.12 as well.
+        # - os: osx
+        #   # osx_image: xcode8 # OS X 10.11
+        #   osx_image: xcode9.2 # OS X 10.12
+        #   env:
+        #     - TARGET=main
+        #   cache:
+        #     directories:
+        #       - /usr/local/Homebrew
+        #       - $HOME/Library/Caches/Homebrew
+        #       - local-lib
+
+              # OSX errors out consistently for Perl now too. Back to jenkins.
+              #        - os: osx
+              #          osx_image: xcode9.4 # OS X 10.13
+              #          env:
+              #            - TARGET=main
+              #          cache:
+              #            directories:
+              #              - /usr/local/Homebrew
+              #              - $HOME/Library/Caches/Homebrew
+              #              - local-lib
+              #          after_success:
+              #            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/osx/travis-deploy-main.sh || travis_terminate 1; fi
+
+        # OSX is erroring out consistently for C++, remove and debug
+              #        - os: osx
+              #          osx_image: xcode9.4
+              #          env:
+              #            - TARGET=cpp
+              #            - CACHE=$HOME/cache
+              #          cache:
+              #            ccache: true
+              #            directories:
+              #              - /usr/local/Homebrew
+              #              - $HOME/cache
+              #              - $HOME/Library/Caches/Homebrew
+
+env:
+  global:
+  - secure: eEVRZNMv7FM6jrOU9iAFkDhWxFQ1WtHBEaObImcvtFUxy6vWSt3ehFFeTRouj3uHQAnbvUzziDyvPPm8/95alv5g/du8ML6YzzqKBKfazM0xQ7SF6R2DQL8lfFIp+RSV7T02byEP1f1g7Zva7xH9szIlDcSfU0pXW4KWbkBFMd8=
+  - secure: gj338h+qHGccTD/VQFmEJkqdg2McIe2pO0iZ4Ae9BvY5vxkIML4BpoYZQXQTqiAOETnUjlcknY9lx0hI/PfkDD9MSJc5BC/3fMYRCu3SgAclEwklWf9vvtodUeT69mtnZuw1zze1nTbExuOw2mepbqFjxKKMl+9l5oCz4O54fXU=
+
 notifications:
   irc:
     channels:
@@ -38,64 +123,3 @@ notifications:
     on_success: change
     on_failure: always
     use_notice: true
-dist: trusty
-matrix:
-    include:
-        - os: linux
-          env:
-            - BUILD_PL=true
-            - SLIC3R_STATIC=1
-            - CC=gcc-7
-            - CXX=g++-7
-          install:
-            - export BOOST_DIR=$HOME/boost_1_63_0
-            - export SLIC3R_STATIC=1
-            - export CXX=g++-4.9
-            - export CC=g++-4.9
-            - source $HOME/perl5/perlbrew/etc/bashrc
-          after_success:
-            - eval $(perl -Mlocal::lib=$TRAVIS_BUILD_DIR/local-lib)
-            - cd package/linux && make -f build_shell.mk && mv Slic3r* $TRAVIS_BUILD_DIR && cd $TRAVIS_BUILD_DIR
-            - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
-            - package/linux/appimage.sh x86_64
-            - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
-            - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
-            - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
-        - os: linux
-          env: 
-            - BUILD_PL=false
-            - WXVERSION=pkg
-            - CC=gcc-7
-            - CXX=g++-7
-            - BOOST_DIR=$HOME/boost_1_63_0
-            - DISPLAY=:99.0
-          cache:
-            apt: true
-            directories:
-              - "$HOME/cache"
-          after_success:
-            - cp slic3r ../
-            - LD_LIBRARY_PATH=$WXDIR/lib package/linux/make_archive.sh linux-x64
-            - package/linux/appimage.sh x86_64
-            - package/deploy/sftp.sh linux ~/slic3r-upload.rsa *.bz2 Slic3r*.AppImage
-            - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa AppImage Slic3r*.AppImage
-            - package/deploy/sftp-symlink.sh linux ~/slic3r-upload.rsa tar.bz2 *.bz2
-        - os: osx
-          osx_image: xcode9.4
-          before_install:
-            - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )& fi
-            - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update -v        ; fi
-            - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install ccache; fi
-          env:
-            - BUILD_PL=false
-            - WXVERSION=pkg
-            - BOOST_DIR=$HOME/boost_1_63_0
-            - DISPLAY=:99.0
-          cache:
-            ccache: true
-          directories:
-            - $HOME/Library/Caches/Homebrew
-env:
-  global:
-  - secure: eEVRZNMv7FM6jrOU9iAFkDhWxFQ1WtHBEaObImcvtFUxy6vWSt3ehFFeTRouj3uHQAnbvUzziDyvPPm8/95alv5g/du8ML6YzzqKBKfazM0xQ7SF6R2DQL8lfFIp+RSV7T02byEP1f1g7Zva7xH9szIlDcSfU0pXW4KWbkBFMd8=
-  - secure: gj338h+qHGccTD/VQFmEJkqdg2McIe2pO0iZ4Ae9BvY5vxkIML4BpoYZQXQTqiAOETnUjlcknY9lx0hI/PfkDD9MSJc5BC/3fMYRCu3SgAclEwklWf9vvtodUeT69mtnZuw1zze1nTbExuOw2mepbqFjxKKMl+9l5oCz4O54fXU=

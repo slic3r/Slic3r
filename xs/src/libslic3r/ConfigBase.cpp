@@ -1,9 +1,13 @@
 #include "ConfigBase.hpp"
+#include "Log.hpp"
 #include <assert.h>
 #include <ctime>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <exception> // std::runtime_error
+#include <set>
+#include <boost/version.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/erase.hpp>
@@ -13,7 +17,11 @@
 #include <boost/config.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
+#ifdef BOOST_NOWIDE_FOUND
+#include <boost/nowide/cstdlib.hpp>
+#else
 #include <boost/nowide/cenv.hpp>
+#endif
 #include <boost/nowide/fstream.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -204,8 +212,17 @@ ConfigOptionDef::ConfigOptionDef(const ConfigOptionDef &other)
 
 ConfigOptionDef::~ConfigOptionDef()
 {
-    if (this->default_value != nullptr)
-        delete this->default_value;
+    delete this->default_value;
+}
+
+std::vector<std::string>
+ConfigOptionDef::cli_args() const
+{
+    std::string cli = this->cli.substr(0, this->cli.find("="));
+    boost::trim_right_if(cli, boost::is_any_of("!"));
+    std::vector<std::string> args;
+    boost::split(args, cli, boost::is_any_of("|"));
+    return args;
 }
 
 ConfigOptionDef*
@@ -229,17 +246,114 @@ ConfigDef::has(const t_config_option_key &opt_key) const
     return this->options.count(opt_key) > 0;
 }
 
-const ConfigOptionDef*
+const ConfigOptionDef&
 ConfigDef::get(const t_config_option_key &opt_key) const
 {
-    if (this->options.count(opt_key) == 0) return NULL;
-    return &const_cast<ConfigDef*>(this)->options[opt_key];
+    if (this->options.count(opt_key) == 0)
+        throw UnknownOptionException(opt_key);
+    return this->options.at(opt_key);
 }
 
 void
 ConfigDef::merge(const ConfigDef &other)
 {
     this->options.insert(other.options.begin(), other.options.end());
+}
+
+std::ostream&
+ConfigDef::print_cli_help(std::ostream& out, bool show_defaults) const
+{
+    // prepare a function for wrapping text
+    auto wrap = [](std::string text, size_t line_length) -> std::string {
+        std::istringstream words(text);
+        std::ostringstream wrapped;
+        std::string word;
+ 
+        if (words >> word) {
+            wrapped << word;
+            size_t space_left = line_length - word.length();
+            while (words >> word) {
+                if (space_left < word.length() + 1) {
+                    wrapped << '\n' << word;
+                    space_left = line_length - word.length();
+                } else {
+                    wrapped << ' ' << word;
+                    space_left -= word.length() + 1;
+                }
+            }
+        }
+        return wrapped.str();
+    };
+    
+    // get the unique categories
+    std::set<std::string> categories;
+    for (const auto& opt : this->options) {
+        const ConfigOptionDef& def = opt.second;
+        categories.insert(def.category);
+    }
+    
+    for (auto category : categories) {
+        if (category != "") {
+            out << category << ":" << std::endl;
+        } else if (categories.size() > 1) {
+            out << "Misc options:" << std::endl;
+        }
+        
+        for (const auto& opt : this->options) {
+            const ConfigOptionDef& def = opt.second;
+            if (def.category != category) continue;
+            
+            if (!def.cli.empty()) {
+                // get all possible variations: --foo, --foobar, -f...
+                auto cli_args = def.cli_args();
+                for (auto& arg : cli_args) {
+                    arg.insert(0, (arg.size() == 1) ? "-" : "--");
+                    if (def.type == coFloat || def.type == coInt || def.type == coFloatOrPercent
+                        || def.type == coFloats || def.type == coInts) {
+                        arg += " N";
+                    } else if (def.type == coPoint) {
+                        arg += " X,Y";
+                    } else if (def.type == coPoint3) {
+                        arg += " X,Y,Z";
+                    } else if (def.type == coString || def.type == coStrings) {
+                        arg += " ABCD";
+                    }
+                }
+            
+                // left: command line options
+                const std::string cli = boost::algorithm::join(cli_args, ", ");
+                out << " " << std::left << std::setw(20) << cli;
+            
+                // right: option description
+                std::string descr = def.tooltip;
+                if (show_defaults && def.default_value != nullptr && def.type != coBool
+                    && (def.type != coString || !def.default_value->serialize().empty())) {
+                    descr += " (";
+                    if (!def.sidetext.empty()) {
+                        descr += def.sidetext + ", ";
+                    } else if (!def.enum_values.empty()) {
+                        descr += boost::algorithm::join(def.enum_values, ", ") + "; ";
+                    }
+                    descr += "default: " + def.default_value->serialize() + ")";
+                }
+            
+                // wrap lines of description
+                descr = wrap(descr, 80);
+                std::vector<std::string> lines;
+                boost::split(lines, descr, boost::is_any_of("\n"));
+            
+                // if command line options are too long, print description in new line
+                for (size_t i = 0; i < lines.size(); ++i) {
+                    if (i == 0 && cli.size() > 19)
+                        out << std::endl;
+                    if (i > 0 || cli.size() > 19)
+                        out << std::string(21, ' ');
+                    out << lines[i] << std::endl;
+                }
+            }
+        }
+    }
+    return out;
 }
 
 bool
@@ -250,19 +364,39 @@ ConfigBase::has(const t_config_option_key &opt_key) const {
 void
 ConfigBase::apply(const ConfigBase &other, bool ignore_nonexistent) {
     // apply all options
-    this->apply_only(other, other.keys(), ignore_nonexistent);
+    this->apply_only(other, other.keys(), ignore_nonexistent, false);
 }
 
 void
 ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent) {
+    this->apply_only(other, opt_keys, ignore_nonexistent, false);
+}
+
+void
+ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_keys, bool ignore_nonexistent, bool default_nonexistent) {
     // loop through options and apply them
     for (const t_config_option_key &opt_key : opt_keys) {
-        ConfigOption* my_opt = this->option(opt_key, true);
+        ConfigOption* my_opt = NULL;
+        try {
+            my_opt = this->option(opt_key, true);
+        } catch ( UnknownOptionException & e ){
+            if (!ignore_nonexistent) Slic3r::Log::warn("Config") << "Option " << opt_key << ": " << e.what() << std::endl;
+        }
+        if (opt_key.size() == 0) continue;
         if (my_opt == NULL) {
-            if (ignore_nonexistent == false) throw UnknownOptionException();
+            if (ignore_nonexistent == false) throw UnknownOptionException(opt_key);
             continue;
         }
-        
+        if (default_nonexistent && !other.has(opt_key)) {
+            auto* def_opt = this->def->get(opt_key).default_value->clone();
+            // not the most efficient way, but easier than casting pointers to subclasses
+            bool res = my_opt->deserialize( def_opt->serialize() );
+            if (!res) {
+                std::string error = "Unexpected failure when deserializing serialized value for " + opt_key;
+                CONFESS(error.c_str());
+            }
+            continue;
+        }
         // not the most efficient way, but easier than casting pointers to subclasses
         bool res = my_opt->deserialize( other.option(opt_key)->serialize() );
         if (!res) {
@@ -270,6 +404,16 @@ ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &opt_
             CONFESS(error.c_str());
         }
     }
+}
+
+void
+ConfigBase::set_defaults(const t_config_option_keys &opt_keys)
+{
+    // use defaults from definition
+    if (this->def == NULL) return;
+    for (auto opt_key : opt_keys)
+        if (this->def->has(opt_key))
+            this->option(opt_key, true)->set(*this->def->options.at(opt_key).default_value);
 }
 
 bool
@@ -298,33 +442,38 @@ ConfigBase::serialize(const t_config_option_key &opt_key) const {
 
 bool
 ConfigBase::set_deserialize(t_config_option_key opt_key, std::string str, bool append) {
-    const ConfigOptionDef* optdef = this->def->get(opt_key);
-    if (optdef == NULL) {
+    if (!this->def->has(opt_key)) {
         // If we didn't find an option, look for any other option having this as an alias.
         for (const auto &opt : this->def->options) {
-            for (const t_config_option_key &opt_key2 : opt.second.aliases) {
-                if (opt_key2 == opt_key) {
-                    opt_key = opt_key2;
-                    optdef = &opt.second;
+            for (const t_config_option_key& alias : opt.second.aliases) {
+                if (alias == opt_key) {
+                    opt_key = alias;
                     break;
                 }
             }
-            if (optdef != NULL) break;
         }
-        if (optdef == NULL)
-            throw UnknownOptionException();
     }
+    if (!this->def->has(opt_key))
+        throw UnknownOptionException(opt_key);
     
-    if (!optdef->shortcut.empty()) {
-        for (const t_config_option_key &shortcut : optdef->shortcut) {
-            if (!this->set_deserialize(shortcut, str)) return false;
-        }
+    const ConfigOptionDef& optdef = this->def->options.at(opt_key);
+    if (!optdef.shortcut.empty()) {
+        for (const t_config_option_key& shortcut : optdef.shortcut)
+            if (!this->set_deserialize(shortcut, str))
+                return false;
+        
         return true;
     }
     
     ConfigOption* opt = this->option(opt_key, true);
     assert(opt != NULL);
     return opt->deserialize(str, append);
+}
+
+void
+ConfigBase::set_deserialize_throw(t_config_option_key opt_key, std::string str, bool append) {
+    bool res = this->set_deserialize(opt_key, str, append);
+    if (!res) throw BadOptionTypeException();
 }
 
 // Return an absolute value of a possibly relative config variable.
@@ -334,11 +483,11 @@ ConfigBase::get_abs_value(const t_config_option_key &opt_key) const {
     const ConfigOption* opt = this->option(opt_key);
     if (const ConfigOptionFloatOrPercent* optv = dynamic_cast<const ConfigOptionFloatOrPercent*>(opt)) {
         // get option definition
-        const ConfigOptionDef* def = this->def->get(opt_key);
-        assert(def != NULL);
+        assert(this->def->has(opt_key));
+        const ConfigOptionDef& def = this->def->get(opt_key);
         
         // compute absolute value over the absolute value of the base option
-        return optv->get_abs_value(this->get_abs_value(def->ratio_over));
+        return optv->get_abs_value(this->get_abs_value(def.ratio_over));
     } else if (const ConfigOptionFloat* optv = dynamic_cast<const ConfigOptionFloat*>(opt)) {
         return optv->value;
     } else {
@@ -358,22 +507,93 @@ ConfigBase::get_abs_value(const t_config_option_key &opt_key, double ratio_over)
     return opt->get_abs_value(ratio_over);
 }
 
+bool
+ConfigBase::getBool(const t_config_option_key &opt_key) const {
+    return this->option_throw(opt_key)->getBool();
+}
+
+bool
+ConfigBase::getBool(const t_config_option_key &opt_key, bool default_value) const {
+    const ConfigOption* opt = this->option(opt_key);
+    return opt == nullptr ? default_value : opt->getBool();
+}
+
+void
+ConfigBase::setBool(const t_config_option_key &opt_key, bool value) {
+    this->option(opt_key, true)->setBool(value);
+}
+
+double
+ConfigBase::getFloat(const t_config_option_key &opt_key) const {
+    return this->option_throw(opt_key)->getFloat();
+}
+
+double
+ConfigBase::getFloat(const t_config_option_key &opt_key, double default_value) const {
+    const ConfigOption* opt = this->option(opt_key);
+    return opt == nullptr ? default_value : opt->getFloat();
+}
+
+void
+ConfigBase::setFloat(const t_config_option_key &opt_key, double value) {
+    this->option(opt_key, true)->setFloat(value);
+}
+
+int
+ConfigBase::getInt(const t_config_option_key &opt_key) const {
+    return this->option_throw(opt_key)->getInt();
+}
+
+int
+ConfigBase::getInt(const t_config_option_key &opt_key, int default_value) const {
+    const ConfigOption* opt = this->option(opt_key);
+    return opt == nullptr ? default_value : opt->getInt();
+}
+
+void
+ConfigBase::setInt(const t_config_option_key &opt_key, int value) {
+    this->option(opt_key, true)->setInt(value);
+}
+
+std::string
+ConfigBase::getString(const t_config_option_key &opt_key) const {
+    return this->option_throw(opt_key)->getString();
+}
+
+std::string
+ConfigBase::getString(const t_config_option_key &opt_key, std::string default_value) const {
+    const ConfigOption* opt = this->option(opt_key);
+    return opt == nullptr ? default_value : opt->getString();
+}
+
+void
+ConfigBase::setString(const t_config_option_key &opt_key, std::string value) {
+    this->option(opt_key, true)->setString(value);
+}
+
+std::vector<std::string>
+ConfigBase::getStrings(const t_config_option_key &opt_key) const {
+    return this->option_throw(opt_key)->getStrings();
+}
+
+std::vector<std::string>
+ConfigBase::getStrings(const t_config_option_key &opt_key, std::vector<std::string> default_value) const {
+    const ConfigOption* opt = this->option(opt_key);
+    return opt == nullptr ? default_value : opt->getStrings();
+}
+
+void
+ConfigBase::setStrings(const t_config_option_key &opt_key, std::vector<std::string> value) {
+    this->option(opt_key, true)->setStrings(value);
+}
+
 void
 ConfigBase::setenv_()
 {
-    t_config_option_keys opt_keys = this->keys();
-    for (t_config_option_keys::const_iterator it = opt_keys.begin(); it != opt_keys.end(); ++it) {
-        // prepend the SLIC3R_ prefix
-        std::ostringstream ss;
-        ss << "SLIC3R_";
-        ss << *it;
-        std::string envname = ss.str();
-        
-        // capitalize environment variable name
-        for (size_t i = 0; i < envname.size(); ++i)
-            envname[i] = (envname[i] <= 'z' && envname[i] >= 'a') ? envname[i]-('a'-'A') : envname[i];
-        
-        boost::nowide::setenv(envname.c_str(), this->serialize(*it).c_str(), 1);
+    for (auto &opt_key : this->keys()) {
+        std::string envname = "SLIC3R_" + opt_key;
+        boost::to_upper(envname);
+        boost::nowide::setenv(envname.c_str(), this->serialize(opt_key).c_str(), 1);
     }
 }
 
@@ -382,9 +602,23 @@ ConfigBase::option(const t_config_option_key &opt_key) const {
     return const_cast<ConfigBase*>(this)->option(opt_key, false);
 }
 
+const ConfigOption*
+ConfigBase::option_throw(const t_config_option_key &opt_key) const {
+    const auto opt = this->option(opt_key);
+    if (opt == nullptr) throw UnknownOptionException(opt_key);
+    return opt;
+}
+
 ConfigOption*
 ConfigBase::option(const t_config_option_key &opt_key, bool create) {
     return this->optptr(opt_key, create);
+}
+
+ConfigOption*
+ConfigBase::option_throw(const t_config_option_key &opt_key, bool create) {
+    auto opt = this->optptr(opt_key, create);
+    if (opt == nullptr) throw UnknownOptionException(opt_key);
+    return opt;
 }
 
 void
@@ -393,7 +627,13 @@ ConfigBase::load(const std::string &file)
     namespace pt = boost::property_tree;
     pt::ptree tree;
 	boost::nowide::ifstream ifs(file);
-	pt::read_ini(ifs, tree);
+    try {
+        pt::read_ini(ifs, tree);
+    } catch(std::exception& ex) {
+        // Log or error string stating that the data read is corrupt
+        Log::error("Config") << "Error reading ini " << file << ":" << ex.what() << "\n";
+        throw ex;
+    }
     BOOST_FOREACH(const pt::ptree::value_type &v, tree) {
         try {
             t_config_option_key opt_key = v.first;
@@ -426,6 +666,39 @@ ConfigBase::save(const std::string &file) const
     c.close();
 }
 
+void
+ConfigBase::validate() const
+{
+    for (auto &opt_key : this->keys()) {
+        // get option definition
+        assert(this->def->has(opt_key));
+        const ConfigOptionDef& def = this->def->get(opt_key);
+        
+        if (def.type == coInt) {
+            auto &value = this->opt<ConfigOptionInt>(opt_key)->value;
+            if (value < def.min || value > def.max)
+                throw InvalidOptionException(opt_key);
+        } else if (def.type == coFloat) {
+            auto &value = this->opt<ConfigOptionFloat>(opt_key)->value;
+            if (value < def.min || value > def.max)
+                throw InvalidOptionException(opt_key);
+        } else if (def.type == coFloatOrPercent) {
+            const auto* opt = this->opt<ConfigOptionFloatOrPercent>(opt_key);
+            auto &value = opt->value;
+            if (!opt->percent && (value < def.min || value > def.max))
+                throw InvalidOptionException(opt_key);
+        } else if (def.type == coInts) {
+            for (auto &value : this->opt<ConfigOptionInts>(opt_key)->values)
+                if (value < def.min || value > def.max)
+                    throw InvalidOptionException(opt_key);
+        } else if (def.type == coFloats) {
+            for (auto &value : this->opt<ConfigOptionFloats>(opt_key)->values)
+                if (value < def.min || value > def.max)
+                    throw InvalidOptionException(opt_key);
+        }
+    }
+}
+
 DynamicConfig& DynamicConfig::operator= (DynamicConfig other)
 {
     this->swap(other);
@@ -435,13 +708,14 @@ DynamicConfig& DynamicConfig::operator= (DynamicConfig other)
 void
 DynamicConfig::swap(DynamicConfig &other)
 {
+    std::swap(this->def, other.def);
     std::swap(this->options, other.options);
 }
 
 DynamicConfig::~DynamicConfig () {
     for (t_options_map::iterator it = this->options.begin(); it != this->options.end(); ++it) {
         ConfigOption* opt = it->second;
-        if (opt != NULL) delete opt;
+        delete opt;
     }
 }
 
@@ -454,40 +728,40 @@ ConfigOption*
 DynamicConfig::optptr(const t_config_option_key &opt_key, bool create) {
     if (this->options.count(opt_key) == 0) {
         if (create) {
-            const ConfigOptionDef* optdef = this->def->get(opt_key);
-            if (optdef == NULL) return NULL;
+            if (!this->def->has(opt_key)) throw UnknownOptionException(opt_key);
+            const ConfigOptionDef& optdef = this->def->options.at(opt_key);
             ConfigOption* opt;
-            if (optdef->default_value != nullptr) {
-                opt = optdef->default_value->clone();
-            } else if (optdef->type == coFloat) {
+            if (optdef.default_value != nullptr) {
+                opt = optdef.default_value->clone();
+            } else if (optdef.type == coFloat) {
                 opt = new ConfigOptionFloat ();
-            } else if (optdef->type == coFloats) {
+            } else if (optdef.type == coFloats) {
                 opt = new ConfigOptionFloats ();
-            } else if (optdef->type == coInt) {
+            } else if (optdef.type == coInt) {
                 opt = new ConfigOptionInt ();
-            } else if (optdef->type == coInts) {
+            } else if (optdef.type == coInts) {
                 opt = new ConfigOptionInts ();
-            } else if (optdef->type == coString) {
+            } else if (optdef.type == coString) {
                 opt = new ConfigOptionString ();
-            } else if (optdef->type == coStrings) {
+            } else if (optdef.type == coStrings) {
                 opt = new ConfigOptionStrings ();
-            } else if (optdef->type == coPercent) {
+            } else if (optdef.type == coPercent) {
                 opt = new ConfigOptionPercent ();
-            } else if (optdef->type == coFloatOrPercent) {
+            } else if (optdef.type == coFloatOrPercent) {
                 opt = new ConfigOptionFloatOrPercent ();
-            } else if (optdef->type == coPoint) {
+            } else if (optdef.type == coPoint) {
                 opt = new ConfigOptionPoint ();
-            } else if (optdef->type == coPoint3) {
+            } else if (optdef.type == coPoint3) {
                 opt = new ConfigOptionPoint3 ();
-            } else if (optdef->type == coPoints) {
+            } else if (optdef.type == coPoints) {
                 opt = new ConfigOptionPoints ();
-            } else if (optdef->type == coBool) {
+            } else if (optdef.type == coBool) {
                 opt = new ConfigOptionBool ();
-            } else if (optdef->type == coBools) {
+            } else if (optdef.type == coBools) {
                 opt = new ConfigOptionBools ();
-            } else if (optdef->type == coEnum) {
+            } else if (optdef.type == coEnum) {
                 ConfigOptionEnumGeneric* optv = new ConfigOptionEnumGeneric ();
-                optv->keys_map = &optdef->enum_keys_map;
+                optv->keys_map = &optdef.enum_keys_map;
                 opt = static_cast<ConfigOption*>(optv);
             } else {
                 throw std::runtime_error("Unknown option type");
@@ -525,7 +799,7 @@ DynamicConfig::empty() const {
 }
 
 void
-DynamicConfig::read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra)
+DynamicConfig::read_cli(const std::vector<std::string> &tokens, t_config_option_keys* extra, t_config_option_keys* keys)
 {
     std::vector<char*> _argv;
     
@@ -535,23 +809,17 @@ DynamicConfig::read_cli(const std::vector<std::string> &tokens, t_config_option_
     for (size_t i = 0; i < tokens.size(); ++i)
         _argv.push_back(const_cast<char *>(tokens[i].c_str()));
     
-    this->read_cli(_argv.size(), &_argv[0], extra);
+    this->read_cli(_argv.size(), &_argv[0], extra, keys);
 }
 
 bool
-DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra)
+DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra, t_config_option_keys* keys)
 {
     // cache the CLI option => opt_key mapping
     std::map<std::string,std::string> opts;
-    for (const auto &oit : this->def->options) {
-        std::string cli = oit.second.cli;
-        cli = cli.substr(0, cli.find("="));
-        boost::trim_right_if(cli, boost::is_any_of("!"));
-        std::vector<std::string> tokens;
-        boost::split(tokens, cli, boost::is_any_of("|"));
-        for (const std::string &t : tokens)
+    for (const auto &oit : this->def->options)
+        for (auto t : this->def->get(oit.first).cli_args())
             opts[t] = oit.first;
-    }
     
     bool parse_options = true;
     for (int i = 1; i < argc; ++i) {
@@ -614,6 +882,10 @@ DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra)
         
         // Store the option value.
         const bool existing = this->has(opt_key);
+        if (keys != nullptr && !existing) {
+            // save the order of detected keys
+            keys->push_back(opt_key);
+        }
         if (ConfigOptionBool* opt = this->opt<ConfigOptionBool>(opt_key, true)) {
             opt->value = !no;
         } else if (ConfigOptionBools* opt = this->opt<ConfigOptionBools>(opt_key, true)) {
@@ -638,14 +910,7 @@ DynamicConfig::read_cli(int argc, char** argv, t_config_option_keys* extra)
 void
 StaticConfig::set_defaults()
 {
-    // use defaults from definition
-    if (this->def == NULL) return;
-    t_config_option_keys keys = this->keys();
-    for (t_config_option_keys::const_iterator it = keys.begin(); it != keys.end(); ++it) {
-        const ConfigOptionDef* def = this->def->get(*it);
-        if (def->default_value != nullptr)
-            this->option(*it)->set(*def->default_value);
-    }
+    ConfigBase::set_defaults(this->keys());
 }
 
 t_config_option_keys
@@ -666,7 +931,7 @@ ConfigOptionPoint::deserialize(std::string str, bool append) {
         this->value.x = boost::lexical_cast<coordf_t>(tokens[0]);
         this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
     } catch (boost::bad_lexical_cast &e){
-        std::cout << "Exception caught : " << e.what() << std::endl;
+        Slic3r::Log::error("Config") << "Deserialisation error of [" << str << "]  : " << e.what()<<" (expected 2D point)" << std::endl;
         return false;
     }
     return true;
@@ -681,7 +946,7 @@ ConfigOptionPoint3::deserialize(std::string str, bool append) {
         this->value.y = boost::lexical_cast<coordf_t>(tokens[1]);
         this->value.z = boost::lexical_cast<coordf_t>(tokens[2]);
     } catch (boost::bad_lexical_cast &e){
-        std::cout << "Exception caught : " << e.what() << std::endl;
+        Slic3r::Log::error("Config") << "Deserialisation error of ["<<str<<"]  : " << e.what()<<" (expected 3D point)" << std::endl;
         return false;
     }
     return true;
@@ -703,10 +968,9 @@ ConfigOptionPoints::deserialize(std::string str, bool append) {
 			this->values.push_back(point);
 		}
 	} catch (boost::bad_lexical_cast &e) {
-		printf("%s\n", e.what());
+		Slic3r::Log::error("Config") << "Deserialisation error of ["  << str << "] " << e.what() << " (expected list of points) ";
 		return false;
 	}
-
 	return true;
 }
 

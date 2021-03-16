@@ -8,15 +8,22 @@ namespace Slic3r {
 
 /// Surface type enumerations.
 /// As it is very unlikely that there will be more than 32 or 64 of these surface types, pack into a flag 
-enum SurfaceType { 
-    stTop            = 0b1, 
-    stBottom         = 0b10, 
-    stBottomBridge   = 0b100, 
-    stInternal       = 0b1000, 
-    stInternalSolid  = 0b10000, 
-    stInternalBridge = 0b100000, 
-    stInternalVoid   = 0b1000000
+enum SurfaceType : uint16_t { 
+    stTop            = 0b1,       /// stTop: it has nothing just on top of it
+    stBottom         = 0b10,      /// stBottom: it's a surface with nothing just under it (or the base plate, or a support)
+    stInternal       = 0b100,     /// stInternal: not top nor bottom
+    stSolid          = 0b1000,    /// stSolid: modify the stInternal to say it should be at 100% infill
+    stBridge         = 0b10000,   /// stBridge: modify stBottom or stInternal to say it should be extruded as a bridge
+    stVoid           = 0b100000   /// stVoid: modify stInternal to say it should be at 0% infill
 };
+inline SurfaceType operator|(SurfaceType a, SurfaceType b)
+{return static_cast<SurfaceType>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b));}
+inline SurfaceType operator&(SurfaceType a, SurfaceType b)
+{return static_cast<SurfaceType>(static_cast<uint16_t>(a) & static_cast<uint16_t>(b));}
+inline SurfaceType operator|=(SurfaceType& a, SurfaceType b)
+{ a = a | b; return a;}
+inline SurfaceType operator&=(SurfaceType& a, SurfaceType b)
+{ a = a & b; return a;}
 
 class Surface
 {
@@ -37,6 +44,7 @@ class Surface
     bool is_solid() const;
     bool is_external() const;
     bool is_internal() const;
+    bool is_top() const;
     bool is_bottom() const;
     bool is_bridge() const;
 };
@@ -101,7 +109,7 @@ inline ExPolygons to_expolygons(const SurfacesPtr &src)
 }
 
 
-// Count a nuber of polygons stored inside the vector of expolygons.
+// Count a number of polygons stored inside the vector of expolygons.
 // Useful for allocating space for polygons when converting expolygons to polygons.
 inline size_t number_polygons(const Surfaces &surfaces)
 {

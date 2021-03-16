@@ -10,6 +10,7 @@ BEGIN {
 
 use List::Util qw(first);
 use Slic3r;
+use Slic3r::Flow ':roles';
 use Slic3r::Geometry qw(epsilon scale PI);
 use Slic3r::Geometry::Clipper qw(diff);
 use Slic3r::Test;
@@ -21,7 +22,7 @@ use Slic3r::Test;
     
     my $test = sub {
         my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
-        my $flow = $print->print->objects->[0]->support_material_flow;
+        my $flow = $print->print->objects->[0]->support_material_flow(FLOW_ROLE_SUPPORT_MATERIAL);
         my $support = Slic3r::Print::SupportMaterial->new(
             object_config       => $print->print->objects->[0]->config,
             print_config        => $print->print->config,
@@ -320,7 +321,7 @@ use Slic3r::Test;
     
     my $test = sub {
         my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
-        my $flow = $print->print->objects->[0]->support_material_flow;
+        my $flow = $print->print->objects->[0]->support_material_flow(FLOW_ROLE_SUPPORT_MATERIAL);
         my $support = Slic3r::Print::SupportMaterial->new(
             object_config       => $print->print->objects->[0]->config,
             print_config        => $print->print->config,

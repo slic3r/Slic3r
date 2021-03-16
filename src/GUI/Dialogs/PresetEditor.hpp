@@ -158,7 +158,7 @@ public:
             "perimeter_acceleration"s, "infill_acceleration"s, "bridge_acceleration"s,
             "first_layer_acceleration"s, "default_acceleration"s,
             "skirts"s, "skirt_distance"s, "skirt_height"s, "min_skirt_length"s,
-            "brim_connections_width"s, "brim_width"s, "interior_brim_width"s,
+            "brim_connections_width"s, "brim_ears"s, "brim_ears_max_angle"s, "brim_width"s, "interior_brim_width"s,
             "support_material"s, "support_material_threshold"s, "support_material_max_layers"s, "support_material_enforce_layers"s,
             "raft_layers"s,
             "support_material_pattern"s, "support_material_spacing"s, "support_material_angle"s, ""s,

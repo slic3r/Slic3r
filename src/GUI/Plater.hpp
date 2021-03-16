@@ -26,6 +26,7 @@
 #include "Plater/Preview2D.hpp"
 #include "Plater/Preview3D.hpp"
 #include "Plater/PreviewDLP.hpp"
+#include "Plater/PresetChooser.hpp"
 
 #include "Settings.hpp"
 
@@ -33,6 +34,7 @@
 
 namespace Slic3r { namespace GUI {
 
+class PresetChooser; // forward dec
 using UndoOperation = int;
 
 enum class UndoCmd {
@@ -112,10 +114,8 @@ public:
     void export_tmf() {};
     void export_stl() {};
 
-    /// Return a reference to the currently selected preset for a group.
-    Preset* selected_presets(preset_t preset);
-    /// Return a reference to all currently selected presets.
-    std::vector<Preset*> selected_presets();
+
+    void show_preset_editor(preset_t preset, unsigned int idx);
 private:
     std::shared_ptr<Slic3r::Print> print {std::make_shared<Print>(Slic3r::Print())};
     std::shared_ptr<Slic3r::Model> model {std::make_shared<Model>(Slic3r::Model())};
@@ -252,17 +252,8 @@ private:
     /// Struct containing various object info fields.
     info_fields object_info;
 
-    /// Build the preset chooser
-    void build_preset_chooser();
+    PresetChooser* _presets;
 
-    wxFlexGridSizer* presets_sizer {};
-
-    std::vector<wxBitmapComboBox*> preset_choosers {preset_types, nullptr};
-    void _on_change_combobox(preset_t preset, wxBitmapComboBox* choice);
-
-    void show_preset_editor(preset_t preset, unsigned int idx);
-
-    void _on_select_preset(preset_t preset) {};
     void load_presets();
 
 };

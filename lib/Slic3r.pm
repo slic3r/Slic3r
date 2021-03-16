@@ -11,6 +11,7 @@ use warnings;
 require v5.10;
 
 our $VERSION = VERSION();
+our $GITVERSION = GITVERSION();
 
 our $debug = 0;
 sub debugf {
@@ -247,6 +248,7 @@ sub thread_cleanup {
     *Slic3r::Surface::DESTROY               = sub {};
     *Slic3r::Surface::Collection::DESTROY   = sub {};
     *Slic3r::TriangleMesh::DESTROY          = sub {};
+    *Slic3r::TransformationMatrix::DESTROY  = sub {};
     return undef;  # this prevents a "Scalars leaked" warning
 }
 

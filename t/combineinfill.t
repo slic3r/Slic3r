@@ -82,7 +82,7 @@ plan tests => 8;
     my $print = Slic3r::Test::init_print('20mm_cube', config => $config);
     $print->process;
     
-    ok defined(first { @{$_->get_region(0)->fill_surfaces->filter_by_type(S_TYPE_INTERNALVOID)} > 0 }
+    ok defined(first { @{$_->get_region(0)->fill_surfaces->filter_by_type(S_TYPE_INTERNAL + S_TYPE_VOID)} > 0 }
         @{$print->print->get_object(0)->layers}),
         'infill combination produces internal void surfaces';
     

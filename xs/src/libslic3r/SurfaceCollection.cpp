@@ -39,6 +39,14 @@ SurfaceCollection::simplify(double tolerance)
     this->surfaces = ss;
 }
 
+void
+SurfaceCollection::remove_collinear_points()
+{
+    for(Surface &surface : this->surfaces) {
+        surface.expolygon.remove_colinear_points();
+    }
+}
+
 /* group surfaces by common properties */
 void
 SurfaceCollection::group(std::vector<SurfacesConstPtr> *retval) const
@@ -91,28 +99,31 @@ SurfaceCollection::any_bottom_contains(const T &item) const
 template bool SurfaceCollection::any_bottom_contains<Polyline>(const Polyline &item) const;
 
 SurfacesPtr
-SurfaceCollection::filter_by_type(SurfaceType type)
+SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types)
 {
     SurfacesPtr ss;
-    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
-        if (surface->surface_type == type) ss.push_back(&*surface);
-    }
+    for (Surface& s : this->surfaces)
+        for (const SurfaceType& t : types)
+            if (s.surface_type == t) {
+                ss.push_back(&s);
+                break;
+            }
     return ss;
 }
 
-SurfacesPtr
-SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types)
+SurfacesConstPtr
+SurfaceCollection::filter_by_type(std::initializer_list<SurfaceType> types) const
 {
-    size_t n {0};
-    SurfacesPtr ss;
-    for (const auto& t : types) {
-        n |= t;
-    }
-    for (Surfaces::iterator surface = this->surfaces.begin(); surface != this->surfaces.end(); ++surface) {
-        if ((surface->surface_type & n) == surface->surface_type) ss.push_back(&*surface);
-    }
+    SurfacesConstPtr ss;
+    for (const Surface& s : this->surfaces)
+        for (const SurfaceType& t : types)
+            if (s.surface_type == t) {
+                ss.push_back(&s);
+                break;
+            }
     return ss;
 }
+
 void
 SurfaceCollection::filter_by_type(SurfaceType type, Polygons* polygons)
 {
@@ -126,6 +137,12 @@ void
 SurfaceCollection::append(const SurfaceCollection &coll)
 {
     this->append(coll.surfaces);
+}
+
+void
+SurfaceCollection::append(const Surface &surface)
+{
+    this->surfaces.push_back(surface);
 }
 
 void
@@ -193,12 +210,23 @@ SurfaceCollection::keep_type(const SurfaceType type)
 void
 SurfaceCollection::keep_types(const SurfaceType *types, size_t ntypes) 
 {
-    size_t n {0};
-    for (size_t i = 0; i < ntypes; ++i)
-        n |= types[i]; // form bitmask.
-    // Use stl remove_if to remove 
-    auto ptr = std::remove_if(surfaces.begin(), surfaces.end(),[n] (const Surface& s) { return (s.surface_type & n) != s.surface_type; });
-    surfaces.erase(ptr, surfaces.cend());
+    size_t j = 0;
+    for (size_t i = 0; i < surfaces.size(); ++ i) {
+        bool keep = false;
+        for (size_t k = 0; k < ntypes; ++ k) {
+            if (surfaces[i].surface_type == types[k]) {
+                keep = true;
+                break;
+            }
+        }
+        if (keep) {
+            if (j < i)
+                std::swap(surfaces[i], surfaces[j]);
+            ++ j;
+        }
+    }
+    if (j < surfaces.size())
+        surfaces.erase(surfaces.begin() + j, surfaces.end());
 }
 
 void 
@@ -208,6 +236,14 @@ SurfaceCollection::keep_types(std::initializer_list<SurfaceType> types) {
     }
 }
 /* group surfaces by common properties */
+std::vector<SurfacesPtr>
+SurfaceCollection::group()
+{
+    std::vector<SurfacesPtr> retval;
+    this->group(&retval);
+    return retval;
+}
+
 void
 SurfaceCollection::group(std::vector<SurfacesPtr> *retval)
 {

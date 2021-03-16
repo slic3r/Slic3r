@@ -1,6 +1,7 @@
 #include "IO.hpp"
 #include <stdexcept>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <boost/filesystem.hpp>
 #include <boost/nowide/fstream.hpp>
@@ -9,6 +10,24 @@
 #include "tiny_obj_loader.h"
 
 namespace Slic3r { namespace IO {
+
+const std::map<ExportFormat,std::string> extensions{
+    {STL, "stl"},
+    {OBJ, "obj"},
+    {POV, "pov"},
+    {AMF, "amf"},
+    {TMF, "3mf"},
+    {SVG, "svg"},
+    {Gcode, "gcode"},
+};
+
+const std::map<ExportFormat,bool(*)(const Model&,std::string)> write_model{
+    {STL, &STL::write},
+    {OBJ, &OBJ::write},
+    {POV, &POV::write},
+    {AMF, &AMF::write},
+    {TMF, &TMF::write},
+};
 
 bool
 STL::read(std::string input_file, TriangleMesh* mesh)
@@ -44,14 +63,14 @@ STL::read(std::string input_file, Model* model)
 }
 
 bool
-STL::write(Model& model, std::string output_file, bool binary)
+STL::write(const Model &model, std::string output_file, bool binary)
 {
     TriangleMesh mesh = model.mesh();
     return STL::write(mesh, output_file, binary);
 }
 
 bool
-STL::write(TriangleMesh& mesh, std::string output_file, bool binary)
+STL::write(const TriangleMesh &mesh, std::string output_file, bool binary)
 {
     if (binary) {
         mesh.write_binary(output_file);
@@ -134,30 +153,37 @@ OBJ::read(std::string input_file, Model* model)
 }
 
 bool
-OBJ::write(Model& model, std::string output_file)
+OBJ::write(const Model& model, std::string output_file)
 {
     TriangleMesh mesh = model.mesh();
+    // pre-emptively repair because object write can break 
+    // output
+    mesh.repair();
     return OBJ::write(mesh, output_file);
 }
 
 bool
-OBJ::write(TriangleMesh& mesh, std::string output_file)
+OBJ::write(const TriangleMesh& mesh, std::string output_file)
 {
     mesh.WriteOBJFile(output_file);
     return true;
 }
 
 bool
-POV::write(TriangleMesh& mesh, std::string output_file)
+POV::write(const Model &model, std::string output_file)
 {
-    TriangleMesh mesh2 = mesh;
-    mesh2.center_around_origin();
-    
+    TriangleMesh mesh{ model.mesh() };
+    return POV::write(mesh, output_file);
+}
+
+bool
+POV::write(const TriangleMesh& mesh, std::string output_file)
+{
     using namespace std;
     boost::nowide::ofstream pov;
     pov.open(output_file.c_str(), ios::out | ios::trunc);
-    for (int i = 0; i < mesh2.stl.stats.number_of_facets; ++i) {
-        const stl_facet &f = mesh2.stl.facet_start[i];
+    for (int i = 0; i < mesh.stl.stats.number_of_facets; ++i) {
+        const stl_facet &f = mesh.stl.facet_start[i];
         pov << "triangle { ";
         pov << "<" << f.vertex[0].x << "," << f.vertex[0].y << "," << f.vertex[0].z << ">,";
         pov << "<" << f.vertex[1].x << "," << f.vertex[1].y << "," << f.vertex[1].z << ">,";

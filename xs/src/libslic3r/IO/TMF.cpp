@@ -144,6 +144,8 @@ TMFEditor::write_object(boost::nowide::ofstream& fout, const ModelObject* object
     std::vector<int> vertices_offsets;
     int num_vertices = 0;
 
+    Pointf3 origin_translation = object->origin_translation();
+
     for (const auto volume : object->volumes){
         // Require mesh vertices.
         volume->mesh.require_shared_vertices();
@@ -160,9 +162,9 @@ TMFEditor::write_object(boost::nowide::ofstream& fout, const ModelObject* object
             // In order to do this we compensate for this translation in the instance placement
             // below.
             fout << "                    <vertex";
-            fout << " x=\"" << (stl.v_shared[i].x - object->origin_translation.x) << "\"";
-            fout << " y=\"" << (stl.v_shared[i].y - object->origin_translation.y) << "\"";
-            fout << " z=\"" << (stl.v_shared[i].z - object->origin_translation.z) << "\"/>\n";
+            fout << " x=\"" << (stl.v_shared[i].x - origin_translation.x) << "\"";
+            fout << " y=\"" << (stl.v_shared[i].y - origin_translation.y) << "\"";
+            fout << " z=\"" << (stl.v_shared[i].z - origin_translation.z) << "\"/>\n";
         }
         num_vertices += stl.stats.shared_vertices;
     }
@@ -246,32 +248,22 @@ TMFEditor::write_build(boost::nowide::ofstream& fout)
             fout << "        <item objectid=\"" << (object_id + 1) << "\"";
 
             // Get the rotation about x, y &z, translations and the scale vector.
-            double sc = instance->scaling_factor,
-                    cosine_rz = cos(instance->rotation),
-                    sine_rz = sin(instance->rotation),
-                    cosine_ry = cos(instance->y_rotation),
-                    sine_ry = sin(instance->y_rotation),
-                    cosine_rx = cos(instance->x_rotation),
-                    sine_rx = sin(instance->x_rotation),
-                    tx = instance->offset.x + object->origin_translation.x ,
-                    ty = instance->offset.y + object->origin_translation.y,
-                    tz = instance->z_translation;
+            TransformationMatrix trafo = instance->get_trafo_matrix();
 
             // Add the transform
             fout << " transform=\""
-                 << (cosine_ry * cosine_rz * sc * instance->scaling_vector.x)
-                 << " "
-                 << (cosine_ry * sine_rz * sc) << " "
-                 << (-1 * sine_ry * sc) << " "
-                 << ((sine_rx * sine_ry * cosine_rz -1 * cosine_rx * sine_rz) * sc)  << " "
-                 << ((sine_rx * sine_ry * sine_rz + cosine_rx *cosine_rz) * sc * instance->scaling_vector.y) << " "
-                 << (sine_rx * cosine_ry * sc) << " "
-                 << ((cosine_rx * sine_ry * cosine_rz + sine_rx * sine_rz) * sc) << " "
-                 << ((sine_rx * sine_ry * sine_rz - sine_rx * cosine_rz) * sc) << " "
-                 << (cosine_rx * cosine_ry * sc * instance->scaling_vector.z) << " "
-                 << (tx) << " "
-                 << (ty) << " "
-                 << (tz)
+                 << trafo.m00 << " "
+                 << trafo.m10 << " "
+                 << trafo.m20 << " "
+                 << trafo.m01 << " "
+                 << trafo.m11 << " "
+                 << trafo.m21 << " "
+                 << trafo.m02 << " "
+                 << trafo.m12 << " "
+                 << trafo.m22 << " "
+                 << trafo.m03 << " "
+                 << trafo.m13 << " "
+                 << trafo.m23
                  << "\"/>\n";
 
         }
@@ -388,9 +380,10 @@ TMFEditor::~TMFEditor(){
 }
 
 bool
-TMF::write(Model& model, std::string output_file)
+TMF::write(const Model& model, std::string output_file)
 {
-    TMFEditor tmf_writer(std::move(output_file), &model);
+    Model m2{model};
+    TMFEditor tmf_writer(std::move(output_file), &m2);
     return tmf_writer.produce_TMF();
 }
 
@@ -512,15 +505,13 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 // Apply transformation if supplied.
                 const char* transformation_matrix = get_attribute(atts, "transform");
                 if(transformation_matrix){
+                    TransformationMatrix trafo;
+                    std::vector<double> single_transformations;
+                    if(!extract_trafo(transformation_matrix, trafo))
+                        this->stop();
+
                     // Decompose the affine matrix.
-                    std::vector<double> transformations;
-                    if(!get_transformations(transformation_matrix, transformations))
-                        this->stop();
-
-                    if(transformations.size() != 9)
-                        this->stop();
-
-                    apply_transformation(instance, transformations);
+                    instance->set_complete_trafo(trafo);
                 }
 
                 node_type_new = NODE_TYPE_ITEM;
@@ -563,36 +554,19 @@ TMFParserContext::startElement(const char *name, const char **atts)
                 if(!object_id)
                     this->stop();
                 ModelObject* component_object = m_model.objects[m_objects_indices[object_id]];
-                // Append it to the parent (current m_object) as a mesh since Slic3r doesn't support an object inside another.
-                // after applying 3d matrix transformation if found.
-                TriangleMesh component_mesh;
-                const char* transformation_matrix = get_attribute(atts, "transform");
-                if(transformation_matrix){
-                    // Decompose the affine matrix.
-                    std::vector<double> transformations;
-                    if(!get_transformations(transformation_matrix, transformations))
-                        this->stop();
-
-                    if( transformations.size() != 9)
-                        this->stop();
-
-                    // Create a copy of the current object.
-                    ModelObject* object_copy = m_model.add_object(*component_object, true);
-
-                    apply_transformation(object_copy, transformations);
-
-                    // Get the mesh of this instance object.
-                    component_mesh = object_copy->raw_mesh();
-
-                    // Delete the copy of the object.
-                    m_model.delete_object(m_model.objects.size() - 1);
-
-                } else {
-                    component_mesh = component_object->raw_mesh();
-                }
-                ModelVolume* volume = m_object->add_volume(component_mesh);
+                ModelVolume* volume = m_object->add_volume(component_object->raw_mesh());
                 if(!volume)
                     this->stop();
+
+                const char* transformation_matrix = get_attribute(atts, "transform");
+                if(transformation_matrix){
+                    TransformationMatrix trafo;
+
+                    if(!extract_trafo(transformation_matrix, trafo))
+                        this->stop();
+
+                    volume->apply_transformation(trafo);
+                }
                 node_type_new =NODE_TYPE_COMPONENT;
             } else if (strcmp(name, "slic3r:volumes") == 0) {
                 node_type_new = NODE_TYPE_SLIC3R_VOLUMES;
@@ -736,7 +710,7 @@ TMFParserContext::stop()
 }
 
 bool
-TMFParserContext::get_transformations(std::string matrix, std::vector<double> &transformations)
+TMFParserContext::extract_trafo(std::string matrix, TransformationMatrix &trafo)
 {
     // Get the values.
     double m[12];
@@ -754,108 +728,22 @@ TMFParserContext::get_transformations(std::string matrix, std::vector<double> &t
     if(k != 12)
         return false;
 
-    // Get the translation (x,y,z) value. Remember the matrix in 3mf is a row major not a column major.
-    transformations.push_back(m[9]);
-    transformations.push_back(m[10]);
-    transformations.push_back(m[11]);
-
-    // Get the scale values.
-    double sx = sqrt( m[0] * m[0] + m[1] * m[1] + m[2] * m[2]),
-        sy = sqrt( m[3] * m[3] + m[4] * m[4] + m[5] * m[5]),
-        sz = sqrt( m[6] * m[6] + m[7] * m[7] + m[8] * m[8]);
-    transformations.push_back(sx);
-    transformations.push_back(sy);
-    transformations.push_back(sz);
-
-    // Get the rotation values.
-    // Normalize scale from the rotation matrix.
-    m[0] /= sx; m[1] /= sy; m[2] /= sz;
-    m[3] /= sx; m[4] /= sy; m[5] /= sz;
-    m[6] /= sx; m[7] /= sy; m[8] /= sz;
-
-    // Get quaternion values
-    double q_w = sqrt(std::max(0.0, 1.0 + m[0] + m[4] + m[8])) / 2,
-        q_x = sqrt(std::max(0.0, 1.0 + m[0] - m[4] - m[8])) / 2,
-        q_y = sqrt(std::max(0.0, 1.0 - m[0] + m[4] - m[8])) / 2,
-        q_z = sqrt(std::max(0.0, 1.0 - m[0] - m[4] + m[8])) / 2;
-
-    q_x *= ((q_x * (m[5] - m[7])) <= 0 ? -1 : 1);
-    q_y *= ((q_y * (m[6] - m[2])) <= 0 ? -1 : 1);
-    q_z *= ((q_z * (m[1] - m[3])) <= 0 ? -1 : 1);
-
-    // Normalize quaternion values.
-    double q_magnitude = sqrt(q_w * q_w + q_x * q_x + q_y * q_y + q_z * q_z);
-    q_w /= q_magnitude;
-    q_x /= q_magnitude;
-    q_y /= q_magnitude;
-    q_z /= q_magnitude;
-
-    double test = q_x * q_y + q_z * q_w;
-    double result_x, result_y, result_z;
-    // singularity at north pole
-    if (test > 0.499)
-    {
-        result_x = 0;
-        result_y = 2 * atan2(q_x, q_w);
-        result_z = PI / 2;
-    }
-        // singularity at south pole
-    else if (test < -0.499)
-    {
-        result_x = 0;
-        result_y = -2 * atan2(q_x, q_w);
-        result_z = -PI / 2;
-    }
-    else
-    {
-        result_x = atan2(2 * q_x * q_w - 2 * q_y * q_z, 1 - 2 * q_x * q_x - 2 * q_z * q_z);
-        result_y = atan2(2 * q_y * q_w - 2 * q_x * q_z, 1 - 2 * q_y * q_y - 2 * q_z * q_z);
-        result_z = asin(2 * q_x * q_y + 2 * q_z * q_w);
-
-        if (result_x < 0) result_x += 2 * PI;
-        if (result_y < 0) result_y += 2 * PI;
-        if (result_z < 0) result_z += 2 * PI;
-    }
-    transformations.push_back(result_x);
-    transformations.push_back(result_y);
-    transformations.push_back(result_z);
+    // matrices in 3mf is row-major for row-vectors multiplied from the left, 
+    // so we have to transpose the matrix
+    trafo.m00 = m[0];
+    trafo.m10 = m[1];
+    trafo.m20 = m[2];
+    trafo.m01 = m[3];
+    trafo.m11 = m[4];
+    trafo.m21 = m[5];
+    trafo.m02 = m[6];
+    trafo.m12 = m[7];
+    trafo.m22 = m[8];
+    trafo.m03 = m[9];
+    trafo.m13 = m[10];
+    trafo.m23 = m[11];
 
     return true;
-}
-
-void
-TMFParserContext::apply_transformation(ModelObject *object, std::vector<double> &transformations)
-{
-    // Apply scale.
-    Pointf3 vec(transformations[3], transformations[4], transformations[5]);
-    object->scale(vec);
-
-    // Apply x, y & z rotation.
-    object->rotate(transformations[6], X);
-    object->rotate(transformations[7], Y);
-    object->rotate(transformations[8], Z);
-
-    // Apply translation.
-    object->translate(transformations[0], transformations[1], transformations[2]);
-    return;
-}
-
-void
-TMFParserContext::apply_transformation(ModelInstance *instance, std::vector<double> &transformations)
-{
-    // Apply scale.
-    instance->scaling_vector = Pointf3(transformations[3], transformations[4], transformations[5]);;
-
-    // Apply x, y & z rotation.
-    instance->rotation = transformations[8];
-    instance->x_rotation = transformations[6];
-    instance->y_rotation = transformations[7];
-
-    // Apply translation.
-    instance->offset.x = transformations[0];
-    instance->offset.y = transformations[1];
-    instance->z_translation = transformations[2];
-    return;
 }
 
 ModelVolume*

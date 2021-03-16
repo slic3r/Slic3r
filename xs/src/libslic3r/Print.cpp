@@ -9,7 +9,17 @@
 #include <algorithm>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
+#include <cstdio>
+#include <cstdlib>
 #include <fstream>
+#include <thread>
+#include <sstream>
+
+#ifdef __cpp_lib_quoted_string_io
+    #include <iomanip>
+#else
+    #include <boost/algorithm/string.hpp>
+#endif
 
 namespace Slic3r {
 
@@ -80,7 +90,7 @@ Print::delete_object(size_t idx)
 {
     PrintObjectPtrs::iterator i = this->objects.begin() + idx;
     if (i >= this->objects.end()) 
-        throw InvalidObjectException();
+        throw std::out_of_range("Object not found");
     
     // before deleting object, invalidate all of its steps in order to 
     // invalidate all of the dependent ones in Print
@@ -92,8 +102,6 @@ Print::delete_object(size_t idx)
 
     // TODO: purge unused regions
 }
-
-#ifndef SLIC3RXS
 
 void
 Print::process() 
@@ -132,15 +140,15 @@ Print::make_brim()
 void
 Print::make_skirt()
 {
+    if (this->state.is_done(psSkirt)) return;
+    this->state.set_started(psSkirt);
+    
     // prereqs
-    for(auto& obj: this->objects) {
+    for (auto* obj: this->objects) {
         obj->make_perimeters();
         obj->infill();
         obj->generate_support_material();
     }
-
-    if (this->state.is_done(psSkirt)) return;
-    this->state.set_started(psSkirt);
 
     // since this method must be idempotent, we clear skirt paths *before*
     // checking whether we need to generate them
@@ -164,136 +172,102 @@ Print::make_skirt()
     // include the thickest object first. It is just guaranteed that a skirt is
     // prepended to the first 'n' layers (with 'n' = skirt_height).
     // $skirt_height_z in this case is the highest possible skirt height for safety.
-    double skirt_height_z {-1.0};
-    for (const auto& object : this->objects) {
-        size_t skirt_height {
-            this->has_infinite_skirt() ? object->layer_count() :
-            std::min(size_t(this->config.skirt_height()), object->layer_count())
+    this->skirt_height_z = -1.0;
+    for (const auto* object : this->objects) {
+        const size_t skirt_height {
+            this->has_infinite_skirt()
+                ? object->layer_count()
+                : std::min(size_t(this->config.skirt_height()), object->layer_count())
         };
-        auto* highest_layer {object->get_layer(skirt_height - 1)};
-        skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
+        const Layer* highest_layer { object->get_layer(skirt_height - 1) };
+        this->skirt_height_z = std::max(skirt_height_z, highest_layer->print_z);
     }
 
     // collect points from all layers contained in skirt height
     Points points;
-    for(auto* object : this->objects) {
+    for (auto* object : this->objects) {
         Points object_points;
         
-        // get object layers up to skirt_height_z
-        for(auto* layer : object->layers) {
-            if(layer->print_z > skirt_height_z)break;
-            for(ExPolygon poly : layer->slices){
-                for(Point point : static_cast<Points>(poly)){
-                    object_points.push_back(point);
-                }
-            }
+        // get object layers up to this->skirt_height_z
+        for (const auto* layer : object->layers) {
+            if (layer->print_z > this->skirt_height_z) break;
+            for (const ExPolygon ex : layer->slices)
+                append_to(object_points, static_cast<Points>(ex));
         }
         
-        // get support layers up to $skirt_height_z
-        for(auto* layer : object->support_layers) {
-            if(layer->print_z > skirt_height_z)break;
-            for(auto* ee : layer->support_fills){
-                for(Point point : ee->as_polyline().points){
-                    object_points.push_back(point);
-                }
-            }
-            for(auto* ee : layer->support_interface_fills){
-                for(Point point : ee->as_polyline().points){
-                    object_points.push_back(point);
-                }
-            }
+        // get support layers up to this->skirt_height_z
+        for (const auto* layer : object->support_layers) {
+            if (layer->print_z > this->skirt_height_z) break;
+            for (auto* ee : layer->support_fills)
+                append_to(object_points, ee->as_polyline().points);
+            for (auto* ee : layer->support_interface_fills)
+                append_to(object_points, ee->as_polyline().points);
         }
         
         // repeat points for each object copy
-        for(auto copy : object->_shifted_copies) {
-            for(Point point : object_points){
-                point.translate(copy);
-                points.push_back(point);
+        for (const auto& copy : object->_shifted_copies) {
+            for (Point p : object_points) {
+                p.translate(copy);
+                points.push_back(p);
             }
         }
     }
     if (points.size() < 3) return;  // at least three points required for a convex hull
     
     // find out convex hull
-    auto convex = Geometry::convex_hull(points);
+    const Polygon convex = Geometry::convex_hull(points);
     
     // skirt may be printed on several layers, having distinct layer heights,
     // but loops must be aligned so can't vary width/spacing
     // TODO: use each extruder's own flow
-    auto first_layer_height = this->skirt_first_layer_height();
-    auto flow = this->skirt_flow();
-    auto spacing = flow.spacing();
-    auto mm3_per_mm = flow.mm3_per_mm();
+    const auto first_layer_height = this->skirt_first_layer_height();
+    const auto flow = this->skirt_flow();
+    const auto spacing = flow.scaled_spacing();
+    const auto mm3_per_mm = flow.mm3_per_mm();
     
+    int skirts = this->config.skirts();
+    if (skirts == 0 && this->has_infinite_skirt())
+        skirts = 1;
     
-    auto skirts = this->config.skirts;
-    if(this->has_infinite_skirt() && skirts == 0){
-      skirts = 1;
-    }
-    
-    //my @extruded_length = ();  # for each extruder
-    //extruders_e_per_mm = ();
-    //size_t extruder_idx = 0;
-    
-    // new to the cpp implementation
-    float e_per_mm {0.0}, extruded_length = 0;
-    size_t extruders_warm = 0;
-    if (this->config.min_skirt_length.getFloat() > 0) {
-        //my $config = Config::GCode();
-        //$config->apply_static($self->config);
-        auto extruder = Extruder(0, &this->config);
-        e_per_mm = extruder.e_per_mm(mm3_per_mm);
-    }
+    const std::set<size_t> extruders{ this->extruders() };
+    auto extruder_it = extruders.cbegin();
+    std::vector<float> e_per_mm{0}, extruded_length{0};
+    if (this->config.min_skirt_length() > 0)
+        for (auto i : extruders)
+            e_per_mm[i] = Extruder(i, &this->config).e_per_mm(mm3_per_mm);
     
     // draw outlines from outside to inside
     // loop while we have less skirts than required or any extruder hasn't reached the min length if any
-    float distance = scale_(std::max(this->config.skirt_distance.getFloat(), this->config.brim_width.getFloat()));
+    float distance = scale_(std::max(this->config.skirt_distance(), this->config.brim_width()));
     for (int i = skirts; i > 0; i--) {
-        distance += scale_(spacing);
-        auto loop = offset(Polygons{convex}, distance, 1, jtRound, scale_(0.1)).at(0);
-        auto epath = ExtrusionPath(erSkirt,
-                mm3_per_mm,        // this will be overridden at G-code export time
-                flow.width,
-                first_layer_height // this will be overridden at G-code export time
+        distance += spacing;
+        const Polygon loop = offset(Polygons{convex}, distance, 1, jtRound, scale_(0.1)).at(0);
+        auto epath = ExtrusionPath(
+            erSkirt,
+            mm3_per_mm,        // this will be overridden at G-code export time
+            flow.width,
+            first_layer_height // this will be overridden at G-code export time
         );
         epath.polyline = loop.split_at_first_point();
-        auto eloop = ExtrusionLoop(epath,elrSkirt);
+        auto eloop = ExtrusionLoop(epath, elrSkirt);
         this->skirt.append(eloop);
         
-        if (this->config.min_skirt_length.getFloat() > 0) {
-            // Alternative simpler method
-            extruded_length += unscale(loop.length()) * e_per_mm;
-            if(extruded_length >= this->config.min_skirt_length.getFloat()){
-                extruders_warm++;
-                extruded_length = 0;
-            }
-            if (extruders_warm < this->extruders().size()){
-                i++;
-            }
-           
-            /*$extruded_length[$extruder_idx] ||= 0;
-            if (!$extruders_e_per_mm[$extruder_idx]) {
-                my $config = Slic3r::Config::GCode->new;
-                $config->apply_static($self->config);
-                my $extruder = Slic3r::Extruder->new($extruder_idx, $config);
-                $extruders_e_per_mm[$extruder_idx] = $extruder->e_per_mm($mm3_per_mm);
-            }
-            $extruded_length[$extruder_idx] += unscale $loop->length * $extruders_e_per_mm[$extruder_idx];
-            $i++ if defined first { ($extruded_length[$_] // 0) < $self->config->min_skirt_length } 0 .. $#{$self->extruders};
-            if ($extruded_length[$extruder_idx] >= $self->config->min_skirt_length) {
-                if ($extruder_idx < $#{$self->extruders}) {
-                    $extruder_idx++;
-                    next;
+        if (this->config.min_skirt_length() > 0) {
+            extruded_length[*extruder_it] += unscale(loop.length()) * e_per_mm[*extruder_it];
+            for (auto j : extruders) {
+                if (extruded_length[j] < this->config.min_skirt_length()) {
+                    ++i;
+                    break;
                 }
-            }*/
+            }
+            if (extruded_length[*extruder_it] >= this->config.min_skirt_length() && extruder_it != extruders.end())
+                ++extruder_it;
         }
     }
 
     this->skirt.reverse();
     this->state.set_done(psSkirt);
 }
-
-#endif // SLIC3RXS
 
 void
 Print::reload_object(size_t idx)
@@ -375,6 +349,8 @@ Print::invalidate_state_by_config(const PrintConfigBase &config)
             osteps.insert(posSupportMaterial);
         } else if (opt_key == "brim_width"
             || opt_key == "interior_brim_width"
+            || opt_key == "brim_ears"
+            || opt_key == "brim_ears_max_angle"
             || opt_key == "brim_connections_width") {
             steps.insert(psBrim);
             steps.insert(psSkirt);
@@ -704,33 +680,74 @@ Print::add_model_object(ModelObject* model_object, int idx)
     }
 }
 
-#ifndef SLIC3RXS
 void
 Print::export_gcode(std::ostream& output, bool quiet)
 {
+    // prerequisites
     this->process();
+    
     if (this->status_cb != nullptr) 
         this->status_cb(90, "Exporting G-Code...");
-
-    auto export_handler {Slic3r::PrintGCode(*this, output)};
-    export_handler.output();
-
+    
+    Slic3r::PrintGCode(*this, output).output();
 }
 
 void
-Print::export_gcode(const std::string& outfile, bool quiet)
+Print::export_gcode(std::string outfile, bool quiet)
 {
-    std::ofstream outstream(outfile);
+    // compute the actual output filepath
+    outfile = this->output_filepath(outfile);
+    
+    // write G-code to a temporary file in order to make the export atomic
+    const std::string tempfile{ outfile + ".tmp" };
+    std::ofstream outstream(tempfile);
     this->export_gcode(outstream);
+    
+    // rename the temporary file to the destination file
+    // When renaming, some other application (thank you, Windows Explorer) 
+    // may keep the file locked. Try to wait a bit and then rename the file again.
+    for (int i = 0; std::rename(tempfile.c_str(), outfile.c_str()) != 0; ++i) {
+        if (i == 4) {
+            std::stringstream ss;
+            ss << "Failed to remove the output G-code file from "
+                << tempfile << " to " << outfile << ". Is " << tempfile << " locked?";
+            throw std::runtime_error(ss.str());
+        } else {
+            // Wait for 1/4 seconds and try to rename once again.
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+    }
+    
+    // run post-processing scripts
+    if (!this->config.post_process.values.empty()) {
+        if (this->status_cb != nullptr) 
+            this->status_cb(95, "Running post-processing scripts...");
+        
+        this->config.setenv_();
+        for (std::string ppscript : this->config.post_process.values) {
+            #ifdef __cpp_lib_quoted_string_io
+                std::stringstream _tmp_string(ppscript);
+                _tmp_string << " " << std::quoted(outfile);
+                ppscript = _tmp_string.str();
+            #else
+                boost::replace_all(ppscript, "\"", "\\\"");
+                ppscript += " \"" + outfile + "\"";
+            #endif
+            system(ppscript.c_str());
+        
+            // TODO: system() should be only used if user enabled an option for explicitly
+            // supporting arguments, otherwise we should use exec*() and call the executable
+            // directly without launching a shell. #4000
+        }
+    }
 }
 
-
+#ifndef SLIC3RXS
 bool
 Print::apply_config(config_ptr config) {
     // dereference the stored pointer and pass the resulting data to apply_config()
     return this->apply_config(config->config());
 }
-
 #endif
 
 bool
@@ -850,7 +867,7 @@ bool Print::has_skirt() const
         || this->has_infinite_skirt();
 }
 
-std::string
+void
 Print::validate() const
 {
     if (this->config.complete_objects) {
@@ -881,14 +898,21 @@ Print::validate() const
                 object->model_object()->instances.front()->transform_polygon(&convex_hull);
                 
                 // grow convex hull with the clearance margin
-                convex_hull = offset(convex_hull, scale_(this->config.extruder_clearance_radius.value)/2, 1, jtRound, scale_(0.1)).front();
+                convex_hull = offset(
+                    convex_hull,
+                    // safety_offset in intersection() is not enough for preventing false positives
+                    scale_(this->config.extruder_clearance_radius.value)/2 - scale_(0.01),
+                    CLIPPER_OFFSET_SCALE,
+                    jtRound, scale_(0.1)
+                ).front();
                 
                 // now we check that no instance of convex_hull intersects any of the previously checked object instances
                 for (Points::const_iterator copy = object->_shifted_copies.begin(); copy != object->_shifted_copies.end(); ++copy) {
                     Polygon p = convex_hull;
                     p.translate(*copy);
+                    
                     if (!intersection(a, p).empty())
-                        return "Some objects are too close; your extruder will collide with them.";
+                        throw InvalidPrintException{"Some objects are too close; your extruder will collide with them."};
                     
                     a = union_(a, p);
                 }
@@ -907,7 +931,7 @@ Print::validate() const
             // it will be printed as last one so its height doesn't matter
             object_height.pop_back();
             if (!object_height.empty() && object_height.back() > scale_(this->config.extruder_clearance_height.value))
-                return "Some objects are too tall and cannot be printed without extruder collisions.";
+                throw InvalidPrintException{"Some objects are too tall and cannot be printed without extruder collisions."};
         }
     } // end if (this->config.complete_objects)
     
@@ -915,15 +939,13 @@ Print::validate() const
         size_t total_copies_count = 0;
         FOREACH_OBJECT(this, i_object) total_copies_count += (*i_object)->copies().size();
         if (total_copies_count > 1 && !this->config.complete_objects.getBool())
-            return "The Spiral Vase option can only be used when printing a single object.";
+            throw InvalidPrintException{"The Spiral Vase option can only be used when printing a single object."};
         if (this->regions.size() > 1)
-            return "The Spiral Vase option can only be used when printing single material objects.";
+            throw InvalidPrintException{"The Spiral Vase option can only be used when printing single material objects."};
     }
     
     if (this->extruders().empty())
-        return "The supplied settings will cause an empty print.";
-    
-    return std::string();
+        throw InvalidPrintException{"The supplied settings will cause an empty print."};
 }
 
 // the bounding box of objects placed in copies position
@@ -1066,6 +1088,7 @@ Print::_make_brim()
     
     const coord_t grow_distance = flow.scaled_width()/2;
     Polygons islands;
+    Points pt_ears;
     
     for (PrintObject* object : this->objects) {
         const Layer* layer0 = object->get_layer(0);
@@ -1085,6 +1108,10 @@ Print::_make_brim()
             for (Polygon p : object_islands) {
                 p.translate(copy);
                 islands.push_back(p);
+                if(this->config.brim_ears)
+                    for (const Point &p_corner : p.convex_points(this->config.brim_ears_max_angle.value * PI / 180.0)) {
+                        pt_ears.push_back(p_corner);
+                    }
             }
         }
     }
@@ -1105,6 +1132,124 @@ Print::_make_brim()
         ));
     }
     
+    if(this->config.brim_ears){
+        
+        //create ear pattern
+        coord_t size_ear = (scale_(this->config.brim_width.value) - flow.scaled_spacing());
+        Polygon point_round;
+        point_round.points.push_back(Point(size_ear*1, 0*size_ear));
+        point_round.points.push_back(Point(size_ear*0.966, 0.26*size_ear));
+        point_round.points.push_back(Point(size_ear*0.87, 0.5*size_ear));
+        point_round.points.push_back(Point(size_ear*0.7, 0.7*size_ear));
+        point_round.points.push_back(Point(size_ear*0.5, 0.87*size_ear));
+        point_round.points.push_back(Point(size_ear*0.26, 0.966*size_ear));
+        point_round.points.push_back(Point(size_ear*0, 1*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.26, 0.966*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.5, 0.87*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.7, 0.7*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.87, 0.5*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.966, 0.26*size_ear));
+        point_round.points.push_back(Point(size_ear*-1, 0*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.966, -0.26*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.87, -0.5*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.7, -0.7*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.5, -0.87*size_ear));
+        point_round.points.push_back(Point(size_ear*-0.26, -0.966*size_ear));
+        point_round.points.push_back(Point(size_ear*0, -1*size_ear));
+        point_round.points.push_back(Point(size_ear*0.26, -0.966*size_ear));
+        point_round.points.push_back(Point(size_ear*0.5, -0.87*size_ear));
+        point_round.points.push_back(Point(size_ear*0.7, -0.7*size_ear));
+        point_round.points.push_back(Point(size_ear*0.87, -0.5*size_ear));
+        point_round.points.push_back(Point(size_ear*0.966, -0.26*size_ear));
+        
+        //create ears
+        Polygons mouse_ears;
+        for (Point pt : pt_ears) {
+            mouse_ears.push_back(point_round);
+            mouse_ears.back().translate(pt);
+        }
+        
+        //intersection
+        Polylines lines = intersection_pl(union_pt_chained(loops), mouse_ears);
+        
+        //reorder them
+        Polylines lines_sorted;
+        Polyline* previous = NULL;
+        Polyline* best = NULL;
+        double best_dist = -1;
+        size_t best_idx = 0;
+        while (lines.size() > 0) {
+            if (previous == NULL) {
+                lines_sorted.push_back(lines.back());
+                previous = &lines_sorted.back();
+                lines.erase(lines.end() - 1);
+            } else {
+                best = NULL;
+                best_dist = -1;
+                best_idx = 0;
+                for (size_t i = 0; i < lines.size(); ++i) {
+                    Polyline &viewed_line = lines[i];
+                    double dist = viewed_line.points.front().distance_to(previous->points.front());
+                    dist = std::min(dist, viewed_line.points.front().distance_to(previous->points.back()));
+                    dist = std::min(dist, viewed_line.points.back().distance_to(previous->points.front()));
+                    dist = std::min(dist, viewed_line.points.back().distance_to(previous->points.back()));
+                    if (dist < best_dist || best == NULL) {
+                        best = &viewed_line;
+                        best_dist = dist;
+                        best_idx = i;
+                    }
+                }
+                if (best != NULL) {
+                    //copy new line inside the sorted array.
+                    lines_sorted.push_back(lines[best_idx]);
+                    lines.erase(lines.begin() + best_idx);
+                    
+                    //connect if near enough
+                    if (lines_sorted.size() > 1) {
+                        size_t idx = lines_sorted.size() - 2;
+                        bool connect = false;
+                        if (lines_sorted[idx].points.back().distance_to(lines_sorted[idx + 1].points.front()) < flow.scaled_spacing() * 2) {
+                            connect = true;
+                        } else if (lines_sorted[idx].points.back().distance_to(lines_sorted[idx + 1].points.back()) < flow.scaled_spacing() * 2) {
+                            lines_sorted[idx + 1].reverse();
+                            connect = true;
+                        } else if (lines_sorted[idx].points.front().distance_to(lines_sorted[idx + 1].points.front()) < flow.scaled_spacing() * 2) {
+                            lines_sorted[idx].reverse();
+                            connect = true;
+                        } else if (lines_sorted[idx].points.front().distance_to(lines_sorted[idx + 1].points.back()) < flow.scaled_spacing() * 2) {
+                            lines_sorted[idx].reverse();
+                            lines_sorted[idx + 1].reverse();
+                            connect = true;
+                        }
+                        
+                        if (connect) {
+                            //connect them
+                            lines_sorted[idx].points.insert(
+                                lines_sorted[idx].points.end(),
+                                lines_sorted[idx + 1].points.begin(),
+                                lines_sorted[idx + 1].points.end());
+                            lines_sorted.erase(lines_sorted.begin() + idx + 1);
+                            idx--;
+                        }
+                    }
+                    
+                    //update last position
+                    previous = &lines_sorted.back();
+                } else {
+                    previous = NULL;
+                }
+                
+            }
+        }
+        
+        //push into extrusions
+        for (Polyline &to_extrude : lines_sorted) {
+            ExtrusionPath path(erSkirt, mm3_per_mm, flow.width, flow.height);
+            path.polyline = to_extrude;
+            this->brim.append(path);
+        }
+    }
+    else
     {
         Polygons chained = union_pt_chained(loops);
         for (Polygons::const_reverse_iterator p = chained.rbegin(); p != chained.rend(); ++p) {

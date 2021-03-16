@@ -366,7 +366,7 @@ sub on_btn_load {
                 $new_volume->set_input_file_vol_idx($vol_idx);
                 
                 # apply the same translation we applied to the object
-                $new_volume->mesh->translate(@{$self->{model_object}->origin_translation});
+                $new_volume->apply_transformation($self->{model_object}->get_trafo_obj);
                 
                 # set a default extruder value, since user can't add it manually
                 $new_volume->config->set_ifndef('extruder', 0);
@@ -405,27 +405,26 @@ sub on_btn_lambda {
             $params->{"slab_h"},
         );
         # box sets the base coordinate at 0,0, move to center of plate
-        $mesh->translate(
-            -$size->x*1.5/2.0,
-            -$size->y*1.5/2.0,  #**
-            0,
-        );
+        my $trafo = Slic3r::TransformationMatrix->new;
+        $trafo->set_translation_xyz(-$size->x*1.5/2.0,-$size->y*1.5/2.0,0);
+        $mesh->transform($trafo);
     } else {
         return;
     }
 
     my $center = $self->{model_object}->bounding_box->center; 
-    if (!$Slic3r::GUI::Settings->{_}{autocenter}) {
-        #TODO what we really want to do here is just align the
-        # center of the modifier to the center of the part.
-        $mesh->translate($center->x, $center->y, 0);
-    }
 
     $mesh->repair;
     my $new_volume = $self->{model_object}->add_volume(mesh => $mesh);
     $new_volume->set_modifier($is_modifier);
     $new_volume->set_name($name);
 
+    if (!$Slic3r::GUI::Settings->{_}{autocenter}) {
+        #TODO what we really want to do here is just align the
+        # center of the modifier to the center of the part.
+        $new_volume->translate($center->x, $center->y,0);
+    }
+    
     # set a default extruder value, since user can't add it manually
     $new_volume->config->set_ifndef('extruder', 0);
 
@@ -497,7 +496,7 @@ sub _update {
     my $itemData = $self->get_selection;
     if ($itemData && $itemData->{type} eq 'volume') {
         my $volume = $self->{model_object}->volumes->[$itemData->{volume_id}];
-        $volume->mesh->translate(@{ $volume->mesh->bounding_box->min_point->vector_to($self->{move_target}) });
+        $volume->translate(@{ $volume->mesh->bounding_box->min_point->vector_to($self->{move_target}) });
     }
 
     $self->{parts_changed} = 1;
@@ -517,7 +516,7 @@ sub changescale {
         if (defined $axis) {
             my $axis_name = $axis == X ? 'X' : $axis == Y ? 'Y' : 'Z';
             my $scale;
-            if (defined $tosize) {
+            if ($tosize) {
                 my $cursize = $object_size->[$axis];
                 # Wx::GetNumberFromUser() does not support decimal numbers
                 my $newsize = Wx::GetTextFromUser(
@@ -535,7 +534,7 @@ sub changescale {
             }
             my $versor = [1,1,1];
             $versor->[$axis] = $scale/100;
-            $volume->mesh->scale_xyz(Slic3r::Pointf3->new(@$versor));
+            $volume->scale_xyz(Slic3r::Pointf3->new(@$versor));
         } else {
             my $scale;
             if ($tosize) {
@@ -553,7 +552,7 @@ sub changescale {
                 return if !$scale || $scale !~ /^\d*(?:\.\d*)?$/ || $scale < 0;
             }
             return if !$scale || $scale < 0;
-            $volume->mesh->scale($scale);
+            $volume->scale_xyz(Slic3r::Pointf3->new($scale/100, $scale/100, $scale/100));
         }
         $self->_parts_changed;
     }
@@ -574,10 +573,9 @@ sub rotate {
                     $default, $self);
             return if !$angle || $angle !~ /^-?\d*(?:\.\d*)?$/ || $angle == -1;
         }
-        if ($axis == X) { $volume->mesh->rotate_x(deg2rad($angle)); }
-
-        if ($axis == Y) { $volume->mesh->rotate_y(deg2rad($angle)); } 
-        if ($axis == Z) { $volume->mesh->rotate_z(deg2rad($angle)); }
+        if ($axis == X) { $volume->rotate(deg2rad($angle), X); }
+        if ($axis == Y) { $volume->rotate(deg2rad($angle), Y); } 
+        if ($axis == Z) { $volume->rotate(deg2rad($angle), Z); }
             
         $self->_parts_changed;
     }

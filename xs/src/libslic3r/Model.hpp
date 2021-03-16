@@ -7,6 +7,7 @@
 #include "Layer.hpp"
 #include "Point.hpp"
 #include "TriangleMesh.hpp"
+#include "TransformationMatrix.hpp"
 #include "LayerHeightSpline.hpp"
 #include <map>
 #include <string>
@@ -73,7 +74,9 @@ class Model
     /// \param  input_file std::string the file path expressed in UTF-8
     /// \return Model the read Model
     static Model read_from_file(std::string input_file);
-
+    
+    void merge(const Model &other);
+    
     /// Create a new object and add it to the current Model.
     /// \return ModelObject* a pointer to the new Model
     ModelObject* add_object();
@@ -133,13 +136,17 @@ class Model
     /// Repair the ModelObjects of the current Model.
     /// This function calls repair function on each TriangleMesh of each model object volume
     void repair();
-
+    
+    /// Split the meshes of the ModelObjects into several distinct ModelObjects.
+    void split();
+    
     /// Center the total bounding box of the instances around a point.
     /// This transformation works in the XY plane only and no transformation in Z is performed.
     /// \param point pointf object to center the model instances of model objects around
     void center_instances_around_point(const Pointf &point);
 
     void align_instances_to_origin();
+    void align_to_ground();
 
     /// Translate each ModelObject with x, y, z units.
     /// \param x coordf_t units in the x direction
@@ -270,12 +277,6 @@ class ModelObject
     int part_number; ///< It's used for the 3MF items part numbers in the build element.
     LayerHeightSpline layer_height_spline;     ///< Spline based variations of layer thickness for interactive user manipulation
 
-    Pointf3 origin_translation;
-    ///< This vector accumulates the total translation applied to the object by the
-    ///< center_around_origin() method. Callers might want to apply the same translation
-    ///< to new volumes before adding them to this object in order to preserve alignment
-    ///< when user expects that.
-
     // these should be private but we need to expose them via XS until all methods are ported
     BoundingBoxf3 _bounding_box;
     bool _bounding_box_valid;
@@ -329,6 +330,17 @@ class ModelObject
     /// Repair all TriangleMesh objects found in each ModelVolume.
     void repair();
 
+    Pointf3 origin_translation() const;
+    ///< This vector returns the total translation applied to the object by the
+    ///< transformation methods. Callers might want to apply the same translation
+    ///< to new volumes before adding them to this object in order to preserve alignment
+    ///< when user expects that.
+
+    TransformationMatrix get_trafo_obj() const {return this->trafo_obj;};
+    /// return a copy of the private trafo_obj, that accumulates all top-level transformations
+
+    void set_trafo_obj(TransformationMatrix const & trafo) {this->trafo_obj = trafo;};
+
     /// Flatten all volumes and instances into a single mesh and applying all the ModelInstances transformations.
     TriangleMesh mesh() const;
 
@@ -351,6 +363,9 @@ class ModelObject
     /// Center the current ModelObject to origin by translating the ModelVolumes
     void center_around_origin();
 
+    /// Get the matrix, that, when applied, centers the bounding box in all 3 coordinate directions
+    TransformationMatrix get_trafo_to_center() const;
+
     /// Translate the current ModelObject by translating ModelVolumes with (x,y,z) units.
     /// This function calls translate(coordf_t x, coordf_t y, coordf_t z) to translate every TriangleMesh in each ModelVolume.
     /// \param vector Vectorf3 the translation vector
@@ -364,8 +379,8 @@ class ModelObject
 
     /// Scale the current ModelObject by scaling its ModelVolumes.
     /// This function calls scale(const Pointf3 &versor) to scale every TriangleMesh in each ModelVolume.
-    /// \param factor float the scaling factor
-    void scale(float factor);
+    /// \param factor double the scaling factor
+    void scale(double factor);
 
     /// Scale the current ModelObject by scaling its ModelVolumes.
     /// \param versor Pointf3 the scaling factor in a 3d vector.
@@ -377,13 +392,32 @@ class ModelObject
     void scale_to_fit(const Sizef3 &size);
 
     /// Rotate the current ModelObject by rotating ModelVolumes.
-    /// \param angle float the angle in radians
+    /// \param angle double the angle in radians
     /// \param axis Axis the axis to be rotated around
-    void rotate(float angle, const Axis &axis);
+    void rotate(double angle, const Axis &axis);
+
+    /// Rotate the current ModelObject by rotating ModelVolumes.
+    /// \param angle double the angle in radians
+    /// \param axis Axis the axis to be rotated around
+    void rotate(double angle, const Vectorf3 &axis);
+
+    /// Rotate the current ModelObject by rotating ModelVolumes to align the given vectors
+    /// \param origin Vectorf3
+    /// \param target Vectorf3
+    void rotate(const Vectorf3 &origin, const Vectorf3 &target);
 
     /// Mirror the current Model around a certain axis.
     /// \param axis Axis enum member
     void mirror(const Axis &axis);
+
+    /// Reset the internal collection of transformations
+    void reset_undo_trafo();
+
+    /// Get the accumulated collection of transformations since its reset
+    TransformationMatrix get_undo_trafo() const;
+
+    /// Apply transformation to all volumes
+    void apply_transformation(const TransformationMatrix & trafo);
 
     /// Transform the current ModelObject by a certain ModelInstance attributes.
     /// Inverse transformation is applied to all the ModelInstances, so that the final size/position/rotation of the transformed objects doesn't change.
@@ -419,6 +453,7 @@ class ModelObject
     /// Print the current info of this ModelObject
     void print_info() const;
 
+
     private:
     Model* model; ///< Parent object, owning this ModelObject.
 
@@ -431,6 +466,12 @@ class ModelObject
     /// \param other ModelObject the other ModelObject to be copied
     /// \param copy_volumes bool whether to also copy its volumes or not, by default = true
     ModelObject(Model *model, const ModelObject &other, bool copy_volumes = true);
+
+    /// Trafo to collect the transformation applied to all volumes over a series of manipulations
+    TransformationMatrix trafo_undo_stack;
+
+    /// Trafo that accumulates all transformations applied to the whole object
+    TransformationMatrix trafo_obj;
 
     /// = Operator overloading
     /// \param other ModelObject the other ModelObject to be copied
@@ -453,11 +494,16 @@ class ModelVolume
     public:
 
     std::string name;   ///< Name of this ModelVolume object
-    TriangleMesh mesh;  ///< The triangular model.
+    TriangleMesh mesh;  ///< The triangular model
+
+    TransformationMatrix trafo; 
+    ///< The transformation matrix of this volume, representing which transformation has been
+    ///< applied to the mesh
+    
     DynamicPrintConfig config;
     ///< Configuration parameters specific to an object model geometry or a modifier volume,
     ///< overriding the global Slic3r settings and the ModelObject settings.
-    
+
     /// Input file path needed for reloading the volume from disk
     std::string input_file; ///< Input file path
     int input_file_obj_idx; ///< Input file object index
@@ -468,6 +514,42 @@ class ModelVolume
     /// Get the parent object owning this modifier volume.
     /// \return ModelObject* pointer to the owner ModelObject
     ModelObject* get_object() const { return this->object; };
+
+    /// Get the ModelVolume's mesh, transformed by the argument's TransformationMatrix
+    /// \param trafo
+    /// \return TriangleMesh the transformed mesh
+    TriangleMesh get_transformed_mesh(TransformationMatrix const & trafo) const;
+
+    BoundingBoxf3 get_transformed_bounding_box(TransformationMatrix const & trafo) const;
+    BoundingBoxf3 bounding_box() const;
+
+    //Transformation matrix manipulators
+    
+    /// performs translation
+    void translate(double x, double y, double z);
+    void translate(Vectorf3 const &vector) { this->translate(vector.x, vector.y, vector.z); };
+    void translateXY(Vectorf const &vector) { this->translate(vector.x, vector.y, 0); };
+
+    /// performs uniform scale
+    void scale(double factor) { this->scale(factor, factor, factor); };
+
+    /// performs per-axis scale
+    void scale(double x, double y, double z);
+
+    /// performs per-axis scale via vector
+    void scale(Vectorf3 const &vector) { this->scale(vector.x, vector.y, vector.z); };
+
+    /// performs mirroring along given axis
+    void mirror(const Axis &axis);
+
+    /// performs mirroring along given axis
+    void mirror(const Vectorf3 &normal);
+
+    /// performs rotation around given axis
+    void rotate(double angle_rad, const Axis &axis);
+
+    /// apply whichever matrix is supplied, multiplied from the left
+    void apply_transformation(TransformationMatrix const &trafo);
 
     /// Get the material id of this ModelVolume object
     /// \return t_model_material_id the material id string
@@ -483,7 +565,7 @@ class ModelVolume
 
     /// Add a new ModelMaterial to this ModelVolume
     /// \param material_id t_model_material_id the id of the material to be added
-    /// \param material ModelMaterial the material to be coppied
+    /// \param material ModelMaterial the material to be copied
     void set_material(t_model_material_id material_id, const ModelMaterial &material);
 
     /// Add a unique ModelMaterial to the current ModelVolume
@@ -523,27 +605,26 @@ class ModelInstance
     friend class ModelObject;
     public:
     double rotation;            ///< Rotation around the Z axis, in radians around mesh center point.
-    double x_rotation;          ///< Rotation around the X axis, in radians around mesh center point. Specific to 3MF format.
-    double y_rotation;          ///< Rotation around the Y axis, in radians around mesh center point. Specific to 3MF format.
     double scaling_factor;      ///< uniform scaling factor.
-    Pointf3 scaling_vector;     ///< scaling vector. Specific to 3MF format.
     Pointf offset;              ///< offset in unscaled coordinates.
-    double z_translation;       ///< translation in z axis. Specific to 3MF format. It's not used anywhere in Slic3r except at writing/reading 3mf.
+    TransformationMatrix additional_trafo; ///< 3mf instance transformation cannot be completely represented by the other properties
 
     /// Get the owning ModelObject
     /// \return ModelObject* pointer to the owner ModelObject
     ModelObject* get_object() const { return this->object; };
 
+    /// Set the internal instance parameters by extracting them from the given complete transformation
+    void set_complete_trafo(TransformationMatrix const & trafo);
+
+    //TRAFO:should be deprecated
     /// Transform an external TriangleMesh object
     /// \param mesh TriangleMesh* pointer to the the mesh
     /// \param dont_translate bool whether to translate the mesh or not
     void transform_mesh(TriangleMesh* mesh, bool dont_translate = false) const;
 
-    /// Calculate a bounding box of a transformed mesh. To be called on an external mesh.
-    /// \param mesh TriangleMesh* pointer to the the mesh
-    /// \param dont_translate bool whether to translate the bounding box or not
-    /// \return BoundingBoxf3 the bounding box after transformation
-    BoundingBoxf3 transform_mesh_bounding_box(const TriangleMesh* mesh, bool dont_translate = false) const;
+    /// Returns the TransformationMatrix defined by the instance's Transform an external TriangleMesh to the returned TriangleMesh object
+    /// \param dont_translate bool whether to translate the mesh or not
+    TransformationMatrix get_trafo_matrix(bool dont_translate = false) const;
 
     /// Transform an external bounding box.
     /// \param bbox BoundingBoxf3 the bounding box to be transformed
@@ -561,6 +642,11 @@ class ModelInstance
     /// Constructor
     /// \param object ModelObject* pointer to the owner ModelObject
     ModelInstance(ModelObject *object);
+
+    /// Constructor
+    /// \param object ModelObject* pointer to the owner ModelObject
+    /// \param trafo transformation that the Model Instance should initially represent
+    ModelInstance(ModelObject *object, const TransformationMatrix & trafo);
 
     /// Constructor
     /// \param object ModelObject* pointer to the owner ModelObject

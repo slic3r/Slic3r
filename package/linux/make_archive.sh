@@ -6,16 +6,19 @@
 # Adapted from script written by bubnikv for Prusa3D.
 # Run from slic3r repo root directory.
 
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $(basename $0) arch_name"
+if [ "$#" -lt 1 ]; then
+    echo "Usage: $(basename $0) arch_name [source_dir]"
+    echo "source_dir is the path to Slic3r's main directory. Default: $(pwd)"
     exit 1;
 fi
-libdirs=$(find ./local-lib -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
+
+echo "WD: $(dirname $0)"
 WD=./$(dirname $0)
 source $(dirname $0)/../common/util.sh
 # Determine if this is a tagged (release) commit.
 # Change the build id accordingly.
 
+set_source_dir $2
 set_version
 get_commit
 set_build_id
@@ -23,6 +26,8 @@ set_branch
 set_app_name
 set_pr_id
 install_par
+
+libdirs=$(find ${SLIC3R_DIR}/local-lib -iname *.so -exec dirname {} \; | sort -u | paste -sd ";" -)
 
 # If we're on a branch, add the branch name to the app name.
 if [ "$current_branch" == "master" ]; then
@@ -38,17 +43,22 @@ fi
 rm -rf $WD/_tmp
 mkdir -p $WD/_tmp
 
-# Set  the application folder infomation.
+# Set the application folder information.
 appfolder="$WD/${appname}"
 archivefolder=$appfolder
 resourcefolder=$appfolder
 
-echo "Appfolder: $appfolder, archivefolder: $archivefolder"
+echo "Appfolder: $appfolder, archivefolder: $archivefolder, resourcefolder=$resourcefolder"
 
 # Our slic3r dir and location of perl
-PERL_BIN=$(which perl)
-PP_BIN=$(which pp)
-SLIC3R_DIR="./"
+if [[ -z ${PERL_BIN+x} ]]; then
+    PERL_BIN=$(which perl)
+    echo "Found perl at $PERL_BIN"
+fi
+if [[ -z ${PP_BIN+x} ]]; then
+    PP_BIN=$(which pp)
+    echo "Found pp at $PP_BIN"
+fi
 
 if [[ -d "${appfolder}" ]]; then
     echo "Deleting old working folder: ${appfolder}"
@@ -61,10 +71,10 @@ if [[ -e "${dmgfile}" ]]; then
 fi
 
 echo "Creating new app folder: $appfolder"
-mkdir -p $appfolder 
+mkdir -p $appfolder
 
-echo "Copying resources..." 
-cp -rf $SLIC3R_DIR/var $resourcefolder/
+echo "Copying resources... from ${SLIC3R_DIR}/var to $resourcefolder"
+cp -rf ${SLIC3R_DIR}/var $resourcefolder/
 
 echo "Copying Slic3r..."
 cp $SLIC3R_DIR/slic3r.pl $archivefolder/slic3r.pl
@@ -101,7 +111,7 @@ unzip -qq -o $WD/_tmp/test.par -d $WD/_tmp/
 cp -rf $WD/_tmp/lib/* $archivefolder/local-lib/lib/perl5/
 cp -rf $WD/_tmp/shlib $archivefolder/
 rm -rf $WD/_tmp
-for i in $(cat $WD/libpaths.txt | grep -v "^#" | awk -F# '{print $1}'); do 
+for i in $(cat $WD/libpaths.txt | grep -v "^#" | awk -F# '{print $1}'); do
 	install -v $i $archivefolder/bin
 done
 
@@ -114,9 +124,9 @@ rm -rf $archivefolder/local-lib/lib/perl5/App
 rm -rf $archivefolder/local-lib/lib/perl5/Devel/CheckLib.pm
 rm -rf $archivefolder/local-lib/lib/perl5/ExtUtils
 rm -rf $archivefolder/local-lib/lib/perl5/Module/Build*
-rm -rf $(pwd)$archivefolder/local-lib/lib/perl5/TAP
-rm -rf $(pwd)/$archivefolder/local-lib/lib/perl5/Test*
-find $(pwd)/$archivefolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
+rm -rf $archivefolder/local-lib/lib/perl5/TAP
+rm -rf $archivefolder/local-lib/lib/perl5/Test*
+find $archivefolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
     -or -name DocView -or -name STC -or -name IPC \
     -or -name Calendar -or -name DataView \
     -or -name DateTime -or -name Media -or -name PerlTest \
@@ -124,4 +134,5 @@ find $(pwd)/$archivefolder/local-lib -type d -path '*/Wx/*' \( -name WebView \
 rm -rf $archivefolder/local-lib/lib/perl5/*/Alien/wxWidgets/*/include
 find $archivefolder/local-lib -depth -type d -empty -exec rmdir "{}" \;
 
-tar -C$(pwd)/$(dirname $appfolder) -cjf $(pwd)/$dmgfile "$appname"
+echo "Archiving from $appfolder"
+tar -C$WD -cjf $(pwd)/$dmgfile "$(basename $appfolder)"

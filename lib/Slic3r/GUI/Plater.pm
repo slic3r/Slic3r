@@ -31,6 +31,7 @@ use Wx qw(:button :cursor :dialog :filedialog :keycode :icon :font :id :misc
 use Wx::Event qw(EVT_BUTTON EVT_COMMAND EVT_KEY_DOWN EVT_MOUSE_EVENTS EVT_PAINT EVT_TOOL 
     EVT_CHOICE EVT_COMBOBOX EVT_TIMER EVT_NOTEBOOK_PAGE_CHANGED EVT_LEFT_UP EVT_CLOSE);
 use base qw(Wx::Panel Class::Accessor);
+use Slic3r::GUI::ColorScheme;
 
 __PACKAGE__->mk_accessors(qw(presets));
 
@@ -42,6 +43,12 @@ use constant TB_EXPORT_GCODE    => &Wx::NewId;
 use constant TB_EXPORT_STL      => &Wx::NewId;
 use constant TB_MORE    => &Wx::NewId;
 use constant TB_FEWER   => &Wx::NewId;
+use constant TB_X90CW   => &Wx::NewId;
+use constant TB_X90CCW  => &Wx::NewId;
+use constant TB_Y90CW   => &Wx::NewId;
+use constant TB_Y90CCW  => &Wx::NewId;
+use constant TB_Z90CW   => &Wx::NewId;
+use constant TB_Z90CCW  => &Wx::NewId;
 use constant TB_45CW    => &Wx::NewId;
 use constant TB_45CCW   => &Wx::NewId;
 use constant TB_ROTFACE => &Wx::NewId;
@@ -83,6 +90,9 @@ sub new {
 
     # Stack of redo operations.
     $self->{redo_stack} = [];
+
+    # Preset dialogs
+    $self->{'preset_dialogs'} = {};
 
     $self->{print}->set_status_cb(sub {
         my ($percent, $message) = @_;
@@ -191,9 +201,20 @@ sub new {
         $self->{htoolbar}->AddTool(TB_MORE, "More", Wx::Bitmap->new($Slic3r::var->("add.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_FEWER, "Fewer", Wx::Bitmap->new($Slic3r::var->("delete.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddSeparator;
-        $self->{htoolbar}->AddTool(TB_45CCW, "45° ccw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_anticlockwise.png"), wxBITMAP_TYPE_PNG), '');
-        $self->{htoolbar}->AddTool(TB_45CW, "45° cw", Wx::Bitmap->new($Slic3r::var->("arrow_rotate_clockwise.png"), wxBITMAP_TYPE_PNG), '');
+       
+        if ($Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz' || $Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz-big') {
+            $self->{htoolbar}->AddTool(TB_X90CCW, "90° X ccw", Wx::Bitmap->new($Slic3r::var->(@rotateX90ccwT), wxBITMAP_TYPE_PNG), '');
+            $self->{htoolbar}->AddTool(TB_X90CW, "90° X cw", Wx::Bitmap->new($Slic3r::var->(@rotateX90cwT), wxBITMAP_TYPE_PNG), '');
+            $self->{htoolbar}->AddTool(TB_Y90CCW, "90° Y ccw", Wx::Bitmap->new($Slic3r::var->(@rotateY90ccwT), wxBITMAP_TYPE_PNG), '');
+            $self->{htoolbar}->AddTool(TB_Y90CW, "90° Y cw", Wx::Bitmap->new($Slic3r::var->(@rotateY90cwT), wxBITMAP_TYPE_PNG), '');
+        }
+        
+        $self->{htoolbar}->AddTool(TB_45CCW, "45° ccw", Wx::Bitmap->new($Slic3r::var->(@rotateZ45ccwT), wxBITMAP_TYPE_PNG), '');
+        $self->{htoolbar}->AddTool(TB_45CW, "45° cw", Wx::Bitmap->new($Slic3r::var->(@rotateZ45cwT), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_ROTFACE, "Rotate face", Wx::Bitmap->new($Slic3r::var->("rotate_face.png"), wxBITMAP_TYPE_PNG), '');
+        
+        $self->{htoolbar}->AddSeparator;
+
         $self->{htoolbar}->AddTool(TB_SCALE, "Scale…", Wx::Bitmap->new($Slic3r::var->("arrow_out.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_SPLIT, "Split", Wx::Bitmap->new($Slic3r::var->("shape_ungroup.png"), wxBITMAP_TYPE_PNG), '');
         $self->{htoolbar}->AddTool(TB_CUT, "Cut…", Wx::Bitmap->new($Slic3r::var->("package.png"), wxBITMAP_TYPE_PNG), '');
@@ -208,8 +229,14 @@ sub new {
             arrange         => "Arrange",
             increase        => "",
             decrease        => "",
-            rotate45ccw     => "",
-            rotate45cw      => "",
+            rotateX90ccw    => "",
+            rotateX90cw     => "",
+            rotateY90ccw    => "",
+            rotateY90cw     => "",
+            rotateZ90ccw    => "",
+            rotateZ90cw     => "",
+            rotateZ45ccw    => "",
+            rotateZ45cw     => "",
             rotateFace      => "",
             changescale     => "Scale…",
             split           => "Split",
@@ -217,44 +244,82 @@ sub new {
             layers          => "Layer heights…",
             settings        => "Settings…",
         );
+        my %tbar_buttonsToolTip = (
+            add             => "Adds new Objects",
+            remove          => "Delete Object",
+            reset           => "Clears the Plate of all Objects",
+            arrange         => "Automaitally arrange Objects",
+            increase        => "Add another Copy",
+            decrease        => "Remove a Copy",
+            rotateX90ccw    => "Rotate around X by 90° counter clockwise",
+            rotateX90cw     => "Rotate around X by 90° clockwise",
+            rotateY90ccw    => "Rotate around Y by 90° counter clockwise",
+            rotateY90cw     => "Rotate around Y by 90° clockwise",
+            rotateZ90ccw    => "Rotate around Z by 90° counter clockwise",
+            rotateZ90cw     => "Rotate around Z by 90° clockwise",
+            rotateZ45ccw    => "Rotate around Z by 45° counter clockwise",
+            rotateZ45cw     => "Rotate around Z by 45° clockwise",
+            rotateFace      => "Rotate to Face",
+            changescale     => "Change Scale of Object",
+            split           => "Split Object",
+            cut             => "Cut Object",
+            settings        => "Settings, Parts, Modifiers and Layers",
+        );
         $self->{btoolbar} = Wx::BoxSizer->new(wxHORIZONTAL);
-        for (qw(add remove reset arrange increase decrease rotate45ccw rotate45cw rotateFace changescale split cut layers settings)) {
+        
+        my @buttons = qw(add remove reset arrange increase decrease);
+        if ($Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz' || $Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz-big') {
+            push @buttons, qw(rotateX90ccw rotateX90cw rotateY90ccw rotateY90cw rotateZ45ccw rotateZ45cw);
+        }
+        push @buttons, qw(changescale split cut settings);
+        for (@buttons) {
             $self->{"btn_$_"} = Wx::Button->new($self, -1, $tbar_buttons{$_}, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
             $self->{btoolbar}->Add($self->{"btn_$_"});
+            $self->{"btn_$_"}->SetToolTipString($tbar_buttonsToolTip{$_});
         }
     }
 
     # right pane buttons
-    $self->{btn_export_gcode} = Wx::Button->new($self, -1, "Export G-code…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
-    $self->{btn_print} = Wx::Button->new($self, -1, "Print…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
-    $self->{btn_send_gcode} = Wx::Button->new($self, -1, "Send to printer", wxDefaultPosition, [-1, 30], wxBU_LEFT);
-    $self->{btn_export_stl} = Wx::Button->new($self, -1, "Export STL…", wxDefaultPosition, [-1, 30], wxBU_LEFT);
+    $self->{btn_export_gcode} = Wx::Button->new($self, -1, "Export G-code…", wxDefaultPosition, [-1, -1], wxBU_LEFT);
+    $self->{btn_print} = Wx::Button->new($self, -1, "Print…", wxDefaultPosition, [-1, -1], wxBU_LEFT);
+    $self->{btn_send_gcode} = Wx::Button->new($self, -1, "Send to printer", wxDefaultPosition, [-1, -1], wxBU_LEFT);
+    $self->{btn_export_stl} = Wx::Button->new($self, -1, "Export STL…", wxDefaultPosition, [-1, -1], wxBU_LEFT);
     #$self->{btn_export_gcode}->SetFont($Slic3r::GUI::small_font);
     #$self->{btn_export_stl}->SetFont($Slic3r::GUI::small_font);
     $self->{btn_print}->Hide;
     $self->{btn_send_gcode}->Hide;
     
     if ($Slic3r::GUI::have_button_icons) {
-        my %icons = qw(
-            add             brick_add.png
-            remove          brick_delete.png
-            reset           cross.png
-            arrange         bricks.png
-            export_gcode    cog_go.png
-            print           arrow_up.png
-            send_gcode      arrow_up.png
-            export_stl      brick_go.png
+        my %icons = (
+            add            => "brick_add.png",
+            remove         => "brick_delete.png",
+            reset          => "cross.png",
+            arrange        => "bricks.png",
+            export_gcode   => "cog_go.png",
+            print          => "arrow_up.png",
+            send_gcode     => "arrow_up.png",
+            export_stl     => "brick_go.png",
             
-            increase        add.png
-            decrease        delete.png
-            rotate45cw      arrow_rotate_clockwise.png
-            rotate45ccw     arrow_rotate_anticlockwise.png
-            rotateFace      rotate_face.png
-            changescale     arrow_out.png
-            split           shape_ungroup.png
-            cut             package.png
-            layers          variable_layer_height.png
-            settings        cog.png
+            increase       => "add.png",
+            decrease       => "delete.png",
+            
+
+            rotateX90cw    => @rotateX90cwT,
+            rotateX90ccw   => @rotateX90ccwT,
+            rotateY90cw    => @rotateY90cwT,
+            rotateY90ccw   => @rotateY90ccwT,
+            rotateZ90cw    => @rotateZ90cwT,
+            rotateZ90ccw   => @rotateZ90ccwT,
+            rotateZ45cw    => @rotateZ45cwT,
+            rotateZ45ccw   => @rotateZ45ccwT,
+            
+            rotateFace     => "rotate_face.png",
+            changescale    => "arrow_out.png",
+            split          => "shape_ungroup.png",
+            cut            => "package.png",
+            layers         => "variable_layer_height.png",
+            settings       => "cog.png",
+
         );
         for (grep $self->{"btn_$_"}, keys %icons) {
             $self->{"btn_$_"}->SetBitmap(Wx::Bitmap->new($Slic3r::var->($icons{$_}), wxBITMAP_TYPE_PNG));
@@ -285,9 +350,18 @@ sub new {
         EVT_TOOL($self, TB_ARRANGE, sub { $self->arrange; });
         EVT_TOOL($self, TB_MORE, sub { $self->increase; });
         EVT_TOOL($self, TB_FEWER, sub { $self->decrease; });
-        EVT_TOOL($self, TB_45CW, sub { $_[0]->rotate(-45) });
-        EVT_TOOL($self, TB_45CCW, sub { $_[0]->rotate(45) });
+        if ($Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz' || $Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz-big') {
+            EVT_TOOL($self, TB_X90CW, sub { $_[0]->rotate(-90, X) });
+            EVT_TOOL($self, TB_X90CCW, sub { $_[0]->rotate(90, X) });
+            EVT_TOOL($self, TB_Y90CW, sub { $_[0]->rotate(-90, Y) });
+            EVT_TOOL($self, TB_Y90CCW, sub { $_[0]->rotate(90, Y) });
+            EVT_TOOL($self, TB_Z90CW, sub { $_[0]->rotate(-90, Z) });
+            EVT_TOOL($self, TB_Z90CCW, sub { $_[0]->rotate(90, Z) });
+        }
+        EVT_TOOL($self, TB_45CW, sub { $_[0]->rotate(-45, Z) });
+        EVT_TOOL($self, TB_45CCW, sub { $_[0]->rotate(45, Z) });
         EVT_TOOL($self, TB_ROTFACE, sub { $_[0]->rotate_face });
+
         EVT_TOOL($self, TB_SCALE, sub { $self->changescale(undef); });
         EVT_TOOL($self, TB_SPLIT, sub { $self->split_object; });
         EVT_TOOL($self, TB_CUT, sub { $_[0]->object_cut_dialog });
@@ -300,9 +374,22 @@ sub new {
         EVT_BUTTON($self, $self->{btn_arrange}, sub { $self->arrange; });
         EVT_BUTTON($self, $self->{btn_increase}, sub { $self->increase; });
         EVT_BUTTON($self, $self->{btn_decrease}, sub { $self->decrease; });
+
+        if ($Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz' || $Slic3r::GUI::Settings->{_}{rotation_controls} eq 'xyz-big') {
+            EVT_BUTTON($self, $self->{btn_rotateX90cw}, sub { $_[0]->rotate(-90, X) });
+            EVT_BUTTON($self, $self->{btn_rotateX90ccw}, sub { $_[0]->rotate(90, X) });
+            EVT_BUTTON($self, $self->{btn_rotateY90cw}, sub { $_[0]->rotate(-90, Y) });
+            EVT_BUTTON($self, $self->{btn_rotateY90ccw}, sub { $_[0]->rotate(90, Y) });
+            EVT_BUTTON($self, $self->{btn_rotateZ90cw}, sub { $_[0]->rotate(-90, Z) });
+            EVT_BUTTON($self, $self->{btn_rotateZ90ccw}, sub { $_[0]->rotate(90, Z) });
+        }
+        EVT_BUTTON($self, $self->{btn_rotateZ45cw}, sub { $_[0]->rotate(-45, Z) });
+        EVT_BUTTON($self, $self->{btn_rotateZ45ccw}, sub { $_[0]->rotate(45, Z) });
+        EVT_BUTTON($self, $self->{btn_rotateFace}, sub { $_[0]->rotate_face });
+
         EVT_BUTTON($self, $self->{btn_rotate45cw}, sub { $_[0]->rotate(-45) });
         EVT_BUTTON($self, $self->{btn_rotate45ccw}, sub { $_[0]->rotate(45) });
-        EVT_BUTTON($self, $self->{btn_rotateFace}, sub { $_[0]->rotate_face });
+        
         EVT_BUTTON($self, $self->{btn_changescale}, sub { $self->changescale(undef); });
         EVT_BUTTON($self, $self->{btn_split}, sub { $self->split_object; });
         EVT_BUTTON($self, $self->{btn_cut}, sub { $_[0]->object_cut_dialog });
@@ -515,6 +602,7 @@ sub new {
             my @info = (
                 fil     => "Used Filament",
                 cost    => "Cost",
+                tim     => "Time",
             );
             while (my $field = shift @info) {
                 my $label = shift @info;
@@ -599,14 +687,6 @@ sub _on_change_combobox {
         return 0 if !$self->prompt_unsaved_changes;
     }
     wxTheApp->CallAfter(sub {
-        # Close the preset editor tab if any
-        if (exists $self->GetFrame->{preset_editor_tabs}{$group}) {
-            my $tabpanel = $self->GetFrame->{tabpanel};
-            $tabpanel->DeletePage($tabpanel->GetPageIndex($self->GetFrame->{preset_editor_tabs}{$group}));
-            delete $self->GetFrame->{preset_editor_tabs}{$group};
-            $tabpanel->SetSelection(0); # without this, a newly created tab will not be selected by wx
-        }
-        
         $self->_on_select_preset($group);
         
         # This will remove the "(modified)" mark from any dirty preset handled here.
@@ -800,28 +880,47 @@ sub selected_presets {
     return $group ? @{$presets{$group}} : %presets;
 }
 
+sub show_unique_preset_dialog {
+    my($self, $group) = @_;
+    my $dlg;
+    my $preset_editor;
+    if( $self->{'preset_dialogs'}->{$group} ) {
+        $dlg = $self->{'preset_dialogs'}->{$group};
+    }
+    else {        
+        my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
+        $dlg = $class->new($self);
+        $self->{'preset_dialogs'}->{$group} = $dlg;        
+    }
+    $dlg->Show;    
+    $preset_editor = $dlg->preset_editor;
+    return $preset_editor;
+}
+
 sub show_preset_editor {
-    my ($self, $group, $i) = @_;
+    my ($self, $group, $i, $panel) = @_;
     
     wxTheApp->CallAfter(sub {
         my @presets = $self->selected_presets($group);
     
         my $preset_editor;
-        my $dlg;
         my $mainframe = $self->GetFrame;
         my $tabpanel = $mainframe->{tabpanel};
         if (exists $mainframe->{preset_editor_tabs}{$group}) {
+            my $tabindex = 0;
+            $tabindex = 1 if $Slic3r::GUI::Settings->{_}{show_host};
+            $tabindex += 1 if $group eq 'print';
+            $tabindex += 2 if $group eq 'filament';
+            $tabindex += 3 if $group eq 'printer';
             # we already have an open editor
-            $tabpanel->SetSelection($tabpanel->GetPageIndex($mainframe->{preset_editor_tabs}{$group}));
+            $tabpanel->SetSelection($tabindex);
             return;
         } elsif ($Slic3r::GUI::Settings->{_}{tabbed_preset_editors}) {
             my $class = "Slic3r::GUI::PresetEditor::" . ucfirst($group);
-            $mainframe->{preset_editor_tabs}{$group} = $preset_editor = $class->new($self->GetFrame);
-            $tabpanel->AddPage($preset_editor, ucfirst($group) . " Settings", 1);
+            $mainframe->{preset_editor_tabs}{$group} = $preset_editor = $class->new($tabpanel);
+            $tabpanel->AddPage($preset_editor, ucfirst($group) . " Settings");
         } else {
-            my $class = "Slic3r::GUI::PresetEditorDialog::" . ucfirst($group);
-            $dlg = $class->new($self);
-            $preset_editor = $dlg->preset_editor;
+           $preset_editor = $self->show_unique_preset_dialog($group);
         }
     
         $preset_editor->select_preset_by_name($presets[$i // 0]->name);
@@ -846,10 +945,6 @@ sub show_preset_editor {
         };
         $preset_editor->on_select_preset($cb);
         $preset_editor->on_save_preset($cb);
-    
-        if ($dlg) {
-            $dlg->Show;
-        }
     });
 }
 
@@ -947,14 +1042,29 @@ sub undo {
 
     my $type = $operation->{type};
 
-    if ($type eq "ROTATE") {
+    if ($type eq "TRANSFORM") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $trafo = $operation->{attributes}->[0];
+        $self->transform($trafo->inverse(), 'true'); # Apply inverse transformation.
+
+    } elsif ($type eq "ROTATE_Z") {
         my $object_id = $operation->{object_identifier};
         my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
 
         my $angle = $operation->{attributes}->[0];
-        my $axis = $operation->{attributes}->[1];
-        $self->rotate(-1 * $angle, $axis, 'true'); # Apply inverse transformation.
+        $self->rotate(-1 * $angle, Z, 'true'); # Apply inverse transformation.
+
+    } elsif ($type eq "SCALE_UNIFORM") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $new_scale = $operation->{attributes}->[0];
+        $self->changescale(undef, undef, $new_scale, 'true');
 
     } elsif ($type eq "INCREASE") {
         my $object_id = $operation->{object_identifier};
@@ -972,14 +1082,6 @@ sub undo {
         my $copies = $operation->{attributes}->[0];
         $self->increase($copies, 'true');
 
-    } elsif ($type eq "MIRROR") {
-        my $object_id = $operation->{object_identifier};
-        my $obj_idx = $self->get_object_index($object_id);
-        $self->select_object($obj_idx);
-
-        my $axis = $operation->{attributes}->[0];
-        $self->mirror($axis, 'true');
-
     } elsif ($type eq "REMOVE") {
         my $_model = $operation->{attributes}->[0];
         $self->load_model_objects(@{$_model->objects});
@@ -996,16 +1098,6 @@ sub undo {
         $self->load_model_objects(@{$operation->{attributes}->[0]->objects});
         $self->{object_identifier}--;
         $self->{objects}->[-1]->identifier($operation->{object_identifier}); # Add the original assigned identifier.
-
-    } elsif ($type eq "CHANGE_SCALE") {
-        my $object_id = $operation->{object_identifier};
-        my $obj_idx = $self->get_object_index($object_id);
-        $self->select_object($obj_idx);
-
-        my $axis = $operation->{attributes}->[0];
-        my $tosize = $operation->{attributes}->[1];
-        my $saved_scale = $operation->{attributes}->[3];
-        $self->changescale($axis, $tosize, $saved_scale, 'true');
 
     } elsif ($type eq "RESET") {
         # Revert changes to the plater object identifier. It's modified when adding new objects only not when undo/redo is executed.
@@ -1050,14 +1142,29 @@ sub redo {
 
     my $type = $operation->{type};
 
-    if ($type eq "ROTATE") {
+    if ($type eq "TRANSFORM") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $trafo = $operation->{attributes}->[0];
+        $self->transform($trafo, 'true'); # Reapply transformation.
+
+    } elsif ($type eq "ROTATE_Z") {
         my $object_id = $operation->{object_identifier};
         my $obj_idx = $self->get_object_index($object_id);
         $self->select_object($obj_idx);
 
         my $angle = $operation->{attributes}->[0];
-        my $axis = $operation->{attributes}->[1];
-        $self->rotate($angle, $axis, 'true');
+        $self->rotate($angle, Z, 'true'); # Reapply transformation.
+
+    } elsif ($type eq "SCALE_UNIFORM") {
+        my $object_id = $operation->{object_identifier};
+        my $obj_idx = $self->get_object_index($object_id);
+        $self->select_object($obj_idx);
+
+        my $new_scale = $operation->{attributes}->[1];
+        $self->changescale(undef, undef, $new_scale, 'true');
 
     } elsif ($type eq "INCREASE") {
         my $object_id = $operation->{object_identifier};
@@ -1074,14 +1181,6 @@ sub redo {
 
         my $copies = $operation->{attributes}->[0];
         $self->decrease($copies, 'true');
-
-    } elsif ($type eq "MIRROR") {
-        my $object_id = $operation->{object_identifier};
-        my $obj_idx = $self->get_object_index($object_id);
-        $self->select_object($obj_idx);
-
-        my $axis = $operation->{attributes}->[0];
-        $self->mirror($axis, 'true');
 
     } elsif ($type eq "REMOVE") {
         my $object_id = $operation->{object_identifier};
@@ -1104,16 +1203,6 @@ sub redo {
             $self->{objects}->[-$obj_count]->identifier($obj_identifiers_start++);
             $obj_count--;
         }
-    } elsif ($type eq "CHANGE_SCALE") {
-        my $object_id = $operation->{object_identifier};
-        my $obj_idx = $self->get_object_index($object_id);
-        $self->select_object($obj_idx);
-
-        my $axis = $operation->{attributes}->[0];
-        my $tosize = $operation->{attributes}->[1];
-        my $old_scale = $operation->{attributes}->[2];
-        $self->changescale($axis, $tosize, $old_scale, 'true');
-
     } elsif ($type eq "RESET") {
         $self->reset('true');
     } elsif ($type eq "ADD") {
@@ -1411,7 +1500,7 @@ sub reset {
     my $current_model = $self->{model}->clone;
 
     if (!defined $dont_push) {
-        # Get the identifiers of the curent model objects.
+        # Get the identifiers of the current model objects.
         my $objects_identifiers = [];
         for (my $i = 0; $i <= $#{$self->{objects}}; $i++){
             push @{$objects_identifiers}, $self->{objects}->[$i]->identifier;
@@ -1438,12 +1527,8 @@ sub increase {
     for my $i (1..$copies) {
         $instance = $model_object->add_instance(
             offset          => Slic3r::Pointf->new(map 10+$_, @{$instance->offset}),
-            z_translation   => $instance->z_translation,
             scaling_factor  => $instance->scaling_factor,
-            scaling_vector  => $instance->scaling_vector,
             rotation        => $instance->rotation,
-            x_rotation      => $instance->x_rotation,
-            y_rotation      => $instance->y_rotation,
         );
         $self->{print}->objects->[$obj_idx]->add_copy($instance->offset);
     }
@@ -1543,23 +1628,38 @@ sub rotate_face {
     return if !defined $normal;
     my $axis = $dlg->SelectedAxis;
     return if !defined $axis;
-    
-    # Actual math to rotate
-    my $angleToXZ = atan2($normal->y(),$normal->x());
-    my $angleToZ = acos(-$normal->z());
-    $self->rotate(-rad2deg($angleToXZ),Z);
-    $self->rotate(rad2deg($angleToZ),Y);
-    
+
+    my $axis_vec = Slic3r::Pointf3->new(0,0,0);
     if($axis == Z){
-        $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-2));
+        $axis_vec->set_z(-1);
     } else {
         if($axis == X){
-            $self->rotate(90,Y);
+            $axis_vec->set_x(-1);
         } else {
-            $self->rotate(90,X);
+            $axis_vec->set_y(-1);
         }
-        $self->add_undo_operation("GROUP", $object->identifier, splice(@{$self->{undo_stack}},-3));
     }
+
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    my $model_instance = $model_object->instances->[0];
+
+    $model_object->transform_by_instance($model_instance, 1);
+
+    $model_object->reset_undo_trafo();
+    $model_object->rotate_vec_to_vec($normal,$axis_vec);
+
+    # realign object to Z = 0
+    $model_object->align_to_ground;
+    $self->make_thumbnail($obj_idx);
+
+    $model_object->update_bounding_box;
+    # update print and start background processing
+    $self->{print}->add_model_object($model_object, $obj_idx);
+
+    $self->selection_changed;  # refresh info (size etc.)
+    $self->on_model_change;
+    
+    $self->add_undo_operation("TRANSFORM", $object->identifier, $model_object->get_undo_trafo());
 }
 
 sub rotate {
@@ -1585,6 +1685,8 @@ sub rotate {
         $angle = Wx::GetTextFromUser("Enter the rotation angle:", "Rotate around $axis_name axis",
             $default, $self);
         return if !$angle || $angle !~ /^-?\d*(?:\.\d*)?$/ || $angle == -1;
+        
+        $angle = $angle - $default;
     }
     
     $self->stop_background_process;
@@ -1593,24 +1695,30 @@ sub rotate {
         my $new_angle = deg2rad($angle);
         $_->set_rotation($_->rotation + $new_angle) for @{ $model_object->instances };
         $object->transform_thumbnail($self->{model}, $obj_idx);
+
+        if (!defined $dont_push) {
+            $self->add_undo_operation("ROTATE_Z", $object->identifier, $angle);
+        }
     } else {
         # rotation around X and Y needs to be performed on mesh
         # so we first apply any Z rotation
         $model_object->transform_by_instance($model_instance, 1);
+
+        $model_object->reset_undo_trafo();
         $model_object->rotate(deg2rad($angle), $axis);
         
         # realign object to Z = 0
-        $model_object->center_around_origin;
+        $model_object->align_to_ground;
         $self->make_thumbnail($obj_idx);
+
+        if (!defined $dont_push) {
+            $self->add_undo_operation("TRANSFORM", $object->identifier, $model_object->get_undo_trafo());
+        }
     }
 
     $model_object->update_bounding_box;
     # update print and start background processing
     $self->{print}->add_model_object($model_object, $obj_idx);
-
-    if (!defined $dont_push) {
-        $self->add_undo_operation("ROTATE", $object->identifier, $angle, $axis);
-    }
 
     $self->selection_changed;  # refresh info (size etc.)
     $self->on_model_change;
@@ -1628,11 +1736,11 @@ sub mirror {
     # apply Z rotation before mirroring
     $model_object->transform_by_instance($model_instance, 1);
     
+    $model_object->reset_undo_trafo();
     $model_object->mirror($axis);
-    $model_object->update_bounding_box;
     
     # realign object to Z = 0
-    $model_object->center_around_origin;
+    $model_object->align_to_ground;
     $self->make_thumbnail($obj_idx);
         
     # update print and start background processing
@@ -1640,7 +1748,38 @@ sub mirror {
     $self->{print}->add_model_object($model_object, $obj_idx);
 
     if (!defined $dont_push) {
-        $self->add_undo_operation("MIRROR", $object->identifier, $axis);
+        $self->add_undo_operation("TRANSFORM", $object->identifier, $model_object->get_undo_trafo());
+    }
+
+    $self->selection_changed;  # refresh info (size etc.)
+    $self->on_model_change;
+}
+
+sub transform {
+    my ($self, $trafo, $dont_push) = @_;
+    
+    my ($obj_idx, $object) = $self->selected_object;
+    return if !defined $obj_idx;
+    
+    my $model_object = $self->{model}->objects->[$obj_idx];
+    my $model_instance = $model_object->instances->[0];
+    
+    # apply Z rotation before mirroring
+    $model_object->transform_by_instance($model_instance, 1);
+    
+    $model_object->apply_transformation($trafo);
+    $model_object->update_bounding_box;
+    
+    # realign object to Z = 0
+    $model_object->align_to_ground;
+    $self->make_thumbnail($obj_idx);
+        
+    # update print and start background processing
+    $self->stop_background_process;
+    $self->{print}->add_model_object($model_object, $obj_idx);
+
+    if (!defined $dont_push) {
+        $self->add_undo_operation("TRANSFORM", $object->identifier, $trafo);
     }
 
     $self->selection_changed;  # refresh info (size etc.)
@@ -1696,9 +1835,17 @@ sub changescale {
         
         my $versor = [1,1,1];
         $versor->[$axis] = $scale/100;
+
+        $model_object->reset_undo_trafo();
         $model_object->scale_xyz(Slic3r::Pointf3->new(@$versor));
+
         # object was already aligned to Z = 0, so no need to realign it
         $self->make_thumbnail($obj_idx);
+
+        # Add the new undo operation.
+        if (!defined $dont_push) {
+            $self->add_undo_operation("TRANSFORM", $object->identifier, $model_object->get_undo_trafo());
+        }
     } else {
         if (!defined $saved_scale) {
             if ($tosize) {
@@ -1733,12 +1880,13 @@ sub changescale {
         $object->transform_thumbnail($self->{model}, $obj_idx);
 
         $scale *= 100;
+
+        # Add the new undo operation.
+        if (!defined $dont_push) {
+            $self->add_undo_operation("SCALE_UNIFORM", $object->identifier, $old_scale, $scale);
+        }
     }
 
-    # Add the new undo operation.
-    if (!defined $dont_push) {
-        $self->add_undo_operation("CHANGE_SCALE", $object->identifier, $axis, $tosize, $scale, $old_scale);
-    }
 
     $model_object->update_bounding_box;
     
@@ -1781,7 +1929,7 @@ sub split_object {
     
     $self->pause_background_process;
 
-    # Save the curent model object for undo/redo operataions.
+    # Save the current model object for undo/redo operataions.
     my $org_object_model = Slic3r::Model->new;
     $org_object_model->add_object($current_model_object);
 
@@ -1807,7 +1955,7 @@ sub split_object {
     # remove the original object before spawning the object_loaded event, otherwise 
     # we'll pass the wrong $obj_idx to it (which won't be recognized after the
     # thumbnail thread returns)
-    $self->remove($obj_idx, 'true'); # Don't push to the undo stack it's considered a split opeation not a remove one.
+    $self->remove($obj_idx, 'true'); # Don't push to the undo stack it's considered a split operation not a remove one.
     $current_object = $obj_idx = undef;
 
     # Save the object identifiers used in undo/redo operations.
@@ -2201,6 +2349,18 @@ sub on_export_completed {
     } else {
         $message = "Export failed";
     }
+    # Estimate print duration
+    {
+        my $estimator = Slic3r::GCode::TimeEstimator->new;
+        $estimator->parse_file($self->{export_gcode_output_file});
+        my $time = $estimator->time;
+        $self->{print_info_tim}->SetLabel(sprintf(
+            "%d hours, %d minutes and %d seconds",
+            int($time / 3600),
+            int(($time % 3600) / 60),
+            int($time % 60),
+        ));
+    }
     $self->{export_gcode_output_file} = undef;
     $self->statusbar->SetStatusText($message);
     wxTheApp->notify($message);
@@ -2375,51 +2535,38 @@ sub export_stl {
 sub reload_from_disk {
     my ($self) = @_;
     
-    my ($obj_idx, $object) = $self->selected_object;
+    my ($obj_idx, $org_obj_plater) = $self->selected_object;
     return if !defined $obj_idx;
     
-    if (!$object->input_file) {
+    if (!$org_obj_plater->input_file) {
         Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because it isn't referenced to its input file any more. This is the case after performing operations like cut or split.");
         return;
     }
-    if (!-e $object->input_file) {
+    if (!-e $org_obj_plater->input_file) {
         Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the file doesn't exist anymore on the disk.");
         return;
     }
-    
-    # Only reload the selected object and not all objects from the input file.
-    my @new_obj_idx = $self->load_file($object->input_file, $object->input_file_obj_idx);
-    if (!@new_obj_idx) {
-        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the new file doesn't contain the object.");
-        return;
-    }
-
-    my $org_obj = $self->{model}->objects->[$obj_idx];
-
-    # check if the object is dependant of more than one file
-    my $org_obj_has_modifiers=0;
-    for my $i (0..($org_obj->volumes_count-1)) {
-        if ($org_obj->input_file ne $org_obj->get_volume($i)->input_file) {
-            $org_obj_has_modifiers=1;
-            last;
-        }
-    }
 
     my $reload_behavior = $Slic3r::GUI::Settings->{_}{reload_behavior};
+    my $reload_preserve_trafo = $Slic3r::GUI::Settings->{_}{reload_preserve_trafo};
 
     # ask the user how to proceed, if option is selected in preferences
-    if ($org_obj_has_modifiers && !$Slic3r::GUI::Settings->{_}{reload_hide_dialog}) {
-        my $dlg = Slic3r::GUI::ReloadDialog->new(undef,$reload_behavior);
+    if (!$Slic3r::GUI::Settings->{_}{reload_hide_dialog}) {
+        my $dlg = Slic3r::GUI::ReloadDialog->new(undef,$reload_behavior,$reload_preserve_trafo);
         my $res = $dlg->ShowModal;
         if ($res==wxID_CANCEL) {
-            $self->remove($_) for @new_obj_idx;
             $dlg->Destroy;
             return;
         }
-        $reload_behavior = $dlg->GetSelection;
+        $reload_behavior = $dlg->GetAdditionalOption;
+        $reload_preserve_trafo = $dlg->GetPreserveTrafo;
         my $save = 0;
         if ($reload_behavior != $Slic3r::GUI::Settings->{_}{reload_behavior}) {
             $Slic3r::GUI::Settings->{_}{reload_behavior} = $reload_behavior;
+            $save = 1;
+        }
+        if ($reload_preserve_trafo != $Slic3r::GUI::Settings->{_}{reload_preserve_trafo}) {
+            $Slic3r::GUI::Settings->{_}{reload_preserve_trafo} = $reload_preserve_trafo;
             $save = 1;
         }
         if ($dlg->GetHideOnNext) {
@@ -2429,6 +2576,15 @@ sub reload_from_disk {
         Slic3r::GUI->save_settings if $save;
         $dlg->Destroy;
     }
+    
+    # Only reload the selected object and not all objects from the input file.
+    my @new_obj_idx = $self->load_file($org_obj_plater->input_file, $org_obj_plater->input_file_obj_idx);
+    if (!@new_obj_idx) {
+        Slic3r::GUI::warning_catcher($self)->("The selected object couldn't be reloaded because the new file doesn't contain the object.");
+        return;
+    }
+
+    my $org_obj = my $new_obj = $self->{model}->objects->[$obj_idx];
 
     my $volume_unmatched=0;
 
@@ -2437,6 +2593,7 @@ sub reload_from_disk {
         $new_obj->clear_instances;
         $new_obj->add_instance($_) for @{$org_obj->instances};
         $new_obj->config->apply($org_obj->config);
+        $new_obj->set_trafo_obj($org_obj->get_trafo_obj()) if $reload_preserve_trafo;
         
         my $new_vol_idx = 0;
         my $org_vol_idx = 0;
@@ -2445,10 +2602,12 @@ sub reload_from_disk {
         
         while ($new_vol_idx<=$new_vol_count-1) {
             if (($org_vol_idx<=$org_vol_count-1) && ($org_obj->get_volume($org_vol_idx)->input_file eq $new_obj->input_file)) {
-                # apply config from the matching volumes
+                # apply config and trafo from the matching volumes
+                $new_obj->get_volume($new_vol_idx)->apply_transformation($org_obj->get_volume($org_vol_idx)->get_transformation) if $reload_preserve_trafo;
                 $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume($org_vol_idx++)->config);
             } else {
-                # reload has more volumes than original (first file), apply config from the first volume
+                # reload has more volumes than original (first file), apply config and trafo from the parent object
+                $new_obj->get_volume($new_vol_idx)->apply_transformation($org_obj->get_trafo_obj()) if $reload_preserve_trafo;
                 $new_obj->get_volume($new_vol_idx++)->config->apply($org_obj->get_volume(0)->config);
                 $volume_unmatched=1;
             }
@@ -2460,10 +2619,11 @@ sub reload_from_disk {
             $volume_unmatched=1;
         }
         while ($org_vol_idx<=$org_vol_count-1) {
+            my $org_volume = $org_obj->get_volume($org_vol_idx);
+
             if ($reload_behavior==1) { # Reload behavior: copy
-                my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx));
-                $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
-                $new_volume->mesh->translate(@{$new_obj->origin_translation});
+
+                my $new_volume = $new_obj->add_volume($org_volume);
                 if ($new_volume->name =~ m/link to path\z/) {
                     my $new_name = $new_volume->name;
                     $new_name =~ s/ - no link to path$/ - copied/;
@@ -2471,35 +2631,37 @@ sub reload_from_disk {
                 }elsif(!($new_volume->name =~ m/copied\z/)) {
                     $new_volume->set_name($new_volume->name . " - copied");
                 }
+
             }else{ # Reload behavior: Reload all, also fallback solution if ini was manually edited to a wrong value
-                if ($org_obj->get_volume($org_vol_idx)->input_file) {
-                    my $model = eval { Slic3r::Model->read_from_file($org_obj->get_volume($org_vol_idx)->input_file) };
+
+                if ($org_volume->input_file) {
+                    my $model = eval { Slic3r::Model->read_from_file($org_volume->input_file) };
                     if ($@) {
-                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
-                    }elsif ($org_obj->get_volume($org_vol_idx)->input_file_obj_idx > ($model->objects_count-1)) {
+                        $org_volume->set_input_file("");
+                    }elsif ($org_volume->input_file_obj_idx > ($model->objects_count-1)) {
                         # Object Index for that part / modifier not found in current version of the file
-                        $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                        $org_volume->set_input_file("");
                     }else{
-                        my $prt_mod_obj = $model->objects->[$org_obj->get_volume($org_vol_idx)->input_file_obj_idx];
-                        if ($org_obj->get_volume($org_vol_idx)->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
+                        my $prt_mod_obj = $model->objects->[$org_volume->input_file_obj_idx];
+                        if ($org_volume->input_file_vol_idx > ($prt_mod_obj->volumes_count-1)) {
                             # Volume Index for that part / modifier not found in current version of the file
-                            $org_obj->get_volume($org_vol_idx)->set_input_file("");
+                            $org_volume->set_input_file("");
                         }else{
                             # all checks passed, load new mesh and copy metadata
-                            my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_obj->get_volume($org_vol_idx)->input_file_vol_idx));
-                            $new_volume->set_input_file($org_obj->get_volume($org_vol_idx)->input_file);
-                            $new_volume->set_input_file_obj_idx($org_obj->get_volume($org_vol_idx)->input_file_obj_idx);
-                            $new_volume->set_input_file_vol_idx($org_obj->get_volume($org_vol_idx)->input_file_vol_idx);
-                            $new_volume->config->apply($org_obj->get_volume($org_vol_idx)->config);
-                            $new_volume->set_modifier($org_obj->get_volume($org_vol_idx)->modifier);
-                            $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                            my $new_volume = $new_obj->add_volume($prt_mod_obj->get_volume($org_volume->input_file_vol_idx));
+
+                            $new_volume->apply_transformation($org_volume->get_transformation()) if $reload_preserve_trafo;
+
+                            $new_volume->set_input_file($org_volume->input_file);
+                            $new_volume->set_input_file_obj_idx($org_volume->input_file_obj_idx);
+                            $new_volume->set_input_file_vol_idx($org_volume->input_file_vol_idx);
+                            $new_volume->config->apply($org_volume->config);
+                            $new_volume->set_modifier($org_volume->modifier);
                         }
                     }
                 }
-                if (!$org_obj->get_volume($org_vol_idx)->input_file) {
-                    my $new_volume = $new_obj->add_volume($org_obj->get_volume($org_vol_idx)); # error -> copy old mesh
-                    $new_volume->mesh->translate(@{$org_obj->origin_translation->negative});
-                    $new_volume->mesh->translate(@{$new_obj->origin_translation});
+                if (!$org_volume->input_file) {
+                    my $new_volume = $new_obj->add_volume($org_volume); # error -> copy old mesh
                     if ($new_volume->name =~ m/copied\z/) {
                         my $new_name = $new_volume->name;
                         $new_name =~ s/ - copied$/ - no link to path/;
@@ -2512,6 +2674,7 @@ sub reload_from_disk {
             }
             $org_vol_idx++;
         }
+        $new_obj->center_around_origin();
     }
     $self->remove($obj_idx);
     
@@ -2939,11 +3102,11 @@ sub selection_changed {
     
     my $method = $have_sel ? 'Enable' : 'Disable';
     $self->{"btn_$_"}->$method
-        for grep $self->{"btn_$_"}, qw(remove increase decrease rotate45cw rotate45ccw rotateFace changescale split cut layers settings);
+        for grep $self->{"btn_$_"}, qw(remove increase decrease rotateX90cw rotateX90ccw rotateY90cw rotateY90ccw rotateZ90cw rotateZ90ccw rotateZ45cw rotateZ45ccw rotateFace changescale split cut layers settings);
     
     if ($self->{htoolbar}) {
         $self->{htoolbar}->EnableTool($_, $have_sel)
-            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_45CW, TB_45CCW, TB_ROTFACE, TB_SCALE, TB_SPLIT, TB_CUT, TB_LAYERS, TB_SETTINGS);
+            for (TB_REMOVE, TB_MORE, TB_FEWER, TB_X90CW, TB_X90CCW, TB_Y90CW, TB_Y90CCW, TB_Z90CW, TB_Z90CCW, TB_45CW, TB_45CCW, TB_ROTFACE, TB_SCALE, TB_SPLIT, TB_CUT, TB_LAYERS, TB_SETTINGS);
     }
     
     if ($self->{object_info_size}) { # have we already loaded the info pane?
@@ -3085,45 +3248,53 @@ sub object_menu {
     wxTheApp->append_menu_item($menu, "Set number of copies…", 'Change the number of copies of the selected object', sub {
         $self->set_number_of_copies;
     }, undef, 'textfield.png');
-    $menu->AppendSeparator();
-    wxTheApp->append_menu_item($menu, "Move to bed center", 'Center object around bed center', sub {
-        $self->center_selected_object_on_bed;
-    }, undef, 'arrow_in.png');
-    wxTheApp->append_menu_item($menu, "Rotate 45° clockwise", 'Rotate the selected object by 45° clockwise', sub {
-        $self->rotate(-45);
-    }, undef, 'arrow_rotate_clockwise.png');
-    wxTheApp->append_menu_item($menu, "Rotate 45° counter-clockwise", 'Rotate the selected object by 45° counter-clockwise', sub {
-        $self->rotate(+45);
-    }, undef, 'arrow_rotate_anticlockwise.png');
+
+    if (!$Slic3r::GUI::Settings->{_}{autocenter}){
+        $menu->AppendSeparator();
+        wxTheApp->append_menu_item($menu, "Move to bed center", 'Center object around bed center', sub {
+            $self->center_selected_object_on_bed;
+        }, undef, 'arrow_in.png');
+    }
     wxTheApp->append_menu_item($menu, "Rotate Face to Plane", 'Rotates the selected object to have the selected face parallel with a plane', sub {
         $self->rotate_face;
     }, undef, 'rotate_face.png');
+    $menu->AppendSeparator();
     
     {
         my $rotateMenu = Wx::Menu->new;
+        wxTheApp->append_menu_item($rotateMenu, "180° around X axis", 'Rotate the selected object by 180° around X axis', sub {
+            $self->rotate(180, X);
+        }, undef, @rotateX90ccw);
+        wxTheApp->append_menu_item($rotateMenu, "180° around Y axis", 'Rotate the selected object by 180° around Y axis', sub {
+            $self->rotate(180, Y);
+        }, undef, @rotateY90ccw);
+        wxTheApp->append_menu_item($rotateMenu, "180° around Z axis", 'Rotate the selected object by 180° around Z axis', sub {
+            $self->rotate(180, Z);
+        }, undef, @rotateZ90ccw);
+        $rotateMenu->AppendSeparator();
         wxTheApp->append_menu_item($rotateMenu, "Around X axis…", 'Rotate the selected object by an arbitrary angle around X axis', sub {
             $self->rotate(undef, X);
-        }, undef, 'bullet_red.png');
+        }, undef, @rotateX90ccw);
         wxTheApp->append_menu_item($rotateMenu, "Around Y axis…", 'Rotate the selected object by an arbitrary angle around Y axis', sub {
             $self->rotate(undef, Y);
-        }, undef, 'bullet_green.png');
+        }, undef, @rotateY90ccw);
         wxTheApp->append_menu_item($rotateMenu, "Around Z axis…", 'Rotate the selected object by an arbitrary angle around Z axis', sub {
             $self->rotate(undef, Z);
-        }, undef, 'bullet_blue.png');
-        wxTheApp->append_submenu($menu, "Rotate", 'Rotate the selected object by an arbitrary angle', $rotateMenu, undef, 'textfield.png');
+        }, undef, @rotateZ90ccw);
+        wxTheApp->append_submenu($menu, "Rotate", 'Rotate the selected object', $rotateMenu, undef, 'arrow_rotate_anticlockwise.png');
     }
     
     {
         my $mirrorMenu = Wx::Menu->new;
-        wxTheApp->append_menu_item($mirrorMenu, "Along X axis…", 'Mirror the selected object along the X axis', sub {
+        wxTheApp->append_menu_item($mirrorMenu, "Along X axis", 'Mirror the selected object along the X axis', sub {
             $self->mirror(X);
-        }, undef, 'bullet_red.png');
-        wxTheApp->append_menu_item($mirrorMenu, "Along Y axis…", 'Mirror the selected object along the Y axis', sub {
+        }, undef, @mirrorX);
+        wxTheApp->append_menu_item($mirrorMenu, "Along Y axis", 'Mirror the selected object along the Y axis', sub {
             $self->mirror(Y);
-        }, undef, 'bullet_green.png');
-        wxTheApp->append_menu_item($mirrorMenu, "Along Z axis…", 'Mirror the selected object along the Z axis', sub {
+        }, undef, @mirrorY);
+        wxTheApp->append_menu_item($mirrorMenu, "Along Z axis", 'Mirror the selected object along the Z axis', sub {
             $self->mirror(Z);
-        }, undef, 'bullet_blue.png');
+        }, undef, @mirrorZ);
         wxTheApp->append_submenu($menu, "Mirror", 'Mirror the selected object', $mirrorMenu, undef, 'shape_flip_horizontal.png');
     }
     
@@ -3273,9 +3444,7 @@ sub make_thumbnail {
     my $mesh = $model->objects->[$obj_idx]->raw_mesh;
     # Apply x, y rotations and scaling vector in case of reading a 3MF model object.
     my $model_instance = $model->objects->[$obj_idx]->instances->[0];
-    $mesh->rotate_x($model_instance->x_rotation);
-    $mesh->rotate_y($model_instance->y_rotation);
-    $mesh->scale_xyz($model_instance->scaling_vector);
+    $mesh->transform($model_instance->additional_trafo);
 
     if ($mesh->facets_count <= 5000) {
         # remove polygons with area <= 1mm

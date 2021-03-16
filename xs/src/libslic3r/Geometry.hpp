@@ -34,6 +34,7 @@ Pointf circle_taubin_newton(const Pointfs& input, size_t cycles = 20);
 Pointf circle_taubin_newton(const Pointfs::const_iterator& input_start, const Pointfs::const_iterator& input_end, size_t cycles = 20);
 
 /// Epsilon value
+// FIXME: this is a duplicate from libslic3r.h
 constexpr double epsilon { 1e-4 };
 constexpr coord_t scaled_epsilon { static_cast<coord_t>(epsilon / SCALING_FACTOR) };
 

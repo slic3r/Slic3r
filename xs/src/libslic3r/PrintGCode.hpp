@@ -1,4 +1,3 @@
-#ifndef SLIC3RXS
 #ifndef slic3r_PrintGCode_hpp
 #define slic3r_PrintGCode_hpp
 
@@ -33,7 +32,7 @@ public:
     std::string filter(const std::string& in, bool wait = false);
 
 private:
-    
+
     Slic3r::Print& _print;
     const Slic3r::PrintConfig& config;
 
@@ -49,7 +48,7 @@ private:
 //    Slic3r::ArcFitting _arc_fitting;
 //    Slic3r::PressureRegulator _pressure_regulator;
 
-    /// presence in the array indicates that the 
+    /// presence in the array indicates that the
     std::map<coord_t, bool> _skirt_done {};
     bool _brim_done {false};
     bool _second_layer_things_done {false};
@@ -77,4 +76,3 @@ private:
 } // namespace Slic3r
 
 #endif // slic3r_PrintGCode_hpp
-#endif // SLIC3RXS

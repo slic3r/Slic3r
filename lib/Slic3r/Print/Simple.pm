@@ -34,6 +34,16 @@ has 'rotate' => (
     default => sub { 0 },
 );
 
+has 'rotate_x' => (
+    is      => 'rw',
+    default => sub { 0 },
+);
+
+has 'rotate_y' => (
+    is      => 'rw',
+    default => sub { 0 },
+);
+
 has 'duplicate_grid' => (
     is      => 'rw',
     default => sub { [1,1] },
@@ -75,9 +85,24 @@ sub set_model {
     my $need_arrange = $model->add_default_instances && ! $self->dont_arrange;
     
     # apply scaling and rotation supplied from command line if any
-    foreach my $instance (map @{$_->instances}, @{$model->objects}) {
+    foreach my $model_object (@{$model->objects}) {
+      foreach my $instance (@{$model_object->instances}) {
         $instance->set_scaling_factor($instance->scaling_factor * $self->scale);
         $instance->set_rotation($instance->rotation + $self->rotate);
+        #$instance->set_x_rotation($instance->x_rotation + $self->rotate_x);
+        #$instance->set_y_rotation($instance->y_rotation + $self->rotate_y);
+	if ($self->rotate_x != 0 || $self->rotate_y != 0) {
+	  $model_object->transform_by_instance($instance, 1);
+	  if ($self->rotate_x != 0) {
+	    $model_object->rotate($self->rotate_x, X);
+	  }
+	  if ($self->rotate_y != 0) {
+	    $model_object->rotate($self->rotate_y, Y);
+	  }
+	  # realign object to Z = 0
+	  $model_object->center_around_origin;
+	}
+      }
     }
     
     my $bed_shape = $self->_print->config->bed_shape;

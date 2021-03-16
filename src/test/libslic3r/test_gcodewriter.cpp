@@ -98,3 +98,30 @@ SCENARIO("lift() is not ignored after unlift() at normal values of Z") {
         }
     }
 }
+
+SCENARIO("set_speed emits values with fixed-point output.") {
+
+    GIVEN("GCodeWriter instance") {
+        GCodeWriter writer;
+        WHEN("set_speed is called to set speed to 1.09321e+06") {
+            THEN("Output string is G1 F1093210.000") {
+                REQUIRE_THAT(writer.set_speed(1.09321e+06), Catch::Equals("G1 F1093210.000\n"));
+            }
+        }
+        WHEN("set_speed is called to set speed to 1") {
+            THEN("Output string is G1 F1.000") {
+                REQUIRE_THAT(writer.set_speed(1.0), Catch::Equals("G1 F1.000\n"));
+            }
+        }
+        WHEN("set_speed is called to set speed to 203.200022") {
+            THEN("Output string is G1 F203.200") {
+                REQUIRE_THAT(writer.set_speed(203.200022), Catch::Equals("G1 F203.200\n"));
+            }
+        }
+        WHEN("set_speed is called to set speed to 203.200522") {
+            THEN("Output string is G1 F203.200") {
+                REQUIRE_THAT(writer.set_speed(203.200522), Catch::Equals("G1 F203.201\n"));
+            }
+        }
+    }
+}

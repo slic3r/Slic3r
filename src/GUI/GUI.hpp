@@ -5,6 +5,7 @@
 #include "Notifier.hpp"
 #include <string>
 #include <vector>
+#include <array>
 #include <stack>
 #include <mutex>
 
@@ -17,6 +18,12 @@ namespace Slic3r { namespace GUI {
 class App: public wxApp
 {
 public:
+    /// If set to a file path, Slic3r will automatically export to it the active configuration whenever an option is changed or a preset or selected.
+    wxString autosave {""};
+    
+    /// The directory where presets and config are stored. If empty, Slic3r will default to the location provided by wxWidgets.
+    wxString datadir {""};
+    
     virtual bool OnInit() override;
     App() : wxApp() {}
 
@@ -32,13 +39,15 @@ public:
 
     void OnUnhandledException() override;
 
-    std::vector<Presets> presets { preset_types, Presets() };
+    preset_store presets { Presets() };
+    std::array<wxString, preset_types> preset_ini { };
+    Settings* settings() { return ui_settings.get(); }
+
 private:
     std::unique_ptr<Notifier> notifier {nullptr};
 
     void load_presets();
 
-    wxString datadir {""};
     const std::string LogChannel {"APP"}; //< Which log these messages should go to.
 
     /// Lock to guard the callback stack

@@ -70,14 +70,14 @@ SCENARIO( "UI_Choice: default values from options") {
             }
         }
         WHEN( "I set the string value to another item in the enumeration") {
-            test_field.choice()->SetValue("C"s);
+            test_field.combo()->SetValue("C"s);
             THEN( "get_string() returns the matching item in ConfigOptionDef") {
                 REQUIRE(test_field.get_string() == "C"s);
                 REQUIRE(test_field.choice()->FindString(simple_option.enum_values[1]) == 1);
             }
         }
         WHEN( "I set the string value to another item that is not in the enumeration") {
-            test_field.choice()->SetValue("F"s);
+            test_field.combo()->SetValue("F"s);
             THEN( "get_string() returns the matching item in ConfigOptionDef") {
                 REQUIRE(test_field.get_string() == "F"s);
                 REQUIRE(test_field.choice()->GetSelection() == wxNOT_FOUND);

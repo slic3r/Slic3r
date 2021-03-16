@@ -26,11 +26,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <boost/detail/endian.hpp>
-
-#ifndef BOOST_LITTLE_ENDIAN
-#error "admesh works correctly on little endian machines only!"
-#endif
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     #include "windows.h"
@@ -206,7 +201,8 @@ extern void stl_rotate_z(stl_file *stl, float angle);
 extern void stl_mirror_xy(stl_file *stl);
 extern void stl_mirror_yz(stl_file *stl);
 extern void stl_mirror_xz(stl_file *stl);
-extern void stl_transform(stl_file *stl, float *trafo3x4);
+extern void stl_transform(stl_file *stl, double const *trafo3x4);
+extern void stl_get_transform(stl_file const *stl_src, stl_file *stl_dst, double const *trafo3x4);
 extern void stl_open_merge(stl_file *stl, ADMESH_CHAR *file);
 extern void stl_invalidate_shared_vertices(stl_file *stl);
 extern void stl_generate_shared_vertices(stl_file *stl);

@@ -1,6 +1,7 @@
 # Preferences dialog, opens from Menu: File->Preferences
 
 package Slic3r::GUI::Preferences;
+use List::Util qw(any);
 use Wx qw(:dialog :id :misc :sizer :systemsettings wxTheApp);
 use Wx::Event qw(EVT_BUTTON EVT_TEXT_ENTER);
 use base 'Wx::Dialog';
@@ -82,7 +83,7 @@ sub new {
         opt_id      => 'show_host',
         type        => 'bool',
         label       => 'Show Controller Tab (requires restart)',
-        tooltip     => 'Shows/Hides the Controller Tab. Requires a restart of Slic3r.',
+        tooltip     => 'Shows/Hides the Controller Tab. (Restart of Slic3r required.)',
         default     => $Slic3r::GUI::Settings->{_}{show_host},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # nudge_val
@@ -96,8 +97,15 @@ sub new {
         opt_id      => 'reload_hide_dialog',
         type        => 'bool',
         label       => 'Hide Dialog on Reload',
-        tooltip     => 'When checked, the dialog on reloading files with added parts & modifiers is suppressed. The reload is performed according to the option given in \'Default Reload Behavior\'',
+        tooltip     => 'When checked, the dialog on reloading files with added parts & modifiers is suppressed. The reload is performed according to the option given in \'Default Reload Behavior\' and \'Keep Transformation on Reload\'',
         default     => $Slic3r::GUI::Settings->{_}{reload_hide_dialog},
+    ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # reload preserve transformation
+        opt_id      => 'reload_preserve_trafo',
+        type        => 'bool',
+        label       => 'Keep Transformations on Reload',
+        tooltip     => 'When checked, the \'Reload from disk\' function tries to preserve the current orientation of the object on the bed by applying the same transformation to the reloaded object.',
+        default     => $Slic3r::GUI::Settings->{_}{reload_preserve_trafo},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # default reload behavior
         opt_id      => 'reload_behavior',
@@ -109,14 +117,24 @@ sub new {
         default     => $Slic3r::GUI::Settings->{_}{reload_behavior},
         width       => 180,
     ));
+    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # Extended GUI - Context and/or Toolbar
+        opt_id      => 'rotation_controls',
+        type        => 'select',
+        label       => 'Rotation controls in toolbar',
+        tooltip     => 'What rotation controls to show in the toolbar. (Restart of Slic3r required.)',
+        labels      => ['Z only', 'X,Y,Z', 'X,Y,Z (big buttons)'],
+        values      => ['z', 'xyz', 'xyz-big'],
+        default     => $Slic3r::GUI::Settings->{_}{rotation_controls},
+        width       => 180,
+    ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(    # colorscheme
         opt_id      => 'colorscheme',
         type        => 'select',
         label       => 'Color Scheme',
-        tooltip     => 'Choose between color schemes - restart of Slic3r required.',
+        tooltip     => 'Choose between color schemes. (Restart of Slic3r required.)',
         labels      => ['Default','Solarized'], # add more schemes, if you want in ColorScheme.pm.
         values      => ['getDefault','getSolarized'], # add more schemes, if you want - those are the names of the corresponding function in ColorScheme.pm.
-        default     => $Slic3r::GUI::Settings->{_}{colorscheme} // 'getDefault',
+        default     => $Slic3r::GUI::Settings->{_}{colorscheme},
         width       => 180,
     ));
     
@@ -136,7 +154,7 @@ sub new {
 sub _accept {
     my $self = shift;
     
-    if ($self->{values}{mode}) {
+    if (any { exists $self->{values}{$_} } qw(show_host rotation_controls colorscheme)) {
         Slic3r::GUI::warning_catcher($self)->("You need to restart Slic3r to make the changes effective.");
     }
     

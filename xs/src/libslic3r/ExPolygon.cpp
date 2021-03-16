@@ -130,6 +130,14 @@ ExPolygon::has_boundary_point(const Point &point) const
 }
 
 void
+ExPolygon::remove_colinear_points()
+{
+    this->contour.remove_collinear_points();
+    for (Polygon &p : this->holes)
+        p.remove_collinear_points();
+}
+
+void
 ExPolygon::remove_vertical_collinear_points(coord_t tolerance)
 {
     this->contour.remove_vertical_collinear_points(tolerance);
@@ -265,7 +273,7 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
                 //assert polyline.size == best_candidate->size (see selection loop, an 'if' takes care of that)
 
                 //iterate the points
-                // as voronoi should create symetric thing, we can iterate synchonously
+                // as voronoi should create symmetric thing, we can iterate synchonously
                 unsigned int idx_point = 1;
                 while (idx_point < polyline.points.size() && polyline.points[idx_point].distance_to(best_candidate->points[idx_point]) < max_width) {
                     //fusion
@@ -314,7 +322,6 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
     
     // Loop through all returned polylines in order to extend their endpoints to the 
     //   expolygon boundaries
-    bool removed = false;
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         
@@ -414,7 +421,6 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
             && polyline.length() < max_w * 2) {
             pp.erase(pp.begin() + i);
             --i;
-            removed = true;
             continue;
         }
 

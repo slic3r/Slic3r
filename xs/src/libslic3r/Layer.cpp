@@ -2,6 +2,7 @@
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
 #include "Print.hpp"
+#include "Log.hpp"
 
 namespace Slic3r {
 
@@ -267,7 +268,7 @@ Layer::make_fills()
 /// Initially all slices are of type S_TYPE_INTERNAL.
 /// Slices are compared against the top / bottom slices and regions and classified to the following groups:
 /// S_TYPE_TOP - Part of a region, which is not covered by any upper layer. This surface will be filled with a top solid infill.
-/// S_TYPE_BOTTOMBRIDGE - Part of a region, which is not fully supported, but it hangs in the air, or it hangs losely on a support or a raft.
+/// S_TYPE_BOTTOM | S_TYPE_BRIDGE - Part of a region, which is not fully supported, but it hangs in the air, or it hangs loosely on a support or a raft.
 /// S_TYPE_BOTTOM - Part of a region, which is not supported by the same region, but it is supported either by another region, or by a soluble interface layer.
 /// S_TYPE_INTERNAL - Part of a region, which is supported by the same region type.
 /// If a part of a region is of S_TYPE_BOTTOM and S_TYPE_TOP, the S_TYPE_BOTTOM wins.
@@ -331,7 +332,7 @@ Layer::detect_surfaces_type()
             const SurfaceType surface_type_bottom =
                 (object.config.support_material.value && object.config.support_material_contact_distance.value == 0)
                 ? stBottom
-                : stBottomBridge;
+                : (stBottom | stBridge);
         
             // Any surface lying on the void is a true bottom bridge (an overhang)
             bottom.append(
@@ -370,7 +371,7 @@ Layer::detect_surfaces_type()
             // just like any other bottom surface lying on the void
             const SurfaceType surface_type_bottom =
                 (object.config.raft_layers.value > 0 && object.config.support_material_contact_distance.value > 0)
-                ? stBottomBridge
+                ? (stBottom | stBridge)
                 : stBottom;
             for (Surface &s : bottom.surfaces) s.surface_type = surface_type_bottom;
         }
@@ -417,7 +418,7 @@ Layer::detect_surfaces_type()
         #endif
     
         {
-            /*  Fill in layerm->fill_surfaces by trimming the layerm->slices by the cummulative layerm->fill_surfaces.
+            /*  Fill in layerm->fill_surfaces by trimming the layerm->slices by the cumulative layerm->fill_surfaces.
                 Note: this method should be idempotent, but fill_surfaces gets modified
                 in place. However we're now only using its boundaries (which are invariant)
                 so we're safe. This guarantees idempotence of prepare_infill() also in case

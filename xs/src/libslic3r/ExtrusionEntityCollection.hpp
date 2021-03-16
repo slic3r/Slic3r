@@ -24,7 +24,7 @@ class ExtrusionEntityCollection : public ExtrusionEntity
     ExtrusionEntityCollection& operator= (const ExtrusionEntityCollection &other);
     ~ExtrusionEntityCollection();
 
-    /// Operator to convert and flatten this collection to a single vefctor of ExtrusionPaths.
+    /// Operator to convert and flatten this collection to a single vector of ExtrusionPaths.
     operator ExtrusionPaths() const;
    
     /// This particular ExtrusionEntity is a collection.
@@ -59,11 +59,14 @@ class ExtrusionEntityCollection : public ExtrusionEntity
     size_t items_count() const;
 
     /// Returns a single vector of pointers to all non-collection items contained in this one
-    void flatten(ExtrusionEntityCollection* retval) const;
+    /// \param retval a pointer to the output memory space.
+    /// \param preserve_ordering Flag to method that will flatten if and only if the underlying collection is sortable when True (default: False).
+    void flatten(ExtrusionEntityCollection* retval, bool preserve_ordering = false) const;
 
     /// Returns a flattened copy of this ExtrusionEntityCollection. That is, all of the items in its entities vector are not collections.
     /// You should be iterating over flatten().entities if you are interested in the underlying ExtrusionEntities (and don't care about hierarchy).
-    ExtrusionEntityCollection flatten() const;
+    /// \param preserve_ordering Flag to method that will flatten if and only if the underlying collection is sortable when True (default: False).
+    ExtrusionEntityCollection flatten(bool preserve_ordering = false) const;
 
 
     double min_mm3_per_mm() const;
@@ -74,6 +77,8 @@ class ExtrusionEntityCollection : public ExtrusionEntity
 
     ExtrusionEntitiesPtr::iterator begin() { return entities.begin(); }
     ExtrusionEntitiesPtr::iterator end() { return entities.end(); }
+    ExtrusionEntitiesPtr::const_iterator begin() const { return entities.cbegin(); }
+    ExtrusionEntitiesPtr::const_iterator end() const { return entities.cend(); }
     ExtrusionEntitiesPtr::const_iterator cbegin() const { return entities.cbegin(); }
     ExtrusionEntitiesPtr::const_iterator cend() const { return entities.cend(); }
 

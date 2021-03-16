@@ -13,14 +13,23 @@
 #include <math.h>
 #include <assert.h>
 #include <stdexcept>
+#include <boost/version.hpp>
 #include <boost/config.hpp>
 #include <boost/nowide/convert.hpp>
+#if BOOST_VERSION >= 107300
+#include <boost/bind/bind.hpp>
+#endif
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
 #endif
 
 namespace Slic3r {
+
+
+#if BOOST_VERSION >= 107300
+using boost::placeholders::_1;
+#endif
 
 TriangleMesh::TriangleMesh()
     : repaired(false)
@@ -108,7 +117,6 @@ void TriangleMesh::clone(const TriangleMesh& other) {
     }
 }
 
-#ifndef SLIC3RXS
 TriangleMesh::TriangleMesh(TriangleMesh&& other) {
     this->repaired = std::move(other.repaired);
     this->stl = std::move(other.stl);
@@ -123,7 +131,6 @@ TriangleMesh& TriangleMesh::operator= (TriangleMesh&& other)
 
     return *this;
 }
-#endif
 
 void
 TriangleMesh::swap(TriangleMesh &other)
@@ -147,22 +154,22 @@ TriangleMesh::ReadSTLFile(const std::string &input_file) {
 }
 
 void
-TriangleMesh::write_ascii(const std::string &output_file)
+TriangleMesh::write_ascii(const std::string &output_file) const
 {
     #ifdef BOOST_WINDOWS
-    stl_write_ascii(&this->stl, boost::nowide::widen(output_file).c_str(), "");
+    stl_write_ascii(const_cast<stl_file*>(&this->stl), boost::nowide::widen(output_file).c_str(), "");
     #else
-    stl_write_ascii(&this->stl, output_file.c_str(), "");
+    stl_write_ascii(const_cast<stl_file*>(&this->stl), output_file.c_str(), "");
     #endif
 }
 
 void
-TriangleMesh::write_binary(const std::string &output_file)
+TriangleMesh::write_binary(const std::string &output_file) const
 {
     #ifdef BOOST_WINDOWS
-    stl_write_binary(&this->stl, boost::nowide::widen(output_file).c_str(), "");
+    stl_write_binary(const_cast<stl_file*>(&this->stl), boost::nowide::widen(output_file).c_str(), "");
     #else
-    stl_write_binary(&this->stl, output_file.c_str(), "");
+    stl_write_binary(const_cast<stl_file*>(&this->stl), output_file.c_str(), "");
     #endif
 }
 
@@ -174,23 +181,23 @@ TriangleMesh::repair() {
     if (this->stl.stats.number_of_facets == 0) return;
     
     this->check_topology();
-    
-    // remove_unconnected
-    if (stl.stats.connected_facets_3_edge <  stl.stats.number_of_facets) {
-        stl_remove_unconnected_facets(&stl);
-    }
-    
-    // fill_holes
-    if (stl.stats.connected_facets_3_edge < stl.stats.number_of_facets) {
-        stl_fill_holes(&stl);
-        stl_clear_error(&stl);
-    }
-    
-    // normal_directions
-    stl_fix_normal_directions(&stl);
-    
-    // normal_values
-    stl_fix_normal_values(&stl);
+
+    /// Call the stl_repair from admesh rather than reimplementing it ourselves.
+    stl_repair(&(this->stl),  // operate on this STL
+               true,  // flag: try to fix everything
+               true,  // flag: check for perfectly aligned edges
+               false, // flag: don't use tolerance
+               0.0,    // null tolerance value
+               false, // flag: don't increment tolerance
+               0.0,   // amount to increment tolerance on each iteration
+               true,  // find and try to connect nearby bad facets
+               10,    // Perform 10 iterations
+               true,  // remove unconnected
+               true,  // fill holes
+               true,  // fix normal directions
+               true,  // fix normal values
+               false, // reverse direction of all facets and normals
+               0);  // Verbosity
     
     // always calculate the volume and reverse all normals if volume is negative
     (void)this->volume();
@@ -272,13 +279,13 @@ TriangleMesh::facets_count() const
 }
 
 void
-TriangleMesh::WriteOBJFile(const std::string &output_file) {
-    stl_generate_shared_vertices(&stl);
+TriangleMesh::WriteOBJFile(const std::string &output_file) const {
+    stl_generate_shared_vertices(const_cast<stl_file*>(&this->stl));
     
     #ifdef BOOST_WINDOWS
-    stl_write_obj(&stl, boost::nowide::widen(output_file).c_str());
+    stl_write_obj(const_cast<stl_file*>(&this->stl), boost::nowide::widen(output_file).c_str());
     #else
-    stl_write_obj(&stl, output_file.c_str());
+    stl_write_obj(const_cast<stl_file*>(&this->stl), output_file.c_str());
     #endif
 }
 
@@ -399,7 +406,27 @@ void TriangleMesh::rotate(double angle, const Point& center)
     this->translate(+center.x, +center.y, 0);
 }
 
-#ifndef SLIC3RXS
+void TriangleMesh::align_to_bed()
+{
+    stl_translate_relative(&(this->stl), 0.0f, 0.0f, -this->stl.stats.min.z);
+    stl_invalidate_shared_vertices(&this->stl);
+}
+
+TriangleMesh TriangleMesh::get_transformed_mesh(TransformationMatrix const & trafo) const
+{
+    TriangleMesh mesh;
+    std::vector<double> trafo_arr = trafo.matrix3x4f();
+    stl_get_transform(&(this->stl), &(mesh.stl), trafo_arr.data());
+    stl_invalidate_shared_vertices(&(mesh.stl));
+    return mesh;
+}
+
+void TriangleMesh::transform(TransformationMatrix const & trafo)
+{
+    std::vector<double> trafo_arr = trafo.matrix3x4f();
+    stl_transform(&(this->stl), trafo_arr.data());
+    stl_invalidate_shared_vertices(&(this->stl));
+}
 
 Pointf3s TriangleMesh::vertices()
 {
@@ -408,7 +435,7 @@ Pointf3s TriangleMesh::vertices()
         if (this->stl.v_shared == nullptr) 
             stl_generate_shared_vertices(&stl); // build the list of vertices
         for (auto i = 0; i < this->stl.stats.shared_vertices; i++) {
-            const auto& v {this->stl.v_shared[i]};
+            const auto& v = this->stl.v_shared[i];
             tmp.emplace_back(Pointf3(v.x, v.y, v.z));
         }
     } else {
@@ -424,7 +451,7 @@ Point3s TriangleMesh::facets()
         if (this->stl.v_shared == nullptr) 
             stl_generate_shared_vertices(&stl); // build the list of vertices
         for (auto i = 0; i < stl.stats.number_of_facets; i++) {
-            const auto& v {stl.v_indices[i]};
+            const auto& v = stl.v_indices[i];
             tmp.emplace_back(Point3(v.vertex[0], v.vertex[1], v.vertex[2]));
         }
     } else {
@@ -438,18 +465,18 @@ Pointf3s TriangleMesh::normals() const
     Pointf3s tmp {};
     if (this->repaired) {
         for (auto i = 0; i < stl.stats.number_of_facets; i++) {
-            const auto& n {stl.facet_start[i].normal};
+            const auto& n = stl.facet_start[i].normal;
             tmp.emplace_back(Pointf3(n.x, n.y, n.z));
         }
     } else {
         Slic3r::Log::warn("TriangleMesh", "normals() requires repair()");
     }
-    return std::move(tmp);
+    return tmp;
 }
 
 Pointf3 TriangleMesh::size() const
 {
-    const auto& sz {stl.stats.size};
+    const auto& sz = stl.stats.size;
     return Pointf3(sz.x, sz.y, sz.z);
 }
 
@@ -512,10 +539,6 @@ void TriangleMesh::cut(Axis axis, double z, TriangleMesh* upper, TriangleMesh* l
             Slic3r::Log::error("TriangleMesh", "Invalid Axis supplied to cut()");
     }
 }
-
-
-
-#endif // SLIC3RXS
 
 TriangleMeshPtrs
 TriangleMesh::split() const
@@ -677,6 +700,26 @@ TriangleMesh::bounding_box() const
     bb.max.y = this->stl.stats.max.y;
     bb.max.z = this->stl.stats.max.z;
     return bb;
+}
+
+BoundingBoxf3
+TriangleMesh::get_transformed_bounding_box(TransformationMatrix const & trafo) const
+{
+    BoundingBoxf3 bbox;
+    for (int i = 0; i < this->stl.stats.number_of_facets; ++ i) {
+        const stl_facet &facet = this->stl.facet_start[i];
+        for (int j = 0; j < 3; ++ j) {
+            double v_x = facet.vertex[j].x;
+            double v_y = facet.vertex[j].y;
+            double v_z = facet.vertex[j].z;
+            Pointf3 poi;
+            poi.x = float(trafo.m00*v_x + trafo.m01*v_y + trafo.m02*v_z + trafo.m03);
+            poi.y = float(trafo.m10*v_x + trafo.m11*v_y + trafo.m12*v_z + trafo.m13);
+            poi.z = float(trafo.m20*v_x + trafo.m21*v_y + trafo.m22*v_z + trafo.m23);
+            bbox.merge(poi);
+        }
+    }
+    return bbox;
 }
 
 void
@@ -1566,7 +1609,7 @@ TriangleMeshSlicer<A>::TriangleMeshSlicer(TriangleMesh* _mesh) : mesh(_mesh), v_
     
     {
         t_edges edges;
-        // reserve() instad of resize() because otherwise we couldn't read .size() below to assign edge_idx
+        // reserve() instead of resize() because otherwise we couldn't read .size() below to assign edge_idx
         edges.reserve(this->mesh->stl.stats.number_of_facets * 3);  // number of edges = number of facets * 3
         t_edges_map edges_map;
         for (int facet_idx = 0; facet_idx < this->mesh->stl.stats.number_of_facets; facet_idx++) {
@@ -1616,7 +1659,7 @@ TriangleMeshSlicer<A>::TriangleMeshSlicer(TriangleMesh* _mesh) : mesh(_mesh), v_
 template <Axis A>
 TriangleMeshSlicer<A>::~TriangleMeshSlicer()
 {
-    if (this->v_scaled_shared != NULL) free(this->v_scaled_shared);
+    free(this->v_scaled_shared);
 }
 
 template class TriangleMeshSlicer<X>;

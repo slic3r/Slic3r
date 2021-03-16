@@ -15,6 +15,7 @@ xs/assertlib*
 .init_bundle.ini
 local-lib
 package/osx/Slic3r*.app
+package/osx/_tmp
 *.dmg
 *.swp
 *.swo

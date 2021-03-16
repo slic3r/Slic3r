@@ -17,18 +17,30 @@ if [ ! -z ${PR_ID+x} ] || [ $current_branch != "master" ]; then
 fi
 
 if [ -s $KEY ]; then
-    for i in $FILES; do 
-         filepath=$(readlink -f "$i")
-         tmpfile=$(mktemp)
-         echo put $filepath > $tmpfile 
-         sftp -b $tmpfile -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
-         result=$?
-         if [ $? -eq 1 ]; then 
-             echo "Error with SFTP"
-             exit $result; 
-         fi
+    if [ ! -z ${PR_ID+x} ] || [ $current_branch != "master" ]; then
+        # clean up old copies of the same branch/PR
+        if [ ! -z ${PR_ID+x} ]; then
+            echo "rm *PR${PR_ID}*" | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
+        fi
+        if [ $current_branch != "master" ]; then
+            echo "rm *${current_branch}*" | sftp -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
+        fi
+    fi
+    for i in $FILES; do
+        filepath=$i  # this is expected to be an absolute path
+        tmpfile=$(mktemp)
+        echo progress > $tmpfile
+        echo put $filepath >> $tmpfile
+
+        sftp -b $tmpfile -i$KEY "${UPLOAD_USER}@dl.slic3r.org:$DIR/"
+        result=$?
+        if [ $? -eq 1 ]; then
+            echo "Error with SFTP"
+            exit $result;
+        fi
+        rm $tmpfile
     done
 else
-    echo "$KEY is not available, not deploying." 
+    echo "$KEY is not available, not deploying."
 fi
 exit $result

@@ -85,6 +85,9 @@
 %typemap{ExtrusionLoop*};
 %typemap{Ref<ExtrusionLoop>}{simple};
 %typemap{Clone<ExtrusionLoop>}{simple};
+%typemap{TransformationMatrix*};
+%typemap{Ref<TransformationMatrix>}{simple};
+%typemap{Clone<TransformationMatrix>}{simple};
 %typemap{TriangleMesh*};
 %typemap{Ref<TriangleMesh>}{simple};
 %typemap{Clone<TriangleMesh>}{simple};
@@ -178,6 +181,7 @@
 %typemap{ExtrusionPaths};
 %typemap{Surfaces};
 %typemap{Polygons*};
+%typemap{TransformationMatrix*};
 %typemap{TriangleMesh*};
 %typemap{TriangleMeshPtrs};
 %typemap{Extruder*};

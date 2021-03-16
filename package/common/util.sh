@@ -1,9 +1,25 @@
 #!/bin/bash
 
+function set_source_dir ()
+{
+    if [[ -z ${TRAVIS_BUILD_DIR+x} ]]; then
+        if [[ ! -z ${1+x} ]]; then
+            SLIC3R_DIR=$1
+            echo "Using SLIC3R_DIR = $1"
+        else
+            SLIC3R_DIR=$(pwd)
+            echo "Using current directory as source dir"
+        fi
+    else
+        SLIC3R_DIR="$TRAVIS_BUILD_DIR"
+        echo "Using Travis build dir"
+    fi
+}
+
 # must be run from the root
 function set_version ()
 {
-SLIC3R_VERSION=$(grep "VERSION" xs/src/libslic3r/libslic3r.h | awk -F\" '{print $2}')
+SLIC3R_VERSION=$(grep "VERSION" ${SLIC3R_DIR}/xs/src/libslic3r/libslic3r.h | awk -F\" '{print $2}')
 }
 # Cache the SHA1 for this build commit.
 function get_commit () {
@@ -30,7 +46,7 @@ fi
 function set_branch () 
 {
     echo "Setting current_branch"
-    if [ -z ${TRAVIS_BRANCH} ] && [ -z ${GIT_BRANCH+x} ] && [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
+    if [ -z ${TRAVIS_BRANCH+x} ] && [ -z ${GIT_BRANCH+x} ] && [ -z ${APPVEYOR_REPO_BRANCH+x} ]; then
     current_branch=$(git symbolic-ref HEAD | sed 's!refs\/heads\/!!')
     else
         current_branch="unknown"

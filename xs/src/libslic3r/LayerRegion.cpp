@@ -59,7 +59,7 @@ LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection*
     );
     
     if (this->layer()->lower_layer != NULL)
-        // Cummulative sum of polygons over all the regions.
+        // Cumulative sum of polygons over all the regions.
         g.lower_slices = &this->layer()->lower_layer->slices;
     
     g.layer_id              = this->layer()->id();
@@ -152,7 +152,7 @@ LayerRegion::process_external_surfaces()
     
     SurfaceCollection top;
     for (const Surface &surface : surfaces) {
-        if (surface.surface_type != stTop) continue;
+        if (!surface.is_top()) continue;
         
         // give priority to bottom surfaces
         ExPolygons grown = diff_ex(
@@ -203,7 +203,7 @@ LayerRegion::process_external_surfaces()
     {
         SurfaceCollection other;
         for (const Surface &s : surfaces)
-            if (s.surface_type != stTop && !s.is_bottom())
+            if (!s.is_top() && !s.is_bottom())
                 other.surfaces.push_back(s);
         
         // group surfaces
@@ -238,21 +238,21 @@ LayerRegion::prepare_fill_surfaces()
     
     // if no solid layers are requested, turn top/bottom surfaces to internal
     if (this->region()->config.top_solid_layers == 0 && this->region()->config.min_top_bottom_shell_thickness <= 0) {
-        for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
-            if (surface->surface_type == stTop) {
+        for (Surface &surface : this->fill_surfaces.surfaces) {
+            if (surface.surface_type == stTop) {
                 if (this->layer()->object()->config.infill_only_where_needed) {
-                    surface->surface_type = stInternalVoid;
+                    surface.surface_type = (stInternal | stVoid);
                 } else {
-                    surface->surface_type = stInternal;
+                    surface.surface_type = stInternal;
                 }
             }
         }
     }
     
     if (this->region()->config.bottom_solid_layers == 0 && this->region()->config.min_top_bottom_shell_thickness <= 0) {
-        for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
-            if (surface->surface_type == stBottom || surface->surface_type == stBottomBridge)
-                surface->surface_type = stInternal;
+        for (Surface &surface : this->fill_surfaces.surfaces) {
+            if (surface.is_bottom())
+                surface.surface_type = stInternal;
         }
     }
 
@@ -264,7 +264,7 @@ LayerRegion::prepare_fill_surfaces()
         const double min_area = this->region()->config.solid_infill_below_area.value / SCALING_FACTOR / SCALING_FACTOR;
         for (Surface &surface : this->fill_surfaces.surfaces) {
             if (surface.surface_type == stInternal && surface.area() <= min_area)
-                surface.surface_type = stInternalSolid;
+                surface.surface_type = (stInternal | stSolid);
         }
     }
 }

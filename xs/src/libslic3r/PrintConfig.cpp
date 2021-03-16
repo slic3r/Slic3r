@@ -35,7 +35,7 @@ PrintConfigDef::PrintConfigDef()
     def->category = __TRANS("Layers and Perimeters");
     def->tooltip = __TRANS("Controls the quality / printing time tradeoff for adaptive layer generation. 0 -> fastest printing with max layer height, 100 -> highest quality, min layer height");
     def->sidetext = "%";
-    def->cli = "adaptive_slicing_quality=f";
+    def->cli = "adaptive-slicing-quality=f";
     def->min = 0;
     def->max = 100;
     def->gui_type = "slider";
@@ -51,6 +51,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("bed_shape", coPoints);
     def->label = __TRANS("Bed shape");
+    def->tooltip = __TRANS("Shape of the print bed.");
     {
         ConfigOptionPoints* opt = new ConfigOptionPoints();
         opt->values.push_back(Pointf(0,0));
@@ -159,6 +160,23 @@ PrintConfigDef::PrintConfigDef()
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0);
 
+    def = this->add("brim_ears", coBool);
+    def->label = __TRANS("Exterior brim ears");
+    def->category = __TRANS("Skirt and brim");
+    def->tooltip = __TRANS("Draw the brim only over the sharp edges of the model.");
+    def->cli = "brim-ears!";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("brim_ears_max_angle", coFloat);
+    def->label = __TRANS("Brim ears Maximum Angle");
+    def->category = __TRANS("Skirt and brim");
+    def->tooltip = __TRANS("Maximum angle for a corner to place a brim ear.");
+    def->sidetext = "°";
+    def->cli = "brim-ears-max-angle=f";
+    def->min = 0;
+    def->max = 180;
+    def->default_value = new ConfigOptionFloat(125);
+
     def = this->add("brim_width", coFloat);
     def->label = __TRANS("Exterior brim width");
     def->category = __TRANS("Skirt and brim");
@@ -196,7 +214,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("disable_fan_first_layers", coInt);
     def->label = __TRANS("Disable fan for the first");
-    def->tooltip = __TRANS("This disables the fan completely for the first N layers to aid in the adhesion of media to the bed. (default 3)");
+    def->tooltip = __TRANS("This disables the fan completely for the first N layers to aid in the adhesion of media to the bed.");
     def->sidetext = __TRANS("layers");
     def->cli = "disable-fan-first-layers=i";
     def->min = 0;
@@ -410,6 +428,12 @@ PrintConfigDef::PrintConfigDef()
         opt->values.push_back(0.f);
         def->default_value = opt;
     }
+
+    def = this->add("fan_percentage", coBool);
+    def->label = __TRANS("Fan PWM from 0-100");
+    def->tooltip = __TRANS("Set this if your printer uses control values from 0-100 instead of 0-255.");
+    def->cli = "fan-percentage";
+    def->default_value = new ConfigOptionBool(false);
 
     def = this->add("filament_diameter", coFloats);
     def->label = __TRANS("Diameter");
@@ -1032,7 +1056,7 @@ PrintConfigDef::PrintConfigDef()
 
     def = this->add("pressure_advance", coFloat);
     def->label = __TRANS("Pressure advance");
-    def->category = __TRANS("Extruder");
+    def->category = __TRANS("Extruders");
     def->tooltip = __TRANS("When set to a non-zero value, this experimental option enables pressure regulation. It's the K constant for the advance algorithm that pushes more or less filament upon speed changes. It's useful for Bowden-tube extruders. Reasonable values are in range 0-10.");
     def->cli = "pressure-advance=f";
     def->min = 0;
@@ -1892,9 +1916,94 @@ PrintConfigBase::_handle_legacy(t_config_option_key &opt_key, std::string &value
     }
 }
 
-CLIConfigDef::CLIConfigDef()
+CLIActionsConfigDef::CLIActionsConfigDef()
 {
     ConfigOptionDef* def;
+    
+    // Actions:
+    def = this->add("export_obj", coBool);
+    def->label = __TRANS("Export SVG");
+    def->tooltip = __TRANS("Export the model(s) as OBJ.");
+    def->cli = "export-obj";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("export_pov", coBool);
+    def->label = __TRANS("Export POV");
+    def->tooltip = __TRANS("Export the model as POV-Ray definition.");
+    def->cli = "export-pov";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("export_svg", coBool);
+    def->label = __TRANS("Export SVG");
+    def->tooltip = __TRANS("Slice the model and export solid slices as SVG.");
+    def->cli = "export-svg";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("export_sla_svg", coBool);
+    def->label = __TRANS("Export SVG for SLA");
+    def->tooltip = __TRANS("Slice the model and export SLA printing layers as SVG.");
+    def->cli = "export-sla-svg|sla";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("export_3mf", coBool);
+    def->label = __TRANS("Export 3MF");
+    def->tooltip = __TRANS("Export the model(s) as 3MF.");
+    def->cli = "export-3mf";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("export_amf", coBool);
+    def->label = __TRANS("Export AMF");
+    def->tooltip = __TRANS("Export the model(s) as AMF.");
+    def->cli = "export-amf";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("export_stl", coBool);
+    def->label = __TRANS("Export STL");
+    def->tooltip = __TRANS("Export the model(s) as STL.");
+    def->cli = "export-stl";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("export_gcode", coBool);
+    def->label = __TRANS("Export G-code");
+    def->tooltip = __TRANS("Slice the model and export toolpaths as G-code.");
+    def->cli = "export-gcode|gcode|g";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("help", coBool);
+    def->label = __TRANS("Help");
+    def->tooltip = __TRANS("Show this help.");
+    def->cli = "help|h";
+    def->default_value = new ConfigOptionBool(false);
+
+    def = this->add("help_options", coBool);
+    def->label = __TRANS("Help (options)");
+    def->tooltip = __TRANS("Show the full list of print/G-code configuration options.");
+    def->cli = "help-options";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("info", coBool);
+    def->label = __TRANS("Output Model Info");
+    def->tooltip = __TRANS("Write information about the model to the console.");
+    def->cli = "info";
+    def->default_value = new ConfigOptionBool(false);
+    
+    def = this->add("save", coString);
+    def->label = __TRANS("Save config file");
+    def->tooltip = __TRANS("Save configuration to the specified file.");
+    def->cli = "save";
+    def->default_value = new ConfigOptionString();
+}
+
+CLITransformConfigDef::CLITransformConfigDef()
+{
+    ConfigOptionDef* def;
+    
+    // Transform options:
+    def = this->add("align_xy", coPoint);
+    def->label = __TRANS("Align XY");
+    def->tooltip = __TRANS("Align the model to the given point.");
+    def->cli = "align-xy";
+    def->default_value = new ConfigOptionPoint(Pointf(100,100));
     
     def = this->add("cut", coFloat);
     def->label = __TRANS("Cut");
@@ -1920,139 +2029,109 @@ CLIConfigDef::CLIConfigDef()
     def->cli = "cut-y";
     def->default_value = new ConfigOptionFloat(0);
     
-    def = this->add("export_obj", coBool);
-    def->label = __TRANS("Export SVG");
-    def->tooltip = __TRANS("Export the model as OBJ.");
-    def->cli = "export-obj";
-    def->default_value = new ConfigOptionBool(false);
-    
-    def = this->add("export_pov", coBool);
-    def->label = __TRANS("Export POV");
-    def->tooltip = __TRANS("Export the model as POV-Ray definition.");
-    def->cli = "export-pov";
-    def->default_value = new ConfigOptionBool(false);
-    
-    def = this->add("export_svg", coBool);
-    def->label = __TRANS("Export SVG");
-    def->tooltip = __TRANS("Slice the model and export slices as SVG.");
-    def->cli = "export-svg";
-    def->default_value = new ConfigOptionBool(false);
+    def = this->add("center", coPoint);
+    def->label = __TRANS("Center");
+    def->tooltip = __TRANS("Center the print around the given center.");
+    def->cli = "center";
+    def->default_value = new ConfigOptionPoint(Pointf(100,100));
 
-    def = this->add("export_3mf", coBool);
-    def->label = __TRANS("Export 3MF");
-    def->tooltip = __TRANS("Slice the model and export slices as 3MF.");
-    def->cli = "export-3mf";
-    def->default_value = new ConfigOptionBool(false);
-
-    def = this->add("slice", coBool);
-    def->label = __TRANS("Slice");
-    def->tooltip = __TRANS("Slice the model and export gcode.");
-    def->cli = "slice";
-    def->default_value = new ConfigOptionBool(false);
-
-    def = this->add("help", coBool);
-    def->label = __TRANS("Help");
-    def->tooltip = __TRANS("Show this help.");
-    def->cli = "help";
-    def->default_value = new ConfigOptionBool(false);
-
-    def = this->add("gui", coBool);
-    def->label = __TRANS("Use GUI");
-    def->tooltip = __TRANS("Start the Slic3r GUI.");
-    def->cli = "gui";
-    def->default_value = new ConfigOptionBool(false);
+    def = this->add("dont_arrange", coBool);
+    def->label = __TRANS("Don't arrange");
+    def->tooltip = __TRANS("Do not rearrange the given models before merging and keep their original XY coordinates.");
+    def->cli = "dont-arrange";
     
-    def = this->add("info", coBool);
-    def->label = __TRANS("Output Model Info");
-    def->tooltip = __TRANS("Write information about the model to the console.");
-    def->cli = "info";
-    def->default_value = new ConfigOptionBool(false);
+    def = this->add("duplicate", coInt);
+    def->label = __TRANS("Duplicate");
+    def->tooltip =__TRANS("Multiply copies by this factor.");
+    def->cli = "duplicate=i";
+    def->min = 1;
     
-    def = this->add("load", coStrings);
-    def->label = __TRANS("Load config file");
-    def->tooltip = __TRANS("Load configuration from the specified file. It can be used more than once to load options from multiple files.");
-    def->cli = "load";
-    def->default_value = new ConfigOptionStrings();
-    
-    def = this->add("output", coString);
-    def->label = __TRANS("Output File");
-    def->tooltip = __TRANS("The file where the output will be written (if not specified, it will be based on the input file).");
-    def->cli = "output";
-    def->default_value = new ConfigOptionString("");
+    def = this->add("duplicate_grid", coPoint);
+    def->label = __TRANS("Duplicate by grid");
+    def->tooltip = __TRANS("Multiply copies by creating a grid.");
+    def->cli = "duplicate-grid";
+
+    def = this->add("merge", coBool);
+    def->label = __TRANS("Merge");
+    def->tooltip = __TRANS("Arrange the supplied models in a plate and merge them in a single model in order to perform actions once.");
+    def->cli = "merge|m";
+
+    def = this->add("repair", coBool);
+    def->label = __TRANS("Repair");
+    def->tooltip = __TRANS("Try to repair any non-manifold meshes (this option is implicitly added whenever we need to slice the model to perform the requested action).");
+    def->cli = "repair";
     
     def = this->add("rotate", coFloat);
     def->label = __TRANS("Rotate");
-    def->tooltip = __TRANS("Rotation angle around the Z axis in degrees (0-360, default: 0).");
+    def->tooltip = __TRANS("Rotation angle around the Z axis in degrees.");
     def->cli = "rotate";
     def->default_value = new ConfigOptionFloat(0);
     
     def = this->add("rotate_x", coFloat);
     def->label = __TRANS("Rotate around X");
-    def->tooltip = __TRANS("Rotation angle around the X axis in degrees (0-360, default: 0).");
+    def->tooltip = __TRANS("Rotation angle around the X axis in degrees.");
     def->cli = "rotate-x";
     def->default_value = new ConfigOptionFloat(0);
     
     def = this->add("rotate_y", coFloat);
     def->label = __TRANS("Rotate around Y");
-    def->tooltip = __TRANS("Rotation angle around the Y axis in degrees (0-360, default: 0).");
+    def->tooltip = __TRANS("Rotation angle around the Y axis in degrees.");
     def->cli = "rotate-y";
     def->default_value = new ConfigOptionFloat(0);
     
-    def = this->add("save", coString);
-    def->label = __TRANS("Save config file");
-    def->tooltip = __TRANS("Save configuration to the specified file.");
-    def->cli = "save";
-    def->default_value = new ConfigOptionString();
-    
-    def = this->add("scale", coFloat);
+    def = this->add("scale", coFloatOrPercent);
     def->label = __TRANS("Scale");
-    def->tooltip = __TRANS("Scaling factor (default: 1).");
+    def->tooltip = __TRANS("Scaling factor or percentage.");
     def->cli = "scale";
-    def->default_value = new ConfigOptionFloat(1);
+    def->default_value = new ConfigOptionFloatOrPercent(1, false);
+
+    def = this->add("split", coBool);
+    def->label = __TRANS("Split");
+    def->tooltip = __TRANS("Detect unconnected parts in the given model(s) and split them into separate objects.");
+    def->cli = "split";
     
     def = this->add("scale_to_fit", coPoint3);
     def->label = __TRANS("Scale to Fit");
     def->tooltip = __TRANS("Scale to fit the given volume.");
     def->cli = "scale-to-fit";
     def->default_value = new ConfigOptionPoint3(Pointf3(0,0,0));
-
-    def = this->add("center", coPoint3);
-    def->label = __TRANS("Center");
-    def->tooltip = __TRANS("Center the print around the given center (default: 100, 100).");
-    def->cli = "center";
-    def->default_value = new ConfigOptionPoint(Pointf(100,100));
 }
 
-const CLIConfigDef cli_config_def;
 
-std::ostream&
-print_cli_options(std::ostream& out) {
-    for (const auto& opt : cli_config_def.options) {
-        if (opt.second.cli.size() != 0) {
-            out << "\t" << std::left << std::setw(40) << std::string("--") + opt.second.cli; 
-            out << "\t" << opt.second.tooltip << "\n";
-            if (opt.second.default_value != nullptr) 
-                out << "\t" << std::setw(40) << " " << "\t" << " (default: " << opt.second.default_value->serialize() << ")";
-            out << "\n";
-        }
-    }
-    std::cerr << std::endl;
-    return out;
+CLIMiscConfigDef::CLIMiscConfigDef()
+{
+    ConfigOptionDef* def;
+    
+    def = this->add("ignore_nonexistent_config", coBool);
+    def->label = __TRANS("Ignore non-existent config files");
+    def->tooltip = __TRANS("Do not fail if a file supplied to --load does not exist.");
+    def->cli = "ignore-nonexistent-config";
+    
+    def = this->add("load", coStrings);
+    def->label = __TRANS("Load config file");
+    def->tooltip = __TRANS("Load configuration from the specified file. It can be used more than once to load options from multiple files.");
+    def->cli = "load";
+    
+    def = this->add("output", coString);
+    def->label = __TRANS("Output File");
+    def->tooltip = __TRANS("The file where the output will be written (if not specified, it will be based on the input file).");
+    def->cli = "output|o";
+    
+    #ifdef USE_WX
+    def = this->add("autosave", coString);
+    def->label = __TRANS("Autosave");
+    def->tooltip = __TRANS("Automatically export current configuration to the specified file.");
+    def->cli = "autosave";
+    
+    def = this->add("datadir", coString);
+    def->label = __TRANS("Data directory");
+    def->tooltip = __TRANS("Load and store settings at the given directory. This is useful for maintaining different profiles or including configurations from a network storage.");
+    def->cli = "datadir";
+    #endif
 }
 
-std::ostream&
-print_print_options(std::ostream& out) {
-    for (const auto& opt : print_config_def.options) {
-        if (opt.second.cli.size() != 0) {
-            out << "\t" << std::left << std::setw(40) << std::string("--") + opt.second.cli; 
-            out << "\t" << opt.second.tooltip << "\n";
-            if (opt.second.default_value != nullptr) 
-                out << "\t" << std::setw(40) << " " << "\t" << " (default: " << opt.second.default_value->serialize() << ")";
-            out << "\n";
-        }
-    }
-    std::cerr << std::endl;
-    return out;
-}
+const CLIActionsConfigDef    cli_actions_config_def;
+const CLITransformConfigDef  cli_transform_config_def;
+const CLIMiscConfigDef       cli_misc_config_def;
 
 }

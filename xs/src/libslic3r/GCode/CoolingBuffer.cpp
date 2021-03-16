@@ -50,7 +50,8 @@ apply_speed_factor(std::string &line, float speed_factor, float min_print_speed)
     // replace speed in string
     {
         std::ostringstream oss;
-        oss << speed;
+        oss.precision(3);
+        oss << std::fixed << speed;
         line.replace(pos+1, (last_pos-pos), oss.str());
     }
 }

@@ -60,6 +60,7 @@ REGISTER_CLASS(SLAPrint, "SLAPrint");
 REGISTER_CLASS(SlicingAdaptive, "SlicingAdaptive");
 REGISTER_CLASS(Surface, "Surface");
 REGISTER_CLASS(SurfaceCollection, "Surface::Collection");
+REGISTER_CLASS(TransformationMatrix, "TransformationMatrix");
 REGISTER_CLASS(TriangleMesh, "TriangleMesh");
 REGISTER_CLASS(GLVertexArray, "GUI::_3DScene::GLVertexArray");
 
@@ -79,8 +80,8 @@ ConfigBase__get(ConfigBase* THIS, const t_config_option_key &opt_key) {
     ConfigOption* opt = THIS->option(opt_key);
     if (opt == NULL) return &PL_sv_undef;
     
-    const ConfigOptionDef* def = THIS->def->get(opt_key);
-    return ConfigOption_to_SV(*opt, *def);
+    const ConfigOptionDef& def = THIS->def->get(opt_key);
+    return ConfigOption_to_SV(*opt, def);
 }
 
 SV*
@@ -153,22 +154,22 @@ ConfigBase__get_at(ConfigBase* THIS, const t_config_option_key &opt_key, size_t 
     ConfigOption* opt = THIS->option(opt_key);
     if (opt == NULL) return &PL_sv_undef;
     
-    const ConfigOptionDef* def = THIS->def->get(opt_key);
-    if (def->type == coFloats) {
+    const ConfigOptionDef& def = THIS->def->get(opt_key);
+    if (def.type == coFloats) {
         ConfigOptionFloats* optv = dynamic_cast<ConfigOptionFloats*>(opt);
         return newSVnv(optv->get_at(i));
-    } else if (def->type == coInts) {
+    } else if (def.type == coInts) {
         ConfigOptionInts* optv = dynamic_cast<ConfigOptionInts*>(opt);
         return newSViv(optv->get_at(i));
-    } else if (def->type == coStrings) {
+    } else if (def.type == coStrings) {
         ConfigOptionStrings* optv = dynamic_cast<ConfigOptionStrings*>(opt);
         // we don't serialize() because that would escape newlines
         std::string val = optv->get_at(i);
         return newSVpvn_utf8(val.c_str(), val.length(), true);
-    } else if (def->type == coPoints) {
+    } else if (def.type == coPoints) {
         ConfigOptionPoints* optv = dynamic_cast<ConfigOptionPoints*>(opt);
         return perl_to_SV_clone_ref(optv->get_at(i));
-    } else if (def->type == coBools) {
+    } else if (def.type == coBools) {
         ConfigOptionBools* optv = dynamic_cast<ConfigOptionBools*>(opt);
         return newSViv(optv->get_at(i) ? 1 : 0);
     } else {
@@ -181,12 +182,12 @@ ConfigBase__set(ConfigBase* THIS, const t_config_option_key &opt_key, SV* value)
     ConfigOption* opt = THIS->option(opt_key, true);
     if (opt == NULL) CONFESS("Trying to set non-existing option");
     
-    const ConfigOptionDef* def = THIS->def->get(opt_key);
-    if (def->type == coFloat) {
+    const ConfigOptionDef& def = THIS->def->get(opt_key);
+    if (def.type == coFloat) {
         if (!looks_like_number(value)) return false;
         ConfigOptionFloat* optv = dynamic_cast<ConfigOptionFloat*>(opt);
         optv->value = SvNV(value);
-    } else if (def->type == coFloats) {
+    } else if (def.type == coFloats) {
         ConfigOptionFloats* optv = dynamic_cast<ConfigOptionFloats*>(opt);
         std::vector<double> values;
         AV* av = (AV*)SvRV(value);
@@ -197,11 +198,11 @@ ConfigBase__set(ConfigBase* THIS, const t_config_option_key &opt_key, SV* value)
             values.push_back(SvNV(*elem));
         }
         optv->values = values;
-    } else if (def->type == coInt) {
+    } else if (def.type == coInt) {
         if (!looks_like_number(value)) return false;
         ConfigOptionInt* optv = dynamic_cast<ConfigOptionInt*>(opt);
         optv->value = SvIV(value);
-    } else if (def->type == coInts) {
+    } else if (def.type == coInts) {
         ConfigOptionInts* optv = dynamic_cast<ConfigOptionInts*>(opt);
         std::vector<int> values;
         AV* av = (AV*)SvRV(value);
@@ -212,10 +213,10 @@ ConfigBase__set(ConfigBase* THIS, const t_config_option_key &opt_key, SV* value)
             values.push_back(SvIV(*elem));
         }
         optv->values = values;
-    } else if (def->type == coString) {
+    } else if (def.type == coString) {
         ConfigOptionString* optv = dynamic_cast<ConfigOptionString*>(opt);
         optv->value = std::string(SvPV_nolen(value), SvCUR(value));
-    } else if (def->type == coStrings) {
+    } else if (def.type == coStrings) {
         ConfigOptionStrings* optv = dynamic_cast<ConfigOptionStrings*>(opt);
         optv->values.clear();
         AV* av = (AV*)SvRV(value);
@@ -225,13 +226,13 @@ ConfigBase__set(ConfigBase* THIS, const t_config_option_key &opt_key, SV* value)
             if (elem == NULL) return false;
             optv->values.push_back(std::string(SvPV_nolen(*elem), SvCUR(*elem)));
         }
-    } else if (def->type == coPoint) {
+    } else if (def.type == coPoint) {
         ConfigOptionPoint* optv = dynamic_cast<ConfigOptionPoint*>(opt);
         return from_SV_check(value, &optv->value);
-    } else if(def->type == coPoint3){
+    } else if(def.type == coPoint3){
         ConfigOptionPoint3* optv = dynamic_cast<ConfigOptionPoint3*>(opt);
         return from_SV_check(value, &optv->value);
-    } else if (def->type == coPoints) {
+    } else if (def.type == coPoints) {
         ConfigOptionPoints* optv = dynamic_cast<ConfigOptionPoints*>(opt);
         std::vector<Pointf> values;
         AV* av = (AV*)SvRV(value);
@@ -243,10 +244,10 @@ ConfigBase__set(ConfigBase* THIS, const t_config_option_key &opt_key, SV* value)
             values.push_back(point);
         }
         optv->values = values;
-    } else if (def->type == coBool) {
+    } else if (def.type == coBool) {
         ConfigOptionBool* optv = dynamic_cast<ConfigOptionBool*>(opt);
         optv->value = SvTRUE(value);
-    } else if (def->type == coBools) {
+    } else if (def.type == coBools) {
         ConfigOptionBools* optv = dynamic_cast<ConfigOptionBools*>(opt);
         optv->values.clear();
         AV* av = (AV*)SvRV(value);
@@ -287,9 +288,9 @@ ConfigBase__set_ifndef(ConfigBase* THIS, const t_config_option_key &opt_key, SV*
 
 bool
 StaticConfig__set(StaticConfig* THIS, const t_config_option_key &opt_key, SV* value) {
-    const ConfigOptionDef* optdef = THIS->def->get(opt_key);
-    if (!optdef->shortcut.empty()) {
-        for (std::vector<t_config_option_key>::const_iterator it = optdef->shortcut.begin(); it != optdef->shortcut.end(); ++it) {
+    const ConfigOptionDef& optdef = THIS->def->get(opt_key);
+    if (!optdef.shortcut.empty()) {
+        for (std::vector<t_config_option_key>::const_iterator it = optdef.shortcut.begin(); it != optdef.shortcut.end(); ++it) {
             if (!StaticConfig__set(THIS, *it, value)) return false;
         }
         return true;

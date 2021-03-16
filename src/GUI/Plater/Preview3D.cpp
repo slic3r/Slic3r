@@ -25,8 +25,8 @@ Preview3D::Preview3D(wxWindow* parent, const wxSize& size, std::shared_ptr<Slic3
     //z_label->SetFont(Slic3r::GUI::small_font);
     
     auto* vsizer = new wxBoxSizer(wxVERTICAL);
-    vsizer->Add(slider, 1, wxALL | wxEXPAND | wxALIGN_CENTER, 3);
-    vsizer->Add(z_label, 0, wxALL | wxEXPAND | wxALIGN_CENTER, 3);
+    vsizer->Add(slider, 1, wxALL | wxEXPAND, 3);
+    vsizer->Add(z_label, 0, wxALL | wxEXPAND, 3);
     
     auto* sizer = new wxBoxSizer(wxHORIZONTAL);
     sizer->Add(&canvas, 1, wxALL | wxEXPAND, 0);
@@ -96,7 +96,7 @@ void Preview3D::load_print() {
         std::sort(layers_z.begin(),layers_z.end());
         slider->SetRange(0, layers_z.size()-1);
         z_idx = slider->GetValue();
-        // If invalide z_idx,  move the slider to the top
+        // If invalid z_idx,  move the slider to the top
         if (z_idx >= layers_z.size() || slider->GetValue() == 0) {
             slider->SetValue(layers_z.size()-1);
             //$z_idx = @{$self->{layer_z}} ? -1 : undef;

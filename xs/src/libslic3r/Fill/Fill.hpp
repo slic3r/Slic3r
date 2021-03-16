@@ -16,49 +16,49 @@ namespace Slic3r {
 
 class Surface;
 
-// Abstract base class for the infill generators.
+/// Abstract base class for the infill generators.
 class Fill
 {
 public:
-    // Index of the layer.
+    /// Index of the layer.
     size_t      layer_id;
     
-    // Z coordinate of the top print surface, in unscaled coordinates
+    /// Z coordinate of the top print surface, in unscaled coordinates
     coordf_t    z;
     
-    // in unscaled coordinates
+    /// in unscaled coordinates
     coordf_t    min_spacing;
     
-    // overlap over spacing for extrusion endpoints
+    /// overlap over spacing for extrusion endpoints
     float       endpoints_overlap;
     
-    // in radians, ccw, 0 = East
+    /// in radians, ccw, 0 = East
     float       angle;
     
-    // In scaled coordinates. Maximum lenght of a perimeter segment connecting two infill lines.
-    // Used by the FillRectilinear2, FillGrid2, FillTriangles, FillStars and FillCubic.
-    // If left to zero, the links will not be limited.
+    /// In scaled coordinates. Maximum length of a perimeter segment connecting two infill lines.
+    /// Used by the FillRectilinear2, FillGrid2, FillTriangles, FillStars and FillCubic.
+    /// If left to zero, the links will not be limited.
     coord_t     link_max_length;
     
-    // In scaled coordinates. Used by the concentric infill pattern to clip the loops to create extrusion paths.
+    /// In scaled coordinates. Used by the concentric infill pattern to clip the loops to create extrusion paths.
     coord_t     loop_clipping;
     
-    // In scaled coordinates. Bounding box of the 2D projection of the object.
-    // If not defined, the bounding box of each single expolygon is used.
+    /// In scaled coordinates. Bounding box of the 2D projection of the object.
+    /// If not defined, the bounding box of each single expolygon is used.
     BoundingBox bounding_box;
     
-    // Fill density, fraction in <0, 1>
+    /// Fill density, fraction in <0, 1>
     float       density;
 
-    // Don't connect the fill lines around the inner perimeter.
+    /// Don't connect the fill lines around the inner perimeter.
     bool        dont_connect;
 
-    // Don't adjust spacing to fill the space evenly.
+    /// Don't adjust spacing to fill the space evenly.
     bool        dont_adjust;
 
-    // For Honeycomb.
-    // we were requested to complete each loop;
-    // in this case we don't try to make more continuous paths
+    /// For Honeycomb.
+    /// we were requested to complete each loop;
+    /// in this case we don't try to make more continuous paths
     bool        complete;
 
 public:
@@ -67,23 +67,23 @@ public:
     virtual Fill* clone() const = 0;
     virtual ~Fill() {};
     
-    // Implementations can override the following virtual methods:
-    // Use bridge flow for the fill?
+    /// Implementations can override the following virtual methods:
+    /// Use bridge flow for the fill?
     virtual bool use_bridge_flow() const { return false; };
 
-    // Do not sort the fill lines to optimize the print head path?
+    /// Do not sort the fill lines to optimize the print head path?
     virtual bool no_sort() const { return false; };
 
-    // Can this pattern be used for solid infill?
+    /// Can this pattern be used for solid infill?
     virtual bool can_solid() const { return false; };
 
-    // Perform the fill.
+    /// Perform the fill.
     virtual Polylines fill_surface(const Surface &surface);
     
     coordf_t spacing() const { return this->_spacing; };
     
 protected:
-    // the actual one in unscaled coordinates, we fill this while generating paths
+    /// the actual one in unscaled coordinates, we fill this while generating paths
     coordf_t _spacing;
     
     Fill() :
@@ -103,14 +103,14 @@ protected:
     
     typedef std::pair<float, Point> direction_t;
     
-    // The expolygon may be modified by the method to avoid a copy.
+    /// The expolygon may be modified by the method to avoid a copy.
     virtual void _fill_surface_single(
         unsigned int                    thickness_layers,
         const direction_t               &direction, 
         ExPolygon                       &expolygon, 
         Polylines*                      polylines_out) {};
     
-    // Implementations can override the following virtual method:
+    /// Implementations can override the following virtual method:
     virtual float _layer_angle(size_t idx) const {
         return (idx % 2) == 0 ? (M_PI/2.) : 0;
     };

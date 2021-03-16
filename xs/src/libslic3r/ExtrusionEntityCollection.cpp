@@ -220,25 +220,41 @@ ExtrusionEntityCollection::items_count() const
     return count;
 }
 
-/* Returns a single vector of pointers to all non-collection items contained in this one */
+/* Returns a single vector of chained (new) pointers to all non-collection items contained in this one */
 void
-ExtrusionEntityCollection::flatten(ExtrusionEntityCollection* retval) const
+ExtrusionEntityCollection::flatten(ExtrusionEntityCollection* retval, bool preserve_ordering) const
 {
-    for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
-        if ((*it)->is_collection()) {
-            ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
-            retval->append(collection->flatten().entities);
-        } else {
-            retval->append(**it);
+    if (this->no_sort and preserve_ordering) {
+        /// if we want to preserve ordering and we can't sort, break out the unsorted ones first.
+        ExtrusionEntityCollection *unsortable = new ExtrusionEntityCollection(*this);
+        retval->append(*unsortable);
+        unsortable->entities.clear();
+        for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
+            if ((*it)->is_collection()) {
+                ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
+                collection->flatten(unsortable, preserve_ordering);
+            }
+            else {
+                unsortable->append(**it);
+            }
+        }
+    } else {
+        for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
+            if ((*it)->is_collection()) {
+                ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
+                retval->append(collection->flatten(preserve_ordering).entities);
+            } else {
+                retval->append(**it);
+            }
         }
     }
 }
 
 ExtrusionEntityCollection
-ExtrusionEntityCollection::flatten() const
+ExtrusionEntityCollection::flatten(bool preserve_ordering) const
 {
     ExtrusionEntityCollection coll;
-    this->flatten(&coll);
+    this->flatten(&coll, preserve_ordering);
     return coll;
 }
 

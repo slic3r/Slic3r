@@ -13,7 +13,7 @@
 namespace boost {
     namespace nowide {
         ///
-        /// Instal utf8_codecvt facet into  boost::filesystem::path such all char strings are interpreted as utf-8 strings
+        /// Install utf8_codecvt facet into  boost::filesystem::path such all char strings are interpreted as utf-8 strings
         ///
         inline void nowide_filesystem()
         {

@@ -38,7 +38,7 @@
 
 namespace p2t {
 
-// Inital triangle factor, seed triangle will extend 30% of
+// Initial triangle factor, seed triangle will extend 30% of
 // PointSet width to both left and right.
 const double kAlpha = 0.3;
 

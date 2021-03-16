@@ -211,7 +211,7 @@ stl_open_merge(stl_file *stl, ADMESH_CHAR *file_to_merge) {
   /* Record the file pointer too: */
   origFp=stl->fp;
 
-  /* Initialize the sturucture with zero stats, header info and sizes: */
+  /* Initialize the structure with zero stats, header info and sizes: */
   stl_initialize(&stl_to_merge);
   stl_count_facets(&stl_to_merge, file_to_merge);
 
@@ -437,13 +437,9 @@ void
 stl_close(stl_file *stl) {
   if (stl->error) return;
 
-  if(stl->neighbors_start != NULL)
-    free(stl->neighbors_start);
-  if(stl->facet_start != NULL)
-    free(stl->facet_start);
-  if(stl->v_indices != NULL)
-    free(stl->v_indices);
-  if(stl->v_shared != NULL)
-    free(stl->v_shared);
+  free(stl->neighbors_start);
+  free(stl->facet_start);
+  free(stl->v_indices);
+  free(stl->v_shared);
 }
 

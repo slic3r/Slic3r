@@ -19,6 +19,7 @@ use Time::HiRes qw(gettimeofday tv_interval);
 $|++;
 binmode STDOUT, ':utf8';
 binmode STDERR, ':utf8';
+$ENV{GDK_BACKEND} = 'x11';
 
 our %opt = ();
 my %cli_options = ();
@@ -48,6 +49,8 @@ my %cli_options = ();
         
         'scale=f'               => \$opt{scale},
         'rotate=f'              => \$opt{rotate},
+        'rotate-x=f'            => \$opt{rotate_x},
+        'rotate-y=f'            => \$opt{rotate_y},
         'duplicate=i'           => \$opt{duplicate},
         'duplicate-grid=s'      => \$opt{duplicate_grid},
         'print-center=s'        => \$opt{print_center},
@@ -157,7 +160,7 @@ if (@ARGV) {  # slicing from command line
             my $model = Slic3r::Model->read_from_file($file);
             $model->add_default_instances;
             my $mesh = $model->mesh;
-            $mesh->translate(0, 0, -$mesh->bounding_box->z_min);
+            $mesh->align_to_bed();
             my $upper = Slic3r::TriangleMesh->new;
             my $lower = Slic3r::TriangleMesh->new;
             $mesh->cut(Z, $opt{cut}, $upper, $lower);
@@ -178,8 +181,8 @@ if (@ARGV) {  # slicing from command line
             my $model = Slic3r::Model->read_from_file($file);
             $model->add_default_instances;
             my $mesh = $model->mesh;
+            $mesh->align_to_bed();
             my $bb = $mesh->bounding_box;
-            $mesh->translate(0, 0, -$bb->z_min);
             
             my $x_parts = ceil(($bb->size->x - epsilon)/$grid_x);
             my $y_parts = ceil(($bb->size->y - epsilon)/$grid_y); #--
@@ -258,6 +261,8 @@ if (@ARGV) {  # slicing from command line
         my $sprint = Slic3r::Print::Simple->new(
             scale           => $opt{scale}          // 1,
             rotate          => deg2rad($opt{rotate} // 0),
+            rotate_x        => deg2rad($opt{rotate_x} // 0),
+            rotate_y        => deg2rad($opt{rotate_y} // 0),
             duplicate       => $opt{duplicate}      // 1,
             duplicate_grid  => $opt{duplicate_grid} // [1,1],
             print_center    => $opt{print_center},
@@ -553,12 +558,16 @@ $j
                         of filament on the first layer, for each extruder (mm, 0+, default: $config->{min_skirt_length})
     --brim-width        Width of the brim that will get added to each object to help adhesion
                         (mm, default: $config->{brim_width})
+    --brim-ears         Print brim only on sharp corners.
+    --brim-ears-max-angle Maximum angle considered for adding brim ears. (degrees, default: $config->{brim_ears_max_angle})
     --interior-brim-width  Width of the brim that will get printed inside object holes to help adhesion
                         (mm, default: $config->{interior_brim_width})
    
    Transform options:
     --scale             Factor for scaling input object (default: 1)
-    --rotate            Rotation angle in degrees (0-360, default: 0)
+    --rotate            Rotation angle in degrees around Z (default: 0)
+    --rotate-x          Rotation angle in degrees around X (default: 0)
+    --rotate-y          Rotation angle in degrees around Y (default: 0)
     --duplicate         Number of items with auto-arrange (1+, default: 1)
     --duplicate-grid    Number of items with grid arrangement (default: 1,1)
     --duplicate-distance Distance in mm between copies (default: $config->{duplicate_distance})

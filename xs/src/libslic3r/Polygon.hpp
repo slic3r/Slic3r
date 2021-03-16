@@ -41,6 +41,8 @@ class Polygon : public MultiPoint {
     // Tested by counting intersections along a horizontal line.
     bool contains(const Point &point) const;
     void douglas_peucker(double tolerance);
+    /// removes collinear points within SCALED_EPSILON tolerance
+    void remove_collinear_points();
     void remove_vertical_collinear_points(coord_t tolerance);
     Polygons simplify(double tolerance) const;
     void simplify(double tolerance, Polygons &polygons) const;

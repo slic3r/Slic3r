@@ -17,6 +17,7 @@
     void repair();
     float volume();
     void WriteOBJFile(std::string output_file);
+
     void scale(float factor);
     void scale_xyz(Pointf3* versor)
         %code{% THIS->scale(*versor); %};
@@ -29,6 +30,13 @@
     void mirror_z();
     void align_to_origin();
     void rotate(double angle, Point* center);
+    void align_to_bed();
+
+    void transform(TransformationMatrix* trafo)
+        %code{% THIS->transform(*trafo); %};
+    Clone<TriangleMesh> get_transformed_mesh(TransformationMatrix* trafo)
+        %code{% RETVAL=THIS->get_transformed_mesh(*trafo); %};
+
     TriangleMeshPtrs split();
     TriangleMeshPtrs cut_by_grid(Pointf* grid)
         %code{% RETVAL = THIS->cut_by_grid(*grid); %};
