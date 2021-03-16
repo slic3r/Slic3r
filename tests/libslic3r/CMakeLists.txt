@@ -2,6 +2,7 @@ get_filename_component(_TEST_NAME ${CMAKE_CURRENT_LIST_DIR} NAME)
 
 add_executable(${_TEST_NAME}_tests 
 	${_TEST_NAME}_tests.cpp
+	test_amf.cpp
 	test_3mf.cpp
 	test_aabbindirect.cpp
 	test_clipper_offset.cpp
@@ -21,6 +22,7 @@ add_executable(${_TEST_NAME}_tests
     test_png_io.cpp
     test_timeutils.cpp
 	)
+
 
 if (TARGET OpenVDB::openvdb)
     target_sources(${_TEST_NAME}_tests PRIVATE test_hollowing.cpp)
