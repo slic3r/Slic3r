@@ -2024,10 +2024,10 @@ namespace Skirt {
         // not at the print_z of the interlaced support material layers.
         std::map<unsigned int, std::pair<size_t, size_t>> skirt_loops_per_extruder_out;
         if (print.has_skirt() && ! print.skirt().entities.empty() &&
+            // infinite or high skirt does not make sense for sequential print here
+            //(if it is selected, it's done in the "extrude object-only skirt" in process_layer)
             // Not enough skirt layers printed yet.
             (skirt_done.size() < (size_t)print.config().skirt_height.value || print.has_infinite_skirt()) &&
-            // infinite or high skirt does not make sense for sequential print!
-            (layer_tools.print_z - skirt_done.back() < print.config().skirt_extrusion_width) &&
             // This print_z has not been extruded yet (sequential print)
             // FIXME: The skirt_done should not be empty at this point. The check is a workaround
             // of https://github.com/prusa3d/PrusaSlicer/issues/5652, but it deserves a real fix.
@@ -2405,7 +2405,7 @@ void GCode::process_layer(
 
             const PrintObject *print_object = layers.front().object();
             this->set_origin(unscale(print_object->instances()[single_object_instance_idx].shift));
-            if (this->m_layer != nullptr && this->m_layer->id() < m_config.skirt_height) {
+            if (this->m_layer != nullptr && (this->m_layer->id() < m_config.skirt_height || print.has_infinite_skirt() )) {
                 for (const ExtrusionEntity *ee : print_object->skirt().entities)
                     gcode += this->extrude_entity(*ee, "", m_config.support_material_speed.value);
             }
@@ -3274,7 +3274,7 @@ void GCode::use(const ExtrusionEntityCollection &collection) {
 std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &description, double speed) {
 
     ExtrusionPath simplifed_path = path;
-    if (this->config().min_length.value != 0 && !m_last_too_small.empty() /*&& m_last_too_small.length() > 0*/) {
+    if (this->config().min_length.value != 0 && !m_last_too_small.empty()) {
         //descr += " trys fusion " + std::to_string(unscaled(m_last_too_small.last_point().x())) + " , " + std::to_string(unscaled(path.first_point().x()));
         //ensure that it's a continous thing
         if (m_last_too_small.first_point().distance_to_square(path.first_point()) < scale_(this->config().min_length) /*&& m_last_too_small.first_point().distance_to_square(path.first_point()) > EPSILON*/) {
