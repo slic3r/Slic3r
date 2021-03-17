@@ -1300,8 +1300,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Toolchange temperature");
     def->tooltip = L("To further reduce stringing, it can be helpful to set a lower temperature just prior to extracting filament from the hotend.");
     def->sidetext = L("°C");
-    def->min = 175;
-    def->max = 285;
+    def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInts { 200 });
 
