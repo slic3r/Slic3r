@@ -5509,6 +5509,9 @@ void DynamicPrintConfig::normalize_fdm()
             this->opt<ConfigOptionBool>("ensure_vertical_shell_thickness", true)->value = false;
             this->opt<ConfigOptionBool>("infill_dense", true)->value = false;
             this->opt<ConfigOptionBool>("extra_perimeters", true)->value = false;
+            this->opt<ConfigOptionBool>("extra_perimeters_overhangs", true)->value = false;
+            this->opt<ConfigOptionBool>("extra_perimeters_odd_layers", true)->value = false;
+            this->opt<ConfigOptionBool>("overhangs_reverse", true)->value = false; 
         }
     }
 }
@@ -5680,8 +5683,10 @@ std::string FullPrintConfig::validate()
             return "Spiral vase mode is not compatible with support material";
         if (this->infill_dense)
             return "Spiral vase mode can only print hollow objects and have no top surface, so you don't need any dense infill";
-        if (this->extra_perimeters)
+        if (this->extra_perimeters || this->extra_perimeters_overhangs || this->extra_perimeters_odd_layers)
             return "Can't make more than one perimeter when spiral vase mode is enabled";
+        if (this->overhangs_reverse)
+            return "Can't reverse the direction of the perimeter every layer when spiral vase mode is enabled";
     }
 
     // extrusion widths
