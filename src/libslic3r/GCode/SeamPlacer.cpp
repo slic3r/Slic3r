@@ -376,6 +376,7 @@ Point SeamPlacer::get_seam(const Layer& layer, SeamPosition seam_position,
     if (seam_position != spRandom) {
         // Retrieve the last start position for this object.
 
+        double travel_cost = 1;
         if (seam_position == spAligned) {
             // Seam is aligned to the seam at the preceding layer.
             if (po != nullptr) {
@@ -391,6 +392,7 @@ Point SeamPlacer::get_seam(const Layer& layer, SeamPosition seam_position,
             last_pos.x() = 0;
             last_pos.y() += coord_t(3. * po->bounding_box().radius());
             last_pos_weight = 5.f;
+            travel_cost = 0;
         }else if (seam_position == spNearest) {
             // last_pos already contains current nozzle position
             // set base last_pos_weight to the same value as penaltyFlatSurface
@@ -398,6 +400,7 @@ Point SeamPlacer::get_seam(const Layer& layer, SeamPosition seam_position,
             if (po != nullptr) {
                 last_pos_weight = po->config().seam_travel_cost.get_abs_value(last_pos_weight);
                 angle_weight = po->config().seam_angle_cost.get_abs_value(angle_weight);
+                travel_cost = po->config().seam_travel_cost.get_abs_value(1);
             }
         }
 
@@ -416,7 +419,7 @@ Point SeamPlacer::get_seam(const Layer& layer, SeamPosition seam_position,
 
         //find the max dist the seam can be
         float dist_max = 0.1f * lengths.back();// 5.f * nozzle_dmr
-        if (po != nullptr && po->config().seam_travel_cost.get_abs_value(1) >= 1) {
+        if (po != nullptr && travel_cost >= 1) {
             last_pos_weight *= 2;
             dist_max = 0;
             for (size_t i = 0; i < polygon.points.size(); ++i) {
@@ -456,7 +459,7 @@ Point SeamPlacer::get_seam(const Layer& layer, SeamPosition seam_position,
                 penalty = penaltyConvexVertex + (penaltyFlatSurface - penaltyConvexVertex) * bspline_kernel(ccwAngle);
             }
             penalty *= angle_weight;
-            if (po != nullptr && po->config().seam_travel_cost.get_abs_value(1) >= 1) {
+            if (po != nullptr && travel_cost >= 1) {
                 penalty += last_pos_weight * polygon.points[i].distance_to(last_pos_proj) / dist_max;
             } else {
                 // Give a negative penalty for points close to the last point or the prefered seam location.
