@@ -3719,7 +3719,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             throw Slic3r::InvalidArgument("Invalid speed");
         }
         //don't modify bridge speed
-        if (factor < 1 && !(path.role() == erOverhangPerimeter || path.role() == erBridgeInfill || path.role() == erInternalBridgeInfill)) {
+        if (factor < 1 && !(path.role() == erOverhangPerimeter || is_bridge(path.role()))) {
             float small_speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
             //apply factor between feature speed and small speed
             speed = speed * factor + (1.f - factor) * small_speed;

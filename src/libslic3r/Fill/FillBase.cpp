@@ -252,7 +252,7 @@ Fill::do_gap_fill(const ExPolygons& gapfill_areas, const FillParams& params, Ext
             MedialAxis{ ex, params.flow.scaled_width() * 2, params.flow.scaled_width() / 5, coord_t(params.flow.height) }.build(polylines_gapfill);
         }
     }
-    if (!polylines_gapfill.empty() && params.role != erBridgeInfill && params.role != erInternalBridgeInfill) {
+    if (!polylines_gapfill.empty() && !is_bridge(params.role)) {
         //test
 #ifdef _DEBUG
         for (ThickPolyline poly : polylines_gapfill) {

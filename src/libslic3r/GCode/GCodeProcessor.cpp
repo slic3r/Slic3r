@@ -1909,7 +1909,7 @@ void GCodeProcessor::process_G1(const GCodeReader::GCodeLine& line)
 #endif // ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
             // cross section: rectangle
             m_width = delta_pos[E] * static_cast<float>(M_PI * sqr(1.05f * filament_radius)) / (delta_xyz * m_height);
-        else if (m_extrusion_role == erBridgeInfill || m_extrusion_role == erNone)
+        else if (is_bridge(m_extrusion_role) || m_extrusion_role == erNone)
             // cross section: circle
             m_width = static_cast<float>(m_filament_diameters[m_extruder_id]) * std::sqrt(delta_pos[E] / delta_xyz);
         else

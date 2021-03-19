@@ -104,6 +104,7 @@ inline bool is_perimeter(ExtrusionRole role)
 inline bool is_infill(ExtrusionRole role)
 {
     return role == erBridgeInfill
+        || role == erInternalBridgeInfill
         || role == erInternalInfill
         || role == erSolidInfill
         || role == erTopSolidInfill
@@ -113,13 +114,15 @@ inline bool is_infill(ExtrusionRole role)
 inline bool is_solid_infill(ExtrusionRole role)
 {
     return role == erBridgeInfill
+        || role == erInternalBridgeInfill
         || role == erSolidInfill
         || role == erTopSolidInfill
         || role == erIroning;
 }
 
 inline bool is_bridge(ExtrusionRole role) {
-    return role == erBridgeInfill;
+    return role == erBridgeInfill
+        || role == erInternalBridgeInfill;
 }
 
 

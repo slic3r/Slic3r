@@ -153,7 +153,7 @@ FillConcentricWGapFill::fill_surface_extrusion(
                     MedialAxis{ ex, coord_t(max), coord_t(min), coord_t(params.flow.height) }.build(polylines);
                 }
             }
-            if (!polylines.empty() && good_role != erBridgeInfill && good_role != erInternalBridgeInfill) {
+            if (!polylines.empty() && !is_bridge(good_role)) {
                 ExtrusionEntityCollection gap_fill = thin_variable_width(polylines, erGapFill, params.flow);
                 //set role if needed
                 if (good_role != erSolidInfill) {
