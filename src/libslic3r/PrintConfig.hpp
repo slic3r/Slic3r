@@ -750,6 +750,7 @@ public:
     ConfigOptionBool                extra_perimeters_odd_layers;
     ConfigOptionBool                extra_perimeters_overhangs;
     ConfigOptionBool                only_one_perimeter_top;
+    ConfigOptionBool                only_one_perimeter_top_other_algo;
     ConfigOptionFloat               fill_angle;
     ConfigOptionFloat               fill_angle_increment;
     ConfigOptionPercent             fill_density;
@@ -861,6 +862,7 @@ protected:
         OPT_PTR(extra_perimeters_odd_layers);
         OPT_PTR(extra_perimeters_overhangs);
         OPT_PTR(only_one_perimeter_top);
+        OPT_PTR(only_one_perimeter_top_other_algo);
         OPT_PTR(fill_angle);
         OPT_PTR(fill_angle_increment);
         OPT_PTR(fill_density);

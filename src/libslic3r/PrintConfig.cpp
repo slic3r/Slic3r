@@ -1014,6 +1014,12 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Use only one perimeter on flat top surface, to let more space to the top infill pattern.");
     def->set_default_value(new ConfigOptionBool(true));
 
+    def = this->add("only_one_perimeter_top_other_algo", coBool);
+    def->label = L("Only one peri - other algo");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("If you have some problem with the 'Only one perimeter on Top surfaces' option, you can try to activate this on the problematic layer.");
+    def->set_default_value(new ConfigOptionBool(false));
+
 
     def = this->add("extruder", coInt);
     def->gui_type = "i_enum_open";
@@ -5168,6 +5174,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "extra_perimeters_overhangs",
 "extra_perimeters_odd_layers",
 "only_one_perimeter_top",
+"only_one_perimeter_top_other_algo",
 "extruder_temperature_offset",
 "extruder_fan_offset",
 "print_extrusion_multiplier",
@@ -5272,9 +5279,9 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
         opt_key = "";
         value = "";
     } else if (opt_key.find("_pattern") != std::string::npos) {
-        if ("smooth" == value || "smoothtriple" == value || "smoothhilbert" == value || "rectiwithperimeter" == value || "scatteredrectilinear" == value || "rectilineargapfill" == value || "sawtooth" == value) {
+        if ("smooth" == value || "smoothtriple" == value || "smoothhilbert" == value || "rectiwithperimeter" == value || "scatteredrectilinear" == value || "rectilineargapfill" == value || "monotonicgapfill" == value || "sawtooth" == value) {
             value = "rectilinear";
-        } else if ( "concentricgapfill" == value) {
+        } else if ("concentricgapfill" == value) {
             value = "concentric";
         }
     } else if ("seam_position" == opt_key) {

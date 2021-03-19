@@ -680,6 +680,7 @@ namespace Slic3r {
                 opt_key == "gap_fill"
                 || opt_key == "gap_fill_min_area"
                 || opt_key == "only_one_perimeter_top"
+                || opt_key == "only_one_perimeter_top_other_algo"
                 || opt_key == "overhangs_width_speed"
                 || opt_key == "overhangs_width"
                 || opt_key == "overhangs_reverse"
