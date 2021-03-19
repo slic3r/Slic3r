@@ -52,6 +52,8 @@ std::string toString(OptionCategory opt) {
     case padSupp: return "Pad and Support";
     case wipe: return "Wipe Options";
     case milling: return "milling";
+    case hollowing: return "hollowing";
+    case milling_extruders: return "milling_extruders";
     }
     return "error";
 }
@@ -457,7 +459,7 @@ void ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys 
         } else {
             try {
                 my_opt->set(other_opt);
-            } catch (ConfigurationException e) {
+            } catch (ConfigurationException& e) {
                 throw ConfigurationException(std::string(e.what()) + ", when ConfigBase::apply_only on " + opt_key);
             }
         }
