@@ -1999,7 +1999,8 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
         Polygon loop;
         {
             Polygons loops = offset(convex_hull, distance, ClipperLib::jtRound, float(scale_(0.1)));
-            Geometry::simplify_polygons(loops, scale_(0.05), &loops);
+            //make sure the skirt is simple enough
+            Geometry::simplify_polygons(loops, flow.scaled_width() / 10, &loops);
 			if (loops.empty())
 				break;
 			loop = loops.front();
