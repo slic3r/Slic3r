@@ -591,9 +591,14 @@ void AMFParserContext::endElement(const char * /* name */)
     // Faces of the current volume:
     case NODE_TYPE_TRIANGLE:
         assert(m_object && m_volume);
-        m_volume_facets.push_back(atoi(m_value[0].c_str()));
-        m_volume_facets.push_back(atoi(m_value[1].c_str()));
-        m_volume_facets.push_back(atoi(m_value[2].c_str()));
+        // drop illegal vertex references.
+        if (strtoul(m_value[0].c_str(), nullptr, 10) < m_object_vertices.size() &&
+            strtoul(m_value[1].c_str(), nullptr, 10) < m_object_vertices.size() &&
+            strtoul(m_value[2].c_str(), nullptr, 10) < m_object_vertices.size()) {
+            m_volume_facets.push_back(atoi(m_value[0].c_str()));
+            m_volume_facets.push_back(atoi(m_value[1].c_str()));
+            m_volume_facets.push_back(atoi(m_value[2].c_str()));
+        }
         m_value[0].clear();
         m_value[1].clear();
         m_value[2].clear();
