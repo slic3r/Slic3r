@@ -87,3 +87,215 @@ SCENARIO("PrintObject: object layer heights", "[PrintObject]") {
 #endif
     }
 }
+
+SCENARIO("PrintObject: minimum horizontal shells", "[PrintObject]") {
+    GIVEN("20mm cube and default initial config, initial layer height of 0.1mm") {
+        auto config {Slic3r::DynamicPrintConfig::full_print_config()};
+        TestMesh m { TestMesh::cube_20x20x20 };
+        Slic3r::Model model;
+
+        config.set_deserialize({
+                               {"nozzle_diameter", 3},
+                               {"bottom_solid_layers", 0},
+                               {"top_solid_layers", 0},
+                               {"perimeters", 1},
+                               {"first_layer_height", 0.1},
+                               {"layer_height", 0.1},
+                               {"fill_density", 0},
+                               {"top_solid_min_thickness", 0.0},
+                               {"bottom_solid_min_thickness", 0.0}
+                               });
+
+        WHEN("bottom_solid_min_thickness is 1.0 with layer height of 0.1") {
+            Slic3r::Print print;
+            config.set("bottom_solid_min_thickness", 1.0);
+            Slic3r::Test::init_print({m}, print, model, config);
+            print.process();
+            THEN("Layers 0-9 are solid (Z < 1.0) (all fill_surfaces are solid)") {
+                for (int i = 0; i < 10; i++) {
+                    CHECK(print.objects().at(0)->layers().at(i)->print_z <= (i+1 * 0.1));
+                    for (auto* r : print.objects().at(0)->layers().at(i)->regions()) {
+                        for (auto s : r->fill_surfaces) {
+                            REQUIRE(s.has_fill_solid());
+                        }
+                    }
+                }
+            }
+            AND_THEN("Layer 10 (Z > 1.0) is not solid.") {
+                for (auto* r : print.objects().at(0)->layers().at(10)->regions()) {
+                    for (auto s : r->fill_surfaces) {
+                        REQUIRE(!s.has_fill_solid());
+                    }
+                }
+            }
+            AND_THEN("Top layer is not solid.") {
+                for (auto* r : print.objects().at(0)->layers().back()->regions()) {
+                    for (auto s : r->fill_surfaces) {
+                        REQUIRE(!s.has_fill_solid());
+                    }
+                }
+            }
+        }
+        WHEN("min shell thickness is 1.22 with layer height of 0.1") {
+            Slic3r::Print print;
+            config.set("bottom_solid_min_thickness", 1.22);
+            config.set("layer_height", 0.1);
+            Slic3r::Test::init_print({m}, print, model, config);
+            print.process();
+            AND_THEN("Layers 0-12 are solid (bottom of layer >= 1.22) (all fill_surfaces are solid)") {
+                for (int i = 0; i < 13; i++) {
+                    CHECK(print.objects().front()->layers().at(i)->print_z <= (i+1 * 0.1));
+                    for (auto* r : print.objects().at(0)->layers().at(i)->regions()) {
+                        for (auto s : r->fill_surfaces) {
+                            REQUIRE(s.has_fill_solid());
+                        }
+                    }
+                }
+            }
+            AND_THEN("Layer 13 (Z > 1.0) is not solid.") {
+                for (auto* r : print.objects().at(0)->layers().at(13)->regions()) {
+                    for (auto s : r->fill_surfaces) {
+                        REQUIRE(!s.has_fill_solid());
+                    }
+                }
+            }
+            AND_THEN("Top layer is not solid.") {
+                for (auto* r : print.objects().at(0)->layers().back()->regions()) {
+                    for (auto s : r->fill_surfaces) {
+                        REQUIRE(!s.has_fill_solid());
+                    }
+                }
+            }
+        }
+        WHEN("min shell thickness is 1.22 14 bottom layers") {
+            config.set("bottom_solid_min_thickness", 1.22);
+            config.set("bottom_solid_layers", 14);
+            config.set("layer_height", 0.1);
+            Slic3r::Print print;
+            Slic3r::Test::init_print({m}, print, model, config);
+            print.process();
+            for (int i = 0; i < 20; i++)
+                print.objects().at(0)->layers().at(i)->make_fills();
+            AND_THEN("Layers 0-13 are solid (bottom of layer >= 1.22) (all fill_surfaces are solid)") {
+                for (int i = 0; i < 14; i++) {
+                    CHECK(print.objects().at(0)->layers().at(i)->print_z <= (i+1 * 0.1));
+                    for (auto* r : print.objects().at(0)->layers().at(i)->regions()) {
+                        for (auto s : r->fill_surfaces) {
+                            REQUIRE(s.has_fill_solid());
+                        }
+                    }
+                }
+            }
+            AND_THEN("Layer 14 is not solid.") {
+                for (auto* r : print.objects().at(0)->layers().at(14)->regions()) {
+                    for (auto s : r->fill_surfaces) {
+                        REQUIRE(!s.has_fill_solid());
+                    }
+                }
+            }
+            AND_THEN("Top layer is not solid.") {
+                for (auto* r : print.objects().at(0)->layers().back()->regions()) {
+                    for (auto s : r->fill_surfaces) {
+                        REQUIRE(!s.has_fill_solid());
+                    }
+                }
+            }
+        }
+        WHEN("top_solid_min_thickness is 1.0 with layer height of 0.1") {
+            Slic3r::Print print;
+            config.set("top_solid_min_thickness", 1.0);
+            Slic3r::Test::init_print({m}, print, model, config);
+            print.process();
+            THEN("Top 9 Layers are solid (Z < 1.0) (all fill_surfaces are solid)") {
+                for (int i = 0; i < 10; i++) {
+                    CHECK(print.objects().at(0)->layers().at(i)->print_z <= (i+1 * 0.1));
+                    for (auto* r : print.objects().at(0)->layers().at(i)->regions()) {
+                        for (auto s : r->fill_surfaces) {
+                            REQUIRE(s.has_fill_solid());
+                        }
+                    }
+                }
+            }
+            AND_THEN("Layer 10 (Z > 1.0) is not solid.") {
+                for (auto* r : print.objects().at(0)->layers().at(10)->regions()) {
+                    for (auto s : r->fill_surfaces) {
+                        REQUIRE(!s.has_fill_solid());
+                    }
+                }
+            }
+            AND_THEN("Top layer is not solid.") {
+                for (auto* r : print.objects().at(0)->layers().back()->regions()) {
+                    for (auto s : r->fill_surfaces) {
+                        REQUIRE(!s.has_fill_solid());
+                    }
+                }
+            }
+        }
+        WHEN("min shell thickness is 1.22 with layer height of 0.1") {
+            Slic3r::Print print;
+            config.set("bottom_solid_min_thickness", 1.22);
+            config.set("layer_height", 0.1);
+            Slic3r::Test::init_print({m}, print, model, config);
+            print.process();
+            AND_THEN("Layers 0-12 are solid (bottom of layer >= 1.22) (all fill_surfaces are solid)") {
+                for (int i = 0; i < 13; i++) {
+                    CHECK(print.objects().front()->layers().at(i)->print_z <= (i+1 * 0.1));
+                    for (auto* r : print.objects().at(0)->layers().at(i)->regions()) {
+                        for (auto s : r->fill_surfaces) {
+                            REQUIRE(s.has_fill_solid());
+                        }
+                    }
+                }
+            }
+            AND_THEN("Layer 13 (Z > 1.0) is not solid.") {
+                for (auto* r : print.objects().at(0)->layers().at(13)->regions()) {
+                    for (auto s : r->fill_surfaces) {
+                        REQUIRE(!s.has_fill_solid());
+                    }
+                }
+            }
+            AND_THEN("Top layer is not solid.") {
+                for (auto* r : print.objects().at(0)->layers().back()->regions()) {
+                    for (auto s : r->fill_surfaces) {
+                        REQUIRE(!s.has_fill_solid());
+                    }
+                }
+            }
+        }
+        WHEN("min shell thickness is 1.22 14 bottom layers") {
+            config.set("bottom_solid_min_thickness", 1.22);
+            config.set("bottom_solid_layers", 14);
+            config.set("layer_height", 0.1);
+            Slic3r::Print print;
+            Slic3r::Test::init_print({m}, print, model, config);
+            print.process();
+            for (int i = 0; i < 20; i++)
+                print.objects().at(0)->layers().at(i)->make_fills();
+            AND_THEN("Layers 0-13 are solid (bottom of layer >= 1.22) (all fill_surfaces are solid)") {
+                for (int i = 0; i < 14; i++) {
+                    CHECK(print.objects().at(0)->layers().at(i)->print_z <= (i+1 * 0.1));
+                    for (auto* r : print.objects().at(0)->layers().at(i)->regions()) {
+                        for (auto s : r->fill_surfaces) {
+                            REQUIRE(s.has_fill_solid());
+                        }
+                    }
+                }
+            }
+            AND_THEN("Layer 14 is not solid.") {
+                for (auto* r : print.objects().at(0)->layers().at(14)->regions()) {
+                    for (auto s : r->fill_surfaces) {
+                        REQUIRE(!s.has_fill_solid());
+                    }
+                }
+            }
+            AND_THEN("Top layer is not solid.") {
+                for (auto* r : print.objects().at(0)->layers().back()->regions()) {
+                    for (auto s : r->fill_surfaces) {
+                        REQUIRE(!s.has_fill_solid());
+                    }
+                }
+            }
+        }
+
+    }
+}
