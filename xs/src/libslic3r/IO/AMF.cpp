@@ -6,10 +6,17 @@
 #include <string>
 #include <boost/move/move.hpp>
 #include <boost/nowide/fstream.hpp>
+#include <boost/filesystem/operations.hpp>
 #include <boost/nowide/iostream.hpp>
+#include <boost/algorithm/string.hpp>
 #include <expat/expat.h>
+#include <miniz/miniz.h>
+#include "../Exception.hpp"
+#include "miniz_extension.hpp"
 
 namespace Slic3r { namespace IO {
+bool load_amf_archive(const char* path, Model* model, bool check_version);
+bool extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, Model* model, bool check_version);
 
 struct AMFParserContext
 {
@@ -454,6 +461,20 @@ void AMFParserContext::endDocument()
 bool
 AMF::read(std::string input_file, Model* model)
 {
+    // Quick and dirty hack from PrusaSlic3r's AMF deflate
+    if (boost::iends_with(input_file, ".amf")) {
+        boost::nowide::ifstream file(input_file.c_str(), boost::nowide::ifstream::binary);
+        if (!file.good())
+            return false;
+
+        char _str_zip_mask[3];
+        file.read(_str_zip_mask, 2);
+        file.close();
+        std::string zip_mask(_str_zip_mask);
+        if (zip_mask == "PK")
+            return load_amf_archive(input_file.c_str(), model, false);
+    }
+
     XML_Parser parser = XML_ParserCreate(NULL); // encoding
     if (! parser) {
         printf("Couldn't allocate memory for parser\n");
@@ -621,5 +642,134 @@ AMF::write(const Model& model, std::string output_file)
     file.close();
     return true;
 }
+
+bool extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, Model* model, bool check_version)
+{
+    if (stat.m_uncomp_size == 0)
+    {
+        printf("Found invalid size\n");
+        close_zip_reader(&archive);
+        return false;
+    }
+
+    XML_Parser parser = XML_ParserCreate(nullptr); // encoding
+    if (!parser) {
+        printf("Couldn't allocate memory for parser\n");
+        close_zip_reader(&archive);
+        return false;
+    }
+
+    AMFParserContext ctx(parser, model);
+    XML_SetUserData(parser, (void*)&ctx);
+    XML_SetElementHandler(parser, AMFParserContext::startElement, AMFParserContext::endElement);
+    XML_SetCharacterDataHandler(parser, AMFParserContext::characters);
+
+    struct CallbackData
+    {
+        XML_Parser& parser;
+        const mz_zip_archive_file_stat& stat;
+
+        CallbackData(XML_Parser& parser, const mz_zip_archive_file_stat& stat) : parser(parser), stat(stat) {}
+    };
+
+    CallbackData data(parser, stat);
+
+    mz_bool res = 0;
+
+    try
+    {
+        res = mz_zip_reader_extract_file_to_callback(&archive, stat.m_filename, [](void* pOpaque, mz_uint64 file_ofs, const void* pBuf, size_t n)->size_t {
+            CallbackData* data = (CallbackData*)pOpaque;
+            if (!XML_Parse(data->parser, (const char*)pBuf, (int)n, (file_ofs + n == data->stat.m_uncomp_size) ? 1 : 0))
+            {
+                char error_buf[1024];
+                ::sprintf(error_buf, "Error (%s) while parsing '%s' at line %d", XML_ErrorString(XML_GetErrorCode(data->parser)), data->stat.m_filename, (int)XML_GetCurrentLineNumber(data->parser));
+                throw Slic3r::FileIOError(error_buf);
+            }
+
+            return n;
+            }, &data, 0);
+    }
+    catch (std::exception& e)
+    {
+        printf("%s\n", e.what());
+        close_zip_reader(&archive);
+        return false;
+    }
+
+    if (res == 0)
+    {
+        printf("Error while extracting model data from zip archive");
+        close_zip_reader(&archive);
+        return false;
+    }
+
+    ctx.endDocument();
+
+    return true;
+}
+
+// Load an AMF archive into a provided model.
+bool load_amf_archive(const char* path, Model* model, bool check_version)
+{
+    if ((path == nullptr) || (model == nullptr))
+        return false;
+
+    mz_zip_archive archive;
+    mz_zip_zero_struct(&archive);
+
+    if (!open_zip_reader(&archive, path))
+    {
+        printf("Unable to init zip reader\n");
+        return false;
+    }
+
+    mz_uint num_entries = mz_zip_reader_get_num_files(&archive);
+
+    mz_zip_archive_file_stat stat;
+    // we first loop the entries to read from the archive the .amf file only, in order to extract the version from it
+    for (mz_uint i = 0; i < num_entries; ++i)
+    {
+        if (mz_zip_reader_file_stat(&archive, i, &stat))
+        {
+            if (boost::iends_with(stat.m_filename, ".amf"))
+            {
+                try
+                {
+                    if (!extract_model_from_archive(archive, stat, model, check_version))
+                    {
+                        close_zip_reader(&archive);
+                        printf("Archive does not contain a valid model");
+                        return false;
+                    }
+                }
+                catch (const std::exception& e)
+                {
+                    // ensure the zip archive is closed and rethrow the exception
+                    close_zip_reader(&archive);
+                    throw std::runtime_error(e.what());
+                }
+
+                break;
+            }
+        }
+    }
+
+#if 0 // forward compatibility
+    // we then loop again the entries to read other files stored in the archive
+    for (mz_uint i = 0; i < num_entries; ++i)
+    {
+        if (mz_zip_reader_file_stat(&archive, i, &stat))
+        {
+            // add code to extract the file
+        }
+    }
+#endif // forward compatibility
+
+    close_zip_reader(&archive);
+
+    return true;
+}
+
 
 } }
