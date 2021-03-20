@@ -70,6 +70,13 @@ public:
     void append(ExPolygons &&src, const Surface &surfaceTempl) { surfaces_append(this->surfaces, std::move(src), surfaceTempl); }
     void append(Surfaces &&src) { surfaces_append(this->surfaces, std::move(src)); }
 
+    Surfaces::iterator begin() { return this->surfaces.begin();}
+    Surfaces::iterator end() { return this->surfaces.end();}
+    Surfaces::const_iterator cbegin() const { return this->surfaces.cbegin();}
+    Surfaces::const_iterator cend() const { return this->surfaces.cend();}
+    Surfaces::const_iterator begin() const { return this->surfaces.cbegin();}
+    Surfaces::const_iterator end() const { return this->surfaces.cend();}
+
     // For debugging purposes:
     void export_to_svg(const char *path, bool show_labels);
 };
