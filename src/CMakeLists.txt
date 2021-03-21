@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.9)
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 project (slic3r)
 
 option(Enable_GUI "Use the wxWidgets code in slic3r.cpp" OFF)
@@ -122,7 +122,7 @@ find_package(Threads REQUIRED)
 set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost REQUIRED COMPONENTS system thread filesystem)
 
-if (${Boost_VERSION_MACRO} VERSION_GREATER "1.74.0")
+if (${Boost_VERSION} VERSION_GREATER "1.74.0")
     find_package(Boost REQUIRED COMPONENTS system thread filesystem OPTIONAL_COMPONENTS nowide)
 endif()
 
