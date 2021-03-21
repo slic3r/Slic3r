@@ -137,7 +137,8 @@ std::string GCodeWriter::set_temperature(const unsigned int temperature, bool wa
     temp_w_offset += int16_t(get_tool(tool)->temp_offset());
     temp_w_offset = std::max(int16_t(0), std::min(int16_t(2000), temp_w_offset));
 
-    if (m_last_temperature_with_offset == temp_w_offset && !wait)
+    // temp_w_offset has an effective minimum value of 0, so this cast is safe.
+    if (m_last_temperature_with_offset == static_cast<uint16_t>(temp_w_offset) && !wait)
         return "";
     if (wait && (FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)))
         return "";
@@ -227,8 +228,9 @@ std::string GCodeWriter::set_fan(const unsigned int speed, bool dont_save, uint1
         fan_speed += int8_t(tool->fan_offset());
     fan_speed = std::max(int16_t(0), std::min(int16_t(100), fan_speed));
 
+    // fan_speed has an effective minimum value of 0, so this cast is safe.
     //test if it's useful to write it
-    if (m_last_fan_speed_with_offset != fan_speed || dont_save) {
+    if (m_last_fan_speed_with_offset != static_cast<uint16_t>(fan_speed) || dont_save) {
         //save new current value
         if (!dont_save) {
             m_last_fan_speed = speed;
@@ -379,7 +381,9 @@ std::string GCodeWriter::toolchange(unsigned int tool_id)
         if (FLAVOR_IS(gcfKlipper)) {
             //check if we can use the tool_name field or not
             if (tool_id > 0 && tool_id < this->config.tool_name.values.size() && !this->config.tool_name.values[tool_id].empty()
-                && this->config.tool_name.values[tool_id][0] != ('0' + tool_id)) {
+                // NOTE: this will probably break if there's more than 10 tools, as it's relying on the
+                // ASCII character table.
+                && this->config.tool_name.values[tool_id][0] != static_cast<char>(('0' + tool_id))) {
                 gcode << this->toolchange_prefix() << this->config.tool_name.values[tool_id];
             } else {
                 gcode << this->toolchange_prefix() << "extruder";
