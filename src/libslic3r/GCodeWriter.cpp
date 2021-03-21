@@ -227,6 +227,7 @@ std::string GCodeWriter::set_fan(const unsigned int speed, bool dont_save, uint1
     if (tool != nullptr)
         fan_speed += int8_t(tool->fan_offset());
     fan_speed = std::max(int16_t(0), std::min(int16_t(100), fan_speed));
+    const auto fan_baseline = (this->config.fan_percentage.value ? 100.0 : 255.0);
 
     // fan_speed has an effective minimum value of 0, so this cast is safe.
     //test if it's useful to write it
@@ -258,7 +259,7 @@ std::string GCodeWriter::set_fan(const unsigned int speed, bool dont_save, uint1
                 } else {
                     gcode << "S";
                 }
-                gcode << (255.0 * fan_speed / 100.0);
+                gcode << (fan_baseline * (fan_speed / 100.0));
             }
             if (this->config.gcode_comments) gcode << " ; enable fan";
             gcode << "\n";

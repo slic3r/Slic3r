@@ -2528,6 +2528,14 @@ void PrintConfigDef::init_fff_params()
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionInts{ 35 });
 
+    def = this->add("fan_percentage", coBool);
+    def->label = _("Fan PWM from 0-100");
+    def->category = OptionCategory::output;
+    def->tooltip = _("Set this if your printer uses control values from 0-100 instead of 0-255.");
+    def->cli = "fan-percentage";
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("min_layer_height", coFloats);
     def->label = L("Min");
     def->full_label = ("Min layer height");
