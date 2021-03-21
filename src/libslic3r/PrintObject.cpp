@@ -171,44 +171,50 @@ namespace Slic3r {
         // the id is center-diameter-extruderid
         std::vector<std::vector<std::pair<std::tuple<Point, float, int>, Polygon*>>> layerid2center;
         for (size_t i = 0; i < this->m_layers.size(); i++) layerid2center.emplace_back();
-        //tbb::parallel_for(
-            //tbb::blocked_range<size_t>(0, m_layers.size()),
-            //[this, layerid2center](const tbb::blocked_range<size_t>& range) {
-            //for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++layer_idx) {
-        for (size_t layer_idx = 0; layer_idx < this->m_layers.size(); ++layer_idx) {
-            m_print->throw_if_canceled();
-            Layer* layer = m_layers[layer_idx];
-            for (size_t region_idx = 0; region_idx < layer->m_regions.size(); ++region_idx)
-            {
-                if (layer->m_regions[region_idx]->region()->config().hole_to_polyhole) {
-                    for (Surface& surf : layer->m_regions[region_idx]->m_slices.surfaces) {
-                        for (Polygon& hole : surf.expolygon.holes) {
-                            //test if convex (as it's clockwise bc it's a hole, we have to do the opposite)
-                            if (hole.convex_points().empty() && hole.points.size() > 4) {
-                                double center_x = 0, center_y = 0;
-                                for (int i = 0; i < hole.points.size(); ++i) {
-                                    center_x += hole.points[i].x();
-                                    center_y += hole.points[i].y();
-                                }
-                                Point center{ center_x / hole.points.size(), center_y / hole.points.size() };
-                                double diameter_min = std::numeric_limits<float>::max(), diameter_max = 0;
-                                for (int i = 0; i < hole.points.size(); ++i) {
-                                    double dist = hole.points[i].distance_to(center);
-                                    diameter_min = std::min(diameter_min, dist);
-                                    diameter_max = std::max(diameter_max, dist);
-                                }
-                                if (diameter_max - diameter_min < SCALED_EPSILON) {
-                                    layerid2center[layer_idx].emplace_back(
-                                        std::tuple<Point, float, int>{center, diameter_max, layer->m_regions[region_idx]->region()->config().perimeter_extruder.value}, & hole);
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, m_layers.size()),
+            [this, &layerid2center](const tbb::blocked_range<size_t>& range) {
+            for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++layer_idx) {
+                m_print->throw_if_canceled();
+                Layer* layer = m_layers[layer_idx];
+                for (size_t region_idx = 0; region_idx < layer->m_regions.size(); ++region_idx)
+                {
+                    if (layer->m_regions[region_idx]->region()->config().hole_to_polyhole) {
+                        for (Surface& surf : layer->m_regions[region_idx]->m_slices.surfaces) {
+                            for (Polygon& hole : surf.expolygon.holes) {
+                                //test if convex (as it's clockwise bc it's a hole, we have to do the opposite)
+                                if (hole.convex_points().empty() && hole.points.size() > 8) {
+                                    // Computing circle center
+                                    double center_x = 0, center_y = 0;
+                                    double lines_length = 0;
+                                    for (Line l : hole.lines()) {
+                                        center_x += l.a.x() * l.length();
+                                        center_x += l.b.x() * l.length();
+                                        center_y += l.a.y() * l.length();
+                                        center_y += l.b.y() * l.length();
+                                        lines_length += l.length() + l.length();
+                                    }
+                                    Point center{ center_x / lines_length, center_y / lines_length };
+                                    // check for roundeness
+                                    double diameter_min = std::numeric_limits<float>::max(), diameter_max = 0;
+                                    for (int i = 0; i < hole.points.size(); ++i) {
+                                        double dist = hole.points[i].distance_to(center);
+                                        diameter_min = std::min(diameter_min, dist);
+                                        diameter_max = std::max(diameter_max, dist);
+                                    }
+                                    // SCALED_EPSILON was a bit too harsh.
+                                    if (diameter_max - diameter_min < 1000) {
+                                        layerid2center[layer_idx].emplace_back(
+                                            std::tuple<Point, float, int>{center, diameter_max, layer->m_regions[region_idx]->region()->config().perimeter_extruder.value}, & hole);
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                // for layer->slices, it will be also replaced later.
             }
-            // for layer->slices, it will be also replaced later.
-        }
-        //});
+        });
         //sort holes per center-diameter
         std::map<std::tuple<Point, float, int>, std::vector<std::pair<Polygon*, int>>> id2layerz2hole;
 
