@@ -159,7 +159,7 @@ bool GLTexture::load_from_svg_file(const std::string& filename, bool use_mipmaps
         return false;
 }
 
-bool GLTexture::load_from_svg_files_as_sprites_array(const std::vector<std::string>& filenames, const std::vector<std::pair<int, bool>>& states, unsigned int sprite_size_px, bool compress)
+bool GLTexture::load_from_svg_files_as_sprites_array(const std::vector<std::string>& filenames, const std::vector<std::pair<int, bool>>& states, unsigned int sprite_size_px, bool compress, uint32_t color)
 {
     reset();
 
@@ -207,6 +207,18 @@ bool GLTexture::load_from_svg_files_as_sprites_array(const std::vector<std::stri
         NSVGimage* image = nsvgParseFromFile(filename.c_str(), "px", 96.0f);
         if (image == nullptr)
             continue;
+
+        //recolor
+        if (color < 0xFFFFFFFF) {
+            NSVGshape* shape = image->shapes;
+            while (shape != nullptr) {
+                if ((shape->fill.color & 0xFFFFFF) == 15430177 || (shape->fill.color & 0xFFFFFF) == 2223467)
+                    shape->fill.color = color | 0xFF000000;
+                if ((shape->stroke.color & 0xFFFFFF) == 15430177 || (shape->stroke.color & 0xFFFFFF) == 2223467)
+                    shape->stroke.color = color | 0xFF000000;
+                shape = shape->next;
+            }
+        }
 
         float scale = (float)sprite_size_px / std::max(image->width, image->height);
 

@@ -43,6 +43,8 @@ wxMenuItem* append_menu_check_item(wxMenu* menu, int id, const wxString& string,
 
 void enable_menu_item(wxUpdateUIEvent& evt, std::function<bool()> const cb_condition, wxMenuItem* item, wxWindow* win);
 
+uint32_t color_from_hex(std::string hex);
+
 class wxDialog;
 
 void    edit_tooltip(wxString& tooltip);

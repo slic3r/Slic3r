@@ -25,6 +25,7 @@
 #include "Field.hpp"
 #include "format.hpp"
 #include "NotificationManager.hpp"
+#include "wxExtensions.hpp"
 
 namespace Slic3r {
 
@@ -118,16 +119,24 @@ Control::Control( wxWindow *parent,
     //ORANGE_PEN        = wxPen(wxColour(253, 126, 66));
     //LIGHT_ORANGE_PEN  = wxPen(wxColour(254, 177, 139));
 
-    DARK_BLUE_PEN     = wxPen(wxColour(32, 113, 234));
-    BLUE_PEN          = wxPen(wxColour(66, 141, 253));
-    LIGHT_BLUE_PEN    = wxPen(wxColour(139, 185, 254));
+    //DARK_BLUE_PEN = wxPen(wxColour(32, 113, 234));
+    //BLUE_PEN = wxPen(wxColour(66, 141, 253));
+    //LIGHT_BLUE_PEN = wxPen(wxColour(139, 185, 254));
+
+    uint32_t dark_color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color_dark"));
+    uint32_t main_color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color"));
+    uint32_t light_color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color_light"));
+
+    DARK_COLOR_PEN = wxPen(wxColour(dark_color & 0xFF, (dark_color & 0xFF00) >> 8, (dark_color & 0xFF0000) >> 16));
+    COLOR_PEN = wxPen(wxColour(main_color & 0xFF, (main_color & 0xFF00) >> 8, (main_color & 0xFF0000) >> 16));
+    LIGHT_COLOR_PEN = wxPen(wxColour(light_color & 0xFF, (light_color & 0xFF00) >> 8, (light_color & 0xFF0000) >> 16));
 
     DARK_GREY_PEN     = wxPen(wxColour(128, 128, 128));
     GREY_PEN          = wxPen(wxColour(164, 164, 164));
     LIGHT_GREY_PEN    = wxPen(wxColour(204, 204, 204));
 
     m_line_pens = { &DARK_GREY_PEN, &GREY_PEN, &LIGHT_GREY_PEN };
-    m_segm_pens = { &DARK_BLUE_PEN, &BLUE_PEN, &LIGHT_BLUE_PEN };
+    m_segm_pens = { &DARK_COLOR_PEN, &COLOR_PEN, &LIGHT_COLOR_PEN };
 
     m_font = GetFont();
     this->SetMinSize(get_min_size());
@@ -503,7 +512,7 @@ void Control::draw_info_line_with_icon(wxDC& dc, const wxPoint& pos, const Selec
 {
     if (m_selection == selection) {
         //draw info line
-        dc.SetPen(DARK_BLUE_PEN);
+        dc.SetPen(DARK_COLOR_PEN);
         const wxPoint pt_beg = is_horizontal() ? wxPoint(pos.x, pos.y - m_thumb_size.y) : wxPoint(pos.x - m_thumb_size.x, pos.y/* - 1*/);
         const wxPoint pt_end = is_horizontal() ? wxPoint(pos.x, pos.y + m_thumb_size.y) : wxPoint(pos.x + m_thumb_size.x, pos.y/* - 1*/);
         dc.DrawLine(pt_beg, pt_end);
@@ -551,7 +560,7 @@ void Control::draw_tick_on_mouse_position(wxDC& dc)
         wxCoord new_pos = get_position_from_value(tick);
         const wxPoint pos = is_horizontal() ? wxPoint(new_pos, height * 0.5) : wxPoint(0.5 * width, new_pos);
 
-        dc.SetPen(DARK_BLUE_PEN);
+        dc.SetPen(DARK_COLOR_PEN);
 
         draw_ticks(dc, pos, -2);
         draw_ticks(dc, pos, 2 );

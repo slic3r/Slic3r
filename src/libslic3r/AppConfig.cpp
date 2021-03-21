@@ -63,6 +63,20 @@ void AppConfig::set_defaults()
         if (get("freecad_path").empty())
             set("freecad_path", ".");
 
+        if (get("color_very_dark").empty())
+            set("color_very_dark", "0047c7");
+		
+        if (get("color_dark").empty())
+            set("color_dark", "2172eb");
+		
+        if (get("color").empty())
+            set("color", "428dfd");
+		
+        if (get("color_light").empty())
+            set("color_light", "8bb9fe");
+		
+        if (get("color_very_light").empty())
+            set("color_very_light", "428cff");
 
         if (get("version_check").empty())
             set("version_check", "1");

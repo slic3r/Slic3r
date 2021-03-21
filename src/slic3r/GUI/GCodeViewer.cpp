@@ -260,7 +260,7 @@ void GCodeViewer::SequentialView::Marker::render() const
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::SetNextWindowBgAlpha(0.25f);
     imgui.begin(std::string("ToolPosition"), ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove);
-    imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, _u8L("Tool position") + ":");
+    imgui.text_colored(ImGuiWrapper::get_COL_LIGHT(), _u8L("Tool position") + ":");
     ImGui::SameLine();
     char buf[1024];
     sprintf(buf, "X: %.2f, Y: %.2f, Z: %.2f", m_world_position(0), m_world_position(1), m_world_position(2));
@@ -2315,7 +2315,7 @@ void GCodeViewer::render_legend() const
                     pos = ImGui::GetCursorScreenPos();
                     float width = std::max(1.0f, percent_bar_size * percent / max_percent);
                     draw_list->AddRectFilled({ pos.x, pos.y + 2.0f }, { pos.x + width, pos.y + icon_size - 2.0f },
-                        ImGui::GetColorU32(ImGuiWrapper::COL_BLUE_LIGHT));
+                        ImGui::GetColorU32(ImGuiWrapper::get_COL_LIGHT()));
                     ImGui::Dummy({ percent_bar_size, icon_size });
                     ImGui::SameLine();
                     char buf[64];
@@ -2945,7 +2945,7 @@ void GCodeViewer::render_statistics() const
     auto add_time = [this, &imgui](const std::string& label, int64_t time) {
         char buf[1024];
         sprintf(buf, "%lld ms (%s)", time, get_time_dhms(static_cast<float>(time) * 0.001f).c_str());
-        imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, label);
+        imgui.text_colored(ImGuiWrapper::get_COL_LIGHT(), label);
         ImGui::SameLine(offset);
         imgui.text(buf);
     };
@@ -2963,7 +2963,7 @@ void GCodeViewer::render_statistics() const
         static const float inv_mb = 1.0f / mb;
         static const float gb = 1024.0f * mb;
         static const float inv_gb = 1.0f / gb;
-        imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, label);
+        imgui.text_colored(ImGuiWrapper::get_COL_LIGHT(), label);
         ImGui::SameLine(offset);
         if (static_cast<float>(memory) < mb)
             imgui.text(format_string("KB", inv_kb));
@@ -2976,7 +2976,7 @@ void GCodeViewer::render_statistics() const
     auto add_counter = [this, &imgui](const std::string& label, int64_t counter) {
         char buf[1024];
         sprintf(buf, "%lld", counter);
-        imgui.text_colored(ImGuiWrapper::COL_BLUE_LIGHT, label);
+        imgui.text_colored(ImGuiWrapper::get_COL_LIGHT(), label);
         ImGui::SameLine(offset);
         imgui.text(buf);
     };

@@ -22,11 +22,14 @@
 #include <imgui/imgui_internal.h>
 
 #include "libslic3r/libslic3r.h"
+#include "libslic3r/AppConfig.hpp"
 #include "libslic3r/Utils.hpp"
 #include "3DScene.hpp"
 #include "GUI.hpp"
+#include "GUI_App.hpp"
 #include "I18N.hpp"
 #include "Search.hpp"
+#include "wxExtensions.hpp"
 
 #include "../Utils/MacDarkMode.hpp"
 #include "nanosvg/nanosvg.h"
@@ -58,12 +61,39 @@ const ImVec4 ImGuiWrapper::COL_GREY_DARK         = { 0.333f, 0.333f, 0.333f, 1.0
 const ImVec4 ImGuiWrapper::COL_GREY_LIGHT        = { 0.4f, 0.4f, 0.4f, 1.0f };
 //const ImVec4 ImGuiWrapper::COL_ORANGE_DARK       = { 0.757f, 0.404f, 0.216f, 1.0f };
 //const ImVec4 ImGuiWrapper::COL_ORANGE_LIGHT      = { 1.0f, 0.49f, 0.216f, 1.0f };
-const ImVec4 ImGuiWrapper::COL_BLUE_DARK         = { 0.0f, 0.28f, 0.78f, 1.0f }; //0047c7
-const ImVec4 ImGuiWrapper::COL_BLUE_LIGHT        = { 0.13f, 0.45f, 0.92f, 1.0f }; //2172eb
+//const ImVec4 ImGuiWrapper::COL_BLUE_DARK         = { 0.0f, 0.28f, 0.78f, 1.0f }; //0047c7
+//const ImVec4 ImGuiWrapper::COL_BLUE_LIGHT        = { 0.13f, 0.45f, 0.92f, 1.0f }; //2172eb
 const ImVec4 ImGuiWrapper::COL_WINDOW_BACKGROUND = { 0.133f, 0.133f, 0.133f, 0.8f };
-const ImVec4 ImGuiWrapper::COL_BUTTON_BACKGROUND = COL_BLUE_DARK;
-const ImVec4 ImGuiWrapper::COL_BUTTON_HOVERED    = COL_BLUE_LIGHT;
-const ImVec4 ImGuiWrapper::COL_BUTTON_ACTIVE     = ImGuiWrapper::COL_BUTTON_HOVERED;
+//const ImVec4 ImGuiWrapper::COL_BUTTON_BACKGROUND = COL_BLUE_DARK;
+//const ImVec4 ImGuiWrapper::COL_BUTTON_HOVERED    = COL_BLUE_LIGHT;
+//const ImVec4 ImGuiWrapper::COL_BUTTON_ACTIVE     = ImGuiWrapper::COL_BUTTON_HOVERED;
+
+bool ImGuiWrapper::COL_LOADED   = false;
+ImVec4 ImGuiWrapper::COL_DARK   = { 0.0f, 0.28f, 0.78f, 1.0f }; //0047c7
+ImVec4 ImGuiWrapper::COL_LIGHT  = { 0.13f, 0.45f, 0.92f, 1.0f }; //2172eb
+
+void ImGuiWrapper::load_colors()
+{
+    uint32_t dark_color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color_very_dark"));
+    uint32_t light_color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color_dark"));
+    ImGuiWrapper::COL_DARK = { (dark_color & 0xFF) / 255.f, ((dark_color & 0xFF00) >> 8) / 255.f, ((dark_color & 0xFF0000) >> 16) / 255.f, 1.0f };
+    ImGuiWrapper::COL_LIGHT = { (light_color & 0xFF) / 255.f, ((light_color & 0xFF00) >> 8) / 255.f, ((light_color & 0xFF0000) >> 16) / 255.f, 1.0f };
+}
+
+ImVec4 ImGuiWrapper::get_COL_DARK() {
+    if (!ImGuiWrapper::COL_LOADED) {
+        load_colors();
+    }
+    return ImGuiWrapper::COL_DARK;
+}
+
+ImVec4 ImGuiWrapper::get_COL_LIGHT() {
+    if (!ImGuiWrapper::COL_LOADED) {
+        load_colors();
+    }
+    return ImGuiWrapper::COL_LIGHT;
+}
+
 
 ImGuiWrapper::ImGuiWrapper()
     : m_glyph_ranges(nullptr)
@@ -1061,7 +1091,7 @@ void ImGuiWrapper::init_style()
     // Window
     style.WindowRounding = 4.0f;
     set_color(ImGuiCol_WindowBg, COL_WINDOW_BACKGROUND);
-    set_color(ImGuiCol_TitleBgActive, COL_BLUE_DARK);
+    set_color(ImGuiCol_TitleBgActive, get_COL_DARK());
 
     // Generics
     set_color(ImGuiCol_FrameBg, COL_GREY_DARK);
@@ -1069,32 +1099,32 @@ void ImGuiWrapper::init_style()
     set_color(ImGuiCol_FrameBgActive, COL_GREY_LIGHT);
 
     // Text selection
-    set_color(ImGuiCol_TextSelectedBg, COL_BLUE_DARK);
+    set_color(ImGuiCol_TextSelectedBg, get_COL_DARK());
 
     // Buttons
-    set_color(ImGuiCol_Button, COL_BUTTON_BACKGROUND);
-    set_color(ImGuiCol_ButtonHovered, COL_BUTTON_HOVERED);
-    set_color(ImGuiCol_ButtonActive, COL_BUTTON_ACTIVE);
+    set_color(ImGuiCol_Button, get_COL_DARK()); //COL_BUTTON_BACKGROUND);
+    set_color(ImGuiCol_ButtonHovered, get_COL_LIGHT()); //COL_BUTTON_HOVERED);
+    set_color(ImGuiCol_ButtonActive, get_COL_LIGHT()); //COL_BUTTON_ACTIVE);
 
     // Checkbox
-    set_color(ImGuiCol_CheckMark, COL_BLUE_LIGHT);
+    set_color(ImGuiCol_CheckMark, get_COL_LIGHT());
 
     // ComboBox items
-    set_color(ImGuiCol_Header, COL_BLUE_DARK);
-    set_color(ImGuiCol_HeaderHovered, COL_BLUE_LIGHT);
-    set_color(ImGuiCol_HeaderActive, COL_BLUE_LIGHT);
+    set_color(ImGuiCol_Header, get_COL_DARK());
+    set_color(ImGuiCol_HeaderHovered, get_COL_LIGHT());
+    set_color(ImGuiCol_HeaderActive, get_COL_LIGHT());
 
     // Slider
-    set_color(ImGuiCol_SliderGrab, COL_BLUE_DARK);
-    set_color(ImGuiCol_SliderGrabActive, COL_BLUE_LIGHT);
+    set_color(ImGuiCol_SliderGrab, get_COL_DARK());
+    set_color(ImGuiCol_SliderGrabActive, get_COL_LIGHT());
 
     // Separator
-    set_color(ImGuiCol_Separator, COL_BLUE_LIGHT);
+    set_color(ImGuiCol_Separator, get_COL_LIGHT());
 
     // Tabs
-    set_color(ImGuiCol_Tab, COL_BLUE_DARK);
-    set_color(ImGuiCol_TabHovered, COL_BLUE_LIGHT);
-    set_color(ImGuiCol_TabActive, COL_BLUE_LIGHT);
+    set_color(ImGuiCol_Tab, get_COL_DARK());
+    set_color(ImGuiCol_TabHovered, get_COL_LIGHT());
+    set_color(ImGuiCol_TabActive, get_COL_LIGHT());
     set_color(ImGuiCol_TabUnfocused, COL_GREY_DARK);
     set_color(ImGuiCol_TabUnfocusedActive, COL_GREY_LIGHT);
 }

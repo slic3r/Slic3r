@@ -230,12 +230,12 @@ wxBitmap* BitmapCache::insert_raw_rgba(const std::string &bitmap_key, unsigned w
 }
 
 wxBitmap* BitmapCache::load_png(const std::string &bitmap_name, unsigned width, unsigned height,
-    const bool grayscale/* = false*/)
+    uint32_t color/* = false*/)
 {
     std::string bitmap_key = bitmap_name + ( height !=0 ? 
                                            "-h" + std::to_string(height) : 
                                            "-w" + std::to_string(width))
-                                         + (grayscale ? "-gs" : "");
+                                         + ((color == 9079434) ? "-gs" : "");
 
     auto it = m_map.find(bitmap_key);
     if (it != m_map.end())
@@ -254,20 +254,22 @@ wxBitmap* BitmapCache::load_png(const std::string &bitmap_name, unsigned width, 
     if (height != 0 && width != 0)
         image.Rescale(width, height, wxIMAGE_QUALITY_BILINEAR);
 
-    if (grayscale)
+    if (color == 9079434)
         image = image.ConvertToGreyscale(m_gs, m_gs, m_gs);
+    else if( color < 0xFFFFFFFF)
+        image.Replace(33, 114, 235, color & 0xFF, (color & 0xFF00) >> 8, (color & 0xFF0000) >> 16);
 
     return this->insert(bitmap_key, wxImage_to_wxBitmap_with_alpha(std::move(image)));
 }
 
 wxBitmap* BitmapCache::load_svg(const std::string &bitmap_name, unsigned target_width, unsigned target_height, 
-    const bool grayscale/* = false*/, const bool dark_mode/* = false*/)
+    uint32_t color /* = 2172eb*/, const bool dark_mode/* = false*/)
 {
     std::string bitmap_key = bitmap_name + ( target_height !=0 ? 
                                            "-h" + std::to_string(target_height) : 
                                            "-w" + std::to_string(target_width))
-                                         + (m_scale != 1.0f ? "-s" + std::to_string(m_scale) : "")
-                                         + (grayscale ? "-gs" : "");
+                                         + (m_scale != 1.0f ? "-s" + std::to_string(m_scale) : "");
+                                         //+ (grayscale ? "-gs" : "");
 
     /* For the Dark mode of any platform, we should draw icons in respect to OS background
      * Note: All standard(regular) icons are collected in "icons" folder,
@@ -309,6 +311,18 @@ wxBitmap* BitmapCache::load_svg(const std::string &bitmap_name, unsigned target_
     if (image == nullptr)
         return nullptr;
 
+    //recolor
+    if (color < 0xFFFFFFFF) {
+        NSVGshape* shape = image->shapes;
+        while (shape != nullptr) {
+            if ((shape->fill.color & 0xFFFFFF) == 15430177 || (shape->fill.color & 0xFFFFFF) == 2223467)
+                shape->fill.color = color | 0xFF000000;
+            if ((shape->stroke.color & 0xFFFFFF) == 15430177 || (shape->stroke.color & 0xFFFFFF) == 2223467)
+                shape->stroke.color = color | 0xFF000000;
+            shape = shape->next;
+        }
+    }
+
     target_height != 0 ? target_height *= m_scale : target_width *= m_scale;
 
     float svg_scale = target_height != 0 ? 
@@ -334,7 +348,7 @@ wxBitmap* BitmapCache::load_svg(const std::string &bitmap_name, unsigned target_
     ::nsvgDeleteRasterizer(rast);
     ::nsvgDelete(image);
 
-    return this->insert_raw_rgba(bitmap_key, width, height, data.data(), grayscale);
+    return this->insert_raw_rgba(bitmap_key, width, height, data.data(), 9079434 == color);
 }
 
 //we make scaled solid bitmaps only for the cases, when its will be used with scaled SVG icon in one output bitmap

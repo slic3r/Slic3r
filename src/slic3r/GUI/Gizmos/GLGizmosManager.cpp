@@ -1065,7 +1065,8 @@ bool GLGizmosManager::generate_icons_texture() const
 //    if (sprite_size_px % 2 != 0)
 //        sprite_size_px += 1;
 
-    bool res = m_icons_texture.load_from_svg_files_as_sprites_array(filenames, states, sprite_size_px, false);
+    uint32_t color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color_dark"));
+    bool res = m_icons_texture.load_from_svg_files_as_sprites_array(filenames, states, sprite_size_px, false, color);
     if (res)
         m_icons_texture_dirty = false;
 

@@ -7,6 +7,9 @@
 
 #include <boost/algorithm/string/replace.hpp>
 
+
+#include "libslic3r/AppConfig.hpp"
+
 #include "BitmapCache.hpp"
 #include "GUI.hpp"
 #include "GUI_App.hpp"
@@ -175,6 +178,19 @@ wxMenuItem* append_menu_check_item(wxMenu* menu, int id, const wxString& string,
             }, id);
 
     return item;
+}
+
+uint32_t color_from_hex(std::string hex)
+{
+    std::stringstream ss;
+    ss << std::hex << hex;
+    uint32_t color_bad_endian;
+    ss >> color_bad_endian;
+    uint32_t color = 0;
+    color |= (color_bad_endian & 0xFF) << 16;
+    color |= (color_bad_endian & 0xFF00);
+    color |= (color_bad_endian & 0xFF0000) >> 16;
+    return color;
 }
 
 const unsigned int wxCheckListBoxComboPopup::DefaultWidth = 200;
@@ -434,9 +450,16 @@ wxBitmap create_scaled_bitmap(  const std::string& bmp_name_in,
     boost::replace_last(bmp_name, ".png", "");
 
     // Try loading an SVG first, then PNG if SVG is not found:
-    wxBitmap *bmp = cache.load_svg(bmp_name, width, height, grayscale, Slic3r::GUI::wxGetApp().dark_mode());
+    uint32_t color = -1;
+    if (grayscale) color = 9079434;
+    else if (Slic3r::GUI::wxGetApp().app_config->get("color_dark").length() == 6)
+        try {
+            color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color_dark"));
+        }
+        catch (std::exception /*e*/) {}
+    wxBitmap *bmp = cache.load_svg(bmp_name, width, height, color, Slic3r::GUI::wxGetApp().dark_mode());
     if (bmp == nullptr) {
-        bmp = cache.load_png(bmp_name, width, height, grayscale);
+        bmp = cache.load_png(bmp_name, width, height, color);
     }
 
     if (bmp == nullptr) {

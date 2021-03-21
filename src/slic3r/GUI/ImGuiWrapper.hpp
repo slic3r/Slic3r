@@ -100,14 +100,20 @@ public:
     static const ImVec4 COL_GREY_LIGHT;
     //static const ImVec4 COL_ORANGE_DARK;
     //static const ImVec4 COL_ORANGE_LIGHT;
-    static const ImVec4 COL_BLUE_DARK;
-    static const ImVec4 COL_BLUE_LIGHT;
+    //static const ImVec4 COL_BLUE_DARK;
+    //static const ImVec4 COL_BLUE_LIGHT
+    static ImVec4 get_COL_DARK();
+    static ImVec4 get_COL_LIGHT();
     static const ImVec4 COL_WINDOW_BACKGROUND;
-    static const ImVec4 COL_BUTTON_BACKGROUND;
-    static const ImVec4 COL_BUTTON_HOVERED;
-    static const ImVec4 COL_BUTTON_ACTIVE;
+    //static const ImVec4 COL_BUTTON_BACKGROUND;
+    //static const ImVec4 COL_BUTTON_HOVERED;
+    //static const ImVec4 COL_BUTTON_ACTIVE;
 
 private:
+    static bool COL_LOADED;
+    static ImVec4 COL_DARK;
+    static ImVec4 COL_LIGHT;
+    static void load_colors();
     void init_font(bool compress);
     void init_input();
     void init_style();

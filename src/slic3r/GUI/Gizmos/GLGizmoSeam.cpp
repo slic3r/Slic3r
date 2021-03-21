@@ -1,12 +1,14 @@
 #include "GLGizmoSeam.hpp"
 
 #include "libslic3r/Model.hpp"
+#include "libslic3r/AppConfig.hpp"
 
 //#include "slic3r/GUI/3DScene.hpp"
 #include "slic3r/GUI/GLCanvas3D.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/ImGuiWrapper.hpp"
 #include "slic3r/GUI/Plater.hpp"
+#include "slic3r/GUI/wxExtensions.hpp"
 
 
 #include <GL/glew.h>
@@ -102,10 +104,13 @@ void GLGizmoSeam::on_render_input_window(float x, float y, float bottom_limit)
     window_width = std::max(window_width, button_width);
     window_width = std::max(window_width, cursor_type_radio_left + cursor_type_radio_width1 + cursor_type_radio_width2);
 
-    auto draw_text_with_caption = [this, &caption_max](const wxString& caption, const wxString& text) {
+
+    uint32_t very_light_color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color_very_light"));
+    const ImVec4 text_color = { (very_light_color & 0xFF) / 255.f, ((very_light_color & 0xFF00) >> 8) / 255.f, ((very_light_color & 0xFF0000) >> 16) / 255.f, 1.0f };
+    auto draw_text_with_caption = [this, &caption_max, &text_color](const wxString& caption, const wxString& text) {
         // static const ImVec4 ORANGE(1.0f, 0.49f, 0.22f, 1.0f);
-        static const ImVec4 BLUE(0.26f, 0.55f, 1.0f, 1.0f);
-        m_imgui->text_colored(BLUE, caption);
+        //static const ImVec4 BLUE(0.26f, 0.55f, 1.0f, 1.0f);
+        m_imgui->text_colored(text_color, caption);
         ImGui::SameLine(caption_max);
         m_imgui->text(text);
     };

@@ -302,6 +302,8 @@ void PreferencesDialog::build()
 	m_optgroup_gui->m_on_change = [this, tabs](t_config_option_key opt_key, boost::any value) {
         if (opt_key == "suppress_hyperlinks")
             m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "";
+		else if (opt_key.find("color") != std::string::npos)
+			m_values[opt_key] = boost::any_cast<std::string>(value);
         else
             m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
 
@@ -344,6 +346,54 @@ void PreferencesDialog::build()
 		option = Option(def, "use_custom_toolbar_size");
 	m_optgroup_gui->append_single_option_line(option);
 	}
+
+
+	// color prusa -> susie eb7221
+	//ICON 237, 107, 33 -> ed6b21 ; 2172eb
+	//DARK 237, 107, 33 -> ed6b21 ; 32, 113, 234 2071ea
+	//MAIN 253, 126, 66 -> fd7e42 ; 66, 141, 253 428dfd
+	//LIGHT 254, 177, 139 -> feac8b; 139, 185, 254 8bb9fe
+	//TEXT 1.0f, 0.49f, 0.22f, 1.0f ff7d38 ; 0.26f, 0.55f, 1.0f, 1.0f 428cff
+
+	def.label = L("Very dark gui color");
+	def.type = coString;
+	def.tooltip = std::string(L("Very dark color, in the RGB hex format.")) + std::string(L(" Mainly used as background or dark text color. Slic3r(yellow): , PrusaSlicer(orange): c46737, SuperSlicer(blue): 0047c7"));
+	def.set_default_value(new ConfigOptionString{ app_config->get("color_very_dark") });
+	option = Option(def, "color_very_dark");
+	option.opt.width = 6;
+	m_optgroup_gui->append_single_option_line(option);
+
+	def.label = L("Dark gui color");
+	def.type = coString;
+	def.tooltip = std::string(L("Dark color, in the RGB hex format.")) + std::string(L(" Mainly used as icon color. Slic3r(yellow): , PrusaSlicer(orange): ed6b21, SuperSlicer(blue): 2172eb"));
+	def.set_default_value(new ConfigOptionString{ app_config->get("color_dark") });
+	option = Option(def, "color_dark");
+	option.opt.width = 6;
+	m_optgroup_gui->append_single_option_line(option);
+
+	def.label = L("Gui color");
+	def.type = coString;
+	def.tooltip = std::string(L("Main color, in the RGB hex format.")) + std::string(L(" Slic3r(yellow): , PrusaSlicer(orange): fd7e42, SuperSlicer(blue): 428dfd"));
+	def.set_default_value(new ConfigOptionString{ app_config->get("color") });
+	option = Option(def, "color");
+	option.opt.width = 6;
+	m_optgroup_gui->append_single_option_line(option);
+
+	def.label = L("Light gui color");
+	def.type = coString;
+	def.tooltip = std::string(L("Light color, in the RGB hex format.")) + std::string(L(" Slic3r(yellow): , PrusaSlicer(orange): feac8b, SuperSlicer(blue): 8bb9fe"));
+	def.set_default_value(new ConfigOptionString{ app_config->get("color_light") });
+	option = Option(def, "color_light");
+	option.opt.width = 6;
+	m_optgroup_gui->append_single_option_line(option);
+
+	def.label = L("Very light gui color");
+	def.type = coString;
+	def.tooltip = std::string(L("Very light color, in the RGB hex format.")) + std::string(L(" Mainly used as light text color. Slic3r(yellow): , PrusaSlicer(orange): ff7d38, SuperSlicer(blue): 428cff"));
+	def.set_default_value(new ConfigOptionString{ app_config->get("color_very_light") });
+	option = Option(def, "color_very_light");
+	option.opt.width = 6;
+	m_optgroup_gui->append_single_option_line(option);
 
 	activate_options_tab(m_optgroup_gui);
 

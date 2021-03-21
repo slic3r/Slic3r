@@ -138,7 +138,8 @@ public:
             memDC.SelectObject(bitmap);
 
             memDC.SetFont(m_action_font);
-            memDC.SetTextForeground(wxColour(0, 102, 255));
+            uint32_t color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color_very_dark"));
+            memDC.SetTextForeground(wxColour(color & 0xFF, (color & 0xFF00) >> 8, (color & 0xFF0000) >> 16));
             memDC.DrawText(text, int(m_scale * 60), m_action_line_y_position);
 
             memDC.SelectObject(wxNullBitmap);
@@ -189,7 +190,8 @@ public:
         // load bitmap for logo
         BitmapCache bmp_cache;
         int logo_size = lround(width * 0.25);
-        wxBitmap logo_bmp = *bmp_cache.load_svg(wxGetApp().is_editor() ? "super_slicer_logo" : "add_gcode", logo_size, logo_size);
+        //uint32_t color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color_dark")); //uncomment if you also want to modify the icon color
+        wxBitmap logo_bmp = *bmp_cache.load_svg(wxGetApp().is_editor() ? "super_slicer_logo" : "add_gcode", logo_size, logo_size/*, color*/);
 
         wxCoord margin = int(m_scale * 20);
 
@@ -652,13 +654,15 @@ GUI_App::GUI_App(EAppMode mode)
     : wxApp()
     , m_app_mode(mode)
     , m_em_unit(10)
-    , m_imgui(new ImGuiWrapper())
+    , m_imgui()
     , m_wizard(nullptr)
 	, m_removable_drive_manager(std::make_unique<RemovableDriveManager>())
 	, m_other_instance_message_handler(std::make_unique<OtherInstanceMessageHandler>())
 {
 	//app config initializes early becasuse it is used in instance checking in PrusaSlicer.cpp
 	this->init_app_config();
+    //ImGuiWrapper need the app config to get the colors
+    m_imgui.reset(new ImGuiWrapper{});
 }
 
 GUI_App::~GUI_App()
