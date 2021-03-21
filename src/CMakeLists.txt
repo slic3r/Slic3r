@@ -122,7 +122,7 @@ find_package(Threads REQUIRED)
 set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost REQUIRED COMPONENTS system thread filesystem)
 
-if (${Boost_VERSION_STRING} VERSION_GREATER "1.73.0")
+if (${Boost_VERSION_STRING} VERSION_GREATER_EQUAL "1.74.0")
     find_package(Boost REQUIRED COMPONENTS system thread filesystem OPTIONAL_COMPONENTS nowide)
 endif()
 
