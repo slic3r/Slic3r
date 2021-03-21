@@ -6,6 +6,12 @@ export CC=gcc-7
 export CXX=g++-7
 export DISPLAY=:99.0
 
+if [ -f "$(which cmake3)" ]; then 
+    export CMAKE=$(which cmake3)
+else
+    export CMAKE=$(which cmake)
+fi
+
 mkdir -p $CACHE
 
 if [[ "$WXVERSION"  != "pkg" ]]; then
@@ -25,6 +31,6 @@ fi
 tar -C$HOME -xjf $CACHE/boost-compiled.tar.bz2
 
 mkdir build && cd build
-cmake -DBOOST_ROOT=$HOME/boost_1_63_0 -DSLIC3R_STATIC=ON -DCMAKE_BUILD_TYPE=Release ../src
-cmake --build .
+${CMAKE} -DBOOST_ROOT=$HOME/boost_1_63_0 -DSLIC3R_STATIC=ON -DCMAKE_BUILD_TYPE=Release ../src
+${CMAKE} --build .
 ./slic3r_test -s

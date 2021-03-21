@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.9)
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 project (slic3r)
 
 option(Enable_GUI "Use the wxWidgets code in slic3r.cpp" OFF)
@@ -122,7 +122,8 @@ find_package(Threads REQUIRED)
 set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost REQUIRED COMPONENTS system thread filesystem)
 
-if (${Boost_VERSION_MACRO} VERSION_GREATER_EQUAL "1.73.0")
+if (NOT (${Boost_VERSION_STRING} VERSION_LESS "1.74.0"))
+    MESSAGE("Adding in boost::nowide")
     find_package(Boost REQUIRED COMPONENTS system thread filesystem OPTIONAL_COMPONENTS nowide)
 endif()
 
@@ -170,6 +171,10 @@ set(LIBSLIC3R_INCLUDES
 
 add_library(ZipArchive STATIC
     ${LIBDIR}/Zip/ZipArchive.cpp
+)
+
+add_library(miniz STATIC
+    ${LIBDIR}/miniz/miniz.c
 )
 target_compile_features(ZipArchive PUBLIC cxx_std_11)
 target_include_directories(ZipArchive PUBLIC ${COMMON_INCLUDES})
@@ -236,6 +241,7 @@ add_library(libslic3r STATIC
     ${LIBDIR}/libslic3r/TransformationMatrix.cpp
     ${LIBDIR}/libslic3r/SupportMaterial.cpp
     ${LIBDIR}/libslic3r/utils.cpp
+    ${LIBDIR}/libslic3r/miniz_extension.cpp
 )
 target_compile_features(libslic3r PUBLIC cxx_std_11)
 target_include_directories(libslic3r SYSTEM PUBLIC ${SLIC3R_INCLUDES})
@@ -398,6 +404,7 @@ set(LIBSLIC3R_DEPENDS
     polypartition
     poly2tri
     ZipArchive
+    miniz
     ${Boost_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT} 
 )

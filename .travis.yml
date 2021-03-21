@@ -33,6 +33,8 @@ addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
+    - sourceline: 'deb http://download.opensuse.org/repositories/science:/dlr/xUbuntu_14.04/ /'
+      key_url: 'https://download.opensuse.org/repositories/science:dlr/xUbuntu_14.04/Release.key'
     packages:
     - g++-7
     - gcc-7
