@@ -100,7 +100,8 @@ void CalibrationRetractionDialog::remove_slowdown(wxCommandEvent& event_args) {
 void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    plat->reset();
+    if (!plat->new_project("Retraction calibration"))
+        return;
 
     bool autocenter = gui_app->app_config->get("autocenter") == "1";
     if (autocenter) {

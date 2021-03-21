@@ -139,7 +139,9 @@ public:
     SLAPrint& sla_print();
     const PrintBase* current_print() const;
 
-    void new_project();
+    bool check_project_unsaved_changes();
+    bool ask_for_new_project(std::string project_name = "");
+    bool new_project(std::string project_name = "");
     void load_project();
     void load_project(const wxString& filename);
     void add_model(bool imperial_units = false);
@@ -184,7 +186,6 @@ public:
     void select_all();
     void deselect_all();
     void remove(size_t obj_idx);
-    void reset();
     void reset_with_confirm();
     void delete_object_from_model(size_t obj_idx);
     void remove_selected();
@@ -201,7 +202,7 @@ public:
     void export_gcode(bool prefer_removable);
     void export_stl(bool extended = false, bool selection_only = false);
     void export_amf();
-    void export_3mf(const boost::filesystem::path& output_path = boost::filesystem::path());
+    void save_project_as_3mf(const boost::filesystem::path& output_path = boost::filesystem::path());
     void reload_from_disk();
     void reload_all_from_disk();
     bool has_toolpaths_to_export() const;

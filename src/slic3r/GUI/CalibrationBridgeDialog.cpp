@@ -53,7 +53,8 @@ void CalibrationBridgeDialog::create_buttons(wxStdDialogButtonSizer* buttons){
 void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool add) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    plat->reset();
+    if (!plat->new_project("Bridge calibration"))
+        return;
 
     bool autocenter = gui_app->app_config->get("autocenter") == "1";
     if (autocenter) {

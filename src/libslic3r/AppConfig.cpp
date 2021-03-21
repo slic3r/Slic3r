@@ -127,6 +127,12 @@ void AppConfig::set_defaults()
 
         if (get("default_action_on_select_preset").empty())
             set("default_action_on_select_preset", "none");     // , "transfer", "discard" or "save" 
+
+        if (get("default_action_preset_on_new_project").empty())
+            set("default_action_preset_on_new_project", "1");
+
+        if (get("default_action_on_new_project").empty())
+            set("default_action_on_new_project", "1");
     }
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
     else {

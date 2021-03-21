@@ -446,6 +446,8 @@ public:
     const Transform3d& get_matrix(bool dont_translate = false, bool dont_rotate = false, bool dont_scale = false, bool dont_mirror = false) const;
 
     Transformation operator * (const Transformation& other) const;
+    bool operator==(const Transformation& trsf) const;
+    bool operator!=(const Transformation& trsf) const { return !operator==(trsf); }
 
     // Find volume transformation, so that the chained (instance_trafo * volume_trafo) will be as close to identity
     // as possible in least squares norm in regard to the 8 corners of bbox.

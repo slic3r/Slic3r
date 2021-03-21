@@ -1777,8 +1777,9 @@ struct Plater::priv
     void select_all();
     void deselect_all();
     void remove(size_t obj_idx);
+    void remove_all();
     void delete_object_from_model(size_t obj_idx);
-    void reset();
+    void reset(std::string name = "");
     void mirror(Axis axis);
     void split_object();
     void split_volume();
@@ -1902,6 +1903,20 @@ struct Plater::priv
     // extension should contain the leading dot, i.e.: ".3mf"
     wxString get_project_filename(const wxString& extension = wxEmptyString) const;
     void set_project_filename(const wxString& filename);
+    void set_saved_project(const DynamicPrintConfig& config, const Model& model) { m_project_last_saved_cfg = config; m_saved_model = model; }
+    bool has_project_change(const DynamicPrintConfig& config, const Model& model) const {
+        if (m_project_last_saved_cfg.keys().empty()) {
+            //new project, unsaved
+            //check if current preset is dirty
+            PrinterTechnology printer_technology = wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology();
+            for (Tab* tab : wxGetApp().tabs_list)
+                if (tab->supports_printer_technology(printer_technology) && tab->current_preset_is_dirty()) {
+                    return false;
+                }
+        } else if(!m_project_last_saved_cfg.equals(config))
+            return false;
+        return !m_saved_model.equals(model);
+    }
 
     // Caching last value of show_action_buttons parameter for show_action_buttons(), so that a callback which does not know this state will not override it.
     mutable bool    			ready_to_slice = { false };
@@ -1928,6 +1943,8 @@ private:
 
     // path to project file stored with no extension
     wxString 					m_project_filename;
+    Model                       m_saved_model;
+    DynamicPrintConfig          m_project_last_saved_cfg;
     Slic3r::UndoRedo::Stack 	m_undo_redo_stack_main;
     Slic3r::UndoRedo::Stack 	m_undo_redo_stack_gizmos;
     Slic3r::UndoRedo::Stack    *m_undo_redo_stack_active = &m_undo_redo_stack_main;
@@ -2807,6 +2824,18 @@ void Plater::priv::remove(size_t obj_idx)
     object_list_changed();
 }
 
+void Plater::priv::remove_all()
+{
+    if (view3D->is_layers_editing_enabled())
+        view3D->enable_layers_editing(false);
+
+    model.clear_objects();
+    update();
+    // Delete object from Sidebar list. Do it after update, so that the GLScene selection is updated with the modified model.
+    sidebar->obj_list()->delete_all_objects_from_list();
+    object_list_changed();
+}
+
 
 void Plater::priv::delete_object_from_model(size_t obj_idx)
 {
@@ -2819,13 +2848,14 @@ void Plater::priv::delete_object_from_model(size_t obj_idx)
     object_list_changed();
 }
 
-void Plater::priv::reset()
+void Plater::priv::reset(std::string name)
 {
-    Plater::TakeSnapshot snapshot(q, _L("Reset Project"));
+    Plater::TakeSnapshot snapshot(q, _L(name.empty()? "Reset Project" : name));
 
 	clear_warnings();
 
-    set_project_filename(wxEmptyString);
+    set_project_filename(name.empty() ? wxEmptyString : _L(name));
+    set_saved_project(DynamicPrintConfig{}, Model{});
 
     if (view3D->is_layers_editing_enabled())
         view3D->enable_layers_editing(false);
@@ -4800,10 +4830,60 @@ const PrintBase* Plater::current_print() const {
     return printer_technology() == ptFFF ? (PrintBase*)&p->fff_print : (PrintBase*)&p->sla_print;
 }
 
-void Plater::new_project()
+bool Plater::check_project_unsaved_changes() {
+    if (wxGetApp().app_config->get("default_action_on_new_project") == "1" && p->has_project_change(wxGetApp().preset_bundle->full_config_secure(), p->model))
+    {
+        wxMessageDialog diag = wxMessageDialog(static_cast<wxWindow*>(this), _L("You have unsaved Changed, do you want to save your project or to remove all settings and objects?"), wxString(SLIC3R_APP_NAME), wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxCENTRE);
+        diag.SetYesNoLabels(_L("Discard"), _L("Save"));
+        //diag.SetOKLabel(_L("Always discard"));
+        int result = diag.ShowModal();
+        if (result == wxID_CANCEL)
+            return false;
+        else if (result == wxID_NO)
+            save_project_as_3mf(into_path(get_project_filename(".3mf")));
+        //else if (result == wxID_OK)
+            //wxGetApp().app_config->set("default_action_on_new_project", "0");
+    }
+    return true;
+}
+
+bool Plater::ask_for_new_project(std::string project_name)
 {
+    if (!check_project_unsaved_changes())
+        return false;
+    return new_project(project_name);
+}
+
+bool Plater::new_project(std::string project_name)
+{
+    //ask to know what to do with unsaved conf change: 
+    // if discard or save, we can make sur it's reset
+    // if cancel, then do not touch them
+    if (wxGetApp().app_config->get("default_action_preset_on_new_project") == "0" && wxGetApp().check_unsaved_changes()) {
+
+        //if (!config.empty()) {
+        //    Preset::normalize(config);
+        //    wxGetApp().preset_bundle->
+        //    wxGetApp().preset_bundle->load_config_model(filename.string(), std::move(config));
+        //    if (printer_technology == ptFFF)
+        //        CustomGCode::update_custom_gcode_per_print_z_from_config(model.custom_gcode_per_print_z, &wxGetApp().preset_bundle->project_config);
+        //    // For exporting from the amf/3mf we shouldn't check printer_presets for the containing information about "Print Host upload"
+        //    wxGetApp().load_current_presets(false);
+        //    is_project_file = true;
+        //}
+        PrinterTechnology printer_technology = wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology();
+        for (Tab* tab : wxGetApp().tabs_list)
+            if (tab->supports_printer_technology(printer_technology) && tab->current_preset_is_dirty()) {
+                std::vector<std::string> dirty_options = tab->get_presets()->current_dirty_options();
+                for (std::string key : dirty_options) {
+                    tab->get_presets()->get_edited_preset().config.set_key_value(key, tab->get_presets()->get_selected_preset().config.option(key)->clone());
+                }
+                tab->update_dirty();
+            }
+    }
     p->select_view_3D("3D");
-    wxPostEvent(p->view3D->get_wxglcanvas(), SimpleEvent(EVT_GLTOOLBAR_DELETE_ALL));
+    p->reset(project_name);
+    return true;
 }
 
 void Plater::load_project()
@@ -4829,6 +4909,7 @@ void Plater::load_project(const wxString& filename)
     input_paths.push_back(into_path(filename));
 
     std::vector<size_t> res = load_files(input_paths);
+    p->set_saved_project(wxGetApp().preset_bundle->full_config_secure(), p->model);
 
     // if res is empty no data has been loaded
     if (!res.empty())
@@ -5156,11 +5237,15 @@ void Plater::select_all() { p->select_all(); }
 void Plater::deselect_all() { p->deselect_all(); }
 
 void Plater::remove(size_t obj_idx) { p->remove(obj_idx); }
-void Plater::reset() { p->reset(); }
 void Plater::reset_with_confirm()
 {
-    if (wxMessageDialog(static_cast<wxWindow*>(this), _L("All objects will be removed, continue?"), wxString(SLIC3R_APP_NAME) + " - " + _L("Delete all"), wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxCENTRE).ShowModal() == wxID_YES)
-        reset();
+    wxMessageDialog dialog(static_cast<wxWindow*>(this), _L("All objects will be removed, continue?"), wxString(SLIC3R_APP_NAME) + " - " + _L("Delete all"), wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxCENTRE);
+    dialog.SetYesNoLabels("New Project", "Erase all objects");
+    int result = dialog.ShowModal();
+    if (result == wxID_YES)
+        ask_for_new_project();
+    else if (result == wxID_NO)
+        p->remove_all();
 }
 
 void Plater::delete_object_from_model(size_t obj_idx) { p->delete_object_from_model(obj_idx); }
@@ -5539,12 +5624,11 @@ void Plater::export_amf()
     }
 }
 
-void Plater::export_3mf(const boost::filesystem::path& output_path)
+void Plater::save_project_as_3mf(const boost::filesystem::path& output_path)
 {
-    if (p->model.objects.empty()) { return; }
+    //if (p->model.objects.empty()) { return; }
 
     wxString path;
-    bool export_config = true;
     if (output_path.empty())
     {
         path = p->get_export_file(FT_3MF);
@@ -5574,10 +5658,11 @@ void Plater::export_3mf(const boost::filesystem::path& output_path)
         !show_support_on_thumbnails, // parts_only
         show_bed_on_thumbnails, // show_bed
         true); // transparent_background
-    if (Slic3r::store_3mf(path_u8.c_str(), &p->model, export_config ? &cfg : nullptr, full_pathnames, &thumbnail_data)) {
+    if (Slic3r::store_3mf(path_u8.c_str(), &p->model, &cfg, full_pathnames, &thumbnail_data)) {
         // Success
         p->statusbar()->set_status_text(format_wxstr(_L("3MF file exported to %s"), path));
-        p->set_project_filename(path);
+        p->set_project_filename(path); 
+        p->set_saved_project(cfg, p->model);
     }
     else {
         // Failure

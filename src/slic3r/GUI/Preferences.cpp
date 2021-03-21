@@ -191,6 +191,20 @@ void PreferencesDialog::build()
 		def.set_default_value(new ConfigOptionBool{ app_config->get("default_action_on_select_preset") == "none" });
 		option = Option(def, "default_action_on_select_preset");
 		m_optgroup_general->append_single_option_line(option);
+
+		def.label = L("Always keep current preset changes on a new project");
+		def.type = coBool;
+		def.tooltip = L("When you create a new project, it will keep the current preset state, and won't open the preset change dialog.");
+		def.set_default_value(new ConfigOptionBool{ app_config->get("default_action_preset_on_new_project") == "1" });
+		option = Option(def, "default_action_preset_on_new_project");
+		m_optgroup_general->append_single_option_line(option);
+
+		def.label = L("Ask for unsaved project changes");
+		def.type = coBool;
+		def.tooltip = L("Always ask if you want to save your project change if you are going to loose some changes. Or it will discard them by deafult.");
+		def.set_default_value(new ConfigOptionBool{ app_config->get("default_action_on_new_project") == "1" });
+		option = Option(def, "default_action_on_new_project");
+		m_optgroup_general->append_single_option_line(option);
 	}
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 #ifdef _WIN32

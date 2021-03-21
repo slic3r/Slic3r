@@ -2097,7 +2097,7 @@ namespace Slic3r {
             return false;
         }
 
-        if ((thumbnail_data != nullptr) && thumbnail_data->is_valid())
+        if (!model.objects.empty() && thumbnail_data != nullptr && thumbnail_data->is_valid())
         {
             // Adds the file Metadata/thumbnail.png.
             if (!_add_thumbnail_file_to_archive(archive, *thumbnail_data))
@@ -2121,12 +2121,13 @@ namespace Slic3r {
         // Adds model file ("3D/3dmodel.model").
         // This is the one and only file that contains all the geometry (vertices and triangles) of all ModelVolumes.
         IdToObjectDataMap objects_data;
-        if (!_add_model_file_to_archive(filename, archive, model, objects_data))
-        {
-            close_zip_writer(&archive);
-            boost::filesystem::remove(filename);
-            return false;
-        }
+        if(!model.objects.empty())
+            if (!_add_model_file_to_archive(filename, archive, model, objects_data))
+            {
+                close_zip_writer(&archive);
+                boost::filesystem::remove(filename);
+                return false;
+            }
 
         // Adds layer height profile file ("Metadata/Slic3r_PE_layer_heights_profile.txt").
         // All layer height profiles of all ModelObjects are stored here, indexed by 1 based index of the ModelObject in Model.

@@ -1878,7 +1878,9 @@ public:
     auto                        cbegin() const { return m_data.cbegin(); }
     auto                        cend() const { return m_data.cend(); }
     t_config_option_keys        keys() const { return m_data.keys(); }
-    bool                        has(const t_config_option_key &opt_key) const { return m_data.has(opt_key); }
+    bool                        has(const t_config_option_key& opt_key) const { return m_data.has(opt_key); }
+    bool                        operator==(const ModelConfig& other) const { return m_data.equals(other.m_data); }
+    bool                        operator!=(const ModelConfig& other) const { return !this->operator==(other); }
     const ConfigOption*         option(const t_config_option_key &opt_key) const { return m_data.option(opt_key); }
     int                         opt_int(const t_config_option_key &opt_key) const { return m_data.opt_int(opt_key); }
     int                         extruder() const { return opt_int("extruder"); }

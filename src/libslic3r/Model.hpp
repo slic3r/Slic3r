@@ -146,6 +146,9 @@ public:
     void apply(const t_model_material_attributes &attributes)
         { this->attributes.insert(attributes.begin(), attributes.end()); }
 
+    bool operator==(const ModelMaterial& mm) const { return attributes == mm.attributes && config == mm.config; }
+    bool operator!=(const ModelMaterial& mm) const { return !operator==(mm); }
+
 private:
     // Parent, owning this material.
     Model *m_model;
@@ -193,6 +196,10 @@ public:
     {
         ar(cereal::base_class<ObjectWithTimestamp>(this), m_data);
     }
+
+
+    bool                  operator==(const LayerHeightProfile& other) const { return object_id_and_timestamp_match(other) && m_data == other.m_data; }
+    bool                  operator!=(const LayerHeightProfile& other) const { return !this->operator==(other); }
 
 private:
     // Constructors to be only called by derived classes.
@@ -281,6 +288,8 @@ public:
     // This bounding box is being cached.
     const BoundingBoxf3& bounding_box() const;
     void invalidate_bounding_box() { m_bounding_box_valid = false; m_raw_bounding_box_valid = false; m_raw_mesh_bounding_box_valid = false; }
+
+    bool equals(const ModelObject &other);
 
     // A mesh containing all transformed instances of this object.
     TriangleMesh mesh() const;
@@ -670,6 +679,8 @@ public:
         this->seam_facets.set_new_unique_id();
     }
 
+    bool operator!=(const ModelVolume& mm) const;
+
 protected:
 	friend class Print;
     friend class SLAPrint;
@@ -677,7 +688,7 @@ protected:
 	friend class ModelObject;
 
 	// Copies IDs of both the ModelVolume and its config.
-	explicit ModelVolume(const ModelVolume &rhs) = default;
+    explicit ModelVolume(const ModelVolume& rhs) = default;
     void     set_model_object(ModelObject *model_object) { object = model_object; }
 	void 	 assign_new_unique_ids_recursive() override;
     void     transform_this_mesh(const Transform3d& t, bool fix_left_handed);
@@ -888,6 +899,9 @@ public:
         this->object->invalidate_bounding_box();
     }
 
+    bool operator==(const ModelInstance& other) const;
+    bool operator!=(const ModelInstance& other) const { return !operator==(other); }
+
 protected:
     friend class Print;
     friend class SLAPrint;
@@ -984,6 +998,8 @@ public:
 
     static Model read_from_file(const std::string& input_file, DynamicPrintConfig* config = nullptr, bool add_default_instances = true, bool check_version = false);
     static Model read_from_archive(const std::string& input_file, DynamicPrintConfig* config, bool add_default_instances = true, bool check_version = false);
+
+    bool equals(const Model& rhs) const;
 
     // Add a new ModelObject to this Model, generate a new ID for this ModelObject.
     ModelObject* add_object();

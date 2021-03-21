@@ -43,7 +43,9 @@ void CalibrationOverBridgeDialog::create_geometry2(wxCommandEvent& event_args) {
 void CalibrationOverBridgeDialog::create_geometry(bool over_bridge) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    plat->reset();
+    if (!plat->new_project("Over-bridge calibration"))
+        return;
+
     bool autocenter = gui_app->app_config->get("autocenter") == "1";
     if (autocenter) {
         //disable aut-ocenter for this calibration.

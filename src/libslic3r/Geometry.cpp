@@ -1185,6 +1185,16 @@ Transformation Transformation::operator * (const Transformation& other) const
     return Transformation(get_matrix() * other.get_matrix());
 }
 
+
+bool Transformation::operator==(const Transformation& other) const
+{
+    return m_offset == other.m_offset
+        && m_rotation == other.m_rotation
+        && m_scaling_factor == other.m_scaling_factor
+        && m_mirror == other.m_mirror
+        && m_matrix.isApprox(other.m_matrix);
+}
+
 Transformation Transformation::volume_to_bed_transformation(const Transformation& instance_transformation, const BoundingBoxf3& bbox)
 {
     Transformation out;

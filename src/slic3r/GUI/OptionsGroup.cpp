@@ -634,8 +634,8 @@ void ConfigOptionsGroup::back_to_config_value(const DynamicPrintConfig& config, 
 		value = get_config_value(config, opt_short_key, opt_index);
 	}
 
-	set_value(opt_key, value);
-	on_change_OG(opt_key, get_value(opt_key));
+    if(set_value(opt_key, value))
+        on_change_OG(opt_key, get_value(opt_key));
 }
 
 void ConfigOptionsGroup::on_kill_focus(const std::string& opt_key)

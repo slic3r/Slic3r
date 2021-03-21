@@ -56,7 +56,9 @@ void CalibrationTempDialog::create_buttons(wxStdDialogButtonSizer* buttons){
 void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    plat->reset();
+    if (!plat->new_project("Temperature calibration"))
+        return;
+
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
             Slic3r::resources_dir()+"/calibration/filament_temp/Smart_compact_temperature_calibration_item.amf"}, true, false, false);
 

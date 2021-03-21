@@ -54,7 +54,9 @@ void CalibrationCubeDialog::create_buttons(wxStdDialogButtonSizer* buttons){
 void CalibrationCubeDialog::create_geometry(std::string calibration_path) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    plat->reset();
+    if (!plat->new_project("Calibration cube"))
+        return;
+
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
             Slic3r::resources_dir()+"/calibration/cube/"+ calibration_path}, true, false, false);
 

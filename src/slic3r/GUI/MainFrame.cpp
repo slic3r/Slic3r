@@ -208,6 +208,10 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
             event.Veto();
             return;
         }
+        if (event.CanVeto() && plater() && !plater()->check_project_unsaved_changes()) {
+            event.Veto();
+            return;
+        }
         if (event.CanVeto() && !wxGetApp().check_print_host_queue()) {
             event.Veto();
             return;
@@ -486,12 +490,18 @@ void MainFrame::shutdown()
 void MainFrame::update_title()
 {
     wxString title = wxEmptyString;
+    bool has_name = false;
     if (m_plater != nullptr) {
         // m_plater->get_project_filename() produces file name including path, but excluding extension.
         // Don't try to remove the extension, it would remove part of the file name after the last dot!
         wxString project = from_path(into_path(m_plater->get_project_filename()).filename());
-        if (!project.empty())
+        if (project.empty()) {
+            project = m_plater->get_project_filename();
+        }
+        if (!project.empty()) {
+            has_name = true;
             title += (project + " - ");
+        }
     }
 
     std::string build_id = wxGetApp().is_editor() ? SLIC3R_BUILD_ID : GCODEVIEWER_BUILD_ID;
@@ -511,7 +521,7 @@ void MainFrame::update_title()
     }
 
     title += wxString(SLIC3R_APP_NAME) + "_" + wxString(SLIC3R_VERSION) ;
-    if (wxGetApp().is_editor())
+    if (wxGetApp().is_editor() && !has_name)
         title += (" " + _L("based on PrusaSlicer & Slic3r"));
 
     SetTitle(title);
@@ -664,12 +674,12 @@ bool MainFrame::is_active_and_shown_tab(Tab* tab)
 
 bool MainFrame::can_start_new_project() const
 {
-    return (m_plater != nullptr) && !m_plater->model().objects.empty();
+    return (m_plater != nullptr);
 }
 
 bool MainFrame::can_save() const
 {
-    return (m_plater != nullptr) && !m_plater->model().objects.empty();
+    return (m_plater != nullptr);
 }
 
 bool MainFrame::can_export_model() const
@@ -944,7 +954,7 @@ void MainFrame::init_menubar_as_editor()
     wxMenu* fileMenu = new wxMenu;
     {
         append_menu_item(fileMenu, wxID_ANY, _L("&New Project") + "\tCtrl+N", _L("Start a new project"),
-            [this](wxCommandEvent&) { if (m_plater) m_plater->new_project(); }, "", nullptr,
+            [this](wxCommandEvent&) { if (m_plater) m_plater->ask_for_new_project(); }, "", nullptr,
             [this](){return m_plater != nullptr && can_start_new_project(); }, this);
         append_menu_item(fileMenu, wxID_ANY, _L("&Open Project") + dots + "\tCtrl+O", _L("Open a project file"),
             [this](wxCommandEvent&) { if (m_plater) m_plater->load_project(); }, "open", nullptr,
@@ -986,14 +996,14 @@ void MainFrame::init_menubar_as_editor()
         Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(m_recent_projects.GetCount() > 0); }, recent_projects_submenu->GetId());
 
         append_menu_item(fileMenu, wxID_ANY, _L("&Save Project") + "\tCtrl+S", _L("Save current project file"),
-            [this](wxCommandEvent&) { if (m_plater) m_plater->export_3mf(into_path(m_plater->get_project_filename(".3mf"))); }, "save", nullptr,
+            [this](wxCommandEvent&) { if (m_plater) m_plater->save_project_as_3mf(into_path(m_plater->get_project_filename(".3mf"))); }, "save", nullptr,
             [this](){return m_plater != nullptr && can_save(); }, this);
 #ifdef __APPLE__
         append_menu_item(fileMenu, wxID_ANY, _L("Save Project &as") + dots + "\tCtrl+Shift+S", _L("Save current project file as"),
 #else
         append_menu_item(fileMenu, wxID_ANY, _L("Save Project &as") + dots + "\tCtrl+Alt+S", _L("Save current project file as"),
 #endif // __APPLE__
-            [this](wxCommandEvent&) { if (m_plater) m_plater->export_3mf(); }, "save", nullptr,
+            [this](wxCommandEvent&) { if (m_plater) m_plater->save_project_as_3mf(); }, "save", nullptr,
             [this](){return m_plater != nullptr && can_save(); }, this);
 
         fileMenu->AppendSeparator();

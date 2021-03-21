@@ -38,7 +38,8 @@ void CalibrationFlowDialog::create_buttons(wxStdDialogButtonSizer* buttons){
 void CalibrationFlowDialog::create_geometry(float start, float delta) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    plat->reset();
+    if (!plat->new_project("Flow calibration"))
+        return;
 
     bool autocenter = gui_app->app_config->get("autocenter") == "1";
     if (autocenter) {

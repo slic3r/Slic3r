@@ -97,6 +97,30 @@ void Model::update_links_bottom_up_recursive()
 	}
 }
 
+bool Model::equals(const Model& rhs) const {
+    // check materials
+    if(this->materials.size() != rhs.materials.size())
+        return false;
+    for (const std::pair<const t_model_material_id, ModelMaterial*>& m : this->materials) {
+        // check the ID and m_model.
+        if (rhs.materials.find(m.first) == rhs.materials.end() || rhs.materials.at(m.first)->operator==(*m.second))
+            return false;
+    }
+    // check objects
+    if (this->objects.size() != rhs.objects.size())
+        return false;
+    for (int i = 0; i < rhs.objects.size(); i++) {
+        // Copy including the ID, leave ID set to invalid (zero).
+        if (rhs.objects[i]->equals(*objects[i]))
+            return false;
+    }
+
+    // copy custom code per height
+    if (this->custom_gcode_per_print_z != rhs.custom_gcode_per_print_z)
+            return false;
+    return true;
+}
+
 Model Model::read_from_file(const std::string& input_file, DynamicPrintConfig* config, bool add_default_instances, bool check_version)
 {
     Model model;
@@ -152,8 +176,9 @@ Model Model::read_from_archive(const std::string& input_file, DynamicPrintConfig
     if (!result)
         throw Slic3r::RuntimeError("Loading of a model file failed.");
 
-    if (model.objects.empty())
-        throw Slic3r::RuntimeError("The supplied file couldn't be read because it's empty");
+    //it can read the config only
+    //if (model.objects.empty())
+        //throw Slic3r::RuntimeError("The supplied file couldn't be read because it's empty");
 
     for (ModelObject *o : model.objects)
     {
@@ -612,6 +637,33 @@ void ModelObject::assign_new_unique_ids_recursive()
     for (ModelInstance *model_instance : this->instances)
         model_instance->assign_new_unique_ids_recursive();
     this->layer_height_profile.set_new_unique_id();
+}
+
+bool ModelObject::equals(const ModelObject& rhs) {
+
+    if (this->id() != rhs.id() || this->config.id() != rhs.config.id()) return false;
+
+    if (this->name != rhs.name) return false;
+    if (this->input_file != rhs.input_file) return false;
+    // Copies the config's ID
+    if (this->config != rhs.config) return false;
+    if (this->sla_support_points != rhs.sla_support_points) return false;
+    if (this->sla_points_status != rhs.sla_points_status) return false;
+    if (this->sla_drain_holes != rhs.sla_drain_holes) return false;
+    if (this->layer_config_ranges != rhs.layer_config_ranges) return false;
+    if (this->layer_height_profile != rhs.layer_height_profile) return false;
+    if (this->printable != rhs.printable) return false;
+    if (this->origin_translation != rhs.origin_translation) return false;
+    if (m_bounding_box != rhs.m_bounding_box) return false;
+    if (m_bounding_box_valid != rhs.m_bounding_box_valid) return false;
+    if (m_raw_bounding_box != rhs.m_raw_bounding_box) return false;
+    if (m_raw_bounding_box_valid != rhs.m_raw_bounding_box_valid) return false;
+    if (m_raw_mesh_bounding_box != rhs.m_raw_mesh_bounding_box) return false;
+    if (m_raw_mesh_bounding_box_valid != rhs.m_raw_mesh_bounding_box_valid) return false;
+
+    if (this->volumes != rhs.volumes) return false;
+    if (this->instances != rhs.instances) return false;
+    return true;
 }
 
 // Clone this ModelObject including its volumes and instances, keep the IDs of the copies equal to the original.
@@ -1824,6 +1876,14 @@ void ModelVolume::convert_from_imperial_units()
     this->source.is_converted_from_inches = true;
 }
 
+bool ModelVolume::operator!=(const ModelVolume& mm) const
+{
+    if (object->id() != mm.object->id()) return false;
+    if (m_type != mm.m_type || m_material_id != mm.m_material_id) return false;
+    if (m_transformation != mm.m_transformation) return false;
+    return true;
+}
+
 void ModelInstance::transform_mesh(TriangleMesh* mesh, bool dont_translate) const
 {
     mesh->transform(get_matrix(dont_translate));
@@ -1874,6 +1934,9 @@ void ModelInstance::transform_polygon(Polygon* polygon) const
     polygon->scale(get_scaling_factor(X), get_scaling_factor(Y)); // scale around polygon origin
 }
 
+bool ModelInstance::operator==(const ModelInstance& other) const {
+    return m_transformation == other.m_transformation && print_volume_state == other.print_volume_state && printable == other.printable;
+}
 
 arrangement::ArrangePolygon ModelInstance::get_arrange_polygon() const
 {
@@ -1902,6 +1965,8 @@ arrangement::ArrangePolygon ModelInstance::get_arrange_polygon() const
 
     return ret;
 }
+
+
 
 indexed_triangle_set FacetsAnnotation::get_facets(const ModelVolume& mv, EnforcerBlockerType type) const
 {

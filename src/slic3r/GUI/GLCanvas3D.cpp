@@ -4511,7 +4511,7 @@ bool GLCanvas3D::_init_main_toolbar()
     item.tooltip = _utf8(L("Delete all")) + " [" + GUI::shortkey_ctrl_prefix() + "Del]";
     item.sprite_id = 2;
     item.left.action_callback = [this]() { if (m_canvas != nullptr) wxPostEvent(m_canvas, SimpleEvent(EVT_GLTOOLBAR_DELETE_ALL)); };
-    item.enabling_callback = []()->bool { return wxGetApp().plater()->can_delete_all(); };
+    item.enabling_callback = []()->bool { return wxGetApp().plater()/*->can_delete_all()*/; };
     if (!m_main_toolbar.add_item(item))
         return false;
 
