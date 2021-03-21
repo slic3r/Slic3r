@@ -1,7 +1,7 @@
 #include "../IO.hpp"
 #include <iostream>
 #include <fstream>
-#include <string.h>
+#include <cstring>
 #include <map>
 #include <string>
 #include <boost/move/move.hpp>
@@ -469,8 +469,9 @@ AMF::read(std::string input_file, Model* model)
 
         char buffer[3];
         file.read(buffer, 2);
+        buffer[2] = '\0';
         file.close();
-        if (strcmp(buffer, "PK") == 0)
+        if (std::strcmp(buffer, "PK") == 0)
             return load_amf_archive(input_file.c_str(), model, false);
     }
 
