@@ -2854,7 +2854,7 @@ void Plater::priv::reset(std::string name)
 
 	clear_warnings();
 
-    set_project_filename(name.empty() ? wxEmptyString : _L(name));
+    set_project_filename(name.empty() ? wxString(wxEmptyString) : _L(name));
     set_saved_project(DynamicPrintConfig{}, Model{});
 
     if (view3D->is_layers_editing_enabled())
