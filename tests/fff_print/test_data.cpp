@@ -159,8 +159,9 @@ void init_print(std::vector<TriangleMesh> &&meshes, Slic3r::Print &print, Slic3r
 	DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
     config.apply(config_in);
 
-    if (verbose_gcode())
+    if (verbose_gcode()) {
         config.set_key_value("gcode_comments", new ConfigOptionBool(true));
+    }
 
 	for (const TriangleMesh &t : meshes) {
 		ModelObject *object = model.add_object();
