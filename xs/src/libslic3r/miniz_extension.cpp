@@ -1,6 +1,7 @@
 #include <exception>
 
 #include "miniz_extension.hpp"
+#include "Exception.hpp"
 
 #if defined(_MSC_VER) || defined(__MINGW64__)
 #include "boost/nowide/cstdio.hpp"
@@ -36,11 +37,13 @@ bool open_zip(mz_zip_archive *zip, const char *fname, bool isread)
     if (isread)
     {
         res = mz_zip_reader_init_cfile(zip, f, 0, 0);
-        if (!res)
+        if (!res) {
             // if we get here it means we tried to open a non-zip file
             // we need to close the file here because the call to mz_zip_get_cfile() made into close_zip() returns a null pointer
             // see: https://github.com/prusa3d/PrusaSlicer/issues/3536
             fclose(f);
+            throw Slic3r::FileIOError("Tried to open a non-zip file.");
+        }
     }
     else
         res = mz_zip_writer_init_cfile(zip, f, 0);
