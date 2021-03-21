@@ -470,7 +470,7 @@ AMF::read(std::string input_file, Model* model)
         char buffer[3];
         file.read(buffer, 2);
         file.close();
-        if (strcmp(buffer, "PK"))
+        if (strcmp(buffer, "PK") == 0)
             return load_amf_archive(input_file.c_str(), model, false);
     }
 

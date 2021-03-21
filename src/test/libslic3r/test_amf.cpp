@@ -8,7 +8,6 @@ using namespace Slic3r;
 using namespace std::literals::string_literals;
 
 SCENARIO("Reading deflated AMF files", "[AMF]") {
-    auto _tmp_config = DynamicPrintConfig{};
     GIVEN("Compressed AMF file of a 20mm cube") {
         auto model {new Slic3r::Model()};
         WHEN("file is read") {
