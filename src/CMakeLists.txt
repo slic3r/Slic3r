@@ -122,7 +122,8 @@ find_package(Threads REQUIRED)
 set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost REQUIRED COMPONENTS system thread filesystem)
 
-if (NOT ${Boost_VERSION_STRING} VERSION_LESS "1.74.0")
+if (NOT (${Boost_VERSION_STRING} VERSION_LESS "1.74.0"))
+    MESSAGE("Adding in boost::nowide")
     find_package(Boost REQUIRED COMPONENTS system thread filesystem OPTIONAL_COMPONENTS nowide)
 endif()
 
