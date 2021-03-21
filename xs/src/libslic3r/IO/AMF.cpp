@@ -462,16 +462,15 @@ bool
 AMF::read(std::string input_file, Model* model)
 {
     // Quick and dirty hack from PrusaSlic3r's AMF deflate
-    if (boost::iends_with(input_file, ".amf")) {
+    if (boost::iends_with(input_file.c_str(), ".amf")) {
         boost::nowide::ifstream file(input_file.c_str(), boost::nowide::ifstream::binary);
         if (!file.good())
             return false;
 
-        char _str_zip_mask[3];
-        file.read(_str_zip_mask, 2);
+        char buffer[3];
+        file.read(buffer, 2);
         file.close();
-        std::string zip_mask(_str_zip_mask);
-        if (zip_mask == "PK")
+        if (strcmp(buffer, "PK"))
             return load_amf_archive(input_file.c_str(), model, false);
     }
 
