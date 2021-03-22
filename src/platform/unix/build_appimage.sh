@@ -12,9 +12,9 @@ mv superslicer AppRun
 chmod +x AppRun
 
 cp resources/icons/Slic3r_192px.png superslicer.png
-cat <<EOF > SuperSlicer.desktop
+cat <<EOF > Slic3r.desktop
 [Desktop Entry]
-Name=SuperSlicer
+Name=Slic3r
 Exec=AppRun %F
 Icon=superslicer
 Type=Application
@@ -24,5 +24,5 @@ EOF
 
 
 ../appimagetool.AppImage .
-mv SuperSlicer-x86_64.AppImage ${APP_IMAGE}
+mv Slic3r-x86_64.AppImage ${APP_IMAGE}
 chmod +x ${APP_IMAGE}

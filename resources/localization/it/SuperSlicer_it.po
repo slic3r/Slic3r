@@ -50,16 +50,16 @@ msgid "GNU Affero General Public License, version 3"
 msgstr "GNU Affero General Public License, versione 3"
 
 #: src/slic3r/GUI/AboutDialog.cpp:262
-msgid "SuperSlicer is based on PrusaSlicer which is based on Slic3r by Alessandro Ranellucci and the RepRap community."
-msgstr "SuperSlicer è basato su PrusaSlicer che si basa su Slic3r di Alessandro Ranellucci e la comunità RepRap."
+msgid "Slic3r is based on PrusaSlicer which is based on Slic3r by Alessandro Ranellucci and the RepRap community."
+msgstr "Slic3r è basato su PrusaSlicer che si basa su Slic3r di Alessandro Ranellucci e la comunità RepRap."
 
 #: src/slic3r/GUI/AboutDialog.cpp:263
 msgid "Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik, Durand Rémi and numerous others."
 msgstr "Contributi di Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik, Durand Rémi e molti altri."
 
 #: src/slic3r/GUI/AppConfig.cpp:120
-msgid "Error parsing SuperSlicer config file, it is probably corrupted. Try to manually delete the file to recover from the error. Your user profiles will not be affected."
-msgstr "Errore durante l'analisi del file di configurazione SuperSlicer, probabilmente danneggiato. Provare a eliminare manualmente il file per recuperare dall'errore. I profili utente non saranno interessati."
+msgid "Error parsing Slic3r config file, it is probably corrupted. Try to manually delete the file to recover from the error. Your user profiles will not be affected."
+msgstr "Errore durante l'analisi del file di configurazione Slic3r, probabilmente danneggiato. Provare a eliminare manualmente il file per recuperare dall'errore. I profili utente non saranno interessati."
 
 #: src/slic3r/GUI/BackgroundSlicingProcess.cpp:109
 msgid "Copying of the temporary G-code to the output G-code failed. Maybe the SD card is write locked?"
@@ -491,8 +491,8 @@ msgid "Active"
 msgstr "Attivo"
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:50
-msgid "SuperSlicer version"
-msgstr "SuperSlicer version"
+msgid "Slic3r version"
+msgstr "Slic3r version"
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:51 src/slic3r/GUI/Preset.cpp:1718
 msgid "print"
@@ -515,12 +515,12 @@ msgid "version"
 msgstr "versione"
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:58
-msgid "min SuperSlicer version"
-msgstr "min SuperSlicer version"
+msgid "min Slic3r version"
+msgstr "min Slic3r version"
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:60
-msgid "max SuperSlicer version"
-msgstr "max SuperSlicer versione"
+msgid "max Slic3r version"
+msgstr "max Slic3r versione"
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:63
 msgid "model"
@@ -684,11 +684,11 @@ msgstr "Modalità Visualizzazione"
 
 #: src/slic3r/GUI/ConfigWizard.cpp:837
 msgid ""
-"SuperSlicer's user interfaces comes in three variants:\n"
+"Slic3r's user interfaces comes in three variants:\n"
 "Simple, Advanced, and Expert.\n"
 "The Simple mode shows only the most frequently used settings relevant for regular 3D printing. The other two offer progressively more sophisticated fine-tuning, they are suitable for advanced and expert users, respectively."
 msgstr ""
-"Le interfacce utente di SuperSlicer sono disponibili in tre varianti:\n"
+"Le interfacce utente di Slic3r sono disponibili in tre varianti:\n"
 "Semplice, avanzato ed esperto.\n"
 "La modalità Semplice mostra solo le impostazioni utilizzate più di frequente rilevanti per la normale stampa 3D. Gli altri due offrono una messa a punto progressivamente più sofisticata, sono adatti rispettivamente per utenti avanzati ed esperti."
 
@@ -1656,10 +1656,10 @@ msgstr "Rimuovi selezione da rettangolo"
 #: src/slic3r/GUI/GLCanvas3DManager.cpp:306
 #, c-format
 msgid ""
-"SuperSlicer requires OpenGL 2.0 capable graphics driver to run correctly, \n"
+"Slic3r requires OpenGL 2.0 capable graphics driver to run correctly, \n"
 "while OpenGL version %s, render %s, vendor %s was detected."
 msgstr ""
-"SuperSlicer richiede il corretto funzionamento del driver di grafica OpenGL 2.0, \n"
+"Slic3r richiede il corretto funzionamento del driver di grafica OpenGL 2.0, \n"
 "mentre è stata rilevata la versione OpenGL %s, il rendering %s è stato rilevato."
 
 #: src/slic3r/GUI/GLCanvas3DManager.cpp:309
@@ -1667,8 +1667,8 @@ msgid "You may need to update your graphics card driver."
 msgstr "Dovresti aggiornare i driver della scheda video."
 
 #: src/slic3r/GUI/GLCanvas3DManager.cpp:312
-msgid "As a workaround, you may run SuperSlicer with a software rendered 3D graphics by running prusa-slicer.exe with the --sw_renderer parameter."
-msgstr "Come soluzione alternativa, è possibile eseguire SuperSlicer con una grafica 3D sottoposta a rendering software eseguendo prusa-slicer.exe con il parametro --sw_renderer.</a0>"
+msgid "As a workaround, you may run Slic3r with a software rendered 3D graphics by running prusa-slicer.exe with the --sw_renderer parameter."
+msgstr "Come soluzione alternativa, è possibile eseguire Slic3r con una grafica 3D sottoposta a rendering software eseguendo prusa-slicer.exe con il parametro --sw_renderer.</a0>"
 
 #: src/slic3r/GUI/GLCanvas3DManager.cpp:314
 msgid "Unsupported OpenGL version"
@@ -3836,28 +3836,28 @@ msgid "How to use the FreeCad python script window."
 msgstr "Come utilizzare la finestra di script Python di FreeCad."
 
 #: src/slic3r/GUI/MainFrame.cpp:801
-msgid "SuperSlicer Releases"
-msgstr "Rilasci di SuperSlicer"
+msgid "Slic3r Releases"
+msgstr "Rilasci di Slic3r"
 
 #: src/slic3r/GUI/MainFrame.cpp:801
-msgid "Open the SuperSlicer releases page in your browser"
-msgstr "Apri la pagina delle versioni di SuperSlicer nel tuo browser"
+msgid "Open the Slic3r releases page in your browser"
+msgstr "Apri la pagina delle versioni di Slic3r nel tuo browser"
 
 #: src/slic3r/GUI/MainFrame.cpp:803
-msgid "SuperSlicer wiki"
-msgstr "SuperSlicer wiki"
+msgid "Slic3r wiki"
+msgstr "Slic3r wiki"
 
 #: src/slic3r/GUI/MainFrame.cpp:803
-msgid "Open the SuperSlicer wiki in your browser"
-msgstr "Apri il wiki di SuperSlicer nel tuo browser"
+msgid "Open the Slic3r wiki in your browser"
+msgstr "Apri il wiki di Slic3r nel tuo browser"
 
 #: src/slic3r/GUI/MainFrame.cpp:805
-msgid "SuperSlicer website"
-msgstr "SuperSlicer website"
+msgid "Slic3r website"
+msgstr "Slic3r website"
 
 #: src/slic3r/GUI/MainFrame.cpp:805
-msgid "Open the SuperSlicer website in your browser"
-msgstr "Apri il sito Web SuperSlicer nel tuo browser"
+msgid "Open the Slic3r website in your browser"
+msgstr "Apri il sito Web Slic3r nel tuo browser"
 
 #: src/slic3r/GUI/MainFrame.cpp:807
 msgid "Prusa Edition website"
@@ -4738,8 +4738,8 @@ msgid "If this is enabled, Slic3r will pre-process objects as soon as they're lo
 msgstr "Se attivo, Slic3r processerà in anticipo gli oggetti non appena saranno caricati, così da risparmiare tempo durante l'esportazione del G-code."
 
 #: src/slic3r/GUI/Preferences.cpp:66
-msgid "If enabled, SuperSlicer will check for the new versions of itself online. When a new version becomes available a notification is displayed at the next application startup (never during program usage). This is only a notification mechanisms, no automatic installation is done."
-msgstr "Se abilitata, SuperSlicer tiche' per le nuove versioni di se stesso online. Quando una nuova versione diventa disponibile, viene visualizzata una notifica all'avvio successivo dell'applicazione (mai durante l'utilizzo del programma). Questo è solo un meccanismo di notifica, non viene eseguita alcuna installazione automatica."
+msgid "If enabled, Slic3r will check for the new versions of itself online. When a new version becomes available a notification is displayed at the next application startup (never during program usage). This is only a notification mechanisms, no automatic installation is done."
+msgstr "Se abilitata, Slic3r tiche' per le nuove versioni di se stesso online. Quando una nuova versione diventa disponibile, viene visualizzata una notifica all'avvio successivo dell'applicazione (mai durante l'utilizzo del programma). Questo è solo un meccanismo di notifica, non viene eseguita alcuna installazione automatica."
 
 #: src/slic3r/GUI/Preferences.cpp:72
 msgid "Export sources full pathnames to 3mf and amf"

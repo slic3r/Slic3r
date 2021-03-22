@@ -50,8 +50,8 @@ msgid "GNU Affero General Public License, version 3"
 msgstr "GNU Affero Licence Publique Générale, version 3"
 
 #: src/slic3r/GUI/AboutDialog.cpp:260
-msgid "SuperSlicer is based on PrusaSlicer which is based on Slic3r by Alessandro Ranellucci and the RepRap community."
-msgstr "SuperSlicer est basé sur PrusaSlicer qui est basé sur Slic3r d’Alessandro Ranellucci et de la communauté RepRap."
+msgid "Slic3r is based on PrusaSlicer which is based on Slic3r by Alessandro Ranellucci and the RepRap community."
+msgstr "Slic3r est basé sur PrusaSlicer qui est basé sur Slic3r d’Alessandro Ranellucci et de la communauté RepRap."
 
 #: src/slic3r/GUI/AboutDialog.cpp:261
 msgid "Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik, Durand Rémi and numerous others."
@@ -301,7 +301,7 @@ msgstr "Actif"
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:45
 msgid "PrusaSlicer version"
-msgstr "Version SuperSlicer"
+msgstr "Version Slic3r"
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:46 src/slic3r/GUI/Preset.cpp:1406
 msgid "print"
@@ -2729,28 +2729,28 @@ msgid "Right View"
 msgstr "Vue Droite"
 
 #: src/slic3r/GUI/MainFrame.cpp:659
-msgid "SuperSlicer Releases"
-msgstr "Publication de la SuperSlicer"
+msgid "Slic3r Releases"
+msgstr "Publication de la Slic3r"
 
 #: src/slic3r/GUI/MainFrame.cpp:659
-msgid "Open the SuperSlicer releases page in your browser"
+msgid "Open the Slic3r releases page in your browser"
 msgstr "Ouvrez la page des versions de slic3r ++ dans votre navigateur"
 
 #: src/slic3r/GUI/MainFrame.cpp:661
-msgid "SuperSlicer wiki"
-msgstr "Wiki SuperSlicer"
+msgid "Slic3r wiki"
+msgstr "Wiki Slic3r"
 
 #: src/slic3r/GUI/MainFrame.cpp:661
-msgid "Open the SuperSlicer wiki in your browser"
-msgstr "Ouvrez le wiki SuperSlicer dans votre navigateur"
+msgid "Open the Slic3r wiki in your browser"
+msgstr "Ouvrez le wiki Slic3r dans votre navigateur"
 
 #: src/slic3r/GUI/MainFrame.cpp:663
-msgid "SuperSlicer website"
-msgstr "Site web SuperSlicer"
+msgid "Slic3r website"
+msgstr "Site web Slic3r"
 
 #: src/slic3r/GUI/MainFrame.cpp:663
-msgid "Open the SuperSlicer website in your browser"
-msgstr "Ouvrez le site web SuperSlicer dans votre navigateur"
+msgid "Open the Slic3r website in your browser"
+msgstr "Ouvrez le site web Slic3r dans votre navigateur"
 
 #: src/slic3r/GUI/MainFrame.cpp:665
 msgid "Prusa Edition website"
@@ -3523,7 +3523,7 @@ msgid "If this is enabled, Slic3r will pre-process objects as soon as they're lo
 msgstr "Si ceci est activé, Slic3r va pré-calculer les objets dès qu'ils sont chargés pour gagner du temps lors de l'export du G-code."
 
 #: src/slic3r/GUI/Preferences.cpp:71
-msgid "If enabled, SuperSlicer will check for the new versions of itself online. When a new version becomes available a notification is displayed at the next application startup (never during program usage). This is only a notification mechanisms, no automatic installation is done."
+msgid "If enabled, Slic3r will check for the new versions of itself online. When a new version becomes available a notification is displayed at the next application startup (never during program usage). This is only a notification mechanisms, no automatic installation is done."
 msgstr "Si activé, Slic3r ++ recherchera les nouvelles versions de lui-même en ligne. Lorsqu'une nouvelle version devient disponible, une notification est affichée au prochain démarrage de l'application (jamais pendant l'utilisation du programme). Il s’agit uniquement d’un mécanisme de notification, aucune installation automatique n’est effectuée."
 
 #: src/slic3r/GUI/Preferences.cpp:79
@@ -6060,7 +6060,7 @@ msgid ""
 "Add more perimeters when needed for avoiding gaps in sloping walls. Slic3r keeps adding perimeters, until more than 70% of the loop immediately above is supported, and keep adding periemter until all overhangs are filled.\n"
 "!! this is a very slow algorithm !!"
 msgstr ""
-"Ajoutez davantage de périmètres si nécessaire pour éviter des trous dans les pentes. SuperSlicer continue d'ajouter des périmètres jusqu'à ce que plus de 70% de la boucle ci-dessus soit prise en charge, et continue d'ajouter des périmètres jusqu'à ce que tous les surplombs soient remplis.\n"
+"Ajoutez davantage de périmètres si nécessaire pour éviter des trous dans les pentes. Slic3r continue d'ajouter des périmètres jusqu'à ce que plus de 70% de la boucle ci-dessus soit prise en charge, et continue d'ajouter des périmètres jusqu'à ce que tous les surplombs soient remplis.\n"
 " !! c'est un algorithme très lent !!"
 
 #: src/libslic3r/PrintConfig.cpp:699
@@ -6770,7 +6770,7 @@ msgstr "Ce code personnalisé est inséré à chaque changement de couche, juste
 
 #: src/libslic3r/PrintConfig.cpp:1566
 msgid "This custom code is inserted at every extrusion type change.Note that you can use placeholder variables for all Slic3r settings as well as [extrusion_role], [layer_num] and [layer_z] that can take these string values: { Perimeter, ExternalPerimeter, OverhangPerimeter, InternalInfill, SolidInfill, TopSolidInfill, BridgeInfill, GapFill, Skirt, SupportMaterial, SupportMaterialInterface, WipeTower, Mixed }. Mixed is only used when the role of the extrusion is not unique, not exactly inside an other category or not known."
-msgstr "Ce code personnalisé est inséré à chaque changement de type d'extrusion. Notez que vous pouvez utiliser des variables de substitution pour tous les paramètres SuperSlicer, ainsi que pour [layer_num], [layer_z] et [extrusion_role] pouvant prendre ces valeurs de chaîne: { Perimeter, ExternalPerimeter, OverhangPerimeter, InternalInfill, SolidInfill, TopSolidInfill, BridgeInfill, GapFill, Skirt, SupportMaterial, SupportMaterialInterface, WipeTower, Mixed }. Mixed n'est utilisé que lorsque le rôle de l'extrusion n'est pas unique, pas uniquement dans une catégorie ou n'est pas connu."
+msgstr "Ce code personnalisé est inséré à chaque changement de type d'extrusion. Notez que vous pouvez utiliser des variables de substitution pour tous les paramètres Slic3r, ainsi que pour [layer_num], [layer_z] et [extrusion_role] pouvant prendre ces valeurs de chaîne: { Perimeter, ExternalPerimeter, OverhangPerimeter, InternalInfill, SolidInfill, TopSolidInfill, BridgeInfill, GapFill, Skirt, SupportMaterial, SupportMaterialInterface, WipeTower, Mixed }. Mixed n'est utilisé que lorsque le rôle de l'extrusion n'est pas unique, pas uniquement dans une catégorie ou n'est pas connu."
 
 #: src/libslic3r/PrintConfig.cpp:1578
 msgid "Exact last layer height"
@@ -7217,7 +7217,7 @@ msgid ""
 "Note: slic3r simplify the geometry with a treshold of 0.0125mm and has an internal resolution of 0.0001mm."
 msgstr ""
 "Résolution minimale, utilisée pour simplifier le fichier d'entrée afin d'accélérer le travail de découpage et de réduire l'utilisation de la mémoire. Les modèles haute résolution comportent souvent plus de détails que les imprimantes. Définissez la valeur sur zéro pour désactiver toute simplification et utiliser la résolution complète de l'entrée.\n"
-"Remarque: SuperSlicer simplifie aussi la géométrie avec un seuil de 0.0125mm et une résolution interne de 0.0001mm."
+"Remarque: Slic3r simplifie aussi la géométrie avec un seuil de 0.0125mm et une résolution interne de 0.0001mm."
 
 #: src/libslic3r/PrintConfig.cpp:2121
 msgid "Minimum travel after retraction"
@@ -7644,7 +7644,7 @@ msgstr ""
 #: src/libslic3r/PrintConfig.cpp:2626
 #, c-format
 msgid "The vertical distance between support material interface and the object(when the object is printed on top of the support). Setting this to 0 will also prevent Slic3r from using bridge flow and speed for the first object layer. Can be a % of the extruding width used for the interface layers."
-msgstr "Distance verticale entre l’interface du support et l’objet (lorsque l’objet est imprimé sur le support). Définir ce paramètre à 0 empêchera également SuperSlicer d’utiliser le flux et la vitesse de pont pour le premier calque d’objet. Peut être un% de la largeur d'extrusion utilisée pour les couches d'interface."
+msgstr "Distance verticale entre l’interface du support et l’objet (lorsque l’objet est imprimé sur le support). Définir ce paramètre à 0 empêchera également Slic3r d’utiliser le flux et la vitesse de pont pour le premier calque d’objet. Peut être un% de la largeur d'extrusion utilisée pour les couches d'interface."
 
 #: src/libslic3r/PrintConfig.cpp:2631
 msgid "detachable"
@@ -7805,7 +7805,7 @@ msgstr "Permettre aux périmètres externe de se chevaucher pour éviter l'utili
 
 #: src/libslic3r/PrintConfig.cpp:2839
 msgid "Detect single-width walls (parts where two extrusions don't fit and we need to collapse them into a single trace). If unchecked, slic3r may try to fit perimeters where it's not possible, creating some overlap leading to over-extrusion."
-msgstr "Détecter les parois extrudable par une seule passe (parois minces) (pièces dans lesquelles deux extrusions ne rentrent pas et nous devons les réduire en une seule trace). Si cette case n'est pas cochée, SuperSlicer peut essayer d’adapter les périmètres là où ce n’est pas possible, créant ainsi un chevauchement conduisant à une sur-extrusion."
+msgstr "Détecter les parois extrudable par une seule passe (parois minces) (pièces dans lesquelles deux extrusions ne rentrent pas et nous devons les réduire en une seule trace). Si cette case n'est pas cochée, Slic3r peut essayer d’adapter les périmètres là où ce n’est pas possible, créant ainsi un chevauchement conduisant à une sur-extrusion."
 
 #: src/libslic3r/PrintConfig.cpp:2846
 msgid "min width"
@@ -7950,7 +7950,7 @@ msgstr "Activer le calcul de volume de purge avancé"
 #: src/libslic3r/PrintConfig.cpp:3010
 #, c-format
 msgid "Allow slic3r to compute the purge volume via smart computations. Use the pigment% of each filament and following parameters"
-msgstr "Autorisez SuperSlicer à calculer le volume de purge via des calculs intelligents. Utilisez le pourcentage de pigment de chaque filament et les paramètres suivants"
+msgstr "Autorisez Slic3r à calculer le volume de purge via des calculs intelligents. Utilisez le pourcentage de pigment de chaque filament et les paramètres suivants"
 
 #: src/libslic3r/PrintConfig.cpp:3015
 msgid "Nozzle volume"

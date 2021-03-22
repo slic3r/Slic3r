@@ -55,7 +55,7 @@ msgstr ""
 
 #: src/slic3r/GUI/AboutDialog.cpp:265
 msgid ""
-"SuperSlicer is based on PrusaSlicer which is based on Slic3r by Alessandro "
+"Slic3r is based on PrusaSlicer which is based on Slic3r by Alessandro "
 "Ranellucci and the RepRap community."
 msgstr ""
 
@@ -534,7 +534,7 @@ msgid "Active"
 msgstr ""
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:51
-msgid "SuperSlicer version"
+msgid "Slic3r version"
 msgstr ""
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:55 src/libslic3r/Preset.cpp:1506
@@ -567,11 +567,11 @@ msgid "version"
 msgstr ""
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:67
-msgid "min SuperSlicer version"
+msgid "min Slic3r version"
 msgstr ""
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:69
-msgid "max SuperSlicer version"
+msgid "max Slic3r version"
 msgstr ""
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:72
@@ -771,11 +771,11 @@ msgid "Files association"
 msgstr ""
 
 #: src/slic3r/GUI/ConfigWizard.cpp:1193 src/slic3r/GUI/Preferences.cpp:91
-msgid "Associate .3mf files to SuperSlicer"
+msgid "Associate .3mf files to Slic3r"
 msgstr ""
 
 #: src/slic3r/GUI/ConfigWizard.cpp:1194 src/slic3r/GUI/Preferences.cpp:98
-msgid "Associate .stl files to SuperSlicer"
+msgid "Associate .stl files to Slic3r"
 msgstr ""
 
 #: src/slic3r/GUI/ConfigWizard.cpp:1205
@@ -784,7 +784,7 @@ msgstr ""
 
 #: src/slic3r/GUI/ConfigWizard.cpp:1207
 msgid ""
-"SuperSlicer's user interfaces comes in three variants:\n"
+"Slic3r's user interfaces comes in three variants:\n"
 "Simple, Advanced, and Expert.\n"
 "The Simple mode shows only the most frequently used settings relevant for "
 "regular 3D printing. The other two offer progressively more sophisticated "
@@ -4230,7 +4230,7 @@ msgstr ""
 
 #: src/slic3r/GUI/MainFrame.cpp:154
 msgid ""
-"Remember to check for updates at https://github.com/supermerill/SuperSlicer/"
+"Remember to check for updates at https://github.com/supermerill/Slic3r/"
 "releases"
 msgstr ""
 
@@ -4239,27 +4239,27 @@ msgid "based on PrusaSlicer & Slic3r"
 msgstr ""
 
 #: src/slic3r/GUI/MainFrame.cpp:874
-msgid "SuperSlicer Releases"
+msgid "Slic3r Releases"
 msgstr ""
 
 #: src/slic3r/GUI/MainFrame.cpp:874
-msgid "Open the SuperSlicer releases page in your browser"
+msgid "Open the Slic3r releases page in your browser"
 msgstr ""
 
 #: src/slic3r/GUI/MainFrame.cpp:876
-msgid "SuperSlicer wiki"
+msgid "Slic3r wiki"
 msgstr ""
 
 #: src/slic3r/GUI/MainFrame.cpp:876
-msgid "Open the SuperSlicer wiki in your browser"
+msgid "Open the Slic3r wiki in your browser"
 msgstr ""
 
 #: src/slic3r/GUI/MainFrame.cpp:878
-msgid "SuperSlicer website"
+msgid "Slic3r website"
 msgstr ""
 
 #: src/slic3r/GUI/MainFrame.cpp:878
-msgid "Open the SuperSlicer website in your browser"
+msgid "Open the Slic3r website in your browser"
 msgstr ""
 
 #: src/slic3r/GUI/MainFrame.cpp:880
@@ -4883,11 +4883,11 @@ msgid "&Open G-code"
 msgstr ""
 
 #: src/slic3r/GUI/MainFrame.cpp:1314
-msgid "Open &SuperSlicer"
+msgid "Open &Slic3r"
 msgstr ""
 
 #: src/slic3r/GUI/MainFrame.cpp:1314
-msgid "Open SuperSlicer"
+msgid "Open Slic3r"
 msgstr ""
 
 #: src/slic3r/GUI/MainFrame.cpp:1359
@@ -5901,7 +5901,7 @@ msgstr ""
 
 #: src/slic3r/GUI/Preferences.cpp:75
 msgid ""
-"If enabled, SuperSlicer will check for the new versions of itself online. "
+"If enabled, Slic3r will check for the new versions of itself online. "
 "When a new version becomes available a notification is displayed at the next "
 "application startup (never during program usage). This is only a "
 "notification mechanisms, no automatic installation is done."
@@ -5918,11 +5918,11 @@ msgid ""
 msgstr ""
 
 #: src/slic3r/GUI/Preferences.cpp:93
-msgid "If enabled, sets SuperSlicer as default application to open .3mf files."
+msgid "If enabled, sets Slic3r as default application to open .3mf files."
 msgstr ""
 
 #: src/slic3r/GUI/Preferences.cpp:100
-msgid "If enabled, sets SuperSlicer as default application to open .stl files."
+msgid "If enabled, sets Slic3r as default application to open .stl files."
 msgstr ""
 
 #: src/slic3r/GUI/Preferences.cpp:110
@@ -6835,7 +6835,7 @@ msgid ""
 "right of the Printer profiles combo box, by selecting the \"Add physical "
 "printer\" item in the Printer combo box. The Physical Printer profile editor "
 "opens also when clicking on the \"cog\" icon in the Printer settings tab. "
-"The Physical Printer profiles are being stored into SuperSlicer/"
+"The Physical Printer profiles are being stored into Slic3r/"
 "physical_printer directory."
 msgstr ""
 

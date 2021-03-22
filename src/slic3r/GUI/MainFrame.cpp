@@ -131,7 +131,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
     default:
     case GUI_App::EAppMode::Editor:
         m_taskbar_icon = std::make_unique<PrusaSlicerTaskBarIcon>(wxTBI_DOCK);
-        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG), "SuperSlicer");
+        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG), "Slic3r");
         break;
     case GUI_App::EAppMode::GCodeViewer:
         m_taskbar_icon = std::make_unique<GCodeViewerTaskBarIcon>(wxTBI_DOCK);
@@ -150,7 +150,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
 	m_statusbar->embed(this);
     m_statusbar->set_status_text(_L("Version") + " " +
         SLIC3R_VERSION +
-        _L("Remember to check for updates at https://github.com/supermerill/SuperSlicer/releases"));
+        _L("Remember to check for updates at https://slic3r.org/download"));
 
     // initialize tabpanel and menubar
     init_tabpanel();
@@ -967,31 +967,28 @@ static const wxString sep_space = "";
 static wxMenu* generate_help_menu()
 {
     wxMenu* helpMenu = new wxMenu();
-    append_menu_item(helpMenu, wxID_ANY, _L("SuperSlicer Releases"), _L("Open the SuperSlicer releases page in your browser"),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/SuperSlicer/releases"); });
-    append_menu_item(helpMenu, wxID_ANY, _L("SuperSlicer wiki"), _L("Open the SuperSlicer wiki in your browser"),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/SuperSlicer/wiki"); });
-    append_menu_item(helpMenu, wxID_ANY, _L("SuperSlicer website"), _L("Open the SuperSlicer website in your browser"),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/SuperSlicer"); });
+    append_menu_item(helpMenu, wxID_ANY, _L("Slic3r Releases"), _L("Open the Slic3r releases page in your browser"),
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("https://slic3r.org/download/"); });
+    append_menu_item(helpMenu, wxID_ANY, _L("Slic3r manual"), _L("Open the Slic3r manual in your browser"),
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://manual.slic3r.org"); });
+    append_menu_item(helpMenu, wxID_ANY, _L("Slic3r wiki"), _L("Open the Slic3r wiki in your browser"),
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/slic3r/Slic3r/wiki"); });
+    append_menu_item(helpMenu, wxID_ANY, _L("Slic3r website"), _L("Open the Slic3r website in your browser"),
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://slic3r.org"); });
+    helpMenu->AppendSeparator();
     append_menu_item(helpMenu, wxID_ANY, _L("Prusa Edition website"), _L("Open the Prusa Edition website in your browser"),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/prusa3d/PrusaSlicer"); });
     //#        my $versioncheck = $self->_append_menu_item($helpMenu, "Check for &Updates...", "Check for new Slic3r versions", sub{
     //#            wxTheApp->check_version(1);
     //#        });
     //#        $versioncheck->Enable(wxTheApp->have_version_check);
-    append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("Slic3r Website")),
-        wxString::Format(_L("Open the Slic3r website in your browser")),
-        //            [this](wxCommandEvent&) { wxGetApp().open_web_page_localized("https://www.prusa3d.com/slicerweb"); });
-        //        append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("%s &Manual"), SLIC3R_APP_NAME),
-        //                                             wxString::Format(_L("Open the %s manual in your browser"), SLIC3R_APP_NAME),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://manual.slic3r.org/"); });
     helpMenu->AppendSeparator();
     append_menu_item(helpMenu, wxID_ANY, _L("System &Info"), _L("Show system information"),
         [](wxCommandEvent&) { wxGetApp().system_info(); });
     append_menu_item(helpMenu, wxID_ANY, _L("Show &Configuration Folder"), _L("Show user configuration folder (datadir)"),
         [](wxCommandEvent&) { Slic3r::GUI::desktop_open_datadir_folder(); });
     append_menu_item(helpMenu, wxID_ANY, _L("Report an I&ssue"), wxString::Format(_L("Report an issue on %s"), SLIC3R_APP_NAME),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/SuperSlicer/issues/new"); });
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/slic3r/Slic3r/issues/new"); });
 
     if (wxGetApp().is_editor())
         append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("&About %s"), SLIC3R_APP_NAME), _L("Show about dialog"),
@@ -1350,7 +1347,7 @@ void MainFrame::init_menubar_as_editor()
         append_menu_item(generationMenu, wxID_ANY, _(L("FreeCad python script")), _(L("Create an object by writing little easy script.")),
             [this](wxCommandEvent&) { wxGetApp().freecad_script_dialog(); });
         append_menu_item(generationMenu, wxID_ANY, _(L("Script help page")), _(L("How to use the FreeCad python script window.")),
-            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("https://github.com/supermerill/SuperSlicer/wiki/FreePySCAD-script-window"); });
+            [this](wxCommandEvent&) { wxLaunchDefaultBrowser("https://github.com/supermerill/Slic3r/wiki/FreePySCAD-script-window"); });
 
     }
 

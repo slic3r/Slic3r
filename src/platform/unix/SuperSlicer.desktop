@@ -1,8 +1,8 @@
 [Desktop Entry]
-Name=SuperSlicer
+Name=Slic3r
 GenericName=3D Printing Software
 Comment=G-code generator for 3D printers
-Icon=SuperSlicer
+Icon=Slic3r
 Exec=superslicer %F
 Terminal=false
 Type=Application
