@@ -1525,7 +1525,7 @@ bool GUI_App::load_language(wxString language, bool initial)
         // Get the active language from PrusaSlicer.ini, or empty string if the key does not exist.
         language = app_config->get("translation_language");
         if (! language.empty())
-            BOOST_LOG_TRIVIAL(trace) << boost::format("translation_language provided by SuperSlicer.ini: %1%") % language;
+            BOOST_LOG_TRIVIAL(trace) << boost::format("translation_language provided by Slic3r.ini: %1%") % language;
 
         // Get the system language.
         {
@@ -1569,7 +1569,7 @@ bool GUI_App::load_language(wxString language, bool initial)
     }
 
     if (language_info != nullptr && language_info->LayoutDirection == wxLayout_RightToLeft) {
-        BOOST_LOG_TRIVIAL(trace) << boost::format("The following language code requires right to left layout, which is not supported by SuperSlicer: %1%") % language_info->CanonicalName.ToUTF8().data();
+        BOOST_LOG_TRIVIAL(trace) << boost::format("The following language code requires right to left layout, which is not supported by Slic3r: %1%") % language_info->CanonicalName.ToUTF8().data();
         language_info = nullptr;
     }
 

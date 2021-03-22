@@ -1,8 +1,12 @@
 #include <catch2/catch.hpp>
 
 #include "libslic3r/PrintConfig.hpp"
+#include "libslic3r/Model.hpp"
+#include "libslic3r/Print.hpp"
+#include <test_data.hpp>
 
 using namespace Slic3r;
+using namespace Slic3r::Test;
 
 SCENARIO("Generic config validation performs as expected.", "[Config]") {
     GIVEN("A config generated from default options") {
@@ -198,6 +202,21 @@ SCENARIO("Config ini load/save interface", "[Config]") {
         THEN("Config object contains ini file options.") {
 			REQUIRE(config.option_throw<ConfigOptionStrings>("filament_colour", false)->values.size() == 1);
 			REQUIRE(config.option_throw<ConfigOptionStrings>("filament_colour", false)->values.front() == "#ABCD");
+        }
+    }
+}
+
+SCENARIO("Config parameter conversion from old/related configurations.", "[Config][parameters]") {
+    GIVEN("A Slic3r Config") {
+        Slic3r::Model model;
+        Slic3r::Print print;
+        WHEN("Config is intialized with old config item z_steps_per_mm set to 100") {
+            init_print({TestMesh::cube_20x20x20}, print, model, {
+                    { "z_steps_per_mm", 100 }
+                    });
+            THEN("New config item z_step is set to 0.01") {
+                REQUIRE(print.config().z_step == Approx(0.01));
+            }
         }
     }
 }
