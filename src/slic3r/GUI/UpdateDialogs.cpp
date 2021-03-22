@@ -25,9 +25,9 @@ namespace Slic3r {
 namespace GUI {
 
 
-static const char* URL_CHANGELOG = "https://github.com/supermerill/SuperSlicer/releases";
-static const char* URL_DOWNLOAD = "https://github.com/supermerill/SuperSlicer/releases";
-static const char* URL_DEV = "https://github.com/supermerill/SuperSlicer/releases/tag/version_%1%";
+static const char* URL_CHANGELOG = "https://files.prusa3d.com/?latest=slicer-stable&lng=%1%";
+static const char* URL_DOWNLOAD = "https://slic3r.org/download/";
+static const char* URL_DEV = "https://github.com/slic3r/Slic3r/releases/tag/version_%1%";
 
 static const std::string CONFIG_UPDATE_WIKI_URL("https://github.com/prusa3d/PrusaSlicer/wiki/Slic3r-PE-1.40-configuration-update");
 
@@ -37,7 +37,7 @@ static const std::string CONFIG_UPDATE_WIKI_URL("https://github.com/prusa3d/Prus
 MsgUpdateSlic3r::MsgUpdateSlic3r(const Semver &ver_current, const Semver &ver_online)
 	: MsgDialog(nullptr, _(L("Update available")), wxString::Format(_(L("New version of %s is available")), SLIC3R_APP_NAME))
 {
-	const bool dev_version = true;// ver_online.prerelease() != nullptr; // SuperSlicer is always a dev version
+	const bool dev_version = true;// ver_online.prerelease() != nullptr; // Slic3r is always a dev version
 
 	auto *versions = new wxFlexGridSizer(2, 0, VERT_SPACING);
 	versions->Add(new wxStaticText(this, wxID_ANY, _(L("Current version:"))));
