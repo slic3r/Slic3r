@@ -85,6 +85,7 @@ class Preview : public wxPanel
     wxPanel* m_bottom_toolbar_panel { nullptr };
     wxStaticText* m_label_view_type { nullptr };
     wxChoice* m_choice_view_type { nullptr };
+    std::map<GCodeViewer::EViewType, wxString>  m_choice_view_label;
     wxStaticText* m_label_show { nullptr };
     wxComboCtrl* m_combochecklist_features { nullptr };
     size_t m_combochecklist_features_pos { 0 };
@@ -111,9 +112,9 @@ class Preview : public wxPanel
     std::string m_preferred_color_mode; // neutered / deprecated, ready to remove
     GCodeViewer::EViewType m_last_choice = GCodeViewer::EViewType::FeatureType;
     //fields to see what color to display
+#endif // ENABLE_PREVIEW_TYPE_CHANGE
     bool m_has_switched_to_color = false;
     bool m_has_switched_to_extruders = false;
-#endif // ENABLE_PREVIEW_TYPE_CHANGE
 
     bool m_loaded { false };
 

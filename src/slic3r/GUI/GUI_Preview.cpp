@@ -233,19 +233,21 @@ bool Preview::init(wxWindow* parent, Model* model)
     m_bottom_toolbar_panel = new wxPanel(this);
     m_label_view_type = new wxStaticText(m_bottom_toolbar_panel, wxID_ANY, _L("View"));
     m_choice_view_type = new wxChoice(m_bottom_toolbar_panel, wxID_ANY);
-    m_choice_view_type->Append(_L(m_width_screen == tiny ? "Feature": "Feature type"));
-    m_choice_view_type->Append(_L("Height"));
-    m_choice_view_type->Append(_L("Width"));
-    m_choice_view_type->Append(_L("Speed"));
-    m_choice_view_type->Append(_L(m_width_screen == tiny ? "Fan" : "Fan speed"));
-    m_choice_view_type->Append(_L(m_width_screen == tiny ? "time" : "Layer time"));
-    m_choice_view_type->Append(_L(m_width_screen == tiny ? "Log time" : "Layer time (log)"));
-    m_choice_view_type->Append(_L(m_width_screen == tiny ? "Chrono" : "Chronology"));
-    m_choice_view_type->Append(_L(m_width_screen == tiny ? "Vol. flow" :"Volumetric flow rate"));
-    m_choice_view_type->Append(_L("Tool"));
-    m_choice_view_type->Append(_L("Filament"));
-    m_choice_view_type->Append(_L(m_width_screen == tiny ? "Color":"Color Print"));
-    m_choice_view_type->Append(_L((m_width_screen == tiny ? "Temp" : "Temperature")));
+    m_choice_view_label[GCodeViewer::EViewType::FeatureType] = wxString(_L(m_width_screen == tiny ? "Feature" : "Feature type"));
+    m_choice_view_label[GCodeViewer::EViewType::Height] = wxString(_L("Height"));
+    m_choice_view_label[GCodeViewer::EViewType::Width] = wxString(_L("Width"));
+    m_choice_view_label[GCodeViewer::EViewType::Feedrate] = wxString(_L("Speed"));
+    m_choice_view_label[GCodeViewer::EViewType::FanSpeed] = wxString(_L(m_width_screen == tiny ? "Fan" : "Fan speed"));
+    m_choice_view_label[GCodeViewer::EViewType::LayerTime] = wxString(_L(m_width_screen == tiny ? "time" : "Layer time"));
+    m_choice_view_label[GCodeViewer::EViewType::LayerTimeLog] = wxString(_L(m_width_screen == tiny ? "Log time" : "Layer time (log)"));
+    m_choice_view_label[GCodeViewer::EViewType::Chronology] = wxString(_L(m_width_screen == tiny ? "Chrono" : "Chronology"));
+    m_choice_view_label[GCodeViewer::EViewType::VolumetricRate] = wxString(_L(m_width_screen == tiny ? "Vol. flow" : "Volumetric flow rate"));
+    m_choice_view_label[GCodeViewer::EViewType::Tool] = wxString(_L("Tool"));
+    m_choice_view_label[GCodeViewer::EViewType::Filament] = wxString(_L("Filament"));
+    m_choice_view_label[GCodeViewer::EViewType::ColorPrint] = wxString(_L(m_width_screen == tiny ? "Color" : "Color Print"));
+    m_choice_view_label[GCodeViewer::EViewType::ExtruderTemp] = wxString(_L((m_width_screen == tiny ? "Temp" : "Temperature")));
+    for(int i=0; i < (int)GCodeViewer::EViewType::Count; i++)
+        m_choice_view_type->Append(m_choice_view_label[(GCodeViewer::EViewType)i]);
     m_choice_view_type->SetSelection(0);
 
     m_label_show = new wxStaticText(m_bottom_toolbar_panel, wxID_ANY, _L("Show"));
@@ -885,7 +887,7 @@ void Preview::load_print_as_fff(bool keep_z_range)
                 break;
             }
     }
-	if (print->is_step_done(posSupportMaterial)) {
+	if (!has_layers && print->is_step_done(posSupportMaterial)) {
         for (const PrintObject* print_object : print->objects())
             if (! print_object->support_layers().empty()) {
                 has_layers = true;
@@ -929,7 +931,7 @@ void Preview::load_print_as_fff(bool keep_z_range)
         if (!gcode_preview_data_valid) {
             color_print_values = wxGetApp().plater()->model().custom_gcode_per_print_z.gcodes;
             colors.push_back("#808080"); // gray color for pause print or custom G-code 
-    }
+        }
     }
     else if (gcode_view_type == GCodeViewer::EViewType::Filament)
 
@@ -991,16 +993,25 @@ void Preview::load_print_as_fff(bool keep_z_range)
     unsigned int number_extruders = (unsigned int)print->extruders().size();
 
     if (!m_keep_current_preview_type) {
-        const wxString choice = !wxGetApp().plater()->model().custom_gcode_per_print_z.gcodes.empty() ?
-            _L("Color Print") :
-            (number_extruders > 1) ? _L("Tool") : _L("Feature type");
+        const DynamicPrintConfig& config = wxGetApp().preset_bundle->project_config;
+        bool has_color_print = !wxGetApp().plater()->model().custom_gcode_per_print_z.gcodes.empty()/*&&
+                                 (wxGetApp().extruders_edited_cnt()==1 || !slice_completed) */;
+        bool has_multi_tool = (number_extruders > 1); //config.option<ConfigOptionFloats>("wiping_volumes_matrix")->values.size() > 1;
 
-        int type = m_choice_view_type->FindString(choice);
+        if (!m_has_switched_to_color && has_color_print) {
+            m_last_choice = GCodeViewer::EViewType::ColorPrint;
+            m_has_switched_to_color = true;
+        } else if (!m_has_switched_to_extruders && has_multi_tool) {
+            m_last_choice = GCodeViewer::EViewType::Tool;
+            m_has_switched_to_extruders = true;
+        }
+
+        int type = m_choice_view_type->FindString(m_choice_view_label[m_last_choice]);
         if (m_choice_view_type->GetSelection() != type) {
             if (0 <= type && type < static_cast<int>(GCodeViewer::EViewType::Count)) {
                 m_choice_view_type->SetSelection(type);
                 m_canvas->set_gcode_view_preview_type(static_cast<GCodeViewer::EViewType>(type));
-}
+            }
         }
     }
 #endif // ENABLE_PREVIEW_TYPE_CHANGE
