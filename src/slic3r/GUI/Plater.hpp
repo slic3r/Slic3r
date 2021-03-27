@@ -14,6 +14,7 @@
 #include "libslic3r/GCode/GCodeProcessor.hpp"
 #include "Jobs/Job.hpp"
 #include "Search.hpp"
+#include "GUI_Preview.hpp"
 
 class wxButton;
 class ScalableButton;
@@ -166,6 +167,7 @@ public:
     void stop_jobs();
     void select_view(const std::string& direction);
     void select_view_3D(const std::string& name);
+    void force_preview(Preview::ForceState force);
 
     bool is_preview_shown() const;
     bool is_preview_loaded() const;

@@ -1292,6 +1292,12 @@ void GLCanvas3D::set_as_dirty()
     m_dirty = true;
 }
 
+void GLCanvas3D::set_items_show(bool show_volumes, bool show_gcode)
+{
+    m_show_volume = show_volumes;
+    m_show_gcode = show_gcode;
+}
+
 unsigned int GLCanvas3D::get_volumes_count() const
 {
     return (unsigned int)m_volumes.volumes.size();
@@ -1661,9 +1667,9 @@ void GLCanvas3D::render()
     // draw scene
     glsafe(::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
     _render_background();
-
-    _render_objects();
-    if (!m_main_toolbar.is_enabled())
+    if(m_show_volume)
+        _render_objects();
+    if (m_show_gcode && !m_main_toolbar.is_enabled())
         _render_gcode();
     _render_sla_slices();
     _render_selection();

@@ -561,8 +561,8 @@ void PreferencesDialog::create_icon_size_slider()
 
 void PreferencesDialog::create_settings_mode_widget()
 {
-	wxString choices[] = { _L("Old regular layout with the tab bar"),
-						   _L("New layout, access via settings button in the top menu"),
+	wxString choices[] = { _L("Regular layout with the tab bar"),
+						   _L("Access via settings button in the top menu"),
 						   _L("Settings in non-modal window") };
 
 	auto app_config = get_app_config();

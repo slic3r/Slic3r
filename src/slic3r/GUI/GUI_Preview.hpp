@@ -39,7 +39,20 @@ class Bed3D;
 struct Camera;
 class Plater;
 
-class View3D : public wxPanel
+// ----------------------------------------------------------------------------
+// titlepanel
+// ----------------------------------------------------------------------------
+class wxTitledPanel : public wxPanel
+{
+public:
+    std::string name;
+    std::string title;
+    virtual GLCanvas3D* get_canvas3d() = 0;
+    virtual void set_as_dirty() = 0;
+    virtual void select_view(const std::string& direction) = 0;
+};
+
+class View3D : public wxTitledPanel
 {
     wxGLCanvas* m_canvas_widget;
     GLCanvas3D* m_canvas;
@@ -49,12 +62,12 @@ public:
     virtual ~View3D();
 
     wxGLCanvas* get_wxglcanvas() { return m_canvas_widget; }
-    GLCanvas3D* get_canvas3d() { return m_canvas; }
+    GLCanvas3D* get_canvas3d() override { return m_canvas; }
 
-    void set_as_dirty();
+    void set_as_dirty() override;
     void bed_shape_changed();
 
-    void select_view(const std::string& direction);
+    void select_view(const std::string& direction) override;
     void select_all();
     void deselect_all();
     void delete_selected();
@@ -76,7 +89,7 @@ private:
     bool init(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSlicingProcess* process);
 };
 
-class Preview : public wxPanel
+class Preview : public wxTitledPanel
 {
     wxGLCanvas* m_canvas_widget { nullptr };
     GLCanvas3D* m_canvas { nullptr };
@@ -140,12 +153,18 @@ public:
         Legend
     };
 
+    enum class ForceState : unsigned int {
+        NoForce,
+        ForceExtrusions,
+        ForceGcode
+    };
+
 Preview(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSlicingProcess* process, 
     GCodeProcessor::Result* gcode_result, std::function<void()> schedule_background_process = []() {});
     virtual ~Preview();
 
     wxGLCanvas* get_wxglcanvas() { return m_canvas_widget; }
-    GLCanvas3D* get_canvas3d() { return m_canvas; }
+    GLCanvas3D* get_canvas3d() override { return m_canvas; }
 
     void set_as_dirty();
 
@@ -159,6 +178,7 @@ Preview(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSl
     void load_print(bool keep_z_range = false);
     void reload_print(bool keep_volumes = false);
     void refresh_print();
+    void set_force_state(ForceState new_force_state = ForceState::NoForce) { current_force_state = new_force_state; }
 
     void msw_rescale();
     void jump_layers_slider(wxKeyEvent& evt);
@@ -180,6 +200,8 @@ Preview(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSl
     void hide_layers_slider();
 
 private:
+    ForceState current_force_state = ForceState::NoForce;
+
     bool init(wxWindow* parent, Model* model);
 
     void bind_event_handlers();

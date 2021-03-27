@@ -57,6 +57,9 @@ View3D::~View3D()
 
 bool View3D::init(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSlicingProcess* process)
 {
+    name = "3D";
+    title = "3D view";
+
     if (!Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0 /* disable wxTAB_TRAVERSAL */))
         return false;
 
@@ -195,6 +198,10 @@ Preview::Preview(
 
 bool Preview::init(wxWindow* parent, Model* model)
 {
+
+    name = "Preview";
+    title = "Gcode Preview";
+
     if (!Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0 /* disable wxTAB_TRAVERSAL */))
         return false;
 
@@ -921,6 +928,7 @@ void Preview::load_print_as_fff(bool keep_z_range)
 
     GCodeViewer::EViewType gcode_view_type = m_canvas->get_gcode_view_preview_type();
     bool gcode_preview_data_valid = !m_gcode_result->moves.empty();
+    gcode_preview_data_valid = gcode_preview_data_valid && current_force_state != ForceState::ForceExtrusions;
     // Collect colors per extruder.
     std::vector<std::string> colors;
     std::vector<CustomGCode::Item> color_print_values = {};
@@ -934,7 +942,6 @@ void Preview::load_print_as_fff(bool keep_z_range)
         }
     }
     else if (gcode_view_type == GCodeViewer::EViewType::Filament)
-
     {
         const ConfigOptionStrings* extruders_opt = dynamic_cast<const ConfigOptionStrings*>(m_config->option("extruder_colour"));
         const ConfigOptionStrings* filamemts_opt = dynamic_cast<const ConfigOptionStrings*>(m_config->option("filament_colour"));
@@ -954,7 +961,6 @@ void Preview::load_print_as_fff(bool keep_z_range)
         color_print_values.clear();
     }
     else if (gcode_preview_data_valid || (gcode_view_type == GCodeViewer::EViewType::Tool))
-
     {
         colors = wxGetApp().plater()->get_extruder_colors_from_plater_config();
         color_print_values.clear();
@@ -962,9 +968,15 @@ void Preview::load_print_as_fff(bool keep_z_range)
 
     if (IsShown()) {
         std::vector<double> zs;
+        if (current_force_state == ForceState::ForceGcode)
+            m_canvas->set_items_show(false, true);
+        else if (current_force_state == ForceState::ForceExtrusions)
+            m_canvas->set_items_show(true, false);
+        else
+            m_canvas->set_items_show(true, true);
 
         m_canvas->set_selected_extruder(0);
-        if (gcode_preview_data_valid) {
+        if (current_force_state == ForceState::ForceGcode || (gcode_preview_data_valid && current_force_state != ForceState::ForceExtrusions)) {
             // Load the real G-code preview.
             m_canvas->load_gcode_preview(*m_gcode_result);
             m_canvas->refresh_gcode_preview(*m_gcode_result, colors);
