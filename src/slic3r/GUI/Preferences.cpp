@@ -304,6 +304,8 @@ void PreferencesDialog::build()
             m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "";
 		else if (opt_key.find("color") != std::string::npos)
 			m_values[opt_key] = boost::any_cast<std::string>(value);
+        else if (opt_key.find("tab_icon_size") != std::string::npos)
+            m_values[opt_key] = std::to_string(boost::any_cast<int>(value));
         else
             m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
 
@@ -345,6 +347,15 @@ void PreferencesDialog::build()
 		def.set_default_value(new ConfigOptionBool{ app_config->get("use_custom_toolbar_size") == "1" });
 		option = Option(def, "use_custom_toolbar_size");
 		m_optgroup_gui->append_single_option_line(option);
+
+        def.label = L("Tab icon size");
+        def.type = coInt;
+        def.tooltip = std::string(L("Size of the tab icons, in pixels. Set to 0 to remove icons."))
+            + std::string(L("\nYou have to restart the application before any change will be taken into account."));
+        def.set_default_value(new ConfigOptionInt{ atoi(app_config->get("tab_icon_size").c_str()) });
+        option = Option(def, "tab_icon_size");
+        option.opt.width = 6;
+        m_optgroup_gui->append_single_option_line(option);
 	}
 
 
@@ -469,7 +480,7 @@ void PreferencesDialog::accept()
 	    if (it != m_values.end() && app_config->get(key) != it->second) {
 			m_settings_layout_changed = true;
 			break;
-	}
+		}
 	}
 
 	for (const std::string& key : {"default_action_on_close_application", "default_action_on_select_preset"}) {
@@ -574,27 +585,30 @@ void PreferencesDialog::create_icon_size_slider()
 
 void PreferencesDialog::create_settings_mode_widget()
 {
-	wxString choices[] = { _L("Old regular layout with the tab bar"),
-						   _L("New layout, access via settings button in the top menu"),
+	wxString choices[] = { _L("Regular layout with the tab bar"),
+						   _L("Old PrusaSlicer layout"),
+						   _L("Access via settings button in the top menu"),
 						   _L("Settings in non-modal window") };
 
 	auto app_config = get_app_config();
-	int selection = app_config->get("old_settings_layout_mode") == "1" ? 0 :
-	                app_config->get("new_settings_layout_mode") == "1" ? 1 :
-	                app_config->get("dlg_settings_layout_mode") == "1" ? 2 : 0;
+	int selection = app_config->get("tab_settings_layout_mode") == "1" ? 0 :
+					app_config->get("old_settings_layout_mode") == "1" ? 1 :
+	                app_config->get("new_settings_layout_mode") == "1" ? 2 :
+	                app_config->get("dlg_settings_layout_mode") == "1" ? 3 : 1;
 
 	wxWindow* parent = m_optgroup_gui->parent();
 
 	m_layout_mode_box = new wxRadioBox(parent, wxID_ANY, _L("Layout Options"), wxDefaultPosition, wxDefaultSize,
-		WXSIZEOF(choices), choices, 3, wxRA_SPECIFY_ROWS);
+		WXSIZEOF(choices), choices, 4, wxRA_SPECIFY_ROWS);
 	m_layout_mode_box->SetFont(wxGetApp().normal_font());
 	m_layout_mode_box->SetSelection(selection);
 
 	m_layout_mode_box->Bind(wxEVT_RADIOBOX, [this](wxCommandEvent& e) {
 		int selection = e.GetSelection();
-		m_values["old_settings_layout_mode"] = boost::any_cast<bool>(selection == 0) ? "1" : "0";
-		m_values["new_settings_layout_mode"] = boost::any_cast<bool>(selection == 1) ? "1" : "0";
-		m_values["dlg_settings_layout_mode"] = boost::any_cast<bool>(selection == 2) ? "1" : "0";
+		m_values["tab_settings_layout_mode"] = boost::any_cast<bool>(selection == 0) ? "1" : "0";
+		m_values["old_settings_layout_mode"] = boost::any_cast<bool>(selection == 1) ? "1" : "0";
+		m_values["new_settings_layout_mode"] = boost::any_cast<bool>(selection == 2) ? "1" : "0";
+		m_values["dlg_settings_layout_mode"] = boost::any_cast<bool>(selection == 3) ? "1" : "0";
 	});
 
 	auto sizer = new wxBoxSizer(wxHORIZONTAL);

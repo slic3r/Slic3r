@@ -905,7 +905,7 @@ bool GUI_App::on_init_inner()
     mainframe = new MainFrame();
     // hide settings tabs after first Layout
     if (is_editor())
-        mainframe->select_tab(size_t(0));
+        mainframe->select_tab(MainFrame::ETabType::LastPlater);
 
     sidebar().obj_list()->init_objects(); // propagate model objects to object list
 //     update_mode(); // !!! do that later
@@ -1173,7 +1173,7 @@ void GUI_App::recreate_GUI(const wxString& msg_name)
     mainframe = new MainFrame();
     if (is_editor())
         // hide settings tabs after first Layout
-        mainframe->select_tab(size_t(0));
+        mainframe->select_tab(MainFrame::ETabType::LastPlater);
     // Propagate model objects to object list.
     sidebar().obj_list()->init_objects();
     SetTopWindow(mainframe);
@@ -1806,7 +1806,7 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
                 // hide full main_sizer for mainFrame
                 mainframe->GetSizer()->Show(false);
                 mainframe->update_layout();
-                mainframe->select_tab(size_t(0));
+                mainframe->select_tab(MainFrame::ETabType::LastPlater);
             }
             break;
         }

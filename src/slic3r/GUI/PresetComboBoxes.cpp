@@ -696,7 +696,7 @@ bool PlaterPresetComboBox::switch_to_tab()
 
     wxGetApp().tab_panel()->SetSelection(page_id);
     // Switch to Settings NotePad
-    wxGetApp().mainframe->select_tab();
+    wxGetApp().mainframe->select_tab(MainFrame::ETabType::LastSettings);
     return true;
 }
 

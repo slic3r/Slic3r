@@ -799,7 +799,6 @@ Sidebar::Sidebar(Plater *parent)
             p->plater->export_gcode(true);
         else
             p->plater->reslice();
-		p->plater->select_view_3D("Preview");
     });
     p->btn_send_gcode->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { p->plater->send_gcode(); });
 //    p->btn_eject_device->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { p->plater->eject_drive(); });
@@ -993,7 +992,7 @@ void Sidebar::jump_to_option(size_t selected)
     wxGetApp().get_tab(opt.type)->activate_option(boost::nowide::narrow(opt.opt_key), boost::nowide::narrow(opt.category));
 
     // Switch to the Settings NotePad
-//    wxGetApp().mainframe->select_tab();
+//    wxGetApp().mainframe->select_tab(MainFrame::ETabType::LastSettings);
 }
 
 ObjectManipulation* Sidebar::obj_manipul()
@@ -1634,8 +1633,8 @@ struct Plater::priv
 
     // GUI elements
     wxSizer* panel_sizer{ nullptr };
-    wxPanel* current_panel{ nullptr };
-    std::vector<wxPanel*> panels;
+    wxTitledPanel* current_panel{ nullptr };
+    std::vector<wxTitledPanel*> panels;
     Sidebar *sidebar;
     Bed3D bed;
     Camera camera;
@@ -1651,6 +1650,7 @@ struct Plater::priv
 
     BackgroundSlicingProcess    background_process;
     bool suppressed_backround_processing_update { false };
+    std::function<void(int)> process_done_callback = [](int) {};
 
     // Jobs defined inside the group class will be managed so that only one can
     // run at a time. Also, the background process will be stopped if a job is
@@ -1839,7 +1839,7 @@ struct Plater::priv
     void reload_all_from_disk();
     void fix_through_netfabb(const int obj_idx, const int vol_idx = -1);
 
-    void set_current_panel(wxPanel* panel);
+    void set_current_panel(wxTitledPanel* panel);
 
     void on_select_preset(wxCommandEvent&);
     void on_slicing_update(SlicingStatusEvent&);
@@ -2142,7 +2142,7 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     q->SetDropTarget(new PlaterDropTarget(q));   // if my understanding is right, wxWindow takes the owenership
     q->Layout();
 
-    set_current_panel(wxGetApp().is_editor() ? static_cast<wxPanel*>(view3D) : static_cast<wxPanel*>(preview));
+    set_current_panel(wxGetApp().is_editor() ? static_cast<wxTitledPanel*>(view3D) : static_cast<wxTitledPanel*>(preview));
     if (wxGetApp().is_gcode_viewer())
         preview->hide_layers_slider();
 
@@ -2267,28 +2267,33 @@ void Plater::priv::update(unsigned int flags)
 
 void Plater::priv::select_view(const std::string& direction)
 {
-    if (current_panel == view3D)
-        view3D->select_view(direction);
-    else if (current_panel == preview)
-        preview->select_view(direction);
+    if(current_panel != nullptr)
+        current_panel->select_view(direction);
 }
 
 void Plater::priv::select_view_3D(const std::string& name)
 {
-    if (name == "3D")
-        set_current_panel(view3D);
-    else if (name == "Preview")
-        set_current_panel(preview);
-
+    for (wxTitledPanel* panel : panels) {
+        if (panel->name == name) {
+            set_current_panel(panel);
+            break;
+        }
+    }
     wxGetApp().update_ui_from_settings(false);
 }
 
 void Plater::priv::select_next_view_3D()
 {
-    if (current_panel == view3D)
-        set_current_panel(preview);
-    else if (current_panel == preview)
-        set_current_panel(view3D);
+    for (int i = 0; i < panels.size(); i++) {
+        if (panels[i] == current_panel) {
+            if (i + 1 == panels.size()) {
+                set_current_panel(panels[0]);
+            } else {
+                set_current_panel(panels[i+1]);
+            }
+            return;
+        }
+    }
 }
 
 void Plater::priv::collapse_sidebar(bool collapse)
@@ -3089,6 +3094,16 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
             show_action_buttons(true);
     }
 
+    //update tab if needed
+    if (invalidated != Print::ApplyStatus::APPLY_STATUS_UNCHANGED)
+    {
+        if (this->preview->can_display_gcode())
+            main_frame->select_tab(MainFrame::ETabType::PlaterGcode, true);
+        else if (this->preview->can_display_volume())
+            main_frame->select_tab(MainFrame::ETabType::PlaterPreview, true);
+        else
+            main_frame->select_tab(MainFrame::ETabType::Plater3D, true);
+    }
     return return_state;
 }
 
@@ -3488,7 +3503,7 @@ void Plater::priv::fix_through_netfabb(const int obj_idx, const int vol_idx/* = 
     this->schedule_background_process();
 }
 
-void Plater::priv::set_current_panel(wxPanel* panel)
+void Plater::priv::set_current_panel(wxTitledPanel* panel)
 {
     if (std::find(panels.begin(), panels.end(), panel) == panels.end())
         return;
@@ -3500,7 +3515,7 @@ void Plater::priv::set_current_panel(wxPanel* panel)
     if (current_panel == panel)
         return;
 
-    wxPanel* old_panel = current_panel;
+    wxTitledPanel* old_panel = current_panel;
     current_panel = panel;
     // to reduce flickering when changing view, first set as visible the new current panel
     for (wxPanel* p : panels) {
@@ -3525,12 +3540,12 @@ void Plater::priv::set_current_panel(wxPanel* panel)
 
     panel_sizer->Layout();
 
+    if(old_panel)
+        old_panel->get_canvas3d()->unbind_event_handlers();
+    if (current_panel)
+        current_panel->get_canvas3d()->bind_event_handlers();
+
     if (current_panel == view3D) {
-        if (old_panel == preview)
-            preview->get_canvas3d()->unbind_event_handlers();
-
-        view3D->get_canvas3d()->bind_event_handlers();
-
         if (view3D->is_reload_delayed()) {
             // Delayed loading of the 3D scene.
             if (this->printer_technology == ptSLA) {
@@ -3540,19 +3555,8 @@ void Plater::priv::set_current_panel(wxPanel* panel)
             } else
                 view3D->reload_scene(true);
         }
-
-        // sets the canvas as dirty to force a render at the 1st idle event (wxWidgets IsShownOnScreen() is buggy and cannot be used reliably)
-        view3D->set_as_dirty();
-        view_toolbar.select_item("3D");
-        if(notification_manager != nullptr)
-            notification_manager->set_in_preview(false);
     }
     else if (current_panel == preview) {
-        if (old_panel == view3D)
-            view3D->get_canvas3d()->unbind_event_handlers();
-
-        preview->get_canvas3d()->bind_event_handlers();
-
         // see: Plater::priv::object_list_changed()
         // FIXME: it may be better to have a single function making this check and let it be called wherever needed
         bool export_in_progress = this->background_process.is_export_scheduled();
@@ -3561,14 +3565,17 @@ void Plater::priv::set_current_panel(wxPanel* panel)
             this->q->reslice();
         // keeps current gcode preview, if any
         preview->reload_print(true);
-
-        preview->set_as_dirty();
-        view_toolbar.select_item("Preview");
-        if (notification_manager != nullptr)
-            notification_manager->set_in_preview(true);
     }
 
-    current_panel->SetFocusFromKbd();
+    if (current_panel) {
+        // sets the canvas as dirty to force a render at the 1st idle event (wxWidgets IsShownOnScreen() is buggy and cannot be used reliably)
+        current_panel->set_as_dirty();
+        view_toolbar.select_item(current_panel->name);
+        if (notification_manager != nullptr)
+            notification_manager->set_in_preview(current_panel == preview);
+
+        current_panel->SetFocusFromKbd();
+    }
 }
 
 void Plater::priv::on_select_preset(wxCommandEvent &evt)
@@ -3701,6 +3708,7 @@ void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
 void Plater::priv::on_slicing_completed(wxCommandEvent & evt)
 {
     notification_manager->push_slicing_complete_notification(evt.GetInt(), is_sidebar_collapsed());
+    main_frame->select_tab(MainFrame::ETabType::PlaterPreview);
     switch (this->printer_technology) {
     case ptFFF:
         this->update_fff_scene();
@@ -3780,6 +3788,7 @@ void Plater::priv::on_process_completed(SlicingProcessCompletedEvent &evt)
     this->background_process.stop();
     this->statusbar()->reset_cancel_callback();
     this->statusbar()->stop_busy();
+    main_frame->select_tab(MainFrame::ETabType::PlaterGcode);
 
     // Reset the "export G-code path" name, so that the automatic background processing will be enabled again.
     this->background_process.reset_export();
@@ -4272,7 +4281,7 @@ bool Plater::priv::init_view_toolbar()
 
     item.name = "3D";
     item.icon_filename = "editor.svg";
-    item.tooltip = _utf8(L("3D editor view")) + " [" + GUI::shortkey_ctrl_prefix() + "5]";
+    item.tooltip = _utf8(L("3D editor view")) + " [" + GUI::shortkey_ctrl_prefix() + "1]";
     item.sprite_id = 0;
     item.left.action_callback = [this]() { if (this->q != nullptr) wxPostEvent(this->q, SimpleEvent(EVT_GLVIEWTOOLBAR_3D)); };
     if (!view_toolbar.add_item(item))
@@ -4280,14 +4289,13 @@ bool Plater::priv::init_view_toolbar()
 
     item.name = "Preview";
     item.icon_filename = "preview.svg";
-    item.tooltip = _utf8(L("Preview")) + " [" + GUI::shortkey_ctrl_prefix() + "6]";
+    item.tooltip = _utf8(L("Preview")) + " [" + GUI::shortkey_ctrl_prefix() + "3]";
     item.sprite_id = 1;
     item.left.action_callback = [this]() { if (this->q != nullptr) wxPostEvent(this->q, SimpleEvent(EVT_GLVIEWTOOLBAR_PREVIEW)); };
     if (!view_toolbar.add_item(item))
         return false;
 
     view_toolbar.select_item("3D");
-    view_toolbar.set_enabled(true);
 
     return true;
 }
@@ -5220,6 +5228,15 @@ void Plater::update_ui_from_settings(bool apply_free_camera_correction) { p->upd
 void Plater::select_view(const std::string& direction) { p->select_view(direction); }
 
 void Plater::select_view_3D(const std::string& name) { p->select_view_3D(name); }
+
+void Plater::set_force_preview(Preview::ForceState force) {
+    if (p->preview)
+        p->preview->set_force_state(force);
+}
+
+Preview::ForceState Plater::get_force_preview() {
+    return p->preview->get_force_state();
+}
 
 bool Plater::is_preview_shown() const { return p->is_preview_shown(); }
 bool Plater::is_preview_loaded() const { return p->is_preview_loaded(); }
