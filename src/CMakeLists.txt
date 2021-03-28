@@ -156,7 +156,7 @@ if (WIN32)
     endif()
     target_compile_definitions(Slic3r_app_gui PRIVATE -DSLIC3R_WRAPPER_NOCONSOLE)
     add_dependencies(Slic3r_app_gui Slic3r)
-    set_target_properties(Slic3r_app_gui PROPERTIES OUTPUT_NAME "superslicer")
+    set_target_properties(Slic3r_app_gui PROPERTIES OUTPUT_NAME "slic3r")
     target_link_libraries(Slic3r_app_gui PRIVATE boost_headeronly)
 
     add_executable(Slic3r_app_console PrusaSlicer_app_msvc.cpp ${CMAKE_CURRENT_BINARY_DIR}/Slic3r.rc)
@@ -166,7 +166,7 @@ if (WIN32)
     endif ()
     target_compile_definitions(Slic3r_app_console PRIVATE -DSLIC3R_WRAPPER_CONSOLE)
     add_dependencies(Slic3r_app_console Slic3r)
-    set_target_properties(Slic3r_app_console PROPERTIES OUTPUT_NAME "superslicer_console")
+    set_target_properties(Slic3r_app_console PROPERTIES OUTPUT_NAME "slic3r_console")
     target_link_libraries(Slic3r_app_console PRIVATE boost_headeronly)
 
     add_executable(PrusaSlicer_app_gcodeviewer WIN32 PrusaSlicer_app_msvc.cpp ${CMAKE_CURRENT_BINARY_DIR}/PrusaSlicer-gcodeviewer.rc)
@@ -214,15 +214,15 @@ else ()
         # On OSX, the name of the binary matches the name of the Application.
         add_custom_command(TARGET Slic3r POST_BUILD
             COMMAND ls
-            # COMMAND ln -sf Slic3r superslicer
+            # COMMAND ln -sf Slic3r slic3r
             COMMAND ln -sf Slic3r prusa-gcodeviewer
             COMMAND ln -sf Slic3r PrusaGCodeViewer
             WORKING_DIRECTORY "$<TARGET_FILE_DIR:Slic3r>"
-            COMMENT "Symlinking the G-code viewer to Slic3r, symlinking to superslicer and prusa-gcodeviewer"
+            COMMENT "Symlinking the G-code viewer to Slic3r, symlinking to slic3r and prusa-gcodeviewer"
             VERBATIM)
     else ()
         add_custom_command(TARGET Slic3r POST_BUILD
-            COMMAND ln -sf superslicer prusa-gcodeviewer
+            COMMAND ln -sf slic3r prusa-gcodeviewer
             WORKING_DIRECTORY "$<TARGET_FILE_DIR:Slic3r>"
             COMMENT "Symlinking the G-code viewer to Slic3r"
             VERBATIM)
@@ -251,5 +251,5 @@ else ()
     install(TARGETS Slic3r RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
     # Install the symlink for gcodeviewer
-    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink superslicer supergcodeviewer WORKING_DIRECTORY \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR})")
+    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink slic3r slic3rgcodeviewer WORKING_DIRECTORY \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR})")
 endif ()

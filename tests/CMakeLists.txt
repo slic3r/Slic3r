@@ -18,7 +18,7 @@ include(Catch)
 set(CATCH_EXTRA_ARGS "" CACHE STRING "Extra arguments for catch2 test suites.")
 
 set(COMMON_DATA_UTILS
-    ${TEST_DATA_DIR}/cpp/test_data.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/data/cpp/test_data.cpp
 )
 
 
