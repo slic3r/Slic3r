@@ -120,7 +120,9 @@ void CopyrightsDialog::fill_entries()
         { "AppImage packaging for Linux using AppImageKit"
                             , "2004-2019 Simon Peter and contributors"      , "https://appimage.org/" },
         { "lib_fts"
-                            , "Forrest Smith"                               , "https://www.forrestthewoods.com/" }
+                            , "Forrest Smith"                               , "https://www.forrestthewoods.com/" },
+        { "Arc Welder"
+                            , "Brad Hochgesang",                            , "https://github.com/FormerLurker/ArcWelderLib/" }
     };
 }
 
