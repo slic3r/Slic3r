@@ -1,0 +1,3 @@
+[submodule "src/ArcWelderLib"]
+	path = src/ArcWelderLib
+	url = https://github.com/FormerLurker/ArcWelderLib.git
