@@ -166,13 +166,13 @@ void PreferencesDialog::build()
 
 		
 #if __APPLE__
-		def.label = L("Allow just a single PrusaSlicer instance");
+		def.label = L("Allow just a single Slic3r instance");
 		def.type = coBool;
 	def.tooltip = L("On OSX there is always only one instance of app running by default. However it is allowed to run multiple instances of same app from the command line. In such case this settings will allow only one instance.");
 #else
-		def.label = L("Allow just a single PrusaSlicer instance");
+		def.label = L("Allow just a single Slic3r instance");
 		def.type = coBool;
-		def.tooltip = L("If this is enabled, when starting PrusaSlicer and another instance of the same PrusaSlicer is already running, that instance will be reactivated instead.");
+		def.tooltip = L("If this is enabled, when starting Slic3r and another instance of the same Slic3r is already running, that instance will be reactivated instead.");
 #endif
 	def.set_default_value(new ConfigOptionBool{ app_config->has("single_instance") ? app_config->get("single_instance") == "1" : false });
 	option = Option(def, "single_instance");
@@ -209,9 +209,9 @@ void PreferencesDialog::build()
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 #ifdef _WIN32
 	else {
-		def.label = L("Associate .gcode files to PrusaSlicer G-code Viewer");
+		def.label = L("Associate .gcode files to Slic3r G-code Viewer");
 		def.type = coBool;
-		def.tooltip = L("If enabled, sets PrusaSlicer G-code Viewer as default application to open .gcode files.");
+		def.tooltip = L("If enabled, sets Slic3r G-code Viewer as default application to open .gcode files.");
 		def.set_default_value(new ConfigOptionBool(app_config->get("associate_gcode") == "1"));
 		option = Option(def, "associate_gcode");
 		m_optgroup_general->append_single_option_line(option);
