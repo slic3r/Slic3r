@@ -263,17 +263,24 @@ void MainFrame::update_layout()
 
         // On Linux m_plater needs to be removed from m_tabpanel before to reparent it
         int plater_page_id = m_tabpanel->FindPage(m_plater);
-        while (plater_page_id != wxNOT_FOUND) {
+        if (plater_page_id != wxNOT_FOUND)
             m_tabpanel->RemovePage(plater_page_id);
-            plater_page_id = m_tabpanel->FindPage(m_plater);
-        }
+
+        for (int i = 0; i < m_tabpanel->GetPageCount(); i++)
+            if (m_tabpanel->GetPage(i)->GetChildren().size() == 1 && m_tabpanel->GetPage(i)->GetChildren().front() == m_plater)
+                m_tabpanel->GetPage(i)->GetSizer()->Clear();
+
+        if (m_plater->GetParent() != this)
+            m_plater->Reparent(this);
+
+        while(m_tabpanel->GetPage(0)->GetChildren().size() == 0)
+            m_tabpanel->DeletePage(0);
+
         for (int i = 0; i < m_tabpanel->GetPageCount();  i++) {
             m_tabpanel->SetPageImage(i, -1);
         }
         m_tabpanel->SetImageList(nullptr); //clear
 
-        if (m_plater->GetParent() != this)
-            m_plater->Reparent(this);
 
         if (m_tabpanel->GetParent() != this)
             m_tabpanel->Reparent(this);
@@ -293,7 +300,8 @@ void MainFrame::update_layout()
         m_tabpanel->Hide();
         m_plater->Hide();
         m_plater->enable_view_toolbar(true);
-        m_plater->force_preview(Preview::ForceState::NoForce);
+        m_plater->set_force_preview(Preview::ForceState::NoForce);
+        m_plater->process_done_callback([this](int) {});
 
         Layout();
     };
@@ -343,7 +351,18 @@ void MainFrame::update_layout()
     {
         // don't use view_toolbar here
         m_plater->enable_view_toolbar(false);
-        m_plater->Reparent(m_tabpanel);
+        m_plater->process_done_callback([this](int process_state) {
+            //note: this won't call wxEVT_NOTEBOOK_PAGE_CHANGED and it's intended as the process_done caller will update the panel itself.
+            if (m_tabpanel->GetSelection() != process_state && m_tabpanel->GetSelection() < 3)
+            {
+                //m_plater->Hide();
+                m_tabpanel->GetCurrentPage()->GetSizer()->Clear();
+                m_plater->Reparent(m_tabpanel->GetPage(process_state));
+                m_tabpanel->GetPage(process_state)->GetSizer()->Add(m_plater, 1, wxEXPAND);
+                m_tabpanel->SetSelection(process_state);
+                m_plater->Show();
+            }
+        });
         // icons for ESettingsLayout::Old
         wxImageList* img_list = nullptr;
         for (std::string icon_name : {"editor_menu", "layers", "preview_menu", "cog"}) {
@@ -353,15 +372,20 @@ void MainFrame::update_layout()
             img_list->Add(bmp);
         }
         m_tabpanel->AssignImageList(img_list);
-        m_tabpanel->InsertPage(0, m_plater, _L("3D view"));
-        m_tabpanel->InsertPage(1, m_plater, _L("Sliced preview"));
-        m_tabpanel->InsertPage(2, m_plater, _L("Gcode preview"));
+        m_tabpanel->InsertPage(0, new wxPanel(m_tabpanel), _L("3D view"));
+        m_tabpanel->InsertPage(1, new wxPanel(m_tabpanel), _L("Sliced preview"));
+        m_tabpanel->InsertPage(2, new wxPanel(m_tabpanel), _L("Gcode preview"));
+        m_tabpanel->GetPage(0)->SetSizer(new wxBoxSizer(wxVERTICAL));
+        m_tabpanel->GetPage(1)->SetSizer(new wxBoxSizer(wxVERTICAL));
+        m_tabpanel->GetPage(2)->SetSizer(new wxBoxSizer(wxVERTICAL));
         m_tabpanel->SetPageImage(0, 0);
         m_tabpanel->SetPageImage(1, 1);
         m_tabpanel->SetPageImage(2, 2);
         m_tabpanel->SetPageImage(3, 3);
         m_tabpanel->SetPageImage(4, 3);
         m_tabpanel->SetPageImage(5, 3);
+        m_plater->Reparent(m_tabpanel->GetPage(0));
+        m_tabpanel->GetPage(0)->GetSizer()->Add(m_plater, 1, wxEXPAND);
         m_main_sizer->Add(m_tabpanel, 1, wxEXPAND);
         m_plater->Show();
         m_tabpanel->Show();
@@ -585,18 +609,30 @@ void MainFrame::init_tabpanel()
             m_last_selected_tab = m_tabpanel->GetSelection();
         }
         else if (this->m_layout == ESettingsLayout::Old) {
+            //m_plater->Hide();
+            for(int i=0;i<3;i++)
+                m_tabpanel->GetPage(i)->GetSizer()->Clear();
+            m_plater->Reparent(m_tabpanel->GetCurrentPage());
             if (m_tabpanel->GetSelection() == 0)
                 this->m_plater->select_view_3D("3D");
             else if (m_tabpanel->GetSelection() == 1) {
-                this->m_plater->force_preview(Preview::ForceState::ForceExtrusions);
-                this->m_plater->select_view_3D("Preview");
-                this->m_plater->refresh_print();
+                if (this->m_plater->get_force_preview() != Preview::ForceState::ForceExtrusions) {
+                    this->m_plater->set_force_preview(Preview::ForceState::ForceExtrusions);
+                    this->m_plater->select_view_3D("Preview");
+                    this->m_plater->refresh_print();
+                }else
+                    this->m_plater->select_view_3D("Preview");
             }
             else if (m_tabpanel->GetSelection() == 2) {
-                this->m_plater->force_preview(Preview::ForceState::ForceGcode);
-                this->m_plater->select_view_3D("Preview");
-                this->m_plater->refresh_print();
+                if (this->m_plater->get_force_preview() != Preview::ForceState::ForceGcode) {
+                    this->m_plater->set_force_preview(Preview::ForceState::ForceGcode);
+                    this->m_plater->select_view_3D("Preview");
+                    this->m_plater->refresh_print();
+                }else
+                    this->m_plater->select_view_3D("Preview");
             }
+            m_tabpanel->GetCurrentPage()->GetSizer()->Add(m_plater, 1, wxEXPAND);
+            m_plater->Show();
         }else
             select_tab(size_t(0)); // select Plater
     });

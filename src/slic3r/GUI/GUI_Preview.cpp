@@ -496,6 +496,22 @@ void Preview::hide_layers_slider()
     Layout();
 }
 
+bool Preview::can_display_gcode()
+{
+    return !m_gcode_result->moves.empty();
+}
+
+bool Preview::can_display_volume()
+{
+    const Print* print = m_canvas->fff_print();
+    if (print == nullptr)
+        return false;
+
+    if (!print->is_step_done(psSkirt) || !print->is_step_done(psBrim))
+        return false;
+    return true;
+}
+
 void Preview::on_size(wxSizeEvent& evt)
 {
     evt.Skip();

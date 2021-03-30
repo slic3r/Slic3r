@@ -179,6 +179,7 @@ Preview(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSl
     void reload_print(bool keep_volumes = false);
     void refresh_print();
     void set_force_state(ForceState new_force_state = ForceState::NoForce) { current_force_state = new_force_state; }
+    ForceState get_force_state() { return current_force_state; }
 
     void msw_rescale();
     void jump_layers_slider(wxKeyEvent& evt);
@@ -198,6 +199,9 @@ Preview(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSl
     void move_moves_slider(wxKeyEvent& evt);
 #endif // ENABLE_ARROW_KEYS_WITH_SLIDERS
     void hide_layers_slider();
+
+    bool can_display_gcode();
+    bool can_display_volume();
 
 private:
     ForceState current_force_state = ForceState::NoForce;

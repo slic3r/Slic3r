@@ -457,7 +457,7 @@ private:
     int  m_extra_frame_requested_delayed { std::numeric_limits<int>::max() };
     bool m_event_handlers_bound{ false };
 
-    bool m_show_volume = true;;
+    bool m_show_objects = true;
     mutable GLVolumeCollection m_volumes;
     bool m_show_gcode = true;
     GCodeViewer m_gcode_viewer;
@@ -554,7 +554,7 @@ public:
     void post_event(wxEvent &&event);
 
     void set_as_dirty();
-    void set_items_show(bool show_volumes, bool show_gcode);
+    void set_items_show(bool show_objects, bool show_gcode);
 
     unsigned int get_volumes_count() const;
     const GLVolumeCollection& get_volumes() const { return m_volumes; }

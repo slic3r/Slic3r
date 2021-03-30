@@ -1292,9 +1292,9 @@ void GLCanvas3D::set_as_dirty()
     m_dirty = true;
 }
 
-void GLCanvas3D::set_items_show(bool show_volumes, bool show_gcode)
+void GLCanvas3D::set_items_show(bool show_objects, bool show_gcode)
 {
-    m_show_volume = show_volumes;
+    m_show_objects = show_objects;
     m_show_gcode = show_gcode;
 }
 
@@ -1667,7 +1667,7 @@ void GLCanvas3D::render()
     // draw scene
     glsafe(::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
     _render_background();
-    if(m_show_volume)
+    if(m_show_objects)
         _render_objects();
     if (m_show_gcode && !m_main_toolbar.is_enabled())
         _render_gcode();
@@ -5762,8 +5762,8 @@ void GLCanvas3D::_load_print_toolpaths()
         	GLVolume &vol = *volume;
             volume = m_volumes.new_toolpath_volume(vol.color);
             reserve_new_volume_finalize_old_volume(*volume, vol, m_initialized);
+        }
     }
-}
     volume->indexed_vertex_array.finalize_geometry(m_initialized);
 }
 

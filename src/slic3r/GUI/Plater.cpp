@@ -799,7 +799,6 @@ Sidebar::Sidebar(Plater *parent)
             p->plater->export_gcode(true);
         else
             p->plater->reslice();
-		p->plater->select_view_3D("Preview");
     });
     p->btn_send_gcode->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { p->plater->send_gcode(); });
 //    p->btn_eject_device->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { p->plater->eject_drive(); });
@@ -1651,6 +1650,7 @@ struct Plater::priv
 
     BackgroundSlicingProcess    background_process;
     bool suppressed_backround_processing_update { false };
+    std::function<void(int)> process_done_callback = [](int) {};
 
     // Jobs defined inside the group class will be managed so that only one can
     // run at a time. Also, the background process will be stopped if a job is
@@ -3094,6 +3094,16 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
             show_action_buttons(true);
     }
 
+    //update tab if needed
+    if (invalidated != Print::ApplyStatus::APPLY_STATUS_UNCHANGED && process_done_callback)
+    {
+        if (this->preview->can_display_gcode())
+            process_done_callback(2);
+        else if (this->preview->can_display_volume())
+            process_done_callback(1);
+        else
+            process_done_callback(0);
+    }
     return return_state;
 }
 
@@ -3698,6 +3708,7 @@ void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
 void Plater::priv::on_slicing_completed(wxCommandEvent & evt)
 {
     notification_manager->push_slicing_complete_notification(evt.GetInt(), is_sidebar_collapsed());
+    process_done_callback(1);
     switch (this->printer_technology) {
     case ptFFF:
         this->update_fff_scene();
@@ -3777,6 +3788,7 @@ void Plater::priv::on_process_completed(SlicingProcessCompletedEvent &evt)
     this->background_process.stop();
     this->statusbar()->reset_cancel_callback();
     this->statusbar()->stop_busy();
+    process_done_callback(2);
 
     // Reset the "export G-code path" name, so that the automatic background processing will be enabled again.
     this->background_process.reset_export();
@@ -5217,9 +5229,17 @@ void Plater::select_view(const std::string& direction) { p->select_view(directio
 
 void Plater::select_view_3D(const std::string& name) { p->select_view_3D(name); }
 
-void Plater::force_preview(Preview::ForceState force) { 
+void Plater::set_force_preview(Preview::ForceState force) {
     if (p->preview)
         p->preview->set_force_state(force);
+}
+
+Preview::ForceState Plater::get_force_preview() {
+    return p->preview->get_force_state();
+}
+
+void Plater::process_done_callback(std::function<void(int)> process_done_callback) {
+    p->process_done_callback = process_done_callback;
 }
 
 bool Plater::is_preview_shown() const { return p->is_preview_shown(); }
