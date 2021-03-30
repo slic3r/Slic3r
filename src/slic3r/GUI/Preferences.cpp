@@ -324,12 +324,12 @@ void PreferencesDialog::build()
 	m_optgroup_gui->append_single_option_line(option);
 
 	if (is_editor) {
-	def.label = L("Show sidebar collapse/expand button");
-	def.type = coBool;
-	def.tooltip = L("If enabled, the button for the collapse sidebar will be appeared in top right corner of the 3D Scene");
-	def.set_default_value(new ConfigOptionBool{ app_config->get("show_collapse_button") == "1" });
-	option = Option(def, "show_collapse_button");
-	m_optgroup_gui->append_single_option_line(option);
+		def.label = L("Show sidebar collapse/expand button");
+		def.type = coBool;
+		def.tooltip = L("If enabled, the button for the collapse sidebar will be appeared in top right corner of the 3D Scene");
+		def.set_default_value(new ConfigOptionBool{ app_config->get("show_collapse_button") == "1" });
+		option = Option(def, "show_collapse_button");
+		m_optgroup_gui->append_single_option_line(option);
 
 		def.label = L("Suppress to open hyperlink in browser");
 		def.type = coBool;
@@ -340,11 +340,11 @@ void PreferencesDialog::build()
 		m_optgroup_gui->append_single_option_line(option);
 
 		def.label = L("Use custom size for toolbar icons");
-	def.type = coBool;
+		def.type = coBool;
 		def.tooltip = L("If enabled, you can change size of toolbar icons manually.");
 		def.set_default_value(new ConfigOptionBool{ app_config->get("use_custom_toolbar_size") == "1" });
 		option = Option(def, "use_custom_toolbar_size");
-	m_optgroup_gui->append_single_option_line(option);
+		m_optgroup_gui->append_single_option_line(option);
 	}
 
 
@@ -357,7 +357,10 @@ void PreferencesDialog::build()
 
 	def.label = L("Very dark gui color");
 	def.type = coString;
-	def.tooltip = std::string(L("Very dark color, in the RGB hex format.")) + std::string(L(" Mainly used as background or dark text color. Slic3r(yellow): , PrusaSlicer(orange): c46737, SuperSlicer(blue): 0047c7"));
+	def.tooltip = std::string(L("Very dark color, in the RGB hex format."))
+		+ std::string(L(" Mainly used as background or dark text color."))
+		+ std::string(L("\nYou have to restart the application before any change will be taken into account."))
+		+ std::string(L("\nSlic3r(yellow): ada230, PrusaSlicer(orange): c46737, SuperSlicer(blue): 0047c7"));
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_very_dark") });
 	option = Option(def, "color_very_dark");
 	option.opt.width = 6;
@@ -365,7 +368,10 @@ void PreferencesDialog::build()
 
 	def.label = L("Dark gui color");
 	def.type = coString;
-	def.tooltip = std::string(L("Dark color, in the RGB hex format.")) + std::string(L(" Mainly used as icon color. Slic3r(yellow): , PrusaSlicer(orange): ed6b21, SuperSlicer(blue): 2172eb"));
+	def.tooltip = std::string(L("Dark color, in the RGB hex format."))
+		+ std::string(L(" Mainly used as icon color."))
+		+ std::string(L("\nYou have to restart the application before any change will be taken into account."))
+		+ std::string(L("\nSlic3r(yellow): cabe39, PrusaSlicer(orange): ed6b21, SuperSlicer(blue): 2172eb"));
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_dark") });
 	option = Option(def, "color_dark");
 	option.opt.width = 6;
@@ -373,7 +379,9 @@ void PreferencesDialog::build()
 
 	def.label = L("Gui color");
 	def.type = coString;
-	def.tooltip = std::string(L("Main color, in the RGB hex format.")) + std::string(L(" Slic3r(yellow): , PrusaSlicer(orange): fd7e42, SuperSlicer(blue): 428dfd"));
+	def.tooltip = std::string(L("Main color, in the RGB hex format."))
+		+ std::string(L("\nYou have to restart the application before any change will be taken into account.")) 
+		+ std::string(L(" Slic3r(yellow): eddc21, PrusaSlicer(orange): fd7e42, SuperSlicer(blue): 428dfd"));
 	def.set_default_value(new ConfigOptionString{ app_config->get("color") });
 	option = Option(def, "color");
 	option.opt.width = 6;
@@ -381,7 +389,9 @@ void PreferencesDialog::build()
 
 	def.label = L("Light gui color");
 	def.type = coString;
-	def.tooltip = std::string(L("Light color, in the RGB hex format.")) + std::string(L(" Slic3r(yellow): , PrusaSlicer(orange): feac8b, SuperSlicer(blue): 8bb9fe"));
+	def.tooltip = std::string(L("Light color, in the RGB hex format."))
+		+ std::string(L("\nYou have to restart the application before any change will be taken into account.")) 
+		+ std::string(L(" Slic3r(yellow): ffee38, PrusaSlicer(orange): feac8b, SuperSlicer(blue): 8bb9fe"));
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_light") });
 	option = Option(def, "color_light");
 	option.opt.width = 6;
@@ -389,7 +399,10 @@ void PreferencesDialog::build()
 
 	def.label = L("Very light gui color");
 	def.type = coString;
-	def.tooltip = std::string(L("Very light color, in the RGB hex format.")) + std::string(L(" Mainly used as light text color. Slic3r(yellow): , PrusaSlicer(orange): ff7d38, SuperSlicer(blue): 428cff"));
+	def.tooltip = std::string(L("Very light color, in the RGB hex format."))
+		+ std::string(L(" Mainly used as light text color."))
+		+ std::string(L("\nYou have to restart the application before any change will be taken into account."))
+		+ std::string(L("\nSlic3r(yellow): fef48b, PrusaSlicer(orange): ff7d38, SuperSlicer(blue): 428cff"));
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_very_light") });
 	option = Option(def, "color_very_light");
 	option.opt.width = 6;
@@ -398,10 +411,10 @@ void PreferencesDialog::build()
 	activate_options_tab(m_optgroup_gui);
 
 	if (is_editor) {
-	create_icon_size_slider();
-	m_icon_size_sizer->ShowItems(app_config->get("use_custom_toolbar_size") == "1");
+		create_icon_size_slider();
+		m_icon_size_sizer->ShowItems(app_config->get("use_custom_toolbar_size") == "1");
 
-	create_settings_mode_widget();
+		create_settings_mode_widget();
 	}
 
 #if ENABLE_ENVIRONMENT_MAP
