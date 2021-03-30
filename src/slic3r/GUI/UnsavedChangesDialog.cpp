@@ -1100,7 +1100,9 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
 
             ItemData item_data = { "extruders_count", local_label, old_val, new_val, type };
             if(wxGetApp().get_tab(type)->get_page_count() > 0)
-                m_items_map.emplace(m_tree_model->AddOption(type, _L(wxGetApp().get_tab(type)->get_page(0)->title()), _L("Capabilities"), local_label, old_val, new_val, category_icon_map.at(wxGetApp().get_tab(type)->get_page(0)->title())), item_data);
+                m_items_map.emplace(m_tree_model->AddOption(type, _L(wxGetApp().get_tab(type)->get_page(0)->title()), _L("Capabilities"), local_label, old_val, new_val, 
+                    category_icon_map.find(wxGetApp().get_tab(type)->get_page(0)->title())!= category_icon_map.end()? category_icon_map.at(wxGetApp().get_tab(type)->get_page(0)->title()) : "wrench"),
+                    item_data);
         }
         //TODO same for milling head?
 
@@ -1120,7 +1122,8 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
             if (old_val != item_data.old_val || new_val != item_data.new_val)
                 item_data.is_long = true;
 
-            m_items_map.emplace(m_tree_model->AddOption(type, option.category_local, option.group_local, option.label_local, old_val, new_val, category_icon_map.at(option.category)), item_data);
+            m_items_map.emplace(m_tree_model->AddOption(type, option.category_local, option.group_local, option.label_local, old_val, new_val, 
+                category_icon_map.find(option.category) != category_icon_map.end() ? category_icon_map.at(option.category) : "wrench"), item_data);
         }
     }
 }
