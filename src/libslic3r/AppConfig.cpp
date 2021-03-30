@@ -63,6 +63,9 @@ void AppConfig::set_defaults()
         if (get("freecad_path").empty())
             set("freecad_path", ".");
 
+        if (get("tab_icon_size").empty())
+            set("tab_icon_size", "32");
+
         if (get("color_very_dark").empty())
             set("color_very_dark", "0047c7");
 		

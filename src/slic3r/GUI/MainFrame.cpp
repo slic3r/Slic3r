@@ -365,12 +365,18 @@ void MainFrame::update_layout()
         });
         // icons for ESettingsLayout::Old
         wxImageList* img_list = nullptr;
-        for (std::string icon_name : {"editor_menu", "layers", "preview_menu", "cog"}) {
-            const wxBitmap& bmp = create_scaled_bitmap(icon_name, this, 32);
-            if (img_list == nullptr)
-                img_list = new wxImageList(bmp.GetWidth(), bmp.GetHeight());
-            img_list->Add(bmp);
+        int icon_size = 0;
+        try {
+            icon_size = atoi(wxGetApp().app_config->get("tab_icon_size").c_str());
         }
+        catch (std::exception e) {}
+        if(icon_size >= 8)
+            for (std::string icon_name : {"editor_menu", "layers", "preview_menu", "cog"}) {
+                const wxBitmap& bmp = create_scaled_bitmap(icon_name, this, icon_size);
+                if (img_list == nullptr)
+                    img_list = new wxImageList(bmp.GetWidth(), bmp.GetHeight());
+                img_list->Add(bmp);
+            }
         m_tabpanel->AssignImageList(img_list);
         m_tabpanel->InsertPage(0, new wxPanel(m_tabpanel), _L("3D view"));
         m_tabpanel->InsertPage(1, new wxPanel(m_tabpanel), _L("Sliced preview"));
@@ -378,12 +384,15 @@ void MainFrame::update_layout()
         m_tabpanel->GetPage(0)->SetSizer(new wxBoxSizer(wxVERTICAL));
         m_tabpanel->GetPage(1)->SetSizer(new wxBoxSizer(wxVERTICAL));
         m_tabpanel->GetPage(2)->SetSizer(new wxBoxSizer(wxVERTICAL));
-        m_tabpanel->SetPageImage(0, 0);
-        m_tabpanel->SetPageImage(1, 1);
-        m_tabpanel->SetPageImage(2, 2);
-        m_tabpanel->SetPageImage(3, 3);
-        m_tabpanel->SetPageImage(4, 3);
-        m_tabpanel->SetPageImage(5, 3);
+        if (icon_size >= 8)
+        {
+            m_tabpanel->SetPageImage(0, 0);
+            m_tabpanel->SetPageImage(1, 1);
+            m_tabpanel->SetPageImage(2, 2);
+            m_tabpanel->SetPageImage(3, 3);
+            m_tabpanel->SetPageImage(4, 3);
+            m_tabpanel->SetPageImage(5, 3);
+        }
         m_plater->Reparent(m_tabpanel->GetPage(0));
         m_tabpanel->GetPage(0)->GetSizer()->Add(m_plater, 1, wxEXPAND);
         m_main_sizer->Add(m_tabpanel, 1, wxEXPAND);

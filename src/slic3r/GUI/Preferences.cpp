@@ -304,6 +304,8 @@ void PreferencesDialog::build()
             m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "";
 		else if (opt_key.find("color") != std::string::npos)
 			m_values[opt_key] = boost::any_cast<std::string>(value);
+        else if (opt_key.find("tab_icon_size") != std::string::npos)
+            m_values[opt_key] = std::to_string(boost::any_cast<int>(value));
         else
             m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
 
@@ -345,6 +347,15 @@ void PreferencesDialog::build()
 		def.set_default_value(new ConfigOptionBool{ app_config->get("use_custom_toolbar_size") == "1" });
 		option = Option(def, "use_custom_toolbar_size");
 		m_optgroup_gui->append_single_option_line(option);
+
+        def.label = L("Tab icon size");
+        def.type = coInt;
+        def.tooltip = std::string(L("Size of the tab icons, in pixels. Set to 0 to remove icons."))
+            + std::string(L("\nYou have to restart the application before any change will be taken into account."));
+        def.set_default_value(new ConfigOptionInt{ atoi(app_config->get("tab_icon_size").c_str()) });
+        option = Option(def, "tab_icon_size");
+        option.opt.width = 6;
+        m_optgroup_gui->append_single_option_line(option);
 	}
 
 
@@ -469,7 +480,7 @@ void PreferencesDialog::accept()
 	    if (it != m_values.end() && app_config->get(key) != it->second) {
 			m_settings_layout_changed = true;
 			break;
-	}
+		}
 	}
 
 	for (const std::string& key : {"default_action_on_close_application", "default_action_on_select_preset"}) {
