@@ -1605,9 +1605,24 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     print.throw_if_canceled();
 }
 
-std::string GCode::placeholder_parser_process(const std::string &name, const std::string &templ, unsigned int current_extruder_id, const DynamicConfig *config_override)
+std::string GCode::placeholder_parser_process(const std::string &name, const std::string &templ, unsigned int current_extruder_id, DynamicConfig *config_override)
 {
+    DynamicConfig default_config;
+    if (config_override == nullptr)
+        config_override = &default_config;
     try {
+        //add some config conversion for colors
+        auto func_add_colour = [config_override](std::string key, std::string colour) {
+            if (colour.length() == 7) {
+                config_override->set_key_value(key, new ConfigOptionInt((int)strtol(colour.substr(1, 6).c_str(), NULL, 16)));
+            }
+        };
+        if (current_extruder_id >= 0 && current_extruder_id < config().filament_colour.size()) {
+            func_add_colour("filament_colour_int", config().filament_colour.values[current_extruder_id]);
+            func_add_colour("extruder_colour_int", config().extruder_colour.values[current_extruder_id]);
+        }
+        func_add_colour("thumbnails_color_int", config().thumbnails_color);
+
         std::string gcode = m_placeholder_parser.process(templ, current_extruder_id, config_override, &m_placeholder_parser_context);
         if (!gcode.empty() && m_config.gcode_comments) {
             gcode = "; custom gcode: " + name + "\n" + gcode;
