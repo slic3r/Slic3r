@@ -85,10 +85,10 @@ int GUI_Run(GUI_InitParams &params)
         return result;
     } catch (const Slic3r::Exception &ex) {
         boost::nowide::cerr << ex.what() << std::endl;
-        wxMessageBox(boost::nowide::widen(ex.what()), _L("PrusaSlicer GUI initialization failed"), wxICON_STOP);
+        wxMessageBox(boost::nowide::widen(ex.what()), _L(SLIC3R_APP_NAME " GUI initialization failed"), wxICON_STOP);
     } catch (const std::exception &ex) {
-        boost::nowide::cerr << "PrusaSlicer GUI initialization failed: " << ex.what() << std::endl;
-        wxMessageBox(format_wxstr(_L("Fatal error, exception catched: %1%"), ex.what()), _L("PrusaSlicer GUI initialization failed"), wxICON_STOP);
+        boost::nowide::cerr << SLIC3R_APP_NAME << " GUI initialization failed: " << ex.what() << std::endl;
+        wxMessageBox(format_wxstr(_L("Fatal error, exception catched: %1%"), ex.what()), _L(SLIC3R_APP_NAME " GUI initialization failed"), wxICON_STOP);
     }
 
     // error

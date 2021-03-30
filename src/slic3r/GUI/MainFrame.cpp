@@ -94,12 +94,12 @@ static wxIcon main_frame_icon(GUI_App::EAppMode app_mode)
     if (len > 0 && len < MAX_PATH) {
         path.erase(path.begin() + len, path.end());
         if (app_mode == GUI_App::EAppMode::GCodeViewer) {
-            // Only in case the slicer was started with --gcodeviewer parameter try to load the icon from prusa-gcodeviewer.exe
+            // Only in case the slicer was started with --gcodeviewer parameter try to load the icon from gcodeviewer.exe
             // Otherwise load it from the exe.
-            for (const std::wstring_view exe_name : { std::wstring_view(L"superslicer.exe"), std::wstring_view(L"superslicer_console.exe") })
+            for (const std::wstring_view exe_name : { std::wstring_view(SLIC3R_APP_WCMD L".exe"), std::wstring_view(SLIC3R_APP_WCMD L"_console.exe") })
                 if (boost::iends_with(path, exe_name)) {
                     path.erase(path.end() - exe_name.size(), path.end());
-                    path += L"prusa-gcodeviewer.exe";
+                    path += GCODEVIEWER_APP_WCMD L".exe";
                     break;
                 }
         }
@@ -131,11 +131,11 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
     default:
     case GUI_App::EAppMode::Editor:
         m_taskbar_icon = std::make_unique<PrusaSlicerTaskBarIcon>(wxTBI_DOCK);
-        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG), "SuperSlicer");
+        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG), SLIC3R_APP_NAME);
         break;
     case GUI_App::EAppMode::GCodeViewer:
         m_taskbar_icon = std::make_unique<GCodeViewerTaskBarIcon>(wxTBI_DOCK);
-        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("PrusaSlicer-gcodeviewer_128px.png"), wxBITMAP_TYPE_PNG), "G-code Viewer");
+        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("PrusaSlicer-gcodeviewer_128px.png"), wxBITMAP_TYPE_PNG), GCODEVIEWER_APP_NAME);
         break;
     }
 #endif // __APPLE__
@@ -150,7 +150,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
 	m_statusbar->embed(this);
     m_statusbar->set_status_text(_L("Version") + " " +
         SLIC3R_VERSION +
-        _L("Remember to check for updates at https://github.com/supermerill/SuperSlicer/releases"));
+        _L("Remember to check for updates at https://github.com/" SLIC3R_GITHUB "/releases"));
 
     // initialize tabpanel and menubar
     init_tabpanel();
@@ -626,7 +626,7 @@ void MainFrame::update_title()
 
     title += wxString(SLIC3R_APP_NAME) + "_" + wxString(SLIC3R_VERSION) ;
     if (wxGetApp().is_editor() && !has_name)
-        title += (" " + _L("based on PrusaSlicer & Slic3r"));
+        title += (" " + _L(SLIC3R_BASED_ON));
 
     SetTitle(title);
 }
@@ -1050,20 +1050,20 @@ static const wxString sep_space = "";
 static wxMenu* generate_help_menu()
 {
     wxMenu* helpMenu = new wxMenu();
-    append_menu_item(helpMenu, wxID_ANY, _L("SuperSlicer Releases"), _L("Open the SuperSlicer releases page in your browser"),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/SuperSlicer/releases"); });
-    append_menu_item(helpMenu, wxID_ANY, _L("SuperSlicer wiki"), _L("Open the SuperSlicer wiki in your browser"),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/SuperSlicer/wiki"); });
-    append_menu_item(helpMenu, wxID_ANY, _L("SuperSlicer website"), _L("Open the SuperSlicer website in your browser"),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/SuperSlicer"); });
+    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " Releases"), _L("Open the " SLIC3R_APP_NAME " github releases page in your browser"),
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/" SLIC3R_GITHUB "/releases"); });
+    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " wiki"), _L("Open the " SLIC3R_APP_NAME " wiki in your browser"),
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/" SLIC3R_GITHUB "/wiki"); });
+    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " website"), _L("Open the " SLIC3R_APP_NAME " website in your browser"),
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/" SLIC3R_GITHUB); });
     append_menu_item(helpMenu, wxID_ANY, _L("Prusa Edition website"), _L("Open the Prusa Edition website in your browser"),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/prusa3d/PrusaSlicer"); });
     //#        my $versioncheck = $self->_append_menu_item($helpMenu, "Check for &Updates...", "Check for new Slic3r versions", sub{
     //#            wxTheApp->check_version(1);
     //#        });
     //#        $versioncheck->Enable(wxTheApp->have_version_check);
-    append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("Slic3r Website")),
-        wxString::Format(_L("Open the Slic3r website in your browser")),
+    append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("Slic3r Manual")),
+        wxString::Format(_L("Open the Slic3r Manual in your browser")),
         //            [this](wxCommandEvent&) { wxGetApp().open_web_page_localized("https://www.prusa3d.com/slicerweb"); });
         //        append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("%s &Manual"), SLIC3R_APP_NAME),
         //                                             wxString::Format(_L("Open the %s manual in your browser"), SLIC3R_APP_NAME),
@@ -1074,7 +1074,7 @@ static wxMenu* generate_help_menu()
     append_menu_item(helpMenu, wxID_ANY, _L("Show &Configuration Folder"), _L("Show user configuration folder (datadir)"),
         [](wxCommandEvent&) { Slic3r::GUI::desktop_open_datadir_folder(); });
     append_menu_item(helpMenu, wxID_ANY, _L("Report an I&ssue"), wxString::Format(_L("Report an issue on %s"), SLIC3R_APP_NAME),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/supermerill/SuperSlicer/issues/new"); });
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/" SLIC3R_GITHUB "/issues/new"); });
 
     if (wxGetApp().is_editor())
         append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("&About %s"), SLIC3R_APP_NAME), _L("Show about dialog"),
@@ -1487,7 +1487,7 @@ void MainFrame::init_menubar_as_gcodeviewer()
         append_menu_item(fileMenu, wxID_ANY, _L("Export &toolpaths as OBJ") + dots, _L("Export toolpaths as OBJ"),
             [this](wxCommandEvent&) { if (m_plater != nullptr) m_plater->export_toolpaths_to_obj(); }, "export_plater", nullptr,
             [this]() {return can_export_toolpaths(); }, this);
-        append_menu_item(fileMenu, wxID_ANY, _L("Open &SuperSlicer") + dots, _L("Open SuperSlicer"),
+        append_menu_item(fileMenu, wxID_ANY, _L("O&pen " SLIC3R_APP_NAME) + dots, _L("Open " SLIC3R_APP_NAME),
             [this](wxCommandEvent&) { start_new_slicer(); }, "", nullptr,
             [this]() {return true; }, this);
         fileMenu->AppendSeparator();

@@ -722,7 +722,7 @@ void ConfigBase::load_from_gcode_file(const std::string &file)
             strncmp(slic3rpp_gcode_header, firstline.c_str(), strlen(slic3rpp_gcode_header)) != 0 &&
             strncmp(superslicer_gcode_header, firstline.c_str(), strlen(superslicer_gcode_header)) != 0 &&
             strncmp(prusaslicer_gcode_header, firstline.c_str(), strlen(prusaslicer_gcode_header)) != 0)
-			throw Slic3r::RuntimeError("Not a PrusaSlicer / SuperSlicer generated g-code.");
+			throw Slic3r::RuntimeError("Not a Slic3r / PrusaSlicer / SuperSlicer generated g-code.");
     }
     ifs.seekg(0, ifs.end);
 	auto file_length = ifs.tellg();

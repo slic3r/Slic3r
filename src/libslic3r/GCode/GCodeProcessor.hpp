@@ -435,7 +435,8 @@ namespace Slic3r {
         {
             Unknown,
             PrusaSlicer,
-            SuperSlicer,            Slic3rPE,
+            SuperSlicer,
+            Slic3rPE,
             Slic3r,
             Cura,
             Simplify3D,

@@ -863,7 +863,7 @@ void GCodeProcessor::process_file(const std::string& filename, bool apply_postpr
             }
         });
 
-        // if the gcode was produced by SuperSlicer,
+        // if the gcode was produced by this slicer,
         // extract the config from it
         try {
             if (m_producer == EProducer::PrusaSlicer || m_producer == EProducer::SuperSlicer || m_producer == EProducer::Slic3rPE || m_producer == EProducer::Slic3r) {

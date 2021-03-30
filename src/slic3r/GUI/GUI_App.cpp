@@ -191,7 +191,7 @@ public:
         BitmapCache bmp_cache;
         int logo_size = lround(width * 0.25);
         //uint32_t color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color_dark")); //uncomment if you also want to modify the icon color
-        wxBitmap logo_bmp = *bmp_cache.load_svg(wxGetApp().is_editor() ? "super_slicer_logo" : "add_gcode", logo_size, logo_size/*, color*/);
+        wxBitmap logo_bmp = *bmp_cache.load_svg(wxGetApp().is_editor() ? SLIC3R_APP_KEY "_logo" : "add_gcode", logo_size, logo_size/*, color*/);
 
         wxCoord margin = int(m_scale * 20);
 
@@ -253,7 +253,7 @@ private:
             version = _L("Version") + " " + std::string(SLIC3R_VERSION_FULL);
 
             // credits infornation
-            credits =   title + " " + _L("is based on PrusaSlicer by Prusa and Slic3r by Alessandro Ranellucci and the RepRap community.") + "\n\n" +
+            credits = _L(SLIC3R_INTRO) + "\n\n" +
                         title + " " + _L("is licensed under the") + " " + _L("GNU Affero General Public License, version 3") + "\n\n" +
                         _L("Contributions by Vojtech Bubnik, Enrico Turri, Durand Remi, Oleksandra Iushchenko, Tamas Meszaros, Lukas Matena, Vojtech Kral, David Kocik and numerous others.") + "\n\n" +
                         _L("Artwork model by Durand Remi");
@@ -826,7 +826,7 @@ bool GUI_App::on_init_inner()
         }
 
         // create splash screen with updated bmp
-        scrn = new SplashScreen(bmp.IsOk() ? bmp : create_scaled_bitmap("super_slicer_logo", nullptr, 400), 
+        scrn = new SplashScreen(bmp.IsOk() ? bmp : create_scaled_bitmap( SLIC3R_APP_KEY "_logo", nullptr, 400), 
                                 wxSPLASH_CENTRE_ON_SCREEN | wxSPLASH_TIMEOUT, 4000, splashscreen_pos);
 #ifndef __linux__
         wxYield();
@@ -1525,7 +1525,7 @@ bool GUI_App::load_language(wxString language, bool initial)
         // Get the active language from PrusaSlicer.ini, or empty string if the key does not exist.
         language = app_config->get("translation_language");
         if (! language.empty())
-            BOOST_LOG_TRIVIAL(trace) << boost::format("translation_language provided by SuperSlicer.ini: %1%") % language;
+            BOOST_LOG_TRIVIAL(trace) << boost::format("translation_language provided by " SLIC3R_APP_NAME ".ini: %1%") % language;
 
         // Get the system language.
         {
@@ -1616,14 +1616,14 @@ bool GUI_App::load_language(wxString language, bool initial)
 
     if (! wxLocale::IsAvailable(language_info->Language)) {
     	// Loading the language dictionary failed.
-    	wxString message = "Switching SuperSlicer to language " + language_info->CanonicalName + " failed.";
+    	wxString message = "Switching " SLIC3R_APP_NAME " to language " + language_info->CanonicalName + " failed.";
 #if !defined(_WIN32) && !defined(__APPLE__)
         // likely some linux system
         message += "\nYou may need to reconfigure the missing locales, likely by running the \"locale-gen\" and \"dpkg-reconfigure locales\" commands.\n";
 #endif
         if (initial)
         	message + "\n\nApplication will close.";
-		wxMessageBox(message, "SuperSlicer - Switching language failed", wxOK | wxICON_ERROR);
+		wxMessageBox(message, SLIC3R_APP_NAME " - Switching language failed", wxOK | wxICON_ERROR);
         if (initial)
 			std::exit(EXIT_FAILURE);
 		else
@@ -2353,8 +2353,8 @@ void GUI_App::associate_3mf_files()
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L"SuperSlicer.1";
-    std::wstring prog_desc = L"SuperSlicer";
+    std::wstring prog_id = SLIC3R_APP_WNAME L".1";
+    std::wstring prog_desc = SLIC3R_APP_WNAME;
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\.3mf";
@@ -2378,8 +2378,8 @@ void GUI_App::associate_stl_files()
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L"Prusa.Slicer.1";
-    std::wstring prog_desc = L"PrusaSlicer";
+    std::wstring prog_id = L"Super.Slicer.1";
+    std::wstring prog_desc = SLIC3R_APP_WNAME;
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\.stl";
