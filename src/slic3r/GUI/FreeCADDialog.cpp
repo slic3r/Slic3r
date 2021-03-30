@@ -228,7 +228,7 @@ FreeCADDialog::FreeCADDialog(GUI_App* app, MainFrame* mainframe)
     commands.emplace_back(PyCommand{"extrude", PyCommandType::pctOPERATION, "extrude(x,y,z,taper,[convexity=])"});
     //redraw
     commands.emplace_back(PyCommand{"redraw", PyCommandType::pctOPERATION | PyCommandType::pctNO_PARAMETER,
-        "redraw(...obj3D)\nEvery object inside this command\nwill be added into SuperSlicer.\n"});
+        "redraw(...obj3D)\nEvery object inside this command\nwill be added into " SLIC3R_APP_NAME ".\n"});
     // beta / buggy
     commands.emplace_back(PyCommand{"scale", PyCommandType::pctMODIFIER | PyCommandType::pctDO_NOT_SHOW});
 

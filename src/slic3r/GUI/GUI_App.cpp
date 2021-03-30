@@ -1616,14 +1616,14 @@ bool GUI_App::load_language(wxString language, bool initial)
 
     if (! wxLocale::IsAvailable(language_info->Language)) {
     	// Loading the language dictionary failed.
-    	wxString message = "Switching SuperSlicer to language " + language_info->CanonicalName + " failed.";
+    	wxString message = "Switching " SLIC3R_APP_NAME " to language " + language_info->CanonicalName + " failed.";
 #if !defined(_WIN32) && !defined(__APPLE__)
         // likely some linux system
         message += "\nYou may need to reconfigure the missing locales, likely by running the \"locale-gen\" and \"dpkg-reconfigure locales\" commands.\n";
 #endif
         if (initial)
         	message + "\n\nApplication will close.";
-		wxMessageBox(message, "SuperSlicer - Switching language failed", wxOK | wxICON_ERROR);
+		wxMessageBox(message, SLIC3R_APP_NAME " - Switching language failed", wxOK | wxICON_ERROR);
         if (initial)
 			std::exit(EXIT_FAILURE);
 		else
@@ -2353,8 +2353,8 @@ void GUI_App::associate_3mf_files()
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L"SuperSlicer.1";
-    std::wstring prog_desc = L"SuperSlicer";
+    std::wstring prog_id = SLIC3R_APP_WNAME L".1";
+    std::wstring prog_desc = SLIC3R_APP_WNAME;
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\.3mf";
@@ -2378,8 +2378,8 @@ void GUI_App::associate_stl_files()
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L"Prusa.Slicer.1";
-    std::wstring prog_desc = L"PrusaSlicer";
+    std::wstring prog_id = L"Super.Slicer.1";
+    std::wstring prog_desc = SLIC3R_APP_WNAME;
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\.stl";

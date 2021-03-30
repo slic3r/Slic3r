@@ -1932,7 +1932,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::infill;
     def->tooltip = L("Connect an infill line to an internal perimeter with a short segment of an additional perimeter. "
                      "If expressed as percentage (example: 15%) it is calculated over infill extrusion width. "
-                     "PrusaSlicer tries to connect two close infill lines to a short perimeter segment. If no such perimeter segment "
+                     SLIC3R_APP_NAME " tries to connect two close infill lines to a short perimeter segment. If no such perimeter segment "
                      "shorter than infill_anchor_max is found, the infill line is connected to a perimeter segment at just one side "
                      "and the length of the perimeter segment taken is limited to this parameter, but no longer than anchor_length_max. "
                      "\nSet this parameter to zero to disable anchoring perimeters connected to a single infill line.");
@@ -1959,7 +1959,7 @@ void PrintConfigDef::init_fff_params()
     def->category    = def_infill_anchor_min->category;
     def->tooltip = L("Connect an infill line to an internal perimeter with a short segment of an additional perimeter. "
                      "If expressed as percentage (example: 15%) it is calculated over infill extrusion width. "
-                     "PrusaSlicer tries to connect two close infill lines to a short perimeter segment. If no such perimeter segment "
+                     SLIC3R_APP_NAME " tries to connect two close infill lines to a short perimeter segment. If no such perimeter segment "
                      "shorter than this parameter is found, the infill line is connected to a perimeter segment at just one side "
                      "and the length of the perimeter segment taken is limited to infill_anchor, but no longer than this parameter. "
                      "\nIf set to 0, the old algorithm for infill connection will be used, it should create the same result as with 1000 & 0.");
@@ -2903,7 +2903,7 @@ void PrintConfigDef::init_fff_params()
         "the slicing job and reducing memory usage. High-resolution models often carry "
         "more detail than printers can render. Set to zero to disable any simplification "
         "and use full resolution from input. "
-        "\nNote: SuperSlicer has an internal resolution of 0.000001mm."
+        "\nNote: " SLIC3R_APP_NAME " has an internal resolution of 0.000001mm."
         "\nInfill & Thin areas are simplified up to 0.0125mm.");
     def->sidetext = L("mm");
     def->min = 0;
@@ -5971,8 +5971,8 @@ CLIMiscConfigDef::CLIMiscConfigDef()
 
     def = this->add("single_instance", coBool);
     def->label = L("Single instance mode");
-    def->tooltip = L("If enabled, the command line arguments are sent to an existing instance of GUI PrusaSlicer, "
-                     "or an existing PrusaSlicer window is activated. "
+    def->tooltip = L("If enabled, the command line arguments are sent to an existing instance of GUI " SLIC3R_APP_NAME ", "
+                     "or an existing " SLIC3R_APP_NAME " window is activated. "
                      "Overrides the \"single_instance\" configuration value from application preferences.");
 
 /*

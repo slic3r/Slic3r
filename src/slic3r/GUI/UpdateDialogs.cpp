@@ -25,8 +25,8 @@ namespace Slic3r {
 namespace GUI {
 
 
-static const char* URL_CHANGELOG = "https://files.prusa3d.com/?latest=slicer-stable&lng=%1%";
-static const char* URL_DOWNLOAD = "https://www.prusa3d.com/downloads&lng=%1%";
+static const char* URL_CHANGELOG = "https://github.com/supermerill/SuperSlicer/releases";
+static const char* URL_DOWNLOAD = "https://github.com/supermerill/SuperSlicer/releases";
 static const char* URL_DEV = "https://github.com/supermerill/SuperSlicer/releases/tag/version_%1%";
 
 static const std::string CONFIG_UPDATE_WIKI_URL("https://github.com/prusa3d/PrusaSlicer/wiki/Slic3r-PE-1.40-configuration-update");

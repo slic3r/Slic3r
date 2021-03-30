@@ -1398,7 +1398,7 @@ void MainFrame::init_menubar_as_gcodeviewer()
         append_menu_item(fileMenu, wxID_ANY, _L("Export &toolpaths as OBJ") + dots, _L("Export toolpaths as OBJ"),
             [this](wxCommandEvent&) { if (m_plater != nullptr) m_plater->export_toolpaths_to_obj(); }, "export_plater", nullptr,
             [this]() {return can_export_toolpaths(); }, this);
-        append_menu_item(fileMenu, wxID_ANY, _L("Open &SuperSlicer") + dots, _L("Open SuperSlicer"),
+        append_menu_item(fileMenu, wxID_ANY, _L("O&pen " SLIC3R_APP_NAME) + dots, _L("Open " SLIC3R_APP_NAME),
             [this](wxCommandEvent&) { start_new_slicer(); }, "", nullptr,
             [this]() {return true; }, this);
         fileMenu->AppendSeparator();

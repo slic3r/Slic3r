@@ -205,7 +205,7 @@ std::string AppConfig::load()
         // we will rethrow this exception from the place of load() call, if returned value wouldn't be empty
         /*
         throw Slic3r::RuntimeError(
-        	_utf8(L("Error parsing SuperSlicer config file, it is probably corrupted. "
+        	_utf8(L("Error parsing " SLIC3R_APP_NAME " config file, it is probably corrupted. "
                     "Try to manually delete the file to recover from the error. Your user profiles will not be affected.")) + 
         	"\n\n" + AppConfig::config_path() + "\n\n" + ex.what());
         */
