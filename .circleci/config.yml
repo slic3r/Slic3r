@@ -41,12 +41,12 @@ jobs:
           at: /tmp/workspace
       - checkout
       - run:
-        name: Package AppImage
-        command: |
-          chmod +x /build/src/platform/unix/build_appimage.sh
-          pushd /tmp/workspace
-          tar -xzf Slic3r.tar.gz
-          /build/src/platform/unix/build_appimage.sh /build/Slic3r.AppImage
+          name: Package AppImage
+          command: |
+            chmod +x /build/src/platform/unix/build_appimage.sh
+            pushd /tmp/workspace
+            tar -xzf Slic3r.tar.gz
+            /build/src/platform/unix/build_appimage.sh /build/Slic3r.AppImage
       - store_artifacts:
         path: /build/Slic3r.AppImage
 workflows:
