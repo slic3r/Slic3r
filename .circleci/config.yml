@@ -1,0 +1,24 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: slic3r/appimage-build
+
+    working_directory: /build
+    steps:
+      - checkout
+      - run:
+          name: Build with CMake
+          command: |
+            mkdir /build/build
+            cd /build/cmake
+            DCC=gcc CXX=g++ cmake /build -DCMAKE_INSTALL_PREFIX=/build.Slic3r -DCMAKE_PREFIX_PATH=/opt/dependencies/destdir/usr/local -DSLIC3R_STATIC=1 -DSLIC3R_BUILD_TESTS=OFF
+            cmake --build . -j4
+            cmake --install .
+            pushd /build.Slic3r
+            echo -e '#!/bin/bash\nDIR=$(readlink -f "$0" | xargs dirname)\nexport LD_LIBRARY_PATH="$DIR/bin"\nexec "$DIR/bin/Slic3r" "$@"' > /build.Slic3r/Slic3r
+            chmod u+x Slic3r
+            tar -czf /build/Slic3r.tar.gz .
+            popd
+      - store_artifacts:
+          path: /build/Slic3r.tar.gz
