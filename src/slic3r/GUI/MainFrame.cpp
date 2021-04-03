@@ -1,37 +1,37 @@
 #include "MainFrame.hpp"
 
-#include <wx/panel.h>
-#include <wx/notebook.h>
-#include <wx/icon.h>
-#include <wx/sizer.h>
-#include <wx/menu.h>
-#include <wx/progdlg.h>
-#include <wx/tooltip.h>
-//#include <wx/glcanvas.h>
-#include <wx/filename.h>
 #include <wx/debug.h>
+#include <wx/filename.h>
+//#include <wx/glcanvas.h>
+#include <wx/icon.h>
+#include <wx/menu.h>
+#include <wx/notebook.h>
+#include <wx/panel.h>
+#include <wx/progdlg.h>
+#include <wx/sizer.h>
+#include <wx/tooltip.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 
-#include "libslic3r/Print.hpp"
 #include "libslic3r/Polygon.hpp"
-#include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/Print.hpp"
+#include "libslic3r/SLAPrint.hpp"
 
-#include "Tab.hpp"
-#include "ProgressStatusBar.hpp"
-#include "3DScene.hpp"
-#include "PrintHostDialogs.hpp"
-#include "wxExtensions.hpp"
-#include "GUI_ObjectList.hpp"
-#include "Mouse3DController.hpp"
-#include "RemovableDriveManager.hpp"
-#include "InstanceCheck.hpp"
-#include "I18N.hpp"
-#include "GLCanvas3D.hpp"
-#include "Plater.hpp"
 #include "../Utils/Process.hpp"
+#include "3DScene.hpp"
+#include "GLCanvas3D.hpp"
+#include "GUI_ObjectList.hpp"
+#include "I18N.hpp"
+#include "InstanceCheck.hpp"
+#include "Mouse3DController.hpp"
+#include "Plater.hpp"
+#include "PrintHostDialogs.hpp"
+#include "ProgressStatusBar.hpp"
+#include "RemovableDriveManager.hpp"
+#include "Tab.hpp"
 #include "format.hpp"
+#include "wxExtensions.hpp"
 
 #include <fstream>
 #include <string_view>
