@@ -266,7 +266,7 @@ void MainFrame::update_layout()
         if (plater_page_id != wxNOT_FOUND)
             m_tabpanel->RemovePage(plater_page_id);
 
-        for (int i = 0; i < m_tabpanel->GetPageCount(); i++)
+        for (size_t i = 0; i < m_tabpanel->GetPageCount(); i++)
             if (m_tabpanel->GetPage(i)->GetChildren().size() == 1 && m_tabpanel->GetPage(i)->GetChildren().front() == m_plater)
                 m_tabpanel->GetPage(i)->GetSizer()->Clear();
 
@@ -276,7 +276,7 @@ void MainFrame::update_layout()
         while(m_tabpanel->GetPage(0)->GetChildren().size() == 0)
             m_tabpanel->DeletePage(0);
 
-        for (int i = 0; i < m_tabpanel->GetPageCount();  i++) {
+        for (size_t i = 0; i < m_tabpanel->GetPageCount();  i++) {
             m_tabpanel->SetPageImage(i, -1);
         }
         m_tabpanel->SetImageList(nullptr); //clear
