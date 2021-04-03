@@ -49,10 +49,6 @@ msgstr "è concesso in licenza ai sensi"
 msgid "GNU Affero General Public License, version 3"
 msgstr "GNU Affero General Public License, versione 3"
 
-#: src/slic3r/GUI/AboutDialog.cpp:262
-msgid "Slic3r is based on PrusaSlicer which is based on Slic3r by Alessandro Ranellucci and the RepRap community."
-msgstr "Slic3r è basato su PrusaSlicer che si basa su Slic3r di Alessandro Ranellucci e la comunità RepRap."
-
 #: src/slic3r/GUI/AboutDialog.cpp:263
 msgid "Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik, Durand Rémi and numerous others."
 msgstr "Contributi di Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik, Durand Rémi e molti altri."

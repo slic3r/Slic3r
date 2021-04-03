@@ -53,12 +53,6 @@ msgstr ""
 msgid "GNU Affero General Public License, version 3"
 msgstr ""
 
-#: src/slic3r/GUI/AboutDialog.cpp:265
-msgid ""
-"Slic3r is based on PrusaSlicer which is based on Slic3r by Alessandro "
-"Ranellucci and the RepRap community."
-msgstr ""
-
 #: src/slic3r/GUI/AboutDialog.cpp:266
 msgid ""
 "Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, "
@@ -2517,12 +2511,6 @@ msgstr ""
 
 #: src/slic3r/GUI/Gizmos/GLGizmoPainterBase.cpp:372
 msgid "Add supports"
-msgstr ""
-
-#: src/slic3r/GUI/GUI_App.cpp:242
-msgid ""
-"is based on PrusaSlicer by Prusa and Slic3r by Alessandro Ranellucci and the "
-"RepRap community."
 msgstr ""
 
 #: src/slic3r/GUI/GUI_App.cpp:244
