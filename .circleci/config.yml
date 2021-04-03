@@ -4,14 +4,15 @@ jobs:
     docker:
       - image: slic3r/appimage-build
 
+    environment:
+      CC: gcc
+      CXX: g++
+
     working_directory: /build
     steps:
       - checkout
       - run:
           name: Build with CMake
-          environment:
-            - CC=gcc
-            - CXX=g++
           command: |
             mkdir /build/build
             cd /build/cmake
