@@ -122,7 +122,7 @@ void CopyrightsDialog::fill_entries()
         { "lib_fts"
                             , "Forrest Smith"                               , "https://www.forrestthewoods.com/" },
         { "Arc Welder"
-                            , "Brad Hochgesang",                            , "https://github.com/FormerLurker/ArcWelderLib/" }
+                            , "Brad Hochgesang"                             , "https://github.com/FormerLurker/ArcWelderLib/" }
     };
 }
 
