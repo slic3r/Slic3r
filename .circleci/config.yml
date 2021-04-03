@@ -49,10 +49,9 @@ jobs:
           /build/src/platform/unix/build_appimage.sh /build/Slic3r.AppImage
       - store_artifacts:
         path: /build/Slic3r.AppImage
-  workflows:
-    version: 2
-    build_and_package:
-      jobs:
-        - build
-        - test
-        - package_appimage
+workflows:
+  version: 2
+  build_and_package:
+    jobs:
+      - build
+      - package_appimage
