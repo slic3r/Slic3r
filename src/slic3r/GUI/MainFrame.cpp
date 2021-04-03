@@ -369,7 +369,7 @@ void MainFrame::update_layout()
         try {
             icon_size = atoi(wxGetApp().app_config->get("tab_icon_size").c_str());
         }
-        catch (std::exception e) {}
+        catch (const std::exception& e) {}
         if(icon_size >= 8)
             for (std::string icon_name : {"editor_menu", "layers", "preview_menu", "cog"}) {
                 const wxBitmap& bmp = create_scaled_bitmap(icon_name, this, icon_size);
@@ -1659,7 +1659,7 @@ bool MainFrame::load_config_file(const std::string &path)
 {
     try {
         wxGetApp().preset_bundle->load_config_file(path); 
-    } catch (const std::exception &ex) {
+    } catch (const std::exception& ex) {
         show_error(this, ex.what());
         return false;
     }
@@ -1690,7 +1690,7 @@ void MainFrame::export_configbundle(bool export_physical_printers /*= false*/)
         wxGetApp().app_config->update_config_dir(get_dir_name(file));
         try {
             wxGetApp().preset_bundle->export_configbundle(file.ToUTF8().data(), false, export_physical_printers);
-        } catch (const std::exception &ex) {
+        } catch (const std::exception& ex) {
 			show_error(this, ex.what());
         }
     }
