@@ -1,11 +1,14 @@
 ### Version
-_Version of SupserSlicer used goes here, Use `About->About SuperSlicer`_
+_Version of Slic3r used goes here_
+
+_Use `About->About Slic3r` for release versions._
+
+_Do not report Prusa3D Slic3r bugs here without confirming it is a problem on a development release of Slic3r, or your issue will be closed. *Only* use normal Slic3r version IDs._
+
+_For -dev versions, use `git describe --tag` or get the hash value for the version you downloaded or `git rev-parse HEAD`_
 
 ### Operating system type + version
-_What OS are you using (and version)_
-
-### 3D printer brand / version + firmware version (if known)
-_What 3D printer brand / version are you printing on, is it a stock model or did you modify the printer, what firmware is running on your printer, version of the firmware #s_
+_What OS are you using, and state any version #s_
 
 ### Behavior
 * _Describe the problem_
@@ -13,7 +16,11 @@ _What 3D printer brand / version are you printing on, is it a stock model or did
   * _If this is a command-line slicing issue, include the options used_
 * _Expected Results_
 * _Actual Results_
-  * _Screenshots from __*SuperSlicer*__ preview are preferred_
+  * _Screenshots from __*Slic3r*__ preview are preferred_
 
-#### Project File (.3MF) where problem occurs
-_Upload a SuperSlicer Project File (.3MF) (`File -> Save` / `Save Project`)_
+_Is this a new feature request?_
+Related guides for writing feature requests: http://meta.stackexchange.com/a/259196 http://nickohrn.com/2013/09/write-great-feature-request-bug-report/
+
+
+#### STL/Config (.ZIP) where problem occurs
+_Upload a zipped copy of an STL and your config (`File -> Export Config`)_
