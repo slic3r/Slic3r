@@ -55,4 +55,6 @@ workflows:
   build_and_package:
     jobs:
       - build
-      - package_appimage
+      - package_appimage:
+          requires:
+            - build
