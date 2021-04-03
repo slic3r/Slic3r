@@ -2061,5 +2061,5 @@ void SettingsDialog::on_dpi_changed(const wxRect& suggested_rect)
 }
 
 
-} // GUI
-} // Slic3r
+} // namespace GUI
+} // namespace Slic3r
