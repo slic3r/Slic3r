@@ -7,16 +7,16 @@ APP_IMAGE=$1
 wget ${APPIMAGETOOLURL} -O ../appimagetool.AppImage
 chmod +x ../appimagetool.AppImage
 
-sed -i -e 's#/usr#././#g' bin/superslicer
-mv superslicer AppRun
+sed -i -e 's#/usr#././#g' bin/Slic3r
+mv Slic3r AppRun
 chmod +x AppRun
 
-cp resources/icons/Slic3r_192px.png superslicer.png
+cp resources/icons/Slic3r_192px.png Slic3r.png
 cat <<EOF > Slic3r.desktop
 [Desktop Entry]
 Name=Slic3r
 Exec=AppRun %F
-Icon=superslicer
+Icon=Slic3r
 Type=Application
 Categories=Utility;
 MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;

@@ -9,16 +9,50 @@ jobs:
       - checkout
       - run:
           name: Build with CMake
+          environment:
+            - CC=gcc
+            - CXX=g++
           command: |
             mkdir /build/build
             cd /build/cmake
-            DCC=gcc CXX=g++ cmake /build -DCMAKE_INSTALL_PREFIX=/build.Slic3r -DCMAKE_PREFIX_PATH=/opt/dependencies/destdir/usr/local -DSLIC3R_STATIC=1 -DSLIC3R_BUILD_TESTS=OFF
-            cmake --build . -j4
+            cmake /build -DCMAKE_INSTALL_PREFIX=/build.Slic3r \
+                         -DCMAKE_PREFIX_PATH=/opt/dependencies/destdir/usr/local \
+                         -DSLIC3R_STATIC=1\
+                         -DSLIC3R_BUILD_TESTS=OFF
+            make -j4 Slic3r
             cmake --install .
             pushd /build.Slic3r
             echo -e '#!/bin/bash\nDIR=$(readlink -f "$0" | xargs dirname)\nexport LD_LIBRARY_PATH="$DIR/bin"\nexec "$DIR/bin/Slic3r" "$@"' > /build.Slic3r/Slic3r
             chmod u+x Slic3r
             tar -czf /build/Slic3r.tar.gz .
             popd
+      - persist_to_workspace:
+          root: /build
+          paths:
+            - /build/Slic3r.tar.gz
       - store_artifacts:
           path: /build/Slic3r.tar.gz
+  package_appimage:
+    machine:
+      image: ubuntu-1604:202007-01
+    working_directory: /build
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - checkout
+      - run:
+        name: Package AppImage
+        command: |
+          chmod +x /build/src/platform/unix/build_appimage.sh
+          pushd /tmp/workspace
+          tar -xzf Slic3r.tar.gz
+          /build/src/platform/unix/build_appimage.sh /build/Slic3r.AppImage
+      - store_artifacts:
+        path: /build/Slic3r.AppImage
+  workflows:
+    version: 2
+    build_and_package:
+      jobs:
+        - build
+        - test
+        - package_appimage
