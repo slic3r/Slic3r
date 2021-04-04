@@ -1051,7 +1051,7 @@ static wxMenu* generate_help_menu()
 {
     wxMenu* helpMenu = new wxMenu();
     append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " Releases"), _L("Open the " SLIC3R_APP_NAME " releases page in your browser"),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser(SLIC3R_DOWLOAD); });
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser(SLIC3R_DOWNLOAD); });
     append_menu_item(helpMenu, wxID_ANY, _L("Slic3r manual"), _L("Open the Slic3r manual in your browser"),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://manual.slic3r.org"); });
     append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " wiki"), _L("Open the " SLIC3R_APP_NAME " wiki in your browser"),

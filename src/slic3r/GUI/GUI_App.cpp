@@ -191,7 +191,9 @@ public:
         BitmapCache bmp_cache;
         int logo_size = lround(width * 0.25);
         //uint32_t color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color_dark")); //uncomment if you also want to modify the icon color
-        wxBitmap logo_bmp = *bmp_cache.load_svg(wxGetApp().is_editor() ? SLIC3R_APP_KEY "_logo" : "add_gcode", logo_size, logo_size/*, color*/);
+        wxBitmap* logo_bmp = bmp_cache.load_svg(wxGetApp().is_editor() ? SLIC3R_APP_KEY "_logo" : "add_gcode", logo_size, logo_size/*, color*/);
+        if(logo_bmp == nullptr) logo_bmp = bmp_cache.load_png(wxGetApp().is_editor() ? SLIC3R_APP_KEY "_logo" : "add_gcode", logo_size, logo_size/*, color*/);
+        if (logo_bmp == nullptr) return;
 
         wxCoord margin = int(m_scale * 20);
 
@@ -202,7 +204,7 @@ public:
         wxMemoryDC memDc(bmp);
 
         // draw logo
-        memDc.DrawBitmap(logo_bmp, margin, margin, true);
+        memDc.DrawBitmap(*logo_bmp, margin, margin, true);
 
         // draw the (white) labels inside of our black box (at the left of the splashscreen)
         memDc.SetTextForeground(wxColour(255, 255, 255));
@@ -700,10 +702,10 @@ bool GUI_App::init_opengl()
 
 void GUI_App::init_app_config()
 {
-	// Profiles for the alpha are stored into the PrusaSlicer-alpha directory to not mix with the current release.
-//	SetAppName(SLIC3R_APP_KEY);
-	SetAppName(SLIC3R_APP_KEY "-alpha");
-//	SetAppDisplayName(SLIC3R_APP_NAME);
+	// Profiles for the alpha are stored into the Slic3r-alpha directory to not mix with the current release.
+//	SetAppName(SLIC3R_APP_KEY "-alpha");
+    SetAppName(SLIC3R_APP_KEY);
+    SetAppDisplayName(SLIC3R_APP_NAME);
 
 	// Set the Slic3r data directory at the Slic3r XS module.
 	// Unix: ~/ .Slic3r

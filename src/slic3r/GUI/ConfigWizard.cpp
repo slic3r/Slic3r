@@ -91,17 +91,18 @@ BundleMap BundleMap::load()
     const auto vendor_dir = (boost::filesystem::path(Slic3r::data_dir()) / "vendor").make_preferred();
     const auto rsrc_vendor_dir = (boost::filesystem::path(resources_dir()) / "profiles").make_preferred();
 
-    auto prusa_bundle_path = (vendor_dir / PresetBundle::PRUSA_BUNDLE).replace_extension(".ini");
-    auto prusa_bundle_rsrc = false;
-    if (! boost::filesystem::exists(prusa_bundle_path)) {
-        prusa_bundle_path = (rsrc_vendor_dir / PresetBundle::PRUSA_BUNDLE).replace_extension(".ini");
-        prusa_bundle_rsrc = true;
-    }
-    {
-        Bundle prusa_bundle;
-        if (prusa_bundle.load(std::move(prusa_bundle_path), prusa_bundle_rsrc, true))
-            res.emplace(PresetBundle::PRUSA_BUNDLE, std::move(prusa_bundle)); 
-    }
+    // commented prusa bundle mandatory check at startup
+    //auto prusa_bundle_path = (vendor_dir / PresetBundle::PRUSA_BUNDLE).replace_extension(".ini");
+    //auto prusa_bundle_rsrc = false;
+    //if (! boost::filesystem::exists(prusa_bundle_path)) {
+    //    prusa_bundle_path = (rsrc_vendor_dir / PresetBundle::PRUSA_BUNDLE).replace_extension(".ini");
+    //    prusa_bundle_rsrc = true;
+    //}
+    //{
+    //    Bundle prusa_bundle;
+    //    if (prusa_bundle.load(std::move(prusa_bundle_path), prusa_bundle_rsrc, true))
+    //        res.emplace(PresetBundle::PRUSA_BUNDLE, std::move(prusa_bundle)); 
+    //}
 
     // Load the other bundles in the datadir/vendor directory
     // and then additionally from resources/profiles.

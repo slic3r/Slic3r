@@ -152,23 +152,25 @@ if (WIN32)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libslic3r/libslic3r_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h @ONLY)
 
     add_executable(Slic3r_app_gui WIN32 PrusaSlicer_app_msvc.cpp ${CMAKE_CURRENT_BINARY_DIR}/Slic3r.rc ${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h)
+    target_include_directories(Slic3r_app_gui PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
     # Generate debug symbols even in release mode.
     if(MSVC)
         target_link_options(Slic3r_app_gui PUBLIC "$<$<CONFIG:RELEASE>:/DEBUG>")
     endif()
     target_compile_definitions(Slic3r_app_gui PRIVATE -DSLIC3R_WRAPPER_NOCONSOLE)
     add_dependencies(Slic3r_app_gui Slic3r)
-    set_target_properties(Slic3r_app_gui PROPERTIES OUTPUT_NAME "@SLIC3R_APP_CMD@")
+    set_target_properties(Slic3r_app_gui PROPERTIES OUTPUT_NAME "${SLIC3R_APP_CMD}")
     target_link_libraries(Slic3r_app_gui PRIVATE boost_headeronly)
 
     add_executable(Slic3r_app_console PrusaSlicer_app_msvc.cpp ${CMAKE_CURRENT_BINARY_DIR}/Slic3r.rc ${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h)
+    target_include_directories(Slic3r_app_console PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
     # Generate debug symbols even in release mode.
     if (MSVC)
         target_link_options(Slic3r_app_console PUBLIC "$<$<CONFIG:RELEASE>:/DEBUG>")
     endif ()
     target_compile_definitions(Slic3r_app_console PRIVATE -DSLIC3R_WRAPPER_CONSOLE)
     add_dependencies(Slic3r_app_console Slic3r)
-    set_target_properties(Slic3r_app_console PROPERTIES OUTPUT_NAME "@SLIC3R_APP_CMD@_console")
+    set_target_properties(Slic3r_app_console PROPERTIES OUTPUT_NAME "${SLIC3R_APP_CMD}_console")
     target_link_libraries(Slic3r_app_console PRIVATE boost_headeronly)
 
     add_executable(PrusaSlicer_app_gcodeviewer WIN32 PrusaSlicer_app_msvc.cpp ${CMAKE_CURRENT_BINARY_DIR}/gcodeviewer.rc ${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h)
@@ -179,7 +181,7 @@ if (WIN32)
     endif ()
     target_compile_definitions(PrusaSlicer_app_gcodeviewer PRIVATE -DSLIC3R_WRAPPER_NOCONSOLE -DSLIC3R_WRAPPER_GCODEVIEWER)
     add_dependencies(PrusaSlicer_app_gcodeviewer Slic3r)
-    set_target_properties(PrusaSlicer_app_gcodeviewer PROPERTIES OUTPUT_NAME "@GCODEVIEWER_APP_CMD@")
+    set_target_properties(PrusaSlicer_app_gcodeviewer PROPERTIES OUTPUT_NAME "${GCODEVIEWER_APP_CMD}")
     target_link_libraries(PrusaSlicer_app_gcodeviewer PRIVATE boost_headeronly)
 endif ()
 
@@ -221,7 +223,7 @@ else ()
             COMMAND ln -sf Slic3r prusa-gcodeviewer
             COMMAND ln -sf Slic3r PrusaGCodeViewer
             WORKING_DIRECTORY "$<TARGET_FILE_DIR:Slic3r>"
-            COMMENT "Symlinking the G-code viewer to Slic3r, symlinking to slic3r and prusa-gcodeviewer"
+            COMMENT "Symlinking the G-code viewer to Slic3r, symlinking to slic3r and gcodeviewer"
             VERBATIM)
     else ()
         add_custom_command(TARGET Slic3r POST_BUILD
