@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(SuperSlicer)
+project(Slic3r)
 
 include("version.inc")
 include(GNUInstallDirs)
@@ -22,11 +22,11 @@ else()
         endif()
 endif()
 
-option(SLIC3R_STATIC 			"Compile SuperSlicer with static libraries (Boost, TBB, glew)" ${SLIC3R_STATIC_INITIAL})
-option(SLIC3R_GUI    			"Compile SuperSlicer with GUI components (OpenGL, wxWidgets)" 1)
-option(SLIC3R_FHS               "Assume SuperSlicer is to be installed in a FHS directory structure" 0)
+option(SLIC3R_STATIC 			"Compile Slic3r with static libraries (Boost, TBB, glew)" ${SLIC3R_STATIC_INITIAL})
+option(SLIC3R_GUI    			"Compile Slic3r with GUI components (OpenGL, wxWidgets)" 1)
+option(SLIC3R_FHS               "Assume Slic3r is to be installed in a FHS directory structure" 0)
 option(SLIC3R_WX_STABLE         "Build against wxWidgets stable (3.0) as oppsed to dev (3.1) on Linux" 0)
-option(SLIC3R_PROFILE 			"Compile SuperSlicer with an invasive Shiny profiler" 0)
+option(SLIC3R_PROFILE 			"Compile Slic3r with an invasive Shiny profiler" 0)
 option(SLIC3R_PCH               "Use precompiled headers" 1)
 option(SLIC3R_MSVC_COMPILE_PARALLEL "Compile on Visual Studio in parallel" 1)
 option(SLIC3R_MSVC_PDB          "Generate PDB files on MSVC in Release mode" 1)
@@ -42,7 +42,7 @@ endif ()
 
 # Proposal for C++ unit tests and sandboxes
 option(SLIC3R_BUILD_SANDBOXES   "Build development sandboxes" OFF)
-option(SLIC3R_BUILD_TESTS       "Build unit tests" ON)
+option(SLIC3R_BUILD_TESTS       "Build unit tests" OFF)
 
 # Print out the SLIC3R_* cache options
 get_cmake_property(_cache_vars CACHE_VARIABLES)
@@ -239,13 +239,13 @@ add_definitions(-DwxUSE_UNICODE -D_UNICODE -DUNICODE -DWXINTL_NO_GETTEXT_MACRO)
 add_definitions(-DwxNO_UNSAFE_WXSTRING_CONV)
 
 if (SLIC3R_PROFILE)
-    message("SuperSlicer will be built with a Shiny invasive profiler")
+    message("Slic3r will be built with a Shiny invasive profiler")
     add_definitions(-DSLIC3R_PROFILE)
 endif ()
 
 # Disable optimization even with debugging on.
 if (0)
-    message(STATUS "Perl compiled without optimization. Disabling optimization for the SuperSlicer build.")
+    message(STATUS "Perl compiled without optimization. Disabling optimization for the Slic3r build.")
     message("Old CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
     message("Old CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELEASE}")
     message("Old CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS_RELEASE}")
@@ -425,7 +425,7 @@ set(L10N_DIR "${SLIC3R_RESOURCES_DIR}/localization")
 add_custom_target(gettext_make_pot
     COMMAND xgettext --keyword=L --keyword=_L --keyword=_u8L --keyword=L_CONTEXT:1,2c --keyword=_L_PLURAL:1,2 --add-comments=TRN --from-code=UTF-8 --debug
         -f "${L10N_DIR}/list.txt"
-        -o "${L10N_DIR}/SuperSlicer.pot"
+        -o "${L10N_DIR}/Slic3r.pot"
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     COMMENT "Generate pot file from strings in the source tree"
 )
@@ -433,10 +433,10 @@ add_custom_target(gettext_po_to_mo
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     COMMENT "Generate localization po files (binary) from mo files (texts)"
 )
-file(GLOB L10N_PO_FILES "${L10N_DIR}/*/SuperSlicer*.po")
+file(GLOB L10N_PO_FILES "${L10N_DIR}/*/Slic3r*.po")
 foreach(po_file ${L10N_PO_FILES})
     GET_FILENAME_COMPONENT(po_dir "${po_file}" DIRECTORY)
-    SET(mo_file "${po_dir}/SuperSlicer.mo")
+    SET(mo_file "${po_dir}/Slic3r.mo")
     add_custom_command(
         TARGET gettext_po_to_mo PRE_BUILD
         COMMAND msgfmt ARGS -o ${mo_file} ${po_file}
@@ -490,9 +490,9 @@ function(prusaslicer_copy_dlls target)
 endfunction()
 
 
-# libslic3r, SuperSlicer GUI and the SuperSlicer executable.
+# libslic3r, Slic3r GUI and the Slic3r executable.
 add_subdirectory(src)
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT SuperSlicer_app_console)
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Slic3r_app_console)
 
 # Perl bindings, currently only used for the unit / integration tests of libslic3r.
 # Also runs the unit / integration tests.
@@ -515,16 +515,46 @@ if (WIN32)
     install(DIRECTORY "${SLIC3R_RESOURCES_DIR}/" DESTINATION "${CMAKE_INSTALL_PREFIX}/resources")
 elseif (SLIC3R_FHS)
     # CMAKE_INSTALL_FULL_DATAROOTDIR: read-only architecture-independent data root (share)
-    set(SLIC3R_FHS_RESOURCES "${CMAKE_INSTALL_FULL_DATAROOTDIR}/SuperSlicer")
+    set(SLIC3R_FHS_RESOURCES "${CMAKE_INSTALL_FULL_DATAROOTDIR}/Slic3r")
     install(DIRECTORY "${SLIC3R_RESOURCES_DIR}/" DESTINATION "${SLIC3R_FHS_RESOURCES}")
-    install(FILES src/platform/unix/SuperSlicer.desktop DESTINATION ${CMAKE_INSTALL_FULL_DATAROOTDIR}/applications)
-    install(FILES src/platform/unix/SuperGcodeviewer.desktop DESTINATION ${CMAKE_INSTALL_FULL_DATAROOTDIR}/applications)
-    install(FILES resources/icons/Slic3r_192px.png DESTINATION ${CMAKE_INSTALL_FULL_DATAROOTDIR}/pixmaps RENAME SuperSlicer.png)
-    install(FILES resources/icons/PrusaSlicer-gcodeviewer_192px.png DESTINATION ${CMAKE_INSTALL_FULL_DATAROOTDIR}/pixmaps RENAME SuperSlicer-gcodeviewer.png)
+    install(FILES src/platform/unix/Slic3r.desktop DESTINATION ${CMAKE_INSTALL_FULL_DATAROOTDIR}/applications)
+    install(FILES src/platform/unix/Gcodeviewer.desktop DESTINATION ${CMAKE_INSTALL_FULL_DATAROOTDIR}/applications)
+    install(FILES resources/icons/Slic3r_192px.png DESTINATION ${CMAKE_INSTALL_FULL_DATAROOTDIR}/pixmaps RENAME Slic3r.png)
+    install(FILES resources/icons/PrusaSlicer-gcodeviewer_192px.png DESTINATION ${CMAKE_INSTALL_FULL_DATAROOTDIR}/pixmaps RENAME Slic3r-gcodeviewer.png)
 else ()
-    install(FILES src/platform/unix/SuperSlicer.desktop DESTINATION ${CMAKE_INSTALL_PREFIX}/resources/applications)
-    install(FILES src/platform/unix/SuperGcodeviewer.desktop DESTINATION ${CMAKE_INSTALL_PREFIX}/resources/applications)
+    install(FILES src/platform/unix/Slic3r.desktop DESTINATION ${CMAKE_INSTALL_PREFIX}/resources/applications)
+    install(FILES src/platform/unix/Gcodeviewer.desktop DESTINATION ${CMAKE_INSTALL_PREFIX}/resources/applications)
     install(DIRECTORY "${SLIC3R_RESOURCES_DIR}/" DESTINATION "${CMAKE_INSTALL_PREFIX}/resources")
 endif ()
 
 configure_file(${LIBDIR}/platform/unix/fhs.hpp.in ${LIBDIR_BIN}/platform/unix/fhs.hpp)
+
+if (WIN32)
+else () 
+    set(CPACK_GENERATOR "STGZ;TGZ;TZ")
+    set(CPACK_NSIS_DISPLAY_NAME "Slic3r 2.0")
+    set(CPACK_OUTPUT_CONFIG_FILE "${CMAKE_SOURCE_DIR}/cmake/CPackConfig.cmake")
+    set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "CMake is a build tool")
+    set(CPACK_PACKAGE_EXECUTABLES "Slic3r")
+    set(CPACK_PACKAGE_FILE_NAME "slic3r-2.0-Linux-x86_64")
+    set(CPACK_PACKAGE_INSTALL_DIRECTORY "Slic3r 2.0")
+    set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "Slic3r 2.0.0")
+    set(CPACK_PACKAGE_NAME "Slic3r")
+    set(CPACK_PACKAGE_VENDOR "Slic3r")
+    set(CPACK_PACKAGE_VERSION "2.0.0")
+    set(CPACK_PACKAGE_VERSION_MAJOR "2")
+    set(CPACK_PACKAGE_VERSION_MINOR "0")
+    set(CPACK_PACKAGE_VERSION_PATCH "0")
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+    set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+    set(CPACK_RESOURCE_FILE_WELCOME "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+    set(CPACK_SOURCE_GENERATOR "TGZ;TZ")
+    set(CPACK_SOURCE_PACKAGE_FILE_NAME "Slic3r-2.0.0")
+    set(CPACK_SOURCE_STRIP_FILES "")
+    set(CPACK_STRIP_FILES "bin/Slic3r")
+    set(CPACK_SYSTEM_NAME "Linux-x86_64")
+    set(CPACK_TOPLEVEL_TAG "Linux-x86_64")
+endif()
+
+include(CPack)

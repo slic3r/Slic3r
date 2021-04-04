@@ -1569,7 +1569,7 @@ bool GUI_App::load_language(wxString language, bool initial)
     }
 
     if (language_info != nullptr && language_info->LayoutDirection == wxLayout_RightToLeft) {
-        BOOST_LOG_TRIVIAL(trace) << boost::format("The following language code requires right to left layout, which is not supported by SuperSlicer: %1%") % language_info->CanonicalName.ToUTF8().data();
+        BOOST_LOG_TRIVIAL(trace) << boost::format("The following language code requires right to left layout, which is not supported by Slic3r: %1%") % language_info->CanonicalName.ToUTF8().data();
         language_info = nullptr;
     }
 

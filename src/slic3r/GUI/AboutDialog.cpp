@@ -57,10 +57,10 @@ CopyrightsDialog::CopyrightsDialog()
 
     wxFont font = get_default_font(this);
     const int fs = font.GetPointSize();
-    const int fs2 = static_cast<int>(1.2f*fs);
-    int size[] = { fs, fs, fs, fs, fs2, fs2, fs2 };
+    const int fs2 = static_cast<int>(1.2F*fs);
+    std::array<int, 7> size = { fs, fs, fs, fs, fs2, fs2, fs2 };
 
-    m_html->SetFonts(font.GetFaceName(), font.GetFaceName(), size);
+    m_html->SetFonts(font.GetFaceName(), font.GetFaceName(), size.cbegin());
     m_html->SetBorders(2);        
     m_html->SetPage(get_html_text());
 
@@ -122,7 +122,9 @@ void CopyrightsDialog::fill_entries()
         { "AppImage packaging for Linux using AppImageKit"
                             , "2004-2019 Simon Peter and contributors"      , "https://appimage.org/" },
         { "lib_fts"
-                            , "Forrest Smith"                               , "https://www.forrestthewoods.com/" }
+                            , "Forrest Smith"                               , "https://www.forrestthewoods.com/" },
+        { "Arc Welder"
+                            , "Brad Hochgesang"                             , "https://github.com/FormerLurker/ArcWelderLib/" }
     };
 }
 
@@ -259,8 +261,8 @@ AboutDialog::AboutDialog()
 		auto bgr_clr_str = wxString::Format(wxT("#%02X%02X%02X"), bgr_clr.Red(), bgr_clr.Green(), bgr_clr.Blue());
 
 		const int fs = font.GetPointSize()-1;
-        int size[] = {fs,fs,fs,fs,fs,fs,fs};
-        m_html->SetFonts(font.GetFaceName(), font.GetFaceName(), size);
+        std::array<int, 7> size = {fs,fs,fs,fs,fs,fs,fs};
+        m_html->SetFonts(font.GetFaceName(), font.GetFaceName(), size.cbegin());
         m_html->SetBorders(2);
         const std::string copyright_str = _utf8(L("Copyright"));
         // TRN "Slic3r _is licensed under the_ License"

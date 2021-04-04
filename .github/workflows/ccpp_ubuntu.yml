@@ -43,10 +43,10 @@ jobs:
       run: mkdir build
     - name: cmake
       working-directory: ./build
-      run: cmake .. -DCMAKE_PREFIX_PATH="/home/runner/work/SuperSlicer/SuperSlicer/deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
-    - name: make SuperSlicer
+      run: cmake .. -DCMAKE_PREFIX_PATH="/home/runner/work/Slic3r/Slic3r/deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
+    - name: make Slic3r
       working-directory: ./build
-      run: make SuperSlicer
+      run: make Slic3r
     - name: create directory and copy into it
       working-directory: ./build
       run: |
@@ -57,27 +57,27 @@ jobs:
       run: cp -Rf ../resources package/resources
     - name: copy bin
       working-directory: ./build
-      run: cp -f src/superslicer package/bin/superslicer
+      run: cp -f src/Slic3r package/bin/Slic3r
     - name: create sh from echo
       working-directory: ./build/package
       run: |
-        echo -e '#!/bin/bash\nDIR=$(readlink -f "$0" | xargs dirname)\nexport LD_LIBRARY_PATH="$DIR/bin"\nexec "$DIR/bin/superslicer" "$@"' >superslicer
-        chmod u+x superslicer
-        tar -cvf ../SuperSlicer.tar .
+        echo -e '#!/bin/bash\nDIR=$(readlink -f "$0" | xargs dirname)\nexport LD_LIBRARY_PATH="$DIR/bin"\nexec "$DIR/bin/Slic3r" "$@"' >Slic3r
+        chmod u+x Slic3r
+        tar -cvf ../Slic3r.tar .
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
         name: nightly_linux.tar
-        path: build/SuperSlicer.tar
+        path: build/Slic3r.tar
     - name: build appimage
       working-directory: ./build/package
       run: |
         chmod +x ../../src/platform/unix/build_appimage.sh
-        ../../src/platform/unix/build_appimage.sh SuperSlicer_ubu64.AppImage
+        ../../src/platform/unix/build_appimage.sh Slic3r_ubu64.AppImage
     - name: Upload appimage
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: SuperSlicer-AppImage.tar
-        path: build/package/SuperSlicer_ubu64.AppImage
+        name: Slic3r-AppImage.tar
+        path: build/package/Slic3r_ubu64.AppImage
         
         

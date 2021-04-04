@@ -52,6 +52,8 @@ std::string toString(OptionCategory opt) {
     case padSupp: return "Pad and Support";
     case wipe: return "Wipe Options";
     case milling: return "milling";
+    case hollowing: return "hollowing";
+    case milling_extruders: return "milling_extruders";
     }
     return "error";
 }
@@ -457,7 +459,7 @@ void ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys 
         } else {
             try {
                 my_opt->set(other_opt);
-            } catch (ConfigurationException e) {
+            } catch (ConfigurationException& e) {
                 throw ConfigurationException(std::string(e.what()) + ", when ConfigBase::apply_only on " + opt_key);
             }
         }
@@ -722,7 +724,7 @@ void ConfigBase::load_from_gcode_file(const std::string &file)
             strncmp(slic3rpp_gcode_header, firstline.c_str(), strlen(slic3rpp_gcode_header)) != 0 &&
             strncmp(superslicer_gcode_header, firstline.c_str(), strlen(superslicer_gcode_header)) != 0 &&
             strncmp(prusaslicer_gcode_header, firstline.c_str(), strlen(prusaslicer_gcode_header)) != 0)
-			throw Slic3r::RuntimeError("Not a Slic3r / PrusaSlicer / SuperSlicer generated g-code.");
+			throw Slic3r::RuntimeError("Not a g-code recognized for configuration import.");
     }
     ifs.seekg(0, ifs.end);
 	auto file_length = ifs.tellg();

@@ -94,3 +94,66 @@ SCENARIO("set_speed emits values with fixed-point output.", "[GCodeWriter]") {
         }
     }
 }
+
+SCENARIO("set_fan rescales based on fan_percentage.", "[GCode][GCodeWriter]") {
+    GIVEN("GCodeWriter instance with comments off and RepRap flavor") {
+        GCodeWriter writer;
+        writer.config.gcode_comments.value = false;
+        writer.config.gcode_flavor.value = gcfRepRap;
+        WHEN("set_fan is called to set speed to 100\% with fan_percentage = true") {
+            writer.config.fan_percentage.value = true;
+            THEN("Fan value is set to 100.") {
+                REQUIRE_THAT(writer.set_fan(100, true), Catch::Equals("M106 S100\n"));
+            }
+            AND_WHEN("Fan value is set to 93\%") {
+                THEN("Output string is 'M106 S93'") {
+                    REQUIRE_THAT(writer.set_fan(93, true), Catch::Equals("M106 S93\n"));
+                }
+            }
+            AND_WHEN("Fan value is set to 21\%") {
+                THEN("Output string is 'M106 S21'") {
+                    REQUIRE_THAT(writer.set_fan(21, true), Catch::Equals("M106 S21\n"));
+                }
+            }
+        }
+        WHEN("set_fan is called to set speed to 100\% with fan_percentage = false") {
+            writer.config.fan_percentage.value = false;
+            THEN("Output string is 'M106 S255'") {
+                REQUIRE_THAT(writer.set_fan(100, true), Catch::Equals("M106 S255\n"));
+            }
+            AND_WHEN("Fan value is set to 93\%") {
+                THEN("Output string is 'M106 S237'") {
+                    REQUIRE_THAT(writer.set_fan(93, true), Catch::Equals("M106 S237.15\n"));
+                }
+            }
+            AND_WHEN("Fan value is set to 21\%") {
+                THEN("Output string is 'M106 S54'") {
+                    REQUIRE_THAT(writer.set_fan(21, true), Catch::Equals("M106 S53.55\n"));
+                }
+            }
+        }
+    }
+}
+SCENARIO("set_fan saves state.", "[GCode][GCodeWriter]") {
+    GIVEN("GCodeWriter instance with comments off and RepRap flavor") {
+        GCodeWriter writer;
+        writer.config.gcode_comments.value = false;
+        writer.config.gcode_flavor.value = gcfRepRap;
+        writer.config.fan_percentage.value = true;
+        WHEN("set_fan is called to set speed to 100\%, saving") {
+            THEN("Fan gcode is emitted.") {
+                CHECK_THAT(writer.set_fan(100, false), Catch::Equals("M106 S100\n"));
+            }
+        }
+        AND_WHEN("Another call is made to set_fan for 100\%") {
+            THEN("No fan output gcode is emitted.") {
+                REQUIRE_THAT(writer.set_fan(100, false), Catch::Equals(""));
+            }
+        }
+        AND_WHEN("Another call is made to set_fan for 90\%") {
+            THEN("Fan gcode is emitted.") {
+                REQUIRE_THAT(writer.set_fan(90, false), Catch::Equals("M106 S90\n"));
+            }
+        }
+    }
+}

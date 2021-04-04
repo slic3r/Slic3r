@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Super GCode viewer
+Comment=G-code viewer of Slic3r
+Exec=superslicer --gcodeviewer %F
+Icon=Slic3r-gcodeviewer
+Terminal=false
+Type=Application
+MimeType=text/x.gcode;
+Categories=Graphics;3DGraphics;
+Keywords=3D;Printing;Slicer;

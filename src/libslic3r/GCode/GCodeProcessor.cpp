@@ -863,7 +863,7 @@ void GCodeProcessor::process_file(const std::string& filename, bool apply_postpr
             }
         });
 
-        // if the gcode was produced by this slicer,
+        // if the gcode was produced by Slic3r,
         // extract the config from it
         try {
             if (m_producer == EProducer::PrusaSlicer || m_producer == EProducer::SuperSlicer || m_producer == EProducer::Slic3rPE || m_producer == EProducer::Slic3r) {
@@ -1197,7 +1197,7 @@ void GCodeProcessor::process_tags(const std::string_view comment)
     }
 
 #if ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
-    if (!m_producers_enabled || m_producer == EProducer::PrusaSlicer || m_producer == EProducer::SuperSlicer) {
+    if (!m_producers_enabled || m_producer == EProducer::PrusaSlicer || m_producer == EProducer::Slic3r || m_producer == EProducer::SuperSlicer) {
         // height tag
         if (starts_with(comment, Height_Tag)) {
             if (!parse_number(comment.substr(Height_Tag.size()), m_forced_height))
@@ -1212,7 +1212,7 @@ void GCodeProcessor::process_tags(const std::string_view comment)
         }
     }
 #else
-    if ((!m_producers_enabled || m_producer == EProducer::PrusaSlicer || m_producer == EProducer::SuperSlicer) &&
+    if ((!m_producers_enabled || m_producer == EProducer::PrusaSlicer || m_producer == EProducer::Slic3r) &&
         starts_with(comment, Height_Tag)) {
         // height tag
         if (!parse_number(comment.substr(Height_Tag.size()), m_height))
@@ -1889,7 +1889,7 @@ void GCodeProcessor::process_G1(const GCodeReader::GCodeLine& line)
         m_height_compare.update(m_height, m_extrusion_role);
 #endif // ENABLE_GCODE_VIEWER_DATA_CHECKING
 #else
-        if ((m_producers_enabled && m_producer != EProducer::PrusaSlicer || m_producer == EProducer::SuperSlicer) || m_height == 0.0f) {
+        if ((m_producers_enabled && m_producer != EProducer::PrusaSlicer || m_producer == EProducer::SuperSlicer || m_producer == EProducer::Slic3r) || m_height == 0.0f) {
             if (m_end_position[Z] > m_extruded_last_z + EPSILON) {
                 m_height = m_end_position[Z] - m_extruded_last_z;
 #if ENABLE_GCODE_VIEWER_DATA_CHECKING

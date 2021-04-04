@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Slic3r
+GenericName=3D Printing Software
+Comment=G-code generator for 3D printers
+Icon=Slic3r
+Exec=Slic3r %F
+Terminal=false
+Type=Application
+MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;
+Categories=Graphics;3DGraphics;Engineering;
+Keywords=3D;Printing;Slicer;slice;3D;printer;convert;gcode;stl;obj;amf;SLA
+StartupNotify=false
+StartupWMClass=Slic3r

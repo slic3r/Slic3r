@@ -17,9 +17,18 @@ include(Catch)
 
 set(CATCH_EXTRA_ARGS "" CACHE STRING "Extra arguments for catch2 test suites.")
 
+set(COMMON_DATA_UTILS
+    ${CMAKE_CURRENT_SOURCE_DIR}/data/cpp/test_data.cpp
+)
+
+
 add_library(test_common INTERFACE)
 target_compile_definitions(test_common INTERFACE TEST_DATA_DIR=R"\(${TEST_DATA_DIR}\)" CATCH_CONFIG_FAST_COMPILE)
 target_link_libraries(test_common INTERFACE Catch2::Catch2)
+
+add_library(test_common_data ${COMMON_DATA_UTILS})
+target_include_directories(test_common_data PUBLIC ${TEST_DATA_DIR}/include)
+target_link_libraries(test_common_data PRIVATE test_common libslic3r)
 
 if (APPLE)
     target_link_libraries(test_common INTERFACE "-liconv -framework IOKit" "-framework CoreFoundation" -lc++)

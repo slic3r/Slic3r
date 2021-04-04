@@ -1011,6 +1011,7 @@ public:
     ConfigOptionFloats              extruder_temperature_offset;
     ConfigOptionString              extrusion_axis;
     ConfigOptionFloats              extrusion_multiplier;
+    ConfigOptionBool                fan_percentage;
     ConfigOptionFloat               fan_kickstart;
     ConfigOptionBool                fan_speedup_overhangs;
     ConfigOptionFloat               fan_speedup_time;
@@ -1121,6 +1122,7 @@ protected:
         OPT_PTR(extruder_temperature_offset);
         OPT_PTR(extrusion_axis);
         OPT_PTR(extrusion_multiplier);
+        OPT_PTR(fan_percentage);
         OPT_PTR(fan_kickstart);
         OPT_PTR(fan_speedup_overhangs);
         OPT_PTR(fan_speedup_time);

@@ -3,8 +3,8 @@
 ## 1) initialisation
 open the settings.ini
 for each file that can contains useful translation, create / edit a "data" line to point to the said file.
-The 'input' property must be the SuperSlicer.pot path
-The 'output' must be the SuperSlicer.po
+The 'input' property must be the Slic3r.pot path
+The 'output' must be the Slic3r.po
 The 'todo' contains the path of the po file to complete.
 
 note that the first data line has the priority over the other ones (the first translation encountered is the one used)
@@ -16,9 +16,9 @@ So the settings.ini contains these lines :
 data = es/Slic3r++.po
 data = es/PrusaSlicer_es.po
 
-input = SuperSlicer.pot
+input = Slic3r.pot
 todo = es/todo.po
-output = es/SuperSlicer.po
+output = es/Slic3r.po
 ```
 
 ## 2) launch the utility.
@@ -43,13 +43,13 @@ After filling the todo file, change the settings.ini:
 
 ```
 data = es/todo.po
-data = es/SuperSlicer.po
+data = es/Slic3r.po
 data = es/Slic3r++.po
 data = es/PrusaSlicer_es.po
 
-input = SuperSlicer.pot
+input = Slic3r.pot
 todo = es/todo.po
-output = es/SuperSlicer.po
+output = es/Slic3r.po
 ```
 
 And re-launch the utility.

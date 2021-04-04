@@ -1,37 +1,37 @@
 #include "MainFrame.hpp"
 
-#include <wx/panel.h>
-#include <wx/notebook.h>
-#include <wx/icon.h>
-#include <wx/sizer.h>
-#include <wx/menu.h>
-#include <wx/progdlg.h>
-#include <wx/tooltip.h>
-//#include <wx/glcanvas.h>
-#include <wx/filename.h>
 #include <wx/debug.h>
+#include <wx/filename.h>
+//#include <wx/glcanvas.h>
+#include <wx/icon.h>
+#include <wx/menu.h>
+#include <wx/notebook.h>
+#include <wx/panel.h>
+#include <wx/progdlg.h>
+#include <wx/sizer.h>
+#include <wx/tooltip.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 
-#include "libslic3r/Print.hpp"
 #include "libslic3r/Polygon.hpp"
-#include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/Print.hpp"
+#include "libslic3r/SLAPrint.hpp"
 
-#include "Tab.hpp"
-#include "ProgressStatusBar.hpp"
-#include "3DScene.hpp"
-#include "PrintHostDialogs.hpp"
-#include "wxExtensions.hpp"
-#include "GUI_ObjectList.hpp"
-#include "Mouse3DController.hpp"
-#include "RemovableDriveManager.hpp"
-#include "InstanceCheck.hpp"
-#include "I18N.hpp"
-#include "GLCanvas3D.hpp"
-#include "Plater.hpp"
 #include "../Utils/Process.hpp"
+#include "3DScene.hpp"
+#include "GLCanvas3D.hpp"
+#include "GUI_ObjectList.hpp"
+#include "I18N.hpp"
+#include "InstanceCheck.hpp"
+#include "Mouse3DController.hpp"
+#include "Plater.hpp"
+#include "PrintHostDialogs.hpp"
+#include "ProgressStatusBar.hpp"
+#include "RemovableDriveManager.hpp"
+#include "Tab.hpp"
 #include "format.hpp"
+#include "wxExtensions.hpp"
 
 #include <fstream>
 #include <string_view>
@@ -60,9 +60,9 @@ public:
     wxMenu *CreatePopupMenu() override {
         wxMenu *menu = new wxMenu;
         if(wxGetApp().app_config->get("single_instance") == "0") {
-            // Only allow opening a new PrusaSlicer instance on OSX if "single_instance" is disabled, 
+            // Only allow opening a new Slic3r instance on OSX if "single_instance" is disabled, 
             // as starting new instances would interfere with the locking mechanism of "single_instance" support.
-            append_menu_item(menu, wxID_ANY, _L("Open new instance"), _L("Open a new PrusaSlicer instance"),
+            append_menu_item(menu, wxID_ANY, _L("Open new instance"), _L("Open a new Slic3r instance"),
             [this](wxCommandEvent&) { start_new_slicer(); }, "", nullptr);
         }
         append_menu_item(menu, wxID_ANY, _L("G-code preview") + dots, _L("Open G-code viewer"),
@@ -76,7 +76,7 @@ public:
     GCodeViewerTaskBarIcon(wxTaskBarIconType iconType = wxTBI_DEFAULT_TYPE) : wxTaskBarIcon(iconType) {}
     wxMenu *CreatePopupMenu() override {
         wxMenu *menu = new wxMenu;
-        append_menu_item(menu, wxID_ANY, _L("Open PrusaSlicer"), _L("Open a new PrusaSlicer instance"),
+        append_menu_item(menu, wxID_ANY, _L("Open Slic3r"), _L("Open a new Slic3r instance"),
             [this](wxCommandEvent&) { start_new_slicer(nullptr, true); }, "", nullptr);
         append_menu_item(menu, wxID_ANY, _L("G-code preview") + dots, _L("Open new G-code viewer"),
             [this](wxCommandEvent&) { start_new_gcodeviewer_open_file(); }, "", nullptr);
@@ -131,7 +131,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
     default:
     case GUI_App::EAppMode::Editor:
         m_taskbar_icon = std::make_unique<PrusaSlicerTaskBarIcon>(wxTBI_DOCK);
-        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG), SLIC3R_APP_NAME);
+        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG), SLIC3R_APP_ID);
         break;
     case GUI_App::EAppMode::GCodeViewer:
         m_taskbar_icon = std::make_unique<GCodeViewerTaskBarIcon>(wxTBI_DOCK);
@@ -150,7 +150,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
 	m_statusbar->embed(this);
     m_statusbar->set_status_text(_L("Version") + " " +
         SLIC3R_VERSION +
-        _L("Remember to check for updates at https://github.com/" SLIC3R_GITHUB "/releases"));
+        _L("Remember to check for updates at " SLIC3R_DOWNLOAD));
 
     // initialize tabpanel and menubar
     init_tabpanel();
@@ -1050,24 +1050,18 @@ static const wxString sep_space = "";
 static wxMenu* generate_help_menu()
 {
     wxMenu* helpMenu = new wxMenu();
-    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " Releases"), _L("Open the " SLIC3R_APP_NAME " github releases page in your browser"),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/" SLIC3R_GITHUB "/releases"); });
+    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " Releases"), _L("Open the " SLIC3R_APP_NAME " releases page in your browser"),
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser(SLIC3R_DOWLOAD); });
+    append_menu_item(helpMenu, wxID_ANY, _L("Slic3r manual"), _L("Open the Slic3r manual in your browser"),
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://manual.slic3r.org"); });
     append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " wiki"), _L("Open the " SLIC3R_APP_NAME " wiki in your browser"),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/" SLIC3R_GITHUB "/wiki"); });
-    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " website"), _L("Open the " SLIC3R_APP_NAME " website in your browser"),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/" SLIC3R_GITHUB); });
-    append_menu_item(helpMenu, wxID_ANY, _L("Prusa Edition website"), _L("Open the Prusa Edition website in your browser"),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/prusa3d/PrusaSlicer"); });
+    append_menu_item(helpMenu, wxID_ANY, _L("Slic3r website"), _L("Open the Slic3r website in your browser"),
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://slic3r.org"); });
     //#        my $versioncheck = $self->_append_menu_item($helpMenu, "Check for &Updates...", "Check for new Slic3r versions", sub{
     //#            wxTheApp->check_version(1);
     //#        });
     //#        $versioncheck->Enable(wxTheApp->have_version_check);
-    append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("Slic3r Manual")),
-        wxString::Format(_L("Open the Slic3r Manual in your browser")),
-        //            [this](wxCommandEvent&) { wxGetApp().open_web_page_localized("https://www.prusa3d.com/slicerweb"); });
-        //        append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("%s &Manual"), SLIC3R_APP_NAME),
-        //                                             wxString::Format(_L("Open the %s manual in your browser"), SLIC3R_APP_NAME),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://manual.slic3r.org/"); });
     helpMenu->AppendSeparator();
     append_menu_item(helpMenu, wxID_ANY, _L("System &Info"), _L("Show system information"),
         [](wxCommandEvent&) { wxGetApp().system_info(); });
@@ -1079,10 +1073,11 @@ static wxMenu* generate_help_menu()
     if (wxGetApp().is_editor())
         append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("&About %s"), SLIC3R_APP_NAME), _L("Show about dialog"),
             [](wxCommandEvent&) { Slic3r::GUI::about(); });
-    else
+    else {
         append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("&About %s"), GCODEVIEWER_APP_NAME), _L("Show about dialog"),
             [](wxCommandEvent&) { Slic3r::GUI::about(); });
         helpMenu->AppendSeparator();
+    }
     append_menu_item(helpMenu, wxID_ANY, _L("Keyboard Shortcuts") + sep + "&?", _L("Show the list of the keyboard shortcuts"),
         [](wxCommandEvent&) { wxGetApp().keyboard_shortcuts(); });
 #if ENABLE_THUMBNAIL_GENERATOR_DEBUG
@@ -1746,7 +1741,7 @@ bool MainFrame::load_config_file(const std::string &path)
 {
     try {
         wxGetApp().preset_bundle->load_config_file(path); 
-    } catch (const std::exception &ex) {
+    } catch (const std::exception& ex) {
         show_error(this, ex.what());
         return false;
     }
@@ -1777,7 +1772,7 @@ void MainFrame::export_configbundle(bool export_physical_printers /*= false*/)
         wxGetApp().app_config->update_config_dir(get_dir_name(file));
         try {
             wxGetApp().preset_bundle->export_configbundle(file.ToUTF8().data(), false, export_physical_printers);
-        } catch (const std::exception &ex) {
+        } catch (const std::exception& ex) {
 			show_error(this, ex.what());
         }
     }
@@ -2198,5 +2193,5 @@ void SettingsDialog::on_dpi_changed(const wxRect& suggested_rect)
 }
 
 
-} // GUI
-} // Slic3r
+} // namespace GUI
+} // namespace Slic3r

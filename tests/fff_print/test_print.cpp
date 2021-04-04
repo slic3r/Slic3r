@@ -13,10 +13,22 @@ SCENARIO("PrintObject: Perimeter generation", "[PrintObject]") {
     GIVEN("20mm cube and default config") {
         WHEN("make_perimeters() is called")  {
             Slic3r::Print print;
-            Slic3r::Test::init_and_process_print({TestMesh::cube_20x20x20}, print, { { "fill_density", 0 } });
+            Slic3r::Test::init_and_process_print({TestMesh::cube_20x20x20}, print, {
+                    { "fill_density", 0 },
+                    { "solid_layers", 0 },
+                    { "layer_height", 0.2 },
+                    { "first_layer_height", 0.2},
+                    { "first_layer_width", 0.3 },
+                    { "only_one_perimeter_top", 0},
+                    { "perimeter_extrusion_width", 0.3},
+                    { "first_layer_extrusion_width", 0.3},
+                    { "external_perimeter_extrusion_width", 0.3 },
+                    { "perimeters", 3 },
+                    { "nozzle_diameter", 0.3 },
+                    });
 			const PrintObject &object = *print.objects().front();
 			THEN("67 layers exist in the model") {
-                REQUIRE(object.layers().size() == 66);
+                REQUIRE(object.layers().size() == 100);
             }
             THEN("Every layer in region 0 has 1 island of perimeters") {
                 for (const Layer *layer : object.layers())
