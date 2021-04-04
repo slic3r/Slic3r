@@ -540,7 +540,7 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
 
     m_extruder_names.resize(extruders_count);
     for (size_t i = 0; i < extruders_count; ++i) {
-        m_extruder_names[i] = config.tool_name.values[i];
+        m_extruder_names[i] = config.tool_name.get_at(i);
     }
 
     m_extruder_colors.resize(extruders_count);
