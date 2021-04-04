@@ -6,7 +6,7 @@ set(SLIC3R_APP_NAME "Slic3r")
 # Key fo the slicer, must only contains ascii chars and no spaces
 set(SLIC3R_APP_KEY "Slic3r")
 # exe name of the slicer, should be lowercase and valid in all os
-set(SLIC3R_APP_CMD "slic3r")
+set(SLIC3R_APP_CMD "Slic3r")
 # versions
 set(SLIC3R_VERSION "2.0")
 set(SLIC3R_VERSION_FULL "2.0.00.0")
