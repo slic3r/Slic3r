@@ -22,6 +22,7 @@ group:Cooling fan
 		setting:label$Only for overhangs:fan_speedup_overhangs
 	end_line
 	setting:label$Kickstart duration:fan_kickstart
+	setting:fan_percentage
 group:Thumbnails
 	line:Size for Gcode
 		setting:id$0:label$Small:thumbnails
