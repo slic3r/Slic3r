@@ -67,6 +67,8 @@ add_library(libslic3r STATIC
     Flow.cpp
     Flow.hpp
     format.hpp
+    Format/Format.hpp
+    Format/Format.cpp
     Format/3mf.cpp
     Format/3mf.hpp
     Format/AMF.cpp
@@ -81,6 +83,8 @@ add_library(libslic3r STATIC
     Format/STL.hpp
     Format/SL1.hpp
     Format/SL1.cpp
+    Format/CWS.hpp
+    Format/CWS.cpp
     GCode/ThumbnailData.cpp
     GCode/ThumbnailData.hpp
     GCode/CoolingBuffer.cpp

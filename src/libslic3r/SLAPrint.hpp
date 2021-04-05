@@ -503,6 +503,7 @@ public:
     const std::vector<PrintLayer>& print_layers() const { return m_printer_input; }
     
     void set_printer(SLAPrinter *archiver);
+    void set_printer(std::shared_ptr<SLAPrinter> archiver);
     
 private:
     
@@ -525,6 +526,7 @@ private:
     
     // The archive object which collects the raster images after slicing
     SLAPrinter                     *m_printer = nullptr;
+    std::shared_ptr<SLAPrinter>    m_printer_ref;
     
     // Estimated print time, material consumed.
     SLAPrintStatistics              m_print_statistics;

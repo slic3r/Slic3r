@@ -166,6 +166,17 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<PrinterTechnology
     return keys_map;
 }
 
+template<> inline const t_config_enum_values& ConfigOptionEnum<OutputFormat>::get_enum_values() {
+    static t_config_enum_values keys_map;
+    if (keys_map.empty()) {
+        keys_map["mCWS"] = ofMaskedCWS;
+        keys_map["SL1"]  = ofSL1;
+    }
+    return keys_map;
+}
+
+
+
 template<> inline const t_config_enum_values& ConfigOptionEnum<WipeAlgo>::get_enum_values() {
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
@@ -400,6 +411,7 @@ extern const PrintConfigDef print_config_def;
 class StaticPrintConfig;
 
 PrinterTechnology printer_technology(const ConfigBase &cfg);
+OutputFormat output_format(const ConfigBase &cfg);
 // double min_object_distance(const ConfigBase &cfg);
 
 // Slic3r dynamic configuration, used to override the configuration
@@ -1668,6 +1680,7 @@ class SLAPrinterConfig : public StaticPrintConfig
     STATIC_PRINT_CONFIG_CACHE(SLAPrinterConfig)
 public:
     ConfigOptionEnum<PrinterTechnology>     printer_technology;
+    ConfigOptionEnum<OutputFormat>          output_format;
     ConfigOptionPoints                      bed_shape;
     ConfigOptionFloat                       max_print_height;
     ConfigOptionFloat                       display_width;
@@ -1698,6 +1711,7 @@ protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
         OPT_PTR(printer_technology);
+        OPT_PTR(output_format);
         OPT_PTR(bed_shape);
         OPT_PTR(max_print_height);
         OPT_PTR(display_width);

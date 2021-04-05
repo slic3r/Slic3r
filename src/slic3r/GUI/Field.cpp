@@ -1192,6 +1192,8 @@ void Choice::set_value(const boost::any& value, bool change_event)
             val = idx_from_enum_value<SLAPillarConnectionMode>(val);
         else if (m_opt_id.compare("wipe_advanced_algo") == 0)
             val = idx_from_enum_value<WipeAlgo>(val);
+        else if (m_opt_id.compare("output_format") == 0)
+            val = idx_from_enum_value<OutputFormat>(val);
 		field->SetSelection(val);
 		break;
 	}
@@ -1307,6 +1309,8 @@ boost::any& Choice::get_value()
             convert_to_enum_value<SLAPillarConnectionMode>(ret_enum);
         else if (m_opt_id.compare("wipe_advanced_algo") == 0)
             convert_to_enum_value<WipeAlgo>(ret_enum);
+        else if (m_opt_id.compare("output_format") == 0)
+            convert_to_enum_value<OutputFormat>(ret_enum);
     }
     else if (m_opt.gui_type == "f_enum_open") {
         const int ret_enum = field->GetSelection();

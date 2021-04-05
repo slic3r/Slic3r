@@ -5007,6 +5007,18 @@ void PrintConfigDef::init_sla_params()
     def->max = 10;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(2.0));
+
+
+    def = this->add("output_format", coEnum);
+    def->label = L("Output Format");
+    def->tooltip = L("Select the output format for this printer.");
+    def->enum_keys_map = &ConfigOptionEnum<OutputFormat>::get_enum_values();
+    def->enum_values.push_back("mCWS");
+    def->enum_values.push_back("SL1");
+    def->enum_labels.push_back(L("Masked CWS"));
+    def->enum_labels.push_back(L("Prusa SL1"));
+    def->mode = comAdvanced; // output_format should be preconfigured in profiles;
+    def->set_default_value(new ConfigOptionEnum<OutputFormat>(ofMaskedCWS));
 }
 
 void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &value)
@@ -5367,6 +5379,16 @@ DynamicPrintConfig* DynamicPrintConfig::new_from_defaults_keys(const std::vector
     auto *out = new DynamicPrintConfig();
     out->apply_only(FullPrintConfig::defaults(), keys);
     return out;
+}
+
+OutputFormat output_format(const ConfigBase &cfg)
+{
+    std::cerr << "Detected technology " << printer_technology(cfg) << "\n";
+    if (printer_technology(cfg) == ptFFF) return ofGCode;
+    const ConfigOptionEnum<OutputFormat> *opt = cfg.option<ConfigOptionEnum<OutputFormat>>("output_format");
+    if (opt) return opt->value;
+
+    return ofUnknown;
 }
 
 /*

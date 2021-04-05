@@ -959,6 +959,8 @@ static wxString get_string_value(std::string opt_key, const DynamicPrintConfig& 
             return get_string_from_enum<CompleteObjectSort>(opt_key, config);
         if (opt_key == "display_orientation")
             return get_string_from_enum<SLADisplayOrientation>(opt_key, config);
+        if (opt_key == "output_format")
+            return get_string_from_enum<OutputFormat>(opt_key, config);
         if (opt_key == "gcode_flavor")
             return get_string_from_enum<GCodeFlavor>(opt_key, config);
         if (opt_key == "host_type")

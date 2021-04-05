@@ -186,6 +186,31 @@ inline PrinterTechnology operator&=(PrinterTechnology& a, PrinterTechnology b) {
     a = a & b; return a;
 }
 
+/// 
+enum OutputFormat : uint16_t
+{
+    ofMaskedCWS = 1 << 0,
+    ofSL1 = 1 << 1,
+    ofGCode = 1 << 2,
+    ofUnknown = 1 << 15
+};
+
+inline OutputFormat operator|(OutputFormat a, OutputFormat b) {
+    return static_cast<OutputFormat>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+}
+inline OutputFormat operator&(OutputFormat a, OutputFormat b) {
+    return static_cast<OutputFormat>(static_cast<uint8_t>(a)& static_cast<uint8_t>(b));
+}
+inline OutputFormat operator|=(OutputFormat& a, OutputFormat b) {
+    a = a | b; return a;
+}
+inline OutputFormat operator&=(OutputFormat& a, OutputFormat b) {
+    a = a & b; return a;
+}
+
+
+
+
 // A generic value of a configuration option.
 class ConfigOption {
 public:

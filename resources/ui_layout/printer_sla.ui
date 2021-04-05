@@ -1,5 +1,7 @@
 
 page:General:printer
+group:Output Method
+    setting:output_format
 group:Size and coordinates
 	bed_shape
 	setting:max_print_height

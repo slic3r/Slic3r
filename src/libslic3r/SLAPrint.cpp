@@ -678,6 +678,12 @@ void SLAPrint::set_printer(SLAPrinter *arch)
     m_printer = arch;
 }
 
+void SLAPrint::set_printer(std::shared_ptr<SLAPrinter> arch)
+{
+    this->set_printer(arch.get());
+    m_printer_ref = arch; // add this so that the reference count is increased.
+}
+
 bool SLAPrint::invalidate_step(SLAPrintStep step)
 {
     bool invalidated = Inherited::invalidate_step(step);
@@ -839,6 +845,7 @@ bool SLAPrint::invalidate_state_by_config_options(const std::vector<t_config_opt
         "max_print_height",
         "printer_technology",
         "output_filename_format",
+        "output_format",
         "fast_tilt_time",
         "slow_tilt_time",
         "area_fill",
