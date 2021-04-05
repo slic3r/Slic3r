@@ -992,7 +992,7 @@ void Sidebar::jump_to_option(size_t selected)
     wxGetApp().get_tab(opt.type)->activate_option(boost::nowide::narrow(opt.opt_key), boost::nowide::narrow(opt.category));
 
     // Switch to the Settings NotePad
-//    wxGetApp().mainframe->select_tab();
+//    wxGetApp().mainframe->select_tab(MainFrame::ETabType::LastSettings);
 }
 
 ObjectManipulation* Sidebar::obj_manipul()
@@ -3095,14 +3095,14 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
     }
 
     //update tab if needed
-    if (invalidated != Print::ApplyStatus::APPLY_STATUS_UNCHANGED && process_done_callback)
+    if (invalidated != Print::ApplyStatus::APPLY_STATUS_UNCHANGED)
     {
         if (this->preview->can_display_gcode())
-            process_done_callback(2);
+            main_frame->select_tab(MainFrame::ETabType::PlaterGcode, true);
         else if (this->preview->can_display_volume())
-            process_done_callback(1);
+            main_frame->select_tab(MainFrame::ETabType::PlaterPreview, true);
         else
-            process_done_callback(0);
+            main_frame->select_tab(MainFrame::ETabType::Plater3D, true);
     }
     return return_state;
 }
@@ -3708,7 +3708,7 @@ void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
 void Plater::priv::on_slicing_completed(wxCommandEvent & evt)
 {
     notification_manager->push_slicing_complete_notification(evt.GetInt(), is_sidebar_collapsed());
-    process_done_callback(1);
+    main_frame->select_tab(MainFrame::ETabType::PlaterPreview);
     switch (this->printer_technology) {
     case ptFFF:
         this->update_fff_scene();
@@ -3788,7 +3788,7 @@ void Plater::priv::on_process_completed(SlicingProcessCompletedEvent &evt)
     this->background_process.stop();
     this->statusbar()->reset_cancel_callback();
     this->statusbar()->stop_busy();
-    process_done_callback(2);
+    main_frame->select_tab(MainFrame::ETabType::PlaterGcode);
 
     // Reset the "export G-code path" name, so that the automatic background processing will be enabled again.
     this->background_process.reset_export();
@@ -4281,7 +4281,7 @@ bool Plater::priv::init_view_toolbar()
 
     item.name = "3D";
     item.icon_filename = "editor.svg";
-    item.tooltip = _utf8(L("3D editor view")) + " [" + GUI::shortkey_ctrl_prefix() + "5]";
+    item.tooltip = _utf8(L("3D editor view")) + " [" + GUI::shortkey_ctrl_prefix() + "1]";
     item.sprite_id = 0;
     item.left.action_callback = [this]() { if (this->q != nullptr) wxPostEvent(this->q, SimpleEvent(EVT_GLVIEWTOOLBAR_3D)); };
     if (!view_toolbar.add_item(item))
@@ -4289,7 +4289,7 @@ bool Plater::priv::init_view_toolbar()
 
     item.name = "Preview";
     item.icon_filename = "preview.svg";
-    item.tooltip = _utf8(L("Preview")) + " [" + GUI::shortkey_ctrl_prefix() + "6]";
+    item.tooltip = _utf8(L("Preview")) + " [" + GUI::shortkey_ctrl_prefix() + "3]";
     item.sprite_id = 1;
     item.left.action_callback = [this]() { if (this->q != nullptr) wxPostEvent(this->q, SimpleEvent(EVT_GLVIEWTOOLBAR_PREVIEW)); };
     if (!view_toolbar.add_item(item))
@@ -5238,9 +5238,6 @@ Preview::ForceState Plater::get_force_preview() {
     return p->preview->get_force_state();
 }
 
-void Plater::process_done_callback(std::function<void(int)> process_done_callback) {
-    p->process_done_callback = process_done_callback;
-}
 
 bool Plater::is_preview_shown() const { return p->is_preview_shown(); }
 bool Plater::is_preview_loaded() const { return p->is_preview_loaded(); }

@@ -81,7 +81,8 @@ class MainFrame : public DPIFrame
 
     
 
-    size_t      m_last_selected_tab;
+    size_t      m_last_selected_plater_tab;
+    size_t      m_last_selected_setting_tab;
 
     std::string     get_base_name(const wxString &full_name, const char *extension = nullptr) const;
     std::string     get_dir_name(const wxString &full_name) const;
@@ -117,17 +118,36 @@ class MainFrame : public DPIFrame
 
     // vector of a MenuBar items changeable in respect to printer technology 
     std::vector<wxMenuItem*> m_changeable_menu_items;
+    wxMenuItem* m_layerpreview_menu_item;
 
     wxFileHistory m_recent_projects;
+
+public:
 
     enum class ESettingsLayout
     {
         Unknown,
         Old,
-        New,
+        Tabs,
+        Hidden,
         Dlg,
         GCodeViewer
     };
+
+    enum class ETabType : uint8_t
+    {
+        Plater3D,
+        PlaterPreview,
+        PlaterGcode,
+        LastPlater,
+        PrintSettings,
+        FilamentSettings,
+        PrinterSettings,
+        LastSettings,
+        Any
+    };
+
+private:
     
     ESettingsLayout m_layout{ ESettingsLayout::Unknown };
 
@@ -136,6 +156,7 @@ protected:
     virtual void on_sys_color_changed() override;
 
 public:
+
     MainFrame();
     ~MainFrame() = default;
 
@@ -162,7 +183,7 @@ public:
     void        update_ui_from_settings(bool apply_free_camera_correction = true);
     bool        is_loaded() const { return m_loaded; }
     bool        is_last_input_file() const  { return !m_qs_last_input_file.IsEmpty(); }
-    bool        is_dlg_layout() const { return m_layout == ESettingsLayout::Dlg; }
+    ESettingsLayout get_layout() const { return m_layout; }
 
     void        quick_slice(const int qs = qsUndef);
     void        reslice_now();
@@ -177,8 +198,9 @@ public:
     void        load_config(const DynamicPrintConfig& config);
     // Select tab in m_tabpanel
     // When tab == -1, will be selected last selected tab
+    // 0 = a plater tab, 1 = print setting, 2 = filament settign, 3 = printer setting
     void        select_tab(Tab* tab);
-    void        select_tab(size_t tab = size_t(-1));
+    void        select_tab(ETabType tab = ETabType::Any, bool keep_tab_type = false);
     void        select_view(const std::string& direction);
     // Propagate changed configuration from the Tab to the Plater and save changes to the AppConfig
     void        on_config_changed(DynamicPrintConfig* cfg) const ;
@@ -189,6 +211,7 @@ public:
 
     Plater*               m_plater { nullptr };
     wxNotebook*           m_tabpanel { nullptr };
+    bool                  m_tabpanel_stop_event = false;
     SettingsDialog        m_settings_dialog;
     wxWindow*             m_plater_page{ nullptr };
     wxProgressDialog*     m_progress_dialog { nullptr };

@@ -112,16 +112,18 @@ void Field::PostInitialize()
 	BUILD();
 
 	// For the mode, when settings are in non-modal dialog, neither dialog nor tabpanel doesn't receive wxEVT_KEY_UP event, when some field is selected.
-	// So, like a workaround check wxEVT_KEY_UP event for the Filed and switch between tabs if Ctrl+(1-4) was pressed 
+	// So, like a workaround check wxEVT_KEY_UP event for the Filed and switch between tabs if Ctrl+(1-6) was pressed 
 	if (getWindow())
 		getWindow()->Bind(wxEVT_KEY_UP, [](wxKeyEvent& evt) {
 		    if ((evt.GetModifiers() & wxMOD_CONTROL) != 0) {
-			    int tab_id = -1;
-			    switch (evt.GetKeyCode()) {
-			    case '1': { tab_id = 0; break; }
-			    case '2': { tab_id = 1; break; }
-				case '3': { tab_id = 2; break; }
-				case '4': { tab_id = 3; break; }
+                MainFrame::ETabType tab_id = MainFrame::ETabType::Any;
+                switch (evt.GetKeyCode()) {
+                case '1': { tab_id = MainFrame::ETabType::Plater3D; break; }
+                case '2': { tab_id = MainFrame::ETabType::PlaterPreview; break; }
+                case '3': { tab_id = MainFrame::ETabType::PlaterGcode; break; }
+                case '4': { tab_id = MainFrame::ETabType::PrintSettings; break; }
+                case '5': { tab_id = MainFrame::ETabType::FilamentSettings; break; }
+                case '6': { tab_id = MainFrame::ETabType::PrintSettings;     break; }
 #ifdef __APPLE__
 				case 'f':
 #else /* __APPLE__ */
@@ -130,9 +132,11 @@ void Field::PostInitialize()
 				case 'F': { wxGetApp().plater()->search(false); break; }
 			    default: break;
 			    }
-			    if (tab_id >= 0)
+			    if (tab_id < MainFrame::ETabType::Any)
 					wxGetApp().mainframe->select_tab(tab_id);
-				if (tab_id > 0)
+				if (wxGetApp().mainframe->get_layout() == MainFrame::ESettingsLayout::Tabs
+					|| wxGetApp().mainframe->get_layout() == MainFrame::ESettingsLayout::Old
+					|| tab_id >= MainFrame::ETabType::PrintSettings)
 					// tab panel should be focused for correct navigation between tabs
 				    wxGetApp().tab_panel()->SetFocus();
 		    }

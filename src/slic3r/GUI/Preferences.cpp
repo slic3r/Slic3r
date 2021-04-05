@@ -590,22 +590,24 @@ void PreferencesDialog::create_settings_mode_widget()
 						   _L("Settings in non-modal window") };
 
 	auto app_config = get_app_config();
-	int selection = app_config->get("old_settings_layout_mode") == "1" ? 0 :
-	                app_config->get("new_settings_layout_mode") == "1" ? 1 :
-	                app_config->get("dlg_settings_layout_mode") == "1" ? 2 : 0;
+	int selection = app_config->get("tab_settings_layout_mode") == "1" ? 0 :
+					app_config->get("old_settings_layout_mode") == "1" ? 1 :
+	                app_config->get("new_settings_layout_mode") == "1" ? 2 :
+	                app_config->get("dlg_settings_layout_mode") == "1" ? 3 : 1;
 
 	wxWindow* parent = m_optgroup_gui->parent();
 
 	m_layout_mode_box = new wxRadioBox(parent, wxID_ANY, _L("Layout Options"), wxDefaultPosition, wxDefaultSize,
-		WXSIZEOF(choices), choices, 3, wxRA_SPECIFY_ROWS);
+		WXSIZEOF(choices), choices, 4, wxRA_SPECIFY_ROWS);
 	m_layout_mode_box->SetFont(wxGetApp().normal_font());
 	m_layout_mode_box->SetSelection(selection);
 
 	m_layout_mode_box->Bind(wxEVT_RADIOBOX, [this](wxCommandEvent& e) {
 		int selection = e.GetSelection();
-		m_values["old_settings_layout_mode"] = boost::any_cast<bool>(selection == 0) ? "1" : "0";
-		m_values["new_settings_layout_mode"] = boost::any_cast<bool>(selection == 1) ? "1" : "0";
-		m_values["dlg_settings_layout_mode"] = boost::any_cast<bool>(selection == 2) ? "1" : "0";
+		m_values["tab_settings_layout_mode"] = boost::any_cast<bool>(selection == 0) ? "1" : "0";
+		m_values["old_settings_layout_mode"] = boost::any_cast<bool>(selection == 1) ? "1" : "0";
+		m_values["new_settings_layout_mode"] = boost::any_cast<bool>(selection == 2) ? "1" : "0";
+		m_values["dlg_settings_layout_mode"] = boost::any_cast<bool>(selection == 3) ? "1" : "0";
 	});
 
 	auto sizer = new wxBoxSizer(wxHORIZONTAL);

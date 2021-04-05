@@ -169,7 +169,6 @@ public:
     void select_view_3D(const std::string& name);
     void set_force_preview(Preview::ForceState force);
     Preview::ForceState get_force_preview();
-    void process_done_callback(std::function<void(int state)> process_done_callback);
 
     bool is_preview_shown() const;
     bool is_preview_loaded() const;

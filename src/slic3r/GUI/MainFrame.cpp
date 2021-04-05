@@ -94,12 +94,12 @@ static wxIcon main_frame_icon(GUI_App::EAppMode app_mode)
     if (len > 0 && len < MAX_PATH) {
         path.erase(path.begin() + len, path.end());
         if (app_mode == GUI_App::EAppMode::GCodeViewer) {
-            // Only in case the slicer was started with --gcodeviewer parameter try to load the icon from prusa-gcodeviewer.exe
+            // Only in case the slicer was started with --gcodeviewer parameter try to load the icon from gcodeviewer.exe
             // Otherwise load it from the exe.
-            for (const std::wstring_view exe_name : { std::wstring_view(L"superslicer.exe"), std::wstring_view(L"superslicer_console.exe") })
+            for (const std::wstring_view exe_name : { std::wstring_view(SLIC3R_APP_WCMD L".exe"), std::wstring_view(SLIC3R_APP_WCMD L"_console.exe") })
                 if (boost::iends_with(path, exe_name)) {
                     path.erase(path.end() - exe_name.size(), path.end());
-                    path += L"prusa-gcodeviewer.exe";
+                    path += GCODEVIEWER_APP_WCMD L".exe";
                     break;
                 }
         }
@@ -131,11 +131,11 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
     default:
     case GUI_App::EAppMode::Editor:
         m_taskbar_icon = std::make_unique<PrusaSlicerTaskBarIcon>(wxTBI_DOCK);
-        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG), "Slic3r");
+        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG), SLIC3R_APP_NAME);
         break;
     case GUI_App::EAppMode::GCodeViewer:
         m_taskbar_icon = std::make_unique<GCodeViewerTaskBarIcon>(wxTBI_DOCK);
-        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("PrusaSlicer-gcodeviewer_128px.png"), wxBITMAP_TYPE_PNG), "G-code Viewer");
+        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("PrusaSlicer-gcodeviewer_128px.png"), wxBITMAP_TYPE_PNG), GCODEVIEWER_APP_NAME);
         break;
     }
 #endif // __APPLE__
@@ -150,7 +150,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
 	m_statusbar->embed(this);
     m_statusbar->set_status_text(_L("Version") + " " +
         SLIC3R_VERSION +
-        _L("Remember to check for updates at https://slic3r.org/download"));
+        _L("Remember to check for updates at https://github.com/" SLIC3R_GITHUB "/releases"));
 
     // initialize tabpanel and menubar
     init_tabpanel();
@@ -262,6 +262,8 @@ void MainFrame::update_layout()
         };
 
         // On Linux m_plater needs to be removed from m_tabpanel before to reparent it
+        //clear if previous was old
+        m_tabpanel_stop_event = true;
         int plater_page_id = m_tabpanel->FindPage(m_plater);
         if (plater_page_id != wxNOT_FOUND)
             m_tabpanel->RemovePage(plater_page_id);
@@ -273,22 +275,31 @@ void MainFrame::update_layout()
         if (m_plater->GetParent() != this)
             m_plater->Reparent(this);
 
-        while(m_tabpanel->GetPage(0)->GetChildren().size() == 0)
-            m_tabpanel->DeletePage(0);
-
-        for (size_t i = 0; i < m_tabpanel->GetPageCount();  i++) {
+        for (int i = 0; i < m_tabpanel->GetPageCount();  i++) {
             m_tabpanel->SetPageImage(i, -1);
         }
         m_tabpanel->SetImageList(nullptr); //clear
-
+         
 
         if (m_tabpanel->GetParent() != this)
             m_tabpanel->Reparent(this);
 
+        //clear if previous was hidden
         plater_page_id = (m_plater_page != nullptr) ? m_tabpanel->FindPage(m_plater_page) : wxNOT_FOUND;
         if (plater_page_id != wxNOT_FOUND) {
             m_tabpanel->DeletePage(plater_page_id);
             m_plater_page = nullptr;
+        }
+
+        //clear if previous was tabs
+        for (int i = 0; i < m_tabpanel->GetPageCount(); i++)
+            if (m_tabpanel->GetPage(i)->GetChildren().empty() && m_tabpanel->GetPage(i)->GetSizer()->GetItemCount() > 0) {
+                clean_sizer(m_tabpanel->GetPage(i)->GetSizer());
+            }
+        if (m_tabpanel->GetPage(0)->GetChildren().size() == 0 && m_tabpanel->GetPage(1)->GetChildren().size() == 0 && m_tabpanel->GetPage(2)->GetChildren().size() == 0) {
+            m_tabpanel->DeletePage(2);
+            m_tabpanel->DeletePage(1);
+            m_tabpanel->DeletePage(0);
         }
 
         clean_sizer(m_main_sizer);
@@ -298,18 +309,19 @@ void MainFrame::update_layout()
             m_settings_dialog.Close();
 
         m_tabpanel->Hide();
+        m_tabpanel_stop_event = false;
         m_plater->Hide();
         m_plater->enable_view_toolbar(true);
         m_plater->set_force_preview(Preview::ForceState::NoForce);
-        m_plater->process_done_callback([this](int) {});
 
         Layout();
     };
 
     ESettingsLayout layout = wxGetApp().is_gcode_viewer() ? ESettingsLayout::GCodeViewer :
-        (wxGetApp().app_config->get("old_settings_layout_mode") == "1" ? ESettingsLayout::Old :
-            wxGetApp().app_config->get("new_settings_layout_mode") == "1" ? ESettingsLayout::New :
-            wxGetApp().app_config->get("dlg_settings_layout_mode") == "1" ? ESettingsLayout::Dlg : ESettingsLayout::Old);
+           (wxGetApp().app_config->get("old_settings_layout_mode") == "1" ? ESettingsLayout::Old :
+            wxGetApp().app_config->get("tab_settings_layout_mode") == "1" ? ESettingsLayout::Tabs :
+            wxGetApp().app_config->get("new_settings_layout_mode") == "1" ? ESettingsLayout::Hidden :
+            wxGetApp().app_config->get("dlg_settings_layout_mode") == "1" ? ESettingsLayout::Dlg : ESettingsLayout::Tabs);
 
     if (m_layout == layout)
         return;
@@ -337,8 +349,11 @@ void MainFrame::update_layout()
 
     m_layout = layout;
 
+    m_layerpreview_menu_item->Enable(m_layout == ESettingsLayout::Tabs || m_layout == ESettingsLayout::Old);
+
     // From the very beginning the Print settings should be selected
-    m_last_selected_tab = m_layout == ESettingsLayout::Dlg ? 0 : 1;
+    m_last_selected_setting_tab = 0;
+    m_last_selected_plater_tab = 999;
 
     // Set new settings
     switch (m_layout)
@@ -346,37 +361,67 @@ void MainFrame::update_layout()
     case ESettingsLayout::Unknown:
     {
         break;
-    }
-    case ESettingsLayout::Old:
+    }case ESettingsLayout::Old:
     {
         // don't use view_toolbar here
         m_plater->enable_view_toolbar(false);
-        m_plater->process_done_callback([this](int process_state) {
-            //note: this won't call wxEVT_NOTEBOOK_PAGE_CHANGED and it's intended as the process_done caller will update the panel itself.
-            if (m_tabpanel->GetSelection() != process_state && m_tabpanel->GetSelection() < 3)
-            {
-                //m_plater->Hide();
-                m_tabpanel->GetCurrentPage()->GetSizer()->Clear();
-                m_plater->Reparent(m_tabpanel->GetPage(process_state));
-                m_tabpanel->GetPage(process_state)->GetSizer()->Add(m_plater, 1, wxEXPAND);
-                m_tabpanel->SetSelection(process_state);
-                m_plater->Show();
-            }
-        });
+        //layout
+        m_plater->Reparent(m_tabpanel);
+        m_tabpanel->InsertPage(0, m_plater, _L("Plater"));
+        m_main_sizer->Add(m_tabpanel, 1, wxEXPAND);
         // icons for ESettingsLayout::Old
         wxImageList* img_list = nullptr;
         int icon_size = 0;
         try {
             icon_size = atoi(wxGetApp().app_config->get("tab_icon_size").c_str());
         }
-        catch (const std::exception& e) {}
-        if(icon_size >= 8)
-            for (std::string icon_name : {"editor_menu", "layers", "preview_menu", "cog"}) {
+        catch (std::exception e) {}
+        if (icon_size >= 8) {
+            std::initializer_list<std::string> icon_list = { "plater", "cog", "spool_cog", "printer_cog" };
+            if (icon_size < 16)
+                icon_list = { "plater", "cog", "spool", "printer" };
+            for (std::string icon_name : icon_list) {
                 const wxBitmap& bmp = create_scaled_bitmap(icon_name, this, icon_size);
                 if (img_list == nullptr)
                     img_list = new wxImageList(bmp.GetWidth(), bmp.GetHeight());
                 img_list->Add(bmp);
             }
+        }
+        m_tabpanel->AssignImageList(img_list);
+        if (icon_size >= 8)
+        {
+            m_tabpanel->SetPageImage(0, 0);
+            m_tabpanel->SetPageImage(1, 1);
+            m_tabpanel->SetPageImage(2, 2);
+            m_tabpanel->SetPageImage(3, 3);
+        }
+        // show
+        m_plater->Show();
+        m_tabpanel->Show();
+        break;
+    }
+    case ESettingsLayout::Tabs:
+    {
+        // don't use view_toolbar here
+        m_plater->enable_view_toolbar(false);
+        // icons for ESettingsLayout::Tabs
+        wxImageList* img_list = nullptr;
+        int icon_size = 0;
+        try {
+            icon_size = atoi(wxGetApp().app_config->get("tab_icon_size").c_str());
+        }
+        catch (std::exception e) {}
+        if (icon_size >= 8) {
+            std::initializer_list<std::string> icon_list = { "editor_menu", "layers", "preview_menu", "cog", "spool_cog", "printer_cog" };
+            if (icon_size < 16)
+                icon_list = { "editor_menu", "layers", "preview_menu", "cog", "spool", "printer" };
+            for (std::string icon_name : icon_list) {
+                const wxBitmap& bmp = create_scaled_bitmap(icon_name, this, icon_size);
+                if (img_list == nullptr)
+                    img_list = new wxImageList(bmp.GetWidth(), bmp.GetHeight());
+                img_list->Add(bmp);
+            }
+        }
         m_tabpanel->AssignImageList(img_list);
         m_tabpanel->InsertPage(0, new wxPanel(m_tabpanel), _L("3D view"));
         m_tabpanel->InsertPage(1, new wxPanel(m_tabpanel), _L("Sliced preview"));
@@ -390,17 +435,18 @@ void MainFrame::update_layout()
             m_tabpanel->SetPageImage(1, 1);
             m_tabpanel->SetPageImage(2, 2);
             m_tabpanel->SetPageImage(3, 3);
-            m_tabpanel->SetPageImage(4, 3);
-            m_tabpanel->SetPageImage(5, 3);
+            m_tabpanel->SetPageImage(4, 4);
+            m_tabpanel->SetPageImage(5, 5);
         }
         m_plater->Reparent(m_tabpanel->GetPage(0));
         m_tabpanel->GetPage(0)->GetSizer()->Add(m_plater, 1, wxEXPAND);
+        m_tabpanel->ChangeSelection(0);
         m_main_sizer->Add(m_tabpanel, 1, wxEXPAND);
         m_plater->Show();
         m_tabpanel->Show();
         break;
     }
-    case ESettingsLayout::New:
+    case ESettingsLayout::Hidden:
     {
         m_main_sizer->Add(m_plater, 1, wxEXPAND);
         m_tabpanel->Hide();
@@ -466,7 +512,7 @@ void MainFrame::update_layout()
 //    // So, if we haven't possibility to set MinSize() for the MainFrame, 
 //    // set the MinSize() as a half of regular  for the m_plater and m_tabpanel, when settings layout is in slNew mode
 //    // Otherwise, MainFrame will be maximized by height
-//    if (m_layout == ESettingsLayout::New) {
+//    if (m_layout == ESettingsLayout::Hidden) {
 //        wxSize size = wxGetApp().get_min_size();
 //        size.SetHeight(int(0.5 * size.GetHeight()));
 //        m_plater->SetMinSize(size);
@@ -475,7 +521,7 @@ void MainFrame::update_layout()
 //#endif
     
 #ifdef __APPLE__
-    m_plater->sidebar().change_top_border_for_mode_sizer(m_layout != ESettingsLayout::Old);
+    m_plater->sidebar().change_top_border_for_mode_sizer(m_layout != ESettingsLayout::Tabs && m_layout != ESettingsLayout::Old);
 #endif
     
     Layout();
@@ -582,7 +628,9 @@ void MainFrame::update_title()
     	}
     }
 
-    title += wxString(SLIC3R_APP_NAME) + " " + wxString(SLIC3R_VERSION) ;
+    title += wxString(SLIC3R_APP_NAME) + "_" + wxString(SLIC3R_VERSION) ;
+    if (wxGetApp().is_editor() && !has_name)
+        title += (" " + _L(SLIC3R_BASED_ON));
 
     SetTitle(title);
 }
@@ -600,6 +648,8 @@ void MainFrame::init_tabpanel()
 
 
     m_tabpanel->Bind(wxEVT_NOTEBOOK_PAGE_CHANGED, [this](wxEvent&) {
+        if (m_tabpanel_stop_event)
+            return;
         wxWindow* panel = m_tabpanel->GetCurrentPage();
         Tab* tab = dynamic_cast<Tab*>(panel);
 
@@ -607,19 +657,43 @@ void MainFrame::init_tabpanel()
         if (panel == nullptr || (tab != nullptr && !tab->supports_printer_technology(m_plater->printer_technology())))
             return;
 
-        auto& tabs_list = wxGetApp().tabs_list;
-        int last_selected_tab = m_last_selected_tab;
+        std::vector<Tab*>& tabs_list = wxGetApp().tabs_list;
+        int last_selected_plater_tab = m_last_selected_plater_tab;
+        int last_selected_setting_tab = m_last_selected_setting_tab;
         if (tab && std::find(tabs_list.begin(), tabs_list.end(), tab) != tabs_list.end()) {
             // On GTK, the wxEVT_NOTEBOOK_PAGE_CHANGED event is triggered
             // before the MainFrame is fully set up.
             tab->OnActivate();
-            m_last_selected_tab = m_tabpanel->GetSelection();
+            if (this->m_layout == ESettingsLayout::Tabs)
+                last_selected_setting_tab = m_tabpanel->GetSelection() - 3;
+            if (this->m_layout == ESettingsLayout::Dlg)
+                last_selected_setting_tab = m_tabpanel->GetSelection();
+            else
+                last_selected_setting_tab = m_tabpanel->GetSelection() - 1;
         }
-        else if (this->m_layout == ESettingsLayout::Old) {
-            //m_plater->Hide();
+        else if (this->m_layout == ESettingsLayout::Tabs) {
+            if (last_selected_plater_tab == m_tabpanel->GetSelection()) {
+                std::cout << "Page changed to the same one (" << m_last_selected_plater_tab << ") no need to do anything\n";
+                return;
+            }
+            bool need_freeze = !this->IsFrozen();
+            if(need_freeze) Freeze();
+            std::cout << "I switched to tab  " << m_tabpanel->GetSelection() << " and so i need to change the panel position & content\n";
+            size_t new_tab = m_tabpanel->GetSelection();
+
+            size_t max = 0;
+            for (int i = 0; i < 3; i++)
+                max = std::max(max, m_tabpanel->GetPage(i)->GetSizer()->GetItemCount());
+            std::cout << " 1 - hide & clear the sizers: " << max << "->";
             for(int i=0;i<3;i++)
                 m_tabpanel->GetPage(i)->GetSizer()->Clear();
+            max = 0;
+            for (int i = 0; i < 3; i++)
+                max = std::max(max, m_tabpanel->GetPage(i)->GetSizer()->GetItemCount());
+            std::cout << max << "\n";
+
             m_plater->Reparent(m_tabpanel->GetCurrentPage());
+            std::cout << " 2 - change parent from tab " << m_last_selected_plater_tab << " to tab " << m_tabpanel->GetSelection() << "\n";
             if (m_tabpanel->GetSelection() == 0)
                 this->m_plater->select_view_3D("3D");
             else if (m_tabpanel->GetSelection() == 1) {
@@ -638,10 +712,24 @@ void MainFrame::init_tabpanel()
                 }else
                     this->m_plater->select_view_3D("Preview");
             }
+            std::cout << " 3 - redraw\n";
+            std::cout << " 4 - add to new sizer: " << m_tabpanel->GetCurrentPage()->GetSizer()->GetItemCount() << "->";
             m_tabpanel->GetCurrentPage()->GetSizer()->Add(m_plater, 1, wxEXPAND);
+            std::cout << m_tabpanel->GetCurrentPage()->GetSizer()->GetItemCount() << "\n";
             m_plater->Show();
-        }else
-            select_tab(size_t(0)); // select Plater
+            std::cout << "End of change for the panel position & content, tab is "<< m_tabpanel->GetSelection() <<"\n";
+            m_last_selected_plater_tab = m_tabpanel->GetSelection();
+
+            if (need_freeze) Thaw();
+#ifdef __APPLE__
+            m_tabpanel->ChangeSelection(new_tab);
+            m_tabpanel->Refresh();
+            std::cout << "Macos: force tab selection to  "<< new_tab <<" : " << m_tabpanel->GetSelection() << "\n";
+#endif
+        } else {
+            select_tab(MainFrame::ETabType::LastPlater); // select Plater
+            m_last_selected_plater_tab = 999;
+        }
     });
 
     m_plater = new Plater(this, this);
@@ -753,7 +841,7 @@ bool MainFrame::is_active_and_shown_tab(Tab* tab)
     if (m_layout == ESettingsLayout::Dlg)
         return m_settings_dialog.IsShown();
 
-    if (m_layout == ESettingsLayout::New)
+    if (m_layout == ESettingsLayout::Hidden)
         return m_main_sizer->IsShown(m_tabpanel);
     
     return true;
@@ -854,9 +942,10 @@ bool MainFrame::can_change_view() const
     switch (m_layout)
     {
     default:                   { return false; }
-    case ESettingsLayout::New: { return m_plater->IsShown(); }
+    case ESettingsLayout::Hidden: { return m_plater->IsShown(); }
     case ESettingsLayout::Dlg: { return true; }
-    case ESettingsLayout::Old: { 
+    case ESettingsLayout::Old: 
+    case ESettingsLayout::Tabs: { 
     int page_id = m_tabpanel->GetSelection();
     return page_id != wxNOT_FOUND && dynamic_cast<const Slic3r::GUI::Plater*>(m_tabpanel->GetPage((size_t)page_id)) != nullptr;
     }
@@ -965,25 +1054,29 @@ static const wxString sep_space = "";
 static wxMenu* generate_help_menu()
 {
     wxMenu* helpMenu = new wxMenu();
-    append_menu_item(helpMenu, wxID_ANY, _L("Slic3r Releases"), _L("Open the Slic3r releases page in your browser"),
+    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " Releases"), _L("Open the Slic3r releases page in your browser"),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser("https://slic3r.org/download/"); });
-    append_menu_item(helpMenu, wxID_ANY, _L("Slic3r manual"), _L("Open the Slic3r manual in your browser"),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://manual.slic3r.org"); });
-    append_menu_item(helpMenu, wxID_ANY, _L("Slic3r wiki"), _L("Open the Slic3r wiki in your browser"),
+    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " wiki", _L("Open the Slic3r wiki in your browser"),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/slic3r/Slic3r/wiki"); });
-    append_menu_item(helpMenu, wxID_ANY, _L("Slic3r website"), _L("Open the Slic3r website in your browser"),
+    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " website"), _L("Open the Slic3r website in your browser"),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://slic3r.org"); });
     //#        my $versioncheck = $self->_append_menu_item($helpMenu, "Check for &Updates...", "Check for new Slic3r versions", sub{
     //#            wxTheApp->check_version(1);
     //#        });
     //#        $versioncheck->Enable(wxTheApp->have_version_check);
+    append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("Slic3r Manual")),
+        wxString::Format(_L("Open the Slic3r Manual in your browser")),
+        //            [this](wxCommandEvent&) { wxGetApp().open_web_page_localized("http://manual.slic3r.org"); });
+        //        append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("%s &Manual"), SLIC3R_APP_NAME),
+        //                                             wxString::Format(_L("Open the %s manual in your browser"), SLIC3R_APP_NAME),
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://manual.slic3r.org/"); });
     helpMenu->AppendSeparator();
     append_menu_item(helpMenu, wxID_ANY, _L("System &Info"), _L("Show system information"),
         [](wxCommandEvent&) { wxGetApp().system_info(); });
     append_menu_item(helpMenu, wxID_ANY, _L("Show &Configuration Folder"), _L("Show user configuration folder (datadir)"),
         [](wxCommandEvent&) { Slic3r::GUI::desktop_open_datadir_folder(); });
     append_menu_item(helpMenu, wxID_ANY, _L("Report an I&ssue"), wxString::Format(_L("Report an issue on %s"), SLIC3R_APP_NAME),
-        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/slic3r/Slic3r/issues/new"); });
+        [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/" SLIC3R_GITHUB "/issues/new"); });
 
     if (wxGetApp().is_editor())
         append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("&About %s"), SLIC3R_APP_NAME), _L("Show about dialog"),
@@ -1259,31 +1352,28 @@ void MainFrame::init_menubar_as_editor()
     auto windowMenu = new wxMenu();
     {
         if (m_plater) {
-            append_menu_item(windowMenu, wxID_HIGHEST + 1, _L("&Plater Tab") + "\tCtrl+1", _L("Show the plater"),
-                [this](wxCommandEvent&) { select_tab(size_t(0)); }, "plater", nullptr,
+            append_menu_item(windowMenu, wxID_HIGHEST + 1, _L("3D &Plater Tab") + "\tCtrl+1", _L("Show the editor of the input models"),
+                [this](wxCommandEvent&) { select_tab(ETabType::Plater3D); }, "editor_menu", nullptr,
+                []() {return true; }, this);
+            m_layerpreview_menu_item = append_menu_item(windowMenu, wxID_HIGHEST + 2, _L("Layer previe&w Tab") + "\tCtrl+2", _L("Show the layers from the slicing process"),
+                [this](wxCommandEvent&) { select_tab(ETabType::PlaterPreview); }, "layers", nullptr,
+                []() {return true; }, this);
+            append_menu_item(windowMenu, wxID_HIGHEST + 3, _L("GCode Pre&view Tab") + "\tCtrl+3", _L("Show the preview of the gcode output"),
+                [this](wxCommandEvent&) { select_tab(ETabType::PlaterGcode); }, "preview_menu", nullptr,
                 []() {return true; }, this);
             windowMenu->AppendSeparator();
         }
-        append_menu_item(windowMenu, wxID_HIGHEST + 2, _L("P&rint Settings Tab") + "\tCtrl+2", _L("Show the print settings"),
-            [this/*, tab_offset*/](wxCommandEvent&) { select_tab(1); }, "cog", nullptr,
+        append_menu_item(windowMenu, wxID_HIGHEST + 4, _L("P&rint Settings Tab") + "\tCtrl+4", _L("Show the print settings"),
+            [this/*, tab_offset*/](wxCommandEvent&) { select_tab(ETabType::PrintSettings); }, "cog", nullptr,
             []() {return true; }, this);
-        wxMenuItem* item_material_tab = append_menu_item(windowMenu, wxID_HIGHEST + 3, _L("&Filament Settings Tab") + "\tCtrl+3", _L("Show the filament settings"),
-            [this/*, tab_offset*/](wxCommandEvent&) { select_tab(2); }, "spool", nullptr,
+        wxMenuItem* item_material_tab = append_menu_item(windowMenu, wxID_HIGHEST + 5, _L("&Filament Settings Tab") + "\tCtrl+5", _L("Show the filament settings"),
+            [this/*, tab_offset*/](wxCommandEvent&) { select_tab(ETabType::FilamentSettings); }, "spool", nullptr,
             []() {return true; }, this);
         m_changeable_menu_items.push_back(item_material_tab);
-        wxMenuItem* item_printer_tab = append_menu_item(windowMenu, wxID_HIGHEST + 4, _L("Print&er Settings Tab") + "\tCtrl+4", _L("Show the printer settings"),
-            [this/*, tab_offset*/](wxCommandEvent&) { select_tab(3); }, "printer", nullptr,
+        wxMenuItem* item_printer_tab = append_menu_item(windowMenu, wxID_HIGHEST + 6, _L("Print&er Settings Tab") + "\tCtrl+6", _L("Show the printer settings"),
+            [this/*, tab_offset*/](wxCommandEvent&) { select_tab(ETabType::PrinterSettings); }, "printer", nullptr,
             []() {return true; }, this);
         m_changeable_menu_items.push_back(item_printer_tab);
-        if (m_plater) {
-            windowMenu->AppendSeparator();
-            append_menu_item(windowMenu, wxID_HIGHEST + 5, _L("3&D") + "\tCtrl+5", _L("Show the 3D editing view"),
-                [this](wxCommandEvent&) { m_plater->select_view_3D("3D"); }, "editor_menu", nullptr,
-                [this](){return can_change_view(); }, this);
-            append_menu_item(windowMenu, wxID_HIGHEST + 6, _L("Pre&view") + "\tCtrl+6", _L("Show the 3D slices preview"),
-                [this](wxCommandEvent&) { m_plater->select_view_3D("Preview"); }, "preview_menu", nullptr,
-                [this](){return can_change_view(); }, this);
-        }
 
         windowMenu->AppendSeparator();
         append_menu_item(windowMenu, wxID_ANY, _L("Print &Host Upload Queue") + "\tCtrl+J", _L("Display the Print Host Upload Queue window"),
@@ -1771,13 +1861,16 @@ void MainFrame::select_tab(Tab* tab)
 {
     if (!tab)
         return;
-    int page_idx = m_tabpanel->FindPage(tab);
-    if (page_idx != wxNOT_FOUND && m_layout == ESettingsLayout::Dlg)
-        page_idx++;
-    select_tab(size_t(page_idx));
+    std::vector<Tab*>& tabs_list = wxGetApp().tabs_list;
+    std::vector<Tab*>::iterator it_tab = std::find(tabs_list.begin(), tabs_list.end(), tab);
+    if (it_tab != tabs_list.end()) {
+        select_tab((ETabType)((uint8_t)ETabType::PrintSettings + uint8_t(it_tab - tabs_list.begin())));
+    }
+
+    select_tab(ETabType::LastSettings);
 }
 
-void MainFrame::select_tab(size_t tab/* = size_t(-1)*/)
+void MainFrame::select_tab(ETabType tab /* = Any*/, bool keep_tab_type)
 {
     bool tabpanel_was_hidden = false;
 
@@ -1785,7 +1878,26 @@ void MainFrame::select_tab(size_t tab/* = size_t(-1)*/)
     // We should select/activate tab before its showing to avoid an UI-flickering
     auto select = [this, tab](bool was_hidden) {
         // when tab == -1, it means we should show the last selected tab
-        size_t new_selection = tab == (size_t)(-1) ? m_last_selected_tab : (m_layout == ESettingsLayout::Dlg && tab != 0) ? tab - 1 : tab;
+        size_t new_selection = 0;
+        if (tab <= ETabType::LastPlater) {
+            //select plater
+            new_selection = (uint8_t)tab;
+            if (tab == ETabType::LastPlater)
+                new_selection = m_last_selected_plater_tab > 2 ? 0 : m_last_selected_plater_tab;
+            if (m_layout != ESettingsLayout::Tabs)
+                new_selection = 0;
+
+        } else if (tab <= ETabType::LastSettings) {
+            //select setting
+            new_selection = (uint8_t)tab - (uint8_t)ETabType::PrintSettings;
+            if (tab == ETabType::LastSettings) 
+                new_selection = m_last_selected_setting_tab > 2 ? 0 : m_last_selected_setting_tab;
+            //push to the correct position
+            if (m_layout == ESettingsLayout::Tabs)
+                new_selection = m_last_selected_setting_tab + 3;
+            else if (m_layout != ESettingsLayout::Dlg)
+                new_selection = new_selection + 1;
+        }
 
         if (m_tabpanel->GetSelection() != (int)new_selection)
             m_tabpanel->SetSelection(new_selection);
@@ -1796,8 +1908,20 @@ void MainFrame::select_tab(size_t tab/* = size_t(-1)*/)
         }
     };
 
+    if (m_layout != ESettingsLayout::Tabs) {
+        if (tab == ETabType::Plater3D || (tab == ETabType::LastPlater && m_last_selected_plater_tab == 0)) {
+            m_plater->select_view_3D("3D");
+        } else if (tab == ETabType::PlaterPreview || (tab == ETabType::LastPlater && m_last_selected_plater_tab == 1)) {
+            m_plater->select_view_3D("Preview");
+        } else if (tab == ETabType::PlaterGcode || (tab == ETabType::LastPlater && m_last_selected_plater_tab == 2)) {
+            m_plater->select_view_3D("Preview");
+        }
+    }
+
     if (m_layout == ESettingsLayout::Dlg) {
-        if (tab==0) {
+        if (keep_tab_type)
+            return;
+        if (tab <= ETabType::LastPlater) {
             if (m_settings_dialog.IsShown())
                 this->SetFocus();
             // plater should be focused for correct navigation inside search window
@@ -1828,21 +1952,35 @@ void MainFrame::select_tab(size_t tab/* = size_t(-1)*/)
         }
 #endif
     }
-    else if (m_layout == ESettingsLayout::New) {
-        m_main_sizer->Show(m_plater, tab == 0);
+    else if (m_layout == ESettingsLayout::Hidden) {
+        if (keep_tab_type && m_tabpanel->GetSelection()>0)
+            return;
+        m_main_sizer->Show(m_plater, tab <= ETabType::LastPlater);
         tabpanel_was_hidden = !m_main_sizer->IsShown(m_tabpanel);
         select(tabpanel_was_hidden);
-        m_main_sizer->Show(m_tabpanel, tab != 0);
+        m_main_sizer->Show(m_tabpanel, tab > ETabType::LastPlater);
 
         // plater should be focused for correct navigation inside search window
-        if (tab == 0 && m_plater->canvas3D()->is_search_pressed())
+        if (tab <= ETabType::LastPlater && m_plater->canvas3D()->is_search_pressed())
             m_plater->SetFocus();
         Layout();
+    }
+    else if (m_layout == ESettingsLayout::Old) {
+        if (keep_tab_type && m_tabpanel->GetSelection() > 0)
+            return;
+        else
+            select(false);
+    }
+    else if (m_layout == ESettingsLayout::Tabs) {
+        if (keep_tab_type && ( (m_tabpanel->GetSelection() >=3 && tab <= ETabType::LastPlater) || (m_tabpanel->GetSelection() < 3 && tab > ETabType::LastPlater)))
+            return;
+        else
+            select(false);
     }
     else
         select(false);
 
-    // When we run application in ESettingsLayout::New or ESettingsLayout::Dlg mode, tabpanel is hidden from the very beginning
+    // When we run application in ESettingsLayout::Hidden or ESettingsLayout::Dlg mode, tabpanel is hidden from the very beginning
     // and as a result Tab::update_changed_tree_ui() function couldn't update m_is_nonsys_values values,
     // which are used for update TreeCtrl and "revert_buttons".
     // So, force the call of this function for Tabs, if tab panel was hidden
@@ -2000,10 +2138,12 @@ SettingsDialog::SettingsDialog(MainFrame* mainframe)
         auto key_up_handker = [this](wxKeyEvent& evt) {
             if ((evt.GetModifiers() & wxMOD_CONTROL) != 0) {
                 switch (evt.GetKeyCode()) {
-                case '1': { m_main_frame->select_tab(size_t(0)); break; }
-                case '2': { m_main_frame->select_tab(1); break; }
-                case '3': { m_main_frame->select_tab(2); break; }
-                case '4': { m_main_frame->select_tab(3); break; }
+                case '1': { m_main_frame->select_tab(MainFrame::ETabType::Plater3D); break; }
+                case '2': { m_main_frame->select_tab(MainFrame::ETabType::Plater3D); break; }
+                case '3': { m_main_frame->select_tab(MainFrame::ETabType::PlaterGcode); break; }
+                case '4': { m_main_frame->select_tab(MainFrame::ETabType::PrintSettings); break; }
+                case '5': { m_main_frame->select_tab(MainFrame::ETabType::FilamentSettings); break; }
+                case '6': { m_main_frame->select_tab(MainFrame::ETabType::PrinterSettings); break; }
 #ifdef __APPLE__
                 case 'f':
 #else /* __APPLE__ */

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: Adobe Illustrator 23.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   version="1.0"
+   id="Layer_1"
+   x="0px"
+   y="0px"
+   viewBox="0 0 16 16"
+   enable-background="new 0 0 16 16"
+   xml:space="preserve"
+   sodipodi:docname="printer_settings.svg"
+   inkscape:version="0.92.4 (5da689c313, 2019-01-14)"><metadata
+   id="metadata22"><rdf:RDF><cc:Work
+       rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
+         rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title></dc:title></cc:Work></rdf:RDF></metadata><defs
+   id="defs20"><pattern
+     y="0"
+     x="0"
+     height="6"
+     width="6"
+     patternUnits="userSpaceOnUse"
+     id="EMFhbasepattern" /></defs><sodipodi:namedview
+   pagecolor="#ffffff"
+   bordercolor="#666666"
+   borderopacity="1"
+   objecttolerance="10"
+   gridtolerance="10"
+   guidetolerance="10"
+   inkscape:pageopacity="0"
+   inkscape:pageshadow="2"
+   inkscape:window-width="1517"
+   inkscape:window-height="980"
+   id="namedview18"
+   showgrid="false"
+   inkscape:zoom="20.85965"
+   inkscape:cx="3.0277352"
+   inkscape:cy="7.4276381"
+   inkscape:window-x="573"
+   inkscape:window-y="270"
+   inkscape:window-maximized="0"
+   inkscape:current-layer="Layer_1" />
+
+<g
+   id="machine_x2B_cog"
+   transform="matrix(0.83360586,0,0,0.83360586,-0.58820988,-0.64530384)"><path
+     style="fill:#808080;stroke:none;stroke-opacity:1"
+     inkscape:connector-curvature="0"
+     d="M 13.77,6.39 C 13.64,5.92 13.45,5.47 13.22,5.06 l 0.43,-1.3 -1.41,-1.41 -1.3,0.43 C 10.52,2.55 10.08,2.36 9.61,2.23 L 9,1 H 7 L 6.39,2.23 C 5.92,2.36 5.47,2.54 5.06,2.78 L 3.76,2.35 2.34,3.76 2.77,5.06 C 2.54,5.47 2.36,5.92 2.23,6.39 L 1,7 v 2 l 1.23,0.61 c 0.13,0.47 0.32,0.92 0.55,1.33 l -0.43,1.3 1.41,1.41 1.3,-0.43 c 0.42,0.23 0.86,0.42 1.33,0.55 L 7,15 h 2 l 0.61,-1.23 c 0.47,-0.13 0.92,-0.32 1.33,-0.55 l 1.3,0.43 1.41,-1.41 -0.43,-1.3 c 0.23,-0.42 0.42,-0.86 0.55,-1.33 L 15,9 V 7 Z M 8,13 C 5.24,13 3,10.76 3,8 3,5.24 5.24,3 8,3 c 2.76,0 5,2.24 5,5 0,2.76 -2.24,5 -5,5 z"
+     id="path2" /><path
+     style="fill:#2172eb"
+     inkscape:connector-curvature="0"
+     d="M 11.3,7.08 C 11.23,6.81 11.12,6.56 10.99,6.32 L 11.24,5.58 10.43,4.77 9.68,5.01 C 9.45,4.88 9.19,4.78 8.92,4.7 L 8.57,4 H 7.43 L 7.08,4.7 C 6.81,4.78 6.55,4.88 6.32,5.01 L 5.58,4.77 4.77,5.58 5.02,6.32 C 4.88,6.55 4.78,6.81 4.7,7.08 L 4,7.43 v 1.14 l 0.7,0.35 c 0.07,0.27 0.18,0.52 0.31,0.76 l -0.25,0.74 0.81,0.81 0.74,-0.25 c 0.24,0.13 0.49,0.24 0.76,0.31 L 7.43,12 h 1.14 l 0.35,-0.7 c 0.27,-0.07 0.52,-0.18 0.76,-0.31 l 0.74,0.25 0.81,-0.81 -0.25,-0.74 C 11.11,9.45 11.22,9.2 11.29,8.93 L 12,8.57 V 7.43 Z M 8,10.86 C 6.42,10.86 5.14,9.58 5.14,8 5.14,6.42 6.42,5.14 8,5.14 c 1.58,0 2.86,1.28 2.86,2.86 0,1.58 -1.28,2.86 -2.86,2.86 z"
+     id="path4" /></g><g
+   id="printer"
+   transform="matrix(0.791121,0,0,0.791121,3.133185,3.133185)">
+	<rect
+   x="1"
+   y="1"
+   width="1"
+   height="14"
+   id="rect2"
+   style="fill:#808080" />
+	<rect
+   x="14"
+   y="1"
+   width="1"
+   height="14"
+   id="rect4"
+   style="fill:#808080" />
+	<rect
+   x="7.5"
+   y="-1.5"
+   transform="rotate(90,8,5.5)"
+   width="1"
+   height="14"
+   id="rect6"
+   style="fill:#808080" />
+	<rect
+   x="7.5"
+   y="-5.5"
+   transform="rotate(90,8,1.5)"
+   width="1"
+   height="14"
+   id="rect8"
+   style="fill:#808080" />
+	<rect
+   x="7"
+   y="7"
+   transform="rotate(90,8,14)"
+   width="2"
+   height="14"
+   id="rect10"
+   style="fill:#808080" />
+	<rect
+   x="8.3571119"
+   y="4"
+   width="4"
+   height="4"
+   id="rect12"
+   style="fill:#2172eb" />
+	<polygon
+   points="5,9 4,8 6,8 "
+   id="polygon14"
+   transform="translate(5.2852025)"
+   style="fill:#2172eb" />
+</g></svg>

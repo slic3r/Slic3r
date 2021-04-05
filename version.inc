@@ -8,3 +8,12 @@ set(SLIC3R_VERSION_FULL "2.0.00.0")
 set(SLIC3R_BUILD_ID "Slic3r_${SLIC3R_VERSION_FULL}")
 set(SLIC3R_RC_VERSION "2,0,00,0")
 set(SLIC3R_RC_VERSION_DOTS "${SLIC3R_VERSION_FULL}")
+
+
+set(GCODEVIEWER_APP_NAME "G-code Viewer")
+set(GCODEVIEWER_APP_KEY "GCodeViewer")
+set(GCODEVIEWER_APP_CMD "gcodeviewer")
+
+set(SLIC3R_BASED_ON "")
+set(SLIC3R_GITHUB "slic3r/Slic3r")
+set(SLIC3R_INTRO "Slic3r contains sizable contributions from Prusa Research. Original work by Alessandro Ranellucci and the RepRap community.")

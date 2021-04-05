@@ -6,6 +6,7 @@
 #include <Windows.h>
 #include <shellapi.h>
 #include <wchar.h>
+#include "libslic3r/libslic3r_version.h"
 
 
 
@@ -286,7 +287,7 @@ int wmain(int argc, wchar_t **argv)
 //    printf("Loading Slic3r library: %S\n", path_to_slic3r);
     HINSTANCE hInstance_Slic3r = LoadLibraryExW(path_to_slic3r, nullptr, 0);
     if (hInstance_Slic3r == nullptr) {
-        printf("Slic3r.dll was not loaded, error code: %d\n", GetLastError());
+        printf(SLIC3R_APP_NAME ".dll was not loaded, error code: %d\n", GetLastError());
         return -1;
     }
 

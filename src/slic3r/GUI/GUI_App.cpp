@@ -191,7 +191,7 @@ public:
         BitmapCache bmp_cache;
         int logo_size = lround(width * 0.25);
         //uint32_t color = color_from_hex(Slic3r::GUI::wxGetApp().app_config->get("color_dark")); //uncomment if you also want to modify the icon color
-        wxBitmap logo_bmp = *bmp_cache.load_svg(wxGetApp().is_editor() ? "super_slicer_logo" : "add_gcode", logo_size, logo_size/*, color*/);
+        wxBitmap logo_bmp = *bmp_cache.load_svg(wxGetApp().is_editor() ? SLIC3R_APP_KEY "_logo" : "add_gcode", logo_size, logo_size/*, color*/);
 
         wxCoord margin = int(m_scale * 20);
 
@@ -253,7 +253,8 @@ private:
             version = _L("Version") + " " + std::string(SLIC3R_VERSION_FULL);
 
             // credits infornation
-            credits =   title + " " + _L("is licensed under the") + " " + _L("GNU Affero General Public License, version 3") + "\n\n" +
+            credits = _L(SLIC3R_INTRO) + "\n\n" +
+                        title + " " + _L("is licensed under the") + " " + _L("GNU Affero General Public License, version 3") + "\n\n" +
                         _L("Contributions by Vojtech Bubnik, Enrico Turri, Durand Remi, Oleksandra Iushchenko, Tamas Meszaros, Lukas Matena, Vojtech Kral, David Kocik and numerous others.") + "\n\n" +
                         _L("Artwork model by Durand Remi");
 
@@ -825,7 +826,7 @@ bool GUI_App::on_init_inner()
         }
 
         // create splash screen with updated bmp
-        scrn = new SplashScreen(bmp.IsOk() ? bmp : create_scaled_bitmap("super_slicer_logo", nullptr, 400), 
+        scrn = new SplashScreen(bmp.IsOk() ? bmp : create_scaled_bitmap( SLIC3R_APP_KEY "_logo", nullptr, 400), 
                                 wxSPLASH_CENTRE_ON_SCREEN | wxSPLASH_TIMEOUT, 4000, splashscreen_pos);
 #ifndef __linux__
         wxYield();
@@ -904,7 +905,7 @@ bool GUI_App::on_init_inner()
     mainframe = new MainFrame();
     // hide settings tabs after first Layout
     if (is_editor())
-        mainframe->select_tab(size_t(0));
+        mainframe->select_tab(MainFrame::ETabType::LastPlater);
 
     sidebar().obj_list()->init_objects(); // propagate model objects to object list
 //     update_mode(); // !!! do that later
@@ -1172,7 +1173,7 @@ void GUI_App::recreate_GUI(const wxString& msg_name)
     mainframe = new MainFrame();
     if (is_editor())
         // hide settings tabs after first Layout
-        mainframe->select_tab(size_t(0));
+        mainframe->select_tab(MainFrame::ETabType::LastPlater);
     // Propagate model objects to object list.
     sidebar().obj_list()->init_objects();
     SetTopWindow(mainframe);
@@ -1524,7 +1525,7 @@ bool GUI_App::load_language(wxString language, bool initial)
         // Get the active language from PrusaSlicer.ini, or empty string if the key does not exist.
         language = app_config->get("translation_language");
         if (! language.empty())
-            BOOST_LOG_TRIVIAL(trace) << boost::format("translation_language provided by Slic3r.ini: %1%") % language;
+            BOOST_LOG_TRIVIAL(trace) << boost::format("translation_language provided by " SLIC3R_APP_NAME ".ini: %1%") % language;
 
         // Get the system language.
         {
@@ -1805,7 +1806,7 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
                 // hide full main_sizer for mainFrame
                 mainframe->GetSizer()->Show(false);
                 mainframe->update_layout();
-                mainframe->select_tab(size_t(0));
+                mainframe->select_tab(MainFrame::ETabType::LastPlater);
             }
             break;
         }

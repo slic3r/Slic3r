@@ -97,12 +97,12 @@ void KBShortcutsDialog::fill_shortcuts()
 #endif // __APPLE__
             { ctrl + "F", L("Search") },
             // Window
-            { ctrl + "1", L("Select Plater Tab") },
-            { ctrl + "2", L("Select Print Settings Tab") },
-            { ctrl + "3", L("Select Filament Settings Tab") },
-            { ctrl + "4", L("Select Printer Settings Tab") },
-            { ctrl + "5", L("Switch to 3D") },
-            { ctrl + "6", L("Switch to Preview") },
+            { ctrl + "1", L("Select 3d editor Tab") },
+            { ctrl + "2", L("Select Layer Preview Tab") },
+            { ctrl + "3", L("Select Gcode preview Tab") },
+            { ctrl + "4", L("Select Print Settings Tab") },
+            { ctrl + "5", L("Select Filament Settings Tab") },
+            { ctrl + "6", L("Select Printer Settings Tab") },
             { ctrl + "J", L("Print host upload queue") },
             { ctrl + "Shift+" + "I", L("Open new instance") },
             // View
