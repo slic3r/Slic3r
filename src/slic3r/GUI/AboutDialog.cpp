@@ -60,7 +60,7 @@ CopyrightsDialog::CopyrightsDialog()
     const int fs2 = static_cast<int>(1.2F*fs);
     std::array<int, 7> size = { fs, fs, fs, fs, fs2, fs2, fs2 };
 
-    m_html->SetFonts(font.GetFaceName(), font.GetFaceName(), size.cbegin());
+    m_html->SetFonts(font.GetFaceName(), font.GetFaceName(), size.data());
     m_html->SetBorders(2);        
     m_html->SetPage(get_html_text());
 
@@ -262,7 +262,7 @@ AboutDialog::AboutDialog()
 
 		const int fs = font.GetPointSize()-1;
         std::array<int, 7> size = {fs,fs,fs,fs,fs,fs,fs};
-        m_html->SetFonts(font.GetFaceName(), font.GetFaceName(), size.cbegin());
+        m_html->SetFonts(font.GetFaceName(), font.GetFaceName(), size.data());
         m_html->SetBorders(2);
         const std::string copyright_str = _utf8(L("Copyright"));
         // TRN "Slic3r _is licensed under the_ License"
