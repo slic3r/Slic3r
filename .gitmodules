@@ -3,4 +3,4 @@
 	url = https://github.com/FormerLurker/ArcWelderLib.git
 [submodule "resources/profiles"]
 	path = resources/profiles
-	url = git@github.com:slic3r/slic3r-profiles.git
+	url = https://github.com/slic3r/slic3r-profiles.git
