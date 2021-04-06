@@ -61,7 +61,7 @@ CopyrightsDialog::CopyrightsDialog()
     std::array<int, 7> size = { fs, fs, fs, fs, fs2, fs2, fs2 };
 
     m_html->SetFonts(font.GetFaceName(), font.GetFaceName(), size.data());
-    m_html->SetBorders(2);        
+    m_html->SetBorders(2);
     m_html->SetPage(get_html_text());
 
     sizer->Add(m_html, 1, wxEXPAND | wxALL, 15);

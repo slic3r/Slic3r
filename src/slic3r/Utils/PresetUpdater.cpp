@@ -390,7 +390,8 @@ void PresetUpdater::priv::sync_config(const VendorMap vendors)
 void PresetUpdater::priv::check_install_indices() const
 {
 	BOOST_LOG_TRIVIAL(info) << "Checking if indices need to be installed from resources...";
-
+	if (!fs::exists(rsrc_path))
+		return;
     for (auto &dir_entry : boost::filesystem::directory_iterator(rsrc_path))
 		if (is_idx_file(dir_entry)) {
 			const auto &path = dir_entry.path();

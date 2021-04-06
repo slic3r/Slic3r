@@ -669,6 +669,7 @@ const std::vector<std::string>& Preset::printer_options()
             "fan_kickstart",
             "fan_speedup_overhangs",
             "fan_speedup_time",
+            "fan_percentage",
             "gcode_flavor", 
             "gcode_precision_xyz",
             "use_relative_e_distances",

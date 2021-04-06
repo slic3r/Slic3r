@@ -586,6 +586,7 @@ void PreferencesDialog::create_icon_size_slider()
 void PreferencesDialog::create_settings_mode_widget()
 {
 	wxString choices[] = { _L("Regular layout with the tab bar"),
+						   _L("Old PrusaSlicer layout"),
 						   _L("Access via settings button in the top menu"),
 						   _L("Settings in non-modal window") };
 

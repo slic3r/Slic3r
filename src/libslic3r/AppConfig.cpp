@@ -66,20 +66,45 @@ void AppConfig::set_defaults()
         if (get("tab_icon_size").empty())
             set("tab_icon_size", "32");
 
+        //get default color from the ini file
+
+        //try to load colors from ui file
+        std::map<std::string, std::string> key2color = { {"Gui_color_very_dark", "ada230"}, {"Gui_color_dark", "cabe39"}, {"Gui_color", "eddc21"}, {"Gui_color_light", "ffee38"}, {"Gui_color_very_light", "fef48b"} };
+        boost::property_tree::ptree tree_colors;
+        boost::filesystem::path path_colors = boost::filesystem::path(resources_dir()) / "ui_layout" / "colors.ini";
+        try {
+            boost::nowide::ifstream ifs;
+            ifs.imbue(boost::locale::generator()("en_US.UTF-8"));
+            ifs.open(path_colors.string());
+            boost::property_tree::read_ini(ifs, tree_colors);
+
+            for(std::map<std::string, std::string>::iterator it = key2color.begin(); it != key2color.end() ; ++it) {
+                std::string color_code = tree_colors.get<std::string>(it->first);
+                if (color_code.length() == 6)
+                    it->second = color_code;
+            }
+        }
+        catch (const std::ifstream::failure& err) {
+            trace(1, (std::string("The color file cannot be loaded. Reason: ") + err.what(), path_colors.string()).c_str());
+        }
+        catch (const std::runtime_error& err) {
+            trace(1, (std::string("Failed loading the color file. Reason: ") + err.what(), path_colors.string()).c_str());
+        }
+
         if (get("color_very_dark").empty())
-            set("color_very_dark", "0047c7");
-		
+            set("color_very_dark", key2color["Gui_color_very_dark"]);
+
         if (get("color_dark").empty())
-            set("color_dark", "2172eb");
-		
+            set("color_dark", key2color["Gui_color_dark"]);
+
         if (get("color").empty())
-            set("color", "428dfd");
-		
+            set("color", key2color["Gui_color"]);
+
         if (get("color_light").empty())
-            set("color_light", "8bb9fe");
-		
+            set("color_light", key2color["Gui_color_light"]);
+
         if (get("color_very_light").empty())
-            set("color_very_light", "428cff");
+            set("color_very_light", key2color["Gui_color_very_light"]);
 
         if (get("version_check").empty())
             set("version_check", "1");

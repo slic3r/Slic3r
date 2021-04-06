@@ -62,9 +62,9 @@ static void start_new_slicer_or_gcodeviewer(const NewSlicerInstanceType instance
 	{
 		// Maybe one day we will be able to run PrusaGCodeViewer, but for now the Apple notarization 
 		// process refuses Apps with multiple binaries and Vojtech does not know any workaround.
-		// ((instance_type == NewSlicerInstanceType::Slicer) ? SLIC3R_APP_NAME : GCODEVIEWER_APP_NAME);
+		// ((instance_type == NewSlicerInstanceType::Slicer) ? SLIC3R_APP_CMD : GCODEVIEWER_APP_CMD);
 		// Just run the slicer and give it a --gcodeviewer parameter.
-		bin_path = bin_path.parent_path() / SLIC3R_APP_NAME;
+		bin_path = bin_path.parent_path() / SLIC3R_APP_CMD;
 		// On Apple the wxExecute fails, thus we use boost::process instead.
 		BOOST_LOG_TRIVIAL(info) << "Trying to spawn a new slicer \"" << bin_path.string() << "\"";
 		try {

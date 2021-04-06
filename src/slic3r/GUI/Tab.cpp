@@ -2,9 +2,10 @@
 #include "slic3r/Utils/Serial.hpp"
 #include "Tab.hpp"
 #include "PresetHints.hpp"
+#include "libslic3r/Log.hpp"
+#include "libslic3r/Model.hpp"
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/Utils.hpp"
-#include "libslic3r/Model.hpp"
 
 #include "slic3r/Utils/Http.hpp"
 #include "slic3r/Utils/PrintHost.hpp"
@@ -1421,8 +1422,8 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
     if (!boost::filesystem::exists(ui_layout_file)) {
         std::cerr << "Error: cannot create " << setting_type_name << "settings, cannot find file " << ui_layout_file << "\n";
         return false;
-    }else
-        std::cout << "create settings  " << setting_type_name << "\n";
+    } else
+        Slic3r::slic3r_log->info("settings gui") << "create settings  " << setting_type_name << "\n";
 
     bool no_page_yet = true;
 #ifdef __WXMSW__
@@ -1465,7 +1466,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             no_page_yet = false;
             if (in_line) {
                 current_group->append_line(current_line);
-                if (logs) std::cout << "add line\n";
+                if (logs) Slic3r::slic3r_log->info("settings gui") << "add line\n";
                 in_line = false;
             }
             std::vector<std::string> params;
@@ -1487,14 +1488,14 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
             }
 
-            if(logs) std::cout << "create page " << label.c_str() <<" : "<< params[params.size() - 1] << "\n";
+            if(logs) Slic3r::slic3r_log->info("settings gui") << "create page " << label.c_str() <<" : "<< params[params.size() - 1] << "\n";
             current_page = add_options_page(L(label), params[params.size() - 1]);
         }
         else if (boost::starts_with(full_line, "end_page"))
         {
             if (in_line) {
                 current_group->append_line(current_line);
-                if (logs) std::cout << "add line\n";
+                if (logs) Slic3r::slic3r_log->info("settings gui") << "add line\n";
                 in_line = false;
             }
             current_page.reset();
@@ -1503,7 +1504,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
         {
             if (in_line) {
                 current_group->append_line(current_line);
-                if (logs) std::cout << "add line\n";
+                if (logs) Slic3r::slic3r_log->info("settings gui") << "add line\n";
                 in_line = false;
             }
             std::vector<std::string> params;
@@ -1637,13 +1638,13 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                     });
                 }
             }
-            if (logs) std::cout << "create group " << params.back() << "\n";
+            if (logs) Slic3r::slic3r_log->info("settings gui") << "create group " << params.back() << "\n";
         }
         else if (boost::starts_with(full_line, "end_group"))
         {
             if (in_line) {
                 current_group->append_line(current_line);
-                if (logs) std::cout << "add line\n";
+                if (logs) Slic3r::slic3r_log->info("settings gui") << "add line\n";
                 in_line = false;
             }
             current_group.reset();
@@ -1652,7 +1653,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
         {
             if (in_line) {
                 current_group->append_line(current_line);
-                if (logs) std::cout << "add line\n";
+                if (logs) Slic3r::slic3r_log->info("settings gui") << "add line\n";
                 in_line = false;
             }
             std::vector<std::string> params;
@@ -1669,12 +1670,12 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
             }
             in_line = true;
-            if (logs) std::cout << "create line " << (params.empty() ? "" : params.back()) << "\n";
+            if (logs) Slic3r::slic3r_log->info("settings gui") << "create line " << (params.empty() ? "" : params.back()) << "\n";
         }
         else if (boost::starts_with(full_line, "end_line"))
         {
             current_group->append_line(current_line);
-            if (logs) std::cout << "add line\n";
+            if (logs) Slic3r::slic3r_log->info("settings gui") << "add line\n";
             in_line = false;
         }
         else if (boost::starts_with(full_line, "setting"))
@@ -1787,7 +1788,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             } else {
                 current_line.append_option(option);
             }
-            if (logs) std::cout << "create setting " << setting_id <<"  with label "<< option.opt.label << "and height "<< option.opt.height<<" fw:"<< option.opt.full_width << "\n";
+            if (logs) Slic3r::slic3r_log->info("settings gui") << "create setting " << setting_id <<"  with label "<< option.opt.label << "and height "<< option.opt.height<<" fw:"<< option.opt.full_width << "\n";
         }
         else if (boost::starts_with(full_line, "height")) {
             std::string arg = "";
@@ -2008,7 +2009,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
 //        layout_page(current_page);
 #endif
 
-    if(logs) std::cout << "END create settings  " << setting_type_name << "\n";
+    if(logs) Slic3r::slic3r_log->info("settings gui") << "END create settings  " << setting_type_name << "\n";
 
     return !no_page_yet;
 }
