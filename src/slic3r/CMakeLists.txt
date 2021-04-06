@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.13)
 project(libslic3r_gui)
 
+if(NOT WIN32)
+    # Add DEBUG flags to debug builds.
+    add_compile_options(${_CC_DEBUG_FLAGS})
+endif()
+
+
 include(PrecompiledHeader)
 
 set(SLIC3R_GUI_SOURCES
@@ -247,6 +253,7 @@ if (APPLE)
 endif ()
 
 add_library(libslic3r_gui STATIC ${SLIC3R_GUI_SOURCES})
+target_compile_definitions(libslic3r_gui PRIVATE $<$<BOOL:${SLIC3R_ALPHA}>:SLIC3R_ALPHA>)
 
 encoding_check(libslic3r_gui)
 

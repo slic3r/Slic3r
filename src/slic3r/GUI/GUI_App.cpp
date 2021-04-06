@@ -700,9 +700,12 @@ bool GUI_App::init_opengl()
 
 void GUI_App::init_app_config()
 {
-	// Profiles for the alpha are stored into the PrusaSlicer-alpha directory to not mix with the current release.
-//	SetAppName(SLIC3R_APP_KEY);
-	SetAppName(SLIC3R_APP_KEY "-alpha");
+    #ifdef SLIC3R_ALPHA
+        // Profiles for the alpha are stored into the PrusaSlicer-alpha directory to not mix with the current release.
+	    SetAppName(SLIC3R_APP_KEY "-alpha");
+    #else 
+    	SetAppName(SLIC3R_APP_KEY);
+    #endif
 //	SetAppDisplayName(SLIC3R_APP_NAME);
 
 	// Set the Slic3r data directory at the Slic3r XS module.
