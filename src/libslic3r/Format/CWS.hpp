@@ -6,9 +6,11 @@
 
 namespace Slic3r {
 // "Masked" CWS as used by Malyan S100
-class MaskedCWSArchive : public SL1Archive {
+class MaskedCWSArchive : public SLAArchive {
     SLAPrinterConfig m_cfg;
 public:
+    SLAPrinterConfig& config() override { return m_cfg; }
+    const SLAPrinterConfig& config() const override { return m_cfg; }
     MaskedCWSArchive() = default;
     explicit MaskedCWSArchive(const SLAPrinterConfig &cfg): m_cfg(cfg) {}
     explicit MaskedCWSArchive(SLAPrinterConfig &&cfg): m_cfg(std::move(cfg)) {}

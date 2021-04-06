@@ -15,8 +15,9 @@ std::string to_ini(const ConfMap &m)
     for (auto &param : m) ret += param.first + " = " + param.second + "\n";
     // this format, at least for the Malyan M100, seems to want this in the config.
     auto _t = m.find("layerHeight"s);
-    if (_t != m.cend())
-        ret += "<SliceHeight>" + _t->second + "< / SliceHeight>";
+    if (_t != m.cend()) {
+        ret += "<SliceHeight>" + _t->second + "</SliceHeight>\n";
+    }
     
     return ret;
 }
@@ -33,6 +34,7 @@ std::string get_cfg_value(const DynamicPrintConfig &cfg, const std::string &key)
     return ret;    
 }
 
+/// Set up list of configuration options in the default slicing.
 void fill_iniconf(ConfMap &m, const SLAPrint &print)
 {
     auto &cfg = print.full_print_config();
@@ -102,7 +104,6 @@ void MaskedCWSArchive::export_print(Zipper& zipper,
         prjname.empty() ?
             boost::filesystem::path(zipper.get_filename()).stem().string() :
             prjname;
-    std::cerr << "Calling from MaskedCWSArchive\n" ;
     
     ConfMap iniconf, slicerconf;
     fill_iniconf(iniconf, print);

@@ -447,7 +447,7 @@ int CLI::run(int argc, char **argv)
                 std::string outfile = m_config.opt_string("output");
                 Print       fff_print;
                 SLAPrint    sla_print;
-                std::shared_ptr<SL1Archive> sla_archive = Slic3r::get_output_format(m_print_config);
+                std::shared_ptr<SLAArchive> sla_archive = Slic3r::get_output_format(m_print_config);
 
                 sla_print.set_printer(sla_archive);
                 sla_print.set_status_callback(

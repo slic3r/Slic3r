@@ -88,6 +88,8 @@ add_library(libslic3r STATIC
     Format/STL.hpp
     Format/SL1.hpp
     Format/SL1.cpp
+    Format/SLAArchive.hpp
+    Format/SLAArchive.cpp
     Format/CWS.hpp
     Format/CWS.cpp
     GCode/ThumbnailData.cpp

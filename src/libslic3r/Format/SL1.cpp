@@ -403,44 +403,6 @@ void fill_slicerconf(ConfMap &m, const SLAPrint &print)
 
 } // namespace
 
-uqptr<sla::RasterBase> SL1Archive::create_raster() const
-{
-    sla::RasterBase::Resolution res;
-    sla::RasterBase::PixelDim   pxdim;
-    std::array<bool, 2>         mirror;
-
-    double w  = m_cfg.display_width.getFloat();
-    double h  = m_cfg.display_height.getFloat();
-    auto   pw = size_t(m_cfg.display_pixels_x.getInt());
-    auto   ph = size_t(m_cfg.display_pixels_y.getInt());
-
-    mirror[X] = m_cfg.display_mirror_x.getBool();
-    mirror[Y] = m_cfg.display_mirror_y.getBool();
-    
-    auto ro = m_cfg.display_orientation.getInt();
-    sla::RasterBase::Orientation orientation =
-        ro == sla::RasterBase::roPortrait ? sla::RasterBase::roPortrait :
-                                            sla::RasterBase::roLandscape;
-    
-    if (orientation == sla::RasterBase::roPortrait) {
-        std::swap(w, h);
-        std::swap(pw, ph);
-    }
-
-    res   = sla::RasterBase::Resolution{pw, ph};
-    pxdim = sla::RasterBase::PixelDim{w / pw, h / ph};
-    sla::RasterBase::Trafo tr{orientation, mirror};
-
-    double gamma = m_cfg.gamma_correction.getFloat();
-
-    return sla::create_raster_grayscale_aa(res, pxdim, gamma, tr);
-}
-
-sla::RasterEncoder SL1Archive::get_encoder() const
-{
-    return sla::PNGRasterEncoder{};
-}
-
 void SL1Archive::export_print(Zipper& zipper,
                               const SLAPrint &print,
                               const std::string &prjname)
