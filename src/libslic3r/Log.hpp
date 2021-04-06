@@ -8,11 +8,10 @@
 #include <memory>
 #include <set>
 
-
 namespace Slic3r {
 
 /// All available logging levels.
-enum class log_t : uint8_t { FERR = 0, ERR = 4, WARN = 8, INFO = 16, DEBUG = 32, ALL = 255 };
+enum class log_t : uint8_t { FERR = 0, ERR = 4, WARN = 8, INFO = 16, DBG = 32, ALL = 255 };
 
 inline bool operator>(const log_t lhs, const log_t rhs) { return static_cast<uint8_t>(lhs) > static_cast<uint8_t>(rhs); }
 inline bool operator<(const log_t lhs, const log_t rhs) { return static_cast<uint8_t>(lhs) < static_cast<uint8_t>(rhs); }
