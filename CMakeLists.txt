@@ -22,6 +22,15 @@ else()
         endif()
 endif()
 
+if(NOT WIN32)
+    # Add DEBUG flags to debug builds.
+    # Also add -g to RELWITHDEBINFO on non-win32
+    set(_CC_DEBUG_FLAGS $<$<CONFIG:DEBUG>:-DwxDEBUG_LEVEL=1>
+                        $<$<CONFIG:DEBUG>:-g>
+                        $<$<CONFIG:RELWITHDEBINFO>:-g>
+    )
+endif()
+
 option(SLIC3R_STATIC 			"Compile Slic3r with static libraries (Boost, TBB, glew)" ${SLIC3R_STATIC_INITIAL})
 option(SLIC3R_GUI    			"Compile Slic3r with GUI components (OpenGL, wxWidgets)" 1)
 option(SLIC3R_FHS               "Assume Slic3r is to be installed in a FHS directory structure" 0)
@@ -112,11 +121,6 @@ enable_testing ()
 # Enable C++17 language standard.
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-if(NOT WIN32)
-    # Add DEBUG flags to debug builds.
-    add_compile_options("$<$<CONFIG:DEBUG>:-DDEBUG>")
-endif()
 
 # To be able to link libslic3r with the Perl XS module.
 # Once we get rid of Perl and libslic3r is linked statically, we can get rid of -fPIC

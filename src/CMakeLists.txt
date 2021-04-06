@@ -99,6 +99,7 @@ if (WIN32)
     add_library(Slic3r SHARED PrusaSlicer.cpp PrusaSlicer.hpp)
 else ()
     add_executable(Slic3r PrusaSlicer.cpp PrusaSlicer.hpp)
+    target_compile_options(Slic3r PRIVATE ${_CC_DEBUG_FLAGS})
 endif ()
 
 if (MINGW)

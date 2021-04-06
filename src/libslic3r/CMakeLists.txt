@@ -1,6 +1,11 @@
 project(libslic3r)
 cmake_minimum_required(VERSION 3.13)
 
+if(NOT WIN32)
+    # Add DEBUG flags to debug builds.
+    add_compile_options(${_CC_DEBUG_FLAGS})
+endif()
+
 include(PrecompiledHeader)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libslic3r_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h @ONLY)
