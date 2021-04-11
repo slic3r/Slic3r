@@ -8,6 +8,7 @@
 #include "OpenGLManager.hpp"
 #include "GLCanvas3D.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/PrintConfig.hpp"
 #include "DoubleSlider.hpp"
 
 #include "BitmapCache.hpp"
@@ -653,7 +654,15 @@ wxBoxSizer* Preview::create_layers_slider_sizer()
 
     Bind(DoubleSlider::wxCUSTOMEVT_TICKSCHANGED, [this](wxEvent&) {
         Model& model = wxGetApp().plater()->model();
-        model.custom_gcode_per_print_z = m_layers_slider->GetTicksValues();
+        Info custom_gcode_per_print_z = m_layers_slider->GetTicksValues();
+        //remove z-shift from gcode output
+        const float z_shift = wxGetApp().preset_bundle->printers.get_edited_preset().config.opt_float("z_offset");
+        if (can_display_gcode() && z_shift != 0) {
+            for (CustomGCode::Item& tick : custom_gcode_per_print_z.gcodes) {
+                tick.print_z -= z_shift;
+            }
+        }
+        model.custom_gcode_per_print_z = custom_gcode_per_print_z;
         m_schedule_background_process();
 
 #if ENABLE_PREVIEW_TYPE_CHANGE
@@ -731,7 +740,15 @@ void Preview::update_layers_slider(const std::vector<double>& layers_z, bool kee
     update_layers_slider_mode();
 
     Plater* plater = wxGetApp().plater();
-    CustomGCode::Info& ticks_info_from_model = plater->model().custom_gcode_per_print_z;
+    CustomGCode::Info ticks_info_from_model = plater->model().custom_gcode_per_print_z;
+    //add z-shift from gcode output
+    const float z_shift = wxGetApp().preset_bundle->printers.get_edited_preset().config.opt_float("z_offset");
+    if (can_display_gcode() && z_shift != 0) {
+        for (CustomGCode::Item& tick : ticks_info_from_model.gcodes) {
+            tick.print_z += z_shift;
+        }
+    }
+    //check incoherencies
     check_layers_slider_values(ticks_info_from_model.gcodes, layers_z);
 
     m_layers_slider->SetSliderValues(layers_z);
