@@ -364,8 +364,6 @@ void MainFrame::update_layout()
         break;
     }case ESettingsLayout::Old:
     {
-        // don't use view_toolbar here
-        m_plater->enable_view_toolbar(false);
         //layout
         m_plater->Reparent(m_tabpanel);
         m_tabpanel->InsertPage(0, m_plater, _L("Plater"));

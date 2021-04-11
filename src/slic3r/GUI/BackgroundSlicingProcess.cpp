@@ -495,8 +495,15 @@ void BackgroundSlicingProcess::schedule_upload(Slic3r::PrintHostJob upload_job)
 
 void BackgroundSlicingProcess::reset_export()
 {
-	assert(! this->running());
-	if (! this->running()) {
+	bool running = true;
+	{
+		// I don't know if it's safe to let m_mutex be lock whiole doing invalidate_step.
+		// if so, please remove the braces.
+		std::unique_lock<std::mutex> lck(m_mutex);
+		running = this->running();
+		assert(!running);
+	}
+	if (!running) {
 		m_export_path.clear();
 		m_export_path_on_removable_media = false;
 		// invalidate_step expects the mutex to be locked.
