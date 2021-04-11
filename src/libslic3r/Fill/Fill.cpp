@@ -144,7 +144,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                         params.pattern = ipRectiWithPerimeter;
                         params.connection = InfillConnection::icConnected;
                     }
-                    if (params.density <= 0)
+                    if (params.density <= 0 && !is_denser)
                         continue;
                 }
                 //adjust spacing/density (to over-extrude when needed)

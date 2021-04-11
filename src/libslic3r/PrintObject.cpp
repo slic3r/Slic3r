@@ -567,11 +567,11 @@ namespace Slic3r {
             tbb::parallel_for(
                 tbb::blocked_range<size_t>(1, m_layers.size()),
                 [this](const tbb::blocked_range<size_t>& range) {
-                for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++layer_idx) {
-                    m_print->throw_if_canceled();
-                    m_layers[layer_idx]->make_ironing();
+                    for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++layer_idx) {
+                        m_print->throw_if_canceled();
+                        m_layers[layer_idx]->make_ironing();
+                    }
                 }
-            }
             );
             m_print->throw_if_canceled();
             BOOST_LOG_TRIVIAL(debug) << "Ironing in parallel - end";
@@ -1439,17 +1439,7 @@ namespace Slic3r {
                 for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++layer_idx)
                     if (layer_expansions_and_voids[layer_idx + 1]) {
                         m_print->throw_if_canceled();
-                        Polygons voids;
-                        for (const LayerRegion* layerm : m_layers[layer_idx]->regions()) {
-                            /// supermerill: why *0.3 ???
-                            float unsupported_width = -float(scale_(layerm->region()->config().external_infill_margin.get_abs_value(
-                                layerm->region()->config().perimeters == 0 ? 0 : (layerm->flow(frExternalPerimeter).width + layerm->flow(frPerimeter).spacing() * (layerm->region()->config().perimeters - 1)))));
-                            if (layerm->region()->config().fill_density.value == 0.)
-                                for (const Surface& surface : layerm->fill_surfaces.surfaces)
-                                    // Shrink the holes, let the layer above expand slightly inside the unsupported areas.
-                                    polygons_append(voids, offset(surface.expolygon, unsupported_width));
-                        }
-                        surfaces_covered[layer_idx] = diff(to_polygons(this->m_layers[layer_idx]->lslices), voids);
+                        surfaces_covered[layer_idx] = to_polygons(this->m_layers[layer_idx]->lslices);
                     }
             }
             );
