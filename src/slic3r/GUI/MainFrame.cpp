@@ -317,7 +317,12 @@ void MainFrame::update_layout()
            (wxGetApp().app_config->get("old_settings_layout_mode") == "1" ? ESettingsLayout::Old :
             wxGetApp().app_config->get("tab_settings_layout_mode") == "1" ? ESettingsLayout::Tabs :
             wxGetApp().app_config->get("new_settings_layout_mode") == "1" ? ESettingsLayout::Hidden :
-            wxGetApp().app_config->get("dlg_settings_layout_mode") == "1" ? ESettingsLayout::Dlg : ESettingsLayout::Tabs);
+            wxGetApp().app_config->get("dlg_settings_layout_mode") == "1" ? ESettingsLayout::Dlg :
+#ifdef __APPLE__
+                ESettingsLayout::Old);
+#else
+                ESettingsLayout::Tabs);
+#endif
 
     if (m_layout == layout)
         return;
@@ -669,27 +674,37 @@ void MainFrame::init_tabpanel()
         }
         else if (this->m_layout == ESettingsLayout::Tabs) {
             if (last_selected_plater_tab == m_tabpanel->GetSelection()) {
-                std::cout << "Page changed to the same one (" << m_last_selected_plater_tab << ") no need to do anything\n";
+#ifdef __APPLE__
+                BOOST_LOG_TRIVIAL(debug) << "Page changed to the same one (" << m_last_selected_plater_tab << ") no need to do anything\n";
+#endif
                 return;
             }
             bool need_freeze = !this->IsFrozen();
             if(need_freeze) Freeze();
-            std::cout << "I switched to tab  " << m_tabpanel->GetSelection() << " and so i need to change the panel position & content\n";
+#ifdef __APPLE__
+            BOOST_LOG_TRIVIAL(debug) << "I switched to tab  " << m_tabpanel->GetSelection() << " and so i need to change the panel position & content\n";
+#endif
             size_t new_tab = m_tabpanel->GetSelection();
 
             size_t max = 0;
             for (int i = 0; i < 3; i++)
                 max = std::max(max, m_tabpanel->GetPage(i)->GetSizer()->GetItemCount());
-            std::cout << " 1 - hide & clear the sizers: " << max << "->";
+#ifdef __APPLE__
+            BOOST_LOG_TRIVIAL(debug) << " 1 - hide & clear the sizers: " << max << "->";
+#endif
             for(int i=0;i<3;i++)
                 m_tabpanel->GetPage(i)->GetSizer()->Clear();
             max = 0;
             for (int i = 0; i < 3; i++)
                 max = std::max(max, m_tabpanel->GetPage(i)->GetSizer()->GetItemCount());
-            std::cout << max << "\n";
+#ifdef __APPLE__
+            BOOST_LOG_TRIVIAL(debug) << max << "\n";
+#endif
 
             m_plater->Reparent(m_tabpanel->GetCurrentPage());
-            std::cout << " 2 - change parent from tab " << m_last_selected_plater_tab << " to tab " << m_tabpanel->GetSelection() << "\n";
+#ifdef __APPLE__
+            BOOST_LOG_TRIVIAL(debug) << " 2 - change parent from tab " << m_last_selected_plater_tab << " to tab " << m_tabpanel->GetSelection() << "\n";
+#endif
             if (m_tabpanel->GetSelection() == 0)
                 this->m_plater->select_view_3D("3D");
             else if (m_tabpanel->GetSelection() == 1) {
@@ -708,19 +723,25 @@ void MainFrame::init_tabpanel()
                 }else
                     this->m_plater->select_view_3D("Preview");
             }
-            std::cout << " 3 - redraw\n";
-            std::cout << " 4 - add to new sizer: " << m_tabpanel->GetCurrentPage()->GetSizer()->GetItemCount() << "->";
+#ifdef __APPLE__
+            BOOST_LOG_TRIVIAL(debug) << " 3 - redraw\n";
+            BOOST_LOG_TRIVIAL(debug) << " 4 - add to new sizer: " << m_tabpanel->GetCurrentPage()->GetSizer()->GetItemCount() << "->";
+#endif
             m_tabpanel->GetCurrentPage()->GetSizer()->Add(m_plater, 1, wxEXPAND);
-            std::cout << m_tabpanel->GetCurrentPage()->GetSizer()->GetItemCount() << "\n";
+#ifdef __APPLE__
+            BOOST_LOG_TRIVIAL(debug) << m_tabpanel->GetCurrentPage()->GetSizer()->GetItemCount() << "\n";
+#endif
             m_plater->Show();
-            std::cout << "End of change for the panel position & content, tab is "<< m_tabpanel->GetSelection() <<"\n";
+#ifdef __APPLE__
+            BOOST_LOG_TRIVIAL(debug) << "End of change for the panel position & content, tab is "<< m_tabpanel->GetSelection() <<"\n";
+#endif
             m_last_selected_plater_tab = m_tabpanel->GetSelection();
 
             if (need_freeze) Thaw();
 #ifdef __APPLE__
             m_tabpanel->ChangeSelection(new_tab);
             m_tabpanel->Refresh();
-            std::cout << "Macos: force tab selection to  "<< new_tab <<" : " << m_tabpanel->GetSelection() << "\n";
+            BOOST_LOG_TRIVIAL(debug) << "Macos: force tab selection to  "<< new_tab <<" : " << m_tabpanel->GetSelection() << "\n";
 #endif
         } else {
             select_tab(MainFrame::ETabType::LastPlater); // select Plater

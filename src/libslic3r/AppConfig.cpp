@@ -108,6 +108,7 @@ void AppConfig::set_defaults()
 
         if (get("version_check").empty())
             set("version_check", "1");
+
         if (get("preset_update").empty())
             set("preset_update", "0");
 
