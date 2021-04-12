@@ -2,8 +2,12 @@
 #include "I18N.hpp"
 
 #include "libslic3r/Utils.hpp"
+#include "GUI.hpp"
 #include "GUI_App.hpp"
-#include "wxExtensions.hpp"
+#include "MainFrame.hpp"
+#include "format.hpp"
+
+#include <wx/clipbrd.h>
 
 namespace Slic3r { 
 namespace GUI {
@@ -36,10 +40,10 @@ void AboutDialogLogo::onRepaint(wxEvent &event)
 // CopyrightsDialog
 // -----------------------------------------
 CopyrightsDialog::CopyrightsDialog()
-    : DPIDialog(NULL, wxID_ANY, from_u8((boost::format("%1% - %2%")
-                                                       % SLIC3R_APP_NAME
-                                                       % _utf8(L("Portions copyright"))).str()),
-                wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
+    : DPIDialog(static_cast<wxWindow*>(wxGetApp().mainframe), wxID_ANY, from_u8((boost::format("%1% - %2%")
+        % (wxGetApp().is_editor() ? SLIC3R_APP_NAME : GCODEVIEWER_APP_NAME)
+        % _utf8(L("Portions copyright"))).str()),
+        wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
     this->SetFont(wxGetApp().normal_font());
 	this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
@@ -51,7 +55,7 @@ CopyrightsDialog::CopyrightsDialog()
     m_html = new wxHtmlWindow(this, wxID_ANY, wxDefaultPosition, 
                               wxSize(40 * em_unit(), 20 * em_unit()), wxHW_SCROLLBAR_AUTO);
 
-    wxFont font = GetFont();
+    wxFont font = get_default_font(this);
     const int fs = font.GetPointSize();
     const int fs2 = static_cast<int>(1.2f*fs);
     int size[] = { fs, fs, fs, fs, fs2, fs2, fs2 };
@@ -114,7 +118,9 @@ void CopyrightsDialog::fill_entries()
         { "Icons for STL and GCODE files."
                             , "Akira Yasuda"                                , "http://3dp0.com/icons-for-stl-and-gcode/" },
         { "AppImage packaging for Linux using AppImageKit"
-                            , "2004-2019 Simon Peter and contributors"      , "https://appimage.org/" }
+                            , "2004-2019 Simon Peter and contributors"      , "https://appimage.org/" },
+        { "lib_fts"
+                            , "Forrest Smith"                               , "https://www.forrestthewoods.com/" }
     };
 }
 
@@ -147,9 +153,8 @@ wxString CopyrightsDialog::get_html_text()
                     , entry.link, entry.lib_name);
 
         if (!entry.copyright.empty())
-            text += wxString::Format(
-                    "%s %s"
-                    "<br/><br/>"
+            text += format_wxstr(
+                    "%1% %2%<br/><br/>"
                     , copyright_str, entry.copyright);
     }
 
@@ -198,8 +203,8 @@ void CopyrightsDialog::onCloseDialog(wxEvent &)
 }
 
 AboutDialog::AboutDialog()
-    : DPIDialog(NULL, wxID_ANY, from_u8((boost::format(_utf8(L("About %s"))) % SLIC3R_APP_NAME).str()), wxDefaultPosition,
-                wxDefaultSize, /*wxCAPTION*/wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
+    : DPIDialog(static_cast<wxWindow*>(wxGetApp().mainframe), wxID_ANY, from_u8((boost::format(_utf8(L("About %s"))) % (wxGetApp().is_editor() ? SLIC3R_APP_NAME : GCODEVIEWER_APP_NAME)).str()), wxDefaultPosition,
+        wxDefaultSize, /*wxCAPTION*/wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
     SetFont(wxGetApp().normal_font());
 
@@ -211,7 +216,7 @@ AboutDialog::AboutDialog()
 	main_sizer->Add(hsizer, 0, wxEXPAND | wxALL, 20);
 
     // logo
-    m_logo_bitmap = ScalableBitmap(this, "PrusaSlicer_192px.png", 192);
+    m_logo_bitmap = ScalableBitmap(this, wxGetApp().is_editor() ? "PrusaSlicer_192px.png" : "PrusaSlicer-gcodeviewer_192px.png", 192);
     m_logo = new wxStaticBitmap(this, wxID_ANY, m_logo_bitmap.bmp());
 	hsizer->Add(m_logo, 1, wxALIGN_CENTER_VERTICAL);
     
@@ -220,7 +225,7 @@ AboutDialog::AboutDialog()
 
     // title
     {
-        wxStaticText* title = new wxStaticText(this, wxID_ANY, SLIC3R_APP_NAME, wxDefaultPosition, wxDefaultSize);
+        wxStaticText* title = new wxStaticText(this, wxID_ANY, wxGetApp().is_editor() ? SLIC3R_APP_NAME : GCODEVIEWER_APP_NAME, wxDefaultPosition, wxDefaultSize);
         wxFont title_font = GUI::wxGetApp().bold_font();
         title_font.SetFamily(wxFONTFAMILY_ROMAN);
         title_font.SetPointSize(24);
@@ -230,7 +235,7 @@ AboutDialog::AboutDialog()
     
     // version
     {
-        auto version_string = _(L("Version"))+ " " + std::string(SLIC3R_VERSION);
+        auto version_string = _L("Version") + " " + std::string(SLIC3R_VERSION);
         wxStaticText* version = new wxStaticText(this, wxID_ANY, version_string.c_str(), wxDefaultPosition, wxDefaultSize);
         wxFont version_font = GetFont();
         #ifdef __WXMSW__
@@ -246,7 +251,7 @@ AboutDialog::AboutDialog()
     m_html = new wxHtmlWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO/*NEVER*/);
     {
         m_html->SetMinSize(wxSize(-1, 16 * wxGetApp().em_unit()));
-        wxFont font = GetFont();
+        wxFont font = get_default_font(this);
         const auto text_clr = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
 		auto text_clr_str = wxString::Format(wxT("#%02X%02X%02X"), text_clr.Red(), text_clr.Green(), text_clr.Blue());
 		auto bgr_clr_str = wxString::Format(wxT("#%02X%02X%02X"), bgr_clr.Red(), bgr_clr.Green(), bgr_clr.Blue());
@@ -291,9 +296,14 @@ AboutDialog::AboutDialog()
     wxStdDialogButtonSizer* buttons = this->CreateStdDialogButtonSizer(wxCLOSE);
 
     m_copy_rights_btn_id = NewControlId();
-    auto copy_rights_btn = new wxButton(this, m_copy_rights_btn_id, _(L("Portions copyright"))+dots);
+    auto copy_rights_btn = new wxButton(this, m_copy_rights_btn_id, _L("Portions copyright")+dots);
     buttons->Insert(0, copy_rights_btn, 0, wxLEFT, 5);
     copy_rights_btn->Bind(wxEVT_BUTTON, &AboutDialog::onCopyrightBtn, this);
+
+    m_copy_version_btn_id = NewControlId();
+    auto copy_version_btn = new wxButton(this, m_copy_version_btn_id, _L("Copy Version Info"));
+    buttons->Insert(1, copy_version_btn, 0, wxLEFT, 5);
+    copy_version_btn->Bind(wxEVT_BUTTON, &AboutDialog::onCopyToClipboard, this);
     
     this->SetEscapeId(wxID_CLOSE);
     this->Bind(wxEVT_BUTTON, &AboutDialog::onCloseDialog, this, wxID_CLOSE);
@@ -343,6 +353,13 @@ void AboutDialog::onCopyrightBtn(wxEvent &)
 {
     CopyrightsDialog dlg;
     dlg.ShowModal();
+}
+
+void AboutDialog::onCopyToClipboard(wxEvent&)
+{
+    wxTheClipboard->Open();
+    wxTheClipboard->SetData(new wxTextDataObject(_L("Version") + " " + std::string(SLIC3R_VERSION)));
+    wxTheClipboard->Close();
 }
 
 } // namespace GUI

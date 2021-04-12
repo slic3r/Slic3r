@@ -18,6 +18,35 @@ typedef std::vector<ThickLine> ThickLines;
 
 Linef3 transform(const Linef3& line, const Transform3d& t);
 
+namespace line_alg {
+
+// Distance to the closest point of line.
+template<class L, class T, int N>
+double distance_to_squared(const L &line, const Vec<N, T> &point)
+{
+    const Vec<N, double>  v  = (line.b - line.a).template cast<double>();
+    const Vec<N, double>  va = (point  - line.a).template cast<double>();
+    const double  l2 = v.squaredNorm();  // avoid a sqrt
+    if (l2 == 0.0)
+        // a == b case
+        return va.squaredNorm();
+    // Consider the line extending the segment, parameterized as a + t (b - a).
+    // We find projection of this point onto the line.
+    // It falls where t = [(this-a) . (b-a)] / |b-a|^2
+    const double t = va.dot(v) / l2;
+    if (t < 0.0)      return va.squaredNorm();  // beyond the 'a' end of the segment
+    else if (t > 1.0) return (point - line.b).template cast<double>().squaredNorm();  // beyond the 'b' end of the segment
+    return (t * v - va).squaredNorm();
+}
+
+template<class L, class T, int N>
+double distance_to(const L &line, const Vec<N, T> &point)
+{
+    return std::sqrt(distance_to_squared(line, point));
+}
+
+} // namespace line_alg
+
 class Line
 {
 public:
@@ -25,7 +54,8 @@ public:
     Line(const Point& _a, const Point& _b) : a(_a), b(_b) {}
     explicit operator Lines() const { Lines lines; lines.emplace_back(*this); return lines; }
     void   scale(double factor) { this->a *= factor; this->b *= factor; }
-    void   translate(double x, double y) { Vector v(x, y); this->a += v; this->b += v; }
+    void   translate(const Point &v) { this->a += v; this->b += v; }
+    void   translate(double x, double y) { this->translate(Point(x, y)); }
     void   rotate(double angle, const Point &center) { this->a.rotate(angle, center); this->b.rotate(angle, center); }
     void   reverse() { std::swap(this->a, this->b); }
     double length() const { return (b - a).cast<double>().norm(); }
@@ -46,8 +76,10 @@ public:
     double ccw(const Point& point) const { return point.ccw(*this); }
     // Clip a line with a bounding box. Returns false if the line is completely outside of the bounding box.
 	bool   clip_with_bbox(const BoundingBox &bbox);
+    // Extend the line from both sides by an offset.
+    void   extend(double offset);
 
-    static double distance_to_squared(const Point &point, const Point &a, const Point &b);
+    static inline double distance_to_squared(const Point &point, const Point &a, const Point &b) { return line_alg::distance_to_squared(Line{a, b}, Vec<2, coord_t>{point}); }
     static double distance_to(const Point &point, const Point &a, const Point &b) { return sqrt(distance_to_squared(point, a, b)); }
 
     Point a;
@@ -103,6 +135,8 @@ public:
     Vec3d b;
 };
 
+BoundingBox get_extents(const Lines &lines);
+
 } // namespace Slic3r
 
 // start Boost
@@ -123,4 +157,4 @@ namespace boost { namespace polygon {
 } }
 // end Boost
 
-#endif
+#endif // slic3r_Line_hpp_

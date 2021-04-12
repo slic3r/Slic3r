@@ -1,5 +1,5 @@
 #include <libslic3r/SLA/Contour3D.hpp>
-#include <libslic3r/SLA/EigenMesh3D.hpp>
+#include <libslic3r/SLA/IndexedMesh.hpp>
 
 #include <libslic3r/Format/objparser.hpp>
 
@@ -27,15 +27,15 @@ Contour3D::Contour3D(TriangleMesh &&trmesh)
     faces3.swap(trmesh.its.indices);
 }
 
-Contour3D::Contour3D(const EigenMesh3D &emesh) {
-    points.reserve(size_t(emesh.V().rows()));
-    faces3.reserve(size_t(emesh.F().rows()));
+Contour3D::Contour3D(const IndexedMesh &emesh) {
+    points.reserve(emesh.vertices().size());
+    faces3.reserve(emesh.indices().size());
     
-    for (int r = 0; r < emesh.V().rows(); r++)
-        points.emplace_back(emesh.V().row(r).cast<double>());
+    for (const Vec3f& vert : emesh.vertices())
+        points.emplace_back(vert.cast<double>());
     
-    for (int i = 0; i < emesh.F().rows(); i++)
-        faces3.emplace_back(emesh.F().row(i));
+    for (const auto& ind : emesh.indices())
+        faces3.emplace_back(ind);
 }
 
 Contour3D &Contour3D::merge(const Contour3D &ctr)

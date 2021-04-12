@@ -15,6 +15,7 @@
 
 class wxButton;
 class wxTextCtrl;
+class wxComboBox;
 class wxCheckBox;
 class wxDataViewListCtrl;
 
@@ -29,14 +30,16 @@ namespace GUI {
 class PrintHostSendDialog : public GUI::MsgDialog
 {
 public:
-    PrintHostSendDialog(const boost::filesystem::path &path, bool can_start_print);
+    PrintHostSendDialog(const boost::filesystem::path &path, bool can_start_print, const wxArrayString& groups);
     boost::filesystem::path filename() const;
     bool start_print() const;
+    std::string group() const;
 
     virtual void EndModal(int ret) override;
 private:
     wxTextCtrl *txt_filename;
     wxCheckBox *box_print;
+    wxComboBox *combo_groups;
 };
 
 
@@ -61,7 +64,7 @@ public:
     PrintHostQueueDialog(wxWindow *parent);
 
     void append_job(const PrintHostJob &job);
-
+    void get_active_jobs(std::vector<std::pair<std::string, std::string>>& ret);
 protected:
     void on_dpi_changed(const wxRect &suggested_rect) override;
 
@@ -100,12 +103,13 @@ private:
     void on_progress(Event&);
     void on_error(Event&);
     void on_cancel(Event&);
+    // This vector keep adress and filename of uploads. It is used when checking for running uploads during exit.
+    std::vector<std::pair<std::string, std::string>> upload_names;
 };
 
 wxDECLARE_EVENT(EVT_PRINTHOST_PROGRESS, PrintHostQueueDialog::Event);
 wxDECLARE_EVENT(EVT_PRINTHOST_ERROR, PrintHostQueueDialog::Event);
 wxDECLARE_EVENT(EVT_PRINTHOST_CANCEL, PrintHostQueueDialog::Event);
-
 
 }}
 

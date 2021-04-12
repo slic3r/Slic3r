@@ -2,6 +2,7 @@
 #include "Line.hpp"
 #include "MultiPoint.hpp"
 #include "Int128.hpp"
+#include "BoundingBox.hpp"
 #include <algorithm>
 
 namespace Slic3r {
@@ -42,16 +43,6 @@ Pointf3s transform(const Pointf3s& points, const Transform3d& t)
     Pointf3s ret_points(vertices_count, Vec3d::Zero());
     ::memcpy((void*)ret_points.data(), (const void*)dst.data(), data_size);
     return ret_points;
-}
-
-void Point::rotate(double angle)
-{
-    double cur_x = (double)(*this)(0);
-    double cur_y = (double)(*this)(1);
-    double s     = ::sin(angle);
-    double c     = ::cos(angle);
-    (*this)(0) = (coord_t)round(c * cur_x - s * cur_y);
-    (*this)(1) = (coord_t)round(c * cur_y + s * cur_x);
 }
 
 void Point::rotate(double angle, const Point &center)
@@ -184,6 +175,19 @@ Point Point::projection_onto(const Line &line) const
     
     // Else pick closest endpoint.
     return ((line.a - *this).cast<double>().squaredNorm() < (line.b - *this).cast<double>().squaredNorm()) ? line.a : line.b;
+}
+
+BoundingBox get_extents(const Points &pts)
+{ 
+    return BoundingBox(pts);
+}
+
+BoundingBox get_extents(const std::vector<Points> &pts)
+{
+    BoundingBox bbox;
+    for (const Points &p : pts)
+        bbox.merge(get_extents(p));
+    return bbox;
 }
 
 std::ostream& operator<<(std::ostream &stm, const Vec2d &pointf)

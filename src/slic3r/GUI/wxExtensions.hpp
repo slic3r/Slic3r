@@ -8,6 +8,7 @@
 #include <wx/sizer.h>
 #include <wx/menu.h>
 #include <wx/bmpcbox.h>
+#include <wx/statbmp.h>
 
 #include <vector>
 #include <functional>
@@ -21,10 +22,10 @@ inline void         msw_rescale_menu(wxMenu* /* menu */) {}
 
 wxMenuItem* append_menu_item(wxMenu* menu, int id, const wxString& string, const wxString& description,
     std::function<void(wxCommandEvent& event)> cb, const wxBitmap& icon, wxEvtHandler* event_handler = nullptr,
-    std::function<bool()> const cb_condition = []() { return true;}, wxWindow* parent = nullptr);
+    std::function<bool()> const cb_condition = []() { return true;}, wxWindow* parent = nullptr, int insert_pos = wxNOT_FOUND);
 wxMenuItem* append_menu_item(wxMenu* menu, int id, const wxString& string, const wxString& description,
     std::function<void(wxCommandEvent& event)> cb, const std::string& icon = "", wxEvtHandler* event_handler = nullptr,
-    std::function<bool()> const cb_condition = []() { return true; }, wxWindow* parent = nullptr);
+    std::function<bool()> const cb_condition = []() { return true; }, wxWindow* parent = nullptr, int insert_pos = wxNOT_FOUND);
 
 wxMenuItem* append_submenu(wxMenu* menu, wxMenu* sub_menu, int id, const wxString& string, const wxString& description,
     const std::string& icon = "",
@@ -62,7 +63,6 @@ class wxCheckListBoxComboPopup : public wxCheckListBox, public wxComboPopup
 {
     static const unsigned int DefaultWidth;
     static const unsigned int DefaultHeight;
-    static const unsigned int DefaultItemHeight;
 
     wxString m_text;
 
@@ -93,37 +93,6 @@ public:
     void OnCheckListBox(wxCommandEvent& evt);
     void OnListBoxSelection(wxCommandEvent& evt);
 };
-
-namespace Slic3r {
-namespace GUI {
-// ***  PresetBitmapComboBox  ***
-
-// BitmapComboBox used to presets list on Sidebar and Tabs
-class PresetBitmapComboBox: public wxBitmapComboBox
-{
-public:
-    PresetBitmapComboBox(wxWindow* parent, const wxSize& size = wxDefaultSize);
-    ~PresetBitmapComboBox() {}
-
-#ifdef __APPLE__
-protected:
-    /* For PresetBitmapComboBox we use bitmaps that are created from images that are already scaled appropriately for Retina
-     * (Contrary to the intuition, the `scale` argument for Bitmap's constructor doesn't mean
-     * "please scale this to such and such" but rather
-     * "the wxImage is already sized for backing scale such and such". )
-     * Unfortunately, the constructor changes the size of wxBitmap too.
-     * Thus We need to use unscaled size value for bitmaps that we use
-     * to avoid scaled size of control items.
-     * For this purpose control drawing methods and
-     * control size calculation methods (virtual) are overridden.
-     **/
-    virtual bool OnAddBitmap(const wxBitmap& bitmap) override;
-    virtual void OnDrawItem(wxDC& dc, const wxRect& rect, int item, int flags) const override;
-#endif
-};
-
-}
-}
 
 
 // ***  wxDataViewTreeCtrlComboBox  ***
@@ -160,7 +129,8 @@ public:
     ScalableBitmap() {};
     ScalableBitmap( wxWindow *parent,
                     const std::string& icon_name = "",
-                    const int px_cnt = 16);
+                    const int px_cnt = 16, 
+                    const bool grayscale = false);
 
     ~ScalableBitmap() {}
 
@@ -181,6 +151,7 @@ private:
     wxBitmap        m_bmp = wxBitmap();
     std::string     m_icon_name = "";
     int             m_px_cnt {16};
+    bool            m_grayscale {false};
 };
 
 
@@ -238,7 +209,9 @@ public:
         const wxString&     label = wxEmptyString,
         const wxSize&       size = wxDefaultSize,
         const wxPoint&      pos = wxDefaultPosition,
-        long                style = wxBU_EXACTFIT | wxNO_BORDER);
+        long                style = wxBU_EXACTFIT | wxNO_BORDER,
+        bool                use_default_disabled_bitmap = false,
+        int                 bmp_px_cnt = 16);
 
     ScalableButton(
         wxWindow *          parent,
@@ -252,6 +225,7 @@ public:
     void SetBitmap_(const ScalableBitmap& bmp);
     void SetBitmapDisabled_(const ScalableBitmap &bmp);
     int  GetBitmapHeight();
+    void UseDefaultBitmapDisabled();
 
     void    msw_rescale();
 
@@ -261,6 +235,8 @@ private:
     std::string     m_disabled_icon_name;
     int             m_width {-1}; // should be multiplied to em_unit
     int             m_height{-1}; // should be multiplied to em_unit
+
+    bool            m_use_default_disabled_bitmap {false};
 
     // bitmap dimensions 
     int             m_px_cnt{ 16 };
@@ -322,6 +298,9 @@ public:
 
     void SetMode(const /*ConfigOptionMode*/int mode);
 
+    void set_items_flag(int flag);
+    void set_items_border(int border);
+
     void msw_rescale();
 
 private:
@@ -352,6 +331,31 @@ public:
 private:
     wxMenuItem* m_separator_frst { nullptr };    // use like separator before settings item
     wxMenuItem* m_separator_scnd { nullptr };   // use like separator between settings items
+};
+
+
+// ----------------------------------------------------------------------------
+// BlinkingBitmap
+// ----------------------------------------------------------------------------
+
+class BlinkingBitmap : public wxStaticBitmap
+{
+public:
+    BlinkingBitmap() {};
+    BlinkingBitmap(wxWindow* parent, const std::string& icon_name = "search_blink");
+
+    ~BlinkingBitmap() {}
+
+    void    msw_rescale();
+    void    invalidate();
+    void    activate();
+    void    blink();
+
+    const wxBitmap& get_bmp() const { return bmp.bmp(); }
+
+private:
+    ScalableBitmap  bmp;
+    bool            show {false};
 };
 
 

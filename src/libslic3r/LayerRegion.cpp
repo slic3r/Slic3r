@@ -54,15 +54,23 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollec
 {
     this->perimeters.clear();
     this->thin_fills.clear();
-    
+
+    const PrintConfig       &print_config  = this->layer()->object()->print()->config();
+    const PrintRegionConfig &region_config = this->region()->config();
+    // This needs to be in sync with PrintObject::_slice() slicing_mode_normal_below_layer!
+    bool spiral_vase = print_config.spiral_vase &&
+        (this->layer()->id() >= region_config.bottom_solid_layers.value &&
+         this->layer()->print_z >= region_config.bottom_solid_min_thickness - EPSILON);
+
     PerimeterGenerator g(
         // input:
         &slices,
         this->layer()->height,
         this->flow(frPerimeter),
-        &this->region()->config(),
+        &region_config,
         &this->layer()->object()->config(),
-        &this->layer()->object()->print()->config(),
+        &print_config,
+        spiral_vase,
         
         // output:
         &this->perimeters,
@@ -264,7 +272,7 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
                     this->flow(frInfill, true).scaled_width()
                 );
                 #ifdef SLIC3R_DEBUG
-                printf("Processing bridge at layer " PRINTF_ZU ":\n", this->layer()->id());
+                printf("Processing bridge at layer %zu:\n", this->layer()->id());
                 #endif
 				double custom_angle = Geometry::deg2rad(this->region()->config().bridge_angle.value);
 				if (bd.detect_angle(custom_angle)) {

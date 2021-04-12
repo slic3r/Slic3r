@@ -1,9 +1,15 @@
 // Include GLGizmoBase.hpp before I18N.hpp as it includes some libigl code, which overrides our localization "L" macro.
 #include "GLGizmoRotate.hpp"
 #include "slic3r/GUI/GLCanvas3D.hpp"
+#include "slic3r/GUI/ImGuiWrapper.hpp"
 
 #include <GL/glew.h>
 
+#include "slic3r/GUI/GUI_App.hpp"
+#include "slic3r/GUI/GUI.hpp"
+#include "libslic3r/PresetBundle.hpp"
+
+#include "libslic3r/SLA/Rotfinder.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -192,6 +198,12 @@ void GLGizmoRotate::on_render_for_picking() const
     render_grabber_extension(box, true);
 
     glsafe(::glPopMatrix());
+}
+
+void GLGizmoRotate3D::on_render_input_window(float x, float y, float bottom_limit)
+{
+    if (wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology() != ptSLA)
+        return;
 }
 
 void GLGizmoRotate::render_circle() const

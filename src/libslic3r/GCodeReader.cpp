@@ -1,6 +1,7 @@
 #include "GCodeReader.hpp"
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/nowide/fstream.hpp>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
@@ -113,9 +114,10 @@ void GCodeReader::update_coordinates(GCodeLine &gline, std::pair<const char*, co
 
 void GCodeReader::parse_file(const std::string &file, callback_t callback)
 {
-    std::ifstream f(file);
+    boost::nowide::ifstream f(file);
     std::string line;
-    while (std::getline(f, line))
+    m_parsing_file = true;
+    while (m_parsing_file && std::getline(f, line))
         this->parse_line(line, callback);
 }
 

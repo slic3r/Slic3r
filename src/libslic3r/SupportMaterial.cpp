@@ -409,7 +409,7 @@ void PrintObjectSupportMaterial::generate(PrintObject &object)
                 export_print_z_polygons_and_extrusions_to_svg(
                     debug_out_path("support-w-fills-%d-%lf.svg", iRun, layers_sorted[i]->print_z).c_str(),
                     layers_sorted.data() + i, j - i,
-                    *object.support_layers[layer_id]);
+                    *object.support_layers()[layer_id]);
                 ++layer_id;
             }
             i = j;
@@ -597,8 +597,8 @@ public:
             ::fwrite(&n_points, 4, 1, file);
             for (uint32_t j = 0; j < n_points; ++ j) {
                 const Point &pt = poly.points[j];
-                ::fwrite(&pt.x, sizeof(coord_t), 1, file);
-                ::fwrite(&pt.y, sizeof(coord_t), 1, file);
+                ::fwrite(&pt.x(), sizeof(coord_t), 1, file);
+                ::fwrite(&pt.y(), sizeof(coord_t), 1, file);
             }
         }
         n_polygons = m_trimming_polygons->size();
@@ -609,8 +609,8 @@ public:
             ::fwrite(&n_points, 4, 1, file);
             for (uint32_t j = 0; j < n_points; ++ j) {
                 const Point &pt = poly.points[j];
-                ::fwrite(&pt.x, sizeof(coord_t), 1, file);
-                ::fwrite(&pt.y, sizeof(coord_t), 1, file);
+                ::fwrite(&pt.x(), sizeof(coord_t), 1, file);
+                ::fwrite(&pt.y(), sizeof(coord_t), 1, file);
             }
         }
         ::fclose(file);
@@ -906,13 +906,15 @@ namespace SupportMaterialInternal {
                     polyline.extend_start(fw);
                     polyline.extend_end(fw);
                     // Is the straight perimeter segment supported at both sides?
-					for (size_t i = 0; i < lower_layer.lslices.size(); ++ i)
-						if (lower_layer.lslices_bboxes[i].contains(polyline.first_point()) && lower_layer.lslices_bboxes[i].contains(polyline.last_point()) && 
-							lower_layer.lslices[i].contains(polyline.first_point()) && lower_layer.lslices[i].contains(polyline.last_point())) {
-							// Offset a polyline into a thick line.
-							polygons_append(bridges, offset(polyline, 0.5f * w + 10.f));
-							break;
-						}
+                    Point pts[2]       = { polyline.first_point(), polyline.last_point() };
+                    bool  supported[2] = { false, false };
+					for (size_t i = 0; i < lower_layer.lslices.size() && ! (supported[0] && supported[1]); ++ i)
+                        for (int j = 0; j < 2; ++ j)
+                            if (! supported[j] && lower_layer.lslices_bboxes[i].contains(pts[j]) && lower_layer.lslices[i].contains(pts[j]))
+                                supported[j] = true;
+                    if (supported[0] && supported[1])
+                        // Offset a polyline into a thick line.
+                        polygons_append(bridges, offset(polyline, 0.5f * w + 10.f));
                 }
             bridges = union_(bridges);
         }
@@ -970,6 +972,10 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
     // Slice support enforcers / support blockers.
     std::vector<ExPolygons> enforcers = object.slice_support_enforcers();
     std::vector<ExPolygons> blockers  = object.slice_support_blockers();
+
+    // Append custom supports.
+    object.project_and_append_custom_facets(false, EnforcerBlockerType::ENFORCER, enforcers);
+    object.project_and_append_custom_facets(false, EnforcerBlockerType::BLOCKER, blockers);
 
     // Output layers, sorted by top Z.
     MyLayersPtr contact_out;
@@ -1097,10 +1103,10 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                             if (! enforcers.empty()) {
                                 // Apply the "support enforcers".
                                 //FIXME add the "enforcers" to the sparse support regions only.
-                                const ExPolygons &enforcer = enforcers[layer_id - 1];
+                                const ExPolygons &enforcer = enforcers[layer_id];
                                 if (! enforcer.empty()) {
                                     // Enforce supports (as if with 90 degrees of slope) for the regions covered by the enforcer meshes.
-                                    Polygons new_contacts = diff(intersection(layerm_polygons, to_polygons(enforcer)),
+                                    Polygons new_contacts = diff(intersection(layerm_polygons, to_polygons(std::move(enforcer))),
                                             offset(lower_layer_polygons, 0.05f * fw, SUPPORT_SURFACES_OFFSET_PARAMETERS));
                                     if (! new_contacts.empty()) {
                                         if (diff_polygons.empty())
@@ -1111,19 +1117,26 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                                 }
                             }
                         }
-                        // Apply the "support blockers".
-                        if (! diff_polygons.empty() && ! blockers.empty() && ! blockers[layer_id].empty()) {
-                            // Enforce supports (as if with 90 degrees of slope) for the regions covered by the enforcer meshes.
-                            diff_polygons = diff(diff_polygons, to_polygons(blockers[layer_id]));
-                        }
+
                         if (diff_polygons.empty())
                             continue;
+
+                        // Apply the "support blockers".
+                        if (! blockers.empty() && ! blockers[layer_id].empty()) {
+                            // Expand the blocker a bit. Custom blockers produce strips
+                            // spanning just the projection between the two slices.
+                            // Subtracting them as they are may leave unwanted narrow
+                            // residues of diff_polygons that would then be supported.
+                            diff_polygons = diff(diff_polygons,
+                                offset(union_(to_polygons(std::move(blockers[layer_id]))),
+                                       1000.*SCALED_EPSILON));
+                        }
 
                         #ifdef SLIC3R_DEBUG
                         {
                             ::Slic3r::SVG svg(debug_out_path("support-top-contacts-raw-run%d-layer%d-region%d.svg", 
                                 iRun, layer_id, 
-                                std::find_if(layer.regions.begin(), layer.regions.end(), [layerm](const LayerRegion* other){return other == layerm;}) - layer.regions.begin()), 
+                                std::find_if(layer.regions().begin(), layer.regions().end(), [layerm](const LayerRegion* other){return other == layerm;}) - layer.regions().begin()),
                             get_extents(diff_polygons));
                             Slic3r::ExPolygons expolys = union_ex(diff_polygons, false);
                             svg.draw(expolys);
@@ -1141,7 +1154,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                         Slic3r::SVG::export_expolygons(
                             debug_out_path("support-top-contacts-filtered-run%d-layer%d-region%d-z%f.svg", 
                                 iRun, layer_id, 
-                                std::find_if(layer.regions.begin(), layer.regions.end(), [layerm](const LayerRegion* other){return other == layerm;}) - layer.regions.begin(), 
+                                std::find_if(layer.regions().begin(), layer.regions().end(), [layerm](const LayerRegion* other){return other == layerm;}) - layer.regions().begin(),
                                 layer.print_z),
                             union_ex(diff_polygons, false));
                         #endif /* SLIC3R_DEBUG */
@@ -1471,7 +1484,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
                         svg.draw(union_ex(top, false), "blue", 0.5f);
                         svg.draw(union_ex(projection_raw, true), "red", 0.5f);
                         svg.draw_outline(union_ex(projection_raw, true), "red", "blue", scale_(0.1f));
-                        svg.draw(layer.slices, "green", 0.5f);
+                        svg.draw(layer.lslices, "green", 0.5f);
                     }
         #endif /* SLIC3R_DEBUG */
 
@@ -2313,14 +2326,18 @@ static inline void fill_expolygons_generate_paths(
 {
     FillParams fill_params;
     fill_params.density = density;
-    fill_params.complete = true;
     fill_params.dont_adjust = true;
     for (const ExPolygon &expoly : expolygons) {
         Surface surface(stInternal, expoly);
+        Polylines polylines;
+    	try {
+            polylines = filler->fill_surface(&surface, fill_params);
+		} catch (InfillFailedException &) {
+		}
         extrusion_entities_append_paths(
             dst,
-            filler->fill_surface(&surface, fill_params),
-            role, 
+            std::move(polylines),
+            role,
             flow.mm3_per_mm(), flow.width, flow.height);
     }
 }
@@ -2335,13 +2352,17 @@ static inline void fill_expolygons_generate_paths(
 {
     FillParams fill_params;
     fill_params.density = density;
-    fill_params.complete = true;
     fill_params.dont_adjust = true;
     for (ExPolygon &expoly : expolygons) {
         Surface surface(stInternal, std::move(expoly));
+        Polylines polylines;
+    	try {
+            polylines = filler->fill_surface(&surface, fill_params);
+		} catch (InfillFailedException &) {
+		}
         extrusion_entities_append_paths(
             dst,
-            filler->fill_surface(&surface, fill_params),
+            std::move(polylines),
             role,
             flow.mm3_per_mm(), flow.width, flow.height);
     }
@@ -2494,7 +2515,7 @@ void LoopInterfaceProcessor::generate(MyLayerExtruded &top_contact_layer, const 
                 Polygon     &contour = (i_contour == 0) ? it_contact_expoly->contour : it_contact_expoly->holes[i_contour - 1];
                 const Point *seg_current_pt = nullptr;
                 coordf_t     seg_current_t  = 0.;
-                if (! intersection_pl(contour.split_at_first_point(), overhang_with_margin).empty()) {
+                if (! intersection_pl((Polylines)contour.split_at_first_point(), overhang_with_margin).empty()) {
                     // The contour is below the overhang at least to some extent.
                     //FIXME ideally one would place the circles below the overhang only.
                     // Walk around the contour and place circles so their centers are not closer than circle_distance from each other.

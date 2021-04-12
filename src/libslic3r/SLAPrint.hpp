@@ -1,9 +1,10 @@
 #ifndef slic3r_SLAPrint_hpp_
 #define slic3r_SLAPrint_hpp_
 
+#include <cstdint>
 #include <mutex>
 #include "PrintBase.hpp"
-#include "SLA/RasterWriter.hpp"
+#include "SLA/RasterBase.hpp"
 #include "SLA/SupportTree.hpp"
 #include "Point.hpp"
 #include "MTUtils.hpp"
@@ -37,7 +38,7 @@ using _SLAPrintObjectBase =
 
 // Layers according to quantized height levels. This will be consumed by
 // the printer (rasterizer) in the SLAPrint class.
-// using coord_t = long long;
+// using coord_t = int64_t;
 
 enum SliceOrigin { soSupport, soModel };
 
@@ -261,7 +262,7 @@ protected:
 	SLAPrintObject(SLAPrint* print, ModelObject* model_object);
     ~SLAPrintObject();
 
-    void                    config_apply(const ConfigBase &other, bool ignore_nonexistent = false) { this->m_config.apply(other, ignore_nonexistent); }
+    void                    config_apply(const ConfigBase &other, bool ignore_nonexistent = false) { m_config.apply(other, ignore_nonexistent); }
     void                    config_apply_only(const ConfigBase &other, const t_config_option_keys &keys, bool ignore_nonexistent = false)
         { this->m_config.apply_only(other, keys, ignore_nonexistent); }
 
@@ -350,6 +351,7 @@ struct SLAPrintStatistics
     size_t                          fast_layers_count;
     double                          total_cost;
     double                          total_weight;
+    std::vector<double>             layers_times;
 
     // Config with the filled in print statistics.
     DynamicConfig           config() const;
@@ -366,6 +368,33 @@ struct SLAPrintStatistics
         fast_layers_count = 0;
         total_cost = 0.;
         total_weight = 0.;
+        layers_times.clear();
+    }
+};
+
+class SLAPrinter {
+protected:
+    std::vector<sla::EncodedRaster> m_layers;
+    
+    virtual uqptr<sla::RasterBase> create_raster() const = 0;
+    virtual sla::RasterEncoder get_encoder() const = 0;
+    
+public:
+    virtual ~SLAPrinter() = default;
+    
+    virtual void apply(const SLAPrinterConfig &cfg) = 0;
+    
+    // Fn have to be thread safe: void(sla::RasterBase& raster, size_t lyrid);
+    template<class Fn> void draw_layers(size_t layer_num, Fn &&drawfn)
+    {
+        m_layers.resize(layer_num);
+        sla::ccr::for_each(size_t(0), m_layers.size(),
+                           [this, &drawfn] (size_t idx) {
+                               sla::EncodedRaster& enc = m_layers[idx];
+                               auto rst = create_raster();
+                               drawfn(*rst, idx);
+                               enc = rst->encode(get_encoder());
+                           });
     }
 };
 
@@ -394,6 +423,8 @@ public:
 
     void                clear() override;
     bool                empty() const override { return m_objects.empty(); }
+    // List of existing PrintObject IDs, to remove notifications for non-existent IDs.
+    std::vector<ObjectID> print_object_ids() const;
     ApplyStatus         apply(const Model &model, DynamicPrintConfig config) override;
     void                set_task(const TaskParams &params) override;
     void                process() override;
@@ -403,19 +434,14 @@ public:
     // Returns true if the last step was finished with success.
     bool                finished() const override { return this->is_step_done(slaposSliceSupports) && this->Inherited::is_step_done(slapsRasterize); }
 
-    inline void export_raster(const std::string& fpath,
-                              const std::string& projectname = "")
-    {
-        if(m_printer) m_printer->save(fpath, projectname);
-    }
-
-    inline void export_raster(Zipper &zipper,
-                              const std::string& projectname = "")
-    {
-        if(m_printer) m_printer->save(zipper, projectname);
-    }
-
     const PrintObjects& objects() const { return m_objects; }
+    // PrintObject by its ObjectID, to be used to uniquely bind slicing warnings to their source PrintObjects
+    // in the notification center.
+    const SLAPrintObject* get_object(ObjectID object_id) const {
+        auto it = std::find_if(m_objects.begin(), m_objects.end(),
+            [object_id](const SLAPrintObject *obj) { return obj->id() == object_id; });
+        return (it == m_objects.end()) ? nullptr : *it;
+    }
 
     const SLAPrintConfig&       print_config() const { return m_print_config; }
     const SLAPrinterConfig&     printer_config() const { return m_printer_config; }
@@ -445,14 +471,15 @@ public:
 
         std::vector<ClipperLib::Polygon> m_transformed_slices;
 
-        template<class Container> void transformed_slices(Container&& c) {
+        template<class Container> void transformed_slices(Container&& c)
+        {
             m_transformed_slices = std::forward<Container>(c);
         }
         
         friend class SLAPrint::Steps;
 
     public:
-
+        
         explicit PrintLayer(coord_t lvl) : m_level(lvl) {}
 
         // for being sorted in their container (see m_printer_input)
@@ -474,8 +501,11 @@ public:
     // The aggregated and leveled print records from various objects.
     // TODO: use this structure for the preview in the future.
     const std::vector<PrintLayer>& print_layers() const { return m_printer_input; }
-
+    
+    void set_printer(SLAPrinter *archiver);
+    
 private:
+    
     // Implement same logic as in SLAPrintObject
     bool invalidate_step(SLAPrintStep st);
 
@@ -491,13 +521,13 @@ private:
     std::vector<bool>               m_stepmask;
 
     // Ready-made data for rasterization.
-    std::vector<PrintLayer>                 m_printer_input;
-
-    // The printer itself
-    std::unique_ptr<sla::RasterWriter>   m_printer;
-
+    std::vector<PrintLayer>         m_printer_input;
+    
+    // The archive object which collects the raster images after slicing
+    SLAPrinter                     *m_printer = nullptr;
+    
     // Estimated print time, material consumed.
-    SLAPrintStatistics                      m_print_statistics;
+    SLAPrintStatistics              m_print_statistics;
     
     class StatusReporter
     {
@@ -512,15 +542,6 @@ private:
         
         double status() const { return m_st; }
     } m_report_status;
-    
-    sla::RasterWriter &init_printer();
-    
-    inline sla::Raster::Orientation get_printer_orientation() const
-    {
-        auto ro = m_printer_config.display_orientation.getInt();
-        return ro == sla::Raster::roPortrait ? sla::Raster::roPortrait :
-                                               sla::Raster::roLandscape;
-    }
 
 	friend SLAPrintObject;
 };
@@ -529,7 +550,7 @@ private:
 
 bool is_zero_elevation(const SLAPrintObjectConfig &c);
 
-sla::SupportConfig make_support_cfg(const SLAPrintObjectConfig& c);
+sla::SupportTreeConfig make_support_cfg(const SLAPrintObjectConfig& c);
 
 sla::PadConfig::EmbedObject builtin_pad_cfg(const SLAPrintObjectConfig& c);
 

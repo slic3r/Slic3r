@@ -3,6 +3,7 @@
 %{
 #include <xsinit.h>
 #include "libslic3r/PerimeterGenerator.hpp"
+#include "libslic3r/Layer.hpp"
 %}
 
 %name{Slic3r::Layer::PerimeterGenerator} class PerimeterGenerator {
@@ -15,6 +16,7 @@
             dynamic_cast<PrintRegionConfig*>(region_config),
             dynamic_cast<PrintObjectConfig*>(object_config),
             dynamic_cast<PrintConfig*>(print_config),
+            false,
             loops, gap_fill, fill_surfaces); %};
     ~PerimeterGenerator();
     

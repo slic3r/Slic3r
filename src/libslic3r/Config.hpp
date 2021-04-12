@@ -13,6 +13,7 @@
 #include <vector>
 #include "libslic3r.h"
 #include "clonable_ptr.hpp"
+#include "Exception.hpp"
 #include "Point.hpp"
 
 #include <boost/algorithm/string/trim.hpp>
@@ -33,33 +34,34 @@ extern std::string  escape_strings_cstyle(const std::vector<std::string> &strs);
 extern bool         unescape_string_cstyle(const std::string &str, std::string &out);
 extern bool         unescape_strings_cstyle(const std::string &str, std::vector<std::string> &out);
 
+extern std::string  escape_ampersand(const std::string& str);
+
 /// Specialization of std::exception to indicate that an unknown config option has been encountered.
-class UnknownOptionException : public std::runtime_error {
+class UnknownOptionException : public Slic3r::RuntimeError {
 public:
     UnknownOptionException() :
-        std::runtime_error("Unknown option exception") {}
+        Slic3r::RuntimeError("Unknown option exception") {}
     UnknownOptionException(const std::string &opt_key) :
-        std::runtime_error(std::string("Unknown option exception: ") + opt_key) {}
+        Slic3r::RuntimeError(std::string("Unknown option exception: ") + opt_key) {}
 };
 
 /// Indicate that the ConfigBase derived class does not provide config definition (the method def() returns null).
-class NoDefinitionException : public std::runtime_error
+class NoDefinitionException : public Slic3r::RuntimeError
 {
 public:
     NoDefinitionException() :
-        std::runtime_error("No definition exception") {}
+        Slic3r::RuntimeError("No definition exception") {}
     NoDefinitionException(const std::string &opt_key) :
-        std::runtime_error(std::string("No definition exception: ") + opt_key) {}
+        Slic3r::RuntimeError(std::string("No definition exception: ") + opt_key) {}
 };
 
 /// Indicate that an unsupported accessor was called on a config option.
-class BadOptionTypeException : public std::runtime_error
+class BadOptionTypeException : public Slic3r::RuntimeError
 {
 public:
-	BadOptionTypeException() :
-		std::runtime_error("Bad option type exception") {}
-	BadOptionTypeException(const char* message) : 
-		std::runtime_error(message) {}
+	BadOptionTypeException() : Slic3r::RuntimeError("Bad option type exception") {}
+	BadOptionTypeException(const std::string &message) : Slic3r::RuntimeError(message) {}
+    BadOptionTypeException(const char* message) : Slic3r::RuntimeError(message) {}
 };
 
 // Type of a configuration value.
@@ -84,6 +86,8 @@ enum ConfigOptionType {
     coPercents      = coPercent + coVectorType,
     // a fraction or an absolute value
     coFloatOrPercent = 5,
+    // vector of the above
+    coFloatsOrPercents = coFloatOrPercent + coVectorType,
     // single 2d point (Point2f). Currently not used.
     coPoint         = 6,
     // vector of 2d points (Point2f). Currently used for the definition of the print bed and for the extruder offsets.
@@ -168,7 +172,7 @@ public:
     void set(const ConfigOption *rhs) override
     {
         if (rhs->type() != this->type())
-            throw std::runtime_error("ConfigOptionSingle: Assigning an incompatible type");
+            throw Slic3r::RuntimeError("ConfigOptionSingle: Assigning an incompatible type");
         assert(dynamic_cast<const ConfigOptionSingle<T>*>(rhs));
         this->value = static_cast<const ConfigOptionSingle<T>*>(rhs)->value;
     }
@@ -176,7 +180,7 @@ public:
     bool operator==(const ConfigOption &rhs) const override
     {
         if (rhs.type() != this->type())
-            throw std::runtime_error("ConfigOptionSingle: Comparing incompatible types");
+            throw Slic3r::RuntimeError("ConfigOptionSingle: Comparing incompatible types");
         assert(dynamic_cast<const ConfigOptionSingle<T>*>(&rhs));
         return this->value == static_cast<const ConfigOptionSingle<T>*>(&rhs)->value;
     }
@@ -240,7 +244,7 @@ public:
     void set(const ConfigOption *rhs) override
     {
         if (rhs->type() != this->type())
-            throw std::runtime_error("ConfigOptionVector: Assigning an incompatible type");
+            throw Slic3r::RuntimeError("ConfigOptionVector: Assigning an incompatible type");
         assert(dynamic_cast<const ConfigOptionVector<T>*>(rhs));
         this->values = static_cast<const ConfigOptionVector<T>*>(rhs)->values;
     }
@@ -257,12 +261,12 @@ public:
             if (opt->type() == this->type()) {
                 auto other = static_cast<const ConfigOptionVector<T>*>(opt);
                 if (other->values.empty())
-                    throw std::runtime_error("ConfigOptionVector::set(): Assigning from an empty vector");
+                    throw Slic3r::RuntimeError("ConfigOptionVector::set(): Assigning from an empty vector");
                 this->values.emplace_back(other->values.front());
             } else if (opt->type() == this->scalar_type())
                 this->values.emplace_back(static_cast<const ConfigOptionSingle<T>*>(opt)->value);
             else
-                throw std::runtime_error("ConfigOptionVector::set():: Assigning an incompatible type");
+                throw Slic3r::RuntimeError("ConfigOptionVector::set():: Assigning an incompatible type");
         }
     }
 
@@ -281,12 +285,12 @@ public:
             // Assign the first value of the rhs vector.
             auto other = static_cast<const ConfigOptionVector<T>*>(rhs);
             if (other->values.empty())
-                throw std::runtime_error("ConfigOptionVector::set_at(): Assigning from an empty vector");
+                throw Slic3r::RuntimeError("ConfigOptionVector::set_at(): Assigning from an empty vector");
             this->values[i] = other->get_at(j);
         } else if (rhs->type() == this->scalar_type())
             this->values[i] = static_cast<const ConfigOptionSingle<T>*>(rhs)->value;
         else
-            throw std::runtime_error("ConfigOptionVector::set_at(): Assigning an incompatible type");
+            throw Slic3r::RuntimeError("ConfigOptionVector::set_at(): Assigning an incompatible type");
     }
 
     const T& get_at(size_t i) const
@@ -311,9 +315,9 @@ public:
         else if (n > this->values.size()) {
             if (this->values.empty()) {
                 if (opt_default == nullptr)
-                    throw std::runtime_error("ConfigOptionVector::resize(): No default value provided.");
+                    throw Slic3r::RuntimeError("ConfigOptionVector::resize(): No default value provided.");
                 if (opt_default->type() != this->type())
-                    throw std::runtime_error("ConfigOptionVector::resize(): Extending with an incompatible type.");
+                    throw Slic3r::RuntimeError("ConfigOptionVector::resize(): Extending with an incompatible type.");
                 this->values.resize(n, static_cast<const ConfigOptionVector<T>*>(opt_default)->values.front());
             } else {
                 // Resize by duplicating the last value.
@@ -330,7 +334,7 @@ public:
     bool operator==(const ConfigOption &rhs) const override
     {
         if (rhs.type() != this->type())
-            throw std::runtime_error("ConfigOptionVector: Comparing incompatible types");
+            throw Slic3r::RuntimeError("ConfigOptionVector: Comparing incompatible types");
         assert(dynamic_cast<const ConfigOptionVector<T>*>(&rhs));
         return this->values == static_cast<const ConfigOptionVector<T>*>(&rhs)->values;
     }
@@ -342,9 +346,9 @@ public:
     // An option overrides another option if it is not nil and not equal.
     bool overriden_by(const ConfigOption *rhs) const override {
         if (this->nullable())
-        	throw std::runtime_error("Cannot override a nullable ConfigOption.");
+        	throw Slic3r::RuntimeError("Cannot override a nullable ConfigOption.");
         if (rhs->type() != this->type())
-            throw std::runtime_error("ConfigOptionVector.overriden_by() applied to different types.");
+            throw Slic3r::RuntimeError("ConfigOptionVector.overriden_by() applied to different types.");
     	auto rhs_vec = static_cast<const ConfigOptionVector<T>*>(rhs);
     	if (! rhs->nullable())
     		// Overridding a non-nullable object with another non-nullable object.
@@ -362,9 +366,9 @@ public:
     // Apply an override option, possibly a nullable one.
     bool apply_override(const ConfigOption *rhs) override {
         if (this->nullable())
-        	throw std::runtime_error("Cannot override a nullable ConfigOption.");
+        	throw Slic3r::RuntimeError("Cannot override a nullable ConfigOption.");
         if (rhs->type() != this->type())
-			throw std::runtime_error("ConfigOptionVector.apply_override() applied to different types.");
+			throw Slic3r::RuntimeError("ConfigOptionVector.apply_override() applied to different types.");
 		auto rhs_vec = static_cast<const ConfigOptionVector<T>*>(rhs);
 		if (! rhs->nullable()) {
     		// Overridding a non-nullable object with another non-nullable object.
@@ -453,7 +457,7 @@ public:
     bool                    operator==(const ConfigOptionFloatsTempl &rhs) const { return vectors_equal(this->values, rhs.values); }
     bool 					operator==(const ConfigOption &rhs) const override {
         if (rhs.type() != this->type())
-            throw std::runtime_error("ConfigOptionFloatsTempl: Comparing incompatible types");
+            throw Slic3r::RuntimeError("ConfigOptionFloatsTempl: Comparing incompatible types");
         assert(dynamic_cast<const ConfigOptionVector<double>*>(&rhs));
         return vectors_equal(this->values, static_cast<const ConfigOptionVector<double>*>(&rhs)->values);
     }
@@ -500,7 +504,7 @@ public:
         		if (NULLABLE)
         			this->values.push_back(nil_value());
         		else
-        			throw std::runtime_error("Deserializing nil into a non-nullable object");
+        			throw Slic3r::RuntimeError("Deserializing nil into a non-nullable object");
         	} else {
 	            std::istringstream iss(item_str);
 	            double value;
@@ -525,9 +529,9 @@ protected:
         		if (NULLABLE)
         			ss << "nil";
         		else
-                    throw std::runtime_error("Serializing NaN");
+                    throw Slic3r::RuntimeError("Serializing NaN");
         	} else
-                throw std::runtime_error("Serializing invalid number");
+                throw Slic3r::RuntimeError("Serializing invalid number");
 	}
     static bool vectors_equal(const std::vector<double> &v1, const std::vector<double> &v2) {
     	if (NULLABLE) {
@@ -646,7 +650,7 @@ public:
         		if (NULLABLE)
         			this->values.push_back(nil_value());
         		else
-                    throw std::runtime_error("Deserializing nil into a non-nullable object");
+                    throw Slic3r::RuntimeError("Deserializing nil into a non-nullable object");
         	} else {
 	            std::istringstream iss(item_str);
 	            int value;
@@ -663,7 +667,7 @@ private:
         		if (NULLABLE)
         			ss << "nil";
         		else
-                    throw std::runtime_error("Serializing NaN");
+                    throw Slic3r::RuntimeError("Serializing NaN");
         	} else
         		ss << v;
 	}
@@ -848,7 +852,7 @@ public:
     bool                        operator==(const ConfigOption &rhs) const override
     {
         if (rhs.type() != this->type())
-            throw std::runtime_error("ConfigOptionFloatOrPercent: Comparing incompatible types");
+            throw Slic3r::RuntimeError("ConfigOptionFloatOrPercent: Comparing incompatible types");
         assert(dynamic_cast<const ConfigOptionFloatOrPercent*>(&rhs));
         return *this == *static_cast<const ConfigOptionFloatOrPercent*>(&rhs);
     }
@@ -859,7 +863,7 @@ public:
 
     void set(const ConfigOption *rhs) override {
         if (rhs->type() != this->type())
-            throw std::runtime_error("ConfigOptionFloatOrPercent: Assigning an incompatible type");
+            throw Slic3r::RuntimeError("ConfigOptionFloatOrPercent: Assigning an incompatible type");
         assert(dynamic_cast<const ConfigOptionFloatOrPercent*>(rhs));
         *this = *static_cast<const ConfigOptionFloatOrPercent*>(rhs);
     }
@@ -886,6 +890,143 @@ private:
 	friend class cereal::access;
 	template<class Archive> void serialize(Archive &ar) { ar(cereal::base_class<ConfigOptionPercent>(this), percent); }
 };
+
+
+struct FloatOrPercent
+{
+    double  value;
+    bool    percent;
+
+private:
+    friend class cereal::access;
+    template<class Archive> void serialize(Archive & ar) { ar(this->value); ar(this->percent); }
+};
+
+inline bool operator==(const FloatOrPercent &l, const FloatOrPercent &r)
+{
+    return l.value == r.value && l.percent == r.percent;
+}
+
+inline bool operator!=(const FloatOrPercent& l, const FloatOrPercent& r)
+{
+    return !(l == r);
+}
+
+template<bool NULLABLE>
+class ConfigOptionFloatsOrPercentsTempl : public ConfigOptionVector<FloatOrPercent>
+{
+public:
+    ConfigOptionFloatsOrPercentsTempl() : ConfigOptionVector<FloatOrPercent>() {}
+    explicit ConfigOptionFloatsOrPercentsTempl(size_t n, FloatOrPercent value) : ConfigOptionVector<FloatOrPercent>(n, value) {}
+    explicit ConfigOptionFloatsOrPercentsTempl(std::initializer_list<FloatOrPercent> il) : ConfigOptionVector<FloatOrPercent>(std::move(il)) {}
+    explicit ConfigOptionFloatsOrPercentsTempl(const std::vector<FloatOrPercent> &vec) : ConfigOptionVector<FloatOrPercent>(vec) {}
+    explicit ConfigOptionFloatsOrPercentsTempl(std::vector<FloatOrPercent> &&vec) : ConfigOptionVector<FloatOrPercent>(std::move(vec)) {}
+
+    static ConfigOptionType static_type() { return coFloatsOrPercents; }
+    ConfigOptionType        type()  const override { return static_type(); }
+    ConfigOption*           clone() const override { return new ConfigOptionFloatsOrPercentsTempl(*this); }
+    bool                    operator==(const ConfigOptionFloatsOrPercentsTempl &rhs) const { return vectors_equal(this->values, rhs.values); }
+    bool                    operator==(const ConfigOption &rhs) const override {
+        if (rhs.type() != this->type())
+            throw Slic3r::RuntimeError("ConfigOptionFloatsOrPercentsTempl: Comparing incompatible types");
+        assert(dynamic_cast<const ConfigOptionVector<FloatOrPercent>*>(&rhs));
+        return vectors_equal(this->values, static_cast<const ConfigOptionVector<FloatOrPercent>*>(&rhs)->values);
+    }
+    // Could a special "nil" value be stored inside the vector, indicating undefined value?
+    bool                    nullable() const override { return NULLABLE; }
+    // Special "nil" value to be stored into the vector if this->supports_nil().
+    static FloatOrPercent   nil_value() { return { std::numeric_limits<double>::quiet_NaN(), false }; }
+    // A scalar is nil, or all values of a vector are nil.
+    bool                    is_nil() const override { for (auto v : this->values) if (! std::isnan(v.value)) return false; return true; }
+    bool                    is_nil(size_t idx) const override { return std::isnan(this->values[idx].value); }
+
+    std::string serialize() const override
+    {
+        std::ostringstream ss;
+        for (const FloatOrPercent &v : this->values) {
+            if (&v != &this->values.front())
+                ss << ",";
+            serialize_single_value(ss, v);
+        }
+        return ss.str();
+    }
+    
+    std::vector<std::string> vserialize() const override
+    {
+        std::vector<std::string> vv;
+        vv.reserve(this->values.size());
+        for (const FloatOrPercent &v : this->values) {
+            std::ostringstream ss;
+            serialize_single_value(ss, v);
+            vv.push_back(ss.str());
+        }
+        return vv;
+    }
+
+    bool deserialize(const std::string &str, bool append = false) override
+    {
+        if (! append)
+            this->values.clear();
+        std::istringstream is(str);
+        std::string item_str;
+        while (std::getline(is, item_str, ',')) {
+            boost::trim(item_str);
+            if (item_str == "nil") {
+                if (NULLABLE)
+                    this->values.push_back(nil_value());
+                else
+                    throw Slic3r::RuntimeError("Deserializing nil into a non-nullable object");
+            } else {
+                bool percent = item_str.find_first_of("%") != std::string::npos;
+                std::istringstream iss(item_str);
+                double value;
+                iss >> value;
+                this->values.push_back({ value, percent });
+            }
+        }
+        return true;
+    }
+
+    ConfigOptionFloatsOrPercentsTempl& operator=(const ConfigOption *opt)
+    {   
+        this->set(opt);
+        return *this;
+    }
+
+protected:
+    void serialize_single_value(std::ostringstream &ss, const FloatOrPercent &v) const {
+            if (std::isfinite(v.value)) {
+                ss << v.value;
+                if (v.percent)
+                    ss << "%";
+            } else if (std::isnan(v.value)) {
+                if (NULLABLE)
+                    ss << "nil";
+                else
+                    throw Slic3r::RuntimeError("Serializing NaN");
+            } else
+                throw Slic3r::RuntimeError("Serializing invalid number");
+    }
+    static bool vectors_equal(const std::vector<FloatOrPercent> &v1, const std::vector<FloatOrPercent> &v2) {
+        if (NULLABLE) {
+            if (v1.size() != v2.size())
+                return false;
+            for (auto it1 = v1.begin(), it2 = v2.begin(); it1 != v1.end(); ++ it1, ++ it2)
+                if (! ((std::isnan(it1->value) && std::isnan(it2->value)) || *it1 == *it2))
+                    return false;
+            return true;
+        } else
+            // Not supporting nullable values, the default vector compare is cheaper.
+            return v1 == v2;
+    }
+
+private:
+    friend class cereal::access;
+    template<class Archive> void serialize(Archive &ar) { ar(cereal::base_class<ConfigOptionVector<FloatOrPercent>>(this)); }
+};
+
+using ConfigOptionFloatsOrPercents          = ConfigOptionFloatsOrPercentsTempl<false>;
+using ConfigOptionFloatsOrPercentsNullable  = ConfigOptionFloatsOrPercentsTempl<true>;
 
 class ConfigOptionPoint : public ConfigOptionSingle<Vec2d>
 {
@@ -1127,7 +1268,7 @@ public:
         		if (NULLABLE)
         			this->values.push_back(nil_value());
         		else
-                    throw std::runtime_error("Deserializing nil into a non-nullable object");
+                    throw Slic3r::RuntimeError("Deserializing nil into a non-nullable object");
         	} else
         		this->values.push_back(item_str.compare("1") == 0);	
         }
@@ -1140,7 +1281,7 @@ protected:
         		if (NULLABLE)
         			ss << "nil";
         		else
-                    throw std::runtime_error("Serializing NaN");
+                    throw Slic3r::RuntimeError("Serializing NaN");
         	} else
         		ss << (v ? "1" : "0");
 	}
@@ -1176,14 +1317,14 @@ public:
     bool operator==(const ConfigOption &rhs) const override
     {
         if (rhs.type() != this->type())
-            throw std::runtime_error("ConfigOptionEnum<T>: Comparing incompatible types");
+            throw Slic3r::RuntimeError("ConfigOptionEnum<T>: Comparing incompatible types");
         // rhs could be of the following type: ConfigOptionEnumGeneric or ConfigOptionEnum<T>
         return this->value == (T)rhs.getInt();
     }
 
     void set(const ConfigOption *rhs) override {
         if (rhs->type() != this->type())
-            throw std::runtime_error("ConfigOptionEnum<T>: Assigning an incompatible type");
+            throw Slic3r::RuntimeError("ConfigOptionEnum<T>: Assigning an incompatible type");
         // rhs could be of the following type: ConfigOptionEnumGeneric or ConfigOptionEnum<T>
         this->value = (T)rhs->getInt();
     }
@@ -1260,14 +1401,14 @@ public:
     bool operator==(const ConfigOption &rhs) const override
     {
         if (rhs.type() != this->type())
-            throw std::runtime_error("ConfigOptionEnumGeneric: Comparing incompatible types");
+            throw Slic3r::RuntimeError("ConfigOptionEnumGeneric: Comparing incompatible types");
         // rhs could be of the following type: ConfigOptionEnumGeneric or ConfigOptionEnum<T>
         return this->value == rhs.getInt();
     }
 
     void set(const ConfigOption *rhs) override {
         if (rhs->type() != this->type())
-            throw std::runtime_error("ConfigOptionEnumGeneric: Assigning an incompatible type");
+            throw Slic3r::RuntimeError("ConfigOptionEnumGeneric: Assigning an incompatible type");
         // rhs could be of the following type: ConfigOptionEnumGeneric or ConfigOptionEnum<T>
         this->value = rhs->getInt();
     }
@@ -1322,7 +1463,7 @@ public:
 		    case coInts:            { auto opt = new ConfigOptionIntsNullable();	archive(*opt); return opt; }
 		    case coPercents:        { auto opt = new ConfigOptionPercentsNullable();archive(*opt); return opt; }
 		    case coBools:           { auto opt = new ConfigOptionBoolsNullable();	archive(*opt); return opt; }
-		    default:                throw std::runtime_error(std::string("ConfigOptionDef::load_option_from_archive(): Unknown nullable option type for option ") + this->opt_key);
+		    default:                throw Slic3r::RuntimeError(std::string("ConfigOptionDef::load_option_from_archive(): Unknown nullable option type for option ") + this->opt_key);
 		    }
     	} else {
 		    switch (this->type) {
@@ -1341,7 +1482,7 @@ public:
 		    case coBool:            { auto opt = new ConfigOptionBool(); 			archive(*opt); return opt; }
 		    case coBools:           { auto opt = new ConfigOptionBools(); 			archive(*opt); return opt; }
 		    case coEnum:            { auto opt = new ConfigOptionEnumGeneric(this->enum_keys_map); archive(*opt); return opt; }
-		    default:                throw std::runtime_error(std::string("ConfigOptionDef::load_option_from_archive(): Unknown option type for option ") + this->opt_key);
+		    default:                throw Slic3r::RuntimeError(std::string("ConfigOptionDef::load_option_from_archive(): Unknown option type for option ") + this->opt_key);
 		    }
 		}
 	}
@@ -1353,7 +1494,7 @@ public:
 		    case coInts:            archive(*static_cast<const ConfigOptionIntsNullable*>(opt));    break;
 		    case coPercents:        archive(*static_cast<const ConfigOptionPercentsNullable*>(opt));break;
 		    case coBools:           archive(*static_cast<const ConfigOptionBoolsNullable*>(opt)); 	break;
-		    default:                throw std::runtime_error(std::string("ConfigOptionDef::save_option_to_archive(): Unknown nullable option type for option ") + this->opt_key);
+		    default:                throw Slic3r::RuntimeError(std::string("ConfigOptionDef::save_option_to_archive(): Unknown nullable option type for option ") + this->opt_key);
 		    }
 		} else {
 		    switch (this->type) {
@@ -1372,7 +1513,7 @@ public:
 		    case coBool:            archive(*static_cast<const ConfigOptionBool*>(opt)); 			break;
 		    case coBools:           archive(*static_cast<const ConfigOptionBools*>(opt)); 			break;
 		    case coEnum:            archive(*static_cast<const ConfigOptionEnumGeneric*>(opt)); 	break;
-		    default:                throw std::runtime_error(std::string("ConfigOptionDef::save_option_to_archive(): Unknown option type for option ") + this->opt_key);
+		    default:                throw Slic3r::RuntimeError(std::string("ConfigOptionDef::save_option_to_archive(): Unknown option type for option ") + this->opt_key);
 		    }
 		}
 		// Make the compiler happy, shut up the warnings.
@@ -1414,6 +1555,8 @@ public:
     bool                                multiline       = false;
     // For text input: If true, the GUI text box spans the complete page width.
     bool                                full_width      = false;
+    // For text input: If true, the GUI formats text as code (fixed-width)
+    bool                                is_code         = false;
     // Not editable. Currently only used for the display of the number of threads.
     bool                                readonly        = false;
     // Height of a multiline GUI text box.

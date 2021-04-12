@@ -11,7 +11,6 @@
 //    PrintRegionConfig
 //    PrintConfig
 //        GCodeConfig
-//    HostConfig
 //
 
 #ifndef slic3r_PrintConfig_hpp_
@@ -25,17 +24,35 @@
 namespace Slic3r {
 
 enum GCodeFlavor : unsigned char {
-    gcfRepRap, gcfRepetier, gcfTeacup, gcfMakerWare, gcfMarlin, gcfSailfish, gcfMach3, gcfMachinekit,
+    gcfRepRapSprinter, gcfRepRapFirmware, gcfRepetier, gcfTeacup, gcfMakerWare, gcfMarlin, gcfSailfish, gcfMach3, gcfMachinekit,
     gcfSmoothie, gcfNoExtrusion,
 };
 
-enum PrintHostType {
-    htOctoPrint, htDuet, htFlashAir, htAstroBox
+enum class MachineLimitsUsage {
+	EmitToGCode,
+	TimeEstimateOnly,
+	Ignore,
+	Count,
 };
 
-enum InfillPattern {
-    ipRectilinear, ipGrid, ipTriangles, ipStars, ipCubic, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
-    ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral, ipCount,
+enum PrintHostType {
+    htOctoPrint, htDuet, htFlashAir, htAstroBox, htRepetier
+};
+
+enum AuthorizationType {
+    atKeyPassword, atUserPassword
+};
+
+enum InfillPattern : int {
+    ipRectilinear, ipMonotonic, ipAlignedRectilinear, ipGrid, ipTriangles, ipStars, ipCubic, ipLine, ipConcentric, ipHoneycomb, ip3DHoneycomb,
+    ipGyroid, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral, ipAdaptiveCubic, ipSupportCubic, ipCount,
+};
+
+enum class IroningType {
+	TopSurfaces,
+	TopmostOnly,
+	AllSolid,
+	Count,
 };
 
 enum SupportMaterialPattern {
@@ -77,7 +94,8 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<PrinterTechnology
 template<> inline const t_config_enum_values& ConfigOptionEnum<GCodeFlavor>::get_enum_values() {
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
-        keys_map["reprap"]          = gcfRepRap;
+        keys_map["reprap"]          = gcfRepRapSprinter;
+        keys_map["reprapfirmware"]  = gcfRepRapFirmware;
         keys_map["repetier"]        = gcfRepetier;
         keys_map["teacup"]          = gcfTeacup;
         keys_map["makerware"]       = gcfMakerWare;
@@ -91,6 +109,16 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<GCodeFlavor>::get
     return keys_map;
 }
 
+template<> inline const t_config_enum_values& ConfigOptionEnum<MachineLimitsUsage>::get_enum_values() {
+    static t_config_enum_values keys_map;
+    if (keys_map.empty()) {
+        keys_map["emit_to_gcode"]       = int(MachineLimitsUsage::EmitToGCode);
+        keys_map["time_estimate_only"]  = int(MachineLimitsUsage::TimeEstimateOnly);
+        keys_map["ignore"]            	= int(MachineLimitsUsage::Ignore);
+    }
+    return keys_map;
+}
+
 template<> inline const t_config_enum_values& ConfigOptionEnum<PrintHostType>::get_enum_values() {
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
@@ -98,6 +126,16 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<PrintHostType>::g
         keys_map["duet"]            = htDuet;
         keys_map["flashair"]        = htFlashAir;
         keys_map["astrobox"]        = htAstroBox;
+        keys_map["repetier"]        = htRepetier;
+    }
+    return keys_map;
+}
+
+template<> inline const t_config_enum_values& ConfigOptionEnum<AuthorizationType>::get_enum_values() {
+    static t_config_enum_values keys_map;
+    if (keys_map.empty()) {
+        keys_map["key"]             = atKeyPassword;
+        keys_map["user"]            = atUserPassword;
     }
     return keys_map;
 }
@@ -106,6 +144,8 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<InfillPattern>::g
     static t_config_enum_values keys_map;
     if (keys_map.empty()) {
         keys_map["rectilinear"]         = ipRectilinear;
+        keys_map["monotonic"]           = ipMonotonic;
+        keys_map["alignedrectilinear"]  = ipAlignedRectilinear;
         keys_map["grid"]                = ipGrid;
         keys_map["triangles"]           = ipTriangles;
         keys_map["stars"]               = ipStars;
@@ -118,6 +158,18 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<InfillPattern>::g
         keys_map["hilbertcurve"]        = ipHilbertCurve;
         keys_map["archimedeanchords"]   = ipArchimedeanChords;
         keys_map["octagramspiral"]      = ipOctagramSpiral;
+        keys_map["adaptivecubic"]       = ipAdaptiveCubic;
+        keys_map["supportcubic"]        = ipSupportCubic;
+    }
+    return keys_map;
+}
+
+template<> inline const t_config_enum_values& ConfigOptionEnum<IroningType>::get_enum_values() {
+    static t_config_enum_values keys_map;
+    if (keys_map.empty()) {
+        keys_map["top"]                 = int(IroningType::TopSurfaces);
+        keys_map["topmost"]             = int(IroningType::TopmostOnly);
+        keys_map["solid"]               = int(IroningType::AllSolid);
     }
     return keys_map;
 }
@@ -194,6 +246,9 @@ extern const PrintConfigDef print_config_def;
 
 class StaticPrintConfig;
 
+PrinterTechnology printer_technology(const ConfigBase &cfg);
+double min_object_distance(const ConfigBase &cfg);
+
 // Slic3r dynamic configuration, used to override the configuration
 // per object, per modification volume or per printing material.
 // The dynamic configuration is also used to store user modifications of the print global parameters,
@@ -205,8 +260,12 @@ class DynamicPrintConfig : public DynamicConfig
 public:
     DynamicPrintConfig() {}
     DynamicPrintConfig(const DynamicPrintConfig &rhs) : DynamicConfig(rhs) {}
+    DynamicPrintConfig(DynamicPrintConfig &&rhs) noexcept : DynamicConfig(std::move(rhs)) {}
     explicit DynamicPrintConfig(const StaticPrintConfig &rhs);
     explicit DynamicPrintConfig(const ConfigBase &rhs) : DynamicConfig(rhs) {}
+
+    DynamicPrintConfig& operator=(const DynamicPrintConfig &rhs) { DynamicConfig::operator=(rhs); return *this; }
+    DynamicPrintConfig& operator=(DynamicPrintConfig &&rhs) noexcept { DynamicConfig::operator=(std::move(rhs)); return *this; }
 
     static DynamicPrintConfig  full_print_config();
     static DynamicPrintConfig* new_from_defaults_keys(const std::vector<std::string> &keys);
@@ -214,7 +273,7 @@ public:
     // Overrides ConfigBase::def(). Static configuration definition. Any value stored into this ConfigBase shall have its definition here.
     const ConfigDef*    def() const override { return &print_config_def; }
 
-    void                normalize();
+    void                normalize_fdm();
 
     void 				set_num_extruders(unsigned int num_extruders);
 
@@ -228,14 +287,6 @@ public:
     void                handle_legacy(t_config_option_key &opt_key, std::string &value) const override
         { PrintConfigDef::handle_legacy(opt_key, value); }
 };
-
-template<typename CONFIG>
-void normalize_and_apply_config(CONFIG &dst, const DynamicPrintConfig &src)
-{
-    DynamicPrintConfig src_normalized(src);
-    src_normalized.normalize();
-    dst.apply(src_normalized, true);
-}
 
 class StaticPrintConfig : public StaticConfig
 {
@@ -480,11 +531,19 @@ public:
     ConfigOptionPercent             fill_density;
     ConfigOptionEnum<InfillPattern> fill_pattern;
     ConfigOptionFloat               gap_fill_speed;
+    ConfigOptionFloatOrPercent      infill_anchor;
+    ConfigOptionFloatOrPercent      infill_anchor_max;
     ConfigOptionInt                 infill_extruder;
     ConfigOptionFloatOrPercent      infill_extrusion_width;
     ConfigOptionInt                 infill_every_layers;
     ConfigOptionFloatOrPercent      infill_overlap;
     ConfigOptionFloat               infill_speed;
+    // Ironing options
+    ConfigOptionBool 				ironing;
+    ConfigOptionEnum<IroningType> 	ironing_type;
+    ConfigOptionPercent 			ironing_flowrate;
+    ConfigOptionFloat 				ironing_spacing;
+    ConfigOptionFloat 				ironing_speed;
     // Detect bridging perimeters
     ConfigOptionBool                overhangs;
     ConfigOptionInt                 perimeter_extruder;
@@ -525,11 +584,18 @@ protected:
         OPT_PTR(fill_density);
         OPT_PTR(fill_pattern);
         OPT_PTR(gap_fill_speed);
+        OPT_PTR(infill_anchor);
+        OPT_PTR(infill_anchor_max);
         OPT_PTR(infill_extruder);
         OPT_PTR(infill_extrusion_width);
         OPT_PTR(infill_every_layers);
         OPT_PTR(infill_overlap);
         OPT_PTR(infill_speed);
+        OPT_PTR(ironing);
+        OPT_PTR(ironing_type);
+        OPT_PTR(ironing_flowrate);
+        OPT_PTR(ironing_spacing);
+        OPT_PTR(ironing_speed);
         OPT_PTR(overhangs);
         OPT_PTR(perimeter_extruder);
         OPT_PTR(perimeter_extrusion_width);
@@ -554,6 +620,8 @@ class MachineEnvelopeConfig : public StaticPrintConfig
 {
     STATIC_PRINT_CONFIG_CACHE(MachineEnvelopeConfig)
 public:
+	// Allowing the machine limits to be completely ignored or used just for time estimator.
+    ConfigOptionEnum<MachineLimitsUsage> machine_limits_usage;
     // M201 X... Y... Z... E... [mm/sec^2]
     ConfigOptionFloats              machine_max_acceleration_x;
     ConfigOptionFloats              machine_max_acceleration_y;
@@ -581,6 +649,7 @@ public:
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
+        OPT_PTR(machine_limits_usage);
         OPT_PTR(machine_max_acceleration_x);
         OPT_PTR(machine_max_acceleration_y);
         OPT_PTR(machine_max_acceleration_z);
@@ -617,6 +686,7 @@ public:
     ConfigOptionStrings             filament_type;
     ConfigOptionBools               filament_soluble;
     ConfigOptionFloats              filament_cost;
+    ConfigOptionFloats              filament_spool_weight;
     ConfigOptionFloats              filament_max_volumetric_speed;
     ConfigOptionFloats              filament_loading_speed;
     ConfigOptionFloats              filament_loading_speed_start;
@@ -667,6 +737,9 @@ public:
     ConfigOptionBool                remaining_times;
     ConfigOptionBool                silent_mode;
     ConfigOptionFloat               extra_loading_move;
+    ConfigOptionString              color_change_gcode;
+    ConfigOptionString              pause_print_gcode;
+    ConfigOptionString              template_custom_gcode;
 
     std::string get_extrusion_axis() const
     {
@@ -690,6 +763,7 @@ protected:
         OPT_PTR(filament_type);
         OPT_PTR(filament_soluble);
         OPT_PTR(filament_cost);
+        OPT_PTR(filament_spool_weight);
         OPT_PTR(filament_max_volumetric_speed);
         OPT_PTR(filament_loading_speed);
         OPT_PTR(filament_loading_speed_start);
@@ -740,6 +814,9 @@ protected:
         OPT_PTR(remaining_times);
         OPT_PTR(silent_mode);
         OPT_PTR(extra_loading_move);
+        OPT_PTR(color_change_gcode);
+        OPT_PTR(pause_print_gcode);
+        OPT_PTR(template_custom_gcode);
     }
 };
 
@@ -749,10 +826,9 @@ class PrintConfig : public MachineEnvelopeConfig, public GCodeConfig
     STATIC_PRINT_CONFIG_CACHE_DERIVED(PrintConfig)
     PrintConfig() : MachineEnvelopeConfig(0), GCodeConfig(0) { initialize_cache(); *this = s_cache_PrintConfig.defaults(); }
 public:
-    double                          min_object_distance() const;
-    static double                   min_object_distance(const ConfigBase *config);
 
     ConfigOptionBool                avoid_crossing_perimeters;
+    ConfigOptionFloatOrPercent      avoid_crossing_perimeters_max_detour;
     ConfigOptionPoints              bed_shape;
     ConfigOptionInts                bed_temperature;
     ConfigOptionFloat               bridge_acceleration;
@@ -777,6 +853,7 @@ public:
     ConfigOptionFloatOrPercent      first_layer_extrusion_width;
     ConfigOptionFloatOrPercent      first_layer_speed;
     ConfigOptionInts                first_layer_temperature;
+    ConfigOptionInts                full_fan_speed_layer;
     ConfigOptionFloat               infill_acceleration;
     ConfigOptionBool                infill_first;
     ConfigOptionInts                max_fan_speed;
@@ -826,6 +903,7 @@ protected:
         this->MachineEnvelopeConfig::initialize(cache, base_ptr);
         this->GCodeConfig::initialize(cache, base_ptr);
         OPT_PTR(avoid_crossing_perimeters);
+        OPT_PTR(avoid_crossing_perimeters_max_detour);
         OPT_PTR(bed_shape);
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);
@@ -850,6 +928,7 @@ protected:
         OPT_PTR(first_layer_extrusion_width);
         OPT_PTR(first_layer_speed);
         OPT_PTR(first_layer_temperature);
+        OPT_PTR(full_fan_speed_layer);
         OPT_PTR(infill_acceleration);
         OPT_PTR(infill_first);
         OPT_PTR(max_fan_speed);
@@ -894,38 +973,14 @@ protected:
     }
 };
 
-class HostConfig : public StaticPrintConfig
-{
-    STATIC_PRINT_CONFIG_CACHE(HostConfig)
-public:
-    ConfigOptionEnum<PrintHostType> host_type;
-    ConfigOptionString              print_host;
-    ConfigOptionString              printhost_apikey;
-    ConfigOptionString              printhost_cafile;
-    ConfigOptionString              serial_port;
-    ConfigOptionInt                 serial_speed;
-
-protected:
-    void initialize(StaticCacheBase &cache, const char *base_ptr)
-    {
-        OPT_PTR(host_type);
-        OPT_PTR(print_host);
-        OPT_PTR(printhost_apikey);
-        OPT_PTR(printhost_cafile);
-        OPT_PTR(serial_port);
-        OPT_PTR(serial_speed);
-    }
-};
-
 // This object is mapped to Perl as Slic3r::Config::Full.
 class FullPrintConfig :
     public PrintObjectConfig,
     public PrintRegionConfig,
-    public PrintConfig,
-    public HostConfig
+    public PrintConfig
 {
     STATIC_PRINT_CONFIG_CACHE_DERIVED(FullPrintConfig)
-    FullPrintConfig() : PrintObjectConfig(0), PrintRegionConfig(0), PrintConfig(0), HostConfig(0) { initialize_cache(); *this = s_cache_FullPrintConfig.defaults(); }
+    FullPrintConfig() : PrintObjectConfig(0), PrintRegionConfig(0), PrintConfig(0) { initialize_cache(); *this = s_cache_FullPrintConfig.defaults(); }
 
 public:
     // Validate the FullPrintConfig. Returns an empty string on success, otherwise an error message is returned.
@@ -933,13 +988,12 @@ public:
 
 protected:
     // Protected constructor to be called to initialize ConfigCache::m_default.
-    FullPrintConfig(int) : PrintObjectConfig(0), PrintRegionConfig(0), PrintConfig(0), HostConfig(0) {}
+    FullPrintConfig(int) : PrintObjectConfig(0), PrintRegionConfig(0), PrintConfig(0) {}
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
         this->PrintObjectConfig::initialize(cache, base_ptr);
         this->PrintRegionConfig::initialize(cache, base_ptr);
         this->PrintConfig      ::initialize(cache, base_ptr);
-        this->HostConfig       ::initialize(cache, base_ptr);
     }
 };
 
@@ -982,6 +1036,10 @@ public:
 
     // Radius in mm of the support pillars.
     ConfigOptionFloat support_pillar_diameter /*= 0.8*/;
+
+    // The percentage of smaller pillars compared to the normal pillar diameter
+    // which are used in problematic areas where a normal pilla cannot fit.
+    ConfigOptionPercent support_small_pillar_diameter_percent;
     
     // How much bridge (supporting another pinhead) can be placed on a pillar.
     ConfigOptionInt   support_max_bridges_on_pillar;
@@ -1106,6 +1164,7 @@ protected:
         OPT_PTR(support_head_penetration);
         OPT_PTR(support_head_width);
         OPT_PTR(support_pillar_diameter);
+        OPT_PTR(support_small_pillar_diameter_percent);
         OPT_PTR(support_max_bridges_on_pillar);
         OPT_PTR(support_pillar_connection_mode);
         OPT_PTR(support_buildplate_only);
@@ -1303,6 +1362,99 @@ private:
         ~PrintAndCLIConfigDef() { this->options.clear(); }
     };
     static PrintAndCLIConfigDef s_def;
+};
+
+Points get_bed_shape(const DynamicPrintConfig &cfg);
+Points get_bed_shape(const PrintConfig &cfg);
+Points get_bed_shape(const SLAPrinterConfig &cfg);
+
+// ModelConfig is a wrapper around DynamicPrintConfig with an addition of a timestamp.
+// Each change of ModelConfig is tracked by assigning a new timestamp from a global counter.
+// The counter is used for faster synchronization of the background slicing thread
+// with the front end by skipping synchronization of equal config dictionaries. 
+// The global counter is also used for avoiding unnecessary serialization of config 
+// dictionaries when taking an Undo snapshot.
+//
+// The global counter is NOT thread safe, therefore it is recommended to use ModelConfig from
+// the main thread only.
+// 
+// As there is a global counter and it is being increased with each change to any ModelConfig,
+// if two ModelConfig dictionaries differ, they should differ with their timestamp as well.
+// Therefore copying the ModelConfig including its timestamp is safe as there is no harm
+// in having multiple ModelConfig with equal timestamps as long as their dictionaries are equal.
+//
+// The timestamp is used by the Undo/Redo stack. As zero timestamp means invalid timestamp
+// to the Undo/Redo stack (zero timestamp means the Undo/Redo stack needs to serialize and
+// compare serialized data for differences), zero timestamp shall never be used.
+// Timestamp==1 shall only be used for empty dictionaries.
+class ModelConfig
+{
+public:
+    void         clear() { m_data.clear(); m_timestamp = 1; }
+
+    void         assign_config(const ModelConfig &rhs) {
+        if (m_timestamp != rhs.m_timestamp) {
+            m_data      = rhs.m_data;
+            m_timestamp = rhs.m_timestamp;
+        }
+    }
+    void         assign_config(ModelConfig &&rhs) {
+        if (m_timestamp != rhs.m_timestamp) {
+            m_data      = std::move(rhs.m_data);
+            m_timestamp = rhs.m_timestamp;
+            rhs.clear();
+        }
+    }
+
+    // Modification of the ModelConfig is not thread safe due to the global timestamp counter!
+    // Don't call modification methods from the back-end!
+    // Assign methods don't assign if src==dst to not having to bump the timestamp in case they are equal.
+    void         assign_config(const DynamicPrintConfig &rhs)  { if (m_data != rhs) { m_data = rhs; this->touch(); } }
+    void         assign_config(DynamicPrintConfig &&rhs)       { if (m_data != rhs) { m_data = std::move(rhs); this->touch(); } }
+    void         apply(const ModelConfig &other, bool ignore_nonexistent = false) { this->apply(other.get(), ignore_nonexistent); }
+    void         apply(const ConfigBase &other, bool ignore_nonexistent = false) { m_data.apply_only(other, other.keys(), ignore_nonexistent); this->touch(); }
+    void         apply_only(const ModelConfig &other, const t_config_option_keys &keys, bool ignore_nonexistent = false) { this->apply_only(other.get(), keys, ignore_nonexistent); }
+    void         apply_only(const ConfigBase &other, const t_config_option_keys &keys, bool ignore_nonexistent = false) { m_data.apply_only(other, keys, ignore_nonexistent); this->touch(); }
+    bool         set_key_value(const std::string &opt_key, ConfigOption *opt) { bool out = m_data.set_key_value(opt_key, opt); this->touch(); return out; }
+    template<typename T>
+    void         set(const std::string &opt_key, T value) { m_data.set(opt_key, value, true); this->touch(); }
+    void         set_deserialize(const t_config_option_key &opt_key, const std::string &str, bool append = false)
+        { m_data.set_deserialize(opt_key, str, append); this->touch(); }
+    bool         erase(const t_config_option_key &opt_key) { bool out = m_data.erase(opt_key); if (out) this->touch(); return out; }
+
+    // Getters are thread safe.
+    // The following implicit conversion breaks the Cereal serialization.
+//    operator const DynamicPrintConfig&() const throw() { return this->get(); }
+    const DynamicPrintConfig&   get() const throw() { return m_data; }
+    bool                        empty() const throw() { return m_data.empty(); }
+    size_t                      size() const throw() { return m_data.size(); }
+    auto                        cbegin() const { return m_data.cbegin(); }
+    auto                        cend() const { return m_data.cend(); }
+    t_config_option_keys        keys() const { return m_data.keys(); }
+    bool                        has(const t_config_option_key &opt_key) const { return m_data.has(opt_key); }
+    const ConfigOption*         option(const t_config_option_key &opt_key) const { return m_data.option(opt_key); }
+    int                         opt_int(const t_config_option_key &opt_key) const { return m_data.opt_int(opt_key); }
+    int                         extruder() const { return opt_int("extruder"); }
+    double                      opt_float(const t_config_option_key &opt_key) const { return m_data.opt_float(opt_key); }
+    std::string                 opt_serialize(const t_config_option_key &opt_key) const { return m_data.opt_serialize(opt_key); }
+
+    // Return an optional timestamp of this object.
+    // If the timestamp returned is non-zero, then the serialization framework will
+    // only save this object on the Undo/Redo stack if the timestamp is different
+    // from the timestmap of the object at the top of the Undo / Redo stack.
+    virtual uint64_t    timestamp() const throw() { return m_timestamp; }
+    bool                timestamp_matches(const ModelConfig &rhs) const throw() { return m_timestamp == rhs.m_timestamp; }
+    // Not thread safe! Should not be called from other than the main thread!
+    void                touch() { m_timestamp = ++ s_last_timestamp; }
+
+private:
+    friend class cereal::access;
+    template<class Archive> void serialize(Archive& ar) { ar(m_timestamp); ar(m_data); }
+
+    uint64_t                    m_timestamp { 1 };
+    DynamicPrintConfig          m_data;
+
+    static uint64_t             s_last_timestamp;
 };
 
 } // namespace Slic3r

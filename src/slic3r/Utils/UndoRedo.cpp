@@ -17,7 +17,7 @@
 #define CEREAL_FUTURE_EXPERIMENTAL
 #include <cereal/archives/adapters.hpp>
 
-#include <libslic3r/Config.hpp>
+#include <libslic3r/PrintConfig.hpp>
 #include <libslic3r/ObjectID.hpp>
 #include <libslic3r/Utils.hpp>
 
@@ -35,6 +35,15 @@
 
 namespace Slic3r {
 namespace UndoRedo {
+
+#ifdef SLIC3R_UNDOREDO_DEBUG
+static inline std::string ptr_to_string(const void* ptr)
+{
+    char buf[64];
+    sprintf(buf, "%p", ptr);
+    return buf;
+}
+#endif
 
 SnapshotData::SnapshotData() : printer_technology(ptUnknown), flags(0), layer_range_idx(-1)
 {
@@ -307,7 +316,11 @@ private:
 		size_t		size;
 		char 		data[1];
 
+		// The serialized data matches the data stored here.
 		bool 		matches(const std::string& rhs) { return this->size == rhs.size() && memcmp(this->data, rhs.data(), this->size) == 0; }
+
+		// The timestamp matches the timestamp serialized in the data stored here.
+		bool 		matches_timestamp(uint64_t timestamp) { assert(timestamp > 0);  assert(this->size > 8); return memcmp(this->data, &timestamp, 8) == 0; }
 	};
 
 	Interval    m_interval;
@@ -350,7 +363,8 @@ public:
 	size_t  	size() const { return m_data->size; }
 	size_t		refcnt() const { return m_data->refcnt; }
 	bool		matches(const std::string& data) { return m_data->matches(data); }
-	size_t 		memsize() const { 
+	bool		matches_timestamp(uint64_t timestamp) { return m_data->matches_timestamp(timestamp); }
+	size_t 		memsize() const {
 		return m_data->refcnt == 1 ?
 			// Count just the size of the snapshot data.
 			m_data->size :
@@ -362,15 +376,6 @@ private:
 	MutableHistoryInterval(const MutableHistoryInterval &rhs);
 	MutableHistoryInterval& operator=(const MutableHistoryInterval &rhs);
 };
-
-#ifdef SLIC3R_UNDOREDO_DEBUG
-static inline std::string ptr_to_string(const void* ptr)
-{
-	char buf[64];
-	sprintf(buf, "%p", ptr);
-	return buf;
-}
-#endif
 
 // Smaller objects (Model, ModelObject, ModelInstance, ModelVolume, DynamicPrintConfig)
 // are mutable and there is not tracking of the changes, therefore a snapshot needs to be
@@ -396,6 +401,27 @@ public:
 		for (const MutableHistoryInterval &interval : m_history)
 			memsize += interval.memsize();
 		return memsize;
+	}
+
+	// If an object provides a reliable timestamp and the object serializes the timestamp first,
+	// then we may just check the validity of the timestamp against the last snapshot without 
+	// having to serialize the whole object. This reduces the amount of serialization and memcmp 
+	// when taking a snapshot.
+	bool try_save_timestamp(size_t active_snapshot_time, size_t current_time, uint64_t timestamp) {
+		assert(m_history.empty() || m_history.back().end() <= active_snapshot_time);
+		if (! m_history.empty() && m_history.back().matches_timestamp(timestamp)) {
+			if (m_history.back().end() < active_snapshot_time)
+				// Share the previous data by reference counting.
+				m_history.emplace_back(Interval(current_time, current_time + 1), m_history.back());
+			else {
+				assert(m_history.back().end() == active_snapshot_time);
+				// Just extend the last interval using the old data.
+				m_history.back().extend_end(current_time + 1);
+			}
+			return true;
+		}
+		// The timestamp is not valid, the caller has to call this->save() with the serialized data.
+		return false;
 	}
 
 	void save(size_t active_snapshot_time, size_t current_time, const std::string &data) {
@@ -522,6 +548,7 @@ public:
     void load_snapshot(size_t timestamp, Slic3r::Model& model, Slic3r::GUI::GLGizmosManager& gizmos);
 
 	bool has_undo_snapshot() const;
+	bool has_undo_snapshot(size_t time_to_load) const;
 	bool has_redo_snapshot() const;
     bool undo(Slic3r::Model &model, const Slic3r::GUI::Selection &selection, Slic3r::GUI::GLGizmosManager &gizmos, const SnapshotData &snapshot_data, size_t jump_to_time);
     bool redo(Slic3r::Model &model, Slic3r::GUI::GLGizmosManager &gizmos, size_t jump_to_time);
@@ -749,13 +776,23 @@ template<typename T> ObjectID StackImpl::save_mutable_object(const T &object)
 	if (it_object_history == m_objects.end())
 		it_object_history = m_objects.insert(it_object_history, std::make_pair(object.id(), std::unique_ptr<MutableObjectHistory<T>>(new MutableObjectHistory<T>())));
 	auto *object_history = static_cast<MutableObjectHistory<T>*>(it_object_history->second.get());
-	// Then serialize the object into a string.
-	std::ostringstream oss;
+	bool  needs_to_save  = true;
 	{
-		Slic3r::UndoRedo::OutputArchive archive(*this, oss);
-		archive(object);
+		// If the timestamp returned is non zero, then it is considered reliable.
+		// The caller is supposed to serialize the timestamp first.
+		uint64_t timestamp = object.timestamp();
+		if (timestamp > 0)
+			needs_to_save = ! object_history->try_save_timestamp(m_active_snapshot_time, m_current_time, timestamp);
 	}
-	object_history->save(m_active_snapshot_time, m_current_time, oss.str());
+	if (needs_to_save) {
+		// Serialize the object into a string.
+		std::ostringstream oss;
+		{
+			Slic3r::UndoRedo::OutputArchive archive(*this, oss);
+			archive(object);
+		}
+		object_history->save(m_active_snapshot_time, m_current_time, oss.str());
+	}
 	return object.id();
 }
 
@@ -847,7 +884,7 @@ void StackImpl::load_snapshot(size_t timestamp, Slic3r::Model& model, Slic3r::GU
 	// Find the snapshot by time. It must exist.
 	const auto it_snapshot = std::lower_bound(m_snapshots.begin(), m_snapshots.end(), Snapshot(timestamp));
 	if (it_snapshot == m_snapshots.end() || it_snapshot->timestamp != timestamp)
-		throw std::runtime_error((boost::format("Snapshot with timestamp %1% does not exist") % timestamp).str());
+		throw Slic3r::RuntimeError((boost::format("Snapshot with timestamp %1% does not exist") % timestamp).str());
 
 	m_active_snapshot_time = timestamp;
 	model.clear_objects();
@@ -869,6 +906,11 @@ bool StackImpl::has_undo_snapshot() const
 	assert(this->valid());
 	auto it = std::lower_bound(m_snapshots.begin(), m_snapshots.end(), Snapshot(m_active_snapshot_time));
 	return -- it != m_snapshots.begin();
+}
+
+bool StackImpl::has_undo_snapshot(size_t time_to_load) const
+{
+	return time_to_load < m_active_snapshot_time && std::binary_search(m_snapshots.begin(), m_snapshots.end(), Snapshot(time_to_load));
 }
 
 bool StackImpl::has_redo_snapshot() const
@@ -1047,6 +1089,7 @@ void Stack::release_least_recently_used() { pimpl->release_least_recently_used()
 void Stack::take_snapshot(const std::string& snapshot_name, const Slic3r::Model& model, const Slic3r::GUI::Selection& selection, const Slic3r::GUI::GLGizmosManager& gizmos, const SnapshotData &snapshot_data)
 	{ pimpl->take_snapshot(snapshot_name, model, selection, gizmos, snapshot_data); }
 bool Stack::has_undo_snapshot() const { return pimpl->has_undo_snapshot(); }
+bool Stack::has_undo_snapshot(size_t time_to_load) const { return pimpl->has_undo_snapshot(time_to_load); }
 bool Stack::has_redo_snapshot() const { return pimpl->has_redo_snapshot(); }
 bool Stack::undo(Slic3r::Model& model, const Slic3r::GUI::Selection& selection, Slic3r::GUI::GLGizmosManager& gizmos, const SnapshotData &snapshot_data, size_t time_to_load)
 	{ return pimpl->undo(model, selection, gizmos, snapshot_data, time_to_load); }

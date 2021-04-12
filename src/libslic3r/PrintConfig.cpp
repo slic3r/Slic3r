@@ -63,8 +63,10 @@ void PrintConfigDef::init_common_params()
     def->set_default_value(new ConfigOptionString(""));
 
     def = this->add("thumbnails", coPoints);
-    def->label = L("Picture sizes to be stored into a .gcode and .sl1 files");
+    def->label = L("G-code thumbnails");
+    def->tooltip = L("Picture sizes to be stored into a .gcode and .sl1 files, in the following format: \"XxY, XxY, ...\"");
     def->mode = comExpert;
+    def->gui_type = "one_string";
     def->set_default_value(new ConfigOptionPoints());
 
     def = this->add("layer_height", coFloat);
@@ -80,6 +82,8 @@ void PrintConfigDef::init_common_params()
     def->label = L("Max print height");
     def->tooltip = L("Set this to the maximum height that can be reached by your extruder while printing.");
     def->sidetext = L("mm");
+    def->min = 0;
+    def->max = 1200;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(200.0));
 
@@ -96,7 +100,9 @@ void PrintConfigDef::init_common_params()
     def = this->add("print_host", coString);
     def->label = L("Hostname, IP or URL");
     def->tooltip = L("Slic3r can upload G-code files to a printer host. This field should contain "
-                   "the hostname, IP address or URL of the printer host instance.");
+                   "the hostname, IP address or URL of the printer host instance. "
+                   "Print host behind HAProxy with basic auth enabled can be accessed by putting the user name and password into the URL "
+                   "in the following format: https://username:password@your-octopi-address/");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionString(""));
 
@@ -106,7 +112,14 @@ void PrintConfigDef::init_common_params()
                    "the API Key or the password required for authentication.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionString(""));
-
+    
+    def = this->add("printhost_port", coString);
+    def->label = L("Printer");
+    def->tooltip = L("Name of the printer");
+    def->gui_type = "select_open";
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionString(""));
+    
     def = this->add("printhost_cafile", coString);
     def->label = L("HTTPS CA File");
     def->tooltip = L("Custom CA certificate file can be specified for HTTPS OctoPrint connections, in crt/pem format. "
@@ -123,6 +136,37 @@ void PrintConfigDef::init_common_params()
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(0.2));
+
+    // Options used by physical printers
+    
+    def = this->add("printhost_user", coString);
+    def->label = L("User");
+//    def->tooltip = L("");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionString(""));
+    
+    def = this->add("printhost_password", coString);
+    def->label = L("Password");
+//    def->tooltip = L("");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionString(""));
+    
+    def = this->add("preset_name", coString);
+    def->label = L("Printer preset name");
+    def->tooltip = L("Related printer preset name");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionString(""));
+
+    def = this->add("printhost_authorization_type", coEnum);
+    def->label = L("Authorization Type");
+//    def->tooltip = L("");
+    def->enum_keys_map = &ConfigOptionEnum<AuthorizationType>::get_enum_values();
+    def->enum_values.push_back("key");
+    def->enum_values.push_back("user");
+    def->enum_labels.push_back(L("API key"));
+    def->enum_labels.push_back(L("HTTP digest"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<AuthorizationType>(atKeyPassword));
 }
 
 void PrintConfigDef::init_fff_params()
@@ -140,10 +184,22 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("avoid_crossing_perimeters_max_detour", coFloatOrPercent);
+    def->label = L("Avoid crossing perimeters - Max detour length");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("The maximum detour length for avoid crossing perimeters. "
+                     "If the detour is longer than this value, avoid crossing perimeters is not applied for this travel path. "
+                     "Detour length could be specified either as an absolute value or as percentage (for example 50%) of a direct travel path.");
+    def->sidetext = L("mm or % (zero to disable)");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloatOrPercent(0., false));
+
     def = this->add("bed_temperature", coInts);
     def->label = L("Other layers");
     def->tooltip = L("Bed temperature for layers after the first one. "
                    "Set this to zero to disable bed temperature control commands in the output.");
+    def->sidetext = L("°C");
     def->full_label = L("Bed temperature");
     def->min = 0;
     def->max = 300;
@@ -418,18 +474,22 @@ void PrintConfigDef::init_fff_params()
     def->cli = "top-fill-pattern|external-fill-pattern|solid-fill-pattern";
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
+    def->enum_values.push_back("monotonic");
+    def->enum_values.push_back("alignedrectilinear");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
     def->enum_labels.push_back(L("Rectilinear"));
+    def->enum_labels.push_back(L("Monotonic"));
+    def->enum_labels.push_back(L("Aligned Rectilinear"));
     def->enum_labels.push_back(L("Concentric"));
     def->enum_labels.push_back(L("Hilbert Curve"));
     def->enum_labels.push_back(L("Archimedean Chords"));
     def->enum_labels.push_back(L("Octagram Spiral"));
     // solid_fill_pattern is an obsolete equivalent to top_fill_pattern/bottom_fill_pattern.
     def->aliases = { "solid_fill_pattern", "external_fill_pattern" };
-    def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipRectilinear));
+    def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipMonotonic));
 
     def = this->add("bottom_fill_pattern", coEnum);
     def->label = L("Bottom fill pattern");
@@ -440,7 +500,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_values = def_top_fill_pattern->enum_values;
     def->enum_labels = def_top_fill_pattern->enum_labels;
     def->aliases = def_top_fill_pattern->aliases;
-    def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipRectilinear));
+    def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipMonotonic));
 
     def = this->add("external_perimeter_extrusion_width", coFloatOrPercent);
     def->label = L("External perimeters");
@@ -489,7 +549,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("The extruder to use (unless more specific extruder settings are specified). "
                    "This value overrides perimeter and infill extruders, but not the support extruders.");
     def->min = 0;  // 0 = inherit defaults
-    def->enum_labels.push_back("default");  // override label for item 0
+    def->enum_labels.push_back(L("default"));  // override label for item 0
     def->enum_labels.push_back("1");
     def->enum_labels.push_back("2");
     def->enum_labels.push_back("3");
@@ -547,6 +607,7 @@ void PrintConfigDef::init_fff_params()
                    "this setting to get nice surface finish and correct single wall widths. "
                    "Usual values are between 0.9 and 1.1. If you think you need to change this more, "
                    "check filament diameter and your firmware E steps.");
+    def->max = 2;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloats { 1. });
 
@@ -559,6 +620,7 @@ void PrintConfigDef::init_fff_params()
                    "If expressed as percentage (for example: 230%), it will be computed over layer height.");
     def->sidetext = L("mm or %");
     def->min = 0;
+    def->max = 1000;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -763,6 +825,16 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->set_default_value(new ConfigOptionFloats { 0. });
 
+    def = this->add("filament_spool_weight", coFloats);
+    def->label = L("Spool weight");
+    def->tooltip = L("Enter weight of the empty filament spool. "
+                     "One may weigh a partially consumed filament spool before printing and one may compare the measured weight "
+                     "with the calculated weight of the filament with the spool to find out whether the amount "
+                     "of filament on the spool is sufficient to finish the print.");
+    def->sidetext = L("g");
+    def->min = 0;
+    def->set_default_value(new ConfigOptionFloats { 0. });
+
     def = this->add("filament_settings_id", coStrings);
     def->set_default_value(new ConfigOptionStrings { "" });
     def->cli = ConfigOptionDef::nocli;
@@ -828,6 +900,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Fill pattern for general low-density infill.");
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
+    def->enum_values.push_back("alignedrectilinear");
     def->enum_values.push_back("grid");
     def->enum_values.push_back("triangles");
     def->enum_values.push_back("stars");
@@ -840,7 +913,10 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
+    def->enum_values.push_back("adaptivecubic");
+    def->enum_values.push_back("supportcubic");
     def->enum_labels.push_back(L("Rectilinear"));
+    def->enum_labels.push_back(L("Aligned Rectilinear"));
     def->enum_labels.push_back(L("Grid"));
     def->enum_labels.push_back(L("Triangles"));
     def->enum_labels.push_back(L("Stars"));
@@ -853,6 +929,8 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Hilbert Curve"));
     def->enum_labels.push_back(L("Archimedean Chords"));
     def->enum_labels.push_back(L("Octagram Spiral"));
+    def->enum_labels.push_back(L("Adaptive Cubic"));
+    def->enum_labels.push_back(L("Support Cubic"));
     def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipStars));
 
     def = this->add("first_layer_acceleration", coFloat);
@@ -866,8 +944,10 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("first_layer_bed_temperature", coInts);
     def->label = L("First layer");
+    def->full_label = L("First layer bed temperature");
     def->tooltip = L("Heated build plate temperature for the first layer. Set this to zero to disable "
                    "bed temperature control commands in the output.");
+    def->sidetext = L("°C");
     def->max = 0;
     def->max = 300;
     def->set_default_value(new ConfigOptionInts { 0 });
@@ -908,11 +988,24 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("first_layer_temperature", coInts);
     def->label = L("First layer");
-    def->tooltip = L("Extruder temperature for first layer. If you want to control temperature manually "
-                   "during print, set this to zero to disable temperature control commands in the output file.");
+    def->full_label = L("First layer nozzle temperature");
+    def->tooltip = L("Nozzle temperature for the first layer. If you want to control temperature manually "
+                     "during print, set this to zero to disable temperature control commands in the output G-code.");
+    def->sidetext = L("°C");
     def->min = 0;
     def->max = max_temp;
     def->set_default_value(new ConfigOptionInts { 200 });
+
+    def = this->add("full_fan_speed_layer", coInts);
+    def->label = L("Full fan speed at layer");
+    def->tooltip = L("Fan speed will be ramped up linearly from zero at layer \"disable_fan_first_layers\" "
+                   "to maximum at layer \"full_fan_speed_layer\". "
+                   "\"full_fan_speed_layer\" will be ignored if lower than \"disable_fan_first_layers\", in which case "
+                   "the fan will be running at maximum allowed speed at layer \"disable_fan_first_layers\" + 1.");
+    def->min = 0;
+    def->max = 1000;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInts { 0 });
 
     def = this->add("gap_fill_speed", coFloat);
     def->label = L("Gap fill");
@@ -939,6 +1032,7 @@ void PrintConfigDef::init_fff_params()
                    "The \"No extrusion\" flavor prevents PrusaSlicer from exporting any extrusion value at all.");
     def->enum_keys_map = &ConfigOptionEnum<GCodeFlavor>::get_enum_values();
     def->enum_values.push_back("reprap");
+    def->enum_values.push_back("reprapfirmware");
     def->enum_values.push_back("repetier");
     def->enum_values.push_back("teacup");
     def->enum_values.push_back("makerware");
@@ -949,6 +1043,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("smoothie");
     def->enum_values.push_back("no-extrusion");
     def->enum_labels.push_back("RepRap/Sprinter");
+    def->enum_labels.push_back("RepRapFirmware");
     def->enum_labels.push_back("Repetier");
     def->enum_labels.push_back("Teacup");
     def->enum_labels.push_back("MakerWare (MakerBot)");
@@ -959,7 +1054,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back("Smoothie");
     def->enum_labels.push_back(L("No extrusion"));
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionEnum<GCodeFlavor>(gcfRepRap));
+    def->set_default_value(new ConfigOptionEnum<GCodeFlavor>(gcfRepRapSprinter));
 
     def = this->add("gcode_label_objects", coBool);
     def->label = L("Label objects");
@@ -996,6 +1091,55 @@ void PrintConfigDef::init_fff_params()
     def->min = 1;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(1));
+
+    auto def_infill_anchor_min = def = this->add("infill_anchor", coFloatOrPercent);
+    def->label = L("Length of the infill anchor");
+    def->category = L("Advanced");
+    def->tooltip = L("Connect an infill line to an internal perimeter with a short segment of an additional perimeter. "
+                     "If expressed as percentage (example: 15%) it is calculated over infill extrusion width. "
+                     "PrusaSlicer tries to connect two close infill lines to a short perimeter segment. If no such perimeter segment "
+                     "shorter than infill_anchor_max is found, the infill line is connected to a perimeter segment at just one side "
+                     "and the length of the perimeter segment taken is limited to this parameter, but no longer than anchor_length_max. "
+                     "Set this parameter to zero to disable anchoring perimeters connected to a single infill line.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "infill_extrusion_width";
+    def->gui_type = "f_enum_open";
+    def->enum_values.push_back("0");
+    def->enum_values.push_back("1");
+    def->enum_values.push_back("2");
+    def->enum_values.push_back("5");
+    def->enum_values.push_back("10");
+    def->enum_values.push_back("1000");
+    def->enum_labels.push_back(L("0 (no open anchors)"));
+    def->enum_labels.push_back("1 mm");
+    def->enum_labels.push_back("2 mm");
+    def->enum_labels.push_back("5 mm");
+    def->enum_labels.push_back("10 mm");
+    def->enum_labels.push_back(L("1000 (unlimited)"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(600, true));
+
+    def = this->add("infill_anchor_max", coFloatOrPercent);
+    def->label = L("Maximum length of the infill anchor");
+    def->category    = def_infill_anchor_min->category;
+    def->tooltip = L("Connect an infill line to an internal perimeter with a short segment of an additional perimeter. "
+                     "If expressed as percentage (example: 15%) it is calculated over infill extrusion width. "
+                     "PrusaSlicer tries to connect two close infill lines to a short perimeter segment. If no such perimeter segment "
+                     "shorter than this parameter is found, the infill line is connected to a perimeter segment at just one side "
+                     "and the length of the perimeter segment taken is limited to infill_anchor, but no longer than this parameter. "
+                     "Set this parameter to zero to disable anchoring.");
+    def->sidetext    = def_infill_anchor_min->sidetext;
+    def->ratio_over  = def_infill_anchor_min->ratio_over;
+    def->gui_type    = def_infill_anchor_min->gui_type;
+    def->enum_values = def_infill_anchor_min->enum_values;
+    def->enum_labels.push_back(L("0 (not anchored)"));
+    def->enum_labels.push_back("1 mm");
+    def->enum_labels.push_back("2 mm");
+    def->enum_labels.push_back("5 mm");
+    def->enum_labels.push_back("10 mm");
+    def->enum_labels.push_back(L("1000 (unlimited)"));
+    def->mode        = def_infill_anchor_min->mode;
+    def->set_default_value(new ConfigOptionFloatOrPercent(50, false));
 
     def = this->add("infill_extruder", coInt);
     def->label = L("Infill extruder");
@@ -1076,6 +1220,55 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("ironing", coBool);
+    def->label = L("Enable ironing");
+    def->tooltip = L("Enable ironing of the top layers with the hot print head for smooth surface");
+    def->category = L("Ironing");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("ironing_type", coEnum);
+    def->label = L("Ironing Type");
+    def->category = L("Ironing");
+    def->tooltip = L("Ironing Type");
+    def->enum_keys_map = &ConfigOptionEnum<IroningType>::get_enum_values();
+    def->enum_values.push_back("top");
+    def->enum_values.push_back("topmost");
+    def->enum_values.push_back("solid");
+    def->enum_labels.push_back(L("All top surfaces"));
+    def->enum_labels.push_back(L("Topmost surface only"));
+    def->enum_labels.push_back(L("All solid surfaces"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<IroningType>(IroningType::TopSurfaces));
+
+    def = this->add("ironing_flowrate", coPercent);
+    def->label = L("Flow rate");
+    def->category = L("Ironing");
+    def->tooltip = L("Percent of a flow rate relative to object's normal layer height.");
+    def->sidetext = L("%");
+    def->ratio_over = "layer_height";
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionPercent(15));
+
+    def = this->add("ironing_spacing", coFloat);
+    def->label = L("Spacing between ironing passes");
+    def->category = L("Ironing");
+    def->tooltip = L("Distance between ironing lines");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.1));
+
+    def = this->add("ironing_speed", coFloat);
+    def->label = L("Ironing");
+    def->category = L("Speed");
+    def->tooltip = L("Ironing");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(15));
+
     def = this->add("layer_gcode", coString);
     def->label = L("After layer change G-code");
     def->tooltip = L("This custom code is inserted at every layer change, right after the Z move "
@@ -1102,6 +1295,21 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("The firmware supports stealth mode");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(true));
+
+    def = this->add("machine_limits_usage", coEnum);
+    def->label = L("How to apply limits");
+    def->full_label = L("Purpose of Machine Limits");
+    def->category = L("Machine limits");
+    def->tooltip = L("How to apply the Machine Limits");
+    def->enum_keys_map = &ConfigOptionEnum<MachineLimitsUsage>::get_enum_values();
+    def->enum_values.push_back("emit_to_gcode");
+    def->enum_values.push_back("time_estimate_only");
+    def->enum_values.push_back("ignore");
+    def->enum_labels.push_back(L("Emit to G-code"));
+    def->enum_labels.push_back(L("Use for time estimate"));
+    def->enum_labels.push_back(L("Ignore"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<MachineLimitsUsage>(MachineLimitsUsage::EmitToGCode));
 
     {
         struct AxisDefault {
@@ -1337,10 +1545,12 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("duet");
     def->enum_values.push_back("flashair");
     def->enum_values.push_back("astrobox");
+    def->enum_values.push_back("repetier");
     def->enum_labels.push_back("OctoPrint");
     def->enum_labels.push_back("Duet");
     def->enum_labels.push_back("FlashAir");
     def->enum_labels.push_back("AstroBox");
+    def->enum_labels.push_back("Repetier");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionEnum<PrintHostType>(htOctoPrint));
 
@@ -1398,8 +1608,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("perimeter_acceleration", coFloat);
     def->label = L("Perimeters");
     def->tooltip = L("This is the acceleration your printer will use for perimeters. "
-                   "A high value like 9000 usually gives good results if your hardware is up to the job. "
-                   "Set zero to disable acceleration control for perimeters.");
+                     "Set zero to disable acceleration control for perimeters.");
     def->sidetext = L("mm/s²");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0));
@@ -1494,6 +1703,10 @@ void PrintConfigDef::init_fff_params()
     def->cli = ConfigOptionDef::nocli;
 
     def = this->add("printer_settings_id", coString);
+    def->set_default_value(new ConfigOptionString(""));
+    def->cli = ConfigOptionDef::nocli;
+
+    def = this->add("physical_printer_settings_id", coString);
     def->set_default_value(new ConfigOptionString(""));
     def->cli = ConfigOptionDef::nocli;
 
@@ -1655,26 +1868,6 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(30));
 #endif
 
-    def = this->add("serial_port", coString);
-    def->gui_type = "select_open";
-    def->label = "";
-    def->full_label = L("Serial port");
-    def->tooltip = L("USB/serial port for printer connection.");
-    def->width = 20;
-    def->set_default_value(new ConfigOptionString(""));
-
-    def = this->add("serial_speed", coInt);
-    def->gui_type = "i_enum_open";
-    def->label = L("Speed");
-    def->full_label = L("Serial port speed");
-    def->tooltip = L("Speed (baud) of USB/serial port for printer connection.");
-    def->min = 1;
-    def->max = 300000;
-    def->enum_values.push_back("115200");
-    def->enum_values.push_back("250000");
-    def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionInt(250000));
-
     def = this->add("skirt_distance", coFloat);
     def->label = L("Distance from object");
     def->tooltip = L("Distance between skirt and object(s). Set this to zero to attach the skirt "
@@ -1803,7 +1996,7 @@ void PrintConfigDef::init_fff_params()
                    "in order to remove any visible seam. This option requires a single perimeter, "
                    "no infill, no top solid layers and no support material. You can still set "
                    "any number of bottom solid layers as well as skirt/brim loops. "
-                   "It won't work when printing more than an object.");
+                   "It won't work when printing more than one single object.");
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("standby_temperature_delta", coInt);
@@ -1847,6 +2040,33 @@ void PrintConfigDef::init_fff_params()
     def->height = 12;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionStrings { "; Filament gcode\n" });
+
+    def = this->add("color_change_gcode", coString);
+    def->label = L("Color change G-code");
+    def->tooltip = L("This G-code will be used as a code for the color change");
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 12;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionString("M600"));
+
+    def = this->add("pause_print_gcode", coString);
+    def->label = L("Pause Print G-code");
+    def->tooltip = L("This G-code will be used as a code for the pause print");
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 12;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionString("M601"));
+
+    def = this->add("template_custom_gcode", coString);
+    def->label = L("Custom G-code");
+    def->tooltip = L("This G-code will be used as a custom code");
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 12;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionString(""));
 
     def = this->add("single_extruder_multi_material", coBool);
     def->label = L("Single Extruder Multi Material");
@@ -2069,9 +2289,10 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("temperature", coInts);
     def->label = L("Other layers");
-    def->tooltip = L("Extruder temperature for layers after the first one. Set this to zero to disable "
-                   "temperature control commands in the output.");
-    def->full_label = L("Temperature");
+    def->tooltip = L("Nozzle temperature for layers after the first one. Set this to zero to disable "
+                     "temperature control commands in the output G-code.");
+    def->sidetext = L("°C");
+    def->full_label = L("Nozzle temperature");
     def->min = 0;
     def->max = max_temp;
     def->set_default_value(new ConfigOptionInts { 200 });
@@ -2624,7 +2845,7 @@ void PrintConfigDef::init_sla_params()
     def->set_default_value(new ConfigOptionBool(true));
 
     def = this->add("support_head_front_diameter", coFloat);
-    def->label = L("Support head front diameter");
+    def->label = L("Pinhead front diameter");
     def->category = L("Supports");
     def->tooltip = L("Diameter of the pointing side of the head");
     def->sidetext = L("mm");
@@ -2633,7 +2854,7 @@ void PrintConfigDef::init_sla_params()
     def->set_default_value(new ConfigOptionFloat(0.4));
 
     def = this->add("support_head_penetration", coFloat);
-    def->label = L("Support head penetration");
+    def->label = L("Head penetration");
     def->category = L("Supports");
     def->tooltip = L("How much the pinhead has to penetrate the model surface");
     def->sidetext = L("mm");
@@ -2642,7 +2863,7 @@ void PrintConfigDef::init_sla_params()
     def->set_default_value(new ConfigOptionFloat(0.2));
 
     def = this->add("support_head_width", coFloat);
-    def->label = L("Support head width");
+    def->label = L("Pinhead width");
     def->category = L("Supports");
     def->tooltip = L("Width from the back sphere center to the front sphere center");
     def->sidetext = L("mm");
@@ -2652,7 +2873,7 @@ void PrintConfigDef::init_sla_params()
     def->set_default_value(new ConfigOptionFloat(1.0));
 
     def = this->add("support_pillar_diameter", coFloat);
-    def->label = L("Support pillar diameter");
+    def->label = L("Pillar diameter");
     def->category = L("Supports");
     def->tooltip = L("Diameter in mm of the support pillars");
     def->sidetext = L("mm");
@@ -2660,6 +2881,17 @@ void PrintConfigDef::init_sla_params()
     def->max = 15;
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionFloat(1.0));
+
+    def = this->add("support_small_pillar_diameter_percent", coPercent);
+    def->label = L("Small pillar diameter percent");
+    def->category = L("Supports");
+    def->tooltip = L("The percentage of smaller pillars compared to the normal pillar diameter "
+                     "which are used in problematic areas where a normal pilla cannot fit.");
+    def->sidetext = L("%");
+    def->min = 1;
+    def->max = 100;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionPercent(50));
     
     def = this->add("support_max_bridges_on_pillar", coInt);
     def->label = L("Max bridges on a pillar");
@@ -2672,7 +2904,7 @@ void PrintConfigDef::init_sla_params()
     def->set_default_value(new ConfigOptionInt(3));
 
     def = this->add("support_pillar_connection_mode", coEnum);
-    def->label = L("Support pillar connection mode");
+    def->label = L("Pillar connection mode");
     def->tooltip = L("Controls the bridge type between two neighboring pillars."
                      " Can be zig-zag, cross (double zig-zag) or dynamic which"
                      " will automatically switch between the first two depending"
@@ -3027,9 +3259,14 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         "seal_position", "vibration_limit", "bed_size",
         "print_center", "g0", "threads", "pressure_advance", "wipe_tower_per_color_wipe"
 #ifndef HAS_PRESSURE_EQUALIZER
-        , "max_volumetric_extrusion_rate_slope_positive", "max_volumetric_extrusion_rate_slope_negative"
+        , "max_volumetric_extrusion_rate_slope_positive", "max_volumetric_extrusion_rate_slope_negative",
 #endif /* HAS_PRESSURE_EQUALIZER */
+        "serial_port", "serial_speed"
     };
+
+    // In PrusaSlicer 2.3.0-alpha0 the "monotonous" infill was introduced, which was later renamed to "monotonic".
+    if (value == "monotonous" && (opt_key == "top_fill_pattern" || opt_key == "bottom_fill_pattern" || opt_key == "fill_pattern"))
+        value = "monotonic";
 
     if (ignore.find(opt_key) != ignore.end()) {
         opt_key = "";
@@ -3060,7 +3297,43 @@ DynamicPrintConfig* DynamicPrintConfig::new_from_defaults_keys(const std::vector
     return out;
 }
 
-void DynamicPrintConfig::normalize()
+double min_object_distance(const ConfigBase &cfg)
+{   
+    double ret = 0.;
+    
+    if (printer_technology(cfg) == ptSLA) ret = 6.;
+    else {
+        auto ecr_opt = cfg.option<ConfigOptionFloat>("extruder_clearance_radius");
+        auto dd_opt  = cfg.option<ConfigOptionFloat>("duplicate_distance");
+        auto co_opt  = cfg.option<ConfigOptionBool>("complete_objects");
+
+        if (!ecr_opt || !dd_opt || !co_opt) ret = 0.;
+        else {
+            // min object distance is max(duplicate_distance, clearance_radius)
+            ret = (co_opt->value && ecr_opt->value > dd_opt->value) ?
+                      ecr_opt->value : dd_opt->value;
+        }
+    }
+
+    return ret;
+}
+
+PrinterTechnology printer_technology(const ConfigBase &cfg)
+{
+    const ConfigOptionEnum<PrinterTechnology> *opt = cfg.option<ConfigOptionEnum<PrinterTechnology>>("printer_technology");
+    
+    if (opt) return opt->value;
+    
+    const ConfigOptionBool *export_opt = cfg.option<ConfigOptionBool>("export_sla");
+    if (export_opt && export_opt->getBool()) return ptSLA;
+    
+    export_opt = cfg.option<ConfigOptionBool>("export_gcode");
+    if (export_opt && export_opt->getBool()) return ptFFF;    
+    
+    return ptUnknown;
+}
+
+void DynamicPrintConfig::normalize_fdm()
 {
     if (this->has("extruder")) {
         int extruder = this->option("extruder")->getInt();
@@ -3086,8 +3359,11 @@ void DynamicPrintConfig::normalize()
     if (this->has("spiral_vase") && this->opt<ConfigOptionBool>("spiral_vase", true)->value) {
         {
             // this should be actually done only on the spiral layers instead of all
-            ConfigOptionBools* opt = this->opt<ConfigOptionBools>("retract_layer_change", true);
+            auto* opt = this->opt<ConfigOptionBools>("retract_layer_change", true);
             opt->values.assign(opt->values.size(), false);  // set all values to false
+            // Disable retract on layer change also for filament overrides.
+            auto* opt_n = this->opt<ConfigOptionBoolsNullable>("filament_retract_layer_change", true);
+            opt_n->values.assign(opt_n->values.size(), false);  // Set all values to false.
         }
         {
             this->opt<ConfigOptionInt>("perimeters", true)->value       = 1;
@@ -3102,6 +3378,8 @@ void DynamicPrintConfig::set_num_extruders(unsigned int num_extruders)
     const auto &defaults = FullPrintConfig::defaults();
     for (const std::string &key : print_config_def.extruder_option_keys()) {
         if (key == "default_filament_profile")
+            // Don't resize this field, as it is presented to the user at the "Dependencies" page of the Printer profile and we don't want to present
+            // empty fields there, if not defined by the system profile.
             continue;
         auto *opt = this->option(key, false);
         assert(opt != nullptr);
@@ -3128,22 +3406,6 @@ std::string DynamicPrintConfig::validate()
         //FIXME no validation on SLA data?
         return std::string();
     }
-}
-
-double PrintConfig::min_object_distance() const
-{
-    return PrintConfig::min_object_distance(static_cast<const ConfigBase*>(this));
-}
-
-double PrintConfig::min_object_distance(const ConfigBase *config)
-{
-    double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat();
-    double duplicate_distance = config->option("duplicate_distance")->getFloat();
-
-    // min object distance is max(duplicate_distance, clearance_radius)
-    return (config->option("complete_objects")->getBool() && extruder_clearance_radius > duplicate_distance)
-        ? extruder_clearance_radius
-        : duplicate_distance;
 }
 
 //FIXME localize this function.
@@ -3181,11 +3443,12 @@ std::string FullPrintConfig::validate()
 
     if (this->use_firmware_retraction.value &&
         this->gcode_flavor.value != gcfSmoothie &&
-        this->gcode_flavor.value != gcfRepRap &&
+        this->gcode_flavor.value != gcfRepRapSprinter &&
+        this->gcode_flavor.value != gcfRepRapFirmware &&
         this->gcode_flavor.value != gcfMarlin &&
         this->gcode_flavor.value != gcfMachinekit &&
         this->gcode_flavor.value != gcfRepetier)
-        return "--use-firmware-retraction is only supported by Marlin, Smoothie, Repetier and Machinekit firmware";
+        return "--use-firmware-retraction is only supported by Marlin, Smoothie, RepRapFirmware, Repetier and Machinekit firmware";
 
     if (this->use_firmware_retraction.value)
         for (unsigned char wipe : this->wipe.values)
@@ -3324,7 +3587,6 @@ StaticPrintConfig::StaticCache<class Slic3r::PrintRegionConfig> PrintRegionConfi
 StaticPrintConfig::StaticCache<class Slic3r::MachineEnvelopeConfig> MachineEnvelopeConfig::s_cache_MachineEnvelopeConfig;
 StaticPrintConfig::StaticCache<class Slic3r::GCodeConfig>       GCodeConfig::s_cache_GCodeConfig;
 StaticPrintConfig::StaticCache<class Slic3r::PrintConfig>       PrintConfig::s_cache_PrintConfig;
-StaticPrintConfig::StaticCache<class Slic3r::HostConfig>        HostConfig::s_cache_HostConfig;
 StaticPrintConfig::StaticCache<class Slic3r::FullPrintConfig>   FullPrintConfig::s_cache_FullPrintConfig;
 
 StaticPrintConfig::StaticCache<class Slic3r::SLAMaterialConfig>     SLAMaterialConfig::s_cache_SLAMaterialConfig;
@@ -3375,6 +3637,12 @@ CLIActionsConfigDef::CLIActionsConfigDef()
     def->label = L("Export G-code");
     def->tooltip = L("Slice the model and export toolpaths as G-code.");
     def->cli = "export-gcode|gcode|g";
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("gcodeviewer", coBool);
+    def->label = L("G-code viewer");
+    def->tooltip = L("Visualize an already sliced and saved G-code");
+    def->cli = "gcodeviewer";
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("slice", coBool);
@@ -3516,6 +3784,12 @@ CLIMiscConfigDef::CLIMiscConfigDef()
     def->tooltip = L("The file where the output will be written (if not specified, it will be based on the input file).");
     def->cli = "output|o";
 
+    def = this->add("single_instance", coBool);
+    def->label = L("Single instance mode");
+    def->tooltip = L("If enabled, the command line arguments are sent to an existing instance of GUI PrusaSlicer, "
+                     "or an existing PrusaSlicer window is activated. "
+                     "Overrides the \"single_instance\" configuration value from application preferences.");
+
 /*
     def = this->add("autosave", coString);
     def->label = L("Autosave");
@@ -3555,7 +3829,40 @@ void DynamicPrintAndCLIConfig::handle_legacy(t_config_option_key &opt_key, std::
     }
 }
 
+uint64_t ModelConfig::s_last_timestamp = 1;
+
+static Points to_points(const std::vector<Vec2d> &dpts)
+{
+    Points pts; pts.reserve(dpts.size());
+    for (auto &v : dpts)
+        pts.emplace_back( coord_t(scale_(v.x())), coord_t(scale_(v.y())) );
+    return pts;    
 }
+
+Points get_bed_shape(const DynamicPrintConfig &config)
+{
+    const auto *bed_shape_opt = config.opt<ConfigOptionPoints>("bed_shape");
+    if (!bed_shape_opt) {
+        
+        // Here, it is certain that the bed shape is missing, so an infinite one
+        // has to be used, but still, the center of bed can be queried
+        if (auto center_opt = config.opt<ConfigOptionPoint>("center"))
+            return { scaled(center_opt->value) };
+        
+        return {};
+    }
+    
+    return to_points(bed_shape_opt->values);
+}
+
+Points get_bed_shape(const PrintConfig &cfg)
+{
+    return to_points(cfg.bed_shape.values);
+}
+
+Points get_bed_shape(const SLAPrinterConfig &cfg) { return to_points(cfg.bed_shape.values); }
+
+} // namespace Slic3r
 
 #include <cereal/types/polymorphic.hpp>
 CEREAL_REGISTER_TYPE(Slic3r::DynamicPrintConfig)

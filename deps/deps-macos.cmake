@@ -9,6 +9,8 @@ set(DEP_CMAKE_OPTS
     "-DCMAKE_OSX_DEPLOYMENT_TARGET=${DEP_OSX_TARGET}"
     "-DCMAKE_CXX_FLAGS=${DEP_WERRORS_SDK}"
     "-DCMAKE_C_FLAGS=${DEP_WERRORS_SDK}"
+    "-DCMAKE_FIND_FRAMEWORK=LAST"
+    "-DCMAKE_FIND_APPBUNDLE=LAST"
 )
 
 include("deps-unix-common.cmake")
@@ -65,7 +67,6 @@ ExternalProject_Add(dep_libcurl
         --disable-smb
         --disable-smtp
         --disable-gopher
-        --disable-crypto-auth
         --without-gssapi
         --without-libpsl
         --without-libidn2
@@ -84,32 +85,6 @@ ExternalProject_Add(dep_libcurl
         --without-zsh-functions-dir
     BUILD_COMMAND make "-j${NPROC}"
     INSTALL_COMMAND make install "DESTDIR=${DESTDIR}"
-)
-
-ExternalProject_Add(dep_wxwidgets
-    EXCLUDE_FROM_ALL 1
-    GIT_REPOSITORY "https://github.com/prusa3d/wxWidgets"
-    GIT_TAG v3.1.3-patched
-    BUILD_IN_SOURCE 1
-#    PATCH_COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/wxwidgets-pngprefix.h" src/png/pngprefix.h
-    CONFIGURE_COMMAND env "CXXFLAGS=${DEP_WERRORS_SDK}" "CFLAGS=${DEP_WERRORS_SDK}" ./configure
-        "--prefix=${DESTDIR}/usr/local"
-        --disable-shared
-        --with-osx_cocoa
-        --with-macosx-sdk=${CMAKE_OSX_SYSROOT}
-        "--with-macosx-version-min=${DEP_OSX_TARGET}"
-        --with-opengl
-        --with-regex=builtin
-        --with-libpng=builtin
-        --with-libxpm=builtin
-        --with-libjpeg=builtin
-        --with-libtiff=builtin
-        --with-zlib
-        --with-expat=builtin
-        --disable-debug
-        --disable-debug_flag
-    BUILD_COMMAND make "-j${NPROC}" && PATH=/usr/local/opt/gettext/bin/:$ENV{PATH} make -C locale allmo
-    INSTALL_COMMAND make install
 )
 
 add_dependencies(dep_openvdb dep_boost)

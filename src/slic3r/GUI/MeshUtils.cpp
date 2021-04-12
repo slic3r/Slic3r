@@ -27,7 +27,6 @@ void MeshClipper::set_mesh(const TriangleMesh& mesh)
         m_mesh = &mesh;
         m_triangles_valid = false;
         m_triangles2d.resize(0);
-        m_triangles3d.resize(0);
         m_tms.reset(nullptr);
     }
 }
@@ -40,18 +39,18 @@ void MeshClipper::set_transformation(const Geometry::Transformation& trafo)
         m_trafo = trafo;
         m_triangles_valid = false;
         m_triangles2d.resize(0);
-        m_triangles3d.resize(0);
     }
 }
 
 
 
-const std::vector<Vec3f>& MeshClipper::get_triangles()
+void MeshClipper::render_cut()
 {
     if (! m_triangles_valid)
         recalculate_triangles();
 
-    return m_triangles3d;
+    if (m_vertex_array.has_VBOs())
+        m_vertex_array.render();
 }
 
 
@@ -67,37 +66,47 @@ void MeshClipper::recalculate_triangles()
     const Vec3f& scaling = m_trafo.get_scaling_factor().cast<float>();
     // Calculate clipping plane normal in mesh coordinates.
     Vec3f up_noscale = instance_matrix_no_translation_no_scaling.inverse() * m_plane.get_normal().cast<float>();
-    Vec3f up (up_noscale(0)*scaling(0), up_noscale(1)*scaling(1), up_noscale(2)*scaling(2));
+    Vec3d up (up_noscale(0)*scaling(0), up_noscale(1)*scaling(1), up_noscale(2)*scaling(2));
     // Calculate distance from mesh origin to the clipping plane (in mesh coordinates).
     float height_mesh = m_plane.distance(m_trafo.get_offset()) * (up_noscale.norm()/up.norm());
 
     // Now do the cutting
     std::vector<ExPolygons> list_of_expolys;
-    m_tms->set_up_direction(up);
+    m_tms->set_up_direction(up.cast<float>());
     m_tms->slice(std::vector<float>{height_mesh}, SlicingMode::Regular, 0.f, &list_of_expolys, [](){});
     m_triangles2d = triangulate_expolygons_2f(list_of_expolys[0], m_trafo.get_matrix().matrix().determinant() < 0.);
 
     // Rotate the cut into world coords:
-    Eigen::Quaternionf q;
-    q.setFromTwoVectors(Vec3f::UnitZ(), up);
-    Transform3f tr = Transform3f::Identity();
+    Eigen::Quaterniond q;
+    q.setFromTwoVectors(Vec3d::UnitZ(), up);
+    Transform3d tr = Transform3d::Identity();
     tr.rotate(q);
-    tr = m_trafo.get_matrix().cast<float>() * tr;
+    tr = m_trafo.get_matrix() * tr;
 
-    m_triangles3d.clear();
-    m_triangles3d.reserve(m_triangles2d.size());
-    for (const Vec2f& pt : m_triangles2d) {
-        m_triangles3d.push_back(Vec3f(pt(0), pt(1), height_mesh+0.001f));
-        m_triangles3d.back() = tr * m_triangles3d.back();
+    // to avoid z-fighting
+    height_mesh += 0.001f;
+
+    m_vertex_array.release_geometry();
+    for (auto it=m_triangles2d.cbegin(); it != m_triangles2d.cend(); it=it+3) {
+        m_vertex_array.push_geometry(tr * Vec3d((*(it+0))(0), (*(it+0))(1), height_mesh), up);
+        m_vertex_array.push_geometry(tr * Vec3d((*(it+1))(0), (*(it+1))(1), height_mesh), up);
+        m_vertex_array.push_geometry(tr * Vec3d((*(it+2))(0), (*(it+2))(1), height_mesh), up);
+        size_t idx = it - m_triangles2d.cbegin();
+        m_vertex_array.push_triangle(idx, idx+1, idx+2);
     }
+    m_vertex_array.finalize_geometry(true);
 
     m_triangles_valid = true;
 }
 
 
+Vec3f MeshRaycaster::get_triangle_normal(size_t facet_idx) const
+{
+    return m_normals[facet_idx];
+}
 
-bool MeshRaycaster::unproject_on_mesh(const Vec2d& mouse_pos, const Transform3d& trafo, const Camera& camera,
-                                      Vec3f& position, Vec3f& normal, const ClippingPlane* clipping_plane) const
+void MeshRaycaster::line_from_mouse_pos(const Vec2d& mouse_pos, const Transform3d& trafo, const Camera& camera,
+                                        Vec3d& point, Vec3d& direction) const
 {
     const std::array<int, 4>& viewport = camera.get_viewport();
     const Transform3d& model_mat = camera.get_view_matrix();
@@ -112,7 +121,21 @@ bool MeshRaycaster::unproject_on_mesh(const Vec2d& mouse_pos, const Transform3d&
     pt1 = inv * pt1;
     pt2 = inv * pt2;
 
-    std::vector<sla::EigenMesh3D::hit_result> hits = m_emesh.query_ray_hits(pt1, pt2-pt1);
+    point = pt1;
+    direction = pt2-pt1;
+}
+
+
+bool MeshRaycaster::unproject_on_mesh(const Vec2d& mouse_pos, const Transform3d& trafo, const Camera& camera,
+                                      Vec3f& position, Vec3f& normal, const ClippingPlane* clipping_plane,
+                                      size_t* facet_idx) const
+{
+    Vec3d point;
+    Vec3d direction;
+    line_from_mouse_pos(mouse_pos, trafo, camera, point, direction);
+
+    std::vector<sla::IndexedMesh::hit_result> hits = m_emesh.query_ray_hits(point, direction);
+
     if (hits.empty())
         return false; // no intersection found
 
@@ -134,6 +157,10 @@ bool MeshRaycaster::unproject_on_mesh(const Vec2d& mouse_pos, const Transform3d&
     // Now stuff the points in the provided vector and calculate normals if asked about them:
     position = hits[i].position().cast<float>();
     normal = hits[i].normal().cast<float>();
+
+    if (facet_idx)
+        *facet_idx = hits[i].face();
+
     return true;
 }
 
@@ -157,7 +184,7 @@ std::vector<unsigned> MeshRaycaster::get_unobscured_idxs(const Geometry::Transfo
 
         bool is_obscured = false;
         // Cast a ray in the direction of the camera and look for intersection with the mesh:
-        std::vector<sla::EigenMesh3D::hit_result> hits;
+        std::vector<sla::IndexedMesh::hit_result> hits;
         // Offset the start of the ray by EPSILON to account for numerical inaccuracies.
         hits = m_emesh.query_ray_hits((inverse_trafo * pt + direction_to_camera_mesh * EPSILON).cast<double>(),
                                       direction_to_camera.cast<double>());
@@ -194,12 +221,9 @@ Vec3f MeshRaycaster::get_closest_point(const Vec3f& point, Vec3f* normal) const
     int idx = 0;
     Vec3d closest_point;
     m_emesh.squared_distance(point.cast<double>(), idx, closest_point);
-    if (normal) {
-        auto indices = m_emesh.F().row(idx);
-        Vec3d a(m_emesh.V().row(indices(1)) - m_emesh.V().row(indices(0)));
-        Vec3d b(m_emesh.V().row(indices(2)) - m_emesh.V().row(indices(0)));
-        *normal = Vec3f(a.cross(b).cast<float>());
-    }
+    if (normal)
+        *normal = m_normals[idx];
+
     return closest_point.cast<float>();
 }
 

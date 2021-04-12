@@ -1,10 +1,10 @@
 #include "Config.hpp"
+#include "format.hpp"
 #include "Utils.hpp"
 #include <assert.h>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
-#include <exception> // std::runtime_error
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/erase.hpp>
@@ -192,6 +192,23 @@ bool unescape_strings_cstyle(const std::string &str, std::vector<std::string> &o
     }
 }
 
+std::string escape_ampersand(const std::string& str)
+{
+    // Allocate a buffer 2 times the input string length,
+    // so the output will fit even if all input characters get escaped.
+    std::vector<char> out(str.size() * 6, 0);
+    char* outptr = out.data();
+    for (size_t i = 0; i < str.size(); ++i) {
+        char c = str[i];
+        if (c == '&') {
+            (*outptr++) = '&';
+            (*outptr++) = '&';
+        } else
+            (*outptr++) = c;
+    }
+    return std::string(out.data(), outptr - out.data());
+}
+
 std::vector<std::string> ConfigOptionDef::cli_args(const std::string &key) const
 {
 	std::vector<std::string> args;
@@ -216,8 +233,9 @@ ConfigOption* ConfigOptionDef::create_empty_option() const
 	    case coFloats:          return new ConfigOptionFloatsNullable();
 	    case coInts:            return new ConfigOptionIntsNullable();
 	    case coPercents:        return new ConfigOptionPercentsNullable();
+        case coFloatsOrPercents: return new ConfigOptionFloatsOrPercentsNullable();
 	    case coBools:           return new ConfigOptionBoolsNullable();
-	    default:                throw std::runtime_error(std::string("Unknown option type for nullable option ") + this->label);
+	    default:                throw Slic3r::RuntimeError(std::string("Unknown option type for nullable option ") + this->label);
 	    }
 	} else {
 	    switch (this->type) {
@@ -230,6 +248,7 @@ ConfigOption* ConfigOptionDef::create_empty_option() const
 	    case coPercent:         return new ConfigOptionPercent();
 	    case coPercents:        return new ConfigOptionPercents();
 	    case coFloatOrPercent:  return new ConfigOptionFloatOrPercent();
+        case coFloatsOrPercents: return new ConfigOptionFloatsOrPercents();
 	    case coPoint:           return new ConfigOptionPoint();
 	    case coPoints:          return new ConfigOptionPoints();
 	    case coPoint3:          return new ConfigOptionPoint3();
@@ -237,7 +256,7 @@ ConfigOption* ConfigOptionDef::create_empty_option() const
 	    case coBool:            return new ConfigOptionBool();
 	    case coBools:           return new ConfigOptionBools();
 	    case coEnum:            return new ConfigOptionEnumGeneric(this->enum_keys_map);
-	    default:                throw std::runtime_error(std::string("Unknown option type for option ") + this->label);
+	    default:                throw Slic3r::RuntimeError(std::string("Unknown option type for option ") + this->label);
 	    }
 	}
 }
@@ -464,7 +483,7 @@ bool ConfigBase::set_deserialize_nothrow(const t_config_option_key &opt_key_src,
 void ConfigBase::set_deserialize(const t_config_option_key &opt_key_src, const std::string &value_src, bool append)
 {
 	if (! this->set_deserialize_nothrow(opt_key_src, value_src, append))
-		throw BadOptionTypeException("ConfigBase::set_deserialize() failed");
+		throw BadOptionTypeException(format("ConfigBase::set_deserialize() failed for parameter \"%1%\", value \"%2%\"", opt_key_src,  value_src));
 }
 
 void ConfigBase::set_deserialize(std::initializer_list<SetDeserializeItem> items)
@@ -534,7 +553,7 @@ double ConfigBase::get_abs_value(const t_config_option_key &opt_key) const
         return opt_def->ratio_over.empty() ? 0. : 
             static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->get_abs_value(this->get_abs_value(opt_def->ratio_over));
     }
-    throw std::runtime_error("ConfigBase::get_abs_value(): Not a valid option type for get_abs_value()");
+    throw Slic3r::RuntimeError("ConfigBase::get_abs_value(): Not a valid option type for get_abs_value()");
 }
 
 // Return an absolute value of a possibly relative config variable.
@@ -545,7 +564,7 @@ double ConfigBase::get_abs_value(const t_config_option_key &opt_key, double rati
     const ConfigOption *raw_opt = this->option(opt_key);
     assert(raw_opt != nullptr);
     if (raw_opt->type() != coFloatOrPercent)
-        throw std::runtime_error("ConfigBase::get_abs_value(): opt_key is not of coFloatOrPercent");
+        throw Slic3r::RuntimeError("ConfigBase::get_abs_value(): opt_key is not of coFloatOrPercent");
     // Compute absolute value.
     return static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->get_abs_value(ratio_over);
 }
@@ -570,7 +589,7 @@ void ConfigBase::setenv_() const
 
 void ConfigBase::load(const std::string &file)
 {
-    if (boost::iends_with(file, ".gcode") || boost::iends_with(file, ".g"))
+    if (is_gcode_file(file))
         this->load_from_gcode_file(file);
     else
         this->load_from_ini(file);
@@ -608,7 +627,7 @@ void ConfigBase::load_from_gcode_file(const std::string &file)
 		std::getline(ifs, firstline);
 		if (strncmp(slic3r_gcode_header, firstline.c_str(), strlen(slic3r_gcode_header)) != 0 &&
             strncmp(prusaslicer_gcode_header, firstline.c_str(), strlen(prusaslicer_gcode_header)) != 0)
-			throw std::runtime_error("Not a PrusaSlicer / Slic3r PE generated g-code.");
+			throw Slic3r::RuntimeError("Not a PrusaSlicer / Slic3r PE generated g-code.");
 	}
     ifs.seekg(0, ifs.end);
 	auto file_length = ifs.tellg();
@@ -620,7 +639,7 @@ void ConfigBase::load_from_gcode_file(const std::string &file)
 
     size_t key_value_pairs = load_from_gcode_string(data.data());
     if (key_value_pairs < 80)
-        throw std::runtime_error((boost::format("Suspiciously low number of configuration values extracted from %1%: %2%") % file % key_value_pairs).str());
+        throw Slic3r::RuntimeError(format("Suspiciously low number of configuration values extracted from %1%: %2%", file, key_value_pairs));
 }
 
 // Load the config keys from the given string.
@@ -749,7 +768,7 @@ ConfigOption* DynamicConfig::optptr(const t_config_option_key &opt_key, bool cre
         throw NoDefinitionException(opt_key);
     const ConfigOptionDef *optdef = def->get(opt_key);
     if (optdef == nullptr)
-//        throw std::runtime_error(std::string("Invalid option name: ") + opt_key);
+//        throw Slic3r::RuntimeError(std::string("Invalid option name: ") + opt_key);
         // Let the parent decide what to do if the opt_key is not defined by this->def().
         return nullptr;
     ConfigOption *opt = optdef->create_default_option();
@@ -933,6 +952,8 @@ CEREAL_REGISTER_TYPE(Slic3r::ConfigOptionPercent)
 CEREAL_REGISTER_TYPE(Slic3r::ConfigOptionPercents)
 CEREAL_REGISTER_TYPE(Slic3r::ConfigOptionPercentsNullable)
 CEREAL_REGISTER_TYPE(Slic3r::ConfigOptionFloatOrPercent)
+CEREAL_REGISTER_TYPE(Slic3r::ConfigOptionFloatsOrPercents)
+CEREAL_REGISTER_TYPE(Slic3r::ConfigOptionFloatsOrPercentsNullable)
 CEREAL_REGISTER_TYPE(Slic3r::ConfigOptionPoint)
 CEREAL_REGISTER_TYPE(Slic3r::ConfigOptionPoints)
 CEREAL_REGISTER_TYPE(Slic3r::ConfigOptionPoint3)
@@ -967,6 +988,8 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ConfigOptionFloat, Slic3r::ConfigOp
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ConfigOptionFloats, Slic3r::ConfigOptionPercents)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ConfigOptionFloats, Slic3r::ConfigOptionPercentsNullable)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ConfigOptionPercent, Slic3r::ConfigOptionFloatOrPercent)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ConfigOptionVector<Slic3r::FloatOrPercent>, Slic3r::ConfigOptionFloatsOrPercents)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ConfigOptionVector<Slic3r::FloatOrPercent>, Slic3r::ConfigOptionFloatsOrPercentsNullable)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ConfigOptionSingle<Slic3r::Vec2d>, Slic3r::ConfigOptionPoint)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ConfigOptionVector<Slic3r::Vec2d>, Slic3r::ConfigOptionPoints)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Slic3r::ConfigOptionSingle<Slic3r::Vec3d>, Slic3r::ConfigOptionPoint3)

@@ -39,9 +39,11 @@ extern void add_menus(wxMenuBar *menu, int event_preferences_changed, int event_
 // Change option value in config
 void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt_key, const boost::any& value, int opt_index = 0);
 
-void show_error(wxWindow* parent, const wxString& message);
-void show_error(wxWindow* parent, const char* message);
-inline void show_error(wxWindow* parent, const std::string& message) { show_error(parent, message.c_str()); }
+// If monospaced_font is true, the error message is displayed using html <code><pre></pre></code> tags,
+// so that the code formatting will be preserved. This is useful for reporting errors from the placeholder parser.
+void show_error(wxWindow* parent, const wxString& message, bool monospaced_font = false);
+void show_error(wxWindow* parent, const char* message, bool monospaced_font = false);
+inline void show_error(wxWindow* parent, const std::string& message, bool monospaced_font = false) { show_error(parent, message.c_str(), monospaced_font); }
 void show_error_id(int id, const std::string& message);   // For Perl
 void show_info(wxWindow* parent, const wxString& message, const wxString& title = wxString());
 void show_info(wxWindow* parent, const char* message, const char* title = nullptr);
@@ -49,13 +51,17 @@ inline void show_info(wxWindow* parent, const std::string& message,const std::st
 void warning_catcher(wxWindow* parent, const wxString& message);
 
 // Creates a wxCheckListBoxComboPopup inside the given wxComboCtrl, filled with the given text and items.
-// Items are all initialized to the given value.
-// Items must be separated by '|', for example "Item1|Item2|Item3", and so on.
-void create_combochecklist(wxComboCtrl* comboCtrl, std::string text, std::string items, bool initial_value);
+// Items data must be separated by '|', and contain the item name to be shown followed by its initial value (0 for false, 1 for true).
+// For example "Item1|0|Item2|1|Item3|0", and so on.
+void create_combochecklist(wxComboCtrl* comboCtrl, const std::string& text, const std::string& items);
 
 // Returns the current state of the items listed in the wxCheckListBoxComboPopup contained in the given wxComboCtrl,
-// encoded inside an int.
-int combochecklist_get_flags(wxComboCtrl* comboCtrl);
+// encoded inside an unsigned int.
+unsigned int combochecklist_get_flags(wxComboCtrl* comboCtrl);
+
+// Sets the current state of the items listed in the wxCheckListBoxComboPopup contained in the given wxComboCtrl,
+// with the flags encoded in the given unsigned int.
+void combochecklist_set_flags(wxComboCtrl* comboCtrl, unsigned int flags);
 
 // wxString conversions:
 

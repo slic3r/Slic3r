@@ -3,7 +3,9 @@
 
 #include "slic3r/GUI/GLTexture.hpp"
 #include "slic3r/GUI/GLToolbar.hpp"
-#include "slic3r/GUI/Gizmos/GLGizmos.hpp"
+#include "slic3r/GUI/Gizmos/GLGizmoBase.hpp"
+#include "slic3r/GUI/Gizmos/GLGizmosCommon.hpp"
+
 #include "libslic3r/ObjectID.hpp"
 
 #include <map>
@@ -18,6 +20,8 @@ namespace GUI {
 
 class GLCanvas3D;
 class ClippingPlane;
+enum class SLAGizmoEventType : unsigned char;
+class CommonGizmosDataPool;
 
 class Rect
 {
@@ -62,6 +66,8 @@ public:
         Cut,
         Hollow,
         SlaSupports,
+        FdmSupports,
+        Seam,
         Undefined
     };
 
@@ -113,7 +119,8 @@ private:
     MouseCapture m_mouse_capture;
     std::string m_tooltip;
     bool m_serializing;
-    std::unique_ptr<CommonGizmosData> m_common_gizmos_data;
+    //std::unique_ptr<CommonGizmosData> m_common_gizmos_data;
+    std::unique_ptr<CommonGizmosDataPool> m_common_gizmos_data;
 
 public:
     explicit GLGizmosManager(GLCanvas3D& parent);
@@ -163,6 +170,7 @@ public:
 
     void refresh_on_off_state();
     void reset_all_states();
+    bool is_serializing() const { return m_serializing; }
 
     void set_hover_id(int id);
     void enable_grabber(EType type, unsigned int id, bool enable);
@@ -195,12 +203,16 @@ public:
     void set_flattening_data(const ModelObject* model_object);
 
     void set_sla_support_data(ModelObject* model_object);
+
+    void set_painter_gizmo_data();
+
     bool gizmo_event(SLAGizmoEventType action, const Vec2d& mouse_position = Vec2d::Zero(), bool shift_down = false, bool alt_down = false, bool control_down = false);
-    ClippingPlane get_sla_clipping_plane() const;
+    ClippingPlane get_clipping_plane() const;
     bool wants_reslice_supports_on_undo() const;
 
     void render_current_gizmo() const;
     void render_current_gizmo_for_picking_pass() const;
+    void render_painter_gizmo() const;
 
     void render_overlay() const;
 
@@ -212,6 +224,8 @@ public:
     bool on_key(wxKeyEvent& evt);
 
     void update_after_undo_redo(const UndoRedo::Snapshot& snapshot);
+
+    int get_selectable_icons_cnt() const { return get_selectable_idxs().size(); }
 
 private:
     void render_background(float left, float top, float right, float bottom, float border) const;
@@ -228,63 +242,6 @@ private:
 };
 
 
-
-class MeshRaycaster;
-class MeshClipper;
-
-// This class is only for sharing SLA related data between SLA gizmos
-// and its synchronization with backend data. It should not be misused
-// for anything else.
-class CommonGizmosData {
-public:
-    CommonGizmosData();
-    const TriangleMesh* mesh() const {
-        return (! m_mesh ? nullptr : m_mesh); //(m_cavity_mesh ? m_cavity_mesh.get() : m_mesh));
-    }
-
-    bool update_from_backend(GLCanvas3D& canvas, ModelObject* model_object);
-    bool recent_update = false;
-    static constexpr float HoleStickOutLength = 1.f;
-
-    ModelObject* m_model_object = nullptr;
-    const TriangleMesh* m_mesh;
-    std::unique_ptr<MeshRaycaster> m_mesh_raycaster;
-    std::unique_ptr<MeshClipper> m_object_clipper;
-    std::unique_ptr<MeshClipper> m_supports_clipper;
-
-    //std::unique_ptr<TriangleMesh> m_cavity_mesh;
-    //std::unique_ptr<GLVolume> m_volume_with_cavity;
-
-    int m_active_instance = -1;
-    float m_active_instance_bb_radius = 0;
-    ObjectID m_model_object_id = 0;
-    int m_print_object_idx = -1;
-    int m_print_objects_count = -1;
-    int m_old_timestamp = -1;
-
-    float m_clipping_plane_distance = 0.f;
-    std::unique_ptr<ClippingPlane> m_clipping_plane;
-    bool m_clipping_plane_was_moved = false;
-
-    void stash_clipping_plane() {
-        m_clipping_plane_distance_stash = m_clipping_plane_distance;
-    }
-
-    void unstash_clipping_plane() {
-        m_clipping_plane_distance = m_clipping_plane_distance_stash;
-    }
-
-    bool has_drilled_mesh() const { return m_has_drilled_mesh; }
-
-    void build_AABB_if_needed();
-
-private:
-    const TriangleMesh* m_old_mesh;
-    TriangleMesh m_backend_mesh_transformed;
-    float m_clipping_plane_distance_stash = 0.f;
-    bool m_has_drilled_mesh = false;
-    bool m_schedule_aabb_calculation = false;
-};
 
 } // namespace GUI
 } // namespace Slic3r

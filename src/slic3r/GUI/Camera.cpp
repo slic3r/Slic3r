@@ -1,13 +1,11 @@
 #include "libslic3r/libslic3r.h"
+#include "libslic3r/AppConfig.hpp"
 
 #include "Camera.hpp"
-#if !ENABLE_THUMBNAIL_GENERATOR
-#include "3DScene.hpp"
-#endif // !ENABLE_THUMBNAIL_GENERATOR
 #include "GUI_App.hpp"
-#include "AppConfig.hpp"
 #if ENABLE_CAMERA_STATISTICS
 #include "Mouse3DController.hpp"
+#include "Plater.hpp"
 #endif // ENABLE_CAMERA_STATISTICS
 
 #include <GL/glew.h>
@@ -25,10 +23,8 @@ namespace Slic3r {
 namespace GUI {
 
 const double Camera::DefaultDistance = 1000.0;
-#if ENABLE_THUMBNAIL_GENERATOR
 const double Camera::DefaultZoomToBoxMarginFactor = 1.025;
 const double Camera::DefaultZoomToVolumesMarginFactor = 1.025;
-#endif // ENABLE_THUMBNAIL_GENERATOR
 double Camera::FrustrumMinZRange = 50.0;
 double Camera::FrustrumMinNearZ = 100.0;
 double Camera::FrustrumZMargin = 10.0;
@@ -36,15 +32,6 @@ double Camera::MaxFovDeg = 60.0;
 
 Camera::Camera()
     : requires_zoom_to_bed(false)
-    , m_type(Perspective)
-    , m_target(Vec3d::Zero())
-    , m_zenit(45.0f)
-    , m_zoom(1.0)
-    , m_distance(DefaultDistance)
-    , m_gui_scale(1.0)
-    , m_view_matrix(Transform3d::Identity())
-    , m_view_rotation(1., 0., 0., 0.)
-    , m_projection_matrix(Transform3d::Identity())
 {
     set_default_orientation();
 }
@@ -62,11 +49,12 @@ std::string Camera::get_type_as_string() const
 
 void Camera::set_type(EType type)
 {
-    if (m_type != type)
-    {
+    if (m_type != type) {
         m_type = type;
-        wxGetApp().app_config->set("use_perspective_camera", (m_type == Perspective) ? "1" : "0");
-        wxGetApp().app_config->save();
+        if (m_update_config_on_type_change_enabled) {
+            wxGetApp().app_config->set("use_perspective_camera", (m_type == Perspective) ? "1" : "0");
+            wxGetApp().app_config->save();
+        }
     }
 }
 
@@ -219,18 +207,10 @@ void Camera::apply_projection(const BoundingBoxf3& box, double near_z, double fa
     glsafe(::glMatrixMode(GL_MODELVIEW));
 }
 
-#if ENABLE_THUMBNAIL_GENERATOR
 void Camera::zoom_to_box(const BoundingBoxf3& box, double margin_factor)
-#else
-void Camera::zoom_to_box(const BoundingBoxf3& box, int canvas_w, int canvas_h)
-#endif // ENABLE_THUMBNAIL_GENERATOR
 {
     // Calculate the zoom factor needed to adjust the view around the given box.
-#if ENABLE_THUMBNAIL_GENERATOR
     double zoom = calc_zoom_to_bounding_box_factor(box, margin_factor);
-#else
-    double zoom = calc_zoom_to_bounding_box_factor(box, canvas_w, canvas_h);
-#endif // ENABLE_THUMBNAIL_GENERATOR
     if (zoom > 0.0)
     {
         m_zoom = zoom;
@@ -239,7 +219,6 @@ void Camera::zoom_to_box(const BoundingBoxf3& box, int canvas_w, int canvas_h)
     }
 }
 
-#if ENABLE_THUMBNAIL_GENERATOR
 void Camera::zoom_to_volumes(const GLVolumePtrs& volumes, double margin_factor)
 {
     Vec3d center;
@@ -251,7 +230,6 @@ void Camera::zoom_to_volumes(const GLVolumePtrs& volumes, double margin_factor)
         set_target(center);
     }
 }
-#endif // ENABLE_THUMBNAIL_GENERATOR
 
 #if ENABLE_CAMERA_STATISTICS
 void Camera::debug_render() const
@@ -387,11 +365,7 @@ std::pair<double, double> Camera::calc_tight_frustrum_zs_around(const BoundingBo
     return ret;
 }
 
-#if ENABLE_THUMBNAIL_GENERATOR
 double Camera::calc_zoom_to_bounding_box_factor(const BoundingBoxf3& box, double margin_factor) const
-#else
-double Camera::calc_zoom_to_bounding_box_factor(const BoundingBoxf3& box, int canvas_w, int canvas_h) const
-#endif // ENABLE_THUMBNAIL_GENERATOR
 {
     double max_bb_size = box.max_size();
     if (max_bb_size == 0.0)
@@ -423,11 +397,6 @@ double Camera::calc_zoom_to_bounding_box_factor(const BoundingBoxf3& box, int ca
     double max_x = -DBL_MAX;
     double max_y = -DBL_MAX;
 
-#if !ENABLE_THUMBNAIL_GENERATOR
-    // margin factor to give some empty space around the box
-    double margin_factor = 1.25;
-#endif // !ENABLE_THUMBNAIL_GENERATOR
-
     for (const Vec3d& v : vertices)
     {
         // project vertex on the plane perpendicular to camera forward axis
@@ -449,16 +418,12 @@ double Camera::calc_zoom_to_bounding_box_factor(const BoundingBoxf3& box, int ca
     if ((dx <= 0.0) || (dy <= 0.0))
         return -1.0f;
 
-    double med_x = 0.5 * (max_x + min_x);
-    double med_y = 0.5 * (max_y + min_y);
-
     dx *= margin_factor;
     dy *= margin_factor;
 
     return std::min((double)m_viewport[2] / dx, (double)m_viewport[3] / dy);
 }
 
-#if ENABLE_THUMBNAIL_GENERATOR
 double Camera::calc_zoom_to_volumes_factor(const GLVolumePtrs& volumes, Vec3d& center, double margin_factor) const
 {
     if (volumes.empty())
@@ -519,7 +484,6 @@ double Camera::calc_zoom_to_volumes_factor(const GLVolumePtrs& volumes, Vec3d& c
 
     return std::min((double)m_viewport[2] / dx, (double)m_viewport[3] / dy);
 }
-#endif // ENABLE_THUMBNAIL_GENERATOR
 
 void Camera::set_distance(double distance) const
 {

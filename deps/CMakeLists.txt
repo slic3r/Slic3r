@@ -34,7 +34,10 @@ endif ()
 set(DESTDIR "${CMAKE_CURRENT_BINARY_DIR}/destdir" CACHE PATH "Destination directory")
 
 option(DEP_DEBUG "Build debug variants (only applicable on Windows)" ON)
-option(DEP_WX_STABLE "Build against wxWidgets stable 3.0 as opposed to default 3.1 (Linux only)" OFF)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    option(DEP_WX_GTK3 "Build wxWidgets against GTK3" OFF)
+endif()
 
 # On developer machines, it can be enabled to speed up compilation and suppress warnings coming from IGL. 
 # FIXME:
@@ -126,50 +129,77 @@ else()
     include("deps-linux.cmake")
 endif()
 
+set(ZLIB_PKG "")
+if (NOT ZLIB_FOUND) 
+    include(ZLIB/ZLIB.cmake)
+    set(ZLIB_PKG dep_ZLIB)
+endif ()
+set(PNG_PKG "")
+if (NOT PNG_FOUND) 
+    include(PNG/PNG.cmake)
+    set(PNG_PKG dep_PNG)
+endif ()
+set(EXPAT_PKG "")
+if (NOT EXPAT_FOUND) 
+    include(EXPAT/EXPAT.cmake)
+    set(EXPAT_PKG dep_EXPAT)
+endif ()
+
 include(GLEW/GLEW.cmake)
 include(OpenCSG/OpenCSG.cmake)
-
 include(GMP/GMP.cmake)
 include(MPFR/MPFR.cmake)
 include(CGAL/CGAL.cmake)
+include(wxWidgets/wxWidgets.cmake)
+
+if (NOT "${ZLIB_PKG}" STREQUAL "")
+    add_dependencies(dep_blosc ${ZLIB_PKG})
+    add_dependencies(dep_openexr ${ZLIB_PKG})
+endif ()
+
+set(_dep_list
+    dep_boost
+    dep_tbb
+    dep_libcurl
+    dep_wxWidgets
+    dep_gtest
+    dep_cereal
+    dep_nlopt
+    dep_openvdb
+    dep_OpenCSG
+    dep_CGAL
+    ${PNG_PKG}
+    ${ZLIB_PKG}
+    ${EXPAT_PKG}
+    )
+
+if ("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+    # Patch the boost::polygon library with a custom one.
+    ExternalProject_Add(dep_boost_polygon
+        EXCLUDE_FROM_ALL ON
+        GIT_REPOSITORY "https://github.com/prusa3d/polygon"
+        GIT_TAG prusaslicer_gmp
+        DEPENDS dep_boost
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_BINARY_DIR}/dep_boost_polygon-prefix/src/dep_boost_polygon/include/boost/polygon"
+            "${DESTDIR}/usr/local/include/boost/polygon"
+    )
+    # Only override boost::Polygon Voronoi implementation with Vojtech's GMP hacks on 64bit platforms.
+    list(APPEND _dep_list "dep_boost_polygon")
+endif ()
 
 if (MSVC)
-
-    add_custom_target(deps ALL
-    DEPENDS
-        dep_boost
-        dep_tbb
-        dep_libcurl
-        dep_wxwidgets
-        dep_gtest
-        dep_cereal
-        dep_nlopt
-        # dep_qhull # Experimental
-        dep_ZLIB    # on Windows we still need zlib
-        dep_openvdb
-        dep_OpenCSG
-        dep_CGAL
-    )
-
+    # Experimental
+    #list(APPEND _dep_list "dep_qhull")
 else()
-
-    add_custom_target(deps ALL
-    DEPENDS
-        dep_boost
-        dep_tbb
-        dep_libcurl
-        dep_wxwidgets
-        dep_gtest
-        dep_cereal
-        dep_nlopt
-        dep_qhull
-        dep_openvdb
-        dep_OpenCSG
-        dep_CGAL
-        # dep_libigl # Not working, static build has different Eigen
-    )
-
+    list(APPEND _dep_list "dep_qhull")
+    # Not working, static build has different Eigen
+    #list(APPEND _dep_list "dep_libigl")
 endif()
+
+add_custom_target(deps ALL DEPENDS ${_dep_list})
 
 # Note: I'm not using any of the LOG_xxx options in ExternalProject_Add() commands
 # because they seem to generate bogus build files (possibly a bug in ExternalProject).

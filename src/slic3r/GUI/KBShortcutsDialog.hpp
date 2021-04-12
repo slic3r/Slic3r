@@ -8,8 +8,6 @@
 #include "GUI_Utils.hpp"
 #include "wxExtensions.hpp"
 
-#define ENABLE_SCROLLABLE 1
-
 namespace Slic3r { 
 namespace GUI {
 
@@ -17,14 +15,13 @@ class KBShortcutsDialog : public DPIDialog
 {
     typedef std::pair<std::string, std::string> Shortcut;
     typedef std::vector<Shortcut> Shortcuts;
-    typedef std::vector<std::pair<wxString, Shortcuts>> ShortcutsVec;
+    typedef std::pair<std::pair<wxString, wxString>, Shortcuts> ShortcutsItem;
+    typedef std::vector<ShortcutsItem> ShortcutsVec;
 
     ShortcutsVec    m_full_shortcuts;
     ScalableBitmap  m_logo_bmp;
     wxStaticBitmap* m_header_bitmap;
-#if ENABLE_SCROLLABLE
     std::vector<wxPanel*> m_pages;
-#endif // ENABLE_SCROLLABLE
 
 public:
     KBShortcutsDialog();
@@ -36,8 +33,7 @@ private:
     void fill_shortcuts();
 
     wxPanel* create_header(wxWindow* parent, const wxFont& bold_font);
-    wxPanel* create_page(wxWindow* parent, const std::pair<wxString, Shortcuts>& shortcuts, const wxFont& font, const wxFont& bold_font);
-
+    wxPanel* create_page(wxWindow* parent, const ShortcutsItem& shortcuts, const wxFont& font, const wxFont& bold_font);
 };
 
 } // namespace GUI

@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <functional>
 #include <boost/filesystem.hpp>
+#include <boost/log/trivial.hpp>
 
 #include <wx/sizer.h>
 #include <wx/panel.h>
@@ -18,12 +19,15 @@
 #include <wx/listbox.h>
 #include <wx/checklst.h>
 #include <wx/radiobut.h>
+#include <wx/html/htmlwin.h>
 
 #include "libslic3r/PrintConfig.hpp"
+#include "libslic3r/PresetBundle.hpp"
 #include "slic3r/Utils/PresetUpdater.hpp"
-#include "AppConfig.hpp"
-#include "PresetBundle.hpp"
 #include "BedShapeDialog.hpp"
+#include "GUI.hpp"
+#include "wxExtensions.hpp"
+
 
 namespace fs = boost::filesystem;
 
@@ -55,32 +59,91 @@ enum Technology {
     T_ANY = ~0,
 };
 
+struct Bundle
+{
+	std::unique_ptr<PresetBundle> preset_bundle;
+	VendorProfile* vendor_profile{ nullptr };
+	bool is_in_resources{ false };
+	bool is_prusa_bundle{ false };
+
+	Bundle() = default;
+	Bundle(Bundle&& other);
+
+	// Returns false if not loaded. Reason for that is logged as boost::log error.
+	bool load(fs::path source_path, bool is_in_resources, bool is_prusa_bundle = false);
+
+	const std::string& vendor_id() const { return vendor_profile->id; }
+};
+
+struct BundleMap : std::unordered_map<std::string /* = vendor ID */, Bundle>
+{
+	static BundleMap load();
+
+	Bundle& prusa_bundle();
+	const Bundle& prusa_bundle() const;
+};
+
 struct Materials
 {
     Technology technology;
     // use vector for the presets to purpose of save of presets sorting in the bundle
     std::vector<const Preset*> presets;
+    // String is alias of material, size_t number of compatible counters 
+    std::vector<std::pair<std::string, size_t>> compatibility_counter;
     std::set<std::string> types;
+	std::set<const Preset*> printers;
 
     Materials(Technology technology) : technology(technology) {}
 
     void push(const Preset *preset);
+	void add_printer(const Preset* preset);
     void clear();
     bool containts(const Preset *preset) const {
-        return std::find(presets.begin(), presets.end(), preset) != presets.end(); 
+        //return std::find(presets.begin(), presets.end(), preset) != presets.end(); 
+		return std::find_if(presets.begin(), presets.end(),
+			[preset](const Preset* element) { return element == preset; }) != presets.end();
+
     }
+	
+	bool get_omnipresent(const Preset* preset) {
+		return get_printer_counter(preset) == printers.size();
+	}
+
+    const std::vector<const Preset*> get_presets_by_alias(const std::string name) {
+        std::vector<const Preset*> ret_vec;
+        for (auto it = presets.begin(); it != presets.end(); ++it) {
+            if ((*it)->alias == name)
+                ret_vec.push_back((*it));
+        }
+        return ret_vec;
+    }
+
+	
+
+	size_t get_printer_counter(const Preset* preset) {
+		for (auto it : compatibility_counter) {
+			if (it.first == preset->alias)
+                return it.second;
+        }
+		return 0;
+	}
 
     const std::string& appconfig_section() const;
     const std::string& get_type(const Preset *preset) const;
     const std::string& get_vendor(const Preset *preset) const;
+	
+	template<class F> void filter_presets(const Preset* printer, const std::string& type, const std::string& vendor, F cb) {
+		for (auto preset : presets) {
+			const Preset& prst = *(preset);
+			const Preset& prntr = *printer;
+		      if ((printer == nullptr || is_compatible_with_printer(PresetWithVendorProfile(prst, prst.vendor), PresetWithVendorProfile(prntr, prntr.vendor))) &&
+			    (type.empty() || get_type(preset) == type) &&
+				(vendor.empty() || get_vendor(preset) == vendor)) {
 
-    template<class F> void filter_presets(const std::string &type, const std::string &vendor, F cb) {
-        for (const Preset *preset : presets) {
-            if ((type.empty() || get_type(preset) == type) && (vendor.empty() || get_vendor(preset) == vendor)) {
-                cb(preset);
-            }
-        }
-    }
+				cb(preset);
+			}
+		}
+	}
 
     static const std::string UNKNOWN;
     static const std::string& get_filament_type(const Preset *preset);
@@ -89,32 +152,8 @@ struct Materials
     static const std::string& get_material_vendor(const Preset *preset);
 };
 
-struct Bundle
-{
-    std::unique_ptr<PresetBundle> preset_bundle;
-    VendorProfile *vendor_profile { nullptr };
-    bool is_in_resources { false };
-    bool is_prusa_bundle { false };
-
-    Bundle() = default;
-    Bundle(Bundle &&other);
-
-    // Returns false if not loaded. Reason for that is logged as boost::log error.
-    bool load(fs::path source_path, bool is_in_resources, bool is_prusa_bundle = false);
-
-    const std::string& vendor_id() const { return vendor_profile->id; }
-};
-
-struct BundleMap: std::unordered_map<std::string /* = vendor ID */, Bundle>
-{
-    static BundleMap load();
-
-    Bundle& prusa_bundle();
-    const Bundle& prusa_bundle() const;
-};
 
 struct PrinterPickerEvent;
-
 
 // GUI elements
 
@@ -223,6 +262,7 @@ struct PagePrinters: ConfigWizardPage
 template<class T, class D> struct DataList : public T
 {
     DataList(wxWindow *parent) : T(parent, wxID_ANY) {}
+	DataList(wxWindow* parent, int style) : T(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, style) {}
 
     // Note: We're _not_ using wxLB_SORT here because it doesn't do the right thing,
     // eg. "ABS" is sorted before "(All)"
@@ -250,29 +290,74 @@ template<class T, class D> struct DataList : public T
     }
 
     int size() { return this->GetCount(); }
+
+    void on_mouse_move(const wxPoint& position) {
+        int item = T::HitTest(position);
+       
+        if(item == wxHitTest::wxHT_WINDOW_INSIDE)
+            BOOST_LOG_TRIVIAL(error) << "hit test wxHT_WINDOW_INSIDE";
+        else if (item == wxHitTest::wxHT_WINDOW_OUTSIDE)
+            BOOST_LOG_TRIVIAL(error) << "hit test wxHT_WINDOW_OUTSIDE";
+        else if(item == wxHitTest::wxHT_WINDOW_CORNER)
+            BOOST_LOG_TRIVIAL(error) << "hit test wxHT_WINDOW_CORNER";
+        else if (item == wxHitTest::wxHT_WINDOW_VERT_SCROLLBAR)
+            BOOST_LOG_TRIVIAL(error) << "hit test wxHT_WINDOW_VERT_SCROLLBAR";
+       else if (item == wxHitTest::wxHT_NOWHERE)
+            BOOST_LOG_TRIVIAL(error) << "hit test wxHT_NOWHERE";
+       else if (item == wxHitTest::wxHT_MAX)
+            BOOST_LOG_TRIVIAL(error) << "hit test wxHT_MAX";
+       else
+            BOOST_LOG_TRIVIAL(error) << "hit test: " << item;
+    }
 };
 
 typedef DataList<wxListBox, std::string> StringList;
 typedef DataList<wxCheckListBox, std::string> PresetList;
 
+struct ProfilePrintData
+{
+    std::reference_wrapper<const std::string> name;
+    bool omnipresent;
+    bool checked;
+    ProfilePrintData(const std::string& n, bool o, bool c) : name(n), omnipresent(o), checked(c) {}
+};
+
 struct PageMaterials: ConfigWizardPage
 {
     Materials *materials;
-    StringList *list_l1, *list_l2;
-    PresetList *list_l3;
-    int sel1_prev, sel2_prev;
+    StringList *list_printer, *list_type, *list_vendor;
+    PresetList *list_profile;
+    int sel_printer_count_prev, sel_printer_item_prev, sel_type_prev, sel_vendor_prev;
     bool presets_loaded;
 
+    wxFlexGridSizer *grid;
+    wxHtmlWindow* html_window;
+
+    int compatible_printers_width = { 100 };
+    std::string empty_printers_label;
+    bool first_paint = { false };
     static const std::string EMPTY;
+    int last_hovered_item = { -1 } ;
 
     PageMaterials(ConfigWizard *parent, Materials *materials, wxString title, wxString shortname, wxString list1name);
 
     void reload_presets();
-    void update_lists(int sel1, int sel2);
+	void update_lists(int sel1, int sel2, int sel3);
+	void on_material_highlighted(int sel_material);
+    void on_material_hovered(int sel_material);
     void select_material(int i);
     void select_all(bool select);
     void clear();
+    void set_compatible_printers_html_window(const std::vector<std::string>& printer_names, bool all_printers = false);
+    void clear_compatible_printers_label();
 
+    void sort_list_data(StringList* list, bool add_All_item, bool material_type_ordering);
+    void sort_list_data(PresetList* list, const std::vector<ProfilePrintData>& data);
+
+    void on_paint();
+    void on_mouse_move_on_profiles(wxMouseEvent& evt);
+    void on_mouse_enter_profiles(wxMouseEvent& evt);
+    void on_mouse_leave_profiles(wxMouseEvent& evt);
     virtual void on_activate() override;
 };
 
@@ -307,11 +392,32 @@ struct PageReloadFromDisk : ConfigWizardPage
     PageReloadFromDisk(ConfigWizard* parent);
 };
 
+#if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+#ifdef _WIN32
+struct PageFilesAssociation : ConfigWizardPage
+{
+private:
+    wxCheckBox* cb_3mf{ nullptr };
+    wxCheckBox* cb_stl{ nullptr };
+//    wxCheckBox* cb_gcode;
+
+public:
+    PageFilesAssociation(ConfigWizard* parent);
+
+    bool associate_3mf() const { return cb_3mf->IsChecked(); }
+    bool associate_stl() const { return cb_stl->IsChecked(); }
+//    bool associate_gcode() const { return cb_gcode->IsChecked(); }
+};
+#endif // _WIN32
+#endif // ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+
 struct PageMode: ConfigWizardPage
 {
     wxRadioButton *radio_simple;
     wxRadioButton *radio_advanced;
     wxRadioButton *radio_expert;
+
+    wxCheckBox    *check_inch;
 
     PageMode(ConfigWizard *parent);
 
@@ -463,6 +569,11 @@ struct ConfigWizard::priv
     PageCustom       *page_custom = nullptr;
     PageUpdate       *page_update = nullptr;
     PageReloadFromDisk *page_reload_from_disk = nullptr;
+#if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
+#ifdef _WIN32
+    PageFilesAssociation* page_files_association = nullptr;
+#endif // _WIN32
+#endif // ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
     PageMode         *page_mode = nullptr;
     PageVendors      *page_vendors = nullptr;
     Pages3rdparty     pages_3rdparty;
@@ -478,6 +589,7 @@ struct ConfigWizard::priv
 
     priv(ConfigWizard *q)
         : q(q)
+        , appconfig_new(AppConfig::EAppMode::Editor)
         , filaments(T_FFF)
         , sla_materials(T_SLA)
     {}

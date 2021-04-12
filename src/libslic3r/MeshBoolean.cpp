@@ -1,3 +1,4 @@
+#include "Exception.hpp"
 #include "MeshBoolean.hpp"
 #include "libslic3r/TriangleMesh.hpp"
 #undef PI
@@ -11,7 +12,6 @@
 #include <CGAL/Exact_integer.h>
 #include <CGAL/Surface_mesh.h>
 #include <CGAL/Polygon_mesh_processing/orient_polygon_soup.h>
-#include <CGAL/Polygon_mesh_processing/repair_polygon_soup.h>
 #include <CGAL/Polygon_mesh_processing/repair.h>
 #include <CGAL/Polygon_mesh_processing/remesh.h>
 #include <CGAL/Polygon_mesh_processing/polygon_soup_to_polygon_mesh.h>
@@ -29,7 +29,7 @@ TriangleMesh eigen_to_triangle_mesh(const EigenMesh &emesh)
     auto &VC = emesh.first; auto &FC = emesh.second;
     
     Pointf3s points(size_t(VC.rows())); 
-    std::vector<Vec3crd> facets(size_t(FC.rows()));
+    std::vector<Vec3i> facets(size_t(FC.rows()));
     
     for (Eigen::Index i = 0; i < VC.rows(); ++i)
         points[size_t(i)] = VC.row(i);
@@ -136,7 +136,7 @@ template<class _Mesh> void triangle_mesh_to_cgal(const TriangleMesh &M, _Mesh &o
     if(CGAL::is_closed(out))
         CGALProc::orient_to_bound_a_volume(out);
     else
-        std::runtime_error("Mesh not watertight");
+        throw Slic3r::RuntimeError("Mesh not watertight");
 }
 
 inline Vec3d to_vec3d(const _EpicMesh::Point &v)
@@ -154,7 +154,7 @@ inline Vec3d to_vec3d(const _EpecMesh::Point &v)
 template<class _Mesh> TriangleMesh cgal_to_triangle_mesh(const _Mesh &cgalmesh)
 {
     Pointf3s points;
-    std::vector<Vec3crd> facets;
+    std::vector<Vec3i> facets;
     points.reserve(cgalmesh.num_vertices());
     facets.reserve(cgalmesh.num_faces());
     
@@ -166,7 +166,7 @@ template<class _Mesh> TriangleMesh cgal_to_triangle_mesh(const _Mesh &cgalmesh)
     for (auto &face : cgalmesh.faces()) {
         auto    vtc = cgalmesh.vertices_around_face(cgalmesh.halfedge(face));
         int     i   = 0;
-        Vec3crd trface;
+        Vec3i trface;
         for (auto v : vtc) trface(i++) = static_cast<int>(v);
         facets.emplace_back(trface);
     }
@@ -222,7 +222,7 @@ template<class Op> void _cgal_do(Op &&op, CGALMesh &A, CGALMesh &B)
     }
 
     if (! success)
-        throw std::runtime_error("CGAL mesh boolean operation failed.");
+        throw Slic3r::RuntimeError("CGAL mesh boolean operation failed.");
 }
 
 void minus(CGALMesh &A, CGALMesh &B) { _cgal_do(_cgal_diff, A, B); }

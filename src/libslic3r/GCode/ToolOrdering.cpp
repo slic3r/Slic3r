@@ -1,5 +1,6 @@
 #include "Print.hpp"
 #include "ToolOrdering.hpp"
+#include "Layer.hpp"
 
 // #define SLIC3R_DEBUG
 
@@ -15,7 +16,6 @@
 
 #include <libslic3r.h>
 
-#include "../GCodeWriter.hpp"
 
 namespace Slic3r {
 
@@ -94,7 +94,7 @@ ToolOrdering::ToolOrdering(const PrintObject &object, unsigned int first_extrude
     // Reorder the extruders to minimize tool switches.
     this->reorder_extruders(first_extruder);
 
-    this->fill_wipe_tower_partitions(object.print()->config(), object.layers().front()->print_z - object.layers().front()->height);
+    this->fill_wipe_tower_partitions(object.print()->config(), object.layers().front()->print_z - object.layers().front()->height, object.config().layer_height);
 
     this->collect_extruder_statistics(prime_multi_material);
 }
@@ -107,6 +107,7 @@ ToolOrdering::ToolOrdering(const Print &print, unsigned int first_extruder, bool
 
     // Initialize the print layers for all objects and all layers.
     coordf_t object_bottom_z = 0.;
+    coordf_t max_layer_height = 0.;
     {
         std::vector<coordf_t> zs;
         for (auto object : print.objects()) {
@@ -122,6 +123,8 @@ ToolOrdering::ToolOrdering(const Print &print, unsigned int first_extruder, bool
                     object_bottom_z = layer->print_z - layer->height;
                     break;
                 }
+
+            max_layer_height = std::max(max_layer_height, object->config().layer_height.value);
         }
         this->initialize_layers(zs);
     }
@@ -144,7 +147,7 @@ ToolOrdering::ToolOrdering(const Print &print, unsigned int first_extruder, bool
     // Reorder the extruders to minimize tool switches.
     this->reorder_extruders(first_extruder);
 
-    this->fill_wipe_tower_partitions(print.config(), object_bottom_z);
+    this->fill_wipe_tower_partitions(print.config(), object_bottom_z, max_layer_height);
 
     this->collect_extruder_statistics(prime_multi_material);
 }
@@ -318,7 +321,7 @@ void ToolOrdering::reorder_extruders(unsigned int last_extruder_id)
         }    
 }
 
-void ToolOrdering::fill_wipe_tower_partitions(const PrintConfig &config, coordf_t object_bottom_z)
+void ToolOrdering::fill_wipe_tower_partitions(const PrintConfig &config, coordf_t object_bottom_z, coordf_t max_object_layer_height)
 {
     if (m_layer_tools.empty())
         return;
@@ -351,6 +354,10 @@ void ToolOrdering::fill_wipe_tower_partitions(const PrintConfig &config, coordf_
             mlh = 0.75 * config.nozzle_diameter.values[i];
         max_layer_height = std::min(max_layer_height, mlh);
     }
+    // The Prusa3D Fast (0.35mm layer height) print profile sets a higher layer height than what is normally allowed
+    // by the nozzle. This is a hack and it works by increasing extrusion width. See GH #3919.
+    max_layer_height = std::max(max_layer_height, max_object_layer_height);
+
     for (size_t i = 0; i + 1 < m_layer_tools.size(); ++ i) {
         const LayerTools &lt      = m_layer_tools[i];
         const LayerTools &lt_next = m_layer_tools[i + 1];
@@ -404,7 +411,7 @@ void ToolOrdering::fill_wipe_tower_partitions(const PrintConfig &config, coordf_
         unsigned int j = i+1;
         double last_wipe_tower_print_z = lt_next.print_z;
         while (++j < m_layer_tools.size()-1 && !m_layer_tools[j].has_wipe_tower)
-            if (m_layer_tools[j+1].print_z - last_wipe_tower_print_z > max_layer_height) {
+            if (m_layer_tools[j+1].print_z - last_wipe_tower_print_z > max_layer_height + EPSILON) {
                 m_layer_tools[j].has_wipe_tower = true;
                 last_wipe_tower_print_z = m_layer_tools[j].print_z;
             }
@@ -485,7 +492,7 @@ void ToolOrdering::assign_custom_gcodes(const Print &print)
 		for (unsigned int i : lt.extruders)
 			extruder_printing_above[i] = true;
 		// Skip all custom G-codes above this layer and skip all extruder switches.
-		for (; custom_gcode_it != custom_gcode_per_print_z.gcodes.rend() && (custom_gcode_it->print_z > lt.print_z + EPSILON || custom_gcode_it->gcode == ToolChangeCode); ++ custom_gcode_it);
+		for (; custom_gcode_it != custom_gcode_per_print_z.gcodes.rend() && (custom_gcode_it->print_z > lt.print_z + EPSILON || custom_gcode_it->type == CustomGCode::ToolChange); ++ custom_gcode_it);
 		if (custom_gcode_it == custom_gcode_per_print_z.gcodes.rend())
 			// Custom G-codes were processed.
 			break;
@@ -497,8 +504,8 @@ void ToolOrdering::assign_custom_gcodes(const Print &print)
 			print_z_below = it_lt_below->print_z;
 		if (custom_gcode.print_z > print_z_below + 0.5 * EPSILON) {
 			// The custom G-code applies to the current layer.
-			bool color_change = custom_gcode.gcode == ColorChangeCode;
-			bool tool_change  = custom_gcode.gcode == ToolChangeCode;
+			bool color_change = custom_gcode.type == CustomGCode::ColorChange;
+			bool tool_change  = custom_gcode.type == CustomGCode::ToolChange;
 			bool pause_or_custom_gcode = ! color_change && ! tool_change;
 			bool apply_color_change = ! ignore_tool_and_color_changes &&
 				// If it is color change, it will actually be useful as the exturder above will print.

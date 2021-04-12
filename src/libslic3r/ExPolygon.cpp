@@ -1,5 +1,6 @@
 #include "BoundingBox.hpp"
 #include "ExPolygon.hpp"
+#include "Exception.hpp"
 #include "Geometry.hpp"
 #include "Polygon.hpp"
 #include "Line.hpp"
@@ -41,11 +42,11 @@ void ExPolygon::scale(double factor)
         hole.scale(factor);
 }
 
-void ExPolygon::translate(double x, double y)
+void ExPolygon::translate(const Point &p)
 {
-    contour.translate(x, y);
+    contour.translate(p);
     for (Polygon &hole : holes)
-        hole.translate(x, y);
+        hole.translate(p);
 }
 
 void ExPolygon::rotate(double angle)
@@ -349,23 +350,10 @@ void ExPolygon::get_trapezoids2(Polygons* polygons) const
     // find trapezoids by looping from first to next-to-last coordinate
     for (std::vector<coord_t>::const_iterator x = xx.begin(); x != xx.end()-1; ++x) {
         coord_t next_x = *(x + 1);
-        if (*x == next_x) continue;
-        
-        // build rectangle
-        Polygon poly;
-        poly.points.resize(4);
-        poly[0](0) = *x;
-        poly[0](1) = bb.min(1);
-        poly[1](0) = next_x;
-        poly[1](1) = bb.min(1);
-        poly[2](0) = next_x;
-        poly[2](1) = bb.max(1);
-        poly[3](0) = *x;
-        poly[3](1) = bb.max(1);
-        
-        // intersect with this expolygon
-        // append results to return value
-        polygons_append(*polygons, intersection(poly, to_polygons(*this)));
+        if (*x != next_x)
+            // intersect with rectangle
+            // append results to return value
+            polygons_append(*polygons, intersection({ { { *x, bb.min.y() }, { next_x, bb.min.y() }, { next_x, bb.max.y() }, { *x, bb.max.y() } } }, to_polygons(*this)));
     }
 }
 
@@ -404,7 +392,7 @@ void ExPolygon::triangulate_pp(Polygons* polygons) const
         {
             TPPLPoly p;
             p.Init(int(ex->contour.points.size()));
-            //printf(PRINTF_ZU "\n0\n", ex->contour.points.size());
+            //printf("%zu\n0\n", ex->contour.points.size());
             for (const Point &point : ex->contour.points) {
                 size_t i = &point - &ex->contour.points.front();
                 p[i].x = point(0);
@@ -419,7 +407,7 @@ void ExPolygon::triangulate_pp(Polygons* polygons) const
         for (Polygons::const_iterator hole = ex->holes.begin(); hole != ex->holes.end(); ++hole) {
             TPPLPoly p;
             p.Init(hole->points.size());
-            //printf(PRINTF_ZU "\n1\n", hole->points.size());
+            //printf("%zu\n1\n", hole->points.size());
             for (const Point &point : hole->points) {
                 size_t i = &point - &hole->points.front();
                 p[i].x = point(0);
@@ -435,7 +423,7 @@ void ExPolygon::triangulate_pp(Polygons* polygons) const
     std::list<TPPLPoly> output;
     int res = TPPLPartition().Triangulate_MONO(&input, &output);
     if (res != 1)
-        throw std::runtime_error("Triangulation failed");
+        throw Slic3r::RuntimeError("Triangulation failed");
     
     // convert output polygons
     for (std::list<TPPLPoly>::iterator poly = output.begin(); poly != output.end(); ++poly) {
@@ -548,7 +536,7 @@ void ExPolygon::triangulate_pp(Points *triangles) const
     int res = TPPLPartition().Triangulate_MONO(&input, &output);
 // int TPPLPartition::Triangulate_EC(TPPLPolyList *inpolys, TPPLPolyList *triangles) {
     if (res != 1)
-        throw std::runtime_error("Triangulation failed");
+        throw Slic3r::RuntimeError("Triangulation failed");
     *triangles = polypartition_output_to_triangles(output);
 }
 
@@ -591,7 +579,7 @@ void ExPolygon::triangulate_p2t(Polygons* polygons) const
                 }
                 polygons->push_back(p);
             }
-        } catch (const std::runtime_error & /* err */) {
+        } catch (const Slic3r::RuntimeError & /* err */) {
             assert(false);
             // just ignore, don't triangulate
         }

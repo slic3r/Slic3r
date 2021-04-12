@@ -8,7 +8,16 @@
 #include "SVG.hpp"
 #endif /* CLIPPER_UTILS_DEBUG */
 
-#include <Shiny/Shiny.h>
+// Profiling support using the Shiny intrusive profiler
+//#define CLIPPER_UTILS_PROFILE
+#if defined(SLIC3R_PROFILE) && defined(CLIPPER_UTILS_PROFILE)
+	#include <Shiny/Shiny.h>
+	#define CLIPPERUTILS_PROFILE_FUNC() PROFILE_FUNC()
+	#define CLIPPERUTILS_PROFILE_BLOCK(name) PROFILE_BLOCK(name)
+#else
+	#define CLIPPERUTILS_PROFILE_FUNC()
+	#define CLIPPERUTILS_PROFILE_BLOCK(name)
+#endif
 
 #define CLIPPER_OFFSET_SHORTEST_EDGE_FACTOR (0.005f)
 
@@ -50,7 +59,7 @@ err:
 
 void scaleClipperPolygon(ClipperLib::Path &polygon)
 {
-    PROFILE_FUNC();
+    CLIPPERUTILS_PROFILE_FUNC();
     for (ClipperLib::Path::iterator pit = polygon.begin(); pit != polygon.end(); ++pit) {
         pit->X <<= CLIPPER_OFFSET_POWER_OF_2;
         pit->Y <<= CLIPPER_OFFSET_POWER_OF_2;
@@ -59,7 +68,7 @@ void scaleClipperPolygon(ClipperLib::Path &polygon)
 
 void scaleClipperPolygons(ClipperLib::Paths &polygons)
 {
-    PROFILE_FUNC();
+    CLIPPERUTILS_PROFILE_FUNC();
     for (ClipperLib::Paths::iterator it = polygons.begin(); it != polygons.end(); ++it)
         for (ClipperLib::Path::iterator pit = (*it).begin(); pit != (*it).end(); ++pit) {
             pit->X <<= CLIPPER_OFFSET_POWER_OF_2;
@@ -69,7 +78,7 @@ void scaleClipperPolygons(ClipperLib::Paths &polygons)
 
 void unscaleClipperPolygon(ClipperLib::Path &polygon)
 {
-    PROFILE_FUNC();
+    CLIPPERUTILS_PROFILE_FUNC();
     for (ClipperLib::Path::iterator pit = polygon.begin(); pit != polygon.end(); ++pit) {
         pit->X += CLIPPER_OFFSET_SCALE_ROUNDING_DELTA;
         pit->Y += CLIPPER_OFFSET_SCALE_ROUNDING_DELTA;
@@ -80,7 +89,7 @@ void unscaleClipperPolygon(ClipperLib::Path &polygon)
 
 void unscaleClipperPolygons(ClipperLib::Paths &polygons)
 {
-    PROFILE_FUNC();
+    CLIPPERUTILS_PROFILE_FUNC();
     for (ClipperLib::Paths::iterator it = polygons.begin(); it != polygons.end(); ++it)
         for (ClipperLib::Path::iterator pit = (*it).begin(); pit != (*it).end(); ++pit) {
             pit->X += CLIPPER_OFFSET_SCALE_ROUNDING_DELTA;
@@ -707,45 +716,33 @@ static void traverse_pt_noholes(const ClipperLib::PolyNodes &nodes, Polygons *ou
     });
 }
 
-static void traverse_pt_old(ClipperLib::PolyNodes &nodes, Polygons* retval)
+static void traverse_pt_outside_in(const ClipperLib::PolyNodes &nodes, Polygons *retval)
 {
-    /* use a nearest neighbor search to order these children
-       TODO: supply start_near to chained_path() too? */
-    
     // collect ordering points
     Points ordering_points;
     ordering_points.reserve(nodes.size());
-    for (ClipperLib::PolyNodes::const_iterator it = nodes.begin(); it != nodes.end(); ++it) {
-        Point p((*it)->Contour.front().X, (*it)->Contour.front().Y);
-        ordering_points.push_back(p);
-    }
-    
-    // perform the ordering
-    ClipperLib::PolyNodes ordered_nodes = chain_clipper_polynodes(ordering_points, nodes);
-    
-    // push results recursively
-    for (ClipperLib::PolyNodes::iterator it = ordered_nodes.begin(); it != ordered_nodes.end(); ++it) {
+    for (const ClipperLib::PolyNode *node : nodes)
+        ordering_points.emplace_back(node->Contour.front().X, node->Contour.front().Y);
+
+    // Perform the ordering, push results recursively.
+    //FIXME pass the last point to chain_clipper_polynodes?
+    for (const ClipperLib::PolyNode *node : chain_clipper_polynodes(ordering_points, nodes)) {
+        retval->emplace_back(ClipperPath_to_Slic3rPolygon(node->Contour));
+        if (node->IsHole()) 
+            // Orient a hole, which is clockwise oriented, to CCW.
+            retval->back().reverse();
         // traverse the next depth
-        traverse_pt_old((*it)->Childs, retval);
-        retval->push_back(ClipperPath_to_Slic3rPolygon((*it)->Contour));
-        if ((*it)->IsHole()) retval->back().reverse();  // ccw
+        traverse_pt_outside_in(node->Childs, retval);
     }
 }
 
-Polygons union_pt_chained(const Polygons &subject, bool safety_offset_)
+Polygons union_pt_chained_outside_in(const Polygons &subject, bool safety_offset_)
 {
     ClipperLib::PolyTree polytree = union_pt(subject, safety_offset_);
     
     Polygons retval;
-    traverse_pt_old(polytree.Childs, &retval);
+    traverse_pt_outside_in(polytree.Childs, &retval);
     return retval;
-    
-// TODO: This needs to be tested:
-//    ClipperLib::PolyTree polytree = union_pt(subject, safety_offset_);
-    
-//    Polygons retval;
-//    traverse_pt_noholes(polytree.Childs, &retval);
-//    return retval;
 }
 
 Polygons simplify_polygons(const Polygons &subject, bool preserve_collinear)
@@ -790,7 +787,7 @@ ExPolygons simplify_polygons_ex(const Polygons &subject, bool preserve_collinear
 
 void safety_offset(ClipperLib::Paths* paths)
 {
-    PROFILE_FUNC();
+    CLIPPERUTILS_PROFILE_FUNC();
 
     // scale input
     scaleClipperPolygons(*paths);
@@ -812,11 +809,11 @@ void safety_offset(ClipperLib::Paths* paths)
         if (! ccw)
             std::reverse(path.begin(), path.end());
         {
-            PROFILE_BLOCK(safety_offset_AddPaths);
+            CLIPPERUTILS_PROFILE_BLOCK(safety_offset_AddPaths);
             co.AddPath((*paths)[i], ClipperLib::jtMiter, ClipperLib::etClosedPolygon);
         }
         {
-            PROFILE_BLOCK(safety_offset_Execute);
+            CLIPPERUTILS_PROFILE_BLOCK(safety_offset_Execute);
             // offset outside by 10um
             ClipperLib::Paths out_this;
             co.Execute(out_this, ccw ? 10.f * float(CLIPPER_OFFSET_SCALE) : -10.f * float(CLIPPER_OFFSET_SCALE));
@@ -1060,7 +1057,7 @@ Polygons variable_offset_inner(const ExPolygon &expoly, const std::vector<std::v
 	ClipperLib::Paths holes;
 	holes.reserve(expoly.holes.size());
 	for (const Polygon& hole : expoly.holes)
-		append(holes, fix_after_outer_offset(mittered_offset_path_scaled(hole, deltas[1 + &hole - expoly.holes.data()], miter_limit), ClipperLib::pftNegative, false));
+		append(holes, fix_after_outer_offset(mittered_offset_path_scaled(hole.points, deltas[1 + &hole - expoly.holes.data()], miter_limit), ClipperLib::pftNegative, false));
 #ifndef NDEBUG	
 	for (auto &c : holes)
 		assert(ClipperLib::Area(c) > 0.);
@@ -1104,7 +1101,7 @@ for (const std::vector<float>& ds : deltas)
 	ClipperLib::Paths holes;
 	holes.reserve(expoly.holes.size());
 	for (const Polygon& hole : expoly.holes)
-		append(holes, fix_after_inner_offset(mittered_offset_path_scaled(hole, deltas[1 + &hole - expoly.holes.data()], miter_limit), ClipperLib::pftPositive, true));
+		append(holes, fix_after_inner_offset(mittered_offset_path_scaled(hole.points, deltas[1 + &hole - expoly.holes.data()], miter_limit), ClipperLib::pftPositive, true));
 #ifndef NDEBUG
 	for (auto &c : holes)
 		assert(ClipperLib::Area(c) > 0.);
@@ -1148,7 +1145,7 @@ for (const std::vector<float>& ds : deltas)
 	ClipperLib::Paths holes;
 	holes.reserve(expoly.holes.size());
 	for (const Polygon& hole : expoly.holes)
-		append(holes, fix_after_inner_offset(mittered_offset_path_scaled(hole, deltas[1 + &hole - expoly.holes.data()], miter_limit), ClipperLib::pftPositive, true));
+		append(holes, fix_after_inner_offset(mittered_offset_path_scaled(hole.points, deltas[1 + &hole - expoly.holes.data()], miter_limit), ClipperLib::pftPositive, true));
 #ifndef NDEBUG
 	for (auto &c : holes)
 		assert(ClipperLib::Area(c) > 0.);
@@ -1196,7 +1193,7 @@ ExPolygons variable_offset_inner_ex(const ExPolygon &expoly, const std::vector<s
 	ClipperLib::Paths holes;
 	holes.reserve(expoly.holes.size());
 	for (const Polygon& hole : expoly.holes)
-		append(holes, fix_after_outer_offset(mittered_offset_path_scaled(hole, deltas[1 + &hole - expoly.holes.data()], miter_limit), ClipperLib::pftNegative, false));
+		append(holes, fix_after_outer_offset(mittered_offset_path_scaled(hole.points, deltas[1 + &hole - expoly.holes.data()], miter_limit), ClipperLib::pftNegative, false));
 #ifndef NDEBUG
 	for (auto &c : holes)
 		assert(ClipperLib::Area(c) > 0.);
