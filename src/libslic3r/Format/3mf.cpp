@@ -720,6 +720,9 @@ namespace Slic3r {
                 model_object->sla_drain_holes = std::move(obj_drain_holes->second);
             }
 
+            ObjectMetadata::VolumeMetadataList volumes;
+            ObjectMetadata::VolumeMetadataList* volumes_ptr = nullptr;
+
             IdToMetadataMap::iterator obj_metadata = m_objects_metadata.find(object.first);
             if (obj_metadata != m_objects_metadata.end())
             {
