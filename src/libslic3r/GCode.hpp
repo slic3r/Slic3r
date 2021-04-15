@@ -183,7 +183,7 @@ public:
     static void append_full_config(const Print& print, std::string& str);
 
     // called by porcess_layer, do the color change / custom gcode
-    std::string emit_custom_gcode_per_print_z(const CustomGCode::Item* custom_gcode, uint16_t first_extruder_id, const Print& print, PrintStatistics& stats);
+    std::string emit_custom_gcode_per_print_z(GCode& gcodegen, const CustomGCode::Item* custom_gcode, uint16_t first_extruder_id, const Print& print, PrintStatistics& stats);
 
     // Object and support extrusions of the same PrintObject at the same print_z.
     // public, so that it could be accessed by free helper functions from GCode.cpp
