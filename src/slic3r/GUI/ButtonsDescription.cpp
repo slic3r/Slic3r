@@ -50,6 +50,18 @@ ButtonsDescription::ButtonsDescription(wxWindow* parent, const std::vector<Entry
 	grid_sizer->Add(sys_colour, -1, wxALIGN_CENTRE_VERTICAL);
 	grid_sizer->Add(sys_label, -1, wxALIGN_CENTRE_VERTICAL | wxEXPAND);
 
+	auto default_label = new wxStaticText(this, wxID_ANY, _(L("Value is the same as the last saved preset, but is not the system value")));
+	default_label->SetForegroundColour(wxGetApp().get_label_clr_default());
+	auto default_colour = new wxColourPickerCtrl(this, wxID_ANY, wxGetApp().get_label_clr_default());
+	default_colour->Bind(wxEVT_COLOURPICKER_CHANGED, ([default_colour, default_label](wxCommandEvent e)
+	{
+		default_label->SetForegroundColour(default_colour->GetColour());
+		default_label->Refresh();
+	}));
+	grid_sizer->Add(0, -1, wxALIGN_CENTRE_VERTICAL);
+	grid_sizer->Add(default_colour, -1, wxALIGN_CENTRE_VERTICAL);
+	grid_sizer->Add(default_label, -1, wxALIGN_CENTRE_VERTICAL | wxEXPAND);
+
 	auto mod_label = new wxStaticText(this, wxID_ANY, _(L("Value was changed and is not equal to the system value or the last saved preset")));
 	mod_label->SetForegroundColour(wxGetApp().get_label_clr_modified());
 	auto mod_colour = new wxColourPickerCtrl(this, wxID_ANY, wxGetApp().get_label_clr_modified());
@@ -61,15 +73,29 @@ ButtonsDescription::ButtonsDescription(wxWindow* parent, const std::vector<Entry
 	grid_sizer->Add(0, -1, wxALIGN_CENTRE_VERTICAL);
 	grid_sizer->Add(mod_colour, -1, wxALIGN_CENTRE_VERTICAL);
 	grid_sizer->Add(mod_label, -1, wxALIGN_CENTRE_VERTICAL | wxEXPAND);
+
+	auto phony_label = new wxStaticText(this, wxID_ANY, _(L("Value isn't taken into account, it's computed over an other field.")));
+	phony_label->SetForegroundColour(wxGetApp().get_label_clr_phony());
+	auto phony_colour = new wxColourPickerCtrl(this, wxID_ANY, wxGetApp().get_label_clr_phony());
+	phony_colour->Bind(wxEVT_COLOURPICKER_CHANGED, ([phony_colour, phony_label](wxCommandEvent e)
+	{
+		phony_label->SetForegroundColour(phony_colour->GetColour());
+		phony_label->Refresh();
+	}));
+	grid_sizer->Add(0, -1, wxALIGN_CENTRE_VERTICAL);
+	grid_sizer->Add(phony_colour, -1, wxALIGN_CENTRE_VERTICAL);
+	grid_sizer->Add(phony_label, -1, wxALIGN_CENTRE_VERTICAL | wxEXPAND);
 	
 
 	auto buttons = CreateStdDialogButtonSizer(wxOK|wxCANCEL);
 	main_sizer->Add(buttons, 0, wxALIGN_CENTER_HORIZONTAL | wxBOTTOM, 10);
 
 	wxButton* btn = static_cast<wxButton*>(FindWindowById(wxID_OK, this));
-	btn->Bind(wxEVT_BUTTON, [sys_colour, mod_colour, this](wxCommandEvent&) { 
+	btn->Bind(wxEVT_BUTTON, [sys_colour, mod_colour, default_colour, phony_colour, this](wxCommandEvent&) {
 		wxGetApp().set_label_clr_sys(sys_colour->GetColour());
 		wxGetApp().set_label_clr_modified(mod_colour->GetColour());
+		wxGetApp().set_label_clr_default(default_colour->GetColour());
+		wxGetApp().set_label_clr_phony(phony_colour->GetColour());
 		EndModal(wxID_OK);
 		});
 

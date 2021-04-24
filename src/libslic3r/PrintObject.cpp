@@ -725,7 +725,7 @@ namespace Slic3r {
                 steps.emplace_back(posSlice);
             } else if (opt_key == "support_material") {
                 steps.emplace_back(posSupportMaterial);
-                if (m_config.support_material_contact_distance_top == 0. || m_config.support_material_contact_distance_bottom == 0.) {
+                if (m_config.support_material_contact_distance_top.value == 0. || m_config.support_material_contact_distance_bottom.value == 0.) {
                     // Enabling / disabling supports while soluble support interface is enabled.
                     // This changes the bridging logic (bridging enabled without supports, disabled with supports).
                     // Reset everything.
@@ -1091,20 +1091,20 @@ namespace Slic3r {
                                     if (!intersect.empty()) {
                                         double area_intersect = 0;
                                         // calculate area to decide if area is small enough for autofill
-                                        if (layerm->region()->config().infill_dense_algo == dfaAutoNotFull || layerm->region()->config().infill_dense_algo == dfaAutoOrEnlarged)
+                                        if (layerm->region()->config().infill_dense_algo.value == dfaAutoNotFull || layerm->region()->config().infill_dense_algo.value == dfaAutoOrEnlarged)
                                             for (ExPolygon poly_inter : intersect)
                                                 area_intersect += poly_inter.area();
 
-                                        if (layerm->region()->config().infill_dense_algo == dfaEnlarged 
-                                            || (layerm->region()->config().infill_dense_algo == dfaAutoOrEnlarged && surf.area() <= area_intersect * COEFF_SPLIT)) {
+                                        if (layerm->region()->config().infill_dense_algo.value == dfaEnlarged
+                                            || (layerm->region()->config().infill_dense_algo.value == dfaAutoOrEnlarged && surf.area() <= area_intersect * COEFF_SPLIT)) {
                                             //expand the area a bit
                                             intersect = offset_ex(intersect, double(scale_(layerm->region()->config().external_infill_margin.get_abs_value(
                                                 region->config().perimeters == 0 ? 0 : (layerm->flow(frExternalPerimeter).width + layerm->flow(frPerimeter).spacing() * (region->config().perimeters - 1))))));
-                                        } else if (layerm->region()->config().infill_dense_algo == dfaAutoNotFull
-                                            || layerm->region()->config().infill_dense_algo == dfaAutomatic) {
+                                        } else if (layerm->region()->config().infill_dense_algo.value == dfaAutoNotFull
+                                            || layerm->region()->config().infill_dense_algo.value == dfaAutomatic) {
 
                                             //like intersect.empty() but more resilient
-                                            if (layerm->region()->config().infill_dense_algo == dfaAutomatic
+                                            if (layerm->region()->config().infill_dense_algo.value == dfaAutomatic
                                                 || surf.area() > area_intersect * COEFF_SPLIT) {
                                                 ExPolygons cover_intersect;
 
@@ -1237,7 +1237,7 @@ namespace Slic3r {
 
                     Polygons     layerm_slices_surfaces = to_polygons(layerm->slices().surfaces);
                     // no_perimeter_full_bridge allow to put bridges where there are nothing, hence adding area to slice, that's why we need to start from the result of PerimeterGenerator.
-                    if (layerm->region()->config().no_perimeter_unsupported_algo == npuaFilled) {
+                    if (layerm->region()->config().no_perimeter_unsupported_algo.value == npuaFilled) {
                         layerm_slices_surfaces = union_(layerm_slices_surfaces, to_polygons(layerm->fill_surfaces));
                     }
 
@@ -3512,11 +3512,11 @@ namespace Slic3r {
                     0.5f * layerms.back()->flow(frPerimeter).scaled_width() +
                     // Because fill areas for rectilinear and honeycomb are grown 
                     // later to overlap perimeters, we need to counteract that too.
-                    ((region->config().fill_pattern == ipRectilinear ||
-                        region->config().fill_pattern == ipMonotonic ||
-                        region->config().fill_pattern == ipGrid ||
-                        region->config().fill_pattern == ipLine ||
-                        region->config().fill_pattern == ipHoneycomb) ? 1.5f : 0.5f) *
+                    ((region->config().fill_pattern.value == ipRectilinear ||
+                        region->config().fill_pattern.value == ipMonotonic ||
+                        region->config().fill_pattern.value == ipGrid ||
+                        region->config().fill_pattern.value == ipLine ||
+                        region->config().fill_pattern.value == ipHoneycomb) ? 1.5f : 0.5f) *
                     layerms.back()->flow(frSolidInfill).scaled_width();
                 for (ExPolygon& expoly : intersection)
                     polygons_append(intersection_with_clearance, offset(expoly, clearance_offset));

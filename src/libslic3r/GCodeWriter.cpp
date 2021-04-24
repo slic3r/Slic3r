@@ -6,9 +6,9 @@
 #include <map>
 #include <assert.h>
 
-#define FLAVOR_IS(val) this->config.gcode_flavor == val
-#define FLAVOR_IS_NOT(val) this->config.gcode_flavor != val
-#define COMMENT(comment) if (this->config.gcode_comments && !comment.empty()) gcode << " ; " << comment;
+#define FLAVOR_IS(val) this->config.gcode_flavor.value == val
+#define FLAVOR_IS_NOT(val) this->config.gcode_flavor.value != val
+#define COMMENT(comment) if (this->config.gcode_comments.value && !comment.empty()) gcode << " ; " << comment;
 #define PRECISION(val, precision) std::fixed << std::setprecision(precision) << (val)
 #define XYZF_NUM(val) PRECISION(val, this->config.gcode_precision_xyz.value)
 #define E_NUM(val) PRECISION(val, this->config.gcode_precision_e.get_at(m_tool->id()))

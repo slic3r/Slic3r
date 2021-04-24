@@ -1242,7 +1242,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                         // it will support layers printed with a bridging flow.
                         if (SupportMaterialInternal::has_bridging_extrusions(layer)) {
                             coordf_t bridging_height = layer.height;
-                            if (m_object_config->support_material_contact_distance_type == zdFilament) {
+                            if (m_object_config->support_material_contact_distance_type.value == zdFilament) {
                                 bridging_height = 0.;
                                 for (const LayerRegion *region : layer.regions())
                                     bridging_height += region->region()->bridging_height_avg(*m_print_config);
@@ -1513,7 +1513,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
                                 // According to Jindrich the bottom surfaces work well.
                                 //FIXME test the bridging flow instead?
                                 m_support_material_interface_flow.nozzle_diameter;
-                            layer_new.height_block = ((m_object_config->support_material_contact_distance_type == zdPlane) ? object.layers()[layer_id + 1]->height : layer_new.height);
+                            layer_new.height_block = ((m_object_config->support_material_contact_distance_type.value == zdPlane) ? object.layers()[layer_id + 1]->height : layer_new.height);
                             layer_new.print_z = m_slicing_params.soluble_interface ? object.layers()[layer_id + 1]->print_z :
                                 (layer.print_z + layer_new.height_block + this->m_slicing_params.gap_object_support);
                             layer_new.bottom_z = layer.print_z;
@@ -2135,7 +2135,7 @@ void PrintObjectSupportMaterial::trim_support_layers_by_object(
                         const Layer &object_layer = *object.layers()[i];
                         bool some_region_overlaps = false;
                         for (LayerRegion *region : object_layer.regions()) {
-                            coordf_t bridging_height = m_object_config->support_material_contact_distance_type == zdFilament
+                            coordf_t bridging_height = m_object_config->support_material_contact_distance_type.value == zdFilament
                                 ? region->region()->bridging_height_avg(*this->m_print_config)
                                 : object_layer.height;
                             if (object_layer.print_z - bridging_height > support_layer.print_z + gap_extra_above - EPSILON)

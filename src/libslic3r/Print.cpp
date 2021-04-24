@@ -1535,7 +1535,7 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
                            "all nozzles have to be of the same diameter.") };
                 }
                 if (this->has_wipe_tower()) {
-                    if (object->config().support_material_contact_distance_type == zdNone) {
+                    if (object->config().support_material_contact_distance_type.value == zdNone) {
                         // Soluble interface
                         if (! object->config().support_material_synchronize_layers)
                             return { PrintBase::PrintValidationError::pveWrongSettings,L("For the Wipe Tower to work with the soluble supports, the support layers need to be synchronized with the object layers.") };

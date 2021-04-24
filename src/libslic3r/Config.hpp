@@ -214,6 +214,12 @@ inline OutputFormat operator&=(OutputFormat& a, OutputFormat b) {
 // A generic value of a configuration option.
 class ConfigOption {
 public:
+    // if true, this option doesn't need to be saved, it's a computed value from an other configOption.
+    bool phony;
+
+    ConfigOption() : phony(false) {}
+    ConfigOption(bool phony) : phony(phony) {}
+
     virtual ~ConfigOption() {}
 
     virtual ConfigOptionType    type() const = 0;
@@ -258,6 +264,7 @@ class ConfigOptionSingle : public ConfigOption {
 public:
     T value;
     explicit ConfigOptionSingle(T value) : value(value) {}
+    explicit ConfigOptionSingle(T value, bool phony) : ConfigOption(phony), value(value) {}
     operator T() const { return this->value; }
     
     void set(const ConfigOption *rhs) override
@@ -266,6 +273,7 @@ public:
             throw Slic3r::RuntimeError("ConfigOptionSingle: Assigning an incompatible type");
         assert(dynamic_cast<const ConfigOptionSingle<T>*>(rhs));
         this->value = static_cast<const ConfigOptionSingle<T>*>(rhs)->value;
+        this->phony = rhs->phony;
     }
 
     bool operator==(const ConfigOption &rhs) const override
@@ -340,6 +348,7 @@ public:
             throw Slic3r::RuntimeError("ConfigOptionVector: Assigning an incompatible type");
         assert(dynamic_cast<const ConfigOptionVector<T>*>(rhs));
         this->values = static_cast<const ConfigOptionVector<T>*>(rhs)->values;
+        this->phony = rhs->phony;
     }
 
     // Set from a vector of ConfigOptions. 
@@ -504,6 +513,7 @@ class ConfigOptionFloat : public ConfigOptionSingle<double>
 public:
     ConfigOptionFloat() : ConfigOptionSingle<double>(0) {}
     explicit ConfigOptionFloat(double _value) : ConfigOptionSingle<double>(_value) {}
+    explicit ConfigOptionFloat(double _value, bool _phony) : ConfigOptionSingle<double>(_value, _phony) {}
 
     static ConfigOptionType static_type() { return coFloat; }
     ConfigOptionType        type()      const override { return static_type(); }
@@ -850,6 +860,7 @@ class ConfigOptionPercent : public ConfigOptionFloat
 public:
     ConfigOptionPercent() : ConfigOptionFloat(0) {}
     explicit ConfigOptionPercent(double _value) : ConfigOptionFloat(_value) {}
+    explicit ConfigOptionPercent(double _value, bool _phony) : ConfigOptionFloat(_value, _phony) {}
     
     static ConfigOptionType static_type() { return coPercent; }
     ConfigOptionType        type()  const override { return static_type(); }
@@ -943,6 +954,7 @@ public:
     bool percent;
     ConfigOptionFloatOrPercent() : ConfigOptionPercent(0), percent(false) {}
     explicit ConfigOptionFloatOrPercent(double _value, bool _percent) : ConfigOptionPercent(_value), percent(_percent) {}
+    explicit ConfigOptionFloatOrPercent(double _value, bool _percent, bool _phony) : ConfigOptionPercent(_value, _phony), percent(_percent) {}
 
     static ConfigOptionType     static_type() { return coFloatOrPercent; }
     ConfigOptionType            type()  const override { return static_type(); }
@@ -1427,6 +1439,7 @@ public:
             throw Slic3r::RuntimeError("ConfigOptionEnum<T>: Assigning an incompatible type");
         // rhs could be of the following type: ConfigOptionEnumGeneric or ConfigOptionEnum<T>
         this->value = (T)rhs->getInt();
+        this->phony = rhs->phony;
     }
 
     std::string serialize() const override
@@ -1511,6 +1524,7 @@ public:
             throw Slic3r::RuntimeError("ConfigOptionEnumGeneric: Assigning an incompatible type");
         // rhs could be of the following type: ConfigOptionEnumGeneric or ConfigOptionEnum<T>
         this->value = rhs->getInt();
+        this->phony = rhs->phony;
     }
 
     std::string serialize() const override
@@ -1658,7 +1672,9 @@ public:
     // For text input: If true, the GUI formats text as code (fixed-width)
     bool                                is_code         = false;
     // Not editable. Currently only used for the display of the number of threads.
-    bool                                readonly        = false;
+    bool                                readonly = false;
+    // Can be phony. if not present at laoding, mark it as phony. Also adapt the gui to look for phony status.
+    bool                                can_phony = false;
     // Height of a multiline GUI text box.
     int                                 height          = -1;
     // Optional width of an input field.

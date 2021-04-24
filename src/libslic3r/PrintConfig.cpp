@@ -830,8 +830,22 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+
+    def = this->add("external_perimeter_extrusion_spacing", coFloatOrPercent);
+    def->label = L("External perimeters");
+    def->full_label = L("External perimeters spacing");
+    def->category = OptionCategory::width;
+    def->tooltip = L("Like the External perimeters width, but this value is the distance between the edge and the 'frontier' to the next perimeter."
+                "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
+    def->min = 0;
+    def->can_phony = true;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
 
     def = this->add("external_perimeter_cut_corners", coPercent);
     def->label = L("Cutting corners");
@@ -1140,15 +1154,29 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Default extrusion width");
     def->category = OptionCategory::width;
     def->tooltip = L("Set this to a non-zero value to allow a manual extrusion width. "
-                   "If left to zero, Slic3r derives extrusion widths from the nozzle diameter "
-                   "(see the tooltips for perimeter extrusion width, infill extrusion width etc). "
-                   "If expressed as percentage (for example: 105%), it will be computed over nozzle diameter.");
+        "If left to zero, Slic3r derives extrusion widths from the nozzle diameter "
+        "(see the tooltips for perimeter extrusion width, infill extrusion width etc). "
+        "If expressed as percentage (for example: 105%), it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+
+    def = this->add("extrusion_spacing", coFloatOrPercent);
+    def->label = L("Default extrusion spacing");
+    def->category = OptionCategory::width;
+    def->tooltip = L("Like Default extrusion width but spacing is the distance between two lines (as they overlap a bit, it's not the same)."
+        "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
+    def->min = 0;
+    def->max = 1000;
+    def->can_phony = true;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
 
     def = this->add("fan_always_on", coBools);
     def->label = L("Keep fan always on");
@@ -1709,15 +1737,31 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("First layer width");
     def->category = OptionCategory::width;
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for first layer. "
-                   "You can use this to force fatter extrudates for better adhesion. If expressed "
-                   "as percentage (for example 140%) it will be computed over the nozzle diameter "
-                   "of the nozzle used for the type of extrusion. "
-                   "If set to zero, it will use the default extrusion width.");
+        "You can use this to force fatter extrudates for better adhesion. If expressed "
+        "as percentage (for example 140%) it will be computed over the nozzle diameter "
+        "of the nozzle used for the type of extrusion. "
+        "If set to zero, it will use the default extrusion width.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max = 1000;
+    def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(140, true));
+
+    def = this->add("first_layer_extrusion_spacing", coFloatOrPercent);
+    def->label = L("First layer");
+    def->full_label = L("First layer spacing");
+    def->category = OptionCategory::width;
+    def->tooltip = L("Like First layer width but spacing is the distance between two lines (as they overlap a bit, it's not the same)."
+        "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
+    def->min = 0;
+    def->max = 1000;
+    def->can_phony = true;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
 
     def = this->add("first_layer_height", coFloatOrPercent);
     def->label = L("First layer height");
@@ -2086,16 +2130,33 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("infill_extrusion_width", coFloatOrPercent);
     def->label = L("Infill");
+    def->full_label = L("Infill width");
     def->category = OptionCategory::width;
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for infill. "
-                   "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
-                   "You may want to use fatter extrudates to speed up the infill and make your parts stronger. "
-                   "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
+        "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
+        "You may want to use fatter extrudates to speed up the infill and make your parts stronger. "
+        "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max = 1000;
+    def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+
+    def = this->add("infill_extrusion_spacing", coFloatOrPercent);
+    def->label = L("Infill");
+    def->full_label = L("Infill spacing");
+    def->category = OptionCategory::width;
+    def->tooltip = L("Like First layer width but spacing is the distance between two lines (as they overlap a bit, it's not the same)."
+        "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
+    def->min = 0;
+    def->max = 1000;
+    def->can_phony = true;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
 
     def = this->add("infill_first", coBool);
     def->label = L("Infill before perimeters");
@@ -2799,14 +2860,30 @@ void PrintConfigDef::init_fff_params()
     def->full_label = ("Perimeter width");
     def->category = OptionCategory::width;
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for perimeters. "
-                   "You may want to use thinner extrudates to get more accurate surfaces. "
-                   "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
-                   "If expressed as percentage (for example 105%) it will be computed over nozzle diameter.");
+        "You may want to use thinner extrudates to get more accurate surfaces. "
+        "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
+        "If expressed as percentage (for example 105%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
     def->aliases = { "perimeters_extrusion_width" };
     def->min = 0;
+    def->max = 1000;
+    def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+
+    def = this->add("perimeter_extrusion_spacing", coFloatOrPercent);
+    def->label = L("Perimeters");
+    def->full_label = ("Perimeter spacing");
+    def->category = OptionCategory::width;
+    def->tooltip = L("Like Perimeter width but spacing is the distance between two perimeter lines (as they overlap a bit, it's not the same)."
+        "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->sidetext = L("mm or %");
+    def->aliases = { "perimeters_extrusion_width" };
+    def->min = 0;
+    def->max = 1000;
+    def->can_phony = true;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
 
     def = this->add("perimeter_speed", coFloat);
     def->label = L("Default");
@@ -3141,10 +3218,12 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("skirt_extrusion_width", coFloatOrPercent);
     def->label = L("Skirt");
+    def->full_label = L("Skirt width");
     def->category = OptionCategory::width;
     def->tooltip = L("Horizontal width of the skirt that will be printed around each object.");
     def->sidetext = L("mm");
     def->min = 0;
+    def->max = 1000;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -3306,13 +3385,29 @@ void PrintConfigDef::init_fff_params()
     def->full_label = ("Solid infill width");
     def->category = OptionCategory::width;
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for infill for solid surfaces. "
-                   "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
-                   "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
+        "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
+        "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max = 1000;
+    def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+
+    def = this->add("solid_infill_extrusion_spacing", coFloatOrPercent);
+    def->label = L("Solid spacing");
+    def->full_label = ("Solid infill spacing");
+    def->category = OptionCategory::width;
+    def->tooltip = L("Like Solid infill width but spacing is the distance between two lines (as they overlap a bit, it's not the same)."
+        "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
+    def->min = 0;
+    def->max = 1000;
+    def->can_phony = true;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
 
     def = this->add("solid_infill_speed", coFloatOrPercent);
     def->label = L("Solid");
@@ -3577,11 +3672,12 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Support material width");
     def->category = OptionCategory::width;
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for support material. "
-                   "If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. "
-                   "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
+        "If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. "
+        "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max = 1000;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -3857,14 +3953,29 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Top solid infill");
     def->category = OptionCategory::width;
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for infill for top surfaces. "
-                   "You may want to use thinner extrudates to fill all narrow regions and get a smoother finish. "
-                   "If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. "
-                   "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
+        "You may want to use thinner extrudates to fill all narrow regions and get a smoother finish. "
+        "If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. "
+        "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max = 1000;
+    def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+
+    def = this->add("top_infill_extrusion_spacing", coFloatOrPercent);
+    def->label = L("Top solid spacing");
+    def->category = OptionCategory::width;
+    def->tooltip = L("Like Top solid infill width but spacing is the distance between two lines (as they overlap a bit, it's not the same)."
+        "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
+    def->min = 0;
+    def->max = 1000;
+    def->can_phony = true;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
 
     def = this->add("top_solid_infill_speed", coFloatOrPercent);
     def->label = L("Top solid");
@@ -5141,6 +5252,12 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
     // In PrusaSlicer 2.3.0-alpha0 the "monotonic" infill was introduced, which was later renamed to "monotonous".
     if (value == "monotonous" && (opt_key == "top_fill_pattern" || opt_key == "bottom_fill_pattern" || opt_key == "fill_pattern" || opt_key == "solid_fill_pattern" || opt_key == "support_material_interface_pattern"))
         value = "monotonic";
+    // some changes has occurs between rectilineargapfill and monotonicgapfill. Set them at the right value for each type
+    if (value == "rectilineargapfill" && (opt_key == "top_fill_pattern" || opt_key == "bottom_fill_pattern" || opt_key == "fill_pattern" || opt_key == "support_material_interface_pattern"))
+        value = "monotonicgapfill";
+    if (value == "monotonicgapfill" && (opt_key == "solid_fill_pattern"))
+        value = "rectilineargapfill";
+    
 
     if (ignore.find(opt_key) != ignore.end()) {
         opt_key = "";
@@ -5292,7 +5409,14 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "milling_post_process",
 "milling_extra_size",
 "milling_after_z",
-"milling_speed"
+"milling_speed",
+"extrusion_spacing",
+"first_layer_extrusion_spacing",
+"perimeter_extrusion_spacing",
+"external_perimeter_extrusion_spacing",
+"infill_extrusion_spacing",
+"solid_infill_extrusion_spacing",
+"top_infill_extrusion_spacing"
 
     };
     //looks if it's to be removed, or have to be transformed
@@ -5360,6 +5484,15 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
             value = "marlin";
         else if ("klipper" == value)
             value = "reprap";
+    } else if (opt_key.find("extrusion_width") != std::string::npos) {
+        if (std::set<std::string>{"extrusion_width", "first_layer_extrusion_width", "perimeter_extrusion_width", "external_perimeter_extrusion_width", 
+            "infill_extrusion_width", "solid_infill_extrusion_width", "top_infill_extrusion_width"}.count(opt_key) > 0) {
+            const ConfigOptionFloatOrPercent* opt = all_conf.option<ConfigOptionFloatOrPercent>(opt_key);
+            if (opt->phony) {
+                //bypass the phony kill switch from Config::opt_serialize
+                value = opt->serialize();
+            }
+        }
     }
 
 }
@@ -5592,6 +5725,7 @@ std::string DynamicPrintConfig::validate()
     {
         FullPrintConfig fpc;
         fpc.apply(*this, true);
+
         // Verify this print options through the FullPrintConfig.
         return fpc.validate();
     }
@@ -5599,6 +5733,261 @@ std::string DynamicPrintConfig::validate()
         //FIXME no validation on SLA data?
         return std::string();
     }
+}
+
+template<typename TYPE>
+const TYPE* find_option(const t_config_option_key &opt_key, DynamicPrintConfig* default_config, const std::vector<const DynamicPrintConfig*> &other_config) {
+    const TYPE* option = default_config->option<TYPE>(opt_key);
+    if (option)
+        return option;
+    for (const DynamicPrintConfig* conf : other_config) {
+        option = conf->option<TYPE>(opt_key);
+        if (option)
+            return option;
+    }
+    return nullptr;
+}
+
+bool DynamicPrintConfig::update_phony(const std::vector<const DynamicPrintConfig*> config_collection) {
+    bool something_changed = false;
+    //update width/spacing links
+    const char* widths[] = { "", "external_perimeter_", "perimeter_", "infill_", "solid_infill_", "top_infill_", "support_material_", "first_layer_", "skirt_" };
+    for (size_t i = 0; i < sizeof(widths) / sizeof(widths[i]); ++i) {
+        std::string key_width(widths[i]);
+        key_width += "extrusion_width";
+        std::string key_spacing(widths[i]);
+        key_spacing += "extrusion_spacing";
+        ConfigOptionFloatOrPercent* width_option = this->option<ConfigOptionFloatOrPercent>(key_width);
+        ConfigOptionFloatOrPercent* spacing_option = this->option<ConfigOptionFloatOrPercent>(key_spacing);
+        if (width_option && spacing_option)
+            if (!spacing_option->phony && width_option->phony)
+                something_changed |= value_changed(key_spacing, config_collection);
+            else
+                something_changed |= value_changed(key_width, config_collection);
+    }
+
+    return something_changed;
+}
+
+bool DynamicPrintConfig::value_changed(const t_config_option_key& opt_key, const std::vector<const DynamicPrintConfig*> config_collection) {
+
+    if (opt_key == "layer_height") {
+        update_phony(config_collection);
+    }
+
+    bool something_changed = false;
+    // width -> spacing
+    if (opt_key.find("extrusion_spacing") != std::string::npos) {
+        const ConfigOptionFloats* nozzle_diameter_option = find_option<ConfigOptionFloats>("nozzle_diameter", this, config_collection);
+        const ConfigOptionFloat* layer_height_option = find_option<ConfigOptionFloat>("layer_height", this, config_collection);
+        ConfigOptionFloatOrPercent* spacing_option = this->option<ConfigOptionFloatOrPercent>(opt_key);
+        if (layer_height_option && spacing_option && nozzle_diameter_option) {
+            //compute spacing with current height and change the width
+            double max_nozzle_diameter = 0;
+            for (double dmr : nozzle_diameter_option->values)
+                max_nozzle_diameter = std::max(max_nozzle_diameter, dmr);
+            Flow flow = Flow::new_from_spacing(spacing_option->get_abs_value(max_nozzle_diameter), max_nozzle_diameter, layer_height_option->value, false);
+            if (opt_key == "extrusion_spacing") {
+                ConfigOptionFloatOrPercent* width_option = this->option<ConfigOptionFloatOrPercent>("extrusion_width");
+                if (width_option) {
+                    width_option->phony = true;
+                    spacing_option->phony = false;
+                    width_option->value = (spacing_option->percent) ? std::round(100 * flow.width / max_nozzle_diameter) : (std::round(flow.width * 10000) / 10000);
+                    width_option->percent = spacing_option->percent;
+                    something_changed = true;
+                }
+            }
+            if (opt_key == "first_layer_extrusion_spacing") {
+                ConfigOptionFloatOrPercent* width_option = this->option<ConfigOptionFloatOrPercent>("first_layer_extrusion_width");
+                if (width_option) {
+                    width_option->phony = true;
+                    spacing_option->phony = false;
+                    width_option->value = (spacing_option->percent) ? std::round(100 * flow.width / max_nozzle_diameter) : (std::round(flow.width * 10000) / 10000);
+                    width_option->percent = spacing_option->percent;
+                    something_changed = true;
+                }
+            }
+            if (opt_key == "perimeter_extrusion_spacing") {
+                const ConfigOptionPercent* perimeter_overlap_option = find_option<ConfigOptionPercent>("perimeter_overlap", this, config_collection);
+                ConfigOptionFloatOrPercent* width_option = this->option<ConfigOptionFloatOrPercent>("perimeter_extrusion_width");
+                if (width_option && perimeter_overlap_option) {
+                    width_option->phony = true;
+                    spacing_option->phony = false;
+                    flow.spacing_ratio = perimeter_overlap_option->get_abs_value(1);
+                    flow.width = spacing_option->get_abs_value(max_nozzle_diameter) + layer_height_option->value * (1. - 0.25 * PI) * flow.spacing_ratio;
+                    width_option->value = (spacing_option->percent) ? std::round(100 * flow.width / max_nozzle_diameter) : (std::round(flow.width * 10000) / 10000);
+                    width_option->percent = spacing_option->percent;
+                    something_changed = true;
+                }
+            }
+            if (opt_key == "external_perimeter_extrusion_spacing") {
+                const ConfigOptionPercent* external_perimeter_overlap_option = find_option<ConfigOptionPercent>("external_perimeter_overlap", this, config_collection);
+                ConfigOptionFloatOrPercent* width_option = this->option<ConfigOptionFloatOrPercent>("external_perimeter_extrusion_width");
+                if (width_option && external_perimeter_overlap_option) {
+                    width_option->phony = true;
+                    spacing_option->phony = false;
+                    flow.spacing_ratio = external_perimeter_overlap_option->get_abs_value(0.5);
+                    flow.width = spacing_option->get_abs_value(max_nozzle_diameter) + layer_height_option->value * (1. - 0.25 * PI) * flow.spacing_ratio;
+                    width_option->value = (spacing_option->percent) ? std::round(100 * flow.width / max_nozzle_diameter) : (std::round(flow.width * 10000) / 10000);
+                    width_option->percent = spacing_option->percent;
+                    something_changed = true;
+                }
+            }
+            if (opt_key == "infill_extrusion_spacing") {
+                ConfigOptionFloatOrPercent* width_option = this->option<ConfigOptionFloatOrPercent>("infill_extrusion_width");
+                if (width_option) {
+                    width_option->phony = true;
+                    spacing_option->phony = false;
+                    width_option->value = (spacing_option->percent) ? std::round(100 * flow.width / max_nozzle_diameter) : (std::round(flow.width * 10000) / 10000);
+                    width_option->percent = spacing_option->percent;
+                    something_changed = true;
+                }
+            }
+            if (opt_key == "solid_infill_extrusion_spacing") {
+                ConfigOptionFloatOrPercent* width_option = this->option<ConfigOptionFloatOrPercent>("solid_infill_extrusion_width");
+                if (width_option) {
+                    width_option->phony = true;
+                    spacing_option->phony = false;
+                    width_option->value = (spacing_option->percent) ? std::round(100 * flow.width / max_nozzle_diameter) : (std::round(flow.width * 10000) / 10000);
+                    width_option->percent = spacing_option->percent;
+                    something_changed = true;
+                }
+            }
+            if (opt_key == "top_infill_extrusion_spacing") {
+                ConfigOptionFloatOrPercent* width_option = this->option<ConfigOptionFloatOrPercent>("top_infill_extrusion_width");
+                if (width_option) {
+                    width_option->phony = true;
+                    spacing_option->phony = false;
+                    width_option->value = (spacing_option->percent) ? std::round(100 * flow.width / max_nozzle_diameter) : (std::round(flow.width * 10000) / 10000);
+                    width_option->percent = spacing_option->percent;
+                    something_changed = true;
+                }
+            }
+            /*if (opt_key == "support_material_extrusion_spacing") {
+                if (spacing_option->percent)
+                    this->set_key_value("support_material_extrusion_width", new ConfigOptionFloatOrPercent(std::round(100 * flow.width / max_nozzle_diameter), true));
+                else
+                    this->set_key_value("support_material_extrusion_width", new ConfigOptionFloatOrPercent(std::round(flow.width * 10000) / 10000, false));
+                something_changed = true;
+            }
+            if (opt_key == "skirt_extrusion_spacing") {
+                if (spacing_option->percent)
+                    this->set_key_value("skirt_extrusion_width", new ConfigOptionFloatOrPercent(std::round(100 * flow.width / max_nozzle_diameter), true));
+                else
+                    this->set_key_value("skirt_extrusion_width", new ConfigOptionFloatOrPercent(std::round(flow.width * 10000) / 10000, false));
+                something_changed = true;
+            }*/
+        }
+    }
+    if (opt_key.find("extrusion_width") != std::string::npos) {
+        const ConfigOptionFloats* nozzle_diameter_option = find_option<ConfigOptionFloats>("nozzle_diameter", this, config_collection);
+        const ConfigOptionFloat* layer_height_option = find_option<ConfigOptionFloat>("layer_height", this, config_collection);
+        ConfigOptionFloatOrPercent* width_option = this->option<ConfigOptionFloatOrPercent>(opt_key);
+        if (layer_height_option && width_option && nozzle_diameter_option) {
+            //compute spacing with current height and change the width
+            double max_nozzle_diameter = 0;
+            for (double dmr : nozzle_diameter_option->values)
+                max_nozzle_diameter = std::max(max_nozzle_diameter, dmr);
+            if (opt_key == "extrusion_width") {
+                ConfigOptionFloatOrPercent* spacing_option = this->option<ConfigOptionFloatOrPercent>("extrusion_spacing");
+                if (width_option) {
+                    width_option->phony = false;
+                    spacing_option->phony = true;
+                    Flow flow = Flow::new_from_config_width(FlowRole::frPerimeter, *width_option, max_nozzle_diameter, layer_height_option->value, 0);
+                    spacing_option->value = (width_option->percent) ? std::round(100 * flow.spacing() / max_nozzle_diameter) : (std::round(flow.spacing() * 10000) / 10000);
+                    spacing_option->percent = width_option->percent;
+                    something_changed = true;
+                }
+            }
+            if (opt_key == "first_layer_extrusion_width") {
+                ConfigOptionFloatOrPercent* spacing_option = this->option<ConfigOptionFloatOrPercent>("first_layer_extrusion_spacing");
+                if (width_option) {
+                    width_option->phony = false;
+                    spacing_option->phony = true;
+                    Flow flow = Flow::new_from_config_width(FlowRole::frPerimeter, *width_option, max_nozzle_diameter, layer_height_option->value, 0);
+                    spacing_option->value = (width_option->percent) ? std::round(100 * flow.spacing() / max_nozzle_diameter) : (std::round(flow.spacing() * 10000) / 10000);
+                    spacing_option->percent = width_option->percent;
+                    something_changed = true;
+                }
+            }
+            if (opt_key == "perimeter_extrusion_width") {
+                const ConfigOptionPercent* perimeter_overlap_option = find_option<ConfigOptionPercent>("perimeter_overlap", this, config_collection);
+                ConfigOptionFloatOrPercent* spacing_option = this->option<ConfigOptionFloatOrPercent>("perimeter_extrusion_spacing");
+                if (width_option && perimeter_overlap_option) {
+                    width_option->phony = false;
+                    spacing_option->phony = true;
+                    Flow flow = Flow::new_from_config_width(FlowRole::frExternalPerimeter, *width_option, max_nozzle_diameter, layer_height_option->value, 0);
+                    flow.spacing_ratio = perimeter_overlap_option->get_abs_value(1);
+                    spacing_option->value = (width_option->percent) ? std::round(100 * flow.spacing() / max_nozzle_diameter) : (std::round(flow.spacing() * 10000) / 10000);
+                    spacing_option->percent = width_option->percent;
+                    something_changed = true;
+                }
+            }
+            if (opt_key == "external_perimeter_extrusion_width") {
+                const ConfigOptionPercent* external_perimeter_overlap_option = find_option<ConfigOptionPercent>("external_perimeter_overlap", this, config_collection);
+                ConfigOptionFloatOrPercent* spacing_option = this->option<ConfigOptionFloatOrPercent>("external_perimeter_extrusion_spacing");
+                if (width_option && external_perimeter_overlap_option) {
+                    width_option->phony = false;
+                    spacing_option->phony = true;
+                    Flow ext_perimeter_flow = Flow::new_from_config_width(FlowRole::frPerimeter, *width_option, max_nozzle_diameter, layer_height_option->value, 0);
+                    ext_perimeter_flow.spacing_ratio = external_perimeter_overlap_option->get_abs_value(0.5);
+                    spacing_option->value = (width_option->percent) ? std::round(100 * ext_perimeter_flow.spacing() / max_nozzle_diameter) : (std::round(ext_perimeter_flow.spacing() * 10000) / 10000);
+                    spacing_option->percent = width_option->percent;
+                    something_changed = true;
+                }
+            }
+            if (opt_key == "infill_extrusion_width") {
+                ConfigOptionFloatOrPercent* spacing_option = this->option<ConfigOptionFloatOrPercent>("infill_extrusion_spacing");
+                if (width_option) {
+                    width_option->phony = false;
+                    spacing_option->phony = true;
+                    Flow flow = Flow::new_from_config_width(FlowRole::frInfill, *width_option, max_nozzle_diameter, layer_height_option->value, 0);
+                    spacing_option->value = (width_option->percent) ? std::round(100 * flow.spacing() / max_nozzle_diameter) : (std::round(flow.spacing() * 10000) / 10000);
+                    spacing_option->percent = width_option->percent;
+                    something_changed = true;
+                }
+            }
+            if (opt_key == "solid_infill_extrusion_width") {
+                ConfigOptionFloatOrPercent* spacing_option = this->option<ConfigOptionFloatOrPercent>("solid_infill_extrusion_spacing");
+                if (width_option) {
+                    width_option->phony = false;
+                    spacing_option->phony = true;
+                    Flow flow = Flow::new_from_config_width(FlowRole::frSolidInfill, *width_option, max_nozzle_diameter, layer_height_option->value, 0);
+                    spacing_option->value = (width_option->percent) ? std::round(100 * flow.spacing() / max_nozzle_diameter) : (std::round(flow.spacing() * 10000) / 10000);
+                    spacing_option->percent = width_option->percent;
+                    something_changed = true;
+                }
+            }
+            if (opt_key == "top_infill_extrusion_width") {
+                ConfigOptionFloatOrPercent* spacing_option = this->option<ConfigOptionFloatOrPercent>("top_infill_extrusion_spacing");
+                if (width_option) {
+                    width_option->phony = false;
+                    spacing_option->phony = true;
+                    Flow flow = Flow::new_from_config_width(FlowRole::frTopSolidInfill, *width_option, max_nozzle_diameter, layer_height_option->value, 0);
+                    spacing_option->value = (width_option->percent) ? std::round(100 * flow.spacing() / max_nozzle_diameter) : (std::round(flow.spacing() * 10000) / 10000);
+                    spacing_option->percent = width_option->percent;
+                    something_changed = true;
+                }
+            }
+            //if (opt_key == "support_material_extrusion_width") {
+            //    Flow flow = Flow::new_from_config_width(FlowRole::frSupportMaterial, *width_option, max_nozzle_diameter, layer_height_option->value, 0);
+            //    if (width_option->percent)
+            //        this->set_key_value("support_material_extrusion_spacing", new ConfigOptionFloatOrPercent(std::round(100 * flow.spacing() / max_nozzle_diameter), true));
+            //    else
+            //        this->set_key_value("support_material_extrusion_spacing", new ConfigOptionFloatOrPercent(std::round(flow.spacing() * 10000) / 10000, false));
+            //    something_changed = true;
+            //}
+            //if (opt_key == "skirt_extrusion_width") {
+            //    Flow flow = Flow::new_from_config_width(FlowRole::frPerimeter, *width_option, max_nozzle_diameter, layer_height_option->value, 0);
+            //    if (width_option->percent)
+            //        this->set_key_value("skirt_extrusion_spacing", new ConfigOptionFloatOrPercent(std::round(100 * flow.spacing() / max_nozzle_diameter), true));
+            //    else
+            //        this->set_key_value("skirt_extrusion_spacing", new ConfigOptionFloatOrPercent(std::round(flow.spacing() * 10000) / 10000, false));
+            //    something_changed = true;
+            //}
+        }
+    }
+    return something_changed;
 }
 
 //FIXME localize this function.
@@ -5701,8 +6090,8 @@ std::string FullPrintConfig::validate()
             return "Invalid value for --extrusion-multiplier";
 
     // --default-acceleration
-    if ((this->perimeter_acceleration != 0. || this->infill_acceleration != 0. || this->bridge_acceleration != 0. || this->first_layer_acceleration != 0.) &&
-        this->default_acceleration == 0.)
+    if ((this->perimeter_acceleration.value != 0. || this->infill_acceleration.value != 0. || this->bridge_acceleration.value != 0. || this->first_layer_acceleration.value != 0.) &&
+        this->default_acceleration.value == 0.)
         return "Invalid zero value for --default-acceleration when using other acceleration settings";
 
     // --spiral-vase
@@ -5732,10 +6121,10 @@ std::string FullPrintConfig::validate()
         double max_nozzle_diameter = 0.;
         for (double dmr : this->nozzle_diameter.values)
             max_nozzle_diameter = std::max(max_nozzle_diameter, dmr);
-        const char *widths[] = { "external_perimeter", "perimeter", "infill", "solid_infill", "top_infill", "support_material", "first_layer" };
+        const char *widths[] = { "", "external_perimeter_", "perimeter_", "infill_", "solid_infill_", "top_infill_", "support_material_", "first_layer_", "skirt_" };
         for (size_t i = 0; i < sizeof(widths) / sizeof(widths[i]); ++ i) {
             std::string key(widths[i]);
-            key += "_extrusion_width";
+            key += "extrusion_width";
             if (this->get_abs_value(key, max_nozzle_diameter) > 10. * max_nozzle_diameter)
                 return std::string("Invalid extrusion width (too large): ") + key;
         }

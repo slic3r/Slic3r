@@ -156,7 +156,7 @@ void PerimeterGenerator::process()
                             ExPolygons bridgeable = union_ex(detector.coverage(-1, true));
                             if (!bridgeable.empty()) {
                                 //check if we get everything or just the bridgeable area
-                                if (this->config->no_perimeter_unsupported_algo == npuaNoPeri || this->config->no_perimeter_unsupported_algo == npuaFilled) {
+                                if (this->config->no_perimeter_unsupported_algo.value == npuaNoPeri || this->config->no_perimeter_unsupported_algo.value == npuaFilled) {
                                     //we bridge everything, even the not-bridgeable bits
                                     for (size_t i = 0; i < unsupported_filtered.size();) {
                                         ExPolygon &poly_unsupp = *(unsupported_filtered.begin() + i);
@@ -177,7 +177,7 @@ void PerimeterGenerator::process()
                                     }
                                     unsupported_filtered = intersection_ex(last,
                                         offset2_ex(unsupported_filtered, double(-perimeter_spacing / 2), double(perimeter_spacing * 3 / 2)));
-                                    if (this->config->no_perimeter_unsupported_algo == npuaFilled) {
+                                    if (this->config->no_perimeter_unsupported_algo.value == npuaFilled) {
                                         for (ExPolygon &expol : unsupported_filtered) {
                                             //check if the holes won't be covered by the upper layer
                                             //TODO: if we want to do that, we must modify the geometry before making perimeters.
@@ -227,7 +227,7 @@ void PerimeterGenerator::process()
 
                                     }
                                     //TODO: add other polys as holes inside this one (-margin)
-                                } else if (this->config->no_perimeter_unsupported_algo == npuaBridgesOverhangs || this->config->no_perimeter_unsupported_algo == npuaBridges){
+                                } else if (this->config->no_perimeter_unsupported_algo.value == npuaBridgesOverhangs || this->config->no_perimeter_unsupported_algo.value == npuaBridges){
                                     //simplify to avoid most of artefacts from printing lines.
                                     ExPolygons bridgeable_simplified;
                                     for (ExPolygon &poly : bridgeable) {
@@ -246,7 +246,7 @@ void PerimeterGenerator::process()
                                     //unbridgeable = offset2_ex(unbridgeable, -ext_perimeter_width, ext_perimeter_width);
 
 
-                                    if (this->config->no_perimeter_unsupported_algo == npuaBridges) {
+                                    if (this->config->no_perimeter_unsupported_algo.value == npuaBridges) {
                                         ExPolygons unbridgeable = unsupported_filtered;
                                         for (ExPolygon &expol : unbridgeable)
                                             expol.holes.clear();

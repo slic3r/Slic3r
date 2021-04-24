@@ -170,6 +170,7 @@ protected:
 	wxColour			m_sys_label_clr;
 	wxColour			m_modified_label_clr;
 	wxColour			m_default_text_clr;
+	wxColour			m_phony_text_clr;
 
 	// Tooltip text for reset buttons (for whole options group)
 	wxString			m_ttg_value_lock;
@@ -199,7 +200,13 @@ protected:
 	bool				m_show_incompatible_presets;
 
     std::vector<Preset::Type>	m_dependent_tabs;
-	enum OptStatus { osSystemValue = 1, osInitValue = 2 };
+	enum OptStatus {
+		osSystemValue = 1,
+		osInitValue = 2,
+		osSystemPhony = 4,
+		osInitPhony = 8,
+		osCurrentPhony = 16,
+	};
 	std::map<std::string, int>	m_options_list;
 	int							m_opt_status_value = 0;
 

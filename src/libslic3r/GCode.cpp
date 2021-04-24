@@ -743,7 +743,7 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessor::Result* re
 namespace DoExport {
     static void init_gcode_processor(const PrintConfig& config, GCodeProcessor& processor, bool& silent_time_estimator_enabled)
     {
-        silent_time_estimator_enabled = (config.gcode_flavor == gcfMarlin) && config.silent_mode;
+        silent_time_estimator_enabled = (config.gcode_flavor.value == gcfMarlin) && config.silent_mode;
         processor.reset();
         processor.apply_config(config);
         processor.enable_stealth_time_estimator(silent_time_estimator_enabled);
@@ -1490,7 +1490,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
                 bbox_prime.offset(0.5f);
                 bool overlap = bbox_prime.overlap(bbox_print);
 
-                if (print.config().gcode_flavor == gcfMarlin) {
+                if (print.config().gcode_flavor.value == gcfMarlin) {
                     _write(file, this->retract());
                     _write(file, "M300 S800 P500\n"); // Beep for 500ms, tone 800Hz.
                     if (overlap) {
@@ -1727,14 +1727,14 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfSmoothie, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, (print.config().gcode_flavor == gcfMarlin || print.config().gcode_flavor == gcfSmoothie) 
+            fprintf(file, (print.config().gcode_flavor.value == gcfMarlin || print.config().gcode_flavor.value == gcfSmoothie) 
                 ? "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/sec\n"
                 : "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/min\n",
                 int(print.config().machine_max_feedrate_x.values.front() + 0.5),
                 int(print.config().machine_max_feedrate_y.values.front() + 0.5),
                 int(print.config().machine_max_feedrate_z.values.front() + 0.5),
                 int(print.config().machine_max_feedrate_e.values.front() + 0.5));
-        if (print.config().gcode_flavor == gcfRepRap) {
+        if (print.config().gcode_flavor.value == gcfRepRap) {
             fprintf(file, "M203 X%d Y%d Z%d E%d I%d; sets maximum feedrates, mm/min\n",
                 int(print.config().machine_max_feedrate_x.values.front() + 0.5),
                 int(print.config().machine_max_feedrate_y.values.front() + 0.5),
@@ -1806,7 +1806,7 @@ void GCode::_print_first_layer_extruder_temperatures(FILE *file, Print &print, c
 {
     // Is the bed temperature set by the provided custom G-code?
     int  temp_by_gcode     = -1;
-    bool include_g10   = print.config().gcode_flavor == gcfRepRap;
+    bool include_g10   = print.config().gcode_flavor.value == gcfRepRap;
     if (custom_gcode_sets_temperature(gcode, 104, 109, include_g10, temp_by_gcode)) {
         // Set the extruder temperature at m_writer, but throw away the generated G-code as it will be written with the custom G-code.
         int temp = print.config().first_layer_temperature.get_at(first_printing_extruder_id);

@@ -1033,6 +1033,7 @@ void GUI_App::init_label_colours()
         m_color_label_sys = wxColour(26, 132, 57);
     }
     m_color_label_default = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+    m_color_label_phony = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
 }
 
 void GUI_App::update_label_colours_from_appconfig()
@@ -1047,6 +1048,18 @@ void GUI_App::update_label_colours_from_appconfig()
         auto str = app_config->get("label_clr_modified");
         if (str != "")
             m_color_label_modified = wxColour(str);
+    }
+
+    if (app_config->has("label_clr_default")) {
+        auto str = app_config->get("label_clr_default");
+        if (str != "")
+            m_color_label_default = wxColour(str);
+    }
+
+    if (app_config->has("label_clr_phony")) {
+        auto str = app_config->get("label_clr_phony");
+        if (str != "")
+            m_color_label_phony = wxColour(str);
     }
 }
 
@@ -1096,6 +1109,22 @@ void GUI_App::set_label_clr_sys(const wxColour& clr) {
     auto clr_str = wxString::Format(wxT("#%02X%02X%02X"), clr.Red(), clr.Green(), clr.Blue());
     std::string str = clr_str.ToStdString();
     app_config->set("label_clr_sys", str);
+    app_config->save();
+}
+
+void GUI_App::set_label_clr_default(const wxColour& clr) {
+    m_color_label_default = clr;
+    auto clr_str = wxString::Format(wxT("#%02X%02X%02X"), clr.Red(), clr.Green(), clr.Blue());
+    std::string str = clr_str.ToStdString();
+    app_config->set("label_clr_default", str);
+    app_config->save();
+}
+
+void GUI_App::set_label_clr_phony(const wxColour& clr) {
+    m_color_label_phony = clr;
+    auto clr_str = wxString::Format(wxT("#%02X%02X%02X"), clr.Red(), clr.Green(), clr.Blue());
+    std::string str = clr_str.ToStdString();
+    app_config->set("label_clr_phony", str);
     app_config->save();
 }
 
@@ -1154,7 +1183,7 @@ void GUI_App::check_printer_presets()
     for (const std::string& preset_name : preset_names)
         msg_text += "\n    \"" + from_u8(preset_name) + "\",";
     msg_text.RemoveLast();
-    msg_text += "\n\n" + _L("But since this version of PrusaSlicer we don't show this information in Printer Settings anymore.\n"
+    msg_text += "\n\n" + _L("But since this version of " SLIC3R_APP_NAME " we don't show this information in Printer Settings anymore.\n"
                             "Settings will be available in physical printers settings.") + "\n\n" +
                          _L("By default new Printer devices will be named as \"Printer N\" during its creation.\n"
                             "Note: This name can be changed later from the physical printers settings");

@@ -258,15 +258,40 @@ group:Autospeed (advanced)
 
 page:Width & Flow:width
 group:Extrusion width
-	setting:extrusion_width
-	setting:first_layer_extrusion_width
-	setting:perimeter_extrusion_width
-	setting:external_perimeter_extrusion_width
-	setting:infill_extrusion_width
-	setting:solid_infill_extrusion_width
-	setting:top_infill_extrusion_width
-	setting:support_material_extrusion_width
-	setting:skirt_extrusion_width
+	line:default
+		setting:sidetext_width$10:label$width:extrusion_width
+		setting:sidetext_width$10:label_width$15:label$spacing:extrusion_spacing
+	end_line
+	line:first layer
+		setting:sidetext_width$10:label$width:first_layer_extrusion_width
+		setting:sidetext_width$10:label_width$15:label$spacing:first_layer_extrusion_spacing
+	end_line
+	line:perimeter
+		setting:sidetext_width$10:label$width:perimeter_extrusion_width
+		setting:sidetext_width$10:label_width$15:label$spacing:perimeter_extrusion_spacing
+	end_line
+	line:external perimeter
+		setting:sidetext_width$10:label$width:external_perimeter_extrusion_width
+		setting:sidetext_width$10:label_width$15:label$width&spacing combo:external_perimeter_extrusion_spacing
+	end_line
+	line:infill
+		setting:sidetext_width$10:label$width:infill_extrusion_width
+		setting:sidetext_width$10:label_width$15:label$spacing:infill_extrusion_spacing
+	end_line
+	line:solid infill
+		setting:sidetext_width$10:label$width:solid_infill_extrusion_width
+		setting:sidetext_width$10:label_width$15:label$spacing:solid_infill_extrusion_spacing
+	end_line
+	line:top infill
+		setting:sidetext_width$10:label$width:top_infill_extrusion_width
+		setting:sidetext_width$10:label_width$15:label$spacing:top_infill_extrusion_spacing
+	end_line
+	line:support material
+		setting:sidetext_width$10:label$width:support_material_extrusion_width
+	end_line
+	line:skirt
+		setting:sidetext_width$10:label$width:skirt_extrusion_width
+	end_line
 	recommended_extrusion_width_description
 group:Overlap
 	line:Perimeter overlap

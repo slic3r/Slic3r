@@ -251,6 +251,8 @@ void Tab::create_preset_tab()
             for (Tab *tab : wxGetApp().tabs_list) {
                 tab->m_sys_label_clr = wxGetApp().get_label_clr_sys();
                 tab->m_modified_label_clr = wxGetApp().get_label_clr_modified();
+                tab->m_default_text_clr = wxGetApp().get_label_clr_default();
+                tab->m_phony_text_clr = wxGetApp().get_label_clr_phony();
                 tab->update_labels_colour();
             }
         }
@@ -260,7 +262,8 @@ void Tab::create_preset_tab()
     // Colors for ui "decoration"
     m_sys_label_clr			= wxGetApp().get_label_clr_sys();
     m_modified_label_clr	= wxGetApp().get_label_clr_modified();
-    m_default_text_clr		= wxGetApp().get_label_clr_default();
+    m_default_text_clr      = wxGetApp().get_label_clr_default();
+    m_phony_text_clr        = wxGetApp().get_label_clr_phony();
 
     // Sizer with buttons for mode changing
     m_mode_sizer = new ModeSizer(panel);
@@ -513,6 +516,15 @@ void Tab::update_labels_colour()
             else
                 color = &m_modified_label_clr;
         }
+        if ((opt.second & osCurrentPhony) != 0)
+            color = &m_phony_text_clr;
+        else {
+            if ((opt.second & osInitPhony) != 0)
+                color = &m_modified_label_clr;
+            else if ((opt.second & osSystemPhony) != 0)
+                color = &m_default_text_clr;
+        }
+
         if (opt.first == "bed_shape"            || opt.first == "filament_ramming_parameters" || 
             opt.first == "compatible_prints"    || opt.first == "compatible_printers"           ) {
             if (m_colored_Label_colors.find(opt.first) != m_colored_Label_colors.end())
@@ -591,7 +603,17 @@ void Tab::decorate()
             icon = &m_bmp_white_bullet;
             tt = &m_tt_white_bullet;
         }
-            
+
+        //color for phony things
+        if ((opt.second & osCurrentPhony) != 0)
+            color = &m_phony_text_clr;
+        else {
+            if ((opt.second & osInitPhony) != 0)
+                color = &m_modified_label_clr;
+            else if ((opt.second & osSystemPhony) != 0)
+                color = &m_default_text_clr;
+        }
+
         if (colored_label_clr) {
             *colored_label_clr = *color;
             continue;
@@ -634,8 +656,28 @@ void Tab::update_changed_ui()
     for (auto& it : m_options_list)
         it.second = m_opt_status_value;
 
-    for (auto opt_key : dirty_options)	m_options_list[opt_key] &= ~osInitValue;
-    for (auto opt_key : nonsys_options)	m_options_list[opt_key] &= ~osSystemValue;
+
+    const Preset& edited_preset   = m_presets->get_edited_preset();
+    const Preset& selected_preset = m_presets->get_selected_preset();
+    const Preset* system_preset   = m_presets->get_selected_preset_parent();
+    for (auto& opt_key : m_presets->get_edited_preset().config.keys()) {
+        if (edited_preset.config.option(opt_key)->phony)
+            //ensure that osCurrentPhony is in the bitmask 
+            m_options_list[opt_key] |= osCurrentPhony;
+        if (selected_preset.config.option(opt_key)->phony)
+            m_options_list[opt_key] |= osInitPhony;
+        if (system_preset && system_preset->config.option(opt_key)->phony)
+            m_options_list[opt_key] |= osSystemPhony;
+    }
+
+    //don't let option that were phony be resetable.
+    for (auto opt_key : dirty_options)
+        if( (m_options_list[opt_key] & osInitPhony) == 0)
+            //ensure that osInitValue is not in the bitmask 
+            m_options_list[opt_key] &= ~osInitValue;
+    for (auto opt_key : nonsys_options)
+        if ((m_options_list[opt_key] & osSystemPhony) == 0)
+            m_options_list[opt_key] &= ~osSystemValue;
 
     decorate();
 
@@ -1139,6 +1181,13 @@ void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
 
     if (opt_key == "extruders_count") {
         wxGetApp().plater()->on_extruders_change(boost::any_cast<int>(value));
+    }
+
+    //wxGetApp().preset_bundle->value_changed(opt_key);
+    if (m_config->value_changed(opt_key, { wxGetApp().plater()->config() })) {
+        update_dirty();
+        //# Initialize UI components with the config values.
+        reload_config();
     }
 
     update();
@@ -2956,6 +3005,7 @@ void Tab::load_current_preset()
         update_tab_ui();
 
         // update show/hide tabs
+        //merill note: this is a bit of anti-inheritance pattern
         if (m_type == Slic3r::Preset::TYPE_PRINTER) {
             const PrinterTechnology printer_technology = m_presets->get_edited_preset().printer_technology();
             if (printer_technology != static_cast<TabPrinter*>(this)->m_printer_technology)
@@ -3002,6 +3052,15 @@ void Tab::load_current_preset()
             on_presets_changed();
             if (m_type == Preset::TYPE_SLA_PRINT || m_type == Preset::TYPE_PRINT)
                 update_frequently_changed_parameters();
+
+            //update width/spacing links
+            if (m_type == Preset::TYPE_PRINT) {
+                //verify that spacings are set
+                if (m_config->update_phony({ wxGetApp().plater()->config() })) {
+                    update_dirty();
+                    reload_config();
+                }
+            }
         }
 
         m_opt_status_value = (m_presets->get_selected_preset_parent() ? osSystemValue : 0) | osInitValue;

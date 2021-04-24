@@ -456,6 +456,13 @@ public:
 
     void                to_prusa(t_config_option_key& opt_key, std::string& value) const override
         { PrintConfigDef::to_prusa(opt_key, value, *this); }
+
+    /// <summary>
+    /// callback to changed other settings that are linked (like width & spacing)
+    /// </summary>
+    /// <param name="opt_key">name of the changed option</param>
+    bool                value_changed(const t_config_option_key& opt_key, const std::vector<const DynamicPrintConfig*> config_collection);
+    bool                update_phony(const std::vector<const DynamicPrintConfig*> config_collection);
 };
 
 class StaticPrintConfig : public StaticConfig

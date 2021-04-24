@@ -535,9 +535,23 @@ const std::vector<std::string>& Preset::print_options()
         "extruder_clearance_radius", 
         "extruder_clearance_height", "gcode_comments", "gcode_label_objects", "output_filename_format", "post_process", "perimeter_extruder", 
         "infill_extruder", "solid_infill_extruder", "support_material_extruder", "support_material_interface_extruder", 
-        "ooze_prevention", "standby_temperature_delta", "interface_shells", "extrusion_width", "first_layer_extrusion_width", 
-        "perimeter_extrusion_width", "external_perimeter_extrusion_width", "infill_extrusion_width", "solid_infill_extrusion_width", 
-        "top_infill_extrusion_width", "support_material_extrusion_width", "infill_overlap", "bridge_flow_ratio", 
+        "ooze_prevention", "standby_temperature_delta", "interface_shells", 
+        "extrusion_spacing", 
+        "extrusion_width", 
+        "first_layer_extrusion_spacing", 
+        "first_layer_extrusion_width", 
+        "perimeter_extrusion_spacing", 
+        "perimeter_extrusion_width", 
+        "external_perimeter_extrusion_spacing", 
+        "external_perimeter_extrusion_width", 
+        "infill_extrusion_spacing", 
+        "infill_extrusion_width", 
+        "solid_infill_extrusion_spacing", 
+        "solid_infill_extrusion_width", 
+        "top_infill_extrusion_spacing", 
+        "top_infill_extrusion_width", 
+        "support_material_extrusion_width", 
+        "infill_overlap", "bridge_flow_ratio", 
         "infill_anchor",
         "infill_anchor_max",
         "clip_multipart_objects",
@@ -1373,7 +1387,9 @@ inline t_config_option_keys deep_diff(const ConfigBase &config_this, const Confi
     for (const t_config_option_key &opt_key : config_this.keys()) {
         const ConfigOption *this_opt  = config_this.option(opt_key);
         const ConfigOption *other_opt = config_other.option(opt_key);
-        if (this_opt != nullptr && other_opt != nullptr && *this_opt != *other_opt)
+        //dirty if both exist, they aren't both phony and value is different
+        if (this_opt != nullptr && other_opt != nullptr && !(this_opt->phony && other_opt->phony)
+            && ((*this_opt != *other_opt) || (this_opt->phony != other_opt->phony)))
         {
             if (opt_key == "bed_shape" || opt_key == "thumbnails" || opt_key == "compatible_prints" || opt_key == "compatible_printers") {
                 // Scalar variable, or a vector variable, which is independent from number of extruders,

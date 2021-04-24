@@ -116,6 +116,7 @@ private:
     wxColour        m_color_label_modified;
     wxColour        m_color_label_sys;
     wxColour        m_color_label_default;
+    wxColour        m_color_label_phony;
 
     wxFont		    m_small_font;
     wxFont		    m_bold_font;
@@ -171,10 +172,13 @@ public:
 	void            update_fonts(const MainFrame *main_frame = nullptr);
     void            set_label_clr_modified(const wxColour& clr);
     void            set_label_clr_sys(const wxColour& clr);
+    void            set_label_clr_default(const wxColour& clr);
+    void            set_label_clr_phony(const wxColour& clr);
 
     const wxColour& get_label_clr_modified(){ return m_color_label_modified; }
     const wxColour& get_label_clr_sys()     { return m_color_label_sys; }
     const wxColour& get_label_clr_default() { return m_color_label_default; }
+    const wxColour& get_label_clr_phony()   { return m_color_label_phony; }
 
     const wxFont&   small_font()            { return m_small_font; }
     const wxFont&   bold_font()             { return m_bold_font; }
