@@ -1819,14 +1819,14 @@ void GCode::_print_first_layer_extruder_temperatures(FILE *file, Print &print, c
         // Custom G-code does not set the extruder temperature. Do it now.
         if (!print.config().single_extruder_multi_material.value) {
             // Set temperatures of all the printing extruders.
-            for (unsigned int tool_id : print.extruders()) {
-                int temp = print.config().first_layer_temperature.get_at(tool_id);
+            for (const Extruder& tool : m_writer.extruders()) {
+                int temp = print.config().first_layer_temperature.get_at(tool.id());
                 if (temp == 0)
-                    temp = print.config().temperature.get_at(tool_id);
+                    temp = print.config().temperature.get_at(tool.id());
                 if (print.config().ooze_prevention.value)
                     temp += print.config().standby_temperature_delta.value;
                 if (temp > 0)
-                    _write(file, m_writer.set_temperature(temp, false, tool_id));
+                    _write(file, m_writer.set_temperature(temp, false, tool.id()));
             }
         }
         if (wait || print.config().single_extruder_multi_material.value) {
