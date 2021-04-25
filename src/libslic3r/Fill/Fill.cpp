@@ -219,6 +219,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                     params.anchor_length_max = float(region_config.infill_anchor_max);
                     if (region_config.infill_anchor_max.percent)
                         params.anchor_length_max = float(params.anchor_length_max * 0.01 * params.spacing);
+                    params.anchor_length = std::min(params.anchor_length, params.anchor_length_max);
                 }
 
                 auto it_params = set_surface_params.find(params);
