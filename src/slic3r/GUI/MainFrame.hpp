@@ -188,7 +188,7 @@ public:
     void        quick_slice(const int qs = qsUndef);
     void        reslice_now();
     void        repair_stl();
-    void        export_config();
+    void        export_config(bool to_prusa = false);
     // Query user for the config file and open it.
     void        load_config_file();
     // Open a config file. Return true if loaded.

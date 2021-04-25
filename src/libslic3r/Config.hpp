@@ -1923,7 +1923,7 @@ public:
     // Returns number of key/value pairs extracted.
     size_t load_from_gcode_string(const char* str);
     void load(const boost::property_tree::ptree &tree);
-    void save(const std::string &file) const;
+    void save(const std::string &file, bool to_prusa = false) const;
 
 	// Set all the nullable values to nils.
     void null_nullables();

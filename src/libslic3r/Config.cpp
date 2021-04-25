@@ -814,13 +814,21 @@ size_t ConfigBase::load_from_gcode_string(const char* str)
 	return num_key_value_pairs;
 }
 
-void ConfigBase::save(const std::string &file) const
+void ConfigBase::save(const std::string &file, bool to_prusa) const
 {
     boost::nowide::ofstream c;
     c.open(file, std::ios::out | std::ios::trunc);
     c << "# " << Slic3r::header_slic3r_generated() << std::endl;
-    for (const std::string &opt_key : this->keys())
-        c << opt_key << " = " << this->opt_serialize(opt_key) << std::endl;
+    if (to_prusa)
+        for (std::string opt_key : this->keys()) {
+            std::string value = this->opt_serialize(opt_key);
+            this->to_prusa(opt_key, value);
+            if(!opt_key.empty())
+                c << opt_key << " = " << value << std::endl;
+        }
+    else
+        for (const std::string &opt_key : this->keys())
+            c << opt_key << " = " << this->opt_serialize(opt_key) << std::endl;
     c.close();
 }
 

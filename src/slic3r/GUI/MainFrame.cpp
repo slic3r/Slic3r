@@ -1260,6 +1260,10 @@ void MainFrame::init_menubar_as_editor()
         append_menu_item(export_menu, wxID_ANY, _L("Export Config Bundle With Physical Printers") + dots, _L("Export all presets including physical printers to file"),
             [this](wxCommandEvent&) { export_configbundle(true); }, "export_config_bundle", nullptr,
             []() {return true; }, this);
+        export_menu->AppendSeparator();
+        append_menu_item(export_menu, wxID_ANY, _L("Export to &Prusa Config") + dots, _L("Export current configuration to file, with only settings compatible with PrusaSlicer"),
+            [this](wxCommandEvent&) { export_config(true); }, "export_config", nullptr,
+            []() {return true; }, this);
         append_submenu(fileMenu, export_menu, wxID_ANY, _L("&Export"), "");
 
 		append_menu_item(fileMenu, wxID_ANY, _L("Ejec&t SD card / Flash drive") + dots + "\tCtrl+T", _L("Eject SD card / Flash drive after the G-code was exported to it."),
@@ -1717,7 +1721,7 @@ void MainFrame::repair_stl()
     Slic3r::GUI::show_info(this, L("Your file was repaired."), L("Repair"));
 }
 
-void MainFrame::export_config()
+void MainFrame::export_config(bool to_prusa)
 {
     // Generate a cummulative configuration for the selected print, filaments and printer.
     auto config = wxGetApp().preset_bundle->full_config();
@@ -1738,7 +1742,7 @@ void MainFrame::export_config()
     if (!file.IsEmpty()) {
         wxGetApp().app_config->update_config_dir(get_dir_name(file));
         m_last_config = file;
-        config.save(file.ToUTF8().data());
+        config.save(file.ToUTF8().data(), to_prusa);
     }
 }
 
