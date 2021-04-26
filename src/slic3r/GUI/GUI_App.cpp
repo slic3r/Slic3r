@@ -604,8 +604,8 @@ static void generic_exception_handle()
         BOOST_LOG_TRIVIAL(error) << boost::format("std::bad_alloc exception: %1%") % ex.what();
         std::terminate();
     } catch (const boost::io::bad_format_string& ex) {
-        wxString errmsg = _L("PrusaSlicer has encountered a localization error. "
-                             "Please report to PrusaSlicer team, what language was active and in which scenario "
+        wxString errmsg = _L(SLIC3R_APP_NAME " has encountered a localization error. "
+                             "Please report to " SLIC3R_APP_NAME " team, what language was active and in which scenario "
                              "this issue happened. Thank you.\n\nThe application will now terminate.");
         wxMessageBox(errmsg + "\n\n" + wxString(ex.what()), _L("Critical error"), wxOK | wxICON_ERROR);
         BOOST_LOG_TRIVIAL(error) << boost::format("Uncaught exception: %1%") % ex.what();
@@ -739,13 +739,13 @@ void GUI_App::init_app_config()
             // Error while parsing config file. We'll customize the error message and rethrow to be displayed.
             if (is_editor()) {
                 throw Slic3r::RuntimeError(
-                    _u8L("Error parsing PrusaSlicer config file, it is probably corrupted. "
+                    _u8L("Error parsing " SLIC3R_APP_NAME " config file, it is probably corrupted. "
                         "Try to manually delete the file to recover from the error. Your user profiles will not be affected.") +
                     "\n\n" + app_config->config_path() + "\n\n" + error);
             }
             else {
                 throw Slic3r::RuntimeError(
-                    _u8L("Error parsing PrusaGCodeViewer config file, it is probably corrupted. "
+                    _u8L("Error parsing " GCODEVIEWER_APP_NAME " config file, it is probably corrupted. "
                         "Try to manually delete the file to recover from the error.") +
                     "\n\n" + app_config->config_path() + "\n\n" + error);
             }
@@ -800,7 +800,7 @@ bool GUI_App::on_init_inner()
             wxRichMessageDialog
                 dlg(nullptr,
                     wxString::Format(_L("%s\nDo you want to continue?"), msg),
-                    "PrusaSlicer", wxICON_QUESTION | wxYES_NO);
+                    SLIC3R_APP_NAME, wxICON_QUESTION | wxYES_NO);
             dlg.ShowCheckBox(_L("Remember my choice"));
             if (dlg.ShowModal() != wxID_YES) return false;
 
@@ -2438,8 +2438,8 @@ void GUI_App::associate_gcode_files()
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L"PrusaSlicer.GCodeViewer.1";
-    std::wstring prog_desc = L"PrusaSlicerGCodeViewer";
+    std::wstring prog_id = SLIC3R_APP_WKEY L".GCodeViewer.1";
+    std::wstring prog_desc = L"" GCODEVIEWER_APP_NAME;
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\.gcode";

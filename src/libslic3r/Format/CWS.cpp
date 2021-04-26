@@ -47,7 +47,8 @@ void fill_iniconf(ConfMap &m, const SLAPrint &print)
     m["printerProfile"] = get_cfg_value(cfg, "printer_settings_id");
     m["printProfile"]   = get_cfg_value(cfg, "sla_print_settings_id");
     m["fileCreationTimestamp"] = Utils::utc_timestamp();
-    m["prusaSlicerVersion"]    = SLIC3R_BUILD_ID;
+    m["slicerName"]     = SLIC3R_APP_NAME;
+    m["slicerVersion"]  = SLIC3R_VERSION_FULL;
     
     SLAPrintStatistics stats = print.print_statistics();
     // Set statistics values to the printer
@@ -116,7 +117,7 @@ void MaskedCWSArchive::export_print(Zipper& zipper,
         zipper.add_entry("default.slicing");
         zipper << to_ini(iniconf);
 
-        zipper.add_entry("prusaslicer.ini");
+        zipper.add_entry("slicer.ini");
         zipper << to_ini(slicerconf);
         
         size_t i = 0;

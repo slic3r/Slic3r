@@ -534,7 +534,7 @@ void UnsavedChangesModel::Rescale()
 //------------------------------------------
 
 UnsavedChangesDialog::UnsavedChangesDialog(const wxString& header)
-    : DPIDialog(static_cast<wxWindow*>(wxGetApp().mainframe), wxID_ANY, _L("PrusaSlicer is closing: Unsaved Changes"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
+    : DPIDialog(static_cast<wxWindow*>(wxGetApp().mainframe), wxID_ANY, _L(SLIC3R_APP_NAME " is closing: Unsaved Changes"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
     m_app_config_key = "default_action_on_close_application";
 
@@ -671,13 +671,13 @@ void UnsavedChangesDialog::build(Preset::Type type, PresetCollection* dependent_
         wxString preferences_item = type == Preset::TYPE_INVALID ? _L("Ask for unsaved changes when closing application") : 
                                                                    _L("Ask for unsaved changes when selecting new preset");
         wxString msg =
-            _L("PrusaSlicer will remember your action.") + "\n\n" +
+            _L(SLIC3R_APP_NAME " will remember your action.") + "\n\n" +
             (type == Preset::TYPE_INVALID ?
-                _L("You will not be asked about the unsaved changes the next time you close PrusaSlicer.") :
+                _L("You will not be asked about the unsaved changes the next time you close " SLIC3R_APP_NAME ".") :
                 _L("You will not be asked about the unsaved changes the next time you switch a preset.")) + "\n\n" +
                 format_wxstr(_L("Visit \"Preferences\" and check \"%1%\"\nto be asked about unsaved changes again."), preferences_item);
     
-        wxMessageDialog dialog(nullptr, msg, _L("PrusaSlicer: Don't ask me again"), wxOK | wxCANCEL | wxICON_INFORMATION);
+        wxMessageDialog dialog(nullptr, msg, _L(SLIC3R_APP_NAME ": Don't ask me again"), wxOK | wxCANCEL | wxICON_INFORMATION);
         if (dialog.ShowModal() == wxID_CANCEL)
             m_remember_choice->SetValue(false);
     });

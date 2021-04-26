@@ -186,10 +186,10 @@ namespace instance_check_internal
 			dbus_uint32_t 	serial = 0;
 			const char* sigval = message_text.c_str();
 			//std::string		interface_name = "com.prusa3d.prusaslicer.InstanceCheck";
-			std::string		interface_name = "com.prusa3d.prusaslicer.InstanceCheck.Object" + version;
+			std::string		interface_name = "org.slic3r." SLIC3R_APP_CMD ".InstanceCheck.Object" + version;
 			std::string   	method_name = "AnotherInstance";
 			//std::string		object_name = "/com/prusa3d/prusaslicer/InstanceCheck";
-			std::string		object_name = "/com/prusa3d/prusaslicer/InstanceCheck/Object" + version;
+			std::string		object_name = "/org/slic3r/" SLIC3R_APP_CMD "/InstanceCheck/Object" + version;
 
 
 			// initialise the error value
@@ -490,7 +490,8 @@ namespace MessageHandlerDBusInternal
 	        "       <arg name=\"data\" direction=\"out\" type=\"s\" />"
 	        "     </method>"
 	        "   </interface>"
-	        "   <interface name=\"com.prusa3d.prusaslicer.InstanceCheck\">"
+//	        "   <interface name=\"com.prusa3d.prusaslicer.InstanceCheck\">"
+	        "   <interface name=\"org.slic3r." SLIC3R_APP_CMD ".InstanceCheck\">"
 	        "     <method name=\"AnotherInstance\">"
 	        "       <arg name=\"data\" direction=\"in\" type=\"s\" />"
 	        "     </method>"
@@ -528,7 +529,8 @@ namespace MessageHandlerDBusInternal
 	{
 		const char* interface_name = dbus_message_get_interface(message);
 	    const char* member_name    = dbus_message_get_member(message);
-	    std::string our_interface  = "com.prusa3d.prusaslicer.InstanceCheck.Object" + wxGetApp().get_instance_hash_string();
+//	    std::string our_interface  = "com.prusa3d.prusaslicer.InstanceCheck.Object" + wxGetApp().get_instance_hash_string();
+	    std::string our_interface  = "org.slic3r." SLIC3R_APP_CMD ".InstanceCheck.Object" + wxGetApp().get_instance_hash_string();
 	    BOOST_LOG_TRIVIAL(trace) << "DBus message received: interface: " << interface_name << ", member: " << member_name;
 	    if (0 == strcmp("org.freedesktop.DBus.Introspectable", interface_name) && 0 == strcmp("Introspect", member_name)) {		
 	        respond_to_introspect(connection, message);
@@ -548,8 +550,9 @@ void OtherInstanceMessageHandler::listen()
     int 				 name_req_val;
     DBusObjectPathVTable vtable;
     std::string 		 instance_hash  = wxGetApp().get_instance_hash_string();
-	std::string			 interface_name = "com.prusa3d.prusaslicer.InstanceCheck.Object" + instance_hash;
-    std::string			 object_name 	= "/com/prusa3d/prusaslicer/InstanceCheck/Object" + instance_hash;
+//  std::string			 interface_name = "com.prusa3d.prusaslicer.InstanceCheck.Object" + instance_hash;
+    std::string			 interface_name = "org.slic3r." SLIC3R_APP_CMD ".InstanceCheck.Object" + instance_hash;
+    std::string			 object_name 	= "/org/slic3r/" SLIC3R_APP_CMD "/InstanceCheck/Object" + instance_hash;
 
     //BOOST_LOG_TRIVIAL(debug) << "init dbus listen " << interface_name << " " << object_name;
     dbus_error_init(&err);
@@ -577,7 +580,7 @@ void OtherInstanceMessageHandler::listen()
 	    return;
 	}
 	if (DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != name_req_val) {
-		BOOST_LOG_TRIVIAL(error) << "Not primary owner of DBus name - probably another PrusaSlicer instance is running.";
+		BOOST_LOG_TRIVIAL(error) << "Not primary owner of DBus name - probably another " SLIC3R_APP_KEY " instance is running.";
 	    BOOST_LOG_TRIVIAL(error) << "Dbus Messages listening terminating.";
 	    dbus_connection_unref(conn);
 	    return;

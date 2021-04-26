@@ -4789,7 +4789,7 @@ void Plater::priv::bring_instance_forward() const
         BOOST_LOG_TRIVIAL(debug) << "Couldnt bring instance forward - mainframe is null";
         return;
     }
-    BOOST_LOG_TRIVIAL(debug) << "prusaslicer window going forward";
+    BOOST_LOG_TRIVIAL(debug) << SLIC3R_APP_CMD " window going forward";
     //this code maximize app window on Fedora
     {
         main_frame->Iconize(false);

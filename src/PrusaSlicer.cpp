@@ -103,7 +103,7 @@ int CLI::run(int argc, char **argv)
             false;
 #else
             // On Unix systems, the superslicer binary may be symlinked to give the application a different meaning.
-            boost::algorithm::iends_with(boost::filesystem::path(argv[0]).filename().string(), "gcodeviewer");
+            boost::algorithm::iends_with(boost::filesystem::path(argv[0]).filename().string(), GCODEVIEWER_APP_CMD);
 #endif // _WIN32
 
     const std::vector<std::string> &load_configs		= m_config.option<ConfigOptionStrings>("load", true)->values;

@@ -256,15 +256,15 @@ bool OpenGLManager::init_gl()
         if (!valid_version) {
             // Complain about the OpenGL version.
             wxString message = from_u8((boost::format(
-                _utf8(L("PrusaSlicer requires OpenGL 2.0 capable graphics driver to run correctly, \n"
+                _utf8(L(SLIC3R_APP_NAME " requires OpenGL 2.0 capable graphics driver to run correctly, \n"
                     "while OpenGL version %s, render %s, vendor %s was detected."))) % s_gl_info.get_version() % s_gl_info.get_renderer() % s_gl_info.get_vendor()).str());
             message += "\n";
         	message += _L("You may need to update your graphics card driver.");
 #ifdef _WIN32
             message += "\n";
-        	message += _L("As a workaround, you may run PrusaSlicer with a software rendered 3D graphics by running prusa-slicer.exe with the --sw_renderer parameter.");
+        	message += _L("As a workaround, you may run " SLIC3R_APP_NAME " with a software rendered 3D graphics by running prusa-slicer.exe with the --sw_renderer parameter.");
 #endif
-        	wxMessageBox(message, wxString("PrusaSlicer - ") + _L("Unsupported OpenGL version"), wxOK | wxICON_ERROR);
+        	wxMessageBox(message, wxString(SLIC3R_APP_NAME " - ") + _L("Unsupported OpenGL version"), wxOK | wxICON_ERROR);
         }
 
         if (valid_version) {
@@ -273,7 +273,7 @@ bool OpenGLManager::init_gl()
             if (!result) {
                 wxString message = from_u8((boost::format(
                     _utf8(L("Unable to load the following shaders:\n%s"))) % error).str());
-                wxMessageBox(message, wxString("PrusaSlicer - ") + _L("Error loading shaders"), wxOK | wxICON_ERROR);
+                wxMessageBox(message, wxString(SLIC3R_APP_NAME " - ") + _L("Error loading shaders"), wxOK | wxICON_ERROR);
             }
         }
     }

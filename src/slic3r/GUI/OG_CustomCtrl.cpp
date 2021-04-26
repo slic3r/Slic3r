@@ -778,7 +778,7 @@ bool OG_CustomCtrl::CtrlLine::launch_browser() const
     bool launch = true;
 
     if (get_app_config()->get("suppress_hyperlinks").empty()) {
-        RememberChoiceDialog dialog(nullptr, _L("Should we open this hyperlink in your default browser?"), _L("PrusaSlicer: Open hyperlink"));
+        RememberChoiceDialog dialog(nullptr, _L("Should we open this hyperlink in your default browser?"), _L(SLIC3R_APP_NAME ": Open hyperlink"));
         int answer = dialog.ShowModal();
         launch = answer == wxID_YES;
 
@@ -807,11 +807,11 @@ RememberChoiceDialog::RememberChoiceDialog(wxWindow* parent, const wxString& msg
                 return;
         wxString preferences_item = _L("Suppress to open hyperlink in browser");
         wxString msg =
-                _L("PrusaSlicer will remember your choice.") + "\n\n" +
+                _L(SLIC3R_APP_NAME " will remember your choice.") + "\n\n" +
             _L("You will not be asked about it again on label hovering.") + "\n\n" +
                 format_wxstr(_L("Visit \"Preferences\" and check \"%1%\"\nto changes your choice."), preferences_item);
 
-            wxMessageDialog dialog(nullptr, msg, _L("PrusaSlicer: Don't ask me again"), wxOK | wxCANCEL | wxICON_INFORMATION);
+            wxMessageDialog dialog(nullptr, msg, _L(SLIC3R_APP_NAME ": Don't ask me again"), wxOK | wxCANCEL | wxICON_INFORMATION);
             if (dialog.ShowModal() == wxID_CANCEL)
                 m_remember_choice->SetValue(false);
         });

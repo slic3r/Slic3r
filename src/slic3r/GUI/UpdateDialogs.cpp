@@ -154,7 +154,7 @@ MsgUpdateForced::MsgUpdateForced(const std::vector<Update>& updates) :
 		"Updated configuration bundles:"
 	)), SLIC3R_APP_NAME));
 	
-	logo->SetBitmap(create_scaled_bitmap("Slic3r_192px.png", this, 192));
+	logo->SetBitmap(create_scaled_bitmap(SLIC3R_APP_KEY "_192px.png", this, 192));
 
 	text->Wrap(CONTENT_WIDTH * wxGetApp().em_unit());
 	content_sizer->Add(text);
@@ -210,7 +210,7 @@ MsgDataIncompatible::MsgDataIncompatible(const std::unordered_map<std::string, w
     MsgDialog(nullptr, wxString::Format(_(L("%s incompatibility")), SLIC3R_APP_NAME), 
                        wxString::Format(_(L("%s configuration is incompatible")), SLIC3R_APP_NAME), wxID_NONE)
 {
-	logo->SetBitmap(create_scaled_bitmap("Slic3r_192px.png", this, 192));
+	logo->SetBitmap(create_scaled_bitmap(SLIC3R_APP_KEY "_192px.png", this, 192));
 
 	auto *text = new wxStaticText(this, wxID_ANY, wxString::Format(_(L(
 		"This version of %s is not compatible with currently installed configuration bundles.\n"
@@ -313,7 +313,7 @@ MsgNoUpdates::MsgNoUpdates() :
 	content_sizer->Add(text);
 	content_sizer->AddSpacer(VERT_SPACING);
 
-	logo->SetBitmap(create_scaled_bitmap("Slic3r_192px.png", this, 192));
+	logo->SetBitmap(create_scaled_bitmap(SLIC3R_APP_KEY "_192px.png", this, 192));
 
 	Fit();
 }

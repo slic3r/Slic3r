@@ -2,7 +2,7 @@
 Name=@GCODEVIEWER_APP_NAME@
 Comment=G-code viewer of Slic3r
 Exec=@SLIC3R_APP_CMD@ --gcodeviewer %F
-Icon=@SLIC3R_APP_KEY@-gcodeviewer
+Icon=@GCODEVIEWER_APP_KEY@
 Terminal=false
 Type=Application
 MimeType=text/x.gcode;

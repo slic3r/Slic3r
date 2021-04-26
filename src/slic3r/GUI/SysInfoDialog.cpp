@@ -92,7 +92,7 @@ SysInfoDialog::SysInfoDialog()
 	main_sizer->Add(hsizer, 1, wxEXPAND | wxALL, 10);
 
     // logo
-    m_logo_bmp = ScalableBitmap(this, wxGetApp().is_editor() ? "Slic3r_192px.png" : "PrusaSlicer-gcodeviewer_192px.png", 192);
+    m_logo_bmp = ScalableBitmap(this, wxGetApp().is_editor() ? SLIC3R_APP_KEY "_192px.png" : GCODEVIEWER_APP_KEY "_192px.png", 192);
     m_logo = new wxStaticBitmap(this, wxID_ANY, m_logo_bmp.bmp());
 	hsizer->Add(m_logo, 0, wxALIGN_CENTER_VERTICAL);
     

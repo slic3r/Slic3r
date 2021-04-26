@@ -106,7 +106,7 @@ static wxIcon main_frame_icon(GUI_App::EAppMode app_mode)
     }
     return wxIcon(path, wxBITMAP_TYPE_ICO);
 #else // _WIN32
-    return wxIcon(Slic3r::var(app_mode == GUI_App::EAppMode::Editor ? "Slic3r_128px.png" : "PrusaSlicer-gcodeviewer_128px.png"), wxBITMAP_TYPE_PNG);
+    return wxIcon(Slic3r::var(app_mode == GUI_App::EAppMode::Editor ? SLIC3R_APP_KEY "_128px.png" : GCODEVIEWER_APP_KEY "_128px.png"), wxBITMAP_TYPE_PNG);
 #endif // _WIN32
 }
 
@@ -131,11 +131,11 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
     default:
     case GUI_App::EAppMode::Editor:
         m_taskbar_icon = std::make_unique<PrusaSlicerTaskBarIcon>(wxTBI_DOCK);
-        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG), SLIC3R_APP_KEY);
+        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var(SLIC3R_APP_KEY "_128px.png"), wxBITMAP_TYPE_PNG), SLIC3R_APP_KEY);
         break;
     case GUI_App::EAppMode::GCodeViewer:
         m_taskbar_icon = std::make_unique<GCodeViewerTaskBarIcon>(wxTBI_DOCK);
-        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("PrusaSlicer-gcodeviewer_128px.png"), wxBITMAP_TYPE_PNG), GCODEVIEWER_APP_NAME);
+        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var(GCODEVIEWER_APP_KEY "_128px.png"), wxBITMAP_TYPE_PNG), GCODEVIEWER_APP_NAME);
         break;
     }
 #endif // __APPLE__
@@ -1399,7 +1399,7 @@ void MainFrame::init_menubar_as_editor()
             [this](wxCommandEvent&) { m_printhost_queue_dlg->Show(); }, "upload_queue", nullptr, []() {return true; }, this);
         
         windowMenu->AppendSeparator();
-        append_menu_item(windowMenu, wxID_ANY, _L("Open new instance") + "\tCtrl+Shift+I", _L("Open a new PrusaSlicer instance"),
+        append_menu_item(windowMenu, wxID_ANY, _L("Open new instance") + "\tCtrl+Shift+I", _L("Open a new " SLIC3R_APP_NAME " instance"),
 			[this](wxCommandEvent&) { start_new_slicer(); }, "", nullptr, [this]() {return m_plater != nullptr && wxGetApp().app_config->get("single_instance") != "1"; }, this);
     }
 
@@ -2149,7 +2149,7 @@ SettingsDialog::SettingsDialog(MainFrame* mainframe)
         SetIcon(wxIcon(szExeFileName, wxBITMAP_TYPE_ICO));
     }
 #else
-    SetIcon(wxIcon(var("Slic3r_128px.png"), wxBITMAP_TYPE_PNG));
+    SetIcon(wxIcon(var(SLIC3R_APP_KEY "_128px.png"), wxBITMAP_TYPE_PNG));
 #endif // _WIN32
 
     this->Bind(wxEVT_SHOW, [this](wxShowEvent& evt) {

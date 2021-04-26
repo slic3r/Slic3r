@@ -16,7 +16,7 @@ AboutDialogLogo::AboutDialogLogo(wxWindow* parent)
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize)
 {
     this->SetBackgroundColour(*wxWHITE);
-    this->logo = wxBitmap(from_u8(Slic3r::var("Slic3r_192px.png")), wxBITMAP_TYPE_PNG);
+    this->logo = wxBitmap(from_u8(Slic3r::var(SLIC3R_APP_KEY"_192px.png")), wxBITMAP_TYPE_PNG);
     this->SetMinSize(this->logo.GetSize());
     
     this->Bind(wxEVT_PAINT, &AboutDialogLogo::onRepaint, this);
@@ -220,7 +220,7 @@ AboutDialog::AboutDialog()
 	main_sizer->Add(hsizer, 0, wxEXPAND | wxALL, 20);
 
     // logo
-    m_logo_bitmap = ScalableBitmap(this, wxGetApp().is_editor() ? "Slic3r_192px.png" : "PrusaSlicer-gcodeviewer_192px.png", 192);
+    m_logo_bitmap = ScalableBitmap(this, wxGetApp().is_editor() ? SLIC3R_APP_KEY "_192px.png" : GCODEVIEWER_APP_KEY "_192px.png", 192);
     m_logo = new wxStaticBitmap(this, wxID_ANY, m_logo_bitmap.bmp());
 	hsizer->Add(m_logo, 1, wxALIGN_CENTER_VERTICAL);
     
@@ -270,6 +270,8 @@ AboutDialog::AboutDialog()
         const std::string license_str = _utf8(L("GNU Affero General Public License, version 3"));
         const std::string based_on_str = _utf8(L(SLIC3R_INTRO));
         const std::string contributors_str = _utf8(L("Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik, Durand Rémi and numerous others."));
+        const std::string manual_str = _utf8(L("Manual by Gary Hodgson. Inspired by the RepRap community."));
+        const std::string icon_str = _utf8(L("Slic3r logo designed by Corey Daniels."));
         const auto text = from_u8(
             (boost::format(
             "<html>"
@@ -283,7 +285,9 @@ AboutDialog::AboutDialog()
             "<br /><br />"
             "%8%"
             "<br /><br />"
-            "%9%"
+            "%9%<br />"
+            "%10%<br />"
+            "%11%"
             "</font>"
             "</body>"
             "</html>") % bgr_clr_str % text_clr_str % text_clr_str
@@ -291,7 +295,9 @@ AboutDialog::AboutDialog()
             % is_lecensed_str
             % license_str
             % based_on_str
-            % contributors_str).str());
+            % contributors_str
+            % manual_str
+            % icon_str).str());
         m_html->SetPage(text);
         vsizer->Add(m_html, 1, wxEXPAND | wxBOTTOM, 10);
         m_html->Bind(wxEVT_HTML_LINK_CLICKED, &AboutDialog::onLinkClicked, this);
