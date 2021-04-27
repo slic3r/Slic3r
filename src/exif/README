@@ -1,0 +1,94 @@
+"exif.c" is a simple implementation to access the Exif segment in a JPEG file.
+It easily enables you to get the value of the IFD tag field with such code:
+
+  TagNodeInfo *tag = getTagInfo(ifdArray, IFD_EXIF, TAG_DateTimeOriginal);
+  printf("DateTimeOriginal = [%s]\n", tag->byteData);
+
+  -> DateTimeOriginal = [2013:09:01 09:49:00]
+
+See "sample_main.c" and "exif.h" for details.
+
+exif.c only uses standard C library functions. So, it will be usable in many environments. 
+It has been tested in the following environments.
+
+ - Windows XP 32bit + 32bit Visual C++
+ - Windows 7 64bit + 64bit Visual C++
+ - Redhat Linux 32bit + 32bit gcc
+ - Mac OS X 64bit + 64bit gcc
+
+building with gcc:
+gcc -o exif sample_main.c exif.c
+
+building with Microsoft Visual C++:
+cl.exe /o exif sample_main.c exif.c
+
+The following output is the result of the sample program.
+---------------------------------------------------------------------------
+$ exif test.jpg
+
+[test.jpg] createIfdTableArray: result=4
+
+{0TH IFD}
+ - Make: [Apple]
+ - Model: [iPod touch]
+ - Orientation: 1
+ - XResolution: 72/1
+ - YResolution: 72/1
+ - ResolutionUnit: 2
+ - Software: [6.1.4]
+ - DateTime: [2013:09:01 09:49:00]
+ - YCbCrPositioning: 1
+ - ExifIFDPointer: 206
+ - GPSInfoIFDPointer: 576
+
+{EXIF IFD}
+ - ExposureTime: 1/30
+ - FNumber: 12/5
+ - ExposureProgram: 2
+ - PhotographicSensitivity: 400
+ - ExifVersion: 0 2 2 1
+ - DateTimeOriginal: [2013:09:01 09:49:00]
+ - DateTimeDigitized: [2013:09:01 09:49:00]
+ - ComponentsConfiguration: 0x01 0x02 0x03 0x00
+ - ShutterSpeedValue: 4035/821
+ - ApertureValue: 4845/1918
+ - BrightnessValue: 2234/1113
+ - MeteringMode: 5
+ - Flash: 32
+ - FocalLength: 77/20
+ - FlashPixVersion: 0 1 0 0
+ - ColorSpace: 1
+ - PixelXDimension: 960
+ - PixelYDimension: 720
+ - SensingMethod: 2
+ - ExposureMode: 0
+ - WhiteBalance: 0
+ - FocalLengthIn35mmFormat: 32
+ - SceneCaptureType: 0
+
+{GPS IFD}
+ - GPSLatitudeRef: [S]
+ - GPSLatitude: 69/1 17/100 0/1
+ - GPSLongitudeRef: [E]
+ - GPSLongitude: 39/1 35/100 0/1
+ - GPSAltitudeRef: 0
+ - GPSAltitude: 6151/470
+ - GPSTimeStamp: 0/1 48/1 3921/100
+
+{1ST IFD}
+ - Compression: 6
+ - XResolution: 72/1
+ - YResolution: 72/1
+ - ResolutionUnit: 2
+ - JPEGInterchangeFormat: 840
+ - JPEGInterchangeFormatLength: 8648
+
+0th IFD : Model = [iPod touch]
+Exif IFD : DateTimeOriginal = [2013:09:01 09:49:00]
+GPS IFD : GPSLatitude = 69/1 17/100 0/1
+removeExifSegmentFromJPEGFile: result=1
+---------------------------------------------------------------------------
+http://dsas.blog.klab.org/archives/52123322.html (Japanese only)
+
+Copyright (C) 2013 KLab Inc.
+

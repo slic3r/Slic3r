@@ -214,6 +214,12 @@ void AppConfig::set_defaults()
     if (get("show_splash_screen").empty())
         set("show_splash_screen", "1");
 
+    if (get("splash_screen_editor").empty())
+        set("splash_screen_editor", "benchy-splashscreen.jpg");
+
+    if (get("splash_screen_gcodeviewer").empty())
+        set("splash_screen_gcodeviewer", "prusa-gcodepreview.jpg");
+
 #if ENABLE_CTRL_M_ON_WINDOWS
 #ifdef _WIN32
     if (get("use_legacy_3DConnexion").empty())

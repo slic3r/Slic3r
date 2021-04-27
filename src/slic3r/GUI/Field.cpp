@@ -990,13 +990,23 @@ void Choice::BUILD() {
     temp->Bind(wxEVT_COMBOBOX_DROPDOWN, [this](wxCommandEvent&) { m_is_dropped = true; });
     temp->Bind(wxEVT_COMBOBOX_CLOSEUP,  [this](wxCommandEvent&) { m_is_dropped = false; });
 
-    temp->Bind(wxEVT_COMBOBOX,          [this](wxCommandEvent&) { on_change_field(); }, temp->GetId());
+    temp->Bind(wxEVT_COMBOBOX,          [this](wxCommandEvent&) {
+        //note: on_change_field() is never really called because m_disable_change_event is always true.
+        // it should be fixed in a better way, but as modifying how m_disable_change_event is set will need exentive testing
+        // on all platform, I add this stop-gap. If you can remove it and let the splash_screen_editor field working, do it!
+        if (m_disable_change_event) {
+            m_disable_change_event = false;
+            on_change_field();
+            m_disable_change_event = true;
+        }else
+            on_change_field(); 
+    }, temp->GetId());
 
     if (m_is_editable) {
         temp->Bind(wxEVT_KILL_FOCUS, ([this](wxEvent& e) {
             e.Skip();
             if (m_opt.type == coStrings) {
-                on_change_field();
+                    on_change_field();
                 return;
             }
 

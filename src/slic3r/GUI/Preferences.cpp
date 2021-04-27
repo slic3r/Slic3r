@@ -58,8 +58,10 @@ void PreferencesDialog::build()
 	m_optgroup_general->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
 		if (opt_key == "default_action_on_close_application" || opt_key == "default_action_on_select_preset")
 			m_values[opt_key] = boost::any_cast<bool>(value) ? "none" : "discard";
+		else if (opt_key == "splash_screen_editor" || opt_key == "splash_screen_gcodeviewer")
+			m_values[opt_key] = boost::any_cast<std::string>(value);
 		else
-		m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
+			m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
 	};
 
 	bool is_editor = wxGetApp().is_editor();
@@ -236,6 +238,27 @@ void PreferencesDialog::build()
 	def.set_default_value(new ConfigOptionBool{ app_config->get("show_splash_screen") == "1" });
 	option = Option(def, "show_splash_screen");
 	m_optgroup_general->append_single_option_line(option);
+	
+	// splashscreen image
+	{
+		ConfigOptionDef def_combobox;
+		def_combobox.label = L("Splashscreen image");
+		def_combobox.type = coStrings;
+		def_combobox.tooltip = L("Choose the image to use as splashscreen");
+		def_combobox.gui_type = "f_enum_open";
+		def_combobox.gui_flags = "show_value";
+		def_combobox.enum_values.push_back(std::string(SLIC3R_APP_NAME)  + L(" icon"));
+		//get all images in the spashscreen dir
+		for (const boost::filesystem::directory_entry& dir_entry : boost::filesystem::directory_iterator(boost::filesystem::path(Slic3r::resources_dir()) / "splashscreen"))
+			if (dir_entry.path().has_extension()&& std::set<std::string>{ ".jpg", ".JPG", ".jpeg" }.count(dir_entry.path().extension().string()) > 0 )
+				def_combobox.enum_values.push_back(dir_entry.path().filename().string());
+		std::string current_file_name = app_config->get(is_editor ? "splash_screen_editor" : "splash_screen_gcodeviewer");
+		if (std::find(def_combobox.enum_values.begin(), def_combobox.enum_values.end(), current_file_name) == def_combobox.enum_values.end())
+			current_file_name = def_combobox.enum_values[0];
+		def_combobox.set_default_value(new ConfigOptionStrings{ current_file_name });
+		option = Option(def_combobox, is_editor ? "splash_screen_editor" : "splash_screen_gcodeviewer");
+		m_optgroup_general->append_single_option_line(option);
+	}
 
 #if ENABLE_CTRL_M_ON_WINDOWS
 #if defined(_WIN32) || defined(__APPLE__)
