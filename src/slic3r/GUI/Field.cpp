@@ -48,6 +48,8 @@ wxString double_to_string(double const value, const int max_precision /*= 8*/)
 		    // Remove sign from orphaned zero.
 		    if (s.compare("-0") == 0)
 		        s = "0";
+            if (s.Last() == '.')
+                s.erase(s.length() -1);
 		}
 	}
 
@@ -426,7 +428,7 @@ bool is_defined_input_value(wxWindow* win, const ConfigOptionType& type)
 }
 
 void TextCtrl::BUILD() {
-    auto size = wxSize(def_width()*m_em_unit, wxDefaultCoord);
+    auto size = wxSize((this->m_opt.type == ConfigOptionType::coPercent ? def_width_thinner() : def_width())*m_em_unit, wxDefaultCoord);
     if (m_opt.height >= 0) size.SetHeight(m_opt.height*m_em_unit);
     if (m_opt.width >= 0) size.SetWidth(m_opt.width*m_em_unit);
 
@@ -442,7 +444,7 @@ void TextCtrl::BUILD() {
 	}
 	case coPercent:
 	{
-		text_value = wxString::Format(_T("%i"), int(m_opt.default_value->getFloat()));
+		text_value = double_to_string(m_opt.default_value->getFloat());
 		text_value += "%";
 		break;
 	}	

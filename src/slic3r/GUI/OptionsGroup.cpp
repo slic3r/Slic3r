@@ -886,8 +886,8 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 	}
 	case coPercent:{
 		double val = config.option<ConfigOptionPercent>(opt_key)->value;
-		text_value = wxString::Format(_T("%i"), int(val));
-		ret = text_value;// += "%";
+        text_value = double_to_string(val);
+		ret = text_value;
 	}
 		break;
 	case coPercents:
