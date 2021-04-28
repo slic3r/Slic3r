@@ -162,6 +162,25 @@ double Area(const Path &poly)
   return -a * 0.5;
 }
 //------------------------------------------------------------------------------
+IntPoint Centroid(const Path& poly, double area)
+{
+    double x_temp = 0;
+    double y_temp = 0;
+
+    const int max = poly.size() - 1;
+    size_t i = 0;
+    for (; i < max; ++i)
+    {
+        size_t j = i + 1;
+        x_temp += (double)(poly[i].X + poly[j].X) * ((double)poly[i].X * poly[j].Y - (double)poly[j].X * poly[i].Y);
+        y_temp += (double)(poly[i].Y + poly[j].Y) * ((double)poly[i].X * poly[j].Y - (double)poly[j].X * poly[i].Y);
+    }
+    x_temp += (double)(poly[i].X + poly[0].X) * ((double)poly[i].X * poly[0].Y - (double)poly[0].X * poly[i].Y);
+    y_temp += (double)(poly[i].Y + poly[0].Y) * ((double)poly[i].X * poly[0].Y - (double)poly[0].X * poly[i].Y);
+
+    return IntPoint(x_temp / (6 * area), y_temp / (6 * area));
+}
+//------------------------------------------------------------------------------
 
 double Area(const OutRec &outRec)
 {
@@ -3895,10 +3914,10 @@ double DistanceFromLineSqrd(
   const IntPoint& pt, const IntPoint& ln1, const IntPoint& ln2)
 {
   //The equation of a line in general form (Ax + By + C = 0)
-  //given 2 points (x¹,y¹) & (x²,y²) is ...
-  //(y¹ - y²)x + (x² - x¹)y + (y² - y¹)x¹ - (x² - x¹)y¹ = 0
-  //A = (y¹ - y²); B = (x² - x¹); C = (y² - y¹)x¹ - (x² - x¹)y¹
-  //perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
+  //given 2 points (xï¿½,yï¿½) & (xï¿½,yï¿½) is ...
+  //(yï¿½ - yï¿½)x + (xï¿½ - xï¿½)y + (yï¿½ - yï¿½)xï¿½ - (xï¿½ - xï¿½)yï¿½ = 0
+  //A = (yï¿½ - yï¿½); B = (xï¿½ - xï¿½); C = (yï¿½ - yï¿½)xï¿½ - (xï¿½ - xï¿½)yï¿½
+  //perpendicular distance of point (xï¿½,yï¿½) = (Axï¿½ + Byï¿½ + C)/Sqrt(Aï¿½ + Bï¿½)
   //see http://en.wikipedia.org/wiki/Perpendicular_distance
   double A = double(ln1.Y - ln2.Y);
   double B = double(ln2.X - ln1.X);

@@ -184,6 +184,7 @@ private:
 };
 
 double Area(const Path &poly);
+IntPoint Centroid(const Path& poly, double area);
 inline bool Orientation(const Path &poly) { return Area(poly) >= 0; }
 int PointInPolygon(const IntPoint &pt, const Path &path);
 

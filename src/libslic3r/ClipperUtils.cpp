@@ -524,6 +524,22 @@ T _clipper_do(const ClipperLib::ClipType     clipType,
     return retval;
 }
 
+bool test_path(const ClipperLib::Path &path) {
+
+    double area = std::abs(ClipperLib::Area(path));
+    // get highest dist, but as it's n² in complexity, i use 2*dist to center wich is 2n in complexity
+    ClipperLib::cInt max_dist_sqrd = 0;
+    ClipperLib::IntPoint centroid = ClipperLib::Centroid(path, area);
+    for (const ClipperLib::IntPoint& pt : path) {
+        // &0x3FFFFFFF to let  (dx * dx + dy * dy) be storable into a int64
+        ClipperLib::cInt dx = (pt.X - centroid.X) & 0x3FFFFFFF;
+        ClipperLib::cInt dy = (pt.Y - centroid.Y) & 0x3FFFFFFF;
+        ClipperLib::cInt dist_sqrd = (dx * dx + dy * dy);
+        max_dist_sqrd = std::max(max_dist_sqrd, dist_sqrd);
+    }
+    return (area < (SCALED_EPSILON + SCALED_EPSILON) * std::sqrt(max_dist_sqrd));
+}
+
 // Fix of #117: A large fractal pyramid takes ages to slice
 // The Clipper library has difficulties processing overlapping polygons.
 // Namely, the function ClipperLib::JoinCommonEdges() has potentially a terrible time complexity if the output
@@ -554,6 +570,24 @@ inline ClipperLib::PolyTree _clipper_do_polytree2(const ClipperLib::ClipType cli
     clipper.AddPaths(input_subject, ClipperLib::ptSubject, true);
     ClipperLib::PolyTree retval;
     clipper.Execute(ClipperLib::ctUnion, retval, fillType, fillType);
+
+    // if safety_offset_, remove too small polygons & holes
+    if (safety_offset_)
+        for (int idx_poly = 0; idx_poly < retval.ChildCount(); ++idx_poly) {
+            ClipperLib::PolyNode* ex_polygon = retval.Childs[idx_poly];
+            if (test_path(ex_polygon->Contour)) {
+                retval.Childs.erase(retval.Childs.begin() + idx_poly);
+                --idx_poly;
+            } else {
+                for (int i = 0; i < ex_polygon->ChildCount(); ++i)
+                {
+                    if (test_path(ex_polygon->Childs[i]->Contour)) {
+                        ex_polygon->Childs.erase(ex_polygon->Childs.begin() + i);
+                        --i;
+                    }
+                }
+            }
+        }
     return retval;
 }
 
