@@ -1444,7 +1444,8 @@ public:
 
     std::string serialize() const override
     {
-        const t_config_enum_names& names = ConfigOptionEnum<T>::get_enum_names();
+        // as names is staic-initialized, it's thread safe
+        static t_config_enum_names names = ConfigOptionEnum<T>::create_enum_names();
         assert(static_cast<int>(this->value) < int(names.size()));
         return names[static_cast<int>(this->value)];
     }
@@ -1463,10 +1464,10 @@ public:
         return false;
     }
 
-    // Map from an enum name to an enum integer value.
-    static const t_config_enum_names& get_enum_names() 
+    // Map from an enum name to an enum integer value. Can be used for static initialisation
+    static t_config_enum_names create_enum_names() 
     {
-        static t_config_enum_names names;
+        t_config_enum_names names;
         if (names.empty()) {
             // Initialize the map.
             const t_config_enum_values &enum_keys_map = ConfigOptionEnum<T>::get_enum_values();

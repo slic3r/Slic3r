@@ -147,161 +147,149 @@ enum ZLiftTop {
 };
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<CompleteObjectSort>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["object"] = cosObject;
-        keys_map["lowy"] = cosY;
-        keys_map["lowz"] = cosY;
-    }
+    static t_config_enum_values keys_map = {
+        {"object", cosObject},
+        {"lowy", cosY},
+        {"lowz", cosY},
+    };
     return keys_map;
 }
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<PrinterTechnology>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["FFF"] = ptFFF;
-        keys_map["SLA"] = ptSLA;
-        keys_map["SLS"] = ptSLS;
-    }
+    static t_config_enum_values keys_map = {
+        {"FFF", ptFFF},
+        {"SLA", ptSLA},
+        {"SLS", ptSLS},
+    };
     return keys_map;
 }
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<OutputFormat>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["mCWS"] = ofMaskedCWS;
-        keys_map["SL1"]  = ofSL1;
-    }
+    static t_config_enum_values keys_map = {
+        {"mCWS", ofMaskedCWS},
+        {"SL1", ofSL1},
+    };
     return keys_map;
 }
 
 
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<WipeAlgo>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["linear"]             = waLinear;
-        keys_map["quadra"]             = waQuadra;
-        keys_map["expo"]             = waHyper;
-    }
+    static t_config_enum_values keys_map = {
+        {"linear", waLinear},
+        {"quadra", waQuadra},
+        {"expo", waHyper},
+    };
     return keys_map;
 }
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<GCodeFlavor>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["reprap"]          = gcfRepRap;
-        keys_map["repetier"]        = gcfRepetier;
-        keys_map["teacup"]          = gcfTeacup;
-        keys_map["makerware"]       = gcfMakerWare;
-        keys_map["marlin"]          = gcfMarlin;
-        keys_map["lerdge"]          = gcfLerdge;
-        keys_map["klipper"]         = gcfKlipper;
-        keys_map["sailfish"]        = gcfSailfish;
-        keys_map["smoothie"]        = gcfSmoothie;
-        keys_map["sprinter"]        = gcfSprinter;
-        keys_map["mach3"]           = gcfMach3;
-        keys_map["machinekit"]      = gcfMachinekit;
-        keys_map["no-extrusion"]    = gcfNoExtrusion;
-    }
+    static t_config_enum_values keys_map = {
+        {"reprap", gcfRepRap},
+        {"repetier", gcfRepetier},
+        {"teacup", gcfTeacup},
+        {"makerware", gcfMakerWare},
+        {"marlin", gcfMarlin},
+        {"lerdge", gcfLerdge},
+        {"klipper", gcfKlipper},
+        {"sailfish", gcfSailfish},
+        {"smoothie", gcfSmoothie},
+        {"sprinter", gcfSprinter},
+        {"mach3", gcfMach3},
+        {"machinekit", gcfMachinekit},
+        {"no-extrusion", gcfNoExtrusion},
+    };
     return keys_map;
 }
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<MachineLimitsUsage>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["emit_to_gcode"]       = int(MachineLimitsUsage::EmitToGCode);
-        keys_map["time_estimate_only"]  = int(MachineLimitsUsage::TimeEstimateOnly);
-        keys_map["limits"]            	= int(MachineLimitsUsage::Limits);
-        keys_map["ignore"]            	= int(MachineLimitsUsage::Ignore);
-    }
+    static t_config_enum_values keys_map = {
+        {"emit_to_gcode", int(MachineLimitsUsage::EmitToGCode)},
+        {"time_estimate_only", int(MachineLimitsUsage::TimeEstimateOnly)},
+        {"limits", int(MachineLimitsUsage::Limits)},
+        {"ignore", int(MachineLimitsUsage::Ignore)},
+    };
     return keys_map;
 }
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<PrintHostType>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["octoprint"]       = htOctoPrint;
-        keys_map["duet"]            = htDuet;
-        keys_map["flashair"]        = htFlashAir;
-        keys_map["astrobox"]        = htAstroBox;
-        keys_map["repetier"]        = htRepetier;
-    }
+    static t_config_enum_values keys_map = {
+        {"octoprint", htOctoPrint},
+        {"duet", htDuet},
+        {"flashair", htFlashAir},
+        {"astrobox", htAstroBox},
+        {"repetier", htRepetier},
+    };
     return keys_map;
 }
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<AuthorizationType>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["key"]             = atKeyPassword;
-        keys_map["user"]            = atUserPassword;
-    }
+    static t_config_enum_values keys_map = {
+        {"key", atKeyPassword},
+        {"user", atUserPassword},
+    };
     return keys_map;
 }
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<InfillPattern>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["rectilinear"]         = ipRectilinear;
-        keys_map["monotonic"]           = ipMonotonic;
-        keys_map["grid"]                = ipGrid;
-        keys_map["triangles"]           = ipTriangles;
-        keys_map["stars"]               = ipStars;
-        keys_map["cubic"]               = ipCubic;
-        keys_map["line"]                = ipLine;
-        keys_map["concentric"]          = ipConcentric;
-        keys_map["concentricgapfill"]   = ipConcentricGapFill;
-        keys_map["honeycomb"]           = ipHoneycomb;
-        keys_map["3dhoneycomb"]         = ip3DHoneycomb;
-        keys_map["gyroid"]              = ipGyroid;
-        keys_map["hilbertcurve"]        = ipHilbertCurve;
-        keys_map["archimedeanchords"]   = ipArchimedeanChords;
-        keys_map["octagramspiral"]      = ipOctagramSpiral;
-        keys_map["smooth"]              = ipSmooth;
-        keys_map["smoothtriple"]        = ipSmoothTriple;
-        keys_map["smoothhilbert"]       = ipSmoothHilbert;
-        keys_map["rectiwithperimeter"]  = ipRectiWithPerimeter;
-        keys_map["scatteredrectilinear"]= ipScatteredRectilinear;
-        keys_map["rectilineargapfill"]  = ipRectilinearWGapFill;
-        keys_map["monotonicgapfill"]    = ipMonotonicWGapFill;
-        keys_map["sawtooth"]            = ipSawtooth;
-        keys_map["adaptivecubic"]       = ipAdaptiveCubic;
-        keys_map["supportcubic"]        = ipSupportCubic;
-    }
+    static t_config_enum_values keys_map = {
+        {"rectilinear", ipRectilinear},
+        {"monotonic", ipMonotonic},
+        {"grid", ipGrid},
+        {"triangles", ipTriangles},
+        {"stars", ipStars},
+        {"cubic", ipCubic},
+        {"line", ipLine},
+        {"concentric", ipConcentric},
+        {"concentricgapfill", ipConcentricGapFill},
+        {"honeycomb", ipHoneycomb},
+        {"3dhoneycomb", ip3DHoneycomb},
+        {"gyroid", ipGyroid},
+        {"hilbertcurve", ipHilbertCurve},
+        {"archimedeanchords", ipArchimedeanChords},
+        {"octagramspiral", ipOctagramSpiral},
+        {"smooth", ipSmooth},
+        {"smoothtriple", ipSmoothTriple},
+        {"smoothhilbert", ipSmoothHilbert},
+        {"rectiwithperimeter", ipRectiWithPerimeter},
+        {"scatteredrectilinear", ipScatteredRectilinear},
+        {"rectilineargapfill", ipRectilinearWGapFill},
+        {"monotonicgapfill", ipMonotonicWGapFill},
+        {"sawtooth", ipSawtooth},
+        {"adaptivecubic", ipAdaptiveCubic},
+        {"supportcubic", ipSupportCubic}
+    };
     return keys_map;
 }
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<IroningType>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["top"]                 = int(IroningType::TopSurfaces);
-        keys_map["topmost"]             = int(IroningType::TopmostOnly);
-        keys_map["solid"]               = int(IroningType::AllSolid);
-    }
+    static t_config_enum_values keys_map = {
+        {"top", int(IroningType::TopSurfaces)},
+        {"topmost", int(IroningType::TopmostOnly)},
+        {"solid", int(IroningType::AllSolid)},
+    };
     return keys_map;
 }
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<SupportMaterialPattern>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["rectilinear"]         = smpRectilinear;
-        keys_map["rectilinear-grid"]    = smpRectilinearGrid;
-        keys_map["honeycomb"]           = smpHoneycomb;
-    }
+    static t_config_enum_values keys_map{
+        {"rectilinear", smpRectilinear},
+        {"rectilinear-grid", smpRectilinearGrid},
+        {"honeycomb", smpHoneycomb},
+    };
     return keys_map;
 }
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<SeamPosition>::get_enum_values() {
-    static t_config_enum_values keys_map;
-    if (keys_map.empty()) {
-        keys_map["random"]              = spRandom;
-        keys_map["nearest"]             = spNearest;
-        keys_map["near"]                = spNearest;
-        keys_map["aligned"]             = spAligned;
-        keys_map["rear"]                = spRear;
-        keys_map["hidden"]              = spNearest;
-        keys_map["custom"]              = spCustom;
-    }
+    static t_config_enum_values keys_map{
+        {"random", spRandom},
+        {"nearest", spNearest},
+        {"near", spNearest},
+        {"aligned", spAligned},
+        {"rear", spRear},
+        {"hidden", spNearest},
+        {"custom", spCustom},
+    };
     return keys_map;
 }
 
