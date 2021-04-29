@@ -1,9 +1,9 @@
-name: C/C++ Nigthly windows x64
+name: C/C++ debug windows x64
 
 on:
   push:
     branches:
-      - Nigthly
+      - debug_win
 
 jobs:
   build_dep:
@@ -12,7 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        ref: 'Nigthly'
+        ref: 'debug_win'
     - uses: ilammy/msvc-dev-cmd@v1
     - name: mkdir in deps
       run: mkdir deps/build
@@ -58,7 +58,7 @@ jobs:
       run: cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH="d:\a\Slic3r\Slic3r\deps\destdir\usr\local"
     - name: make
       working-directory: ./build
-      run: msbuild /m /P:Configuration=Release INSTALL.vcxproj
+      run: msbuild /m /P:Configuration=Debug INSTALL.vcxproj
     - name: create directory and copy into it
       working-directory: ./build
       run: ls
@@ -102,5 +102,5 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: nightly_win64
+        name: nightly_win64_debug
         path: build/package/

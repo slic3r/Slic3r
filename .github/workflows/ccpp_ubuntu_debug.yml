@@ -1,9 +1,9 @@
-name: C/C++ Nigthly ubuntu
+name: C/C++ debug ubuntu
 
 on:
   push:
     branches:
-      - Nigthly
+      - debug_ubuntu
 
 jobs:
   build:
@@ -13,10 +13,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        ref: 'Nigthly'
+        ref: 'debug_ubuntu'
     - name: update submodule profiles
       working-directory: ./resources/profiles
-      run: git submodule update 
+      run: git submodule update
     - name: change date in version
       run: sed -i "s/+UNKNOWN/_$(date '+%F')/" version.inc
     - name: update clock
@@ -46,7 +46,7 @@ jobs:
       run: mkdir build
     - name: cmake
       working-directory: ./build
-      run: cmake .. -DCMAKE_PREFIX_PATH="/home/runner/work/Slic3r/Slic3r/deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
+      run: cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="/home/runner/work/Slic3r/Slic3r/deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
     - name: make Slic3r
       working-directory: ./build
       run: make Slic3r

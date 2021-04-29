@@ -1,9 +1,9 @@
-name: C/C++ Nigthly macos
+name: C/C++ debug macos
 
 on:
   push:
     branches:
-      - Nigthly
+      - debug_macos
 
 jobs:
   build:
@@ -13,7 +13,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        ref: 'Nigthly'
+        ref: 'debug_macos'
+    - name: update submodule profiles
+      working-directory: ./resources/profiles
+      run: git submodule update
     - name: change date in version
       run: |
         sed "s/+UNKNOWN/_$(date '+%F')/" version.inc > version.date.inc
@@ -22,7 +25,7 @@ jobs:
       run: mkdir deps/build
     - name: cmake deps
       working-directory: ./deps/build
-      run: cmake .. -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13"
+      run: cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13"
     - name: make deps
       working-directory: ./deps/build
       run: make
@@ -42,7 +45,7 @@ jobs:
       run: mkdir build
     - name: cmake
       working-directory: ./build
-      run: cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13" -DSLIC3R_STATIC=1
+      run: cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13" -DSLIC3R_STATIC=1
     - name: make Slic3r
       working-directory: ./build
       run: make Slic3r
@@ -91,5 +94,5 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: nightly_macos.dmg
+        name: nightly_macos_debug.dmg
         path: build/Slic3r.dmg
