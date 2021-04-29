@@ -3462,18 +3462,26 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Start G-code");
     def->category = OptionCategory::customgcode;
     def->tooltip = L("This start procedure is inserted at the beginning, after bed has reached "
-                   "the target temperature and extruder just started heating, and before extruder "
-                   "has finished heating. If Slic3r detects M104 or M190 in your custom codes, "
-                   "such commands will not be prepended automatically so you're free to customize "
-                   "the order of heating commands and other custom actions. Note that you can use "
-                   "placeholder variables for all Slic3r settings, so you can put "
-                   "a \"M109 S[first_layer_temperature]\" command wherever you want."
-                    "\n placeholders: initial_extruder, total_layer_count, has_wipe_tower, has_single_extruder_multi_material_priming, total_toolchanges, bounding_box[minx,miny,maxx,maxy]");
+        "the target temperature and extruder just started heating, and before extruder "
+        "has finished heating. If Slic3r detects M104 or M190 in your custom codes, "
+        "such commands will not be prepended automatically so you're free to customize "
+        "the order of heating commands and other custom actions. Note that you can use "
+        "placeholder variables for all Slic3r settings, so you can put "
+        "a \"M109 S[first_layer_temperature]\" command wherever you want."
+        "\n placeholders: initial_extruder, total_layer_count, has_wipe_tower, has_single_extruder_multi_material_priming, total_toolchanges, bounding_box[minx,miny,maxx,maxy]");
     def->multiline = true;
     def->full_width = true;
     def->height = 12;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionString("G28 ; home all axes\nG1 Z5 F5000 ; lift nozzle\n"));
+
+    def = this->add("start_gcode_manual", coBool);
+    def->label = L("Only custom Start G-code");
+    def->category = OptionCategory::customgcode;
+    def->tooltip = L("Ensure that the slicer won't add heating, fan, extruder... commands before or just after your start-gcode."
+                    "If set to true, you have to write a good and complete start_gcode, as no checks are made anymore.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("start_filament_gcode", coStrings);
     def->label = L("Start G-code");
@@ -5437,7 +5445,8 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "external_perimeter_extrusion_spacing",
 "infill_extrusion_spacing",
 "solid_infill_extrusion_spacing",
-"top_infill_extrusion_spacing"
+"top_infill_extrusion_spacing",
+"start_gcode_manual",
 
     };
     //looks if it's to be removed, or have to be transformed

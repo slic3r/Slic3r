@@ -1323,14 +1323,15 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
 
     std::string start_gcode = this->placeholder_parser_process("start_gcode", print.config().start_gcode.value, initial_extruder_id);
     // Set bed temperature if the start G-code does not contain any bed temp control G-codes.
-    if(this->config().gcode_flavor != gcfKlipper && print.config().first_layer_bed_temperature.get_at(initial_extruder_id) != 0)
+    if( !this->config().start_gcode_manual && this->config().gcode_flavor != gcfKlipper && print.config().first_layer_bed_temperature.get_at(initial_extruder_id) != 0)
         this->_print_first_layer_bed_temperature(file, print, start_gcode, initial_extruder_id, false);
 
     //init extruders
-    this->_init_multiextruders(file, print, m_writer, tool_ordering, start_gcode);
+    if (!this->config().start_gcode_manual)
+        this->_init_multiextruders(file, print, m_writer, tool_ordering, start_gcode);
 
     // Set extruder(s) temperature before and after start G-code.
-    if ((this->config().gcode_flavor != gcfKlipper || print.config().start_gcode.value.empty()) && print.config().first_layer_temperature.get_at(initial_extruder_id) != 0)
+    if (!this->config().start_gcode_manual && (this->config().gcode_flavor != gcfKlipper || print.config().start_gcode.value.empty()) && print.config().first_layer_temperature.get_at(initial_extruder_id) != 0)
         this->_print_first_layer_extruder_temperatures(file, print, start_gcode, initial_extruder_id, false);
 
     // adds tag for processor
@@ -1350,7 +1351,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
 */
 
     // Disable fan.
-    if (print.config().disable_fan_first_layers.get_at(initial_extruder_id))
+    if (!this->config().start_gcode_manual && print.config().disable_fan_first_layers.get_at(initial_extruder_id))
         _write(file, m_writer.set_fan(0, true, initial_extruder_id));
     //ensure fan is at the right speed
 
@@ -1367,52 +1368,57 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     m_seam_placer.init(print);
 
     //activate first extruder is multi-extruder and not in start-gcode
-    if (m_writer.multiple_extruders) {
-        //if not in gcode
-        bool find = false;
-        if (!start_gcode.empty()) {
-            const char *ptr = start_gcode.data();
-            while (*ptr != 0) {
-                // Skip whitespaces.
-                for (; *ptr == ' ' || *ptr == '\t'; ++ptr);
-                if (*ptr == 'T') {
-                    // TX for most of the firmwares
-                    find = true;
-                    break;
-                } else if (*ptr == 'A' && print.config().gcode_flavor.value == gcfKlipper) {
-                    // ACTIVATE_EXTRUDER for klipper (if used)
-                    if (std::string::npos != start_gcode.find("ACTIVATE_EXTRUDER", size_t(ptr - start_gcode.data()))) {
+    if (!this->config().start_gcode_manual) {
+        if (m_writer.multiple_extruders) {
+            //if not in gcode
+            bool find = false;
+            if (!start_gcode.empty()) {
+                const char* ptr = start_gcode.data();
+                while (*ptr != 0) {
+                    // Skip whitespaces.
+                    for (; *ptr == ' ' || *ptr == '\t'; ++ptr);
+                    if (*ptr == 'T') {
+                        // TX for most of the firmwares
                         find = true;
                         break;
+                    } else if (*ptr == 'A' && print.config().gcode_flavor.value == gcfKlipper) {
+                        // ACTIVATE_EXTRUDER for klipper (if used)
+                        if (std::string::npos != start_gcode.find("ACTIVATE_EXTRUDER", size_t(ptr - start_gcode.data()))) {
+                            find = true;
+                            break;
+                        }
                     }
+                    // Skip the rest of the line.
+                    for (; *ptr != 0 && *ptr != '\r' && *ptr != '\n'; ++ptr);
+                    // Skip the end of line indicators.
+                    for (; *ptr == '\r' || *ptr == '\n'; ++ptr);
                 }
-                // Skip the rest of the line.
-                for (; *ptr != 0 && *ptr != '\r' && *ptr != '\n'; ++ptr);
-                // Skip the end of line indicators.
-                for (; *ptr == '\r' || *ptr == '\n'; ++ptr);
             }
-        }
-        if (!find) {
-            // Set initial extruder only after custom start G-code.
-            // Ugly hack: Do not set the initial extruder if the extruder is primed using the MMU priming towers at the edge of the print bed.
-            if (!(has_wipe_tower && print.config().single_extruder_multi_material_priming)) {
-                _write(file, this->set_extruder(initial_extruder_id, 0.));
+            if (!find) {
+                // Set initial extruder only after custom start G-code.
+                // Ugly hack: Do not set the initial extruder if the extruder is primed using the MMU priming towers at the edge of the print bed.
+                if (!(has_wipe_tower && print.config().single_extruder_multi_material_priming)) {
+                    _write(file, this->set_extruder(initial_extruder_id, 0.));
+                } else {
+                    m_writer.toolchange(initial_extruder_id);
+                }
             } else {
-                m_writer.toolchange(initial_extruder_id);
+                // set writer to the tool as should be set in the start_gcode.
+                _write(file, this->set_extruder(initial_extruder_id, 0., true));
             }
         } else {
-            // set writer to the tool as should be set in the start_gcode.
-            _write(file, this->set_extruder(initial_extruder_id, 0., true));
+            // if we are running a single-extruder setup, just set the extruder and "return nothing"
+            _write(file, this->set_extruder(initial_extruder_id, 0.));
         }
     } else {
-        // if we are running a single-extruder setup, just set the extruder and "return nothing"
-        _write(file, this->set_extruder(initial_extruder_id, 0.));
+        // the right tool should have been set by the user.
+        m_writer.toolchange(initial_extruder_id);
     }
 
     //write temps after custom gcodes to ensure the temperature are good. (after tool selection)
-    if(print.config().first_layer_temperature.get_at(initial_extruder_id) != 0)
+    if (!this->config().start_gcode_manual && print.config().first_layer_temperature.get_at(initial_extruder_id) != 0)
         this->_print_first_layer_extruder_temperatures(file, print, start_gcode, initial_extruder_id, true);
-    if (print.config().first_layer_bed_temperature.get_at(initial_extruder_id) != 0)
+    if (!this->config().start_gcode_manual && print.config().first_layer_bed_temperature.get_at(initial_extruder_id) != 0)
         this->_print_first_layer_bed_temperature(file, print, start_gcode, initial_extruder_id, true);
 
     // Do all objects for each layer.
@@ -2699,7 +2705,10 @@ void GCode::set_origin(const Vec2d &pointf)
 
 std::string GCode::preamble()
 {
-    std::string gcode = m_writer.preamble();
+    std::string gcode;
+    
+    if (!this->config().start_gcode_manual)
+        gcode = m_writer.preamble();
 
     /*  Perform a *silent* move to z_offset: we need this to initialize the Z
         position of our writer object so that any initial lift taking place

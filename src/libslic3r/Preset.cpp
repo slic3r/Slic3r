@@ -692,8 +692,13 @@ const std::vector<std::string>& Preset::printer_options()
             "min_length",
             //FIXME the print host keys are left here just for conversion from the Printer preset to Physical Printer preset.
             "host_type", "print_host", "printhost_apikey", "printhost_cafile", "printhost_port",
-            "single_extruder_multi_material", "start_gcode", "end_gcode", "before_layer_gcode", "layer_gcode", "toolchange_gcode",
-
+            "single_extruder_multi_material", 
+            "start_gcode",
+            "start_gcode_manual",
+            "end_gcode",
+            "before_layer_gcode",
+            "layer_gcode",
+            "toolchange_gcode",
             "color_change_gcode", "pause_print_gcode", "template_custom_gcode",            "feature_gcode",
             "between_objects_gcode", "printer_vendor", "printer_model", "printer_variant", "printer_notes", "cooling_tube_retraction",
             "cooling_tube_length", "high_current_on_filament_swap", "parking_pos_retraction", "extra_loading_move", "max_print_height", 

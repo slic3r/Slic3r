@@ -1089,6 +1089,7 @@ public:
     ConfigOptionFloats              retract_speed;
     ConfigOptionStrings             start_filament_gcode;
     ConfigOptionString              start_gcode;
+    ConfigOptionBool                start_gcode_manual;
     ConfigOptionBool                single_extruder_multi_material;
     ConfigOptionBool                single_extruder_multi_material_priming;
     ConfigOptionBool                wipe_tower_no_sparse_layers;
@@ -1202,6 +1203,7 @@ protected:
         OPT_PTR(single_extruder_multi_material_priming);
         OPT_PTR(wipe_tower_no_sparse_layers);
         OPT_PTR(start_gcode);
+        OPT_PTR(start_gcode_manual);
         OPT_PTR(start_filament_gcode);
         OPT_PTR(tool_name);
         OPT_PTR(toolchange_gcode);

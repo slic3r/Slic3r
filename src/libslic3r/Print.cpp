@@ -164,6 +164,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "slowdown_below_layer_time",
         "standby_temperature_delta",
         "start_gcode",
+        "start_gcode_manual",
         "start_filament_gcode",
         "thin_walls_speed",
         "time_estimation_compensation",
