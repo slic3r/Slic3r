@@ -1723,17 +1723,17 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
    ///     gcfSmoothie, gcfNoExtrusion, gcfLerdge,
     if (print.config().machine_limits_usage.value == MachineLimitsUsage::EmitToGCode) {
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap,  gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, "M201 X%d Y%d Z%d E%d ; sets maximum accelerations, mm/sec^2\n",
+            _write_format(file, "M201 X%d Y%d Z%d E%d ; sets maximum accelerations, mm/sec^2\n",
                 int(print.config().machine_max_acceleration_x.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_y.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_z.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_e.values.front() + 0.5));
         if (std::set<uint8_t>{gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, "M202 X%d Y%d ; sets maximum travel acceleration\n",
+            _write_format(file, "M202 X%d Y%d ; sets maximum travel acceleration\n",
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfSmoothie, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, (print.config().gcode_flavor.value == gcfMarlin || print.config().gcode_flavor.value == gcfSmoothie) 
+            _write_format(file, (print.config().gcode_flavor.value == gcfMarlin || print.config().gcode_flavor.value == gcfSmoothie)
                 ? "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/sec\n"
                 : "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/min\n",
                 int(print.config().machine_max_feedrate_x.values.front() + 0.5),
@@ -1741,7 +1741,7 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
                 int(print.config().machine_max_feedrate_z.values.front() + 0.5),
                 int(print.config().machine_max_feedrate_e.values.front() + 0.5));
         if (print.config().gcode_flavor.value == gcfRepRap) {
-            fprintf(file, "M203 X%d Y%d Z%d E%d I%d; sets maximum feedrates, mm/min\n",
+            _write_format(file, "M203 X%d Y%d Z%d E%d I%d; sets maximum feedrates, mm/min\n",
                 int(print.config().machine_max_feedrate_x.values.front() + 0.5),
                 int(print.config().machine_max_feedrate_y.values.front() + 0.5),
                 int(print.config().machine_max_feedrate_z.values.front() + 0.5),
@@ -1749,33 +1749,33 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
                 int(print.config().machine_min_extruding_rate.values.front() + 0.5));
         }
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, "M204 P%d R%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
+            _write_format(file, "M204 P%d R%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
                 int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_retracting.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
         if (std::set<uint8_t>{gcfRepRap, gcfKlipper, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, "M204 P%d T%d ; sets acceleration (P, T), mm/sec^2\n",
+            _write_format(file, "M204 P%d T%d ; sets acceleration (P, T), mm/sec^2\n",
                 int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
         if (std::set<uint8_t>{gcfRepRap}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, "M566 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
+            _write_format(file, "M566 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
                 print.config().machine_max_jerk_x.values.front(),
                 print.config().machine_max_jerk_y.values.front(),
                 print.config().machine_max_jerk_z.values.front(),
                 print.config().machine_max_jerk_e.values.front());
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, "M205 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
+            _write_format(file, "M205 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
                 print.config().machine_max_jerk_x.values.front(),
                 print.config().machine_max_jerk_y.values.front(),
                 print.config().machine_max_jerk_z.values.front(),
                 print.config().machine_max_jerk_e.values.front());
         if (std::set<uint8_t>{gcfSmoothie}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, "M205 X%.2lf Z%.2lf ; sets the jerk limits, mm/sec\n",
+            _write_format(file, "M205 X%.2lf Z%.2lf ; sets the jerk limits, mm/sec\n",
                 std::min(print.config().machine_max_jerk_x.values.front(),
                 print.config().machine_max_jerk_y.values.front()),
                 print.config().machine_max_jerk_z.values.front());
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
-            fprintf(file, "M205 S%d T%d ; sets the minimum extruding and travel feed rate, mm/sec\n",
+            _write_format(file, "M205 S%d T%d ; sets the minimum extruding and travel feed rate, mm/sec\n",
                 int(print.config().machine_min_extruding_rate.values.front() + 0.5),
                 int(print.config().machine_min_travel_rate.values.front() + 0.5));
     }
