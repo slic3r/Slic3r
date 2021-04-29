@@ -849,10 +849,16 @@ namespace DoExport {
             for (const Vec2d &size : sizes)
                 if (size.x() > 0 && size.y() > 0)
                     good_sizes.push_back(size);
+            if (good_sizes.empty()) return;
 
+            //Create the thumbnails
 	        const size_t max_row_length = 78;
 	        ThumbnailsList thumbnails;
-	        thumbnail_cb(thumbnails, good_sizes, true, true, thumbnails_with_bed, true);
+            // note that it needs the gui thread, so can create deadlock if  job is canceled.
+	        bool can_create_thumbnail = thumbnail_cb(thumbnails, good_sizes, true, true, thumbnails_with_bed, true);
+            throw_if_canceled();
+            if (!can_create_thumbnail) return;
+
 	        for (const ThumbnailData& data : thumbnails)
 	        {
 	            if (data.is_valid())

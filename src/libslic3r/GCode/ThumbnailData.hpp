@@ -20,7 +20,7 @@ struct ThumbnailData
 };
 
 typedef std::vector<ThumbnailData> ThumbnailsList;
-typedef std::function<void(ThumbnailsList & thumbnails, const Vec2ds & sizes, bool printable_only, bool parts_only, bool show_bed, bool transparent_background)> ThumbnailsGeneratorCallback;
+typedef std::function<bool(ThumbnailsList & thumbnails, const Vec2ds & sizes, bool printable_only, bool parts_only, bool show_bed, bool transparent_background)> ThumbnailsGeneratorCallback;
 
 } // namespace Slic3r
 

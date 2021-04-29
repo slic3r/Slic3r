@@ -447,7 +447,7 @@ void Selection::set_deserialized(EMode mode, const std::vector<std::pair<size_t,
     this->set_bounding_boxes_dirty();
 }
 
-void Selection::clear()
+void Selection::clear(bool is_destroying)
 {
     if (!m_valid)
         return;
@@ -466,7 +466,7 @@ void Selection::clear()
     this->set_bounding_boxes_dirty();
 
     // this happens while the application is closing
-    if (wxGetApp().obj_manipul() == nullptr)
+    if (is_destroying || wxGetApp().obj_manipul() == nullptr)
         return;
 
     // resets the cache in the sidebar

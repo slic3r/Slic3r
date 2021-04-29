@@ -2001,14 +2001,43 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     background_process.set_fff_print(&fff_print);
     background_process.set_sla_print(&sla_print);
     background_process.set_gcode_result(&gcode_result);
-    background_process.set_thumbnail_cb([this](ThumbnailsList& thumbnails, const Vec2ds& sizes, bool printable_only, bool parts_only, bool show_bed, bool transparent_background)
+    background_process.set_thumbnail_cb([this](ThumbnailsList& thumbnails, const Vec2ds& sizes, bool printable_only, bool parts_only, bool show_bed, bool transparent_background)->bool
         {
-            std::packaged_task<void(ThumbnailsList&, const Vec2ds&, bool, bool, bool, bool)> task([this](ThumbnailsList& thumbnails, const Vec2ds& sizes, bool printable_only, bool parts_only, bool show_bed, bool transparent_background) {
+            auto task = std::make_shared<std::packaged_task<void(ThumbnailsList&, const Vec2ds&, bool, bool, bool, bool)>>([this](ThumbnailsList& thumbnails, const Vec2ds& sizes, bool printable_only, bool parts_only, bool show_bed, bool transparent_background) {
                 generate_thumbnails(thumbnails, sizes, printable_only, parts_only, show_bed, transparent_background);
                 });
-            std::future<void> result = task.get_future();
-            wxTheApp->CallAfter([&]() { task(thumbnails, sizes, printable_only, parts_only, show_bed, transparent_background); });
-            result.wait();
+
+            std::future<void> future_result = task->get_future();
+            std::shared_ptr<std::mutex> protect_bool = std::make_shared<std::mutex>();
+            std::shared_ptr<bool> is_started = std::make_shared<bool>(false);
+            std::shared_ptr<bool> cancel = std::make_shared<bool>(false);
+            wxTheApp->CallAfter([task, protect_bool, is_started, cancel, &thumbnails, &sizes, &printable_only, &parts_only, &show_bed, &transparent_background]()
+            { 
+                {
+                    std::lock_guard<std::mutex> lock(*protect_bool);
+                    if (*cancel)
+                        return;
+                    *is_started = true;
+                }
+                (*task)(thumbnails, sizes, printable_only, parts_only, show_bed, transparent_background); 
+            });
+            // can deadlock if background processing is cancelled / locked
+            // have to cancel the process if we're exiting here as the parameters will be deleted.
+            // if the process is already started, then we have to wait its end. and there is no deadlock with generate_thumbnails
+            // 2 seconds is plenty to 
+            std::future_status result = future_result.wait_for(std::chrono::seconds(2));
+            if (result == std::future_status::ready)
+                return true;
+            {
+                std::lock_guard<std::mutex> lock(*protect_bool);
+                if (*is_started) {
+                    future_result.wait();
+                    result = std::future_status::ready;
+                } else {
+                    *cancel = true;
+                }
+            }
+            return result == std::future_status::ready;
         });
     background_process.set_slicing_completed_event(EVT_SLICING_COMPLETED);
     background_process.set_finished_event(EVT_PROCESS_COMPLETED);

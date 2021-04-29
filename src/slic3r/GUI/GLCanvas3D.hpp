@@ -558,7 +558,7 @@ public:
 
     unsigned int get_volumes_count() const;
     const GLVolumeCollection& get_volumes() const { return m_volumes; }
-    void reset_volumes();
+    void reset_volumes(bool is_destroying = false);
     int check_volumes_outside_state() const;
 
     void reset_gcode_toolpaths() { m_gcode_viewer.reset(); }

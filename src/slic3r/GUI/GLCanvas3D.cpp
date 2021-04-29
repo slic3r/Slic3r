@@ -1206,7 +1206,7 @@ GLCanvas3D::GLCanvas3D(wxGLCanvas* canvas)
 
 GLCanvas3D::~GLCanvas3D()
 {
-    reset_volumes();
+    reset_volumes(true);
 }
 
 void GLCanvas3D::post_event(wxEvent &&event)
@@ -1303,7 +1303,7 @@ unsigned int GLCanvas3D::get_volumes_count() const
     return (unsigned int)m_volumes.volumes.size();
 }
 
-void GLCanvas3D::reset_volumes()
+void GLCanvas3D::reset_volumes(bool is_destroying)
 {
     if (!m_initialized)
         return;
@@ -1313,11 +1313,12 @@ void GLCanvas3D::reset_volumes()
 
     _set_current();
 
-        m_selection.clear();
+        m_selection.clear(is_destroying);
         m_volumes.clear();
         m_dirty = true;
 
-    _set_warning_texture(WarningTexture::ObjectOutside, false);
+    if(!is_destroying)
+        _set_warning_texture(WarningTexture::ObjectOutside, false);
 }
 
 int GLCanvas3D::check_volumes_outside_state() const

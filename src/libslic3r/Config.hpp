@@ -169,7 +169,7 @@ enum PrinterTechnology : uint8_t
     // Laser engraving
     ptLaser = 1 << 4,
     // Any technology, useful for parameters compatible with both ptFFF and ptSLA
-    ptAny = 1+2+4,
+    ptAny = ptFFF | ptSLA | ptSLS | ptMill | ptLaser,
     // Unknown, useful for command line processing
     ptUnknown = 1 << 7
 };
