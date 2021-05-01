@@ -776,7 +776,7 @@ std::string CoolingBuffer::apply_layer_cooldown(
                 bridge_fan_speed = clamp(0, 255, int(float(bridge_fan_speed) * factor + 0.5f));
             }
 #undef EXTRUDER_CONFIG
-            // 0 is deprecated for diable: take care of temp settings.
+            // 0 is deprecated for disable: take care of temp settings.
             if (bridge_fan_speed == 0) bridge_fan_speed = -1;
             if (ext_peri_fan_speed == 0) ext_peri_fan_speed = -1;
             if (top_fan_speed == 0) top_fan_speed = -1;
