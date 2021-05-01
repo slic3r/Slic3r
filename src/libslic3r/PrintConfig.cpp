@@ -5268,6 +5268,14 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         opt_key = "";
         return;
     }
+
+    //prusa
+    if ("gcode_flavor" == opt_key) {
+        if ("reprap" == value)
+            value = "sprinter";
+        else if ("reprapfirmware" == value)
+            value = "reprap";
+    }
 }
 
 void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, const DynamicConfig& all_conf) {
