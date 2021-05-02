@@ -910,6 +910,7 @@ void SpinCtrl::msw_rescale()
 }
 
 #ifdef __WXOSX__
+static_assert(wxMAJOR_VERSION >= 3, "Use of wxBitmapComboBox on Settings Tabs requires wxWidgets 3.0 and newer");
 using choice_ctrl = wxBitmapComboBox;
 #else
 using choice_ctrl = wxComboBox;
@@ -964,25 +965,6 @@ void Choice::BUILD() {
 		set_selection();
 	}
 
-#ifdef __WXOSX__
-//#ifndef __WXGTK__
-    /* Workaround for a correct rendering of the control without Bitmap (under MSW and OSX):
-     * 
-     * 1. We should create small Bitmap to fill Bitmaps RefData,
-     *    ! in this case wxBitmap.IsOK() return true.
-     * 2. But then set width to 0 value for no using of bitmap left and right spacing 
-     * 3. Set this empty bitmap to the at list one item and BitmapCombobox will be recreated correct
-     * 
-     * Note: Set bitmap height to the Font size because of OSX rendering.
-     */
-    // Welll, it makes wx freak out... (in debug) if select_open
-    if (m_opt.gui_type != "select_open") {
-        wxBitmap empty_bmp(1, temp->GetFont().GetPixelSize().y + 2);
-        empty_bmp.SetWidth(0);
-        temp->SetItemBitmap(0, empty_bmp);
-    }
-#endif
-
     temp->Bind(wxEVT_MOUSEWHEEL, [this](wxMouseEvent& e) {
         if (m_suppress_scroll && !m_is_dropped)
             e.StopPropagation();
@@ -1008,20 +990,32 @@ void Choice::BUILD() {
         temp->Bind(wxEVT_KILL_FOCUS, ([this](wxEvent& e) {
             e.Skip();
             if (m_opt.type == coStrings) {
-                    on_change_field();
+                on_change_field();
                 return;
             }
 
             if (is_defined_input_value<choice_ctrl>(window, m_opt.type)) {
-                if (m_opt.type == coFloatOrPercent) {
+                switch (m_opt.type) {
+                case coFloatOrPercent:
+                {
                     std::string old_val = !m_value.empty() ? boost::any_cast<std::string>(m_value) : "";
                     if (old_val == boost::any_cast<std::string>(get_value()))
                         return;
+                    break;
                 }
-                else {
+                case coInt:
+                {
+                    int old_val = !m_value.empty() ? boost::any_cast<int>(m_value) : 0;
+                    if (old_val == boost::any_cast<int>(get_value()))
+                        return;
+                    break;
+                }
+                default:
+                {
                     double old_val = !m_value.empty() ? boost::any_cast<double>(m_value) : -99999;
                     if (fabs(old_val - boost::any_cast<double>(get_value())) <= 0.0001)
                         return;
+                }
                 }
                 on_change_field();
             }
