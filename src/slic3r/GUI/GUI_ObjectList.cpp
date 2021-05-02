@@ -382,10 +382,10 @@ void ObjectList::get_selection_indexes(std::vector<int>& obj_idxs, std::vector<i
     else {
         for (wxDataViewItem item : sels) {
             const ItemType type = m_objects_model->GetItemType(item);
-            assert(type & (itObject | itInstance | itInstanceRoot));
+            assert(type & (itObject | itInstance | itInstanceRoot | itSettings));
 
-            obj_idxs.emplace_back(type & itObject ? m_objects_model->GetIdByItem(item) :
-                                  m_objects_model->GetIdByItem(m_objects_model->GetTopParent(item)));
+            obj_idxs.emplace_back((type & itObject) ? m_objects_model->GetIdByItem(item) :
+                                m_objects_model->GetIdByItem(m_objects_model->GetTopParent(item)));
         }
     }
 
