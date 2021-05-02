@@ -565,6 +565,7 @@ const std::vector<std::string>& Preset::print_options()
         "hole_size_compensation",
         "hole_size_threshold",
         "hole_to_polyhole",
+        "hole_to_polyhole_threshold",
         "threads", "resolution",
         "wipe_tower", "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_bridging",
         "wipe_tower_brim",

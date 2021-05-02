@@ -88,9 +88,9 @@ void PrintRegion::collect_object_printing_extruders(std::vector<uint16_t> &objec
     // If not, then there must be something wrong with the Print::apply() function.
 #ifndef NDEBUG
     auto num_extruders = (int)print()->config().nozzle_diameter.size();
-    assert(this->config().perimeter_extruder    <= num_extruders);
-    assert(this->config().infill_extruder       <= num_extruders);
-    assert(this->config().solid_infill_extruder <= num_extruders);
+    assert(this->config().perimeter_extruder.value      <= num_extruders);
+    assert(this->config().infill_extruder.value         <= num_extruders);
+    assert(this->config().solid_infill_extruder.value   <= num_extruders);
 #endif
     for(const PrintObject * obj : this->m_print->objects())
         collect_object_printing_extruders(print()->config(), obj->config(), this->config(), object_extruders);

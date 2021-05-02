@@ -169,7 +169,7 @@ namespace Slic3r {
     {
         // get all circular holes for each layer
         // the id is center-diameter-extruderid
-        std::vector<std::vector<std::pair<std::tuple<Point, float, int>, Polygon*>>> layerid2center;
+        std::vector<std::vector<std::pair<std::tuple<Point, float, int, coord_t>, Polygon*>>> layerid2center;
         for (size_t i = 0; i < this->m_layers.size(); i++) layerid2center.emplace_back();
         tbb::parallel_for(
             tbb::blocked_range<size_t>(0, m_layers.size()),
@@ -185,27 +185,20 @@ namespace Slic3r {
                                 //test if convex (as it's clockwise bc it's a hole, we have to do the opposite)
                                 if (hole.convex_points().empty() && hole.points.size() > 8) {
                                     // Computing circle center
-                                    double center_x = 0, center_y = 0;
-                                    double lines_length = 0;
-                                    for (Line l : hole.lines()) {
-                                        center_x += l.a.x() * l.length();
-                                        center_x += l.b.x() * l.length();
-                                        center_y += l.a.y() * l.length();
-                                        center_y += l.b.y() * l.length();
-                                        lines_length += l.length() + l.length();
-                                    }
-                                    Point center{ center_x / lines_length, center_y / lines_length };
-                                    // check for roundeness
+                                    Point center = hole.centroid();
                                     double diameter_min = std::numeric_limits<float>::max(), diameter_max = 0;
+                                    double diameter_sum = 0;
                                     for (int i = 0; i < hole.points.size(); ++i) {
                                         double dist = hole.points[i].distance_to(center);
                                         diameter_min = std::min(diameter_min, dist);
                                         diameter_max = std::max(diameter_max, dist);
+                                        diameter_sum += dist;
                                     }
-                                    // SCALED_EPSILON was a bit too harsh.
-                                    if (diameter_max - diameter_min < 1000) {
+                                    // SCALED_EPSILON was a bit too harsh. Now using a config, as some may want some harsh setting and some don't.
+                                    coord_t max_variation = std::max(SCALED_EPSILON, scale_(this->m_layers[layer_idx]->m_regions[region_idx]->region()->config().hole_to_polyhole_threshold.get_abs_value(unscaled(diameter_sum / hole.points.size()))));
+                                    if (diameter_max - diameter_min < max_variation * 2) {
                                         layerid2center[layer_idx].emplace_back(
-                                            std::tuple<Point, float, int>{center, diameter_max, layer->m_regions[region_idx]->region()->config().perimeter_extruder.value}, & hole);
+                                            std::tuple<Point, float, int, coord_t>{center, diameter_max, layer->m_regions[region_idx]->region()->config().perimeter_extruder.value, max_variation}, & hole);
                                     }
                                 }
                             }
@@ -216,7 +209,7 @@ namespace Slic3r {
             }
         });
         //sort holes per center-diameter
-        std::map<std::tuple<Point, float, int>, std::vector<std::pair<Polygon*, int>>> id2layerz2hole;
+        std::map<std::tuple<Point, float, int, coord_t>, std::vector<std::pair<Polygon*, int>>> id2layerz2hole;
 
         //search & find hole that span at least X layers
         const size_t min_nb_layers = 2;
@@ -224,7 +217,7 @@ namespace Slic3r {
         for (size_t layer_idx = 0; layer_idx < this->m_layers.size(); ++layer_idx) {
             for (size_t hole_idx = 0; hole_idx < layerid2center[layer_idx].size(); ++hole_idx) {
                 //get all other same polygons
-                std::tuple<Point, float, int>& id = layerid2center[layer_idx][hole_idx].first;
+                std::tuple<Point, float, int, coord_t>& id = layerid2center[layer_idx][hole_idx].first;
                 float max_z = layers()[layer_idx]->print_z;
                 std::vector<std::pair<Polygon*, int>> holes;
                 holes.emplace_back(layerid2center[layer_idx][hole_idx].second, layer_idx);
@@ -232,10 +225,11 @@ namespace Slic3r {
                     if (layers()[search_layer_idx]->print_z - layers()[search_layer_idx]->height - max_z > EPSILON) break;
                     //search an other polygon with same id
                     for (size_t search_hole_idx = 0; search_hole_idx < layerid2center[search_layer_idx].size(); ++search_hole_idx) {
-                        std::tuple<Point, float, int>& search_id = layerid2center[search_layer_idx][search_hole_idx].first;
-                        if (std::get<0>(id).distance_to(std::get<0>(search_id)) < SCALED_EPSILON
-                            && std::abs(std::get<1>(id) - std::get<1>(search_id)) < SCALED_EPSILON
-                            && std::get<2>(id) == std::get<2>(search_id)) {
+                        std::tuple<Point, float, int, coord_t>& search_id = layerid2center[search_layer_idx][search_hole_idx].first;
+                        if (std::get<2>(id) == std::get<2>(search_id)
+                            && std::get<0>(id).distance_to(std::get<0>(search_id)) < std::get<3>(id)
+                            && std::abs(std::get<1>(id) - std::get<1>(search_id)) < std::get<3>(id)
+                            ) {
                             max_z = layers()[search_layer_idx]->print_z;
                             holes.emplace_back(layerid2center[search_layer_idx][search_hole_idx].second, search_layer_idx);
                             layerid2center[search_layer_idx].erase(layerid2center[search_layer_idx].begin() + search_hole_idx);
@@ -721,6 +715,7 @@ namespace Slic3r {
                 || opt_key == "hole_size_compensation"
                 || opt_key == "hole_size_threshold"
                 || opt_key == "hole_to_polyhole"
+                || opt_key == "hole_to_polyhole_threshold"
                 || opt_key == "z_step") {
                 steps.emplace_back(posSlice);
             } else if (opt_key == "support_material") {
