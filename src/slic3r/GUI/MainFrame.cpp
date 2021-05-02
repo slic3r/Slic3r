@@ -288,13 +288,17 @@ void MainFrame::update_layout()
         }
 
         //clear if previous was tabs
-        for (int i = 0; i < m_tabpanel->GetPageCount(); i++)
+        for (int i = 0; i < m_tabpanel->GetPageCount() - 3; i++)
             if (m_tabpanel->GetPage(i)->GetChildren().empty() && m_tabpanel->GetPage(i)->GetSizer()->GetItemCount() > 0) {
                 clean_sizer(m_tabpanel->GetPage(i)->GetSizer());
             }
-        if (m_tabpanel->GetPage(0)->GetChildren().size() == 0 && m_tabpanel->GetPage(1)->GetChildren().size() == 0 && m_tabpanel->GetPage(2)->GetChildren().size() == 0) {
+        if (m_tabpanel->GetPageCount() >= 6 && m_tabpanel->GetPage(0)->GetChildren().size() == 0 && m_tabpanel->GetPage(1)->GetChildren().size() == 0 && m_tabpanel->GetPage(2)->GetChildren().size() == 0) {
             m_tabpanel->DeletePage(2);
             m_tabpanel->DeletePage(1);
+            m_tabpanel->DeletePage(0);
+        }
+        // ensure wehave only the 3 settings tabs
+        while (m_tabpanel->GetPageCount() > 3) {
             m_tabpanel->DeletePage(0);
         }
 
@@ -375,7 +379,7 @@ void MainFrame::update_layout()
             icon_size = atoi(wxGetApp().app_config->get("tab_icon_size").c_str());
         }
         catch (std::exception e) {}
-        if (icon_size >= 8) {
+        if (m_tabpanel->GetPageCount() == 4 && icon_size >= 8) {
             std::initializer_list<std::string> icon_list = { "plater", "cog", "spool_cog", "printer_cog" };
             if (icon_size < 16)
                 icon_list = { "plater", "cog", "spool", "printer" };
@@ -385,10 +389,7 @@ void MainFrame::update_layout()
                     img_list = new wxImageList(bmp.GetWidth(), bmp.GetHeight());
                 img_list->Add(bmp);
             }
-        }
-        m_tabpanel->AssignImageList(img_list);
-        if (icon_size >= 8)
-        {
+            m_tabpanel->AssignImageList(img_list);
             m_tabpanel->SetPageImage(0, 0);
             m_tabpanel->SetPageImage(1, 1);
             m_tabpanel->SetPageImage(2, 2);
@@ -421,24 +422,27 @@ void MainFrame::update_layout()
                 img_list->Add(bmp);
             }
         }
-        m_tabpanel->AssignImageList(img_list);
-        m_tabpanel->InsertPage(0, new wxPanel(m_tabpanel), _L("3D view"));
+        wxPanel* first_panel = new wxPanel(m_tabpanel);
+        m_tabpanel->InsertPage(0, first_panel, _L("3D view"));
         m_tabpanel->InsertPage(1, new wxPanel(m_tabpanel), _L("Sliced preview"));
         m_tabpanel->InsertPage(2, new wxPanel(m_tabpanel), _L("Gcode preview"));
-        m_tabpanel->GetPage(0)->SetSizer(new wxBoxSizer(wxVERTICAL));
-        m_tabpanel->GetPage(1)->SetSizer(new wxBoxSizer(wxVERTICAL));
-        m_tabpanel->GetPage(2)->SetSizer(new wxBoxSizer(wxVERTICAL));
-        if (icon_size >= 8)
-        {
-            m_tabpanel->SetPageImage(0, 0);
-            m_tabpanel->SetPageImage(1, 1);
-            m_tabpanel->SetPageImage(2, 2);
-            m_tabpanel->SetPageImage(3, 3);
-            m_tabpanel->SetPageImage(4, 4);
-            m_tabpanel->SetPageImage(5, 5);
+        if (m_tabpanel->GetPageCount() == 6) {
+            m_tabpanel->AssignImageList(img_list);
+            m_tabpanel->GetPage(0)->SetSizer(new wxBoxSizer(wxVERTICAL));
+            m_tabpanel->GetPage(1)->SetSizer(new wxBoxSizer(wxVERTICAL));
+            m_tabpanel->GetPage(2)->SetSizer(new wxBoxSizer(wxVERTICAL));
+            if (icon_size >= 8)
+            {
+                m_tabpanel->SetPageImage(0, 0);
+                m_tabpanel->SetPageImage(1, 1);
+                m_tabpanel->SetPageImage(2, 2);
+                m_tabpanel->SetPageImage(3, 3);
+                m_tabpanel->SetPageImage(4, 4);
+                m_tabpanel->SetPageImage(5, 5);
+            }
         }
-        m_plater->Reparent(m_tabpanel->GetPage(0));
-        m_tabpanel->GetPage(0)->GetSizer()->Add(m_plater, 1, wxEXPAND);
+        m_plater->Reparent(first_panel);
+        first_panel->GetSizer()->Add(m_plater, 1, wxEXPAND);
         m_tabpanel->ChangeSelection(0);
         m_main_sizer->Add(m_tabpanel, 1, wxEXPAND);
         m_plater->Show();
