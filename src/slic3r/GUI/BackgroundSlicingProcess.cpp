@@ -497,11 +497,11 @@ void BackgroundSlicingProcess::reset_export()
 {
 	bool running = true;
 	{
-		// I don't know if it's safe to let m_mutex be lock whiole doing invalidate_step.
+		// I don't know if it's safe to let m_mutex be lock while doing invalidate_step.
 		// if so, please remove the braces.
 		std::unique_lock<std::mutex> lck(m_mutex);
 		running = this->running();
-		assert(!running);
+		//assert(!running);
 	}
 	if (!running) {
 		m_export_path.clear();

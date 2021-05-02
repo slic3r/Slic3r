@@ -3030,8 +3030,11 @@ void Tab::load_current_preset()
                     }
                     else {
                         int page_id = wxGetApp().tab_panel()->FindPage(tab);
-                        wxGetApp().tab_panel()->GetPage(page_id)->Show(false);
-                        wxGetApp().tab_panel()->RemovePage(page_id);
+                        //TODO shouldn't happen, emit an error here.
+                        if (page_id >= 0 && page_id < wxGetApp().tab_panel()->GetPageCount()) {
+                            wxGetApp().tab_panel()->GetPage(page_id)->Show(false);
+                            wxGetApp().tab_panel()->RemovePage(page_id);
+                        }
                     }
                 }
                 static_cast<TabPrinter*>(this)->m_printer_technology = printer_technology;
@@ -3056,7 +3059,7 @@ void Tab::load_current_preset()
             //update width/spacing links
             if (m_type == Preset::TYPE_PRINT) {
                 //verify that spacings are set
-                if (m_config->update_phony({ wxGetApp().plater()->config() })) {
+                if (m_config && m_config->update_phony({ wxGetApp().plater()->config() })) {
                     update_dirty();
                     reload_config();
                 }

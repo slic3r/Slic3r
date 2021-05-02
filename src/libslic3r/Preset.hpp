@@ -698,7 +698,7 @@ public:
     // Returns the config of the selected printer, or nullptr if no printer is selected.
     DynamicPrintConfig*     get_selected_printer_config() { return (m_idx_selected == size_t(-1)) ? nullptr : &(this->get_selected_printer().config); }
     // Returns the config of the selected printer, or nullptr if no printer is selected.
-    PrinterTechnology       get_selected_printer_technology() { return (m_idx_selected == size_t(-1)) ? PrinterTechnology::ptAny : this->get_selected_printer().printer_technology(); }
+    //PrinterTechnology       get_selected_printer_technology() { return (m_idx_selected == size_t(-1)) ? PrinterTechnology::ptAny : this->get_selected_printer().printer_technology(); }
 
     // Each physical printer can have a several related preset,
     // so, use the next functions to get an exact names of selections in the list:

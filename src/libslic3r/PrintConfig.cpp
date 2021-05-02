@@ -6182,20 +6182,6 @@ std::string FullPrintConfig::validate()
     return "";
 }
 
-// Declare the static caches for each StaticPrintConfig derived class.
-StaticPrintConfig::StaticCache<class Slic3r::PrintObjectConfig> PrintObjectConfig::s_cache_PrintObjectConfig;
-StaticPrintConfig::StaticCache<class Slic3r::PrintRegionConfig> PrintRegionConfig::s_cache_PrintRegionConfig;
-StaticPrintConfig::StaticCache<class Slic3r::MachineEnvelopeConfig> MachineEnvelopeConfig::s_cache_MachineEnvelopeConfig;
-StaticPrintConfig::StaticCache<class Slic3r::GCodeConfig>       GCodeConfig::s_cache_GCodeConfig;
-StaticPrintConfig::StaticCache<class Slic3r::PrintConfig>       PrintConfig::s_cache_PrintConfig;
-StaticPrintConfig::StaticCache<class Slic3r::FullPrintConfig>   FullPrintConfig::s_cache_FullPrintConfig;
-
-StaticPrintConfig::StaticCache<class Slic3r::SLAMaterialConfig>     SLAMaterialConfig::s_cache_SLAMaterialConfig;
-StaticPrintConfig::StaticCache<class Slic3r::SLAPrintConfig>        SLAPrintConfig::s_cache_SLAPrintConfig;
-StaticPrintConfig::StaticCache<class Slic3r::SLAPrintObjectConfig>  SLAPrintObjectConfig::s_cache_SLAPrintObjectConfig;
-StaticPrintConfig::StaticCache<class Slic3r::SLAPrinterConfig>      SLAPrinterConfig::s_cache_SLAPrinterConfig;
-StaticPrintConfig::StaticCache<class Slic3r::SLAFullPrintConfig>    SLAFullPrintConfig::s_cache_SLAFullPrintConfig;
-
 CLIActionsConfigDef::CLIActionsConfigDef()
 {
     ConfigOptionDef* def;

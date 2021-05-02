@@ -1444,7 +1444,7 @@ public:
 
     std::string serialize() const override
     {
-        // as names is staic-initialized, it's thread safe
+        // as names are static-initialized, it's thread safe
         static t_config_enum_names names = ConfigOptionEnum<T>::create_enum_names();
         assert(static_cast<int>(this->value) < int(names.size()));
         return names[static_cast<int>(this->value)];
@@ -1673,9 +1673,9 @@ public:
     // For text input: If true, the GUI formats text as code (fixed-width)
     bool                                is_code         = false;
     // Not editable. Currently only used for the display of the number of threads.
-    bool                                readonly = false;
+    bool                                readonly        = false;
     // Can be phony. if not present at laoding, mark it as phony. Also adapt the gui to look for phony status.
-    bool                                can_phony = false;
+    bool                                can_phony       = false;
     // Height of a multiline GUI text box.
     int                                 height          = -1;
     // Optional width of an input field.

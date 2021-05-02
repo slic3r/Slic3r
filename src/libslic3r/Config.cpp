@@ -590,11 +590,11 @@ bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, con
         throw new UnknownOptionException(opt_key);
 
     bool ok = true;
-    if (!optdef->can_phony || value != "")
+    if (!optdef->can_phony || !value.empty())
         ok = opt->deserialize(value, append);
     //set phony status
     if (optdef->can_phony)
-        if(value == "")
+        if(value.empty())
             opt->phony = true;
         else
             opt->phony = false;
