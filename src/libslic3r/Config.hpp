@@ -215,10 +215,12 @@ inline OutputFormat operator&=(OutputFormat& a, OutputFormat b) {
 class ConfigOption {
 public:
     // if true, this option doesn't need to be saved, it's a computed value from an other configOption.
-    bool phony;
+    // uint32_t because macos crash if it's a bool. and it doesn't change the size of the object because of alignment.
+    uint32_t phony;
+
 
     ConfigOption() : phony(false) {}
-    ConfigOption(bool phony) : phony(phony) {}
+    ConfigOption(bool phony) : phony(uint32_t(phony)) {}
 
     virtual ~ConfigOption() {}
 
@@ -240,6 +242,8 @@ public:
     virtual bool 				nullable()		const { return false; }
     // A scalar is nil, or all values of a vector are nil.
     virtual bool 				is_nil() 		const { return false; }
+    bool                        is_phony()      const { return phony != 0; }
+    void                        set_phony(bool phony) { this->phony = phony ? 1 : 0; }
     // Is this option overridden by another option?
     // An option overrides another option if it is not nil and not equal.
     virtual bool 				overriden_by(const ConfigOption *rhs) const {

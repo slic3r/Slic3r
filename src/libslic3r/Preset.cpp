@@ -1394,8 +1394,8 @@ inline t_config_option_keys deep_diff(const ConfigBase &config_this, const Confi
         const ConfigOption *this_opt  = config_this.option(opt_key);
         const ConfigOption *other_opt = config_other.option(opt_key);
         //dirty if both exist, they aren't both phony and value is different
-        if (this_opt != nullptr && other_opt != nullptr && !(this_opt->phony && other_opt->phony)
-            && ((*this_opt != *other_opt) || (this_opt->phony != other_opt->phony)))
+        if (this_opt != nullptr && other_opt != nullptr && !(this_opt->is_phony() && other_opt->is_phony())
+            && ((*this_opt != *other_opt) || (this_opt->is_phony() != other_opt->is_phony())))
         {
             if (opt_key == "bed_shape" || opt_key == "thumbnails" || opt_key == "compatible_prints" || opt_key == "compatible_printers") {
                 // Scalar variable, or a vector variable, which is independent from number of extruders,

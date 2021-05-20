@@ -474,8 +474,8 @@ t_config_option_keys ConfigBase::diff(const ConfigBase &other) const
         const ConfigOption *this_opt  = this->option(opt_key);
         const ConfigOption *other_opt = other.option(opt_key);
         //dirty if both exist, they aren't both phony and value is different
-        if (this_opt != nullptr && other_opt != nullptr && !(this_opt->phony && other_opt->phony) 
-            && ((*this_opt != *other_opt) || (this_opt->phony != other_opt->phony)))
+        if (this_opt != nullptr && other_opt != nullptr && !(this_opt->is_phony() && other_opt->is_phony())
+            && ((*this_opt != *other_opt) || (this_opt->is_phony() != other_opt->is_phony())))
             diff.emplace_back(opt_key);
     }
     return diff;
@@ -497,7 +497,7 @@ std::string ConfigBase::opt_serialize(const t_config_option_key &opt_key) const
 {
     const ConfigOption* opt = this->option(opt_key);
     assert(opt != nullptr);
-    if (opt->phony)
+    if (opt->is_phony())
         return "";
     return opt->serialize();
 }
@@ -595,11 +595,11 @@ bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, con
     //set phony status
     if (optdef->can_phony)
         if(value.empty())
-            opt->phony = true;
+            opt->set_phony(true);
         else
-            opt->phony = false;
+            opt->set_phony(false);
     else
-        opt->phony = false;
+        opt->set_phony(false);
 
     return ok;
 }

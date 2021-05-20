@@ -661,12 +661,12 @@ void Tab::update_changed_ui()
     const Preset& selected_preset = m_presets->get_selected_preset();
     const Preset* system_preset   = m_presets->get_selected_preset_parent();
     for (auto& opt_key : m_presets->get_edited_preset().config.keys()) {
-        if (edited_preset.config.option(opt_key)->phony)
+        if (edited_preset.config.option(opt_key)->is_phony())
             //ensure that osCurrentPhony is in the bitmask 
             m_options_list[opt_key] |= osCurrentPhony;
-        if (selected_preset.config.option(opt_key)->phony)
+        if (selected_preset.config.option(opt_key)->is_phony())
             m_options_list[opt_key] |= osInitPhony;
-        if (system_preset && system_preset->config.option(opt_key)->phony)
+        if (system_preset && system_preset->config.option(opt_key)->is_phony())
             m_options_list[opt_key] |= osSystemPhony;
     }
 
