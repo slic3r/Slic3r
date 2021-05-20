@@ -622,11 +622,16 @@ void PreferencesDialog::create_settings_mode_widget()
 						   _L("Access via settings button in the top menu"),
 						   _L("Settings in non-modal window") };
 
-	auto app_config = get_app_config();
-	int selection = app_config->get("tab_settings_layout_mode") == "1" ? 0 :
-					app_config->get("old_settings_layout_mode") == "1" ? 1 :
-	                app_config->get("new_settings_layout_mode") == "1" ? 2 :
-	                app_config->get("dlg_settings_layout_mode") == "1" ? 3 : 1;
+    auto app_config = get_app_config();
+    int selection = app_config->get("tab_settings_layout_mode") == "1" ? 0 :
+                    app_config->get("old_settings_layout_mode") == "1" ? 1 :
+                    app_config->get("new_settings_layout_mode") == "1" ? 2 :
+                    app_config->get("dlg_settings_layout_mode") == "1" ? 3 :
+#ifdef __APPLE__
+        1;
+#else
+        0;
+#endif
 
 	wxWindow* parent = m_optgroup_gui->parent();
 
