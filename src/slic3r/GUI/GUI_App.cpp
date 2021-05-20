@@ -827,9 +827,17 @@ bool GUI_App::on_init_inner()
         std::string file_name = is_editor()
             ? app_config->get("splash_screen_editor")
             : app_config->get("splash_screen_gcodeviewer");
+        if (app_config->get("show_splash_screen_random") == "1") {
+            std::vector<std::string> names;
+            //get all images in the spashscreen dir
+            for (const boost::filesystem::directory_entry& dir_entry : boost::filesystem::directory_iterator(boost::filesystem::path(Slic3r::resources_dir()) / "splashscreen"))
+                if (dir_entry.path().has_extension() && std::set<std::string>{ ".jpg", ".JPG", ".jpeg" }.count(dir_entry.path().extension().string()) > 0)
+                    names.push_back(dir_entry.path().filename().string());
+            file_name = names[rand() % names.size()];
+        }
         wxString artist;
         if (!file_name.empty() && file_name != (std::string(SLIC3R_APP_NAME) + L(" icon"))) {
-            wxString splash_screen_path = (boost::filesystem::path(Slic3r::resources_dir()) / "splashscreen" / file_name).string();
+            wxString splash_screen_path = wxString::FromUTF8((boost::filesystem::path(Slic3r::resources_dir()) / "splashscreen" / file_name).string());
         // make a bitmap with dark grey banner on the left side
             bmp = SplashScreen::MakeBitmap(wxBitmap(splash_screen_path, wxBITMAP_TYPE_JPEG));
 
@@ -842,7 +850,7 @@ bool GUI_App::on_init_inner()
                 tag = exif_getTagInfo(ifdArray, IFD_0TH, TAG_Artist);
                 if (tag) {
                     if (!tag->error) {
-                        artist = (_L("Artwork model by") + " " + ((char*)tag->byteData));
+                        artist = (_L("Artwork model by") + " " + wxString::FromUTF8((char*)tag->byteData));
                     }
                 }
             }

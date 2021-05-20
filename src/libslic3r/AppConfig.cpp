@@ -214,11 +214,38 @@ void AppConfig::set_defaults()
     if (get("show_splash_screen").empty())
         set("show_splash_screen", "1");
 
-    if (get("splash_screen_editor").empty())
-        set("splash_screen_editor", "benchy-splashscreen.jpg");
+    if (get("show_splash_screen_random").empty())
+        set("show_splash_screen_random", "0");
 
-    if (get("splash_screen_gcodeviewer").empty())
-        set("splash_screen_gcodeviewer", "prusa-gcodepreview.jpg");
+    {
+
+        //try to load splashscreen from ui file
+        std::map<std::string, std::string> key2splashscreen = {{"splash_screen_editor", "benchy-splashscreen.jpg"}, {"splash_screen_gcodeviewer", "prusa-gcodepreview.jpg"} };
+        boost::property_tree::ptree tree_splashscreen;
+        boost::filesystem::path path_colors = boost::filesystem::path(resources_dir()) / "ui_layout" / "colors.ini";
+        try {
+            boost::nowide::ifstream ifs;
+            ifs.imbue(boost::locale::generator()("en_US.UTF-8"));
+            ifs.open(path_colors.string());
+            boost::property_tree::read_ini(ifs, tree_splashscreen);
+
+            for (std::map<std::string, std::string>::iterator it = key2splashscreen.begin(); it != key2splashscreen.end(); ++it) {
+                std::string splashscreen_filename = tree_splashscreen.get<std::string>(it->first);
+                it->second = splashscreen_filename;
+            }
+        }
+        catch (const std::ifstream::failure& err) {
+            trace(1, (std::string("The splashscreen file cannot be loaded. Reason: ") + err.what(), path_colors.string()).c_str());
+        }
+        catch (const std::runtime_error& err) {
+            trace(1, (std::string("Failed loading the splashscreen file. Reason: ") + err.what(), path_colors.string()).c_str());
+        }
+        if (get("splash_screen_editor").empty())
+            set("splash_screen_editor", key2splashscreen["splash_screen_editor"]);
+
+        if (get("splash_screen_gcodeviewer").empty())
+            set("splash_screen_gcodeviewer", key2splashscreen["splash_screen_gcodeviewer"]);
+    }
 
 #if ENABLE_CTRL_M_ON_WINDOWS
 #ifdef _WIN32

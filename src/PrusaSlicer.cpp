@@ -58,6 +58,9 @@ int CLI::run(int argc, char **argv)
     // Mark the main thread for the debugger and for runtime checks.
     set_current_thread_name("slic3r_main");
 
+    //init random generator
+    std::srand(std::time(nullptr));
+
 #ifdef __WXGTK__
     // On Linux, wxGTK has no support for Wayland, and the app crashes on
     // startup if gtk3 is used. This env var has to be set explicitly to

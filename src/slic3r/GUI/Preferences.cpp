@@ -238,6 +238,13 @@ void PreferencesDialog::build()
 	def.set_default_value(new ConfigOptionBool{ app_config->get("show_splash_screen") == "1" });
 	option = Option(def, "show_splash_screen");
 	m_optgroup_general->append_single_option_line(option);
+
+	def.label = L("Random splash screen");
+	def.type = coBool;
+	def.tooltip = L("Show a random splash screen image from the list at each startup");
+	def.set_default_value(new ConfigOptionBool{ app_config->get("show_splash_screen_random") == "1" });
+	option = Option(def, "show_splash_screen_random");
+	m_optgroup_general->append_single_option_line(option);
 	
 	// splashscreen image
 	{
