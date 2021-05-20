@@ -1863,7 +1863,39 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             current_line = { "", "" };
             current_line.full_width = 1;
             current_line.widget = [this, tab](wxWindow* parent) {
-                return description_line_widget(parent, &(tab->m_recommended_extrusion_width_description_line));
+                //return description_line_widget(parent, &(tab->m_recommended_extrusion_width_description_line));
+
+                auto sizer = new wxBoxSizer(wxVERTICAL);
+                wxCollapsiblePane* collpane = new wxCollapsiblePane(parent, wxID_ANY, _L("Help / Details:"));
+                // add the pane with a zero proportion value to the 'sz' sizer which contains it
+                sizer->Add(collpane, 0, wxGROW | wxALL, 5);
+                // now add a test label in the collapsible pane using a sizer to layout it:
+                wxWindow* win = collpane->GetPane();
+                collpane->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, [tab](wxEvent&) {
+                    tab->Layout();
+                });
+
+                const wxBitmap& bmp_width = create_scaled_bitmap("explanation_width", this, 80);
+                wxStaticBitmap* image_width = new wxStaticBitmap(win, wxID_ANY, bmp_width);
+                const wxBitmap& bmp_spacing = create_scaled_bitmap("explanation_spacing", this, 80);
+                wxStaticBitmap* image_spacing = new wxStaticBitmap(win, wxID_ANY, bmp_spacing);
+                auto sizerV = new wxBoxSizer(wxVERTICAL);
+                auto sizerH2 = new wxBoxSizer(wxHORIZONTAL);
+                auto sizerH3 = new wxBoxSizer(wxHORIZONTAL);
+                sizerH2->Add(image_width, 1, 0, 0);
+                sizerH2->Add(image_spacing, 1, 0, 0);
+                sizerV->Add(sizerH2);
+                ogStaticText* text = new ogStaticText(win, _L("If the perimeter overlap is set at 100%, the yellow areas should be filled by the overlap.\nIf overlap is at 0%, width = spacing."));
+                text->SetFont(wxGetApp().normal_font());
+                sizerH3->Add(text, 1, wxEXPAND | wxALL, 0);
+                sizerV->Add(sizerH3);
+
+                win->SetSizer(sizerV);
+
+                sizerV->SetSizeHints(win);
+                collpane->Collapse(true);
+
+                return sizer;
             };
             current_group->append_line(current_line);
             current_page->descriptions.push_back("extrusion_width");
