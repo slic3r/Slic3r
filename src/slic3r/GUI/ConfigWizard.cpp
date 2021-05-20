@@ -2591,13 +2591,14 @@ ConfigWizard::ConfigWizard(wxWindow *parent)
     p->btnsizer->Add(p->btn_finish, 0, wxLEFT, BTN_SPACING);
     p->btnsizer->Add(p->btn_cancel, 0, wxLEFT, BTN_SPACING);
 
-    const auto prusa_it = p->bundles.find("PrusaResearch");
-    wxCHECK_RET(prusa_it != p->bundles.cend(), "Vendor PrusaResearch not found");
-    const VendorProfile *vendor_prusa = prusa_it->second.vendor_profile;
 
     p->add_page(p->page_welcome = new PageWelcome(this));
 
 #ifdef ALLOW_PRUSA_FIRST
+    const auto prusa_it = p->bundles.find("PrusaResearch");
+    wxCHECK_RET(prusa_it != p->bundles.cend(), "Vendor PrusaResearch not found");
+    const VendorProfile* vendor_prusa = prusa_it->second.vendor_profile;
+
     p->page_fff = new PagePrinters(this, _L("Prusa FFF Technology Printers"), "Prusa FFF", *vendor_prusa, 0, T_FFF);
     p->add_page(p->page_fff);
 
