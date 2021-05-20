@@ -7,6 +7,7 @@
 #include "ImGuiWrapper.hpp"
 
 #include "wxExtensions.hpp"
+#include "libslic3r/Config.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/log/trivial.hpp>
@@ -443,8 +444,8 @@ void NotificationManager::PopNotification::init()
 	}
 	// hypertext calculation
 	if (!m_hypertext.empty()) {
-		int prev_end = m_endlines.size() > 1 ? m_endlines[m_endlines.size() - 2] : 0;
-		if (ImGui::CalcTextSize((text.substr(prev_end, last_end - prev_end) + m_hypertext).c_str()).x > m_window_width - m_window_width_offset) {
+		int prev_end = m_endlines.size() > 1 ? m_endlines[m_endlines.size() - 2] : 0; // m_endlines.size() - 2 because we are fitting hypertext instead of last endline
+		if (ImGui::CalcTextSize((escape_string_cstyle(text.substr(prev_end, last_end - prev_end)) + m_hypertext).c_str()).x > m_window_width - m_window_width_offset) {
 			m_endlines.push_back(last_end);
 			m_lines_count++;
 		}
@@ -492,7 +493,7 @@ void NotificationManager::PopNotification::render_text(ImGuiWrapper& imgui, cons
 			}
 			//hyperlink text
 			if (!m_hypertext.empty()) {
-				render_hypertext(imgui, x_offset + ImGui::CalcTextSize((line + " ").c_str()).x, starting_y + (m_lines_count - 1) * shift_y, m_hypertext);
+				render_hypertext(imgui, x_offset + ImGui::CalcTextSize((line + (line.empty() ? "" : " ")).c_str()).x, starting_y + (m_lines_count - 1) * shift_y, m_hypertext);
 			}
 			
 			
