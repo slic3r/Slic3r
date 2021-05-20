@@ -86,11 +86,11 @@ jobs:
     - name: copy dll
       working-directory: ./build
       shell: cmd
-      run: xcopy /RCYIE src\release\*.dll package\
+      run: xcopy /RCYIE src\Debug\*.dll package\
     - name: copy exe
       working-directory: ./build
       shell: cmd
-      run: xcopy /RCYIE src\release\*.exe package\
+      run: xcopy /RCYIE src\Debug\*.exe package\
     - name: copy ms runtime
       working-directory: ./build
       shell: cmd

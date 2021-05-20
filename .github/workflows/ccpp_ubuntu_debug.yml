@@ -29,16 +29,16 @@ jobs:
       run: mkdir deps/build
     - name: cmake deps
       working-directory: ./deps/build
-      run: cmake ..
+      run: cmake .. -DCMAKE_BUILD_TYPE=Debug
     - name: make deps
       working-directory: ./deps/build
       run: make
-    - name: rename wxscintilla
-      working-directory: ./deps/build/destdir/usr/local/lib
-      run: cp libwxscintilla-3.1.a libwx_gtk2u_scintilla-3.1.a
     - name: ls libs
       working-directory: ./deps/build
       run: ls ./destdir/usr/local/lib
+    - name: rename wxscintilla
+      working-directory: ./deps/build/destdir/usr/local/lib
+      run: cp libwxscintilla-3.1.a libwx_gtk2u_scintilla-3.1.a
     - name: clean deps
       working-directory: ./deps/build
       run: rm -rf dep_*
