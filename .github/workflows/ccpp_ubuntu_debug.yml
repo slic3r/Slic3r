@@ -50,6 +50,9 @@ jobs:
     - name: make Slic3r
       working-directory: ./build
       run: make Slic3r
+    - name: make .mo
+      working-directory: ./build
+      run: make gettext_po_to_mo
     - name: create directory and copy into it
       working-directory: ./build
       run: |

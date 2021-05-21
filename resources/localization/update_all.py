@@ -8,8 +8,9 @@ for lang in languages:
 	if 'y' != input("translating "+lang+"? (y/n): "):
 		continue
 	# create .po
-	os.system("msgunfmt "+lang+"/PrusaSlicer.mo -o "+lang+"/PrusaSlicer.po > nul");
-
+	#os.system("msgunfmt "+lang+"/Slic3r.mo -o "+lang+"/SuperSlicer.po > nul");
+	#os.system("copy ..\\loc\\"+lang+"\\*.po "+lang+"\\PrusaSlicer.po");
+	
 	file_out_stream = open(lang+"/settings.ini", mode="w", encoding="utf-8");
 	file_out_stream.write("data = ./PrusaSlicer.po\n");
 	file_out_stream.write("ui_dir = ../../ui_layout\n");
@@ -23,6 +24,9 @@ for lang in languages:
 	p = subprocess.Popen(["python","../pom_merger.py"], cwd=lang);
 	p.wait();
 
-	#create .mo
-	os.system("msgfmt "+lang+"/Slic3r.po -o "+lang+"/SuperSlicer.mo");
-	# msgfmt Slic3r.po -o Slic3r.mo
+	for file in os.listdir(lang):
+		if not file.endswith("Slic3r.po"):
+			os.remove(lang + "/" + file);
+	# #create .mo
+	# os.system("msgfmt "+lang+"/SuperSlicer.po -o "+lang+"/SuperSlicer.mo");
+	# #msgfmt Slic3r.po -o Slic3r.mo

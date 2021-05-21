@@ -59,6 +59,9 @@ jobs:
     - name: make
       working-directory: ./build
       run: msbuild /m /P:Configuration=Release INSTALL.vcxproj
+    - name: make .mo
+      working-directory: ./build
+      run: msbuild /m /P:Configuration=Release gettext_po_to_mo.vcxproj
     - name: create directory and copy into it
       working-directory: ./build
       run: ls
@@ -75,10 +78,13 @@ jobs:
       working-directory: ./build
       shell: cmd
       run: '"C:/Program Files/7-Zip/7z.exe" x Slic3r_2.2.53.3_win64_20201005.zip'
-    - name: copy old release content
+    - name: copy missing dll content from old release
       working-directory: ./build
       shell: cmd
-      run: xcopy /RCYIE Slic3r_2.2.53.3_win64_20201005\* package\
+      run: |
+        xcopy /RCYIE Slic3r_2.2.53.3_win64_20201005\*.dll package\
+        xcopy /RCYIE Slic3r_2.2.53.3_win64_20201005\*.bat package\
+        xcopy /RCYIE Slic3r_2.2.53.3_win64_20201005\mesa package\
     - name: copy new resources
       working-directory: ./build
       shell: cmd
