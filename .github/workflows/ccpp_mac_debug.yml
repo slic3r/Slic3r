@@ -16,7 +16,7 @@ jobs:
         ref: 'debug_macos'
     - name: update submodule profiles
       working-directory: ./resources/profiles
-      run: git submodule update
+      run: git submodule update --init
     - name: change date in version
       run: |
         sed "s/+UNKNOWN/_$(date '+%F')/" version.inc > version.date.inc

@@ -36,7 +36,7 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@v1
     - name: update submodule profiles
       working-directory: ./resources/profiles
-      run: git submodule update
+      run: git submodule update --init
     - name: change date in version
       shell: powershell
       run: (Get-Content version.inc) | Foreach-Object {$_ -replace "\+UNKNOWN", ("_" + [datetime]::Today.ToString("yyyy-MM-dd"))} | Set-Content version.inc

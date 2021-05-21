@@ -16,7 +16,7 @@ jobs:
         ref: 'debug_ubuntu'
     - name: update submodule profiles
       working-directory: ./resources/profiles
-      run: git submodule update
+      run: git submodule update --init
     - name: change date in version
       run: sed -i "s/+UNKNOWN/_$(date '+%F')/" version.inc
     - name: update clock
