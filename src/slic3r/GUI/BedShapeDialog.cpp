@@ -403,6 +403,7 @@ wxPanel* BedShapePanel::init_model_panel()
     line.full_width = 1;
     line.widget = [this](wxWindow* parent) {
         wxButton* load_btn = new wxButton(parent, wxID_ANY, _(L("Load...")));
+        load_btn->SetToolTip(_L("The origin of the model is the center of the build plate."));
         wxSizer* load_sizer = new wxBoxSizer(wxHORIZONTAL);
         load_sizer->Add(load_btn, 1, wxEXPAND);
 
