@@ -7,7 +7,7 @@
   <key>CFBundleGetInfoString</key>
   <string>@SLIC3R_APP_NAME@ Copyright (C) 2011-2020 Alessandro Ranellucci, (C) 2016-2020 Prusa Reseach, (C) 2018-2020 Remi Durand</string>
   <key>CFBundleIconFile</key>
-  <string>@SLIC3R_BUILD_ID@.icns</string>
+  <string>@SLIC3R_APP_KEY@.icns</string>
   <key>CFBundleName</key>
   <string>@SLIC3R_APP_KEY@</string>
   <key>CFBundleShortVersionString</key>
