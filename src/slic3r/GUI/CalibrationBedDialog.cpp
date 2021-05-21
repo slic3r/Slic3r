@@ -25,7 +25,7 @@ namespace Slic3r {
 namespace GUI {
 
 void CalibrationBedDialog::create_buttons(wxStdDialogButtonSizer* buttons){
-    wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Generate")));
+    wxButton* bt = new wxButton(this, wxID_FILE1, _L("Generate"));
     bt->Bind(wxEVT_BUTTON, &CalibrationBedDialog::create_geometry, this);
     buttons->Add(bt);
 }

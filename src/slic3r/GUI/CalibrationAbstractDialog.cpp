@@ -58,7 +58,7 @@ void CalibrationAbstractDialog::create(std::string html_path, wxSize dialog_size
     wxStdDialogButtonSizer* buttons = new wxStdDialogButtonSizer();
     create_buttons(buttons);
 
-    wxButton* close = new wxButton(this, wxID_CLOSE, _(L("Close")));
+    wxButton* close = new wxButton(this, wxID_CLOSE, _L("Close"));
     close->Bind(wxEVT_BUTTON, &CalibrationAbstractDialog::close_me, this);
     buttons->AddButton(close);
     close->SetDefault();
