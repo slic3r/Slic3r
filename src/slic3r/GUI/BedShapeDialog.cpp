@@ -403,14 +403,13 @@ wxPanel* BedShapePanel::init_model_panel()
     line.full_width = 1;
     line.widget = [this](wxWindow* parent) {
         wxButton* load_btn = new wxButton(parent, wxID_ANY, _(L("Load...")));
-        load_btn->SetToolTip(_L("The origin of the model is the center of the build plate."));
+        load_btn->SetToolTip(_L("The position of the model origin (point with coordinates x:0, y:0, z:0) needs to be in the middle of the print bed area. If you load a custom model and it appears misaligned, the origin is not set properly."));
         wxSizer* load_sizer = new wxBoxSizer(wxHORIZONTAL);
         load_sizer->Add(load_btn, 1, wxEXPAND);
 
         wxStaticText* filename_lbl = new wxStaticText(parent, wxID_ANY, _(NONE));
         wxSizer* filename_sizer = new wxBoxSizer(wxHORIZONTAL);
         filename_sizer->Add(filename_lbl, 1, wxEXPAND);
-
         wxButton* remove_btn = new wxButton(parent, wxID_ANY, _(L("Remove")));
         wxSizer* remove_sizer = new wxBoxSizer(wxHORIZONTAL);
         remove_sizer->Add(remove_btn, 1, wxEXPAND);
