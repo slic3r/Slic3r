@@ -1739,7 +1739,7 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5),
                 int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfSmoothie, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
-            _write_format(file, (print.config().gcode_flavor.value == gcfMarlin || print.config().gcode_flavor.value == gcfSmoothie)
+            _write_format(file, (print.config().gcode_flavor.value == gcfMarlin || print.config().gcode_flavor.value == gcfLerdge || print.config().gcode_flavor.value == gcfSmoothie)
                 ? "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/sec\n"
                 : "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/min\n",
                 int(print.config().machine_max_feedrate_x.values.front() + 0.5),

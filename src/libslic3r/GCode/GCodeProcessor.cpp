@@ -762,7 +762,7 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
 #endif // ENABLE_VOLUMETRIC_EXTRUSION_PROCESSING
 
     //adapt to firmware units
-    if (m_flavor != gcfMarlin && m_flavor != gcfSmoothie && m_flavor != gcfSmoothie) {
+    if (m_flavor != gcfMarlin && m_flavor != gcfLerdge && m_flavor != gcfSmoothie) {
         //change some fields from mm/min to mm/sec as intended
         for (double& val : m_time_processor.machine_limits.machine_max_feedrate_x.values) val /= 60;
         for (double& val : m_time_processor.machine_limits.machine_max_feedrate_y.values) val /= 60;
