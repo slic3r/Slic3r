@@ -33,7 +33,7 @@ Look up prerequisites here:
 
     cd Slic3r
 
-    git checkout nonplanar-master-merge
+    git checkout nonplanar
 
 #### Install Perl libs
 
