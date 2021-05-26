@@ -1,4 +1,5 @@
 import re
+from datetime import date
 
 datastore = dict();
 datastore_trim = dict();# key:string -> TranslationLine
@@ -6,6 +7,7 @@ datastore_trim = dict();# key:string -> TranslationLine
 regex_only_letters = re.compile(r"[^a-zA-Z]")
 allow_msgctxt = True;
 ignore_case = False;
+remove_comment = False;
 
 def trim(str):
 	redo = True;
@@ -45,7 +47,7 @@ class TranslationLine:
 	multivalue = False
 
 def main():
-	global datastore, datastore_trim, regex_only_letters, allow_msgctxt, ignore_case;
+	global datastore, datastore_trim, regex_only_letters, allow_msgctxt, ignore_case, remove_comment;
 	data_files = list(); # list of file paths
 	ui_dir = "";
 	operations = list(); # list of TranslationFiles
@@ -71,13 +73,17 @@ def main():
 		if line.startswith("allow_msgctxt"):
 			allow_msgctxt = (line[line.index('=')+1:].strip().lower() == "true");
 			print("Don't comment msgctxt" if allow_msgctxt else "Commenting msgctxt");
+		
+		if line.startswith("allow_msgctxt"):
+			allow_msgctxt = (line[line.index('=')+1:].strip().lower() == "true");
+			print("Don't comment msgctxt" if allow_msgctxt else "Commenting msgctxt");
 
-		if line.startswith("ignore_case"):
-			ignore_case = (line[line.index('=')+1:].strip().lower() == "true");
-			if ignore_case:
-				print("If the string is not found, try by ignoring the case");
-	
-	
+		if line.startswith("remove_comment"):
+			remove_comment = (line[line.index('=')+1:].strip().lower() == "true");
+			if remove_comment:
+				print("Will not output the comments");
+
+
 	# all_lines = list();
 	for data_file in data_files:
 		new_data = createKnowledge(data_file);
@@ -95,10 +101,10 @@ def main():
 				# if already exist, only change it if the previous was lower than 3 char
 				if length_new > length_old and length_old < 3:
 					print(str_old_val.replace('\n', ' ')+" replaced by "+str_test_val.replace('\n', ' '));
-					datastore.put(id, str_test_val);
-					datastore_trim.put(trim(id), str_test_val);
+					datastore[dataline.msgid].msgstr = str_test_val;
+					datastore_trim[trim(dataline.msgid)].msgstr = str_test_val;
 		print("finish reading" + data_file + " of size "+ str(len(new_data)) + ", now we had "+ str(len(datastore)) + " items");
-	
+
 	if ignore_case:
 		temp = list();
 		for msgid in datastore:
@@ -149,7 +155,7 @@ def main():
 					dict_ope[dataline.msgid] = dataline;
 					ope_file_in.append(dataline);
 		print("String to translate: " + str(len(ope_file_in) - nbTrans)+" and already translated: "+str(nbTrans));
-
+		
 		#create TODO file
 		if operation.file_todo:
 			outputUntranslated(ope_file_in, operation.file_todo);
@@ -304,7 +310,7 @@ def outputUntranslated(data_to_translate, file_path_out):
 		# idealy, they shoud be grouped by proximity, but it's abit more complicated to code
 		sorted_lines = list()
 		for dataline in data_to_translate:
-			if not dataline.msgstr and dataline.msgid and len(getTranslation(dataline)) == 0:
+			if not dataline.msgstr.strip() and dataline.msgid and len(getTranslation(dataline).strip()) == 0:
 				sorted_lines.append(dataline);
 		sorted_lines.sort(key=lambda x:x.msgid.lower())
 
@@ -326,14 +332,32 @@ def outputUntranslated(data_to_translate, file_path_out):
 def translate(data_to_translate, file_path_out):
 	# try:
 	file_out_stream = open(file_path_out, mode="w", encoding="utf-8")
+	file_out_stream.write("# Translation file for ???\n");
+	file_out_stream.write("# Copyright (C) 2021\n");
+	file_out_stream.write("# This file is distributed under the same license as Slic3r.\n");
+	file_out_stream.write("#\n");
+	file_out_stream.write("msgid \"\"\n");
+	file_out_stream.write("msgstr \"\"\n");
+	file_out_stream.write("\"Project-Id-Version: Slic3r\\n\"\n");
+	file_out_stream.write("\"POT-Creation-Date: "+date.today().strftime('%Y-%m-%d %H:%M%z')+"\\n\"\n");
+	file_out_stream.write("\"PO-Revision-Date: "+date.today().strftime('%Y-%m-%d %H:%M%z')+"\\n\"\n");
+	file_out_stream.write("\"Last-Translator:\\n\"\n");
+	file_out_stream.write("\"Language-Team:\\n\"\n");
+	file_out_stream.write("\"MIME-Version: 1.0\\n\"\n");
+	file_out_stream.write("\"Content-Type: text/plain; charset=UTF-8\\n\"\n");
+	file_out_stream.write("\"Content-Transfer-Encoding: 8bit\\n\"\n");
+	file_out_stream.write("\"Language:\\n\"\n");
 	nb_lines = 0;
+	data_to_translate.sort(key=lambda x:x.msgid.lower().strip())
 	# translate bits that are empty
 	for dataline in data_to_translate:
-		if not dataline.msgstr:
+		if not dataline.msgstr.strip():
 			transl = getTranslation(dataline)
-			if len(transl) > 0:
-				file_out_stream.write(dataline.header_comment)
+			if len(transl) > 9 or ( len(transl) > 3 and not transl.startswith('msgstr "')):
 				file_out_stream.write("\n")
+				if not remove_comment:
+					file_out_stream.write(dataline.header_comment.strip())
+					file_out_stream.write("\n")
 				file_out_stream.write(dataline.raw_msgid)
 				file_out_stream.write("\n")
 				file_out_stream.write(transl)
@@ -343,8 +367,10 @@ def translate(data_to_translate, file_path_out):
 					print("WARNING: not same number of '%' ( "+ str(dataline.raw_msgid.count('%')) + " => " + str(transl.count('%')) + ")"
 						+"\n  for string:'" + dataline.msgid + "  '\n=>'"+transl[8:]);
 		else:
-			file_out_stream.write(dataline.header_comment)
 			file_out_stream.write("\n")
+			if not remove_comment:
+				file_out_stream.write(dataline.header_comment.strip())
+				file_out_stream.write("\n")
 			file_out_stream.write(dataline.raw_msgid)
 			file_out_stream.write("\n")
 			file_out_stream.write(dataline.raw_msgstr)
@@ -371,7 +397,7 @@ def parse_ui_file(file_path):
 		if len(items) > 1:
 			if items[0]=="page" or items[0]=="group" or items[0]=="line":
 				current_line = TranslationLine();
-				current_line.header_comment = "\n#: "+file_path+" : l"+str(line_idx);
+				current_line.header_comment = "\n#: "+file_path;#+":"+str(line_idx);
 				current_line.raw_msgid = "msgid \""+items[-1]+"\"";
 				current_line.msgid = items[-1];
 				current_line.raw_msgstr = "msgstr \"\"";
