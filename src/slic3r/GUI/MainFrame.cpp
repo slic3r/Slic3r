@@ -150,7 +150,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
 	m_statusbar->embed(this);
     m_statusbar->set_status_text(_L("Version") + " " +
         SLIC3R_VERSION + " " +
-        _L("Remember to check for updates at " SLIC3R_DOWNLOAD));
+        _L("Remember to check for updates at") + " " + SLIC3R_DOWNLOAD);
 
     // initialize tabpanel and menubar
     init_tabpanel();
