@@ -1075,7 +1075,7 @@ template<typename LINE>
 ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, ExtrusionRole role, bool is_external) const {
     ExtrusionPaths paths;
     double nozzle_diameter = this->print_config->nozzle_diameter.get_at(this->config->perimeter_extruder - 1);
-    if (this->config->overhangs_width.get_abs_value(nozzle_diameter) ==0 && 0== this->config->overhangs_width_speed.get_abs_value(nozzle_diameter)) {
+    if (this->config->overhangs_width.get_abs_value(nozzle_diameter) == 0 && 0 == this->config->overhangs_width_speed.get_abs_value(nozzle_diameter)) {
         //error
         return paths;
     
@@ -1113,7 +1113,7 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, Extrusio
             (this->config->overhangs_width_speed.value > 0 ?
                 diff_pl(poly_speed, this->_lower_slices_bridge_flow):
                 diff_pl(std::vector<LINE>{ loop_polygons }, this->_lower_slices_bridge_flow)),
-            erBridgeInfill,
+            erOverhangPerimeter,
             this->_mm3_per_mm_overhang,
             this->overhang_flow.width,
             this->overhang_flow.height);
@@ -1138,7 +1138,7 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(LINE loop_polygons, Extrusio
             extrusion_paths_append(
                 paths,
                 diff_pl(std::vector<LINE>{ loop_polygons }, this->_lower_slices_bridge_flow),
-                erBridgeInfill,
+                erOverhangPerimeter,
                 this->_mm3_per_mm_overhang,
                 this->overhang_flow.width,
                 this->overhang_flow.height);

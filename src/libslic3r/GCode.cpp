@@ -3701,7 +3701,8 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             acceleration = m_config.first_layer_acceleration.get_abs_value(acceleration);
         } else if (m_config.perimeter_acceleration.value > 0 && is_perimeter(path.role())) {
             acceleration = m_config.perimeter_acceleration.get_abs_value(acceleration);
-        } else if (m_config.bridge_acceleration.value > 0 && is_bridge(path.role())) {
+        } else if (m_config.bridge_acceleration.value > 0 && is_bridge(path.role()) 
+                && path.role() != erOverhangPerimeter ) {
             acceleration = m_config.bridge_acceleration.get_abs_value(acceleration);
         } else if (m_config.infill_acceleration.value > 0 && is_infill(path.role())) {
             acceleration = m_config.infill_acceleration.get_abs_value(acceleration);
@@ -3746,7 +3747,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             throw Slic3r::InvalidArgument("Invalid speed");
         }
         //don't modify bridge speed
-        if (factor < 1 && !(path.role() == erOverhangPerimeter || is_bridge(path.role()))) {
+        if (factor < 1 && !(is_bridge(path.role()))) {
             float small_speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
             //apply factor between feature speed and small speed
             speed = speed * factor + (1.f - factor) * small_speed;
@@ -3850,8 +3851,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
 
     std::string comment;
     if (m_enable_cooling_markers) {
-        if (is_bridge(path.role()) 
-            || path.role() == ExtrusionRole::erOverhangPerimeter)
+        if (is_bridge(path.role()))
             gcode += ";_BRIDGE_FAN_START\n";
         else if (ExtrusionRole::erTopSolidInfill == path.role())
             gcode += ";_TOP_FAN_START\n";
@@ -3870,8 +3870,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
 std::string GCode::_after_extrude(const ExtrusionPath &path) {
     std::string gcode;
     if (m_enable_cooling_markers)
-        if (is_bridge(path.role())
-            || path.role() == ExtrusionRole::erOverhangPerimeter)
+        if (is_bridge(path.role()))
             gcode += ";_BRIDGE_FAN_END\n";
         else if (ExtrusionRole::erTopSolidInfill == path.role())
             gcode += ";_TOP_FAN_END\n";

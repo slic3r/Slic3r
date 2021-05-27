@@ -122,7 +122,8 @@ inline bool is_solid_infill(ExtrusionRole role)
 
 inline bool is_bridge(ExtrusionRole role) {
     return role == erBridgeInfill
-        || role == erInternalBridgeInfill;
+        || role == erInternalBridgeInfill
+        || role == erOverhangPerimeter;
 }
 
 

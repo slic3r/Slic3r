@@ -304,7 +304,8 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::speed;
     def->tooltip = L("This is the acceleration your printer will use for bridges."
                 "\nCan be a % of the default acceleration"
-                "\nSet zero to disable acceleration control for bridges.");
+                "\nSet zero to disable acceleration control for bridges."
+                "\nNote that it won't be applied to overhangs, they still use the perimeter acceleration.");
     def->sidetext = L("mm/s² or %");
     def->min = 0;
     def->mode = comExpert;
