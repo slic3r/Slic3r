@@ -353,8 +353,8 @@ void MainFrame::update_layout()
 #endif //__WXMSW__
 
     m_layout = layout;
-
-    m_layerpreview_menu_item->Enable(m_layout == ESettingsLayout::Tabs || m_layout == ESettingsLayout::Old);
+    if (m_plater && m_layerpreview_menu_item)
+        m_layerpreview_menu_item->Enable(m_layout == ESettingsLayout::Tabs || m_layout == ESettingsLayout::Old);
 
     // From the very beginning the Print settings should be selected
     m_last_selected_setting_tab = 0;
