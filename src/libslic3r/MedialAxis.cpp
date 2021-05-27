@@ -206,7 +206,7 @@ MedialAxis::validate_edge(const VD::edge_type* edge, Lines &lines, std::map<cons
     // discard edge if it lies outside the supplied shape
     // this could maybe be optimized (checking inclusion of the endpoints
     // might give false positives as they might belong to the contour itself)
-    if (line.a.coincides_with(line.b)) {
+    if (line.a.coincides_with_epsilon(line.b)) {
         // in this case, contains(line) returns a false positive
         if (!this->expolygon.contains(line.a)) return false;
     } else {
