@@ -64,6 +64,7 @@ group:Advanced
 		setting:sidetext_width$0:perimeter_loop
 		setting:label_width$5:label$Seam:perimeter_loop_seam
 	end_line
+	setting:perimeter_round_corners
 group: External perimeter first
 	setting:label$Activate:external_perimeters_first
 	line:Apply on

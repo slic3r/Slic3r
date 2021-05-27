@@ -809,6 +809,7 @@ public:
     ConfigOptionBool                overhangs_reverse;
     ConfigOptionFloatOrPercent      overhangs_reverse_threshold;
     ConfigOptionEnum<NoPerimeterUnsupportedAlgo> no_perimeter_unsupported_algo;
+    ConfigOptionBool                perimeter_round_corners;
     ConfigOptionInt                 perimeter_extruder;
     ConfigOptionFloatOrPercent      perimeter_extrusion_width;
     ConfigOptionBool                perimeter_loop;
@@ -919,6 +920,7 @@ protected:
         OPT_PTR(overhangs_reverse);
         OPT_PTR(overhangs_reverse_threshold);
         OPT_PTR(no_perimeter_unsupported_algo);
+        OPT_PTR(perimeter_round_corners);
         OPT_PTR(perimeter_extruder);
         OPT_PTR(perimeter_extrusion_width);
         OPT_PTR(perimeter_loop);

@@ -2622,7 +2622,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("min_width_top_surface", coFloatOrPercent);
     def->label = L("Minimum top width for infill");
     def->category = OptionCategory::speed;
-    def->tooltip = L("If a top surface has to be printed and it's partially covered by an other layer, it won't be considered at a top layer where his width is below this value."
+    def->tooltip = L("If a top surface has to be printed and it's partially covered by an other layer, it won't be considered at a top layer where its width is below this value."
         " This can be useful to not let the 'one perimeter on top' trigger on surface that should be covered only by perimeters."
         " This value can be a mm or a % of the perimeter extrusion width.");
     def->sidetext = L("mm or %");
@@ -2846,6 +2846,15 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/s² or %");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
+
+    def = this->add("perimeter_round_corners", coBool);
+    def->label = L("Round corners");
+    def->full_label = ("Round corners for perimeters");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("Internal periemters will go around sharp corners by tunring around isntead of making the same sharp corner."
+                        " This can help when there is visible holes in sharp corners on perimeters");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("perimeter_extruder", coInt);
     def->label = L("Perimeter extruder");
@@ -5448,6 +5457,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "solid_infill_extrusion_spacing",
 "top_infill_extrusion_spacing",
 "start_gcode_manual",
+"perimeter_round_corners",
 
     };
     //looks if it's to be removed, or have to be transformed

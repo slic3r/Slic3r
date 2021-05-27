@@ -540,6 +540,7 @@ const std::vector<std::string>& Preset::print_options()
         "extrusion_width", 
         "first_layer_extrusion_spacing", 
         "first_layer_extrusion_width", 
+        "perimeter_round_corners",
         "perimeter_extrusion_spacing", 
         "perimeter_extrusion_width", 
         "external_perimeter_extrusion_spacing", 

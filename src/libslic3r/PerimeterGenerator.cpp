@@ -431,12 +431,14 @@ void PerimeterGenerator::process()
                     if (thin_perimeter)
                         next_onion = offset_ex(
                             last,
-                            -(float)(ext_perimeter_width / 2));
+                            -(float)(ext_perimeter_width / 2),
+                            (config->perimeter_round_corners.value ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter));
                     else
                         next_onion = offset2_ex(
                             last,
                             -(float)(ext_perimeter_width / 2 + ext_min_spacing / 2 - 1),
-                            +(float)(ext_min_spacing / 2 - 1));
+                            +(float)(ext_min_spacing / 2 - 1),
+                            (config->perimeter_round_corners.value ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter));
 
                     // look for thin walls
                      if (this->config->thin_walls) {
@@ -510,11 +512,13 @@ void PerimeterGenerator::process()
                         {
                             if (thin_perimeter)
                                 next_onion = union_ex(next_onion, offset_ex(diff_ex(last, thins, true),
-                                    -(float)(ext_perimeter_width / 2)));
+                                    -(float)(ext_perimeter_width / 2),
+                                    (config->perimeter_round_corners.value ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter)));
                             else
                                 next_onion = union_ex(next_onion, offset2_ex(diff_ex(last, thins, true),
                                     -(float)((ext_perimeter_width / 2) + (ext_min_spacing / 4)), 
-                                    (float)(ext_min_spacing / 4)));
+                                    (float)(ext_min_spacing / 4),
+                                    (config->perimeter_round_corners.value ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter)));
                         }
                     }
                     if (m_spiral_vase && next_onion.size() > 1) {
@@ -534,7 +538,8 @@ void PerimeterGenerator::process()
                         // the original.
                         next_onion = offset2_ex(last,
                             -(float)(good_spacing + min_spacing / 2 - 1),
-                            +(float)(min_spacing / 2 - 1));
+                            +(float)(min_spacing / 2 - 1),
+                            (config->perimeter_round_corners.value ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter));
 
                         ExPolygons no_thin_onion = offset_ex(last, double(-good_spacing));
                         std::vector<float> divs { 1.8f, 1.6f }; //don't over-extrude, so don't use divider >2
@@ -555,7 +560,8 @@ void PerimeterGenerator::process()
                     } else {
                         // If "overlapping_perimeters" is enabled, this paths will be entered, which 
                         // leads to overflows, as in prusa3d/Slic3r GH #32
-                        next_onion = offset_ex(last, double( - good_spacing));
+                        next_onion = offset_ex(last, double( - good_spacing),
+                            (config->perimeter_round_corners.value ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter));
                     }
                     // look for gaps
                     if (this->config->gap_fill 
@@ -566,7 +572,8 @@ void PerimeterGenerator::process()
                         // won't be able to fill but we'd still remove from infill area
                         append(gaps, diff_ex(
                             offset(last, -0.5f * gap_fill_spacing),
-                            offset(next_onion, 0.5f * good_spacing + 10)));  // safety offset
+                            offset(next_onion, 0.5f * good_spacing + 10,
+                                (config->perimeter_round_corners.value ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter))));  // safety offset
                 }
 
                 if (next_onion.empty()) {
@@ -693,15 +700,15 @@ void PerimeterGenerator::process()
 
                         //get the not-top surface, from the "real top" but enlarged by external_infill_margin (and the min_width_top_surface we removed a bit before)
                         ExPolygons inner_polygons = diff_ex(last, offset_ex(top_polygons, offset_top_surface + min_width_top_surface
-                            //also remove the ext_perimeter_spacing/2 width because we are faking the external periemter, and we will remove ext_perimeter_spacing2
+                            //also remove the ext_perimeter_spacing/2 width because we are faking the external perimeter, and we will remove ext_perimeter_spacing2
                             - double(ext_perimeter_spacing / 2)), true);
                         // get the enlarged top surface, by using inner_polygons instead of upper_slices, and clip it for it to be exactly the polygons to fill.
                         top_polygons = diff_ex(fill_clip, inner_polygons, true);
                         // increase by half peri the inner space to fill the frontier between last and stored.
                         top_fills = union_ex(top_fills, top_polygons);
-                        //set the clip to the external wall but go bacjk inside by infill_extrusion_width/2 to be sure the extrusion won't go outside even with a 100% overlap.
+                        //set the clip to the external wall but go back inside by infill_extrusion_width/2 to be sure the extrusion won't go outside even with a 100% overlap.
                         fill_clip = offset_ex(last, double(ext_perimeter_spacing / 2) - this->config->infill_extrusion_width.get_abs_value(nozzle_diameter) / 2);
-                        ExPolygons oldLast = last;
+                        //ExPolygons oldLast = last;
                         last = intersection_ex(inner_polygons, last);
                         //{
                         //    std::stringstream stri;
