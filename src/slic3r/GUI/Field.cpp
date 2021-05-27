@@ -56,7 +56,7 @@ wxString double_to_string(double const value, const int max_precision /*= 8*/)
     return s;
 }
 
-wxString get_thumbnails_string(const std::vector<Vec2d>& values)
+wxString get_points_string(const std::vector<Vec2d>& values)
 {
     wxString ret_str;
 	for (size_t i = 0; i < values.size(); ++ i) {
@@ -361,17 +361,17 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
         if (!str.IsEmpty()) {
             bool invalid_val = false;
             bool out_of_range_val = false;
-            wxStringTokenizer thumbnails(str, ",");
-            while (thumbnails.HasMoreTokens()) {
-                wxString token = thumbnails.GetNextToken();
+            wxStringTokenizer points(str, ",");
+            while (points.HasMoreTokens()) {
+                wxString token = points.GetNextToken();
                 double x, y;
-                wxStringTokenizer thumbnail(token, "x");
-                if (thumbnail.HasMoreTokens()) {
-                    wxString x_str = thumbnail.GetNextToken();
-                    if (x_str.ToDouble(&x) && thumbnail.HasMoreTokens()) {
-                        wxString y_str = thumbnail.GetNextToken();
-                        if (y_str.ToDouble(&y) && !thumbnail.HasMoreTokens()) {
-                            if (0 < x && x < 1000 && 0 < y && y < 1000) {
+                wxStringTokenizer point(token, "x");
+                if (point.HasMoreTokens()) {
+                    wxString x_str = point.GetNextToken();
+                    if (x_str.ToDouble(&x) && point.HasMoreTokens()) {
+                        wxString y_str = point.GetNextToken();
+                        if (y_str.ToDouble(&y) && !point.HasMoreTokens()) {
+                            if (m_opt.min <= x && x <= m_opt.max && m_opt.min <= y && y <= m_opt.max) {
                                 out_values.push_back(Vec2d(x, y));
                                 continue;
                             }
@@ -387,7 +387,7 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
             if (out_of_range_val) {
                 wxString text_value;
                 if (!m_value.empty())
-                    text_value = get_thumbnails_string(boost::any_cast<std::vector<Vec2d>>(m_value));
+                    text_value = get_points_string(boost::any_cast<std::vector<Vec2d>>(m_value));
                 set_value(text_value, true);
                 show_error(m_parent, _L("Input value is out of range")
                 );
@@ -395,7 +395,7 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
             else if (invalid_val) {
                 wxString text_value;
                 if (!m_value.empty())
-                    text_value = get_thumbnails_string(boost::any_cast<std::vector<Vec2d>>(m_value));
+                    text_value = get_points_string(boost::any_cast<std::vector<Vec2d>>(m_value));
                 set_value(text_value, true);
                 show_error(m_parent, format_wxstr(_L("Invalid input format. Expected vector of dimensions in the following format: \"%1%\""),"XxY, XxY, ..." ));
             }
@@ -472,7 +472,7 @@ void TextCtrl::BUILD() {
 		break;
 	}
     case coPoints:
-        text_value = get_thumbnails_string(m_opt.get_default_value<ConfigOptionPoints>()->values);
+        text_value = get_points_string(m_opt.get_default_value<ConfigOptionPoints>()->values);
         break;
 	default:
 		break; 

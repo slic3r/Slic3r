@@ -572,7 +572,7 @@ void Tab::decorate()
         if (!colored_label_clr) {
             field = get_field(opt.first);
             if (!field)
-            continue;
+                continue;
         }
 
         bool is_nonsys_value = false;
@@ -711,7 +711,7 @@ void TabPrinter::init_options_list()
 
     for (const auto opt_key : m_config->keys())
     {
-        if (opt_key == "bed_shape" || opt_key == "thumbnails") {
+        if (opt_key == "bed_shape") {
             m_options_list.emplace(opt_key, m_opt_status_value);
             continue;
         }
@@ -1084,13 +1084,13 @@ std::pair<OG_CustomCtrl*, bool*> Tab::get_custom_ctrl_with_blinking_ptr(const t_
     return ret;
 }
 
-Field* Tab::get_field(const t_config_option_key& opt_key, Page** selected_page, int opt_index/* = -1*/)
+Field* Tab::get_field(Page*& selected_page, const t_config_option_key& opt_key, int opt_index/* = -1*/)
 {
     Field* field = nullptr;
     for (auto page : m_pages) {
         field = page->get_field(opt_key, opt_index);
         if (field != nullptr) {
-            *selected_page = page.get();
+            selected_page = page.get();
             return field;
         }
     }

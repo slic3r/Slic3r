@@ -335,7 +335,7 @@ public:
 	Field*			get_field(const t_config_option_key& opt_key, int opt_index = -1) const;
 	std::pair<OG_CustomCtrl*, bool*> get_custom_ctrl_with_blinking_ptr(const t_config_option_key& opt_key, int opt_index = -1);
 
-    Field*          get_field(const t_config_option_key &opt_key, Page** selected_page, int opt_index = -1);
+    Field*          get_field(Page*& selected_page, const t_config_option_key &opt_key, int opt_index = -1);
 	void			toggle_option(const std::string& opt_key, bool toggle, int opt_index = -1);
 	wxSizer*		description_line_widget(wxWindow* parent, ogStaticText** StaticText, wxString text = wxEmptyString);
 	bool			current_preset_is_dirty();

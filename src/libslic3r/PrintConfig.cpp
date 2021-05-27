@@ -76,6 +76,8 @@ void PrintConfigDef::init_common_params()
     def->label = L("Thumbnails size");
     def->tooltip = L("Picture sizes to be stored into a .gcode and .sl1 files, in the following format: \"XxY, XxY, ...\"");
     def->mode = comExpert;
+    def->min = 0;
+    def->max = 2048;
     //def->gui_type = "one_string"; //supermerill: test/see what this does.
     def->set_default_value(new ConfigOptionPoints{ Vec2d(0,0), Vec2d(0,0) });
 
