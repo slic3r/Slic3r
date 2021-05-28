@@ -128,6 +128,13 @@ public:
         std::sort(options.begin(), options.end(), [](const Option& o1, const Option& o2) {
             return o1.opt_key < o2.opt_key; });
     }
+
+    static void register_label_override(t_config_option_key key, std::string label, std::string full_label, std::string tooltip) {
+        label_override.insert({ key, {label, full_label, tooltip} });
+    }
+
+private:
+    inline static std::unordered_map< t_config_option_key, std::array<std::string, 3>> label_override;
 };
 
 

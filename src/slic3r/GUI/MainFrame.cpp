@@ -1884,13 +1884,19 @@ void MainFrame::select_tab(Tab* tab)
 {
     if (!tab)
         return;
-    std::vector<Tab*>& tabs_list = wxGetApp().tabs_list;
-    std::vector<Tab*>::iterator it_tab = std::find(tabs_list.begin(), tabs_list.end(), tab);
-    if (it_tab != tabs_list.end()) {
-        select_tab((ETabType)((uint8_t)ETabType::PrintSettings + uint8_t(it_tab - tabs_list.begin())));
+    ETabType tab_type = ETabType::LastSettings;
+    switch (tab->type()) {
+    case Preset::Type::TYPE_FILAMENT:
+    case Preset::Type::TYPE_SLA_MATERIAL:
+        tab_type = ETabType::FilamentSettings;
+    case Preset::Type::TYPE_PRINT:
+    case Preset::Type::TYPE_SLA_PRINT:
+        tab_type = ETabType::PrintSettings;
+    case Preset::Type::TYPE_PRINTER:
+        tab_type = ETabType::PrinterSettings;
     }
+    select_tab(tab_type);
 
-    select_tab(ETabType::LastSettings);
 }
 
 void MainFrame::select_tab(ETabType tab /* = Any*/, bool keep_tab_type)

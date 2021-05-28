@@ -2347,7 +2347,7 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("fan_speedup_overhangs", coBool);
-    def->label = L("Fan startup delay");
+    def->label = L("Allow fan delay on overhangs");
     def->category = OptionCategory::firmware;
     def->tooltip = L("Will only take into account the delay for the cooling of overhangs.");
     def->mode = comAdvanced;

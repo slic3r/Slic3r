@@ -108,6 +108,10 @@ void OptionsSearcher::append_options(DynamicPrintConfig* config, Preset::Type ty
 
         wxString label = opt.full_label.empty() ? opt.label : opt.full_label;
 
+        if (label_override.find(opt.opt_key) != label_override.end()) {
+            label = label_override[opt.opt_key][1].empty() ? label_override[opt.opt_key][0] : label_override[opt.opt_key][1];
+        }
+
         if (cnt == 0)
             emplace(opt_key, label);
         else
@@ -185,34 +189,34 @@ bool OptionsSearcher::search(const std::string& search, bool force/* = false*/)
     {
         std::wstring out;
         out += marker_by_type(opt.type, printer_technology);
-    	const std::wstring *prev = nullptr;
-    	for (const std::wstring * const s : {
-	        view_params.category 	? &opt.category_local 		: nullptr,
-	        &opt.group_local, &opt.label_local })
-    		if (s != nullptr && (prev == nullptr || *prev != *s)) {
-      			if (out.size()>2)
-    				out += sep;
-    			out += *s;
-    			prev = s;
-    		}
-        return out;
+        const std::wstring* prev = nullptr;
+        for (const std::wstring* const s : {
+            view_params.category ? &opt.category_local : nullptr,
+                & opt.group_local, & opt.label_local })
+            if (s != nullptr && (prev == nullptr || *prev != *s)) {
+                if (out.size() > 2)
+                    out += sep;
+                out += *s;
+                prev = s;
+            }
+            return out;
     };
 
     auto get_label_english = [this, &sep](const Option& opt)
     {
         std::wstring out;
         out += marker_by_type(opt.type, printer_technology);
-    	const std::wstring*prev = nullptr;
-    	for (const std::wstring * const s : {
-	        view_params.category 	? &opt.category 			: nullptr,
-	        &opt.group, &opt.label })
-    		if (s != nullptr && (prev == nullptr || *prev != *s)) {
-      			if (out.size()>2)
-    				out += sep;
-    			out += *s;
-    			prev = s;
-    		}
-        return out;
+        const std::wstring* prev = nullptr;
+        for (const std::wstring* const s : {
+            view_params.category ? &opt.category : nullptr,
+                & opt.group, & opt.label })
+            if (s != nullptr && (prev == nullptr || *prev != *s)) {
+                if (out.size() > 2)
+                    out += sep;
+                out += *s;
+                prev = s;
+            }
+            return out;
     };
 
     auto get_tooltip = [this, &sep](const Option& opt)

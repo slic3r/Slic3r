@@ -48,6 +48,7 @@
 #include "PhysicalPrinterDialog.hpp"
 #include "UnsavedChangesDialog.hpp"
 #include "SavePresetDialog.hpp"
+#include "Search.hpp"
 
 #ifdef WIN32
 	#include <commctrl.h>
@@ -1771,6 +1772,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             if (current_group->sidetext_width >= 0)
                 option.opt.sidetext_width = current_group->sidetext_width;
 
+            bool need_to_notified_search = false;
             bool colored = false;
             wxString label_path;
             for (int i = 1; i < params.size() - 1; i++) {
@@ -1789,10 +1791,12 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 else if (params[i] == "full_label")
                 {
                     option.opt.label = option.opt.full_label;
+                    need_to_notified_search = true;
                 }
                 else if (params[i].find("label$") != std::string::npos)
                 {
                     option.opt.label = params[i].substr(6, params[i].size() - 6);
+                    need_to_notified_search = true;
                 }
                 else if (boost::starts_with(params[i], "label_width$")) {
                     option.opt.label_width = atoi(params[i].substr(12, params[i].size() - 12).c_str());
@@ -1821,6 +1825,9 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                     label_path = params[i].substr(4, params[i].size() - 4);
                 }
             }
+
+            if (need_to_notified_search)
+                Search::OptionsSearcher::register_label_override(option.opt.opt_key, option.opt.label, option.opt.full_label, option.opt.tooltip);
 
             if(height>0)
                 option.opt.height = height;
