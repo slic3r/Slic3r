@@ -829,7 +829,8 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::width;
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for external perimeters. "
         "If left zero, default extrusion width will be used if set, otherwise 1.05 x nozzle diameter will be used. "
-        "If expressed as percentage (for example 112.5%), it will be computed over nozzle diameter.");
+        "If expressed as percentage (for example 112.5%), it will be computed over nozzle diameter.") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using the perimeter 'Overlap' percentages and default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
@@ -842,7 +843,8 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("External perimeters spacing");
     def->category = OptionCategory::width;
     def->tooltip = L("Like the External perimeters width, but this value is the distance between the edge and the 'frontier' to the next perimeter."
-                "\nSetting the spacing will deactivate the width setting, and vice versa.");
+                "\nSetting the spacing will deactivate the width setting, and vice versa.") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using the perimeter 'Overlap' percentages and default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
@@ -1159,7 +1161,8 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Set this to a non-zero value to allow a manual extrusion width. "
         "If left to zero, Slic3r derives extrusion widths from the nozzle diameter "
         "(see the tooltips for perimeter extrusion width, infill extrusion width etc). "
-        "If expressed as percentage (for example: 105%), it will be computed over nozzle diameter.");
+        "If expressed as percentage (for example: 105%), it will be computed over nozzle diameter.") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using the perimeter 'Overlap' percentages and default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
@@ -1171,8 +1174,8 @@ void PrintConfigDef::init_fff_params()
     def = this->add("extrusion_spacing", coFloatOrPercent);
     def->label = L("Default extrusion spacing");
     def->category = OptionCategory::width;
-    def->tooltip = L("Like Default extrusion width but spacing is the distance between two lines (as they overlap a bit, it's not the same)."
-        "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->tooltip = L("Like Default extrusion width but spacing is the distance between two lines (as they overlap a bit, it's not the same).") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using the perimeter 'Overlap' percentages and default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
@@ -1743,7 +1746,8 @@ void PrintConfigDef::init_fff_params()
         "You can use this to force fatter extrudates for better adhesion. If expressed "
         "as percentage (for example 140%) it will be computed over the nozzle diameter "
         "of the nozzle used for the type of extrusion. "
-        "If set to zero, it will use the default extrusion width.");
+        "If set to zero, it will use the default extrusion width."
+        "\nYou can set either 'Spacing', or 'Width'; the other will be calculated, using the perimeter 'Overlap' percentages and default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
@@ -1756,8 +1760,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("First layer");
     def->full_label = L("First layer spacing");
     def->category = OptionCategory::width;
-    def->tooltip = L("Like First layer width but spacing is the distance between two lines (as they overlap a bit, it's not the same)."
-        "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->tooltip = L("Like First layer width but spacing is the distance between two lines (as they overlap a bit, it's not the same).") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using the perimeter 'Overlap' percentages and default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
@@ -2138,7 +2142,8 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for infill. "
         "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
         "You may want to use fatter extrudates to speed up the infill and make your parts stronger. "
-        "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
+        "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
@@ -2151,8 +2156,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Infill");
     def->full_label = L("Infill spacing");
     def->category = OptionCategory::width;
-    def->tooltip = L("Like First layer width but spacing is the distance between two lines (as they overlap a bit, it's not the same)."
-        "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->tooltip = L("Like First layer width but spacing is the distance between two lines (as they overlap a bit, it's not the same).") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
@@ -2874,7 +2879,8 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for perimeters. "
         "You may want to use thinner extrudates to get more accurate surfaces. "
         "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
-        "If expressed as percentage (for example 105%) it will be computed over nozzle diameter.");
+        "If expressed as percentage (for example 105%) it will be computed over nozzle diameter.") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using the perimeter 'Overlap' percentages and default layer height.");
     def->sidetext = L("mm or %");
     def->aliases = { "perimeters_extrusion_width" };
     def->min = 0;
@@ -2887,8 +2893,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Perimeters");
     def->full_label = ("Perimeter spacing");
     def->category = OptionCategory::width;
-    def->tooltip = L("Like Perimeter width but spacing is the distance between two perimeter lines (as they overlap a bit, it's not the same)."
-        "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->tooltip = L("Like Perimeter width but spacing is the distance between two perimeter lines (as they overlap a bit, it's not the same).") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using the perimeter 'Overlap' percentages and default layer height.");
     def->sidetext = L("mm or %");
     def->aliases = { "perimeters_extrusion_width" };
     def->min = 0;
@@ -3398,7 +3404,8 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::width;
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for infill for solid surfaces. "
         "If left zero, default extrusion width will be used if set, otherwise 1.125 x nozzle diameter will be used. "
-        "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
+        "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
@@ -3411,8 +3418,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Solid spacing");
     def->full_label = ("Solid infill spacing");
     def->category = OptionCategory::width;
-    def->tooltip = L("Like Solid infill width but spacing is the distance between two lines (as they overlap a bit, it's not the same)."
-        "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->tooltip = L("Like Solid infill width but spacing is the distance between two lines (as they overlap a bit, it's not the same).") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
@@ -3976,7 +3983,8 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Set this to a non-zero value to set a manual extrusion width for infill for top surfaces. "
         "You may want to use thinner extrudates to fill all narrow regions and get a smoother finish. "
         "If left zero, default extrusion width will be used if set, otherwise nozzle diameter will be used. "
-        "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.");
+        "If expressed as percentage (for example 110%) it will be computed over nozzle diameter.") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
@@ -3988,8 +3996,8 @@ void PrintConfigDef::init_fff_params()
     def = this->add("top_infill_extrusion_spacing", coFloatOrPercent);
     def->label = L("Top solid spacing");
     def->category = OptionCategory::width;
-    def->tooltip = L("Like Top solid infill width but spacing is the distance between two lines (as they overlap a bit, it's not the same)."
-        "\nSetting the spacing will deactivate the width setting, and vice versa.");
+    def->tooltip = L("Like Top solid infill width but spacing is the distance between two lines (as they overlap a bit, it's not the same).") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
