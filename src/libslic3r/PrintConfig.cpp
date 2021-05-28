@@ -3955,7 +3955,8 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("This custom code is inserted at every extruder change. If you don't leave this empty, you are "
         "expected to take care of the toolchange yourself - slic3r will not output any other G-code to "
         "change the filament. You can use placeholder variables for all Slic3r settings as well as [previous_extruder] "
-        "and [next_extruder], so e.g. the standard toolchange command can be scripted as T[next_extruder].");
+        "and [next_extruder], so e.g. the standard toolchange command can be scripted as T[next_extruder]."
+        "!! Warning !!: if any charater is written here, slic3r won't output any toochange command by itself.");
     def->multiline = true;
     def->full_width = true;
     def->height = 5;
