@@ -5239,7 +5239,8 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
     } else if (opt_key == "z_steps_per_mm") {
         opt_key = "z_step";
         float v = boost::lexical_cast<float>(value);
-        value = boost::lexical_cast<std::string>(1/v);
+        if(v > 0)
+            value = boost::lexical_cast<std::string>(1/v);
     } else if (opt_key == "infill_not_connected") {
         opt_key = "infill_connection";
         if (value == "1")
