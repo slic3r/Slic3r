@@ -300,27 +300,46 @@ void Bed3D::calc_triangles(const ExPolygon& poly)
 void Bed3D::calc_gridlines(const ExPolygon& poly, const BoundingBox& bed_bbox)
 {
     Polylines axes_lines;
-    for (coord_t x = bed_bbox.min(0); x <= bed_bbox.max(0); x += scale_(10.0)) {
+    Polylines axes_lines_big;
+    Polylines axes_lines_small;
+    for (coord_t x = bed_bbox.min(0), idx= 0; x <= bed_bbox.max(0); x += scale_(5.0), idx++) {
         Polyline line;
         line.append(Point(x, bed_bbox.min(1)));
         line.append(Point(x, bed_bbox.max(1)));
-        axes_lines.push_back(line);
+        if (idx % 10 == 0)
+            axes_lines_big.push_back(line);
+        else if(idx%2==1)
+            axes_lines_small.push_back(line);
+        else
+            axes_lines.push_back(line);
     }
-    for (coord_t y = bed_bbox.min(1); y <= bed_bbox.max(1); y += scale_(10.0)) {
+    for (coord_t y = bed_bbox.min(1), idx = 0; y <= bed_bbox.max(1); y += scale_(5.0), idx++) {
         Polyline line;
         line.append(Point(bed_bbox.min(0), y));
         line.append(Point(bed_bbox.max(0), y));
-        axes_lines.push_back(line);
+        if (idx % 10 == 0)
+            axes_lines_big.push_back(line);
+        else if (idx % 2 == 1)
+            axes_lines_small.push_back(line);
+        else
+            axes_lines.push_back(line);
     }
 
     // clip with a slightly grown expolygon because our lines lay on the contours and may get erroneously clipped
     Lines gridlines = to_lines(intersection_pl(axes_lines, offset(poly, (float)SCALED_EPSILON)));
+    Lines gridlines_big = to_lines(intersection_pl(axes_lines_big, offset(poly, (float)SCALED_EPSILON)));
+    Lines gridlines_small = to_lines(intersection_pl(axes_lines_small, offset(poly, (float)SCALED_EPSILON)));
+
 
     // append bed contours
     Lines contour_lines = to_lines(poly);
     std::copy(contour_lines.begin(), contour_lines.end(), std::back_inserter(gridlines));
 
     if (!m_gridlines.set_from_lines(gridlines, GROUND_Z))
+        printf("Unable to create bed grid lines\n");
+    if (!m_gridlines_big.set_from_lines(gridlines_big, GROUND_Z))
+        printf("Unable to create bed grid lines\n");
+    if (!m_gridlines_small.set_from_lines(gridlines_small, GROUND_Z))
         printf("Unable to create bed grid lines\n");
 }
 
@@ -559,13 +578,19 @@ void Bed3D::render_default(bool bottom) const
         }
 
         // draw grid
-        glsafe(::glLineWidth(1.5f * m_scale_factor));
         if (has_model && !bottom)
             glsafe(::glColor4f(0.9f, 0.9f, 0.9f, 1.0f));
         else
             glsafe(::glColor4f(0.9f, 0.9f, 0.9f, 0.6f));
-        glsafe(::glVertexPointer(3, GL_FLOAT, m_triangles.get_vertex_data_size(), (GLvoid*)m_gridlines.get_vertices_data()));
+        glsafe(::glLineWidth(0.5f * m_scale_factor));
+        glsafe(::glVertexPointer(3, GL_FLOAT, m_gridlines_small.get_vertex_data_size(), (GLvoid*)m_gridlines_small.get_vertices_data()));
+        glsafe(::glDrawArrays(GL_LINES, 0, (GLsizei)m_gridlines_small.get_vertices_count()));
+        glsafe(::glLineWidth(1.5f * m_scale_factor));
+        glsafe(::glVertexPointer(3, GL_FLOAT, m_gridlines.get_vertex_data_size(), (GLvoid*)m_gridlines.get_vertices_data()));
         glsafe(::glDrawArrays(GL_LINES, 0, (GLsizei)m_gridlines.get_vertices_count()));
+        glsafe(::glLineWidth(3.0f * m_scale_factor));
+        glsafe(::glVertexPointer(3, GL_FLOAT, m_gridlines_big.get_vertex_data_size(), (GLvoid*)m_gridlines_big.get_vertices_data()));
+        glsafe(::glDrawArrays(GL_LINES, 0, (GLsizei)m_gridlines_big.get_vertices_count()));
 
         glsafe(::glDisableClientState(GL_VERTEX_ARRAY));
 

@@ -82,6 +82,8 @@ private:
     Polygon m_polygon;
     GeometryBuffer m_triangles;
     GeometryBuffer m_gridlines;
+    GeometryBuffer m_gridlines_big;
+    GeometryBuffer m_gridlines_small;
     mutable GLTexture m_texture;
     mutable GLModel m_model;
     mutable Vec3d m_model_offset{ Vec3d::Zero() };
