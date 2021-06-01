@@ -127,6 +127,7 @@ void Layer::make_perimeters()
       if ((*layerm)->slices().empty()) {
           (*layerm)->perimeters.clear();
           (*layerm)->fills.clear();
+          (*layerm)->ironings.clear();
           (*layerm)->thin_fills.clear();
       } else {
         size_t region_id = layerm - m_regions.begin();
