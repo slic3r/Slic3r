@@ -32,7 +32,7 @@ def get_version():
 date_str = date.today().strftime('%y%m%d');
 version = get_version();
 print("create release for: " + str(version));
-release_path = "./release_"+str(version);
+release_path = "./build/release_"+str(version);
 if(os.path.isdir(release_path)):
 	rmtree(release_path);
 	print("deleting old directory");
