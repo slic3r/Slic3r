@@ -932,7 +932,7 @@ WipeTower::ToolChangeResult WipeTower::toolchange_Brim(bool sideOnly, float y_of
 		m_wipe_tower_width,
 		m_wipe_tower_depth);
     double unscaled_brim_width = m_config->wipe_tower_brim.get_abs_value(m_nozzle_diameter);
-    Slic3r::Flow brim_flow = Flow::new_from_config_width(FlowRole::frPerimeter, m_config->first_layer_extrusion_width, m_layer_height, m_nozzle_diameter);
+    Slic3r::Flow brim_flow = Flow::new_from_config_width(FlowRole::frPerimeter, m_config->first_layer_extrusion_width, m_nozzle_diameter, m_layer_height);
 
     WipeTowerWriter writer(m_layer_height, brim_flow.width, m_gcode_flavor, m_filpar);
     writer.set_extrusion_flow(brim_flow.mm3_per_mm())
