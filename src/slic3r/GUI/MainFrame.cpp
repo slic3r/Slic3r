@@ -322,10 +322,10 @@ void MainFrame::update_layout()
             wxGetApp().app_config->get("tab_settings_layout_mode") == "1" ? ESettingsLayout::Tabs :
             wxGetApp().app_config->get("new_settings_layout_mode") == "1" ? ESettingsLayout::Hidden :
             wxGetApp().app_config->get("dlg_settings_layout_mode") == "1" ? ESettingsLayout::Dlg :
-#ifdef __APPLE__
-                ESettingsLayout::Old);
-#else
+#ifdef __WXMSW__
                 ESettingsLayout::Tabs);
+#else
+                ESettingsLayout::Old);
 #endif
 
     if (m_layout == layout)
@@ -404,6 +404,8 @@ void MainFrame::update_layout()
     {
         // don't use view_toolbar here
         m_plater->enable_view_toolbar(false);
+        bool need_freeze = !this->IsFrozen();
+        if(need_freeze) this->Freeze();
         // icons for ESettingsLayout::Tabs
         wxImageList* img_list = nullptr;
         int icon_size = 0;
@@ -447,6 +449,7 @@ void MainFrame::update_layout()
         m_main_sizer->Add(m_tabpanel, 1, wxEXPAND);
         m_plater->Show();
         m_tabpanel->Show();
+        if (need_freeze) this->Thaw();
         break;
     }
     case ESettingsLayout::Hidden:
@@ -682,7 +685,12 @@ void MainFrame::init_tabpanel()
                 return;
             }
             bool need_freeze = !this->IsFrozen();
+            bool need_freeze_plater = false;
             if(need_freeze) Freeze();
+            else {
+                need_freeze_plater = !m_plater->IsFrozen();
+                if (need_freeze_plater) m_plater->Freeze();
+            }
 #ifdef __APPLE__
             BOOST_LOG_TRIVIAL(debug) << "I switched to tab  " << m_tabpanel->GetSelection() << " and so i need to change the panel position & content\n";
 #endif
@@ -740,6 +748,7 @@ void MainFrame::init_tabpanel()
             m_last_selected_plater_tab = m_tabpanel->GetSelection();
 
             if (need_freeze) Thaw();
+            else if (need_freeze_plater) m_plater->Freeze();
 #ifdef __APPLE__
             m_tabpanel->ChangeSelection(new_tab);
             m_tabpanel->Refresh();
