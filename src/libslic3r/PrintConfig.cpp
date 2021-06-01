@@ -18,7 +18,7 @@ namespace Slic3r {
 //! macro used to mark string used at localization,
 //! return same string
 #define L(s) (s)
-#define _(s) Slic3r::I18N::translate(s)
+//#define _(s) Slic3r::I18N::translate(s)
 
 static void assign_printer_technology_to_unknown(t_optiondef_map &options, PrinterTechnology printer_technology)
 {
@@ -2598,9 +2598,9 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionInts{ 35 });
 
     def = this->add("fan_percentage", coBool);
-    def->label = _("Fan PWM from 0-100");
+    def->label = L("Fan PWM from 0-100");
     def->category = OptionCategory::output;
-    def->tooltip = _("Set this if your printer uses control values from 0-100 instead of 0-255.");
+    def->tooltip = L("Set this if your printer uses control values from 0-100 instead of 0-255.");
     def->cli = "fan-percentage";
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
