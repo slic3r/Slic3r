@@ -88,6 +88,7 @@ private:
     mutable GLModel m_model;
     mutable Vec3d m_model_offset{ Vec3d::Zero() };
     std::array<float, 4> m_model_color{ 0.235f, 0.235f, 0.235f, 1.0f };
+    std::array<float, 4> m_grid_color{ 0.9f, 0.9f, 0.9f, 0.6f };
     // temporary texture shown until the main texture has still no levels compressed
     mutable GLTexture m_temp_texture;
     mutable unsigned int m_vbo_id;

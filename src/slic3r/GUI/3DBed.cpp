@@ -170,6 +170,41 @@ Bed3D::Bed3D()
     , m_vbo_id(0)
     , m_scale_factor(1.0f)
 {
+    {
+        //try to load splashscreen from ui file
+        boost::property_tree::ptree tree_colors;
+        boost::filesystem::path path_colors = boost::filesystem::path(resources_dir()) / "ui_layout" / "colors.ini";
+        try {
+            boost::nowide::ifstream ifs;
+            ifs.imbue(boost::locale::generator()("en_US.UTF-8"));
+            ifs.open(path_colors.string());
+            boost::property_tree::read_ini(ifs, tree_colors);
+
+            std::string color_code = tree_colors.get<std::string>("Gui_plater");
+            if (color_code.length() > 5) {
+                wxColour color;
+                color.Set((color_code[0] == '#') ? color_code : ("#" + color_code));
+                this->m_model_color[0] = color.Red() / 256.f;
+                this->m_model_color[1] = color.Green() / 256.f;
+                this->m_model_color[2] = color.Blue() / 256.f;
+            }
+            color_code = tree_colors.get<std::string>("Gui_plater_grid");
+            if (color_code.length() > 5) {
+                wxColour color;
+                color.Set((color_code[0] == '#') ? color_code : ("#" + color_code));
+                this->m_grid_color[0] = color.Red() / 256.f;
+                this->m_grid_color[1] = color.Green() / 256.f;
+                this->m_grid_color[2] = color.Blue() / 256.f;
+            }
+        }
+        catch (const std::ifstream::failure& err) {
+            trace(1, (std::string("The color file cannot be loaded. Reason: ") + err.what(), path_colors.string()).c_str());
+        }
+        catch (const std::runtime_error& err) {
+            trace(1, (std::string("Failed loading the color file. Reason: ") + err.what(), path_colors.string()).c_str());
+        }
+    }
+
 }
 
 bool Bed3D::set_shape(const Pointfs& shape, const std::string& custom_texture, const std::string& custom_model, bool force_as_custom)
@@ -580,8 +615,10 @@ void Bed3D::render_default(bool bottom) const
         // draw grid
         if (has_model && !bottom)
             glsafe(::glColor4f(0.9f, 0.9f, 0.9f, 1.0f));
-        else
+        else if (bottom)
             glsafe(::glColor4f(0.9f, 0.9f, 0.9f, 0.6f));
+        else
+            glsafe(::glColor4fv(m_grid_color.data()));
         glsafe(::glLineWidth(0.5f * m_scale_factor));
         glsafe(::glVertexPointer(3, GL_FLOAT, m_gridlines_small.get_vertex_data_size(), (GLvoid*)m_gridlines_small.get_vertices_data()));
         glsafe(::glDrawArrays(GL_LINES, 0, (GLsizei)m_gridlines_small.get_vertices_count()));
