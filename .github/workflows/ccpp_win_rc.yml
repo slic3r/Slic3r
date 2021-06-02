@@ -73,18 +73,18 @@ jobs:
     - name: copy from release
       working-directory: ./build
       shell: powershell
-      run: '(new-object System.Net.WebClient).DownloadFile("https://github.com/supermerill/Slic3r/releases/download/2.2.53.3/Slic3r_2.2.53.3_win64_20201005.zip", "Slic3r_2.2.53.3_win64_20201005.zip")'
+      run: '(new-object System.Net.WebClient).DownloadFile("https://github.com/supermerill/SuperSlicer/releases/download/2.3.56.1/SuperSlicer_2.3.56.1_win64_210527.zip", "SuperSlicer_2.3.56.1_win64_210527.zip")'
     - name: unzip
       working-directory: ./build
       shell: cmd
-      run: '"C:/Program Files/7-Zip/7z.exe" x Slic3r_2.2.53.3_win64_20201005.zip'
+      run: '"C:/Program Files/7-Zip/7z.exe" x SuperSlicer_2.3.56.1_win64_210527.zip'
     - name: copy missing dll content from old release
       working-directory: ./build
       shell: cmd
       run: |
-        xcopy /RCYIE Slic3r_2.2.53.3_win64_20201005\*.dll package\
-        xcopy /RCYIE Slic3r_2.2.53.3_win64_20201005\*.bat package\
-        xcopy /RCYIE Slic3r_2.2.53.3_win64_20201005\mesa package\
+        xcopy /RCYIE SuperSlicer_2.3.56.1_win64_210527\*.dll package\
+        xcopy /RCYIE SuperSlicer_2.3.56.1_win64_210527\*.bat package\
+        xcopy /RCYIE SuperSlicer_2.3.56.1_win64_210527\mesa package\
     - name: copy new resources
       working-directory: ./build
       shell: cmd
