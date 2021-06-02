@@ -405,7 +405,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Internal bridge speed");
     def->category = OptionCategory::speed;
     def->tooltip = L("Speed for printing the bridges that support the top layer.\nCan be a % of the bridge speed.");
-    def->sidetext = L("mm/s");
+    def->sidetext = L("mm/s or %");
     def->ratio_over = "bridge_speed";
     def->min = 0;
     def->mode = comAdvanced;
