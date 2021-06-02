@@ -3240,7 +3240,9 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Skirt");
     def->full_label = L("Skirt width");
     def->category = OptionCategory::width;
-    def->tooltip = L("Horizontal width of the skirt that will be printed around each object.");
+    def->tooltip = L("Horizontal width of the skirt that will be printed around each object."
+        " If left zero, first layer extrusion width will be used if set and the skirt is only 1 layer height"
+        ", or perimeter extrusion width will be used (using the computed value if not set).");
     def->sidetext = L("mm");
     def->min = 0;
     def->max = 1000;
@@ -5653,7 +5655,7 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
             //add the skirt
             if (config->option("skirts")->getInt() > 0 && config->option("skirt_height")->getInt() == 1 && ref_height == 0) {
                 skirt_dist = config->option("skirt_distance")->getFloat();
-                const double first_layer_width = config->get_abs_value("first_layer_extrusion_width");
+                const double first_layer_width = config->get_abs_value("skirt_extrusion_width");
                 Flow flow(first_layer_width, first_layer_height, max_nozzle_diam);
                 skirt_dist += first_layer_width + (flow.spacing() * ((double)config->option("skirts")->getInt() - 1));
                 base_dist = std::max(base_dist, skirt_dist + 1);
@@ -5662,7 +5664,7 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
                 double skirt_height = ((double)config->option("skirt_height")->getInt() - 1) * config->get_abs_value("layer_height") + first_layer_height;
                 if (ref_height <= skirt_height) {
                     skirt_dist = config->option("skirt_distance")->getFloat();
-                    const double first_layer_width = config->get_abs_value("first_layer_extrusion_width");
+                    const double first_layer_width = config->get_abs_value("skirt_extrusion_width");
                     Flow flow(first_layer_width, first_layer_height, max_nozzle_diam);
                     skirt_dist += first_layer_width + (flow.spacing() * ((double)config->option("skirts")->getInt() - 1));
                     //std::cout << "  Set  skirt_dist=" << config->option("skirt_distance")->getFloat() << " => " << skirt_dist << "\n";

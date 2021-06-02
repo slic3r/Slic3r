@@ -1151,7 +1151,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
         _write_format(file, "; top infill extrusion width = %.2fmm\n",          region->flow(frTopSolidInfill,    layer_height, false, false, -1., *first_object).width);
         if (print.has_support_material())
             _write_format(file, "; support material extrusion width = %.2fmm\n", support_material_flow(first_object).width);
-        if (print.config().first_layer_extrusion_width.value > 0)
+        if (first_object->config().first_layer_extrusion_width.value > 0)
             _write_format(file, "; first layer extrusion width = %.2fmm\n",   region->flow(frPerimeter, first_layer_height, false, true, -1., *first_object).width);
         _write_format(file, "\n");
     }

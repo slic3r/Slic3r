@@ -1978,7 +1978,7 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
         "complete_objects_sort",
         "complete_objects_one_skirt",
         "duplicate_distance", "extruder_clearance_radius", 
-        "first_layer_extrusion_width",
+        "skirt_extrusion_width",
         "skirts", "skirt_distance", "skirt_height",
         "brim_width", "variable_layer_height", "nozzle_diameter", "single_extruder_multi_material",
         "wipe_tower", "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle",

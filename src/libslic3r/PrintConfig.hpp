@@ -621,6 +621,7 @@ public:
     ConfigOptionBool                exact_last_layer_height;
     ConfigOptionFloatOrPercent      extrusion_width;
     ConfigOptionFloatOrPercent      first_layer_height;
+    ConfigOptionFloatOrPercent      first_layer_extrusion_width;
     ConfigOptionFloat               first_layer_size_compensation;
     ConfigOptionFloat               hole_size_compensation;
     ConfigOptionFloat               hole_size_threshold;
@@ -690,6 +691,7 @@ protected:
         OPT_PTR(hole_size_compensation);
         OPT_PTR(hole_size_threshold);
         OPT_PTR(first_layer_height);
+        OPT_PTR(first_layer_extrusion_width);
         OPT_PTR(first_layer_size_compensation);
         OPT_PTR(infill_only_where_needed);
         OPT_PTR(interface_shells);
@@ -1277,7 +1279,6 @@ public:
     ConfigOptionPercents            filament_shrink;
     ConfigOptionFloatOrPercent      first_layer_acceleration;
     ConfigOptionInts                first_layer_bed_temperature;
-    ConfigOptionFloatOrPercent      first_layer_extrusion_width;
     ConfigOptionPercent             first_layer_flow_ratio;
     ConfigOptionFloatOrPercent      first_layer_speed;
     ConfigOptionFloatOrPercent      first_layer_infill_speed;
@@ -1346,7 +1347,8 @@ protected:
         this->GCodeConfig::initialize(cache, base_ptr);
         OPT_PTR(allow_empty_layers);
         OPT_PTR(avoid_crossing_perimeters);
-        OPT_PTR(avoid_crossing_not_first_layer);        OPT_PTR(avoid_crossing_perimeters_max_detour);
+        OPT_PTR(avoid_crossing_not_first_layer);
+        OPT_PTR(avoid_crossing_perimeters_max_detour);
         OPT_PTR(bed_shape);
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);
@@ -1372,7 +1374,6 @@ protected:
         OPT_PTR(filament_shrink);
         OPT_PTR(first_layer_acceleration);
         OPT_PTR(first_layer_bed_temperature);
-        OPT_PTR(first_layer_extrusion_width);
         OPT_PTR(first_layer_flow_ratio);
         OPT_PTR(first_layer_speed);
         OPT_PTR(first_layer_infill_speed);

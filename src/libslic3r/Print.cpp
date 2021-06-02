@@ -1652,13 +1652,13 @@ double Print::skirt_first_layer_height() const
     return m_objects.front()->config().get_abs_value("first_layer_height");
 }
 
-Flow Print::brim_flow(size_t extruder_id) const
+Flow Print::brim_flow(size_t extruder_id, const PrintObjectConfig& brim_config) const
 {
-    ConfigOptionFloatOrPercent width = m_config.first_layer_extrusion_width;
+    ConfigOptionFloatOrPercent width = brim_config.first_layer_extrusion_width;
     if (width.value <= 0) 
-        width = m_regions.front()->config().perimeter_extrusion_width;
+        width = m_default_region_config.perimeter_extrusion_width;
     if (width.value <= 0) 
-        width = m_objects.front()->config().extrusion_width;
+        width = brim_config.extrusion_width;
     
     /* We currently use a random region's perimeter extruder.
        While this works for most cases, we should probably consider all of the perimeter
@@ -1676,12 +1676,13 @@ Flow Print::brim_flow(size_t extruder_id) const
 Flow Print::skirt_flow(size_t extruder_id) const
 {
     ConfigOptionFloatOrPercent width = m_config.skirt_extrusion_width;
-    if (width.value <= 0 && m_config.first_layer_extrusion_width.value > 0)
-        width = m_config.first_layer_extrusion_width;
+    if (width.value <= 0 && m_default_object_config.first_layer_extrusion_width.value > 0
+        && m_config.skirt_height == 1 && !m_config.draft_shield)
+        width = m_default_object_config.first_layer_extrusion_width;
     if (width.value <= 0) 
-        width = m_regions.front()->config().perimeter_extrusion_width;
+        width = m_default_region_config.perimeter_extrusion_width;
     if (width.value <= 0)
-        width = m_objects.front()->config().extrusion_width;
+        width = m_default_object_config.extrusion_width;
     
     /* We currently use a random object's support material extruder.
        While this works for most cases, we should probably consider all of the support material
@@ -1791,7 +1792,8 @@ void Print::process()
                     && obj_group.front()->config().brim_inside_holes.value == obj->config().brim_inside_holes.value
                     && obj_group.front()->config().brim_offset.value == obj->config().brim_offset.value
                     && obj_group.front()->config().brim_width.value == obj->config().brim_width.value
-                    && obj_group.front()->config().brim_width_interior.value == obj->config().brim_width_interior.value) {
+                    && obj_group.front()->config().brim_width_interior.value == obj->config().brim_width_interior.value
+                    && obj_group.front()->config().first_layer_extrusion_width.value == obj->config().first_layer_extrusion_width.value) {
                     added = true;
                     obj_group.push_back(obj);
                 }
@@ -1824,7 +1826,7 @@ void Print::process()
                         std::vector<uint16_t> set_extruders = this->object_extruders({ obj });
                         append(set_extruders, this->support_material_extruders());
                         sort_remove_duplicates(set_extruders);
-                        Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front());
+                        Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front(), obj->config());
                         //don't consider other objects/instances. It's not possible because it's duplicated by some code afterward... i think.
                         brim_area.clear();
                         //create a brim "pattern" (one per object)
@@ -1849,7 +1851,7 @@ void Print::process()
                     std::vector<uint16_t> set_extruders = this->object_extruders(m_objects);
                     append(set_extruders, this->support_material_extruders());
                     sort_remove_duplicates(set_extruders);
-                    Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front());
+                    Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front(), obj_group.front()->config());
                     if (brim_config.brim_ears)
                         this->_make_brim_ears(flow, obj_group, brim_area, m_brim);
                     else
@@ -1969,7 +1971,6 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
         extruders_e_per_mm.reserve(set_extruders.size());
         for (unsigned int extruder_id : set_extruders) {
             Flow   flow = this->skirt_flow(extruder_id);
-            float  spacing = flow.spacing();
             double mm3_per_mm = flow.mm3_per_mm();
             extruders.push_back(extruder_id);
             extruders_e_per_mm.push_back(Extruder((unsigned int)extruder_id, &m_config).e_per_mm(mm3_per_mm));
@@ -2753,7 +2754,7 @@ void Print::_make_wipe_tower()
     this->throw_if_canceled();
 
     // Initialize the wipe tower.
-    WipeTower wipe_tower(m_config, wipe_volumes, m_wipe_tower_data.tool_ordering.first_extruder());
+    WipeTower wipe_tower(m_config, m_default_object_config, wipe_volumes, m_wipe_tower_data.tool_ordering.first_extruder());
     
 
     //wipe_tower.set_retract();
