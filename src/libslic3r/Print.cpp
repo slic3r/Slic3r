@@ -2107,9 +2107,24 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector< BrimLoop>>& loops, 
 
     };
     //calls
-    for (std::vector<BrimLoop>& loops : loops)
-        for (BrimLoop& loop : loops)
-            cut_loop(loop);
+    std::list< std::pair<BrimLoop*,int>> cut_child_first;
+    for (std::vector<BrimLoop>& loops : loops) {
+        for (BrimLoop& loop : loops) {
+            cut_child_first.emplace_front(&loop, 0);
+            //flat recurtion
+            while (!cut_child_first.empty()) {
+                if (cut_child_first.front().first->children.size() <= cut_child_first.front().second) {
+                    //if no child to cut, cut ourself and pop
+                    cut_loop(*cut_child_first.front().first);
+                    cut_child_first.pop_front();
+                } else {
+                    // more child to cut, push the next
+                    cut_child_first.front().second++;
+                    cut_child_first.emplace_front(&cut_child_first.front().first->children[cut_child_first.front().second - 1], 0);
+                }
+            }
+        }
+    }
 
     this->throw_if_canceled();
 
@@ -2397,17 +2412,16 @@ void Print::_make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, Ex
         }
 
         //create ears
-        Polygons mouse_ears;
         ExPolygons mouse_ears_ex;
         for (Point pt : pt_ears) {
-            mouse_ears.push_back(point_round);
-            mouse_ears.back().translate(pt);
             mouse_ears_ex.emplace_back();
-            mouse_ears_ex.back().contour = mouse_ears.back();
+            mouse_ears_ex.back().contour = point_round;
+            mouse_ears_ex.back().contour.translate(pt);
         }
 
         //intersection
-        Polylines lines = intersection_pl(loops, mouse_ears);
+        ExPolygons mouse_ears_area = intersection_ex(mouse_ears_ex, brimmable_areas);
+        Polylines lines = intersection_pl(loops, to_polygons(mouse_ears_area));
         this->throw_if_canceled();
 
         //reorder & extrude them
@@ -2423,8 +2437,8 @@ void Print::_make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, Ex
             float(this->skirt_first_layer_height())
         );
 
-        ExPolygons new_brim_area = intersection_ex(brimmable_areas, mouse_ears_ex);
-        unbrimmable.insert(unbrimmable.end(), new_brim_area.begin(), new_brim_area.end());
+        unbrimmable = union_ex(unbrimmable, offset_ex(mouse_ears_ex, flow.scaled_spacing()/2));
+
     } else /* brim_config.brim_ears_pattern.value == InfillPattern::ipRectilinear */{
         
         //create ear pattern

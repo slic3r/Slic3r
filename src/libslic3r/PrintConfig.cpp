@@ -460,7 +460,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Detection radius");
     def->full_label = L("Brim ear detection length");
     def->category = OptionCategory::skirtBrim;
-    def->tooltip = L("The geometry will be decimated before dectecting sharp angles. This parameter indicate the minimum length of strait sections after decimation."
+    def->tooltip = L("The geometry will be decimated before dectecting sharp angles. This parameter indicate the minimum length of the deviation for the decimation."
                     "\n0 to deactivate");
     def->sidetext = L("mm");
     def->min = 0;
