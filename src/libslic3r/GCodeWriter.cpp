@@ -81,7 +81,8 @@ void GCodeWriter::set_extruders(std::vector<uint16_t> extruder_ids)
     /*  we enable support for multiple extruder if any extruder greater than 0 is used
         (even if prints only uses that one) since we need to output Tx commands
         first extruder has index 0 */
-    this->multiple_extruders = this->multiple_extruders || (*std::max_element(extruder_ids.begin(), extruder_ids.end())) > 0;
+    if(!extruder_ids.empty() && !this->multiple_extruders)
+        this->multiple_extruders = (*std::max_element(extruder_ids.begin(), extruder_ids.end())) > 0;
 }
 
 void GCodeWriter::set_mills(std::vector<uint16_t> mill_ids)
