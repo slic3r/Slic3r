@@ -842,6 +842,15 @@ void GCodeProcessor::reset()
     m_width_compare.reset();
 #endif // ENABLE_GCODE_VIEWER_DATA_CHECKING
 }
+void GCodeProcessor::process_string(const std::string& gcode, std::function<void()> cancel_callback)
+{
+    std::stringstream ss(gcode);
+    std::string strline;
+    while ( std::getline(ss, strline))
+        m_parser.parse_line(strline, [this](GCodeReader& reader, const GCodeReader::GCodeLine& line) {
+            process_gcode_line(line); 
+        });
+}
 
 void GCodeProcessor::process_file(const std::string& filename, bool apply_postprocess, std::function<void()> cancel_callback)
 {

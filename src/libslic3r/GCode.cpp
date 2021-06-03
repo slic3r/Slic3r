@@ -719,6 +719,11 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessor::Result* re
     }
 
     BOOST_LOG_TRIVIAL(debug) << "Start processing gcode, " << log_memory_info();
+    //klipper can hide gcode into a macro, so add guessed init gcode to the processor.
+    if (this->config().start_gcode_manual) {
+        std::string gcode = m_writer.preamble();
+        m_processor.process_string(gcode, [print]() { print->throw_if_canceled(); });
+    }
     m_processor.process_file(path_tmp, true, [print]() { print->throw_if_canceled(); });
     DoExport::update_print_estimated_times_stats(m_processor, print->m_print_statistics);
     if (result != nullptr)
