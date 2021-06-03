@@ -126,7 +126,7 @@ void Field::PostInitialize()
                 case '3': { tab_id = MainFrame::ETabType::PlaterGcode; break; }
                 case '4': { tab_id = MainFrame::ETabType::PrintSettings; break; }
                 case '5': { tab_id = MainFrame::ETabType::FilamentSettings; break; }
-                case '6': { tab_id = MainFrame::ETabType::PrintSettings;     break; }
+                case '6': { tab_id = MainFrame::ETabType::PrinterSettings; break; }
 #ifdef __APPLE__
 				case 'f':
 #else /* __APPLE__ */
@@ -135,13 +135,14 @@ void Field::PostInitialize()
 				case 'F': { wxGetApp().plater()->search(false); break; }
 			    default: break;
 			    }
-			    if (tab_id < MainFrame::ETabType::Any)
-					wxGetApp().mainframe->select_tab(tab_id);
-				if (wxGetApp().mainframe->get_layout() == MainFrame::ESettingsLayout::Tabs
-					|| wxGetApp().mainframe->get_layout() == MainFrame::ESettingsLayout::Old
-					|| tab_id >= MainFrame::ETabType::PrintSettings)
-					// tab panel should be focused for correct navigation between tabs
-				    wxGetApp().tab_panel()->SetFocus();
+                if (tab_id < MainFrame::ETabType::Any) {
+                    wxGetApp().mainframe->select_tab(tab_id);
+                    if (wxGetApp().mainframe->get_layout() == MainFrame::ESettingsLayout::Tabs
+                        || wxGetApp().mainframe->get_layout() == MainFrame::ESettingsLayout::Old
+                        || tab_id >= MainFrame::ETabType::PrintSettings)
+                        // tab panel should be focused for correct navigation between tabs
+                        wxGetApp().tab_panel()->SetFocus();
+                }
 		    }
 			    
 		    evt.Skip();

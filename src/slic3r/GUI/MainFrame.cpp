@@ -1384,35 +1384,35 @@ void MainFrame::init_menubar_as_editor()
     auto windowMenu = new wxMenu();
     {
         if (m_plater) {
-            append_menu_item(windowMenu, wxID_HIGHEST + 1, _L("3D &Plater Tab") + "\tCtrl+1", _L("Show the editor of the input models"),
+            append_menu_item(windowMenu, wxID_HIGHEST + 1, _L("3D &Plater Tab") + sep + GUI::shortkey_ctrl_prefix() + "1", _L("Show the editor of the input models"),
                 [this](wxCommandEvent&) { select_tab(ETabType::Plater3D); }, "editor_menu", nullptr,
                 []() {return true; }, this);
-            m_layerpreview_menu_item = append_menu_item(windowMenu, wxID_HIGHEST + 2, _L("Layer previe&w Tab") + "\tCtrl+2", _L("Show the layers from the slicing process"),
+            m_layerpreview_menu_item = append_menu_item(windowMenu, wxID_HIGHEST + 2, _L("Layer previe&w Tab") + sep + GUI::shortkey_ctrl_prefix() + "2", _L("Show the layers from the slicing process"),
                 [this](wxCommandEvent&) { select_tab(ETabType::PlaterPreview); }, "layers", nullptr,
                 []() {return true; }, this);
-            append_menu_item(windowMenu, wxID_HIGHEST + 3, _L("GCode Pre&view Tab") + "\tCtrl+3", _L("Show the preview of the gcode output"),
+            append_menu_item(windowMenu, wxID_HIGHEST + 3, _L("GCode Pre&view Tab") + sep + GUI::shortkey_ctrl_prefix() + "3", _L("Show the preview of the gcode output"),
                 [this](wxCommandEvent&) { select_tab(ETabType::PlaterGcode); }, "preview_menu", nullptr,
                 []() {return true; }, this);
             windowMenu->AppendSeparator();
         }
-        append_menu_item(windowMenu, wxID_HIGHEST + 4, _L("P&rint Settings Tab") + "\tCtrl+4", _L("Show the print settings"),
+        append_menu_item(windowMenu, wxID_HIGHEST + 4, _L("P&rint Settings Tab") + sep + GUI::shortkey_ctrl_prefix() + "4", _L("Show the print settings"),
             [this/*, tab_offset*/](wxCommandEvent&) { select_tab(ETabType::PrintSettings); }, "cog", nullptr,
             []() {return true; }, this);
-        wxMenuItem* item_material_tab = append_menu_item(windowMenu, wxID_HIGHEST + 5, _L("&Filament Settings Tab") + "\tCtrl+5", _L("Show the filament settings"),
+        wxMenuItem* item_material_tab = append_menu_item(windowMenu, wxID_HIGHEST + 5, _L("&Filament Settings Tab") + sep + GUI::shortkey_ctrl_prefix() + "5", _L("Show the filament settings"),
             [this/*, tab_offset*/](wxCommandEvent&) { select_tab(ETabType::FilamentSettings); }, "spool", nullptr,
             []() {return true; }, this);
         m_changeable_menu_items.push_back(item_material_tab);
-        wxMenuItem* item_printer_tab = append_menu_item(windowMenu, wxID_HIGHEST + 6, _L("Print&er Settings Tab") + "\tCtrl+6", _L("Show the printer settings"),
+        wxMenuItem* item_printer_tab = append_menu_item(windowMenu, wxID_HIGHEST + 6, _L("Print&er Settings Tab") + sep + GUI::shortkey_ctrl_prefix() + "6", _L("Show the printer settings"),
             [this/*, tab_offset*/](wxCommandEvent&) { select_tab(ETabType::PrinterSettings); }, "printer", nullptr,
             []() {return true; }, this);
         m_changeable_menu_items.push_back(item_printer_tab);
 
         windowMenu->AppendSeparator();
-        append_menu_item(windowMenu, wxID_ANY, _L("Print &Host Upload Queue") + "\tCtrl+J", _L("Display the Print Host Upload Queue window"),
+        append_menu_item(windowMenu, wxID_ANY, _L("Print &Host Upload Queue") + sep + GUI::shortkey_ctrl_prefix() + "J", _L("Display the Print Host Upload Queue window"),
             [this](wxCommandEvent&) { m_printhost_queue_dlg->Show(); }, "upload_queue", nullptr, []() {return true; }, this);
         
         windowMenu->AppendSeparator();
-        append_menu_item(windowMenu, wxID_ANY, _L("Open new instance") + "\tCtrl+Shift+I", _L("Open a new " SLIC3R_APP_NAME " instance"),
+        append_menu_item(windowMenu, wxID_ANY, _L("Open new instance") + sep + GUI::shortkey_ctrl_prefix() + "Shift+" + "I", _L("Open a new " SLIC3R_APP_NAME " instance"),
 			[this](wxCommandEvent&) { start_new_slicer(); }, "", nullptr, [this]() {return m_plater != nullptr && wxGetApp().app_config->get("single_instance") != "1"; }, this);
     }
 
@@ -1506,7 +1506,7 @@ void MainFrame::init_menubar_as_gcodeviewer()
 {
     wxMenu* fileMenu = new wxMenu;
     {
-        append_menu_item(fileMenu, wxID_ANY, _L("&Open G-code") + dots + "\tCtrl+O", _L("Open a G-code file"),
+        append_menu_item(fileMenu, wxID_ANY, _L("&Open G-code") + dots + sep + GUI::shortkey_ctrl_prefix() + "O", _L("Open a G-code file"),
             [this](wxCommandEvent&) { if (m_plater != nullptr) m_plater->load_gcode(); }, "open", nullptr,
             [this]() {return m_plater != nullptr; }, this);
 #ifdef __APPLE__
