@@ -4059,6 +4059,18 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(130));
 
+    def = this->add("travel_speed_z", coFloat);
+    def->label = L("Z Travel");
+    def->full_label = L("Z travel speed");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("Speed for movements along the Z axis.\nWhen set to zero, this value "
+                     "is ignored and regular travel speed is used instead.");
+    def->sidetext = L("mm/s");
+    def->aliases = { "travel_feed_rate_z" };
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.));
+
     def = this->add("use_firmware_retraction", coBool);
     def->label = L("Use firmware retraction");
     def->category = OptionCategory::general;
@@ -5475,7 +5487,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "top_infill_extrusion_spacing",
 "start_gcode_manual",
 "perimeter_round_corners",
-
+"travel_speed_z",
     };
     //looks if it's to be removed, or have to be transformed
     if (to_remove_keys.find(opt_key) != to_remove_keys.end()) {

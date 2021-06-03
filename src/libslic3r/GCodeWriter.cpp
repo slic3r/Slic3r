@@ -496,7 +496,9 @@ std::string GCodeWriter::_travel_to_z(double z, const std::string &comment)
         gcode << "G1 Z" << PRECISION(z, 6);
     else
         gcode << "G1 Z" << XYZF_NUM(z);
-    gcode <<   " F" << XYZF_NUM(this->config.travel_speed.value * 60.0);
+
+    const double speed = this->config.travel_speed_z.value == 0.0 ? this->config.travel_speed.value : this->config.travel_speed_z.value;
+    gcode <<   " F" << XYZF_NUM(speed * 60.0);
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();

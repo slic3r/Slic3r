@@ -505,7 +505,7 @@ const std::vector<std::string>& Preset::print_options()
         "gap_fill_min_area",
         "gap_fill_overlap",
         "gap_fill_speed",
-        "travel_speed", "first_layer_speed", "perimeter_acceleration", "infill_acceleration",
+        "travel_speed", "travel_speed_z", "first_layer_speed", "perimeter_acceleration", "infill_acceleration",
         "bridge_acceleration", "first_layer_acceleration", "default_acceleration", 
         "duplicate_distance",
         "skirts", "skirt_distance", "skirt_height",

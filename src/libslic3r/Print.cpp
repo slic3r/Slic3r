@@ -173,6 +173,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "top_fan_speed",
         "threads",
         "travel_speed",
+        "travel_speed_z",
         "use_firmware_retraction",
         "use_relative_e_distances",
         "use_volumetric_e",
