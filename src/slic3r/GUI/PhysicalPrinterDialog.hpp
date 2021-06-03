@@ -95,7 +95,7 @@ public:
     PrinterTechnology   get_printer_technology();
 
     void        DeletePreset(PresetForPrinter* preset_for_printer);
-
+    void        selected_preset_changed(std::string preset_name);
 protected:
     void on_dpi_changed(const wxRect& suggested_rect) override;
     void on_sys_color_changed() override {};

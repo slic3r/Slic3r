@@ -62,6 +62,8 @@ PresetForPrinter::PresetForPrinter(PhysicalPrinterDialog* parent, const std::str
         if (preset->name == edited_preset.name)
             preset = &edited_preset;
 
+        m_parent->selected_preset_changed(preset->name);
+
         // if created physical printer doesn't have any settings, use the settings from the selected preset
         if (m_parent->get_printer()->has_empty_config()) {
             // update Print Host upload from the selected preset
@@ -645,5 +647,12 @@ void PhysicalPrinterDialog::DeletePreset(PresetForPrinter* preset_for_printer)
     this->Fit();
 }
 
+void PhysicalPrinterDialog::selected_preset_changed(std::string preset_name)
+{
+    if (preset_name.rfind("Original Prusa i3 MK3", 0) == 0)
+    {
+        BOOST_LOG_TRIVIAL(debug) << "Original Prusa i3 MK3";
+    }
+}
 
 }}    // namespace Slic3r::GUI
