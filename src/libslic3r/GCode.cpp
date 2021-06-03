@@ -2419,7 +2419,7 @@ void GCode::process_layer(
 
             this->set_origin(0., 0.);
             m_avoid_crossing_perimeters.use_external_mp();
-            gcode += this->extrude_entity(print.brim(), "brim", m_config.support_material_speed.value);
+            gcode += this->extrude_entity(print.brim(), "Brim", m_config.support_material_speed.value);
             m_brim_done = true;
             m_avoid_crossing_perimeters.use_external_mp(false);
             // Allow a straight travel move to the first object point.
@@ -3559,7 +3559,7 @@ std::vector<double> cut_corner_cache = {
 
 std::string GCode::_extrude(const ExtrusionPath &path, const std::string &description, double speed) {
 
-    std::string descr = description + ExtrusionEntity::role_to_string(path.role());
+    std::string descr = description.empty() ? ExtrusionEntity::role_to_string(path.role()) : description;
     std::string gcode = this->_before_extrude(path, descr, speed);
     
     // calculate extrusion length per distance unit
@@ -3676,8 +3676,6 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
 std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string &description_in, double speed) {
     std::string gcode;
     std::string description{ description_in };
-    if (is_bridge(path.role()))
-        description += " (bridge)";
 
     // go to first point of extrusion path
     if (!m_last_pos_defined || m_last_pos != path.first_point()) {
