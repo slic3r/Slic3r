@@ -1185,7 +1185,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
             nb_items++;
         }
     }
-    if (this->config().gcode_label_objects && print.config().gcode_flavor.value == gcfMarlin) {
+    if (this->config().gcode_label_objects && (print.config().gcode_flavor.value == gcfMarlin || print.config().gcode_flavor.value == gcfRepRap)) {
         _write(file, "; Total objects to print: " + std::to_string(nb_items) + "\n");
         _write(file, "M486 T" + std::to_string(nb_items) + "\n");
     }
@@ -2481,7 +2481,7 @@ void GCode::process_layer(
                     gcode += std::string("; INIT printing object ") + instance_to_print.print_object.model_object()->name
                         + " id:" + std::to_string(std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin())
                         + " copy " + std::to_string(instance_to_print.instance_id) + "\n";
-                    if (print.config().gcode_flavor.value == gcfMarlin) {
+                    if (print.config().gcode_flavor.value == gcfMarlin || print.config().gcode_flavor.value == gcfRepRap) {
                         size_t instance_plater_id = 0;
                         //get index of the current copy in the whole itemset;
                         for (const PrintObject* obj : this->m_ordered_objects)
@@ -2537,7 +2537,7 @@ void GCode::process_layer(
                     gcode += std::string("; INIT stop printing object ") + instance_to_print.print_object.model_object()->name
                         + " id:" + std::to_string((std::find(this->m_ordered_objects.begin(), this->m_ordered_objects.end(), &instance_to_print.print_object) - this->m_ordered_objects.begin()))
                         + " copy " + std::to_string(instance_to_print.instance_id) + "\n";
-                    if (print.config().gcode_flavor.value == gcfMarlin) {
+                    if (print.config().gcode_flavor.value == gcfMarlin || print.config().gcode_flavor.value == gcfRepRap) {
                         m_gcode_label_objects_end += std::string("M486 S-1") + "\n";
                     }
                 }
