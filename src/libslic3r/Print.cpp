@@ -375,14 +375,16 @@ std::vector<uint16_t> Print::support_material_extruders() const
                 uint16_t i = (uint16_t)object->config().support_material_extruder - 1;
                 extruders.emplace_back((i >= num_extruders) ? 0 : i);
             }
-        	assert(object->config().support_material_interface_extruder >= 0);
-            if (object->config().support_material_interface_extruder == 0)
-                support_uses_current_extruder = true;
-            else {
-                uint16_t i = (uint16_t)object->config().support_material_interface_extruder - 1;
-                extruders.emplace_back((i >= num_extruders) ? 0 : i);
+            if (object->config().support_material_interface_layers > 0) {
+                assert(object->config().support_material_interface_extruder >= 0);
+                if (object->config().support_material_interface_extruder == 0)
+                    support_uses_current_extruder = true;
+                else {
+                    uint16_t i = (uint16_t)object->config().support_material_interface_extruder - 1;
+                    extruders.emplace_back((i >= num_extruders) ? 0 : i);
+                }
+            }
         }
-    }
     }
 
     if (support_uses_current_extruder)
