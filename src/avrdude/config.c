@@ -363,6 +363,7 @@ int read_config_builtin()
 
   // Note: Can't use yy_scan_buffer, it's buggy (?), leads to fread from a null FILE*
   // and so unfortunatelly we have to use the copying variant here
+  // note: changed for avrdude_slic3r_conf_SIZE but i can't build with uper case... if you need it on your os, please use a #ifndef
   YY_BUFFER_STATE buffer = yy_scan_bytes((const char *)avrdude_slic3r_conf, avrdude_slic3r_conf_size);
   if (buffer == NULL) {
     avrdude_message(MSG_INFO, "%s: read_config_builtin: Failed to initialize parsing buffer\n", progname);

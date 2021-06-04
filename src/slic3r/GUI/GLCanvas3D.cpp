@@ -3883,7 +3883,11 @@ void GLCanvas3D::update_tooltip_for_settings_item_in_main_toolbar()
 
 bool GLCanvas3D::has_toolpaths_to_export() const
 {
+#if ENABLE_SPLITTED_VERTEX_BUFFER
+    return m_gcode_viewer.can_export_toolpaths();
+#else
     return m_gcode_viewer.has_data();
+#endif // ENABLE_SPLITTED_VERTEX_BUFFER
 }
 
 void GLCanvas3D::export_toolpaths_to_obj(const char* filename) const
@@ -5862,7 +5866,7 @@ void GLCanvas3D::_load_print_object_toolpaths(const PrintObject& print_object, c
         int get_color_idx_for_tool_change(std::vector<CustomGCode::Item>::const_iterator it, const int extruder) const
         {
             const int current_extruder = it->extruder == 0 ? extruder : it->extruder;
-            if (number_tools() == extruders_cnt + 1) // there is no one "M600"
+            if (number_tools() == size_t(extruders_cnt + 1)) // there is no one "M600"
                 return std::min<int>(extruders_cnt - 1, std::max<int>(current_extruder - 1, 0));
 
             auto it_n = it;

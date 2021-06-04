@@ -62,13 +62,13 @@ namespace fts {
     }
 
     // Public interface
-    static bool fuzzy_match(char_type const * pattern, char_type const * str, int & outScore) {
+    [[maybe_unused]] static bool fuzzy_match(char_type const * pattern, char_type const * str, int & outScore) {
         pos_type matches[max_matches + 1]; // with the room for the stopper
         matches[0] = stopper;
         return fuzzy_match(pattern, str, outScore, matches);
     }
 
-    static bool fuzzy_match(char_type const * pattern, char_type const * str, int & outScore, pos_type * matches) {
+    [[maybe_unused]] static bool fuzzy_match(char_type const * pattern, char_type const * str, int & outScore, pos_type * matches) {
         int recursionCount = 0;
         static constexpr int recursionLimit = 10;
         return fuzzy_internal::fuzzy_match_recursive(pattern, str, outScore, str, nullptr, matches, 0, recursionCount, recursionLimit);
@@ -113,15 +113,16 @@ namespace fts {
         bool first_match = true;
         while (*pattern != '\0' && *str != '\0') {
 
-        	int  num_matched  = std::tolower(*pattern) == std::tolower(*str) ? 1 : 0;
-        	bool folded_match = false;
-        	if (! num_matched) {
+        	int  num_matched  = std::towlower(*pattern) == std::towlower(*str) ? 1 : 0;
+            // bool folded_match = false;
+
+            if (! num_matched) {
                 wchar_t tmp[4];
                 wchar_t *end = Slic3r::fold_to_ascii(*str, tmp);
                 wchar_t *c = tmp;
                 for (const wchar_t* d = pattern; c != end && *d != 0 && std::towlower(*c) == std::towlower(*d); ++c, ++d);
                 if (c == end) {
-        			folded_match = true;
+                    // folded_match = true;
         			num_matched = end - tmp;
         		}
 	        }
@@ -168,11 +169,11 @@ namespace fts {
         // Calculate score
         if (matched) {
             static constexpr int sequential_bonus = 15;            // bonus for adjacent matches
-            static constexpr int separator_bonus = 30;             // bonus if match occurs after a separator
-            static constexpr int camel_bonus = 30;                 // bonus if match is uppercase and prev is lower
+            static constexpr int separator_bonus = 10/*30*/;             // bonus if match occurs after a separator
+            // static constexpr int camel_bonus = 30;                 // bonus if match is uppercase and prev is lower
             static constexpr int first_letter_bonus = 15;          // bonus if the first letter is matched
 
-            static constexpr int leading_letter_penalty = -5;      // penalty applied for every letter in str before the first match
+            static constexpr int leading_letter_penalty = -1/*-5*/;      // penalty applied for every letter in str before the first match
             static constexpr int max_leading_letter_penalty = -15; // maximum penalty for leading letters
             static constexpr int unmatched_letter_penalty = -1;    // penalty for every letter that doesn't matter
 

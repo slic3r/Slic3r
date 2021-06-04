@@ -158,6 +158,8 @@ add_library(libslic3r STATIC
     PerimeterGenerator.hpp
     PlaceholderParser.cpp
     PlaceholderParser.hpp
+    Platform.cpp
+    Platform.hpp
     Point.cpp
     Point.hpp
     Polygon.cpp

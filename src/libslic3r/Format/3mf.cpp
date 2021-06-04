@@ -402,6 +402,10 @@ namespace Slic3r {
         bool m_check_version;
 
         XML_Parser m_xml_parser;
+        // Error code returned by the application side of the parser. In that case the expat may not reliably deliver the error state
+        // after returning from XML_Parse() function, thus we keep the error state here.
+        bool m_parse_error { false };
+        std::string m_parse_error_message;
         Model* m_model;
         float m_unit_factor;
         CurrentObject m_curr_object;
@@ -427,7 +431,16 @@ namespace Slic3r {
 
     private:
         void _destroy_xml_parser();
-        void _stop_xml_parser();
+        void _stop_xml_parser(const std::string& msg = std::string());
+
+        bool        parse_error()         const { return m_parse_error; }
+        const char* parse_error_message() const {
+            return m_parse_error ?
+                // The error was signalled by the user code, not the expat parser.
+                (m_parse_error_message.empty() ? "Invalid 3MF format" : m_parse_error_message.c_str()) :
+                // The error was signalled by the expat parser.
+                XML_ErrorString(XML_GetErrorCode(m_xml_parser));
+        }
 
         bool _load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config);
         bool _extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat);
@@ -567,10 +580,14 @@ namespace Slic3r {
         }
     }
 
-    void _3MF_Importer::_stop_xml_parser()
+    void _3MF_Importer::_stop_xml_parser(const std::string &msg)
     {
-        if (m_xml_parser != nullptr)
-            XML_StopParser(m_xml_parser, false);
+        assert(! m_parse_error);
+        assert(m_parse_error_message.empty());
+        assert(m_xml_parser != nullptr);
+        m_parse_error = true;
+        m_parse_error_message = msg;
+        XML_StopParser(m_xml_parser, false);
     }
 
     bool _3MF_Importer::_load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config)
@@ -708,12 +725,12 @@ namespace Slic3r {
 
         close_zip_reader(&archive);
 
-        for (const IdToModelObjectMap::value_type& object : m_objects)
-        {
-            ModelObject *model_object = m_model->objects[object.second];
-            ObjectMetadata::VolumeMetadataList volumes;
-            ObjectMetadata::VolumeMetadataList* volumes_ptr = nullptr;
-
+        for (const IdToModelObjectMap::value_type& object : m_objects) {
+            if (object.second >= m_model->objects.size()) {
+                add_error("Unable to find object");
+                return false;
+            }
+            ModelObject* model_object = m_model->objects[object.second];
             IdToGeometryMap::const_iterator obj_geometry = m_geometries.find(object.first);
             if (obj_geometry == m_geometries.end())
             {
@@ -742,6 +759,9 @@ namespace Slic3r {
             if (obj_drain_holes != m_sla_drain_holes.end() && !obj_drain_holes->second.empty()) {
                 model_object->sla_drain_holes = std::move(obj_drain_holes->second);
             }
+
+            ObjectMetadata::VolumeMetadataList volumes;
+            ObjectMetadata::VolumeMetadataList* volumes_ptr = nullptr;
 
             IdToMetadataMap::iterator obj_metadata = m_objects_metadata.find(object.first);
             if (obj_metadata != m_objects_metadata.end())
@@ -805,12 +825,13 @@ namespace Slic3r {
         struct CallbackData
         {
             XML_Parser& parser;
+            _3MF_Importer& importer;
             const mz_zip_archive_file_stat& stat;
 
-            CallbackData(XML_Parser& parser, const mz_zip_archive_file_stat& stat) : parser(parser), stat(stat) {}
+            CallbackData(XML_Parser& parser, _3MF_Importer& importer, const mz_zip_archive_file_stat& stat) : parser(parser), importer(importer), stat(stat) {}
         };
 
-        CallbackData data(m_xml_parser, stat);
+        CallbackData data(m_xml_parser, *this, stat);
 
         mz_bool res = 0;
 
@@ -818,10 +839,9 @@ namespace Slic3r {
         {
             res = mz_zip_reader_extract_file_to_callback(&archive, stat.m_filename, [](void* pOpaque, mz_uint64 file_ofs, const void* pBuf, size_t n)->size_t {
                 CallbackData* data = (CallbackData*)pOpaque;
-                if (!XML_Parse(data->parser, (const char*)pBuf, (int)n, (file_ofs + n == data->stat.m_uncomp_size) ? 1 : 0))
-                {
+                if (!XML_Parse(data->parser, (const char*)pBuf, (int)n, (file_ofs + n == data->stat.m_uncomp_size) ? 1 : 0) || data->importer.parse_error()) {
                     char error_buf[1024];
-                    ::sprintf(error_buf, "Error (%s) while parsing '%s' at line %d", XML_ErrorString(XML_GetErrorCode(data->parser)), data->stat.m_filename, (int)XML_GetCurrentLineNumber(data->parser));
+                    ::sprintf(error_buf, "Error (%s) while parsing '%s' at line %d", data->importer.parse_error_message(), data->stat.m_filename, (int)XML_GetCurrentLineNumber(data->parser));
                     throw Slic3r::FileIOError(error_buf);
                 }
 
@@ -1419,8 +1439,11 @@ namespace Slic3r {
     bool _3MF_Importer::_handle_end_model()
     {
         // deletes all non-built or non-instanced objects
-        for (const IdToModelObjectMap::value_type& object : m_objects)
-        {
+        for (const IdToModelObjectMap::value_type& object : m_objects) {
+            if (object.second >= m_model->objects.size()) {
+                add_error("Unable to find object");
+                return false;
+            }
             ModelObject *model_object = m_model->objects[object.second];
             if ((model_object != nullptr) && (model_object->instances.size() == 0))
                 m_model->delete_object(model_object);
@@ -1921,6 +1944,10 @@ namespace Slic3r {
                 for (unsigned int v = 0; v < 3; ++v)
                 {
                     unsigned int tri_id = geometry.triangles[src_start_id + ii + v] * 3;
+                    if (tri_id + 2 >= geometry.vertices.size()) {
+                        add_error("Malformed triangle mesh");
+                        return false;
+                    }
                     facet.vertex[v] = Vec3f(geometry.vertices[tri_id + 0], geometry.vertices[tri_id + 1], geometry.vertices[tri_id + 2]);
                 }
             }

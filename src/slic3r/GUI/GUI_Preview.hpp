@@ -182,6 +182,7 @@ Preview(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSl
     ForceState get_force_state() { return current_force_state; }
 
     void msw_rescale();
+    void sys_color_changed();
     void jump_layers_slider(wxKeyEvent& evt);
     void move_layers_slider(wxKeyEvent& evt);
     void edit_layers_slider(wxKeyEvent& evt);
