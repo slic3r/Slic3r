@@ -654,7 +654,7 @@ void PreferencesDialog::create_settings_mode_widget()
 		m_values["new_settings_layout_mode"] = boost::any_cast<bool>(selection == 2) ? "1" : "0";
 		m_values["dlg_settings_layout_mode"] = boost::any_cast<bool>(selection == 3) ? "1" : "0";
 	});
-	std::wstring unstable_warning = _L("!! Can be unstable in some os distribution !!");
+	wxString unstable_warning = _L("!! Can be unstable in some os distribution !!");
 	m_layout_mode_box->SetToolTip(_L("Choose how the windows are selectable and displayed:")
 		+ "\n* " + _L(" Tab layout: all windows are in the application, all are selectable via a tab.")
 #ifndef WIN32
