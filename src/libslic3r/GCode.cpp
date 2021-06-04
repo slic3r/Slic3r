@@ -858,7 +858,7 @@ namespace DoExport {
 
             //Create the thumbnails
 	        const size_t max_row_length = 78;
-            ThumbnailsList thumbnails = thumbnail_cb(ThumbnailsParams{ sizes, true, true, true, true });
+            ThumbnailsList thumbnails = thumbnail_cb(ThumbnailsParams{ sizes, true, true, thumbnails_with_bed, true });
 	        for (const ThumbnailData& data : thumbnails)
 	        {
 	            if (data.is_valid())
