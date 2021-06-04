@@ -466,6 +466,8 @@ void PhysicalPrinterDialog::update()
             m_optgroup->hide_field(opt_key);
         const auto opt = m_config->option<ConfigOptionEnum<PrintHostType>>("host_type");
         supports_multiple_printers = opt && opt->value == htRepetier;
+
+        update_host_type();
     }
     else {
         m_optgroup->set_value("host_type", int(PrintHostType::htOctoPrint), false);
@@ -487,6 +489,44 @@ void PhysicalPrinterDialog::update()
 
     this->SetSize(this->GetBestSize());
     this->Layout();
+}
+
+void PhysicalPrinterDialog::update_host_type()
+{
+    bool all_presets_are_from_mk3_family = true;
+
+    for (PresetForPrinter* preset : m_presets) {
+        std::string preset_name = preset->get_preset_name();
+        if (Preset* preset = wxGetApp().preset_bundle->printers.find_preset(preset_name)) {
+            if (preset->vendor->name == "Prusa Research") {
+                const std::vector<VendorProfile::PrinterModel>& models = preset->vendor->models;
+                std::string model_id = preset->config.opt_string("printer_model");
+                auto it = std::find_if(models.begin(), models.end(),
+                    [model_id](const VendorProfile::PrinterModel& model) { return model.id == model_id; });
+                if (it != models.end() && it->family == "MK3")
+                    continue;
+            }
+        }
+        all_presets_are_from_mk3_family = false;
+        break;
+    }
+
+    Field* ht = m_optgroup->get_field("host_type");
+
+    wxArrayString types;
+    // Append localized enum_labels
+    assert(ht->m_opt.enum_labels.size() == ht->m_opt.enum_values.size());
+    for (size_t i = 0; i < ht->m_opt.enum_labels.size(); i++) {
+        if (ht->m_opt.enum_values[i] == "prusalink" && !all_presets_are_from_mk3_family)
+            continue;
+        types.Add(_(ht->m_opt.enum_labels[i]));
+    }
+
+    Choice* choice = dynamic_cast<Choice*>(ht);
+    int val = m_config->option("host_type")->getInt();
+    choice->set_values(types);
+    val = m_config->option("host_type")->getInt();
+    choice->set_value(m_config->option("host_type")->getInt());
 }
 
 
@@ -617,8 +657,9 @@ void PhysicalPrinterDialog::AddPreset(wxEvent& event)
 
     m_presets_sizer->Add(m_presets.back()->sizer(), 1, wxEXPAND | wxTOP, BORDER_W);
     update_full_printer_names();
-
     this->Fit();
+
+    update_host_type();
 }
 
 void PhysicalPrinterDialog::DeletePreset(PresetForPrinter* preset_for_printer)
@@ -645,6 +686,8 @@ void PhysicalPrinterDialog::DeletePreset(PresetForPrinter* preset_for_printer)
 
     this->Layout();
     this->Fit();
+
+    update_host_type();
 }
 
 void PhysicalPrinterDialog::selected_preset_changed(std::string preset_name)
