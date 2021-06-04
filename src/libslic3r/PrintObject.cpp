@@ -715,8 +715,7 @@ namespace Slic3r {
                 || opt_key == "hole_size_compensation"
                 || opt_key == "hole_size_threshold"
                 || opt_key == "hole_to_polyhole"
-                || opt_key == "hole_to_polyhole_threshold"
-                || opt_key == "z_step") {
+                || opt_key == "hole_to_polyhole_threshold") {
                 steps.emplace_back(posSlice);
             } else if (opt_key == "support_material") {
                 steps.emplace_back(posSupportMaterial);
@@ -750,7 +749,8 @@ namespace Slic3r {
                 steps.emplace_back(posSupportMaterial);
             } else if (opt_key == "bottom_solid_layers") {
                 steps.emplace_back(posPrepareInfill);
-                if (m_print->config().spiral_vase) {
+                if (m_print->config().spiral_vase
+                || opt_key == "z_step") {
                     // Changing the number of bottom layers when a spiral vase is enabled requires re-slicing the object again.
                     // Otherwise, holes in the bottom layers could be filled, as is reported in GH #5528.
                     steps.emplace_back(posSlice);
