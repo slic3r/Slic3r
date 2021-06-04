@@ -92,10 +92,10 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: nightly_macos.tar
+        name: rc_macos.tar
         path: build/Slic3r.tar
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: nightly_macos.dmg
+        name: rc_macos.dmg
         path: build/Slic3r.dmg

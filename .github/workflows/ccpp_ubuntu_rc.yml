@@ -73,7 +73,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: nightly_linux.tar
+        name: rc_linux.tar
         path: build/Slic3r.tar
     - name: build appimage
       working-directory: ./build/package
@@ -86,6 +86,6 @@ jobs:
     - name: Upload appimage
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: Slic3r-AppImage.tar
+        name: rc-Slic3r-AppImage.tar
         path: build/package/Slic3r_ubu64.AppImage.tar
         

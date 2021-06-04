@@ -108,5 +108,5 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: nightly_win64
+        name: rc_win64
         path: build/package/
