@@ -5552,6 +5552,9 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
             value = "marlin";
         else if ("klipper" == value)
             value = "sprinter";
+    } else if ("host_type" == opt_key) {
+        if ("klipper" == value)
+            value = "octoprint";
     } else if (opt_key.find("extrusion_width") != std::string::npos) {
         if (std::set<std::string>{"extrusion_width", "first_layer_extrusion_width", "perimeter_extrusion_width", "external_perimeter_extrusion_width", 
             "infill_extrusion_width", "solid_infill_extrusion_width", "top_infill_extrusion_width"}.count(opt_key) > 0) {
