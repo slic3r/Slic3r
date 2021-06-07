@@ -36,7 +36,7 @@ using t_kill_focus = std::function<void(const std::string&)>;
 using t_change = std::function<void(const t_config_option_key&, const boost::any&)>;
 using t_back_to_init = std::function<void(const std::string&)>;
 
-wxString double_to_string(double const value, const int max_precision = 8);
+wxString double_to_string(double const value, const int max_precision = 6);
 wxString get_points_string(const std::vector<Vec2d>& values);
 
 class Field {

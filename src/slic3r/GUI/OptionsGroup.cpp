@@ -857,7 +857,7 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
                 double val = opt->type == coFloats ?
                             config.option<ConfigOptionFloatsNullable>(opt_key)->get_at(idx) :
                             config.option<ConfigOptionPercentsNullable>(opt_key)->get_at(idx);
-                ret = double_to_string(val); }
+                ret = double_to_string(val, opt->precision); }
             }
             break;
         case coBools:
@@ -877,7 +877,7 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 	case coFloatOrPercent:{
 		const auto &value = *config.option<ConfigOptionFloatOrPercent>(opt_key);
 
-        text_value = double_to_string(value.value);
+        text_value = double_to_string(value.value, opt->precision);
 		if (value.percent)
 			text_value += "%";
 
@@ -886,7 +886,7 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 	}
 	case coPercent:{
 		double val = config.option<ConfigOptionPercent>(opt_key)->value;
-        text_value = double_to_string(val);
+        text_value = double_to_string(val, opt->precision);
 		ret = text_value;
 	}
 		break;
@@ -897,7 +897,7 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 					config.opt_float(opt_key, idx) :
 						opt->type == coFloat ? config.opt_float(opt_key) :
 						config.option<ConfigOptionPercents>(opt_key)->get_at(idx);
-		ret = double_to_string(val);
+		ret = double_to_string(val, opt->precision);
 		}
 		break;
 	case coString:

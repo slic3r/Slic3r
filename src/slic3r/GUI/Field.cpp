@@ -26,7 +26,7 @@
 
 namespace Slic3r { namespace GUI {
 
-wxString double_to_string(double const value, const int max_precision /*= 8*/)
+wxString double_to_string(double const value, const int max_precision /*= 6*/)
 {
 // Style_NoTrailingZeroes does not work on OSX. It also does not work correctly with some locales on Windows.
 //	return wxNumberFormatter::ToString(value, max_precision, wxNumberFormatter::Style_NoTrailingZeroes);
@@ -240,7 +240,7 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
 
 			wxString label = m_opt.full_label.empty() ? _(m_opt.label) : _(m_opt.full_label);
             show_error(m_parent, from_u8((boost::format(_utf8(L("%s doesn't support percentage"))) % label).str()));
-			set_value(double_to_string(m_opt.min), true);
+			set_value(double_to_string(m_opt.min, m_opt.precision), true);
 			m_value = double(m_opt.min);
 			break;
 		}
@@ -260,7 +260,7 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
                     break;
                 }
                 show_error(m_parent, _(L("Invalid numeric input.")));
-                set_value(double_to_string(val), true);
+                set_value(double_to_string(val, m_opt.precision), true);
             }
             if (m_opt.min > val || val > m_opt.max)
             {
@@ -280,7 +280,7 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
                             }
                             else
                                 val = boost::any_cast<double>(m_value);
-                            set_value(double_to_string(val), true);
+                            set_value(double_to_string(val, m_opt.precision), true);
                         }
                     }
                 }
@@ -288,7 +288,7 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
                     show_error(m_parent, _L("Input value is out of range"));
                     if (m_opt.min > val) val = m_opt.min;
                     if (val > m_opt.max) val = m_opt.max;
-                    set_value(double_to_string(val), true);
+                    set_value(double_to_string(val, m_opt.precision), true);
                 }
             }
         }
@@ -314,7 +314,7 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
                     break;
                 }
                 show_error(m_parent, _(L("Invalid numeric input.")));
-                set_value(double_to_string(val), true);
+                set_value(double_to_string(val, m_opt.precision), true);
             } else {
 
                 //at least check min, as we can want a 0 min
@@ -326,7 +326,7 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
                     }
                     show_error(m_parent, _(L("Input value is out of range")));
                     if (m_opt.min > val) val = m_opt.min;
-                    set_value(double_to_string(val), true);
+                    set_value(double_to_string(val, m_opt.precision), true);
                 } else if (((m_opt.sidetext.rfind("mm/s") != std::string::npos && val > m_opt.max) ||
                      (m_opt.sidetext.rfind("mm ") != std::string::npos && val > 1)) &&
                      (m_value.empty() || std::string(str.ToUTF8().data()) != boost::any_cast<std::string>(m_value)))
@@ -356,7 +356,7 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
                     bool infill_anchors = m_opt.opt_key == "infill_anchor" || m_opt.opt_key == "infill_anchor_max";
 
                     const std::string sidetext = m_opt.sidetext.rfind("mm/s") != std::string::npos ? "mm/s" : "mm";
-                    const wxString stVal = double_to_string(val, 2);
+                    const wxString stVal = double_to_string(val, m_opt.precision);
                     const wxString msg_text = from_u8((boost::format(_utf8(L("Do you mean %s%% instead of %s %s?\n"
                         "Select YES if you want to change this value to %s%%, \n"
                         "or NO if you are sure that %s %s is a correct value."))) % stVal % stVal % sidetext % stVal % stVal % sidetext).str());
@@ -456,14 +456,14 @@ void TextCtrl::BUILD() {
 	switch (m_opt.type) {
 	case coFloatOrPercent:
 	{
-		text_value = double_to_string(m_opt.default_value->getFloat());
+		text_value = double_to_string(m_opt.default_value->getFloat(), m_opt.precision);
 		if (m_opt.get_default_value<ConfigOptionFloatOrPercent>()->percent)
 			text_value += "%";
 		break;
 	}
 	case coPercent:
 	{
-		text_value = double_to_string(m_opt.default_value->getFloat());
+		text_value = double_to_string(m_opt.default_value->getFloat(), m_opt.precision);
 		text_value += "%";
 		break;
 	}	
@@ -476,7 +476,7 @@ void TextCtrl::BUILD() {
 			m_opt.type == coFloat ? 
 				m_opt.default_value->getFloat() :
 				m_opt.get_default_value<ConfigOptionPercents>()->get_at(m_opt_idx);
-		text_value = double_to_string(val);
+		text_value = double_to_string(val, m_opt.precision);
         m_last_meaningful_value = text_value;
 		break;
 	}
@@ -1082,7 +1082,7 @@ void Choice::set_selection()
 		break;
 	}
 	case coFloatOrPercent: {
-		text_value = double_to_string(m_opt.default_value->getFloat());
+		text_value = double_to_string(m_opt.default_value->getFloat(), m_opt.precision);
 		if (m_opt.get_default_value<ConfigOptionFloatOrPercent>()->percent)
 			text_value += "%";
 		break;

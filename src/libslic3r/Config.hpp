@@ -1696,6 +1696,8 @@ public:
     // By setting min=0, only nonnegative input is allowed.
     double                              min = INT_MIN;
     double                              max = INT_MAX;
+    // max precision after the dot, only for display
+    int                                 precision = 6;
     ConfigOptionMode                    mode = comSimple;
     // Legacy names for this configuration option.
     // Used when parsing legacy configuration file.

@@ -1798,7 +1798,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                     option.opt.label = option.opt.full_label;
                     need_to_notified_search = true;
                 }
-                else if (params[i].find("label$") != std::string::npos)
+                else if (boost::starts_with(params[i], "label$"))
                 {
                     option.opt.label = L(params[i].substr(6, params[i].size() - 6));
                     need_to_notified_search = true;
@@ -1806,11 +1806,11 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 else if (boost::starts_with(params[i], "label_width$")) {
                     option.opt.label_width = atoi(params[i].substr(12, params[i].size() - 12).c_str());
                 }
-                else if (params[i].find("sidetext$") != std::string::npos)
+                else if (boost::starts_with(params[i], "sidetext$"))
                 {
                     option.opt.sidetext = L(params[i].substr(9, params[i].size() - 9));
                 }
-                else if (params[i].find("sidetext_width$") != std::string::npos)
+                else if (boost::starts_with(params[i], "sidetext_width$"))
                 {
                     option.opt.sidetext_width = atoi(params[i].substr(15, params[i].size() - 15).c_str());
                 }
@@ -1823,13 +1823,16 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 else if (boost::starts_with(params[i], "height$")) {
                     option.opt.height = atoi(params[i].substr(7, params[i].size() - 7).c_str());
                 }
+                else if (boost::starts_with(params[i], "precision$")) {
+                    option.opt.precision = atoi(params[i].substr(7, params[i].size() - 7).c_str());
+                }
                 else if (params[i] == "color") {
                     colored = true;
                 }
                 else if (boost::starts_with(params[i], "url$")) { // only on line
                     label_path = params[i].substr(4, params[i].size() - 4);
                 }
-                else if (params[i].find("tooltip$") != std::string::npos)
+                else if (boost::starts_with(params[i], "tooltip$"))
                 {
                     option.opt.tooltip = L(params[i].substr(8, params[i].size() - 8));
                     need_to_notified_search = true;

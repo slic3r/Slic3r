@@ -911,12 +911,12 @@ static wxString get_string_value(std::string opt_key, const DynamicPrintConfig& 
         return from_u8((boost::format("%1%%%") % int(val)).str());
     }
     case coFloat:
-        return double_to_string(config.opt_float(opt_key));
+        return double_to_string(config.opt_float(opt_key), opt->precision);
     case coFloats: {
         double val = is_nullable ?
             config.opt<ConfigOptionFloatsNullable>(opt_key)->get_at(opt_idx) :
             config.opt<ConfigOptionFloats>(opt_key)->get_at(opt_idx);
-        return double_to_string(val);
+        return double_to_string(val, opt->precision);
     }
     case coString:
         return from_u8(config.opt_string(opt_key));
@@ -937,9 +937,9 @@ static wxString get_string_value(std::string opt_key, const DynamicPrintConfig& 
         break;
         }
     case coFloatOrPercent: {
-        const ConfigOptionFloatOrPercent* opt = config.opt<ConfigOptionFloatOrPercent>(opt_key);
-        if (opt)
-            out = double_to_string(opt->value) + (opt->percent ? "%" : "");
+        const ConfigOptionFloatOrPercent* float_percent = config.opt<ConfigOptionFloatOrPercent>(opt_key);
+        if (float_percent)
+            out = double_to_string(float_percent->value, opt->precision) + (float_percent->percent ? "%" : "");
         return out;
     }
     case coEnum: {

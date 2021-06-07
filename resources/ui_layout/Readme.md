@@ -41,6 +41,7 @@ each parameter is separated by ':'
 	* STR, the last parameter: the id name of the setting.
 	* label$STR: to override the label by this new one (if it ends with '_' it won't have a ':' ; if empty it won't have a length).
 	* label_width$INT: change the width of the label. Only works if it's in a line. Override the group one. -1 for auto.
+	* full_label$STR: to override the full_label by this new one (full_label is used on modifiers).
 	* full_label: to override the label by the "full one".
 	* full_width: to tell to create a field that span the full width.
 	* sidetext$STR: the suffix at the right of the widget (like 'mm').
@@ -48,6 +49,7 @@ each parameter is separated by ':'
 	* simple|advanced|expert: add one of these to modify the mode in which this setting appear.
 	* width$INT: change the width of the field. Shouod work on most type of settings.
 	* height$INT: change the height of the field. Don't works with every type of setting.
+	* precision$INT: number of digit after the dot displayed.
 	* url$STR: the url to call when clicking on it.
 	* id $INT: for setting only a single value of a setting array.
 	* idx: for setting only a single value of a setting array, with the index of the page (for extruder ui page)

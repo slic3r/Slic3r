@@ -136,6 +136,7 @@ void PrintConfigDef::init_common_params()
                      "The gap closing operation may reduce the final print resolution, therefore it is advisable to keep the value reasonably low.");
     def->sidetext = L("mm");
     def->min = 0;
+    def->precision = 8;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(0.049));
 
@@ -835,6 +836,8 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -849,6 +852,8 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
@@ -1168,6 +1173,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -1181,6 +1187,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
@@ -1753,6 +1760,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(140, true));
@@ -1767,6 +1775,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
@@ -2149,6 +2158,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -2163,6 +2173,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
@@ -2624,6 +2635,7 @@ void PrintConfigDef::init_fff_params()
                      "\n0 to disable.");
     def->sidetext = L("mm");
     def->min = 0;
+    def->precision = 8;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0.035));
 
@@ -2888,6 +2900,7 @@ void PrintConfigDef::init_fff_params()
     def->aliases = { "perimeters_extrusion_width" };
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -2902,6 +2915,7 @@ void PrintConfigDef::init_fff_params()
     def->aliases = { "perimeters_extrusion_width" };
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
@@ -3013,6 +3027,7 @@ void PrintConfigDef::init_fff_params()
         "\nInfill & Thin areas are simplified up to 0.0125mm.");
     def->sidetext = L("mm");
     def->min = 0;
+    def->precision = 8;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0.002));
 
@@ -3244,9 +3259,10 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Horizontal width of the skirt that will be printed around each object."
         " If left zero, first layer extrusion width will be used if set and the skirt is only 1 layer height"
         ", or perimeter extrusion width will be used (using the computed value if not set).");
-    def->sidetext = L("mm");
+    def->sidetext = L("mm or %");
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -3359,6 +3375,7 @@ void PrintConfigDef::init_fff_params()
         "\nIt's really only useful to smoothen functional models or very wide angles.");
     def->sidetext = L("mm");
     def->min = 0;
+    def->precision = 8;
     def->cli = "curve-smoothing-precision=f";
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(0));
@@ -3415,6 +3432,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -3429,6 +3447,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
@@ -3535,6 +3554,7 @@ void PrintConfigDef::init_fff_params()
         " Put 0 to disable.");
     def->sidetext = L("mm");
     def->min = 0;
+    def->precision = 8;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(0.0001));
 
@@ -3710,6 +3730,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -3994,6 +4015,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -4007,6 +4029,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
@@ -4348,6 +4371,7 @@ void PrintConfigDef::init_fff_params()
     def->cli = "z-step=f";
     def->sidetext = L("mm");
     def->min = 0;
+    def->precision = 8;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0.005));
 
@@ -5840,6 +5864,7 @@ bool DynamicPrintConfig::update_phony(const std::vector<const DynamicPrintConfig
     return something_changed;
 }
 
+//note: width<-> spacing conversion is done via float, so max 6-7 digit of precision.
 bool DynamicPrintConfig::value_changed(const t_config_option_key& opt_key, const std::vector<const DynamicPrintConfig*> config_collection) {
 
     if (opt_key == "layer_height") {
