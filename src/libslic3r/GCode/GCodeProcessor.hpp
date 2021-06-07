@@ -422,7 +422,7 @@ namespace Slic3r {
         unsigned char m_extruder_id;
         ExtruderColors m_extruder_colors;
         std::vector<float> m_filament_diameters;
-        float m_extruded_last_z;
+        double m_extruded_last_z;
         unsigned int m_g1_line_id;
         unsigned int m_layer_id;
         CpColor m_cp_color;

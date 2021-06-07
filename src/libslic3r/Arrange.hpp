@@ -67,7 +67,7 @@ struct ArrangePolygon {
     {
         ExPolygon ret = poly;
         ret.rotate(rotation);
-        ret.translate(translation.x(), translation.y());
+        ret.translate(double(translation.x()), double(translation.y()));
 
         return ret;
     }

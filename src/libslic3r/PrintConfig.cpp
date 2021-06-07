@@ -5956,9 +5956,9 @@ bool DynamicPrintConfig::value_changed(const t_config_option_key& opt_key, const
         ConfigOptionFloatOrPercent* width_option = this->option<ConfigOptionFloatOrPercent>(opt_key);
         if (layer_height_option && width_option && nozzle_diameter_option) {
             //compute spacing with current height and change the width
-            double max_nozzle_diameter = 0;
+            float max_nozzle_diameter = 0;
             for (double dmr : nozzle_diameter_option->values)
-                max_nozzle_diameter = std::max(max_nozzle_diameter, dmr);
+                max_nozzle_diameter = std::max(max_nozzle_diameter, (float)dmr);
             ConfigOptionFloatOrPercent* spacing_option = nullptr;
             try {
                 if (opt_key == "extrusion_width") {

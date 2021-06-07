@@ -1334,33 +1334,33 @@ void MainFrame::init_menubar_as_editor()
     #else
         wxString hotkey_delete = "Del";
     #endif
-        append_menu_item(editMenu, wxID_ANY, _L("&Select all") + "\t" + GUI::shortkey_ctrl_prefix() + sep_space + "A",
+        append_menu_item(editMenu, wxID_ANY, _L("&Select all") + "\t" + GUI::shortkey_ctrl_prefix() + "A",
             _L("Selects all objects"), [this](wxCommandEvent&) { m_plater->select_all(); },
             "", nullptr, [this](){return can_select(); }, this);
-        append_menu_item(editMenu, wxID_ANY, _L("D&eselect all") + "\t" + "Esc",
+        append_menu_item(editMenu, wxID_ANY, _L("D&eselect all") + sep + "Esc",
             _L("Deselects all objects"), [this](wxCommandEvent&) { m_plater->deselect_all(); },
             "", nullptr, [this](){return can_deselect(); }, this);
         editMenu->AppendSeparator();
         append_menu_item(editMenu, wxID_ANY, _L("&Delete selected") + "\t" + hotkey_delete,
             _L("Deletes the current selection"),[this](wxCommandEvent&) { m_plater->remove_selected(); },
             "remove_menu", nullptr, [this](){return can_delete(); }, this);
-        append_menu_item(editMenu, wxID_ANY, _L("Delete &all") + "\t" + GUI::shortkey_ctrl_prefix() + sep_space + hotkey_delete,
+        append_menu_item(editMenu, wxID_ANY, _L("Delete &all") + "\t" + GUI::shortkey_ctrl_prefix() + hotkey_delete,
             _L("Deletes all objects"), [this](wxCommandEvent&) { m_plater->reset_with_confirm(); },
             "delete_all_menu", nullptr, [this](){return can_delete_all(); }, this);
 
         editMenu->AppendSeparator();
-        append_menu_item(editMenu, wxID_ANY, _L("&Undo") + "\t" + GUI::shortkey_ctrl_prefix() + sep_space + "Z",
+        append_menu_item(editMenu, wxID_ANY, _L("&Undo") + "\t" + GUI::shortkey_ctrl_prefix() + "Z",
             _L("Undo"), [this](wxCommandEvent&) { m_plater->undo(); },
             "undo_menu", nullptr, [this](){return m_plater->can_undo(); }, this);
-        append_menu_item(editMenu, wxID_ANY, _L("&Redo") + "\t" + GUI::shortkey_ctrl_prefix() + sep_space + "Y",
+        append_menu_item(editMenu, wxID_ANY, _L("&Redo") + "\t" + GUI::shortkey_ctrl_prefix() + "Y",
             _L("Redo"), [this](wxCommandEvent&) { m_plater->redo(); },
             "redo_menu", nullptr, [this](){return m_plater->can_redo(); }, this);
 
         editMenu->AppendSeparator();
-        append_menu_item(editMenu, wxID_ANY, _L("&Copy") + "\t" + GUI::shortkey_ctrl_prefix() + sep_space + "C",
+        append_menu_item(editMenu, wxID_ANY, _L("&Copy") + "\t" + GUI::shortkey_ctrl_prefix() + "C",
             _L("Copy selection to clipboard"), [this](wxCommandEvent&) { m_plater->copy_selection_to_clipboard(); },
             "copy_menu", nullptr, [this](){return m_plater->can_copy_to_clipboard(); }, this);
-        append_menu_item(editMenu, wxID_ANY, _L("&Paste") + "\t" + GUI::shortkey_ctrl_prefix() + sep_space + "V",
+        append_menu_item(editMenu, wxID_ANY, _L("&Paste") + "\t" + GUI::shortkey_ctrl_prefix() + "V",
             _L("Paste clipboard"), [this](wxCommandEvent&) { m_plater->paste_from_clipboard(); },
             "paste_menu", nullptr, [this](){return m_plater->can_paste_from_clipboard(); }, this);
         
@@ -1922,38 +1922,43 @@ void MainFrame::select_tab(Tab* tab)
 MainFrame::ETabType MainFrame::selected_tab() const
 {
     if (m_layout == ESettingsLayout::Old) {
-        if (m_tabpanel->GetSelection() == 0)
-            if (m_plater->is_view3D_shown())
+        if (m_tabpanel->GetSelection() == 0) {
+            if (m_plater->is_view3D_shown()) {
                 return ETabType::Plater3D;
-            else
+            } else {
                 return ETabType::PlaterGcode;
-        else
-            return ETabType((uint8_t)ETabType::PrintSettings + m_tabpanel->GetSelection() - 1);
-    }
-    else if (m_layout == ESettingsLayout::Tabs) {
-        if (m_tabpanel->GetSelection() < 3)
-            return ETabType((uint8_t)ETabType::Plater3D + m_tabpanel->GetSelection());
-        else
-            return ETabType((uint8_t)ETabType::PrintSettings + m_tabpanel->GetSelection() - 3);
-    }
-    else if (m_layout == ESettingsLayout::Hidden) {
-        if (!m_main_sizer->IsShown(m_tabpanel)) {
-            if (m_plater->is_view3D_shown())
-                return ETabType::Plater3D;
-            else
-                return ETabType::PlaterGcode;
+            }
         } else {
             return ETabType((uint8_t)ETabType::PrintSettings + m_tabpanel->GetSelection() - 1);
         }
-    }
-    else if (m_layout == ESettingsLayout::Dlg) {
+    } else if (m_layout == ESettingsLayout::Tabs) {
+        if (m_tabpanel->GetSelection() < 3) {
+            return ETabType((uint8_t)ETabType::Plater3D + m_tabpanel->GetSelection());
+        } else {
+            return ETabType((uint8_t)ETabType::PrintSettings + m_tabpanel->GetSelection() - 3);
+        }
+    } else if (m_layout == ESettingsLayout::Hidden) {
         if (!m_main_sizer->IsShown(m_tabpanel)) {
-            if (m_plater->is_view3D_shown())
+            if (m_plater->is_view3D_shown()) {
                 return ETabType::Plater3D;
-            else
+            } else {
                 return ETabType::PlaterGcode;
+            }
+        } else {
+            return ETabType((uint8_t)ETabType::PrintSettings + m_tabpanel->GetSelection() - 1);
+        }
+    } else if (m_layout == ESettingsLayout::Dlg) {
+        if (!m_main_sizer->IsShown(m_tabpanel)) {
+            if (m_plater->is_view3D_shown()) {
+                return ETabType::Plater3D;
+            } else {
+                return ETabType::PlaterGcode;
+            }
+        } else {
+            return ETabType::Plater3D;
         }
     }
+    return ETabType::Plater3D;
 }
 
 void MainFrame::select_tab(ETabType tab /* = Any*/, bool keep_tab_type)
