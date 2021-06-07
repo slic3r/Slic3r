@@ -382,7 +382,7 @@ void wxDataViewTreeCtrlComboPopup::OnDataViewTreeCtrlSelection(wxCommandEvent& e
 
 // edit tooltip : change Slic3r to SLIC3R_APP_KEY
 // Temporary workaround for localization
-void edit_tooltip(wxString& tooltip)
+void update_Slic3r_string(wxString& tooltip)
 {
     tooltip.Replace("Slic3r", SLIC3R_APP_NAME, true);
 }

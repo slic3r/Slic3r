@@ -25,6 +25,3 @@ set(SLIC3R_BASED_ON "")
 set(SLIC3R_GITHUB "slic3r/Slic3r")
 # download url
 set(SLIC3R_DOWNLOAD "https://slic3r.org/download")
-# string to display in the spalshscreen
-set(SLIC3R_INTRO "Slic3r contains sizable contributions from Prusa Research. Original work by Alessandro Ranellucci and the RepRap community.")
-

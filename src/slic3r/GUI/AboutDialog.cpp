@@ -81,6 +81,7 @@ CopyrightsDialog::CopyrightsDialog()
 void CopyrightsDialog::fill_entries()
 {
     m_entries = {
+        { "SuperSlicer"     , "2021 SuperSlicer"                            , "https://github.com/supermerill/SuperSlicer" },
         { "Slic3r"          , "2021 Slic3r"                                 , "https://github.com/slic3r/slic3r" },
         { "Prusaslicer"     , "2021 PrusaResearch"                          , "https://github.com/prusa3d/PrusaSlicer" },
         { "wxWidgets"       , "2019 wxWidgets"                              , "https://www.wxwidgets.org/" },
@@ -268,7 +269,7 @@ AboutDialog::AboutDialog()
         // TRN "Slic3r _is licensed under the_ License"
         const std::string is_lecensed_str = _utf8(L("is licensed under the"));
         const std::string license_str = _utf8(L("GNU Affero General Public License, version 3"));
-        const std::string based_on_str = _utf8(L(SLIC3R_INTRO));
+        const std::string based_on_str = _utf8(L("Slic3r contains sizable contributions from Prusa Research. Original work by Alessandro Ranellucci and the RepRap community."));
         const std::string contributors_str = _utf8(L("Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Vojtech Bubnik, Durand Rémi and numerous others."));
         const std::string manual_str = _utf8(L("Manual by Gary Hodgson. Inspired by the RepRap community."));
         const std::string icon_str = _utf8(L("Slic3r logo designed by Corey Daniels."));

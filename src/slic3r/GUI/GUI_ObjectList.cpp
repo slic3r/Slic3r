@@ -1605,15 +1605,16 @@ wxMenu* ObjectList::append_submenu_add_generic(wxMenu* menu, const ModelVolumeTy
 
     std::vector<std::string> items = { "Box", "Cylinder", "Sphere", "Slab" };
     if(type == ModelVolumeType::SEAM_POSITION) items = { "Sphere" };
-
+    // only to trigger slab tranlation (the other three should be translated by append_menu_items_add_volume) 
+    wxString slabStr = _L("Slab");
+    // add items to menu
     for (std::string& item : items)
     {
         if (type == ModelVolumeType::INVALID && item == "Slab")
             continue;
-        append_menu_item(sub_menu, wxID_ANY, _(L(item)), "",
-            [this, type, item](wxCommandEvent&) { load_generic_subobject(L(item), type); }, "", menu);
+        append_menu_item(sub_menu, wxID_ANY, _L(item), "",
+            [this, type, item](wxCommandEvent&) { load_generic_subobject(item, type); }, "", menu);
     }
-
     return sub_menu;
 }
 
@@ -1642,7 +1643,7 @@ void ObjectList::append_menu_items_add_volume(wxMenu* menu)
             ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::SUPPORT_ENFORCER)].second, nullptr,
             [this]() { return is_instance_or_object_selected(); }, parent);
         append_menu_item(menu, wxID_ANY, _(ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::SUPPORT_BLOCKER)].first), "",
-            [this](wxCommandEvent&) { load_generic_subobject(L("Box"), ModelVolumeType::SUPPORT_BLOCKER); },
+            [this](wxCommandEvent&) { load_generic_subobject(L("Cylinder"), ModelVolumeType::SUPPORT_BLOCKER); },
             ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::SUPPORT_BLOCKER)].second, nullptr,
             [this]() { return is_instance_or_object_selected(); }, parent);
         append_menu_item(menu, wxID_ANY, _(ADD_VOLUME_MENU_ITEMS[int(ModelVolumeType::SEAM_POSITION)].first), "",
@@ -2319,7 +2320,7 @@ void ObjectList::load_shape_object(const std::string& type_name)
     // Create mesh
     BoundingBoxf3 bb;
     TriangleMesh mesh = create_mesh(type_name, bb);
-    load_mesh_object(mesh, _(L("Shape")) + "-" + _(type_name));
+    load_mesh_object(mesh, _L("Shape") + "-" + _L(type_name));
 }
 
 void ObjectList::load_mesh_object(const TriangleMesh &mesh, const wxString &name, bool center)

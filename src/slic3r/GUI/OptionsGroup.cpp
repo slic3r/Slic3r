@@ -524,7 +524,7 @@ void OptionsGroup::clear(bool destroy_custom_ctrl)
 Line OptionsGroup::create_single_option_line(const Option& option, const wxString& path/* = wxEmptyString*/) const {
 // 	Line retval{ _(option.opt.label), _(option.opt.tooltip) };
     wxString tooltip = _(option.opt.tooltip);
-    edit_tooltip(tooltip);
+    update_Slic3r_string(tooltip);
 	Line retval{ _(option.opt.label), tooltip };
 	retval.label_path = path;
     Option tmp(option);

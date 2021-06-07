@@ -112,16 +112,16 @@ void PreferencesDialog::build()
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 #ifdef _WIN32
 		// Please keep in sync with ConfigWizard
-		def.label = L("Associate .3mf files to " SLIC3R_APP_NAME);
+		def.label = (boost::format(L("Associate .3mf files to %1%")) % SLIC3R_APP_NAME).str();
 		def.type = coBool;
-		def.tooltip = L("If enabled, sets " SLIC3R_APP_NAME " as default application to open .3mf files.");
+		def.tooltip = L("If enabled, sets Slic3r as default application to open .3mf files.");
 		def.set_default_value(new ConfigOptionBool(app_config->get("associate_3mf") == "1"));
 		option = Option(def, "associate_3mf");
 		m_optgroup_general->append_single_option_line(option);
 
-		def.label = L("Associate .stl files to " SLIC3R_APP_NAME);
+		def.label = (boost::format(L("Associate .stl files to %1%")) % SLIC3R_APP_NAME).str();
 		def.type = coBool;
-		def.tooltip = L("If enabled, sets " SLIC3R_APP_NAME " as default application to open .stl files.");
+		def.tooltip = L("If enabled, sets Slic3r as default application to open .stl files.");
 		def.set_default_value(new ConfigOptionBool(app_config->get("associate_stl") == "1"));
 		option = Option(def, "associate_stl");
 		m_optgroup_general->append_single_option_line(option);
@@ -168,11 +168,11 @@ void PreferencesDialog::build()
 
 		
 #if __APPLE__
-		def.label = L("Allow just a single Slic3r instance");
+		def.label = (L("Allow just a single Slic3r instance")) % SLIC3R_APP_NAME).str();
 		def.type = coBool;
 	def.tooltip = L("On OSX there is always only one instance of app running by default. However it is allowed to run multiple instances of same app from the command line. In such case this settings will allow only one instance.");
 #else
-		def.label = L("Allow just a single Slic3r instance");
+		def.label = (boost::format(L("Allow just a single Slic3r instance")) % SLIC3R_APP_NAME).str();
 		def.type = coBool;
 		def.tooltip = L("If this is enabled, when starting Slic3r and another instance of the same Slic3r is already running, that instance will be reactivated instead.");
 #endif
@@ -211,7 +211,7 @@ void PreferencesDialog::build()
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 #ifdef _WIN32
 	else {
-		def.label = L("Associate .gcode files to Slic3r G-code Viewer");
+		def.label = (boost::format(L("Associate .gcode files to Slic3r G-code Viewer")) % SLIC3R_APP_NAME).str();
 		def.type = coBool;
 		def.tooltip = L("If enabled, sets Slic3r G-code Viewer as default application to open .gcode files.");
 		def.set_default_value(new ConfigOptionBool(app_config->get("associate_gcode") == "1"));

@@ -193,7 +193,7 @@ wxString Field::get_tooltip_text(const wxString& default_string)
 {
 	wxString tooltip_text("");
 	wxString tooltip = _(m_opt.tooltip);
-    edit_tooltip(tooltip);
+    update_Slic3r_string(tooltip);
 
     std::string opt_id = m_opt_id;
     auto hash_pos = opt_id.find("#");

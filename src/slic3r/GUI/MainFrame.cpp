@@ -63,7 +63,7 @@ public:
         if(wxGetApp().app_config->get("single_instance") == "0") {
             // Only allow opening a new Slic3r instance on OSX if "single_instance" is disabled, 
             // as starting new instances would interfere with the locking mechanism of "single_instance" support.
-            append_menu_item(menu, wxID_ANY, _L("Open new instance"), _L("Open a new Slic3r instance"),
+            append_menu_item(menu, wxID_ANY, _L("Open new instance"), wxString::Format(_L("Open a new %s instance"), SLIC3R_APP_NAME),
             [this](wxCommandEvent&) { start_new_slicer(); }, "", nullptr);
         }
         append_menu_item(menu, wxID_ANY, _L("G-code preview") + dots, _L("Open G-code viewer"),
@@ -77,7 +77,7 @@ public:
     GCodeViewerTaskBarIcon(wxTaskBarIconType iconType = wxTBI_DEFAULT_TYPE) : wxTaskBarIcon(iconType) {}
     wxMenu *CreatePopupMenu() override {
         wxMenu *menu = new wxMenu;
-        append_menu_item(menu, wxID_ANY, _L("Open Slic3r"), _L("Open a new Slic3r instance"),
+        append_menu_item(menu, wxID_ANY, wxString::Format(_L("Open %s"), SLIC3R_APP_NAME), wxString::Format(_L("Open a new %s instance"), SLIC3R_APP_NAME),
             [this](wxCommandEvent&) { start_new_slicer(nullptr, true); }, "", nullptr);
         append_menu_item(menu, wxID_ANY, _L("G-code preview") + dots, _L("Open new G-code viewer"),
             [this](wxCommandEvent&) { start_new_gcodeviewer_open_file(); }, "", nullptr);
@@ -97,10 +97,10 @@ static wxIcon main_frame_icon(GUI_App::EAppMode app_mode)
         if (app_mode == GUI_App::EAppMode::GCodeViewer) {
             // Only in case the slicer was started with --gcodeviewer parameter try to load the icon from gcodeviewer.exe
             // Otherwise load it from the exe.
-            for (const std::wstring_view exe_name : { std::wstring_view(SLIC3R_APP_WCMD L".exe"), std::wstring_view(SLIC3R_APP_WCMD L"_console.exe") })
+            for (const std::wstring_view exe_name : { std::wstring_view(SLIC3R_APP_WCMD ".exe"), std::wstring_view(SLIC3R_APP_WCMD "_console.exe") })
                 if (boost::iends_with(path, exe_name)) {
                     path.erase(path.end() - exe_name.size(), path.end());
-                    path += GCODEVIEWER_APP_WCMD L".exe";
+                    path += GCODEVIEWER_APP_WCMD ".exe";
                     break;
                 }
         }
@@ -150,8 +150,8 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
     if (wxGetApp().is_editor())
 	m_statusbar->embed(this);
     m_statusbar->set_status_text(_L("Version") + " " +
-        SLIC3R_VERSION + " " +
-        _L("Remember to check for updates at") + " " + SLIC3R_DOWNLOAD);
+        SLIC3R_VERSION + ". " +
+        wxString::Format(_L("Remember to check for updates at %s"), SLIC3R_DOWNLOAD));
 
     // initialize tabpanel and menubar
     init_tabpanel();
@@ -1083,9 +1083,9 @@ static const wxString sep_space = "";
 static wxMenu* generate_help_menu()
 {
     wxMenu* helpMenu = new wxMenu();
-    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " Releases"), _L("Open the " SLIC3R_APP_NAME " releases page in your browser"),
+    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " Releases"), wxString::Format(_L("Open the %s releases page in your browser"), SLIC3R_APP_NAME),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser(SLIC3R_DOWNLOAD); });
-    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " wiki"), _L("Open the " SLIC3R_APP_NAME " wiki in your browser"),
+    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " wiki"), wxString::Format(_L("Open the %s wiki in your browser"), SLIC3R_APP_NAME),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/" SLIC3R_GITHUB "/wiki"); });
     append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " website"), _L("Open the Slic3r website in your browser"),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://slic3r.org"); });

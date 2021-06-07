@@ -1571,7 +1571,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
             }
             
-            current_group = current_page->new_optgroup(_(L(params.back())), nolabel?0:-1);
+            current_group = current_page->new_optgroup(_L(params.back()), nolabel?0:-1);
             for (int i = 1; i < params.size() - 1; i++) {
                 if (boost::starts_with(params[i], "title_width$")) {
                     current_group->title_width = atoi(params[i].substr(12, params[i].size() - 12).c_str());
@@ -1606,10 +1606,10 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                                     for (auto cur_diam : nozzle_diameters) {
                                         // if value is differs from first nozzle diameter value
                                         if (fabs(cur_diam - frst_diam) > EPSILON) {
-                                            const wxString msg_text = _(L("Single Extruder Multi Material is selected, \n"
+                                            const wxString msg_text = _L("Single Extruder Multi Material is selected, \n"
                                                 "and all extruders must have the same diameter.\n"
-                                                "Do you want to change the diameter for all extruders to first extruder nozzle diameter value?"));
-                                            wxMessageDialog dialog(parent(), msg_text, _(L("Nozzle diameter")), wxICON_WARNING | wxYES_NO);
+                                                "Do you want to change the diameter for all extruders to first extruder nozzle diameter value?");
+                                            wxMessageDialog dialog(parent(), msg_text, _L("Nozzle diameter"), wxICON_WARNING | wxYES_NO);
 
                                             DynamicPrintConfig new_conf = *m_config;
                                             if (dialog.ShowModal() == wxID_YES) {
@@ -1790,12 +1790,17 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
                 else if (params[i] == "full_label")
                 {
+                    option.opt.full_label = L(params[i].substr(11, params[i].size() - 11));
+                    need_to_notified_search = true;
+                }
+                else if (params[i] == "full_label")
+                {
                     option.opt.label = option.opt.full_label;
                     need_to_notified_search = true;
                 }
                 else if (params[i].find("label$") != std::string::npos)
                 {
-                    option.opt.label = params[i].substr(6, params[i].size() - 6);
+                    option.opt.label = L(params[i].substr(6, params[i].size() - 6));
                     need_to_notified_search = true;
                 }
                 else if (boost::starts_with(params[i], "label_width$")) {
@@ -1803,7 +1808,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
                 else if (params[i].find("sidetext$") != std::string::npos)
                 {
-                    option.opt.sidetext = params[i].substr(9, params[i].size() - 9);
+                    option.opt.sidetext = L(params[i].substr(9, params[i].size() - 9));
                 }
                 else if (params[i].find("sidetext_width$") != std::string::npos)
                 {
@@ -1823,6 +1828,11 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
                 else if (boost::starts_with(params[i], "url$")) { // only on line
                     label_path = params[i].substr(4, params[i].size() - 4);
+                }
+                else if (params[i].find("tooltip$") != std::string::npos)
+                {
+                    option.opt.tooltip = L(params[i].substr(8, params[i].size() - 8));
+                    need_to_notified_search = true;
                 }
             }
 
@@ -2028,9 +2038,9 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                     // if value was changed
                     if (fabs(nozzle_diameters[idx_page == 0 ? 1 : 0] - new_nd) > EPSILON)
                     {
-                        const wxString msg_text = _(L("This is a single extruder multimaterial printer, diameters of all extruders "
-                            "will be set to the new value. Do you want to proceed?"));
-                        wxMessageDialog dialog(parent(), msg_text, _(L("Nozzle diameter")), wxICON_WARNING | wxYES_NO);
+                        const wxString msg_text = _L("This is a single extruder multimaterial printer, diameters of all extruders "
+                            "will be set to the new value. Do you want to proceed?");
+                        wxMessageDialog dialog(parent(), msg_text, _L("Nozzle diameter"), wxICON_WARNING | wxYES_NO);
 
                         DynamicPrintConfig new_conf = *m_config;
                         if (dialog.ShowModal() == wxID_YES) {

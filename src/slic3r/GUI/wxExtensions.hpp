@@ -47,7 +47,7 @@ uint32_t color_from_hex(std::string hex);
 
 class wxDialog;
 
-void    edit_tooltip(wxString& tooltip);
+void    update_Slic3r_string(wxString& tooltip);
 void    msw_buttons_rescale(wxDialog* dlg, const int em_unit, const std::vector<int>& btn_ids);
 int     em_unit(wxWindow* win);
 int     mode_icon_px_size();
