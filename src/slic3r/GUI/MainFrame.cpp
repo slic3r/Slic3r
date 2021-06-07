@@ -1906,11 +1906,14 @@ void MainFrame::select_tab(Tab* tab)
     case Preset::Type::TYPE_FILAMENT:
     case Preset::Type::TYPE_SLA_MATERIAL:
         tab_type = ETabType::FilamentSettings;
+        break;
     case Preset::Type::TYPE_PRINT:
     case Preset::Type::TYPE_SLA_PRINT:
         tab_type = ETabType::PrintSettings;
+        break;
     case Preset::Type::TYPE_PRINTER:
         tab_type = ETabType::PrinterSettings;
+        break;
     }
     select_tab(tab_type);
 
