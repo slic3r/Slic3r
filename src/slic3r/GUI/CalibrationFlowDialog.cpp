@@ -26,10 +26,10 @@ namespace Slic3r {
 namespace GUI {
 
 void CalibrationFlowDialog::create_buttons(wxStdDialogButtonSizer* buttons){
-    wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Generate 10% intervals around current value")));
+    wxButton* bt = new wxButton(this, wxID_FILE1, _L("Generate 10% intervals around current value"));
     bt->Bind(wxEVT_BUTTON, &CalibrationFlowDialog::create_geometry_10, this);
     buttons->Add(bt);
-    bt = new wxButton(this, wxID_FILE2, _(L("Generate 2% intervals below current value")));
+    bt = new wxButton(this, wxID_FILE2, _L("Generate 2% intervals below current value"));
     bt->Bind(wxEVT_BUTTON, &CalibrationFlowDialog::create_geometry_2_5, this);
     buttons->Add(bt);
 }
@@ -38,7 +38,7 @@ void CalibrationFlowDialog::create_buttons(wxStdDialogButtonSizer* buttons){
 void CalibrationFlowDialog::create_geometry(float start, float delta) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    if (!plat->new_project("Flow calibration"))
+    if (!plat->new_project(L("Flow calibration")))
         return;
 
     bool autocenter = gui_app->app_config->get("autocenter") == "1";

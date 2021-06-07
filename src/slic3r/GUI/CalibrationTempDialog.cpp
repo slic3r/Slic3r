@@ -28,27 +28,27 @@ namespace GUI {
 void CalibrationTempDialog::create_buttons(wxStdDialogButtonSizer* buttons){
     wxString choices_steps[] = { "5","10","15","20" };
     steps = new wxComboBox(this, wxID_ANY, wxString{ "10" }, wxDefaultPosition, wxDefaultSize, 4, choices_steps);
-    steps->SetToolTip(_(L("Select the step in celcius between two tests.")));
+    steps->SetToolTip(_L("Select the step in celcius between two tests.\nNote that only multiple of 5 are engraved on the part."));
     steps->SetSelection(1);
     wxString choices_nb[] = { "0","1","2","3","4","5","6","7" };
     nb_down = new wxComboBox(this, wxID_ANY, wxString{ "2" }, wxDefaultPosition, wxDefaultSize, 8, choices_nb);
-    nb_down->SetToolTip(_(L("Select the number of tests with lower temperature than the current one.")));
+    nb_down->SetToolTip(_L("Select the number of tests with lower temperature than the current one."));
     nb_down->SetSelection(2);
     nb_up = new wxComboBox(this, wxID_ANY, wxString{ "2" }, wxDefaultPosition, wxDefaultSize, 8, choices_nb);
-    nb_up->SetToolTip(_(L("Select the number of tests with higher temperature than the current one.")));
+    nb_up->SetToolTip(_L("Select the number of tests with higher temperature than the current one."));
     nb_up->SetSelection(2);
 
-    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "nb down:" }));
+    buttons->Add(new wxStaticText(this, wxID_ANY, _L("Nb down:")));
     buttons->Add(nb_down);
     buttons->AddSpacer(15);
-    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "nb up:" }));
+    buttons->Add(new wxStaticText(this, wxID_ANY, _L("Nb up:")));
     buttons->Add(nb_up);
     buttons->AddSpacer(40);
-    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "steps:" }));
+    buttons->Add(new wxStaticText(this, wxID_ANY, _L("Steps:")));
     buttons->Add(steps);
     buttons->AddSpacer(40);
 
-    wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Generate")));
+    wxButton* bt = new wxButton(this, wxID_FILE1, _L("Generate"));
     bt->Bind(wxEVT_BUTTON, &CalibrationTempDialog::create_geometry, this);
     buttons->Add(bt);
 }
@@ -56,7 +56,7 @@ void CalibrationTempDialog::create_buttons(wxStdDialogButtonSizer* buttons){
 void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    if (!plat->new_project("Temperature calibration"))
+    if (!plat->new_project(L("Temperature calibration")))
         return;
 
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
@@ -105,15 +105,16 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     std::vector<ModelObject*>tower;
     tower.push_back(model.objects[objs_idx[0]]);
     float zshift = (1 - xyzScale) / 2;
-    if (temperature > 175 && temperature < 290) {
+    if (temperature > 175 && temperature < 290 && temperature%5==0) {
         tower.push_back(add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_temp/t"+std::to_string(temperature)+".amf",
             Vec3d{ xyzScale * 5, - xyzScale * 2.5, zshift - xyzScale * 2.5}, Vec3d{ xyzScale, xyzScale, xyzScale * 0.43 }));
     }
     for (int16_t i = 1; i < nb_items; i++) {
         tower.push_back(add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_temp/Smart_compact_temperature_calibration_item.amf", 
             Vec3d{ 0,0, i * 10 * xyzScale }, Vec3d{ xyzScale, xyzScale * 0.5, xyzScale }));
-        if (temperature - i * step_temp > 175 && temperature - i * step_temp < 290) {
-            tower.push_back(add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_temp/t" + std::to_string(temperature - i * step_temp) + ".amf",
+        int sub_temp = temperature - i * step_temp;
+        if (sub_temp > 175 && sub_temp < 290 && sub_temp % 5 == 0) {
+            tower.push_back(add_part(model.objects[objs_idx[0]], Slic3r::resources_dir()+"/calibration/filament_temp/t" + std::to_string(sub_temp) + ".amf",
                 Vec3d{ xyzScale * 5, -xyzScale * 2.5, xyzScale * (i * 10 - 2.5) }, Vec3d{ xyzScale, xyzScale, xyzScale * 0.43 }));
         }
     }

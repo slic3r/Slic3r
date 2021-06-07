@@ -28,17 +28,17 @@ namespace GUI {
 void CalibrationBridgeDialog::create_buttons(wxStdDialogButtonSizer* buttons){
     wxString choices_steps[] = { "5","10","15" };
     steps = new wxComboBox(this, wxID_ANY, wxString{ "10" }, wxDefaultPosition, wxDefaultSize, 3, choices_steps);
-    steps->SetToolTip(_(L("Select the step in % between two tests.")));
+    steps->SetToolTip(_L("Select the step in % between two tests.\nNote that only multiple of 5 are engraved on the parts."));
     steps->SetSelection(1);
     wxString choices_nb[] = { "1","2","3","4","5","6" };
     nb_tests = new wxComboBox(this, wxID_ANY, wxString{ "5" }, wxDefaultPosition, wxDefaultSize, 6, choices_nb);
-    nb_tests->SetToolTip(_(L("Select the number of tests")));
+    nb_tests->SetToolTip(_L("Select the number of tests"));
     nb_tests->SetSelection(4);
 
-    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "step:" }));
+    buttons->Add(new wxStaticText(this, wxID_ANY,_L("Step:")));
     buttons->Add(steps);
     buttons->AddSpacer(15);
-    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "nb tests:" }));
+    buttons->Add(new wxStaticText(this, wxID_ANY, _L("Nb tests:")));
     buttons->Add(nb_tests);
     buttons->AddSpacer(40);
     wxButton* bt = new wxButton(this, wxID_FILE1, _L("Test Flow Ratio"));
@@ -53,7 +53,7 @@ void CalibrationBridgeDialog::create_buttons(wxStdDialogButtonSizer* buttons){
 void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool add) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    if (!plat->new_project("Bridge calibration"))
+    if (!plat->new_project(L("Bridge calibration")))
         return;
 
     bool autocenter = gui_app->app_config->get("autocenter") == "1";
@@ -99,10 +99,11 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     int start = bridge_flow_ratio->value;
     float zshift = 2.3 * (1 - z_scale);
     for (size_t i = 0; i < nb_items; i++) {
-        if((start + (add ? 1 : -1) * i * step) < 180 && (start + (add ? 1 : -1) * i * step) > 20)
-            add_part(model.objects[objs_idx[i]], Slic3r::resources_dir() + "/calibration/bridge_flow/f"+std::to_string(start + (add ? 1 : -1) * i * step)+".amf", Vec3d{ -10,0, zshift + 4.6 * z_scale }, Vec3d{ 1,1,z_scale });
+        int step_num = (start + (add ? 1 : -1) * i * step);
+        if (step_num < 180 && step_num > 20 && step_num%5 == 0) {
+            add_part(model.objects[objs_idx[i]], Slic3r::resources_dir() + "/calibration/bridge_flow/f" + std::to_string(step_num) + ".amf", Vec3d{ -10,0, zshift + 4.6 * z_scale }, Vec3d{ 1,1,z_scale });
+        }
     }
-
     /// --- translate ---;
     bool has_to_arrange = false;
     const float brim_width = std::max(print_config->option<ConfigOptionFloat>("brim_width")->value, nozzle_diameter * 5.);

@@ -28,7 +28,7 @@ namespace GUI {
 void CalibrationRetractionDialog::create_buttons(wxStdDialogButtonSizer* buttons){
     wxString choices_steps[] = { "0.1","0.2","0.5","1","2" };
     steps = new wxComboBox(this, wxID_ANY, wxString{ "0.2" }, wxDefaultPosition, wxDefaultSize, 5, choices_steps);
-    steps->SetToolTip(_L("Each militer add this value to the retraction value. "));
+    steps->SetToolTip(_L("Each militer add this value to the retraction value."));
     steps->SetSelection(1);
     wxString choices_nb[] = { "2","4","6","8","10","15","20","25" };
     nb_steps = new wxComboBox(this, wxID_ANY, wxString{ "15" }, wxDefaultPosition, wxDefaultSize, 8, choices_nb);
@@ -42,34 +42,34 @@ void CalibrationRetractionDialog::create_buttons(wxStdDialogButtonSizer* buttons
     int temp = int((2 + filament_config->option<ConfigOptionInts>("temperature")->get_at(0)) / 5) * 5;
     auto size = wxSize(4 * em_unit(), wxDefaultCoord);
     temp_start = new wxTextCtrl(this, wxID_ANY, std::to_string(temp), wxDefaultPosition, size);
-    wxString degree = L'°' ;
-    wxString choices_decr[] = { "one test","2x10"+ degree,"3x10"+ degree, L"4x10°", _("3x50°"), _L("5x5°") };
+    temp_start->SetToolTip(_L("Note that only Multiple of 5 can be engraved in the part"));
+    wxString choices_decr[] = { _L("one test"),_L("2x10°"),_L("3x10°"), _L("4x10°"), _L("3x50°"), _L("5x5°") };
     decr_temp = new wxComboBox(this, wxID_ANY, wxString{ "current" }, wxDefaultPosition, wxDefaultSize, 6, choices_decr);
     decr_temp->SetToolTip(_L("Select the number tower to print, and by how many degrees C to decrease each time."));
     decr_temp->SetSelection(0);
     decr_temp->SetEditable(false);
 
-    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "step:" }));
+    buttons->Add(new wxStaticText(this, wxID_ANY, _L("Step:")));
     buttons->Add(steps);
     buttons->AddSpacer(15);
-    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "height:" }));
+    buttons->Add(new wxStaticText(this, wxID_ANY, _L("Height:")));
     buttons->Add(nb_steps);
     buttons->AddSpacer(20);
 
-    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "start temp:" }));
+    buttons->Add(new wxStaticText(this, wxID_ANY, _L("Start temp:")));
     buttons->Add(temp_start);
     buttons->AddSpacer(15);
-    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "temp decr:" }));
+    buttons->Add(new wxStaticText(this, wxID_ANY, _L("Temp decr:")));
     buttons->Add(decr_temp);
     buttons->AddSpacer(20);
 
-    wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Remove fil. slowdown")));
+    wxButton* bt = new wxButton(this, wxID_FILE1, _L("Remove fil. slowdown"));
     bt->Bind(wxEVT_BUTTON, &CalibrationRetractionDialog::remove_slowdown, this);
     buttons->Add(bt);
 
     buttons->AddSpacer(30);
 
-    bt = new wxButton(this, wxID_FILE1, _(L("Generate")));
+    bt = new wxButton(this, wxID_FILE1, _L("Generate"));
     bt->Bind(wxEVT_BUTTON, &CalibrationRetractionDialog::create_geometry, this);
     buttons->Add(bt);
 }
@@ -101,7 +101,7 @@ void CalibrationRetractionDialog::remove_slowdown(wxCommandEvent& event_args) {
 void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    if (!plat->new_project("Retraction calibration"))
+    if (!plat->new_project(L("Retraction calibration")))
         return;
 
     bool autocenter = gui_app->app_config->get("autocenter") == "1";
@@ -175,12 +175,12 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
     for (size_t id_item = 0; id_item < nb_items; id_item++) {
         part_tower.emplace_back();
         int mytemp = temp - temp_decr * id_item;
-        if (mytemp > 285) mytemp = 285;
-        if (mytemp < 180) mytemp = 180;
-        add_part(model.objects[objs_idx[id_item]], Slic3r::resources_dir() + "/calibration/filament_temp/t"+ std::to_string(mytemp) + ".amf",
-            Vec3d{ 0,0, scale * 0.2 -4.8 }, Vec3d{ scale,scale,scale });
-        model.objects[objs_idx[id_item]]->volumes[1]->rotate(PI / 2, Vec3d(0, 0, 1));
-        model.objects[objs_idx[id_item]]->volumes[1]->rotate(-PI / 2, Vec3d(1, 0, 0));
+        if (mytemp <= 285 && mytemp >= 180 && mytemp % 5 == 0) {
+            add_part(model.objects[objs_idx[id_item]], Slic3r::resources_dir() + "/calibration/filament_temp/t" + std::to_string(mytemp) + ".amf",
+                Vec3d{ 0,0, scale * 0.2 - 4.8 }, Vec3d{ scale,scale,scale });
+            model.objects[objs_idx[id_item]]->volumes[1]->rotate(PI / 2, Vec3d(0, 0, 1));
+            model.objects[objs_idx[id_item]]->volumes[1]->rotate(-PI / 2, Vec3d(1, 0, 0));
+        }
         for (int num_retract = 0; num_retract < nb_retract; num_retract++) {
             part_tower.back().push_back(add_part(model.objects[objs_idx[id_item]], 
                 Slic3r::resources_dir() + "/calibration/retraction/retraction_calibration_pillar.amf", 

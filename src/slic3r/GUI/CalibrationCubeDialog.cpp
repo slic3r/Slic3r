@@ -26,37 +26,38 @@ namespace GUI {
 void CalibrationCubeDialog::create_buttons(wxStdDialogButtonSizer* buttons){
     wxString choices_scale[] = { "10", "20", "30", "40" };
     scale = new wxComboBox(this, wxID_ANY, wxString{ "20" }, wxDefaultPosition, wxDefaultSize, 4, choices_scale);
-    scale->SetToolTip(_(L("You can choose the dimension of the cube. It's a simple scale, you can modify it in the right panel yourself if you prefer. It's just quicker to select it here.")));
+    scale->SetToolTip(_L("You can choose the dimension of the cube."
+        " It's a simple scale, you can modify it in the right panel yourself if you prefer. It's just quicker to select it here."));
     scale->SetSelection(1);
     wxString choices_goal[] = { "Dimensional accuracy (default)" , "infill/perimeter overlap"/*, "external perimeter overlap"*/};
-    calibrate = new wxComboBox(this, wxID_ANY, wxString{ "Dimensional accuracy (default)" }, wxDefaultPosition, wxDefaultSize, 2, choices_goal);
-    calibrate->SetToolTip(_(L("Select a goal, this will change settings to increase the effects to search.")));
+    calibrate = new wxComboBox(this, wxID_ANY, _L("Dimensional accuracy (default)"), wxDefaultPosition, wxDefaultSize, 2, choices_goal);
+    calibrate->SetToolTip(_L("Select a goal, this will change settings to increase the effects to search."));
     calibrate->SetSelection(0);
     calibrate->SetEditable(false);
 
-    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "dimension:" }));
+    buttons->Add(new wxStaticText(this, wxID_ANY, _L("Dimension:")));
     buttons->Add(scale);
-    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "mm" }));
+    buttons->Add(new wxStaticText(this, wxID_ANY, _L("mm")));
     buttons->AddSpacer(40);
-    buttons->Add(new wxStaticText(this, wxID_ANY, wxString{ "goal:" }));
+    buttons->Add(new wxStaticText(this, wxID_ANY, _L("Goal:")));
     buttons->Add(calibrate);
     buttons->AddSpacer(40);
 
     wxButton* bt = new wxButton(this, wxID_FILE1, _(L("Standard Cube")));
     bt->Bind(wxEVT_BUTTON, &CalibrationCubeDialog::create_geometry_standard, this);
-    bt->SetToolTip(_(L("Standard cubic xyz cube, with a flat top. Better for infill/perimeter overlap calibration.")));
+    bt->SetToolTip(_L("Standard cubic xyz cube, with a flat top. Better for infill/perimeter overlap calibration."));
     buttons->Add(bt);
     buttons->AddSpacer(10);
     bt = new wxButton(this, wxID_FILE1, _(L("Voron Cube")));
     bt->Bind(wxEVT_BUTTON, &CalibrationCubeDialog::create_geometry_voron, this);
-    bt->SetToolTip(_(L("Voron cubic cube with many features inside, with a bearing slot on top. Better to check dimensional accuracy.")));
+    bt->SetToolTip(_L("Voron cubic cube with many features inside, with a bearing slot on top. Better to check dimensional accuracy."));
     buttons->Add(bt);
 }
 
 void CalibrationCubeDialog::create_geometry(std::string calibration_path) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    if (!plat->new_project("Calibration cube"))
+    if (!plat->new_project(L("Calibration cube")))
         return;
 
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{

@@ -26,8 +26,8 @@ namespace Slic3r {
 namespace GUI {
 
 void CalibrationOverBridgeDialog::create_buttons(wxStdDialogButtonSizer* buttons){
-    wxButton* bt1 = new wxButton(this, wxID_FILE1, _(L("Over-Bridge calibration")));
-    wxButton* bt2 = new wxButton(this, wxID_FILE1, _(L("Top flow calibration")));
+    wxButton* bt1 = new wxButton(this, wxID_FILE1, _L("Over-Bridge calibration"));
+    wxButton* bt2 = new wxButton(this, wxID_FILE1, _L("Top flow calibration"));
     bt1->Bind(wxEVT_BUTTON, &CalibrationOverBridgeDialog::create_geometry1, this);
     bt2->Bind(wxEVT_BUTTON, &CalibrationOverBridgeDialog::create_geometry2, this);
     buttons->Add(bt1);
@@ -43,7 +43,7 @@ void CalibrationOverBridgeDialog::create_geometry2(wxCommandEvent& event_args) {
 void CalibrationOverBridgeDialog::create_geometry(bool over_bridge) {
     Plater* plat = this->main_frame->plater();
     Model& model = plat->model();
-    if (!plat->new_project("Over-bridge calibration"))
+    if (!plat->new_project(L("Over-bridge calibration")))
         return;
 
     bool autocenter = gui_app->app_config->get("autocenter") == "1";

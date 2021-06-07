@@ -82,7 +82,7 @@ ModelObject* CalibrationAbstractDialog::add_part(ModelObject* model_object, std:
         model = Model::read_from_file(input_file);
     }
     catch (std::exception & e) {
-        auto msg = _(L("Error!")) + " " + input_file + " : " + e.what() + ".";
+        auto msg = _L("Error!") + " " + input_file + " : " + e.what() + ".";
         show_error(this, msg);
         exit(1);
     }
@@ -147,7 +147,7 @@ wxPanel* CalibrationAbstractDialog::create_header(wxWindow* parent, const wxFont
     sizer->AddStretchSpacer();
 
     // text
-    wxStaticText* text = new wxStaticText(panel, wxID_ANY, _(L("Keyboard shortcuts")));
+    wxStaticText* text = new wxStaticText(panel, wxID_ANY, _L("Keyboard shortcuts"));
     text->SetFont(header_font);
     sizer->Add(text, 0, wxALIGN_CENTER_VERTICAL);
 
