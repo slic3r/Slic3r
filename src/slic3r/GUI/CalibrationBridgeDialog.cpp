@@ -164,7 +164,6 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     }
 
     plat->reslice();
-    plat->select_view_3D("Preview");
 
     if (autocenter) {
         //re-enable auto-center after this calibration.

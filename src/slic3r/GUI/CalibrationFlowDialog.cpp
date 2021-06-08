@@ -180,7 +180,6 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
     }
 
     plat->reslice();
-    plat->select_view_3D("Preview");
 
     if (autocenter) {
         //re-enable auto-center after this calibration.

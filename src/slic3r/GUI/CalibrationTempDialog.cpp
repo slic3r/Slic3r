@@ -179,7 +179,6 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
 
 
     plat->reslice();
-    plat->select_view_3D("Preview");
 }
 
 } // namespace GUI

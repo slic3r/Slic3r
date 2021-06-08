@@ -274,7 +274,6 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
     }
 
     plat->reslice();
-    plat->select_view_3D("Preview");
 
     if (autocenter) {
         //re-enable auto-center after this calibration.

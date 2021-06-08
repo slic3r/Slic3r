@@ -111,7 +111,7 @@ void CalibrationCubeDialog::create_geometry(std::string calibration_path) {
 
 
     plat->reslice();
-    plat->select_view_3D("Preview");
+
 }
 
 } // namespace GUI

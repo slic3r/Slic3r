@@ -155,7 +155,6 @@ void CalibrationOverBridgeDialog::create_geometry(bool over_bridge) {
     }
 
     plat->reslice();
-    plat->select_view_3D("Preview");
 
     if (autocenter) {
         //re-enable auto-center after this calibration.
