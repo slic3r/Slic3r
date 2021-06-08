@@ -395,7 +395,7 @@ def parse_ui_file(file_path):
 	while line_idx < len(lines):
 		items = lines[line_idx].strip().split(":");
 		if len(items) > 1:
-			if items[0]=="page:
+			if items[0]=="page":
 				current_line = TranslationLine();
 				current_line.header_comment = "\n#: "+file_path;#+":"+str(line_idx);
 				current_line.raw_msgid = "msgid \""+items[1]+"\"";
@@ -413,14 +413,15 @@ def parse_ui_file(file_path):
 				read_data_lines.append(current_line);
 			if items[0]=="setting":
 				for item in items:
-					if item.startswith("label$") or item.startswith("sidetext$") or item.startswith("sidetext$"):
-						current_line = TranslationLine();
-						current_line.header_comment = "\n#: "+file_path+" : l"+str(line_idx);
-						current_line.msgid = item.split("$")[-1];
-						current_line.raw_msgid = "msgid \""+current_line.msgid+"\"";
-						current_line.raw_msgstr = "msgstr \"\"";
-						current_line.msgstr = "";
-						read_data_lines.append(current_line);
+					if item.startswith("label$") or item.startswith("full_label$") or item.startswith("sidetext$") or item.startswith("tooltip$"):
+						if item.split("$")[-1] != "_" and len(item.split("$")[-1]) > 0 :
+							current_line = TranslationLine();
+							current_line.header_comment = "\n#: "+file_path+" : l"+str(line_idx);
+							current_line.msgid = item.split("$")[-1];
+							current_line.raw_msgid = "msgid \""+current_line.msgid+"\"";
+							current_line.raw_msgstr = "msgstr \"\"";
+							current_line.msgstr = "";
+							read_data_lines.append(current_line);
 		line_idx+=1;
 	
 	return read_data_lines;
