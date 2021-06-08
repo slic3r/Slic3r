@@ -1263,6 +1263,7 @@ public:
     ConfigOptionInts                chamber_temperature;
     ConfigOptionBool                complete_objects;
     ConfigOptionBool                complete_objects_one_skirt;
+    ConfigOptionBool                complete_objects_one_brim;
     ConfigOptionEnum<CompleteObjectSort> complete_objects_sort;
     ConfigOptionFloats              colorprint_heights;
     ConfigOptionBools               cooling;
@@ -1358,6 +1359,7 @@ protected:
         OPT_PTR(chamber_temperature);
         OPT_PTR(complete_objects);
         OPT_PTR(complete_objects_one_skirt);
+        OPT_PTR(complete_objects_one_brim);
         OPT_PTR(complete_objects_sort);
         OPT_PTR(colorprint_heights);
         OPT_PTR(cooling);

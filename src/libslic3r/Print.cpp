@@ -202,6 +202,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             || opt_key == "skirt_distance"
             || opt_key == "min_skirt_length"
             || opt_key == "complete_objects_one_skirt"
+            || opt_key == "complete_objects_one_brim"
             || opt_key == "ooze_prevention"
             || opt_key == "wipe_tower_x"
             || opt_key == "wipe_tower_y"
@@ -1275,8 +1276,9 @@ static inline bool sequential_print_horizontal_clearance_valid(const Print &prin
 {
 	Polygons convex_hulls_other;
 	std::map<ObjectID, Polygon> map_model_object_to_convex_hull;
+    const double dist_grow = PrintConfig::min_object_distance(&print.default_region_config());
 	for (const PrintObject *print_object : print.objects()) {
-        double dist_grow = PrintConfig::min_object_distance(&print_object->config());
+        const double object_grow = print.config().complete_objects_one_brim ? dist_grow : std::max(dist_grow, print_object->config().brim_width.value);
 	    assert(! print_object->model_object()->instances.empty());
 	    assert(! print_object->instances().empty());
 	    ObjectID model_object_id = print_object->model_object()->id();
@@ -1294,7 +1296,7 @@ static inline bool sequential_print_horizontal_clearance_valid(const Print &prin
 	                        Geometry::assemble_transform(Vec3d::Zero(), model_instance0->get_rotation(), model_instance0->get_scaling_factor(), model_instance0->get_mirror())),
                 	// Shrink the extruder_clearance_radius a tiny bit, so that if the object arrangement algorithm placed the objects
 	                // exactly by satisfying the extruder_clearance_radius, this test will not trigger collision.
-	                float(scale_(0.5 * dist_grow - EPSILON)),
+	                float(scale_(0.5 * object_grow - EPSILON)),
 	                jtRound, float(scale_(0.1))).front());
 	    }
 	    // Make a copy, so it may be rotated for instances.
@@ -1803,7 +1805,7 @@ void Print::process()
             const PrintObjectConfig &brim_config = obj_group.front()->config();
             if (brim_config.brim_width > 0 || brim_config.brim_width_interior > 0) {
                 this->set_status(88, L("Generating brim"));
-                if (config().complete_objects) {
+                if (config().complete_objects && !config().complete_objects_one_brim) {
                     for (PrintObject *obj : obj_group) {
                         //get flow
                         std::vector<uint16_t> set_extruders = this->object_extruders({ obj });

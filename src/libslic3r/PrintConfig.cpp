@@ -575,6 +575,14 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("complete_objects_one_brim", coBool);
+    def->label = L("Print all brim at startup");
+    def->category = OptionCategory::output;
+    def->tooltip = L("When using 'Complete individual objects', the default behavior is to draw the brim at the beginning of each object."
+        " if you prefer to have more place for you objects, you can print all the brims at the beginning, so ther is less problem with collision.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("complete_objects_sort", coEnum);
     def->label = L("Object sort");
     def->category = OptionCategory::output;
@@ -5381,6 +5389,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "brim_offset",
 "chamber_temperature",
 "complete_objects_one_skirt",
+"complete_objects_one_brim",
 "complete_objects_sort",
 "top_fill_pattern",
 "solid_fill_pattern",
@@ -5662,7 +5671,6 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
     //std::cout << "START min_object_distance =>" << base_dist << "\n";
     const ConfigOptionBool* co_opt = config->option<ConfigOptionBool>("complete_objects");
     if (co_opt && co_opt->value) {
-        double brim_dist = 0;
         double skirt_dist = 0;
         try {
             std::vector<double> vals = dynamic_cast<const ConfigOptionFloats*>(config->option("nozzle_diameter"))->values;
@@ -5677,18 +5685,7 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
                 base_dist = extruder_clearance_radius;
             }
 
-            //add brim width
-            //  note: now brim can be per-object, so you have to get a different min_object_distance per object
-            //    You should increase/reduce the size of the polygons that have a model-wide setting.
             const double first_layer_height = config->get_abs_value("first_layer_height");
-            if (ref_height <= first_layer_height && ref_height != 0) {
-                if (config->option("brim_width")->getFloat() > 0) {
-                    brim_dist += config->option("brim_width")->getFloat();
-                }
-            }
-            else //if (config->option("brim_width")->getFloat() + 1 > base_dist) {
-                base_dist += config->option("brim_width")->getFloat();
-            //}
             //add the skirt
             if (config->option("skirts")->getInt() > 0 && config->option("skirt_height")->getInt() >= 1 && !config->option("complete_objects_one_skirt")->getBool()) {
                 if (ref_height == 0) {
@@ -5721,7 +5718,7 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
         catch (const std::exception & ex) {
             boost::nowide::cerr << ex.what() << std::endl;
         }
-        return base_dist + std::max(skirt_dist, brim_dist);
+        return base_dist + skirt_dist;
     }
     return base_dist;
 }

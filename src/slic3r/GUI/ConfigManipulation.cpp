@@ -483,7 +483,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 
     bool have_sequential_printing = config->opt_bool("complete_objects");
     for (auto el : { /*"extruder_clearance_radius", "extruder_clearance_height",*/ "complete_objects_one_skirt",
-		"complete_objects_sort"})
+		"complete_objects_sort", "complete_objects_one_brim"})
         toggle_field(el, have_sequential_printing);
 
     bool have_ooze_prevention = config->opt_bool("ooze_prevention");

@@ -531,6 +531,7 @@ const std::vector<std::string>& Preset::print_options()
         , "support_material_buildplate_only", "dont_support_bridges", "notes", 
         "complete_objects",
         "complete_objects_one_skirt",
+        "complete_objects_one_brim",
         "complete_objects_sort",
         "extruder_clearance_radius", 
         "extruder_clearance_height", "gcode_comments", "gcode_label_objects", "output_filename_format", "post_process", "perimeter_extruder", 

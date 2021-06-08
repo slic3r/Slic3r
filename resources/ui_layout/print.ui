@@ -348,6 +348,7 @@ group:Plater
 group:Sequential printing
 	setting:complete_objects
 	setting:complete_objects_one_skirt
+	setting:complete_objects_one_brim
 	setting:complete_objects_sort
 	line:Extruder clearance (mm)
 		setting:width$6:extruder_clearance_radius
