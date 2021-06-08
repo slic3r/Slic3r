@@ -64,50 +64,112 @@ static inline void throw_on_missing_variable(const std::string &opt_key, const c
 // Used to provide hints to the user on default extrusion width values, and to provide reasonable values to the PlaceholderParser.
 double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionFloatOrPercent* opt, const ConfigOptionResolver& config, const unsigned int first_printing_extruder)
 {
-	assert(opt != nullptr);
+    assert(opt != nullptr);
 
-	bool first_layer = boost::starts_with(opt_key, "first_layer_");
+    bool first_layer = boost::starts_with(opt_key, "first_layer_") || boost::starts_with(opt_key, "brim_");
+    if (!first_layer && boost::starts_with(opt_key, "skirt_")) {
+        const ConfigOptionInt* optInt = config.option<ConfigOptionInt>("skirt_height");
+        const ConfigOptionBool* optBool = config.option<ConfigOptionBool>("draft_shield");
+        first_layer = (optBool && optInt && optInt->value == 1 && !optBool->value);
+    }
 
-#if 0
-// This is the logic used for skit / brim, but not for the rest of the 1st layer.
-	if (opt->value == 0. && first_layer) {
-		// The "first_layer_extrusion_width" was set to zero, try a substitute.
-		opt = config.option<ConfigOptionFloatOrPercent>("perimeter_extrusion_width");
-		if (opt == nullptr)
-    		throw_on_missing_variable(opt_key, "perimeter_extrusion_width");
+    if (opt->value == 0.) {
+        // The role specific extrusion width value was set to zero, get a not-0 one (if possible)
+        opt = extrusion_option(opt_key, config);
+    }
+
+    if (opt->percent) {
+        auto opt_key_layer_height = first_layer ? "first_layer_height" : "layer_height";
+        auto opt_layer_height = config.option(opt_key_layer_height);
+        if (opt_layer_height == nullptr)
+            throw_on_missing_variable(opt_key, opt_key_layer_height);
+        // first_layer_height depends on first_printing_extruder
+        auto opt_nozzle_diameters = config.option<ConfigOptionFloats>("nozzle_diameter");
+        if (opt_nozzle_diameters == nullptr)
+            throw_on_missing_variable(opt_key, "nozzle_diameter");
+        return opt->get_abs_value(float(opt_nozzle_diameters->get_at(first_printing_extruder)));
+    }
+
+    if (opt->value == 0.) {
+        // If user left option to 0, calculate a sane default width.
+        auto opt_nozzle_diameters = config.option<ConfigOptionFloats>("nozzle_diameter");
+        if (opt_nozzle_diameters == nullptr)
+            throw_on_missing_variable(opt_key, "nozzle_diameter");
+        return auto_extrusion_width(opt_key_to_flow_role(opt_key), float(opt_nozzle_diameters->get_at(first_printing_extruder)));
+    }
+
+    return opt->value;
+}
+
+//used to get brim & skirt extrusion config
+const ConfigOptionFloatOrPercent* Flow::extrusion_option(const std::string& opt_key, const ConfigOptionResolver& config)
+{
+
+    const ConfigOptionFloatOrPercent* opt = config.option<ConfigOptionFloatOrPercent>(opt_key);
+
+    //brim is first_layer_extrusion_width then perimeter_extrusion_width
+    if (!opt && boost::starts_with(opt_key, "brim_")) {
+        const ConfigOptionFloatOrPercent* optTest = config.option<ConfigOptionFloatOrPercent>("first_layer_extrusion_width");
+        opt = optTest;
+        if (opt == nullptr)
+            throw_on_missing_variable(opt_key, "first_layer_extrusion_width");
+        if (opt->value == 0) {
+            opt = config.option<ConfigOptionFloatOrPercent>("perimeter_extrusion_width");
+            if (opt == nullptr)
+                throw_on_missing_variable(opt_key, "perimeter_extrusion_width");
+        }
+    }
+
+    if (opt == nullptr)
+        throw_on_missing_variable(opt_key, opt_key.c_str());
+
+    // This is the logic used for skit / brim, but not for the rest of the 1st layer.
+	if (opt->value == 0. && boost::starts_with(opt_key, "skirt")) {
+        // The "skirt_extrusion_width" was set to zero, try a substitute.
+        const ConfigOptionFloatOrPercent* optTest = config.option<ConfigOptionFloatOrPercent>("first_layer_extrusion_width");
+        const ConfigOptionInt* optInt = config.option<ConfigOptionInt>("skirt_height");
+        const ConfigOptionBool* optBool = config.option<ConfigOptionBool>("draft_shield");
+        if (optTest == nullptr)
+            throw_on_missing_variable(opt_key, "first_layer_extrusion_width");
+        if (optBool == nullptr)
+            throw_on_missing_variable(opt_key, "draft_shield");
+        if (optInt == nullptr)
+            throw_on_missing_variable(opt_key, "skirt_height");
+        // The "first_layer_extrusion_width" was set to zero, try a substitute.
+        if (optTest && optBool && optInt && optTest->value > 0 && optInt->value == 1 && !optBool->value)
+            opt = optTest;
+
+        if (opt->value == 0) {
+            opt = config.option<ConfigOptionFloatOrPercent>("perimeter_extrusion_width");
+            if (opt == nullptr)
+                throw_on_missing_variable(opt_key, "perimeter_extrusion_width");
+        }
 	}
-#endif
+
+    // external_perimeter_extrusion_width default is perimeter_extrusion_width
+    if (opt->value == 0. && boost::starts_with(opt_key, "external_perimeter_extrusion_width")) {
+        // The role specific extrusion width value was set to zero, try the role non-specific extrusion width.
+        opt = config.option<ConfigOptionFloatOrPercent>("perimeter_extrusion_width");
+        if (opt == nullptr)
+            throw_on_missing_variable(opt_key, "perimeter_extrusion_width");
+    }
+
+    // top_infill_extrusion_width default is solid_infill_extrusion_width
+    if (opt->value == 0. && boost::starts_with(opt_key, "top_infill_extrusion_width")) {
+        // The role specific extrusion width value was set to zero, try the role non-specific extrusion width.
+        opt = config.option<ConfigOptionFloatOrPercent>("solid_infill_extrusion_width");
+        if (opt == nullptr)
+            throw_on_missing_variable(opt_key, "perimeter_extrusion_width");
+    }
 
 	if (opt->value == 0.) {
 		// The role specific extrusion width value was set to zero, try the role non-specific extrusion width.
 		opt = config.option<ConfigOptionFloatOrPercent>("extrusion_width");
 		if (opt == nullptr)
     		throw_on_missing_variable(opt_key, "extrusion_width");
-    	// Use the "layer_height" instead of "first_layer_height".
-    	first_layer = false;
 	}
 
-	if (opt->percent) {
-		auto opt_key_layer_height = first_layer ? "first_layer_height" : "layer_height";
-    	auto opt_layer_height = config.option(opt_key_layer_height);
-    	if (opt_layer_height == nullptr)
-    		throw_on_missing_variable(opt_key, opt_key_layer_height);
-        // first_layer_height depends on first_printing_extruder
-        auto opt_nozzle_diameters = config.option<ConfigOptionFloats>("nozzle_diameter");
-        if (opt_nozzle_diameters == nullptr)
-            throw_on_missing_variable(opt_key, "nozzle_diameter");
-		return opt->get_abs_value(float(opt_nozzle_diameters->get_at(first_printing_extruder)));
-	}
-
-	if (opt->value == 0.) {
-        // If user left option to 0, calculate a sane default width.
-    	auto opt_nozzle_diameters = config.option<ConfigOptionFloats>("nozzle_diameter");
-    	if (opt_nozzle_diameters == nullptr)
-    		throw_on_missing_variable(opt_key, "nozzle_diameter");
-        return auto_extrusion_width(opt_key_to_flow_role(opt_key), float(opt_nozzle_diameters->get_at(first_printing_extruder)));
-    }
-
-	return opt->value;
+	return opt;
 }
 
 // Used to provide hints to the user on default extrusion width values, and to provide reasonable values to the PlaceholderParser.

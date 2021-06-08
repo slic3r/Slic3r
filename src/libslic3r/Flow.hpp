@@ -106,6 +106,8 @@ public:
     // on active extruder etc. Therefore the value calculated by this function shall be used as a hint only.
 	static double extrusion_width(const std::string &opt_key, const ConfigOptionFloatOrPercent *opt, const ConfigOptionResolver &config, const unsigned int first_printing_extruder = 0);
 	static double extrusion_width(const std::string &opt_key, const ConfigOptionResolver &config, const unsigned int first_printing_extruder = 0);
+    static const ConfigOptionFloatOrPercent* extrusion_option(const std::string& opt_key, const ConfigOptionResolver& config);
+
 };
 
 extern Flow support_material_flow(const PrintObject *object, float layer_height = 0.f);

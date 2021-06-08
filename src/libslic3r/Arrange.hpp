@@ -46,7 +46,7 @@ struct ArrangePolygon {
     ExPolygon poly;                 /// The 2D silhouette to be arranged
     Vec2crd   translation{0, 0};    /// The translation of the poly
     double    rotation{0.0};        /// The rotation of the poly in radians
-    coord_t   inflation = 0;        /// Arrange with inflated polygon
+    //coord_t   inflation = 0;        /// Arrange with inflated polygon
     int       bed_idx{UNARRANGED};  /// To which logical bed does poly belong...
     int       priority{0};
     

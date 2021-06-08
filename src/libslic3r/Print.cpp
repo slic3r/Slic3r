@@ -1658,20 +1658,12 @@ double Print::skirt_first_layer_height() const
 
 Flow Print::brim_flow(size_t extruder_id, const PrintObjectConfig& brim_config) const
 {
-    ConfigOptionFloatOrPercent width = brim_config.first_layer_extrusion_width;
-    if (width.value <= 0) 
-        width = m_default_region_config.perimeter_extrusion_width;
-    if (width.value <= 0) 
-        width = brim_config.extrusion_width;
-    
-    /* We currently use a random region's perimeter extruder.
-       While this works for most cases, we should probably consider all of the perimeter
-       extruders and take the one with, say, the smallest index.
-       The same logic should be applied to the code that selects the extruder during G-code
-       generation as well. */
+    //use default region, but current object config.
+    PrintRegionConfig tempConf = m_default_region_config;
+    tempConf.parent = &brim_config;
     return Flow::new_from_config_width(
         frPerimeter,
-		width,
+        *Flow::extrusion_option("brim_extrusion_width", tempConf),
         (float)m_config.nozzle_diameter.get_at(extruder_id),
 		(float)this->skirt_first_layer_height()
     );
@@ -1679,27 +1671,14 @@ Flow Print::brim_flow(size_t extruder_id, const PrintObjectConfig& brim_config) 
 
 Flow Print::skirt_flow(size_t extruder_id) const
 {
-    ConfigOptionFloatOrPercent width = m_config.skirt_extrusion_width;
-    if (width.value <= 0 && m_default_object_config.first_layer_extrusion_width.value > 0
-        && m_config.skirt_height == 1 && !m_config.draft_shield)
-        width = m_default_object_config.first_layer_extrusion_width;
-    if (width.value <= 0) 
-        width = m_default_region_config.perimeter_extrusion_width;
-    if (width.value <= 0)
-        width = m_default_object_config.extrusion_width;
-    
-    /* We currently use a random object's support material extruder.
-       While this works for most cases, we should probably consider all of the support material
-       extruders and take the one with, say, the smallest index;
-       The same logic should be applied to the code that selects the extruder during G-code
-       generation as well. */
-    /* or select the used extruder with the highest nozzle diameter, to be on the safe side.*/
+    //send m_default_object_config becasue it's the lowest config needed (extrusion_option need config from object & print)
     return Flow::new_from_config_width(
         frPerimeter,
-		width,
-		(float)m_config.nozzle_diameter.get_at(extruder_id),
-		(float)this->skirt_first_layer_height()
+        *Flow::extrusion_option("skirt_extrusion_width", m_default_region_config),
+        (float)m_config.nozzle_diameter.get_at(extruder_id),
+        (float)this->skirt_first_layer_height()
     );
+    
 }
 
 bool Print::has_support_material() const
@@ -1855,7 +1834,7 @@ void Print::process()
                     std::vector<uint16_t> set_extruders = this->object_extruders(m_objects);
                     append(set_extruders, this->support_material_extruders());
                     sort_remove_duplicates(set_extruders);
-                    Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front(), obj_group.front()->config());
+                    Flow        flow = this->brim_flow(set_extruders.empty() ? m_regions.front()->config().perimeter_extruder - 1 : set_extruders.front(), m_default_object_config);
                     if (brim_config.brim_ears)
                         this->_make_brim_ears(flow, obj_group, brim_area, m_brim);
                     else
