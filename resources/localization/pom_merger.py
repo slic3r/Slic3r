@@ -1,6 +1,13 @@
 import re
 from datetime import date
 
+try:
+	from Levenshtein import distance as levenshtein_distance
+except ImportError:
+	print("you need to do 'python -m pip install python-Levenshtein'");
+	exit(0);
+
+
 datastore = dict();
 datastore_trim = dict();# key:string -> TranslationLine
 
@@ -8,6 +15,11 @@ regex_only_letters = re.compile(r"[^a-zA-Z]")
 allow_msgctxt = True;
 ignore_case = False;
 remove_comment = False;
+percent_error_similar = 0
+language_code = "??"
+language = ""
+max_similar = 3;
+database_out = "";
 
 def trim(str):
 	redo = True;
@@ -37,6 +49,7 @@ class TranslationFiles:
 	file_in = ""
 	file_out = ""
 	file_todo = ""
+	database = ""
 
 class TranslationLine:
 	header_comment = ""
@@ -48,6 +61,7 @@ class TranslationLine:
 
 def main():
 	global datastore, datastore_trim, regex_only_letters, allow_msgctxt, ignore_case, remove_comment;
+	global percent_error_similar, language, language_code, max_similar, database_out;
 	data_files = list(); # list of file paths
 	ui_dir = "";
 	operations = list(); # list of TranslationFiles
@@ -55,7 +69,10 @@ def main():
 	lines = settings_stream.read().splitlines()
 	for line in lines:
 		if line.startswith("data"):
-			data_files.append(line[line.index('=')+1:].strip());
+			if line.startswith("database_out"):
+				database_out = line[line.index('=')+1:].strip();
+			else:
+				data_files.append(line[line.index('=')+1:].strip());
 		
 		if line.startswith("input"):
 			operations.append(TranslationFiles());
@@ -66,6 +83,7 @@ def main():
 		
 		if line.startswith("todo") and operations:
 			operations[-1].file_todo = line[line.index('=')+1:].strip();
+		
 		
 		if line.startswith("ui_dir"):
 			ui_dir = line[line.index('=')+1:].strip();
@@ -82,27 +100,45 @@ def main():
 			remove_comment = (line[line.index('=')+1:].strip().lower() == "true");
 			if remove_comment:
 				print("Will not output the comments");
+				
+		if line.startswith("percent_error_similar"):
+			percent_error_similar = float(line[line.index('=')+1:].strip());
+			print("percent_error_similar set to " + str(percent_error_similar));
+				
+		if line.startswith("max_similar"):
+			max_similar = int(line[line.index('=')+1:].strip());
+			print("max_similar set to " + str(max_similar));
+			
+		if line.startswith("language"):
+			if line.startswith("language_code"):
+				language_code = line[line.index('=')+1:].strip();
+				print("language_code set to " + language_code);
+			else:
+				language = line[line.index('=')+1:].strip();
+				print("language set to " + language);
+			
 
 
 	# all_lines = list();
 	for data_file in data_files:
 		new_data = createKnowledge(data_file);
 		for dataline in new_data:
-			if not dataline.msgid in datastore:
-				datastore[dataline.msgid] = dataline;
-				datastore_trim[trim(dataline.msgid)] = dataline;
-				if dataline.msgid == " Layers,":
-					print(trim(dataline.msgid)+" is inside? "+("oui" if "Layers" in datastore_trim else "non"));
-			else:
-				str_old_val = datastore[dataline.msgid].msgstr;
-				str_test_val = dataline.msgstr;
-				length_old = len(regex_only_letters.sub("", str_old_val));
-				length_new = len(regex_only_letters.sub("", str_test_val));
-				# if already exist, only change it if the previous was lower than 3 char
-				if length_new > length_old and length_old < 3:
-					print(str_old_val.replace('\n', ' ')+" replaced by "+str_test_val.replace('\n', ' '));
-					datastore[dataline.msgid].msgstr = str_test_val;
-					datastore_trim[trim(dataline.msgid)].msgstr = str_test_val;
+			if len(dataline.msgstr) > 0:
+				if not dataline.msgid in datastore:
+					datastore[dataline.msgid] = dataline;
+					datastore_trim[trim(dataline.msgid)] = dataline;
+					if dataline.msgid == " Layers,":
+						print(trim(dataline.msgid)+" is inside? "+("oui" if "Layers" in datastore_trim else "non"));
+				else:
+					str_old_val = datastore[dataline.msgid].msgstr;
+					str_test_val = dataline.msgstr;
+					length_old = len(regex_only_letters.sub("", str_old_val));
+					length_new = len(regex_only_letters.sub("", str_test_val));
+					# if already exist, only change it if the previous was lower than 3 char
+					if length_new > length_old and length_old < 3:
+						print(str_old_val.replace('\n', ' ')+" replaced by "+str_test_val.replace('\n', ' '));
+						datastore[dataline.msgid].msgstr = str_test_val;
+						datastore_trim[trim(dataline.msgid)].msgstr = str_test_val;
 		print("finish reading" + data_file + " of size "+ str(len(new_data)) + ", now we had "+ str(len(datastore)) + " items");
 
 	if ignore_case:
@@ -155,6 +191,10 @@ def main():
 					dict_ope[dataline.msgid] = dataline;
 					ope_file_in.append(dataline);
 		print("String to translate: " + str(len(ope_file_in) - nbTrans)+" and already translated: "+str(nbTrans));
+			
+		#create database
+		if database_out:
+			outputDatabase(database_out);
 		
 		#create TODO file
 		if operation.file_todo:
@@ -260,7 +300,7 @@ def createKnowledge(file_path_in):
 			read_data_lines.append(current_line);
 			current_line = TranslationLine();
 	except Exception as error:
-		print("error, cannot read file " + file_path_in);
+		print("Warning, cannot read file " + file_path_in);
 		print(error);
 	return read_data_lines;
 
@@ -301,12 +341,21 @@ def getTranslation(item):
 			return getTranslation(lowercase)
 	return "";
 
+def getTranslationNear(msgid_to_search, percent):
+	max_word_diff = 1 + int(percent * len(msgid_to_search));
+	possible_solutions = list();
+	for msgid in datastore:
+		dist = levenshtein_distance(msgid, msgid_to_search);
+		if dist < max_word_diff:
+			possible_solutions.append( (dist, datastore[msgid]) );
+	possible_solutions.sort(key=lambda x:x[0]);
+	return possible_solutions;
 
 def outputUntranslated(data_to_translate, file_path_out):
 	try:
 		file_out_stream = open(file_path_out, mode="w", encoding="utf-8")
 		nb_lines = 0;
-		#sort to have an easier time trnaslating.
+		#sort to have an easier time translating.
 		# idealy, they shoud be grouped by proximity, but it's abit more complicated to code
 		sorted_lines = list()
 		for dataline in data_to_translate:
@@ -316,12 +365,20 @@ def outputUntranslated(data_to_translate, file_path_out):
 
 		# output bits that are empty
 		for dataline in sorted_lines:
-			file_out_stream.write(dataline.header_comment)
-			file_out_stream.write("\n")
-			file_out_stream.write(dataline.raw_msgid)
-			file_out_stream.write("\n")
-			file_out_stream.write(dataline.raw_msgstr)
-			file_out_stream.write("\n")
+			file_out_stream.write(dataline.header_comment);
+			file_out_stream.write("\n");
+			# get translation that are near enough to be copy-pasted by humans.
+			good_enough = getTranslationNear(dataline.msgid, 0.4);
+			if len(good_enough) >0:
+				file_out_stream.write("#Similar to me: "+dataline.msgid+"\n");
+				for index in range(min(len(good_enough), max_similar)):
+					file_out_stream.write("# "+str(good_enough[index][0])+("" if len(str(good_enough[index][0]))>2 else " " if len(str(good_enough[index][0]))==2 else "  ")
+						+"  changes: " + good_enough[index][1].msgid+"\n");
+					file_out_stream.write("#  translation: " + good_enough[index][1].msgstr+"\n");
+			file_out_stream.write(dataline.raw_msgid);
+			file_out_stream.write("\n");
+			file_out_stream.write(dataline.raw_msgstr);
+			file_out_stream.write("\n");
 			nb_lines+=1;
 
 		print("There is " + str(nb_lines) +" string untranslated");
@@ -332,7 +389,7 @@ def outputUntranslated(data_to_translate, file_path_out):
 def translate(data_to_translate, file_path_out):
 	# try:
 	file_out_stream = open(file_path_out, mode="w", encoding="utf-8")
-	file_out_stream.write("# Translation file for ???\n");
+	file_out_stream.write("# Translation file for "+(language if len(language)>0 else language_code)+"\n");
 	file_out_stream.write("# Copyright (C) 2021\n");
 	file_out_stream.write("# This file is distributed under the same license as Slic3r.\n");
 	file_out_stream.write("#\n");
@@ -346,7 +403,7 @@ def translate(data_to_translate, file_path_out):
 	file_out_stream.write("\"MIME-Version: 1.0\\n\"\n");
 	file_out_stream.write("\"Content-Type: text/plain; charset=UTF-8\\n\"\n");
 	file_out_stream.write("\"Content-Transfer-Encoding: 8bit\\n\"\n");
-	file_out_stream.write("\"Language:\\n\"\n");
+	file_out_stream.write("\"Language:"+language_code+"\\n\"\n");
 	nb_lines = 0;
 	data_to_translate.sort(key=lambda x:x.msgid.lower().strip())
 	# translate bits that are empty
@@ -384,6 +441,26 @@ def translate(data_to_translate, file_path_out):
 		# print("error, cannot write file " + file_path_out);
 		# print(error);
 
+def outputDatabase(file_path_out):
+	try:
+		file_out_stream = open(file_path_out, mode="w", encoding="utf-8")
+		nb_lines = 0;
+		
+		for msgid in datastore:
+			dataline = datastore[msgid];
+			file_out_stream.write(dataline.header_comment);
+			file_out_stream.write("\n");
+			file_out_stream.write(dataline.raw_msgid);
+			file_out_stream.write("\n");
+			file_out_stream.write(dataline.raw_msgstr);
+			file_out_stream.write("\n");
+			nb_lines+=1;
+
+		print("There is " + str(nb_lines) +" in your database file");
+	except Exception as error:
+		print("error, cannot write file " + file_path_out);
+		print(error);
+
 def parse_ui_file(file_path):
 	read_data_lines = list();
 	# try:
@@ -395,7 +472,7 @@ def parse_ui_file(file_path):
 	while line_idx < len(lines):
 		items = lines[line_idx].strip().split(":");
 		if len(items) > 1:
-			if items[0]=="page:
+			if items[0]=="page":
 				current_line = TranslationLine();
 				current_line.header_comment = "\n#: "+file_path;#+":"+str(line_idx);
 				current_line.raw_msgid = "msgid \""+items[1]+"\"";
@@ -413,14 +490,15 @@ def parse_ui_file(file_path):
 				read_data_lines.append(current_line);
 			if items[0]=="setting":
 				for item in items:
-					if item.startswith("label$") or item.startswith("sidetext$") or item.startswith("sidetext$"):
-						current_line = TranslationLine();
-						current_line.header_comment = "\n#: "+file_path+" : l"+str(line_idx);
-						current_line.msgid = item.split("$")[-1];
-						current_line.raw_msgid = "msgid \""+current_line.msgid+"\"";
-						current_line.raw_msgstr = "msgstr \"\"";
-						current_line.msgstr = "";
-						read_data_lines.append(current_line);
+					if item.startswith("label$") or item.startswith("full_label$") or item.startswith("sidetext$") or item.startswith("tooltip$"):
+						if item.split("$")[-1] != '_' and len(item.split("$")[-1]) > 0 :
+							current_line = TranslationLine();
+							current_line.header_comment = "\n#: "+file_path+" : l"+str(line_idx);
+							current_line.msgid = item.split("$")[-1];
+							current_line.raw_msgid = "msgid \""+current_line.msgid+"\"";
+							current_line.raw_msgstr = "msgstr \"\"";
+							current_line.msgstr = "";
+							read_data_lines.append(current_line);
 		line_idx+=1;
 	
 	return read_data_lines;

@@ -1762,8 +1762,8 @@ void PrintConfigDef::init_fff_params()
         "You can use this to force fatter extrudates for better adhesion. If expressed "
         "as percentage (for example 140%) it will be computed over the nozzle diameter "
         "of the nozzle used for the type of extrusion. "
-        "If set to zero, it will use the default extrusion width."
-        "\nYou can set either 'Spacing', or 'Width'; the other will be calculated, using the perimeter 'Overlap' percentages and default layer height.");
+        "If set to zero, it will use the default extrusion width.") + std::string("\n") +
+        L("You can set either 'Spacing', or 'Width'; the other will be calculated, using the perimeter 'Overlap' percentages and default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
@@ -2000,8 +2000,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Length of the infill anchor");
     def->category = OptionCategory::infill;
     def->tooltip = L("Connect an infill line to an internal perimeter with a short segment of an additional perimeter. "
-                     "If expressed as percentage (example: 15%) it is calculated over infill extrusion width. "
-                     SLIC3R_APP_NAME " tries to connect two close infill lines to a short perimeter segment. If no such perimeter segment "
+                     "If expressed as percentage (example: 15%) it is calculated over infill extrusion width. Slic3r tries to connect two close infill lines to a short perimeter segment. If no such perimeter segment "
                      "shorter than infill_anchor_max is found, the infill line is connected to a perimeter segment at just one side "
                      "and the length of the perimeter segment taken is limited to this parameter, but no longer than anchor_length_max. "
                      "\nSet this parameter to zero to disable anchoring perimeters connected to a single infill line.");
@@ -2027,8 +2026,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Maximum length of the infill anchor");
     def->category    = def_infill_anchor_min->category;
     def->tooltip = L("Connect an infill line to an internal perimeter with a short segment of an additional perimeter. "
-                     "If expressed as percentage (example: 15%) it is calculated over infill extrusion width. "
-                     SLIC3R_APP_NAME " tries to connect two close infill lines to a short perimeter segment. If no such perimeter segment "
+                     "If expressed as percentage (example: 15%) it is calculated over infill extrusion width. Slic3r tries to connect two close infill lines to a short perimeter segment. If no such perimeter segment "
                      "shorter than this parameter is found, the infill line is connected to a perimeter segment at just one side "
                      "and the length of the perimeter segment taken is limited to infill_anchor, but no longer than this parameter. "
                      "\nIf set to 0, the old algorithm for infill connection will be used, it should create the same result as with 1000 & 0.");
@@ -2881,7 +2879,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Round corners");
     def->full_label = L("Round corners for perimeters");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("Internal periemters will go around sharp corners by tunring around isntead of making the same sharp corner."
+    def->tooltip = L("Internal perimeters will go around sharp corners by turning around instead of making the same sharp corner."
                         " This can help when there is visible holes in sharp corners on perimeters");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
@@ -3031,7 +3029,7 @@ void PrintConfigDef::init_fff_params()
         "the slicing job and reducing memory usage. High-resolution models often carry "
         "more details than printers can render. Set to zero to disable any simplification "
         "and use full resolution from input. "
-        "\nNote: " SLIC3R_APP_NAME " has an internal working resolution of 0.0001mm."
+        "\nNote: Slic3r has an internal working resolution of 0.0001mm."
         "\nInfill & Thin areas are simplified up to 0.0125mm.");
     def->sidetext = L("mm");
     def->min = 0;
@@ -3923,7 +3921,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Thin walls");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Detect single-width walls (parts where two extrusions don't fit and we need "
-        "to collapse them into a single trace). If unchecked, slic3r may try to fit perimeters "
+        "to collapse them into a single trace). If unchecked, Slic3r may try to fit perimeters "
         "where it's not possible, creating some overlap leading to over-extrusion.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(true));
@@ -3934,7 +3932,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Minimum width for the extrusion to be extruded (widths lower than the nozzle diameter will be over-extruded at the nozzle diameter)."
         " If expressed as percentage (for example 110%) it will be computed over nozzle diameter."
-        " The default behavior of slic3r and slic3rPE is with a 33% value. Put 100% to avoid any sort of over-extrusion.");
+        " The default behavior of PrusaSlicer is with a 33% value. Put 100% to avoid any sort of over-extrusion.");
     def->ratio_over = "nozzle_diameter";
     def->mode = comExpert;
     def->min = 0;
@@ -3984,7 +3982,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("time_estimation_compensation", coPercent);
     def->label = L("Time estimation compensation");
     def->category = OptionCategory::firmware;
-    def->tooltip = L("This setting allow you to modify the time estiamtion by a % amount. As slic3r only use the marlin algorithm, it's not precise enough if an other firmware is used.");
+    def->tooltip = L("This setting allow you to modify the time estiamtion by a % amount. As Slic3r only use the marlin algorithm, it's not precise enough if an other firmware is used.");
     def->mode = comAdvanced;
     def->sidetext = L("%");
     def->min = 0;
@@ -3994,10 +3992,10 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Tool change G-code");
     def->category = OptionCategory::customgcode;
     def->tooltip = L("This custom code is inserted at every extruder change. If you don't leave this empty, you are "
-        "expected to take care of the toolchange yourself - slic3r will not output any other G-code to "
+        "expected to take care of the toolchange yourself - Slic3r will not output any other G-code to "
         "change the filament. You can use placeholder variables for all Slic3r settings as well as [previous_extruder] "
         "and [next_extruder], so e.g. the standard toolchange command can be scripted as T[next_extruder]."
-        "!! Warning !!: if any charater is written here, slic3r won't output any toochange command by itself.");
+        "!! Warning !!: if any charater is written here, Slic3r won't output any toochange command by itself.");
     def->multiline = true;
     def->full_width = true;
     def->height = 5;
@@ -4175,7 +4173,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("wipe_advanced", coBool);
     def->label = L("Enable advanced wiping volume");
-    def->tooltip = L("Allow slic3r to compute the purge volume via smart computations. Use the pigment% of each filament and following parameters");
+    def->tooltip = L("Allow Slic3r to compute the purge volume via smart computations. Use the pigment% of each filament and following parameters");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
 
@@ -6501,8 +6499,8 @@ CLIMiscConfigDef::CLIMiscConfigDef()
 
     def = this->add("single_instance", coBool);
     def->label = L("Single instance mode");
-    def->tooltip = L("If enabled, the command line arguments are sent to an existing instance of GUI " SLIC3R_APP_NAME ", "
-                     "or an existing " SLIC3R_APP_NAME " window is activated. "
+    def->tooltip = L("If enabled, the command line arguments are sent to an existing instance of GUI Slic3r, "
+                     "or an existing Slic3r window is activated. "
                      "Overrides the \"single_instance\" configuration value from application preferences.");
 
 /*

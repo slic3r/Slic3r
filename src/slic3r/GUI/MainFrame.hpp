@@ -201,7 +201,8 @@ public:
     // 0 = a plater tab, 1 = print setting, 2 = filament settign, 3 = printer setting
     void        select_tab(Tab* tab);
     void        select_tab(ETabType tab = ETabType::Any, bool keep_tab_type = false);
-    ETabType    selected_tab() const;
+    ETabType    selected_tab() const; 
+    ETabType    next_preview_tab();
     void        select_view(const std::string& direction);
     // Propagate changed configuration from the Tab to the Plater and save changes to the AppConfig
     void        on_config_changed(DynamicPrintConfig* cfg) const ;

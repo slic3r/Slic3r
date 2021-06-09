@@ -52,6 +52,9 @@ jobs:
     - name: make .mo
       working-directory: ./build
       run: make gettext_po_to_mo
+    - name: make .pot
+      working-directory: ./build
+      run: make gettext_make_pot
     - name: update Info.plist
       working-directory: ./build/src
       run: sed "s/+UNKNOWN/_$(date '+%F')/" Info.plist >Info.date.plist

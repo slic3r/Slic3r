@@ -749,12 +749,13 @@ void MainFrame::init_tabpanel()
             m_last_selected_plater_tab = m_tabpanel->GetSelection();
 
             if (need_freeze) Thaw();
-            else if (need_freeze_plater) m_plater->Freeze();
+            else if (need_freeze_plater) m_plater->Thaw();
 #ifdef __APPLE__
             m_tabpanel->ChangeSelection(new_tab);
             m_tabpanel->Refresh();
             BOOST_LOG_TRIVIAL(debug) << "Macos: force tab selection to  "<< new_tab <<" : " << m_tabpanel->GetSelection() << "\n";
 #endif
+            m_plater->SetFocus();
         } else {
             select_tab(MainFrame::ETabType::LastPlater); // select Plater
             m_last_selected_plater_tab = 999;
@@ -1324,6 +1325,7 @@ void MainFrame::init_menubar_as_editor()
     }
 
     // Edit menu
+    //some are protected by can_change_view() to be able to use them differently in setting items
     wxMenu* editMenu = nullptr;
     if (m_plater != nullptr)
     {
@@ -1336,33 +1338,33 @@ void MainFrame::init_menubar_as_editor()
     #endif
         append_menu_item(editMenu, wxID_ANY, _L("&Select all") + "\t" + GUI::shortkey_ctrl_prefix() + "A",
             _L("Selects all objects"), [this](wxCommandEvent&) { m_plater->select_all(); },
-            "", nullptr, [this](){return can_select(); }, this);
+            "", nullptr, [this](){return can_select() && can_change_view(); }, this);
         append_menu_item(editMenu, wxID_ANY, _L("D&eselect all") + sep + "Esc",
             _L("Deselects all objects"), [this](wxCommandEvent&) { m_plater->deselect_all(); },
-            "", nullptr, [this](){return can_deselect(); }, this);
+            "", nullptr, [this](){return can_deselect() && can_change_view(); }, this);
         editMenu->AppendSeparator();
         append_menu_item(editMenu, wxID_ANY, _L("&Delete selected") + "\t" + hotkey_delete,
             _L("Deletes the current selection"),[this](wxCommandEvent&) { m_plater->remove_selected(); },
-            "remove_menu", nullptr, [this](){return can_delete(); }, this);
+            "remove_menu", nullptr, [this](){return can_delete() && can_change_view(); }, this);
         append_menu_item(editMenu, wxID_ANY, _L("Delete &all") + "\t" + GUI::shortkey_ctrl_prefix() + hotkey_delete,
             _L("Deletes all objects"), [this](wxCommandEvent&) { m_plater->reset_with_confirm(); },
-            "delete_all_menu", nullptr, [this](){return can_delete_all(); }, this);
+            "delete_all_menu", nullptr, [this](){return can_delete_all() && can_change_view(); }, this);
 
         editMenu->AppendSeparator();
         append_menu_item(editMenu, wxID_ANY, _L("&Undo") + "\t" + GUI::shortkey_ctrl_prefix() + "Z",
             _L("Undo"), [this](wxCommandEvent&) { m_plater->undo(); },
-            "undo_menu", nullptr, [this](){return m_plater->can_undo(); }, this);
+            "undo_menu", nullptr, [this](){return m_plater->can_undo() && can_change_view(); }, this);
         append_menu_item(editMenu, wxID_ANY, _L("&Redo") + "\t" + GUI::shortkey_ctrl_prefix() + "Y",
             _L("Redo"), [this](wxCommandEvent&) { m_plater->redo(); },
-            "redo_menu", nullptr, [this](){return m_plater->can_redo(); }, this);
+            "redo_menu", nullptr, [this](){return m_plater->can_redo() && can_change_view(); }, this);
 
         editMenu->AppendSeparator();
         append_menu_item(editMenu, wxID_ANY, _L("&Copy") + "\t" + GUI::shortkey_ctrl_prefix() + "C",
             _L("Copy selection to clipboard"), [this](wxCommandEvent&) { m_plater->copy_selection_to_clipboard(); },
-            "copy_menu", nullptr, [this](){return m_plater->can_copy_to_clipboard(); }, this);
+            "copy_menu", nullptr, [this](){return m_plater->can_copy_to_clipboard() && can_change_view(); }, this);
         append_menu_item(editMenu, wxID_ANY, _L("&Paste") + "\t" + GUI::shortkey_ctrl_prefix() + "V",
             _L("Paste clipboard"), [this](wxCommandEvent&) { m_plater->paste_from_clipboard(); },
-            "paste_menu", nullptr, [this](){return m_plater->can_paste_from_clipboard(); }, this);
+            "paste_menu", nullptr, [this](){return m_plater->can_paste_from_clipboard() && can_change_view(); }, this);
         
         editMenu->AppendSeparator();
 #ifdef __APPLE__
@@ -1423,19 +1425,12 @@ void MainFrame::init_menubar_as_editor()
         viewMenu = new wxMenu();
         add_common_view_menu_items(viewMenu, this, std::bind(&MainFrame::can_change_view, this));
         viewMenu->AppendSeparator();
-        append_menu_check_item(viewMenu, wxID_ANY, _L("Show &labels") + "\t" + GUI::shortkey_ctrl_prefix() + "E", _L("Show object/instance labels in 3D scene"),
+        append_menu_check_item(viewMenu, wxID_ANY, _L("Show &labels") + "\t" + "E", _L("Show object/instance labels in 3D scene"),
             [this](wxCommandEvent&) { m_plater->show_view3D_labels(!m_plater->are_view3D_labels_shown()); }, this,
-            [this]() { return m_plater->is_view3D_shown(); }, [this]() { return m_plater->are_view3D_labels_shown(); }, this);
+            [this]() { return m_plater->is_view3D_shown() && can_change_view(); }, [this]() { return m_plater->are_view3D_labels_shown(); }, this);
         append_menu_check_item(viewMenu, wxID_ANY, _L("&Collapse sidebar") + "\t" + "Shift+" + sep_space + "Tab", _L("Collapse sidebar"),
-            [this](wxCommandEvent&) { 
-                //fix for trigger on pressed & release
-                static time_t last_time_called = 0;
-                time_t now = Slic3r::Utils::get_current_time_utc();
-                if(now - last_time_called > 2)
-                    m_plater->collapse_sidebar(!m_plater->is_sidebar_collapsed());
-                last_time_called = now;
-            }, this,
-            []() { return true; }, [this]() { return m_plater->is_sidebar_collapsed(); }, this);
+            [this](wxCommandEvent&) { m_plater->collapse_sidebar(!m_plater->is_sidebar_collapsed()); }, this,
+            [this]() { return can_change_view(); }, [this]() { return m_plater->is_sidebar_collapsed(); }, this);
     }
 
     // calibration menu
@@ -1917,6 +1912,25 @@ void MainFrame::select_tab(Tab* tab)
     }
     select_tab(tab_type);
 
+}
+
+MainFrame::ETabType MainFrame::next_preview_tab()
+{
+    if (m_layout == ESettingsLayout::Tabs) {
+        MainFrame::ETabType current_tab = selected_tab();
+        MainFrame::ETabType next_tab = MainFrame::ETabType(uint8_t(current_tab) + 1);
+        if (next_tab == MainFrame::ETabType::LastPlater) next_tab = MainFrame::ETabType::Plater3D;
+        select_tab(next_tab, true);
+        return next_tab;
+    } else {
+        if (m_plater->is_view3D_shown()) {
+            m_plater->select_view_3D("Preview");
+            return /*m_plater->can_display_gcode()*/ MainFrame::ETabType::PlaterGcode;
+        } else {
+            m_plater->select_view_3D("3D");
+            return MainFrame::ETabType::Plater3D;
+        }
+    }
 }
 
 MainFrame::ETabType MainFrame::selected_tab() const
