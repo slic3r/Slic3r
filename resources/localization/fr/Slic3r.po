@@ -1,18 +1,21 @@
 # Translation file for french
 # Copyright (C) 2021
-# This file is distributed under the same license as SuperSlicer.
+# This file is distributed under the same license as Slic3r.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: SuperSlicer\n"
-"POT-Creation-Date: 2021-06-07 00:00\n"
-"PO-Revision-Date: 2021-06-07 00:00\n"
-"Last-Translator: 5axes\n"
+"Project-Id-Version: Slic3r\n"
+"POT-Creation-Date: 2021-06-09 00:00\n"
+"PO-Revision-Date: 2021-06-09 00:00\n"
+"Last-Translator:\n"
 "Language-Team:\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: fr\n"
+"Language:fr\n"
+
+msgid "!! Can be unstable in some os distribution !!"
+msgstr "!! peut être instable avec certaines distributions de système d'exploitation."
 
 msgid "%1% Preset"
 msgstr "%1% Préréglage"
@@ -278,12 +281,6 @@ msgstr "(Inconnu)"
 msgid ") not found."
 msgstr ") non trouvé."
 
-msgid ", or an existing "
-msgstr ", ou un existant"
-
-msgid "/physical_printer directory."
-msgstr "Répertoire /physical_printer."
-
 msgid "0 (no open anchors)"
 msgstr "0 (aucune ancre ouverte)"
 
@@ -292,6 +289,9 @@ msgstr "0 (Connexion simple)"
 
 msgid "1000 (unlimited)"
 msgstr "1000 (illimité)"
+
+msgid "2x10°"
+msgstr "2x10°"
 
 msgid "3D &Plater Tab"
 msgstr "Onglet 3D &Plater"
@@ -313,6 +313,15 @@ msgstr "Paramètres 3Dconnexion"
 
 msgid "3MF file exported to %s"
 msgstr "Fichier 3MF exporté vers %s"
+
+msgid "3x10°"
+msgstr "3x10"
+
+msgid "3x50°"
+msgstr "3x50°"
+
+msgid "4x10°"
+msgstr "4x10°"
 
 msgid "5x5°"
 msgstr "5x5°"
@@ -746,8 +755,8 @@ msgid ""
 "Linear : volume = nozzle + volume_mult * (pigmentBefore-pigmentAfter)\n"
 "Quadratic: volume = nozzle + volume_mult * (pigmentBefore-pigmentAfter)+ "
 "volume_mult * (pigmentBefore-pigmentAfter)^3\n"
-"Hyperbola: volume = nozzle + volume_mult * (0.5+pigmentBefore) / (0.5"
-"+pigmentAfter)"
+"Hyperbola: volume = nozzle + volume_mult * (0.5+pigmentBefore) / "
+"(0.5+pigmentAfter)"
 msgstr ""
 "Algorithme pour la purge avancé. \n"
 "Linéaire: volume = buse + volume_mult * (pigmentAvant-pigmentAfter) \n"
@@ -806,8 +815,11 @@ msgstr "Permettez à tous les périmètres de se chevaucher, et pas seulement au
 msgid "Allow empty layers"
 msgstr "Autoriser les couches vides"
 
-msgid "Allow just a single Slic3r instance"
-msgstr "Autoriser une seule instance de Slic3r"
+msgid "Allow fan delay on overhangs"
+msgstr "Permet le délai du ventilateur pour les surplombs"
+
+msgid "Allow just a single %1% instance"
+msgstr "Permet juste une unique instance de %1%"
 
 msgid "Allow only one skirt loop"
 msgstr "N'autoriser qu'une seule boucle de jupe"
@@ -822,11 +834,9 @@ msgstr ""
 "et un comportement indéfini."
 
 msgid ""
-"Allow slic3r to compute the purge volume via smart computations. Use the "
+"Allow Slic3r to compute the purge volume via smart computations. Use the "
 "pigment% of each filament and following parameters"
-msgstr "" 
-"Permettre à slic3r de calculer le volume de purge via des calculs intelligents. Utilisez le "
-"pigment% de chaque filament et les paramètres suivants"
+msgstr "Permettre à Slic3r de calculer le volume de purge via des calculs intelligents. Utilisez le pigment% de chaque filament et les paramètres suivants"
 
 msgid ""
 "Allow the external perimeter to merge the thin walls in the path. You can "
@@ -966,8 +976,8 @@ msgid "Are you sure you want to continue?"
 msgstr "Êtes-vous sûr de vouloir continuer ?"
 
 msgid ""
-"Are you sure you want to delete \"%1%\" preset from the physical printer \"%"
-"2%\"?"
+"Are you sure you want to delete \"%1%\" preset from the physical printer "
+"\"%2%\"?"
 msgstr ""
 "Voulez-vous vraiment supprimer le préréglage \"%1%\" de l'imprimante "
 "physique \"%2%\" ?"
@@ -1026,12 +1036,6 @@ msgstr "Modèle d'œuvre d'art par"
 msgid "As a workaround, you may run "
 msgstr "Comme solution de contournement, vous pouvez exécuter "
 
-msgid " as default application to open .3mf files."
-msgstr " comme application par défaut pour ouvrir les fichiers .3mf."
-
-msgid " as default application to open .stl files."
-msgstr " comme application par défaut pour ouvrir les fichiers .stl."
-
 msgid "Ask for unsaved changes when closing application"
 msgstr ""
 "Demander pour les modifications non enregistrées lors de la fermeture de "
@@ -1048,11 +1052,17 @@ msgstr "Demander les modifications non sauvegardées du projet"
 msgid "Associate .3mf files to "
 msgstr "Associer les fichiers .3mf à "
 
-msgid "Associate .gcode files to Slic3r G-code Viewer"
-msgstr "Associer les fichiers .gcode à la visionneuse de G-Code de Slic3r"
+msgid "Associate .3mf files to %1%"
+msgstr "Associe les fichiers .3mf à %1%"
+
+msgid "Associate .gcode files to %1%"
+msgstr "Associe les fichiers .gcode à %1%"
 
 msgid "Associate .stl files to "
 msgstr "Associer les fichiers .stl à "
+
+msgid "Associate .stl files to %1%"
+msgstr "Associe les fichiers .stl à %1%"
 
 msgid "at %1%%% over bridges"
 msgstr "à %1%%% au-dessus des ponts"
@@ -1276,6 +1286,9 @@ msgstr "Ponts"
 
 msgid "Bridge acceleration"
 msgstr "Acceleration pour les ponts"
+
+msgid "Bridge calibration"
+msgstr "Calibration des ponts"
 
 msgid "Bridge flow"
 msgstr "Débit du pont"
@@ -1566,6 +1579,9 @@ msgstr "Choisissez combien de chiffres après le point pour les déplacements de
 msgid "Choose how many digit after the dot for xyz coordinates."
 msgstr "Choisissez le nombre de chiffres après le point pour les coordonnées xyz."
 
+msgid "Choose how the windows are selectable and displayed:"
+msgstr "Choisissez comment la fenêtre est sélectionnable et affiché:"
+
 msgid "Choose one file (3MF/AMF):"
 msgstr "Choisir un fichier (3MF/AMF) :"
 
@@ -1718,20 +1734,6 @@ msgstr "Concentrique"
 msgid "Concentric (filled)"
 msgstr "Concentrique (remplit)"
 
-msgid ""
-" config file, it is probably corrupted. Try to manually delete the file to "
-"recover from the error."
-msgstr ""
-" le fichier de configuration est probablement corrompu. Essayez de supprimer manuellement le fichier pour "
-"récupérer l'erreur."
-
-msgid ""
-" config file, it is probably corrupted. Try to manually delete the file to "
-"recover from the error. Your user profiles will not be affected."
-msgstr ""
-" le fichier de configuration est probablement corrompu. Essayez de supprimer manuellement le fichier pour "
-"récupérer l'erreur. Vos profils utilisateurs ne seront pas affectés."
-
 msgid "Configuration &Assistant"
 msgstr "&Assistant de Configuration"
 
@@ -1768,11 +1770,46 @@ msgstr "Confirmation"
 msgid ""
 "Connect an infill line to an internal perimeter with a short segment of an "
 "additional perimeter. If expressed as percentage (example: 15%) it is "
-"calculated over infill extrusion width. "
+"calculated over infill extrusion width. Slic3r tries to connect two close "
+"infill lines to a short perimeter segment. If no such perimeter segment "
+"shorter than infill_anchor_max is found, the infill line is connected to a "
+"perimeter segment at just one side and the length of the perimeter segment "
+"taken is limited to this parameter, but no longer than anchor_length_max. \n"
+"Set this parameter to zero to disable anchoring perimeters connected to a "
+"single infill line."
 msgstr ""
 "Relier une ligne intercalaire à un périmètre interne avec un court segment d'un "
 "périmètre supplémentaire. Si elle est exprimée en pourcentage (exemple : 15 %), elle est "
 "calculé sur la largeur d'extrusion du remplissage. "
+"Slic3r tente de relier deux lignes de remplissage proches à un court segment de périmètre. Si aucun "
+"un tel segment de périmètre plus court que infill_anchor_max n'est trouvé, la ligne de remplissage "
+"ligne de remplissage est connectée à un segment de périmètre sur un seul côté et la longueur du "
+"le segment de périmètre pris est limité à ce paramètre, mais pas plus long que "
+"anchor_length_max.\n"
+"Définissez ce paramètre sur zéro pour désactiver l'ancrage des périmètres connectés à une "
+"ligne de remplissage unique."
+
+msgid ""
+"Connect an infill line to an internal perimeter with a short segment of an "
+"additional perimeter. If expressed as percentage (example: 15%) it is "
+"calculated over infill extrusion width. Slic3r tries to connect two close "
+"infill lines to a short perimeter segment. If no such perimeter segment "
+"shorter than this parameter is found, the infill line is connected to a "
+"perimeter segment at just one side and the length of the perimeter segment "
+"taken is limited to infill_anchor, but no longer than this parameter. \n"
+"If set to 0, the old algorithm for infill connection will be used, it should "
+"create the same result as with 1000 & 0."
+msgstr ""
+"Relier une ligne intercalaire à un périmètre interne avec un court segment d'un "
+"périmètre supplémentaire. Si elle est exprimée en pourcentage (exemple : 15 %), elle est "
+"calculé sur la largeur d'extrusion du remplissage. "
+"Slic3r tente de relier deux lignes de remplissage proches à un court segment de périmètre. Si aucun "
+"un tel segment de périmètre plus court que ce paramètre n'est trouvé, la ligne de remplissage "
+"est connectée à un segment de périmètre d'un seul côté et la longueur du "
+"segment de périmètre pris est limité à infill_anchor, mais pas plus long que ce "
+"paramètre.\n"
+"Si la valeur 0 est attribuée, l'ancien algorithme pour la connexion intercalaire sera utilisé, ce qui devrait "
+"créer le même résultat qu'avec 1000 & 0."
 
 msgid "Connected"
 msgstr "Connecté"
@@ -1801,25 +1838,14 @@ msgstr "Connexion des tiges de support et jonctions"
 msgid "Connection of top infill lines"
 msgstr "Raccordement des lignes de remplissage supérieures"
 
-msgid "Connection to AstroBox works correctly."
-msgstr "La connexion à AstroBox fonctionne correctement."
+msgid "Connection to %s works correctly."
+msgstr "La connexion avec %s fonctionne correctement."
 
-msgid "Connection to Duet works correctly."
-msgstr "La connexion avec Duet fonctionne correctement."
+msgid "Contact distance on top of supports"
+msgstr "Distance de contact au-dessus des supports"
 
-msgid "Connection to FlashAir works correctly and upload is enabled."
-msgstr ""
-"La connexion à FlashAir fonctionne correctement et le téléchargement est "
-"activé."
-
-msgid "Connection to OctoPrint works correctly."
-msgstr "La connexion avec OctoPrint fonctionne correctement."
-
-msgid "Connection to Prusa SL1 works correctly."
-msgstr "La connexion avec Prusa SL1 fonctionne correctement."
-
-msgid "Connection to Repetier works correctly."
-msgstr "La connexion à Repetier fonctionne correctement."
+msgid "Contact distance under the bottom of supports"
+msgstr "Distance de contact en-dessous des supports"
 
 msgid ""
 "Contributions by Henrik Brix Andersen, Nicolas Dandrimont, Mark Hindess, "
@@ -1963,23 +1989,11 @@ msgstr "Basé sur les coûts"
 msgid "Could not arrange model objects! Some geometries may be invalid."
 msgstr "Impossible d'agencer les objets du modèle ! Certaines géométries sont peut-être non-valides."
 
-msgid "Could not connect to AstroBox"
-msgstr "Impossible de se connecter à AstroBox"
-
-msgid "Could not connect to Duet"
-msgstr "Impossible de se connecter à Duet"
-
-msgid "Could not connect to FlashAir"
-msgstr "Impossible de se connecter à FlashAir"
-
-msgid "Could not connect to OctoPrint"
-msgstr "Impossible de se connecter à OctoPrint"
+msgid "Could not connect to %s"
+msgstr "Ne peut pas se connecter à %s"
 
 msgid "Could not connect to Prusa SLA"
 msgstr "Impossible de se connecter à Prusa SLA"
-
-msgid "Could not connect to Repetier"
-msgstr "Impossible de se connecter à Repetier"
 
 msgid ""
 "Could not detect system SSL certificate store. The slicer will be unable to "
@@ -2026,7 +2040,7 @@ msgid ""
 "ironing pattern."
 msgstr ""
 "Créez une impression d'essai pour vous aider à définir votre ratio de débit de pontage et "
-"motif d'étirage."
+"motif de lissage."
 
 msgid "Create a test print to help you to set your retraction length."
 msgstr "Créez une impression d'essai pour vous aider à définir votre longueur de rétraction."
@@ -2136,6 +2150,9 @@ msgstr "coupe-circuit"
 msgid "Cutting corners"
 msgstr "Couper les coins"
 
+msgid "Cylinder"
+msgstr "Cylindre"
+
 msgid "D&eselect all"
 msgstr "Tout désél&ectionner"
 
@@ -2227,6 +2244,9 @@ msgstr "Profil par défaut du matériau SLA"
 
 msgid "default SLA print profile"
 msgstr "profil d'impression SLA par défaut"
+
+msgid "Default speed"
+msgstr "Vitesse par défaut"
 
 msgid "default value"
 msgstr "Valeur par défaut"
@@ -2338,6 +2358,12 @@ msgstr "Supprimer tous les objets"
 msgid "Deletes the current selection"
 msgstr "Supprime la sélection en cours"
 
+msgid "Dense infill algorithm"
+msgstr "Algorithme pour le remplissage dense"
+
+msgid "Dense infill layer"
+msgstr "Couche de remplissage dense"
+
 msgid "Density"
 msgstr "Densité"
 
@@ -2382,14 +2408,10 @@ msgstr "Détaché"
 
 msgid ""
 "Detect single-width walls (parts where two extrusions don't fit and we need "
-"to collapse them into a single trace). If unchecked, slic3r may try to fit "
+"to collapse them into a single trace). If unchecked, Slic3r may try to fit "
 "perimeters where it's not possible, creating some overlap leading to over-"
 "extrusion."
-msgstr ""
-"Détecter les parois extrudable par une seule passe (parois minces) "
-"(pièces dans lesquelles deux extrusions ne rentrent pas et nous devons les réduire en une seule trace)."
-" Si cette case n'est pas cochée,"
-" Slic3r peut essayer d’adapter les périmètres là où ce n’est pas possible, créant ainsi un chevauchement conduisant à une sur-extrusion."
+msgstr "Détecter les parois extrudable par une seule passe (parois minces) (pièces dans lesquelles deux extrusions ne rentrent pas et nous devons les réduire en une seule trace). Si cette case n'est pas cochée, Slic3r peut essayer d’adapter les périmètres là où ce n’est pas possible, créant ainsi un chevauchement conduisant à une sur-extrusion."
 
 msgid ""
 "Detect unconnected parts in the given model(s) and split them into separate "
@@ -2427,6 +2449,12 @@ msgstr "Diamètre du plateau d'impression. Il est supposé que l'origine (0,0) e
 
 msgid "Did you forgot to put a '%' in the "
 msgstr "As-tu oublié de mettre un '%' dans le "
+
+msgid "Dimension:"
+msgstr "Dimension:"
+
+msgid "Dimensional accuracy (default)"
+msgstr "Exactitude dimensionnelle (défault)"
 
 msgid "Direction"
 msgstr "Direction"
@@ -2481,7 +2509,7 @@ msgid "Display width"
 msgstr "Largeur de l'affichage"
 
 msgid "Distance between ironing lines"
-msgstr "Distance entre les lignes d'étirage"
+msgstr "Distance entre les lignes de lissage"
 
 msgid "Distance between objects"
 msgstr "Distance entre les objets"
@@ -2634,8 +2662,8 @@ msgstr "Dynamique"
 msgid "E&xport"
 msgstr "E&xporter"
 
-msgid "Each militer add this value to the retraction value. "
-msgstr "Chaque milicien ajoute cette valeur à celle de la rétraction. "
+msgid "Each militer add this value to the retraction value."
+msgstr "Chaque milicien ajoute cette valeur à celle de la rétraction."
 
 msgid "Ear pattern"
 msgstr "Motif du coin"
@@ -2718,7 +2746,7 @@ msgstr "Activer le refroidissement automatique"
 msgid "Enable fan if layer print time is below"
 msgstr "Activer le ventilateur si le temps d'impression de la couche est inférieur à"
 
-msgid "Enable Gap Fill"
+msgid "Enable Gap fill"
 msgstr "Active le remplissage des lacunes/écarts"
 
 msgid ""
@@ -2733,16 +2761,16 @@ msgid "Enable horizontal mirroring of output images"
 msgstr "Active la symétrie horizontale des images de sortie"
 
 msgid "Enable ironing"
-msgstr "Activer l'étirage"
+msgstr "Activer le lissage"
 
 msgid ""
 "Enable ironing of the top layers with the hot print head for smooth surface"
 msgstr ""
-"Activer l'étirage des couches supérieures avec la tête d'impression chaude "
+"Activer le lissage des couches supérieures avec la tête d'impression chaude "
 "pour une surface lisse"
 
 msgid "Enable ironing post-process"
-msgstr "Permettre l'étirage en post-processus"
+msgstr "Permettre le lissage en post-processus"
 
 msgid "Enable rotations (slow)"
 msgstr "Activer les rotations (lentes)"
@@ -2871,8 +2899,8 @@ msgid "Enter the number of copies:"
 msgstr "Saisissez le nombre de copies :"
 
 msgid ""
-"Enter the shrinkage percentage that the filament will get after cooling (94% "
-"if you measure 94mm instead of 100mm). The part will be scaled in xy to "
+"Enter the shrinkage percentage that the filament will get after cooling "
+"(94% if you measure 94mm instead of 100mm). The part will be scaled in xy to "
 "conpensate. Only the filament used for the perimeter is taken into account.\n"
 "Be sure to let enough space between objects, as this compensation is done "
 "after the checks."
@@ -2996,6 +3024,9 @@ msgstr "Partout"
 
 msgid "Exact last layer height"
 msgstr "Mettre la dernière couche à la hauteur exacte"
+
+msgid "Exact pattern"
+msgstr "Motif exact"
 
 msgid "except for the first %1% layers where the fan is disabled"
 msgstr "sauf pour les premières couches %1% où le ventilateur est désactivé"
@@ -3436,8 +3467,8 @@ msgstr "Ventilateur"
 msgid "Fan KickStart time"
 msgstr "Temps de démarrage du ventilateur"
 
-msgid "Fan speed"
-msgstr "Vitesse du ventilateur"
+msgid "Fan PWM from 0-100"
+msgstr "ventilateru PWM entre 0 et 100"
 
 msgid "Fan Speed (%)"
 msgstr "Vitesse du ventilateur (%)"
@@ -3492,9 +3523,6 @@ msgstr "Types de fonctionnalité"
 msgid "FFF Technology Printers"
 msgstr "Imprimantes Technologie FFF"
 
-msgid " field? it's currently set to "
-msgstr " Il est actuellement réglé sur "
-
 msgid "Filament"
 msgstr "Filament"
 
@@ -3547,6 +3575,9 @@ msgstr "Réglages du filament"
 
 msgid "Filament Settings Tab"
 msgstr "Onglet de réglages du filament"
+
+msgid "Filament start G-code"
+msgstr "G-code de début d'utilisation de filament"
 
 msgid "Filament temperature calibration"
 msgstr "Calibrage de la température du filament"
@@ -3643,7 +3674,7 @@ msgid ""
 msgstr ""
 "Motif de remplissage pour une surface solide (interne). Cela n'affecte que les couches pleines non visibles."
 " Vous devriez utiliser 'rectilinéaire' dans la plupart des cas."
-" Vous pouvez essayer l'étirage pour les matières  translucide. 'Rectiliéaire (remplit)'"
+" Vous pouvez essayer le lissage pour les matières  translucide. 'Rectiliéaire (remplit)'"
 " permet de remplacer les motifs en zig-zag trop rapprochés par une seule épaisse ligne et est plus efficace pour remplir de petits espaces."
 
 msgid ""
@@ -3696,6 +3727,9 @@ msgstr "Accélération pour la première couche"
 
 msgid "First layer bed temperature"
 msgstr "Température du plateau pour la première couche"
+
+msgid "First layer calibration"
+msgstr "Calibration de la première couche"
 
 msgid "First layer flow ratio"
 msgstr "Ratio du débit de la première couche"
@@ -3751,6 +3785,9 @@ msgstr "Flash effectué avec succès !"
 msgid "Flow"
 msgstr "Débit"
 
+msgid "Flow calibration"
+msgstr "Calibration du débit"
+
 msgid "Flow rate"
 msgstr "Débit"
 
@@ -3766,16 +3803,11 @@ msgid ""
 "provide a smooth surface due to a lack of plastic. You can increase it "
 "slightly to pull the top layer at the correct height. Recommended maximum: "
 "120%."
-msgstr ""
-"Ratio de débit permettant de compenser les lacunes d'une surface supérieure pontée. Utilisé pour "
-"l'étirage du motif de remplissage pour éviter les régions où la passe à faible débit ne permet pas "
-"fournir une surface lisse en raison d'un manque de plastique. Vous pouvez l'augmenter "
-"légèrement pour tirer la couche supérieure à la bonne hauteur. Maximum recommandé : "
-"120%."
+msgstr "Ratio de débit pour compenser les écarts dans la surface au-dessus de ponts. Utilisé pour prévenir le fait que dans certaines régions le passage à faible débit ne permet pas de fournit pas une surface lisse en raison du manque de plastique (en particulier lors de l'utilisatoin du motif lissé). Vous pouvez l'augmenter légèrement pour réhausser la couche supérieure à la bonne hauteur. Maximum recommandé: 120%."
 
 msgid ""
-"Following printer preset(s) is duplicated:%1%The above preset for printer \"%"
-"2%\" will be used just once."
+"Following printer preset(s) is duplicated:%1%The above preset for printer "
+"\"%2%\" will be used just once."
 msgstr ""
 "Le ou les préréglages d'imprimante suivants sont dupliqués :%1% Le "
 "préréglage ci-dessus pour l'imprimante \"%2%\" sera utilisé une seule fois."
@@ -3845,8 +3877,14 @@ msgstr "de"
 msgid "From"
 msgstr "Depuis"
 
+msgid "From filament"
+msgstr "Depuis le filament"
+
 msgid "From Object List You can't delete the last solid part from object."
 msgstr "Depuis la Liste d'Objet Vous ne pouvez pas supprimer la dernière partie solide de l'objet."
+
+msgid "From plane"
+msgstr "Depuis le niveau"
 
 msgid "Front"
 msgstr "De face"
@@ -4072,6 +4110,9 @@ msgstr "Gizmos"
 msgid "GNU Affero General Public License, version 3"
 msgstr "GNU Affero Licence Publique Générale, version 3"
 
+msgid "Goal:"
+msgstr "But:"
+
 msgid ""
 "Good precision is required, so use a caliper and do multiple measurements "
 "along the filament, then compute the average."
@@ -4106,13 +4147,6 @@ msgstr " L'initialisation de l'interface graphique a échoué"
 
 msgid "Gyroid"
 msgstr "Gyroide"
-
-msgid ""
-" has an internal working resolution of 0.0001mm.\n"
-"Infill & Thin areas are simplified up to 0.0125mm."
-msgstr ""
-" a une résolution interne de travail de 0,0001mm.\n"
-"Les zones de remplissage et les zones minces sont simplifiées jusqu'à 0,0125mm."
 
 msgid " has encountered a localization error. Please report to "
 msgstr " a rencontré une erreur de localisation. Veuillez le signaler à "
@@ -4156,6 +4190,9 @@ msgstr "Modificateur de la zone de hauteur"
 
 msgid "Height ranges"
 msgstr "Zones de hauteur"
+
+msgid "Height:"
+msgstr "Hauteur:"
 
 msgid "Heights at which a filament change is to occur. "
 msgstr "Hauteur à laquel un changement de filament a lieu. "
@@ -4268,8 +4305,14 @@ msgid ""
 "first layer."
 msgstr "Longeur de la bordure de trou, qui sera imprimmée à l'intérieur des trous d'un object sur la première couche."
 
-msgid "Horizontal width of the skirt that will be printed around each object."
-msgstr "Largeur horizontale de la jupe qui sera imprimée autour de chaque objet."
+msgid ""
+"Horizontal width of the skirt that will be printed around each object. If "
+"left zero, first layer extrusion width will be used if set and the skirt is "
+"only 1 layer height, or perimeter extrusion width will be used (using the "
+"computed value if not set)."
+msgstr "Largeur horizontale de la bordure qui sera imprimée autour de chaque objet."
+"\nSi laissé à zéro et d'une hauterur d'une couche, la largeur de la première "
+"couche sera utilisé, ou sinon la largeur des périmètres."
 
 msgid "Host"
 msgstr "L'Hôte"
@@ -4398,7 +4441,7 @@ msgstr "idx"
 
 msgid ""
 "If a top surface has to be printed and it's partially covered by an other "
-"layer, it won't be considered at a top layer where his width is below this "
+"layer, it won't be considered at a top layer where its width is below this "
 "value. This can be useful to not let the 'one perimeter on top' trigger on "
 "surface that should be covered only by perimeters. This value can be a mm or "
 "a % of the perimeter extrusion width."
@@ -4489,15 +4532,14 @@ msgstr "Si activé, rend l'objet à l'aide de la carte d'environnement."
 msgid "If enabled, reverses the direction of zoom with mouse wheel"
 msgstr "Si activé, inverse la direction du zoom avec la molette de la souris"
 
-msgid "If enabled, sets "
-msgstr "Si elle est activée, elle définit "
+msgid "If enabled, sets %1% as default application to open .gcode files."
+msgstr "Si activé, définit %1% comme application par défaut pour ouvrir les fichiers .gcode."
 
-msgid ""
-"If enabled, sets Slic3r G-code Viewer as default application to open .gcode "
-"files."
-msgstr ""
-"Si activé, définit Slic3r G-Code Viewer comme application par défaut pour ouvrir les fichiers .gcode "
-"fichiers."
+msgid "If enabled, sets Slic3r as default application to open .3mf files."
+msgstr "Si activé, définit Slic3r comme application par défaut pour ouvrir les fichiers .3mf."
+
+msgid "If enabled, sets Slic3r as default application to open .stl files."
+msgstr "Si activé, définit Slic3r comme application par défaut pour ouvrir les fichiers .stl."
 
 msgid ""
 "If enabled, Slic3r downloads updates of built-in system presets in the "
@@ -4522,13 +4564,6 @@ msgid ""
 msgstr ""
 "Si activé, le bouton de réduction de la barre latérale apparaîtra dans le "
 "coin supérieur droit de la scène 3D"
-
-msgid ""
-"If enabled, the command line arguments are sent to an existing instance of "
-"GUI "
-msgstr ""
-"Si activé, les arguments de la ligne de commande sont envoyés à une instance existante de "
-"l'interface "
 
 msgid ""
 "If enabled, the descriptions of configuration parameters in settings tabs "
@@ -4925,9 +4960,6 @@ msgstr "Distance d'insertion"
 msgid "Inspect / activate configuration snapshots"
 msgstr "Inspecter / activer les instantanés de configuration"
 
-msgid " instance"
-msgstr " instance"
-
 msgid "Instance %d"
 msgstr "Instance %d"
 
@@ -4973,6 +5005,9 @@ msgstr "erreur interne"
 msgid "Internal infill"
 msgstr "Remplissage interne"
 
+msgid "Internal perimeter"
+msgstr "Périmètres internes"
+
 msgid "Introduction"
 msgstr "Introduction"
 
@@ -5011,34 +5046,34 @@ msgid "Invalid pinhead diameter"
 msgstr "Diamètre de tête d'épingle non valide"
 
 msgid "Ironing"
-msgstr "L'étirage"
+msgstr "Lissage"
 
 msgid "Ironing angle"
-msgstr "Angle d'étirage"
+msgstr "Angle de lissage"
 
 msgid "Ironing angle. if negative, it will use the fill angle."
-msgstr "Angle d'étirage. S'il est négatif, il utilisera l'angle de remplissage."
+msgstr "Angle de lissage. S'il est négatif, il utilisera l'angle de remplissage."
 
 msgid "Ironing flow distribution"
-msgstr "Distribution du débit d'étirage"
+msgstr "Distribution du débit de lissage"
 
 msgid "Ironing infill tuning"
-msgstr "Réglage de remplissage pour l'étirage"
+msgstr "Réglage de remplissage pour le lissage"
 
 msgid "Ironing pattern calibration"
-msgstr "Calibrage du motif d'étirage"
+msgstr "Calibrage du motif de lissage"
 
 msgid "Ironing post-process (This will go on top of infills and perimeters)"
-msgstr "Etirage post-processus (il sera appliqué sur les remplissages et les périmètres)."
+msgstr "Lissage post-processus (il sera appliqué sur les remplissages et les périmètres)."
 
 msgid "Ironing post-process speed"
-msgstr "Vitesse du post-traitement d'étirage"
+msgstr "Vitesse du post-traitement de lissage"
 
 msgid "Ironing Type"
-msgstr "Type d'étirage"
+msgstr "Type de lissage"
 
 msgid "Ironing width"
-msgstr "Largeur de l'étirage"
+msgstr "Largeur du lissage"
 
 msgid " is closing: Unsaved Changes"
 msgstr " se ferme : Modifications non sauvegardées"
@@ -5191,13 +5226,7 @@ msgstr "Réglages de zone de Couche à modifier"
 msgid "Layer Time"
 msgstr "Temps de couche"
 
-msgid "Layer time"
-msgstr "Temps de couche"
-
 msgid "Layer Time (log)"
-msgstr "Durée de la couche (log)"
-
-msgid "Layer time (log)"
 msgstr "Durée de la couche (log)"
 
 msgid "Layer time goal"
@@ -5274,8 +5303,7 @@ msgstr "Couleur claire de l'interface"
 
 msgid ""
 "Like Default extrusion width but spacing is the distance between two lines "
-"(as they overlap a bit, it's not the same).\n"
-"Setting the spacing will deactivate the width setting, and vice versa."
+"(as they overlap a bit, it's not the same)."
 msgstr ""
 "Comme la largeur d'extrusion par défaut, mais l'espacement est la distance entre deux lignes "
 " (comme elles se chevauchent un peu, ce n'est pas la même chose).\n"
@@ -5283,8 +5311,7 @@ msgstr ""
 
 msgid ""
 "Like First layer width but spacing is the distance between two lines (as "
-"they overlap a bit, it's not the same).\n"
-"Setting the spacing will deactivate the width setting, and vice versa."
+"they overlap a bit, it's not the same)."
 msgstr ""
 "Comme la largeur de la première couche, mais l'espacement est la distance entre deux lignes (car "
 "elles se chevauchent un peu, ce n'est pas la même chose).\n"
@@ -5292,21 +5319,17 @@ msgstr ""
 
 msgid ""
 "Like Perimeter width but spacing is the distance between two perimeter lines "
-"(as they overlap a bit, it's not the same).\n"
-"Setting the spacing will deactivate the width setting, and vice versa."
+"(as they overlap a bit, it's not the same)."
 msgstr ""
 "Comme la largeur du périmètre mais l'espacement est la distance entre deux lignes du périmètre "
-" (comme elles se chevauchent un peu, ce n'est pas la même chose).\n"
-"Le réglage de l'espacement désactive le réglage de la largeur, et vice versa."
+" (comme elles se chevauchent un peu, ce n'est pas la même chose)."
 
 msgid ""
 "Like Solid infill width but spacing is the distance between two lines (as "
-"they overlap a bit, it's not the same).\n"
-"Setting the spacing will deactivate the width setting, and vice versa."
+"they overlap a bit, it's not the same)."
 msgstr ""
 "Comme la largeur du remplissage solide, mais l'espacement est la distance entre deux lignes (car "
-"elles se chevauchent un peu, ce n'est pas la même chose).\n"
-"Le réglage de l'espacement désactive le réglage de la largeur, et vice versa."
+"elles se chevauchent un peu, ce n'est pas la même chose)."
 
 msgid ""
 "Like the External perimeters width, but this value is the distance between "
@@ -5319,12 +5342,10 @@ msgstr ""
 
 msgid ""
 "Like Top solid infill width but spacing is the distance between two lines "
-"(as they overlap a bit, it's not the same).\n"
-"Setting the spacing will deactivate the width setting, and vice versa."
+"(as they overlap a bit, it's not the same)."
 msgstr ""
-"Comme la largeur de remplissage de Top solid, mais l'espacement est la distance entre deux lignes "
-" (comme elles se chevauchent un peu, ce n'est pas la même chose).\n"
-"Le réglage de l'espacement désactive le réglage de la largeur, et vice versa."
+"Comme la largeur des périmètres externes, mais cette valeur est la distance entre "
+"le bord et la 'frontière' du périmètre suivant."
 
 msgid "Line"
 msgstr "Lignes"
@@ -5562,6 +5583,9 @@ msgstr "Nombre de ponts maximum par pilier"
 
 msgid "Max fan speed"
 msgstr "Vitesse maximale du ventilateur"
+
+msgid "Max layer height"
+msgstr "Hauteur de couche maximum"
 
 msgid "Max length"
 msgstr "Longueur maximale"
@@ -5838,6 +5862,9 @@ msgstr "Angle concave minimum"
 msgid "Min convex angle"
 msgstr "Angle convexe minimum"
 
+msgid "Min layer height"
+msgstr "Hauteur de couche minimum"
+
 msgid "Min length"
 msgstr "Longueur minimale"
 
@@ -5885,13 +5912,9 @@ msgid ""
 "the slicing job and reducing memory usage. High-resolution models often "
 "carry more details than printers can render. Set to zero to disable any "
 "simplification and use full resolution from input. \n"
-"Note: "
-msgstr ""
-"Résolution minimale des détails, utilisée pour simplifier le fichier d'entrée afin d'accélérer "
-"le travail de découpage et réduire l'utilisation de la mémoire. Les modèles haute résolution comportent souvent "
-"comportent souvent plus de détails que les imprimantes ne peuvent en restituer. Définissez cette valeur à zéro pour désactiver toute "
-"simplification et utiliser la résolution complète de l'entrée. \n"
-"Remarque : "
+"Note: Slic3r has an internal working resolution of 0.0001mm.\n"
+"Infill & Thin areas are simplified up to 0.0125mm."
+msgstr "Résolution minimale, utilisée pour simplifier le fichier d'entrée afin d'accélérer le travail de découpage et de réduire l'utilisation de la mémoire. Les modèles haute résolution comportent souvent plus de détails que les imprimantes. Définissez la valeur sur zéro pour désactiver toute simplification et utiliser la résolution complète de l'entrée.\nRemarque: SuperSlicer a une résolution interne de 0.0001mm et les surfaces fines sont simplifiés avec un seuil de 0.0125mm."
 
 msgid "Minimum exposure time"
 msgstr "Temps d'exposition minimum"
@@ -5966,9 +5989,9 @@ msgid ""
 "Minimum width for the extrusion to be extruded (widths lower than the nozzle "
 "diameter will be over-extruded at the nozzle diameter). If expressed as "
 "percentage (for example 110%) it will be computed over nozzle diameter. The "
-"default behavior of slic3r and slic3rPE is with a 33% value. Put 100% to "
-"avoid any sort of over-extrusion."
-msgstr "La largeur minimale pour extruder (les largeurs inférieures au diamètre de la buse seront sur-extrudées au diamètre de la buse). Si exprimé en pourcentage (par exemple 110%), il sera calculé sur le diamètre de la buse. Le comportement par défaut de slic3r et slic3rPE est avec une valeur de 33%. Mettez 100% pour éviter toute sorte de sur-extrusion."
+"default behavior of PrusaSlicer is with a 33% value. Put 100% to avoid any "
+"sort of over-extrusion."
+msgstr "La largeur minimale pour extruder (les largeurs inférieures au diamètre de la buse seront sur-extrudées au diamètre de la buse). Si exprimé en pourcentage (par exemple 110%), il sera calculé sur le diamètre de la buse. Le comportement par défaut de PrusaSlicer est d'utiliser une valeur de 33%. Mettez 100% pour éviter toute sorte de sur-extrusion."
 
 msgid ""
 "Minimum width of features to maintain when doing the first layer "
@@ -6021,9 +6044,6 @@ msgstr "mm ou %"
 
 msgid "mm or % (zero to disable)"
 msgstr "mm ou % (zéro pour désactiver)"
-
-msgid " mm."
-msgstr " mm"
 
 msgid "mm/%"
 msgstr "mm/%"
@@ -6114,9 +6134,6 @@ msgstr "Monotone"
 
 msgid "Monotonic (filled)"
 msgstr "Monotonique (remplissage)"
-
-msgid "More"
-msgstr "Plus"
 
 msgid "Mouse wheel"
 msgstr "Roulette de la souris"
@@ -6262,6 +6279,15 @@ msgstr "Nom du fabriquant de l'imprimante."
 msgid "Name of the profile, from which this profile inherits."
 msgstr "Nom du profil, duquel hérite ce profil."
 
+msgid "Nb down:"
+msgstr "Nb plus frais:"
+
+msgid "Nb tests:"
+msgstr "Nb de tests:"
+
+msgid "Nb up:"
+msgstr "Nb plus chaud:"
+
 msgid "Nearest"
 msgstr "Au plus près"
 
@@ -6324,6 +6350,9 @@ msgstr "Aucune mise à jour disponible"
 
 msgid "None"
 msgstr "Aucun"
+
+msgid "None (soluble)"
+msgstr "Aucune (soluble)"
 
 msgid "Normal"
 msgstr "Normal"
@@ -6687,14 +6716,17 @@ msgstr "La prévention des écoulements n'est actuellement pas supportée lorsqu
 msgid "Open "
 msgstr "Ouvrir "
 
+msgid "Open %s"
+msgstr "Ouvrir %s"
+
 msgid "Open a G-code file"
 msgstr "Ouvrir un fichier G-Code"
 
 msgid "Open a new "
 msgstr "Ouvrir une nouvelle "
 
-msgid "Open a new Slic3r instance"
-msgstr "Ouvrir une nouvelle instance de Slic3r"
+msgid "Open a new %s instance"
+msgstr "Ouvrir une nouvelle instance de %s"
 
 msgid "Open a project file"
 msgstr "Ouvrir un fichier de projet"
@@ -6730,11 +6762,11 @@ msgid "Open project STL/OBJ/AMF/3MF with config, clear plater"
 msgstr ""
 "Ouvrir un projet STL/OBJ/AMF/3MF avec configuration, libérer le plateau"
 
-msgid "Open Slic3r"
-msgstr "Ouvrir Slic3r"
+msgid "Open the %s releases page in your browser"
+msgstr "uvrez la page des versions de%s dans votre navigateur"
 
-msgid "Open the "
-msgstr "Ouvrez le "
+msgid "Open the %s wiki in your browser"
+msgstr "Ouvrez le wiki de %s dans votre navigateur"
 
 msgid "Open the Slic3r Manual in your browser"
 msgstr "Ouvrez le manuel du Slic3r dans votre navigateur."
@@ -6822,6 +6854,9 @@ msgstr "Options de sortie"
 
 msgid "Over-Bridge calibration"
 msgstr "Calibrage de l'Over-Bridge"
+
+msgid "Over-bridge calibration"
+msgstr "Calibration du dessus des ponts"
 
 msgid "Overhang bridge flow threshold"
 msgstr "Seuil de débit du pont en surplomb"
@@ -7016,7 +7051,7 @@ msgid ""
 "percentage of the layer that will be over-extruded on top to do the ironing."
 msgstr ""
 " Pourcentage d'un débit par rapport à la hauteur de couche normale de l'objet. C'est le "
-"pourcentage de la couche qui sera surexpulsée sur le dessus pour faire l'étirage."
+"pourcentage de la couche qui sera surexpulsée sur le dessus pour faire le lissage."
 
 msgid "Percentage"
 msgstr "Pourcentage"
@@ -7037,6 +7072,9 @@ msgstr "Périmètre"
 msgid "perimeter"
 msgstr "perimeter"
 
+msgid "Perimeter acceleration"
+msgstr "Acceleration pour les périmètres"
+
 msgid "Perimeter anchor"
 msgstr "Ancrage périphérique"
 
@@ -7055,8 +7093,14 @@ msgstr "chevauchement du périmètre"
 msgid "Perimeter overlap"
 msgstr "Chevauchement du périmètre"
 
+msgid "Perimeter spacing"
+msgstr "Espacement des périmètres"
+
 msgid "Perimeter speed"
 msgstr "Vitesses pour les parois"
+
+msgid "Perimeter width"
+msgstr "Largeur des périmètres"
 
 msgid "perimeters"
 msgstr "périmètres"
@@ -7066,6 +7110,9 @@ msgstr "Périmètres"
 
 msgid "Perimeters & Shell"
 msgstr "Périmètre et enveloppe"
+
+msgid "Perimeters count"
+msgstr "Nombre de périmètres"
 
 msgid "Perimeters loop"
 msgstr "Périmètres en boucle"
@@ -7423,8 +7470,8 @@ msgid "Purpose of Machine Limits"
 msgstr "Objectif des limites de la machine"
 
 msgid ""
-"Put here the gcode to change the toolhead (called after the g-code T"
-"[next_extruder]). You have access to [next_extruder] and "
+"Put here the gcode to change the toolhead (called after the g-code "
+"T[next_extruder]). You have access to [next_extruder] and "
 "[previous_extruder]. next_extruder is the 'extruder number' of the new "
 "milling tool, it's equal to the index (begining at 0) of the milling tool "
 "plus the number of extruders. previous_extruder is the 'extruder number' of "
@@ -7567,8 +7614,8 @@ msgid "Recent projects"
 msgstr "Projets récents"
 
 msgid ""
-"Recommended min extrusion width for other layers (with a layer height of %"
-"1%) is %2$.3f mm (or %3%%%).\n"
+"Recommended min extrusion width for other layers (with a layer height of "
+"%1%) is %2$.3f mm (or %3%%%).\n"
 msgstr ""
 "La largeur d'extrusion minimale recommandée pour les autres couches (avec une hauteur de couche de %"
 "1%) est %2$.3f mm (ou %3%%%).\n"
@@ -7638,9 +7685,6 @@ msgstr "Nom du préréglage d'imprimante associé"
 msgid " Releases"
 msgstr " Versions"
 
-msgid " releases page in your browser"
-msgstr " page des versions dans votre navigateur"
-
 msgid "Reload all from disk"
 msgstr "Tout recharger à partir du disque"
 
@@ -7671,8 +7715,8 @@ msgstr "Se souvenir de mon choix"
 msgid "Remember output directory"
 msgstr "Se souvenir du répertoire de sortie"
 
-msgid "Remember to check for updates at "
-msgstr "N'oubliez pas de vérifier les mises à jour sur "
+msgid "Remember to check for updates at %s"
+msgstr "N'oubliez pas de vérifier les mises à jour sur %s"
 
 msgid "Remove"
 msgstr "Retirer"
@@ -7868,6 +7912,9 @@ msgstr "Rétracter lors des changements de couche"
 msgid "Retraction"
 msgstr "Rétraction"
 
+msgid "Retraction calibration"
+msgstr "Calibration de la rétraction"
+
 msgid ""
 "Retraction is not triggered when travel moves are shorter than this length."
 msgstr "La rétraction n'est pas déclenchée lorsque les déplacements sont plus courts que cette distance."
@@ -7962,6 +8009,12 @@ msgstr "Angle de rotation autour de l'axe Y en degrés."
 
 msgid "Rotation angle around the Z axis in degrees."
 msgstr "Angle de rotation autour de l'axe Z en degrés."
+
+msgid "Round corners"
+msgstr "Coins arrondis"
+
+msgid "Round corners for perimeters"
+msgstr "Coins arrondis pour périmètres"
 
 msgid "Roundness margin"
 msgstr "Marge de circularité"
@@ -8232,12 +8285,6 @@ msgstr "Sélectionner les profils d'impression avec lesquels ce profil est compa
 
 msgid "Select the printers this profile is compatible with."
 msgstr "Sélectionner les imprimantes avec lesquelles ce profil est compatible."
-
-msgid "Select the step in % between two tests."
-msgstr "Sélectionnez l'écart en % entre deux tests."
-
-msgid "Select the step in celcius between two tests."
-msgstr "Sélectionnez l'écart en degrés Celsius entre deux tests."
 
 msgid "Select the STL file to repair:"
 msgstr "Sélectionner le fichier STL à réparer :"
@@ -8851,6 +8898,9 @@ msgstr "Des supports SLA en dehors de la zone d'impression ont été détectés.
 msgid "SLA Technology Printers"
 msgstr "Imprimantes Technologie SLA"
 
+msgid "Slab"
+msgstr "Dalle"
+
 msgid ""
 "Slic3r can upload G-code files to a printer host. This field must contain "
 "the kind of the host."
@@ -8982,6 +9032,9 @@ msgstr "Fins"
 msgid "Small perimeter speed"
 msgstr "Petite vitesse périphérique"
 
+msgid "Small perimeters speed"
+msgstr "Vitesse pour petits périmètres"
+
 msgid "Small pillar diameter percent"
 msgstr "Pourcentage de pilier petit diamètre"
 
@@ -9012,8 +9065,17 @@ msgstr "Remplissage plein toutes les"
 msgid "Solid infill extruder"
 msgstr "Extrudeur pour le remplissage plein"
 
+msgid "Solid infill spacing"
+msgstr "Espacement des remplissages plein"
+
+msgid "Solid infill speed"
+msgstr "Vitesse des remplissages plein"
+
 msgid "Solid infill threshold area"
 msgstr "Surface de seuil pour le remplissage plein"
+
+msgid "Solid infill width"
+msgstr "Largeur des remplissages plein"
 
 msgid "Solid layers"
 msgstr "Couches pleines"
@@ -9082,13 +9144,16 @@ msgid "Spacing between interface lines. Set zero to get a solid interface."
 msgstr "Espacement entre les lignes d'interface. Mettez à zéro pour obtenir une interface pleine."
 
 msgid "Spacing between ironing lines"
-msgstr "Espacement des lignes d'étirage"
+msgstr "Espacement des lignes de lissage"
 
 msgid "Spacing between support material lines."
 msgstr "Espacement entre les lignes des supports."
 
 msgid "Sparse"
 msgstr "Remplissage"
+
+msgid "Sparse infill speed"
+msgstr "Vitesse des remplissages clairsemées"
 
 msgid "Speed"
 msgstr "Vitesse"
@@ -9345,6 +9410,12 @@ msgstr "Mode furtif"
 msgid "stealth mode"
 msgstr "mode silencieux"
 
+msgid "Step:"
+msgstr "Etape:"
+
+msgid "Steps:"
+msgstr "Etapes:"
+
 msgid "STL file exported to %s"
 msgstr "Fichier STL exporté vers %s"
 
@@ -9363,9 +9434,6 @@ msgid ""
 msgstr ""
 "Démonté avec succès. Le périphérique %s(% s) peut maintenant être retiré en "
 "toute sécurité de l'ordinateur."
-
-msgid "Sup. mat. interface"
-msgstr "Interface mat. sup."
 
 msgid "support"
 msgstr "support"
@@ -9443,6 +9511,9 @@ msgstr "Changement des paramètres de support"
 
 msgid "Support pattern"
 msgstr "Motifs pour supports"
+
+msgid "Support pattern angle"
+msgstr "Angle des motifs pour supports"
 
 msgid "Support pillar"
 msgstr "Pilier de support"
@@ -9563,25 +9634,22 @@ msgstr "Préréglages système"
 msgid "Tab icon size"
 msgstr "Taille de l'icône de l'onglet"
 
+msgid ""
+" Tab layout: all windows are in the application, all are selectable via a "
+"tab."
+msgstr "Configuration en onglet: toutes les fenêtres sont dans l'application, toutes sélectionable par un onglet."
+
 msgid "Take Configuration &Snapshot"
 msgstr "Capturer un in&stantané de la configuration"
 
 msgid "Taking configuration snapshot"
 msgstr "Snapshot de la configuration  en cours"
 
-msgid ""
-" team, what language was active and in which scenario this issue happened. "
-"Thank you.\n"
-"\n"
-"The application will now terminate."
-msgstr ""
-" l'équipe, quelle langue était active et dans quel scénario ce problème s'est produit. "
-"Merci.\n"
-"\n"
-"L'application va maintenant se terminer."
-
 msgid "Temperature"
 msgstr "Température"
+
+msgid "Temperature calibration"
+msgstr "Calibration de la température"
 
 msgid ""
 "Temperature difference to be applied when an extruder is not active. Enables "
@@ -9755,12 +9823,9 @@ msgstr "Espace entre le bas de l'objet et le socle généré en mode élévation
 
 msgid ""
 "The geometry will be decimated before dectecting sharp angles. This "
-"parameter indicate the minimum length of strait sections after decimation.\n"
+"parameter indicate the minimum length of the deviation for the decimation.\n"
 "0 to deactivate"
-msgstr ""
-" La géométrie sera décimée avant de détecter les angles aigus. Ce "
-"paramètre indique la longueur minimale des sections droites après décimation.\n"
-"0 pour désactiver"
+msgstr "La géométrie sera décimée avant de détecter les angles aigus. Ce paramètre indique la longueur minimale de la déviation après décimation.\n0 pour désactiver"
 
 msgid "The height of the pillar base cone"
 msgstr "La hauteur du cône de la base du pilier"
@@ -10249,8 +10314,8 @@ msgid ""
 "default extruder and bed temperature are reset using non-wait command; "
 "however if M104, M109, M140 or M190 are detected in this custom code, Slic3r "
 "will not add temperature commands. Note that you can use placeholder "
-"variables for all Slic3r settings, so you can put a \"M109 S"
-"[first_layer_temperature]\" command wherever you want."
+"variables for all Slic3r settings, so you can put a \"M109 "
+"S[first_layer_temperature]\" command wherever you want."
 msgstr ""
 "Ce code est inséré entre des objets lorsque vous utilisez l'impression séquentielle."
 " Par défaut la température de l'extrudeur et du plateau est réinitialisée et utilise la commande sans-attente;"
@@ -10261,16 +10326,12 @@ msgstr ""
 msgid ""
 "This custom code is inserted at every extruder change. If you don't leave "
 "this empty, you are expected to take care of the toolchange yourself - "
-"slic3r will not output any other G-code to change the filament. You can use "
+"Slic3r will not output any other G-code to change the filament. You can use "
 "placeholder variables for all Slic3r settings as well as [previous_extruder] "
 "and [next_extruder], so e.g. the standard toolchange command can be scripted "
-"as T[next_extruder]."
-msgstr ""
-"Ce code personnalisé est inséré à chaque changement d'extrudeuse. Si vous ne laissez pas ce champ vide, vous devrez vous occuper de l'outil."
-" Changez vous-même. Slic3r ne fournira aucun autre code G pour changer le filament."
-" Vous pouvez utiliser des variables de substitution pour tous les paramètres Slic3r,"
-" ainsi que pour [previous_extruder] et [next_extruder], par exemple."
-" La commande standard toolchange peut être écrite sous la forme T [next_extruder]."
+"as T[next_extruder].!! Warning !!: if any charater is written here, Slic3r "
+"won't output any toochange command by itself."
+msgstr "Ce code personnalisé est inséré à chaque changement d'extrudeuse. Si vous ne laissez pas ce champ vide, vous devrez vous occuper de l'outil. Changez vous-même. Slic3r ne fournira aucun autre code G pour changer le filament. Vous pouvez utiliser des variables de substitution pour tous les paramètres Slic3r, ainsi que pour [previous_extruder] et [next_extruder], par exemple. La commande standard toolchange peut être écrite sous la forme T [next_extruder]. !! Attention !! Si un quelconque caractère est écrit ici, Slic3r n'écrira aucun G-code de changment de buse par lui-même."
 
 msgid ""
 "This custom code is inserted at every extrusion type change.Note that you "
@@ -10559,11 +10620,10 @@ msgstr ""
 msgid ""
 "This is the acceleration your printer will use for bridges.\n"
 "Can be a % of the default acceleration\n"
-"Set zero to disable acceleration control for bridges."
-msgstr ""
-"C'est l'accélération que votre imprimante utilisera pour les ponts."
-"Peut être un % de l'accélération par défaut\n"
-"Mettez zéro pour désactiver le contrôle de l'accélération pour les ponts."
+"Set zero to disable acceleration control for bridges.\n"
+"Note that it won't be applied to overhangs, they still use the perimeter "
+"acceleration."
+msgstr "C'est l'accélération que votre imprimante utilisera pour les ponts.Peut être un % de l'accélération par défaut\nMettez zéro pour désactiver le contrôle de l'accélération pour les ponts.\nNotez que cela ne sear pas appliqué aux surplombs, ils continueront d'utiliser l'acceleration des périmètres."
 
 msgid ""
 "This is the acceleration your printer will use for first layer.\n"
@@ -10628,7 +10688,7 @@ msgid ""
 "your extruder will eat the filament. A value too high and the first pass "
 "won't print well."
 msgstr ""
-" C'est le pourcentage du débit qui est utilisé pour la deuxième passe d'étirage. "
+" C'est le pourcentage du débit qui est utilisé pour la deuxième passe de lissage. "
 " Typiquement 10-20%. Ne devrait pas être supérieur à 20%, à moins que votre largeur d'extrusion supérieure "
 "largeur d'extrusion largement supérieure à celle de votre buse. Une valeur trop faible et "
 "votre extrudeuse va manger le filament. Une valeur trop élevée et la première passe "
@@ -10651,10 +10711,10 @@ msgid ""
 "you have enough plastic in the top layer. A value too low will make your "
 "extruder eat the filament."
 msgstr ""
-"Il s'agit de la largeur de la passe d'étirage, en % de l'extrusion du remplissage supérieur "
+"Il s'agit de la largeur de la passe de lissage, en % de l'extrusion du remplissage supérieur "
 "largeur, ne doit pas être supérieure à 50% (deux fois plus de lignes, 50% de chevauchement). Il n'est "
 "pas nécessaire de descendre en dessous de 25% (quatre fois plus de lignes, 75% de chevauchement). \n"
-"Si vous avez des problèmes avec votre processus d'étirage, n'oubliez pas de regarder le "
+"Si vous avez des problèmes avec votre processus de lissage, n'oubliez pas de regarder le "
 "débit->débit du pont supérieur, car ce paramètre doit être réglé à min 110% pour laisser "
 "d'avoir assez de plastique dans la couche supérieure. Une valeur trop basse fera que votre "
 "extrudeuse mangera le filament."
@@ -10708,7 +10768,7 @@ msgid ""
 "Perimeters option is enabled."
 msgstr ""
 "Cette option définit le nombre de périmètres à générer pour chaque couche."
-" Notez que Slic3r peut augmenter cette valeur automatiquement si il détecte une surface inclinée qui nécessite un plus grand nombre de périmètres,"
+" Notez que Slic3r peut augmenter cette valeur automatiquement s'il détecte une surface inclinée qui nécessite un plus grand nombre de périmètres,"
 " si l'option \"Périmètres supplémentaires\" est sélectionnée."
 
 msgid ""
@@ -10790,12 +10850,9 @@ msgstr ""
 
 msgid ""
 "This setting allow you to modify the time estiamtion by a % amount. As "
-"slic3r only use the marlin algorithm, it's not precise enough if an other "
+"Slic3r only use the marlin algorithm, it's not precise enough if an other "
 "firmware is used."
-msgstr ""
-"Ce paramètre vous permet de modifier l'estimation du temps par un % pourcentage. Comme "
-"Slic3r n'utilise que l'algorithme marlin, il n'est pas assez précis si un autre "
-"firmware est utilisé."
+msgstr "Ce paramètre vous permet de modifier l'estimation du temps par un % pourcentage. Comme Slic3r n'utilise que l'algorithme marlin, il n'est pas assez précis si un autre firmware est utilisé."
 
 msgid ""
 "This setting allow you to reduce the overlap between the perimeters and the "
@@ -10950,8 +11007,8 @@ msgid ""
 "Slic3r detects M104, M109, M140 or M190 in your custom codes, such commands "
 "will not be prepended automatically so you're free to customize the order of "
 "heating commands and other custom actions. Note that you can use placeholder "
-"variables for all Slic3r settings, so you can put a \"M109 S"
-"[first_layer_temperature]\" command wherever you want. If you have multiple "
+"variables for all Slic3r settings, so you can put a \"M109 "
+"S[first_layer_temperature]\" command wherever you want. If you have multiple "
 "extruders, the gcode is processed in extruder order."
 msgstr ""
 "Cette procédure de démarrage est insérée au début, après un gcode de démarrage de l'imprimante"
@@ -10972,8 +11029,8 @@ msgid ""
 "you can use placeholder variables for all Slic3r settings, so you can put a "
 "\"M109 S[first_layer_temperature]\" command wherever you want.\n"
 " placeholders: initial_extruder, total_layer_count, has_wipe_tower, "
-"has_single_extruder_multi_material_priming, total_toolchanges, bounding_box"
-"[minx,miny,maxx,maxy]"
+"has_single_extruder_multi_material_priming, total_toolchanges, "
+"bounding_box[minx,miny,maxx,maxy]"
 msgstr ""
 "Cette procédure de démarrage est insérée au début, après que le plateau ait atteint la "
 "température cible et que l'extrudeuse vient de commencer à chauffer, et avant que l'extrudeuse "
@@ -11317,40 +11374,6 @@ msgid "Triangles"
 msgstr "Triangles"
 
 msgid ""
-" tries to connect two close infill lines to a short perimeter segment. If no "
-"such perimeter segment shorter than infill_anchor_max is found, the infill "
-"line is connected to a perimeter segment at just one side and the length of "
-"the perimeter segment taken is limited to this parameter, but no longer than "
-"anchor_length_max. \n"
-"Set this parameter to zero to disable anchoring perimeters connected to a "
-"single infill line."
-msgstr ""
-"tente de relier deux lignes de remplissage proches à un court segment de périmètre. Si aucun "
-"un tel segment de périmètre plus court que infill_anchor_max n'est trouvé, la ligne de remplissage "
-"ligne de remplissage est connectée à un segment de périmètre sur un seul côté et la longueur du "
-"le segment de périmètre pris est limité à ce paramètre, mais pas plus long que "
-"anchor_length_max.\n"
-"Définissez ce paramètre sur zéro pour désactiver l'ancrage des périmètres connectés à une "
-"ligne de remplissage unique."
-
-msgid ""
-" tries to connect two close infill lines to a short perimeter segment. If no "
-"such perimeter segment shorter than this parameter is found, the infill line "
-"is connected to a perimeter segment at just one side and the length of the "
-"perimeter segment taken is limited to infill_anchor, but no longer than this "
-"parameter. \n"
-"If set to 0, the old algorithm for infill connection will be used, it should "
-"create the same result as with 1000 & 0."
-msgstr ""
-"tente de relier deux lignes de remplissage proches à un court segment de périmètre. Si aucun "
-"un tel segment de périmètre plus court que ce paramètre n'est trouvé, la ligne de remplissage "
-"est connectée à un segment de périmètre d'un seul côté et la longueur du "
-"segment de périmètre pris est limité à infill_anchor, mais pas plus long que ce "
-"paramètre.\n"
-"Si la valeur 0 est attribuée, l'ancien algorithme pour la connexion intercalaire sera utilisé, ce qui devrait "
-"créer le même résultat qu'avec 1000 & 0."
-
-msgid ""
 "Try to repair any non-manifold meshes (this option is implicitly added "
 "whenever we need to slice the model to perform the requested action)."
 msgstr ""
@@ -11358,7 +11381,7 @@ msgstr ""
 " (cette option est ajoutée implicitement dès que nous devons découper le modèle pour accomplir l'action demandée)."
 
 msgid "Tuning ironing"
-msgstr "Réglage de l'étirage"
+msgstr "Réglage du lissage"
 
 msgid "Type"
 msgstr "Type"
@@ -11747,9 +11770,6 @@ msgstr "Volumétrique"
 msgid "Volumetric flow hints not available"
 msgstr "Indications du débit volumétrique non disponible"
 
-msgid "Volumetric flow rate"
-msgstr "Débit volumétrique"
-
 msgid "Volumetric flow rate (mm³/s)"
 msgstr "Débit volumétrique (mm³/s)"
 
@@ -11777,13 +11797,6 @@ msgstr "Attention"
 
 msgid "WARNING:"
 msgstr "ATTENTION :"
-
-msgid ""
-" we don't show this information in Printer Settings anymore.\n"
-"Settings will be available in physical printers settings."
-msgstr ""
-"Nous ne montrons plus cette information dans les paramètres de l'imprimante.\n"
-"Les paramètres seront disponibles dans les paramètres des imprimantes physiques."
 
 msgid " website"
 msgstr " site web"
@@ -12032,22 +12045,8 @@ msgstr "combo largeur et espacement"
 msgid " wiki"
 msgstr " wiki"
 
-msgid " wiki in your browser"
-msgstr " wiki dans votre navigateur"
-
 msgid "will be turned off by default."
 msgstr "sera désactivé par défaut."
-
-msgid ""
-" will check for the new versions of itself online. When a new version "
-"becomes available a notification is displayed at the next application "
-"startup (never during program usage). This is only a notification "
-"mechanisms, no automatic installation is done."
-msgstr ""
-" vérifiera les nouvelles versions de lui-même en ligne. Lorsqu'une nouvelle version "
-"devient disponible, une notification est affichée au prochain "
-"de l'application (jamais pendant l'utilisation du programme). Il s'agit uniquement d'une notification "
-"mécanismes, aucune installation automatique n'est effectuée."
 
 msgid ""
 "Will inflate or deflate the sliced 2D polygons according to the sign of the "
@@ -12065,13 +12064,6 @@ msgstr " se souviendra de votre choix. "
 
 msgid "will run at %1%%% by default"
 msgstr "s'exécutera à %1%%% par défaut"
-
-msgid ""
-" window is activated. Overrides the \"single_instance\" configuration value "
-"from application preferences."
-msgstr ""
-"La fenêtre 'single_instance' est activée. Remplace la valeur de configuration \"single_instance\" "
-"des préférences de l'application."
 
 msgid "Wipe"
 msgstr "Nettoyer"
@@ -12120,13 +12112,6 @@ msgstr "Tour de purge Y"
 
 msgid "Wipe while retracting"
 msgstr "Nettoyer lors des rétractions"
-
-msgid ""
-" with a software rendered 3D graphics by running prusa-slicer.exe with the --"
-"sw_renderer parameter."
-msgstr ""
-" avec un logiciel de rendu de graphiques 3D en exécutant prusa-slicer.exe avec le --"
-"paramètre sw_renderer."
 
 msgid "with a volumetric rate"
 msgstr "avec un débit volumétrique"
@@ -12252,6 +12237,16 @@ msgid "You can put your notes regarding the SLA print material here."
 msgstr "Vous pouvez mettre ici vos annotations concernant le matériau d'impression SLA."
 
 msgid ""
+"You can set either 'Spacing', or 'Width'; the other will be calculated, "
+"using default layer height."
+msgstr "Vous pouvez rentrer au choix 'l'Espacement' ou la 'Largeur'; l'autre sera calculé automatiquement en utilisant la hauteur de couche générale."
+
+msgid ""
+"You can set either 'Spacing', or 'Width'; the other will be calculated, "
+"using the perimeter 'Overlap' percentages and default layer height."
+msgstr "Vous pouvez rentrer au choix 'l'Espacement' ou la 'Largeur'; l'autre sera calculé automatiquement en utilisant le recouvrement des périmètres et la hauteur de couche générale."
+
+msgid ""
 "You can set this to a positive value to disable fan at all during the first "
 "layers, so that it does not make adhesion worse."
 msgstr "Vous pouvez régler ce paramètre sur une valeur positive pour désactiver complètement le ventilateur pendant les premières couches, afin de ne pas rendre l'adhérence plus difficile."
@@ -12267,8 +12262,8 @@ msgid "You can't change a type of the last solid part of the object."
 msgstr "Vous ne pouvez pas changer un type de la dernière partie solide de l'objet."
 
 msgid ""
-"You can't to add the object(s) from %s because of one or some of them is"
-"(are) multi-part"
+"You can't to add the object(s) from %s because of one or some of them "
+"is(are) multi-part"
 msgstr "Vous ne pouvez pas ajouter l'objet (les objets) depuis %s car l'un d'entre eux est en plusieurs parties"
 
 msgid "You cannot load SLA project with a multi-part object on the bed"
@@ -12362,10 +12357,16 @@ msgstr ""
 "a pas de collision."
 
 msgid "Z full step"
-msgstr "Z pas entier"
+msgstr "Pas entier sur Z"
 
 msgid "Z offset"
 msgstr "Décalage Z"
+
+msgid "Z Travel"
+msgstr "Déplaceemnt en Z"
+
+msgid "Z travel speed"
+msgstr "Vitesse de déplacement en Z"
 
 msgid "Z-lift override"
 msgstr "Annulation du décalage en Z"
