@@ -2812,7 +2812,8 @@ void GLCanvas3D::on_key(wxKeyEvent& evt)
                 }
                 else if (keyCode == WXK_TAB && evt.ShiftDown() && !evt.ControlDown() && ! wxGetApp().is_gcode_viewer()) {
                     // Collapse side-panel with Shift+Tab
-                    post_event(SimpleEvent(EVT_GLCANVAS_COLLAPSE_SIDEBAR));
+                    // already done with the menu entry, don't re-do the call here.
+                    //post_event(SimpleEvent(EVT_GLCANVAS_COLLAPSE_SIDEBAR));
                 }
                 else if (keyCode == WXK_SHIFT) {
                     translationProcessor.process(evt);

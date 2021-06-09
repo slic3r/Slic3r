@@ -2281,16 +2281,17 @@ void Plater::priv::select_view_3D(const std::string& name)
 
 void Plater::priv::select_next_view_3D()
 {
-    for (int i = 0; i < panels.size(); i++) {
-        if (panels[i] == current_panel) {
-            if (i + 1 == panels.size()) {
-                set_current_panel(panels[0]);
-            } else {
-                set_current_panel(panels[i+1]);
-            }
-            return;
-        }
-    }
+    main_frame->next_preview_tab();
+   //for (int i = 0; i < panels.size(); i++) {
+   //     if (panels[i] == current_panel) {
+   //         if (i + 1 == panels.size()) {
+   //             set_current_panel(panels[0]);
+   //         } else {
+   //             set_current_panel(panels[i+1]);
+   //         }
+   //         return;
+   //     }
+   // }
 }
 
 void Plater::priv::collapse_sidebar(bool collapse)

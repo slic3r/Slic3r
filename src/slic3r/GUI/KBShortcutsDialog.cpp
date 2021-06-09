@@ -146,6 +146,7 @@ void KBShortcutsDialog::fill_shortcuts()
             { "I", L("Zoom in") },
             { "O", L("Zoom out") },
             { "Tab", L("Switch between Editor/Preview") },
+            { "Ctrl+Tab", L("Switch between Tab") },
             { "Shift+Tab", L("Collapse/Expand the sidebar") },
 #if ENABLE_CTRL_M_ON_WINDOWS
 #ifdef _WIN32
