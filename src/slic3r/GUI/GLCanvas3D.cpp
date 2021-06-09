@@ -6538,7 +6538,7 @@ void GLCanvas3D::WipeTowerInfo::apply_wipe_tower() const
     cfg.opt<ConfigOptionFloat>("wipe_tower_x", true)->value = m_pos(X);
     cfg.opt<ConfigOptionFloat>("wipe_tower_y", true)->value = m_pos(Y);
     cfg.opt<ConfigOptionFloat>("wipe_tower_rotation_angle", true)->value = (180./M_PI) * m_rotation;
-    wxGetApp().get_tab(Preset::TYPE_PRINT)->load_config(cfg);
+    wxGetApp().get_tab(Preset::TYPE_FFF_PRINT)->load_config(cfg);
 }
 
 

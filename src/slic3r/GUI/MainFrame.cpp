@@ -253,6 +253,61 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_S
     }
 }
 
+void MainFrame::update_icon() {
+
+    // icons for ESettingsLayout::Hidden
+    wxImageList* img_list = nullptr;
+    int icon_size = 0;
+    try {
+        icon_size = atoi(wxGetApp().app_config->get("tab_icon_size").c_str());
+    }
+    catch (std::exception e) {}
+    switch (m_layout)
+    {
+    case ESettingsLayout::Unknown:
+    {
+        break;
+    } case ESettingsLayout::Old:
+      case ESettingsLayout::Hidden:
+    {
+        if (m_tabpanel->GetPageCount() == 4 && icon_size >= 8) {
+            m_tabpanel->SetPageImage(0, 0);
+            m_tabpanel->SetPageImage(1, 3);
+            m_tabpanel->SetPageImage(2, m_plater->printer_technology() == PrinterTechnology::ptSLA ? 6 : 4);
+            m_tabpanel->SetPageImage(3, m_plater->printer_technology() == PrinterTechnology::ptSLA ? 7 : 5);
+        }
+        break;
+    }
+    case ESettingsLayout::Tabs:
+    {
+        if (icon_size >= 8)
+        {
+            m_tabpanel->SetPageImage(0, 0);
+            m_tabpanel->SetPageImage(1, 1);
+            m_tabpanel->SetPageImage(2, 2);
+            m_tabpanel->SetPageImage(3, 3);
+            m_tabpanel->SetPageImage(4, m_plater->printer_technology() == PrinterTechnology::ptSLA ? 6 : 4);
+            m_tabpanel->SetPageImage(5, m_plater->printer_technology() == PrinterTechnology::ptSLA ? 7 : 5);
+        }
+        break;
+    }
+    case ESettingsLayout::Dlg:
+    {
+        if (m_tabpanel->GetPageCount() == 4 && icon_size >= 8) {
+            m_tabpanel->SetPageImage(0, 3);
+            m_tabpanel->SetPageImage(1, m_plater->printer_technology() == PrinterTechnology::ptSLA ? 6 : 4);
+            m_tabpanel->SetPageImage(2, m_plater->printer_technology() == PrinterTechnology::ptSLA ? 7 : 5);
+        }
+        break;
+    }
+    case ESettingsLayout::GCodeViewer:
+    {
+        break;
+    }
+    }
+
+}
+
 void MainFrame::update_layout()
 {
     auto restore_to_creation = [this]() {
@@ -261,6 +316,8 @@ void MainFrame::update_layout()
                 sizer->Detach(0);
             }
         };
+
+        std::cout << "update_layout: " << m_tabpanel->GetPageCount() << "\n";
 
         // On Linux m_plater needs to be removed from m_tabpanel before to reparent it
         //clear if previous was old
@@ -360,6 +417,7 @@ void MainFrame::update_layout()
     // From the very beginning the Print settings should be selected
     m_last_selected_setting_tab = 0;
     m_last_selected_plater_tab = 999;
+    std::cout << "update_layout1: " << m_tabpanel->GetPageCount() << "\n";
 
     // Set new settings
     switch (m_layout)
@@ -373,29 +431,7 @@ void MainFrame::update_layout()
         m_plater->Reparent(m_tabpanel);
         m_tabpanel->InsertPage(0, m_plater, _L("Plater"));
         m_main_sizer->Add(m_tabpanel, 1, wxEXPAND);
-        // icons for ESettingsLayout::Old
-        wxImageList* img_list = nullptr;
-        int icon_size = 0;
-        try {
-            icon_size = atoi(wxGetApp().app_config->get("tab_icon_size").c_str());
-        }
-        catch (std::exception e) {}
-        if (m_tabpanel->GetPageCount() == 4 && icon_size >= 8) {
-            std::initializer_list<std::string> icon_list = { "plater", "cog", "spool_cog", "printer_cog" };
-            if (icon_size < 16)
-                icon_list = { "plater", "cog", "spool", "printer" };
-            for (std::string icon_name : icon_list) {
-                const wxBitmap& bmp = create_scaled_bitmap(icon_name, this, icon_size);
-                if (img_list == nullptr)
-                    img_list = new wxImageList(bmp.GetWidth(), bmp.GetHeight());
-                img_list->Add(bmp);
-            }
-            m_tabpanel->AssignImageList(img_list);
-            m_tabpanel->SetPageImage(0, 0);
-            m_tabpanel->SetPageImage(1, 1);
-            m_tabpanel->SetPageImage(2, 2);
-            m_tabpanel->SetPageImage(3, 3);
-        }
+        update_icon();
         // show
         m_plater->Show();
         m_tabpanel->Show();
@@ -407,42 +443,15 @@ void MainFrame::update_layout()
         m_plater->enable_view_toolbar(false);
         bool need_freeze = !this->IsFrozen();
         if(need_freeze) this->Freeze();
-        // icons for ESettingsLayout::Tabs
-        wxImageList* img_list = nullptr;
-        int icon_size = 0;
-        try {
-            icon_size = atoi(wxGetApp().app_config->get("tab_icon_size").c_str());
-        }
-        catch (std::exception e) {}
-        if (icon_size >= 8) {
-            std::initializer_list<std::string> icon_list = { "editor_menu", "layers", "preview_menu", "cog", "spool_cog", "printer_cog" };
-            if (icon_size < 16)
-                icon_list = { "editor_menu", "layers", "preview_menu", "cog", "spool", "printer" };
-            for (std::string icon_name : icon_list) {
-                const wxBitmap& bmp = create_scaled_bitmap(icon_name, this, icon_size);
-                if (img_list == nullptr)
-                    img_list = new wxImageList(bmp.GetWidth(), bmp.GetHeight());
-                img_list->Add(bmp);
-            }
-        }
         wxPanel* first_panel = new wxPanel(m_tabpanel);
         m_tabpanel->InsertPage(0, first_panel, _L("3D view"));
         m_tabpanel->InsertPage(1, new wxPanel(m_tabpanel), _L("Sliced preview"));
         m_tabpanel->InsertPage(2, new wxPanel(m_tabpanel), _L("Gcode preview"));
         if (m_tabpanel->GetPageCount() == 6) {
-            m_tabpanel->AssignImageList(img_list);
             m_tabpanel->GetPage(0)->SetSizer(new wxBoxSizer(wxVERTICAL));
             m_tabpanel->GetPage(1)->SetSizer(new wxBoxSizer(wxVERTICAL));
             m_tabpanel->GetPage(2)->SetSizer(new wxBoxSizer(wxVERTICAL));
-            if (icon_size >= 8)
-            {
-                m_tabpanel->SetPageImage(0, 0);
-                m_tabpanel->SetPageImage(1, 1);
-                m_tabpanel->SetPageImage(2, 2);
-                m_tabpanel->SetPageImage(3, 3);
-                m_tabpanel->SetPageImage(4, 4);
-                m_tabpanel->SetPageImage(5, 5);
-            }
+            update_icon();
         }
         m_plater->Reparent(first_panel);
         first_panel->GetSizer()->Add(m_plater, 1, wxEXPAND);
@@ -460,6 +469,7 @@ void MainFrame::update_layout()
         m_main_sizer->Add(m_tabpanel, 1, wxEXPAND);
         m_plater_page = new wxPanel(m_tabpanel);
         m_tabpanel->InsertPage(0, m_plater_page, _L("Plater")); // empty panel just for Plater tab */
+        update_icon();
         m_plater->Show();
         break;
     }
@@ -468,6 +478,7 @@ void MainFrame::update_layout()
         m_main_sizer->Add(m_plater, 1, wxEXPAND);
         m_tabpanel->Reparent(&m_settings_dialog);
         m_settings_dialog.GetSizer()->Add(m_tabpanel, 1, wxEXPAND);
+        update_icon();
         m_tabpanel->Show();
         m_plater->Show();
         break;
@@ -602,6 +613,21 @@ void MainFrame::shutdown()
     wxGetApp().plater_ = nullptr;
 }
 
+void MainFrame::change_tab(Tab* old_tab, Tab* new_tab)
+{
+    int page_id = m_tabpanel->FindPage(old_tab);
+    if (page_id >= 0 && page_id < m_tabpanel->GetPageCount()) {
+        m_tabpanel->GetPage(page_id)->Show(false);
+        m_tabpanel->RemovePage(page_id);
+    }
+    m_tabpanel->InsertPage(page_id, new_tab, new_tab->title());
+    #ifdef __linux__ // the tabs apparently need to be explicitly shown on Linux (pull request #1563)
+        int page_id = m_tabpanel->FindPage(new_tab);
+        m_tabpanel->GetPage(page_id)->Show(true);
+    #endif // __linux__
+    MainFrame::update_icon();
+}
+
 void MainFrame::update_title()
 {
     wxString title = wxEmptyString;
@@ -653,6 +679,25 @@ void MainFrame::init_tabpanel()
     m_tabpanel->Hide();
     m_settings_dialog.set_tabpanel(m_tabpanel);
 
+    // icons for m_tabpanel tabs
+    wxImageList* img_list = nullptr;
+    int icon_size = 0;
+    try {
+        icon_size = atoi(wxGetApp().app_config->get("tab_icon_size").c_str());
+    }
+    catch (std::exception e) {}
+    if (icon_size >= 8) {
+        std::initializer_list<std::string> icon_list = { "editor_menu", "layers", "preview_menu", "cog", "spool_cog", "printer_cog", "resin_cog", "sla_printer_cog" };
+        if (icon_size < 16)
+            icon_list = { "editor_menu", "layers", "preview_menu", "cog", "spool", "printer", "resin", "sla_printer" };
+        for (std::string icon_name : icon_list) {
+            const wxBitmap& bmp = create_scaled_bitmap(icon_name, this, icon_size);
+            if (img_list == nullptr)
+                img_list = new wxImageList(bmp.GetWidth(), bmp.GetHeight());
+            img_list->Add(bmp);
+        }
+    }
+    m_tabpanel->AssignImageList(img_list);
 
     m_tabpanel->Bind(wxEVT_NOTEBOOK_PAGE_CHANGED, [this](wxEvent&) {
         if (m_tabpanel_stop_event)
@@ -771,6 +816,7 @@ void MainFrame::init_tabpanel()
 
     if (wxGetApp().is_editor())
         create_preset_tabs();
+    std::cout << "create_preset_tabs: " << m_tabpanel->GetPageCount() << "\n";
 
     if (m_plater) {
         // load initial config
@@ -1898,11 +1944,11 @@ void MainFrame::select_tab(Tab* tab)
         return;
     ETabType tab_type = ETabType::LastSettings;
     switch (tab->type()) {
-    case Preset::Type::TYPE_FILAMENT:
+    case Preset::Type::TYPE_FFF_FILAMENT:
     case Preset::Type::TYPE_SLA_MATERIAL:
         tab_type = ETabType::FilamentSettings;
         break;
-    case Preset::Type::TYPE_PRINT:
+    case Preset::Type::TYPE_FFF_PRINT:
     case Preset::Type::TYPE_SLA_PRINT:
         tab_type = ETabType::PrintSettings;
         break;

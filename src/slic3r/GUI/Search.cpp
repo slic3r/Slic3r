@@ -31,10 +31,10 @@ namespace Search {
 static char marker_by_type(Preset::Type type, PrinterTechnology pt)
 {
     switch(type) {
-    case Preset::TYPE_PRINT:
+    case Preset::TYPE_FFF_PRINT:
     case Preset::TYPE_SLA_PRINT:
         return ImGui::PrintIconMarker;
-    case Preset::TYPE_FILAMENT:
+    case Preset::TYPE_FFF_FILAMENT:
         return ImGui::FilamentIconMarker;
     case Preset::TYPE_SLA_MATERIAL:
         return ImGui::MaterialIconMarker;

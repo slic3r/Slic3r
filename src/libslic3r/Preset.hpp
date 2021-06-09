@@ -110,15 +110,20 @@ typedef std::map<std::string, VendorProfile> VendorMap;
 class Preset
 {
 public:
-    enum Type
+    enum Type : uint8_t
     {
-        TYPE_INVALID,
-        TYPE_PRINT,
-        TYPE_SLA_PRINT,
-        TYPE_FILAMENT,
-        TYPE_SLA_MATERIAL,
-        TYPE_PRINTER,
-        TYPE_COUNT,
+        TYPE_INVALID = 0,
+        TYPE_PRINT1 = 1 << 0,
+        TYPE_MATERIAL = 1 << 1,
+        TYPE_PRINTER = 1 << 2,
+        TYPE_TAB = TYPE_PRINT1 | TYPE_MATERIAL | TYPE_PRINTER,
+        TYPE_FFF = 1 << 3,
+        TYPE_FFF_PRINT = TYPE_FFF | TYPE_PRINT1,
+        TYPE_FFF_FILAMENT = TYPE_FFF | TYPE_MATERIAL,
+        TYPE_SLA = 1 << 4,
+        TYPE_SLA_PRINT = TYPE_SLA | TYPE_PRINT1,
+        TYPE_SLA_MATERIAL = TYPE_SLA | TYPE_MATERIAL,
+        TYPE_TECHNOLOGY = TYPE_FFF | TYPE_SLA,
     };
 
     Preset(Type type, const std::string &name, bool is_default = false) : type(type), is_default(is_default), name(name) {}
@@ -184,7 +189,7 @@ public:
     // Returns the "compatible_prints_condition".
     static std::string& compatible_prints_condition(DynamicPrintConfig &cfg) { return cfg.option<ConfigOptionString>("compatible_prints_condition", true)->value; }
     std::string&        compatible_prints_condition() { 
-		assert(this->type == TYPE_FILAMENT || this->type == TYPE_SLA_MATERIAL);
+		assert(this->type == TYPE_FFF_FILAMENT || this->type == TYPE_SLA_MATERIAL);
         return Preset::compatible_prints_condition(this->config);
     }
     const std::string&  compatible_prints_condition() const { return const_cast<Preset*>(this)->compatible_prints_condition(); }
@@ -192,7 +197,7 @@ public:
     // Returns the "compatible_printers_condition".
     static std::string& compatible_printers_condition(DynamicPrintConfig &cfg) { return cfg.option<ConfigOptionString>("compatible_printers_condition", true)->value; }
     std::string&        compatible_printers_condition() {
-		assert(this->type == TYPE_PRINT || this->type == TYPE_SLA_PRINT || this->type == TYPE_FILAMENT || this->type == TYPE_SLA_MATERIAL);
+		assert(this->type == TYPE_FFF_PRINT || this->type == TYPE_SLA_PRINT || this->type == TYPE_FFF_FILAMENT || this->type == TYPE_SLA_MATERIAL);
         return Preset::compatible_printers_condition(this->config);
     }
     const std::string&  compatible_printers_condition() const { return const_cast<Preset*>(this)->compatible_printers_condition(); }
@@ -250,6 +255,19 @@ protected:
 bool is_compatible_with_print  (const PresetWithVendorProfile &preset, const PresetWithVendorProfile &active_print, const PresetWithVendorProfile &active_printer);
 bool is_compatible_with_printer(const PresetWithVendorProfile &preset, const PresetWithVendorProfile &active_printer, const DynamicPrintConfig *extra_config);
 bool is_compatible_with_printer(const PresetWithVendorProfile &preset, const PresetWithVendorProfile &active_printer);
+
+inline Preset::Type operator|(Preset::Type a, Preset::Type b) {
+    return static_cast<Preset::Type>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b));
+}
+inline Preset::Type operator&(Preset::Type a, Preset::Type b) {
+    return static_cast<Preset::Type>(static_cast<uint16_t>(a) & static_cast<uint16_t>(b));
+}
+inline Preset::Type operator|=(Preset::Type& a, Preset::Type b) {
+    a = a | b; return a;
+}
+inline Preset::Type operator&=(Preset::Type& a, Preset::Type b) {
+    a = a & b; return a;
+}
 
 enum class PresetSelectCompatibleType {
 	// Never select a compatible preset if the newly selected profile is not compatible.

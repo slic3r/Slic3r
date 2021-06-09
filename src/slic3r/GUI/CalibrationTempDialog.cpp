@@ -63,8 +63,8 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
             Slic3r::resources_dir()+"/calibration/filament_temp/Smart_compact_temperature_calibration_item.amf"}, true, false, false);
 
     assert(objs_idx.size() == 1);
-    const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();
-    const DynamicPrintConfig* filament_config = this->gui_app->get_tab(Preset::TYPE_FILAMENT)->get_config();
+    const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->get_config();
+    const DynamicPrintConfig* filament_config = this->gui_app->get_tab(Preset::TYPE_FFF_FILAMENT)->get_config();
     const DynamicPrintConfig* printer_config = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
 
     // -- get temps
@@ -165,12 +165,12 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     model.objects[objs_idx[0]]->config.set_key_value("top_fill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinearWGapFill));
 
     //update plater
-    this->gui_app->get_tab(Preset::TYPE_PRINT)->load_config(new_print_config);
+    this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->load_config(new_print_config);
     plat->on_config_change(new_print_config);
     //this->gui_app->get_tab(Preset::TYPE_PRINTER)->load_config(new_printer_config);
     //plat->on_config_change(new_printer_config);
     plat->changed_objects(objs_idx);
-    this->gui_app->get_tab(Preset::TYPE_PRINT)->update_dirty();
+    this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->update_dirty();
     //this->gui_app->get_tab(Preset::TYPE_PRINTER)->update_dirty();
     plat->is_preview_shown();
     //update everything, easier to code.

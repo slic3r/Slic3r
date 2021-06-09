@@ -38,7 +38,7 @@ void CalibrationRetractionDialog::create_buttons(wxStdDialogButtonSizer* buttons
     //start_step = new wxComboBox(this, wxID_ANY, wxString{ "current" }, wxDefaultPosition, wxDefaultSize, 7, choices_start);
     //start_step->SetToolTip(_(L("Select the highest temperature to test for.")));
     //start_step->SetSelection(0);
-    const DynamicPrintConfig* filament_config = this->gui_app->get_tab(Preset::TYPE_FILAMENT)->get_config();
+    const DynamicPrintConfig* filament_config = this->gui_app->get_tab(Preset::TYPE_FFF_FILAMENT)->get_config();
     int temp = int((2 + filament_config->option<ConfigOptionInts>("temperature")->get_at(0)) / 5) * 5;
     auto size = wxSize(4 * em_unit(), wxDefaultCoord);
     temp_start = new wxTextCtrl(this, wxID_ANY, std::to_string(temp), wxDefaultPosition, size);
@@ -76,7 +76,7 @@ void CalibrationRetractionDialog::create_buttons(wxStdDialogButtonSizer* buttons
 
 void CalibrationRetractionDialog::remove_slowdown(wxCommandEvent& event_args) {
 
-    const DynamicPrintConfig* filament_config = this->gui_app->get_tab(Preset::TYPE_FILAMENT)->get_config();
+    const DynamicPrintConfig* filament_config = this->gui_app->get_tab(Preset::TYPE_FFF_FILAMENT)->get_config();
     DynamicPrintConfig new_filament_config = *filament_config; //make a copy
 
     const ConfigOptionInts *fil_conf = filament_config->option<ConfigOptionInts>("slowdown_below_layer_time");
@@ -92,9 +92,9 @@ void CalibrationRetractionDialog::remove_slowdown(wxCommandEvent& event_args) {
     new_fil_conf->values[0] = 0;
     new_filament_config.set_key_value("fan_below_layer_time", new_fil_conf);
 
-    this->gui_app->get_tab(Preset::TYPE_FILAMENT)->load_config(new_filament_config);
+    this->gui_app->get_tab(Preset::TYPE_FFF_FILAMENT)->load_config(new_filament_config);
     this->main_frame->plater()->on_config_change(new_filament_config);
-    this->gui_app->get_tab(Preset::TYPE_FILAMENT)->update_dirty();
+    this->gui_app->get_tab(Preset::TYPE_FFF_FILAMENT)->update_dirty();
 
 }
 
@@ -134,9 +134,9 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
 
 
     assert(objs_idx.size() == nb_items);
-    const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();
+    const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->get_config();
     const DynamicPrintConfig* printer_config = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
-    const DynamicPrintConfig* filament_config = this->gui_app->get_tab(Preset::TYPE_FILAMENT)->get_config();
+    const DynamicPrintConfig* filament_config = this->gui_app->get_tab(Preset::TYPE_FFF_FILAMENT)->get_config();
 
     double retraction_start = 0;
     std::string str = temp_start->GetValue().ToStdString();
@@ -248,8 +248,8 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
         if (print_config->option<ConfigOptionInt>("skirts")->getInt() > 0 && print_config->option<ConfigOptionInt>("skirt_height")->getInt() > 0) {
             new_print_config.set_key_value("complete_objects_one_skirt", new ConfigOptionBool(true));
         }
-        this->gui_app->get_tab(Preset::TYPE_PRINT)->load_config(new_print_config);
-        this->gui_app->get_tab(Preset::TYPE_PRINT)->update_dirty();
+        this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->load_config(new_print_config);
+        this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->update_dirty();
         plat->on_config_change(new_print_config);
     }
 

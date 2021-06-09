@@ -118,7 +118,7 @@ Tab::Tab(wxNotebook* parent, const wxString& title, Preset::Type type) :
     m_compatible_printers.dialog_title  = _L("Compatible printers");
     m_compatible_printers.dialog_label  = _L("Select the printers this profile is compatible with.");
 
-    m_compatible_prints.type			= Preset::TYPE_PRINT;
+    m_compatible_prints.type			= Preset::TYPE_FFF_PRINT;
     m_compatible_prints.key_list 		= "compatible_prints";
     m_compatible_prints.key_condition	= "compatible_prints_condition";
     m_compatible_prints.dialog_title 	= _L("Compatible print profiles");
@@ -146,9 +146,9 @@ Tab::Tab(wxNotebook* parent, const wxString& title, Preset::Type type) :
 
 void Tab::set_type()
 {
-    if (m_name == "print")              { m_type = Slic3r::Preset::TYPE_PRINT; }
+    if (m_name == "print")              { m_type = Slic3r::Preset::TYPE_FFF_PRINT; }
     else if (m_name == "sla_print")     { m_type = Slic3r::Preset::TYPE_SLA_PRINT; }
-    else if (m_name == "filament")      { m_type = Slic3r::Preset::TYPE_FILAMENT; }
+    else if (m_name == "filament")      { m_type = Slic3r::Preset::TYPE_FFF_FILAMENT; }
     else if (m_name == "sla_material")  { m_type = Slic3r::Preset::TYPE_SLA_MATERIAL; }
     else if (m_name == "printer")       { m_type = Slic3r::Preset::TYPE_PRINTER; }
     else                                { m_type = Slic3r::Preset::TYPE_INVALID; assert(false); }
@@ -816,7 +816,7 @@ void Tab::update_changed_tree_ui()
                     get_sys_and_mod_flags(opt_key, sys_page, modified_page);
                 }
             }
-            if (m_type == Preset::TYPE_FILAMENT && page->title() == "Advanced") {
+            if (m_type == Preset::TYPE_FFF_FILAMENT && page->title() == "Advanced") {
                 get_sys_and_mod_flags("filament_ramming_parameters", sys_page, modified_page);
             }
             if (page->title() == "Dependencies") {
@@ -824,7 +824,7 @@ void Tab::update_changed_tree_ui()
                     sys_page = m_presets->get_selected_preset_parent() != nullptr;
                     modified_page = false;
                 } else {
-                    if (m_type == Slic3r::Preset::TYPE_FILAMENT || m_type == Slic3r::Preset::TYPE_SLA_MATERIAL)
+                    if (m_type == Slic3r::Preset::TYPE_FFF_FILAMENT || m_type == Slic3r::Preset::TYPE_SLA_MATERIAL)
                         get_sys_and_mod_flags("compatible_prints", sys_page, modified_page);
                     get_sys_and_mod_flags("compatible_printers", sys_page, modified_page);
                 }
@@ -912,7 +912,7 @@ void Tab::on_roll_back_value(const bool to_sys /*= true*/)
                         is_empty ? m_compatible_printers.btn->Disable() : m_compatible_printers.btn->Enable();
                     }
                     // "compatible_prints" option exists only in Filament Settimgs and Materials Tabs
-                    if ((m_type == Preset::TYPE_FILAMENT || m_type == Preset::TYPE_SLA_MATERIAL) && (m_options_list["compatible_prints"] & os) == 0) {
+                    if ((m_type == Preset::TYPE_FFF_FILAMENT || m_type == Preset::TYPE_SLA_MATERIAL) && (m_options_list["compatible_prints"] & os) == 0) {
                         to_sys ? group->back_to_sys_value("compatible_prints") : group->back_to_initial_value("compatible_prints");
                         load_key_value("compatible_prints", true/*some value*/, true);
 
@@ -3060,7 +3060,8 @@ void Tab::load_current_preset()
         //merill note: this is a bit of anti-inheritance pattern
         if (m_type == Slic3r::Preset::TYPE_PRINTER) {
             const PrinterTechnology printer_technology = m_presets->get_edited_preset().printer_technology();
-            if (printer_technology != static_cast<TabPrinter*>(this)->m_printer_technology)
+            const PrinterTechnology old_printer_technology = static_cast<TabPrinter*>(this)->m_printer_technology;
+            if (printer_technology != old_printer_technology)
             {
                 // The change of the technology requires to remove some of unrelated Tabs
                 // During this action, wxNoteBook::RemovePage invoke wxEVT_NOTEBOOK_PAGE_CHANGED
@@ -3070,22 +3071,15 @@ void Tab::load_current_preset()
                 Page* tmp_page = m_active_page;
                 m_active_page = nullptr;
                 for (auto tab : wxGetApp().tabs_list) {
-                    if (tab->type() == Preset::TYPE_PRINTER) // Printer tab is shown every time
+                    if (tab->type() == Preset::TYPE_PRINTER) // Printer tab shouln't be swapped
                         continue;
                     if (tab->supports_printer_technology(printer_technology))
                     {
-                        wxGetApp().tab_panel()->InsertPage(wxGetApp().tab_panel()->FindPage(this), tab, tab->title());
-                        #ifdef __linux__ // the tabs apparently need to be explicitly shown on Linux (pull request #1563)
-                            int page_id = wxGetApp().tab_panel()->FindPage(tab);
-                            wxGetApp().tab_panel()->GetPage(page_id)->Show(true);
-                        #endif // __linux__
-                    }
-                    else {
-                        int page_id = wxGetApp().tab_panel()->FindPage(tab);
-                        //TODO shouldn't happen, emit an error here.
-                        if (page_id >= 0 && page_id < wxGetApp().tab_panel()->GetPageCount()) {
-                            wxGetApp().tab_panel()->GetPage(page_id)->Show(false);
-                            wxGetApp().tab_panel()->RemovePage(page_id);
+                        //search the other one to be replaced
+                        for (auto tab_old : wxGetApp().tabs_list) {
+                            if ((tab->type() & Preset::TYPE_TAB) == (tab_old->type() & Preset::TYPE_TAB) && tab_old->supports_printer_technology(old_printer_technology) ) {
+                                wxGetApp().mainframe->change_tab(tab_old, tab);
+                            }
                         }
                     }
                 }
@@ -3105,11 +3099,11 @@ void Tab::load_current_preset()
         }
         else {
             on_presets_changed();
-            if (m_type == Preset::TYPE_SLA_PRINT || m_type == Preset::TYPE_PRINT)
+            if (m_type == Preset::TYPE_SLA_PRINT || m_type == Preset::TYPE_FFF_PRINT)
                 update_frequently_changed_parameters();
 
             //update width/spacing links
-            if (m_type == Preset::TYPE_PRINT) {
+            if (m_type == Preset::TYPE_FFF_PRINT) {
                 //verify that spacings are set
                 if (m_config && m_config->update_phony({ wxGetApp().plater()->config() })) {
                     update_dirty();
@@ -3207,7 +3201,7 @@ void Tab::select_preset(std::string preset_name, bool delete_current /*=false*/,
     }
     assert(! delete_current || (m_presets->get_edited_preset().name != preset_name && m_presets->get_edited_preset().is_user()));
     bool current_dirty = ! delete_current && m_presets->current_is_dirty();
-    bool print_tab     = m_presets->type() == Preset::TYPE_PRINT || m_presets->type() == Preset::TYPE_SLA_PRINT;
+    bool print_tab     = m_presets->type() == Preset::TYPE_FFF_PRINT || m_presets->type() == Preset::TYPE_SLA_PRINT;
     bool printer_tab   = m_presets->type() == Preset::TYPE_PRINTER;
     bool canceled      = false;
     bool technology_changed = false;
@@ -3229,7 +3223,7 @@ void Tab::select_preset(std::string preset_name, bool delete_current /*=false*/,
             canceled = old_preset_dirty && ! new_preset_compatible && ! may_discard_current_dirty_preset(&dependent, preset_name);
         if (! canceled) {
             // The preset will be switched to a different, compatible preset, or the '-- default --'.
-            m_dependent_tabs.emplace_back((printer_technology == ptFFF) ? Preset::Type::TYPE_FILAMENT : Preset::Type::TYPE_SLA_MATERIAL);
+            m_dependent_tabs.emplace_back((printer_technology == ptFFF) ? Preset::Type::TYPE_FFF_FILAMENT : Preset::Type::TYPE_SLA_MATERIAL);
             if (old_preset_dirty && ! new_preset_compatible)
                 dependent.discard_current_changes();
         }
@@ -3256,9 +3250,9 @@ void Tab::select_preset(std::string preset_name, bool delete_current /*=false*/,
                 bool         	     new_preset_compatible;
             };
             std::vector<PresetUpdate> updates = {
-                { Preset::Type::TYPE_PRINT,         &m_preset_bundle->prints,       ptFFF },
+                { Preset::Type::TYPE_FFF_PRINT,         &m_preset_bundle->prints,       ptFFF },
                 { Preset::Type::TYPE_SLA_PRINT,     &m_preset_bundle->sla_prints,   ptSLA },
-                { Preset::Type::TYPE_FILAMENT,      &m_preset_bundle->filaments,    ptFFF },
+                { Preset::Type::TYPE_FFF_FILAMENT,      &m_preset_bundle->filaments,    ptFFF },
                 { Preset::Type::TYPE_SLA_MATERIAL,  &m_preset_bundle->sla_materials,ptSLA }
             };
             for (PresetUpdate &pu : updates) {
@@ -3328,8 +3322,8 @@ void Tab::select_preset(std::string preset_name, bool delete_current /*=false*/,
         };
         if (current_dirty || delete_current || print_tab || printer_tab)
             m_preset_bundle->update_compatible(
-            	update_compatible_type(technology_changed, print_tab,   (print_tab ? this : wxGetApp().get_tab(Preset::TYPE_PRINT))->m_show_incompatible_presets),
-            	update_compatible_type(technology_changed, false, 		wxGetApp().get_tab(Preset::TYPE_FILAMENT)->m_show_incompatible_presets));
+            	update_compatible_type(technology_changed, print_tab,   (print_tab ? this : wxGetApp().get_tab(Preset::TYPE_FFF_PRINT))->m_show_incompatible_presets),
+            	update_compatible_type(technology_changed, false, 		wxGetApp().get_tab(Preset::TYPE_FFF_FILAMENT)->m_show_incompatible_presets));
         // Initialize the UI from the current preset.
         if (printer_tab)
             static_cast<TabPrinter*>(this)->update_pages();
@@ -3345,8 +3339,8 @@ void Tab::select_preset(std::string preset_name, bool delete_current /*=false*/,
              * to the corresponding printer_technology
              */
             const PrinterTechnology printer_technology = m_presets->get_edited_preset().printer_technology();
-            if (printer_technology == ptFFF && m_dependent_tabs.front() != Preset::Type::TYPE_PRINT)
-                m_dependent_tabs = { Preset::Type::TYPE_PRINT, Preset::Type::TYPE_FILAMENT };
+            if (printer_technology == ptFFF && m_dependent_tabs.front() != Preset::Type::TYPE_FFF_PRINT)
+                m_dependent_tabs = { Preset::Type::TYPE_FFF_PRINT, Preset::Type::TYPE_FFF_FILAMENT };
             else if (printer_technology == ptSLA && m_dependent_tabs.front() != Preset::Type::TYPE_SLA_PRINT)
                 m_dependent_tabs = { Preset::Type::TYPE_SLA_PRINT, Preset::Type::TYPE_SLA_MATERIAL };
         }
@@ -3390,7 +3384,7 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection* presets /*= nullptr
             // If filament preset is saved for multi-material printer preset,
             // there are cases when filament comboboxs are updated for old (non-modified) colors,
             // but in full_config a filament_colors option aren't.
-            if (presets->type() == Preset::TYPE_FILAMENT && wxGetApp().extruders_edited_cnt() > 1)
+            if (presets->type() == Preset::TYPE_FFF_FILAMENT && wxGetApp().extruders_edited_cnt() > 1)
                 wxGetApp().plater()->force_filament_colors_update();
     }
     }
@@ -3594,7 +3588,7 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach)
     /* If filament preset is saved for multi-material printer preset, 
      * there are cases when filament comboboxs are updated for old (non-modified) colors, 
      * but in full_config a filament_colors option aren't.*/
-    if (m_type == Preset::TYPE_FILAMENT && wxGetApp().extruders_edited_cnt() > 1)
+    if (m_type == Preset::TYPE_FFF_FILAMENT && wxGetApp().extruders_edited_cnt() > 1)
         wxGetApp().plater()->force_filament_colors_update();
 
     {
@@ -3602,15 +3596,15 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach)
     	// Update profile selection combo boxes at the depending tabs to reflect modifications in profile compatibility.
 	    std::vector<Preset::Type> dependent;
 	    switch (m_type) {
-	    case Preset::TYPE_PRINT:
-	    	dependent = { Preset::TYPE_FILAMENT };
+	    case Preset::TYPE_FFF_PRINT:
+	    	dependent = { Preset::TYPE_FFF_FILAMENT };
 	    	break;
 	    case Preset::TYPE_SLA_PRINT:
 	    	dependent = { Preset::TYPE_SLA_MATERIAL };
 	    	break;
 	    case Preset::TYPE_PRINTER:
             if (static_cast<const TabPrinter*>(this)->m_printer_technology == ptFFF)
-                dependent = { Preset::TYPE_PRINT, Preset::TYPE_FILAMENT };
+                dependent = { Preset::TYPE_FFF_PRINT, Preset::TYPE_FFF_FILAMENT };
             else
                 dependent = { Preset::TYPE_SLA_PRINT, Preset::TYPE_SLA_MATERIAL };
 	        break;

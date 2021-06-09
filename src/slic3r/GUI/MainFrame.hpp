@@ -41,11 +41,11 @@ enum QuickSlice
     qsExportPNG = 8
 };
 
-struct PresetTab {
-    std::string       name;
-    Tab*              panel;
-    PrinterTechnology technology;
-};
+//struct PresetTab {
+//    std::string       name;
+//    Tab*              panel;
+//    PrinterTechnology technology;
+//};
 
 // ----------------------------------------------------------------------------
 // SettingsDialog
@@ -89,6 +89,7 @@ class MainFrame : public DPIFrame
 
     void on_presets_changed(SimpleEvent&);
     void on_value_changed(wxCommandEvent&);
+    void update_icon();
 
     bool can_start_new_project() const;
     bool can_save() const;
@@ -173,6 +174,7 @@ public:
     void        create_preset_tabs();
     void        add_created_tab(Tab* panel);
     bool        is_active_and_shown_tab(Tab* tab);
+    void        change_tab(Tab* old_tab, Tab* new_tab);
     // Register Win32 RawInput callbacks (3DConnexion) and removable media insert / remove callbacks.
     // Called from wxEVT_ACTIVATE, as wxEVT_CREATE was not reliable (bug in wxWidgets?).
     void        register_win32_callbacks();

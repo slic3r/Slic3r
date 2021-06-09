@@ -379,7 +379,7 @@ class TabPrint : public Tab
 public:
 	TabPrint(wxNotebook* parent) : 
 // 		Tab(parent, _(L("Print Settings")), L("print")) {}
-        Tab(parent, _(L("Print Settings")), Slic3r::Preset::TYPE_PRINT) {}
+        Tab(parent, _(L("Print Settings")), Slic3r::Preset::TYPE_FFF_PRINT) {}
 	~TabPrint() {}
 	
 	void		build() override;
@@ -411,7 +411,7 @@ protected:
 public:
 	TabFilament(wxNotebook* parent) : 
 // 		Tab(parent, _(L("Filament Settings")), L("filament")) {}
-		Tab(parent, _(L("Filament Settings")), Slic3r::Preset::TYPE_FILAMENT) {}
+		Tab(parent, _(L("Filament Settings")), Slic3r::Preset::TYPE_FFF_FILAMENT) {}
 	~TabFilament() {}
 
 	void		build() override;

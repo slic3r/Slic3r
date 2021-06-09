@@ -38,8 +38,8 @@ static std::vector<std::string> s_project_options {
 const char *PresetBundle::PRUSA_BUNDLE = "PrusaResearch";
 
 PresetBundle::PresetBundle() :
-    prints(Preset::TYPE_PRINT, Preset::print_options(), static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults())),
-    filaments(Preset::TYPE_FILAMENT, Preset::filament_options(), static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults())),
+    prints(Preset::TYPE_FFF_PRINT, Preset::print_options(), static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults())),
+    filaments(Preset::TYPE_FFF_FILAMENT, Preset::filament_options(), static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults())),
     sla_materials(Preset::TYPE_SLA_MATERIAL, Preset::sla_material_options(), static_cast<const SLAMaterialConfig&>(SLAFullPrintConfig::defaults())), 
     sla_prints(Preset::TYPE_SLA_PRINT, Preset::sla_print_options(), static_cast<const SLAPrintObjectConfig&>(SLAFullPrintConfig::defaults())),
     printers(Preset::TYPE_PRINTER, Preset::printer_options(), static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults()), "- default FFF -"),
@@ -320,9 +320,9 @@ const std::string& PresetBundle::get_preset_name_by_alias( const Preset::Type& p
     if (preset_type == Preset::TYPE_PRINTER || preset_type == Preset::TYPE_INVALID)
         return alias;
 
-    const PresetCollection& presets = preset_type == Preset::TYPE_PRINT     ? prints :
+    const PresetCollection& presets = preset_type == Preset::TYPE_FFF_PRINT     ? prints :
                                       preset_type == Preset::TYPE_SLA_PRINT ? sla_prints :
-                                      preset_type == Preset::TYPE_FILAMENT  ? filaments :
+                                      preset_type == Preset::TYPE_FFF_FILAMENT  ? filaments :
                                       sla_materials;
 
     return presets.get_preset_name_by_alias(alias);
@@ -331,9 +331,9 @@ const std::string& PresetBundle::get_preset_name_by_alias( const Preset::Type& p
 void PresetBundle::save_changes_for_preset(const std::string& new_name, Preset::Type type,
                                            const std::vector<std::string>& unselected_options)
 {
-    PresetCollection& presets = type == Preset::TYPE_PRINT          ? prints :
+    PresetCollection& presets = type == Preset::TYPE_FFF_PRINT          ? prints :
                                 type == Preset::TYPE_SLA_PRINT      ? sla_prints :
-                                type == Preset::TYPE_FILAMENT       ? filaments :
+                                type == Preset::TYPE_FFF_FILAMENT       ? filaments :
                                 type == Preset::TYPE_SLA_MATERIAL   ? sla_materials : printers;
 
     // if we want to save just some from selected options
@@ -348,7 +348,7 @@ void PresetBundle::save_changes_for_preset(const std::string& new_name, Preset::
     // If saving the preset changes compatibility with other presets, keep the now incompatible dependent presets selected, however with a "red flag" icon showing that they are no more compatible.
     update_compatible(PresetSelectCompatibleType::Never);
 
-    if (type == Preset::TYPE_FILAMENT) {
+    if (type == Preset::TYPE_FFF_FILAMENT) {
         // synchronize the first filament presets.
         set_filament_preset(0, filaments.get_selected_preset_name());
     }

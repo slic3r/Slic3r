@@ -77,7 +77,7 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     std::vector<size_t> objs_idx = plat->load_files(items, true, false, false);
 
     assert(objs_idx.size() == nb_items);
-    const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();
+    const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->get_config();
     const DynamicPrintConfig* printer_config = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
 
     /// --- scale ---
@@ -143,10 +143,10 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     }
 
     //update plater
-    this->gui_app->get_tab(Preset::TYPE_PRINT)->load_config(new_print_config);
+    this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->load_config(new_print_config);
     plat->on_config_change(new_print_config);
     plat->changed_objects(objs_idx);
-    //this->gui_app->get_tab(Preset::TYPE_PRINT)->update_dirty();
+    //this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->update_dirty();
     //update everything, easier to code.
     ObjectList* obj = this->gui_app->obj_list();
     obj->update_after_undo_redo();

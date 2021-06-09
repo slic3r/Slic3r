@@ -61,7 +61,7 @@ void CalibrationOverBridgeDialog::create_geometry(bool over_bridge) {
             Slic3r::resources_dir()+"/calibration/over-bridge_tuning/over-bridge_flow_ratio_test.amf"}, true, false, false);
 
     assert(objs_idx.size() == 6);
-    const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();
+    const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->get_config();
     const DynamicPrintConfig* printer_config = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
 
     /// --- scale ---
@@ -135,7 +135,7 @@ void CalibrationOverBridgeDialog::create_geometry(bool over_bridge) {
     }
 
     //update plater
-    this->gui_app->get_tab(Preset::TYPE_PRINT)->load_config(new_print_config);
+    this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->load_config(new_print_config);
     plat->on_config_change(new_print_config);
     plat->changed_objects(objs_idx);
     //update everything, easier to code.

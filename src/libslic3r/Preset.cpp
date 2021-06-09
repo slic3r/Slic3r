@@ -420,8 +420,8 @@ void Preset::set_visible_from_appconfig(const AppConfig &app_config)
         if (model.empty() || variant.empty())
             return;
         is_visible = app_config.get_variant(vendor->id, model, variant);
-    } else if (type == TYPE_FILAMENT || type == TYPE_SLA_MATERIAL) {
-        const std::string &section_name = (type == TYPE_FILAMENT) ? AppConfig::SECTION_FILAMENTS : AppConfig::SECTION_MATERIALS;
+    } else if (type == TYPE_FFF_FILAMENT || type == TYPE_SLA_MATERIAL) {
+        const std::string &section_name = (type == TYPE_FFF_FILAMENT) ? AppConfig::SECTION_FILAMENTS : AppConfig::SECTION_MATERIALS;
         if (app_config.has_section(section_name)) {
             // Check whether this profile is marked as "installed" in PrusaSlicer.ini, 
             // or whether a profile is marked as "installed", which this profile may have been renamed from.
@@ -1551,8 +1551,8 @@ void PresetCollection::update_map_system_profile_renamed()
 std::string PresetCollection::name() const
 {
     switch (this->type()) {
-    case Preset::TYPE_PRINT:        return L("print");
-    case Preset::TYPE_FILAMENT:     return L("filament");
+    case Preset::TYPE_FFF_PRINT:        return L("print");
+    case Preset::TYPE_FFF_FILAMENT:     return L("filament");
     case Preset::TYPE_SLA_PRINT:    return L("SLA print");
     case Preset::TYPE_SLA_MATERIAL: return L("SLA material");
     case Preset::TYPE_PRINTER:      return L("printer");
@@ -1563,8 +1563,8 @@ std::string PresetCollection::name() const
 std::string PresetCollection::section_name() const
 {
     switch (this->type()) {
-    case Preset::TYPE_PRINT:        return "print";
-    case Preset::TYPE_FILAMENT:     return "filament";
+    case Preset::TYPE_FFF_PRINT:        return "print";
+    case Preset::TYPE_FFF_FILAMENT:     return "filament";
     case Preset::TYPE_SLA_PRINT:    return "sla_print";
     case Preset::TYPE_SLA_MATERIAL: return "sla_material";
     case Preset::TYPE_PRINTER:      return "printer";

@@ -299,7 +299,7 @@ FreqChangedParams::FreqChangedParams(wxWindow* parent) :
     m_og->hide_labels();
 
     m_og->m_on_change = [config, this](t_config_option_key opt_key, boost::any value) {
-        Tab* tab_print = wxGetApp().get_tab(Preset::TYPE_PRINT);
+        Tab* tab_print = wxGetApp().get_tab(Preset::TYPE_FFF_PRINT);
         if (!tab_print) return;
 
         if (opt_key == "fill_density") {
@@ -692,8 +692,8 @@ Sidebar::Sidebar(Plater *parent)
     };
 
     p->combos_filament.push_back(nullptr);
-    init_combo(&p->combo_print,         _L("Print settings"),     Preset::TYPE_PRINT,         false);
-    init_combo(&p->combos_filament[0],  _L("Filament"),           Preset::TYPE_FILAMENT,      true);
+    init_combo(&p->combo_print,         _L("Print settings"),     Preset::TYPE_FFF_PRINT,         false);
+    init_combo(&p->combos_filament[0],  _L("Filament"),           Preset::TYPE_FFF_FILAMENT,      true);
     init_combo(&p->combo_sla_print,     _L("SLA print settings"), Preset::TYPE_SLA_PRINT,     false);
     init_combo(&p->combo_sla_material,  _L("SLA material"),       Preset::TYPE_SLA_MATERIAL,  false);
     init_combo(&p->combo_printer,       _L("Printer"),            Preset::TYPE_PRINTER,       false);
@@ -809,7 +809,7 @@ Sidebar::Sidebar(Plater *parent)
 Sidebar::~Sidebar() {}
 
 void Sidebar::init_filament_combo(PlaterPresetComboBox **combo, const int extr_idx) {
-    *combo = new PlaterPresetComboBox(p->presets_panel, Slic3r::Preset::TYPE_FILAMENT);
+    *combo = new PlaterPresetComboBox(p->presets_panel, Slic3r::Preset::TYPE_FFF_FILAMENT);
 //         # copy icons from first choice
 //         $choice->SetItemBitmap($_, $choices->[0]->GetItemBitmap($_)) for 0..$#presets;
 
@@ -865,7 +865,7 @@ void Sidebar::update_presets(Preset::Type preset_type)
     const auto print_tech = preset_bundle.printers.get_edited_preset().printer_technology();
 
     switch (preset_type) {
-    case Preset::TYPE_FILAMENT: 
+    case Preset::TYPE_FFF_FILAMENT: 
     {
         const size_t extruder_cnt = print_tech != ptFFF ? 1 :
                                 dynamic_cast<ConfigOptionFloats*>(preset_bundle.printers.get_edited_preset().config.option("nozzle_diameter"))->values.size();
@@ -883,7 +883,7 @@ void Sidebar::update_presets(Preset::Type preset_type)
         break;
     }
 
-    case Preset::TYPE_PRINT:
+    case Preset::TYPE_FFF_PRINT:
         p->combo_print->update();
         break;
 
@@ -3602,13 +3602,13 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
     std::string preset_name = wxGetApp().preset_bundle->get_preset_name_by_alias(preset_type, 
         Preset::remove_suffix_modified(combo->GetString(selection).ToUTF8().data()));
 
-    if (preset_type == Preset::TYPE_FILAMENT) {
+    if (preset_type == Preset::TYPE_FFF_FILAMENT) {
         wxGetApp().preset_bundle->set_filament_preset(idx, preset_name);
     }
 
     bool select_preset = !combo->selection_is_changed_according_to_physical_printers();
     // TODO: ?
-    if (preset_type == Preset::TYPE_FILAMENT && sidebar->is_multifilament()) {
+    if (preset_type == Preset::TYPE_FFF_FILAMENT && sidebar->is_multifilament()) {
         // Only update the plater UI for the 2nd and other filaments.
         combo->update();
     }
@@ -3987,7 +3987,7 @@ void Plater::priv::on_wipetower_moved(Vec3dEvent &evt)
     DynamicPrintConfig cfg;
     cfg.opt<ConfigOptionFloat>("wipe_tower_x", true)->value = evt.data(0);
     cfg.opt<ConfigOptionFloat>("wipe_tower_y", true)->value = evt.data(1);
-    wxGetApp().get_tab(Preset::TYPE_PRINT)->load_config(cfg);
+    wxGetApp().get_tab(Preset::TYPE_FFF_PRINT)->load_config(cfg);
 }
 
 void Plater::priv::on_wipetower_rotated(Vec3dEvent& evt)
@@ -3996,7 +3996,7 @@ void Plater::priv::on_wipetower_rotated(Vec3dEvent& evt)
     cfg.opt<ConfigOptionFloat>("wipe_tower_x", true)->value = evt.data(0);
     cfg.opt<ConfigOptionFloat>("wipe_tower_y", true)->value = evt.data(1);
     cfg.opt<ConfigOptionFloat>("wipe_tower_rotation_angle", true)->value = Geometry::rad2deg(evt.data(2));
-    wxGetApp().get_tab(Preset::TYPE_PRINT)->load_config(cfg);
+    wxGetApp().get_tab(Preset::TYPE_FFF_PRINT)->load_config(cfg);
 }
 
 void Plater::priv::on_update_geometry(Vec3dsEvent<2>&)
@@ -4725,7 +4725,7 @@ void Plater::priv::undo_redo_to(std::vector<UndoRedo::Snapshot>::const_iterator 
                 new_config.set_key_value("wipe_tower_x", new ConfigOptionFloat(model.wipe_tower.position.x()));
                 new_config.set_key_value("wipe_tower_y", new ConfigOptionFloat(model.wipe_tower.position.y()));
                 new_config.set_key_value("wipe_tower_rotation_angle", new ConfigOptionFloat(model.wipe_tower.rotation));
-                Tab *tab_print = wxGetApp().get_tab(Preset::TYPE_PRINT);
+                Tab *tab_print = wxGetApp().get_tab(Preset::TYPE_FFF_PRINT);
                 tab_print->load_config(new_config);
                 tab_print->update_dirty();
             }
