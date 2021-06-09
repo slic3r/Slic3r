@@ -38,12 +38,20 @@ To decompile the .mo of Prusaslicer, use the command `msgunfmt PrusaSlicer.mo -o
 So the settings.ini contains these lines :
 
 ```
-data = es/my_old_po_file.po
+data = es/Slic3r.po
+data = MyKnowledgeBase.po
 data = es/PrusaSlicer_es.po
+
+database_out = MyKnowledgeBase.po
 
 ui_dir = ../ui_layout
 allow_msgctxt = false
 ignore_case = false
+remove_comment = true
+percent_error_similar = 0.4
+max_similar = 3
+language = french
+language_code = fr
 
 input = Slic3r.pot
 todo = es/todo.po
@@ -51,10 +59,15 @@ output = es/Slic3r.po
 ```
 
 Notes:
-* thee 'todo' and 'output' files will be erased, so be sure nothing has this name (or write another name)
+* thee 'todo' and 'output' files will be erased, so be sure nothing important has this name (or write another name)
+* the file at 'database_out' will receive all the database created from the data files. That way, it will keep your new & old unused translations just in case the wording revert back to it, or to be used as reference for the helper.
 * ui_dir should be the path to the slic3r/resources/ui_layout directory. If you're in slic3r/resources/localization, this value is good.
 * allow_msgctxt is a bool to allow to keep the msgctxt tags. You need a recent version of gettext to use that.
 * ignore_case is a bool that will let the tool to ignore the case when comparing msgid if no translation is found.
+* remove_comment is a bool taht will remove all comment in the output file. It's to avoid unecessary changes in the git commit.
+* percent_error_similar is a number between 0 and 1. This will activate the helper that will write help comment in the TODO file. These will present similar string that are already translated, to let you pick chunk that are already translated to avoid redoing all the work. It's the percentage of difference allowed (0 = identical, 1 = everything, 0.5 = not more than half of the string is different), using (levenshtein distance / msgid length).
+* max_similar: max number of help translation per item
+* language and language_code: text to include in the header.
 
 
 ### 2) launch the utility.
@@ -83,13 +96,18 @@ After filling the todo file, change the settings.ini:
 
 ```
 data = es/todo.po
-data = es/Slic3r.po
-data = es/my_old_po_file.po
-data = es/PrusaSlicer_es.po
+data = MyKnowledgeBase.po
+
+database_out = MyKnowledgeBase.po
 
 ui_dir = ../ui_layout
 allow_msgctxt = false
 ignore_case = false
+remove_comment = true
+percent_error_similar = 0.4
+max_similar = 3
+language = french
+language_code = fr
 
 input = Slic3r.pot
 todo = es/todo.po

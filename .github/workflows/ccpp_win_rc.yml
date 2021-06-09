@@ -62,6 +62,9 @@ jobs:
     - name: make .mo
       working-directory: ./build
       run: msbuild /m /P:Configuration=Release gettext_po_to_mo.vcxproj
+    - name: make .pot
+      working-directory: ./build
+      run: msbuild /m /P:Configuration=Release gettext_make_pot.vcxproj
     - name: create directory and copy into it
       working-directory: ./build
       run: ls

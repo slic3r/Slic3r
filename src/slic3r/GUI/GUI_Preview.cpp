@@ -1141,15 +1141,15 @@ wxString Preview::get_option_type_string(OptionType type) const
     {
     case OptionType::Travel:        { return _L("Travel"); }
     case OptionType::Wipe:          { return _L("Wipe"); }
-    case OptionType::Retractions:   { return _L(m_width_screen == tiny ? "Retr." : "Retractions"); }
-    case OptionType::Unretractions: { return _L(m_width_screen == tiny ? "Dere." : "Deretractions"); }
-    case OptionType::ToolChanges:   { return _L(m_width_screen == tiny ? "Tool/C" : "Tool changes"); }
-    case OptionType::ColorChanges:  { return _L(m_width_screen == tiny ? "Col/C" : "Color changes"); }
-    case OptionType::PausePrints:   { return _L(m_width_screen == tiny ? "Pause" : "Print pauses"); }
-    case OptionType::CustomGCodes:  { return _L(m_width_screen == tiny ? "Custom" : "Custom G-codes"); }
+    case OptionType::Retractions:   { return m_width_screen == tiny ? _L("Retr.") : _L("Retractions"); }
+    case OptionType::Unretractions: { return m_width_screen == tiny ? _L("Dere.") : _L("Deretractions"); }
+    case OptionType::ToolChanges:   { return m_width_screen == tiny ? _L("Tool/C") : _L("Tool changes"); }
+    case OptionType::ColorChanges:  { return m_width_screen == tiny ? _L("Col/C") : _L("Color changes"); }
+    case OptionType::PausePrints:   { return m_width_screen == tiny ? _L("Pause") : _L("Print pauses"); }
+    case OptionType::CustomGCodes:  { return m_width_screen == tiny ? _L("Custom") : _L("Custom G-codes"); }
     case OptionType::Shells:        { return _L("Shells"); }
-    case OptionType::ToolMarker:    { return _L(m_width_screen == tiny ? "Marker" : "Tool marker"); }
-    case OptionType::Legend:        { return _L(m_width_screen == tiny ? "Legend" : "Legend/Estimated printing time"); }
+    case OptionType::ToolMarker:    { return m_width_screen == tiny ? _L("Marker") : _L("Tool marker"); }
+    case OptionType::Legend:        { return m_width_screen == tiny ? _L("Legend") : _L("Legend/Estimated printing time"); }
     default:                        { return ""; }
     }
 }
