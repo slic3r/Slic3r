@@ -151,11 +151,13 @@ bool GCodeViewer::Path::matches(const GCodeProcessor::MoveVertex& move) const
 #if ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
         return type == move.type && extruder_id == move.extruder_id && cp_color_id == move.cp_color_id && role == move.extrusion_role &&
             move.position[2] <= sub_paths.front().first.position[2] && feedrate == move.feedrate && fan_speed == move.fan_speed &&
+            layer_time == move.layer_duration && elapsed_time == move.time && extruder_temp == move.temperature &&
             height == round_to_nearest(move.height, 2) && width == round_to_nearest(move.width, 2) &&
             matches_percent(volumetric_rate, move.volumetric_rate(), 0.05f);
 #else
         return type == move.type && move.position[2] <= sub_paths.front().position[2] && role == move.extrusion_role && height == round_to_nearest(move.height, 2) &&
             width == round_to_nearest(move.width, 2) && feedrate == move.feedrate && fan_speed == move.fan_speed &&
+            layer_time == move.layer_duration && elapsed_time == move.time && extruder_temp == move.temperature &&
             volumetric_rate == round_to_nearest(move.volumetric_rate(), 2) && extruder_id == move.extruder_id &&
             cp_color_id == move.cp_color_id;
 #endif // ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
@@ -163,13 +165,15 @@ bool GCodeViewer::Path::matches(const GCodeProcessor::MoveVertex& move) const
 #if ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
         return type == move.type && extruder_id == move.extruder_id && cp_color_id == move.cp_color_id && role == move.extrusion_role &&
             move.position[2] <= first.position[2] && feedrate == move.feedrate && fan_speed == move.fan_speed &&
+            layer_time == move.layer_duration && elapsed_time == move.time && extruder_temp == move.temperature &&
             height == round_to_nearest(move.height, 2) && width == round_to_nearest(move.width, 2) &&
             matches_percent(volumetric_rate, move.volumetric_rate(), 0.05f);
 #else
         return type == move.type && move.position[2] <= first.position[2] && role == move.extrusion_role && height == round_to_nearest(move.height, 2) &&
             width == round_to_nearest(move.width, 2) && feedrate == move.feedrate && fan_speed == move.fan_speed &&
+            layer_time == move.layer_duration && elapsed_time == move.time && extruder_temp == move.temperature &&
             volumetric_rate == round_to_nearest(move.volumetric_rate(), 2) && extruder_id == move.extruder_id &&
-            cp_color_id == move.cp_color_id && extruder_temp == move.temperature;
+            cp_color_id == move.cp_color_id;
 #endif // ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
 #endif // ENABLE_SPLITTED_VERTEX_BUFFER
     }
@@ -202,11 +206,11 @@ void GCodeViewer::TBuffer::add_path(const GCodeProcessor::MoveVertex& move, unsi
 #if ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
     paths.push_back({ move.type, move.extrusion_role, move.delta_extruder,
         round_to_nearest(move.height, 2), round_to_nearest(move.width, 2), move.feedrate, move.fan_speed,
-        move.volumetric_rate(), move.extruder_id, move.cp_color_id, { { endpoint, endpoint } } });
+        move.volumetric_rate(), move.extruder_id, move.cp_color_id, { { endpoint, endpoint } }, move.layer_duration, move.time, move.temperature });
 #else
     paths.push_back({ move.type, move.extrusion_role, move.delta_extruder,
         round_to_nearest(move.height, 2), round_to_nearest(move.width, 2), move.feedrate, move.fan_speed,
-        round_to_nearest(move.volumetric_rate(), 2), move.extruder_id, move.cp_color_id, { { endpoint, endpoint } } });
+        round_to_nearest(move.volumetric_rate(), 2), move.extruder_id, move.cp_color_id, { { endpoint, endpoint } }, move.layer_duration, move.time, move.temperature });
 #endif // ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
 #else
 #if ENABLE_TOOLPATHS_WIDTH_HEIGHT_FROM_GCODE
@@ -3285,8 +3289,13 @@ void GCodeViewer::refresh_render_paths(bool keep_sequential_current_first, bool 
         case EViewType::Width:          { color = m_extrusions.ranges.width.get_color_at(path.width); break; }
         case EViewType::Feedrate:       { color = m_extrusions.ranges.feedrate.get_color_at(path.feedrate); break; }
         case EViewType::FanSpeed:       { color = m_extrusions.ranges.fan_speed.get_color_at(path.fan_speed); break; }
+        case EViewType::LayerTime:      { color = m_extrusions.ranges.layer_duration.get_color_at(path.layer_time); break; }
+        case EViewType::LayerTimeLog:   { color = m_extrusions.ranges.layer_duration.get_color_at(path.layer_time, true); break; }
+        case EViewType::Chronology:     { color = m_extrusions.ranges.elapsed_time.get_color_at(path.elapsed_time); break; }
         case EViewType::VolumetricRate: { color = m_extrusions.ranges.volumetric_rate.get_color_at(path.volumetric_rate); break; }
         case EViewType::Tool:           { color = m_tool_colors[path.extruder_id]; break; }
+        case EViewType::Filament:       { color = m_filament_colors[path.extruder_id]; break; }
+        case EViewType::ExtruderTemp:   { color = m_extrusions.ranges.extruder_temp.get_color_at(path.extruder_temp); break; }
         case EViewType::ColorPrint:     {
             if (path.cp_color_id >= static_cast<unsigned char>(m_tool_colors.size())) {
                 color = { 0.5f, 0.5f, 0.5f };
