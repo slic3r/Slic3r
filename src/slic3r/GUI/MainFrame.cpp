@@ -1074,7 +1074,9 @@ void MainFrame::on_sys_color_changed()
 #ifdef _MSC_VER
     // \xA0 is a non-breaking space. It is entered here to spoil the automatic accelerators,
     // as the simple numeric accelerators spoil all numeric data entry.
-static const wxString sep = "\t\xA0";
+    // note: same for letters
+    // note: don't work anymore, it doesn't show them to the right. Revert to " - "
+static const wxString sep = " - ";//\t\xA0
 static const wxString sep_space = "\xA0";
 #else
 static const wxString sep = " - ";
@@ -1129,7 +1131,7 @@ static wxMenu* generate_help_menu()
 
 static void add_common_view_menu_items(wxMenu* view_menu, MainFrame* mainFrame, std::function<bool(void)> can_change_view)
 {
-    // The camera control accelerators are captured by GLCanvas3D::on_char().
+    // The camera control accelerators are captured by GLCanvas3D::on_char(). So be sure to don't activate the accelerator by using '\t'
     append_menu_item(view_menu, wxID_ANY, _L("Iso") + sep + "&0", _L("Iso View"), [mainFrame](wxCommandEvent&) { mainFrame->select_view("iso"); },
         "", nullptr, [can_change_view]() { return can_change_view(); }, mainFrame);
     view_menu->AppendSeparator();
@@ -1379,8 +1381,8 @@ void MainFrame::init_menubar_as_editor()
 
         editMenu->AppendSeparator();
         append_menu_item(editMenu, wxID_ANY, _L("Searc&h") + "\tCtrl+F",
-            _L("Search in settings"), [this](wxCommandEvent&) { m_plater->search(/*m_tabpanel->GetCurrentPage() == */m_plater->IsShown()); },
-            "search", nullptr, []() {return true; }, this);
+            _L("Search in settings"), [this](wxCommandEvent&) { m_plater->search(/*m_tabpanel->GetCurrentPage() == */m_plater->IsShown() && can_change_view()); },
+            "search", nullptr, []() { return true; }, this);
     }
 
     // Window menu
@@ -1425,9 +1427,9 @@ void MainFrame::init_menubar_as_editor()
         viewMenu = new wxMenu();
         add_common_view_menu_items(viewMenu, this, std::bind(&MainFrame::can_change_view, this));
         viewMenu->AppendSeparator();
-        append_menu_check_item(viewMenu, wxID_ANY, _L("Show &labels") + "\t" + "E", _L("Show object/instance labels in 3D scene"),
-            [this](wxCommandEvent&) { m_plater->show_view3D_labels(!m_plater->are_view3D_labels_shown()); }, this,
-            [this]() { return m_plater->is_view3D_shown() && can_change_view(); }, [this]() { return m_plater->are_view3D_labels_shown(); }, this);
+        append_menu_check_item(viewMenu, wxID_ANY, _L("Show &labels") + sep + "&e", _L("Show object/instance labels in 3D scene"),
+            [this](wxCommandEvent&) { m_plater->show_view3D_labels(!m_plater->are_view3D_labels_shown()); /* only called on clic, real event is handled by GLCanvas3D::on_char */ }, this,
+            [this]() { return m_plater->is_view3D_shown(); }, [this]() { return m_plater->are_view3D_labels_shown(); }, this);
         append_menu_check_item(viewMenu, wxID_ANY, _L("&Collapse sidebar") + "\t" + "Shift+" + sep_space + "Tab", _L("Collapse sidebar"),
             [this](wxCommandEvent&) { m_plater->collapse_sidebar(!m_plater->is_sidebar_collapsed()); }, this,
             [this]() { return can_change_view(); }, [this]() { return m_plater->is_sidebar_collapsed(); }, this);
