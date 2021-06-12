@@ -13,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        ref: 'Nigthly'
+        ref: 'rc'
     - name: update submodule profiles
       working-directory: ./resources/profiles
       run: git submodule update --init
