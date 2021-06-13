@@ -1228,6 +1228,11 @@ ExPolygons variable_offset_inner_ex(const ExPolygon &expoly, const std::vector<s
 	holes.reserve(expoly.holes.size());
 	for (const Polygon& hole : expoly.holes)
 		append(holes, fix_after_outer_offset(mittered_offset_path_scaled(hole.points, deltas[1 + &hole - expoly.holes.data()], miter_limit), ClipperLib::pftNegative, false));
+    for (auto it = holes.begin(); it != holes.end();)
+        if (ClipperLib::Area(*it) < 0.) {
+            it = holes.erase(it);
+        }
+        else ++it;
 #ifndef NDEBUG
 	for (auto &c : holes)
 		assert(ClipperLib::Area(c) > 0.);
