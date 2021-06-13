@@ -752,15 +752,9 @@ void PerimeterGenerator::process()
                     if (!expoly.holes.empty()) {
                         //this is a a sort of a loop
                         //try to see if it's possible to add a "perimeter"
-                        Polygons small_peri = offset(expoly.contour, -(float)(perimeter_spacing), ClipperLib::jtMiter, 3);
-                        Polygons small_holes = expoly.holes;
-                        polygons_reverse(small_holes);
-                        ExPolygons small_ex = diff_ex(small_peri, small_holes);
-                        if (small_ex.size() == 1 && !small_ex.front().holes.empty()) {
+                        ExPolygons contour_expolygon = offset_ex(expoly, -(float)(perimeter_spacing / 2), ClipperLib::jtMiter, 3);
+                        if (contour_expolygon.size() == 1 && !contour_expolygon.front().holes.empty()) {
                             //OK
-                            Polygons perimeter_line = offset(expoly.contour, -(float)(perimeter_spacing/2), ClipperLib::jtMiter, 3);
-                            if (perimeter_line.size() != 1)
-                                continue;
                             // update list & variable to let the new perimeter be taken into account
                             loop_number = contours_size;
                             if (contours_size >= contours.size()) {
@@ -768,16 +762,10 @@ void PerimeterGenerator::process()
                                 holes.emplace_back();
                             }
                             //Add the new periemter
-                            contours[contours_size].emplace_back(perimeter_line.front(), contours_size, true, has_steep_overhang);
+                            contours[contours_size].emplace_back(contour_expolygon.front().contour, contours_size, true, has_steep_overhang);
                             //create the new gapfills
-                            ExPolygon perimeter_area;
-                            perimeter_area.holes.emplace_back(small_ex.front().contour);
-                            perimeter_area.holes.front().reverse();
-                            perimeter_line = offset(perimeter_line.front(), (float)(perimeter_spacing / 2), ClipperLib::jtMiter, 3);
-                            if (perimeter_line.size() != 1) // should never happen
-                                perimeter_line = { expoly.contour };
-                            perimeter_area.contour = perimeter_line.front();
-                            ExPolygons to_add = diff_ex(expoly, perimeter_area);
+                            ExPolygons gapfill_area = offset_ex(expoly.contour, -(float)(perimeter_spacing));
+                            ExPolygons to_add = intersection_ex({ expoly }, gapfill_area);
                             //add the new gapfill
                             if (to_add.size() == 0)
                                 expoly.clear();
