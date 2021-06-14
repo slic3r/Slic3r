@@ -706,10 +706,10 @@ ModeSizer::ModeSizer(wxWindow *parent, int hgap/* = 0*/) :
     SetFlexibleDirection(wxHORIZONTAL);
 
     std::vector < std::pair < wxString, std::string >> buttons = {
-        {_(L("Simple")),    "mode_simple"},
+        {_L("Simple"),    "mode_simple"},
 //        {_(L("Advanced")),  "mode_advanced"},
-        {_CTX(L_CONTEXT("Advanced", "Mode"), "Mode"), "mode_advanced"},
-        {_(L("Expert")),    "mode_expert"},
+        {_L("Advanced") /*_CTX(L_CONTEXT("Advanced", "Mode") , "Mode")*/, "mode_advanced"},
+        {_L("Expert"),    "mode_expert"},
     };
 
     auto modebtnfn = [](wxCommandEvent &event, int mode_id) {

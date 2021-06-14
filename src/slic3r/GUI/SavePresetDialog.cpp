@@ -212,7 +212,7 @@ void SavePresetDialog::build(std::vector<Preset::Type> types, std::string suffix
 #endif // ENABLE_WX_3_1_3_DPI_CHANGED_EVENT
 
     if (suffix.empty())
-        suffix = _CTX_utf8(L_CONTEXT("Copy", "PresetName"), "PresetName");
+        suffix = _u8L("Copy")/*_CTX_utf8(L_CONTEXT("Copy", "PresetName") , "PresetName")*/;
 
     wxBoxSizer* topSizer = new wxBoxSizer(wxVERTICAL);
 

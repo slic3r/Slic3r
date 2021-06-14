@@ -1571,7 +1571,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
             }
             
-            current_group = current_page->new_optgroup(_L(params.back()), nolabel?0:-1);
+            current_group = current_page->new_optgroup(_(params.back()), nolabel?0:-1);
             for (int i = 1; i < params.size() - 1; i++) {
                 if (boost::starts_with(params[i], "title_width$")) {
                     current_group->title_width = atoi(params[i].substr(12, params[i].size() - 12).c_str());
@@ -1790,7 +1790,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
                 else if (params[i] == "full_label")
                 {
-                    option.opt.full_label = L(params[i].substr(11, params[i].size() - 11));
+                    option.opt.full_label = (params[i].substr(11, params[i].size() - 11));
                     need_to_notified_search = true;
                 }
                 else if (params[i] == "full_label")
@@ -1800,7 +1800,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
                 else if (boost::starts_with(params[i], "label$"))
                 {
-                    option.opt.label = L(params[i].substr(6, params[i].size() - 6));
+                    option.opt.label = (params[i].substr(6, params[i].size() - 6));
                     need_to_notified_search = true;
                 }
                 else if (boost::starts_with(params[i], "label_width$")) {
@@ -1808,7 +1808,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
                 else if (boost::starts_with(params[i], "sidetext$"))
                 {
-                    option.opt.sidetext = L(params[i].substr(9, params[i].size() - 9));
+                    option.opt.sidetext = (params[i].substr(9, params[i].size() - 9));
                 }
                 else if (boost::starts_with(params[i], "sidetext_width$"))
                 {
@@ -1834,7 +1834,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
                 else if (boost::starts_with(params[i], "tooltip$"))
                 {
-                    option.opt.tooltip = L(params[i].substr(8, params[i].size() - 8));
+                    option.opt.tooltip = (params[i].substr(8, params[i].size() - 8));
                     need_to_notified_search = true;
                 }
             }
@@ -2562,13 +2562,13 @@ PageShp TabPrinter::build_kinematics_page()
         def.gui_type = "legend";
         def.mode = comAdvanced;
         def.tooltip = L("Values in this column are for Normal mode");
-        def.set_default_value(new ConfigOptionString{ _(L("Normal")).ToUTF8().data() });
+        def.set_default_value(new ConfigOptionString{ _u8L("Normal").data() });
 
         auto option = Option(def, "full_power_legend");
         line.append_option(option);
 
         def.tooltip = L("Values in this column are for Stealth mode");
-        def.set_default_value(new ConfigOptionString{ _(L("Stealth")).ToUTF8().data() });
+        def.set_default_value(new ConfigOptionString{ _u8L("Stealth").data() });
         option = Option(def, "silent_legend");
         line.append_option(option);
 

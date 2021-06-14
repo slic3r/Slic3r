@@ -176,9 +176,11 @@ wxPoint OG_CustomCtrl::get_pos(const Line& line, Field* field_in/* = nullptr*/)
                 // add label if any
                 if (!option.label.empty()) {
                     std::string opt_label = (option.label.empty() || option.label.back() != '_') ? option.label : option.label.substr(0, option.label.size() - 1);
+                    std::cout << "translate '" << opt_label << "' to '";
                     //!            To correct translation by context have to use wxGETTEXT_IN_CONTEXT macro from wxWidget 3.1.1
-                    label = (opt_label == L_CONTEXT("Top", "Layers") || opt_label == L_CONTEXT("Bottom", "Layers")) ?
-                        _CTX(opt_label, "Layers") : _(opt_label);
+                    label = /*(opt_label == L_CONTEXT("Top", "Layers") || opt_label == L_CONTEXT("Bottom", "Layers")) ?
+                        _CTX(opt_label, "Layers") :*/ _(opt_label);
+                    std::cout << label << "'\n";
                     bool no_dots = label.empty() || option.label.back() == '_';
                     if (!no_dots)
                         label += ":";
@@ -605,8 +607,8 @@ void OG_CustomCtrl::CtrlLine::render(wxDC& dc, wxCoord v_pos)
         if (!option.label.empty()) {
             std::string opt_label = (option.label.empty() || option.label.back() != '_') ? option.label : option.label.substr(0, option.label.size() - 1);
             //!            To correct translation by context have to use wxGETTEXT_IN_CONTEXT macro from wxWidget 3.1.1
-            wxString label = (opt_label == L_CONTEXT("Top", "Layers") || opt_label == L_CONTEXT("Bottom", "Layers")) ?
-                _CTX(opt_label, "Layers") : _(opt_label);
+            wxString label = /*(opt_label == L_CONTEXT("Top", "Layers") || opt_label == L_CONTEXT("Bottom", "Layers")) ?
+                _CTX(opt_label, "Layers") :*/ _(opt_label);
             bool no_dots = label.empty() || option.label.back() == '_';
             if (!no_dots)
                 label += ":";

@@ -337,8 +337,8 @@ void OptionsGroup::activate_line(Line& line)
 		if (!option.label.empty() && !custom_ctrl) {
 //!			To correct translation by context have to use wxGETTEXT_IN_CONTEXT macro from wxWidget 3.1.1
 			std::string opt_label = (option.label.empty() || option.label.back() != '_') ? option.label : option.label.substr(0, option.label.size() - 1);
-			wxString str_label = (opt_label == L_CONTEXT("Top", "Layers") || opt_label == L_CONTEXT("Bottom", "Layers")) ?
-								_CTX(opt_label, "Layers") :
+			wxString str_label = /*(opt_label == L_CONTEXT("Top", "Layers") || opt_label == L_CONTEXT("Bottom", "Layers")) ?
+								_CTX(opt_label, "Layers") :*/
 								_(opt_label);
 
             bool no_dots = str_label.empty() || option.label.back() == '_';

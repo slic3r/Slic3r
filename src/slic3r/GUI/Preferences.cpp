@@ -112,14 +112,14 @@ void PreferencesDialog::build()
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 #ifdef _WIN32
 		// Please keep in sync with ConfigWizard
-		def.label = (boost::format(L("Associate .3mf files to %1%")) % SLIC3R_APP_NAME).str();
+		def.label = (boost::format(_u8L("Associate .3mf files to %1%")) % SLIC3R_APP_NAME).str();
 		def.type = coBool;
 		def.tooltip = L("If enabled, sets Slic3r as default application to open .3mf files.");
 		def.set_default_value(new ConfigOptionBool(app_config->get("associate_3mf") == "1"));
 		option = Option(def, "associate_3mf");
 		m_optgroup_general->append_single_option_line(option);
 
-		def.label = (boost::format(L("Associate .stl files to %1%")) % SLIC3R_APP_NAME).str();
+		def.label = (boost::format(_u8L("Associate .stl files to %1%")) % SLIC3R_APP_NAME).str();
 		def.type = coBool;
 		def.tooltip = L("If enabled, sets Slic3r as default application to open .stl files.");
 		def.set_default_value(new ConfigOptionBool(app_config->get("associate_stl") == "1"));
@@ -168,11 +168,11 @@ void PreferencesDialog::build()
 
 		
 #if __APPLE__
-		def.label = (boost::format(L("Allow just a single %1% instance")) % SLIC3R_APP_NAME).str();
+		def.label = (boost::format(_u8L("Allow just a single %1% instance")) % SLIC3R_APP_NAME).str();
 		def.type = coBool;
 	def.tooltip = L("On OSX there is always only one instance of app running by default. However it is allowed to run multiple instances of same app from the command line. In such case this settings will allow only one instance.");
 #else
-		def.label = (boost::format(L("Allow just a single %1% instance")) % SLIC3R_APP_NAME).str();
+		def.label = (boost::format(_u8L("Allow just a single %1% instance")) % SLIC3R_APP_NAME).str();
 		def.type = coBool;
 		def.tooltip = L("If this is enabled, when starting Slic3r and another instance of the same Slic3r is already running, that instance will be reactivated instead.");
 #endif
@@ -211,9 +211,9 @@ void PreferencesDialog::build()
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 #ifdef _WIN32
 	else {
-		def.label = (boost::format(L("Associate .gcode files to %1%")) % GCODEVIEWER_APP_NAME).str();
+		def.label = (boost::format(_u8L("Associate .gcode files to %1%")) % GCODEVIEWER_APP_NAME).str();
 		def.type = coBool;
-		def.tooltip = (boost::format(L("If enabled, sets %1% as default application to open .gcode files.")) % GCODEVIEWER_APP_NAME).str();
+		def.tooltip = (boost::format(_u8L("If enabled, sets %1% as default application to open .gcode files.")) % GCODEVIEWER_APP_NAME).str();
 		def.set_default_value(new ConfigOptionBool(app_config->get("associate_gcode") == "1"));
 		option = Option(def, "associate_gcode");
 		m_optgroup_general->append_single_option_line(option);
@@ -398,10 +398,10 @@ void PreferencesDialog::build()
 
 	def.label = L("Very dark gui color");
 	def.type = coString;
-	def.tooltip = std::string(L("Very dark color, in the RGB hex format."))
-		+ std::string(L(" Mainly used as background or dark text color."))
-		+ std::string(L("\nYou have to restart the application before any change will be taken into account."))
-		+ std::string(L("\nSlic3r(yellow): ada230, PrusaSlicer(orange): c46737, SuperSlicer(blue): 0047c7"));
+	def.tooltip = _u8L("Very dark color, in the RGB hex format.")
+		+ " "  + _u8L("Mainly used as background or dark text color.")
+		+ "\n" + _u8L("You have to restart the application before any change will be taken into account.")
+		+ "\n" + _u8L("Slic3r(yellow): ada230, PrusaSlicer(orange): c46737, SuperSlicer(blue): 0047c7");
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_very_dark") });
 	option = Option(def, "color_very_dark");
 	option.opt.width = 6;
@@ -409,10 +409,10 @@ void PreferencesDialog::build()
 
 	def.label = L("Dark gui color");
 	def.type = coString;
-	def.tooltip = std::string(L("Dark color, in the RGB hex format."))
-		+ std::string(L(" Mainly used as icon color."))
-		+ std::string(L("\nYou have to restart the application before any change will be taken into account."))
-		+ std::string(L("\nSlic3r(yellow): cabe39, PrusaSlicer(orange): ed6b21, SuperSlicer(blue): 2172eb"));
+	def.tooltip = _u8L("Dark color, in the RGB hex format.")
+		+ " " + _u8L("Mainly used as icon color.")
+		+ "\n" + _u8L("You have to restart the application before any change will be taken into account.")
+		+ "\n" + _u8L("Slic3r(yellow): cabe39, PrusaSlicer(orange): ed6b21, SuperSlicer(blue): 2172eb");
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_dark") });
 	option = Option(def, "color_dark");
 	option.opt.width = 6;
@@ -420,9 +420,9 @@ void PreferencesDialog::build()
 
 	def.label = L("Gui color");
 	def.type = coString;
-	def.tooltip = std::string(L("Main color, in the RGB hex format."))
-		+ std::string(L("\nYou have to restart the application before any change will be taken into account.")) 
-		+ std::string(L(" Slic3r(yellow): eddc21, PrusaSlicer(orange): fd7e42, SuperSlicer(blue): 428dfd"));
+	def.tooltip = _u8L("Main color, in the RGB hex format.")
+		+ "\n" + _u8L("You have to restart the application before any change will be taken into account.")
+		+ " " + _u8L("Slic3r(yellow): eddc21, PrusaSlicer(orange): fd7e42, SuperSlicer(blue): 428dfd");
 	def.set_default_value(new ConfigOptionString{ app_config->get("color") });
 	option = Option(def, "color");
 	option.opt.width = 6;
@@ -430,9 +430,9 @@ void PreferencesDialog::build()
 
 	def.label = L("Light gui color");
 	def.type = coString;
-	def.tooltip = std::string(L("Light color, in the RGB hex format."))
-		+ std::string(L("\nYou have to restart the application before any change will be taken into account.")) 
-		+ std::string(L(" Slic3r(yellow): ffee38, PrusaSlicer(orange): feac8b, SuperSlicer(blue): 8bb9fe"));
+	def.tooltip = _u8L("Light color, in the RGB hex format.")
+		+ "\n" + _u8L("You have to restart the application before any change will be taken into account.")
+		+ " " + _u8L("Slic3r(yellow): ffee38, PrusaSlicer(orange): feac8b, SuperSlicer(blue): 8bb9fe");
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_light") });
 	option = Option(def, "color_light");
 	option.opt.width = 6;
@@ -440,10 +440,10 @@ void PreferencesDialog::build()
 
 	def.label = L("Very light gui color");
 	def.type = coString;
-	def.tooltip = std::string(L("Very light color, in the RGB hex format."))
-		+ std::string(L(" Mainly used as light text color."))
-		+ std::string(L("\nYou have to restart the application before any change will be taken into account."))
-		+ std::string(L("\nSlic3r(yellow): fef48b, PrusaSlicer(orange): ff7d38, SuperSlicer(blue): 428cff"));
+	def.tooltip = _u8L("Very light color, in the RGB hex format.")
+		+ " " + _u8L("Mainly used as light text color.")
+		+ "\n" + _u8L("You have to restart the application before any change will be taken into account.")
+		+ "\n" + _u8L("Slic3r(yellow): fef48b, PrusaSlicer(orange): ff7d38, SuperSlicer(blue): 428cff");
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_very_light") });
 	option = Option(def, "color_very_light");
 	option.opt.width = 6;
