@@ -460,7 +460,7 @@ bool copy_file_linux(const boost::filesystem::path &from, const boost::filesyste
     	}
     	break;
   	}
-  	BOOST_LOG_TRIVIAL(trace) << "infile.fd";
+  	BOOST_LOG_TRIVIAL(trace) << "infile.fd " << infile.fd;
 
 
 	struct ::stat from_stat;
@@ -495,7 +495,7 @@ bool copy_file_linux(const boost::filesystem::path &from, const boost::filesyste
 	  	}
 	  	break;
 	}
-	BOOST_LOG_TRIVIAL(trace) << "outfile.fd";
+	BOOST_LOG_TRIVIAL(trace) << "outfile.fd " << outfile.fd;
 
 	struct ::stat to_stat;
 	if (::fstat(outfile.fd, &to_stat) != 0)
@@ -532,7 +532,9 @@ bool copy_file_linux(const boost::filesystem::path &from, const boost::filesyste
 			std::size_t size_to_copy = max_send_size;
 			if (size_left < static_cast<uintmax_t>(max_send_size))
 				size_to_copy = static_cast<std::size_t>(size_left);
+			BOOST_LOG_TRIVIAL(trace) << "sendfile " << outfile.fd << "; " << infile.fd << "; " << size_to_copy;
 			ssize_t sz = ::sendfile(outfile.fd, infile.fd, nullptr, size_to_copy);
+			BOOST_LOG_TRIVIAL(trace) << sz;
 			if (sz < 0) {
 				err = errno;
 				if (err == EINTR)
