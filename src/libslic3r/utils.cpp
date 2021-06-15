@@ -490,8 +490,6 @@ bool copy_file_linux(const boost::filesystem::path &from, const boost::filesyste
 	ec.clear();
   	int err = 0;
 
-  	BOOST_LOG_TRIVIAL(trace) << "copy_file_linux("<<from<<", "<<to<< ")";
-
   	// Note: Declare fd_wrappers here so that errno is not clobbered by close() that may be called in fd_wrapper destructors
   	fd_wrapper infile, outfile;
 
@@ -507,8 +505,6 @@ bool copy_file_linux(const boost::filesystem::path &from, const boost::filesyste
     	}
     	break;
   	}
-  	BOOST_LOG_TRIVIAL(trace) << "infile.fd " << infile.fd;
-
 
 	struct ::stat from_stat;
 	if (::fstat(infile.fd, &from_stat) != 0) {
@@ -517,15 +513,11 @@ bool copy_file_linux(const boost::filesystem::path &from, const boost::filesyste
 		goto fail;
 	}
 	
-	BOOST_LOG_TRIVIAL(trace) << "from_stat";
-
   	const mode_t from_mode = from_stat.st_mode;
   	if (!S_ISREG(from_mode)) {
     	err = ENOSYS;
     	goto fail;
   	}
-
-	BOOST_LOG_TRIVIAL(trace) << "from_mode";
 
   	// Enable writing for the newly created files. Having write permission set is important e.g. for NFS,
   	// which checks the file permission on the server, even if the client's file descriptor supports writing.
@@ -542,13 +534,10 @@ bool copy_file_linux(const boost::filesystem::path &from, const boost::filesyste
 	  	}
 	  	break;
 	}
-	BOOST_LOG_TRIVIAL(trace) << "outfile.fd " << outfile.fd;
 
 	struct ::stat to_stat;
 	if (::fstat(outfile.fd, &to_stat) != 0)
 		goto fail_errno;
-
-	BOOST_LOG_TRIVIAL(trace) << "to_stat";
 
 	to_mode = to_stat.st_mode;
 	if (!S_ISREG(to_mode)) {
@@ -556,14 +545,10 @@ bool copy_file_linux(const boost::filesystem::path &from, const boost::filesyste
 		goto fail;
 	}
 
-	BOOST_LOG_TRIVIAL(trace) << "to_mode";
-
 	if (from_stat.st_dev == to_stat.st_dev && from_stat.st_ino == to_stat.st_ino) {
 		err = EEXIST;
 		goto fail;
 	}
-
-	BOOST_LOG_TRIVIAL(trace) << "from / to compare";
 
 	//! copy_file implementation that uses sendfile loop. Requires sendfile to support file descriptors.
 	//FIXME Vojtech: This is a copy loop valid for Linux 2.6.33 and newer.
@@ -579,9 +564,7 @@ bool copy_file_linux(const boost::filesystem::path &from, const boost::filesyste
 			std::size_t size_to_copy = max_send_size;
 			if (size_left < static_cast<uintmax_t>(max_send_size))
 				size_to_copy = static_cast<std::size_t>(size_left);
-			BOOST_LOG_TRIVIAL(trace) << "sendfile " << outfile.fd << "; " << infile.fd << "; " << size_to_copy;
 			ssize_t sz = ::sendfile(outfile.fd, infile.fd, nullptr, size_to_copy);
-			BOOST_LOG_TRIVIAL(trace) << sz;
 			if (sz < 0) {
 				err = errno;
 	            if (offset == 0u) {
@@ -606,9 +589,6 @@ bool copy_file_linux(const boost::filesystem::path &from, const boost::filesyste
 			offset += sz;
 		}
 	}
-
-	BOOST_LOG_TRIVIAL(trace) << "sendfile loop";
-
 	// If we created a new file with an explicitly added S_IWUSR permission,
 	// we may need to update its mode bits to match the source file.
 	if (to_mode != from_mode && ::fchmod(outfile.fd, from_mode) != 0) {
@@ -631,8 +611,6 @@ bool copy_file_linux(const boost::filesystem::path &from, const boost::filesyste
 	err = ::fdatasync(outfile.fd);
 	if (err != 0)
 		goto fail_errno;
-
-	BOOST_LOG_TRIVIAL(trace) << "copy_file_linux success";
 
 	return true;
 }
