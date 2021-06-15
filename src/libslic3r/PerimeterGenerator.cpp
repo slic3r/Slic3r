@@ -135,7 +135,7 @@ void PerimeterGenerator::process()
 
         for (surface_idx = 0; surface_idx < all_surfaces.size(); surface_idx++) {
             Surface *surface = &all_surfaces[surface_idx];
-            ExPolygons last = union_ex(surface->expolygon.simplify_p(SCALED_RESOLUTION));
+            ExPolygons last = union_ex(surface->expolygon);
             //compute our unsupported surface
             ExPolygons unsupported = diff_ex(last, *this->lower_slices, true);
             if (!unsupported.empty()) {
