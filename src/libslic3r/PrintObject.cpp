@@ -3249,10 +3249,12 @@ namespace Slic3r {
 
                 coordf_t print_z = layer->print_z;
                 coordf_t bottom_z = layer->bottom_z();
+                // 0: topSolid, 1: botSolid, 2: boSolidBridged
                 for (size_t idx_surface_type = 0; idx_surface_type < 3; ++idx_surface_type) {
                     m_print->throw_if_canceled();
                     SurfaceType type = (idx_surface_type == 0) ? (stPosTop | stDensSolid) :
-                        ((idx_surface_type == 1) ? (stPosBottom | stDensSolid) : (stPosBottom | stDensSolid | stModBridge));
+                        ((idx_surface_type == 1) ? (stPosBottom | stDensSolid) : 
+                            (stPosBottom | stDensSolid | stModBridge));
                     int num_solid_layers = ((type & stPosTop) == stPosTop) ? region_config.top_solid_layers.value : region_config.bottom_solid_layers.value;
                     if (num_solid_layers == 0)
                         continue;
@@ -3269,16 +3271,17 @@ namespace Slic3r {
                     // Surfaces including the area of perimeters. Everything, that is visible from the top / bottom
                     // (not covered by a layer above / below).
                     // This does not contain the areas covered by perimeters!
-                    Polygons solid;
+                    ExPolygons solid;
                     for (const Surface& surface : layerm->slices().surfaces)
                         if (surface.surface_type == type)
-                            polygons_append(solid, to_polygons(surface.expolygon));
+                            solid.push_back(surface.expolygon);
                     // Infill areas (slices without the perimeters).
                     for (const Surface& surface : layerm->fill_surfaces.surfaces)
                         if (surface.surface_type == type)
-                            polygons_append(solid, to_polygons(surface.expolygon));
+                            solid.push_back(surface.expolygon);
                     if (solid.empty())
                         continue;
+                    solid = union_ex(solid);
                     //                Slic3r::debugf "Layer %d has %s surfaces\n", $i, (($type & stTop) != 0) ? 'top' : 'bottom';
 
                                     // Scatter top / bottom regions to other layers. Scattering process is inherently serial, it is difficult to parallelize without locking.
@@ -3304,13 +3307,14 @@ namespace Slic3r {
                         // narrow bottom surfaces): reassigning $solid will consider the 'shadow' of the 
                         // upper perimeter as an obstacle and shell will not be propagated to more upper layers
                         //FIXME How does it work for stInternalBRIDGE? This is set for sparse infill. Likely this does not work.
-                        Polygons new_internal_solid;
+                        ExPolygons new_internal_solid;
                         {
-                            Polygons internal;
+                            ExPolygons internal;
                             for (const Surface& surface : neighbor_layerm->fill_surfaces.surfaces)
                                 if (surface.has_pos_internal() && (surface.has_fill_sparse() || surface.has_fill_solid()))
-                                    polygons_append(internal, to_polygons(surface.expolygon));
-                            new_internal_solid = intersection(solid, internal, true);
+                                    internal.push_back(surface.expolygon);
+                            internal = union_ex(internal);
+                            new_internal_solid = intersection_ex(solid, internal, true);
                         }
                         if (new_internal_solid.empty()) {
                             // No internal solid needed on this layer. In order to decide whether to continue
@@ -3335,18 +3339,23 @@ namespace Slic3r {
                             // and it's not wanted in a hollow print even if it would make sense when
                             // obeying the solid shell count option strictly (DWIM!)
                             float margin = float(neighbor_layerm->flow(frExternalPerimeter).scaled_width());
-                            Polygons too_narrow = diff(
+                            ExPolygons too_narrow = diff_ex(
                                 new_internal_solid,
-                                offset2(new_internal_solid, -margin, +margin, jtMiter, 5),
+                                offset2_ex(new_internal_solid, -margin, +margin, jtMiter, 5),
                                 true);
                             // Trim the regularized region by the original region.
                             if (!too_narrow.empty())
-                                new_internal_solid = solid = diff(new_internal_solid, too_narrow);
+                            if (!too_narrow.empty()) {
+                                solid = new_internal_solid = diff_ex(new_internal_solid, too_narrow);
+                            }
                         }
+
+
+                        //merill: this is creating artifacts, and i can't recreate the issue it wants to fix.
 
                         // make sure the new internal solid is wide enough, as it might get collapsed
                         // when spacing is added in Fill.pm
-                        {
+                        if(false){
                             //FIXME Vojtech: Disable this and you will be sorry.
                             // https://github.com/prusa3d/PrusaSlicer/issues/26 bottom
                             float margin = 3.f * layerm->flow(frSolidInfill).scaled_width(); // require at least this size
@@ -3355,28 +3364,28 @@ namespace Slic3r {
                             // get a triangle in $too_narrow; if we grow it below then the shell
                             // would have a different shape from the external surface and we'd still
                             // have the same angle, so the next shell would be grown even more and so on.
-                            Polygons too_narrow = diff(
+                            ExPolygons too_narrow = diff_ex(
                                 new_internal_solid,
-                                offset2(new_internal_solid, -margin, +margin, ClipperLib::jtMiter, 5),
+                                offset2_ex(new_internal_solid, -margin, +margin, ClipperLib::jtMiter, 5),
                                 true);
                             if (!too_narrow.empty()) {
                                 // grow the collapsing parts and add the extra area to  the neighbor layer 
                                 // as well as to our original surfaces so that we support this 
                                 // additional area in the next shell too
                                 // make sure our grown surfaces don't exceed the fill area
-                                Polygons internal;
+                                ExPolygons internal;
                                 for (const Surface& surface : neighbor_layerm->fill_surfaces.surfaces)
                                     if (surface.has_pos_internal() && !surface.has_mod_bridge())
-                                        polygons_append(internal, to_polygons(surface.expolygon));
-                                polygons_append(new_internal_solid,
-                                    intersection(
-                                        offset(too_narrow, +margin),
+                                        internal.push_back(surface.expolygon);
+                                expolygons_append(new_internal_solid,
+                                    intersection_ex(
+                                        offset_ex(too_narrow, +margin),
                                         // Discard bridges as they are grown for anchoring and we can't
                                         // remove such anchors. (This may happen when a bridge is being 
                                         // anchored onto a wall where little space remains after the bridge
                                         // is grown, and that little space is an internal solid shell so 
                                         // it triggers this too_narrow logic.)
-                                        internal));
+                                        union_ex(internal)));
                                 // see https://github.com/prusa3d/PrusaSlicer/pull/3426
                                 // solid = new_internal_solid;
                             }
@@ -3385,30 +3394,31 @@ namespace Slic3r {
                         // internal-solid are the union of the existing internal-solid surfaces
                         // and new ones
                         SurfaceCollection backup = std::move(neighbor_layerm->fill_surfaces);
-                        polygons_append(new_internal_solid, to_polygons(backup.filter_by_type(stPosInternal | stDensSolid)));
+                        expolygons_append(new_internal_solid, to_expolygons(backup.filter_by_type(stPosInternal | stDensSolid)));
                         ExPolygons internal_solid = union_ex(new_internal_solid, false);
                         // assign new internal-solid surfaces to layer
                         neighbor_layerm->fill_surfaces.set(internal_solid, stPosInternal | stDensSolid);
                         // subtract intersections from layer surfaces to get resulting internal surfaces
-                        Polygons polygons_internal = to_polygons(std::move(internal_solid));
+                        //ExPolygons polygons_internal = to_polygons(std::move(internal_solid));
                         ExPolygons internal = diff_ex(
-                            to_polygons(backup.filter_by_type(stPosInternal | stDensSparse)),
-                            polygons_internal,
+                            to_expolygons(backup.filter_by_type(stPosInternal | stDensSparse)),
+                            internal_solid,
                             true);
                         // assign resulting internal surfaces to layer
                         neighbor_layerm->fill_surfaces.append(internal, stPosInternal | stDensSparse);
-                        polygons_append(polygons_internal, to_polygons(std::move(internal)));
+                        expolygons_append(internal_solid, internal);
                         // assign top and bottom surfaces to layer
                         SurfaceType surface_types_solid[] = { stPosTop | stDensSolid, stPosBottom | stDensSolid, stPosBottom | stDensSolid | stModBridge };
                         backup.keep_types(surface_types_solid, 3);
                         //backup.keep_types_flag(stPosTop | stPosBottom);
                         std::vector<SurfacesPtr> top_bottom_groups;
                         backup.group(&top_bottom_groups);
-                        for (SurfacesPtr& group : top_bottom_groups)
+                        for (SurfacesPtr& group : top_bottom_groups) {
                             neighbor_layerm->fill_surfaces.append(
-                                diff_ex(to_polygons(group), polygons_internal),
+                                diff_ex(to_expolygons(group), union_ex(internal_solid)),
                                 // Use an existing surface as a template, it carries the bridge angle etc.
                                 *group.front());
+                        }
                     }
                 EXTERNAL:;
                 } // foreach type (stTop, stBottom, stBottomBridge)

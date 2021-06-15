@@ -525,6 +525,8 @@ void PerimeterGenerator::process()
                                     (float)(ext_min_spacing / 4),
                                     (round_peri ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter),
                                     (round_peri ? min_round_spacing : 3)));
+
+                            next_onion = intersection_ex(next_onion, last);
                         }
                     }
                     if (m_spiral_vase && next_onion.size() > 1) {
