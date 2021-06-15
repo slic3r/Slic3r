@@ -5565,14 +5565,12 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
         catch (...) {
         }
     } else if ("gcode_flavor" == opt_key) {
-        if ("reprap" == value)
-            value = "reprapfirmware";
-        else if ("sprinter" == value)
+        if ("sprinter" == value)
             value = "reprap";
         else if ("lerdge" == value)
             value = "marlin";
         else if ("klipper" == value)
-            value = "sprinter";
+            value = "reprap";
     } else if ("host_type" == opt_key) {
         if ("klipper" == value)
             value = "octoprint";
