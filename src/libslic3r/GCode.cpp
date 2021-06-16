@@ -1368,7 +1368,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     m_seam_placer.init(print);
 
     //activate first extruder is multi-extruder and not in start-gcode
-    if ((initial_extruder_id != (uint16_t)-1) && !this->config().start_gcode_manual) {
+    if ((initial_extruder_id != (uint16_t)-1)) {
         if (m_writer.multiple_extruders) {
             //if not in gcode
             bool find = false;
