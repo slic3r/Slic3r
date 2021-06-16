@@ -609,9 +609,9 @@ static void generic_exception_handle()
         BOOST_LOG_TRIVIAL(error) << boost::format("std::bad_alloc exception: %1%") % ex.what();
         std::terminate();
     } catch (const boost::io::bad_format_string& ex) {
-        wxString errmsg = _L(SLIC3R_APP_NAME " has encountered a localization error. "
-                             "Please report to " SLIC3R_APP_NAME " team, what language was active and in which scenario "
-                             "this issue happened. Thank you.\n\nThe application will now terminate.");
+        wxString errmsg = wxString::Format(_L( "%s has encountered a localization error. "
+                             "Please report to %s team, what language was active and in which scenario "
+                             "this issue happened. Thank you.\n\nThe application will now terminate."), SLIC3R_APP_NAME, SLIC3R_APP_NAME);
         wxMessageBox(errmsg + "\n\n" + wxString(ex.what()), _L("Critical error"), wxOK | wxICON_ERROR);
         BOOST_LOG_TRIVIAL(error) << boost::format("Uncaught exception: %1%") % ex.what();
         std::terminate();
@@ -744,14 +744,14 @@ void GUI_App::init_app_config()
             // Error while parsing config file. We'll customize the error message and rethrow to be displayed.
             if (is_editor()) {
                 throw Slic3r::RuntimeError(
-                    _u8L("Error parsing " SLIC3R_APP_NAME " config file, it is probably corrupted. "
-                        "Try to manually delete the file to recover from the error. Your user profiles will not be affected.") +
+                    (boost::format(_u8L("Error parsing %1% config file, it is probably corrupted. "
+                        "Try to manually delete the file to recover from the error. Your user profiles will not be affected.")) % std::string(SLIC3R_APP_NAME)).str() +
                     "\n\n" + app_config->config_path() + "\n\n" + error);
             }
             else {
                 throw Slic3r::RuntimeError(
-                    _u8L("Error parsing " GCODEVIEWER_APP_NAME " config file, it is probably corrupted. "
-                        "Try to manually delete the file to recover from the error.") +
+                    (boost::format(_u8L("Error parsing %1% config file, it is probably corrupted. "
+                        "Try to manually delete the file to recover from the error.")) % std::string(GCODEVIEWER_APP_NAME)).str() +
                     "\n\n" + app_config->config_path() + "\n\n" + error);
             }
         }
@@ -1218,8 +1218,8 @@ void GUI_App::check_printer_presets()
     for (const std::string& preset_name : preset_names)
         msg_text += "\n    \"" + from_u8(preset_name) + "\",";
     msg_text.RemoveLast();
-    msg_text += "\n\n" + _L("But since this version of " SLIC3R_APP_NAME " we don't show this information in Printer Settings anymore.\n"
-                            "Settings will be available in physical printers settings.") + "\n\n" +
+    msg_text += "\n\n" + wxString::Format(_L("But since this version of %s we don't show this information in Printer Settings anymore.\n"
+                            "Settings will be available in physical printers settings."), SLIC3R_APP_NAME) + "\n\n" +
                          _L("By default new Printer devices will be named as \"Printer N\" during its creation.\n"
                             "Note: This name can be changed later from the physical printers settings");
 
@@ -1319,7 +1319,7 @@ void GUI_App::change_calibration_dialog(const wxDialog* have_to_destroy, wxDialo
 
 void GUI_App::html_dialog()
 {
-    change_calibration_dialog(nullptr, new HtmlDialog(this, mainframe,"Introduction to calibrations", "/calibration/introduction.html"));
+    change_calibration_dialog(nullptr, new HtmlDialog(this, mainframe,"Introduction to calibrations", "/calibration", "introduction.html"));
 }
 void GUI_App::bed_leveling_dialog()
 {

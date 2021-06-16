@@ -10,7 +10,7 @@ class CalibrationFlowDialog : public CalibrationAbstractDialog
 {
 
 public:
-    CalibrationFlowDialog(GUI_App* app, MainFrame* mainframe) : CalibrationAbstractDialog(app, mainframe, "Flow calibration") { create("/calibration/filament_flow/filament_flow.html", wxSize(900, 500));  }
+    CalibrationFlowDialog(GUI_App* app, MainFrame* mainframe) : CalibrationAbstractDialog(app, mainframe, "Flow calibration") { create("/calibration/filament_flow","filament_flow.html", wxSize(900, 500));  }
     virtual ~CalibrationFlowDialog() {}
     
 protected:

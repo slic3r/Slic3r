@@ -10,7 +10,7 @@ class CalibrationBedDialog : public CalibrationAbstractDialog
 {
 
 public:
-    CalibrationBedDialog(GUI_App* app, MainFrame* mainframe) : CalibrationAbstractDialog(app, mainframe, "Bed leveling calibration") { create("/calibration/bed_leveling/bed_leveling.html");  }
+    CalibrationBedDialog(GUI_App* app, MainFrame* mainframe) : CalibrationAbstractDialog(app, mainframe, "Bed leveling calibration") { create("/calibration/bed_leveling", "bed_leveling.html");  }
     virtual ~CalibrationBedDialog() {}
 protected:
     void create_buttons(wxStdDialogButtonSizer* sizer) override;

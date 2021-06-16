@@ -96,7 +96,7 @@ void PreferencesDialog::build()
 	// Please keep in sync with ConfigWizard
 	def.label = L("Check for application updates");
 	def.type = coBool;
-	def.tooltip = L("If enabled, " SLIC3R_APP_NAME " will check for the new versions of itself online. When a new version becomes available a notification is displayed at the next application startup (never during program usage). This is only a notification mechanisms, no automatic installation is done.");
+	def.tooltip = L("If enabled, Slic3r will check for the new versions of itself online. When a new version becomes available a notification is displayed at the next application startup (never during program usage). This is only a notification mechanisms, no automatic installation is done.");
 	def.set_default_value(new ConfigOptionBool(app_config->get("version_check") == "1"));
 		option = Option(def, "version_check");
 	m_optgroup_general->append_single_option_line(option);
@@ -380,8 +380,8 @@ void PreferencesDialog::build()
 
         def.label = L("Tab icon size");
         def.type = coInt;
-        def.tooltip = std::string(L("Size of the tab icons, in pixels. Set to 0 to remove icons."))
-            + std::string(L("\nYou have to restart the application before any change will be taken into account."));
+        def.tooltip = L("Size of the tab icons, in pixels. Set to 0 to remove icons."
+            "\nYou have to restart the application before any change will be taken into account.");
         def.set_default_value(new ConfigOptionInt{ atoi(app_config->get("tab_icon_size").c_str()) });
         option = Option(def, "tab_icon_size");
         option.opt.width = 6;

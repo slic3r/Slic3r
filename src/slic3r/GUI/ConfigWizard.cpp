@@ -1200,8 +1200,8 @@ PageReloadFromDisk::PageReloadFromDisk(ConfigWizard* parent)
 PageFilesAssociation::PageFilesAssociation(ConfigWizard* parent)
     : ConfigWizardPage(parent, _L("Files association"), _L("Files association"))
 {
-    cb_3mf = new wxCheckBox(this, wxID_ANY, _L("Associate .3mf files to " SLIC3R_APP_NAME));
-    cb_stl = new wxCheckBox(this, wxID_ANY, _L("Associate .stl files to " SLIC3R_APP_NAME));
+    cb_3mf = new wxCheckBox(this, wxID_ANY, from_u8((boost::format(_u8L("Associate .3mf files to %1%")) % SLIC3R_APP_NAME).str()));
+    cb_stl = new wxCheckBox(this, wxID_ANY, from_u8((boost::format(_u8L("Associate .stl files to %1%")) % SLIC3R_APP_NAME).str()));
 //    cb_gcode = new wxCheckBox(this, wxID_ANY, _L("Associate .gcode files to PrusaSlicer G-code Viewer"));
 
     append(cb_3mf);
@@ -1214,10 +1214,10 @@ PageFilesAssociation::PageFilesAssociation(ConfigWizard* parent)
 PageMode::PageMode(ConfigWizard *parent)
     : ConfigWizardPage(parent, _L("View mode"), _L("View mode"))
 {
-    append_text(_L(SLIC3R_APP_NAME "'s user interfaces comes in three variants:\nSimple, Advanced, and Expert.\n"
+    append_text(wxString::Format(_L("%s's user interfaces comes in three variants:\nSimple, Advanced, and Expert.\n"
         "The Simple mode shows only the most frequently used settings relevant for regular 3D printing. "
         "The other two offer progressively more sophisticated fine-tuning, "
-        "they are suitable for advanced and expert users, respectively."));
+        "they are suitable for advanced and expert users, respectively."), SLIC3R_APP_NAME));
 
     radio_simple = new wxRadioButton(this, wxID_ANY, _L("Simple mode"));
     radio_advanced = new wxRadioButton(this, wxID_ANY, _L("Advanced mode"));

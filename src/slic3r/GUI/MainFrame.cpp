@@ -1086,11 +1086,11 @@ static const wxString sep_space = "";
 static wxMenu* generate_help_menu()
 {
     wxMenu* helpMenu = new wxMenu();
-    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " Releases"), wxString::Format(_L("Open the %s releases page in your browser"), SLIC3R_APP_NAME),
+    append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("%s Releases"), SLIC3R_APP_NAME), wxString::Format(_L("Open the %s releases page in your browser"), SLIC3R_APP_NAME),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser(SLIC3R_DOWNLOAD); });
-    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " wiki"), wxString::Format(_L("Open the %s wiki in your browser"), SLIC3R_APP_NAME),
+    append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("%s wiki"), SLIC3R_APP_NAME), wxString::Format(_L("Open the %s wiki in your browser"), SLIC3R_APP_NAME),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://github.com/" SLIC3R_GITHUB "/wiki"); });
-    append_menu_item(helpMenu, wxID_ANY, _L(SLIC3R_APP_NAME " website"), _L("Open the Slic3r website in your browser"),
+    append_menu_item(helpMenu, wxID_ANY, wxString::Format(_L("%s website"), SLIC3R_APP_NAME), _L("Open the Slic3r website in your browser"),
         [](wxCommandEvent&) { wxLaunchDefaultBrowser("http://slic3r.org"); });
     //#        my $versioncheck = $self->_append_menu_item($helpMenu, "Check for &Updates...", "Check for new Slic3r versions", sub{
     //#            wxTheApp->check_version(1);
@@ -1417,7 +1417,7 @@ void MainFrame::init_menubar_as_editor()
             [this](wxCommandEvent&) { m_printhost_queue_dlg->Show(); }, "upload_queue", nullptr, []() {return true; }, this);
         
         windowMenu->AppendSeparator();
-        append_menu_item(windowMenu, wxID_ANY, _L("Open new instance") + "\tCtrl+Shift+" + "I", _L("Open a new " SLIC3R_APP_NAME " instance"),
+        append_menu_item(windowMenu, wxID_ANY, _L("Open new instance") + "\tCtrl+Shift+" + "I", wxString::Format(_L("Open a new %s instance"), SLIC3R_APP_NAME),
 			[this](wxCommandEvent&) { start_new_slicer(); }, "", nullptr, [this]() {return m_plater != nullptr && wxGetApp().app_config->get("single_instance") != "1"; }, this);
     }
 
@@ -1527,7 +1527,7 @@ void MainFrame::init_menubar_as_gcodeviewer()
         append_menu_item(fileMenu, wxID_ANY, _L("Export &toolpaths as OBJ") + dots, _L("Export toolpaths as OBJ"),
             [this](wxCommandEvent&) { if (m_plater != nullptr) m_plater->export_toolpaths_to_obj(); }, "export_plater", nullptr,
             [this]() {return can_export_toolpaths(); }, this);
-        append_menu_item(fileMenu, wxID_ANY, _L("O&pen " SLIC3R_APP_NAME) + dots, _L("Open " SLIC3R_APP_NAME),
+        append_menu_item(fileMenu, wxID_ANY, wxString::Format(_L("O&pen %s"), SLIC3R_APP_NAME) + dots, wxString::Format(_L("Open %s"), SLIC3R_APP_NAME),
             [this](wxCommandEvent&) { start_new_slicer(); }, "", nullptr,
             [this]() {return true; }, this);
         fileMenu->AppendSeparator();

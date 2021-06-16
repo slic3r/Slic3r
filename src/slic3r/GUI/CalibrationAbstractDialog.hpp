@@ -25,7 +25,7 @@ public:
 private:
     wxPanel* create_header(wxWindow* parent, const wxFont& bold_font);
 protected:
-    void create(std::string html_path, wxSize dialogsize = wxSize(850, 550));
+    void create(std::string html_path, std::string html_name, wxSize dialogsize = wxSize(850, 550));
     virtual void create_buttons(wxStdDialogButtonSizer*) = 0;
     void on_dpi_changed(const wxRect& suggested_rect) override;
     void close_me(wxCommandEvent& event_args);
@@ -42,7 +42,7 @@ class HtmlDialog : public CalibrationAbstractDialog
 {
 
 public:
-    HtmlDialog(GUI_App* app, MainFrame* mainframe, std::string title, std::string html_path) : CalibrationAbstractDialog(app, mainframe, title) { create(html_path); }
+    HtmlDialog(GUI_App* app, MainFrame* mainframe, std::string title, std::string html_path, std::string html_name) : CalibrationAbstractDialog(app, mainframe, title) { create(html_path, html_name); }
     virtual ~HtmlDialog() {}
 protected:
     void create_buttons(wxStdDialogButtonSizer* sizer) override {}

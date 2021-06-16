@@ -1956,12 +1956,12 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
         } else if (boost::starts_with(full_line, "print_host_upload_description")) {
             TabPrinter* tab = nullptr;
             if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
-            wxString description_line_text = _L(""
+            wxString description_line_text = wxString::Format(_L(""
                 "Note: All parameters from this group are moved to the Physical Printer settings (see changelog).\n\n"
                 "A new Physical Printer profile is created by clicking on the \"cog\" icon right of the Printer profiles combo box, "
                 "by selecting the \"Add physical printer\" item in the Printer combo box. The Physical Printer profile editor opens "
                 "also when clicking on the \"cog\" icon in the Printer settings tab. The Physical Printer profiles are being stored "
-                "into " SLIC3R_APP_NAME "/physical_printer directory.");
+                "into %s/physical_printer directory."), SLIC3R_APP_KEY);
 
             current_line = { "", "" };
             current_line.full_width = 1;

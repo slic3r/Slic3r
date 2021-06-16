@@ -257,14 +257,15 @@ bool OpenGLManager::init_gl()
         bool valid_version = s_gl_info.is_version_greater_or_equal_to(2, 0);
         if (!valid_version) {
             // Complain about the OpenGL version.
-            wxString message = from_u8((boost::format(
-                _utf8(L(SLIC3R_APP_NAME " requires OpenGL 2.0 capable graphics driver to run correctly, \n"
-                    "while OpenGL version %s, render %s, vendor %s was detected."))) % s_gl_info.get_version() % s_gl_info.get_renderer() % s_gl_info.get_vendor()).str());
+            wxString message = wxString::Format(
+                _L( "%s requires OpenGL 2.0 capable graphics driver to run correctly, \n"
+                    "while OpenGL version %s, render %s, vendor %s was detected."),
+					SLIC3R_APP_NAME, s_gl_info.get_version(), s_gl_info.get_renderer(), s_gl_info.get_vendor());
             message += "\n";
         	message += _L("You may need to update your graphics card driver.");
 #ifdef _WIN32
             message += "\n";
-            message += _L("As a workaround, you may run " SLIC3R_APP_NAME " with a software rendered 3D graphics by running " SLIC3R_APP_CMD ".exe with the --sw-renderer parameter.");
+            message += wxString::Format(_L("As a workaround, you may run %s with a software rendered 3D graphics by running %s.exe with the --sw-renderer parameter."), SLIC3R_APP_NAME, SLIC3R_APP_CMD);
 #endif
         	wxMessageBox(message, wxString(SLIC3R_APP_NAME " - ") + _L("Unsupported OpenGL version"), wxOK | wxICON_ERROR);
         }

@@ -10,7 +10,7 @@ class CalibrationCubeDialog : public CalibrationAbstractDialog
 {
 
 public:
-    CalibrationCubeDialog(GUI_App* app, MainFrame* mainframe) : CalibrationAbstractDialog(app, mainframe, "Calibration cube") { create("/calibration/cube/cube.html"); }
+    CalibrationCubeDialog(GUI_App* app, MainFrame* mainframe) : CalibrationAbstractDialog(app, mainframe, "Calibration cube") { create("/calibration/cube", "cube.html"); }
     virtual ~CalibrationCubeDialog(){ }
     
 protected:

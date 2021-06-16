@@ -40,14 +40,31 @@ namespace GUI {
 
     }
 
-void CalibrationAbstractDialog::create(std::string html_path, wxSize dialog_size){
+void CalibrationAbstractDialog::create(std::string html_path, std::string html_name, wxSize dialog_size){
 
     auto main_sizer = new wxBoxSizer(wxVERTICAL);
+
+    //language
+    wxString language = wxGetApp().current_language_code();
+    std::string full_file_path = Slic3r::resources_dir() + html_path+"/"+ into_u8(language)+"_"+ html_name;
+    if (language == "en") {
+        full_file_path = Slic3r::resources_dir() + html_path + "/" + html_name;
+    }else if (!boost::filesystem::exists(full_file_path)) {
+        language = wxGetApp().current_language_code_safe();
+        full_file_path = Slic3r::resources_dir() + html_path + "/" + into_u8(language) + "_" + html_name;
+        if (!boost::filesystem::exists(full_file_path)) {
+            language = language.IsEmpty() ? "en" : language.BeforeFirst('_');
+            full_file_path = Slic3r::resources_dir() + html_path + "/" + into_u8(language) + "_" + html_name;
+            if (!boost::filesystem::exists(full_file_path)) {
+                full_file_path = Slic3r::resources_dir() + html_path + "/" + html_name;
+            }
+        }
+    }
 
     //html
     html_viewer = new wxHtmlWindow(this, wxID_ANY,
         wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO);
-    html_viewer->LoadPage(Slic3r::resources_dir()+ html_path);
+    html_viewer->LoadPage(full_file_path);
     main_sizer->Add(html_viewer, 1, wxEXPAND | wxALL, 5);
 
     wxDisplay display(wxDisplay::GetFromWindow(main_frame));

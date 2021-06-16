@@ -1728,7 +1728,7 @@ namespace Slic3r {
             {
                 // std::string msg = _(L("The selected 3mf file has been saved with a newer version of " + std::string(SLIC3R_APP_NAME) + " and is not compatible."));
                 // throw version_error(msg.c_str());
-                const std::string msg = (boost::format(_(L("The selected 3mf file has been saved with a newer version of %1% and is not compatible."))) % std::string(SLIC3R_APP_NAME)).str();
+                const std::string msg = (boost::format("The selected 3mf file has been saved with a newer version of %1% and is not compatible.") % std::string(SLIC3R_APP_NAME)).str();
                 throw version_error(msg);
             }
         }

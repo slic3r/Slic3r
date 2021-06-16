@@ -977,7 +977,7 @@ bool extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_fi
     {
         // std::string msg = _(L("The selected amf file has been saved with a newer version of " + std::string(SLIC3R_APP_NAME) + " and is not compatible."));
         // throw Slic3r::FileIOError(msg.c_str());
-        const std::string msg = (boost::format(_(L("The selected amf file has been saved with a newer version of %1% and is not compatible."))) % std::string(SLIC3R_APP_NAME)).str();
+        const std::string msg = (boost::format("The selected amf file has been saved with a newer version of %1% and is not compatible.") % std::string(SLIC3R_APP_NAME)).str();
         throw Slic3r::FileIOError(msg);
     }
 
