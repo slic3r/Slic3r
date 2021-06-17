@@ -80,7 +80,7 @@ public:
 
     wxString get_test_ok_msg() const override;
     wxString get_test_failed_msg(wxString& msg) const override;
-    bool can_start_print() const override { return false; }
+    bool can_start_print() const override { return true; }
 
 protected:
     bool validate_version_text(const boost::optional<std::string>& version_text) const override;

@@ -1554,7 +1554,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back("AstroBox");
     def->enum_labels.push_back("Repetier");
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionEnum<PrintHostType>(/*htOctoPrint*/htPrusaLink));
+    def->set_default_value(new ConfigOptionEnum<PrintHostType>(htOctoPrint));
 
     def = this->add("only_retract_when_crossing_perimeters", coBool);
     def->label = L("Only retract when crossing perimeters");

@@ -238,7 +238,7 @@ wxString PrusaLink::get_test_failed_msg(wxString& msg) const
 
 bool PrusaLink::validate_version_text(const boost::optional<std::string>& version_text) const
 {
-    return version_text ? boost::starts_with(*version_text, "PrusaLink") : false;
+    return version_text ? (boost::starts_with(*version_text, "PrusaLink") || boost::starts_with(*version_text, "OctoPrint")) : false;
 }
 
 void PrusaLink::set_auth(Http& http) const
