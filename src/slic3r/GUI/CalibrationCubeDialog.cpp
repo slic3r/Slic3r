@@ -2,6 +2,7 @@
 #include "I18N.hpp"
 #include "libslic3r/Model.hpp"
 #include "libslic3r/Utils.hpp"
+#include "GLCanvas3D.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Plater.hpp"
@@ -60,6 +61,7 @@ void CalibrationCubeDialog::create_geometry(std::string calibration_path) {
     if (!plat->new_project(L("Calibration cube")))
         return;
 
+    GLCanvas3D::set_warning_freeze(true);
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
             Slic3r::resources_dir()+"/calibration/cube/"+ calibration_path}, true, false, false);
 
@@ -103,6 +105,7 @@ void CalibrationCubeDialog::create_geometry(std::string calibration_path) {
     }
 
     //update plater
+    GLCanvas3D::set_warning_freeze(false);
     plat->changed_objects(objs_idx);
     plat->is_preview_shown();
     //update everything, easier to code.

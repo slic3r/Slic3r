@@ -627,6 +627,9 @@ GLCanvas3D::WarningTexture::WarningTexture()
 
 void GLCanvas3D::WarningTexture::activate(WarningTexture::Warning warning, bool state, const GLCanvas3D& canvas, std::string str_override)
 {
+    if (m_freeze)
+        return;
+
     // Since we have NotificationsManager.hpp the warning textures are no loger needed.
     // However i have left the infrastructure here and only commented the rendering.
     // The  plater warning / error notifications are added and closed from here.

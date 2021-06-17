@@ -1276,7 +1276,7 @@ static inline bool sequential_print_horizontal_clearance_valid(const Print &prin
 	Polygons convex_hulls_other;
 	std::map<ObjectID, Polygon> map_model_object_to_convex_hull;
 	for (const PrintObject *print_object : print.objects()) {
-        double dist_grow = PrintConfig::min_object_distance(&print_object->config());
+        double dist_grow = PrintConfig::min_object_distance(&print.full_print_config());// &print_object->config());
 	    assert(! print_object->model_object()->instances.empty());
 	    assert(! print_object->instances().empty());
 	    ObjectID model_object_id = print_object->model_object()->id();

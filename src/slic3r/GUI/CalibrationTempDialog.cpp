@@ -4,6 +4,7 @@
 #include "libslic3r/CustomGCode.hpp"
 #include "libslic3r/Model.hpp"
 #include "libslic3r/AppConfig.hpp"
+#include "GLCanvas3D.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Plater.hpp"
@@ -59,6 +60,7 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     if (!plat->new_project(L("Temperature calibration")))
         return;
 
+    GLCanvas3D::set_warning_freeze(true);
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
             Slic3r::resources_dir()+"/calibration/filament_temp/Smart_compact_temperature_calibration_item.amf"}, true, false, false);
 
@@ -165,6 +167,7 @@ void CalibrationTempDialog::create_geometry(wxCommandEvent& event_args) {
     model.objects[objs_idx[0]]->config.set_key_value("top_fill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinearWGapFill));
 
     //update plater
+    GLCanvas3D::set_warning_freeze(false);
     this->gui_app->get_tab(Preset::TYPE_PRINT)->load_config(new_print_config);
     plat->on_config_change(new_print_config);
     //this->gui_app->get_tab(Preset::TYPE_PRINTER)->load_config(new_printer_config);

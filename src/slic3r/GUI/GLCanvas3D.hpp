@@ -323,6 +323,7 @@ class GLCanvas3D
         // function used to get an information for rescaling of the warning
         void msw_rescale(const GLCanvas3D& canvas);
 
+        inline static bool m_freeze = false;
     private:
         static const unsigned char Background_Color[3];
         static const unsigned char Opacity;
@@ -332,7 +333,7 @@ class GLCanvas3D
 
         // information for rescaling of the warning legend
         std::string     m_msg_text = "";
-        bool            m_is_colored_red{false};
+        bool            m_is_colored_red{ false };
 
         // Information about which warnings are currently active.
         std::vector<Warning> m_warnings;
@@ -431,6 +432,8 @@ public:
         float accuracy           = 0.65f; // Unused currently
         bool  enable_rotation    = false;
     };
+
+    static void set_warning_freeze(bool freeze) { WarningTexture::m_freeze = freeze; }
 
 private:
     wxGLCanvas* m_canvas;

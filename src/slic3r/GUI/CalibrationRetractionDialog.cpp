@@ -4,6 +4,7 @@
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include "Jobs/ArrangeJob.hpp"
+#include "GLCanvas3D.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Plater.hpp"
@@ -104,6 +105,7 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
     if (!plat->new_project(L("Retraction calibration")))
         return;
 
+    GLCanvas3D::set_warning_freeze(true);
     bool autocenter = gui_app->app_config->get("autocenter") == "1";
     if (autocenter) {
         //disable aut-ocenter for this calibration.
@@ -254,6 +256,7 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
     }
 
     //update plater
+    GLCanvas3D::set_warning_freeze(false);
     plat->changed_objects(objs_idx);
     //if (plat->printer_technology() == ptFFF)
         //plat->fff_print().full_print_config().apply(plat->config());

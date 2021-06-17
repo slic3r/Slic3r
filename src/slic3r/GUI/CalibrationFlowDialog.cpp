@@ -4,6 +4,7 @@
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include "Jobs/ArrangeJob.hpp"
+#include "GLCanvas3D.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Plater.hpp"
@@ -41,6 +42,7 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
     if (!plat->new_project(L("Flow calibration")))
         return;
 
+    GLCanvas3D::set_warning_freeze(true);
     bool autocenter = gui_app->app_config->get("autocenter") == "1";
     if (autocenter) {
         //disable auto-center for this calibration.
@@ -159,6 +161,7 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
     }
 
     //update plater
+    GLCanvas3D::set_warning_freeze(false);
     this->gui_app->get_tab(Preset::TYPE_PRINT)->load_config(new_print_config);
     plat->on_config_change(new_print_config);
     plat->changed_objects(objs_idx);

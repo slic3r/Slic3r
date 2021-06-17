@@ -3,6 +3,7 @@
 #include "libslic3r/Model.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/AppConfig.hpp"
+#include "GLCanvas3D.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Plater.hpp"
@@ -36,12 +37,12 @@ void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
     if (!plat->new_project(L("First layer calibration")))
         return;
 
+    GLCanvas3D::set_warning_freeze(true);
     bool autocenter = gui_app->app_config->get("autocenter") == "1";
     if(autocenter) {
         //disable aut-ocenter for this calibration.
         gui_app->app_config->set("autocenter", "0");
     }
-
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
             Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
             Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
@@ -134,6 +135,7 @@ void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
     }
 
     //update plater
+    GLCanvas3D::set_warning_freeze(false);
     this->gui_app->get_tab(Preset::TYPE_PRINT)->load_config(new_print_config);
     plat->on_config_change(new_print_config);
     plat->changed_objects(objs_idx);
