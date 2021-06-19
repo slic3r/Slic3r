@@ -320,6 +320,7 @@ private:
     std::string     retract(bool toolchange = false);
     std::string     unretract() { return m_writer.unlift() + m_writer.unretract(); }
     std::string     set_extruder(uint16_t extruder_id, double print_z, bool no_toolchange = false);
+    std::string     toolchange(uint16_t extruder_id, double print_z);
 
     // Cache for custom seam enforcers/blockers for each layer.
     SeamPlacer                          m_seam_placer;
