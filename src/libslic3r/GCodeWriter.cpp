@@ -10,7 +10,9 @@
 #define FLAVOR_IS_NOT(val) this->config.gcode_flavor.value != val
 #define COMMENT(comment) if (this->config.gcode_comments.value && !comment.empty()) gcode << " ; " << comment;
 #define PRECISION(val, precision) std::fixed << std::setprecision(precision) << (val)
-#define XYZF_NUM(val) PRECISION(val, this->config.gcode_precision_xyz.value)
+#define XYZ_NUM(val) PRECISION(val, this->config.gcode_precision_xyz.value)
+#define FLOAT_PRECISION(val, precision) std::defaultfloat << std::setprecision(precision) << (val)
+#define F_NUM(val) FLOAT_PRECISION(val, 8)
 #define E_NUM(val) PRECISION(val, this->config.gcode_precision_e.get_at(m_tool->id()))
 
 namespace Slic3r {
@@ -408,7 +410,7 @@ std::string GCodeWriter::set_speed(double F, const std::string &comment, const s
     assert(F > 0.);
     assert(F < 100000.);
     std::ostringstream gcode;
-    gcode << "G1 F" << XYZF_NUM(F);
+    gcode << "G1 F" << F_NUM(F);
     COMMENT(comment);
     gcode << cooling_marker;
     gcode << "\n";
@@ -423,9 +425,9 @@ std::string GCodeWriter::travel_to_xy(const Vec2d &point, const std::string &com
     m_pos.x() = point.x();
     m_pos.y() = point.y();
     
-    gcode << "G1 X" << XYZF_NUM(point.x())
-          <<   " Y" << XYZF_NUM(point.y())
-          <<   " F" << XYZF_NUM(this->config.travel_speed.value * 60.0);
+    gcode << "G1 X" << XYZ_NUM(point.x())
+          <<   " Y" << XYZ_NUM(point.y())
+          <<   " F" << F_NUM(this->config.travel_speed.value * 60.0);
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();
@@ -454,13 +456,13 @@ std::string GCodeWriter::travel_to_xyz(const Vec3d &point, const std::string &co
 
     std::ostringstream gcode;
     gcode << write_acceleration();
-    gcode << "G1 X" << XYZF_NUM(point.x())
-          << " Y" << XYZF_NUM(point.y());
+    gcode << "G1 X" << XYZ_NUM(point.x())
+          << " Y" << XYZ_NUM(point.y());
     if (config.z_step > SCALING_FACTOR)
         gcode << " Z" << PRECISION(point.z(), 6);
     else
-        gcode << " Z" << XYZF_NUM(point.z());
-    gcode <<   " F" << XYZF_NUM(this->config.travel_speed.value * 60.0);
+        gcode << " Z" << XYZ_NUM(point.z());
+    gcode <<   " F" << F_NUM(this->config.travel_speed.value * 60.0);
 
     COMMENT(comment);
     gcode << "\n";
@@ -495,10 +497,10 @@ std::string GCodeWriter::_travel_to_z(double z, const std::string &comment)
     gcode << write_acceleration();    if (config.z_step > SCALING_FACTOR)
         gcode << "G1 Z" << PRECISION(z, 6);
     else
-        gcode << "G1 Z" << XYZF_NUM(z);
+        gcode << "G1 Z" << XYZ_NUM(z);
 
     const double speed = this->config.travel_speed_z.value == 0.0 ? this->config.travel_speed.value : this->config.travel_speed_z.value;
-    gcode <<   " F" << XYZF_NUM(speed * 60.0);
+    gcode <<   " F" << F_NUM(speed * 60.0);
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();
@@ -525,8 +527,8 @@ std::string GCodeWriter::extrude_to_xy(const Vec2d &point, double dE, const std:
 
     std::ostringstream gcode;
     gcode << write_acceleration();
-    gcode << "G1 X" << XYZF_NUM(point.x())
-        << " Y" << XYZF_NUM(point.y());
+    gcode << "G1 X" << XYZ_NUM(point.x())
+        << " Y" << XYZ_NUM(point.y());
     if(is_extrude)
         gcode <<    " " << m_extrusion_axis << E_NUM(m_tool->E());
     COMMENT(comment);
@@ -544,9 +546,9 @@ std::string GCodeWriter::extrude_to_xyz(const Vec3d &point, double dE, const std
 
     std::ostringstream gcode;
     gcode << write_acceleration();
-    gcode << "G1 X" << XYZF_NUM(point.x())
-        << " Y" << XYZF_NUM(point.y())
-        << " Z" << XYZF_NUM(point.z() + m_pos.z());
+    gcode << "G1 X" << XYZ_NUM(point.x())
+        << " Y" << XYZ_NUM(point.y())
+        << " Z" << XYZ_NUM(point.z() + m_pos.z());
     if (is_extrude)
             gcode <<    " " << m_extrusion_axis << E_NUM(m_tool->E());
     COMMENT(comment);
@@ -612,7 +614,7 @@ std::string GCodeWriter::_retract(double length, double restart_extra, const std
                 gcode << "G10 ; retract\n";
         } else {
             gcode << "G1 " << m_extrusion_axis << E_NUM(m_tool->E())
-                           << " F" << XYZF_NUM(m_tool->retract_speed() * 60.);
+                           << " F" << F_NUM(m_tool->retract_speed() * 60.);
             COMMENT(comment);
             gcode << "\n";
         }
@@ -644,7 +646,7 @@ std::string GCodeWriter::unretract()
         } else {
             // use G1 instead of G0 because G0 will blend the restart with the previous travel move
             gcode << "G1 " << m_extrusion_axis << E_NUM(m_tool->E())
-                           << " F" << XYZF_NUM(m_tool->deretract_speed() * 60.);
+                           << " F" << F_NUM(m_tool->deretract_speed() * 60.);
             if (this->config.gcode_comments) gcode << " ; unretract";
             gcode << "\n";
         }
