@@ -118,7 +118,7 @@ void Field::PostInitialize()
 	// So, like a workaround check wxEVT_KEY_UP event for the Filed and switch between tabs if Ctrl+(1-6) was pressed 
 	if (getWindow())
 		getWindow()->Bind(wxEVT_KEY_UP, [](wxKeyEvent& evt) {
-		    if ((evt.GetModifiers() & wxMOD_CONTROL) != 0) {
+		    if ((evt.GetModifiers() & wxMOD_CONTROL) != 0 && (evt.GetModifiers() & wxMOD_ALT == 0)) {
                 MainFrame::ETabType tab_id = MainFrame::ETabType::Any;
                 switch (evt.GetKeyCode()) {
                 case '1': { tab_id = MainFrame::ETabType::Plater3D; break; }
