@@ -21,39 +21,41 @@
 #include <boost/format.hpp>
 #include <string.h>
 
+#define L(s) (s)
+
 namespace Slic3r {
 
 
 std::string toString(OptionCategory opt) {
     switch (opt) {
     case none: return "";
-    case perimeter: return "Perimeters & Shell";
-    case slicing: return "Slicing";
-    case infill: return "Infill";
-    case ironing: return "Ironing PP";
-    case skirtBrim: return "Skirt & Brim";
-    case support: return "Support material";
-    case width: return "Width & Flow";
-    case speed: return "Speed";
-    case extruders: return "Multiple extruders";
-    case output: return "Output options";
-    case notes: return "Notes";
-    case dependencies: return "Dependencies";
-    case filament: return "Filament";
-    case cooling: return "Cooling";
-    case advanced: return "Advanced";
-    case filoverride: return "Filament overrides";
-    case customgcode: return "Custom G-code";
-    case general: return "General";
+    case perimeter: return L("Perimeters & Shell");
+    case slicing: return L("Slicing");
+    case infill: return L("Infill");
+    case ironing: return L("Ironing PP");
+    case skirtBrim: return L("Skirt & Brim");
+    case support: return L("Support material");
+    case width: return L("Width & Flow");
+    case speed: return L("Speed");
+    case extruders: return L("Multiple extruders");
+    case output: return L("Output options");
+    case notes: return L("Notes");
+    case dependencies: return L("Dependencies");
+    case filament: return L("Filament");
+    case cooling: return L("Cooling");
+    case advanced: return L("Advanced");
+    case filoverride: return L("Filament overrides");
+    case customgcode: return L("Custom G-code");
+    case general: return L("General");
     case limits: return "Machine limits";
     case mmsetup: return "Single Extruder MM Setup";
     case firmware: return "Firmware";
     case pad: return "Pad";
     case padSupp: return "Pad and Support";
     case wipe: return "Wipe Options";
-    case milling: return "milling";
-    case hollowing: return "hollowing";
-    case milling_extruders: return "milling_extruders";
+    case milling: return "Milling";
+    case hollowing: return "Hollowing";
+    case milling_extruders: return "Milling extruders";
     }
     return "error";
 }
