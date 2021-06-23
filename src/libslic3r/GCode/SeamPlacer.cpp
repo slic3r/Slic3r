@@ -394,6 +394,10 @@ Point SeamPlacer::get_seam(const Layer& layer, SeamPosition seam_position,
             last_pos_weight = 5.f;
             travel_cost = 0;
         }else if (seam_position == spNearest) {
+            last_pos_weight = 25.f;
+            travel_cost = 0;
+            angle_weight = 0;
+        }else if (seam_position == spCost) {
             // last_pos already contains current nozzle position
             // set base last_pos_weight to the same value as penaltyFlatSurface
             last_pos_weight = 5.f;

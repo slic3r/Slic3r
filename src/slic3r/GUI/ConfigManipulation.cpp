@@ -373,7 +373,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
         toggle_field(el, have_perimeters && config->opt_bool("thin_walls"));
 
     for (auto el : { "seam_angle_cost", "seam_travel_cost" })
-        toggle_field(el, have_perimeters && config->option<ConfigOptionEnum<SeamPosition>>("seam_position")->value == SeamPosition::spNearest);
+        toggle_field(el, have_perimeters && config->option<ConfigOptionEnum<SeamPosition>>("seam_position")->value == SeamPosition::spCost);
 
     toggle_field("perimeter_loop_seam", config->opt_bool("perimeter_loop"));
 

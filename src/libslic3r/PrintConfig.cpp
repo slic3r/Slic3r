@@ -3177,7 +3177,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Position of perimeters' starting points."
                     "\n ");
     def->enum_keys_map = &ConfigOptionEnum<SeamPosition>::get_enum_values();
-    def->enum_values.push_back("near");
+    def->enum_values.push_back("cost");
     def->enum_values.push_back("random");
     def->enum_values.push_back("aligned");
     def->enum_values.push_back("rear");
@@ -3186,7 +3186,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Aligned"));
     def->enum_labels.push_back(L("Rear"));
     def->mode = comSimple;
-    def->set_default_value(new ConfigOptionEnum<SeamPosition>(spNearest));
+    def->set_default_value(new ConfigOptionEnum<SeamPosition>(spCost));
 
     def = this->add("seam_angle_cost", coPercent);
     def->label = L("Angle cost");
@@ -5296,7 +5296,8 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         if (value == "hidden") {
             opt_key = "seam_travel_cost";
             value = "20%";
-        }
+        }else if ("near" == value || "nearest" == value )
+            value = "cost";
     } else if (opt_key == "overhangs") {
         opt_key = "overhangs_width_speed";
         if (value == "1")
@@ -5521,7 +5522,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
             value = "concentric";
         }
     } else if ("seam_position" == opt_key) {
-        if ("seam_travel_cost" == value || "near" == value || "hidden" == value) {
+        if ("cost" == value) {
             value = "nearest";
         }
     } else if ("first_layer_size_compensation" == opt_key) {
