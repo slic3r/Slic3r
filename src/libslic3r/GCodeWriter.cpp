@@ -9,13 +9,41 @@
 #define FLAVOR_IS(val) this->config.gcode_flavor.value == val
 #define FLAVOR_IS_NOT(val) this->config.gcode_flavor.value != val
 #define COMMENT(comment) if (this->config.gcode_comments.value && !comment.empty()) gcode << " ; " << comment;
-#define PRECISION(val, precision) std::fixed << std::setprecision(precision) << (val)
+#define PRECISION(val, precision) to_string_nozero(val, precision)
 #define XYZF_NUM(val) PRECISION(val, this->config.gcode_precision_xyz.value)
 #define E_NUM(val) PRECISION(val, this->config.gcode_precision_e.get_at(m_tool->id()))
 
 namespace Slic3r {
 
-    std::string GCodeWriter::PausePrintCode = "M601";
+std::string to_string_nozero(double value, int32_t max_precision) {
+    double intpart;
+    if (modf(value, &intpart) == 0.0) {
+        //shortcut for int
+        return boost::lexical_cast<std::string>(intpart);
+    } else {
+        std::stringstream ss;
+        //first, get the int part, to see how many digit it takes
+        int long10 = 0;
+        if (intpart > 9)
+            long10 = std::floor(std::log10(std::abs(intpart)));
+        //set the usable precision: there is only 15-16 decimal digit in a double
+        ss << std::fixed << std::setprecision(int(std::min(15 - long10, int(max_precision)))) << value;
+        std::string ret = ss.str();
+        uint8_t nb_del = 0;
+        for (uint8_t i = uint8_t(ss.tellp()) - 1; i > 0; i--) {
+            if (ret[i] == '0')
+                nb_del++;
+            else
+                break;
+        }
+        if (nb_del > 0)
+            return ret.substr(0, ret.size() - nb_del);
+        else
+            return ret;
+    }
+}
+
+std::string GCodeWriter::PausePrintCode = "M601";
 
 void GCodeWriter::apply_print_config(const PrintConfig &print_config)
 {
