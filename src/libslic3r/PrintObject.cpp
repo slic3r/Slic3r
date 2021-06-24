@@ -685,6 +685,7 @@ namespace Slic3r {
                 || opt_key == "overhangs_width"
                 || opt_key == "overhangs_reverse"
                 || opt_key == "overhangs_reverse_threshold"
+                || opt_key == "perimeter_extrusion_spacing"
                 || opt_key == "perimeter_extrusion_width"
                 || opt_key == "infill_overlap"
                 || opt_key == "thin_perimeters"
@@ -695,6 +696,8 @@ namespace Slic3r {
                 || opt_key == "external_perimeters_first"
                 || opt_key == "external_perimeters_hole"
                 || opt_key == "external_perimeters_nothole"
+                || opt_key == "external_perimeter_extrusion_spacing"
+                || opt_key == "external_perimeter_extrusion_width"
                 || opt_key == "external_perimeters_vase"
                 || opt_key == "perimeter_loop"
                 || opt_key == "perimeter_loop_seam") {
@@ -763,6 +766,7 @@ namespace Slic3r {
                 || opt_key == "fill_density"
                 || opt_key == "interface_shells"
                 || opt_key == "infill_extruder"
+                || opt_key == "infill_extrusion_spacing"
                 || opt_key == "infill_extrusion_width"
                 || opt_key == "infill_every_layers"
                 || opt_key == "infill_dense"
@@ -793,6 +797,7 @@ namespace Slic3r {
                 || opt_key == "infill_connection_solid"
                 || opt_key == "infill_connection_top"
                 || opt_key == "infill_connection_bottom"
+                || opt_key == "top_infill_extrusion_spacing"
                 || opt_key == "top_infill_extrusion_width") {
                 steps.emplace_back(posInfill);
             } else if (
@@ -804,6 +809,7 @@ namespace Slic3r {
                 || opt_key == "no_perimeter_unsupported_algo"
                 || opt_key == "perimeters"
                 || opt_key == "perimeter_overlap"
+                || opt_key == "solid_infill_extrusion_spacing"
                 || opt_key == "solid_infill_extrusion_width") {
                 steps.emplace_back(posPerimeters);
                 steps.emplace_back(posPrepareInfill);
@@ -813,6 +819,7 @@ namespace Slic3r {
                 steps.emplace_back(posPerimeters);
                 steps.emplace_back(posSupportMaterial);
             } else if (opt_key == "bridge_flow_ratio"
+                || opt_key == "first_layer_extrusion_spacing"
                 || opt_key == "first_layer_extrusion_width") {
                 //if (m_config.support_material_contact_distance > 0.) {
                     // Only invalidate due to bridging if bridging is enabled.

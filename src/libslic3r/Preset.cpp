@@ -1391,14 +1391,15 @@ void add_correct_opts_to_diff(const std::string &opt_key, t_config_option_keys& 
 }
 
 // Use deep_diff to correct return of changed options, considering individual options for each extruder.
-inline t_config_option_keys deep_diff(const ConfigBase &config_this, const ConfigBase &config_other)
+inline t_config_option_keys deep_diff(const ConfigBase &config_this, const ConfigBase &config_other, bool ignore_phony)
 {
     t_config_option_keys diff;
     for (const t_config_option_key &opt_key : config_this.keys()) {
         const ConfigOption *this_opt  = config_this.option(opt_key);
         const ConfigOption *other_opt = config_other.option(opt_key);
         //dirty if both exist, they aren't both phony and value is different
-        if (this_opt != nullptr && other_opt != nullptr && !(this_opt->is_phony() && other_opt->is_phony())
+        if (this_opt != nullptr && other_opt != nullptr 
+            && (ignore_phony || !(this_opt->is_phony() && other_opt->is_phony()))
             && ((*this_opt != *other_opt) || (this_opt->is_phony() != other_opt->is_phony())))
         {
             if (opt_key == "bed_shape" || opt_key == "compatible_prints" || opt_key == "compatible_printers") {
@@ -1425,13 +1426,13 @@ inline t_config_option_keys deep_diff(const ConfigBase &config_this, const Confi
     return diff;
 }
 
-std::vector<std::string> PresetCollection::dirty_options(const Preset *edited, const Preset *reference, const bool deep_compare /*= false*/)
+std::vector<std::string> PresetCollection::dirty_options(const Preset *edited, const Preset *reference, const bool deep_compare /*= false*/, const bool ignore_phony)
 {
     std::vector<std::string> changed;
     if (edited != nullptr && reference != nullptr) {
         changed = deep_compare ?
-                deep_diff(edited->config, reference->config) :
-                reference->config.diff(edited->config);
+                deep_diff(edited->config, reference->config, ignore_phony) :
+                reference->config.diff(edited->config, ignore_phony);
         // The "compatible_printers" option key is handled differently from the others:
         // It is not mandatory. If the key is missing, it means it is compatible with any printer.
         // If the key exists and it is empty, it means it is compatible with no printer.

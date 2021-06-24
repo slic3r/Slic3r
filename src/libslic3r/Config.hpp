@@ -1886,7 +1886,7 @@ public:
     // or this ConfigBase is of a StaticConfig type and it does not support some of the keys, and ignore_nonexistent is not set.
     void apply_only(const ConfigBase &other, const t_config_option_keys &keys, bool ignore_nonexistent = false);
     bool equals(const ConfigBase &other) const { return this->keys().size() == other.keys().size() && this->diff(other).empty(); }
-    t_config_option_keys diff(const ConfigBase &other) const;
+    t_config_option_keys diff(const ConfigBase &other, bool even_phony = true) const;
     t_config_option_keys equal(const ConfigBase &other) const;
     std::string opt_serialize(const t_config_option_key &opt_key) const;
 

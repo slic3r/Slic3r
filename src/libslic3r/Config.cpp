@@ -469,14 +469,15 @@ void ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys 
 }
 
 // this will *ignore* options not present in both configs
-t_config_option_keys ConfigBase::diff(const ConfigBase &other) const
+t_config_option_keys ConfigBase::diff(const ConfigBase &other, bool even_phony /*=true*/) const
 {
     t_config_option_keys diff;
     for (const t_config_option_key &opt_key : this->keys()) {
         const ConfigOption *this_opt  = this->option(opt_key);
         const ConfigOption *other_opt = other.option(opt_key);
         //dirty if both exist, they aren't both phony and value is different
-        if (this_opt != nullptr && other_opt != nullptr && !(this_opt->is_phony() && other_opt->is_phony())
+        if (this_opt != nullptr && other_opt != nullptr 
+            && (even_phony || !(this_opt->is_phony() && other_opt->is_phony()))
             && ((*this_opt != *other_opt) || (this_opt->is_phony() != other_opt->is_phony())))
             diff.emplace_back(opt_key);
     }
