@@ -663,7 +663,7 @@ wxBoxSizer* Preview::create_layers_slider_sizer()
         Info custom_gcode_per_print_z = m_layers_slider->GetTicksValues();
         //remove z-shift from gcode output
         const float z_shift = wxGetApp().preset_bundle->printers.get_edited_preset().config.opt_float("z_offset");
-        if (can_display_gcode() && z_shift != 0) {
+        if (can_display_gcode() && z_shift != 0 && ForceState::ForceExtrusions != current_force_state) {
             for (CustomGCode::Item& tick : custom_gcode_per_print_z.gcodes) {
                 tick.print_z -= z_shift;
             }
@@ -751,7 +751,7 @@ void Preview::update_layers_slider(const std::vector<double>& layers_z, bool kee
     {
         //add z-shift from gcode output
         const float z_shift = wxGetApp().preset_bundle->printers.get_edited_preset().config.opt_float("z_offset");
-        if (can_display_gcode() && z_shift != 0) {
+        if (can_display_gcode() && z_shift != 0 && ForceState::ForceExtrusions != current_force_state) {
             for (CustomGCode::Item& tick : ticks_info_from_model.gcodes) {
                 tick.print_z += z_shift;
             }
