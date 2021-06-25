@@ -225,7 +225,7 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
 
 coord_t Fill::_line_spacing_for_density(float density) const
 {
-    return coord_t(scale_(this->get_spacing()) / density);
+    return scale_(this->get_spacing() / density);
 }
 
 //FIXME: add recent improvmeent from perimetergenerator: avoid thick gapfill
