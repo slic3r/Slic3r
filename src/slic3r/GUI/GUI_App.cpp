@@ -209,7 +209,7 @@ public:
         memDc.DrawBitmap(*logo_bmp, margin, margin, true);
 
         // draw the (white) labels inside of our black box (at the left of the splashscreen)
-        memDc.SetTextForeground(wxColour(255, 255, 255));
+        memDc.SetTextForeground(wxColour(180, 180, 180));
 
         memDc.SetFont(m_constant_text.title_font);
         memDc.DrawLabel(m_constant_text.title,   banner_rect, wxALIGN_TOP | wxALIGN_LEFT);
