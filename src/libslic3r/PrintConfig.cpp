@@ -5298,6 +5298,10 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
             value = "20%";
         }else if ("near" == value || "nearest" == value )
             value = "cost";
+    } else if (opt_key == "perimeter_loop_seam") {
+        if (value == "hidden") {
+            value = "nearest";
+        }
     } else if (opt_key == "overhangs") {
         opt_key = "overhangs_width_speed";
         if (value == "1")
