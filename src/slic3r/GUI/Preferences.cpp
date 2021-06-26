@@ -96,7 +96,8 @@ void PreferencesDialog::build()
 	if (is_editor) {
 		def_combobox_auto_switch_preview.label = L("Switch to Preview when sliced");
 		def_combobox_auto_switch_preview.type = coStrings;
-		def_combobox_auto_switch_preview.tooltip = L("Choose an option.");
+		def_combobox_auto_switch_preview.tooltip = L("When an object is sliced, it will switch your view from the curent view to the "
+			"preview (and then gcode-preview) automatically, depending on the option choosen.");
 		def_combobox_auto_switch_preview.gui_type = "f_enum_open";
 		def_combobox_auto_switch_preview.gui_flags = "show_value";
 		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Don't switch"));

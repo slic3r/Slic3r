@@ -5,14 +5,14 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Slic3r\n"
-"POT-Creation-Date: 2021-06-25 00:00\n"
-"PO-Revision-Date: 2021-06-25 00:00\n"
+"POT-Creation-Date: 2021-06-26 00:00\n"
+"PO-Revision-Date: 2021-06-26 00:00\n"
 "Last-Translator: 5axes\n"
 "Language-Team:5axes, supermerill\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: fr\n"
+"Language:fr\n"
 
 msgid "!! Can be unstable in some os distribution !!"
 msgstr "!! peut être instable avec certaines distributions de système d'exploitation."
@@ -109,6 +109,9 @@ msgstr "%s n'a aucunes mises à jour de configuration disponibles."
 msgid "%s incompatibility"
 msgstr "Incompatibilité de %s"
 
+msgid "%s is closing: Unsaved Changes"
+msgstr "%s se ferme : Modifications non sauvegardées"
+
 msgid ""
 "%s now uses an updated configuration structure.\n"
 "\n"
@@ -168,6 +171,9 @@ msgstr ""
 "version.\n"
 "\n"
 "Lots de configuration mis à jour :"
+
+msgid "%s will remember your action."
+msgstr "%s se souviendra de votre action. "
 
 msgid "%s will remember your choice."
 msgstr "%s se souviendra de votre choix."
@@ -368,9 +374,6 @@ msgstr "4x10°"
 
 msgid "5x5°"
 msgstr "5x5°"
-
-msgid ": Don't ask me again"
-msgstr ": Ne me le redemande pas"
 
 msgid ": Open hyperlink"
 msgstr "Ouvrir un lien hypertexte"
@@ -1003,6 +1006,9 @@ msgstr "Voulez-vous vraiment supprimer l'imprimante \"%1%\" ?"
 
 msgid "Are you sure you want to do it?"
 msgstr "Êtes-vous certain de vouloir le faire ?"
+
+msgid "Are you sure?"
+msgstr "Etes-vous sûr?"
 
 msgid "Area fill"
 msgstr "Remplissage de zone"
@@ -2640,6 +2646,9 @@ msgstr "Ne plus afficher"
 
 msgid "Don't support bridges"
 msgstr "Ne pas supporter les ponts"
+
+msgid "Don't switch"
+msgstr "Ne pas changer"
 
 msgid "Downgrade"
 msgstr "Rétrograder"
@@ -5149,9 +5158,6 @@ msgstr "Type de lissage"
 msgid "Ironing width"
 msgstr "Largeur du lissage"
 
-msgid " is closing: Unsaved Changes"
-msgstr " se ferme : Modifications non sauvegardées"
-
 msgid "is licensed under the"
 msgstr "est sous licence"
 
@@ -6809,6 +6815,9 @@ msgstr "le côté extérieur"
 msgid "Only for overhangs"
 msgstr "Uniquement pour les surplombs"
 
+msgid "Only if on plater"
+msgstr "Si déjà sur le plateau"
+
 msgid "Only infill where needed"
 msgstr "Remplissage seulement où cela est nécessaire"
 
@@ -6843,6 +6852,9 @@ msgid ""
 msgstr ""
 "Utilisé uniquement pour klipper, où vous pouvez nommer l'extrudeuse. S'il n'est pas défini, ce sera "
 "'extruderX' avec 'X' remplacé par le numéro de l'extrudeuse."
+
+msgid "Only when GCode is ready"
+msgstr "Quand le GCode est prêt"
 
 msgid "Ooze prevention"
 msgstr "Prévention des coulures"
@@ -9114,11 +9126,6 @@ msgstr ""
 "le mot de passe dans l'URL en respectant le format suivant : "
 "https://username:password@your-octopi-address/"
 
-msgid ""
-"Slic3r contains sizable contributions from Prusa Research. Original work by "
-"Alessandro Ranellucci and the RepRap community."
-msgstr "Slic3r contient une important contribution de Prusa Research. Code orignalement crée par Alessandro Ranellucci and the RepRap community."
-
 msgid "Slic3r logo designed by Corey Daniels."
 msgstr "Logo Slic3r conçu par Corey Daniels."
 
@@ -9648,6 +9655,13 @@ msgstr ""
 "Démonté avec succès. Le périphérique %s(% s) peut maintenant être retiré en "
 "toute sécurité de l'ordinateur."
 
+msgid ""
+"SuperSlicer is a skinned version of Slic3r, based on PrusaSlicer by Prusa "
+"and the original Slic3r by Alessandro Ranellucci & the RepRap community."
+msgstr ""
+"SuperSlicer est une version modifiée de Slic3r, basée sur PrusaSlicer de Prusa "
+"et sur la version Slic3r originale d'Alessandro Ranellucci et de la communauté RepRap."
+
 msgid "support"
 msgstr "support"
 
@@ -9796,17 +9810,20 @@ msgstr "Code de changement pour Changer l'extrudeuse"
 msgid "Switch code to Color change (%1%) for:"
 msgstr "Code de changement pour Changer de couleur (%1%) pour :"
 
-msgid "Switch from 3D view to Preview when sliced"
-msgstr "Passage de la vue 3D à la prévisualisation lors du découpage en couches"
-
 msgid "Switch to editing mode"
 msgstr "Basculer vers le mode édition"
+
+msgid "Switch to Preview when sliced"
+msgstr "Changer l'onglet sur l'aperçu dès que possible"
 
 msgid "Switch to Settings"
 msgstr "Basculer dans le Réglages"
 
 msgid "Switch to the %s mode"
 msgstr "Basculer vers le mode %s"
+
+msgid "Switch when possible"
+msgstr "Dès que possible"
 
 msgid "Switching Presets: Unsaved Changes"
 msgstr "Changement de préréglages : modifications non enregistrées"
@@ -12053,11 +12070,13 @@ msgstr ""
 "l'enregistrement ?"
 
 msgid ""
-"When an object is sliced, it will switch your view from the 3D view to the "
-"previewx (and then gcode-preview) automatically."
+"When an object is sliced, it will switch your view from the curent view to "
+"the preview (and then gcode-preview) automatically, depending on the option "
+"choosen."
 msgstr ""
-"Lorsqu'un objet est découpé en couches, cela fera passer votre vue de la vue 3D à la "
-"pré-visualisation (et ensuite prévisualisation G-Code) automatiquement."
+"Lorsqu'un objet est découpé en couches, cela fera passer votre vue de la vue "
+"3D à la pré-visualisation (et ensuite prévisualisation G-Code) automatiquement, "
+"selon l'option choisie."
 
 msgid ""
 "When checked, the print and filament presets are shown in the preset editor "
@@ -12281,9 +12300,6 @@ msgstr "Va augmenter ou diminuer les polygones 2D découpés en fonction du sign
 
 msgid "Will only take into account the delay for the cooling of overhangs."
 msgstr "Ne tiendra compte que du délai pour le refroidissement des surplombs."
-
-msgid " will remember your action."
-msgstr " se souviendra de votre action. "
 
 msgid "will run at %1%%% by default"
 msgstr "s'exécutera à %1%%% par défaut"
@@ -12539,8 +12555,8 @@ msgid "You will not be asked about it again on label hovering."
 msgstr "Vous ne serez plus interrogé sur ce sujet lors du survol de l'étiquette."
 
 msgid ""
-"You will not be asked about the unsaved changes the next time you close "
-msgstr "Vous ne serez pas interrogé sur les modifications non sauvegardées lors de la prochaine fermeture de l'application. "
+"You will not be asked about the unsaved changes the next time you close %s."
+msgstr "Vous ne serez pas interrogé sur les modifications non sauvegardées lors de la prochaine fermeture de %s."
 
 msgid ""
 "You will not be asked about the unsaved changes the next time you switch a "
