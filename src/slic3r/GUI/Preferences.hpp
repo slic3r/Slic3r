@@ -24,6 +24,9 @@ class PreferencesDialog : public DPIDialog
 #if ENABLE_ENVIRONMENT_MAP
 	std::shared_ptr<ConfigOptionsGroup>	m_optgroup_render;
 #endif // ENABLE_ENVIRONMENT_MAP
+
+    ConfigOptionDef def_combobox_auto_switch_preview;
+
 	wxSizer*                            m_icon_size_sizer;
 	wxRadioBox*							m_layout_mode_box;
     bool                                isOSX {false};

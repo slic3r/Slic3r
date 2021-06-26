@@ -58,7 +58,7 @@ void PreferencesDialog::build()
 	m_optgroup_general->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
 		if (opt_key == "default_action_on_close_application" || opt_key == "default_action_on_select_preset")
 			m_values[opt_key] = boost::any_cast<bool>(value) ? "none" : "discard";
-		else if (opt_key == "splash_screen_editor" || opt_key == "splash_screen_gcodeviewer")
+		else if (std::unordered_set<std::string>{ "splash_screen_editor" ,"splash_screen_gcodeviewer" ,"auto_switch_preview" }.count(opt_key) > 0)
 			m_values[opt_key] = boost::any_cast<std::string>(value);
 		else
 			m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
@@ -92,6 +92,30 @@ void PreferencesDialog::build()
 	def.set_default_value(new ConfigOptionBool{ app_config->get("background_processing") == "1" });
 		option = Option(def, "background_processing");
 	m_optgroup_general->append_single_option_line(option);
+
+	if (is_editor) {
+		def_combobox_auto_switch_preview.label = L("Switch to Preview when sliced");
+		def_combobox_auto_switch_preview.type = coStrings;
+		def_combobox_auto_switch_preview.tooltip = L("Choose an option.");
+		def_combobox_auto_switch_preview.gui_type = "f_enum_open";
+		def_combobox_auto_switch_preview.gui_flags = "show_value";
+		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Don't switch"));
+		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Switch when possible"));
+		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Only if on plater"));
+		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Only when GCode is ready"));
+		if(app_config->get("auto_switch_preview") == "0")
+			def_combobox_auto_switch_preview.set_default_value(new ConfigOptionStrings{ def_combobox_auto_switch_preview.enum_values[0] });
+		else if (app_config->get("auto_switch_preview") == "1")
+			def_combobox_auto_switch_preview.set_default_value(new ConfigOptionStrings{ def_combobox_auto_switch_preview.enum_values[1] });
+		else if (app_config->get("auto_switch_preview") == "2")
+			def_combobox_auto_switch_preview.set_default_value(new ConfigOptionStrings{ def_combobox_auto_switch_preview.enum_values[2] });
+		else if (app_config->get("auto_switch_preview") == "3")
+			def_combobox_auto_switch_preview.set_default_value(new ConfigOptionStrings{ def_combobox_auto_switch_preview.enum_values[3] });
+		else
+			def_combobox_auto_switch_preview.set_default_value(new ConfigOptionStrings{ def_combobox_auto_switch_preview.enum_values[2] });
+		option = Option(def_combobox_auto_switch_preview, "auto_switch_preview");
+		m_optgroup_general->append_single_option_line(option);
+	}
 
 	// Please keep in sync with ConfigWizard
 	def.label = L("Check for application updates");
@@ -449,15 +473,6 @@ void PreferencesDialog::build()
 	option.opt.width = 6;
 	m_optgroup_gui->append_single_option_line(option);
 
-	if (is_editor) {
-		def.label = L("Switch from 3D view to Preview when sliced");
-		def.type = coBool;
-		def.tooltip = std::string(L("When an object is sliced, it will switch your view from the 3D view to the previewx (and then gcode-preview) automatically."));
-		def.set_default_value(new ConfigOptionBool{ app_config->get("auto_switch_preview") == "1" });
-		option = Option(def, "auto_switch_preview");
-		m_optgroup_gui->append_single_option_line(option);
-	}
-
 	activate_options_tab(m_optgroup_gui);
 
 	if (is_editor) {
@@ -526,6 +541,27 @@ void PreferencesDialog::accept()
 	    auto it = m_values.find(key);
 		if (it != m_values.end() && it->second != "none" && app_config->get(key) != "none")
 			m_values.erase(it); // we shouldn't change value, if some of those parameters was selected, and then deselected
+	}
+
+	auto it_auto_switch_preview = m_values.find("auto_switch_preview");
+	if (it_auto_switch_preview != m_values.end()) {
+		std::vector<std::string> values = def_combobox_auto_switch_preview.enum_values;
+		for(size_t i=0; i< values.size(); i++)
+		if (values[i] == it_auto_switch_preview->second)
+			it_auto_switch_preview->second = std::to_string(i);
+	}
+
+	auto it_background_processing = m_values.find("background_processing");
+	if (it_background_processing != m_values.end() && it_background_processing->second == "1") {
+		bool warning = app_config->get("auto_switch_preview") != "0";
+		if (it_auto_switch_preview != m_values.end())
+			warning = it_auto_switch_preview->second == "1";
+		if(warning) {
+			wxMessageDialog dialog(nullptr, "Using background processing with automatic tab switching may be combersome"
+				", are-you sure to keep the automatic tab switching?", _L("Are you sure?"), wxOK | wxCANCEL | wxICON_QUESTION);
+			if (dialog.ShowModal() == wxID_CANCEL)
+				m_values["auto_switch_preview"] = "0";
+		}
 	}
 
 	for (std::map<std::string, std::string>::iterator it = m_values.begin(); it != m_values.end(); ++it)

@@ -3093,14 +3093,23 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
     }
 
     //update tab if needed
-    if (invalidated != Print::ApplyStatus::APPLY_STATUS_UNCHANGED && wxGetApp().app_config->get("auto_switch_preview") == "1")
+    // auto_switch_preview == 0 means "no force tab change"
+    if (invalidated != Print::ApplyStatus::APPLY_STATUS_UNCHANGED && wxGetApp().app_config->get("auto_switch_preview") != "0")
     {
-        if (this->preview->can_display_gcode())
-            main_frame->select_tab(MainFrame::ETabType::PlaterGcode, true);
-        else if (this->preview->can_display_volume())
-            main_frame->select_tab(MainFrame::ETabType::PlaterPreview, true);
-        else
-            main_frame->select_tab(MainFrame::ETabType::Plater3D, true);
+        // auto_switch_preview == 3 means "force tab change only if for gcode"
+        if(wxGetApp().app_config->get("auto_switch_preview") == "3")
+            if(this->preview->can_display_gcode())
+                main_frame->select_tab(MainFrame::ETabType::PlaterGcode, true);
+        // auto_switch_preview == 1 means "force tab change"
+        // auto_switch_preview == 2 (the only other one) means "force tab change only if already on a plater one"
+        else if (wxGetApp().app_config->get("auto_switch_preview") == "1" || main_frame->selected_tab() < MainFrame::ETabType::LastPlater) {
+            if (this->preview->can_display_gcode())
+                main_frame->select_tab(MainFrame::ETabType::PlaterGcode, true);
+            else if (this->preview->can_display_volume())
+                main_frame->select_tab(MainFrame::ETabType::PlaterPreview, true);
+            else
+                main_frame->select_tab(MainFrame::ETabType::Plater3D, true);
+        }
     }
     return return_state;
 }
@@ -3705,8 +3714,13 @@ void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
 
 void Plater::priv::on_slicing_completed(wxCommandEvent & evt)
 {
+    // auto_switch_preview == 0 means "no force tab change"
+    // auto_switch_preview == 1 means "force tab change"
+    // auto_switch_preview == 2 means "force tab change only if already on a plater one"
+    // auto_switch_preview == 3 means "force tab change only if for gcode"
     notification_manager->push_slicing_complete_notification(evt.GetInt(), is_sidebar_collapsed());
-    if(wxGetApp().app_config->get("auto_switch_preview") == "1" && !this->preview->can_display_gcode())
+    if( ( wxGetApp().app_config->get("auto_switch_preview") == "1" || (wxGetApp().app_config->get("auto_switch_preview") == "2" && main_frame->selected_tab() < MainFrame::ETabType::LastPlater) )
+        && !this->preview->can_display_gcode())
         main_frame->select_tab(MainFrame::ETabType::PlaterPreview);
     switch (this->printer_technology) {
     case ptFFF:
@@ -3786,7 +3800,13 @@ void Plater::priv::on_process_completed(SlicingProcessCompletedEvent &evt)
     this->background_process.stop();
     this->statusbar()->reset_cancel_callback();
     this->statusbar()->stop_busy();
-    if (wxGetApp().app_config->get("auto_switch_preview") == "1")
+    // auto_switch_preview == 0 means "no force tab change"
+    // auto_switch_preview == 1 means "force tab change"
+    // auto_switch_preview == 2 means "force tab change only if already on a plater one"
+    // auto_switch_preview == 3 means "force tab change only if for gcode"
+    if (wxGetApp().app_config->get("auto_switch_preview") == "1" 
+        || (wxGetApp().app_config->get("auto_switch_preview") == "2" && main_frame->selected_tab() < MainFrame::ETabType::LastPlater) 
+        || wxGetApp().app_config->get("auto_switch_preview") == "3")
         main_frame->select_tab(MainFrame::ETabType::PlaterGcode);
 
     // Reset the "export G-code path" name, so that the automatic background processing will be enabled again.

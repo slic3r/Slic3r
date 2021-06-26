@@ -165,7 +165,7 @@ void AppConfig::set_defaults()
             set("auto_toolbar_size", "100");
 
         if (get("auto_switch_preview").empty())
-            set("auto_switch_preview", "1");
+            set("auto_switch_preview", "2");
 
 #if ENABLE_ENVIRONMENT_MAP
         if (get("use_environment_map").empty())
