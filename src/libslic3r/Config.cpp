@@ -551,7 +551,8 @@ bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, con
         else
             opt->set(optdef->default_value.get());
 
-        if (substitutions_ctxt.rule == ForwardCompatibilitySubstitutionRule::Enable) {
+        if (substitutions_ctxt.rule == ForwardCompatibilitySubstitutionRule::Enable ||
+            substitutions_ctxt.rule == ForwardCompatibilitySubstitutionRule::EnableSystemSilent) {
             // Log the substitution.
             ConfigSubstitution config_substitution;
             config_substitution.opt_def = optdef;
