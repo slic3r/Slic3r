@@ -546,7 +546,7 @@ bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, con
         // Deserialize failed, try to substitute with a default value.
         assert(substitutions_ctxt.rule == ForwardCompatibilitySubstitutionRule::Enable || substitutions_ctxt.rule == ForwardCompatibilitySubstitutionRule::EnableSilent);
 
-        if (opt_key == "gcode_flavor" && value == "marlinfirmware")
+        if (opt_key == "gcode_flavor" && (value == "marlin2" || value == "marlinfirmware"))
             static_cast<ConfigOptionEnum<GCodeFlavor>*>(opt)->value = gcfMarlin;
         else
             opt->set(optdef->default_value.get());
