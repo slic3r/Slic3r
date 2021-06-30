@@ -167,7 +167,7 @@ private:
 		// Callback for hypertext - returns true if notification should close after triggering
 		// Usually sends event to UI thread thru wxEvtHandler.
 		// Examples in basic_notifications.
-		std::function<bool(wxEvtHandler*)> callback { nullptr };
+        std::function<bool(wxEvtHandler*)> callback;
 		const std::string        text2;
 	};
 
@@ -231,7 +231,7 @@ private:
 		//returns top in actual frame
 		float                  get_current_top() const { return m_top_y; }
 		const NotificationType get_type() const { return m_data.type; }
-		const NotificationData get_data() const { return m_data; }
+		const NotificationData& get_data() const { return m_data; }
 		const bool             is_gray() const { return m_is_gray; }
 		// Call equals one second down
 		void                   substract_remaining_time(int seconds) { m_remaining_time -= seconds; }
@@ -383,10 +383,10 @@ private:
 		ProgressBarNotification(const NotificationData& n, NotificationIDProvider& id_provider, wxEvtHandler* evt_handler, float percentage) : PopNotification(n, id_provider, evt_handler) { set_percentage(percentage); }
 		void set_percentage(float percent) { m_percentage = percent; if (percent >= 1.0f) m_progress_complete = true; else m_progress_complete = false; }
 	protected:
-		virtual void init();
-		virtual void render_text(ImGuiWrapper& imgui,
+		void init();
+		void render_text(ImGuiWrapper& imgui,
 			const float win_size_x, const float win_size_y,
-			const float win_pos_x, const float win_pos_y);
+			const float win_pos_x, const float win_pos_y) override;
 		void         render_bar(ImGuiWrapper& imgui,
 			const float win_size_x, const float win_size_y,
 			const float win_pos_x, const float win_pos_y);
@@ -410,20 +410,20 @@ private:
 		std::string m_export_dir_path;
 	protected:
 		// Reserves space on right for more buttons
-		virtual void count_spaces() override;
-		virtual void render_text(ImGuiWrapper& imgui,
-			                     const float win_size_x, const float win_size_y,
-			                     const float win_pos_x, const float win_pos_y) override;
+		void count_spaces() override;
+		void render_text(ImGuiWrapper& imgui,
+						 const float win_size_x, const float win_size_y,
+						 const float win_pos_x, const float win_pos_y) override;
 		// Renders also button to open directory with exported path and eject removable media
-		virtual void render_close_button(ImGuiWrapper& imgui,
-			                             const float win_size_x, const float win_size_y,
-			                             const float win_pos_x, const float win_pos_y) override;
+		void render_close_button(ImGuiWrapper& imgui,
+								 const float win_size_x, const float win_size_y,
+								 const float win_pos_x, const float win_pos_y) override;
 		void         render_eject_button(ImGuiWrapper& imgui,
 			                             const float win_size_x, const float win_size_y,
 			                             const float win_pos_x, const float win_pos_y);
-		virtual void render_minimize_button(ImGuiWrapper& imgui, const float win_pos_x, const float win_pos_y) override 
+		void render_minimize_button(ImGuiWrapper& imgui, const float win_pos_x, const float win_pos_y) override
 			{ m_minimize_b_visible = false; }
-		virtual bool on_text_click() override; 
+		bool on_text_click() override;
 		// local time of last hover for showing tooltip
 		long      m_hover_time { 0 };
 	};
@@ -465,23 +465,7 @@ private:
 #endif // ENABLE_NEW_NOTIFICATIONS_FADE_OUT 
 */
 	//prepared (basic) notifications
-	const std::vector<NotificationData> basic_notifications = {
-//		{NotificationType::SlicingNotPossible, NotificationLevel::RegularNotification, 10,  _u8L("Slicing is not possible.")},
-//		{NotificationType::ExportToRemovableFinished, NotificationLevel::ImportantNotification, 0,  _u8L("Exporting finished."),  _u8L("Eject drive.") },
-		{NotificationType::Mouse3dDisconnected, NotificationLevel::RegularNotification, 10,  _u8L("3D Mouse disconnected.") },
-//		{NotificationType::Mouse3dConnected, NotificationLevel::RegularNotification, 5,  _u8L("3D Mouse connected.") },
-//		{NotificationType::NewPresetsAviable, NotificationLevel::ImportantNotification, 20,  _u8L("New Presets are available."),  _u8L("See here.") },
-		{NotificationType::PresetUpdateAvailable, NotificationLevel::ImportantNotification, 20,  _u8L("Configuration update is available."),  _u8L("See more."), [](wxEvtHandler* evnthndlr){
-			if (evnthndlr != nullptr) wxPostEvent(evnthndlr, PresetUpdateAvailableClickedEvent(EVT_PRESET_UPDATE_AVAILABLE_CLICKED)); return true; }},
-		{NotificationType::NewAppAvailable, NotificationLevel::ImportantNotification, 20,  _u8L("New version is available."),  _u8L("See Releases page."), [](wxEvtHandler* evnthndlr){ 
-				wxLaunchDefaultBrowser("https://github.com/prusa3d/PrusaSlicer/releases"); return true; }},
-		{NotificationType::EmptyColorChangeCode, NotificationLevel::RegularNotification, 10,  
-			_u8L("You have just added a G-code for color change, but its value is empty.\n"
-				 "To export the G-code correctly, check the \"Color Change G-code\" in \"Printer Settings > Custom G-code\"") },
-		//{NotificationType::NewAppAvailable, NotificationLevel::ImportantNotification, 20,  _u8L("New vesion of PrusaSlicer is available.",  _u8L("Download page.") },
-		//{NotificationType::LoadingFailed, NotificationLevel::RegularNotification, 20,  _u8L("Loading of model has Failed") },
-		//{NotificationType::DeviceEjected, NotificationLevel::RegularNotification, 10,  _u8L("Removable device has been safely ejected")} // if we want changeble text (like here name of device), we need to do it as CustomNotification
-	};
+    static const NotificationData basic_notifications[];
 };
 
 }//namespace GUI
