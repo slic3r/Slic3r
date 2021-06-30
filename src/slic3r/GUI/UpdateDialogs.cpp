@@ -137,7 +137,7 @@ MsgUpdateConfig::MsgUpdateConfig(const std::vector<Update> &updates, bool force_
 	btn_sizer->Add(btn_ok);
 	btn_sizer->AddSpacer(HORIZ_SPACING);
 	if (force_before_wizard) {
-		auto* btn_no_install = new wxButton(this, wxID_ANY, "Don't install");
+		auto* btn_no_install = new wxButton(this, wxID_ANY, _L("Don't install"));
 		btn_no_install->Bind(wxEVT_BUTTON, [this](wxEvent&) { this->EndModal(wxID_CLOSE); });
 		btn_sizer->Add(btn_no_install);
 		btn_sizer->AddSpacer(HORIZ_SPACING);

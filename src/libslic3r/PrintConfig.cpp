@@ -3774,58 +3774,58 @@ CLIMiscConfigDef::CLIMiscConfigDef()
     ConfigOptionDef* def;
 
     def = this->add("ignore_nonexistent_config", coBool);
-    def->label = L("Ignore non-existent config files");
-    def->tooltip = L("Do not fail if a file supplied to --load does not exist.");
+    def->label = "Ignore non-existent config files";
+    def->tooltip = "Do not fail if a file supplied to --load does not exist.";
 
     def = this->add("config_compatibility", coEnum);
-    def->label = L("Forward-compatibility rule when loading configurations from config files and project files (3MF, AMF).");
-    def->tooltip = L("This version of PrusaSlicer may not understand configurations produced by newest PrusaSlicer versions. "
+    def->label = "Forward-compatibility rule when loading configurations from config files and project files (3MF, AMF).";
+    def->tooltip = "This version of PrusaSlicer may not understand configurations produced by newest PrusaSlicer versions. "
                      "For example, newer PrusaSlicer may extend the list of supported firmware flavors. One may decide to "
-                     "bail out or to substitute an unknown value with a default silently or verbosely.");
+                     "bail out or to substitute an unknown value with a default silently or verbosely.";
     def->enum_keys_map = &ConfigOptionEnum<ForwardCompatibilitySubstitutionRule>::get_enum_values();
     def->enum_values.push_back("disable");
     def->enum_values.push_back("enable");
     def->enum_values.push_back("enable_silent");
-    def->enum_labels.push_back(L("Bail out on unknown configuration values"));
-    def->enum_labels.push_back(L("Enable reading unknown configuration values by verbosely substituting them with defaults."));
-    def->enum_labels.push_back(L("Enable reading unknown configuration values by silently substituting them with defaults."));
+    def->enum_labels.push_back("Bail out on unknown configuration values");
+    def->enum_labels.push_back("Enable reading unknown configuration values by verbosely substituting them with defaults.");
+    def->enum_labels.push_back("Enable reading unknown configuration values by silently substituting them with defaults.");
     def->set_default_value(new ConfigOptionEnum<ForwardCompatibilitySubstitutionRule>(ForwardCompatibilitySubstitutionRule::Enable));
 
     def = this->add("load", coStrings);
-    def->label = L("Load config file");
-    def->tooltip = L("Load configuration from the specified file. It can be used more than once to load options from multiple files.");
+    def->label = "Load config file";
+    def->tooltip = "Load configuration from the specified file. It can be used more than once to load options from multiple files.";
 
     def = this->add("output", coString);
-    def->label = L("Output File");
-    def->tooltip = L("The file where the output will be written (if not specified, it will be based on the input file).");
+    def->label = "Output File";
+    def->tooltip = "The file where the output will be written (if not specified, it will be based on the input file).";
     def->cli = "output|o";
 
     def = this->add("single_instance", coBool);
-    def->label = L("Single instance mode");
-    def->tooltip = L("If enabled, the command line arguments are sent to an existing instance of GUI PrusaSlicer, "
+    def->label = "Single instance mode";
+    def->tooltip = "If enabled, the command line arguments are sent to an existing instance of GUI PrusaSlicer, "
                      "or an existing PrusaSlicer window is activated. "
-                     "Overrides the \"single_instance\" configuration value from application preferences.");
+                     "Overrides the \"single_instance\" configuration value from application preferences.";
 
 /*
     def = this->add("autosave", coString);
-    def->label = L("Autosave");
-    def->tooltip = L("Automatically export current configuration to the specified file.");
+    def->label = "Autosave";
+    def->tooltip = "Automatically export current configuration to the specified file.";
 */
 
     def = this->add("datadir", coString);
-    def->label = L("Data directory");
-    def->tooltip = L("Load and store settings at the given directory. This is useful for maintaining different profiles or including configurations from a network storage.");
+    def->label = "Data directory";
+    def->tooltip = "Load and store settings at the given directory. This is useful for maintaining different profiles or including configurations from a network storage.";
 
     def = this->add("loglevel", coInt);
-    def->label = L("Logging level");
-    def->tooltip = L("Sets logging sensitivity. 0:fatal, 1:error, 2:warning, 3:info, 4:debug, 5:trace\n"
-                     "For example. loglevel=2 logs fatal, error and warning level messages.");
+    def->label = "Logging level";
+    def->tooltip = "Sets logging sensitivity. 0:fatal, 1:error, 2:warning, 3:info, 4:debug, 5:trace\n"
+                     "For example. loglevel=2 logs fatal, error and warning level messages.";
     def->min = 0;
 
 #if (defined(_MSC_VER) || defined(__MINGW32__)) && defined(SLIC3R_GUI)
     def = this->add("sw_renderer", coBool);
-    def->label = L("Render with a software renderer");
-    def->tooltip = L("Render with a software renderer. The bundled MESA software renderer is loaded instead of the default OpenGL driver.");
+    def->label = "Render with a software renderer";
+    def->tooltip = "Render with a software renderer. The bundled MESA software renderer is loaded instead of the default OpenGL driver.";
     def->min = 0;
 #endif /* _MSC_VER */
 }
