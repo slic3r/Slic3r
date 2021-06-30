@@ -501,6 +501,16 @@ void ConfigBase::set_deserialize(std::initializer_list<SetDeserializeItem> items
 		this->set_deserialize(item.opt_key, item.opt_value, substitutions_ctxt, item.append);
 }
 
+static inline bool looks_like_enum_value(const std::string &s)
+{
+	if (value.empty() || value.size() > 64 || ! isalpha(value.front()))
+		return false;
+	for (const char c : s)
+		if (! (isalnum(c) || c == '_' || c == '-'))
+			return false;
+	return true;
+}
+
 bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, const std::string &value, ConfigSubstitutionContext& substitutions_ctxt, bool append)
 {
     t_config_option_key    opt_key = opt_key_src;
@@ -546,8 +556,10 @@ bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, con
         // Deserialize failed, try to substitute with a default value.
         assert(substitutions_ctxt.rule == ForwardCompatibilitySubstitutionRule::Enable || substitutions_ctxt.rule == ForwardCompatibilitySubstitutionRule::EnableSilent);
 
-        if (opt_key == "gcode_flavor" && (value == "marlin2" || value == "marlinfirmware"))
+        if (optdef->type == coEnum && opt_key == "gcode_flavor" && (value == "marlin2" || value == "marlinfirmware"))
             static_cast<ConfigOptionEnum<GCodeFlavor>*>(opt)->value = gcfMarlin;
+        else if (optdef->type == coBool && looks_like_enum_value(value))
+            static_cast<ConfigOptionBool*>(opt)->value = boost::iequals(value, "enabled") || boost::iequals(value, "on");
         else
             opt->set(optdef->default_value.get());
 
