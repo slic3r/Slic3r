@@ -52,10 +52,10 @@ std::string toString(OptionCategory opt) {
     case firmware: return "Firmware";
     case pad: return "Pad";
     case padSupp: return "Pad and Support";
-    case wipe: return "Wipe Options";
-    case milling: return "Milling";
+    case wipe: return L("Wipe Options");
+    case milling: return L("Milling");
     case hollowing: return "Hollowing";
-    case milling_extruders: return "Milling extruders";
+    case milling_extruders: return "Milling tools";
     }
     return "error";
 }
