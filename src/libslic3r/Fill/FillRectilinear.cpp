@@ -873,7 +873,7 @@ std::vector<SegmentedIntersectionLine> FillRectilinear::_vert_lines_for_polygon(
 }
 
 
-static void slice_region_by_vertical_lines(std::vector<SegmentedIntersectionLine>& segs,
+static void slice_region_by_vertical_lines(const FillRectilinear* filler, std::vector<SegmentedIntersectionLine>& segs,
     const ExPolygonWithOffset& poly_with_offset)//, size_t n_vlines, coord_t x0, coord_t line_spacing)
 {
     // Sort the intersections along their segments, specify the intersection types.
@@ -953,7 +953,17 @@ static void slice_region_by_vertical_lines(std::vector<SegmentedIntersectionLine
         if (j < sil.intersections.size())
             sil.intersections.erase(sil.intersections.begin() + j, sil.intersections.end());
     }
+    // TODO: delete this when the bug will be fixed (you can slice  InfillIssue.3mf)
+    for (size_t i_seg = 0; i_seg < segs.size(); ++i_seg) {
+        SegmentedIntersectionLine& sil = segs[i_seg];
+        if ((sil.intersections.size() & 1) == 1 && sil.intersections.size() > 1) {
+            BOOST_LOG_TRIVIAL(error) << "FillRectilinear::fill_surface() failed to fill a region: impair number of intersections at layer " << filler->layer_id << " @z="<< filler->z;
+            if (sil.intersections.back().iContour == 0 && sil.intersections[sil.intersections.size() - 2].iContour == 0)
+                sil.intersections.pop_back();
+        }
+    }
 
+    try {
     // Verify the segments. If something is wrong, give up.
 #define ASSERT_THROW(CONDITION) do { assert(CONDITION); if (! (CONDITION)) throw InfillFailedException(); } while (0)
     for (size_t i_seg = 0; i_seg < segs.size(); ++i_seg) {
@@ -973,6 +983,55 @@ static void slice_region_by_vertical_lines(std::vector<SegmentedIntersectionLine
             ASSERT_THROW(i + 1 == j || sil.intersections[j - 1].type == SegmentIntersection::INNER_HIGH);
             i = j + 1;
         }
+    }
+
+    }
+    catch (const InfillFailedException& /* ex */) {
+        // Export the buggy result into an SVG file.
+        static int iRun = 0;
+        BoundingBox bbox = get_extents(poly_with_offset.polygons_src);
+        bbox.offset(scale_(3.));
+        ::Slic3r::SVG svg(debug_out_path("slice_region_by_vertical_lines-failed-%d.svg", iRun++), bbox);
+        svg.draw(poly_with_offset.polygons_src);
+        svg.draw(to_polylines(poly_with_offset.polygons_src), "green");
+        svg.draw(to_polylines(poly_with_offset.polygons_outer), "green");
+        svg.draw(to_polylines(poly_with_offset.polygons_inner), "green");
+        for (size_t i_seg = 0; i_seg < segs.size(); ++i_seg) {
+            SegmentedIntersectionLine& sil = segs[i_seg];
+            for (size_t i = 0; i < sil.intersections.size();) {
+                // An intersection segment crossing the bigger contour may cross the inner offsetted contour even number of times.
+                if (sil.intersections[i].type != SegmentIntersection::OUTER_LOW) {
+                    svg.draw(Point(sil.pos, sil.intersections[i].pos()), "red");
+                    break;
+                }
+                size_t j = i + 1;
+                if (j == sil.intersections.size()) {
+                    svg.draw(Point(sil.pos, sil.intersections[i].pos()), "magenta");
+                    break;
+                }
+                if (!(sil.intersections[j].type == SegmentIntersection::INNER_LOW || sil.intersections[j].type == SegmentIntersection::OUTER_HIGH)) {
+                    svg.draw(Point(sil.pos, sil.intersections[j].pos()), "blue");
+                    break;
+                }
+                for (; j < sil.intersections.size() && sil.intersections[j].is_inner(); ++j);
+                if (j == sil.intersections.size()) {
+                    svg.draw(Point(sil.pos, sil.intersections[j - 1].pos()), "magenta");
+                    break;
+                }
+                if ((j & 1) != 1 || sil.intersections[j].type != SegmentIntersection::OUTER_HIGH) {
+                    svg.draw(Point(sil.pos, sil.intersections[j].pos()), "red");
+                    break;
+                }
+                if (!(i + 1 == j || sil.intersections[j - 1].type == SegmentIntersection::INNER_HIGH)) {
+                    svg.draw(Point(sil.pos, sil.intersections[j].pos()), "red");
+                    break;
+                }
+                svg.draw(Line(Point(sil.pos, sil.intersections[i].pos()), Point(sil.pos, sil.intersections[j].pos())), "black");
+                i = j + 1;
+            }
+        }
+        assert(false);
+        throw;
     }
 #undef ASSERT_THROW
 
@@ -2802,7 +2861,7 @@ bool FillRectilinear::fill_surface_by_lines(const Surface *surface, const FillPa
     // Intersect a set of equally spaced vertical lines with expolygon.
     std::vector<SegmentedIntersectionLine> segs = _vert_lines_for_polygon(poly_with_offset, bounding_box, params, line_spacing);
 
-    slice_region_by_vertical_lines(segs, poly_with_offset);
+    slice_region_by_vertical_lines(this, segs, poly_with_offset);
 
     //all the works is done HERE
     // Connect by horizontal / vertical links, classify the links based on link_max_length as too long.
@@ -2929,7 +2988,7 @@ bool FillRectilinear::fill_surface_by_multilines(const Surface* surface, FillPar
         const double sin_a = sin(angle);
 
         std::vector<SegmentedIntersectionLine> segs = _vert_lines_for_polygon(poly_with_offset, bounding_box, params, line_spacing);
-        slice_region_by_vertical_lines(segs, poly_with_offset);
+        slice_region_by_vertical_lines(this, segs, poly_with_offset);
         for (const SegmentedIntersectionLine& vline : segs)
             if (vline.pos > x_min) {
                 if (vline.pos >= x_max)
