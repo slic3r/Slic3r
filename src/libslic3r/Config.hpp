@@ -54,6 +54,12 @@ namespace ConfigHelpers {
 		return boost::iequals(value, "enabled") || boost::iequals(value, "on");
 	}
 
+	enum DeserializationSubstitution {
+		Disabled,
+		DefaultsToFalse,
+		DefaultsToTrue
+	};
+
     enum DeserializationResult {
     	Loaded,
     	Substituted,
@@ -1345,7 +1351,7 @@ public:
         return vv;
     }
 
-    ConfigHelpers::DeserializationResult deserialize_with_substitutions(const std::string &str, bool append, bool substitute)
+    ConfigHelpers::DeserializationResult deserialize_with_substitutions(const std::string &str, bool append, ConfigHelpers::DeserializationSubstitution substitution)
     {
         if (! append)
             this->values.clear();
@@ -1364,8 +1370,8 @@ public:
         		new_value = true;
         	} else if (item_str == "0") {
         		new_value = false;
-        	} else if (substitute && ConfigHelpers::looks_like_enum_value(item_str)) {
-        		new_value = ConfigHelpers::enum_looks_like_true_value(item_str);
+        	} else if (substitution != ConfigHelpers::DeserializationSubstitution::Disabled && ConfigHelpers::looks_like_enum_value(item_str)) {
+        		new_value = ConfigHelpers::enum_looks_like_true_value(item_str) || substituted == ConfigHelpers::DeserializationSubstitution::DefaultsToTrue;
         		substituted = true;
         	} else
         		return ConfigHelpers::DeserializationResult::Failed;
@@ -1376,7 +1382,7 @@ public:
 
     bool deserialize(const std::string &str, bool append = false) override
     {
-    	return this->deserialize_with_substitutions(str, append, false) == ConfigHelpers::DeserializationResult::Loaded;
+    	return this->deserialize_with_substitutions(str, append, ConfigHelpers::DeserializationSubstitution::Disabled) == ConfigHelpers::DeserializationResult::Loaded;
     }
 
 protected:
