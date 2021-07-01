@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-06-30 15:03+0200\n"
+"POT-Creation-Date: 2021-07-01 16:50+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -507,7 +507,7 @@ msgstr ""
 msgid "SLA print"
 msgstr ""
 
-#: src/slic3r/GUI/ConfigSnapshotDialog.cpp:60 src/slic3r/GUI/GUI.cpp:318
+#: src/slic3r/GUI/ConfigSnapshotDialog.cpp:60 src/slic3r/GUI/GUI.cpp:353
 #: src/slic3r/GUI/Plater.cpp:697 src/libslic3r/Preset.cpp:1309
 msgid "SLA material"
 msgstr ""
@@ -887,7 +887,7 @@ msgid "SLA Technology Printers"
 msgstr ""
 
 #: src/slic3r/GUI/ConfigWizard.cpp:2278 src/slic3r/GUI/DoubleSlider.cpp:2265
-#: src/slic3r/GUI/DoubleSlider.cpp:2285 src/slic3r/GUI/GUI.cpp:245
+#: src/slic3r/GUI/DoubleSlider.cpp:2285 src/slic3r/GUI/GUI.cpp:246
 msgid "Notice"
 msgstr ""
 
@@ -923,7 +923,7 @@ msgstr ""
 msgid "&Finish"
 msgstr ""
 
-#: src/slic3r/GUI/ConfigWizard.cpp:2559 src/slic3r/GUI/FirmwareDialog.cpp:151
+#: src/slic3r/GUI/ConfigWizard.cpp:2559 src/slic3r/GUI/FirmwareDialog.cpp:153
 #: src/slic3r/GUI/Gizmos/GLGizmoFdmSupports.cpp:248
 #: src/slic3r/GUI/ProgressStatusBar.cpp:26
 #: src/slic3r/GUI/UnsavedChangesDialog.cpp:656
@@ -1373,31 +1373,31 @@ msgid ""
 "\"%1%\""
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:150
+#: src/slic3r/GUI/FirmwareDialog.cpp:152
 msgid "Flash!"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:152
+#: src/slic3r/GUI/FirmwareDialog.cpp:154
 msgid "Flashing in progress. Please do not disconnect the printer!"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:199
+#: src/slic3r/GUI/FirmwareDialog.cpp:201
 msgid "Flashing failed"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:282
+#: src/slic3r/GUI/FirmwareDialog.cpp:284
 msgid "Flashing succeeded!"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:283
+#: src/slic3r/GUI/FirmwareDialog.cpp:285
 msgid "Flashing failed. Please see the avrdude log below."
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:284
+#: src/slic3r/GUI/FirmwareDialog.cpp:286
 msgid "Flashing cancelled."
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:332
+#: src/slic3r/GUI/FirmwareDialog.cpp:334
 #, possible-c-format
 msgid ""
 "This firmware hex file does not match the printer model.\n"
@@ -1408,13 +1408,13 @@ msgid ""
 "Please only continue if you are sure this is the right thing to do."
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:419 src/slic3r/GUI/FirmwareDialog.cpp:454
+#: src/slic3r/GUI/FirmwareDialog.cpp:421 src/slic3r/GUI/FirmwareDialog.cpp:456
 #, possible-c-format
 msgid ""
 "Multiple %s devices found. Please only connect one at a time for flashing."
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:436
+#: src/slic3r/GUI/FirmwareDialog.cpp:438
 #, possible-c-format
 msgid ""
 "The %s device was not found.\n"
@@ -1422,80 +1422,80 @@ msgid ""
 "connector ..."
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:548
+#: src/slic3r/GUI/FirmwareDialog.cpp:550
 #, possible-c-format
 msgid "The %s device could not have been found"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:645
+#: src/slic3r/GUI/FirmwareDialog.cpp:651
 #, possible-c-format
 msgid "Error accessing port at %s: %s"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:647
+#: src/slic3r/GUI/FirmwareDialog.cpp:653
 #, possible-c-format
 msgid "Error: %s"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:777
+#: src/slic3r/GUI/FirmwareDialog.cpp:782
 msgid "Firmware flasher"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:802
+#: src/slic3r/GUI/FirmwareDialog.cpp:807
 msgid "Firmware image:"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:805
+#: src/slic3r/GUI/FirmwareDialog.cpp:810
 #: src/slic3r/GUI/PhysicalPrinterDialog.cpp:291
 #: src/slic3r/GUI/PhysicalPrinterDialog.cpp:366
 msgid "Browse"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:807
+#: src/slic3r/GUI/FirmwareDialog.cpp:812
 msgid "Serial port:"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:809
+#: src/slic3r/GUI/FirmwareDialog.cpp:814
 msgid "Autodetected"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:810
+#: src/slic3r/GUI/FirmwareDialog.cpp:815
 msgid "Rescan"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:817
+#: src/slic3r/GUI/FirmwareDialog.cpp:822
 msgid "Progress:"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:820
+#: src/slic3r/GUI/FirmwareDialog.cpp:825
 msgid "Status:"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:821
+#: src/slic3r/GUI/FirmwareDialog.cpp:826
 msgid "Ready"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:841
+#: src/slic3r/GUI/FirmwareDialog.cpp:846
 msgid "Advanced: Output log"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:852
+#: src/slic3r/GUI/FirmwareDialog.cpp:857
 #: src/slic3r/GUI/Mouse3DController.cpp:551
 #: src/slic3r/GUI/PrintHostDialogs.cpp:200
 msgid "Close"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:902
+#: src/slic3r/GUI/FirmwareDialog.cpp:907
 msgid ""
 "Are you sure you want to cancel firmware flashing?\n"
 "This could leave your printer in an unusable state!"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:903
+#: src/slic3r/GUI/FirmwareDialog.cpp:908
 msgid "Confirmation"
 msgstr ""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:906
+#: src/slic3r/GUI/FirmwareDialog.cpp:911
 msgid "Cancelling..."
 msgstr ""
 
@@ -1677,18 +1677,18 @@ msgid "Custom G-codes"
 msgstr ""
 
 #: src/slic3r/GUI/GCodeViewer.cpp:4375 src/slic3r/GUI/GCodeViewer.cpp:4399
-#: src/slic3r/GUI/GUI.cpp:319 src/slic3r/GUI/Plater.cpp:698
+#: src/slic3r/GUI/GUI.cpp:354 src/slic3r/GUI/Plater.cpp:698
 #: src/libslic3r/PrintConfig.cpp:117
 msgid "Printer"
 msgstr ""
 
 #: src/slic3r/GUI/GCodeViewer.cpp:4377 src/slic3r/GUI/GCodeViewer.cpp:4404
-#: src/slic3r/GUI/GUI.cpp:315 src/slic3r/GUI/Plater.cpp:694
+#: src/slic3r/GUI/GUI.cpp:350 src/slic3r/GUI/Plater.cpp:694
 msgid "Print settings"
 msgstr ""
 
 #: src/slic3r/GUI/GCodeViewer.cpp:4380 src/slic3r/GUI/GCodeViewer.cpp:4410
-#: src/slic3r/GUI/GUI.cpp:317 src/slic3r/GUI/Plater.cpp:695
+#: src/slic3r/GUI/GUI.cpp:352 src/slic3r/GUI/Plater.cpp:695
 #: src/slic3r/GUI/Tab.cpp:1801 src/slic3r/GUI/Tab.cpp:1802
 msgid "Filament"
 msgstr ""
@@ -2356,7 +2356,7 @@ msgstr ""
 msgid "Are you sure you want to do it?"
 msgstr ""
 
-#: src/slic3r/GUI/Gizmos/GLGizmoSlaSupports.cpp:1129 src/slic3r/GUI/GUI.cpp:257
+#: src/slic3r/GUI/Gizmos/GLGizmoSlaSupports.cpp:1129 src/slic3r/GUI/GUI.cpp:258
 #: src/slic3r/GUI/PhysicalPrinterDialog.cpp:621
 #: src/slic3r/GUI/PhysicalPrinterDialog.cpp:645
 #: src/slic3r/GUI/WipeTowerDialog.cpp:45 src/slic3r/GUI/WipeTowerDialog.cpp:366
@@ -2467,32 +2467,46 @@ msgstr ""
 msgid "Add supports"
 msgstr ""
 
-#: src/slic3r/GUI/GUI.cpp:295 src/slic3r/GUI/UnsavedChangesDialog.cpp:149
-#: src/slic3r/GUI/UnsavedChangesDialog.cpp:158
-#: src/slic3r/GUI/UnsavedChangesDialog.cpp:857
-msgid "Undef"
+#: src/slic3r/GUI/GUI.cpp:305
+msgid "Undefined"
 msgstr ""
 
-#: src/slic3r/GUI/GUI.cpp:304
-msgid "new unknown value %1% was changed to default value %2%"
+#: src/slic3r/GUI/GUI.cpp:330
+msgid "%1% was substituted with %2%"
 msgstr ""
 
-#: src/slic3r/GUI/GUI.cpp:316 src/slic3r/GUI/Plater.cpp:696
+#: src/slic3r/GUI/GUI.cpp:339
+msgid ""
+"Most likely the configuration was produced by a newer version of PrusaSlicer "
+"or by some PrusaSlicer fork."
+msgstr ""
+
+#: src/slic3r/GUI/GUI.cpp:340
+msgid "The following values were substituted:"
+msgstr ""
+
+#: src/slic3r/GUI/GUI.cpp:341
+msgid "Please review the substitutions and adjust them if needed."
+msgstr ""
+
+#: src/slic3r/GUI/GUI.cpp:351 src/slic3r/GUI/Plater.cpp:696
 msgid "SLA print settings"
 msgstr ""
 
-#: src/slic3r/GUI/GUI.cpp:332
-msgid ""
-"Loading profiles found following incompatibilities:%1% To recover these "
-"files, incompatible values were changed to default values.\n"
-" But data in files won't be changed until you save them in PrusaSlicer."
+#: src/slic3r/GUI/GUI.cpp:355 src/slic3r/GUI/PhysicalPrinterDialog.cpp:156
+msgid "Physical Printer"
 msgstr ""
 
-#: src/slic3r/GUI/GUI.cpp:349
+#: src/slic3r/GUI/GUI.cpp:368
 msgid ""
-"Loading %1% file found incompatibilities.\n"
-"To recover this file, incompatible values were changed to default values:"
-"%2%But data in files won't be changed until you save them in PrusaSlicer."
+"Configuration bundle was loaded, however some configuration values were not "
+"recognized."
+msgstr ""
+
+#: src/slic3r/GUI/GUI.cpp:378
+msgid ""
+"Configuration file \"%1%\" was loaded, however some configuration values "
+"were not recognized."
 msgstr ""
 
 #: src/slic3r/GUI/GUI_App.cpp:247
@@ -2541,7 +2555,7 @@ msgstr ""
 msgid "Start the application"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:589
+#: src/slic3r/GUI/GUI_App.cpp:591
 #, possible-c-format
 msgid ""
 "%s has encountered an error. It was likely caused by running out of memory. "
@@ -2551,11 +2565,11 @@ msgid ""
 "The application will now terminate."
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:592
+#: src/slic3r/GUI/GUI_App.cpp:594
 msgid "Fatal error"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:596
+#: src/slic3r/GUI/GUI_App.cpp:598
 msgid ""
 "PrusaSlicer has encountered a localization error. Please report to "
 "PrusaSlicer team, what language was active and in which scenario this issue "
@@ -2564,248 +2578,248 @@ msgid ""
 "The application will now terminate."
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:599
+#: src/slic3r/GUI/GUI_App.cpp:601
 msgid "Critical error"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:747
+#: src/slic3r/GUI/GUI_App.cpp:749
 msgid ""
 "Error parsing PrusaSlicer config file, it is probably corrupted. Try to "
 "manually delete the file to recover from the error. Your user profiles will "
 "not be affected."
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:753
+#: src/slic3r/GUI/GUI_App.cpp:755
 msgid ""
 "Error parsing PrusaGCodeViewer config file, it is probably corrupted. Try to "
 "manually delete the file to recover from the error."
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:807
+#: src/slic3r/GUI/GUI_App.cpp:809
 #, possible-c-format
 msgid ""
 "%s\n"
 "Do you want to continue?"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:809 src/slic3r/GUI/UnsavedChangesDialog.cpp:665
+#: src/slic3r/GUI/GUI_App.cpp:811 src/slic3r/GUI/UnsavedChangesDialog.cpp:665
 msgid "Remember my choice"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:844
+#: src/slic3r/GUI/GUI_App.cpp:846
 msgid "Loading configuration"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:915
+#: src/slic3r/GUI/GUI_App.cpp:917
 msgid "Preparing settings tabs"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1132
+#: src/slic3r/GUI/GUI_App.cpp:1134
 msgid ""
 "You have the following presets with saved options for \"Print Host upload\""
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1136
+#: src/slic3r/GUI/GUI_App.cpp:1138
 msgid ""
 "But since this version of PrusaSlicer we don't show this information in "
 "Printer Settings anymore.\n"
 "Settings will be available in physical printers settings."
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1138
+#: src/slic3r/GUI/GUI_App.cpp:1140
 msgid ""
 "By default new Printer devices will be named as \"Printer N\" during its "
 "creation.\n"
 "Note: This name can be changed later from the physical printers settings"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1141 src/slic3r/GUI/PhysicalPrinterDialog.cpp:691
+#: src/slic3r/GUI/GUI_App.cpp:1143 src/slic3r/GUI/PhysicalPrinterDialog.cpp:691
 msgid "Information"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1154 src/slic3r/GUI/GUI_App.cpp:1165
+#: src/slic3r/GUI/GUI_App.cpp:1156 src/slic3r/GUI/GUI_App.cpp:1167
 msgid "Recreating"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1170
+#: src/slic3r/GUI/GUI_App.cpp:1172
 msgid "Loading of current presets"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1175
+#: src/slic3r/GUI/GUI_App.cpp:1177
 msgid "Loading of a mode view"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1251
+#: src/slic3r/GUI/GUI_App.cpp:1253
 msgid "Choose one file (3MF/AMF):"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1263
+#: src/slic3r/GUI/GUI_App.cpp:1265
 msgid "Choose one or more files (STL/OBJ/AMF/3MF/PRUSA):"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1275
+#: src/slic3r/GUI/GUI_App.cpp:1277
 msgid "Choose one file (GCODE/.GCO/.G/.ngc/NGC):"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1286
+#: src/slic3r/GUI/GUI_App.cpp:1288
 msgid "Changing of an application language"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1409
+#: src/slic3r/GUI/GUI_App.cpp:1411
 msgid "Select the language"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1409
+#: src/slic3r/GUI/GUI_App.cpp:1411
 msgid "Language"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1558
+#: src/slic3r/GUI/GUI_App.cpp:1560
 msgid "modified"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1607
+#: src/slic3r/GUI/GUI_App.cpp:1609
 #, possible-c-format
 msgid "Run %s"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1611
+#: src/slic3r/GUI/GUI_App.cpp:1613
 msgid "&Configuration Snapshots"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1611
+#: src/slic3r/GUI/GUI_App.cpp:1613
 msgid "Inspect / activate configuration snapshots"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1612
+#: src/slic3r/GUI/GUI_App.cpp:1614
 msgid "Take Configuration &Snapshot"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1612
+#: src/slic3r/GUI/GUI_App.cpp:1614
 msgid "Capture a configuration snapshot"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1613
+#: src/slic3r/GUI/GUI_App.cpp:1615
 msgid "Check for updates"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1613
+#: src/slic3r/GUI/GUI_App.cpp:1615
 msgid "Check for configuration updates"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1616
+#: src/slic3r/GUI/GUI_App.cpp:1618
 msgid "&Preferences"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1622
+#: src/slic3r/GUI/GUI_App.cpp:1624
 msgid "Application preferences"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1627 src/slic3r/GUI/wxExtensions.cpp:685
+#: src/slic3r/GUI/GUI_App.cpp:1629 src/slic3r/GUI/wxExtensions.cpp:685
 msgid "Simple"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1627
+#: src/slic3r/GUI/GUI_App.cpp:1629
 msgid "Simple View Mode"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1629 src/slic3r/GUI/wxExtensions.cpp:687
+#: src/slic3r/GUI/GUI_App.cpp:1631 src/slic3r/GUI/wxExtensions.cpp:687
 msgctxt "Mode"
 msgid "Advanced"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1629
+#: src/slic3r/GUI/GUI_App.cpp:1631
 msgid "Advanced View Mode"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1630 src/slic3r/GUI/wxExtensions.cpp:688
+#: src/slic3r/GUI/GUI_App.cpp:1632 src/slic3r/GUI/wxExtensions.cpp:688
 msgid "Expert"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1630
+#: src/slic3r/GUI/GUI_App.cpp:1632
 msgid "Expert View Mode"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1635
+#: src/slic3r/GUI/GUI_App.cpp:1637
 msgid "Mode"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1635
+#: src/slic3r/GUI/GUI_App.cpp:1637
 #, possible-c-format
 msgid "%s View Mode"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1638
+#: src/slic3r/GUI/GUI_App.cpp:1640
 msgid "&Language"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1641
+#: src/slic3r/GUI/GUI_App.cpp:1643
 msgid "Flash printer &firmware"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1641
+#: src/slic3r/GUI/GUI_App.cpp:1643
 msgid "Upload a firmware image into an Arduino based printer"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1657
+#: src/slic3r/GUI/GUI_App.cpp:1659
 msgid "Taking configuration snapshot"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1657
+#: src/slic3r/GUI/GUI_App.cpp:1659
 msgid "Snapshot name"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1695
+#: src/slic3r/GUI/GUI_App.cpp:1697
 msgid "Failed to activate configuration snapshot."
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1745
+#: src/slic3r/GUI/GUI_App.cpp:1747
 msgid "Language selection"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1747
+#: src/slic3r/GUI/GUI_App.cpp:1749
 msgid ""
 "Switching the language will trigger application restart.\n"
 "You will lose content of the plater."
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1749
+#: src/slic3r/GUI/GUI_App.cpp:1751
 msgid "Do you want to proceed?"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1776
+#: src/slic3r/GUI/GUI_App.cpp:1778
 msgid "&Configuration"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1807
+#: src/slic3r/GUI/GUI_App.cpp:1809
 msgid "The preset(s) modifications are successfully saved"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1828
+#: src/slic3r/GUI/GUI_App.cpp:1830
 msgid "The uploads are still ongoing"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1828
+#: src/slic3r/GUI/GUI_App.cpp:1830
 msgid "Stop them and continue anyway?"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:1831
+#: src/slic3r/GUI/GUI_App.cpp:1833
 msgid "Ongoing uploads"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:2059 src/slic3r/GUI/Tab.cpp:3249
+#: src/slic3r/GUI/GUI_App.cpp:2061 src/slic3r/GUI/Tab.cpp:3249
 msgid "It's impossible to print multi-part object(s) with SLA technology."
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:2060
+#: src/slic3r/GUI/GUI_App.cpp:2062
 msgid "Please check and fix your object list."
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:2061 src/slic3r/GUI/Jobs/SLAImportJob.cpp:212
+#: src/slic3r/GUI/GUI_App.cpp:2063 src/slic3r/GUI/Jobs/SLAImportJob.cpp:212
 #: src/slic3r/GUI/Plater.cpp:2361 src/slic3r/GUI/Tab.cpp:3251
 msgid "Attention!"
 msgstr ""
 
-#: src/slic3r/GUI/GUI_App.cpp:2078
+#: src/slic3r/GUI/GUI_App.cpp:2080
 msgid "Select a gcode file:"
 msgstr ""
 
@@ -3791,11 +3805,11 @@ msgid "Load Config from ini/amf/3mf/gcode and merge"
 msgstr ""
 
 #: src/slic3r/GUI/KBShortcutsDialog.cpp:79 src/slic3r/GUI/Plater.cpp:771
-#: src/slic3r/GUI/Plater.cpp:6074 src/libslic3r/PrintConfig.cpp:3639
+#: src/slic3r/GUI/Plater.cpp:6075 src/libslic3r/PrintConfig.cpp:3639
 msgid "Export G-code"
 msgstr ""
 
-#: src/slic3r/GUI/KBShortcutsDialog.cpp:80 src/slic3r/GUI/Plater.cpp:6075
+#: src/slic3r/GUI/KBShortcutsDialog.cpp:80 src/slic3r/GUI/Plater.cpp:6076
 msgid "Send G-code"
 msgstr ""
 
@@ -4891,7 +4905,7 @@ msgid "Save zip file as:"
 msgstr ""
 
 #: src/slic3r/GUI/MainFrame.cpp:1406 src/slic3r/GUI/Plater.cpp:3017
-#: src/slic3r/GUI/Plater.cpp:5602 src/slic3r/GUI/Tab.cpp:1582
+#: src/slic3r/GUI/Plater.cpp:5603 src/slic3r/GUI/Tab.cpp:1582
 #: src/slic3r/GUI/Tab.cpp:4122
 msgid "Slicing"
 msgstr ""
@@ -4992,72 +5006,68 @@ msgstr ""
 msgid "%s information"
 msgstr ""
 
-#: src/slic3r/GUI/MsgDialog.cpp:114
-msgid "Note that"
-msgstr ""
-
-#: src/slic3r/GUI/NotificationManager.hpp:471
+#: src/slic3r/GUI/NotificationManager.cpp:41
 msgid "3D Mouse disconnected."
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.hpp:474
+#: src/slic3r/GUI/NotificationManager.cpp:44
 msgid "Configuration update is available."
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.hpp:474
+#: src/slic3r/GUI/NotificationManager.cpp:44
 msgid "See more."
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.hpp:476
+#: src/slic3r/GUI/NotificationManager.cpp:46
 msgid "New version is available."
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.hpp:476
+#: src/slic3r/GUI/NotificationManager.cpp:46
 msgid "See Releases page."
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.hpp:479
+#: src/slic3r/GUI/NotificationManager.cpp:49
 msgid ""
 "You have just added a G-code for color change, but its value is empty.\n"
 "To export the G-code correctly, check the \"Color Change G-code\" in "
 "\"Printer Settings > Custom G-code\""
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.cpp:515
-#: src/slic3r/GUI/NotificationManager.cpp:523
+#: src/slic3r/GUI/NotificationManager.cpp:533
+#: src/slic3r/GUI/NotificationManager.cpp:541
 msgid "More"
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.cpp:890
-#: src/slic3r/GUI/NotificationManager.cpp:1170
+#: src/slic3r/GUI/NotificationManager.cpp:908
+#: src/slic3r/GUI/NotificationManager.cpp:1188
 msgid "Export G-Code."
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.cpp:936
+#: src/slic3r/GUI/NotificationManager.cpp:954
 msgid "Open Folder."
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.cpp:975
+#: src/slic3r/GUI/NotificationManager.cpp:993
 msgid "Eject drive"
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.cpp:1089
-#: src/slic3r/GUI/NotificationManager.cpp:1105
-#: src/slic3r/GUI/NotificationManager.cpp:1116
+#: src/slic3r/GUI/NotificationManager.cpp:1107
+#: src/slic3r/GUI/NotificationManager.cpp:1123
+#: src/slic3r/GUI/NotificationManager.cpp:1134
 msgid "ERROR:"
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.cpp:1094
-#: src/slic3r/GUI/NotificationManager.cpp:1109
-#: src/slic3r/GUI/NotificationManager.cpp:1124
+#: src/slic3r/GUI/NotificationManager.cpp:1112
+#: src/slic3r/GUI/NotificationManager.cpp:1127
+#: src/slic3r/GUI/NotificationManager.cpp:1142
 msgid "WARNING:"
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.cpp:1173
+#: src/slic3r/GUI/NotificationManager.cpp:1191
 msgid "Slicing finished."
 msgstr ""
 
-#: src/slic3r/GUI/NotificationManager.cpp:1215
+#: src/slic3r/GUI/NotificationManager.cpp:1233
 msgid "Exporting finished."
 msgstr ""
 
@@ -5128,10 +5138,6 @@ msgstr ""
 
 #: src/slic3r/GUI/PhysicalPrinterDialog.cpp:82
 msgid "This printer will be shown in the presets list as"
-msgstr ""
-
-#: src/slic3r/GUI/PhysicalPrinterDialog.cpp:156
-msgid "Physical Printer"
 msgstr ""
 
 #: src/slic3r/GUI/PhysicalPrinterDialog.cpp:163
@@ -5315,12 +5321,12 @@ msgstr ""
 msgid "Around object"
 msgstr ""
 
-#: src/slic3r/GUI/Plater.cpp:757 src/slic3r/GUI/Plater.cpp:6075
+#: src/slic3r/GUI/Plater.cpp:757 src/slic3r/GUI/Plater.cpp:6076
 msgid "Send to printer"
 msgstr ""
 
 #: src/slic3r/GUI/Plater.cpp:772 src/slic3r/GUI/Plater.cpp:3017
-#: src/slic3r/GUI/Plater.cpp:5605
+#: src/slic3r/GUI/Plater.cpp:5606
 msgid "Slice now"
 msgstr ""
 
@@ -5820,44 +5826,44 @@ msgstr ""
 msgid "Cut by Plane"
 msgstr ""
 
-#: src/slic3r/GUI/Plater.cpp:5337
+#: src/slic3r/GUI/Plater.cpp:5338
 msgid "Save G-code file as:"
 msgstr ""
 
-#: src/slic3r/GUI/Plater.cpp:5337
+#: src/slic3r/GUI/Plater.cpp:5338
 msgid "Save SL1 / SL1S file as:"
 msgstr ""
 
-#: src/slic3r/GUI/Plater.cpp:5484
+#: src/slic3r/GUI/Plater.cpp:5485
 #, possible-c-format
 msgid "STL file exported to %s"
 msgstr ""
 
-#: src/slic3r/GUI/Plater.cpp:5501
+#: src/slic3r/GUI/Plater.cpp:5502
 #, possible-c-format
 msgid "AMF file exported to %s"
 msgstr ""
 
-#: src/slic3r/GUI/Plater.cpp:5504
+#: src/slic3r/GUI/Plater.cpp:5505
 #, possible-c-format
 msgid "Error exporting AMF file %s"
 msgstr ""
 
-#: src/slic3r/GUI/Plater.cpp:5533
+#: src/slic3r/GUI/Plater.cpp:5534
 #, possible-c-format
 msgid "3MF file exported to %s"
 msgstr ""
 
-#: src/slic3r/GUI/Plater.cpp:5538
+#: src/slic3r/GUI/Plater.cpp:5539
 #, possible-c-format
 msgid "Error exporting 3MF file %s"
 msgstr ""
 
-#: src/slic3r/GUI/Plater.cpp:6074
+#: src/slic3r/GUI/Plater.cpp:6075
 msgid "Export"
 msgstr ""
 
-#: src/slic3r/GUI/Plater.cpp:6169
+#: src/slic3r/GUI/Plater.cpp:6170
 msgid "Paste From Clipboard"
 msgstr ""
 
@@ -7320,6 +7326,12 @@ msgstr ""
 msgid "Material Settings"
 msgstr ""
 
+#: src/slic3r/GUI/UnsavedChangesDialog.cpp:149
+#: src/slic3r/GUI/UnsavedChangesDialog.cpp:158
+#: src/slic3r/GUI/UnsavedChangesDialog.cpp:857
+msgid "Undef"
+msgstr ""
+
 #: src/slic3r/GUI/UnsavedChangesDialog.cpp:537
 msgid "PrusaSlicer is closing: Unsaved Changes"
 msgstr ""
@@ -7500,6 +7512,10 @@ msgstr ""
 
 #: src/slic3r/GUI/UpdateDialogs.cpp:136
 msgid "Install"
+msgstr ""
+
+#: src/slic3r/GUI/UpdateDialogs.cpp:140
+msgid "Don't install"
 msgstr ""
 
 #: src/slic3r/GUI/UpdateDialogs.cpp:157 src/slic3r/GUI/UpdateDialogs.cpp:219
@@ -11616,107 +11632,6 @@ msgstr ""
 
 #: src/libslic3r/PrintConfig.cpp:3768
 msgid "Scale to fit the given volume."
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3777
-msgid "Ignore non-existent config files"
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3778
-msgid "Do not fail if a file supplied to --load does not exist."
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3781
-msgid ""
-"Forward-compatibility rule when loading configurations from config files and "
-"project files (3MF, AMF)."
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3782
-msgid ""
-"This version of PrusaSlicer may not understand configurations produced by "
-"newest PrusaSlicer versions. For example, newer PrusaSlicer may extend the "
-"list of supported firmware flavors. One may decide to bail out or to "
-"substitute an unknown value with a default silently or verbosely."
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3789
-msgid "Bail out on unknown configuration values"
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3790
-msgid ""
-"Enable reading unknown configuration values by verbosely substituting them "
-"with defaults."
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3791
-msgid ""
-"Enable reading unknown configuration values by silently substituting them "
-"with defaults."
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3795
-msgid "Load config file"
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3796
-msgid ""
-"Load configuration from the specified file. It can be used more than once to "
-"load options from multiple files."
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3799
-msgid "Output File"
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3800
-msgid ""
-"The file where the output will be written (if not specified, it will be "
-"based on the input file)."
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3804
-msgid "Single instance mode"
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3805
-msgid ""
-"If enabled, the command line arguments are sent to an existing instance of "
-"GUI PrusaSlicer, or an existing PrusaSlicer window is activated. Overrides "
-"the \"single_instance\" configuration value from application preferences."
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3816
-msgid "Data directory"
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3817
-msgid ""
-"Load and store settings at the given directory. This is useful for "
-"maintaining different profiles or including configurations from a network "
-"storage."
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3820
-msgid "Logging level"
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3821
-msgid ""
-"Sets logging sensitivity. 0:fatal, 1:error, 2:warning, 3:info, 4:debug, 5:"
-"trace\n"
-"For example. loglevel=2 logs fatal, error and warning level messages."
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3827
-msgid "Render with a software renderer"
-msgstr ""
-
-#: src/libslic3r/PrintConfig.cpp:3828
-msgid ""
-"Render with a software renderer. The bundled MESA software renderer is "
-"loaded instead of the default OpenGL driver."
 msgstr ""
 
 #: src/libslic3r/Zipper.cpp:27
