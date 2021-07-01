@@ -70,7 +70,7 @@ private:
 class InfoDialog : public MsgDialog
 {
 public:
-	InfoDialog(wxWindow *parent, const wxString &msg);
+	InfoDialog(wxWindow *parent, const wxString &title, const wxString &msg);
 	InfoDialog(InfoDialog&&) = delete;
 	InfoDialog(const InfoDialog&) = delete;
 	InfoDialog&operator=(InfoDialog&&) = delete;
