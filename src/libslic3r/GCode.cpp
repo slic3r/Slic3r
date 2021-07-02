@@ -4018,7 +4018,7 @@ std::string GCode::toolchange(uint16_t extruder_id, double print_z) {
     // Process the custom toolchange_gcode. If it is empty, insert just a Tn command.
     const std::string& toolchange_gcode = m_config.toolchange_gcode.value;
     std::string toolchange_gcode_parsed;
-    if (!toolchange_gcode.empty()) {
+    if (!toolchange_gcode.empty() && m_writer.multiple_extruders) {
         DynamicConfig config;
         config.set_key_value("previous_extruder", new ConfigOptionInt((int)(m_writer.tool() != nullptr ? m_writer.tool()->id() : -1)));
         config.set_key_value("next_extruder", new ConfigOptionInt((int)extruder_id));
@@ -4032,7 +4032,7 @@ std::string GCode::toolchange(uint16_t extruder_id, double print_z) {
 
     // We inform the writer about what is happening, but we may not use the resulting gcode.
     std::string toolchange_command = m_writer.toolchange(extruder_id);
-    if (toolchange_gcode.empty())// !custom_gcode_changes_tool(toolchange_gcode_parsed, m_writer.toolchange_prefix(), extruder_id) && !no_toolchange)
+    if (toolchange_gcode.empty() && m_writer.multiple_extruders)// !custom_gcode_changes_tool(toolchange_gcode_parsed, m_writer.toolchange_prefix(), extruder_id) && !no_toolchange)
         gcode += toolchange_command;
     else {
         // user provided his own toolchange gcode, no need to do anything
