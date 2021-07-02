@@ -13,6 +13,8 @@ group:Support head
 	setting:support_head_width
 group:Support pillar
 	setting:support_pillar_diameter
+	setting:support_small_pillar_diameter_percent
+	setting:support_max_bridges_on_pillar
 	setting:support_pillar_connection_mode
 	setting:support_buildplate_only
 # TODO: This parameter is not used at the moment.
@@ -21,8 +23,8 @@ group:Support pillar
 	setting:support_base_height
 	setting:support_base_safety_distance
 # Mirrored parameter from Pad page for toggling elevation on the same page
-	setting:pad_around_object
 	setting:support_object_elevation
+	support_object_elevation_description
 group:Connection of the support sticks and junctions
 	setting:support_critical_angle
 	setting:support_max_bridge_length
@@ -47,6 +49,13 @@ group:Pad
 	setting:pad_object_connector_stride
 	setting:pad_object_connector_width
 	setting:pad_object_connector_penetration
+
+page:Hollowing:hollowing
+group:Hollowing
+	setting:hollowing_enable
+	setting:hollowing_min_thickness
+	setting:hollowing_quality
+	setting:hollowing_closing_distance
 
 page:Advanced:wrench
 group:Slicing

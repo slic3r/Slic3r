@@ -5271,6 +5271,9 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         float v = boost::lexical_cast<float>(value);
         if (v > 0)
             value = boost::lexical_cast<std::string>(-v);
+    }
+    else if ("elefant_foot_min_width" == opt_key) {
+        opt_key = "elephant_foot_min_width";
     } else if (opt_key == "thumbnails") {
         if (value.empty())
             value = "0x0,0x0";
@@ -5537,8 +5540,8 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
                 value = "0";
             }
         }
-    } else if ("elefant_foot_min_width" == opt_key) {
-        opt_key = "elephant_foot_min_width";
+    } else if ("elephant_foot_min_width" == opt_key) {
+        opt_key = "elefant_foot_min_width";
     } else if("first_layer_acceleration" == opt_key || "infill_acceleration" == opt_key || "bridge_acceleration" == opt_key || "default_acceleration" == opt_key || "overhangs_speed" == opt_key || "perimeter_acceleration" == opt_key){
         if (value.find("%") != std::string::npos)
             value = "0";

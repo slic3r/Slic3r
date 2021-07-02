@@ -1953,6 +1953,16 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             };
             current_group->append_line(current_line);
             current_page->descriptions.push_back("volumetric_speed");
+        } else if(boost::starts_with(full_line, "support_object_elevation_description")) {
+            TabSLAPrint* tab = nullptr;
+            if ((tab = dynamic_cast<TabSLAPrint*>(this)) == nullptr) continue;
+            Line line{ "", "" };
+            line.full_width = 1;
+            line.widget = [this, tab](wxWindow* parent) {
+                return description_line_widget(parent, &(tab->m_support_object_elevation_description_line));
+            };
+            current_group->append_line(line);
+            current_page->descriptions.push_back("support_object_elevation");
         } else if (boost::starts_with(full_line, "print_host_upload_description")) {
             TabPrinter* tab = nullptr;
             if ((tab = dynamic_cast<TabPrinter*>(this)) == nullptr) continue;
