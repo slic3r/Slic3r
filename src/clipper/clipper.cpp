@@ -1457,13 +1457,16 @@ OutPt* Clipper::AddLocalMinPoly(TEdge *e1, TEdge *e2, const IntPoint &Pt)
         prevE = e->PrevInAEL;
   }
 
-  if (prevE && prevE->OutIdx >= 0 &&
-      (TopX(*prevE, Pt.Y) == TopX(*e, Pt.Y)) &&
-      SlopesEqual(*e, *prevE, m_UseFullRange) &&
-      (e->WindDelta != 0) && (prevE->WindDelta != 0))
+  if (prevE && prevE->OutIdx >= 0 && prevE->Top.Y < Pt.Y && e->Top.Y < Pt.Y)
   {
-    OutPt* outPt = AddOutPt(prevE, Pt);
-    m_Joins.emplace_back(Join(result, outPt, e->Top));
+      cInt xPrev = TopX(*prevE, Pt.Y);
+      cInt xE = TopX(*e, Pt.Y);
+      if (xPrev == xE && (e->WindDelta != 0) && (prevE->WindDelta != 0) &&
+          SlopesEqual(IntPoint(xPrev, Pt.Y), prevE->Top, IntPoint(xE, Pt.Y), e->Top, m_UseFullRange))
+      {
+          OutPt* outPt = AddOutPt(prevE, Pt);
+          m_Joins.emplace_back(Join(result, outPt, e->Top));
+      }
   }
   return result;
 }
@@ -2310,6 +2313,10 @@ void Clipper::ProcessHorizontal(TEdge *horzEdge)
 
     if (horzEdge->OutIdx >= 0 && !IsOpen)  //note: may be done multiple times
 		{
+#ifdef use_xyz
+            if (dir == dLeftToRight) SetZ(e->Curr, *horzEdge, *e);
+            else SetZ(e->Curr, *e, *horzEdge);
+#endif
             op1 = AddOutPt(horzEdge, e->Curr);
 			TEdge* eNextHorz = m_SortedEdges;
 			while (eNextHorz)
@@ -2634,6 +2641,9 @@ void Clipper::ProcessEdgesAtTopOfScanbeam(const cInt topY)
       {
         e->Curr.X = TopX( *e, topY );
         e->Curr.Y = topY;
+#ifdef use_xyz
+        e->Curr.Z = topY == e->Top.Y ? e->Top.Z : (topY == e->Bot.Y ? e->Bot.Z : 0);
+#endif
       }
 
       //When StrictlySimple and 'e' is being touched by another edge, then
@@ -3203,6 +3213,14 @@ bool Clipper::JoinPoints(Join *j, OutRec* outRec1, OutRec* outRec2)
 }
 //----------------------------------------------------------------------
 
+static OutRec* ParseFirstLeft(OutRec* FirstLeft)
+{
+    while (FirstLeft && !FirstLeft->Pts)
+        FirstLeft = FirstLeft->FirstLeft;
+    return FirstLeft;
+}
+//------------------------------------------------------------------------------
+
 // This is potentially very expensive! O(n^3)!
 void Clipper::FixupFirstLefts1(OutRec* OldOutRec, OutRec* NewOutRec) const
 { 
@@ -3223,8 +3241,11 @@ void Clipper::FixupFirstLefts1(OutRec* OldOutRec, OutRec* NewOutRec) const
 void Clipper::FixupFirstLefts2(OutRec* OldOutRec, OutRec* NewOutRec) const
 { 
   //reassigns FirstLeft WITHOUT testing if NewOutRec contains the polygon
-  for (OutRec *outRec : m_PolyOuts)
-    if (outRec->FirstLeft == OldOutRec) outRec->FirstLeft = NewOutRec;
+    for (OutRec* outRec : m_PolyOuts)
+    {
+        OutRec* firstLeft = ParseFirstLeft(outRec->FirstLeft);
+        if (firstLeft == OldOutRec) outRec->FirstLeft = NewOutRec;
+    }
 }
 //----------------------------------------------------------------------
 
