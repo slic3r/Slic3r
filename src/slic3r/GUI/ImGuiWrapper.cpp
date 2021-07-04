@@ -138,12 +138,18 @@ void ImGuiWrapper::set_language(const std::string &language)
         0x0100, 0x017F, // Latin Extended-A
         0,
     };
-	static const ImWchar ranges_turkish[] = {
-		0x0020, 0x01FF, // Basic Latin + Latin Supplement
-		0x0100, 0x017F, // Latin Extended-A
-		0x0180, 0x01FF, // Turkish
-		0,
-	};
+    static const ImWchar ranges_turkish[] = {
+        0x0020, 0x01FF, // Basic Latin + Latin Supplement
+        0x0100, 0x017F, // Latin Extended-A
+        0x0180, 0x01FF, // Turkish
+        0,
+    };
+    static const ImWchar ranges_hungarian[] = {
+        0x0020, 0x01FF, // Basic Latin + Latin Supplement
+        0x2011, 0x20AC, // hungarian
+        0x27E8, 0x27E9, // hungarian
+        0,
+    };
     static const ImWchar ranges_vietnamese[] =
     {
         0x0020, 0x00FF, // Basic Latin
@@ -165,6 +171,8 @@ void ImGuiWrapper::set_language(const std::string &language)
         ranges = ranges_turkish;
     } else if (lang == "vi") {
         ranges = ranges_vietnamese;
+    } else if (lang == "hu") {
+        ranges = ranges_hungarian;
     } else if (lang == "ja") {
         ranges = ImGui::GetIO().Fonts->GetGlyphRangesJapanese(); // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
         m_font_cjk = true;
