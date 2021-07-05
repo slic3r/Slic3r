@@ -1841,6 +1841,10 @@ void GCodeProcessor::process_G1(const GCodeReader::GCodeLine& line)
 
     ++m_g1_line_id;
 
+    //reprap thingy, ignore
+    if (line.has('R') || line.has('H'))
+        return;
+
     // enable processing of lines M201/M203/M204/M205
     m_time_processor.machine_envelope_processing_enabled = true;
 
