@@ -5,11 +5,15 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: PhraseApp (phraseapp.com)\n"
+"X-Generator: Phrase (phrase.com)\n"
 
 #: src/slic3r/GUI/Tab.cpp:4124
-msgid "\"%1%\" is disabled because \"%2%\" is on in \"%3%\" category.\nTo enable \"%1%\", please switch off \"%2%\""
-msgstr "\"%1%\" ist deaktiviert, weil \"%2%\" in der Kategorie \"%3%\" eingeschaltet ist.\nUm \"%1%\" zu aktivieren, schalten Sie bitte \"%2%\" aus."
+msgid ""
+"\"%1%\" is disabled because \"%2%\" is on in \"%3%\" category.\n"
+"To enable \"%1%\", please switch off \"%2%\""
+msgstr ""
+"\"%1%\" ist deaktiviert, weil \"%2%\" in der Kategorie \"%3%\" eingeschaltet ist.\n"
+"Um \"%1%\" zu aktivieren, schalten Sie bitte \"%2%\" aus."
 
 #: src/libslic3r/PrintConfig.cpp:249 src/libslic3r/PrintConfig.cpp:828
 #: src/libslic3r/PrintConfig.cpp:1148 src/libslic3r/PrintConfig.cpp:1327
@@ -27,6 +31,10 @@ msgstr "%1% Voreinstellung"
 #: src/slic3r/GUI/Plater.cpp:4423
 msgid "%1% printer was active at the time the target Undo / Redo snapshot was taken. Switching to %1% printer requires reloading of %1% presets."
 msgstr "Der %1% Drucker war zum Zeitpunkt der Aufnahme des Ziel-Rückgängig-/Wiederherstellungs-Schnappschusses aktiv. Die Umstellung auf den %1%-Drucker erfordert ein Neuladen der %1%-Voreinstellungen."
+
+#: src/slic3r/GUI/GUI.cpp:330
+msgid "%1% was substituted with %2%"
+msgstr "%1% wurde durch %2% ersetzt"
 
 #: src/slic3r/GUI/MainFrame.cpp:1585
 msgid "%1% was successfully sliced."
@@ -63,8 +71,12 @@ msgstr "%d Voreinstellungen erfolgreich importiert."
 
 #: src/slic3r/GUI/GUI_App.cpp:718
 #, possible-c-format
-msgid "%s\nDo you want to continue?"
-msgstr "%s\nMöchten Sie fortfahren?"
+msgid ""
+"%s\n"
+"Do you want to continue?"
+msgstr ""
+"%s\n"
+"Möchten Sie fortfahren?"
 
 #: src/slic3r/GUI/MainFrame.cpp:917 src/slic3r/GUI/MainFrame.cpp:1316
 #, possible-c-format
@@ -108,8 +120,14 @@ msgstr "%s ist auf einen Fehler gestoßen"
 
 #: src/slic3r/GUI/GUI_App.cpp:528
 #, possible-c-format
-msgid "%s has encountered an error. It was likely caused by running out of memory. If you are sure you have enough RAM on your system, this may also be a bug and we would be glad if you reported it.\n\nThe application will now terminate."
-msgstr "%s ist auf einen Fehler gestoßen. Es wurde wahrscheinlich dadurch verursacht, dass der Speicher knapp wird. Wenn Sie sicher sind, dass Sie genügend RAM auf Ihrem System haben, kann dies auch ein Programmfehler sein, und wir würden uns freuen, wenn Sie ihn melden würden.\n\nDie Anwendung wird nun beendet."
+msgid ""
+"%s has encountered an error. It was likely caused by running out of memory. If you are sure you have enough RAM on your system, this may also be a bug and we would be glad if you reported it.\n"
+"\n"
+"The application will now terminate."
+msgstr ""
+"%s ist auf einen Fehler gestoßen. Es wurde wahrscheinlich dadurch verursacht, dass der Speicher knapp wird. Wenn Sie sicher sind, dass Sie genügend RAM auf Ihrem System haben, kann dies auch ein Programmfehler sein, und wir würden uns freuen, wenn Sie ihn melden würden.\n"
+"\n"
+"Die Anwendung wird nun beendet."
 
 #: src/slic3r/GUI/BackgroundSlicingProcess.cpp:62
 #, possible-c-format
@@ -126,10 +144,27 @@ msgstr "Für %s sind keine Konfigurationsaktualisierungen verfügbar."
 msgid "%s incompatibility"
 msgstr "%s-Inkompatibilität"
 
+#: src/slic3r/GUI/MsgDialog.cpp:114
+#, possible-c-format
+msgid "%s information"
+msgstr "%s Information"
+
 #: src/slic3r/GUI/UpdateDialogs.cpp:270
 #, possible-c-format
-msgid "%s now uses an updated configuration structure.\n\nSo called 'System presets' have been introduced, which hold the built-in default settings for various printers. These System presets cannot be modified, instead, users now may create their own presets inheriting settings from one of the System presets.\nAn inheriting preset may either inherit a particular value from its parent or override it with a customized value.\n\nPlease proceed with the %s that follows to set up the new presets and to choose whether to enable automatic preset updates."
-msgstr "%s verwendet nun eine aktualisierte Konfigurationsstruktur.\n\nSogenannte 'Systemeinstellungen' wurden eingeführt; diese enthalten die eingebauten Standardeinstellungen für verschiedene Drucker. Diese Systemeinstellungen können nicht verändert werden. Stattdessen können Benutzer nun ihre eigenen Voreinstellungen erstellen, die Werte von einer der Systemeinstellungen übernehmen.\nEine übernehmende Voreinstellung kann entweder einen bestimmten Wert von ihrem Vorbild übernehmen, oder ihn mit einem eigenen Wert überschreiben.\n\nBitte fahren Sie fort mit '%s'. Dies folgt nun, um die neuen Einstellungen einzurichten sowie auszuwählen, ob Einstellungen automatisch aktualisiert werden dürfen."
+msgid ""
+"%s now uses an updated configuration structure.\n"
+"\n"
+"So called 'System presets' have been introduced, which hold the built-in default settings for various printers. These System presets cannot be modified, instead, users now may create their own presets inheriting settings from one of the System presets.\n"
+"An inheriting preset may either inherit a particular value from its parent or override it with a customized value.\n"
+"\n"
+"Please proceed with the %s that follows to set up the new presets and to choose whether to enable automatic preset updates."
+msgstr ""
+"%s verwendet nun eine aktualisierte Konfigurationsstruktur.\n"
+"\n"
+"Sogenannte 'Systemeinstellungen' wurden eingeführt; diese enthalten die eingebauten Standardeinstellungen für verschiedene Drucker. Diese Systemeinstellungen können nicht verändert werden. Stattdessen können Benutzer nun ihre eigenen Voreinstellungen erstellen, die Werte von einer der Systemeinstellungen übernehmen.\n"
+"Eine übernehmende Voreinstellung kann entweder einen bestimmten Wert von ihrem Vorbild übernehmen, oder ihn mit einem eigenen Wert überschreiben.\n"
+"\n"
+"Bitte fahren Sie fort mit '%s'. Dies folgt nun, um die neuen Einstellungen einzurichten sowie auszuwählen, ob Einstellungen automatisch aktualisiert werden dürfen."
 
 #: src/slic3r/GUI/GUI_App.cpp:1512
 #, possible-c-format
@@ -138,8 +173,18 @@ msgstr "%s Anzeigemodus"
 
 #: src/slic3r/GUI/UpdateDialogs.cpp:151
 #, possible-c-format
-msgid "%s will now start updates. Otherwise it won't be able to start.\n\nNote that a full configuration snapshot will be created first. It can then be restored at any time should there be a problem with the new version.\n\nUpdated configuration bundles:"
-msgstr "%s beginnt nun mit der Aktualisierung. Andernfalls kann nicht gestartet werden.\n\nBeachten Sie, dass zuerst ein vollständiger Konfigurations-Snapshot erstellt wird. Er kann dann jederzeit wiederhergestellt werden, falls es ein Problem mit der neuen Version geben sollte.\n\nAktualisierte Konfigurations-Bundles:"
+msgid ""
+"%s will now start updates. Otherwise it won't be able to start.\n"
+"\n"
+"Note that a full configuration snapshot will be created first. It can then be restored at any time should there be a problem with the new version.\n"
+"\n"
+"Updated configuration bundles:"
+msgstr ""
+"%s beginnt nun mit der Aktualisierung. Andernfalls kann nicht gestartet werden.\n"
+"\n"
+"Beachten Sie, dass zuerst ein vollständiger Konfigurations-Snapshot erstellt wird. Er kann dann jederzeit wiederhergestellt werden, falls es ein Problem mit der neuen Version geben sollte.\n"
+"\n"
+"Aktualisierte Konfigurations-Bundles:"
 
 #: src/slic3r/GUI/MainFrame.cpp:933 src/slic3r/GUI/MainFrame.cpp:937
 #: src/slic3r/GUI/MainFrame.cpp:1329
@@ -765,8 +810,12 @@ msgid "AMF file exported to %s"
 msgstr "AMF Datei exportiert nach %s"
 
 #: src/slic3r/GUI/GLCanvas3D.cpp:638
-msgid "An object outside the print area was detected.\nResolve the current problem to continue slicing."
-msgstr "Es wurde ein Objekt außerhalb des Druckbereichs erkannt.\nDas Problem lösen, um mit dem Slicen fortzufahren."
+msgid ""
+"An object outside the print area was detected.\n"
+"Resolve the current problem to continue slicing."
+msgstr ""
+"Es wurde ein Objekt außerhalb des Druckbereichs erkannt.\n"
+"Das Problem lösen, um mit dem Slicen fortzufahren."
 
 #: src/slic3r/GUI/GLCanvas3D.cpp:633
 msgid "An object outside the print area was detected."
@@ -819,7 +868,9 @@ msgid "Are you sure you want to %1% the selected preset?"
 msgstr "Sind Sie sicher, dass Sie die gewählte Voreinstellung %1% möchten?"
 
 #: src/slic3r/GUI/FirmwareDialog.cpp:902
-msgid "Are you sure you want to cancel firmware flashing?\nThis could leave your printer in an unusable state!"
+msgid ""
+"Are you sure you want to cancel firmware flashing?\n"
+"This could leave your printer in an unusable state!"
 msgstr "Sind Sie sicher, dass Sie das Flashen der Firmware abbrechen wollen? Dies könnte Ihren Drucker in einen unbrauchbaren Zustand versetzen!"
 
 #: src/slic3r/GUI/DoubleSlider.cpp:2122 src/slic3r/GUI/DoubleSlider.cpp:2142
@@ -1010,12 +1061,18 @@ msgid "BACK ARROW"
 msgstr "PFEIL ZURÜCK"
 
 #: src/slic3r/GUI/Tab.cpp:3727
-msgid "BACK ARROW icon indicates that the settings were changed and are not equal to the last saved preset for the current option group.\nClick to reset all settings for the current option group to the last saved preset."
+msgid ""
+"BACK ARROW icon indicates that the settings were changed and are not equal to the last saved preset for the current option group.\n"
+"Click to reset all settings for the current option group to the last saved preset."
 msgstr "Das Symbol PFEIL ZURÜCK zeigt an, dass die Einstellungen geändert wurden und nicht mit dem zuletzt gespeicherten Preset für die aktuelle Optionsgruppe übereinstimmen. Klicken Sie hier, um alle Einstellungen für die aktuelle Optionsgruppe auf das zuletzt gespeicherte Preset zurückzusetzen."
 
 #: src/slic3r/GUI/Tab.cpp:3741
-msgid "BACK ARROW icon indicates that the value was changed and is not equal to the last saved preset.\nClick to reset current value to the last saved preset."
-msgstr "Das Symbol PFEIL ZURÜCK zeigt an, dass der Wert geändert wurde und nicht mit dem zuletzt gespeicherten Preset übereinstimmt. \nKlicken Sie, um den aktuellen Wert auf das zuletzt gespeicherte Preset zurückzusetzen."
+msgid ""
+"BACK ARROW icon indicates that the value was changed and is not equal to the last saved preset.\n"
+"Click to reset current value to the last saved preset."
+msgstr ""
+"Das Symbol PFEIL ZURÜCK zeigt an, dass der Wert geändert wurde und nicht mit dem zuletzt gespeicherten Preset übereinstimmt. \n"
+"Klicken Sie, um den aktuellen Wert auf das zuletzt gespeicherte Preset zurückzusetzen."
 
 #: src/slic3r/GUI/Preferences.cpp:72
 msgid "Background processing"
@@ -1215,16 +1272,24 @@ msgid "buffer too small"
 msgstr "Puffer zu klein"
 
 #: src/slic3r/GUI/GUI_App.cpp:1152
-msgid "But since this version of PrusaSlicer we don't show this information in Printer Settings anymore.\nSettings will be available in physical printers settings."
-msgstr "Seit dieser Version von PrusaSlicer zeigen wir diese Informationen nicht mehr in den Druckereinstellungen an.\nDie Einstellungen sind in den Einstellungen für physische Drucker verfügbar."
+msgid ""
+"But since this version of PrusaSlicer we don't show this information in Printer Settings anymore.\n"
+"Settings will be available in physical printers settings."
+msgstr ""
+"Seit dieser Version von PrusaSlicer zeigen wir diese Informationen nicht mehr in den Druckereinstellungen an.\n"
+"Die Einstellungen sind in den Einstellungen für physische Drucker verfügbar."
 
 #: src/slic3r/GUI/ButtonsDescription.cpp:16
 msgid "Buttons And Text Colors Description"
 msgstr "Schaltflächen und Textfarben Beschreibung"
 
 #: src/slic3r/GUI/GUI_App.cpp:1084
-msgid "By default new Printer devices will be named as \"Printer N\" during its creation.\nNote: This name can be changed later from the physical printers settings"
-msgstr "Standardmäßig werden neue Drucker bei ihrer Erstellung als \"Drucker N\" bezeichnet.\nHinweis: Dieser Name kann später über die Einstellungen für physische Drucker geändert werden."
+msgid ""
+"By default new Printer devices will be named as \"Printer N\" during its creation.\n"
+"Note: This name can be changed later from the physical printers settings"
+msgstr ""
+"Standardmäßig werden neue Drucker bei ihrer Erstellung als \"Drucker N\" bezeichnet.\n"
+"Hinweis: Dieser Name kann später über die Einstellungen für physische Drucker geändert werden."
 
 #: src/slic3r/GUI/PresetHints.cpp:222
 msgid "by the print profile maximum"
@@ -1266,16 +1331,30 @@ msgid "Cannot calculate extrusion width for %1%: Variable \"%2%\" not accessible
 msgstr "Kann die Extrusionsbreite für %1% nicht berechnen: Variable \"%2%\" nicht zugänglich."
 
 #: src/slic3r/GUI/GUI_ObjectList.cpp:3400
-msgid "Cannot insert a new layer range after the current layer range.\nCurrent layer range overlaps with the next layer range."
-msgstr "Es kann kein neuer Schichtenbereich nach dem aktuellen Schichtenbereich eingefügt werden.\nDer aktuelle Schichtenbereich überschneidet sich mit dem nächsten Schichtenbereich."
+msgid ""
+"Cannot insert a new layer range after the current layer range.\n"
+"Current layer range overlaps with the next layer range."
+msgstr ""
+"Es kann kein neuer Schichtenbereich nach dem aktuellen Schichtenbereich eingefügt werden.\n"
+"Der aktuelle Schichtenbereich überschneidet sich mit dem nächsten Schichtenbereich."
 
 #: src/slic3r/GUI/GUI_ObjectList.cpp:3391
-msgid "Cannot insert a new layer range after the current layer range.\nThe next layer range is too thin to be split to two\nwithout violating the minimum layer height."
-msgstr "Es kann kein neuer Schichtenbereich nach dem aktuellen Schichtenbereich eingefügt werden.\nDer nächste Schichtenbereich ist zu schmal, um auf zwei Schichten aufgeteilt zu werden ohne die Mindestschichthöhe zu verletzen."
+msgid ""
+"Cannot insert a new layer range after the current layer range.\n"
+"The next layer range is too thin to be split to two\n"
+"without violating the minimum layer height."
+msgstr ""
+"Es kann kein neuer Schichtenbereich nach dem aktuellen Schichtenbereich eingefügt werden.\n"
+"Der nächste Schichtenbereich ist zu schmal, um auf zwei Schichten aufgeteilt zu werden ohne die Mindestschichthöhe zu verletzen."
 
 #: src/slic3r/GUI/GUI_ObjectList.cpp:3395
-msgid "Cannot insert a new layer range between the current and the next layer range.\nThe gap between the current layer range and the next layer range\nis thinner than the minimum layer height allowed."
-msgstr "Es kann kein neuer Schichtenbereich zwischen dem aktuellen und dem nächsten Schichtenbereich eingefügt werden.\nDie Lücke zwischen dem aktuellen und dem nächsten Schichtenbereich ist ist schmaler als die minimal zulässige Schichthöhe."
+msgid ""
+"Cannot insert a new layer range between the current and the next layer range.\n"
+"The gap between the current layer range and the next layer range\n"
+"is thinner than the minimum layer height allowed."
+msgstr ""
+"Es kann kein neuer Schichtenbereich zwischen dem aktuellen und dem nächsten Schichtenbereich eingefügt werden.\n"
+"Die Lücke zwischen dem aktuellen und dem nächsten Schichtenbereich ist ist schmaler als die minimal zulässige Schichthöhe."
 
 #: src/slic3r/GUI/SavePresetDialog.cpp:137
 msgid "Cannot overwrite a system profile."
@@ -1561,7 +1640,7 @@ msgstr "Kompatible Druckerbedingung"
 
 #: src/libslic3r/PrintConfig.cpp:338
 msgid "Complete individual objects"
-msgstr "Kompatible Einzelobjekte"
+msgstr "Objekte nacheinander drucken"
 
 #: src/slic3r/GUI/PrintHostDialogs.cpp:234
 msgid "Completed"
@@ -1586,6 +1665,14 @@ msgstr "&Konfigurations-Assistent"
 #: src/slic3r/GUI/ConfigWizard.cpp:2624
 msgid "Configuration Assistant"
 msgstr "Konfigurations-Assistent"
+
+#: src/slic3r/GUI/GUI.cpp:368
+msgid "Configuration bundle was loaded, however some configuration values were not recognized."
+msgstr "Konfigurations-Bundle wurde geladen, jedoch wurden einige Konfigurationswerte nicht erkannt."
+
+#: src/slic3r/GUI/GUI.cpp:378
+msgid "Configuration file \"%1%\" was loaded, however some configuration values were not recognized."
+msgstr "Konfigurationsdatei \"%1%\" wurde geladen, jedoch wurden einige Konfigurationswerte nicht erkannt."
 
 #: src/libslic3r/PrintConfig.cpp:1424
 msgid "Configuration notes"
@@ -1652,8 +1739,16 @@ msgid "Connection to printers connected via the print host failed."
 msgstr "Die Verbindung zu Druckern, die über den Druck-Host angeschlossen sind, ist fehlgeschlagen."
 
 #: src/slic3r/Utils/OctoPrint.cpp:185
+msgid "Connection to Prusa SL1 / SL1S works correctly."
+msgstr "Verbindung zum Prusa SL1 / SL1S funktioniert einwandfrei."
+
+#: src/slic3r/Utils/OctoPrint.cpp:185
 msgid "Connection to Prusa SL1 works correctly."
 msgstr "Verbindung zum Prusa SL1 funktioniert einwandfrei."
+
+#: src/slic3r/Utils/OctoPrint.cpp:229
+msgid "Connection to PrusaLink works correctly."
+msgstr "Die Verbindung zu PrusaLink funktioniert einwandfrei."
 
 #: src/libslic3r/PrintConfig.cpp:2051
 msgid "Contact Z distance"
@@ -1724,16 +1819,38 @@ msgid "Copy Version Info"
 msgstr "Versionsinfo kopieren"
 
 #: src/slic3r/Utils/PresetUpdater.cpp:84
-msgid "Copying of file %1% to %2% failed.\nError message : %3%\nCopying was triggered by function: %4%"
-msgstr "Das Kopieren der Datei %1% nach %2% ist fehlgeschlagen.\nFehlermeldung : %3%\nKopieren wurde ausgelöst durch Funktion: %4%"
+msgid ""
+"Copying of file %1% to %2% failed.\n"
+"Error message : %3%\n"
+"Copying was triggered by function: %4%"
+msgstr ""
+"Das Kopieren der Datei %1% nach %2% ist fehlgeschlagen.\n"
+"Fehlermeldung : %3%\n"
+"Kopieren wurde ausgelöst durch Funktion: %4%"
 
 #: src/slic3r/Utils/PresetUpdater.cpp:91
-msgid "Copying of file %1% to %2% failed. Permissions fail at target file after copying.\nError message : %3%\nCopying was triggered by function: %4%"
-msgstr "Kopieren der Datei %1% nach %2% fehlgeschlagen. Berechtigungsfehler der Zieldatei nach dem Kopieren.\nFehlermeldung : %3%\n Dieser Fehler wurde ausgelöst durch Funktion: %4%"
+msgid ""
+"Copying of file %1% to %2% failed. Permissions fail at target file after copying.\n"
+"Error message : %3%\n"
+"Copying was triggered by function: %4%"
+msgstr ""
+"Kopieren der Datei %1% nach %2% fehlgeschlagen. Berechtigungsfehler der Zieldatei nach dem Kopieren.\n"
+"Fehlermeldung : %3%\n"
+" Dieser Fehler wurde ausgelöst durch Funktion: %4%"
 
 #: src/slic3r/Utils/PresetUpdater.cpp:70
-msgid "Copying of file %1% to %2% failed. Permissions fail at target file before copying.\nError message : %3%\nThis error happend during %4% phase."
-msgstr "Kopieren der Datei %1% nach %2% fehlgeschlagen. Berechtigungsfehler der Zieldatei vor dem Kopieren.\nFehlermeldung : %3%\nDieser Fehler trat während der Phase %4% auf."
+msgid ""
+"Copying of file %1% to %2% failed. Permissions fail at target file before copying.\n"
+"Error message : %3%\n"
+"This error happend during %4% phase."
+msgstr ""
+"Kopieren der Datei %1% nach %2% fehlgeschlagen. Berechtigungsfehler der Zieldatei vor dem Kopieren.\n"
+"Fehlermeldung : %3%\n"
+"Dieser Fehler trat während der Phase %4% auf."
+
+#: src/slic3r/Utils/PresetUpdater.cpp:65
+msgid "Copying of file %1% to %2% failed: %3%"
+msgstr "Kopieren der Datei %1% nach %2% fehlgeschlagen: %3%"
 
 #: src/slic3r/GUI/BackgroundSlicingProcess.cpp:156
 msgid "Copying of the temporary G-code has finished but the exported code couldn't be opened during copy check. The output G-code is at %1%.tmp."
@@ -1748,8 +1865,12 @@ msgid "Copying of the temporary G-code to the output G-code failed"
 msgstr "Das Kopieren des temporären G-Codes auf den Ausgabe-G-Code ist fehlgeschlagen"
 
 #: src/slic3r/GUI/BackgroundSlicingProcess.cpp:163
-msgid "Copying of the temporary G-code to the output G-code failed. Maybe the SD card is write locked?\nError message: %1%"
-msgstr "Das Kopieren des temporären G-Codes auf den Ausgabe-G-Code ist fehlgeschlagen. Vielleicht ist die SD-Karte schreibgeschützt?\nFehlermeldung: %1%"
+msgid ""
+"Copying of the temporary G-code to the output G-code failed. Maybe the SD card is write locked?\n"
+"Error message: %1%"
+msgstr ""
+"Das Kopieren des temporären G-Codes auf den Ausgabe-G-Code ist fehlgeschlagen. Vielleicht ist die SD-Karte schreibgeschützt?\n"
+"Fehlermeldung: %1%"
 
 #: src/slic3r/GUI/BackgroundSlicingProcess.cpp:147
 msgid "Copying of the temporary G-code to the output G-code failed. There might be problem with target device, please try exporting again or using different device. The corrupted output G-code is at %1%.tmp."
@@ -1799,6 +1920,10 @@ msgstr "Ich konnte keine Verbindung zu OctoPrint herstellen"
 #: src/slic3r/Utils/OctoPrint.cpp:191
 msgid "Could not connect to Prusa SLA"
 msgstr "Ich konnte keine Verbindung zum Prusa SLA herstellen"
+
+#: src/slic3r/Utils/OctoPrint.cpp:235
+msgid "Could not connect to PrusaLink"
+msgstr "Konnte keine Verbindung zu PrusaLink herstellen."
 
 #: src/slic3r/Utils/Http.cpp:73
 msgid "Could not detect system SSL certificate store. PrusaSlicer will be unable to establish secure network connections."
@@ -2353,8 +2478,14 @@ msgstr "Die angegebenen Modelle werden vor dem Zusammenführen nicht neu angeord
 
 #: src/slic3r/GUI/Field.cpp:288
 #, possible-c-format
-msgid "Do you mean %s%% instead of %s %s?\nSelect YES if you want to change this value to %s%%, \nor NO if you are sure that %s %s is a correct value."
-msgstr "Meinen Sie%s anstelle von %s %s?\nWählen Sie JA, wenn Sie diesen Wert auf %s%% ändern möchten, \noder NEIN, wenn Sie sicher sind, dass %s %s ein korrekter Wert ist."
+msgid ""
+"Do you mean %s%% instead of %s %s?\n"
+"Select YES if you want to change this value to %s%%, \n"
+"or NO if you are sure that %s %s is a correct value."
+msgstr ""
+"Meinen Sie%s anstelle von %s %s?\n"
+"Wählen Sie JA, wenn Sie diesen Wert auf %s%% ändern möchten, \n"
+"oder NEIN, wenn Sie sicher sind, dass %s %s ein korrekter Wert ist."
 
 #: src/slic3r/GUI/DoubleSlider.cpp:2138
 msgid "Do you want to delete all saved tool changes?"
@@ -2387,6 +2518,10 @@ msgstr "enthält keinen gültigen G-Code."
 #: src/libslic3r/PrintConfig.cpp:3628
 msgid "Don't arrange"
 msgstr "Nicht Anordnen"
+
+# Don't install
+msgid "Don't install"
+msgstr "Nicht installieren"
 
 #: src/slic3r/GUI/UpdateDialogs.cpp:71
 msgid "Don't notify about new releases any more"
@@ -3161,6 +3296,10 @@ msgstr "Ausblendende Schichten"
 msgid "failed finding central directory"
 msgstr "Zentrales Verzeichnis nicht gefunden"
 
+#: src/slic3r/GUI/Plater.cpp:2399
+msgid "Failed loading file \"%1%\" due to an invalid configuration."
+msgstr "Das Laden der Datei \"%1%\" ist aufgrund einer ungültigen Konfiguration fehlgeschlagen."
+
 #: src/slic3r/Utils/FixModelByWin10.cpp:235
 msgid "Failed loading the input model."
 msgstr "Das Laden des Inputmodells ist fehlgeschlagen."
@@ -3512,11 +3651,17 @@ msgstr "Nur für Stützverstärker"
 
 #. TRN Description for "WHITE BULLET"
 #: src/slic3r/GUI/Tab.cpp:3702
-msgid "for the left button: indicates a non-system (or non-default) preset,\nfor the right button: indicates that the settings hasn't been modified."
-msgstr "Beim linken Knopf: zeigt eine Nicht-System- (oder Nicht-Standard-) Einstellung an.\nBeim rechten Knopf: zeigt an, dass die Einstellung nicht geändert wurde."
+msgid ""
+"for the left button: indicates a non-system (or non-default) preset,\n"
+"for the right button: indicates that the settings hasn't been modified."
+msgstr ""
+"Beim linken Knopf: zeigt eine Nicht-System- (oder Nicht-Standard-) Einstellung an.\n"
+"Beim rechten Knopf: zeigt an, dass die Einstellung nicht geändert wurde."
 
 #: src/slic3r/GUI/ConfigManipulation.cpp:135
-msgid "For the Wipe Tower to work with the soluble supports, the support layers\nneed to be synchronized with the object layers."
+msgid ""
+"For the Wipe Tower to work with the soluble supports, the support layers\n"
+"need to be synchronized with the object layers."
 msgstr "Damit der Reinigungsturm mit den löslichen Trägermaterialien arbeiten kann, müssen die Stützschichten mit den Objektschichten synchronisiert sein."
 
 #: src/libslic3r/Print.cpp:1422
@@ -3572,8 +3717,12 @@ msgid "G-code"
 msgstr "G-Code"
 
 #: src/slic3r/GUI/DoubleSlider.cpp:1146
-msgid "G-code associated to this tick mark is in a conflict with print mode.\nEditing it will cause changes of Slider data."
-msgstr "Der mit diesem Häkchen verbundene G-Code steht in Konflikt mit dem Druckmodus.\nSeine Bearbeitung führt zu Änderungen der Slicer-Daten."
+msgid ""
+"G-code associated to this tick mark is in a conflict with print mode.\n"
+"Editing it will cause changes of Slider data."
+msgstr ""
+"Der mit diesem Häkchen verbundene G-Code steht in Konflikt mit dem Druckmodus.\n"
+"Seine Bearbeitung führt zu Änderungen der Slicer-Daten."
 
 #: src/slic3r/GUI/BackgroundSlicingProcess.cpp:165
 msgid "G-code file exported to %1%"
@@ -3963,8 +4112,12 @@ msgid "Hostname, IP or URL"
 msgstr "Hostname, IP oder URL"
 
 #: src/slic3r/GUI/Tab.cpp:210
-msgid "Hover the cursor over buttons to find more information \nor click this button."
-msgstr "Bewegen Sie den Mauszeiger über die Schaltflächen, um weitere Informationen zu erhalten,\noder klicken Sie auf diese Schaltfläche."
+msgid ""
+"Hover the cursor over buttons to find more information \n"
+"or click this button."
+msgstr ""
+"Bewegen Sie den Mauszeiger über die Schaltflächen, um weitere Informationen zu erhalten,\n"
+"oder klicken Sie auf diese Schaltfläche."
 
 #: src/libslic3r/PrintConfig.cpp:2976
 msgid "How far should the pad extend around the contained geometry"
@@ -4030,8 +4183,12 @@ msgid "If enabled, all printing extruders will be primed at the front edge of th
 msgstr "Wenn aktiviert, werden alle Druckextruder zu Beginn des Druckvorgangs an der Vorderkante des Druckbetts geprimt."
 
 #: src/slic3r/GUI/ConfigWizard.cpp:1164
-msgid "If enabled, allows the Reload from disk command to automatically find and load the files when invoked.\nIf not enabled, the Reload from disk command will ask to select each file using an open file dialog."
-msgstr "Wenn diese Option aktiviert ist, ermöglicht der Befehl Von Festplatte neu laden das automatische Suchen und Laden der Dateien, wenn er aufgerufen wird.\nWenn nicht aktiviert, fordert der Befehl Von der Festplatte neu laden jede Datei über ein Dialogfeld zum Öffnen von Dateien zur Auswahl auf."
+msgid ""
+"If enabled, allows the Reload from disk command to automatically find and load the files when invoked.\n"
+"If not enabled, the Reload from disk command will ask to select each file using an open file dialog."
+msgstr ""
+"Wenn diese Option aktiviert ist, ermöglicht der Befehl Von Festplatte neu laden das automatische Suchen und Laden der Dateien, wenn er aufgerufen wird.\n"
+"Wenn nicht aktiviert, fordert der Befehl Von der Festplatte neu laden jede Datei über ein Dialogfeld zum Öffnen von Dateien zur Auswahl auf."
 
 #: src/slic3r/GUI/Preferences.cpp:91
 msgid "If enabled, allows the Reload from disk command to automatically find and load the files when invoked."
@@ -4238,6 +4395,10 @@ msgstr "Import einer reparierten 3MF Datei fehlgeschlagen"
 msgid "Import profile only"
 msgstr "Nur Profil importieren"
 
+#: src/slic3r/GUI/MainFrame.cpp:1000
+msgid "Import SL1 / SL1S archive"
+msgstr "Import SL1 / SL1S Archiv"
+
 #: src/slic3r/GUI/MainFrame.cpp:1050
 msgid "Import SL1 archive"
 msgstr "SL1-Archiv importieren"
@@ -4309,8 +4470,12 @@ msgstr "Bearbeitungsbereich vergrößern/verkleinern"
 
 #. TRN Description for "UNLOCKED LOCK"
 #: src/slic3r/GUI/Tab.cpp:3695
-msgid "indicates that some settings were changed and are not equal to the system (or default) values for the current option group.\nClick the UNLOCKED LOCK icon to reset all settings for current option group to the system (or default) values."
-msgstr "zeigt an, dass einige Einstellungen geändert wurden und nicht mit den System- (oder Standard-) Werten für die aktuelle Optionsgruppe übereinstimmen.\nKlicken Sie auf das Symbol GEÖFFNETES SCHLOSS, um alle Einstellungen für die aktuelle Optionsgruppe auf die System- (oder Standard-) Werte zurückzusetzen."
+msgid ""
+"indicates that some settings were changed and are not equal to the system (or default) values for the current option group.\n"
+"Click the UNLOCKED LOCK icon to reset all settings for current option group to the system (or default) values."
+msgstr ""
+"zeigt an, dass einige Einstellungen geändert wurden und nicht mit den System- (oder Standard-) Werten für die aktuelle Optionsgruppe übereinstimmen.\n"
+"Klicken Sie auf das Symbol GEÖFFNETES SCHLOSS, um alle Einstellungen für die aktuelle Optionsgruppe auf die System- (oder Standard-) Werte zurückzusetzen."
 
 #. TRN Description for "LOCKED LOCK"
 #: src/slic3r/GUI/Tab.cpp:3691
@@ -4319,8 +4484,12 @@ msgstr "zeigt an, dass die Einstellungen mit den System- (oder Standard-) Werten
 
 #. TRN Description for "BACK ARROW"
 #: src/slic3r/GUI/Tab.cpp:3707
-msgid "indicates that the settings were changed and are not equal to the last saved preset for the current option group.\nClick the BACK ARROW icon to reset all settings for the current option group to the last saved preset."
-msgstr "zeigt an, dass die Einstellungen geändert wurden und nicht mit dem zuletzt gespeicherten Preset für die aktuelle Optionsgruppe übereinstimmen.\nKlicken Sie auf das Symbol PFEIL ZURÜCK, um alle Einstellungen für die aktuelle Optionsgruppe auf das zuletzt gespeicherte Preset zurückzusetzen."
+msgid ""
+"indicates that the settings were changed and are not equal to the last saved preset for the current option group.\n"
+"Click the BACK ARROW icon to reset all settings for the current option group to the last saved preset."
+msgstr ""
+"zeigt an, dass die Einstellungen geändert wurden und nicht mit dem zuletzt gespeicherten Preset für die aktuelle Optionsgruppe übereinstimmen.\n"
+"Klicken Sie auf das Symbol PFEIL ZURÜCK, um alle Einstellungen für die aktuelle Optionsgruppe auf das zuletzt gespeicherte Preset zurückzusetzen."
 
 #: src/slic3r/GUI/ConfigManipulation.cpp:210
 #: src/slic3r/GUI/GUI_ObjectList.cpp:35 src/slic3r/GUI/GUI_ObjectList.cpp:93
@@ -4383,8 +4552,12 @@ msgstr "Anfangsschichthöhe"
 
 #: src/slic3r/GUI/Field.cpp:269
 #, possible-c-format
-msgid "Input value is out of range\nAre you sure that %s is a correct value and that you want to continue?"
-msgstr "Eingabewert liegt außerhalb des Bereichs\nSind Sie sicher, dass %s ein korrekter Wert ist und Sie fortfahren möchten?"
+msgid ""
+"Input value is out of range\n"
+"Are you sure that %s is a correct value and that you want to continue?"
+msgstr ""
+"Eingabewert liegt außerhalb des Bereichs\n"
+"Sind Sie sicher, dass %s ein korrekter Wert ist und Sie fortfahren möchten?"
 
 #: src/slic3r/GUI/Field.cpp:252 src/slic3r/GUI/Field.cpp:1370
 msgid "Input value is out of range"
@@ -4396,6 +4569,10 @@ msgstr "Inspiziere / aktiviere Konfigurations-Momentaufnahmen"
 
 #: src/slic3r/Utils/PresetUpdater.cpp:120
 msgid "install"
+msgstr "Installation"
+
+#: src/slic3r/GUI/UpdateDialogs.cpp:136
+msgid "Install"
 msgstr "Installation"
 
 #: src/slic3r/GUI/ObjectDataViewModel.cpp:62
@@ -4552,13 +4729,23 @@ msgstr "Zur Höhe wechseln"
 
 #: src/slic3r/GUI/DoubleSlider.cpp:1223
 #, possible-c-format
-msgid "Jump to height %s\nor Set ruler mode"
-msgstr "Auf Höhe %s springen\noder Linealmodus einstellen"
+msgid ""
+"Jump to height %s\n"
+"or Set ruler mode"
+msgstr ""
+"Auf Höhe %s springen\n"
+"oder Linealmodus einstellen"
 
 #: src/slic3r/GUI/DoubleSlider.cpp:1220
 #, possible-c-format
-msgid "Jump to height %s\nSet ruler mode\nor Set extruder sequence for the entire print"
-msgstr "Auf Höhe %s springen\nLineal-Modus einstellen\noder Extrudersequenz für den gesamten Druck einstellen"
+msgid ""
+"Jump to height %s\n"
+"Set ruler mode\n"
+"or Set extruder sequence for the entire print"
+msgstr ""
+"Auf Höhe %s springen\n"
+"Lineal-Modus einstellen\n"
+"oder Extrudersequenz für den gesamten Druck einstellen"
 
 #: src/slic3r/GUI/DoubleSlider.cpp:1071 src/slic3r/GUI/DoubleSlider.cpp:1852
 msgid "Jump to move"
@@ -4755,6 +4942,10 @@ msgstr "Lade ein Modell"
 #: src/slic3r/GUI/MainFrame.cpp:1046
 msgid "Load an model saved with imperial units"
 msgstr "Laden eines mit imperialen Einheiten gespeicherten Modells"
+
+#: src/slic3r/GUI/MainFrame.cpp:1000
+msgid "Load an SL1 / Sl1S archive"
+msgstr "Laden eines SL1 / SL1S Archiv"
 
 #: src/slic3r/GUI/MainFrame.cpp:1058
 msgid "Load an SL1 archive"
@@ -5494,6 +5685,10 @@ msgstr "Monotonisch"
 msgid "More"
 msgstr "Mehr"
 
+#: src/slic3r/GUI/GUI.cpp:339
+msgid "Most likely the configuration was produced by a newer version of PrusaSlicer or by some PrusaSlicer fork."
+msgstr "Höchstwahrscheinlich wurde die Konfiguration von einer neueren Version des PrusaSlicer oder von einem PrusaSlicer-Ableger erzeugt."
+
 #: src/slic3r/GUI/Gizmos/GLGizmoSlaSupports.cpp:1219
 msgid "Mouse wheel"
 msgstr "Mausrad"
@@ -5604,8 +5799,14 @@ msgid "Multiple Extruders"
 msgstr "Mehrere Extruder"
 
 #: src/slic3r/GUI/Plater.cpp:2372
-msgid "Multiple objects were loaded for a multi-material printer.\nInstead of considering them as multiple objects, should I consider\nthese files to represent a single object having multiple parts?"
-msgstr "Für einen Multimaterialdrucker wurden mehrere Objekte geladen.\nSoll ich, anstatt sie als mehrere Objekte zu betrachten, \ndiese Dateien als ein einzelnes Objekt mit mehreren Teilen behandeln?"
+msgid ""
+"Multiple objects were loaded for a multi-material printer.\n"
+"Instead of considering them as multiple objects, should I consider\n"
+"these files to represent a single object having multiple parts?"
+msgstr ""
+"Für einen Multimaterialdrucker wurden mehrere Objekte geladen.\n"
+"Soll ich, anstatt sie als mehrere Objekte zu betrachten, \n"
+"diese Dateien als ein einzelnes Objekt mit mehreren Teilen behandeln?"
 
 #: src/libslic3r/PrintConfig.cpp:3638
 msgid "Multiply copies by creating a grid."
@@ -5660,6 +5861,10 @@ msgstr "Neues Projekt"
 #: src/slic3r/GUI/KBShortcutsDialog.cpp:105
 msgid "New project, clear plater"
 msgstr "Neues Projekt, Druckplatte leeren"
+
+#: src/slic3r/GUI/GUI.cpp:304
+msgid "new unknown value %1% was changed to default value %2%"
+msgstr "neuer unbekannter Wert %1% wurde auf Standardwert %2% geändert"
 
 #: src/slic3r/GUI/UnsavedChangesDialog.cpp:609
 msgid "New Value"
@@ -5748,6 +5953,10 @@ msgstr "Nicht gefunden:"
 msgid "Note"
 msgstr "Hinweis"
 
+#: src/slic3r/GUI/MsgDialog.cpp:114
+msgid "Note that"
+msgstr "Beachten Sie, dass"
+
 #: src/slic3r/GUI/Tab.cpp:3408
 msgid "Note, that selected preset will be deleted from this/those printer(s) too."
 msgstr "Beachten Sie, dass die ausgewählte Voreinstellung auch von diesem/diesen Drucker(n) gelöscht wird."
@@ -5757,8 +5966,14 @@ msgid "Note, that this/those printer(s) will be deleted after deleting of the se
 msgstr "Beachten Sie, dass dieser/diese Drucker nach dem Löschen der ausgewählten Voreinstellung gelöscht werden."
 
 #: src/slic3r/GUI/Tab.cpp:2039
-msgid "Note: All parameters from this group are moved to the Physical Printer settings (see changelog).\n\nA new Physical Printer profile is created by clicking on the \"cog\" icon right of the Printer profiles combo box, by selecting the \"Add physical printer\" item in the Printer combo box. The Physical Printer profile editor opens also when clicking on the \"cog\" icon in the Printer settings tab. The Physical Printer profiles are being stored into PrusaSlicer/physical_printer directory."
-msgstr "Hinweis: Alle Parameter aus dieser Gruppe werden in die Einstellungen des physischen Druckers verschoben (siehe Changelog).\n\nEin neues physisches Druckerprofil wird erstellt, indem man auf das \"Zahnrad\"-Symbol rechts vom Auswahlfeld \"Druckerprofile\" klickt, indem man den Punkt \"Physischen Drucker hinzufügen\" im Auswahlfeld \"Drucker\" auswählt. Der Profil-Editor für physische Drucker wird auch durch Klicken auf das \"Zahnrad\"-Symbol in der Registerkarte \"Druckereinstellungen\" geöffnet. Die Profile des physischen Druckers werden im Verzeichnis PrusaSlicer/physical_printer gespeichert."
+msgid ""
+"Note: All parameters from this group are moved to the Physical Printer settings (see changelog).\n"
+"\n"
+"A new Physical Printer profile is created by clicking on the \"cog\" icon right of the Printer profiles combo box, by selecting the \"Add physical printer\" item in the Printer combo box. The Physical Printer profile editor opens also when clicking on the \"cog\" icon in the Printer settings tab. The Physical Printer profiles are being stored into PrusaSlicer/physical_printer directory."
+msgstr ""
+"Hinweis: Alle Parameter aus dieser Gruppe werden in die Einstellungen des physischen Druckers verschoben (siehe Changelog).\n"
+"\n"
+"Ein neues physisches Druckerprofil wird erstellt, indem man auf das \"Zahnrad\"-Symbol rechts vom Auswahlfeld \"Druckerprofile\" klickt, indem man den Punkt \"Physischen Drucker hinzufügen\" im Auswahlfeld \"Drucker\" auswählt. Der Profil-Editor für physische Drucker wird auch durch Klicken auf das \"Zahnrad\"-Symbol in der Registerkarte \"Druckereinstellungen\" geöffnet. Die Profile des physischen Druckers werden im Verzeichnis PrusaSlicer/physical_printer gespeichert."
 
 #: src/slic3r/Utils/AstroBox.cpp:92
 msgid "Note: AstroBox version at least 1.1.0 is required."
@@ -6082,6 +6297,10 @@ msgstr "Download-Seite für die Prusa3D-Treiber in Ihrem Browser öffnen"
 msgid "Open the software releases page in your browser"
 msgstr "Seite mit Programmversionen in Ihrem Browser öffnen"
 
+#: src/slic3r/GUI/UpdateDialogs.cpp:89
+msgid "Opening Configuration Wizard"
+msgstr "Öffne Konfigurationsassistent"
+
 #: src/slic3r/GUI/Gizmos/GLGizmoRotate.cpp:220 src/slic3r/GUI/Plater.cpp:3961
 msgid "Optimize orientation"
 msgstr "Optimiere Ausrichtung"
@@ -6372,6 +6591,10 @@ msgid "Pick another vendor supported by %s"
 msgstr "Wählen Sie einen anderen Hersteller, der von %s unterstützt wird"
 
 #: src/libslic3r/PrintConfig.cpp:67
+msgid "Picture sizes to be stored into a .gcode and .sl1 / .sl1s files, in the following format: \"XxY, XxY, ...\""
+msgstr "Bildgrößen, die in einer .gcode und .sl1 / .sl1s Datei gespeichert werden sollen, im folgenden Format: \"XxY, XxY, ...\""
+
+#: src/libslic3r/PrintConfig.cpp:67
 msgid "Picture sizes to be stored into a .gcode and .sl1 files, in the following format: \"XxY, XxY, ...\""
 msgstr "Bildgrößen, die in einer .gcode- und .sl1-Datei gespeichert werden sollen, im folgenden Format: \"XxY, XxY, ...\""
 
@@ -6420,6 +6643,10 @@ msgstr "Bitte überprüfen und korrigieren Sie Ihre Objektliste."
 #: src/slic3r/GUI/Tab.cpp:3188
 msgid "Please check your object list before preset changing."
 msgstr "Bitte überprüfen Sie Ihre Objektliste, bevor Sie die Voreinstellungen ändern."
+
+#: src/slic3r/GUI/GUI.cpp:341
+msgid "Please review the substitutions and adjust them if needed."
+msgstr "Überprüfen Sie die Ersatzwerte und passen Sie sie bei Bedarf an."
 
 #: src/slic3r/GUI/Plater.cpp:3089
 msgid "Please select the file to reload"
@@ -6521,14 +6748,20 @@ msgid "Press to activate selection rectangle"
 msgstr "Drücken um das Auswahlrechteck zu aktivieren"
 
 #: src/slic3r/GUI/KBShortcutsDialog.cpp:155
-msgid "Press to select multiple objects\nor move multiple objects with mouse"
-msgstr "Drücken zum Auswählen des mehrteiligen Objekts \noder Bewegen des mehrteiligen Objekts mit der Maus"
+msgid ""
+"Press to select multiple objects\n"
+"or move multiple objects with mouse"
+msgstr ""
+"Drücken zum Auswählen des mehrteiligen Objekts \n"
+"oder Bewegen des mehrteiligen Objekts mit der Maus"
 
 #: src/slic3r/GUI/KBShortcutsDialog.cpp:221
 #: src/slic3r/GUI/KBShortcutsDialog.cpp:222
 #: src/slic3r/GUI/KBShortcutsDialog.cpp:231
 #: src/slic3r/GUI/KBShortcutsDialog.cpp:232
-msgid "Press to speed up 5 times while moving thumb\nwith arrow keys or mouse wheel"
+msgid ""
+"Press to speed up 5 times while moving thumb\n"
+"with arrow keys or mouse wheel"
 msgstr "Drücken, um 5 Mal schneller zu werden, während der Regler mit Pfeiltasten oder Mausrad bewegt wird"
 
 #: src/slic3r/GUI/KBShortcutsDialog.cpp:212 src/slic3r/GUI/Plater.cpp:4052
@@ -6731,8 +6964,14 @@ msgid "PrusaSlicer GUI initialization failed"
 msgstr "PrusaSlicer GUI-Initialisierung fehlgeschlagen"
 
 #: src/slic3r/GUI/GUI_App.cpp:586
-msgid "PrusaSlicer has encountered a localization error. Please report to PrusaSlicer team, what language was active and in which scenario this issue happened. Thank you.\n\nThe application will now terminate."
-msgstr "PrusaSlicer ist auf einen Lokalisierungsfehler gestoßen. Bitte melden Sie dem PrusaSlicer-Team, welche Sprache aktiv war und in welchem Szenario dieses Problem aufgetreten ist. Wir danken Ihnen.\n\nDie Anwendung wird nun beendet."
+msgid ""
+"PrusaSlicer has encountered a localization error. Please report to PrusaSlicer team, what language was active and in which scenario this issue happened. Thank you.\n"
+"\n"
+"The application will now terminate."
+msgstr ""
+"PrusaSlicer ist auf einen Lokalisierungsfehler gestoßen. Bitte melden Sie dem PrusaSlicer-Team, welche Sprache aktiv war und in welchem Szenario dieses Problem aufgetreten ist. Wir danken Ihnen.\n"
+"\n"
+"Die Anwendung wird nun beendet."
 
 #: src/slic3r/GUI/AboutDialog.cpp:285
 msgid "PrusaSlicer is based on Slic3r by Alessandro Ranellucci and the RepRap community."
@@ -6742,9 +6981,19 @@ msgstr "PrusaSlicer basiert auf Slic3r von Alessandro Ranellucci und der RepRap 
 msgid "PrusaSlicer is closing: Unsaved Changes"
 msgstr "PrusaSlicer wird geschlossen: Nicht gespeicherte Änderungen"
 
+#: src/slic3r/GUI/UpdateDialogs.cpp:90
+msgid ""
+"PrusaSlicer is not using the newest configuration available.\n"
+"Configuration Wizard may not offer the latest printers, filaments and SLA materials to be installed. "
+msgstr ""
+"Der PrusaSlicer verwendet nicht die neueste verfügbare Konfiguration.\n"
+"Der Konfigurationsassistent bietet möglicherweise nicht die neuesten zu installierenden Drucker, Filamente und SLA-Materialien an. "
+
 #: src/slic3r/GUI/OpenGLManager.cpp:259
 #, possible-c-format
-msgid "PrusaSlicer requires OpenGL 2.0 capable graphics driver to run correctly, \nwhile OpenGL version %s, render %s, vendor %s was detected."
+msgid ""
+"PrusaSlicer requires OpenGL 2.0 capable graphics driver to run correctly, \n"
+"while OpenGL version %s, render %s, vendor %s was detected."
 msgstr "PrusaSlicer benötigt einen OpenGL 2.0-fähigen Grafiktreiber, um korrekt zu laufen, während die OpenGL-Version %s, Render %s, Hersteller %s erkannt wurde."
 
 #: src/slic3r/GUI/ConfigSnapshotDialog.cpp:50
@@ -6756,8 +7005,14 @@ msgid "PrusaSlicer will remember your action."
 msgstr "PrusaSlicer wird sich an Ihre Aktion erinnern."
 
 #: src/slic3r/GUI/ConfigWizard.cpp:1174
-msgid "PrusaSlicer's user interfaces comes in three variants:\nSimple, Advanced, and Expert.\nThe Simple mode shows only the most frequently used settings relevant for regular 3D printing. The other two offer progressively more sophisticated fine-tuning, they are suitable for advanced and expert users, respectively."
-msgstr "Die Benutzeroberflächen von PrusaSlicer sind in drei Varianten erhältlich:\nEinfach, Fortgeschritten und Experte.\nDer einfache Modus zeigt nur die am häufigsten verwendeten Einstellungen, die für den regulären 3D-Druck relevant sind. Die beiden anderen bieten eine immer anspruchsvollere Feinabstimmung, sie sind für fortgeschrittene bzw. erfahrene Anwender geeignet."
+msgid ""
+"PrusaSlicer's user interfaces comes in three variants:\n"
+"Simple, Advanced, and Expert.\n"
+"The Simple mode shows only the most frequently used settings relevant for regular 3D printing. The other two offer progressively more sophisticated fine-tuning, they are suitable for advanced and expert users, respectively."
+msgstr ""
+"Die Benutzeroberflächen von PrusaSlicer sind in drei Varianten erhältlich:\n"
+"Einfach, Fortgeschritten und Experte.\n"
+"Der einfache Modus zeigt nur die am häufigsten verwendeten Einstellungen, die für den regulären 3D-Druck relevant sind. Die beiden anderen bieten eine immer anspruchsvollere Feinabstimmung, sie sind für fortgeschrittene bzw. erfahrene Anwender geeignet."
 
 #: src/slic3r/GUI/UnsavedChangesDialog.cpp:668
 msgid "PrusaSlicer: Don't ask me again"
@@ -6841,8 +7096,14 @@ msgid "Ramming customization"
 msgstr "Einstellungen für das Rammen"
 
 #: src/slic3r/GUI/WipeTowerDialog.cpp:41
-msgid "Ramming denotes the rapid extrusion just before a tool change in a single-extruder MM printer. Its purpose is to properly shape the end of the unloaded filament so it does not prevent insertion of the new filament and can itself be reinserted later. This phase is important and different materials can require different extrusion speeds to get the good shape. For this reason, the extrusion rates during ramming are adjustable.\n\nThis is an expert-level setting, incorrect adjustment will likely lead to jams, extruder wheel grinding into filament etc."
-msgstr "Rammen steht für die beschleunigte Extrusion unmittelbar vor einem Werkzeugwechsel in einem MM-Drucker mit einem Extruder. Der Zweck ist, die Spitze des entladenen Filaments geeignet zu formen, damit es das Laden des neuen Filaments nicht behindert und später selber wieder eingeführt werden kann. Diese Phase ist wichtig und verschiedene Materialien können unterschiedliche Extrusionsgeschwindigkeiten benötigen, um die richtige Form zu erzielen. Aus diesem Grund können die Extrusionsraten für das Rammen angepasst werden.\n\nDies ist eine Einstellung für fortgeschrittene Benutzer. Falsche Anpassungen werden sehr wahrscheinlich zu Verstopfungen führen oder dazu, dass die Zähne der Extruderwelle ins Filament einschneiden usw."
+msgid ""
+"Ramming denotes the rapid extrusion just before a tool change in a single-extruder MM printer. Its purpose is to properly shape the end of the unloaded filament so it does not prevent insertion of the new filament and can itself be reinserted later. This phase is important and different materials can require different extrusion speeds to get the good shape. For this reason, the extrusion rates during ramming are adjustable.\n"
+"\n"
+"This is an expert-level setting, incorrect adjustment will likely lead to jams, extruder wheel grinding into filament etc."
+msgstr ""
+"Rammen steht für die beschleunigte Extrusion unmittelbar vor einem Werkzeugwechsel in einem MM-Drucker mit einem Extruder. Der Zweck ist, die Spitze des entladenen Filaments geeignet zu formen, damit es das Laden des neuen Filaments nicht behindert und später selber wieder eingeführt werden kann. Diese Phase ist wichtig und verschiedene Materialien können unterschiedliche Extrusionsgeschwindigkeiten benötigen, um die richtige Form zu erzielen. Aus diesem Grund können die Extrusionsraten für das Rammen angepasst werden.\n"
+"\n"
+"Dies ist eine Einstellung für fortgeschrittene Benutzer. Falsche Anpassungen werden sehr wahrscheinlich zu Verstopfungen führen oder dazu, dass die Zähne der Extruderwelle ins Filament einschneiden usw."
 
 #: src/slic3r/GUI/WipeTowerDialog.cpp:91
 msgid "Ramming line spacing"
@@ -7469,6 +7730,10 @@ msgstr "Speichere Projekt (3mf)"
 msgid "Save project as (3mf)"
 msgstr "Speichere Projekt als (3mf)"
 
+#: src/slic3r/GUI/Plater.cpp:5337
+msgid "Save SL1 / SL1S file as:"
+msgstr "SL1 / SL1S-Datei speichern unter:"
+
 #: src/slic3r/GUI/Plater.cpp:4975
 msgid "Save SL1 file as:"
 msgstr "Speichere SL1 Datei als:"
@@ -7673,8 +7938,14 @@ msgid "Select what kind of support do you need"
 msgstr "Wählen Sie aus, welche Art von Unterstützung Sie benötigen"
 
 #: src/slic3r/GUI/DoubleSlider.cpp:2135
-msgid "Select YES if you want to delete all saved tool changes, \nNO if you want all tool changes switch to color changes, \nor CANCEL to leave it unchanged."
-msgstr "Wählen Sie JA, wenn Sie alle gespeicherten Werkzeugänderungen löschen möchten, \nNEIN, wenn Sie möchten, dass alle Werkzeugänderungen auf Farbwechsel umgestellt werden, \noder ABBRECHEN, um sie unverändert zu lassen."
+msgid ""
+"Select YES if you want to delete all saved tool changes, \n"
+"NO if you want all tool changes switch to color changes, \n"
+"or CANCEL to leave it unchanged."
+msgstr ""
+"Wählen Sie JA, wenn Sie alle gespeicherten Werkzeugänderungen löschen möchten, \n"
+"NEIN, wenn Sie möchten, dass alle Werkzeugänderungen auf Farbwechsel umgestellt werden, \n"
+"oder ABBRECHEN, um sie unverändert zu lassen."
 
 #: src/slic3r/GUI/Selection.cpp:191
 msgid "Selection-Add"
@@ -7919,8 +8190,12 @@ msgid "Set upper thumb to current slider thumb"
 msgstr "Stelle den oberen Regler auf den aktuellen Schieberegler"
 
 #: src/libslic3r/PrintConfig.cpp:3714
-msgid "Sets logging sensitivity. 0:fatal, 1:error, 2:warning, 3:info, 4:debug, 5:trace\nFor example. loglevel=2 logs fatal, error and warning level messages."
-msgstr "Stellt die Empfindlichkeit der Protokollierung ein. 0:fatal, 1:Fehler, 2:Warnung, 3:Info, 4:Debug, 5: Trace.\nZum Beispiel. loglevel=2 protokolliert fatale, Fehler- und Warnstufenmeldungen."
+msgid ""
+"Sets logging sensitivity. 0:fatal, 1:error, 2:warning, 3:info, 4:debug, 5:trace\n"
+"For example. loglevel=2 logs fatal, error and warning level messages."
+msgstr ""
+"Stellt die Empfindlichkeit der Protokollierung ein. 0:fatal, 1:Fehler, 2:Warnung, 3:Info, 4:Debug, 5: Trace.\n"
+"Zum Beispiel. loglevel=2 protokolliert fatale, Fehler- und Warnstufenmeldungen."
 
 #: src/slic3r/GUI/BedShapeDialog.cpp:292 src/slic3r/GUI/MainFrame.cpp:1969
 msgid "Settings"
@@ -8146,8 +8421,14 @@ msgid "Single Extruder Multi Material"
 msgstr "Einzelextruder mit Multi-Material"
 
 #: src/slic3r/GUI/Tab.cpp:2101
-msgid "Single Extruder Multi Material is selected, \nand all extruders must have the same diameter.\nDo you want to change the diameter for all extruders to first extruder nozzle diameter value?"
-msgstr "Einzel-Extruder Multi-Material ist ausgewählt, \nund alle Extruder müssen den gleichen Durchmesser haben.\nMöchten Sie den Durchmesser für alle Extruder auf den Wert des ersten Extruderdüsendurchmessers ändern?"
+msgid ""
+"Single Extruder Multi Material is selected, \n"
+"and all extruders must have the same diameter.\n"
+"Do you want to change the diameter for all extruders to first extruder nozzle diameter value?"
+msgstr ""
+"Einzel-Extruder Multi-Material ist ausgewählt, \n"
+"und alle Extruder müssen den gleichen Durchmesser haben.\n"
+"Möchten Sie den Durchmesser für alle Extruder auf den Wert des ersten Extruderdüsendurchmessers ändern?"
 
 #: src/slic3r/GUI/Tab.cpp:2476
 msgid "Single extruder multimaterial parameters"
@@ -8412,8 +8693,12 @@ msgstr "Einige G/M-Code Befehle, einschließlich Temperaturregelung und andere, 
 
 #: src/slic3r/GUI/Plater.cpp:2309
 #, possible-c-format
-msgid "Some object(s) in file %s looks like saved in inches.\nShould I consider them as a saved in inches and convert them?"
-msgstr "Einige Objekte in der Datei %s sehen aus wie in Zoll gespeichert.\nAls in Zoll gespeicherte Objekte betrachten und konvertieren?"
+msgid ""
+"Some object(s) in file %s looks like saved in inches.\n"
+"Should I consider them as a saved in inches and convert them?"
+msgstr ""
+"Einige Objekte in der Datei %s sehen aus wie in Zoll gespeichert.\n"
+"Als in Zoll gespeicherte Objekte betrachten und konvertieren?"
 
 #: src/slic3r/GUI/GLCanvas3D.cpp:636
 msgid "Some objects are not visible."
@@ -8425,7 +8710,7 @@ msgstr "Einige Objekte sind zu nahe; Ihr Extruder wird mit ihnen zusammenstoßen
 
 #: src/libslic3r/Print.cpp:1254
 msgid "Some objects are too tall and cannot be printed without extruder collisions."
-msgstr "Einige Objekte sind zu hoch und können nicht ohne Zusammenstoss mit dem Extruder gedruckt werden."
+msgstr "Einige Objekte sind zu hoch und können nicht ohne Zusammenstoß mit dem Extruder gedruckt werden."
 
 #: src/libslic3r/PrintConfig.cpp:2988
 msgid "Some objects can get along with a few smaller pads instead of a single big one. This parameter defines how far the center of two smaller pads should be. If theyare closer, they will get merged into one pad."
@@ -8433,7 +8718,7 @@ msgstr "Einige Objekte können mit ein paar kleineren Grundschichten auskommen, 
 
 #: src/libslic3r/PrintConfig.cpp:2330
 msgid "Some printers or printer setups may have difficulties printing with a variable layer height. Enabled by default."
-msgstr "Mit einigen Druckern oder Druckerkonfigurationen ist es schwierig, mit einer variablen Schichthöhe zu drucken. Standardmässig aktiviert."
+msgstr "Mit einigen Druckern oder Druckerkonfigurationen ist es schwierig, mit einer variablen Schichthöhe zu drucken. Standardmäßig aktiviert."
 
 #: src/slic3r/GUI/GLCanvas3D.cpp:3967
 msgid "Spacing"
@@ -8467,7 +8752,7 @@ msgstr "Geschwindigkeit (mm/s)"
 
 #: src/libslic3r/PrintConfig.cpp:964
 msgid "Speed for filling small gaps using short zigzag moves. Keep this reasonably low to avoid too much shaking and resonance issues. Set zero to disable gaps filling."
-msgstr "Geschwindigkeit, mit der kleine Lücken mit kurzen Zickzackbewegungen gefüllt werden. Beschränken Sie diese auf einen mässigen Wert, um übermässiges Rütteln und Resonanzprobleme zu vermeiden. Auf null gesetzt, wird das Füllen kleiner Lücken deaktiviert."
+msgstr "Geschwindigkeit, mit der kleine Lücken mit kurzen Zickzackbewegungen gefüllt werden. Beschränken Sie diese auf einen mäßigen Wert, um übermässiges Rütteln und Resonanzprobleme zu vermeiden. Auf Null gesetzt, wird das Füllen kleiner Lücken deaktiviert."
 
 #: src/slic3r/GUI/Tab.cpp:1488
 msgid "Speed for non-print moves"
@@ -8487,7 +8772,7 @@ msgstr "Brückendruckgeschwindigkeit."
 
 #: src/libslic3r/PrintConfig.cpp:1884
 msgid "Speed for printing solid regions (top/bottom/internal horizontal shells). This can be expressed as a percentage (for example: 80%) over the default infill speed above. Set to zero for auto."
-msgstr "Druckgeschwindigkeit für massive Bereiche (obere/untere/innenliegende waagrechte Hüllen). Sie kann als Prozentwert (z.B. 80%) der oben eingegebenen standardmässigen Infill-Geschwindigkeit angegeben werden. Für Automatik auf null setzen."
+msgstr "Druckgeschwindigkeit für massive Bereiche (obere/untere/innenliegende waagrechte Hüllen). Sie kann als Prozentwert (z.B. 80%) der oben eingegebenen standardmäßigen Infill-Geschwindigkeit angegeben werden. Für Automatik auf null setzen."
 
 #: src/libslic3r/PrintConfig.cpp:2135
 msgid "Speed for printing support material interface layers. If expressed as percentage (for example 50%) it will be calculated over support material speed."
@@ -8622,8 +8907,30 @@ msgid "Start the application"
 msgstr "Anwendung starten"
 
 #: src/slic3r/GUI/GUI_App.cpp:386
-msgid "Starting with %1% 2.3, configuration directory on Linux has changed (according to XDG Base Directory Specification) to \n%2%.\n\nThis directory did not exist yet (maybe you run the new version for the first time).\nHowever, an old %1% configuration directory was detected in \n%3%.\n\nConsider moving the contents of the old directory to the new location in order to access your profiles, etc.\nNote that if you decide to downgrade %1% in future, it will use the old location again.\n\nWhat do you want to do now?"
-msgstr "Beginnend mit %1% 2.3 hat sich das Konfigurationsverzeichnis unter Linux (gemäß XDG Base Directory Specification) geändert in \n%2%.\n\nDieses Verzeichnis existierte noch nicht (vielleicht führen Sie die neue Version zum ersten Mal aus).\nEs wurde jedoch ein altes %1%-Konfigurationsverzeichnis entdeckt in \n%3%.\n\nZiehen Sie in Betracht, den Inhalt des alten Verzeichnisses an den neuen Ort zu verschieben, um auf Ihre Profile usw. zuzugreifen.\nBeachten Sie, dass bei einem zukünftigen Downgrade von %1% wieder der alte Speicherort verwendet wird.\n\nWas möchten Sie jetzt tun?"
+msgid ""
+"Starting with %1% 2.3, configuration directory on Linux has changed (according to XDG Base Directory Specification) to \n"
+"%2%.\n"
+"\n"
+"This directory did not exist yet (maybe you run the new version for the first time).\n"
+"However, an old %1% configuration directory was detected in \n"
+"%3%.\n"
+"\n"
+"Consider moving the contents of the old directory to the new location in order to access your profiles, etc.\n"
+"Note that if you decide to downgrade %1% in future, it will use the old location again.\n"
+"\n"
+"What do you want to do now?"
+msgstr ""
+"Beginnend mit %1% 2.3 hat sich das Konfigurationsverzeichnis unter Linux (gemäß XDG Base Directory Specification) geändert in \n"
+"%2%.\n"
+"\n"
+"Dieses Verzeichnis existierte noch nicht (vielleicht führen Sie die neue Version zum ersten Mal aus).\n"
+"Es wurde jedoch ein altes %1%-Konfigurationsverzeichnis entdeckt in \n"
+"%3%.\n"
+"\n"
+"Ziehen Sie in Betracht, den Inhalt des alten Verzeichnisses an den neuen Ort zu verschieben, um auf Ihre Profile usw. zuzugreifen.\n"
+"Beachten Sie, dass bei einem zukünftigen Downgrade von %1% wieder der alte Speicherort verwendet wird.\n"
+"\n"
+"Was möchten Sie jetzt tun?"
 
 #: src/slic3r/GUI/PrintHostDialogs.cpp:149
 msgid "Status"
@@ -8689,7 +8996,7 @@ msgstr "Stützblocker"
 
 #: src/libslic3r/PrintConfig.cpp:895
 msgid "Support Cubic"
-msgstr "Stütz-kubisch"
+msgstr "Stütz kubisch"
 
 #: src/slic3r/GUI/GUI_ObjectList.cpp:4014
 msgid "Support Enforcer"
@@ -8791,8 +9098,12 @@ msgid "Supports stealth mode"
 msgstr "Unterstützt Stealth Modus"
 
 #: src/slic3r/GUI/ConfigManipulation.cpp:158
-msgid "Supports work better, if the following feature is enabled:\n- Detect bridging perimeters"
-msgstr "Stützen funktionieren besser, wenn die folgende Funktion aktiviert ist:\n- Erkennen von Umfangbrücken"
+msgid ""
+"Supports work better, if the following feature is enabled:\n"
+"- Detect bridging perimeters"
+msgstr ""
+"Stützen funktionieren besser, wenn die folgende Funktion aktiviert ist:\n"
+"- Erkennen von Umfangbrücken"
 
 #: src/slic3r/GUI/Preferences.cpp:104
 msgid "Suppress \" - default - \" presets"
@@ -8852,12 +9163,22 @@ msgid "Switching Presets: Unsaved Changes"
 msgstr "Voreinstellungen umschalten: Nicht gespeicherte Änderungen"
 
 #: src/slic3r/GUI/GUI_App.cpp:1608
-msgid "Switching the language will trigger application restart.\nYou will lose content of the plater."
-msgstr "Das Umschalten der Sprache löst einen Neustart der Anwendung aus.\nSie verlieren den Inhalt der Druckplatte."
+msgid ""
+"Switching the language will trigger application restart.\n"
+"You will lose content of the plater."
+msgstr ""
+"Das Umschalten der Sprache löst einen Neustart der Anwendung aus.\n"
+"Sie verlieren den Inhalt der Druckplatte."
 
 #: src/slic3r/GUI/WipeTowerDialog.cpp:365
-msgid "Switching to simple settings will discard changes done in the advanced mode!\n\nDo you want to proceed?"
-msgstr "Das Umschalten auf einfache Einstellungen verwirft die im erweiterten Modus vorgenommenen Änderungen!\n\nWollen Sie fortfahren?"
+msgid ""
+"Switching to simple settings will discard changes done in the advanced mode!\n"
+"\n"
+"Do you want to proceed?"
+msgstr ""
+"Das Umschalten auf einfache Einstellungen verwirft die im erweiterten Modus vorgenommenen Änderungen!\n"
+"\n"
+"Wollen Sie fortfahren?"
 
 #: src/slic3r/GUI/Tab.cpp:1332
 msgid "symbolic profile name"
@@ -8935,16 +9256,26 @@ msgstr "Das %s-Gerät konnte nicht gefunden werden"
 
 #: src/slic3r/GUI/FirmwareDialog.cpp:436
 #, possible-c-format
-msgid "The %s device was not found.\nIf the device is connected, please press the Reset button next to the USB connector ..."
-msgstr "Das %s-Gerät wurde nicht gefunden.\nWenn das Gerät angeschlossen ist, drücken Sie bitte die Reset-Taste neben dem USB-Anschluss...."
+msgid ""
+"The %s device was not found.\n"
+"If the device is connected, please press the Reset button next to the USB connector ..."
+msgstr ""
+"Das %s-Gerät wurde nicht gefunden.\n"
+"Wenn das Gerät angeschlossen ist, drücken Sie bitte die Reset-Taste neben dem USB-Anschluss...."
 
 #: src/slic3r/GUI/Tab.cpp:1238
 msgid "The current custom preset will be detached from the parent system preset."
 msgstr "Die aktuelle benutzerdefinierte Voreinstellung wird von der Voreinstellung des übergeordneten Systems gelöst."
 
 #: src/slic3r/GUI/GUI_ObjectManipulation.cpp:925
-msgid "The currently manipulated object is tilted (rotation angles are not multiples of 90°).\nNon-uniform scaling of tilted objects is only possible in the World coordinate system,\nonce the rotation is embedded into the object coordinates."
-msgstr "Das aktuell manipulierte Objekt wird gekippt (Drehwinkel sind keine Vielfachen von 90°).\nEine ungleiche Skalierung von geschwenkten Objekten ist nur im Weltkoordinatensystem möglich,\nsobald die Drehung in die Objektkoordinaten eingearbeitet wurde."
+msgid ""
+"The currently manipulated object is tilted (rotation angles are not multiples of 90°).\n"
+"Non-uniform scaling of tilted objects is only possible in the World coordinate system,\n"
+"once the rotation is embedded into the object coordinates."
+msgstr ""
+"Das aktuell manipulierte Objekt wird gekippt (Drehwinkel sind keine Vielfachen von 90°).\n"
+"Eine ungleiche Skalierung von geschwenkten Objekten ist nur im Weltkoordinatensystem möglich,\n"
+"sobald die Drehung in die Objektkoordinaten eingearbeitet wurde."
 
 #: src/libslic3r/PrintConfig.cpp:2890
 msgid "The default angle for connecting support sticks and junctions."
@@ -9028,6 +9359,10 @@ msgstr "Bei den folgenden SLA-Druckermodellen wurden keine Materialien ausgewäh
 msgid "the following suffix is not allowed:"
 msgstr "das folgenden Suffix ist nicht erlaubt:"
 
+#: src/slic3r/GUI/GUI.cpp:340
+msgid "The following values were substituted:"
+msgstr "Die folgenden Werte wurden ersetzt:"
+
 #: src/libslic3r/PrintConfig.cpp:3035
 msgid "The gap between the object bottom and the generated pad in zero elevation mode."
 msgstr "Der Abstand zwischen dem Objektboden und der erzeugten Grundschicht im Nullhöhenmodus."
@@ -9101,8 +9436,14 @@ msgid "The percentage of smaller pillars compared to the normal pillar diameter 
 msgstr "Der Prozentsatz der im Vergleich zum normalen Pfeilerdurchmesser kleineren Pfeiler, die in problematischen Bereichen eingesetzt werden, in die ein normaler Pfeiler nicht passt."
 
 #: src/libslic3r/PrintConfig.cpp:2567
-msgid "The percentage of the bed area. \nIf the print area exceeds the specified value, \nthen a slow tilt will be used, otherwise - a fast tilt"
-msgstr "Der Prozentsatz der Druckbettfläche.\nWenn der Druckbereich den angegebenen Wert überschreitet,\nwird eine langsame Verkippung verwendet, andernfalls - eine schnelle Verkippung"
+msgid ""
+"The percentage of the bed area. \n"
+"If the print area exceeds the specified value, \n"
+"then a slow tilt will be used, otherwise - a fast tilt"
+msgstr ""
+"Der Prozentsatz der Druckbettfläche.\n"
+"Wenn der Druckbereich den angegebenen Wert überschreitet,\n"
+"wird eine langsame Verkippung verwendet, andernfalls - eine schnelle Verkippung"
 
 #: src/slic3r/GUI/Tab.cpp:3430
 msgid "The physical printer(s) below is based on the preset, you are going to delete."
@@ -9149,12 +9490,22 @@ msgid "The selected object couldn't be split because it contains only one part."
 msgstr "Das ausgewählte Objekt konnte nicht getrennt werden, da es nur aus einem Teil besteht."
 
 #: src/slic3r/GUI/MainFrame.cpp:1003
-msgid "The selected project is no longer available.\nDo you want to remove it from the recent projects list?"
-msgstr "Das ausgewählte Projekt ist nicht mehr verfügbar.\nWollen Sie es aus der Liste der letzten Projekte entfernen?"
+msgid ""
+"The selected project is no longer available.\n"
+"Do you want to remove it from the recent projects list?"
+msgstr ""
+"Das ausgewählte Projekt ist nicht mehr verfügbar.\n"
+"Wollen Sie es aus der Liste der letzten Projekte entfernen?"
 
 #: src/slic3r/GUI/DoubleSlider.cpp:1121
-msgid "The sequential print is on.\nIt's impossible to apply any custom G-code for objects printing sequentually.\nThis code won't be processed during G-code generation."
-msgstr "Der sequentielle Druck ist eingeschaltet.\nEs ist unmöglich, einen benutzerdefinierten G-Code für Objekte anzuwenden, die sequentiell gedruckt werden.\nDieser Code wird bei der G-Code-Generierung nicht verarbeitet."
+msgid ""
+"The sequential print is on.\n"
+"It's impossible to apply any custom G-code for objects printing sequentually.\n"
+"This code won't be processed during G-code generation."
+msgstr ""
+"Der sequentielle Druck ist eingeschaltet.\n"
+"Es ist unmöglich, einen benutzerdefinierten G-Code für Objekte anzuwenden, die sequentiell gedruckt werden.\n"
+"Dieser Code wird bei der G-Code-Generierung nicht verarbeitet."
 
 #: src/slic3r/GUI/ConfigWizard.cpp:1187
 msgid "The size of the object can be specified in inches"
@@ -9174,8 +9525,22 @@ msgstr "Die Einzugsgeschwindigkeit (sie betrifft nur den Extruderantrieb)."
 
 #: src/slic3r/GUI/ConfigManipulation.cpp:80
 #, possible-c-format
-msgid "The Spiral Vase mode requires:\n- one perimeter\n- no top solid layers\n- 0% fill density\n- no support material\n- Ensure vertical shell thickness enabled\n- Detect thin walls disabled"
-msgstr "Der Spiralvasenmodus erfordert:\n- einen Perimeter\n- keine oberen massiven Schichten\n- 0% Fülldichte\n- kein Stützmaterial\n- Vertikale Schalenstärke sicherstellen aktiv\n- Dünne Wände erkennen nicht aktiv"
+msgid ""
+"The Spiral Vase mode requires:\n"
+"- one perimeter\n"
+"- no top solid layers\n"
+"- 0% fill density\n"
+"- no support material\n"
+"- Ensure vertical shell thickness enabled\n"
+"- Detect thin walls disabled"
+msgstr ""
+"Der Spiralvasenmodus erfordert:\n"
+"- einen Perimeter\n"
+"- keine oberen massiven Schichten\n"
+"- 0% Fülldichte\n"
+"- kein Stützmaterial\n"
+"- Vertikale Schalenstärke sicherstellen aktiv\n"
+"- Dünne Wände erkennen nicht aktiv"
 
 #: src/libslic3r/Print.cpp:1270
 msgid "The Spiral Vase option can only be used when printing single material objects."
@@ -9213,16 +9578,27 @@ msgid "The vertical distance between object and support material interface. Sett
 msgstr "Der vertikale Abstand zwischen Objekt und Trägermaterialschnittstelle. Wenn Sie diesen Wert auf 0 setzen, wird PrusaSlicer auch verhindern, dass Bridge-Flow und -Geschwindigkeit für die erste Objektschicht verwendet werden."
 
 #: src/slic3r/GUI/Tab.cpp:2731
-msgid "The Wipe option is not available when using the Firmware Retraction mode.\n\nShall I disable it in order to enable Firmware Retraction?"
-msgstr "Die Reinigungsoption ist nicht verfügbar, wenn der Firmware-Einzug verwendet wird.\n\nSoll ich sie ausschalten, um den Firmware-Einzug zu aktivieren?"
+msgid ""
+"The Wipe option is not available when using the Firmware Retraction mode.\n"
+"\n"
+"Shall I disable it in order to enable Firmware Retraction?"
+msgstr ""
+"Die Reinigungsoption ist nicht verfügbar, wenn der Firmware-Einzug verwendet wird.\n"
+"\n"
+"Soll ich sie ausschalten, um den Firmware-Einzug zu aktivieren?"
 
 #: src/libslic3r/Print.cpp:1294
 msgid "The Wipe Tower currently does not support volumetric E (use_volumetric_e=0)."
 msgstr "Der Reinigungsturm unterstützt derzeit kein volumetrisches E (use_volumetric_e=0)."
 
 #: src/slic3r/GUI/ConfigManipulation.cpp:114
-msgid "The Wipe Tower currently supports the non-soluble supports only\nif they are printed with the current extruder without triggering a tool change.\n(both support_material_extruder and support_material_interface_extruder need to be set to 0)."
-msgstr "Der Reinigungsturm unterstützt derzeit nur die unlöslichen Stützen, wenn sie mit dem aktuellen Extruder gedruckt werden, ohne einen Werkzeugwechsel auszulösen.\n(sowohl der Stützmaterial-Extruder als auch der Stützmaterial-Schnittstellen-Extruder müssen auf 0 eingestellt sein)"
+msgid ""
+"The Wipe Tower currently supports the non-soluble supports only\n"
+"if they are printed with the current extruder without triggering a tool change.\n"
+"(both support_material_extruder and support_material_interface_extruder need to be set to 0)."
+msgstr ""
+"Der Reinigungsturm unterstützt derzeit nur die unlöslichen Stützen, wenn sie mit dem aktuellen Extruder gedruckt werden, ohne einen Werkzeugwechsel auszulösen.\n"
+"(sowohl der Stützmaterial-Extruder als auch der Stützmaterial-Schnittstellen-Extruder müssen auf 0 eingestellt sein)"
 
 #: src/libslic3r/Print.cpp:1426
 msgid "The Wipe Tower currently supports the non-soluble supports only if they are printed with the current extruder without triggering a tool change. (both support_material_extruder and support_material_interface_extruder need to be set to 0)."
@@ -9273,16 +9649,28 @@ msgid "There are unprintable objects. Try to adjust support settings to make the
 msgstr "Es gibt nicht druckbare Objekte. Versuchen Sie, die Stützeinstellungen anzupassen, um die Objekte druckbar zu machen."
 
 #: src/slic3r/GUI/DoubleSlider.cpp:1155
-msgid "There is a color change for extruder that has not been used before.\nCheck your settings to avoid redundant color changes."
-msgstr "Es gibt einen Farbwechsel für den Extruder, der bisher noch nicht verwendet wurde.\nÜberprüfen Sie Ihre Einstellungen, um überflüssige Farbwechsel zu vermeiden."
+msgid ""
+"There is a color change for extruder that has not been used before.\n"
+"Check your settings to avoid redundant color changes."
+msgstr ""
+"Es gibt einen Farbwechsel für den Extruder, der bisher noch nicht verwendet wurde.\n"
+"Überprüfen Sie Ihre Einstellungen, um überflüssige Farbwechsel zu vermeiden."
 
 #: src/slic3r/GUI/DoubleSlider.cpp:1149
-msgid "There is a color change for extruder that won't be used till the end of print job.\nThis code won't be processed during G-code generation."
-msgstr "Es gibt einen Farbwechsel für den Extruder, der nicht vor dem Ende des Druckauftrags verwendet wird.\nDieser Code wird bei der G-Code-Generierung nicht verarbeitet."
+msgid ""
+"There is a color change for extruder that won't be used till the end of print job.\n"
+"This code won't be processed during G-code generation."
+msgstr ""
+"Es gibt einen Farbwechsel für den Extruder, der nicht vor dem Ende des Druckauftrags verwendet wird.\n"
+"Dieser Code wird bei der G-Code-Generierung nicht verarbeitet."
 
 #: src/slic3r/GUI/DoubleSlider.cpp:1152
-msgid "There is an extruder change set to the same extruder.\nThis code won't be processed during G-code generation."
-msgstr "Es gibt einen Extruderwechsel, der auf denselben Extruder eingestellt ist.\nDieser Code wird während der G-Code-Generierung nicht verarbeitet."
+msgid ""
+"There is an extruder change set to the same extruder.\n"
+"This code won't be processed during G-code generation."
+msgstr ""
+"Es gibt einen Extruderwechsel, der auf denselben Extruder eingestellt ist.\n"
+"Dieser Code wird während der G-Code-Generierung nicht verarbeitet."
 
 #: src/libslic3r/GCode.cpp:604
 msgid "There is an object with no extrusions on the first layer."
@@ -9294,8 +9682,12 @@ msgid "This %s version: %s"
 msgstr "Diese %s Version: %s"
 
 #: src/slic3r/GUI/Tab.cpp:1244
-msgid "This action is not revertable.\nDo you want to proceed?"
-msgstr "Diese Aktion ist nicht umkehrbar.\nWollen Sie fortfahren?"
+msgid ""
+"This action is not revertable.\n"
+"Do you want to proceed?"
+msgstr ""
+"Diese Aktion ist nicht umkehrbar.\n"
+"Wollen Sie fortfahren?"
 
 #: src/libslic3r/PrintConfig.cpp:199
 msgid "This code is inserted between objects when using sequential printing. By default extruder and bed temperature are reset using non-wait command; however if M104, M109, M140 or M190 are detected in this custom code, Slic3r will not add temperature commands. Note that you can use placeholder variables for all Slic3r settings, so you can put a \"M109 S[first_layer_temperature]\" command wherever you want."
@@ -9370,17 +9762,32 @@ msgid "This file cannot be loaded in a simple mode. Do you want to switch to an 
 msgstr "Diese Datei kann nicht im einfachen Modus geladen werden. Möchten Sie in den fortgeschrittenen Modus wechseln?"
 
 #: src/slic3r/GUI/Plater.cpp:2319
-msgid "This file contains several objects positioned at multiple heights.\nInstead of considering them as multiple objects, should I consider\nthis file as a single object having multiple parts?"
+msgid ""
+"This file contains several objects positioned at multiple heights.\n"
+"Instead of considering them as multiple objects, should I consider\n"
+"this file as a single object having multiple parts?"
 msgstr "Diese Datei enthält mehrere Objekte, die in verschiedenen Höhen positioniert sind. Anstatt sie als mehrere Objekte zu betrachten, soll ich diese Datei als ein einzelnes Objekt mit mehreren Teilen betrachten?"
 
 #: src/slic3r/GUI/FirmwareDialog.cpp:332
 #, possible-c-format
-msgid "This firmware hex file does not match the printer model.\nThe hex file is intended for: %s\nPrinter reported: %s\n\nDo you want to continue and flash this hex file anyway?\nPlease only continue if you are sure this is the right thing to do."
-msgstr "Diese Firmware-Hex-Datei stimmt nicht mit dem Druckermodell überein.\nDie Hex-Datei ist für: %s\nDrucker erkannt: %s\n\nMöchtest Sie fortfahren und diese Hex-Datei trotzdem flashen?\nBitte fahren Sie nur fort, wenn Sie der festen Überzeugung sind, dass dies das Richtige ist."
+msgid ""
+"This firmware hex file does not match the printer model.\n"
+"The hex file is intended for: %s\n"
+"Printer reported: %s\n"
+"\n"
+"Do you want to continue and flash this hex file anyway?\n"
+"Please only continue if you are sure this is the right thing to do."
+msgstr ""
+"Diese Firmware-Hex-Datei stimmt nicht mit dem Druckermodell überein.\n"
+"Die Hex-Datei ist für: %s\n"
+"Drucker erkannt: %s\n"
+"\n"
+"Möchtest Sie fortfahren und diese Hex-Datei trotzdem flashen?\n"
+"Bitte fahren Sie nur fort, wenn Sie der festen Überzeugung sind, dass dies das Richtige ist."
 
 #: src/libslic3r/PrintConfig.cpp:348
 msgid "This flag enables the automatic cooling logic that adjusts print speed and fan speed according to layer printing time."
-msgstr "Diese Einstellung aktiviert the Logik, die die Druckgeschwindigkeit und Lüftergeschwindigkeit automatisch gemäß der Schichtdruckdauer regelt."
+msgstr "Diese Einstellung aktiviert die Logik, die die Druckgeschwindigkeit und Lüftergeschwindigkeit automatisch gemäß der Schichtdruckdauer regelt."
 
 #: src/slic3r/GUI/Plater.cpp:402
 msgid "This flag enables the brim that will be printed around each object on the first layer."
@@ -9468,8 +9875,12 @@ msgid "This matrix describes volumes (in cubic milimetres) required to purge the
 msgstr "Diese Matrix beschreibt die Volumina (in Kubikmillimetern), die benötigt werden, um das neue Filament auf dem Reinigungsturm für ein bestimmtes Werkzeugpaar zu reinigen."
 
 #: src/slic3r/GUI/GUI_ObjectManipulation.cpp:928
-msgid "This operation is irreversible.\nDo you want to proceed?"
-msgstr "Dieser Vorgang ist nicht mehr rückgängig zu machen.\nMöchten Sie fortfahren?"
+msgid ""
+"This operation is irreversible.\n"
+"Do you want to proceed?"
+msgstr ""
+"Dieser Vorgang ist nicht mehr rückgängig zu machen.\n"
+"Möchten Sie fortfahren?"
 
 #: src/libslic3r/PrintConfig.cpp:1550
 msgid "This option sets the number of perimeters to generate for each layer. Note that Slic3r may increase this number automatically when it detects sloping surfaces which benefit from a higher number of perimeters if the Extra Perimeters option is enabled."
@@ -9537,8 +9948,16 @@ msgstr "Dieser Vektor speichert die erforderlichen Volumina für den Wechsel von
 
 #: src/slic3r/GUI/UpdateDialogs.cpp:216
 #, possible-c-format
-msgid "This version of %s is not compatible with currently installed configuration bundles.\nThis probably happened as a result of running an older %s after using a newer one.\n\nYou may either exit %s and try again with a newer version, or you may re-run the initial configuration. Doing so will create a backup snapshot of the existing configuration before installing files compatible with this %s."
-msgstr "Diese Version von %s ist nicht kompatibel zu den aktuell installierten Konfigurationssammlungen.\nDies wurde wahrscheinlich dadurch verursacht, dass Sie eine ältere %s Version benutzt haben, nachdem Sie eine neuere ausgeführt hatten.\n\nSie können %s entweder beenden und es mit einer neueren Version nochmals versuchen, oder Sie können die erstmalige Startkonfiguration nochmals wiederholen. In diesem Fall wird eine Sicherungskopie der aktuellen Konfiguration erstellt, bevor die mit dieser %s-Version kompatiblen Dateien installiert werden."
+msgid ""
+"This version of %s is not compatible with currently installed configuration bundles.\n"
+"This probably happened as a result of running an older %s after using a newer one.\n"
+"\n"
+"You may either exit %s and try again with a newer version, or you may re-run the initial configuration. Doing so will create a backup snapshot of the existing configuration before installing files compatible with this %s."
+msgstr ""
+"Diese Version von %s ist nicht kompatibel zu den aktuell installierten Konfigurationssammlungen.\n"
+"Dies wurde wahrscheinlich dadurch verursacht, dass Sie eine ältere %s Version benutzt haben, nachdem Sie eine neuere ausgeführt hatten.\n"
+"\n"
+"Sie können %s entweder beenden und es mit einer neueren Version nochmals versuchen, oder Sie können die erstmalige Startkonfiguration nochmals wiederholen. In diesem Fall wird eine Sicherungskopie der aktuellen Konfiguration erstellt, bevor die mit dieser %s-Version kompatiblen Dateien installiert werden."
 
 #: src/libslic3r/PrintConfig.cpp:2601
 msgid "This will apply a gamma correction to the rasterized 2D polygons. A gamma value of zero means thresholding with the threshold in the middle. This behaviour eliminates antialiasing without losing holes in polygons."
@@ -9763,8 +10182,12 @@ msgstr "Typ:"
 
 #: src/slic3r/GUI/OpenGLManager.cpp:275
 #, possible-c-format
-msgid "Unable to load the following shaders:\n%s"
-msgstr "Die folgenden Shader konnten nicht geladen werden:\n%s"
+msgid ""
+"Unable to load the following shaders:\n"
+"%s"
+msgstr ""
+"Die folgenden Shader konnten nicht geladen werden:\n"
+"%s"
 
 #: src/slic3r/GUI/Plater.cpp:3233
 msgid "Unable to reload:"
@@ -9775,6 +10198,10 @@ msgstr "Kann nicht nachgeladen werden:"
 #: src/slic3r/GUI/UnsavedChangesDialog.cpp:845
 msgid "Undef"
 msgstr "Undef"
+
+#: src/slic3r/GUI/GUI.cpp:305
+msgid "Undefined"
+msgstr "Undefiniert"
 
 #: src/libslic3r/miniz_extension.cpp:91
 msgid "undefined error"
@@ -9832,12 +10259,20 @@ msgid "UNLOCKED LOCK"
 msgstr "OFFENES SCHLOSS"
 
 #: src/slic3r/GUI/Tab.cpp:3719
-msgid "UNLOCKED LOCK icon indicates that some settings were changed and are not equal to the system (or default) values for the current option group.\nClick to reset all settings for current option group to the system (or default) values."
-msgstr "Das Symbol GEÖFFNETES SCHLOSS zeigt an, dass einige Einstellungen geändert wurden und nicht mehr mit den System- (oder Standard-) Werte für die aktuelle Optionsgruppe identisch sind.\nKlicken Sie, um alle Einstellungen für die aktuelle Optionsgruppe auf die System- (oder Standard-) Werte zurückzusetzen."
+msgid ""
+"UNLOCKED LOCK icon indicates that some settings were changed and are not equal to the system (or default) values for the current option group.\n"
+"Click to reset all settings for current option group to the system (or default) values."
+msgstr ""
+"Das Symbol GEÖFFNETES SCHLOSS zeigt an, dass einige Einstellungen geändert wurden und nicht mehr mit den System- (oder Standard-) Werte für die aktuelle Optionsgruppe identisch sind.\n"
+"Klicken Sie, um alle Einstellungen für die aktuelle Optionsgruppe auf die System- (oder Standard-) Werte zurückzusetzen."
 
 #: src/slic3r/GUI/Tab.cpp:3734
-msgid "UNLOCKED LOCK icon indicates that the value was changed and is not equal to the system (or default) value.\nClick to reset current value to the system (or default) value."
-msgstr "Das Symbol GEÖFFNETES SCHLOSS zeigt an, dass der Wert geändert wurde und nicht  mit der System- (oder Standard-) Einstellung identisch ist.\nKlicken Sie, um den aktuellen Wert auf die System- (oder Standard-) Einstellung zurückzusetzen."
+msgid ""
+"UNLOCKED LOCK icon indicates that the value was changed and is not equal to the system (or default) value.\n"
+"Click to reset current value to the system (or default) value."
+msgstr ""
+"Das Symbol GEÖFFNETES SCHLOSS zeigt an, dass der Wert geändert wurde und nicht  mit der System- (oder Standard-) Einstellung identisch ist.\n"
+"Klicken Sie, um den aktuellen Wert auf die System- (oder Standard-) Einstellung zurückzusetzen."
 
 #: src/slic3r/GUI/KBShortcutsDialog.cpp:173
 msgid "Unselect gizmo or clear selection"
@@ -10120,8 +10555,12 @@ msgid "View mode"
 msgstr "Anzeigemodus"
 
 #: src/slic3r/GUI/UnsavedChangesDialog.cpp:666
-msgid "Visit \"Preferences\" and check \"%1%\"\nto be asked about unsaved changes again."
-msgstr "Besuchen Sie \"Präferenzen\" und überprüfen Sie \"%1%\",\num über nicht gespeicherte Änderungen wieder gefragt zu werden."
+msgid ""
+"Visit \"Preferences\" and check \"%1%\"\n"
+"to be asked about unsaved changes again."
+msgstr ""
+"Besuchen Sie \"Präferenzen\" und überprüfen Sie \"%1%\",\n"
+"um über nicht gespeicherte Änderungen wieder gefragt zu werden."
 
 #: src/libslic3r/PrintConfig.cpp:3553
 msgid "Visualize an already sliced and saved G-code"
@@ -10366,8 +10805,18 @@ msgid "World coordinates"
 msgstr "Weltkoordinaten"
 
 #: src/slic3r/GUI/UpdateDialogs.cpp:92
-msgid "Would you like to install it?\n\nNote that a full configuration snapshot will be created first. It can then be restored at any time should there be a problem with the new version.\n\nUpdated configuration bundles:"
-msgstr "Möchten Sie dies installieren?\n\nBeachten Sie, dass zuerst eine Momentaufnahme der gesamten Konfiguration erstellt wird. Diese kann dann jederzeit wiederhergestellt werden, falls es ein Problem mit der neuen Version gibt.\n\nAktualisierte Konfigurationssammlungen:"
+msgid ""
+"Would you like to install it?\n"
+"\n"
+"Note that a full configuration snapshot will be created first. It can then be restored at any time should there be a problem with the new version.\n"
+"\n"
+"Updated configuration bundles:"
+msgstr ""
+"Möchten Sie dies installieren?\n"
+"\n"
+"Beachten Sie, dass zuerst eine Momentaufnahme der gesamten Konfiguration erstellt wird. Diese kann dann jederzeit wiederhergestellt werden, falls es ein Problem mit der neuen Version gibt.\n"
+"\n"
+"Aktualisierte Konfigurationssammlungen:"
 
 #: src/slic3r/GUI/GUI_App.cpp:1802
 msgid "Would you like to stop uploads and close the program?"
@@ -10455,12 +10904,20 @@ msgid "You cannot use non-uniform scaling mode for multiple objects/parts select
 msgstr "Sie können den nichtgleichmäßigen Skalierungsmodus nicht für mehrere Objekte/Teileauswahlen verwenden"
 
 #: src/slic3r/GUI/NotificationManager.hpp:459
-msgid "You have just added a G-code for color change, but its value is empty.\nTo export the G-code correctly, check the \"Color Change G-code\" in \"Printer Settings > Custom G-code\""
-msgstr "Sie haben gerade einen G-Code für Farbwechsel hinzugefügt, aber sein Wert ist leer.\nUm den G-Code korrekt zu exportieren, überprüfen Sie den \"Farbwechsel-G-Code\" unter \"Druckereinstellungen > Benutzerdefinierter G-Code\"."
+msgid ""
+"You have just added a G-code for color change, but its value is empty.\n"
+"To export the G-code correctly, check the \"Color Change G-code\" in \"Printer Settings > Custom G-code\""
+msgstr ""
+"Sie haben gerade einen G-Code für Farbwechsel hinzugefügt, aber sein Wert ist leer.\n"
+"Um den G-Code korrekt zu exportieren, überprüfen Sie den \"Farbwechsel-G-Code\" unter \"Druckereinstellungen > Benutzerdefinierter G-Code\"."
 
 #: src/slic3r/GUI/SavePresetDialog.cpp:277
-msgid "You have selected physical printer \"%1%\" \nwith related printer preset \"%2%\""
-msgstr "Sie haben den physischen Drucker \"%1%\" ausgewählt \nmit der zugehörigen Druckervoreinstellung \"%2%\"."
+msgid ""
+"You have selected physical printer \"%1%\" \n"
+"with related printer preset \"%2%\""
+msgstr ""
+"Sie haben den physischen Drucker \"%1%\" ausgewählt \n"
+"mit der zugehörigen Druckervoreinstellung \"%2%\"."
 
 #: src/slic3r/GUI/GUI_App.cpp:1078
 msgid "You have the following presets with saved options for \"Print Host upload\""
@@ -10479,9 +10936,13 @@ msgstr "Ein Konfigurations-Update muss installiert werden."
 msgid "You need to restart %s to make the changes effective."
 msgstr "Sie müssen %s neu starten, damit die Änderungen wirksam werden."
 
-#: src/slic3r/GUI/PhysicalPrinterDialog.cpp:468
+#: src/slic3r/GUI/PhysicalPrinterDialog.cpp:611
 msgid "You should change the name of your printer device."
-msgstr "Sie sollten den Namen Ihres Druckers ändern."
+msgstr "Sie sollten den Namen Ihres Druckgeräts ändern."
+
+#: src/slic3r/GUI/PhysicalPrinterDialog.cpp:468
+msgid "You should to change a name of your printer device. It can't be saved."
+msgstr "Sie sollten den Namen Ihres Druckers ändern. Er kann nicht gespeichert werden."
 
 #: src/slic3r/GUI/GUI_ObjectList.cpp:3884
 #, possible-c-format
@@ -10521,12 +10982,24 @@ msgid "Z offset"
 msgstr "Z-Abstand"
 
 #: src/slic3r/GUI/ConfigManipulation.cpp:59
-msgid "Zero first layer height is not valid.\n\nThe first layer height will be reset to 0.01."
-msgstr "Null Höhe der ersten Schicht ist nicht gültig.\n\nDie erste Schichthöhe wird auf 0,01 zurückgesetzt."
+msgid ""
+"Zero first layer height is not valid.\n"
+"\n"
+"The first layer height will be reset to 0.01."
+msgstr ""
+"Null Höhe der ersten Schicht ist nicht gültig.\n"
+"\n"
+"Die erste Schichthöhe wird auf 0,01 zurückgesetzt."
 
 #: src/slic3r/GUI/ConfigManipulation.cpp:47
-msgid "Zero layer height is not valid.\n\nThe layer height will be reset to 0.01."
-msgstr "Eine Nullschichthöhe ist nicht gültig.\n\nDie Schichthöhe wird auf 0,01 zurückgesetzt."
+msgid ""
+"Zero layer height is not valid.\n"
+"\n"
+"The layer height will be reset to 0.01."
+msgstr ""
+"Eine Nullschichthöhe ist nicht gültig.\n"
+"\n"
+"Die Schichthöhe wird auf 0,01 zurückgesetzt."
 
 #: src/libslic3r/PrintConfig.cpp:2831
 msgid "Zig-Zag"
@@ -10550,8 +11023,12 @@ msgid "Zoom to Bed"
 msgstr "Zoom aufs Druckbett"
 
 #: src/slic3r/GUI/KBShortcutsDialog.cpp:176
-msgid "Zoom to selected object\nor all objects in scene, if none selected"
-msgstr "Auf ausgewähltes Objekt zoomen\noder alle Objekte in der Szene, wenn keines ausgewählt ist"
+msgid ""
+"Zoom to selected object\n"
+"or all objects in scene, if none selected"
+msgstr ""
+"Auf ausgewähltes Objekt zoomen\n"
+"oder alle Objekte in der Szene, wenn keines ausgewählt ist"
 
 #: src/libslic3r/PrintConfig.cpp:241 src/libslic3r/PrintConfig.cpp:816
 #: src/libslic3r/PrintConfig.cpp:1748 src/libslic3r/PrintConfig.cpp:1758
