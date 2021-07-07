@@ -34,7 +34,7 @@ msgstr "%1% tiskárna byla aktivní v době, kdy byly pořízeny kroky Zpět / V
 
 #: src/slic3r/GUI/GUI.cpp:330
 msgid "%1% was substituted with %2%"
-msgstr "%2% bylo nahrazeno za %1%"
+msgstr "%1% bylo nahrazeno hodnotou %2%"
 
 #: src/slic3r/GUI/MainFrame.cpp:1585
 msgid "%1% was successfully sliced."
