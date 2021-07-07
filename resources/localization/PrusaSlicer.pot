@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-07-01 16:50+0200\n"
+"POT-Creation-Date: 2021-07-07 13:33+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2486,7 +2486,7 @@ msgid "The following values were substituted:"
 msgstr ""
 
 #: src/slic3r/GUI/GUI.cpp:341
-msgid "Please review the substitutions and adjust them if needed."
+msgid "Review the substitutions and adjust them if needed."
 msgstr ""
 
 #: src/slic3r/GUI/GUI.cpp:351 src/slic3r/GUI/Plater.cpp:696

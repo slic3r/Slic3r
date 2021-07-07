@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-06-30 16:33+0200\n"
-"PO-Revision-Date: 2021-06-30 16:36+0200\n"
+"POT-Creation-Date: 2021-07-07 13:33+0200\n"
+"PO-Revision-Date: 2021-07-07 13:37+0200\n"
 "Last-Translator: Oleksandra Iushchenko <yusanka@gmail.com>\n"
 "Language-Team: \n"
 "Language: uk\n"
@@ -397,7 +397,6 @@ msgid "First layer height"
 msgstr "Висота першого шару"
 
 #: src/slic3r/GUI/ConfigManipulation.cpp:81
-#, fuzzy, c-format
 msgid ""
 "The Spiral Vase mode requires:\n"
 "- one perimeter\n"
@@ -556,7 +555,7 @@ msgstr "філаменти"
 msgid "SLA print"
 msgstr "SLA-друк"
 
-#: src/slic3r/GUI/ConfigSnapshotDialog.cpp:60 src/slic3r/GUI/GUI.cpp:318
+#: src/slic3r/GUI/ConfigSnapshotDialog.cpp:60 src/slic3r/GUI/GUI.cpp:353
 #: src/slic3r/GUI/Plater.cpp:697 src/libslic3r/Preset.cpp:1309
 msgid "SLA material"
 msgstr "SLA-матеріал"
@@ -969,7 +968,7 @@ msgid "SLA Technology Printers"
 msgstr "Принтери технології SLA"
 
 #: src/slic3r/GUI/ConfigWizard.cpp:2278 src/slic3r/GUI/DoubleSlider.cpp:2265
-#: src/slic3r/GUI/DoubleSlider.cpp:2285 src/slic3r/GUI/GUI.cpp:245
+#: src/slic3r/GUI/DoubleSlider.cpp:2285 src/slic3r/GUI/GUI.cpp:246
 msgid "Notice"
 msgstr "Зауваження"
 
@@ -1007,7 +1006,7 @@ msgstr "Далі >"
 msgid "&Finish"
 msgstr "Завершити"
 
-#: src/slic3r/GUI/ConfigWizard.cpp:2559 src/slic3r/GUI/FirmwareDialog.cpp:151
+#: src/slic3r/GUI/ConfigWizard.cpp:2559 src/slic3r/GUI/FirmwareDialog.cpp:153
 #: src/slic3r/GUI/Gizmos/GLGizmoFdmSupports.cpp:248
 #: src/slic3r/GUI/ProgressStatusBar.cpp:26
 #: src/slic3r/GUI/UnsavedChangesDialog.cpp:656
@@ -1498,31 +1497,31 @@ msgstr ""
 "Недійсний формат введення. Очікується вектор розмірів у наступному форматі: "
 "\"%1%\""
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:150
+#: src/slic3r/GUI/FirmwareDialog.cpp:152
 msgid "Flash!"
 msgstr "Прошити!"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:152
+#: src/slic3r/GUI/FirmwareDialog.cpp:154
 msgid "Flashing in progress. Please do not disconnect the printer!"
 msgstr "Триває прошивка. Будь ласка, не від'єднуй принтер!"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:199
+#: src/slic3r/GUI/FirmwareDialog.cpp:201
 msgid "Flashing failed"
 msgstr "Помилка прошивки"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:282
+#: src/slic3r/GUI/FirmwareDialog.cpp:284
 msgid "Flashing succeeded!"
 msgstr "Прошивка вдалася!"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:283
+#: src/slic3r/GUI/FirmwareDialog.cpp:285
 msgid "Flashing failed. Please see the avrdude log below."
 msgstr "Помилка прошивки. Будь ласка, переглянте журнал avrdude нижче."
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:284
+#: src/slic3r/GUI/FirmwareDialog.cpp:286
 msgid "Flashing cancelled."
 msgstr "Прошивку скасовано."
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:332
+#: src/slic3r/GUI/FirmwareDialog.cpp:334
 #, c-format
 msgid ""
 "This firmware hex file does not match the printer model.\n"
@@ -1539,7 +1538,7 @@ msgstr ""
 "Продовжити роботу та все одно прошити цей hex-файл?\n"
 "Будь ласка, продовжуйте, тільки якщо ви впевнені, що це правильно робити."
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:419 src/slic3r/GUI/FirmwareDialog.cpp:454
+#: src/slic3r/GUI/FirmwareDialog.cpp:421 src/slic3r/GUI/FirmwareDialog.cpp:456
 #, c-format
 msgid ""
 "Multiple %s devices found. Please only connect one at a time for flashing."
@@ -1547,7 +1546,7 @@ msgstr ""
 "Знайдено кілька пристроїв %s . Будь ласка, підключайте лише один пристрій "
 "для прошивки."
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:436
+#: src/slic3r/GUI/FirmwareDialog.cpp:438
 #, c-format
 msgid ""
 "The %s device was not found.\n"
@@ -1557,70 +1556,70 @@ msgstr ""
 "Пристрій %s не знайдено.\n"
 "Якщо пристрій підключений, натисніть кнопку Скинути поруч з USB-роз'ємом ..."
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:548
+#: src/slic3r/GUI/FirmwareDialog.cpp:550
 #, c-format
 msgid "The %s device could not have been found"
 msgstr "Пристрою %s не знайдено"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:645
+#: src/slic3r/GUI/FirmwareDialog.cpp:651
 #, c-format
 msgid "Error accessing port at %s: %s"
 msgstr "Помилка доступу до порту на %s: %s"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:647
+#: src/slic3r/GUI/FirmwareDialog.cpp:653
 #, c-format
 msgid "Error: %s"
 msgstr "Помилка: %s"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:777
+#: src/slic3r/GUI/FirmwareDialog.cpp:782
 msgid "Firmware flasher"
 msgstr "Пепепрошивка"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:802
+#: src/slic3r/GUI/FirmwareDialog.cpp:807
 msgid "Firmware image:"
 msgstr "Імідж прошивки:"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:805
+#: src/slic3r/GUI/FirmwareDialog.cpp:810
 #: src/slic3r/GUI/PhysicalPrinterDialog.cpp:291
 #: src/slic3r/GUI/PhysicalPrinterDialog.cpp:366
 msgid "Browse"
 msgstr "Переглянути"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:807
+#: src/slic3r/GUI/FirmwareDialog.cpp:812
 msgid "Serial port:"
 msgstr "Послідовний порт:"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:809
+#: src/slic3r/GUI/FirmwareDialog.cpp:814
 msgid "Autodetected"
 msgstr "Автоматично виявлено"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:810
+#: src/slic3r/GUI/FirmwareDialog.cpp:815
 msgid "Rescan"
 msgstr "Пересканувати"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:817
+#: src/slic3r/GUI/FirmwareDialog.cpp:822
 msgid "Progress:"
 msgstr "Прогрес:"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:820
+#: src/slic3r/GUI/FirmwareDialog.cpp:825
 msgid "Status:"
 msgstr "Статус:"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:821
+#: src/slic3r/GUI/FirmwareDialog.cpp:826
 msgid "Ready"
 msgstr "Готово"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:841
+#: src/slic3r/GUI/FirmwareDialog.cpp:846
 msgid "Advanced: Output log"
 msgstr "Розширений: журнал виводу"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:852
+#: src/slic3r/GUI/FirmwareDialog.cpp:857
 #: src/slic3r/GUI/Mouse3DController.cpp:551
 #: src/slic3r/GUI/PrintHostDialogs.cpp:200
 msgid "Close"
 msgstr "Закрити"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:902
+#: src/slic3r/GUI/FirmwareDialog.cpp:907
 msgid ""
 "Are you sure you want to cancel firmware flashing?\n"
 "This could leave your printer in an unusable state!"
@@ -1628,11 +1627,11 @@ msgstr ""
 "Ви впевнені, що хочете скасувати перепрошивку?\n"
 "Це може привести ваш принтер у непридатний стан!"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:903
+#: src/slic3r/GUI/FirmwareDialog.cpp:908
 msgid "Confirmation"
 msgstr "Підтвердження"
 
-#: src/slic3r/GUI/FirmwareDialog.cpp:906
+#: src/slic3r/GUI/FirmwareDialog.cpp:911
 msgid "Cancelling..."
 msgstr "Скасування..."
 
@@ -1814,18 +1813,18 @@ msgid "Custom G-codes"
 msgstr "Користувацькі G-коди"
 
 #: src/slic3r/GUI/GCodeViewer.cpp:4375 src/slic3r/GUI/GCodeViewer.cpp:4399
-#: src/slic3r/GUI/GUI.cpp:319 src/slic3r/GUI/Plater.cpp:698
+#: src/slic3r/GUI/GUI.cpp:354 src/slic3r/GUI/Plater.cpp:698
 #: src/libslic3r/PrintConfig.cpp:117
 msgid "Printer"
 msgstr "Принтер"
 
 #: src/slic3r/GUI/GCodeViewer.cpp:4377 src/slic3r/GUI/GCodeViewer.cpp:4404
-#: src/slic3r/GUI/GUI.cpp:315 src/slic3r/GUI/Plater.cpp:694
+#: src/slic3r/GUI/GUI.cpp:350 src/slic3r/GUI/Plater.cpp:694
 msgid "Print settings"
 msgstr "Параметри друку"
 
 #: src/slic3r/GUI/GCodeViewer.cpp:4380 src/slic3r/GUI/GCodeViewer.cpp:4410
-#: src/slic3r/GUI/GUI.cpp:317 src/slic3r/GUI/Plater.cpp:695
+#: src/slic3r/GUI/GUI.cpp:352 src/slic3r/GUI/Plater.cpp:695
 #: src/slic3r/GUI/Tab.cpp:1801 src/slic3r/GUI/Tab.cpp:1802
 msgid "Filament"
 msgstr "Філамент"
@@ -2497,7 +2496,7 @@ msgstr "Автогенерація видалить всі відредагов�
 msgid "Are you sure you want to do it?"
 msgstr "Ви впевнені, що хочете це зробити?"
 
-#: src/slic3r/GUI/Gizmos/GLGizmoSlaSupports.cpp:1129 src/slic3r/GUI/GUI.cpp:257
+#: src/slic3r/GUI/Gizmos/GLGizmoSlaSupports.cpp:1129 src/slic3r/GUI/GUI.cpp:258
 #: src/slic3r/GUI/PhysicalPrinterDialog.cpp:621
 #: src/slic3r/GUI/PhysicalPrinterDialog.cpp:645
 #: src/slic3r/GUI/WipeTowerDialog.cpp:45 src/slic3r/GUI/WipeTowerDialog.cpp:366
@@ -2608,42 +2607,53 @@ msgstr "Вийти з режиму малювання підтримок"
 msgid "Add supports"
 msgstr "Додати підтримки"
 
-#: src/slic3r/GUI/GUI.cpp:295 src/slic3r/GUI/UnsavedChangesDialog.cpp:149
-#: src/slic3r/GUI/UnsavedChangesDialog.cpp:158
-#: src/slic3r/GUI/UnsavedChangesDialog.cpp:857
-msgid "Undef"
-msgstr "Невизначений"
+#: src/slic3r/GUI/GUI.cpp:305
+msgid "Undefined"
+msgstr "Невизначено"
 
-#: src/slic3r/GUI/GUI.cpp:304
-msgid "new unknown value %1% was changed to default value %2%"
+#: src/slic3r/GUI/GUI.cpp:330
+msgid "%1% was substituted with %2%"
+msgstr "%1% було замінено на %2%"
+
+#: src/slic3r/GUI/GUI.cpp:339
+msgid ""
+"Most likely the configuration was produced by a newer version of PrusaSlicer "
+"or by some PrusaSlicer fork."
 msgstr ""
-"нове невідоме значення %1% було змінено на значення за промовчанням %2%"
+"Швидше за все, конфігурація була виготовлена новішою версією PrusaSlicer або "
+"деяким форкем PrusaSlicer."
 
-#: src/slic3r/GUI/GUI.cpp:316 src/slic3r/GUI/Plater.cpp:696
+#: src/slic3r/GUI/GUI.cpp:340
+msgid "The following values were substituted:"
+msgstr "Замінено такі значення:"
+
+#: src/slic3r/GUI/GUI.cpp:341
+msgid "Review the substitutions and adjust them if needed."
+msgstr "Перегляньте заміни та за потреби відрегулюйте їх."
+
+#: src/slic3r/GUI/GUI.cpp:351 src/slic3r/GUI/Plater.cpp:696
 msgid "SLA print settings"
 msgstr "Параметри SLA-друку"
 
-#: src/slic3r/GUI/GUI.cpp:332
-msgid ""
-"Loading profiles found following incompatibilities:%1% To recover these "
-"files, incompatible values were changed to default values.\n"
-" But data in files won't be changed until you save them in PrusaSlicer."
-msgstr ""
-"Під час завантаження профілів було знайдено наступні несумісності:%1% Щоб "
-"відновити ці файли, несумісні значення було змінено на значення за "
-"промовчанням.\n"
-" Але дані у файлах не будуть змінені, поки ви не збережете їх у PrusaSlicer."
+#: src/slic3r/GUI/GUI.cpp:355 src/slic3r/GUI/PhysicalPrinterDialog.cpp:156
+msgid "Physical Printer"
+msgstr "Фізичний принтер"
 
-#: src/slic3r/GUI/GUI.cpp:349
+#: src/slic3r/GUI/GUI.cpp:368
 msgid ""
-"Loading %1% file found incompatibilities.\n"
-"To recover this file, incompatible values were changed to default values:"
-"%2%But data in files won't be changed until you save them in PrusaSlicer."
+"Configuration bundle was loaded, however some configuration values were not "
+"recognized."
 msgstr ""
-"Завантаження %1% файла виявили несумісність.\n"
-"Щоб відновити цей файл, несумісні значення було змінено на значення за "
-"промовчанням:%2% Але дані у файлах не змінюватимуться, доки ви не збережете "
-"їх у PrusaSlicer."
+"Пакет конфігурації завантажено, проте деякі значення конфігурації не "
+"розпізнано."
+
+#: src/slic3r/GUI/GUI.cpp:378
+msgid ""
+"Configuration file \"%1%\" was loaded, however some configuration values "
+"were not recognized."
+msgstr ""
+"Файл конфігурації \"%1%\" завантажено, однак деякі значення конфігурації не "
+"розпізнаються."
 
 #: src/slic3r/GUI/GUI_App.cpp:247
 msgid "is based on Slic3r by Alessandro Ranellucci and the RepRap community."
@@ -2707,7 +2717,7 @@ msgstr "Вийти, я зараз перенесу свої дані"
 msgid "Start the application"
 msgstr "Запустити програму"
 
-#: src/slic3r/GUI/GUI_App.cpp:589
+#: src/slic3r/GUI/GUI_App.cpp:591
 #, c-format
 msgid ""
 "%s has encountered an error. It was likely caused by running out of memory. "
@@ -2722,11 +2732,11 @@ msgstr ""
 "\n"
 "Тепер застосування буде припинено."
 
-#: src/slic3r/GUI/GUI_App.cpp:592
+#: src/slic3r/GUI/GUI_App.cpp:594
 msgid "Fatal error"
 msgstr "Критична помилка"
 
-#: src/slic3r/GUI/GUI_App.cpp:596
+#: src/slic3r/GUI/GUI_App.cpp:598
 msgid ""
 "PrusaSlicer has encountered a localization error. Please report to "
 "PrusaSlicer team, what language was active and in which scenario this issue "
@@ -2739,11 +2749,11 @@ msgstr ""
 "\n"
 "Тепер застосування буде припинено."
 
-#: src/slic3r/GUI/GUI_App.cpp:599
+#: src/slic3r/GUI/GUI_App.cpp:601
 msgid "Critical error"
 msgstr "Критична помилка"
 
-#: src/slic3r/GUI/GUI_App.cpp:747
+#: src/slic3r/GUI/GUI_App.cpp:749
 msgid ""
 "Error parsing PrusaSlicer config file, it is probably corrupted. Try to "
 "manually delete the file to recover from the error. Your user profiles will "
@@ -2753,7 +2763,7 @@ msgstr ""
 "пошкоджений. Спробуйте вручну видалити файл, щоб оговтатися від помилки. Це "
 "не вплине на профілі користувачів."
 
-#: src/slic3r/GUI/GUI_App.cpp:753
+#: src/slic3r/GUI/GUI_App.cpp:755
 msgid ""
 "Error parsing PrusaGCodeViewer config file, it is probably corrupted. Try to "
 "manually delete the file to recover from the error."
@@ -2761,7 +2771,7 @@ msgstr ""
 "Помилка під час розбору файлу конфігурації PrusaGCodeViewer, можливо, він "
 "пошкоджений. Спробуйте вручну видалити файл, щоб оговтатися від помилки."
 
-#: src/slic3r/GUI/GUI_App.cpp:807
+#: src/slic3r/GUI/GUI_App.cpp:809
 #, c-format
 msgid ""
 "%s\n"
@@ -2770,26 +2780,26 @@ msgstr ""
 "%s\n"
 "Бажаєте продовжити?"
 
-#: src/slic3r/GUI/GUI_App.cpp:809 src/slic3r/GUI/UnsavedChangesDialog.cpp:665
+#: src/slic3r/GUI/GUI_App.cpp:811 src/slic3r/GUI/UnsavedChangesDialog.cpp:665
 msgid "Remember my choice"
 msgstr "Пам'ятати мій вибір"
 
-#: src/slic3r/GUI/GUI_App.cpp:844
+#: src/slic3r/GUI/GUI_App.cpp:846
 msgid "Loading configuration"
 msgstr "Завантаження конфігурації"
 
-#: src/slic3r/GUI/GUI_App.cpp:915
+#: src/slic3r/GUI/GUI_App.cpp:917
 msgid "Preparing settings tabs"
 msgstr "Підготовка вкладок параметрів"
 
-#: src/slic3r/GUI/GUI_App.cpp:1132
+#: src/slic3r/GUI/GUI_App.cpp:1134
 msgid ""
 "You have the following presets with saved options for \"Print Host upload\""
 msgstr ""
 "У вас є наступні пресети із збереженими параметрами для \"Завантаження хоста "
 "друку(\"Print Host upload\")\""
 
-#: src/slic3r/GUI/GUI_App.cpp:1136
+#: src/slic3r/GUI/GUI_App.cpp:1138
 msgid ""
 "But since this version of PrusaSlicer we don't show this information in "
 "Printer Settings anymore.\n"
@@ -2799,7 +2809,7 @@ msgstr ""
 "параметрах принтера.\n"
 "Ці параметри будуть доступні у налаштуваннях фізичних принтерів."
 
-#: src/slic3r/GUI/GUI_App.cpp:1138
+#: src/slic3r/GUI/GUI_App.cpp:1140
 msgid ""
 "By default new Printer devices will be named as \"Printer N\" during its "
 "creation.\n"
@@ -2809,150 +2819,150 @@ msgstr ""
 "їх створення.\n"
 "Примітка: Цю назву можна змінити пізніше в налаштуваннях фізичних принтерів"
 
-#: src/slic3r/GUI/GUI_App.cpp:1141 src/slic3r/GUI/PhysicalPrinterDialog.cpp:691
+#: src/slic3r/GUI/GUI_App.cpp:1143 src/slic3r/GUI/PhysicalPrinterDialog.cpp:691
 msgid "Information"
 msgstr "Інформація"
 
-#: src/slic3r/GUI/GUI_App.cpp:1154 src/slic3r/GUI/GUI_App.cpp:1165
+#: src/slic3r/GUI/GUI_App.cpp:1156 src/slic3r/GUI/GUI_App.cpp:1167
 msgid "Recreating"
 msgstr "Пере-створення"
 
-#: src/slic3r/GUI/GUI_App.cpp:1170
+#: src/slic3r/GUI/GUI_App.cpp:1172
 msgid "Loading of current presets"
 msgstr "Завантаження поточних пресетів"
 
-#: src/slic3r/GUI/GUI_App.cpp:1175
+#: src/slic3r/GUI/GUI_App.cpp:1177
 msgid "Loading of a mode view"
 msgstr "Завантаження режиму перегляду"
 
-#: src/slic3r/GUI/GUI_App.cpp:1251
+#: src/slic3r/GUI/GUI_App.cpp:1253
 msgid "Choose one file (3MF/AMF):"
 msgstr "Виберіть один файл (3MF/AMF):"
 
-#: src/slic3r/GUI/GUI_App.cpp:1263
+#: src/slic3r/GUI/GUI_App.cpp:1265
 msgid "Choose one or more files (STL/OBJ/AMF/3MF/PRUSA):"
 msgstr "Виберіть один чи кілька файлів (STL/OBJ/AMF/PRUSA):"
 
-#: src/slic3r/GUI/GUI_App.cpp:1275
+#: src/slic3r/GUI/GUI_App.cpp:1277
 msgid "Choose one file (GCODE/.GCO/.G/.ngc/NGC):"
 msgstr "Виберіть один файл (GCODE/.GCO/.G/.ngc/NGC):"
 
-#: src/slic3r/GUI/GUI_App.cpp:1286
+#: src/slic3r/GUI/GUI_App.cpp:1288
 msgid "Changing of an application language"
 msgstr "Зміна мови застосування"
 
-#: src/slic3r/GUI/GUI_App.cpp:1409
+#: src/slic3r/GUI/GUI_App.cpp:1411
 msgid "Select the language"
 msgstr "Оберіть мову"
 
-#: src/slic3r/GUI/GUI_App.cpp:1409
+#: src/slic3r/GUI/GUI_App.cpp:1411
 msgid "Language"
 msgstr "Мова"
 
-#: src/slic3r/GUI/GUI_App.cpp:1558
+#: src/slic3r/GUI/GUI_App.cpp:1560
 msgid "modified"
 msgstr "модифікований"
 
-#: src/slic3r/GUI/GUI_App.cpp:1607
+#: src/slic3r/GUI/GUI_App.cpp:1609
 #, c-format
 msgid "Run %s"
 msgstr "Запустити %s"
 
-#: src/slic3r/GUI/GUI_App.cpp:1611
+#: src/slic3r/GUI/GUI_App.cpp:1613
 msgid "&Configuration Snapshots"
 msgstr "Знімки конфігурації"
 
-#: src/slic3r/GUI/GUI_App.cpp:1611
+#: src/slic3r/GUI/GUI_App.cpp:1613
 msgid "Inspect / activate configuration snapshots"
 msgstr "Перегляньте / активізуйте знімки конфігурації"
 
-#: src/slic3r/GUI/GUI_App.cpp:1612
+#: src/slic3r/GUI/GUI_App.cpp:1614
 msgid "Take Configuration &Snapshot"
 msgstr "Зробіть знімок конфігурації"
 
-#: src/slic3r/GUI/GUI_App.cpp:1612
+#: src/slic3r/GUI/GUI_App.cpp:1614
 msgid "Capture a configuration snapshot"
 msgstr "Зробіть знімок конфігурації"
 
-#: src/slic3r/GUI/GUI_App.cpp:1613
+#: src/slic3r/GUI/GUI_App.cpp:1615
 msgid "Check for updates"
 msgstr "Перевірити наявність оновлень"
 
-#: src/slic3r/GUI/GUI_App.cpp:1613
+#: src/slic3r/GUI/GUI_App.cpp:1615
 msgid "Check for configuration updates"
 msgstr "Перевірити наявність оновлень конфігурації"
 
-#: src/slic3r/GUI/GUI_App.cpp:1616
+#: src/slic3r/GUI/GUI_App.cpp:1618
 msgid "&Preferences"
 msgstr "&Преференції"
 
-#: src/slic3r/GUI/GUI_App.cpp:1622
+#: src/slic3r/GUI/GUI_App.cpp:1624
 msgid "Application preferences"
 msgstr "Преференції застосування"
 
-#: src/slic3r/GUI/GUI_App.cpp:1627 src/slic3r/GUI/wxExtensions.cpp:685
+#: src/slic3r/GUI/GUI_App.cpp:1629 src/slic3r/GUI/wxExtensions.cpp:685
 msgid "Simple"
 msgstr "Простий"
 
-#: src/slic3r/GUI/GUI_App.cpp:1627
+#: src/slic3r/GUI/GUI_App.cpp:1629
 msgid "Simple View Mode"
 msgstr "Простий режим перегляду"
 
-#: src/slic3r/GUI/GUI_App.cpp:1629 src/slic3r/GUI/wxExtensions.cpp:687
+#: src/slic3r/GUI/GUI_App.cpp:1631 src/slic3r/GUI/wxExtensions.cpp:687
 msgctxt "Mode"
 msgid "Advanced"
 msgstr "Розширений"
 
-#: src/slic3r/GUI/GUI_App.cpp:1629
+#: src/slic3r/GUI/GUI_App.cpp:1631
 msgid "Advanced View Mode"
 msgstr "Розширений режим перегляду"
 
-#: src/slic3r/GUI/GUI_App.cpp:1630 src/slic3r/GUI/wxExtensions.cpp:688
+#: src/slic3r/GUI/GUI_App.cpp:1632 src/slic3r/GUI/wxExtensions.cpp:688
 msgid "Expert"
 msgstr "Експерт"
 
-#: src/slic3r/GUI/GUI_App.cpp:1630
+#: src/slic3r/GUI/GUI_App.cpp:1632
 msgid "Expert View Mode"
 msgstr "Режим перегляду Експерт"
 
-#: src/slic3r/GUI/GUI_App.cpp:1635
+#: src/slic3r/GUI/GUI_App.cpp:1637
 msgid "Mode"
 msgstr "Режим"
 
-#: src/slic3r/GUI/GUI_App.cpp:1635
+#: src/slic3r/GUI/GUI_App.cpp:1637
 #, c-format
 msgid "%s View Mode"
 msgstr "Режим перегляду %s"
 
-#: src/slic3r/GUI/GUI_App.cpp:1638
+#: src/slic3r/GUI/GUI_App.cpp:1640
 msgid "&Language"
 msgstr "Мова"
 
-#: src/slic3r/GUI/GUI_App.cpp:1641
+#: src/slic3r/GUI/GUI_App.cpp:1643
 msgid "Flash printer &firmware"
 msgstr "Прошити принтер"
 
-#: src/slic3r/GUI/GUI_App.cpp:1641
+#: src/slic3r/GUI/GUI_App.cpp:1643
 msgid "Upload a firmware image into an Arduino based printer"
 msgstr "Завантажте імідж прошивки на Arduino-принтер"
 
-#: src/slic3r/GUI/GUI_App.cpp:1657
+#: src/slic3r/GUI/GUI_App.cpp:1659
 msgid "Taking configuration snapshot"
 msgstr "Знімок конфігурації"
 
-#: src/slic3r/GUI/GUI_App.cpp:1657
+#: src/slic3r/GUI/GUI_App.cpp:1659
 msgid "Snapshot name"
 msgstr "Назва знімку"
 
-#: src/slic3r/GUI/GUI_App.cpp:1695
+#: src/slic3r/GUI/GUI_App.cpp:1697
 msgid "Failed to activate configuration snapshot."
 msgstr "Не вдалося активувати знімок конфігурації."
 
-#: src/slic3r/GUI/GUI_App.cpp:1745
+#: src/slic3r/GUI/GUI_App.cpp:1747
 msgid "Language selection"
 msgstr "Вибір мови"
 
-#: src/slic3r/GUI/GUI_App.cpp:1747
+#: src/slic3r/GUI/GUI_App.cpp:1749
 msgid ""
 "Switching the language will trigger application restart.\n"
 "You will lose content of the plater."
@@ -2960,46 +2970,46 @@ msgstr ""
 "Переключення мови спричинить перезапуск програми.\n"
 "Ви втратите вміст платеру."
 
-#: src/slic3r/GUI/GUI_App.cpp:1749
+#: src/slic3r/GUI/GUI_App.cpp:1751
 msgid "Do you want to proceed?"
 msgstr "Ви хочете продовжити?"
 
-#: src/slic3r/GUI/GUI_App.cpp:1776
+#: src/slic3r/GUI/GUI_App.cpp:1778
 msgid "&Configuration"
 msgstr "&Конфігурація"
 
-#: src/slic3r/GUI/GUI_App.cpp:1807
+#: src/slic3r/GUI/GUI_App.cpp:1809
 msgid "The preset(s) modifications are successfully saved"
 msgstr "Модифікації пресетів успішно збережено"
 
-#: src/slic3r/GUI/GUI_App.cpp:1828
+#: src/slic3r/GUI/GUI_App.cpp:1830
 msgid "The uploads are still ongoing"
 msgstr "Завантаження все ще триває"
 
-#: src/slic3r/GUI/GUI_App.cpp:1828
+#: src/slic3r/GUI/GUI_App.cpp:1830
 msgid "Stop them and continue anyway?"
 msgstr "Зупинити їх і продовжувати в будь-якому випадку?"
 
-#: src/slic3r/GUI/GUI_App.cpp:1831
+#: src/slic3r/GUI/GUI_App.cpp:1833
 msgid "Ongoing uploads"
 msgstr "Триває завантаження"
 
-#: src/slic3r/GUI/GUI_App.cpp:2059 src/slic3r/GUI/Tab.cpp:3249
+#: src/slic3r/GUI/GUI_App.cpp:2061 src/slic3r/GUI/Tab.cpp:3249
 msgid "It's impossible to print multi-part object(s) with SLA technology."
 msgstr ""
 "За технологією SLA неможливо надрукувати об'єкти, що складаються з декількох "
 "частин."
 
-#: src/slic3r/GUI/GUI_App.cpp:2060
+#: src/slic3r/GUI/GUI_App.cpp:2062
 msgid "Please check and fix your object list."
 msgstr "Будь ласка, перевірте та виправте свій список об'єктів."
 
-#: src/slic3r/GUI/GUI_App.cpp:2061 src/slic3r/GUI/Jobs/SLAImportJob.cpp:212
+#: src/slic3r/GUI/GUI_App.cpp:2063 src/slic3r/GUI/Jobs/SLAImportJob.cpp:212
 #: src/slic3r/GUI/Plater.cpp:2361 src/slic3r/GUI/Tab.cpp:3251
 msgid "Attention!"
 msgstr "Увага!"
 
-#: src/slic3r/GUI/GUI_App.cpp:2078
+#: src/slic3r/GUI/GUI_App.cpp:2080
 msgid "Select a gcode file:"
 msgstr "Виберіть файл G-коду:"
 
@@ -4012,11 +4022,11 @@ msgid "Load Config from ini/amf/3mf/gcode and merge"
 msgstr "Завантажити конфігурацію з INI/AMF/3MF/GCODE та об’єднати"
 
 #: src/slic3r/GUI/KBShortcutsDialog.cpp:79 src/slic3r/GUI/Plater.cpp:771
-#: src/slic3r/GUI/Plater.cpp:6074 src/libslic3r/PrintConfig.cpp:3639
+#: src/slic3r/GUI/Plater.cpp:6075 src/libslic3r/PrintConfig.cpp:3639
 msgid "Export G-code"
 msgstr "Експорт G-коду"
 
-#: src/slic3r/GUI/KBShortcutsDialog.cpp:80 src/slic3r/GUI/Plater.cpp:6075
+#: src/slic3r/GUI/KBShortcutsDialog.cpp:80 src/slic3r/GUI/Plater.cpp:6076
 msgid "Send G-code"
 msgstr "Надіслання G-коду"
 
@@ -5136,7 +5146,7 @@ msgid "Save zip file as:"
 msgstr "Зберегти zip-файл як:"
 
 #: src/slic3r/GUI/MainFrame.cpp:1406 src/slic3r/GUI/Plater.cpp:3017
-#: src/slic3r/GUI/Plater.cpp:5602 src/slic3r/GUI/Tab.cpp:1582
+#: src/slic3r/GUI/Plater.cpp:5603 src/slic3r/GUI/Tab.cpp:1582
 #: src/slic3r/GUI/Tab.cpp:4122
 msgid "Slicing"
 msgstr "Нарізання"
@@ -5237,31 +5247,27 @@ msgstr "%s виявив помилку"
 msgid "%s information"
 msgstr "%s інформація"
 
-#: src/slic3r/GUI/MsgDialog.cpp:114
-msgid "Note that"
-msgstr "Зверніть увагу, що"
-
-#: src/slic3r/GUI/NotificationManager.hpp:471
+#: src/slic3r/GUI/NotificationManager.cpp:41
 msgid "3D Mouse disconnected."
 msgstr "3D миша відключена."
 
-#: src/slic3r/GUI/NotificationManager.hpp:474
+#: src/slic3r/GUI/NotificationManager.cpp:44
 msgid "Configuration update is available."
 msgstr "Доступне оновлення конфігурації."
 
-#: src/slic3r/GUI/NotificationManager.hpp:474
+#: src/slic3r/GUI/NotificationManager.cpp:44
 msgid "See more."
 msgstr "Див. докладніше."
 
-#: src/slic3r/GUI/NotificationManager.hpp:476
+#: src/slic3r/GUI/NotificationManager.cpp:46
 msgid "New version is available."
 msgstr "Доступна нова версія."
 
-#: src/slic3r/GUI/NotificationManager.hpp:476
+#: src/slic3r/GUI/NotificationManager.cpp:46
 msgid "See Releases page."
 msgstr "Див. Сторінку випусків."
 
-#: src/slic3r/GUI/NotificationManager.hpp:479
+#: src/slic3r/GUI/NotificationManager.cpp:49
 msgid ""
 "You have just added a G-code for color change, but its value is empty.\n"
 "To export the G-code correctly, check the \"Color Change G-code\" in "
@@ -5271,41 +5277,41 @@ msgstr ""
 "Щоб правильно експортувати G-код, перевірте значення параметру «G-коду зміни "
 "кольору» в «Параметри принтера > Користувацький G-код»"
 
-#: src/slic3r/GUI/NotificationManager.cpp:515
-#: src/slic3r/GUI/NotificationManager.cpp:523
+#: src/slic3r/GUI/NotificationManager.cpp:533
+#: src/slic3r/GUI/NotificationManager.cpp:541
 msgid "More"
 msgstr "Більше"
 
-#: src/slic3r/GUI/NotificationManager.cpp:890
-#: src/slic3r/GUI/NotificationManager.cpp:1170
+#: src/slic3r/GUI/NotificationManager.cpp:908
+#: src/slic3r/GUI/NotificationManager.cpp:1188
 msgid "Export G-Code."
 msgstr "Експортувати G-код."
 
-#: src/slic3r/GUI/NotificationManager.cpp:936
+#: src/slic3r/GUI/NotificationManager.cpp:954
 msgid "Open Folder."
 msgstr "Відкрити папку."
 
-#: src/slic3r/GUI/NotificationManager.cpp:975
+#: src/slic3r/GUI/NotificationManager.cpp:993
 msgid "Eject drive"
 msgstr "Від'єднати диск"
 
-#: src/slic3r/GUI/NotificationManager.cpp:1089
-#: src/slic3r/GUI/NotificationManager.cpp:1105
-#: src/slic3r/GUI/NotificationManager.cpp:1116
+#: src/slic3r/GUI/NotificationManager.cpp:1107
+#: src/slic3r/GUI/NotificationManager.cpp:1123
+#: src/slic3r/GUI/NotificationManager.cpp:1134
 msgid "ERROR:"
 msgstr "ПОМИЛКА:"
 
-#: src/slic3r/GUI/NotificationManager.cpp:1094
-#: src/slic3r/GUI/NotificationManager.cpp:1109
-#: src/slic3r/GUI/NotificationManager.cpp:1124
+#: src/slic3r/GUI/NotificationManager.cpp:1112
+#: src/slic3r/GUI/NotificationManager.cpp:1127
+#: src/slic3r/GUI/NotificationManager.cpp:1142
 msgid "WARNING:"
 msgstr "ЗАСТЕРЕЖЕННЯ:"
 
-#: src/slic3r/GUI/NotificationManager.cpp:1173
+#: src/slic3r/GUI/NotificationManager.cpp:1191
 msgid "Slicing finished."
 msgstr "Нарізання завершено."
 
-#: src/slic3r/GUI/NotificationManager.cpp:1215
+#: src/slic3r/GUI/NotificationManager.cpp:1233
 msgid "Exporting finished."
 msgstr "Експорт завершено."
 
@@ -5385,10 +5391,6 @@ msgstr "Видаліть цей пресет з цього принтера"
 #: src/slic3r/GUI/PhysicalPrinterDialog.cpp:82
 msgid "This printer will be shown in the presets list as"
 msgstr "Цей принтер буде відображатися у списку пресетів як"
-
-#: src/slic3r/GUI/PhysicalPrinterDialog.cpp:156
-msgid "Physical Printer"
-msgstr "Фізичний принтер"
 
 #: src/slic3r/GUI/PhysicalPrinterDialog.cpp:163
 msgid "Type here the name of your printer device"
@@ -5581,12 +5583,12 @@ msgstr "Під об’єктем"
 msgid "Around object"
 msgstr "Навколо об'єкта"
 
-#: src/slic3r/GUI/Plater.cpp:757 src/slic3r/GUI/Plater.cpp:6075
+#: src/slic3r/GUI/Plater.cpp:757 src/slic3r/GUI/Plater.cpp:6076
 msgid "Send to printer"
 msgstr "Надіслати на принтер"
 
 #: src/slic3r/GUI/Plater.cpp:772 src/slic3r/GUI/Plater.cpp:3017
-#: src/slic3r/GUI/Plater.cpp:5605
+#: src/slic3r/GUI/Plater.cpp:5606
 msgid "Slice now"
 msgstr "Нарізати зараз"
 
@@ -6110,44 +6112,44 @@ msgstr "Встановити кількість копій на %d"
 msgid "Cut by Plane"
 msgstr "Вирізати площиною"
 
-#: src/slic3r/GUI/Plater.cpp:5337
+#: src/slic3r/GUI/Plater.cpp:5338
 msgid "Save G-code file as:"
 msgstr "Зберегти G-код файл як:"
 
-#: src/slic3r/GUI/Plater.cpp:5337
+#: src/slic3r/GUI/Plater.cpp:5338
 msgid "Save SL1 / SL1S file as:"
 msgstr "Зберегти SL1 / SL1S файл як:"
 
-#: src/slic3r/GUI/Plater.cpp:5484
+#: src/slic3r/GUI/Plater.cpp:5485
 #, c-format
 msgid "STL file exported to %s"
 msgstr "STL-файл експортовано в %s"
 
-#: src/slic3r/GUI/Plater.cpp:5501
+#: src/slic3r/GUI/Plater.cpp:5502
 #, c-format
 msgid "AMF file exported to %s"
 msgstr "AMF-файл експортовано в %s"
 
-#: src/slic3r/GUI/Plater.cpp:5504
+#: src/slic3r/GUI/Plater.cpp:5505
 #, c-format
 msgid "Error exporting AMF file %s"
 msgstr "Помилка експортування AMF-файлу %s"
 
-#: src/slic3r/GUI/Plater.cpp:5533
+#: src/slic3r/GUI/Plater.cpp:5534
 #, c-format
 msgid "3MF file exported to %s"
 msgstr "3MF-файл експортовано в %s"
 
-#: src/slic3r/GUI/Plater.cpp:5538
+#: src/slic3r/GUI/Plater.cpp:5539
 #, c-format
 msgid "Error exporting 3MF file %s"
 msgstr "Помилка експортування 3MF-файлу %s"
 
-#: src/slic3r/GUI/Plater.cpp:6074
+#: src/slic3r/GUI/Plater.cpp:6075
 msgid "Export"
 msgstr "Експорт"
 
-#: src/slic3r/GUI/Plater.cpp:6169
+#: src/slic3r/GUI/Plater.cpp:6170
 msgid "Paste From Clipboard"
 msgstr "Вставити з буферу обміну"
 
@@ -7761,6 +7763,12 @@ msgstr "Параметри принтеру"
 #: src/slic3r/GUI/Tab.hpp:476
 msgid "Material Settings"
 msgstr "Параметри матеріалу"
+
+#: src/slic3r/GUI/UnsavedChangesDialog.cpp:149
+#: src/slic3r/GUI/UnsavedChangesDialog.cpp:158
+#: src/slic3r/GUI/UnsavedChangesDialog.cpp:857
+msgid "Undef"
+msgstr "Невизначений"
 
 #: src/slic3r/GUI/UnsavedChangesDialog.cpp:537
 msgid "PrusaSlicer is closing: Unsaved Changes"
@@ -9577,7 +9585,6 @@ msgid "Extra perimeters if needed"
 msgstr "Додаткові периметри, якщо необхідно"
 
 #: src/libslic3r/PrintConfig.cpp:539
-#, fuzzy, c-format
 msgid ""
 "Add more perimeters when needed for avoiding gaps in sloping walls. Slic3r "
 "keeps adding perimeters, until more than 70% of the loop immediately above "
@@ -10640,7 +10647,6 @@ msgid "This setting represents the maximum speed of your fan."
 msgstr "Цей параметр відображає максимальну швидкість вашого вентилятора."
 
 #: src/libslic3r/PrintConfig.cpp:1435
-#, fuzzy, c-format
 msgid ""
 "This is the highest printable layer height for this extruder, used to cap "
 "the variable layer height and support layer height. Maximum recommended "
@@ -12830,6 +12836,34 @@ msgstr "Підготовка заповнення"
 #: src/libslic3r/PrintObject.cpp:421
 msgid "Generating support material"
 msgstr "Створення підтримок"
+
+#~ msgid "new unknown value %1% was changed to default value %2%"
+#~ msgstr ""
+#~ "нове невідоме значення %1% було змінено на значення за промовчанням %2%"
+
+#~ msgid ""
+#~ "Loading profiles found following incompatibilities:%1% To recover these "
+#~ "files, incompatible values were changed to default values.\n"
+#~ " But data in files won't be changed until you save them in PrusaSlicer."
+#~ msgstr ""
+#~ "Під час завантаження профілів було знайдено наступні несумісності:%1% Щоб "
+#~ "відновити ці файли, несумісні значення було змінено на значення за "
+#~ "промовчанням.\n"
+#~ " Але дані у файлах не будуть змінені, поки ви не збережете їх у "
+#~ "PrusaSlicer."
+
+#~ msgid ""
+#~ "Loading %1% file found incompatibilities.\n"
+#~ "To recover this file, incompatible values were changed to default values:"
+#~ "%2%But data in files won't be changed until you save them in PrusaSlicer."
+#~ msgstr ""
+#~ "Завантаження %1% файла виявили несумісність.\n"
+#~ "Щоб відновити цей файл, несумісні значення було змінено на значення за "
+#~ "промовчанням:%2% Але дані у файлах не змінюватимуться, доки ви не "
+#~ "збережете їх у PrusaSlicer."
+
+#~ msgid "Note that"
+#~ msgstr "Зверніть увагу, що"
 
 #~ msgid "Ignore non-existent config files"
 #~ msgstr "Ігнорувати неіснуючі конфігураційні файли"
