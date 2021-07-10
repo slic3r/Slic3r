@@ -1579,6 +1579,28 @@ MedialAxis::taper_ends(ThickPolylines& pp)
     }
 }
 
+double
+check_circular(ExPolygon& expolygon, coord_t max_variation) {
+    if (expolygon.holes.size() > 0) return 0;
+
+    //test if convex
+    if (expolygon.contour.concave_points().empty() && expolygon.contour.points.size() > 3) {
+        // Computing circle center
+        Point center = expolygon.contour.centroid();
+        double radius_min = std::numeric_limits<float>::max(), radius_max = 0;
+        for (int i = 0; i < expolygon.contour.points.size(); ++i) {
+            double dist = expolygon.contour.points[i].distance_to(center);
+            radius_min = std::min(radius_min, dist);
+            radius_max = std::max(radius_max, dist);
+        }
+        // check with max_variation to be sure it's round enough
+        if (radius_max - radius_min < max_variation) {
+            return radius_max;
+        }
+    }
+    return 0;
+}
+
 void
 MedialAxis::build(ThickPolylines &polylines_out)
 {
@@ -1602,6 +1624,23 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //safety check
     if (this->expolygon.area() < this->min_width * this->min_width) this->expolygon = this->surface;
     if (this->expolygon.area() < this->min_width * this->min_width) return;
+
+    //check for circular shape
+    double radius = check_circular(this->expolygon, this->min_width/4);
+    if (radius > 0) {
+        ExPolygons miniPeri = offset_ex(this->expolygon.contour, -radius / 2);
+        if (miniPeri.size() == 1 && miniPeri[0].holes.size() == 0) {
+            ThickPolyline thickPoly;
+            thickPoly.points = miniPeri[0].contour.points;
+            thickPoly.endpoints.first = false;
+            thickPoly.endpoints.second = false;
+            for (int i = 0; i < thickPoly.points.size(); i++) {
+                thickPoly.width.push_back(radius);
+            }
+            polylines_out.insert(polylines_out.end(), thickPoly);
+            return;
+        }
+    }
 
     //std::cout << "simplify_polygon_frontier\n";
     // compute the Voronoi diagram and extract medial axis polylines
