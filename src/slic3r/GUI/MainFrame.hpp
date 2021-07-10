@@ -187,7 +187,7 @@ public:
     bool        is_last_input_file() const  { return !m_qs_last_input_file.IsEmpty(); }
     ESettingsLayout get_layout() const { return m_layout; }
 
-    void        quick_slice(const int qs = qsUndef);
+//    void        quick_slice(const int qs = qsUndef);
     void        reslice_now();
     void        repair_stl();
     void        export_config(bool to_prusa = false);

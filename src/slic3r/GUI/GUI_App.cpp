@@ -443,7 +443,9 @@ wxString file_wildcards(FileType file_type, const std::string &custom_extension)
 
         /* FT_TEX */     "Texture (*.png, *.svg)|*.png;*.PNG;*.svg;*.SVG",
 
-        /* FT_PNGZIP */  "Masked SLA files (*.sl1)|*.sl1;*.SL1",
+        /* FT_SL1 */     "Masked SLA files (*.sl1, *.sl1s)|*.sl1;*.SL1;*.sl1s;*.SL1S",
+        // Workaround for OSX file picker, for some reason it always saves with the 1st extension.
+        /* FT_SL1S */    "Masked SLA files (*.sl1s, *.sl1)|*.sl1s;*.SL1S;*.sl1;*.SL1",
     };
 
 	std::string out = defaults[file_type];
@@ -634,6 +636,9 @@ void GUI_App::post_init()
             this->plater()->load_gcode(wxString::FromUTF8(this->init_params->input_files[0].c_str()));
     }
     else {
+        if (! this->init_params->preset_substitutions.empty())
+            show_substitutions_info(this->init_params->preset_substitutions);
+
 #if 0
         // Load the cummulative config over the currently active profiles.
         //FIXME if multiple configs are loaded, only the last one will have an effect.
@@ -653,6 +658,24 @@ void GUI_App::post_init()
         if (! this->init_params->extra_config.empty())
             this->mainframe->load_config(this->init_params->extra_config);
     }
+
+    // The extra CallAfter() is needed because of Mac, where this is the only way
+    // to popup a modal dialog on start without screwing combo boxes.
+    // This is ugly but I honestly found no better way to do it.
+    // Neither wxShowEvent nor wxWindowCreateEvent work reliably.
+    if (this->preset_updater) {
+        this->check_updates(false);
+        CallAfter([this] {
+            this->config_wizard_startup();
+            this->preset_updater->slic3r_update_notify();
+            this->preset_updater->sync(preset_bundle);
+        });
+    }
+
+#ifdef _WIN32
+    // Sets window property to mainframe so other instances can indentify it.
+    OtherInstanceMessageHandler::init_windows_properties(mainframe, m_instance_hash_int);
+#endif //WIN32
 }
 
 IMPLEMENT_APP(GUI_App)
@@ -923,7 +946,10 @@ bool GUI_App::on_init_inner()
     // Suppress the '- default -' presets.
     preset_bundle->set_default_suppressed(app_config->get("no_defaults") == "1");
     try {
-        preset_bundle->load_presets(*app_config);
+        // Enable all substitutions (in both user and system profiles), but log the substitutions in user profiles only.
+        // If there are substitutions in system profiles, then a "reconfigure" event shall be triggered, which will force
+        // installation of a compatible system preset, thus nullifying the system preset substitutions.
+        init_params->preset_substitutions = preset_bundle->load_presets(*app_config, ForwardCompatibilitySubstitutionRule::EnableSystemSilent);
     } catch (const std::exception &ex) {
         show_error(nullptr, ex.what());
     }
@@ -976,7 +1002,6 @@ bool GUI_App::on_init_inner()
         if (! plater_)
             return;
 
-
         if (app_config->dirty() && app_config->get("autosave") == "1")
             app_config->save();
 
@@ -996,33 +1021,6 @@ bool GUI_App::on_init_inner()
             this->mainframe->register_win32_callbacks();
 #endif
             this->post_init();
-        }
-
-        // Preset updating & Configwizard are done after the above initializations,
-        // and after MainFrame is created & shown.
-        // The extra CallAfter() is needed because of Mac, where this is the only way
-        // to popup a modal dialog on start without screwing combo boxes.
-        // This is ugly but I honestly found no better way to do it.
-        // Neither wxShowEvent nor wxWindowCreateEvent work reliably.
-
-        static bool once = true;
-        if (once) {
-            once = false;
-
-            if (preset_updater != nullptr) {
-			check_updates(false);
-
-			CallAfter([this] {
-				config_wizard_startup();
-				preset_updater->slic3r_update_notify();
-				preset_updater->sync(preset_bundle);
-				});
-        }
-
-#ifdef _WIN32
-            //sets window property to mainframe so other instances can indentify it
-            OtherInstanceMessageHandler::init_windows_properties(mainframe, m_instance_hash_int);
-#endif //WIN32
         }
     });
 
@@ -1819,9 +1817,10 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
                     child->SetFont(normal_font());
 
                 if (dlg.ShowModal() == wxID_OK)
-                    app_config->set("on_snapshot",
-                    Slic3r::GUI::Config::SnapshotDB::singleton().take_snapshot(
-                    *app_config, Slic3r::GUI::Config::Snapshot::SNAPSHOT_USER, dlg.GetValue().ToUTF8().data()).id);
+                    if (const Config::Snapshot *snapshot = Config::take_config_snapshot_report_error(
+                            *app_config, Config::Snapshot::SNAPSHOT_USER, dlg.GetValue().ToUTF8().data());
+                        snapshot != nullptr)
+                        app_config->set("on_snapshot", snapshot->id);
             }
             break;
         case ConfigMenuSnapshots:
@@ -1832,13 +1831,24 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
                 ConfigSnapshotDialog dlg(Slic3r::GUI::Config::SnapshotDB::singleton(), on_snapshot);
                 dlg.ShowModal();
                 if (!dlg.snapshot_to_activate().empty()) {
-                    if (! Config::SnapshotDB::singleton().is_on_snapshot(*app_config))
-                        Config::SnapshotDB::singleton().take_snapshot(*app_config, Config::Snapshot::SNAPSHOT_BEFORE_ROLLBACK);
+                    if (! Config::SnapshotDB::singleton().is_on_snapshot(*app_config) && 
+                        ! Config::take_config_snapshot_cancel_on_error(*app_config, Config::Snapshot::SNAPSHOT_BEFORE_ROLLBACK, "",
+                                GUI::format(_L("Continue to activate a configuration snapshot %1%?"), dlg.snapshot_to_activate())))
+                        break;
                     try {
                         app_config->set("on_snapshot", Config::SnapshotDB::singleton().restore_snapshot(dlg.snapshot_to_activate(), *app_config).id);
-                        preset_bundle->load_presets(*app_config);
+                        // Enable substitutions, log both user and system substitutions. There should not be any substitutions performed when loading system
+                        // presets because compatibility of profiles shall be verified using the min_slic3r_version keys in config index, but users
+                        // are known to be creative and mess with the config files in various ways.
+                        if (PresetsConfigSubstitutions all_substitutions = preset_bundle->load_presets(*app_config, ForwardCompatibilitySubstitutionRule::Enable);
+                            ! all_substitutions.empty())
+                            show_substitutions_info(all_substitutions);
+
                         // Load the currently selected preset into the GUI, update the preset selection box.
                         load_current_presets();
+
+                        // update config wizard in respect to the new config
+                        update_wizard_from_config();
                     } catch (std::exception &ex) {
                         GUI::show_error(nullptr, _L("Failed to activate configuration snapshot.") + "\n" + into_u8(ex.what()));
                     }
@@ -2015,6 +2025,17 @@ void GUI_App::load_current_presets(bool check_printer_presets_ /*= true*/)
 		}
 }
 
+void GUI_App::update_wizard_from_config()
+{
+    if (!m_wizard)
+        return;
+    // If ConfigWizard was created before changing of the configuration,
+    // we have to destroy it to have possibility to create it again in respect to the new config's parameters
+    m_wizard->Reparent(nullptr);
+    m_wizard->Destroy();
+    m_wizard = nullptr;
+}
+
 bool GUI_App::OnExceptionInMainLoop()
 {
     generic_exception_handle();
@@ -2175,7 +2196,13 @@ bool GUI_App::run_wizard(ConfigWizard::RunReason reason, ConfigWizard::StartPage
 {
     wxCHECK_MSG(mainframe != nullptr, false, "Internal error: Main frame not created / null");
 
+    if (reason == ConfigWizard::RR_USER)
+        if (PresetUpdater::UpdateResult result = preset_updater->config_update(app_config->orig_version(), PresetUpdater::UpdateParams::FORCED_BEFORE_WIZARD);
+            result == PresetUpdater::R_ALL_CANCELED)
+            return false;
+
     if (! m_wizard) {
+        wxBusyCursor wait;
         m_wizard = new ConfigWizard(mainframe);
     }
 
@@ -2334,7 +2361,7 @@ void GUI_App::check_updates(const bool verbose)
 {	
 	PresetUpdater::UpdateResult updater_result;
 	try {
-		updater_result = preset_updater->config_update(app_config->orig_version(), verbose);
+		updater_result = preset_updater->config_update(app_config->orig_version(), verbose ? PresetUpdater::UpdateParams::SHOW_TEXT_BOX : PresetUpdater::UpdateParams::SHOW_NOTIFICATION);
 		if (updater_result == PresetUpdater::R_INCOMPAT_EXIT) {
 			mainframe->Close();
 		}

@@ -72,6 +72,7 @@ enum class MachineLimitsUsage : uint8_t {
 };
 
 enum PrintHostType {
+    htPrusaLink,
     htOctoPrint,
     htDuet,
     htFlashAir,
@@ -222,6 +223,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<MachineLimitsUsag
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<PrintHostType>::get_enum_values() {
     static t_config_enum_values keys_map = {
+        {"prusalink", htPrusaLink},
         {"octoprint", htOctoPrint},
         {"duet", htDuet},
         {"flashair", htFlashAir},
@@ -370,6 +372,15 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<ZLiftTop>::get_en
     return keys_map;
 }
 
+template<> inline const t_config_enum_values& ConfigOptionEnum<ForwardCompatibilitySubstitutionRule>::get_enum_values() {
+    static const t_config_enum_values keys_map = {
+        { "disable",        ForwardCompatibilitySubstitutionRule::Disable },
+        { "enable",         ForwardCompatibilitySubstitutionRule::Enable },
+        { "enable_silent",  ForwardCompatibilitySubstitutionRule::EnableSilent }
+    };
+
+    return keys_map;
+}
 // Defines each and every confiuration option of Slic3r, including the properties of the GUI dialogs.
 // Does not store the actual values, but defines default values.
 class PrintConfigDef : public ConfigDef
@@ -1901,8 +1912,8 @@ public:
     bool         set_key_value(const std::string &opt_key, ConfigOption *opt) { bool out = m_data.set_key_value(opt_key, opt); this->touch(); return out; }
     template<typename T>
     void         set(const std::string &opt_key, T value) { m_data.set(opt_key, value, true); this->touch(); }
-    void         set_deserialize(const t_config_option_key &opt_key, const std::string &str, bool append = false)
-        { m_data.set_deserialize(opt_key, str, append); this->touch(); }
+    void         set_deserialize(const t_config_option_key &opt_key, const std::string &str, ConfigSubstitutionContext &substitution_context, bool append = false)
+        { m_data.set_deserialize(opt_key, str, substitution_context, append); this->touch(); }
     bool         erase(const t_config_option_key &opt_key) { bool out = m_data.erase(opt_key); if (out) this->touch(); return out; }
 
     // Getters are thread safe.

@@ -62,10 +62,11 @@ namespace Slic3r
 
 struct AMFParserContext
 {
-    AMFParserContext(XML_Parser parser, DynamicPrintConfig* config, Model* model) :
+    AMFParserContext(XML_Parser parser, DynamicPrintConfig* config, ConfigSubstitutionContext* config_substitutions, Model* model) :
         m_parser(parser),
         m_model(*model), 
-        m_config(config)
+        m_config(config),
+        m_config_substitutions(config_substitutions)
     {
         m_path.reserve(12);
     }
@@ -256,6 +257,8 @@ struct AMFParserContext
     std::string              m_value[5];
     // Pointer to config to update if config data are stored inside the amf file
     DynamicPrintConfig      *m_config { nullptr };
+    // Config substitution rules and collected config substitution log.
+    ConfigSubstitutionContext *m_config_substitutions { nullptr };
 
 private:
     AMFParserContext& operator=(AMFParserContext&);
@@ -704,8 +707,9 @@ void AMFParserContext::endElement(const char * /* name */)
         }
 
     case NODE_TYPE_METADATA:
-        if ((m_config != nullptr) && strncmp(m_value[0].c_str(), SLIC3R_CONFIG_TYPE, strlen(SLIC3R_CONFIG_TYPE)) == 0)
-            m_config->load_from_gcode_string(m_value[1].c_str());
+        if ((m_config != nullptr) && strncmp(m_value[0].c_str(), SLIC3R_CONFIG_TYPE, strlen(SLIC3R_CONFIG_TYPE)) == 0) {
+            m_config->load_from_gcode_string(m_value[1].c_str(), *m_config_substitutions);
+        }
         else if (strncmp(m_value[0].c_str(), "slic3r.", 7) == 0) {
             const char *opt_key = m_value[0].c_str() + 7;
             if (print_config_def.options.find(opt_key) != print_config_def.options.end()) {
@@ -723,7 +727,7 @@ void AMFParserContext::endElement(const char * /* name */)
                     config = &it->second;
                 }
                 if (config)
-                    config->set_deserialize(opt_key, m_value[1]);
+                    config->set_deserialize(opt_key, m_value[1], *m_config_substitutions);
             } else if (m_path.size() == 3 && m_path[1] == NODE_TYPE_OBJECT && m_object && strcmp(opt_key, "layer_height_profile") == 0) {
                 // Parse object's layer height profile, a semicolon separated list of floats.
                 char *p = m_value[1].data();
@@ -848,7 +852,7 @@ void AMFParserContext::endDocument()
 }
 
 // Load an AMF file into a provided model.
-bool load_amf_file(const char *path, DynamicPrintConfig *config, Model *model)
+bool load_amf_file(const char *path, DynamicPrintConfig *config, ConfigSubstitutionContext *config_substitutions, Model *model)
 {
     if ((path == nullptr) || (model == nullptr))
         return false;
@@ -865,7 +869,7 @@ bool load_amf_file(const char *path, DynamicPrintConfig *config, Model *model)
         return false;
     }
 
-    AMFParserContext ctx(parser, config, model);
+    AMFParserContext ctx(parser, config, config_substitutions, model);
     XML_SetUserData(parser, (void*)&ctx);
     XML_SetElementHandler(parser, AMFParserContext::startElement, AMFParserContext::endElement);
     XML_SetCharacterDataHandler(parser, AMFParserContext::characters);
@@ -909,7 +913,7 @@ bool load_amf_file(const char *path, DynamicPrintConfig *config, Model *model)
     return result;
 }
 
-bool extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, DynamicPrintConfig* config, Model* model, bool check_version)
+bool extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, DynamicPrintConfig* config, ConfigSubstitutionContext* config_substitutions, Model* model, bool check_version)
 {
     if (stat.m_uncomp_size == 0)
     {
@@ -925,7 +929,7 @@ bool extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_fi
         return false;
     }
 
-    AMFParserContext ctx(parser, config, model);
+    AMFParserContext ctx(parser, config, config_substitutions, model);
     XML_SetUserData(parser, (void*)&ctx);
     XML_SetElementHandler(parser, AMFParserContext::startElement, AMFParserContext::endElement);
     XML_SetCharacterDataHandler(parser, AMFParserContext::characters);
@@ -985,7 +989,7 @@ bool extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_fi
 }
 
 // Load an AMF archive into a provided model.
-bool load_amf_archive(const char* path, DynamicPrintConfig* config, Model* model, bool check_version)
+bool load_amf_archive(const char* path, DynamicPrintConfig* config, ConfigSubstitutionContext* config_substitutions, Model* model, bool check_version)
 {
     if ((path == nullptr) || (model == nullptr))
         return false;
@@ -1011,7 +1015,7 @@ bool load_amf_archive(const char* path, DynamicPrintConfig* config, Model* model
             {
                 try
                 {
-                    if (!extract_model_from_archive(archive, stat, config, model, check_version))
+                    if (!extract_model_from_archive(archive, stat, config, config_substitutions, model, check_version))
                     {
                         close_zip_reader(&archive);
                         printf("Archive does not contain a valid model");
@@ -1053,11 +1057,11 @@ bool load_amf_archive(const char* path, DynamicPrintConfig* config, Model* model
 
 // Load an AMF file into a provided model.
 // If config is not a null pointer, updates it if the amf file/archive contains config data
-bool load_amf(const char* path, DynamicPrintConfig* config, Model* model, bool check_version)
+bool load_amf(const char* path, DynamicPrintConfig* config, ConfigSubstitutionContext* config_substitutions, Model* model, bool check_version)
 {
     if (boost::iends_with(path, ".amf.xml"))
         // backward compatibility with older slic3r output
-        return load_amf_file(path, config, model);
+        return load_amf_file(path, config, config_substitutions, model);
     else if (boost::iends_with(path, ".amf"))
     {
         boost::nowide::ifstream file(path, boost::nowide::ifstream::binary);
@@ -1068,7 +1072,7 @@ bool load_amf(const char* path, DynamicPrintConfig* config, Model* model, bool c
         file.read(zip_mask.data(), 2);
         file.close();
 
-        return (zip_mask == "PK") ? load_amf_archive(path, config, model, check_version) : load_amf_file(path, config, model);
+        return (zip_mask == "PK") ? load_amf_archive(path, config, config_substitutions, model, check_version) : load_amf_file(path, config, config_substitutions, model);
     }
     else
         return false;

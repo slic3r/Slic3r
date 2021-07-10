@@ -952,6 +952,8 @@ static wxString get_string_value(std::string opt_key, const DynamicPrintConfig& 
             return get_string_from_enum<InfillPattern>(opt_key, config);
         if (opt_key == "complete_objects_sort")
             return get_string_from_enum<CompleteObjectSort>(opt_key, config);
+        if (opt_key == "config_compatibility")
+            return get_string_from_enum<ForwardCompatibilitySubstitutionRule>(opt_key, config);
         if (opt_key == "display_orientation")
             return get_string_from_enum<SLADisplayOrientation>(opt_key, config);
         if (opt_key == "output_format")

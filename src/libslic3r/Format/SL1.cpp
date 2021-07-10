@@ -203,7 +203,7 @@ RasterParams get_raster_params(const DynamicPrintConfig &cfg)
 
     if (!opt_disp_cols || !opt_disp_rows || !opt_disp_w || !opt_disp_h ||
         !opt_mirror_x || !opt_mirror_y || !opt_orient)
-        throw Slic3r::FileIOError("Invalid SL1 file");
+        throw Slic3r::FileIOError("Invalid SL1 / SL1S file");
 
     RasterParams rstp;
 
@@ -229,7 +229,7 @@ SliceParams get_slice_params(const DynamicPrintConfig &cfg)
     auto *opt_init_layerh = cfg.option<ConfigOptionFloat>("initial_layer_height");
 
     if (!opt_layerh || !opt_init_layerh)
-        throw Slic3r::FileIOError("Invalid SL1 file");
+        throw Slic3r::FileIOError("Invalid SL1 / SL1S file");
 
     return SliceParams{opt_layerh->getFloat(), opt_init_layerh->getFloat()};
 }
@@ -287,13 +287,13 @@ std::vector<ExPolygons> extract_slices_from_sla_archive(
 
 } // namespace
 
-void import_sla_archive(const std::string &zipfname, DynamicPrintConfig &out)
+ConfigSubstitutions import_sla_archive(const std::string &zipfname, DynamicPrintConfig &out)
 {
     ArchiveData arch = extract_sla_archive(zipfname, "png");
-    out.load(arch.profile);
+    return out.load(arch.profile, ForwardCompatibilitySubstitutionRule::Enable);
 }
 
-void import_sla_archive(
+ConfigSubstitutions import_sla_archive(
     const std::string &      zipfname,
     Vec2i32                  windowsize,
     TriangleMesh &           out,
@@ -305,7 +305,7 @@ void import_sla_archive(
     windowsize.y() = std::max(2, windowsize.y());
 
     ArchiveData arch = extract_sla_archive(zipfname, "thumbnail");
-    profile.load(arch.profile);
+    ConfigSubstitutions config_substitutions = profile.load(arch.profile, ForwardCompatibilitySubstitutionRule::Enable);
 
     RasterParams rstp = get_raster_params(profile);
     rstp.win          = {windowsize.y(), windowsize.x()};
@@ -317,6 +317,8 @@ void import_sla_archive(
 
     if (!slices.empty())
         out = slices_to_triangle_mesh(slices, 0, slicp.layerh, slicp.initial_layerh);
+
+    return config_substitutions;
 }
 
 using ConfMap = std::map<std::string, std::string>;

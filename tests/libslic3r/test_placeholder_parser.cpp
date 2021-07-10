@@ -10,7 +10,7 @@ SCENARIO("Placeholder parser scripting", "[PlaceholderParser]") {
 	auto 				config = DynamicPrintConfig::full_print_config();
 
     // To test the "first_layer_extrusion_width" over "nozzle_diameter" chain.
-	config.set_deserialize( {
+	config.set_deserialize_strict( {
 		{ "printer_notes", "  PRINTER_VENDOR_PRUSA3D  PRINTER_MODEL_MK2  " },
 	    { "nozzle_diameter", "0.6;0.6;0.6;0.6" },
 	    { "temperature", "357;359;363;378" }

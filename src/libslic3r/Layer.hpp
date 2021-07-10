@@ -49,7 +49,7 @@ public:
 
     // collection of expolygons representing the bridged areas (thus not
     // needing support material)
-    Polygons                    bridged;
+//    Polygons                    bridged;
 
     // collection of polylines representing the unsupported bridge edges
     Polylines          			unsupported_bridge_edges;

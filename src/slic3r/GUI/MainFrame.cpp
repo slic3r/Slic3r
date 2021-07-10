@@ -1268,7 +1268,7 @@ void MainFrame::init_menubar_as_editor()
             [this](wxCommandEvent&) { if (m_plater) m_plater->add_model(true); }, "import_plater", nullptr,
             [this](){return m_plater != nullptr; }, this);
         
-        append_menu_item(import_menu, wxID_ANY, _L("Import SL1 archive") + dots, _L("Load an SL1 archive"),
+        append_menu_item(import_menu, wxID_ANY, _L("Import SL1 / SL1S archive") + dots, _L("Load an SL1 / Sl1S archive"),
             [this](wxCommandEvent&) { if (m_plater) m_plater->import_sl1_archive(); }, "import_plater", nullptr,
             [this](){return m_plater != nullptr; }, this);    
     
@@ -1625,6 +1625,7 @@ void MainFrame::update_menubar()
     m_changeable_menu_items[miPrinterTab]   ->SetBitmap(create_scaled_bitmap(is_fff ? "printer" : "sla_printer"));
 }
 
+#if 0
 // To perform the "Quck Slice", "Quick Slice and Save As", "Repeat last Quick Slice" and "Slice to SVG".
 void MainFrame::quick_slice(const int qs)
 {
@@ -1747,6 +1748,7 @@ void MainFrame::quick_slice(const int qs)
 //     };
 //     Slic3r::GUI::catch_error(this, []() { if (m_progress_dialog) m_progress_dialog->Destroy(); });
 }
+#endif
 
 void MainFrame::reslice_now()
 {
@@ -1829,7 +1831,9 @@ void MainFrame::load_config_file()
 bool MainFrame::load_config_file(const std::string &path)
 {
     try {
-        wxGetApp().preset_bundle->load_config_file(path); 
+        ConfigSubstitutions config_substitutions = wxGetApp().preset_bundle->load_config_file(path, ForwardCompatibilitySubstitutionRule::Enable);
+        if (!config_substitutions.empty())
+            show_substitutions_info(config_substitutions, path);
     } catch (const std::exception& ex) {
         show_error(this, ex.what());
         return false;
@@ -1885,13 +1889,19 @@ void MainFrame::load_configbundle(wxString file/* = wxEmptyString, const bool re
 
     wxGetApp().app_config->update_config_dir(get_dir_name(file));
 
-    auto presets_imported = 0;
+    size_t presets_imported = 0;
+    PresetsConfigSubstitutions config_substitutions;
     try {
-        presets_imported = wxGetApp().preset_bundle->load_configbundle(file.ToUTF8().data());
+        // Report all substitutions.
+        std::tie(config_substitutions, presets_imported) = wxGetApp().preset_bundle->load_configbundle(
+            file.ToUTF8().data(), PresetBundle::LoadConfigBundleAttribute::SaveImported, ForwardCompatibilitySubstitutionRule::Enable);
     } catch (const std::exception &ex) {
         show_error(this, ex.what());
         return;
     }
+
+    if (! config_substitutions.empty())
+        show_substitutions_info(config_substitutions);
 
     // Load the currently selected preset into the GUI, update the preset selection box.
 	wxGetApp().load_current_presets();

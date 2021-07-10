@@ -66,6 +66,22 @@ private:
 };
 
 
+// Generic info dialog, used for displaying exceptions
+class InfoDialog : public MsgDialog
+{
+public:
+	InfoDialog(wxWindow *parent, const wxString &title, const wxString &msg);
+	InfoDialog(InfoDialog&&) = delete;
+	InfoDialog(const InfoDialog&) = delete;
+	InfoDialog&operator=(InfoDialog&&) = delete;
+	InfoDialog&operator=(const InfoDialog&) = delete;
+	virtual ~InfoDialog() = default;
+
+private:
+	wxString msg;
+};
+
+
 }
 }
 
