@@ -271,31 +271,35 @@ void PhysicalPrinterDialog::update_printers()
 
     wxArrayString printers;
     Field* rs = m_optgroup->get_field("printhost_port");
-    if (!host->get_printers(printers)) {
-        std::vector<std::string> slugs;
+    try {
+        if (!host->get_printers(printers)) {
+            std::vector<std::string> slugs;
 
-        Choice* choice = dynamic_cast<Choice*>(rs);
-        choice->set_values(slugs);
+            Choice* choice = dynamic_cast<Choice*>(rs);
+            choice->set_values(slugs);
 
-        rs->disable();
-    } else {
-        std::vector<std::string> slugs;
-        for (int i = 0; i < printers.size(); i++) {
-            slugs.push_back(printers[i].ToStdString());
+            rs->disable();
+        } else {
+            std::vector<std::string> slugs;
+            for (int i = 0; i < printers.size(); i++) {
+                slugs.push_back(printers[i].ToStdString());
+            }
+
+            Choice* choice = dynamic_cast<Choice*>(rs);
+            choice->set_values(slugs);
+            boost::any val = choice->get_value();
+            boost::any any_string_type = std::string("");
+            auto value_idx = std::find(slugs.begin(), slugs.end(), m_config->opt<ConfigOptionString>("printhost_port")->value);
+            if ((val.empty() || (any_string_type.type() == val.type() && boost::any_cast<std::string>(val) == "")) && !slugs.empty() && value_idx == slugs.end()) {
+                change_opt_value(*m_config, "printhost_port", slugs[0]);
+                choice->set_value(slugs[0], false);
+            } else if (value_idx != slugs.end()) {
+                choice->set_value(m_config->option<ConfigOptionString>("printhost_port")->value, false);
+            }
+            rs->enable();
         }
-
-        Choice* choice = dynamic_cast<Choice*>(rs);
-        choice->set_values(slugs);
-        boost::any val = choice->get_value();
-        boost::any any_string_type = std::string("");
-        auto value_idx = std::find(slugs.begin(), slugs.end(), m_config->opt<ConfigOptionString>("printhost_port")->value);
-        if ((val.empty() || (any_string_type.type() == val.type() && boost::any_cast<std::string>(val) == "")) && !slugs.empty() && value_idx == slugs.end()) {
-            change_opt_value(*m_config, "printhost_port", slugs[0]);
-            choice->set_value(slugs[0],false);
-        } else if(value_idx != slugs.end() ){
-            choice->set_value(m_config->option<ConfigOptionString>("printhost_port")->value, false);
-        }
-        rs->enable();
+    } catch (HostNetworkError error) {
+        show_error(this, error.what());
     }
 }
 

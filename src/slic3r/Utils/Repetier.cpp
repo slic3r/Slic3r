@@ -62,11 +62,14 @@ bool Repetier::test(wxString &msg) const
                 std::stringstream ss(body);
                 pt::ptree ptree;
                 pt::read_json(ss, ptree);
-                
-                const auto text = ptree.get_optional<std::string>("name");
-                res = validate_version_text(text);
-                if (! res) {
-                    msg = GUI::from_u8((boost::format(_u8L("Mismatched type of print host: %s")) % (text ? *text : "Repetier")).str());
+
+                res = ptree.get_optional<std::string>("name").has_value();
+                if (!res)
+                    msg = GUI::from_u8((boost::format(_u8L("Can't process the repetier return message: missing field '%s'")) % ("name")).str());
+                else {
+                    res = ptree.get_optional<std::string>("printers").has_value();
+                    if (!res)
+                        msg = GUI::from_u8((boost::format(_u8L("Can't process the repetier return message: missing field '%s'")) % ("printers")).str());
                 }
             }
             catch (const std::exception &) {
