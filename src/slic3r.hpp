@@ -20,7 +20,8 @@ class CLI {
     FullPrintConfig full_print_config;
     t_config_option_keys input_files, actions, transforms;
     std::vector<Model> models;
-    
+    std::string last_outfile;
+
     /// Prints usage of the CLI.
     void print_help(bool include_print_options = false) const;
     

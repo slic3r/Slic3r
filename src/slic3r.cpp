@@ -1,4 +1,5 @@
 #include "slic3r.hpp"
+#include "GCodeSender.hpp"
 #include "Geometry.hpp"
 #include "IO.hpp"
 #include "Log.hpp"
@@ -19,6 +20,8 @@
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/iostream.hpp>
 #include <stdexcept>
+#include <sstream>
+#include <string>
 
 #ifdef USE_WX
     #include "GUI/GUI.hpp"
@@ -337,6 +340,7 @@ int CLI::run(int argc, char **argv) {
                     exit(EXIT_FAILURE);
                 }
                 Slic3r::Log::info("CLI") << "G-code exported to " << outfile << std::endl;
+                this->last_outfile = outfile;
                 
                 // output some statistics
                 double duration { std::chrono::duration_cast<second_>(clock_::now() - t0).count() };
@@ -348,6 +352,49 @@ int CLI::run(int argc, char **argv) {
                     << "Filament required: " << print.total_used_filament() << "mm"
                     << " (" << print.total_extruded_volume()/1000 << "cm3)" << std::endl;
             }
+        } else if (opt_key == "print") {
+            if (this->models.size() > 1) {
+                Slic3r::Log::error("CLI") <<  "error: --print is not supported for multiple jobs" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            
+            // Get last sliced G-code or the manually supplied one
+            std::string gcode_file{ this->config.getString("gcode_file", "") };
+            if (gcode_file.empty())
+                gcode_file = this->last_outfile;
+            
+            if (gcode_file.empty()) {
+                Slic3r::Log::error("CLI") <<  "error: no G-code file to send; supply a model to slice or --gcode-file" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+
+            // Check serial port options
+            if (!this->print_config.has("serial_port") || !this->print_config.has("serial_speed")) {
+                Slic3r::Log::error("CLI") <<  "error: missing required --serial-port and --serial-speed" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+
+            // Connect to printer
+            Slic3r::GCodeSender sender;
+            sender.connect(
+                this->print_config.getString("serial_port"),
+                this->print_config.getInt("serial_speed")
+            );
+            while (!sender.is_connected()) {}
+            boost::nowide::cout << "Connected to printer" << std::endl;
+
+            // Send file line-by-line
+            std::ifstream infile(gcode_file);
+            std::string line;
+            while (std::getline(infile, line)) {
+                sender.send(line);
+            }
+
+            // Print queue size
+            while (sender.queue_size() > 0) {
+                boost::nowide::cout << "Queue size: " << sender.queue_size() << std::endl;
+            }
+            boost::nowide::cout << "Print completed!" << std::endl;
         } else {
             Slic3r::Log::error("CLI") <<  "error: option not supported yet: " << opt_key << std::endl;
             exit(EXIT_FAILURE);

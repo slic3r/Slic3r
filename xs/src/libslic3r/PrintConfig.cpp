@@ -1992,6 +1992,12 @@ CLIActionsConfigDef::CLIActionsConfigDef()
     def->tooltip = __TRANS("Save configuration to the specified file.");
     def->cli = "save";
     def->default_value = new ConfigOptionString();
+
+    def = this->add("print", coBool);
+    def->label = __TRANS("Send G-code");
+    def->tooltip = __TRANS("Send G-code to a printer.");
+    def->cli = "print";
+    def->default_value = new ConfigOptionBool(false);
 }
 
 CLITransformConfigDef::CLITransformConfigDef()
@@ -2116,6 +2122,11 @@ CLIMiscConfigDef::CLIMiscConfigDef()
     def->label = __TRANS("Output File");
     def->tooltip = __TRANS("The file where the output will be written (if not specified, it will be based on the input file).");
     def->cli = "output|o";
+
+    def = this->add("gcode_file", coString);
+    def->label = __TRANS("G-code file");
+    def->tooltip = __TRANS("The G-code file to send to the printer.");
+    def->cli = "gcode-file";
     
     #ifdef USE_WX
     def = this->add("autosave", coString);

@@ -208,7 +208,6 @@ if (!$ENV{SLIC3R_STATIC} && $have_boost) {
         }
     }
 }
-push @cflags, '-DBOOST_LIBS' if $have_boost;
 die <<'EOF' if !$have_boost;
 Slic3r requires the Boost libraries. Please make sure they are installed.
 

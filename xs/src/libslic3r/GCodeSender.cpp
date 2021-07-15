@@ -1,4 +1,3 @@
-#ifdef BOOST_LIBS
 #include "GCodeSender.hpp"
 #include <iostream>
 #include <istream>
@@ -564,4 +563,3 @@ GCodeSender::reset()
 
 }
 
-#endif
