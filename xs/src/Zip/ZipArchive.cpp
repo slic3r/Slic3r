@@ -1,4 +1,3 @@
-#include "miniz/miniz.h"
 #include "Zip/ZipArchive.hpp"
 
 namespace Slic3r {
