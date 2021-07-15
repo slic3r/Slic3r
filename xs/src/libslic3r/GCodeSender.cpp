@@ -53,8 +53,8 @@ constexpr auto KEEP_SENT = 20;
 namespace asio = boost::asio;
 
 GCodeSender::GCodeSender()
-    : io(), serial(io), can_send(false), sent(0), open(false), error(false),
-      connected(false), queue_paused(false)
+    : io(), serial(io), open(false),
+      connected(false), error(false), can_send(false), queue_paused(false), sent(0)
 {}
 
 GCodeSender::~GCodeSender()
@@ -107,6 +107,8 @@ GCodeSender::connect(std::string devname, unsigned int baud_rate)
     this->background_thread.swap(t);
     
     // always send a M105 to check for connection because firmware might be silent on connect 
+    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+    this->sent++;
     this->send("M105", true);
     
     return true;
