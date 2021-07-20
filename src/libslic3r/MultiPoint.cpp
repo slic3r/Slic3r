@@ -265,7 +265,7 @@ std::vector<Point> MultiPoint::_douglas_peucker_plus(const std::vector<Point>& p
 {
     std::vector<Point> result_pts;
     std::vector<size_t> result_idx;
-    double tolerance_sq = tolerance * tolerance;
+    const double tolerance_sq = tolerance * tolerance;
     if (!pts.empty()) {
         const Point* anchor = &pts.front();
         size_t        anchor_idx = 0;
@@ -314,9 +314,9 @@ std::vector<Point> MultiPoint::_douglas_peucker_plus(const std::vector<Point>& p
 
         //TODO use linked list if needed.
         // add other points that are at not less than min_length dist of the other points.
-        std::vector<double> distances;
+        //std::vector<double> distances;
         for (size_t segment_idx = 0; segment_idx < result_idx.size()-1; segment_idx++) {
-            distances.clear();
+            //distances.clear();
             size_t start_idx = result_idx[segment_idx];
             size_t end_idx = result_idx[segment_idx + 1];
             if (end_idx - start_idx == 1) continue;
@@ -324,57 +324,63 @@ std::vector<Point> MultiPoint::_douglas_peucker_plus(const std::vector<Point>& p
             double sum = 0;
             for (size_t i = start_idx; i < end_idx; i++) {
                 double dist = pts[i].distance_to(pts[i + 1]);
-                distances.push_back(dist);
+                //distances.push_back(dist);
                 sum += dist;
             }
             if (sum < min_length * 2) continue;
             //if there are too many points and dist, then choose a more difficult sections of ~min_length * 2-4, where we will at least one
-            if (sum > min_length * 4) {
-                //check what is the last index possible
-                double current_sum = 0;
-                size_t last_possible_idx = end_idx;
-                while (current_sum < min_length * 2) {
-                    last_possible_idx--;
-                    current_sum += distances[last_possible_idx - start_idx];
-                }
+            //if (sum > min_length * 4) {
+            //    //check what is the last index possible
+            //    double current_sum = 0;
+            //    size_t last_possible_idx = end_idx;
+            //    while (current_sum < min_length * 2) {
+            //        last_possible_idx--;
+            //        current_sum += distances[last_possible_idx - start_idx];
+            //    }
 
-                //find the new end point
-                current_sum = 0;
-                size_t current_idx = start_idx;
-                while (current_sum < min_length * 4 && current_idx < last_possible_idx){
-                    current_sum += distances[current_idx - start_idx];
-                    current_idx ++;
-                }
+            //    //find the new end point
+            //    current_sum = 0;
+            //    size_t current_idx = start_idx;
+            //    while (current_sum < min_length * 4 && current_idx < last_possible_idx){
+            //        current_sum += distances[current_idx - start_idx];
+            //        current_idx ++;
+            //    }
 
-                // last check, to see if the points are well distributed enough. 
-                if (current_sum > min_length * 2 && current_idx > start_idx + 1) {
-                    //set new end
-                    sum = current_sum;
-                    end_idx = current_idx;
-                    result_idx.insert(result_idx.begin() + segment_idx + 1, end_idx);
-                    result_pts.insert(result_pts.begin() + segment_idx + 1, pts[end_idx]);
-                }
-            }
+            //    // last check, to see if the points are well distributed enough. 
+            //    if (current_sum > min_length * 2 && current_idx > start_idx + 1) {
+            //        //set new end
+            //        sum = current_sum;
+            //        end_idx = current_idx;
+            //        result_idx.insert(result_idx.begin() + segment_idx + 1, end_idx);
+            //        result_pts.insert(result_pts.begin() + segment_idx + 1, pts[end_idx]);
+            //    }
+            //}
 
             Point* start_point = &result_pts[segment_idx];
             Point* end_point = &result_pts[segment_idx + 1];
 
             //use at least a point, even if it's not in the middle and sum ~= min_length * 2
             double max_dist_sq = 0.0;
-            size_t furthest_idx = start_idx + 1;
+            size_t furthest_idx = start_idx;
+            const double half_min_length_sq = min_length * min_length / 4;
             // find point furthest from line seg created by (anchor, floater) and note it
             for (size_t i = start_idx + 1; i < end_idx; ++i) {
-                double dist_sq = Line::distance_to_squared(pts[i], *start_point, *end_point);
-                if (dist_sq > max_dist_sq) {
-                    max_dist_sq = dist_sq;
-                    furthest_idx = i;
+                if (start_point->distance_to_square(pts[i]) > half_min_length_sq && end_point->distance_to_square(pts[i]) > half_min_length_sq) {
+                    double dist_sq = Line::distance_to_squared(pts[i], *start_point, *end_point);
+                    if (dist_sq > max_dist_sq) {
+                        max_dist_sq = dist_sq;
+                        furthest_idx = i;
+                    }
                 }
             }
 
-            //add this point and skip it
-            result_idx.insert(result_idx.begin() + segment_idx + 1, furthest_idx);
-            result_pts.insert(result_pts.begin() + segment_idx + 1, pts[furthest_idx]);
-            segment_idx++;
+            if (furthest_idx > start_idx) {
+                //add this point
+                result_idx.insert(result_idx.begin() + segment_idx + 1, furthest_idx);
+                result_pts.insert(result_pts.begin() + segment_idx + 1, pts[furthest_idx]);
+                //and retry to simplify it
+                segment_idx--;
+            }
         }
 
 
