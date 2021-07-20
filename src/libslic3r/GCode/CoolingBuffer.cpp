@@ -743,6 +743,17 @@ std::string CoolingBuffer::apply_layer_cooldown(
         const FullPrintConfig &config = m_gcodegen.config();
 #define EXTRUDER_CONFIG(OPT) config.OPT.get_at(m_current_extruder)
         int min_fan_speed = EXTRUDER_CONFIG(min_fan_speed);
+        bridge_fan_speed = EXTRUDER_CONFIG(bridge_fan_speed);
+        top_fan_speed = EXTRUDER_CONFIG(top_fan_speed);
+        ext_peri_fan_speed = EXTRUDER_CONFIG(external_perimeter_fan_speed);
+        // 0 is deprecated for disable: take care of temp settings.
+        if (bridge_fan_speed == 0) bridge_fan_speed = -1;
+        if (ext_peri_fan_speed == 0) ext_peri_fan_speed = -1;
+        if (top_fan_speed == 0) top_fan_speed = -1;
+        if (bridge_fan_speed == 1) bridge_fan_speed = 0;
+        if (ext_peri_fan_speed == 1) ext_peri_fan_speed = 0;
+        if (top_fan_speed == 1) top_fan_speed = 0;
+        // end deprecation
         int fan_speed_new = EXTRUDER_CONFIG(fan_always_on) ? min_fan_speed : 0;
         int disable_fan_first_layers = EXTRUDER_CONFIG(disable_fan_first_layers);
         if (int(layer_id) >= disable_fan_first_layers) {
@@ -758,11 +769,14 @@ std::string CoolingBuffer::apply_layer_cooldown(
                     assert(layer_time >= slowdown_below_layer_time);
                     double t = (layer_time - slowdown_below_layer_time) / (fan_below_layer_time - slowdown_below_layer_time);
                     fan_speed_new = int(floor(t * min_fan_speed + (1. - t) * max_fan_speed) + 0.5);
+                    if (bridge_fan_speed >= 0 && bridge_fan_speed < max_fan_speed)
+                        bridge_fan_speed = int(floor(t * bridge_fan_speed + (1. - t) * max_fan_speed) + 0.5);
+                    if (top_fan_speed >= 0 && top_fan_speed < max_fan_speed)
+                        top_fan_speed = int(floor(t * top_fan_speed + (1. - t) * max_fan_speed) + 0.5);
+                    if (ext_peri_fan_speed >= 0 && ext_peri_fan_speed < max_fan_speed)
+                        ext_peri_fan_speed = int(floor(t * ext_peri_fan_speed + (1. - t) * max_fan_speed) + 0.5);
                 }
             //}
-            bridge_fan_speed   = EXTRUDER_CONFIG(bridge_fan_speed);
-            top_fan_speed = EXTRUDER_CONFIG(top_fan_speed);
-            ext_peri_fan_speed = EXTRUDER_CONFIG(external_perimeter_fan_speed);
 
             // Is the fan speed ramp enabled?
             int full_fan_speed_layer = EXTRUDER_CONFIG(full_fan_speed_layer);
@@ -773,17 +787,10 @@ std::string CoolingBuffer::apply_layer_cooldown(
                 // Ramp up the fan speed from disable_fan_first_layers to full_fan_speed_layer.
                 float factor = float(int(layer_id + 1) - disable_fan_first_layers) / float(full_fan_speed_layer - disable_fan_first_layers);
                 fan_speed_new    = clamp(0, 255, int(float(fan_speed_new   ) * factor + 0.5f));
-                bridge_fan_speed = clamp(0, 255, int(float(bridge_fan_speed) * factor + 0.5f));
+                if(bridge_fan_speed >= 0)
+                    bridge_fan_speed = clamp(0, 255, int(float(bridge_fan_speed) * factor + 0.5f));
             }
 #undef EXTRUDER_CONFIG
-            // 0 is deprecated for disable: take care of temp settings.
-            if (bridge_fan_speed == 0) bridge_fan_speed = -1;
-            if (ext_peri_fan_speed == 0) ext_peri_fan_speed = -1;
-            if (top_fan_speed == 0) top_fan_speed = -1;
-            if (bridge_fan_speed == 1) bridge_fan_speed = 0;
-            if (ext_peri_fan_speed == 1) ext_peri_fan_speed = 0;
-            if (top_fan_speed == 1) top_fan_speed = 0;
-            // end deprecation
             bridge_fan_control = bridge_fan_speed > fan_speed_new && bridge_fan_speed >= 0;
             top_fan_control    = top_fan_speed != fan_speed_new && top_fan_speed >= 0;
             ext_peri_fan_control = ext_peri_fan_speed != fan_speed_new && ext_peri_fan_speed >= 0;
