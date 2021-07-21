@@ -29,6 +29,8 @@ CMakeCache.txt
 src/test/test_options.hpp
 src/slic3r
 build/*
+serial.txt
+.vscode
 
 slic3r
 gui_test
