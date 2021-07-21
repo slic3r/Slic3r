@@ -25,7 +25,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
     // initialize status bar
     this->statusbar = new ProgressStatusBar(this, -1);
-    wxString welcome_text {_("Version SLIC3R_VERSION_REPLACE - Remember to check for updates at http://slic3r.org/")};
+    wxString welcome_text {_("Version SLIC3R_VERSION_REPLACE - Remember to check for updates at https://slic3r.org/")};
     welcome_text.Replace("SLIC3R_VERSION_REPLACE", wxString(SLIC3R_VERSION));
     this->statusbar->SetStatusText(welcome_text);
     this->SetStatusBar(this->statusbar);

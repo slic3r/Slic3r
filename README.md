@@ -22,7 +22,7 @@ Slic3r is:
 * **Embeddable:** a complete and powerful command line interface allows Slic3r to be used from the shell or integrated with server-side applications.
 * **Powerful:** see the list below!
 
-See the [project homepage](http://slic3r.org/) at slic3r.org for more information.
+See the [project homepage](https://slic3r.org/) at slic3r.org for more information.
 
 ### <a name="features"></a>Features
 
@@ -44,7 +44,7 @@ The core parts of Slic3r are written in C++11, with multithreading. The graphica
 
 ### How to install?
 
-You can download a precompiled package from [slic3r.org](http://slic3r.org/) (releases) or from [dl.slicr3r.org](http://dl.slic3r.org/dev/) (automated builds).
+You can download a precompiled package from [slic3r.org](https://slic3r.org/) (releases) or from [dl.slicr3r.org](https://dl.slic3r.org/dev/) (automated builds).
 
 If you want to compile the source yourself follow the instructions on one of these wiki pages:
 * [Linux](https://github.com/slic3r/Slic3r/wiki/Running-Slic3r-from-git-on-GNU-Linux)

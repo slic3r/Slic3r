@@ -184,7 +184,7 @@ sub export_svg {
 <svg width="%s" height="%s" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:slic3r="http://slic3r.org/namespaces/slic3r">
   <!-- 
   Generated using Slic3r $Slic3r::VERSION
-  http://slic3r.org/
+  https://slic3r.org/
    -->
 EOF
     

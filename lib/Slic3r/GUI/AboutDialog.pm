@@ -50,8 +50,8 @@ sub new {
         '<br /><br />' .
         '<font>' .
         'Copyright &copy; 2011-2017 Alessandro Ranellucci. <br />' .
-        '<a href="http://slic3r.org/">Slic3r</a> is licensed under the ' .
-        '<a href="http://www.gnu.org/licenses/agpl-3.0.html">GNU Affero General Public License, version 3</a>.' .
+        '<a href="https://slic3r.org/">Slic3r</a> is licensed under the ' .
+        '<a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU Affero General Public License, version 3</a>.' .
         '<br /><br /><br />' .
         'Contributions by Henrik Brix Andersen, Vojtech Bubnik, Nicolas Dandrimont, Mark Hindess, Petr Ledvina, Joseph Lenox, Y. Sapir, Mike Sheldrake, Kliment Yanev and numerous others. ' .
         'Manual by Gary Hodgson. Inspired by the RepRap community. <br />' .

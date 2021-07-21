@@ -124,7 +124,7 @@ bool App::OnInit()
             if ($response =~ /^obsolete ?= ?([a-z0-9.-]+,)*\Q$Slic3r::VERSION\E(?:,|$)/) {
                 my $res = Wx::MessageDialog->new(undef, "A new version is available. Do you want to open the Slic3r website now?",
                     'Update', wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxICON_INFORMATION | wxICON_ERROR)->ShowModal;
-                Wx::LaunchDefaultBrowser('http://slic3r.org/') if $res == wxID_YES;
+                Wx::LaunchDefaultBrowser('https://slic3r.org/') if $res == wxID_YES;
             } else {
                 Slic3r::GUI::show_info(undef, "You're using the latest version. No updates are available.") if $manual_check;
             }

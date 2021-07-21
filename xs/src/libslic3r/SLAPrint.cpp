@@ -228,7 +228,7 @@ SLAPrint::write_svg(const std::string &outputfile) const
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
         "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.0//EN\" \"http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd\">\n"
         "<svg width=\"%f\" height=\"%f\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns:slic3r=\"http://slic3r.org/namespaces/slic3r\" viewport-fill=\"black\">\n"
-        "<!-- Generated using Slic3r %s http://slic3r.org/ -->\n"
+        "<!-- Generated using Slic3r %s https://slic3r.org/ -->\n"
         , size.x, size.y, SLIC3R_VERSION);
     
     for (size_t i = 0; i < this->layers.size(); ++i) {

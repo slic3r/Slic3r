@@ -228,7 +228,7 @@ sub OnInit {
             if ($response =~ /^obsolete ?= ?([a-z0-9.-]+,)*\Q$Slic3r::VERSION\E(?:,|$)/) {
                 my $res = Wx::MessageDialog->new(undef, "A new version is available. Do you want to open the Slic3r website now?",
                     'Update', wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxICON_INFORMATION | wxICON_ERROR)->ShowModal;
-                Wx::LaunchDefaultBrowser('http://slic3r.org/') if $res == wxID_YES;
+                Wx::LaunchDefaultBrowser('https://slic3r.org/') if $res == wxID_YES;
             } else {
                 Slic3r::GUI::show_info(undef, "You're using the latest version. No updates are available.") if $manual_check;
             }
@@ -386,7 +386,7 @@ sub check_version {
     threads->create(sub {
         my $ua = LWP::UserAgent->new;
         $ua->timeout(10);
-        my $response = $ua->get('http://slic3r.org/updatecheck');
+        my $response = $ua->get('https://slic3r.org/updatecheck');
         Wx::PostEvent($self, Wx::PlThreadEvent->new(-1, $VERSION_CHECK_EVENT,
             threads::shared::shared_clone([ $response->is_success, $response->decoded_content, $manual_check ])));
         
