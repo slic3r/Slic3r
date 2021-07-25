@@ -100,7 +100,7 @@ matrix:
               #          after_success:
               #            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/osx/travis-deploy-main.sh || travis_terminate 1; fi
 
-        # OSX is erroring out consistently for C++, remove and debug
+              # OSX is erroring out consistently for C++, remove and debug
               #        - os: osx
               #          osx_image: xcode9.4
               #          env:
