@@ -47,6 +47,10 @@ addons:
     - wx3.0-headers
     - libwxgtk3.0-dev
     - wx-common
+    - libboost-all-dev
+    - libboost-thread-dev
+    - libboost-system-dev
+    - libboost-filesystem-dev
   ssh_known_hosts: dl.slic3r.org
 
 matrix:
@@ -74,44 +78,29 @@ matrix:
           after_success:
             - package/linux/travis-deploy-cpp.sh
 
-        # While this works, it does not appear to be needed as the 10.13 builds
-        # work on 10.12 as well.
-        # - os: osx
-        #   # osx_image: xcode8 # OS X 10.11
-        #   osx_image: xcode9.2 # OS X 10.12
-        #   env:
-        #     - TARGET=main
-        #   cache:
-        #     directories:
-        #       - /usr/local/Homebrew
-        #       - $HOME/Library/Caches/Homebrew
-        #       - local-lib
+        - os: osx
+          osx_image: xcode11.5 # OS X 10.15.4
+          env:
+            - TARGET=main
+          cache:
+            directories:
+              - /usr/local/Homebrew
+              - $HOME/Library/Caches/Homebrew
+              - local-lib
+          after_success:
+            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/osx/travis-deploy-main.sh || travis_terminate 1; fi
 
-              # OSX errors out consistently for Perl now too. Back to jenkins.
-              #        - os: osx
-              #          osx_image: xcode9.4 # OS X 10.13
-              #          env:
-              #            - TARGET=main
-              #          cache:
-              #            directories:
-              #              - /usr/local/Homebrew
-              #              - $HOME/Library/Caches/Homebrew
-              #              - local-lib
-              #          after_success:
-              #            - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then ./package/osx/travis-deploy-main.sh || travis_terminate 1; fi
-
-              # OSX is erroring out consistently for C++, remove and debug
-              #        - os: osx
-              #          osx_image: xcode9.4
-              #          env:
-              #            - TARGET=cpp
-              #            - CACHE=$HOME/cache
-              #          cache:
-              #            ccache: true
-              #            directories:
-              #              - /usr/local/Homebrew
-              #              - $HOME/cache
-              #              - $HOME/Library/Caches/Homebrew
+        - os: osx
+          osx_image: xcode11.5 # OS X 10.15.4
+          env:
+            - TARGET=cpp
+            - CACHE=$HOME/cache
+          cache:
+            ccache: true
+            directories:
+              - /usr/local/Homebrew
+              - $HOME/cache
+              - $HOME/Library/Caches/Homebrew
 
 env:
   global:

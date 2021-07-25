@@ -10,7 +10,7 @@ brew update -v
 brew install boost     || brew upgrade boost
 brew install perl      || brew upgrade perl
 brew install cpanminus || brew upgrade cpanminus
-brew install wxwidgets || brew upgrade wxwidgets
+brew install wxmac@3.0 || brew upgrade wxmac@3.0
 brew install coreutils || brew upgrade coreutils
 brew link --overwrite perl cpanminus
 
