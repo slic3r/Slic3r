@@ -32,8 +32,6 @@ addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
-    #- sourceline: 'deb http://download.opensuse.org/repositories/science:/dlr/xUbuntu_14.04/ /'
-    #  key_url: 'https://download.opensuse.org/repositories/science:dlr/xUbuntu_14.04/Release.key'
     packages:
       - g++-7
       - gcc-7
@@ -43,14 +41,15 @@ addons:
       - libgtk2.0-dev
       - freeglut3
       - cmake
-      - wx3.0-headers
-      - libwxgtk3.0-dev
       - wx-common
+      - wx3.0-headers
+      - libwxgtk3.0-gtk3-0v5
       - libboost-all-dev
       - libboost-thread-dev
       - libboost-system-dev
       - libboost-filesystem-dev
   homebrew:
+    update: true
     packages:
       - ccache
       - coreutils
