@@ -24,6 +24,6 @@ if [[ "$WXVERSION"  != "pkg" ]]; then
 fi
 
 mkdir build && cd build
-${CMAKE} -DBOOST_ROOT=$HOME/boost_1_63_0 -DSLIC3R_STATIC=ON -DCMAKE_BUILD_TYPE=Release ../src
+${CMAKE} -DSLIC3R_STATIC=ON -DCMAKE_BUILD_TYPE=Release ../src
 ${CMAKE} --build .
 ./slic3r_test -s

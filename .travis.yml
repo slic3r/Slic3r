@@ -11,7 +11,6 @@
 # - deploy to dl.slic3r.org (except for the cppgui branch)
 
 language: generic
-dist: trusty
 
 before_install:
     - sh package/common/travis-decrypt-key
@@ -36,38 +35,50 @@ addons:
     #- sourceline: 'deb http://download.opensuse.org/repositories/science:/dlr/xUbuntu_14.04/ /'
     #  key_url: 'https://download.opensuse.org/repositories/science:dlr/xUbuntu_14.04/Release.key'
     packages:
-    - g++-7
-    - gcc-7
-    - g++-8
-    - gcc-8
-    - libgtk2.0-0 
-    - libgtk2.0-dev
-    - freeglut3
-    - cmake
-    - wx3.0-headers
-    - libwxgtk3.0-dev
-    - wx-common
-    - libboost-all-dev
-    - libboost-thread-dev
-    - libboost-system-dev
-    - libboost-filesystem-dev
+      - g++-7
+      - gcc-7
+      - g++-8
+      - gcc-8
+      - libgtk2.0-0 
+      - libgtk2.0-dev
+      - freeglut3
+      - cmake
+      - wx3.0-headers
+      - libwxgtk3.0-dev
+      - wx-common
+      - libboost-all-dev
+      - libboost-thread-dev
+      - libboost-system-dev
+      - libboost-filesystem-dev
+  homebrew:
+    packages:
+      - ccache
+      - coreutils
+      - boost
+      - gcc
+      - perl
+      - cpanminus
+      - cmake
+      - wxmac@3.0
   ssh_known_hosts: dl.slic3r.org
 
 matrix:
     include:
         - os: linux
+          dist: focal
           env:
             - TARGET=main
           cache:
             directories:
-              - $HOME/boost_1_63_0
-              - $HOME/perl5
-              - $HOME/wx302
+              # - $HOME/boost_1_63_0
+              # - $HOME/perl5
+              # - $HOME/wx302
               - local-lib
           after_success:
             - if [[ "${TRAVIS_BRANCH}" != "cppgui" ]]; then source ${HOME}/perl5/perlbrew/etc/bashrc; perlbrew switch slic3r-perl; ./package/linux/travis-deploy-main.sh || travis_terminate 1; fi
 
         - os: linux
+          dist: focal
           env: 
             - TARGET=cpp
             - CACHE=$HOME/cache

@@ -1,18 +1,18 @@
 #!/bin/bash
 set -euo pipefail
 
-# These two commands are only needed on 10.12:
-rm -rf /usr/local/Homebrew/Library/Taps/homebrew/homebrew-cask
-brew uninstall --force postgis cgal sfcgal
+# # These two commands are only needed on 10.12:
+# rm -rf /usr/local/Homebrew/Library/Taps/homebrew/homebrew-cask
+# brew uninstall --force postgis cgal sfcgal
 
-brew update -v
+# brew update -v
 
-brew install boost     || brew upgrade boost
-brew install perl      || brew upgrade perl
-brew install cpanminus || brew upgrade cpanminus
-brew install wxmac@3.0 || brew upgrade wxmac@3.0
-brew install coreutils || brew upgrade coreutils
-brew link --overwrite perl cpanminus
+# brew install boost     || brew upgrade boost
+# brew install perl      || brew upgrade perl
+# brew install cpanminus || brew upgrade cpanminus
+# brew install wxmac@3.0 || brew upgrade wxmac@3.0
+# brew install coreutils || brew upgrade coreutils
+# brew link --overwrite perl cpanminus
 
 export SLIC3R_STATIC=1
 export BOOST_DIR=/usr/local
