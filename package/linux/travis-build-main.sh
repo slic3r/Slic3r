@@ -19,6 +19,8 @@ set -eo pipefail
 #     tar -C$TRAVIS_BUILD_DIR -xjf /tmp/local-lib-wx302.tar.bz2
 # fi
 
+export SLIC3R_NO_CPANM_TESTS=1
+
 cpanm local::lib
 eval $(perl -Mlocal::lib=${TRAVIS_BUILD_DIR}/local-lib)
 CC=g++-8 CXX=g++-8 cpanm ExtUtils::CppGuess --force

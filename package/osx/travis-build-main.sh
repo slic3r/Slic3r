@@ -15,6 +15,7 @@ set -euo pipefail
 # brew link --overwrite perl cpanminus
 
 export SLIC3R_STATIC=1
+export SLIC3R_NO_CPANM_TESTS=1
 export BOOST_DIR=/usr/local
 perl ./Build.PL
 

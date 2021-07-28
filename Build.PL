@@ -129,7 +129,7 @@ EOF
         
         # temporary workaround for upstream bug in test
         push @cmd, '--notest'
-            if $module =~ /^(?:OpenGL|Math::PlanePath|Test::Harness|IO::Scalar)$/;
+            if $ENV{SLIC3R_NO_CPANM_TESTS} || $module =~ /^(?:OpenGL|Math::PlanePath|Test::Harness|IO::Scalar)$/;
         
         push @cmd, "$module~$version";
         my $res = system @cmd;
