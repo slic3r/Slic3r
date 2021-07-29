@@ -32,4 +32,6 @@ fi
 perl ./Build.PL --gui
 
 # Install PAR::Packer now so that it gets cached by Travis
-cpanm --local-lib local-lib PAR::Packer
+cpanm --notest --local-lib local-lib PAR::Packer
+
+travis_terminate 0

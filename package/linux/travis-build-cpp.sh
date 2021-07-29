@@ -27,3 +27,5 @@ mkdir build && cd build
 ${CMAKE} -DSLIC3R_STATIC=ON -DCMAKE_BUILD_TYPE=Release ../src
 ${CMAKE} --build .
 ./slic3r_test -s
+
+travis_terminate 0

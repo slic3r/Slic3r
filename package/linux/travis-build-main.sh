@@ -28,4 +28,5 @@ CC=g++-8 CXX=g++-8 perl ./Build.PL
 excode=$?
 if [ $excode -ne 0 ]; then exit $excode; fi
 perl ./Build.PL --gui
-exit $?
+
+travis_terminate 0

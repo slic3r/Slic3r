@@ -48,6 +48,8 @@ addons:
       - libboost-thread-dev
       - libboost-system-dev
       - libboost-filesystem-dev
+      - cpanminus
+      - liblocal-lib-perl
   homebrew:
     update: true
     packages:

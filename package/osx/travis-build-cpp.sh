@@ -32,3 +32,5 @@ cmake -DBOOST_ROOT=/usr/local -DSLIC3R_STATIC=ON -DCMAKE_BUILD_TYPE=Release ../s
 cmake --build .
 ./slic3r_test -s
 #./gui_test -s
+
+travis_terminate 0
