@@ -532,8 +532,8 @@ bool test_path(const ClipperLib::Path &path) {
     ClipperLib::IntPoint centroid = ClipperLib::Centroid(path, area);
     for (const ClipperLib::IntPoint& pt : path) {
         // &0x3FFFFFFF to let  (dx * dx + dy * dy) be storable into a int64
-        ClipperLib::cInt dx = (pt.X - centroid.X) & 0x3FFFFFFF;
-        ClipperLib::cInt dy = (pt.Y - centroid.Y) & 0x3FFFFFFF;
+        ClipperLib::cInt dx = std::abs(pt.X - centroid.X) & 0x3FFFFFFF;
+        ClipperLib::cInt dy = std::abs(pt.Y - centroid.Y) & 0x3FFFFFFF;
         ClipperLib::cInt dist_sqrd = (dx * dx + dy * dy);
         max_dist_sqrd = std::max(max_dist_sqrd, dist_sqrd);
     }

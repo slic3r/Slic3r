@@ -1606,6 +1606,8 @@ check_circular(ExPolygon& expolygon, coord_t max_variation) {
 void
 MedialAxis::build(ThickPolylines &polylines_out)
 {
+    //static int id = 0;
+    //id++;
     //std::cout << this->id << "\n";
     //{
     //    std::stringstream stri;
@@ -1629,11 +1631,12 @@ MedialAxis::build(ThickPolylines &polylines_out)
 
     //check for circular shape
     double radius = check_circular(this->expolygon, this->min_width/4);
-    if (radius > 0) {
+    if (radius > 0 && this->expolygon.contour.points.size() > 4) {
         ExPolygons miniPeri = offset_ex(this->expolygon.contour, -radius / 2);
         if (miniPeri.size() == 1 && miniPeri[0].holes.size() == 0) {
             ThickPolyline thickPoly;
             thickPoly.points = miniPeri[0].contour.points;
+            thickPoly.points.push_back(thickPoly.points.front());
             thickPoly.endpoints.first = false;
             thickPoly.endpoints.second = false;
             for (int i = 0; i < thickPoly.points.size(); i++) {
