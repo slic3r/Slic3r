@@ -711,6 +711,7 @@ namespace Slic3r {
                 || opt_key == "clip_multipart_objects"
                 || opt_key == "first_layer_size_compensation"
                 || opt_key == "elephant_foot_min_width"
+                || opt_key == "dont_support_bridges"
                 || opt_key == "support_material_contact_distance_type"
                 || opt_key == "support_material_contact_distance_top"
                 || opt_key == "support_material_contact_distance_bottom"
@@ -747,7 +748,6 @@ namespace Slic3r {
                 || opt_key == "support_material_synchronize_layers"
                 || opt_key == "support_material_threshold"
                 || opt_key == "support_material_with_sheath"
-                || opt_key == "dont_support_bridges"
                 || opt_key == "support_material_solid_first_layer") {
                 steps.emplace_back(posSupportMaterial);
             } else if (opt_key == "bottom_solid_layers") {
@@ -1220,9 +1220,11 @@ namespace Slic3r {
                     stPosBottom | stDensSolid | stModBridge : stPosBottom | stDensSolid;
                 // If we have soluble support material, don't bridge. The overhang will be squished against a soluble layer separating
                 // the support from the print.
+                bool has_bridges = !(m_config.support_material.value
+                    && m_config.support_material_contact_distance_type.value == zdNone
+                    && !m_config.dont_support_bridges);
                 SurfaceType surface_type_bottom_other =
-                    (m_config.support_material.value && m_config.support_material_contact_distance_type.value == zdNone) ?
-                    stPosBottom | stDensSolid : stPosBottom | stDensSolid | stModBridge;
+                    has_bridges ? stPosBottom | stDensSolid | stModBridge : stPosBottom | stDensSolid;
                 for (size_t idx_layer = range.begin(); idx_layer < range.end(); ++idx_layer) {
                     m_print->throw_if_canceled();
                     // BOOST_LOG_TRIVIAL(trace) << "Detecting solid surfaces for region " << idx_region << " and layer " << layer->print_z;
