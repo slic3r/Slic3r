@@ -392,25 +392,44 @@ void PresetUpdater::priv::check_install_indices() const
 	BOOST_LOG_TRIVIAL(info) << "Checking if indices need to be installed from resources...";
 	if (!fs::exists(rsrc_path))
 		return;
-    for (auto &dir_entry : boost::filesystem::directory_iterator(rsrc_path))
+	for (auto& dir_entry : boost::filesystem::directory_iterator(rsrc_path)) {
 		if (is_idx_file(dir_entry)) {
-			const auto &path = dir_entry.path();
+			const auto& path = dir_entry.path();
 			const auto path_in_cache = cache_path / path.filename();
 
-			if (! fs::exists(path_in_cache)) {
+			if (!fs::exists(path_in_cache)) {
 				BOOST_LOG_TRIVIAL(info) << "Install index from resources: " << path.filename();
 				copy_file_fix(path, path_in_cache);
 			} else {
 				Index idx_rsrc, idx_cache;
 				idx_rsrc.load(path);
 				idx_cache.load(path_in_cache);
+				fs::path bundle_path = vendor_path / (idx_cache.vendor() + ".ini");
 
-				if (idx_cache.version() < idx_rsrc.version()) {
-					BOOST_LOG_TRIVIAL(info) << "Update index from resources: " << path.filename();
+				//test if the cache file is bad and the resource one is good.
+				if (fs::exists(bundle_path)) {
+					Semver version = VendorProfile::from_ini(bundle_path, false).config_version;
+					const auto ver_from_cache = idx_cache.find(version);
+					const auto ver_from_resource = idx_rsrc.find(version);
+					if (ver_from_resource != idx_rsrc.end()) {
+						if (idx_cache.version() < idx_rsrc.version()) {
+							if (fs::exists(bundle_path)) {
+								BOOST_LOG_TRIVIAL(info) << "Update index from resources (new version): " << path.filename();
+								copy_file_fix(path, path_in_cache);
+							}
+						} else if (ver_from_cache == idx_cache.end()) {
+							BOOST_LOG_TRIVIAL(info) << "Update index from resources (only way to have a consistent idx): " << path.filename();
+							copy_file_fix(path, path_in_cache);
+						}
+					}
+				} else if (idx_cache.version() < idx_rsrc.version() || idx_cache.configs().back().max_slic3r_version < idx_rsrc.configs().back().max_slic3r_version) {
+					//not installed, force update the .idx from resource
+					BOOST_LOG_TRIVIAL(info) << "Update index from resources (uninstalled & more up-to-date): " << path.filename();
 					copy_file_fix(path, path_in_cache);
 				}
 			}
 		}
+	}
 }
 
 // Generates a list of bundle updates that are to be performed.
@@ -454,10 +473,29 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 			recommended->config_version.to_string());
 
 		if (! ver_current_found) {
-			// Any published config shall be always found in the latest config index.
-			auto message = format("Preset bundle `%1%` version not found in index: %2%", idx.vendor(), vp.config_version.to_string());
-			BOOST_LOG_TRIVIAL(error) << message;
-			GUI::show_error(nullptr, message);
+			// Config bundle inside the resources directory.
+			fs::path path_in_rsrc = rsrc_path / (idx.vendor() + ".ini");
+			fs::path path_idx_in_rsrc = rsrc_path / (idx.vendor() + ".idx");
+			if (fs::exists(path_idx_in_rsrc)) {
+				Index rsrc_idx;
+				rsrc_idx.load(path_idx_in_rsrc);
+			
+				// Any published config shall be always found in the latest config index.
+				std::string message = format("Preset bundle `%1%` version not found in index: %2%, do we force the update to the version %3%? ", idx.vendor(), vp.config_version.to_string(), rsrc_idx.version().to_string());
+				wxMessageDialog msg_wingow(nullptr, message, wxString(SLIC3R_APP_NAME " - ") + (_L("Notice")), wxYES | wxNO | wxICON_INFORMATION);
+				if (msg_wingow.ShowModal() == wxID_YES) {
+					//copy idx
+					copy_file_fix(path_idx_in_rsrc, idx.path());
+					//copy profile
+					copy_file_fix(path_in_rsrc, bundle_path);
+				}
+				continue;
+			} else {
+				// Any published config shall be always found in the latest config index.
+				std::string message = format("Preset bundle `%1%` version not found in index: %2%", idx.vendor(), vp.config_version.to_string());
+				BOOST_LOG_TRIVIAL(error) << message;
+				GUI::show_error(nullptr, message);
+			}
 			continue;
 		}
 
