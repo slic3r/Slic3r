@@ -963,6 +963,7 @@ static void slice_region_by_vertical_lines(const FillRectilinear* filler, std::v
         }
     }
 
+#ifdef SLIC3R_DEBUG
     try {
     // Verify the segments. If something is wrong, give up.
 #define ASSERT_THROW(CONDITION) do { assert(CONDITION); if (! (CONDITION)) throw InfillFailedException(); } while (0)
@@ -1034,6 +1035,7 @@ static void slice_region_by_vertical_lines(const FillRectilinear* filler, std::v
         throw;
     }
 #undef ASSERT_THROW
+#endif //SLIC3R_DEBUG
 
 }
 
