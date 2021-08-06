@@ -44,6 +44,7 @@
 #include "GUI_ObjectList.hpp"
 #include "Plater.hpp"
 #include "MainFrame.hpp"
+#include "GLCanvas3D.hpp"
 #include "format.hpp"
 #include "PhysicalPrinterDialog.hpp"
 #include "UnsavedChangesDialog.hpp"
@@ -3369,6 +3370,16 @@ void Tab::select_preset(std::string preset_name, bool delete_current /*=false*/,
         apply_config_from_cache();
 
         load_current_preset();
+
+        // apply duplicate_distance for print preset
+        if (m_type == Preset::TYPE_PRINT) {
+            wxGetApp().mainframe->plater()->canvas3D()->set_arrange_settings(m_presets->get_edited_preset().config, m_presets->get_edited_preset().printer_technology());
+        }
+        if (m_type == Preset::TYPE_PRINTER) {
+            wxGetApp().mainframe->plater()->canvas3D()->set_arrange_settings(m_preset_bundle->prints.get_edited_preset().config, m_presets->get_edited_preset().printer_technology());
+            
+        }
+
     }
 }
 

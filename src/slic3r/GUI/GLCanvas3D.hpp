@@ -776,12 +776,9 @@ public:
     {
         const ArrangeSettings &settings = get_arrange_settings(this);
         ArrangeSettings ret = settings;
-        if (&settings == &m_arrange_settings_fff_seq_print) {
-            ret.distance = std::max(ret.distance, float(PrintConfig::min_object_distance(m_config)));
-        }
-
         return ret;
     }
+    void set_arrange_settings(const DynamicPrintConfig& conf, PrinterTechnology tech);
 
     // Timestamp for FPS calculation and notification fade-outs.
     static int64_t timestamp_now() {

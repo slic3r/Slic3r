@@ -1154,6 +1154,29 @@ void GLCanvas3D::load_arrange_settings()
         m_arrange_settings_sla.enable_rotation = (en_rot_sla_str == "1" || en_rot_sla_str == "yes");
 }
 
+// update arrange dist from current print conf.
+void GLCanvas3D::set_arrange_settings(const DynamicPrintConfig& conf, PrinterTechnology tech) {
+
+    const ConfigOptionFloat* dd_opt = conf.option<ConfigOptionFloat>("duplicate_distance");
+    const ConfigOptionFloat* dd2_opt = m_config->option<ConfigOptionFloat>("duplicate_distance");
+
+    if (dd_opt && dd_opt != 0) {
+        float dist = 6.f;
+        if (tech == ptSLA) {
+            dist = dd_opt->value;
+        } else if (tech == ptFFF) {
+            const ConfigOptionBool* co_opt = conf.option<ConfigOptionBool>("complete_objects");
+            if (co_opt && co_opt->value) {
+                dist = float(PrintConfig::min_object_distance(m_config) * 2);
+            } else {
+                dist = 0.f;
+            }
+            dist += dd_opt->value;
+        }
+        this->get_arrange_settings().distance = dist;
+    }
+}
+
 PrinterTechnology GLCanvas3D::current_printer_technology() const
 {
     return m_process->current_printer_technology();
@@ -4045,7 +4068,7 @@ bool GLCanvas3D::_render_arrange_menu(float pos_x)
     } else if (ptech == ptFFF) {
         auto co_opt = m_config->option<ConfigOptionBool>("complete_objects");
         if (co_opt && co_opt->value) {
-            dist_min     = float(PrintConfig::min_object_distance(m_config));
+            dist_min     = float(PrintConfig::min_object_distance(m_config) * 2);
             postfix      = "_fff_seq_print";
         } else {
             dist_min     = 0.f;
@@ -4059,7 +4082,11 @@ bool GLCanvas3D::_render_arrange_menu(float pos_x)
     imgui->text(GUI::format_wxstr(_L("Press %1%left mouse button to enter the exact value"), shortkey_ctrl_prefix()));
 
     if (imgui->slider_float(_L("Spacing"), &settings.distance, dist_min, 100.0f, "%5.2f") || dist_min > settings.distance) {
-        settings.distance = std::max(dist_min, settings.distance);
+        if (dist_min > settings.distance) {
+            const ConfigOptionFloat* dd_opt = this->m_config->option<ConfigOptionFloat>("duplicate_distance");
+            if (dd_opt)
+                settings.distance = dist_min + dd_opt->value;
+        }
         settings_out.distance = settings.distance;
         appcfg->set("arrange", dist_key.c_str(), std::to_string(settings_out.distance));
         settings_changed = true;
@@ -4075,6 +4102,9 @@ bool GLCanvas3D::_render_arrange_menu(float pos_x)
 
     if (imgui->button(_L("Reset"))) {
         settings_out = ArrangeSettings{};
+        const ConfigOptionFloat* dd_opt = this->m_config->option<ConfigOptionFloat>("duplicate_distance");
+        if(dd_opt)
+                settings_out.distance = dist_min + dd_opt->value;
         settings_out.distance = std::max(dist_min, settings_out.distance);
         appcfg->set("arrange", dist_key.c_str(), std::to_string(settings_out.distance));
         appcfg->set("arrange", rot_key.c_str(), settings_out.enable_rotation? "1" : "0");

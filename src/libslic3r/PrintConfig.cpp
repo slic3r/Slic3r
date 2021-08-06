@@ -667,7 +667,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("duplicate_distance", coFloat);
     def->label = L("Distance between objects");
     def->category = OptionCategory::output;
-    def->tooltip = L("Distance used for the auto-arrange feature of the plater.");
+    def->tooltip = L("Default distance used for the auto-arrange feature of the plater.\nSet to 0 to use the last value instead.");
     def->sidetext = L("mm");
     def->aliases = { "multiply_distance" };
     def->min = 0;
@@ -5660,9 +5660,7 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
     //test if called from usaslicer::l240 where it's called on an empty config...
     if (dd_opt == nullptr) return 0;
 
-    // /2 becasue we only count the grawing for the current object
-    const double duplicate_distance = dd_opt->value / 2;
-    double base_dist = duplicate_distance;
+    double base_dist = 0;
     //std::cout << "START min_object_distance =>" << base_dist << "\n";
     const ConfigOptionBool* co_opt = config->option<ConfigOptionBool>("complete_objects");
     if (co_opt && co_opt->value) {
@@ -5676,7 +5674,7 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
             // min object distance is max(duplicate_distance, clearance_radius)
             // /2 becasue we only count the grawing for the current object
             //add 1 as safety offset.
-            double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat() / 2 + 1;
+            double extruder_clearance_radius = config->option("extruder_clearance_radius")->getFloat() / 2;
             if (extruder_clearance_radius > base_dist) {
                 base_dist = extruder_clearance_radius;
             }
