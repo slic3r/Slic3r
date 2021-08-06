@@ -2806,8 +2806,18 @@ namespace Slic3r {
                 }
 
                 // stores object's config data
-                for (const std::string& key : obj->config.keys()) {
-                    stream << "  <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << OBJECT_TYPE << "\" " << KEY_ATTR << "=\"" << key << "\" " << VALUE_ATTR << "=\"" << obj->config.opt_serialize(key) << "\"/>\n";
+                if (file_path == MODEL_PRUSA_CONFIG_FILE) {
+                    for (std::string key : obj->config.keys()) {
+                        // convert to prusa config
+                        std::string value = obj->config.opt_serialize(key);
+                        obj->config.to_prusa(key, value);
+                        if (!key.empty())
+                            stream << "  <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << OBJECT_TYPE << "\" " << KEY_ATTR << "=\"" << key << "\" " << VALUE_ATTR << "=\"" << value << "\"/>\n";
+                    }
+                } else {
+                    for (const std::string& key : obj->config.keys()) {
+                        stream << "  <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << OBJECT_TYPE << "\" " << KEY_ATTR << "=\"" << key << "\" " << VALUE_ATTR << "=\"" << obj->config.opt_serialize(key) << "\"/>\n";
+                    }
                 }
 
                 for (const ModelVolume* volume : obj_metadata.second.object->volumes)
@@ -2868,18 +2878,17 @@ namespace Slic3r {
                             }
 
                             // stores volume's config data
-                            for (std::string key : volume->config.keys())
-                            {
-                                // config
-                                if (file_path == MODEL_PRUSA_CONFIG_FILE) {
+                            if (file_path == MODEL_PRUSA_CONFIG_FILE) {
+                                for (std::string key : volume->config.keys()) {
                                     // convert to prusa config
                                     std::string value = volume->config.opt_serialize(key);
                                     volume->config.to_prusa(key, value);
                                     if (!key.empty())
                                         stream << "   <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << VOLUME_TYPE << "\" " << KEY_ATTR << "=\"" << key << "\" " << VALUE_ATTR << "=\"" << value << "\"/>\n";
-                                } else {
-                                    stream << "   <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << VOLUME_TYPE << "\" " << KEY_ATTR << "=\"" << key << "\" " << VALUE_ATTR << "=\"" << volume->config.opt_serialize(key) << "\"/>\n";
                                 }
+                            } else {
+                                for (const std::string& key : volume->config.keys())
+                                    stream << "   <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << VOLUME_TYPE << "\" " << KEY_ATTR << "=\"" << key << "\" " << VALUE_ATTR << "=\"" << volume->config.opt_serialize(key) << "\"/>\n";
                             }
 
                             stream << "  </" << VOLUME_TAG << ">\n";
