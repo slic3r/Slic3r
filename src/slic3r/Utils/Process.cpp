@@ -1,6 +1,7 @@
 #include "Process.hpp"
 
 #include <libslic3r/AppConfig.hpp>
+#include <libslic3r/Utils.hpp>
 
 #include "../GUI/GUI.hpp"
 // for file_wildcards()
@@ -47,8 +48,10 @@ static void start_new_slicer_or_gcodeviewer(const NewSlicerInstanceType instance
 		for (const auto& file : paths_to_open)
 			args.emplace_back(file);
 	}
-	if (instance_type == NewSlicerInstanceType::Slicer && single_instance)
-		args.emplace_back(L"--single-instance");
+    if (instance_type == NewSlicerInstanceType::Slicer && single_instance)
+        args.emplace_back(L"--single-instance");
+    args.emplace_back(L"--datadir");
+    args.emplace_back(boost::nowide::widen(Slic3r::data_dir().c_str()).c_str());
 	args.emplace_back(nullptr);
 	BOOST_LOG_TRIVIAL(info) << "Trying to spawn a new slicer \"" << into_u8(path) << "\"";
 	// Don't call with wxEXEC_HIDE_CONSOLE, PrusaSlicer in GUI mode would just show the splash screen. It would not open the main window though, it would
