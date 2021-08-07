@@ -3366,7 +3366,7 @@ void Tab::select_preset(std::string preset_name, bool delete_current /*=false*/,
         load_current_preset();
 
         // apply duplicate_distance for print preset
-        if (m_type == Preset::TYPE_PRINT) {
+        if (m_type == Preset::TYPE_FFF_PRINT || m_type == Preset::TYPE_SLA_PRINT) {
             wxGetApp().mainframe->plater()->canvas3D()->set_arrange_settings(m_presets->get_edited_preset().config, m_presets->get_edited_preset().printer_technology());
         }
         if (m_type == Preset::TYPE_PRINTER) {

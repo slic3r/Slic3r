@@ -622,7 +622,6 @@ void MainFrame::change_tab(Tab* old_tab, Tab* new_tab)
     }
     m_tabpanel->InsertPage(page_id, new_tab, new_tab->title());
     #ifdef __linux__ // the tabs apparently need to be explicitly shown on Linux (pull request #1563)
-        int page_id = m_tabpanel->FindPage(new_tab);
         m_tabpanel->GetPage(page_id)->Show(true);
     #endif // __linux__
     MainFrame::update_icon();
