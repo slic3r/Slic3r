@@ -420,8 +420,8 @@ void Preset::set_visible_from_appconfig(const AppConfig &app_config)
         if (model.empty() || variant.empty())
             return;
         is_visible = app_config.get_variant(vendor->id, model, variant);
-    } else if (type == TYPE_FILAMENT || type == TYPE_SLA_MATERIAL) {
-        const std::string &section_name = (type == TYPE_FILAMENT) ? AppConfig::SECTION_FILAMENTS : AppConfig::SECTION_MATERIALS;
+    } else if (type == TYPE_FFF_FILAMENT || type == TYPE_SLA_MATERIAL) {
+        const std::string &section_name = (type == TYPE_FFF_FILAMENT) ? AppConfig::SECTION_FILAMENTS : AppConfig::SECTION_MATERIALS;
         if (app_config.has_section(section_name)) {
             // Check whether this profile is marked as "installed" in PrusaSlicer.ini, 
             // or whether a profile is marked as "installed", which this profile may have been renamed from.
@@ -446,6 +446,7 @@ const std::vector<std::string>& Preset::print_options()
         "top_solid_min_thickness",
         "bottom_solid_layers",
         "bottom_solid_min_thickness",
+        "duplicate_distance",
         "extra_perimeters",
         "extra_perimeters_odd_layers",
         "extra_perimeters_overhangs",
@@ -456,26 +457,28 @@ const std::vector<std::string>& Preset::print_options()
         "avoid_crossing_perimeters", 
         "avoid_crossing_not_first_layer",
         "thin_perimeters", "thin_perimeters_all",
-        "thin_walls",
         "overhangs_speed",
         "overhangs_width",
         "overhangs_width_speed", 
         "overhangs_reverse",
         "overhangs_reverse_threshold",
-        "seam_position", 
+        "seam_position",
+        // external_perimeters
         "external_perimeters_first",
         "external_perimeters_vase",
         "external_perimeters_nothole",
         "external_perimeters_hole",
-        "fill_density"
-        , "fill_pattern"
-        , "fill_top_flow_ratio"
-        , "fill_smooth_width"
-        , "fill_smooth_distribution"
-        , "top_fill_pattern"
-        , "bottom_fill_pattern"
-        , "solid_fill_pattern",
+        // fill pattern
+        "fill_density",
+        "fill_pattern",
+        "fill_top_flow_ratio",
+        "fill_smooth_width",
+        "fill_smooth_distribution",
+        "top_fill_pattern",
+        "bottom_fill_pattern",
+        "solid_fill_pattern",
         "infill_every_layers", "infill_only_where_needed", "solid_infill_every_layers",
+        // ironing
         "ironing",
         "ironing_type",
         "ironing_flowrate",
@@ -493,25 +496,40 @@ const std::vector<std::string>& Preset::print_options()
         "max_volumetric_extrusion_rate_slope_positive", "max_volumetric_extrusion_rate_slope_negative", 
 #endif /* HAS_PRESSURE_EQUALIZER */
         "min_width_top_surface",
-        "perimeter_speed",
-        "small_perimeter_speed",
-        "small_perimeter_min_length",
-        "small_perimeter_max_length",
-        "external_perimeter_speed", "infill_speed", "solid_infill_speed", 
-        "top_solid_infill_speed", "support_material_speed", "support_material_xy_spacing", "support_material_interface_speed",
         "bridge_speed",
         "bridge_speed_internal",
+        // speeds
+        "external_perimeter_speed", 
+        "first_layer_speed",
+        "infill_speed",
+        "perimeter_speed",
+        "small_perimeter_speed",
+        "small_perimeter_max_length",
+        "small_perimeter_min_length",
+        "solid_infill_speed",
+        "support_material_interface_speed",
+        "support_material_speed", 
+        "support_material_xy_spacing",
+        "top_solid_infill_speed",
+        "travel_speed", "travel_speed_z",
+        // gapfill
         "gap_fill",
         "gap_fill_min_area",
         "gap_fill_overlap",
         "gap_fill_speed",
-        "travel_speed", "travel_speed_z", "first_layer_speed", "perimeter_acceleration", "infill_acceleration",
-        "bridge_acceleration", "first_layer_acceleration", "default_acceleration", 
-        "duplicate_distance",
+        // acceleration
+        "bridge_acceleration",
+        "default_acceleration",
+        "first_layer_acceleration",
+        "infill_acceleration",
+        "perimeter_acceleration",
+        "travel_acceleration",
+        // skirt
         "skirts", "skirt_distance", "skirt_height",
         "skirt_extrusion_width",
         "min_skirt_length",
         "draft_shield",
+        // brim
         "brim_inside_holes",
         "brim_width",
         "brim_width_interior",
@@ -520,39 +538,43 @@ const std::vector<std::string>& Preset::print_options()
         "brim_ears_max_angle",
         "brim_ears_pattern",
         "brim_offset",
-        "support_material", "support_material_auto", "support_material_threshold", "support_material_enforce_layers", 
-        "raft_layers", "support_material_pattern", "support_material_with_sheath", "support_material_spacing", 
+        // support
+        "support_material", "support_material_auto", "support_material_threshold", "support_material_enforce_layers",
+        "raft_layers", "support_material_pattern", "support_material_with_sheath", "support_material_spacing",
         "support_material_interface_pattern",
-        "support_material_synchronize_layers", "support_material_angle", "support_material_interface_layers", 
-        "support_material_interface_spacing", "support_material_interface_contact_loops"
-        , "support_material_contact_distance_type"
-        , "support_material_contact_distance_top"
-        , "support_material_contact_distance_bottom" 
-        , "support_material_buildplate_only", "dont_support_bridges", "notes", 
+        "support_material_synchronize_layers", "support_material_angle", "support_material_interface_layers",
+        "support_material_interface_spacing", "support_material_interface_contact_loops",
+        "support_material_contact_distance_type",
+        "support_material_contact_distance_top",
+        "support_material_contact_distance_bottom",
+        "support_material_buildplate_only", "dont_support_bridges", "notes", 
         "complete_objects",
         "complete_objects_one_skirt",
+        "complete_objects_one_brim",
         "complete_objects_sort",
         "extruder_clearance_radius", 
         "extruder_clearance_height", "gcode_comments", "gcode_label_objects", "output_filename_format", "post_process", "perimeter_extruder", 
         "infill_extruder", "solid_infill_extruder", "support_material_extruder", "support_material_interface_extruder", 
         "ooze_prevention", "standby_temperature_delta", "interface_shells", 
+        // width & spacing
         "extrusion_spacing", 
         "extrusion_width", 
         "first_layer_extrusion_spacing", 
         "first_layer_extrusion_width", 
         "perimeter_round_corners",
-        "perimeter_extrusion_spacing", 
-        "perimeter_extrusion_width", 
-        "external_perimeter_extrusion_spacing", 
-        "external_perimeter_extrusion_width", 
-        "infill_extrusion_spacing", 
-        "infill_extrusion_width", 
-        "solid_infill_extrusion_spacing", 
-        "solid_infill_extrusion_width", 
-        "top_infill_extrusion_spacing", 
-        "top_infill_extrusion_width", 
-        "support_material_extrusion_width", 
-        "infill_overlap", "bridge_flow_ratio", 
+        "perimeter_extrusion_spacing",
+        "perimeter_extrusion_width",
+        "external_perimeter_extrusion_spacing",
+        "external_perimeter_extrusion_width",
+        "infill_extrusion_spacing",
+        "infill_extrusion_width",
+        "solid_infill_extrusion_spacing",
+        "solid_infill_extrusion_width",
+        "top_infill_extrusion_spacing",
+        "top_infill_extrusion_width",
+        "support_material_extrusion_width",
+        // overlap, ratios
+        "infill_overlap", "bridge_flow_ratio",
         "infill_anchor",
         "infill_anchor_max",
         "clip_multipart_objects",
@@ -560,14 +582,17 @@ const std::vector<std::string>& Preset::print_options()
         "bridge_overlap",
         "first_layer_flow_ratio",
         "clip_multipart_objects", "enforce_full_fill_volume", "external_infill_margin", "bridged_infill_margin",
+        // compensation
         "first_layer_size_compensation",
+        "first_layer_size_compensation_layers",
         "xy_size_compensation",
         "xy_inner_size_compensation",
         "hole_size_compensation",
         "hole_size_threshold",
         "hole_to_polyhole",
         "hole_to_polyhole_threshold",
-        "threads", "resolution",
+        "threads",
+        // wipe tower
         "wipe_tower", "wipe_tower_x", "wipe_tower_y", "wipe_tower_width", "wipe_tower_rotation_angle", "wipe_tower_bridging",
         "wipe_tower_brim",
         "single_extruder_multi_material_priming", 
@@ -583,14 +608,19 @@ const std::vector<std::string>& Preset::print_options()
         "seam_travel_cost",
         "infill_connection", "infill_connection_solid", "infill_connection_top", "infill_connection_bottom",
         "first_layer_infill_speed",
+        // thin wall
+        "thin_walls",
         "thin_walls_min_width",
         "thin_walls_overlap",
-        "thin_walls_speed"
-        , "model_precision"
-        , "curve_smoothing_precision"
-        , "curve_smoothing_cutoff_dist"
-        , "curve_smoothing_angle_convex"
-        , "curve_smoothing_angle_concave",
+        "thin_walls_speed",
+        "thin_walls_merge",
+        //precision, spoothign
+        "model_precision",
+        "resolution",
+        "curve_smoothing_precision",
+        "curve_smoothing_cutoff_dist",
+        "curve_smoothing_angle_convex",
+        "curve_smoothing_angle_concave",
         "print_extrusion_multiplier",
         "print_retract_length",
         "print_temperature",
@@ -599,11 +629,11 @@ const std::vector<std::string>& Preset::print_options()
         "external_perimeter_overlap",
         "perimeter_bonding",
         "perimeter_overlap",
+        //milling
         "milling_after_z",
         "milling_post_process",
         "milling_extra_size",
         "milling_speed",
-        "thin_walls_merge",
     };
     return s_opts;
 }
@@ -889,7 +919,9 @@ void PresetCollection::add_default_preset(const std::vector<std::string> &keys, 
 
 // Load all presets found in dir_path.
 // Throws an exception on error.
-void PresetCollection::load_presets(const std::string &dir_path, const std::string &subdir)
+void PresetCollection::load_presets(
+    const std::string &dir_path, const std::string &subdir, 
+    PresetsConfigSubstitutions& substitutions, ForwardCompatibilitySubstitutionRule substitution_rule)
 {
     // Don't use boost::filesystem::canonical() on Windows, it is broken in regard to reparse points, 
     // see https://github.com/prusa3d/PrusaSlicer/issues/732
@@ -916,7 +948,9 @@ void PresetCollection::load_presets(const std::string &dir_path, const std::stri
                 // Load the preset file, apply preset values on top of defaults.
                 try {
                     DynamicPrintConfig config;
-                    config.load_from_ini(preset.file);
+                    ConfigSubstitutions config_substitutions = config.load_from_ini(preset.file, substitution_rule);
+                    if (! config_substitutions.empty())
+                        substitutions.push_back({ preset.name, m_type, PresetConfigSubstitutions::Source::UserFile, preset.file, std::move(config_substitutions) });
                     // Find a default preset for the config. The PrintPresetCollection provides different default preset based on the "printer_technology" field.
                     const Preset &default_preset = this->default_preset_for(config);
                     preset.config = default_preset.config;
@@ -1551,8 +1585,8 @@ void PresetCollection::update_map_system_profile_renamed()
 std::string PresetCollection::name() const
 {
     switch (this->type()) {
-    case Preset::TYPE_PRINT:        return L("print");
-    case Preset::TYPE_FILAMENT:     return L("filament");
+    case Preset::TYPE_FFF_PRINT:        return L("print");
+    case Preset::TYPE_FFF_FILAMENT:     return L("filament");
     case Preset::TYPE_SLA_PRINT:    return L("SLA print");
     case Preset::TYPE_SLA_MATERIAL: return L("SLA material");
     case Preset::TYPE_PRINTER:      return L("printer");
@@ -1563,8 +1597,8 @@ std::string PresetCollection::name() const
 std::string PresetCollection::section_name() const
 {
     switch (this->type()) {
-    case Preset::TYPE_PRINT:        return "print";
-    case Preset::TYPE_FILAMENT:     return "filament";
+    case Preset::TYPE_FFF_PRINT:        return "print";
+    case Preset::TYPE_FFF_FILAMENT:     return "filament";
     case Preset::TYPE_SLA_PRINT:    return "sla_print";
     case Preset::TYPE_SLA_MATERIAL: return "sla_material";
     case Preset::TYPE_PRINTER:      return "printer";
@@ -1800,7 +1834,9 @@ PhysicalPrinterCollection::PhysicalPrinterCollection( const std::vector<std::str
 
 // Load all printers found in dir_path.
 // Throws an exception on error.
-void PhysicalPrinterCollection::load_printers(const std::string& dir_path, const std::string& subdir)
+void PhysicalPrinterCollection::load_printers(
+    const std::string& dir_path, const std::string& subdir, 
+    PresetsConfigSubstitutions& substitutions, ForwardCompatibilitySubstitutionRule substitution_rule)
 {
     // Don't use boost::filesystem::canonical() on Windows, it is broken in regard to reparse points, 
     // see https://github.com/prusa3d/PrusaSlicer/issues/732
@@ -1826,7 +1862,9 @@ void PhysicalPrinterCollection::load_printers(const std::string& dir_path, const
                 // Load the preset file, apply preset values on top of defaults.
                 try {
                     DynamicPrintConfig config;
-                    config.load_from_ini(printer.file);
+                    ConfigSubstitutions config_substitutions = config.load_from_ini(printer.file, substitution_rule);
+                    if (! config_substitutions.empty())
+                        substitutions.push_back({ name, Preset::Type::TYPE_PHYSICAL_PRINTER, PresetConfigSubstitutions::Source::UserFile, printer.file, std::move(config_substitutions) });
                     printer.update_from_config(config);
                     printer.loaded = true;
                 }

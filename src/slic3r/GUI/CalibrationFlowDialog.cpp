@@ -58,7 +58,7 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
 
 
     assert(objs_idx.size() == 5);
-    const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();
+    const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->get_config();
     const DynamicPrintConfig* printerConfig = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
     
     /// --- scale ---
@@ -162,10 +162,10 @@ void CalibrationFlowDialog::create_geometry(float start, float delta) {
 
     //update plater
     GLCanvas3D::set_warning_freeze(false);
-    this->gui_app->get_tab(Preset::TYPE_PRINT)->load_config(new_print_config);
+    this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->load_config(new_print_config);
     plat->on_config_change(new_print_config);
     plat->changed_objects(objs_idx);
-    this->gui_app->get_tab(Preset::TYPE_PRINT)->update_dirty();
+    this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->update_dirty();
     //update everything, easier to code.
     ObjectList* obj = this->gui_app->obj_list();
     obj->update_after_undo_redo();

@@ -72,6 +72,7 @@ enum class MachineLimitsUsage : uint8_t {
 };
 
 enum PrintHostType {
+    htPrusaLink,
     htOctoPrint,
     htDuet,
     htFlashAir,
@@ -222,6 +223,7 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<MachineLimitsUsag
 
 template<> inline const t_config_enum_values& ConfigOptionEnum<PrintHostType>::get_enum_values() {
     static t_config_enum_values keys_map = {
+        {"prusalink", htPrusaLink},
         {"octoprint", htOctoPrint},
         {"duet", htDuet},
         {"flashair", htFlashAir},
@@ -369,6 +371,15 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<ZLiftTop>::get_en
     return keys_map;
 }
 
+template<> inline const t_config_enum_values& ConfigOptionEnum<ForwardCompatibilitySubstitutionRule>::get_enum_values() {
+    static const t_config_enum_values keys_map = {
+        { "disable",        ForwardCompatibilitySubstitutionRule::Disable },
+        { "enable",         ForwardCompatibilitySubstitutionRule::Enable },
+        { "enable_silent",  ForwardCompatibilitySubstitutionRule::EnableSilent }
+    };
+
+    return keys_map;
+}
 // Defines each and every confiuration option of Slic3r, including the properties of the GUI dialogs.
 // Does not store the actual values, but defines default values.
 class PrintConfigDef : public ConfigDef
@@ -622,6 +633,7 @@ public:
     ConfigOptionFloatOrPercent      first_layer_height;
     ConfigOptionFloatOrPercent      first_layer_extrusion_width;
     ConfigOptionFloat               first_layer_size_compensation;
+    ConfigOptionInt                 first_layer_size_compensation_layers;
     ConfigOptionFloat               hole_size_compensation;
     ConfigOptionFloat               hole_size_threshold;
     ConfigOptionBool                infill_only_where_needed;
@@ -692,6 +704,7 @@ protected:
         OPT_PTR(first_layer_height);
         OPT_PTR(first_layer_extrusion_width);
         OPT_PTR(first_layer_size_compensation);
+        OPT_PTR(first_layer_size_compensation_layers);
         OPT_PTR(infill_only_where_needed);
         OPT_PTR(interface_shells);
         OPT_PTR(layer_height);
@@ -802,7 +815,7 @@ public:
     ConfigOptionEnum<IroningType>   ironing_type;
     ConfigOptionPercent             ironing_flowrate;
     ConfigOptionFloat               ironing_spacing;
-    ConfigOptionFloat               ironing_speed;
+    ConfigOptionFloatOrPercent      ironing_speed;
     // milling options
     ConfigOptionFloatOrPercent      milling_after_z;
     ConfigOptionFloatOrPercent      milling_extra_size;
@@ -1262,6 +1275,7 @@ public:
     ConfigOptionInts                chamber_temperature;
     ConfigOptionBool                complete_objects;
     ConfigOptionBool                complete_objects_one_skirt;
+    ConfigOptionBool                complete_objects_one_brim;
     ConfigOptionEnum<CompleteObjectSort> complete_objects_sort;
     ConfigOptionFloats              colorprint_heights;
     ConfigOptionBools               cooling;
@@ -1327,6 +1341,7 @@ public:
     ConfigOptionBool                thumbnails_with_bed;
     ConfigOptionPercent             time_estimation_compensation;
     ConfigOptionInts                top_fan_speed;
+    ConfigOptionFloatOrPercent      travel_acceleration;
     ConfigOptionBools               wipe;
     ConfigOptionBool                wipe_tower;
     ConfigOptionFloatOrPercent      wipe_tower_brim;
@@ -1357,6 +1372,7 @@ protected:
         OPT_PTR(chamber_temperature);
         OPT_PTR(complete_objects);
         OPT_PTR(complete_objects_one_skirt);
+        OPT_PTR(complete_objects_one_brim);
         OPT_PTR(complete_objects_sort);
         OPT_PTR(colorprint_heights);
         OPT_PTR(cooling);
@@ -1422,6 +1438,7 @@ protected:
         OPT_PTR(thumbnails_with_bed);
         OPT_PTR(time_estimation_compensation);
         OPT_PTR(top_fan_speed);
+        OPT_PTR(travel_acceleration);
         OPT_PTR(wipe);
         OPT_PTR(wipe_tower);
         OPT_PTR(wipe_tower_brim);
@@ -1894,8 +1911,8 @@ public:
     bool         set_key_value(const std::string &opt_key, ConfigOption *opt) { bool out = m_data.set_key_value(opt_key, opt); this->touch(); return out; }
     template<typename T>
     void         set(const std::string &opt_key, T value) { m_data.set(opt_key, value, true); this->touch(); }
-    void         set_deserialize(const t_config_option_key &opt_key, const std::string &str, bool append = false)
-        { m_data.set_deserialize(opt_key, str, append); this->touch(); }
+    void         set_deserialize(const t_config_option_key &opt_key, const std::string &str, ConfigSubstitutionContext &substitution_context, bool append = false)
+        { m_data.set_deserialize(opt_key, str, substitution_context, append); this->touch(); }
     bool         erase(const t_config_option_key &opt_key) { bool out = m_data.erase(opt_key); if (out) this->touch(); return out; }
 
     // Getters are thread safe.

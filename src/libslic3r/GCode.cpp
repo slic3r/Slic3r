@@ -273,10 +273,11 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
         // Retract for a tool change, using the toolchange retract value and setting the priming extra length.
         gcode += gcodegen.retract(true);
         gcodegen.m_avoid_crossing_perimeters.use_external_mp_once();
-        gcode += gcodegen.travel_to(
+        Polyline polyline = gcodegen.travel_to(
+            gcode,
             wipe_tower_point_to_object_point(gcodegen, start_pos),
-            erMixed,
-            "Travel to a Wipe Tower");
+            erMixed);
+        gcodegen.write_travel_to(gcode, polyline, "Travel to a Wipe Tower");
         gcode += gcodegen.unretract();
     }
 
@@ -727,6 +728,81 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessor::Result* re
 
 // free functions called by GCode::_do_export()
 namespace DoExport {
+
+    class ExtrusionMinMM : public ExtrusionVisitorConst {
+        double min = std::numeric_limits<double>::max();
+        std::unordered_set<ExtrusionRole> excluded;
+    public:
+        ExtrusionMinMM(const ConfigBase* config) {
+            excluded.insert(erIroning);
+            excluded.insert(erMilling);
+            excluded.insert(erCustom);
+            excluded.insert(erMixed);
+            excluded.insert(erNone);
+            excluded.insert(erWipeTower);
+            if (config->get_abs_value("perimeter_speed") != 0 && config->get_abs_value("small_perimeter_speed") != 0) {
+                excluded.insert(erPerimeter);
+                excluded.insert(erSkirt);
+            }
+            if (config->get_abs_value("external_perimeter_speed") != 0 && config->get_abs_value("small_perimeter_speed") != 0)
+                excluded.insert(erExternalPerimeter);
+            if (config->get_abs_value("overhangs_speed") != 0 && config->get_abs_value("small_perimeter_speed") != 0)
+                excluded.insert(erOverhangPerimeter);
+            if (config->get_abs_value("gap_fill_speed") != 0)
+                excluded.insert(erGapFill);
+            if (config->get_abs_value("thin_walls_speed") != 0)
+                excluded.insert(erThinWall);
+            if (config->get_abs_value("infill_speed") != 0)
+                excluded.insert(erInternalInfill);
+            if (config->get_abs_value("solid_infill_speed") != 0)
+                excluded.insert(erSolidInfill);
+            if (config->get_abs_value("top_solid_infill_speed") != 0)
+                excluded.insert(erTopSolidInfill);
+            if (config->get_abs_value("bridge_speed") != 0)
+                excluded.insert(erBridgeInfill);
+            if (config->get_abs_value("bridge_speed_internal") != 0)
+                excluded.insert(erInternalBridgeInfill);
+            if (config->get_abs_value("support_material_speed") != 0)
+                excluded.insert(erSupportMaterial);
+            if (config->get_abs_value("support_material_interface_speed") != 0)
+                excluded.insert(erSupportMaterialInterface);
+        }
+        virtual void use(const ExtrusionPath& path) override {
+            if (excluded.find(path.role()) == excluded.end())
+                min = std::min(min, path.mm3_per_mm);
+        }
+        virtual void use(const ExtrusionPath3D& path3D) override {
+            if (excluded.find(path3D.role()) == excluded.end())
+                min = std::min(min, path3D.mm3_per_mm);
+        }
+        virtual void use(const ExtrusionMultiPath& multipath) override {
+            for (const ExtrusionPath& path : multipath.paths)
+                use(path);
+        }
+        virtual void use(const ExtrusionMultiPath3D& multipath) override {
+            for (const ExtrusionPath& path : multipath.paths)
+                use(path);
+        }
+        virtual void use(const ExtrusionLoop& loop) override {
+            for (const ExtrusionPath& path : loop.paths)
+                use(path);
+        }
+        virtual void use(const ExtrusionEntityCollection& collection) override {
+            for (const ExtrusionEntity* entity : collection.entities)
+                entity->visit(*this);
+        }
+        double reset_use_get(const ExtrusionEntityCollection entity) { reset(); use(entity); return get(); }
+        double get() { return min; }
+        void reset() { min = std::numeric_limits<double>::max(); }
+        //test if at least a ExtrusionRole from tests is used for min computation
+        bool is_compatible(std::initializer_list<ExtrusionRole> tests) { 
+            for (ExtrusionRole test : tests)
+                if (excluded.find(test) == excluded.end())
+                    return true;
+            return false;
+        }
+    };
+
     static void init_gcode_processor(const PrintConfig& config, GCodeProcessor& processor, bool& silent_time_estimator_enabled)
     {
         silent_time_estimator_enabled = (config.gcode_flavor.value == gcfMarlin) && config.silent_mode;
@@ -737,6 +813,7 @@ namespace DoExport {
 
 	static double autospeed_volumetric_limit(const Print &print)
 	{
+        ExtrusionMinMM compute_min_mm3_per_mm{ &print.full_print_config() };
 	    // get the minimum cross-section used in the print
 	    std::vector<double> mm3_per_mm;
 	    for (auto object : print.objects()) {
@@ -744,37 +821,20 @@ namespace DoExport {
 	            const PrintRegion* region = print.regions()[region_id];
 	            for (auto layer : object->layers()) {
 	                const LayerRegion* layerm = layer->regions()[region_id];
-	                if (region->config().get_abs_value("perimeter_speed") == 0 ||
-	                    region->config().get_abs_value("small_perimeter_speed") == 0 ||
-	                    region->config().get_abs_value("external_perimeter_speed") == 0 ||
-	                    region->config().get_abs_value("overhangs_speed") == 0)
-	                    mm3_per_mm.push_back(layerm->perimeters.min_mm3_per_mm());
-	                if (region->config().get_abs_value("infill_speed") == 0 ||
-	                    region->config().get_abs_value("solid_infill_speed") == 0 ||
-	                    region->config().get_abs_value("top_solid_infill_speed") == 0 ||
-                        region->config().get_abs_value("bridge_speed") == 0 ||
-	                    region->config().get_abs_value("bridge_speed_internal") == 0)
-                    {
-                        // Minimal volumetric flow should not be calculated over ironing extrusions.
-                        // Use following lambda instead of the built-it method.
-                        // https://github.com/prusa3d/PrusaSlicer/issues/5082
-                        auto min_mm3_per_mm_no_ironing = [](const ExtrusionEntityCollection& eec) -> double {
-                            double min = std::numeric_limits<double>::max();
-                            for (const ExtrusionEntity* ee : eec.entities)
-                                if (ee->role() != erIroning)
-                                    min = std::min(min, ee->min_mm3_per_mm());
-                            return min;
-                        };
-
-                        mm3_per_mm.push_back(min_mm3_per_mm_no_ironing(layerm->fills));
-                    }
+                    if (compute_min_mm3_per_mm.is_compatible({ erPerimeter, erExternalPerimeter, erOverhangPerimeter }))
+                        mm3_per_mm.push_back(compute_min_mm3_per_mm.reset_use_get(layerm->perimeters));
+                    if (compute_min_mm3_per_mm.is_compatible({ erInternalInfill, erSolidInfill, erTopSolidInfill,erBridgeInfill,erInternalBridgeInfill }))
+                        mm3_per_mm.push_back(compute_min_mm3_per_mm.reset_use_get(layerm->fills));
 	            }
 	        }
-	        if (object->config().get_abs_value("support_material_speed") == 0 ||
-	            object->config().get_abs_value("support_material_interface_speed") == 0)
+            if (compute_min_mm3_per_mm.is_compatible({ erSupportMaterial, erSupportMaterialInterface }))
 	            for (auto layer : object->support_layers())
-	                mm3_per_mm.push_back(layer->support_fills.min_mm3_per_mm());
+                    mm3_per_mm.push_back(compute_min_mm3_per_mm.reset_use_get(layer->support_fills));
 	    }
+        if (compute_min_mm3_per_mm.is_compatible({ erSkirt })) {
+            mm3_per_mm.push_back(compute_min_mm3_per_mm.reset_use_get(print.skirt()));
+            mm3_per_mm.push_back(compute_min_mm3_per_mm.reset_use_get(print.brim()));
+        }
 	    // filter out 0-width segments
 	    mm3_per_mm.erase(std::remove_if(mm3_per_mm.begin(), mm3_per_mm.end(), [](double v) { return v < 0.000001; }), mm3_per_mm.end());
 	    double volumetric_speed = 0.;
@@ -1333,7 +1393,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
 
     // Disable fan.
     if ((initial_extruder_id != (uint16_t)-1) && !this->config().start_gcode_manual && print.config().disable_fan_first_layers.get_at(initial_extruder_id))
-        _write(file, m_writer.set_fan(0, true, initial_extruder_id));
+        _write(file, m_writer.set_fan(uint8_t(0), true, initial_extruder_id));
     //ensure fan is at the right speed
 
     print.throw_if_canceled();
@@ -1427,7 +1487,10 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
                     m_enable_cooling_markers = false; // we're not filtering these moves through CoolingBuffer
                     m_avoid_crossing_perimeters.use_external_mp_once();
                     _write(file, this->retract());
-                    _write(file, this->travel_to(Point(0, 0), erNone, "move to origin position for next object"));
+                    std::string gcode;
+                    Polyline polyline = this->travel_to(gcode, Point(0, 0), erNone);
+                    this->write_travel_to(gcode, polyline, "move to origin position for next object");
+                    _write(file, gcode);
                     m_enable_cooling_markers = true;
                     // Disable motion planner when traveling to first object point.
                     m_avoid_crossing_perimeters.disable_once();
@@ -1535,7 +1598,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
         _add_object_change_labels(gcode);
         _write(file, gcode);
     }
-    _write(file, m_writer.set_fan(false));
+    _write(file, m_writer.set_fan(uint8_t(0)));
 
     // adds tag for processor
     _write_format(file, ";%s%s\n", GCodeProcessor::Extrusion_Role_Tag.c_str(), ExtrusionEntity::role_to_string(erCustom).c_str());
@@ -3107,9 +3170,10 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         double min_length = scale_(this->m_config.small_perimeter_min_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
         double max_length = scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
         if (loop.length() <= min_length) {
-        speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+            speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
         } else {
-            speed = -(loop.length() - min_length) / (max_length - min_length);
+            //set speed between -1 and 0 you have to multiply the real peed by the opposite of that, and add the other part as small_perimeter_speed
+            speed = (min_length - loop.length()) / (max_length - min_length);
         }
     }
     
@@ -3662,13 +3726,69 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
     std::string gcode;
     std::string description{ description_in };
 
-    // go to first point of extrusion path
-    if (!m_last_pos_defined || m_last_pos != path.first_point()) {
-        gcode += this->travel_to(
-            path.first_point(),
-            path.role(),
-            "move to first " + description + " point"
-        );
+
+    // adjust acceleration, inside the travel to set the deceleration
+    double acceleration = get_default_acceleration(m_config);
+    double travel_acceleration = m_writer.get_acceleration();
+    {
+        if (this->on_first_layer() && m_config.first_layer_acceleration.value > 0) {
+            acceleration = m_config.first_layer_acceleration.get_abs_value(acceleration);
+        } else if (m_config.perimeter_acceleration.value > 0 && is_perimeter(path.role())) {
+            acceleration = m_config.perimeter_acceleration.get_abs_value(acceleration);
+        } else if (m_config.bridge_acceleration.value > 0 && is_bridge(path.role())
+            && path.role() != erOverhangPerimeter) {
+            acceleration = m_config.bridge_acceleration.get_abs_value(acceleration);
+        } else if (m_config.infill_acceleration.value > 0 && is_infill(path.role())) {
+            acceleration = m_config.infill_acceleration.get_abs_value(acceleration);
+        }
+        if (m_config.travel_acceleration.value > 0)
+            travel_acceleration = m_config.travel_acceleration.get_abs_value(acceleration);
+    }
+
+    if (travel_acceleration == acceleration) {
+        m_writer.set_acceleration((uint32_t)floor(acceleration + 0.5));
+        // go to first point of extrusion path (stop at midpoint to let us set the decel speed)
+        if (!m_last_pos_defined || m_last_pos != path.first_point()) {
+             Polyline polyline = this->travel_to(gcode, path.first_point(), path.role());
+             this->write_travel_to(gcode, polyline, "move to first " + description + " point (" + std::to_string(acceleration) +" == "+ std::to_string(travel_acceleration)+")");
+        }
+    } else {
+        // go to midpoint to let us set the decel speed)
+        if (!m_last_pos_defined || m_last_pos != path.first_point()) {
+            Polyline poly_start = this->travel_to(gcode, path.first_point(), path.role());
+            coordf_t length = poly_start.length();
+            if (length > SCALED_EPSILON) {
+                Polyline poly_end;
+                coordf_t min_length = scale_(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0.5)) * 20;
+                if (poly_start.size() > 2 && length > min_length * 3) {
+                    //if complex travel, try to deccelerate only at the end, unless it's less than ~ 20 nozzle
+                    if (poly_start.lines().back().length() < min_length) {
+                        poly_end = poly_start;
+                        poly_start.clip_end(min_length);
+                        poly_end.clip_start(length - min_length);
+                    } else {
+                        poly_end.points.push_back(poly_start.points.back());
+                        poly_start.points.pop_back();
+                        poly_end.points.push_back(poly_start.points.back());
+                        poly_end.reverse();
+                    }
+                } else {
+                    poly_end = poly_start;
+                    poly_start.clip_end(length / 2);
+                    poly_end.clip_start(length / 2);
+                }
+                m_writer.set_acceleration((uint32_t)floor(travel_acceleration + 0.5));
+                this->write_travel_to(gcode, poly_start, "move to first " + description + " point (acceleration)");
+                //travel acceleration should be already set at startup via special gcode, and so it's automatically used by G0.
+                m_writer.set_acceleration((uint32_t)floor(acceleration + 0.5));
+                this->write_travel_to(gcode, poly_end, "move to first " + description + " point (deceleration)");
+            } else {
+                m_writer.set_acceleration((uint32_t)floor(travel_acceleration + 0.5));
+                this->write_travel_to(gcode, poly_start, "move to first " + description + " point (acceleration)");
+            }
+        } else {
+            m_writer.set_acceleration((uint32_t)floor(acceleration + 0.5));
+        }
     }
 
     //if needed, write the gcode_label_objects_end then gcode_label_objects_start
@@ -3677,24 +3797,6 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
 
     // compensate retraction
     gcode += this->unretract();
-
-    // adjust acceleration
-    {
-        double acceleration = get_default_acceleration(m_config);
-        if (this->on_first_layer() && m_config.first_layer_acceleration.value > 0) {
-            acceleration = m_config.first_layer_acceleration.get_abs_value(acceleration);
-        } else if (m_config.perimeter_acceleration.value > 0 && is_perimeter(path.role())) {
-            acceleration = m_config.perimeter_acceleration.get_abs_value(acceleration);
-        } else if (m_config.bridge_acceleration.value > 0 && is_bridge(path.role()) 
-                && path.role() != erOverhangPerimeter ) {
-            acceleration = m_config.bridge_acceleration.get_abs_value(acceleration);
-        } else if (m_config.infill_acceleration.value > 0 && is_infill(path.role())) {
-            acceleration = m_config.infill_acceleration.get_abs_value(acceleration);
-        }
-        //travel acceleration should be already set at startup via special gcode, and so it's automatically used by G0.
-        m_writer.set_acceleration((uint16_t)floor(acceleration + 0.5));
-    }
-
 
     // set speed
     if (speed < 0) {
@@ -3734,40 +3836,53 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
         if (factor < 1 && !(is_bridge(path.role()))) {
             float small_speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
             //apply factor between feature speed and small speed
-            speed = speed * factor + (1.f - factor) * small_speed;
-    }
+            speed = (speed * factor) + double((1.f - factor) * small_speed);
+        }
     }
     if (m_volumetric_speed != 0. && speed == 0) {
         //if m_volumetric_speed, use the max size for thinwall & gapfill, to avoid variations
-        speed = m_volumetric_speed / path.mm3_per_mm;
-        if (speed > m_config.max_print_speed.value)
-            speed = m_config.max_print_speed.value;
+        double vol_speed = m_volumetric_speed / path.mm3_per_mm;
+        if (vol_speed > m_config.max_print_speed.value)
+            vol_speed = m_config.max_print_speed.value;
+        // if using a % of an auto speed, use the % over the volumetric speed.
+        if (path.role() == erExternalPerimeter) {
+            speed = m_config.get_abs_value("external_perimeter_speed", vol_speed);
+        } else if (path.role() == erInternalBridgeInfill) {
+            speed = m_config.get_abs_value("bridge_speed_internal", vol_speed);
+        } else if (path.role() == erOverhangPerimeter) {
+            speed = m_config.get_abs_value("overhangs_speed", vol_speed);
+        } else if (path.role() == erSolidInfill) {
+            speed = m_config.get_abs_value("solid_infill_speed", vol_speed);
+        } else if (path.role() == erTopSolidInfill) {
+            speed = m_config.get_abs_value("top_solid_infill_speed", vol_speed);
+        }
+        if(speed == 0){
+            speed = vol_speed;
+        }
     }
     if (speed == 0) // this code shouldn't trigger as if it's 0, you have to get a m_volumetric_speed
         speed = m_config.max_print_speed.value;
     if (this->on_first_layer())
-        if (path.role() == erInternalInfill || path.role() == erSolidInfill)
-            speed = std::min(m_config.get_abs_value("first_layer_infill_speed", speed), speed);
-        else
-            speed = std::min(m_config.get_abs_value("first_layer_speed", speed), speed);
-    if (m_config.max_volumetric_speed.value > 0) {
-        // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
-        speed = std::min(
-            speed,
-            m_config.max_volumetric_speed.value / path.mm3_per_mm
-            );
+        if (path.role() == erInternalInfill || path.role() == erSolidInfill) {
+            double first_layer_infill_speed = m_config.get_abs_value("first_layer_infill_speed", speed);
+            if(first_layer_infill_speed > 0)
+                speed = std::min(first_layer_infill_speed, speed);
+        } else {
+            double first_layer_speed = m_config.get_abs_value("first_layer_speed", speed);
+            if (first_layer_speed > 0)
+                speed = std::min(first_layer_speed, speed);
+        }
+    // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
+    if (m_config.max_volumetric_speed.value > 0 && path.mm3_per_mm > 0) {
+        speed = std::min(m_config.max_volumetric_speed.value / path.mm3_per_mm, speed);
     }
-    if (EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_volumetric_speed, 0) > 0) {
-        // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
-        speed = std::min(
-            speed,
-            EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_volumetric_speed, speed) / path.mm3_per_mm
-        );
+    double filament_max_volumetric_speed = EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_volumetric_speed, 0);
+    if (filament_max_volumetric_speed > 0) {
+        speed = std::min(filament_max_volumetric_speed, speed);
     }
-    if (EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_speed, 0) > 0) {
-        speed = std::min(
-            speed,
-            EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_speed, speed));
+    double filament_max_speed = EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_speed, 0);
+    if (filament_max_speed > 0) {
+        speed = std::min(filament_max_speed, speed);
     }
     double F = speed * 60;  // convert mm/sec to mm/min
 
@@ -3881,7 +3996,7 @@ void GCode::_add_object_change_labels(std::string& gcode) {
 }
 
 // This method accepts &point in print coordinates.
-std::string GCode::travel_to(const Point &point, ExtrusionRole role, std::string comment)
+Polyline GCode::travel_to(std::string &gcode, const Point &point, ExtrusionRole role)
 {
     /*  Define the travel move as a line between current position and the taget point.
         This is expressed in print coordinates, so it will need to be translated by
@@ -3910,7 +4025,6 @@ std::string GCode::travel_to(const Point &point, ExtrusionRole role, std::string
     m_avoid_crossing_perimeters.reset_once_modifiers();
 
     // generate G-code for the travel move
-    std::string gcode;
     if (needs_retraction) {
         if (m_config.avoid_crossing_perimeters && could_be_wipe_disabled)
             m_wipe.reset_path();
@@ -3931,15 +4045,19 @@ std::string GCode::travel_to(const Point &point, ExtrusionRole role, std::string
     //if needed, write the gcode_label_objects_end then gcode_label_objects_start
     _add_object_change_labels(gcode);
 
+    return travel;
+}
+
+
+void GCode::write_travel_to(std::string &gcode, const Polyline& travel, std::string comment)
+{
     // use G1 because we rely on paths being straight (G0 may make round paths)
     if (travel.size() >= 2) {
-        for (size_t i = 1; i < travel.size(); ++ i)
+        for (size_t i = 1; i < travel.size(); ++i)
             gcode += m_writer.travel_to_xy(this->point_to_gcode(travel.points[i]), comment);
         this->set_last_pos(travel.points.back());
     }
-    return gcode;
 }
-
 bool GCode::needs_retraction(const Polyline &travel, ExtrusionRole role)
 {
     if (travel.length() < scale_(EXTRUDER_CONFIG_WITH_DEFAULT(retract_before_travel, 0))) {

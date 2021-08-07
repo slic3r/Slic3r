@@ -74,7 +74,7 @@ void PrintConfigDef::init_common_params()
 
     def = this->add("thumbnails", coPoints);
     def->label = L("Thumbnails size");
-    def->tooltip = L("Picture sizes to be stored into a .gcode and .sl1 files, in the following format: \"XxY, XxY, ...\"");
+    def->tooltip = L("Picture sizes to be stored into a .gcode and .sl1 / .sl1s files, in the following format: \"XxY, XxY, ...\"");
     def->mode = comExpert;
     def->min = 0;
     def->max = 2048;
@@ -310,6 +310,7 @@ void PrintConfigDef::init_fff_params()
                 "\nSet zero to disable acceleration control for bridges."
                 "\nNote that it won't be applied to overhangs, they still use the perimeter acceleration.");
     def->sidetext = L("mm/s² or %");
+    def->ratio_over = "default_acceleration";
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
@@ -574,6 +575,14 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("complete_objects_one_brim", coBool);
+    def->label = L("Print all brim at startup");
+    def->category = OptionCategory::output;
+    def->tooltip = L("When using 'Complete individual objects', the default behavior is to draw the brim at the beginning of each object."
+        " if you prefer to have more place for you objects, you can print all the brims at the beginning, so ther is less problem with collision.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("complete_objects_sort", coEnum);
     def->label = L("Object sort");
     def->category = OptionCategory::output;
@@ -627,6 +636,7 @@ void PrintConfigDef::init_fff_params()
                    "\nYou can set it as a % of the max of the X/Y machine acceleration limit."
                    "\nSet zero to prevent resetting acceleration at all.");
     def->sidetext = L("mm/s² or %");
+    def->ratio_over = "machine_max_acceleration_X";
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
@@ -1695,6 +1705,19 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(0));
 
+    def = this->add("first_layer_size_compensation_layers", coInt);
+    def->label = L("height in layers");
+    def->full_label = L("XY First layer compensation height in layers");
+    def->category = OptionCategory::slicing;
+    def->tooltip = L("The number of layers on which the elephant foot compensation will be active. "
+        "The first layer will be shrunk by the elephant foot compensation value, then "
+        "the next layers will be gradually shrunk less, up to the layer indicated by this value.");
+    def->sidetext = L("layers");
+    def->min = 1;
+    def->max = 30;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(1));
+
     def = this->add("fill_smooth_width", coFloatOrPercent);
     def->label = L("Width");
     def->full_label = L("Ironing width");
@@ -1730,6 +1753,7 @@ void PrintConfigDef::init_fff_params()
                 "\nCan be a % of the default acceleration"
                 "\nSet zero to disable acceleration control for first layer.");
     def->sidetext = L("mm/s² or %");
+    def->ratio_over = "default_acceleration";
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -1880,7 +1904,8 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Gap fill speed");
     def->category = OptionCategory::speed;
     def->tooltip = L("Speed for filling small gaps using short zigzag moves. Keep this reasonably low "
-        "to avoid too much shaking and resonance issues.");
+        "to avoid too much shaking and resonance issues."
+        "\nGap fill extrusions are ignored from the automatic volumetric speed computation, unless you set it to 0.");
     def->sidetext = L("mm/s");
     def->min = 0;
     def->mode = comAdvanced;
@@ -1972,6 +1997,7 @@ void PrintConfigDef::init_fff_params()
                 "\nCan be a % of the default acceleration"
                 "\nSet zero to disable acceleration control for infill.");
     def->sidetext = L("mm/s² or %");
+    def->ratio_over = "default_acceleration";
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
@@ -2286,14 +2312,17 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloat(0.1));
 
-    def = this->add("ironing_speed", coFloat);
+    def = this->add("ironing_speed", coFloatOrPercent);
     def->label = L("Ironing");
     def->category = OptionCategory::ironing;
-    def->tooltip = L("Ironing");
+    def->tooltip = L("Ironing speed. Used for the ironing pass of the ironing infill pattern, and the post-process infill."
+        " Can be defined as mm.s, or a % of the top solid infill speed."
+        "\nIroning extrusions are ignored from the automatic volumetric speed computation.");
     def->sidetext = L("mm/s");
-    def->min = 0;
+    def->ratio_over = "top_solid_infill_speed";
+    def->min = 0.1;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloat(15));
+    def->set_default_value(new ConfigOptionFloatOrPercent(15, false));
 
     def = this->add("layer_gcode", coString);
     def->label = L("After layer change G-code");
@@ -2693,12 +2722,14 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Slic3r can upload G-code files to a printer host. This field must contain "
                    "the kind of the host.");
     def->enum_keys_map = &ConfigOptionEnum<PrintHostType>::get_enum_values();
+    def->enum_values.push_back("prusalink");
     def->enum_values.push_back("octoprint");
     def->enum_values.push_back("duet");
     def->enum_values.push_back("flashair");
     def->enum_values.push_back("astrobox");
     def->enum_values.push_back("repetier");
     def->enum_values.push_back("klipper");
+    def->enum_labels.push_back("PrusaLink");
     def->enum_labels.push_back("OctoPrint");
     def->enum_labels.push_back("Duet");
     def->enum_labels.push_back("FlashAir");
@@ -2863,6 +2894,8 @@ void PrintConfigDef::init_fff_params()
                 "\nCan be a % of the default acceleration"
                 "\nSet zero to disable acceleration control for perimeters.");
     def->sidetext = L("mm/s² or %");
+    def->ratio_over = "default_acceleration";
+    def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
@@ -4070,6 +4103,18 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->set_default_value(new ConfigOptionFloat(0.));
 
+    def = this->add("travel_acceleration", coFloatOrPercent);
+    def->label = L("Travel");
+    def->full_label = L("Travel acceleration");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("Acceleration for travel moves (jumps between distant extrusion points)."
+            "\nNote that the deceleration of a travel will use the acceleration value of the extrusion that will be printed after it (if any)");
+    def->sidetext = L("mm/s² or %");
+    def->ratio_over = "default_acceleration";
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloatOrPercent(1500, false));
+
     def = this->add("travel_speed", coFloat);
     def->label = L("Travel");
     def->full_label = L("Travel speed");
@@ -5241,7 +5286,7 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
     } else if (opt_key == "bed_size" && !value.empty()) {
         opt_key = "bed_shape";
         ConfigOptionPoint p;
-        p.deserialize(value);
+        p.deserialize(value, ForwardCompatibilitySubstitutionRule::Disable);
         std::ostringstream oss;
         oss << "0x0," << p.value(0) << "x0," << p.value(0) << "x" << p.value(1) << ",0x" << p.value(1);
         value = oss.str();
@@ -5388,6 +5433,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "brim_offset",
 "chamber_temperature",
 "complete_objects_one_skirt",
+"complete_objects_one_brim",
 "complete_objects_sort",
 "solid_fill_pattern",
 "enforce_full_fill_volume",
@@ -5516,6 +5562,8 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "start_gcode_manual",
 "perimeter_round_corners",
 "travel_speed_z",
+"first_layer_size_compensation_layers",
+"travel_acceleration",
     };
     //looks if it's to be removed, or have to be transformed
     if (to_remove_keys.find(opt_key) != to_remove_keys.end()) {
@@ -5542,9 +5590,12 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
         }
     } else if ("elephant_foot_min_width" == opt_key) {
         opt_key = "elefant_foot_min_width";
-    } else if("first_layer_acceleration" == opt_key || "infill_acceleration" == opt_key || "bridge_acceleration" == opt_key || "default_acceleration" == opt_key || "overhangs_speed" == opt_key || "perimeter_acceleration" == opt_key){
-        if (value.find("%") != std::string::npos)
-            value = "0";
+    } else if("first_layer_acceleration" == opt_key || "infill_acceleration" == opt_key || "bridge_acceleration" == opt_key || "default_acceleration" == opt_key || "perimeter_acceleration" == opt_key
+        || "overhangs_speed" == opt_key || "ironing_speed" == opt_key){
+        // remove '%'
+        if (value.find("%") != std::string::npos) {
+            value = std::to_string(all_conf.get_abs_value(opt_key));
+        }
     } else if ("gap_fill_speed" == opt_key && all_conf.has("gap_fill") && !all_conf.option<ConfigOptionBool>("gap_fill")->value) {
         value = "0";
     } else if ("bridge_flow_ratio" == opt_key && all_conf.has("bridge_flow_ratio")) {
@@ -5664,7 +5715,6 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
     //std::cout << "START min_object_distance =>" << base_dist << "\n";
     const ConfigOptionBool* co_opt = config->option<ConfigOptionBool>("complete_objects");
     if (co_opt && co_opt->value) {
-        double brim_dist = 0;
         double skirt_dist = 0;
         try {
             std::vector<double> vals = dynamic_cast<const ConfigOptionFloats*>(config->option("nozzle_diameter"))->values;
@@ -5679,18 +5729,7 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
                 base_dist = extruder_clearance_radius;
             }
 
-            //add brim width
-            //  note: now brim can be per-object, so you have to get a different min_object_distance per object
-            //    You should increase/reduce the size of the polygons that have a model-wide setting.
             const double first_layer_height = config->get_abs_value("first_layer_height");
-            if (ref_height <= first_layer_height && ref_height != 0) {
-                if (config->option("brim_width")->getFloat() > 0) {
-                    brim_dist += config->option("brim_width")->getFloat();
-                }
-            }
-            else //if (config->option("brim_width")->getFloat() + 1 > base_dist) {
-                base_dist += config->option("brim_width")->getFloat();
-            //}
             //add the skirt
             if (config->option("skirts")->getInt() > 0 && config->option("skirt_height")->getInt() >= 1 && !config->option("complete_objects_one_skirt")->getBool()) {
                 if (ref_height == 0) {
@@ -5723,7 +5762,7 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
         catch (const std::exception & ex) {
             boost::nowide::cerr << ex.what() << std::endl;
         }
-        return base_dist + std::max(skirt_dist, brim_dist);
+        return base_dist + skirt_dist;
     }
     return base_dist;
 }
@@ -6494,6 +6533,20 @@ CLIMiscConfigDef::CLIMiscConfigDef()
     def = this->add("ignore_nonexistent_config", coBool);
     def->label = L("Ignore non-existent config files");
     def->tooltip = L("Do not fail if a file supplied to --load does not exist.");
+
+    def = this->add("config_compatibility", coEnum);
+    def->label = L("Forward-compatibility rule when loading configurations from config files and project files (3MF, AMF).");
+    def->tooltip = L("This version of Slic3r may not understand configurations produced by newest Slic3r versions. "
+                     "For example, newer Slic3r may extend the list of supported firmware flavors. One may decide to "
+                     "bail out or to substitute an unknown value with a default silently or verbosely.");
+    def->enum_keys_map = &ConfigOptionEnum<ForwardCompatibilitySubstitutionRule>::get_enum_values();
+    def->enum_values.push_back("disable");
+    def->enum_values.push_back("enable");
+    def->enum_values.push_back("enable_silent");
+    def->enum_labels.push_back("Bail out on unknown configuration values");
+    def->enum_labels.push_back("Enable reading unknown configuration values by verbosely substituting them with defaults.");
+    def->enum_labels.push_back("Enable reading unknown configuration values by silently substituting them with defaults.");
+    def->set_default_value(new ConfigOptionEnum<ForwardCompatibilitySubstitutionRule>(ForwardCompatibilitySubstitutionRule::Enable));
 
     def = this->add("load", coStrings);
     def->label = L("Load config file");

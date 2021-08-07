@@ -9,13 +9,41 @@
 #define FLAVOR_IS(val) this->config.gcode_flavor.value == val
 #define FLAVOR_IS_NOT(val) this->config.gcode_flavor.value != val
 #define COMMENT(comment) if (this->config.gcode_comments.value && !comment.empty()) gcode << " ; " << comment;
-#define PRECISION(val, precision) std::fixed << std::setprecision(precision) << (val)
+#define PRECISION(val, precision) to_string_nozero(val, precision)
 #define XYZ_NUM(val) PRECISION(val, this->config.gcode_precision_xyz.value)
 #define FLOAT_PRECISION(val, precision) std::defaultfloat << std::setprecision(precision) << (val)
 #define F_NUM(val) FLOAT_PRECISION(val, 8)
 #define E_NUM(val) PRECISION(val, this->config.gcode_precision_e.get_at(m_tool->id()))
 
 namespace Slic3r {
+
+std::string to_string_nozero(double value, int32_t max_precision) {
+    double intpart;
+    if (modf(value, &intpart) == 0.0) {
+        //shortcut for int
+        return boost::lexical_cast<std::string>(intpart);
+    } else {
+        std::stringstream ss;
+        //first, get the int part, to see how many digit it takes
+        int long10 = 0;
+        if (intpart > 9)
+            long10 = std::floor(std::log10(std::abs(intpart)));
+        //set the usable precision: there is only 15-16 decimal digit in a double
+        ss << std::fixed << std::setprecision(int(std::min(15 - long10, int(max_precision)))) << value;
+        std::string ret = ss.str();
+        uint8_t nb_del = 0;
+        for (uint8_t i = uint8_t(ss.tellp()) - 1; i > 0; i--) {
+            if (ret[i] == '0')
+                nb_del++;
+            else
+                break;
+        }
+        if (nb_del > 0)
+            return ret.substr(0, ret.size() - nb_del);
+        else
+            return ret;
+    }
+}
 
     std::string GCodeWriter::PausePrintCode = "M601";
 
@@ -129,19 +157,19 @@ std::string GCodeWriter::postamble() const
     return gcode.str();
 }
 
-std::string GCodeWriter::set_temperature(const unsigned int temperature, bool wait, int tool)
+std::string GCodeWriter::set_temperature(const int16_t temperature, bool wait, int tool)
 {
     //use m_tool if tool isn't set
     if (tool < 0 && m_tool != nullptr)
         tool = m_tool->id();
 
     //add offset
-    int16_t temp_w_offset = int16_t(temperature);
+    int16_t temp_w_offset = temperature;
     temp_w_offset += int16_t(get_tool(tool)->temp_offset());
     temp_w_offset = std::max(int16_t(0), std::min(int16_t(2000), temp_w_offset));
 
     // temp_w_offset has an effective minimum value of 0, so this cast is safe.
-    if (m_last_temperature_with_offset == static_cast<uint16_t>(temp_w_offset) && !wait)
+    if (m_last_temperature_with_offset == temp_w_offset && !wait)
         return "";
     if (wait && (FLAVOR_IS(gcfMakerWare) || FLAVOR_IS(gcfSailfish)))
         return "";
@@ -184,7 +212,7 @@ std::string GCodeWriter::set_temperature(const unsigned int temperature, bool wa
     return gcode.str();
 }
 
-std::string GCodeWriter::set_bed_temperature(unsigned int temperature, bool wait)
+std::string GCodeWriter::set_bed_temperature(uint32_t temperature, bool wait)
 {
     if (temperature == m_last_bed_temperature && (! wait || m_last_bed_temperature_reached))
         return std::string();
@@ -220,25 +248,25 @@ std::string GCodeWriter::set_bed_temperature(unsigned int temperature, bool wait
     return gcode.str();
 }
 
-std::string GCodeWriter::set_fan(const unsigned int speed, bool dont_save, uint16_t default_tool)
+std::string GCodeWriter::set_fan(const uint8_t speed, bool dont_save, uint16_t default_tool)
 {
     std::ostringstream gcode;
 
     const Tool *tool = m_tool == nullptr ? get_tool(default_tool) : m_tool;
     //add fan_offset
-    int16_t fan_speed = int16_t(speed);
+    int8_t fan_speed = int8_t(std::min(uint8_t(100), speed));
     if (tool != nullptr)
-        fan_speed += int8_t(tool->fan_offset());
-    fan_speed = std::max(int16_t(0), std::min(int16_t(100), fan_speed));
+        fan_speed += tool->fan_offset();
+    fan_speed = std::max(int8_t(0), std::min(int8_t(100), fan_speed));
     const auto fan_baseline = (this->config.fan_percentage.value ? 100.0 : 255.0);
 
     // fan_speed has an effective minimum value of 0, so this cast is safe.
     //test if it's useful to write it
-    if (m_last_fan_speed_with_offset != static_cast<uint16_t>(fan_speed) || dont_save) {
+    if (m_last_fan_speed_with_offset != fan_speed || dont_save) {
         //save new current value
         if (!dont_save) {
             m_last_fan_speed = speed;
-            m_last_fan_speed_with_offset = fan_speed;
+            m_last_fan_speed_with_offset = uint8_t(fan_speed);
         }
         
         // write it
@@ -271,7 +299,7 @@ std::string GCodeWriter::set_fan(const unsigned int speed, bool dont_save, uint1
     return gcode.str();
 }
 
-void GCodeWriter::set_acceleration(unsigned int acceleration)
+void GCodeWriter::set_acceleration(uint32_t acceleration)
 {
     // Clamp the acceleration to the allowed maximum.
     if (m_max_acceleration > 0 && acceleration > m_max_acceleration)
@@ -281,6 +309,11 @@ void GCodeWriter::set_acceleration(unsigned int acceleration)
         return;
 
     m_current_acceleration = acceleration;
+}
+
+uint32_t GCodeWriter::get_acceleration() const
+{
+    return m_current_acceleration;
 }
 
 std::string GCodeWriter::write_acceleration(){
@@ -294,9 +327,12 @@ std::string GCodeWriter::write_acceleration(){
     if (FLAVOR_IS(gcfRepetier)) {
         // M201: Set max printing acceleration
         gcode << "M201 X" << m_current_acceleration << " Y" << m_current_acceleration;
-    } else if(FLAVOR_IS(gcfMarlin) || FLAVOR_IS(gcfLerdge) || FLAVOR_IS(gcfRepRap) || FLAVOR_IS(gcfSprinter)){
+    } else if(FLAVOR_IS(gcfMarlin) || FLAVOR_IS(gcfLerdge) || FLAVOR_IS(gcfSprinter)){
         // M204: Set printing acceleration
         gcode << "M204 P" << m_current_acceleration;
+    } else  if (FLAVOR_IS(gcfRepRap)) {
+        // M204: Set printing & travel acceleration
+        gcode << "M204 P" << m_current_acceleration <<" T" << m_current_acceleration;
     } else {
         // M204: Set default acceleration
         gcode << "M204 S" << m_current_acceleration;
@@ -331,16 +367,16 @@ std::string GCodeWriter::reset_e(bool force)
     }
 }
 
-std::string GCodeWriter::update_progress(unsigned int num, unsigned int tot, bool allow_100) const
+std::string GCodeWriter::update_progress(uint32_t num, uint32_t tot, bool allow_100) const
 {
     if (FLAVOR_IS_NOT(gcfMakerWare) && FLAVOR_IS_NOT(gcfSailfish))
         return "";
     
-    unsigned int percent = (unsigned int)floor(100.0 * num / tot + 0.5);
-    if (!allow_100) percent = std::min(percent, (unsigned int)99);
+    uint8_t percent = (uint32_t)floor(100.0 * num / tot + 0.5);
+    if (!allow_100) percent = std::min(percent, (uint8_t)99);
     
     std::ostringstream gcode;
-    gcode << "M73 P" << percent;
+    gcode << "M73 P" << int(percent);
     if (this->config.gcode_comments) gcode << " ; update progress";
     gcode << "\n";
     return gcode.str();
@@ -354,7 +390,7 @@ std::string GCodeWriter::toolchange_prefix() const
            "T";
 }
 
-std::string GCodeWriter::toolchange(unsigned int tool_id)
+std::string GCodeWriter::toolchange(uint16_t tool_id)
 {
     // set the new extruder
 	/*auto it_extruder = Slic3r::lower_bound_by_predicate(m_extruders.begin(), m_extruders.end(), [tool_id](const Extruder &e) { return e.id() < tool_id; });

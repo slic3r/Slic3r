@@ -51,7 +51,7 @@ void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
             Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf"}, true, false, false);
 
     assert(objs_idx.size() == 5);
-    const DynamicPrintConfig* printConfig = this->gui_app->get_tab(Preset::TYPE_PRINT)->get_config();
+    const DynamicPrintConfig* printConfig = this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->get_config();
     const DynamicPrintConfig* printerConfig = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
     
     /// --- scale ---
@@ -136,10 +136,10 @@ void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
 
     //update plater
     GLCanvas3D::set_warning_freeze(false);
-    this->gui_app->get_tab(Preset::TYPE_PRINT)->load_config(new_print_config);
+    this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->load_config(new_print_config);
     plat->on_config_change(new_print_config);
     plat->changed_objects(objs_idx);
-    this->gui_app->get_tab(Preset::TYPE_PRINT)->update_dirty();
+    this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->update_dirty();
     //update everything, easier to code.
     this->gui_app->obj_list()->update_after_undo_redo();
     //if(!plat->is_background_process_update_scheduled())

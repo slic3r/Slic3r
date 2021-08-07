@@ -56,15 +56,18 @@ static const char *TMP_EXTENSION = ".download";
 
 void copy_file_fix(const fs::path &source, const fs::path &target)
 {
-	static const auto perms = fs::owner_read | fs::owner_write | fs::group_read | fs::others_read;   // aka 644
-
 	BOOST_LOG_TRIVIAL(debug) << format("PresetUpdater: Copying %1% -> %2%", source, target);
-
-	// Make sure the file has correct permission both before and after we copy over it
-	if (fs::exists(target)) {
-		fs::permissions(target, perms);
+	std::string error_message;
+	CopyFileResult cfr = copy_file(source.string(), target.string(), error_message, false);
+	if (cfr != CopyFileResult::SUCCESS) {
+		BOOST_LOG_TRIVIAL(error) << "Copying failed(" << cfr << "): " << error_message;
+		throw Slic3r::CriticalException(GUI::format(
+				_L("Copying of file %1% to %2% failed: %3%"),
+				source, target, error_message));
 	}
-	fs::copy_file(source, target, fs::copy_option::overwrite_if_exists);
+	// Permissions should be copied from the source file by copy_file(). We are not sure about the source
+	// permissions, let's rewrite them with 644.
+	static constexpr const auto perms = fs::owner_read | fs::owner_write | fs::group_read | fs::others_read;
 	fs::permissions(target, perms);
 }
 
@@ -168,7 +171,7 @@ struct PresetUpdater::priv
 
 	void check_install_indices() const;
 	Updates get_config_updates(const Semver& old_slic3r_version) const;
-	void perform_updates(Updates &&updates, bool snapshot = true) const;
+	bool perform_updates(Updates &&updates, bool snapshot = true) const;
 	void set_waiting_updates(Updates u);
 };
 
@@ -512,7 +515,7 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 		}
 
 		if (recommended->config_version < vp.config_version) {
-			BOOST_LOG_TRIVIAL(warning) << format("Recommended config version for the currently running " SLIC3R_APP_NAME " is older than the currently installed config for vendor %1%. This should not happen.", idx.vendor());
+			BOOST_LOG_TRIVIAL(warning) << format("Recommended config version for the currently running %1% is older than the currently installed config for vendor %2%. This should not happen.", SLIC3R_APP_NAME, idx.vendor());
 			continue;
 		}
 
@@ -583,7 +586,7 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 					found = true;
 				} else {
 					BOOST_LOG_TRIVIAL(warning) << format("The recommended config version for vendor `%1%` in resources does not match the recommended\n"
-			                                             " config version for this version of " SLIC3R_APP_NAME ". Corrupted installation?", idx.vendor());
+			                                             " config version for this version of `%2%`. Corrupted installation?", idx.vendor(), SLIC3R_APP_NAME);
 				}
 			}
 		}
@@ -636,12 +639,14 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 	return updates;
 }
 
-void PresetUpdater::priv::perform_updates(Updates &&updates, bool snapshot) const
+bool PresetUpdater::priv::perform_updates(Updates &&updates, bool snapshot) const
 {
 	if (updates.incompats.size() > 0) {
 		if (snapshot) {
 			BOOST_LOG_TRIVIAL(info) << "Taking a snapshot...";
-			SnapshotDB::singleton().take_snapshot(*GUI::wxGetApp().app_config, Snapshot::SNAPSHOT_DOWNGRADE);
+			if (! GUI::Config::take_config_snapshot_cancel_on_error(*GUI::wxGetApp().app_config, Snapshot::SNAPSHOT_DOWNGRADE, "",
+				_u8L("Continue and install configuration updates?")))
+				return false;
 		}
 		
 		BOOST_LOG_TRIVIAL(info) << format("Deleting %1% incompatible bundles", updates.incompats.size());
@@ -656,7 +661,9 @@ void PresetUpdater::priv::perform_updates(Updates &&updates, bool snapshot) cons
 		
 		if (snapshot) {
 			BOOST_LOG_TRIVIAL(info) << "Taking a snapshot...";
-			SnapshotDB::singleton().take_snapshot(*GUI::wxGetApp().app_config, Snapshot::SNAPSHOT_UPGRADE);
+			if (! GUI::Config::take_config_snapshot_cancel_on_error(*GUI::wxGetApp().app_config, Snapshot::SNAPSHOT_UPGRADE, "",
+				_u8L("Continue and install configuration updates?")))
+				return false;
 		}
 
 		BOOST_LOG_TRIVIAL(info) << format("Performing %1% updates", updates.updates.size());
@@ -667,7 +674,8 @@ void PresetUpdater::priv::perform_updates(Updates &&updates, bool snapshot) cons
 			update.install();
 
 			PresetBundle bundle;
-			bundle.load_configbundle(update.source.string(), PresetBundle::LOAD_CFGBNDLE_SYSTEM);
+			// Throw when parsing invalid configuration. Only valid configuration is supposed to be provided over the air.
+			bundle.load_configbundle(update.source.string(), PresetBundle::LoadConfigBundleAttribute::LoadSystem, ForwardCompatibilitySubstitutionRule::Disable);
 
 			BOOST_LOG_TRIVIAL(info) << format("Deleting %1% conflicting presets", bundle.prints.size() + bundle.filaments.size() + bundle.printers.size());
 
@@ -699,6 +707,8 @@ void PresetUpdater::priv::perform_updates(Updates &&updates, bool snapshot) cons
 			for (const auto &name : bundle.obsolete_presets.printers)  { obsolete_remover("printer", name); }
 		}
 	}
+
+	return true;
 }
 
 void PresetUpdater::priv::set_waiting_updates(Updates u)
@@ -765,7 +775,20 @@ void PresetUpdater::slic3r_update_notify()
 	}
 }
 
-PresetUpdater::UpdateResult PresetUpdater::config_update(const Semver& old_slic3r_version, bool no_notification) const
+static void reload_configs_update_gui()
+{
+	// Reload global configuration
+	auto* app_config = GUI::wxGetApp().app_config;
+	// System profiles should not trigger any substitutions, user profiles may trigger substitutions, but these substitutions
+	// were already presented to the user on application start up. Just do substitutions now and keep quiet about it.
+	// However throw on substitutions in system profiles, those shall never happen with system profiles installed over the air.
+	GUI::wxGetApp().preset_bundle->load_presets(*app_config, ForwardCompatibilitySubstitutionRule::EnableSilentDisableSystem);
+	GUI::wxGetApp().load_current_presets();
+	GUI::wxGetApp().plater()->set_bed_shape();
+	GUI::wxGetApp().update_wizard_from_config();
+}
+
+PresetUpdater::UpdateResult PresetUpdater::config_update(const Semver& old_slic3r_version, UpdateParams params) const
 {
 	if (! p->enabled_config_update) { return R_NOOP; }
 
@@ -799,11 +822,9 @@ PresetUpdater::UpdateResult PresetUpdater::config_update(const Semver& old_slic3
 
 			// This effectively removes the incompatible bundles:
 			// (snapshot is taken beforehand)
-			p->perform_updates(std::move(updates));
-
-			if (!GUI::wxGetApp().run_wizard(GUI::ConfigWizard::RR_DATA_INCOMPAT)) {
+			if (! p->perform_updates(std::move(updates)) ||
+				! GUI::wxGetApp().run_wizard(GUI::ConfigWizard::RR_DATA_INCOMPAT))
 				return R_INCOMPAT_EXIT;
-			}
 
 			return R_INCOMPAT_CONFIGURED;
 		}
@@ -822,7 +843,7 @@ PresetUpdater::UpdateResult PresetUpdater::config_update(const Semver& old_slic3
 		}
 
 		//forced update
-		if(incompatible_version)
+		if (incompatible_version)
 		{
 			BOOST_LOG_TRIVIAL(info) << format("Update of %1% bundles available. At least one requires higher version of Slicer.", updates.updates.size());
 
@@ -837,14 +858,9 @@ PresetUpdater::UpdateResult PresetUpdater::config_update(const Semver& old_slic3
 			const auto res = dlg.ShowModal();
 			if (res == wxID_OK) {
 				BOOST_LOG_TRIVIAL(info) << "User wants to update...";
-
-				p->perform_updates(std::move(updates));
-
-				// Reload global configuration
-				auto* app_config = GUI::wxGetApp().app_config;
-				GUI::wxGetApp().preset_bundle->load_presets(*app_config);
-				GUI::wxGetApp().load_current_presets();
-				GUI::wxGetApp().plater()->set_bed_shape();
+				if (! p->perform_updates(std::move(updates)))
+					return R_INCOMPAT_EXIT;
+				reload_configs_update_gui();
 				return R_UPDATE_INSTALLED;
 			}
 			else {
@@ -854,35 +870,35 @@ PresetUpdater::UpdateResult PresetUpdater::config_update(const Semver& old_slic3
 		}
 
 		// regular update
-		if (no_notification) {
-			BOOST_LOG_TRIVIAL(info) << format("Update of %1% bundles available. Asking for confirmation ...", p->waiting_updates.updates.size());
-
-		std::vector<GUI::MsgUpdateConfig::Update> updates_msg;
-			for (const auto& update : updates.updates) {
-			std::string changelog_url = update.version.config_version.prerelease() == nullptr ? update.changelog_url : std::string();
-			updates_msg.emplace_back(update.vendor, update.version.config_version, update.version.comment, std::move(changelog_url));
-		}
-
-		GUI::MsgUpdateConfig dlg(updates_msg);
-
-		const auto res = dlg.ShowModal();
-		if (res == wxID_OK) {
-			BOOST_LOG_TRIVIAL(debug) << "User agreed to perform the update";
-			p->perform_updates(std::move(updates));
-
-			// Reload global configuration
-				auto* app_config = GUI::wxGetApp().app_config;
-			GUI::wxGetApp().preset_bundle->load_presets(*app_config);
-			GUI::wxGetApp().load_current_presets();
-			return R_UPDATE_INSTALLED;
-			}
-			else {
-			BOOST_LOG_TRIVIAL(info) << "User refused the update";
-			return R_UPDATE_REJECT;
-		}
-	} else {
+		if (params == UpdateParams::SHOW_NOTIFICATION) {
 			p->set_waiting_updates(updates);
 			GUI::wxGetApp().plater()->get_notification_manager()->push_notification(GUI::NotificationType::PresetUpdateAvailable);
+		}
+		else {
+			BOOST_LOG_TRIVIAL(info) << format("Update of %1% bundles available. Asking for confirmation ...", p->waiting_updates.updates.size());
+
+			std::vector<GUI::MsgUpdateConfig::Update> updates_msg;
+			for (const auto& update : updates.updates) {
+				std::string changelog_url = update.version.config_version.prerelease() == nullptr ? update.changelog_url : std::string();
+				updates_msg.emplace_back(update.vendor, update.version.config_version, update.version.comment, std::move(changelog_url));
+			}
+
+			GUI::MsgUpdateConfig dlg(updates_msg, params == UpdateParams::FORCED_BEFORE_WIZARD);
+
+			const auto res = dlg.ShowModal();
+			if (res == wxID_OK) {
+				BOOST_LOG_TRIVIAL(debug) << "User agreed to perform the update";
+				if (! p->perform_updates(std::move(updates)))
+					return R_ALL_CANCELED;
+				reload_configs_update_gui();
+				return R_UPDATE_INSTALLED;
+			}
+			else {
+				BOOST_LOG_TRIVIAL(info) << "User refused the update";
+				if (params == UpdateParams::FORCED_BEFORE_WIZARD && res == wxID_CANCEL)
+					return R_ALL_CANCELED;
+				return R_UPDATE_REJECT;
+			}
 		}
 		
 		// MsgUpdateConfig will show after the notificaation is clicked
@@ -893,7 +909,7 @@ PresetUpdater::UpdateResult PresetUpdater::config_update(const Semver& old_slic3
 	return R_NOOP;
 }
 
-void PresetUpdater::install_bundles_rsrc(std::vector<std::string> bundles, bool snapshot) const
+bool PresetUpdater::install_bundles_rsrc(std::vector<std::string> bundles, bool snapshot) const
 {
 	Updates updates;
 
@@ -905,7 +921,7 @@ void PresetUpdater::install_bundles_rsrc(std::vector<std::string> bundles, bool 
 		updates.updates.emplace_back(std::move(path_in_rsrc), std::move(path_in_vendors), Version(), "", "");
 	}
 
-	p->perform_updates(std::move(updates), snapshot);
+	return p->perform_updates(std::move(updates), snapshot);
 }
 
 void PresetUpdater::on_update_notification_confirm()
@@ -925,20 +941,14 @@ void PresetUpdater::on_update_notification_confirm()
 	const auto res = dlg.ShowModal();
 	if (res == wxID_OK) {
 		BOOST_LOG_TRIVIAL(debug) << "User agreed to perform the update";
-		p->perform_updates(std::move(p->waiting_updates));
-
-		// Reload global configuration
-		auto* app_config = GUI::wxGetApp().app_config;
-		GUI::wxGetApp().preset_bundle->load_presets(*app_config);
-		GUI::wxGetApp().load_current_presets();
-		p->has_waiting_updates = false;
-		//return R_UPDATE_INSTALLED;
+		if (p->perform_updates(std::move(p->waiting_updates))) {
+			reload_configs_update_gui();
+			p->has_waiting_updates = false;
+		}
 	}
 	else {
 		BOOST_LOG_TRIVIAL(info) << "User refused the update";
-		//return R_UPDATE_REJECT;
-	}
-	
+	}	
 }
 
 }

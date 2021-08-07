@@ -92,7 +92,10 @@ group:Modifying slices
 	line:XY compensation
 		setting:width$6:xy_size_compensation
 		setting:width$6:xy_inner_size_compensation
+	end_line
+	line:XY First layer compensation
 		setting:width$6:first_layer_size_compensation
+		setting:width$6:first_layer_size_compensation_layers
 	end_line
 	line:Vertical Hole shrinking compensation
 		setting:width$6:hole_size_compensation
@@ -225,6 +228,9 @@ group:label_width$8:sidetext_width$7:Speed for print moves
 		setting:width$4:solid_infill_speed
 		setting:width$4:top_solid_infill_speed
 	end_line
+	line:Ironing speed
+		setting:label$_:width$4:ironing_speed
+	end_line
 	line:Support speed
 		setting:width$4:support_material_speed
 		setting:width$4:support_material_interface_speed
@@ -238,7 +244,6 @@ group:label_width$8:sidetext_width$7:Speed for print moves
 		setting:width$4:gap_fill_speed
 		setting:width$4:thin_walls_speed
 	end_line
-	setting:label$Ironing post-process speed:label_width$30:width$4:ironing_speed
 group:Speed for non-print moves
 	line:Travel speed
 		setting:label$xy:travel_speed
@@ -254,11 +259,12 @@ group:sidetext_width$7:Modifiers
 		setting:label_width$8:width$4:small_perimeter_max_length
 		setting:label_width$8:width$4:small_perimeter_speed
 group:Acceleration control (advanced)
+	setting:default_acceleration
 	setting:perimeter_acceleration
 	setting:infill_acceleration
 	setting:bridge_acceleration
 	setting:first_layer_acceleration
-	setting:default_acceleration
+	setting:travel_acceleration
 group:Autospeed (advanced)
 	setting:label$Volumetric speed for Autospeed:max_volumetric_speed
 	setting:max_print_speed
@@ -348,6 +354,7 @@ group:Plater
 group:Sequential printing
 	setting:complete_objects
 	setting:complete_objects_one_skirt
+	setting:complete_objects_one_brim
 	setting:complete_objects_sort
 	line:Extruder clearance (mm)
 		setting:width$6:extruder_clearance_radius

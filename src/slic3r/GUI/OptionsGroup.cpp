@@ -977,6 +977,8 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
             ret = static_cast<int>(config.option<ConfigOptionEnum<WipeAlgo>>(opt_key)->value);
         } else if (opt_key == "output_format") {
             ret = static_cast<int>(config.option<ConfigOptionEnum<OutputFormat>>(opt_key)->value);
+        } else if (opt_key == "config_compatibility") {
+            ret = static_cast<int>(config.option<ConfigOptionEnum<ForwardCompatibilitySubstitutionRule>>(opt_key)->value);
         }
 	}
 		break;

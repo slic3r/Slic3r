@@ -299,7 +299,7 @@ FreqChangedParams::FreqChangedParams(wxWindow* parent) :
     m_og->hide_labels();
 
     m_og->m_on_change = [config, this](t_config_option_key opt_key, boost::any value) {
-        Tab* tab_print = wxGetApp().get_tab(Preset::TYPE_PRINT);
+        Tab* tab_print = wxGetApp().get_tab(Preset::TYPE_FFF_PRINT);
         if (!tab_print) return;
 
         if (opt_key == "fill_density") {
@@ -692,8 +692,8 @@ Sidebar::Sidebar(Plater *parent)
     };
 
     p->combos_filament.push_back(nullptr);
-    init_combo(&p->combo_print,         _L("Print settings"),     Preset::TYPE_PRINT,         false);
-    init_combo(&p->combos_filament[0],  _L("Filament"),           Preset::TYPE_FILAMENT,      true);
+    init_combo(&p->combo_print,         _L("Print settings"),     Preset::TYPE_FFF_PRINT,         false);
+    init_combo(&p->combos_filament[0],  _L("Filament"),           Preset::TYPE_FFF_FILAMENT,      true);
     init_combo(&p->combo_sla_print,     _L("SLA print settings"), Preset::TYPE_SLA_PRINT,     false);
     init_combo(&p->combo_sla_material,  _L("SLA material"),       Preset::TYPE_SLA_MATERIAL,  false);
     init_combo(&p->combo_printer,       _L("Printer"),            Preset::TYPE_PRINTER,       false);
@@ -809,7 +809,7 @@ Sidebar::Sidebar(Plater *parent)
 Sidebar::~Sidebar() {}
 
 void Sidebar::init_filament_combo(PlaterPresetComboBox **combo, const int extr_idx) {
-    *combo = new PlaterPresetComboBox(p->presets_panel, Slic3r::Preset::TYPE_FILAMENT);
+    *combo = new PlaterPresetComboBox(p->presets_panel, Slic3r::Preset::TYPE_FFF_FILAMENT);
 //         # copy icons from first choice
 //         $choice->SetItemBitmap($_, $choices->[0]->GetItemBitmap($_)) for 0..$#presets;
 
@@ -865,7 +865,7 @@ void Sidebar::update_presets(Preset::Type preset_type)
     const auto print_tech = preset_bundle.printers.get_edited_preset().printer_technology();
 
     switch (preset_type) {
-    case Preset::TYPE_FILAMENT: 
+    case Preset::TYPE_FFF_FILAMENT: 
     {
         const size_t extruder_cnt = print_tech != ptFFF ? 1 :
                                 dynamic_cast<ConfigOptionFloats*>(preset_bundle.printers.get_edited_preset().config.option("nozzle_diameter"))->values.size();
@@ -883,7 +883,7 @@ void Sidebar::update_presets(Preset::Type preset_type)
         break;
     }
 
-    case Preset::TYPE_PRINT:
+    case Preset::TYPE_FFF_PRINT:
         p->combo_print->update();
         break;
 
@@ -1978,6 +1978,7 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
         "complete_objects",
         "complete_objects_sort",
         "complete_objects_one_skirt",
+		"complete_objects_one_brim",
         "duplicate_distance", "extruder_clearance_radius", 
         "skirt_extrusion_width",
         "first_layer_extrusion_width",
@@ -2398,7 +2399,8 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                 DynamicPrintConfig config;
                 {
                     DynamicPrintConfig config_loaded;
-                    model = Slic3r::Model::read_from_archive(path.string(), &config_loaded, false, load_config);
+                    ConfigSubstitutionContext config_substitutions{ ForwardCompatibilitySubstitutionRule::Enable };
+                    model = Slic3r::Model::read_from_archive(path.string(), &config_loaded, &config_substitutions, only_if(load_config, Model::LoadAttribute::CheckVersion));
                     if (load_config && !config_loaded.empty()) {
                         // Based on the printer technology field found in the loaded config, select the base for the config,
 					    PrinterTechnology printer_technology = Preset::printer_technology(config_loaded);
@@ -2424,6 +2426,8 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         // and place the loaded config over the base.
                         config += std::move(config_loaded);
                     }
+                    if (! config_substitutions.empty())
+                        show_substitutions_info(config_substitutions.substitutions, filename.string());
 
                     this->model.custom_gcode_per_print_z = model.custom_gcode_per_print_z;
                 }
@@ -2444,11 +2448,15 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                 }
             }
             else {
-                model = Slic3r::Model::read_from_file(path.string(), nullptr, false, load_config);
+                model = Slic3r::Model::read_from_file(path.string(), nullptr, nullptr, only_if(load_config, Model::LoadAttribute::CheckVersion));
                 for (auto obj : model.objects)
                     if (obj->name.empty())
                         obj->name = fs::path(obj->input_file).filename().string();
             }
+        } catch (const ConfigurationError &e) {
+            std::string message = GUI::format(_L("Failed loading file \"%1%\" due to an invalid configuration."), filename.string()) + "\n\n" + e.what();
+            GUI::show_error(q, message);
+            continue;
         } catch (const std::exception &e) {
             GUI::show_error(q, e.what());
             continue;
@@ -3324,7 +3332,7 @@ void Plater::priv::reload_from_disk()
         Model new_model;
         try
         {
-            new_model = Model::read_from_file(path, nullptr, true, false);
+            new_model = Model::read_from_file(path, nullptr, nullptr, Model::LoadAttribute::AddDefaultInstances);
             for (ModelObject* model_object : new_model.objects)
             {
                 model_object->center_around_origin();
@@ -3610,13 +3618,13 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
     std::string preset_name = wxGetApp().preset_bundle->get_preset_name_by_alias(preset_type, 
         Preset::remove_suffix_modified(combo->GetString(selection).ToUTF8().data()));
 
-    if (preset_type == Preset::TYPE_FILAMENT) {
+    if (preset_type == Preset::TYPE_FFF_FILAMENT) {
         wxGetApp().preset_bundle->set_filament_preset(idx, preset_name);
     }
 
     bool select_preset = !combo->selection_is_changed_according_to_physical_printers();
     // TODO: ?
-    if (preset_type == Preset::TYPE_FILAMENT && sidebar->is_multifilament()) {
+    if (preset_type == Preset::TYPE_FFF_FILAMENT && sidebar->is_multifilament()) {
         // Only update the plater UI for the 2nd and other filaments.
         combo->update();
     }
@@ -4006,7 +4014,7 @@ void Plater::priv::on_wipetower_moved(Vec3dEvent &evt)
     DynamicPrintConfig cfg;
     cfg.opt<ConfigOptionFloat>("wipe_tower_x", true)->value = evt.data(0);
     cfg.opt<ConfigOptionFloat>("wipe_tower_y", true)->value = evt.data(1);
-    wxGetApp().get_tab(Preset::TYPE_PRINT)->load_config(cfg);
+    wxGetApp().get_tab(Preset::TYPE_FFF_PRINT)->load_config(cfg);
 }
 
 void Plater::priv::on_wipetower_rotated(Vec3dEvent& evt)
@@ -4015,7 +4023,7 @@ void Plater::priv::on_wipetower_rotated(Vec3dEvent& evt)
     cfg.opt<ConfigOptionFloat>("wipe_tower_x", true)->value = evt.data(0);
     cfg.opt<ConfigOptionFloat>("wipe_tower_y", true)->value = evt.data(1);
     cfg.opt<ConfigOptionFloat>("wipe_tower_rotation_angle", true)->value = Geometry::rad2deg(evt.data(2));
-    wxGetApp().get_tab(Preset::TYPE_PRINT)->load_config(cfg);
+    wxGetApp().get_tab(Preset::TYPE_FFF_PRINT)->load_config(cfg);
 }
 
 void Plater::priv::on_update_geometry(Vec3dsEvent<2>&)
@@ -4725,7 +4733,9 @@ void Plater::priv::undo_redo_to(std::vector<UndoRedo::Snapshot>::const_iterator 
             // Switch to the other printer technology. Switch to the last printer active for that particular technology.
             AppConfig *app_config = wxGetApp().app_config;
             app_config->set("presets", "printer", (new_printer_technology == ptFFF) ? m_last_fff_printer_profile_name : m_last_sla_printer_profile_name);
-            wxGetApp().preset_bundle->load_presets(*app_config);
+            //FIXME Why are we reloading the whole preset bundle here? Please document. This is fishy and it is unnecessarily expensive.
+            // Anyways, don't report any config value substitutions, they have been already reported to the user at application start up.
+            wxGetApp().preset_bundle->load_presets(*app_config, ForwardCompatibilitySubstitutionRule::EnableSilent);
 			// load_current_presets() calls Tab::load_current_preset() -> TabPrint::update() -> Object_list::update_and_show_object_settings_item(),
 			// but the Object list still keeps pointer to the old Model. Avoid a crash by removing selection first.
 			this->sidebar->obj_list()->unselect_objects();
@@ -4744,7 +4754,7 @@ void Plater::priv::undo_redo_to(std::vector<UndoRedo::Snapshot>::const_iterator 
                 new_config.set_key_value("wipe_tower_x", new ConfigOptionFloat(model.wipe_tower.position.x()));
                 new_config.set_key_value("wipe_tower_y", new ConfigOptionFloat(model.wipe_tower.position.y()));
                 new_config.set_key_value("wipe_tower_rotation_angle", new ConfigOptionFloat(model.wipe_tower.rotation));
-                Tab *tab_print = wxGetApp().get_tab(Preset::TYPE_PRINT);
+                Tab *tab_print = wxGetApp().get_tab(Preset::TYPE_FFF_PRINT);
                 tab_print->load_config(new_config);
                 tab_print->update_dirty();
             }
@@ -5496,13 +5506,14 @@ void Plater::export_gcode(bool prefer_removable)
 
     fs::path output_path;
     {
-        wxFileDialog dlg(this, (printer_technology() == ptFFF) ? _L("Save G-code file as:") : _L("Save SL1 file as:"),
+    	std::string ext = default_output_file.extension().string();
+        wxFileDialog dlg(this, (printer_technology() == ptFFF) ? _L("Save G-code file as:") : _L("Save SL1 / SL1S file as:"),
             start_dir,
             from_path(default_output_file.filename()),
-            GUI::file_wildcards((printer_technology() == ptFFF) ? FT_GCODE : FT_PNGZIP, default_output_file.extension().string()),
+            GUI::file_wildcards((printer_technology() == ptFFF) ? FT_GCODE : boost::iequals(ext, ".sl1s") ? FT_SL1S : FT_SL1, ext),
             wxFD_SAVE | wxFD_OVERWRITE_PROMPT
         );
-        if (dlg.ShowModal() == wxID_OK)
+            if (dlg.ShowModal() == wxID_OK)
             output_path = into_path(dlg.GetPath());
     }
 

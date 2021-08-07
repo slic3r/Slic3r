@@ -427,7 +427,7 @@ namespace Slic3r {
         _3MF_Importer();
         ~_3MF_Importer();
 
-        bool load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config, bool check_version);
+        bool load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config, ConfigSubstitutionContext& config_substitutions, bool check_version);
 
     private:
         void _destroy_xml_parser();
@@ -442,16 +442,16 @@ namespace Slic3r {
                 XML_ErrorString(XML_GetErrorCode(m_xml_parser));
         }
 
-        bool _load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config);
+        bool _load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config, ConfigSubstitutionContext& config_substitutions);
         bool _extract_model_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat);
         void _extract_layer_heights_profile_config_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat);
-        void _extract_layer_config_ranges_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat);
+        void _extract_layer_config_ranges_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, ConfigSubstitutionContext& config_substitutions);
         void _extract_sla_support_points_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat);
         void _extract_sla_drain_holes_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat);
 
         void _extract_custom_gcode_per_print_z_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat);
 
-        void _extract_print_config_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, DynamicPrintConfig& config, const std::string& archive_filename);
+        void _extract_print_config_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, DynamicPrintConfig& config, ConfigSubstitutionContext& subs_context, const std::string& archive_filename);
         bool _extract_model_config_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, Model& model);
 
         // handlers to parse the .model file
@@ -518,7 +518,7 @@ namespace Slic3r {
         bool _handle_start_config_metadata(const char** attributes, unsigned int num_attributes);
         bool _handle_end_config_metadata();
 
-        bool _generate_volumes(ModelObject& object, const Geometry& geometry, const ObjectMetadata::VolumeMetadataList& volumes);
+        bool _generate_volumes(ModelObject& object, const Geometry& geometry, const ObjectMetadata::VolumeMetadataList& volumes, ConfigSubstitutionContext& config_substitutions);
 
         // callbacks to parse the .model file
         static void XMLCALL _handle_start_model_xml_element(void* userData, const char* name, const char** attributes);
@@ -547,7 +547,7 @@ namespace Slic3r {
         _destroy_xml_parser();
     }
 
-    bool _3MF_Importer::load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config, bool check_version)
+    bool _3MF_Importer::load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config, ConfigSubstitutionContext& config_substitutions, bool check_version)
     {
         m_version = 0;
         m_check_version = check_version;
@@ -568,7 +568,7 @@ namespace Slic3r {
         m_curr_characters.clear();
         clear_errors();
 
-        return _load_model_from_file(filename, model, config);
+        return _load_model_from_file(filename, model, config, config_substitutions);
     }
 
     void _3MF_Importer::_destroy_xml_parser()
@@ -590,7 +590,7 @@ namespace Slic3r {
         XML_StopParser(m_xml_parser, false);
     }
 
-    bool _3MF_Importer::_load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config)
+    bool _3MF_Importer::_load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config, ConfigSubstitutionContext& config_substitutions)
     {
         mz_zip_archive archive;
         mz_zip_zero_struct(&archive);
@@ -653,7 +653,7 @@ namespace Slic3r {
                 if (boost::algorithm::iequals(name, LAYER_CONFIG_RANGES_FILE))
                 {
                     // extract slic3r layer config ranges file
-                    _extract_layer_config_ranges_from_archive(archive, stat);
+                    _extract_layer_config_ranges_from_archive(archive, stat, config_substitutions);
                 } else if (boost::algorithm::iequals(name, SLA_SUPPORT_POINTS_FILE))
                 {
                     // extract sla support points file
@@ -665,7 +665,7 @@ namespace Slic3r {
                 } else if (boost::algorithm::iequals(name, PRINT_CONFIG_FILE))
                 {
                     // extract slic3r print config file
-                    _extract_print_config_from_archive(archive, stat, config, filename);
+                    _extract_print_config_from_archive(archive, stat, config, config_substitutions, filename);
                     print_config_parsed = true;
                 }
                 if (boost::algorithm::iequals(name, CUSTOM_GCODE_PER_PRINT_Z_FILE))
@@ -687,7 +687,8 @@ namespace Slic3r {
         }
         //parsed superslicer/prusa files if slic3r not found
         //note that is we successfully read one of the config file, then the other ones should also have the same name
-        auto read_from_other_storage = [this, &print_config_parsed, num_entries, &archive, &stat, &config, &model, &filename](const std::string &print_config_name, const std::string& model_config_name) -> bool {
+        auto read_from_other_storage = [this, &print_config_parsed, num_entries, &archive, &stat, &config, &model, &filename, &config_substitutions]
+                (const std::string &print_config_name, const std::string& model_config_name) -> bool {
             for (mz_uint i = 0; i < num_entries; ++i)
             {
                 if (mz_zip_reader_file_stat(&archive, i, &stat))
@@ -699,7 +700,7 @@ namespace Slic3r {
                     if (boost::algorithm::iequals(name, print_config_name))
                     {
                         // extract slic3r print config file
-                        _extract_print_config_from_archive(archive, stat, config, filename);
+                        _extract_print_config_from_archive(archive, stat, config, config_substitutions, filename);
                         print_config_parsed = true;
                     } else if (boost::algorithm::iequals(name, model_config_name))
                     {
@@ -774,7 +775,7 @@ namespace Slic3r {
                     if (metadata.key == "name")
                         model_object->name = metadata.value;
                     else
-                        model_object->config.set_deserialize(metadata.key, metadata.value);
+                        model_object->config.set_deserialize(metadata.key, metadata.value, config_substitutions);
                 }
 
                 // select object's detected volumes
@@ -791,7 +792,7 @@ namespace Slic3r {
                 volumes_ptr = &volumes;
             }
 
-            if (!_generate_volumes(*model_object, obj_geometry->second, *volumes_ptr))
+            if (!_generate_volumes(*model_object, obj_geometry->second, *volumes_ptr, config_substitutions))
                 return false;
         }
 
@@ -868,7 +869,12 @@ namespace Slic3r {
         return true;
     }
 
-    void _3MF_Importer::_extract_print_config_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, DynamicPrintConfig& config, const std::string& archive_filename)
+    void _3MF_Importer::_extract_print_config_from_archive(
+        mz_zip_archive& archive, 
+        const mz_zip_archive_file_stat& stat, 
+        DynamicPrintConfig& config, 
+        ConfigSubstitutionContext& config_substitutions, 
+        const std::string& archive_filename)
     {
         if (stat.m_uncomp_size > 0)
         {
@@ -879,7 +885,7 @@ namespace Slic3r {
                 add_error("Error while reading config data to buffer");
                 return;
             }
-            config.load_from_gcode_string(buffer.data());
+            config.load_from_gcode_string(buffer.data(), config_substitutions);
         }
     }
 
@@ -954,7 +960,7 @@ namespace Slic3r {
         }
     }
 
-    void _3MF_Importer::_extract_layer_config_ranges_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat)
+    void _3MF_Importer::_extract_layer_config_ranges_from_archive(mz_zip_archive& archive, const mz_zip_archive_file_stat& stat, ConfigSubstitutionContext& config_substitutions)
     {
         if (stat.m_uncomp_size > 0)
         {
@@ -1003,8 +1009,7 @@ namespace Slic3r {
                             continue;
                         std::string opt_key = option.second.get<std::string>("<xmlattr>.opt_key");
                         std::string value = option.second.data();
-
-                        config.set_deserialize(opt_key, value);
+                        config.set_deserialize(opt_key, value, config_substitutions);
                     }
 
                     config_ranges[{ min_z, max_z }].assign_config(std::move(config));
@@ -1895,7 +1900,7 @@ namespace Slic3r {
         return true;
     }
 
-    bool _3MF_Importer::_generate_volumes(ModelObject& object, const Geometry& geometry, const ObjectMetadata::VolumeMetadataList& volumes)
+    bool _3MF_Importer::_generate_volumes(ModelObject& object, const Geometry& geometry, const ObjectMetadata::VolumeMetadataList& volumes, ConfigSubstitutionContext& config_substitutions)
     {
         if (!object.volumes.empty())
         {
@@ -1997,7 +2002,7 @@ namespace Slic3r {
                 else if (metadata.key == SOURCE_IN_INCHES)
                     volume->source.is_converted_from_inches = metadata.value == "1";
                 else
-                    volume->config.set_deserialize(metadata.key, metadata.value);
+                    volume->config.set_deserialize(metadata.key, metadata.value, config_substitutions);
             }
         }
 
@@ -2971,13 +2976,13 @@ bool _3MF_Exporter::_add_custom_gcode_per_print_z_file_to_archive( mz_zip_archiv
     return true;
 }
 
-bool load_3mf(const char* path, DynamicPrintConfig* config, Model* model, bool check_version)
+bool load_3mf(const char* path, DynamicPrintConfig& config, ConfigSubstitutionContext& config_substitutions, Model* model, bool check_version)
     {
-        if ((path == nullptr) || (config == nullptr) || (model == nullptr))
+        if (path == nullptr || model == nullptr)
             return false;
 
         _3MF_Importer importer;
-        bool res = importer.load_model_from_file(path, *model, *config, check_version);
+        bool res = importer.load_model_from_file(path, *model, config, config_substitutions, check_version);
         importer.log_errors();
         return res;
     }

@@ -465,9 +465,12 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
             }
 
             //init the surface with the current polygon
-            surface_fill.surface.expolygon = std::move(expoly);
-            //make fill
-            f->fill_surface_extrusion(&surface_fill.surface, surface_fill.params, m_regions[surface_fill.region_id]->fills.entities);
+            if (!expoly.contour.empty()) {
+                surface_fill.surface.expolygon = std::move(expoly);
+
+                //make fill
+                f->fill_surface_extrusion(&surface_fill.surface, surface_fill.params, m_regions[surface_fill.region_id]->fills.entities);
+            }
         }
     }
 

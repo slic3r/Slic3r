@@ -25,23 +25,23 @@ public:
     void export_print(Zipper &zipper, const SLAPrint &print, const std::string &projectname = "") override;
 };
     
-void import_sla_archive(const std::string &zipfname, DynamicPrintConfig &out);
+ConfigSubstitutions import_sla_archive(const std::string &zipfname, DynamicPrintConfig &out);
 
-void import_sla_archive(
+ConfigSubstitutions import_sla_archive(
     const std::string &      zipfname,
     Vec2i32                  windowsize,
     TriangleMesh &           out,
     DynamicPrintConfig &     profile,
     std::function<bool(int)> progr = [](int) { return true; });
 
-inline void import_sla_archive(
+inline ConfigSubstitutions import_sla_archive(
     const std::string &      zipfname,
     Vec2i32                  windowsize,
     TriangleMesh &           out,
     std::function<bool(int)> progr = [](int) { return true; })
 {
     DynamicPrintConfig profile;
-    import_sla_archive(zipfname, windowsize, out, profile, progr);
+    return import_sla_archive(zipfname, windowsize, out, profile, progr);
 }
 
 } // namespace Slic3r::sla

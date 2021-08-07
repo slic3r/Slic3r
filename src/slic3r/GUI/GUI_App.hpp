@@ -63,7 +63,9 @@ enum FileType
 
     FT_TEX,
 
-    FT_PNGZIP,
+    FT_SL1,
+	// Workaround for OSX file picker, for some reason it always saves with the 1st extension.
+ 	FT_SL1S,
 
     FT_SIZE,
 };
@@ -226,6 +228,7 @@ public:
     bool            check_print_host_queue();
     bool            checked_tab(Tab* tab);
     void            load_current_presets(bool check_printer_presets = true);
+    void            update_wizard_from_config();
 
     wxString        current_language_code() const { return m_wxLocale->GetCanonicalName(); }
 	// Translate the language code to a code, for which Prusa Research maintains translations. Defaults to "en_US".
@@ -250,7 +253,7 @@ public:
 
 
     // Parameters extracted from the command line to be passed to GUI after initialization.
-    const GUI_InitParams* init_params { nullptr };
+    GUI_InitParams* init_params { nullptr };
 
     AppConfig*      app_config{ nullptr };
     PresetBundle*   preset_bundle{ nullptr };
@@ -260,7 +263,7 @@ public:
     std::mutex      not_modal_dialog_mutex;
     wxDialog*       not_modal_dialog = nullptr;
 
-	PresetUpdater* get_preset_updater() { return preset_updater; }
+	PresetUpdater*  get_preset_updater() { return preset_updater; }
 
     wxNotebook*     tab_panel() const ;
     int             extruders_cnt() const;

@@ -78,12 +78,12 @@ PresetComboBox::PresetComboBox(wxWindow* parent, Preset::Type preset_type, const
 
     switch (m_type)
     {
-    case Preset::TYPE_PRINT: {
+    case Preset::TYPE_FFF_PRINT: {
         m_collection = &m_preset_bundle->prints;
         m_main_bitmap_name = "cog";
         break;
     }
-    case Preset::TYPE_FILAMENT: {
+    case Preset::TYPE_FFF_FILAMENT: {
         m_collection = &m_preset_bundle->filaments;
         m_main_bitmap_name = "spool";
         break;
@@ -399,7 +399,7 @@ wxBitmap* PresetComboBox::get_bmp(  std::string bitmap_key, bool wide_icons, con
             // Paint a red flag for incompatible presets.
             bmps.emplace_back(is_compatible ? bitmap_cache().mkclear(norm_icon_width, icon_height) : m_bitmapIncompatible.bmp());
 
-        if (m_type == Preset::TYPE_FILAMENT && !filament_rgb.empty())
+        if (m_type == Preset::TYPE_FFF_FILAMENT && !filament_rgb.empty())
         {
             unsigned char rgb[3];
             // Paint the color bars.
@@ -604,7 +604,7 @@ PlaterPresetComboBox::PlaterPresetComboBox(wxWindow *parent, Preset::Type preset
         }
     });
 
-    if (m_type == Preset::TYPE_FILAMENT)
+    if (m_type == Preset::TYPE_FFF_FILAMENT)
     {
         Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &event) {
             const Preset* selected_preset = m_collection->find_preset(m_preset_bundle->filament_presets[m_extruder_idx]);
@@ -671,7 +671,7 @@ PlaterPresetComboBox::PlaterPresetComboBox(wxWindow *parent, Preset::Type preset
         /* In a case of a multi-material printing, for editing another Filament Preset
          * it's needed to select this preset for the "Filament settings" Tab
          */
-        if (m_type == Preset::TYPE_FILAMENT && wxGetApp().extruders_edited_cnt() > 1)
+        if (m_type == Preset::TYPE_FFF_FILAMENT && wxGetApp().extruders_edited_cnt() > 1)
         {
             const std::string& selected_preset = GetString(GetSelection()).ToUTF8().data();
 
@@ -763,7 +763,7 @@ void PlaterPresetComboBox::show_edit_menu()
 // If an incompatible preset is selected, it is shown as well.
 void PlaterPresetComboBox::update()
 {
-    if (m_type == Preset::TYPE_FILAMENT &&
+    if (m_type == Preset::TYPE_FFF_FILAMENT &&
         (m_preset_bundle->printers.get_edited_preset().printer_technology() == ptSLA ||
         m_preset_bundle->filament_presets.size() <= (size_t)m_extruder_idx) )
         return;
@@ -775,7 +775,7 @@ void PlaterPresetComboBox::update()
 
     const Preset* selected_filament_preset = nullptr;
     std::string extruder_color;
-    if (m_type == Preset::TYPE_FILAMENT)
+    if (m_type == Preset::TYPE_FFF_FILAMENT)
     {
         unsigned char rgb[3];
         extruder_color = m_preset_bundle->printers.get_edited_preset().config.opt_string("extruder_colour", (unsigned int)m_extruder_idx);
@@ -787,7 +787,7 @@ void PlaterPresetComboBox::update()
     }
 
     bool has_selection = m_collection->get_selected_idx() != size_t(-1);
-    const Preset* selected_preset = m_type == Preset::TYPE_FILAMENT ? selected_filament_preset : has_selection ? &m_collection->get_selected_preset() : nullptr;
+    const Preset* selected_preset = m_type == Preset::TYPE_FFF_FILAMENT ? selected_filament_preset : has_selection ? &m_collection->get_selected_preset() : nullptr;
     // Show wide icons if the currently selected preset is not compatible with the current printer,
     // and draw a red flag in front of the selected preset.
     bool wide_icons = selected_preset && !selected_preset->is_compatible;
@@ -804,7 +804,7 @@ void PlaterPresetComboBox::update()
     for (size_t i = presets.front().is_visible ? 0 : m_collection->num_default_presets(); i < presets.size(); ++i) 
     {
         const Preset& preset = presets[i];
-        bool is_selected =  m_type == Preset::TYPE_FILAMENT ?
+        bool is_selected =  m_type == Preset::TYPE_FFF_FILAMENT ?
                             m_preset_bundle->filament_presets[m_extruder_idx] == preset.name :
                             // The case, when some physical printer is selected
                             m_type == Preset::TYPE_PRINTER && m_preset_bundle->physical_printers.has_selection() ? false :
@@ -817,7 +817,7 @@ void PlaterPresetComboBox::update()
         std::string bitmap_type_name = bitmap_key = m_type == Preset::TYPE_PRINTER && preset.printer_technology() == ptSLA ? "sla_printer" : m_main_bitmap_name;
 
         bool single_bar = false;
-        if (m_type == Preset::TYPE_FILAMENT)
+        if (m_type == Preset::TYPE_FFF_FILAMENT)
         {
             // Assign an extruder color to the selected item if the extruder color is defined.
             filament_rgb = is_selected ? selected_filament_preset->config.opt_string("filament_colour", 0) : 
@@ -883,11 +883,11 @@ void PlaterPresetComboBox::update()
         }
     }
 
-    if (m_type == Preset::TYPE_PRINTER || m_type == Preset::TYPE_FILAMENT || m_type == Preset::TYPE_SLA_MATERIAL) {
+    if (m_type == Preset::TYPE_PRINTER || m_type == Preset::TYPE_FFF_FILAMENT || m_type == Preset::TYPE_SLA_MATERIAL) {
         wxBitmap* bmp = get_bmp("edit_preset_list", wide_icons, "edit_uni");
         assert(bmp);
 
-        if (m_type == Preset::TYPE_FILAMENT)
+        if (m_type == Preset::TYPE_FFF_FILAMENT)
             set_label_marker(Append(separator(L("Add/Remove filaments")), *bmp), LABEL_ITEM_WIZARD_FILAMENTS);
         else if (m_type == Preset::TYPE_SLA_MATERIAL)
             set_label_marker(Append(separator(L("Add/Remove materials")), *bmp), LABEL_ITEM_WIZARD_MATERIALS);
@@ -901,9 +901,13 @@ void PlaterPresetComboBox::update()
     if (!tooltip.IsEmpty())
         SetToolTip(tooltip);
 
+#ifdef __WXMSW__
+    // Use this part of code just on Windows to avoid of some layout issues on Linux
+    // see https://github.com/prusa3d/PrusaSlicer/issues/5163 and https://github.com/prusa3d/PrusaSlicer/issues/5505
     // Update control min size after rescale (changed Display DPI under MSW)
     if (GetMinWidth() != 20 * m_em_unit)
         SetMinSize(wxSize(20 * m_em_unit, GetSize().GetHeight()));
+#endif //__WXMSW__
 }
 
 void PlaterPresetComboBox::msw_rescale()

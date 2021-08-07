@@ -433,7 +433,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 
     bool have_default_acceleration = config->option<ConfigOptionFloatOrPercent>("default_acceleration")->value > 0;
     for (auto el : { "perimeter_acceleration", "infill_acceleration",
-                    "bridge_acceleration", "first_layer_acceleration" })
+                    "bridge_acceleration", "first_layer_acceleration", "travel_acceleration" })
         toggle_field(el, have_default_acceleration);
 
     bool have_skirt = config->opt_int("skirts") > 0;
@@ -483,7 +483,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 
     bool have_sequential_printing = config->opt_bool("complete_objects");
     for (auto el : { /*"extruder_clearance_radius", "extruder_clearance_height",*/ "complete_objects_one_skirt",
-		"complete_objects_sort"})
+		"complete_objects_sort", "complete_objects_one_brim"})
         toggle_field(el, have_sequential_printing);
 
     bool have_ooze_prevention = config->opt_bool("ooze_prevention");

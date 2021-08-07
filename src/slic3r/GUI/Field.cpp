@@ -1185,6 +1185,10 @@ void Choice::set_value(const boost::any& value, bool change_event)
 	}
 	case coEnum: {
 		int val = boost::any_cast<int>(value);
+        if (m_opt_id.compare("host_type") == 0 && val != 0 && 
+            m_opt.enum_values.size() > field->GetCount()) // for case, when PrusaLink isn't used as a HostType
+            val--;
+
         if (m_opt_id == "top_fill_pattern" || m_opt_id == "bottom_fill_pattern" || m_opt_id == "solid_fill_pattern"
             || m_opt_id == "fill_pattern" || m_opt_id == "support_material_interface_pattern" || m_opt_id == "brim_ears_pattern")
             val = idx_from_enum_value<InfillPattern>(val);
@@ -1223,6 +1227,8 @@ void Choice::set_value(const boost::any& value, bool change_event)
             val = idx_from_enum_value<WipeAlgo>(val);
         else if (m_opt_id.compare("output_format") == 0)
             val = idx_from_enum_value<OutputFormat>(val);
+        else if (m_opt_id.compare("config_compatibility") == 0)
+            val = idx_from_enum_value<ForwardCompatibilitySubstitutionRule>(val);
 		field->SetSelection(val);
 		break;
 	}
@@ -1279,7 +1285,7 @@ void Choice::set_values(const wxArrayString &values)
 	auto ww = dynamic_cast<choice_ctrl*>(window);
 	auto value = ww->GetValue();
 	ww->Clear();
-	ww->Append("");
+//	ww->Append("");
 	for (const auto &el : values)
 		ww->Append(el);
 	ww->SetValue(value);
@@ -1301,7 +1307,10 @@ boost::any& Choice::get_value()
 
 	if (m_opt.type == coEnum)
     {
-        int ret_enum = field->GetSelection(); 
+        int ret_enum = field->GetSelection();
+        if (m_opt_id.compare("host_type") == 0 &&
+            m_opt.enum_values.size() > field->GetCount()) // for case, when PrusaLink isn't used as a HostType
+            ret_enum++;
         if (m_opt_id == "top_fill_pattern" || m_opt_id == "bottom_fill_pattern" || m_opt_id == "solid_fill_pattern" 
             || m_opt_id == "support_material_interface_pattern" || m_opt_id == "fill_pattern" || m_opt_id == "brim_ears_pattern")
             convert_to_enum_value<InfillPattern>(ret_enum);
@@ -1340,6 +1349,8 @@ boost::any& Choice::get_value()
             convert_to_enum_value<WipeAlgo>(ret_enum);
         else if (m_opt_id.compare("output_format") == 0)
             convert_to_enum_value<OutputFormat>(ret_enum);
+        else if(m_opt_id.compare("config_compatibility") == 0)
+            convert_to_enum_value<ForwardCompatibilitySubstitutionRule>(ret_enum);
     }
     else if (m_opt.gui_type == "f_enum_open") {
         const int ret_enum = field->GetSelection();
