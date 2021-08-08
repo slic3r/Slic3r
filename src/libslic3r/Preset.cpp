@@ -446,6 +446,7 @@ const std::vector<std::string>& Preset::print_options()
         "top_solid_min_thickness",
         "bottom_solid_layers",
         "bottom_solid_min_thickness",
+        "solid_over_perimeters",
         "duplicate_distance",
         "extra_perimeters",
         "extra_perimeters_odd_layers",

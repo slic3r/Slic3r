@@ -14,6 +14,7 @@ group:Horizontal shells
 		setting:bottom_solid_min_thickness
 	end_line
 	top_bottom_shell_thickness_explanation
+	setting:solid_over_perimeters
 	setting:enforce_full_fill_volume
 group:Quality
 	line:Only one perimeter on Top surfaces

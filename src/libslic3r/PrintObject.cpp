@@ -778,6 +778,7 @@ namespace Slic3r {
                 || opt_key == "solid_infill_below_area"
                 || opt_key == "solid_infill_extruder"
                 || opt_key == "solid_infill_every_layers"
+                || opt_key == "solid_over_perimeters"
                 || opt_key == "top_solid_layers"
                 || opt_key == "top_solid_min_thickness") {
                 steps.emplace_back(posPrepareInfill);
@@ -1479,7 +1480,11 @@ namespace Slic3r {
         {
             // Collected polygons, offsetted
             Polygons    top_surfaces;
+            Polygons    top_fill_surfaces;
+            Polygons    top_perimeter_surfaces;
             Polygons    bottom_surfaces;
+            Polygons    bottom_fill_surfaces;
+            Polygons    bottom_perimeter_surfaces;
             Polygons    holes;
         };
         bool     spiral_vase = this->print()->config().spiral_vase.value;
@@ -1538,10 +1543,14 @@ namespace Slic3r {
                         // Top surfaces.
                         append(cache.top_surfaces, offset(to_expolygons(layerm.slices().filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing));
                         append(cache.top_surfaces, offset(to_expolygons(layerm.fill_surfaces.filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing));
+                        append(cache.top_fill_surfaces, offset(to_expolygons(layerm.fill_surfaces.filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing));
+                        append(cache.top_perimeter_surfaces, to_polygons(layerm.slices().filter_by_type(stPosTop | stDensSolid)));
                         // Bottom surfaces.
                         const SurfaceType surfaces_bottom[2] = { stPosBottom | stDensSolid, stPosBottom | stDensSolid | stModBridge };
                         append(cache.bottom_surfaces, offset(to_expolygons(layerm.slices().filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing));
                         append(cache.bottom_surfaces, offset(to_expolygons(layerm.fill_surfaces.filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing));
+                        append(cache.bottom_fill_surfaces, offset(to_expolygons(layerm.fill_surfaces.filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing));
+                        append(cache.bottom_perimeter_surfaces, to_polygons(layerm.slices().filter_by_type(stPosTop | stDensSolid)));
                         // Calculate the maximum perimeter offset as if the slice was extruded with a single extruder only.
                         // First find the maxium number of perimeters per region slice.
                         unsigned int perimeters = 0;
@@ -1596,13 +1605,16 @@ namespace Slic3r {
             //FIXME Improve the heuristics for a grain size.
             size_t grain_size = std::max(num_layers / 16, size_t(1));
 
+            //solid_over_perimeters value, to remove solid fill where there's only perimeters on multiple layers
+            int nb_perimeter_layers_for_solid_fill = region.config().solid_over_perimeters.value;
+
             if (!top_bottom_surfaces_all_regions) {
                 // This is either a single material print, or a multi-material print and interface_shells are enabled, meaning that the vertical shell thickness
                 // is calculated over a single material.
                 BOOST_LOG_TRIVIAL(debug) << "Discovering vertical shells for region " << idx_region << " in parallel - start : cache top / bottom";
                 tbb::parallel_for(
                     tbb::blocked_range<size_t>(0, num_layers, grain_size),
-                    [this, idx_region, &cache_top_botom_regions](const tbb::blocked_range<size_t>& range) {
+                    [this, idx_region, &cache_top_botom_regions, nb_perimeter_layers_for_solid_fill](const tbb::blocked_range<size_t>& range) {
                     for (size_t idx_layer = range.begin(); idx_layer < range.end(); ++idx_layer) {
                         m_print->throw_if_canceled();
                         Layer& layer = *m_layers[idx_layer];
@@ -1612,10 +1624,18 @@ namespace Slic3r {
                         auto& cache = cache_top_botom_regions[idx_layer];
                         cache.top_surfaces = offset(to_expolygons(layerm.slices().filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing);
                         append(cache.top_surfaces, offset(to_expolygons(layerm.fill_surfaces.filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing));
+                        if (nb_perimeter_layers_for_solid_fill != 0) {
+                            cache.top_fill_surfaces = offset(to_expolygons(layerm.fill_surfaces.filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing);
+                            cache.top_perimeter_surfaces = to_polygons(layerm.slices().filter_by_type(stPosTop | stDensSolid));
+                        }
                         // Bottom surfaces.
                         const SurfaceType surfaces_bottom[2] = { stPosBottom | stDensSolid, stPosBottom | stDensSolid | stModBridge };
                         cache.bottom_surfaces = offset(to_expolygons(layerm.slices().filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing);
                         append(cache.bottom_surfaces, offset(to_expolygons(layerm.fill_surfaces.filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing));
+                        if (nb_perimeter_layers_for_solid_fill != 0) {
+                            cache.bottom_fill_surfaces = offset(to_expolygons(layerm.fill_surfaces.filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing);
+                            cache.bottom_perimeter_surfaces = to_polygons(layerm.slices().filter_by_types(surfaces_bottom, 2));
+                        }
                         // Holes over all regions. Only collect them once, they are valid for all idx_region iterations.
                         if (cache.holes.empty()) {
                             for (size_t idx_region = 0; idx_region < layer.regions().size(); ++idx_region)
@@ -1630,7 +1650,7 @@ namespace Slic3r {
             BOOST_LOG_TRIVIAL(debug) << "Discovering vertical shells for region " << idx_region << " in parallel - start : ensure vertical wall thickness";
             tbb::parallel_for(
                 tbb::blocked_range<size_t>(0, num_layers, grain_size),
-                [this, idx_region, &cache_top_botom_regions]
+                [this, idx_region, &cache_top_botom_regions, nb_perimeter_layers_for_solid_fill]
             (const tbb::blocked_range<size_t>& range) {
                 // printf("discover_vertical_shells from %d to %d\n", range.begin(), range.end());
                 for (size_t idx_layer = range.begin(); idx_layer < range.end(); ++idx_layer) {
@@ -1654,6 +1674,8 @@ namespace Slic3r {
                     coord_t      infill_line_spacing = solid_infill_flow.scaled_spacing();
                     // Find a union of perimeters below / above this surface to guarantee a minimum shell thickness.
                     Polygons shell;
+                    Polygons fill_shell;
+                    Polygons max_perimeter_shell; // for nb_perimeter_layers_for_solid_fill
                     Polygons holes;
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
                     ExPolygons shell_ex;
@@ -1701,6 +1723,16 @@ namespace Slic3r {
                                     // than running the union_ all at once.
                                     shell = union_(shell, false);
                                 }
+                                if (nb_perimeter_layers_for_solid_fill != 0) {
+                                    if (!cache.top_fill_surfaces.empty()) {
+                                        polygons_append(fill_shell, cache.top_fill_surfaces);
+                                        fill_shell = union_(fill_shell, false);
+                                    }
+                                    if (nb_perimeter_layers_for_solid_fill > 1 && i - idx_layer < nb_perimeter_layers_for_solid_fill) {
+                                        polygons_append(max_perimeter_shell, cache.top_perimeter_surfaces);
+                                        max_perimeter_shell = union_(max_perimeter_shell, false);
+                                    }
+                                }
                             }
                         }
                         if (int n_bottom_layers = region_config.bottom_solid_layers.value; n_bottom_layers > 0) {
@@ -1719,6 +1751,16 @@ namespace Slic3r {
                                     // Running the union_ using the Clipper library piece by piece is cheaper 
                                     // than running the union_ all at once.
                                     shell = union_(shell, false);
+                                }
+                                if (nb_perimeter_layers_for_solid_fill != 0) {
+                                    if (!cache.bottom_fill_surfaces.empty()) {
+                                        polygons_append(fill_shell, cache.bottom_fill_surfaces);
+                                        fill_shell = union_(fill_shell, false);
+                                    }
+                                    if (nb_perimeter_layers_for_solid_fill > 1 && idx_layer - i < nb_perimeter_layers_for_solid_fill) {
+                                        polygons_append(max_perimeter_shell, cache.bottom_perimeter_surfaces);
+                                        max_perimeter_shell = union_(max_perimeter_shell, false);
+                                    }
                                 }
                             }
                         }
@@ -1780,11 +1822,27 @@ namespace Slic3r {
                         svg.Close();
                     }
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
-
                     // Trim the shells region by the internal & internal void surfaces.
                     const SurfaceType surfaceTypesInternal[] = { stPosInternal | stDensSparse, stPosInternal | stDensVoid, stPosInternal | stDensSolid };
                     const Polygons    polygonsInternal = to_polygons(layerm->fill_surfaces.filter_by_types(surfaceTypesInternal, 3));
-                    shell = intersection(shell, polygonsInternal, true);
+                    {
+                        Polygons shell_internal = intersection(shell, polygonsInternal, true);
+                        //check if a polygon is only over perimeter, in this case evict it (depends from nb_perimeter_layers_for_solid_fill value)
+                        if (nb_perimeter_layers_for_solid_fill != 0) {
+                            for (int i = 0; i < shell_internal.size(); i++) {
+                                if (intersection({ shell_internal[i] }, fill_shell, false).empty()) {
+                                    if (nb_perimeter_layers_for_solid_fill < 2 || intersection({ shell_internal[i] }, max_perimeter_shell, false).empty()) {
+                                        shell_internal.erase(shell_internal.begin() + i);
+                                        i--;
+                                    }
+                                }
+                            }
+                            if (shell_internal.empty())
+                                continue;
+                        }
+
+                        shell = std::move(shell_internal);
+                    }
                     polygons_append(shell, diff(polygonsInternal, holes));
                     if (shell.empty())
                         continue;
