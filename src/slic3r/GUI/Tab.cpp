@@ -1186,6 +1186,7 @@ void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
     }
 
     //wxGetApp().preset_bundle->value_changed(opt_key);
+    // update phony fields
     if (m_config->value_changed(opt_key, { wxGetApp().plater()->config() })) {
         update_dirty();
         //# Initialize UI components with the config values.
@@ -2979,24 +2980,30 @@ void TabPrinter::toggle_options()
     //z step checks
     {
         double z_step = m_config->opt_float("z_step");
+        int64_t z_step_Mlong = (int64_t)(z_step * 1000000.);
         DynamicPrintConfig new_conf;
         bool has_changed = false;
         const std::vector<double>& min_layer_height = m_config->option<ConfigOptionFloats>("min_layer_height")->values;
-        for (int i = 0; i < min_layer_height.size(); i++)
-            if (min_layer_height[i] / z_step != 0) {
-                if(!has_changed )
+        for (int i = 0; i < min_layer_height.size(); i++) {
+            if (min_layer_height[i] != 0 && (int64_t)(min_layer_height[i] * 1000000.) % z_step_Mlong != 0) {
+                if (!has_changed)
                     new_conf = *m_config;
                 new_conf.option<ConfigOptionFloats>("min_layer_height")->values[i] = std::max(z_step, Slic3r::check_z_step(new_conf.option<ConfigOptionFloats>("min_layer_height")->values[i], z_step));
                 has_changed = true;
             }
-        const std::vector<double>& max_layer_height = m_config->option<ConfigOptionFloats>("max_layer_height")->values;
-        for (int i = 0; i < max_layer_height.size(); i++)
-            if (max_layer_height[i] / z_step != 0) {
+        }
+        const std::vector<double>& nozzle_diameters = m_config->option<ConfigOptionFloats>("nozzle_diameter")->values;
+        std::vector<double> max_layer_height = m_config->option<ConfigOptionFloats>("max_layer_height")->values;
+        for (int i = 0; i < max_layer_height.size(); i++) {
+            if (max_layer_height[i] == 0)
+                max_layer_height[i] = nozzle_diameters[i] * 0.75;
+            if ((int64_t)(max_layer_height[i] * 1000000.) % z_step_Mlong != 0) {
                 if (!has_changed)
                     new_conf = *m_config;
                 new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i] = std::max(z_step, Slic3r::check_z_step(new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i], z_step));
                 has_changed = true;
             }
+        }
         if (has_changed) {
             load_config(new_conf);
         }

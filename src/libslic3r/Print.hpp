@@ -65,8 +65,9 @@ public:
     const Print*                print() const { return m_print; }
     const PrintRegionConfig&    config() const { return m_config; }
 	// 1-based extruder identifier for this region and role.
-	uint16_t 				    extruder(FlowRole role) const;
-    Flow                        flow(FlowRole role, double layer_height, bool bridge, bool first_layer, double width, const PrintObject &object) const;
+	uint16_t 				    extruder(FlowRole role, const PrintObject& object) const;
+    Flow                        flow(FlowRole role, double layer_height, bool bridge, bool first_layer, double width, const PrintObject& object) const;
+    float                       width(FlowRole role, bool first_layer, const PrintObject& object) const;
     // Average diameter of nozzles participating on extruding this region.
     coordf_t                    nozzle_dmr_avg(const PrintConfig &print_config) const;
     // Average diameter of nozzles participating on extruding this region.

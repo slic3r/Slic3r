@@ -2171,7 +2171,7 @@ namespace Slic3r {
 
     static void apply_to_print_region_config(PrintRegionConfig& out, const DynamicPrintConfig& in)
     {
-        // 1) Copy the "extruder key to infill_extruder and perimeter_extruder.
+        // 1) Copy the "extruder" key to infill_extruder and perimeter_extruder.
         std::string sextruder = "extruder";
         auto* opt_extruder = in.opt<ConfigOptionInt>(sextruder);
         if (opt_extruder) {
@@ -2381,7 +2381,7 @@ namespace Slic3r {
                 }
                 std::vector<ExPolygons> expolygons_by_layer = this->slice_region(region_id, slice_zs, slicing_mode, slicing_mode_normal_below_layer, SlicingMode::Regular);
                 //scale for shrinkage
-                const size_t extruder_id = this->print()->regions()[region_id]->extruder(FlowRole::frPerimeter) - 1;
+                const size_t extruder_id = this->print()->regions()[region_id]->extruder(FlowRole::frPerimeter, *this) - 1;
                 double scale = print()->config().filament_shrink.get_abs_value(extruder_id, 1);
                 if (scale != 1) {
                     scale = 1 / scale;
@@ -2434,7 +2434,7 @@ namespace Slic3r {
             }
             //scale for shrinkage
             for (SlicedVolume& sv : sliced_volumes) {
-                double scale = print()->config().filament_shrink.get_abs_value(this->print()->regions()[sv.region_id]->extruder(FlowRole::frPerimeter) - 1, 1);
+                double scale = print()->config().filament_shrink.get_abs_value(this->print()->regions()[sv.region_id]->extruder(FlowRole::frPerimeter, *this) - 1, 1);
                 if (scale != 1) {
                     scale = 1 / scale;
                     for (ExPolygons& polys : sv.expolygons_by_layer)

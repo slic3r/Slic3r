@@ -112,7 +112,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                 FlowRole extrusion_role = surface.has_pos_top() ? frTopSolidInfill : (surface.has_fill_solid() ? frSolidInfill : frInfill);
                 bool     is_bridge      = layer.id() > 0 && surface.has_mod_bridge();
                 bool     is_denser      = false;
-                params.extruder         = layerm.region()->extruder(extrusion_role);
+                params.extruder         = layerm.region()->extruder(extrusion_role, *layer.object());
                 params.pattern          = region_config.fill_pattern.value;
                 params.density          = float(region_config.fill_density) / 100.f;
                 params.dont_adjust      = false;
@@ -324,7 +324,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                 }
             if (internal_solid_fill == nullptr) {
                 // Produce another solid fill.
-                params.extruder = layerm.region()->extruder(frSolidInfill);
+                params.extruder = layerm.region()->extruder(frSolidInfill, *layer.object());
                 params.pattern  = layerm.region()->config().solid_fill_pattern.value;
                 params.density  = 100.f;
                 params.role     = erInternalInfill;
