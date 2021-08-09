@@ -744,16 +744,21 @@ void GUI_App::init_app_config()
 	// Mac : "~/Library/Application Support/Slic3r"
 
     if (data_dir().empty()) {
-        #ifndef __linux__
+        //check if there is a "configuration" directory next to the resources
+        if (boost::filesystem::exists(boost::filesystem::path{ resources_dir() } / ".." / "configuration")) {
+            set_data_dir((boost::filesystem::path{ resources_dir() } / ".." / "configuration").string());
+        } else {
+#ifndef __linux__
             set_data_dir(wxStandardPaths::Get().GetUserDataDir().ToUTF8().data());
-        #else
+#else
             // Since version 2.3, config dir on Linux is in ${XDG_CONFIG_HOME}.
             // https://github.com/prusa3d/PrusaSlicer/issues/2911
             wxString dir;
-            if (! wxGetEnv(wxS("XDG_CONFIG_HOME"), &dir) || dir.empty() )
+            if (!wxGetEnv(wxS("XDG_CONFIG_HOME"), &dir) || dir.empty())
                 dir = wxFileName::GetHomeDir() + wxS("/.config");
             set_data_dir((dir + "/" + GetAppName()).ToUTF8().data());
-        #endif
+#endif
+        }
     }
 
 	if (!app_config)
