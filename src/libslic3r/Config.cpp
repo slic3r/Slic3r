@@ -626,7 +626,7 @@ bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, con
                 // That means, we expect enum values being added in the future and possibly booleans being converted to enums.
                 (optdef->type == coEnum || optdef->type == coBool) && ConfigHelpers::looks_like_enum_value(value)) {
                 // Deserialize failed, try to substitute with a default value.
-                assert(substitutions_ctxt.rule == ForwardCompatibilitySubstitutionRule::Enable || substitutions_ctxt.rule == ForwardCompatibilitySubstitutionRule::EnableSilent);
+                //assert(substitutions_ctxt.rule == ForwardCompatibilitySubstitutionRule::Enable || substitutions_ctxt.rule == ForwardCompatibilitySubstitutionRule::EnableSilent);
                 if (optdef->type == coEnum && opt_key == "gcode_flavor" && (value == "marlin2" || value == "marlinfirmware"))
                     static_cast<ConfigOptionEnum<GCodeFlavor>*>(opt)->value = gcfMarlin;
                 else if (optdef->type == coBool)
