@@ -2019,7 +2019,7 @@ MainFrame::ETabType MainFrame::selected_tab() const
             return ETabType((uint8_t)ETabType::PrintSettings + m_tabpanel->GetSelection() - 1);
         }
     } else if (m_layout == ESettingsLayout::Dlg) {
-        if (!m_main_sizer->IsShown(m_tabpanel)) {
+        if (!m_settings_dialog.GetSizer()->IsShown(m_tabpanel)) {
             if (m_plater->is_view3D_shown()) {
                 return ETabType::Plater3D;
             } else {
