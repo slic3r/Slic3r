@@ -297,17 +297,19 @@ std::string PresetHints::maximum_volumetric_flow_description(const PresetBundle 
         //FIXME handle gap_fill_speed
         if (! out.empty())
             out += "\n";
-        out += (first_layer ? _utf8(L("First layer volumetric")) : (bridging ? _utf8(L("Bridging volumetric")) : _utf8(L("Volumetric"))));
-        out += " " + _utf8(L("flow rate is maximized")) + " ";
         bool limited_by_max_volumetric_speed = max_volumetric_speed > 0 && max_volumetric_speed < max_flow;
-        out += (limited_by_max_volumetric_speed ? 
-            _utf8(L("by the print profile maximum")) :
-            (_utf8(L("when printing"))+ " " + max_flow_extrusion_type))
-            + " " + _utf8(L("with a volumetric rate"))+ " ";
-        if (limited_by_max_volumetric_speed)
-            max_flow = max_volumetric_speed;
 
-        out += (boost::format(_utf8(L("%3.2f mm³/s at filament speed %3.2f mm/s."))) % max_flow % (max_flow / filament_crossection)).str();
+        std::string pattern = (boost::format(_u8L("%s flow rate is maximized ")) 
+            % (first_layer ? _u8L("First layer volumetric") : (bridging ? _u8L("Bridging volumetric") : _u8L("Volumetric")))).str();
+        std::string pattern2;
+        if (limited_by_max_volumetric_speed)
+            pattern2 = (boost::format(_u8L("by the print profile maximum volumetric rate of %3.2f mm³/s at filament speed %3.2f mm/s."))
+                % max_volumetric_speed % (max_volumetric_speed / filament_crossection)).str();
+        else
+            pattern2 = (boost::format(_u8L("when printing %s with a volumetric rate of %3.2f mm³/s at filament speed %3.2f mm/s."))
+                % max_flow_extrusion_type % max_flow % (max_flow / filament_crossection)).str();
+
+        out += pattern + " " + pattern2;
     }
 
  	return out;

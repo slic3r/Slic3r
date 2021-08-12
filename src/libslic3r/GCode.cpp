@@ -3878,7 +3878,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
     }
     double filament_max_volumetric_speed = EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_volumetric_speed, 0);
     if (filament_max_volumetric_speed > 0) {
-        speed = std::min(filament_max_volumetric_speed, speed);
+        speed = std::min(filament_max_volumetric_speed / path.mm3_per_mm, speed);
     }
     double filament_max_speed = EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_speed, 0);
     if (filament_max_speed > 0) {
