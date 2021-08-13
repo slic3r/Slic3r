@@ -4176,9 +4176,9 @@ void ObjectList::change_part_type()
         }
     }
 
-    const wxString names[] = { _(L("Part")), _(L("Modifier")), _(L("Support Enforcer")), _(L("Support Blocker")) };
+    const wxString names[] = { _L("Part"), _L("Modifier"), _L("Support Enforcer"), _L("Support Blocker"), _L("Seam Position") };
     
-    auto new_type = ModelVolumeType(wxGetSingleChoiceIndex(_(L("Type:")), _(L("Select type of part")), wxArrayString(4, names), int(type)));
+    auto new_type = ModelVolumeType(wxGetSingleChoiceIndex(_(L("Type:")), _(L("Select type of part")), wxArrayString(5, names), int(type)));
 
 	if (new_type == type || new_type == ModelVolumeType::INVALID)
         return;
