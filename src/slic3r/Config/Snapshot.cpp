@@ -592,8 +592,8 @@ bool take_config_snapshot_cancel_on_error(const AppConfig &app_config, Snapshot:
         return true;
     } catch (std::exception &err) {
         wxRichMessageDialog dlg(static_cast<wxWindow*>(wxGetApp().mainframe),
-            _L("PrusaSlicer has encountered an error while taking a configuration snapshot.") + "\n\n" + from_u8(err.what()) + "\n\n" + from_u8(message),
-            _L("PrusaSlicer error"),
+            _L("SuperSlicer has encountered an error while taking a configuration snapshot.") + "\n\n" + from_u8(err.what()) + "\n\n" + from_u8(message),
+            _L("SuperSlicer error"),
             wxYES_NO);
         dlg.SetYesNoLabels(_L("Continue"), _L("Abort"));
         return dlg.ShowModal() == wxID_YES;
