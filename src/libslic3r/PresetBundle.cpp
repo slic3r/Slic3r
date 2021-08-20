@@ -904,74 +904,17 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
 }
 
 // Load the active configuration of a config bundle from a boost property_tree. This is a private method called from load_config_file.
+// Note: only called when using --load from cli. Will load the bundle like with the menu but wihtout saving it.
 ConfigSubstitutions PresetBundle::load_config_file_config_bundle(
     const std::string &path, const boost::property_tree::ptree &tree, ForwardCompatibilitySubstitutionRule compatibility_rule)
 {
-    // 1) Load the config bundle into a temp data.
-    PresetBundle tmp_bundle;
-    // Load the config bundle, but don't save the loaded presets to user profile directory, as only the presets marked as active in the loaded preset bundle
-    // will be loaded into the master PresetBundle and activated.
-    auto [presets_substitutions, presets_imported] = tmp_bundle.load_configbundle(path, {}, compatibility_rule);
-
-    std::string bundle_name = std::string(" - ") + boost::filesystem::path(path).filename().string();
-
-    // 2) Extract active configs from the config bundle, copy them and activate them in this bundle.
+    // Load the config bundle, but don't save the loaded presets to user profile directory
+    // [PresetsConfigSubstitutions, size_t]
+    auto [presets_substitutions, presets_imported] = this->load_configbundle(path, { }, compatibility_rule);
     ConfigSubstitutions config_substitutions;
-    auto load_one = [this, &path, &bundle_name, &presets_substitutions = presets_substitutions, &config_substitutions](PresetCollection &collection_dst, PresetCollection &collection_src, const std::string &preset_name_src, bool activate) -> std::string {
-        // If there are substitutions reported for this preset, move them to config_substitutions.
-        if (auto it = std::find_if(presets_substitutions.begin(), presets_substitutions.end(), [&preset_name_src](const PresetConfigSubstitutions& subs){ return subs.preset_name == preset_name_src; });
-            it != presets_substitutions.end() && ! it->substitutions.empty())
-            append(config_substitutions, std::move(it->substitutions));
-        Preset *preset_src = collection_src.find_preset(preset_name_src, false);
-        Preset *preset_dst = collection_dst.find_preset(preset_name_src, false);
-        assert(preset_src != nullptr);
-        std::string preset_name_dst;
-        if (preset_dst != nullptr && preset_dst->is_default) {
-            // No need to copy a default preset, it always exists in collection_dst.
-            if (activate)
-                collection_dst.select_preset(0);
-            return preset_name_src;
-        } else if (preset_dst != nullptr && preset_src->config == preset_dst->config) {
-            // Don't save as the config exists in the current bundle and its content is the same.
-            return preset_name_src;
-        } else {
-            // Generate a new unique name.
-            preset_name_dst = preset_name_src + bundle_name;
-            Preset *preset_dup = nullptr;
-            for (size_t i = 1; (preset_dup = collection_dst.find_preset(preset_name_dst, false)) != nullptr; ++ i) {
-                if (preset_src->config == preset_dup->config)
-                    // The preset has been already copied into collection_dst.
-                    return preset_name_dst;
-                // Try to generate another name.
-                char buf[64];
-                sprintf(buf, " (%d)", (int)i);
-                preset_name_dst = preset_name_src + buf + bundle_name;
-            }
-        }
-        assert(! preset_name_dst.empty());
-        // Save preset_src->config into collection_dst under preset_name_dst.
-        // The "compatible_printers" field should not have been exported into a config.ini or a G-code anyway, 
-        // but some of the alpha versions of Slic3r did.
-        ConfigOption *opt_compatible = preset_src->config.optptr("compatible_printers");
-        if (opt_compatible != nullptr) {
-            assert(opt_compatible->type() == coStrings);
-            if (opt_compatible->type() == coStrings)
-                static_cast<ConfigOptionStrings*>(opt_compatible)->values.clear();
-        }
-        collection_dst.load_preset(path, preset_name_dst, std::move(preset_src->config), activate).is_external = true;
-        return preset_name_dst;
-    };
-    load_one(this->prints,        tmp_bundle.prints,        tmp_bundle.prints       .get_selected_preset_name(), true);
-    load_one(this->sla_prints,    tmp_bundle.sla_prints,    tmp_bundle.sla_prints   .get_selected_preset_name(), true);
-    load_one(this->filaments,     tmp_bundle.filaments,     tmp_bundle.filaments    .get_selected_preset_name(), true);
-    load_one(this->sla_materials, tmp_bundle.sla_materials, tmp_bundle.sla_materials.get_selected_preset_name(), true);
-    load_one(this->printers,      tmp_bundle.printers,      tmp_bundle.printers     .get_selected_preset_name(), true);
-    this->update_multi_material_filament_presets();
-    for (size_t i = 1; i < std::min(tmp_bundle.filament_presets.size(), this->filament_presets.size()); ++ i)
-        this->filament_presets[i] = load_one(this->filaments, tmp_bundle.filaments, tmp_bundle.filament_presets[i], false);
-
     this->update_compatible(PresetSelectCompatibleType::Never);
-
+    for (PresetConfigSubstitutions &sub : presets_substitutions)
+        append(config_substitutions, std::move(sub.substitutions));
     sort_remove_duplicates(config_substitutions);
     return std::move(config_substitutions);
 }
@@ -1443,7 +1386,7 @@ std::pair<PresetsConfigSubstitutions, size_t> PresetBundle::load_configbundle(
         if (! active_print.empty()) 
             prints.select_preset_by_name(active_print, true);
         if (! active_sla_print.empty()) 
-            sla_materials.select_preset_by_name(active_sla_print, true);
+            sla_prints.select_preset_by_name(active_sla_print, true);
         if (! active_sla_material.empty()) 
             sla_materials.select_preset_by_name(active_sla_material, true);
         if (! active_printer.empty())
