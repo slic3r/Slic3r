@@ -2978,8 +2978,8 @@ void TabPrinter::toggle_options()
     }
 
     //z step checks
-    {
-        double z_step = m_config->opt_float("z_step");
+    double z_step = m_config->opt_float("z_step");
+    if(z_step > 0){
         int64_t z_step_Mlong = (int64_t)(z_step * 1000000.);
         DynamicPrintConfig new_conf;
         bool has_changed = false;
