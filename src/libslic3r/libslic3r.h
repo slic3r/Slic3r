@@ -57,7 +57,7 @@ static constexpr coordf_t RESOLUTION = 0.0125;
 #ifdef __linux__
 static constexpr coord_t SCALED_RESOLUTION = 12500;
 #else
-static constexpr coord_t SCALED_RESOLUTION = 0.0125 * UNSCALING_FACTOR;
+static constexpr coord_t SCALED_RESOLUTION = coord_t(0.0125 * UNSCALING_FACTOR);
 #endif
 //for creating circles (for brim_ear)
 #define POLY_SIDES 24

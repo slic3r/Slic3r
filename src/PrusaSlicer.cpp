@@ -60,7 +60,7 @@ int CLI::run(int argc, char **argv)
     set_current_thread_name("slic3r_main");
 
     //init random generator
-    std::srand(std::time(nullptr));
+    std::srand((unsigned int)std::time(nullptr));
 
 #ifdef __WXGTK__
     // On Linux, wxGTK has no support for Wayland, and the app crashes on
@@ -480,7 +480,7 @@ int CLI::run(int argc, char **argv)
                 if (! m_config.opt_bool("dont_arrange")) {
                     ArrangeParams arrange_cfg;
                     arrange_cfg.min_obj_distance = scaled(PrintConfig::min_object_distance(&m_print_config)) * 2;
-                    arrange_cfg.min_obj_distance += m_print_config.opt_float("duplicate_distance");
+                    arrange_cfg.min_obj_distance += scaled(m_print_config.opt_float("duplicate_distance"));
                     if (dups > 1) {
                             try {
                             // if all input objects have defined position(s) apply duplication to the whole model

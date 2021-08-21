@@ -4413,7 +4413,7 @@ void PrintConfigDef::init_fff_params()
                     "\nAs cylinders are often exported as triangles of varying size, points may not be on the circle circumference."
                     " This setting allows you some leway to broaden the detection."
                     "\nIn mm or in % of the radius.");
-    def->sidetext = L("mm²");
+    def->sidetext = L("mm or %");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0.01, false));
 
