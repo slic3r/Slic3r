@@ -174,7 +174,10 @@ group:title_width$19:Ironing post-process (This will go on top of infills and pe
 page:Skirt & Brim:skirt+brim
 group:Skirt
 	setting:skirts
-	setting:skirt_distance
+	line:Distance
+		setting:skirt_distance
+		setting:label$from brim:sidetext$else from object:skirt_distance_from_brim
+	end_line
 	setting:skirt_height
 	setting:draft_shield
 	setting:skirt_brim

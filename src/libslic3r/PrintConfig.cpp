@@ -3298,6 +3298,14 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(6));
 
+    def = this->add("skirt_distance_from_brim", coBool);
+    def->label = L("from brim");
+    def->full_label = L("Skirt distance from brim");
+    def->category = OptionCategory::skirtBrim;
+    def->tooltip = L("The distance is computed from the brim and not from the objects");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(true));
+
     def = this->add("skirt_height", coInt);
     def->label = L("Skirt height");
     def->category = OptionCategory::skirtBrim;
@@ -5539,6 +5547,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "seam_angle_cost",
 "seam_travel_cost",
 "skirt_brim",
+"skirt_distance_from_brim",
 "skirt_extrusion_width",
 "small_perimeter_min_length",
 "small_perimeter_max_length",

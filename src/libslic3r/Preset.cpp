@@ -527,7 +527,10 @@ const std::vector<std::string>& Preset::print_options()
         "perimeter_acceleration",
         "travel_acceleration",
         // skirt
-        "skirts", "skirt_distance", "skirt_height",
+        "skirts",
+        "skirt_distance",
+        "skirt_distance_from_brim",
+        "skirt_height",
         "skirt_brim",
         "skirt_extrusion_width",
         "min_skirt_length",
