@@ -515,6 +515,7 @@ const std::vector<std::string>& Preset::print_options()
         "travel_speed", "travel_speed_z",
         // gapfill
         "gap_fill",
+        "gap_fill_last",
         "gap_fill_min_area",
         "gap_fill_overlap",
         "gap_fill_speed",

@@ -377,7 +377,8 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 
     toggle_field("perimeter_loop_seam", config->opt_bool("perimeter_loop"));
 
-    toggle_field("gap_fill_min_area", config->opt_bool("gap_fill"));
+    for (auto el : { "gap_fill_last", "gap_fill_min_area" })
+        toggle_field(el, config->opt_bool("gap_fill"));
 
     toggle_field("avoid_crossing_not_first_layer", config->opt_bool("avoid_crossing_perimeters"));
 

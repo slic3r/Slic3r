@@ -790,6 +790,7 @@ public:
     ConfigOptionPercent             fill_smooth_distribution;
     ConfigOptionFloatOrPercent      fill_smooth_width;
     ConfigOptionBool                gap_fill;
+    ConfigOptionBool                gap_fill_last;
     ConfigOptionFloatOrPercent      gap_fill_min_area;
     ConfigOptionPercent             gap_fill_overlap;
     ConfigOptionFloat               gap_fill_speed;
@@ -905,6 +906,7 @@ protected:
         OPT_PTR(fill_smooth_distribution);
         OPT_PTR(fill_smooth_width);
         OPT_PTR(gap_fill);
+        OPT_PTR(gap_fill_last);
         OPT_PTR(gap_fill_min_area);
         OPT_PTR(gap_fill_overlap);
         OPT_PTR(gap_fill_speed);

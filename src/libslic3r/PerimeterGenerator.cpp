@@ -638,7 +638,7 @@ void PerimeterGenerator::process()
                     // look for gaps
                     if (this->config->gap_fill 
                         //check if we are going to have an other perimeter
-                        && (i <= loop_number || has_overhang || next_onion.empty()))
+                        && (i <= loop_number || has_overhang || next_onion.empty() || (this->config->gap_fill_last.value && i == loop_number+1)))
                         // not using safety offset here would "detect" very narrow gaps
                         // (but still long enough to escape the area threshold) that gap fill
                         // won't be able to fill but we'd still remove from infill area

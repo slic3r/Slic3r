@@ -158,6 +158,7 @@ void Layer::make_perimeters()
                 && config.extra_perimeters_odd_layers == other_config.extra_perimeters_odd_layers
                 && config.extra_perimeters_overhangs == other_config.extra_perimeters_overhangs
                 && config.gap_fill                  == other_config.gap_fill
+                && config.gap_fill_last             == other_config.gap_fill_last
                 && config.gap_fill_min_area         == other_config.gap_fill_min_area
                 && config.gap_fill_overlap          == other_config.gap_fill_overlap
                 && config.gap_fill_speed            == other_config.gap_fill_speed

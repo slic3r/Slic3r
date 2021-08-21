@@ -55,6 +55,7 @@ group:Advanced
 	line:Gap Fill
 		setting:label$_:gap_fill
 		setting:width$5:gap_fill_min_area
+		setting:width$5:gap_fill_last
 	end_line
 	line:Seam
 		setting:label_width$12:sidetext_width$0:seam_position

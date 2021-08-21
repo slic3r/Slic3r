@@ -678,6 +678,7 @@ namespace Slic3r {
         for (const t_config_option_key& opt_key : opt_keys) {
             if (
                 opt_key == "gap_fill"
+                || opt_key == "gap_fill_last"
                 || opt_key == "gap_fill_min_area"
                 || opt_key == "only_one_perimeter_top"
                 || opt_key == "only_one_perimeter_top_other_algo"

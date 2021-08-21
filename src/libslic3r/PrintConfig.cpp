@@ -1876,6 +1876,14 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(true));
 
+    def = this->add("gap_fill_last", coBool);
+    def->label = L("after last perimeter");
+    def->full_label = L("Gapfill after last perimeter");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("All gaps between the alst periemter and the infill which are thinner than a perimeter will be filled by gapfill.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool{true });
+
     def = this->add("gap_fill_min_area", coFloatOrPercent);
     def->label = L("Min surface");
     def->full_label = L("Min gap-fill surface");
@@ -1884,7 +1892,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "perimeter_width_square";
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloatOrPercent{ 100,true });
+    def->set_default_value(new ConfigOptionFloatOrPercent{100, true });
 
     def = this->add("gap_fill_overlap", coPercent);
     def->label = L("Gap fill overlap");
@@ -5494,6 +5502,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "gap_fill",
 "gap_fill_min_area",
 "gap_fill_overlap",
+"gap_fill_infill",
 "infill_dense",
 "infill_connection",
 "infill_dense_algo",
