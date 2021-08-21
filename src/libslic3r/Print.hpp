@@ -202,6 +202,7 @@ public:
     void project_and_append_custom_facets(bool seam, EnforcerBlockerType type, std::vector<ExPolygons>& expolys) const;
 
     /// skirts if done per copy and not per platter
+    const std::optional<ExtrusionEntityCollection>& skirt_first_layer() const { return m_skirt_first_layer; }
     const ExtrusionEntityCollection& skirt() const { return m_skirt; }
     const ExtrusionEntityCollection& brim() const { return m_brim; }
 
@@ -271,6 +272,7 @@ private:
 
     // Ordered collections of extrusion paths to build skirt loops and brim.
     // have to be duplicated per copy
+    std::optional<ExtrusionEntityCollection> m_skirt_first_layer;
     ExtrusionEntityCollection               m_skirt;
     ExtrusionEntityCollection               m_brim;
 
@@ -460,6 +462,7 @@ public:
     // If zero, then the print is empty and the print shall not be executed.
     uint16_t                    num_object_instances() const;
 
+    const std::optional<ExtrusionEntityCollection>& skirt_first_layer() const { return m_skirt_first_layer; }
     const ExtrusionEntityCollection& skirt() const { return m_skirt; }
     const ExtrusionEntityCollection& brim() const { return m_brim; }
     // Convex hull of the 1st layer extrusions, for bed leveling and placing the initial purge line.
@@ -501,7 +504,7 @@ private:
 		t_config_option_keys &full_config_diff, 
 		DynamicPrintConfig &filament_overrides) const;
 
-    void                _make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
+    void                _make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out, std::optional<ExtrusionEntityCollection> &out_first_layer);
     void                _make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
     void                _make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
     void                _make_brim_interior(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
@@ -525,6 +528,7 @@ private:
     PrintRegionPtrs                         m_regions;
 
     // Ordered collections of extrusion paths to build skirt loops and brim.
+    std::optional<ExtrusionEntityCollection> m_skirt_first_layer;
     ExtrusionEntityCollection               m_skirt;
     ExtrusionEntityCollection               m_brim;
     // Convex hull of the 1st layer extrusions.

@@ -177,6 +177,7 @@ group:Skirt
 	setting:skirt_distance
 	setting:skirt_height
 	setting:draft_shield
+	setting:skirt_brim
 	setting:min_skirt_length
 group:Brim
 	setting:brim_width

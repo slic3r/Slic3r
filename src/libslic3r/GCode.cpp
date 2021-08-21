@@ -833,6 +833,8 @@ namespace DoExport {
 	    }
         if (compute_min_mm3_per_mm.is_compatible({ erSkirt })) {
             mm3_per_mm.push_back(compute_min_mm3_per_mm.reset_use_get(print.skirt()));
+            if(print.skirt_first_layer())
+                mm3_per_mm.push_back(compute_min_mm3_per_mm.reset_use_get(*print.skirt_first_layer()));
             mm3_per_mm.push_back(compute_min_mm3_per_mm.reset_use_get(print.brim()));
         }
 	    // filter out 0-width segments
@@ -2082,7 +2084,14 @@ namespace Skirt {
         // not at the print_z of the interlaced support material layers.
         std::map<uint16_t, std::pair<size_t, size_t>> skirt_loops_per_extruder_out;
         if (skirt_done.empty() && print.has_skirt() && ! print.skirt().entities.empty()) {
-        	skirt_loops_per_extruder_all_printing(print, layer_tools, skirt_loops_per_extruder_out);
+            if (print.skirt_first_layer()) {
+                size_t n_loops = print.skirt_first_layer()->entities.size();
+                size_t n_tools = layer_tools.extruders.size();
+                size_t lines_per_extruder = (n_loops + n_tools - 1) / n_tools;
+                for (size_t i = 0; i < n_loops; i += lines_per_extruder)
+                    skirt_loops_per_extruder_out[layer_tools.extruders[i / lines_per_extruder]] = std::pair<size_t, size_t>(i, std::min(i + lines_per_extruder, n_loops));
+            } else
+        	    skirt_loops_per_extruder_all_printing(print, layer_tools, skirt_loops_per_extruder_out);
             skirt_done.emplace_back(layer_tools.print_z);
         }
         return skirt_loops_per_extruder_out;
@@ -2443,9 +2452,10 @@ void GCode::process_layer(
             Flow layer_skirt_flow(print.skirt_flow(extruder_id));
             layer_skirt_flow.height = float(m_skirt_done.back() - (m_skirt_done.size() == 1 ? 0. : m_skirt_done[m_skirt_done.size() - 2]));
             double mm3_per_mm = layer_skirt_flow.mm3_per_mm();
+            const ExtrusionEntityCollection& coll = first_layer && print.skirt_first_layer() ? *print.skirt_first_layer() : print.skirt();
             for (size_t i = loops.first; i < loops.second; ++i) {
                 // Adjust flow according to this layer's layer height.
-                ExtrusionLoop loop = *dynamic_cast<const ExtrusionLoop*>(print.skirt().entities[i]);
+                ExtrusionLoop loop = *dynamic_cast<const ExtrusionLoop*>(coll.entities[i]);
                 for (ExtrusionPath &path : loop.paths) {
                     assert(layer_skirt_flow.height == layer_skirt_flow.height);
                     assert(mm3_per_mm == mm3_per_mm);
@@ -2475,6 +2485,7 @@ void GCode::process_layer(
             m_avoid_crossing_perimeters.disable_once();
         }
         //extrude object-only skirt
+        //TODO: use it also for wiping like the other one (as they are exlusiev)
         if (single_object_instance_idx != size_t(-1) && !layers.front().object()->skirt().empty()
             && extruder_id == layer_tools.extruders.front()) {
             //if first layer, ask for a bigger lift for travel to object, to be on the safe side
@@ -2483,8 +2494,12 @@ void GCode::process_layer(
             const PrintObject *print_object = layers.front().object();
             this->set_origin(unscale(print_object->instances()[single_object_instance_idx].shift));
             if (this->m_layer != nullptr && (this->m_layer->id() < m_config.skirt_height || print.has_infinite_skirt() )) {
-                for (const ExtrusionEntity *ee : print_object->skirt().entities)
-                    gcode += this->extrude_entity(*ee, "", m_config.support_material_speed.value);
+                if(first_layer && print.skirt_first_layer())
+                    for (const ExtrusionEntity* ee : print_object->skirt_first_layer()->entities)
+                        gcode += this->extrude_entity(*ee, "", m_config.support_material_speed.value);
+                else
+                    for (const ExtrusionEntity *ee : print_object->skirt().entities)
+                        gcode += this->extrude_entity(*ee, "", m_config.support_material_speed.value);
             }
         }
         //extrude object-only brim

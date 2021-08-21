@@ -1329,6 +1329,7 @@ public:
     ConfigOptionFloat               resolution;
     ConfigOptionFloats              retract_before_travel;
     ConfigOptionBools               retract_layer_change;
+    ConfigOptionInt                 skirt_brim;
     ConfigOptionFloat               skirt_distance;
     ConfigOptionInt                 skirt_height;
     ConfigOptionFloatOrPercent      skirt_extrusion_width;
@@ -1426,6 +1427,7 @@ protected:
         OPT_PTR(resolution);
         OPT_PTR(retract_before_travel);
         OPT_PTR(retract_layer_change);
+        OPT_PTR(skirt_brim);
         OPT_PTR(skirt_distance);
         OPT_PTR(skirt_extrusion_width);
         OPT_PTR(skirt_height);

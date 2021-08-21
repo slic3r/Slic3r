@@ -440,7 +440,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     bool have_skirt = config->opt_int("skirts") > 0;
     toggle_field("skirt_height", have_skirt && !config->opt_bool("draft_shield"));
     toggle_field("skirt_width", have_skirt);
-    for (auto el : { "skirt_distance", "draft_shield", "min_skirt_length" })
+    for (auto el : { "skirt_distance", "skirt_brim", "draft_shield", "min_skirt_length" })
         toggle_field(el, have_skirt);
 
     bool have_brim = config->opt_float("brim_width") > 0 || config->opt_float("brim_width_interior") > 0;
