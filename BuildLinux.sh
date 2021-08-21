@@ -3,7 +3,7 @@
 export ROOT=`pwd`
 export NCORES=`nproc --all`
 
-
+unset name
 while getopts ":dsiuh" opt; do
   case ${opt} in
     u )
@@ -29,6 +29,18 @@ while getopts ":dsiuh" opt; do
         ;;
   esac
 done
+
+if [ $OPTIND -eq 1 ]
+then
+	echo "Usage: ./BuildLinux.sh [-i][-u][-d][-s]"
+        echo "   -i: Generate appimage"
+        echo "   -d: build deps"
+        echo "   -s: build slic3r"
+        echo "   -u: only update clock & dependency packets (need sudo)"
+        echo "For a first use, you want to 'sudo ./BuildLinux.sh -u'"
+        echo "   and then './BuildLinux.sh -dsi'"
+        exit 0
+fi
 
 # mkdir build
 if [ ! -d "build" ]
