@@ -197,7 +197,8 @@ std::string PresetHints::maximum_volumetric_flow_description(const PresetBundle 
     const auto &support_material_extrusion_width    = *print_config.option<ConfigOptionFloatOrPercent>("support_material_extrusion_width");
     const auto &top_infill_extrusion_width          = *print_config.option<ConfigOptionFloatOrPercent>("top_infill_extrusion_width");
     const auto &first_layer_speed                   = *print_config.option<ConfigOptionFloatOrPercent>("first_layer_speed");
-    const auto &first_layer_infill_speed            = *print_config.option<ConfigOptionFloatOrPercent>("first_layer_infill_speed");
+    const auto& first_layer_infill_speed = *print_config.option<ConfigOptionFloatOrPercent>("first_layer_infill_speed");
+    const auto& first_layer_min_speed = *print_config.option<ConfigOptionFloatOrPercent>("first_layer_infill_speed");
 
     // Index of an extruder assigned to a feature. If set to 0, an active extruder will be used for a multi-material print.
     // If different from idx_extruder, it will not be taken into account for this hint.
@@ -228,16 +229,24 @@ std::string PresetHints::maximum_volumetric_flow_description(const PresetBundle 
         const float                       bfr = bridging ? bridge_flow_ratio : 0.f;
         double                            max_flow = 0.;
         std::string                       max_flow_extrusion_type;
-        auto                              limit_by_first_layer_speed = [&first_layer_speed, first_layer](double speed_normal, double speed_max) {
-            if (first_layer && first_layer_speed.value > 0)
+        auto                              limit_by_first_layer_speed = [&first_layer_min_speed , &first_layer_speed, first_layer](double speed_normal, double speed_max) {
+            if (first_layer) {
+                const double base_speed = speed_normal;
                 // Apply the first layer limit.
-                speed_normal = first_layer_speed.get_abs_value(speed_normal);
+                if (first_layer_speed.value > 0)
+                    speed_normal = std::min(first_layer_speed.get_abs_value(base_speed), speed_normal);
+                speed_normal = std::max(first_layer_min_speed.get_abs_value(base_speed), speed_normal);
+            }
             return (speed_normal > 0.) ? speed_normal : speed_max;
         };
-        auto                              limit_infill_by_first_layer_speed = [&first_layer_infill_speed, first_layer](double speed_normal, double speed_max) {
-            if (first_layer && first_layer_infill_speed.value > 0)
+        auto                              limit_infill_by_first_layer_speed = [&first_layer_min_speed, &first_layer_infill_speed, first_layer](double speed_normal, double speed_max) {
+            if (first_layer) {
+                const double base_speed = speed_normal;
                 // Apply the first layer limit.
-                speed_normal = first_layer_infill_speed.get_abs_value(speed_normal);
+                if(first_layer_infill_speed.value > 0)
+                    speed_normal = std::min(first_layer_infill_speed.get_abs_value(base_speed), speed_normal);
+                speed_normal = std::max(first_layer_min_speed.get_abs_value(base_speed), speed_normal);
+            }
             return (speed_normal > 0.) ? speed_normal : speed_max;
         };
         if (perimeter_extruder_active) {

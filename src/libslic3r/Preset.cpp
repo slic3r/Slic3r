@@ -502,6 +502,7 @@ const std::vector<std::string>& Preset::print_options()
         // speeds
         "external_perimeter_speed", 
         "first_layer_speed",
+        "first_layer_min_speed",
         "infill_speed",
         "perimeter_speed",
         "small_perimeter_speed",

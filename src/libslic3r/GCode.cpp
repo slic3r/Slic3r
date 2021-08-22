@@ -3861,15 +3861,15 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             vol_speed = m_config.max_print_speed.value;
         // if using a % of an auto speed, use the % over the volumetric speed.
         if (path.role() == erExternalPerimeter) {
-            speed = m_config.get_abs_value("external_perimeter_speed", vol_speed);
+            speed = m_config.external_perimeter_speed.get_abs_value(vol_speed);
         } else if (path.role() == erInternalBridgeInfill) {
-            speed = m_config.get_abs_value("bridge_speed_internal", vol_speed);
+            speed = m_config.bridge_speed_internal.get_abs_value(vol_speed);
         } else if (path.role() == erOverhangPerimeter) {
-            speed = m_config.get_abs_value("overhangs_speed", vol_speed);
+            speed = m_config.overhangs_speed.get_abs_value(vol_speed);
         } else if (path.role() == erSolidInfill) {
-            speed = m_config.get_abs_value("solid_infill_speed", vol_speed);
+            speed = m_config.solid_infill_speed.get_abs_value(vol_speed);
         } else if (path.role() == erTopSolidInfill) {
-            speed = m_config.get_abs_value("top_solid_infill_speed", vol_speed);
+            speed = m_config.top_solid_infill_speed.get_abs_value(vol_speed);
         }
         if(speed == 0){
             speed = vol_speed;
@@ -3877,16 +3877,20 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
     }
     if (speed == 0) // this code shouldn't trigger as if it's 0, you have to get a m_volumetric_speed
         speed = m_config.max_print_speed.value;
-    if (this->on_first_layer())
+    if (this->on_first_layer()) {
+        const double base_speed = speed;
         if (path.role() == erInternalInfill || path.role() == erSolidInfill) {
-            double first_layer_infill_speed = m_config.get_abs_value("first_layer_infill_speed", speed);
-            if(first_layer_infill_speed > 0)
+            double first_layer_infill_speed = m_config.first_layer_infill_speed.get_abs_value(base_speed);
+            if (first_layer_infill_speed > 0)
                 speed = std::min(first_layer_infill_speed, speed);
         } else {
-            double first_layer_speed = m_config.get_abs_value("first_layer_speed", speed);
+            double first_layer_speed = m_config.first_layer_speed.get_abs_value(base_speed);
             if (first_layer_speed > 0)
                 speed = std::min(first_layer_speed, speed);
         }
+        double first_layer_min_speed = m_config.first_layer_min_speed.get_abs_value(base_speed);
+        speed = std::max(first_layer_min_speed, speed);
+    }
     // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
     if (m_config.max_volumetric_speed.value > 0 && path.mm3_per_mm > 0) {
         speed = std::min(m_config.max_volumetric_speed.value / path.mm3_per_mm, speed);

@@ -1114,7 +1114,7 @@ void PrintConfigDef::init_fff_params()
                    "If the extruder is not centered, choose the largest value for safety. "
                    "This setting is used to check for collisions and to display the graphical preview "
                    "in the plater."
-                   "\nSet to 0 to disable clearance checking.");
+                   "\nSet zero to disable clearance checking.");
     def->sidetext = L("mm");
     def->min = 0;
     def->mode = comExpert;
@@ -1235,7 +1235,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::cooling;
     def->tooltip = L("If layer print time is estimated below this number of seconds, fan will be enabled "
                 "and its speed will be calculated by interpolating the default and maximum speeds."
-                "\nSet to 0 to disable.");
+                "\nSet zero to disable.");
     def->sidetext = L("approximate seconds");
     def->min = 0;
     def->max = 1000;
@@ -1838,14 +1838,14 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloatOrPercent(75, true));
 
     def = this->add("first_layer_speed", coFloatOrPercent);
-    def->label = L("Default");
+    def->label = L("Max");
     def->full_label = L("Default first layer speed");
     def->category = OptionCategory::speed;
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to all the print moves "
-                   "but infill of the first layer, it can be overwritten by the 'default' (default depends of the type of the path) "
-                   "speed if it's lower than that. If expressed as a percentage "
-                   "it will scale the current speed."
-                   "\nSet it at 100% to remove any first layer speed modification (with first_layer_infill_speed).");
+        "but infill of the first layer, it can be overwritten by the 'default' (default depends of the type of the path) "
+        "speed if it's lower than that. If expressed as a percentage "
+        "it will scale the current speed."
+        "\nSet it at 100% to remove any first layer speed modification (with first_layer_infill_speed and first_layer_speed_min).");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "depends";
     def->min = 0;
@@ -1865,6 +1865,20 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(30, false));
+
+    def = this->add("first_layer_min_speed", coFloatOrPercent);
+    def->label = L("Min");
+    def->full_label = L("Min first layer speed");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to all the print moves"
+        ", it can be overwritten by the 'default' (default depends of the type of the path) speed if it's higher than that."
+        " If expressed as a percentage it will scale the current speed."
+        "\nSet zero to disable.");
+    def->sidetext = L("mm/s or %");
+    def->ratio_over = "depends";
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
     
     def = this->add("first_layer_temperature", coInts);
     def->label = L("First layer");
@@ -2687,7 +2701,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Minimum extrusion length");
     def->category = OptionCategory::speed;
     def->tooltip = L("Too many too small commands may overload the firmware / connection. Put a higher value here if you see strange slowdown."
-                     "\n0 to disable.");
+                     "\nSet zero to disable.");
     def->sidetext = L("mm");
     def->min = 0;
     def->precision = 8;
@@ -3080,7 +3094,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::slicing;
     def->tooltip = L("Minimum detail resolution, used to simplify the input file for speeding up "
         "the slicing job and reducing memory usage. High-resolution models often carry "
-        "more details than printers can render. Set to zero to disable any simplification "
+        "more details than printers can render. Set zero to disable any simplification "
         "and use full resolution from input. "
         "\nNote: Slic3r has an internal working resolution of 0.0001mm."
         "\nInfill & Thin areas are simplified up to 0.0125mm.");
@@ -3359,7 +3373,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::cooling;
     def->tooltip = L("If layer print time is estimated below this number of seconds, print moves "
         "speed will be scaled down to extend duration to this value, if possible."
-        "\nSet to 0 to disable.");
+        "\nSet zero to disable.");
     def->sidetext = L("approximate seconds");
     def->min = 0;
     def->max = 1000;
@@ -3454,7 +3468,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("cutoff");
     def->full_label = L("Curve smoothing cutoff dist");
     def->category = OptionCategory::slicing;
-    def->tooltip = L("Maximum distance between two points to allow adding new ones. Allow to avoid distorting long strait areas. 0 to disable.");
+    def->tooltip = L("Maximum distance between two points to allow adding new ones. Allow to avoid distorting long strait areas.\nSet zero to disable.");
     def->sidetext = L("mm");
     def->min = 0;
     def->cli = "curve-smoothing-cutoff-dist=f";
@@ -3621,7 +3635,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::slicing;
     def->tooltip = L("This is the rounding error of the input object."
         " It's used to align points that should be in the same line."
-        " Put 0 to disable.");
+        "\nSet zero to disable.");
     def->sidetext = L("mm");
     def->min = 0;
     def->precision = 8;
@@ -3687,7 +3701,7 @@ void PrintConfigDef::init_fff_params()
         " This number allow to keep some if there is a low number of perimeter over the void."
         "\nIf this setting is equal or higher than the top/bottom solid layer count, it won't evict anything."
         "\nIf this setting is set to 1, it will evict all solid fill are are only over perimeters."
-        "\nSet it to 0 to disable.");
+        "\nSet zero to disable.");
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(2));
@@ -4471,7 +4485,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Set this to the height moved when your Z motor (or equivalent) turns one step."
                     "If your motor needs 200 steps to move your head/plater by 1mm, this field should be 1/200 = 0.005."
                     "\nNote that the gcode will write the z values with 6 digits after the dot if z_step is set (it's 3 digits if it's disabled)."
-                    "\nPut 0 to disable.");
+                    "\nSet zero to disable.");
     def->cli = "z-step=f";
     def->sidetext = L("mm");
     def->min = 0;
@@ -5538,6 +5552,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "fill_smooth_width",
 "fill_smooth_distribution",
 "first_layer_infill_speed",
+"first_layer_min_speed",
 "gap_fill",
 "gap_fill_min_area",
 "gap_fill_overlap",

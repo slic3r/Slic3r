@@ -118,6 +118,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "first_layer_flow_ratio",
         "first_layer_speed",
         "first_layer_infill_speed",
+        "first_layer_min_speed",
         "full_fan_speed_layer",
         "gap_fill_speed",
         "gcode_comments",

@@ -258,6 +258,7 @@ group:Speed for non-print moves
 	end_line
 group:sidetext_width$7:Modifiers
 	line:First layer speed
+		setting:label_width$8:width$4:first_layer_min_speed
 		setting:label_width$8:width$4:first_layer_speed
 		setting:label_width$8:width$4:first_layer_infill_speed
 	end_line
