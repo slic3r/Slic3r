@@ -3965,7 +3965,9 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
 
     std::string comment;
     if (m_enable_cooling_markers) {
-        if (is_bridge(path.role()))
+        if(path.role() == erInternalBridgeInfill)
+            gcode += ";_BRIDGE_INTERNAL_FAN_START\n";
+        else if (is_bridge(path.role()))
             gcode += ";_BRIDGE_FAN_START\n";
         else if (ExtrusionRole::erTopSolidInfill == path.role())
             gcode += ";_TOP_FAN_START\n";
@@ -3984,7 +3986,9 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
 std::string GCode::_after_extrude(const ExtrusionPath &path) {
     std::string gcode;
     if (m_enable_cooling_markers)
-        if (is_bridge(path.role()))
+        if (path.role() == erInternalBridgeInfill)
+            gcode += ";_BRIDGE_INTERNAL_FAN_END\n";
+        else if (is_bridge(path.role()))
             gcode += ";_BRIDGE_FAN_END\n";
         else if (ExtrusionRole::erTopSolidInfill == path.role())
             gcode += ";_TOP_FAN_END\n";

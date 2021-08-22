@@ -1276,6 +1276,7 @@ public:
     ConfigOptionInts                bed_temperature;
     ConfigOptionFloatOrPercent      bridge_acceleration;
     ConfigOptionInts                bridge_fan_speed;
+    ConfigOptionInts                bridge_internal_fan_speed;
     ConfigOptionInts                chamber_temperature;
     ConfigOptionBool                complete_objects;
     ConfigOptionBool                complete_objects_one_skirt;
@@ -1375,6 +1376,7 @@ protected:
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);
         OPT_PTR(bridge_fan_speed);
+        OPT_PTR(bridge_internal_fan_speed);
         OPT_PTR(chamber_temperature);
         OPT_PTR(complete_objects);
         OPT_PTR(complete_objects_one_skirt);

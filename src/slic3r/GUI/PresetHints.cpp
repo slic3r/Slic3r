@@ -22,6 +22,7 @@ std::string PresetHints::cooling_description(const Preset &preset)
     int     max_fan_speed = preset.config.opt_int("max_fan_speed", 0);
     int     top_fan_speed = preset.config.opt_int("top_fan_speed", 0);
     int     bridge_fan_speed = preset.config.opt_int("bridge_fan_speed", 0);
+    int     bridge_internal_fan_speed = preset.config.opt_int("bridge_internal_fan_speed", 0);
     int     ext_peri_fan_speed = preset.config.opt_int("external_perimeter_fan_speed", 0);
     int     disable_fan_first_layers = preset.config.opt_int("disable_fan_first_layers", 0);
     int     slowdown_below_layer_time = preset.config.opt_int("slowdown_below_layer_time", 0);
@@ -32,9 +33,11 @@ std::string PresetHints::cooling_description(const Preset &preset)
     //for the time being, -1 shoudl eb for disabel, but it's 0 from legacy.
     if (top_fan_speed == 0) top_fan_speed = -1;
     if (bridge_fan_speed == 0) bridge_fan_speed = -1;
+    if (bridge_internal_fan_speed == 0) bridge_internal_fan_speed = -1;
     if (ext_peri_fan_speed == 0) ext_peri_fan_speed = -1;
     if (top_fan_speed == 1) top_fan_speed = 0;
     if (bridge_fan_speed == 1) bridge_fan_speed = 0;
+    if (bridge_internal_fan_speed == 1) bridge_internal_fan_speed = 0;
     if (ext_peri_fan_speed == 1) ext_peri_fan_speed = 0;
 
     //if (preset.config.opt_bool("cooling", 0)) {
@@ -51,6 +54,9 @@ std::string PresetHints::cooling_description(const Preset &preset)
         }
         if (bridge_fan_speed >= 0 && bridge_fan_speed > min_fan_speed) {
             out += ", " + (boost::format(_utf8(L("at %1%%% over bridges"))) % bridge_fan_speed).str();
+        }
+        if (bridge_internal_fan_speed >= 0 && bridge_internal_fan_speed > min_fan_speed) {
+            out += ", " + (boost::format(_utf8(L("at %1%%% over infill bridges"))) % bridge_internal_fan_speed).str();
         }
         if (disable_fan_first_layers > 1)
             out += ", " + (boost::format(_utf8(L("except for the first %1% layers where the fan is disabled"))) % disable_fan_first_layers).str();
@@ -79,8 +85,13 @@ std::string PresetHints::cooling_description(const Preset &preset)
         }
         if (bridge_fan_speed > max_fan_speed) {
             out += ", " + (boost::format(_utf8(L("at %1%%% over bridges"))) % bridge_fan_speed).str();
-        }else if (bridge_fan_speed > min_fan_speed) {
+        } else if (bridge_fan_speed > min_fan_speed) {
             out += ", " + (boost::format(_utf8(L("at %1%%% over bridges"))) % bridge_fan_speed).str() + " " + L("if it's above the current computed fan speed value");
+        }
+        if (bridge_internal_fan_speed > max_fan_speed) {
+            out += ", " + (boost::format(_utf8(L("at %1%%% over infill bridges"))) % bridge_internal_fan_speed).str();
+        } else if (bridge_internal_fan_speed > min_fan_speed) {
+            out += ", " + (boost::format(_utf8(L("at %1%%% over infill bridges"))) % bridge_internal_fan_speed).str() + " " + L("if it's above the current computed fan speed value");
         }
         if (disable_fan_first_layers > 1)
             out += " ; " + ((boost::format(_utf8(L("except for the first %1% layers where the fan is disabled"))) % disable_fan_first_layers).str());
@@ -118,6 +129,7 @@ std::string PresetHints::cooling_description(const Preset &preset)
 
     //tooltip for Depractaed values
     bridge_fan_speed = preset.config.opt_int("bridge_fan_speed", 0);
+    bridge_internal_fan_speed = preset.config.opt_int("bridge_internal_fan_speed", 0);
     ext_peri_fan_speed = preset.config.opt_int("external_perimeter_fan_speed", 0);
     top_fan_speed = preset.config.opt_int("top_fan_speed", 0);
     if (top_fan_speed == 0)
@@ -126,6 +138,8 @@ std::string PresetHints::cooling_description(const Preset &preset)
         out += "\n\n!!! 0 for the External perimeters fan speed is Deprecated, please set it to -1 to disable it !!!";
     if (bridge_fan_speed == 0)
         out += "\n\n!!! 0 for the Bridge fan speed is Deprecated, please set it to -1 to disable it !!!";
+    if (bridge_internal_fan_speed == 0)
+        out += "\n\n!!! 0 for the Infill bridge fan speed is Deprecated, please set it to -1 to disable it !!!";
 
     return out;
 }

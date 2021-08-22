@@ -330,7 +330,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("bridge_fan_speed", coInts);
     def->label = L("Bridges fan speed");
     def->category = OptionCategory::cooling;
-    def->tooltip = L("This fan speed is enforced during all bridges and overhangs. It won't slow down the fan if it's currently running at a higher speed."
+    def->tooltip = L("This fan speed is enforced during bridges and overhangs. It won't slow down the fan if it's currently running at a higher speed."
         "\nSet to 1 to disable the fan."
         "\nSet to -1 to disable this override."
         "\nCan only be overriden by disable_fan_first_layers.");
@@ -338,7 +338,20 @@ void PrintConfigDef::init_fff_params()
     def->min = -1;
     def->max = 100;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionInts { 100 });
+    def->set_default_value(new ConfigOptionInts{ 100 });
+
+    def = this->add("bridge_internal_fan_speed", coInts);
+    def->label = L("Infill bridges fan speed");
+    def->category = OptionCategory::cooling;
+    def->tooltip = L("This fan speed is enforced during all infill bridges. It won't slow down the fan if it's currently running at a higher speed."
+        "\nSet to 1 to disable the fan."
+        "\nSet to -1 to disable this override (will take the value of Bridges fan speed)."
+        "\nCan only be overriden by disable_fan_first_layers.");
+    def->sidetext = L("%");
+    def->min = -1;
+    def->max = 100;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInts{ -1 });
 
     def = this->add("top_fan_speed", coInts);
     def->label = L("Top fan speed");
@@ -5460,6 +5473,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "avoid_crossing_not_first_layer",
 "top_fan_speed",
 "over_bridge_flow_ratio",
+"bridge_internal_fan_speed",
 "bridge_overlap",
 "bridge_speed_internal",
 "brim_inside_holes",

@@ -342,7 +342,7 @@ private:
     AvoidCrossingPerimeters             m_avoid_crossing_perimeters;
     bool                                m_enable_loop_clipping;
     // If enabled, the G-code generator will put following comments at the ends
-    // of the G-code lines: _EXTRUDE_SET_SPEED, _WIPE, _BRIDGE_FAN_START, _BRIDGE_FAN_END
+    // of the G-code lines: _EXTRUDE_SET_SPEED, _WIPE, _BRIDGE_FAN_START, _BRIDGE_FAN_END, _BRIDGE_INTERNAL_FAN_START, _BRIDGE_INTERNAL_FAN_END
     // Those comments are received and consumed (removed from the G-code) by the CoolingBuffer.pm Perl module.
     bool                                m_enable_cooling_markers;
     // Markers for the Pressure Equalizer to recognize the extrusion type.

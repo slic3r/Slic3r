@@ -30,7 +30,10 @@ page:Cooling:time
 group:Fan speed - default
 	setting:label$Run the fan at default speed when possible:fan_always_on
 	setting:min_fan_speed
-	setting:bridge_fan_speed
+	line:Bridges fan speed
+		setting:label$:bridge_fan_speed
+		setting:label$Infill bridges:bridge_internal_fan_speed
+	end_line
 	setting:top_fan_speed
 	setting:external_perimeter_fan_speed
 	line:Disable fan for the first
