@@ -3366,14 +3366,19 @@ void GCode::use(const ExtrusionEntityCollection &collection) {
     }
 }
 
-std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &description, double speed) {
+std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &description, double speed_mm_per_sec) {
 
     ExtrusionPath simplifed_path = path;
     const double scaled_min_length = scale_(this->config().min_length.value);
-    if (scaled_min_length > 0 && !m_last_too_small.empty()) {
+    const double max_gcode_per_second = this->config().max_gcode_per_second.value;
+    double current_scaled_min_length = scaled_min_length;
+    if (max_gcode_per_second > 0) {
+        current_scaled_min_length = std::max(current_scaled_min_length, scale_(_compute_speed_mm_per_sec(path, speed_mm_per_sec)) / max_gcode_per_second);
+    }
+    if (current_scaled_min_length > 0 && !m_last_too_small.empty()) {
         //descr += " trys fusion " + std::to_string(unscaled(m_last_too_small.last_point().x())) + " , " + std::to_string(unscaled(path.first_point().x()));
         //ensure that it's a continous thing
-        if (m_last_too_small.last_point().distance_to_square(path.first_point()) < scaled_min_length*scaled_min_length /*&& m_last_too_small.first_point().distance_to_square(path.first_point()) > EPSILON*/) {
+        if (m_last_too_small.last_point().distance_to_square(path.first_point()) < current_scaled_min_length * current_scaled_min_length /*&& m_last_too_small.first_point().distance_to_square(path.first_point()) > EPSILON*/) {
             //descr += " ! fusion " + std::to_string(simplifed_path.polyline.points.size());
             simplifed_path.height = (m_last_too_small.height * m_last_too_small.length() + simplifed_path.height * simplifed_path.length()) / (m_last_too_small.length() + simplifed_path.length());
             simplifed_path.mm3_per_mm = (m_last_too_small.mm3_per_mm * m_last_too_small.length() + simplifed_path.mm3_per_mm * simplifed_path.length()) / (m_last_too_small.length() + simplifed_path.length());
@@ -3383,11 +3388,11 @@ std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &de
         }
         m_last_too_small.polyline.points.clear();
     }
-    if (scaled_min_length > 0) {
+    if (current_scaled_min_length > 0) {
         // it's an alternative to simplifed_path.simplify(scale_(this->config().min_length)); with more enphasis ont he segment length that on the feature detail.
         // because tolerance = min_length /10, douglas_peucker will erase more points if angles are shallower than 6° and then the '_plus' will kick in to keep a bit more.
         // if angles are all bigger than 6°, then the douglas_peucker will do all the work.
-        simplifed_path.polyline.points = MultiPoint::_douglas_peucker_plus(simplifed_path.polyline.points, scaled_min_length / 10, scaled_min_length);
+        simplifed_path.polyline.points = MultiPoint::_douglas_peucker_plus(simplifed_path.polyline.points, current_scaled_min_length / 10, current_scaled_min_length);
     }
     //else simplifed_path.simplify(SCALED_RESOLUTION);  //should already be simplified
     if (scaled_min_length > 0 && simplifed_path.length() < scaled_min_length) {
@@ -3395,7 +3400,7 @@ std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &de
         return "";
     }
 
-    std::string gcode = this->_extrude(simplifed_path, description, speed);
+    std::string gcode = this->_extrude(simplifed_path, description, speed_mm_per_sec);
 
     if (m_wipe.enable) {
         m_wipe.path = std::move(simplifed_path.polyline);
@@ -3737,6 +3742,102 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
     return gcode;
 }
 
+double_t GCode::_compute_speed_mm_per_sec(const ExtrusionPath& path, double speed) {
+
+    // set speed
+    if (speed < 0) {
+        //if speed == -1, then it's means "choose yourself, but if it's -1 < speed <0 , then it's a scaling from small_periemter.
+        //it's a bit hacky, so if you want to rework it, help yourself.
+        float factor = (-speed);
+        if (path.role() == erPerimeter) {
+            speed = m_config.get_abs_value("perimeter_speed");
+        } else if (path.role() == erExternalPerimeter) {
+            speed = m_config.get_abs_value("external_perimeter_speed");
+        } else if (path.role() == erBridgeInfill) {
+            speed = m_config.get_abs_value("bridge_speed");
+        } else if (path.role() == erInternalBridgeInfill) {
+            speed = m_config.get_abs_value("bridge_speed_internal");
+        } else if (path.role() == erOverhangPerimeter) {
+            speed = m_config.get_abs_value("overhangs_speed");
+        } else if (path.role() == erInternalInfill) {
+            speed = m_config.get_abs_value("infill_speed");
+        } else if (path.role() == erSolidInfill) {
+            speed = m_config.get_abs_value("solid_infill_speed");
+        } else if (path.role() == erTopSolidInfill) {
+            speed = m_config.get_abs_value("top_solid_infill_speed");
+        } else if (path.role() == erThinWall) {
+            speed = m_config.get_abs_value("thin_walls_speed");
+        } else if (path.role() == erGapFill) {
+            speed = m_config.get_abs_value("gap_fill_speed");
+        } else if (path.role() == erIroning) {
+            speed = m_config.get_abs_value("ironing_speed");
+        } else if (path.role() == erNone) {
+            speed = m_config.get_abs_value("travel_speed");
+        } else if (path.role() == erMilling) {
+            speed = m_config.get_abs_value("milling_speed");
+        } else {
+            throw Slic3r::InvalidArgument("Invalid speed");
+        }
+        //don't modify bridge speed
+        if (factor < 1 && !(is_bridge(path.role()))) {
+            float small_speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+            //apply factor between feature speed and small speed
+            speed = (speed * factor) + double((1.f - factor) * small_speed);
+        }
+    }
+    if (m_volumetric_speed != 0. && speed == 0) {
+        //if m_volumetric_speed, use the max size for thinwall & gapfill, to avoid variations
+        double vol_speed = m_volumetric_speed / path.mm3_per_mm;
+        if (vol_speed > m_config.max_print_speed.value)
+            vol_speed = m_config.max_print_speed.value;
+        // if using a % of an auto speed, use the % over the volumetric speed.
+        if (path.role() == erExternalPerimeter) {
+            speed = m_config.external_perimeter_speed.get_abs_value(vol_speed);
+        } else if (path.role() == erInternalBridgeInfill) {
+            speed = m_config.bridge_speed_internal.get_abs_value(vol_speed);
+        } else if (path.role() == erOverhangPerimeter) {
+            speed = m_config.overhangs_speed.get_abs_value(vol_speed);
+        } else if (path.role() == erSolidInfill) {
+            speed = m_config.solid_infill_speed.get_abs_value(vol_speed);
+        } else if (path.role() == erTopSolidInfill) {
+            speed = m_config.top_solid_infill_speed.get_abs_value(vol_speed);
+        }
+        if (speed == 0) {
+            speed = vol_speed;
+        }
+    }
+    if (speed == 0) // this code shouldn't trigger as if it's 0, you have to get a m_volumetric_speed
+        speed = m_config.max_print_speed.value;
+    if (this->on_first_layer()) {
+        const double base_speed = speed;
+        if (path.role() == erInternalInfill || path.role() == erSolidInfill) {
+            double first_layer_infill_speed = m_config.first_layer_infill_speed.get_abs_value(base_speed);
+            if (first_layer_infill_speed > 0)
+                speed = std::min(first_layer_infill_speed, speed);
+        } else {
+            double first_layer_speed = m_config.first_layer_speed.get_abs_value(base_speed);
+            if (first_layer_speed > 0)
+                speed = std::min(first_layer_speed, speed);
+        }
+        double first_layer_min_speed = m_config.first_layer_min_speed.get_abs_value(base_speed);
+        speed = std::max(first_layer_min_speed, speed);
+    }
+    // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
+    if (m_config.max_volumetric_speed.value > 0 && path.mm3_per_mm > 0) {
+        speed = std::min(m_config.max_volumetric_speed.value / path.mm3_per_mm, speed);
+    }
+    double filament_max_volumetric_speed = EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_volumetric_speed, 0);
+    if (filament_max_volumetric_speed > 0) {
+        speed = std::min(filament_max_volumetric_speed / path.mm3_per_mm, speed);
+    }
+    double filament_max_speed = EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_speed, 0);
+    if (filament_max_speed > 0) {
+        speed = std::min(filament_max_speed, speed);
+    }
+
+    return speed;
+}
+
 std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string &description_in, double speed) {
     std::string gcode;
     std::string description{ description_in };
@@ -3813,96 +3914,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
     // compensate retraction
     gcode += this->unretract();
 
-    // set speed
-    if (speed < 0) {
-        //if speed == -1, then it's means "choose yourself, but if it's -1 < speed <0 , then it's a scaling from small_periemter.
-        //it's a bit hacky, so if you want to rework it, help yourself.
-        float factor = (-speed);
-        if (path.role() == erPerimeter) {
-            speed = m_config.get_abs_value("perimeter_speed");
-        } else if (path.role() == erExternalPerimeter) {
-            speed = m_config.get_abs_value("external_perimeter_speed");
-        } else if (path.role() == erBridgeInfill) {
-            speed = m_config.get_abs_value("bridge_speed"); 
-        } else if (path.role() == erInternalBridgeInfill) {
-            speed = m_config.get_abs_value("bridge_speed_internal"); 
-        } else if (path.role() == erOverhangPerimeter) {
-            speed = m_config.get_abs_value("overhangs_speed");
-        } else if (path.role() == erInternalInfill) {
-            speed = m_config.get_abs_value("infill_speed");
-        } else if (path.role() == erSolidInfill) {
-            speed = m_config.get_abs_value("solid_infill_speed");
-        } else if (path.role() == erTopSolidInfill) {
-            speed = m_config.get_abs_value("top_solid_infill_speed");
-        } else if (path.role() == erThinWall) {
-            speed = m_config.get_abs_value("thin_walls_speed");
-        } else if (path.role() == erGapFill) {
-            speed = m_config.get_abs_value("gap_fill_speed");
-        } else if (path.role() == erIroning) {
-            speed = m_config.get_abs_value("ironing_speed");
-        } else if (path.role() == erNone) {
-            speed = m_config.get_abs_value("travel_speed");
-        } else if (path.role() == erMilling) {
-            speed = m_config.get_abs_value("milling_speed");
-        } else {
-            throw Slic3r::InvalidArgument("Invalid speed");
-        }
-        //don't modify bridge speed
-        if (factor < 1 && !(is_bridge(path.role()))) {
-            float small_speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
-            //apply factor between feature speed and small speed
-            speed = (speed * factor) + double((1.f - factor) * small_speed);
-        }
-    }
-    if (m_volumetric_speed != 0. && speed == 0) {
-        //if m_volumetric_speed, use the max size for thinwall & gapfill, to avoid variations
-        double vol_speed = m_volumetric_speed / path.mm3_per_mm;
-        if (vol_speed > m_config.max_print_speed.value)
-            vol_speed = m_config.max_print_speed.value;
-        // if using a % of an auto speed, use the % over the volumetric speed.
-        if (path.role() == erExternalPerimeter) {
-            speed = m_config.external_perimeter_speed.get_abs_value(vol_speed);
-        } else if (path.role() == erInternalBridgeInfill) {
-            speed = m_config.bridge_speed_internal.get_abs_value(vol_speed);
-        } else if (path.role() == erOverhangPerimeter) {
-            speed = m_config.overhangs_speed.get_abs_value(vol_speed);
-        } else if (path.role() == erSolidInfill) {
-            speed = m_config.solid_infill_speed.get_abs_value(vol_speed);
-        } else if (path.role() == erTopSolidInfill) {
-            speed = m_config.top_solid_infill_speed.get_abs_value(vol_speed);
-        }
-        if(speed == 0){
-            speed = vol_speed;
-        }
-    }
-    if (speed == 0) // this code shouldn't trigger as if it's 0, you have to get a m_volumetric_speed
-        speed = m_config.max_print_speed.value;
-    if (this->on_first_layer()) {
-        const double base_speed = speed;
-        if (path.role() == erInternalInfill || path.role() == erSolidInfill) {
-            double first_layer_infill_speed = m_config.first_layer_infill_speed.get_abs_value(base_speed);
-            if (first_layer_infill_speed > 0)
-                speed = std::min(first_layer_infill_speed, speed);
-        } else {
-            double first_layer_speed = m_config.first_layer_speed.get_abs_value(base_speed);
-            if (first_layer_speed > 0)
-                speed = std::min(first_layer_speed, speed);
-        }
-        double first_layer_min_speed = m_config.first_layer_min_speed.get_abs_value(base_speed);
-        speed = std::max(first_layer_min_speed, speed);
-    }
-    // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
-    if (m_config.max_volumetric_speed.value > 0 && path.mm3_per_mm > 0) {
-        speed = std::min(m_config.max_volumetric_speed.value / path.mm3_per_mm, speed);
-    }
-    double filament_max_volumetric_speed = EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_volumetric_speed, 0);
-    if (filament_max_volumetric_speed > 0) {
-        speed = std::min(filament_max_volumetric_speed / path.mm3_per_mm, speed);
-    }
-    double filament_max_speed = EXTRUDER_CONFIG_WITH_DEFAULT(filament_max_speed, 0);
-    if (filament_max_speed > 0) {
-        speed = std::min(filament_max_speed, speed);
-    }
+    speed = _compute_speed_mm_per_sec(path, speed);
     double F = speed * 60;  // convert mm/sec to mm/min
 
     // extrude arc or line

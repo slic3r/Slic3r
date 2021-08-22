@@ -19,6 +19,10 @@ group:silent_mode_event:Firmware
 		setting:gcode_precision_xyz
 		setting:gcode_precision_e
 	end_line
+	line:Processing limit
+		setting:max_gcode_per_second
+		setting:min_length
+	end_line
 group:Cooling fan
 	line:Speedup
 		setting:label$Speedup time:fan_speedup_time
@@ -40,7 +44,6 @@ group:Advanced
 	setting:use_relative_e_distances
 	setting:use_firmware_retraction
 	setting:use_volumetric_e
-	setting:min_length
 	setting:variable_layer_height
 
 page:Custom G-code:cog

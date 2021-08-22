@@ -430,6 +430,7 @@ private:
 
     std::string _extrude(const ExtrusionPath &path, const std::string &description, double speed = -1);
     std::string _before_extrude(const ExtrusionPath &path, const std::string &description, double speed = -1);
+    double_t    _compute_speed_mm_per_sec(const ExtrusionPath& path, double speed = -1);
     std::string _after_extrude(const ExtrusionPath &path);
     void print_machine_envelope(FILE *file, Print &print);
     void _print_first_layer_bed_temperature(FILE *file, Print &print, const std::string &gcode, uint16_t first_printing_extruder_id, bool wait);

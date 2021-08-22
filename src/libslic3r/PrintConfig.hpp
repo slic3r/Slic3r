@@ -1096,6 +1096,7 @@ public:
     ConfigOptionInts                gcode_precision_e;
     ConfigOptionString              layer_gcode;
     ConfigOptionString              feature_gcode;
+    ConfigOptionFloat               max_gcode_per_second;
     ConfigOptionFloat               max_print_speed;
     ConfigOptionFloat               max_volumetric_speed;
 #ifdef HAS_PRESSURE_EQUALIZER
@@ -1209,6 +1210,7 @@ protected:
         OPT_PTR(gcode_precision_e);
         OPT_PTR(layer_gcode);
         OPT_PTR(feature_gcode);
+        OPT_PTR(max_gcode_per_second);
         OPT_PTR(max_print_speed);
         OPT_PTR(max_volumetric_speed);
         OPT_PTR(milling_z_lift);

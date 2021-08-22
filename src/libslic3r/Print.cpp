@@ -128,6 +128,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "infill_acceleration",
         "layer_gcode",
         "max_fan_speed",
+        "max_gcode_per_second",
         "max_print_height",
         "max_print_speed",
         "max_volumetric_speed",

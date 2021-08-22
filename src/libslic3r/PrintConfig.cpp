@@ -2586,6 +2586,17 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloats{ 1500., 1250. });
 
+    def = this->add("max_gcode_per_second", coFloat);
+    def->label = L("Maximum G1 per second");
+    def->category = OptionCategory::speed;
+    def->tooltip = L("If your firmware stops while printing, it may have its gcode queue full."
+        " Set this parameter to merge extrusions into bigger ones to reduce the number of gcode commands the printer has to process each second."
+        "\nNote that reducing your printing speed (at least for the external extrusions) will reduce the number of time this will triggger and so increase quality."
+        "\nSet zero to disable.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(1500));
+
     def = this->add("max_fan_speed", coInts);
     def->label = L("Max");
     def->full_label = L("Max fan speed");
@@ -2700,8 +2711,9 @@ void PrintConfigDef::init_fff_params()
     def = this->add("min_length", coFloat);
     def->label = L("Minimum extrusion length");
     def->category = OptionCategory::speed;
-    def->tooltip = L("Too many too small commands may overload the firmware / connection. Put a higher value here if you see strange slowdown."
-                     "\nSet zero to disable.");
+    def->tooltip = L("[Deprecated] Prefer using max_gcode_per_second instead, as it's much better when you have very different speeds for features."
+        "\nToo many too small commands may overload the firmware / connection. Put a higher value here if you see strange slowdown."
+        "\nSet zero to disable.");
     def->sidetext = L("mm");
     def->min = 0;
     def->precision = 8;
