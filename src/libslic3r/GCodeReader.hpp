@@ -72,6 +72,14 @@ public:
         uint32_t         m_mask;
         friend class GCodeReader;
     };
+    class FakeGCodeLine : public GCodeLine {
+    public:
+        void set_x(float x) { m_axis[X] = x; m_mask = (m_mask | (1 << int(X))); }
+        void set_y(float y) { m_axis[Y] = y; m_mask = (m_mask | (1 << int(Y))); }
+        void set_z(float z) { m_axis[Z] = z; m_mask = (m_mask | (1 << int(Z))); }
+        void set_e(float e) { m_axis[E] = e; m_mask = (m_mask | (1 << int(E))); }
+        void set_f(float f) { m_axis[F] = f; m_mask = (m_mask | (1 << int(F))); }
+    };
 
     typedef std::function<void(GCodeReader&, const GCodeLine&)> callback_t;
     

@@ -940,7 +940,6 @@ void GCodeProcessor::process_file(const std::string& filename, bool apply_postpr
             m_result.moves[i].layer_duration = 0;
 }
 #if ENABLE_GCODE_VIEWER_DATA_CHECKING
-    std::cout << "\n";
     m_mm3_per_mm_compare.output();
     m_height_compare.output();
     m_width_compare.output();
@@ -1050,7 +1049,6 @@ void GCodeProcessor::process_klipper_ACTIVATE_EXTRUDER(const GCodeReader::GCodeL
 
 void GCodeProcessor::process_gcode_line(const GCodeReader::GCodeLine& line)
 {
-/* std::cout << line.raw() << std::endl; */
 
     // update start position
     m_start_position = m_end_position;
@@ -1078,6 +1076,8 @@ void GCodeProcessor::process_gcode_line(const GCodeReader::GCodeLine& line)
                 {
                 case 0:  { process_G0(line); break; }  // Move
                 case 1:  { process_G1(line); break; }  // Move
+                case 2:  { process_G2_G3(line, false); break; }  // Move
+                case 3:  { process_G2_G3(line, true); break; }  // Move
                 case 10: { process_G10(line); break; } // Retract
                 case 11: { process_G11(line); break; } // Unretract
                 case 20: { process_G20(line); break; } // Set Units to Inches
@@ -1876,6 +1876,7 @@ void GCodeProcessor::process_G1(const GCodeReader::GCodeLine& line)
     if (type == EMoveType::Extrude && m_end_position[Z] == 0.0f)
         type = EMoveType::Travel;
 
+    float height_saved = -1;
     if (type == EMoveType::Extrude) {
         double delta_xyz = std::sqrt(sqr(delta_pos[X]) + sqr(delta_pos[Y]) + sqr(delta_pos[Z]));
 #if !ENABLE_VOLUMETRIC_EXTRUSION_PROCESSING
@@ -1935,9 +1936,10 @@ void GCodeProcessor::process_G1(const GCodeReader::GCodeLine& line)
                 // cross section: rectangle + 2 semicircles
                 m_width = float(delta_pos[E] * (M_PI * sqr(filament_radius)) / (delta_xyz * m_height) + (1.0 - 0.25 * M_PI) * m_height);
 
-            // if teh value seems wrong, fall back to circular extrusion from flow
+            // if the value seems wrong, fall back to circular extrusion from flow
             if (m_width > m_height * 10 || m_width < m_height) {
                 m_width = 2 * std::sqrt(m_mm3_per_mm / float(PI));
+                height_saved = m_height;
                 m_height = m_width;
             }
         }
@@ -2114,6 +2116,123 @@ void GCodeProcessor::process_G1(const GCodeReader::GCodeLine& line)
 
     // store move
     store_move_vertex(type);
+
+    //restore
+    if(height_saved > 0)
+        m_height = height_saved;
+}
+
+void GCodeProcessor::emit_G1_from_G2(Vec2d dest, float e, float f) {
+    GCodeReader::FakeGCodeLine line_fake;
+    line_fake.set_x(dest.x());
+    line_fake.set_y(dest.y());
+    //line_fake.set_z(dest.z());
+    line_fake.set_e(e);
+    if( f > 0)
+        line_fake.set_f(f);
+    process_G1(line_fake);
+}
+
+void GCodeProcessor::process_G2_G3(const GCodeReader::GCodeLine& line, bool direct)
+{
+    //check it has everything
+    float i = 0, j = 0;
+    bool has_i = line.has_value('I', i);
+    bool has_j = line.has_value('J', j);
+    if(!((line.has_x() || line.has_y()) && (has_i || has_j)))
+        return;
+    //compute points
+    //  compute mult factor
+    float lengthsScaleFactor = (m_units == EUnits::Inches) ? INCHES_TO_MM : 1.0f;
+    Vec2d p_start = { m_end_position[Axis::X], m_end_position[Axis::Y] };
+    Vec2d p_end = { line.x() * lengthsScaleFactor, line.y() * lengthsScaleFactor };
+    Vec2d p_center = { i * lengthsScaleFactor, j * lengthsScaleFactor };
+    p_center += p_start;
+    //  if relative positioning
+    if ((m_global_positioning_type == EPositioningType::Relative)) {
+        Vec2d p_to_add = { m_start_position[Axis::X], m_start_position[Axis::Y] };
+        p_end += p_to_add;
+        p_center += p_to_add;
+    }
+    // get missing values
+    if (!line.has_x())
+        p_end.x() = p_start.x();
+    if (!line.has_y())
+        p_end.y() = p_start.y();
+    if (!has_i)
+        p_center.x() = p_start.x();
+    if (!has_j)
+        p_center.y() = p_start.y();
+
+    //compute angles
+    double min_dist = m_width == 0 ? 1 : m_width * 4;
+    const double pi2 = 2 * PI;
+    const double radius = (p_start - p_center).norm();
+    const double radius2 = (p_end - p_center).norm();
+    if (std::abs(radius - radius2) > min_dist*0.1) {
+        BOOST_LOG_TRIVIAL(error) << "error, radius from start & end are too different in command '" << line.raw() << "'.";
+        return;
+    }
+    Vec2d p_start_rel = p_start - p_center;
+    Vec2d p_end_rel = p_end - p_center;
+    const double a1 = atan2(p_start_rel.y(), p_start_rel.x());
+    const double a2 = atan2(p_end_rel.y(), p_end_rel.x());
+    double adiff = a2 - a1;
+    //if (a1 < 0)
+    //    a1 += pi2;
+    //if (a2 < 0)
+    //    a2 += pi2;
+    if (adiff > pi2)
+        adiff -= pi2;
+    if (adiff < -pi2)
+        adiff += pi2;
+    //check order
+    if (direct) {
+        if (adiff < 0)
+            adiff += pi2;
+    } else {
+        if (adiff > 0)
+            adiff -= pi2;
+    }
+    double distance = std::abs(adiff * radius);
+    //get E
+    float dE = 0;
+    float start_e = m_start_position[E];
+    bool e_relative = true;
+    if (line.has_e()) {
+        e_relative = (m_e_local_positioning_type == EPositioningType::Relative);
+        double ret = line.e() * lengthsScaleFactor;
+#if ENABLE_VOLUMETRIC_EXTRUSION_PROCESSING
+        if (m_use_volumetric_e) {
+            float filament_diameter = (static_cast<size_t>(m_extruder_id) < m_filament_diameters.size()) ? m_filament_diameters[m_extruder_id] : m_filament_diameters.back();
+            float filament_radius = 0.5f * filament_diameter;
+            double area_filament_cross_section = M_PI * sqr(filament_radius);
+            ret /= area_filament_cross_section;
+        }
+#endif // ENABLE_VOLUMETRIC_EXTRUSION_PROCESSING
+        dE = e_relative ? ret : m_origin[E] + ret - start_e;
+    }
+
+    //compute how much sections we need (~1 per 4 * width/nozzle)
+    int nb_sections = std::min(30, 1 + int(distance / min_dist));
+    Vec2d p_current = p_start;
+    float angle_incr = adiff / nb_sections;
+    float dE_incr = dE / nb_sections;
+    float current_angle = a1;
+    //create smaller sections
+    for (int i = 1; i < nb_sections;i++) {
+        current_angle += angle_incr;
+        p_current = { std::cos(current_angle) * radius, std::sin(current_angle) * radius };
+        p_current += p_center;
+        emit_G1_from_G2(p_current, e_relative ? dE_incr : start_e + i * dE_incr, line.has_f() ? line.f() : -1);
+        // update start position for next fake G1
+        m_start_position[X] = p_current.x();
+        m_start_position[Y] = p_current.y();
+        m_start_position[E] += dE_incr;
+    }
+    //emit last
+    emit_G1_from_G2(p_end, e_relative ? dE_incr : start_e + dE, line.has_f() ? line.f() : -1);
+
 }
 
 void GCodeProcessor::process_G10(const GCodeReader::GCodeLine& line)

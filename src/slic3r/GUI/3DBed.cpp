@@ -337,7 +337,11 @@ void Bed3D::calc_gridlines(const ExPolygon& poly, const BoundingBox& bed_bbox)
     Polylines axes_lines;
     Polylines axes_lines_big;
     Polylines axes_lines_small;
-    for (coord_t x = bed_bbox.min(0), idx= 0; x <= bed_bbox.max(0); x += scale_(5.0), idx++) {
+    coord_t square = scale_(5);
+    while (bed_bbox.radius() > square * 100) {
+        square *= 10;
+    }
+    for (coord_t x = bed_bbox.min(0), idx= 0; x <= bed_bbox.max(0); x += square, idx++) {
         Polyline line;
         line.append(Point(x, bed_bbox.min(1)));
         line.append(Point(x, bed_bbox.max(1)));
@@ -348,7 +352,7 @@ void Bed3D::calc_gridlines(const ExPolygon& poly, const BoundingBox& bed_bbox)
         else
             axes_lines.push_back(line);
     }
-    for (coord_t y = bed_bbox.min(1), idx = 0; y <= bed_bbox.max(1); y += scale_(5.0), idx++) {
+    for (coord_t y = bed_bbox.min(1), idx = 0; y <= bed_bbox.max(1); y += square, idx++) {
         Polyline line;
         line.append(Point(bed_bbox.min(0), y));
         line.append(Point(bed_bbox.max(0), y));

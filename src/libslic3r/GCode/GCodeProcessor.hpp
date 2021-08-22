@@ -507,6 +507,8 @@ namespace Slic3r {
         // Move
         void process_G0(const GCodeReader::GCodeLine& line);
         void process_G1(const GCodeReader::GCodeLine& line);
+        void process_G2_G3(const GCodeReader::GCodeLine& line, bool direct);
+        void emit_G1_from_G2(Vec2d dest, float de, float f);
 
         // Retract
         void process_G10(const GCodeReader::GCodeLine& line);
