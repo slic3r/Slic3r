@@ -5801,9 +5801,11 @@ void GLCanvas3D::_load_print_toolpaths()
             //skirt & brim from objects
             for (const PrintObject* print_object : print->objects()) {
                 if (!print_object->brim().empty())
-                    _3DScene::extrusionentity_to_verts(print_object->brim(), print_zs[i], Point(0, 0), *volume);
+                    for(const PrintInstance& inst : print_object->instances())
+                        _3DScene::extrusionentity_to_verts(print_object->brim(), print_zs[i], inst.shift, *volume);
                 if (print_object->skirt_first_layer())
-                    _3DScene::extrusionentity_to_verts(*print_object->skirt_first_layer(), print_zs[i], Point(0, 0), *volume);
+                    for (const PrintInstance& inst : print_object->instances())
+                        _3DScene::extrusionentity_to_verts(*print_object->skirt_first_layer(), print_zs[i], inst.shift, *volume);
             }
         }
         //skirts from print
@@ -5812,7 +5814,8 @@ void GLCanvas3D::_load_print_toolpaths()
         //skirts from objects
         for (const PrintObject* print_object : print->objects()) {
             if ( !print_object->skirt().empty() && (i != 0 || !print_object->skirt_first_layer()))
-                _3DScene::extrusionentity_to_verts(print_object->skirt(), print_zs[i], Point(0, 0), *volume);
+                for (const PrintInstance& inst : print_object->instances())
+                    _3DScene::extrusionentity_to_verts(print_object->skirt(), print_zs[i], inst.shift, *volume);
         }
         // Ensure that no volume grows over the limits. If the volume is too large, allocate a new one.
         if (volume->indexed_vertex_array.vertices_and_normals_interleaved.size() > MAX_VERTEX_BUFFER_SIZE) {
