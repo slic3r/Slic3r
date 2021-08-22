@@ -4440,12 +4440,20 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Polyhole detection margin");
     def->category = OptionCategory::slicing;
     def->tooltip = L("Maximum defection of a point to the estimated radius of the circle."
-                    "\nAs cylinders are often exported as triangles of varying size, points may not be on the circle circumference."
-                    " This setting allows you some leway to broaden the detection."
-                    "\nIn mm or in % of the radius.");
+        "\nAs cylinders are often exported as triangles of varying size, points may not be on the circle circumference."
+        " This setting allows you some leway to broaden the detection."
+        "\nIn mm or in % of the radius.");
     def->sidetext = L("mm or %");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0.01, false));
+
+    def = this->add("hole_to_polyhole_twisted", coBool);
+    def->label = L("Twisting");
+    def->full_label = L("Polyhole twist");
+    def->category = OptionCategory::slicing;
+    def->tooltip = L("Rotate the polyhole every layer.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(true));
 
     def = this->add("z_offset", coFloat);
     def->label = L("Z offset");
@@ -5596,6 +5604,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "hole_size_threshold",
 "hole_to_polyhole",
 "hole_to_polyhole_threshold",
+"hole_to_polyhole_twisted",
 "z_step",
 "milling_cutter",
 "milling_diameter",

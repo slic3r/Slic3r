@@ -106,6 +106,7 @@ group:Modifying slices
 	line:Convert round vertical holes to polyholes
 		setting:label$_:hole_to_polyhole
 		setting:hole_to_polyhole_threshold
+		setting:hole_to_polyhole_twisted
 	end_line
 group:Other
 	setting:clip_multipart_objects

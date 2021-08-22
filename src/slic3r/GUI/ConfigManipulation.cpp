@@ -430,7 +430,8 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     for (auto el : { "solid_fill_pattern", "infill_connection_solid" })
         toggle_field(el, has_solid_infill); // should be top_solid_layers") > 1 || bottom_solid_layers") > 1
 
-    toggle_field("hole_to_polyhole_threshold", config->opt_bool("hole_to_polyhole"));
+    for (auto el : { "hole_to_polyhole_threshold", "hole_to_polyhole_twisted" })
+        toggle_field(el, config->opt_bool("hole_to_polyhole"));
 
     bool have_default_acceleration = config->option<ConfigOptionFloatOrPercent>("default_acceleration")->value > 0;
     for (auto el : { "perimeter_acceleration", "infill_acceleration",

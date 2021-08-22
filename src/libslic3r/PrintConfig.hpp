@@ -798,6 +798,7 @@ public:
     ConfigOptionFloatOrPercent      infill_anchor_max;
     ConfigOptionBool                hole_to_polyhole;
     ConfigOptionFloatOrPercent      hole_to_polyhole_threshold;
+    ConfigOptionBool                hole_to_polyhole_twisted;
     ConfigOptionInt                 infill_extruder;
     ConfigOptionFloatOrPercent      infill_extrusion_width;
     ConfigOptionInt                 infill_every_layers;
@@ -914,6 +915,7 @@ protected:
         OPT_PTR(infill_anchor_max);
         OPT_PTR(hole_to_polyhole);
         OPT_PTR(hole_to_polyhole_threshold);
+        OPT_PTR(hole_to_polyhole_twisted);
         OPT_PTR(infill_extruder);
         OPT_PTR(infill_extrusion_width);
         OPT_PTR(infill_every_layers);
