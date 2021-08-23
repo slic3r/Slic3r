@@ -2109,8 +2109,8 @@ namespace Slic3r {
         bool _add_sla_support_points_file_to_archive(mz_zip_archive& archive, Model& model);
         bool _add_sla_drain_holes_file_to_archive(mz_zip_archive& archive, Model& model);
         bool _add_print_config_file_to_archive(mz_zip_archive& archive, const DynamicPrintConfig &config, const std::string &file_path);
-        bool _add_model_config_file_to_archive(mz_zip_archive& archive, const Model& model, const IdToObjectDataMap &objects_data, const std::string &file_path);
-        bool _add_custom_gcode_per_print_z_file_to_archive(mz_zip_archive& archive, Model& model, const DynamicPrintConfig* config);
+        bool _add_model_config_file_to_archive(mz_zip_archive& archive, const Model& model, const DynamicPrintConfig& print_config, const IdToObjectDataMap &objects_data, const std::string &file_path);
+        bool _add_custom_gcode_per_print_z_file_to_archive(mz_zip_archive& archive, Model& model, const DynamicPrintConfig& config);
     };
 
     bool _3MF_Exporter::save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config, bool fullpath_sources, const ThumbnailData* thumbnail_data)
@@ -2211,7 +2211,7 @@ namespace Slic3r {
 
         // Adds custom gcode per height file ("Metadata/Prusa_Slicer_custom_gcode_per_print_z.xml").
         // All custom gcode per height of whole Model are stored here
-        if (!_add_custom_gcode_per_print_z_file_to_archive(archive, model, config))
+        if (!_add_custom_gcode_per_print_z_file_to_archive(archive, model, *config))
         {
             close_zip_writer(&archive);
             boost::filesystem::remove(filename);
@@ -2238,21 +2238,21 @@ namespace Slic3r {
         // This file contains all the attributes of all ModelObjects and their ModelVolumes (names, parameter overrides).
         // As there is just a single Indexed Triangle Set data stored per ModelObject, offsets of volumes into their respective Indexed Triangle Set data
         // is stored here as well.
-        if (!_add_model_config_file_to_archive(archive, model, objects_data, MODEL_CONFIG_FILE))
+        if (!_add_model_config_file_to_archive(archive, model, *config, objects_data, MODEL_CONFIG_FILE))
         {
             close_zip_writer(&archive);
             boost::filesystem::remove(filename);
             return false;
         }
         // also add prusa
-        if (!_add_model_config_file_to_archive(archive, model, objects_data, MODEL_PRUSA_CONFIG_FILE))
+        if (!_add_model_config_file_to_archive(archive, model, *config, objects_data, MODEL_PRUSA_CONFIG_FILE))
         {
             close_zip_writer(&archive);
             boost::filesystem::remove(filename);
             return false;
         }
         //  also superslicer for backward comp, just for some version from 2.3.56
-        if (!_add_model_config_file_to_archive(archive, model, objects_data, MODEL_SUPER_CONFIG_FILE))
+        if (!_add_model_config_file_to_archive(archive, model, *config, objects_data, MODEL_SUPER_CONFIG_FILE))
         {
             close_zip_writer(&archive);
             boost::filesystem::remove(filename);
@@ -2787,7 +2787,7 @@ namespace Slic3r {
         return true;
     }
 
-    bool _3MF_Exporter::_add_model_config_file_to_archive(mz_zip_archive& archive, const Model& model, const IdToObjectDataMap &objects_data, const std::string &file_path)
+    bool _3MF_Exporter::_add_model_config_file_to_archive(mz_zip_archive& archive, const Model& model, const DynamicPrintConfig& print_config, const IdToObjectDataMap &objects_data, const std::string &file_path)
     {
         std::stringstream stream;
         // Store mesh transformation in full precision, as the volumes are stored transformed and they need to be transformed back
@@ -2802,6 +2802,7 @@ namespace Slic3r {
             const ModelObject* obj = obj_metadata.second.object;
             if (obj != nullptr)
             {
+                DynamicPrintConfig obj_config_wparent; // part of the chain of config, used as reference to convert configs to prusa config
                 // Output of instances count added because of github #3435, currently not used by PrusaSlicer
                 stream << " <" << OBJECT_TAG << " " << ID_ATTR << "=\"" << obj_metadata.first << "\" " << INSTANCESCOUNT_ATTR << "=\"" << obj->instances.size() << "\">\n";
 
@@ -2812,10 +2813,13 @@ namespace Slic3r {
 
                 // stores object's config data
                 if (file_path == MODEL_PRUSA_CONFIG_FILE) {
+                    assert(obj->config.get().parent == nullptr);
+                    obj_config_wparent = obj->config.get();
+                    obj_config_wparent.parent = &print_config;
                     for (std::string key : obj->config.keys()) {
                         // convert to prusa config
                         std::string value = obj->config.opt_serialize(key);
-                        obj->config.to_prusa(key, value);
+                        obj_config_wparent.to_prusa(key, value);
                         if (!key.empty())
                             stream << "  <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << OBJECT_TYPE << "\" " << KEY_ATTR << "=\"" << key << "\" " << VALUE_ATTR << "=\"" << value << "\"/>\n";
                     }
@@ -2884,10 +2888,13 @@ namespace Slic3r {
 
                             // stores volume's config data
                             if (file_path == MODEL_PRUSA_CONFIG_FILE) {
+                                assert(volume->config.get().parent == nullptr);
+                                DynamicPrintConfig copy_config = volume->config.get(); 
+                                copy_config.parent = &obj_config_wparent;
                                 for (std::string key : volume->config.keys()) {
                                     // convert to prusa config
                                     std::string value = volume->config.opt_serialize(key);
-                                    volume->config.to_prusa(key, value);
+                                    copy_config.to_prusa(key, value);
                                     if (!key.empty())
                                         stream << "   <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << VOLUME_TYPE << "\" " << KEY_ATTR << "=\"" << key << "\" " << VALUE_ATTR << "=\"" << value << "\"/>\n";
                                 }
@@ -2918,7 +2925,7 @@ namespace Slic3r {
         return true;
     }
 
-bool _3MF_Exporter::_add_custom_gcode_per_print_z_file_to_archive( mz_zip_archive& archive, Model& model, const DynamicPrintConfig* config)
+bool _3MF_Exporter::_add_custom_gcode_per_print_z_file_to_archive( mz_zip_archive& archive, Model& model, const DynamicPrintConfig& config)
 {
     std::string out = "";
 
@@ -2940,9 +2947,9 @@ bool _3MF_Exporter::_add_custom_gcode_per_print_z_file_to_archive( mz_zip_archiv
             code_tree.put("<xmlattr>.extra"     , code.extra    );
 
             // add gcode field data for the old version of the PrusaSlicer
-            std::string gcode = code.type == CustomGCode::ColorChange ? config->opt_string("color_change_gcode")    :
-                                code.type == CustomGCode::PausePrint  ? config->opt_string("pause_print_gcode")     :
-                                code.type == CustomGCode::Template    ? config->opt_string("template_custom_gcode") :
+            std::string gcode = code.type == CustomGCode::ColorChange ? config.opt_string("color_change_gcode")    :
+                                code.type == CustomGCode::PausePrint  ? config.opt_string("pause_print_gcode")     :
+                                code.type == CustomGCode::Template    ? config.opt_string("template_custom_gcode") :
                                 code.type == CustomGCode::ToolChange  ? "tool_change"   : code.extra; 
             code_tree.put("<xmlattr>.gcode"     , gcode   );
         }

@@ -1958,8 +1958,6 @@ public:
     // Not thread safe! Should not be called from other than the main thread!
     void                touch() { m_timestamp = ++ s_last_timestamp; }
 
-    void                to_prusa(t_config_option_key& opt_key, std::string& value) const
-        { m_data.to_prusa(opt_key, value); }
 private:
     friend class cereal::access;
     template<class Archive> void serialize(Archive& ar) { ar(m_timestamp); ar(m_data); }
