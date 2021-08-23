@@ -678,7 +678,8 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
         }
     }
 
-    if (m_flavor == gcfMarlin) {
+    const ConfigOptionEnum<MachineLimitsUsage>* machine_limits_usage = config.option<ConfigOptionEnum<MachineLimitsUsage>>("machine_limits_usage");
+    if (machine_limits_usage && machine_limits_usage->value != MachineLimitsUsage::Ignore) {
         const ConfigOptionFloats* machine_max_acceleration_x = config.option<ConfigOptionFloats>("machine_max_acceleration_x");
         if (machine_max_acceleration_x != nullptr)
             m_time_processor.machine_limits.machine_max_acceleration_x.values = machine_max_acceleration_x->values;
@@ -2494,6 +2495,7 @@ void GCodeProcessor::process_M204(const GCodeReader::GCodeLine& line)
 
 void GCodeProcessor::process_M205(const GCodeReader::GCodeLine& line)
 {
+    // Note: Sprinter / Marlin gcode
     for (size_t i = 0; i < static_cast<size_t>(PrintEstimatedTimeStatistics::ETimeMode::Count); ++i) {
         if (static_cast<PrintEstimatedTimeStatistics::ETimeMode>(i) == PrintEstimatedTimeStatistics::ETimeMode::Normal ||
             m_time_processor.machine_envelope_processing_enabled) {
@@ -2579,6 +2581,7 @@ void GCodeProcessor::process_M402(const GCodeReader::GCodeLine& line)
 
 void GCodeProcessor::process_M566(const GCodeReader::GCodeLine& line)
 {
+    // RepRapFirmware gcode
     for (size_t i = 0; i < static_cast<size_t>(PrintEstimatedTimeStatistics::ETimeMode::Count); ++i) {
         if (line.has_x())
             set_option_value(m_time_processor.machine_limits.machine_max_jerk_x, i, line.x() * MMMIN_TO_MMSEC);
