@@ -2742,7 +2742,7 @@ wxString Plater::priv::get_export_file(GUI::FileType file_type)
 
     wxFileDialog dlg(q, dlg_title,
         from_path(output_file.parent_path()), from_path(output_file.filename()),
-        wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+        wildcard, wxFD_SAVE |(wxGetApp().app_config->get_show_overwrite_dialog() ? wxFD_OVERWRITE_PROMPT : 0) );
 
     if (dlg.ShowModal() != wxID_OK)
         return wxEmptyString;
@@ -5500,7 +5500,7 @@ void Plater::export_gcode(bool prefer_removable)
             start_dir,
             from_path(default_output_file.filename()),
             GUI::file_wildcards((printer_technology() == ptFFF) ? FT_GCODE : FT_PNGZIP, default_output_file.extension().string()),
-            wxFD_SAVE | wxFD_OVERWRITE_PROMPT
+            wxFD_SAVE | (wxGetApp().app_config->get_show_overwrite_dialog() ? wxFD_OVERWRITE_PROMPT : 0)
         );
         if (dlg.ShowModal() == wxID_OK)
             output_path = into_path(dlg.GetPath());

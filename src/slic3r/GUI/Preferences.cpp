@@ -77,6 +77,15 @@ void PreferencesDialog::build()
 		option = Option(def, "remember_output_path");
 	m_optgroup_general->append_single_option_line(option);
 
+	ConfigOptionDef def;
+	Option option(def, "");
+	def.label = L("Show overwrite dialog.");
+	def.type = coBool;
+	def.tooltip = L("If this is enabled, Slic3r will prompt for when overwriting files from save dialogs.");
+	def.set_default_value(new ConfigOptionBool{ app_config->has("show_overwrite_dialog") ? app_config->get("show_overwrite_dialog") == "1" : true });
+		option = Option(def, "show_overwrite_dialog");
+	m_optgroup_general->append_single_option_line(option);
+
 	def.label = L("Auto-center parts");
 	def.type = coBool;
 	def.tooltip = L("If this is enabled, Slic3r will auto-center objects "

@@ -64,6 +64,9 @@ void AppConfig::set_defaults()
         if (get("freecad_path").empty())
             set("freecad_path", ".");
 
+        if (get("show_overwrite_dialog").empty())
+            set("show_overwrite_dialog", "1");
+
         if (get("tab_icon_size").empty())
             set("tab_icon_size", "32");
 
