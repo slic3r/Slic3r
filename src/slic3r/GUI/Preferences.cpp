@@ -215,6 +215,13 @@ void PreferencesDialog::build()
 		option = Option(def, "show_drop_project_dialog");
 		m_optgroups_general.back()->append_single_option_line(option);
 
+		def.label = L("Show overwrite dialog.");
+		def.type = coBool;
+		def.tooltip = L("If this is enabled, Slic3r will prompt for when overwriting files from save dialogs.");
+		def.set_default_value(new ConfigOptionBool{ app_config->has("show_overwrite_dialog") ? app_config->get("show_overwrite_dialog") == "1" : true });
+		option = Option(def, "show_overwrite_dialog");
+		m_optgroups_general.back()->append_single_option_line(option);
+
 		
 #if __APPLE__
 		def.label = (boost::format(_u8L("Allow just a single %1% instance")) % SLIC3R_APP_NAME).str();
@@ -550,8 +557,9 @@ void PreferencesDialog::build()
 
 void PreferencesDialog::accept()
 {
-    if (m_values.find("no_defaults") != m_values.end())
-        warning_catcher(this, wxString::Format(_L("You need to restart %s to make the changes effective."), SLIC3R_APP_NAME));
+	if (m_values.find("no_defaults") != m_values.end()) {
+		warning_catcher(this, wxString::Format(_L("You need to restart %s to make the changes effective."), SLIC3R_APP_NAME));
+	}
 
 	auto app_config = get_app_config();
 

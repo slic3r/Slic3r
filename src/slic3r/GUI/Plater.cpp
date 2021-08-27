@@ -2750,7 +2750,7 @@ wxString Plater::priv::get_export_file(GUI::FileType file_type)
 
     wxFileDialog dlg(q, dlg_title,
         from_path(output_file.parent_path()), from_path(output_file.filename()),
-        wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+        wildcard, wxFD_SAVE |(wxGetApp().app_config->get_show_overwrite_dialog() ? wxFD_OVERWRITE_PROMPT : 0) );
 
     if (dlg.ShowModal() != wxID_OK)
         return wxEmptyString;
@@ -5532,12 +5532,12 @@ void Plater::export_gcode(bool prefer_removable)
 
     fs::path output_path;
     {
-    	std::string ext = default_output_file.extension().string();
+        std::string ext = default_output_file.extension().string();
         wxFileDialog dlg(this, (printer_technology() == ptFFF) ? _L("Save G-code file as:") : _L("Save SL1 / SL1S file as:"),
             start_dir,
             from_path(default_output_file.filename()),
             GUI::file_wildcards((printer_technology() == ptFFF) ? FT_GCODE : boost::iequals(ext, ".sl1s") ? FT_SL1S : FT_SL1, ext),
-            wxFD_SAVE | wxFD_OVERWRITE_PROMPT
+            wxFD_SAVE | (wxGetApp().app_config->get_show_overwrite_dialog() ? wxFD_OVERWRITE_PROMPT : 0)
         );
             if (dlg.ShowModal() == wxID_OK)
             output_path = into_path(dlg.GetPath());

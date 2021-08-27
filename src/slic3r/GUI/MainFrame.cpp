@@ -1700,7 +1700,7 @@ void MainFrame::quick_slice(const int qs)
         wxFileDialog dlg(this, from_u8((boost::format(_utf8(L("Save %s file as:"))) % ((qs & qsExportSVG) ? _L("SVG") : _L("G-code"))).str()),
             wxGetApp().app_config->get_last_output_dir(get_dir_name(output_file)), get_base_name(input_file), 
             qs & qsExportSVG ? file_wildcards(FT_SVG) : file_wildcards(FT_GCODE),
-            wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+            wxFD_SAVE | (wxGetApp().app_config->get_show_overwrite_dialog() ? wxFD_OVERWRITE_PROMPT : 0));
         if (dlg.ShowModal() != wxID_OK)
             return;
         output_file = dlg.GetPath();
@@ -1711,7 +1711,7 @@ void MainFrame::quick_slice(const int qs)
     else if (qs & qsExportPNG) {
         wxFileDialog dlg(this, _L("Save zip file as:"),
             wxGetApp().app_config->get_last_output_dir(get_dir_name(output_file)),
-            get_base_name(output_file), "*.sl1", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+            get_base_name(output_file), "*.sl1", wxFD_SAVE | (wxGetApp().app_config->get_show_overwrite_dialog() ? wxFD_OVERWRITE_PROMPT : 0));
         if (dlg.ShowModal() != wxID_OK)
             return;
         output_file = dlg.GetPath();
@@ -1773,7 +1773,7 @@ void MainFrame::repair_stl()
     {
         wxFileDialog dlg( this, L("Save OBJ file (less prone to coordinate errors than STL) as:"),
                                         get_dir_name(output_file), get_base_name(output_file, ".obj"),
-                                        file_wildcards(FT_OBJ), wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+                                        file_wildcards(FT_OBJ), wxFD_SAVE | (wxGetApp().app_config->get_show_overwrite_dialog() ? wxFD_OVERWRITE_PROMPT : 0));
         if (dlg.ShowModal() != wxID_OK)
             return;
         output_file = dlg.GetPath();
