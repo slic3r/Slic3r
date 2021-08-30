@@ -2370,18 +2370,19 @@ void Print::_make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, Ex
                     }
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_instances.size());
+        coord_t ear_detection_length = scale_t(object->config().brim_ears_detection_length.value);
         for (const PrintInstance &copy_pt : object->m_instances)
             for (const ExPolygon &poly : object_islands) {
                 islands.push_back(poly);
                 islands.back().translate(copy_pt.shift.x(), copy_pt.shift.y());
                 Polygon decimated_polygon = poly.contour;
                 // brim_ears_detection_length codepath
-                if (object->config().brim_ears_detection_length.value > 0) {
+                if (ear_detection_length > 0) {
                     //decimate polygon
                     Points points = poly.contour.points;
                     points.push_back(points.front());
-                    points = MultiPoint::_douglas_peucker(points, scale_(object->config().brim_ears_detection_length.value));
-                    if (points.size() > 1) {
+                    points = MultiPoint::_douglas_peucker(points, ear_detection_length);
+                    if (points.size() > 4) { //don't decimate if it's going to be below 4 points, as it's surely enough to fill everything anyway
                         points.erase(points.end() - 1);
                         decimated_polygon.points = points;
                     }
