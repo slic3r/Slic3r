@@ -99,11 +99,10 @@ extern Semver SEMVER;
 template<typename T, typename Q>
 inline T unscale(Q v) { return T(v) * T(SCALING_FACTOR); }
 
-inline double unscaled(double v) { return v * SCALING_FACTOR; }
-inline coordf_t unscale_(coord_t v) { return v * SCALING_FACTOR; }
-inline coord_t scale_t(coordf_t v) { return (coord_t)(v * UNSCALING_FACTOR); }
-inline double scale_d(coordf_t v) { return (v * UNSCALING_FACTOR); }
-inline double scale_d(coord_t v) { return (double(v) * UNSCALING_FACTOR); }
+inline double unscaled(coord_t v) { return double(v) * SCALING_FACTOR; }
+inline double unscaled(coordf_t v) { return v * SCALING_FACTOR; }
+inline coord_t scale_t(double v) { return coord_t(v * UNSCALING_FACTOR); }
+inline coordf_t scale_d(double v) { return coordf_t(v * UNSCALING_FACTOR); }
 
 enum Axis { 
 	X=0,

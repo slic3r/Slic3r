@@ -88,10 +88,10 @@ public:
 		assert(m_bbox.contains(p2));
 		p1 -= m_bbox.min;
 		p2 -= m_bbox.min;
-		assert(p1.x() >= 0 && p1.x() < m_cols * m_resolution);
-		assert(p1.y() >= 0 && p1.y() < m_rows * m_resolution);
-		assert(p2.x() >= 0 && p2.x() < m_cols * m_resolution);
-		assert(p2.y() >= 0 && p2.y() < m_rows * m_resolution);
+		assert(p1.x() >= 0 && p1.x() < coord_t(m_cols) * m_resolution);
+		assert(p1.y() >= 0 && p1.y() < coord_t(m_rows) * m_resolution);
+		assert(p2.x() >= 0 && p2.x() < coord_t(m_cols) * m_resolution);
+		assert(p2.y() >= 0 && p2.y() < coord_t(m_rows) * m_resolution);
 		// Get the cells of the end points.
 		coord_t ix = p1(0) / m_resolution;
 		coord_t iy = p1(1) / m_resolution;
@@ -248,9 +248,9 @@ public:
 	std::pair<std::vector<std::pair<size_t, size_t>>::const_iterator, std::vector<std::pair<size_t, size_t>>::const_iterator> cell_data_range(coord_t row, coord_t col) const
 	{
 		assert(row >= 0);
-		assert(row < m_rows);
+		assert(row < (coord_t)m_rows);
 		assert(col >= 0);
-		assert(col < m_cols);
+		assert(col < (coord_t)m_cols);
 		const EdgeGrid::Grid::Cell &cell = m_cells[row * m_cols + col];
 		return std::make_pair(m_cell_data.begin() + cell.begin, m_cell_data.begin() + cell.end);
 	}

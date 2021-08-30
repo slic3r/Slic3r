@@ -175,7 +175,7 @@ std::string Wipe::wipe(GCode& gcodegen, bool toolchange)
         /*  Calculate how long we need to travel in order to consume the required
             amount of retraction. In other words, how far do we move in XY at wipe_speed
             for the time needed to consume retract_length at retract_speed?  */
-        double wipe_dist = scale_(length / gcodegen.writer().tool()->retract_speed() * wipe_speed);
+        coordf_t wipe_dist = scale_d(length / gcodegen.writer().tool()->retract_speed() * wipe_speed);
 
         /*  Take the stored wipe path and replace first point with the current actual position
             (they might be different, for example, in case of loop clipping).  */
@@ -2875,8 +2875,8 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     // apply the small/external? perimeter speed
     if (speed == -1 && is_perimeter(paths.front().role()) && loop.length() <=
         scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)))) {
-        double min_length = scale_(this->m_config.small_perimeter_min_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
-        double max_length = scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        coordf_t min_length = scale_d(this->m_config.small_perimeter_min_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        coordf_t max_length = scale_d(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
         if (loop.length() <= min_length) {
             speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
         } else {
@@ -2923,7 +2923,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
         Vec2d  p1 = paths.front().polyline.points.front().cast<double>();
         Vec2d  p2 = paths.front().polyline.points[1].cast<double>();
         Vec2d  v = p2 - p1;
-        double nd = scale_(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, paths.front().width));
+        double nd = scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, paths.front().width));
         double l2 = v.squaredNorm();
         // Shift by no more than a nozzle diameter.
         //FIXME Hiding the seams will not work nicely for very densely discretized contours!
@@ -3071,7 +3071,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
         Vec2d  p1 = paths.front().polyline.points.front().cast<double>();
         Vec2d  p2 = paths.front().polyline.points[1].cast<double>();
         Vec2d  v = p2 - p1;
-        double nd = scale_(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, paths.front().width));
+        coordf_t nd = scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, paths.front().width));
         double l2 = v.squaredNorm();
         // Shift by no more than a nozzle diameter.
         //FIXME Hiding the seams will not work nicely for very densely discretized contours!
@@ -3192,8 +3192,8 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     // apply the small perimeter speed
     if (speed == -1 && is_perimeter(paths.front().role()) && loop.length() <=
         scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)))) {
-        double min_length = scale_(this->m_config.small_perimeter_min_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
-        double max_length = scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        double min_length = scale_d(this->m_config.small_perimeter_min_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        double max_length = scale_d(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
         if (loop.length() <= min_length) {
             speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
         } else {
@@ -3228,7 +3228,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
 
         //extra wipe before the little move.
         if (EXTRUDER_CONFIG_WITH_DEFAULT(wipe_extra_perimeter, 0) > 0) {
-            coord_t wipe_dist = scale_(EXTRUDER_CONFIG_WITH_DEFAULT(wipe_extra_perimeter,0));
+            coordf_t wipe_dist = scale_(EXTRUDER_CONFIG_WITH_DEFAULT(wipe_extra_perimeter,0));
             ExtrusionPaths paths_wipe;
             for (int i = 0; i < paths.size(); i++) {
                 ExtrusionPath& path = paths[i];
@@ -3286,7 +3286,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         Vec2d  current_pos = current_point.cast<double>();
         Vec2d  next_pos = next_point.cast<double>();
         Vec2d  vec_dist  = next_pos - current_pos;
-        double nd = scale_(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter,0));
+        double nd = scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter,0));
         double l2 = vec_dist.squaredNorm();
         // Shift by no more than a nozzle diameter.
         //FIXME Hiding the seams will not work nicely for very densely discretized contours!
@@ -3379,7 +3379,7 @@ void GCode::use(const ExtrusionEntityCollection &collection) {
 std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &description, double speed_mm_per_sec) {
 
     ExtrusionPath simplifed_path = path;
-    const double scaled_min_length = scale_(this->config().min_length.value);
+    const coordf_t scaled_min_length = scale_d(this->config().min_length.value);
     const double max_gcode_per_second = this->config().max_gcode_per_second.value;
     double current_scaled_min_length = scaled_min_length;
     if (max_gcode_per_second > 0) {
@@ -3390,7 +3390,7 @@ std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &de
         //ensure that it's a continous thing
         if (m_last_too_small.last_point().distance_to_square(path.first_point()) < current_scaled_min_length * current_scaled_min_length /*&& m_last_too_small.first_point().distance_to_square(path.first_point()) > EPSILON*/) {
             //descr += " ! fusion " + std::to_string(simplifed_path.polyline.points.size());
-            simplifed_path.height = (m_last_too_small.height * m_last_too_small.length() + simplifed_path.height * simplifed_path.length()) / (m_last_too_small.length() + simplifed_path.length());
+            simplifed_path.height = float(m_last_too_small.height * m_last_too_small.length() + simplifed_path.height * simplifed_path.length()) / float(m_last_too_small.length() + simplifed_path.length());
             simplifed_path.mm3_per_mm = (m_last_too_small.mm3_per_mm * m_last_too_small.length() + simplifed_path.mm3_per_mm * simplifed_path.length()) / (m_last_too_small.length() + simplifed_path.length());
             simplifed_path.polyline.points.insert(simplifed_path.polyline.points.begin(), m_last_too_small.polyline.points.begin(), m_last_too_small.polyline.points.end()-1);
             assert(simplifed_path.height == simplifed_path.height);
@@ -3560,11 +3560,11 @@ void GCode::_post_process(std::string& what, bool flush) {
         if (this->m_fan_mover.get() == nullptr)
             this->m_fan_mover.reset(new Slic3r::FanMover(
                 this->m_writer,
-                std::abs(this->config().fan_speedup_time.value), 
+                std::abs((float)this->config().fan_speedup_time.value), 
                 this->config().fan_speedup_time.value > 0,
                 this->config().use_relative_e_distances.value,
                 this->config().fan_speedup_overhangs.value,
-                this->config().fan_kickstart.value));
+                (float)this->config().fan_kickstart.value));
         what = this->m_fan_mover->process_gcode(what, flush);
     }
 
@@ -3695,7 +3695,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
                             double mult2 = 1 - coeff;
                             double sum = 0;
                             //Create a point
-                            Point inter_point1 = line.point_at(scale_(length1));
+                            Point inter_point1 = line.point_at(scale_d(length1));
                             //extrude very reduced
                             gcode += m_writer.extrude_to_xy(
                                 this->point_to_gcode(inter_point1),
@@ -3704,7 +3704,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
                             sum += e_per_mm * (length1) * mult1;
 
                             if (line_length - length1 > length2) {
-                                Point inter_point2 = line.point_at(scale_(length2));
+                                Point inter_point2 = line.point_at(scale_d(length2));
                                 //extrude reduced
                                 gcode += m_writer.extrude_to_xy(
                                     this->point_to_gcode(inter_point2),
@@ -3758,7 +3758,7 @@ double_t GCode::_compute_speed_mm_per_sec(const ExtrusionPath& path, double spee
     if (speed < 0) {
         //if speed == -1, then it's means "choose yourself, but if it's -1 < speed <0 , then it's a scaling from small_periemter.
         //it's a bit hacky, so if you want to rework it, help yourself.
-        float factor = (-speed);
+        float factor = float(-speed);
         if (path.role() == erPerimeter) {
             speed = m_config.get_abs_value("perimeter_speed");
         } else if (path.role() == erExternalPerimeter) {
@@ -3790,7 +3790,7 @@ double_t GCode::_compute_speed_mm_per_sec(const ExtrusionPath& path, double spee
         }
         //don't modify bridge speed
         if (factor < 1 && !(is_bridge(path.role()))) {
-            float small_speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+            float small_speed = (float)m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
             //apply factor between feature speed and small speed
             speed = (speed * factor) + double((1.f - factor) * small_speed);
         }
@@ -3885,7 +3885,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             coordf_t length = poly_start.length();
             if (length > SCALED_EPSILON) {
                 Polyline poly_end;
-                coordf_t min_length = scale_(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0.5)) * 20;
+                coordf_t min_length = scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0.5)) * 20;
                 if (poly_start.size() > 2 && length > min_length * 3) {
                     //if complex travel, try to deccelerate only at the end, unless it's less than ~ 20 nozzle
                     if (poly_start.lines().back().length() < min_length) {
@@ -4304,9 +4304,9 @@ Vec2d GCode::point_to_gcode(const Point &point) const
 // convert a model-space scaled point into G-code coordinates
 Vec3d GCode::point_to_gcode(const Point &point, const coord_t z_offset) const {
     Vec2d extruder_offset = EXTRUDER_CONFIG_WITH_DEFAULT(extruder_offset, Vec2d(0, 0)); //FIXME : mill ofsset
-    Vec3d ret_vec(unscale_(point.x()) + m_origin.x() - extruder_offset.x(),
-        unscale_(point.y()) + m_origin.y() - extruder_offset.y(),
-        unscale_(z_offset));
+    Vec3d ret_vec(unscaled(point.x()) + m_origin.x() - extruder_offset.x(),
+        unscaled(point.y()) + m_origin.y() - extruder_offset.y(),
+        unscaled(z_offset));
     return ret_vec;
 }
 

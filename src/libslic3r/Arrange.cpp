@@ -528,10 +528,10 @@ inline coord_t width(const BoundingBox& box) { return box.max.x() - box.min.x();
 inline coord_t height(const BoundingBox& box) { return box.max.y() - box.min.y(); }
 inline double area(const BoundingBox& box) { return double(width(box)) * height(box); }
 inline double poly_area(const Points &pts) { return std::abs(Polygon::area(pts)); }
-inline double distance_to(const Point& p1, const Point& p2)
+inline coordf_t distance_to(const Point& p1, const Point& p2)
 {
-    double dx = p2.x() - p1.x();
-    double dy = p2.y() - p1.y();
+    coordf_t dx = coordf_t(p2.x() - p1.x());
+    coordf_t dy = coordf_t(p2.y() - p1.y());
     return std::sqrt(dx*dx + dy*dy);
 }
 

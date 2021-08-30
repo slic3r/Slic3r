@@ -174,8 +174,8 @@ FillConcentricWGapFill::fill_surface_extrusion(
     ExPolygons gapfill_areas = diff_ex({ surface->expolygon }, offset_ex(expp, double(scale_(0.5 * this->get_spacing()))));
     gapfill_areas = union_ex(gapfill_areas, true);
     if (gapfill_areas.size() > 0) {
-        double minarea = params.flow.scaled_width() * params.flow.scaled_width();
-        if (params.config != nullptr) minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow.width)) * params.flow.scaled_width();
+        double minarea = double(params.flow.scaled_width()) * double(params.flow.scaled_width());
+        if (params.config != nullptr) minarea = scale_d(params.config->gap_fill_min_area.get_abs_value(params.flow.width)) * double(params.flow.scaled_width());
         for (int i = 0; i < gapfill_areas.size(); i++) {
             if (gapfill_areas[i].area() < minarea) {
                 gapfill_areas.erase(gapfill_areas.begin() + i);

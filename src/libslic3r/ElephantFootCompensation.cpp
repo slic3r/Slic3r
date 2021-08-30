@@ -536,14 +536,14 @@ static bool validate_expoly_orientation(const ExPolygon &expoly)
 #endif /* NDEBUG */
 
 ExPolygon elephant_foot_compensation(const ExPolygon &input_expoly, double min_contour_width, const double compensation)
-{	
+{
 	assert(validate_expoly_orientation(input_expoly));
 
-	double scaled_compensation = scale_(compensation);
-    min_contour_width = scale_(min_contour_width);
-	double min_contour_width_compensated = min_contour_width + 2. * scaled_compensation;
+	coordf_t scaled_compensation = scale_d(compensation);
+	coordf_t scaled_min_contour_width = scale_d(min_contour_width);
+	coordf_t min_contour_width_compensated = scaled_min_contour_width + 2. * scaled_compensation;
 	// Make the search radius a bit larger for the averaging in contour_distance over a fan of rays to work.
-	double search_radius = min_contour_width_compensated + min_contour_width * 0.5;
+	coordf_t search_radius = min_contour_width_compensated + scaled_min_contour_width * 0.5;
 
 	BoundingBox bbox = get_extents(input_expoly.contour);
 	Point 		bbox_size = bbox.size();
@@ -578,12 +578,12 @@ ExPolygon elephant_foot_compensation(const ExPolygon &input_expoly, double min_c
 			for (float &d : dists) {
 	//			printf("Point %d, Distance: %lf\n", int(&d - dists.data()), unscale<double>(d));
 				// Convert contour width to available compensation distance.
-				if (d < min_contour_width)
+				if (d < scaled_min_contour_width)
 					d = 0.f;
 				else if (d > min_contour_width_compensated)
 					d = - float(scaled_compensation);
 				else
-					d = - (d - float(min_contour_width)) / 2.f;
+					d = - (d - float(scaled_min_contour_width)) / 2.f;
 				assert(d >= - float(scaled_compensation) && d <= 0.f);
 			}
 	//		smooth_compensation(dists, 0.4f, 10);

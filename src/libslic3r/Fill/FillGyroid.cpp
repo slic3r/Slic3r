@@ -184,7 +184,7 @@ void FillGyroid::_fill_surface_single(
     if (! polylines.empty()) {
         // Remove very small bits, but be careful to not remove infill lines connecting thin walls!
         // The infill perimeter lines should be separated by around a single infill line width.
-        const double minlength = scale_(0.8 * this->get_spacing());
+        const coordf_t minlength = scale_d(0.8 * this->get_spacing());
         polylines.erase(
             std::remove_if(polylines.begin(), polylines.end(), [minlength](const Polyline &pl) { return pl.length() < minlength; }),
             polylines.end());

@@ -161,11 +161,11 @@ BoundingBox3Base<PointClass>::size() const
 template Vec3f BoundingBox3Base<Vec3f>::size() const;
 template Vec3d BoundingBox3Base<Vec3d>::size() const;
 
-template <class PointClass> double BoundingBoxBase<PointClass>::radius() const
+template <class PointClass> coordf_t BoundingBoxBase<PointClass>::radius() const
 {
     assert(this->defined);
-    double x = this->max(0) - this->min(0);
-    double y = this->max(1) - this->min(1);
+    coordf_t x = coordf_t(this->max(0) - this->min(0));
+    coordf_t y = coordf_t(this->max(1) - this->min(1));
     return 0.5 * sqrt(x*x+y*y);
 }
 template double BoundingBoxBase<Point>::radius() const;

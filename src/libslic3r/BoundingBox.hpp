@@ -43,7 +43,7 @@ public:
     void merge(const BoundingBoxBase<PointClass> &bb);
     void scale(double factor);
     PointClass size() const;
-    double radius() const;
+    coordf_t radius() const;
     void translate(coordf_t x, coordf_t y) { assert(this->defined); PointClass v(x, y); this->min += v; this->max += v; }
     void translate(const Vec2d &v) { this->min += v; this->max += v; }
     void offset(coordf_t delta);

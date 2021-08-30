@@ -27,7 +27,7 @@ std::string to_string_nozero(double value, int32_t max_precision) {
         //first, get the int part, to see how many digit it takes
         int long10 = 0;
         if (intpart > 9)
-            long10 = std::floor(std::log10(std::abs(intpart)));
+            long10 = (int)std::floor(std::log10(std::abs(intpart)));
         //set the usable precision: there is only 15-16 decimal digit in a double
         ss << std::fixed << std::setprecision(int(std::min(15 - long10, int(max_precision)))) << value;
         std::string ret = ss.str();

@@ -2819,8 +2819,8 @@ bool FillRectilinear::fill_surface_by_lines(const Surface *surface, const FillPa
     ExPolygonWithOffset poly_with_offset(
         surface->expolygon, 
         - rotate_vector.first, 
-        float(scale_(0 /*this->overlap*/ - (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->get_spacing())),
-        float(scale_(0 /*this->overlap*/ - 0.5f * this->get_spacing())));
+        (scale_t(0 /*this->overlap*/ - (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->get_spacing())),
+        (scale_t(0 /*this->overlap*/ - 0.5f * this->get_spacing())));
     if (poly_with_offset.n_contours_inner == 0) {
         // Not a single infill line fits.
         //Prusa: maybe one shall trigger the gap fill here?
@@ -2956,24 +2956,24 @@ bool FillRectilinear::fill_surface_by_multilines(const Surface* surface, FillPar
 {
     assert(sweep_params.size() > 1);
     assert(!params.full_infill());
-    params.density /= double(sweep_params.size());
+    params.density /= float(sweep_params.size());
     assert(params.density > 0.0001f && params.density <= 1.f);
 
-    ExPolygonWithOffset poly_with_offset_base(surface->expolygon, 0, float(scale_(this->overlap - 0.5 * this->get_spacing())));
+    ExPolygonWithOffset poly_with_offset_base(surface->expolygon, 0, scale_t(this->overlap - 0.5 * this->get_spacing()));
     if (poly_with_offset_base.n_contours == 0)
         // Not a single infill line fits.
         return true;
 
     Polylines fill_lines;
-    coord_t line_width = coord_t(scale_(this->get_spacing()));
-    coord_t line_spacing = coord_t(scale_(this->get_spacing()) / params.density);
+    coord_t line_width = scale_t(this->get_spacing());
+    coord_t line_spacing = scale_t(this->get_spacing() / params.density);
     std::pair<float, Point> rotate_vector = this->_infill_direction(surface);
     for (const SweepParams& sweep : sweep_params) {
         size_t n_fill_lines_initial = fill_lines.size();
 
         // Rotate polygons so that we can work with vertical lines here
         double angle = rotate_vector.first + sweep.angle_base;
-        ExPolygonWithOffset poly_with_offset(poly_with_offset_base, -angle);
+        ExPolygonWithOffset poly_with_offset(poly_with_offset_base, float(-angle));
         BoundingBox bounding_box = poly_with_offset.bounding_box_src();
         // Don't produce infill lines, which fully overlap with the infill perimeter.
         coord_t     x_min = bounding_box.min.x() + line_width + coord_t(SCALED_EPSILON);
@@ -3096,10 +3096,10 @@ FillRectilinearPeri::fill_surface_extrusion(const Surface *surface, const FillPa
     Polylines polylines_1;
     //generate perimeter:
     ExPolygons path_perimeter = offset2_ex(surface->expolygon, 
-        scale_(-this->get_spacing()), scale_(this->get_spacing() / 2), 
-        ClipperLib::jtMiter, scale_(this->get_spacing()) * 10);
+        scale_d(-this->get_spacing()), scale_d(this->get_spacing() / 2), 
+        ClipperLib::jtMiter, scale_d(this->get_spacing()) * 10);
     //fix a bug that can happens when (positive) offsetting with a big miter limit and two island merge. See https://github.com/supermerill/SuperSlicer/issues/609
-    path_perimeter = intersection_ex(path_perimeter, offset_ex(surface->expolygon, scale_(-this->get_spacing() / 2)));
+    path_perimeter = intersection_ex(path_perimeter, offset_ex(surface->expolygon, scale_d(-this->get_spacing() / 2)));
     for (ExPolygon &expolygon : path_perimeter) {
         expolygon.contour.make_counter_clockwise();
         polylines_1.push_back(expolygon.contour.split_at_index(0));
@@ -3133,7 +3133,7 @@ FillRectilinearPeri::fill_surface_extrusion(const Surface *surface, const FillPa
     Polylines polylines_2;
     bool canFill = true;
     //50% overlap with the new perimeter
-    ExPolygons path_inner = offset2_ex(surface->expolygon, scale_(-this->get_spacing() * 1.5), scale_(this->get_spacing()));
+    ExPolygons path_inner = offset2_ex(surface->expolygon, scale_d(-this->get_spacing() * 1.5), scale_d(this->get_spacing()));
     for (ExPolygon &expolygon : path_inner) {
         Surface surfInner(*surface, expolygon);
         if (!fill_surface_by_lines(&surfInner, params, 0.f, 0.f, polylines_2)) {
@@ -3203,7 +3203,7 @@ Polylines FillScatteredRectilinear::fill_surface(const Surface *surface, const F
     Polylines polylines_out;
 
     // Offset the pattern randomly using the current layer index as the generator
-    float offset = randomFloatFromSeed((uint32_t) layer_id) * 0.5f * this->get_spacing();
+    float offset = (float)randomFloatFromSeed((uint32_t) layer_id) * 0.5f * this->get_spacing();
 
     if (!fill_surface_by_lines(surface, params, 0.f, offset, polylines_out)) {
         printf("FillScatteredRectilinear::fill_surface() failed to fill a region.\n");
@@ -3307,7 +3307,7 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
                     current_extrusion->push_back(last, tooth_zhop);
 
                     // add new extrusion that go down with no nozzle_flow / sqrt(2)
-                    extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow.mm3_per_mm() / std::sqrt(2), params.flow.width / std::sqrt(2), params.flow.height));
+                    extrusions->paths.push_back(ExtrusionPath3D(good_role, params.flow.mm3_per_mm() / std::sqrt(2), float(params.flow.width / std::sqrt(2)), params.flow.height));
                     current_extrusion = &(extrusions->paths.back());
                     current_extrusion->push_back(last, tooth_zhop);
                     //add next point
@@ -3438,7 +3438,7 @@ FillRectilinearWGapFill::fill_surface_extrusion(const Surface *surface, const Fi
             eec->entities, polylines_rectilinear,
             good_role,
             params.flow.mm3_per_mm() * params.flow_mult * flow_mult_exact_volume,
-            params.flow.width * params.flow_mult * flow_mult_exact_volume,
+            params.flow.width * params.flow_mult * float(flow_mult_exact_volume),
             params.flow.height);
 
         coll_nosort->entities.push_back(eec);
@@ -3452,7 +3452,7 @@ FillRectilinearWGapFill::fill_surface_extrusion(const Surface *surface, const Fi
     gapfill_areas.insert(gapfill_areas.end(), unextruded_areas.begin(), unextruded_areas.end());
     gapfill_areas = union_ex(gapfill_areas, true);
     if (gapfill_areas.size() > 0) {
-        const double minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow.width)) * params.flow.scaled_width();
+        const double minarea = scale_d(params.config->gap_fill_min_area.get_abs_value(params.flow.width)) * double(params.flow.scaled_width());
         for (int i = 0; i < gapfill_areas.size(); i++) {
             if (gapfill_areas[i].area() < minarea) {
                 gapfill_areas.erase(gapfill_areas.begin() + i);

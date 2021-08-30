@@ -8,7 +8,7 @@ namespace Slic3r {
     void MillingPostProcess::getExtrusionLoop(const Layer* layer, Polygon& poly, Polylines& entrypoints, ExtrusionEntityCollection& out_coll) {
 
 
-        const double milling_diameter = scale_(this->print_config->milling_diameter.get_at(0));
+        const coord_t milling_diameter = scale_t(this->print_config->milling_diameter.get_at(0));
 
         //get the longest polyline
         Polyline best_polyline;
@@ -22,8 +22,8 @@ namespace Slic3r {
             //get two pair of points that are at less than max_dist.
             int32_t first_point_extract_idx = 1;
             int32_t first_point_idx = -1;
-            const double dist_max_square = milling_diameter * milling_diameter / 4;
-            double best_dist = dist_max_square;
+            const coordf_t dist_max_square = coordf_t(milling_diameter) * coordf_t(milling_diameter / 4);
+            coordf_t best_dist = dist_max_square;
             for (int32_t idx = 0; idx < poly.points.size(); idx++) {
                 if (poly.points[idx].distance_to_square(best_polyline.points[first_point_extract_idx]) < best_dist) {
                     best_dist = poly.points[idx].distance_to_square(best_polyline.points[first_point_extract_idx]);
@@ -91,7 +91,7 @@ namespace Slic3r {
         if (contour.polyline.points.size() > 3)
             contour.polyline.points.push_back(contour.polyline.points[1]);
         contour.mm3_per_mm = 0;
-        contour.width = this->print_config->milling_diameter.get_at(0);
+        contour.width = (float)this->print_config->milling_diameter.get_at(0);
         contour.height = (float)layer->height;
         out_coll.append(std::move(contour));
         return;
@@ -102,18 +102,18 @@ namespace Slic3r {
     {
         if (!can_be_milled(layer)) return ExtrusionEntityCollection();
 
-        const double milling_diameter = scale_(this->print_config->milling_diameter.get_at(0));
+        const coord_t milling_diameter = scale_t(this->print_config->milling_diameter.get_at(0));
 
         ExPolygons milling_lines;
         for (const Surface& surf : slices->surfaces) {
-            ExPolygons surf_milling = offset_ex(surf.expolygon, milling_diameter/2, ClipperLib::jtRound);
+            ExPolygons surf_milling = offset_ex(surf.expolygon, double(milling_diameter / 2), ClipperLib::jtRound);
             for (const ExPolygon& expoly : surf_milling)
 //                expoly.simplify(SCALED_RESOLUTION, &milling_lines); // should already be done
                 milling_lines.push_back(expoly);
         }
         milling_lines = union_ex(milling_lines);
 
-        ExPolygons secured_points = offset_ex(milling_lines, milling_diameter / 3);
+        ExPolygons secured_points = offset_ex(milling_lines, double(milling_diameter / 3));
         ExPolygons entrypoints;
         for (const ExPolygon& expoly : secured_points)
 //            expoly.simplify(SCALED_RESOLUTION, &entrypoints); // should already be done

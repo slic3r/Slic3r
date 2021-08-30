@@ -221,12 +221,12 @@ double Extruder::retract_restart_extra_toolchange() const
 
 int16_t Extruder::temp_offset() const
 {
-    return m_config->extruder_temperature_offset.get_at(m_id);
+    return int16_t(m_config->extruder_temperature_offset.get_at(m_id));
 }
 
 int8_t Extruder::fan_offset() const
 {
-    return m_config->extruder_fan_offset.get_at(m_id);
+    return int8_t(m_config->extruder_fan_offset.get_at(m_id));
 }
 
 double Mill::retract_lift() const {

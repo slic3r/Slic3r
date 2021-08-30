@@ -638,11 +638,11 @@ static inline Intersection* get_nearest_intersection(std::vector<std::pair<Inter
 
 // Create a line representing the anchor aka hook extrusion based on line_to_offset 
 // translated in the direction of the intersection line (intersection.intersect_line).
-static Line create_offset_line(Line offset_line, const Intersection &intersection, const double scaled_offset)
+static Line create_offset_line(Line offset_line, const Intersection &intersection, const coordf_t scaled_offset)
 {
     offset_line.translate((perp(intersection.closest_line->vector().cast<double>().normalized()) * (intersection.left ? scaled_offset : - scaled_offset)).cast<coord_t>());
     // Extend the line by a small value to guarantee a collision with adjacent lines
-    offset_line.extend(coord_t(scaled_offset * 1.16)); // / cos(PI/6)
+    offset_line.extend(coordf_t(coord_t(scaled_offset * 1.16))); // / cos(PI/6)
     return offset_line;
 }
 
@@ -1385,8 +1385,8 @@ void Filler::_fill_surface_single(
     }
 #endif /* ADAPTIVE_CUBIC_INFILL_DEBUG_OUTPUT */
 
-    const auto hook_length     = coordf_t(std::min<float>(std::numeric_limits<coord_t>::max(), scale_(params.anchor_length)));
-    const auto hook_length_max = coordf_t(std::min<float>(std::numeric_limits<coord_t>::max(), scale_(params.anchor_length_max)));
+    const coordf_t hook_length     = std::min<coordf_t>((coordf_t)std::numeric_limits<coord_t>::max(), scale_d(params.anchor_length));
+    const coordf_t hook_length_max = std::min<coordf_t>((coordf_t)std::numeric_limits<coord_t>::max(), scale_d(params.anchor_length_max));
 
     Polylines all_polylines_with_hooks = all_polylines.size() > 1 ? connect_lines_using_hooks(std::move(all_polylines), expolygon, this->get_spacing(), hook_length, hook_length_max) : std::move(all_polylines);
 

@@ -202,10 +202,10 @@ inline Polylines to_polylines(ExPolygon &&src)
     Polyline &pl = polylines[idx ++];
     pl.points = std::move(src.contour.points);
     pl.points.push_back(pl.points.front());
-    for (Polygons::const_iterator ith = src.holes.begin(); ith != src.holes.end(); ++ith) {
+    for (Polygon& ith : src.holes) {
         Polyline &pl = polylines[idx ++];
-        pl.points = std::move(ith->points);
-        pl.points.push_back(ith->points.front());
+        pl.points = std::move(ith.points);
+        pl.points.push_back(pl.points.front());
     }
     assert(idx == polylines.size());
     return polylines;
@@ -216,14 +216,14 @@ inline Polylines to_polylines(ExPolygons &&src)
     Polylines polylines;
     polylines.assign(number_polygons(src), Polyline());
     size_t idx = 0;
-    for (ExPolygons::const_iterator it = src.begin(); it != src.end(); ++it) {
+    for (ExPolygon& ex_poly : src) {
         Polyline &pl = polylines[idx ++];
-        pl.points = std::move(it->contour.points);
+        pl.points = std::move(ex_poly.contour.points);
         pl.points.push_back(pl.points.front());
-        for (Polygons::const_iterator ith = it->holes.begin(); ith != it->holes.end(); ++ith) {
+        for (Polygon& ith : ex_poly.holes) {
             Polyline &pl = polylines[idx ++];
-            pl.points = std::move(ith->points);
-            pl.points.push_back(ith->points.front());
+            pl.points = std::move(ith.points);
+            pl.points.push_back(pl.points.front());
         }
     }
     assert(idx == polylines.size());
@@ -243,9 +243,9 @@ inline Polygons to_polygons(const ExPolygons &src)
 {
     Polygons polygons;
     polygons.reserve(number_polygons(src));
-    for (ExPolygons::const_iterator it = src.begin(); it != src.end(); ++it) {
-        polygons.push_back(it->contour);
-        polygons.insert(polygons.end(), it->holes.begin(), it->holes.end());
+    for (const ExPolygon& ex_poly : src) {
+        polygons.push_back(ex_poly.contour);
+        polygons.insert(polygons.end(), ex_poly.holes.begin(), ex_poly.holes.end());
     }
     return polygons;
 }

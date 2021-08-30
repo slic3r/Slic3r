@@ -94,7 +94,7 @@ void FillLine::_fill_surface_single(
         // offset the expolygon by max(min_spacing/2, extra)
         ExPolygon expolygon_off;
         {
-            ExPolygons expolygons_off = offset_ex(expolygon, this->_min_spacing/2);
+            ExPolygons expolygons_off = offset_ex(expolygon, coordf_t(this->_min_spacing / 2));
             if (! expolygons_off.empty()) {
                 // When expanding a polygon, the number of islands could only shrink. Therefore the offset_ex shall generate exactly one expanded island for one input island.
                 assert(expolygons_off.size() == 1);

@@ -243,8 +243,8 @@ Fill::do_gap_fill(const ExPolygons& gapfill_areas, const FillParams& params, Ext
     //    offset2_ex(gapfill_areas, double(-max / 2), double(+max / 2)),
     //    true);
     ExPolygons gapfill_areas_collapsed = offset2_ex(gapfill_areas, double(-min / 2), double(+min / 2));
-    double minarea = params.flow.scaled_width() * params.flow.scaled_width();
-    if (params.config != nullptr) minarea = scale_(params.config->gap_fill_min_area.get_abs_value(params.flow.width)) * params.flow.scaled_width();
+    double minarea = double(params.flow.scaled_width()) * double(params.flow.scaled_width());
+    if (params.config != nullptr) minarea = scale_d(params.config->gap_fill_min_area.get_abs_value(params.flow.width)) * double(params.flow.scaled_width());
     for (const ExPolygon& ex : gapfill_areas_collapsed) {
         //remove too small gaps that are too hard to fill.
         //ie one that are smaller than an extrusion with width of min and a length of max.
@@ -2109,8 +2109,8 @@ void connect_infill(Polylines&& infill_ordered, const std::vector<const Polygon*
     assert(params.anchor_length     >= 0.);
     assert(params.anchor_length_max >= 0.01f);
     assert(params.anchor_length_max >= params.anchor_length);
-    const double anchor_length     = scale_(params.anchor_length);
-    const double anchor_length_max = scale_(params.anchor_length_max);
+    const coordf_t anchor_length     = scale_d(params.anchor_length);
+    const coordf_t anchor_length_max = scale_d(params.anchor_length_max);
 
 #if 0
     append(polylines_out, infill_ordered);

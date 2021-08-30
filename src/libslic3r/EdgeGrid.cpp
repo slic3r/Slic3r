@@ -1213,8 +1213,8 @@ bool EdgeGrid::Grid::signed_distance_edges(const Point &pt, coord_t search_radiu
 	// Signum of the distance field at pt.
 	int sign_min = 0;
 	bool on_segment = false;
-	for (int r = bbox.min(1); r <= bbox.max(1); ++ r) {
-		for (int c = bbox.min(0); c <= bbox.max(0); ++ c) {
+	for (coord_t r = bbox.min(1); r <= bbox.max(1); ++ r) {
+		for (coord_t c = bbox.min(0); c <= bbox.max(0); ++ c) {
 			const Cell &cell = m_cells[r * m_cols + c];
 			for (size_t i = cell.begin; i < cell.end; ++ i) {
 				const Slic3r::Points &pts = *m_contours[m_cell_data[i].first];
@@ -1301,7 +1301,7 @@ Polygons EdgeGrid::Grid::contours_simplified(coord_t offset, bool fill_holes) co
 		std::vector<char> cell_inside2(cell_inside);
 		for (int r = 1; r + 1 < int(cell_rows); ++ r) {
 			for (int c = 1; c + 1 < int(cell_cols); ++ c) {
-				int addr = r * cell_cols + c;
+				int addr = r * int(cell_cols) + c;
 				if ((cell_inside2[addr - 1] && cell_inside2[addr + 1]) ||
 					(cell_inside2[addr - cell_cols] && cell_inside2[addr + cell_cols]))
 					cell_inside[addr] = true;
@@ -1483,8 +1483,8 @@ bool EdgeGrid::Grid::has_intersecting_edges() const
 
 void EdgeGrid::save_png(const EdgeGrid::Grid &grid, const BoundingBox &bbox, coord_t resolution, const char *path, size_t scale)
 {
-	unsigned int w = (bbox.max(0) - bbox.min(0) + resolution - 1) / resolution;
-	unsigned int h = (bbox.max(1) - bbox.min(1) + resolution - 1) / resolution;
+	uint32_t w = uint32_t((bbox.max(0) - bbox.min(0) + resolution - 1) / resolution);
+	uint32_t h = uint32_t((bbox.max(1) - bbox.min(1) + resolution - 1) / resolution);
 
 	std::vector<uint8_t> pixels(w * h * 3, 0);
 
@@ -1501,7 +1501,7 @@ void EdgeGrid::save_png(const EdgeGrid::Grid &grid, const BoundingBox &bbox, coo
 			#else
 			if (grid.signed_distance(pt, search_radius, min_dist)) {
 			#endif
-				float s = 255 * std::abs(min_dist) / float(display_blend_radius);
+				float s = float(255 * std::abs(min_dist)) / float(display_blend_radius);
 				int is = std::max(0, std::min(255, int(floor(s + 0.5f))));
 				if (min_dist < 0) {
 					if (on_segment) {
@@ -1548,7 +1548,7 @@ void EdgeGrid::save_png(const EdgeGrid::Grid &grid, const BoundingBox &bbox, coo
 				}
 			}
 
-			float dgrid = fabs(min_dist) / float(grid.resolution());
+			float dgrid = fabs(float(min_dist)) / float(grid.resolution());
 			float igrid = floor(dgrid + 0.5f);
 			dgrid = std::abs(dgrid - igrid) * float(grid.resolution()) / float(resolution);
 			if (dgrid < 1.f) {
@@ -1559,7 +1559,7 @@ void EdgeGrid::save_png(const EdgeGrid::Grid &grid, const BoundingBox &bbox, coo
 				pxl[2] = (unsigned char)(t * pxl[2]);
 				if (igrid > 0.f) {
 					// Other than zero iso contour.
-					int g = pxl[1] + 255.f * (1.f - t);
+					int g = int(pxl[1] + 255.f * (1.f - t));
 					pxl[1] = std::min(g, 255);
 				}
 			}
@@ -1572,7 +1572,7 @@ void EdgeGrid::save_png(const EdgeGrid::Grid &grid, const BoundingBox &bbox, coo
 // Find all pairs of intersectiong edges from the set of polygons.
 std::vector<std::pair<EdgeGrid::Grid::ContourEdge, EdgeGrid::Grid::ContourEdge>> intersecting_edges(const Polygons &polygons)
 {
-	double len = 0;
+	coordf_t len = 0;
 	size_t cnt = 0;
 	BoundingBox bbox;
 	for (const Polygon &poly : polygons) {
@@ -1592,7 +1592,7 @@ std::vector<std::pair<EdgeGrid::Grid::ContourEdge, EdgeGrid::Grid::ContourEdge>>
         bbox.offset(20);
         EdgeGrid::Grid grid;
         grid.set_bbox(bbox);
-        grid.create(polygons, len);
+        grid.create(polygons, coord_t(len));
         out = grid.intersecting_edges();
     }
     return out;
@@ -1612,7 +1612,7 @@ void export_intersections_to_svg(const std::string &filename, const Polygons &po
     	intersecting_contours.insert(ie.second.first);
     }
     // Highlight the contours with intersections.
-    coord_t line_width = coord_t(scale_(0.01));
+    coord_t line_width = scale_t(0.01);
     for (const Points *ic : intersecting_contours) {
 	    svg.draw_outline(Polygon(*ic), "green");
 	    svg.draw_outline(Polygon(*ic), "black", line_width);

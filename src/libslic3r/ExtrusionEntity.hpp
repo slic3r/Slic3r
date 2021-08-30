@@ -435,7 +435,7 @@ public:
     ExtrusionLoop(ExtrusionPaths &&paths, ExtrusionLoopRole role = elrDefault) : paths(std::move(paths)), m_loop_role(role) { assert(this->first_point() == this->paths.back().polyline.points.back()); }
     ExtrusionLoop(const ExtrusionPath &path, ExtrusionLoopRole role = elrDefault) : m_loop_role(role) 
         { this->paths.push_back(path); }
-    ExtrusionLoop(const ExtrusionPath &&path, ExtrusionLoopRole role = elrDefault) : m_loop_role(role)
+    ExtrusionLoop(ExtrusionPath &&path, ExtrusionLoopRole role = elrDefault) : m_loop_role(role)
         { this->paths.emplace_back(std::move(path)); }
     virtual bool is_loop() const override{ return true; }
     virtual bool can_reverse() const override { return false; }

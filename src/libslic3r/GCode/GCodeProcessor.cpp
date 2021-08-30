@@ -1955,7 +1955,7 @@ void GCodeProcessor::process_G1(const GCodeReader::GCodeLine& line)
 
     // time estimate section
     auto move_length = [](const AxisCoords& delta_pos) {
-        float sq_xyz_length = (float)sqr(delta_pos[X]) + sqr(delta_pos[Y]) + sqr(delta_pos[Z]);
+        float sq_xyz_length = (float)sqr(delta_pos[X]) + (float)sqr(delta_pos[Y]) + (float)sqr(delta_pos[Z]);
         return (sq_xyz_length > 0.0f) ? std::sqrt(sq_xyz_length) : std::abs(delta_pos[E]);
     };
 
