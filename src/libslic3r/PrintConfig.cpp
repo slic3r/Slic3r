@@ -1963,6 +1963,15 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(0));
 
+    def = this->add("gcode_filename_illegal_char", coString);
+    def->label = L("Illegal characters");
+    def->full_label = L("Illegal characters for filename");
+    def->category = OptionCategory::output;
+    def->tooltip = L("All characters that are written here will be replaced by '_' when writing the gcode file name."
+        "\nIf the first charater is '[' or '(', then this field will be considered as a regexp (enter '[^a-zA-Z0-9]' to only use ascii char).");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionString(""));
+
     def = this->add("gcode_flavor", coEnum);
     def->label = L("G-code flavor");
     def->category = OptionCategory::general;
@@ -1998,6 +2007,15 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("No extrusion"));
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionEnum<GCodeFlavor>(gcfSprinter));
+
+    def = this->add("gcode_filename_illegal_char", coString);
+    def->label = L("Illegal characters");
+    def->full_label = L("Illegal characters for filename");
+    def->category = OptionCategory::output;
+    def->tooltip = L("All characters that are written here will be replaced by '_' when writing the gcode file name."
+                "\nIf the first charater is '[' or '(', then this field will be considered as a regexp (enter '[^a-zA-Z]' to only use ascii char).");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionString(""));
 
     def = this->add("gcode_label_objects", coBool);
     def->label = L("Label objects");
@@ -5568,6 +5586,7 @@ std::unordered_set<std::string> prusa_export_to_remove_keys = {
 "gap_fill_min_area",
 "gap_fill_overlap",
 "gap_fill",
+"gcode_filename_illegal_char",
 "hole_size_compensation",
 "hole_size_threshold",
 "hole_to_polyhole_threshold",

@@ -122,6 +122,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "full_fan_speed_layer",
         "gap_fill_speed",
         "gcode_comments",
+        "gcode_filename_illegal_char",
         "gcode_label_objects",
         "gcode_precision_xyz",
         "gcode_precision_e",

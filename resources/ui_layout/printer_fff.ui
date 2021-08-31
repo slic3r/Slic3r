@@ -23,6 +23,7 @@ group:silent_mode_event:Firmware
 		setting:max_gcode_per_second
 		setting:min_length
 	end_line
+	setting:gcode_filename_illegal_char
 group:Cooling fan
 	line:Speedup
 		setting:label$Speedup time:fan_speedup_time

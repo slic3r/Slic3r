@@ -1090,6 +1090,7 @@ public:
     ConfigOptionFloats              filament_cooling_final_speed;
     ConfigOptionStrings             filament_ramming_parameters;
     ConfigOptionBool                gcode_comments;
+    ConfigOptionString              gcode_filename_illegal_char;
     ConfigOptionEnum<GCodeFlavor>   gcode_flavor;
     ConfigOptionBool                gcode_label_objects;
     ConfigOptionInt                 gcode_precision_xyz;
@@ -1204,6 +1205,7 @@ protected:
         OPT_PTR(filament_cooling_final_speed);
         OPT_PTR(filament_ramming_parameters);
         OPT_PTR(gcode_comments);
+        OPT_PTR(gcode_filename_illegal_char);
         OPT_PTR(gcode_flavor);
         OPT_PTR(gcode_label_objects);
         OPT_PTR(gcode_precision_xyz);
