@@ -203,6 +203,7 @@ Preview(wxWindow* parent, Model* model, DynamicPrintConfig* config, BackgroundSl
 
     bool can_display_gcode();
     bool can_display_volume();
+    void reset_gcode_toolpaths();
 
 private:
     ForceState current_force_state = ForceState::NoForce;

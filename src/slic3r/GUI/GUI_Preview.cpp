@@ -416,8 +416,9 @@ void Preview::reload_print(bool keep_volumes)
 #ifdef __linux__
         m_volumes_cleanup_required || 
 #endif /* __linux__ */
-        !keep_volumes)
+        (!keep_volumes && m_canvas->is_preview_dirty()))
     {
+        m_canvas->set_preview_dirty();
         m_canvas->reset_volumes();
         m_loaded = false;
 #ifdef __linux__
@@ -1020,8 +1021,9 @@ void Preview::load_print_as_fff(bool keep_z_range)
         m_canvas->set_selected_extruder(0);
         if (current_force_state == ForceState::ForceGcode || (gcode_preview_data_valid && current_force_state != ForceState::ForceExtrusions)) {
             // Load the real G-code preview.
-            m_canvas->load_gcode_preview(*m_gcode_result);
-            m_canvas->refresh_gcode_preview(*m_gcode_result, colors);
+            if (current_force_state == ForceState::NoForce)
+                m_canvas->set_items_show(false, true);
+            m_canvas->load_gcode_preview(*m_gcode_result, colors);
             m_left_sizer->Show(m_bottom_toolbar_panel);
             m_left_sizer->Layout();
             Refresh();
@@ -1029,6 +1031,8 @@ void Preview::load_print_as_fff(bool keep_z_range)
             m_loaded = true;
         } else {
             // Load the initial preview based on slices, not the final G-code.
+            if (current_force_state == ForceState::NoForce)
+                m_canvas->set_items_show(true, false);
             m_canvas->load_preview(colors, color_print_values);
             m_left_sizer->Hide(m_bottom_toolbar_panel);
             m_left_sizer->Layout();
@@ -1039,8 +1043,9 @@ void Preview::load_print_as_fff(bool keep_z_range)
             // all layers filtered out
             hide_layers_slider();
             m_canvas_widget->Refresh();
-        } else
+        } else {
             update_layers_slider(zs, keep_z_range);
+        }
     }
 
 #if ENABLE_PREVIEW_TYPE_CHANGE
@@ -1069,6 +1074,13 @@ void Preview::load_print_as_fff(bool keep_z_range)
         }
     }
 #endif // ENABLE_PREVIEW_TYPE_CHANGE
+}
+
+void Preview::reset_gcode_toolpaths()
+{
+    if (current_force_state == ForceState::NoForce)
+        m_canvas->set_items_show(true, false);
+    m_canvas->reset_gcode_toolpaths();
 }
 
 void Preview::load_print_as_sla()

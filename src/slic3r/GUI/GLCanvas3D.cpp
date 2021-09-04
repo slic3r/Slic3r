@@ -1339,9 +1339,10 @@ void GLCanvas3D::reset_volumes(bool is_destroying)
 
     _set_current();
 
-        m_selection.clear(is_destroying);
-        m_volumes.clear();
-        m_dirty = true;
+    m_selection.clear(is_destroying);
+    m_volumes.release_geometry();
+    m_volumes.clear();
+    m_dirty = true;
 
     if(!is_destroying)
         _set_warning_texture(WarningTexture::ObjectOutside, false);
@@ -2326,21 +2327,21 @@ static void reserve_new_volume_finalize_old_volume(GLVolume& vol_new, GLVolume& 
 	vol_old.finalize_geometry(gl_initialized);
 }
 
-void GLCanvas3D::load_gcode_preview(const GCodeProcessor::Result& gcode_result)
+void GLCanvas3D::load_gcode_preview(const GCodeProcessor::Result& gcode_result, const std::vector<std::string>& str_tool_colors)
 {
-    m_gcode_viewer.load(gcode_result, *this->fff_print(), m_initialized);
+    if (m_dirty_gcode) {
+        m_dirty_gcode = false;
+        m_gcode_viewer.load(gcode_result, *this->fff_print(), m_initialized);
 
-    if (wxGetApp().is_editor()) {
-        m_gcode_viewer.update_shells_color_by_extruder(m_config);
-        _show_warning_texture_if_needed(WarningTexture::ToolpathOutside);
+        if (wxGetApp().is_editor()) {
+            m_gcode_viewer.update_shells_color_by_extruder(m_config);
+            _show_warning_texture_if_needed(WarningTexture::ToolpathOutside);
+        }
+
+        m_gcode_viewer.refresh(gcode_result, str_tool_colors);
+        set_as_dirty();
+        request_extra_frame();
     }
-}
-
-void GLCanvas3D::refresh_gcode_preview(const GCodeProcessor::Result& gcode_result, const std::vector<std::string>& str_tool_colors)
-{
-    m_gcode_viewer.refresh(gcode_result, str_tool_colors);
-    set_as_dirty();
-    request_extra_frame();
 }
 
 #if ENABLE_RENDER_PATH_REFRESH_AFTER_OPTIONS_CHANGE
@@ -2367,23 +2368,27 @@ void GLCanvas3D::load_sla_preview()
 
 void GLCanvas3D::load_preview(const std::vector<std::string>& str_tool_colors, const std::vector<CustomGCode::Item>& color_print_values)
 {
-    const Print *print = this->fff_print();
+    const Print* print = this->fff_print();
     if (print == nullptr)
         return;
 
     _set_current();
 
-    // Release OpenGL data before generating new data.
-    this->reset_volumes();
+    if (m_dirty_preview || m_volumes.empty()) {
+        m_dirty_preview = false;
+        // Release OpenGL data before generating new data.
+        this->reset_volumes();
+        //note: this isn't releasing all the memory in all os, can make it crash on linux for exemple.
 
-    _load_print_toolpaths();
-    _load_wipe_tower_toolpaths(str_tool_colors);
-    for (const PrintObject* object : print->objects())
+        _load_print_toolpaths();
+        _load_wipe_tower_toolpaths(str_tool_colors);
+        for (const PrintObject* object : print->objects())
             _load_print_object_toolpaths(*object, str_tool_colors, color_print_values);
 
-    _update_toolpath_volumes_outside_state();
-    _show_warning_texture_if_needed(WarningTexture::ToolpathOutside);
+        _update_toolpath_volumes_outside_state();
+        _show_warning_texture_if_needed(WarningTexture::ToolpathOutside);
     }
+}
 
 void GLCanvas3D::bind_event_handlers()
 {
@@ -4835,7 +4840,7 @@ bool GLCanvas3D::_init_collapse_toolbar()
 bool GLCanvas3D::_set_current()
 {
     return m_context != nullptr && m_canvas->SetCurrent(*m_context);
-    }
+}
 
 void GLCanvas3D::_resize(unsigned int w, unsigned int h)
 {

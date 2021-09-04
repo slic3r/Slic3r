@@ -3576,8 +3576,14 @@ void Plater::priv::set_current_panel(wxTitledPanel* panel)
         // FIXME: it may be better to have a single function making this check and let it be called wherever needed
         bool export_in_progress = this->background_process.is_export_scheduled();
         bool model_fits = view3D->check_volumes_outside_state() != ModelInstancePVS_Partly_Outside;
-        if (!model.objects.empty() && !export_in_progress && model_fits)
-            this->q->reslice();
+
+        if (!model.objects.empty() && !export_in_progress && model_fits) {
+            //check if already slicing
+            bool already_running = this->background_process.state() == BackgroundSlicingProcess::State::STATE_RUNNING ||
+                this->background_process.state() == BackgroundSlicingProcess::State::STATE_STARTED;
+            if(!already_running)
+                this->q->reslice();
+        }
         // keeps current gcode preview, if any
         preview->reload_print(true);
     }
@@ -3722,6 +3728,7 @@ void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
 
 void Plater::priv::on_slicing_completed(wxCommandEvent & evt)
 {
+    preview->get_canvas3d()->set_gcode_viewer_dirty();
     // auto_switch_preview == 0 means "no force tab change"
     // auto_switch_preview == 1 means "force tab change"
     // auto_switch_preview == 2 means "force tab change only if already on a plater one"
@@ -3753,6 +3760,8 @@ void Plater::priv::on_slicing_began()
 {
 	clear_warnings();
 	notification_manager->close_notification_of_type(NotificationType::SlicingComplete);
+    preview->get_canvas3d()->set_gcode_viewer_dirty();
+    preview->get_canvas3d()->set_preview_dirty();
 }
 void Plater::priv::add_warning(const Slic3r::PrintStateBase::Warning& warning, size_t oid)
 {
@@ -4390,7 +4399,7 @@ void Plater::priv::enable_preview_moves_slider(bool enable)
 
 void Plater::priv::reset_gcode_toolpaths()
 {
-    preview->get_canvas3d()->reset_gcode_toolpaths();
+    preview->reset_gcode_toolpaths();
 }
 
 bool Plater::priv::can_set_instance_to_object() const

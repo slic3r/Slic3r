@@ -475,6 +475,8 @@ private:
 
     // Screen is only refreshed from the OnIdle handler if it is dirty.
     bool m_dirty;
+    bool m_dirty_preview = true;
+    bool m_dirty_gcode = true;
     bool m_initialized;
     bool m_apply_zoom_to_volumes_filter;
     mutable std::vector<int> m_hover_volume_idxs;
@@ -557,6 +559,9 @@ public:
     void post_event(wxEvent &&event);
 
     void set_as_dirty();
+    void set_preview_dirty() { m_dirty_preview = true; }
+    bool is_preview_dirty() { return m_dirty_preview; }
+    void set_gcode_viewer_dirty() { m_dirty_gcode = true; }
     void set_items_show(bool show_objects, bool show_gcode);
 
     unsigned int get_volumes_count() const;
@@ -666,8 +671,7 @@ public:
 
     void reload_scene(bool refresh_immediately, bool force_full_scene_refresh = false);
 
-    void load_gcode_preview(const GCodeProcessor::Result& gcode_result);
-    void refresh_gcode_preview(const GCodeProcessor::Result& gcode_result, const std::vector<std::string>& str_tool_colors);
+    void load_gcode_preview(const GCodeProcessor::Result& gcode_result, const std::vector<std::string>& str_tool_colors);
 #if ENABLE_RENDER_PATH_REFRESH_AFTER_OPTIONS_CHANGE
     void refresh_gcode_preview_render_paths();
 #endif // ENABLE_RENDER_PATH_REFRESH_AFTER_OPTIONS_CHANGE
