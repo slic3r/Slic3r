@@ -389,13 +389,16 @@ public:
     virtual void            finalize() {}
 
     struct SlicingStatus {
-		SlicingStatus(int percent, const std::string &text, unsigned int flags = 0) : percent(percent), text(text), flags(flags) {}
+        SlicingStatus(int percent, const std::string& text, unsigned int flags = 0) : percent(percent), main_text(text), flags(flags) {}
+        SlicingStatus(int percent, const std::string& text, const std::vector<std::string>& args, unsigned int flags = 0) 
+            : percent(percent), main_text(text), args(args), flags(flags) {}
         SlicingStatus(const PrintBase &print, int warning_step) : 
             flags(UPDATE_PRINT_STEP_WARNINGS), warning_object_id(print.id()), warning_step(warning_step) {}
         SlicingStatus(const PrintObjectBase &print_object, int warning_step) : 
             flags(UPDATE_PRINT_OBJECT_STEP_WARNINGS), warning_object_id(print_object.id()), warning_step(warning_step) {}
-        int             percent { -1 };
-        std::string     text;
+        int                         percent { -1 };
+        std::string                 main_text;
+        std::vector<std::string>    args;
         // Bitmap of flags.
         enum FlagBits {
             DEFAULT                             = 0,
@@ -422,8 +425,12 @@ public:
     // Register a custom status callback.
     void                    set_status_callback(status_callback_type cb) { m_status_callback = cb; }
     // Calls a registered callback to update the status, or print out the default message.
-    void                    set_status(int percent, const std::string &message, unsigned int flags = SlicingStatus::DEFAULT) {
-		if (m_status_callback) m_status_callback(SlicingStatus(percent, message, flags));
+    void                    set_status(int percent, const std::string& message, unsigned int flags = SlicingStatus::DEFAULT) const {
+        if (m_status_callback) m_status_callback(SlicingStatus(percent, message, flags));
+        else printf("%d => %s\n", percent, message.c_str());
+    }
+    void                    set_status(int percent, const std::string& message, const std::vector<std::string>& args, unsigned int flags = SlicingStatus::DEFAULT) const {
+        if (m_status_callback) m_status_callback(SlicingStatus(percent, message, args, flags));
         else printf("%d => %s\n", percent, message.c_str());
     }
 

@@ -1087,6 +1087,8 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
 {
     PROFILE_FUNC();
 
+    m_last_status_update = std::chrono::system_clock::now();
+
     // modifies m_silent_time_estimator_enabled
     DoExport::init_gcode_processor(print.config(), m_processor, m_silent_time_estimator_enabled);
 
@@ -2712,6 +2714,13 @@ void GCode::process_layer(
     _write(file, gcode);
     BOOST_LOG_TRIVIAL(trace) << "Exported layer " << layer.id() << " print_z " << print_z <<
         log_memory_info();
+
+
+    std::chrono::time_point<std::chrono::system_clock> end_export_layer = std::chrono::system_clock::now();
+    if ((static_cast<std::chrono::duration<double>>(end_export_layer - m_last_status_update)).count() > 0.2) {
+        m_last_status_update = std::chrono::system_clock::now();
+        print.set_status(int((layer.id() * 100) / layer_count()), std::string(L("Generating G-code layer %s / %s")), std::vector<std::string>{ std::to_string(layer.id()), std::to_string(layer_count()) }, PrintBase::SlicingStatus::DEFAULT);
+    }
 }
 
 void GCode::apply_print_config(const PrintConfig &print_config)

@@ -3675,7 +3675,24 @@ void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
         }
 
         this->statusbar()->set_progress(evt.status.percent);
-        this->statusbar()->set_status_text(_(evt.status.text) + wxString::FromUTF8("…"));
+        if (evt.status.args.empty()) {
+            this->statusbar()->set_status_text(_(evt.status.main_text) + wxString::FromUTF8("…"));
+        } else {
+            std::vector<wxString> arg_lst;
+            for (std::string str : evt.status.args)
+                arg_lst.push_back(_(str));
+            //FIXME use var-args list 
+            if (arg_lst.size() == 1)
+                this->statusbar()->set_status_text(wxString::Format(_(evt.status.main_text), arg_lst[0]));
+            else if (arg_lst.size() == 2)
+                this->statusbar()->set_status_text(wxString::Format(_(evt.status.main_text), arg_lst[0], arg_lst[1]));
+            else if (arg_lst.size() == 3)
+                this->statusbar()->set_status_text(wxString::Format(_(evt.status.main_text), arg_lst[0], arg_lst[1], arg_lst[2]));
+            else if (arg_lst.size() == 4)
+                this->statusbar()->set_status_text(wxString::Format(_(evt.status.main_text), arg_lst[0], arg_lst[1], arg_lst[2], arg_lst[3]));
+            else
+                this->statusbar()->set_status_text(wxString::Format(_(evt.status.main_text), arg_lst[0], arg_lst[1], arg_lst[2], arg_lst[3], arg_lst[4]));
+        }
         //notification_manager->set_progress_bar_percentage("Slicing progress", (float)evt.status.percent / 100.0f);
     }
     if (evt.status.flags & (PrintBase::SlicingStatus::RELOAD_SCENE | PrintBase::SlicingStatus::RELOAD_SLA_SUPPORT_POINTS)) {

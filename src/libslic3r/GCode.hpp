@@ -23,6 +23,7 @@
 #include <memory>
 #include <map>
 #include <string>
+#include <chrono>
 
 #ifdef HAS_PRESSURE_EQUALIZER
 #include "GCode/PressureEqualizer.hpp"
@@ -408,6 +409,9 @@ private:
     void _add_object_change_labels(std::string &gcode);
 
     bool m_silent_time_estimator_enabled;
+
+    //for gui status update
+    std::chrono::time_point<std::chrono::system_clock> m_last_status_update;
 
     // Processor
     GCodeProcessor m_processor;
