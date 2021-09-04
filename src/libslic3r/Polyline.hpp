@@ -24,7 +24,9 @@ public:
     explicit Polyline(const Points &points) : MultiPoint(points) {}
     explicit Polyline(Points &&points) : MultiPoint(std::move(points)) {}
     Polyline& operator=(const Polyline &other) { points = other.points; return *this; }
-    Polyline& operator=(Polyline &&other) { points = std::move(other.points); return *this; }
+    Polyline& operator=(Polyline&& other) { points = std::move(other.points); return *this; }
+    bool operator==(const Polyline& other) const { return points == other.points; }
+    bool operator!=(const Polyline& other) const { return points != other.points; }
     static Polyline new_scale(const std::vector<Vec2d> &points) {
         Polyline pl;
         pl.points.reserve(points.size());

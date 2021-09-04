@@ -369,13 +369,14 @@ struct PrintStatistics
 
 class BrimLoop {
 public:
-    BrimLoop(const Polygon& p) : line(p.split_at_first_point()), is_loop(true) {}
-    BrimLoop(const Polyline& l) : line(l), is_loop(false) {}
-    Polyline line;
+    BrimLoop(const Polygon& p) : lines(Polylines{ p.split_at_first_point() }), is_loop(true) {}
+    BrimLoop(const Polyline& l) : lines(Polylines{l}), is_loop(false) {}
+    Polylines lines;
     std::vector<BrimLoop> children;
-    bool is_loop;
+    bool is_loop; // has only one polyline stored and front == back
     Polygon polygon() const{
-        Polygon poly = Polygon(line.points);
+        assert(is_loop);
+        Polygon poly = Polygon(lines.front().points);
         if (poly.points.front() == poly.points.back())
             poly.points.resize(poly.points.size() - 1);
         return poly;

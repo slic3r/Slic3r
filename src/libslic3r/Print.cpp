@@ -2082,7 +2082,7 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
         append(m_skirt_convex_hull, std::move(poly.points));
 }
 
-void Print::_extrude_brim_from_tree(std::vector<std::vector< BrimLoop>>& loops, const Polygons& frontiers, const Flow& flow, ExtrusionEntityCollection& out, bool reversed/*= false*/) {
+void Print::_extrude_brim_from_tree(std::vector<std::vector<BrimLoop>>& loops, const Polygons& frontiers, const Flow& flow, ExtrusionEntityCollection& out, bool reversed/*= false*/) {
 
     // nest contour loops (same as in perimetergenerator)
     for (int d = loops.size() - 1; d >= 1; --d) {
@@ -2095,8 +2095,8 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector< BrimLoop>>& loops, 
                 for (size_t j = 0; j < loops[t].size(); ++j) {
                     BrimLoop& candidate_parent = loops[t][j];
                     bool test = reversed
-                        ? loop.polygon().contains(candidate_parent.line.first_point())
-                        : candidate_parent.polygon().contains(loop.line.first_point());
+                        ? loop.polygon().contains(candidate_parent.lines.front().first_point())
+                        : candidate_parent.polygon().contains(loop.lines.front().first_point());
                     if (test) {
                         candidate_parent.children.push_back(loop);
                         contours_d.erase(contours_d.begin() + i);
@@ -2112,28 +2112,35 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector< BrimLoop>>& loops, 
         NEXT_CONTOUR:;
         }
     }
+    for (int i = loops.size() - 1; i > 0; --i) {
+        if (loops[i].empty()) {
+            loops.erase(loops.begin() + i);
+        }
+    }
 
     //def
     //cut loops if they go inside a forbidden region
-    std::function<void(BrimLoop&)> cut_loop = [&frontiers](BrimLoop& to_cut) {
+    std::function<void(BrimLoop&)> cut_loop = [&frontiers, reversed](BrimLoop& to_cut) {
         Polylines result;
-        if (to_cut.is_loop)
+        if (to_cut.is_loop) {
             result = intersection_pl(Polygons{ to_cut.polygon() }, frontiers, true);
-        else
-            result = intersection_pl(Polylines{ to_cut.line }, frontiers, true);
-        if (result.empty())
-            to_cut.line.points.clear();
-        else {
-            if (to_cut.line.points != result[0].points) {
-                to_cut.line.points = result[0].points;
+        } else {
+            result = intersection_pl(to_cut.lines, frontiers, true);
+        }
+        if (result.empty()) {
+            to_cut.lines.clear();
+        } else {
+            if (to_cut.lines != result) {
+                to_cut.lines = result;
+                if (reversed) {
+                    std::reverse(to_cut.lines.begin(), to_cut.lines.end());
+                }
                 to_cut.is_loop = false;
             }
-            for (int i = 1; i < result.size(); i++)
-                to_cut.children.insert(to_cut.children.begin() + i - 1, BrimLoop(std::move(result[i])));
         }
 
     };
-    //calls
+    //calls, deep-first
     std::list< std::pair<BrimLoop*,int>> cut_child_first;
     for (std::vector<BrimLoop>& loops : loops) {
         for (BrimLoop& loop : loops) {
@@ -2164,24 +2171,27 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector< BrimLoop>>& loops, 
     std::function<void(BrimLoop&, ExtrusionEntityCollection*)>* extrude_ptr;
     std::function<void(BrimLoop&, ExtrusionEntityCollection*) > extrude = [&mm3_per_mm, &width, &height, &extrude_ptr, &nextIdx](BrimLoop& to_cut, ExtrusionEntityCollection* parent) {
         int idx = nextIdx++;
-        bool i_have_line = !to_cut.line.points.empty() && to_cut.line.is_valid();
+        //bool i_have_line = !to_cut.line.points.empty() && to_cut.line.is_valid();
+        bool i_have_line = to_cut.lines.size() > 0 && to_cut.lines.front().size() > 0 && to_cut.lines.front().is_valid();
         if (!i_have_line && to_cut.children.empty()) {
             //nothing
         } else if (i_have_line && to_cut.children.empty()) {
-            if (to_cut.line.points.back() == to_cut.line.points.front()) {
-                ExtrusionPath path(erSkirt, mm3_per_mm, width, height);
-                path.polyline.points = to_cut.line.points;
-                parent->entities.emplace_back(new ExtrusionLoop(std::move(path), elrSkirt));
-            } else {
-                ExtrusionPath* extrusion_path = new ExtrusionPath(erSkirt, mm3_per_mm, width, height);
-                parent->entities.push_back(extrusion_path);
-                extrusion_path->polyline = to_cut.line;
-            }
+            for(Polyline& line : to_cut.lines)
+                if (line.points.back() == line.points.front()) {
+                    ExtrusionPath path(erSkirt, mm3_per_mm, width, height);
+                    path.polyline.points = line.points;
+                    parent->entities.emplace_back(new ExtrusionLoop(std::move(path), elrSkirt));
+                } else {
+                    ExtrusionPath* extrusion_path = new ExtrusionPath(erSkirt, mm3_per_mm, width, height);
+                    parent->entities.push_back(extrusion_path);
+                    extrusion_path->polyline = line;
+                }
         } else if (!i_have_line && !to_cut.children.empty()) {
             if (to_cut.children.size() == 1) {
                 (*extrude_ptr)(to_cut.children[0], parent);
             } else {
                 ExtrusionEntityCollection* mycoll = new ExtrusionEntityCollection();
+                //mycoll->no_sort = true;
                 parent->entities.push_back(mycoll);
                 for (BrimLoop& child : to_cut.children)
                     (*extrude_ptr)(child, mycoll);
@@ -2190,19 +2200,21 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector< BrimLoop>>& loops, 
             ExtrusionEntityCollection* print_me_first = new ExtrusionEntityCollection();
             parent->entities.push_back(print_me_first);
             print_me_first->no_sort = true;
-            if (to_cut.line.points.back() == to_cut.line.points.front()) {
-                ExtrusionPath path(erSkirt, mm3_per_mm, width, height);
-                path.polyline.points = to_cut.line.points;
-                print_me_first->entities.emplace_back(new ExtrusionLoop(std::move(path), elrSkirt));
-            } else {
-                ExtrusionPath* extrusion_path = new ExtrusionPath(erSkirt, mm3_per_mm, width, height);
-                print_me_first->entities.push_back(extrusion_path);
-                extrusion_path->polyline = to_cut.line;
-            }
+            for (Polyline& line : to_cut.lines)
+                if (line.points.back() == line.points.front()) {
+                    ExtrusionPath path(erSkirt, mm3_per_mm, width, height);
+                    path.polyline.points = line.points;
+                    print_me_first->entities.emplace_back(new ExtrusionLoop(std::move(path), elrSkirt));
+                } else {
+                    ExtrusionPath* extrusion_path = new ExtrusionPath(erSkirt, mm3_per_mm, width, height);
+                    print_me_first->entities.push_back(extrusion_path);
+                    extrusion_path->polyline = line;
+                }
             if (to_cut.children.size() == 1) {
                 (*extrude_ptr)(to_cut.children[0], print_me_first);
             } else {
                 ExtrusionEntityCollection* children = new ExtrusionEntityCollection();
+                //children->no_sort = true;
                 print_me_first->entities.push_back(children);
                 for (BrimLoop& child : to_cut.children)
                     (*extrude_ptr)(child, children);
@@ -2238,13 +2250,7 @@ void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolyg
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
             for (Polygon poly : polys) {
-                for (ExPolygon& expoly2 : union_ex(Polygons{ poly })) {
-                    if (brim_config.brim_inside_holes || brim_config.brim_width_interior > 0) {
-                        object_islands.emplace_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
-                    } else {
-                        object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly2.contour) : offset_ex(to_expolygon(expoly2.contour), brim_offset)[0]);
-                    }
-                }
+                object_islands.emplace_back(brim_offset == 0 ? ExPolygon{ poly } : offset_ex(poly, brim_offset)[0]);
             }
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_instances.size());
@@ -2358,17 +2364,14 @@ void Print::_make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, Ex
 
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
-            for (Polygon poly : polys)
-                for (ExPolygon& expoly2 : union_ex(Polygons{ poly }))
-                    //don't put ears over supports unless it's 100% fill
-                    if (object->config().support_material_solid_first_layer) {
-                        if (brim_config.brim_inside_holes || brim_config.brim_width_interior > 0)
-                            object_islands.push_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
-                        else
-                            object_islands.emplace_back(brim_offset == 0 ? to_expolygon(expoly2.contour) : offset_ex(to_expolygon(expoly2.contour), brim_offset)[0]);
-                    } else {
-                        unbrimmable_with_support.push_back(expoly2);
-                    }
+            for (Polygon poly : polys) {
+                //don't put ears over supports unless it's 100% fill
+                if (object->config().support_material_solid_first_layer) {
+                    object_islands.push_back(brim_offset == 0 ? ExPolygon{ poly } : offset_ex(poly, brim_offset)[0]);
+                } else {
+                    unbrimmable_with_support.push_back(ExPolygon{ poly });
+                }
+            }
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_instances.size());
         coord_t ear_detection_length = scale_t(object->config().brim_ears_detection_length.value);
@@ -2514,15 +2517,17 @@ void Print::_make_brim_interior(const Flow &flow, const PrintObjectPtrs &objects
     const PrintObjectConfig &brim_config = objects.front()->config();
     coord_t brim_offset = scale_(brim_config.brim_offset.value);
     ExPolygons    islands;
+    coordf_t spacing;
     for (PrintObject *object : objects) {
         ExPolygons object_islands;
         for (ExPolygon &expoly : object->m_layers.front()->lslices)
             object_islands.push_back(brim_offset == 0 ? expoly : offset_ex(expoly, brim_offset)[0]);
         if (!object->support_layers().empty()) {
-            Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON));
-            for (Polygon poly : polys)
-                for (ExPolygon& expoly2 : union_ex(Polygons{ poly }))
-                    object_islands.push_back(brim_offset == 0 ? expoly2 : offset_ex(expoly2, brim_offset)[0]);
+            spacing = scaled(object->config().support_material_interface_spacing.value) + support_material_flow(object, float(this->skirt_first_layer_height())).scaled_width() * 1.5;
+            Polygons polys = offset2(object->support_layers().front()->support_fills.polygons_covered_by_spacing(float(SCALED_EPSILON)), spacing, -spacing);
+            for (Polygon poly : polys) {
+                object_islands.push_back(brim_offset == 0 ? ExPolygon{ poly } : offset_ex(poly, brim_offset)[0]);
+            }
         }
         islands.reserve(islands.size() + object_islands.size() * object->instances().size());
         for (const PrintInstance &instance : object->instances())
