@@ -191,10 +191,14 @@ bool
 MedialAxis::validate_edge(const VD::edge_type* edge, Lines &lines, std::map<const VD::edge_type*, std::pair<coordf_t, coordf_t> > &thickness)
 {
     // prevent overflows and detect almost-infinite edges
-    if (std::abs(edge->vertex0()->x()) > double(CLIPPER_MAX_COORD_UNSCALED) || 
-        std::abs(edge->vertex0()->y()) > double(CLIPPER_MAX_COORD_UNSCALED) || 
+    if (std::abs(edge->vertex0()->x()) > double(CLIPPER_MAX_COORD_UNSCALED) ||
+        std::abs(edge->vertex0()->y()) > double(CLIPPER_MAX_COORD_UNSCALED) ||
         std::abs(edge->vertex1()->x()) > double(CLIPPER_MAX_COORD_UNSCALED) ||
-        std::abs(edge->vertex1()->y()) > double(CLIPPER_MAX_COORD_UNSCALED))
+        std::abs(edge->vertex1()->y()) > double(CLIPPER_MAX_COORD_UNSCALED) ||
+        std::isnan(edge->vertex0()->x()) || 
+        std::isnan(edge->vertex0()->y()) ||
+        std::isnan(edge->vertex1()->x()) ||
+        std::isnan(edge->vertex1()->y()) )
         return false;
 
     // construct the line representing this edge of the Voronoi diagram
