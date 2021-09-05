@@ -6,6 +6,7 @@
 
 #include <wx/dialog.h>
 #include <map>
+#include <vector>
 
 class wxRadioBox;
 
@@ -17,7 +18,7 @@ class ConfigOptionsGroup;
 class PreferencesDialog : public DPIDialog
 {
 	std::map<std::string, std::string>	m_values;
-	std::shared_ptr<ConfigOptionsGroup>	m_optgroup_general;
+	std::vector<std::shared_ptr<ConfigOptionsGroup>> m_optgroups_general;
 	std::shared_ptr<ConfigOptionsGroup>	m_optgroup_paths;
 	std::shared_ptr<ConfigOptionsGroup>	m_optgroup_camera;
 	std::shared_ptr<ConfigOptionsGroup>	m_optgroup_gui;
@@ -47,6 +48,7 @@ protected:
     void layout();
     void create_icon_size_slider();
     void create_settings_mode_widget();
+    std::shared_ptr<ConfigOptionsGroup> create_general_options_group(const wxString& title, wxNotebook* tabs);
 };
 
 } // GUI

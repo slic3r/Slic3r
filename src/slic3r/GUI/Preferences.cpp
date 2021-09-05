@@ -35,12 +35,29 @@ static std::shared_ptr<ConfigOptionsGroup>create_options_tab(const wxString& tit
 	return optgroup;
 }
 
-static void activate_options_tab(std::shared_ptr<ConfigOptionsGroup> optgroup)
+std::shared_ptr<ConfigOptionsGroup> PreferencesDialog::create_general_options_group(const wxString& title, wxNotebook* tabs)
+{
+
+    std::shared_ptr<ConfigOptionsGroup> optgroup = std::make_shared<ConfigOptionsGroup>((wxPanel*)tabs->GetPage(0), title);
+    optgroup->title_width = 40;
+    optgroup->label_width = 40;
+    optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
+        if (opt_key == "default_action_on_close_application" || opt_key == "default_action_on_select_preset")
+            m_values[opt_key] = boost::any_cast<bool>(value) ? "none" : "discard";
+        else if (std::unordered_set<std::string>{ "splash_screen_editor", "splash_screen_gcodeviewer", "auto_switch_preview" }.count(opt_key) > 0)
+            m_values[opt_key] = boost::any_cast<std::string>(value);
+        else
+            m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
+    };
+    return optgroup;
+}
+
+static void activate_options_tab(std::shared_ptr<ConfigOptionsGroup> optgroup, int padding = 20)
 {
 	optgroup->activate();
 	optgroup->update_visibility(comSimple);
 	wxBoxSizer* sizer = static_cast<wxBoxSizer*>(static_cast<wxPanel*>(optgroup->parent())->GetSizer());
-	sizer->Add(optgroup->sizer, 0, wxEXPAND | wxALL, 20);
+	sizer->Add(optgroup->sizer, 0, wxEXPAND | wxALL, padding);
 }
 
 void PreferencesDialog::build()
@@ -54,46 +71,36 @@ void PreferencesDialog::build()
 	wxNotebook* tabs = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNB_TOP | wxTAB_TRAVERSAL | wxNB_NOPAGETHEME);
 
 	// Add "General" tab
-	m_optgroup_general = create_options_tab(_L("General"), tabs);
-	m_optgroup_general->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
-		if (opt_key == "default_action_on_close_application" || opt_key == "default_action_on_select_preset")
-			m_values[opt_key] = boost::any_cast<bool>(value) ? "none" : "discard";
-		else if (std::unordered_set<std::string>{ "splash_screen_editor" ,"splash_screen_gcodeviewer" ,"auto_switch_preview" }.count(opt_key) > 0)
-			m_values[opt_key] = boost::any_cast<std::string>(value);
-		else
-			m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
-	};
+	m_optgroups_general.clear();
+	m_optgroups_general.emplace_back(create_options_tab(_L("General"), tabs));
+
 
 	bool is_editor = wxGetApp().is_editor();
 
 	ConfigOptionDef def;
 	Option option(def, "");
-	if (is_editor) {
-	def.label = L("Remember output directory");
-	def.type = coBool;
-	def.tooltip = L("If this is enabled, Slic3r will prompt the last output directory "
-					  "instead of the one containing the input files.");
-    def.set_default_value(new ConfigOptionBool{ app_config->has("remember_output_path") ? app_config->get("remember_output_path") == "1" : true });
-		option = Option(def, "remember_output_path");
-	m_optgroup_general->append_single_option_line(option);
-
-	def.label = L("Auto-center parts");
-	def.type = coBool;
-	def.tooltip = L("If this is enabled, Slic3r will auto-center objects "
-					  "around the print bed center.");
-	def.set_default_value(new ConfigOptionBool{ app_config->get("autocenter") == "1" });
-		option = Option(def, "autocenter");
-	m_optgroup_general->append_single_option_line(option);
-
-	def.label = L("Background processing");
-	def.type = coBool;
-	def.tooltip = L("If this is enabled, Slic3r will pre-process objects as soon "
-					  "as they\'re loaded in order to save time when exporting G-code.");
-	def.set_default_value(new ConfigOptionBool{ app_config->get("background_processing") == "1" });
-		option = Option(def, "background_processing");
-	m_optgroup_general->append_single_option_line(option);
 
 	if (is_editor) {
+
+        //activate_options_tab(m_optgroups_general.back(), 3);
+        m_optgroups_general.emplace_back(create_general_options_group(_L("Automation"), tabs));
+
+        def.label = L("Auto-center parts");
+        def.type = coBool;
+        def.tooltip = L("If this is enabled, Slic3r will auto-center objects "
+            "around the print bed center.");
+        def.set_default_value(new ConfigOptionBool{ app_config->get("autocenter") == "1" });
+        option = Option(def, "autocenter");
+        m_optgroups_general.back()->append_single_option_line(option);
+
+        def.label = L("Background processing");
+        def.type = coBool;
+        def.tooltip = L("If this is enabled, Slic3r will pre-process objects as soon "
+            "as they\'re loaded in order to save time when exporting G-code.");
+        def.set_default_value(new ConfigOptionBool{ app_config->get("background_processing") == "1" });
+        option = Option(def, "background_processing");
+        m_optgroups_general.back()->append_single_option_line(option);
+
 		def_combobox_auto_switch_preview.label = L("Switch to Preview when sliced");
 		def_combobox_auto_switch_preview.type = coStrings;
 		def_combobox_auto_switch_preview.tooltip = L("When an object is sliced, it will switch your view from the curent view to the "
@@ -104,7 +111,7 @@ void PreferencesDialog::build()
 		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Switch when possible"));
 		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Only if on plater"));
 		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Only when GCode is ready"));
-		if(app_config->get("auto_switch_preview") == "0")
+		if (app_config->get("auto_switch_preview") == "0")
 			def_combobox_auto_switch_preview.set_default_value(new ConfigOptionStrings{ def_combobox_auto_switch_preview.enum_values[0] });
 		else if (app_config->get("auto_switch_preview") == "1")
 			def_combobox_auto_switch_preview.set_default_value(new ConfigOptionStrings{ def_combobox_auto_switch_preview.enum_values[1] });
@@ -115,24 +122,61 @@ void PreferencesDialog::build()
 		else
 			def_combobox_auto_switch_preview.set_default_value(new ConfigOptionStrings{ def_combobox_auto_switch_preview.enum_values[2] });
 		option = Option(def_combobox_auto_switch_preview, "auto_switch_preview");
-		m_optgroup_general->append_single_option_line(option);
-	}
+		m_optgroups_general.back()->append_single_option_line(option);
 
-	// Please keep in sync with ConfigWizard
-	def.label = L("Check for application updates");
-	def.type = coBool;
-	def.tooltip = L("If enabled, Slic3r will check for the new versions of itself online. When a new version becomes available a notification is displayed at the next application startup (never during program usage). This is only a notification mechanisms, no automatic installation is done.");
-	def.set_default_value(new ConfigOptionBool(app_config->get("version_check") == "1"));
-		option = Option(def, "version_check");
-	m_optgroup_general->append_single_option_line(option);
 
-	// Please keep in sync with ConfigWizard
-	def.label = L("Export sources full pathnames to 3mf and amf");
-	def.type = coBool;
-	def.tooltip = L("If enabled, allows the Reload from disk command to automatically find and load the files when invoked.");
-	def.set_default_value(new ConfigOptionBool(app_config->get("export_sources_full_pathnames") == "1"));
-	option = Option(def, "export_sources_full_pathnames");
-	m_optgroup_general->append_single_option_line(option);
+        activate_options_tab(m_optgroups_general.back(), 3);
+        m_optgroups_general.emplace_back(create_general_options_group(_L("Presets and updates"), tabs));
+
+        // Please keep in sync with ConfigWizard
+        def.label = L("Check for application updates");
+        def.type = coBool;
+        def.tooltip = L("If enabled, Slic3r will check for the new versions of itself online. When a new version becomes available a notification is displayed at the next application startup (never during program usage). This is only a notification mechanisms, no automatic installation is done.");
+        def.set_default_value(new ConfigOptionBool(app_config->get("version_check") == "1"));
+            option = Option(def, "version_check");
+        m_optgroups_general.back()->append_single_option_line(option);
+
+        // Please keep in sync with ConfigWizard
+        def.label = L("Update built-in Presets automatically");
+        def.type = coBool;
+        def.tooltip = L("If enabled, Slic3r downloads updates of built-in system presets in the background. These updates are downloaded into a separate temporary location. When a new preset version becomes available it is offered at application startup.");
+        def.set_default_value(new ConfigOptionBool(app_config->get("preset_update") == "1"));
+        option = Option(def, "preset_update");
+        m_optgroups_general.back()->append_single_option_line(option);
+
+        def.label = L("Suppress \" - default - \" presets");
+        def.type = coBool;
+        def.tooltip = L("Suppress \" - default - \" presets in the Print / Filament / Printer "
+            "selections once there are any other valid presets available.");
+        def.set_default_value(new ConfigOptionBool{ app_config->get("no_defaults") == "1" });
+        option = Option(def, "no_defaults");
+        m_optgroups_general.back()->append_single_option_line(option);
+
+        def.label = L("Show incompatible print and filament presets");
+        def.type = coBool;
+        def.tooltip = L("When checked, the print and filament presets are shown in the preset editor "
+            "even if they are marked as incompatible with the active printer");
+        def.set_default_value(new ConfigOptionBool{ app_config->get("show_incompatible_presets") == "1" });
+        option = Option(def, "show_incompatible_presets");
+        m_optgroups_general.back()->append_single_option_line(option);
+
+        def.label = L("Main GUI always in expert mode");
+        def.type = coBool;
+        def.tooltip = L("If enabled, the gui will be in expert mode even if the simple or advanced mode is selected (but not the setting tabs).");
+        def.set_default_value(new ConfigOptionBool{ app_config->get("objects_always_expert") == "1" });
+        option = Option(def, "objects_always_expert");
+        m_optgroups_general.back()->append_single_option_line(option);
+
+        activate_options_tab(m_optgroups_general.back(), 3);
+        m_optgroups_general.emplace_back(create_general_options_group(_L("Files"), tabs));
+
+        // Please keep in sync with ConfigWizard
+        def.label = L("Export sources full pathnames to 3mf and amf");
+        def.type = coBool;
+        def.tooltip = L("If enabled, allows the Reload from disk command to automatically find and load the files when invoked.");
+        def.set_default_value(new ConfigOptionBool(app_config->get("export_sources_full_pathnames") == "1"));
+        option = Option(def, "export_sources_full_pathnames");
+        m_optgroups_general.back()->append_single_option_line(option);
 
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 #ifdef _WIN32
@@ -142,54 +186,34 @@ void PreferencesDialog::build()
 		def.tooltip = L("If enabled, sets Slic3r as default application to open .3mf files.");
 		def.set_default_value(new ConfigOptionBool(app_config->get("associate_3mf") == "1"));
 		option = Option(def, "associate_3mf");
-		m_optgroup_general->append_single_option_line(option);
+		m_optgroups_general.back()->append_single_option_line(option);
 
 		def.label = (boost::format(_u8L("Associate .stl files to %1%")) % SLIC3R_APP_NAME).str();
 		def.type = coBool;
 		def.tooltip = L("If enabled, sets Slic3r as default application to open .stl files.");
 		def.set_default_value(new ConfigOptionBool(app_config->get("associate_stl") == "1"));
 		option = Option(def, "associate_stl");
-		m_optgroup_general->append_single_option_line(option);
+		m_optgroups_general.back()->append_single_option_line(option);
 #endif // _WIN32
 #endif // ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 
-		// Please keep in sync with ConfigWizard
-		def.label = L("Update built-in Presets automatically");
-		def.type = coBool;
-		def.tooltip = L("If enabled, Slic3r downloads updates of built-in system presets in the background. These updates are downloaded into a separate temporary location. When a new preset version becomes available it is offered at application startup.");
-		def.set_default_value(new ConfigOptionBool(app_config->get("preset_update") == "1"));
-		option = Option(def, "preset_update");
-	m_optgroup_general->append_single_option_line(option);
+        def.label = L("Remember output directory");
+        def.type = coBool;
+        def.tooltip = L("If this is enabled, Slic3r will prompt the last output directory "
+            "instead of the one containing the input files.");
+        def.set_default_value(new ConfigOptionBool{ app_config->has("remember_output_path") ? app_config->get("remember_output_path") == "1" : true });
+        option = Option(def, "remember_output_path");
+        m_optgroups_general.back()->append_single_option_line(option);
 
-	def.label = L("Suppress \" - default - \" presets");
-	def.type = coBool;
-	def.tooltip = L("Suppress \" - default - \" presets in the Print / Filament / Printer "
-					  "selections once there are any other valid presets available.");
-	def.set_default_value(new ConfigOptionBool{ app_config->get("no_defaults") == "1" });
-		option = Option(def, "no_defaults");
-	m_optgroup_general->append_single_option_line(option);
-
-	def.label = L("Show incompatible print and filament presets");
-	def.type = coBool;
-	def.tooltip = L("When checked, the print and filament presets are shown in the preset editor "
-					  "even if they are marked as incompatible with the active printer");
-	def.set_default_value(new ConfigOptionBool{ app_config->get("show_incompatible_presets") == "1" });
-		option = Option(def, "show_incompatible_presets");
-	m_optgroup_general->append_single_option_line(option);
-
-	def.label = L("Main GUI always in expert mode");
-	def.type = coBool;
-	def.tooltip = L("If enabled, the gui will be in expert mode even if the simple or advanced mode is selected (but not the setting tabs).");
-	def.set_default_value(new ConfigOptionBool{ app_config->get("objects_always_expert") == "1" });
-	option = Option(def, "objects_always_expert");
-	m_optgroup_general->append_single_option_line(option);
+        activate_options_tab(m_optgroups_general.back(), 3);
+        m_optgroups_general.emplace_back(create_general_options_group(_L("Dialogs"), tabs));
 
 		def.label = L("Show drop project dialog");
 		def.type = coBool;
 		def.tooltip = L("When checked, whenever dragging and dropping a project file on the application, shows a dialog asking to select the action to take on the file to load.");
 		def.set_default_value(new ConfigOptionBool{ app_config->get("show_drop_project_dialog") == "1" });
 		option = Option(def, "show_drop_project_dialog");
-		m_optgroup_general->append_single_option_line(option);
+		m_optgroups_general.back()->append_single_option_line(option);
 
 		
 #if __APPLE__
@@ -201,37 +225,37 @@ void PreferencesDialog::build()
 		def.type = coBool;
 		def.tooltip = L("If this is enabled, when starting Slic3r and another instance of the same Slic3r is already running, that instance will be reactivated instead.");
 #endif
-	def.set_default_value(new ConfigOptionBool{ app_config->has("single_instance") ? app_config->get("single_instance") == "1" : false });
-	option = Option(def, "single_instance");
-	m_optgroup_general->append_single_option_line(option);
+		def.set_default_value(new ConfigOptionBool{ app_config->has("single_instance") ? app_config->get("single_instance") == "1" : false });
+		option = Option(def, "single_instance");
+		m_optgroups_general.back()->append_single_option_line(option);
 
 		def.label = L("Ask for unsaved changes when closing application");
 		def.type = coBool;
 		def.tooltip = L("When closing the application, always ask for unsaved changes");
 		def.set_default_value(new ConfigOptionBool{ app_config->get("default_action_on_close_application") == "none" });
 		option = Option(def, "default_action_on_close_application");
-		m_optgroup_general->append_single_option_line(option);
+		m_optgroups_general.back()->append_single_option_line(option);
 
 		def.label = L("Ask for unsaved changes when selecting new preset");
 		def.type = coBool;
 		def.tooltip = L("Always ask for unsaved changes when selecting new preset");
 		def.set_default_value(new ConfigOptionBool{ app_config->get("default_action_on_select_preset") == "none" });
 		option = Option(def, "default_action_on_select_preset");
-		m_optgroup_general->append_single_option_line(option);
+		m_optgroups_general.back()->append_single_option_line(option);
 
 		def.label = L("Always keep current preset changes on a new project");
 		def.type = coBool;
 		def.tooltip = L("When you create a new project, it will keep the current preset state, and won't open the preset change dialog.");
 		def.set_default_value(new ConfigOptionBool{ app_config->get("default_action_preset_on_new_project") == "1" });
 		option = Option(def, "default_action_preset_on_new_project");
-		m_optgroup_general->append_single_option_line(option);
+		m_optgroups_general.back()->append_single_option_line(option);
 
 		def.label = L("Ask for unsaved project changes");
 		def.type = coBool;
 		def.tooltip = L("Always ask if you want to save your project change if you are going to loose some changes. Or it will discard them by deafult.");
 		def.set_default_value(new ConfigOptionBool{ app_config->get("default_action_on_new_project") == "1" });
 		option = Option(def, "default_action_on_new_project");
-		m_optgroup_general->append_single_option_line(option);
+		m_optgroups_general.back()->append_single_option_line(option);
 	}
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 #ifdef _WIN32
@@ -241,7 +265,7 @@ void PreferencesDialog::build()
 		def.tooltip = (boost::format(_u8L("If enabled, sets %1% as default application to open .gcode files.")) % GCODEVIEWER_APP_NAME).str();
 		def.set_default_value(new ConfigOptionBool(app_config->get("associate_gcode") == "1"));
 		option = Option(def, "associate_gcode");
-		m_optgroup_general->append_single_option_line(option);
+		m_optgroups_general.back()->append_single_option_line(option);
 	}
 #endif // _WIN32
 #endif // ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
@@ -253,8 +277,13 @@ void PreferencesDialog::build()
 	                "If you are experiencing 3D performance problems, disabling this option may help.");
 	def.set_default_value(new ConfigOptionBool{ app_config->get("use_retina_opengl") == "1" });
 	option = Option (def, "use_retina_opengl");
-	m_optgroup_general->append_single_option_line(option);
+	m_optgroups_general.back()->append_single_option_line(option);
 #endif
+
+    if (is_editor) {
+        activate_options_tab(m_optgroups_general.back(), 3);
+        m_optgroups_general.emplace_back(create_general_options_group(_L("Splash screen"), tabs));
+    }
 
     // Show/Hide splash screen
 	def.label = L("Show splash screen");
@@ -262,19 +291,19 @@ void PreferencesDialog::build()
 	def.tooltip = L("Show splash screen");
 	def.set_default_value(new ConfigOptionBool{ app_config->get("show_splash_screen") == "1" });
 	option = Option(def, "show_splash_screen");
-	m_optgroup_general->append_single_option_line(option);
+	m_optgroups_general.back()->append_single_option_line(option);
 
 	def.label = L("Random splash screen");
 	def.type = coBool;
 	def.tooltip = L("Show a random splash screen image from the list at each startup");
 	def.set_default_value(new ConfigOptionBool{ app_config->get("show_splash_screen_random") == "1" });
 	option = Option(def, "show_splash_screen_random");
-	m_optgroup_general->append_single_option_line(option);
+	m_optgroups_general.back()->append_single_option_line(option);
 	
 	// splashscreen image
 	{
 		ConfigOptionDef def_combobox;
-		def_combobox.label = L("Splashscreen image");
+		def_combobox.label = L("Splash screen image");
 		def_combobox.type = coStrings;
 		def_combobox.tooltip = L("Choose the image to use as splashscreen");
 		def_combobox.gui_type = "f_enum_open";
@@ -289,21 +318,25 @@ void PreferencesDialog::build()
 			current_file_name = def_combobox.enum_values[0];
 		def_combobox.set_default_value(new ConfigOptionStrings{ current_file_name });
 		option = Option(def_combobox, is_editor ? "splash_screen_editor" : "splash_screen_gcodeviewer");
-		m_optgroup_general->append_single_option_line(option);
+		m_optgroups_general.back()->append_single_option_line(option);
 	}
 
 #if ENABLE_CTRL_M_ON_WINDOWS
 #if defined(_WIN32) || defined(__APPLE__)
+    if (is_editor) {
+        activate_options_tab(m_optgroups_general.back(), 3);
+        m_optgroups_general.emplace_back(create_general_options_group(_L("Others"), tabs));
+    }
 	def.label = L("Enable support for legacy 3DConnexion devices");
 	def.type = coBool;
 	def.tooltip = L("If enabled, the legacy 3DConnexion devices settings dialog is available by pressing CTRL+M");
 	def.set_default_value(new ConfigOptionBool{ app_config->get("use_legacy_3DConnexion") == "1" });
 	option = Option(def, "use_legacy_3DConnexion");
-	m_optgroup_general->append_single_option_line(option);
+	m_optgroups_general.back()->append_single_option_line(option);
 #endif // _WIN32 || __APPLE__
 #endif // ENABLE_CTRL_M_ON_WINDOWS
 
-	activate_options_tab(m_optgroup_general);
+    activate_options_tab(m_optgroups_general.back(), m_optgroups_general.back()->parent()->GetSizer()->GetItemCount() > 1 ? 3 : 20);
 
 	
 	// Add "Paths" tab
@@ -580,7 +613,14 @@ void PreferencesDialog::accept()
 
 void PreferencesDialog::on_dpi_changed(const wxRect &suggested_rect)
 {
-    m_optgroup_general->msw_rescale();
+	for (int i = 0; i < (int)m_optgroups_general.size(); i++) {
+		if (m_optgroups_general[i]) {
+			m_optgroups_general[i]->msw_rescale();
+		} else {
+			m_optgroups_general.erase(m_optgroups_general.begin() + i);
+			i--;
+		}
+	}
 	m_optgroup_paths->msw_rescale();
 	m_optgroup_camera->msw_rescale();
     m_optgroup_gui->msw_rescale();
