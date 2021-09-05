@@ -2835,28 +2835,28 @@ void Print::_make_wipe_tower()
                         float pigmentAft = m_config.filament_wipe_advanced_pigment.get_at(extruder_id);
                         if (m_config.wipe_advanced_algo.value == waLinear) {
                             volume_to_wipe += m_config.wipe_advanced_multiplier.value * (pigmentBef - pigmentAft);
-                            std::cout << "advanced wiping (lin) ";
-                            std::cout << current_extruder_id << " -> " << extruder_id << " will use " << volume_to_wipe << " mm3\n";
-                            std::cout << " calculus : " << m_config.wipe_advanced_nozzle_melted_volume << " + " << m_config.wipe_advanced_multiplier.value
+                            BOOST_LOG_TRIVIAL(info) << "advanced wiping (lin) ";
+                            BOOST_LOG_TRIVIAL(info) << current_extruder_id << " -> " << extruder_id << " will use " << volume_to_wipe << " mm3\n";
+                            BOOST_LOG_TRIVIAL(info) << " calculus : " << m_config.wipe_advanced_nozzle_melted_volume << " + " << m_config.wipe_advanced_multiplier.value
                                 << " * ( " << pigmentBef << " - " << pigmentAft << " )\n";
-                            std::cout << "    = " << m_config.wipe_advanced_nozzle_melted_volume << " + " << (m_config.wipe_advanced_multiplier.value* (pigmentBef - pigmentAft)) << "\n";
+                            BOOST_LOG_TRIVIAL(info) << "    = " << m_config.wipe_advanced_nozzle_melted_volume << " + " << (m_config.wipe_advanced_multiplier.value* (pigmentBef - pigmentAft)) << "\n";
                         } else if (m_config.wipe_advanced_algo.value == waQuadra) {
                             volume_to_wipe += m_config.wipe_advanced_multiplier.value * (pigmentBef - pigmentAft)
                                 + m_config.wipe_advanced_multiplier.value * (pigmentBef - pigmentAft) * (pigmentBef - pigmentAft) * (pigmentBef - pigmentAft);
-                            std::cout << "advanced wiping (quadra) ";
-                            std::cout << current_extruder_id << " -> " << extruder_id << " will use " << volume_to_wipe << " mm3\n";
-                            std::cout << " calculus : " << m_config.wipe_advanced_nozzle_melted_volume << " + " << m_config.wipe_advanced_multiplier.value
+                            BOOST_LOG_TRIVIAL(info) << "advanced wiping (quadra) ";
+                            BOOST_LOG_TRIVIAL(info) << current_extruder_id << " -> " << extruder_id << " will use " << volume_to_wipe << " mm3\n";
+                            BOOST_LOG_TRIVIAL(info) << " calculus : " << m_config.wipe_advanced_nozzle_melted_volume << " + " << m_config.wipe_advanced_multiplier.value
                                 << " * ( " << pigmentBef << " - " << pigmentAft << " ) + " << m_config.wipe_advanced_multiplier.value
                                 << " * ( " << pigmentBef << " - " << pigmentAft << " ) ^3 \n";
-                            std::cout << "    = " << m_config.wipe_advanced_nozzle_melted_volume << " + " << (m_config.wipe_advanced_multiplier.value* (pigmentBef - pigmentAft))
+                            BOOST_LOG_TRIVIAL(info) << "    = " << m_config.wipe_advanced_nozzle_melted_volume << " + " << (m_config.wipe_advanced_multiplier.value* (pigmentBef - pigmentAft))
                                 << " + " << (m_config.wipe_advanced_multiplier.value*(pigmentBef - pigmentAft)*(pigmentBef - pigmentAft)*(pigmentBef - pigmentAft))<<"\n";
                         } else if (m_config.wipe_advanced_algo.value == waHyper) {
                             volume_to_wipe += m_config.wipe_advanced_multiplier.value * (0.5 + pigmentBef) / (0.5 + pigmentAft);
-                            std::cout << "advanced wiping (hyper) ";
-                            std::cout << current_extruder_id << " -> " << extruder_id << " will use " << volume_to_wipe << " mm3\n";
-                            std::cout << " calculus : " << m_config.wipe_advanced_nozzle_melted_volume << " + " << m_config.wipe_advanced_multiplier.value
+                            BOOST_LOG_TRIVIAL(info) << "advanced wiping (hyper) ";
+                            BOOST_LOG_TRIVIAL(info) << current_extruder_id << " -> " << extruder_id << " will use " << volume_to_wipe << " mm3\n";
+                            BOOST_LOG_TRIVIAL(info) << " calculus : " << m_config.wipe_advanced_nozzle_melted_volume << " + " << m_config.wipe_advanced_multiplier.value
                                 << " * ( 0.5 + " << pigmentBef << " ) / ( 0.5 + " << pigmentAft << " )\n";
-                            std::cout << "    = " << m_config.wipe_advanced_nozzle_melted_volume << " + " << (m_config.wipe_advanced_multiplier.value * (0.5 + pigmentBef) / (0.5 + pigmentAft)) << "\n";
+                            BOOST_LOG_TRIVIAL(info) << "    = " << m_config.wipe_advanced_nozzle_melted_volume << " + " << (m_config.wipe_advanced_multiplier.value * (0.5 + pigmentBef) / (0.5 + pigmentAft)) << "\n";
                         }
                     }
                     //filament_wipe_advanced_pigment
