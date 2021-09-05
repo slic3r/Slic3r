@@ -6152,9 +6152,14 @@ void Plater::force_print_bed_update()
 
 void Plater::on_activate()
 {
-#if defined(__linux__) || defined(_WIN32)
     // Activating the main frame, and no window has keyboard focus.
     // Set the keyboard focus to the visible Canvas3D.
+#if defined(__linux__)
+    if (this->p->view3D->IsShown() && wxWindow::FindFocus() != this->p->view3D->get_wxglcanvas())
+        this->p->view3D->get_wxglcanvas()->SetFocus();
+    else if (this->p->preview->IsShown() && wxWindow::FindFocus() != this->p->view3D->get_wxglcanvas())
+        this->p->preview->get_wxglcanvas()->SetFocus();
+#elif defined(_WIN32)
     if (this->p->view3D->IsShown() && wxWindow::FindFocus() != this->p->view3D->get_wxglcanvas())
         CallAfter([this]() { this->p->view3D->get_wxglcanvas()->SetFocus(); });
     else if (this->p->preview->IsShown() && wxWindow::FindFocus() != this->p->view3D->get_wxglcanvas())
