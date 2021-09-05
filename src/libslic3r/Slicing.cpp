@@ -72,17 +72,32 @@ coordf_t Slicing::max_layer_height_from_nozzle(const DynamicPrintConfig &print_c
     return check_z_step(std::max(min_layer_height, (max_layer_height == 0.) ? (0.75 * nozzle_dmr) : max_layer_height), print_config.opt_float("z_step"));
 }
 
+
 SlicingParameters SlicingParameters::create_from_config(
 	const PrintConfig 		&print_config, 
 	const PrintObjectConfig &object_config,
 	coordf_t				 object_height,
-	const std::vector<uint16_t> &object_extruders)
+	const std::set<uint16_t> &object_extruders)
 {
     //first layer height is got from the first_layer_height setting unless the value was garbage.
     // if the first_layer_height setting depends of the nozzle width, use the first one. Apply the z_step
-    coordf_t first_layer_height = (object_config.first_layer_height.get_abs_value(print_config.nozzle_diameter.empty() ? 0. : print_config.nozzle_diameter.get_at(0)) <= 0) ?
-        object_config.layer_height.value : 
-        object_config.first_layer_height.get_abs_value(print_config.nozzle_diameter.get_at(0));
+
+    //get object first layer height
+    double first_layer_height = object_config.first_layer_height.value;
+    if (object_config.first_layer_height.percent) {
+        first_layer_height = 1000000000.;
+        for (uint16_t extruder_id : object_extruders) {
+            if (print_config.nozzle_diameter.size() <= extruder_id)
+                break;
+            double nozzle_diameter = print_config.nozzle_diameter.values[extruder_id];
+            first_layer_height = std::min(first_layer_height, object_config.first_layer_height.get_abs_value(nozzle_diameter));
+        }
+        if (first_layer_height == 1000000000.)
+            first_layer_height = 0;
+    }
+
+    if (first_layer_height == 0)
+        object_config.layer_height.value;
     first_layer_height = check_z_step(first_layer_height, print_config.z_step);
     // If object_config.support_material_extruder == 0 resp. object_config.support_material_interface_extruder == 0,
     // print_config.nozzle_diameter.get_at(size_t(-1)) returns the 0th nozzle diameter,

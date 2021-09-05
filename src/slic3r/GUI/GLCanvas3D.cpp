@@ -65,6 +65,7 @@
 #include <float.h>
 #include <algorithm>
 #include <cmath>
+#include <set>
 #include "DoubleSlider.hpp"
 
 #include <imgui/imgui_internal.h>

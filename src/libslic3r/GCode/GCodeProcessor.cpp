@@ -581,7 +581,7 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
 #endif // ENABLE_VOLUMETRIC_EXTRUSION_PROCESSING
 
     if (m_flavor != gcfMarlin) {
-        double time_estimation_compensation = config.get_abs_value("time_estimation_compensation");
+        double time_estimation_compensation = config.get_computed_value("time_estimation_compensation");
         for (auto& machine : this->m_time_processor.machines) {
             machine.time_acceleration = float(time_estimation_compensation);
         }
@@ -773,7 +773,7 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
     }
 
     if (m_flavor != gcfMarlin) {
-        double time_estimation_compensation = config.get_abs_value("time_estimation_compensation");
+        double time_estimation_compensation = config.get_computed_value("time_estimation_compensation");
         for (auto& machine : this->m_time_processor.machines) {
             machine.time_acceleration = float(time_estimation_compensation);
         }

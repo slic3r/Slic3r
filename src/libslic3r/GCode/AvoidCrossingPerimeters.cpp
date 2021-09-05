@@ -483,7 +483,7 @@ static bool need_wipe(const GCode          &gcodegen,
 // called by get_perimeter_spacing() / get_perimeter_spacing_external()
 static inline float get_default_perimeter_spacing(const PrintObject &print_object)
 {
-    std::vector<uint16_t> printing_extruders = print_object.object_extruders();
+    std::set<uint16_t> printing_extruders = print_object.object_extruders();
     assert(!printing_extruders.empty());
     float avg_extruder = 0;
     for(uint16_t extruder_id : printing_extruders)

@@ -657,12 +657,15 @@ bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, con
             opt->set_phony(false);
     else
         opt->set_phony(false);
+
+    if (optdef->is_vector_extruder)
+        static_cast<ConfigOptionVectorBase*>(opt)->set_is_extruder_size(true);
     return success;
 }
 
 // Return an absolute value of a possibly relative config variable.
 // For example, return absolute infill extrusion width, either from an absolute value, or relative to the layer height.
-double ConfigBase::get_abs_value(const t_config_option_key &opt_key) const
+double ConfigBase::get_computed_value(const t_config_option_key &opt_key, int extruder_id) const
 {
     // Get stored option value.
     const ConfigOption *raw_opt = this->option(opt_key);
@@ -670,52 +673,92 @@ double ConfigBase::get_abs_value(const t_config_option_key &opt_key) const
         std::stringstream ss; ss << "You can't define an option that need " << opt_key << " without defining it!";
         throw std::runtime_error(ss.str());
     }
-    if (raw_opt->type() == coFloat)
-        return static_cast<const ConfigOptionFloat*>(raw_opt)->value;
-    if (raw_opt->type() == coInt)
-        return static_cast<const ConfigOptionInt*>(raw_opt)->value;
-    if (raw_opt->type() == coBool)
-        return static_cast<const ConfigOptionBool*>(raw_opt)->value?1:0;
-    const ConfigOptionDef* opt_def = nullptr;
-    const ConfigOptionPercent* cast_opt = nullptr;
-    if (raw_opt->type() == coFloatOrPercent) {
-        if(!static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->percent)
-            return static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->value;
-        // Get option definition.
-        const ConfigDef *def = this->def();
-        if (def == nullptr)
-            throw NoDefinitionException(opt_key);
-        opt_def = def->get(opt_key);
-        cast_opt = static_cast<const ConfigOptionFloatOrPercent*>(raw_opt);
-        assert(opt_def != nullptr);
-    }
-    if (raw_opt->type() == coPercent) {
-        // Get option definition.
-        const ConfigDef* def = this->def();
-        if (def == nullptr)
-            throw NoDefinitionException(opt_key);
-        opt_def = def->get(opt_key);
-        assert(opt_def != nullptr);
-        cast_opt = static_cast<const ConfigOptionPercent*>(raw_opt);
-    }
-    if (opt_def != nullptr) {
-        //if over no other key, it's most probably a simple %
-        if (opt_def->ratio_over == "")
-            return cast_opt->get_abs_value(1);
-        if (opt_def->ratio_over == "nozzle_diameter") {
-            //use the first... i guess.
-            //TODO: find a better way, like a "current_extruder_idx" config option.
-            if (this->option(opt_def->ratio_over) == nullptr) {
-                std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " need nozzle_diameter but can't acess it. Please use get_abs_value(nozzle_diam).";
-                throw std::runtime_error(ss.str());
-            }
-            return cast_opt->get_abs_value(static_cast<const ConfigOptionFloats*>(this->option(opt_def->ratio_over))->values[0]);
+
+    if (!raw_opt->is_vector()) {
+        if (raw_opt->type() == coFloat)
+            return static_cast<const ConfigOptionFloat*>(raw_opt)->value;
+        if (raw_opt->type() == coInt)
+            return static_cast<const ConfigOptionInt*>(raw_opt)->value;
+        if (raw_opt->type() == coBool)
+            return static_cast<const ConfigOptionBool*>(raw_opt)->value ? 1 : 0;
+        const ConfigOptionDef* opt_def = nullptr;
+        const ConfigOptionPercent* cast_opt = nullptr;
+        if (raw_opt->type() == coFloatOrPercent) {
+            if (!static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->percent)
+                return static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->value;
+            // Get option definition.
+            const ConfigDef* def = this->def();
+            if (def == nullptr)
+                throw NoDefinitionException(opt_key);
+            opt_def = def->get(opt_key);
+            cast_opt = static_cast<const ConfigOptionFloatOrPercent*>(raw_opt);
+            assert(opt_def != nullptr);
         }
-        // Compute absolute value over the absolute value of the base option.
-        //FIXME there are some ratio_over chains, which end with empty ratio_with.
-        // For example, XXX_extrusion_width parameters are not handled by get_abs_value correctly.
-        return opt_def->ratio_over.empty() ? 0. :
-            cast_opt->get_abs_value(this->get_abs_value(opt_def->ratio_over));
+        if (raw_opt->type() == coPercent) {
+            // Get option definition.
+            const ConfigDef* def = this->def();
+            if (def == nullptr)
+                throw NoDefinitionException(opt_key);
+            opt_def = def->get(opt_key);
+            assert(opt_def != nullptr);
+            cast_opt = static_cast<const ConfigOptionPercent*>(raw_opt);
+        }
+        if (opt_def != nullptr) {
+            //if over no other key, it's most probably a simple %
+            if (opt_def->ratio_over == "")
+                return cast_opt->get_abs_value(1);
+            // Compute absolute value over the absolute value of the base option.
+            //FIXME there are some ratio_over chains, which end with empty ratio_with.
+            // For example, XXX_extrusion_width parameters are not handled by get_abs_value correctly.
+            if (!opt_def->ratio_over.empty() && opt_def->ratio_over != "depends")
+                return cast_opt->get_abs_value(this->get_computed_value(opt_def->ratio_over));
+
+            std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has no valid ratio_over to compute of";
+            throw ConfigurationError(ss.str());
+        }
+    } else {
+        // check if it's an extruder_id array
+        const ConfigOptionVectorBase* vector_opt = static_cast<const ConfigOptionVectorBase*>(raw_opt);
+        if (vector_opt->is_extruder_size()) {
+            if (extruder_id < 0) {
+                const ConfigOption* opt_extruder_id = nullptr;
+                if ((opt_extruder_id = this->option("extruder")) == nullptr)
+                    if ((opt_extruder_id = this->option("current_extruder")) == nullptr
+                        || opt_extruder_id->getInt() < 0 || opt_extruder_id->getInt() >= vector_opt->size()) {
+                        std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " need to has the extuder id to get the right value, but it's not available";
+                        throw ConfigurationError(ss.str());
+                    }
+                extruder_id = opt_extruder_id->getInt();
+            }
+
+            if (raw_opt->type() == coFloats || raw_opt->type() == coInts || raw_opt->type() == coBools)
+                return vector_opt->getFloat(extruder_id);
+            if (raw_opt->type() == coFloatsOrPercents) {
+                const ConfigOptionFloatsOrPercents* opt_fl_per = static_cast<const ConfigOptionFloatsOrPercents*>(raw_opt);
+                if (!opt_fl_per->values[extruder_id].percent)
+                    return opt_fl_per->values[extruder_id].value;
+
+                const ConfigDef* def = this->def();
+                if (def == nullptr)
+                    throw NoDefinitionException(opt_key);
+                const ConfigOptionDef* opt_def = def->get(opt_key);
+                if (!opt_def->ratio_over.empty() && opt_def->ratio_over != "depends")
+                    return opt_fl_per->get_abs_value(extruder_id, this->get_computed_value(opt_def->ratio_over, extruder_id));
+                std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has no valid ratio_over to compute of";
+                throw ConfigurationError(ss.str());
+            }
+            if (raw_opt->type() == coPercents) {
+                const ConfigOptionPercents* opt_per = static_cast<const ConfigOptionPercents*>(raw_opt);
+                const ConfigDef* def = this->def();
+                if (def == nullptr)
+                    throw NoDefinitionException(opt_key);
+                const ConfigOptionDef* opt_def = def->get(opt_key);
+                if (!opt_def->ratio_over.empty() && opt_def->ratio_over != "depends")
+                    return opt_per->get_abs_value(extruder_id, this->get_computed_value(opt_def->ratio_over, extruder_id));
+                std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has no valid ratio_over to compute of";
+                throw ConfigurationError(ss.str());
+            }
+        }
     }
     std::stringstream ss; ss << "ConfigBase::get_abs_value(): "<< opt_key<<" has not a valid option type for get_abs_value()";
     throw ConfigurationError(ss.str());

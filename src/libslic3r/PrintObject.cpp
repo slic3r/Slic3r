@@ -2277,7 +2277,7 @@ namespace Slic3r {
         size_t              num_extruders = print_config.nozzle_diameter.size();
         object_config = object_config_from_model_object(object_config, model_object, num_extruders);
 
-        std::vector<uint16_t> object_extruders;
+        std::set<uint16_t> object_extruders;
         for (const ModelVolume* model_volume : model_object.volumes)
             if (model_volume->is_model_part()) {
                 PrintRegion::collect_object_printing_extruders(
@@ -2295,7 +2295,6 @@ namespace Slic3r {
                             region_config_from_model_volume(default_region_config, &range_and_config.second.get(), *model_volume, num_extruders),
                             object_extruders);
             }
-        sort_remove_duplicates(object_extruders);
 
         if (object_max_z <= 0.f)
             object_max_z = (float)model_object.raw_bounding_box().size().z();
@@ -2303,15 +2302,27 @@ namespace Slic3r {
     }
 
     // returns 0-based indices of extruders used to print the object (without brim, support and other helper extrusions)
-    std::vector<uint16_t> PrintObject::object_extruders() const
+    std::set<uint16_t> PrintObject::object_extruders() const
     {
-        std::vector<uint16_t> extruders;
-        extruders.reserve(this->region_volumes.size() * 3);
+        std::set<uint16_t> extruders;
         for (size_t idx_region = 0; idx_region < this->region_volumes.size(); ++idx_region)
             if (!this->region_volumes[idx_region].empty())
                 m_print->get_region(idx_region)->collect_object_printing_extruders(extruders);
-        sort_remove_duplicates(extruders);
         return extruders;
+    }
+
+    double PrintObject::get_first_layer_height() const
+    {
+        //get object first layer height
+        double object_first_layer_height = config().first_layer_height.value;
+        if (config().first_layer_height.percent) {
+            object_first_layer_height = 1000000000;
+            for (uint16_t extruder_id : object_extruders()) {
+                double nozzle_diameter = print()->config().nozzle_diameter.values[extruder_id];
+                object_first_layer_height = std::fmin(object_first_layer_height, config().first_layer_height.get_abs_value(nozzle_diameter));
+            }
+        }
+        return object_first_layer_height;
     }
 
     bool PrintObject::update_layer_height_profile(const ModelObject& model_object, const SlicingParameters& slicing_parameters, std::vector<coordf_t>& layer_height_profile)
@@ -3879,5 +3890,6 @@ static void fix_mesh_connectivity(TriangleMesh &mesh)
         auto it = Slic3r::lower_bound_by_predicate(m_layers.begin(), m_layers.end(), [limit](const Layer* layer) { return layer->print_z < limit; });
         return (it == m_layers.begin()) ? nullptr : *(--it);
     }
+
 
 } // namespace Slic3r

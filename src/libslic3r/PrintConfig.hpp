@@ -1950,6 +1950,7 @@ public:
     const ConfigOption*         option(const t_config_option_key &opt_key) const { return m_data.option(opt_key); }
     int                         opt_int(const t_config_option_key &opt_key) const { return m_data.opt_int(opt_key); }
     int                         extruder() const { return opt_int("extruder"); }
+    int                         first_layer_extruder() const { return opt_int("first_layer_extruder"); }
     double                      opt_float(const t_config_option_key &opt_key) const { return m_data.opt_float(opt_key); }
     std::string                 opt_serialize(const t_config_option_key &opt_key) const { return m_data.opt_serialize(opt_key); }
 

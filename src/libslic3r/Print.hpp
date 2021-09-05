@@ -74,8 +74,8 @@ public:
     coordf_t                    bridging_height_avg(const PrintConfig &print_config) const;
 
     // Collect 0-based extruder indices used to print this region's object.
-	void                        collect_object_printing_extruders(std::vector<uint16_t> &object_extruders) const;
-	static void                 collect_object_printing_extruders(const PrintConfig &print_config, const PrintObjectConfig &object_config, const PrintRegionConfig &region_config, std::vector<uint16_t> &object_extruders);
+	void                        collect_object_printing_extruders(std::set<uint16_t> &object_extruders) const;
+	static void                 collect_object_printing_extruders(const PrintConfig &print_config, const PrintObjectConfig &object_config, const PrintRegionConfig &region_config, std::set<uint16_t> &object_extruders);
 
 // Methods modifying the PrintRegion's state:
 public:
@@ -188,7 +188,8 @@ public:
     static SlicingParameters    slicing_parameters(const DynamicPrintConfig &full_config, const ModelObject &model_object, float object_max_z);
 
     // returns 0-based indices of extruders used to print the object (without brim, support and other helper extrusions)
-    std::vector<uint16_t>   object_extruders() const;
+    std::set<uint16_t>   object_extruders() const;
+    double               get_first_layer_height() const;
 
     // Called by make_perimeters()
     void slice();
@@ -432,13 +433,14 @@ public:
 
     // Returns an empty string if valid, otherwise returns an error message.
     std::pair<PrintValidationError, std::string> validate() const override;
-    double              skirt_first_layer_height() const;
     Flow                brim_flow(size_t extruder_id, const PrintObjectConfig &brim_config) const;
-    Flow                skirt_flow(size_t extruder_id) const;
+    Flow                skirt_flow(size_t extruder_id, bool first_layer=false) const;
+    double              get_first_layer_height() const;
+    double              get_object_first_layer_height(const PrintObject& object) const;
     
-    std::vector<uint16_t> object_extruders(const PrintObjectPtrs &objects) const;
-    std::vector<uint16_t> support_material_extruders() const;
-    std::vector<uint16_t> extruders() const;
+    std::set<uint16_t>  object_extruders(const PrintObjectPtrs &objects) const;
+    std::set<uint16_t>  support_material_extruders() const;
+    std::set<uint16_t>  extruders() const;
     double              max_allowed_layer_height() const;
     bool                has_support_material() const;
     // Make sure the background processing has no access to this model_object during this call!

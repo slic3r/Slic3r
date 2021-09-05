@@ -137,8 +137,11 @@ namespace Slic3r {
     }
 
     bool MillingPostProcess::can_be_milled(const Layer* layer) {
+        double max_first_layer = 0;
+        for (double diam : this->print_config->nozzle_diameter.values)
+            max_first_layer = std::max(max_first_layer, config->milling_after_z.get_abs_value(this->object_config->first_layer_height.get_abs_value(diam)));
         return !print_config->milling_diameter.values.empty() && config->milling_post_process
-            && layer->bottom_z() >= config->milling_after_z.get_abs_value(this->object_config->first_layer_height.get_abs_value(this->print_config->nozzle_diameter.values.front()));
+            && layer->bottom_z() >= max_first_layer;
     }
 
     ExPolygons MillingPostProcess::get_unmillable_areas(const Layer* layer)

@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <vector>
+#include <set>
 #include <cassert>
 #include <cmath>
 #include <type_traits>
@@ -122,6 +123,15 @@ inline void append(std::vector<T>& dest, const std::vector<T>& src)
         dest = src;
     else
         dest.insert(dest.end(), src.begin(), src.end());
+}
+
+template <typename T>
+inline void append(std::set<T>& dest, const std::set<T>& src)
+{
+    if (dest.empty())
+        dest = src;
+    else
+        dest.insert(src.begin(), src.end());
 }
 
 template <typename T>

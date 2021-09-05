@@ -290,7 +290,7 @@ Flow support_material_1st_layer_flow(const PrintObject *object, float layer_heig
     const auto &width = (object->config().first_layer_extrusion_width.value > 0) ? object->config().first_layer_extrusion_width : object->config().support_material_extrusion_width;
     float slice_height = layer_height;
     if (layer_height <= 0.f && !object->print()->config().nozzle_diameter.empty()){
-        slice_height = (float)(object->config().first_layer_height.get_abs_value(object->print()->config().nozzle_diameter.get_at(0)));
+        slice_height = (float)object->get_first_layer_height();
     }
     return Flow::new_from_config_width(
         frSupportMaterial,

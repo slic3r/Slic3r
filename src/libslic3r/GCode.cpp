@@ -225,7 +225,7 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
         //get biggest first layer height and set extra lift for first travel, to be safe.
         double extra_lift_value = 0;
         for (const PrintObject* obj : print.objects())
-            extra_lift_value = std::max(extra_lift_value, obj->config().first_layer_height.get_abs_value(print.config().nozzle_diameter.get_at(0)));
+            extra_lift_value = std::max(extra_lift_value, print.get_object_first_layer_height(*obj));
         writer.set_extra_lift(extra_lift_value * 2);
     }
 }
@@ -741,31 +741,34 @@ namespace DoExport {
             excluded.insert(erMixed);
             excluded.insert(erNone);
             excluded.insert(erWipeTower);
-            if (config->get_abs_value("perimeter_speed") != 0 && config->get_abs_value("small_perimeter_speed") != 0) {
+            if (config->option("perimeter_speed") != nullptr && config->option("perimeter_speed")->getFloat() != 0
+                && config->option("small_perimeter_speed") != nullptr && config->option("small_perimeter_speed")->getFloat() != 0) {
                 excluded.insert(erPerimeter);
                 excluded.insert(erSkirt);
             }
-            if (config->get_abs_value("external_perimeter_speed") != 0 && config->get_abs_value("small_perimeter_speed") != 0)
+            if (config->option("external_perimeter_speed") != nullptr && config->option("external_perimeter_speed")->getFloat() != 0
+                && config->option("small_perimeter_speed") != nullptr && config->option("small_perimeter_speed")->getFloat() != 0)
                 excluded.insert(erExternalPerimeter);
-            if (config->get_abs_value("overhangs_speed") != 0 && config->get_abs_value("small_perimeter_speed") != 0)
+            if (config->option("overhangs_speed") != nullptr && config->option("overhangs_speed")->getFloat() != 0
+                && config->option("small_perimeter_speed") != nullptr && config->option("small_perimeter_speed")->getFloat() != 0)
                 excluded.insert(erOverhangPerimeter);
-            if (config->get_abs_value("gap_fill_speed") != 0)
+            if (config->option("gap_fill_speed") != nullptr && config->option("gap_fill_speed")->getFloat() != 0)
                 excluded.insert(erGapFill);
-            if (config->get_abs_value("thin_walls_speed") != 0)
+            if (config->option("thin_walls_speed") != nullptr && config->option("thin_walls_speed")->getFloat() != 0)
                 excluded.insert(erThinWall);
-            if (config->get_abs_value("infill_speed") != 0)
+            if (config->option("infill_speed") != nullptr && config->option("infill_speed")->getFloat() != 0)
                 excluded.insert(erInternalInfill);
-            if (config->get_abs_value("solid_infill_speed") != 0)
+            if (config->option("solid_infill_speed") != nullptr && config->option("solid_infill_speed")->getFloat() != 0)
                 excluded.insert(erSolidInfill);
-            if (config->get_abs_value("top_solid_infill_speed") != 0)
+            if (config->option("top_solid_infill_speed") != nullptr && config->option("top_solid_infill_speed")->getFloat() != 0)
                 excluded.insert(erTopSolidInfill);
-            if (config->get_abs_value("bridge_speed") != 0)
+            if (config->option("bridge_speed") != nullptr && config->option("bridge_speed")->getFloat() != 0)
                 excluded.insert(erBridgeInfill);
-            if (config->get_abs_value("bridge_speed_internal") != 0)
+            if (config->option("bridge_speed_internal") != nullptr && config->option("bridge_speed_internal")->getFloat() != 0)
                 excluded.insert(erInternalBridgeInfill);
-            if (config->get_abs_value("support_material_speed") != 0)
+            if (config->option("support_material_speed") != nullptr && config->option("support_material_speed")->getFloat() != 0)
                 excluded.insert(erSupportMaterial);
-            if (config->get_abs_value("support_material_interface_speed") != 0)
+            if (config->option("support_material_interface_speed") != nullptr && config->option("support_material_interface_speed")->getFloat() != 0)
                 excluded.insert(erSupportMaterialInterface);
         }
         virtual void use(const ExtrusionPath& path) override {
@@ -1188,7 +1191,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     // Write some terse information on the slicing parameters.
     const PrintObject *first_object         = print.objects().front();
     const double       layer_height         = first_object->config().layer_height.value;
-    const double       first_layer_height   = first_object->config().first_layer_height.get_abs_value(m_config.nozzle_diameter.empty()?0.:m_config.nozzle_diameter.get_at(0));
+    const double       first_layer_height   = print.get_first_layer_height();
     for (const PrintRegion* region : print.regions()) {
         _write_format(file, "; external perimeters extrusion width = %.2fmm\n", region->flow(frExternalPerimeter, layer_height, false, false, -1., *first_object).width);
         _write_format(file, "; perimeters extrusion width = %.2fmm\n",          region->flow(frPerimeter,         layer_height, false, false, -1., *first_object).width);
@@ -1293,7 +1296,8 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
         }
         // We don't allow switching of extruders per layer by Model::custom_gcode_per_print_z in sequential mode.
         // Use the extruder IDs collected from Regions.
-    	this->set_extruders(print.extruders());
+        std::set<uint16_t> extruder_set = print.extruders();
+    	this->set_extruders(std::vector<uint16_t>(extruder_set.begin(), extruder_set.end()));
         if(has_milling)
             m_writer.set_mills(std::vector<uint16_t>() = { 0 });
     } else {
@@ -3760,31 +3764,31 @@ double_t GCode::_compute_speed_mm_per_sec(const ExtrusionPath& path, double spee
         //it's a bit hacky, so if you want to rework it, help yourself.
         float factor = float(-speed);
         if (path.role() == erPerimeter) {
-            speed = m_config.get_abs_value("perimeter_speed");
+            speed = m_config.get_computed_value("perimeter_speed");
         } else if (path.role() == erExternalPerimeter) {
-            speed = m_config.get_abs_value("external_perimeter_speed");
+            speed = m_config.get_computed_value("external_perimeter_speed");
         } else if (path.role() == erBridgeInfill) {
-            speed = m_config.get_abs_value("bridge_speed");
+            speed = m_config.get_computed_value("bridge_speed");
         } else if (path.role() == erInternalBridgeInfill) {
-            speed = m_config.get_abs_value("bridge_speed_internal");
+            speed = m_config.get_computed_value("bridge_speed_internal");
         } else if (path.role() == erOverhangPerimeter) {
-            speed = m_config.get_abs_value("overhangs_speed");
+            speed = m_config.get_computed_value("overhangs_speed");
         } else if (path.role() == erInternalInfill) {
-            speed = m_config.get_abs_value("infill_speed");
+            speed = m_config.get_computed_value("infill_speed");
         } else if (path.role() == erSolidInfill) {
-            speed = m_config.get_abs_value("solid_infill_speed");
+            speed = m_config.get_computed_value("solid_infill_speed");
         } else if (path.role() == erTopSolidInfill) {
-            speed = m_config.get_abs_value("top_solid_infill_speed");
+            speed = m_config.get_computed_value("top_solid_infill_speed");
         } else if (path.role() == erThinWall) {
-            speed = m_config.get_abs_value("thin_walls_speed");
+            speed = m_config.get_computed_value("thin_walls_speed");
         } else if (path.role() == erGapFill) {
-            speed = m_config.get_abs_value("gap_fill_speed");
+            speed = m_config.get_computed_value("gap_fill_speed");
         } else if (path.role() == erIroning) {
-            speed = m_config.get_abs_value("ironing_speed");
+            speed = m_config.get_computed_value("ironing_speed");
         } else if (path.role() == erNone) {
-            speed = m_config.get_abs_value("travel_speed");
+            speed = m_config.get_computed_value("travel_speed");
         } else if (path.role() == erMilling) {
-            speed = m_config.get_abs_value("milling_speed");
+            speed = m_config.get_computed_value("milling_speed");
         } else {
             throw Slic3r::InvalidArgument("Invalid speed");
         }
