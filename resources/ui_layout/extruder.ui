@@ -29,7 +29,9 @@ group:Retraction
 	setting:idx:retract_restart_extra
 	setting:idx:retract_before_travel
 	setting:idx:retract_layer_change
+group:Retraction wipe
 	setting:idx:wipe
+	setting:idx:wipe_speed
 	setting:idx:retract_before_wipe
 	setting:idx:wipe_extra_perimeter
 group:Retraction when tool is disabled (advanced settings for multi-extruder setups)

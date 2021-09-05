@@ -2263,6 +2263,7 @@ void TabFilament::add_filament_overrides_page()
                                         "filament_retract_before_travel",
                                         "filament_retract_layer_change",
                                         "filament_wipe",
+                                        "filament_wipe_speed",
                                         "filament_wipe_extra_perimeter",
                                         "filament_retract_before_wipe"
                                      })
@@ -2290,6 +2291,7 @@ void TabFilament::update_filament_overrides_page()
                                             "filament_retract_before_travel",
                                             "filament_retract_layer_change",
                                             "filament_wipe",
+                                            "filament_wipe_speed",
                                             "filament_wipe_extra_perimeter",
                                             "filament_retract_before_wipe"
                                         };
@@ -2912,17 +2914,20 @@ void TabPrinter::toggle_options()
 
         // some options only apply when not using firmware retraction
         vec.resize(0);
-        vec = { "retract_speed", "deretract_speed", "retract_before_wipe", "retract_restart_extra", "wipe" };
+        vec = { "retract_speed", "deretract_speed", "retract_before_wipe", "retract_restart_extra", "wipe", "wipe_speed" };
         for (auto el : vec) {
             field = get_field(el, i);
             if (field)
                 field->toggle(retraction && !use_firmware_retraction);
         }
 
-        bool wipe = m_config->opt_bool("wipe", i);
-        field = get_field("retract_before_wipe", i);
-        if (field)
-            field->toggle(wipe);
+        bool wipe = m_config->opt_bool("wipe", i) && have_retract_length;
+        vec = { "retract_before_wipe", "wipe_speed" };
+        for (auto el : vec) {
+            field = get_field(el, i);
+            if (field)
+                field->toggle(wipe);
+        }
 
         if (use_firmware_retraction && wipe) {
             wxMessageDialog dialog(parent(),

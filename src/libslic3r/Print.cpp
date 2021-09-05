@@ -184,6 +184,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "use_volumetric_e",
         "variable_layer_height",
         "wipe",
+        "wipe_speed",
         "wipe_extra_perimeter"
     };
 

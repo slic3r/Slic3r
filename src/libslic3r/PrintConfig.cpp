@@ -4272,11 +4272,19 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("wipe", coBools);
     def->label = L("Wipe while retracting");
-    def->category = OptionCategory::general;
+    def->category = OptionCategory::extruders;
     def->tooltip = L("This flag will move the nozzle while retracting to minimize the possible blob "
-                   "on leaky extruders.");
+        "on leaky extruders.");
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionBools { false });
+    def->set_default_value(new ConfigOptionBools{ false });
+
+    def = this->add("wipe_speed", coFloats);
+    def->label = L("Wipe speed");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L("Speed in mm/s of the wipe. If it's faster, it will try to go further away, as the wipe time is set by ( 100% - 'retract before wipe') * 'retaction length' / 'retraction speed'."
+        "\nIf set to zero, the travel speed is used.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats{ 0 });
 
     def = this->add("wipe_tower", coBool);
     def->label = L("Enable");
@@ -4527,7 +4535,7 @@ void PrintConfigDef::init_fff_params()
     for (const char *opt_key : {
         // floats
         "retract_length", "retract_lift", "retract_lift_above", "retract_lift_below", "retract_speed", "deretract_speed", "retract_restart_extra", "retract_before_travel",
-        "wipe_extra_perimeter",
+        "wipe_extra_perimeter", "wipe_speed",
         // bools
         "retract_layer_change", "wipe",
         // percents
@@ -4574,6 +4582,7 @@ void PrintConfigDef::init_extruder_option_keys()
         "retract_before_travel",
         "wipe",
 		"wipe_extra_perimeter",
+        "wipe_speed",
         "retract_layer_change",
         "retract_length_toolchange",
         "retract_restart_extra_toolchange",
@@ -4593,6 +4602,7 @@ void PrintConfigDef::init_extruder_option_keys()
         "retract_restart_extra",
         "retract_speed",
         "wipe",
+        "wipe_speed",
         "wipe_extra_perimeter"
     };
     assert(std::is_sorted(m_extruder_retract_keys.begin(), m_extruder_retract_keys.end()));
@@ -5670,6 +5680,7 @@ std::unordered_set<std::string> prusa_export_to_remove_keys = {
 "wipe_advanced_nozzle_melted_volume",
 "wipe_advanced",
 "wipe_extra_perimeter",
+"wipe_speed",
 "wipe_tower_brim",
 "xy_inner_size_compensation",
 "z_step",

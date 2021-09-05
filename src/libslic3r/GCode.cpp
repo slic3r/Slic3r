@@ -158,6 +158,8 @@ std::string Wipe::wipe(GCode& gcodegen, bool toolchange)
     /*  Reduce feedrate a bit; travel speed is often too high to move on existing material.
         Too fast = ripping of existing material; too slow = short wipe path, thus more blob.  */
     double wipe_speed = gcodegen.writer().config.travel_speed.value * 0.8;
+    if(gcodegen.writer().tool_is_extruder() && gcodegen.writer().config.wipe_speed.get_at(gcodegen.writer().tool()->id()) > 0)
+        wipe_speed = gcodegen.writer().config.wipe_speed.get_at(gcodegen.writer().tool()->id());
 
     // get the retraction length
     double length = gcodegen.writer().tool()->retract_length();
@@ -190,7 +192,7 @@ std::string Wipe::wipe(GCode& gcodegen, bool toolchange)
             if (!wipe_path.empty()) {
                 // add tag for processor
                 gcode += ";" + GCodeProcessor::Wipe_Start_Tag + "\n";
-                for (const Line& line : wipe_path.lines()) {
+            for (const Line& line : wipe_path.lines()) {
                 double segment_length = line.length();
                 /*  Reduce retraction length a bit to avoid effective retraction speed to be greater than the configured one
                     due to rounding (TODO: test and/or better math for this)  */
@@ -235,13 +237,13 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
 
     std::string WipeTowerIntegration::append_tcr(GCode& gcodegen, const WipeTower::ToolChangeResult& tcr, int new_extruder_id, double z) const
     {
-    if (new_extruder_id != -1 && new_extruder_id != tcr.new_tool)
+        if (new_extruder_id != -1 && new_extruder_id != tcr.new_tool)
             throw Slic3r::InvalidArgument("Error: WipeTowerIntegration::append_tcr was asked to do a toolchange it didn't expect.");
 
-    std::string gcode;
+        std::string gcode;
 
-    // Toolchangeresult.gcode assumes the wipe tower corner is at the origin (except for priming lines)
-    // We want to rotate and shift all extrusions (gcode postprocessing) and starting and ending position
+        // Toolchangeresult.gcode assumes the wipe tower corner is at the origin (except for priming lines)
+        // We want to rotate and shift all extrusions (gcode postprocessing) and starting and ending position
         float alpha = m_wipe_tower_rotation / 180.f * float(M_PI);
 
         auto transform_wt_pt = [&alpha, this](const Vec2f& pt) -> Vec2f {
@@ -250,112 +252,112 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
             return out;
         };
 
-    Vec2f start_pos = tcr.start_pos;
-    Vec2f end_pos = tcr.end_pos;
+        Vec2f start_pos = tcr.start_pos;
+        Vec2f end_pos = tcr.end_pos;
         if (! tcr.priming) {
             start_pos = transform_wt_pt(start_pos);
             end_pos = transform_wt_pt(end_pos);
-    }
-
-    Vec2f wipe_tower_offset = tcr.priming ? Vec2f::Zero() : m_wipe_tower_pos;
-    float wipe_tower_rotation = tcr.priming ? 0.f : alpha;
-
-    std::string tcr_rotated_gcode = post_process_wipe_tower_moves(tcr, wipe_tower_offset, wipe_tower_rotation);
-
-    //if needed, write the gcode_label_objects_end then priming tower
-    if (!gcodegen.m_gcode_label_objects_end.empty()) {
-        gcode += gcodegen.m_gcode_label_objects_end;
-        gcodegen.m_gcode_label_objects_end = "";
-    }
-
-    if (! tcr.priming) {
-        // Move over the wipe tower.
-        // Retract for a tool change, using the toolchange retract value and setting the priming extra length.
-        gcode += gcodegen.retract(true);
-        gcodegen.m_avoid_crossing_perimeters.use_external_mp_once();
-        Polyline polyline = gcodegen.travel_to(
-            gcode,
-            wipe_tower_point_to_object_point(gcodegen, start_pos),
-            erMixed);
-        gcodegen.write_travel_to(gcode, polyline, "Travel to a Wipe Tower");
-        gcode += gcodegen.unretract();
-    }
-
-    double current_z = gcodegen.writer().get_position().z();
-    if (z == -1.) // in case no specific z was provided, print at current_z pos
-        z = current_z;
-    if (! is_approx(z, current_z)) {
-        gcode += gcodegen.writer().retract();
-        gcode += gcodegen.writer().travel_to_z(z, "Travel down to the last wipe tower layer.");
-        gcode += gcodegen.writer().unretract();
-    }
-
-
-    // Process the end filament gcode.
-    std::string end_filament_gcode_str;
-    if (gcodegen.writer().tool() != nullptr && gcodegen.writer().tool_is_extruder()) {
-        // Process the custom end_filament_gcode in case of single_extruder_multi_material.
-        uint16_t            old_extruder_id     = gcodegen.writer().tool()->id();
-        const std::string& end_filament_gcode  = gcodegen.config().end_filament_gcode.get_at(old_extruder_id);
-        if (gcodegen.writer().tool() != nullptr && ! end_filament_gcode.empty()) {
-            DynamicConfig config;
-            int previous_extruder_id = gcodegen.writer().tool() ? (int)gcodegen.writer().tool()->id() : -1;
-            config.set_key_value("previous_extruder", new ConfigOptionInt(previous_extruder_id));
-            config.set_key_value("next_extruder", new ConfigOptionInt((int)new_extruder_id));
-            config.set_key_value("layer_num", new ConfigOptionInt(gcodegen.m_layer_index));
-            config.set_key_value("layer_z", new ConfigOptionFloat(tcr.print_z));
-            end_filament_gcode_str = gcodegen.placeholder_parser_process("end_filament_gcode", end_filament_gcode, old_extruder_id, &config);
-            check_add_eol(end_filament_gcode_str);
         }
-    }
 
-    // Process the custom toolchange_gcode. If it is empty, provide a simple Tn command to change the filament.
-    // Otherwise, leave control to the user completely.
-    std::string toolchange_gcode_str;
+        Vec2f wipe_tower_offset = tcr.priming ? Vec2f::Zero() : m_wipe_tower_pos;
+        float wipe_tower_rotation = tcr.priming ? 0.f : alpha;
 
-    if (tcr.priming || (new_extruder_id >= 0 && gcodegen.writer().need_toolchange(new_extruder_id)))
-        toolchange_gcode_str += gcodegen.toolchange(new_extruder_id, tcr.print_z);
+        std::string tcr_rotated_gcode = post_process_wipe_tower_moves(tcr, wipe_tower_offset, wipe_tower_rotation);
 
-    gcodegen.placeholder_parser().set("current_extruder", new_extruder_id);
+        //if needed, write the gcode_label_objects_end then priming tower
+        if (!gcodegen.m_gcode_label_objects_end.empty()) {
+            gcode += gcodegen.m_gcode_label_objects_end;
+            gcodegen.m_gcode_label_objects_end = "";
+        }
 
-    // Process the start filament gcode.
-    std::string start_filament_gcode_str;
+        if (! tcr.priming) {
+            // Move over the wipe tower.
+            // Retract for a tool change, using the toolchange retract value and setting the priming extra length.
+            gcode += gcodegen.retract(true);
+            gcodegen.m_avoid_crossing_perimeters.use_external_mp_once();
+            Polyline polyline = gcodegen.travel_to(
+                gcode,
+                wipe_tower_point_to_object_point(gcodegen, start_pos),
+                erMixed);
+            gcodegen.write_travel_to(gcode, polyline, "Travel to a Wipe Tower");
+            gcode += gcodegen.unretract();
+        }
+
+        double current_z = gcodegen.writer().get_position().z();
+        if (z == -1.) // in case no specific z was provided, print at current_z pos
+            z = current_z;
+        if (! is_approx(z, current_z)) {
+            gcode += gcodegen.writer().retract();
+            gcode += gcodegen.writer().travel_to_z(z, "Travel down to the last wipe tower layer.");
+            gcode += gcodegen.writer().unretract();
+        }
+
+
+        // Process the end filament gcode.
+        std::string end_filament_gcode_str;
+        if (gcodegen.writer().tool() != nullptr && gcodegen.writer().tool_is_extruder()) {
+            // Process the custom end_filament_gcode in case of single_extruder_multi_material.
+            uint16_t            old_extruder_id     = gcodegen.writer().tool()->id();
+            const std::string& end_filament_gcode  = gcodegen.config().end_filament_gcode.get_at(old_extruder_id);
+            if (gcodegen.writer().tool() != nullptr && ! end_filament_gcode.empty()) {
+                DynamicConfig config;
+                int previous_extruder_id = gcodegen.writer().tool() ? (int)gcodegen.writer().tool()->id() : -1;
+                config.set_key_value("previous_extruder", new ConfigOptionInt(previous_extruder_id));
+                config.set_key_value("next_extruder", new ConfigOptionInt((int)new_extruder_id));
+                config.set_key_value("layer_num", new ConfigOptionInt(gcodegen.m_layer_index));
+                config.set_key_value("layer_z", new ConfigOptionFloat(tcr.print_z));
+                end_filament_gcode_str = gcodegen.placeholder_parser_process("end_filament_gcode", end_filament_gcode, old_extruder_id, &config);
+                check_add_eol(end_filament_gcode_str);
+            }
+        }
+
+        // Process the custom toolchange_gcode. If it is empty, provide a simple Tn command to change the filament.
+        // Otherwise, leave control to the user completely.
+        std::string toolchange_gcode_str;
+
+        if (tcr.priming || (new_extruder_id >= 0 && gcodegen.writer().need_toolchange(new_extruder_id)))
+            toolchange_gcode_str += gcodegen.toolchange(new_extruder_id, tcr.print_z);
+
+        gcodegen.placeholder_parser().set("current_extruder", new_extruder_id);
+
+        // Process the start filament gcode.
+        std::string start_filament_gcode_str;
         const std::string& start_filament_gcode = gcodegen.config().start_filament_gcode.get_at(new_extruder_id);
         if (!start_filament_gcode.empty()) {
-        // Process the start_filament_gcode for the active filament only.
+            // Process the start_filament_gcode for the active filament only.
+            DynamicConfig config;
+            config.set_key_value("filament_extruder_id", new ConfigOptionInt(new_extruder_id));
+            config.set_key_value("previous_extruder", new ConfigOptionInt(gcodegen.writer().tool() ? (int)gcodegen.writer().tool()->id() : -1));
+            config.set_key_value("next_extruder", new ConfigOptionInt(new_extruder_id));
+            config.set_key_value("layer_num", new ConfigOptionInt(0));
+            config.set_key_value("layer_z", new ConfigOptionFloat(z));
+            start_filament_gcode_str = gcodegen.placeholder_parser_process("start_filament_gcode", start_filament_gcode, new_extruder_id, &config);
+            check_add_eol(start_filament_gcode_str);
+        }
+
+        // Insert the end filament, toolchange, and start filament gcode into the generated gcode.
         DynamicConfig config;
-        config.set_key_value("filament_extruder_id", new ConfigOptionInt(new_extruder_id));
-        config.set_key_value("previous_extruder", new ConfigOptionInt(gcodegen.writer().tool() ? (int)gcodegen.writer().tool()->id() : -1));
-        config.set_key_value("next_extruder", new ConfigOptionInt(new_extruder_id));
-        config.set_key_value("layer_num", new ConfigOptionInt(0));
-        config.set_key_value("layer_z", new ConfigOptionFloat(z));
-        start_filament_gcode_str = gcodegen.placeholder_parser_process("start_filament_gcode", start_filament_gcode, new_extruder_id, &config);
-        check_add_eol(start_filament_gcode_str);
-    }
+        config.set_key_value("end_filament_gcode",   new ConfigOptionString(end_filament_gcode_str));
+        config.set_key_value("toolchange_gcode",     new ConfigOptionString(toolchange_gcode_str));
+        config.set_key_value("start_filament_gcode", new ConfigOptionString(start_filament_gcode_str));
+        std::string tcr_gcode, tcr_escaped_gcode = gcodegen.placeholder_parser_process("tcr_rotated_gcode", tcr_rotated_gcode, new_extruder_id, &config);
+        unescape_string_cstyle(tcr_escaped_gcode, tcr_gcode);
+        gcode += tcr_gcode;
+        check_add_eol(toolchange_gcode_str);
 
-    // Insert the end filament, toolchange, and start filament gcode into the generated gcode.
-    DynamicConfig config;
-    config.set_key_value("end_filament_gcode",   new ConfigOptionString(end_filament_gcode_str));
-    config.set_key_value("toolchange_gcode",     new ConfigOptionString(toolchange_gcode_str));
-    config.set_key_value("start_filament_gcode", new ConfigOptionString(start_filament_gcode_str));
-    std::string tcr_gcode, tcr_escaped_gcode = gcodegen.placeholder_parser_process("tcr_rotated_gcode", tcr_rotated_gcode, new_extruder_id, &config);
-    unescape_string_cstyle(tcr_escaped_gcode, tcr_gcode);
-    gcode += tcr_gcode;
-    check_add_eol(toolchange_gcode_str);
+        if (gcodegen.writer().tool() && gcodegen.m_config.filament_enable_toolchange_part_fan.values[gcodegen.writer().tool()->id()]) {
+            //if the fan may have been changed silently by the wipetower, recover it.
+            gcode += gcodegen.m_writer.set_fan(gcodegen.m_writer.get_fan(), true);
+        }
 
-    if (gcodegen.writer().tool() && gcodegen.m_config.filament_enable_toolchange_part_fan.values[gcodegen.writer().tool()->id()]) {
-        //if the fan may have been changed silently by the wipetower, recover it.
-        gcode += gcodegen.m_writer.set_fan(gcodegen.m_writer.get_fan(), true);
-    }
-
-    // A phony move to the end position at the wipe tower.
-    gcodegen.writer().travel_to_xy(end_pos.cast<double>());
-    gcodegen.set_last_pos(wipe_tower_point_to_object_point(gcodegen, end_pos));
+        // A phony move to the end position at the wipe tower.
+        gcodegen.writer().travel_to_xy(end_pos.cast<double>());
+        gcodegen.set_last_pos(wipe_tower_point_to_object_point(gcodegen, end_pos));
         if (!is_approx(z, current_z)) {
-        gcode += gcodegen.writer().retract();
-        gcode += gcodegen.writer().travel_to_z(current_z, "Travel back up to the topmost object layer.");
-        gcode += gcodegen.writer().unretract();
-    } else {
+            gcode += gcodegen.writer().retract();
+            gcode += gcodegen.writer().travel_to_z(current_z, "Travel back up to the topmost object layer.");
+            gcode += gcodegen.writer().unretract();
+        } else {
         // Prepare a future wipe.
             gcodegen.m_wipe.reset_path();
             for (const Vec2f& wipe_pt : tcr.wipe_path)
@@ -367,10 +369,10 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
         return gcode;
     }
 
-    // This function postprocesses gcode_original, rotates and moves all G1 extrusions and returns resulting gcode
-    // Starting position has to be supplied explicitely (otherwise it would fail in case first G1 command only contained one coordinate)
-    std::string WipeTowerIntegration::post_process_wipe_tower_moves(const WipeTower::ToolChangeResult& tcr, const Vec2f& translation, float angle) const
-    {
+// This function postprocesses gcode_original, rotates and moves all G1 extrusions and returns resulting gcode
+// Starting position has to be supplied explicitely (otherwise it would fail in case first G1 command only contained one coordinate)
+std::string WipeTowerIntegration::post_process_wipe_tower_moves(const WipeTower::ToolChangeResult& tcr, const Vec2f& translation, float angle) const
+{
     Vec2f extruder_offset = m_extruder_offsets[tcr.initial_tool].cast<float>();
 
     std::istringstream gcode_str(tcr.gcode);
@@ -388,7 +390,7 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
         // WT generator can override this by appending the never_skip_tag
         if (line.find("G1 ") == 0) {
             bool never_skip = false;
-                auto it = line.find(WipeTower::never_skip_tag());
+            auto it = line.find(WipeTower::never_skip_tag());
             if (it != std::string::npos) {
                 // remove the tag and remember we saw it
                 never_skip = true;
@@ -399,7 +401,7 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
             line_str >> std::noskipws;  // don't skip whitespace
             char ch = 0;
             while (line_str >> ch) {
-                    if (ch == 'X' || ch == 'Y')
+                if (ch == 'X' || ch == 'Y')
                     line_str >> (ch == 'X' ? pos.x() : pos.y());
                 else
                         line_out << ch;
@@ -439,7 +441,7 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
         }
     }
     return gcode_out;
-    }
+}
 
 
     std::string WipeTowerIntegration::prime(GCode& gcodegen)
@@ -454,33 +456,32 @@ static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeW
 
     std::string WipeTowerIntegration::tool_change(GCode& gcodegen, int extruder_id, bool finish_layer)
     {
-    std::string gcode;
-    assert(m_layer_idx >= 0);
+        std::string gcode;
+        assert(m_layer_idx >= 0);
         if (!m_brim_done || gcodegen.writer().need_toolchange(extruder_id) || finish_layer) {
-		if (m_layer_idx < (int)m_tool_changes.size()) {
+            if (m_layer_idx < (int)m_tool_changes.size()) {
                 if (!(size_t(m_tool_change_idx) < m_tool_changes[m_layer_idx].size()))
                     throw Slic3r::RuntimeError("Wipe tower generation failed, possibly due to empty first layer.");
 
-
-            // Calculate where the wipe tower layer will be printed. -1 means that print z will not change,
-            // resulting in a wipe tower with sparse layers.
-            double wipe_tower_z = -1;
-            bool ignore_sparse = false;
-            if (gcodegen.config().wipe_tower_no_sparse_layers.value) {
-                wipe_tower_z = m_last_wipe_tower_print_z;
-                ignore_sparse = (m_brim_done && m_tool_changes[m_layer_idx].size() == 1 && m_tool_changes[m_layer_idx].front().initial_tool == m_tool_changes[m_layer_idx].front().new_tool);
+                // Calculate where the wipe tower layer will be printed. -1 means that print z will not change,
+                // resulting in a wipe tower with sparse layers.
+                double wipe_tower_z = -1;
+                bool ignore_sparse = false;
+                if (gcodegen.config().wipe_tower_no_sparse_layers.value) {
+                    wipe_tower_z = m_last_wipe_tower_print_z;
+                    ignore_sparse = (m_brim_done && m_tool_changes[m_layer_idx].size() == 1 && m_tool_changes[m_layer_idx].front().initial_tool == m_tool_changes[m_layer_idx].front().new_tool);
                     if (m_tool_change_idx == 0 && !ignore_sparse)
-                       wipe_tower_z = m_last_wipe_tower_print_z + m_tool_changes[m_layer_idx].front().layer_height;
+                        wipe_tower_z = m_last_wipe_tower_print_z + m_tool_changes[m_layer_idx].front().layer_height;
                 }
 
                 if (!ignore_sparse) {
-                gcode += append_tcr(gcodegen, m_tool_changes[m_layer_idx][m_tool_change_idx++], extruder_id, wipe_tower_z);
-                m_last_wipe_tower_print_z = wipe_tower_z;
+                    gcode += append_tcr(gcodegen, m_tool_changes[m_layer_idx][m_tool_change_idx++], extruder_id, wipe_tower_z);
+                    m_last_wipe_tower_print_z = wipe_tower_z;
+                }
             }
-		}
-        m_brim_done = true;
-    }
-    return gcode;
+            m_brim_done = true;
+        }
+        return gcode;
     }
 
     // Print is finished. Now it remains to unload the filament safely with ramming over the wipe tower.
@@ -575,8 +576,8 @@ std::vector<GCode::LayerToPrint> GCode::collect_layers_to_print(const PrintObjec
 
             // Remember last layer with extrusions.
             if (has_extrusions)
-            last_extrusion_layer = &layers_to_print.back();
-    }
+                last_extrusion_layer = &layers_to_print.back();
+        }
     }
 
     return layers_to_print;
