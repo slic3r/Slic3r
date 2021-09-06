@@ -906,7 +906,7 @@ msgid "Allow just a single %1% instance"
 msgstr "Permet juste une unique instance de %1%"
 
 msgid "Allow only one skirt loop"
-msgstr "N'autoriser qu'une seule boucle de bordure"
+msgstr "N'autoriser qu'une seule boucle de jupe"
 
 msgid ""
 "Allow outermost perimeter to overlap itself to avoid the use of thin walls. "
@@ -937,7 +937,7 @@ msgid ""
 "Allow to create a brim over an island when it's inside a hole (or surrounded "
 "by an object)."
 msgstr ""
-"Permet de créer une jupe autour d'un îlot lorsqu'il est à l'intérieur d'un trou (ou entourée par un objet)."
+"Permet de créer une bordure autour d'un îlot lorsqu'il est à l'intérieur d'un trou (ou entourée par un objet)."
 
 msgid "Along X axis"
 msgstr "Le long de l'axe X"
@@ -1216,6 +1216,9 @@ msgstr "Automatique, ou ancré si trop grand"
 msgid "Automatically repair an STL file"
 msgstr "Réparer automatiquement un fichier STL"
 
+msgid "Automation"
+msgstr "Automatisation"
+
 msgid "Autoset by angle"
 msgstr "Automatique par angle"
 
@@ -1430,28 +1433,28 @@ msgid "Bridging volumetric"
 msgstr "Volumétrie des ponts"
 
 msgid "Brim"
-msgstr "Jupe"
+msgstr "Bordure"
 
 msgid "Brim configuration"
-msgstr "Configuration de la jupe"
+msgstr "Configuration de la bordure"
 
 msgid "Brim ear detection length"
-msgstr "Longueur de détection de la jupe de coins"
+msgstr "Longueur de détection de la bordure de coins"
 
 msgid "Brim ear max angle"
-msgstr "Angle maximal de la jupe de coins"
+msgstr "Angle maximal de la bordure de coins"
 
 msgid "Brim ears"
-msgstr "Jupe sur les coins"
+msgstr "Bordure sur les coins"
 
 msgid "Brim inside holes"
-msgstr "Jupe à l'intérieur des trous"
+msgstr "Bordure à l'intérieur des trous"
 
 msgid "Brim offset"
-msgstr "Décalage de la jupe"
+msgstr "Décalage de la bordure"
 
 msgid "Brim width"
-msgstr "Largeur de la jupe"
+msgstr "Largeur de la bordure"
 
 msgid "Browse"
 msgstr "Parcourir"
@@ -2573,6 +2576,9 @@ msgstr "Détermine si les températures de changement de filament seront appliqu
 msgid "Device:"
 msgstr "Appareil :"
 
+msgid "Dialogs"
+msgstr "Boîtes de dialogue"
+
 msgid "Diameter"
 msgstr "Diamètre"
 
@@ -2663,14 +2669,14 @@ msgstr "Distance entre les objets"
 msgid ""
 "Distance between skirt and object(s). Set this to zero to attach the skirt "
 "to the object(s) and get a brim for better adhesion."
-msgstr "Distance entre le ou les objet(s) et la bordure. Mettez zéro pour attacher la bordure a(ux) objet(s) et obtenir une jupe pour une meilleure adhésion."
+msgstr "Distance entre le ou les objet(s) et la jupe. Mettez zéro pour attacher la jupe a(ux) objet(s) et obtenir une bordure pour une meilleure adhésion."
 
 msgid ""
 "Distance between the brim and the part. Should be kept at 0 unless you "
 "encounter great difficulties to separate them. It's subtracted to brim_width "
 "and brim_width_interior, so it has to be lower than them"
 msgstr ""
-"Distance entre la jupe et la pièce. Doit être maintenue à 0, sauf si vous "
+"Distance entre la bordure et la pièce. Doit être maintenue à 0, sauf si vous "
 "rencontrez de grandes difficultés pour les séparer. Elle est soustraite à brim_width "
 "et brim_width_interior, elle doit donc être inférieure à celles-ci"
 
@@ -3531,7 +3537,7 @@ msgid "Extra perimeters over overhangs"
 msgstr "Périmètres supplémentaires au-dessus des surplombs"
 
 msgid "Extra skirt lines on the first layer."
-msgstr "Lignes de jupe supplémentaires sur la première couche."
+msgstr "Lignes de bordure supplémentaires sur la première couche."
 
 msgid "Extra Wipe for external perimeters"
 msgstr "Essuyage Extra pour les périmètres extérieurs"
@@ -3837,6 +3843,9 @@ msgstr "échec d'écriture du fichier"
 msgid "Filename"
 msgstr "Nom de fichier"
 
+msgid "Files"
+msgstr "Fichiers"
+
 msgid "Files association"
 msgstr "Association de fichiers"
 
@@ -3936,6 +3945,9 @@ msgstr "Température du plateau pour la première couche"
 msgid "First layer calibration"
 msgstr "Calibration de la première couche"
 
+msgid "First layer extruder"
+msgstr "Extrudeur pour la première couche"
+
 msgid "First layer flow ratio"
 msgstr "Ratio du débit de la première couche"
 
@@ -3944,6 +3956,12 @@ msgstr "Hauteur de la première couche"
 
 msgid "First layer height can't be greater than %s"
 msgstr "La hauteur de la première couche ne peut pas être supérieure à %s"
+
+msgid "First layer height can't be higher than %s"
+msgstr "La hauteur de la première couche ne peut pas être supérieure à %s"
+
+msgid "First layer height can't be thinner than %s"
+msgstr "La hauteur de la première couche ne peut pas être inférieure à %s"
 
 msgid "First layer nozzle temperature"
 msgstr "Température de la buse de la première couche"
@@ -4094,7 +4112,7 @@ msgid "From"
 msgstr "Depuis"
 
 msgid "from brim"
-msgstr "à partir de la jupe"
+msgstr "à partir de la bordure"
 
 msgid "From filament"
 msgstr "Depuis le filament"
@@ -4199,7 +4217,7 @@ msgid ""
 "specified amount of filament on the bottom layer. For multi-extruder "
 "machines, this minimum applies to each extruder."
 msgstr ""
-"Longueur minimal de bordures à imprimer afin de consommer la quantité de filament spécifiée sur la couche du dessous."
+"Longueur minimal de jupes à imprimer afin de consommer la quantité de filament spécifiée sur la couche du dessous."
 " Pour les machines multi-extrudeuses, ce minimum s'applique à chaque extrudeuse."
 
 msgid "Generate support material"
@@ -4226,7 +4244,7 @@ msgid "generated warnings"
 msgstr "avertissements générés"
 
 msgid "Generating brim"
-msgstr "Génération de la jupe"
+msgstr "Génération de la bordure"
 
 msgid "Generating G-code"
 msgstr "Génération du G-Code"
@@ -4247,7 +4265,7 @@ msgid "Generating perimeters: layer %s / %s"
 msgstr "Génération des périmètres : couche %s / %s"
 
 msgid "Generating skirt"
-msgstr "Génération de la bordure"
+msgstr "Génération de la jupe"
 
 msgid "Generating support material"
 msgstr "Génération des supports"
@@ -4404,8 +4422,8 @@ msgid ""
 "Height of skirt expressed in layers. Set this to a tall value to use skirt "
 "as a shield against drafts."
 msgstr ""
-"Hauteur de la bordure exprimée en couches."
-" Mettez une valeur élevée pour utiliser la bordure comme un bouclier contre les flux d'air."
+"Hauteur de la jupe exprimée en couches."
+" Mettez une valeur élevée pour utiliser la jupe comme un bouclier contre les flux d'air."
 
 msgid "Height of the display"
 msgstr "Hauteur de l'affichage"
@@ -4529,13 +4547,13 @@ msgid ""
 "Horizontal width of the brim that will be printed around each object on the "
 "first layer."
 msgstr ""
-"Largeur du cordon de la jupe qui sera imprimée autour de chaque objet sur la première couche."
+"Largeur du cordon de la bordure qui sera imprimée autour de chaque objet sur la première couche."
 
 msgid ""
 "Horizontal width of the brim that will be printed inside each object on the "
 "first layer."
 msgstr ""
-"Largeur de la jupe intérieure, qui sera imprimée à l'intérieur des trous d'un objet sur la première couche."
+"Largeur de la bordure intérieure, qui sera imprimée à l'intérieur des trous d'un objet sur la première couche."
 
 msgid ""
 "Horizontal width of the skirt that will be printed around each object. If "
@@ -4543,7 +4561,7 @@ msgid ""
 "is only 1 layer height, or perimeter extrusion width will be used (using the "
 "computed value if not set)."
 msgstr ""
-"Largeur horizontale de la bordure qui sera imprimée autour de chaque objet.\n"
+"Largeur horizontale de la jupe qui sera imprimée autour de chaque objet.\n"
 "Si laissé à zéro et d'une hauteur d'une couche, la largeur de la première "
 "couche sera utilisé, ou sinon la largeur des périmètres."
 
@@ -4722,7 +4740,7 @@ msgid ""
 "If enabled, all printing extruders will be primed at the front edge of the "
 "print bed at the start of the print."
 msgstr ""
-"Si ceci est activé, toutes les extrudeuses qui impriment seront positionnés sur la bordure avant du plateau d'impression"
+"Si ceci est activé, toutes les extrudeuses qui impriment seront positionnés sur la jupe avant du plateau d'impression"
 " au début de l'impression et une bande de test sera extrudé pour chacune."
 
 msgid ""
@@ -4842,7 +4860,7 @@ msgid ""
 "useful to protect an ABS or ASA print from warping and detaching from print "
 "bed due to wind draft."
 msgstr ""
-"Si elle est activée, la bordure sera aussi haute que l'objet imprimé le plus "
+"Si elle est activée, la jupe sera aussi haute que l'objet imprimé le plus "
 "haut. Cela sert à protéger les impressions ABS ou ASA des phénomènes de "
 "déformation ou de décollement du plateau d'impression liés au flux d'air."
 
@@ -4966,6 +4984,12 @@ msgid ""
 "If this is enabled, Slic3r will pre-process objects as soon as they're "
 "loaded in order to save time when exporting G-code."
 msgstr "Si ceci est activé, Slic3r va pré-calculer les objets dès qu'ils sont chargés pour gagner du temps lors de l'export du G-Code."
+
+msgid ""
+"If this is enabled, Slic3r will prompt for when overwriting files from save "
+"dialogs."
+msgstr "Si cette option est activé, Slic3r affichera une boites de dialogue pour confirmation "
+"lors d'un écrasement de fichier."
 
 msgid ""
 "If this is enabled, Slic3r will prompt the last output directory instead of "
@@ -5297,7 +5321,7 @@ msgid "Interface shells"
 msgstr "Création d'interface entre coques"
 
 msgid "Interior Brim width"
-msgstr "Largeur de jupe intérieure"
+msgstr "Largeur de bordure intérieure"
 
 msgid "Internal bridge infill"
 msgstr "Remplissage des ponts intérieurs"
@@ -6050,9 +6074,9 @@ msgid ""
 "If set to 0, no brim will be created. \n"
 "If set to ~178, brim will be created on everything but strait sections."
 msgstr ""
-"Angle maximum pour ajouter une jupe de coin.\n"
-"Si mis à 0, aucune jupe ne sera créée.\n"
-"Si mis à environ 178, la jupe sera créée autour de toutes les arrêtes sauf les sections droites."
+"Angle maximum pour ajouter une bordure de coin.\n"
+"Si mis à 0, aucune bordure ne sera créée.\n"
+"Si mis à environ 178, la bordure sera créée autour de toutes les arrêtes sauf les sections droites."
 
 msgid ""
 "Maximum area for the hole where the hole_size_compensation will apply fully. "
@@ -6274,7 +6298,7 @@ msgid "Minimal distance of the support points"
 msgstr "Distance minimale des points de support"
 
 msgid "Minimal filament extrusion length"
-msgstr "Longueur minimale de la bordure"
+msgstr "Longueur minimale de la jupe"
 
 msgid "Minimal points distance"
 msgstr "Distance minimale des points"
@@ -6886,9 +6910,9 @@ msgid ""
 "set, the number of loops might be greater than the one configured here. Set "
 "this to zero to disable skirt completely."
 msgstr ""
-"Nombre de boucles pour la bordure. Si la Longueur Minimale d'Extrusion est paramétrée,"
+"Nombre de boucles pour la jupe. Si la Longueur Minimale d'Extrusion est paramétrée,"
 " le nombre de boucles minimal sera plus grand que celui configuré ici."
-" Mettez à zéro pour désactiver complètement la bordure."
+" Mettez à zéro pour désactiver complètement la jupe."
 
 msgid "Number of milling heads."
 msgstr "Nombre de têtes de fraisage."
@@ -7081,7 +7105,7 @@ msgstr ""
 " Utile quand vous voulez seulement retirer la couture des trous de vis."
 
 msgid "Only draw brim over the sharp edges of the model."
-msgstr "Ne mettre une jupe qu'autour des arrêtes saillantes du modèle."
+msgstr "Ne mettre une bordure qu'autour des arrêtes saillantes du modèle."
 
 msgid "Only for inner side"
 msgstr "le côté intérieur"
@@ -7247,6 +7271,9 @@ msgstr "Autres couches"
 
 msgid "Other Vendors"
 msgstr "Autres Fabriquants"
+
+msgid "Others"
+msgstr "Autres"
 
 msgid "Outer"
 msgstr "Extérieur"
@@ -7677,6 +7704,9 @@ msgstr ""
 
 msgid "Preset with name \"%1%\" already exists."
 msgstr "Un préréglage avec le nom \"%1%\" existe déjà."
+
+msgid "Presets and updates"
+msgstr "Préréglages et mises à jour"
 
 msgid "Press %1%left mouse button to enter the exact value"
 msgstr ""
@@ -8337,6 +8367,9 @@ msgstr "Vitesse de Rétraction"
 
 msgid "Retraction when tool is disabled (advanced settings for multi-extruder setups)"
 msgstr "Rétraction lorsque le filament est désactivé (réglages avancés pour les configurations multi-extrudeuses)"
+
+msgid "Retraction wipe"
+msgstr "Essuyage lors de la rétraction"
 
 msgid "Retractions"
 msgstr "Rétractions"
@@ -9121,7 +9154,7 @@ msgid "Shall I adjust those settings in order to enable the Wipe Tower?"
 msgstr "Dois-je ajuster ces réglages afin d'activer la tour de purge ?"
 
 msgid "Shall I switch the brim offset to 0?"
-msgstr "Dois-je mettre le décalage du bord à 0 ?"
+msgstr "Dois-je mettre le décalage de la bordure à 0 ?"
 
 msgid "Shall I switch to rectilinear fill pattern?"
 msgstr "Dois-je passer au motif de remplissage rectiligne?"
@@ -9197,6 +9230,9 @@ msgstr "Afficher la hauteur de l'objet sur la règle"
 
 msgid "Show object/instance labels in 3D scene"
 msgstr "Afficher les labels de l'objet /instance dans la scène 3D"
+
+msgid "Show overwrite dialog."
+msgstr "Demander avant d'écraser un fichier."
 
 msgid "Show sidebar collapse/expand button"
 msgstr "Afficher le bouton Réduire/Développer de la barre latérale"
@@ -9331,28 +9367,28 @@ msgid ""
 msgstr "Skinnydip effectue un plongeon supplémentaire dans la zone de fusion pour 'brûler' les fines chaînes de filaments"
 
 msgid "Skirt"
-msgstr "Bordure"
+msgstr "Jupe"
 
 msgid "skirt"
-msgstr "bordure"
+msgstr "jupe"
 
 msgid "Skirt & Brim"
-msgstr "Bordure & Jupe"
+msgstr "Jupe & Bordure"
 
 msgid "Skirt brim"
-msgstr "Bord de la jupe"
+msgstr "Bord de la bordure"
 
 msgid "Skirt distance from brim"
-msgstr "Distance de la jupe au bord"
+msgstr "Distance de la bordure au bord"
 
 msgid "Skirt height"
-msgstr "Hauteur de la bordure"
+msgstr "Hauteur de la jupe"
 
 msgid "Skirt Loops"
-msgstr "Boucles de la bordure"
+msgstr "Boucles de la jupe"
 
 msgid "Skirt width"
-msgstr "Largeur de la bordure"
+msgstr "Largeur de la jupe"
 
 msgid "SLA gizmo keyboard shortcuts"
 msgstr "Raccourcis clavier pour le gizmo SLA"
@@ -9771,6 +9807,13 @@ msgstr ""
 msgid "Speed for travel moves (jumps between distant extrusion points)."
 msgstr "Vitesse pour les déplacements (trajet entre deux points d'extrusion distants)."
 
+msgid ""
+"Speed in mm/s of the wipe. If it's faster, it will try to go further away, "
+"as the wipe time is set by ( 100% - 'retract before wipe') * 'retaction "
+"length' / 'retraction speed'.\n"
+"If set to zero, the travel speed is used."
+msgstr "Vitesse en mm/s pour l'essuyage. Si vous l'augmenter, l'essuyage se fera sur une distance plus grande. Le temps d'essuyage est défini par ( 100% - 'rétraction avant essuyage') * 'distance de rétraction' / 'vitesse de rétraction'.\nSi mis à 0, la vitesse de déplacement est utilisé."
+
 msgid "Speed of the first cooling move"
 msgstr "Vitesse du premier mouvement de refroidissement"
 
@@ -9818,8 +9861,11 @@ msgstr "Vase Spirale"
 msgid "Spiral vase"
 msgstr "Vase spirale"
 
-msgid "Splashscreen image"
-msgstr "Image de l'écran d'accueil"
+msgid "Splash screen"
+msgstr "Ecran de démarrage"
+
+msgid "Splash screen image"
+msgstr "Image de l'écran de démarrage"
 
 msgid "Split"
 msgstr "Scinder"
@@ -10016,6 +10062,9 @@ msgstr "Support"
 msgid "support material"
 msgstr "supports"
 
+msgid "Support material extruder"
+msgstr "Extruder pour l'interface des supports"
+
 msgid "Support material interface"
 msgstr "Interface des supports"
 
@@ -10035,9 +10084,6 @@ msgstr ""
 
 msgid "Support material/raft interface extruder"
 msgstr "Extrudeuse pour l'interface des supports/du radeau"
-
-msgid "Support material/raft/skirt extruder"
-msgstr "Extrudeuse pour support/radeau/jupe"
 
 msgid "Support on build plate only"
 msgstr "Support sur le plateau uniquement"
@@ -10208,7 +10254,7 @@ msgid ""
 "wiped."
 msgstr ""
 "Différence de température devant être appliquée quand un extrudeuse n'est pas actif."
-" Permet la génération d'une jupe \"sacrificielle\" de même hauteur sur laquelle les buses peuvent s'auto-nettoyer régulièrement."
+" Permet la génération d'une bordure \"sacrificielle\" de même hauteur sur laquelle les buses peuvent s'auto-nettoyer régulièrement."
 
 msgid "Temperature variation"
 msgstr "Variation de température"
@@ -10279,13 +10325,18 @@ msgid "The default angle for connecting support sticks and junctions."
 msgstr "L'angle par défaut pour connecter les tiges de support et les jonctions."
 
 msgid "The distance is computed from the brim and not from the objects"
-msgstr "La distance est calculée à partir de la jupe et non des objets."
+msgstr "La distance est calculée à partir de la bordure et non des objets."
 
 msgid ""
 "The endings of the support pillars will be deployed on the gap between the "
 "object and the pad. 'Support base safety distance' has to be greater than "
 "the 'Pad object gap' parameter to avoid this."
 msgstr "Les extrémités des piliers de support seront déployées dans l'espace entre l'objet et le socle. La 'Distance de sécurité de base du support' doit être plus grande que le paramètre 'Espace de l'objet socle' pour éviter cela."
+
+msgid ""
+"The extruder to use (unless more specific extruder settings are specified) "
+"for the first layer."
+msgstr "L'extrudeuse à utiliser (sauf si des paramètres plus spécifiques de l'extrudeuse sont spécifiés) pour al première couche."
 
 msgid ""
 "The extruder to use (unless more specific extruder settings are specified). "
@@ -10298,10 +10349,15 @@ msgstr "L'extrudeuse à utiliser pour imprimer le remplissage."
 
 msgid ""
 "The extruder to use when printing perimeters and brim. First extruder is 1."
-msgstr "L'extrudeuse à utiliser pour imprimer les périmètres et la jupe. Le premier extrudeuse a le numéro 1."
+msgstr "L'extrudeuse à utiliser pour imprimer les périmètres et la bordure. Le premier extrudeuse a le numéro 1."
 
 msgid "The extruder to use when printing solid infill."
 msgstr "L'extrudeuse à utiliser pour imprimer les remplissages plein."
+
+msgid ""
+"The extruder to use when printing support material (1+, 0 to use the current "
+"extruder to minimize tool changes)."
+msgstr "L'extrudeuse à utiliser pour imprimer des supports (1+,0 pour utiliser l'extrudeuse actuel et limiter les changements de filament)."
 
 msgid ""
 "The extruder to use when printing support material interface (1+, 0 to use "
@@ -10309,12 +10365,6 @@ msgid ""
 msgstr ""
 "L'extrudeuse à utiliser pour imprimer les interfaces du support (1+,0 pour utiliser l'extrudeuse actuel et limiter les changements de filament)."
 " Cela affecte également le radeau."
-
-msgid ""
-"The extruder to use when printing support material, raft and skirt (1+, 0 to "
-"use the current extruder to minimize tool changes)."
-msgstr ""
-"L'extrudeuse à utiliser pour imprimer des supports, du radeau ou des bordures (1+,0 pour utiliser l'extrudeuse actuel et limiter les changements de filament)."
 
 msgid "The filament material type for use in custom G-codes."
 msgstr "Le type de matériau de filament à utiliser dans les G-Codes personnalisés."
@@ -11103,7 +11153,7 @@ msgstr ""
 "requiert un périmètre unique, aucun remplissage, aucune couche pleine du dessus "
 "et aucun matériau de support. Vous pouvez toujours paramétrer le "
 "nombre de couches pleines du dessous que vous souhaitez de même que des boucles de "
-"bordure/jupe. Cela ne fonctionnera pas si vous imprimez plus qu'un seul objet."
+"jupe/bordure. Cela ne fonctionnera pas si vous imprimez plus qu'un seul objet."
 
 msgid ""
 "This file cannot be loaded in a simple mode. Do you want to switch to an "
@@ -11146,7 +11196,7 @@ msgstr ""
 msgid ""
 "This flag enables the brim that will be printed around each object on the "
 "first layer."
-msgstr "Cette option permet l'impression de la jupe qui entoure chaque objet lors de la première couche."
+msgstr "Cette option permet l'impression de la bordure qui entoure chaque objet lors de la première couche."
 
 msgid "This flag enforces a retraction whenever a Z move is done (before it)."
 msgstr "Cette option impose une rétraction chaque fois qu'un mouvement Z est effectué (avant celui-ci)."
@@ -11369,7 +11419,7 @@ msgid ""
 "such skirt when changing temperatures."
 msgstr ""
 "Cette option abaissera la température des extrudeuses inutilisés pour prévenir le oozing (suintement)."
-" Cela active automatiquement la génération d'une haute bordure et le déplacement des extrudeuses hors de cette bordure lors des changements de température."
+" Cela active automatiquement la génération d'une haute jupe et le déplacement des extrudeuses hors de cette jupe lors des changements de température."
 
 msgid ""
 "This option will limit infill to the areas actually needed for supporting "
@@ -12500,11 +12550,8 @@ msgid ""
 "When printing with very low layer heights, you might still want to print a "
 "thicker bottom layer to improve adhesion and tolerance for non perfect build "
 "plates. This can be expressed as an absolute value or as a percentage (for "
-"example: 75%) over the default nozzle width."
-msgstr ""
-"Lorsque vous imprimez avec de très basses hauteurs de couche,"
-" vous pouvez toujours imprimer une couche du dessous plus épaisse pour améliorer l’adhérence et éviter de toucher le plateau"
-", celui-ci pouvant être imparfait. Cela peut être exprimé en valeur absolue ou en pourcentage (par exemple: 75%) par rapport au diamètre de la buse."
+"example: 75%) over the lowest nozzle diameter used in by the object."
+msgstr "Lorsque vous imprimez avec de très basses hauteurs de couche, vous pouvez toujours imprimer une couche du dessous plus épaisse pour améliorer l’adhérence et éviter de toucher le plateau, celui-ci pouvant être imparfait. Cela peut être exprimé en valeur absolue ou en pourcentage (par exemple: 75%) par rapport au diamètre de la buse la plus fine utlisé pour l'objet."
 
 msgid ""
 "When retraction is triggered before changing tool, filament is pulled back "
@@ -12588,7 +12635,7 @@ msgid ""
 "less problem with collision."
 msgstr ""
 "Lorsque vous utilisez 'Compléter les objets individuels', le comportement par défaut est de dessiner "
-"le bord au début de chaque objet. Si vous préférez avoir plus de place "
+"la bordure au début de chaque objet. Si vous préférez avoir plus de place "
 "pour vos objets, vous pouvez imprimer toutes les bordures au début, ainsi il y a "
 "moins de problème de collision."
 
@@ -12598,7 +12645,7 @@ msgid ""
 "whole plater, use this option."
 msgstr ""
 "Lorsque vous utilisez 'Compléter les objets individuels', le comportement par défaut est de dessiner "
-" la bordure autour de chaque objet. Si vous préférez n'avoir qu'une seule bordure pour l'impression entière"
+" la jupe autour de chaque objet. Si vous préférez n'avoir qu'une seule jupe pour l'impression entière"
 ", utilisez cette option."
 
 msgid ""
@@ -12708,6 +12755,9 @@ msgstr "Purger dans cet objet"
 
 msgid "Wipe into this object's infill"
 msgstr "Purger dans le remplissage de cet objet"
+
+msgid "Wipe speed"
+msgstr "Vitesse d'essuyage"
 
 msgid "Wipe Tower"
 msgstr "Tour de Purge"
