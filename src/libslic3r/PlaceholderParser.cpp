@@ -666,6 +666,85 @@ namespace client
             return opt;
         }
 
+
+        // copy of ConfigBase::get_computed_value
+        double get_computed_value(const t_config_option_key& opt_key) const
+        {
+            // Get stored option value.
+            const ConfigOption* raw_opt = this->optptr(opt_key);
+            if (raw_opt == nullptr) {
+                std::stringstream ss; ss << "You can't define an option that need " << opt_key << " without defining it!";
+                throw std::runtime_error(ss.str());
+            }
+
+            if (!raw_opt->is_vector()) {
+                if (raw_opt->type() == coFloat)
+                    return static_cast<const ConfigOptionFloat*>(raw_opt)->value;
+                if (raw_opt->type() == coInt)
+                    return static_cast<const ConfigOptionInt*>(raw_opt)->value;
+                if (raw_opt->type() == coBool)
+                    return static_cast<const ConfigOptionBool*>(raw_opt)->value ? 1 : 0;
+                const ConfigOptionDef* opt_def = nullptr;
+                const ConfigOptionPercent* cast_opt = nullptr;
+                if (raw_opt->type() == coFloatOrPercent) {
+                    if (!static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->percent)
+                        return static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->value;
+                    // Get option definition.
+                    opt_def = print_config_def.get(opt_key);
+                    cast_opt = static_cast<const ConfigOptionFloatOrPercent*>(raw_opt);
+                    assert(opt_def != nullptr);
+                }
+                if (raw_opt->type() == coPercent) {
+                    // Get option definition.
+                    opt_def = print_config_def.get(opt_key);
+                    assert(opt_def != nullptr);
+                    cast_opt = static_cast<const ConfigOptionPercent*>(raw_opt);
+                }
+                if (opt_def != nullptr) {
+                    //if over no other key, it's most probably a simple %
+                    if (opt_def->ratio_over == "")
+                        return cast_opt->get_abs_value(1);
+                    // Compute absolute value over the absolute value of the base option.
+                    //FIXME there are some ratio_over chains, which end with empty ratio_with.
+                    // For example, XXX_extrusion_width parameters are not handled by get_abs_value correctly.
+                    if (!opt_def->ratio_over.empty() && opt_def->ratio_over != "depends")
+                        return cast_opt->get_abs_value(this->get_computed_value(opt_def->ratio_over));
+
+                    std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has no valid ratio_over to compute of";
+                    throw ConfigurationError(ss.str());
+                }
+            } else {
+                // check if it's an extruder_id array
+                const ConfigOptionVectorBase* vector_opt = static_cast<const ConfigOptionVectorBase*>(raw_opt);
+                if (vector_opt->is_extruder_size()) {
+
+                    if (raw_opt->type() == coFloats || raw_opt->type() == coInts || raw_opt->type() == coBools)
+                        return vector_opt->getFloat(current_extruder_id);
+                    if (raw_opt->type() == coFloatsOrPercents) {
+                        const ConfigOptionFloatsOrPercents* opt_fl_per = static_cast<const ConfigOptionFloatsOrPercents*>(raw_opt);
+                        if (!opt_fl_per->values[current_extruder_id].percent)
+                            return opt_fl_per->values[current_extruder_id].value;
+
+                        const ConfigOptionDef* opt_def = print_config_def.get(opt_key);
+                        if (!opt_def->ratio_over.empty() && opt_def->ratio_over != "depends")
+                            return opt_fl_per->get_abs_value(current_extruder_id, this->get_computed_value(opt_def->ratio_over));
+                        std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has no valid ratio_over to compute of";
+                        throw ConfigurationError(ss.str());
+                    }
+                    if (raw_opt->type() == coPercents) {
+                        const ConfigOptionPercents* opt_per = static_cast<const ConfigOptionPercents*>(raw_opt);
+                        const ConfigOptionDef* opt_def = print_config_def.get(opt_key);
+                        if (!opt_def->ratio_over.empty() && opt_def->ratio_over != "depends")
+                            return opt_per->get_abs_value(current_extruder_id, this->get_computed_value(opt_def->ratio_over));
+                        std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has no valid ratio_over to compute of";
+                        throw ConfigurationError(ss.str());
+                    }
+                }
+            }
+            std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has not a valid option type for get_abs_value()";
+            throw ConfigurationError(ss.str());
+        }
+
         const ConfigOption*     resolve_symbol(const std::string &opt_key) const { return this->optptr(opt_key); }
 
         template <typename Iterator>
@@ -754,8 +833,13 @@ namespace client
             OptWithPos<Iterator>            &opt,
             expr<Iterator>                  &output)
         {
-            if (opt.opt->is_vector())
-                ctx->throw_exception("Referencing a vector variable when scalar is expected", opt.it_range);
+            std::string opt_key(opt.it_range.begin(), opt.it_range.end());
+            if (opt.opt->is_vector()) {
+                const ConfigOptionDef* opt_def = print_config_def.get(opt_key);
+                if (!opt_def->is_vector_extruder)
+                    ctx->throw_exception("Referencing a vector variable when scalar is expected", opt.it_range);
+            }
+            const ConfigOptionDef* opt_def;
             switch (opt.opt->type()) {
             case coFloat:   output.set_d(opt.opt->getFloat());   break;
             case coInt:     output.set_i(opt.opt->getInt());     break;
@@ -765,7 +849,6 @@ namespace client
             case coBool:    output.set_b(opt.opt->getBool());    break;
             case coFloatOrPercent:
             {
-                std::string opt_key(opt.it_range.begin(), opt.it_range.end());
                 if (boost::ends_with(opt_key, "extrusion_width")) {
                 	// Extrusion width use the first nozzle diameter
                     output.set_d(Flow::extrusion_width(opt_key, *ctx, static_cast<unsigned int>(ctx->current_extruder_id)));
@@ -774,7 +857,7 @@ namespace client
                     output.set_d(opt.opt->getFloat());
                 } else {
                 	// Resolve dependencies using the "ratio_over" link to a parent value.
-			        const ConfigOptionDef  *opt_def = print_config_def.get(opt_key);
+			        opt_def = print_config_def.get(opt_key);
 			        assert(opt_def != nullptr);
 			        double v = opt.opt->getFloat() * 0.01; // percent to ratio
 			        for (;;) {
@@ -787,20 +870,53 @@ namespace client
                     		v *= Flow::extrusion_width(opt_def->ratio_over, static_cast<const ConfigOptionFloatOrPercent*>(opt_parent), *ctx, static_cast<unsigned int>(ctx->current_extruder_id));
                     		break;
                     	}
-                    	if (opt_parent->type() == coFloat || opt_parent->type() == coFloatOrPercent) {
-			        		v *= opt_parent->getFloat();
-			        		if (opt_parent->type() == coFloat || ! static_cast<const ConfigOptionFloatOrPercent*>(opt_parent)->percent)
-			        			break;
-			        		v *= 0.01; // percent to ratio
-			        	}
-		        		// Continue one level up in the "ratio_over" hierarchy.
-				        opt_def = print_config_def.get(opt_def->ratio_over);
-				        assert(opt_def != nullptr);
+                        double val = ctx->get_computed_value(opt_def->ratio_over);
+                        v *= val;
+                        break;
+            //        	if (opt_parent->type() == coFloat || opt_parent->type() == coFloatOrPercent) {
+			        	//	v *= opt_parent->getFloat();
+			        	//	if (opt_parent->type() == coFloat || ! static_cast<const ConfigOptionFloatOrPercent*>(opt_parent)->percent)
+			        	//		break;
+			        	//	v *= 0.01; // percent to ratio
+			        	//}
+		        		//// Continue one level up in the "ratio_over" hierarchy.
+				        //opt_def = print_config_def.get(opt_def->ratio_over);
+				        //assert(opt_def != nullptr);
 			        }
                     output.set_d(v);
 	            }
 		        break;
 		    }
+            case coInts:
+                opt_def = print_config_def.get(opt_key);
+                if (opt_def->is_vector_extruder) {
+                    output.set_i((int)((ConfigOptionVectorBase*)opt.opt)->getFloat(ctx->current_extruder_id));
+                    break;
+                } else
+                    ctx->throw_exception("Unknown scalar variable type", opt.it_range);
+            case coFloats:
+            case coPercents:
+                opt_def = print_config_def.get(opt_key);
+                if (opt_def->is_vector_extruder) {
+                    output.set_d(((ConfigOptionVectorBase*)opt.opt)->getFloat(ctx->current_extruder_id));
+                    break;
+                } else
+                    ctx->throw_exception("Unknown scalar variable type", opt.it_range);
+            case coStrings:
+                opt_def = print_config_def.get(opt_key);
+                if (opt_def->is_vector_extruder) {
+                    output.set_s(((ConfigOptionStrings*)opt.opt)->values[ctx->current_extruder_id]);
+                    break;
+                } else
+                    ctx->throw_exception("Unknown scalar variable type", opt.it_range);
+            case coPoints:
+                opt_def = print_config_def.get(opt_key);
+                if (opt_def->is_vector_extruder) {
+                    output.set_s(to_string(((ConfigOptionPoints*)opt.opt)->values[ctx->current_extruder_id]));
+                    break;
+                }else
+                    ctx->throw_exception("Unknown scalar variable type", opt.it_range);
+                //TODO: coFloatOrPercents
             default:
                 ctx->throw_exception("Unknown scalar variable type", opt.it_range);
             }
