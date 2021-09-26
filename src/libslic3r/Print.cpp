@@ -1794,6 +1794,7 @@ void Print::auto_assign_extruders(ModelObject* model_object) const
 void Print::process()
 {
     name_tbb_thread_pool_threads();
+    bool something_done = !is_step_done_unguarded(psBrim);
 
     BOOST_LOG_TRIVIAL(info) << "Starting the slicing process." << log_memory_info();
     for (PrintObject *obj : m_objects)
@@ -1934,6 +1935,9 @@ void Print::process()
        this->set_done(psBrim);
     }
     BOOST_LOG_TRIVIAL(info) << "Slicing process finished." << log_memory_info();
+    //notify gui that the slicing/preview structs are ready to be drawed
+    if (something_done)
+        this->set_status(90, L("Slicing done"), SlicingStatus::FlagBits::SLICING_ENDED);
 }
 
 // G-code export process, running at a background thread.

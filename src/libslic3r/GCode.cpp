@@ -721,6 +721,8 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessor::Result* re
 
     BOOST_LOG_TRIVIAL(info) << "Exporting G-code finished" << log_memory_info();
 	print->set_done(psGCodeExport);
+    //notify gui that the gcode is ready to be drawed
+    print->set_status(100, L("Gcode done"), PrintBase::SlicingStatus::FlagBits::GCODE_ENDED);
 
     // Write the profiler measurements to file
     PROFILE_UPDATE();

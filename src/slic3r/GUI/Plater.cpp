@@ -3668,6 +3668,12 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
 
 void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
 {
+    //update dirty flags
+    if (0 != (evt.status.flags & Slic3r::PrintBase::SlicingStatus::FlagBits::SLICING_ENDED))
+        preview->get_canvas3d()->set_preview_dirty();
+    if (0 != (evt.status.flags & Slic3r::PrintBase::SlicingStatus::FlagBits::GCODE_ENDED))
+        preview->get_canvas3d()->set_gcode_viewer_dirty();
+
     if (evt.status.percent >= -1) {
         if (m_ui_jobs.is_any_running()) {
             // Avoid a race condition
@@ -3745,7 +3751,6 @@ void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
 
 void Plater::priv::on_slicing_completed(wxCommandEvent & evt)
 {
-    preview->get_canvas3d()->set_gcode_viewer_dirty();
     // auto_switch_preview == 0 means "no force tab change"
     // auto_switch_preview == 1 means "force tab change"
     // auto_switch_preview == 2 means "force tab change only if already on a plater one"
