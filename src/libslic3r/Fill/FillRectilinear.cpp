@@ -3402,27 +3402,30 @@ FillRectilinearWGapFill::fill_surface_extrusion(const Surface *surface, const Fi
         //check if not over-extruding
         if (!params.dont_adjust && params.full_infill() && !params.flow.bridge && params.fill_exactly) {
             // compute the path of the nozzle -> extruded volume
-            double lengthTot = 0;
-            int nbLines = 0;
+            double length_tot = 0;
+            int nb_lines = 0;
             for (const Polyline &pline : polylines_rectilinear) {
                 Lines lines = pline.lines();
                 for (auto line = lines.begin(); line != lines.end(); ++line) {
-                    lengthTot += unscaled(line->length());
-                    nbLines++;
+                    length_tot += unscaled(line->length());
+                    nb_lines++;
                 }
             }
-            double extrudedVolume = params.flow.mm3_per_mm() * lengthTot;
+            //compute flow to remove spacing_ratio from the equation
+            double extruded_volume = 0;
+            if (params.flow.spacing_ratio < 1.f && !params.flow.bridge) {
+                // the spacing is larger than usual. get the flow from the current spacing
+                Flow test_flow = Flow::new_from_spacing(params.flow.spacing(), params.flow.nozzle_diameter, params.flow.height, 1, params.flow.bridge);
+                extruded_volume = test_flow.mm3_per_mm() * length_tot;
+            } else
+                extruded_volume = params.flow.mm3_per_mm() * length_tot;
             // compute real volume
-            double poylineVolume = compute_unscaled_volume_to_fill(surface, params);
-            //printf("process want %f mm3 extruded for a volume of %f space : we mult by %f %i\n",
-            //    extrudedVolume,
-            //    (poylineVolume),
-            //    (poylineVolume) / extrudedVolume,
-            //    this->no_overlap_expolygons.size());
-            if (extrudedVolume != 0 && poylineVolume != 0) flow_mult_exact_volume = poylineVolume / extrudedVolume;
+            double polyline_volume = compute_unscaled_volume_to_fill(surface, params);
+            if (extruded_volume != 0 && polyline_volume != 0) flow_mult_exact_volume = polyline_volume / extruded_volume;
             //failsafe, it can happen
             if (flow_mult_exact_volume > 1.3) flow_mult_exact_volume = 1.3;
             if (flow_mult_exact_volume < 0.8) flow_mult_exact_volume = 0.8;
+            BOOST_LOG_TRIVIAL(info) << "Infill (without gapfil) process extrude " << extruded_volume << " mm3 for a volume of " << polyline_volume << " mm3 : we mult the flow by " << flow_mult_exact_volume;
         }
 
         //Create extrusions
@@ -3443,7 +3446,7 @@ FillRectilinearWGapFill::fill_surface_extrusion(const Surface *surface, const Fi
 
         coll_nosort->entities.push_back(eec);
 
-        unextruded_areas = diff_ex(rectilinear_areas, union_ex(eec->polygons_covered_by_spacing(10), true));
+        unextruded_areas = diff_ex(rectilinear_areas, union_ex(eec->polygons_covered_by_spacing(params.flow.spacing_ratio , 10), true));
     }
     else
         unextruded_areas = rectilinear_areas;

@@ -339,7 +339,7 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
                         new_conf.set_key_value("fill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinear));
                         fill_density = 100;
                     } else
-                        fill_density = wxGetApp().preset_bundle->prints.get_selected_preset().config.option<ConfigOptionPercent>("fill_density")->value;
+                        fill_density = wxGetApp().preset_bundle->fff_prints.get_selected_preset().config.option<ConfigOptionPercent>("fill_density")->value;
                     new_conf.set_key_value("fill_density", new ConfigOptionPercent(fill_density));
                     apply(config, &new_conf);
                     if (cb_value_change)

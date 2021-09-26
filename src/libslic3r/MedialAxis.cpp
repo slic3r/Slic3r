@@ -1518,7 +1518,7 @@ MedialAxis::grow_to_nozzle_diameter(ThickPolylines& pp, const ExPolygons& anchor
         float(unscaled(this->nozzle_diameter)),
         float(unscaled(this->nozzle_diameter)),
         float(unscaled(this->height)),
-        false).scaled_width();
+        1, false).scaled_width();
     //ensure the width is not lower than min_width.
     for (ThickPolyline& polyline : pp) {
         for (int i = 0; i < polyline.points.size(); ++i) {

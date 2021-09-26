@@ -67,10 +67,10 @@ public:
     // Is it a bridge?
     bool  bridge;
     // % of spacing taken into account 1=>all/default, 0=> width=spacing
-    float spacing_ratio = 1;
+    float spacing_ratio;
     
-    Flow(float _w, float _h, float _nd, bool _bridge = false) :
-        width(_w), height(_h), nozzle_diameter(_nd), bridge(_bridge) {}
+    Flow(float _w, float _h, float _nd, float spacing_ratio, bool _bridge) :
+        width(_w), height(_h), nozzle_diameter(_nd), spacing_ratio(spacing_ratio), bridge(_bridge) {}
 
     float   spacing() const;
     float   spacing(const Flow &other) const;
@@ -87,14 +87,14 @@ public:
 
     bool operator==(const Flow &rhs) const { return this->width == rhs.width && this->height == rhs.height && this->nozzle_diameter == rhs.nozzle_diameter && this->bridge == rhs.bridge; }
     
-    static Flow new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent &width, float nozzle_diameter, float height, float bridge_flow_ratio = 0);
+    static Flow new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent &width, float nozzle_diameter, float height, float spacing_ratio, float bridge_flow_ratio);
     // Create a flow from the spacing of extrusion lines.
     // This method is used exclusively to calculate new flow of 100% infill, where the extrusion width was allowed to scale
     // to fit a region with integer number of lines.
-    static Flow new_from_spacing(float spacing, float nozzle_diameter, float height, bool bridge);
+    static Flow new_from_spacing(float spacing, float nozzle_diameter, float height, float spacing_ratio, bool bridge);
 
-    static float overlap(float height) {
-        return (float)(height * (1. - 0.25 * PI));
+    float overlap(float height) {
+        return (float)(height * (1. - 0.25 * PI)) * spacing_ratio;
     }
 
     // Sane extrusion width defautl based on nozzle diameter.

@@ -468,8 +468,9 @@ public:
     /// callback to changed other settings that are linked (like width & spacing)
     /// </summary>
     /// <param name="opt_key">name of the changed option</param>
-    bool                value_changed(const t_config_option_key& opt_key, const std::vector<const DynamicPrintConfig*> config_collection);
-    bool                update_phony(const std::vector<const DynamicPrintConfig*> config_collection);
+    /// <return> configs that have at least a change</param>
+    std::set<const DynamicPrintConfig*> value_changed(const t_config_option_key& opt_key, const std::vector<DynamicPrintConfig*> config_collection);
+    std::set<const DynamicPrintConfig*> update_phony(const std::vector<DynamicPrintConfig*> config_collection);
 };
 
 class StaticPrintConfig : public StaticConfig
@@ -1304,6 +1305,7 @@ public:
     ConfigOptionInts                fan_below_layer_time;
     ConfigOptionStrings             filament_colour;
     ConfigOptionStrings             filament_notes;
+    ConfigOptionPercents            filament_max_overlap;
     ConfigOptionPercents            filament_shrink;
     ConfigOptionFloatOrPercent      first_layer_acceleration;
     ConfigOptionInts                first_layer_bed_temperature;
@@ -1405,6 +1407,7 @@ protected:
         OPT_PTR(fan_below_layer_time);
         OPT_PTR(filament_colour);
         OPT_PTR(filament_notes);
+        OPT_PTR(filament_max_overlap);
         OPT_PTR(filament_shrink);
         OPT_PTR(first_layer_acceleration);
         OPT_PTR(first_layer_bed_temperature);

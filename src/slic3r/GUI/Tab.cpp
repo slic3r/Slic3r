@@ -1187,10 +1187,37 @@ void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
 
     //wxGetApp().preset_bundle->value_changed(opt_key);
     // update phony fields
-    if (m_config->value_changed(opt_key, { wxGetApp().plater()->config() })) {
+    
+    //auto thing = wxGetApp().plater()->
+    std::set<const DynamicPrintConfig*> changed = m_config->value_changed(opt_key, {
+        &wxGetApp().preset_bundle->prints(wxGetApp().plater()->printer_technology()).get_edited_preset().config,
+        &wxGetApp().preset_bundle->materials(wxGetApp().plater()->printer_technology()).get_edited_preset().config,
+        &wxGetApp().preset_bundle->printers.get_edited_preset().config,
+        /*&wxGetApp().preset_bundle->full_config()*/ });
+    if (changed.find(m_config) != changed.end()) {
         update_dirty();
         //# Initialize UI components with the config values.
         reload_config();
+    }
+    if (changed.find(&wxGetApp().preset_bundle->fff_prints.get_edited_preset().config) != changed.end()) {
+        wxGetApp().get_tab(Preset::Type::TYPE_FFF_PRINT)->update_dirty();
+        wxGetApp().get_tab(Preset::Type::TYPE_FFF_PRINT)->reload_config();
+    }
+    if (changed.find(&wxGetApp().preset_bundle->sla_prints.get_edited_preset().config) != changed.end()) {
+        wxGetApp().get_tab(Preset::Type::TYPE_SLA_PRINT)->update_dirty();
+        wxGetApp().get_tab(Preset::Type::TYPE_SLA_PRINT)->reload_config();
+    }
+    if (changed.find(&wxGetApp().preset_bundle->filaments.get_edited_preset().config) != changed.end()) {
+        wxGetApp().get_tab(Preset::Type::TYPE_FFF_FILAMENT)->update_dirty();
+        wxGetApp().get_tab(Preset::Type::TYPE_FFF_FILAMENT)->reload_config();
+    }
+    if (changed.find(&wxGetApp().preset_bundle->sla_materials.get_edited_preset().config) != changed.end()) {
+        wxGetApp().get_tab(Preset::Type::TYPE_SLA_MATERIAL)->update_dirty();
+        wxGetApp().get_tab(Preset::Type::TYPE_SLA_MATERIAL)->reload_config();
+    }
+    if (changed.find(&wxGetApp().preset_bundle->printers.get_edited_preset().config) != changed.end()) {
+        wxGetApp().get_tab(Preset::Type::TYPE_PRINTER)->update_dirty();
+        wxGetApp().get_tab(Preset::Type::TYPE_PRINTER)->reload_config();
     }
 
     update();
@@ -1198,9 +1225,9 @@ void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
 
 // Show/hide the 'purging volumes' button
 void Tab::update_wiping_button_visibility() {
-    if (m_preset_bundle->printers.get_selected_preset().printer_technology() == ptSLA)
+    if (m_preset_bundle->printers.get_selected_preset().printer_technology() != ptFFF)
         return; // ys_FIXME
-    bool wipe_tower_enabled = dynamic_cast<ConfigOptionBool*>(  (m_preset_bundle->prints.get_edited_preset().config  ).option("wipe_tower"))->value;
+    bool wipe_tower_enabled = dynamic_cast<ConfigOptionBool*>(  (m_preset_bundle->fff_prints.get_edited_preset().config  ).option("wipe_tower"))->value;
     bool multiple_extruders = dynamic_cast<ConfigOptionFloats*>((m_preset_bundle->printers.get_edited_preset().config).option("nozzle_diameter"))->values.size() > 1;
 
     auto wiping_dialog_button = wxGetApp().sidebar().get_wiping_dialog_button();
@@ -2129,7 +2156,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
 
 void TabPrint::build()
 {
-    m_presets = &m_preset_bundle->prints;
+    m_presets = &m_preset_bundle->fff_prints;
     load_initial_data();
     if (create_pages("print.ui")) return;
 
@@ -3128,7 +3155,11 @@ void Tab::load_current_preset()
             //update width/spacing links
             if (m_type == Preset::TYPE_FFF_PRINT) {
                 //verify that spacings are set
-                if (m_config && m_config->update_phony({ wxGetApp().plater()->config() })) {
+                if (m_config && !m_config->update_phony({
+                        &wxGetApp().preset_bundle->prints(wxGetApp().plater()->printer_technology()).get_edited_preset().config,
+                        &wxGetApp().preset_bundle->materials(wxGetApp().plater()->printer_technology()).get_edited_preset().config,
+                        &wxGetApp().preset_bundle->printers.get_edited_preset().config
+                    }).empty()) {
                     update_dirty();
                     reload_config();
                 }
@@ -3273,9 +3304,9 @@ void Tab::select_preset(std::string preset_name, bool delete_current /*=false*/,
                 bool         	     new_preset_compatible;
             };
             std::vector<PresetUpdate> updates = {
-                { Preset::Type::TYPE_FFF_PRINT,         &m_preset_bundle->prints,       ptFFF },
+                { Preset::Type::TYPE_FFF_PRINT,     &m_preset_bundle->fff_prints,   ptFFF },
                 { Preset::Type::TYPE_SLA_PRINT,     &m_preset_bundle->sla_prints,   ptSLA },
-                { Preset::Type::TYPE_FFF_FILAMENT,      &m_preset_bundle->filaments,    ptFFF },
+                { Preset::Type::TYPE_FFF_FILAMENT,  &m_preset_bundle->filaments,    ptFFF },
                 { Preset::Type::TYPE_SLA_MATERIAL,  &m_preset_bundle->sla_materials,ptSLA }
             };
             for (PresetUpdate &pu : updates) {
@@ -3382,8 +3413,7 @@ void Tab::select_preset(std::string preset_name, bool delete_current /*=false*/,
             wxGetApp().mainframe->plater()->canvas3D()->set_arrange_settings(m_presets->get_edited_preset().config, m_presets->get_edited_preset().printer_technology());
         }
         if (m_type == Preset::TYPE_PRINTER) {
-            wxGetApp().mainframe->plater()->canvas3D()->set_arrange_settings(m_preset_bundle->prints.get_edited_preset().config, m_presets->get_edited_preset().printer_technology());
-            
+            wxGetApp().mainframe->plater()->canvas3D()->set_arrange_settings(m_preset_bundle->prints(m_presets->get_edited_preset().printer_technology()).get_edited_preset().config, m_presets->get_edited_preset().printer_technology()); 
         }
 
     }
@@ -3805,8 +3835,7 @@ wxSizer* Tab::compatible_widget_create(wxWindow* parent, PresetDependencies &dep
     {
         // Collect names of non-default non-external profiles.
         PrinterTechnology printer_technology = m_preset_bundle->printers.get_edited_preset().printer_technology();
-        PresetCollection &depending_presets  = (deps.type == Preset::TYPE_PRINTER) ? m_preset_bundle->printers :
-                (printer_technology == ptFFF) ? m_preset_bundle->prints : m_preset_bundle->sla_prints;
+        PresetCollection &depending_presets  = (deps.type == Preset::TYPE_PRINTER) ? m_preset_bundle->printers : m_preset_bundle->prints(printer_technology);
         wxArrayString presets;
         for (size_t idx = 0; idx < depending_presets.size(); ++ idx)
         {

@@ -236,7 +236,7 @@ void GLGizmosManager::update_data()
     }
     else if (is_wipe_tower)
     {
-        DynamicPrintConfig& config = wxGetApp().preset_bundle->prints.get_edited_preset().config;
+        DynamicPrintConfig& config = wxGetApp().preset_bundle->fff_prints.get_edited_preset().config;
         set_scale(Vec3d::Ones());
         set_rotation(Vec3d(0., 0., (M_PI/180.) * dynamic_cast<const ConfigOptionFloat*>(config.option("wipe_tower_rotation_angle"))->value));
         set_flattening_data(nullptr);

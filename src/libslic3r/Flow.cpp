@@ -1,6 +1,7 @@
 #include "Flow.hpp"
 #include "I18N.hpp"
 #include "Print.hpp"
+#include "Layer.hpp"
 #include <cmath>
 #include <assert.h>
 
@@ -180,7 +181,7 @@ double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionResol
 
 // This constructor builds a Flow object from an extrusion width config setting
 // and other context properties.
-Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent &width, float nozzle_diameter, float height, float bridge_flow_ratio)
+Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent &width, float nozzle_diameter, float height, float spacing_ratio, float bridge_flow_ratio)
 {
     // we need layer height unless it's a bridge
     if (height <= 0 && bridge_flow_ratio == 0) 
@@ -201,11 +202,11 @@ Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent
         w = float(width.get_abs_value(nozzle_diameter));
     }
     
-    return Flow(w, height, nozzle_diameter, bridge_flow_ratio > 0);
+    return Flow(w, height, nozzle_diameter, spacing_ratio, bridge_flow_ratio > 0);
 }
 
 // This constructor builds a Flow object from a given centerline spacing.
-Flow Flow::new_from_spacing(float spacing, float nozzle_diameter, float height, bool bridge) 
+Flow Flow::new_from_spacing(float spacing, float nozzle_diameter, float height, float spacing_ratio, bool bridge)
 {
     // we need layer height unless it's a bridge
     if (height <= 0 && !bridge) 
@@ -216,11 +217,11 @@ Flow Flow::new_from_spacing(float spacing, float nozzle_diameter, float height, 
     float width = float(bridge ?
         (spacing - BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter) :
 #ifdef HAS_PERIMETER_LINE_OVERLAP
-        (spacing + PERIMETER_LINE_OVERLAP_FACTOR * height * (1. - 0.25 * PI));
+        (spacing + PERIMETER_LINE_OVERLAP_FACTOR * height * (1. - 0.25 * PI) * spacing_ratio);
 #else
-        (spacing + height * (1. - 0.25 * PI)));
+        (spacing + height * (1. - 0.25 * PI) * spacing_ratio));
 #endif
-    return Flow(width, bridge ? width : height, nozzle_diameter, bridge);
+    return Flow(width, bridge ? width : height, nozzle_diameter, spacing_ratio, bridge);
 }
 
 // This method returns the centerline spacing between two adjacent extrusions 
@@ -231,7 +232,7 @@ float Flow::spacing() const
     if (this->bridge)
         return this->width + BRIDGE_EXTRA_SPACING;
     // rectangle with semicircles at the ends
-    float min_flow_spacing = this->width - this->height * (1. - 0.25 * PI);
+    float min_flow_spacing = this->width - this->height * (1. - 0.25 * PI) * spacing_ratio;
     float res = this->width - PERIMETER_LINE_OVERLAP_FACTOR * (this->width - min_flow_spacing);
 #else
     float res = float(this->bridge ? (this->width + BRIDGE_EXTRA_SPACING_MULT * nozzle_diameter) : (this->width - this->height * (1. - 0.25 * PI) * spacing_ratio));
@@ -274,13 +275,18 @@ double Flow::mm3_per_mm() const
 
 Flow support_material_flow(const PrintObject *object, float layer_height)
 {
+    int extruder_id = object->config().support_material_extruder.value - 1;
+    if (extruder_id < 0) {
+        extruder_id = object->layers().front()->get_region(0)->region()->config().perimeter_extruder - 1;
+    }
     return Flow::new_from_config_width(
         frSupportMaterial,
         // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the Flow class takes care of the percent to value substitution.
         (object->config().support_material_extrusion_width.value > 0) ? object->config().support_material_extrusion_width : object->config().extrusion_width,
         // if object->config().support_material_extruder == 0 (which means to not trigger tool change, but use the current extruder instead), get_at will return the 0th component.
-        float(object->print()->config().nozzle_diameter.get_at(object->config().support_material_extruder-1)),
+        float(object->print()->config().nozzle_diameter.get_at(extruder_id)),
         (layer_height > 0.f) ? layer_height : float(object->config().layer_height.value),
+        extruder_id < 0 ? 1 : object->config().get_computed_value("filament_max_overlap", extruder_id), //if can get an extruder, then use its param, or use full overlap if we don't know the extruder id.
         // bridge_flow_ratio
         0.f);
 }
@@ -292,25 +298,35 @@ Flow support_material_1st_layer_flow(const PrintObject *object, float layer_heig
     if (layer_height <= 0.f && !object->print()->config().nozzle_diameter.empty()){
         slice_height = (float)object->get_first_layer_height();
     }
+    int extruder_id = object->config().support_material_extruder.value -1;
+    if (extruder_id < 0) {
+        extruder_id = object->layers().front()->get_region(0)->region()->config().infill_extruder - 1;
+    }
     return Flow::new_from_config_width(
         frSupportMaterial,
         // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the Flow class takes care of the percent to value substitution.
         (width.value > 0) ? width : object->config().extrusion_width,
-        float(object->print()->config().nozzle_diameter.get_at(object->config().support_material_extruder - 1)),
+        float(object->print()->config().nozzle_diameter.get_at(extruder_id)),
         slice_height,
+        extruder_id < 0 ? 1 : object->config().get_computed_value("filament_max_overlap", extruder_id), //if can get an extruder, then use its param, or use full overlap if we don't know the extruder id.
         // bridge_flow_ratio
         0.f);
 }
 
 Flow support_material_interface_flow(const PrintObject *object, float layer_height)
 {
+    int extruder_id = object->config().support_material_interface_extruder.value - 1;
+    if (extruder_id < 0) {
+        extruder_id = object->layers().front()->get_region(0)->region()->config().infill_extruder - 1;
+    }
     return Flow::new_from_config_width(
         frSupportMaterialInterface,
         // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the Flow class takes care of the percent to value substitution.
         (object->config().support_material_extrusion_width > 0) ? object->config().support_material_extrusion_width : object->config().extrusion_width,
         // if object->config().support_material_interface_extruder == 0 (which means to not trigger tool change, but use the current extruder instead), get_at will return the 0th component.
-        float(object->print()->config().nozzle_diameter.get_at(object->config().support_material_interface_extruder-1)),
+        float(object->print()->config().nozzle_diameter.get_at(extruder_id)),
         (layer_height > 0.f) ? layer_height : float(object->config().layer_height.value),
+        extruder_id < 0 ? 1 : object->config().get_computed_value("filament_max_overlap", extruder_id), //if can get an extruder, then use its param, or use full overlap if we don't know the extruder id.
         // bridge_flow_ratio
         0.f);
 }

@@ -149,7 +149,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer)
                 }
                 //adjust spacing/density (to over-extrude when needed)
                 if (surface.has_mod_overBridge()) {
-                    params.density = float(layerm.region()->config().over_bridge_flow_ratio.get_abs_value(1));
+                    params.density = float(region_config.over_bridge_flow_ratio.get_abs_value(1));
                 }
 
                 //note: same as getRoleFromSurfaceType()
@@ -442,7 +442,8 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
             // so we can safely ignore the slight variation that might have
             // been applied to $f->flow_spacing
         } else {
-            surface_fill.params.flow = Flow::new_from_spacing((float)f->get_spacing(), surface_fill.params.flow.nozzle_diameter, (float)surface_fill.params.flow.height, surface_fill.params.flow.bridge);
+            float overlap = surface_fill.params.config->get_computed_value("filament_max_overlap", surface_fill.params.extruder - 1);
+            surface_fill.params.flow = Flow::new_from_spacing((float)f->get_spacing(), surface_fill.params.flow.nozzle_diameter, (float)surface_fill.params.flow.height, overlap, surface_fill.params.flow.bridge);
         }
 
         //apply bridge_overlap if needed
@@ -452,8 +453,8 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
 
         for (ExPolygon &expoly : surface_fill.expolygons) {
             //set overlap polygons
-            if (layerm->region()->config().perimeters > 0) {
-                f->overlap = layerm->region()->config().get_abs_value("infill_overlap", (perimeter_spacing + (f->get_spacing())) / 2);
+            if (surface_fill.params.config->perimeters > 0) {
+                f->overlap = surface_fill.params.config->infill_overlap.get_abs_value((perimeter_spacing + (f->get_spacing())) / 2);
                 if (f->overlap != 0) {
                     f->no_overlap_expolygons = intersection_ex(layerm->fill_no_overlap_expolygons, ExPolygons() = { expoly });
                 } else {
@@ -646,7 +647,7 @@ void Layer::make_ironing()
         fill.angle = float(ironing_params.angle + 0.25 * M_PI);
         fill.link_max_length = (coord_t)scale_(3. * fill.get_spacing());
         double height = ironing_params.height * fill.get_spacing() / nozzle_dmr;
-        Flow flow = Flow::new_from_spacing(float(nozzle_dmr), 0., float(height), false);
+        Flow flow = Flow::new_from_spacing(float(nozzle_dmr), 0., float(height), 1.f, false);
         double flow_mm3_per_mm = flow.mm3_per_mm();
         Surface surface_fill((stPosTop | stDensSolid), ExPolygon());
         for (ExPolygon &expoly : ironing_areas) {

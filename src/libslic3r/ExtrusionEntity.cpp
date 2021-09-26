@@ -64,12 +64,12 @@ void ExtrusionPath::polygons_covered_by_width(Polygons &out, const float scaled_
     polygons_append(out, offset(this->polyline, double(scale_(this->width/2)) + scaled_epsilon));
 }
 
-void ExtrusionPath::polygons_covered_by_spacing(Polygons &out, const float scaled_epsilon) const
+void ExtrusionPath::polygons_covered_by_spacing(Polygons &out, const float spacing_ratio, const float scaled_epsilon) const
 {
     // Instantiating the Flow class to get the line spacing.
     // Don't know the nozzle diameter, setting to zero. It shall not matter it shall be optimized out by the compiler.
     // if the spacing is negative, use the width instead. can happen on ironing second pass.
-    Flow flow(this->width, this->height, 0.f, (this->width*4 < this->height)?true:is_bridge(this->role()));
+    Flow flow(this->width, this->height, 0.f, spacing_ratio, (this->width*4 < this->height)?true:is_bridge(this->role()));
     polygons_append(out, offset(this->polyline, 0.5f * double(flow.scaled_spacing()) + scaled_epsilon));
 }
 
@@ -249,10 +249,10 @@ void ExtrusionLoop::polygons_covered_by_width(Polygons &out, const float scaled_
         path.polygons_covered_by_width(out, scaled_epsilon);
 }
 
-void ExtrusionLoop::polygons_covered_by_spacing(Polygons &out, const float scaled_epsilon) const
+void ExtrusionLoop::polygons_covered_by_spacing(Polygons &out, const float spacing_ratio, const float scaled_epsilon) const
 {
     for (const ExtrusionPath &path : this->paths)
-        path.polygons_covered_by_spacing(out, scaled_epsilon);
+        path.polygons_covered_by_spacing(out, spacing_ratio, scaled_epsilon);
 }
 
 std::string ExtrusionEntity::role_to_string(ExtrusionRole role)

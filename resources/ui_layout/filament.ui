@@ -21,6 +21,7 @@ group:Filament properties
 	setting:width$7:filament_type
 	setting:filament_soluble
     setting:filament_shrink
+	setting:filament_max_overlap
 group:Print speed override
 	setting:filament_max_speed
 	setting:filament_max_volumetric_speed

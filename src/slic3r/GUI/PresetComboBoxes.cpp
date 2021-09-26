@@ -79,7 +79,7 @@ PresetComboBox::PresetComboBox(wxWindow* parent, Preset::Type preset_type, const
     switch (m_type)
     {
     case Preset::TYPE_FFF_PRINT: {
-        m_collection = &m_preset_bundle->prints;
+        m_collection = &m_preset_bundle->fff_prints;
         m_main_bitmap_name = "cog";
         break;
     }

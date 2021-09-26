@@ -73,27 +73,38 @@ namespace Slic3r {
         Polylines polylines_layer = f2->fill_surface(&srf_to_fill, params);
 
         if (!polylines_layer.empty()) {
-
-            //compute the path of the nozzle
-            double lengthTot = 0;
-            int nbLines = 0;
-            for (Polyline &pline : polylines_layer) {
-                Lines lines = pline.lines();
-                for (Line &line : lines) {
-                    lengthTot += unscaled(line.length());
-                    nbLines++;
-                }
-            }
-            double extrudedVolume = params.flow.mm3_per_mm() * lengthTot / params.density;
-            if (extrudedVolume == 0) extrudedVolume = volume;
-
             //get the role
             ExtrusionRole good_role = params.role;
             if (good_role == erNone || good_role == erCustom) {
                 good_role = params.flow.bridge && idx == 0 ? erBridgeInfill : rolePass[idx];
             }
-            // print
-            float mult_flow = float(params.fill_exactly /*&& idx == 0*/ ? std::min(2., volume / extrudedVolume) : 1);
+            //get the flow
+            float mult_flow = 1;
+            if (params.fill_exactly) {
+                //compute the path of the nozzle
+                double length_tot = 0;
+                int nb_lines = 0;
+                for (Polyline& pline : polylines_layer) {
+                    Lines lines = pline.lines();
+                    for (Line& line : lines) {
+                        length_tot += unscaled(line.length());
+                        nb_lines++;
+                    }
+                }
+                //compute flow to remove spacing_ratio from the equation
+                double extruded_volume = 0;
+                if (params.flow.spacing_ratio < 1.f && !params.flow.bridge) {
+                    // the spacing is larger than usual. get the flow from the current spacing
+                    Flow test_flow = Flow::new_from_spacing(params.flow.spacing(), params.flow.nozzle_diameter, params.flow.height, 1, params.flow.bridge);
+                    extruded_volume = test_flow.mm3_per_mm() * length_tot / params.density;
+                } else
+                    extruded_volume = params.flow.mm3_per_mm() * length_tot / params.density;
+                if (extruded_volume == 0) extruded_volume = volume;
+
+                // print
+                mult_flow = (float)std::min(2., volume / extruded_volume);
+                BOOST_LOG_TRIVIAL(info) << "Ironing process extrude " << extruded_volume << " mm3 for a volume of " << volume << " mm3 : we mult the flow by " << mult_flow;
+            }
             extrusion_entities_append_paths(
                 eec.entities, std::move(polylines_layer),
                 good_role,

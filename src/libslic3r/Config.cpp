@@ -742,7 +742,9 @@ double ConfigBase::get_computed_value(const t_config_option_key &opt_key, int ex
                 if (def == nullptr)
                     throw NoDefinitionException(opt_key);
                 const ConfigOptionDef* opt_def = def->get(opt_key);
-                if (!opt_def->ratio_over.empty() && opt_def->ratio_over != "depends")
+                if (opt_def->ratio_over.empty())
+                    return opt_fl_per->get_abs_value(extruder_id, 1);
+                if (opt_def->ratio_over != "depends")
                     return opt_fl_per->get_abs_value(extruder_id, this->get_computed_value(opt_def->ratio_over, extruder_id));
                 std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has no valid ratio_over to compute of";
                 throw ConfigurationError(ss.str());
@@ -753,7 +755,9 @@ double ConfigBase::get_computed_value(const t_config_option_key &opt_key, int ex
                 if (def == nullptr)
                     throw NoDefinitionException(opt_key);
                 const ConfigOptionDef* opt_def = def->get(opt_key);
-                if (!opt_def->ratio_over.empty() && opt_def->ratio_over != "depends")
+                if (opt_def->ratio_over.empty())
+                    return opt_per->get_abs_value(extruder_id, 1);
+                if (opt_def->ratio_over != "depends")
                     return opt_per->get_abs_value(extruder_id, this->get_computed_value(opt_def->ratio_over, extruder_id));
                 std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has no valid ratio_over to compute of";
                 throw ConfigurationError(ss.str());

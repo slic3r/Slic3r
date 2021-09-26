@@ -38,8 +38,8 @@ namespace Slic3r {
 void PerimeterGenerator::process()
 {
     //set spacing
-    this->perimeter_flow.spacing_ratio = this->config->perimeter_overlap.get_abs_value(1);
-    this->ext_perimeter_flow.spacing_ratio = this->config->external_perimeter_overlap.get_abs_value(1);
+    this->perimeter_flow.spacing_ratio = std::min(this->perimeter_flow.spacing_ratio, (float)this->config->perimeter_overlap.get_abs_value(1));
+    this->ext_perimeter_flow.spacing_ratio = std::min(this->ext_perimeter_flow.spacing_ratio, (float)this->config->external_perimeter_overlap.get_abs_value(1));
 
     // other perimeters
     this->_mm3_per_mm               = this->perimeter_flow.mm3_per_mm();
@@ -991,7 +991,7 @@ void PerimeterGenerator::process()
             // collapse 
             double min = 0.2 * perimeter_width * (1 - INSET_OVERLAP_TOLERANCE);
             //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
-            min = std::max(min, double(Flow::new_from_spacing(EPSILON, (float)nozzle_diameter, (float)this->layer->height, false).scaled_width()));
+            min = std::max(min, double(Flow::new_from_spacing(EPSILON, (float)nozzle_diameter, (float)this->layer->height, this->perimeter_flow.spacing_ratio, false).scaled_width()));
             double max = 2.2 * perimeter_spacing;
             //remove areas that are too big (shouldn't occur...)
             ExPolygons too_big = offset2_ex(gaps, double(-max / 2), double(+max / 2));

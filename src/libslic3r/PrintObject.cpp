@@ -861,6 +861,7 @@ namespace Slic3r {
                 || opt_key == "external_perimeter_overlap"
                 || opt_key == "gap_fill_overlap"
                 || opt_key == "no_perimeter_unsupported_algo"
+                || opt_key == "filament_max_overlap"
                 || opt_key == "perimeters"
                 || opt_key == "perimeter_overlap"
                 || opt_key == "solid_infill_extrusion_spacing"

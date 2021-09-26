@@ -1495,9 +1495,7 @@ void ObjectList::get_settings_choice(const wxString& category_name)
     for (auto sel : selections)
         selected_options.push_back((*settings_list)[sel].first);
 
-    const DynamicPrintConfig& from_config = printer_technology() == ptFFF ? 
-                                            wxGetApp().preset_bundle->prints.get_edited_preset().config : 
-                                            wxGetApp().preset_bundle->sla_prints.get_edited_preset().config;
+    const DynamicPrintConfig& from_config = wxGetApp().preset_bundle->prints(printer_technology()).get_edited_preset().config;
 
     for (auto& setting : (*settings_list))
     {
@@ -1562,7 +1560,7 @@ void ObjectList::get_freq_settings_choice(const wxString& bundle_name)
                                                           _(L("Add Settings Bundle for Object"));
     take_snapshot(snapshot_text);
 
-    const DynamicPrintConfig& from_config = wxGetApp().preset_bundle->prints.get_edited_preset().config;
+    const DynamicPrintConfig& from_config = wxGetApp().preset_bundle->prints(printer_technology()).get_edited_preset().config;
     for (auto& opt_key : options)
     {
         if (find(opt_keys.begin(), opt_keys.end(), opt_key) == opt_keys.end()) {
@@ -2830,7 +2828,7 @@ DynamicPrintConfig ObjectList::get_default_layer_config(const int obj_idx)
     DynamicPrintConfig config;
     coordf_t layer_height = object(obj_idx)->config.has("layer_height") ? 
                             object(obj_idx)->config.opt_float("layer_height") : 
-                            wxGetApp().preset_bundle->prints.get_edited_preset().config.opt_float("layer_height");
+                            wxGetApp().preset_bundle->prints(printer_technology()).get_edited_preset().config.opt_float("layer_height");
     config.set_key_value("layer_height",new ConfigOptionFloat(layer_height));
     config.set_key_value("extruder",    new ConfigOptionInt(0));
 

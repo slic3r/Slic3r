@@ -72,7 +72,7 @@ struct FillParams
     ExtrusionRole role      { erNone };
 
     //flow to use
-    Flow          flow      = Flow(0.f, 0.f, 0.f, false);
+    Flow          flow      = Flow(0.f, 0.f, 0.f, 1.f, false);
 
     //full configuration for the region, to avoid copying every bit that is needed. Use this for process-specific parameters.
     PrintRegionConfig const *config{ nullptr };

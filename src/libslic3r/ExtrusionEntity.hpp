@@ -196,11 +196,11 @@ public:
     // Produce a list of 2D polygons covered by the extruded paths, offsetted by the extrusion spacing.
     // Increase the offset by scaled_epsilon to achieve an overlap, so a union will produce no gaps.
     // Useful to calculate area of an infill, which has been really filled in by a 100% rectilinear infill.
-    virtual void polygons_covered_by_spacing(Polygons &out, const float scaled_epsilon) const = 0;
+    virtual void polygons_covered_by_spacing(Polygons &out, const float spacing_ratio, const float scaled_epsilon) const = 0;
     virtual Polygons polygons_covered_by_width(const float scaled_epsilon = 0.f) const
         { Polygons out; this->polygons_covered_by_width(out, scaled_epsilon); return out; }
-    virtual Polygons polygons_covered_by_spacing(const float scaled_epsilon = 0.f) const
-        { Polygons out; this->polygons_covered_by_spacing(out, scaled_epsilon); return out; }
+    virtual Polygons polygons_covered_by_spacing(const float spacing_ratio, const float scaled_epsilon) const
+        { Polygons out; this->polygons_covered_by_spacing(out, spacing_ratio, scaled_epsilon); return out; }
     virtual Polyline as_polyline() const = 0;
     virtual void   collect_polylines(Polylines &dst) const = 0;
     virtual Polylines as_polylines() const { Polylines dst; this->collect_polylines(dst); return dst; }
@@ -262,11 +262,11 @@ public:
     // Produce a list of 2D polygons covered by the extruded paths, offsetted by the extrusion spacing.
     // Increase the offset by scaled_epsilon to achieve an overlap, so a union will produce no gaps.
     // Useful to calculate area of an infill, which has been really filled in by a 100% rectilinear infill.
-    void polygons_covered_by_spacing(Polygons &out, const float scaled_epsilon) const override;
+    void polygons_covered_by_spacing(Polygons &out, const float spacing_ratio, const float scaled_epsilon) const override;
     virtual Polygons polygons_covered_by_width(const float scaled_epsilon = 0.f) const
         { Polygons out; this->polygons_covered_by_width(out, scaled_epsilon); return out; }
-    virtual Polygons polygons_covered_by_spacing(const float scaled_epsilon = 0.f) const
-        { Polygons out; this->polygons_covered_by_spacing(out, scaled_epsilon); return out; }
+    virtual Polygons polygons_covered_by_spacing(const float spacing_ratio, const float scaled_epsilon) const
+        { Polygons out; this->polygons_covered_by_spacing(out, spacing_ratio, scaled_epsilon); return out; }
     Polyline as_polyline() const override { return this->polyline; }
     void   collect_polylines(Polylines &dst) const override { if (! this->polyline.empty()) dst.emplace_back(this->polyline); }
     double total_volume() const override { return mm3_per_mm * unscale<double>(length()); }
@@ -353,9 +353,9 @@ public:
     // Produce a list of 2D polygons covered by the extruded paths, offsetted by the extrusion spacing.
     // Increase the offset by scaled_epsilon to achieve an overlap, so a union will produce no gaps.
     // Useful to calculate area of an infill, which has been really filled in by a 100% rectilinear infill.
-    void polygons_covered_by_spacing(Polygons &out, const float scaled_epsilon) const override {
+    void polygons_covered_by_spacing(Polygons &out, const float spacing_ratio, const float scaled_epsilon) const override {
         for (const THING &entity : this->paths)
-            entity.polygons_covered_by_spacing(out, scaled_epsilon);
+            entity.polygons_covered_by_spacing(out, spacing_ratio, scaled_epsilon);
     }
 
     Polyline as_polyline() const override {
@@ -381,7 +381,7 @@ public:
         return out;
     }
     Polygons polygons_covered_by_width(const float scaled_epsilon = 0.f) const override{ Polygons out; this->polygons_covered_by_width(out, scaled_epsilon); return out; }
-    Polygons polygons_covered_by_spacing(const float scaled_epsilon = 0.f) const override { Polygons out; this->polygons_covered_by_spacing(out, scaled_epsilon); return out; }
+    Polygons polygons_covered_by_spacing(const float spacing_ratio, const float scaled_epsilon) const override { Polygons out; this->polygons_covered_by_spacing(out, spacing_ratio,  scaled_epsilon); return out; }
     void collect_polylines(Polylines &dst) const override { Polyline pl = this->as_polyline(); if (!pl.empty()) dst.emplace_back(std::move(pl)); }
     double total_volume() const override { double volume = 0.; for (const auto& path : paths) volume += path.total_volume(); return volume; }
 };
@@ -463,11 +463,11 @@ public:
     // Produce a list of 2D polygons covered by the extruded paths, offsetted by the extrusion spacing.
     // Increase the offset by scaled_epsilon to achieve an overlap, so a union will produce no gaps.
     // Useful to calculate area of an infill, which has been really filled in by a 100% rectilinear infill.
-    void polygons_covered_by_spacing(Polygons &out, const float scaled_epsilon) const  override;
+    void polygons_covered_by_spacing(Polygons &out, const float spacing_ratio, const float scaled_epsilon) const  override;
     Polygons polygons_covered_by_width(const float scaled_epsilon = 0.f) const
         { Polygons out; this->polygons_covered_by_width(out, scaled_epsilon); return out; }
-    Polygons polygons_covered_by_spacing(const float scaled_epsilon = 0.f) const
-        { Polygons out; this->polygons_covered_by_spacing(out, scaled_epsilon); return out; }
+    Polygons polygons_covered_by_spacing(const float spacing_ratio, const float scaled_epsilon) const
+        { Polygons out; this->polygons_covered_by_spacing(out, spacing_ratio, scaled_epsilon); return out; }
     Polyline as_polyline() const override { return this->polygon().split_at_first_point(); }
     void   collect_polylines(Polylines &dst) const override { Polyline pl = this->as_polyline(); if (! pl.empty()) dst.emplace_back(std::move(pl)); }
     double total_volume() const override { double volume = 0.; for (const auto& path : paths) volume += path.total_volume(); return volume; }

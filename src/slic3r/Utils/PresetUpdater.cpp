@@ -677,21 +677,21 @@ bool PresetUpdater::priv::perform_updates(Updates &&updates, bool snapshot) cons
 			// Throw when parsing invalid configuration. Only valid configuration is supposed to be provided over the air.
 			bundle.load_configbundle(update.source.string(), PresetBundle::LoadConfigBundleAttribute::LoadSystem, ForwardCompatibilitySubstitutionRule::Disable);
 
-			BOOST_LOG_TRIVIAL(info) << format("Deleting %1% conflicting presets", bundle.prints.size() + bundle.filaments.size() + bundle.printers.size());
+			BOOST_LOG_TRIVIAL(info) << format("Deleting %1% conflicting presets", bundle.fff_prints.size() + bundle.filaments.size() + bundle.printers.size());
 
 			auto preset_remover = [](const Preset &preset) {
 				BOOST_LOG_TRIVIAL(info) << '\t' << preset.file;
 				fs::remove(preset.file);
 			};
 
-			for (const auto &preset : bundle.prints)    { preset_remover(preset); }
+			for (const auto &preset : bundle.fff_prints){ preset_remover(preset); }
 			for (const auto &preset : bundle.filaments) { preset_remover(preset); }
 			for (const auto &preset : bundle.printers)  { preset_remover(preset); }
 
 			// Also apply the `obsolete_presets` property, removing obsolete ini files
 
 			BOOST_LOG_TRIVIAL(info) << format("Deleting %1% obsolete presets",
-				bundle.obsolete_presets.prints.size() + bundle.obsolete_presets.filaments.size() + bundle.obsolete_presets.printers.size());
+				bundle.obsolete_presets.fff_prints.size() + bundle.obsolete_presets.filaments.size() + bundle.obsolete_presets.printers.size());
 
 			auto obsolete_remover = [](const char *subdir, const std::string &preset) {
 				auto path = fs::path(Slic3r::data_dir()) / subdir / preset;
@@ -700,7 +700,7 @@ bool PresetUpdater::priv::perform_updates(Updates &&updates, bool snapshot) cons
 				fs::remove(path);
 			};
 
-			for (const auto &name : bundle.obsolete_presets.prints)    { obsolete_remover("print", name); }
+			for (const auto &name : bundle.obsolete_presets.fff_prints)    { obsolete_remover("print", name); }
 			for (const auto &name : bundle.obsolete_presets.filaments) { obsolete_remover("filament", name); }
 			for (const auto &name : bundle.obsolete_presets.sla_prints) { obsolete_remover("sla_print", name); } 
 			for (const auto &name : bundle.obsolete_presets.sla_materials/*filaments*/) { obsolete_remover("sla_material", name); } 

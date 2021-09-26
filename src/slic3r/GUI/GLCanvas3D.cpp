@@ -2245,7 +2245,7 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
 
             const Print *print = m_process->fff_print();
 
-            const DynamicPrintConfig &print_config  = wxGetApp().preset_bundle->prints.get_edited_preset().config;
+            const DynamicPrintConfig &print_config  = wxGetApp().preset_bundle->fff_prints.get_edited_preset().config;
             double layer_height                     = print_config.opt_float("layer_height");
             double first_layer_height               = print_config.get_abs_value("first_layer_height", layer_height);
             double nozzle_diameter                  = print->config().nozzle_diameter.values[0];

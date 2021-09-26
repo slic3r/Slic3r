@@ -55,7 +55,9 @@ Flow PrintRegion::flow(FlowRole role, double layer_height, bool bridge, bool fir
     // Get the configured nozzle_diameter for the extruder associated to the flow role requested.
     // Here this->extruder(role) - 1 may underflow to MAX_INT, but then the get_at() will follback to zero'th element, so everything is all right.
     double nozzle_diameter = m_print->config().nozzle_diameter.get_at(this->extruder(role, object) - 1);
-    return Flow::new_from_config_width(role, config_width, (float)nozzle_diameter, (float)layer_height, bridge ? (float)m_config.bridge_flow_ratio.get_abs_value(1) : 0.0f);
+    return Flow::new_from_config_width(role, config_width, (float)nozzle_diameter, (float)layer_height,
+        this->config().get_computed_value("filament_max_overlap", this->extruder(role, object) - 1),
+        bridge ? (float)m_config.bridge_flow_ratio.get_abs_value(1) : 0.0f);
 }
 
 float  PrintRegion::width(FlowRole role, bool first_layer, const PrintObject& object) const

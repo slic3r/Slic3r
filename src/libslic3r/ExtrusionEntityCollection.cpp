@@ -121,10 +121,10 @@ void ExtrusionEntityCollection::polygons_covered_by_width(Polygons &out, const f
         entity->polygons_covered_by_width(out, scaled_epsilon);
 }
 
-void ExtrusionEntityCollection::polygons_covered_by_spacing(Polygons &out, const float scaled_epsilon) const
+void ExtrusionEntityCollection::polygons_covered_by_spacing(Polygons &out, const float spacing_ratio, const float scaled_epsilon) const
 {
     for (const ExtrusionEntity *entity : this->entities)
-        entity->polygons_covered_by_spacing(out, scaled_epsilon);
+        entity->polygons_covered_by_spacing(out, spacing_ratio, scaled_epsilon);
 }
 
 // Recursively count paths and loops contained in this collection.
