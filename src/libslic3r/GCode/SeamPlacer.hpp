@@ -20,7 +20,7 @@ namespace EdgeGrid { class Grid; }
 class SeamHistory {
 public:
     SeamHistory() { clear(); }
-    std::optional<Point> get_last_seam(const PrintObject* po, size_t layer_id, const BoundingBox& island_bb);
+    std::optional<Point> get_last_seam(const PrintObject* po, coord_t layer_z, const BoundingBox& island_bb);
     void add_seam(const PrintObject* po, const Point& pos, const BoundingBox& island_bb);
     void clear();
 
@@ -32,7 +32,7 @@ private:
 
     std::map<const PrintObject*, std::vector<SeamPoint>> m_data_last_layer;
     std::map<const PrintObject*, std::vector<SeamPoint>> m_data_this_layer;
-    size_t m_layer_id;
+    coord_t m_layer_z;
 };
 
 

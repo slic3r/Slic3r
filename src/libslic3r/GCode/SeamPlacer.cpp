@@ -863,14 +863,14 @@ void SeamPlacer::apply_custom_seam(const Polygon& polygon, size_t po_idx,
 
 
 
-std::optional<Point> SeamHistory::get_last_seam(const PrintObject* po, size_t layer_id, const BoundingBox& island_bb)
+std::optional<Point> SeamHistory::get_last_seam(const PrintObject* po, coord_t layer_z, const BoundingBox& island_bb)
 {
-    assert(layer_id >= m_layer_id);
-    if (layer_id > m_layer_id) {
+    assert(layer_z >= m_layer_z);
+    if (layer_z > m_layer_z) {
         // Get seam was called for different layer than last time.
         m_data_last_layer = m_data_this_layer;
         m_data_this_layer.clear();
-        m_layer_id = layer_id;
+        m_layer_z = layer_z;
     }
 
 
@@ -918,7 +918,7 @@ void SeamHistory::add_seam(const PrintObject* po, const Point& pos, const Boundi
 
 void SeamHistory::clear()
 {
-    m_layer_id = 0;
+    m_layer_z = 0;
     m_data_last_layer.clear();
     m_data_this_layer.clear();
 }
