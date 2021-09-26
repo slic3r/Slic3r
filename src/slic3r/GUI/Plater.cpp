@@ -4903,7 +4903,7 @@ const PrintBase* Plater::current_print() const {
 bool Plater::check_project_unsaved_changes() {
     if (wxGetApp().app_config->get("default_action_on_new_project") == "1" && p->has_project_change(wxGetApp().preset_bundle->full_config_secure(), p->model))
     {
-        wxMessageDialog diag = wxMessageDialog(static_cast<wxWindow*>(this), _L("You have unsaved Changed, do you want to save your project or to remove all settings and objects?"), wxString(SLIC3R_APP_NAME), wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxCENTRE);
+        wxMessageDialog diag = wxMessageDialog(static_cast<wxWindow*>(this), _L("You have unsaved changes, do you want to save your project or to remove all settings and objects?"), wxString(SLIC3R_APP_NAME), wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxCENTRE);
         diag.SetYesNoLabels(_L("Discard"), _L("Save"));
         //diag.SetOKLabel(_L("Always discard"));
         int result = diag.ShowModal();
