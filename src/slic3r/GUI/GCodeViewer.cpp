@@ -2956,6 +2956,12 @@ void GCodeViewer::refresh_render_paths(bool keep_sequential_current_first, bool 
         }
     }
 
+    //fix error (all paths in m_buffers may be out of the m_layers_z_range)
+    //FIXME better than this dumb stop-gap
+    if (global_endpoints.first > global_endpoints.last) {
+        global_endpoints = { 0, m_moves_count };
+    }
+
     // update current sequential position
     sequential_view->current.first = !top_layer_only && keep_sequential_current_first ? std::clamp(sequential_view->current.first, global_endpoints.first, global_endpoints.last) : global_endpoints.first;
     sequential_view->current.last = keep_sequential_current_last ? std::clamp(sequential_view->current.last, global_endpoints.first, global_endpoints.last) : global_endpoints.last;
