@@ -2620,15 +2620,20 @@ void Print::_make_brim_interior(const Flow &flow, const PrintObjectPtrs &objects
     for (size_t i = 0; i < num_loops; ++i) {
         this->throw_if_canceled();
         loops.emplace_back();
-        islands_to_loops = offset(islands_to_loops, double(-flow.scaled_spacing()), jtSquare);
-        for (Polygon &poly : islands_to_loops) {
-            poly.points.push_back(poly.points.front());
-            Points p = MultiPoint::_douglas_peucker(poly.points, SCALED_RESOLUTION);
-            p.pop_back();
-            poly.points = std::move(p);
+        Polygons islands_to_loops_offseted;
+        for (Polygon& poly : islands_to_loops) {
+            Polygons temp = offset(poly, double(-flow.scaled_spacing()), jtSquare);
+            for (Polygon& poly : temp) {
+                poly.points.push_back(poly.points.front());
+                Points p = MultiPoint::_douglas_peucker(poly.points, SCALED_RESOLUTION);
+                p.pop_back();
+                poly.points = std::move(p);
+            }
+            for (Polygon& poly : offset(temp, 0.5f * double(flow.scaled_spacing())))
+                loops[i].emplace_back(poly);
+            islands_to_loops_offseted.insert(islands_to_loops_offseted.end(), temp.begin(), temp.end());
         }
-        for (Polygon& poly : offset(islands_to_loops, 0.5f * double(flow.scaled_spacing())))
-            loops[i].emplace_back(poly);
+        islands_to_loops = islands_to_loops_offseted;
     }
     //loops = union_pt_chained_outside_in(loops, false);
     std::reverse(loops.begin(), loops.end());
