@@ -644,7 +644,6 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
         //if (polyline.points.size() != 2) continue; // maybe we should have something to merge X-point to 2-point if it's near enough.
         if (polyline.endpoints.first) polyline.reverse();
         else if (!polyline.endpoints.second) continue;
-        if (polyline.width.back() > 0) continue;
 
         //check my length is small
         coord_t length = (coord_t)polyline.length();
@@ -676,28 +675,30 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
         if (pp[crosspoint[0]].endpoints.second && length > pp[crosspoint[0]].length()) continue;
         if (pp[crosspoint[1]].endpoints.second && length > pp[crosspoint[1]].length()) continue;
 
-        //FIXME: also pull (a bit less) points that are near to this one.
-        // if true, pull it a bit, depends on my size, the dot?, and the coeff at my 0-end (~14% for a square, almost 0 for a gentle curve)
-        coord_t length_pull = (coord_t)polyline.length();
-        length_pull *= (coord_t)( 0.144 * get_coeff_from_angle_countour(
-            polyline.points.back(), 
-            this->expolygon, 
-            std::min(min_width, (coord_t)(polyline.length() / 2))));
+        if (polyline.width.back() > 0) {
+            //FIXME: also pull (a bit less) points that are near to this one.
+            // if true, pull it a bit, depends on my size, the dot?, and the coeff at my 0-end (~14% for a square, almost 0 for a gentle curve)
+            coord_t length_pull = (coord_t)polyline.length();
+            length_pull *= (coord_t)(0.144 * get_coeff_from_angle_countour(
+                polyline.points.back(),
+                this->expolygon,
+                std::min(min_width, (coord_t)(polyline.length() / 2))));
 
-        //compute dir
-        Vec2d pull_direction(polyline.points[1].x() - polyline.points[0].x(), polyline.points[1].y() - polyline.points[0].y());
-        pull_direction.normalize();
-        pull_direction.x() *= length_pull;
-        pull_direction.y() *= length_pull;
+            //compute dir
+            Vec2d pull_direction(polyline.points[1].x() - polyline.points[0].x(), polyline.points[1].y() - polyline.points[0].y());
+            pull_direction.normalize();
+            pull_direction.x() *= length_pull;
+            pull_direction.y() *= length_pull;
 
-        //pull the points
-        Point &p1 = pp[crosspoint[0]].points[0];
-        p1.x() = p1.x() + (coord_t)pull_direction.x();
-        p1.y() = p1.y() + (coord_t)pull_direction.y();
+            //pull the points
+            Point& p1 = pp[crosspoint[0]].points[0];
+            p1.x() = p1.x() + (coord_t)pull_direction.x();
+            p1.y() = p1.y() + (coord_t)pull_direction.y();
 
-        Point &p2 = pp[crosspoint[1]].points[0];
-        p2.x() = p2.x() + (coord_t)pull_direction.x();
-        p2.y() = p2.y() + (coord_t)pull_direction.y();
+            Point& p2 = pp[crosspoint[1]].points[0];
+            p2.x() = p2.x() + (coord_t)pull_direction.x();
+            p2.y() = p2.y() + (coord_t)pull_direction.y();
+        }
 
         //delete the now unused polyline
         pp.erase(pp.begin() + i);
