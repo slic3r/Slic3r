@@ -2778,9 +2778,9 @@ namespace Slic3r {
                         //apply hole threshold cutoff
                         double convex_delta_adapted = convex_delta;
                         double area = -hole.area();
-                        if (area > max_hole_area * 4) {
+                        if (area > max_hole_area * 4 && max_hole_area > 0) {
                             convex_delta_adapted = not_convex_delta;
-                        } else if (area > max_hole_area) {
+                        } else if (area > max_hole_area && max_hole_area > 0) {
                             // not a hard threshold, to avoid artefacts on slopped holes.
                             double percent = (max_hole_area * 4 - area) / (max_hole_area * 3);
                             convex_delta_adapted = convex_delta * percent + (1 - percent) * not_convex_delta;
