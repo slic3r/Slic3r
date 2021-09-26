@@ -98,7 +98,10 @@ void OG_CustomCtrl::init_ctrl_lines()
             ctrl_lines.emplace_back(CtrlLine(height, this, line, false, opt_group->staticbox));
         }
         else
-            int i = 0;
+        {
+            height = m_bmp_blinking_sz.GetHeight() + m_v_gap;
+            ctrl_lines.emplace_back(CtrlLine(height, this, line, opt_group->no_title, opt_group->staticbox));
+        }
     }
 }
 
@@ -134,6 +137,9 @@ wxPoint OG_CustomCtrl::get_pos(const Line& line, Field* field_in/* = nullptr*/)
                 else
                     break;
             }
+
+            //round it to next m_em_unit
+            h_pos += (h_pos % m_em_unit == 0) ? 0 : m_em_unit - (h_pos % m_em_unit);
 
             wxString label = line.label;
             if (opt_group->title_width != 0)
@@ -556,6 +562,9 @@ void OG_CustomCtrl::CtrlLine::render(wxDC& dc, wxCoord v_pos)
 
     const std::vector<Option>& option_set = og_line.get_options();
 
+    //round it to next m_em_unit
+    h_pos += (h_pos % ctrl->m_em_unit == 0) ? 0 : ctrl->m_em_unit - (h_pos % ctrl->m_em_unit);
+
     bool is_url_string = false;
     if (ctrl->opt_group->title_width != 0 && !og_line.label.IsEmpty()) {
         const wxColour* text_clr = (option_set.size() == 1 && field ? field->label_color() : og_line.full_Label_color);
@@ -626,7 +635,7 @@ void OG_CustomCtrl::CtrlLine::render(wxDC& dc, wxCoord v_pos)
                     is_url_string = false;
                 else if (opt == option_set.front())
                 is_url_string = !suppress_hyperlinks && !og_line.label_path.IsEmpty();
-                h_pos = draw_text(dc, wxPoint(h_pos, v_pos), label, field ? field->label_color() : nullptr, width, is_url_string, true);
+                h_pos = draw_text(dc, wxPoint(h_pos, v_pos), label, field ? field->label_color() : nullptr, width, is_url_string, !field->m_opt.aligned_label_left);
             }
         }
 

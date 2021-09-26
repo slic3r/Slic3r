@@ -226,7 +226,7 @@ group:Post-processing scripts
 	setting:full_width:height$5:post_process
 
 page:Notes:note
-group:nolabel:Notes
+group:no_title:Notes
 	setting:full_width:height$25:notes
 
 page:Dependencies:wrench

@@ -91,7 +91,8 @@ class OptionsGroup {
 public:
     const bool		staticbox {true};
     const wxString	title;
-    size_t			title_width = 20;// {200};
+    int             title_width = 20;// {200};
+    bool            no_title = false;
     wxSizer*		sizer {nullptr};
 	OG_CustomCtrl*  custom_ctrl{ nullptr };
     column_t		extra_column {nullptr};

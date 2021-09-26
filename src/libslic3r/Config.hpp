@@ -1828,6 +1828,8 @@ public:
     int                                 width = -1;
     // Optional label width of the label (if in a line).
     int                                 label_width = -1;
+    // Optional label alignement to the left instead of the right
+    bool                                aligned_label_left = false;
     // Optional label width of the sidetext (if in a line).
     int                                 sidetext_width = -1;
     // <min, max> limit of a numeric input.

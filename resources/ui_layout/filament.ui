@@ -86,9 +86,9 @@ group:Toolchange parameters with single extruder MM printers
 filament_overrides_page
 
 page:Custom G-code:cog
-group:nolabel:Start G-code
+group:no_title:Start G-code
 	setting:full_width:height$35:start_filament_gcode
-group:nolabel:End G-code
+group:no_title:End G-code
 	setting:full_width:height$35:end_filament_gcode
 
 page:Notes:note.png

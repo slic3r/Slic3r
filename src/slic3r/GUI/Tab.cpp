@@ -1592,15 +1592,18 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 while (str.size() > 1 && (str.front() == ' ' || str.front() == '\t')) str = str.substr(1, str.size() - 1);
                 while (str.size() > 1 && (str.back() == ' ' || str.back() == '\t')) str = str.substr(0, str.size() - 1);
             }
-            bool nolabel = false;
+            bool no_title = false;
             for (int i = 1; i < params.size() - 1; i++) {
                 if (params[i] == "nolabel")
                 {
-                    nolabel = true;
+                    no_title = true;
+                    std::cerr << "Warning: 'nolabel' is deprecated, please replace it by 'no_title' in your " << setting_type_name << " ui file";
                 }
+                if (params[i] == "no_title")
+                    no_title = true;
             }
             
-            current_group = current_page->new_optgroup(_(params.back()), nolabel?0:-1);
+            current_group = current_page->new_optgroup(_(params.back()), no_title);
             for (int i = 1; i < params.size() - 1; i++) {
                 if (boost::starts_with(params[i], "title_width$")) {
                     current_group->title_width = atoi(params[i].substr(12, params[i].size() - 12).c_str());
@@ -1834,6 +1837,9 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
                 else if (boost::starts_with(params[i], "label_width$")) {
                     option.opt.label_width = atoi(params[i].substr(12, params[i].size() - 12).c_str());
+                }
+                else if (boost::starts_with(params[i], "label_left")) {
+                    option.opt.aligned_label_left = true;
                 }
                 else if (boost::starts_with(params[i], "sidetext$"))
                 {
@@ -4179,13 +4185,14 @@ bool Page::set_value(const t_config_option_key& opt_key, const boost::any& value
 }
 
 // package Slic3r::GUI::Tab::Page;
-ConfigOptionsGroupShp Page::new_optgroup(const wxString& title, int noncommon_title_width /*= -1*/)
+ConfigOptionsGroupShp Page::new_optgroup(const wxString& title, bool no_title /*= false*/)
 {
     //! config_ have to be "right"
     ConfigOptionsGroupShp optgroup = std::make_shared<ConfigOptionsGroup>(m_parent, title, m_config, true);
     optgroup->set_config_category(m_title.ToStdString());
-    if (noncommon_title_width >= 0)
-        optgroup->title_width = noncommon_title_width;
+    optgroup->no_title = no_title;
+    if (no_title)
+        optgroup->title_width = 0;
 
 #ifdef __WXOSX__
     auto tab = parent()->GetParent()->GetParent();// GetParent()->GetParent();
@@ -4294,7 +4301,7 @@ void TabSLAMaterial::build()
     }
 
     page = add_options_page(L("Notes"), "note");
-    optgroup = page->new_optgroup(L("Notes"), 0);
+    optgroup = page->new_optgroup(L("Notes"), true);
     optgroup->title_width = 0;
     Option option = optgroup->get_option("material_notes");
     option.opt.full_width = true;

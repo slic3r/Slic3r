@@ -20,7 +20,7 @@ group:label_width$19:Corrections
 	end_line
 
 page:Notes:note
-group:label_width$0:nolabel:Notes
+group:label_width$0:no_title:Notes
     setting:full_width:height$25:material_notes
 
 page:Dependencies:wrench

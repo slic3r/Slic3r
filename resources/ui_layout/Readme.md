@@ -27,13 +27,13 @@ each parameter is separated by ':'
 	* first STR is for the label and the second for the icon, with or without the .svg / .png
 	* idx: append the index of the page (for extruder ui) to the name
 * Group: 
-	group[:nolabel][:title_width$INT][:label_width$INT][:sidetext_width$INT][:EVENT][:id$INT][:idx]:STR
+	group[:no_title][:title_width$INT][:label_width$INT][:sidetext_width$INT][:EVENT][:id$INT][:idx]:STR
 	* EVENT can be extruders_count_event if the group contains extruders_count and is a printer tab ; silent_mode_event if the group contains silent_mode and is a printer tab ; material_density_event if the group contains material_density.
-	* title_width$INT is used to set the size of the left column, where labels are draw.
+	* title_width$INT is used to set the size of the left column, where titles are draw.
 	* label_width$INT is used to set the size of the labels on lines.
 	* sidetext_width$INT is used to set the size of the suffix label (see sidetext in setting).
 	* EVENT can be extruders_count_event (TabPrinter only), silent_mode_event (TabPrinter only), material_density_event.
-	* nolabel is used to remove the left column, where labels are draw.
+	* no_title is used to remove the left column, where titles are draw.
 * Line:
 	line:STR*
 * setting:
@@ -41,6 +41,7 @@ each parameter is separated by ':'
 	* STR, the last parameter: the id name of the setting.
 	* label$STR: to override the label by this new one (if it ends with '_' it won't have a ':' ; if empty it won't have a length).
 	* label_width$INT: change the width of the label. Only works if it's in a line. Override the group one. -1 for auto.
+	* label_left: Draw the label aligned to the left instead of the right.
 	* full_label$STR: to override the full_label by this new one (full_label is used on modifiers).
 	* full_label: to override the label by the "full one".
 	* full_width: to tell to create a field that span the full width.

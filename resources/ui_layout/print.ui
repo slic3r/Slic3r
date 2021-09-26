@@ -114,26 +114,26 @@ group:Other
 	setting:allow_empty_layers
 
 page:Infill:infill
-group:title_width$8:Infill
-	line:Sparse
-		setting:width$5:label$_:sidetext_width$1:fill_density
-		setting:label_width$1:label$_:fill_pattern
+group:title_width$0:Infill
+	line:_
+		setting:label_left:label_width$6:label$Sparse:width$8:sidetext_width$1:fill_density
+		setting:label_width$0:label$_:fill_pattern
 		setting:label$_:width$18:infill_connection
 	end_line
 	line:_
-		setting:label$Connection length:label_width$20:sidetext_width$7:width$12:infill_anchor_max
+		setting:label$Connection length:label_width$25:sidetext_width$7:width$12:infill_anchor_max
 		setting:label$Perimeter anchor:sidetext_width$7:width$12:infill_anchor
 		end_line
-	line:Solid
-		setting:label_width$11:label$_:solid_fill_pattern
+	line:_
+		setting:label_left:label_width$20:label$Solid:solid_fill_pattern
 		setting:label$_:width$18:infill_connection_solid
 	end_line
-	line:Top
-		setting:label_width$11:label$_:top_fill_pattern
+	line:_
+		setting:label_left:label_width$20:label$Top:top_fill_pattern
 		setting:label$_:width$18:infill_connection_top
 	end_line
-	line:Bottom
-		setting:label_width$11:label$_:bottom_fill_pattern
+	line:_
+		setting:label_left:label_width$20:label$Bottom:bottom_fill_pattern
 		setting:label$_:width$18:infill_connection_bottom
 	end_line
 group:Reducing printing time
@@ -382,7 +382,7 @@ group:Post-processing script
 	setting:full_width:height$5:post_process
 
 page:Notes:note
-group:nolabel:Notes
+group:no_title:Notes
 	setting:full_width:height$25:notes
 
 page:Dependencies:wrench

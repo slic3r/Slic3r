@@ -55,7 +55,7 @@ group:Print Host upload
 	build_printhost
 
 page:Notes:note.png
-group:nolabel:Notes
+group:no_title:Notes
 		setting:full_width:height$25:printer_notes
 
 page:Dependencies:wrench.png
