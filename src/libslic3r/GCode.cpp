@@ -3859,10 +3859,10 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
     std::string description{ description_in };
 
 
-    // adjust acceleration, inside the travel to set the deceleration
+    // adjust acceleration, inside the travel to set the deceleration (unless it's deactivated)
     double acceleration = get_default_acceleration(m_config);
     double travel_acceleration = m_writer.get_acceleration();
-    {
+    if(acceleration > 0){
         if (this->on_first_layer() && m_config.first_layer_acceleration.value > 0) {
             acceleration = m_config.first_layer_acceleration.get_abs_value(acceleration);
         } else if (m_config.perimeter_acceleration.value > 0 && is_perimeter(path.role())) {

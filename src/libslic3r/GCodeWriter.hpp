@@ -21,7 +21,7 @@ public:
     GCodeWriter() : 
         multiple_extruders(false), m_extrusion_axis("E"), m_tool(nullptr),
         m_single_extruder_multi_material(false),
-        m_last_acceleration(0), m_max_acceleration(0), m_last_fan_speed(0), 
+        m_last_acceleration(0), m_current_acceleration(0), m_max_acceleration(0), m_last_fan_speed(0),
         m_last_bed_temperature(0), m_last_bed_temperature_reached(true), 
         m_lifted(0)
         {}
