@@ -75,6 +75,8 @@ BedShape::BedShape(const ConfigOptionPoints& points)
             // all vertices are equidistant to center
             m_type      = Type::Circular;
             m_diameter  = unscale<double>(avg_dist * 2);
+            //round
+            m_diameter = std::round(1000 * m_diameter) / 1000.;
 
             return;
         }
