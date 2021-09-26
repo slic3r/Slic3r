@@ -451,6 +451,7 @@ const std::vector<std::string>& Preset::print_options()
         "extra_perimeters",
         "extra_perimeters_odd_layers",
         "extra_perimeters_overhangs",
+        "only_one_perimeter_first_layer",
         "only_one_perimeter_top",
         "only_one_perimeter_top_other_algo",
         "ensure_vertical_shell_thickness", 

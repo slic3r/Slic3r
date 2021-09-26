@@ -1071,6 +1071,12 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("only_one_perimeter_first_layer", coBool);
+    def->label = L("Only one perimeter on First layer");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("Use only one perimeter on first layer, to give more space to the top infill pattern.");
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("only_one_perimeter_top", coBool);
     def->label = L("Only one perimeter on Top surfaces");
     def->category = OptionCategory::perimeter;
@@ -5742,6 +5748,7 @@ std::unordered_set<std::string> prusa_export_to_remove_keys = {
 "no_perimeter_unsupported_algo",
 "only_one_perimeter_top_other_algo",
 "only_one_perimeter_top",
+"only_one_perimeter_first_layer",
 "over_bridge_flow_ratio",
 "overhangs_reverse_threshold",
 "overhangs_reverse",

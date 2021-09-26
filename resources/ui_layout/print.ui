@@ -17,23 +17,24 @@ group:Horizontal shells
 	setting:solid_over_perimeters
 	setting:enforce_full_fill_volume
 group:Quality
-	line:Only one perimeter on Top surfaces
-		setting:label$ :only_one_perimeter_top
+	line:Only one perimeter 
+		setting:label_width$8:label$On first layer:only_one_perimeter_first_layer
+		setting:label_width$10:label$On top surfaces:only_one_perimeter_top
 		setting:label$Minimum width:sidetext_width$7:min_width_top_surface
 	end_line
 	line:Extra perimeters
-		setting:extra_perimeters_overhangs
-		setting:extra_perimeters_odd_layers
+		setting:label_width$8:extra_perimeters_overhangs
+		setting:label_width$10:extra_perimeters_odd_layers
 	end_line
 	setting:ensure_vertical_shell_thickness
 	line:Avoid crossing perimeters
 		setting:label$_:avoid_crossing_perimeters
-		setting:label$Not on first layer:avoid_crossing_not_first_layer
+		setting:label_width$12:label$Not on first layer:avoid_crossing_not_first_layer
 		setting:avoid_crossing_perimeters_max_detour
 	end_line
 	line:Overlapping external perimeter
 		setting:label$_:thin_perimeters
-		setting:label$Also for all perimeters:thin_perimeters_all
+		setting:label_width$12:label$Also for all perimeters:thin_perimeters_all
 	end_line
 	line:Thin walls
 		setting:label$_:thin_walls
