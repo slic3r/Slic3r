@@ -2629,7 +2629,7 @@ namespace Slic3r {
                         // Only enable Elephant foot compensation if printing directly on the print bed.
                         first_layer_compensation = float(scale_(m_config.first_layer_size_compensation.value));
                         // reduce first_layer_compensation for every layer over the first one.
-                        first_layer_compensation = (first_layers - layer_id + 1) * first_layer_compensation / float(first_layers);
+                        first_layer_compensation = (first_layers - layer_id) * first_layer_compensation / float(first_layers);
                         // simplify compensations if possible
                         if (first_layer_compensation > 0) {
                             outter_delta += first_layer_compensation;
