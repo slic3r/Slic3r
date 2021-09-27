@@ -296,7 +296,6 @@ struct ConfigSubstitutionContext
     ConfigSubstitutions					    substitutions;
 };
 
-
 // A generic value of a configuration option.
 class ConfigOption {
 public:
@@ -308,7 +307,7 @@ public:
         FCO_EXTRUDER_ARRAY = 1 << 1,
     };
 
-    ConfigOption() : flags(false) {}
+    ConfigOption() : flags(uint32_t(0)) {}
     ConfigOption(bool phony) : flags(uint32_t(FlagsConfigOption::FCO_PHONY)) {}
 
     virtual ~ConfigOption() {}
@@ -414,8 +413,9 @@ public:
     virtual bool   is_nil(size_t idx) const = 0;
     // Get if the size of this vector is/should be the same as nozzle_diameter
     bool is_extruder_size() const { return (flags & FCO_EXTRUDER_ARRAY) != 0; }
-    void set_is_extruder_size(bool is_extruder_size) { 
-        if (is_extruder_size) this->flags |= FCO_EXTRUDER_ARRAY; else this->flags &= uint8_t(0xFF ^ FCO_EXTRUDER_ARRAY); }
+    void set_is_extruder_size(bool is_extruder_size) {
+        if (is_extruder_size) this->flags |= FCO_EXTRUDER_ARRAY; else this->flags &= uint8_t(0xFF ^ FCO_EXTRUDER_ARRAY);
+    }
     virtual double getFloat(int idx) const { throw BadOptionTypeException("Calling ConfigOption::getFloat(idx) on a non-numeric arrray ConfigOptionVectorBase"); }
 
     // We just overloaded and hid two base class virtual methods.
@@ -1062,7 +1062,7 @@ public:
     static ConfigOptionType     static_type() { return coFloatOrPercent; }
     ConfigOptionType            type()  const override { return static_type(); }
     ConfigOption*               clone() const override { return new ConfigOptionFloatOrPercent(*this); }
-    ConfigOptionFloatOrPercent& operator=(const ConfigOption *opt) { this->set(opt); return *this; }
+    ConfigOptionFloatOrPercent& operator=(const ConfigOption* opt) { this->set(opt); return *this; }
     bool                        operator==(const ConfigOption &rhs) const override
     {
         if (rhs.type() != this->type())
@@ -1113,7 +1113,7 @@ struct FloatOrPercent
 
 private:
     friend class cereal::access;
-    template<class Archive> void serialize(Archive & ar) { ar(this->value); ar(this->percent); }
+    template<class Archive> void serialize(Archive & ar) { ar(this->flags); ar(this->value); ar(this->percent); }
 };
 
 inline bool operator==(const FloatOrPercent &l, const FloatOrPercent &r)
@@ -1153,7 +1153,7 @@ public:
     // A scalar is nil, or all values of a vector are nil.
     bool                    is_nil() const override { for (auto v : this->values) if (! std::isnan(v.value)) return false; return true; }
     bool                    is_nil(size_t idx) const override { return std::isnan(this->values[idx].value); }
-    double                  get_abs_value(size_t i, double ratio_over) const { 
+    double                  get_abs_value(size_t i, double ratio_over) const {
         if (this->is_nil(i)) return 0;
         const FloatOrPercent& data = this->get_at(i);
         if (data.percent) return ratio_over * data.value / 100;
@@ -1345,11 +1345,13 @@ public:
 private:
 	friend class cereal::access;
 	template<class Archive> void save(Archive& archive) const {
+        archive(flags);
 		size_t cnt = this->values.size();
 		archive(cnt);
 		archive.saveBinary((const char*)this->values.data(), sizeof(Vec2d) * cnt);
 	}
 	template<class Archive> void load(Archive& archive) {
+        archive(flags);
 		size_t cnt;
 		archive(cnt);
 		this->values.assign(cnt, Vec2d());
@@ -1453,7 +1455,7 @@ public:
     // A scalar is nil, or all values of a vector are nil.
     bool 					is_nil() const override { for (auto v : this->values) if (v != nil_value()) return false; return true; }
     bool 					is_nil(size_t idx) const override { return this->values[idx] == nil_value(); }
-    virtual double          getFloat(int idx) const override { return values[idx]?1:0; }
+    virtual double          getFloat(int idx) const override { return values[idx] ? 1 : 0; }
 
     bool& get_at(size_t i) {
         assert(! this->values.empty());
@@ -1710,40 +1712,34 @@ public:
     ConfigOption*						create_default_option() const;
 
     template<class Archive> ConfigOption* load_option_from_archive(Archive &archive) const {
-        ConfigOption* opt;
-        ConfigOptionVectorBase* opt_vec = nullptr;
         if (this->nullable) {
-		    switch (this->type) {
-		    case coFloats:          { opt = opt_vec = new ConfigOptionFloatsNullable();  break; }
-		    case coInts:            { opt = opt_vec = new ConfigOptionIntsNullable();  break; }
-		    case coPercents:        { opt = opt_vec = new ConfigOptionPercentsNullable();  break; }
-		    case coBools:           { opt = opt_vec = new ConfigOptionBoolsNullable(); break; }
+            switch (this->type) {
+            case coFloats:          { auto opt = new ConfigOptionFloatsNullable();  archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
+            case coInts:            { auto opt = new ConfigOptionIntsNullable();    archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
+            case coPercents:        { auto opt = new ConfigOptionPercentsNullable();archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
+            case coBools:           { auto opt = new ConfigOptionBoolsNullable();   archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
 		    default:                throw ConfigurationError(std::string("ConfigOptionDef::load_option_from_archive(): Unknown nullable option type for option ") + this->opt_key);
 		    }
     	} else {
 		    switch (this->type) {
-		    case coFloat:           {           opt = new ConfigOptionFloat(); break;}
-		    case coFloats:          { opt = opt_vec = new ConfigOptionFloats();  break; }
-		    case coInt:             {           opt = new ConfigOptionInt();  break; }
-		    case coInts:            { opt = opt_vec = new ConfigOptionInts();  break; }
-		    case coString:          {           opt = new ConfigOptionString();	 break; }
-		    case coStrings:         { opt = opt_vec = new ConfigOptionStrings();  break; }
-		    case coPercent:         {           opt = new ConfigOptionPercent();  break; }
-		    case coPercents:        { opt = opt_vec = new ConfigOptionPercents();  break; }
-		    case coFloatOrPercent:  {           opt = new ConfigOptionFloatOrPercent();  break; }
-		    case coPoint:           {           opt = new ConfigOptionPoint();  break; }
-		    case coPoints:          { opt = opt_vec = new ConfigOptionPoints();  break; }
-		    case coPoint3:          {           opt = new ConfigOptionPoint3();  break; }
-		    case coBool:            {           opt = new ConfigOptionBool();  break; }
-		    case coBools:           { opt = opt_vec = new ConfigOptionBools();  break; }
-		    case coEnum:            {           opt = new ConfigOptionEnumGeneric(this->enum_keys_map);  break; }
+            case coFloat:           { auto opt = new ConfigOptionFloat();           archive(*opt); return opt; }
+            case coFloats:          { auto opt = new ConfigOptionFloats();          archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
+            case coInt:             { auto opt = new ConfigOptionInt();             archive(*opt); return opt; }
+            case coInts:            { auto opt = new ConfigOptionInts();            archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
+            case coString:          { auto opt = new ConfigOptionString();          archive(*opt); return opt; }
+            case coStrings:         { auto opt = new ConfigOptionStrings();         archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
+            case coPercent:         { auto opt = new ConfigOptionPercent();         archive(*opt); return opt; }
+            case coPercents:        { auto opt = new ConfigOptionPercents();        archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
+            case coFloatOrPercent:  { auto opt = new ConfigOptionFloatOrPercent();  archive(*opt); return opt; }
+            case coPoint:           { auto opt = new ConfigOptionPoint();           archive(*opt); return opt; }
+            case coPoints:          { auto opt = new ConfigOptionPoints();          archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
+            case coPoint3:          { auto opt = new ConfigOptionPoint3();          archive(*opt); return opt; }
+            case coBool:            { auto opt = new ConfigOptionBool();            archive(*opt); return opt; }
+            case coBools:           { auto opt = new ConfigOptionBools();           archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
+            case coEnum:            { auto opt = new ConfigOptionEnumGeneric(this->enum_keys_map); archive(*opt); return opt; }
 		    default:                throw ConfigurationError(std::string("ConfigOptionDef::load_option_from_archive(): Unknown option type for option ") + this->opt_key);
 		    }
 		}
-        if (opt_vec != nullptr)
-            opt_vec->set_is_extruder_size (this->is_vector_extruder);
-        archive(*opt);
-        return opt;
 	}
 
     template<class Archive> ConfigOption* save_option_to_archive(Archive &archive, const ConfigOption *opt) const {
@@ -1815,8 +1811,8 @@ public:
     // For text input: If true, the GUI text box spans the complete page width.
     bool                                full_width      = false;
     // For text input: If true, the GUI formats text as code (fixed-width)
-    bool                                is_code = false;
-    // For array settign: If true, It has the same size as the number of extruders.
+    bool                                is_code         = false;
+    // For array setting: If true, It has the same size as the number of extruders.
     bool                                is_vector_extruder = false;
     // Not editable. Currently only used for the display of the number of threads.
     bool                                readonly        = false;
