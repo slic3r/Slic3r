@@ -3033,8 +3033,6 @@ void TabPrinter::toggle_options()
         const std::vector<double>& nozzle_diameters = m_config->option<ConfigOptionFloats>("nozzle_diameter")->values;
         std::vector<double> max_layer_height = m_config->option<ConfigOptionFloats>("max_layer_height")->values;
         for (int i = 0; i < max_layer_height.size(); i++) {
-            if (max_layer_height[i] == 0)
-                max_layer_height[i] = nozzle_diameters[i] * 0.75;
             if ((int64_t)(max_layer_height[i] * 1000000.) % z_step_Mlong != 0) {
                 if (!has_changed)
                     new_conf = *m_config;
