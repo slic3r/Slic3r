@@ -2938,7 +2938,7 @@ void TabPrinter::toggle_options()
 
         // retract lift above / below only applies if using retract lift
         vec.resize(0);
-        vec = { "retract_lift_above", "retract_lift_below", "retract_lift_first_layer", "retract_lift_top" };
+        vec = { "retract_lift_above", "retract_lift_below", "retract_lift_top" };
         for (auto el : vec) {
             field = get_field(el, i);
             if (field)

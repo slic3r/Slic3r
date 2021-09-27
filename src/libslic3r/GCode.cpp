@@ -221,7 +221,8 @@ std::string Wipe::wipe(GCode& gcodegen, bool toolchange)
 //if first layer, ask for a bigger lift for travel to object, to be on the safe side
 static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeWriter & writer, int extruder_id) {
     //if first layer, ask for a bigger lift for travel to object, to be on the safe side
-    if (layer.id() == 0 && print.config().retract_lift.get_at(extruder_id) != 0) {
+    if (layer.id() == 0 && 
+        (print.config().retract_lift.get_at(extruder_id) != 0 || print.config().retract_lift_first_layer.get_at(extruder_id))) {
         //get biggest first layer height and set extra lift for first travel, to be safe.
         double extra_lift_value = 0;
         for (const PrintObject* obj : print.objects())
@@ -4173,8 +4174,9 @@ std::string GCode::retract(bool toolchange)
     }
     if (need_lift)
         if (m_writer.tool()->retract_length() > 0 
-            || m_config.use_firmware_retraction 
+            || m_config.use_firmware_retraction
             || (!m_writer.tool_is_extruder() && m_writer.tool()->retract_lift() != 0)
+            || (BOOL_EXTRUDER_CONFIG(retract_lift_first_layer) && this->m_layer_index == 0)
             )
             gcode += m_writer.lift();
 
