@@ -5066,6 +5066,8 @@ void Plater::load_gcode(const wxString& filename)
     p->gcode_result = std::move(processor.extract_result());
 
     // show results
+    p->preview->get_canvas3d()->set_preview_dirty();
+    p->preview->get_canvas3d()->set_gcode_viewer_dirty();
     p->preview->reload_print(false);
     p->preview->get_canvas3d()->zoom_to_gcode();
 
