@@ -2123,12 +2123,12 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionInt(3));
 
-    def = this->add("gcode_precision_e", coInts);
+    def = this->add("gcode_precision_e", coInt);
     def->label = L("Extruder decimals");
     def->category = OptionCategory::output;
     def->tooltip = L("Choose how many digits after the dot for extruder moves.");
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionInts{ 5 });
+    def->set_default_value(new ConfigOptionInt(5));
 
     def = this->add("high_current_on_filament_swap", coBool);
     def->label = L("High extruder current on filament swap");
@@ -3120,8 +3120,8 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
 
     def = this->add("perimeter_speed", coFloat);
-    def->label = L("Default");
-    def->full_label = L("Default speed");
+    def->label = L("Internal");
+    def->full_label = L("Internal perimeters speed");
     def->category = OptionCategory::speed;
     def->tooltip = L("Speed for perimeters (contours, aka vertical shells). Set to zero for auto.");
     def->sidetext = L("mm/s");
@@ -5605,6 +5605,15 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
             value = "Not on top";
         else
             value = "All surfaces";
+    } else if ("gcode_precision_e" == opt_key) {
+        try {
+            int val = boost::lexical_cast<int>(value);
+            if (val > 0)
+                value = boost::lexical_cast<std::string>(val);
+        }
+        catch (boost::bad_lexical_cast&) {
+            value = "5";
+        }
     }
 
     // Ignore the following obsolete configuration keys:
