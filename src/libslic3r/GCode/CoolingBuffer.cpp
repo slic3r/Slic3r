@@ -810,10 +810,14 @@ std::string CoolingBuffer::apply_layer_cooldown(
             bridge_internal_fan_control = bridge_internal_fan_speed > fan_speed_new && bridge_internal_fan_speed >= 0;
             top_fan_control    = top_fan_speed != fan_speed_new && top_fan_speed >= 0;
             ext_peri_fan_control = ext_peri_fan_speed != fan_speed_new && ext_peri_fan_speed >= 0;
-            // if bridge_internal_fan is disabled, it takes teh value of bridge_fan_control
+            // if bridge_internal_fan is disabled, it takes the value of bridge_fan_control
+            // if bridge_internal_fan_speed is too low, it takes the value of fan_speed_new
             if (!bridge_internal_fan_control && bridge_fan_control) {
                 bridge_internal_fan_control = true;
-                bridge_internal_fan_speed = bridge_fan_speed;
+                if(bridge_internal_fan_speed >= 0)
+                    bridge_internal_fan_speed = fan_speed_new;
+                else
+                    bridge_internal_fan_speed = bridge_fan_speed;
             }
 
         } else {

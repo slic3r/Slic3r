@@ -53,10 +53,17 @@ std::string PresetHints::cooling_description(const Preset &preset)
             out += ", " + (boost::format(_utf8(L("at %1%%% over top fill surfaces"))) % top_fan_speed).str();
         }
         if (bridge_fan_speed >= 0 && bridge_fan_speed > min_fan_speed) {
-            out += ", " + (boost::format(_utf8(L("at %1%%% over bridges"))) % bridge_fan_speed).str();
+            if (bridge_internal_fan_speed < 0)
+                out += ", " + (boost::format(_utf8(L("at %1%%% over all bridges"))) % bridge_fan_speed).str();
+            else
+                out += ", " + (boost::format(_utf8(L("at %1%%% over bridges"))) % bridge_fan_speed).str();
         }
-        if (bridge_internal_fan_speed >= 0 && bridge_internal_fan_speed > min_fan_speed) {
-            out += ", " + (boost::format(_utf8(L("at %1%%% over infill bridges"))) % bridge_internal_fan_speed).str();
+        if (bridge_internal_fan_speed >= 0){
+            if (bridge_internal_fan_speed > min_fan_speed) {
+                out += ", " + (boost::format(_utf8(L("at %1%%% over infill bridges"))) % bridge_internal_fan_speed).str();
+            } else if (bridge_fan_speed >= 0 && bridge_fan_speed > min_fan_speed) {
+                out += ", " + (boost::format(_utf8(L("at %1%%% over infill bridges"))) % min_fan_speed).str();
+            }
         }
         if (disable_fan_first_layers > 1)
             out += ", " + (boost::format(_utf8(L("except for the first %1% layers where the fan is disabled"))) % disable_fan_first_layers).str();
