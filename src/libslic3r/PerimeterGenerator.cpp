@@ -107,7 +107,7 @@ void PerimeterGenerator::process()
         //we use a range to avoid threshold issues.
         coord_t overhangs_width_flow = scale_(config->overhangs_width.get_abs_value(nozzle_diameter));
         coord_t overhangs_width_speed = scale_(config->overhangs_width_speed.get_abs_value(nozzle_diameter));
-        coord_t min_feature = std::min(overhangs_width_flow, overhangs_width_speed) / 2;
+        coord_t min_feature = std::min(overhangs_width_flow, overhangs_width_speed) / 10;
         coord_t overhangs_width_flow_90 = coord_t(overhangs_width_flow * 0.99);
         coord_t overhangs_width_flow_110 = coord_t(overhangs_width_flow * 1.15);
         coord_t overhangs_width_speed_90 = coord_t(overhangs_width_speed * 0.99);
