@@ -13,7 +13,7 @@
 #define XYZ_NUM(val) PRECISION(val, this->config.gcode_precision_xyz.value)
 #define FLOAT_PRECISION(val, precision) std::defaultfloat << std::setprecision(precision) << (val)
 #define F_NUM(val) FLOAT_PRECISION(val, 8)
-#define E_NUM(val) PRECISION(val, this->config.gcode_precision_e.get_at(m_tool->id()))
+#define E_NUM(val) PRECISION(val, this->config.gcode_precision_e.value)
 
 namespace Slic3r {
 

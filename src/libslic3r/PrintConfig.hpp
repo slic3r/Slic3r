@@ -1097,7 +1097,7 @@ public:
     ConfigOptionEnum<GCodeFlavor>   gcode_flavor;
     ConfigOptionBool                gcode_label_objects;
     ConfigOptionInt                 gcode_precision_xyz;
-    ConfigOptionInts                gcode_precision_e;
+    ConfigOptionInt                 gcode_precision_e;
     ConfigOptionString              layer_gcode;
     ConfigOptionString              feature_gcode;
     ConfigOptionFloat               max_gcode_per_second;

@@ -4685,7 +4685,6 @@ void PrintConfigDef::init_extruder_option_keys()
         "extruder_offset",
         "extruder_fan_offset",
         "extruder_temperature_offset",
-        "gcode_precision_e",
         "tool_name",
         "retract_length",
         "retract_lift",
