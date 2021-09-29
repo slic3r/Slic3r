@@ -20,6 +20,19 @@ namespace Slic3r {
 void
 MedialAxis::build(Polylines &polylines)
 {
+    //TODO: special case for triangles
+    //  take the longest edge
+    //  take the opposite vertex and get the otho dist
+    //  move the longest edge by X% that dist (depends on angle? from 1/2 to 1/4? or always 1/3?) use move dist as width
+    //  clip it and then enlarge it into anchor
+    //  note: ensure that if anchor is over only one edge, it's not the one choosen.
+
+    //TODO: special case for quasi-rectangle
+    //  take longest (not-anchor if any) edge
+    //  get mid-dist for each adjascent edge
+    //  use these point to get the line, with the mid-dist as widths.
+    //  enlarge it into anchor
+
     ThickPolylines tp;
     this->build(tp);
     polylines.insert(polylines.end(), tp.begin(), tp.end());
@@ -215,15 +228,20 @@ MedialAxis::validate_edge(const VD::edge_type* edge, Lines &lines, std::map<cons
         if (!this->expolygon.contains(line.a)) return false;
     } else {
         //test if  (!expolygon.contains(line))
-        Polylines external_bits = diff_pl(Polylines{ Polyline{ line.a, line.b } }, expolygon);
-        if (!external_bits.empty()){
-            //check if the bits that are not inside are under epsilon length
-            coordf_t max_length = 0;
-            for (Polyline &poly : external_bits){
-                max_length = std::max(max_length, poly.length());
+        //this if isn't perfect (the middle of the line may still be out of the polygon)
+        //but this edge-case shouldn't occur anyway, by the way the voronoi is built.
+        if (!expolygon.contains(line.a) || !expolygon.contains(line.b)) { //this if reduced diff_pl from 25% to 18% cpu usage
+            //this line can count for 25% of slicing time, if not enclosed in if
+            Polylines external_bits = diff_pl(Polylines{ Polyline{ line.a, line.b } }, expolygon);
+            if (!external_bits.empty()) {
+                //check if the bits that are not inside are under epsilon length
+                coordf_t max_length = 0;
+                for (Polyline& poly : external_bits) {
+                    max_length = std::max(max_length, poly.length());
+                }
+                if (max_length > SCALED_EPSILON)
+                    return false;
             }
-            if (max_length > SCALED_EPSILON)
-                return false;
         }
     }
     
