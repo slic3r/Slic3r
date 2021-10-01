@@ -1599,6 +1599,8 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
                     double max_layer_height = config().max_layer_height.values[extruder_id];
                     double nozzle_diameter = config().nozzle_diameter.values[extruder_id];
                     if (max_layer_height < EPSILON) max_layer_height = nozzle_diameter * 0.75;
+                    if (min_layer_height > max_layer_height) return { PrintBase::PrintValidationError::pveWrongSettings, L("Min layer height can't be greater than Max layer height") };
+                    if (max_layer_height > nozzle_diameter) return { PrintBase::PrintValidationError::pveWrongSettings, L("Max layer height can't be greater than nozzle diameter") };
                     double skirt_width = Flow::new_from_config_width(frPerimeter, 
                         *Flow::extrusion_option("skirt_extrusion_width", m_default_region_config), 
                         (float)m_config.nozzle_diameter.get_at(extruder_id), 
