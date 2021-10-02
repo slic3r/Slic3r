@@ -815,7 +815,6 @@ namespace Slic3r {
             } else if (
                 opt_key == "bottom_solid_min_thickness"
                 || opt_key == "bridged_infill_margin"
-                || opt_key == "bridge_angle"
                 || opt_key == "ensure_vertical_shell_thickness"
                 || opt_key == "fill_density"
                 || opt_key == "interface_shells"
@@ -856,7 +855,8 @@ namespace Slic3r {
                 || opt_key == "top_infill_extrusion_width") {
                 steps.emplace_back(posInfill);
             } else if (
-                opt_key == "extra_perimeters"
+                opt_key == "bridge_angle"
+                || opt_key == "extra_perimeters"
                 || opt_key == "extra_perimeters_odd_layers"
                 || opt_key == "external_infill_margin"
                 || opt_key == "external_perimeter_overlap"
