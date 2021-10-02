@@ -942,6 +942,12 @@ static wxString get_string_value(std::string opt_key, const DynamicPrintConfig& 
             out = double_to_string(float_percent->value, opt->precision) + (float_percent->percent ? "%" : "");
         return out;
     }
+    case coFloatsOrPercents: {
+        const ConfigOptionFloatsOrPercents* floats_percents = config.opt<ConfigOptionFloatsOrPercents>(opt_key);
+        if (floats_percents)
+            out = double_to_string(floats_percents->get_at(opt_idx).value, opt->precision) + (floats_percents->get_at(opt_idx).percent ? "%" : "");
+        return out;
+    }
     case coEnum: {
         if (opt_key == "top_fill_pattern" ||
             opt_key == "bottom_fill_pattern" ||

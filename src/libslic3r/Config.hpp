@@ -159,7 +159,7 @@ public:
 };
 
 // Type of a configuration value.
-enum ConfigOptionType {
+enum ConfigOptionType : uint16_t{
     coVectorType    = 0x4000,
     coNone          = 0,
     // single float
@@ -1113,7 +1113,7 @@ struct FloatOrPercent
 
 private:
     friend class cereal::access;
-    template<class Archive> void serialize(Archive & ar) { ar(this->flags); ar(this->value); ar(this->percent); }
+    template<class Archive> void serialize(Archive & ar) {ar(this->value); ar(this->percent); }
 };
 
 inline bool operator==(const FloatOrPercent &l, const FloatOrPercent &r)
@@ -1717,6 +1717,7 @@ public:
             case coFloats:          { auto opt = new ConfigOptionFloatsNullable();  archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
             case coInts:            { auto opt = new ConfigOptionIntsNullable();    archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
             case coPercents:        { auto opt = new ConfigOptionPercentsNullable();archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
+            case coFloatsOrPercents:{ auto opt = new ConfigOptionFloatsOrPercentsNullable();archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
             case coBools:           { auto opt = new ConfigOptionBoolsNullable();   archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
 		    default:                throw ConfigurationError(std::string("ConfigOptionDef::load_option_from_archive(): Unknown nullable option type for option ") + this->opt_key);
 		    }
@@ -1731,6 +1732,7 @@ public:
             case coPercent:         { auto opt = new ConfigOptionPercent();         archive(*opt); return opt; }
             case coPercents:        { auto opt = new ConfigOptionPercents();        archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
             case coFloatOrPercent:  { auto opt = new ConfigOptionFloatOrPercent();  archive(*opt); return opt; }
+            case coFloatsOrPercents:{ auto opt = new ConfigOptionFloatsOrPercents();archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
             case coPoint:           { auto opt = new ConfigOptionPoint();           archive(*opt); return opt; }
             case coPoints:          { auto opt = new ConfigOptionPoints();          archive(*opt); opt->set_is_extruder_size(this->is_vector_extruder); return opt; }
             case coPoint3:          { auto opt = new ConfigOptionPoint3();          archive(*opt); return opt; }
@@ -1748,6 +1750,7 @@ public:
 		    case coFloats:          archive(*static_cast<const ConfigOptionFloatsNullable*>(opt));  break;
 		    case coInts:            archive(*static_cast<const ConfigOptionIntsNullable*>(opt));    break;
 		    case coPercents:        archive(*static_cast<const ConfigOptionPercentsNullable*>(opt));break;
+		    case coFloatsOrPercents:archive(*static_cast<const ConfigOptionFloatsOrPercentsNullable*>(opt));break;
 		    case coBools:           archive(*static_cast<const ConfigOptionBoolsNullable*>(opt)); 	break;
 		    default:                throw ConfigurationError(std::string("ConfigOptionDef::save_option_to_archive(): Unknown nullable option type for option ") + this->opt_key);
 		    }
@@ -1762,6 +1765,7 @@ public:
 		    case coPercent:         archive(*static_cast<const ConfigOptionPercent*>(opt)); 		break;
 		    case coPercents:        archive(*static_cast<const ConfigOptionPercents*>(opt)); 		break;
 		    case coFloatOrPercent:  archive(*static_cast<const ConfigOptionFloatOrPercent*>(opt));	break;
+		    case coFloatsOrPercents:archive(*static_cast<const ConfigOptionFloatsOrPercents*>(opt));break;
 		    case coPoint:           archive(*static_cast<const ConfigOptionPoint*>(opt)); 			break;
 		    case coPoints:          archive(*static_cast<const ConfigOptionPoints*>(opt)); 			break;
 		    case coPoint3:          archive(*static_cast<const ConfigOptionPoint3*>(opt)); 			break;

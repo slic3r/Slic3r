@@ -107,7 +107,7 @@ void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt
         }
 
 		switch (config.def()->get(opt_key)->type) {
-		case coFloatOrPercent:{
+		case coFloatOrPercent: {
 			std::string str = boost::any_cast<std::string>(value);
 			bool percent = false;
 			if (str.back() == '%') {
@@ -116,7 +116,18 @@ void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt
 			}
 			double val = stod(str);
 			config.set_key_value(opt_key, new ConfigOptionFloatOrPercent(val, percent));
-			break;}
+			break; }
+		case coFloatsOrPercents: {
+			std::string str = boost::any_cast<std::string>(value);
+			bool percent = false;
+			if (str.back() == '%') {
+				str.pop_back();
+				percent = true;
+			}
+			double val = stod(str);
+			ConfigOptionFloatsOrPercents* vec_new = new ConfigOptionFloatsOrPercents{ boost::any_cast<FloatOrPercent>(FloatOrPercent{val, percent}) };
+			config.option<ConfigOptionFloatsOrPercents>(opt_key)->set_at(vec_new, opt_index, opt_index);
+			break; }
 		case coPercent:
 			config.set_key_value(opt_key, new ConfigOptionPercent(boost::any_cast<double>(value)));
 			break;

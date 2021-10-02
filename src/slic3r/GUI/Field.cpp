@@ -95,6 +95,7 @@ void Field::PostInitialize()
 	{
 	case coPercents:
 	case coFloats:
+	case coFloatsOrPercents:
 	case coStrings:	
 	case coBools:		
 	case coPoints:
@@ -296,12 +297,15 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
 		break; }
 	case coString:
 	case coStrings:
+        m_value = std::string(str.ToUTF8().data());
+        break;
+    case coFloatsOrPercents:
     case coFloatOrPercent: {
-        if (m_opt.type == coFloatOrPercent && !str.IsEmpty() &&  str.Last() != '%')
+        if (!str.IsEmpty() && str.Last() != '%')
         {
             double val = 0.;
-			// Replace the first occurence of comma in decimal number.
-			str.Replace(",", ".", false);
+            // Replace the first occurence of comma in decimal number.
+            str.Replace(",", ".", false);
 
             // remove space and "mm" substring, if any exists
             str.Replace(" ", "", true);
@@ -328,8 +332,8 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
                     if (m_opt.min > val) val = m_opt.min;
                     set_value(double_to_string(val, m_opt.precision), true);
                 } else if (((m_opt.sidetext.rfind("mm/s") != std::string::npos && val > m_opt.max) ||
-                     (m_opt.sidetext.rfind("mm ") != std::string::npos && val > 1)) &&
-                     (m_value.empty() || std::string(str.ToUTF8().data()) != boost::any_cast<std::string>(m_value)))
+                    (m_opt.sidetext.rfind("mm ") != std::string::npos && val > 1)) &&
+                    (m_value.empty() || std::string(str.ToUTF8().data()) != boost::any_cast<std::string>(m_value)))
                 {
                     // exceptions
                     if (std::set<t_config_option_key>{"infill_anchor", "infill_anchor_max", "avoid_crossing_perimeters_max_detour"}.count(m_opt.opt_key) > 0) {
@@ -338,9 +342,9 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
                     }
                     if (m_opt.opt_key.find("extrusion_width") != std::string::npos || m_opt.opt_key.find("extrusion_spacing") != std::string::npos) {
                         const DynamicPrintConfig& printer_config = wxGetApp().preset_bundle->printers.get_edited_preset().config;
-                        const std::vector<double> &nozzle_diameters = printer_config.option<ConfigOptionFloats>("nozzle_diameter")->values;
+                        const std::vector<double>& nozzle_diameters = printer_config.option<ConfigOptionFloats>("nozzle_diameter")->values;
                         double nozzle_diameter = 0;
-                        for(double diameter : nozzle_diameters)
+                        for (double diameter : nozzle_diameters)
                             nozzle_diameter = std::max(nozzle_diameter, diameter);
                         if (val < nozzle_diameter * 10) {
                             m_value = std::string(str.ToUTF8().data());
@@ -360,19 +364,18 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
                     const wxString msg_text = from_u8((boost::format(_utf8(L("Do you mean %s%% instead of %s %s?\n"
                         "Select YES if you want to change this value to %s%%, \n"
                         "or NO if you are sure that %s %s is a correct value."))) % stVal % stVal % sidetext % stVal % stVal % sidetext).str());
-                    wxMessageDialog dialog(m_parent, msg_text, _(L("Parameter validation")) + ": " + m_opt_id , wxICON_WARNING | wxYES | wxNO);
+                    wxMessageDialog dialog(m_parent, msg_text, _(L("Parameter validation")) + ": " + m_opt_id, wxICON_WARNING | wxYES | wxNO);
                     if ((!infill_anchors || val > 100) && dialog.ShowModal() == wxID_YES) {
                         set_value(from_u8((boost::format("%s%%") % stVal).str()), false/*true*/);
                         str += "%%";
-                    }
-				    else
-					    set_value(stVal, false); // it's no needed but can be helpful, when inputted value contained "," instead of "."
+                    } else
+                        set_value(stVal, false); // it's no needed but can be helpful, when inputted value contained "," instead of "."
                 }
             }
         }
-    
+
         m_value = std::string(str.ToUTF8().data());
-		break; 
+        break;
     }
     case coPoints: {
         std::vector<Vec2d> out_values;
@@ -454,13 +457,13 @@ void TextCtrl::BUILD() {
 	wxString text_value = wxString(""); 
 
 	switch (m_opt.type) {
-	case coFloatOrPercent:
-	{
-		text_value = double_to_string(m_opt.default_value->getFloat(), m_opt.precision);
-		if (m_opt.get_default_value<ConfigOptionFloatOrPercent>()->percent)
-			text_value += "%";
-		break;
-	}
+    case coFloatOrPercent:
+    {
+        text_value = double_to_string(m_opt.default_value->getFloat(), m_opt.precision);
+        if (m_opt.get_default_value<ConfigOptionFloatOrPercent>()->percent)
+            text_value += "%";
+        break;
+    }
 	case coPercent:
 	{
 		text_value = double_to_string(m_opt.default_value->getFloat(), m_opt.precision);
@@ -480,6 +483,14 @@ void TextCtrl::BUILD() {
         m_last_meaningful_value = text_value;
 		break;
 	}
+    case coFloatsOrPercents:
+    {
+        const ConfigOptionFloatsOrPercents* cofop = m_opt.get_default_value<ConfigOptionFloatsOrPercents>();
+        text_value = double_to_string(cofop->get_at(m_opt_idx).value, m_opt.precision);
+        if (cofop->get_at(m_opt_idx).percent)
+            text_value += "%";
+        break;
+    }
 	case coString:			
 		text_value = m_opt.get_default_value<ConfigOptionString>()->value;
 		break;
@@ -605,6 +616,7 @@ bool TextCtrl::value_was_changed()
     case coString:
     case coStrings:
     case coFloatOrPercent:
+    case coFloatsOrPercents:
         return boost::any_cast<std::string>(m_value) != boost::any_cast<std::string>(val);
     default:
         return true;

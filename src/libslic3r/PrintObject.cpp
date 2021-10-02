@@ -851,8 +851,9 @@ namespace Slic3r {
                 || opt_key == "infill_connection_solid"
                 || opt_key == "infill_connection_top"
                 || opt_key == "infill_connection_bottom"
+                || opt_key == "seam_gap"
                 || opt_key == "top_infill_extrusion_spacing"
-                || opt_key == "top_infill_extrusion_width") {
+                || opt_key == "top_infill_extrusion_width" ) {
                 steps.emplace_back(posInfill);
             } else if (
                 opt_key == "bridge_angle"

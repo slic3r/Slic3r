@@ -63,6 +63,16 @@ void change_opt_key(std::string& opt_key, DynamicPrintConfig* config, int& cnt)
         opt_key += "#" + std::to_string(0);
 }
 
+void change_opt_keyFoP(std::string& opt_key, DynamicPrintConfig* config, int& cnt)
+{
+    ConfigOptionFloatsOrPercents* opt_cur = static_cast<ConfigOptionFloatsOrPercents*>(config->option(opt_key));
+    cnt = opt_cur->values.size();
+    return;
+
+    if (opt_cur->values.size() > 0)
+        opt_key += "#" + std::to_string(0);
+}
+
 void OptionsSearcher::append_options(DynamicPrintConfig* config, Preset::Type type, ConfigOptionMode mode)
 {
     auto emplace = [this, type](const std::string opt_key, const wxString& label)
@@ -102,6 +112,8 @@ void OptionsSearcher::append_options(DynamicPrintConfig* config, Preset::Type ty
             case coFloats:	change_opt_key<ConfigOptionFloats	>(opt_key, config, cnt);	break;
             case coStrings:	change_opt_key<ConfigOptionStrings	>(opt_key, config, cnt);	break;
             case coPercents:change_opt_key<ConfigOptionPercents	>(opt_key, config, cnt);	break;
+            //case coFloatsOrPercents:change_opt_key<ConfigOptionFloatsOrPercents	>(opt_key, config, cnt);	break;
+            case coFloatsOrPercents:change_opt_keyFoP(opt_key, config, cnt);	break;
             case coPoints:	change_opt_key<ConfigOptionPoints	>(opt_key, config, cnt);	break;
             default:		break;
             }

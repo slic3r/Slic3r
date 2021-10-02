@@ -422,13 +422,14 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
 
         // Maximum length of the perimeter segment linking two infill lines.
         f->link_max_length = (coord_t)scale_(link_max_length);
-        // Used by the concentric infill pattern to clip the loops to create extrusion paths.
-        f->loop_clipping = coord_t(scale_(surface_fill.params.flow.nozzle_diameter) * LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER);
 
         //give the overlap size to let the infill do his overlap
         //add overlap if at least one perimeter
         const LayerRegion* layerm = this->m_regions[surface_fill.region_id];
         const float perimeter_spacing = layerm->flow(frPerimeter).spacing();
+
+        // Used by the concentric infill pattern to clip the loops to create extrusion paths.
+        f->loop_clipping = scale_t(layerm->region()->config().get_computed_value("seam_gap", surface_fill.params.extruder - 1) * surface_fill.params.flow.nozzle_diameter);
 
         // apply half spacing using this flow's own spacing and generate infill
         //FillParams params;

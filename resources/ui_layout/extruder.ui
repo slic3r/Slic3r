@@ -34,6 +34,7 @@ group:Retraction wipe
 	setting:idx:wipe_speed
 	setting:idx:retract_before_wipe
 	setting:idx:wipe_extra_perimeter
+	setting:idx:seam_gap
 group:Retraction when tool is disabled (advanced settings for multi-extruder setups)
 	setting:idx:retract_length_toolchange
 	setting:idx:retract_restart_extra_toolchange

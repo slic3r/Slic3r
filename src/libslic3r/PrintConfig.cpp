@@ -3425,6 +3425,17 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionPercent(100));
 
+    def = this->add("seam_gap", coFloatsOrPercents);
+    def->label = L("Seam gap");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L("To avoid visible seam, the extrusion can be stoppped a bit before the end of the loop."
+                    "\nCan be a mm or a % of the current extruder diameter.");
+    def->sidetext = L("mm or %");
+    def->min = 0;
+    def->mode = comExpert;
+    def->is_vector_extruder = true;
+    def->set_default_value(new ConfigOptionFloatsOrPercents{ FloatOrPercent{15,true} });
+
 #if 0
     def = this->add("seam_preferred_direction", coFloat);
 //    def->gui_type = "slider";
@@ -4657,7 +4668,9 @@ void PrintConfigDef::init_fff_params()
         // bools
         "retract_layer_change", "wipe",
         // percents
-        "retract_before_wipe"}) {
+        "retract_before_wipe",
+        // floatsOrPercents
+        "seam_gap"}) {
         auto it_opt = options.find(opt_key);
         assert(it_opt != options.end());
         def = this->add_nullable(std::string("filament_") + opt_key, it_opt->second.type);
@@ -4669,6 +4682,7 @@ void PrintConfigDef::init_fff_params()
         switch (def->type) {
         case coFloats   : def->set_default_value(new ConfigOptionFloatsNullable  (static_cast<const ConfigOptionFloats*  >(it_opt->second.default_value.get())->values)); break;
         case coPercents : def->set_default_value(new ConfigOptionPercentsNullable(static_cast<const ConfigOptionPercents*>(it_opt->second.default_value.get())->values)); break;
+        case coFloatsOrPercents : def->set_default_value(new ConfigOptionFloatsOrPercentsNullable(static_cast<const ConfigOptionFloatsOrPercents*>(it_opt->second.default_value.get())->values)); break;
         case coBools    : def->set_default_value(new ConfigOptionBoolsNullable   (static_cast<const ConfigOptionBools*   >(it_opt->second.default_value.get())->values)); break;
         default: assert(false);
         }
@@ -4679,32 +4693,33 @@ void PrintConfigDef::init_extruder_option_keys()
 {
     // ConfigOptionFloats, ConfigOptionPercents, ConfigOptionBools, ConfigOptionStrings
     m_extruder_option_keys = {
-        "nozzle_diameter",
-        "min_layer_height",
-        "max_layer_height",
+        "extruder_colour",
         "extruder_offset",
         "extruder_fan_offset",
         "extruder_temperature_offset",
-        "tool_name",
+        "default_filament_profile",
+        "deretract_speed",
+        "max_layer_height",
+        "min_layer_height",
+        "nozzle_diameter",
+        "retract_before_travel",
+        "retract_before_wipe",
+        "retract_layer_change",
         "retract_length",
+        "retract_length_toolchange",
         "retract_lift",
         "retract_lift_above",
         "retract_lift_below",
         "retract_lift_first_layer",
         "retract_lift_top",
-        "retract_speed",
-        "deretract_speed",
-        "retract_before_wipe",
         "retract_restart_extra",
-        "retract_before_travel",
+        "retract_restart_extra_toolchange",
+        "retract_speed",
+        "seam_gap",
+        "tool_name",
         "wipe",
 		"wipe_extra_perimeter",
         "wipe_speed",
-        "retract_layer_change",
-        "retract_length_toolchange",
-        "retract_restart_extra_toolchange",
-        "extruder_colour",
-        "default_filament_profile"
     };
 
     m_extruder_retract_keys = {
@@ -4718,6 +4733,7 @@ void PrintConfigDef::init_extruder_option_keys()
         "retract_lift_below",
         "retract_restart_extra",
         "retract_speed",
+        "seam_gap",
         "wipe",
         "wipe_extra_perimeter",
         "wipe_speed",
@@ -5779,6 +5795,7 @@ std::unordered_set<std::string> prusa_export_to_remove_keys = {
 "retract_lift_first_layer",
 "retract_lift_top",
 "seam_angle_cost",
+"seam_gap",
 "seam_travel_cost",
 "skirt_brim",
 "skirt_distance_from_brim",
@@ -6628,6 +6645,13 @@ std::string FullPrintConfig::validate()
         case coFloats:
             for (double v : static_cast<const ConfigOptionVector<double>*>(opt)->values)
                 if (v < optdef->min || v > optdef->max) {
+                    out_of_range = true;
+                    break;
+                }
+            break;
+        case coFloatsOrPercents:
+            for (FloatOrPercent v : static_cast<const ConfigOptionVector<FloatOrPercent>*>(opt)->values)
+                if (v.value < optdef->min || v.value > optdef->max) {
                     out_of_range = true;
                     break;
                 }

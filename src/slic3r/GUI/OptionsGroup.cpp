@@ -47,7 +47,8 @@ const t_field& OptionsGroup::build_field(const t_config_option_key& id, const Co
             case coFloat:
             case coFloats:
 			case coPercent:
-			case coPercents:
+            case coPercents:
+            case coFloatsOrPercents:
 			case coString:
 			case coStrings:
 				m_fields.emplace(id, std::move(TextCtrl::Create<TextCtrl>(this->ctrl_parent(), opt, id)));
@@ -860,6 +861,18 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
                 ret = double_to_string(val, opt->precision); }
             }
             break;
+        case coFloatsOrPercents: {
+            if (config.option(opt_key)->is_nil())
+                ret = _(L("N/A"));
+            else {
+                FloatOrPercent float_percent = config.option<ConfigOptionFloatsOrPercentsNullable>(opt_key)->get_at(idx);
+				text_value = double_to_string(float_percent.value, opt->precision);
+				if (float_percent.percent)
+					text_value += "%";
+				ret = text_value;
+			}
+            }
+            break;
         case coBools:
             ret = config.option<ConfigOptionBoolsNullable>(opt_key)->values[idx];
             break;
@@ -879,6 +892,16 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 
         text_value = double_to_string(value.value, opt->precision);
 		if (value.percent)
+			text_value += "%";
+
+		ret = text_value;
+		break;
+	}
+	case coFloatsOrPercents:{
+		const ConfigOptionFloatsOrPercents &value = *config.option<ConfigOptionFloatsOrPercents>(opt_key);
+
+        text_value = double_to_string(value.get_at(idx).value, opt->precision);
+		if (value.get_at(idx).percent)
 			text_value += "%";
 
 		ret = text_value;
