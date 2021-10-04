@@ -686,9 +686,9 @@ void MainFrame::init_tabpanel()
     }
     catch (std::exception e) {}
     if (icon_size >= 8) {
-        std::initializer_list<std::string> icon_list = { "editor_menu", "layers", "preview_menu", "cog", "spool_cog", "printer_cog", "resin_cog", "sla_printer_cog" };
+        std::vector<std::string> icon_list =  { "editor_menu", "layers", "preview_menu", "cog", "spool_cog",  "printer_cog",  "resin_cog",    "sla_printer_cog" };
         if (icon_size < 16)
-            icon_list = { "editor_menu", "layers", "preview_menu", "cog", "spool", "printer", "resin", "sla_printer" };
+            icon_list =                       { "editor_menu", "layers", "preview_menu", "cog", "spool",      "printer",      "resin",        "sla_printer" };
         for (std::string icon_name : icon_list) {
             const wxBitmap& bmp = create_scaled_bitmap(icon_name, this, icon_size);
             if (img_list == nullptr)
