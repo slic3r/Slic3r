@@ -805,10 +805,9 @@ const BoundingBoxf3& ModelObject::bounding_box() const
 {
     if (! m_bounding_box_valid) {
         m_bounding_box_valid = true;
-        BoundingBoxf3 raw_bbox = this->raw_mesh_bounding_box();
         m_bounding_box.reset();
-        for (const ModelInstance *i : this->instances)
-            m_bounding_box.merge(i->transform_bounding_box(raw_bbox));
+        for (size_t i = 0; i < instances.size(); ++i)
+            m_bounding_box.merge(instance_bounding_box(i, false));
     }
     return m_bounding_box;
 }
@@ -927,16 +926,20 @@ const BoundingBoxf3& ModelObject::raw_bounding_box() const
 	return m_raw_bounding_box;
 }
 
-// This returns an accurate snug bounding box of the transformed object instance, without the translation applied.
+// This returns an accurate snug bounding box of the transformed object instance, with or without the translation applied.
 BoundingBoxf3 ModelObject::instance_bounding_box(size_t instance_idx, bool dont_translate) const
 {
+    return instance_bounding_box(*this->instances[instance_idx], dont_translate);
+}
+BoundingBoxf3 ModelObject::instance_bounding_box(const ModelInstance & instance, bool dont_translate) const
+{
     BoundingBoxf3 bb;
-    const Transform3d& inst_matrix = this->instances[instance_idx]->get_transformation().get_matrix(dont_translate);
-    for (ModelVolume *v : this->volumes)
+    const Transform3d& inst_matrix = instance.get_transformation().get_matrix(dont_translate);
+    for (ModelVolume* v : this->volumes)
     {
         if (v->is_model_part())
             bb.merge(v->mesh().transformed_bounding_box(inst_matrix * v->get_matrix()));
-        }
+    }
     return bb;
 }
 
@@ -1923,11 +1926,6 @@ BoundingBoxf3 ModelInstance::transform_mesh_bounding_box(const TriangleMesh& mes
         }
     }
     return bbox;
-}
-
-BoundingBoxf3 ModelInstance::transform_bounding_box(const BoundingBoxf3 &bbox, bool dont_translate) const
-{
-    return bbox.transformed(get_matrix(dont_translate));
 }
 
 Vec3d ModelInstance::transform_vector(const Vec3d& v, bool dont_translate) const

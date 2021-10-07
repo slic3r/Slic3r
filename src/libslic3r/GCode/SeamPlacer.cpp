@@ -349,7 +349,7 @@ Point SeamPlacer::get_seam(const Layer& layer, SeamPosition seam_position,
                 Point nearest = polygon.point_projection(xy_lambda);
                 Vec3d polygon_3dpoint{ unscaled(nearest.x()), unscaled(nearest.y()), (double)layer.print_z };
                 double test_lambda_dist = (polygon_3dpoint - test_lambda_pos).norm();
-                double sphere_radius = po->model_object()->instances.front()->transform_bounding_box(v->mesh().bounding_box(), true).size().x() / 2;
+                double sphere_radius = po->model_object()->instance_bounding_box(0, true).size().x() / 2;
                 //if (test_lambda_dist > sphere_radius)
                 //    continue;
 
