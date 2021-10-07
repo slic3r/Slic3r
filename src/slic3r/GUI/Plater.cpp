@@ -6084,6 +6084,17 @@ void Plater::on_config_change(const DynamicPrintConfig &config)
         }
         else if(opt_key == "extruder_colour") {
             update_scheduled = true;
+            if (p->config->option<ConfigOptionStrings>("filament_colour")->values.size() < config.option<ConfigOptionStrings>(opt_key)->values.size()) {
+                const std::vector<std::string> filament_presets = wxGetApp().preset_bundle->filament_presets;
+                const PresetCollection& filaments = wxGetApp().preset_bundle->filaments;
+                std::vector<std::string> filament_colors;
+                filament_colors.reserve(filament_presets.size());
+
+                for (const std::string& filament_preset : filament_presets)
+                    filament_colors.push_back(filaments.find_preset(filament_preset, true)->config.opt_string("filament_colour", (unsigned)0));
+
+                p->config->option<ConfigOptionStrings>("filament_colour")->values = filament_colors;
+            }
 #if !ENABLE_PREVIEW_TYPE_CHANGE
             p->preview->set_number_extruders(p->config->option<ConfigOptionStrings>(opt_key)->values.size());
 #endif // !ENABLE_PREVIEW_TYPE_CHANGE
