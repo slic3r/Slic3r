@@ -1469,6 +1469,9 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
         m_writer.toolchange(initial_extruder_id);
     }
 
+    // ensure the first tool doesn't "extra_retract"
+    m_writer.unretract();
+
     //write temps after custom gcodes to ensure the temperature are good. (after tool selection)
     if ((initial_extruder_id != (uint16_t)-1) && !this->config().start_gcode_manual && print.config().first_layer_temperature.get_at(initial_extruder_id) != 0)
         this->_print_first_layer_extruder_temperatures(file, print, start_gcode, initial_extruder_id, true);

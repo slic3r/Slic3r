@@ -601,12 +601,14 @@ std::string GCodeWriter::retract(bool before_wipe)
         return this->_retract(
             factor * config_region->print_retract_length,
             factor * m_tool->retract_restart_extra(),
+            NAN,
             "retract"
         );
     }
     return this->_retract(
         factor * m_tool->retract_length(),
         factor * m_tool->retract_restart_extra(),
+        NAN,
         "retract"
     );
 }
@@ -617,12 +619,13 @@ std::string GCodeWriter::retract_for_toolchange(bool before_wipe)
     assert(factor >= 0. && factor <= 1. + EPSILON);
     return this->_retract(
         factor * m_tool->retract_length_toolchange(),
+        NAN,
         factor * m_tool->retract_restart_extra_toolchange(),
         "retract for toolchange"
     );
 }
 
-std::string GCodeWriter::_retract(double length, double restart_extra, const std::string &comment)
+std::string GCodeWriter::_retract(double length, double restart_extra, double restart_extra_toolchange, const std::string &comment)
 {
     std::ostringstream gcode;
     
@@ -637,9 +640,10 @@ std::string GCodeWriter::_retract(double length, double restart_extra, const std
         double area = d * d * PI/4;
         length = length * area;
         restart_extra = restart_extra * area;
+        restart_extra_toolchange = restart_extra_toolchange * area;
     }
     
-    double dE = m_tool->retract(length, restart_extra);
+    double dE = m_tool->retract(length, restart_extra, restart_extra_toolchange);
     assert(dE >= 0);
     assert(dE < 10000000);
     if (dE != 0) {

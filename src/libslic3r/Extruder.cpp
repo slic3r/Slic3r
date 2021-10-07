@@ -13,6 +13,8 @@ Tool::Tool(uint16_t id, GCodeConfig* config) :
 Extruder::Extruder(uint16_t id, GCodeConfig* config) :
     Tool(id, config)
 {
+    // set extra_toolchange to be init for when it will be new current extruder
+    m_restart_extra_toolchange = retract_restart_extra_toolchange();
 
     // cache values that are going to be called often
     m_e_per_mm3 = this->extrusion_multiplier();
@@ -46,7 +48,7 @@ double Tool::extrude(double dE)
    The restart_extra argument sets the extra length to be used for
    unretraction. If we're actually performing a retraction, any restart_extra
    value supplied will overwrite the previous one if any. */
-double Tool::retract(double length, double restart_extra)
+double Tool::retract(double length, double restart_extra, double restart_extra_toolchange)
 {
     // in case of relative E distances we always reset to 0 before any output
     if (m_config->use_relative_e_distances)
@@ -56,17 +58,22 @@ double Tool::retract(double length, double restart_extra)
         m_E             -= to_retract;
         m_absolute_E    -= to_retract;
         m_retracted     += to_retract;
-        m_restart_extra = restart_extra;
+        if(!std::isnan(restart_extra))
+            m_restart_extra = restart_extra;
     }
+    if (!std::isnan(restart_extra_toolchange))
+        m_restart_extra_toolchange = restart_extra_toolchange;
     return to_retract;
 }
 
 double Tool::unretract()
 {
-    double dE = m_retracted + m_restart_extra;
+    double dE = m_retracted + m_restart_extra + m_restart_extra_toolchange;
     this->extrude(dE);
     m_retracted     = 0.;
     m_restart_extra = 0.;
+    if(m_restart_extra_toolchange != 0)
+        m_restart_extra_toolchange = 0.;
     return dE;
 }
 

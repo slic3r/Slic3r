@@ -3281,7 +3281,8 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Retraction Length (Toolchange)");
     def->tooltip = L("When retraction is triggered before changing tool, filament is pulled back "
                    "by the specified amount (the length is measured on raw filament, before it enters "
-                   "the extruder).");
+                   "the extruder)."
+                    "\nNote: This value will be unretracted when this extruder will load the next time.");
     def->sidetext = L("mm (zero to disable)");
     def->mode = comExpert;
     def->min = 0;
@@ -3361,7 +3362,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Extra length on restart");
     def->full_label = L("Extrat length on toolchange restart");
     def->tooltip = L("When the retraction is compensated after changing tool, the extruder will push "
-                   "this additional amount of filament.");
+                    "this additional amount of filament"
+                    " (but not on the first extruder after start, as it should already be loaded).");
     def->sidetext = L("mm");
     def->mode = comExpert;
     def->is_vector_extruder = true;

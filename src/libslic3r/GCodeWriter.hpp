@@ -100,7 +100,7 @@ private:
     Vec3d           m_pos = Vec3d::Zero();
 
     std::string _travel_to_z(double z, const std::string &comment);
-    std::string _retract(double length, double restart_extra, const std::string &comment);
+    std::string _retract(double length, double restart_extra, double restart_extra_toolchange, const std::string &comment);
 
     // if positive, it's set, and the next lift wil have this extra lift
     double extra_lift = 0;

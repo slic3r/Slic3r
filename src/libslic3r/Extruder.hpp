@@ -19,12 +19,13 @@ public:
         m_absolute_E    = 0;
         m_retracted     = 0;
         m_restart_extra = 0;
+        m_restart_extra_toolchange = 0; // note: can't call  retract_restart_extra_toolchange(); because virtual inheritance doesn't work when only the tool is build (constructor)
     }
 
     uint16_t id() const { return m_id; }
 
     virtual double extrude(double dE);
-    virtual double retract(double length, double restart_extra);
+    virtual double retract(double length, double restart_extra, double restart_extra_from_toolchange);
     virtual double unretract();
     double E() const { return m_E; }
     void   reset_E() { m_E = 0.; }
@@ -67,6 +68,7 @@ protected:
     double       m_retracted;
     // When retracted, this value stores the extra amount of priming on deretraction.
     double       m_restart_extra;
+    double       m_restart_extra_toolchange;
     double       m_e_per_mm3;
 };
 
