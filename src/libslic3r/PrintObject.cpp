@@ -210,10 +210,21 @@ namespace Slic3r {
                                         diameter_max = std::max(diameter_max, dist);
                                         diameter_sum += dist;
                                     }
+                                    //also use center of lines to check it's not a rectangle
+                                    double diameter_line_min = std::numeric_limits<float>::max(), diameter_line_max = 0;
+                                    Lines hole_lines = hole.lines();
+                                    for (Line l : hole_lines) {
+                                        Point midline = (l.a + l.b) / 2;
+                                        double dist = center.distance_to(midline);
+                                        diameter_line_min = std::min(diameter_line_min, dist);
+                                        diameter_line_max = std::max(diameter_line_max, dist);
+                                    }
+
+
                                     // SCALED_EPSILON was a bit too harsh. Now using a config, as some may want some harsh setting and some don't.
                                     coord_t max_variation = std::max(SCALED_EPSILON, scale_(this->m_layers[layer_idx]->m_regions[region_idx]->region()->config().hole_to_polyhole_threshold.get_abs_value(unscaled(diameter_sum / hole.points.size()))));
                                     bool twist = this->m_layers[layer_idx]->m_regions[region_idx]->region()->config().hole_to_polyhole_twisted.value;
-                                    if (diameter_max - diameter_min < max_variation * 2) {
+                                    if (diameter_max - diameter_min < max_variation * 2 && diameter_line_max - diameter_line_min < max_variation * 2) {
                                         layerid2center[layer_idx].emplace_back(
                                             std::tuple<Point, float, int, coord_t, bool>{center, diameter_max, layer->m_regions[region_idx]->region()->config().perimeter_extruder.value, max_variation, twist}, & hole);
                                     }
