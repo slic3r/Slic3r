@@ -426,9 +426,8 @@ void PerimeterGenerator::process()
                         }
 
                         //offset by perimeter spacing because the simplify may have reduced it a bit.
-                        if (!bridgeable_simplified.empty())
-                            bridgeable_simplified = offset_ex(bridgeable_simplified, double(perimeter_spacing) / 1.9);
                         if (!bridgeable_simplified.empty()) {
+                            bridgeable_simplified = offset_ex(bridgeable_simplified, double(perimeter_spacing));
                             overhangs_unsupported = diff_ex(overhangs_unsupported, bridgeable_simplified, true);
                         }
                     }
@@ -743,8 +742,9 @@ void PerimeterGenerator::process()
                         fill_clip = offset_ex(last, double(ext_perimeter_spacing / 2) - scale_d(infill_spacing_unscaled / 2));
                         last = intersection_ex(inner_polygons, last);
                         //{
+                        //    static int isazfn = 0;
                         //    std::stringstream stri;
-                        //    stri << this->layer->id() << "_1_"<< i <<"_only_one_peri"<< ".svg";
+                        //    stri << this->layer->id() << "_" << i << "_"<< isazfn++ <<"_only_one_peri"<< ".svg";
                         //    SVG svg(stri.str());
                         //    svg.draw(to_polylines(oldLast), "orange");
                         //    svg.draw(to_polylines(fill_clip), "purple");
