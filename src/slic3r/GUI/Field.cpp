@@ -311,8 +311,10 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
             str.Replace(" ", "", true);
             str.Replace("m", "", true);
 
-            if (!str.ToCDouble(&val))
-            {
+            if (m_opt.nullable && str == na_value()) {
+                val = ConfigOptionFloatsNullable::nil_value();
+                str = "nan";
+            } else if (!str.ToCDouble(&val)) {
                 if (!check_value) {
                     m_value.clear();
                     break;
@@ -480,7 +482,6 @@ void TextCtrl::BUILD() {
 				m_opt.default_value->getFloat() :
 				m_opt.get_default_value<ConfigOptionPercents>()->get_at(m_opt_idx);
 		text_value = double_to_string(val, m_opt.precision);
-        m_last_meaningful_value = text_value;
 		break;
 	}
     case coFloatsOrPercents:
@@ -507,6 +508,7 @@ void TextCtrl::BUILD() {
 	default:
 		break; 
 	}
+    m_last_meaningful_value = text_value;
 
     const long style = m_opt.multiline ? wxTE_MULTILINE : wxTE_PROCESS_ENTER/*0*/;
 	auto temp = new wxTextCtrl(m_parent, wxID_ANY, text_value, wxDefaultPosition, size, style);
