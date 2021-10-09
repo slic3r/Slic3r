@@ -598,7 +598,21 @@ ClipperLib::PolyTree _clipper_do_pl(const ClipperLib::ClipType clipType, const P
     // read input
     ClipperLib::Paths input_subject = Slic3rMultiPoints_to_ClipperPaths(subject);
     ClipperLib::Paths input_clip    = Slic3rMultiPoints_to_ClipperPaths(clip);
-    
+
+    //perform y safing : if a line is on the same Y, clipper may not pick the good point.
+    std::set<coord_t> bad_y;
+    for (ClipperLib::Paths* input : {&input_subject, &input_clip} )
+        for (ClipperLib::Path& path : *input) {
+            coord_t lasty = 0;
+            for (ClipperLib::IntPoint& pt : path) {
+                if (lasty == pt.Y) {
+                    pt.Y+=1;
+                    bad_y.insert(pt.Y);
+                }
+                lasty = pt.Y;
+            }
+        }
+
     // perform safety offset
     if (safety_offset_) safety_offset(&input_clip);
     
@@ -613,6 +627,23 @@ ClipperLib::PolyTree _clipper_do_pl(const ClipperLib::ClipType clipType, const P
     // perform operation
     ClipperLib::PolyTree retval;
     clipper.Execute(clipType, retval, fillType, fillType);
+
+    //restore good y
+    if (!bad_y.empty()) {
+        std::vector<ClipperLib::PolyNode*> to_check;
+        to_check.push_back(&retval);
+        while (!to_check.empty()) {
+            ClipperLib::PolyNode* node = to_check.back();
+            to_check.pop_back();
+            for (ClipperLib::IntPoint& pt : node->Contour) {
+                if (bad_y.find(pt.Y) != bad_y.end()) {
+                    pt.Y-=1;
+                }
+            }
+            to_check.insert(to_check.end(), node->Childs.begin(), node->Childs.end());
+        }
+    }
+
     return retval;
 }
 
