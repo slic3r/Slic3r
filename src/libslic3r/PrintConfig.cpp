@@ -6482,6 +6482,7 @@ std::set<const DynamicPrintConfig*> DynamicPrintConfig::value_changed(const t_co
 }
 
 //FIXME localize this function.
+//note: seems only called for config export & command line. Most of the validation work for the gui is done elsewhere... So this function may be a bit out-of-sync
 std::string FullPrintConfig::validate()
 {
     // --layer-height
@@ -6558,7 +6559,7 @@ std::string FullPrintConfig::validate()
     // --fill-density
     if (fabs(this->fill_density.value - 100.) < EPSILON &&
         (! print_config_def.get("top_fill_pattern")->has_enum_value(this->fill_pattern.serialize())
-        || ! print_config_def.get("bottom_fill_pattern")->has_enum_value(this->fill_pattern.serialize())
+        && ! print_config_def.get("bottom_fill_pattern")->has_enum_value(this->fill_pattern.serialize())
         ))
         return "The selected fill pattern is not supposed to work at 100% density";
 
@@ -6580,11 +6581,6 @@ std::string FullPrintConfig::validate()
     for (double em : this->extrusion_multiplier.values)
         if (em <= 0)
             return "Invalid value for --extrusion-multiplier";
-
-    // --default-acceleration
-    if ((this->perimeter_acceleration.value != 0. || this->infill_acceleration.value != 0. || this->bridge_acceleration.value != 0. || this->first_layer_acceleration.value != 0.) &&
-        this->default_acceleration.value == 0.)
-        return "Invalid zero value for --default-acceleration when using other acceleration settings";
 
     // --spiral-vase
     if (this->spiral_vase) {
