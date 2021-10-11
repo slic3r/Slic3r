@@ -3849,7 +3849,10 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("solid_over_perimeters", coInt);
-    def->label = L("Max perimeters layer for solid infill");
+    def->label = L("No solid infill over");
+    def->full_label = L("No solid infill over perimeters");
+    def->sidetext = L("perimeters");
+    def->sidetext_width = 20;
     def->category = OptionCategory::perimeter;
     def->tooltip = L("When you have a medium/hight number of top/bottom solid layers, and a low/medium of perimeters,"
         " then it have to put some solid infill inside the part to have enough solid layers."

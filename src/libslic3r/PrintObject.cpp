@@ -1672,7 +1672,7 @@ namespace Slic3r {
             size_t grain_size = std::max(num_layers / 16, size_t(1));
 
             //solid_over_perimeters value, to remove solid fill where there's only perimeters on multiple layers
-            int nb_perimeter_layers_for_solid_fill = region.config().solid_over_perimeters.value;
+            const int nb_perimeter_layers_for_solid_fill = region.config().solid_over_perimeters.value;
 
             if (!top_bottom_surfaces_all_regions) {
                 // This is either a single material print, or a multi-material print and interface_shells are enabled, meaning that the vertical shell thickness
@@ -1899,8 +1899,9 @@ namespace Slic3r {
                         //check if a polygon is only over perimeter, in this case evict it (depends from nb_perimeter_layers_for_solid_fill value)
                         if (nb_perimeter_layers_for_solid_fill != 0) {
                             for (int i = 0; i < shell.size(); i++) {
-                                if (nb_perimeter_layers_for_solid_fill < 2 || intersection({ shell[i] }, max_perimeter_shell, false).empty()) {
-                                    toadd = intersection_ex({ shell[i] }, fill_shell);
+                                if (nb_perimeter_layers_for_solid_fill < 2 || intersection_ex({ shell[i] }, max_perimeter_shell, false).empty()) {
+                                    ExPolygons expoly = intersection_ex({ shell[i] }, fill_shell);
+                                    toadd.insert(toadd.end(), expoly.begin(), expoly.end());
                                     shell.erase(shell.begin() + i);
                                     i--;
                                 }
