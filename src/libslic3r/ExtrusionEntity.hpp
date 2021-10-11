@@ -606,6 +606,14 @@ public:
     }
 };
 
+class ExtrusionVisitorRecursiveConst : public ExtrusionVisitorConst {
+public:
+    virtual void use(const ExtrusionMultiPath& multipath) override;
+    virtual void use(const ExtrusionMultiPath3D& multipath) override;
+    virtual void use(const ExtrusionLoop& loop) override;
+    virtual void use(const ExtrusionEntityCollection& collection) override;
+};
+
 }
 
 #endif

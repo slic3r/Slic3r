@@ -1852,6 +1852,8 @@ PerimeterGenerator::_extrude_and_cut_loop(const PerimeterGeneratorLoop &loop, co
                 for (ExtrusionPath &path : paths) {
                     direction_polyline.points.insert(direction_polyline.points.end(), path.polyline.points.begin(), path.polyline.points.end());
                 }
+                for (int i = 0; i < direction_polyline.points.size() - 1; i++)
+                    assert(direction_polyline.points[i] != direction_polyline.points[i + 1]);
                 direction_polyline.clip_start(SCALED_RESOLUTION);
                 direction_polyline.clip_end(SCALED_RESOLUTION);
                 coord_t dot = direction.dot(Line(direction_polyline.points.back(), direction_polyline.points.front()));
@@ -1950,11 +1952,12 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
             //create new node with recursive ask for the inner perimeter & COPY of the points, ready to be cut
             my_loop.paths.insert(my_loop.paths.begin() + nearest.idx_polyline_outter + 1, my_loop.paths[nearest.idx_polyline_outter]);
 
+            // outer_start == outer_end
             ExtrusionPath *outer_start = &my_loop.paths[nearest.idx_polyline_outter];
             ExtrusionPath *outer_end = &my_loop.paths[nearest.idx_polyline_outter + 1];
             Line deletedSection;
 
-            //cut our polyline
+            //cut our polyline, so outer_start has no common point with outer_end
             //separate them
             size_t nearest_idx_outter = outer_start->polyline.closest_point_index(nearest.outter_best);
             if (outer_start->polyline.points[nearest_idx_outter].coincides_with_epsilon(nearest.outter_best)) {
@@ -2193,6 +2196,16 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
             }
             for (size_t i = travel_path_begin.size() - 1; i < travel_path_begin.size(); i--) {
                 my_loop.paths.insert(my_loop.paths.begin() + nearest.idx_polyline_outter + 1, travel_path_begin[i]);
+            }
+        }
+        //remove one-point extrusion
+        //FIXME prevent this instead of patching here?
+        for (int i = 0; i < my_loop.paths.size(); i++) {
+            if (my_loop.paths[i].polyline.size() < 2) {
+                if (my_loop.paths[i].polyline.size() == 1)
+                    std::cout << "erase one-point extrusion : layer " << this->layer->id() << " " << my_loop.paths[i].polyline.points.front().x() << ":" << my_loop.paths[i].polyline.points.front().y() << "\n";
+                my_loop.paths.erase(my_loop.paths.begin() + i);
+                i--;
             }
         }
 
