@@ -400,7 +400,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
         toggle_field(el, have_infill_dense);
 
     bool has_spiral_vase         = have_perimeters && config->opt_bool("spiral_vase");
-    bool has_top_solid_infill 	 = config->opt_int("top_solid_layers") > 0;
+    bool has_top_solid_infill 	 = config->opt_int("top_solid_layers") > 0 || has_spiral_vase;
     bool has_bottom_solid_infill = config->opt_int("bottom_solid_layers") > 0;
     bool has_solid_infill 		 = has_top_solid_infill || has_bottom_solid_infill || (have_infill && (config->opt_int("solid_infill_every_layers") > 0 || config->opt_float("solid_infill_below_area") > 0));
     // solid_infill_extruder uses the same logic as in Print::extruders()
