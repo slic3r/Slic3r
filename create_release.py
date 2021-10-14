@@ -76,6 +76,7 @@ with urlopen("https://api.github.com/repos/"+repo+"/actions/artifacts") as f:
 			my_tar = tarfile.open(release_path+"/"+program_name+"_ubu64.AppImage.tar");
 			my_tar.extractall(release_path);
 			my_tar.close();
+			os.remove(release_path+"/"+program_name+"_ubu64.AppImage.tar");
 			os.rename(release_path+"/"+program_name+"_ubu64.AppImage", release_path+"/"+program_name+"-ubuntu_18.04-" + version + ".AppImage");
 		if entry["name"] == "rc_linux.tar" and not found_linux:
 			found_linux = True;
@@ -88,6 +89,7 @@ with urlopen("https://api.github.com/repos/"+repo+"/actions/artifacts") as f:
 			os.rename(release_path+"/"+program_name+".tar", base_path+".tar");
 			try:
 				subprocess.check_output([path_7zip, "a", "-tzip", base_path+".tar.zip", base_path+".tar"]);
+				os.remove(base_path+".tar");
 			except:
 				with zipfile.ZipFile(base_path+"_bof.tar.zip", 'w') as myzip:
 					myzip.write(base_path+".tar");
