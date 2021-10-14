@@ -606,7 +606,7 @@ ClipperLib::PolyTree _clipper_do_pl(const ClipperLib::ClipType clipType, const P
             coord_t lasty = 0;
             for (ClipperLib::IntPoint& pt : path) {
                 if (lasty == pt.Y) {
-                    pt.Y+=1;
+                    pt.Y+=5; //min is 3 on a certain exemple. Using 5 to have some security
                     bad_y.insert(pt.Y);
                 }
                 lasty = pt.Y;
@@ -637,7 +637,7 @@ ClipperLib::PolyTree _clipper_do_pl(const ClipperLib::ClipType clipType, const P
             to_check.pop_back();
             for (ClipperLib::IntPoint& pt : node->Contour) {
                 if (bad_y.find(pt.Y) != bad_y.end()) {
-                    pt.Y-=1;
+                    pt.Y-=5;
                 }
             }
             to_check.insert(to_check.end(), node->Childs.begin(), node->Childs.end());
