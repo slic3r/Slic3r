@@ -71,8 +71,11 @@ struct FillParams
     // if role == erNone or ERCustom, this method have to choose the best role itself, else it must use the argument's role.
     ExtrusionRole role      { erNone };
 
-    //flow to use
-    Flow          flow      = Flow(0.f, 0.f, 0.f, 1.f, false);
+    // flow to use
+    Flow        flow        = Flow(0.f, 0.f, 0.f, 1.f, false);
+
+    // to order the fills by priority
+    int32_t     priority    = 0;
 
     //full configuration for the region, to avoid copying every bit that is needed. Use this for process-specific parameters.
     PrintRegionConfig const *config{ nullptr };
