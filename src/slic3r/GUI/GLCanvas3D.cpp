@@ -1137,13 +1137,13 @@ void GLCanvas3D::load_arrange_settings()
         wxGetApp().app_config->get("arrange", "enable_rotation_sla");
 
     if (!dist_fff_str.empty())
-        m_arrange_settings_fff.distance = std::stof(dist_fff_str);
+        m_arrange_settings_fff.previously_used_distance = std::stof(dist_fff_str);
 
     if (!dist_fff_seq_print_str.empty())
-        m_arrange_settings_fff_seq_print.distance = std::stof(dist_fff_seq_print_str);
+        m_arrange_settings_fff_seq_print.previously_used_distance = std::stof(dist_fff_seq_print_str);
 
     if (!dist_sla_str.empty())
-        m_arrange_settings_sla.distance = std::stof(dist_sla_str);
+        m_arrange_settings_sla.previously_used_distance = std::stof(dist_sla_str);
 
     if (!en_rot_fff_str.empty())
         m_arrange_settings_fff.enable_rotation = (en_rot_fff_str == "1" || en_rot_fff_str == "yes");
@@ -1159,9 +1159,8 @@ void GLCanvas3D::load_arrange_settings()
 void GLCanvas3D::set_arrange_settings(const DynamicPrintConfig& conf, PrinterTechnology tech) {
 
     const ConfigOptionFloat* dd_opt = conf.option<ConfigOptionFloat>("duplicate_distance");
-    const ConfigOptionFloat* dd2_opt = m_config->option<ConfigOptionFloat>("duplicate_distance");
 
-    if (dd_opt && dd_opt != 0) {
+    if (dd_opt && dd_opt->value != 0) {
         float dist = 6.f;
         if (tech == ptSLA) {
             dist = dd_opt->value;
@@ -1175,7 +1174,40 @@ void GLCanvas3D::set_arrange_settings(const DynamicPrintConfig& conf, PrinterTec
             dist += dd_opt->value;
         }
         this->get_arrange_settings().distance = dist;
+    } else {
+        this->get_arrange_settings().distance = this->get_arrange_settings().previously_used_distance;
     }
+}
+
+// update last arrange dist from current print conf.
+void GLCanvas3D::set_last_arrange_settings(float new_value) {
+
+    PrinterTechnology ptech = current_printer_technology();
+    std::string postfix;
+
+    auto* ptr = &m_arrange_settings_fff;
+
+    if (ptech == ptSLA) {
+        ptr = &m_arrange_settings_sla;
+        postfix = "_sla";
+    } else if (ptech == ptFFF) {
+        auto co_opt = m_config->template option<ConfigOptionBool>("complete_objects");
+        if (co_opt && co_opt->value) {
+            ptr = &m_arrange_settings_fff_seq_print;
+            postfix = "_fff_seq_print";
+        } else {
+            ptr = &m_arrange_settings_fff;
+            postfix = "_fff";
+        }
+    }
+    ptr->previously_used_distance = new_value;
+
+    auto& appcfg = wxGetApp().app_config;
+    std::string dist_key = "min_object_distance", rot_key = "enable_rotation";
+    dist_key += postfix;
+    rot_key += postfix;
+    appcfg->set("arrange", dist_key.c_str(), std::to_string(new_value));
+    appcfg->set("arrange", rot_key.c_str(), ptr->enable_rotation ? "1" : "0");
 }
 
 PrinterTechnology GLCanvas3D::current_printer_technology() const
@@ -4060,30 +4092,20 @@ bool GLCanvas3D::_render_arrange_menu(float pos_x)
     ArrangeSettings settings = get_arrange_settings();
     ArrangeSettings &settings_out = get_arrange_settings();
 
-    auto &appcfg = wxGetApp().app_config;
     PrinterTechnology ptech = m_process->current_printer_technology();
 
     bool settings_changed = false;
     float dist_min = 0.f;
-    std::string dist_key = "min_object_distance", rot_key = "enable_rotation";
-    std::string postfix;
-
     if (ptech == ptSLA) {
-        dist_min     = 0.f;
-        postfix      = "_sla";
+        dist_min = 0.f;
     } else if (ptech == ptFFF) {
         auto co_opt = m_config->option<ConfigOptionBool>("complete_objects");
         if (co_opt && co_opt->value) {
-            dist_min     = float(PrintConfig::min_object_distance(m_config) * 2);
-            postfix      = "_fff_seq_print";
+            dist_min = float(PrintConfig::min_object_distance(m_config) * 2);
         } else {
-            dist_min     = 0.f;
-            postfix     = "_fff";
+            dist_min = 0.f;
         }
     }
-
-    dist_key += postfix;
-    rot_key  += postfix;
 
     imgui->text(GUI::format_wxstr(_L("Press %1%left mouse button to enter the exact value"), shortkey_ctrl_prefix()));
 
@@ -4091,16 +4113,17 @@ bool GLCanvas3D::_render_arrange_menu(float pos_x)
         if (dist_min > settings.distance) {
             const ConfigOptionFloat* dd_opt = this->m_config->option<ConfigOptionFloat>("duplicate_distance");
             if (dd_opt)
-                settings.distance = dist_min + dd_opt->value;
+                if (dd_opt->value == 0)
+                    settings_out.distance = settings.previously_used_distance;
+                else
+                    settings.distance = dist_min + dd_opt->value;
         }
         settings_out.distance = settings.distance;
-        appcfg->set("arrange", dist_key.c_str(), std::to_string(settings_out.distance));
         settings_changed = true;
     }
 
     if (imgui->checkbox(_L("Enable rotations (slow)"), settings.enable_rotation)) {
         settings_out.enable_rotation = settings.enable_rotation;
-        appcfg->set("arrange", rot_key.c_str(), settings_out.enable_rotation? "1" : "0");
         settings_changed = true;
     }
 
@@ -4109,11 +4132,12 @@ bool GLCanvas3D::_render_arrange_menu(float pos_x)
     if (imgui->button(_L("Reset"))) {
         settings_out = ArrangeSettings{};
         const ConfigOptionFloat* dd_opt = this->m_config->option<ConfigOptionFloat>("duplicate_distance");
-        if(dd_opt)
+        if (dd_opt)
+            if (dd_opt->value == 0)
+                settings_out.distance = settings.previously_used_distance;
+            else
                 settings_out.distance = dist_min + dd_opt->value;
         settings_out.distance = std::max(dist_min, settings_out.distance);
-        appcfg->set("arrange", dist_key.c_str(), std::to_string(settings_out.distance));
-        appcfg->set("arrange", rot_key.c_str(), settings_out.enable_rotation? "1" : "0");
         settings_changed = true;
     }
 

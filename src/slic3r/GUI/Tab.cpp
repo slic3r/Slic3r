@@ -1187,6 +1187,10 @@ void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
         wxGetApp().plater()->on_extruders_change(boost::any_cast<int>(value));
     }
 
+    if (opt_key == "duplicate_distance") {
+        wxGetApp().mainframe->plater()->canvas3D()->set_arrange_settings(m_presets->get_edited_preset().config, m_presets->get_edited_preset().printer_technology());
+    }
+
     //wxGetApp().preset_bundle->value_changed(opt_key);
     // update phony fields
     
@@ -3099,6 +3103,12 @@ void Tab::load_current_preset()
 
     update_ui_items_related_on_parent_preset(m_presets->get_selected_preset_parent());
 
+
+    // apply duplicate_distance for print preset
+    if (m_type == Preset::TYPE_FFF_PRINT || m_type == Preset::TYPE_SLA_PRINT) {
+        wxGetApp().mainframe->plater()->canvas3D()->set_arrange_settings(m_presets->get_edited_preset().config, m_presets->get_edited_preset().printer_technology());
+    }
+
 //	m_undo_to_sys_btn->Enable(!preset.is_default);
 
 #if 0
@@ -3416,13 +3426,6 @@ void Tab::select_preset(std::string preset_name, bool delete_current /*=false*/,
 
         load_current_preset();
 
-        // apply duplicate_distance for print preset
-        if (m_type == Preset::TYPE_FFF_PRINT || m_type == Preset::TYPE_SLA_PRINT) {
-            wxGetApp().mainframe->plater()->canvas3D()->set_arrange_settings(m_presets->get_edited_preset().config, m_presets->get_edited_preset().printer_technology());
-        }
-        if (m_type == Preset::TYPE_PRINTER) {
-            wxGetApp().mainframe->plater()->canvas3D()->set_arrange_settings(m_preset_bundle->prints(m_presets->get_edited_preset().printer_technology()).get_edited_preset().config, m_presets->get_edited_preset().printer_technology()); 
-        }
 
     }
 }

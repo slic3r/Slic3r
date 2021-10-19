@@ -702,13 +702,13 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("duplicate_distance", coFloat);
-    def->label = L("Distance between objects");
+    def->label = L("Default distance between objects");
     def->category = OptionCategory::output;
     def->tooltip = L("Default distance used for the auto-arrange feature of the plater.\nSet to 0 to use the last value instead.");
     def->sidetext = L("mm");
     def->aliases = { "multiply_distance" };
     def->min = 0;
-    def->set_default_value(new ConfigOptionFloat(6));
+    def->set_default_value(new ConfigOptionFloat(0));
 
     def = this->add("end_gcode", coString);
     def->label = L("End G-code");

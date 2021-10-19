@@ -200,6 +200,11 @@ void ArrangeJob::process()
                             "Some geometries may be invalid.")));
     }
 
+    //update last arrange value
+    if (!was_canceled()) {
+        m_plater->canvas3D()->set_last_arrange_settings(settings.distance);
+    }
+
     // finalize just here.
     update_status(int(count),
                   was_canceled() ? _(L("Arranging canceled."))

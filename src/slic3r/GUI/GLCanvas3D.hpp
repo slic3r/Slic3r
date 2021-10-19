@@ -426,6 +426,7 @@ public:
 
     struct ArrangeSettings
     {
+        float previously_used_distance = 6.; // last distance used when last pressed on "arrange". Used when "duplicate_distance" is set to 0
         float distance           = 6.;
 //        float distance_seq_print = 6.;    // Used when sequential print is ON
 //        float distance_sla       = 6.;
@@ -783,6 +784,7 @@ public:
         return ret;
     }
     void set_arrange_settings(const DynamicPrintConfig& conf, PrinterTechnology tech);
+    void set_last_arrange_settings(float new_dist);
 
     // Timestamp for FPS calculation and notification fade-outs.
     static int64_t timestamp_now() {
