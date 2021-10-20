@@ -6208,8 +6208,11 @@ std::set<const DynamicPrintConfig*> DynamicPrintConfig::update_phony(const std::
 
 //note: width<-> spacing conversion is done via float, so max 6-7 digit of precision.
 std::set<const DynamicPrintConfig*> DynamicPrintConfig::value_changed(const t_config_option_key& opt_key, const std::vector<DynamicPrintConfig*> config_collection) {
-
     if (opt_key == "layer_height") {
+        const ConfigOptionFloat* layer_height_option = find_option<ConfigOptionFloat>("layer_height", this, config_collection);
+        //if bad layer height, slip to be able to go to the check part without outputing exceptions.
+        if (layer_height_option && layer_height_option->value < EPSILON)
+            return {};
         if (!update_phony(config_collection).empty())
             return { this };
         return {};
