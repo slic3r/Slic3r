@@ -2491,7 +2491,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("After layer change G-code");
     def->category = OptionCategory::customgcode;
     def->tooltip = L("This custom code is inserted at every extrusion type change."
-        "Note that you can use placeholder variables for all Slic3r settings as well as [extrusion_role], [layer_num] and [layer_z] that can take these string values:"
+        "Note that you can use placeholder variables for all Slic3r settings as well as [last_extrusion_role], [extrusion_role], [layer_num] and [layer_z]."
+        " The 'extrusion_role' strings can take these string values:"
         " { Perimeter, ExternalPerimeter, OverhangPerimeter, InternalInfill, SolidInfill, TopSolidInfill, BridgeInfill, GapFill, Skirt, SupportMaterial, SupportMaterialInterface, WipeTower, Mixed }."
         " Mixed is only used when the role of the extrusion is not unique, not exactly inside another category or not known.");
     def->cli = "feature-gcode";
