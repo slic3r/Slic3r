@@ -44,37 +44,47 @@ bool OctoPrint::test(wxString &msg) const
 
     auto http = Http::get(std::move(url));
     set_auth(http);
+    BOOST_LOG_TRIVIAL(info) << "auth set";
     http.on_error([&](std::string body, std::string error, unsigned status) {
+            BOOST_LOG_TRIVIAL(info) << "Error with '"<< body<<"'";
             BOOST_LOG_TRIVIAL(error) << boost::format("%1%: Error getting version: %2%, HTTP %3%, body: `%4%`") % name % error % status % body;
             res = false;
             msg = format_error(body, error, status);
         })
         .on_complete([&, this](std::string body, unsigned) {
-            BOOST_LOG_TRIVIAL(debug) << boost::format("%1%: Got version: %2%") % name % body;
+            BOOST_LOG_TRIVIAL(info) << boost::format("%1%: Got version: %2%") % name % body;
 
             try {
                 std::stringstream ss(body);
                 pt::ptree ptree;
+                BOOST_LOG_TRIVIAL(info) << "ready to read json";
                 pt::read_json(ss, ptree);
+                BOOST_LOG_TRIVIAL(info) << "json read";
 
                 if (! ptree.get_optional<std::string>("api")) {
+                    BOOST_LOG_TRIVIAL(info) << "Error: no api";
                     res = false;
                     return;
                 }
 
+                BOOST_LOG_TRIVIAL(info) << "text?";
                 const auto text = ptree.get_optional<std::string>("text");
+                BOOST_LOG_TRIVIAL(info) << "text="<<text;
                 res = validate_version_text(text);
+                BOOST_LOG_TRIVIAL(info) << "version validated=" << res;
                 if (! res) {
                     msg = GUI::from_u8((boost::format(_utf8(L("Mismatched type of print host: %s"))) % (text ? *text : "OctoPrint")).str());
                 }
             }
-            catch (const std::exception &) {
+            catch (const std::exception &e) {
+                BOOST_LOG_TRIVIAL(info) << "Error: exception: " << e.what();
                 res = false;
                 msg = "Could not parse server response";
             }
         })
         .perform_sync();
 
+    BOOST_LOG_TRIVIAL(info) << "test successful";
     return res;
 }
 

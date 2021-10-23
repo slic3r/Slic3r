@@ -653,6 +653,7 @@ void PhysicalPrinterDialog::on_dpi_changed(const wxRect& suggested_rect)
 
 void PhysicalPrinterDialog::OnOK(wxEvent& event)
 {
+    BOOST_LOG_TRIVIAL(info) << "begin of pysical update";
     wxString printer_name = m_printer_name->GetValue();
     if (printer_name.IsEmpty()) {
         warning_catcher(this, _L("The supplied name is empty. It can't be saved."));
@@ -675,11 +676,14 @@ void PhysicalPrinterDialog::OnOK(wxEvent& event)
             return;
 
         m_printer.name = existing->name;
+        BOOST_LOG_TRIVIAL(info) << "Using existing name";
     }
 
+    BOOST_LOG_TRIVIAL(info) << "Adding physical to all presets";
     std::set<std::string> repeat_presets;
     m_printer.reset_presets();
     for (PresetForPrinter* preset : m_presets) {
+        BOOST_LOG_TRIVIAL(info) << "check repeat preset " << preset->get_preset_name() << " : " << (!m_printer.add_preset(preset->get_preset_name()));
         if (!m_printer.add_preset(preset->get_preset_name()))
             repeat_presets.emplace(preset->get_preset_name());
     }
@@ -698,18 +702,22 @@ void PhysicalPrinterDialog::OnOK(wxEvent& event)
             return;
     }
 
+    BOOST_LOG_TRIVIAL(info) << "check rename";
     std::string renamed_from;
     // temporary save previous printer name if it was edited
     if (m_printer.name != into_u8(m_default_name) &&
         m_printer.name != into_u8(printer_name))
         renamed_from = m_printer.name;
 
+    BOOST_LOG_TRIVIAL(info) << "update printer name, if it was changed, to "<< printer_name;
     //update printer name, if it was changed
     m_printer.set_name(into_u8(printer_name));
 
+    BOOST_LOG_TRIVIAL(info) << "save new physical printer";
     // save new physical printer
     printers.save_printer(m_printer, renamed_from);
 
+    BOOST_LOG_TRIVIAL(info) << "refresh preset list on Printer Settings Tab";
     if (m_printer.preset_names.find(printers.get_selected_printer_preset_name()) == m_printer.preset_names.end()) {
         // select first preset for this printer
         printers.select_printer(m_printer);
@@ -719,6 +727,7 @@ void PhysicalPrinterDialog::OnOK(wxEvent& event)
     else
         wxGetApp().get_tab(Preset::TYPE_PRINTER)->update_preset_choice();
 
+    BOOST_LOG_TRIVIAL(info) << "end of pysical update";
     event.Skip();
 }
 
