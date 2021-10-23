@@ -1085,6 +1085,16 @@ namespace Slic3r {
                 return ExPolygons();
             }
             bigger_polygon = intersection_ex(bigger_polygon[0], growing_area);
+            // After he intersection, we may have section of the bigger_polygon that jumped over a 'clif' to exist in an other area, have to remove them.
+            if (bigger_polygon.size() > 1) {
+                //remove polygon not in intersection with polygon_to_cover
+                for (int i = 0; i < (int)bigger_polygon.size(); i++) {
+                    if (intersection_ex(bigger_polygon[i], polygon_to_cover).empty()) {
+                        bigger_polygon.erase(bigger_polygon.begin() + i);
+                        i--;
+                    }
+                }
+            }
             if (bigger_polygon.size() != 1 || bigger_polygon[0].area() > growing_area.area()) {
                 // Growing too much  => we can as well use the full coverage, in this case
                 polygon_reduced = growing_area;
@@ -1128,7 +1138,7 @@ namespace Slic3r {
         //return the area which cover the growing_area. Intersect it to retreive the holes.
         ExPolygons to_print = intersection_ex(polygon_reduced, growing_area);
 
-        //remove polygon not in intersectino with polygon_to_cover
+        //remove polygon not in intersection with polygon_to_cover
         for (int i = 0; i < (int)to_print.size(); i++) {
             if (intersection_ex(to_print[i], polygon_to_cover).empty()) {
                 to_print.erase(to_print.begin() + i);
@@ -1183,7 +1193,7 @@ namespace Slic3r {
                                         ExPolygons intersect =
                                             offset2_ex(
                                                 intersection_ex(sparse_polys, { upp.expolygon }, true)
-                                                , (float)-layerm->flow(frInfill).scaled_width() / 4, (float)layerm->flow(frInfill).scaled_width() / 4);
+                                                , (float)-layerm->flow(frInfill).scaled_width(), (float)layerm->flow(frInfill).scaled_width());
                                         if (!intersect.empty()) {
                                             double area_intersect = 0;
                                             // calculate area to decide if area is small enough for autofill
