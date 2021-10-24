@@ -84,7 +84,7 @@ public:
         ExtrusionEntityCollection*  gap_fill,
         // Infills without the gap fills
         SurfaceCollection*          fill_surfaces)
-        : slices(slices), lower_slices(nullptr), upper_slices(nullptr),
+        : slices(slices), lower_slices(nullptr), upper_slices(nullptr), layer(nullptr),
             perimeter_flow(flow), ext_perimeter_flow(flow),
             overhang_flow(flow), solid_infill_flow(flow),
             config(config), object_config(object_config), print_config(print_config),

@@ -683,7 +683,7 @@ void PerimeterGenerator::process()
                 last = std::move(next_onion);
                     
                 //store surface for top infill if only_one_perimeter_top
-                if(i==0 && ((layer->id() == 0 && this->config->only_one_perimeter_first_layer) || (config->only_one_perimeter_top && this->upper_slices != NULL))){
+                if(i==0 && (config->only_one_perimeter_top && this->upper_slices != NULL)){
                     if (this->config->only_one_perimeter_top_other_algo) {
                         //split the polygons with top/not_top
                         //get the offset from solid surface anchor
