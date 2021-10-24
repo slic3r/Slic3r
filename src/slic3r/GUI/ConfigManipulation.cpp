@@ -418,8 +418,11 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     // gap fill  can appear in infill
     //toggle_field("gap_fill_speed", have_perimeters && config->opt_bool("gap_fill"));
 
+    bool has_ironing_pattern = config->opt_enum<InfillPattern>("top_fill_pattern") == InfillPattern::ipSmooth
+        || config->opt_enum<InfillPattern>("bottom_fill_pattern") == InfillPattern::ipSmooth
+        || config->opt_enum<InfillPattern>("solid_fill_pattern") == InfillPattern::ipSmooth;
     for (auto el : {"fill_smooth_width, fill_smooth_distribution" })
-        toggle_field(el, config->opt_enum<InfillPattern>("top_fill_pattern") == InfillPattern::ipSmooth);
+        toggle_field(el, has_ironing_pattern);
 
     for (auto el : { "ironing", "top_fill_pattern", "infill_connection_top",  "top_infill_extrusion_width", "top_solid_infill_speed" })
         toggle_field(el, has_top_solid_infill);
@@ -479,9 +482,14 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     toggle_field("support_material_extruder", have_support_material || have_skirt);
     toggle_field("support_material_speed", have_support_material || have_brim || have_skirt);
 
-    bool has_ironing = has_top_solid_infill && config->opt_bool("ironing");
-    for (auto el : { "ironing_type", "ironing_flowrate", "ironing_spacing", "ironing_angle", "ironing_speed" })
-    	toggle_field(el, has_ironing);
+    bool has_PP_ironing = has_top_solid_infill && config->opt_bool("ironing");
+    for (auto el : { "ironing_type", "ironing_flowrate", "ironing_spacing", "ironing_angle" })
+    	toggle_field(el, has_PP_ironing);
+
+    bool has_ironing = has_PP_ironing || has_ironing_pattern;
+    for (auto el : { "ironing_speed" })
+        toggle_field(el, has_ironing);
+    
 
     bool have_sequential_printing = config->opt_bool("complete_objects");
     for (auto el : { /*"extruder_clearance_radius", "extruder_clearance_height",*/ "complete_objects_one_skirt",
