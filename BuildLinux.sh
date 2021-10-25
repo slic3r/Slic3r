@@ -48,23 +48,37 @@ then
     mkdir build
 fi
 
+FOUND_GTK2=$(dpkg -l libgtk* | grep gtk2)
+FOUND_GTK3=$(dpkg -l libgtk* | grep gtk-3)
+
 if [[ -n "$UPDATE_LIB" ]]
 then
-    echo -n "Updating linux ..."
+    echo -n -e "Updating linux ...\n"
     hwclock -s
     apt update
-    apt install libgtk2.0-dev libglew-dev libudev-dev libdbus-1-dev cmake git
-    echo "done"
+    if [[ -z "$FOUND_GTK3" ]]
+    then
+    	echo -e "\nInstalling: libgtk2.0-dev libglew-dev libudev-dev libdbus-1-dev cmake git\n"
+        apt install libgtk2.0-dev libglew-dev libudev-dev libdbus-1-dev cmake git
+    else
+    	echo -e "\nFind libgtk-3, installing: libgtk-3-dev libglew-dev libudev-dev libdbus-1-dev cmake git\n"
+        apt install libgtk-3-dev libglew-dev libudev-dev libdbus-1-dev cmake git
+    fi
+    echo -e "done\n"
     exit 0
 fi
 
-FOUND_GTK2=$(dpkg -l libgtk* | grep gtk2.0-dev)
+FOUND_GTK2_DEV=$(dpkg -l libgtk* | grep gtk2.0-dev)
+FOUND_GTK3_DEV=$(dpkg -l libgtk* | grep gtk-3-dev)
 echo "FOUND_GTK2=$FOUND_GTK2)"
-if [[ -z "$FOUND_GTK2" ]]
+if [[ -z "$FOUND_GTK2_DEV" ]]
+then
+if [[ -z "$FOUND_GTK3_DEV" ]]
 then
     echo "Error, you must install the dependencies before."
     echo "Use option -u with sudo"
     exit 0
+fi
 fi
 
 echo "[1/9] Updating submodules..."
@@ -96,7 +110,14 @@ then
     
         # cmake deps
         pushd deps/build
-        cmake ..
+        if [[ -z "$FOUND_GTK3_DEV" ]]
+        then
+            echo -e "\nusing GTK2\n"
+            cmake ..
+        else
+            echo -e "\nusing GTK3\n"
+            cmake .. -DDEP_WX_GTK3=ON
+        fi
     
     # &> $ROOT/build/Build.log # Capture all command output
     echo "done"
@@ -113,7 +134,12 @@ then
     
         # rename wxscintilla
         pushd destdir/usr/local/lib
-        cp libwxscintilla-3.1.a libwx_gtk2u_scintilla-3.1.a
+        if [[ -z "$FOUND_GTK3_DEV" ]]
+        then
+            cp libwxscintilla-3.1.a libwx_gtk2u_scintilla-3.1.a
+        else
+            cp libwxscintilla-3.1.a libwx_gtk3u_scintilla-3.1.a
+        fi
         popd
     # &> $ROOT/build/Build.log # Capture all command output
     echo "done"
@@ -133,7 +159,12 @@ then
     
         # cmake
         pushd build
-        cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
+        if [[ -z "$FOUND_GTK3_DEV" ]]
+        then
+            cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
+        else
+            cmake .. -DSLIC3R_GTK=3 -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
+        fi
     # &> $ROOT/build/Build.log # Capture all command output
     echo "done"
     
