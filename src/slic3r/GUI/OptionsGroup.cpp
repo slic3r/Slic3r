@@ -988,6 +988,8 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
             ret = static_cast<int>(config.option<ConfigOptionEnum<NoPerimeterUnsupportedAlgo>>(opt_key)->value);
         } else if (opt_key == "printhost_authorization_type") {
             ret = static_cast<int>(config.option<ConfigOptionEnum<AuthorizationType>>(opt_key)->value);
+        } else if (opt_key == "remaining_times_type"){
+            ret = static_cast<int>(config.option<ConfigOptionEnum<RemainingTimeType>>(opt_key)->value);
         } else if (opt_key == "seam_position" || opt_key == "perimeter_loop_seam") {
             ret = static_cast<int>(config.option<ConfigOptionEnum<SeamPosition>>(opt_key)->value);
         } else if (opt_key == "support_material_contact_distance_type"){

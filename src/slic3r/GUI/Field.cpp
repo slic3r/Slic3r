@@ -1229,6 +1229,8 @@ void Choice::set_value(const boost::any& value, bool change_event)
             val = idx_from_enum_value<SeamPosition>(val);
         else if (m_opt_id == "printhost_authorization_type")
             val = idx_from_enum_value<AuthorizationType>(val);
+        else if (m_opt_id.compare("remaining_times_type") == 0)
+            val = idx_from_enum_value<RemainingTimeType>(val);
         else if (m_opt_id.compare("seam_position") == 0)
             val = idx_from_enum_value<SeamPosition>(val);
         else if (m_opt_id.compare("support_material_contact_distance_type") == 0)
@@ -1351,6 +1353,8 @@ boost::any& Choice::get_value()
             convert_to_enum_value<SeamPosition>(ret_enum);
         else if (m_opt_id == "printhost_authorization_type")
             convert_to_enum_value<AuthorizationType>(ret_enum);
+        else if (m_opt_id.compare("remaining_times_type") == 0)
+            convert_to_enum_value<RemainingTimeType>(ret_enum);
         else if (m_opt_id.compare("seam_position") == 0)
             convert_to_enum_value<SeamPosition>(ret_enum);
         else if (m_opt_id.compare("support_material_contact_distance_type") == 0)

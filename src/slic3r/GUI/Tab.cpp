@@ -2895,6 +2895,11 @@ void TabPrinter::toggle_options()
     field = get_field("thumbnails_color");
     if (field) field->toggle(custom_color);
 
+    //firmware
+    bool have_remaining_times = m_config->opt_bool("remaining_times");
+    field = get_field("remaining_times_type");
+    if (field) field->toggle(have_remaining_times);
+
     bool is_marlin_flavor = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == gcfMarlin;
     // Disable silent mode for non-marlin firmwares.
     field = get_field("silent_mode");

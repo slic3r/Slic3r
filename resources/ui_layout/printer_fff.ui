@@ -14,7 +14,10 @@ group:Print Host upload
 group:silent_mode_event:Firmware
 	setting:gcode_flavor
 	setting:silent_mode
-	setting:remaining_times
+	line:Print remaining times
+		setting:label$:remaining_times
+		setting:remaining_times_type
+	end_line
 	line:Gcode precision
 		setting:gcode_precision_xyz
 		setting:gcode_precision_e

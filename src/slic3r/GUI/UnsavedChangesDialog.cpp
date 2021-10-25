@@ -983,6 +983,8 @@ static wxString get_string_value(std::string opt_key, const DynamicPrintConfig& 
             return get_string_from_enum<SeamPosition>(opt_key, config);
         if (opt_key == "printhost_authorization_type")
             return get_string_from_enum<AuthorizationType>(opt_key, config);
+        if (opt_key == "remaining_times_type")
+            return get_string_from_enum<RemainingTimeType>(opt_key, config);
         if (opt_key == "seam_position")
             return get_string_from_enum<SeamPosition>(opt_key, config);
         if (opt_key == "support_material_contact_distance_type")

@@ -2512,12 +2512,26 @@ void PrintConfigDef::init_fff_params()
     def = this->add("remaining_times", coBool);
     def->label = L("Supports remaining times");
     def->category = OptionCategory::firmware;
-    def->tooltip = L("Emit M73 P[percent printed] R[remaining time in minutes] at 1 minute"
-                     " intervals into the G-code to let the firmware show accurate remaining time."
-                     " As of now only the Prusa i3 MK3 firmware recognizes M73."
-                     " Also the i3 MK3 firmware supports M73 Qxx Sxx for the silent mode.");
+    def->tooltip = L("Emit somethign at 1 minute intervals into the G-code to let the firmware show accurate remaining time.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("remaining_times_type", coEnum);
+    def->label = L("Method");
+    def->full_label = L("Supports remaining times method");
+    def->category = OptionCategory::firmware;
+    def->tooltip = L("M73: Emit M73 P[percent printed] R[remaining time in minutes] at 1 minute"
+        " intervals into the G-code to let the firmware show accurate remaining time."
+        " As of now only the Prusa i3 MK3 firmware recognizes M73."
+        " Also the i3 MK3 firmware supports M73 Qxx Sxx for the silent mode."
+        "\nM117: Send a command to display a message to the printer, this is 'Time Left .h..m..s'." );
+    def->mode = comExpert;
+    def->enum_keys_map = &ConfigOptionEnum<RemainingTimeType>::get_enum_values();
+    def->enum_values.push_back("m117");
+    def->enum_values.push_back("m73");
+    def->enum_labels.push_back(L("M117"));
+    def->enum_labels.push_back(L("M73"));
+    def->set_default_value(new ConfigOptionEnum<RemainingTimeType>(RemainingTimeType::rtM73));
 
     def = this->add("silent_mode", coBool);
     def->label = L("Supports stealth mode");

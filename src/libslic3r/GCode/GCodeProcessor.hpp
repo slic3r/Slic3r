@@ -208,7 +208,7 @@ namespace Slic3r {
             float extrude_factor_override_percentage;
             float time; // s
             float time_acceleration;
-            std::string line_m73_mask;
+            RemainingTimeType remaining_times_type;
             State curr;
             State prev;
             CustomGCodeTime gcode_time;

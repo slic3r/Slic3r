@@ -347,14 +347,6 @@ void GCodeProcessor::TimeProcessor::post_process(const std::string& filename)
         return int(::roundf(time_in_seconds / 60.0f));
     };
 
-    auto format_line_M73 = [](const std::string& mask, int percent, int time) {
-        char line_M73[64];
-        sprintf(line_M73, mask.c_str(),
-            std::to_string(percent).c_str(),
-            std::to_string(time).c_str());
-        return std::string(line_M73);
-    };
-
     GCodeReader parser;
     std::string gcode_line;
     size_t g1_lines_counter = 0;
@@ -378,9 +370,18 @@ void GCodeProcessor::TimeProcessor::post_process(const std::string& filename)
             for (size_t i = 0; i < static_cast<size_t>(PrintEstimatedTimeStatistics::ETimeMode::Count); ++i) {
                 const TimeMachine& machine = machines[i];
                 if (machine.enabled) {
-                    ret += format_line_M73(machine.line_m73_mask.c_str(),
-                        (line == First_Line_M73_Placeholder_Tag) ? 0 : 100,
-                        (line == First_Line_M73_Placeholder_Tag) ? time_in_minutes(machine.time) : 0);
+                    if (machine.remaining_times_type == rtM73) {
+                        ret += (boost::format("M73 P%1% R%2%\n")
+                            % std::to_string((line == First_Line_M73_Placeholder_Tag) ? 0 : 100)
+                            % std::to_string((line == First_Line_M73_Placeholder_Tag) ? time_in_minutes(machine.time) : 0)).str();
+                    } else if (machine.remaining_times_type == rtM117) {
+                        if((line == First_Line_M73_Placeholder_Tag))
+                            ret += (boost::format("M117 Time Left %1%h%2%m%3%s\n") 
+                                % std::to_string(int32_t(machine.time) / 3600) % std::to_string(int32_t(machine.time / 60) % 60) % std::to_string(int32_t(machine.time) % 60)
+                                ).str();
+                        else
+                            ret += "M117 Time Left 0s\n";
+                    }
                 }
             }
         }
@@ -434,8 +435,15 @@ void GCodeProcessor::TimeProcessor::post_process(const std::string& filename)
                 std::pair<int, int> to_export = { int(100.0f * elapsed_time / machine.time),
                                                   time_in_minutes(machine.time - elapsed_time) };
                 if (last_exported[i] != to_export) {
-                    export_line += format_line_M73(machine.line_m73_mask.c_str(),
-                        to_export.first, to_export.second);
+                    if (machine.remaining_times_type == rtM73) {
+                        export_line += (boost::format("M73 P%1% R%2%\n")
+                            % std::to_string(to_export.first)
+                            % std::to_string(to_export.second)).str();
+                    } else if (machine.remaining_times_type == rtM117) {
+                        export_line += (boost::format("M117 Time Left %1%h%2%m%3%s\n")
+                            % std::to_string(int32_t(machine.time - elapsed_time) / 3600) % std::to_string((int32_t(machine.time - elapsed_time) / 60) % 60) % std::to_string(int32_t(machine.time - elapsed_time) % 60)
+                            ).str();
+                    }
                     last_exported[i] = to_export;
                 }
             }
@@ -519,8 +527,6 @@ unsigned int GCodeProcessor::s_result_id = 0;
 GCodeProcessor::GCodeProcessor()
 {
     reset();
-    m_time_processor.machines[static_cast<size_t>(PrintEstimatedTimeStatistics::ETimeMode::Normal)].line_m73_mask = "M73 P%s R%s\n";
-    m_time_processor.machines[static_cast<size_t>(PrintEstimatedTimeStatistics::ETimeMode::Stealth)].line_m73_mask = "M73 Q%s S%s\n";
 }
 
 void GCodeProcessor::apply_config(const PrintConfig& config)
@@ -585,7 +591,12 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
         for (auto& machine : this->m_time_processor.machines) {
             machine.time_acceleration = float(time_estimation_compensation);
         }
-    }}
+    }
+
+    m_time_processor.machines[static_cast<size_t>(PrintEstimatedTimeStatistics::ETimeMode::Normal)].remaining_times_type = config.remaining_times_type.value;
+    m_time_processor.machines[static_cast<size_t>(PrintEstimatedTimeStatistics::ETimeMode::Stealth)].remaining_times_type = config.remaining_times_type.value;
+
+}
 
 void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
 {
@@ -778,6 +789,14 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
             machine.time_acceleration = float(time_estimation_compensation);
         }
     }
+
+
+    const ConfigOptionEnum<RemainingTimeType>* remaining_times_type = config.option<ConfigOptionEnum<RemainingTimeType>>("remaining_times_type");
+    if (remaining_times_type) {
+        m_time_processor.machines[static_cast<size_t>(PrintEstimatedTimeStatistics::ETimeMode::Normal)].remaining_times_type = remaining_times_type->value;
+        m_time_processor.machines[static_cast<size_t>(PrintEstimatedTimeStatistics::ETimeMode::Stealth)].remaining_times_type = remaining_times_type->value;
+    }
+
 }
 
 void GCodeProcessor::enable_stealth_time_estimator(bool enabled)

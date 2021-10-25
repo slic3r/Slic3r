@@ -217,6 +217,8 @@ void change_opt_value(DynamicPrintConfig& config, const t_config_option_key& opt
 				config.set_key_value(opt_key, new ConfigOptionEnum<NoPerimeterUnsupportedAlgo>(boost::any_cast<NoPerimeterUnsupportedAlgo>(value)));
 			else if (opt_key == "printhost_authorization_type")
 				config.set_key_value(opt_key, new ConfigOptionEnum<AuthorizationType>(boost::any_cast<AuthorizationType>(value)));
+            else if (opt_key.compare("remaining_times_type") == 0)
+                config.set_key_value(opt_key, new ConfigOptionEnum<RemainingTimeType>(boost::any_cast<RemainingTimeType>(value)));
             else if (opt_key.compare("seam_position") == 0 || opt_key.compare("perimeter_loop_seam") == 0)
                 config.set_key_value(opt_key, new ConfigOptionEnum<SeamPosition>(boost::any_cast<SeamPosition>(value)));
             else if (opt_key.compare("support_material_contact_distance_type") == 0)
