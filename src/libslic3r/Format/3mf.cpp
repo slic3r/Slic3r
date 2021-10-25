@@ -48,14 +48,16 @@ const std::string MODEL_FILE = "3D/3dmodel.model"; // << this is the only format
 const std::string CONTENT_TYPES_FILE = "[Content_Types].xml";
 const std::string RELATIONSHIPS_FILE = "_rels/.rels";
 const std::string THUMBNAIL_FILE = "Metadata/thumbnail.png";
-const std::string PRINT_CONFIG_FILE = "Metadata/Slic3r.config";
-const std::string MODEL_CONFIG_FILE = "Metadata/Slic3r_model.config";
-const std::string PRINT_SUPER_CONFIG_FILE = "Metadata/SuperSlicer.config";
-const std::string MODEL_SUPER_CONFIG_FILE = "Metadata/SuperSlicer_model.config";
-const std::string PRINT_PRUSA_CONFIG_FILE = "Metadata/Slic3r_PE.config";
-const std::string MODEL_PRUSA_CONFIG_FILE = "Metadata/Slic3r_PE_model.config";
+const std::string SLIC3R_PRINT_CONFIG_FILE = "Metadata/Slic3r.config";
+const std::string SLIC3R_MODEL_CONFIG_FILE = "Metadata/Slic3r_model.config";
+const std::string SLIC3R_LAYER_CONFIG_RANGES_FILE = "Metadata/Prusa_Slicer_layer_config_ranges.xml";
+const std::string SUPER_PRINT_CONFIG_FILE = "Metadata/SuperSlicer.config";
+const std::string SUPER_MODEL_CONFIG_FILE = "Metadata/SuperSlicer_model.config";
+const std::string SUPER_LAYER_CONFIG_RANGES_FILE = "Metadata/Prusa_Slicer_layer_config_ranges.xml";
+const std::string PRUSA_PRINT_CONFIG_FILE = "Metadata/Slic3r_PE.config";
+const std::string PRUSA_MODEL_CONFIG_FILE = "Metadata/Slic3r_PE_model.config";
+const std::string PRUSA_LAYER_CONFIG_RANGES_FILE = "Metadata/Prusa_Slicer_layer_config_ranges.xml";
 const std::string LAYER_HEIGHTS_PROFILE_FILE = "Metadata/Slic3r_PE_layer_heights_profile.txt";
-const std::string LAYER_CONFIG_RANGES_FILE = "Metadata/Prusa_Slicer_layer_config_ranges.xml";
 const std::string SLA_SUPPORT_POINTS_FILE = "Metadata/Slic3r_PE_sla_support_points.txt";
 const std::string SLA_DRAIN_HOLES_FILE = "Metadata/Slic3r_PE_sla_drain_holes.txt";
 const std::string CUSTOM_GCODE_PER_PRINT_Z_FILE = "Metadata/Prusa_Slicer_custom_gcode_per_print_z.xml";
@@ -590,6 +592,34 @@ namespace Slic3r {
         XML_StopParser(m_xml_parser, false);
     }
 
+    template<typename CONFIG_CLASS>
+    void convert_from_prusa(CONFIG_CLASS& conf, const DynamicPrintConfig& global_config) {
+    //void convert_from_prusa(DynamicPrintConfig& conf, const DynamicPrintConfig & global_config) {
+    //void convert_from_prusa(ModelConfigObject& conf, const DynamicPrintConfig& global_config) {
+        for (const t_config_option_key& opt_key : conf.keys()) {
+            const ConfigOption* opt = conf.option(opt_key);
+            std::string serialized = opt->serialize();
+            std::string key = opt_key;
+            std::map<std::string, std::string> result = PrintConfigDef::from_prusa(key, serialized, global_config);
+            if (key != opt_key) {
+                conf.erase(opt_key);
+            }
+            if (!key.empty() && serialized != opt->serialize()) {
+                ConfigOption* opt_new = opt->clone();
+                opt_new->deserialize(serialized);
+                conf.set_key_value(key, opt_new);
+            }
+            for (auto entry : result) {
+                const ConfigOptionDef* def = print_config_def.get(entry.first);
+                if (def) {
+                    ConfigOption* opt_new = def->default_value.get()->clone();
+                    opt_new->deserialize(entry.second);
+                    conf.set_key_value(entry.first, opt_new);
+                }
+            }
+        }
+    }
+
     bool _3MF_Importer::_load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config, ConfigSubstitutionContext& config_substitutions)
     {
         mz_zip_archive archive;
@@ -650,7 +680,7 @@ namespace Slic3r {
                     // extract slic3r layer heights profile file
                     _extract_layer_heights_profile_config_from_archive(archive, stat);
                 }
-                if (boost::algorithm::iequals(name, LAYER_CONFIG_RANGES_FILE))
+                if (boost::algorithm::iequals(name, SLIC3R_LAYER_CONFIG_RANGES_FILE))
                 {
                     // extract slic3r layer config ranges file
                     _extract_layer_config_ranges_from_archive(archive, stat, config_substitutions);
@@ -662,7 +692,7 @@ namespace Slic3r {
                 {
                     // extract sla support points file
                     _extract_sla_drain_holes_from_archive(archive, stat);
-                } else if (boost::algorithm::iequals(name, PRINT_CONFIG_FILE))
+                } else if (boost::algorithm::iequals(name, SLIC3R_PRINT_CONFIG_FILE))
                 {
                     // extract slic3r print config file
                     _extract_print_config_from_archive(archive, stat, config, config_substitutions, filename);
@@ -672,7 +702,7 @@ namespace Slic3r {
                 {
                     // extract slic3r layer config ranges file
                     _extract_custom_gcode_per_print_z_from_archive(archive, stat);
-                } else if (boost::algorithm::iequals(name, MODEL_CONFIG_FILE))
+                } else if (boost::algorithm::iequals(name, SLIC3R_MODEL_CONFIG_FILE))
                 {
                     // extract slic3r model config file
                     if (!_extract_model_config_from_archive(archive, stat, model))
@@ -688,7 +718,7 @@ namespace Slic3r {
         //parsed superslicer/prusa files if slic3r not found
         //note that is we successfully read one of the config file, then the other ones should also have the same name
         auto read_from_other_storage = [this, &print_config_parsed, num_entries, &archive, &stat, &config, &model, &filename, &config_substitutions]
-                (const std::string &print_config_name, const std::string& model_config_name) -> bool {
+                (const std::string &print_config_name, const std::string& model_config_name, const std::string& layer_config_name, bool from_prusa) -> bool {
             for (mz_uint i = 0; i < num_entries; ++i)
             {
                 if (mz_zip_reader_file_stat(&archive, i, &stat))
@@ -697,7 +727,12 @@ namespace Slic3r {
                     std::replace(name.begin(), name.end(), '\\', '/');
 
                     //TODO use special methods to convert them better?
-                    if (boost::algorithm::iequals(name, print_config_name))
+
+                    if (boost::algorithm::iequals(name, layer_config_name))
+                    {
+                        // extract slic3r layer config ranges file
+                        _extract_layer_config_ranges_from_archive(archive, stat, config_substitutions);
+                    } else if (boost::algorithm::iequals(name, print_config_name))
                     {
                         // extract slic3r print config file
                         _extract_print_config_from_archive(archive, stat, config, config_substitutions, filename);
@@ -717,14 +752,23 @@ namespace Slic3r {
             }
             return true;
         };
+        bool use_prusa_config = false;
         if (!print_config_parsed)
-            if (!read_from_other_storage(PRINT_SUPER_CONFIG_FILE, MODEL_SUPER_CONFIG_FILE))
+            if (!read_from_other_storage(SUPER_PRINT_CONFIG_FILE, SUPER_MODEL_CONFIG_FILE, SUPER_LAYER_CONFIG_RANGES_FILE, false))
                 return false;
         if (!print_config_parsed)
-            if (!read_from_other_storage(PRINT_PRUSA_CONFIG_FILE, MODEL_PRUSA_CONFIG_FILE))
+            if (!read_from_other_storage(PRUSA_PRINT_CONFIG_FILE, PRUSA_MODEL_CONFIG_FILE, PRUSA_LAYER_CONFIG_RANGES_FILE, true))
                 return false;
+            else {
+                use_prusa_config = true;
+                convert_from_prusa(config, config);
+            }
 
         close_zip_reader(&archive);
+
+        for (auto range_config : m_layer_heights_profiles) {
+
+        }
 
         for (const IdToModelObjectMap::value_type& object : m_objects) {
             if (object.second >= m_model->objects.size()) {
@@ -792,8 +836,18 @@ namespace Slic3r {
                 volumes_ptr = &volumes;
             }
 
+
             if (!_generate_volumes(*model_object, obj_geometry->second, *volumes_ptr, config_substitutions))
                 return false;
+
+            if (use_prusa_config) {
+                convert_from_prusa(model_object->config, config);
+                for (ModelVolume* volume : model_object->volumes)
+                    convert_from_prusa(volume->config, config);
+                for (auto entry : model_object->layer_config_ranges)
+                    convert_from_prusa(entry.second, config);
+            }
+
         }
 
 //        // fixes the min z of the model if negative
@@ -2105,7 +2159,7 @@ namespace Slic3r {
         bool _add_mesh_to_object_stream(std::stringstream& stream, ModelObject& object, VolumeToOffsetsMap& volumes_offsets);
         bool _add_build_to_model_stream(std::stringstream& stream, const BuildItemsList& build_items);
         bool _add_layer_height_profile_file_to_archive(mz_zip_archive& archive, Model& model);
-        bool _add_layer_config_ranges_file_to_archive(mz_zip_archive& archive, Model& model);
+        bool _add_layer_config_ranges_file_to_archive(mz_zip_archive& archive, Model& model, const DynamicPrintConfig& global_config);
         bool _add_sla_support_points_file_to_archive(mz_zip_archive& archive, Model& model);
         bool _add_sla_drain_holes_file_to_archive(mz_zip_archive& archive, Model& model);
         bool _add_print_config_file_to_archive(mz_zip_archive& archive, const DynamicPrintConfig &config, const std::string &file_path);
@@ -2184,7 +2238,7 @@ namespace Slic3r {
         // Adds layer config ranges file ("Metadata/Slic3r_PE_layer_config_ranges.txt").
         // All layer height profiles of all ModelObjects are stored here, indexed by 1 based index of the ModelObject in Model.
         // The index differes from the index of an object ID of an object instance of a 3MF file!
-        if (!_add_layer_config_ranges_file_to_archive(archive, model))
+        if (!_add_layer_config_ranges_file_to_archive(archive, model, *config))
         {
             close_zip_writer(&archive);
             boost::filesystem::remove(filename);
@@ -2223,9 +2277,9 @@ namespace Slic3r {
         if (config != nullptr)
         {
             // also add prusa (& superslicer for backward comp, just for some version from 2.3.56) print config
-            bool error = !_add_print_config_file_to_archive(archive, *config, PRINT_CONFIG_FILE);
-            error = error || !_add_print_config_file_to_archive(archive, *config, PRINT_PRUSA_CONFIG_FILE);
-            error = error || !_add_print_config_file_to_archive(archive, *config, PRINT_SUPER_CONFIG_FILE);
+            bool error = !_add_print_config_file_to_archive(archive, *config, SLIC3R_PRINT_CONFIG_FILE);
+            error = error || !_add_print_config_file_to_archive(archive, *config, PRUSA_PRINT_CONFIG_FILE);
+            error = error || !_add_print_config_file_to_archive(archive, *config, SUPER_PRINT_CONFIG_FILE);
             if(error)
             {
                 close_zip_writer(&archive);
@@ -2238,21 +2292,21 @@ namespace Slic3r {
         // This file contains all the attributes of all ModelObjects and their ModelVolumes (names, parameter overrides).
         // As there is just a single Indexed Triangle Set data stored per ModelObject, offsets of volumes into their respective Indexed Triangle Set data
         // is stored here as well.
-        if (!_add_model_config_file_to_archive(archive, model, *config, objects_data, MODEL_CONFIG_FILE))
+        if (!_add_model_config_file_to_archive(archive, model, *config, objects_data, SLIC3R_MODEL_CONFIG_FILE))
         {
             close_zip_writer(&archive);
             boost::filesystem::remove(filename);
             return false;
         }
         // also add prusa
-        if (!_add_model_config_file_to_archive(archive, model, *config, objects_data, MODEL_PRUSA_CONFIG_FILE))
+        if (!_add_model_config_file_to_archive(archive, model, *config, objects_data, PRUSA_MODEL_CONFIG_FILE))
         {
             close_zip_writer(&archive);
             boost::filesystem::remove(filename);
             return false;
         }
         //  also superslicer for backward comp, just for some version from 2.3.56
-        if (!_add_model_config_file_to_archive(archive, model, *config, objects_data, MODEL_SUPER_CONFIG_FILE))
+        if (!_add_model_config_file_to_archive(archive, model, *config, objects_data, SUPER_MODEL_CONFIG_FILE))
         {
             close_zip_writer(&archive);
             boost::filesystem::remove(filename);
@@ -2598,61 +2652,85 @@ namespace Slic3r {
         return true;
     }
 
-    bool _3MF_Exporter::_add_layer_config_ranges_file_to_archive(mz_zip_archive& archive, Model& model)
+    bool _3MF_Exporter::_add_layer_config_ranges_file_to_archive(mz_zip_archive& archive, Model& model, const DynamicPrintConfig &globalConfig)
     {
-        std::string out = "";
-        pt::ptree tree;
+        std::string default_out = "";
+        std::string prusa_out = "";
 
-        unsigned int object_cnt = 0;
-        for (const ModelObject* object : model.objects)
-        {
-            object_cnt++;
-            const t_layer_config_ranges& ranges = object->layer_config_ranges;
-            if (!ranges.empty())
+        for (std::string* out : { &prusa_out , &default_out }) {
+            pt::ptree tree;
+            unsigned int object_cnt = 0;
+            for (const ModelObject* object : model.objects)
             {
-                pt::ptree& obj_tree = tree.add("objects.object","");
-
-                obj_tree.put("<xmlattr>.id", object_cnt);
-
-                // Store the layer config ranges.
-                for (const auto& range : ranges)
+                object_cnt++;
+                const t_layer_config_ranges& ranges = object->layer_config_ranges;
+                if (!ranges.empty())
                 {
-                    pt::ptree& range_tree = obj_tree.add("range", "");
+                    pt::ptree& obj_tree = tree.add("objects.object", "");
 
-                    // store minX and maxZ
-                    range_tree.put("<xmlattr>.min_z", range.first.first);
-                    range_tree.put("<xmlattr>.max_z", range.first.second);
+                    obj_tree.put("<xmlattr>.id", object_cnt);
 
-                    // store range configuration
-                    const ModelConfig& config = range.second;
-                    for (const std::string& opt_key : config.keys())
+                    // Store the layer config ranges.
+                    for (const auto& range : ranges)
                     {
-                        pt::ptree& opt_tree = range_tree.add("option", config.opt_serialize(opt_key));
-                        opt_tree.put("<xmlattr>.opt_key", opt_key);
+                        pt::ptree& range_tree = obj_tree.add("range", "");
+
+                        // store minX and maxZ
+                        range_tree.put("<xmlattr>.min_z", range.first.first);
+                        range_tree.put("<xmlattr>.max_z", range.first.second);
+
+                        // store range configuration
+                        const ModelConfig& config = range.second;
+                        for (const std::string& opt_key : config.keys())
+                        {
+                            //check if we need to call 'to_prusa' to adapt config
+                            if (out == &prusa_out) {
+                                std::string value = config.opt_serialize(opt_key);
+                                std::string key = opt_key;
+                                PrintConfigDef::to_prusa(key, value, globalConfig);
+                                if (!key.empty()) {
+                                    pt::ptree& opt_tree = range_tree.add("option", value);
+                                    opt_tree.put("<xmlattr>.opt_key", opt_key);
+                                }
+                            } else {
+                                pt::ptree& opt_tree = range_tree.add("option", config.opt_serialize(opt_key));
+                                opt_tree.put("<xmlattr>.opt_key", opt_key);
+                            }
+                        }
                     }
                 }
+
+            }
+            if (!tree.empty())
+            {
+                std::ostringstream oss;
+                pt::write_xml(oss, tree);
+                *out = oss.str();
+
+                // Post processing("beautification") of the output string for a better preview
+                boost::replace_all(*out, "><object", ">\n <object");
+                boost::replace_all(*out, "><range", ">\n  <range");
+                boost::replace_all(*out, "><option", ">\n   <option");
+                boost::replace_all(*out, "></range>", ">\n  </range>");
+                boost::replace_all(*out, "></object>", ">\n </object>");
+                // OR just 
+                boost::replace_all(*out, "><", ">\n<");
             }
         }
 
-        if (!tree.empty())
+        if (!default_out.empty())
         {
-            std::ostringstream oss;
-            pt::write_xml(oss, tree);
-            out = oss.str();
-
-            // Post processing("beautification") of the output string for a better preview
-            boost::replace_all(out, "><object",      ">\n <object");
-            boost::replace_all(out, "><range",       ">\n  <range");
-            boost::replace_all(out, "><option",      ">\n   <option");
-            boost::replace_all(out, "></range>",     ">\n  </range>");
-            boost::replace_all(out, "></object>",    ">\n </object>");
-            // OR just 
-            boost::replace_all(out, "><",            ">\n<"); 
-        }
-
-        if (!out.empty())
-        {
-            if (!mz_zip_writer_add_mem(&archive, LAYER_CONFIG_RANGES_FILE.c_str(), (const void*)out.data(), out.length(), MZ_DEFAULT_COMPRESSION))
+            if (!mz_zip_writer_add_mem(&archive, SLIC3R_LAYER_CONFIG_RANGES_FILE.c_str(), (const void*)default_out.data(), default_out.length(), MZ_DEFAULT_COMPRESSION))
+            {
+                add_error("Unable to add layer heights profile file to archive");
+                return false;
+            }
+            if (!mz_zip_writer_add_mem(&archive, SUPER_LAYER_CONFIG_RANGES_FILE.c_str(), (const void*)default_out.data(), default_out.length(), MZ_DEFAULT_COMPRESSION))
+            {
+                add_error("Unable to add layer heights profile file to archive");
+                return false;
+            }
+            if (!mz_zip_writer_add_mem(&archive, PRUSA_LAYER_CONFIG_RANGES_FILE.c_str(), (const void*)prusa_out.data(), prusa_out.length(), MZ_DEFAULT_COMPRESSION))
             {
                 add_error("Unable to add layer heights profile file to archive");
                 return false;
@@ -2761,7 +2839,7 @@ namespace Slic3r {
         char buffer[1024];
         sprintf(buffer, "; %s\n\n", header_slic3r_generated().c_str());
         std::string out = buffer;
-        if (config_name == PRINT_PRUSA_CONFIG_FILE) {
+        if (config_name == PRUSA_PRINT_CONFIG_FILE) {
             for (std::string key : config.keys())
                 if (key != "compatible_printers") {
                     std::string value = config.opt_serialize(key);
@@ -2812,7 +2890,7 @@ namespace Slic3r {
                 }
 
                 // stores object's config data
-                if (file_path == MODEL_PRUSA_CONFIG_FILE) {
+                if (file_path == PRUSA_MODEL_CONFIG_FILE) {
                     assert(obj->config.get().parent == nullptr);
                     obj_config_wparent = obj->config.get();
                     obj_config_wparent.parent = &print_config;
@@ -2887,7 +2965,7 @@ namespace Slic3r {
                             }
 
                             // stores volume's config data
-                            if (file_path == MODEL_PRUSA_CONFIG_FILE) {
+                            if (file_path == PRUSA_MODEL_CONFIG_FILE) {
                                 assert(volume->config.get().parent == nullptr);
                                 DynamicPrintConfig copy_config = volume->config.get(); 
                                 copy_config.parent = &obj_config_wparent;

@@ -402,6 +402,7 @@ public:
 
     static void handle_legacy(t_config_option_key& opt_key, std::string& value);
     static void to_prusa(t_config_option_key& opt_key, std::string& value, const DynamicConfig& all_conf);
+    static std::map<std::string, std::string> from_prusa(t_config_option_key& opt_key, std::string& value, const DynamicConfig& all_conf);
 
     // Array options growing with the number of extruders
     const std::vector<std::string>& extruder_option_keys() const { return m_extruder_option_keys; }

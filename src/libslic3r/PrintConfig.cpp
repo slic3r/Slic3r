@@ -5544,103 +5544,124 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         } catch (boost::bad_lexical_cast &) {
             value = "0";
         }
-    } else if (opt_key == "gcode_flavor" && value == "makerbot") {
+    }
+    if (opt_key == "gcode_flavor" && value == "makerbot") {
         value = "makerware";
-    } else if (opt_key == "fill_density" && value.find("%") == std::string::npos) {
+    }
+    if (opt_key == "fill_density" && value.find("%") == std::string::npos) {
         try {
             // fill_density was turned into a percent value
             float v = boost::lexical_cast<float>(value);
             value = boost::lexical_cast<std::string>(v*100) + "%";
         } catch (boost::bad_lexical_cast &) {}
-    } else if (opt_key == "randomize_start" && value == "1") {
+    }
+    if (opt_key == "randomize_start" && value == "1") {
         opt_key = "seam_position";
         value = "random";
-    } else if (opt_key == "bed_size" && !value.empty()) {
+    }
+    if (opt_key == "bed_size" && !value.empty()) {
         opt_key = "bed_shape";
         ConfigOptionPoint p;
         p.deserialize(value, ForwardCompatibilitySubstitutionRule::Disable);
         std::ostringstream oss;
         oss << "0x0," << p.value(0) << "x0," << p.value(0) << "x" << p.value(1) << ",0x" << p.value(1);
         value = oss.str();
-    } else if ((opt_key == "perimeter_acceleration" && value == "25")
+    }
+    if ((opt_key == "perimeter_acceleration" && value == "25")
         || (opt_key == "infill_acceleration" && value == "50")) {
         /*  For historical reasons, the world's full of configs having these very low values;
             to avoid unexpected behavior we need to ignore them. Banning these two hard-coded
             values is a dirty hack and will need to be removed sometime in the future, but it
             will avoid lots of complaints for now. */
         value = "0";
-    } else if (opt_key == "support_material_pattern" && value == "pillars") {
+    }
+    if (opt_key == "support_material_pattern" && value == "pillars") {
         // Slic3r PE does not support the pillars. They never worked well.
         value = "rectilinear";
-    } else if (opt_key == "skirt_height" && value == "-1") {
+    }
+    if (opt_key == "skirt_height" && value == "-1") {
     	// PrusaSlicer no more accepts skirt_height == -1 to print a draft shield to the top of the highest object.
     	// A new "draft_shield" boolean config value is used instead.
     	opt_key = "draft_shield";
     	value = "1";
-    } else if (opt_key == "octoprint_host") {
+    }
+    if (opt_key == "octoprint_host") {
         opt_key = "print_host";
-    } else if (opt_key == "octoprint_cafile") {
+    }
+    if (opt_key == "octoprint_cafile") {
         opt_key = "printhost_cafile";
-    } else if (opt_key == "octoprint_apikey") {
+    }
+    if (opt_key == "octoprint_apikey") {
         opt_key = "printhost_apikey";
-    } else if (opt_key == "elefant_foot_compensation") {
+    }
+    if (opt_key == "elefant_foot_compensation") {
         opt_key = "first_layer_size_compensation";
         float v = boost::lexical_cast<float>(value);
         if (v > 0)
             value = boost::lexical_cast<std::string>(-v);
     }
-    else if ("elefant_foot_min_width" == opt_key) {
+    if ("elefant_foot_min_width" == opt_key) {
         opt_key = "elephant_foot_min_width";
-    } else if (opt_key == "thumbnails") {
+    }
+    if (opt_key == "thumbnails") {
         if (value.empty())
             value = "0x0,0x0";
-    } else if (opt_key == "z_steps_per_mm") {
+    }
+    if (opt_key == "z_steps_per_mm") {
         opt_key = "z_step";
         float v = boost::lexical_cast<float>(value);
         if(v > 0)
             value = boost::lexical_cast<std::string>(1/v);
-    } else if (opt_key == "infill_not_connected") {
+    }
+    if (opt_key == "infill_not_connected") {
         opt_key = "infill_connection";
         if (value == "1")
             value = "notconnected";
         else
             value = "connected";
-    } else if (opt_key == "seam_travel") {
+    }
+    if (opt_key == "seam_travel") {
         if (value == "1") {
             opt_key = "seam_travel_cost";
             value = "200%";
         } else {
             opt_key = "";
         }
-    } else if (opt_key == "seam_position") {
+    }
+    if (opt_key == "seam_position") {
         if (value == "hidden") {
             opt_key = "seam_travel_cost";
             value = "20%";
         }else if ("near" == value || "nearest" == value )
             value = "cost";
-    } else if (opt_key == "perimeter_loop_seam") {
+    }
+    if (opt_key == "perimeter_loop_seam") {
         if (value == "hidden") {
             value = "nearest";
         }
-    } else if (opt_key == "overhangs") {
+    }
+    if (opt_key == "overhangs") {
         opt_key = "overhangs_width_speed";
         if (value == "1")
             value = "50%";
         else
             value = "0";
-    } else if (opt_key == "print_machine_envelope") {
+    }
+    if (opt_key == "print_machine_envelope") {
         opt_key = "machine_limits_usage";
         if (value == "1")
             value = "emit_to_gcode";
         else
             value = "time_estimate_only";
-    } else if (opt_key == "retract_lift_not_last_layer") {
+    }
+    if (opt_key == "retract_lift_not_last_layer") {
         opt_key = "retract_lift_top";
         if (value == "1")
             value = "Not on top";
         else
             value = "All surfaces";
-    } else if ("gcode_precision_e" == opt_key) {
+    }
+    if ("gcode_precision_e" == opt_key) {
         try {
             int val = boost::lexical_cast<int>(value);
             if (val > 0)
@@ -5690,6 +5711,20 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         if ("reprap" == value)
             value = "sprinter";
     }
+}
+
+//the map is for extra things to add / modify
+std::map<std::string,std::string> PrintConfigDef::from_prusa(t_config_option_key& opt_key, std::string& value, const DynamicConfig& all_conf) {
+    std::map<std::string, std::string> output;
+    if ("toolchange_gcode" == opt_key) {
+        if (!value.empty() && value.find("T[next_extruder]") == std::string::npos) {
+            value = "T[next_extruder]\n" + value;
+        }
+    }
+    if ("xy_size_compensation" == opt_key) {
+        output["xy_inner_size_compensation"] = value;
+    }
+    return output;
 }
 
 std::unordered_set<std::string> prusa_export_to_remove_keys = {
