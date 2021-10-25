@@ -2004,7 +2004,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("after last perimeter");
     def->full_label = L("Gapfill after last perimeter");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("All gaps between the alst periemter and the infill which are thinner than a perimeter will be filled by gapfill.");
+    def->tooltip = L("All gaps, between the last perimeter and the infill, which are thinner than a perimeter will be filled by gapfill.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool{true });
 
