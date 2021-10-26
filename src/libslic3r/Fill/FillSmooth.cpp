@@ -46,7 +46,10 @@ namespace Slic3r {
         }
         else{
             Surface surfaceNoOverlap(srf_source);
-            for (const ExPolygon &poly : this->no_overlap_expolygons) {
+            //use half overlap instead of none.
+            ExPolygons half_overlap = offset_ex(this->no_overlap_expolygons, scale_(this->overlap / 2));
+            half_overlap = intersection_ex({ srf_source.expolygon }, half_overlap);
+            for (const ExPolygon &poly : half_overlap) {
                 if (poly.empty()) continue;
                 surfaceNoOverlap.expolygon = poly;
                 this->fill_expolygon(idx, *eec, surfaceNoOverlap, params_modifided, volume);

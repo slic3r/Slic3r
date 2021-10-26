@@ -88,9 +88,9 @@ public:
     // Index of the layer.
     size_t      layer_id;
     // Z coordinate of the top print surface, in unscaled coordinates
-    coordf_t    z;
+    double      z;
     // infill / perimeter overlap, in unscaled coordinates 
-    coordf_t    overlap;
+    double      overlap;
     ExPolygons  no_overlap_expolygons;
     // in radians, ccw, 0 = East
     float       angle;
