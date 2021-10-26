@@ -775,6 +775,10 @@ std::string CoolingBuffer::apply_layer_cooldown(
                 if (layer_time < slowdown_below_layer_time && fan_below_layer_time > 0) {
                     // Layer time very short. Enable the fan to a full throttle.
                     fan_speed_new = max_fan_speed;
+                    bridge_fan_speed = max_fan_speed;
+                    bridge_internal_fan_speed = max_fan_speed;
+                    ext_peri_fan_speed = max_fan_speed;
+                    top_fan_speed = max_fan_speed;
                 } else if (layer_time < fan_below_layer_time) {
                     // Layer time quite short. Enable the fan proportionally according to the current layer time.
                     assert(layer_time >= slowdown_below_layer_time);
