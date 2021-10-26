@@ -213,7 +213,7 @@ ExPolygon::remove_point_too_near(const coord_t tolerance) {
         //go to next one
         //if you removed a point, it check if the next one isn't too near from the previous one.
         // if not, it byepass it.
-        if (newdist > tolerance_sq) {
+        if (newdist >= tolerance_sq) {
             ++id;
         }
     }
