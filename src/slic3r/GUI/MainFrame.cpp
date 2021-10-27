@@ -1277,12 +1277,18 @@ void MainFrame::init_menubar_as_editor()
         append_menu_item(import_menu, wxID_ANY, _L("Import &Config") + dots + "\tCtrl+L", _L("Load exported configuration file"),
             [this](wxCommandEvent&) { load_config_file(); }, "import_config", nullptr,
             []() {return true; }, this);
+        append_menu_item(import_menu, wxID_ANY, _L("Import Prusa Config") + dots, _L("Load configuration file exported from PrusaSlicer"),
+            [this](wxCommandEvent&) { load_config_file(true); }, "import_prusa_config", nullptr,
+            []() {return true; }, this);
         append_menu_item(import_menu, wxID_ANY, _L("Import Config from &project") + dots +"\tCtrl+Alt+L", _L("Load configuration from project file"),
             [this](wxCommandEvent&) { if (m_plater) m_plater->extract_config_from_project(); }, "import_config", nullptr,
             []() {return true; }, this);
         import_menu->AppendSeparator();
         append_menu_item(import_menu, wxID_ANY, _L("Import Config &Bundle") + dots, _L("Load presets from a bundle"),
             [this](wxCommandEvent&) { load_configbundle(); }, "import_config_bundle", nullptr,
+            []() {return true; }, this);
+        append_menu_item(import_menu, wxID_ANY, _L("Import Prusa Config Bundle") + dots, _L("Load presets from a PrusaSlicer bundle"),
+            [this](wxCommandEvent&) { load_configbundle(wxEmptyString, true); }, "import_prusa_config_bundle", nullptr,
             []() {return true; }, this);
         append_submenu(fileMenu, import_menu, wxID_ANY, _L("&Import"), "");
 
@@ -1324,7 +1330,7 @@ void MainFrame::init_menubar_as_editor()
             []() {return true; }, this);
         export_menu->AppendSeparator();
         append_menu_item(export_menu, wxID_ANY, _L("Export to &Prusa Config") + dots, _L("Export current configuration to file, with only settings compatible with PrusaSlicer"),
-            [this](wxCommandEvent&) { export_config(true); }, "export_config", nullptr,
+            [this](wxCommandEvent&) { export_config(true); }, "export_prusa_config", nullptr,
             []() {return true; }, this);
         append_submenu(fileMenu, export_menu, wxID_ANY, _L("&Export"), "");
 
@@ -1812,7 +1818,7 @@ void MainFrame::export_config(bool to_prusa)
 }
 
 // Load a config file containing a Print, Filament & Printer preset.
-void MainFrame::load_config_file()
+void MainFrame::load_config_file(bool from_prusa)
 {
         if (!wxGetApp().check_unsaved_changes())
             return;
@@ -1822,17 +1828,17 @@ void MainFrame::load_config_file()
 	wxString file;
     if (dlg.ShowModal() == wxID_OK)
         file = dlg.GetPath();
-    if (! file.IsEmpty() && this->load_config_file(file.ToUTF8().data())) {
+    if (! file.IsEmpty() && this->load_config_file(file.ToUTF8().data(), from_prusa)) {
         wxGetApp().app_config->update_config_dir(get_dir_name(file));
         m_last_config = file;
     }
 }
 
 // Load a config file containing a Print, Filament & Printer preset from command line.
-bool MainFrame::load_config_file(const std::string &path)
+bool MainFrame::load_config_file(const std::string &path, bool from_prusa)
 {
     try {
-        ConfigSubstitutions config_substitutions = wxGetApp().preset_bundle->load_config_file(path, ForwardCompatibilitySubstitutionRule::Enable);
+        ConfigSubstitutions config_substitutions = wxGetApp().preset_bundle->load_config_file(path, ForwardCompatibilitySubstitutionRule::Enable, from_prusa);
         if (!config_substitutions.empty())
             show_substitutions_info(config_substitutions, path);
     } catch (const std::exception& ex) {
@@ -1875,7 +1881,7 @@ void MainFrame::export_configbundle(bool export_physical_printers /*= false*/)
 // Loading a config bundle with an external file name used to be used
 // to auto - install a config bundle on a fresh user account,
 // but that behavior was not documented and likely buggy.
-void MainFrame::load_configbundle(wxString file/* = wxEmptyString, const bool reset_user_profile*/)
+void MainFrame::load_configbundle(wxString file/* = wxEmptyString*/, bool from_prusa/* = false*/)
 {
     if (!wxGetApp().check_unsaved_changes())
         return;
@@ -1893,9 +1899,12 @@ void MainFrame::load_configbundle(wxString file/* = wxEmptyString, const bool re
     size_t presets_imported = 0;
     PresetsConfigSubstitutions config_substitutions;
     try {
+        PresetBundle::LoadConfigBundleAttributes lcba{ PresetBundle::LoadConfigBundleAttribute::SaveImported };
         // Report all substitutions.
         std::tie(config_substitutions, presets_imported) = wxGetApp().preset_bundle->load_configbundle(
-            file.ToUTF8().data(), PresetBundle::LoadConfigBundleAttribute::SaveImported, ForwardCompatibilitySubstitutionRule::Enable);
+            file.ToUTF8().data(), 
+            (from_prusa ? lcba | PresetBundle::LoadConfigBundleAttribute::ConvertFromPrusa : lcba),
+            ForwardCompatibilitySubstitutionRule::Enable);
     } catch (const std::exception &ex) {
         show_error(this, ex.what());
         return;

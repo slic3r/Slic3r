@@ -425,6 +425,8 @@ private:
     std::vector<std::string> 	m_milling_option_keys;
 };
 
+
+
 // The one and only global definition of SLic3r configuration options.
 // This definition is constant.
 extern const PrintConfigDef print_config_def;
@@ -477,6 +479,8 @@ public:
 
     void                to_prusa(t_config_option_key& opt_key, std::string& value) const override
         { PrintConfigDef::to_prusa(opt_key, value, *this); }
+    // utilities to help convert from prusa config.
+    void                convert_from_prusa();
 
     /// <summary>
     /// callback to changed other settings that are linked (like width & spacing)
@@ -1986,6 +1990,10 @@ public:
     // Not thread safe! Should not be called from other than the main thread!
     void                touch() { m_timestamp = ++ s_last_timestamp; }
 
+
+    // utilities to help convert from prusa config.
+    void convert_from_prusa(const DynamicPrintConfig& global_config);
+
 private:
     friend class cereal::access;
     template<class Archive> void serialize(Archive& ar) { ar(m_timestamp); ar(m_data); }
@@ -1995,6 +2003,8 @@ private:
 
     static uint64_t             s_last_timestamp;
 };
+
+
 
 } // namespace Slic3r
 

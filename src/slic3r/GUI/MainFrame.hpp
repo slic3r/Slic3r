@@ -192,11 +192,11 @@ public:
     void        repair_stl();
     void        export_config(bool to_prusa = false);
     // Query user for the config file and open it.
-    void        load_config_file();
+    void        load_config_file(bool from_prusa = false);
     // Open a config file. Return true if loaded.
-    bool        load_config_file(const std::string &path);
+    bool        load_config_file(const std::string &path, bool from_prusa = false);
     void        export_configbundle(bool export_physical_printers = false);
-    void        load_configbundle(wxString file = wxEmptyString);
+    void        load_configbundle(wxString file = wxEmptyString, bool from_prusa = false);
     void        load_config(const DynamicPrintConfig& config);
     // Select tab in m_tabpanel
     // When tab == -1, will be selected last selected tab

@@ -5,6 +5,7 @@
 #include "../GCode.hpp"
 #include "../Geometry.hpp"
 #include "../GCode/ThumbnailData.hpp"
+#include "../PrintConfig.hpp"
 #include "../Time.hpp"
 
 #include "../I18N.hpp"
@@ -592,34 +593,6 @@ namespace Slic3r {
         XML_StopParser(m_xml_parser, false);
     }
 
-    template<typename CONFIG_CLASS>
-    void convert_from_prusa(CONFIG_CLASS& conf, const DynamicPrintConfig& global_config) {
-    //void convert_from_prusa(DynamicPrintConfig& conf, const DynamicPrintConfig & global_config) {
-    //void convert_from_prusa(ModelConfigObject& conf, const DynamicPrintConfig& global_config) {
-        for (const t_config_option_key& opt_key : conf.keys()) {
-            const ConfigOption* opt = conf.option(opt_key);
-            std::string serialized = opt->serialize();
-            std::string key = opt_key;
-            std::map<std::string, std::string> result = PrintConfigDef::from_prusa(key, serialized, global_config);
-            if (key != opt_key) {
-                conf.erase(opt_key);
-            }
-            if (!key.empty() && serialized != opt->serialize()) {
-                ConfigOption* opt_new = opt->clone();
-                opt_new->deserialize(serialized);
-                conf.set_key_value(key, opt_new);
-            }
-            for (auto entry : result) {
-                const ConfigOptionDef* def = print_config_def.get(entry.first);
-                if (def) {
-                    ConfigOption* opt_new = def->default_value.get()->clone();
-                    opt_new->deserialize(entry.second);
-                    conf.set_key_value(entry.first, opt_new);
-                }
-            }
-        }
-    }
-
     bool _3MF_Importer::_load_model_from_file(const std::string& filename, Model& model, DynamicPrintConfig& config, ConfigSubstitutionContext& config_substitutions)
     {
         mz_zip_archive archive;
@@ -761,7 +734,7 @@ namespace Slic3r {
                 return false;
             else {
                 use_prusa_config = true;
-                convert_from_prusa(config, config);
+                config.convert_from_prusa();
             }
 
         close_zip_reader(&archive);
@@ -841,11 +814,11 @@ namespace Slic3r {
                 return false;
 
             if (use_prusa_config) {
-                convert_from_prusa(model_object->config, config);
+                model_object->config.convert_from_prusa(config);
                 for (ModelVolume* volume : model_object->volumes)
-                    convert_from_prusa(volume->config, config);
+                    volume->config.convert_from_prusa(config);
                 for (auto entry : model_object->layer_config_ranges)
-                    convert_from_prusa(entry.second, config);
+                    entry.second.convert_from_prusa(config);
             }
 
         }

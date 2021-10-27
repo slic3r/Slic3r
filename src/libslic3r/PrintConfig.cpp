@@ -5724,7 +5724,47 @@ std::map<std::string,std::string> PrintConfigDef::from_prusa(t_config_option_key
     if ("xy_size_compensation" == opt_key) {
         output["xy_inner_size_compensation"] = value;
     }
+    if ("infill_anchor_max" == opt_key) {
+        if(value == "0")
+            output["infill_connection"] = "notconnected";
+    }
     return output;
+}
+
+
+template<typename CONFIG_CLASS>
+void _convert_from_prusa(CONFIG_CLASS& conf, const DynamicPrintConfig& global_config) {
+    //void convert_from_prusa(DynamicPrintConfig& conf, const DynamicPrintConfig & global_config) {
+    //void convert_from_prusa(ModelConfigObject& conf, const DynamicPrintConfig& global_config) {
+    for (const t_config_option_key& opt_key : conf.keys()) {
+        const ConfigOption* opt = conf.option(opt_key);
+        std::string serialized = opt->serialize();
+        std::string key = opt_key;
+        std::map<std::string, std::string> result = PrintConfigDef::from_prusa(key, serialized, global_config);
+        if (key != opt_key) {
+            conf.erase(opt_key);
+        }
+        if (!key.empty() && serialized != opt->serialize()) {
+            ConfigOption* opt_new = opt->clone();
+            opt_new->deserialize(serialized);
+            conf.set_key_value(key, opt_new);
+        }
+        for (auto entry : result) {
+            const ConfigOptionDef* def = print_config_def.get(entry.first);
+            if (def) {
+                ConfigOption* opt_new = def->default_value.get()->clone();
+                opt_new->deserialize(entry.second);
+                conf.set_key_value(entry.first, opt_new);
+            }
+        }
+    }
+}
+
+void DynamicPrintConfig::convert_from_prusa() {
+    _convert_from_prusa(*this, *this);
+}
+void ModelConfig::convert_from_prusa(const DynamicPrintConfig& global_config) {
+    _convert_from_prusa(*this, global_config);
 }
 
 std::unordered_set<std::string> prusa_export_to_remove_keys = {
@@ -5970,6 +6010,12 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
                 //bypass the phony kill switch from Config::opt_serialize
                 value = opt->serialize();
             }
+        }
+    }
+    if ("infill_anchor_max" == opt_key) {
+        //it's infill_anchor == 0 that disable it for prusa
+        if (all_conf.opt_serialize("infill_connection") == "notconnected") {
+            value = "0";
         }
     }
 

@@ -5,6 +5,7 @@
 #include "Utils.hpp"
 #include "Model.hpp"
 #include "format.hpp"
+#include "PrintConfig.hpp"
 
 #include <algorithm>
 #include <set>
@@ -679,13 +680,15 @@ DynamicPrintConfig PresetBundle::full_sla_config() const
 // Instead of a config file, a G-code may be loaded containing the full set of parameters.
 // In the future the configuration will likely be read from an AMF file as well.
 // If the file is loaded successfully, its print / filament / printer profiles will be activated.
-ConfigSubstitutions PresetBundle::load_config_file(const std::string &path, ForwardCompatibilitySubstitutionRule compatibility_rule)
+ConfigSubstitutions PresetBundle::load_config_file(const std::string &path, ForwardCompatibilitySubstitutionRule compatibility_rule, bool from_prusa)
 {
 	if (is_gcode_file(path)) {
 		DynamicPrintConfig config;
 		config.apply(FullPrintConfig::defaults());
         ConfigSubstitutions config_substitutions = config.load_from_gcode_file(path, compatibility_rule);
         Preset::normalize(config);
+        if(from_prusa)
+            config.convert_from_prusa();
 		load_config_file_config(path, true, std::move(config));
 		return config_substitutions;
 	}
@@ -720,11 +723,13 @@ ConfigSubstitutions PresetBundle::load_config_file(const std::string &path, Forw
     		config.apply(FullPrintConfig::defaults());
             config_substitutions = config.load(tree, compatibility_rule);
     		Preset::normalize(config);
+            if (from_prusa)
+                config.convert_from_prusa();
     		load_config_file_config(path, true, std::move(config));
             return config_substitutions;
         }
         case CONFIG_FILE_TYPE_CONFIG_BUNDLE:
-            return load_config_file_config_bundle(path, tree, compatibility_rule);
+            return load_config_file_config_bundle(path, tree, compatibility_rule, from_prusa);
         }
     } catch (const ConfigurationError &e) {
         throw Slic3r::RuntimeError(format("Invalid configuration file %1%: %2%", path, e.what()));
@@ -906,11 +911,11 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
 // Load the active configuration of a config bundle from a boost property_tree. This is a private method called from load_config_file.
 // Note: only called when using --load from cli. Will load the bundle like with the menu but wihtout saving it.
 ConfigSubstitutions PresetBundle::load_config_file_config_bundle(
-    const std::string &path, const boost::property_tree::ptree &tree, ForwardCompatibilitySubstitutionRule compatibility_rule)
+    const std::string &path, const boost::property_tree::ptree &tree, ForwardCompatibilitySubstitutionRule compatibility_rule, bool from_prusa)
 {
     // Load the config bundle, but don't save the loaded presets to user profile directory
     // [PresetsConfigSubstitutions, size_t]
-    auto [presets_substitutions, presets_imported] = this->load_configbundle(path, { }, compatibility_rule);
+    auto [presets_substitutions, presets_imported] = this->load_configbundle(path, (from_prusa ? LoadConfigBundleAttributes{ LoadConfigBundleAttribute::ConvertFromPrusa } : LoadConfigBundleAttribute{ }), compatibility_rule);
     ConfigSubstitutions config_substitutions;
     this->update_compatible(PresetSelectCompatibleType::Never);
     for (PresetConfigSubstitutions &sub : presets_substitutions)
@@ -1205,7 +1210,7 @@ std::pair<PresetsConfigSubstitutions, size_t> PresetBundle::load_configbundle(
             std::string 			  alias_name;
             std::vector<std::string>  renamed_from;
             try {
-                auto parse_config_section = [&section, &alias_name, &renamed_from, &substitution_context, &path](DynamicPrintConfig &config) {
+                auto parse_config_section = [&section, &alias_name, &renamed_from, &substitution_context, &path, &flags](DynamicPrintConfig &config) {
                     substitution_context.substitutions.clear();
                     for (auto &kvp : section.second) {
                     	if (kvp.first == "alias")
@@ -1219,6 +1224,8 @@ std::pair<PresetsConfigSubstitutions, size_t> PresetBundle::load_configbundle(
                         // Throws on parsing error. For system presets, no substituion is being done, but an exception is thrown.
                         config.set_deserialize(kvp.first, kvp.second.data(), substitution_context);
                     }
+                    if (flags.has(LoadConfigBundleAttribute::ConvertFromPrusa))
+                        config.convert_from_prusa();
                 };
                 if (presets == &this->printers) {
                     // Select the default config based on the printer_technology field extracted from kvp.
