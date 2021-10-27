@@ -25,67 +25,21 @@ jobs:
       run: sudo apt update
     - name: install gtk2 glew
       run: sudo apt install libgtk2.0-dev libglew-dev libudev-dev libdbus-1-dev
-    - name: mkdir in deps
-      run: mkdir deps/build
-    - name: cmake deps
-      working-directory: ./deps/build
-      run: cmake .. -DCMAKE_BUILD_TYPE=Debug
-    - name: make deps
-      working-directory: ./deps/build
-      run: make
-    - name: ls libs
-      working-directory: ./deps/build
-      run: ls ./destdir/usr/local/lib
-    - name: rename wxscintilla
-      working-directory: ./deps/build/destdir/usr/local/lib
-      run: cp libwxscintilla-3.1.a libwx_gtk2u_scintilla-3.1.a
-    - name: clean deps
-      working-directory: ./deps/build
-      run: rm -rf dep_*
-    - name: mkdir build
-      run: mkdir build
-    - name: cmake
+    - name: build deps & slicer
+      run: ./BuildLinux.sh -bdgs
+    - name: make .pot
       working-directory: ./build
-      run: cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="/home/runner/work/Slic3r/Slic3r/deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
-    - name: make Slic3r
+      run: make gettext_make_pot
+    - name: build tar & appimage
       working-directory: ./build
-      run: make Slic3r
-    - name: make .mo
-      working-directory: ./build
-      run: make gettext_po_to_mo
-    - name: create directory and copy into it
-      working-directory: ./build
-      run: |
-        mkdir package
-        mkdir package/bin
-    - name: copy resources
-      working-directory: ./build
-      run: cp -Rf ../resources package/resources
-    - name: copy bin
-      working-directory: ./build
-      run: cp -f src/Slic3r package/bin/Slic3r
-    - name: create sh from echo
-      working-directory: ./build/package
-      run: |
-        echo -e '#!/bin/bash\nDIR=$(readlink -f "$0" | xargs dirname)\nexport LD_LIBRARY_PATH="$DIR/bin"\nexec "$DIR/bin/Slic3r" "$@"' >Slic3r
-        chmod u+x Slic3r
-        tar -cvf ../Slic3r.tar .
+      run: src/BuildLinuxImage.sh -i
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: nightly_linux.tar
-        path: build/Slic3r.tar
-    - name: build appimage
-      working-directory: ./build/package
-      run: |
-        chmod +x ../build_appimage.sh
-        ../build_appimage.sh
-    - name: 'Tar files'
-      working-directory: ./build/package
-      run: tar -cvf Slic3r_ubu64.AppImage.tar Slic3r_ubu64.AppImage
+        name: nightly_linux_gtk2.tar
+        path: build/${{ github.event.repository.name }}.tar
     - name: Upload appimage
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: Slic3r-AppImage.tar
-        path: build/package/Slic3r_ubu64.AppImage.tar
-        
+        name: ${{ github.event.repository.name }}-gtk2.AppImage
+        path: build/${{ github.event.repository.name }}_ubu64.AppImage

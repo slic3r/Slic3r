@@ -10,6 +10,9 @@ jobs:
 
     runs-on: macos-latest
     
+    env:
+      EXEC_NAME: "${{ github.event.repository.name }}"
+      DBL_NAME: "${{ github.event.repository.name }}/${{ github.event.repository.name }}"
     steps:
     - uses: actions/checkout@v2
       with:
@@ -17,6 +20,15 @@ jobs:
     - name: update submodule profiles
       working-directory: ./resources/profiles
       run: git submodule update --init
+    - id: lowercase_repo
+      uses: ASzc/change-string-case-action@v1
+      with:
+        string: ${{ github.event.repository.name }}
+    - name: set exec name
+      if: ${{ github.event.repository.name != 'Slic3r' }}
+      uses: allenevans/set-env@v2.0.0
+      with:
+        EXEC_NAME: "${{ steps.lowercase_repo.outputs.lowercase }}"
     - name: change date in version
       run: |
         sed "s/+UNKNOWN/_$(date '+%F')/" version.inc > version.date.inc
@@ -46,7 +58,7 @@ jobs:
     - name: cmake
       working-directory: ./build
       run: cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13" -DSLIC3R_STATIC=1
-    - name: make Slic3r
+    - name: make ${{ github.event.repository.name }}
       working-directory: ./build
       run: make Slic3r
     - name: make .mo
@@ -59,32 +71,32 @@ jobs:
       working-directory: ./build
       run: |
         mkdir pack
-        mkdir pack/Slic3r
-        mkdir pack/Slic3r/Slic3r.app
-        mkdir pack/Slic3r/Slic3r.app/Contents
-        mkdir pack/Slic3r/Slic3r.app/Contents/_CodeSignature
-        mkdir pack/Slic3r/Slic3r.app/Contents/Frameworks
-        mkdir pack/Slic3r/Slic3r.app/Contents/MacOS
+        mkdir pack/${{ github.event.repository.name }}
+        mkdir pack/${{ env.DBL_NAME }}.app
+        mkdir pack/${{ env.DBL_NAME }}.app/Contents
+        mkdir pack/${{ env.DBL_NAME }}.app/Contents/_CodeSignature
+        mkdir pack/${{ env.DBL_NAME }}.app/Contents/Frameworks
+        mkdir pack/${{ env.DBL_NAME }}.app/Contents/MacOS
     - name: copy Resources
       working-directory: ./build
       run: |
-        cp -Rf ../resources pack/Slic3r/Slic3r.app/Contents/Resources
-        cp pack/Slic3r/Slic3r.app/Contents/Resources/icons/Slic3r.icns pack/Slic3r/Slic3r.app/Contents/resources/Slic3r.icns
-        cp src/Info.date.plist pack/Slic3r/Slic3r.app/Contents/Info.plist
+        cp -Rf ../resources pack/${{ env.DBL_NAME }}.app/Contents/Resources
+        cp pack/${{ env.DBL_NAME }}.app/Contents/Resources/icons/${{ github.event.repository.name }}.icns pack/${{ github.event.repository.name }}/${{ github.event.repository.name }}.app/Contents/resources/${{ github.event.repository.name }}.icns
+        cp src/Info.date.plist pack/${{ github.event.repository.name }}/${{ github.event.repository.name }}.app/Contents/Info.plist
         echo -n -e 'APPL????\x0a' > PkgInfo
-        cp PkgInfo pack/Slic3r/Slic3r.app/Contents/PkgInfo
+        cp PkgInfo pack/${{ env.DBL_NAME }}.app/Contents/PkgInfo
 #        echo -n -e '\xff\xfeAPPL\x3f\x00\x3f\x00\x3f\x00\x3f\x00\x0a\x00' > PkgInfo
     - name: copy bin and do not let it lower case
       working-directory: ./build
       run: |
-        cp -f src/Slic3r pack/Slic3r/Slic3r.app/Contents/MacOS/Slic3r
-        chmod u+x pack/Slic3r/Slic3r.app/Contents/MacOS/Slic3r
-        tar -cvf Slic3r.tar pack/Slic3r
+        cp -f src/${{ env.EXEC_NAME }} pack/${{ env.DBL_NAME }}.app/Contents/MacOS/${{ github.event.repository.name }}
+        chmod u+x pack/${{ env.DBL_NAME }}.app/Contents/MacOS/${{ github.event.repository.name }}
+        tar -cvf ${{ github.event.repository.name }}.tar pack/${{ github.event.repository.name }}
     - name: create dmg
       working-directory: ./build
       run: |
-        hdiutil create -ov -fs HFS+ -volname "Slic3r" -srcfolder "pack/Slic3r" temp.dmg
-        hdiutil convert temp.dmg -format UDZO -o Slic3r.dmg
+        hdiutil create -ov -fs HFS+ -volname "${{ github.event.repository.name }}" -srcfolder "pack/${{ github.event.repository.name }}" temp.dmg
+        hdiutil convert temp.dmg -format UDZO -o ${{ github.event.repository.name }}.dmg
 #    - name: signing Resources (creating CodeResources inside _CodeSignature)
 #      working-directory: .
 #      run: codesign -s <identity> Resources
@@ -93,9 +105,9 @@ jobs:
       uses: actions/upload-artifact@v1.0.0
       with:
         name: nightly_macos.tar
-        path: build/Slic3r.tar
+        path: build/${{ github.event.repository.name }}.tar
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
         name: nightly_macos_debug.dmg
-        path: build/Slic3r.dmg
+        path: build/${{ github.event.repository.name }}.dmg
