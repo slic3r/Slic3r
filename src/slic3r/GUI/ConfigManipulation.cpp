@@ -400,6 +400,9 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     bool have_infill_dense = config->opt_bool("infill_dense") && can_have_infill_dense;
     for (auto el : { "infill_dense_algo" })
         toggle_field(el, have_infill_dense);
+    if(have_infill)
+        for (auto el : { "infill_every_layers", "infill_only_where_needed" })
+            toggle_field(el, !have_infill_dense);
 
     bool has_spiral_vase         = have_perimeters && config->opt_bool("spiral_vase");
     bool has_top_solid_infill 	 = config->opt_int("top_solid_layers") > 0 || has_spiral_vase;

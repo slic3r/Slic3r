@@ -1041,6 +1041,7 @@ namespace Slic3r {
             if ((best_point - polygon_reduced.contour.points[pos_check]).norm() < scale_(0.01)) ++pos_check;
             else polygon_reduced.contour.points.erase(polygon_reduced.contour.points.begin() + pos_check);
         }
+        polygon_reduced.holes.clear();
         return polygon_reduced;
     }
 
@@ -1051,7 +1052,7 @@ namespace Slic3r {
         //fix uncoverable area
         ExPolygons polygons_to_cover = intersection_ex(bad_polygon_to_cover, growing_area);
         if (polygons_to_cover.size() != 1)
-            return { bad_polygon_to_cover };
+            return { growing_area };
         const ExPolygon polygon_to_cover = polygons_to_cover.front();
 
         //grow the polygon_to_check enough to cover polygon_to_cover
@@ -1178,7 +1179,7 @@ namespace Slic3r {
                             Surfaces surf_to_add;
                             ExPolygons dense_polys;
                             std::vector<uint16_t> dense_priority;
-                            ExPolygons surfs_with_overlap = { surface.expolygon };
+                            const ExPolygons surfs_with_overlap = { surface.expolygon };
                             ////create a surface with overlap to allow the dense thing to bond to the infill
                             coord_t scaled_width = layerm->flow(frInfill, true).scaled_width();
                             coord_t overlap = scaled_width / 4;
@@ -3424,7 +3425,7 @@ static void fix_mesh_connectivity(TriangleMesh &mesh)
             upper_internal = intersection(overhangs, lower_layer_internal_surfaces);
             // Apply new internal infill to regions.
             for (LayerRegion* layerm : lower_layer->m_regions) {
-                if (layerm->region()->config().fill_density.value == 0)
+                if (layerm->region()->config().fill_density.value == 0 || layerm->region()->config().infill_dense.value)
                     continue;
                 SurfaceType internal_surface_types[] = { stPosInternal | stDensSparse, stPosInternal | stDensVoid };
                 Polygons internal;
@@ -3665,7 +3666,8 @@ static void fix_mesh_connectivity(TriangleMesh &mesh)
         // Work on each region separately.
         for (size_t region_id = 0; region_id < this->region_volumes.size(); ++region_id) {
             const PrintRegion* region = this->print()->regions()[region_id];
-            const size_t every = region->config().infill_every_layers.value;
+            // can't have void if using infill_dense
+            const size_t every = region->config().infill_dense.value ? 1 : region->config().infill_every_layers.value;
             if (every < 2 || region->config().fill_density == 0.)
                 continue;
             // Limit the number of combined layers to the maximum height allowed by this regions' nozzle.

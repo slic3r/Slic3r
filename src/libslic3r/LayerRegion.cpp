@@ -423,7 +423,7 @@ void LayerRegion::prepare_fill_surfaces()
     if (! spiral_vase && this->region()->config().top_solid_layers == 0) {
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface)
             if (surface->has_pos_top())
-                surface->surface_type = (this->layer()->object()->config().infill_only_where_needed) ? 
+                surface->surface_type = (this->layer()->object()->config().infill_only_where_needed && !this->region()->config().infill_dense.value) ?
                     stPosInternal | stDensVoid : stPosInternal | stDensSparse;
     }
     if (this->region()->config().bottom_solid_layers == 0) {
