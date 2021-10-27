@@ -5662,6 +5662,8 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
             value = "All surfaces";
     }
     if ("gcode_precision_e" == opt_key) {
+        if (value.find(",") != std::string::npos)
+            value = value.substr(0, value.find(","));
         try {
             int val = boost::lexical_cast<int>(value);
             if (val > 0)
