@@ -14,6 +14,7 @@
 #include <wx/numformatter.h>
 #include <wx/tooltip.h>
 #include <wx/notebook.h>
+#include <wx/richtooltip.h>
 #include <wx/tokenzr.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include "OG_CustomCtrl.hpp"
@@ -210,6 +211,77 @@ wxString Field::get_tooltip_text(const wxString& default_string)
         _(L("parameter name")) + "\t: " + opt_id;
 
 	return tooltip_text;
+}
+
+wxString Field::get_rich_tooltip_text(const wxString& default_string)
+{
+    wxString tooltip_text("");
+    wxString tooltip = _(m_opt.tooltip);
+    update_Slic3r_string(tooltip);
+
+    std::string opt_id = m_opt_id;
+    auto hash_pos = opt_id.find("#");
+    if (hash_pos != std::string::npos) {
+        opt_id.replace(hash_pos, 1, "[");
+        opt_id += "]";
+    }
+
+    if (tooltip.length() > 0)
+        tooltip_text = tooltip + "\n" + _(L("default value")) + ": " +
+        (boost::iends_with(opt_id, "_gcode") ? "\n" : "") + default_string;
+
+    return tooltip_text;
+}
+
+wxString Field::get_rich_tooltip_title(const wxString& default_string)
+{
+
+    std::string opt_id = m_opt_id;
+    auto hash_pos = opt_id.find("#");
+    if (hash_pos != std::string::npos) {
+        opt_id.replace(hash_pos, 1, "[");
+        opt_id += "]";
+    }
+
+    return opt_id + ":";
+}
+
+void Field::set_tooltip(const wxString& default_string, wxWindow* window) {
+    if (window == nullptr)
+        window = getWindow();
+    if (get_app_config()->get("use_rich_tooltip") == "1") {
+        this->m_rich_tooltip_timer.m_value = default_string;
+        window->Bind(wxEVT_ENTER_WINDOW, [this, window](wxMouseEvent& event) {
+            if (wxGetActiveWindow() && !this->m_rich_tooltip_timer.IsRunning()) {
+                this->m_rich_tooltip_timer.m_current_window = window;
+                this->m_rich_tooltip_timer.m_is_rich_tooltip_ready = true;
+                this->m_rich_tooltip_timer.StartOnce(500);
+            }
+            });
+        window->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& event) {
+            this->m_rich_tooltip_timer.m_is_rich_tooltip_ready = false;
+            wxWindowList tipWindow = this->getWindow()->GetChildren();
+            if (tipWindow.size() > 0) {
+                wxWindow* tooltipWindow = tipWindow.GetLast()->GetData();
+                if (tooltipWindow && tooltipWindow == this->m_rich_tooltip_timer.m_current_rich_tooltip)
+                    tooltipWindow->Hide();// DismissAndNotify();
+            }
+            });
+    }else
+        window->SetToolTip(get_tooltip_text(default_string));
+}
+
+void RichTooltipTimer::Notify() {
+    if (wxGetActiveWindow() && this->m_is_rich_tooltip_ready && m_current_window) {
+        this->m_current_rich_tooltip = nullptr;
+        wxRichToolTip richTooltip(
+            m_field->get_rich_tooltip_title(this->m_value),
+            m_field->get_rich_tooltip_text(this->m_value));
+        richTooltip.SetTimeout(120000, 0);
+        richTooltip.ShowFor(m_current_window);
+        wxWindowList tipWindow = m_current_window->GetChildren();
+        this->m_current_rich_tooltip = tipWindow.GetLast()->GetData();
+    }
 }
 
 bool Field::is_matched(const std::string& string, const std::string& pattern)
@@ -511,7 +583,7 @@ void TextCtrl::BUILD() {
     m_last_meaningful_value = text_value;
 
     const long style = m_opt.multiline ? wxTE_MULTILINE : wxTE_PROCESS_ENTER/*0*/;
-	auto temp = new wxTextCtrl(m_parent, wxID_ANY, text_value, wxDefaultPosition, size, style);
+    wxTextCtrl* temp = new wxTextCtrl(m_parent, wxID_ANY, text_value, wxDefaultPosition, size, style);
     if (parent_is_custom_ctrl && m_opt.height < 0)
         opt_height = (double)temp->GetSize().GetHeight()/m_em_unit;
     temp->SetFont(m_opt.is_code ?
@@ -525,8 +597,6 @@ void TextCtrl::BUILD() {
 #ifdef __WXOSX__
     temp->OSXDisableAllSmartSubstitutions();
 #endif // __WXOSX__
-
-	temp->SetToolTip(get_tooltip_text(text_value));
 
     if (style == wxTE_PROCESS_ENTER) {
         temp->Bind(wxEVT_TEXT_ENTER, ([this, temp](wxEvent& e)
@@ -590,6 +660,8 @@ void TextCtrl::BUILD() {
 */
     // recast as a wxWindow to fit the calling convention
     window = dynamic_cast<wxWindow*>(temp);
+
+    this->set_tooltip(text_value);
 }	
 
 bool TextCtrl::value_was_changed()
@@ -736,10 +808,10 @@ void CheckBox::BUILD() {
 	    on_change_field();
 	}), temp->GetId());
 
-	temp->SetToolTip(get_tooltip_text(check_value ? "true" : "false")); 
-
 	// recast as a wxWindow to fit the calling convention
 	window = dynamic_cast<wxWindow*>(temp);
+
+    this->set_tooltip(check_value ? "true" : "false");
 }
 
 void CheckBox::set_value(const boost::any& value, bool change_event)
@@ -899,11 +971,12 @@ void SpinCtrl::BUILD() {
         }
 #endif
 	}), temp->GetId());
-	
-	temp->SetToolTip(get_tooltip_text(text_value));
 
 	// recast as a wxWindow to fit the calling convention
 	window = dynamic_cast<wxWindow*>(temp);
+
+    //prblem: it has 2 window, with a child: the mouse enter event won't fire if in children!
+    this->set_tooltip(text_value);
 }
 
 void SpinCtrl::propagate_value()
@@ -1057,7 +1130,7 @@ void Choice::BUILD() {
         }), temp->GetId());
     }
 
-	temp->SetToolTip(get_tooltip_text(temp->GetValue()));
+    this->set_tooltip(temp->GetValue());
 }
 
 void Choice::suppress_scroll()
@@ -1475,9 +1548,9 @@ void ColourPicker::BUILD()
 	// 	// recast as a wxWindow to fit the calling convention
 	window = dynamic_cast<wxWindow*>(temp);
 
-	temp->Bind(wxEVT_COLOURPICKER_CHANGED, ([this](wxCommandEvent e) { on_change_field(); }), temp->GetId());
+    window->Bind(wxEVT_COLOURPICKER_CHANGED, ([this](wxCommandEvent e) { on_change_field(); }), window->GetId());
 
-	temp->SetToolTip(get_tooltip_text(clr.GetAsString()));
+    this->set_tooltip(clr.GetAsString());
 }
 
 void ColourPicker::set_undef_value(wxColourPickerCtrl* field)
@@ -1588,8 +1661,8 @@ void PointCtrl::BUILD()
 	// 	// recast as a wxWindow to fit the calling convention
 	sizer = dynamic_cast<wxSizer*>(temp);
 
-	x_textctrl->SetToolTip(get_tooltip_text(X+", "+Y));
-	y_textctrl->SetToolTip(get_tooltip_text(X+", "+Y));
+    this->set_tooltip(X + ", " + Y, x_textctrl);
+    this->set_tooltip(X + ", " + Y, y_textctrl);
 }
 
 void PointCtrl::msw_rescale()
@@ -1695,7 +1768,7 @@ void StaticText::BUILD()
 	// 	// recast as a wxWindow to fit the calling convention
 	window = dynamic_cast<wxWindow*>(temp);
 
-	temp->SetToolTip(get_tooltip_text(legend));
+    this->set_tooltip(legend);
 }
 
 void StaticText::msw_rescale()

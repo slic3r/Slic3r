@@ -39,6 +39,21 @@ using t_back_to_init = std::function<void(const std::string&)>;
 wxString double_to_string(double const value, const int max_precision = 6);
 wxString get_points_string(const std::vector<Vec2d>& values);
 
+class Field;
+class RichTooltipTimer : public wxTimer
+{
+	Field*				m_field;
+public:
+	bool				m_is_rich_tooltip_ready = false;
+	wxWindow*			m_current_rich_tooltip = nullptr;
+	wxString			m_value;
+	wxWindow*			m_window2 = nullptr; //for point
+	wxWindow*			m_current_window = nullptr; //for point
+	RichTooltipTimer(Field* field) : m_field(field) {};
+
+	void Notify() override;
+};
+
 class Field {
 protected:
     // factory function to defer and enforce creation of derived type. 
@@ -110,11 +125,16 @@ public:
     inline void			toggle(bool en) { en ? enable() : disable(); }
 
 	virtual wxString	get_tooltip_text(const wxString& default_string);
+	// hack via richtooltip that are also hacked
+	RichTooltipTimer	m_rich_tooltip_timer;
+	virtual wxString	get_rich_tooltip_text(const wxString& default_string);
+	virtual wxString	get_rich_tooltip_title(const wxString& default_string);
+	void				set_tooltip(const wxString& default_string, wxWindow* window = nullptr);
 
     void				field_changed() { on_change_field(); }
 
-    Field(const ConfigOptionDef& opt, const t_config_option_key& id) : m_opt(opt), m_opt_id(id) {};
-    Field(wxWindow* parent, const ConfigOptionDef& opt, const t_config_option_key& id) : m_parent(parent), m_opt(opt), m_opt_id(id) {};
+    Field(const ConfigOptionDef& opt, const t_config_option_key& id) : m_opt(opt), m_opt_id(id), m_rich_tooltip_timer(this) {};
+    Field(wxWindow* parent, const ConfigOptionDef& opt, const t_config_option_key& id) : m_parent(parent), m_opt(opt), m_opt_id(id), m_rich_tooltip_timer(this) {};
     virtual ~Field();
 
     /// If you don't know what you are getting back, check both methods for nullptr. 

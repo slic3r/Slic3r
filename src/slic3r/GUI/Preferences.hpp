@@ -18,6 +18,7 @@ class ConfigOptionsGroup;
 class PreferencesDialog : public DPIDialog
 {
 	std::map<std::string, std::string>	m_values;
+	std::vector<std::string>			m_values_need_restart;
 	std::vector<std::shared_ptr<ConfigOptionsGroup>> m_optgroups_general;
 	std::shared_ptr<ConfigOptionsGroup>	m_optgroup_paths;
 	std::shared_ptr<ConfigOptionsGroup>	m_optgroup_camera;

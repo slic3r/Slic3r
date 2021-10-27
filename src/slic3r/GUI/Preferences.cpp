@@ -151,6 +151,7 @@ void PreferencesDialog::build()
         def.set_default_value(new ConfigOptionBool{ app_config->get("no_defaults") == "1" });
         option = Option(def, "no_defaults");
         m_optgroups_general.back()->append_single_option_line(option);
+		m_values_need_restart.push_back("no_defaults");
 
         def.label = L("Show incompatible print and filament presets");
         def.type = coBool;
@@ -263,6 +264,21 @@ void PreferencesDialog::build()
 		def.set_default_value(new ConfigOptionBool{ app_config->get("default_action_on_new_project") == "1" });
 		option = Option(def, "default_action_on_new_project");
 		m_optgroups_general.back()->append_single_option_line(option);
+
+		def.label = L("Use custom tooltip");
+		def.type = coBool;
+		def.tooltip = L("On some OS like MacOS or some Linux, tooltips can't stay on for a long time. This setting replaces native tooltips with custom dialogs to improve readability (only for settings)."
+			"\nNote that for the number controls, you need to hover the arrows to get the custom tooltip.");
+		def.set_default_value(new ConfigOptionBool{ app_config->has("use_rich_tooltip") ? app_config->get("use_rich_tooltip") == "1": 
+#if __APPLE__
+			true
+#else
+			false
+#endif
+			});
+		option = Option(def, "use_rich_tooltip");
+		m_optgroups_general.back()->append_single_option_line(option);
+		m_values_need_restart.push_back("use_rich_tooltip");
 	}
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 #ifdef _WIN32
@@ -445,12 +461,12 @@ void PreferencesDialog::build()
 
         def.label = L("Tab icon size");
         def.type = coInt;
-        def.tooltip = L("Size of the tab icons, in pixels. Set to 0 to remove icons."
-            "\nYou have to restart the application before any change will be taken into account.");
+        def.tooltip = L("Size of the tab icons, in pixels. Set to 0 to remove icons.");
         def.set_default_value(new ConfigOptionInt{ atoi(app_config->get("tab_icon_size").c_str()) });
         option = Option(def, "tab_icon_size");
         option.opt.width = 6;
         m_optgroup_gui->append_single_option_line(option);
+		m_values_need_restart.push_back("tab_icon_size");
 	}
 
 
@@ -465,54 +481,54 @@ void PreferencesDialog::build()
 	def.type = coString;
 	def.tooltip = _u8L("Very dark color, in the RGB hex format.")
 		+ " "  + _u8L("Mainly used as background or dark text color.")
-		+ "\n" + _u8L("You have to restart the application before any change will be taken into account.")
 		+ "\n" + _u8L("Slic3r(yellow): ada230, PrusaSlicer(orange): c46737, SuperSlicer(blue): 0047c7");
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_very_dark") });
 	option = Option(def, "color_very_dark");
 	option.opt.width = 6;
 	m_optgroup_gui->append_single_option_line(option);
+	m_values_need_restart.push_back("color_very_dark");
 
 	def.label = L("Dark gui color");
 	def.type = coString;
 	def.tooltip = _u8L("Dark color, in the RGB hex format.")
 		+ " " + _u8L("Mainly used as icon color.")
-		+ "\n" + _u8L("You have to restart the application before any change will be taken into account.")
 		+ "\n" + _u8L("Slic3r(yellow): cabe39, PrusaSlicer(orange): ed6b21, SuperSlicer(blue): 2172eb");
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_dark") });
 	option = Option(def, "color_dark");
 	option.opt.width = 6;
 	m_optgroup_gui->append_single_option_line(option);
+	m_values_need_restart.push_back("color_dark");
 
 	def.label = L("Gui color");
 	def.type = coString;
 	def.tooltip = _u8L("Main color, in the RGB hex format.")
-		+ "\n" + _u8L("You have to restart the application before any change will be taken into account.")
 		+ " " + _u8L("Slic3r(yellow): eddc21, PrusaSlicer(orange): fd7e42, SuperSlicer(blue): 428dfd");
 	def.set_default_value(new ConfigOptionString{ app_config->get("color") });
 	option = Option(def, "color");
 	option.opt.width = 6;
 	m_optgroup_gui->append_single_option_line(option);
+	m_values_need_restart.push_back("color");
 
 	def.label = L("Light gui color");
 	def.type = coString;
 	def.tooltip = _u8L("Light color, in the RGB hex format.")
-		+ "\n" + _u8L("You have to restart the application before any change will be taken into account.")
 		+ " " + _u8L("Slic3r(yellow): ffee38, PrusaSlicer(orange): feac8b, SuperSlicer(blue): 8bb9fe");
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_light") });
 	option = Option(def, "color_light");
 	option.opt.width = 6;
 	m_optgroup_gui->append_single_option_line(option);
+	m_values_need_restart.push_back("color_light");
 
 	def.label = L("Very light gui color");
 	def.type = coString;
 	def.tooltip = _u8L("Very light color, in the RGB hex format.")
 		+ " " + _u8L("Mainly used as light text color.")
-		+ "\n" + _u8L("You have to restart the application before any change will be taken into account.")
 		+ "\n" + _u8L("Slic3r(yellow): fef48b, PrusaSlicer(orange): ff7d38, SuperSlicer(blue): 428cff");
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_very_light") });
 	option = Option(def, "color_very_light");
 	option.opt.width = 6;
 	m_optgroup_gui->append_single_option_line(option);
+	m_values_need_restart.push_back("color_very_light");
 
 	activate_options_tab(m_optgroup_gui);
 
@@ -557,7 +573,11 @@ void PreferencesDialog::build()
 
 void PreferencesDialog::accept()
 {
-	if (m_values.find("no_defaults") != m_values.end()) {
+	bool need_restart = false;
+	for (auto key : m_values_need_restart)
+		if (m_values.find(key) != m_values.end())
+			need_restart = true;
+	if (need_restart) {
 		warning_catcher(this, wxString::Format(_L("You need to restart %s to make the changes effective."), SLIC3R_APP_NAME));
 	}
 

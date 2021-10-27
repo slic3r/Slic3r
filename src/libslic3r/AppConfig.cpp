@@ -194,6 +194,15 @@ void AppConfig::set_defaults()
 
         if (get("default_action_on_new_project").empty())
             set("default_action_on_new_project", "1");
+		
+        if (get("use_rich_tooltip").empty())
+            set("use_rich_tooltip", 
+#ifndef WIN32
+			"1"
+#else
+			"0"
+#endif
+			);
     }
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
     else {
