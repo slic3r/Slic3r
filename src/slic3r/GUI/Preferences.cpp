@@ -38,18 +38,43 @@ static std::shared_ptr<ConfigOptionsGroup>create_options_tab(const wxString& tit
 std::shared_ptr<ConfigOptionsGroup> PreferencesDialog::create_general_options_group(const wxString& title, wxNotebook* tabs)
 {
 
-    std::shared_ptr<ConfigOptionsGroup> optgroup = std::make_shared<ConfigOptionsGroup>((wxPanel*)tabs->GetPage(0), title);
-    optgroup->title_width = 40;
-    optgroup->label_width = 40;
-    optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
-        if (opt_key == "default_action_on_close_application" || opt_key == "default_action_on_select_preset")
-            m_values[opt_key] = boost::any_cast<bool>(value) ? "none" : "discard";
-        else if (std::unordered_set<std::string>{ "splash_screen_editor", "splash_screen_gcodeviewer", "auto_switch_preview" }.count(opt_key) > 0)
-            m_values[opt_key] = boost::any_cast<std::string>(value);
-        else
-            m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
-    };
-    return optgroup;
+	std::shared_ptr<ConfigOptionsGroup> optgroup = std::make_shared<ConfigOptionsGroup>((wxPanel*)tabs->GetPage(0), title);
+	optgroup->title_width = 40;
+	optgroup->label_width = 40;
+	optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
+		if (opt_key == "default_action_on_close_application" || opt_key == "default_action_on_select_preset")
+			m_values[opt_key] = boost::any_cast<bool>(value) ? "none" : "discard";
+		else if (std::unordered_set<std::string>{ "splash_screen_editor", "splash_screen_gcodeviewer", "auto_switch_preview" }.count(opt_key) > 0)
+			m_values[opt_key] = boost::any_cast<std::string>(value);
+		else
+			m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
+	};
+	return optgroup;
+}
+std::shared_ptr<ConfigOptionsGroup> PreferencesDialog::create_gui_options_group(const wxString& title, wxNotebook* tabs)
+{
+
+	std::shared_ptr<ConfigOptionsGroup> optgroup = std::make_shared<ConfigOptionsGroup>((wxPanel*)tabs->GetPage(3), title);
+	optgroup->title_width = 40;
+	optgroup->label_width = 40;
+	optgroup->m_on_change = [this, tabs](t_config_option_key opt_key, boost::any value) {
+		if (opt_key == "suppress_hyperlinks")
+			m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "";
+		else if (opt_key.find("color") != std::string::npos)
+			m_values[opt_key] = boost::any_cast<std::string>(value);
+		else if (opt_key.find("tab_icon_size") != std::string::npos)
+			m_values[opt_key] = std::to_string(boost::any_cast<int>(value));
+		else
+			m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
+
+		if (opt_key == "use_custom_toolbar_size") {
+			m_icon_size_sizer->ShowItems(boost::any_cast<bool>(value));
+			m_optgroups_gui.front()->parent()->Layout();
+			tabs->Layout();
+			this->layout();
+		}
+	};
+	return optgroup;
 }
 
 static void activate_options_tab(std::shared_ptr<ConfigOptionsGroup> optgroup, int padding = 20)
@@ -264,21 +289,6 @@ void PreferencesDialog::build()
 		def.set_default_value(new ConfigOptionBool{ app_config->get("default_action_on_new_project") == "1" });
 		option = Option(def, "default_action_on_new_project");
 		m_optgroups_general.back()->append_single_option_line(option);
-
-		def.label = L("Use custom tooltip");
-		def.type = coBool;
-		def.tooltip = L("On some OS like MacOS or some Linux, tooltips can't stay on for a long time. This setting replaces native tooltips with custom dialogs to improve readability (only for settings)."
-			"\nNote that for the number controls, you need to hover the arrows to get the custom tooltip.");
-		def.set_default_value(new ConfigOptionBool{ app_config->has("use_rich_tooltip") ? app_config->get("use_rich_tooltip") == "1": 
-#if __APPLE__
-			true
-#else
-			false
-#endif
-			});
-		option = Option(def, "use_rich_tooltip");
-		m_optgroups_general.back()->append_single_option_line(option);
-		m_values_need_restart.push_back("use_rich_tooltip");
 	}
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN
 #ifdef _WIN32
@@ -409,24 +419,12 @@ void PreferencesDialog::build()
 	activate_options_tab(m_optgroup_camera);
 
 	// Add "GUI" tab
-	m_optgroup_gui = create_options_tab(_L("GUI"), tabs);
-	m_optgroup_gui->m_on_change = [this, tabs](t_config_option_key opt_key, boost::any value) {
-        if (opt_key == "suppress_hyperlinks")
-            m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "";
-		else if (opt_key.find("color") != std::string::npos)
-			m_values[opt_key] = boost::any_cast<std::string>(value);
-        else if (opt_key.find("tab_icon_size") != std::string::npos)
-            m_values[opt_key] = std::to_string(boost::any_cast<int>(value));
-        else
-            m_values[opt_key] = boost::any_cast<bool>(value) ? "1" : "0";
+	m_optgroups_gui.clear();
+	m_optgroups_gui.emplace_back(create_options_tab(_L("GUI"), tabs));
 
-		if (opt_key == "use_custom_toolbar_size") {
-			m_icon_size_sizer->ShowItems(boost::any_cast<bool>(value));
-			m_optgroup_gui->parent()->Layout();
-			tabs->Layout();
-			this->layout();
-		}
-	};
+		//activate_options_tab(m_optgroups_general.back(), 3);
+	m_optgroups_gui.emplace_back(create_gui_options_group(_L("Controls"), tabs));
+
 
 	def.label = L("Sequential slider applied only to top layer");
 	def.type = coBool;
@@ -434,7 +432,7 @@ void PreferencesDialog::build()
 					"If disabled, changes made using the sequential slider, in preview, apply to the whole gcode.");
 	def.set_default_value(new ConfigOptionBool{ app_config->get("seq_top_layer_only") == "1" });
 	option = Option(def, "seq_top_layer_only");
-	m_optgroup_gui->append_single_option_line(option);
+	m_optgroups_gui.back()->append_single_option_line(option);
 
 	if (is_editor) {
 		def.label = L("Show sidebar collapse/expand button");
@@ -442,7 +440,7 @@ void PreferencesDialog::build()
 		def.tooltip = L("If enabled, the button for the collapse sidebar will be appeared in top right corner of the 3D Scene");
 		def.set_default_value(new ConfigOptionBool{ app_config->get("show_collapse_button") == "1" });
 		option = Option(def, "show_collapse_button");
-		m_optgroup_gui->append_single_option_line(option);
+		m_optgroups_gui.back()->append_single_option_line(option);
 
 		def.label = L("Suppress to open hyperlink in browser");
 		def.type = coBool;
@@ -450,26 +448,59 @@ void PreferencesDialog::build()
 			"If disabled, the descriptions of configuration parameters in settings tabs will work as hyperlinks.");
 		def.set_default_value(new ConfigOptionBool{ app_config->get("suppress_hyperlinks") == "1" });
 		option = Option(def, "suppress_hyperlinks");
-		m_optgroup_gui->append_single_option_line(option);
+		m_optgroups_gui.back()->append_single_option_line(option);
+
+		activate_options_tab(m_optgroups_gui.back(), 3);
+		m_optgroups_gui.emplace_back(create_gui_options_group(_L("Appearance"), tabs));
 
 		def.label = L("Use custom size for toolbar icons");
 		def.type = coBool;
 		def.tooltip = L("If enabled, you can change size of toolbar icons manually.");
 		def.set_default_value(new ConfigOptionBool{ app_config->get("use_custom_toolbar_size") == "1" });
 		option = Option(def, "use_custom_toolbar_size");
-		m_optgroup_gui->append_single_option_line(option);
+		m_optgroups_gui.back()->append_single_option_line(option);
 
-        def.label = L("Tab icon size");
-        def.type = coInt;
-        def.tooltip = L("Size of the tab icons, in pixels. Set to 0 to remove icons.");
-        def.set_default_value(new ConfigOptionInt{ atoi(app_config->get("tab_icon_size").c_str()) });
-        option = Option(def, "tab_icon_size");
-        option.opt.width = 6;
-        m_optgroup_gui->append_single_option_line(option);
+		create_icon_size_slider(m_optgroups_gui.back().get());
+		m_icon_size_sizer->ShowItems(app_config->get("use_custom_toolbar_size") == "1");
+
+		def.label = L("Tab icon size");
+		def.type = coInt;
+		def.tooltip = L("Size of the tab icons, in pixels. Set to 0 to remove icons.");
+		def.set_default_value(new ConfigOptionInt{ atoi(app_config->get("tab_icon_size").c_str()) });
+		option = Option(def, "tab_icon_size");
+		option.opt.width = 6;
+		m_optgroups_gui.back()->append_single_option_line(option);
 		m_values_need_restart.push_back("tab_icon_size");
+
+		def.label = L("Display setting icons");
+		def.type = coBool;
+		def.tooltip = L("The settings have a lock and dot to show how they are modified. You can hide them by uncheking this option.");
+		def.set_default_value(new ConfigOptionBool{ app_config->get("setting_icon") == "1" });
+		option = Option(def, "setting_icon");
+		option.opt.width = 6;
+		m_optgroups_gui.back()->append_single_option_line(option);
+		m_values_need_restart.push_back("setting_icon");
+
+		def.label = L("Use custom tooltip");
+		def.type = coBool;
+		def.tooltip = L("On some OS like MacOS or some Linux, tooltips can't stay on for a long time. This setting replaces native tooltips with custom dialogs to improve readability (only for settings)."
+			"\nNote that for the number controls, you need to hover the arrows to get the custom tooltip.");
+		def.set_default_value(new ConfigOptionBool{ app_config->has("use_rich_tooltip") ? app_config->get("use_rich_tooltip") == "1" :
+#if __APPLE__
+			true
+#else
+			false
+#endif
+			});
+		option = Option(def, "use_rich_tooltip");
+		m_optgroups_gui.back()->append_single_option_line(option);
+		m_values_need_restart.push_back("use_rich_tooltip");
 	}
 
 
+
+	activate_options_tab(m_optgroups_gui.back(), 3);
+	m_optgroups_gui.emplace_back(create_gui_options_group(_L("Colors"), tabs));
 	// color prusa -> susie eb7221
 	//ICON 237, 107, 33 -> ed6b21 ; 2172eb
 	//DARK 237, 107, 33 -> ed6b21 ; 32, 113, 234 2071ea
@@ -485,7 +516,7 @@ void PreferencesDialog::build()
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_very_dark") });
 	option = Option(def, "color_very_dark");
 	option.opt.width = 6;
-	m_optgroup_gui->append_single_option_line(option);
+	m_optgroups_gui.back()->append_single_option_line(option);
 	m_values_need_restart.push_back("color_very_dark");
 
 	def.label = L("Dark gui color");
@@ -496,7 +527,7 @@ void PreferencesDialog::build()
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_dark") });
 	option = Option(def, "color_dark");
 	option.opt.width = 6;
-	m_optgroup_gui->append_single_option_line(option);
+	m_optgroups_gui.back()->append_single_option_line(option);
 	m_values_need_restart.push_back("color_dark");
 
 	def.label = L("Gui color");
@@ -506,7 +537,7 @@ void PreferencesDialog::build()
 	def.set_default_value(new ConfigOptionString{ app_config->get("color") });
 	option = Option(def, "color");
 	option.opt.width = 6;
-	m_optgroup_gui->append_single_option_line(option);
+	m_optgroups_gui.back()->append_single_option_line(option);
 	m_values_need_restart.push_back("color");
 
 	def.label = L("Light gui color");
@@ -516,7 +547,7 @@ void PreferencesDialog::build()
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_light") });
 	option = Option(def, "color_light");
 	option.opt.width = 6;
-	m_optgroup_gui->append_single_option_line(option);
+	m_optgroups_gui.back()->append_single_option_line(option);
 	m_values_need_restart.push_back("color_light");
 
 	def.label = L("Very light gui color");
@@ -527,17 +558,13 @@ void PreferencesDialog::build()
 	def.set_default_value(new ConfigOptionString{ app_config->get("color_very_light") });
 	option = Option(def, "color_very_light");
 	option.opt.width = 6;
-	m_optgroup_gui->append_single_option_line(option);
+	m_optgroups_gui.back()->append_single_option_line(option);
 	m_values_need_restart.push_back("color_very_light");
 
-	activate_options_tab(m_optgroup_gui);
+	activate_options_tab(m_optgroups_gui.back(), 3);
 
-	if (is_editor) {
-		create_icon_size_slider();
-		m_icon_size_sizer->ShowItems(app_config->get("use_custom_toolbar_size") == "1");
-
-		create_settings_mode_widget();
-	}
+	//create layout options
+	create_settings_mode_widget(tabs);
 
 #if ENABLE_ENVIRONMENT_MAP
 	if (is_editor) {
@@ -651,7 +678,14 @@ void PreferencesDialog::on_dpi_changed(const wxRect &suggested_rect)
 	}
 	m_optgroup_paths->msw_rescale();
 	m_optgroup_camera->msw_rescale();
-    m_optgroup_gui->msw_rescale();
+	for (int i = 0; i < (int)m_optgroups_gui.size(); i++) {
+		if (m_optgroups_gui[i]) {
+			m_optgroups_gui[i]->msw_rescale();
+		} else {
+			m_optgroups_gui.erase(m_optgroups_gui.begin() + i);
+			i--;
+		}
+	}
 
     msw_buttons_rescale(this, em_unit(), { wxID_OK, wxID_CANCEL });
 
@@ -668,7 +702,7 @@ void PreferencesDialog::layout()
     Refresh();
 }
 
-void PreferencesDialog::create_icon_size_slider()
+void PreferencesDialog::create_icon_size_slider(ConfigOptionsGroup* container)
 {
     const auto app_config = get_app_config();
 
@@ -676,7 +710,7 @@ void PreferencesDialog::create_icon_size_slider()
 
     m_icon_size_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-	wxWindow* parent = m_optgroup_gui->parent();
+	wxWindow* parent = container->parent();
 
     if (isOSX)
         // For correct rendering of the slider and value label under OSX
@@ -724,13 +758,13 @@ void PreferencesDialog::create_icon_size_slider()
         win->SetBackgroundStyle(wxBG_STYLE_PAINT);
     }
 
-    m_optgroup_gui->sizer->Add(m_icon_size_sizer, 0, wxEXPAND | wxALL, em);
+	container->parent()->GetSizer()->Add(m_icon_size_sizer, 0, wxEXPAND | wxALL, em);
 }
 
-void PreferencesDialog::create_settings_mode_widget()
+void PreferencesDialog::create_settings_mode_widget(wxNotebook* tabs)
 {
-	wxString choices[] = { _L("Regular layout with the tab bar"),
-						   _L("Old PrusaSlicer layout"),
+	wxString choices[] = { _L("Layout with the tab bar"),
+						   _L("Legacy layout"),
 						   _L("Access via settings button in the top menu"),
 						   _L("Settings in non-modal window") };
 
@@ -745,7 +779,7 @@ void PreferencesDialog::create_settings_mode_widget()
         0;
 #endif
 
-	wxWindow* parent = m_optgroup_gui->parent();
+	wxWindow* parent = m_optgroups_gui.back()->parent();
 
 	m_layout_mode_box = new wxRadioBox(parent, wxID_ANY, _L("Layout Options"), wxDefaultPosition, wxDefaultSize,
 		WXSIZEOF(choices), choices, 4, wxRA_SPECIFY_ROWS);
@@ -772,7 +806,8 @@ void PreferencesDialog::create_settings_mode_widget()
 
 	auto sizer = new wxBoxSizer(wxHORIZONTAL);
 	sizer->Add(m_layout_mode_box, 1, wxALIGN_CENTER_VERTICAL);
-	m_optgroup_gui->sizer->Add(sizer, 0, wxEXPAND);
+	wxBoxSizer* parent_sizer = static_cast<wxBoxSizer*>(static_cast<wxPanel*>(tabs->GetPage(3))->GetSizer());
+	parent_sizer->Add(sizer, 0, wxEXPAND);
 }
 
 

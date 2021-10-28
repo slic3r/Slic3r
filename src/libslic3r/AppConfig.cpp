@@ -169,6 +169,9 @@ void AppConfig::set_defaults()
         if (get("custom_toolbar_size").empty())
             set("custom_toolbar_size", "100");
 
+        if (get("setting_icon").empty())
+            set("setting_icon", "1");
+
         if (get("auto_toolbar_size").empty())
             set("auto_toolbar_size", "100");
 

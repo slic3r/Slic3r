@@ -12,6 +12,7 @@
 
 namespace Slic3r { namespace GUI {
 
+
 static bool is_point_in_rect(const wxPoint& pt, const wxRect& rect)
 {
     return  rect.GetLeft() <= pt.x && pt.x <= rect.GetRight() &&
@@ -38,6 +39,8 @@ static wxString get_url(const wxString& path_end, bool get_default = false)
     return wxString("https://help.prusa3d.com/") + lang_marker + "/article/" + path_end;
 }
 
+int OG_CustomCtrl::m_has_icon = (-1);
+
 OG_CustomCtrl::OG_CustomCtrl(   wxWindow*            parent,
                                 OptionsGroup*        og,
                                 const wxPoint&       pos /* = wxDefaultPosition*/,
@@ -47,6 +50,8 @@ OG_CustomCtrl::OG_CustomCtrl(   wxWindow*            parent,
     wxPanel(parent, wxID_ANY, pos, size, /*wxWANTS_CHARS |*/ wxBORDER_NONE | wxTAB_TRAVERSAL),
     opt_group(og)
 {
+    if (m_has_icon < 0)
+        m_has_icon = get_app_config()->get("setting_icon") == "1";
     if (!wxOSX)
         SetDoubleBuffered(true);// SetDoubleBuffered exists on Win and Linux/GTK, but is missing on OSX
 
@@ -55,8 +60,9 @@ OG_CustomCtrl::OG_CustomCtrl(   wxWindow*            parent,
     m_v_gap     = lround(1.0 * m_em_unit);
     m_h_gap     = lround(0.2 * m_em_unit);
 
-    m_bmp_mode_sz       = get_bitmap_size(create_scaled_bitmap("mode_simple", this, wxOSX ? 10 : 12));
+    m_bmp_mode_sz       = (!m_has_icon) ? wxSize(0,0) : get_bitmap_size(create_scaled_bitmap("mode_simple", this, wxOSX ? 10 : 12));
     m_bmp_blinking_sz   = get_bitmap_size(create_scaled_bitmap("search_blink", this));
+    if (!m_has_icon) m_bmp_blinking_sz.x = 0;
 
     init_ctrl_lines();// from og.lines()
 
@@ -129,7 +135,8 @@ wxPoint OG_CustomCtrl::get_pos(const Line& line, Field* field_in/* = nullptr*/)
     for (CtrlLine& ctrl_line : ctrl_lines) {
         if (&ctrl_line.og_line == &line)
         {
-            h_pos = m_bmp_mode_sz.GetWidth() + m_h_gap;
+            h_pos = m_bmp_mode_sz.GetWidth();
+            if (h_pos) h_pos += m_h_gap;
             if (line.near_label_widget_win) {
                 wxSize near_label_widget_sz = line.near_label_widget_win->GetSize();
                 if (field_in)
@@ -145,7 +152,8 @@ wxPoint OG_CustomCtrl::get_pos(const Line& line, Field* field_in/* = nullptr*/)
             if (opt_group->title_width != 0)
                 h_pos += opt_group->title_width * m_em_unit + m_h_gap;
 
-            int blinking_button_width = m_bmp_blinking_sz.GetWidth() + m_h_gap;
+            int blinking_button_width = m_bmp_blinking_sz.GetWidth();
+            if (blinking_button_width) blinking_button_width += m_h_gap;
 
             if (line.widget) {
                 h_pos += blinking_button_width;
@@ -427,8 +435,9 @@ void OG_CustomCtrl::msw_rescale()
     m_v_gap     = lround(1.0 * m_em_unit);
     m_h_gap     = lround(0.2 * m_em_unit);
 
-    m_bmp_mode_sz = create_scaled_bitmap("mode_simple", this, wxOSX ? 10 : 12).GetSize();
+    m_bmp_mode_sz = (!m_has_icon) ? wxSize(0, 0) : create_scaled_bitmap("mode_simple", this, wxOSX ? 10 : 12).GetSize();
     m_bmp_blinking_sz = create_scaled_bitmap("search_blink", this).GetSize();
+    if (!m_has_icon) m_bmp_blinking_sz.x = 0;
 
     wxCoord    v_pos = 0;
     for (CtrlLine& line : ctrl_lines) {
@@ -492,7 +501,7 @@ void OG_CustomCtrl::CtrlLine::msw_rescale()
 {
     // if we have a single option with no label, no sidetext
     if (draw_just_act_buttons)
-        height = get_bitmap_size(create_scaled_bitmap("empty")).GetHeight();
+        height = (!m_has_icon) ? 0 : get_bitmap_size(create_scaled_bitmap("empty")).GetHeight();
 
     if (ctrl->opt_group->title_width != 0 && !og_line.label.IsEmpty()) {
         wxSize label_sz = ctrl->GetTextExtent(og_line.label);
@@ -546,7 +555,8 @@ void OG_CustomCtrl::CtrlLine::update_visibility(ConfigOptionMode mode)
 void OG_CustomCtrl::CtrlLine::render(wxDC& dc, wxCoord v_pos)
 {
     Field* field = ctrl->opt_group->get_field(og_line.get_options().front().opt_id);
-    int blinking_button_width = ctrl->m_bmp_blinking_sz.GetWidth() + ctrl->m_h_gap;
+    int blinking_button_width = ctrl->m_bmp_blinking_sz.GetWidth();
+    if(blinking_button_width ) blinking_button_width  += ctrl->m_h_gap;
 
     bool suppress_hyperlinks = get_app_config()->get("suppress_hyperlinks") == "1";
     if (draw_just_act_buttons) {
@@ -673,6 +683,8 @@ void OG_CustomCtrl::CtrlLine::render(wxDC& dc, wxCoord v_pos)
 
 wxCoord OG_CustomCtrl::CtrlLine::draw_mode_bmp(wxDC& dc, wxCoord v_pos)
 {
+    if (!m_has_icon)
+        return 0;
     if (!draw_mode_bitmap)
         return ctrl->m_h_gap;
 
@@ -768,25 +780,26 @@ wxCoord OG_CustomCtrl::CtrlLine::draw_act_bmps(wxDC& dc, wxPoint pos, const wxBi
     wxCoord h_pos = pos.x;
     wxCoord v_pos = pos.y + height / 2 - this->ctrl->m_bmp_blinking_sz.GetHeight() / 2;
 
-    dc.DrawBitmap(bmp_undo_to_sys, h_pos, v_pos);
+    if (m_has_icon) {
+        dc.DrawBitmap(bmp_undo_to_sys, h_pos, v_pos);
 
-    int bmp_dim = get_bitmap_size(bmp_undo_to_sys).GetWidth();
-    rects_undo_to_sys_icon[rect_id] = wxRect(h_pos, v_pos, bmp_dim, bmp_dim);
+        int bmp_dim = get_bitmap_size(bmp_undo_to_sys).GetWidth();
+        rects_undo_to_sys_icon[rect_id] = wxRect(h_pos, v_pos, bmp_dim, bmp_dim);
 
-    h_pos += bmp_dim + ctrl->m_h_gap;
-    dc.DrawBitmap(bmp_undo, h_pos, v_pos);
+        h_pos += bmp_dim + ctrl->m_h_gap;
+        dc.DrawBitmap(bmp_undo, h_pos, v_pos);
 
-    bmp_dim = get_bitmap_size(bmp_undo).GetWidth();
-    rects_undo_icon[rect_id] = wxRect(h_pos, v_pos, bmp_dim, bmp_dim);
+        bmp_dim = get_bitmap_size(bmp_undo).GetWidth();
+        rects_undo_icon[rect_id] = wxRect(h_pos, v_pos, bmp_dim, bmp_dim);
 
-    if(is_blinking)
+        if(is_blinking)
+            draw_blinking_bmp(dc, wxPoint(h_pos, v_pos), is_blinking);
+
+        h_pos += bmp_dim + ctrl->m_h_gap;
+
+    } else if (is_blinking) {
         draw_blinking_bmp(dc, wxPoint(h_pos, v_pos), is_blinking);
-
-    h_pos += bmp_dim + ctrl->m_h_gap;
-
-    if (is_blinking)
-        draw_blinking_bmp(dc, wxPoint(h_pos, v_pos), is_blinking);
-
+    }
     return h_pos;
 }
 
