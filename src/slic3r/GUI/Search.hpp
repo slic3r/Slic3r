@@ -37,6 +37,10 @@ struct GroupAndCategory {
 };
 
 struct Option {
+
+//private:
+    //Option() {}
+//public:
 //    bool operator<(const Option& other) const { return other.label > this->label; }
     bool operator<(const Option& other) const { return other.opt_key > this->opt_key; }
 
@@ -50,6 +54,8 @@ struct Option {
     std::wstring    group_local;
     std::wstring    category;
     std::wstring    category_local;
+    std::wstring    tooltip;
+    std::wstring    tooltip_local;
 };
 
 struct FoundOption {
@@ -66,7 +72,7 @@ struct FoundOption {
 
 struct OptionViewParameters
 {
-    bool category   {false};
+    bool category   {true};
     bool english    {false};
     bool exact      {false};
 
