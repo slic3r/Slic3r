@@ -34,8 +34,8 @@ BridgeDetector::BridgeDetector(
 
 void BridgeDetector::initialize()
 {
-    // 5 degrees stepping
-    this->resolution = PI/(36.0*5); 
+    // 2 degrees stepping
+    this->resolution = PI/(90); 
     // output angle not known
     this->angle = -1.;
 
@@ -80,10 +80,7 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
 
     std::vector<BridgeDirection> candidates;
     if (bridge_direction_override == 0.) {
-        std::vector<double> angles = bridge_direction_candidates();
-        candidates.reserve(angles.size());
-        for (size_t i = 0; i < angles.size(); ++ i)
-            candidates.emplace_back(BridgeDirection(angles[i]));
+        candidates = bridge_direction_candidates();
     } else
         candidates.emplace_back(BridgeDirection(bridge_direction_override));
     
@@ -118,50 +115,90 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
                     Point((coord_t)round(c * bbox.max(0) - s * y), (coord_t)round(c * y + s * bbox.max(0)))));
         }
 
-        double total_length = 0;
-        uint32_t nbLines = 0;
-        double max_length = 0;
+        //compute stat on line with anchors, and their lengths.
+        BridgeDirection& c = candidates[i_angle];
+        std::vector<coordf_t> dist_anchored;
         {
             Lines clipped_lines = intersection_ln(lines, clip_area);
             for (size_t i = 0; i < clipped_lines.size(); ++i) {
                 const Line &line = clipped_lines[i];
                 if (expolygons_contain(this->_anchor_regions, line.a) && expolygons_contain(this->_anchor_regions, line.b)) {
                     // This line could be anchored.
-                    double len = line.length();
-                    total_length += len;
-                    max_length = std::max(max_length, len);
-                    nbLines++;
+                    coordf_t len = line.length();
+                    //store stats
+                    c.total_length_anchored += len;
+                    c.max_length_anchored = std::max(c.max_length_anchored, len);
+                    c.nb_lines_anchored++;
+                    dist_anchored.push_back(len);
+                } else {
+                    // this line could NOT be anchored.
+                    coordf_t len = line.length();
+                    c.total_length_free += len;
+                    c.max_length_free = std::max(c.max_length_free, len);
+                    c.nb_lines_free++;
                 }
             }        
         }
-        if (total_length == 0. || nbLines == 0)
+        if (c.total_length_anchored == 0. || c.nb_lines_anchored == 0) {
             continue;
+        } else {
+            have_coverage = true;
+            // compute median
+            if (!dist_anchored.empty()) {
+                std::sort(dist_anchored.begin(), dist_anchored.end());
+                c.median_length_anchor = dist_anchored[dist_anchored.size() / 2];
+            }
 
-        have_coverage = true;
-        // Sum length of bridged lines.
-        candidates[i_angle].coverage = total_length;
-        /*  The following produces more correct results in some cases and more broken in others.
-            TODO: investigate, as it looks more reliable than line clipping. */
-        // $directions_coverage{$angle} = sum(map $_->area, @{$self->coverage($angle)}) // 0;
-        // max length of bridged lines
-        candidates[i_angle].max_length = max_length;
-        candidates[i_angle].mean_length = total_length / nbLines;
+
+            // size is 20%
+        }
     }
 
     // if no direction produced coverage, then there's no bridge direction
     if (! have_coverage)
         return false;
-    
-    // sort directions by coverage - most coverage first
-    std::sort(candidates.begin(), candidates.end());
+
+
+    //compute global stat (max & min median & max length)
+    std::vector<coordf_t> all_median_length;
+    std::vector<coordf_t> all_max_length;
+    for (BridgeDirection &c : candidates) {
+        all_median_length.push_back(c.median_length_anchor);
+        all_max_length.push_back(c.max_length_anchored);
+    }
+    std::sort(all_median_length.begin(), all_median_length.end());
+    std::sort(all_max_length.begin(), all_max_length.end());
+    coordf_t median_max_length = all_max_length[all_max_length.size() / 2];
+    coordf_t min_max_length = all_max_length.front();
+    coordf_t max_max_length = all_max_length.back();
+    coordf_t median_median_length = all_median_length[all_median_length.size() / 2];
+    coordf_t min_median_length = all_median_length.front();
+    coordf_t max_median_length = all_median_length.back();
+
+    //compute individual score
+    for (BridgeDirection& c : candidates) {
+        c.coverage = 0;
+        //ratio_anchored is 70% of the score
+        double ratio_anchored = c.total_length_anchored / (c.total_length_anchored + c.total_length_free);
+        c.coverage = 70 * ratio_anchored;
+        //median is 15% (and need to invert it)
+        double ratio_median = 1 - double(c.median_length_anchor - min_median_length) / (double)std::max(1., max_median_length - min_median_length);
+        c.coverage += 15 * ratio_median;
+        //max is 15 % (and need to invert it)
+        double ratio_max = 1 - double(c.max_length_anchored - min_max_length) / (double)std::max(1., max_max_length - min_max_length);
+        c.coverage += 15 * ratio_max;
+        //bonus for perimeter dir
+        if (c.along_perimeter)
+            c.coverage += 0.05;
+
+    }
     
     // if any other direction is within extrusion width of coverage, prefer it if shorter
     // shorter = shorter max length, or if in espilon (10) range, the shorter mean length.
     // TODO: There are two options here - within width of the angle with most coverage, or within width of the currently perferred?
     size_t i_best = 0;
-    for (size_t i = 1; i < candidates.size() && candidates[i_best].coverage - candidates[i].coverage < this->spacing; ++ i)
-        if (candidates[i].max_length < candidates[i_best].max_length ||
-            (candidates[i].max_length < candidates[i_best].max_length - 10 && candidates[i].mean_length < candidates[i_best].mean_length))
+    for (size_t i = 1; i < candidates.size(); ++ i)
+        if (candidates[i].coverage > candidates[i_best].coverage)
             i_best = i;
 
     this->angle = candidates[i_best].angle;
@@ -171,42 +208,42 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
     #ifdef SLIC3R_DEBUG
     printf("  Optimal infill angle is %d degrees\n", (int)Slic3r::Geometry::rad2deg(this->angle));
     #endif
-    
+
     return true;
 }
 
-std::vector<double> BridgeDetector::bridge_direction_candidates() const
+std::vector<BridgeDetector::BridgeDirection> BridgeDetector::bridge_direction_candidates() const
 {
     // we test angles according to configured resolution
-    std::vector<double> angles;
+    std::vector<BridgeDirection> angles;
     for (int i = 0; i <= PI/this->resolution; ++i)
-        angles.push_back(i * this->resolution);
+        angles.emplace_back(i * this->resolution);
     
     // we also test angles of each bridge contour
     {
         Lines lines = to_lines(this->expolygons);
         for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line)
-            angles.push_back(line->direction());
+            angles.emplace_back(line->direction(), true);
     }
     
     /*  we also test angles of each open supporting edge
         (this finds the optimal angle for C-shaped supports) */
     for (const Polyline &edge : this->_edges)
         if (edge.first_point() != edge.last_point())
-            angles.push_back(Line(edge.first_point(), edge.last_point()).direction());
+            angles.emplace_back(Line(edge.first_point(), edge.last_point()).direction());
     
     // remove duplicates
-    double min_resolution = PI/180.0;  // 1 degree
+    double min_resolution = PI/(4*180.0);  // /180 = 1 degree
     std::sort(angles.begin(), angles.end());
     for (size_t i = 1; i < angles.size(); ++i) {
-        if (Slic3r::Geometry::directions_parallel(angles[i], angles[i-1], min_resolution)) {
+        if (Slic3r::Geometry::directions_parallel(angles[i].angle, angles[i-1].angle, min_resolution)) {
             angles.erase(angles.begin() + i);
             --i;
         }
     }
     /*  compare first value with last one and remove the greatest one (PI) 
         in case they are parallel (PI, 0) */
-    if (Slic3r::Geometry::directions_parallel(angles.front(), angles.back(), min_resolution))
+    if (Slic3r::Geometry::directions_parallel(angles.front().angle, angles.back().angle, min_resolution))
         angles.pop_back();
 
     return angles;

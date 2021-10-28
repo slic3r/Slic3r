@@ -36,7 +36,8 @@ public:
 
 struct FillParams
 {
-    bool        full_infill() const { return density > 0.9999f && density < 1.0001f; }
+    // Allways consider bridge as full infill, whatever the density is.
+    bool        full_infill() const { return flow.bridge || (density > 0.9999f && density < 1.0001f); }
     // Don't connect the fill lines around the inner perimeter.
     bool        dont_connect() const { return connection == InfillConnection::icNotConnected; }
 
