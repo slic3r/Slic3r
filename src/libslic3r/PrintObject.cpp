@@ -489,6 +489,8 @@ namespace Slic3r {
     // and to add a configurable number of solid layers above the BOTTOM / BOTTOMBRIDGE surfaces
     // to close these surfaces reliably.
     //FIXME Vojtech: Is this a good place to add supporting infills below sloping perimeters?
+        //note: only if not "ensure vertical shell"
+    //TODO merill: as "ensure_vertical_shell_thickness" is innefective, this should be simplified / streamlined / deleted?
         this->discover_horizontal_shells();
         m_print->throw_if_canceled();
 
@@ -2121,6 +2123,7 @@ namespace Slic3r {
 
                     // iterate through lower layers spanned by bridge_flow
                     double bottom_z = layer->print_z - bridge_flow.height;
+                    //TODO take into account sparse ratio! double protrude_by = bridge_flow.height - layer->height;
                     for (int i = int(layer_it - m_layers.begin()) - 1; i >= 0; --i) {
                         const Layer* lower_layer = m_layers[i];
 
@@ -2135,22 +2138,44 @@ namespace Slic3r {
                         // intersect such lower internal surfaces with the candidate solid surfaces
                         to_bridge_pp = intersection(to_bridge_pp, lower_internal);
                     }
+                    if (to_bridge_pp.empty()) continue;
 
+                    //put to_bridge_pp into to_bridge
                     // there's no point in bridging too thin/short regions
                     //FIXME Vojtech: The offset2 function is not a geometric offset, 
                     // therefore it may create 1) gaps, and 2) sharp corners, which are outside the original contour.
                     // The gaps will be filled by a separate region, which makes the infill less stable and it takes longer.
+
                     {
+                        to_bridge.clear();
+                        //choose betweent two offset the one that split the less the surface.
                         float min_width = float(bridge_flow.scaled_width()) * 3.f;
-                        to_bridge_pp = offset2(to_bridge_pp, -min_width, +min_width);
+                        for (Polygon& poly_to_check_for_thin : to_bridge_pp) {
+                            ExPolygons collapsed = offset2_ex({ poly_to_check_for_thin }, -min_width, +min_width * 1.25f);
+                            ExPolygons bridge = intersection_ex(collapsed, { ExPolygon{ poly_to_check_for_thin } });
+                            ExPolygons not_bridge = diff_ex({ ExPolygon{ poly_to_check_for_thin } }, collapsed);
+                            int try1_count = bridge.size() + not_bridge.size();
+                            if (try1_count > 1) {
+                                if (layer->id() == 15)
+                                    std::cout << "lol\n";
+                                min_width = float(bridge_flow.scaled_width()) * 1.5f;
+                                collapsed = offset2_ex({ poly_to_check_for_thin }, -min_width, +min_width * 1.5f);
+                                ExPolygons bridge2 = intersection_ex(collapsed, { ExPolygon{ poly_to_check_for_thin } });
+                                not_bridge = diff_ex({ ExPolygon{ poly_to_check_for_thin } }, collapsed);
+                                int try2_count = bridge2.size() + not_bridge.size();
+                                if(try2_count < try1_count)
+                                    to_bridge.insert(to_bridge.begin(), bridge2.begin(), bridge2.end());
+                                else
+                                    to_bridge.insert(to_bridge.begin(), bridge.begin(), bridge.end());
+                            } else if (!bridge.empty())
+                                to_bridge.push_back(bridge.front());
+                        }
                     }
+                    if (to_bridge.empty()) continue;
 
-                    if (to_bridge_pp.empty()) continue;
-
-                    // convert into ExPolygons
-                    to_bridge = union_ex(to_bridge_pp);
+                    // union
+                    to_bridge = union_ex(to_bridge);
                 }
-
 #ifdef SLIC3R_DEBUG
                 printf("Bridging %zu internal areas at layer %zu\n", to_bridge.size(), layer->id());
 #endif
@@ -3508,11 +3533,13 @@ static void fix_mesh_connectivity(TriangleMesh &mesh)
 
                                     // Scatter top / bottom regions to other layers. Scattering process is inherently serial, it is difficult to parallelize without locking.
                     for (int n = ((type & stPosTop) == stPosTop) ? int(i) - 1 : int(i) + 1;
+
                         ((type & stPosTop) == stPosTop) ?
                         (n >= 0 && (int(i) - n < num_solid_layers ||
                             print_z - m_layers[n]->print_z < region_config.top_solid_min_thickness.value - EPSILON)) :
                         (n < int(m_layers.size()) && (n - int(i) < num_solid_layers ||
                             m_layers[n]->bottom_z() - bottom_z < region_config.bottom_solid_min_thickness.value - EPSILON));
+
                         ((type & stPosTop) == stPosTop) ? --n : ++n)
                     {
                         //                    Slic3r::debugf "  looking for neighbors on layer %d...\n", $n;                  
@@ -3566,7 +3593,6 @@ static void fix_mesh_connectivity(TriangleMesh &mesh)
                                 offset2_ex(new_internal_solid, -margin, +margin, jtMiter, 5),
                                 true);
                             // Trim the regularized region by the original region.
-                            if (!too_narrow.empty())
                             if (!too_narrow.empty()) {
                                 solid = new_internal_solid = diff_ex(new_internal_solid, too_narrow);
                             }
