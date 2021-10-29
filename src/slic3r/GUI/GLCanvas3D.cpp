@@ -4864,7 +4864,7 @@ bool GLCanvas3D::_init_collapse_toolbar()
 
 bool GLCanvas3D::_set_current()
 {
-    return m_context != nullptr && m_canvas->SetCurrent(*m_context);
+    return m_context != nullptr && m_canvas->IsShownOnScreen() && m_canvas->SetCurrent(*m_context);
 }
 
 void GLCanvas3D::_resize(unsigned int w, unsigned int h)
