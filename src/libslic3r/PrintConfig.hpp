@@ -1379,6 +1379,7 @@ public:
     ConfigOptionPoints              thumbnails;
     ConfigOptionString              thumbnails_color;
     ConfigOptionBool                thumbnails_custom_color;
+    ConfigOptionBool                thumbnails_end_file;
     ConfigOptionBool                thumbnails_with_bed;
     ConfigOptionPercent             time_estimation_compensation;
     ConfigOptionInts                top_fan_speed;
@@ -1482,6 +1483,7 @@ protected:
         OPT_PTR(thumbnails);
         OPT_PTR(thumbnails_color);
         OPT_PTR(thumbnails_custom_color);
+        OPT_PTR(thumbnails_end_file);
         OPT_PTR(thumbnails_with_bed);
         OPT_PTR(time_estimation_compensation);
         OPT_PTR(top_fan_speed);

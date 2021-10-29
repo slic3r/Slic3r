@@ -757,6 +757,7 @@ const std::vector<std::string>& Preset::printer_options()
             "thumbnails",
             "thumbnails_color",
             "thumbnails_custom_color",
+            "thumbnails_end_file",
             "thumbnails_with_bed",
             "wipe_advanced",
             "wipe_advanced_nozzle_melted_volume",

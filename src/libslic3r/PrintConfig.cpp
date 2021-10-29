@@ -97,6 +97,13 @@ void PrintConfigDef::init_common_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("thumbnails_end_file", coBool);
+    def->label = L("Print at the end");
+    def->tooltip = L("Print the thumbnail code at the end of the gcode file instead of the front."
+        "\nBe careful! Most firmwares expect it at the front, so be sure that your firmware support it.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false)); 
+
     def = this->add("thumbnails_with_bed", coBool);
     def->label = L("Bed on thumbnail");
     def->tooltip = L("Show the bed texture on the thumbnail picture.");
@@ -5914,6 +5921,7 @@ std::unordered_set<std::string> prusa_export_to_remove_keys = {
 "thin_walls_speed",
 "thumbnails_color",
 "thumbnails_custom_color",
+"thumbnails_end_file",
 "thumbnails_with_bed",
 "thumbnails_with_support",
 "time_estimation_compensation",

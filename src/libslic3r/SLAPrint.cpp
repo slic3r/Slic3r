@@ -856,6 +856,7 @@ bool SLAPrint::invalidate_state_by_config_options(const std::vector<t_config_opt
         "thumbnails",
         "thumbnails_color",
         "thumbnails_custom_color",
+        "thumbnails_end_file",
         "thumbnails_with_bed",
         "thumbnails_with_support"
     };

@@ -1169,12 +1169,15 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     _write_format(file, "; %s\n\n", Slic3r::header_slic3r_generated().c_str());
 
 
-    const ConfigOptionBool *thumbnails_with_bed = print.full_print_config().option<ConfigOptionBool>("thumbnails_with_bed");
-    DoExport::export_thumbnails_to_file(thumbnail_cb, 
-        print.full_print_config().option<ConfigOptionPoints>("thumbnails")->values,
-        thumbnails_with_bed==nullptr? false:thumbnails_with_bed->value,
-        [this, file](const char* sz) { this->_write(file, sz); }, 
-        [&print]() { print.throw_if_canceled(); });
+    //print thumbnails at the start unless requested at the end.
+    const ConfigOptionBool* thumbnails_with_bed = print.full_print_config().option<ConfigOptionBool>("thumbnails_with_bed");
+    const ConfigOptionBool* thumbnails_end_file = print.full_print_config().option<ConfigOptionBool>("thumbnails_end_file");
+    if(!thumbnails_end_file || !thumbnails_end_file->value)
+        DoExport::export_thumbnails_to_file(thumbnail_cb, 
+            print.full_print_config().option<ConfigOptionPoints>("thumbnails")->values,
+            thumbnails_with_bed==nullptr? false:thumbnails_with_bed->value,
+            [this, file](const char* sz) { this->_write(file, sz); }, 
+            [&print]() { print.throw_if_canceled(); });
 
     // Write notes (content of the Print Settings tab -> Notes)
     {
@@ -1675,6 +1678,15 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
         if (!full_config.empty())
             _write(file, full_config, true);
     }
+    print.throw_if_canceled();
+
+    //print thumbnails at the end instead of the start if requested
+    if (thumbnails_end_file && thumbnails_end_file->value)
+        DoExport::export_thumbnails_to_file(thumbnail_cb,
+            print.full_print_config().option<ConfigOptionPoints>("thumbnails")->values,
+            thumbnails_with_bed == nullptr ? false : thumbnails_with_bed->value,
+            [this, file](const char* sz) { this->_write(file, sz); },
+            [&print]() { print.throw_if_canceled(); });
     print.throw_if_canceled();
 }
 

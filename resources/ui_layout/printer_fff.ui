@@ -28,8 +28,8 @@ group:silent_mode_event:Firmware
 	end_line
 	setting:gcode_filename_illegal_char
 group:Cooling fan
-	line:Speedup
-		setting:label$Speedup time:fan_speedup_time
+	line:Speedup time
+		setting:label$:fan_speedup_time
 		setting:label$Only for overhangs:fan_speedup_overhangs
 	end_line
 	setting:label$Kickstart duration:fan_kickstart
@@ -43,7 +43,10 @@ group:Thumbnails
 		setting:label$:sidetext_width$1:thumbnails_custom_color
 		setting:label$:label_width$1:thumbnails_color
 	end_line
-	setting:thumbnails_with_bed
+	line:Thumbnail options
+		setting:thumbnails_with_bed
+		setting:thumbnails_end_file
+	end_line
 group:Advanced
 	setting:use_relative_e_distances
 	setting:use_firmware_retraction
