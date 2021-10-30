@@ -986,71 +986,70 @@ void Control::draw_ruler(wxDC& dc)
             wxCoord pos = get_position_from_value(tick);
             draw_ticks_pair(dc, pos, mid, 5);
             draw_tick_text(dc, wxPoint(mid, pos), tick);
-        }
-    else {
-    auto draw_short_ticks = [this, mid](wxDC& dc, double& current_tick, int max_tick) {
-        while (current_tick < max_tick) {
-            wxCoord pos = get_position_from_value(lround(current_tick));
-            draw_ticks_pair(dc, pos, mid, 2);
-            current_tick += m_ruler.short_step;
-            if (current_tick > m_max_value)
-                break;
-        }
-    };   
-
-        double short_tick = std::nan("");
-        int tick = 0;
-        double value = 0.0;
-        int sequence = 0;
-
-        int prev_y_pos = -1;
-        wxCoord label_height = dc.GetMultiLineTextExtent("0").y - 2;
-        int values_size = (int)m_values.size();
-
-    while (tick <= m_max_value) {
-        value += m_ruler.long_step;
-        if (value > m_values.back() && sequence < m_ruler.count) {
-            value = m_ruler.long_step;
-                for (; tick < values_size; tick++)
-                    if (m_values[tick] < value)
+        } else {
+            auto draw_short_ticks = [this, mid](wxDC& dc, double& current_tick, int max_tick) {
+                while (current_tick < max_tick) {
+                    wxCoord pos = get_position_from_value(lround(current_tick));
+                    draw_ticks_pair(dc, pos, mid, 2);
+                    current_tick += m_ruler.short_step;
+                    if (current_tick > m_max_value)
                         break;
-                // short ticks from the last tick to the end of current sequence
-                assert(! std::isnan(short_tick));
+                }
+            };
+
+            double short_tick = std::nan("");
+            int tick = 0;
+            double value = 0.0;
+            int sequence = 0;
+
+            int prev_y_pos = -1;
+            wxCoord label_height = dc.GetMultiLineTextExtent("0").y - 2;
+            int values_size = (int)m_values.size();
+
+            while (tick <= m_max_value) {
+                value += m_ruler.long_step;
+                if (value > m_values.back() && sequence < m_ruler.count) {
+                    value = m_ruler.long_step;
+                    for (; tick < values_size; tick++)
+                        if (m_values[tick] < value)
+                            break;
+                    // short ticks from the last tick to the end of current sequence
+                    //assert(!std::isnan(short_tick));
+                    draw_short_ticks(dc, short_tick, tick);
+                    sequence++;
+                }
+                short_tick = tick;
+
+                for (; tick < values_size; tick++) {
+                    if (m_values[tick] == value)
+                        break;
+                    if (m_values[tick] > value) {
+                        if (tick > 0)
+                            tick--;
+                        break;
+                    }
+                }
+                if (tick > m_max_value)
+                    break;
+
+                wxCoord pos = get_position_from_value(tick);
+                draw_ticks_pair(dc, pos, mid, 5);
+                if (prev_y_pos < 0 || prev_y_pos - pos >= label_height) {
+                    draw_tick_text(dc, wxPoint(mid, pos), tick);
+                    prev_y_pos = pos;
+                }
+
                 draw_short_ticks(dc, short_tick, tick);
-                sequence++;
-            }
-            short_tick = tick;
 
-            for (; tick < values_size; tick++) {
-            if (m_values[tick] == value)
-                break;
-            if (m_values[tick] > value) {
-                if (tick > 0)
-                    tick--;
-                break;
+                if (value == m_values.back() && sequence < m_ruler.count) {
+                    value = 0.0;
+                    sequence++;
+                    tick++;
+                }
             }
+            // short ticks from the last tick to the end 
+            draw_short_ticks(dc, short_tick, m_max_value);
         }
-        if (tick > m_max_value)
-            break;
-
-        wxCoord pos = get_position_from_value(tick);
-        draw_ticks_pair(dc, pos, mid, 5);
-            if (prev_y_pos < 0 || prev_y_pos - pos >= label_height) {
-                draw_tick_text(dc, wxPoint(mid, pos), tick);
-                prev_y_pos = pos;
-            }
-
-        draw_short_ticks(dc, short_tick, tick);
-
-        if (value == m_values.back() && sequence < m_ruler.count) {
-            value = 0.0;
-            sequence++;
-            tick++;
-        }
-    }
-    // short ticks from the last tick to the end 
-    draw_short_ticks(dc, short_tick, m_max_value);
-    }
 
     dc.SetTextForeground(old_clr);
 }

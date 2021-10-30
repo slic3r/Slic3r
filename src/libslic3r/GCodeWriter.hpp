@@ -51,6 +51,7 @@ public:
     std::string set_fan(uint8_t speed, bool dont_save = false, uint16_t default_tool = 0);
     void        set_acceleration(uint32_t acceleration);
     uint32_t    get_acceleration() const;
+    uint32_t    get_max_acceleration() { return this->m_max_acceleration; }
     std::string write_acceleration();
     std::string reset_e(bool force = false);
     std::string update_progress(uint32_t num, uint32_t tot, bool allow_100 = false) const;
@@ -73,11 +74,12 @@ public:
     std::string retract(bool before_wipe = false);
     std::string retract_for_toolchange(bool before_wipe = false);
     std::string unretract();
-    std::string lift();
+    void        set_extra_lift(double extra_zlift) { this->m_extra_lift = extra_zlift; }
+    double      get_extra_lift() { return this->m_extra_lift; }
+    std::string lift(int layer_id);
     std::string unlift();
     Vec3d       get_position() const { return m_pos; }
 
-    void set_extra_lift(double extra_zlift) { this->extra_lift = extra_zlift; }
 private:
 	// Extruders are sorted by their ID, so that binary search is possible.
     std::vector<Extruder> m_extruders;
@@ -96,14 +98,15 @@ private:
     int16_t         m_last_temperature_with_offset;
     int16_t         m_last_bed_temperature;
     bool            m_last_bed_temperature_reached;
+    // if positive, it's set, and the next lift wil have this extra lift
+    double          m_extra_lift = 0;
+    // current lift, to remove from m_pos to have the current height.
     double          m_lifted;
     Vec3d           m_pos = Vec3d::Zero();
 
     std::string _travel_to_z(double z, const std::string &comment);
     std::string _retract(double length, double restart_extra, double restart_extra_toolchange, const std::string &comment);
 
-    // if positive, it's set, and the next lift wil have this extra lift
-    double extra_lift = 0;
 };
 
 } /* namespace Slic3r */

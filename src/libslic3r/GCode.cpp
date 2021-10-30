@@ -219,16 +219,23 @@ std::string Wipe::wipe(GCode& gcodegen, bool toolchange)
 }
 
 //if first layer, ask for a bigger lift for travel to object, to be on the safe side
-static inline void set_extra_lift(const Layer& layer, const Print& print, GCodeWriter & writer, int extruder_id) {
+static inline void set_extra_lift(const float previous_print_z, const int layer_id, const PrintConfig& print_config, GCodeWriter & writer, int extruder_id) {
     //if first layer, ask for a bigger lift for travel to object, to be on the safe side
-    if (layer.id() == 0 && 
-        (print.config().retract_lift.get_at(extruder_id) != 0 || print.config().retract_lift_first_layer.get_at(extruder_id))) {
-        //get biggest first layer height and set extra lift for first travel, to be safe.
-        double extra_lift_value = 0;
-        for (const PrintObject* obj : print.objects())
-            extra_lift_value = std::max(extra_lift_value, print.get_object_first_layer_height(*obj));
-        writer.set_extra_lift(extra_lift_value * 2);
+    double extra_lift_value = 0;
+    if (print_config.lift_min.value > 0) {
+        double retract_lift = 0;
+        //get the current lift (imo, should be given by the writer... i'm duplicating stuff here)
+        if(//(previous_print_z == 0 && print_config.retract_lift_above.get_at(writer.tool()->id()) == 0) ||
+            print_config.retract_lift_above.get_at(writer.tool()->id()) <= previous_print_z + EPSILON
+            || (layer_id == 0 && print_config.retract_lift_first_layer.get_at(writer.tool()->id())))
+            retract_lift = writer.tool()->retract_lift();
+        // see if it's positive
+        if (previous_print_z + extra_lift_value + retract_lift < print_config.lift_min.value) {
+            extra_lift_value = print_config.lift_min.value - previous_print_z - retract_lift;
+        }
     }
+    if(extra_lift_value > 0)
+        writer.set_extra_lift(extra_lift_value);
 }
 
     static inline Point wipe_tower_point_to_object_point(GCode &gcodegen, const Vec2f &wipe_tower_pt)
@@ -1398,6 +1405,8 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
 
     // Write the custom start G-code
     _writeln(file, start_gcode);
+    m_last_pos_defined = false;
+
     //flush FanMover buffer to avoid modifying the start gcode if it's manual.
     if (this->config().start_gcode_manual && this->m_fan_mover.get() != nullptr) {
         std::string to_write = this->m_fan_mover.get()->process_gcode("", true);
@@ -1514,8 +1523,10 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
                     // This happens before Z goes down to layer 0 again, so that no collision happens hopefully.
                     m_enable_cooling_markers = false; // we're not filtering these moves through CoolingBuffer
                     m_avoid_crossing_perimeters.use_external_mp_once();
+                    set_extra_lift(m_last_layer_z, 0, print.config(), m_writer, initial_extruder_id);
                     _write(file, this->retract());
                     std::string gcode;
+                    //go to origin of the next object (it's 0,0 because we shifted the origin to it)
                     Polyline polyline = this->travel_to(gcode, Point(0, 0), erNone);
                     this->write_travel_to(gcode, polyline, "move to origin position for next object");
                     _write(file, gcode);
@@ -1531,6 +1542,8 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
                     this->_print_first_layer_bed_temperature(file, print, between_objects_gcode, initial_extruder_id, false);
                     this->_print_first_layer_extruder_temperatures(file, print, between_objects_gcode, initial_extruder_id, false);
                     _writeln(file, between_objects_gcode);
+                } else {
+                    set_extra_lift(0, 0, print.config(), m_writer, initial_extruder_id);
                 }
                 //reinit the seam placer on the new object
                 m_seam_placer.init(print);
@@ -1555,6 +1568,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
                 m_second_layer_things_done = false;
                 prev_object = &object;
             }
+            set_extra_lift(m_last_layer_z, prev_object->layers().back()->id(), print.config(), m_writer, initial_extruder_id /* osef, it's only for the lift_min */);
         } else {
             // Sort layers by Z.
             // All extrusion moves with the same top layer height are extruded uninterrupted.
@@ -2263,7 +2277,22 @@ void GCode::process_layer(
             print.config().before_layer_gcode.value, m_writer.tool()->id(), &config)
             + "\n";
     }
-    gcode += this->change_layer(print_z);  // this will increase m_layer_index
+    // print z move to next layer UNLESS
+    // if it's going to the first layer, then we may want to dealy the move in these condition:
+    // there is no "after layer change gcode" and it's the first move from the unknown
+    if (print.config().layer_gcode.value.empty() && !m_last_pos_defined && m_config.start_gcode_manual && (
+            // there is a lift (on the first llyer, so the first move will bring us to the required height
+        (m_writer.tool()->retract_lift() > 0 && (m_config.retract_lift_above.get_at(m_writer.tool()->id()) == 0 || BOOL_EXTRUDER_CONFIG(retract_lift_first_layer)))
+        ||   // or lift_min is higher than the first layer height.
+         m_config.lift_min.value > layer.print_z
+        ))
+        m_delayed_layer_change = this->change_layer(print_z); //HACK for superslicer#1775
+    else {
+        //extra lift on layer change if multiple objects
+        if(single_object_instance_idx == size_t(-1) && (support_layer != nullptr || layers.size() > 1))
+            set_extra_lift(m_last_layer_z, layer.id(), print.config(), m_writer, first_extruder_id);
+        gcode += this->change_layer(print_z);  // this will increase m_layer_index
+    }
 	m_layer = &layer;
     if (! print.config().layer_gcode.value.empty()) {
         DynamicConfig config;
@@ -2478,9 +2507,12 @@ void GCode::process_layer(
             m_last_processor_extrusion_role = erWipeTower;
 
         //if first layer, ask for a bigger lift for travel to object, to be on the safe side
-        set_extra_lift(layer, print, m_writer, extruder_id);
+        if(single_object_instance_idx == size_t(-1) && m_layer_index == 0)
+            set_extra_lift(m_last_layer_z, layer.id(), print.config(), m_writer, extruder_id);
 
         if (auto loops_it = skirt_loops_per_extruder.find(extruder_id); loops_it != skirt_loops_per_extruder.end()) {
+            // before going to and from a global skirt, please ensure you are a a safe height
+            set_extra_lift(m_last_layer_z, layer.id(), print.config(), m_writer, extruder_id);
             const std::pair<size_t, size_t> loops = loops_it->second;
             this->set_origin(0., 0.);
             m_avoid_crossing_perimeters.use_external_mp();
@@ -2504,27 +2536,30 @@ void GCode::process_layer(
             // Allow a straight travel move to the first object point if this is the first layer (but don't in next layers).
             if (first_layer && loops.first == 0)
                 m_avoid_crossing_perimeters.disable_once();
+            // before going to and from a global skirt, please ensure you are a a safe height
+            set_extra_lift(m_last_layer_z, layer.id(), print.config(), m_writer, extruder_id);
         }
 
         // Extrude brim with the extruder of the 1st region.
         if (! m_brim_done) {
-            //if first layer, ask for a bigger lift for travel to object, to be on the safe side
-            set_extra_lift(layer, print, m_writer, extruder_id);
-
             this->set_origin(0., 0.);
             m_avoid_crossing_perimeters.use_external_mp();
-            gcode += this->extrude_entity(print.brim(), "Brim", m_config.support_material_speed.value);
+            for (const ExtrusionEntity* brim_entity : print.brim().entities) {
+                //if first layer, ask for a bigger lift for travel to each brim, to be on the safe side
+                set_extra_lift(m_last_layer_z, layer.id(), print.config(), m_writer, extruder_id);
+                gcode += this->extrude_entity(*brim_entity, "Brim", m_config.support_material_speed.value);
+            }
             m_brim_done = true;
             m_avoid_crossing_perimeters.use_external_mp(false);
             // Allow a straight travel move to the first object point.
             m_avoid_crossing_perimeters.disable_once();
+            //to go to the object-only skirt or brim, or to the object  (May be overriden here but I don't care)
+            set_extra_lift(m_last_layer_z, layer.id(), print.config(), m_writer, extruder_id);
         }
         //extrude object-only skirt
         //TODO: use it also for wiping like the other one (as they are exlusiev)
         if (single_object_instance_idx != size_t(-1) && !layers.front().object()->skirt().empty()
             && extruder_id == layer_tools.extruders.front()) {
-            //if first layer, ask for a bigger lift for travel to object, to be on the safe side
-            set_extra_lift(layer, print, m_writer, extruder_id);
 
             const PrintObject *print_object = layers.front().object();
             this->set_origin(unscale(print_object->instances()[single_object_instance_idx].shift));
@@ -2540,8 +2575,6 @@ void GCode::process_layer(
         //extrude object-only brim
         if (single_object_instance_idx != size_t(-1) && !layers.front().object()->brim().empty()
             && extruder_id == layer_tools.extruders.front()) {
-            //if first layer, ask for a bigger lift for travel to object, to be on the safe side
-            set_extra_lift(layer, print, m_writer, extruder_id);
 
             const PrintObject *print_object = layers.front().object();
             this->set_origin(unscale(print_object->instances()[single_object_instance_idx].shift));
@@ -2566,7 +2599,7 @@ void GCode::process_layer(
         for (int print_wipe_extrusions = is_anything_overridden; print_wipe_extrusions>=0; --print_wipe_extrusions) {
             if (is_anything_overridden && print_wipe_extrusions == 0)
                 gcode+="; PURGING FINISHED\n";
-
+            bool first_object = true;
             for (InstanceToPrint &instance_to_print : instances_to_print) {
                 m_config.apply(instance_to_print.print_object.config(), true);
                 m_layer = layers[instance_to_print.layer_id].layer();
@@ -2592,8 +2625,11 @@ void GCode::process_layer(
                         m_gcode_label_objects_start += std::string("M486 S") + std::to_string(instance_plater_id) + "\n";
                     }
                 }
-                //if first layer, ask for a bigger lift for travel to object, to be on the safe side
-                set_extra_lift(layer, print, m_writer, extruder_id);
+                // ask for a bigger lift for travel to object when moving to another object
+                if (single_object_instance_idx == size_t(-1) && !first_object)
+                    set_extra_lift(m_last_layer_z, layer.id(), print.config(), m_writer, extruder_id);
+                else 
+                    first_object = false;
                 // When starting a new object, use the external motion planner for the first travel move.
                 const Point &offset = instance_to_print.print_object.instances()[instance_to_print.instance_id].shift;
                 std::pair<const PrintObject*, Point> this_object_copy(&instance_to_print.print_object, offset);
@@ -3902,7 +3938,10 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
         if (m_config.travel_acceleration.value > 0)
             travel_acceleration = m_config.travel_acceleration.get_abs_value(acceleration);
     }
-
+    if (m_writer.get_max_acceleration() > 0) {
+        acceleration =          std::min((double)m_writer.get_max_acceleration(), acceleration);
+        travel_acceleration =   std::min((double)m_writer.get_max_acceleration(), travel_acceleration);
+    }
     if (travel_acceleration == acceleration) {
         m_writer.set_acceleration((uint32_t)floor(acceleration + 0.5));
         // go to first point of extrusion path (stop at midpoint to let us set the decel speed)
@@ -3915,7 +3954,10 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
         if (!m_last_pos_defined || m_last_pos != path.first_point()) {
             Polyline poly_start = this->travel_to(gcode, path.first_point(), path.role());
             coordf_t length = poly_start.length();
-            if (length > SCALED_EPSILON) {
+            // if length is enough, it's not the hack for first move, and the travel accel is different than the normal accel
+            // then cut the travel in two to change the accel in-between
+            // TODO: compute the real point where it should be cut, considering an infinite max speed.
+            if (length > std::max(scale_d(EPSILON), scale_d(m_config.min_length)) && m_last_pos_defined && floor(travel_acceleration) != floor(acceleration)) {
                 Polyline poly_end;
                 coordf_t min_length = scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0.5)) * 20;
                 if (poly_start.size() > 2 && length > min_length * 3) {
@@ -3954,7 +3996,18 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
     _add_object_change_labels(gcode);
 
     // compensate retraction
-    gcode += this->unretract();
+    if (m_delayed_layer_change.empty()) {
+        gcode += m_writer.unlift();//this->unretract();
+    } else {
+        //check if an unlift happens
+        std::string unlift = m_writer.unlift();
+        if (unlift.empty()) {
+            unlift = m_delayed_layer_change;
+        }
+        m_delayed_layer_change.clear();
+        gcode += unlift;
+    }
+    gcode += m_writer.unretract();
 
     speed = _compute_speed_mm_per_sec(path, speed);
     double F = speed * 60;  // convert mm/sec to mm/min
@@ -4185,7 +4238,9 @@ std::string GCode::retract(bool toolchange)
         methods even if we performed wipe, since this will ensure the entire retraction
         length is honored in case wipe path was too short.  */
     gcode += toolchange ? m_writer.retract_for_toolchange() : m_writer.retract();
-    bool need_lift = !m_writer.tool_is_extruder() || toolchange || (BOOL_EXTRUDER_CONFIG(retract_lift_first_layer) && m_config.print_retract_lift.value != 0 && this->m_layer_index == 0);
+    bool need_lift = !m_writer.tool_is_extruder() || toolchange 
+        || (BOOL_EXTRUDER_CONFIG(retract_lift_first_layer) && m_config.print_retract_lift.value != 0 && this->m_layer_index == 0) 
+        || this->m_writer.get_extra_lift() > 0;
     bool last_fill_extusion_role_top_infill = (this->m_last_extrusion_role == ExtrusionRole::erTopSolidInfill || this->m_last_extrusion_role == ExtrusionRole::erIroning);
     if(this->m_last_extrusion_role == ExtrusionRole::erGapFill)
         last_fill_extusion_role_top_infill = (this->m_last_notgapfill_extrusion_role == ExtrusionRole::erTopSolidInfill || this->m_last_notgapfill_extrusion_role == ExtrusionRole::erIroning);
@@ -4198,12 +4253,7 @@ std::string GCode::retract(bool toolchange)
             need_lift = true;
     }
     if (need_lift)
-        if (m_writer.tool()->retract_length() > 0 
-            || m_config.use_firmware_retraction
-            || (!m_writer.tool_is_extruder() && m_writer.tool()->retract_lift() != 0)
-            || (BOOL_EXTRUDER_CONFIG(retract_lift_first_layer) && this->m_layer_index == 0)
-            )
-            gcode += m_writer.lift();
+        gcode += m_writer.lift(this->m_layer_index);
 
     return gcode;
 }

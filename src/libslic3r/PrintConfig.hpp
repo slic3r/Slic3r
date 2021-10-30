@@ -1338,6 +1338,7 @@ public:
     ConfigOptionInts                first_layer_temperature;
     ConfigOptionInts                full_fan_speed_layer;
     ConfigOptionFloatOrPercent      infill_acceleration;
+    ConfigOptionFloat               lift_min;
     ConfigOptionInts                max_fan_speed;
     ConfigOptionFloatsOrPercents    max_layer_height;
     ConfigOptionFloat               max_print_height;
@@ -1442,6 +1443,7 @@ protected:
         OPT_PTR(first_layer_temperature);
         OPT_PTR(full_fan_speed_layer);
         OPT_PTR(infill_acceleration);
+        OPT_PTR(lift_min);
         OPT_PTR(max_fan_speed);
         OPT_PTR(max_layer_height);
         OPT_PTR(max_print_height);

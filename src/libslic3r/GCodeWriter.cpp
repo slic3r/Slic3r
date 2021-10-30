@@ -510,14 +510,14 @@ std::string GCodeWriter::travel_to_z(double z, const std::string &comment)
     /*  If target Z is lower than current Z but higher than nominal Z
         we don't perform the move but we only adjust the nominal Z by
         reducing the lift amount that will be used for unlift. */
-    if (!this->will_move_z(z)) {
+    // note that if we move but it's lower and we are lifted, we can wait a bit for unlifting, to avoid possible dance on layer change.
+    if (!this->will_move_z(z) || z < m_pos.z() && m_lifted > EPSILON) {
         double nominal_z = m_pos.z() - m_lifted;
         m_lifted -= (z - nominal_z);
         if (std::abs(m_lifted) < EPSILON)
             m_lifted = 0.;
         return "";
     }
-    
     /*  In all the other cases, we perform an actual Z move and cancel
         the lift. */
     m_lifted = 0;
@@ -548,7 +548,7 @@ bool GCodeWriter::will_move_z(double z) const
         we don't perform an actual Z move. */
     if (m_lifted > 0) {
         double nominal_z = m_pos.z() - m_lifted;
-        if (z >= nominal_z && z <= m_pos.z())
+        if (z >= nominal_z + EPSILON && z <= m_pos.z() - EPSILON)
             return false;
     }
     return true;
@@ -698,15 +698,19 @@ std::string GCodeWriter::unretract()
 /*  If this method is called more than once before calling unlift(),
     it will not perform subsequent lifts, even if Z was raised manually
     (i.e. with travel_to_z()) and thus _lifted was reduced. */
-std::string GCodeWriter::lift()
+std::string GCodeWriter::lift(int layer_id)
 {
     // check whether the above/below conditions are met
     double target_lift = 0;
     if(this->tool_is_extruder()){
-        //these two should be in the Tool class methods....
-        double above = this->config.retract_lift_above.get_at(m_tool->id());
-        double below = this->config.retract_lift_below.get_at(m_tool->id());
-        if (m_pos.z() >= above && (below == 0 || m_pos.z() <= below))
+        bool can_lift = this->config.retract_lift_first_layer.get_at(m_tool->id()) && layer_id == 0;
+        if (!can_lift) {
+            //these two should be in the Tool class methods....
+            double above = this->config.retract_lift_above.get_at(m_tool->id());
+            double below = this->config.retract_lift_below.get_at(m_tool->id());
+            can_lift = (m_pos.z() >= above - EPSILON && (below == 0 || m_pos.z() <= below + EPSILON));
+        }
+        if(can_lift)
             target_lift = m_tool->retract_lift();
     } else {
         target_lift = m_tool->retract_lift();
@@ -717,17 +721,19 @@ std::string GCodeWriter::lift()
         target_lift = config_region->print_retract_lift.value;
     }
 
-    if (this->extra_lift > 0) {
-        target_lift += this->extra_lift;
-        this->extra_lift = 0;
+    // one-time extra lift (often for dangerous travels)
+    if (this->m_extra_lift > 0) {
+        target_lift += this->m_extra_lift;
+        this->m_extra_lift = 0;
     }
 
     // compare against epsilon because travel_to_z() does math on it
     // and subtracting layer_height from retract_lift might not give
     // exactly zero
-    if (std::abs(m_lifted) < EPSILON && target_lift > 0) {
+    if (std::abs(m_lifted) < target_lift - EPSILON && target_lift > 0) {
+        std::string str =  this->_travel_to_z(m_pos.z() + target_lift - m_lifted, "lift Z");
         m_lifted = target_lift;
-        return this->_travel_to_z(m_pos.z() + target_lift, "lift Z");
+        return str;
     }
     return "";
 }

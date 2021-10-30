@@ -349,6 +349,8 @@ private:
     // Markers for the Pressure Equalizer to recognize the extrusion type.
     // The Pressure Equalizer removes the markers from the final G-code.
     bool                                m_enable_extrusion_role_markers;
+    // HACK to avoid multiple Z move.
+    std::string                         m_delayed_layer_change;
     // Keeps track of the last extrusion role passed to the processor
     ExtrusionRole                       m_last_processor_extrusion_role;
     // How many times will change_layer() be called?
