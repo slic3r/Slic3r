@@ -1398,6 +1398,13 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
 
     // Write the custom start G-code
     _writeln(file, start_gcode);
+    //flush FanMover buffer to avoid modifying the start gcode if it's manual.
+    if (this->config().start_gcode_manual && this->m_fan_mover.get() != nullptr) {
+        std::string to_write = this->m_fan_mover.get()->process_gcode("", true);
+        const char* gcode_to_write = to_write.c_str();
+        // writes string to file
+        fwrite(gcode_to_write, 1, ::strlen(gcode_to_write), file);
+    }
 
     // Process filament-specific gcode.
    /* if (has_wipe_tower) {
@@ -1711,7 +1718,7 @@ std::string GCode::placeholder_parser_process(const std::string &name, const std
         func_add_colour("thumbnails_color_int", config().thumbnails_color);
 
         std::string gcode = m_placeholder_parser.process(templ, current_extruder_id, config_override, &m_placeholder_parser_context);
-        if (!gcode.empty() && m_config.gcode_comments) {
+        if (!gcode.empty() && (m_config.gcode_comments || m_config.fan_speedup_time.value != 0 || m_config.fan_kickstart.value != 0 )) {
             gcode = "; custom gcode: " + name + "\n" + gcode;
             check_add_eol(gcode);
             gcode += "; custom gcode end: "+ name + "\n";
