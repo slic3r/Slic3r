@@ -1591,8 +1591,8 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("filament_max_overlap", coPercents);
     def->label = L("Max line overlap");
-    def->tooltip = L("This settign will ensure that all overlap are no hgher than this value."
-        " This is useful for filament that are too viscous, as the line can't flow under the previous one.");
+    def->tooltip = L("This setting will ensure that all 'overlap' are not higher than this value."
+        " This is useful for filaments that are too viscous, as the line can't flow under the previous one.");
     def->sidetext = L("%");
     def->ratio_over = "";
     def->min = 0;
@@ -6178,7 +6178,8 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
                 skirts += config->option("skirt_brim")->getInt();
             if (skirts > 0 && config->option("skirt_height")->getInt() >= 1 && !config->option("complete_objects_one_skirt")->getBool()) {
                 float overlap_ratio = 1;
-                if (config->option<ConfigOptionPercents>("filament_max_overlap")) overlap_ratio = config->get_computed_value("filament_max_overlap");
+                //can't know the extruder, so we settle on the worst: 100%
+                //if (config->option<ConfigOptionPercents>("filament_max_overlap")) overlap_ratio = config->get_computed_value("filament_max_overlap");
                 if (ref_height == 0) {
                     skirt_dist = config->option("skirt_distance")->getFloat();
                     Flow skirt_flow = Flow::new_from_config_width(
