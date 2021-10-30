@@ -200,7 +200,7 @@ void AppConfig::set_defaults()
 		
         if (get("use_rich_tooltip").empty())
             set("use_rich_tooltip", 
-#ifndef WIN32
+#if __APPLE__
 			"1"
 #else
 			"0"

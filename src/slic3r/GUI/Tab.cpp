@@ -1810,6 +1810,10 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             if (current_group->sidetext_width >= 0)
                 option.opt.sidetext_width = current_group->sidetext_width;
 
+            // global before the loop because can be overriden
+            if (height > 0)
+                option.opt.height = height;
+
             bool need_to_notified_search = false;
             bool colored = false;
             wxString label_path;
@@ -1883,8 +1887,6 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
             if (need_to_notified_search)
                 Search::OptionsSearcher::register_label_override(option.opt.opt_key, option.opt.label, option.opt.full_label, option.opt.tooltip);
 
-            if(height>0)
-                option.opt.height = height;
 
             if (!in_line) {
                 if (colored) {

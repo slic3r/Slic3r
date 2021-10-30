@@ -1334,7 +1334,7 @@ public:
     ConfigOptionPercent             first_layer_flow_ratio;
     ConfigOptionFloatOrPercent      first_layer_speed;
     ConfigOptionFloatOrPercent      first_layer_infill_speed;
-    ConfigOptionFloatOrPercent      first_layer_min_speed;
+    ConfigOptionFloat               first_layer_min_speed;
     ConfigOptionInts                first_layer_temperature;
     ConfigOptionInts                full_fan_speed_layer;
     ConfigOptionFloatOrPercent      infill_acceleration;

@@ -3852,7 +3852,7 @@ double_t GCode::_compute_speed_mm_per_sec(const ExtrusionPath& path, double spee
             if (first_layer_speed > 0)
                 speed = std::min(first_layer_speed, speed);
         }
-        double first_layer_min_speed = m_config.first_layer_min_speed.get_abs_value(base_speed);
+        double first_layer_min_speed = m_config.first_layer_min_speed.value;
         speed = std::max(first_layer_min_speed, speed);
     }
     // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)

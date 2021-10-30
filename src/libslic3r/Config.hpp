@@ -302,13 +302,13 @@ public:
     // if true, this option doesn't need to be saved, it's a computed value from an other configOption.
     // uint32_t because macos crash if it's a bool. and it doesn't change the size of the object because of alignment.
     uint32_t flags;
-    enum FlagsConfigOption : uint8_t {
+    enum FlagsConfigOption : uint32_t {
         FCO_PHONY = 1,
         FCO_EXTRUDER_ARRAY = 1 << 1,
     };
 
     ConfigOption() : flags(uint32_t(0)) {}
-    ConfigOption(bool phony) : flags(uint32_t(FlagsConfigOption::FCO_PHONY)) {}
+    ConfigOption(bool phony) : flags(phony ? uint32_t(FlagsConfigOption::FCO_PHONY) : uint32_t(0)) {}
 
     virtual ~ConfigOption() {}
 
@@ -1798,7 +1798,7 @@ public:
     // With which printer technology is this configuration valid?
     PrinterTechnology                   printer_technology = ptUnknown;
     // Category of a configuration field, from the GUI perspective.
-    OptionCategory                      category = OptionCategory::none;
+    OptionCategory                      category        = OptionCategory::none;
     // A tooltip text shown in the GUI.
     std::string                         tooltip;
     // Text right from the input field, usually a unit of measurement.
@@ -1825,21 +1825,21 @@ public:
     // Height of a multiline GUI text box.
     int                                 height          = -1;
     // Optional width of an input field.
-    int                                 width = -1;
+    int                                 width           = -1;
     // Optional label width of the label (if in a line).
-    int                                 label_width = -1;
+    int                                 label_width     = -1;
     // Optional label alignement to the left instead of the right
     bool                                aligned_label_left = false;
     // Optional label width of the sidetext (if in a line).
-    int                                 sidetext_width = -1;
+    int                                 sidetext_width  = -1;
     // <min, max> limit of a numeric input.
     // If not set, the <min, max> is set to <INT_MIN, INT_MAX>
     // By setting min=0, only nonnegative input is allowed.
-    double                              min = INT_MIN;
-    double                              max = INT_MAX;
+    double                              min             = INT_MIN;
+    double                              max             = INT_MAX;
     // max precision after the dot, only for display
-    int                                 precision = 6;
-    ConfigOptionMode                    mode = comSimple;
+    int                                 precision       = 6;
+    ConfigOptionMode                    mode            = comSimple;
     // Legacy names for this configuration option.
     // Used when parsing legacy configuration file.
     std::vector<t_config_option_key>    aliases;

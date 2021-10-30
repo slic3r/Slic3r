@@ -58,25 +58,25 @@ group:
 	setting:start_gcode_manual
 height:15
 group:no_title:Start G-code
-	setting:full_width:start_gcode
+	setting:full_width:height$21:start_gcode
 group:no_title:End G-code
 	setting:full_width:end_gcode
 group:no_title:Before layer change G-code
-	setting:full_width:before_layer_gcode
+	setting:full_width:height$9:before_layer_gcode
 group:no_title:After layer change G-code
-	setting:full_width:layer_gcode
+	setting:full_width:height$9:layer_gcode
 group:no_title:Tool change G-code
-	setting:full_width:toolchange_gcode
+	setting:full_width:height$9:toolchange_gcode
 group:no_title:Between objects G-code (for sequential printing)
-	setting:full_width:between_objects_gcode
+	setting:full_width:height$9:between_objects_gcode
 group:no_title:Between extrusion role change G-code
-	setting:full_width:feature_gcode
+	setting:full_width:height$9:feature_gcode
 group:no_title:Colour Change G-code
-	setting:full_width:color_change_gcode
+	setting:full_width:height$5:color_change_gcode
 group:no_title:Pause Print G-code
-	setting:full_width:pause_print_gcode
+	setting:full_width:height$5:pause_print_gcode
 group:no_title:Template Custom G-code
-	setting:full_width:template_custom_gcode
+	setting:full_width:height$5:template_custom_gcode
 height:0
 
 page:Notes:note.png

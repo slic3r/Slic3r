@@ -339,7 +339,6 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Bridges fan speed");
     def->category = OptionCategory::cooling;
     def->tooltip = L("This fan speed is enforced during bridges and overhangs. It won't slow down the fan if it's currently running at a higher speed."
-        "\nSet to 1 to disable the fan."
         "\nSet to -1 to disable this override."
         "\nCan only be overriden by disable_fan_first_layers.");
     def->sidetext = L("%");
@@ -353,8 +352,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Infill bridges fan speed");
     def->category = OptionCategory::cooling;
     def->tooltip = L("This fan speed is enforced during all infill bridges. It won't slow down the fan if it's currently running at a higher speed."
-        "\nSet to 1 to disable the fan."
-        "\nSet to -1 to disable this override (will take the value of Bridges fan speed)."
+        "\nSet to 1 to follow default speed."
+        "\nSet to -1 to disable this override (internal bridges will use Bridges fan speed)."
         "\nCan only be overriden by disable_fan_first_layers.");
     def->sidetext = L("%");
     def->min = -1;
@@ -691,7 +690,7 @@ void PrintConfigDef::init_fff_params()
     def->max = 1000;
     def->mode = comExpert;
     def->is_vector_extruder = true;
-    def->set_default_value(new ConfigOptionInts { 3 });
+    def->set_default_value(new ConfigOptionInts { 1 });
 
     def = this->add("dont_support_bridges", coBool);
     def->label = L("Don't support bridges");
@@ -715,7 +714,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm");
     def->aliases = { "multiply_distance" };
     def->min = 0;
-    def->set_default_value(new ConfigOptionFloat(0));
+    def->set_default_value(new ConfigOptionFloat(6));
 
     def = this->add("end_gcode", coString);
     def->label = L("End G-code");
@@ -747,7 +746,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Ensure vertical shell thickness");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Add solid infill near sloping surfaces to guarantee the vertical shell thickness "
-                   "(top+bottom solid layers).");
+                   "(top+bottom solid layers)."
+                   "\n!! solid_over_perimeters may erase these surfaces !! So you should deactivate it if you want to use this.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
@@ -884,7 +884,7 @@ void PrintConfigDef::init_fff_params()
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+    def->set_default_value(new ConfigOptionFloatOrPercent(105, true, false));
 
     def = this->add("external_perimeter_extrusion_spacing", coFloatOrPercent);
     def->label = L("External perimeters");
@@ -1161,7 +1161,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("extruder_colour", coStrings);
     def->label = L("Extruder Color");
     def->category = OptionCategory::extruders;
-    def->tooltip = L("This is only used in the Slic3r interface as a visual help.");
+    def->tooltip = L("This is only used in Slic3r interface as a visual help.");
     def->gui_type = "color";
     // Empty string means no color assigned yet.
     def->mode = comAdvanced;
@@ -1249,7 +1249,7 @@ void PrintConfigDef::init_fff_params()
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
 
     def = this->add("extrusion_spacing", coFloatOrPercent);
     def->label = L("Default extrusion spacing");
@@ -1263,7 +1263,7 @@ void PrintConfigDef::init_fff_params()
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(100, true, false));
 
     def = this->add("fan_always_on", coBools);
     def->label = L("Keep fan always on");
@@ -1272,7 +1272,7 @@ void PrintConfigDef::init_fff_params()
                 " Useful for PLA, harmful for ABS.");
     def->mode = comSimple;
     def->is_vector_extruder = true;
-    def->set_default_value(new ConfigOptionBools{ false });
+    def->set_default_value(new ConfigOptionBools{ true });
 
     def = this->add("fan_below_layer_time", coInts);
     def->label = L("Enable fan if layer print time is below");
@@ -1901,7 +1901,7 @@ void PrintConfigDef::init_fff_params()
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(140, true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(140, true, false));
 
     def = this->add("first_layer_extrusion_spacing", coFloatOrPercent);
     def->label = L("First layer");
@@ -1935,11 +1935,9 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Max");
     def->full_label = L("Default first layer speed");
     def->category = OptionCategory::speed;
-    def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to all the print moves "
-        "but infill of the first layer, it can be overwritten by the 'default' (default depends of the type of the path) "
-        "speed if it's lower than that. If expressed as a percentage "
-        "it will scale the current speed."
-        "\nSet it at 100% to remove any first layer speed modification (with first_layer_infill_speed and first_layer_speed_min).");
+    def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied as a maximum to all the print moves (but infill) of the first layer."
+        "\nIf expressed as a percentage it will scale the current speed."
+        "\nSet it at 100% to remove any first layer speed modification (but for infill).");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "depends";
     def->min = 0;
@@ -1950,29 +1948,25 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Infill");
     def->full_label = L("Infill first layer speed");
     def->category = OptionCategory::speed;
-    def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to infill moves "
-                   "of the first layer, it can be overwritten by the 'default' (solid infill or infill if not bottom) "
-                   "speed if it's lower than that. If expressed as a percentage "
-                   "(for example: 40%) it will scale the current infill speed.");
+    def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied as a maximum for all infill print moves of the first layer."
+                   "\nIf expressed as a percentage it will scale the current infill speed."
+                   "\nSet it at 100% to remove any infill first layer speed modification.");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "depends";
     def->min = 0;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(30, false));
 
-    def = this->add("first_layer_min_speed", coFloatOrPercent);
+    def = this->add("first_layer_min_speed", coFloat);
     def->label = L("Min");
     def->full_label = L("Min first layer speed");
     def->category = OptionCategory::speed;
-    def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied to all the print moves"
-        ", it can be overwritten by the 'default' (default depends of the type of the path) speed if it's higher than that."
-        " If expressed as a percentage it will scale the current speed."
+    def->tooltip = L("Minimum speed when printing the first layer."
         "\nSet zero to disable.");
-    def->sidetext = L("mm/s or %");
-    def->ratio_over = "depends";
+    def->sidetext = L("mm/s");
     def->min = 0;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+    def->set_default_value(new ConfigOptionFloat(0));
     
     def = this->add("first_layer_temperature", coInts);
     def->label = L("First layer");
@@ -1996,7 +1990,7 @@ void PrintConfigDef::init_fff_params()
     def->max = 1000;
     def->mode = comExpert;
     def->is_vector_extruder = true;
-    def->set_default_value(new ConfigOptionInts { 0 });
+    def->set_default_value(new ConfigOptionInts { 4 });
 
     def = this->add("gap_fill", coBool);
     def->label = L("Gap fill");
@@ -2013,7 +2007,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::perimeter;
     def->tooltip = L("All gaps, between the last perimeter and the infill, which are thinner than a perimeter will be filled by gapfill.");
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionBool{true });
+    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("gap_fill_min_area", coFloatOrPercent);
     def->label = L("Min surface");
@@ -2066,7 +2060,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("All characters that are written here will be replaced by '_' when writing the gcode file name."
         "\nIf the first charater is '[' or '(', then this field will be considered as a regexp (enter '[^a-zA-Z0-9]' to only use ascii char).");
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionString(""));
+    def->set_default_value(new ConfigOptionString("[<>:\"/\\\\|?*]"));
 
     def = this->add("gcode_flavor", coEnum);
     def->label = L("G-code flavor");
@@ -2102,7 +2096,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back("Lerdge");
     def->enum_labels.push_back(L("No extrusion"));
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionEnum<GCodeFlavor>(gcfSprinter));
+    def->set_default_value(new ConfigOptionEnum<GCodeFlavor>(gcfMarlin));
 
     def = this->add("gcode_filename_illegal_char", coString);
     def->label = L("Illegal characters");
@@ -2341,7 +2335,7 @@ void PrintConfigDef::init_fff_params()
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
 
     def = this->add("infill_extrusion_spacing", coFloatOrPercent);
     def->label = L("Infill");
@@ -2356,7 +2350,7 @@ void PrintConfigDef::init_fff_params()
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(100, true, false));
 
     def = this->add("infill_first", coBool);
     def->label = L("Infill before perimeters");
@@ -2519,7 +2513,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("remaining_times", coBool);
     def->label = L("Supports remaining times");
     def->category = OptionCategory::firmware;
-    def->tooltip = L("Emit somethign at 1 minute intervals into the G-code to let the firmware show accurate remaining time.");
+    def->tooltip = L("Emit something at 1 minute intervals into the G-code to let the firmware show accurate remaining time.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
 
@@ -3095,7 +3089,8 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Round corners for perimeters");
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Internal perimeters will go around sharp corners by turning around instead of making the same sharp corner."
-                        " This can help when there are visible holes in sharp corners on perimeters");
+                        " This can help when there are visible holes in sharp corners on perimeters. It also help to print the letters on the benchy stern."
+                        "\nCan incur some more processing time, and corners are a bit less sharp.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
@@ -3124,7 +3119,7 @@ void PrintConfigDef::init_fff_params()
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
 
     def = this->add("perimeter_extrusion_spacing", coFloatOrPercent);
     def->label = L("Perimeters");
@@ -3139,7 +3134,7 @@ void PrintConfigDef::init_fff_params()
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(100, true, false));
 
     def = this->add("perimeter_speed", coFloat);
     def->label = L("Internal");
@@ -3437,7 +3432,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("%");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionPercent(100));
+    def->set_default_value(new ConfigOptionPercent(80));
 
     def = this->add("seam_travel_cost", coPercent);
     def->label = L("Travel cost");
@@ -3447,7 +3442,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("%");
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionPercent(100));
+    def->set_default_value(new ConfigOptionPercent(20));
 
     def = this->add("seam_gap", coFloatsOrPercents);
     def->label = L("Seam gap");
@@ -3696,7 +3691,7 @@ void PrintConfigDef::init_fff_params()
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
 
     def = this->add("solid_infill_extrusion_spacing", coFloatOrPercent);
     def->label = L("Solid spacing");
@@ -3711,7 +3706,7 @@ void PrintConfigDef::init_fff_params()
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0, false, true));
+    def->set_default_value(new ConfigOptionFloatOrPercent(100, true, false));
 
     def = this->add("solid_infill_speed", coFloatOrPercent);
     def->label = L("Solid");
@@ -3878,11 +3873,12 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::perimeter;
     def->tooltip = L("When you have a medium/hight number of top/bottom solid layers, and a low/medium of perimeters,"
         " then it have to put some solid infill inside the part to have enough solid layers."
-        "\nBy setting this to somethign higher than 0, you can remove this 'inside filling'."
+        "\nBy setting this to something higher than 0, you can remove this 'inside filling'."
         " This number allow to keep some if there is a low number of perimeter over the void."
         "\nIf this setting is equal or higher than the top/bottom solid layer count, it won't evict anything."
         "\nIf this setting is set to 1, it will evict all solid fill are are only over perimeters."
-        "\nSet zero to disable.");
+        "\nSet zero to disable."
+        "\n!! ensure_vertical_shell_thickness may be erased by this setting !! You may want to deactivate at least one of the two.");
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(2));
@@ -4299,7 +4295,7 @@ void PrintConfigDef::init_fff_params()
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
+    def->set_default_value(new ConfigOptionFloatOrPercent(105, true, false));
 
     def = this->add("top_infill_extrusion_spacing", coFloatOrPercent);
     def->label = L("Top solid spacing");
@@ -5680,6 +5676,8 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
             value = "5";
         }
     }
+    if ("first_layer_min_speed" == opt_key && value.back() == '%')
+        value = value.substr(0, value.length() - 1); //no percent.
 
     // Ignore the following obsolete configuration keys:
     static std::set<std::string> ignore = {
@@ -5736,6 +5734,10 @@ std::map<std::string,std::string> PrintConfigDef::from_prusa(t_config_option_key
     if ("infill_anchor_max" == opt_key) {
         if(value == "0")
             output["infill_connection"] = "notconnected";
+    }
+    if ("first_layer_speed" == opt_key) {
+        output["first_layer_min_speed"] = value;
+        output["first_layer_infill_speed"] = value;
     }
     return output;
 }
