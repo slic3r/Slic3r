@@ -206,8 +206,7 @@ wxString Field::get_tooltip_text(const wxString& default_string)
 
 	if (tooltip.length() > 0)
         tooltip_text = tooltip + "\n" + _(L("default value")) + "\t: " +
-        (boost::iends_with(opt_id, "_gcode") ? "\n" : "") + default_string +
-        (boost::iends_with(opt_id, "_gcode") ? "" : "\n") + 
+        (boost::iends_with(opt_id, "_gcode") ? "\n" : "") + default_string + "\n" +
         _(L("parameter name")) + "\t: " + opt_id;
 
 	return tooltip_text;
@@ -218,6 +217,8 @@ wxString Field::get_rich_tooltip_text(const wxString& default_string)
     wxString tooltip_text("");
     wxString tooltip = _(m_opt.tooltip);
     update_Slic3r_string(tooltip);
+    std::wstring wtooltip = tooltip.ToStdWstring();
+    std::wstring wtooltip_text;
 
     std::string opt_id = m_opt_id;
     auto hash_pos = opt_id.find("#");
@@ -226,8 +227,20 @@ wxString Field::get_rich_tooltip_text(const wxString& default_string)
         opt_id += "]";
     }
 
+    //add "\n" to long tooltip lines
+    int length = 0;
+    for (int i = 0; i < wtooltip.size(); i++) {
+        if (length >= 80 && wtooltip[i] == u' ')
+            wtooltip_text.push_back(u'\n');
+        else
+            wtooltip_text.push_back(wtooltip[i]);
+        length++;
+        if (wtooltip_text.back() == u'\n')
+            length = 0;
+    }
+
     if (tooltip.length() > 0)
-        tooltip_text = tooltip + "\n" + _(L("default value")) + ": " +
+        tooltip_text = wtooltip_text + "\n" + _(L("default value")) + ": " +
         (boost::iends_with(opt_id, "_gcode") ? "\n" : "") + default_string;
 
     return tooltip_text;
@@ -252,7 +265,11 @@ void Field::set_tooltip(const wxString& default_string, wxWindow* window) {
     if (get_app_config()->get("use_rich_tooltip") == "1") {
         this->m_rich_tooltip_timer.m_value = default_string;
         window->Bind(wxEVT_ENTER_WINDOW, [this, window](wxMouseEvent& event) {
-            if (wxGetActiveWindow() && !this->m_rich_tooltip_timer.IsRunning()) {
+            if (!this->m_rich_tooltip_timer.IsRunning()
+#ifdef __WXMSW__
+                && wxGetActiveWindow() //don't activate if the currrent app is not the focus. (deactivated for linux as it check the field instead)
+#endif /* __WXMSW__ */
+                ) {
                 this->m_rich_tooltip_timer.m_current_window = window;
                 this->m_rich_tooltip_timer.m_is_rich_tooltip_ready = true;
                 this->m_rich_tooltip_timer.StartOnce(500);
@@ -263,16 +280,22 @@ void Field::set_tooltip(const wxString& default_string, wxWindow* window) {
             wxWindowList tipWindow = this->getWindow()->GetChildren();
             if (tipWindow.size() > 0) {
                 wxWindow* tooltipWindow = tipWindow.GetLast()->GetData();
-                if (tooltipWindow && tooltipWindow == this->m_rich_tooltip_timer.m_current_rich_tooltip)
+                if (tooltipWindow && tooltipWindow == this->m_rich_tooltip_timer.m_current_rich_tooltip) {
                     tooltipWindow->Hide();// DismissAndNotify();
+                }
             }
             });
-    }else
+    } else
         window->SetToolTip(get_tooltip_text(default_string));
 }
 
 void RichTooltipTimer::Notify() {
-    if (wxGetActiveWindow() && this->m_is_rich_tooltip_ready && m_current_window) {
+    if (this->m_is_rich_tooltip_ready && m_current_window && !m_current_window->HasFocus()
+#ifdef __WXMSW__
+        && wxGetActiveWindow() //don't activate if the currrent app is not the focus. (deactivated for linux as it check the field instead)
+#endif /* __WXMSW__ */
+        ) {
+        this->m_previous_focus = wxGetActiveWindow()->FindFocus();
         this->m_current_rich_tooltip = nullptr;
         wxRichToolTip richTooltip(
             m_field->get_rich_tooltip_title(this->m_value),
@@ -281,6 +304,23 @@ void RichTooltipTimer::Notify() {
         richTooltip.ShowFor(m_current_window);
         wxWindowList tipWindow = m_current_window->GetChildren();
         this->m_current_rich_tooltip = tipWindow.GetLast()->GetData();
+        this->m_current_rich_tooltip->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BACKGROUND));
+        this->m_current_rich_tooltip->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+        this->m_current_rich_tooltip->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& event) {
+            this->m_is_rich_tooltip_ready = false;
+            wxWindowList tipWindow = m_current_window->GetChildren();
+            if (tipWindow.size() > 0) {
+                wxWindow* tooltipWindow = tipWindow.GetLast()->GetData();
+                if (tooltipWindow && tooltipWindow == this->m_current_rich_tooltip) {
+                    tooltipWindow->Hide();// DismissAndNotify();
+                }
+            }
+            });
+        this->m_current_rich_tooltip->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& event) {
+            CallAfter([this]() {
+                if (this->m_previous_focus) this->m_previous_focus->SetFocus();
+                });
+            });
     }
 }
 

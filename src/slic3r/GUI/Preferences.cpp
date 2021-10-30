@@ -484,7 +484,7 @@ void PreferencesDialog::build()
 		def.label = L("Use custom tooltip");
 		def.type = coBool;
 		def.tooltip = L("On some OS like MacOS or some Linux, tooltips can't stay on for a long time. This setting replaces native tooltips with custom dialogs to improve readability (only for settings)."
-			"\nNote that for the number controls, you need to hover the arrows to get the custom tooltip.");
+			"\nNote that for the number controls, you need to hover the arrows to get the custom tooltip. Also, it keeps the focus but will give it back when it closes. It won't show up if you are editing the field.");
 		def.set_default_value(new ConfigOptionBool{ app_config->has("use_rich_tooltip") ? app_config->get("use_rich_tooltip") == "1" :
 #if __APPLE__
 			true

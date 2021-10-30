@@ -200,11 +200,11 @@ void AppConfig::set_defaults()
 		
         if (get("use_rich_tooltip").empty())
             set("use_rich_tooltip", 
-#if __APPLE__
-			"1"
-#else
+//#if __APPLE__
+			//"1"
+//#else
 			"0"
-#endif
+//#endif
 			);
     }
 #if ENABLE_CUSTOMIZABLE_FILES_ASSOCIATION_ON_WIN

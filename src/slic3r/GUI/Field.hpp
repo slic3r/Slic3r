@@ -45,10 +45,11 @@ class RichTooltipTimer : public wxTimer
 	Field*				m_field;
 public:
 	bool				m_is_rich_tooltip_ready = false;
-	wxWindow*			m_current_rich_tooltip = nullptr;
+	wxWindow*			m_current_rich_tooltip  = nullptr;
+	wxWindow*			m_previous_focus		= nullptr;
 	wxString			m_value;
-	wxWindow*			m_window2 = nullptr; //for point
-	wxWindow*			m_current_window = nullptr; //for point
+	wxWindow*			m_window2				= nullptr; //for point
+	wxWindow*			m_current_window		= nullptr; //for point
 	RichTooltipTimer(Field* field) : m_field(field) {};
 
 	void Notify() override;
