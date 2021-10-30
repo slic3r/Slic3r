@@ -461,36 +461,36 @@ void GLCanvas3D::LayersEditing::render_volumes(const GLCanvas3D& canvas, const G
         // The layer editing shader was already active.
         current_shader = nullptr;
 
-        const_cast<LayersEditing*>(this)->generate_layer_height_texture();
+    const_cast<LayersEditing*>(this)->generate_layer_height_texture();
 
-        // Uniforms were resolved, go ahead using the layer editing shader.
+    // Uniforms were resolved, go ahead using the layer editing shader.
     shader->set_uniform("z_to_texture_row", float(m_layers_texture.cells - 1) / (float(m_layers_texture.width) * float(m_object_max_z)));
     shader->set_uniform("z_texture_row_to_normalized", 1.0f / float(m_layers_texture.height));
     shader->set_uniform("z_cursor", float(m_object_max_z) * float(this->get_cursor_z_relative(canvas)));
     shader->set_uniform("z_cursor_band_width", float(this->band_width));
 
-        // Initialize the layer height texture mapping.
-        GLsizei w = (GLsizei)m_layers_texture.width;
-        GLsizei h = (GLsizei)m_layers_texture.height;
-        GLsizei half_w = w / 2;
-        GLsizei half_h = h / 2;
-        glsafe(::glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
-        glsafe(::glBindTexture(GL_TEXTURE_2D, m_z_texture_id));
-        glsafe(::glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0));
-        glsafe(::glTexImage2D(GL_TEXTURE_2D, 1, GL_RGBA, half_w, half_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0));
-        glsafe(::glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, m_layers_texture.data.data()));
-        glsafe(::glTexSubImage2D(GL_TEXTURE_2D, 1, 0, 0, half_w, half_h, GL_RGBA, GL_UNSIGNED_BYTE, m_layers_texture.data.data() + m_layers_texture.width * m_layers_texture.height * 4));
-        for (const GLVolume* glvolume : volumes.volumes) {
-            // Render the object using the layer editing shader and texture.
-            if (! glvolume->is_active || glvolume->composite_id.object_id != this->last_object_id || glvolume->is_modifier)
-                continue;
+    // Initialize the layer height texture mapping.
+    GLsizei w = (GLsizei)m_layers_texture.width;
+    GLsizei h = (GLsizei)m_layers_texture.height;
+    GLsizei half_w = w / 2;
+    GLsizei half_h = h / 2;
+    glsafe(::glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
+    glsafe(::glBindTexture(GL_TEXTURE_2D, m_z_texture_id));
+    glsafe(::glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0));
+    glsafe(::glTexImage2D(GL_TEXTURE_2D, 1, GL_RGBA, half_w, half_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0));
+    glsafe(::glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, m_layers_texture.data.data()));
+    glsafe(::glTexSubImage2D(GL_TEXTURE_2D, 1, 0, 0, half_w, half_h, GL_RGBA, GL_UNSIGNED_BYTE, m_layers_texture.data.data() + m_layers_texture.width * m_layers_texture.height * 4));
+    for (const GLVolume* glvolume : volumes.volumes) {
+        // Render the object using the layer editing shader and texture.
+        if (! glvolume->is_active || glvolume->composite_id.object_id != this->last_object_id || glvolume->is_modifier)
+            continue;
 
-        shader->set_uniform("volume_world_matrix", glvolume->world_matrix());
-        shader->set_uniform("object_max_z", GLfloat(0));
-            glvolume->render();
-        }
-        // Revert back to the previous shader.
-        glBindTexture(GL_TEXTURE_2D, 0);
+    shader->set_uniform("volume_world_matrix", glvolume->world_matrix());
+    shader->set_uniform("object_max_z", GLfloat(0));
+        glvolume->render();
+    }
+    // Revert back to the previous shader.
+    glBindTexture(GL_TEXTURE_2D, 0);
     if (current_shader != nullptr)
         current_shader->start_using();
 }
@@ -1527,10 +1527,12 @@ bool GLCanvas3D::is_layers_editing_allowed() const
 
 void GLCanvas3D::reset_layer_height_profile()
 {
-    wxGetApp().plater()->take_snapshot(_L("Variable layer height - Reset"));
-    m_layers_editing.reset_layer_height_profile(*this);
-    m_layers_editing.state = LayersEditing::Completed;
-    m_dirty = true;
+    if (is_layers_editing_enabled()) {
+        wxGetApp().plater()->take_snapshot(_L("Variable layer height - Reset"));
+        m_layers_editing.reset_layer_height_profile(*this);
+        m_layers_editing.state = LayersEditing::Completed;
+        m_dirty = true;
+    }
 }
 
 void GLCanvas3D::adaptive_layer_height_profile(float quality_factor)

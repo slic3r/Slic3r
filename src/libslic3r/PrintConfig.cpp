@@ -2732,19 +2732,21 @@ void PrintConfigDef::init_fff_params()
     def->is_vector_extruder = true;
     def->set_default_value(new ConfigOptionInts { 100 });
 
-    def = this->add("max_layer_height", coFloats);
+    def = this->add("max_layer_height", coFloatsOrPercents);
     def->label = L("Max");
     def->full_label = L("Max layer height");
     def->category = OptionCategory::general;
     def->tooltip = L("This is the highest printable layer height for this extruder, used to cap "
                    "the variable layer height and support layer height. Maximum recommended layer height "
                    "is 75% of the extrusion width to achieve reasonable inter-layer adhesion. "
-                   "If set to 0, layer height is limited to 75% of the nozzle diameter.");
-    def->sidetext = L("mm");
+                   "\nCan be a % of the nozzle diameter."
+                   "\nIf set to 0, layer height is limited to 75% of the nozzle diameter.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->mode = comSimple;
     def->is_vector_extruder = true;
-    def->set_default_value(new ConfigOptionFloats { 0. });
+    def->set_default_value(new ConfigOptionFloatsOrPercents{ FloatOrPercent{ 75, true} });
 
     def = this->add("max_print_speed", coFloat);
     def->label = L("Max print speed");
@@ -2824,17 +2826,19 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
-    def = this->add("min_layer_height", coFloats);
+    def = this->add("min_layer_height", coFloatsOrPercents);
     def->label = L("Min");
     def->full_label = L("Min layer height");
     def->category = OptionCategory::extruders;
     def->tooltip = L("This is the lowest printable layer height for this extruder and limits "
-                   "the resolution for variable layer height. Typical values are between 0.05 mm and 0.1 mm.");
-    def->sidetext = L("mm");
+                    "the resolution for variable layer height. Typical values are between 0.05 mm and 0.1 mm."
+                    "\nCan be a % of the nozzle diameter.");
+    def->sidetext = L("mm or %");
+    def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->mode = comSimple;
     def->is_vector_extruder = true;
-    def->set_default_value(new ConfigOptionFloats { 0.07 });
+    def->set_default_value(new ConfigOptionFloatsOrPercents{ FloatOrPercent{ 5, true} });
 
     def = this->add("min_length", coFloat);
     def->label = L("Minimum extrusion length");

@@ -518,8 +518,10 @@ std::vector<GCode::LayerToPrint> GCode::collect_layers_to_print(const PrintObjec
         gap_over_supports = std::max(0., gap_over_supports);
         // Not a soluble support,
         double support_layer_height_min = 1000000.;
-        for (auto lh : object.print()->config().min_layer_height.values)
-            support_layer_height_min = std::min(support_layer_height_min, std::max(0.01, lh));
+        const ConfigOptionFloatsOrPercents& min_layer_height = object.print()->config().min_layer_height;
+        const ConfigOptionFloats& nozzle_diameter = object.print()->config().nozzle_diameter;
+        for(int extr_id = 0; extr_id < min_layer_height.values.size(); ++extr_id)
+            support_layer_height_min = std::min(support_layer_height_min, std::max(nozzle_diameter.values[extr_id]/40, min_layer_height.get_abs_value(extr_id, nozzle_diameter.values[extr_id])));
         gap_over_supports += support_layer_height_min;
     }
 
@@ -2915,9 +2917,9 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     }
 
     //all in unscaled coordinates (hence why it's coordf_t and not coord_t)
-    const coordf_t min_height = EXTRUDER_CONFIG_WITH_DEFAULT(min_layer_height, this->m_layer->height);
+    const coordf_t min_height = m_config.min_layer_height.get_abs_value(m_writer.tool()->id(), m_config.nozzle_diameter.get_at(m_writer.tool()->id()));
     const coordf_t bot_init_z = - this->m_layer->height;
-    //const coordf_t bot_last_z = bot_init_z + this->m_layer->height - EXTRUDER_CONFIG(min_layer_height);
+    //const coordf_t bot_last_z = bot_init_z + this->m_layer->height - m_config.min_layer_height.get_abs_value(m_writer.tool()->id(), m_config.nozzle_diameter.get_at(m_writer.tool()->id()));
     const coordf_t init_z = bot_init_z + min_height;
     //const coordf_t last_z = bot_init_z + this->m_layer->height;
 
@@ -3157,7 +3159,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         //but not for the first layer
         && this->m_layer->id() > 0
         //exclude if min_layer_height * 2 > layer_height (increase from 2 to 3 because it's working but uses in-between)
-        && this->m_layer->height >= EXTRUDER_CONFIG_WITH_DEFAULT(min_layer_height, 0) * 2 - EPSILON
+        && this->m_layer->height >= m_config.min_layer_height.get_abs_value(m_writer.tool()->id(), m_config.nozzle_diameter.get_at(m_writer.tool()->id())) * 2 - EPSILON
         ) {
         return extrude_loop_vase(original_loop, description, speed, lower_layer_edge_grid);
     }

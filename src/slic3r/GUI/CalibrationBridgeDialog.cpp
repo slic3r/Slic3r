@@ -150,7 +150,7 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
         double z_step = printer_config->option<ConfigOptionFloat>("z_step")->value;
         if (z_step == 0)
             z_step = 0.1;
-        double max_height = printer_config->option<ConfigOptionFloats>("max_layer_height")->values[0];
+        double max_height = printer_config->get_computed_value("max_layer_height",0);
         if (max_height > first_layer_height + z_step)
             for (size_t i = 0; i < nb_items; i++)
                 model.objects[objs_idx[i]]->config.set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(first_layer_height + z_step, false));

@@ -152,8 +152,10 @@ PrintObjectSupportMaterial::PrintObjectSupportMaterial(const PrintObject *object
 {
     // Calculate a minimum support layer height as a minimum over all extruders, but not smaller than 10um.
     m_support_layer_height_min = 1000000.;
-    for (auto lh : m_print_config->min_layer_height.values)
-        m_support_layer_height_min = std::min(m_support_layer_height_min, std::max(0.01, lh));
+    const ConfigOptionFloatsOrPercents& min_layer_height = m_print_config->min_layer_height;
+    const ConfigOptionFloats& nozzle_diameter = m_print_config->nozzle_diameter;
+    for (int extr_id = 0; extr_id < min_layer_height.values.size(); ++extr_id)
+        m_support_layer_height_min = std::min(m_support_layer_height_min, std::max(0.01, min_layer_height.get_abs_value(extr_id, nozzle_diameter.get_at(extr_id))));
 
     if (m_object_config->support_material_interface_layers.value == 0) {
         // No interface layers allowed, print everything with the base support pattern.

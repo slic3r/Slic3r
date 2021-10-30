@@ -188,13 +188,13 @@ extern int generate_layer_height_texture(
     void *data, int rows, int cols, bool level_of_detail_2nd_level);
 
 namespace Slicing {
-	// Minimum layer height for the variable layer height algorithm. Nozzle index is 1 based.
-	coordf_t min_layer_height_from_nozzle(const DynamicPrintConfig &print_config, int idx_nozzle);
+	// Minimum layer height for the variable layer height algorithm. Nozzle index is 0 based.
+	coordf_t min_layer_height_from_nozzle(const DynamicPrintConfig &print_config, uint16_t idx_nozzle);
 
 	// Maximum layer height for the variable layer height algorithm, 3/4 of a nozzle dimaeter by default,
 	// it should not be smaller than the minimum layer height.
-	// Nozzle index is 1 based.
-	coordf_t max_layer_height_from_nozzle(const DynamicPrintConfig &print_config, int idx_nozzle);
+	// Nozzle index is 0 based.
+	coordf_t max_layer_height_from_nozzle(const DynamicPrintConfig &print_config, uint16_t idx_nozzle);
 } // namespace Slicing
 
 } // namespace Slic3r

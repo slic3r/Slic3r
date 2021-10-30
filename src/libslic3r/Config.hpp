@@ -1108,8 +1108,11 @@ private:
 
 struct FloatOrPercent
 {
+public:
     double  value;
     bool    percent;
+
+    double get_abs_value(double ratio) const { return percent ? value * ratio : value; }
 
 private:
     friend class cereal::access;

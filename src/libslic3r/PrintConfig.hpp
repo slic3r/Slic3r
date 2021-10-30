@@ -1339,7 +1339,7 @@ public:
     ConfigOptionInts                full_fan_speed_layer;
     ConfigOptionFloatOrPercent      infill_acceleration;
     ConfigOptionInts                max_fan_speed;
-    ConfigOptionFloats              max_layer_height;
+    ConfigOptionFloatsOrPercents    max_layer_height;
     ConfigOptionFloat               max_print_height;
     ConfigOptionPercents            max_speed_reduction;
     ConfigOptionFloats              milling_diameter;
@@ -1348,7 +1348,7 @@ public:
     //ConfigOptionPoints              milling_offset;
     //ConfigOptionFloats              milling_z_offset;
     ConfigOptionInts                min_fan_speed;
-    ConfigOptionFloats              min_layer_height;
+    ConfigOptionFloatsOrPercents    min_layer_height;
     ConfigOptionFloats              min_print_speed;
     ConfigOptionFloat               min_skirt_length;
     ConfigOptionString              notes;
