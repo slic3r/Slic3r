@@ -405,45 +405,68 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
                     show_error(m_parent, _(L("Input value is out of range")));
                     if (m_opt.min > val) val = m_opt.min;
                     set_value(double_to_string(val, m_opt.precision), true);
-                } else if (((m_opt.sidetext.rfind("mm/s") != std::string::npos && val > m_opt.max) ||
-                    (m_opt.sidetext.rfind("mm ") != std::string::npos && val > 1)) &&
-                    (m_value.empty() || std::string(str.ToUTF8().data()) != boost::any_cast<std::string>(m_value)))
-                {
-                    // exceptions
-                    if (std::set<t_config_option_key>{"infill_anchor", "infill_anchor_max", "avoid_crossing_perimeters_max_detour"}.count(m_opt.opt_key) > 0) {
-                        m_value = std::string(str.ToUTF8().data());
-                        break;
-                    }
-                    if (m_opt.opt_key.find("extrusion_width") != std::string::npos || m_opt.opt_key.find("extrusion_spacing") != std::string::npos) {
-                        const DynamicPrintConfig& printer_config = wxGetApp().preset_bundle->printers.get_edited_preset().config;
-                        const std::vector<double>& nozzle_diameters = printer_config.option<ConfigOptionFloats>("nozzle_diameter")->values;
-                        double nozzle_diameter = 0;
-                        for (double diameter : nozzle_diameters)
-                            nozzle_diameter = std::max(nozzle_diameter, diameter);
-                        if (val < nozzle_diameter * 10) {
-                            m_value = std::string(str.ToUTF8().data());
+                } else if (m_value.empty() || std::string(str.ToUTF8().data()) != boost::any_cast<std::string>(m_value)) {
+                    bool not_ok = (m_opt.sidetext.rfind("mm/s") != std::string::npos && val > m_opt.max);
+                    if( !not_ok && m_opt.max_literal.value != 0 )
+                        if (m_opt.max_literal.percent) {
+                            const DynamicPrintConfig& printer_config = wxGetApp().preset_bundle->printers.get_edited_preset().config;
+                            const std::vector<double>& nozzle_diameters = printer_config.option<ConfigOptionFloats>("nozzle_diameter")->values;
+                            double nozzle_diameter = 0;
+                            for (double diameter : nozzle_diameters)
+                                nozzle_diameter = std::max(nozzle_diameter, diameter);
+                            if (m_opt.max_literal.value > 0)
+                                not_ok = val > nozzle_diameter * m_opt.max_literal.value;
+                            else
+                                not_ok = val < nozzle_diameter * (-m_opt.max_literal.value);
+                        }else{
+                            if(m_opt.max_literal.value > 0)
+                                not_ok = val > m_opt.max_literal.value;
+                            else
+                                not_ok = val < -m_opt.max_literal.value;
+                        }
+                    if (not_ok) {
+
+                        //    if (
+                        //    (
+                        //        (m_opt.sidetext.rfind("mm/s") != std::string::npos && val > m_opt.max) 
+                        //        || 
+                        //        (m_opt.sidetext.rfind("mm ") != std::string::npos && val > m_opt.max_literal)
+                        //    ) 
+                        //    &&
+                        //        (m_value.empty() || std::string(str.ToUTF8().data()) != boost::any_cast<std::string>(m_value)))
+                        //{
+                        //    if (m_opt.opt_key.find("extrusion_width") != std::string::npos || m_opt.opt_key.find("extrusion_spacing") != std::string::npos) {
+                        //        const DynamicPrintConfig& printer_config = wxGetApp().preset_bundle->printers.get_edited_preset().config;
+                        //        const std::vector<double>& nozzle_diameters = printer_config.option<ConfigOptionFloats>("nozzle_diameter")->values;
+                        //        double nozzle_diameter = 0;
+                        //        for (double diameter : nozzle_diameters)
+                        //            nozzle_diameter = std::max(nozzle_diameter, diameter);
+                        //        if (val < nozzle_diameter * 10) {
+                        //            m_value = std::string(str.ToUTF8().data());
+                        //            break;
+                        //        }
+                        //    }
+                            //TODO: chack for infill_overlap from diameter% => allow max_literal to be a %
+
+                        if (!check_value) {
+                            m_value.clear();
                             break;
                         }
+
+                        bool infill_anchors = m_opt.opt_key == "infill_anchor" || m_opt.opt_key == "infill_anchor_max";
+
+                        const std::string sidetext = m_opt.sidetext.rfind("mm/s") != std::string::npos ? "mm/s" : "mm";
+                        const wxString stVal = double_to_string(val, m_opt.precision);
+                        const wxString msg_text = from_u8((boost::format(_utf8(L("Do you mean %s%% instead of %s %s?\n"
+                            "Select YES if you want to change this value to %s%%, \n"
+                            "or NO if you are sure that %s %s is a correct value."))) % stVal % stVal % sidetext % stVal % stVal % sidetext).str());
+                        wxMessageDialog dialog(m_parent, msg_text, _(L("Parameter validation")) + ": " + m_opt_id, wxICON_WARNING | wxYES | wxNO);
+                        if ((!infill_anchors || val > 100) && dialog.ShowModal() == wxID_YES) {
+                            set_value(from_u8((boost::format("%s%%") % stVal).str()), false/*true*/);
+                            str += "%%";
+                        } else
+                            set_value(stVal, false); // it's no needed but can be helpful, when inputted value contained "," instead of "."
                     }
-
-                    if (!check_value) {
-                        m_value.clear();
-                        break;
-                    }
-
-                    bool infill_anchors = m_opt.opt_key == "infill_anchor" || m_opt.opt_key == "infill_anchor_max";
-
-                    const std::string sidetext = m_opt.sidetext.rfind("mm/s") != std::string::npos ? "mm/s" : "mm";
-                    const wxString stVal = double_to_string(val, m_opt.precision);
-                    const wxString msg_text = from_u8((boost::format(_utf8(L("Do you mean %s%% instead of %s %s?\n"
-                        "Select YES if you want to change this value to %s%%, \n"
-                        "or NO if you are sure that %s %s is a correct value."))) % stVal % stVal % sidetext % stVal % stVal % sidetext).str());
-                    wxMessageDialog dialog(m_parent, msg_text, _(L("Parameter validation")) + ": " + m_opt_id, wxICON_WARNING | wxYES | wxNO);
-                    if ((!infill_anchors || val > 100) && dialog.ShowModal() == wxID_YES) {
-                        set_value(from_u8((boost::format("%s%%") % stVal).str()), false/*true*/);
-                        str += "%%";
-                    } else
-                        set_value(stVal, false); // it's no needed but can be helpful, when inputted value contained "," instead of "."
                 }
             }
         }

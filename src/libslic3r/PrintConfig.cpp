@@ -320,6 +320,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/s² or %");
     def->ratio_over = "default_acceleration";
     def->min = 0;
+    def->max_literal = { -220, false };
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
@@ -663,6 +664,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/s² or %");
     def->ratio_over = "machine_max_acceleration_X";
     def->min = 0;
+    def->max_literal = { -200, false };
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
@@ -855,6 +857,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/%");
     def->ratio_over = "perimeter_extrusion_width";
     def->min = 0;
+    def->max_literal = { 50, true };
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(150, true));
 
@@ -866,6 +869,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/%");
     def->ratio_over = "external_perimeter_extrusion_width";
     def->min = 0;
+    def->max_literal = { 50, true };
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(200, true));
 
@@ -881,6 +885,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -897,6 +902,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -1246,6 +1252,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -1260,6 +1267,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -1842,6 +1850,7 @@ void PrintConfigDef::init_fff_params()
         " A value too low will make your extruder eat the filament.");
     def->ratio_over = "top_infill_extrusion_width";
     def->min = 0;
+    def->max_literal = { 1, true };
     def->mode = comExpert;
     def->sidetext = L("mm/%");
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
@@ -1869,6 +1878,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/s² or %");
     def->ratio_over = "default_acceleration";
     def->min = 0;
+    def->max_literal = { -200, false };
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
 
@@ -1898,6 +1908,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -1913,6 +1924,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -1928,6 +1940,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max_literal = { 20, false };
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(75, true));
 
@@ -2150,6 +2163,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/s² or %");
     def->ratio_over = "default_acceleration";
     def->min = 0;
+    def->max_literal = { -200, false };
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
@@ -2202,6 +2216,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over  = def_infill_anchor_min->ratio_over;
     def->gui_type    = def_infill_anchor_min->gui_type;
     def->enum_values = def_infill_anchor_min->enum_values;
+    def->max_literal = def_infill_anchor_min->max_literal;
     def->enum_labels.push_back(L("0 (Simple connect)"));
     def->enum_labels.push_back("1 mm");
     def->enum_labels.push_back("2 mm");
@@ -2332,6 +2347,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -2347,6 +2363,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -2376,6 +2393,8 @@ void PrintConfigDef::init_fff_params()
                    "as percentage (example: 15%) it is calculated over perimeter extrusion width.");
     def->sidetext = L("mm or %");
     def->ratio_over = "perimeter_extrusion_width";
+    def->min = 0;
+    def->max_literal = { 1, true };
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(25, true));
 
@@ -2744,6 +2763,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max_literal = { 10, false };
     def->mode = comSimple;
     def->is_vector_extruder = true;
     def->set_default_value(new ConfigOptionFloatsOrPercents{ FloatOrPercent{ 75, true} });
@@ -2836,6 +2856,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max_literal = { 5, false };
     def->mode = comSimple;
     def->is_vector_extruder = true;
     def->set_default_value(new ConfigOptionFloatsOrPercents{ FloatOrPercent{ 5, true} });
@@ -2861,6 +2882,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->ratio_over = "perimeter_extrusion_width";
     def->min = 0;
+    def->max_literal = { 15, false };
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(200, true));
 
@@ -3011,6 +3033,7 @@ void PrintConfigDef::init_fff_params()
         " Set to 0 to deactivate.");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max_literal = { 10, true };
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(75, true));
 
@@ -3030,6 +3053,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Number of mm the overhang need to be for the reversal to be considered useful. Can be a % of the perimeter width.");
     def->ratio_over = "perimeter_extrusion_width";
     def->min = 0;
+    def->max_literal = { 20, false };
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(250, true));
 
@@ -3085,6 +3109,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/s² or %");
     def->ratio_over = "default_acceleration";
     def->min = 0;
+    def->max_literal = { -200, false };
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0,false));
 
@@ -3120,6 +3145,7 @@ void PrintConfigDef::init_fff_params()
     def->aliases = { "perimeters_extrusion_width" };
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -3135,6 +3161,7 @@ void PrintConfigDef::init_fff_params()
     def->aliases = { "perimeters_extrusion_width" };
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -3455,6 +3482,7 @@ void PrintConfigDef::init_fff_params()
                     "\nCan be a mm or a % of the current extruder diameter.");
     def->sidetext = L("mm or %");
     def->min = 0;
+    def->max_literal = { 5, false };
     def->mode = comExpert;
     def->is_vector_extruder = true;
     def->set_default_value(new ConfigOptionFloatsOrPercents{ FloatOrPercent{15,true} });
@@ -3528,6 +3556,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -3578,6 +3607,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max_literal = { 100, false };
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(6, false));
 
@@ -3592,6 +3622,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
+    def->max_literal = { 500, false };
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(20, false));
 
@@ -3692,6 +3723,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -3707,6 +3739,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -3909,6 +3942,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm or %");
     def->ratio_over = "external_perimeter_extrusion_width";
     def->min = 0;
+    def->max_literal = { 10, false};
     def->mode = comAdvanced;
     // Default is half the external perimeter width.
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
@@ -3960,6 +3994,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "top_infill_extrusion_width";
     def->sidetext = L("mm");
     def->min = 0;
+    def->max_literal = { 20, true };
     def->mode = comAdvanced;
     def->aliases = { "support_material_contact_distance" };
     def->set_default_value(new ConfigOptionFloatOrPercent(0.2, false));
@@ -3973,6 +4008,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "top_infill_extrusion_width";
     def->sidetext = L("mm");
     def->min = 0;
+    def->max_literal = { 20, true };
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0.2,false));
 
@@ -4009,6 +4045,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
@@ -4210,6 +4247,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->mode = comExpert;
     def->min = 0;
+    def->max_literal = { 20, true };
     def->set_default_value(new ConfigOptionFloatOrPercent(33, true));
 
     def = this->add("thin_walls_overlap", coFloatOrPercent);
@@ -4220,6 +4258,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "external_perimeter_extrusion_width";
     def->mode = comExpert;
     def->min = 0;
+    def->max_literal = { 10, true };
     def->set_default_value(new ConfigOptionFloatOrPercent(50, true));
 
     def = this->add("thin_walls_merge", coBool);
@@ -4296,6 +4335,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -4310,6 +4350,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "nozzle_diameter";
     def->min = 0;
     def->max = 1000;
+    def->max_literal = { 10, true };
     def->precision = 6;
     def->can_phony = true;
     def->mode = comAdvanced;
@@ -4361,6 +4402,7 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("mm/s² or %");
     def->ratio_over = "default_acceleration";
     def->min = 0;
+    def->max_literal = { -200, false };
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(1500, false));
 
@@ -4520,6 +4562,8 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Width of the brim for the wipe tower. Can be in mm or in % of the (assumed) only one nozzle diameter.");
     def->ratio_over = "nozzle_diameter";
     def->mode = comAdvanced;
+    def->min = 0;
+    def->max_literal = { 100, true };
     def->set_default_value(new ConfigOptionFloatOrPercent(150,true));
 
     def = this->add("wipe_tower_x", coFloat);
@@ -4652,6 +4696,7 @@ void PrintConfigDef::init_fff_params()
         " This setting allows you some leway to broaden the detection."
         "\nIn mm or in % of the radius.");
     def->sidetext = L("mm or %");
+    def->max_literal = { 10, false};
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0.01, false));
 
@@ -4877,6 +4922,7 @@ void PrintConfigDef::init_milling_params()
         " You can set a number of mm or a percentage of the calculated optimal extra width (from flow calculation).");
     def->sidetext = L("mm or %");
     def->ratio_over = "computed_on_the_fly";
+    def->max_literal = { 20, false };
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(150, true));
 
@@ -4886,6 +4932,7 @@ void PrintConfigDef::init_milling_params()
     def->tooltip = L("This setting restricts the post-process milling to a certain height, to avoid milling the bed. It can be a mm or a % of the first layer height (so it can depend on the object).");
     def->sidetext = L("mm or %");
     def->ratio_over = "first_layer_height";
+    def->max_literal = { 10, false };
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(200, true));
 

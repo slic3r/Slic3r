@@ -178,7 +178,7 @@ group:Skirt
 	setting:skirts
 	line:Distance
 		setting:skirt_distance
-		setting:label$from brim:sidetext$else from object:skirt_distance_from_brim
+		setting:label$from brim:skirt_distance_from_brim
 	end_line
 	setting:skirt_height
 	setting:draft_shield

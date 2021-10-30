@@ -210,42 +210,6 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
         apply(config, &new_conf);
     }
 
-    // check forgotten '%'
-    {
-        struct optDescr {
-            ConfigOptionFloatOrPercent* opt;
-            std::string name;
-            float min;
-            float max;
-        };
-        float diameter = 0.4f;
-        if (config->option<ConfigOptionFloatOrPercent>("extrusion_width")->percent) {
-            //has to be percent
-            diameter = 0;
-        } else {
-            diameter = config->option<ConfigOptionFloatOrPercent>("extrusion_width")->value;
-        }
-        std::vector<optDescr> opts;
-        opts.push_back({ config->option<ConfigOptionFloatOrPercent>("infill_overlap"), "infill_overlap", 0, diameter * 10 });
-        for (int i = 0; i < opts.size(); i++) {
-            if ((!opts[i].opt->percent) && (opts[i].opt->get_abs_value(diameter) < opts[i].min || opts[i].opt->get_abs_value(diameter) > opts[i].max)) {
-                wxString msg_text = _(L("Did you forgot to put a '%' in the " + opts[i].name + " field? "
-                    "it's currently set to " + std::to_string(opts[i].opt->get_abs_value(diameter)) + " mm."));
-                if (is_global_config) {
-                    msg_text += "\n\n" + _(L("Shall I add the '%'?"));
-                    wxMessageDialog dialog(nullptr, msg_text, _(L("Wipe Tower")),
-                        wxICON_WARNING | (is_global_config ? wxYES | wxNO : wxOK));
-                    DynamicPrintConfig new_conf = *config;
-                    auto answer = dialog.ShowModal();
-                    if (answer == wxID_YES) {
-                        new_conf.set_key_value(opts[i].name, new ConfigOptionFloatOrPercent(opts[i].opt->value * 100, true));
-                        apply(config, &new_conf);
-                    }
-                }
-            }
-        }
-    }
-
     // check changes from FloatOrPercent to percent (useful to migrate config from prusa to Slic3r)
     {
         std::vector<std::string> names;
