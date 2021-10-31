@@ -1797,11 +1797,12 @@ void Print::process()
 {
     name_tbb_thread_pool_threads();
     bool something_done = !is_step_done_unguarded(psBrim);
-
     BOOST_LOG_TRIVIAL(info) << "Starting the slicing process." << log_memory_info();
     for (PrintObject *obj : m_objects)
         obj->make_perimeters();
     this->set_status(70, L("Infilling layers"));
+    //note: as object seems to be sliced independantly, it's maybe possible to add a tbb parallel_loop with simple partitioner on infill,
+    //  as prepare_infill has some function not // 
     for (PrintObject *obj : m_objects)
         obj->infill();
     for (PrintObject *obj : m_objects)
