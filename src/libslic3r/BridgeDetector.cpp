@@ -97,22 +97,21 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
     for (size_t i_angle = 0; i_angle < candidates.size(); ++ i_angle)
     {
         const double angle = candidates[i_angle].angle;
-
         Lines lines;
         {
             // Get an oriented bounding box around _anchor_regions.
             BoundingBox bbox = get_extents_rotated(this->_anchor_regions, - angle);
             // Cover the region with line segments.
-            lines.reserve((bbox.max(1) - bbox.min(1) + this->spacing) / this->spacing);
+            lines.reserve((bbox.max.y() - bbox.min.y() + this->spacing - SCALED_EPSILON) / this->spacing);
             double s = sin(angle);
             double c = cos(angle);
-            //FIXME Vojtech: The lines shall be spaced half the line width from the edge, but then 
-            // some of the test cases fail. Need to adjust the test cases then?
-//            for (coord_t y = bbox.min(1) + this->spacing / 2; y <= bbox.max(1); y += this->spacing)
-            for (coord_t y = bbox.min(1); y <= bbox.max(1); y += this->spacing)
+            // As The lines be spaced half the line width from the edge
+            // FIXME: some of the test cases may fail. Need to adjust the test cases
+            for (coord_t y = bbox.min.y() + this->spacing / 2; y <= bbox.max.y(); y += this->spacing)
+            //for (coord_t y = bbox.min.y(); y <= bbox.max.y(); y += this->spacing) //this is the old version
                 lines.push_back(Line(
-                    Point((coord_t)round(c * bbox.min(0) - s * y), (coord_t)round(c * y + s * bbox.min(0))),
-                    Point((coord_t)round(c * bbox.max(0) - s * y), (coord_t)round(c * y + s * bbox.max(0)))));
+                    Point((coord_t)round(c * bbox.min.x() - s * y), (coord_t)round(c * y + s * bbox.min.x())),
+                    Point((coord_t)round(c * bbox.max.x() - s * y), (coord_t)round(c * y + s * bbox.max.x()))));
         }
 
         //compute stat on line with anchors, and their lengths.
@@ -122,7 +121,13 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
             Lines clipped_lines = intersection_ln(lines, clip_area);
             for (size_t i = 0; i < clipped_lines.size(); ++i) {
                 const Line &line = clipped_lines[i];
+                bool good_line = false;
                 if (expolygons_contain(this->_anchor_regions, line.a) && expolygons_contain(this->_anchor_regions, line.b)) {
+                    //check that it isn't always inside
+                    Lines lines = intersection_ln(line, to_polygons(this->_anchor_regions));
+                    good_line = lines.size() > 1;
+                }
+                if(good_line) {
                     // This line could be anchored.
                     coordf_t len = line.length();
                     //store stats
@@ -154,10 +159,75 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
         }
     }
 
-    // if no direction produced coverage, then there's no bridge direction
-    if (! have_coverage)
-        return false;
+    // if no direction produced coverage, then there's no bridge direction ?
+    if (!have_coverage) {
+        //try again to choose the least worse
+        // use only poly contour angles
+        if (bridge_direction_override == 0.) {
+            candidates = bridge_direction_candidates(true);
+        } else
+            candidates.emplace_back(BridgeDirection(bridge_direction_override));
+        for (size_t i_angle = 0; i_angle < candidates.size(); ++i_angle)
+        {
+            const double angle = candidates[i_angle].angle;
+            //use the whole polygon
+            Lines lines;
+            {
+                // Get an oriented bounding box around _anchor_regions.
+                BoundingBox bbox = get_extents_rotated(clip_area, -angle);
+                // Cover the region with line segments.
+                lines.reserve((bbox.max.y() - bbox.min.y() + this->spacing - SCALED_EPSILON) / this->spacing);
+                double s = sin(angle);
+                double c = cos(angle);
+                // The lines be spaced half the line width from the edge
+                for (coord_t y = bbox.min.y() + this->spacing / 2; y <= bbox.max.y(); y += this->spacing)
+                    lines.push_back(Line(
+                        Point((coord_t)round(c * bbox.min.x() - s * y), (coord_t)round(c * y + s * bbox.min.x())),
+                        Point((coord_t)round(c * bbox.max.x() - s * y), (coord_t)round(c * y + s * bbox.max.x()))));
+            }
+            //compute stat on line with anchors, and their lengths.
+            BridgeDirection& c = candidates[i_angle];
+            std::vector<coordf_t> dist_anchored;
+            {
+                Lines clipped_lines = intersection_ln(lines, clip_area);
+                for (size_t i = 0; i < clipped_lines.size(); ++i) {
+                    const Line& line = clipped_lines[i];
+                    if (expolygons_contain(this->_anchor_regions, line.a) || expolygons_contain(this->_anchor_regions, line.b)) {
+                        // This line has one anchor
+                        coordf_t len = line.length();
+                        //store stats
+                        c.total_length_anchored += len;
+                        c.max_length_anchored = std::max(c.max_length_anchored, len);
+                        c.nb_lines_anchored++;
+                        dist_anchored.push_back(len);
+                    } else {
+                        // this line could NOT be anchored.
+                        coordf_t len = line.length();
+                        c.total_length_free += len;
+                        c.max_length_free = std::max(c.max_length_free, len);
+                        c.nb_lines_free++;
+                    }
+                }
+            }
+            if (c.total_length_anchored == 0. || c.nb_lines_anchored == 0) {
+                continue;
+            } else {
+                have_coverage = true;
+                // compute median
+                if (!dist_anchored.empty()) {
+                    std::sort(dist_anchored.begin(), dist_anchored.end());
+                    c.median_length_anchor = dist_anchored[dist_anchored.size() / 2];
+                }
 
+
+                // size is 20%
+            }
+        }
+    }
+
+    // if no direction produced coverage, then there's no bridge direction
+    if (!have_coverage)
+        return false;
 
     //compute global stat (max & min median & max length)
     std::vector<coordf_t> all_median_length;
@@ -189,7 +259,7 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
         c.coverage += 15 * ratio_max;
         //bonus for perimeter dir
         if (c.along_perimeter)
-            c.coverage += 0.05;
+            c.coverage += 5;
 
     }
     
@@ -212,12 +282,13 @@ bool BridgeDetector::detect_angle(double bridge_direction_override)
     return true;
 }
 
-std::vector<BridgeDetector::BridgeDirection> BridgeDetector::bridge_direction_candidates() const
+std::vector<BridgeDetector::BridgeDirection> BridgeDetector::bridge_direction_candidates(bool only_from_polygon) const
 {
-    // we test angles according to configured resolution
     std::vector<BridgeDirection> angles;
-    for (int i = 0; i <= PI/this->resolution; ++i)
-        angles.emplace_back(i * this->resolution);
+    // we test angles according to configured resolution
+    if (!only_from_polygon)
+        for (int i = 0; i <= PI/this->resolution; ++i)
+            angles.emplace_back(i * this->resolution);
     
     // we also test angles of each bridge contour
     {

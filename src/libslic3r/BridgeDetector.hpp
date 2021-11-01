@@ -63,7 +63,7 @@ private:
     };
 public:
     // Get possible briging direction candidates.
-    std::vector<BridgeDirection> bridge_direction_candidates() const;
+    std::vector<BridgeDirection> bridge_direction_candidates(bool only_from_polygon = false) const;
 
     // Open lines representing the supporting edges.
     Polylines _edges;
