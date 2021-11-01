@@ -241,105 +241,140 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
                         break;
                     }
                 // Grown by bridged_infill_margin.
-                // also, remove all bridge area that are thinner than a single line.
-                Polygons polys = offset2(to_polygons(bridges[i].expolygon),
-                    (-this->flow(frInfill).scaled_width() / 2), 
-                    (this->flow(frInfill).scaled_width() / 2) + float(margin_bridged), 
-                    EXTERNAL_SURFACES_OFFSET_PARAMETERS);
+                Polygons polys;
                 if (idx_island == -1) {
                     BOOST_LOG_TRIVIAL(trace) << "Bridge did not fall into the source region!";
                 } else {
+                    // also, remove all bridge area that are thinner than a single line.
+                    ExPolygons expoly_collapsed = offset2_ex(bridges[i].expolygon,
+                        (-this->flow(frInfill).scaled_width() / 2), 
+                        (this->flow(frInfill).scaled_width() / 2) + SCALED_EPSILON, 
+                        EXTERNAL_SURFACES_OFFSET_PARAMETERS);
+                    //check if there is something cut
+                    ExPolygons cut = diff_ex({ bridges[i].expolygon }, expoly_collapsed, true);
+                    double area_cut = 0; for (ExPolygon& c : cut) area_cut += c.area();
+                    if (area_cut > (this->flow(frInfill).scaled_width() * this->flow(frInfill).scaled_width())) {
+                        //if area not negligible, we will consider it.
+                        // compute the bridge area, if any.
+                        ExPolygons ex_polys = offset_ex(expoly_collapsed, float(margin_bridged), EXTERNAL_SURFACES_OFFSET_PARAMETERS);
+                        polys = to_polygons(ex_polys);
+                        //add the cut section as solid infill
+                        Surface srf_bottom = bridges[i];
+                        srf_bottom.surface_type = stPosBottom | stDensSolid;
+                        // clip it to the infill area and remove the bridge part.
+                        surfaces_append(
+                            bottom, 
+                            diff_ex(
+                                intersection_ex(
+                                    ExPolygons{ fill_boundaries_ex[idx_island] }, 
+                                    offset_ex(cut, double(margin), EXTERNAL_SURFACES_OFFSET_PARAMETERS)
+                                ),
+                                ex_polys),
+                            srf_bottom);
+                    } else {
+                        //negligible, don't offset2
+                        polys = offset(to_polygons(bridges[i].expolygon), float(margin_bridged), EXTERNAL_SURFACES_OFFSET_PARAMETERS);
+                    }
                     // Found an island, to which this bridge region belongs. Trim it,
                     polys = intersection(polys, to_polygons(fill_boundaries_ex[idx_island]));
                 }
-                bridge_bboxes.push_back(get_extents(polys));
-                bridges_grown.push_back(std::move(polys));
-            }
-        }
-
-        // 2) Group the bridge surfaces by overlaps.
-        std::vector<size_t> bridge_group(bridges.size(), (size_t)-1);
-        size_t n_groups = 0; 
-        for (size_t i = 0; i < bridges.size(); ++ i) {
-            // A grup id for this bridge.
-            size_t group_id = (bridge_group[i] == size_t(-1)) ? (n_groups ++) : bridge_group[i];
-            bridge_group[i] = group_id;
-            // For all possibly overlaping bridges:
-            for (size_t j = i + 1; j < bridges.size(); ++ j) {
-                if (! bridge_bboxes[i].overlap(bridge_bboxes[j]))
-                    continue;
-                if (intersection(bridges_grown[i], bridges_grown[j], false).empty())
-                    continue;
-                // The two bridge regions intersect. Give them the same group id.
-                if (bridge_group[j] != size_t(-1)) {
-                    // The j'th bridge has been merged with some other bridge before.
-                    size_t group_id_new = bridge_group[j];
-                    for (size_t k = 0; k < j; ++ k)
-                        if (bridge_group[k] == group_id)
-                            bridge_group[k] = group_id_new;
-                    group_id = group_id_new;
-                }
-                bridge_group[j] = group_id;
-            }
-        }
-
-        // 3) Merge the groups with the same group id, detect bridges.
-        {
-            BOOST_LOG_TRIVIAL(trace) << "Processing external surface, detecting bridges. layer" << this->layer()->print_z << ", bridge groups: " << n_groups;
-            for (size_t group_id = 0; group_id < n_groups; ++ group_id) {
-                size_t n_bridges_merged = 0;
-                size_t idx_last = (size_t)-1;
-                for (size_t i = 0; i < bridges.size(); ++ i) {
-                    if (bridge_group[i] == group_id) {
-                        ++ n_bridges_merged;
-                        idx_last = i;
-                    }
-                }
-                if (n_bridges_merged == 0)
-                    // This group has no regions assigned as these were moved into another group.
-                    continue;
-                // Collect the initial ungrown regions and the grown polygons.
-                ExPolygons  initial;
-                Polygons    grown;
-                for (size_t i = 0; i < bridges.size(); ++ i) {
-                    if (bridge_group[i] != group_id)
-                        continue;
-                    initial.push_back(std::move(bridges[i].expolygon));
-                    polygons_append(grown, bridges_grown[i]);
-                }
-                // detect bridge direction before merging grown surfaces otherwise adjacent bridges
-                // would get merged into a single one while they need different directions
-                // also, supply the original expolygon instead of the grown one, because in case
-                // of very thin (but still working) anchors, the grown expolygon would go beyond them
-                BridgeDetector bd(
-                    initial,
-                    lower_layer->lslices,
-                    this->flow(frInfill, true).scaled_width()
-                );
-                #ifdef SLIC3R_DEBUG
-                printf("Processing bridge at layer %zu:\n", this->layer()->id());
-                #endif
-                double custom_angle = Geometry::deg2rad(this->region()->config().bridge_angle.value);
-                if (custom_angle > 0) {
-                    // Bridge was not detected (likely it is only supported at one side). Still it is a surface filled in
-                    // using a bridging flow, therefore it makes sense to respect the custom bridging direction.
-                    bridges[idx_last].bridge_angle = custom_angle;
-                }else if (bd.detect_angle(custom_angle)) {
-                    bridges[idx_last].bridge_angle = bd.angle;
-                    if (this->layer()->object()->config().support_material) {
-                        //polygons_append(this->bridged, intersection(bd.coverage(), to_polygons(initial)));
-                        append(this->unsupported_bridge_edges, bd.unsupported_edges());
-                    }
+                //keep bridges & bridge_bboxes & bridges_grown the SAME SIZE
+                if (!polys.empty()) {
+                    bridge_bboxes.push_back(get_extents(polys));
+                    bridges_grown.push_back(std::move(polys));
                 } else {
-                    bridges[idx_last].bridge_angle = 0;
+                    bridges.erase(bridges.begin() + i);
+                    --i;
                 }
-                // without safety offset, artifacts are generated (GH #2494)
-                surfaces_append(bottom, union_ex(grown, true), bridges[idx_last]);
+            }
+        }
+        if (bridges.empty())
+        {
+            fill_boundaries = union_(fill_boundaries, true);
+        } else {
+            // 2) Group the bridge surfaces by overlaps.
+            std::vector<size_t> bridge_group(bridges.size(), (size_t)-1);
+            size_t n_groups = 0; 
+            for (size_t i = 0; i < bridges.size(); ++ i) {
+                // A grup id for this bridge.
+                size_t group_id = (bridge_group[i] == size_t(-1)) ? (n_groups ++) : bridge_group[i];
+                bridge_group[i] = group_id;
+                // For all possibly overlaping bridges:
+                for (size_t j = i + 1; j < bridges.size(); ++ j) {
+                    if (! bridge_bboxes[i].overlap(bridge_bboxes[j]))
+                        continue;
+                    if (intersection(bridges_grown[i], bridges_grown[j], false).empty())
+                        continue;
+                    // The two bridge regions intersect. Give them the same group id.
+                    if (bridge_group[j] != size_t(-1)) {
+                        // The j'th bridge has been merged with some other bridge before.
+                        size_t group_id_new = bridge_group[j];
+                        for (size_t k = 0; k < j; ++ k)
+                            if (bridge_group[k] == group_id)
+                                bridge_group[k] = group_id_new;
+                        group_id = group_id_new;
+                    }
+                    bridge_group[j] = group_id;
+                }
             }
 
-            fill_boundaries = std::move(to_polygons(fill_boundaries_ex));
-            BOOST_LOG_TRIVIAL(trace) << "Processing external surface, detecting bridges - done";
-        }
+            // 3) Merge the groups with the same group id, detect bridges.
+            {
+                BOOST_LOG_TRIVIAL(trace) << "Processing external surface, detecting bridges. layer" << this->layer()->print_z << ", bridge groups: " << n_groups;
+                for (size_t group_id = 0; group_id < n_groups; ++ group_id) {
+                    size_t n_bridges_merged = 0;
+                    size_t idx_last = (size_t)-1;
+                    for (size_t i = 0; i < bridges.size(); ++ i) {
+                        if (bridge_group[i] == group_id) {
+                            ++ n_bridges_merged;
+                            idx_last = i;
+                        }
+                    }
+                    if (n_bridges_merged == 0)
+                        // This group has no regions assigned as these were moved into another group.
+                        continue;
+                    // Collect the initial ungrown regions and the grown polygons.
+                    ExPolygons  initial;
+                    Polygons    grown;
+                    for (size_t i = 0; i < bridges.size(); ++ i) {
+                        if (bridge_group[i] != group_id)
+                            continue;
+                        initial.push_back(std::move(bridges[i].expolygon));
+                        polygons_append(grown, bridges_grown[i]);
+                    }
+                    // detect bridge direction before merging grown surfaces otherwise adjacent bridges
+                    // would get merged into a single one while they need different directions
+                    // also, supply the original expolygon instead of the grown one, because in case
+                    // of very thin (but still working) anchors, the grown expolygon would go beyond them
+                    BridgeDetector bd(
+                        initial,
+                        lower_layer->lslices,
+                        this->flow(frInfill, true).scaled_width()
+                    );
+                    #ifdef SLIC3R_DEBUG
+                    printf("Processing bridge at layer %zu:\n", this->layer()->id());
+                    #endif
+                    double custom_angle = Geometry::deg2rad(this->region()->config().bridge_angle.value);
+                    if (custom_angle > 0) {
+                        // Bridge was not detected (likely it is only supported at one side). Still it is a surface filled in
+                        // using a bridging flow, therefore it makes sense to respect the custom bridging direction.
+                        bridges[idx_last].bridge_angle = custom_angle;
+                    }else if (bd.detect_angle(custom_angle)) {
+                        bridges[idx_last].bridge_angle = bd.angle;
+                        if (this->layer()->object()->config().support_material) {
+                            //polygons_append(this->bridged, intersection(bd.coverage(), to_polygons(initial)));
+                            append(this->unsupported_bridge_edges, bd.unsupported_edges());
+                        }
+                    } else {
+                        bridges[idx_last].bridge_angle = 0;
+                    }
+                    // without safety offset, artifacts are generated (GH #2494)
+                    surfaces_append(bottom, union_ex(grown, true), bridges[idx_last]);
+                }
+
+                fill_boundaries = std::move(to_polygons(fill_boundaries_ex));
+                BOOST_LOG_TRIVIAL(trace) << "Processing external surface, detecting bridges - done";
+            }
 
     #if 0
         {
@@ -347,6 +382,7 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
             bridges.export_to_svg(debug_out_path("bridges-after-grouping-%d.svg", iRun ++), true);
         }
     #endif
+        }
     }
 
     Surfaces new_surfaces;
