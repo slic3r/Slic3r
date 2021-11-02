@@ -1765,6 +1765,8 @@ namespace Slic3r {
 
             //solid_over_perimeters value, to remove solid fill where there's only perimeters on multiple layers
             const int nb_perimeter_layers_for_solid_fill = region.config().solid_over_perimeters.value;
+            const int min_layer_no_solid = region.config().bottom_solid_layers.value - 1;
+            const int min_z_no_solid = region.config().bottom_solid_min_thickness;
 
             if (!top_bottom_surfaces_all_regions) {
                 // This is either a single material print, or a multi-material print and interface_shells are enabled, meaning that the vertical shell thickness
@@ -1772,7 +1774,8 @@ namespace Slic3r {
                 BOOST_LOG_TRIVIAL(debug) << "Discovering vertical shells for region " << idx_region << " in parallel - start : cache top / bottom";
                 tbb::parallel_for(
                     tbb::blocked_range<size_t>(0, num_layers, grain_size),
-                    [this, idx_region, &cache_top_botom_regions, nb_perimeter_layers_for_solid_fill](const tbb::blocked_range<size_t>& range) {
+                    [this, idx_region, &cache_top_botom_regions, nb_perimeter_layers_for_solid_fill, min_layer_no_solid, min_z_no_solid]
+                    (const tbb::blocked_range<size_t>& range) {
                     for (size_t idx_layer = range.begin(); idx_layer < range.end(); ++idx_layer) {
                         m_print->throw_if_canceled();
                         Layer& layer = *m_layers[idx_layer];
@@ -1782,7 +1785,8 @@ namespace Slic3r {
                         auto& cache = cache_top_botom_regions[idx_layer];
                         cache.top_surfaces = offset_ex(to_expolygons(layerm.slices().filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing);
                         append(cache.top_surfaces, offset_ex(to_expolygons(layerm.fill_surfaces.filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing));
-                        if (nb_perimeter_layers_for_solid_fill != 0) {
+                        if (nb_perimeter_layers_for_solid_fill != 0 && (idx_layer > min_layer_no_solid || layer.print_z < min_z_no_solid)) {
+                            //it needs to be activated and we don't check the firs layers, where everything have to be solid.
                             cache.top_fill_surfaces = offset_ex(to_expolygons(layerm.fill_surfaces.filter_by_type(stPosTop | stDensSolid)), min_perimeter_infill_spacing);
                             cache.top_perimeter_surfaces = to_expolygons(layerm.slices().filter_by_type(stPosTop | stDensSolid));
                         }
@@ -1790,7 +1794,7 @@ namespace Slic3r {
                         const SurfaceType surfaces_bottom[2] = { stPosBottom | stDensSolid, stPosBottom | stDensSolid | stModBridge };
                         cache.bottom_surfaces = offset_ex(to_expolygons(layerm.slices().filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing);
                         append(cache.bottom_surfaces, offset_ex(to_expolygons(layerm.fill_surfaces.filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing));
-                        if (nb_perimeter_layers_for_solid_fill != 0) {
+                        if (nb_perimeter_layers_for_solid_fill != 0 && (idx_layer > min_layer_no_solid || layer.print_z < min_z_no_solid)) {
                             cache.bottom_fill_surfaces = offset_ex(to_expolygons(layerm.fill_surfaces.filter_by_types(surfaces_bottom, 2)), min_perimeter_infill_spacing);
                             cache.bottom_perimeter_surfaces = to_expolygons(layerm.slices().filter_by_types(surfaces_bottom, 2));
                         }
@@ -1808,7 +1812,7 @@ namespace Slic3r {
             BOOST_LOG_TRIVIAL(debug) << "Discovering vertical shells for region " << idx_region << " in parallel - start : ensure vertical wall thickness";
             tbb::parallel_for(
                 tbb::blocked_range<size_t>(0, num_layers, grain_size),
-                [this, idx_region, &cache_top_botom_regions, nb_perimeter_layers_for_solid_fill]
+                [this, idx_region, &cache_top_botom_regions, nb_perimeter_layers_for_solid_fill, min_layer_no_solid, min_z_no_solid]
             (const tbb::blocked_range<size_t>& range) {
                 // printf("discover_vertical_shells from %d to %d\n", range.begin(), range.end());
                 for (size_t idx_layer = range.begin(); idx_layer < range.end(); ++idx_layer) {
@@ -1881,7 +1885,7 @@ namespace Slic3r {
                                     // than running the union_ all at once.
                                     shell = union_ex(shell, false);
                                 }
-                                if (nb_perimeter_layers_for_solid_fill != 0) {
+                                if (nb_perimeter_layers_for_solid_fill != 0 && (idx_layer > min_layer_no_solid || print_z < min_z_no_solid)) {
                                     if (!cache.top_fill_surfaces.empty()) {
                                         expolygons_append(fill_shell, cache.top_fill_surfaces);
                                         fill_shell = union_ex(fill_shell, false);
@@ -1910,7 +1914,7 @@ namespace Slic3r {
                                     // than running the union_ all at once.
                                     shell = union_ex(shell, false);
                                 }
-                                if (nb_perimeter_layers_for_solid_fill != 0) {
+                                if (nb_perimeter_layers_for_solid_fill != 0 && (idx_layer > min_layer_no_solid || layer->print_z < min_z_no_solid)) {
                                     if (!cache.bottom_fill_surfaces.empty()) {
                                         expolygons_append(fill_shell, cache.bottom_fill_surfaces);
                                         fill_shell = union_ex(fill_shell, false);
@@ -1989,7 +1993,7 @@ namespace Slic3r {
                         shell = union_ex(shell);
                         ExPolygons toadd;
                         //check if a polygon is only over perimeter, in this case evict it (depends from nb_perimeter_layers_for_solid_fill value)
-                        if (nb_perimeter_layers_for_solid_fill != 0) {
+                        if (nb_perimeter_layers_for_solid_fill != 0 && (idx_layer > min_layer_no_solid || layer->print_z < min_z_no_solid)) {
                             for (int i = 0; i < shell.size(); i++) {
                                 if (nb_perimeter_layers_for_solid_fill < 2 || intersection_ex({ shell[i] }, max_perimeter_shell, false).empty()) {
                                     ExPolygons expoly = intersection_ex({ shell[i] }, fill_shell);
