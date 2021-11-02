@@ -135,12 +135,12 @@ void PerimeterGenerator::process()
                 }
             }
 
-            if (overhangs_width_speed > 0) {
+            if (overhangs_width_speed > 0 && this->config->overhangs_width_speed.value < this->config->overhangs_width.value) {
                 this->_lower_slices_bridge_speed_small = offset((simplified.empty() ? *this->lower_slices : simplified), (coordf_t)overhangs_width_speed_90 - (coordf_t)(ext_perimeter_width / 2));
                 this->_lower_slices_bridge_speed_big = offset((simplified.empty() ? *this->lower_slices : simplified), (coordf_t)overhangs_width_speed_110 - (coordf_t)(ext_perimeter_width / 2));
             }
             if (overhangs_width_flow > 0) {
-                if (overhangs_width_speed_110 == overhangs_width_flow_90)
+                if (overhangs_width_speed_110 == overhangs_width_flow_90 && this->config->overhangs_width_speed.value < this->config->overhangs_width.value)
                     this->_lower_slices_bridge_flow_small = this->_lower_slices_bridge_speed_big;
                 else
                     this->_lower_slices_bridge_flow_small = offset((simplified.empty() ? *this->lower_slices : simplified), (coordf_t)overhangs_width_flow_90 - (coordf_t)(ext_perimeter_width / 2));
@@ -1201,7 +1201,7 @@ ExtrusionPaths PerimeterGenerator::create_overhangs(const Polyline& loop_polygon
     Polylines big_flow;
 
     Polylines* previous = &ok_polylines;
-    if (this->config->overhangs_width_speed.value > 0) {
+    if (this->config->overhangs_width_speed.value > 0 && this->config->overhangs_width_speed.value < this->config->overhangs_width.value) {
         if (!this->_lower_slices_bridge_speed_small.empty()) {
             small_speed = diff_pl(*previous, this->_lower_slices_bridge_speed_small);
             if (!small_speed.empty()) {

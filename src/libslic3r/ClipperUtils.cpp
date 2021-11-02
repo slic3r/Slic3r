@@ -598,16 +598,18 @@ ClipperLib::PolyTree _clipper_do_pl(const ClipperLib::ClipType clipType, const P
     // read input
     ClipperLib::Paths input_subject = Slic3rMultiPoints_to_ClipperPaths(subject);
     ClipperLib::Paths input_clip    = Slic3rMultiPoints_to_ClipperPaths(clip);
+    //scale to have some more precision to do some Y-bugfix
+    scaleClipperPolygons(input_subject);
+    scaleClipperPolygons(input_clip);
 
     //perform y safing : if a line is on the same Y, clipper may not pick the good point.
-    std::set<coord_t> bad_y;
-    for (ClipperLib::Paths* input : {&input_subject, &input_clip} )
+    //note: if not enough, next time, add some of the X coordinate (modulo it so it's contained in the scaling part)
+    for (ClipperLib::Paths* input : { &input_subject, &input_clip })
         for (ClipperLib::Path& path : *input) {
             coord_t lasty = 0;
             for (ClipperLib::IntPoint& pt : path) {
                 if (lasty == pt.Y) {
-                    pt.Y+=5; //min is 3 on a certain exemple. Using 5 to have some security
-                    bad_y.insert(pt.Y);
+                    pt.Y += 50;// well below CLIPPER_OFFSET_POWER_OF_2
                 }
                 lasty = pt.Y;
             }
@@ -629,19 +631,31 @@ ClipperLib::PolyTree _clipper_do_pl(const ClipperLib::ClipType clipType, const P
     clipper.Execute(clipType, retval, fillType, fillType);
 
     //restore good y
-    if (!bad_y.empty()) {
-        std::vector<ClipperLib::PolyNode*> to_check;
-        to_check.push_back(&retval);
-        while (!to_check.empty()) {
-            ClipperLib::PolyNode* node = to_check.back();
-            to_check.pop_back();
-            for (ClipperLib::IntPoint& pt : node->Contour) {
-                if (bad_y.find(pt.Y) != bad_y.end()) {
-                    pt.Y-=5;
-                }
-            }
-            to_check.insert(to_check.end(), node->Childs.begin(), node->Childs.end());
+    std::vector<ClipperLib::PolyNode*> to_check;
+    to_check.push_back(&retval);
+    while (!to_check.empty()) {
+        ClipperLib::PolyNode* node = to_check.back();
+        to_check.pop_back();
+        for (ClipperLib::IntPoint& pit : node->Contour) {
+            pit.X += CLIPPER_OFFSET_SCALE_ROUNDING_DELTA;
+            pit.Y += CLIPPER_OFFSET_SCALE_ROUNDING_DELTA;
+            pit.X >>= CLIPPER_OFFSET_POWER_OF_2;
+            pit.Y >>= CLIPPER_OFFSET_POWER_OF_2;
         }
+        //note: moving in Y may create 0-length segment, so it needs an extra post-processing step to remove these duplicate points.
+        for (size_t idx = 1; idx < node->Contour.size(); ++idx) {
+            ClipperLib::IntPoint& pit = node->Contour[idx];
+            ClipperLib::IntPoint& previous = node->Contour[idx - 1];
+            // unscaling remove too small differences. The equality is enough.
+            if (pit.X == previous.X && pit.Y == previous.Y) {
+                node->Contour.erase(node->Contour.begin() + idx);
+                --idx;
+            }
+        }
+        //be sure you don't save 1-point paths
+        if (node->Contour.size() == 1)
+            node->Contour.clear();
+        to_check.insert(to_check.end(), node->Childs.begin(), node->Childs.end());
     }
 
     return retval;
