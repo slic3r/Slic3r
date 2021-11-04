@@ -93,8 +93,8 @@ jobs:
       working-directory: ./build
       shell: cmd
       run: |
-        xcopy /RCYIE src\release\*.dll package\
-        xcopy /RCYIE src\release\*.exe package\
+        xcopy /RCYIE src\debug\*.dll package\
+        xcopy /RCYIE src\debug\*.exe package\
         xcopy /RCYIE c:\windows\system32\VCRUNTIME140* package\
         del package\opengl32.dll
 #    - name: create zip
