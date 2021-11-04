@@ -39,6 +39,22 @@ static void start_new_slicer_or_gcodeviewer(const NewSlicerInstanceType instance
 #ifdef _WIN32
 	wxString path;
 	wxFileName::SplitPath(wxStandardPaths::Get().GetExecutablePath(), &path, nullptr, nullptr, wxPATH_NATIVE);
+	//check directory exist
+	if (true || !boost::filesystem::is_directory(boost::filesystem::wpath(path.ToStdWstring()))) {
+		BOOST_LOG_TRIVIAL(info) << "Fail to find directory \"" << path << "\", trying another method.";
+		//try an other way
+		std::vector<wchar_t> pathBuf;
+		DWORD copied = 0;
+		do {
+			pathBuf.resize(pathBuf.size() + MAX_PATH);
+			copied = GetModuleFileName(0, pathBuf.data(), pathBuf.size());
+		} while (copied >= pathBuf.size());
+		pathBuf.resize(copied);
+		std::wstring path2(pathBuf.begin(), pathBuf.end());
+		boost::filesystem::wpath boostpath(path2);
+		BOOST_LOG_TRIVIAL(info) << "get current path: \"" << into_u8(path2) << "\" which is in dir \""<< boostpath.parent_path().wstring() <<"\"";
+		path = boostpath.parent_path().wstring();
+	}
 	path += "\\";
 	path += (instance_type == NewSlicerInstanceType::Slicer) ? SLIC3R_APP_CMD ".exe" : GCODEVIEWER_APP_CMD ".exe";
 	std::vector<const wchar_t*> args;
@@ -58,7 +74,7 @@ static void start_new_slicer_or_gcodeviewer(const NewSlicerInstanceType instance
 	// just hang in the background.
 	if (wxExecute(const_cast<wchar_t**>(args.data()), wxEXEC_ASYNC) <= 0)
 		BOOST_LOG_TRIVIAL(error) << "Failed to spawn a new slicer \"" << into_u8(path);
-#else 
+#else  // Win32 (else not)
 	// Own executable path.
 	boost::filesystem::path bin_path = into_path(wxStandardPaths::Get().GetExecutablePath());
 #if defined(__APPLE__)
