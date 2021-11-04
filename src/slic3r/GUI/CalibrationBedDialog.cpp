@@ -121,6 +121,8 @@ void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
         model.objects[objs_idx[i]]->config.set_key_value("gap_fill", new ConfigOptionBool(false));
         model.objects[objs_idx[i]]->config.set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(140, true));
         model.objects[objs_idx[i]]->config.set_key_value("bottom_fill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinearWGapFill));
+        //disable ironing post-process
+        model.objects[objs_idx[i]]->config.set_key_value("ironing", new ConfigOptionBool(false));
     }
     if (bed_shape->values.size() == 4) {
         model.objects[objs_idx[0]]->config.set_key_value("fill_angle", new ConfigOptionFloat(90));
