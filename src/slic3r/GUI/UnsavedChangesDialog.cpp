@@ -646,9 +646,13 @@ void UnsavedChangesDialog::build(Preset::Type type, PresetCollection* dependent_
     };
 
     const PresetCollection& printers = wxGetApp().preset_bundle->printers;
-    if (dependent_presets && (type == dependent_presets->type() ?
-        dependent_presets->get_edited_preset().printer_technology() == dependent_presets->find_preset(new_selected_preset)->printer_technology() :
-        printers.get_edited_preset().printer_technology() == printers.find_preset(new_selected_preset)->printer_technology()))
+    // get the preset we switch to (if it exists)
+    const Preset* new_preset = nullptr;
+    if (dependent_presets)
+        new_preset = (type == dependent_presets->type() ? dependent_presets->find_preset(new_selected_preset) : printers.find_preset(new_selected_preset));
+    if (new_preset && dependent_presets && (type == dependent_presets->type() ?
+        dependent_presets->get_edited_preset().printer_technology() == new_preset->printer_technology() :
+        printers.get_edited_preset().printer_technology() == new_preset->printer_technology()))
         add_btn(&m_transfer_btn, m_move_btn_id, "paste_menu", Action::Transfer, _L("Transfer"));
     add_btn(&m_discard_btn, m_continue_btn_id, dependent_presets ? "switch_presets" : "exit", Action::Discard, _L("Discard"), false);
     add_btn(&m_save_btn, m_save_btn_id, "save", Action::Save, _L("Save"));
@@ -1042,7 +1046,7 @@ void UnsavedChangesDialog::update(Preset::Type type, PresetCollection* dependent
     m_discard_btn  ->Bind(wxEVT_ENTER_WINDOW, [this]                       (wxMouseEvent& e) { show_info_line(Action::Discard); e.Skip(); });
 
 
-    if (type == Preset::TYPE_INVALID) {
+    if (type == Preset::TYPE_INVALID || !dependent_presets) {
         m_action_line->SetLabel(header + "\n" + _L("The following presets were modified:"));
     }
     else {

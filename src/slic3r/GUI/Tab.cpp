@@ -366,6 +366,33 @@ void Tab::create_preset_tab()
 
     if (m_btn_edit_ph_printer)
         m_btn_edit_ph_printer->Bind(wxEVT_BUTTON, [this](wxCommandEvent e) {
+            // ask for saving modif before
+            if (m_presets->current_is_dirty()) {
+                //ok = may_discard_current_dirty_preset(nullptr, "");
+                UnsavedChangesDialog dlg(Preset::Type::TYPE_PRINTER, m_presets, "");
+                if (dlg.ShowModal() == wxID_CANCEL)
+                    return;
+
+                if (dlg.save_preset())  // save selected changes
+                {
+                    const std::vector<std::string>& unselected_options = dlg.get_unselected_options(Preset::Type::TYPE_PRINTER);
+                    const std::string& name = dlg.get_preset_name();
+
+                    // revert unselected options to the old values
+                    m_presets->get_edited_preset().config.apply_only(m_presets->get_selected_preset().config, unselected_options);
+                    save_preset(name);
+
+                    for (const std::pair<std::string, Preset::Type>& nt : dlg.get_names_and_types())
+                        m_preset_bundle->save_changes_for_preset(nt.first, nt.second, dlg.get_unselected_options(nt.second));
+
+                    // if we saved changes to the new presets, we should to 
+                    // synchronize config.ini with the current selections.
+                    m_preset_bundle->export_selections(*wxGetApp().app_config);
+                } else {
+                    // discard all changes
+                    m_presets->discard_current_changes();
+                }
+            }
             if (m_preset_bundle->physical_printers.has_selection())
                 m_presets_choice->edit_physical_printer();
             else
@@ -3471,7 +3498,7 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection* presets /*= nullptr
             // revert unselected options to the old values
             presets->get_edited_preset().config.apply_only(presets->get_selected_preset().config, unselected_options);
             save_preset(name);
-    }
+        }
         else
         {
             m_preset_bundle->save_changes_for_preset(name, presets->type(), unselected_options);
@@ -3481,7 +3508,7 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection* presets /*= nullptr
             // but in full_config a filament_colors option aren't.
             if (presets->type() == Preset::TYPE_FFF_FILAMENT && wxGetApp().extruders_edited_cnt() > 1)
                 wxGetApp().plater()->force_filament_colors_update();
-    }
+        }
     }
     else if (dlg.transfer_changes()) // move selected changes
     {
@@ -3500,8 +3527,7 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection* presets /*= nullptr
 
             // copy selected options to the cache from edited preset
             cache_config_diff(selected_options);
-        }
-        else
+        } else
             wxGetApp().get_tab(presets->type())->cache_config_diff(selected_options);
     }
 

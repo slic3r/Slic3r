@@ -180,7 +180,14 @@ PhysicalPrinterDialog::PhysicalPrinterDialog(wxWindow* parent, wxString printer_
 
     m_printer_name    = new wxTextCtrl(this, wxID_ANY, printer_name, wxDefaultPosition, wxDefaultSize);
     m_printer_name->Bind(wxEVT_TEXT, [this](wxEvent&) { this->update_full_printer_names(); });
-
+    m_printer_name->Bind(wxEVT_SET_FOCUS, [this](wxFocusEvent& e) {
+        if (m_printer_name->GetValue() == m_default_name) m_printer_name->SetValue("");
+        e.Skip();
+    });
+    m_printer_name->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& e) {
+        if (m_printer_name->GetValue().empty()) m_printer_name->SetValue(m_default_name);
+        e.Skip();
+    }); 
     PhysicalPrinterCollection& printers = wxGetApp().preset_bundle->physical_printers;
     PhysicalPrinter* printer = printers.find_printer(into_u8(printer_name));
     if (!printer) {
