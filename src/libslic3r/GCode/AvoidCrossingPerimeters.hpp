@@ -42,11 +42,14 @@ public:
         std::vector<std::vector<float>> boundaries_params;
         // Used for detection of intersection between line and any polygon from boundaries
         EdgeGrid::Grid grid;
+        //used to move the point inside the boundary
+        std::vector<std::pair<ExPolygon, ExPolygons>> boundary_growth;
 
         void clear()
         {
             boundaries.clear();
             boundaries_params.clear();
+            boundary_growth.clear();
         }
     };
 

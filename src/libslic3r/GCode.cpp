@@ -4128,19 +4128,20 @@ void GCode::_add_object_change_labels(std::string& gcode) {
 // This method accepts &point in print coordinates.
 Polyline GCode::travel_to(std::string &gcode, const Point &point, ExtrusionRole role)
 {
-    /*  Define the travel move as a line between current position and the taget point.
+        /*  Define the travel move as a line between current position and the taget point.
         This is expressed in print coordinates, so it will need to be translated by
         this->origin in order to get G-code coordinates.  */
     Polyline travel { this->last_pos(), point };
 
     // check whether a straight travel move would need retraction
-    bool needs_retraction       = this->needs_retraction(travel, role);
+    bool will_cross_perimeter = this->can_cross_perimeter(travel);
+    bool needs_retraction = will_cross_perimeter && this->needs_retraction(travel, role);
     // check whether wipe could be disabled without causing visible stringing
     bool could_be_wipe_disabled = false;
 
-    // if a retraction would be needed, try to use avoid_crossing_perimeters to plan a
+    // if a retraction would be needed (with a low min_dist threshold), try to use avoid_crossing_perimeters to plan a
     // multi-hop travel path inside the configuration space
-    if (needs_retraction
+    if (will_cross_perimeter && this->needs_retraction(travel, role, scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0.4)) * 3)
         && m_config.avoid_crossing_perimeters
         && ! m_avoid_crossing_perimeters.disabled_once()
         && m_avoid_crossing_perimeters.is_init()
@@ -4168,10 +4169,10 @@ Polyline GCode::travel_to(std::string &gcode, const Point &point, ExtrusionRole 
             append(retract_travel.points, travel.points);
             travel = std::move(retract_travel);
         }
-    } else
+    } else {
         // Reset the wipe path when traveling, so one would not wipe along an old path.
         m_wipe.reset_path();
-
+    }
     //if needed, write the gcode_label_objects_end then gcode_label_objects_start
     _add_object_change_labels(gcode);
 
@@ -4188,9 +4189,13 @@ void GCode::write_travel_to(std::string &gcode, const Polyline& travel, std::str
         this->set_last_pos(travel.points.back());
     }
 }
-bool GCode::needs_retraction(const Polyline &travel, ExtrusionRole role)
+
+bool GCode::needs_retraction(const Polyline& travel, ExtrusionRole role /*=erNone*/, coordf_t max_min_dist /*=0*/)
 {
-    if (travel.length() < scale_(EXTRUDER_CONFIG_WITH_DEFAULT(retract_before_travel, 0))) {
+    coordf_t min_dist = scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(retract_before_travel, 0));
+    if (max_min_dist > 0)
+        min_dist = std::min(max_min_dist, min_dist);
+    if (travel.length() < min_dist) {
         // skip retraction if the move is shorter than the configured threshold
         return false;
     }
@@ -4202,15 +4207,43 @@ bool GCode::needs_retraction(const Polyline &travel, ExtrusionRole role)
             // skip retraction if this is a travel move inside a support material island
             //FIXME not retracting over a long path may cause oozing, which in turn may result in missing material
             // at the end of the extrusion path!
-            return false;
+        return false;
     }
 
-    if (m_config.only_retract_when_crossing_perimeters && m_layer != nullptr &&
-        m_config.fill_density.value > 0 && m_layer->any_internal_region_slice_contains(travel))
+    return true;
+}
+
+bool GCode::can_cross_perimeter(const Polyline& travel)
+{
+    if(m_layer != nullptr)
+    if ( (m_config.only_retract_when_crossing_perimeters && m_config.fill_density.value > 0) || m_config.avoid_crossing_perimeters)
+         {
+        //test && m_layer->any_internal_region_slice_contains(travel)
         // Skip retraction if travel is contained in an internal slice *and*
         // internal infill is enabled (so that stringing is entirely not visible).
-        //FIXME any_internal_region_slice_contains() is potentionally very slow, it shall test for the bounding boxes first.
-        return false;
+        //note: any_internal_region_slice_contains() is potentionally very slow, it shall test for the bounding boxes first.
+        //bool inside = false;
+        //BoundingBox bbtravel(travel.points);
+        //for (const BoundingBox &bbox : m_layer->lslices_bboxes) {
+        //    inside = bbox.overlap(bbtravel);
+        //    if(inside) break;
+        //}
+        ////have to do a bit more work to be sure
+        //if (inside) {
+            //contained inside at least one bb
+            //construct m_layer_slices_offseted if needed
+            if (m_layer_slices_offseted.layer != m_layer) {
+                m_layer_slices_offseted.layer = m_layer;
+                m_layer_slices_offseted.diameter = scale_t(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0.4));
+                m_layer_slices_offseted.slices = offset_ex(m_layer->lslices, - m_layer_slices_offseted.diameter * 1.5);
+            }
+            // test if a expoly contains the entire travel
+            for (const ExPolygon &poly : m_layer_slices_offseted.slices)
+                if (poly.contains(travel)) {
+                    return false;
+                }
+        //}
+    }
 
     // retract if only_retract_when_crossing_perimeters is disabled or doesn't apply
     return true;

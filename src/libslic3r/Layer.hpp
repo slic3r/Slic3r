@@ -143,14 +143,6 @@ public:
     void                    restore_untyped_slices();
     // Slices merged into islands, to be used by the elephant foot compensation to trim the individual surfaces with the shrunk merged slices.
     ExPolygons              merged(float offset) const;
-    template <class T> bool any_internal_region_slice_contains(const T &item) const {
-        for (const LayerRegion *layerm : m_regions) if (layerm->slices().any_internal_contains(item)) return true;
-        return false;
-    }
-    template <class T> bool any_bottom_region_slice_contains(const T &item) const {
-        for (const LayerRegion *layerm : m_regions) if (layerm->slices().any_bottom_contains(item)) return true;
-        return false;
-    }
     void                    make_perimeters();
 
     void                    make_milling_post_process();    void                    make_fills() { this->make_fills(nullptr, nullptr); };

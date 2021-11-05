@@ -268,14 +268,97 @@ static std::vector<TravelPoint> simplify_travel(const AvoidCrossingPerimeters::B
     return simplified_path;
 }
 
+bool is_in_internal_boundary(const AvoidCrossingPerimeters::Boundary& boundary, const Point& pt) {
+    for (const std::pair<ExPolygon, ExPolygons>& bound : boundary.boundary_growth)
+        for (const ExPolygon& poly : bound.second)
+            if (poly.contains(pt))
+                return true;
+    return false;
+}
+
+bool find_point_on_boundary(Point& pt_to_move, const AvoidCrossingPerimeters::Boundary& boundary, coord_t max_dist) {
+
+    if (!is_in_internal_boundary(boundary, pt_to_move)) {
+        //get nearest point
+        EdgeGrid::Grid::ClosestPointResult pt_closest = boundary.grid.closest_point(pt_to_move, max_dist);
+        Point contour_pt;
+        if (pt_closest.contour_idx == size_t(-1)) {
+            //manual search on edges
+            bool found = false;
+            for (const std::pair<ExPolygon, ExPolygons>& bound : boundary.boundary_growth)
+                if (bound.first.contains(pt_to_move)) {
+                    coordf_t dist2 = std::numeric_limits<coordf_t>::max();
+                    for (const Polygon& poly : to_polygons(bound.second)) {
+                        Point test_point = *poly.closest_point(pt_to_move);
+                        coordf_t dist2_test = test_point.distance_to_square(pt_to_move);
+                        if (dist2_test < dist2) {
+                            dist2 = dist2_test;
+                            contour_pt = test_point;
+                            found = true;
+                        }
+                    }
+                    if(std::sqrt(dist2) > max_dist)
+                        for (const Polygon& poly : to_polygons(bound.second)) {
+                            Point test_point = pt_to_move.projection_onto(poly);
+                            coordf_t dist2_test = test_point.distance_to_square(pt_to_move);
+                            if (dist2_test < dist2) {
+                                dist2 = dist2_test;
+                                contour_pt = test_point;
+                                found = true;
+                            }
+                        }
+                    break;
+                }
+            if (!found) {
+                return false;
+            }
+        } else {
+            const Slic3r::Points& pts = *boundary.grid.contours()[pt_closest.contour_idx];
+            contour_pt = pts[pt_closest.start_point_idx].interpolate(pt_closest.t, pts[(pt_closest.start_point_idx + 1 == pts.size()) ? 0 : pt_closest.start_point_idx + 1]);
+        }
+        //push it a bit to be sure it's inside
+        Line l{ pt_to_move, contour_pt };
+        l.extend_end(SCALED_EPSILON);
+        pt_to_move = l.b;
+    }
+    return true;
+}
+
 // Called by avoid_perimeters() and by simplify_travel_heuristics().
 static size_t avoid_perimeters_inner(const AvoidCrossingPerimeters::Boundary &boundary,
-                                     const Point                             &start,
-                                     const Point                             &end,
+                                     const Point                             &real_start,
+                                     const Point                             &real_end,
+                                           coord_t                            extrusion_spacing,
                                      std::vector<TravelPoint>                &result_out)
 {
     const Polygons           &boundaries = boundary.boundaries;
     const EdgeGrid::Grid     &edge_grid  = boundary.grid;
+
+    Point start = real_start;
+    Point end = real_end;
+
+    //ensure that start & end are inside
+    if(extrusion_spacing > 0)
+        if (!find_point_on_boundary(start, boundary, (extrusion_spacing * 3)/2) || !find_point_on_boundary(end, boundary, (extrusion_spacing * 3) / 2)) {
+            BOOST_LOG_TRIVIAL(info) << "Fail to find a point in the contour for avoid_perimeter.";
+            //{
+            //    static int isazfn = 0;
+            //    std::stringstream stri;
+            //    stri << "avoid_peri_initbad_" << isazfn++ << ".svg";
+            //    SVG svg(stri.str());
+            //    for (auto elt : boundary.boundary_growth)
+            //        svg.draw((elt.first), "grey");
+            //    for (auto elt : boundary.boundary_growth)
+            //        svg.draw((elt.second), "pink");
+            //    //svg.draw((boundary.boundaries), "pink");
+            //    svg.draw((Line{ start,end }), "red");
+            //    svg.draw((Line{ real_start,real_end }), "green");
+            //    svg.Close();
+            //}
+            result_out = { {start,-1}, {end,-1} };
+            return 0;
+        }
+
     // Find all intersections between boundaries and the line segment, sort them along the line segment.
     std::vector<Intersection> intersections;
     {
@@ -366,8 +449,11 @@ static size_t avoid_perimeters_inner(const AvoidCrossingPerimeters::Boundary &bo
                              debug_out_path("AvoidCrossingPerimetersInner-final-%d.svg", iRun++));
     }
 #endif /* AVOID_CROSSING_PERIMETERS_DEBUG_OUTPUT */
-
+    if(start != real_start)
+        result_out.push_back({ real_start, -1 });
     append(result_out, std::move(result));
+    if (end != real_end)
+        result_out.push_back({ real_end, -1 });
     return intersections.size();
 }
 
@@ -375,11 +461,12 @@ static size_t avoid_perimeters_inner(const AvoidCrossingPerimeters::Boundary &bo
 static size_t avoid_perimeters(const AvoidCrossingPerimeters::Boundary &boundary,
                                const Point                             &start,
                                const Point                             &end,
+                                   coord_t                              spacing,
                                Polyline                                &result_out)
 {
     // Travel line is completely or partially inside the bounding box.
     std::vector<TravelPoint> path;
-    size_t num_intersections = avoid_perimeters_inner(boundary, start, end, path);
+    size_t num_intersections = avoid_perimeters_inner(boundary, start, end, spacing, path);
     result_out = to_polyline(path);
 
 #ifdef AVOID_CROSSING_PERIMETERS_DEBUG_OUTPUT
@@ -796,7 +883,7 @@ static ExPolygons get_boundary(const Layer &layer)
         append(boundary, inner_offset(support_layer->support_islands.expolygons, perimeter_offset));
 #endif
         auto *layer_below = layer.object()->get_first_layer_bellow_printz(layer.print_z, EPSILON);
-        if (layer_below)
+        if (layer_below) //why?
             append(boundary, inner_offset(layer_below->lslices, perimeter_offset));
         // After calling inner_offset it is necessary to call union_ex because of the possibility of intersection ExPolygons
         boundary = union_ex(boundary);
@@ -913,14 +1000,41 @@ Polyline AvoidCrossingPerimeters::travel_to(const GCode &gcodegen, const Point &
     const ExPolygons               &lslices          = gcodegen.layer()->lslices;
     const std::vector<BoundingBox> &lslices_bboxes   = gcodegen.layer()->lslices_bboxes;
     bool                            is_support_layer = dynamic_cast<const SupportLayer *>(gcodegen.layer()) != nullptr;
-    if (!use_external && (is_support_layer || (!lslices.empty() && !any_expolygon_contains(lslices, lslices_bboxes, m_grid_lslice, travel)))) {
+    const float perimeter_spacing = get_perimeter_spacing(*gcodegen.layer());
+    if (!use_external && (is_support_layer || !lslices.empty()
+        /*|| (!lslices.empty() && !any_expolygon_contains(lslices, lslices_bboxes, m_grid_lslice, travel)) already done by the caller */
+        )) {
         // Initialize m_internal only when it is necessary.
-        if (m_internal.boundaries.empty())
-            init_boundary(&m_internal, to_polygons(get_boundary(*gcodegen.layer())));
+        if (m_internal.boundaries.empty()) {
+            std::vector<std::pair<ExPolygon, ExPolygons>> boundary_growth;
+            //create better slice (on second perimeter instead of the first)
+            ExPolygons expoly_boundary;
+            //as we are going to reduce, do it expoli per expoli
+            for (const ExPolygon& origin : lslices) {
+                ExPolygons second_peri = offset_ex(origin, -perimeter_spacing * 1.5f);
+                //there is a collapse! try to add missing parts
+                if (second_peri.size() > 1) {
+                    // get the bits that are collapsed
+                    ExPolygons missing_parts = diff_ex({ origin }, offset_ex(second_peri, perimeter_spacing * 1.51f), true);
+                    //have to grow a bit to be able to fit inside the reduced thing
+                    // then intersect to be sure it don't stick out of the initial poly
+                    missing_parts = intersection_ex({ origin }, offset_ex(missing_parts, perimeter_spacing * 1.1f));
+                    // offset to second peri (-first) where possible, then union and reduce to the first.
+                    second_peri = offset_ex(union_ex(missing_parts, offset_ex(origin, -perimeter_spacing * 0.9f)), -perimeter_spacing * .6f);
+                } else if (second_peri.size() == 0) {
+                    // try again with the first perimeter (should be 0.5, but even with overlapping peri, it's almost never a 50% overlap, so it's better that way)
+                    second_peri = offset_ex(origin, -perimeter_spacing * .6f);
+                }
+                append(expoly_boundary, second_peri);
+                boundary_growth.push_back({ origin, second_peri });
+            }
+            init_boundary(&m_internal, to_polygons(expoly_boundary));
+            m_internal.boundary_growth = boundary_growth;
+        }
 
         // Trim the travel line by the bounding box.
         if (!m_internal.boundaries.empty() && Geometry::liang_barsky_line_clipping(startf, endf, m_internal.bbox)) {
-            travel_intersection_count = avoid_perimeters(m_internal, startf.cast<coord_t>(), endf.cast<coord_t>(), result_pl);
+            travel_intersection_count = avoid_perimeters(m_internal, startf.cast<coord_t>(), endf.cast<coord_t>(), perimeter_spacing, result_pl);
             result_pl.points.front()  = start;
             result_pl.points.back()   = end;
         }
@@ -931,7 +1045,7 @@ Polyline AvoidCrossingPerimeters::travel_to(const GCode &gcodegen, const Point &
 
         // Trim the travel line by the bounding box.
         if (!m_external.boundaries.empty() && Geometry::liang_barsky_line_clipping(startf, endf, m_external.bbox)) {
-            travel_intersection_count = avoid_perimeters(m_external, startf.cast<coord_t>(), endf.cast<coord_t>(), result_pl);
+            travel_intersection_count = avoid_perimeters(m_external, startf.cast<coord_t>(), endf.cast<coord_t>(), 0, result_pl);
             result_pl.points.front()  = start;
             result_pl.points.back()   = end;
         }

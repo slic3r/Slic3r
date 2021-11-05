@@ -123,7 +123,9 @@ BoundingBox get_extents(const Lines &lines)
     }
     return bbox;
 
-}Point Line::point_at(double distance) const {
+}
+
+Point Line::point_at(double distance) const {
     Point point;
     double len = this->length();
     point = this->a;
