@@ -52,9 +52,6 @@ void GCodeWriter::apply_print_config(const PrintConfig &print_config)
     this->config.apply(print_config, true);
     m_extrusion_axis = this->config.get_extrusion_axis();
     m_single_extruder_multi_material = print_config.single_extruder_multi_material.value;
-    m_max_acceleration = std::lrint((print_config.gcode_flavor.value == gcfMarlin || print_config.gcode_flavor.value == gcfLerdge || print_config.gcode_flavor.value == gcfKlipper) 
-        && print_config.machine_limits_usage.value <= MachineLimitsUsage::Limits ?
-        print_config.machine_max_acceleration_extruding.values.front() : 0);
 }
 
 void GCodeWriter::apply_print_region_config(const PrintRegionConfig& print_region_config)
@@ -301,10 +298,6 @@ std::string GCodeWriter::set_fan(const uint8_t speed, bool dont_save, uint16_t d
 
 void GCodeWriter::set_acceleration(uint32_t acceleration)
 {
-    // Clamp the acceleration to the allowed maximum.
-    if (m_max_acceleration > 0 && acceleration > m_max_acceleration)
-        acceleration = m_max_acceleration;
-
     if (acceleration == 0 || acceleration == m_current_acceleration)
         return;
 
@@ -453,23 +446,27 @@ std::string GCodeWriter::set_speed(double F, const std::string &comment, const s
     return gcode.str();
 }
 
-std::string GCodeWriter::travel_to_xy(const Vec2d &point, const std::string &comment)
+std::string GCodeWriter::travel_to_xy(const Vec2d &point, double F, const std::string &comment)
 {
     std::ostringstream gcode;
     gcode << write_acceleration();
+
+    double speed = this->config.travel_speed.value * 60.0;
+    if ((F > 0) & (F < speed))
+        speed = F;
 
     m_pos.x() = point.x();
     m_pos.y() = point.y();
     
     gcode << "G1 X" << XYZ_NUM(point.x())
           <<   " Y" << XYZ_NUM(point.y())
-          <<   " F" << F_NUM(this->config.travel_speed.value * 60.0);
+          <<   " F" << F_NUM(speed);
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();
 }
 
-std::string GCodeWriter::travel_to_xyz(const Vec3d &point, const std::string &comment)
+std::string GCodeWriter::travel_to_xyz(const Vec3d &point, double F, const std::string &comment)
 {
     /*  If target Z is lower than current Z but higher than nominal Z we
         don't perform the Z move but we only move in the XY plane and
@@ -482,13 +479,17 @@ std::string GCodeWriter::travel_to_xyz(const Vec3d &point, const std::string &co
         // and a retract could be skipped (https://github.com/prusa3d/PrusaSlicer/issues/2154
         if (std::abs(m_lifted) < EPSILON)
             m_lifted = 0.;
-        return this->travel_to_xy(to_2d(point));
+        return this->travel_to_xy(to_2d(point), F, comment);
     }
     
     /*  In all the other cases, we perform an actual XYZ move and cancel
         the lift. */
     m_lifted = 0;
     m_pos = point;
+
+    double speed = this->config.travel_speed.value * 60.0;
+    if ((F > 0) & (F < speed))
+        speed = F;
 
     std::ostringstream gcode;
     gcode << write_acceleration();
@@ -498,7 +499,7 @@ std::string GCodeWriter::travel_to_xyz(const Vec3d &point, const std::string &co
         gcode << " Z" << PRECISION(point.z(), 6);
     else
         gcode << " Z" << XYZ_NUM(point.z());
-    gcode <<   " F" << F_NUM(this->config.travel_speed.value * 60.0);
+    gcode <<   " F" << F_NUM(speed);
 
     COMMENT(comment);
     gcode << "\n";

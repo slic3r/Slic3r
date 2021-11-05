@@ -57,49 +57,59 @@ namespace Slic3r {
 #define _(s) Slic3r::I18N::translate(s)
 
 // Only add a newline in case the current G-code does not end with a newline.
-    static inline void check_add_eol(std::string& gcode)
-    {
-        if (!gcode.empty() && gcode.back() != '\n')
-            gcode += '\n';
-    }
+static inline void check_add_eol(std::string& gcode)
+{
+    if (!gcode.empty() && gcode.back() != '\n')
+        gcode += '\n';
+}
     
 
-    // Return true if tch_prefix is found in custom_gcode
-    static bool custom_gcode_changes_tool(const std::string& custom_gcode, const std::string& tch_prefix, unsigned next_extruder)
+// Return true if tch_prefix is found in custom_gcode
+static bool custom_gcode_changes_tool(const std::string& custom_gcode, const std::string& tch_prefix, unsigned next_extruder)
+{
+bool ok = false;
+size_t from_pos = 0;
+size_t pos = 0;
+while ((pos = custom_gcode.find(tch_prefix, from_pos)) != std::string::npos) {
+        if (pos + 1 == custom_gcode.size())
+        break;
+        from_pos = pos + 1;
+    // only whitespace is allowed before the command
+    while (--pos < custom_gcode.size() && custom_gcode[pos] != '\n') {
+            if (!std::isspace(custom_gcode[pos]))
+            goto NEXT;
+    }
     {
-    bool ok = false;
-    size_t from_pos = 0;
-    size_t pos = 0;
-    while ((pos = custom_gcode.find(tch_prefix, from_pos)) != std::string::npos) {
-            if (pos + 1 == custom_gcode.size())
-            break;
-            from_pos = pos + 1;
-        // only whitespace is allowed before the command
-        while (--pos < custom_gcode.size() && custom_gcode[pos] != '\n') {
-                if (!std::isspace(custom_gcode[pos]))
-                goto NEXT;
-        }
-        {
-            // we should also check that the extruder changes to what was expected
-            std::istringstream ss(custom_gcode.substr(from_pos, std::string::npos));
-            unsigned num = 0;
-            if (ss >> num)
-                ok = (num == next_extruder);
-        }
-        NEXT:;
-        }
-        return ok;
+        // we should also check that the extruder changes to what was expected
+        std::istringstream ss(custom_gcode.substr(from_pos, std::string::npos));
+        unsigned num = 0;
+        if (ss >> num)
+            ok = (num == next_extruder);
     }
+    NEXT:;
+    }
+    return ok;
+}
 
-    double get_default_acceleration(PrintConfig& config) {
-        double max = 0;
-        max = config.machine_max_acceleration_extruding.values.front();
-        // on 2.3, check for enable/disable if(config.machine_limits_usage)
-        if (config.machine_limits_usage <= MachineLimitsUsage::Limits)
-            return std::min(config.default_acceleration.get_abs_value(max), max);
-        else
-            return config.default_acceleration.get_abs_value(max);
-    }
+double get_default_acceleration(PrintConfig& config) {
+    double max = 0;
+    max = config.machine_max_acceleration_extruding.get_at(0);
+    // on 2.3, check for enable/disable if(config.machine_limits_usage)
+    if (config.machine_limits_usage <= MachineLimitsUsage::Limits)
+        return std::min(config.get_computed_value("default_acceleration"), max);
+    else
+        return config.get_computed_value("default_acceleration");
+}
+
+double get_travel_acceleration(PrintConfig& config) {
+    double max = 0;
+    max = config.machine_max_acceleration_travel.get_at(0);
+    // on 2.3, check for enable/disable if(config.machine_limits_usage)
+    if (config.machine_limits_usage <= MachineLimitsUsage::Limits)
+        return std::min(config.get_computed_value("travel_acceleration"), max);
+    else
+        return config.get_computed_value("travel_acceleration");
+}
 
 std::string OozePrevention::pre_toolchange(GCode& gcodegen)
 {
@@ -118,8 +128,7 @@ std::string OozePrevention::pre_toolchange(GCode& gcodegen)
         /*  We don't call gcodegen.travel_to() because we don't need retraction (it was already
             triggered by the caller) nor avoid_crossing_perimeters and also because the coordinates
             of the destination point must not be transformed by origin nor current extruder offset.  */
-            gcode += gcodegen.writer().travel_to_xy(unscale(standby_point),
-            "move to standby position");
+            gcode += gcodegen.writer().travel_to_xy(unscale(standby_point), 0.0, "move to standby position");
     }
 
     if (gcodegen.config().standby_temperature_delta.value != 0 && gcodegen.writer().tool_is_extruder() && this->_get_temp(gcodegen) > 0) {
@@ -157,7 +166,7 @@ std::string Wipe::wipe(GCode& gcodegen, bool toolchange)
 
     /*  Reduce feedrate a bit; travel speed is often too high to move on existing material.
         Too fast = ripping of existing material; too slow = short wipe path, thus more blob.  */
-    double wipe_speed = gcodegen.writer().config.travel_speed.value * 0.8;
+    double wipe_speed = gcodegen.writer().config.get_computed_value("travel_speed") * 0.8;
     if(gcodegen.writer().tool_is_extruder() && gcodegen.writer().config.wipe_speed.get_at(gcodegen.writer().tool()->id()) > 0)
         wipe_speed = gcodegen.writer().config.wipe_speed.get_at(gcodegen.writer().tool()->id());
 
@@ -1660,7 +1669,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
                 _writeln(file, this->placeholder_parser_process("end_filament_gcode", print.config().end_filament_gcode.get_at(extruder_id), extruder_id, &config));
             } else {
                 for (const std::string& end_gcode : print.config().end_filament_gcode.values) {
-                    int extruder_id = (uint16_t)(&end_gcode - &print.config().end_filament_gcode.values.front());
+                    int extruder_id = (uint16_t)(&end_gcode - &print.config().end_filament_gcode.get_at(0));
                     config.set_key_value("filament_extruder_id", new ConfigOptionInt(extruder_id));
                     config.set_key_value("previous_extruder", new ConfigOptionInt(extruder_id));
                     config.set_key_value("next_extruder", new ConfigOptionInt(0));
@@ -1826,60 +1835,60 @@ void GCode::print_machine_envelope(FILE *file, Print &print)
     if (print.config().machine_limits_usage.value == MachineLimitsUsage::EmitToGCode) {
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfRepRap,  gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
             _write_format(file, "M201 X%d Y%d Z%d E%d ; sets maximum accelerations, mm/sec^2\n",
-                int(print.config().machine_max_acceleration_x.values.front() + 0.5),
-                int(print.config().machine_max_acceleration_y.values.front() + 0.5),
-                int(print.config().machine_max_acceleration_z.values.front() + 0.5),
-                int(print.config().machine_max_acceleration_e.values.front() + 0.5));
+                int(print.config().machine_max_acceleration_x.get_at(0) + 0.5),
+                int(print.config().machine_max_acceleration_y.get_at(0) + 0.5),
+                int(print.config().machine_max_acceleration_z.get_at(0) + 0.5),
+                int(print.config().machine_max_acceleration_e.get_at(0) + 0.5));
         if (std::set<uint8_t>{gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
             _write_format(file, "M202 X%d Y%d ; sets maximum travel acceleration\n",
-                int(print.config().machine_max_acceleration_travel.values.front() + 0.5),
-                int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
+                int(print.config().machine_max_acceleration_travel.get_at(0) + 0.5),
+                int(print.config().machine_max_acceleration_travel.get_at(0) + 0.5));
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier, gcfSmoothie, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
             _write_format(file, (print.config().gcode_flavor.value == gcfMarlin || print.config().gcode_flavor.value == gcfLerdge || print.config().gcode_flavor.value == gcfSmoothie)
                 ? "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/sec\n"
                 : "M203 X%d Y%d Z%d E%d ; sets maximum feedrates, mm/min\n",
-                int(print.config().machine_max_feedrate_x.values.front() + 0.5),
-                int(print.config().machine_max_feedrate_y.values.front() + 0.5),
-                int(print.config().machine_max_feedrate_z.values.front() + 0.5),
-                int(print.config().machine_max_feedrate_e.values.front() + 0.5));
+                int(print.config().machine_max_feedrate_x.get_at(0) + 0.5),
+                int(print.config().machine_max_feedrate_y.get_at(0) + 0.5),
+                int(print.config().machine_max_feedrate_z.get_at(0) + 0.5),
+                int(print.config().machine_max_feedrate_e.get_at(0) + 0.5));
         if (print.config().gcode_flavor.value == gcfRepRap) {
             _write_format(file, "M203 X%d Y%d Z%d E%d I%d; sets maximum feedrates, mm/min\n",
-                int(print.config().machine_max_feedrate_x.values.front() + 0.5),
-                int(print.config().machine_max_feedrate_y.values.front() + 0.5),
-                int(print.config().machine_max_feedrate_z.values.front() + 0.5),
-                int(print.config().machine_max_feedrate_e.values.front() + 0.5),
-                int(print.config().machine_min_extruding_rate.values.front() + 0.5));
+                int(print.config().machine_max_feedrate_x.get_at(0) + 0.5),
+                int(print.config().machine_max_feedrate_y.get_at(0) + 0.5),
+                int(print.config().machine_max_feedrate_z.get_at(0) + 0.5),
+                int(print.config().machine_max_feedrate_e.get_at(0) + 0.5),
+                int(print.config().machine_min_extruding_rate.get_at(0) + 0.5));
         }
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge}.count(print.config().gcode_flavor.value) > 0)
             _write_format(file, "M204 P%d R%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
-                int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
-                int(print.config().machine_max_acceleration_retracting.values.front() + 0.5),
-                int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
+                int(print.config().machine_max_acceleration_extruding.get_at(0) + 0.5),
+                int(print.config().machine_max_acceleration_retracting.get_at(0) + 0.5),
+                int(print.config().machine_max_acceleration_travel.get_at(0) + 0.5));
         if (std::set<uint8_t>{gcfRepRap, gcfKlipper, gcfSprinter}.count(print.config().gcode_flavor.value) > 0)
             _write_format(file, "M204 P%d T%d ; sets acceleration (P, T), mm/sec^2\n",
-                int(print.config().machine_max_acceleration_extruding.values.front() + 0.5),
-                int(print.config().machine_max_acceleration_travel.values.front() + 0.5));
+                int(print.config().machine_max_acceleration_extruding.get_at(0) + 0.5),
+                int(print.config().machine_max_acceleration_travel.get_at(0) + 0.5));
         if (std::set<uint8_t>{gcfRepRap}.count(print.config().gcode_flavor.value) > 0)
             _write_format(file, "M566 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/min\n",
-                print.config().machine_max_jerk_x.values.front() * 60,
-                print.config().machine_max_jerk_y.values.front() * 60,
-                print.config().machine_max_jerk_z.values.front() * 60,
-                print.config().machine_max_jerk_e.values.front() * 60);
+                print.config().machine_max_jerk_x.get_at(0) * 60,
+                print.config().machine_max_jerk_y.get_at(0) * 60,
+                print.config().machine_max_jerk_z.get_at(0) * 60,
+                print.config().machine_max_jerk_e.get_at(0) * 60);
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
             _write_format(file, "M205 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
-                print.config().machine_max_jerk_x.values.front(),
-                print.config().machine_max_jerk_y.values.front(),
-                print.config().machine_max_jerk_z.values.front(),
-                print.config().machine_max_jerk_e.values.front());
+                print.config().machine_max_jerk_x.get_at(0),
+                print.config().machine_max_jerk_y.get_at(0),
+                print.config().machine_max_jerk_z.get_at(0),
+                print.config().machine_max_jerk_e.get_at(0));
         if (std::set<uint8_t>{gcfSmoothie}.count(print.config().gcode_flavor.value) > 0)
             _write_format(file, "M205 X%.2lf Z%.2lf ; sets the jerk limits, mm/sec\n",
-                std::min(print.config().machine_max_jerk_x.values.front(),
-                print.config().machine_max_jerk_y.values.front()),
-                print.config().machine_max_jerk_z.values.front());
+                std::min(print.config().machine_max_jerk_x.get_at(0),
+                print.config().machine_max_jerk_y.get_at(0)),
+                print.config().machine_max_jerk_z.get_at(0));
         if (std::set<uint8_t>{gcfMarlin, gcfLerdge, gcfRepetier}.count(print.config().gcode_flavor.value) > 0)
             _write_format(file, "M205 S%d T%d ; sets the minimum extruding and travel feed rate, mm/sec\n",
-                int(print.config().machine_min_extruding_rate.values.front() + 0.5),
-                int(print.config().machine_min_travel_rate.values.front() + 0.5));
+                int(print.config().machine_min_extruding_rate.get_at(0) + 0.5),
+                int(print.config().machine_min_travel_rate.get_at(0) + 0.5));
     }
 }
 
@@ -3147,7 +3156,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
         inward_point.rotate(angle, paths.front().polyline.points.front());
         
         // generate the travel move
-        gcode += m_writer.travel_to_xy(this->point_to_gcode(inward_point), "move inwards before travel");
+        gcode += m_writer.travel_to_xy(this->point_to_gcode(inward_point), 0.0, "move inwards before travel");
     }
 
     return gcode;
@@ -3326,7 +3335,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
                 for (Point& pt : path.polyline.points) {
                     prev_point = current_point;
                     current_point = pt;
-                    gcode += m_writer.travel_to_xy(this->point_to_gcode(pt), config().gcode_comments ? "; extra wipe" : "");
+                    gcode += m_writer.travel_to_xy(this->point_to_gcode(pt), 0.0, config().gcode_comments ? "; extra wipe" : "");
                 }
             }
         }
@@ -3361,7 +3370,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         Point  pt = ((nd * nd >= l2) ? next_pos : (current_pos + vec_dist * (nd / sqrt(l2)))).cast<coord_t>();
         pt.rotate(angle, current_point);
         // generate the travel move
-        gcode += m_writer.travel_to_xy(this->point_to_gcode(pt), "move inwards before travel");
+        gcode += m_writer.travel_to_xy(this->point_to_gcode(pt), 0.0, "move inwards before travel");
     }
 
     return gcode;
@@ -3923,26 +3932,24 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
 
     // adjust acceleration, inside the travel to set the deceleration (unless it's deactivated)
     double acceleration = get_default_acceleration(m_config);
-    double travel_acceleration = m_writer.get_acceleration();
+    double max_acceleration = std::numeric_limits<double>::max();
+    // on 2.3, check for enable/disable if(config.machine_limits_usage)
+    if (m_config.machine_limits_usage <= MachineLimitsUsage::Limits)
+        max_acceleration = m_config.machine_max_acceleration_extruding.get_at(0);
+    double travel_acceleration = get_travel_acceleration(m_config);
     if(acceleration > 0){
         if (this->on_first_layer() && m_config.first_layer_acceleration.value > 0) {
-            acceleration = m_config.first_layer_acceleration.get_abs_value(acceleration);
+            acceleration = std::min(max_acceleration, m_config.first_layer_acceleration.get_abs_value(acceleration));
         } else if (m_config.perimeter_acceleration.value > 0 && is_perimeter(path.role())) {
-            acceleration = m_config.perimeter_acceleration.get_abs_value(acceleration);
+            acceleration = std::min(max_acceleration, m_config.perimeter_acceleration.get_abs_value(acceleration));
         } else if (m_config.bridge_acceleration.value > 0 && is_bridge(path.role())
             && path.role() != erOverhangPerimeter) {
-            acceleration = m_config.bridge_acceleration.get_abs_value(acceleration);
+            acceleration = std::min(max_acceleration, m_config.bridge_acceleration.get_abs_value(acceleration));
         } else if (m_config.infill_acceleration.value > 0 && is_infill(path.role())) {
-            acceleration = m_config.infill_acceleration.get_abs_value(acceleration);
+            acceleration = std::min(max_acceleration, m_config.infill_acceleration.get_abs_value(acceleration));
         }
-        if (m_config.travel_acceleration.value > 0)
-            travel_acceleration = m_config.travel_acceleration.get_abs_value(acceleration);
     }
-    if (m_writer.get_max_acceleration() > 0) {
-        acceleration =          std::min((double)m_writer.get_max_acceleration(), acceleration);
-        travel_acceleration =   std::min((double)m_writer.get_max_acceleration(), travel_acceleration);
-    }
-    if (travel_acceleration == acceleration) {
+    if (travel_acceleration <= acceleration) {
         m_writer.set_acceleration((uint32_t)floor(acceleration + 0.5));
         // go to first point of extrusion path (stop at midpoint to let us set the decel speed)
         if (!m_last_pos_defined || m_last_pos != path.first_point()) {
@@ -3957,7 +3964,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             // if length is enough, it's not the hack for first move, and the travel accel is different than the normal accel
             // then cut the travel in two to change the accel in-between
             // TODO: compute the real point where it should be cut, considering an infinite max speed.
-            if (length > std::max(scale_d(EPSILON), scale_d(m_config.min_length)) && m_last_pos_defined && floor(travel_acceleration) != floor(acceleration)) {
+            if (length > std::max(coordf_t(SCALED_EPSILON), scale_d(m_config.min_length)) && m_last_pos_defined) {
                 Polyline poly_end;
                 coordf_t min_length = scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0.5)) * 20;
                 if (poly_start.size() > 2 && length > min_length * 3) {
@@ -4182,10 +4189,72 @@ Polyline GCode::travel_to(std::string &gcode, const Point &point, ExtrusionRole 
 
 void GCode::write_travel_to(std::string &gcode, const Polyline& travel, std::string comment)
 {
-    // use G1 because we rely on paths being straight (G0 may make round paths)
-    if (travel.size() >= 2) {
+    if (travel.size() > 4) {
+        //ensure that you won't overload the firmware.
+        // travel are  strait lines, but with avoid_crossing_perimeters, there can be many points. Reduce speed instead of deleting points, as it's already optimised as much as possible, even if it can be a bit more => TODO?)
+        // we are using a window of 10 moves.
+        const double max_gcode_per_second = this->config().max_gcode_per_second.value;
+        coordf_t dist_next_10_moves = 0;
+        size_t idx_10 = 1;
+        size_t idx_print = 1;
+        const double max_speed = m_config.get_computed_value("travel_speed");
+        double current_speed = max_speed;
+        for (; idx_10 < travel.size() && idx_10 < 11; ++idx_10) {
+            dist_next_10_moves += travel.points[idx_10 - 1].distance_to(travel.points[idx_10]);
+        }
+
+        while (idx_10 < travel.size()) {
+            //compute speed
+            double time_for10_moves = unscaled(dist_next_10_moves) / current_speed;
+            double min_time = 10 / max_gcode_per_second;
+            double ratio_speed = time_for10_moves / min_time;
+            double possible_speed = current_speed * ratio_speed;
+
+            //write
+            if (possible_speed < max_speed) {
+                if(ratio_speed < 0.95 | ratio_speed > 1.05)
+                    current_speed = possible_speed;
+            } else if (current_speed < max_speed) {
+                current_speed = max_speed;
+            }
+            gcode += m_writer.travel_to_xy(
+                this->point_to_gcode(travel.points[idx_print]),
+                current_speed>2 ? double(uint32_t(current_speed * 60)) : current_speed * 60,
+                comment);
+
+            //update for next move
+            dist_next_10_moves -= travel.points[idx_print - 1].distance_to(travel.points[idx_print]);
+            dist_next_10_moves += travel.points[idx_10 - 1].distance_to(travel.points[idx_10]);
+            idx_10++;
+            idx_print++;
+        }
+
+        if (travel.size() < 10) {
+            //compute a global speed
+            double time_for10_moves = unscaled(dist_next_10_moves) / current_speed;
+            double min_time = travel.size() / max_gcode_per_second;
+            double ratio_speed = time_for10_moves / min_time;
+           current_speed *= ratio_speed;
+           current_speed = std::min(max_speed, current_speed);
+        } else {
+            //compute speed for the end
+            double time_for10_moves = unscaled(dist_next_10_moves) / current_speed;
+            double min_time = 10 / max_gcode_per_second;
+            double ratio_speed = time_for10_moves / min_time;
+            current_speed *= ratio_speed;
+            current_speed = std::min(max_speed, current_speed);
+        }
+
+        //finish writing moves at current speed
+        for (; idx_print < travel.size(); ++idx_print)
+            gcode += m_writer.travel_to_xy(this->point_to_gcode(travel.points[idx_print]),
+                current_speed > 2 ? double(uint32_t(current_speed * 60)) : current_speed * 60,
+                comment);
+        this->set_last_pos(travel.points.back());
+    } else if (travel.size() >= 2) {
         for (size_t i = 1; i < travel.size(); ++i)
-            gcode += m_writer.travel_to_xy(this->point_to_gcode(travel.points[i]), comment);
+            // use G1 because we rely on paths being straight (G0 may make round paths)
+            gcode += m_writer.travel_to_xy(this->point_to_gcode(travel.points[i]), 0.0, comment);
         this->set_last_pos(travel.points.back());
     }
 }

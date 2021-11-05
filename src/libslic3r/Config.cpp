@@ -1,4 +1,5 @@
 #include "Config.hpp"
+#include "Preset.hpp"
 #include "format.hpp"
 #include "Utils.hpp"
 #include <assert.h>
@@ -673,6 +674,12 @@ double ConfigBase::get_computed_value(const t_config_option_key &opt_key, int ex
         std::stringstream ss; ss << "You can't define an option that need " << opt_key << " without defining it!";
         throw std::runtime_error(ss.str());
     }
+    // Get option definition.
+    const ConfigDef* def = this->def();
+    if (def == nullptr)
+        throw NoDefinitionException(opt_key);
+    const ConfigOptionDef* opt_def = def->get(opt_key);
+    assert(opt_def != nullptr);
 
     if (!raw_opt->is_vector()) {
         if (raw_opt->type() == coFloat)
@@ -681,26 +688,13 @@ double ConfigBase::get_computed_value(const t_config_option_key &opt_key, int ex
             return static_cast<const ConfigOptionInt*>(raw_opt)->value;
         if (raw_opt->type() == coBool)
             return static_cast<const ConfigOptionBool*>(raw_opt)->value ? 1 : 0;
-        const ConfigOptionDef* opt_def = nullptr;
         const ConfigOptionPercent* cast_opt = nullptr;
         if (raw_opt->type() == coFloatOrPercent) {
             if (!static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->percent)
                 return static_cast<const ConfigOptionFloatOrPercent*>(raw_opt)->value;
-            // Get option definition.
-            const ConfigDef* def = this->def();
-            if (def == nullptr)
-                throw NoDefinitionException(opt_key);
-            opt_def = def->get(opt_key);
             cast_opt = static_cast<const ConfigOptionFloatOrPercent*>(raw_opt);
-            assert(opt_def != nullptr);
         }
         if (raw_opt->type() == coPercent) {
-            // Get option definition.
-            const ConfigDef* def = this->def();
-            if (def == nullptr)
-                throw NoDefinitionException(opt_key);
-            opt_def = def->get(opt_key);
-            assert(opt_def != nullptr);
             cast_opt = static_cast<const ConfigOptionPercent*>(raw_opt);
         }
         if (opt_def != nullptr) {
@@ -719,7 +713,9 @@ double ConfigBase::get_computed_value(const t_config_option_key &opt_key, int ex
     } else {
         // check if it's an extruder_id array
         const ConfigOptionVectorBase* vector_opt = static_cast<const ConfigOptionVectorBase*>(raw_opt);
+        int idx = -1;
         if (vector_opt->is_extruder_size()) {
+            idx = extruder_id;
             if (extruder_id < 0) {
                 const ConfigOption* opt_extruder_id = nullptr;
                 if ((opt_extruder_id = this->option("extruder")) == nullptr)
@@ -729,8 +725,15 @@ double ConfigBase::get_computed_value(const t_config_option_key &opt_key, int ex
                         throw ConfigurationError(ss.str());
                     }
                 extruder_id = opt_extruder_id->getInt();
+                idx = extruder_id;
             }
-
+        } else {
+            t_config_option_keys machine_limits = Preset::machine_limits_options();
+            if (std::find(machine_limits.begin(), machine_limits.end(), opt_key) != machine_limits.end()) {
+                idx = 0;
+            }
+        }
+        if (idx >= 0) {
             if (raw_opt->type() == coFloats || raw_opt->type() == coInts || raw_opt->type() == coBools)
                 return vector_opt->getFloat(extruder_id);
             if (raw_opt->type() == coFloatsOrPercents) {
@@ -738,10 +741,6 @@ double ConfigBase::get_computed_value(const t_config_option_key &opt_key, int ex
                 if (!opt_fl_per->values[extruder_id].percent)
                     return opt_fl_per->values[extruder_id].value;
 
-                const ConfigDef* def = this->def();
-                if (def == nullptr)
-                    throw NoDefinitionException(opt_key);
-                const ConfigOptionDef* opt_def = def->get(opt_key);
                 if (opt_def->ratio_over.empty())
                     return opt_fl_per->get_abs_value(extruder_id, 1);
                 if (opt_def->ratio_over != "depends")
@@ -751,10 +750,6 @@ double ConfigBase::get_computed_value(const t_config_option_key &opt_key, int ex
             }
             if (raw_opt->type() == coPercents) {
                 const ConfigOptionPercents* opt_per = static_cast<const ConfigOptionPercents*>(raw_opt);
-                const ConfigDef* def = this->def();
-                if (def == nullptr)
-                    throw NoDefinitionException(opt_key);
-                const ConfigOptionDef* opt_def = def->get(opt_key);
                 if (opt_def->ratio_over.empty())
                     return opt_per->get_abs_value(extruder_id, 1);
                 if (opt_def->ratio_over != "depends")
@@ -762,7 +757,7 @@ double ConfigBase::get_computed_value(const t_config_option_key &opt_key, int ex
                 std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has no valid ratio_over to compute of";
                 throw ConfigurationError(ss.str());
             }
-        }
+        } 
     }
     std::stringstream ss; ss << "ConfigBase::get_abs_value(): "<< opt_key<<" has not a valid option type for get_abs_value()";
     throw ConfigurationError(ss.str());

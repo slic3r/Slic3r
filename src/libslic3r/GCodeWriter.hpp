@@ -21,7 +21,7 @@ public:
     GCodeWriter() : 
         multiple_extruders(false), m_extrusion_axis("E"), m_tool(nullptr),
         m_single_extruder_multi_material(false),
-        m_last_acceleration(0), m_current_acceleration(0), m_max_acceleration(0), m_last_fan_speed(0),
+        m_last_acceleration(0), m_current_acceleration(0), m_last_fan_speed(0),
         m_last_bed_temperature(0), m_last_bed_temperature_reached(true), 
         m_lifted(0)
         {}
@@ -51,7 +51,6 @@ public:
     std::string set_fan(uint8_t speed, bool dont_save = false, uint16_t default_tool = 0);
     void        set_acceleration(uint32_t acceleration);
     uint32_t    get_acceleration() const;
-    uint32_t    get_max_acceleration() { return this->m_max_acceleration; }
     std::string write_acceleration();
     std::string reset_e(bool force = false);
     std::string update_progress(uint32_t num, uint32_t tot, bool allow_100 = false) const;
@@ -65,8 +64,8 @@ public:
     std::string toolchange_prefix() const;
     std::string toolchange(uint16_t tool_id);
     std::string set_speed(double F, const std::string &comment = std::string(), const std::string &cooling_marker = std::string()) const;
-    std::string travel_to_xy(const Vec2d &point, const std::string &comment = std::string());
-    std::string travel_to_xyz(const Vec3d &point, const std::string &comment = std::string());
+    std::string travel_to_xy(const Vec2d &point, double F = 0.0, const std::string &comment = std::string());
+    std::string travel_to_xyz(const Vec3d &point, double F = 0.0, const std::string &comment = std::string());
     std::string travel_to_z(double z, const std::string &comment = std::string());
     bool        will_move_z(double z) const;
     std::string extrude_to_xy(const Vec2d &point, double dE, const std::string &comment = std::string());
@@ -89,9 +88,6 @@ private:
     Tool*           m_tool;
     uint32_t        m_last_acceleration;
     uint32_t        m_current_acceleration;
-    // Limit for setting the acceleration, to respect the machine limits set for the Marlin firmware.
-    // If set to zero, the limit is not in action.
-    uint32_t        m_max_acceleration;
     uint8_t         m_last_fan_speed;
     uint8_t         m_last_fan_speed_with_offset;
     int16_t         m_last_temperature;
