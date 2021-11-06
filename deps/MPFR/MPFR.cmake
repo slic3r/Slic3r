@@ -24,6 +24,7 @@ else ()
         CONFIGURE_COMMAND env "CFLAGS=${_gmp_ccflags}" "CXXFLAGS=${_gmp_ccflags}" ./configure --prefix=${DESTDIR}/usr/local --enable-shared=no --enable-static=yes --with-gmp=${DESTDIR}/usr/local ${_gmp_build_tgt}
         BUILD_COMMAND make -j
         INSTALL_COMMAND make install
+        ${_cmake_args_osx_arch}
         DEPENDS dep_GMP
     )
 endif ()
