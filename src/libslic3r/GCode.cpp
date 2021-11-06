@@ -3949,7 +3949,7 @@ std::string GCode::_before_extrude(const ExtrusionPath &path, const std::string 
             acceleration = std::min(max_acceleration, m_config.infill_acceleration.get_abs_value(acceleration));
         }
     }
-    if (travel_acceleration <= acceleration) {
+    if (travel_acceleration <= acceleration || travel_acceleration == 0 || acceleration == 0) {
         m_writer.set_acceleration((uint32_t)floor(acceleration + 0.5));
         // go to first point of extrusion path (stop at midpoint to let us set the decel speed)
         if (!m_last_pos_defined || m_last_pos != path.first_point()) {
