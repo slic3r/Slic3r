@@ -43,15 +43,15 @@ void PerimeterGenerator::process()
 
     // other perimeters
     this->_mm3_per_mm               = this->perimeter_flow.mm3_per_mm();
-    coord_t perimeter_width         = this->perimeter_flow.scaled_width();
+    const coord_t perimeter_width         = this->perimeter_flow.scaled_width();
     //spacing between internal perimeters
-    coord_t perimeter_spacing       = this->perimeter_flow.scaled_spacing();
+    const coord_t perimeter_spacing       = this->perimeter_flow.scaled_spacing();
     
     // external perimeters
     this->_ext_mm3_per_mm           = this->ext_perimeter_flow.mm3_per_mm();
-    coord_t ext_perimeter_width     = this->ext_perimeter_flow.scaled_width();
+    const coord_t ext_perimeter_width     = this->ext_perimeter_flow.scaled_width();
     //spacing between two external perimeter (where you don't have the space to add other loops)
-    coord_t ext_perimeter_spacing   = this->ext_perimeter_flow.scaled_spacing();
+    const coord_t ext_perimeter_spacing   = this->ext_perimeter_flow.scaled_spacing();
     //spacing between external perimeter and the second
     coord_t ext_perimeter_spacing2  = this->ext_perimeter_flow.scaled_spacing(this->perimeter_flow);
 
@@ -59,19 +59,21 @@ void PerimeterGenerator::process()
     this->_mm3_per_mm_overhang = this->overhang_flow.mm3_per_mm();
 
     //gap fill
-    coord_t gap_fill_spacing = this->config->gap_fill_overlap.get_abs_value(this->perimeter_flow.scaled_spacing())  
-        + this->perimeter_flow.scaled_width() * (100 - this->config->gap_fill_overlap.value) / 100.;
+    const coord_t gap_fill_spacing_external = this->config->gap_fill_overlap.get_abs_value(this->ext_perimeter_flow.scaled_spacing())
+        + this->ext_perimeter_flow.scaled_width() * (1 - this->config->gap_fill_overlap.get_abs_value(1.));
+    const coord_t gap_fill_spacing = this->config->gap_fill_overlap.get_abs_value(this->perimeter_flow.scaled_spacing())
+        + this->perimeter_flow.scaled_width() * (1 - this->config->gap_fill_overlap.get_abs_value(1.));
 
     // solid infill
-    coord_t solid_infill_spacing = this->solid_infill_flow.scaled_spacing();
+    const coord_t solid_infill_spacing = this->solid_infill_flow.scaled_spacing();
 
     //infill / perimeter
     coord_t infill_peri_overlap = (coord_t)scale_(this->config->get_abs_value("infill_overlap", unscale<coordf_t>(perimeter_spacing + solid_infill_spacing) / 2));
     // infill gap to add vs perimeter (useful if using perimeter bonding)
     coord_t infill_gap = 0;
 
-    bool round_peri = this->config->perimeter_round_corners.value;
-    coord_t min_round_spacing = perimeter_width / 10;
+    const bool round_peri = this->config->perimeter_round_corners.value;
+    const coord_t min_round_spacing = perimeter_width / 10;
 
     // nozzle diameter
     const double nozzle_diameter = this->print_config->nozzle_diameter.get_at(this->config->perimeter_extruder - 1);
@@ -95,8 +97,8 @@ void PerimeterGenerator::process()
     // which is the spacing between external and internal, which is not correct
     // and would make the collapsing (thus the details resolution) dependent on 
     // internal flow which is unrelated. <- i don't undertand, so revert to ext_perimeter_spacing2
-    coord_t min_spacing     = (coord_t)( perimeter_spacing      * (1 - 0.05/*INSET_OVERLAP_TOLERANCE*/) );
-    coord_t ext_min_spacing = (coord_t)( ext_perimeter_spacing2  * (1 - 0.05/*INSET_OVERLAP_TOLERANCE*/) );
+    const coord_t min_spacing     = (coord_t)( perimeter_spacing      * (1 - 0.05/*INSET_OVERLAP_TOLERANCE*/) );
+    const coord_t ext_min_spacing = (coord_t)( ext_perimeter_spacing2  * (1 - 0.05/*INSET_OVERLAP_TOLERANCE*/) );
     
     // prepare grown lower layer slices for overhang detection
     if (this->lower_slices != NULL && (this->config->overhangs_width.value > 0 || this->config->overhangs_width_speed.value > 0)) {
@@ -651,9 +653,15 @@ void PerimeterGenerator::process()
                         no_last_gapfill = offset_ex(next_onion, 0.5f * good_spacing + 10,
                             (round_peri ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter),
                             (round_peri ? min_round_spacing : 3));
-                        append(gaps, diff_ex(
-                            offset_ex(last, -0.5f * gap_fill_spacing),
-                            no_last_gapfill));  // safety offset
+                        if (i == 1) {
+                            append(gaps, diff_ex(
+                                offset_ex(last, -0.5f * gap_fill_spacing_external),
+                                no_last_gapfill));  // safety offset
+                        } else {
+                            append(gaps, diff_ex(
+                                offset_ex(last, -0.5f * gap_fill_spacing),
+                                no_last_gapfill));  // safety offset
+                        }
                     }
                 }
 

@@ -1727,12 +1727,13 @@ MedialAxis::build(ThickPolylines &polylines_out)
                 tp.width[i] = this->max_width;
             }
         }
-        // voronoi bugfix: when we have a wheel, it creates a polyline at the center, completly out of the polygon.
-        if (tp.endpoints.first && tp.endpoints.second && !this->expolygon.contains(tp.first_point()) && !this->expolygon.contains(tp.last_point())) {
-            //delete this out-of-bounds polyline
-            pp.erase(pp.begin() + tp_idx);
-            --tp_idx;
-        }
+        // voronoi bugfix: when we have a wheel, it creates a polyline at the center, completly out of the polygon. #651
+        // note: can't reproduce in the new verison. This may have been fixed by another way.
+        //if (tp.endpoints.first && tp.endpoints.second && !this->expolygon.contains(tp.first_point()) && !this->expolygon.contains(tp.last_point()) && pp.size() > 1) {
+        //    //delete this out-of-bounds polyline
+        //    pp.erase(pp.begin() + tp_idx);
+        //    --tp_idx;
+        //}
     }
     //std::cout << "polyline_from_voronoi\n";
     //{
