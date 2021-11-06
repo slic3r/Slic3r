@@ -492,6 +492,7 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
 
         for (ExPolygon &expoly : surface_fill.expolygons) {
             //set overlap polygons
+            f->no_overlap_expolygons.clear();
             if (surface_fill.params.config->perimeters > 0) {
                 f->overlap = surface_fill.params.config->infill_overlap.get_abs_value((perimeter_spacing + (f->get_spacing())) / 2);
                 if (f->overlap != 0) {

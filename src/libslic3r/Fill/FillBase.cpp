@@ -150,14 +150,14 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
 
 double Fill::compute_unscaled_volume_to_fill(const Surface* surface, const FillParams& params) const {
     double polyline_volume = 0;
-    for (auto poly = this->no_overlap_expolygons.begin(); poly != this->no_overlap_expolygons.end(); ++poly) {
-        polyline_volume += params.flow.height * unscaled(unscaled(poly->area()));
+    for (const ExPolygon& poly : this->no_overlap_expolygons) {
+        polyline_volume += params.flow.height * unscaled(unscaled(poly.area()));
         double perimeter_gap_usage = params.config->perimeter_overlap.get_abs_value(1);
         // add external "perimeter gap"
-        double perimeter_round_gap = unscaled(poly->contour.length()) * params.flow.height * (1 - 0.25 * PI) * 0.5;
+        double perimeter_round_gap = unscaled(poly.contour.length()) * params.flow.height * (1 - 0.25 * PI) * 0.5;
         // add holes "perimeter gaps"
         double holes_gaps = 0;
-        for (auto hole = poly->holes.begin(); hole != poly->holes.end(); ++hole) {
+        for (auto hole = poly.holes.begin(); hole != poly.holes.end(); ++hole) {
             holes_gaps += unscaled(hole->length()) * params.flow.height * (1 - 0.25 * PI) * 0.5;
         }
         polyline_volume += (perimeter_round_gap + holes_gaps) * perimeter_gap_usage;
