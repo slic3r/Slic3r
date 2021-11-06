@@ -3230,6 +3230,8 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     m_support_material_interface_flow.spacing_ratio,
                     layer_ex.layer->bridging);
                 Fill *filler = i == 2 ? filler_intermediate_interface.get() : filler_interface.get();
+                filler->layer_id = support_layer_id;
+                filler->z = support_layer.print_z;
                 float density = interface_density;
                 coordf_t spacing;
                 //if first layer and solid first layer : draw concentric with 100% density
