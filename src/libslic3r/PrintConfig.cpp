@@ -5746,6 +5746,17 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
     }
     if ("first_layer_min_speed" == opt_key && value.back() == '%')
         value = value.substr(0, value.length() - 1); //no percent.
+    if ("bridge_flow_ratio" == opt_key && value.back() != '%') {
+        //need percent
+        try {
+            float val = boost::lexical_cast<float>(value);
+            if (val < 1.)
+                value = boost::lexical_cast<std::string>(val*100) + "%";
+        }
+        catch (boost::bad_lexical_cast&) {
+            value = "100%";
+        }
+    }
 
     // Ignore the following obsolete configuration keys:
     static std::set<std::string> ignore = {
