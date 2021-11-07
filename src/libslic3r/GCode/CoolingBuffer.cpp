@@ -774,24 +774,25 @@ std::string CoolingBuffer::apply_layer_cooldown(
             //if (EXTRUDER_CONFIG(cooling)) {
                 if (layer_time < slowdown_below_layer_time && fan_below_layer_time > 0) {
                     // Layer time very short. Enable the fan to a full throttle.
-                    fan_speed_new = max_fan_speed;
-                    bridge_fan_speed = max_fan_speed;
-                    bridge_internal_fan_speed = max_fan_speed;
-                    ext_peri_fan_speed = max_fan_speed;
-                    top_fan_speed = max_fan_speed;
+                    fan_speed_new = std::max(max_fan_speed, fan_speed_new);
+                    bridge_fan_speed = std::max(max_fan_speed, bridge_fan_speed);
+                    bridge_internal_fan_speed = std::max(max_fan_speed, bridge_internal_fan_speed);
+                    ext_peri_fan_speed = std::max(max_fan_speed, ext_peri_fan_speed); // cannot be ovveridden
+                    //top_fan_speed = std::max(max_fan_speed, top_fan_speed);
                 } else if (layer_time < fan_below_layer_time) {
                     // Layer time quite short. Enable the fan proportionally according to the current layer time.
                     assert(layer_time >= slowdown_below_layer_time);
                     double t = (layer_time - slowdown_below_layer_time) / (fan_below_layer_time - slowdown_below_layer_time);
-                    fan_speed_new = int(floor(t * min_fan_speed + (1. - t) * max_fan_speed) + 0.5);
+                    if (fan_speed_new < max_fan_speed)
+                        fan_speed_new = int(floor(t * min_fan_speed + (1. - t) * max_fan_speed) + 0.5);
                     if (bridge_fan_speed >= 0 && bridge_fan_speed < max_fan_speed)
                         bridge_fan_speed = int(floor(t * bridge_fan_speed + (1. - t) * max_fan_speed) + 0.5);
                     if (bridge_internal_fan_speed >= 0 && bridge_internal_fan_speed < max_fan_speed)
                         bridge_internal_fan_speed = int(floor(t * bridge_internal_fan_speed + (1. - t) * max_fan_speed) + 0.5);
-                    if (top_fan_speed >= 0 && top_fan_speed < max_fan_speed)
-                        top_fan_speed = int(floor(t * top_fan_speed + (1. - t) * max_fan_speed) + 0.5);
                     if (ext_peri_fan_speed >= 0 && ext_peri_fan_speed < max_fan_speed)
                         ext_peri_fan_speed = int(floor(t * ext_peri_fan_speed + (1. - t) * max_fan_speed) + 0.5);
+                    //if (top_fan_speed >= 0 && top_fan_speed < max_fan_speed) // cannot be ovveridden
+                    //    top_fan_speed = int(floor(t * top_fan_speed + (1. - t) * max_fan_speed) + 0.5);
                 }
             //}
 

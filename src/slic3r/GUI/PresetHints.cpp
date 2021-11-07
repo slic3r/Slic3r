@@ -25,6 +25,7 @@ std::string PresetHints::cooling_description(const Preset &preset)
     int     bridge_internal_fan_speed = preset.config.opt_int("bridge_internal_fan_speed", 0);
     int     ext_peri_fan_speed = preset.config.opt_int("external_perimeter_fan_speed", 0);
     int     disable_fan_first_layers = preset.config.opt_int("disable_fan_first_layers", 0);
+    int     full_fan_speed_layer = preset.config.opt_int("full_fan_speed_layer", 0);
     int     slowdown_below_layer_time = preset.config.opt_int("slowdown_below_layer_time", 0);
     int     min_print_speed = int(preset.config.opt_float("min_print_speed", 0) + 0.5);
     int     max_speed_reduc = int(preset.config.opt_float("max_speed_reduction", 0));
@@ -69,6 +70,8 @@ std::string PresetHints::cooling_description(const Preset &preset)
             out += ", " + (boost::format(_utf8(L("except for the first %1% layers where the fan is disabled"))) % disable_fan_first_layers).str();
         else if (disable_fan_first_layers == 1)
             out += ", " + _utf8(L("except for the first layer where the fan is disabled"));
+        if(full_fan_speed_layer > disable_fan_first_layers + 1 && disable_fan_first_layers > 0)
+            out += (boost::format(_utf8(L(" and will gradually speed-up to the above speeds over %1% layers")))  % (full_fan_speed_layer - disable_fan_first_layers)).str();
         out += ".";
     } else
        out += " " + _utf8(L("will be turned off by default."));
@@ -85,7 +88,7 @@ std::string PresetHints::cooling_description(const Preset &preset)
         if (ext_peri_fan_speed > max_fan_speed) {
             out += ", " + (boost::format(_utf8(L("at %1%%% over external perimeters"))) % ext_peri_fan_speed).str();
         } else if (ext_peri_fan_speed > min_fan_speed) {
-            out += ", " + (boost::format(_utf8(L("at %1%%% over external perimeters"))) % ext_peri_fan_speed).str() + " " + L("if it's above the current computed fan speed value");
+            out += ", " + (boost::format(_utf8(L("between %1%%% %2%%% over external perimeters"))) % ext_peri_fan_speed % max_fan_speed).str();
         }
         if (top_fan_speed >= 0) {
             out += ", " + (boost::format(_utf8(L("at %1%%% over top fill surfaces"))) % top_fan_speed).str();
@@ -93,17 +96,19 @@ std::string PresetHints::cooling_description(const Preset &preset)
         if (bridge_fan_speed > max_fan_speed) {
             out += ", " + (boost::format(_utf8(L("at %1%%% over bridges"))) % bridge_fan_speed).str();
         } else if (bridge_fan_speed > min_fan_speed) {
-            out += ", " + (boost::format(_utf8(L("at %1%%% over bridges"))) % bridge_fan_speed).str() + " " + L("if it's above the current computed fan speed value");
+            out += ", " + (boost::format(_utf8(L("between %1%%% %2%%% over bridges"))) % bridge_fan_speed % max_fan_speed).str();
         }
         if (bridge_internal_fan_speed > max_fan_speed) {
             out += ", " + (boost::format(_utf8(L("at %1%%% over infill bridges"))) % bridge_internal_fan_speed).str();
         } else if (bridge_internal_fan_speed > min_fan_speed) {
-            out += ", " + (boost::format(_utf8(L("at %1%%% over infill bridges"))) % bridge_internal_fan_speed).str() + " " + L("if it's above the current computed fan speed value");
+            out += ", " + (boost::format(_utf8(L("between %1%%% %2%%% over infill bridges"))) % bridge_internal_fan_speed % max_fan_speed).str();
         }
         if (disable_fan_first_layers > 1)
             out += " ; " + ((boost::format(_utf8(L("except for the first %1% layers where the fan is disabled"))) % disable_fan_first_layers).str());
         else if (disable_fan_first_layers == 1)
             out += " ; "+ _utf8(L("except for the first layer where the fan is disabled"));
+        if (full_fan_speed_layer > disable_fan_first_layers + 1 && disable_fan_first_layers > 0)
+            out += (boost::format(_utf8(L(" and will gradually speed-up to the above speeds over %1% layers"))) % (full_fan_speed_layer - disable_fan_first_layers)).str();
         out += ".";
     }
 
@@ -116,10 +121,13 @@ std::string PresetHints::cooling_description(const Preset &preset)
                 % max_fan_speed).str();
 
             if (disable_fan_first_layers > 1)
-                out += " (" + (boost::format(_utf8(L("except for the first %1% layers where the fan is disabled"))) % disable_fan_first_layers).str() + ")";
+                out += " (" + (boost::format(_utf8(L("except for the first %1% layers where the fan is disabled"))) % disable_fan_first_layers).str();
             else if (disable_fan_first_layers == 1)
-                out += " (" + _utf8(L("except for the first layer where the fan is disabled")) + ")";
-
+                out += " (" + _utf8(L("except for the first layer where the fan is disabled"));
+            if (full_fan_speed_layer > disable_fan_first_layers + 1 && disable_fan_first_layers > 0)
+                out += (boost::format(_utf8(L(" and will gradually speed-up to the above speeds over %1% layers"))) % (full_fan_speed_layer - disable_fan_first_layers)).str();
+            if(disable_fan_first_layers > 0)
+                out += ")";
             out += " and";
         }
             
