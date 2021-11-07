@@ -135,6 +135,8 @@ enum InfillConnection {
 enum RemainingTimeType {
     rtM117,
     rtM73,
+    rtM73_Quiet,
+    rtNone,
 };
 
 enum SupportZDistanceType {
@@ -342,7 +344,9 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<InfillConnection>
 template<> inline const t_config_enum_values& ConfigOptionEnum<RemainingTimeType>::get_enum_values() {
     static const t_config_enum_values keys_map = {
         { "m117", rtM117 },
-        { "m73", rtM73 }
+        { "m73", rtM73 },
+        { "m73q", rtM73_Quiet },
+        { "none", rtNone }
     };
     return keys_map;
 }
