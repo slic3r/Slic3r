@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <math.h>
 #include <string_view>
+#include <map>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/find.hpp>
@@ -1107,7 +1108,6 @@ void GCode::_init_multiextruders(FILE *file, Print &print, GCodeWriter & writer,
     }
 }
 
-
 void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thumbnail_cb)
 {
     PROFILE_FUNC();
@@ -1359,6 +1359,10 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     // Emit machine envelope limits for the Marlin firmware.
     this->print_machine_envelope(file, print);
 
+    //add variables from filament_custom_variables
+    m_placeholder_parser.parse_custom_variables(m_config.print_custom_variables);
+    m_placeholder_parser.parse_custom_variables(m_config.printer_custom_variables);
+    m_placeholder_parser.parse_custom_variables(m_config.filament_custom_variables);
 
     // Let the start-up script prime the 1st printing tool.
     m_placeholder_parser.set("initial_tool", initial_extruder_id);

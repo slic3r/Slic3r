@@ -836,9 +836,10 @@ namespace client
             expr<Iterator>                  &output)
         {
             std::string opt_key(opt.it_range.begin(), opt.it_range.end());
+            const ConfigOptionVectorBase* vector_opt = nullptr;
             if (opt.opt->is_vector()) {
-                const ConfigOptionDef* opt_def = print_config_def.get(opt_key);
-                if (!opt_def->is_vector_extruder)
+                vector_opt = static_cast<const ConfigOptionVectorBase*>(opt.opt);
+                if (!vector_opt->is_extruder_size())
                     ctx->throw_exception("Referencing a vector variable when scalar is expected", opt.it_range);
             }
             const ConfigOptionDef* opt_def;
@@ -898,29 +899,29 @@ namespace client
                     ctx->throw_exception("Unknown scalar variable type", opt.it_range);
             case coFloats:
             case coPercents:
-                opt_def = print_config_def.get(opt_key);
-                if (opt_def->is_vector_extruder) {
+                vector_opt = static_cast<const ConfigOptionVectorBase*>(opt.opt);
+                if (vector_opt->is_extruder_size()) {
                     output.set_d(((ConfigOptionVectorBase*)opt.opt)->getFloat(ctx->current_extruder_id));
                     break;
                 } else
                     ctx->throw_exception("Unknown scalar variable type", opt.it_range);
             case coFloatsOrPercents:
-                opt_def = print_config_def.get(opt_key);
-                if (opt_def->is_vector_extruder) {
+                vector_opt = static_cast<const ConfigOptionVectorBase*>(opt.opt);
+                if (vector_opt->is_extruder_size()) {
                     output.set_d(ctx->get_computed_value(opt_key));
                     break;
                 } else
                     ctx->throw_exception("Unknown scalar variable type", opt.it_range);
             case coStrings:
-                opt_def = print_config_def.get(opt_key);
-                if (opt_def->is_vector_extruder) {
+                vector_opt = static_cast<const ConfigOptionVectorBase*>(opt.opt);
+                if (vector_opt->is_extruder_size()) {
                     output.set_s(((ConfigOptionStrings*)opt.opt)->values[ctx->current_extruder_id]);
                     break;
                 } else
                     ctx->throw_exception("Unknown scalar variable type", opt.it_range);
             case coPoints:
-                opt_def = print_config_def.get(opt_key);
-                if (opt_def->is_vector_extruder) {
+                vector_opt = static_cast<const ConfigOptionVectorBase*>(opt.opt);
+                if (vector_opt->is_extruder_size()) {
                     output.set_s(to_string(((ConfigOptionPoints*)opt.opt)->values[ctx->current_extruder_id]));
                     break;
                 }else
@@ -1492,5 +1493,167 @@ bool PlaceholderParser::evaluate_boolean_expression(const std::string &templ, co
     context.just_boolean_expression = true;
     return process_macro(templ, context) == "true";
 }
+
+
+void PlaceholderParser::append_custom_variables(std::map<std::string, std::vector<std::string>> name2var_array, int nb_extruders) {
+    std::regex is_a_name("[a-zA-Z_]+");
+    for (const auto& entry : name2var_array) {
+        if (entry.first.empty())
+            continue;
+        if (!std::regex_match(entry.first, is_a_name))
+            continue;
+        const std::vector<std::string>& values = entry.second;
+        //check if all values are empty
+        bool is_not_string = false;
+        for (int extruder_id = 0; extruder_id < nb_extruders; ++extruder_id) {
+            if (!values[extruder_id].empty()) {
+                is_not_string = true;
+                break;
+            }
+        }
+        std::vector<std::string> string_values;
+        //check if all values are strings
+        if (is_not_string) {
+            is_not_string = false;
+            for (int extruder_id = 0; extruder_id < nb_extruders; ++extruder_id) {
+                if (!values[extruder_id].empty()) {
+                    if (values[extruder_id].front() != '\"' && values[extruder_id].back() != '\"') {
+                        is_not_string = true;
+                        break;
+                    }
+                    string_values.push_back(values[extruder_id].substr(1, values[extruder_id].size() - 2));
+                } else {
+                    string_values.push_back("");
+                }
+            }
+        }
+        //check if all values are bools
+        bool is_not_bool = !is_not_string;
+        std::vector<unsigned char> bool_values;
+        if (!is_not_bool) {
+            for (int extruder_id = 0; extruder_id < nb_extruders; ++extruder_id) {
+                if (!values[extruder_id].empty()) {
+                    if (boost::algorithm::to_lower_copy(values[extruder_id]) == "true") {
+                        bool_values.push_back(true);
+                    } else if (boost::algorithm::to_lower_copy(values[extruder_id]) == "false") {
+                        bool_values.push_back(false);
+                    } else {
+                        is_not_bool = true;
+                        break;
+                    }
+                } else {
+                    bool_values.push_back(false);
+                }
+            }
+        }
+        //check if all values are numeric
+        bool is_not_numeric = !is_not_string || !is_not_bool;
+        std::vector<double> double_values;
+        //std::regex("\\s*[+-]?([0-9]+\\.[0-9]*([Ee][+-]?[0-9]+)?|\\.[0-9]+([Ee][+-]?[0-9]+)?|[0-9]+[Ee][+-]?[0-9]+)");
+        if (!is_not_numeric) {
+            for (int extruder_id = 0; extruder_id < nb_extruders; ++extruder_id) {
+                if (!values[extruder_id].empty()) {
+                    try {
+                        double_values.push_back(boost::lexical_cast<float>(values[extruder_id]));
+                    }
+                    catch (boost::bad_lexical_cast&) {
+                        is_not_numeric = true;
+                        break;
+                    }
+                } else {
+                    double_values.push_back(0);
+                }
+            }
+        }
+        //if nothing, then it's strings
+        if (is_not_string && is_not_numeric && is_not_bool) {
+            string_values = values;
+            is_not_string = false;
+        }
+        if (!is_not_numeric) {
+            std::stringstream log;
+            log << "Parsing NUM custom variable '" << entry.first << "' : ";
+            for (auto s : double_values) log << ", " << s;
+            BOOST_LOG_TRIVIAL(trace) << log.str();
+            ConfigOptionFloats* conf = new ConfigOptionFloats(double_values);
+            conf->set_is_extruder_size(true);
+            this->set(entry.first, conf);
+        } else if (!is_not_bool) {
+            std::stringstream log;
+            log << "Parsing BOOL custom variable '" << entry.first << "' : ";
+            for (auto s : bool_values) log << ", " << s;
+            BOOST_LOG_TRIVIAL(trace) << log.str();
+            ConfigOptionBools* conf = new ConfigOptionBools(bool_values);
+            conf->set_is_extruder_size(true);
+            this->set(entry.first, conf);
+        } else {
+            for (std::string& s : string_values)
+                boost::replace_all(s, "\\n", "\n");
+            std::stringstream log;
+            log << "Parsing STR custom variable '" << entry.first << "' : ";
+            for (auto s : string_values) log << ", " << s;
+            BOOST_LOG_TRIVIAL(trace) << log.str();
+            ConfigOptionStrings* conf = new ConfigOptionStrings(string_values);
+            conf->set_is_extruder_size(true);
+            this->set(entry.first, conf);
+        }
+    }
+
+}
+
+void PlaceholderParser::parse_custom_variables(const ConfigOptionString& custom_variables) {
+
+    std::map<std::string, std::vector<std::string>> name2var_array;
+
+    std::string raw_text = custom_variables.value;
+    boost::erase_all(raw_text, "\r");
+    std::vector<std::string> lines;
+    boost::algorithm::split(lines, raw_text, boost::is_any_of("\n"));
+    for (const std::string& line : lines) {
+        int equal_pos = line.find_first_of('=');
+        if (equal_pos != std::string::npos) {
+            std::string name = line.substr(0, equal_pos);
+            std::string value = line.substr(equal_pos + 1);
+            boost::algorithm::trim(name);
+            boost::algorithm::trim(value);
+            if (name2var_array.find(name) == name2var_array.end()) {
+                name2var_array.emplace(name, std::vector<std::string>{ 1, value });
+            } else
+                name2var_array[name][0] = value;
+
+        }
+    }
+    append_custom_variables(name2var_array, 1);
+}
+
+void PlaceholderParser::parse_custom_variables(const ConfigOptionStrings& filament_custom_variables)
+{
+    std::map<std::string, std::vector<std::string>> name2var_array;
+    const std::vector<std::string> empty_array(filament_custom_variables.values.size());
+
+    for (int extruder_id = 0; extruder_id < filament_custom_variables.values.size(); ++extruder_id)
+    {
+        std::string raw_text = filament_custom_variables.values[extruder_id];
+        boost::erase_all(raw_text, "\r");
+        std::vector<std::string> lines;
+        boost::algorithm::split(lines, raw_text, boost::is_any_of("\n"));
+        for (const std::string& line : lines) {
+            int equal_pos = line.find_first_of('=');
+            if (equal_pos != std::string::npos) {
+                std::string name = line.substr(0, equal_pos);
+                std::string value = line.substr(equal_pos + 1);
+                boost::algorithm::trim(name);
+                boost::algorithm::trim(value);
+                if (name2var_array.find(name) == name2var_array.end()) {
+                    name2var_array.emplace(name, empty_array);
+                }
+                name2var_array[name][extruder_id] = value;
+
+            }
+        }
+    }
+    append_custom_variables(name2var_array, filament_custom_variables.values.size());
+}
+
 
 }

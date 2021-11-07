@@ -62,7 +62,14 @@ public:
     // Update timestamp, year, month, day, hour, minute, second variables at m_config.
     void update_timestamp() { update_timestamp(m_config); }
 
+    // set custom variables
+    void parse_custom_variables(const ConfigOptionString& custom_variables);
+    void parse_custom_variables(const ConfigOptionStrings& filament_custom_variables);
+
+
 private:
+    void append_custom_variables(std::map<std::string, std::vector<std::string>> name2var_array, int nb_extruders);
+
 	// config has a higher priority than external_config when looking up a symbol.
     DynamicConfig 			 m_config;
     const DynamicConfig 	*m_external_config;

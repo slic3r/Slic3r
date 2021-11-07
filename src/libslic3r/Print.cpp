@@ -108,6 +108,7 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
         "fan_speedup_time",
         "fan_percentage",
         "filament_colour",
+        "filament_custom_variables",
         "filament_diameter",
         "filament_density",
         "filament_notes",

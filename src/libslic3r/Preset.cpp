@@ -555,7 +555,10 @@ const std::vector<std::string>& Preset::print_options()
         "support_material_contact_distance_type",
         "support_material_contact_distance_top",
         "support_material_contact_distance_bottom",
-        "support_material_buildplate_only", "dont_support_bridges", "notes", 
+        "support_material_buildplate_only", "dont_support_bridges", 
+        // miscellaneous
+        "notes", 
+        "print_custom_variables",
         "complete_objects",
         "complete_objects_one_skirt",
         "complete_objects_one_brim",
@@ -650,7 +653,9 @@ const std::vector<std::string>& Preset::print_options()
 const std::vector<std::string>& Preset::filament_options()
 {    
     static std::vector<std::string> s_opts {
-        "filament_colour", "filament_diameter", "filament_type", "filament_soluble", "filament_notes",
+        "filament_colour", 
+        "filament_custom_variables",
+        "filament_diameter", "filament_type", "filament_soluble", "filament_notes",
         "filament_max_speed",
         "filament_max_volumetric_speed",
         "filament_max_wipe_tower_speed",
@@ -741,14 +746,23 @@ const std::vector<std::string>& Preset::printer_options()
             //FIXME the print host keys are left here just for conversion from the Printer preset to Physical Printer preset.
             "host_type", "print_host", "printhost_apikey", "printhost_cafile", "printhost_port",
             "single_extruder_multi_material", 
+            // custom gcode
             "start_gcode",
             "start_gcode_manual",
             "end_gcode",
             "before_layer_gcode",
             "layer_gcode",
             "toolchange_gcode",
-            "color_change_gcode", "pause_print_gcode", "template_custom_gcode",            "feature_gcode",
-            "between_objects_gcode", "printer_vendor", "printer_model", "printer_variant", "printer_notes", "cooling_tube_retraction",
+            "color_change_gcode", "pause_print_gcode", "template_custom_gcode","feature_gcode",
+            "between_objects_gcode",
+            //printer fields
+            "printer_custom_variables",
+            "printer_vendor",
+            "printer_model", 
+            "printer_variant", 
+            "printer_notes", 
+            // mmu
+            "cooling_tube_retraction",
             "cooling_tube_length", "high_current_on_filament_swap", "parking_pos_retraction", "extra_loading_move", "max_print_height", 
             "default_print_profile", "inherits",
             "remaining_times",
@@ -884,7 +898,7 @@ const std::vector<std::string>& Preset::sla_printer_options()
             "min_initial_exposure_time", "max_initial_exposure_time",
             //FIXME the print host keys are left here just for conversion from the Printer preset to Physical Printer preset.
             "print_host", "printhost_apikey", "printhost_cafile", "printhost_port",
-            "printer_notes",
+            "printer_custom_variables",
             "inherits",
             "thumbnails",
             "thumbnails_color",

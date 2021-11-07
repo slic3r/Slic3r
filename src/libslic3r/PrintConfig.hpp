@@ -1330,6 +1330,7 @@ public:
     ConfigOptionBools               fan_always_on;
     ConfigOptionInts                fan_below_layer_time;
     ConfigOptionStrings             filament_colour;
+    ConfigOptionStrings             filament_custom_variables;
     ConfigOptionStrings             filament_notes;
     ConfigOptionPercents            filament_max_overlap;
     ConfigOptionPercents            filament_shrink;
@@ -1363,6 +1364,8 @@ public:
     ConfigOptionString              output_filename_format;
     ConfigOptionFloatOrPercent      perimeter_acceleration;
     ConfigOptionStrings             post_process;
+    ConfigOptionString              print_custom_variables;
+    ConfigOptionString              printer_custom_variables;
     ConfigOptionString              printer_model;
     ConfigOptionString              printer_notes;
     ConfigOptionFloat               resolution;
@@ -1435,6 +1438,7 @@ protected:
         OPT_PTR(fan_always_on);
         OPT_PTR(fan_below_layer_time);
         OPT_PTR(filament_colour);
+        OPT_PTR(filament_custom_variables);
         OPT_PTR(filament_notes);
         OPT_PTR(filament_max_overlap);
         OPT_PTR(filament_shrink);
@@ -1468,6 +1472,8 @@ protected:
         OPT_PTR(output_filename_format);
         OPT_PTR(perimeter_acceleration);
         OPT_PTR(post_process);
+        OPT_PTR(print_custom_variables);
+        OPT_PTR(printer_custom_variables);
         OPT_PTR(printer_model);
         OPT_PTR(printer_notes);
         OPT_PTR(resolution);

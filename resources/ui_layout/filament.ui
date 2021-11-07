@@ -94,6 +94,8 @@ group:no_title:End G-code
 page:Notes:note.png
 group:label_width$0:Notes
 	setting:full_width:height$25:filament_notes
+group:label_width$0:Custom variables
+	setting:full_width:height$15:filament_custom_variables
 
 page:Dependencies:wrench.png
 	group:Profile dependencies

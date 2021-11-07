@@ -2084,6 +2084,7 @@ public:
     void set_deserialize_strict(std::initializer_list<SetDeserializeItem> items)
         { ConfigSubstitutionContext ctxt{ ForwardCompatibilitySubstitutionRule::Disable }; this->set_deserialize(items, ctxt); }
 
+    const ConfigOptionDef* get_option_def(const t_config_option_key& opt_key) const;
     double get_computed_value(const t_config_option_key &opt_key, int extruder_id = -1) const;
     double get_abs_value(const t_config_option_key &opt_key, double ratio_over) const;
     void setenv_() const;

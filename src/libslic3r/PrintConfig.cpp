@@ -1305,6 +1305,26 @@ void PrintConfigDef::init_fff_params()
     def->is_vector_extruder = true;
     def->set_default_value(new ConfigOptionStrings{ "#29B2B2" });
 
+    def = this->add("filament_custom_variables", coStrings);
+    def->label = L("Custom variables");
+    def->full_label = L("Filament custom variables");
+    def->category = OptionCategory::filament;
+    def->tooltip = L("You can add data accessible to custom-gcode macros."
+        "\nEach line can define one variable."
+        "\nThe format is 'variable_name=value'. the variabel name should only have [a-zA-Z] characters or '_'."
+        "\nA value that can be parsed as a int or float will be avaible as a numeric value."
+        "\nA value that is enclosed by double-quotes will be available as a string (without the quotes)"
+        "\nA value that only takes values as 'true' or 'false' will be a boolean)"
+        "\nEvery other value will be parsed as a string as-is."
+        "\nThese varibles will be available as an array in the custom gcode (one item per extruder), don't forget to use them with the [current_extruder] index to get the current value."
+        " If a filament has a typo on the variable that change its type, then the parser will convert evrything to strings.");
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 13;
+    def->mode = comAdvanced;
+    def->is_vector_extruder = true;
+    def->set_default_value(new ConfigOptionStrings{ "" });
+
     def = this->add("filament_notes", coStrings);
     def->label = L("Filament notes");
     def->category = OptionCategory::notes;
@@ -2982,6 +3002,23 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionString(""));
 
+    def = this->add("print_custom_variables", coString);
+    def->label = L("Custom variables");
+    def->full_label = L("Print custom variables");
+    def->category = OptionCategory::filament;
+    def->tooltip = L("You can add data accessible to custom-gcode macros."
+        "\nEach line can define one variable."
+        "\nThe format is 'variable_name=value'. the variabel name should only have [a-zA-Z] characters or '_'."
+        "\nA value that can be parsed as a int or float will be avaible as a numeric value."
+        "\nA value that is enclosed by double-quotes will be available as a string (without the quotes)"
+        "\nA value that only takes values as 'true' or 'false' will be a boolean)"
+        "\nEvery other value will be parsed as a string as-is.");
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 13;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionString{ "" });
+
     def = this->add("print_host", coString);
     def->label = L("Hostname, IP or URL");
     def->category = OptionCategory::general;
@@ -3222,6 +3259,23 @@ void PrintConfigDef::init_fff_params()
     def->height = 6;
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionStrings());
+
+    def = this->add("printer_custom_variables", coString);
+    def->label = L("Custom variables");
+    def->full_label = L("Printer custom variables");
+    def->category = OptionCategory::filament;
+    def->tooltip = L("You can add data accessible to custom-gcode macros."
+        "\nEach line can define one variable."
+        "\nThe format is 'variable_name=value'. the variabel name should only have [a-zA-Z] characters or '_'."
+        "\nA value that can be parsed as a int or float will be avaible as a numeric value."
+        "\nA value that is enclosed by double-quotes will be available as a string (without the quotes)"
+        "\nA value that only takes values as 'true' or 'false' will be a boolean)"
+        "\nEvery other value will be parsed as a string as-is.");
+    def->multiline = true;
+    def->full_width = true;
+    def->height = 13;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionString{ "" });
 
     def = this->add("printer_model", coString);
     def->label = L("Printer type");

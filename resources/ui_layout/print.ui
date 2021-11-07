@@ -384,6 +384,8 @@ group:Post-processing script
 page:Notes:note
 group:no_title:Notes
 	setting:full_width:height$25:notes
+group:no_title:Custom variables
+	setting:full_width:height$15:print_custom_variables
 
 page:Dependencies:wrench
 group:Profile dependencies
