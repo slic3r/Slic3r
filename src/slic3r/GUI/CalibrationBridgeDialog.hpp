@@ -10,7 +10,7 @@ class CalibrationBridgeDialog : public CalibrationAbstractDialog
 {
 
 public:
-    CalibrationBridgeDialog(GUI_App* app, MainFrame* mainframe) : CalibrationAbstractDialog(app, mainframe, "Bridge calibration") { create("/calibration/bridge_flow", "bridge_flow.html", wxSize(850, 400)); }
+    CalibrationBridgeDialog(GUI_App* app, MainFrame* mainframe) : CalibrationAbstractDialog(app, mainframe, "Bridge calibration") { create(boost::filesystem::path("calibration") / "bridge_flow", "bridge_flow.html", wxSize(850, 400)); }
     virtual ~CalibrationBridgeDialog() { }
     
 protected:

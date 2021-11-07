@@ -75,7 +75,7 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
 
     std::vector<std::string> items;
     for (size_t i = 0; i < nb_items; i++)
-        items.emplace_back(Slic3r::resources_dir()+"/calibration/bridge_flow/bridge_test.amf");
+        items.emplace_back((boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "bridge_flow" / "bridge_test.amf").string());
     std::vector<size_t> objs_idx = plat->load_files(items, true, false, false);
 
     assert(objs_idx.size() == nb_items);
@@ -103,7 +103,7 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
     for (size_t i = 0; i < nb_items; i++) {
         int step_num = (start + (add ? 1 : -1) * i * step);
         if (step_num < 180 && step_num > 20 && step_num%5 == 0) {
-            add_part(model.objects[objs_idx[i]], Slic3r::resources_dir() + "/calibration/bridge_flow/f" + std::to_string(step_num) + ".amf", Vec3d{ -10,0, zshift + 4.6 * z_scale }, Vec3d{ 1,1,z_scale });
+            add_part(model.objects[objs_idx[i]], (boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "bridge_flow" / ("f" + std::to_string(step_num) + ".amf")).string(), Vec3d{ -10,0, zshift + 4.6 * z_scale }, Vec3d{ 1,1,z_scale });
         }
     }
     /// --- translate ---;

@@ -63,7 +63,7 @@ void CalibrationCubeDialog::create_geometry(std::string calibration_path) {
 
     GLCanvas3D::set_warning_freeze(true);
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
-            Slic3r::resources_dir()+"/calibration/cube/"+ calibration_path}, true, false, false);
+            (boost::filesystem::path(Slic3r::resources_dir()) / "calibration"/"cube"/ calibration_path).string()}, true, false, false);
 
     assert(objs_idx.size() == 1);
     const DynamicPrintConfig* printConfig = this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->get_config();

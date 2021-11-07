@@ -55,12 +55,12 @@ void CalibrationOverBridgeDialog::create_geometry(bool over_bridge) {
     }
 
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
-            Slic3r::resources_dir()+"/calibration/over-bridge_tuning/over-bridge_flow_ratio_test.amf",
-            Slic3r::resources_dir()+"/calibration/over-bridge_tuning/over-bridge_flow_ratio_test.amf",
-            Slic3r::resources_dir()+"/calibration/over-bridge_tuning/over-bridge_flow_ratio_test.amf",
-            Slic3r::resources_dir()+"/calibration/over-bridge_tuning/over-bridge_flow_ratio_test.amf",
-            Slic3r::resources_dir()+"/calibration/over-bridge_tuning/over-bridge_flow_ratio_test.amf",
-            Slic3r::resources_dir()+"/calibration/over-bridge_tuning/over-bridge_flow_ratio_test.amf"}, true, false, false);
+            (boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "over-bridge_tuning" / "over-bridge_flow_ratio_test.amf").string(),
+            (boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "over-bridge_tuning" / "over-bridge_flow_ratio_test.amf").string(),
+            (boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "over-bridge_tuning" / "over-bridge_flow_ratio_test.amf").string(),
+            (boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "over-bridge_tuning" / "over-bridge_flow_ratio_test.amf").string(),
+            (boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "over-bridge_tuning" / "over-bridge_flow_ratio_test.amf").string(),
+            (boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "over-bridge_tuning" / "over-bridge_flow_ratio_test.amf").string()}, true, false, false);
 
     assert(objs_idx.size() == 6);
     const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->get_config();
@@ -86,7 +86,7 @@ void CalibrationOverBridgeDialog::create_geometry(bool over_bridge) {
     float zshift =  0.8 * (1 - xyz_scale);
     for (size_t i = 0; i < 6; i++) {
         model.objects[objs_idx[i]]->rotate(PI / 2, { 0,0,1 });
-        ModelObject* obj = add_part(model.objects[objs_idx[i]], Slic3r::resources_dir() + "/calibration/bridge_flow/f"+std::to_string(100 + i * 5)+".amf", Vec3d{ 0, 10 * xyz_scale ,zshift }, Vec3d{ 1, 1, patch_zscale });
+        ModelObject* obj = add_part(model.objects[objs_idx[i]], (boost::filesystem::path(Slic3r::resources_dir()) /"calibration" / "bridge_flow" / ("f"+std::to_string(100 + i * 5)+".amf")).string(), Vec3d{ 0, 10 * xyz_scale ,zshift }, Vec3d{ 1, 1, patch_zscale });
     }
 
     /// --- translate ---;

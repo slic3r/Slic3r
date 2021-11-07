@@ -44,11 +44,11 @@ void CalibrationBedDialog::create_geometry(wxCommandEvent& event_args) {
         gui_app->app_config->set("autocenter", "0");
     }
     std::vector<size_t> objs_idx = plat->load_files(std::vector<std::string>{
-            Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
-            Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
-            Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
-            Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf",
-            Slic3r::resources_dir()+"/calibration/bed_leveling/patch.amf"}, true, false, false);
+            (boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "bed_leveling" / "patch.amf").string(),
+            (boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "bed_leveling" / "patch.amf").string(),
+            (boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "bed_leveling" / "patch.amf").string(),
+            (boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "bed_leveling" / "patch.amf").string(),
+            (boost::filesystem::path(Slic3r::resources_dir()) / "calibration" / "bed_leveling" / "patch.amf").string()}, true, false, false);
 
     assert(objs_idx.size() == 5);
     const DynamicPrintConfig* printConfig = this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->get_config();

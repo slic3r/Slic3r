@@ -968,7 +968,7 @@ void ImGuiWrapper::init_font(bool compress)
 
     //FIXME replace with io.Fonts->AddFontFromMemoryTTF(buf_decompressed_data, (int)buf_decompressed_size, m_font_size, nullptr, ranges.Data);
     //https://github.com/ocornut/imgui/issues/220
-	ImFont* font = io.Fonts->AddFontFromFileTTF((Slic3r::resources_dir() + "/fonts/" + (m_font_cjk ? "NotoSansCJK-Regular.ttc" : "NotoSans-Regular.ttf")).c_str(), m_font_size, nullptr, ranges.Data);
+	ImFont* font = io.Fonts->AddFontFromFileTTF((boost::filesystem::path(Slic3r::resources_dir()) / "fonts" / (m_font_cjk ? "NotoSansCJK-Regular.ttc" : "NotoSans-Regular.ttf")).string().c_str(), m_font_size, nullptr, ranges.Data);
     if (font == nullptr) {
         font = io.Fonts->AddFontDefault();
         if (font == nullptr) {
@@ -981,7 +981,7 @@ void ImGuiWrapper::init_font(bool compress)
     config.MergeMode = true;
     if (! m_font_cjk) {
 		// Apple keyboard shortcuts are only contained in the CJK fonts.
-		ImFont *font_cjk = io.Fonts->AddFontFromFileTTF((Slic3r::resources_dir() + "/fonts/NotoSansCJK-Regular.ttc").c_str(), m_font_size, &config, ranges_keyboard_shortcuts);
+		ImFont *font_cjk = io.Fonts->AddFontFromFileTTF((boost::filesystem::path(Slic3r::resources_dir()) / "fonts" / "NotoSansCJK-Regular.ttc").string().c_str(), m_font_size, &config, ranges_keyboard_shortcuts);
         assert(font_cjk != nullptr);
     }
 #endif

@@ -214,10 +214,10 @@ PrinterPicker::PrinterPicker(wxWindow *parent, const VendorProfile &vendor, wxSt
         std::string icon_path = (model.thumbnail.empty()) ?
             ("/" + model.id + "_thumbnail.png") :
             ("/" + model.thumbnail);
-        if (!load_bitmap(GUI::from_u8(Slic3r::data_dir() + "/vendor/" + vendor.id + icon_path), bitmap, bitmap_width)) {
-            if (!load_bitmap(GUI::from_u8(Slic3r::resources_dir() + "/profiles/" + vendor.id + icon_path), bitmap, bitmap_width)) {
+        if (!load_bitmap(GUI::from_u8((boost::filesystem::path(Slic3r::data_dir()) / "vendor" / (vendor.id + icon_path)).string()), bitmap, bitmap_width)) {
+            if (!load_bitmap(GUI::from_u8((boost::filesystem::path(Slic3r::resources_dir()) / "profiles" / ( vendor.id + icon_path)).string() ), bitmap, bitmap_width)) {
             BOOST_LOG_TRIVIAL(warning) << boost::format("Can't find bitmap file `%1%` for vendor `%2%`, printer `%3%`, using placeholder icon instead")
-                    % (Slic3r::resources_dir() + "/profiles/" + vendor.id + "/" + model.id + "_thumbnail.png")
+                    % ((boost::filesystem::path(Slic3r::resources_dir()) / "profiles" / vendor.id / (model.id + "_thumbnail.png")).string())
                 % vendor.id
                 % model.id;
                 load_bitmap(Slic3r::var(PRINTER_PLACEHOLDER), bitmap, bitmap_width);
