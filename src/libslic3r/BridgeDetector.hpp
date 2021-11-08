@@ -43,16 +43,12 @@ private:
     void initialize();
 
     struct BridgeDirection {
-        BridgeDirection(double a = -1., bool along_perimeter = false) : angle(a), coverage(0.), along_perimeter(along_perimeter){}
-        // the best direction is the one causing most lines to be bridged (thus most coverage)
-        bool operator<(const BridgeDirection &other) const {
-            // Initial sort by coverage only - comparator must obey strict weak ordering
-            return this->coverage > other.coverage;
-        };
+        BridgeDirection(double a = -1., float along_perimeter = 0) : angle(a), coverage(0.), along_perimeter_length(along_perimeter){}
+
         double angle;
         double coverage;
 
-        bool along_perimeter;
+        float along_perimeter_length;
         coordf_t total_length_anchored = 0;
         coordf_t median_length_anchor = 0;
         coordf_t max_length_anchored = 0;
