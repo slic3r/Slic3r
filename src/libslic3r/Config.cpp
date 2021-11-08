@@ -735,25 +735,25 @@ double ConfigBase::get_computed_value(const t_config_option_key &opt_key, int ex
         }
         if (idx >= 0) {
             if (raw_opt->type() == coFloats || raw_opt->type() == coInts || raw_opt->type() == coBools)
-                return vector_opt->getFloat(extruder_id);
+                return vector_opt->getFloat(idx);
             if (raw_opt->type() == coFloatsOrPercents) {
                 const ConfigOptionFloatsOrPercents* opt_fl_per = static_cast<const ConfigOptionFloatsOrPercents*>(raw_opt);
-                if (!opt_fl_per->values[extruder_id].percent)
-                    return opt_fl_per->values[extruder_id].value;
+                if (!opt_fl_per->values[idx].percent)
+                    return opt_fl_per->values[idx].value;
 
                 if (opt_def->ratio_over.empty())
-                    return opt_fl_per->get_abs_value(extruder_id, 1);
+                    return opt_fl_per->get_abs_value(idx, 1);
                 if (opt_def->ratio_over != "depends")
-                    return opt_fl_per->get_abs_value(extruder_id, this->get_computed_value(opt_def->ratio_over, extruder_id));
+                    return opt_fl_per->get_abs_value(idx, this->get_computed_value(opt_def->ratio_over, idx));
                 std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has no valid ratio_over to compute of";
                 throw ConfigurationError(ss.str());
             }
             if (raw_opt->type() == coPercents) {
                 const ConfigOptionPercents* opt_per = static_cast<const ConfigOptionPercents*>(raw_opt);
                 if (opt_def->ratio_over.empty())
-                    return opt_per->get_abs_value(extruder_id, 1);
+                    return opt_per->get_abs_value(idx, 1);
                 if (opt_def->ratio_over != "depends")
-                    return opt_per->get_abs_value(extruder_id, this->get_computed_value(opt_def->ratio_over, extruder_id));
+                    return opt_per->get_abs_value(idx, this->get_computed_value(opt_def->ratio_over, idx));
                 std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has no valid ratio_over to compute of";
                 throw ConfigurationError(ss.str());
             }

@@ -659,10 +659,10 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Default acceleration");
     def->tooltip = L("This is the acceleration your printer will be reset to after "
                    "the role-specific acceleration values are used (perimeter/infill). "
-                   "\nYou can set it as a % of the max of the X/Y machine acceleration limit."
+                   "\nYou can set it as a % of the max of the X machine acceleration limit."
                    "\nSet zero to prevent resetting acceleration at all.");
     def->sidetext = L("mm/s² or %");
-    def->ratio_over = "machine_max_acceleration_X";
+    def->ratio_over = "machine_max_acceleration_x";
     def->min = 0;
     def->max_literal = { -200, false };
     def->mode = comExpert;
