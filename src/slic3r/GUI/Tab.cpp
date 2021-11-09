@@ -3079,20 +3079,20 @@ void TabPrinter::toggle_options()
         const std::vector<FloatOrPercent>& min_layer_height = m_config->option<ConfigOptionFloatsOrPercents>("min_layer_height")->values;
         for (int i = 0; i < min_layer_height.size(); i++) {
             if(!min_layer_height[i].percent)
-                if (min_layer_height[i].get_abs_value(nozzle_diameters[i]) != 0 && (int64_t)(min_layer_height[i].get_abs_value(nozzle_diameters[i]) * 1000000.) % z_step_Mlong != 0) {
+                if (min_layer_height[i].value != 0 && (int64_t)(min_layer_height[i].value * 1000000.) % z_step_Mlong != 0) {
                     if (!has_changed)
                         new_conf = *m_config;
-                    new_conf.option<ConfigOptionFloatsOrPercents>("min_layer_height")->values[i] = FloatOrPercent{ std::max(z_step, Slic3r::check_z_step(min_layer_height[i].get_abs_value(nozzle_diameters[i]), z_step)), false };
+                    new_conf.option<ConfigOptionFloatsOrPercents>("min_layer_height")->values[i].value = std::max(z_step, Slic3r::check_z_step(min_layer_height[i].value, z_step));
                     has_changed = true;
                 }
         }
         std::vector<FloatOrPercent> max_layer_height = m_config->option<ConfigOptionFloatsOrPercents>("max_layer_height")->values;
         for (int i = 0; i < max_layer_height.size(); i++) {
             if (!max_layer_height[i].percent)
-                if ((int64_t)(max_layer_height[i].get_abs_value(nozzle_diameters[i]) * 1000000.) % z_step_Mlong != 0) {
+                if ((int64_t)(max_layer_height[i].value * 1000000.) % z_step_Mlong != 0) {
                     if (!has_changed)
                         new_conf = *m_config;
-                    new_conf.option<ConfigOptionFloatsOrPercents>("max_layer_height")->values[i] = FloatOrPercent{ std::max(z_step, Slic3r::check_z_step(new_conf.option<ConfigOptionFloats>("max_layer_height")->values[i], z_step)), false };
+                    new_conf.option<ConfigOptionFloatsOrPercents>("max_layer_height")->values[i].value = std::max(z_step, Slic3r::check_z_step(max_layer_height[i].value, z_step));
                     has_changed = true;
                 }
         }
