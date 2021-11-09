@@ -922,8 +922,14 @@ static wxString get_string_value(std::string opt_key, const DynamicPrintConfig& 
             config.opt<ConfigOptionFloats>(opt_key)->get_at(opt_idx);
         return double_to_string(val, opt->precision);
     }
-    case coString:
-        return from_u8(config.opt_string(opt_key));
+    case coString: {
+        //character '<' '>' create strange problems for wxWidget, so remove them (only for the display)
+        std::string str = config.opt_string(opt_key);
+        boost::erase_all(str, "<");
+        boost::erase_all(str, ">");
+        return from_u8(str);
+    }
+
     case coStrings: {
         const ConfigOptionStrings* strings = config.opt<ConfigOptionStrings>(opt_key);
         if (strings) {
