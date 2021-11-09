@@ -417,7 +417,6 @@ void MainFrame::update_layout()
     // From the very beginning the Print settings should be selected
     m_last_selected_setting_tab = 0;
     m_last_selected_plater_tab = 999;
-    std::cout << "update_layout1: " << m_tabpanel->GetPageCount() << "\n";
 
     // Set new settings
     switch (m_layout)
@@ -815,7 +814,6 @@ void MainFrame::init_tabpanel()
 
     if (wxGetApp().is_editor())
         create_preset_tabs();
-    std::cout << "create_preset_tabs: " << m_tabpanel->GetPageCount() << "\n";
 
     if (m_plater) {
         // load initial config
