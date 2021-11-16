@@ -413,104 +413,120 @@ void Field::get_value_by_opt_type(wxString& str, const bool check_value/* = true
         break;
     case coFloatsOrPercents:
     case coFloatOrPercent: {
-        if (!str.IsEmpty() && str.Last() != '%')
-        {
-            double val = 0.;
-            // Replace the first occurence of comma in decimal number.
-            str.Replace(",", ".", false);
-
-            // remove space and "mm" substring, if any exists
-            str.Replace(" ", "", true);
-            str.Replace("m", "", true);
-
-            if (m_opt.nullable && str == na_value()) {
-                val = ConfigOptionFloatsNullable::nil_value();
-                str = "nan";
-            } else if (!str.ToCDouble(&val)) {
-                if (!check_value) {
-                    m_value.clear();
-                    break;
-                }
-                show_error(m_parent, _(L("Invalid numeric input.")));
-                set_value(double_to_string(val, m_opt.precision), true);
-            } else {
-
-                //at least check min, as we can want a 0 min
-                if (m_opt.min > val)
-                {
-                    if (!check_value) {
-                        m_value.clear();
-                        break;
-                    }
-                    show_error(m_parent, _(L("Input value is out of range")));
-                    if (m_opt.min > val) val = m_opt.min;
-                    set_value(double_to_string(val, m_opt.precision), true);
-                } else if (m_value.empty() || std::string(str.ToUTF8().data()) != boost::any_cast<std::string>(m_value)) {
-                    bool not_ok = (m_opt.sidetext.rfind("mm/s") != std::string::npos && val > m_opt.max);
-                    if( !not_ok && m_opt.max_literal.value != 0 )
-                        if (m_opt.max_literal.percent) {
-                            const DynamicPrintConfig& printer_config = wxGetApp().preset_bundle->printers.get_edited_preset().config;
+        if (!str.IsEmpty()) {
+            if ("infill_overlap" == m_opt_id && m_last_validated_value != str) {
+                bool bad = false;
+                double val = 0.;
+                if (str.Last() != '%') {
+                    if (str.ToCDouble(&val)) {
+                        const DynamicPrintConfig& printer_config = wxGetApp().preset_bundle->printers.get_edited_preset().config;
                             const std::vector<double>& nozzle_diameters = printer_config.option<ConfigOptionFloats>("nozzle_diameter")->values;
                             double nozzle_diameter = 0;
                             for (double diameter : nozzle_diameters)
                                 nozzle_diameter = std::max(nozzle_diameter, diameter);
-                            if (m_opt.max_literal.value > 0)
-                                not_ok = val > nozzle_diameter * m_opt.max_literal.value;
-                            else
-                                not_ok = val < nozzle_diameter * (-m_opt.max_literal.value);
-                        }else{
-                            if(m_opt.max_literal.value > 0)
-                                not_ok = val > m_opt.max_literal.value;
-                            else
-                                not_ok = val < -m_opt.max_literal.value;
+                        if (val > nozzle_diameter / 2) {
+                            bad = true;
                         }
-                    if (not_ok) {
+                    }
+                } else {
+                    if (str.substr(0, str.size() - 1).ToCDouble(&val)) {
+                        if (val >= 50) {
+                            bad = true;
+                        }
+                    }
+                }
+                if (bad && check_value) {
+                    const wxString msg_text = from_u8(_u8L("The infill / perimeter encroachment can't be higher than half of the perimeter width.\n"
+                        "Are you sure to use this value?"));
+                    wxMessageDialog dialog(m_parent, msg_text, _L("Parameter validation") + ": " + m_opt_id, wxICON_WARNING | wxYES | wxNO);
+                    auto ret = dialog.ShowModal();
+                    if (ret == wxID_NO) {
+                        str = from_u8("49%");
+                        m_last_validated_value = str;
+                        set_value(str, false);
+                        str = m_last_validated_value;
+                    }
+                    m_last_validated_value = str;
+                }
+            }
+            else if (str.Last() != '%') {
+                double val = 0.;
+                // Replace the first occurence of comma in decimal number.
+                str.Replace(",", ".", false);
 
-                        //    if (
-                        //    (
-                        //        (m_opt.sidetext.rfind("mm/s") != std::string::npos && val > m_opt.max) 
-                        //        || 
-                        //        (m_opt.sidetext.rfind("mm ") != std::string::npos && val > m_opt.max_literal)
-                        //    ) 
-                        //    &&
-                        //        (m_value.empty() || std::string(str.ToUTF8().data()) != boost::any_cast<std::string>(m_value)))
-                        //{
-                        //    if (m_opt.opt_key.find("extrusion_width") != std::string::npos || m_opt.opt_key.find("extrusion_spacing") != std::string::npos) {
-                        //        const DynamicPrintConfig& printer_config = wxGetApp().preset_bundle->printers.get_edited_preset().config;
-                        //        const std::vector<double>& nozzle_diameters = printer_config.option<ConfigOptionFloats>("nozzle_diameter")->values;
-                        //        double nozzle_diameter = 0;
-                        //        for (double diameter : nozzle_diameters)
-                        //            nozzle_diameter = std::max(nozzle_diameter, diameter);
-                        //        if (val < nozzle_diameter * 10) {
-                        //            m_value = std::string(str.ToUTF8().data());
-                        //            break;
-                        //        }
-                        //    }
-                            //TODO: chack for infill_overlap from diameter% => allow max_literal to be a %
+                // remove space and "mm" substring, if any exists
+                str.Replace(" ", "", true);
+                str.Replace("m", "", true);
 
+                if (m_opt.nullable && str == na_value()) {
+                    val = ConfigOptionFloatsNullable::nil_value();
+                    str = "nan";
+                } else if (!str.ToCDouble(&val)) {
+                    if (!check_value) {
+                        m_value.clear();
+                        break;
+                    }
+                    show_error(m_parent, _(L("Invalid numeric input.")));
+                    set_value(double_to_string(val, m_opt.precision), true);
+                } else {
+
+                    //at least check min, as we can want a 0 min
+                    if (m_opt.min > val)
+                    {
                         if (!check_value) {
                             m_value.clear();
                             break;
                         }
+                        show_error(m_parent, _(L("Input value is out of range")));
+                        if (m_opt.min > val) val = m_opt.min;
+                        set_value(double_to_string(val, m_opt.precision), true);
+                    } else if (m_value.empty() || std::string(str.ToUTF8().data()) != boost::any_cast<std::string>(m_value)) {
+                        bool not_ok = (m_opt.sidetext.rfind("mm/s") != std::string::npos && val > m_opt.max);
+                        if (!not_ok && m_opt.max_literal.value != 0) {
+                            if (m_opt.max_literal.percent) {
+                                const DynamicPrintConfig& printer_config = wxGetApp().preset_bundle->printers.get_edited_preset().config;
+                                const std::vector<double>& nozzle_diameters = printer_config.option<ConfigOptionFloats>("nozzle_diameter")->values;
+                                double nozzle_diameter = 0;
+                                for (double diameter : nozzle_diameters)
+                                    nozzle_diameter = std::max(nozzle_diameter, diameter);
+                                if (m_opt.max_literal.value > 0)
+                                    not_ok = val > nozzle_diameter * m_opt.max_literal.value;
+                                else
+                                    not_ok = val < nozzle_diameter* (-m_opt.max_literal.value);
+                            } else {
+                                if (m_opt.max_literal.value > 0)
+                                    not_ok = val > m_opt.max_literal.value;
+                                else
+                                    not_ok = val < -m_opt.max_literal.value;
+                            }
+                        }
+                        if (not_ok && m_last_validated_value != str) {
+                            if (!check_value) {
+                                m_value.clear();
+                                break;
+                            }
 
-                        bool infill_anchors = m_opt.opt_key == "infill_anchor" || m_opt.opt_key == "infill_anchor_max";
+                            bool infill_anchors = m_opt.opt_key == "infill_anchor" || m_opt.opt_key == "infill_anchor_max";
 
-                        const std::string sidetext = m_opt.sidetext.rfind("mm/s") != std::string::npos ? "mm/s" : "mm";
-                        const wxString stVal = double_to_string(val, m_opt.precision);
-                        const wxString msg_text = from_u8((boost::format(_utf8(L("Do you mean %s%% instead of %s %s?\n"
-                            "Select YES if you want to change this value to %s%%, \n"
-                            "or NO if you are sure that %s %s is a correct value."))) % stVal % stVal % sidetext % stVal % stVal % sidetext).str());
-                        wxMessageDialog dialog(m_parent, msg_text, _(L("Parameter validation")) + ": " + m_opt_id, wxICON_WARNING | wxYES | wxNO);
-                        if ((!infill_anchors || val > 100) && dialog.ShowModal() == wxID_YES) {
-                            set_value(from_u8((boost::format("%s%%") % stVal).str()), false/*true*/);
-                            str += "%%";
-                        } else
-                            set_value(stVal, false); // it's no needed but can be helpful, when inputted value contained "," instead of "."
+                            const std::string sidetext = m_opt.sidetext.rfind("mm/s") != std::string::npos ? "mm/s" : "mm";
+                            const wxString stVal = double_to_string(val, m_opt.precision);
+                            const wxString msg_text = from_u8((boost::format(_u8L("Do you mean %s%% instead of %s %s?\n"
+                                "Select YES if you want to change this value to %s%%, \n"
+                                "or NO if you are sure that %s %s is a correct value.")) % stVal % stVal % sidetext % stVal % stVal % sidetext).str());
+                            wxMessageDialog dialog(m_parent, msg_text, _L("Parameter validation") + ": " + m_opt_id, wxICON_WARNING | wxYES | wxNO);
+                            if ((!infill_anchors || val > 100) && dialog.ShowModal() == wxID_YES) {
+                                str += "%";
+                                m_last_validated_value = str;
+                                set_value(str, false/*true*/);
+                                str = m_last_validated_value;
+                            } else
+                                set_value(stVal, false); // it's no needed but can be helpful, when inputted value contained "," instead of "."
+                            m_last_validated_value = str;
+                        }
                     }
                 }
             }
         }
-
         m_value = std::string(str.ToUTF8().data());
         break;
     }

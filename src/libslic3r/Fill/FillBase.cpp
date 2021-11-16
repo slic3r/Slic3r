@@ -84,7 +84,7 @@ Polylines Fill::fill_surface(const Surface *surface, const FillParams &params) c
 // This function possibly increases the spacing, never decreases, 
 // and for a narrow width the increase in spacing may become severe,
 // therefore the adjustment is limited to 20% increase.
-coord_t Fill::_adjust_solid_spacing(const coord_t width, const coord_t distance)
+coord_t Fill::_adjust_solid_spacing(const coord_t width, const coord_t distance, const double factor_max)
 {
     assert(width >= 0);
     assert(distance > 0);
@@ -93,10 +93,9 @@ coord_t Fill::_adjust_solid_spacing(const coord_t width, const coord_t distance)
     coord_t distance_new = (number_of_intervals == 0) ? 
         distance : 
         (coord_t)(((width - EPSILON) / number_of_intervals));
-    const coordf_t factor = coordf_t(distance_new) / coordf_t(distance);
+    const double factor = coordf_t(distance_new) / coordf_t(distance);
     assert(factor > 1. - 1e-5);
     // How much could the extrusion width be increased? By 20%.
-    const coordf_t factor_max = 1.2;
     if (factor > factor_max)
         distance_new = coord_t(floor((coordf_t(distance) * factor_max + 0.5)));
     return distance_new;
@@ -228,7 +227,7 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
 
 coord_t Fill::_line_spacing_for_density(float density) const
 {
-    return scale_(this->get_spacing() / density);
+    return scale_t(this->get_spacing() / density);
 }
 
 //FIXME: add recent improvmeent from perimetergenerator: avoid thick gapfill

@@ -16,7 +16,7 @@ class FillRectilinear : public Fill
 public:
     Fill* clone() const override { return new FillRectilinear(*this); };
     ~FillRectilinear() override = default;
-    virtual void init_spacing(coordf_t spacing, const FillParams& params) override;
+    virtual void init_spacing(double spacing, const FillParams& params) override;
     Polylines fill_surface(const Surface* surface, const FillParams& params) const override;
 
 protected:

@@ -404,16 +404,30 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionPercent(100));
 
-    def = this->add("bridge_overlap", coPercent);
-    def->label = L("Bridge overlap");
-    def->full_label = L("Bridge overlap");
+    def = this->add("bridge_overlap_min", coPercent);
+    def->label = L("Min");
+    def->full_label = L("Min bridge density");
     def->sidetext = L("%");
     def->category = OptionCategory::width;
-    def->tooltip = L("Amount of overlap between lines of the bridge. If want more space between line (or less), you can modify it. Default to 100%. A value of 50% will create two times less lines.");
+    def->tooltip = L("Minimum density for bridge lines. If Lower than bridge_overlap, then the overlap value can be lowered automatically down to this value."
+        " If the value is higher, this parameter has no effect."
+        "\nDefault to 87.5% to allow a little void between the lines.");
     def->min = 50;
     def->max = 200;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionPercent(100));
+    def->set_default_value(new ConfigOptionPercent(80));
+
+    def = this->add("bridge_overlap", coPercent);
+    def->label = L("Max");
+    def->full_label = L("Max bridge density");
+    def->sidetext = L("%");
+    def->category = OptionCategory::width;
+    def->tooltip = L("Maximum density for bridge lines. If you want more space between line (or less), you can modify it."
+        " A value of 50% will create two times less lines, and a value of 200% will create two time more lines that overlap each other.");
+    def->min = 50;
+    def->max = 200;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionPercent(90));
 
     def = this->add("bridge_speed", coFloat);
     def->label = L("Bridges");
@@ -2406,15 +2420,16 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("infill_overlap", coFloatOrPercent);
-    def->label = L("Infill/perimeters overlap");
+    def->label = L("Infill/perimeters encroachment");
     def->category = OptionCategory::width;
     def->tooltip = L("This setting applies an additional overlap between infill and perimeters for better bonding. "
                    "Theoretically this shouldn't be needed, but backlash might cause gaps. If expressed "
-                   "as percentage (example: 15%) it is calculated over perimeter extrusion width.");
+                   "as percentage (example: 15%) it is calculated over perimeter extrusion width."
+                    "\nDon't put a value higher than 50% (of the perimeter width), as it will fuse with it and follow the perimeter.");
     def->sidetext = L("mm or %");
     def->ratio_over = "perimeter_extrusion_width";
     def->min = 0;
-    def->max_literal = { 1, true };
+    def->max_literal = { 0.5, true };
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(25, true));
 
@@ -5916,6 +5931,7 @@ std::unordered_set<std::string> prusa_export_to_remove_keys = {
 "avoid_crossing_not_first_layer",
 "bridge_internal_fan_speed",
 "bridge_overlap",
+"bridge_overlap_min",
 "bridge_speed_internal",
 "bridged_infill_margin",
 "brim_ears_detection_length",

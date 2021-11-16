@@ -61,11 +61,12 @@ namespace Slic3r {
     }
     
     void FillSmooth::fill_expolygon(const int idx, ExtrusionEntityCollection &eec, const Surface &srf_to_fill, 
-        const FillParams &params, const double volume) const {
+        const FillParams &params_init, const double volume) const {
         
+        FillParams params = params_init;
         std::unique_ptr<Fill> f2 = std::unique_ptr<Fill>(Fill::new_from_type(fillPattern[idx]));
         f2->bounding_box = this->bounding_box;
-        f2->init_spacing(this->get_spacing(),params);
+        f2->init_spacing(this->get_spacing(), params);
         f2->layer_id = this->layer_id;
         f2->z = this->z;
         f2->angle = anglePass[idx] + this->angle;

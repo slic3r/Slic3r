@@ -7,9 +7,9 @@
 
 namespace Slic3r {
 
-void FillLine::init_spacing(coordf_t spacing, const FillParams& params) {
+void FillLine::init_spacing(double spacing, const FillParams& params) {
 
-    this->_min_spacing = scale_(spacing);
+    this->_min_spacing = scale_t(spacing);
     assert(params.density > 0.0001f && params.density <= 1.f);
     this->_line_spacing = coord_t(coordf_t(this->_min_spacing) / params.density);
     this->_diagonal_distance = this->_line_spacing * 2;

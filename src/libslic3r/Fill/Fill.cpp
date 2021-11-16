@@ -23,9 +23,9 @@ struct SurfaceFillParams : FillParams
 
     // FillBase
     // in unscaled coordinates
-    coordf_t        spacing = 0.;
+    double        spacing = 0.;
     // infill / perimeter overlap, in unscaled coordinates
-    coordf_t        overlap = 0.;
+    double        overlap = 0.;
     // Angle as provided by the region config, in radians.
     float           angle = 0.f;
     // Non-negative for a bridge.
@@ -435,6 +435,7 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
             store_fill(current_region_id);
         }
         current_region_id = surface_fill.region_id;
+        const LayerRegion* layerm = this->m_regions[surface_fill.region_id];
         
         // Create the filler object.
         std::unique_ptr<Fill> f = std::unique_ptr<Fill>(Fill::new_from_type(surface_fill.params.pattern));
@@ -446,6 +447,8 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
 
         // calculate flow spacing for infill pattern generation
         bool using_internal_flow = ! surface_fill.surface.has_fill_solid() && ! surface_fill.params.flow.bridge;
+        //init spacing, it may also use & modify a bit the surface_fill.params, so most of these should be set before.
+        // note that the bridge overlap is applied here via the rectilinear init_spacing. 
         f->init_spacing(surface_fill.params.spacing, surface_fill.params);
         double link_max_length = 0.;
         if (! surface_fill.params.flow.bridge) {
@@ -463,7 +466,6 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
 
         //give the overlap size to let the infill do his overlap
         //add overlap if at least one perimeter
-        const LayerRegion* layerm = this->m_regions[surface_fill.region_id];
         const float perimeter_spacing = layerm->flow(frPerimeter).spacing();
 
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
@@ -485,10 +487,6 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
             surface_fill.params.flow = Flow::new_from_spacing((float)f->get_spacing(), surface_fill.params.flow.nozzle_diameter, (float)surface_fill.params.flow.height, overlap, surface_fill.params.flow.bridge);
         }
 
-        //apply bridge_overlap if needed
-        if (surface_fill.params.flow.bridge && surface_fill.params.density > 0.99 && layerm->region()->config().bridge_overlap.get_abs_value(1) != 1) {
-            surface_fill.params.density *= float(layerm->region()->config().bridge_overlap.get_abs_value(1));
-        }
 
         for (ExPolygon &expoly : surface_fill.expolygons) {
             //set overlap polygons
@@ -508,6 +506,63 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
             //init the surface with the current polygon
             if (!expoly.contour.empty()) {
                 surface_fill.surface.expolygon = std::move(expoly);
+
+                //adjust the bridge density
+                if (surface_fill.params.flow.bridge && surface_fill.params.density > 0.99 /*&& layerm->region()->config().bridge_overlap.get_abs_value(1) != 1*/) {
+                    ////varies the overlap to have teh best coverage for the bridge
+                    //surface_fill.params.density *= float(layerm->region()->config().bridge_overlap.get_abs_value(1));
+                    double min_spacing = 0.999 * surface_fill.params.spacing / surface_fill.params.config->bridge_overlap.get_abs_value(surface_fill.params.density);
+                    double max_spacing = 1.001 * surface_fill.params.spacing / surface_fill.params.config->bridge_overlap_min.get_abs_value(surface_fill.params.density);
+                    double factor = 1.00001;
+                    if (min_spacing < max_spacing * 1.01) {
+                        // create a bouding box of the rotated surface
+                        coord_t bounding_box_size_x = 0;
+                        Polygon poly = surface_fill.surface.expolygon.contour;
+                        coord_t bounding_box_min_x = 0;
+                        poly.rotate(PI / 2 - (surface_fill.params.bridge_angle < 0 ? surface_fill.params.angle : surface_fill.params.bridge_angle));
+                        ExPolygons expolys;
+                        if (surface_fill.params.bridge_angle > 0 && !f->no_overlap_expolygons.empty()) {
+                            //take only the no-overlap area
+                            expolys = offset_ex(intersection_ex(ExPolygons{ ExPolygon{surface_fill.surface.expolygon.contour} }, f->no_overlap_expolygons), -scale_t(surface_fill.params.spacing) / 2 - 10);
+                        } else {
+                            expolys = offset_ex(ExPolygon{surface_fill.surface.expolygon.contour}, -scale_t(surface_fill.params.spacing) / 2 - 10);
+                        }
+                        BoundingBox bb;
+                        bool first = true;
+                        for (ExPolygon& expoly : expolys) {
+                            expoly.holes.clear();
+                            expoly.rotate(PI / 2 - (surface_fill.params.bridge_angle < 0 ? surface_fill.params.angle : surface_fill.params.bridge_angle));
+                            if (first) {
+                                bb = expoly.contour.bounding_box();
+                                first = false;
+                            } else {
+                                bb.merge(expoly.contour.points);
+                            }
+                        }
+                        bounding_box_size_x = bb.size().x();
+                        bounding_box_min_x = bb.min.x();
+
+                        //compute the dist
+                        double new_spacing = unscaled(f->_adjust_solid_spacing(bounding_box_size_x, scale_t(min_spacing), 2));
+                        if (new_spacing <= max_spacing) {
+                            surface_fill.params.density = factor * surface_fill.params.spacing / new_spacing;
+                        } else {
+                            double new_spacing2 = unscaled(f->_adjust_solid_spacing(bounding_box_size_x, scale_t(min_spacing * 1.999 - new_spacing), 2));
+                            if (new_spacing2 < min_spacing) {
+                                if (min_spacing - new_spacing2 < new_spacing - max_spacing) {
+                                    surface_fill.params.density = surface_fill.params.config->bridge_overlap.get_abs_value(surface_fill.params.density);
+                                } else {
+                                    surface_fill.params.density = surface_fill.params.config->bridge_overlap_min.get_abs_value(surface_fill.params.density);
+                                }
+                            } else {
+                                //use the highest density
+                                surface_fill.params.density = surface_fill.params.config->bridge_overlap.get_abs_value(surface_fill.params.density);
+                            }
+                        }
+                        surface_fill.params.dont_adjust = true;
+                        surface_fill.params.bridge_offset = std::abs(poly.bounding_box().min.x() - bounding_box_min_x);
+                    }
+                }
 
                 //make fill
                 while ((size_t)surface_fill.params.priority >= fills_by_priority.size())

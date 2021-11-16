@@ -10,9 +10,6 @@ namespace Slic3r {
 
 class PrintObject;
 
-// Extra spacing of bridge threads, in mult of nozzle_width/extrusion_width. 0.05 for 0.4
-#define BRIDGE_EXTRA_SPACING_MULT 0.125
-
 // Overlap factor of perimeter lines. Currently no overlap.
 #ifdef HAS_PERIMETER_LINE_OVERLAP
     #define PERIMETER_LINE_OVERLAP_FACTOR 1.0

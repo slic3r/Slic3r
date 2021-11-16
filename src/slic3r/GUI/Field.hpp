@@ -230,8 +230,10 @@ protected:
 
 	// current value
 	boost::any			m_value;
-    // last maeningful value
+	// last meaningful value
 	boost::any			m_last_meaningful_value;
+	// last validated value
+	wxString			m_last_validated_value;
 
     int                 m_em_unit;
 

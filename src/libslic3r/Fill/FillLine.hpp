@@ -15,7 +15,7 @@ public:
     Fill* clone() const override { return new FillLine(*this); };
     ~FillLine() override = default;
 
-	void init_spacing(coordf_t spacing, const FillParams& params) override;
+	void init_spacing(double spacing, const FillParams& params) override;
 protected:
 	void _fill_surface_single(
 	    const FillParams                &params, 

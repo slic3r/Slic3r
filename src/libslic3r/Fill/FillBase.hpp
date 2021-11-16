@@ -44,6 +44,9 @@ struct FillParams
     // Fill density, fraction in <0, 1>
     float       density     { 0.f };
 
+    // bridge offset from the centerline.
+    coord_t       bridge_offset = -1;
+
     // Fill extruding flow multiplier, fraction in <0, 1>. Used by "over bridge compensation"
     float       flow_mult   { 1.0f };
 
@@ -108,7 +111,7 @@ public:
     FillAdaptive::Octree* adapt_fill_octree = nullptr;
 protected:
     // in unscaled coordinates, please use init (after settings all others settings) as some algos want to modify the value
-    coordf_t    spacing_priv;
+    double    spacing_priv;
 
 public:
     virtual ~Fill() {}
@@ -118,8 +121,8 @@ public:
     static Fill* new_from_type(const std::string &type);
 
     void         set_bounding_box(const Slic3r::BoundingBox &bbox) { bounding_box = bbox; }
-    virtual void init_spacing(coordf_t spacing, const FillParams &params) { this->spacing_priv = spacing;  }
-    coordf_t get_spacing() const { return spacing_priv; }
+    virtual void init_spacing(double spacing, const FillParams &params) { this->spacing_priv = spacing;  }
+    double get_spacing() const { return spacing_priv; }
 
     // Do not sort the fill lines to optimize the print head path?
     virtual bool no_sort() const { return false; }
@@ -181,7 +184,7 @@ public:
     //for rectilinear
     static void connect_infill(Polylines&& infill_ordered, const ExPolygon& boundary, const Polygons& polygons_src, Polylines& polylines_out, const double spacing, const FillParams& params);
 
-    static coord_t  _adjust_solid_spacing(const coord_t width, const coord_t distance);
+    static coord_t  _adjust_solid_spacing(const coord_t width, const coord_t distance, const double factor_max = 1.2);
 
     // Align a coordinate to a grid. The coordinate may be negative,
     // the aligned value will never be bigger than the original one.

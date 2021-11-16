@@ -216,6 +216,7 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
         names.push_back("bridge_flow_ratio");
         names.push_back("over_bridge_flow_ratio");
         names.push_back("bridge_overlap");
+        names.push_back("bridge_overlap_min");
         names.push_back("fill_top_flow_ratio");
         names.push_back("first_layer_flow_ratio");
         for (int i = 0; i < names.size(); i++) {

@@ -754,13 +754,13 @@ static inline float measure_outer_contour_slab(
 */
 
 void
-FillRectilinear::init_spacing(coordf_t spacing, const FillParams& params)
+FillRectilinear::init_spacing(double spacing, const FillParams& params)
 {
     Fill::init_spacing(spacing, params);
     //remove this code path becaus it's only really useful for squares at 45° and it override a setting
     // define flow spacing according to requested density
     //if (params.full_infill() && !params.dont_adjust) {
-    //    this->spacing = unscale<coordf_t>(this->_adjust_solid_spacing(bounding_box.size()(0), _line_spacing_for_density(params.density)));
+    //    this->spacing = unscaled(this->_adjust_solid_spacing(bounding_box.size()(0), _line_spacing_for_density(params.density)));
     //}
 }
 
@@ -774,9 +774,11 @@ enum DirectionMask
 std::vector<SegmentedIntersectionLine> FillRectilinear::_vert_lines_for_polygon(const ExPolygonWithOffset &poly_with_offset, const BoundingBox &bounding_box, const FillParams &params, coord_t line_spacing) const
 {
     // n_vlines = ceil(bbox_width / line_spacing)
-    size_t  n_vlines = (bounding_box.max(0) - bounding_box.min(0) + line_spacing - 1) / line_spacing;
-    coord_t x0 = bounding_box.min(0);
-    if (params.full_infill())
+    size_t  n_vlines = 1 + (bounding_box.max.x() - bounding_box.min.x() - 10) / line_spacing;
+    coord_t x0 = bounding_box.min.x();
+    if (params.flow.bridge && params.bridge_offset >= 0) {
+        x0 +=  params.bridge_offset;
+    }else if (params.full_infill())
         x0 += (line_spacing + coord_t(SCALED_EPSILON)) / 2;
 
 #ifdef SLIC3R_DEBUG
@@ -2813,8 +2815,8 @@ bool FillRectilinear::fill_surface_by_lines(const Surface *surface, const FillPa
 
     // Shrink the input polygon a bit first to not push the infill lines out of the perimeters.
 //    const float INFILL_OVERLAP_OVER_SPACING = 0.3f;
-    const float INFILL_OVERLAP_OVER_SPACING = 0.45f; //merill: what is this value??? shouldn't it be like flow.width()?
-    assert(INFILL_OVERLAP_OVER_SPACING > 0 && INFILL_OVERLAP_OVER_SPACING < 0.5f);
+    //const float INFILL_OVERLAP_OVER_SPACING = 0.45f; //merill: what is this value???
+    //assert(INFILL_OVERLAP_OVER_SPACING > 0 && INFILL_OVERLAP_OVER_SPACING < 0.5f);
 
     // Rotate polygons so that we can work with vertical lines here
     std::pair<float, Point> rotate_vector = this->_infill_direction(surface);
@@ -2827,8 +2829,8 @@ bool FillRectilinear::fill_surface_by_lines(const Surface *surface, const FillPa
     ExPolygonWithOffset poly_with_offset(
         surface->expolygon, 
         - rotate_vector.first, 
-        (scale_t(0 /*this->overlap*/ - (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->get_spacing())),
-        (scale_t(0 /*this->overlap*/ - 0.5f * this->get_spacing())));
+        (scale_t(0 /*this->overlap*/ - /*(0.5 - INFILL_OVERLAP_OVER_SPACING)*/ 0.05 * this->get_spacing())), // outer offset, have to be > to the inner one (less negative)
+        (scale_t(0 /*this->overlap*/ - 0.48f * this->get_spacing()))); // inner offset (don't put 0.5, as it will cut full-filled area when it's exactly at the right place)
     if (poly_with_offset.n_contours_inner == 0) {
         // Not a single infill line fits.
         //Prusa: maybe one shall trigger the gap fill here?
@@ -2839,15 +2841,15 @@ bool FillRectilinear::fill_surface_by_lines(const Surface *surface, const FillPa
     BoundingBox bounding_box = poly_with_offset.bounding_box_src();
 
     // define flow spacing according to requested density
-    if (params.full_infill() && !params.dont_adjust || line_spacing == 0 ) {
+    if ((params.full_infill() && !params.dont_adjust) || line_spacing == 0 ) {
         //it's == this->_adjust_solid_spacing(bounding_box.size()(0), line_spacing) because of the init_spacing
         line_spacing = scale_(this->get_spacing());
-    } else {
+    } else if (!params.full_infill()) {
         // extend bounding box so that our pattern will be aligned with other layers
         // Transform the reference point to the rotated coordinate system.
         Point refpt = rotate_vector.second.rotated(- rotate_vector.first);
         // _align_to_grid will not work correctly with positive pattern_shift.
-        coord_t pattern_shift_scaled = coord_t(scale_(pattern_shift)) % line_spacing;
+        coord_t pattern_shift_scaled = scale_t(pattern_shift) % line_spacing;
         refpt.x() -= (pattern_shift_scaled >= 0) ? pattern_shift_scaled : (line_spacing + pattern_shift_scaled);
         bounding_box.merge(_align_to_grid(
             bounding_box.min, 

@@ -14,7 +14,7 @@ FillConcentric::init_spacing(coordf_t spacing, const FillParams &params)
 {
     Fill::init_spacing(spacing, params);
     if (params.density > 0.9999f && !params.dont_adjust) {
-        this->spacing_priv = unscale<double>(this->_adjust_solid_spacing(bounding_box.size()(0), _line_spacing_for_density(params.density)));
+        this->spacing_priv = unscaled(this->_adjust_solid_spacing(bounding_box.size()(0), _line_spacing_for_density(params.density)));
     }
 }
 
