@@ -28,13 +28,13 @@ cmake .. -G "Visual Studio 16 2019" -A x64
 msbuild /m ALL_BUILD.vcxproj
 ```
 
-and then build Slic3r (in ./build):
+and then build and install Slic3r (in ./build as an elevated Command Prompt - 'Run As Administrator'):
 ```
 cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH="PATH_TO_Slic3r\deps\build\destdir\usr\local"
 msbuild /m /P:Configuration=Release INSTALL.vcxproj
 ```
 You can also build it in visual studio, for that open the .sln.
-Note that you need to have `libgmp-10.dll` and `libmpfr-4.dll` next to your built Slic3r. You can get them from any Slic3r release.
+Note that you need to have `libgmp-10.dll` and `libmpfr-4.dll` next to your built Slic3r. You can get them from any Slic3r release: So copy these two dlls from your deps-build dir (default: "\deps\build\destdir\usr\local\bin") into the target installation dir of Slic3r (default: "C:\Program Files (x86)\Slic3r")
 
 If you want to create the zipped release, you can follow this [script](https://github.com/supermerill/Slic3r/blob/master/.github/workflows/ccpp_win.yml).
 
