@@ -1253,7 +1253,7 @@ static void connect_segment_intersections_by_contours(
                 SegmentIntersection& it2 = il.intersections[it.left_vertical()];
                 assert(it2.left_vertical() == i_intersection);
                 it2.prev_on_contour_quality = SegmentIntersection::LinkQuality::Invalid;
-    }
+            }
             if (it.has_right_vertical() && it.next_on_contour_quality == SegmentIntersection::LinkQuality::Invalid) {
                 SegmentIntersection& it2 = il.intersections[it.right_vertical()];
                 assert(it2.right_vertical() == i_intersection);
@@ -1263,7 +1263,7 @@ static void connect_segment_intersections_by_contours(
     }
 
     assert(validate_segment_intersection_connectivity(segs));
-            }
+}
 
 static void pinch_contours_insert_phony_outer_intersections(std::vector<SegmentedIntersectionLine> &segs)
 {
@@ -1277,41 +1277,49 @@ static void pinch_contours_insert_phony_outer_intersections(std::vector<Segmente
     for (size_t i_vline = 1; i_vline < segs.size(); ++ i_vline) {
         SegmentedIntersectionLine &il = segs[i_vline];
         assert(il.intersections.empty() || il.intersections.size() >= 2);
-        if (! il.intersections.empty()) {
+        if (il.intersections.size() > 2) {
+            //these can trigger....(2 segments, high then low) but less if I check for il.intersections.size() > 2 instead of !empty()
             assert(il.intersections.front().type == SegmentIntersection::OUTER_LOW);
             assert(il.intersections.back().type == SegmentIntersection::OUTER_HIGH);
             auto end = il.intersections.end() - 1;
             insert_after.clear();
-            for (auto it = il.intersections.begin() + 1; it != end;) {
-                if (it->type == SegmentIntersection::OUTER_HIGH) {
-                    ++ it;
-                    assert(it->type == SegmentIntersection::OUTER_LOW);
-                    ++ it;
+            size_t idx = 1;
+            while(idx < il.intersections.size()) {
+                if (il.intersections[idx].type == SegmentIntersection::OUTER_HIGH) {
+                    if (idx + 1 < il.intersections.size()) {
+                        assert(il.intersections[idx + 1].type == SegmentIntersection::OUTER_LOW);
+                    }
+                    idx += 2;
                 } else {
-                    auto lo  = it;
-                    assert(lo->type == SegmentIntersection::INNER_LOW);
-                    auto hi  = ++ it;
-                    assert(hi->type == SegmentIntersection::INNER_HIGH);
-                    auto lo2 = ++ it;
-                    if (lo2->type == SegmentIntersection::INNER_LOW) {
-                        // INNER_HIGH followed by INNER_LOW. The outer contour may have squeezed the inner contour into two separate loops.
-                        // In that case one shall insert a phony OUTER_HIGH / OUTER_LOW pair.
-                        int up = hi->vertical_up();
-                        int dn = lo2->vertical_down();
+                    size_t loidx = idx;
+                    const SegmentIntersection& lo = il.intersections[loidx];
+                    assert(lo.type == SegmentIntersection::INNER_LOW);
+                    size_t hiidx = ++idx;
+                    const SegmentIntersection& hi = il.intersections[hiidx];
+                    assert(hi.type == SegmentIntersection::INNER_HIGH);
+                    size_t lo2idx = ++idx;
+                    if (lo2idx < il.intersections.size()) {
+                        const SegmentIntersection& lo2 = il.intersections[lo2idx];
+                        if (lo2.type == SegmentIntersection::INNER_LOW) {
+                            // INNER_HIGH followed by INNER_LOW. The outer contour may have squeezed the inner contour into two separate loops.
+                            // In that case one shall insert a phony OUTER_HIGH / OUTER_LOW pair.
+                            int up = hi.vertical_up();
+                            int dn = lo2.vertical_down();
 #ifndef _NDEBUG
-                        assert(up == -1 || up > 0);
-                        assert(dn == -1 || dn >= 0);
-                        assert((up == -1 && dn == -1) || (dn + 1 == up));
+                            assert(up == -1 || up > 0);
+                            assert(dn == -1 || dn >= 0);
+                            assert((up == -1 && dn == -1) || (dn + 1 == up));
 #endif // _NDEBUG
-                        bool pinched = dn + 1 != up;
-                        if (pinched) {
-                            // hi is not connected with its inner contour to lo2.
-                            // Insert a phony OUTER_HIGH / OUTER_LOW pair.
+                            bool pinched = dn + 1 != up;
+                            if (pinched) {
+                                // hi is not connected with its inner contour to lo2.
+                                // Insert a phony OUTER_HIGH / OUTER_LOW pair.
 #if 0
-                            static int pinch_idx = 0;
-                            printf("Pinched %d\n", pinch_idx++);
+                                static int pinch_idx = 0;
+                                printf("Pinched %d\n", pinch_idx++);
 #endif
-                            insert_after.emplace_back(hi - il.intersections.begin());
+                                insert_after.emplace_back(hiidx);
+                            }
                         }
                     }
                 }
