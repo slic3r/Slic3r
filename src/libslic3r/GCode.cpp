@@ -1704,6 +1704,7 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
     _write_format(file, "; total filament cost = %.2lf\n", print.m_print_statistics.total_cost);
     if (print.m_print_statistics.total_toolchanges > 0)
     	_write_format(file, "; total toolchanges = %i\n", print.m_print_statistics.total_toolchanges);
+    _write_format(file, "; total layers count = %i\n", m_layer_count);
     _writeln(file, GCodeProcessor::Estimated_Printing_Time_Placeholder_Tag);
 
     // Append full config.
