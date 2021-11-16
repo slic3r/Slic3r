@@ -1496,6 +1496,9 @@ bool PlaceholderParser::evaluate_boolean_expression(const std::string &templ, co
 
 
 void PlaceholderParser::append_custom_variables(std::map<std::string, std::vector<std::string>> name2var_array, int nb_extruders) {
+
+    bool is_array = nb_extruders > 0;
+    if (!is_array) nb_extruders = 1;
     std::regex is_a_name("[a-zA-Z_]+");
     for (const auto& entry : name2var_array) {
         if (entry.first.empty())
@@ -1575,17 +1578,27 @@ void PlaceholderParser::append_custom_variables(std::map<std::string, std::vecto
             log << "Parsing NUM custom variable '" << entry.first << "' : ";
             for (auto s : double_values) log << ", " << s;
             BOOST_LOG_TRIVIAL(trace) << log.str();
-            ConfigOptionFloats* conf = new ConfigOptionFloats(double_values);
-            conf->set_is_extruder_size(true);
-            this->set(entry.first, conf);
+            if (is_array) {
+                ConfigOptionFloats* conf = new ConfigOptionFloats(double_values);
+                conf->set_is_extruder_size(true);
+                this->set(entry.first, conf);
+            } else {
+                ConfigOptionFloat* conf = new ConfigOptionFloat(double_values[0]);
+                this->set(entry.first, conf);
+            }
         } else if (!is_not_bool) {
             std::stringstream log;
             log << "Parsing BOOL custom variable '" << entry.first << "' : ";
             for (auto s : bool_values) log << ", " << s;
             BOOST_LOG_TRIVIAL(trace) << log.str();
-            ConfigOptionBools* conf = new ConfigOptionBools(bool_values);
-            conf->set_is_extruder_size(true);
-            this->set(entry.first, conf);
+            if (is_array) {
+                ConfigOptionBools* conf = new ConfigOptionBools(bool_values);
+                conf->set_is_extruder_size(true);
+                this->set(entry.first, conf);
+            } else {
+                ConfigOptionBool* conf = new ConfigOptionBool(bool_values[0]);
+                this->set(entry.first, conf);
+            }
         } else {
             for (std::string& s : string_values)
                 boost::replace_all(s, "\\n", "\n");
@@ -1593,9 +1606,14 @@ void PlaceholderParser::append_custom_variables(std::map<std::string, std::vecto
             log << "Parsing STR custom variable '" << entry.first << "' : ";
             for (auto s : string_values) log << ", " << s;
             BOOST_LOG_TRIVIAL(trace) << log.str();
-            ConfigOptionStrings* conf = new ConfigOptionStrings(string_values);
-            conf->set_is_extruder_size(true);
-            this->set(entry.first, conf);
+            if (is_array) {
+                ConfigOptionStrings* conf = new ConfigOptionStrings(string_values);
+                conf->set_is_extruder_size(true);
+                this->set(entry.first, conf);
+            } else {
+                ConfigOptionString* conf = new ConfigOptionString(string_values[0]);
+                this->set(entry.first, conf);
+            }
         }
     }
 
@@ -1623,7 +1641,7 @@ void PlaceholderParser::parse_custom_variables(const ConfigOptionString& custom_
 
         }
     }
-    append_custom_variables(name2var_array, 1);
+    append_custom_variables(name2var_array, 0);
 }
 
 void PlaceholderParser::parse_custom_variables(const ConfigOptionStrings& filament_custom_variables)

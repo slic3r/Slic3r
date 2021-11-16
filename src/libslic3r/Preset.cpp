@@ -898,7 +898,7 @@ const std::vector<std::string>& Preset::sla_printer_options()
             "min_initial_exposure_time", "max_initial_exposure_time",
             //FIXME the print host keys are left here just for conversion from the Printer preset to Physical Printer preset.
             "print_host", "printhost_apikey", "printhost_cafile", "printhost_port",
-            "printer_custom_variables",
+            "printer_notes",
             "inherits",
             "thumbnails",
             "thumbnails_color",
