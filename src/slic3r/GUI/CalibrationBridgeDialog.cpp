@@ -80,7 +80,13 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
 
     assert(objs_idx.size() == nb_items);
     const DynamicPrintConfig* print_config = this->gui_app->get_tab(Preset::TYPE_FFF_PRINT)->get_config();
+    const DynamicPrintConfig* filament_config = this->gui_app->get_tab(Preset::TYPE_FFF_FILAMENT)->get_config();
     const DynamicPrintConfig* printer_config = this->gui_app->get_tab(Preset::TYPE_PRINTER)->get_config();
+    DynamicPrintConfig full_print_config;
+    full_print_config.apply(*print_config);
+    full_print_config.apply(*filament_config);
+    full_print_config.apply(*printer_config);
+    full_print_config.set_key_value("extruder_id", new ConfigOptionInt(0));
 
     /// --- scale ---
     // model is created for a 0.4 nozzle, scale xy with nozzle size.
@@ -144,14 +150,14 @@ void CalibrationBridgeDialog::create_geometry(std::string setting_to_test, bool 
         //model.objects[objs_idx[i]]->config.set_key_value("top_fill_pattern", new ConfigOptionEnum<InfillPattern>(ipSmooth)); /not needed
         model.objects[objs_idx[i]]->config.set_key_value("ironing", new ConfigOptionBool(false)); // not needed, and it slow down things.
     }
-    /// if first ayer height is excatly at the wrong value, the text isn't drawed. Fix that by switching the first layer height just a little bit.
-    double first_layer_height = print_config->get_computed_value("first_layer_height", 0);
+    /// if first ayer height is excactly at the wrong value, the text isn't drawed. Fix that by switching the first layer height just a little bit.
+    double first_layer_height = full_print_config.get_computed_value("first_layer_height", 0);
     double layer_height = nozzle_diameter * 0.5;
     if (layer_height > 0.01 && (int(first_layer_height * 100) % int(layer_height * 100)) == int(layer_height * 50)) {
         double z_step = printer_config->option<ConfigOptionFloat>("z_step")->value;
         if (z_step == 0)
             z_step = 0.1;
-        double max_height = printer_config->get_computed_value("max_layer_height",0);
+        double max_height = full_print_config.get_computed_value("max_layer_height",0);
         if (max_height > first_layer_height + z_step)
             for (size_t i = 0; i < nb_items; i++)
                 model.objects[objs_idx[i]]->config.set_key_value("first_layer_height", new ConfigOptionFloatOrPercent(first_layer_height + z_step, false));

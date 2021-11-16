@@ -710,7 +710,7 @@ double ConfigBase::get_computed_value(const t_config_option_key &opt_key, int ex
         //FIXME there are some ratio_over chains, which end with empty ratio_with.
         // For example, XXX_extrusion_width parameters are not handled by get_abs_value correctly.
         if (!opt_def->ratio_over.empty() && opt_def->ratio_over != "depends")
-            return cast_opt->get_abs_value(this->get_computed_value(opt_def->ratio_over));
+            return cast_opt->get_abs_value(this->get_computed_value(opt_def->ratio_over, extruder_id));
 
         std::stringstream ss; ss << "ConfigBase::get_abs_value(): " << opt_key << " has no valid ratio_over to compute of";
         throw ConfigurationError(ss.str());
