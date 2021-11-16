@@ -231,13 +231,15 @@ void CalibrationRetractionDialog::create_geometry(wxCommandEvent& event_args) {
         model.objects[objs_idx[i]]->config.set_key_value("print_temperature", new ConfigOptionInt(int(temp - temp_decr * i)));
         //set retraction override
         size_t num_part = 0;
+        const int mytemp = temp - temp_decr * i;
+        const int extra_vol = (mytemp <= 285 && mytemp >= 180 && mytemp % 5 == 0) ? 2 : 1;
         for (ModelObject* part : part_tower[i]) {
-            model.objects[objs_idx[i]]->volumes[num_part + 2]->config.set_key_value("print_retract_length", new ConfigOptionFloat(retraction_start + num_part * retraction_steps));
-            model.objects[objs_idx[i]]->volumes[num_part + 2]->config.set_key_value("small_perimeter_speed", new ConfigOptionFloatOrPercent(external_perimeter_speed, false));
-            model.objects[objs_idx[i]]->volumes[num_part + 2]->config.set_key_value("perimeter_speed", new ConfigOptionFloat(std::min(external_perimeter_speed, perimeter_speed)));
-            model.objects[objs_idx[i]]->volumes[num_part + 2]->config.set_key_value("external_perimeter_speed", new ConfigOptionFloatOrPercent(external_perimeter_speed, false));
-            model.objects[objs_idx[i]]->volumes[num_part + 2]->config.set_key_value("small_perimeter_speed", new ConfigOptionFloatOrPercent(external_perimeter_speed, false));
-            //model.objects[objs_idx[i]]->volumes[num_part + 1]->config.set_key_value("infill_speed", new ConfigOptionFloat(std::min(print_config->option<ConfigOptionFloat>("infill_speed")->value, 10.*scale)));
+            model.objects[objs_idx[i]]->volumes[num_part + extra_vol]->config.set_key_value("print_retract_length", new ConfigOptionFloat(retraction_start + num_part * retraction_steps));
+            model.objects[objs_idx[i]]->volumes[num_part + extra_vol]->config.set_key_value("small_perimeter_speed", new ConfigOptionFloatOrPercent(external_perimeter_speed, false));
+            model.objects[objs_idx[i]]->volumes[num_part + extra_vol]->config.set_key_value("perimeter_speed", new ConfigOptionFloat(std::min(external_perimeter_speed, perimeter_speed)));
+            model.objects[objs_idx[i]]->volumes[num_part + extra_vol]->config.set_key_value("external_perimeter_speed", new ConfigOptionFloatOrPercent(external_perimeter_speed, false));
+            model.objects[objs_idx[i]]->volumes[num_part + extra_vol]->config.set_key_value("small_perimeter_speed", new ConfigOptionFloatOrPercent(external_perimeter_speed, false));
+            //model.objects[objs_idx[i]]->volumes[num_part + extra_vol]->config.set_key_value("infill_speed", new ConfigOptionFloat(std::min(print_config->option<ConfigOptionFloat>("infill_speed")->value, 10.*scale)));
             num_part++;
         }
     }
