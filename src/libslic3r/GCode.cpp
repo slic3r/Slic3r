@@ -1399,6 +1399,10 @@ void GCode::_do_export(Print& print, FILE* file, ThumbnailsGeneratorCallback thu
         m_placeholder_parser.set("first_layer_print_max",  new ConfigOptionFloats({ bbox.max.x(), bbox.max.y() }));
         m_placeholder_parser.set("first_layer_print_size", new ConfigOptionFloats({ bbox.size().x(), bbox.size().y() }));
     }
+    //misc
+    if (config().thumbnails_color.value.length() == 7) {
+        m_placeholder_parser.set("thumbnails_color_int", new ConfigOptionInt((int)strtol(config().thumbnails_color.value.substr(1, 6).c_str(), NULL, 16)));
+    }
 
     std::string start_gcode = this->placeholder_parser_process("start_gcode", print.config().start_gcode.value, initial_extruder_id);
     // Set bed temperature if the start G-code does not contain any bed temp control G-codes.
@@ -1743,7 +1747,7 @@ std::string GCode::placeholder_parser_process(const std::string &name, const std
             func_add_colour("filament_colour_int", config().filament_colour.values[current_extruder_id]);
             func_add_colour("extruder_colour_int", config().extruder_colour.values[current_extruder_id]);
         }
-        func_add_colour("thumbnails_color_int", config().thumbnails_color);
+        config_override->set_key_value("current_position", new ConfigOptionFloats({ unscaled(m_last_pos.x()), unscaled(m_last_pos.y()) }));
 
         std::string gcode = m_placeholder_parser.process(templ, current_extruder_id, config_override, &m_placeholder_parser_context);
         if (!gcode.empty() && (m_config.gcode_comments || m_config.fan_speedup_time.value != 0 || m_config.fan_kickstart.value != 0 )) {
