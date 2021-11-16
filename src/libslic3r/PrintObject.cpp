@@ -2177,8 +2177,6 @@ namespace Slic3r {
                             ExPolygons not_bridge = diff_ex({ ExPolygon{ poly_to_check_for_thin } }, collapsed);
                             int try1_count = bridge.size() + not_bridge.size();
                             if (try1_count > 1) {
-                                if (layer->id() == 15)
-                                    std::cout << "lol\n";
                                 min_width = float(bridge_flow.scaled_width()) * 1.5f;
                                 collapsed = offset2_ex({ poly_to_check_for_thin }, -min_width, +min_width * 1.5f);
                                 ExPolygons bridge2 = intersection_ex(collapsed, { ExPolygon{ poly_to_check_for_thin } });
