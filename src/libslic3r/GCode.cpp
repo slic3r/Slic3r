@@ -3773,8 +3773,8 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
                         //we have to remove coeff percentage on path.width length
                         double coeff = cut_corner_cache[idx_angle-30];
                         //the length, do half of the work on width/4 and the other half on width/2
-                        coordf_t length1 = (path.width) / 4;
-                        coordf_t line_length = unscaled(line.length());
+                        double length1 = (path.width) / 4;
+                        double line_length = unscaled(line.length());
                         if (line_length > length1) {
                             double mult1 = 1 - coeff * 2;
                             double length2 = (path.width) / 2;
@@ -3790,7 +3790,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
                             sum += e_per_mm * (length1) * mult1;
 
                             if (line_length - length1 > length2) {
-                                Point inter_point2 = line.point_at(scale_d(length2));
+                                Point inter_point2 = line.point_at(scale_d(length1 + length2));
                                 //extrude reduced
                                 gcode += m_writer.extrude_to_xy(
                                     this->point_to_gcode(inter_point2),
