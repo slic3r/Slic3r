@@ -296,7 +296,7 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
             std::vector<size_t> bridge_group(bridges.size(), (size_t)-1);
             size_t n_groups = 0; 
             for (size_t i = 0; i < bridges.size(); ++ i) {
-                // A grup id for this bridge.
+                // A group id for this bridge.
                 size_t group_id = (bridge_group[i] == size_t(-1)) ? (n_groups ++) : bridge_group[i];
                 bridge_group[i] = group_id;
                 // For all possibly overlaping bridges:

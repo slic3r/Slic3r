@@ -175,7 +175,7 @@ void PerimeterGenerator::process()
 
         for (surface_idx = 0; surface_idx < all_surfaces.size(); surface_idx++) {
             Surface *surface = &all_surfaces[surface_idx];
-            ExPolygons last = union_ex(surface->expolygon);
+            ExPolygons last = { surface->expolygon };
             //compute our unsupported surface
             ExPolygons unsupported = diff_ex(last, *this->lower_slices, true);
             if (!unsupported.empty()) {
@@ -214,7 +214,8 @@ void PerimeterGenerator::process()
                                     //check convex, has some bridge, not overhang
                                     if (contour_simplified.size() == 1 && contour_bigger.size() == 1 && contour_simplified[0].concave_points().size() == 0
                                         && intersection_ex(bridgeable, { poly_unsupp }).size() > 0
-                                        && diff_ex({ poly_unsupp_bigger }, last, true).size() == 0) {
+                                        && diff_ex({ poly_unsupp_bigger }, union_ex(last, offset_ex(bridgeable, perimeter_spacing * 1.5)), true).size() == 0
+                                        ) {
                                         //ok, keep it
                                         i++;
                                     } else {
@@ -298,14 +299,27 @@ void PerimeterGenerator::process()
                                         expol.holes.clear();
                                     unbridgeable = diff_ex(unbridgeable, bridgeable_simplified);
                                     unbridgeable = offset2_ex(unbridgeable, -ext_perimeter_width*2, ext_perimeter_width*2);
-                                    ExPolygons bridges_temp = intersection_ex(last, diff_ex(unsupported_filtered, unbridgeable));
+                                    ExPolygons bridges_temp = offset2_ex(intersection_ex(last, diff_ex(unsupported_filtered, unbridgeable),true),-ext_perimeter_width/4, ext_perimeter_width/4);
                                     //remove the overhangs section from the surface polygons
                                     ExPolygons reference = last;
                                     last = diff_ex(last, unsupported_filtered);
                                     //ExPolygons no_bridge = diff_ex(offset_ex(unbridgeable, ext_perimeter_width * 3 / 2), last);
                                     //bridges_temp = diff_ex(bridges_temp, no_bridge);
-                                    coordf_t bridged_infill_margin = config->bridged_infill_margin.get_abs_value(ext_perimeter_width);
-                                    unsupported_filtered = diff_ex(offset_ex(bridges_temp, bridged_infill_margin), offset_ex(unbridgeable, ext_perimeter_width * 2, jtSquare));
+                                    coordf_t bridged_infill_margin = scale_d(config->bridged_infill_margin.get_abs_value(unscaled(ext_perimeter_width)));
+                                    coordf_t offset_to_do = bridged_infill_margin;
+                                    bool first = true;
+                                    unbridgeable = diff_ex(unbridgeable, offset_ex(bridges_temp, ext_perimeter_width));
+                                    while (offset_to_do > ext_perimeter_width * 1.5) {
+                                        unbridgeable = offset2_ex(unbridgeable, -ext_perimeter_width/4, ext_perimeter_width*2.25, ClipperLib::jtSquare);
+                                        bridges_temp = diff_ex(bridges_temp, unbridgeable);
+                                        bridges_temp = offset_ex(bridges_temp, ext_perimeter_width, ClipperLib::jtMiter, 6.);
+                                        unbridgeable = diff_ex(unbridgeable, offset_ex(bridges_temp, ext_perimeter_width));
+                                        offset_to_do -= ext_perimeter_width;
+                                        first = false;
+                                    }
+                                    unbridgeable = offset_ex(unbridgeable, ext_perimeter_width + offset_to_do, ClipperLib::jtSquare);
+                                    bridges_temp = diff_ex(bridges_temp, unbridgeable);
+                                    unsupported_filtered = offset_ex(bridges_temp, offset_to_do);
                                     unsupported_filtered = intersection_ex(unsupported_filtered, reference);
                                 } else {
                                     ExPolygons unbridgeable = intersection_ex(unsupported, diff_ex(unsupported_filtered, offset_ex(bridgeable_simplified, ext_perimeter_width / 2)));
