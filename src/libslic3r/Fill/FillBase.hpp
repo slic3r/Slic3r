@@ -83,6 +83,9 @@ struct FillParams
 
     //full configuration for the region, to avoid copying every bit that is needed. Use this for process-specific parameters.
     PrintRegionConfig const *config{ nullptr };
+
+    // Zero based extruder ID.
+    unsigned int    extruder = 0;
 };
 static_assert(IsTriviallyCopyable<FillParams>::value, "FillParams class is not POD (and it should be - see constructor).");
 

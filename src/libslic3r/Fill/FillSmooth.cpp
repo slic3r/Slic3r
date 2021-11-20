@@ -19,7 +19,7 @@ namespace Slic3r {
 
     /// @idx: the index of the step (0 = first step, 1 = second step, ...) The first lay down the volume and the others smoothen the surface.
     void FillSmooth::perform_single_fill(const int idx, ExtrusionEntityCollection &eecroot, const Surface &srf_source,
-        const FillParams &params, const double volume) const {
+        const FillParams &params) const {
         if (srf_source.expolygon.empty()) return;
         
         // Save into layer smoothing path.
@@ -42,7 +42,7 @@ namespace Slic3r {
 
         //choose if we are going to extrude with or without overlap
         if ((params.flow.bridge && idx == 0) || has_overlap[idx] || this->no_overlap_expolygons.empty()){
-            this->fill_expolygon(idx, *eec, srf_source, params_modifided, volume);
+            this->fill_expolygon(idx, *eec, srf_source, params_modifided);
         }
         else{
             Surface surfaceNoOverlap(srf_source);
@@ -52,7 +52,7 @@ namespace Slic3r {
             for (const ExPolygon &poly : half_overlap) {
                 if (poly.empty()) continue;
                 surfaceNoOverlap.expolygon = poly;
-                this->fill_expolygon(idx, *eec, surfaceNoOverlap, params_modifided, volume);
+                this->fill_expolygon(idx, *eec, surfaceNoOverlap, params_modifided);
             }
         }
         
@@ -61,7 +61,7 @@ namespace Slic3r {
     }
     
     void FillSmooth::fill_expolygon(const int idx, ExtrusionEntityCollection &eec, const Surface &srf_to_fill, 
-        const FillParams &params_init, const double volume) const {
+        const FillParams &params_init) const {
         
         FillParams params = params_init;
         std::unique_ptr<Fill> f2 = std::unique_ptr<Fill>(Fill::new_from_type(fillPattern[idx]));
@@ -84,7 +84,11 @@ namespace Slic3r {
             }
             //get the flow
             float mult_flow = 1;
-            if (params.fill_exactly) {
+            if (params.fill_exactly && idx == 0) {
+
+                // compute the volume to extrude
+                double volume_to_occupy = compute_unscaled_volume_to_fill(&srf_to_fill, params);
+
                 //compute the path of the nozzle
                 double length_tot = 0;
                 int nb_lines = 0;
@@ -103,11 +107,12 @@ namespace Slic3r {
                     extruded_volume = test_flow.mm3_per_mm() * length_tot / params.density;
                 } else
                     extruded_volume = params.flow.mm3_per_mm() * length_tot / params.density;
-                if (extruded_volume == 0) extruded_volume = volume;
+                if (extruded_volume == 0) extruded_volume = volume_to_occupy;
 
                 // print
-                mult_flow = (float)std::min(2., volume / extruded_volume);
-                BOOST_LOG_TRIVIAL(info) << "Ironing process extrude " << extruded_volume << " mm3 for a volume of " << volume << " mm3 : we mult the flow by " << mult_flow;
+                mult_flow = (float)std::min(2., volume_to_occupy / extruded_volume);
+                BOOST_LOG_TRIVIAL(info) << "Layer " << layer_id << " Ironing process " << idx << " extrude " << extruded_volume << " mm3 for a volume of " << volume_to_occupy << " mm3 : we mult the flow by " << mult_flow;
+                
             }
             extrusion_entities_append_paths(
                 eec.entities, std::move(polylines_layer),
@@ -123,9 +128,6 @@ namespace Slic3r {
     {
         coordf_t init_spacing = this->get_spacing();
 
-        // compute the volume to extrude
-        double volume_to_occupy = compute_unscaled_volume_to_fill(surface, params);
-
         //create root node
         ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
         //you don't want to sort the extrusions: big infill first, small second
@@ -135,7 +137,7 @@ namespace Slic3r {
         FillParams first_pass_params = params;
         //if(first_pass_params.role != ExtrusionRole::erSupportMaterial && first_pass_params.role != ExtrusionRole::erSupportMaterialInterface)
         //s    first_pass_params.role = ExtrusionRole::erSolidInfill;
-        perform_single_fill(0, *eecroot, *surface, first_pass_params, volume_to_occupy);
+        perform_single_fill(0, *eecroot, *surface, first_pass_params);
 
         //use monotonic for ironing pass
         FillParams monotonic_params = params;
@@ -143,12 +145,12 @@ namespace Slic3r {
 
         //second infill
         if (nbPass > 1){
-            perform_single_fill(1, *eecroot, *surface, monotonic_params, volume_to_occupy);
+            perform_single_fill(1, *eecroot, *surface, monotonic_params);
         }
 
         // third infill
         if (nbPass > 2){
-            perform_single_fill(2, *eecroot, *surface, monotonic_params, volume_to_occupy);
+            perform_single_fill(2, *eecroot, *surface, monotonic_params);
         }
         
         if (!eecroot->entities.empty()) 

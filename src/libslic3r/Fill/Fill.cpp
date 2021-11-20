@@ -16,8 +16,6 @@ namespace Slic3r {
 
 struct SurfaceFillParams : FillParams
 {
-    // Zero based extruder ID.
-    unsigned int    extruder = 0;
     // Infill pattern, adjusted for the density etc.
     InfillPattern   pattern = InfillPattern(0);
 

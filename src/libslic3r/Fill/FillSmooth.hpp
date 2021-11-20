@@ -56,9 +56,9 @@ protected:
     InfillPattern fillPattern[3];
 
     void perform_single_fill(const int idx, ExtrusionEntityCollection &eecroot, const Surface &srf_source,
-        const FillParams &params, const double volume) const;
+        const FillParams &params) const;
     void fill_expolygon(const int idx, ExtrusionEntityCollection &eec, const Surface &srf_to_fill,
-        const FillParams &params, const double volume) const;
+        const FillParams &params) const;
 };
 
 
