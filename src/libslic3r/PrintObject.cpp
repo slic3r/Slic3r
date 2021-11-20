@@ -1193,7 +1193,7 @@ namespace Slic3r {
                                 ExPolygons dense_polys;
                                 std::vector<uint16_t> dense_priority;
                                 const ExPolygons surfs_with_overlap = { surface.expolygon };
-                                ////create a surface with overlap to allow the dense thing to bond to the infill
+                                // create a surface with overlap to allow the dense thing to bond to the infill
                                 coord_t scaled_width = layerm->flow(frInfill, true).scaled_width();
                                 coord_t overlap = scaled_width / 4;
                                 for (const ExPolygon& surf_with_overlap : surfs_with_overlap) {
@@ -1203,46 +1203,89 @@ namespace Slic3r {
                                         if (upp.has_fill_solid()) {
                                             // i'm using intersection_ex because the result different than 
                                             // upp.expolygon.overlaps(surf.expolygon) or surf.expolygon.overlaps(upp.expolygon)
-                                            //and a little offset2 to remove the almost supported area
+                                            // and a little offset2 to remove the almost supported area
                                             ExPolygons intersect =
                                                 offset2_ex(
                                                     intersection_ex(sparse_polys, { upp.expolygon }, true)
                                                     , (float)-layerm->flow(frInfill).scaled_width(), (float)layerm->flow(frInfill).scaled_width());
                                             if (!intersect.empty()) {
-                                                double area_intersect = 0;
-                                                // calculate area to decide if area is small enough for autofill
-                                                if (layerm->region()->config().infill_dense_algo.value == dfaAutoNotFull || layerm->region()->config().infill_dense_algo.value == dfaAutoOrEnlarged)
-                                                    for (ExPolygon poly_inter : intersect)
-                                                        area_intersect += poly_inter.area();
+                                                DenseInfillAlgo algo = layerm->region()->config().infill_dense_algo.value;
 
-                                                double surf_with_overlap_area = surf_with_overlap.area();
-                                                if (layerm->region()->config().infill_dense_algo.value == dfaEnlarged
-                                                    || (layerm->region()->config().infill_dense_algo.value == dfaAutoOrEnlarged && surf_with_overlap_area <= area_intersect * COEFF_SPLIT)) {
+                                                //if no infill, don't bother, it's always yes
+                                                if (region->config().fill_density.value == 0) {
+                                                    if (dfaAutoOrEnlarged == algo)
+                                                        algo = dfaAutomatic;
+                                                    else if (dfaAutomatic != algo)
+                                                        algo = dfaAutoNotFull;
+                                                }
+                                                if ( dfaAutoOrNothing == algo
+                                                    || dfaAutoOrEnlarged == algo) {
+                                                    //check if small enough
+                                                    double max_nozzle_diam = 0;
+                                                    for (uint16_t extruder_id : object_extruders()) {
+                                                        max_nozzle_diam = std::max(max_nozzle_diam, print()->config().nozzle_diameter.values[extruder_id]);
+                                                    }
+                                                    coordf_t min_width = scale_d(max_nozzle_diam) / region->config().fill_density.get_abs_value(1.);
+                                                    ExPolygons smalls = offset_ex(intersect, -min_width);
+                                                    //small enough ?
+                                                    if (smalls.empty()) {
+                                                        if (dfaAutoOrNothing == algo)
+                                                            algo = dfaAutoNotFull;
+                                                        if (dfaAutoOrEnlarged == algo)
+                                                            algo = dfaAutomatic;
+                                                    } else if (dfaAutoOrNothing == algo) {
+                                                            algo = dfaDisabled;
+                                                    }
+                                                }
+                                                if (dfaEnlarged == algo) {
                                                     //expand the area a bit
                                                     intersect = offset_ex(intersect, (scaled(layerm->region()->config().external_infill_margin.get_abs_value(
                                                         region->config().perimeters == 0 ? 0 : (layerm->flow(frExternalPerimeter).width + layerm->flow(frPerimeter).spacing() * (region->config().perimeters - 1))))));
-                                                } else if (layerm->region()->config().infill_dense_algo.value == dfaAutoNotFull
-                                                    || layerm->region()->config().infill_dense_algo.value == dfaAutomatic) {
-
-                                                    //like intersect.empty() but more resilient
-                                                    if (layerm->region()->config().infill_dense_algo.value == dfaAutomatic
-                                                        || surf_with_overlap_area > area_intersect * COEFF_SPLIT) {
-                                                        ExPolygons cover_intersect;
-
-                                                        // it will be a dense infill, split the surface if needed
-                                                        //ExPolygons cover_intersect;
-                                                        for (ExPolygon& expoly_tocover : intersect) {
-                                                            ExPolygons temp = dense_fill_fit_to_size(
-                                                                expoly_tocover,
-                                                                surf_with_overlap,
-                                                                4 * layerm->flow(frInfill).scaled_width(),
-                                                                0.01f);
-                                                            cover_intersect.insert(cover_intersect.end(), temp.begin(), temp.end());
-                                                        }
-                                                        intersect = cover_intersect;
-                                                    } else {
-                                                        intersect.clear();
+                                                    intersect = intersection_ex(intersect, sparse_polys);
+                                                } else if (dfaDisabled == algo) {
+                                                    intersect.clear();
+                                                } else {
+                                                    double sparse_area = surf_with_overlap.area();
+                                                    double area_to_cover = 0;
+                                                    double min_area_to_cover = 0;
+                                                    if (dfaAutoNotFull == algo) {
+                                                        // calculate area to decide if area is small enough for autofill
+                                                        for (ExPolygon poly_inter : intersect)
+                                                            area_to_cover += poly_inter.area();
+                                                        // if we have to fill everything, don't bother
+                                                        if (area_to_cover * 1.1 > sparse_area)
+                                                            intersect.clear();
                                                     }
+                                                    //like intersect.empty() but more resilient
+                                                    ExPolygons cover_intersect;
+
+                                                    // it will be a dense infill, split the surface if needed
+                                                    //ExPolygons cover_intersect;
+                                                    for (ExPolygon& expoly_tocover : intersect) {
+                                                        ExPolygons temp = dense_fill_fit_to_size(
+                                                            expoly_tocover,
+                                                            surf_with_overlap,
+                                                            4 * layerm->flow(frInfill).scaled_width(),
+                                                            0.01f);
+                                                        cover_intersect.insert(cover_intersect.end(), temp.begin(), temp.end());
+                                                    }
+                                                    // calculate area to decide if area is small enough for autofill
+                                                    if (dfaAutoOrEnlarged == algo) {
+                                                        double area_dense_covered = 0;
+                                                        for (ExPolygon poly_inter : cover_intersect)
+                                                            area_dense_covered += poly_inter.area();
+                                                        // if enlarge is smaller, use enlarge
+                                                        intersect = offset_ex(intersect, (scaled(layerm->region()->config().external_infill_margin.get_abs_value(
+                                                            region->config().perimeters == 0 ? 0 : (layerm->flow(frExternalPerimeter).width + layerm->flow(frPerimeter).spacing() * (region->config().perimeters - 1))))));
+                                                        intersect = intersection_ex(intersect, sparse_polys);
+                                                        double area_enlarged_covered = 0;
+                                                        for (ExPolygon poly_inter : intersect)
+                                                            area_enlarged_covered += poly_inter.area();
+                                                        if (area_dense_covered < area_enlarged_covered) {
+                                                            intersect = cover_intersect;
+                                                        }
+                                                    }else
+                                                        intersect = cover_intersect;
                                                 }
                                                 if (!intersect.empty()) {
 

@@ -121,7 +121,12 @@ enum SLAMaterial {
     slamHeatResistant,
 };
 enum DenseInfillAlgo {
-    dfaAutomatic, dfaAutoNotFull, dfaAutoOrEnlarged , dfaEnlarged,
+    dfaAutomatic, 
+    dfaAutoNotFull,
+    dfaAutoOrEnlarged,
+    dfaAutoOrNothing,
+    dfaEnlarged,
+    dfaDisabled,
 };
 
 enum NoPerimeterUnsupportedAlgo {
@@ -313,8 +318,9 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<SeamPosition>::ge
 template<> inline const t_config_enum_values& ConfigOptionEnum<DenseInfillAlgo>::get_enum_values() {
     static const t_config_enum_values keys_map = {
         { "automatic", dfaAutomatic },
-        { "autosmall", dfaAutoNotFull },
+        { "autonotfull", dfaAutoNotFull },
         { "autoenlarged", dfaAutoOrEnlarged },
+        { "autosmall",  dfaAutoOrNothing},
         { "enlarged", dfaEnlarged }
     };
     return keys_map;

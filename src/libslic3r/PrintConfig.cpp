@@ -2350,10 +2350,12 @@ void PrintConfigDef::init_fff_params()
         " The Anchored option just slightly enlarges (by 'Default infill margin') the surfaces that need a better support.");
     def->enum_keys_map = &ConfigOptionEnum<DenseInfillAlgo>::get_enum_values();
     def->enum_values.push_back("automatic");
+    def->enum_values.push_back("autonotfull");
     def->enum_values.push_back("autosmall");
     def->enum_values.push_back("autoenlarged");
     def->enum_values.push_back("enlarged");
     def->enum_labels.push_back(L("Automatic"));
+    def->enum_labels.push_back(L("Automatic, unless full"));
     def->enum_labels.push_back(L("Automatic, only for small areas"));
     def->enum_labels.push_back(L("Automatic, or anchored if too big"));
     def->enum_labels.push_back(L("Anchored"));
