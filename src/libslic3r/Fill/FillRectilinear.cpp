@@ -959,9 +959,13 @@ static void slice_region_by_vertical_lines(const FillRectilinear* filler, std::v
     for (size_t i_seg = 0; i_seg < segs.size(); ++i_seg) {
         SegmentedIntersectionLine& sil = segs[i_seg];
         if ((sil.intersections.size() & 1) == 1 && sil.intersections.size() > 1) {
-            BOOST_LOG_TRIVIAL(error) << "FillRectilinear::fill_surface() failed to fill a region: impair number of intersections at layer " << filler->layer_id << " @z="<< filler->z;
-            if (sil.intersections.back().iContour == 0 && sil.intersections[sil.intersections.size() - 2].iContour == 0)
+            BOOST_LOG_TRIVIAL(error) << "FillRectilinear::fill_surface() fail: impair number of intersections at layer " << filler->layer_id << " @z="<< filler->z;
+            if (sil.intersections.back().iContour == sil.intersections[sil.intersections.size() - 2].iContour)
                 sil.intersections.pop_back();
+        }
+        if (sil.intersections.size() == 1) {
+            BOOST_LOG_TRIVIAL(error) << "FillRectilinear::fill_surface() fail: only one intersection at layer " << filler->layer_id << " @z=" << filler->z;
+            sil.intersections.clear();
         }
     }
 
@@ -1172,6 +1176,8 @@ static void connect_segment_intersections_by_contours(
                     same_next = true;
                 }
             }
+            // note: here, an intersection can have its prev to vertical on the same line, but the other intersection can have its intersection on horizontal
+            // it can be problematic...
             assert(iprev >= 0);
             assert(inext >= 0);
 
@@ -1247,6 +1253,27 @@ static void connect_segment_intersections_by_contours(
                     itsct.next_on_contour_quality = SegmentIntersection::LinkQuality::TooLong;
                 }
             }
+
+        // Removed un-mirrored vertical connection.
+        for (size_t i_intersection = 0; i_intersection < il.intersections.size(); ++i_intersection) {
+            SegmentIntersection& it = il.intersections[i_intersection];
+            if (it.has_left_vertical()) {
+                SegmentIntersection& it2 = il.intersections[it.left_vertical()];
+                if (it2.left_vertical() != i_intersection) {
+                    // as it can happen that a vertical connection isn't symetric, if it happens, break the erroneous link
+                    it.prev_on_contour = -1;
+                    it.prev_on_contour_type = SegmentIntersection::LinkType::Phony;
+                }
+            }
+            if (it.has_right_vertical()) {
+                SegmentIntersection& it2 = il.intersections[it.right_vertical()];
+                if (it2.right_vertical() != i_intersection) {
+                    // as it can happen that a vertical connection isn't symetric, if it happens, break the erroneous link
+                    it.next_on_contour = -1;
+                    it.next_on_contour_type = SegmentIntersection::LinkType::Phony;
+                }
+            }
+        }
 
         // Make the LinkQuality::Invalid symmetric on vertical connections.
         for (size_t i_intersection = 0; i_intersection < il.intersections.size(); ++i_intersection) {
@@ -1419,7 +1446,7 @@ static SegmentIntersection& end_of_vertical_run(SegmentedIntersectionLine& il, S
 }
 
 static void traverse_graph_generate_polylines(
-    const ExPolygonWithOffset& poly_with_offset, const FillParams& params, std::vector<SegmentedIntersectionLine>& segs, Polylines& polylines_out)
+    const ExPolygonWithOffset& poly_with_offset, const FillParams& params, std::vector<SegmentedIntersectionLine>& segs, Polylines& polylines_out, coord_t spacing, bool inverted_dir = false)
 {
     // For each outer only chords, measure their maximum distance to the bow of the outer contour.
     // Mark an outer only chord as consumed, if the distance is low.
@@ -1453,51 +1480,108 @@ static void traverse_graph_generate_polylines(
         pointLast = polylines_out.back().points.back();
     for (;;) {
         if (i_intersection == -1) {
-            // The path has been interrupted. Find a next starting point, closest to the previous extruder position.
-            coordf_t dist2min = std::numeric_limits<coordf_t>().max();
-            for (size_t i_vline2 = 0; i_vline2 < segs.size(); ++i_vline2) {
-                const SegmentedIntersectionLine& vline = segs[i_vline2];
-                if (!vline.intersections.empty()) {
-                    assert(vline.intersections.size() > 1);
-                    // Even number of intersections with the loops.
-                    assert((vline.intersections.size() & 1) == 0);
-                    assert(vline.intersections.front().type == SegmentIntersection::OUTER_LOW);
-                    for (size_t i = 0; i < vline.intersections.size(); ++i) {
-                        const SegmentIntersection& intrsctn = vline.intersections[i];
-                        if (intrsctn.is_outer()) {
-                            assert(intrsctn.is_low() || i > 0);
-                            bool consumed = intrsctn.is_low() ?
-                                intrsctn.consumed_vertical_up :
-                                vline.intersections[i - 1].consumed_vertical_up;
-                            if (!consumed) {
-                                coordf_t dist2 = sqr(coordf_t(pointLast(0) - vline.pos)) + sqr(coordf_t(pointLast(1) - intrsctn.pos()));
-                                if (dist2 < dist2min) {
-                                    dist2min = dist2;
-                                    i_vline = int(i_vline2);
-                                    i_intersection = int(i);
-                                    //FIXME We are taking the first left point always. Verify, that the caller chains the paths
-                                    // by a shortest distance, while reversing the paths if needed.
-                                    //if (polylines_out.empty())
-                                        // Initial state, take the first line, which is the first from the left.
-                                    goto found;
+            if (!polylines_out.empty()) {
+                // The path has been interrupted. Find a next starting point, closest to the previous extruder position.
+                coordf_t dist2min = std::numeric_limits<coordf_t>().max();
+                for (size_t i_vline2 = 0; i_vline2 < segs.size(); ++i_vline2) {
+                    const SegmentedIntersectionLine& vline = segs[i_vline2];
+                    if (!vline.intersections.empty()) {
+                        assert(vline.intersections.size() > 1);
+                        // Even number of intersections with the loops.
+                        assert((vline.intersections.size() & 1) == 0);
+                        assert(vline.intersections.front().type == SegmentIntersection::OUTER_LOW);
+                        for (size_t i = 0; i < vline.intersections.size(); ++i) {
+                            const SegmentIntersection& intrsctn = vline.intersections[i];
+                            if (intrsctn.is_outer()) {
+                                assert(intrsctn.is_low() || i > 0);
+                                bool consumed = intrsctn.is_low() ?
+                                    intrsctn.consumed_vertical_up :
+                                    vline.intersections[i - 1].consumed_vertical_up;
+                                if (!consumed) {
+                                    coordf_t dist2 = sqr(coordf_t(pointLast(0) - vline.pos)) + sqr(coordf_t(pointLast(1) - intrsctn.pos()));
+                                    if (dist2 < dist2min) {
+                                        dist2min = dist2;
+                                        i_vline = int(i_vline2);
+                                        i_intersection = int(i);
+                                        //FIXME We are taking the first left point always. Verify, that the caller chains the paths
+                                        // by a shortest distance, while reversing the paths if needed.
+                                        //if (polylines_out.empty())
+                                            // Initial state, take the first line, which is the first from the left.
+                                        goto found;
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                if (i_intersection == -1)
+                    // We are finished.
+                    break;
+            found:
+                // Start a new path.
+                polylines_out.push_back(Polyline());
+                polyline_current = &polylines_out.back();
+                // Emit the first point of a path.
+                pointLast = Point(segs[i_vline].pos, segs[i_vline].intersections[i_intersection].pos());
+                polyline_current->points.push_back(pointLast);
+
+            } else {
+                //find the starting intersection
+                i_vline = 0;
+                i_intersection = 0;
+                bool found = false;
+                while (!found) {
+                    //go to next column if we don't found a suitable one in the current column
+                    while (i_intersection >= segs[i_vline].intersections.size()) {
+                        i_vline++;
+                        i_intersection = 0;
+                        if (i_vline >= segs.size()) {
+                            // nothing to merge
+                            return;
+                        }
+                    }
+                    assert(segs[i_vline].intersections[i_intersection].is_low() || i_intersection > 0);
+                    //does the current on is suitable?
+                    bool consumed = segs[i_vline].intersections[i_intersection].is_low() ?
+                        segs[i_vline].intersections[i_intersection].consumed_vertical_up :
+                        segs[i_vline].intersections[i_intersection - 1].consumed_vertical_up;
+                    //move
+                    if (consumed)
+                        i_intersection++;
+                    else
+                        found = true;
+                }
+                //if inverted dir, stay on the current column but try to start at the opposide side
+                if (inverted_dir) {
+                    int i_intersection_inv = segs[i_vline].intersections.size() - 1;
+                    found = false;
+                    while (!found) {
+                        assert(segs[i_vline].intersections[i_intersection_inv].is_low() || i_intersection_inv > 0);
+                        bool consumed_inv = segs[i_vline].intersections[i_intersection_inv].is_low() ?
+                            segs[i_vline].intersections[i_intersection_inv].consumed_vertical_up :
+                            segs[i_vline].intersections[i_intersection_inv - 1].consumed_vertical_up;
+                        if (consumed_inv)
+                            i_intersection_inv--;
+                        else
+                            found = true;
+                        if (i_intersection_inv <= i_intersection) {
+                            //can't use another start point, return so we can use the other path.
+                            return;
+                        }
+                    }
+                    i_intersection = i_intersection_inv;
+                }
+                // Start a new path with no previous position
+                polylines_out.push_back(Polyline());
+                polyline_current = &polylines_out.back();
+                // Emit the first point of a path.
+                pointLast = Point(segs[i_vline].pos, segs[i_vline].intersections[i_intersection].pos());
+                polyline_current->points.push_back(pointLast);
             }
-            if (i_intersection == -1)
-                // We are finished.
-                break;
-        found:
-            // Start a new path.
-            polylines_out.push_back(Polyline());
-            polyline_current = &polylines_out.back();
-            // Emit the first point of a path.
-            pointLast = Point(segs[i_vline].pos, segs[i_vline].intersections[i_intersection].pos());
-            polyline_current->points.push_back(pointLast);
         }
 
+        assert(i_vline >= 0);
+        assert(i_intersection >= 0);
         // From the initial point (i_vline, i_intersection), follow a path.
         SegmentedIntersectionLine& vline = segs[i_vline];
         SegmentIntersection* it = &vline.intersections[i_intersection];
@@ -1555,6 +1639,14 @@ static void traverse_graph_generate_polylines(
             int  i_next = it->right_horizontal();
             bool intersection_prev_valid = intersection_on_prev_vertical_line_valid(segs, i_vline, i_intersection);
             bool intersection_next_valid = intersection_on_next_vertical_line_valid(segs, i_vline, i_intersection);
+            // special path for bridges: do not make long connection, as it's over-extruded.
+            if (params.flow.bridge) {
+                coordf_t max_length = coordf_t(spacing) * 2.1;
+                intersection_prev_valid = (intersection_prev_valid
+                    && measure_perimeter_horizontal_segment_length(poly_with_offset, segs, i_vline - 1, i_prev, i_intersection) < max_length);
+                intersection_next_valid = (intersection_next_valid
+                    && measure_perimeter_horizontal_segment_length(poly_with_offset, segs, i_vline, i_intersection, i_next) < max_length);
+            }
             bool intersection_horizontal_valid = intersection_prev_valid || intersection_next_valid;
             // Mark both the left and right connecting segment as consumed, because one cannot go to this intersection point as it has been consumed.
             if (i_prev != -1)
@@ -2920,8 +3012,21 @@ bool FillRectilinear::fill_surface_by_lines(const Surface *surface, const FillPa
             std::vector<MonotonicRegionLink> path = chain_monotonic_regions(regions, poly_with_offset, segs, rng);
             polylines_from_paths(path, poly_with_offset, segs, polylines_out);
         }
-    } else
-        traverse_graph_generate_polylines(poly_with_offset, params, segs, polylines_out);
+    } else {
+        std::vector<SegmentedIntersectionLine> segs_save = segs;
+        if (polylines_out.size() > 0) {
+            traverse_graph_generate_polylines(poly_with_offset, params, segs, polylines_out, line_spacing);
+        } else {
+            traverse_graph_generate_polylines(poly_with_offset, params, segs, polylines_out, line_spacing);
+            if (polylines_out.size() > 1) {
+                //try with inverted dir if the connection is better
+                Polylines next_try;
+                traverse_graph_generate_polylines(poly_with_offset, params, segs_save, next_try, line_spacing, true);
+                if (next_try.size() > 0 && next_try.size() < polylines_out.size())
+                    polylines_out = next_try;
+            }
+        }
+    }
 
 
 #ifdef SLIC3R_DEBUG
@@ -3013,7 +3118,10 @@ bool FillRectilinear::fill_surface_by_multilines(const Surface* surface, FillPar
                     auto it_high = it;
                     assert(it_high->type == SegmentIntersection::OUTER_HIGH);
                     if (it_high->type == SegmentIntersection::OUTER_HIGH) {
-                        fill_lines.emplace_back(Point(vline.pos, it_low->pos()).rotated(cos_a, sin_a), Point(vline.pos, it_high->pos()).rotated(cos_a, sin_a));
+                        if (angle == 0.)
+                            fill_lines.emplace_back(Point(vline.pos, it_low->pos()), Point(vline.pos, it_high->pos()));
+                        else
+                            fill_lines.emplace_back(Point(vline.pos, it_low->pos()).rotated(cos_a, sin_a), Point(vline.pos, it_high->pos()).rotated(cos_a, sin_a));
                         ++it;
                     }
                 }
