@@ -2193,12 +2193,19 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector<BrimLoop>>& loops, c
 
     //def
     //cut loops if they go inside a forbidden region
-    std::function<void(BrimLoop&)> cut_loop = [&frontiers, reversed](BrimLoop& to_cut) {
+    std::function<void(BrimLoop&)> cut_loop = [&frontiers, &flow, reversed](BrimLoop& to_cut) {
         Polylines result;
         if (to_cut.is_loop) {
             result = intersection_pl(Polygons{ to_cut.polygon() }, frontiers, true);
         } else {
             result = intersection_pl(to_cut.lines, frontiers, true);
+        }
+        //remove too small segments
+        for (int i = 0; i < result.size(); i++) {
+            if (result[i].length() < flow.scaled_width() * 2) {
+                result.erase(result.begin() + i);
+                i--;
+            }
         }
         if (result.empty()) {
             to_cut.lines.clear();
@@ -2268,6 +2275,14 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector<BrimLoop>>& loops, c
                 parent->entities.push_back(mycoll);
                 for (BrimLoop& child : to_cut.children)
                     (*extrude_ptr)(child, mycoll);
+                //remove un-needed collection if possible
+                if (mycoll->entities.size() == 1) {
+                    parent->entities.back() = mycoll->entities.front();
+                    mycoll->entities.clear();
+                    delete mycoll;
+                } else if (mycoll->entities.size() == 0) {
+                    parent->remove(parent->entities.size() - 1);
+                }
             }
         } else {
             ExtrusionEntityCollection* print_me_first = new ExtrusionEntityCollection();
@@ -2291,6 +2306,14 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector<BrimLoop>>& loops, c
                 print_me_first->entities.push_back(children);
                 for (BrimLoop& child : to_cut.children)
                     (*extrude_ptr)(child, children);
+                //remove un-needed collection if possible
+                if (children->entities.size() == 1) {
+                    print_me_first->entities.back() = children->entities.front();
+                    children->entities.clear();
+                    delete children;
+                } else if (children->entities.size() == 0) {
+                    print_me_first->remove(parent->entities.size() - 1);
+                }
             }
         }
     };
@@ -2310,6 +2333,7 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector<BrimLoop>>& loops, c
 //TODO: test if no regression vs old _make_brim.
 // this new one can extrude brim for an object inside an other object.
 void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out) {
+    const coord_t scaled_spacing = flow.scaled_spacing();
     const PrintObjectConfig &brim_config = objects.front()->config();
     coord_t brim_offset = scale_(brim_config.brim_offset.value);
     ExPolygons    islands;
@@ -2349,7 +2373,7 @@ void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolyg
     const size_t num_loops = size_t(floor(std::max(0.,(brim_config.brim_width.value - brim_config.brim_offset.value)) / flow.spacing()));
     ExPolygons brimmable_areas;
     for (ExPolygon &expoly : islands) {
-        for (Polygon poly : offset(expoly.contour, num_loops * flow.scaled_spacing(), jtSquare)) {
+        for (Polygon poly : offset(expoly.contour, num_loops * scaled_spacing, jtSquare)) {
             brimmable_areas.emplace_back();
             brimmable_areas.back().contour = poly;
             brimmable_areas.back().contour.make_counter_clockwise();
@@ -2374,7 +2398,7 @@ void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolyg
     for (ExPolygon &expoly : islands) {
         unbrimmable_polygons.push_back(expoly.contour);
         //do it separately because we don't want to union them
-        for (ExPolygon &big_expoly : offset_ex(expoly, double(flow.scaled_spacing()) * 0.5, jtSquare)) {
+        for (ExPolygon &big_expoly : offset_ex(expoly, double(scaled_spacing) * 0.5, jtSquare)) {
             bigger_islands.emplace_back(big_expoly);
             unbrimmable_polygons.insert(unbrimmable_polygons.end(), big_expoly.holes.begin(), big_expoly.holes.end());
         }
@@ -2387,7 +2411,7 @@ void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolyg
         bigger_islands.clear();
         if (i > 0) {
             for (ExPolygon &expoly : islands) {
-                for (Polygon &big_contour : offset(expoly.contour, double(flow.scaled_spacing()) * i, jtSquare)) {
+                for (Polygon &big_contour : offset(expoly.contour, double(scaled_spacing) * i, jtSquare)) {
                     bigger_islands.emplace_back(expoly);
                     bigger_islands.back().contour = big_contour;
                 }
@@ -2396,11 +2420,12 @@ void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolyg
         bigger_islands = union_ex(bigger_islands);
         for (ExPolygon &expoly : bigger_islands) {
             loops[i].emplace_back(expoly.contour);
-            //also add hole, in case of it's merged with a contour. <= HOW? if there's an island inside a hole! (in the same object)
-            for (Polygon &hole : expoly.holes)
-                //but remove the points that are inside the holes of islands
-                for (Polyline& pl : diff_pl(Polygons{ hole }, unbrimmable_polygons, true))
-                    loops[i].emplace_back(pl);
+            // buggy
+            ////also add hole, in case of it's merged with a contour. <= HOW? if there's an island inside a hole! (in the same object)
+            //for (Polygon &hole : expoly.holes)
+            //    //but remove the points that are inside the holes of islands
+            //    for (Polyline& pl : diff_pl(Polygons{ hole }, unbrimmable_polygons, true))
+            //        loops[i].emplace_back(pl);
         }
     }
 
