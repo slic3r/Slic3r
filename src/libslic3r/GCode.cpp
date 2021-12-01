@@ -4149,9 +4149,8 @@ Polyline GCode::travel_to(std::string &gcode, const Point &point, ExtrusionRole 
         this->origin in order to get G-code coordinates.  */
     Polyline travel { this->last_pos(), point };
 
-    // check whether a straight travel move would need retraction
+    // check / compute avoid_crossing_perimeters
     bool will_cross_perimeter = this->can_cross_perimeter(travel);
-    bool needs_retraction = will_cross_perimeter && this->needs_retraction(travel, role);
     // check whether wipe could be disabled without causing visible stringing
     bool could_be_wipe_disabled = false;
 
@@ -4163,10 +4162,10 @@ Polyline GCode::travel_to(std::string &gcode, const Point &point, ExtrusionRole 
         && m_avoid_crossing_perimeters.is_init()
         && !(m_config.avoid_crossing_not_first_layer && this->on_first_layer())) {
         travel = m_avoid_crossing_perimeters.travel_to(*this, point, &could_be_wipe_disabled);
-        // check again whether the new travel path still needs a retraction
-        needs_retraction = this->needs_retraction(travel, role);
-        //if (needs_retraction && m_layer_index > 1) exit(0);
     }
+
+    // check whether a straight travel move would need retraction
+    bool needs_retraction = this->needs_retraction(travel, role);
 
     // Re-allow avoid_crossing_perimeters for the next travel moves
     m_avoid_crossing_perimeters.reset_once_modifiers();
