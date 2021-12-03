@@ -2959,14 +2959,17 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     if (paths.empty()) return "";
 
     // apply the small/external? perimeter speed
-    if (speed == -1 && is_perimeter(paths.front().role()) && loop.length() <=
-        scale_(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)))) {
+    if (speed == -1 && is_perimeter(paths.front().role())){
         coordf_t min_length = scale_d(this->m_config.small_perimeter_min_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
         coordf_t max_length = scale_d(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
-        if (loop.length() <= min_length) {
-            speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
-        } else {
-            speed = - (loop.length() - min_length) / (max_length - min_length);
+        max_length = std::max(min_length, max_length);
+        if (loop.length() < max_length) {
+            if (loop.length() <= min_length) {
+                speed = m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+            } else if (max_length > min_length) {
+                //use a negative speed: it will be use as a ratio when computing the real speed
+                speed = -(loop.length() - min_length) / (max_length - min_length);
+            }
         }
     }
 
@@ -3840,11 +3843,12 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &descri
 
 double_t GCode::_compute_speed_mm_per_sec(const ExtrusionPath& path, double speed) {
 
+    float factor = 1;
     // set speed
     if (speed < 0) {
-        //if speed == -1, then it's means "choose yourself, but if it's -1 < speed <0 , then it's a scaling from small_periemter.
+        //if speed == -1, then it's means "choose yourself, but if it's -1 < speed <0 , then it's a scaling from small_perimeter.
+        factor = float(-speed);
         //it's a bit hacky, so if you want to rework it, help yourself.
-        float factor = float(-speed);
         if (path.role() == erPerimeter) {
             speed = m_config.get_computed_value("perimeter_speed");
         } else if (path.role() == erExternalPerimeter) {
@@ -3874,12 +3878,6 @@ double_t GCode::_compute_speed_mm_per_sec(const ExtrusionPath& path, double spee
         } else {
             throw Slic3r::InvalidArgument("Invalid speed");
         }
-        //don't modify bridge speed
-        if (factor < 1 && !(is_bridge(path.role()))) {
-            float small_speed = (float)m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
-            //apply factor between feature speed and small speed
-            speed = (speed * factor) + double((1.f - factor) * small_speed);
-        }
     }
     if (m_volumetric_speed != 0. && speed == 0) {
         //if m_volumetric_speed, use the max size for thinwall & gapfill, to avoid variations
@@ -3904,6 +3902,14 @@ double_t GCode::_compute_speed_mm_per_sec(const ExtrusionPath& path, double spee
     }
     if (speed == 0) // this code shouldn't trigger as if it's 0, you have to get a m_volumetric_speed
         speed = m_config.max_print_speed.value;
+    // Apply small perimeter 'modifier
+    //  don't modify bridge speed
+    if (factor < 1 && !(is_bridge(path.role()))) {
+        float small_speed = (float)m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
+        //apply factor between feature speed and small speed
+        speed = (speed * factor) + double((1.f - factor) * small_speed);
+    }
+    // Apply first layer modifier
     if (this->on_first_layer()) {
         const double base_speed = speed;
         if (path.role() == erInternalInfill || path.role() == erSolidInfill) {
