@@ -75,9 +75,6 @@ void PerimeterGenerator::process()
     const bool round_peri = this->config->perimeter_round_corners.value;
     const coord_t min_round_spacing = perimeter_width / 10;
 
-    // nozzle diameter
-    const double nozzle_diameter = this->print_config->nozzle_diameter.get_at(this->config->perimeter_extruder - 1);
-
     // perimeter conding set.
     if (this->perimeter_flow.spacing_ratio == 1
         && this->ext_perimeter_flow.spacing_ratio == 1
@@ -107,8 +104,8 @@ void PerimeterGenerator::process()
         // in the current layer
 
         //we use a range to avoid threshold issues.
-        coord_t overhangs_width_flow = scale_(config->overhangs_width.get_abs_value(nozzle_diameter));
-        coord_t overhangs_width_speed = scale_(config->overhangs_width_speed.get_abs_value(nozzle_diameter));
+        coord_t overhangs_width_flow = scale_(config->overhangs_width.get_abs_value(this->overhang_flow.nozzle_diameter));
+        coord_t overhangs_width_speed = scale_(config->overhangs_width_speed.get_abs_value(this->overhang_flow.nozzle_diameter));
         coord_t min_feature = std::min(overhangs_width_flow, overhangs_width_speed) / 10;
         coord_t overhangs_width_flow_90 = coord_t(overhangs_width_flow * 0.99);
         coord_t overhangs_width_flow_110 = coord_t(overhangs_width_flow * 1.15);
@@ -117,7 +114,7 @@ void PerimeterGenerator::process()
 
         //flow offset should be greater than speed offset because the flow apply also the speed.
         //check if overhangs_width_speed is low enough to be relevant (if flow is activated)
-        if (overhangs_width_flow > 0 && overhangs_width_speed + nozzle_diameter * 0.01 > overhangs_width_flow) {
+        if (overhangs_width_flow > 0 && overhangs_width_speed + this->overhang_flow.nozzle_diameter * 0.01 > overhangs_width_flow) {
             overhangs_width_speed = 0;
             overhangs_width_speed_90 = 0;
             overhangs_width_speed_110 = 0;
@@ -563,7 +560,7 @@ void PerimeterGenerator::process()
                                         Slic3r::MedialAxis ma{ thin[0], (coord_t)((ext_perimeter_width + ext_perimeter_spacing) * 1.2),
                                             min_width, coord_t(this->layer->height) };
                                         ma.use_bounds(bound)
-                                            .use_min_real_width((coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter))
+                                            .use_min_real_width(scale_t(this->ext_perimeter_flow.nozzle_diameter))
                                             .use_tapers(thin_walls_overlap)
                                             .build(thin_walls);
                                     }
@@ -762,8 +759,8 @@ void PerimeterGenerator::process()
                         // increase by half peri the inner space to fill the frontier between last and stored.
                         top_fills = union_ex(top_fills, top_polygons);
                         //set the clip to the external wall but go back inside by infill_extrusion_width/2 to be sure the extrusion won't go outside even with a 100% overlap.
-                        double infill_spacing_unscaled = this->config->infill_extrusion_width.get_abs_value(nozzle_diameter);
-                        if (infill_spacing_unscaled == 0) infill_spacing_unscaled = Flow::auto_extrusion_width(frInfill, nozzle_diameter);
+                        double infill_spacing_unscaled = this->config->infill_extrusion_width.get_abs_value(this->solid_infill_flow.nozzle_diameter);
+                        if (infill_spacing_unscaled == 0) infill_spacing_unscaled = Flow::auto_extrusion_width(frInfill, this->solid_infill_flow.nozzle_diameter);
                         fill_clip = offset_ex(last, double(ext_perimeter_spacing / 2) - scale_d(infill_spacing_unscaled / 2));
                         last = intersection_ex(inner_polygons, last);
                         //{
@@ -811,7 +808,7 @@ void PerimeterGenerator::process()
                         // increase by half peri the inner space to fill the frontier between last and stored.
                         top_fills = union_ex(top_fills, top_polygons);
                         //set the clip to the external wall but go back inside by infill_extrusion_width/2 to be sure the extrusion won't go outside even with a 100% overlap.
-                        fill_clip = offset_ex(last, double(ext_perimeter_spacing / 2) - this->config->infill_extrusion_width.get_abs_value(nozzle_diameter) / 2);
+                        fill_clip = offset_ex(last, double(ext_perimeter_spacing / 2) - this->config->infill_extrusion_width.get_abs_value(this->solid_infill_flow.nozzle_diameter) / 2);
                         //ExPolygons oldLast = last;
                         last = intersection_ex(inner_polygons, last);
                         //{
@@ -1024,7 +1021,7 @@ void PerimeterGenerator::process()
             // collapse 
             double min = 0.2 * perimeter_width * (1 - INSET_OVERLAP_TOLERANCE);
             //be sure we don't gapfill where the perimeters are already touching each other (negative spacing).
-            min = std::max(min, double(Flow::new_from_spacing(EPSILON, (float)nozzle_diameter, (float)this->layer->height, this->perimeter_flow.spacing_ratio, false).scaled_width()));
+            min = std::max(min, double(Flow::new_from_spacing(EPSILON, this->perimeter_flow.nozzle_diameter, (float)this->layer->height, this->perimeter_flow.spacing_ratio, false).scaled_width()));
             double max = 2.2 * perimeter_spacing;
             //remove areas that are too big (shouldn't occur...)
             ExPolygons too_big = offset2_ex(gaps, double(-max / 2), double(+max / 2));
@@ -1198,8 +1195,7 @@ void PerimeterGenerator::process()
 
 ExtrusionPaths PerimeterGenerator::create_overhangs(const Polyline& loop_polygons, ExtrusionRole role, bool is_external) const {
     ExtrusionPaths paths;
-    double nozzle_diameter = this->print_config->nozzle_diameter.get_at(this->config->perimeter_extruder - 1);
-    if (this->config->overhangs_width.get_abs_value(nozzle_diameter) == 0 && 0 == this->config->overhangs_width_speed.get_abs_value(nozzle_diameter)) {
+    if (this->config->overhangs_width.get_abs_value(this->overhang_flow.nozzle_diameter) == 0 && 0 == this->config->overhangs_width_speed.get_abs_value(this->overhang_flow.nozzle_diameter)) {
         //error
         ExtrusionPath path(role);
         path.polyline = loop_polygons;
