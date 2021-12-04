@@ -288,6 +288,7 @@ static inline void set_extra_lift(const float previous_print_z, const int layer_
             gcodegen.m_gcode_label_objects_end = "";
         }
 
+        bool need_unretract = false;
         if (! tcr.priming) {
             // Move over the wipe tower.
             // Retract for a tool change, using the toolchange retract value and setting the priming extra length.
@@ -298,17 +299,21 @@ static inline void set_extra_lift(const float previous_print_z, const int layer_
                 wipe_tower_point_to_object_point(gcodegen, start_pos),
                 erMixed);
             gcodegen.write_travel_to(gcode, polyline, "Travel to a Wipe Tower");
-            gcode += gcodegen.unretract();
+            need_unretract = true;
         }
 
-        double current_z = gcodegen.writer().get_position().z();
+        double current_z = gcodegen.writer().get_unlifted_position().z();
         if (z == -1.) // in case no specific z was provided, print at current_z pos
             z = current_z;
         if (! is_approx(z, current_z)) {
-            gcode += gcodegen.writer().retract();
+            if (!need_unretract)
+                gcode += gcodegen.writer().retract();
             gcode += gcodegen.writer().travel_to_z(z, "Travel down to the last wipe tower layer.");
-            gcode += gcodegen.writer().unretract();
+            need_unretract = true;
         }
+        // only unretract when travel is finished
+        if(need_unretract)
+            gcode += gcodegen.unretract();
 
 
         // Process the end filament gcode.
@@ -374,7 +379,7 @@ static inline void set_extra_lift(const float previous_print_z, const int layer_
         if (!is_approx(z, current_z)) {
             gcode += gcodegen.writer().retract();
             gcode += gcodegen.writer().travel_to_z(current_z, "Travel back up to the topmost object layer.");
-            gcode += gcodegen.writer().unretract();
+            //gcode += gcodegen.writer().unretract(); //why? it's done automatically later, where needed!
         } else {
         // Prepare a future wipe.
             gcodegen.m_wipe.reset_path();

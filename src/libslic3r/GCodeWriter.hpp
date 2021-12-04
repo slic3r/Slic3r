@@ -78,6 +78,7 @@ public:
     std::string lift(int layer_id);
     std::string unlift();
     Vec3d       get_position() const { return m_pos; }
+    Vec3d       get_unlifted_position() const { return m_pos - Vec3d{0, 0, m_extra_lift + m_lifted}; }
 
 private:
 	// Extruders are sorted by their ID, so that binary search is possible.
