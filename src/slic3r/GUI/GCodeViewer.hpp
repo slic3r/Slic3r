@@ -424,7 +424,7 @@ class GCodeViewer
                 width.reset();
                 feedrate.reset();
                 fan_speed.reset();
-                //volumetric_rate.reset();
+                volumetric_rate.reset();
                 extruder_temp.reset();
                 layer_duration.reset();
                 elapsed_time.reset();
