@@ -1321,7 +1321,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("filament_custom_variables", coStrings);
     def->label = L("Custom variables");
-    def->full_label = L("Filament custom variables");
+    def->full_label = L("Custom Filament variables");
     def->category = OptionCategory::filament;
     def->tooltip = L("You can add data accessible to custom-gcode macros."
         "\nEach line can define one variable."
@@ -3021,7 +3021,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("print_custom_variables", coString);
     def->label = L("Custom variables");
-    def->full_label = L("Print custom variables");
+    def->full_label = L("Custom Print variables");
     def->category = OptionCategory::filament;
     def->tooltip = L("You can add data accessible to custom-gcode macros."
         "\nEach line can define one variable."
@@ -3279,7 +3279,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("printer_custom_variables", coString);
     def->label = L("Custom variables");
-    def->full_label = L("Printer custom variables");
+    def->full_label = L("Custom Printer variables");
     def->category = OptionCategory::filament;
     def->tooltip = L("You can add data accessible to custom-gcode macros."
         "\nEach line can define one variable."
