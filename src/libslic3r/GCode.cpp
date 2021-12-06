@@ -2230,6 +2230,8 @@ void GCode::process_layer(
     assert(! layers.empty());
     // Either printing all copies of all objects, or just a single copy of a single object.
     assert(single_object_instance_idx == size_t(-1) || layers.size() == 1);
+    if(single_object_instance_idx != size_t(-1))
+        m_print_object_instance_id = static_cast<uint16_t>(single_object_instance_idx);
 
     if (layer_tools.extruders.empty())
         // Nothing to extrude.
@@ -2626,6 +2628,7 @@ void GCode::process_layer(
             for (InstanceToPrint &instance_to_print : instances_to_print) {
                 m_config.apply(instance_to_print.print_object.config(), true);
                 m_layer = layers[instance_to_print.layer_id].layer();
+                m_print_object_instance_id = static_cast<uint16_t>(instance_to_print.instance_id);
                 if (m_config.avoid_crossing_perimeters)
                     m_avoid_crossing_perimeters.init_layer(*m_layer);
                 //print object label to help the printer firmware know where it is (for removing the objects)
@@ -3200,7 +3203,9 @@ void GCode::split_at_seam_pos(ExtrusionLoop& loop, std::unique_ptr<EdgeGrid::Gri
         Point seam = m_seam_placer.get_seam(*m_layer, seam_position, loop,
             last_pos, EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0),
             (m_layer == NULL ? nullptr : m_layer->object()),
-            was_clockwise, edge_grid_ptr);
+            m_print_object_instance_id,
+            was_clockwise,
+            edge_grid_ptr);
         // Split the loop at the point with a minium penalty.
         if (!loop.split_at_vertex(seam))
             // The point is not in the original loop. Insert it.

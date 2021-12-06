@@ -43,7 +43,7 @@ public:
 
     Point get_seam(const Layer& layer, SeamPosition seam_position,
                    const ExtrusionLoop& loop, Point last_pos,
-                   coordf_t nozzle_diameter, const PrintObject* po,
+                   coordf_t nozzle_diameter, const PrintObject* po, const uint16_t object_instance_idx,
                    bool was_clockwise, const EdgeGrid::Grid* lower_layer_edge_grid);
 
     using TreeType = AABBTreeIndirect::Tree<2, coord_t>;
