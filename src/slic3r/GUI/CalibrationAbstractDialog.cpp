@@ -65,6 +65,10 @@ void CalibrationAbstractDialog::create(boost::filesystem::path html_path, std::s
     html_viewer = new wxHtmlWindow(this, wxID_ANY,
         wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO);
     html_viewer->LoadPage(GUI::from_u8(full_file_path.string()));
+    // when using hyperlink, open the browser.
+    html_viewer->Bind(wxEVT_HTML_LINK_CLICKED, [this](wxHtmlLinkEvent& evt) {
+        wxLaunchDefaultBrowser(evt.GetLinkInfo().GetHref());
+    });
     main_sizer->Add(html_viewer, 1, wxEXPAND | wxALL, 5);
 
     wxDisplay display(wxDisplay::GetFromWindow(main_frame));
