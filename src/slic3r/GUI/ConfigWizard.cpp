@@ -1408,9 +1408,9 @@ void PageDiameters::apply_custom_config(DynamicPrintConfig &config)
 {
 
     auto *opt_nozzle = new ConfigOptionFloats(1, spin_nozzle->GetValue());
-    config.set_key_value("nozzle_diameter", opt_nozzle);
+    config.set_key_value("nozzle_diameter", opt_nozzle->set_is_extruder_size(true));
     auto *opt_filam = new ConfigOptionFloats(1, spin_filam->GetValue());
-    config.set_key_value("filament_diameter", opt_filam);
+    config.set_key_value("filament_diameter", opt_filam->set_is_extruder_size(true));
 
     config.set_key_value("extrusion_width", new ConfigOptionFloatOrPercent(105, true));
     config.set_key_value("first_layer_extrusion_width", new ConfigOptionFloatOrPercent(140, true));
@@ -1487,13 +1487,13 @@ PageTemperatures::PageTemperatures(ConfigWizard *parent)
 void PageTemperatures::apply_custom_config(DynamicPrintConfig &config)
 {
     auto *opt_extr = new ConfigOptionInts(1, spin_extr->GetValue());
-    config.set_key_value("temperature", opt_extr);
+    config.set_key_value("temperature", opt_extr->set_is_extruder_size(true));
     auto *opt_extr1st = new ConfigOptionInts(1, spin_extr->GetValue());
-    config.set_key_value("first_layer_temperature", opt_extr1st);
+    config.set_key_value("first_layer_temperature", opt_extr1st->set_is_extruder_size(true));
     auto *opt_bed = new ConfigOptionInts(1, spin_bed->GetValue());
-    config.set_key_value("bed_temperature", opt_bed);
+    config.set_key_value("bed_temperature", opt_bed->set_is_extruder_size(true));
     auto *opt_bed1st = new ConfigOptionInts(1, spin_bed->GetValue());
-    config.set_key_value("first_layer_bed_temperature", opt_bed1st);
+    config.set_key_value("first_layer_bed_temperature", opt_bed1st->set_is_extruder_size(true));
 }
 
 

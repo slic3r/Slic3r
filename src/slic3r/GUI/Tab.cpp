@@ -1686,7 +1686,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                                                 for (size_t i = 1; i < nozzle_diameters.size(); i++)
                                                     nozzle_diameters[i] = frst_diam;
 
-                                                new_conf.set_key_value("nozzle_diameter", new ConfigOptionFloats(nozzle_diameters));
+                                                new_conf.set_key_value("nozzle_diameter", (new ConfigOptionFloats(nozzle_diameters))->set_is_extruder_size(true));
                                             } else
                                                 new_conf.set_key_value("single_extruder_multi_material", new ConfigOptionBool(false));
 
@@ -2147,7 +2147,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                         } else
                             nozzle_diameters[idx_page] = nozzle_diameters[idx_page == 0 ? 1 : 0];
 
-                        new_conf.set_key_value("nozzle_diameter", new ConfigOptionFloats(nozzle_diameters));
+                        new_conf.set_key_value("nozzle_diameter", (new ConfigOptionFloats(nozzle_diameters))->set_is_extruder_size(true));
                         load_config(new_conf);
                     }
                 }
@@ -2172,7 +2172,7 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                     colors[idx_page] = "";
 
                     DynamicPrintConfig new_conf = *m_config;
-                    new_conf.set_key_value("extruder_colour", new ConfigOptionStrings(colors));
+                    new_conf.set_key_value("extruder_colour", (new ConfigOptionStrings(colors))->set_is_extruder_size(true));
                     load_config(new_conf);
 
                     update_dirty();
@@ -3066,7 +3066,7 @@ void TabPrinter::toggle_options()
             }
         field = get_field("time_estimation_compensation");
         if (field) field->toggle(machine_limits_usage->value <= MachineLimitsUsage::TimeEstimateOnly);
-            update_machine_limits_description(machine_limits_usage->value);
+        update_machine_limits_description(machine_limits_usage->value);
     }
 
     //z step checks
