@@ -3318,7 +3318,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         m_wipe.path = paths.front().polyline;  // TODO: don't limit wipe to last path
 
     //wipe for External Perimeter
-    if (paths.back().role() == erExternalPerimeter && m_layer != NULL && m_config.perimeters.value > 1 && paths.front().size() >= 2 && paths.back().polyline.points.size() >= 2) {
+    if (paths.back().role() == erExternalPerimeter && m_layer != NULL && m_config.perimeters.value > 0 && paths.front().size() >= 2 && paths.back().polyline.points.size() >= 2) {
         //get points for wipe
         Point prev_point = *(paths.back().polyline.points.end() - 2);       // second to last point
         // *(paths.back().polyline.points.end() - 2) this is the same as (or should be) as paths.front().first_point();
