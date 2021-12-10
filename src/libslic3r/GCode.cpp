@@ -2070,20 +2070,12 @@ std::string GCode::emit_custom_gcode_per_print_z(
             pause_print_msg = custom_gcode->extra;
 
         if (color_change) {
-            //update stats : weight
-            double previously_extruded = 0;
-            for (const auto& tuple : stats.color_extruderid_to_used_weight)
-                if (tuple.first == this->m_writer.tool()->id())
-                    previously_extruded += tuple.second;
-            double extruded = this->m_writer.tool()->filament_density() * this->m_writer.tool()->extruded_volume();
-            stats.color_extruderid_to_used_weight.emplace_back(this->m_writer.tool()->id(), extruded - previously_extruded);
-
             //update stats : length
-            previously_extruded = 0;
+            double previously_extruded = 0;
             for (const auto& tuple : stats.color_extruderid_to_used_filament)
-                if (tuple.first == this->m_writer.tool()->id())
+                if (tuple.first == m600_extruder_before_layer)
                     previously_extruded += tuple.second;
-            stats.color_extruderid_to_used_filament.emplace_back(this->m_writer.tool()->id(), this->m_writer.tool()->used_filament() - previously_extruded);
+            stats.color_extruderid_to_used_filament.emplace_back(m600_extruder_before_layer, this->m_writer.get_tool(m600_extruder_before_layer)->used_filament() - previously_extruded);
         }
 
         // we should add or not colorprint_change in respect to nozzle_diameter count instead of really used extruders count
