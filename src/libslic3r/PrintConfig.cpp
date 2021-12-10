@@ -3512,6 +3512,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("The speed for retractions (this only applies to the extruder motor).");
     def->sidetext = L("mm/s");
     def->mode = comAdvanced;
+    def->min = 0.001;
     def->is_vector_extruder = true;
     def->set_default_value(new ConfigOptionFloats { 40. });
 
