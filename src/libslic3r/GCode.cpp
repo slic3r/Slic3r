@@ -2949,13 +2949,23 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     // clip the path to avoid the extruder to get exactly on the first point of the loop;
     // if polyline was shorter than the clipping distance we'd get a null polyline, so
     // we discard it in that case
-    double clip_length = 0;
+    coordf_t clip_length = 0;
+    coordf_t min_clip_length = scale_(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)) * 0.15;
     if (m_enable_loop_clipping && m_writer.tool_is_extruder())
-        clip_length = m_config.seam_gap.get_abs_value(m_writer.tool()->id(), scale_(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        clip_length = scale_(m_config.seam_gap.get_abs_value(m_writer.tool()->id(), EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
 
     // get paths
-    ExtrusionPaths paths;
-    loop.clip_end(clip_length, &paths);
+    ExtrusionPaths paths = loop.paths;
+    ExtrusionPaths clipped;
+    if (clip_length > min_clip_length) {
+        clipped = clip_end(paths, clip_length);
+        clip_end(clipped, min_clip_length);
+        for (ExtrusionPath& ep : clipped)
+            ep.mm3_per_mm = 0;
+        append(paths, clipped);
+    } else {
+        clip_end(paths, clip_length);
+    }
     if (paths.empty()) return "";
 
     // apply the small/external? perimeter speed
@@ -3063,7 +3073,9 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
             double e_per_mm_per_height = (path->mm3_per_mm / this->m_layer->height)
                 * m_writer.tool()->e_per_mm3()
                 * this->config().print_extrusion_multiplier.get_abs_value(1);
-            if (m_writer.extrusion_axis().empty()) e_per_mm_per_height = 0;
+            if (m_writer.extrusion_axis().empty())
+                e_per_mm_per_height = 0;
+            //extrude
             {
                 std::string comment = m_config.gcode_comments ? description : "";
                 for (const Line &line : path->polyline.lines()) {
@@ -3271,13 +3283,23 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     // clip the path to avoid the extruder to get exactly on the first point of the loop;
     // if polyline was shorter than the clipping distance we'd get a null polyline, so
     // we discard it in that case
-    double clip_length = 0;
+    coordf_t clip_length = 0;
+    coordf_t min_clip_length = scale_(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)) * 0.15;
     if (m_enable_loop_clipping && m_writer.tool_is_extruder())
-        clip_length = m_config.seam_gap.get_abs_value(m_writer.tool()->id(), scale_(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
+        clip_length = scale_(m_config.seam_gap.get_abs_value(m_writer.tool()->id(), EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
 
     // get paths
-    ExtrusionPaths paths;
-    loop.clip_end(clip_length, &paths);
+    ExtrusionPaths paths = loop.paths;
+    ExtrusionPaths clipped;
+    if (clip_length > min_clip_length) {
+        clipped = clip_end(paths, clip_length);
+        clip_end(clipped, min_clip_length);
+        for (ExtrusionPath& ep : clipped)
+            ep.mm3_per_mm = 0;
+        append(paths, clipped);
+    } else {
+        clip_end(paths, clip_length);
+    }
     if (paths.empty()) return "";
 
     // apply the small perimeter speed
@@ -3298,7 +3320,6 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
     std::string gcode;
     for (ExtrusionPaths::iterator path = paths.begin(); path != paths.end(); ++path) {
         //path->simplify(SCALED_RESOLUTION); //should already be simplified
-        //gcode += this->_extrude(*path, description, speed);
         if(path->polyline.points.size()>1)
             gcode += extrude_path(*path, description, speed);
     }

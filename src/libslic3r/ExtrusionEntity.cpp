@@ -213,21 +213,25 @@ void ExtrusionLoop::split_at(const Point &point, bool prefer_non_overhang)
     this->split_at_vertex(p);
 }
 
-void ExtrusionLoop::clip_end(double distance, ExtrusionPaths* paths) const
+ExtrusionPaths clip_end(ExtrusionPaths& paths, double distance)
 {
-    *paths = this->paths;
+    ExtrusionPaths removed;
     
-    while (distance > 0 && !paths->empty()) {
-        ExtrusionPath &last = paths->back();
+    while (distance > 0 && !paths.empty()) {
+        ExtrusionPath& last = paths.back();
+        removed.push_back(last);
         double len = last.length();
         if (len <= distance) {
-            paths->pop_back();
+            paths.pop_back();
             distance -= len;
         } else {
             last.polyline.clip_end(distance);
+            removed.back().polyline.clip_start(removed.back().polyline.length() - distance);
             break;
         }
     }
+    std::reverse(removed.begin(), removed.end());
+    return removed;
 }
 
 bool ExtrusionLoop::has_overhang_point(const Point &point) const
