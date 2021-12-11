@@ -508,7 +508,7 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
 
                 //adjust the bridge density
                 if (surface_fill.params.flow.bridge && surface_fill.params.density > 0.99 /*&& layerm->region()->config().bridge_overlap.get_abs_value(1) != 1*/) {
-                    ////varies the overlap to have teh best coverage for the bridge
+                    ////varies the overlap to have the best coverage for the bridge
                     //surface_fill.params.density *= float(layerm->region()->config().bridge_overlap.get_abs_value(1));
                     double min_spacing = 0.999 * surface_fill.params.spacing / surface_fill.params.config->bridge_overlap.get_abs_value(surface_fill.params.density);
                     double max_spacing = 1.001 * surface_fill.params.spacing / surface_fill.params.config->bridge_overlap_min.get_abs_value(surface_fill.params.density);
@@ -516,9 +516,7 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
                     if (min_spacing < max_spacing * 1.01) {
                         // create a bouding box of the rotated surface
                         coord_t bounding_box_size_x = 0;
-                        Polygon poly = surface_fill.surface.expolygon.contour;
                         coord_t bounding_box_min_x = 0;
-                        poly.rotate(PI / 2 - (surface_fill.params.bridge_angle < 0 ? surface_fill.params.angle : surface_fill.params.bridge_angle));
                         ExPolygons expolys;
                         if (surface_fill.params.bridge_angle > 0 && !f->no_overlap_expolygons.empty()) {
                             //take only the no-overlap area
@@ -530,7 +528,7 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
                         bool first = true;
                         for (ExPolygon& expoly : expolys) {
                             expoly.holes.clear();
-                            expoly.rotate(PI / 2 - (surface_fill.params.bridge_angle < 0 ? surface_fill.params.angle : surface_fill.params.bridge_angle));
+                            expoly.rotate(PI / 2 + (surface_fill.params.bridge_angle < 0 ? surface_fill.params.angle : surface_fill.params.bridge_angle));
                             if (first) {
                                 bb = expoly.contour.bounding_box();
                                 first = false;
@@ -558,6 +556,8 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
                                 surface_fill.params.density = surface_fill.params.config->bridge_overlap.get_abs_value(surface_fill.params.density);
                             }
                         }
+                        Polygon poly = surface_fill.surface.expolygon.contour;
+                        poly.rotate(PI / 2 + (surface_fill.params.bridge_angle < 0 ? surface_fill.params.angle : surface_fill.params.bridge_angle));
                         surface_fill.params.dont_adjust = true;
                         surface_fill.params.bridge_offset = std::abs(poly.bounding_box().min.x() - bounding_box_min_x);
                     }
