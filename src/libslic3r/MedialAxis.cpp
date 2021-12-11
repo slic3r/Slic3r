@@ -1395,6 +1395,65 @@ MedialAxis::remove_too_thin_points(ThickPolylines& pp)
 void
 MedialAxis::remove_too_short_polylines(ThickPolylines& pp, const coord_t min_size)
 {
+    // reduce the flow at the intersection ( + ) points
+    //FIXME: TODO: note that crossings are unnafected right now. they may need a different codepath directly in their method
+    //TODO: unit tests for that.
+    //TODO: never triggered. ther's only the sections passed by crossing fusion that aren't edge-case and it's not treated by this. => comment for now
+    //for each not-endpoint point
+    //std::vector<bool> endpoint_not_used(pp.size() * 2, true);
+    //for (size_t idx_endpoint = 0; idx_endpoint < endpoint_not_used.size(); idx_endpoint++) {
+    //    ThickPolyline& polyline = pp[idx_endpoint / 2];
+    //    //update endpoint_not_used if not seen before
+    //    if (idx_endpoint % 2 == 0 && endpoint_not_used[idx_endpoint]) {
+    //        //update
+    //        endpoint_not_used[(idx_endpoint / 2)] = !polyline.endpoints.first;
+    //        endpoint_not_used[(idx_endpoint / 2) + 1] = endpoint_not_used[(idx_endpoint / 2) + 1] && !polyline.endpoints.second;
+    //    }
+    //    if (endpoint_not_used[idx_endpoint]) {
+    //        int nb_endpoints;
+    //        Point pt = idx_endpoint % 2 == 0 ? polyline.first_point() : polyline.last_point();
+    //        if (idx_endpoint % 2 == 0 && pt.coincides_with(polyline.last_point())) {
+    //            nb_endpoints++;
+    //            endpoint_not_used[(idx_endpoint / 2) + 1] = false;
+    //        }
+    //        //good, now find other points
+    //        for (size_t idx_other_pp = (idx_endpoint / 2) + 1; idx_other_pp < pp.size(); idx_other_pp++) {
+    //            ThickPolyline& other = pp[idx_other_pp];
+    //            if (pt.coincides_with(other.first_point())) {
+    //                nb_endpoints++;
+    //                endpoint_not_used[idx_other_pp * 2] = false;
+    //            }
+    //            if (pt.coincides_with(other.last_point())) {
+    //                nb_endpoints++;
+    //                endpoint_not_used[idx_other_pp * 2 + 1] = false;
+    //            }
+    //        }
+    //        if (nb_endpoints < 3)
+    //            continue;
+    //        // reduce width accordingly
+    //        float reduction = 2.f / nb_endpoints;
+    //        std::cout << "reduce " << reduction << " points!\n";
+    //        if (idx_endpoint % 2 == 0 ) {
+    //            polyline.width.front() *= reduction;
+    //            if(pt.coincides_with(polyline.last_point()))
+    //                polyline.width.back() *= reduction;
+    //        } else {
+    //            polyline.width.back() *= reduction;
+    //        }
+    //        //good, now find other points
+    //        for (size_t idx_other_pp = (idx_endpoint / 2) + 1; idx_other_pp < pp.size(); idx_other_pp++) {
+    //            ThickPolyline& other = pp[idx_other_pp];
+    //            if (pt.coincides_with(other.first_point())) {
+    //                other.width.front() *= reduction;
+    //            }
+    //            if (pt.coincides_with(other.last_point())) {
+    //                other.width.back() *= reduction;
+    //            }
+    //        }
+    //        //TODO: restore good width at width dist, or reduce other points up to width dist
+    //    }
+    //}
+
     //remove too short polyline
     bool changes = true;
     while (changes) {
@@ -1408,11 +1467,16 @@ MedialAxis::remove_too_short_polylines(ThickPolylines& pp, const coord_t min_siz
             // (we can't do this check before endpoints extension and clipping because we don't
             // know how long will the endpoints be extended since it depends on polygon thickness
             // which is variable - extension will be <= max_width/2 on each side) 
-            if ((polyline.endpoints.first || polyline.endpoints.second)
-                && polyline.length() < max_width / 2) {
-                if (shortest_size > polyline.length()) {
-                    shortest_size = polyline.length();
-                    shortest_idx = i;
+            if ((polyline.endpoints.first || polyline.endpoints.second)) {
+                coordf_t max_width = max_width / 2;
+                for (coordf_t w : polyline.width)
+                    max_width = std::max(max_width, w);
+                if(polyline.length() < max_width) {
+                    if (shortest_size > polyline.length()) {
+                        shortest_size = polyline.length();
+                        shortest_idx = i;
+                    }
+
                 }
 
             }
@@ -1857,6 +1921,7 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    svg.draw(pp);
     //    svg.Close();
     //}
+    //TODO: reduce the flow at the intersection ( + ) points on crossing?
     concatenate_polylines_with_crossing(pp);
     //{
     //    std::stringstream stri;
@@ -1879,7 +1944,6 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    svg.Close();
     //}
 
-    //TODO: reduce the flow at the intersection ( + ) points ?
     ensure_not_overextrude(pp);
     //{
     //    std::stringstream stri;

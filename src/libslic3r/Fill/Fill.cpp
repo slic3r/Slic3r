@@ -486,6 +486,8 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
             surface_fill.params.flow = Flow::new_from_spacing((float)f->get_spacing(), surface_fill.params.flow.nozzle_diameter, (float)surface_fill.params.flow.height, overlap, surface_fill.params.flow.bridge);
         }
 
+        //union with safety offset to avoid separation from the appends of different surface with same settings.
+        surface_fill.expolygons = union_ex(surface_fill.expolygons, true);
 
         for (ExPolygon &expoly : surface_fill.expolygons) {
             //set overlap polygons
