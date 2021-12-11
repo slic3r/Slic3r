@@ -4401,7 +4401,8 @@ std::string GCode::toolchange(uint16_t extruder_id, double print_z) {
 
     std::string gcode;
     // Process the custom toolchange_gcode. If it is empty, insert just a Tn command.
-    const std::string& toolchange_gcode = m_config.toolchange_gcode.value;
+    std::string toolchange_gcode = m_config.toolchange_gcode.value;
+    boost::trim(toolchange_gcode); //remove invisible characters that may compromize the 'toolchange_gcode.empty()'
     std::string toolchange_gcode_parsed;
     if (!toolchange_gcode.empty() && m_writer.multiple_extruders) {
         DynamicConfig config;
