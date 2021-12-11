@@ -24,6 +24,11 @@ inline ExtrusionEntitiesPtr filter_by_extrusion_role(const ExtrusionEntitiesPtr 
 
 class ExtrusionEntityCollection : public ExtrusionEntity
 {
+private:
+    // set to tru to forbit to reorder and reverse all entities indie us.
+    bool no_sort;
+    // even if no_sort, allow to reverse() us (and our entities if they allow it, but they should) 
+    bool no_reverse;
 public:
     virtual ExtrusionEntityCollection* clone() const override { return new ExtrusionEntityCollection(*this); }
     // Create a new object, initialize it with this object using the move semantics.
@@ -33,14 +38,13 @@ public:
     /// Owned ExtrusionEntities and descendent ExtrusionEntityCollections.
     /// Iterating over this needs to check each child to see if it, too is a collection.
     ExtrusionEntitiesPtr entities;     // we own these entities
-    bool no_sort;
-    ExtrusionEntityCollection(): no_sort(false) {}
-    ExtrusionEntityCollection(const ExtrusionEntityCollection &other) : no_sort(other.no_sort) { this->append(other.entities); }
-    ExtrusionEntityCollection(ExtrusionEntityCollection &&other) : entities(std::move(other.entities)), no_sort(other.no_sort) {}
+    ExtrusionEntityCollection(): no_sort(false), no_reverse(false) {}
+    ExtrusionEntityCollection(const ExtrusionEntityCollection &other) : no_sort(other.no_sort), no_reverse(other.no_reverse) { this->append(other.entities); }
+    ExtrusionEntityCollection(ExtrusionEntityCollection &&other) : entities(std::move(other.entities)), no_sort(other.no_sort), no_reverse(other.no_reverse) {}
     explicit ExtrusionEntityCollection(const ExtrusionPaths &paths);
     ExtrusionEntityCollection& operator=(const ExtrusionEntityCollection &other);
     ExtrusionEntityCollection& operator=(ExtrusionEntityCollection &&other)
-        { this->entities = std::move(other.entities); this->no_sort = other.no_sort; return *this; }
+        { this->entities = std::move(other.entities); this->no_sort = other.no_sort; this->no_reverse = other.no_reverse; return *this; }
     ~ExtrusionEntityCollection() { clear(); }
 
     /// Operator to convert and flatten this collection to a single vector of ExtrusionPaths.
@@ -55,7 +59,9 @@ public:
         }
         return out;
     }
-    bool can_reverse() const override { return !this->no_sort; }
+    void set_can_sort_reverse(bool sort, bool reverse) { this->no_sort = !sort; this->no_reverse = !reverse; }
+    bool can_sort() const { return !this->no_sort; }
+    bool can_reverse() const override { return can_sort() || !this->no_reverse; }
     bool empty() const { return this->entities.empty(); }
     void clear();
     void swap (ExtrusionEntityCollection &c);
@@ -152,7 +158,7 @@ class FlatenEntities : public ExtrusionVisitorConst {
 public:
     FlatenEntities(bool preserve_ordering) : preserve_ordering(preserve_ordering) {}
     FlatenEntities(ExtrusionEntityCollection pattern, bool preserve_ordering) : preserve_ordering(preserve_ordering) {
-        to_fill.no_sort = pattern.no_sort;
+        to_fill.set_can_sort_reverse(pattern.can_sort(), pattern.can_reverse());
     }
     ExtrusionEntityCollection get() {
         return to_fill;

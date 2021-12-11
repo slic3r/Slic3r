@@ -128,7 +128,7 @@ FillConcentricWGapFill::fill_surface_extrusion(
         ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
 
         ExtrusionEntityCollection *coll_nosort = new ExtrusionEntityCollection();
-        coll_nosort->no_sort = true; //can be sorted inside the pass
+        coll_nosort->set_can_sort_reverse(false, false); //can be sorted inside the pass
         extrusion_entities_append_loops(
             coll_nosort->entities, loops,
             good_role,
@@ -154,7 +154,7 @@ FillConcentricWGapFill::fill_surface_extrusion(
                 }
             }
             if (!polylines.empty() && !is_bridge(good_role)) {
-                ExtrusionEntityCollection gap_fill = thin_variable_width(polylines, erGapFill, params.flow);
+                ExtrusionEntityCollection gap_fill = thin_variable_width(polylines, erGapFill, params.flow, scale_t(params.config->get_computed_value("resolution_internal")));
                 //set role if needed
                 if (good_role != erSolidInfill) {
                     ExtrusionSetRole set_good_role(good_role);

@@ -211,7 +211,7 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
     // Save into layer.
     auto *eec = new ExtrusionEntityCollection();
     /// pass the no_sort attribute to the extrusion path
-    eec->no_sort = this->no_sort();
+    eec->set_can_sort_reverse(!this->no_sort(), !this->no_sort());
     /// add it into the collection
     out.push_back(eec);
     //get the role
@@ -269,7 +269,7 @@ Fill::do_gap_fill(const ExPolygons& gapfill_areas, const FillParams& params, Ext
         }
 #endif
 
-        ExtrusionEntityCollection gap_fill = thin_variable_width(polylines_gapfill, erGapFill, params.flow);
+        ExtrusionEntityCollection gap_fill = thin_variable_width(polylines_gapfill, erGapFill, params.flow, scale_t(params.config->get_computed_value("resolution_internal")));
         //set role if needed
         /*if (params.role != erSolidInfill) {
             ExtrusionSetRole set_good_role(params.role);
@@ -278,7 +278,7 @@ Fill::do_gap_fill(const ExPolygons& gapfill_areas, const FillParams& params, Ext
         //move them into the collection
         if (!gap_fill.entities.empty()) {
             ExtrusionEntityCollection* coll_gapfill = new ExtrusionEntityCollection();
-            coll_gapfill->no_sort = this->no_sort();
+            coll_gapfill->set_can_sort_reverse(!this->no_sort(), !this->no_sort());
             coll_gapfill->append(std::move(gap_fill.entities));
             coll_out.push_back(coll_gapfill);
         }

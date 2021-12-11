@@ -101,13 +101,8 @@ static std::vector<Vec2d> make_one_period(double width, double scaleFactor, doub
     return points;
 }
 
-static Polylines make_gyroid_waves(double gridZ, double density_adjusted, double line_spacing, double width, double height)
+static Polylines make_gyroid_waves(coordf_t gridZ, coordf_t scaleFactor, double width, double height, double tolerance)
 {
-    const double scaleFactor = scale_(line_spacing) / density_adjusted;
-
-    // tolerance in scaled units. clamp the maximum tolerance as there's
-    // no processing-speed benefit to do so beyond a certain point
-    const double tolerance = std::min(line_spacing / 2, FillGyroid::PatternTolerance) / unscale<double>(scaleFactor);
 
     //scale factor for 5% : 8 712 388
     // 1z = 10^-6 mm ?
@@ -167,13 +162,22 @@ void FillGyroid::_fill_surface_single(
     // align bounding box to a multiple of our grid module
     bb.merge(_align_to_grid(bb.min, Point(2*M_PI*distance, 2*M_PI*distance)));
 
+    // tolerance in scaled units. clamp the maximum tolerance as there's
+    // no processing-speed benefit to do so beyond a certain point
+    const coordf_t scaleFactor = scale_d(this->get_spacing()) / density_adjusted;
+    const double tolerance_old = std::min(this->get_spacing() / 2, FillGyroid::PatternTolerance) / unscaled(scaleFactor);
+    const double tolerance_old2 = std::min(this->get_spacing() / 2, FillGyroid::PatternTolerance) * density_adjusted  / this->get_spacing();
+    const double tolerance = params.config->get_computed_value("resolution_internal") * density_adjusted / this->get_spacing();
+    std::cout << "gyroid tolerance: " << tolerance_old << " == " << tolerance_old2 << " ? "<< tolerance << "\n";
+    std::cout << "this->get_spacing(): " << this->get_spacing() << " , scaleFactor= " << unscaled(scaleFactor) << " , min(spa, 0.2)= " << std::min(this->get_spacing() / 2, FillGyroid::PatternTolerance) << "\n";
+
     // generate pattern
     Polylines polylines = make_gyroid_waves(
-        (double)scale_(this->z),
-        density_adjusted,
-        this->get_spacing(),
+        scale_d(this->z),
+        scaleFactor,
         ceil(bb.size()(0) / distance) + 1.,
-        ceil(bb.size()(1) / distance) + 1.);
+        ceil(bb.size()(1) / distance) + 1.,
+        tolerance);
 
     // shift the polyline to the grid origin
     for (Polyline &pl : polylines)

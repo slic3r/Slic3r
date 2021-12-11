@@ -231,7 +231,7 @@ ClipperLib::Paths _offset(ClipperLib::Paths &&input, ClipperLib::EndType endType
         co.ArcTolerance = miterLimit;
     else
         co.MiterLimit = miterLimit;
-    double delta_scaled = delta * float(CLIPPER_OFFSET_SCALE);
+    double delta_scaled = delta * double(CLIPPER_OFFSET_SCALE);
     co.ShortestEdgeLength = double(std::abs(delta_scaled * CLIPPER_OFFSET_SHORTEST_EDGE_FACTOR));
     co.AddPaths(input, joinType, endType);
     ClipperLib::Paths retval;

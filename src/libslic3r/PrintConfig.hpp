@@ -1377,6 +1377,7 @@ public:
     ConfigOptionString              printer_model;
     ConfigOptionString              printer_notes;
     ConfigOptionFloat               resolution;
+    ConfigOptionFloat               resolution_internal;
     ConfigOptionFloats              retract_before_travel;
     ConfigOptionBools               retract_layer_change;
     ConfigOptionInt                 skirt_brim;
@@ -1485,6 +1486,7 @@ protected:
         OPT_PTR(printer_model);
         OPT_PTR(printer_notes);
         OPT_PTR(resolution);
+        OPT_PTR(resolution_internal);
         OPT_PTR(retract_before_travel);
         OPT_PTR(retract_layer_change);
         OPT_PTR(seam_gap);

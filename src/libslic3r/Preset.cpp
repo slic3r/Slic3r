@@ -627,9 +627,10 @@ const std::vector<std::string>& Preset::print_options()
         "thin_walls_overlap",
         "thin_walls_speed",
         "thin_walls_merge",
-        //precision, spoothign
+        //precision, smoothing
         "model_precision",
         "resolution",
+        "resolution_internal",
         "curve_smoothing_precision",
         "curve_smoothing_cutoff_dist",
         "curve_smoothing_angle_convex",

@@ -61,7 +61,7 @@ void ExtrusionEntityCollection::reverse()
     {
         // Don't reverse it if it's a loop, as it doesn't change anything in terms of elements ordering
         // and caller might rely on winding order
-        if (!ptr->can_reverse())
+        if (ptr->can_reverse() && !ptr->is_loop())
             ptr->reverse();
     }
     std::reverse(this->entities.begin(), this->entities.end());
@@ -151,7 +151,7 @@ ExtrusionEntityCollection ExtrusionEntityCollection::flatten(bool preserve_order
 }
 void
 FlatenEntities::use(const ExtrusionEntityCollection &coll) {
-    if ((coll.no_sort || this->to_fill.no_sort) && preserve_ordering) {
+    if ((!coll.can_sort() || !this->to_fill.can_sort()) && preserve_ordering) {
         FlatenEntities unsortable(coll, preserve_ordering);
         for (const ExtrusionEntity* entity : coll.entities) {
             entity->visit(unsortable);

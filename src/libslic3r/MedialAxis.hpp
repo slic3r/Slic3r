@@ -115,7 +115,7 @@ class MedialAxis {
 };
     
     /// create a ExtrusionEntityCollection from ThickPolylines, discretizing the variable width into little sections (of 4*SCALED_RESOLUTION length) where needed.
-    ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow flow);
+    ExtrusionEntityCollection thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow flow, coord_t resolution_internal);
 }
 
 

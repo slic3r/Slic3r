@@ -3208,7 +3208,7 @@ FillRectilinearPeri::fill_surface_extrusion(const Surface *surface, const FillPa
 {
     ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
     //you don't want to sort the extrusions: big infill first, small second
-    eecroot->no_sort = true;
+    eecroot->set_can_sort_reverse(false, false);
 
     // === extrude perimeter ===
     Polylines polylines_1;
@@ -3231,7 +3231,7 @@ FillRectilinearPeri::fill_surface_extrusion(const Surface *surface, const FillPa
         // Save into layer.
         ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
         /// pass the no_sort attribute to the extrusion path
-        eec->no_sort = this->no_sort();
+        eec->set_can_sort_reverse(!this->no_sort(), !this->no_sort());
         /// add it into the collection
         eecroot->entities.push_back(eec);
         //get the role
@@ -3263,7 +3263,7 @@ FillRectilinearPeri::fill_surface_extrusion(const Surface *surface, const FillPa
         // Save into layer.
         ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
         /// pass the no_sort attribute to the extrusion path
-        eec->no_sort = this->no_sort();
+        eec->set_can_sort_reverse(!this->no_sort(), !this->no_sort());
         /// add it into the collection
         eecroot->entities.push_back(eec);
         //get the role
@@ -3365,7 +3365,7 @@ FillRectilinearSawtooth::fill_surface_extrusion(const Surface *surface, const Fi
     if (!polylines_out.empty()) {
         ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
         /// pass the no_sort attribute to the extrusion path
-        eec->no_sort = this->no_sort();
+        eec->set_can_sort_reverse(!this->no_sort(), !this->no_sort());
 
         ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
 
@@ -3489,7 +3489,7 @@ FillRectilinearWGapFill::split_polygon_gap_fill(const Surface &surface, const Fi
 void
 FillRectilinearWGapFill::fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) const {
     ExtrusionEntityCollection *coll_nosort = new ExtrusionEntityCollection();
-    coll_nosort->no_sort = true; //can be sorted inside the pass
+    coll_nosort->set_can_sort_reverse(false, false); //can be sorted inside the pass but thew two pass need to be done one after the other
     ExtrusionRole good_role = getRoleFromSurfaceType(params, surface);
 
     //// remove areas for gapfill 
@@ -3558,9 +3558,9 @@ FillRectilinearWGapFill::fill_surface_extrusion(const Surface *surface, const Fi
         /// pass the no_sort attribute to the extrusion path
         //don't force monotonic if not top or bottom
         if (is_monotonic())
-            eec->no_sort = true;
+            eec->set_can_sort_reverse(false, false);
         else
-            eec->no_sort = this->no_sort();
+            eec->set_can_sort_reverse(!this->no_sort(), !this->no_sort());
 
         extrusion_entities_append_paths(
             eec->entities, polylines_rectilinear,

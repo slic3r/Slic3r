@@ -3364,7 +3364,18 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->precision = 8;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloat(0.002));
+    def->set_default_value(new ConfigOptionFloat(0.0125));
+
+    def = this->add("resolution_internal", coFloat);
+    def->label = L("Internal resolution");
+    def->category = OptionCategory::slicing;
+    def->tooltip = L("Minimum detail resolution, used for internal strutures (gapfill and some infill patterns)."
+            "\nDon't put a too small value (0.05mm is way too low for many printers), as it may creates too many very small segments that may difficult to display and print.");
+    def->sidetext = L("mm");
+    def->min = 0.001;
+    def->precision = 8;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.2));
 
     def = this->add("retract_before_travel", coFloats);
     def->label = L("Minimum travel after retraction");

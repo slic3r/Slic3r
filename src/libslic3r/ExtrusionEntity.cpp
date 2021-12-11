@@ -376,7 +376,7 @@ void ExtrusionPrinter::use(const ExtrusionEntityCollection &collection) {
         if (i != 0) ss << ",";
         collection.entities[i]->visit(*this);
     }
-    if(collection.no_sort) ss<<", no_sort=true";
+    if(!collection.can_sort()) ss<<", no_sort=true";
     ss << "}";
 }
 

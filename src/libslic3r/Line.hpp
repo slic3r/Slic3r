@@ -97,7 +97,7 @@ public:
     ThickLine(const Point& a, const Point& b) : Line(a, b), a_width(0), b_width(0) {}
     ThickLine(const Point& a, const Point& b, double wa, double wb) : Line(a, b), a_width(wa), b_width(wb) {}
 
-    double a_width, b_width;
+    coordf_t a_width, b_width;
 };
 
 class Line3

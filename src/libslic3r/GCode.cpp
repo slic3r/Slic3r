@@ -3455,7 +3455,7 @@ std::string GCode::extrude_entity(const ExtrusionEntity &entity, const std::stri
 }
 
 void GCode::use(const ExtrusionEntityCollection &collection) {
-    if (collection.no_sort || collection.role() == erMixed) {
+    if (!collection.can_sort() || collection.role() == erMixed) {
         for (const ExtrusionEntity* next_entity : collection.entities) {
             next_entity->visit(*this);
         }

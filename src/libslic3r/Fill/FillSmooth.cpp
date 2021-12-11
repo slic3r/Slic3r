@@ -24,7 +24,7 @@ namespace Slic3r {
         
         // Save into layer smoothing path.
         ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
-        eec->no_sort = params.monotonic;
+        eec->set_can_sort_reverse(!params.monotonic, !params.monotonic);
         FillParams params_modifided = params;
         if (params.config != NULL && idx > 0) params_modifided.density /= (float)params.config->fill_smooth_width.get_abs_value(1);
         else if (params.config != NULL && idx == 0) params_modifided.density *= 1;
@@ -131,7 +131,7 @@ namespace Slic3r {
         //create root node
         ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
         //you don't want to sort the extrusions: big infill first, small second
-        eecroot->no_sort = true;
+        eecroot->set_can_sort_reverse(false, false);
 
         // first infill
         FillParams first_pass_params = params;

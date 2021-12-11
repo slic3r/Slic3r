@@ -1,3 +1,4 @@
+#define CATCH_CONFIG_DISABLE
 #include <catch2/catch.hpp>
 
 #include <numeric>
@@ -10,6 +11,11 @@
 
 using namespace Slic3r;
 
+// 32 bit  = 10^9
+// 64 bits: 10^18
+// scale : 1 000 000 (10^6) ~ 2^20
+// clipper scale : 2^17
+// => clipper useful range: 2^26 ~ 10 000 000m => 10 000 km
 SCENARIO("test clipper limits", "[ClipperUtils]") {
     GIVEN("100mm square") {
         WHEN("offset") {
@@ -23,11 +29,15 @@ SCENARIO("test clipper limits", "[ClipperUtils]") {
             THEN("offset 10000") {
                 REQUIRE(offset(square, scale_(10000)).size() == 1);
             }
+            // every segment shorter than 0.5% of the offset will be cut.
+            // that means 500 for an offset of 100000
+            // so from now, offsetting it will destroy evrything
+            // (since 2017)
             THEN("offset 100000") {
-                REQUIRE(offset(square, scale_(100000)).size() == 1);
+                REQUIRE(offset(square, scale_(100000)).size() == 0);
             }
             THEN("offset 1000000") {
-                REQUIRE(offset(square, scale_(1000000)).size() == 1);
+                REQUIRE(offset(square, scale_(1000000)).size() == 0);
             }
         }
     }

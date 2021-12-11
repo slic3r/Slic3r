@@ -18,7 +18,7 @@ ExtrusionPath* createEP(std::initializer_list<Point> vec) {
 }
 ExtrusionEntityCollection* createEC(std::initializer_list<ExtrusionEntity*> vec, bool no_sort = false) {
     ExtrusionEntityCollection *ec = new ExtrusionEntityCollection{};
-    ec->no_sort = no_sort;
+    ec->set_can_sort_reverse(!no_sort, !no_sort);
     ec->entities = vec;
     return ec;
 }
@@ -319,7 +319,7 @@ SCENARIO("Path chaining", "[Geometry][!mayfail]") {
 		}
 	}
 	GIVEN("Gyroid infill end points") {
-		Polylines polylines = {
+		const Polylines polylines = {
 			{ {28122608, 3221037}, {27919139, 56036027} },
 			{ {33642863, 3400772}, {30875220, 56450360} },
 			{ {34579315, 3599827}, {35049758, 55971572} },
@@ -343,16 +343,81 @@ SCENARIO("Path chaining", "[Geometry][!mayfail]") {
 			{ {8266122, 14250611}, {6244813, 17751595} },
 			{ {12177955, 9886741}, {10703348, 11491900} } 
 		};
-		Polylines chained = chain_polylines(polylines);
-		THEN("Chained taking the shortest path") {
-			double connection_length = 0.;
-			for (size_t i = 1; i < chained.size(); ++i) {
-				const Polyline &pl1 = chained[i - 1];
-				const Polyline &pl2 = chained[i];
-				connection_length += (pl2.first_point() - pl1.last_point()).cast<double>().norm();
-			}
-			REQUIRE(connection_length < 85206000.);
-		}
+		const Polylines chained = chain_polylines(polylines);
+        THEN("Chained taking the shortest path") {
+            double connection_length = 0.;
+            std::cout << "{ {" << chained[0].points.front().x() << ", " << chained[0].points.front().y() << "}, {" << chained[0].points.back().x() << ", " << chained[0].points.back().x() << "} },\n";
+            for (size_t i = 1; i < chained.size(); ++i) {
+                const Polyline& pl1 = chained[i - 1];
+                const Polyline& pl2 = chained[i];
+                connection_length += (pl2.first_point() - pl1.last_point()).cast<double>().norm();
+                std::cout << "{ {" << chained[i].points.front().x() << ", " << chained[i].points.front().y() << "}, {" << chained[i].points.back().x() << ", " << chained[i].points.back().x() << "} },\n";
+            }
+            REQUIRE(connection_length < 85206000.);
+        }
+        const ExtrusionPath pattern(ExtrusionRole::erPerimeter);
+        THEN("Chained taking the shortest path with extrusionpaths") {
+            ExtrusionEntityCollection coll;
+            for (auto poly : polylines)
+                coll.entities.push_back(new ExtrusionPath(poly, pattern));
+            chain_and_reorder_extrusion_entities(coll.entities, &polylines[18].points.back());
+            double connection_length = 0.;
+            std::cout << "{ {" << coll.entities[0]->as_polyline().points.front().x() << ", " << coll.entities[0]->as_polyline().points.front().y() << "}, {" << coll.entities[0]->as_polyline().points.back().x() << ", " << coll.entities[0]->as_polyline().points.back().y() << "} },\n";
+            for (size_t i = 1; i < coll.entities.size(); ++i) {
+                const Polyline& pl1 = coll.entities[i - 1]->as_polyline();
+                const Polyline& pl2 = coll.entities[i]->as_polyline();
+                connection_length += (pl2.first_point() - pl1.last_point()).cast<double>().norm();
+                std::cout << "{ {" << coll.entities[i]->as_polyline().points.front().x() << ", " << coll.entities[i]->as_polyline().points.front().y() << "}, {" << coll.entities[i]->as_polyline().points.back().x() << ", " << coll.entities[i]->as_polyline().points.back().y() << "} },\n";
+            }
+            REQUIRE(connection_length < 85206000.);
+        }
+        THEN("Chained can't unfold a eeCollection") {
+            ExtrusionEntityCollection coll;
+            for (auto poly : polylines)
+                coll.entities.push_back(new ExtrusionPath(poly, pattern));
+            ExtrusionEntitiesPtr data{ &coll };
+            chain_and_reorder_extrusion_entities(data, &polylines[18].points.back());
+            double connection_length = 0.;
+            for (size_t i = 1; i < coll.entities.size(); ++i) {
+                const Polyline& pl1 = coll.entities[i - 1]->as_polyline();
+                const Polyline& pl2 = coll.entities[i]->as_polyline();
+                connection_length += (pl2.first_point() - pl1.last_point()).cast<double>().norm();
+            }
+            REQUIRE(connection_length > 85206000.);
+            REQUIRE(polylines[18].points.front() != coll.entities[18]->first_point());
+        }
+        THEN("Chained does not take the shortest path with extrusionpaths if in an un-sortable un-reversable collection") {
+            ExtrusionEntityCollection coll;
+            for (auto poly : polylines)
+                coll.entities.push_back(new ExtrusionPath(poly, pattern));
+            ExtrusionEntitiesPtr data{ &coll };
+            coll.set_can_sort_reverse(false, false);
+            chain_and_reorder_extrusion_entities(data, &polylines[18].points.back());
+            double connection_length = 0.;
+            for (size_t i = 1; i < coll.entities.size(); ++i) {
+                const Polyline& pl1 = coll.entities[i - 1]->as_polyline();
+                const Polyline& pl2 = coll.entities[i]->as_polyline();
+                connection_length += (pl2.first_point() - pl1.last_point()).cast<double>().norm();
+            }
+            REQUIRE(connection_length > 85206000.);
+            REQUIRE(polylines[18].points.front() == coll.entities[18]->first_point());
+        }
+        THEN("Chained does not take the shortest path with extrusionpaths if in an un-sortable collection") {
+            ExtrusionEntityCollection coll;
+            for (auto poly : polylines)
+                coll.entities.push_back(new ExtrusionPath(poly, pattern));
+            ExtrusionEntitiesPtr data{ &coll };
+            coll.set_can_sort_reverse(false, true);
+            chain_and_reorder_extrusion_entities(data, &polylines[18].points.back());
+            double connection_length = 0.;
+            for (size_t i = 1; i < coll.entities.size(); ++i) {
+                const Polyline& pl1 = coll.entities[i - 1]->as_polyline();
+                const Polyline& pl2 = coll.entities[i]->as_polyline();
+                connection_length += (pl2.first_point() - pl1.last_point()).cast<double>().norm();
+            }
+            REQUIRE(connection_length > 85206000.);
+            REQUIRE(polylines[18].points.front() != coll.entities[18]->first_point());
+        }
 	}
 	GIVEN("Loop pieces") {
 		Point a { 2185796, 19058485 };

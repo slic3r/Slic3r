@@ -83,6 +83,7 @@ group:Layer height
 	setting:first_layer_height
 group:Filtering
 	setting:resolution
+	setting:resolution_internal
 	setting:model_precision
 	setting:slice_closing_radius
 group:Modifying slices

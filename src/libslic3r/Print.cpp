@@ -234,9 +234,12 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
             steps.emplace_back(psBrim);
             steps.emplace_back(psSkirt);
         } else if (
-               opt_key == "nozzle_diameter"
+               opt_key == "filament_shrink"
+            || opt_key == "nozzle_diameter"
+            || opt_key == "model_precision"
             || opt_key == "resolution"
-            || opt_key == "filament_shrink"
+            || opt_key == "resolution_internal"
+            || opt_key == "slice_closing_radius"
             // Spiral Vase forces different kind of slicing than the normal model:
             // In Spiral Vase mode, holes are closed and only the largest area contour is kept at each layer.
             // Therefore toggling the Spiral Vase on / off requires complete reslicing.
@@ -2287,7 +2290,7 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector<BrimLoop>>& loops, c
         } else {
             ExtrusionEntityCollection* print_me_first = new ExtrusionEntityCollection();
             parent->entities.push_back(print_me_first);
-            print_me_first->no_sort = true;
+            print_me_first->set_can_sort_reverse(false, false);
             for (Polyline& line : to_cut.lines)
                 if (line.points.back() == line.points.front()) {
                     ExtrusionPath path(erSkirt, mm3_per_mm, width, height);
