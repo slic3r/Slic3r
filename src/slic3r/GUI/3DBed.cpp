@@ -16,7 +16,11 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/locale/generator.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/nowide/fstream.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 static const float GROUND_Z = -0.02f;
 

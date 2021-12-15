@@ -9,6 +9,8 @@
 #include "../SVG.hpp"
 #include "AvoidCrossingPerimeters.hpp"
 
+#include <boost/log/trivial.hpp>
+
 #include <numeric>
 #include <unordered_set>
 

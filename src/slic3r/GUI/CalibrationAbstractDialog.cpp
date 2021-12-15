@@ -5,9 +5,13 @@
 #include "GUI.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Tab.hpp"
+
 #include <wx/scrolwin.h>
 #include <wx/display.h>
 #include <wx/file.h>
+
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/path.hpp>
 
 #if ENABLE_SCROLLABLE
 static wxSize get_screen_size(wxWindow* window)

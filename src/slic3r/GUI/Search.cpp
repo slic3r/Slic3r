@@ -1,7 +1,9 @@
 #include "Search.hpp"
 
 #include <cstddef>
+#include <regex>
 #include <string>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
 #include <boost/nowide/convert.hpp>

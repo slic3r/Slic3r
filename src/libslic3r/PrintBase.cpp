@@ -4,6 +4,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <regex>
+
 #include "I18N.hpp"
 
 //! macro used to mark string used at localization, 

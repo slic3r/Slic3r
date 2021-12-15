@@ -8,6 +8,9 @@
 #include "SVG.hpp"
 #include "polypartition.h"
 #include "poly2tri/poly2tri.h"
+
+#include <boost/log/trivial.hpp>
+
 #include <algorithm>
 #include <cassert>
 #include <list>

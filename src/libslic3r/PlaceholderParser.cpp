@@ -1,11 +1,13 @@
 #include "PlaceholderParser.hpp"
 #include "Exception.hpp"
 #include "Flow.hpp"
+
 #include <cstring>
 #include <ctime>
 #include <iomanip>
 #include <sstream>
 #include <map>
+#include <regex>
 #ifdef _MSC_VER
     #include <stdlib.h>  // provides **_environ
 #else
@@ -25,6 +27,7 @@
 #endif
 
 #include <boost/algorithm/string.hpp>
+#include <boost/log/trivial.hpp>
 #include <boost/nowide/convert.hpp>
 
 // Spirit v2.5 allows you to suppress automatic generation

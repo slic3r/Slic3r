@@ -16,9 +16,10 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <math.h>
-#include <string_view>
 #include <map>
+#include <math.h>
+#include <unordered_set>
+#include <string_view>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/find.hpp>

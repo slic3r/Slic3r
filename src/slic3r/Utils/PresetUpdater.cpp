@@ -6,12 +6,15 @@
 #include <ostream>
 #include <utility>
 #include <stdexcept>
-#include <boost/format.hpp>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp> 
 
 #include <wx/app.h>
 #include <wx/msgdlg.h>

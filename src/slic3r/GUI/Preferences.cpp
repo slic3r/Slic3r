@@ -4,7 +4,11 @@
 #include "Plater.hpp"
 #include "I18N.hpp"
 #include "libslic3r/AppConfig.hpp"
+
 #include <wx/notebook.h>
+
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/path.hpp>
 
 namespace Slic3r {
 namespace GUI {

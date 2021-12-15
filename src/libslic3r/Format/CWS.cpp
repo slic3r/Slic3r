@@ -2,6 +2,10 @@
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/Time.hpp"
 
+#include <boost/log/trivial.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/path.hpp>
+
 namespace Slic3r {
 
 using ConfMap = std::map<std::string, std::string>;

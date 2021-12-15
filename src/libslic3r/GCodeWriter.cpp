@@ -1,10 +1,13 @@
 #include "GCodeWriter.hpp"
 #include "CustomGCode.hpp"
+
+#include <boost/lexical_cast.hpp>
+
 #include <algorithm>
+#include <assert.h>
 #include <iomanip>
 #include <iostream>
 #include <map>
-#include <assert.h>
 
 #define FLAVOR_IS(val) this->config.gcode_flavor.value == val
 #define FLAVOR_IS_NOT(val) this->config.gcode_flavor.value != val
