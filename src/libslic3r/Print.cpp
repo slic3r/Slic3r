@@ -1633,7 +1633,7 @@ std::pair<PrintBase::PrintValidationError, std::string> Print::validate() const
                     //check not-first layer
                     if (object->region_volumes[region_id].front().first.second > layer_height) {
                         if (layer_height + EPSILON < min_layer_height)
-                            return { PrintBase::PrintValidationError::pveWrongSettings, (boost::format(L("First layer height can't be higher than %s")) % "min layer height").str() };
+                            return { PrintBase::PrintValidationError::pveWrongSettings, (boost::format(L("Layer height can't be higher than %s")) % "min layer height").str() };
                         for (auto tuple : std::vector<std::pair<double, const char*>>{
                                 {nozzle_diameter, "nozzle diameter"},
                                 {max_layer_height, "max layer height"},
