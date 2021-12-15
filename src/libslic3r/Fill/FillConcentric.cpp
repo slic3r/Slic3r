@@ -78,6 +78,8 @@ FillConcentricWGapFill::fill_surface_extrusion(
     const FillParams &params,
     ExtrusionEntitiesPtr &out) const {
 
+    double min_gapfill_area = double(params.flow.scaled_width()) * double(params.flow.scaled_width());
+    if (params.config != nullptr) min_gapfill_area = scale_d(params.config->gap_fill_min_area.get_abs_value(params.flow.width)) * double(params.flow.scaled_width());
     // Perform offset.
     Slic3r::ExPolygons expp = offset_ex(surface->expolygon, double(scale_(0 - 0.5 * this->get_spacing())));
     // Create the infills for each of the regions.
@@ -149,7 +151,7 @@ FillConcentricWGapFill::fill_surface_extrusion(
             for (const ExPolygon &ex : gaps_ex) {
                 //remove too small gaps that are too hard to fill.
                 //ie one that are smaller than an extrusion with width of min and a length of max.
-                if (ex.area() > min*max) {
+                if (ex.area() > min_gapfill_area) {
                     MedialAxis{ ex, coord_t(max), coord_t(min), coord_t(params.flow.height) }.build(polylines);
                 }
             }
