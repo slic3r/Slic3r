@@ -281,9 +281,10 @@ inline NfpResult<RawShape> nfpConvexOnly(const RawShape& sh,
             // cos function. But with the quadrant info we can get the sign back
             int sign = q[0] == 1 || q[0] == 2 ? -1 : 1;
             
+            // supermerill: add safe-check for when two points are on the same position
             // If Ratio is an actual rational type, there is no precision loss
-            auto pcos1 = Ratio(lcos[0]) / lsq1 * sign * lcos[0];
-            auto pcos2 = Ratio(lcos[1]) / lsq2 * sign * lcos[1];
+            auto pcos1 = lsq1 != 0 ? Ratio(lcos[0]) / lsq1 * sign * lcos[0] : 1 * sign * lcos[0];
+            auto pcos2 = lsq2 != 0 ? Ratio(lcos[1]) / lsq2 * sign * lcos[1] : 1 * sign * lcos[1];
             
             return q[0] < 2 ? pcos1 < pcos2 : pcos1 > pcos2;
         }
