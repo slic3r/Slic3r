@@ -492,15 +492,15 @@ void PerimeterGenerator::process()
                         next_onion = offset_ex(
                             last,
                             -(float)(ext_perimeter_width / 2),
-                            (round_peri ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter),
-                            (round_peri ? min_round_spacing : 3));
+                            ClipperLib::JoinType::jtMiter,
+                            3);
                     else
                         next_onion = offset2_ex(
                             last,
                             -(float)(ext_perimeter_width / 2 + ext_min_spacing / 2 - 1),
                             +(float)(ext_min_spacing / 2 - 1),
-                            (round_peri ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter),
-                            (round_peri ? min_round_spacing : 3));
+                            ClipperLib::JoinType::jtMiter,
+                            3);
 
                     // look for thin walls
                     if (this->config->thin_walls) {
@@ -569,20 +569,20 @@ void PerimeterGenerator::process()
                             }
                         }
                         // use perimeters to extrude area that can't be printed by thin walls
-                        // it's a bit like re-add thin area in to perimeter area.
+                        // it's a bit like re-add thin area into perimeter area.
                         // it can over-extrude a bit, but it's for a better good.
                         {
                             if (thin_perimeter)
                                 next_onion = union_ex(next_onion, offset_ex(diff_ex(last, thins, true),
                                     -(float)(ext_perimeter_width / 2),
-                                    (round_peri ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter),
-                                    (round_peri ? min_round_spacing : 3)));
+                                    ClipperLib::JoinType::jtMiter,
+                                    3));
                             else
                                 next_onion = union_ex(next_onion, offset2_ex(diff_ex(last, thins, true),
                                     -(float)((ext_perimeter_width / 2) + (ext_min_spacing / 4)),
                                     (float)(ext_min_spacing / 4),
-                                    (round_peri ? ClipperLib::JoinType::jtRound : ClipperLib::JoinType::jtMiter),
-                                    (round_peri ? min_round_spacing : 3)));
+                                    ClipperLib::JoinType::jtMiter,
+                                    3));
 
                             next_onion = intersection_ex(next_onion, last);
                         }
