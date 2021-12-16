@@ -10,10 +10,11 @@
 
 #include <cmath>
 #include <memory>
+#include <atomic>
+#include <thread>
 #include <boost/log/trivial.hpp>
 
 #include <tbb/parallel_for.h>
-#include <tbb/atomic.h>
 #include <tbb/spin_mutex.h>
 #include <tbb/task_group.h>
 
