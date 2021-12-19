@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <sstream>
 #include <map>
-#include <regex>
+
 #ifdef _MSC_VER
     #include <stdlib.h>  // provides **_environ
 #else
@@ -1502,11 +1502,11 @@ void PlaceholderParser::append_custom_variables(std::map<std::string, std::vecto
 
     bool is_array = nb_extruders > 0;
     if (!is_array) nb_extruders = 1;
-    std::regex is_a_name("[a-zA-Z_]+");
+    SLIC3R_REGEX_NAMESPACE::regex is_a_name("[a-zA-Z_]+");
     for (const auto& entry : name2var_array) {
         if (entry.first.empty())
             continue;
-        if (!std::regex_match(entry.first, is_a_name))
+        if (!SLIC3R_REGEX_NAMESPACE::regex_match(entry.first, is_a_name))
             continue;
         const std::vector<std::string>& values = entry.second;
         //check if all values are empty
@@ -1555,7 +1555,7 @@ void PlaceholderParser::append_custom_variables(std::map<std::string, std::vecto
         //check if all values are numeric
         bool is_not_numeric = !is_not_string || !is_not_bool;
         std::vector<double> double_values;
-        //std::regex("\\s*[+-]?([0-9]+\\.[0-9]*([Ee][+-]?[0-9]+)?|\\.[0-9]+([Ee][+-]?[0-9]+)?|[0-9]+[Ee][+-]?[0-9]+)");
+        //SLIC3R_REGEX_NAMESPACE::regex("\\s*[+-]?([0-9]+\\.[0-9]*([Ee][+-]?[0-9]+)?|\\.[0-9]+([Ee][+-]?[0-9]+)?|[0-9]+[Ee][+-]?[0-9]+)");
         if (!is_not_numeric) {
             for (int extruder_id = 0; extruder_id < nb_extruders; ++extruder_id) {
                 if (!values[extruder_id].empty()) {
