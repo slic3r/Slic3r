@@ -242,6 +242,8 @@ void FanMover::_process_gcode_line(GCodeReader& reader, const GCodeReader::GCode
             if (fan_speed >= 0) {
                 const auto fan_baseline = (m_writer.config.fan_percentage.value ? 100.0 : 255.0);
                 fan_speed = 100 * fan_speed / fan_baseline;
+                //speed change: stop kickstart reverting if any
+                m_current_kickstart.time = -1;
                 if (!m_is_custom_gcode) {
                     // if slow down => put in the queue. if not =>
                     if (m_back_buffer_fan_speed < fan_speed) {
