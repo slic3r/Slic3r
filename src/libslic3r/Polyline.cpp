@@ -273,7 +273,7 @@ void concatThickPolylines(ThickPolylines& pp) {
         //concat polyline if only 2 polyline at a point
         for (size_t i = 0; i < pp.size(); ++i) {
             ThickPolyline *polyline = &pp[i];
-            if (polyline->first_point().coincides_with(polyline->last_point())) {
+            if (polyline->first_point().coincides_with_epsilon(polyline->last_point())) {
                 polyline->endpoints.first = false;
                 polyline->endpoints.second = false;
                 continue;
@@ -287,25 +287,25 @@ void concatThickPolylines(ThickPolylines& pp) {
             for (size_t j = 0; j < pp.size(); ++j) {
                 if (j == i) continue;
                 ThickPolyline *other = &pp[j];
-                if (polyline->last_point().coincides_with(other->last_point())) {
+                if (polyline->last_point().coincides_with_epsilon(other->last_point())) {
                     id_candidate_last_point = j;
                     nbCandidate_last_point++;
                 }
-                if (polyline->last_point().coincides_with(other->first_point())) {
+                if (polyline->last_point().coincides_with_epsilon(other->first_point())) {
                     id_candidate_last_point = j;
                     nbCandidate_last_point++;
                 }
-                if (polyline->first_point().coincides_with(other->last_point())) {
+                if (polyline->first_point().coincides_with_epsilon(other->last_point())) {
                     id_candidate_first_point = j;
                     nbCandidate_first_point++;
                 }
-                if (polyline->first_point().coincides_with(other->first_point())) {
+                if (polyline->first_point().coincides_with_epsilon(other->first_point())) {
                     id_candidate_first_point = j;
                     nbCandidate_first_point++;
                 }
             }
             if (id_candidate_last_point == id_candidate_first_point && nbCandidate_first_point == 1 && nbCandidate_last_point == 1) {
-                if (polyline->first_point().coincides_with(pp[id_candidate_first_point].first_point())) pp[id_candidate_first_point].reverse();
+                if (polyline->first_point().coincides_with_epsilon(pp[id_candidate_first_point].first_point())) pp[id_candidate_first_point].reverse();
                 // it's a trap! it's a  loop!
                 polyline->points.insert(polyline->points.end(), pp[id_candidate_first_point].points.begin() + 1, pp[id_candidate_first_point].points.end());
                 polyline->width.insert(polyline->width.end(), pp[id_candidate_first_point].width.begin() + 1, pp[id_candidate_first_point].width.end());
@@ -316,7 +316,7 @@ void concatThickPolylines(ThickPolylines& pp) {
             } else {
 
                 if (nbCandidate_first_point == 1) {
-                    if (polyline->first_point().coincides_with(pp[id_candidate_first_point].first_point())) pp[id_candidate_first_point].reverse();
+                    if (polyline->first_point().coincides_with_epsilon(pp[id_candidate_first_point].first_point())) pp[id_candidate_first_point].reverse();
                     //concat at front
                     polyline->width[0] = std::max(polyline->width.front(), pp[id_candidate_first_point].width.back());
                     polyline->points.insert(polyline->points.begin(), pp[id_candidate_first_point].points.begin(), pp[id_candidate_first_point].points.end() - 1);
@@ -336,7 +336,7 @@ void concatThickPolylines(ThickPolylines& pp) {
                     polyline->endpoints.first = true;
                 }
                 if (nbCandidate_last_point == 1) {
-                    if (polyline->last_point().coincides_with(pp[id_candidate_last_point].last_point())) pp[id_candidate_last_point].reverse();
+                    if (polyline->last_point().coincides_with_epsilon(pp[id_candidate_last_point].last_point())) pp[id_candidate_last_point].reverse();
                     //concat at back
                     polyline->width[polyline->width.size() - 1] = std::max(polyline->width.back(), pp[id_candidate_last_point].width.front());
                     polyline->points.insert(polyline->points.end(), pp[id_candidate_last_point].points.begin() + 1, pp[id_candidate_last_point].points.end());
@@ -353,7 +353,7 @@ void concatThickPolylines(ThickPolylines& pp) {
                     polyline->endpoints.second = true;
                 }
 
-                if (polyline->last_point().coincides_with(polyline->first_point())) {
+                if (polyline->last_point().coincides_with_epsilon(polyline->first_point())) {
                     //the concat has created a loop : update endpoints
                     polyline->endpoints.first = false;
                     polyline->endpoints.second = false;

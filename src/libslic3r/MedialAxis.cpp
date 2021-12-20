@@ -465,7 +465,7 @@ get_coeff_from_angle_countour(Point &point, const ExPolygon &contour, coord_t mi
     if (angle >= PI) angle = 2 * PI - angle;  // smaller angle
     //compute the diff from 90°
     angle = abs(angle - PI / 2);
-    if (point_near.coincides_with(point_nearest) && std::max(nearest_dist, near_dist) + SCALED_EPSILON < point_nearest.distance_to(point_near)) {
+    if (point_near.coincides_with_epsilon(point_nearest) && std::max(nearest_dist, near_dist) + SCALED_EPSILON < point_nearest.distance_to(point_near)) {
         //not only nearest
         Point point_before = id_near == 0 ? contour.contour.points.back() : contour.contour.points[id_near - 1];
         Point point_after = id_near == contour.contour.points.size() - 1 ? contour.contour.points.front() : contour.contour.points[id_near + 1];
@@ -532,13 +532,13 @@ MedialAxis::fusion_curve(ThickPolylines &pp)
         for (size_t j = 0; j < pp.size(); ++j) {
             if (j == i) continue;
             ThickPolyline& other = pp[j];
-            if (polyline.first_point().coincides_with(other.last_point())) {
+            if (polyline.first_point().coincides_with_epsilon(other.last_point())) {
                 other.reverse();
                 crosspoint.push_back(j);
                 double dot_temp = dot(Line(polyline.points[0], polyline.points[1]), (Line(other.points[0], other.points[1])));
                 min_dot = std::min(min_dot, abs(dot_temp));
                 sum_dot += dot_temp;
-            } else if (polyline.first_point().coincides_with(other.first_point())) {
+            } else if (polyline.first_point().coincides_with_epsilon(other.first_point())) {
                 crosspoint.push_back(j);
                 double dot_temp = dot(Line(polyline.points[0], polyline.points[1]), (Line(other.points[0], other.points[1])));
                 min_dot = std::min(min_dot, abs(dot_temp));
@@ -616,10 +616,10 @@ MedialAxis::remove_bits(ThickPolylines &pp)
         for (size_t j = 0; j < pp.size(); ++j) {
             if (j == i) continue;
             ThickPolyline& other = pp[j];
-            if (polyline.first_point().coincides_with(other.last_point())) {
+            if (polyline.first_point().coincides_with_epsilon(other.last_point())) {
                 other.reverse();
                 crosspoint.push_back(j);
-            } else if (polyline.first_point().coincides_with(other.first_point())) {
+            } else if (polyline.first_point().coincides_with_epsilon(other.first_point())) {
                 crosspoint.push_back(j);
             }
         }
@@ -675,10 +675,10 @@ MedialAxis::fusion_corners(ThickPolylines &pp)
         for (size_t j = 0; j < pp.size(); ++j) {
             if (j == i) continue;
             ThickPolyline& other = pp[j];
-            if (polyline.first_point().coincides_with(other.last_point())) {
+            if (polyline.first_point().coincides_with_epsilon(other.last_point())) {
                 other.reverse();
                 crosspoint.push_back(j);
-            } else if (polyline.first_point().coincides_with(other.first_point())) {
+            } else if (polyline.first_point().coincides_with_epsilon(other.first_point())) {
                 crosspoint.push_back(j);
             }
         }
@@ -912,13 +912,13 @@ MedialAxis::main_fusion(ThickPolylines& pp)
             // find another polyline starting here
             for (size_t j = i + 1; j < pp.size(); ++j) {
                 ThickPolyline& other = pp[j];
-                if (polyline.last_point().coincides_with(other.last_point())) {
+                if (polyline.last_point().coincides_with_epsilon(other.last_point())) {
                     polyline.reverse();
                     other.reverse();
-                } else if (polyline.first_point().coincides_with(other.last_point())) {
+                } else if (polyline.first_point().coincides_with_epsilon(other.last_point())) {
                     other.reverse();
-                } else if (polyline.first_point().coincides_with(other.first_point())) {
-                } else if (polyline.last_point().coincides_with(other.first_point())) {
+                } else if (polyline.first_point().coincides_with_epsilon(other.first_point())) {
+                } else if (polyline.last_point().coincides_with_epsilon(other.first_point())) {
                     polyline.reverse();
                 } else {
                     continue;
@@ -978,7 +978,7 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                     //std::cout << "try to find main : " << k << " ? " << i << " " << j << " ";
                     if (k == i || k == j) continue;
                     ThickPolyline& main = pp[k];
-                    if (polyline.first_point().coincides_with(main.last_point())) {
+                    if (polyline.first_point().coincides_with_epsilon(main.last_point())) {
                         main.reverse();
                         if (!main.endpoints.second)
                             find_main_branch = true;
@@ -986,7 +986,7 @@ MedialAxis::main_fusion(ThickPolylines& pp)
                             biggest_main_branch_id = k;
                             biggest_main_branch_length = (coord_t)main.length();
                         }
-                    } else if (polyline.first_point().coincides_with(main.first_point())) {
+                    } else if (polyline.first_point().coincides_with_epsilon(main.first_point())) {
                         if (!main.endpoints.second)
                             find_main_branch = true;
                         else if (biggest_main_branch_length < main.length()) {
@@ -1291,14 +1291,14 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
             if (other.endpoints.first && other.endpoints.second) continue;
             bool me_reverse = false;
             bool other_reverse = false;
-            if (polyline.last_point().coincides_with(other.last_point())) {
+            if (polyline.last_point().coincides_with_epsilon(other.last_point())) {
                 other_reverse = true;
-            } else if (polyline.first_point().coincides_with(other.last_point())) {
+            } else if (polyline.first_point().coincides_with_epsilon(other.last_point())) {
                 me_reverse = true;
                 other_reverse = true;
-            } else if (polyline.first_point().coincides_with(other.first_point())) {
+            } else if (polyline.first_point().coincides_with_epsilon(other.first_point())) {
                 me_reverse = true;
-            } else if (!polyline.last_point().coincides_with(other.first_point())) {
+            } else if (!polyline.last_point().coincides_with_epsilon(other.first_point())) {
                 continue;
             }
 
@@ -1316,12 +1316,12 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
             }
         }
         if (best_candidate != nullptr && best_candidate->points.size() > 1) {
-            if (polyline.last_point().coincides_with(best_candidate->last_point())) {
+            if (polyline.last_point().coincides_with_epsilon(best_candidate->last_point())) {
                 best_candidate->reverse();
-            } else if (polyline.first_point().coincides_with(best_candidate->last_point())) {
+            } else if (polyline.first_point().coincides_with_epsilon(best_candidate->last_point())) {
                 polyline.reverse();
                 best_candidate->reverse();
-            } else if (polyline.first_point().coincides_with(best_candidate->first_point())) {
+            } else if (polyline.first_point().coincides_with_epsilon(best_candidate->first_point())) {
                 polyline.reverse();
             }
             //intersections may create over-extrusion because the included circle can be a bit larger. We have to make it short again if needed.
@@ -1415,18 +1415,18 @@ MedialAxis::remove_too_short_polylines(ThickPolylines& pp, const coord_t min_siz
     //    if (endpoint_not_used[idx_endpoint]) {
     //        int nb_endpoints;
     //        Point pt = idx_endpoint % 2 == 0 ? polyline.first_point() : polyline.last_point();
-    //        if (idx_endpoint % 2 == 0 && pt.coincides_with(polyline.last_point())) {
+    //        if (idx_endpoint % 2 == 0 && pt.coincides_with_epsilon(polyline.last_point())) {
     //            nb_endpoints++;
     //            endpoint_not_used[(idx_endpoint / 2) + 1] = false;
     //        }
     //        //good, now find other points
     //        for (size_t idx_other_pp = (idx_endpoint / 2) + 1; idx_other_pp < pp.size(); idx_other_pp++) {
     //            ThickPolyline& other = pp[idx_other_pp];
-    //            if (pt.coincides_with(other.first_point())) {
+    //            if (pt.coincides_with_epsilon(other.first_point())) {
     //                nb_endpoints++;
     //                endpoint_not_used[idx_other_pp * 2] = false;
     //            }
-    //            if (pt.coincides_with(other.last_point())) {
+    //            if (pt.coincides_with_epsilon(other.last_point())) {
     //                nb_endpoints++;
     //                endpoint_not_used[idx_other_pp * 2 + 1] = false;
     //            }
@@ -1438,7 +1438,7 @@ MedialAxis::remove_too_short_polylines(ThickPolylines& pp, const coord_t min_siz
     //        std::cout << "reduce " << reduction << " points!\n";
     //        if (idx_endpoint % 2 == 0 ) {
     //            polyline.width.front() *= reduction;
-    //            if(pt.coincides_with(polyline.last_point()))
+    //            if(pt.coincides_with_epsilon(polyline.last_point()))
     //                polyline.width.back() *= reduction;
     //        } else {
     //            polyline.width.back() *= reduction;
@@ -1446,10 +1446,10 @@ MedialAxis::remove_too_short_polylines(ThickPolylines& pp, const coord_t min_siz
     //        //good, now find other points
     //        for (size_t idx_other_pp = (idx_endpoint / 2) + 1; idx_other_pp < pp.size(); idx_other_pp++) {
     //            ThickPolyline& other = pp[idx_other_pp];
-    //            if (pt.coincides_with(other.first_point())) {
+    //            if (pt.coincides_with_epsilon(other.first_point())) {
     //                other.width.front() *= reduction;
     //            }
-    //            if (pt.coincides_with(other.last_point())) {
+    //            if (pt.coincides_with_epsilon(other.last_point())) {
     //                other.width.back() *= reduction;
     //            }
     //        }
@@ -1697,7 +1697,7 @@ MedialAxis::build(ThickPolylines &polylines_out)
 {
     //static int id = 0;
     //id++;
-    //std::cout << this->id << "\n";
+    //std::cout << id << "\n";
     //{
     //    std::stringstream stri;
     //    stri << "medial_axis_0_enter_" << id << ".svg";
@@ -1710,8 +1710,8 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_0.5_simplified_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
     //    svg.Close();
     //}
     //safety check
@@ -1778,9 +1778,9 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_0.9_voronoi_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    //svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
     //    svg.Close();
     //}
 
@@ -1805,9 +1805,9 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_1_voronoi_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(*bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
     //    svg.Close();
     //}
 
@@ -1820,9 +1820,9 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_1_voronoi_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(*bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
     //    svg.Close();
     //}
 
@@ -1846,9 +1846,9 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_2_curve_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(*bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
     //    svg.Close();
     //}
 
@@ -1863,9 +1863,9 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_3_fusion_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
     //    svg.Close();
     //}
 
@@ -1875,6 +1875,15 @@ MedialAxis::build(ThickPolylines &polylines_out)
     // Loop through all returned polylines in order to extend their endpoints to the 
     //   expolygon boundaries (if done here, it may be cut later if not thick enough)
     if (stop_at_min_width) {
+        //{
+        //    std::stringstream stri;
+        //    stri << "medial_axis_3_3_extends_" << id << ".svg";
+        //    SVG svg(stri.str());
+        //    svg.draw(*bounds, "grey");
+        //    svg.draw(this->expolygon, "green");
+        //    svg.draw(pp, "red");
+        //    svg.Close();
+        //}
         extends_line_both_side(pp);
     }
 
@@ -1886,14 +1895,24 @@ MedialAxis::build(ThickPolylines &polylines_out)
         std::cout << "\n";
     }*/
     //reduce extrusion when it's too thin to be printable
+    //{
+    //    std::stringstream stri;
+    //    stri << "medial_axis_3_6_remove_thin_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
+    //    svg.Close();
+    //}
+
     remove_too_thin_extrusion(pp);
     //{
     //    std::stringstream stri;
     //    stri << "medial_axis_4_thinok_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
     //    svg.Close();
     //}
 
@@ -1902,9 +1921,9 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_5.0_thuinner_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(*bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
     //    svg.Close();
     //}
 
@@ -1917,9 +1936,9 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_5_expand_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(*bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
     //    svg.Close();
     //}
     //TODO: reduce the flow at the intersection ( + ) points on crossing?
@@ -1928,9 +1947,9 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_6_concat_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
     //    svg.Close();
     //}
 
@@ -1939,9 +1958,9 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_8_tooshort_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
     //    svg.Close();
     //}
 
@@ -1950,9 +1969,9 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_9.1_end_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(*bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
     //    svg.Close();
     //}
     if (nozzle_diameter != min_width) {
@@ -1965,9 +1984,9 @@ MedialAxis::build(ThickPolylines &polylines_out)
     //    std::stringstream stri;
     //    stri << "medial_axis_9.9_endnwithtaper_" << id << ".svg";
     //    SVG svg(stri.str());
-    //    svg.draw(*bounds);
-    //    svg.draw(this->expolygon);
-    //    svg.draw(pp);
+    //    svg.draw(*bounds, "grey");
+    //    svg.draw(this->expolygon, "green");
+    //    svg.draw(pp, "red");
     //    svg.Close();
     //}
 
@@ -2136,7 +2155,7 @@ thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow fl
 
         // Append paths to collection.
         if (!paths.empty()) {
-            if (paths.front().first_point().coincides_with(paths.back().last_point())) {
+            if (paths.front().first_point().coincides_with_epsilon(paths.back().last_point())) {
                 coll.append(ExtrusionLoop(paths));
             } else {
                 if (role == erThinWall){

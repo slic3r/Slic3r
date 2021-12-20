@@ -462,7 +462,7 @@ void PerimeterGenerator::process()
             // In case no perimeters are to be generated, loop_number will equal to -1.            
             std::vector<PerimeterGeneratorLoops> contours(loop_number + 1);    // depth => loops
             std::vector<PerimeterGeneratorLoops> holes(loop_number + 1);       // depth => loops
-            ThickPolylines thin_walls;
+            ThickPolylines thin_walls_thickpolys;
             ExPolygons no_last_gapfill;
             // we loop one time more than needed in order to find gaps after the last perimeter was applied
             for (int i = 0;; ++i) {  // outer loop is 0
@@ -562,7 +562,7 @@ void PerimeterGenerator::process()
                                         ma.use_bounds(bound)
                                             .use_min_real_width(scale_t(this->ext_perimeter_flow.nozzle_diameter))
                                             .use_tapers(thin_walls_overlap)
-                                            .build(thin_walls);
+                                            .build(thin_walls_thickpolys);
                                     }
                                     break;
                                 }
@@ -937,20 +937,23 @@ void PerimeterGenerator::process()
                 }
 
                 // append thin walls
-                if (!thin_walls.empty()) {
-                    ExtrusionEntityCollection tw = thin_variable_width
-                    (thin_walls, erThinWall, this->ext_perimeter_flow, std::max(ext_perimeter_width/4, scale_t(this->print_config->resolution)));
-
-                    entities.append(tw.entities);
-                    thin_walls.clear();
+                if (!thin_walls_thickpolys.empty()) {
+                    if (this->object_config->thin_walls_merge) {
+                        _merge_thin_walls(entities, thin_walls_thickpolys);
+                    } else {
+                        ExtrusionEntityCollection tw = thin_variable_width
+                            (thin_walls_thickpolys, erThinWall, this->ext_perimeter_flow, std::max(ext_perimeter_width / 4, scale_t(this->print_config->resolution)));
+                        entities.append(tw.entities);
+                    }
+                    thin_walls_thickpolys.clear();
                 }
             } else {
                 if (this->object_config->thin_walls_merge) {
                     ThickPolylines no_thin_walls;
                     entities = this->_traverse_loops(contours.front(), no_thin_walls);
-                    _merge_thin_walls(entities, thin_walls);
+                    _merge_thin_walls(entities, thin_walls_thickpolys);
                 } else {
-                    entities = this->_traverse_loops(contours.front(), thin_walls);
+                    entities = this->_traverse_loops(contours.front(), thin_walls_thickpolys);
                 }
             }
 
@@ -1697,11 +1700,12 @@ void PerimeterGenerator::_merge_thin_walls(ExtrusionEntityCollection &extrusions
             } else {
                 //first add the return path
                 ExtrusionEntityCollection tws_second = tws;
-                tws_second.reverse();
                 change_flow.percent_extrusion = 0.1f;
                 change_flow.use(tws_second);
+                //force reverse
                 for (ExtrusionPath &path : change_flow.paths)
                     path.reverse();
+                std::reverse(change_flow.paths.begin(), change_flow.paths.end());
                 //std::reverse(change_flow.paths.begin(), change_flow.paths.end());
                 searcher.search_result.loop->paths.insert(searcher.search_result.loop->paths.begin() + 1 + searcher.search_result.idx_path,
                     change_flow.paths.begin(), change_flow.paths.end());
