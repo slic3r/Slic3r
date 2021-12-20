@@ -138,7 +138,7 @@ void PreferencesDialog::build()
 		def_combobox_auto_switch_preview.gui_flags = "show_value";
 		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Don't switch"));
 		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Switch when possible"));
-		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Only if on plater"));
+		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Only if on platter"));
 		def_combobox_auto_switch_preview.enum_values.push_back(_u8L("Only when GCode is ready"));
 		if (app_config->get("auto_switch_preview") == "0")
 			def_combobox_auto_switch_preview.set_default_value(new ConfigOptionStrings{ def_combobox_auto_switch_preview.enum_values[0] });
@@ -803,7 +803,7 @@ void PreferencesDialog::create_settings_mode_widget(wxNotebook* tabs)
 #ifndef WIN32
 		+ " " + unstable_warning
 #endif
-		+ "\n* " + _L("Old layout: all windows are in the application, settings are on the top tab bar and the plater choice in on the bottom of the plater view.")
+		+ "\n* " + _L("Old layout: all windows are in the application, settings are on the top tab bar and the platter choice in on the bottom of the platter view.")
 		+ "\n* " + _L("Settings button: all windows are in the application, no tabs: you have to clic on settings gears to switch to settings tabs.")
 		+ "\n* " + _L("Settings window: settings are displayed in their own window. You have to clic on settings gears to show the settings window.")
 	);

@@ -1908,7 +1908,7 @@ void GUI_App::add_config_menu(wxMenuBar *menu)
                 title += " - " + _L("Language selection");
                 wxMessageDialog dialog(nullptr,
                     _L("Switching the language will trigger application restart.\n"
-                        "You will lose content of the plater.") + "\n\n" +
+                        "You will lose content of the platter.") + "\n\n" +
                     _L("Do you want to proceed?"),
                     title,
                     wxICON_QUESTION | wxOK | wxCANCEL);

@@ -66,13 +66,13 @@ void KBShortcutsDialog::fill_shortcuts()
     if (wxGetApp().is_editor()) {
         Shortcuts commands_shortcuts = {
             // File
-            { ctrl + "N", L("New project, clear plater") },
-            { ctrl + "O", L("Open project STL/OBJ/AMF/3MF with config, clear plater") },
+            { ctrl + "N", L("New project, clear platter") },
+            { ctrl + "O", L("Open project STL/OBJ/AMF/3MF with config, clear platter") },
             { ctrl + "S", L("Save project (3mf)") },
             { ctrl + alt + "S", L("Save project as (3mf)") },
             { ctrl + "R", L("(Re)slice") },
             // File>Import
-            { ctrl + "I", L("Import STL/OBJ/AMF/3MF without config, keep plater") },
+            { ctrl + "I", L("Import STL/OBJ/AMF/3MF without config, keep platter") },
             { ctrl + "L", L("Import Config from ini/amf/3mf/gcode") },
             { ctrl + alt + "L", L("Load Config from ini/amf/3mf/gcode and merge") },
             // File>Export
@@ -91,9 +91,9 @@ void KBShortcutsDialog::fill_shortcuts()
             { ctrl + "C", L("Copy to clipboard") },
             { ctrl + "V", L("Paste from clipboard") },
 #ifdef __APPLE__
-            { ctrl + "Shift+" + "R", L("Reload plater from disk") },
+            { ctrl + "Shift+" + "R", L("Reload platter from disk") },
 #else
-            { "F5", L("Reload plater from disk") },
+            { "F5", L("Reload platter from disk") },
 #endif // __APPLE__
             { ctrl + "F", L("Search") },
             // Window
@@ -169,7 +169,7 @@ void KBShortcutsDialog::fill_shortcuts()
 #endif // ENABLE_RENDER_PICKING_PASS
         };
 
-        m_full_shortcuts.push_back({ { _L("Plater"), "" }, plater_shortcuts });
+        m_full_shortcuts.push_back({ { _L("Platter"), "" }, plater_shortcuts });
 
         Shortcuts gizmos_shortcuts = {
             { ctrl, L("All gizmos: Rotate - left mouse button; Pan - right mouse button") },
@@ -187,9 +187,9 @@ void KBShortcutsDialog::fill_shortcuts()
         Shortcuts commands_shortcuts = {
             { ctrl + "O", L("Open a G-code file") },
 #ifdef __APPLE__
-            { ctrl + "Shift+" + "R", L("Reload the plater from disk") },
+            { ctrl + "Shift+" + "R", L("Reload the platter from disk") },
 #else
-            { "F5", L("Reload plater from disk") },
+            { "F5", L("Reload platter from disk") },
 #endif // __APPLE__
         };
 

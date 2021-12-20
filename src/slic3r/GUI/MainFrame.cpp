@@ -428,7 +428,7 @@ void MainFrame::update_layout()
     {
         //layout
         m_plater->Reparent(m_tabpanel);
-        m_tabpanel->InsertPage(0, m_plater, _L("Plater"));
+        m_tabpanel->InsertPage(0, m_plater, _L("Platter"));
         m_main_sizer->Add(m_tabpanel, 1, wxEXPAND);
         update_icon();
         // show
@@ -467,7 +467,7 @@ void MainFrame::update_layout()
         m_tabpanel->Hide();
         m_main_sizer->Add(m_tabpanel, 1, wxEXPAND);
         m_plater_page = new wxPanel(m_tabpanel);
-        m_tabpanel->InsertPage(0, m_plater_page, _L("Plater")); // empty panel just for Plater tab */
+        m_tabpanel->InsertPage(0, m_plater_page, _L("Platter")); // empty panel just for Plater tab */
         update_icon();
         m_plater->Show();
         break;

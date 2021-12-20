@@ -610,7 +610,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Allow only one skirt loop");
     def->category = OptionCategory::output;
     def->tooltip = L("When using 'Complete individual objects', the default behavior is to draw the skirt around each object."
-        " if you prefer to have only one skirt for the whole plater, use this option.");
+        " if you prefer to have only one skirt for the whole platter, use this option.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
@@ -726,7 +726,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("duplicate_distance", coFloat);
     def->label = L("Default distance between objects");
     def->category = OptionCategory::output;
-    def->tooltip = L("Default distance used for the auto-arrange feature of the plater.\nSet to 0 to use the last value instead.");
+    def->tooltip = L("Default distance used for the auto-arrange feature of the platter.\nSet to 0 to use the last value instead.");
     def->sidetext = L("mm");
     def->aliases = { "multiply_distance" };
     def->min = 0;
@@ -1171,7 +1171,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Set this to the clearance radius around your extruder. "
                    "If the extruder is not centered, choose the largest value for safety. "
                    "This setting is used to check for collisions and to display the graphical preview "
-                   "in the plater."
+                   "in the platter."
                    "\nSet zero to disable clearance checking.");
     def->sidetext = L("mm");
     def->min = 0;
@@ -4822,7 +4822,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("z_step", coFloat);
     def->label = L("Z full step");
     def->tooltip = L("Set this to the height moved when your Z motor (or equivalent) turns one step."
-                    "If your motor needs 200 steps to move your head/plater by 1mm, this field should be 1/200 = 0.005."
+                    "If your motor needs 200 steps to move your head/platter by 1mm, this field should be 1/200 = 0.005."
                     "\nNote that the gcode will write the z values with 6 digits after the dot if z_step is set (it's 3 digits if it's disabled)."
                     "\nSet zero to disable.");
     def->cli = "z-step=f";
