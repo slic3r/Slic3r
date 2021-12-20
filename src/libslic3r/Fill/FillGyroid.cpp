@@ -168,8 +168,6 @@ void FillGyroid::_fill_surface_single(
     const double tolerance_old = std::min(this->get_spacing() / 2, FillGyroid::PatternTolerance) / unscaled(scaleFactor);
     const double tolerance_old2 = std::min(this->get_spacing() / 2, FillGyroid::PatternTolerance) * density_adjusted  / this->get_spacing();
     const double tolerance = params.config->get_computed_value("resolution_internal") * density_adjusted / this->get_spacing();
-    std::cout << "gyroid tolerance: " << tolerance_old << " == " << tolerance_old2 << " ? "<< tolerance << "\n";
-    std::cout << "this->get_spacing(): " << this->get_spacing() << " , scaleFactor= " << unscaled(scaleFactor) << " , min(spa, 0.2)= " << std::min(this->get_spacing() / 2, FillGyroid::PatternTolerance) << "\n";
 
     // generate pattern
     Polylines polylines = make_gyroid_waves(
