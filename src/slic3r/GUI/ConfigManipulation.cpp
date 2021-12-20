@@ -319,7 +319,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 {
     bool have_perimeters = config->opt_int("perimeters") > 0;
     for (auto el : { "ensure_vertical_shell_thickness", "external_perimeter_speed", "extra_perimeters", "extra_perimeters_overhangs", "extra_perimeters_odd_layers",
-        "external_perimeters_first", "external_perimeters_vase", "external_perimeter_extrusion_width",
+        "external_perimeters_first", "external_perimeters_vase", "external_perimeter_extrusion_width", "external_perimeter_extrusion_spacing",
         "no_perimeter_unsupported_algo", "only_one_perimeter_top", "overhangs", "overhangs_reverse",
         "perimeter_loop", "perimeter_loop_seam","perimeter_speed",
         "seam_position", "small_perimeter_speed", "small_perimeter_min_length", " small_perimeter_max_length", "spiral_vase",
@@ -375,12 +375,12 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     bool has_solid_infill 		 = has_top_solid_infill || has_bottom_solid_infill || (have_infill && (config->opt_int("solid_infill_every_layers") > 0 || config->opt_float("solid_infill_below_area") > 0));
     // solid_infill_extruder uses the same logic as in Print::extruders()
     for (auto el : { "top_fill_pattern", "bottom_fill_pattern", "solid_fill_pattern", "enforce_full_fill_volume", "external_infill_margin", "bridged_infill_margin",
-        "solid_infill_extruder", "solid_infill_extrusion_width", "solid_infill_speed" })
+        "solid_infill_extruder", "solid_infill_extrusion_width", "solid_infill_extrusion_spacing", "solid_infill_speed" })
         toggle_field(el, has_solid_infill);
 
     toggle_field("infill_first", (has_solid_infill || have_infill));
 
-    for (auto el : { "fill_angle", "fill_angle_increment", "bridge_angle", "infill_extrusion_width",
+    for (auto el : { "fill_angle", "fill_angle_increment", "bridge_angle", "infill_extrusion_width", "infill_extrusion_spacing",
                     "infill_speed" })
         toggle_field(el, have_infill || has_solid_infill);
 
@@ -396,7 +396,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     for (auto el : {"fill_smooth_width, fill_smooth_distribution" })
         toggle_field(el, has_ironing_pattern);
 
-    for (auto el : { "ironing", "top_fill_pattern", "infill_connection_top",  "top_infill_extrusion_width", "top_solid_infill_speed" })
+    for (auto el : { "ironing", "top_fill_pattern", "infill_connection_top",  "top_infill_extrusion_width",  "top_infill_extrusion_spacing", "top_solid_infill_speed" })
         toggle_field(el, has_top_solid_infill);
 
     for (auto el : { "bottom_fill_pattern", "infill_connection_bottom" })
@@ -450,13 +450,27 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
         toggle_field(el, have_support_material && have_support_interface);
     toggle_field("support_material_synchronize_layers", have_support_soluble);
 
-    toggle_field("perimeter_extrusion_width", have_perimeters || have_skirt || have_brim);
+    toggle_field("perimeter_extrusion_width", have_perimeters || have_brim);
+    toggle_field("perimeter_extrusion_spacing", have_perimeters || have_brim);
+    toggle_field("skirt_extrusion_width", have_skirt);
     toggle_field("support_material_extruder", have_support_material || have_skirt);
     toggle_field("support_material_speed", have_support_material || have_brim || have_skirt);
 
+    //for default_extrusion_width/spacing, you need to ahve at least an extrusion_width with 0
+    bool have_default_width = config->option("first_layer_extrusion_width")->getFloat() == 0 ||
+        (config->option("perimeter_extrusion_width")->getFloat() == 0 && (have_perimeters || have_brim)) ||
+        (config->option("external_perimeter_extrusion_width")->getFloat() == 0 && have_perimeters) ||
+        (config->option("infill_extrusion_width")->getFloat() == 0 && (have_infill || has_solid_infill)) ||
+        (config->option("solid_infill_extrusion_width")->getFloat() == 0 && has_solid_infill) ||
+        (config->option("top_infill_extrusion_width")->getFloat() == 0 && has_top_solid_infill) ||
+        (config->option("support_material_extrusion_width")->getFloat() == 0 && have_support_material) ||
+        (config->option("skirt_extrusion_width")->getFloat() == 0 && have_skirt);
+    toggle_field("extrusion_width", have_default_width);
+    toggle_field("extrusion_spacing", have_default_width);
+
     bool has_PP_ironing = has_top_solid_infill && config->opt_bool("ironing");
     for (auto el : { "ironing_type", "ironing_flowrate", "ironing_spacing", "ironing_angle" })
-    	toggle_field(el, has_PP_ironing);
+        toggle_field(el, has_PP_ironing);
 
     bool has_ironing = has_PP_ironing || has_ironing_pattern;
     for (auto el : { "ironing_speed" })
@@ -465,7 +479,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 
     bool have_sequential_printing = config->opt_bool("complete_objects");
     for (auto el : { /*"extruder_clearance_radius", "extruder_clearance_height",*/ "complete_objects_one_skirt",
-		"complete_objects_sort", "complete_objects_one_brim"})
+        "complete_objects_sort", "complete_objects_one_brim"})
         toggle_field(el, have_sequential_printing);
 
     bool have_ooze_prevention = config->opt_bool("ooze_prevention");
