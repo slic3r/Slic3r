@@ -1330,8 +1330,12 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
                     && polyline.width.back() > best_candidate->width[1]) {
                 polyline.width.back() = std::min(polyline.width[polyline.width.size() - 2], best_candidate->width[1]);
             }
-            polyline.points.insert(polyline.points.end(), best_candidate->points.begin() + 1, best_candidate->points.end());
-            polyline.width.insert(polyline.width.end(), best_candidate->width.begin() + 1, best_candidate->width.end());
+            //be far enough
+            int far_idx = 1;
+            while (far_idx < best_candidate->points.size() && polyline.last_point().coincides_with_epsilon(best_candidate->points[far_idx]))
+                far_idx++;
+            polyline.points.insert(polyline.points.end(), best_candidate->points.begin() + far_idx, best_candidate->points.end());
+            polyline.width.insert(polyline.width.end(), best_candidate->width.begin() + far_idx, best_candidate->width.end());
             polyline.endpoints.second = best_candidate->endpoints.second;
             assert(polyline.width.size() == polyline.points.size());
             if (best_idx < i) i--;
@@ -1799,6 +1803,24 @@ MedialAxis::build(ThickPolylines &polylines_out)
         //    pp.erase(pp.begin() + tp_idx);
         //    --tp_idx;
         //}
+        //voronoi problem: can put two consecutive points at the same position. Delete one.
+        for (size_t i = 1; i < tp.points.size()-1; i++) {
+            if (tp.points[i-1].distance_to_square(tp.points[i]) < SCALED_EPSILON) {
+                tp.points.erase(tp.points.begin() + i);
+                tp.width.erase(tp.width.begin() + i);
+                i--;
+            }
+        }
+        //delete the inner one
+        if (tp.points.size()>2 && tp.points[tp.points.size() - 2].distance_to_square(tp.points.back()) < SCALED_EPSILON) {
+            tp.points.erase(tp.points.end() - 2);
+            tp.width.erase(tp.width.end() - 2);
+        }
+        //delete null-length polylines
+        if (tp.length() < SCALED_EPSILON && tp.first_point().coincides_with_epsilon(tp.last_point())) {
+            pp.erase(pp.begin() + tp_idx);
+            --tp_idx;
+        }
     }
     //std::cout << "polyline_from_voronoi\n";
     //{
@@ -2078,8 +2100,11 @@ thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow fl
                     continue;
                 }
             } else if (i > 0 && resolution_internal > line_len + prev_line_len) {
-                ThickLine& prev_line = lines[i - 1];
                 //merge lines?
+                //if it's a loop, merge only if the distance is high enough
+                if (p.first_point() == p.last_point() && p.length() < (line_len + prev_line_len) * 6)
+                    continue;
+                ThickLine& prev_line = lines[i - 1];
                 coordf_t width = prev_line_len * (prev_line.a_width + prev_line.b_width) / 2;
                 width += line_len * (line.a_width + line.b_width) / 2;
                 prev_line.b = line.b;
@@ -2149,6 +2174,7 @@ thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow fl
                     path.height = flow.height;
                 }
             }
+            assert(path.polyline.points.size() > 2 || path.first_point() != path.last_point());
         }
         if (path.polyline.is_valid())
             paths.emplace_back(std::move(path));

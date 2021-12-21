@@ -34,32 +34,27 @@ using coord_t = int64_t;
 
 using coordf_t = double;
 
-//FIXME This epsilon value is used for many non-related purposes:
-// For a threshold of a squared Euclidean distance,
-// for a trheshold in a difference of radians,
-// for a threshold of a cross product of two non-normalized vectors etc.
-static constexpr double EPSILON = 1e-4;
 // Scaling factor for a conversion from coord_t to coordf_t: 10e-6
 // This scaling generates a following fixed point representation with for a 32bit integer:
 // 0..4294mm with 1nm resolution
 // int32_t fits an interval of (-2147.48mm, +2147.48mm)
 // with int64_t we don't have to worry anymore about the size of the int.
 static constexpr double SCALING_FACTOR = 0.000001;
-#ifdef __linux__
-static constexpr double UNSCALING_FACTOR = 1000000;
-#else
-static constexpr double UNSCALING_FACTOR = 1 / SCALING_FACTOR;
-#endif
+static constexpr double UNSCALING_FACTOR = 1000000; // 1 / SCALING_FACTOR;
+
+//FIXME This epsilon value is used for many non-related purposes:
+// For a threshold of a squared Euclidean distance,
+// for a trheshold in a difference of radians,
+// for a threshold of a cross product of two non-normalized vectors etc.
+static constexpr double EPSILON = 1e-4;
+static constexpr coord_t SCALED_EPSILON = 100; // coord_t(EPSILON/ SCALING_FACTOR);
 // RESOLUTION, SCALED_RESOLUTION: Used as an error threshold for a Douglas-Peucker polyline simplification algorithm.
 //#define RESOLUTION 0.0125
 //#define SCALED_RESOLUTION 12500
 //#define SCALED_RESOLUTION (RESOLUTION / SCALING_FACTOR)
 static constexpr coordf_t RESOLUTION = 0.0125;
-#ifdef __linux__
-static constexpr coord_t SCALED_RESOLUTION = 12500;
-#else
-static constexpr coord_t SCALED_RESOLUTION = coord_t(0.0125 * UNSCALING_FACTOR);
-#endif
+static constexpr coord_t SCALED_RESOLUTION = 12500; // coord_t(0.0125 * UNSCALING_FACTOR);
+
 //for creating circles (for brim_ear)
 #define POLY_SIDES 24
 #define PI 3.141592653589793238
@@ -72,7 +67,6 @@ static constexpr double INSET_OVERLAP_TOLERANCE = 0.4;
 //inline coord_t scale_(coordf_t v) { return coord_t(floor(v / SCALING_FACTOR + 0.5f)); }
 #define scale_(val) (coord_t)((val) / SCALING_FACTOR)
 
-#define SCALED_EPSILON scale_(EPSILON)
 
 #define SLIC3R_DEBUG_OUT_PATH_PREFIX "out/"
 
