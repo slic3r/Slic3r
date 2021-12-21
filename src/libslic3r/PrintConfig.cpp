@@ -138,7 +138,7 @@ void PrintConfigDef::init_common_params()
     def = this->add("slice_closing_radius", coFloat);
     def->label = L("Slice gap closing radius");
     def->category = OptionCategory::slicing;
-    def->tooltip = L("Cracks smaller than 2x gap closing radius are being filled during the triangle mesh slicing. "
+    def->tooltip = L("Fill cracks smaller than 2x gap closing radius during the triangle mesh slicing. "
                      "The gap closing operation may reduce the final print resolution, therefore it is advisable to keep the value reasonably low.");
     def->sidetext = L("mm");
     def->min = 0;
@@ -223,7 +223,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Allow empty layers");
     def->full_label = L("Allow empty layers");
     def->category = OptionCategory::slicing;
-    def->tooltip = L("Do not prevent the gcode builder to trigger an exception if a full layer is empty and so the print will have to start from thin air afterward.");
+    def->tooltip = L("Prevent the gcode builder from triggering an exception if a full layer is empty, and allow the print to start from thin air afterward.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(false));
 
@@ -240,7 +240,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Don't avoid crossing on 1st layer");
     def->full_label = L("Don't avoid crossing on 1st layer");
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("Do not use the 'Avoid crossing perimeters' on the first layer.");
+    def->tooltip = L("Disable 'Avoid crossing perimeters' for the first layer.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(true));
 
@@ -249,7 +249,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::perimeter;
     def->tooltip = L("The maximum detour length for avoid crossing perimeters. "
                      "If the detour is longer than this value, avoid crossing perimeters is not applied for this travel path. "
-                     "Detour length could be specified either as an absolute value or as percentage (for example 50%) of a direct travel path.");
+                     "Detour length can be specified either as an absolute value or as percentage (for example 50%) of a direct travel path.");
     def->sidetext = L("mm or % (zero to disable)");
     def->min = 0;
     def->mode = comExpert;
@@ -259,7 +259,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Other layers");
     def->category = OptionCategory::filament;
     def->tooltip = L("Bed temperature for layers after the first one. "
-                   "Set this to zero to disable bed temperature control commands in the output.");
+                   "Set zero to disable bed temperature control commands in the output.");
     def->sidetext = L("°C");
     def->full_label = L("Bed temperature");
     def->sidetext = L("°C");
@@ -997,7 +997,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::speed;
     def->tooltip = L("This separate setting will affect the speed of external perimeters (the visible ones). "
                    "If expressed as percentage (for example: 80%) it will be calculated "
-                   "on the perimeters speed setting above. Set to zero for auto.");
+                   "on the perimeters speed setting above. Set zero for auto.");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "perimeter_speed";
     def->min = 0;
@@ -1355,7 +1355,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::filament;
     def->tooltip = L("Maximum speed allowed for this filament. Limits the maximum "
         "speed of a print to the minimum of the print speed and the filament speed. "
-        "Set to zero for no limit.");
+        "Set zero for no limit.");
     def->sidetext = L("mm/s");
     def->min = 0;
     def->mode = comAdvanced;
@@ -1367,7 +1367,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::filament;
     def->tooltip = L("Maximum volumetric speed allowed for this filament. Limits the maximum volumetric "
         "speed of a print to the minimum of print and filament volumetric speed. "
-        "Set to zero for no limit.");
+        "Set zero for no limit.");
     def->sidetext = L("mm³/s");
     def->min = 0;
     def->mode = comAdvanced;
@@ -1920,7 +1920,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("First layer");
     def->full_label = L("First layer bed temperature");
     def->category = OptionCategory::filament;
-    def->tooltip = L("Heated build plate temperature for the first layer. Set this to zero to disable "
+    def->tooltip = L("Heated build plate temperature for the first layer. Set zero to disable "
                    "bed temperature control commands in the output.");
     def->sidetext = L("°C");
     def->max = 0;
@@ -2020,7 +2020,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("First layer nozzle temperature");
     def->category = OptionCategory::filament;
     def->tooltip = L("Extruder nozzle temperature for first layer. If you want to control temperature manually "
-                   "during print, set this to zero to disable temperature control commands in the output file.");
+                   "during print, set zero to disable temperature control commands in the output file.");
     def->sidetext = L("°C");
     def->min = 0;
     def->max = max_temp;
@@ -2439,7 +2439,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Sparse");
     def->full_label = L("Sparse infill speed");
     def->category = OptionCategory::speed;
-    def->tooltip = L("Speed for printing the internal fill. Set to zero for auto.");
+    def->tooltip = L("Speed for printing the internal fill. Set zero for auto.");
     def->sidetext = L("mm/s");
     def->aliases = { "print_feed_rate", "infill_feed_rate" };
     def->min = 0;
@@ -2836,7 +2836,10 @@ void PrintConfigDef::init_fff_params()
     def = this->add("max_speed_reduction", coPercents);
     def->label = L("Max speed reduction");
     def->category = OptionCategory::speed;
-    def->tooltip = L("Set to 90% if you don't want the speed to be reduced by more than 90%.");
+    def->tooltip = L("This setting control by how much the speed can be reduced to increase the layer time."
+        " It's a maximum reduction, so a lower value makes the minimum speed higher."
+        " Set to 90% if you don't want the speed to go below 10% of the current speed."
+        "\nSet zero to disable");
     def->sidetext = L("%");
     def->min = 0;
     def->max = 100;
@@ -3242,7 +3245,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Internal");
     def->full_label = L("Internal perimeters speed");
     def->category = OptionCategory::speed;
-    def->tooltip = L("Speed for perimeters (contours, aka vertical shells). Set to zero for auto.");
+    def->tooltip = L("Speed for perimeters (contours, aka vertical shells). Set zero for auto.");
     def->sidetext = L("mm/s");
     def->aliases = { "perimeter_feed_rate" };
     def->min = 0;
@@ -3622,7 +3625,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("skirt_distance", coFloat);
     def->label = L("Distance from object");
     def->category = OptionCategory::skirtBrim;
-    def->tooltip = L("Distance between skirt and object(s). Set this to zero to attach the skirt "
+    def->tooltip = L("Distance between skirt and object(s). Set zero to attach the skirt "
                    "to the object(s) and get a brim for better adhesion.");
     def->sidetext = L("mm");
     def->min = 0;
@@ -3666,7 +3669,7 @@ void PrintConfigDef::init_fff_params()
     def->full_label = L("Skirt Loops");
     def->category = OptionCategory::skirtBrim;
     def->tooltip = L("Number of loops for the skirt. If the Minimum Extrusion Length option is set, "
-                   "the number of loops might be greater than the one configured here. Set this to zero "
+                   "the number of loops might be greater than the one configured here. Set zero "
                    "to disable skirt completely.");
     def->min = 0;
     def->mode = comSimple;
@@ -3691,7 +3694,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::speed;
     def->tooltip = L("This separate setting will affect the speed of perimeters having radius <= 6.5mm "
                    "(usually holes). If expressed as percentage (for example: 80%) it will be calculated "
-                   "on the perimeters speed setting above. Set to zero for auto.");
+                   "on the perimeters speed setting above. Set zero for auto.");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "perimeter_speed";
     def->min = 0;
@@ -3851,7 +3854,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::speed;
     def->tooltip = L("Speed for printing solid regions (top/bottom/internal horizontal shells). "
                    "This can be expressed as a percentage (for example: 80%) over the default infill speed."
-                   " Set to zero for auto.");
+                   " Set zero for auto.");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "infill_speed";
     def->aliases = { "solid_infill_feed_rate" };
@@ -4008,14 +4011,16 @@ void PrintConfigDef::init_fff_params()
     def->sidetext = L("perimeters");
     def->sidetext_width = 20;
     def->category = OptionCategory::perimeter;
-    def->tooltip = L("When you have a medium/hight number of top/bottom solid layers, and a low/medium of perimeters,"
-        " then it have to put some solid infill inside the part to have enough solid layers."
-        "\nBy setting this to something higher than 0, you can remove this 'inside filling'."
-        " This number allow to keep some if there is a low number of perimeter over the void."
-        "\nIf this setting is equal or higher than the top/bottom solid layer count, it won't evict anything."
-        "\nIf this setting is set to 1, it will evict all solid fill are are only over perimeters."
+    def->tooltip = L("In sloping areas, when you have a number of top / bottom solid layers and few perimeters, "
+        " it may be necessary to put some solid infill above/below the perimeters to fulfill the top/bottom layers criteria."
+        "\nBy setting this to something higher than 0, you can control this behaviour, which might be desirable if "
+        "\nundesirable solid infill is being generated on slopes."
+        "\nThe number set here indicates the number of layers between the inside of the part and the air"
+        " at and beyond which solid infill should no longer be added above/below. If this setting is equal or higher than "
+        " the top/bottom solid layer count, it won't do anything. If this setting is set to 1, it will evict "
+        " all solid fill above/below perimeters. "
         "\nSet zero to disable."
-        "\n!! ensure_vertical_shell_thickness may be erased by this setting !! You may want to deactivate at least one of the two.");
+        "\n!! ensure_vertical_shell_thickness may be erased by this setting !!.");
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(2));
@@ -4267,7 +4272,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Support material will not be generated for overhangs whose slope angle "
                    "(90° = vertical) is above the given threshold. In other words, this value "
                    "represent the most horizontal slope (measured from the horizontal plane) "
-                   "that you can print without support material. Set to zero for automatic detection "
+                   "that you can print without support material. Set zero for automatic detection "
                    "(recommended).");
     def->sidetext = L("°");
     def->min = 0;
@@ -4287,7 +4292,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Other layers");
     def->full_label = L("Temperature");
     def->category = OptionCategory::filament;
-    def->tooltip = L("Extruder nozzle temperature for layers after the first one. Set this to zero to disable "
+    def->tooltip = L("Extruder nozzle temperature for layers after the first one. Set zero to disable "
                    "temperature control commands in the output G-code.");
     def->sidetext = L("°C");
     def->full_label = L("Nozzle temperature");
@@ -4464,7 +4469,7 @@ void PrintConfigDef::init_fff_params()
                    "external layers and not to their internal solid layers). You may want "
                    "to slow down this to get a nicer surface finish. This can be expressed "
                    "as a percentage (for example: 80%) over the solid infill speed above. "
-                   "Set to zero for auto.");
+                   "Set zero for auto.");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "solid_infill_speed";
     def->min = 0;
@@ -5527,7 +5532,7 @@ void PrintConfigDef::init_sla_params()
 
     def = this->add("pad_wall_height", coFloat);
     def->label = L("Pad wall height");
-    def->tooltip = L("Defines the pad cavity depth. Set to zero to disable the cavity. "
+    def->tooltip = L("Defines the pad cavity depth. Set zero to disable the cavity. "
                      "Be careful when enabling this feature, as some resins may "
                      "produce an extreme suction effect inside the cavity, "
                      "which makes peeling the print off the vat foil difficult.");
