@@ -652,6 +652,8 @@ namespace client
         bool                     just_boolean_expression = false;
         std::string              error_message;
 
+        static std::map<t_config_option_key, std::unique_ptr<ConfigOption>> checked_vars;
+
         // Table to translate symbol tag to a human readable error message.
         static std::map<std::string, std::string> tag_to_error_message;
 
@@ -666,6 +668,11 @@ namespace client
                 opt = config->option(opt_key);
             if (opt == nullptr && external_config != nullptr)
                 opt = external_config->option(opt_key);
+            if (opt == nullptr) {
+                auto it = MyContext::checked_vars.find(opt_key);
+                if (it != MyContext::checked_vars.end())
+                    opt = it->second.get();
+            }
             return opt;
         }
 
@@ -825,11 +832,51 @@ namespace client
             boost::iterator_range<Iterator> &opt_key,
             OptWithPos<Iterator>            &output)
         {
-            const ConfigOption *opt = ctx->resolve_symbol(std::string(opt_key.begin(), opt_key.end()));
+            std::string str_key = std::string(opt_key.begin(), opt_key.end());
+            const ConfigOption *opt = ctx->resolve_symbol(str_key);
             if (opt == nullptr)
                 ctx->throw_exception("Not a variable name", opt_key);
             output.opt = opt;
             output.it_range = opt_key;
+        }
+        
+        // function to check if a var exist & add a dummy var if not
+        template <typename Iterator>
+        static void check_variable(
+            const MyContext* ctx,
+            boost::iterator_range<Iterator>& opt_key,
+            Iterator& end_pos,
+            expr<Iterator>& out,
+            ConfigOption* default_val = nullptr)
+        {
+            t_config_option_key key = std::string(opt_key.begin(), opt_key.end());
+            const ConfigOption* opt = nullptr;
+            if (ctx->config_override != nullptr)
+                opt = ctx->config_override->option(key);
+            if (opt == nullptr)
+                opt = ctx->config->option(key);
+            if (opt == nullptr && ctx->external_config != nullptr)
+                opt = ctx->external_config->option(key);
+            if (opt == nullptr) {
+                std::unique_ptr<ConfigOption> ppt;
+                if(default_val == nullptr)
+                    ppt = std::unique_ptr<ConfigOption>(new ConfigOptionBool(false));
+                else
+                    ppt = std::unique_ptr<ConfigOption>(default_val);
+                // set flag to say "it's a var that isn't here, please ignore it"
+                ppt->flags |= ConfigOption::FCO_PLACEHOLDER_TEMP;
+                if (MyContext::checked_vars.find(key) != MyContext::checked_vars.end()) {
+                    if (default_val != nullptr) {
+                        // erase previous value
+                        MyContext::checked_vars[key] = std::move(ppt);
+                    }
+                } else {
+                    // put the var
+                    MyContext::checked_vars.emplace(std::move(key), std::move(ppt));
+                }
+            }
+            //return
+            out = expr<Iterator>(opt != nullptr, out.it_range.begin(), end_pos);
         }
 
         template <typename Iterator>
@@ -944,8 +991,11 @@ namespace client
             Iterator                         it_end,
             expr<Iterator>                  &output)
         {
-            if (opt.opt->is_scalar())
+            if (opt.opt->is_scalar()) {
+                if (0 != (opt.opt->flags & ConfigOption::FCO_PLACEHOLDER_TEMP)) // fake var, from checked_vars
+                    return scalar_variable_reference(ctx, opt, output);
                 ctx->throw_exception("Referencing a scalar variable when vector is expected", opt.it_range);
+            }
             const ConfigOptionVectorBase *vec = static_cast<const ConfigOptionVectorBase*>(opt.opt);
             if (vec->empty())
                 ctx->throw_exception("Indexing an empty vector variable", opt.it_range);
@@ -1064,6 +1114,7 @@ namespace client
         { "variable_reference",         "Expecting a variable reference."},
         { "regular_expression",         "Expecting a regular expression."}
     };
+    std::map<t_config_option_key, std::unique_ptr<ConfigOption>> MyContext::checked_vars = {};
 
     // For debugging the boost::spirit parsers. Print out the string enclosed in it_range.
     template<typename Iterator>
@@ -1324,6 +1375,15 @@ namespace client
                         { out = value.unary_not(out.it_range.begin()); }
                 static void to_int(expr<Iterator> &value, expr<Iterator> &out)
                         { out = value.unary_integer(out.it_range.begin()); }
+                //function for default keyword
+                static void default_bool_(bool &value, const MyContext* ctx, boost::iterator_range<Iterator>& opt_key, Iterator& end_pos, expr<Iterator>& out)
+                        { MyContext::check_variable<Iterator>(ctx, opt_key, end_pos, out, new ConfigOptionBool(value)); }
+                static void default_int_(int &value, const MyContext* ctx, boost::iterator_range<Iterator>& opt_key, Iterator& end_pos, expr<Iterator>& out)
+                        { MyContext::check_variable<Iterator>(ctx, opt_key, end_pos, out, new ConfigOptionInt(value)); }
+                static void default_double_(double &value, const MyContext* ctx, boost::iterator_range<Iterator>& opt_key, Iterator& end_pos, expr<Iterator>& out)
+                        { MyContext::check_variable<Iterator>(ctx, opt_key, end_pos, out, new ConfigOptionFloat(value)); }
+                static void default_string_(boost::iterator_range<Iterator>& it_range, const MyContext* ctx, boost::iterator_range<Iterator>& opt_key, Iterator& end_pos, expr<Iterator>& out)
+                        { MyContext::check_variable<Iterator>(ctx, opt_key, end_pos, out, new ConfigOptionString(std::string(it_range.begin() + 1, it_range.end() - 1))); }
             };
             unary_expression = iter_pos[px::bind(&FactorActions::set_start_pos, _1, _val)] >> (
                     scalar_variable_reference(_r1)                  [ _val = _1 ]
@@ -1338,6 +1398,15 @@ namespace client
                 |   (kw["random"] > '(' > conditional_expression(_r1) [_val = _1] > ',' > conditional_expression(_r1) > ')') 
                                                                     [ px::bind(&MyContext::random<Iterator>, _r1, _val, _2) ]
                 |   (kw["int"] > '(' > unary_expression(_r1) > ')') [ px::bind(&FactorActions::to_int,  _1,     _val) ]
+                |   (kw["exists"] > '('  > identifier > ')' > iter_pos)        [ px::bind(&MyContext::check_variable<Iterator>, _r1, _1, _2, _val, nullptr) ]
+                |   (kw["default"] > '(' > identifier > ',' > strict_double > ')' > iter_pos)
+                                                                    [px::bind(&FactorActions::default_double_, _2, _r1, _1, _3, _val)]
+                |   (kw["default"] > '(' > identifier > ',' > int_ > ')' > iter_pos)
+                                                                    [px::bind(&FactorActions::default_int_, _2, _r1, _1, _3, _val)]
+                |   (kw["default"] > '('  > identifier > ',' > kw[bool_] > ')' > iter_pos)
+                                                                    [ px::bind(&FactorActions::default_bool_, _2, _r1, _1, _3, _val) ]
+                |   (kw["default"] > '(' > identifier > ',' > raw[lexeme['"' > *((utf8char - char_('\\') - char_('"')) | ('\\' > char_)) > '"']] > ')' > iter_pos)
+                                                                    [px::bind(&FactorActions::default_string_, _2, _r1, _1, _3, _val)]
                 |   (strict_double > iter_pos)                      [ px::bind(&FactorActions::double_, _1, _2, _val) ]
                 |   (int_      > iter_pos)                          [ px::bind(&FactorActions::int_,    _1, _2, _val) ]
                 |   (kw[bool_] > iter_pos)                          [ px::bind(&FactorActions::bool_,   _1, _2, _val) ]
@@ -1376,7 +1445,9 @@ namespace client
                 ("random")
                 ("not")
                 ("or")
-                ("true");
+                ("true")
+                ("exists")
+                ("default");
 
             if (0) {
                 debug(start);

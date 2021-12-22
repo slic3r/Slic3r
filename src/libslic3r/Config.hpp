@@ -305,6 +305,7 @@ public:
     enum FlagsConfigOption : uint32_t {
         FCO_PHONY = 1,
         FCO_EXTRUDER_ARRAY = 1 << 1,
+        FCO_PLACEHOLDER_TEMP = 1 << 2,
     };
 
     ConfigOption() : flags(uint32_t(0)) {}
