@@ -3382,6 +3382,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
                     prev_point = current_point;
                     current_point = pt;
                     gcode += m_writer.travel_to_xy(this->point_to_gcode(pt), 0.0, config().gcode_comments ? "; extra wipe" : "");
+                    this->set_last_pos(pt);
                 }
             }
         }
@@ -3417,6 +3418,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         pt.rotate(angle, current_point);
         // generate the travel move
         gcode += m_writer.travel_to_xy(this->point_to_gcode(pt), 0.0, "move inwards before travel");
+        this->set_last_pos(pt);
         gcode += ";" + GCodeProcessor::Wipe_End_Tag + "\n";
 
         // also shift the wipe on retract
@@ -3439,6 +3441,25 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
                         best_poly_idx = poly_idx;
                         best_pt_idx = pt_idx;
     }
+                }
+            }
+            if (best_sqr_dist == nd * nd * 2) {
+                //try to find an edge
+                for (size_t poly_idx = 0; poly_idx < polys.size(); poly_idx++) {
+                    Polygon& poly = polys[poly_idx];
+                    if (poly.is_clockwise() ^ original_polygon.is_clockwise())
+                        poly.reverse();
+                    poly.points.push_back(poly.points.front());
+                    for (size_t pt_idx = 0; pt_idx < poly.points.size()-1; pt_idx++) {
+                        if (Line{ poly.points[pt_idx], poly.points[pt_idx + 1] }.distance_to_squared(pt) < best_sqr_dist) {
+                            poly.points.insert(poly.points.begin() + pt_idx + 1, pt);
+                            best_sqr_dist = 0;
+                            best_poly_idx = poly_idx;
+                            best_pt_idx = pt_idx + 1;
+                            poly.points.erase(poly.points.end() - 1);
+                            break;
+                        }
+                    }
                 }
             }
             if (best_sqr_dist == nd * nd * 2) {
@@ -4228,40 +4249,49 @@ Polyline GCode::travel_to(std::string &gcode, const Point &point, ExtrusionRole 
         this->origin in order to get G-code coordinates.  */
     Polyline travel { this->last_pos(), point };
 
-    // check / compute avoid_crossing_perimeters
-    bool will_cross_perimeter = this->can_cross_perimeter(travel);
     // check whether wipe could be disabled without causing visible stringing
     bool could_be_wipe_disabled = false;
+
+    //can use the avoid crossing algo?
+    bool can_avoid_cross_peri = m_config.avoid_crossing_perimeters
+        && !m_avoid_crossing_perimeters.disabled_once()
+        && m_avoid_crossing_perimeters.is_init()
+        && !(m_config.avoid_crossing_not_first_layer && this->on_first_layer());
+
+    // check / compute avoid_crossing_perimeters
+    bool will_cross_perimeter = this->can_cross_perimeter(travel, can_avoid_cross_peri);
 
     // if a retraction would be needed (with a low min_dist threshold), try to use avoid_crossing_perimeters to plan a
     // multi-hop travel path inside the configuration space
     if (will_cross_perimeter && this->needs_retraction(travel, role, scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0.4)) * 3)
-        && m_config.avoid_crossing_perimeters
-        && ! m_avoid_crossing_perimeters.disabled_once()
-        && m_avoid_crossing_perimeters.is_init()
-        && !(m_config.avoid_crossing_not_first_layer && this->on_first_layer())) {
+        && can_avoid_cross_peri) {
         travel = m_avoid_crossing_perimeters.travel_to(*this, point, &could_be_wipe_disabled);
     }
+    if(can_avoid_cross_peri)
+        will_cross_perimeter = this->can_cross_perimeter(travel, false);
 
     // check whether a straight travel move would need retraction
     bool needs_retraction = this->needs_retraction(travel, role);
+    if (m_config.only_retract_when_crossing_perimeters)
+        needs_retraction = needs_retraction && will_cross_perimeter;
 
     // Re-allow avoid_crossing_perimeters for the next travel moves
     m_avoid_crossing_perimeters.reset_once_modifiers();
 
     // generate G-code for the travel move
     if (needs_retraction) {
-        if (m_config.avoid_crossing_perimeters && could_be_wipe_disabled)
+        if (m_config.avoid_crossing_perimeters && could_be_wipe_disabled && EXTRUDER_CONFIG_WITH_DEFAULT(wipe_only_crossing, true))
             m_wipe.reset_path();
 
         Point last_post_before_retract = this->last_pos();
         gcode += this->retract();
         // When "Wipe while retracting" is enabled, then extruder moves to another position, and travel from this position can cross perimeters.
-        // Because of it, it is necessary to call avoid crossing perimeters for the path between previous last_post and last_post after calling retraction()
-        if (last_post_before_retract != this->last_pos() && m_config.avoid_crossing_perimeters) {
-            Polyline retract_travel = m_avoid_crossing_perimeters.travel_to(*this, last_post_before_retract);
-            append(retract_travel.points, travel.points);
-            travel = std::move(retract_travel);
+        if (last_post_before_retract != this->last_pos() && can_avoid_cross_peri) {
+            // Is the distance is short enough to just shortcut it?
+            if (last_post_before_retract.distance_to(this->last_pos()) > scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0.4)) * 2) {
+                // Because of it, it is necessary to redo the thing
+                travel = m_avoid_crossing_perimeters.travel_to(*this, point);
+            }
         }
     } else {
         // Reset the wipe path when traveling, so one would not wipe along an old path.
@@ -4369,7 +4399,7 @@ bool GCode::needs_retraction(const Polyline& travel, ExtrusionRole role /*=erNon
     return true;
 }
 
-bool GCode::can_cross_perimeter(const Polyline& travel)
+bool GCode::can_cross_perimeter(const Polyline& travel, bool offset)
 {
     if(m_layer != nullptr)
     if ( (m_config.only_retract_when_crossing_perimeters && m_config.fill_density.value > 0) || m_config.avoid_crossing_perimeters)
@@ -4388,13 +4418,13 @@ bool GCode::can_cross_perimeter(const Polyline& travel)
         //if (inside) {
             //contained inside at least one bb
             //construct m_layer_slices_offseted if needed
-            if (m_layer_slices_offseted.layer != m_layer) {
+            if (m_layer_slices_offseted.layer != m_layer && offset) {
                 m_layer_slices_offseted.layer = m_layer;
                 m_layer_slices_offseted.diameter = scale_t(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0.4));
-                m_layer_slices_offseted.slices = offset_ex(m_layer->lslices, - m_layer_slices_offseted.diameter * 1.5);
+                m_layer_slices_offseted.slices = offset_ex(m_layer->lslices, -m_layer_slices_offseted.diameter * 1.5f);
             }
             // test if a expoly contains the entire travel
-            for (const ExPolygon &poly : m_layer_slices_offseted.slices)
+            for (const ExPolygon &poly : offset ? m_layer_slices_offseted.slices : m_layer->lslices)
                 if (poly.contains(travel)) {
                     return false;
                 }
@@ -4427,6 +4457,8 @@ std::string GCode::retract(bool toolchange)
         methods even if we performed wipe, since this will ensure the entire retraction
         length is honored in case wipe path was too short.  */
     gcode += toolchange ? m_writer.retract_for_toolchange() : m_writer.retract();
+
+    //check if need to lift
     bool need_lift = !m_writer.tool_is_extruder() || toolchange 
         || (BOOL_EXTRUDER_CONFIG(retract_lift_first_layer) && m_config.print_retract_lift.value != 0 && this->m_layer_index == 0) 
         || this->m_writer.get_extra_lift() > 0;

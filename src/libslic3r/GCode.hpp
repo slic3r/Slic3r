@@ -318,7 +318,7 @@ private:
 
     Polyline        travel_to(std::string& gcode, const Point &point, ExtrusionRole role);
     void            write_travel_to(std::string& gcode, const Polyline& travel, std::string comment);
-    bool            can_cross_perimeter(const Polyline& travel);
+    bool            can_cross_perimeter(const Polyline& travel, bool offset);
     bool            needs_retraction(const Polyline& travel, ExtrusionRole role = erNone, coordf_t max_min_dist = 0);
     std::string     retract(bool toolchange = false);
     std::string     unretract() { return m_writer.unlift() + m_writer.unretract(); }

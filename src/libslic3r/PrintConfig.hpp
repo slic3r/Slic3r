@@ -1177,6 +1177,7 @@ public:
     ConfigOptionFloat               wipe_advanced_multiplier;
     ConfigOptionFloats              wipe_extra_perimeter;
     ConfigOptionEnum<WipeAlgo>      wipe_advanced_algo;
+    ConfigOptionBools               wipe_only_crossing;
     ConfigOptionFloats              wipe_speed;
     ConfigOptionFloat               z_step;
     ConfigOptionString              color_change_gcode;
@@ -1294,6 +1295,7 @@ protected:
         OPT_PTR(wipe_advanced_multiplier);
         OPT_PTR(wipe_advanced_algo);
         OPT_PTR(wipe_extra_perimeter);
+        OPT_PTR(wipe_only_crossing);
         OPT_PTR(wipe_speed);
         OPT_PTR(z_step);
         OPT_PTR(color_change_gcode);

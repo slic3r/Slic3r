@@ -4579,6 +4579,14 @@ void PrintConfigDef::init_fff_params()
     def->is_vector_extruder = true;
     def->set_default_value(new ConfigOptionBools{ false });
 
+    def = this->add("wipe_only_crossing", coBools);
+    def->label = L("Wipe only when crossing perimeters");
+    def->category = OptionCategory::extruders;
+    def->tooltip = L("Don't wipe when you don't cross a perimeter.");
+    def->mode = comAdvanced;
+    def->is_vector_extruder = true;
+    def->set_default_value(new ConfigOptionBools{ true });
+
     def = this->add("wipe_speed", coFloats);
     def->label = L("Wipe speed");
     def->category = OptionCategory::extruders;
@@ -4843,7 +4851,7 @@ void PrintConfigDef::init_fff_params()
         "retract_length", "retract_lift", "retract_lift_above", "retract_lift_below", "retract_speed", "deretract_speed", "retract_restart_extra", "retract_before_travel",
         "wipe_extra_perimeter", "wipe_speed",
         // bools
-        "retract_layer_change", "wipe",
+        "retract_layer_change", "wipe", "wipe_only_crossing",
         // percents
         "retract_before_wipe",
         // floatsOrPercents
@@ -4896,6 +4904,7 @@ void PrintConfigDef::init_extruder_option_keys()
         "tool_name",
         "wipe",
 		"wipe_extra_perimeter",
+        "wipe_only_crossing",
         "wipe_speed",
     };
 
@@ -4913,6 +4922,7 @@ void PrintConfigDef::init_extruder_option_keys()
         "seam_gap",
         "wipe",
         "wipe_extra_perimeter",
+        "wipe_only_crossing",
         "wipe_speed",
     };
     assert(std::is_sorted(m_extruder_retract_keys.begin(), m_extruder_retract_keys.end()));
@@ -6112,6 +6122,7 @@ std::unordered_set<std::string> prusa_export_to_remove_keys = {
 "wipe_advanced_nozzle_melted_volume",
 "wipe_advanced",
 "wipe_extra_perimeter",
+"wipe_only_crossing",
 "wipe_speed",
 "wipe_tower_brim",
 "xy_inner_size_compensation",
