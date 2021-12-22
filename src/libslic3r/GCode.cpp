@@ -3339,12 +3339,16 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         Point current_point = paths.front().first_point();
         Point next_point = paths.front().polyline.points[1];  // second point
 
+        gcode += ";" + GCodeProcessor::Wipe_Start_Tag + "\n";
         //extra wipe before the little move.
         if (EXTRUDER_CONFIG_WITH_DEFAULT(wipe_extra_perimeter, 0) > 0) {
             coordf_t wipe_dist = scale_(EXTRUDER_CONFIG_WITH_DEFAULT(wipe_extra_perimeter,0));
             ExtrusionPaths paths_wipe;
+            m_wipe.reset_path();
             for (int i = 0; i < paths.size(); i++) {
                 ExtrusionPath& path = paths[i];
+                if (wipe_dist > 0) {
+                    //first, we use the polyline for wipe_extra_perimeter
                 if (path.length() < wipe_dist) {
                     wipe_dist -= path.length();
                     paths_wipe.push_back(path);
@@ -3363,8 +3367,14 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
                     } else {
                         next_point = paths[0].first_point();
                     }
-                    break;
+                        m_wipe.path.append(path.polyline);
+                        m_wipe.path.clip_start(wipe_dist);
+                        wipe_dist -= path.length();
                 }
+                } else {
+                    //then, it's stored for the wipe on retract
+                    m_wipe.path.append(path.polyline);
+            }
             }
             //move
             for (ExtrusionPath& path : paths_wipe) {
@@ -3399,7 +3409,7 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         Vec2d  current_pos = current_point.cast<double>();
         Vec2d  next_pos = next_point.cast<double>();
         Vec2d  vec_dist  = next_pos - current_pos;
-        double nd = scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter,0));
+        const coordf_t nd = scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter,0));
         double l2 = vec_dist.squaredNorm();
         // Shift by no more than a nozzle diameter.
         //FIXME Hiding the seams will not work nicely for very densely discretized contours!
@@ -3407,6 +3417,45 @@ std::string GCode::extrude_loop(const ExtrusionLoop &original_loop, const std::s
         pt.rotate(angle, current_point);
         // generate the travel move
         gcode += m_writer.travel_to_xy(this->point_to_gcode(pt), 0.0, "move inwards before travel");
+        gcode += ";" + GCodeProcessor::Wipe_End_Tag + "\n";
+
+        // also shift the wipe on retract
+        if (m_wipe.enable) {
+            current_pos = pt.cast<double>();
+            //go to the inside (use clipper for easy shift)
+            Polygon original_polygon = original_loop.polygon();
+            Polygons polys = offset(original_polygon, (original_polygon.is_clockwise()?1:-1) * nd / 2);
+            //find nearest point
+            size_t best_poly_idx = 0;
+            size_t best_pt_idx = 0;
+            coordf_t best_sqr_dist = nd*nd*2;
+            for (size_t poly_idx = 0; poly_idx < polys.size(); poly_idx++) {
+                Polygon& poly = polys[poly_idx];
+                if (poly.is_clockwise() ^ original_polygon.is_clockwise())
+                    poly.reverse();
+                for (size_t pt_idx = 0; pt_idx < poly.points.size(); pt_idx++) {
+                    if (poly.points[pt_idx].distance_to_square(pt) < best_sqr_dist) {
+                        best_sqr_dist = poly.points[pt_idx].distance_to_square(pt);
+                        best_poly_idx = poly_idx;
+                        best_pt_idx = pt_idx;
+    }
+                }
+            }
+            if (best_sqr_dist == nd * nd * 2) {
+                //can't find a path, use the old one
+                //BOOST_LOG_TRIVIAL(warning) << "Warn: can't find a proper path for wipe on retract. Layer " << m_layer_index << ", pos " << this->point_to_gcode(pt).x() << " : " << this->point_to_gcode(pt).y() << " !";
+            } else {
+                m_wipe.reset_path();
+                //get the points from here
+                Polygon& poly = polys[best_poly_idx];
+                for (size_t pt_idx = best_pt_idx; pt_idx < poly.points.size(); pt_idx++) {
+                    m_wipe.path.append(poly.points[pt_idx]);
+                }
+                for (size_t pt_idx = 0; pt_idx < best_pt_idx; pt_idx++) {
+                    m_wipe.path.append(poly.points[pt_idx]);
+                }
+            }
+        }
     }
 
     return gcode;
