@@ -651,6 +651,8 @@ MedialAxis::remove_bits(ThickPolylines &pp)
         ///reorder, in case of change
         std::sort(pp.begin(), pp.end(), [](const ThickPolyline & a, const ThickPolyline & b) { return a.length() < b.length(); });
     }
+
+    //TODO: check if there is a U-turn (almost 180° direction change) : remove it.
 }
 
 void
@@ -1492,6 +1494,40 @@ MedialAxis::remove_too_short_polylines(ThickPolylines& pp, const coord_t min_siz
         }
         if (changes) concatThickPolylines(pp);
     }
+
+    //remove points too near each other
+    changes = true;
+    while (changes) {
+        changes = false;
+
+        coordf_t shortest_size = (coordf_t)min_size;
+        size_t shortest_idx = -1;
+        for (size_t polyidx = 0; polyidx < pp.size(); ++polyidx) {
+            ThickPolyline& tp = pp[polyidx];
+            for (size_t pt_idx = 1; pt_idx < tp.points.size() - 1; pt_idx++) {
+                if (tp.points[pt_idx - 1].coincides_with_epsilon(tp.points[pt_idx])) {
+                    tp.points.erase(tp.points.begin() + pt_idx);
+                    tp.width.erase(tp.width.begin() + pt_idx);
+                    pt_idx--;
+                    changes = true;
+                }
+            }
+            //check last segment
+            if (tp.points.size() > 2 && tp.points[tp.points.size() - 2].coincides_with_epsilon(tp.points.back())) {
+                tp.points.erase(tp.points.end() - 2);
+                tp.width.erase(tp.width.end() - 2);
+                changes = true;
+            }
+            //delete null-length polylines
+            if (tp.length() < SCALED_EPSILON && tp.first_point().coincides_with_epsilon(tp.last_point())) {
+                pp.erase(pp.begin() + polyidx);
+                --polyidx;
+                changes = true;
+            }
+        }
+        if (changes) concatThickPolylines(pp);
+    }
+
 }
 
 void
@@ -2037,7 +2073,7 @@ thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow fl
     // variable extrusion within a single move; this value shall only affect the amount
     // of segments, and any pruning shall be performed before we apply this tolerance
     const coord_t tolerance = flow.scaled_width() / 10;//scale_(0.05);
-    
+
     ExtrusionEntityCollection coll;
     for (const ThickPolyline &p : polylines) {
         ExtrusionPaths paths;
@@ -2052,8 +2088,8 @@ thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow fl
             const coordf_t prev_line_len = saved_line_len;
             saved_line_len = line_len;
 
-            assert(line.a_width >= 0);
-            assert(line.b_width >= 0);
+            assert(line.a_width >= 0 && !std::isnan(line.a_width));
+            assert(line.b_width >= 0 && !std::isnan(line.b_width));
             coord_t thickness_delta = std::abs(line.a_width - line.b_width);
 
             // split lines ?
@@ -2108,7 +2144,16 @@ thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow fl
                 coordf_t width = prev_line_len * (prev_line.a_width + prev_line.b_width) / 2;
                 width += line_len * (line.a_width + line.b_width) / 2;
                 prev_line.b = line.b;
-                coordf_t new_length = prev_line.length();
+                const coordf_t new_length = prev_line.length();
+                if (new_length < SCALED_EPSILON) {
+                    // too short, remove it and restart
+                    if (i > 1) {
+                        line.a = lines[i - 2].b;
+                    }
+                    lines.erase(lines.begin() + i-1);
+                    i-=2;
+                    continue;
+                }
                 width /= new_length;
                 prev_line.a_width = width;
                 prev_line.b_width = width;
@@ -2131,7 +2176,7 @@ thin_variable_width(const ThickPolylines &polylines, ExtrusionRole role, Flow fl
             //  but we can't extrude with a negative spacing, so we have to gradually fall back to spacing if the width is too small.
 
             // default: extrude a thin wall that doesn't go outside of the specified width.
-            double wanted_width = unscaled(line.a_width);
+            coordf_t wanted_width = unscaled(line.a_width);
             if (role == erGapFill) {
                 // Convert from spacing to extrusion width based on the extrusion model
                 // of a square extrusion ended with semi circles.
