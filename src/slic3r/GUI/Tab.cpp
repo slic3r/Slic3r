@@ -2348,7 +2348,7 @@ void TabFilament::add_filament_overrides_page()
                                         "filament_retract_layer_change",
                                         "filament_seam_gap",
                                         "filament_wipe",
-                                        "filament_wipe_extra_perimeter",
+                                        "filament_wipe_only_crossing",
                                         "filament_wipe_speed",
                                         "filament_wipe_extra_perimeter"
                                      })
@@ -2378,7 +2378,7 @@ void TabFilament::update_filament_overrides_page()
                                             "filament_retract_layer_change",
                                             "filament_seam_gap",
                                             "filament_wipe",
-                                            "filament_wipe_extra_perimeter",
+                                            "filament_wipe_only_crossing",
                                             "filament_wipe_speed",
                                             "filament_wipe_extra_perimeter"
                                         };
