@@ -143,12 +143,10 @@ OBJ::read(std::string input_file, Model* model)
             ));
         }
         
-        if (points.size() > 0) {
-          TriangleMesh mesh(points, facets);
-          mesh.check_topology();
-          ModelVolume* volume = object->add_volume(mesh);
-          volume->name        = object->name;
-        }
+        TriangleMesh mesh(points, facets);
+        mesh.check_topology();
+        ModelVolume* volume = object->add_volume(mesh);
+        volume->name        = object->name;
     }
     
     return true;

@@ -42,7 +42,7 @@ class TriangleMesh
     /// First argument is a container (either vector or array) of Pointf3 for the vertex data.
     /// Second argument is container of facets (currently Point3).
     template <typename Vertex_Cont, typename Facet_Cont>
-    TriangleMesh(const Vertex_Cont& vertices, const Facet_Cont& facets) : TriangleMesh(vertices.data(), facets.data(), facets.size()) {}
+    TriangleMesh(const Vertex_Cont& vertices, const Facet_Cont& facets) : TriangleMesh(vertices.data(), vertices.size(), facets.data(), facets.size()) {}
 
     TriangleMesh(const TriangleMesh &other);
     ///  copy assignment
@@ -163,7 +163,7 @@ class TriangleMesh
     /// Private constructor that is called from the public sphere. 
     /// It doesn't do any bounds checking on points and operates on raw pointers, so we hide it. 
     /// Other constructors can call this one!
-    TriangleMesh(const Pointf3* points, const Point3* facets, size_t n_facets); 
+    TriangleMesh(const Pointf3* points, size_t n_points, const Point3* facets, size_t n_facets); 
 
     /// Perform the mechanics of a stl copy
     void clone(const TriangleMesh& other);
