@@ -3090,7 +3090,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
                         z_per_length * line_length / nb_sections };
                     coordf_t current_height_internal = current_height + height_increment / 2;
                     //ensure you go to the good xyz
-                    if( (last_point - previous).norm() > EPSILON)
+                    if ((last_point - previous).norm() > EPSILON)
                         gcode += m_writer.extrude_to_xyz(last_point, 0, description);
                     //extrusions
                     for (int i = 0; i < nb_sections - 1; i++) {
@@ -4286,12 +4286,17 @@ Polyline GCode::travel_to(std::string &gcode, const Point &point, ExtrusionRole 
         Point last_post_before_retract = this->last_pos();
         gcode += this->retract();
         // When "Wipe while retracting" is enabled, then extruder moves to another position, and travel from this position can cross perimeters.
+        bool updated_first_pos = false;
         if (last_post_before_retract != this->last_pos() && can_avoid_cross_peri) {
             // Is the distance is short enough to just shortcut it?
             if (last_post_before_retract.distance_to(this->last_pos()) > scale_d(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0.4)) * 2) {
                 // Because of it, it is necessary to redo the thing
                 travel = m_avoid_crossing_perimeters.travel_to(*this, point);
+                updated_first_pos = true;
             }
+        }
+        if (!updated_first_pos) {
+            travel.points.front() = this->last_pos();
         }
     } else {
         // Reset the wipe path when traveling, so one would not wipe along an old path.
