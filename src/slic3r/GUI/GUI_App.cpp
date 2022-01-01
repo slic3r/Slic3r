@@ -744,7 +744,14 @@ void GUI_App::init_app_config()
 	// Mac : "~/Library/Application Support/Slic3r"
 
     if (data_dir().empty()) {
-        //check if there is a "configuration" directory next to the resources
+        //check if there is a "configuration" directory
+#ifdef __APPLE__
+        //... next to the app bundle on MacOs
+        if (boost::filesystem::exists(boost::filesystem::path{ resources_dir() } / ".." / ".." / ".." / "configuration")) {
+            set_data_dir((boost::filesystem::path{ resources_dir() } / ".." / ".." / ".." / "configuration").string());
+        } else
+#endif
+        //... next to the resources directory
         if (boost::filesystem::exists(boost::filesystem::path{ resources_dir() } / ".." / "configuration")) {
             set_data_dir((boost::filesystem::path{ resources_dir() } / ".." / "configuration").string());
         } else {
