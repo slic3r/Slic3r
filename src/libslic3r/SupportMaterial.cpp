@@ -2330,25 +2330,25 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::generate_int
     return interface_layers;
 }
 
-static inline void fill_expolygons_generate_paths(
-    ExtrusionEntitiesPtr    &dst, 
-    const ExPolygons        &expolygons,
-    Fill                    *filler,
-    float                    density,
-    ExtrusionRole            role, 
-    const Flow              &flow)
-{
-    FillParams fill_params;
-    fill_params.density = density;
-    fill_params.dont_adjust = true;
-    fill_params.flow = flow;
-    fill_params.role = role;
-    for (const ExPolygon &expoly : expolygons) {
-        Surface surface(stPosInternal | stDensSparse, expoly);
-        //TODO: catch exception here?
-        filler->fill_surface_extrusion(&surface, fill_params, dst);
-    }
-}
+//static inline void fill_expolygons_generate_paths(
+//    ExtrusionEntitiesPtr    &dst, 
+//    const ExPolygons        &expolygons,
+//    Fill                    *filler,
+//    float                    density,
+//    ExtrusionRole            role, 
+//    const Flow              &flow)
+//{
+//    FillParams fill_params;
+//    fill_params.density = density;
+//    fill_params.dont_adjust = true;
+//    fill_params.flow = flow;
+//    fill_params.role = role;
+//    for (const ExPolygon &expoly : expolygons) {
+//        Surface surface(stPosInternal | stDensSparse, expoly);
+//        //TODO: catch exception here?
+//        filler->fill_surface_extrusion(&surface, fill_params, dst);
+//    }
+//}
 
 static inline void fill_expolygons_generate_paths(
     ExtrusionEntitiesPtr    &dst,
@@ -2357,13 +2357,15 @@ static inline void fill_expolygons_generate_paths(
     float                    density,
     ExtrusionRole            role,
     const Flow              &flow,
-    coordf_t                 spacing)
+    coordf_t                 spacing,
+    const PrintRegionConfig &region_config)
 {
     FillParams fill_params;
     fill_params.density = density;
     fill_params.dont_adjust = true;
     fill_params.flow = flow;
     fill_params.role = role;
+    fill_params.config = &region_config;
     filler->init_spacing(spacing, fill_params);
     for (ExPolygon &expoly : expolygons) {
         Surface surface(stPosInternal | stDensSparse, std::move(expoly));
@@ -3084,7 +3086,9 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                             // Filler and its parameters
                             filler, float(support_density),
                             // Extrusion parameters
-                            erSupportMaterial, flow, m_support_material_flow.spacing());
+                            erSupportMaterial, flow, 
+                            m_support_material_flow.spacing(),
+                            m_object->print()->default_region_config());
                     }
                 }
             }
@@ -3123,7 +3127,10 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                 // Filler and its parameters
                 filler, density,
                 // Extrusion parameters
-                (support_layer_id < m_slicing_params.base_raft_layers) ? erSupportMaterial : erSupportMaterialInterface, flow, spacing);
+                (support_layer_id < m_slicing_params.base_raft_layers) ? erSupportMaterial : erSupportMaterialInterface,
+                flow,
+                spacing,
+                m_object->print()->default_region_config());
         }
     });
 
@@ -3250,6 +3257,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     spacing = m_support_material_interface_flow.spacing();
                     filler->link_max_length = coord_t(scale_(spacing * link_max_length_factor / density));
                 }
+                
                 fill_expolygons_generate_paths(
                     // Destination
                     layer_ex.extrusions.entities, 
@@ -3258,7 +3266,10 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     // Filler and its parameters
                     filler, float(density),
                     // Extrusion parameters
-                    erSupportMaterialInterface, interface_flow, spacing);
+                    erSupportMaterialInterface, 
+                    interface_flow, 
+                    spacing,
+                    m_object->print()->default_region_config());
             }
 
             // Base support or flange.
@@ -3317,7 +3328,10 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     // Filler and its parameters
                     filler, density,
                     // Extrusion parameters
-                    erSupportMaterial, flow, spacing);
+                    erSupportMaterial,
+                    flow,
+                    spacing,
+                    m_object->print()->default_region_config());
             }
 
             layer_cache.overlaps.reserve(4);
