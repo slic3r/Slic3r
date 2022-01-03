@@ -35,12 +35,17 @@ std::string to_string_nozero(double value, int32_t max_precision) {
         ss << std::fixed << std::setprecision(int(std::min(15 - long10, int(max_precision)))) << value;
         std::string ret = ss.str();
         uint8_t nb_del = 0;
-        for (uint8_t i = uint8_t(ss.tellp()) - 1; i > 0; i--) {
-            if (ret[i] == '0')
+        uint8_t idx_char;
+        for (idx_char = uint8_t(ss.tellp()) - 1; idx_char > 0; idx_char--) {
+            if (ret[idx_char] == '0')
                 nb_del++;
             else
                 break;
         }
+        // remove the '.' at the end of the int
+        if(idx_char > 0 && ret[idx_char] == '.')
+            nb_del++;
+
         if (nb_del > 0)
             return ret.substr(0, ret.size() - nb_del);
         else
