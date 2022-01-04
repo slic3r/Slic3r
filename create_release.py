@@ -45,6 +45,7 @@ with urlopen("https://api.github.com/repos/"+repo+"/actions/artifacts") as f:
 	found_linux_appimage_gtk2 = False; 
 	found_linux_appimage_gtk3 = False; 
 	found_macos = False; 
+	found_macos_arm = False; 
 	print("there is "+ str(artifacts["total_count"])+ " artifacts in the repo");
 	for entry in artifacts["artifacts"]:
 		if entry["name"] == "rc_win64" and not found_win:
@@ -67,6 +68,14 @@ with urlopen("https://api.github.com/repos/"+repo+"/actions/artifacts") as f:
 			z = zipfile.ZipFile(io.BytesIO(resp.content));
 			z.extractall(release_path);
 			os.rename(release_path+"/"+program_name+".dmg", release_path+"/"+program_name+"_"+version+"_macos_"+date_str+".dmg");
+		if entry["name"] == "rc_arm_macos.dmg" and not found_macos_arm:
+			found_macos_arm = True;
+			print("ask for: "+entry["archive_download_url"]);
+			resp = requests.get(entry["archive_download_url"], headers={'Authorization': 'token ' + github_auth_token,}, allow_redirects=True);
+			print("macos-arm: " +str(resp));
+			z = zipfile.ZipFile(io.BytesIO(resp.content));
+			z.extractall(release_path);
+			os.rename(release_path+"/"+program_name+".dmg", release_path+"/"+program_name+"_"+version+"_macos_arm_"+date_str+".dmg");
 		if entry["name"] == "rc-"+program_name+"-gtk2.AppImage" and not found_linux_appimage_gtk2:
 			found_linux_appimage_gtk2 = True;
 			print("ask for: "+entry["archive_download_url"]);
@@ -98,3 +107,5 @@ with urlopen("https://api.github.com/repos/"+repo+"/actions/artifacts") as f:
 			except:
 				with zipfile.ZipFile(base_path+"_bof.tar.zip", 'w') as myzip:
 					myzip.write(base_path+".tar");
+
+print("DONT FORGET TO PUSH YOUR MASTER");
