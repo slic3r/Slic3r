@@ -55,9 +55,12 @@ std::string SpiralVase::process_layer(const std::string &gcode)
     // Tapering the absolute extruder distances requires to process every extrusion value after the first transition
     // layer.
     bool  transition = m_transition_layer && m_config->use_relative_e_distances.value;
+    if (transition)
+        new_gcode += "; Began spiral\n";
+    bool  keep_first_travel = m_transition_layer;
     float layer_height_factor = layer_height / total_layer_length;
     float len = 0.f;
-    m_reader.parse_buffer(gcode, [&new_gcode, &z, total_layer_length, layer_height_factor, transition, &len]
+    m_reader.parse_buffer(gcode, [&keep_first_travel , &new_gcode, &z, total_layer_length, layer_height_factor, transition, &len]
         (GCodeReader &reader, GCodeReader::GCodeLine line) {
         if (line.cmd_is("G1")) {
             if (line.has_z()) {
@@ -71,11 +74,15 @@ std::string SpiralVase::process_layer(const std::string &gcode)
                 if (dist_XY > 0) {
                     // horizontal move
                     if (line.extruding(reader)) {
+                        keep_first_travel = false;
                         len += dist_XY;
                         line.set(reader, Z, z + len * layer_height_factor);
                         if (transition && line.has(E))
                             // Transition layer, modulate the amount of extrusion from zero to the final value.
                             line.set(reader, E, line.value(E) * len / total_layer_length);
+                        new_gcode += line.raw() + '\n';
+                    } else if (keep_first_travel) {
+                        //we can travel until the first spiral extrusion
                         new_gcode += line.raw() + '\n';
                     }
                     return;

@@ -3199,8 +3199,9 @@ void GCode::split_at_seam_pos(ExtrusionLoop& loop, std::unique_ptr<EdgeGrid::Gri
     // find the point of the loop that is closest to the current extruder position
     // or randomize if requested
     Point last_pos = this->last_pos();
-    if (m_config.spiral_vase) {
-        loop.split_at(last_pos, false);
+    //for first spiral, choose the seam, as the position will be very relevant.
+    if (m_config.spiral_vase && !m_spiral_vase->is_transition_layer()) {
+            loop.split_at(last_pos, false);
     } else {
         const EdgeGrid::Grid* edge_grid_ptr = (lower_layer_edge_grid && *lower_layer_edge_grid)
             ? lower_layer_edge_grid->get()
