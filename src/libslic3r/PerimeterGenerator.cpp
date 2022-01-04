@@ -960,25 +960,41 @@ void PerimeterGenerator::process()
 
             // if brim will be printed, reverse the order of perimeters so that
             // we continue inwards after having finished the brim
+            // be careful to not print thin walls before perimeters (gapfill will be added after so don't worry for them)
             // TODO: add test for perimeter order
-            if (this->config->external_perimeters_first ||
-                (this->layer->id() == 0 && this->object_config->brim_width.value > 0)) {
-                if (this->config->external_perimeters_nothole.value ||
-                    (this->layer->id() == 0 && this->object_config->brim_width.value > 0)) {
-                    if (this->config->external_perimeters_hole.value ||
-                        (this->layer->id() == 0 && this->object_config->brim_width.value > 0)) {
-                        entities.reverse();
-                    } else {
-                        //reverse only not-hole perimeters
+            const bool brim_first_layer = this->layer->id() == 0 && (this->object_config->brim_width.value > 0 || this->object_config->brim_width_interior.value > 0);
+            if (this->config->external_perimeters_first || brim_first_layer) {
+                if (this->config->external_perimeters_nothole.value || brim_first_layer) {
+                    if (this->config->external_perimeters_hole.value || brim_first_layer) {
+                        //reverse only not-thin wall
                         ExtrusionEntityCollection coll2;
                         for (const auto loop : entities.entities) {
-                            if (loop->is_loop() && !(((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0) {
+                            if ( (loop->is_loop() && loop->role() != erThinWall)) {
                                 coll2.entities.push_back(loop);
                             }
                         }
                         coll2.reverse();
                         for (const auto loop : entities.entities) {
-                            if (!loop->is_loop() || (((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0) {
+                            if (!((loop->is_loop() && loop->role() != erThinWall))) {
+                                coll2.entities.push_back(loop);
+                            }
+                        }
+                        //note: this hacky thing is possible because coll2.entities contains in fact entities's entities
+                        //if you does entities = coll2, you'll delete entities's entities and then you have nothing.
+                        entities.entities = coll2.entities;
+                        //and you have to empty coll2 or it will delete his content, hence crashing our hack
+                        coll2.entities.clear();
+                    } else {
+                        //reverse only not-hole perimeters
+                        ExtrusionEntityCollection coll2;
+                        for (const auto loop : entities.entities) {
+                            if ((loop->is_loop() && loop->role() != erThinWall) && !(((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0) {
+                                coll2.entities.push_back(loop);
+                            }
+                        }
+                        coll2.reverse();
+                        for (const auto loop : entities.entities) {
+                            if (!((loop->is_loop() && loop->role() != erThinWall) && (((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0)) {
                                 coll2.entities.push_back(loop);
                             }
                         }
@@ -992,13 +1008,13 @@ void PerimeterGenerator::process()
                     //reverse the hole, and put them in first place.
                     ExtrusionEntityCollection coll2;
                     for (const auto loop : entities.entities) {
-                        if (loop->is_loop() && (((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0) {
+                        if ((loop->is_loop() && loop->role() != erThinWall) && (((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0) {
                             coll2.entities.push_back(loop);
                         }
                     }
                     coll2.reverse();
                     for (const auto loop : entities.entities) {
-                        if (!loop->is_loop() || !(((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0) {
+                        if (!((loop->is_loop() && loop->role() != erThinWall) && (((ExtrusionLoop*)loop)->loop_role() & ExtrusionLoopRole::elrHole) != 0)) {
                             coll2.entities.push_back(loop);
                         }
                     }
