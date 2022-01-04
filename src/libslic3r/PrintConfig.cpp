@@ -1257,7 +1257,8 @@ void PrintConfigDef::init_fff_params()
     def = this->add("extrusion_width", coFloatOrPercent);
     def->label = L("Default extrusion width");
     def->category = OptionCategory::width;
-    def->tooltip = L("Set this to a non-zero value to allow a manual extrusion width. "
+    def->tooltip = L("This is the DEFAULT extrusion width. It's ONLY used to REPLACE 0-width fields. It's useless when all other width fields have a value."
+        "Set this to a non-zero value to allow a manual extrusion width. "
         "If left to zero, Slic3r derives extrusion widths from the nozzle diameter "
         "(see the tooltips for perimeter extrusion width, infill extrusion width etc). "
         "If expressed as percentage (for example: 105%), it will be computed over nozzle diameter."
@@ -1275,7 +1276,8 @@ void PrintConfigDef::init_fff_params()
     def = this->add("extrusion_spacing", coFloatOrPercent);
     def->label = L("Default extrusion spacing");
     def->category = OptionCategory::width;
-    def->tooltip = L("Like Default extrusion width but spacing is the distance between two lines (as they overlap a bit, it's not the same)."
+    def->tooltip = L("This is the DEFAULT extrusion spacing. It's convert to a width and this width can be used to REPLACE 0-width fields. It's useless when all  width fields have a value."
+        "Like Default extrusion width but spacing is the distance between two lines (as they overlap a bit, it's not the same)."
                 "\nYou can set either 'Spacing', or 'Width'; the other will be calculated, using the perimeter 'Overlap' percentages and default layer height.");
     def->sidetext = L("mm or %");
     def->ratio_over = "nozzle_diameter";
@@ -3372,8 +3374,8 @@ void PrintConfigDef::init_fff_params()
     def = this->add("resolution_internal", coFloat);
     def->label = L("Internal resolution");
     def->category = OptionCategory::slicing;
-    def->tooltip = L("Minimum detail resolution, used for internal strutures (gapfill and some infill patterns)."
-            "\nDon't put a too small value (0.05mm is way too low for many printers), as it may creates too many very small segments that may difficult to display and print.");
+    def->tooltip = L("Minimum detail resolution, used for internal structures (gapfill and some infill patterns)."
+            "\nDon't put a too-small value (0.05mm is way too low for many printers), as it may create too many very small segments that may be difficult to display and print.");
     def->sidetext = L("mm");
     def->min = 0.001;
     def->precision = 8;
@@ -4573,8 +4575,8 @@ void PrintConfigDef::init_fff_params()
     def = this->add("wipe", coBools);
     def->label = L("Wipe while retracting");
     def->category = OptionCategory::extruders;
-    def->tooltip = L("This flag will move the nozzle while retracting to minimize the possible blob "
-        "on leaky extruders.");
+    def->tooltip = L("This flag will move the nozzle while retracting to minimize the possible blob on leaky extruders."
+        "\nNote that as a wipe only happens when there is a retraction, the 'only retract when crossing perimeters' print setting can greatly reduce the number of wipes.");
     def->mode = comAdvanced;
     def->is_vector_extruder = true;
     def->set_default_value(new ConfigOptionBools{ false });
@@ -4582,7 +4584,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("wipe_only_crossing", coBools);
     def->label = L("Wipe only when crossing perimeters");
     def->category = OptionCategory::extruders;
-    def->tooltip = L("Don't wipe when you don't cross a perimeter.");
+    def->tooltip = L("Don't wipe when you don't cross a perimeter. Need 'only_retract_when_crossing_perimeters'and 'wipe' enabled.");
     def->mode = comAdvanced;
     def->is_vector_extruder = true;
     def->set_default_value(new ConfigOptionBools{ true });
