@@ -3,7 +3,7 @@ name: C/C++ debug arm macos
 on:
   push:
     branches:
-      - Nigthly
+      - rc
 
 jobs:
   build:
@@ -13,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        ref: 'Nigthly'
+        ref: 'rc'
     - name: build deps & slicer
       run: ./BuildMacOS.sh -ia
     - name: Upload artifact
