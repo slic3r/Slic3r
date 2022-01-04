@@ -367,8 +367,11 @@ private:
     // For crossing perimeter retraction detection  (contain the layer & nozzle widdth used to construct it)
     // !!!! not thread-safe !!!! if threaded per layer, please store it in the thread.
     struct SliceOffsetted {
-        ExPolygons slices; const Layer* layer; coord_t diameter;
-    }                                   m_layer_slices_offseted{ {},nullptr, 0};
+        ExPolygons slices;
+        ExPolygons slices_offsetted;
+        const Layer* layer;
+        coord_t diameter;
+    }                                   m_layer_slices_offseted{ {},{},nullptr, 0};
     double                              m_volumetric_speed;
     // Support for the extrusion role markers. Which marker is active?
     ExtrusionRole                       m_last_extrusion_role;

@@ -19,7 +19,9 @@ public:
     operator ExPolygons() const;
     void simplify(double tolerance);
     void group(std::vector<SurfacesPtr> *retval);
+    // get all surfaces that have this exact SurfaceType
     SurfacesConstPtr filter_by_type(const SurfaceType type) const;
+    // get all surfaces that have this SurfaceType flag in their SurfaceType
     SurfacesConstPtr filter_by_type_flag(const SurfaceType allowed, const SurfaceType not_allowed = stNone) const;
     SurfacesConstPtr filter_by_types(const SurfaceType *types, int ntypes) const;
     void keep_type(const SurfaceType type);
