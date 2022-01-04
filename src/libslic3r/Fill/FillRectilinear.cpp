@@ -1239,7 +1239,7 @@ static void connect_segment_intersections_by_contours(
                     itsct.prev_on_contour_quality = SegmentIntersection::LinkQuality::TooLong;
                 if (itsct.next_on_contour_quality == SegmentIntersection::LinkQuality::Valid)
                     itsct.next_on_contour_quality = SegmentIntersection::LinkQuality::TooLong;
-            } else if (link_max_length > 0) {
+            } else if (link_max_length > 0 && false /*FIXME SuperSlicer::2141*/) {
                 // Measure length of the links.
                 if (itsct.prev_on_contour_quality == SegmentIntersection::LinkQuality::Valid &&
                     (same_prev ?
