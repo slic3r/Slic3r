@@ -865,7 +865,7 @@ bool GUI_App::on_init_inner()
         }
         wxString artist;
         if (!file_name.empty() && file_name != (std::string(SLIC3R_APP_NAME) + L(" icon"))) {
-            wxString splash_screen_path = wxString::FromUTF8((boost::filesystem::path(Slic3r::resources_dir()) / "splashscreen" / file_name).string());
+            wxString splash_screen_path = wxString::FromUTF8((boost::filesystem::path(Slic3r::resources_dir()) / "splashscreen" / file_name).string().c_str());
         // make a bitmap with dark grey banner on the left side
             bmp = SplashScreen::MakeBitmap(wxBitmap(splash_screen_path, wxBITMAP_TYPE_JPEG));
 
