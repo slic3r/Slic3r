@@ -2127,10 +2127,10 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
             out_first_layer->append(eloop);
         if (m_config.min_skirt_length.value > 0 && !first_layer_only) {
             // The skirt length is limited. Sum the total amount of filament length extruded, in mm.
-            extruded_length[extruder_idx] += unscale<double>(loop.length()) * extruders_e_per_mm[extruder_idx];
+            extruded_length[extruder_idx] += unscale<double>(loop.length());// *extruders_e_per_mm[extruder_idx];
             if (extruded_length[extruder_idx] < m_config.min_skirt_length.value) {
                 // Not extruded enough yet with the current extruder. Add another loop.
-                if (i == 1)
+                if (i == 1 && extruded_length[extruder_idx] > 0)
                     ++ i;
             } else {
                 assert(extruded_length[extruder_idx] >= m_config.min_skirt_length.value);
