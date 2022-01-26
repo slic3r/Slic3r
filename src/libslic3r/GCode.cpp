@@ -820,7 +820,7 @@ namespace DoExport {
                 use(path);
         }
         virtual void use(const ExtrusionEntityCollection& collection) override {
-            for (const ExtrusionEntity* entity : collection.entities)
+            for (const ExtrusionEntity* entity : collection.entities())
                 entity->visit(*this);
         }
         double reset_use_get(const ExtrusionEntityCollection entity) { reset(); use(entity); return get(); }
@@ -892,7 +892,7 @@ namespace DoExport {
 	    // Calculate wiping points if needed
 	    if (print.config().ooze_prevention.value && ! print.config().single_extruder_multi_material) {
 	        Points skirt_points;
-	        for (const ExtrusionEntity *ee : print.skirt().entities)
+	        for (const ExtrusionEntity *ee : print.skirt().entities())
 	            for (const ExtrusionPath &path : dynamic_cast<const ExtrusionLoop*>(ee)->paths)
 	                append(skirt_points, path.polyline.points);
 	        if (! skirt_points.empty()) {
@@ -2131,7 +2131,7 @@ namespace Skirt {
 	static void skirt_loops_per_extruder_all_printing(const Print &print, const LayerTools &layer_tools, std::map<uint16_t, std::pair<size_t, size_t>> &skirt_loops_per_extruder_out)
 	{
         // Prime all extruders printing over the 1st layer over the skirt lines.
-        size_t n_loops = print.skirt().entities.size();
+        size_t n_loops = print.skirt().entities().size();
         size_t n_tools = layer_tools.extruders.size();
         size_t lines_per_extruder = (n_loops + n_tools - 1) / n_tools;
         for (size_t i = 0; i < n_loops; i += lines_per_extruder)
@@ -2148,9 +2148,9 @@ namespace Skirt {
         // Extrude skirt at the print_z of the raft layers and normal object layers
         // not at the print_z of the interlaced support material layers.
         std::map<uint16_t, std::pair<size_t, size_t>> skirt_loops_per_extruder_out;
-        if (skirt_done.empty() && print.has_skirt() && ! print.skirt().entities.empty()) {
+        if (skirt_done.empty() && print.has_skirt() && ! print.skirt().entities().empty()) {
             if (print.skirt_first_layer()) {
-                size_t n_loops = print.skirt_first_layer()->entities.size();
+                size_t n_loops = print.skirt_first_layer()->entities().size();
                 size_t n_tools = layer_tools.extruders.size();
                 size_t lines_per_extruder = (n_loops + n_tools - 1) / n_tools;
                 for (size_t i = 0; i < n_loops; i += lines_per_extruder)
@@ -2174,7 +2174,7 @@ namespace Skirt {
         // Extrude skirt at the print_z of the raft layers and normal object layers
         // not at the print_z of the interlaced support material layers.
         std::map<uint16_t, std::pair<size_t, size_t>> skirt_loops_per_extruder_out;
-        if (print.has_skirt() && ! print.skirt().entities.empty() &&
+        if (print.has_skirt() && ! print.skirt().entities().empty() &&
             // infinite or high skirt does not make sense for sequential print here
             //(if it is selected, it's done in the "extrude object-only skirt" in process_layer)
             // Not enough skirt layers printed yet.
@@ -2360,7 +2360,7 @@ void GCode::process_layer(
         if (layer_to_print.support_layer != nullptr) {
             const SupportLayer &support_layer = *layer_to_print.support_layer;
             const PrintObject  &object = *support_layer.object();
-            if (! support_layer.support_fills.entities.empty()) {
+            if (! support_layer.support_fills.entities().empty()) {
                 ExtrusionRole   role               = support_layer.support_fills.role();
                 bool            has_support        = role == erMixed || role == erSupportMaterial;
                 bool            has_interface      = role == erMixed || role == erSupportMaterialInterface;
@@ -2450,7 +2450,7 @@ void GCode::process_layer(
                         // extrusions represents infill or perimeter extrusions of a single island.
                         assert(dynamic_cast<const ExtrusionEntityCollection*>(ee) != nullptr);
                         const auto* extrusions = static_cast<const ExtrusionEntityCollection*>(ee);
-                        if (extrusions->entities.empty()) // This shouldn't happen but first_point() would fail.
+                        if (extrusions->entities().empty()) // This shouldn't happen but first_point() would fail.
                             continue;
 
                         // This extrusion is part of certain Region, which tells us which extruder should be used for it:
@@ -2505,9 +2505,9 @@ void GCode::process_layer(
                         }
                     }
                 };
-                process_entities(ObjectByExtruder::Island::Region::INFILL, layerm->fills.entities);
-                process_entities(ObjectByExtruder::Island::Region::PERIMETERS, layerm->perimeters.entities);
-                process_entities(ObjectByExtruder::Island::Region::IRONING, layerm->ironings.entities);
+                process_entities(ObjectByExtruder::Island::Region::INFILL, layerm->fills.entities());
+                process_entities(ObjectByExtruder::Island::Region::PERIMETERS, layerm->perimeters.entities());
+                process_entities(ObjectByExtruder::Island::Region::IRONING, layerm->ironings.entities());
             } // for regions
         }
     } // for objects
@@ -2540,7 +2540,7 @@ void GCode::process_layer(
             const ExtrusionEntityCollection& coll = first_layer && print.skirt_first_layer() ? *print.skirt_first_layer() : print.skirt();
             for (size_t i = loops.first; i < loops.second; ++i) {
                 // Adjust flow according to this layer's layer height.
-                ExtrusionLoop loop = *dynamic_cast<const ExtrusionLoop*>(coll.entities[i]);
+                ExtrusionLoop loop = *dynamic_cast<const ExtrusionLoop*>(coll.entities()[i]);
                 for (ExtrusionPath &path : loop.paths) {
                     assert(layer_skirt_flow.height == layer_skirt_flow.height);
                     assert(mm3_per_mm == mm3_per_mm);
@@ -2562,7 +2562,7 @@ void GCode::process_layer(
         if (! m_brim_done) {
             this->set_origin(0., 0.);
             m_avoid_crossing_perimeters.use_external_mp();
-            for (const ExtrusionEntity* brim_entity : print.brim().entities) {
+            for (const ExtrusionEntity* brim_entity : print.brim().entities()) {
                 //if first layer, ask for a bigger lift for travel to each brim, to be on the safe side
                 set_extra_lift(m_last_layer_z, layer.id(), print.config(), m_writer, extruder_id);
                 gcode += this->extrude_entity(*brim_entity, "Brim", m_config.support_material_speed.value);
@@ -2583,10 +2583,10 @@ void GCode::process_layer(
             this->set_origin(unscale(print_object->instances()[single_object_instance_idx].shift));
             if (this->m_layer != nullptr && (this->m_layer->id() < m_config.skirt_height || print.has_infinite_skirt() )) {
                 if(first_layer && print.skirt_first_layer())
-                    for (const ExtrusionEntity* ee : print_object->skirt_first_layer()->entities)
+                    for (const ExtrusionEntity* ee : print_object->skirt_first_layer()->entities())
                         gcode += this->extrude_entity(*ee, "", m_config.support_material_speed.value);
                 else
-                    for (const ExtrusionEntity *ee : print_object->skirt().entities)
+                    for (const ExtrusionEntity *ee : print_object->skirt().entities())
                         gcode += this->extrude_entity(*ee, "", m_config.support_material_speed.value);
             }
         }
@@ -2598,7 +2598,7 @@ void GCode::process_layer(
             this->set_origin(unscale(print_object->instances()[single_object_instance_idx].shift));
             if (this->m_layer != nullptr && this->m_layer->id() == 0) {
                 m_avoid_crossing_perimeters.use_external_mp(true);
-                for (const ExtrusionEntity *ee : print_object->brim().entities)
+                for (const ExtrusionEntity *ee : print_object->brim().entities())
                     gcode += this->extrude_entity(*ee, "brim", m_config.support_material_speed.value);
                 m_avoid_crossing_perimeters.use_external_mp(false);
                 m_avoid_crossing_perimeters.disable_once();
@@ -3557,12 +3557,12 @@ std::string GCode::extrude_entity(const ExtrusionEntity &entity, const std::stri
 
 void GCode::use(const ExtrusionEntityCollection &collection) {
     if (!collection.can_sort() || collection.role() == erMixed) {
-        for (const ExtrusionEntity* next_entity : collection.entities) {
+        for (const ExtrusionEntity* next_entity : collection.entities()) {
             next_entity->visit(*this);
         }
     } else {
         ExtrusionEntityCollection chained = collection.chained_path_from(m_last_pos);
-        for (const ExtrusionEntity* next_entity : chained.entities) {
+        for (const ExtrusionEntity* next_entity : chained.entities()) {
             next_entity->visit(*this);
         }
     }
@@ -3719,12 +3719,12 @@ std::string GCode::extrude_ironing(const Print& print, const std::vector<ObjectB
 std::string GCode::extrude_support(const ExtrusionEntityCollection &support_fills)
 {
     std::string gcode;
-    if (! support_fills.entities.empty()) {
+    if (! support_fills.entities().empty()) {
         const char   *support_label            = "support material";
         const char   *support_interface_label  = "support material interface";
         const double  support_speed            = m_config.support_material_speed.value;
         const double  support_interface_speed  = m_config.support_material_interface_speed.get_abs_value(support_speed);
-        for (const ExtrusionEntity *ee : support_fills.entities) {
+        for (const ExtrusionEntity *ee : support_fills.entities()) {
             ExtrusionRole role = ee->role();
             assert(role == erSupportMaterial || role == erSupportMaterialInterface || role == erMixed);
             if (const ExtrusionEntityCollection* coll = dynamic_cast<const ExtrusionEntityCollection*>(ee)) {
@@ -4645,7 +4645,7 @@ Point GCode::gcode_to_point(const Vec2d &point) const
         scale_(point(1) - m_origin(1) + extruder_offset(1)));
 }
 
-// Goes through by_region std::vector and returns reference to a subvector of entities, that are to be printed
+// Goes through by_region std::vector and returns reference to a subvector of entities(), that are to be printed
 // during infill/perimeter wiping, or normally (depends on wiping_entities parameter)
 // Fills in by_region_per_copy_cache and returns its reference.
 const std::vector<GCode::ObjectByExtruder::Island::Region>& GCode::ObjectByExtruder::Island::by_region_per_copy(std::vector<Region> &by_region_per_copy_cache, unsigned int copy, uint16_t extruder, bool wiping_entities) const
@@ -4703,7 +4703,7 @@ const std::vector<GCode::ObjectByExtruder::Island::Region>& GCode::ObjectByExtru
     return by_region_per_copy_cache;
 }
 
-// This function takes the eec and appends its entities to either perimeters or infills of this Region (depending on the first parameter)
+// This function takes the eec and appends its entities() to either perimeters or infills of this Region (depending on the first parameter)
 // It also saves pointer to ExtruderPerCopy struct (for each entity), that holds information about which extruders should be used for which copy.
 void GCode::ObjectByExtruder::Island::Region::append(const Type type, const ExtrusionEntityCollection* eec, const WipingExtrusions::ExtruderPerCopy* copies_extruder)
 {
@@ -4728,15 +4728,17 @@ void GCode::ObjectByExtruder::Island::Region::append(const Type type, const Extr
     	throw Slic3r::InvalidArgument("Unknown parameter!");
     }
 
-    // First we append the entities, there are eec->entities.size() of them:
-    //don't do fill->entities because it will discard no_sort, we must use flatten(preserve_ordering = true)
-    // this method will encapsulate every no_sort into an other collection, so we can get the entities directly.
-    ExtrusionEntitiesPtr entities = eec->flatten(true).entities;
+    // First we append the entities, there are eec->entities().size() of them:
+    //don't do fill->entities() because it will discard no_sort, we must use flatten(preserve_ordering = true)
+    // this method will encapsulate every no_sort into an other collection, so we can get the entities() directly.
+    ExtrusionEntityCollection coll = eec->flatten(true);
     size_t old_size = perimeters_or_infills->size();
-    size_t new_size = old_size + entities.size();
+    size_t new_size = old_size + coll.entities().size();
     perimeters_or_infills->reserve(new_size);
-    for (auto* ee : entities)
-        perimeters_or_infills->emplace_back(ee);
+    for (ExtrusionEntity* ee : coll.set_entities())
+        perimeters_or_infills->push_back(ee);
+    //hack for change of ownership
+    coll.set_entities().clear();
 
     if (copies_extruder != nullptr) {
     	// Don't reallocate overrides if not needed.

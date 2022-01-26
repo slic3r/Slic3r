@@ -132,7 +132,7 @@ FillConcentricWGapFill::fill_surface_extrusion(
         ExtrusionEntityCollection *coll_nosort = new ExtrusionEntityCollection();
         coll_nosort->set_can_sort_reverse(false, false); //can be sorted inside the pass
         extrusion_entities_append_loops(
-            coll_nosort->entities, loops,
+            coll_nosort->set_entities(), loops,
             good_role,
             params.flow.mm3_per_mm() * params.flow_mult,
             params.flow.width * params.flow_mult,
@@ -163,11 +163,11 @@ FillConcentricWGapFill::fill_surface_extrusion(
                     gap_fill.visit(set_good_role);
                 }
                 //move them into the collection
-                coll_nosort->append(std::move(gap_fill.entities));
+                coll_nosort->append(std::move(gap_fill.entities()));
             }
         }
 
-        if (!coll_nosort->entities.empty())
+        if (!coll_nosort->entities().empty())
             out.push_back(coll_nosort);
         else delete coll_nosort;
     }
