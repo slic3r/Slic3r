@@ -4259,6 +4259,7 @@ Polyline GCode::travel_to(std::string &gcode, const Point &point, ExtrusionRole 
     Polyline travel { this->last_pos(), point };
 
     // check whether wipe could be disabled without causing visible stringing
+    //not used anymore, not reliable
     bool could_be_wipe_disabled = false;
 
     //can use the avoid crossing algo?
@@ -4289,8 +4290,15 @@ Polyline GCode::travel_to(std::string &gcode, const Point &point, ExtrusionRole 
 
     // generate G-code for the travel move
     if (needs_retraction) {
-        if (m_config.avoid_crossing_perimeters && could_be_wipe_disabled && EXTRUDER_CONFIG_WITH_DEFAULT(wipe_only_crossing, true))
-            m_wipe.reset_path();
+        if (m_config.avoid_crossing_perimeters && EXTRUDER_CONFIG_WITH_DEFAULT(wipe_only_crossing, true)) {
+            //if (could_be_wipe_disabled) {
+            //    m_wipe.reset_path();
+            //} else {
+                auto result = diff_pl(Polylines{ travel }, to_polygons(m_layer->lslices));
+                if (result.empty())
+                    m_wipe.reset_path();
+            //}
+        }
 
         Point last_post_before_retract = this->last_pos();
         gcode += this->retract();
