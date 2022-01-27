@@ -885,7 +885,7 @@ namespace client
                 }
             }
             //return
-            out = expr<Iterator>(opt != nullptr, out.it_range.begin(), end_pos);
+            //out = expr<Iterator>(opt != nullptr, out.it_range.begin(), end_pos);
         }
 
         template <typename Iterator>
@@ -1418,15 +1418,15 @@ namespace client
                                                                     [ px::bind(&MyContext::random<Iterator>, _r1, _val, _2) ]
                 |   (kw["int"] > '(' > unary_expression(_r1) > ')') [ px::bind(&FactorActions::to_int,  _1,     _val) ]
                 |   (kw["exists"] > '('  > identifier > ')' > iter_pos)        [ px::bind(&MyContext::check_variable<Iterator>, _r1, _1, _2, _val, nullptr) ]
-                |   (kw["default"] > '(' > identifier > ',' > strict_double > ')' > iter_pos)
+                |   (kw["default_double"] > '(' > identifier > ',' > strict_double > ')' > iter_pos)
                                                                     [px::bind(&FactorActions::default_double_, _2, _r1, _1, _3, _val)]
-                |   (kw["default"] > '(' > identifier > ',' > int_ > ')' > iter_pos)
+                |   (kw["default_int"] > '(' > identifier > ',' > int_ > ')' > iter_pos)
                                                                     [px::bind(&FactorActions::default_int_, _2, _r1, _1, _3, _val)]
-                |   (kw["default"] > '('  > identifier > ',' > kw[bool_] > ')' > iter_pos)
+                |   (kw["default_bool"] > '('  > identifier > ',' > kw[bool_] > ')' > iter_pos)
                                                                     [ px::bind(&FactorActions::default_bool_, _2, _r1, _1, _3, _val) ]
-                |   (kw["default"] > '(' > identifier > ',' > raw[lexeme['"' > *((utf8char - char_('\\') - char_('"')) | ('\\' > char_)) > '"']] > ')' > iter_pos)
+                |   (kw["default_string"] > '(' > identifier > ',' > raw[lexeme['"' > *((utf8char - char_('\\') - char_('"')) | ('\\' > char_)) > '"']] > ')' > iter_pos)
                                                                     [px::bind(&FactorActions::default_string_, _2, _r1, _1, _3, _val)]
-                |   (kw["ignore_legacy"] > '(' > kw[bool_] > ')')[px::bind(&FactorActions::set_ignore_legacy_, _1)]
+                |   (kw["ignore_legacy"] > '(' > kw[bool_] > ')')   [px::bind(&FactorActions::set_ignore_legacy_, _1)]
                 |   (strict_double > iter_pos)                      [ px::bind(&FactorActions::double_, _1, _2, _val) ]
                 |   (int_      > iter_pos)                          [ px::bind(&FactorActions::int_,    _1, _2, _val) ]
                 |   (kw[bool_] > iter_pos)                          [ px::bind(&FactorActions::bool_,   _1, _2, _val) ]
@@ -1467,7 +1467,10 @@ namespace client
                 ("or")
                 ("true")
                 ("exists")
-                ("default")
+                ("default_double")
+                ("default_int")
+                ("default_bool")
+                ("default_string")
                 ("ignore_legacy");
 
             if (0) {
