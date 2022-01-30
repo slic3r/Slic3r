@@ -2212,16 +2212,17 @@ namespace Slic3r {
 
                     {
                         to_bridge.clear();
-                        //choose betweent two offset the one that split the less the surface.
+                        //choose between two offsets the one that split the less the surface.
                         float min_width = float(bridge_flow.scaled_width()) * 3.f;
-                        for (Polygon& poly_to_check_for_thin : to_bridge_pp) {
-                            ExPolygons collapsed = offset2_ex({ poly_to_check_for_thin }, -min_width, +min_width * 1.25f);
+                        ExPolygons to_bridgeOK = offset2_ex(to_bridge_pp, -min_width, +min_width);
+                        for (ExPolygon& poly_to_check_for_thin : union_ex(to_bridge_pp)) {
+                            ExPolygons collapsed = offset2_ex(ExPolygons{ poly_to_check_for_thin }, -min_width, +min_width * 1.25f);
                             ExPolygons bridge = intersection_ex(collapsed, { ExPolygon{ poly_to_check_for_thin } });
                             ExPolygons not_bridge = diff_ex({ ExPolygon{ poly_to_check_for_thin } }, collapsed);
                             int try1_count = bridge.size() + not_bridge.size();
                             if (try1_count > 1) {
                                 min_width = float(bridge_flow.scaled_width()) * 1.5f;
-                                collapsed = offset2_ex({ poly_to_check_for_thin }, -min_width, +min_width * 1.5f);
+                                collapsed = offset2_ex(ExPolygons{ poly_to_check_for_thin }, -min_width, +min_width * 1.5f);
                                 ExPolygons bridge2 = intersection_ex(collapsed, { ExPolygon{ poly_to_check_for_thin } });
                                 not_bridge = diff_ex({ ExPolygon{ poly_to_check_for_thin } }, collapsed);
                                 int try2_count = bridge2.size() + not_bridge.size();
@@ -2229,14 +2230,15 @@ namespace Slic3r {
                                     to_bridge.insert(to_bridge.begin(), bridge2.begin(), bridge2.end());
                                 else
                                     to_bridge.insert(to_bridge.begin(), bridge.begin(), bridge.end());
-                            } else if (!bridge.empty())
-                                to_bridge.push_back(bridge.front());
+                            } else {
+                                to_bridge.insert(to_bridge.begin(), bridge.begin(), bridge.end());
+                            }
                         }
                     }
                     if (to_bridge.empty()) continue;
 
-                    // union
-                    to_bridge = union_ex(to_bridge);
+                    // union not needed as we already did one for polygon->expoly conversion, and there was only collapse (no grow) after that.
+                    //to_bridge = union_ex(to_bridge);
                 }
 #ifdef SLIC3R_DEBUG
                 printf("Bridging %zu internal areas at layer %zu\n", to_bridge.size(), layer->id());
