@@ -489,6 +489,9 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
         //union with safety offset to avoid separation from the appends of different surface with same settings.
         surface_fill.expolygons = union_ex(surface_fill.expolygons, true);
 
+        //store default values, before modification.
+        bool dont_adjust = surface_fill.params.dont_adjust;
+        float density = surface_fill.params.density;
         for (ExPolygon &expoly : surface_fill.expolygons) {
             //set overlap polygons
             f->no_overlap_expolygons.clear();
@@ -503,6 +506,11 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
                 f->overlap = 0;
                 f->no_overlap_expolygons.push_back(expoly);
             }
+
+            //set default param (that can be modified by bridge thing)
+            surface_fill.params.dont_adjust = dont_adjust;
+            surface_fill.params.bridge_offset = 0;
+            surface_fill.params.density = density;
 
             //init the surface with the current polygon
             if (!expoly.contour.empty()) {
@@ -526,6 +534,10 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
                         } else {
                             expolys = offset_ex(ExPolygon{surface_fill.surface.expolygon.contour}, -scale_t(surface_fill.params.spacing) / 2 - 10);
                         }
+                        // if nothing after collapse, then go to next surface_fill.expolygon
+                        if (expolys.empty())
+                            continue;
+
                         BoundingBox bb;
                         bool first = true;
                         for (ExPolygon& expoly : expolys) {
