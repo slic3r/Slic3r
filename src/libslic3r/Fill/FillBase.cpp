@@ -269,17 +269,18 @@ Fill::do_gap_fill(const ExPolygons& gapfill_areas, const FillParams& params, Ext
         }
 #endif
 
-        ExtrusionEntityCollection gap_fill = thin_variable_width(polylines_gapfill, erGapFill, params.flow, scale_t(params.config->get_computed_value("resolution_internal")));
-        //set role if needed
-        /*if (params.role != erSolidInfill) {
-            ExtrusionSetRole set_good_role(params.role);
-            gap_fill.visit(set_good_role);
-        }*/
+        ExtrusionEntitiesPtr gap_fill_entities = thin_variable_width(polylines_gapfill, erGapFill, params.flow, scale_t(params.config->get_computed_value("resolution_internal")));
+        ////set role if needed
+        //if (params.role != erSolidInfill) {
+        //    ExtrusionSetRole set_good_role(params.role);
+        //    for(ExtrusionEntity *ptr : gap_fill_entities)
+        //        ptr->visit(set_good_role);
+        //}
         //move them into the collection
-        if (!gap_fill.entities().empty()) {
+        if (!gap_fill_entities.empty()) {
             ExtrusionEntityCollection* coll_gapfill = new ExtrusionEntityCollection();
             coll_gapfill->set_can_sort_reverse(!this->no_sort(), !this->no_sort());
-            coll_gapfill->append(std::move(gap_fill.entities()));
+            coll_gapfill->append(std::move(gap_fill_entities));
             coll_out.push_back(coll_gapfill);
         }
     }

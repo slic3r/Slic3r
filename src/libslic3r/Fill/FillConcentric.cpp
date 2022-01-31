@@ -156,14 +156,17 @@ FillConcentricWGapFill::fill_surface_extrusion(
                 }
             }
             if (!polylines.empty() && !is_bridge(good_role)) {
-                ExtrusionEntityCollection gap_fill = thin_variable_width(polylines, erGapFill, params.flow, scale_t(params.config->get_computed_value("resolution_internal")));
-                //set role if needed
-                if (good_role != erSolidInfill) {
-                    ExtrusionSetRole set_good_role(good_role);
-                    gap_fill.visit(set_good_role);
+                ExtrusionEntitiesPtr gap_fill_entities = thin_variable_width(polylines, erGapFill, params.flow, scale_t(params.config->get_computed_value("resolution_internal")));
+                if (!gap_fill_entities.empty()) {
+                    //set role if needed
+                    if (good_role != erSolidInfill) {
+                        ExtrusionSetRole set_good_role(good_role);
+                        for (ExtrusionEntity* ptr : gap_fill_entities)
+                            ptr->visit(set_good_role);
+                    }
+                    //move them into the collection
+                    coll_nosort->append(std::move(gap_fill_entities));
                 }
-                //move them into the collection
-                coll_nosort->append(std::move(gap_fill.entities()));
             }
         }
 
