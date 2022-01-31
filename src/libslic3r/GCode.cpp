@@ -3631,7 +3631,7 @@ void GCode::use(const ExtrusionEntityCollection &collection) {
 }
 
 std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &description, double speed_mm_per_sec) {
-
+    std::string gcode;
     ExtrusionPath simplifed_path = path;
     const coordf_t scaled_min_length = scale_d(this->config().min_length.value);
     const double max_gcode_per_second = this->config().max_gcode_per_second.value;
@@ -3640,17 +3640,20 @@ std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &de
         current_scaled_min_length = std::max(current_scaled_min_length, scale_(_compute_speed_mm_per_sec(path, speed_mm_per_sec)) / max_gcode_per_second);
     }
     if (current_scaled_min_length > 0 && !m_last_too_small.empty()) {
-        //descr += " trys fusion " + std::to_string(unscaled(m_last_too_small.last_point().x())) + " , " + std::to_string(unscaled(path.first_point().x()));
-        //ensure that it's a continous thing
-        if (m_last_too_small.last_point().distance_to_square(path.first_point()) < current_scaled_min_length * current_scaled_min_length /*&& m_last_too_small.first_point().distance_to_square(path.first_point()) > EPSILON*/) {
-            //descr += " ! fusion " + std::to_string(simplifed_path.polyline.points.size());
+        //ensure that it's a continous thing of the same type
+        if (m_last_too_small.last_point().distance_to_square(path.first_point()) < EPSILON * EPSILON * 4 && path.role() == m_last_too_small.role()){
             simplifed_path.height = float(m_last_too_small.height * m_last_too_small.length() + simplifed_path.height * simplifed_path.length()) / float(m_last_too_small.length() + simplifed_path.length());
             simplifed_path.mm3_per_mm = (m_last_too_small.mm3_per_mm * m_last_too_small.length() + simplifed_path.mm3_per_mm * simplifed_path.length()) / (m_last_too_small.length() + simplifed_path.length());
             simplifed_path.polyline.points.insert(simplifed_path.polyline.points.begin(), m_last_too_small.polyline.points.begin(), m_last_too_small.polyline.points.end()-1);
             assert(simplifed_path.height == simplifed_path.height);
             assert(simplifed_path.mm3_per_mm == simplifed_path.mm3_per_mm);
+            m_last_too_small.polyline.points.clear();
+        } else {
+            //finish extrude the little thing that was left before us and incompatible with our next extrusion.
+            ExtrusionPath to_finish = m_last_too_small;
+            m_last_too_small.polyline.points.clear();
+            gcode += extrude_path(m_last_too_small, m_last_description, m_last_speed_mm_per_sec);
         }
-        m_last_too_small.polyline.points.clear();
     }
     if (current_scaled_min_length > 0) {
         // it's an alternative to simplifed_path.simplify(scale_(this->config().min_length)); with more enphasis ont he segment length that on the feature detail.
@@ -3661,10 +3664,12 @@ std::string GCode::extrude_path(const ExtrusionPath &path, const std::string &de
     //else simplifed_path.simplify(SCALED_RESOLUTION);  //should already be simplified
     if (scaled_min_length > 0 && simplifed_path.length() < scaled_min_length) {
         m_last_too_small = simplifed_path;
-        return "";
+        m_last_description = description;
+        m_last_speed_mm_per_sec = speed_mm_per_sec;
+        return gcode;
     }
 
-    std::string gcode = this->_extrude(simplifed_path, description, speed_mm_per_sec);
+    gcode += this->_extrude(simplifed_path, description, speed_mm_per_sec);
 
     if (m_wipe.enable) {
         m_wipe.path = std::move(simplifed_path.polyline);
