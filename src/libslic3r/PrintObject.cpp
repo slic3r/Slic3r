@@ -490,9 +490,11 @@ namespace Slic3r {
     // to close these surfaces reliably.
     //FIXME Vojtech: Is this a good place to add supporting infills below sloping perimeters?
         //note: only if not "ensure vertical shell"
-    //TODO merill: as "ensure_vertical_shell_thickness" is innefective, this should be simplified / streamlined / deleted?
         this->discover_horizontal_shells();
         m_print->throw_if_canceled();
+
+    //as there is some too thin solid surface, please deleted them and merge all of the surfacesthat are contigous.
+        this->clean_surfaces();
 
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
         for (size_t region_id = 0; region_id < this->region_volumes.size(); ++region_id) {
@@ -3748,6 +3750,65 @@ static void fix_mesh_connectivity(TriangleMesh &mesh)
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
     }
 
+    void merge_surfaces(LayerRegion* lregion) {
+        //merge regions with same type (other things are all the same anyway)
+        std::map< SurfaceType, std::vector< Surface*>> type2srfs;
+        for (Surface& surface : lregion->fill_surfaces.surfaces) {
+            type2srfs[surface.surface_type].push_back(&surface);
+        }
+        bool changed = false;
+        std::map< SurfaceType, ExPolygons> type2newpolys;
+        for (auto& entry : type2srfs) {
+            if (entry.second.size() > 2) {
+                ExPolygons merged = union_ex(to_expolygons(entry.second), true);
+                if (merged.size() < entry.second.size()) {
+                    changed = true;
+                    type2newpolys[entry.first] = std::move(merged);
+                }
+            }
+        }
+        if (changed) {
+            Surfaces newSrfs;
+            for (auto& entry : type2srfs) {
+                if (type2newpolys.find(entry.first) == type2newpolys.end()) {
+                    for (Surface* srfPtr : entry.second) {
+                        newSrfs.emplace_back(*srfPtr);
+                    }
+                } else {
+                    for (ExPolygon& expoly : type2newpolys[entry.first]) {
+                        newSrfs.emplace_back(*entry.second.front(), expoly);
+                    }
+                }
+            }
+            lregion->fill_surfaces.surfaces = std::move(newSrfs);
+        }
+    }
+
+    void PrintObject::clean_surfaces() {
+        tbb::parallel_for(tbb::blocked_range<size_t>(0, this->layers().size() - 1),
+            [this](const tbb::blocked_range<size_t>& range) {
+                for (size_t idx_layer = range.begin(); idx_layer < range.end(); ++idx_layer) {
+                    for (LayerRegion* lregion : this->layers()[idx_layer]->regions()) {
+                        coord_t extrusion_width = lregion->flow(frInfill).scaled_width();
+                        merge_surfaces(lregion);
+                        // collapse too thin solid surfaces.
+                        bool changed_type = false;
+                        for (Surface& surface : lregion->fill_surfaces.surfaces) {
+                            if (surface.has_fill_solid() && surface.has_pos_internal()) {
+                                if (offset2_ex(surface.expolygon, -extrusion_width / 2, extrusion_width / 2).empty()) {
+                                    //convert to sparse
+                                    surface.surface_type = (surface.surface_type ^ SurfaceType::stDensSolid) | SurfaceType::stDensSparse;
+                                    changed_type = true;
+                                }
+                            }
+                        }
+                        merge_surfaces(lregion);
+
+                    }
+                }
+            });
+
+    }
     // combine fill surfaces across layers to honor the "infill every N layers" option
     // Idempotence of this method is guaranteed by the fact that we don't remove things from
     // fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.

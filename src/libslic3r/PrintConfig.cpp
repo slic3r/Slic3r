@@ -763,7 +763,7 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::perimeter;
     def->tooltip = L("Add solid infill near sloping surfaces to guarantee the vertical shell thickness "
                    "(top+bottom solid layers)."
-                   "\n!! solid_over_perimeters may erase these surfaces !! So you should deactivate it if you want to use this.");
+                   "\n!! solid_over_perimeters may erase these surfaces !!");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
@@ -4022,7 +4022,7 @@ void PrintConfigDef::init_fff_params()
         " the top/bottom solid layer count, it won't do anything. If this setting is set to 1, it will evict "
         " all solid fill above/below perimeters. "
         "\nSet zero to disable."
-        "\n!! ensure_vertical_shell_thickness may be erased by this setting !!.");
+        "\n!! ensure_vertical_shell_thickness needs to be activated so this algorithm can work !!.");
     def->min = 0;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(2));
