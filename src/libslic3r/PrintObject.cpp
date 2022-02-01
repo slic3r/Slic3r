@@ -1330,7 +1330,9 @@ namespace Slic3r {
                                             for (int idx_dense = 0; idx_dense < dense_polys.size(); idx_dense++) {
                                                 ExPolygon dense_poly = dense_polys[idx_dense];
                                                 //remove overlap with perimeter
-                                                ExPolygons offseted_dense_polys = intersection_ex({ dense_poly }, layerm->fill_no_overlap_expolygons);
+                                                ExPolygons offseted_dense_polys = layerm->fill_no_overlap_expolygons.empty()
+                                                    ? ExPolygons{dense_poly}
+                                                    : intersection_ex({ dense_poly }, layerm->fill_no_overlap_expolygons);
                                                 //add overlap with everything
                                                 offseted_dense_polys = offset_ex(offseted_dense_polys, overlap);
                                                 for (ExPolygon offseted_dense_poly : offseted_dense_polys) {
