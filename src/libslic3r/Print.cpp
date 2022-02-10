@@ -2327,7 +2327,7 @@ void Print::_extrude_brim_from_tree(std::vector<std::vector<BrimLoop>>& loops, c
                     print_me_first->append(ExtrusionEntitiesPtr{ children });
                 }
             }
-            assert(print_me_first.size() > 0);
+            assert(print_me_first->entities().size() > 0);
         }
     };
     extrude_ptr = &extrude;
