@@ -3086,8 +3086,6 @@ void TabPrinter::toggle_options()
                 if (field)
                     field->toggle(enabled);
             }
-        field = get_field("time_estimation_compensation");
-        if (field) field->toggle(machine_limits_usage->value <= MachineLimitsUsage::TimeEstimateOnly);
         update_machine_limits_description(machine_limits_usage->value);
     }
 
