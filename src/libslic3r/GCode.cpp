@@ -695,6 +695,7 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessor::Result* re
         throw Slic3r::RuntimeError(std::string("G-code export to ") + path + " failed.\nCannot open the file for writing.\n");
 
     try {
+        m_placeholder_parser.reset();
         m_placeholder_parser_failed_templates.clear();
         this->_do_export(*print, file, thumbnail_cb);
         fflush(file);
