@@ -3033,7 +3033,7 @@ std::string GCode::extrude_loop_vase(const ExtrusionLoop &original_loop, const s
     if (paths.empty()) return "";
 
     // apply the small/external? perimeter speed
-    if (speed == -1 && is_perimeter(paths.front().role())){
+    if (speed == -1 && is_perimeter(paths.front().role()) && this->m_config.small_perimeter_speed.value > 0){
         coordf_t min_length = scale_d(this->m_config.small_perimeter_min_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
         coordf_t max_length = scale_d(this->m_config.small_perimeter_max_length.get_abs_value(EXTRUDER_CONFIG_WITH_DEFAULT(nozzle_diameter, 0)));
         max_length = std::max(min_length, max_length);
@@ -4077,18 +4077,21 @@ double_t GCode::_compute_speed_mm_per_sec(const ExtrusionPath& path, double spee
     //  don't modify bridge speed
     if (factor < 1 && !(is_bridge(path.role()))) {
         float small_speed = (float)m_config.small_perimeter_speed.get_abs_value(m_config.perimeter_speed);
-        //apply factor between feature speed and small speed
-        speed = (speed * factor) + double((1.f - factor) * small_speed);
+        if (small_speed > 0)
+            //apply factor between feature speed and small speed
+            speed = (speed * factor) + double((1.f - factor) * small_speed);
     }
     // Apply first layer modifier
     if (this->on_first_layer()) {
         const double base_speed = speed;
+        double first_layer_speed = m_config.first_layer_speed.get_abs_value(base_speed);
         if (path.role() == erInternalInfill || path.role() == erSolidInfill) {
             double first_layer_infill_speed = m_config.first_layer_infill_speed.get_abs_value(base_speed);
             if (first_layer_infill_speed > 0)
                 speed = std::min(first_layer_infill_speed, speed);
+            else if (first_layer_speed > 0)
+                speed = std::min(first_layer_speed, speed);
         } else {
-            double first_layer_speed = m_config.first_layer_speed.get_abs_value(base_speed);
             if (first_layer_speed > 0)
                 speed = std::min(first_layer_speed, speed);
         }

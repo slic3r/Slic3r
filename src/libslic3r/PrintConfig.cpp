@@ -1994,12 +1994,13 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloatOrPercent(30, false));
     
     def = this->add("first_layer_infill_speed", coFloatOrPercent);
-    def->label = L("Infill");
-    def->full_label = L("Infill first layer speed");
+    def->label = L("Max infill");
+    def->full_label = L("Infill max first layer speed");
     def->category = OptionCategory::speed;
     def->tooltip = L("If expressed as absolute value in mm/s, this speed will be applied as a maximum for all infill print moves of the first layer."
                    "\nIf expressed as a percentage it will scale the current infill speed."
-                   "\nSet it at 100% to remove any infill first layer speed modification.");
+                   "\nSet it at 100% to remove any infill first layer speed modification."
+                   "\nSet zero to disable (using first_layer_speed instead).");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "depends";
     def->min = 0;
@@ -3696,7 +3697,8 @@ void PrintConfigDef::init_fff_params()
     def->category = OptionCategory::speed;
     def->tooltip = L("This separate setting will affect the speed of perimeters having radius <= 6.5mm "
                    "(usually holes). If expressed as percentage (for example: 80%) it will be calculated "
-                   "on the perimeters speed setting above. Set zero for auto.");
+                   "on the perimeters speed setting above."
+                   "\nSet zero to disable.");
     def->sidetext = L("mm/s or %");
     def->ratio_over = "perimeter_speed";
     def->min = 0;
