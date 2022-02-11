@@ -924,7 +924,7 @@ void Sidebar::update_reslice_btn_tooltip() const
 {
     wxString tooltip = wxString("Slice") + " [" + GUI::shortkey_ctrl_prefix() + "R]";
     if (m_mode != comSimple || wxGetApp().app_config->get("objects_always_expert") == "1")
-        tooltip += wxString("\n") + _L("Hold Shift to Slice & Export G-code");
+        tooltip += wxString(" - ") + _L("Hold Shift to Slice & Export G-code");
     p->btn_reslice->SetToolTip(tooltip);
 }
 
