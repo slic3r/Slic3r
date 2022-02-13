@@ -169,6 +169,7 @@ void PerimeterGenerator::process()
     //store surface for bridge infill to avoid unsupported perimeters (but the first one, this one is always good)
     if (this->config->no_perimeter_unsupported_algo != npuaNone
         && this->lower_slices != NULL && !this->lower_slices->empty()) {
+        coordf_t bridged_infill_margin = scale_d(config->bridged_infill_margin.get_abs_value(unscaled(ext_perimeter_width)));
 
         for (surface_idx = 0; surface_idx < all_surfaces.size(); surface_idx++) {
             Surface *surface = &all_surfaces[surface_idx];
@@ -205,13 +206,13 @@ void PerimeterGenerator::process()
                                     ExPolygon &poly_unsupp = *(unsupported_filtered.begin() + i);
                                     Polygons contour_simplified = poly_unsupp.contour.simplify(perimeter_spacing);
                                     ExPolygon poly_unsupp_bigger = poly_unsupp;
-                                    Polygons contour_bigger = offset(poly_unsupp_bigger.contour, perimeter_spacing);
+                                    Polygons contour_bigger = offset(poly_unsupp_bigger.contour, bridged_infill_margin);
                                     if (contour_bigger.size() == 1) poly_unsupp_bigger.contour = contour_bigger[0];
 
                                     //check convex, has some bridge, not overhang
                                     if (contour_simplified.size() == 1 && contour_bigger.size() == 1 && contour_simplified[0].concave_points().size() == 0
                                         && intersection_ex(bridgeable, { poly_unsupp }).size() > 0
-                                        && diff_ex({ poly_unsupp_bigger }, union_ex(last, offset_ex(bridgeable, perimeter_spacing * 1.5)), true).size() == 0
+                                        && diff_ex({ poly_unsupp_bigger }, union_ex(last, offset_ex(bridgeable, bridged_infill_margin + perimeter_spacing * .5)), true).size() == 0
                                         ) {
                                         //ok, keep it
                                         i++;
@@ -220,7 +221,7 @@ void PerimeterGenerator::process()
                                     }
                                 }
                                 unsupported_filtered = intersection_ex(last,
-                                    offset2_ex(unsupported_filtered, double(-perimeter_spacing / 2), double(perimeter_spacing * 3 / 2)));
+                                    offset2_ex(unsupported_filtered, double(-perimeter_spacing / 2), double(bridged_infill_margin + perimeter_spacing / 2)));
                                 if (this->config->no_perimeter_unsupported_algo.value == npuaFilled) {
                                     for (ExPolygon &expol : unsupported_filtered) {
                                         //check if the holes won't be covered by the upper layer
@@ -245,7 +246,7 @@ void PerimeterGenerator::process()
                                             if (intersection_ex(ExPolygons() = { expol }, ExPolygons() = { all_surfaces[surface_idx_other].expolygon }).size() > 0) {
                                                 //this means that other_surf was inside an expol holes
                                                 //as we removed them, we need to add a new one
-                                                ExPolygons new_poly = offset2_ex(all_surfaces[surface_idx_other].expolygon, double(-perimeter_spacing * 2), double(perimeter_spacing));
+                                                ExPolygons new_poly = offset2_ex(all_surfaces[surface_idx_other].expolygon, double(-bridged_infill_margin - perimeter_spacing), double(perimeter_spacing));
                                                 if (new_poly.size() == 1) {
                                                     all_surfaces[surface_idx_other].expolygon = new_poly[0];
                                                     expol.holes.push_back(new_poly[0].contour);
@@ -302,7 +303,6 @@ void PerimeterGenerator::process()
                                     last = diff_ex(last, unsupported_filtered);
                                     //ExPolygons no_bridge = diff_ex(offset_ex(unbridgeable, ext_perimeter_width * 3 / 2), last);
                                     //bridges_temp = diff_ex(bridges_temp, no_bridge);
-                                    coordf_t bridged_infill_margin = scale_d(config->bridged_infill_margin.get_abs_value(unscaled(ext_perimeter_width)));
                                     coordf_t offset_to_do = bridged_infill_margin;
                                     bool first = true;
                                     unbridgeable = diff_ex(unbridgeable, offset_ex(bridges_temp, ext_perimeter_width));
