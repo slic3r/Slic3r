@@ -1199,10 +1199,6 @@ float GUI_App::toolbar_icon_scale(const bool is_limited/* = false*/) const
 
     if (is_limited && int_val < 50)
         int_val = 50;
-    else if (int_val < 1) {
-        int_val = 10; //buggy code? issue supermerill/superslicer#854
-        assert(false);
-    }
 
     return 0.01f * int_val * icon_sc;
 }
