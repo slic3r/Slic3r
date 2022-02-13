@@ -2364,8 +2364,8 @@ static void reserve_new_volume_finalize_old_volume(GLVolume& vol_new, GLVolume& 
 
 void GLCanvas3D::load_gcode_preview(const GCodeProcessor::Result& gcode_result, const std::vector<std::string>& str_tool_colors)
 {
-    if (m_dirty_gcode) {
-        m_dirty_gcode = false;
+    if (last_showned_gcode != gcode_result.computed_timestamp) {
+        last_showned_gcode = gcode_result.computed_timestamp;
         m_gcode_viewer.load(gcode_result, *this->fff_print(), m_initialized);
 
         if (wxGetApp().is_editor()) {
@@ -2401,6 +2401,14 @@ void GLCanvas3D::load_sla_preview()
     }
 }
 
+
+bool GLCanvas3D::is_preview_dirty() {
+    const Print* print = this->fff_print();
+    if (print == nullptr)
+        return false;
+    return last_showned_print != print->timestamp_last_change();
+}
+
 void GLCanvas3D::load_preview(const std::vector<std::string>& str_tool_colors, const std::vector<CustomGCode::Item>& color_print_values)
 {
     const Print* print = this->fff_print();
@@ -2409,8 +2417,8 @@ void GLCanvas3D::load_preview(const std::vector<std::string>& str_tool_colors, c
 
     _set_current();
 
-    if (m_dirty_preview || m_volumes.empty()) {
-        m_dirty_preview = false;
+    if (last_showned_print  != print->timestamp_last_change() || m_volumes.empty()) {
+        last_showned_print = print->timestamp_last_change();
         // Release OpenGL data before generating new data.
         this->reset_volumes();
         //note: this isn't releasing all the memory in all os, can make it crash on linux for exemple.

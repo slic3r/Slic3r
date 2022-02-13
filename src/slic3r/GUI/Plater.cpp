@@ -3142,12 +3142,14 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
     if (invalidated != Print::ApplyStatus::APPLY_STATUS_UNCHANGED && wxGetApp().app_config->get("auto_switch_preview") != "0")
     {
         // auto_switch_preview == 3 means "force tab change only if for gcode"
-        if(wxGetApp().app_config->get("auto_switch_preview") == "3")
-            if(this->preview->can_display_gcode())
+        if (wxGetApp().app_config->get("auto_switch_preview") == "3") {
+            if (this->preview->can_display_gcode())
                 main_frame->select_tab(MainFrame::ETabType::PlaterGcode, true);
-        // auto_switch_preview == 1 means "force tab change"
-        // auto_switch_preview == 2 (the only other one) means "force tab change only if already on a plater one"
-        else if (wxGetApp().app_config->get("auto_switch_preview") == "1" || main_frame->selected_tab() < MainFrame::ETabType::LastPlater) {
+            // auto_switch_preview == 1 means "force tab change"
+        } else if (wxGetApp().app_config->get("auto_switch_preview") == "1") {
+            main_frame->select_tab(MainFrame::ETabType::Plater3D, true);
+            // auto_switch_preview == 2 means "force tab change only if already on a plater one"
+        } else if (wxGetApp().app_config->get("auto_switch_preview") == "2" || main_frame->selected_tab() < MainFrame::ETabType::LastPlater) {
             if (this->preview->can_display_gcode())
                 main_frame->select_tab(MainFrame::ETabType::PlaterGcode, true);
             else if (this->preview->can_display_volume())
@@ -3706,10 +3708,10 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
 void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
 {
     //update dirty flags
-    if (0 != (evt.status.flags & Slic3r::PrintBase::SlicingStatus::FlagBits::SLICING_ENDED))
-        preview->get_canvas3d()->set_preview_dirty();
-    if (0 != (evt.status.flags & Slic3r::PrintBase::SlicingStatus::FlagBits::GCODE_ENDED))
-        preview->get_canvas3d()->set_gcode_viewer_dirty();
+    //if (0 != (evt.status.flags & Slic3r::PrintBase::SlicingStatus::FlagBits::SLICING_ENDED))
+    //    preview->get_canvas3d()->set_preview_dirty();
+    //if (0 != (evt.status.flags & Slic3r::PrintBase::SlicingStatus::FlagBits::GCODE_ENDED))
+    //    preview->get_canvas3d()->set_gcode_viewer_dirty();
 
     if (evt.status.percent >= -1) {
         if (m_ui_jobs.is_any_running()) {
@@ -3819,8 +3821,8 @@ void Plater::priv::on_slicing_began()
 {
 	clear_warnings();
 	notification_manager->close_notification_of_type(NotificationType::SlicingComplete);
-    preview->get_canvas3d()->set_gcode_viewer_dirty();
-    preview->get_canvas3d()->set_preview_dirty();
+    //preview->get_canvas3d()->set_gcode_viewer_dirty();
+    //preview->get_canvas3d()->set_preview_dirty();
 }
 void Plater::priv::add_warning(const Slic3r::PrintStateBase::Warning& warning, size_t oid)
 {
@@ -5103,8 +5105,8 @@ void Plater::load_gcode(const wxString& filename)
     p->gcode_result = std::move(processor.extract_result());
 
     // show results
-    p->preview->get_canvas3d()->set_preview_dirty();
-    p->preview->get_canvas3d()->set_gcode_viewer_dirty();
+    //p->preview->get_canvas3d()->set_preview_dirty();
+    //p->preview->get_canvas3d()->set_gcode_viewer_dirty();
     p->preview->reload_print(false);
     p->preview->get_canvas3d()->zoom_to_gcode();
 

@@ -419,7 +419,6 @@ void Preview::reload_print(bool keep_volumes)
 #endif /* __linux__ */
         (!keep_volumes && m_canvas->is_preview_dirty()))
     {
-        m_canvas->set_preview_dirty();
         m_canvas->reset_volumes();
         m_loaded = false;
 #ifdef __linux__
