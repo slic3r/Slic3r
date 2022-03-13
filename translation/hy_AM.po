@@ -1,0 +1,1360 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Slic3r\n"
+"POT-Creation-Date: 2017-03-29 00:02-0600\n"
+"PO-Revision-Date: 2022-03-13 10:26+0400\n"
+"Last-Translator: Ավագ Սայան <info@armath.am>\n"
+"Language-Team: Armath <info@armath.am>\n"
+"Language: hy_AM\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.4.2\n"
+"X-Poedit-Basepath: ..\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-KeywordsList: __TRANS;__\n"
+"X-Poedit-SearchPath-0: xs/src/libslic3r\n"
+"X-Poedit-SearchPath-1: xs/xrc/slic3r/GUI\n"
+"X-Poedit-SearchPath-2: xs/xrc/slic3r\n"
+
+#: xs/src/libslic3r/PrintConfig.cpp:18
+msgid "Rectilinear"
+msgstr "Ուղղանկյունաձև"
+
+#: xs/src/libslic3r/PrintConfig.cpp:19
+msgid "Concentric"
+msgstr "Կենտրոնաձև"
+
+#: xs/src/libslic3r/PrintConfig.cpp:20
+msgid "Hilbert Curve"
+msgstr "Հիլբերտյան կոր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:21
+msgid "Archimedean Chords"
+msgstr "Արքիմեդյան ակորդ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:22
+msgid "Octagram Spiral"
+msgstr "Ութաթև պարույր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:27
+msgid "Avoid crossing perimeters"
+msgstr "Խուսափել խաչվող պարագծերից"
+
+#: xs/src/libslic3r/PrintConfig.cpp:28 xs/src/libslic3r/PrintConfig.cpp:77 xs/src/libslic3r/PrintConfig.cpp:252 xs/src/libslic3r/PrintConfig.cpp:259 xs/src/libslic3r/PrintConfig.cpp:544 xs/src/libslic3r/PrintConfig.cpp:712 xs/src/libslic3r/PrintConfig.cpp:726 xs/src/libslic3r/PrintConfig.cpp:820 xs/src/libslic3r/PrintConfig.cpp:842 xs/src/libslic3r/PrintConfig.cpp:900
+#: xs/src/libslic3r/PrintConfig.cpp:1080 xs/src/libslic3r/PrintConfig.cpp:1230 xs/src/libslic3r/PrintConfig.cpp:1442 xs/src/libslic3r/PrintConfig.cpp:1503
+msgid "Layers and Perimeters"
+msgstr "Շերտեր և պարագծեր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:29
+msgid "Optimize travel moves in order to minimize the crossing of perimeters. This is mostly useful with Bowden extruders which suffer from oozing. This feature slows down both the print and the G-code generation."
+msgstr "Օպտիմալացնում է դատարկ տեղաշարժերը և թույլ է տալիս կրճատել խաչվող պարագծերը: Սա շատ օգտակար է, հատկապես երբ օգտագործում ենք Bowden տեսակի արտամղիչ գլխիկներ(extruder), քանի որ վերջիններս ունեն լցանյութը ծորելու թերություն. Այս հատկությունը դանդաղեցնում է ինչպես բուն տպագրությունն, այնպես էլ Gcode-ի պատրաստման ընթացքը:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:34
+msgid "Bed shape"
+msgstr "Հարթակի ձևը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:44
+msgid "Has heated bed"
+msgstr "Հարթակն ունի տաքացման հնարավորություն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:45
+msgid "Unselecting this will suppress automatic generation of bed heating gcode."
+msgstr "Այս կետը չնշելու դեպքում հարթակի տաքացման gcode-ը ինքնաբերաբար կգեներեացվի"
+
+#: xs/src/libslic3r/PrintConfig.cpp:50 xs/src/libslic3r/PrintConfig.cpp:1428
+msgid "Other layers"
+msgstr "Այլ շերտեր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:51
+msgid "Bed temperature for layers after the first one."
+msgstr "Հարթակի ջերմաստիճանը առաջին շերտից հետո:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:53
+msgid "Bed temperature"
+msgstr "Հարթակի ջերմաստիճանը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:59
+msgid "Before layer change G-code"
+msgstr "Շերտից առաջ փոխել G-code-ը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:60
+msgid "This custom code is inserted at every layer change, right before the Z move. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num] and [layer_z]."
+msgstr "Այս հատուկ կոդը տեղադրվում է յուրաքանչյուր շերտի փոփոխության ժամանակ, անմիջապես Z-ի քայլից առաջ։Նաև կաարող եք օգտագործել, որպես տեղապահ (placeholder) տեքստի փոփոխականները Slic3r-ի բոլոր կարգավորումների,ինչպես նաև [layer_num]֊ի և [layer_z]֊ի համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:68 xs/src/libslic3r/PrintConfig.cpp:76
+msgid "Bottom"
+msgstr "Հիմք"
+
+#: xs/src/libslic3r/PrintConfig.cpp:69
+msgid "Bottom infill pattern"
+msgstr "Հիմքը լցնելու ձևաչափը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:70 xs/src/libslic3r/PrintConfig.cpp:216 xs/src/libslic3r/PrintConfig.cpp:425 xs/src/libslic3r/PrintConfig.cpp:437 xs/src/libslic3r/PrintConfig.cpp:475 xs/src/libslic3r/PrintConfig.cpp:482 xs/src/libslic3r/PrintConfig.cpp:624 xs/src/libslic3r/PrintConfig.cpp:634 xs/src/libslic3r/PrintConfig.cpp:651 xs/src/libslic3r/PrintConfig.cpp:664
+#: xs/src/libslic3r/PrintConfig.cpp:671 xs/src/libslic3r/PrintConfig.cpp:686 xs/src/libslic3r/PrintConfig.cpp:1168 xs/src/libslic3r/PrintConfig.cpp:1185 xs/src/libslic3r/PrintConfig.cpp:1482
+msgid "Infill"
+msgstr "Նյութի լցոնում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:71
+msgid "Infill pattern for bottom layers. This only affects the external visible layer, and not its adjacent solid shells."
+msgstr "Լցոնման ձևաչափը հիմքի շերտերի համար: Այն միայն ազդում է արտաքին տեսանելի շերտերի վրա, բայց ոչ հարակից պինդ կաղապարների վրա: "
+
+#: xs/src/libslic3r/PrintConfig.cpp:78
+msgid "Number of solid layers to generate on bottom surfaces."
+msgstr "Պինդ շերտերի քանակը, որոնց միջոցով պետք է ստեղծել հիմքի մակերևույթները: "
+
+#: xs/src/libslic3r/PrintConfig.cpp:80
+msgid "Bottom solid layers"
+msgstr "Հիմքի պինդ շերտեր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:85
+msgid "Bridge"
+msgstr "Կամուրջ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:86 xs/src/libslic3r/PrintConfig.cpp:160 xs/src/libslic3r/PrintConfig.cpp:514 xs/src/libslic3r/PrintConfig.cpp:625 xs/src/libslic3r/PrintConfig.cpp:857
+msgid "Speed > Acceleration"
+msgstr "Արագություն > Արագացում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:87
+msgid "This is the acceleration your printer will use for bridges. Set zero to disable acceleration control for bridges."
+msgstr "Սա տպիչի արագացումն է կամրջակների ժամանակ: 0-ի դեպքում անջատում է կամրջակների պատրաստման արագացումը:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:94
+msgid "Bridges fan speed"
+msgstr "Օդափոխիչի արագությունը կամրջակների ժամանակ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:95
+msgid "This fan speed is enforced during all bridges and overhangs."
+msgstr "Օդափոխիչի արագությունը սկսում է աճել բոլոր տեսակի կամուրջների և արագ անցումների ժամանակ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:103
+msgid "Bridge flow ratio"
+msgstr "Կամուրջի հոսքի հարաբերակցություըն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:104 xs/src/libslic3r/PrintConfig.cpp:147 xs/src/libslic3r/PrintConfig.cpp:678 xs/src/libslic3r/PrintConfig.cpp:1559
+msgid "Advanced"
+msgstr "Մանսագիտացված"
+
+#: xs/src/libslic3r/PrintConfig.cpp:105
+msgid "This factor affects the amount of plastic for bridging. You can decrease it slightly to pull the extrudates and prevent sagging, although default settings are usually good and you should experiment with cooling (use a fan) before tweaking this."
+msgstr "Այս գործակիցը ազդում է կամրջման պլաստիկի քանակի վրա։ Կարող եք մի փոքրնվազեցնել այն՝ ձգելով արտամղիչ գլխիկը, թեև զրոյական դրված կարգավորումները սովորաբարլավն են։ Այս դեպքում նախքան այն կարգավորելը պետք է փորձարկել հովացման համակարգը (օգտագործեք օդափոխիչ)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:111
+msgid "Bridges"
+msgstr "Կամուրջներ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:113 xs/src/libslic3r/PrintConfig.cpp:240 xs/src/libslic3r/PrintConfig.cpp:553 xs/src/libslic3r/PrintConfig.cpp:576 xs/src/libslic3r/PrintConfig.cpp:688 xs/src/libslic3r/PrintConfig.cpp:744 xs/src/libslic3r/PrintConfig.cpp:753 xs/src/libslic3r/PrintConfig.cpp:888 xs/src/libslic3r/PrintConfig.cpp:1067 xs/src/libslic3r/PrintConfig.cpp:1105
+#: xs/src/libslic3r/PrintConfig.cpp:1156 xs/src/libslic3r/PrintConfig.cpp:1209 xs/src/libslic3r/PrintConfig.cpp:1491 xs/src/libslic3r/PrintConfig.cpp:1512
+msgid "Speed"
+msgstr "Արագություն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:114
+msgid "Speed for printing bridges."
+msgstr "Կամուրջների տպման արագություն: "
+
+#: xs/src/libslic3r/PrintConfig.cpp:124
+msgid "Brim connections width"
+msgstr "Հիմքի ամրանների միացումերի լայնությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:125 xs/src/libslic3r/PrintConfig.cpp:134 xs/src/libslic3r/PrintConfig.cpp:701 xs/src/libslic3r/PrintConfig.cpp:779 xs/src/libslic3r/PrintConfig.cpp:1118 xs/src/libslic3r/PrintConfig.cpp:1127 xs/src/libslic3r/PrintConfig.cpp:1135
+msgid "Skirt and brim"
+msgstr "Եզր և ամրան"
+
+#: xs/src/libslic3r/PrintConfig.cpp:126
+msgid "If set to a positive value, straight connections will be built on the first layer between adjacent objects."
+msgstr "Եթե սահմանված է դրական արժեքա, ապա ուղիղ կապերը կկառուցվեն առաջին շերտի վրա հարակից օբյեկտների միջև:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:133
+msgid "Exterior brim width"
+msgstr "Արտաքին ամրանի հաստությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:135
+msgid "Horizontal width of the brim that will be printed around each object on the first layer."
+msgstr "Եզրի հորիզոնական լայնության չափը։ Այն սովորաբար տպում է յուրաքանչյուր առարկայի շուրջմեկնարկի ժամանակ։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:142
+msgid "Compatible printers"
+msgstr " Համատեղելի տպիչներ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:146
+msgid "Complete individual objects"
+msgstr "Լրացնել առանձին առարկանները"
+
+#: xs/src/libslic3r/PrintConfig.cpp:148
+msgid "When printing multiple objects or copies, this feature will complete each object before moving onto next one (and starting it from its bottom layer). This feature is useful to avoid the risk of ruined prints. Slic3r should warn and prevent you from  collisions, but beware."
+msgstr "Բազմաթիվ առարկաներ կամ պատճեններ տպելիս այս հատկությունը կլրացնի յուրաքանչյուր առարկան՝նախքան հաջորդին անցնելը (սկսելով ստորին շերտից): Այս հատկությունը օգտակար է խոտանված տպագրությանվտանգից խուսափելու համար: Slic3r-ը պետք է զգուշացնի և կանխի extruder֊ի խափանումներից։Բայց զգուշ եղեք։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:153
+msgid "Enable auto cooling"
+msgstr "Միացնել ինքնահովացումը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:154
+msgid "This flag enables the automatic cooling logic that adjusts print speed and fan speed according to layer printing time."
+msgstr "Այս դրոշակը հնարավորություն է տալիս ունենալ ինքնասառեցման որոշակի տրամաբանություն,որը կարգավորում է տպելու և օդափոխիչի արագությունը՝ շերտի տպագրության ժամանակից կախված։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:159
+msgid "Default"
+msgstr "Լռելայն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:161
+msgid "This is the acceleration your printer will be reset to after the role-specific acceleration values are used (perimeter/infill). Set zero to prevent resetting acceleration at all."
+msgstr "Սա այն արագացումն է, որով տպիչը կմեկնարկի, երբ օգտագործվի հատուկ արագացմանարժեքների (պարագիծ/լցոնում): Սահմանեք զրո, որի դեպքում կկանխեք արագացման բոլորտեսակի սահմանումները:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:168
+msgid "Disable fan for the first"
+msgstr "Առաջին հերթին անջատել օդափոխիչը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:169
+msgid "This disables the fan completely for the first N layers to aid in the adhesion of media to the bed. (default 3)"
+msgstr "Սա ամբողջովին անջատում է օդափոխիչը, որը օգնում է առաջին N քանակի շերտերըհետշությամբ կպչեն հարթակին: (լռելայն սահմանված է 3)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:170
+msgid "layers"
+msgstr "շերտեր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:177
+msgid "Don't support bridges"
+msgstr "Կամուրջներ առանց օժանդակման"
+
+#: xs/src/libslic3r/PrintConfig.cpp:178 xs/src/libslic3r/PrintConfig.cpp:933 xs/src/libslic3r/PrintConfig.cpp:942 xs/src/libslic3r/PrintConfig.cpp:1270 xs/src/libslic3r/PrintConfig.cpp:1277 xs/src/libslic3r/PrintConfig.cpp:1287 xs/src/libslic3r/PrintConfig.cpp:1295 xs/src/libslic3r/PrintConfig.cpp:1308 xs/src/libslic3r/PrintConfig.cpp:1325 xs/src/libslic3r/PrintConfig.cpp:1346
+#: xs/src/libslic3r/PrintConfig.cpp:1355 xs/src/libslic3r/PrintConfig.cpp:1367 xs/src/libslic3r/PrintConfig.cpp:1379 xs/src/libslic3r/PrintConfig.cpp:1395 xs/src/libslic3r/PrintConfig.cpp:1406 xs/src/libslic3r/PrintConfig.cpp:1408 xs/src/libslic3r/PrintConfig.cpp:1419
+msgid "Support material"
+msgstr "Օժանդակ նյութ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:179
+msgid "Experimental option for preventing support material from being generated under bridged areas."
+msgstr "Փորձնական տարբերակ՝ կամրջակների տարածքում օժանդակ նյութի լցոնումը կանխելու համար"
+
+#: xs/src/libslic3r/PrintConfig.cpp:184
+msgid "Distance between copies"
+msgstr "Հեռավորությունը պատճենների միջև"
+
+#: xs/src/libslic3r/PrintConfig.cpp:185
+msgid "Distance used for the auto-arrange feature of the plater."
+msgstr "Հեռավորություն, որն օգտագործվում է հարթակի ինքնադասավորության համար"
+
+#: xs/src/libslic3r/PrintConfig.cpp:193 xs/src/libslic3r/PrintConfig.cpp:202
+msgid "End G-code"
+msgstr "Գլխիկի G-code"
+
+#: xs/src/libslic3r/PrintConfig.cpp:194
+msgid "This end procedure is inserted at the end of the output file. Note that you can use placeholder variables for all Slic3r settings."
+msgstr "Այս վերջնական ընթացակարգը տեղադրվում է ելքային նիշքի վերջին մասում: Նկատի ունեցեք, որ Slic3r-իբոլոր տեսակի կարգավորումների համար կարող եք օգտագործել տեղապահ փոփոխականներ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:203
+msgid "This end procedure is inserted at the end of the output file, before the printer end gcode. Note that you can use placeholder variables for all Slic3r settings. If you have multiple extruders, the gcode is processed in extruder order."
+msgstr "Վերջնական ընթացակարգը տեղադրվում է ելքային նիշքում՝ տպիչի end gcode-ից առաջ: Նկատի ունեցեք,որ Slic3r-ի բոլոր կարգավորումների համար կարող եք օգտագործել տեղապահ փոփոխականներ:Եթե ունեք մի քանի գլխիկ, ապա gcode-ը մշակվում է գլխիկների հերթականությամբ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:215
+msgid "Top/bottom fill pattern"
+msgstr "Վերև/ներքևի լցոնման ոճը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:217
+msgid "Fill pattern for top/bottom infill. This only affects the external visible layer, and not its adjacent solid shells."
+msgstr "Լրացրեք վերևի/ներքևի լցոնման ոճը: Այն ազդում է միայն արտաքին տեսանելի շերտի վրա,և ոչ նրա հարակից ամուր պատյանների վրա:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:224 xs/src/libslic3r/PrintConfig.cpp:237
+msgid "↳ external"
+msgstr "↳ արտաքին"
+
+#: xs/src/libslic3r/PrintConfig.cpp:225
+msgid "External perimeters extrusion width"
+msgstr "Արտաքին պարագծերի արտամղող լայնությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:227 xs/src/libslic3r/PrintConfig.cpp:323 xs/src/libslic3r/PrintConfig.cpp:532 xs/src/libslic3r/PrintConfig.cpp:653 xs/src/libslic3r/PrintConfig.cpp:875 xs/src/libslic3r/PrintConfig.cpp:1196 xs/src/libslic3r/PrintConfig.cpp:1327 xs/src/libslic3r/PrintConfig.cpp:1470
+msgid "Extrusion Width"
+msgstr "Արտամղման լայնությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:228
+msgid "Set this to a non-zero value to set a manual extrusion width for external perimeters. If auto is chosen, a value will be used that maximizes accuracy of the external visible surfaces. If expressed as percentage (for example 200%) it will be computed over layer height."
+msgstr "Սահմանել ոչ զրոյական արժեք, որով կգործադրվի արտաքին պարագծերի արտամղման լայնությունը:Եթե ընտրեք ինքնին տարբերակաը, ապա կօգտագործվի մի արժեք, որն առավելագույնի կհասցնիարտաքին տեսանելի մակերեսների ճշգրտությունը: Եթե գրվի որպես տոկոս (օրինակ 200%), ապա այնկհաշվարկվի շերտի բարձրության վրա"
+
+#: xs/src/libslic3r/PrintConfig.cpp:238
+msgid "External perimeters speed"
+msgstr "Արտաքին պարագծերի արագությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:241
+msgid "This separate setting will affect the speed of external perimeters (the visible ones). If expressed as percentage (for example: 80%) it will be calculated on the perimeters speed setting above."
+msgstr "Այս առանձին կարգավորումը կազդի արտաքին պարագծերի (տեսանելիների) արագության վրա:Եթե գրվում է որպես տոկոս (օրինակ՝ 80%), ապա այն կհաշվարկվի վերը նշված պարագծայինարագության կարգավորման նկատմամբ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:251
+msgid "External perimeters first"
+msgstr "Արտաքին պարագծերը առաջին հերթին"
+
+#: xs/src/libslic3r/PrintConfig.cpp:253
+msgid "Print contour perimeters from the outermost one to the innermost one instead of the default inverse order."
+msgstr "Տպել շրջանակի պարագծերը ամենահեռավորից մինչև ամենամոտը,հակադարձ կարգի փոխարեն:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:258
+msgid "Extra perimeters if needed"
+msgstr "Հավելյալ պարագծեր, եթե անրաժեշտ է"
+
+#: xs/src/libslic3r/PrintConfig.cpp:260
+msgid "Add more perimeters when needed for avoiding gaps in sloping walls."
+msgstr "Անհրաժեշտության դեպքում ավելացնում է ավելի շատ պարագծեր,որը թույլ է տալիս խուսափել թեք պատերից:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:266 xs/src/libslic3r/PrintConfig.cpp:925
+msgid "Extruder"
+msgstr "Գլխիկ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:267 xs/src/libslic3r/PrintConfig.cpp:644 xs/src/libslic3r/PrintConfig.cpp:828 xs/src/libslic3r/PrintConfig.cpp:865 xs/src/libslic3r/PrintConfig.cpp:1177 xs/src/libslic3r/PrintConfig.cpp:1238 xs/src/libslic3r/PrintConfig.cpp:1318 xs/src/libslic3r/PrintConfig.cpp:1338
+msgid "Extruders"
+msgstr "Գլխիկներ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:268
+msgid "The extruder to use (unless more specific extruder settings are specified)."
+msgstr "Օգտագործվող գլխիկը (բացառությամբ այն դեպքերի, երբ գլխիկի համար կոնկրետկարգավորումները նշված չեն):"
+
+#: xs/src/libslic3r/PrintConfig.cpp:278
+msgid "Height"
+msgstr "Բարձրություն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:279
+msgid "Set this to the vertical distance between your nozzle tip and (usually) the X carriage rods. In other words, this is the height of the clearance cylinder around your extruder, and it represents the maximum depth the extruder can peek before colliding with other printed objects."
+msgstr "Սա սահմանում է nozzle ծայրի և (սովորաբար) X սայլի ձողերի միջև ուղղահայաց հեռավորությունը:Այլ կերպ ասած, սա գլխիկի բացթողնման մխոցի բարձրությունն է, և ներկայացնում էառավելագույն խորությունը, որ գլխիկը կարող է իջնել, առանց տպագիր առարկաների հետ բախվելու:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:286
+msgid "Radius"
+msgstr "Շառավիղ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:287
+msgid "Set this to the clearance radius around your extruder. If the extruder is not centered, choose the largest value for safety. This setting is used to check for collisions and to display the graphical preview in the plater."
+msgstr "Սահմանում է գլխիկի շրջակա շառավղի թողունակությունը: Եթե գլխիկը կենտրոնացած չէ,ապա անվտանգության համար կարող եք ընտրել ամենամեծ արժեքը: Այս կարգավորումըօգտագործվում է բախումները ստուգելու և հարթակի վրա գրաֆիկական նախադիտումը ցուցադրելու համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:294
+msgid "Extruder offset"
+msgstr "Արտամղիչ գլխիկի զրոն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:295
+msgid "If your firmware doesn't handle the extruder displacement you need the G-code to take it into account. This option lets you specify the displacement of each extruder with respect to the first one. It expects positive coordinates (they will be subtracted from the XY coordinate)."
+msgstr "Եթե ապարատուրային ծրագիրը չի շարժում գլխիկն, ապա անհրաժեշտ է  վերանայել G-կոդը:Այս տարբերակը թույլ է տալիս հատկանշել յուրաքանչյուր գլխիկի տեղաշարժը առաջինի նկատմամբ:Այն նախատեսված է դրական կոորդինատների համար (կպակասեցվեն XY կոորդինատներից):"
+
+#: xs/src/libslic3r/PrintConfig.cpp:305
+msgid "Extrusion axis"
+msgstr "Արտամղման առանցքը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:306
+msgid "Use this option to set the axis letter associated to your printer's extruder (usually E but some printers use A)."
+msgstr "Օգտագործեք այս տարբերակը՝ տպիչի գլխիկի առանցքի տառը սահմանելու համար(սովորաբար E, բայց որոշ տպիչներ օգտագործում են A):"
+
+#: xs/src/libslic3r/PrintConfig.cpp:311
+msgid "Extrusion multiplier"
+msgstr "Արտամղման բազմապատկիչ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:312
+msgid "This factor changes the amount of flow proportionally. You may need to tweak this setting to get nice surface finish and correct single wall widths. Usual values are between 0.9 and 1.1. If you think you need to change this more, check filament diameter and your firmware E steps."
+msgstr "Այս գործակիցը համամասնորեն փոխում է հոսքի չափը: Երբեմն անհրաժեշտ է գործադրելայս հատկությունը՝ գեղեցիկ հարդարված հարթություն ստանալու և մեկ պատի լայնությունըշտկելու համար: Սովորական արժեքները 0.9-ից 1.1-ի միջև են: Եթե կարծում եք, որ պետքայն շատացնել, ապա ստուգեք լցանյութի տրամագիծը և ապարատուրային ծրագրի E֊ի քայլերը:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:321
+msgid "Default extrusion width"
+msgstr "Լռելայն արտամղման լայնությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:324
+msgid "Set this to a non-zero value to set a manual extrusion width. If expressed as percentage (for example: 230%) it will be computed over layer height."
+msgstr "Սահմանել ոչ զրոյական արժեք, որը թույլ կտա ձեռքով փոփոխել արտամղման լայնությունը:Եթե գրվի տոկոսով (օրինակ՝ 230%), ապա այն կհաշվարկվի շերտի բարձրության վրա:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:333
+msgid "Keep fan always on"
+msgstr "Օդամղիչը միշտ միացրած պահել"
+
+#: xs/src/libslic3r/PrintConfig.cpp:334
+msgid "If this is enabled, fan will never be disabled and will be kept running at least at its minimum speed. Useful for PLA, harmful for ABS."
+msgstr "Եթե սա միացված է, օդափոխիչը երբեք չի անջատվի և կշարունակվի աշխատել նույնիսկնվազագույն արագությամբ: Օգտակար է PLA-ի համար, վնասակար՝ ABS-ի համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:339
+msgid "Enable fan if layer print time is below"
+msgstr "Միացնել օդափոխիչը, եթե շերտի տպման ժամանակը փոքր է"
+
+#: xs/src/libslic3r/PrintConfig.cpp:340
+msgid "If layer print time is estimated below this number of seconds, fan will be enabled and its speed will be calculated by interpolating the minimum and maximum speeds."
+msgstr "Եթե շերտի տպման ժամանակը գնահատվում է այսքան վայրկյանից ցածր, օդափոխիչը կմիանաու վերջինիս արագությունը կհաշվարկվի նվազագույն և առավելագույն արագությունների միջակայքում:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:349
+msgid "Color"
+msgstr "Գույն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:350
+msgid "This is only used in the Slic3r interface as a visual help."
+msgstr "Սա օգտագործվում է միայն Slic3r֊ի միջերեսում, որպես տեսողական օգնություն:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:360
+msgid "Filament notes"
+msgstr "Լցանյութի նշումներ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:361
+msgid "You can put your notes regarding the filament here."
+msgstr "Լցանյութի վերաբերյալ նշումները կարող եք տեղադրել այստեղ։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:373 xs/src/libslic3r/PrintConfig.cpp:752
+msgid "Max volumetric speed"
+msgstr "Առավելագույն ծավալային արագություն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:374
+msgid "Maximum volumetric speed allowed for this filament. Limits the maximum volumetric speed of a print to the minimum of print and filament volumetric speed. Set to zero for no limit."
+msgstr "Առավելագույն ծավալային արագություն այս լցանյութի համար: Սահմանափակում էլցանյութի առավելագույն և նվազագույն ծավալային արագությունները տպագրությանժամանակ: Սահմանեք զրո, եթե չեք ուզում ունենալ սահմանափակումներ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:385
+msgid "Diameter"
+msgstr "Տրամագիծ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:386
+msgid "Enter your filament diameter here. Good precision is required, so use a caliper and do multiple measurements along the filament, then compute the average."
+msgstr "Մուտքագրեք լցանյութի տրամագիծն այստեղ: Պահանջվում է գրել ճշգրիտ թիվ։ Անհրաժեշտ էմի քանի անգամ չափումներ կատարել լցանյութի երկարության տարբեր կետերում,այնուհետև գտնել միջինը արժեքը:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:397
+msgid "Density"
+msgstr "Խտություն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:398
+msgid "Enter your filament density here. This is only for statistical information. A decent way is to weigh a known length of filament and compute the ratio of the length to volume. Better is to calculate the volume directly through displacement."
+msgstr "Մուտքագրեք լցանյութի խտությունը: Սա միայն վիճակագրական տեղեկատվության համար է:Ավելի ճիշտ միջոց է չաթել լցանյութի իրական երկարությունը և հաշվարկել երկարությանու ծավալի հարաբերակցությունը: Նաև լավ տարբերակ է ծավալը հաշվարկել ուղղակի տեղաշարժելով այն:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:409
+msgid "Cost"
+msgstr "Արժեք"
+
+#: xs/src/libslic3r/PrintConfig.cpp:410
+msgid "Enter your filament cost per kg here. This is only for statistical information."
+msgstr "Մուտքագրել լցանյութի արժեքը 1 կգ-ի համար: Սա միայն վիճակագրական տեղեկատվության համար է:"
+
+# Set this to be the local currency symbol.
+#: xs/src/libslic3r/PrintConfig.cpp:411
+msgid "money/kg"
+msgstr "֏/կգ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:424
+msgid "Fill angle"
+msgstr "Լցնել անկյունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:426
+msgid "Default base angle for infill orientation. Cross-hatching will be applied to this. Bridges will be infilled using the best direction Slic3r can detect, so this setting does not affect them."
+msgstr "Լցոնման կողմնորոշումը կանխադրված հիմքի անկյան համար: Դրա վրա կկիրառվի խաչաձև երեսպատում:Կամուրջները կլրացվեն Slic3r-ը կողմից հայտնաբերված լավագույն ուղղությամբ, ուստիայս կարգավորումը չի ազդի կամուրջների վրա:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:436
+msgid "Fill density"
+msgstr "Լրացման խտությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:438
+msgid "Density of internal infill, expressed in the range 0% - 100%."
+msgstr "Ներսի լցոնման խտությունը արտահայտված 0% - 100% միջակայքում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:474
+msgid "Fill gaps"
+msgstr "Լցնել բաց տեղերը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:476
+msgid "If this is enabled, gaps will be filled with single passes. Enable this for better quality, disable it for shorter printing times."
+msgstr "Եթե սա միացված է, բացերը կլրացվեն մեկ փոխանցումով: Միացրեք սա ավելի լավ որակի համար։Անջատելու դեպքում կկրճատվի տպագրության ժամանակը։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:481
+msgid "Fill pattern"
+msgstr "Լրացման նախշը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:483
+msgid "Fill pattern for general low-density infill."
+msgstr "Լրացնել նախշը սովորաական ցածր խտության լցոնում ստանալու համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:513 xs/src/libslic3r/PrintConfig.cpp:522 xs/src/libslic3r/PrintConfig.cpp:530 xs/src/libslic3r/PrintConfig.cpp:561
+msgid "First layer"
+msgstr "Առաջին շերտ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:515
+msgid "This is the acceleration your printer will use for first layer. Set zero to disable acceleration control for first layer."
+msgstr "Սա այն արագացումն է, որը կօգտագործի Ձեր տպիչը առաջին շերտի համար: Սահմանեք զերո, եթեցանկանում եք անջատել արագացման կառավարումն առաջին շերտի համար"
+
+#: xs/src/libslic3r/PrintConfig.cpp:523
+msgid "Heated build plate temperature for the first layer. Set this to zero to disable bed temperature control commands in the output."
+msgstr "Տաքացվող հարթակի ջերմաստիճանը առաջին շերտի համար: Սահմանեք զերո, եթե ցանկանում եք անջատել հարթակի ջերմաստիճանի վերահսկման հրամաններն ելքային նիշքում:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:533
+msgid "Set this to a non-zero value to set a manual extrusion width for first layer. You can use this to force fatter extrudates for better adhesion. If expressed as percentage (for example 120%) it will be computed over first layer height."
+msgstr "Սահմանեք ոչ զրոյական արժեք, եթե ցանկանում եք կիրառել ձեռքով արտամղման հնարավորությունը առաջին շերտի դեպքում: Սա կարող եք օգտագործել ավելի հաստ գլխիկների դեպքում, որպեսզի:կպչունությունը ավելի պինդ լինի։ Եթե այն գրվի տոկոսով (օրինակ՝ 120%), ապա այն կհաշվարկվի առաջին շերտի բարձրության վրա:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:543
+msgid "First layer height"
+msgstr "Առաջին շերտի բարձրություը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:545
+msgid "When printing with very low layer heights, you might still want to print a thicker bottom layer to improve adhesion and tolerance for non perfect build plates. This can be expressed as an absolute value or as a percentage (for example: 150%) over the default layer height."
+msgstr "Երբ շերտը տպում եք շատ ցածր բարձրություններով, ապա իմացեք, որ ամեն դեպքում ներքևի շերտը պետք էավելի հաստ տպել կպչունությունը բարելավելու և հարմարեցնելու ոչ կատարյալ հարրթակներ համար: Սա կարող է արտահայտվել որպես բացարձակ արժեք կամ որպես տոկոս (օրինակ՝ 150%)սովորական շերտի բարձրության արժեքի նկատմամբ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:552
+msgid "First layer speed"
+msgstr "Առաջին շերտի արագությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:554
+msgid "If expressed as absolute value in mm/s, this speed will be applied to all the print moves of the first layer, regardless of their type. If expressed as a percentage (for example: 40%) it will scale the default speeds."
+msgstr "Եթե գրվում է որպես բացարձակ արժեք մմ/վրկ-ով, ապա այս արագությունը կկիրառվիառաջին շերտի բոլոր տպագրական շարժումների վրա՝ անկախ դրանց տեսակից: Եթե գրվի"
+
+#: xs/src/libslic3r/PrintConfig.cpp:562
+msgid "Extruder temperature for first layer. If you want to control temperature manually during print, set this to zero to disable temperature control commands in the output file."
+msgstr "Գլխիկի ջերմաստիճանը առաջին շերտի համար: Եթե ցանկանում եք ձեռքով կառավարելջերմաստիճանը տպման ժամանակ, ապա սա պետք է սահմանել զրոյի՝ ելքային նիշքումջերմաստիճանի վերահսկման հրամաններն անջատելու համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:573
+msgid "↳ gaps"
+msgstr "↳ բացեր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:577
+msgid "Speed for filling gaps. Since these are usually single lines you might want to use a low speed for better sticking. If expressed as percentage (for example: 80%) it will be calculated on the infill speed setting above."
+msgstr "Բացերը լցնելու արագություն: Քանի որ դրանք սովորաբար միայնակ գծեր են,կարող եք օգտագործել ցածր արագություն ավելի լավ կպչելու համար: Եթե գրում եք տոկոսով (օրինակ՝ 80%), ապա այն կհաշվարկվի վերը նշված լցոնման արագության կարգավորմամբ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:587
+msgid "Use native G-code arcs"
+msgstr "Օգտագործել G-code֊ի սեփական կամարները"
+
+#: xs/src/libslic3r/PrintConfig.cpp:588
+msgid "This experimental feature tries to detect arcs from segments and generates G2/G3 arc commands instead of multiple straight G1 commands."
+msgstr "Այս փորձնական հատկությունը փորձում է հատվածներից գտնել աղեղները և ստեղծում էG2/G3 աղեղային հրամաններ՝ բազմակի G1 հրամանների փոխարեն:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:593
+msgid "Verbose G-code"
+msgstr "Մեկնաբանությամբ G-code"
+
+#: xs/src/libslic3r/PrintConfig.cpp:594
+msgid "Enable this to get a commented G-code file, with each line explained by a descriptive text. If you print from SD card, the additional weight of the file could make your firmware slow down."
+msgstr "Միացնելու դեպքում կունենաք մեկնաբանություններով G-code֊ի նիշք, որտեղ յուրաքանչյուրտող բացատրվում է նկարագրական տեքստով: Եթե տպում եք SD քարտից, նիշքի լրացուցիչծավալը կարող է դանդաղեցնել ապարատուրային ծրագիրը:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:599
+msgid "G-code flavor"
+msgstr "G-code֊ի տարբերակ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:600
+msgid "Some G/M-code commands, including temperature control and others, are not universal. Set this option to your printer's firmware to get a compatible output. The \"No extrusion\" flavor prevents Slic3r from exporting any extrusion value at all."
+msgstr "Որոշ G/M կոդի հրամաններ, ներառյալ ջերմաստիճանի վերահսկումը չեն կարող լինելհամընդհանուր բոլոր տպիչների կամ մաոդելների համար: Այս տարբերակը միացնելու դեպքումկունենաք տպիչի ապարատուրային ծրագրի համատեղելի արդյունք: \"Առանց արտամղման\" տարրըկանխում է Slic3r-ին արտահանել ցանկացած արտամղման արժեք:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:626
+msgid "This is the acceleration your printer will use for infill. Set zero to disable acceleration control for infill."
+msgstr "Սա ձեր տպիչի լցոնման արագացումն է: Զրոի դեպքում այն կանջատի կառավարումըլցոնման արագացման համար։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:633
+msgid "Combine infill every"
+msgstr "Միավորել յուրաքանչյուր լցոնումը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:635
+msgid "This feature allows to combine infill and speed up your print by extruding thicker infill layers while preserving thin perimeters, thus accuracy."
+msgstr "Այս հատկությունը թույլ է տալիս համատեղել լցոնումը և արագացնել տպագրությունը՝արտամղելով լցոնման ավելի հաստ շերտերը, միևնույն ժամանակ պահպանելով բարակ պարագծերը,հետևաբար ճշգրտությունը:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:643
+msgid "Infill extruder"
+msgstr "Լցոնել գլխիկը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:645
+msgid "The extruder to use when printing infill."
+msgstr "Գլխիկ, որը պետք է օգտագործվի տպագրության լցոնման համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:654
+msgid "Set this to a non-zero value to set a manual extrusion width for infill. You may want to use fatter extrudates to speed up the infill and make your parts stronger. If expressed as percentage (for example 90%) it will be computed over layer height."
+msgstr "Սահմանեք սա ոչ զրոյական արժեքի՝ լցոնման համար ձեռքով արտամղման լայնությունըլրացնելու համար: Կարող եք օգտագործել ավելի հաստ տրամագծով գլխիկներ՝ լցոնումըարագացնելու և դետալներն ավելի ամուր դարձնելու համար: Եթե գրվի տոկոսով, ապա(օրինակ՝ 90%), այն կհաշվարկվի շերտի բարձրության վրա:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:663
+msgid "Infill before perimeters"
+msgstr "Լցոնում պարագծերից առաջ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:665
+msgid "This option will switch the print order of perimeters and infill, making the latter first."
+msgstr "Այս տարբերակը կփոխի շրջագծերի տպագրության և լցոնման կարգը՝ փոխելով վերջինի ուառաջինի տեղերը։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:670
+msgid "Only infill where needed"
+msgstr "Լցոնել միայն անհրաժեշտության դեպքում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:672
+msgid "This option will limit infill to the areas actually needed for supporting ceilings (it will act as internal support material). If enabled, slows down the G-code generation due to the multiple checks involved."
+msgstr "Այս տարբերակը կսահմանափակի որոշ տարածքների լցոնումը, որոնցից է օրինակ առաստաղներիօժանդակ հատվածները (այն կգործի որպես ներքին օժանդակ նյութ): Միացնելու դեպքում  այն կդանդաղեցնի G-code-ի գեներացումը բազմաթիվ ստուգումների պատճառով:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:677
+msgid "Infill/perimeters overlap"
+msgstr "Լցոնման/շրջագծերի համընկնում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:679
+msgid "This setting applies an additional overlap between infill and perimeters for better bonding. Theoretically this shouldn't be needed, but backlash might cause gaps. If expressed as percentage (example: 15%) it is calculated over perimeter extrusion width."
+msgstr "Այս կարգավորումը առաջացնում է լրացուցիչ համընկնումներ լցոնման և շրջագծերի միջև,որն էլ կապը դարձնում է ավելի ամուր: Տեսականորեն սրա կարիքը չպետք է լիներ, բայցհակազդեցությունը կարող է առաջացնել փոսեր/բացեր: Եթե գրում ենք տոկոսով (օրինակ՝ 15%),ապա այն հաշվարկվում է շրջագծի արտամղման լայնությամբ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:689
+msgid "Speed for printing the internal fill."
+msgstr "Ներքին լցոնման տպման արագությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:700
+msgid "Interior brim width"
+msgstr "Ներսի ընդգրկող շրջանի հաստությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:702
+msgid "Horizontal width of the brim that will be printed inside object holes on the first layer."
+msgstr "Եզրագծի հորիզոնական լայնությունը, որը կտպվի առաջին շերտի վրա գտնվող առարկաների անցքերի ներսում:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:709
+msgid "Interface shells"
+msgstr "Երևացող պատյանները"
+
+#: xs/src/libslic3r/PrintConfig.cpp:710
+msgid "Force the generation of solid shells between adjacent materials/volumes. Useful for multi-extruder prints with translucent materials or manual soluble support material."
+msgstr "Ստիպել պինդ պատյանների առաջացումը հարակից նյութերի/ծավալների միջև:Օգտակար է կիսաթափանցիկ կամ լուծվող նյութով մեկից ավելի արտամղիչ գլխիկներովտպագրության համար"
+
+#: xs/src/libslic3r/PrintConfig.cpp:716
+msgid "After layer change G-code"
+msgstr "Շերտից հետո փոխել G-code֊ը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:717
+msgid "This custom code is inserted at every layer change, right after the Z move and before the extruder moves to the first layer point. Note that you can use placeholder variables for all Slic3r settings as well as [layer_num] and [layer_z]."
+msgstr "Այս հատուկ կոդը տեղադրվում է յուրաքանչյուր շերտի փոփոխության ժամանակ, Z-ի շարժումիցանմիջապես հետո, և մինչ գլխիկը կտեղափոխվի առաջին շերտի դիրքը: Նկատի ունեցեք, որ դուքկարող եք օգտագործել, որպես դաշտի հուշող փոփոխականները Slic3r-ի բոլոր կարգավորումների,ինչպես նաև [layer_num] և [layer_z]-ի համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:725
+msgid "Layer height"
+msgstr "Շերտի բարձրությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:727
+msgid "This setting controls the height (and thus the total number) of the slices/layers. Thinner layers give better accuracy but take more time to print."
+msgstr "Այս կարգավորումը վերահսկում է շերտազատումների/շերտերի բարձրությունը (այսինքն ընդհանուր թիվը):Բարակ շերտերի դեպքում տպագրությյունն ավելի ճշգրտություն է լինում, սակայն այնպահանջում է երկար ժամանակ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:734
+msgid "Max"
+msgstr "Առավելագույն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:735
+msgid "This setting represents the maximum speed of your fan."
+msgstr "Այս կարգավորումը ներկայացնում է օդափոխիչ սարքի առավելագույն արագությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:743
+msgid "Max print speed"
+msgstr "Տպիչի առավելագույն արագությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:745
+msgid "When setting other speed settings to 0 Slic3r will autocalculate the optimal speed in order to keep constant extruder pressure. This experimental setting is used to set the highest print speed you want to allow."
+msgstr "Երբ արագության այլ կարգավորումները սահմանվում է 0, ապա Slic3r-ը ինքնաբերաբար կհաշվի այն օպտիմալ արագությունն, որի դեպքում արտամղող գլխիկը կունենա համաչափ ճնշումը:Այս փորձնական հատկությունը օգտագործվում է տպման գերբարձր արագություն սահմանելու համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:754
+msgid "This experimental setting is used to set the maximum volumetric speed your extruder supports."
+msgstr "Սա փորձնական հատկություն է, որն օգտագործվում է սահմանելու առավելագույն ծավալայինարագություն արտամղող սարքի համար։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:761
+msgid "Min"
+msgstr "Նվազագույն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:762
+msgid "This setting represents the minimum PWM your fan needs to work."
+msgstr "Այս կարգավորումը ներկայացնում է օդափոխիչի աշխատանքային նվազագույն ԼԻՄ֊ը։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:770
+msgid "Min print speed"
+msgstr "Տպիչի նվազագույն արագությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:771
+msgid "Slic3r will not scale speed down below this speed."
+msgstr "Slic3r չի նվազեցնի իրա արագությունը նշվածից ավելի ցածր։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:778
+msgid "Minimum extrusion length"
+msgstr "Նվազագույն արտամղման երկարություն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:780
+msgid "Generate no less than the number of skirt loops required to consume the specified amount of filament on the bottom layer. For multi-extruder machines, this minimum applies to each extruder."
+msgstr "Գեներացնել ոչ պակաս քան փեշի օղակների քանակն է, որն պահանջում է սպառելվերին շերտի նշված քանակի լցանյութ։ Մեկից ավելի գլխիկների դեպքում այս նվազագույնմեծությունը կկիրառվի յուրաքանչյուր գլխիկի համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:787
+msgid "Configuration notes"
+msgstr "Կարգաբերման նշումներ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:788
+msgid "You can put here your personal notes. This text will be added to the G-code header comments."
+msgstr "Այստեղ կարող եք տեղադրել ձեր անձնական գրառումները: Այս տեքստը կավելանա G-code֊իգլխագրի մասում, որպես մեկնաբանություններ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:796
+msgid "Nozzle diameter"
+msgstr "«Նոզլ»֊ի տրամագիծ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:797
+msgid "This is the diameter of your extruder nozzle (for example: 0.5, 0.35 etc.)"
+msgstr "Սա տպիչի գլխիկի «նոզլ»֊ի տրամագիծն է (օրինակ՝ 0,5, 0,35 և այլն)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:807
+msgid "API Key"
+msgstr "API Key"
+
+#: xs/src/libslic3r/PrintConfig.cpp:808
+msgid "Slic3r can upload G-code files to OctoPrint. This field should contain the API Key required for authentication."
+msgstr "Slic3r֊ը կարող վերբեռնել G-code նիշքերն դեպի OctoPrint։ Այս դաշտը պետք է պարունակի API Key որն անհրաժեշտ է մուտքագրել։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:813
+msgid "Host or IP"
+msgstr "Host կամ IP"
+
+#: xs/src/libslic3r/PrintConfig.cpp:814
+msgid "Slic3r can upload G-code files to OctoPrint. This field should contain the hostname or IP address of the OctoPrint instance."
+msgstr "Slic3r֊ը կարող վերբեռնել G-code նիշքերն դեպի OctoPrint։ Այս դաշտը պետք է պարունակի hostname կամ IP հասցե OctoPrint օրինակից։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:819
+msgid "Only retract when crossing perimeters"
+msgstr "Հետ քաշել միայն շրջագծերը հատելիս"
+
+#: xs/src/libslic3r/PrintConfig.cpp:821
+msgid "Disables retraction when the travel path does not exceed the upper layer's perimeters (and thus any ooze will be probably invisible)."
+msgstr "Անջատում է հետ քաշելը, երբ տեղափոխվելու ուղին չի գերազանցում վերին շերտի շրջագիծը(և այդպիսով ցանկացած արտահոսք անտեսանելի կլինի):"
+
+#: xs/src/libslic3r/PrintConfig.cpp:826
+msgid "Enable"
+msgstr "Միացնել"
+
+#: xs/src/libslic3r/PrintConfig.cpp:829
+msgid "During multi-extruder prints, this option will drop the temperature of the inactive extruders to prevent oozing. It will enable a tall skirt automatically and move extruders outside such skirt when changing temperatures."
+msgstr "Մեկից ավելի արտամղող գլխիկի տպագրության ժամանակ այս տարբերակը կիջեցնի, ոչ֊գործուն գխլխիկների ջերմաստիճանները՝ ծորումը կանխելու համար: Այն ինքնաբերաբար կտա բարձր եզրերի ջերմաստիճան, նաև կտեղափոխի արտամղիչները այս տեսակի եզրերից, երբջերմաստիճանը սկսում է տատանվել"
+
+#: xs/src/libslic3r/PrintConfig.cpp:834
+msgid "Output filename format"
+msgstr "Ելքային նիշքանվան ձևաչափը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:835
+msgid "You can use all configuration options as variables inside this template. For example: [layer_height], [fill_density] etc. You can also use [timestamp], [year], [month], [day], [hour], [minute], [second], [version], [input_filename], [input_filename_base]."
+msgstr "Դուք կարող եք օգտագործել կազմավորման բոլոր տարբերակները, որպես փոփոխականներ այսձևանմուշի ներսում: Օրինակ՝ [layer_height], [fill_density] և այլ։ Նաև կարող եքօգտագործել [timestamp], [year], [month], [day], [hour], [minute], [second], [version], [input_filename], [input_filename_base]."
+
+#: xs/src/libslic3r/PrintConfig.cpp:841
+msgid "Detect bridging perimeters"
+msgstr "Հայտնաբերել կամրջման շրջագծերը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:843
+msgid "Experimental option to adjust flow for overhangs (bridge flow will be used), to apply bridge speed to them and enable fan."
+msgstr "Փորձարարական տարբերակ՝ ելքերի համար հոսքը կարգավորելու (կամրջի հոսքը կօգտագործվի),կամրջի արագությունը կիրառելու և հովհարը միացնելու համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:848
+msgid "Overridable options"
+msgstr "Անհաղթահարելի տարբերակներ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:856 xs/src/libslic3r/PrintConfig.cpp:873 xs/src/libslic3r/PrintConfig.cpp:886 xs/src/libslic3r/PrintConfig.cpp:899
+msgid "Perimeters"
+msgstr "Շրջագծեր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:858
+msgid "This is the acceleration your printer will use for perimeters. A high value like 9000 usually gives good results if your hardware is up to the job. Set zero to disable acceleration control for perimeters."
+msgstr "Սա տպիչ արագացումն է շրջագծերի համար: 9000-ի և ավելի բարձր արժեքները սովորաբարլավ արդյունքներ է տալիս, եթե իհարկե ձեր սարքը համապատասխանում է աշխատանքին:Զրոյի դեպքում շրջագծերի արագացման կառավարումն կանջատվի:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:864
+msgid "Perimeter extruder"
+msgstr "Շրջագծային արտամղիչ "
+
+#: xs/src/libslic3r/PrintConfig.cpp:866
+msgid "The extruder to use when printing perimeters and brim. First extruder is 1."
+msgstr "Արտամղիչ գլիկ, որն օգտագործվում է շրջագծերն ու եզրերը տպելիս: Առաջին գլխիկը 1 թիվն է:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:876
+msgid "Set this to a non-zero value to set a manual extrusion width for perimeters. You may want to use thinner extrudates to get more accurate surfaces. If expressed as percentage (for example 200%) it will be computed over layer height."
+msgstr "Սահմանեք ոչ զրոյական արժեք՝ շրջագծերի արտամղման լայնությունը ձեռքով սահմանելու համար:Ավելի ճշգրիտ մակերեսներ ստանալու համար կարող եք օգտագործել ավելի բարակ արտամղիչ գլխիկներ:Եթե գրվի տոկոսով (օրինակ 200%), ապա այն կհաշվարկվի շերտի բարձրության վրա"
+
+#: xs/src/libslic3r/PrintConfig.cpp:889
+msgid "Speed for perimeters (contours, aka vertical shells)."
+msgstr "Շրջագծերի արագությունը (շրջանակներ, ինչպես նաև ուղղաձիգ մակերեսներ)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:901
+msgid "This option sets the number of perimeters to generate for each layer. Note that Slic3r may increase this number automatically when it detects sloping surfaces which benefit from a higher number of perimeters if the Extra Perimeters option is enabled."
+msgstr "Այս տարբերակը սահմանում է յուրաքանչյուր շերտի համար գեներացվող շրջագծերի քանակը:Նկատի ունեցեք, որ Slic3r-ը կարող է ինքնաբերաբար մեծացնել այս թիվը, երբ հայտնաբերում էթեք մակերեսներ, որոնք աճում են մեծ թվով շրջագծերի ժամանակ, եթե միացված է«Extra Perimeters» տարբերակը:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:909
+msgid "Post-processing scripts"
+msgstr "Հետմշակման սցենարներ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:910
+msgid "If you want to process the output G-code through custom scripts, just list their absolute paths here. Separate multiple scripts on individual lines. Scripts will be passed the absolute path to the G-code file as the first argument, and they can access the Slic3r config settings by reading environment variables."
+msgstr "Եթե ցանկանում եք մշակել ելքային G-code հատուկ այլագրերի միջոցով, ապա այստեղ նշեք դրանց բացարձակ ուղիները: Սցենարները բացազատեք առանձին տողերի վրա:Սկզբից այլագրերը կգործարկվենG-code նիշքի վրա, հետո նրանք կարող են մուտք գործել Slic3r֊ի կարգավորումներ՝ կարդալովմիջավայրի փոփոխականները:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:924
+msgid "Pressure advance"
+msgstr "Ճնշման մեծացում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:926
+msgid "When set to a non-zero value, this experimental option enables pressure regulation. It's the K constant for the advance algorithm that pushes more or less filament upon speed changes. It's useful for Bowden-tube extruders. Reasonable values are in range 0-10."
+msgstr "Զրոյական արժեքի սահմանման դեպքում փորձարարական տարբերակը հնարավորություն էտալիս կարգավորել ճնշումը: Դա K հաստատունն է առաջնային ալգորիթմի համար, որը քիչ կամ շատնյութ է մղում արագության փոփոխության դեպքում: Այն օգտակար է Bowden-tube գլխիկներ համար:Օգտակար արժեքները գտնվում են 0-10 միջակայքում:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:932
+msgid "Raft layers"
+msgstr "Օժանդակ շերտեր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:934
+msgid "The object will be raised by this number of layers, and support material will be generated under it."
+msgstr "Մաքուր տպագրությունը կսկսի այս քանակի շերտերից հետո, և մինչ այդ կստեղծվի օժանդակ շերտ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:941
+msgid "Raft offset"
+msgstr "Օժանդակ շերտի զրո"
+
+#: xs/src/libslic3r/PrintConfig.cpp:943
+msgid "Horizontal margin between object base layer and raft contour."
+msgstr "Առարկայի հիմքի և օժանդակ կոնտուրի հորիզոնական լուսանցքը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:950
+msgid "Resolution (deprecated)"
+msgstr "Տարալուծում (հնացած)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:951
+msgid "Minimum detail resolution, used to simplify the input file for speeding up the slicing job and reducing memory usage. High-resolution models often carry more detail than printers can render. Set to zero to disable any simplification and use full resolution from input."
+msgstr "Մանրամասնությունների նվազագույն լուծաչափը, որն պարզեցնում է մուտքային նիշքը, արագացնում է կտրելու աշխատանքը և նվազեցնում է հիշողության օգտագործումը: Բարձր լուծաչափով մոդելները հաճախ ավելի շատ մանրամասներ են պարունակում, քան տպիչները կարող են վերլուծել: Զրո սահմանելու դեպքում գործառույթն կանջատվի։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:958
+msgid "Minimum travel after retraction"
+msgstr "Նվազագույն թռիչք հետ քաշումից հետ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:959 xs/src/libslic3r/PrintConfig.cpp:971 xs/src/libslic3r/PrintConfig.cpp:982 xs/src/libslic3r/PrintConfig.cpp:1007 xs/src/libslic3r/PrintConfig.cpp:1020 xs/src/libslic3r/PrintConfig.cpp:1033 xs/src/libslic3r/PrintConfig.cpp:1045 xs/src/libslic3r/PrintConfig.cpp:1068 xs/src/libslic3r/PrintConfig.cpp:1548
+msgid "Retraction"
+msgstr "Հետքաշում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:960
+msgid "Retraction is not triggered when travel moves are shorter than this length."
+msgstr "Հետքաշումը չի գործարկվում, երբ թռիչքային շարժումներն տվյալ երկարությունից ավելի կարճ են:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:970
+msgid "Retract on layer change"
+msgstr "Հետ քաշել շերտի փոփոխության ժամանակ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:972
+msgid "This flag enforces a retraction whenever a Z move is done."
+msgstr "Այս կետը ուժեղացնում է հետ քաշումը, երբ Z-ի շարժը կատարված է։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:981 xs/src/libslic3r/PrintConfig.cpp:994
+msgid "Length"
+msgstr "Երկարություն"
+
+#: xs/src/libslic3r/PrintConfig.cpp:984
+msgid "When retraction is triggered, filament is pulled back by the specified amount (the length is measured on raw filament, before it enters the extruder)."
+msgstr "Երբ ետ քաշումը գործարկած է, լցանյութը հետ է քաշվում նշված քանակով (երկարությունը չափվում է չհալած նյուիթ վրա,նախքան դրա արտամղիչ գլխիկ մտնելը):"
+
+#: xs/src/libslic3r/PrintConfig.cpp:996
+msgid "When retraction is triggered before changing tool, filament is pulled back by the specified amount (the length is measured on raw filament, before it enters the extruder)."
+msgstr "Երբ ետ քաշումը գործարկած է նախքան գործիքը փոխելը, լցանյութը հետ է սեղմվում նշված քանակով (երկարությունը չափվումէ չհալած նյութի վրա, դրա արտամղիչ գլխիկ մտնելը):"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1006
+msgid "Lift Z"
+msgstr "Lift Z"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1008
+msgid "If you set this to a positive value, Z is quickly raised every time a retraction is triggered. When using multiple extruders, only the setting for the first extruder will be considered."
+msgstr "Դրական արժեքի դեպքում Z-ն արագորեն կբարձրանա ամեն անգամ, երբ գործարկվում է հետկանչը: Մի քանի արտամղիչ գլխիկներ օգտագործելիս հաշվի է առնվում միայն առաջինի կարգավորումը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1018
+msgid "Above Z"
+msgstr "Ներքին Z"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1021
+msgid "If you set this to a positive value, Z lift will only take place above the specified absolute Z. You can tune this setting for skipping lift on the first layers."
+msgstr "Դրական արժեքի դեպքում Z-ի շարժը տեղի կունենա միայն նշված բացարձակ Z-ից բարձր: Սա կարող եք այնպես լավ կարգավորել, որ առաջին շերտերի բարձրացումը գրեթե բաց թողնվի:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1031
+msgid "Below Z"
+msgstr "Z֊ից ցածր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1034
+msgid "If you set this to a positive value, Z lift will only take place below the specified absolute Z. You can tune this setting for limiting lift to the first layers."
+msgstr "Դրական արժեքի դեպքում Z֊ի բարձրացումը տեղի կունենա միայն նշված բացարձակ Z-ից ցածր: Սա կարող եք այնպես լավ կարգավորել, որ սահմանափակվի առաջին շերտերի բարձրացումը:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1044 xs/src/libslic3r/PrintConfig.cpp:1056
+msgid "Extra length on restart"
+msgstr "Լրացուցիչ երկարություն վերագործարկման ժամանակ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1046
+msgid "When the retraction is compensated after the travel move, the extruder will push this additional amount of filament. This setting is rarely needed."
+msgstr "Երբ նյութի հետ քաշումը կոմպեսացվում է թռիչքային քայլերից հետո, ապա գլխիկը սկսում է արտամղել միևնույն չափով լրացուցիչ քանակությամբ լցանյութ: Այս կարգավորումը հազվադեպ է անհրաժեշտ լինում:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1057
+msgid "When the retraction is compensated after changing tool, the extruder will push this additional amount of filament."
+msgstr "Երբ նյութի հետ քաշումը կոմպեսացվում է գործիքը փոխելուց հետո, ապա գլխիկը սկսում է արտամղել լրացուցիչ քանակությամբ\" \"լցանյութ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1069
+msgid "The speed for retractions (it only applies to the extruder motor). If you use the Firmware Retraction option, please note this value still affects the auto-speed pressure regulator."
+msgstr "Նյութի հետ քաշելու արագությունը (դա վերաբերում է միայն գլխիկի շարժիչին): Եթե դուք օգտագործում եք ՆԾԱ֊ի հետ քաշելու տարբերակը, ապա պետք է նկատի ունենալ, որ այս արժեքը դեռևս ազդում է ճնշման կարգավորիչի ավտոմատ արագության վրա:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1079
+msgid "Seam position"
+msgstr "Հատման դիրքը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1081
+msgid "Position of perimeters starting points."
+msgstr "Շրջագծերի մեկնարկման կետերի դիրքը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1098
+msgid "USB/serial port for printer connection."
+msgstr "USB/հաջորդական կայանը տպիչի միացման համար։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1107
+msgid "Speed (baud) of USB/serial port for printer connection."
+msgstr "USB/հաջորդական կայանի արագությունը (baud) տպիչին միանալու համար."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1117
+msgid "Distance from object"
+msgstr "Հեռավորությունը առարկայից"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1119
+msgid "Distance between skirt and object(s). Set this to zero to attach the skirt to the object(s) and get a brim for better adhesion."
+msgstr "Եզրագծի և առարկայի (առարկաների) միջև եղած հեռավորությունը: Զրոյի դեպքում՝ Եզրագիծը և առարկան(ները) կմիանան միմյանց և եզրերը կդարձնի ավելի կպչուն:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1126
+msgid "Skirt height"
+msgstr "Եզրագծի բարձրությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1128
+msgid "Height of skirt expressed in layers. Set this to a tall value to use skirt as a shield against drafts."
+msgstr "Եզրագծի բարձրությունը՝ արտահայտված շերտերով։ Բարձր արժեքի դեպքում եզրագիծը կհանդիսանա որպես վահան ավելցուկային նյութի փոխարեն:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1134
+msgid "Loops (minimum)"
+msgstr "Օղակներ (նվազագույն)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1137
+msgid "Number of loops for the skirt. If the Minimum Extrusion Length option is set, the number of loops might be greater than the one configured here. Set this to zero to disable skirt completely."
+msgstr "Օղակների քանակն եզրագծի համար։ Եթե «Նվազագույն արտամղման երկարություն» տարբերակը սահմանված է, ապա օղակների թիվը կարող է ավելի մեծ լինել, քան նախապես սահմանվածը: Զրոյի դեպքում եզրագիծն ամբողջությամբ կանջատվի:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1143
+msgid "Slow down if layer print time is below"
+msgstr "Դանդաղեցնել, եթե շերտի տպագրության ժամանակը ցածր է"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1144
+msgid "If layer print time is estimated below this number of seconds, print moves speed will be scaled down to extend duration to this value."
+msgstr "Եթե շերտի տպման ժամանակը գնայատվում է վարկյաններից ավելի ցածր, ապա տպագրության արագությունը կցածրանա և արդյունքում կմեծանա ժամանակը։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1153
+msgid "↳ small"
+msgstr "↳ փոքր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1157
+msgid "This separate setting will affect the speed of perimeters having radius <= 6.5mm (usually holes). If expressed as percentage (for example: 80%) it will be calculated on the perimeters speed setting above."
+msgstr "Այս առանձին կարգավորումը ազդում է շրջագծերի արագության վրա, որոնք ունենք <= 6.5մմ շառավղով անցքեր։ Եթե ագրվում է տոկոսով, ապա այն կհաշվարկվի (օրինակ՝ 80%) ներքևում նշված շրջագծերի արագության վրա։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1167
+msgid "Solid infill threshold area"
+msgstr "Շեմային տարածքի կարծր լցոնում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1169
+msgid "Force solid infill for regions having a smaller area than the specified threshold."
+msgstr "Պարտադրել կարծր լցոնում նշված շեմից ավելի փոքր տարածք ունեցող շրջանների համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1176
+msgid "Solid infill extruder"
+msgstr "Արտամղման կարծր լցոնում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1178
+msgid "The extruder to use when printing solid infill."
+msgstr "Կարծր տպագրության ժամանակ օգտագործվող արտաղմղիչ գլխիկը։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1184
+msgid "Solid infill every"
+msgstr "Ամենուր կարծր լցոնում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1186
+msgid "This feature allows to force a solid layer every given number of layers. Zero to disable. You can set this to any value (for example 9999); Slic3r will automatically choose the maximum possible number of layers to combine according to nozzle diameter and layer height."
+msgstr "Այն հատկությունը պարտադրում է կարծր լցոնում յուրաքանչյուր համարի շերրում։ Սահմանեք զրո անջատելու համար։ Կարող եք սա սահմանել ցանկացած արժեքի (օրինակ 9999); Slic3r-ը ինքնաբերաբար կընտրի շերտերի առավելագույն հնարավոր քանակությունը, համակցելով ըստ nozzle-ի տրամագծի և շերտի բարձրության:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1193 xs/src/libslic3r/PrintConfig.cpp:1206
+msgid "↳ solid"
+msgstr "↳ կարծր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1197
+msgid "Set this to a non-zero value to set a manual extrusion width for infill for solid surfaces. If expressed as percentage (for example 90%) it will be computed over layer height."
+msgstr "Սահմանեք սա զերո արժեք, եթե ցանկանում եք ունենալ ձեռքով կարծր մակերեսներ արտամղելու հնարավորություն։ Տոկոսով գրելու դեպքում (օրինակ՝ 90%) այն կհաշվարկվի շերտի բարձրության արժեքի հիմա վրա։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1210
+msgid "Speed for printing solid regions (top/bottom/internal horizontal shells). This can be expressed as a percentage (for example: 80%) over the default infill speed above."
+msgstr "Կարծր տարածքները տպագրելու արագությունը (վերև/ներքև/ներքին հորիզոնական կաղապարներ): Սա կարող եք գրել տոկոսով (օրինակ՝ 80%) սահմանված վերոնշյալ լցոնման հիմնական արագությամբ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1221
+msgid "Solid layers"
+msgstr "Պինդ շերտեր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1222
+msgid "Number of solid layers to generate on top and bottom surfaces."
+msgstr "Կարծր շերտերի քանակը վերին և ներքին մակերեսների շերտերը գեներացնելու համար։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1229
+msgid "Spiral vase"
+msgstr "Պարուրաձև վազ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1231
+msgid "This feature will raise Z gradually while printing a single-walled object in order to remove any visible seam. This option requires a single perimeter, no infill, no top solid layers and no support material. You can still set any number of bottom solid layers as well as skirt/brim loops. It won't work when printing more than an object."
+msgstr "Այս հատկությունը աստիճանաբար կբարձրացնի Z-ը մեկ շերտով առարկա տպելիս՝ տեսանելի հատումներն հեռացնելու համար: Այս տարբերակը պահանջում է մեկ շրջագիծ, առանց լցոնման, առանց վերին կարծր շերտերի և առանց օժանդակ նյութի: Նաև կարող եք սահմանել ներքևի պինդ շերտերի, ինչպես նաև շրջանի/եզրերի օղակներ ցանկացած քանակ: Այն չի աշխատի մեկից ավելի առարկա տպելիս:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1236
+msgid "Temperature variation"
+msgstr "Ջերմաստիճանի տարբերակում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1239
+msgid "Temperature difference to be applied when an extruder is not active.  Enables a full-height \"sacrificial\" skirt on which the nozzles are periodically wiped."
+msgstr "Ջերմաստիճանի տարբերությունը պետք է կիրառվի, երբ արտամղիչ գլխիկը ակտիվ չէ: Միանում է մինչև վերջ բարձրացած «զոհաբերող» եզրով, որի վրայով անցնելուց nozzle-ը պարբերաբար սրբվում են:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1247 xs/src/libslic3r/PrintConfig.cpp:1256
+msgid "Start G-code"
+msgstr "G-կոդի մեկնարկ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1248
+msgid ""
+"This start procedure is inserted at the beginning, after bed has reached the target temperature and extruder just started heating, and before extruder has finished heating. If Slic3r detects M104, M109, M140 or M190 in your custom codes, such commands will not be prepended automatically so you're free to customize the order of heating commands and other custom actions. Note that you "
+"can use placeholder variables for all Slic3r settings, so you can put a \"M109 S[first_layer_temperature]\" command wherever you want."
+msgstr ""
+"Այս մեկնարկի կարգը տեղադրվում է սկզբում, երբ հարթակը հասնում է նպատակային ջերմաստիճանին, և արտամղիչ գլխիկը դե նոր է սկսում տաքանալ, և մինչ դրա տաքացումը: Եթե Slic3r-ը հայտնաբերում է M104, M109, M140 կամ M190 Ձեր հատուկ կոդերում, ապա այդպիսի հրամաններն  չեն տեղադրվի, այնպես որ դուք ազատ եք հարմարեցնել տաքացման հրամանների և այլ հատուկ գործողությունների հերթականությունը: Նկատի ունեցեք, "
+"որ կարող եք օգտագործել դաշտի հուշման տեղապահ փոփոխականները Slic3r-ի բոլոր կարգավորումների համար, այնպես որ կարող եք տեղադրել «M109 S[first_layer_temperature]» հրամանը, որտեղ որ կցանկանաք:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1257
+msgid ""
+"This start procedure is inserted at the beginning, after any printer start gcode. This is used to override settings for a specific filament. If Slic3r detects M104, M109, M140 or M190 in your custom codes, such commands will not be prepended automatically so you're free to customize the order of heating commands and other custom actions. Note that you can use placeholder variables "
+"for all Slic3r settings, so you can put a \"M109 S[first_layer_temperature]\" command wherever you want. If you have multiple extruders, the gcode is processed in extruder order."
+msgstr ""
+"Այս մեկնարկի ընթացակարգը տեղադրվում է նիշքի սկզբում, անմիջապես տպիչի gcode-ի գործրարկումից հետո : Սա օգտագործվում է որոշակի լցանյութի պարամետրեր հեռացնելու համար: Եթե Slic3r-ը հայտնաբերում է M104, M109, M140 կամ M190 Ձեր հատուկ կոդերում, ապա այդպիսի հրամաններն ինքնաբերաբար չեն զետեղվում, ուստի ազատ եք հարմարեցնել տաքացման հրամաններն ու այլ հատուկ գործողությունների հերթականությունը: "
+"Նկատի ունեցեք, որ կարող եք օգտագործել տեղապահ փոփոխականները Slic3r-ի բոլոր կարգավորումների համար, այնպես որ կարող եք տեղադրել «M109 S[first_layer_temperature]» հրամանը, որտեղ որ կցանկանաք: Եթե ունեք մի քանի արտամղիչ գլխիկներ, ապա gcode-ը կմշակվի դրանց հերթականությամբ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1269
+msgid "Generate support material"
+msgstr "Գեներացնել օժանդակ նյութ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1271
+msgid "Enable support material generation."
+msgstr "Միացնել օժանդակ նյութի գեներացումը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1276
+msgid "Pattern angle"
+msgstr "Ձևանմուշի անկյունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1278
+msgid "Use this setting to rotate the support material pattern on the horizontal plane."
+msgstr "Օգտագործել այս կարգավորումն օժանդակ նյութի ձևը հորիզոնական պտտելու համար։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1286
+msgid "Support on build plate only"
+msgstr "Աջակցել միայն կառուցված հարթակը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1288
+msgid "Only create support if it lies on a build plate. Don't create support on a print."
+msgstr "Օժանդակ նյութը արտածել միայն այն դեպքում, եթե այն գտնվում է հարթակի դաշտում։ Տպածի վրա օժանդակ նյութ չստեղծել։ "
+
+#: xs/src/libslic3r/PrintConfig.cpp:1294
+msgid "Contact Z distance"
+msgstr "Z ֊ի հեռավորությունը կապը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1296
+msgid "The vertical distance between object and support material interface. Setting this to 0 will also prevent Slic3r from using bridge flow and speed for the first object layer."
+msgstr "Ուղղահայաց հեռավորությունը առարկայի և օժանդակ նյութի դիմերեսի միջև: 0-ի դեպքում  Slic3r-ին թույլ չի տա օգտագործել կամրջի հոսքը և արագությունն առաջին առարկայի շերտի համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1307
+msgid "Enforce support for the first"
+msgstr "Օժանդակը ամենասկզբից"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1309
+msgid "Generate support material for the specified number of layers counting from bottom, regardless of whether normal support material is enabled or not and regardless of any angle threshold. This is useful for getting more adhesion of objects having a very thin or poor footprint on the build plate."
+msgstr "Ստեղծել օժանդակ նյութ ներքևից հաշվվող շերտերի նշված քանակի համար, անկախ նրանից օժանդակ նյութը միացված է, թե ոչ, և անկախ անկյան շեմից: Սա օգտակար է այնպիսի հարթակների համար, որոնց վրա առարկանները ունեն կպչունության խնդիր:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1317
+msgid "Support material/raft/skirt extruder"
+msgstr "Օժանդակ նյութի/հավելյալի/եզրագծի արտամղում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1319
+msgid "The extruder to use when printing support material, raft and skirt."
+msgstr "Օժանդակ նյութն օգտագործելու արտամղիչ գլխիկը, ավելցուկային նյութն ու եզրագիծը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1328
+msgid "Set this to a non-zero value to set a manual extrusion width for support material. If expressed as percentage (for example 90%) it will be computed over layer height."
+msgstr "Զրոյական արժեքի դեպքում արտամղման լայնությունը կարող եք սահմանելու ձեռքով: Եթե գրեք տոկոսով (օրինակ՝ 90%), ապա այն կհաշվարկվի շերտի բարձրության վրա:."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1337
+msgid "Support material/raft interface extruder"
+msgstr "Օժանդակ նյութ/ավելցուկային մակերեսների արտամղում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1339
+msgid "The extruder to use when printing support material interface. This affects raft too."
+msgstr "Օժանդալ նյութի մակերեսները տպագրող արտամղիչ գլխիկը։ Սա շատ է ազդում աջակցող նյութի վրա։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1345
+msgid "Interface layers"
+msgstr "Մակերեսային շերտեր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1347
+msgid "Number of interface layers to insert between the object(s) and support material."
+msgstr "Օժանդակ նյութի և առարկայի միջև զետեղվող մակերեսային շերտերի քանակը։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1354
+msgid "Interface pattern spacing"
+msgstr "Մակերեսային նախշերի տարածումը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1356
+msgid "Spacing between interface lines. Set zero to get a solid interface."
+msgstr "Մակերեսային գծերի միջտարածությունը։ Սահմանեք զերո կարծր մակերեսներ ունենալու համար։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1363
+msgid "↳ interface"
+msgstr "↳ մակերես"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1364
+msgid "Interface Speed"
+msgstr "Մակերեսի արագությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1365
+msgid "Support material interface speed"
+msgstr "Մակերեսային շերտերի օժանդակ նյութի արագությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1368
+msgid "Speed for printing support material interface layers. If expressed as percentage (for example 50%) it will be calculated over support material speed."
+msgstr "Մակերեսային շերտերի օժանդակ նյոթւ տպագրման արագությունը։ Եթե գրեք տոկոսով (օրինակ՝ 50%), ապա այն կհաշվարկվի օժանդակ նյութի արագության վրա։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1378
+msgid "Pattern"
+msgstr "Ձևանմուշ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1380
+msgid "Pattern used to generate support material."
+msgstr "Ձևանմուշ,որի հիման վրա կգեներացվի օժանդակ նյութը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1394
+msgid "Pattern spacing"
+msgstr "Ձևանմուշի տարածությունը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1396
+msgid "Spacing between support material lines."
+msgstr "Օժանդակ նյութի գծերի միջև եղած տարածքը։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1409
+msgid "Speed for printing support material."
+msgstr "Օժանդակ նյութը տպագրելու արագությունը։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1418
+msgid "Overhang threshold"
+msgstr "Գերկախյալ շեմ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1420
+#, c-format
+msgid "Support material will not be generated for overhangs whose slope angle (90° = vertical) is above the given threshold. In other words, this value represent the most horizontal slope (measured from the horizontal plane) that you can print without support material. Set to a percentage to automatically detect based on some % of overhanging perimeter width instead (recommended)."
+msgstr "Օժանդակ նյութ չի ստեղծվի այն շեմերի համար, որոնց թեքության անկյունը (90° = ուղղահայաց) նշված շեմից բարձր է: Այլ կերպ ասած, այս արժեքը ներկայացնում է ամենահորիզոնական թեքությունը (չափված հորիզոնական հարթությունից),և այդ դեպքում կարող եք տպել առանց օժանդակ նյութի: Տոկոսով սահմանելու դեպքում slic3r-ը ինքնաբերաբար կհայտնաբերի որոշ պարագծերի % o լայնությունը (խորհուրդ է տրվում)։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1429
+msgid "Extruder temperature for layers after the first one. Set this to zero to disable temperature control commands in the output."
+msgstr "Արտամղիչ գլխիկի ջերմաստիճանը առաջին շերտից հետո։ Զրո սահմանելու դեպքում ջերմաստիճանի կառավարումը կանջատվի։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1441
+msgid "Detect thin walls"
+msgstr "Հայտանբերել բարակ պատերը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1443
+msgid "Detect single-width walls (parts where two extrusions don't fit and we need to collapse them into a single trace)."
+msgstr "Հայտնաբերել մեկ միավոր լայնությամբ պատեր (պատեր, որտեղ երկու արտամղիչները չեն տեղավորվում, և պետքէ դրանք լցնել մեկ փոսի մեջ)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1448
+msgid "Threads"
+msgstr "Threads"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1449
+msgid "Threads are used to parallelize long-running tasks. Optimal threads number is slightly above the number of available cores/processors."
+msgstr "Threads-ն օգտագործվում են երկարաժամկետ առաջադրանքները զուգահեռ իրագործելու համար: Սրանց օպտիմալ թիվը միփոքր ավելի բարձր է քան համակարգչի միջուկների/պրոցեսորների թիվը:."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1458
+msgid "Tool change G-code"
+msgstr "Գործիքի փոփոխման G-code"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1459
+msgid "This custom code is inserted right before every extruder change. Note that you can use placeholder variables for all Slic3r settings as well as [previous_extruder] and [next_extruder]."
+msgstr "Այս հատուկ կոդը զետեղվում է անմիջապես աջ արտամղիչի յուրաքանչյուր փոփոխության դեպքում: Նկատի ունեցեք,որ դուք կարող եք օգտագործել տեղապահ/placeholder փոփոխականները Slic3r-ի բոլոր կարգավորումների, ինչպեսնաև [previous_extruder] և [next_extruder] համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1467 xs/src/libslic3r/PrintConfig.cpp:1488
+msgid "↳ top solid"
+msgstr "↳ վերին կարծր"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1471
+msgid "Set this to a non-zero value to set a manual extrusion width for infill for top surfaces. You may want to use thinner extrudates to fill all narrow regions and get a smoother finish. If expressed as percentage (for example 90%) it will be computed over layer height."
+msgstr "Ոչ զրոյական արժեքի դեպքում կարող եք ձեռքով սահմանել արտամղման հաստությունը վերին մակերևույթների լցոնման համար:Ավելի բարակ արտամղումներ դեպքում կունենանք լցոնում նեղ շրջանները համար ու կստանաք ավելի հարթ ծածկույթ:Եթե գրվի տոկոսով (օրինակ՝ 90%),ապա այն կհաշվարկվի շերտի բարձրության վրա"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1480 xs/src/libslic3r/PrintConfig.cpp:1502
+msgid "Top"
+msgstr "Վերին"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1483
+msgid "Infill pattern for top layers. This only affects the external visible layer, and not its adjacent solid shells."
+msgstr "Լցոնման նախշը վերին շերտերի համար: Սա ազդում է միայն արտաքին տեսանել"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1492
+msgid "Speed for printing top solid layers (it only applies to the uppermost external layers and not to their internal solid layers). You may want to slow down this to get a nicer surface finish. This can be expressed as a percentage (for example: 80%) over the solid infill speed above."
+msgstr "Վերին պինդ շերտերի տպման արագությունը (դա վերաբերում է միայն ամենավերին արտաքին շերտերին և ոչ թե դրանիցներքև գտնվող պինդ շերտերին): Սա դանդաղեցնելով կունանեք արտաքին մակերեսի ավելի գեղեցիկ տեսք: Այն կարող էարտահայտվել տոկոսով (օրինակ՝ 80%):"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1504
+msgid "Number of solid layers to generate on top surfaces."
+msgstr "Վերին մակերևույթների վրա առաջացող պինդ շերտերի քանակը:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1511
+msgid "Travel"
+msgstr "Դատարկ ցատկ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1513
+msgid "Speed for travel moves (jumps between distant extrusion points)."
+msgstr "Դատարկ տեղափոխման շարժման արագությունը (ցատկի հեռավորությունը արտամղման կետերի միջև)։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1521
+msgid "Use firmware retraction"
+msgstr "Օգտագործել ներքին ծրագրի հետքաշումը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1522
+msgid "This experimental setting uses G10 and G11 commands to have the firmware handle the retraction. This is only supported in recent Marlin."
+msgstr "Այս փորձարարական կարգավորումն օգտագործում է G10 և G11 հրամաններ, որը firmware֊ին հնարավորություն է տալիսլցանյութը հետ քաշել (retraction): Սա աշխատում է միայն Marlin-ի վերջին տարբերակում:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1527
+msgid "Use relative E distances"
+msgstr "Օգտագործել հարաբերական E հեռավորություններ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1528
+msgid "If your firmware requires relative E values, check this, otherwise leave it unchecked. Most firmwares use absolute values."
+msgstr "Եթե ձեր ՆԾԱ֊ն պահանջում է հարաբերական E արժեքներ, նշեք այս կետը, հակառակ դեպքում թողեք այն չնշած: ՀիմնականՆԾԱ֊ներն օգտագործում են բացարձակ արժեքներ:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1533
+msgid "Use volumetric E"
+msgstr "Օգտագործել ծավալային E"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1534
+msgid ""
+"This experimental setting uses outputs the E values in cubic millimeters instead of linear millimeters. If your firmware doesn't already know filament diameter(s), you can put commands like 'M200 D[filament_diameter_0] T0' in your start G-code in order to turn volumetric mode on and use the filament diameter associated to the filament selected in Slic3r. This is only supported in "
+"recent Marlin."
+msgstr ""
+"Այս փորձարարական գործառույթն օգտագործում է E արժեքների ելքը, ոչ թե գծային այլ խորանարդ միլիմետրերով:Եթե ձեր տպիչի ՆԾԱ/firmware-ն դեռ չունի լցանյութի տրամագիծ(ներ)ն, ապա դուք կարող եք զետեղել«M200 D[filament_diameter_0] T0» հրամանը Gcode-ի սկզբում, որը կմիացնի ծավալային ռեժիմը և կօգտագործիSlic3r֊ում նշված լցանյութի տրամագիծը: Այս ֆունկցիան աշխատում է միայն Marlin-ի վերջին տարբերակում:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1539
+msgid "Vibration limit (deprecated)"
+msgstr "Վիբրացիոն սահմանանափակում (անօգտակար)"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1540
+msgid "This experimental option will slow down those moves hitting the configured frequency limit. The purpose of limiting vibrations is to avoid mechanical resonance. Set zero to disable."
+msgstr "Այս փորձնական տարբերակը կդանդաղեցնի այն շարժումները, որոնք հասնում են որոշակի հաճախականության սահմանին:Վիբրացիաները սահմանափակելով կխուսափենք մեխանիկական ռեզոնանսներից։ Անջատելու համար սահմանեք զրո արժեք:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1547
+msgid "Wipe while retracting"
+msgstr "Սրբել հետ քաշելիս"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1549
+msgid "This flag will move the nozzle while retracting to minimize the possible blob on leaky extruders."
+msgstr "Այս ընտրանքը կշարժի nozzle֊ը, միևնույն ժամանակ տեղի կունենա լցանյութի հետ շարժ, որը նվազագույնչափի կհասցնի արտահոսող գլխիկի ծայրին հավաքվող գնդիկները:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1558
+msgid "XY Size Compensation"
+msgstr "XY չափի փոխհատուցում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1560
+msgid "The object will be grown/shrunk in the XY plane by the configured value (negative = inwards, positive = outwards). This might be useful for fine-tuning hole sizes."
+msgstr "Առարկան կմեծացվի/փոքրացվի XY հարթությունում կարգավորված արժեքով (բացասական = դեպի ներս, դրական = դեպի դուրս):Սա կարող է օգտակար լինել անցքերի չափսերը ֆիքսելու համար:"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1566
+msgid "Z offset"
+msgstr "Z֊ի զրոյական"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1567
+msgid "This value will be added (or subtracted) from all the Z coordinates in the output G-code. It is used to compensate for bad Z endstop position: for example, if your endstop zero actually leaves the nozzle 0.3mm far from the print bed, set this to -0.3 (or fix your endstop)."
+msgstr "Այս արժեքը կավելանա (կամ կհանվի) ելքային Gcode-ի բոլոր Z կոորդինատներից: Այն փոխհատուցում է Z endstop/կանգնակի վատ դիրքը։Օրինակ, եթե ձեր կանգնակի զրոն թողնում է, որ nozzle֊ը հարթակից գտնվի 0,3 մմ հեռավորության վրա, ապա անհրաժեշտ էայս գործակիցը սահմանել -0,3 (կամ կարող եք հենց ֆիզիկապես ուղղել կանգնակը):"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1573
+msgid "Z full steps/mm"
+msgstr "Z֊ի լիարժեք քայլ/մմ"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1574
+msgid ""
+"Set this to the number of *full* steps (not microsteps) needed for moving the Z axis by 1mm; you can calculate this by dividing the number of microsteps configured in your firmware by the microstepping amount (8, 16, 32). Slic3r will round your configured layer height to the nearest multiple of that value in order to ensure the best accuracy. This is most useful for machines with "
+"imperial leadscrews or belt-driven Z or for unusual layer heights with metric leadscrews. Set to zero to disable this experimental feature."
+msgstr ""
+"Սահմանվում է *ամբողջ* քայլերի (ոչ թե միկրոքայլերի) քանակի վրա, որոնք անհրաժեշտ են Z առանցքը 1 մմ-ով տեղափոխելու համար:Կարող եք դա հաշվարկել՝ բաժանելով այն ձեր միկրոքայլերի քանակի վրա, որը կարգավորվում է «միկրոքայլերի ծավալ»ֆունկցիայով ՆԾԱ/firmware֊ի մեջ (8, 16, 32): Slic3r-ը կկլորացնի ձեր կարգավորված շերտի բարձրությունը մինչև այդ արժեքի մոտակա\" \"բազմապատիկը, որպեսզի ապահովի "
+"լավագույն ճշգրտությունը: Սա առավել օգտակար է կայսերական պտուտակներով կամ Z գոտիով շարժվող \" \"մեքենաների կամ մետրային կապող պտուտակներով շերտի անսովոր բարձրությունների դեպքում: Զերո արժեքի դեպքում այս փորձնական\" \"գործառույթն կանջատվի"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1716 xs/src/libslic3r/PrintConfig.cpp:1722 xs/src/libslic3r/PrintConfig.cpp:1728 xs/src/libslic3r/PrintConfig.cpp:1734
+msgid "Cut"
+msgstr "Կտրել"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1717
+msgid "Cut model at the given Z."
+msgstr "Կտրել մոդելը տրված Z֊ի վրա։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1723
+msgid "Cut model in the XY plane into tiles of the specified max size."
+msgstr "Կտրել մոդելի XY հարթությունը սալիկների նշված առավելագույն չափով։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1729
+msgid "Cut model at the given X."
+msgstr "Կտրել մոդելը տրված X֊ի վրա։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1735
+msgid "Cut model at the given Y."
+msgstr "Կտրել մոդելը տրված Y֊ի վրա։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1740 xs/src/libslic3r/PrintConfig.cpp:1752
+msgid "Export SVG"
+msgstr "Արտահանել SVG"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1741
+msgid "Export the model as OBJ."
+msgstr "Արտահանել մոդելն որպես OBJ."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1746
+msgid "Export POV"
+msgstr "Արտահանել POV"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1747
+msgid "Export the model as POV-Ray definition."
+msgstr "Արտահանել մոդելն, որպես POV-Ray սահմանում։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1753
+msgid "Slice the model and export slices as SVG."
+msgstr "Շերտազատել մոդելը և արտահանել որպես SVG։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1758
+msgid "Output Model Info"
+msgstr "Ելքային մոդելի տվյալները"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1759
+msgid "Write information about the model to the console."
+msgstr "Մոոդելի մասին տվյալները գրառել կոնսոլում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1764
+msgid "Load config file"
+msgstr "Բեռնել կարգավորման նիշքը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1765
+msgid "Load configuration from the specified file. It can be used more than once to load options from multiple files."
+msgstr "Բեռնել կարգաբերման նիշքն այստեղից։ Այն կարող է օգտագործվել մեկից ավել անգամ՝ մի շարք նիշքերից ներմուծելու համար"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1770
+msgid "Output File"
+msgstr "Ելքային նիշք"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1771
+msgid "The file where the output will be written (if not specified, it will be based on the input file)."
+msgstr "Նիշք, որտեղ կգրվի ելքը (եթե չի հստակեցվում, ապա այն կգրվի ներմուծման նիշքում )."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1776
+msgid "Rotate"
+msgstr "Պտտել"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1777
+msgid "Rotation angle around the Z axis in degrees (0-360, default: 0)."
+msgstr "Պտտման անկյունը Z կորդինատի շուրջը աստիճաններով (0-360, լռելայն՝ 0)։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1782
+msgid "Rotate around X"
+msgstr "Պտտել X-ի շուրջը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1783
+msgid "Rotation angle around the X axis in degrees (0-360, default: 0)."
+msgstr "Պտտման անկյունը X կորդինատի շուրջը աստիճաններով (0-360, լռելայն՝ 0)։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1788
+msgid "Rotate around Y"
+msgstr "Պտտել Y֊ի շուրջը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1789
+msgid "Rotation angle around the Y axis in degrees (0-360, default: 0)."
+msgstr "Պտտման անկյունը Y կորդինատի շուրջը աստիճաններով (0-360, լռելայն՝ 0)։"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1794
+msgid "Save config file"
+msgstr "Պահել կարգավորման նիշքը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1795
+msgid "Save configuration to the specified file."
+msgstr "Պահել կարգաբերումը կոնկրետ նիշքում"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1800
+msgid "Scale"
+msgstr "Կիրառել չափը"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1801
+msgid "Scaling factor (default: 1)."
+msgstr "Չափափոխման գործակիցը (լռելայն՝ 1)."
+
+#: xs/src/libslic3r/PrintConfig.cpp:1806
+msgid "Scale to Fit"
+msgstr "Փոխել չափը հարմար ձևով"
+
+#: xs/src/libslic3r/PrintConfig.cpp:1807
+msgid "Scale to fit the given volume."
+msgstr "Փոխել չափը՝ տրված ծավալին համապատասխանելու համար:"
