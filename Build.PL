@@ -131,6 +131,10 @@ EOF
         push @cmd, '--notest'
             if $module =~ /^(?:OpenGL|Math::PlanePath|Test::Harness|IO::Scalar)$/;
         
+        # do not try to reinstall modules that were already
+        # installed manually
+        push @cmd, '--skip-satisfied';
+
         push @cmd, "$module~$version";
         my $res = system @cmd;
         if ($res != 0) {
