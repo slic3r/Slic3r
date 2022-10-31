@@ -20,7 +20,7 @@ has 'interface_flow'    => (is => 'rw', required => 1);
 use constant DEBUG_CONTACT_ONLY => 0;
 
 # increment used to reach MARGIN in steps to avoid trespassing thin objects
-use constant MARGIN_STEP => MARGIN/3;
+use constant MARGIN_STEP => MARGIN/1;
 
 sub generate {
     # $object is Slic3r::Print::Object
@@ -907,8 +907,18 @@ sub generate_pillars_shape {
     # this prevents supplying an empty point set to BoundingBox constructor
     return if !%$contact;
     
-    my $pillar_size     = scale $self->object_config->support_material_pillar_size;
-    my $pillar_spacing  = scale $self->object_config->support_material_pillar_spacing;
+    my $bb = Slic3r::Geometry::BoundingBox->new_from_points([ map @$_, map @$_, values %$contact ]);
+    # I have added the bounding box definition before to the arrayref of polygons
+ 
+    my $x_max_squared = sqrt($bb->x_max);
+    #square routing the max x axis to find a variable pillar size for the x axis (only for the x axis currently)
+    my $x_max_pillar = $x_max_squared/1000;
+    #Dividing the squared max x by 1000 so it can be used for pillar size formation
+    my $x_max_pillar_spacing = $x_max_pillar+1;
+    #currently it just adds 1 to the spacing
+
+    my $pillar_size     = scale $x_max_pillar;
+    my $pillar_spacing  = scale $x_max_pillar_spacing;
     
     my $grid;  # arrayref of polygons
     {
@@ -920,7 +930,7 @@ sub generate_pillars_shape {
         );
         
         my @pillars = ();
-        my $bb = Slic3r::Geometry::BoundingBox->new_from_points([ map @$_, map @$_, values %$contact ]);
+      
         for (my $x = $bb->x_min; $x <= $bb->x_max-$pillar_size; $x += $pillar_spacing) {
             for (my $y = $bb->y_min; $y <= $bb->y_max-$pillar_size; $y += $pillar_spacing) {
                 push @pillars, my $p = $pillar->clone;
