@@ -37,7 +37,7 @@ TriangleMesh::TriangleMesh()
     stl_initialize(&this->stl);
 }
 
-TriangleMesh::TriangleMesh(const Pointf3* points, const Point3* facets, size_t n_facets) 
+TriangleMesh::TriangleMesh(const Pointf3* points, size_t n_points, const Point3* facets, size_t n_facets) 
     : repaired(false)
 {
     stl_initialize(&this->stl);
@@ -51,6 +51,13 @@ TriangleMesh::TriangleMesh(const Pointf3* points, const Point3* facets, size_t n
     stl_allocate(&stl);
 
     for (int i = 0; i < stl.stats.number_of_facets; i++) {
+
+        if (facets[i].x >= n_points ||
+            facets[i].y >= n_points ||
+            facets[i].z >= n_points) {
+          throw std::runtime_error("Invalid facet");
+        }
+
         stl_facet facet;
         facet.normal.x = 0;
         facet.normal.y = 0;
