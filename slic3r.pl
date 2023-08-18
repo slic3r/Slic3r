@@ -43,6 +43,8 @@ my %cli_options = ();
         'merge|m'               => \$opt{merge},
         'repair'                => \$opt{repair},
         'cut=f'                 => \$opt{cut},
+        'cut-x=f'               => \$opt{cut_x},
+        'cut-y=f'               => \$opt{cut_y},
         'cut-grid=s'            => \$opt{cut_grid},
         'split'                 => \$opt{split},
         'info'                  => \$opt{info},
@@ -164,6 +166,46 @@ if (@ARGV) {  # slicing from command line
             my $upper = Slic3r::TriangleMesh->new;
             my $lower = Slic3r::TriangleMesh->new;
             $mesh->cut(Z, $opt{cut}, $upper, $lower);
+            $upper->repair;
+            $lower->repair;
+            $upper->write_ascii("${file}_upper.stl")
+                if $upper->facets_count > 0;
+            $lower->write_ascii("${file}_lower.stl")
+                if $lower->facets_count > 0;
+        }
+        exit;
+    }
+
+    if ($opt{cut_x}) {
+        foreach my $file (@ARGV) {
+            $file = Slic3r::decode_path($file);
+            my $model = Slic3r::Model->read_from_file($file);
+            $model->add_default_instances;
+            my $mesh = $model->mesh;
+            $mesh->align_to_bed();
+            my $upper = Slic3r::TriangleMesh->new;
+            my $lower = Slic3r::TriangleMesh->new;
+            $mesh->cut(X, $opt{cut_x}, $upper, $lower);
+            $upper->repair;
+            $lower->repair;
+            $upper->write_ascii("${file}_upper.stl")
+                if $upper->facets_count > 0;
+            $lower->write_ascii("${file}_lower.stl")
+                if $lower->facets_count > 0;
+        }
+        exit;
+    }
+
+    if ($opt{cut_y}) {
+        foreach my $file (@ARGV) {
+            $file = Slic3r::decode_path($file);
+            my $model = Slic3r::Model->read_from_file($file);
+            $model->add_default_instances;
+            my $mesh = $model->mesh;
+            $mesh->align_to_bed();
+            my $upper = Slic3r::TriangleMesh->new;
+            my $lower = Slic3r::TriangleMesh->new;
+            $mesh->cut(Y, $opt{cut_y}, $upper, $lower);
             $upper->repair;
             $lower->repair;
             $upper->write_ascii("${file}_upper.stl")
@@ -334,6 +376,10 @@ Usage: slic3r.pl [ OPTIONS ] [ file.stl ] [ file2.stl ] ...
   Non-slicing actions (no G-code will be generated):
     --repair            Repair given STL files and save them as <name>_fixed.obj
     --cut <z>           Cut given input files at given Z (relative) and export
+                        them as <name>_upper.stl and <name>_lower.stl
+    --cut_x <x>           Cut given input files at given X (relative) and export
+                        them as <name>_upper.stl and <name>_lower.stl
+    --cut_y <y>           Cut given input files at given Y (relative) and export
                         them as <name>_upper.stl and <name>_lower.stl
     --split             Split the shells contained in given STL file into several STL files
     --info              Output information about the supplied file(s) and exit
