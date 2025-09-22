@@ -174,20 +174,26 @@ int CLI::run(int argc, char **argv) {
         } else if (opt_key == "dont_arrange") {
             // do nothing - this option alters other transform options
         } else if (opt_key == "rotate") {
-            for (auto &model : this->models)
+            for (auto &model : this->models) {
+                model.add_default_instances();
                 for (auto &o : model.objects)
                     // this affects volumes:
                     o->rotate(Geometry::deg2rad(config.getFloat(opt_key)), Z);
+            }
         } else if (opt_key == "rotate_x") {
-            for (auto &model : this->models)
+            for (auto &model : this->models) {
+                model.add_default_instances();
                 for (auto &o : model.objects)
                     // this affects volumes:
                     o->rotate(Geometry::deg2rad(config.getFloat(opt_key)), X);
+            }
         } else if (opt_key == "rotate_y") {
-            for (auto &model : this->models)
+            for (auto &model : this->models) {
+                model.add_default_instances();
                 for (auto &o : model.objects)
                     // this affects volumes:
                     o->rotate(Geometry::deg2rad(config.getFloat(opt_key)), Y);
+            }
         } else if (opt_key == "scale") {
             for (auto &model : this->models)
                 for (auto &o : model.objects)
